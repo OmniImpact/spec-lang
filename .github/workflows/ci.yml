@@ -10,13 +10,15 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  gcc:
+  linux:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - name: Bootstrap compiler (gcc)
-        run: ./bootstrap.sh
+      - name: Install clang
+        run: sudo apt-get update && sudo apt-get install -y clang
+      - name: Bootstrap compiler (clang)
+        run: CLANG=clang ./bootstrap.sh
       - name: Build specbuild
         run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
       - name: Build tooling
@@ -27,7 +29,7 @@ jobs:
           bin/specbuild utilities/speclsp/speclsp.json
       - name: Regression suite
         run: |
-          bin/specunit -s bin/spec -t examples -t tests
+          bin/specunit -s bin/spec -t examples -t tests -t testllvm
       - name: Package Linux Artifact
         run: |
           mkdir -p dist
@@ -39,21 +41,20 @@ jobs:
           path: dist/spec-linux-x86_64.zip
           if-no-files-found: error
 
-  clang:
-    runs-on: ubuntu-latest
+  linux-arm64:
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - name: Install clang
         run: sudo apt-get update && sudo apt-get install -y clang
       - name: Bootstrap compiler (clang)
-        run: CC=clang ./bootstrap.sh
-      - name: Build specbuild
-        run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
-      - name: Build tooling and run regression suite
+        run: CLANG=clang ./bootstrap.sh
+      - name: Build specunit
+        run: bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+      - name: Regression suite
         run: |
-          bin/specbuild utilities/specunit/specunit.json
-          bin/specunit -s bin/spec -t examples -t tests
+          bin/specunit -s bin/spec -t examples -t tests -t testllvm
 
   macos:
     runs-on: macos-latest
@@ -61,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Bootstrap compiler (macOS clang)
-        run: CC=clang ./bootstrap.sh
+        run: CLANG=clang ./bootstrap.sh
       - name: Build specbuild
         run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
       - name: Build tooling
@@ -72,7 +73,7 @@ jobs:
           bin/specbuild utilities/speclsp/speclsp.json
       - name: Regression suite
         run: |
-          bin/specunit -s bin/spec -t examples -t tests
+          bin/specunit -s bin/spec -t examples -t tests -t testllvm
       - name: Package macOS Artifact
         run: |
           ARCH=$(uname -m)
@@ -90,20 +91,25 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
-        # Newer Ubuntu kernels ship vm.mmap_rnd_bits=32, which crashes gcc's
+      - name: Install clang
+        run: sudo apt-get update && sudo apt-get install -y clang
+        # Newer Ubuntu kernels ship vm.mmap_rnd_bits=32, which crashes
         # AddressSanitizer at startup; 28 is the known-good value.
       - name: Lower ASLR entropy for ASan compatibility
         run: sudo sysctl -w vm.mmap_rnd_bits=28
       - name: Build sanitized compiler and run suite
         run: |
-          gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
-              -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm -ldl
+          clang -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+              -fno-omit-frame-pointer -c bootstrap/spec_runtime.c -o /tmp/spec_rt_asan.o -pthread
+          clang -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+              -fno-omit-frame-pointer -Wno-override-module bootstrap/spec.ll /tmp/spec_rt_asan.o \
+              -o bin/spec-asan -pthread -lm -ldl -no-pie
           cp bin/spec-asan bin/spec
           export ASAN_OPTIONS=detect_leaks=0
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
           export SPEC_BIN="bin/spec-asan"
           bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
-          bin/specunit-asan -s bin/spec-asan -t examples -t tests -j 2
+          bin/specunit-asan -s bin/spec-asan -t examples -t tests -t testllvm -j 2
 
   windows:
     runs-on: windows-latest
@@ -120,12 +126,12 @@ jobs:
           install: >-
             git
             diffutils
-            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-clang
             zip
-      - name: Bootstrap compiler (MinGW UCRT64)
-        run: ./bootstrap.sh
+      - name: Bootstrap compiler (MinGW UCRT64 clang)
+        run: CLANG=clang ./bootstrap.sh
       - name: Build specbuild
-        run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild.exe
+        run: bin/spec.exe --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild.exe
       - name: Build tooling and run regression suite
         run: |
           CUR_DRIVE="$(pwd | cut -d/ -f2)"
@@ -138,7 +144,7 @@ jobs:
           bin/specbuild.exe utilities/speclint/speclint.json
           bin/specbuild.exe utilities/specinit/specinit.json
           bin/specbuild.exe utilities/speclsp/speclsp.json
-          bin/specunit.exe -s bin/spec.exe -t examples -t tests
+          bin/specunit.exe -s bin/spec.exe -t examples -t tests -t testllvm
       - name: Package Windows Artifact
         run: |
           mkdir -p dist
@@ -151,7 +157,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [gcc, clang, macos, windows, sanitizer]
+    needs: [linux, linux-arm64, macos, windows, sanitizer]
     runs-on: ubuntu-latest
     permissions:
       contents: write
