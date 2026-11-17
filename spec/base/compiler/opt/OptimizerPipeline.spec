@@ -9,6 +9,7 @@ Class is OptimizerPipeline{
 		['base', 'compiler', 'opt', SpecOptimizer],
 		['base', 'compiler', 'opt', ConstantFoldPass],
 		['base', 'compiler', 'opt', DevirtPass],
+		['base', 'compiler', 'opt', ArcPeepholePass],
 		['base', 'compiler', 'opt', PoolElisionPass],
 		['base', 'compiler', 'opt', WrapperUnwrapPass],
 		['base', 'compiler', 'ir', IrModule],

@@ -88,8 +88,12 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
        - `binary_trees` 1t: `11.05M` → **`11.25M` nodes/s** (+1.8%); 8t: `40.17M` → **`40.82M` nodes/s** (+1.6%)
        - `word_freq`: `951.5K` → **`957.9K` lines/s** (+0.7%)
        - `specunit`: 104 passed, 0 failed.
-  3. **Local `Retain` / `Release` Peephole (`ArcPeepholePass`):** Cancel
-     redundant block-local `Retain`/`Release` pairs and null operations.
+  3. **Local `Retain` / `Release` Peephole (`ArcPeepholePass`) — DONE:** Added
+     [ArcPeepholePass.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/opt/ArcPeepholePass.spec) (`order = 18`) for block-local null `Retain`/`Release` elision and `Retain(x)`/`Release(x)` pair cancellation.
+     - **Result (median of 3):**
+       - `binary_trees`: 1t **`11.24M` nodes/s** (neutral), 8t `40.82M` → **`41.07M` nodes/s** (+0.6%)
+       - `word_freq`: `957.9K` → **`960.6K` lines/s** (+0.3%)
+       - `specunit`: 104 passed, 0 failed.
   4. **Second `PoolElisionPass`:** Run after devirtualization/inlining to clean
      up newly exposed pool frames.
 

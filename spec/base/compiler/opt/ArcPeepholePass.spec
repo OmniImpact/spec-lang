@@ -1,0 +1,159 @@
+#! Package base:compiler:opt
+#! Block-local ARC Retain/Release peephole pass over IrModule.
+##
+## 1. Tracks known-null registers and Alloca slots within each basic block and
+##    eliminates Retain/Release on known-null values.
+## 2. Cancels redundant Retain(x) / Release(x) pairs on the same register within
+##    a basic block when no intervening instruction can observe or drop x.
+
+Class of SpecOptimizer is ArcPeepholePass{
+	namespace: ['base', 'compiler', 'opt'];
+
+	replace Array of Array of String is using: [
+		['base', 'compiler', 'opt', SpecOptimizer],
+		['base', 'compiler', 'ir', IrFunction],
+		['base', 'compiler', 'ir', IrBlock],
+		['base', 'compiler', 'ir', IrInst],
+		['base', 'compiler', 'ir', IrType],
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
+	];
+
+	replace Function is init(){
+		return;
+	}
+
+	replace Function of String is name(){
+		return 'arc-peephole';
+	}
+
+	replace Function of Int is order(){
+		return 18;
+	}
+
+	replace Function is runOnFunction(IrFunction is fn){
+		local Int is bi: 0;
+		while({ bi < fn:blocks:length() }, {
+			local IrBlock is blk: fn:blocks:get(index: bi);
+			self:peepholeBlock(blk: blk);
+			bi++;
+		});
+	}
+
+	local Function of Boolean is isPureForArc(IrInst is inst){
+		return match(on: inst, when: [
+			IrInst:ConstInt: { return true; },
+			IrInst:ConstFloat: { return true; },
+			IrInst:ConstBool: { return true; },
+			IrInst:ConstString: { return true; },
+			IrInst:Alloca: { return true; },
+			IrInst:Load: { return true; },
+			IrInst:BinOp: { return true; },
+			IrInst:UnaryOp: { return true; },
+			IrInst:Cmp: { return true; },
+			IrInst:GlobalAddr: { return true; },
+			IrInst:FieldPtr: { return true; },
+			IrInst:PtrElem: { return true; },
+			IrInst:IrCast: { return true; },
+			else: { return false; }
+		]);
+	}
+
+	local Function is peepholeBlock(IrBlock is blk){
+		local Int is n: blk:insts:length();
+		if({ n == 0 }, { return; });
+
+		local Map of String to Boolean is nullRegs: Map:init();
+		local Map of String to Boolean is nullSlots: Map:init();
+		nullRegs:set(key: 'null', value: true);
+
+		local Array of Boolean is drop: [];
+		local Int is i: 0;
+		while({ i < n }, {
+			drop:add(item: false);
+			i++;
+		});
+
+		# Pass 1: Eliminate Retain/Release on known-null registers.
+		i: 0;
+		while({ i < n }, {
+			local IrInst is inst: blk:insts:get(index: i);
+			match(on: inst, when: [
+				IrInst:Store: local Function(String is slot, String is val, IrType is ty){
+					if({ nullRegs:has(key: val) }, {
+						nullSlots:set(key: slot, value: true);
+					}, {
+						nullSlots:set(key: slot, value: false);
+					});
+				},
+				IrInst:Load: local Function(String is dst, String is slot, IrType is ty){
+					if({ nullSlots:get(key: slot, default: false) }, {
+						nullRegs:set(key: dst, value: true);
+					});
+				},
+				IrInst:Retain: local Function(String is val){
+					if({ nullRegs:has(key: val) }, {
+						drop:set(index: i, item: true);
+					});
+				},
+				IrInst:Release: local Function(String is val){
+					if({ nullRegs:has(key: val) }, {
+						drop:set(index: i, item: true);
+					});
+				},
+				else: { }
+			]);
+			i++;
+		});
+
+		# Pass 2: Cancel local Retain(x) ... Release(x) separated only by pure ops.
+		i: 0;
+		while({ i < n }, {
+			if({ !drop:get(index: i) }, {
+				local String is retVal: match(on: blk:insts:get(index: i), when: [
+					IrInst:Retain: local Function of String(String is val){ return val; },
+					else: { return ''; }
+				]);
+				if({ retVal != '' }, {
+					local Int is j: i + 1;
+					local Boolean is scanning: true;
+					while({ j < n && scanning }, {
+						if({ !drop:get(index: j) }, {
+							local IrInst is jInst: blk:insts:get(index: j);
+							local String is relVal: match(on: jInst, when: [
+								IrInst:Release: local Function of String(String is val){ return val; },
+								else: { return ''; }
+							]);
+							if({ relVal == retVal }, {
+								drop:set(index: i, item: true);
+								drop:set(index: j, item: true);
+								scanning: false;
+							}, {
+								if({ !self:isPureForArc(inst: jInst) }, {
+									scanning: false;
+								});
+							});
+						});
+						j++;
+					});
+				});
+			});
+			i++;
+		});
+
+		local Array of IrInst is newInsts: [];
+		local Array of Int is newLines: [];
+		i: 0;
+		while({ i < n }, {
+			if({ !drop:get(index: i) }, {
+				newInsts:add(item: blk:insts:get(index: i));
+				newLines:add(item: blk:instLines:get(index: i));
+			});
+			i++;
+		});
+		blk:insts: newInsts;
+		blk:instLines: newLines;
+	}
+}
