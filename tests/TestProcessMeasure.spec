@@ -18,7 +18,11 @@ Class of SpecUnitTest is TestProcessMeasure{
 	}
 
 	Function is testMeasureSuccess(){
-		local Map of String to String is res: Process:measure(command: '/bin/sh', args: ['-c', 'exit 0']);
+		local Map of String to String is res: if({ Process:osName() == 'windows' }, {
+			Process:measure(command: 'cmd.exe', args: ['/c', 'exit', '0']);
+		}, {
+			Process:measure(command: '/bin/sh', args: ['-c', 'exit 0']);
+		});
 		Assert:areEqualInt(0, res:getInt(key: 'exit', default: -1));
 		Assert:isTrue(res:getInt(key: 'wall_us', default: -1) >= 0);
 		Assert:isTrue(res:getInt(key: 'cpu_us', default: -1) >= 0);
@@ -26,7 +30,11 @@ Class of SpecUnitTest is TestProcessMeasure{
 	}
 
 	Function is testMeasureNonZeroExit(){
-		local Map of String to String is res: Process:measure(command: '/bin/sh', args: ['-c', 'exit 7']);
+		local Map of String to String is res: if({ Process:osName() == 'windows' }, {
+			Process:measure(command: 'cmd.exe', args: ['/c', 'exit', '7']);
+		}, {
+			Process:measure(command: '/bin/sh', args: ['-c', 'exit 7']);
+		});
 		Assert:areEqualInt(7, res:getInt(key: 'exit', default: -1));
 	}
 }
