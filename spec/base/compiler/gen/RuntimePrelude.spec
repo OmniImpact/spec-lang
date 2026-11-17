@@ -87,8 +87,6 @@ typedef struct SpecBuf SpecBuf;
 typedef SpecBuf* String;
 typedef struct SpecClosure SpecClosure;
 typedef struct SpecArray SpecArray;
-typedef struct SpecMap SpecMap;
-typedef struct SpecMapEntry SpecMapEntry;
 typedef struct SpecByteBuffer SpecByteBuffer;
 typedef struct SpecAudioStream SpecAudioStream;
 
@@ -98,12 +96,16 @@ String spec_string_from_bytes(const char* data, size_t n);
 String spec_string_from_chars(const char* c);
 String spec_string_intern(const char* c);
 bool spec_string_bytes_equal(String b, const char* c, size_t n);
-bool spec_string_equals(String a, String b);
 const char* spec_buf_to_cstring(SpecBuf* b);
 void spec_buf_destroy(void* self);
-void spec_array_destroy(void* self);
-void spec_map_destroy(void* self);
-void spec_bytebuffer_destroy(void* self);
+extern SpecArray* Vector_vecNewObject(void);
+extern void Vector_vecAdd(void* self, void* v, void* item);
+extern SpecByteBuffer* Vector_byteBufNew(void);
+extern void* HashTable_mapNew(void);
+extern void HashTable_mapSet(void* self, void* m, String key, String val);
+extern void* HashTable_mapGet(void* self, void* m, String key, void* def);
+extern String Buf_intToString(void* self, long long v);
+extern String Buf_stringConcat(void* self, String a, String b);
 void spec_async_task_started(void);
 void spec_async_task_finished(void);
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error);
@@ -411,13 +413,6 @@ static inline void* spec_xrealloc(void* old, size_t n) {
     return p;
 }
 
-static inline char* spec_xstrdup(const char* s) {
-    size_t n = strlen(s) + 1;
-    char* p = (char*)spec_xmalloc(n);
-    memcpy(p, s, n);
-    return p;
-}
-
 static inline void* spec_retain(void* obj) {
     if (!obj) return NULL;
     SpecHeader* h = SPEC_HEADER(obj);
@@ -558,9 +553,7 @@ typedef struct SpecClosure {
 /* Spec Runtime String Utilities */
 
 
-/* Thread-Safe Spec Dynamic Array */
-#define SPEC_ELEM_NONE 0
-#define SPEC_ELEM_OBJECT 1
+/* Spec Dynamic Array Layout */
 typedef struct SpecArray {
     void** items;
     size_t length;
@@ -569,81 +562,6 @@ typedef struct SpecArray {
     bool frozen;
     _Atomic uint64_t lock;
 } SpecArray;
-
-static inline void _spec_array_lock(SpecArray* a) {
-    uint64_t expected = 0;
-    while (!atomic_compare_exchange_weak_explicit(&a->lock, &expected, 1, memory_order_acquire, memory_order_relaxed)) {
-        expected = 0;
-    }
-}
-
-static inline void _spec_array_unlock(SpecArray* a) {
-    atomic_store_explicit(&a->lock, 0, memory_order_release);
-}
-
-static SpecArray* spec_array_new_kind(int kind) {
-    SpecArray* a = (SpecArray*)spec_alloc(sizeof(SpecArray), spec_array_destroy);
-    a->items = NULL;
-    a->length = 0;
-    a->capacity = 0;
-    a->elem_kind = kind;
-    a->frozen = false;
-    atomic_init(&a->lock, 0);
-    return a;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* Thread-Safe Spec Hash Map (FNV-1a / splitmix64, chained, growing power-of-two table) */
-#define SPEC_MAP_INITIAL_BUCKETS 8
-#define SPEC_KEY_STRING 0
-#define SPEC_KEY_INT    1
-#define SPEC_KEY_FLOAT  2
-#define SPEC_KEY_OBJECT 3
-
-typedef struct SpecMapEntry {
-    uint64_t key_bits;
-    void* value;
-    bool is_str;
-    struct SpecMapEntry* next;
-} SpecMapEntry;
-
-typedef struct SpecMap {
-    SpecMapEntry** buckets;
-    size_t nbuckets;
-    size_t length;
-    int key_kind;
-    int val_kind;
-    bool frozen;
-    _Atomic uint64_t lock;
-} SpecMap;
-
-static SpecMap* spec_map_new_typed_kind(int key_kind, int val_kind) {
-    SpecMap* m = (SpecMap*)spec_alloc(sizeof(SpecMap), spec_map_destroy);
-    m->key_kind = key_kind;
-    m->val_kind = val_kind;
-    m->frozen = false;
-    m->nbuckets = SPEC_MAP_INITIAL_BUCKETS;
-    m->buckets = (SpecMapEntry**)spec_xmalloc(sizeof(SpecMapEntry*) * m->nbuckets);
-    memset(m->buckets, 0, sizeof(SpecMapEntry*) * m->nbuckets);
-    atomic_init(&m->lock, 0);
-    return m;
-}
-
-static SpecMap* spec_map_new_kind(int kind) {
-    return spec_map_new_typed_kind(SPEC_KEY_STRING, kind);
-}
 
 /* Spec Async Task Manager */
 static int spec_in_flight_tasks = 0;
@@ -740,53 +658,6 @@ static void* spec_file_write_worker(void* arg) {
     spec_async_task_finished();
     return NULL;
 }
-
-/* Atomic Slots: dynamically growing chunked table.
-   Starts low (0 chunks allocated) and allocates chunks on demand.
-   Level 0 holds 16 slots; level k (k >= 1) holds 2^(k+3) slots.
-   Total addressable capacity exceeds 2^60 slots with zero reallocations,
-   so slot pointers are permanent and all reads/writes are lock-free. */
-static _Atomic(atomic_llong*) _spec_atomic_levels[64];
-static pthread_mutex_t _spec_atomic_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static atomic_llong* spec_atomic_slot_ptr(long long slot) {
-    if (slot < 0) {
-        spec_panic_bounds("Atomic slot", slot, 0);
-    }
-    size_t level = 0;
-    size_t offset = 0;
-    size_t chunk_size = 16;
-    if (slot < 16) {
-        level = 0;
-        offset = (size_t)slot;
-        chunk_size = 16;
-    } else {
-        int highest_bit = 63 - __builtin_clzll((unsigned long long)slot);
-        level = (size_t)(highest_bit - 3);
-        if (level >= 64) {
-            spec_panic_bounds("Atomic slot index too large", slot, 0);
-        }
-        chunk_size = (size_t)1ULL << highest_bit;
-        offset = (size_t)slot - chunk_size;
-    }
-
-    atomic_llong* chunk = atomic_load_explicit(&_spec_atomic_levels[level], memory_order_acquire);
-    if (!chunk) {
-        pthread_mutex_lock(&_spec_atomic_mutex);
-        chunk = atomic_load_explicit(&_spec_atomic_levels[level], memory_order_relaxed);
-        if (!chunk) {
-            chunk = (atomic_llong*)calloc(chunk_size, sizeof(atomic_llong));
-            if (!chunk) { spec_panic("Out of memory allocating atomic slots"); }
-            atomic_store_explicit(&_spec_atomic_levels[level], chunk, memory_order_release);
-        }
-        pthread_mutex_unlock(&_spec_atomic_mutex);
-    }
-    return &chunk[offset];
-}
-
-
-
-
 
 /* Parallel Fan-Out */
 typedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);
@@ -1102,29 +973,10 @@ String spec_string_intern(const char* c) {
     return s;
 }
 
-String spec_to_string_int(long long v) {
-    char buf[64];
-    snprintf(buf, sizeof(buf), "%lld", v);
-    return spec_string_intern(buf);
-}
-
 String spec_to_string_float(double v) {
     char buf[64];
     snprintf(buf, sizeof(buf), "%.17g", v);
     return spec_string_intern(buf);
-}
-
-void spec_array_destroy(void* self) {
-    SpecArray* a = (SpecArray*)self;
-    if (a) {
-        if (a->items) {
-            for (size_t i = 0; i < a->length; i++) {
-                if (!a->items[i]) continue;
-                if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);
-            }
-        }
-        if (a->items) free(a->items);
-    }
 }
 
 static _Atomic int g_spec_active_threads = 0;
@@ -1139,131 +991,6 @@ static inline void spec_thread_leave(void) {
 
 static inline bool spec_is_multithreaded(void) {
     return atomic_load_explicit(&g_spec_active_threads, memory_order_acquire) > 0;
-}
-
-SpecArray* spec_array_new(void) {
-    return spec_array_new_kind(SPEC_ELEM_NONE);
-}
-
-SpecArray* spec_array_new_object(void) {
-    return spec_array_new_kind(SPEC_ELEM_OBJECT);
-}
-
-void spec_array_add_owned(SpecArray* a, void* item) {
-    if (!a) return;
-    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    bool mt = spec_is_multithreaded();
-    if (mt) _spec_array_lock(a);
-    if (a->elem_kind == SPEC_ELEM_NONE) a->elem_kind = SPEC_ELEM_OBJECT;
-    if (a->length >= a->capacity) {
-        size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
-        a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
-        a->capacity = ncap;
-    }
-    a->items[a->length++] = item;
-    if (mt) _spec_array_unlock(a);
-}
-
-void spec_map_destroy(void* self) {
-    SpecMap* m = (SpecMap*)self;
-    if (m && m->buckets) {
-        for (size_t i = 0; i < m->nbuckets; i++) {
-            SpecMapEntry* curr = m->buckets[i];
-            while (curr) {
-                SpecMapEntry* next = curr->next;
-                if ((m->key_kind == SPEC_KEY_STRING || m->key_kind == SPEC_KEY_OBJECT) && curr->key_bits) {
-                    spec_release((void*)(uintptr_t)curr->key_bits);
-                }
-                if ((curr->is_str || m->val_kind == SPEC_ELEM_OBJECT) && curr->value) {
-                    spec_release(curr->value);
-                }
-                free(curr);
-                curr = next;
-            }
-        }
-        free(m->buckets);
-        m->buckets = NULL;
-    }
-}
-
-SpecMap* spec_map_new(void) {
-    return spec_map_new_kind(SPEC_ELEM_NONE);
-}
-
-SpecMap* spec_map_new_object(void) {
-    return spec_map_new_kind(SPEC_ELEM_OBJECT);
-}
-
-SpecMap* spec_map_new_typed(int key_kind, int val_kind) {
-    return spec_map_new_typed_kind(key_kind, val_kind);
-}
-
-static inline size_t spec_hash_str_buf(String key, size_t nbuckets) {
-    if (!key) return 0;
-    const unsigned char* data = (const unsigned char*)key->data;
-    size_t len = key->length;
-    uint64_t h = 1469598103934665603ULL;
-    for (size_t i = 0; i < len; i++) {
-        h = (h ^ data[i]) * 1099511628211ULL;
-    }
-    return (size_t)(h & (nbuckets - 1));
-}
-
-static void _spec_c_map_set_str(SpecMap* m, String key, String val) {
-    if (!m || !key) return;
-    size_t idx = spec_hash_str_buf(key, m->nbuckets);
-    SpecMapEntry* curr = m->buckets[idx];
-    while (curr) {
-        if (spec_string_equals((String)(uintptr_t)curr->key_bits, key)) {
-            if (val) spec_retain(val);
-            if ((curr->is_str || m->val_kind == SPEC_ELEM_OBJECT) && curr->value) spec_release(curr->value);
-            curr->value = val;
-            curr->is_str = true;
-            return;
-        }
-        curr = curr->next;
-    }
-    if (val) spec_retain(val);
-    spec_retain(key);
-    if (m->length >= m->nbuckets) {
-        size_t nb = m->nbuckets * 2;
-        SpecMapEntry** grown = (SpecMapEntry**)spec_xmalloc(sizeof(SpecMapEntry*) * nb);
-        memset(grown, 0, sizeof(SpecMapEntry*) * nb);
-        for (size_t i = 0; i < m->nbuckets; i++) {
-            SpecMapEntry* c = m->buckets[i];
-            while (c) {
-                SpecMapEntry* nx = c->next;
-                size_t gidx = spec_hash_str_buf((String)(uintptr_t)c->key_bits, nb);
-                c->next = grown[gidx];
-                grown[gidx] = c;
-                c = nx;
-            }
-        }
-        free(m->buckets);
-        m->buckets = grown;
-        m->nbuckets = nb;
-        idx = spec_hash_str_buf(key, nb);
-    }
-    SpecMapEntry* e = (SpecMapEntry*)spec_xmalloc(sizeof(SpecMapEntry));
-    e->key_bits = (uint64_t)(uintptr_t)key;
-    e->value = val;
-    e->is_str = true;
-    e->next = m->buckets[idx];
-    m->buckets[idx] = e;
-    m->length++;
-}
-
-static String _spec_c_map_get_str(SpecMap* m, String key) {
-    if (!m || !key) return NULL;
-    size_t idx = spec_hash_str_buf(key, m->nbuckets);
-    SpecMapEntry* curr = m->buckets[idx];
-    while (curr) {
-        if (spec_string_equals((String)(uintptr_t)curr->key_bits, key)) {
-            return (String)curr->value;
-        }
-        curr = curr->next;
-    }
-    return NULL;
 }
 
 void spec_async_task_started(void) {
@@ -1299,7 +1026,7 @@ void spec_buf_destroy(void* self) {
 }
 
 SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error) {
-    SpecArray* res = spec_array_new_object();
+    SpecArray* res = Vector_vecNewObject();
     if (!path || path->length == 0) {
         _spec_emit_str_error(on_error, "Directory error: Empty path provided");
         return res;
@@ -1312,7 +1039,9 @@ SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error) {
     struct dirent* ent;
     while ((ent = readdir(d)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        spec_array_add_owned(res, spec_string_from_bytes(ent->d_name, strlen(ent->d_name)));
+        String item = spec_string_from_bytes(ent->d_name, strlen(ent->d_name));
+        Vector_vecAdd(NULL, res, item);
+        spec_release(item);
     }
     closedir(d);
     return res;
@@ -1356,23 +1085,6 @@ SpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {
     return b;
 }
 
-void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src) {
-    if (!dst || !src || src->length == 0) return;
-    if (dst->elem_size != 1 || src->elem_size != 1) return;
-    if (dst == src) {
-        size_t n = dst->length;
-        spec_buf_grow(dst, n);
-        memcpy((unsigned char*)dst->data + n, dst->data, n);
-        dst->length += n;
-        ((unsigned char*)dst->data)[dst->length] = 0;
-        return;
-    }
-    spec_buf_grow(dst, src->length);
-    memcpy((unsigned char*)dst->data + dst->length, src->data, src->length);
-    dst->length += src->length;
-    ((unsigned char*)dst->data)[dst->length] = 0;
-}
-
 const char* spec_buf_to_cstring(SpecBuf* b) {
     if (!b || b->length == 0) return "";
     return (const char*)b->data;
@@ -1393,63 +1105,6 @@ bool spec_string_bytes_equal(String b, const char* c, size_t n) {
     if (!b || b->length != n) return false;
     if (n == 0) return true;
     return memcmp(b->data, c, n) == 0;
-}
-
-bool spec_string_equals(String a, String b) {
-    if (a == b) return true;
-    if (!a || !b) return false;
-    if (a->length != b->length) return false;
-    if (a->length == 0) return true;
-    return memcmp(a->data, b->data, a->length) == 0;
-}
-
-long long spec_string_compare(String a, String b) {
-    if (a == b) return 0;
-    if (!a) return b ? -1 : 0;
-    if (!b) return 1;
-    const unsigned char* pa = (const unsigned char*)a->data;
-    const unsigned char* pb = (const unsigned char*)b->data;
-    long long n = a->length < b->length ? a->length : b->length;
-    for (long long i = 0; i < n; i++) {
-        if (pa[i] != pb[i]) {
-            return (long long)pa[i] - (long long)pb[i];
-        }
-    }
-    return (long long)a->length - (long long)b->length;
-}
-
-String spec_string_concat(String a, String b) {
-    if (!a) a = spec_string_from_bytes("", 0);
-    if (!b || b->length == 0) return a;
-    SpecHeader* h = SPEC_HEADER(a);
-    if (!(atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) &&
-        atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 1) {
-        spec_buf_append_buf(a, b);
-        return a;
-    }
-    String res = spec_buf_new(1, 0);
-    if (a->length) spec_buf_append_buf(res, a);
-    spec_buf_append_buf(res, b);
-    spec_release(a);
-    return res;
-}
-
-void spec_bytebuffer_destroy(void* self) {
-    SpecByteBuffer* b = (SpecByteBuffer*)self;
-    if (b && b->data) { free(b->data); b->data = NULL; }
-}
-
-SpecByteBuffer* spec_bytebuffer_new(void) {
-    SpecByteBuffer* b = (SpecByteBuffer*)spec_alloc(sizeof(SpecByteBuffer), spec_bytebuffer_destroy);
-    b->data = NULL;
-    b->length = 0;
-    b->capacity = 0;
-    return b;
-}
-
-String spec_bytebuffer_to_string(SpecByteBuffer* b) {
-    if (!b || b->length == 0) return spec_string_intern("");
-    return spec_string_from_bytes((const char*)b->data, b->length);
 }
 
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {
@@ -1808,19 +1463,23 @@ void spec_set_cli_args(int argc, char** argv) {
     g_spec_argv = argv;
 }
 
-static void spec_cli_arg_set(SpecMap* args, String key, String val) {
-    String prev = _spec_c_map_get_str(args, key);
+static void spec_cli_arg_set(void* args, String key, String val) {
+    String prev = (String)HashTable_mapGet(NULL, args, key, NULL);
     if (prev) {
-        _spec_c_map_set_str(args, key, spec_string_concat(spec_retain(prev), spec_string_concat(spec_string_intern("\n"), val)));
+        String sep = Buf_stringConcat(NULL, prev, spec_string_intern("\n"));
+        String comb = Buf_stringConcat(NULL, sep, val);
+        HashTable_mapSet(NULL, args, key, comb);
     } else {
-        _spec_c_map_set_str(args, key, val);
+        HashTable_mapSet(NULL, args, key, val);
     }
+    spec_release(key);
+    spec_release(val);
 }
 
-SpecMap* spec_cli_args_map(long long argc_ll, char** argv) {
+void* spec_cli_args_map(long long argc_ll, char** argv) {
     int argc = (int)argc_ll;
     spec_set_cli_args(argc, argv);
-    SpecMap* args = spec_map_new();
+    void* args = HashTable_mapNew();
     int pos_idx = 0;
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "--", 2) == 0) {
@@ -1860,22 +1519,23 @@ SpecMap* spec_cli_args_map(long long argc_ll, char** argv) {
 }
 
 SpecArray* spec_process_raw_args(void) {
-    SpecArray* out = spec_array_new_object();
+    SpecArray* out = Vector_vecNewObject();
     for (int i = 1; i < g_spec_argc; i++) {
-        spec_array_add_owned(out, (void*)spec_string_from_chars(g_spec_argv[i] ? g_spec_argv[i] : ""));
+        String item = spec_string_from_chars(g_spec_argv[i] ? g_spec_argv[i] : "");
+        Vector_vecAdd(NULL, out, item);
+        spec_release(item);
     }
     return out;
 }
 
-static void spec_map_set_owned_int(SpecMap* m, const char* key, long long val) {
+static void spec_map_set_owned_int(void* m, const char* key, long long val) {
     String k = spec_string_intern(key);
-    String v = spec_to_string_int(val);
-    _spec_c_map_set_str(m, k, v);
-    spec_release(v);
+    String v = Buf_intToString(NULL, val);
+    HashTable_mapSet(NULL, m, k, v);
 }
 
-SpecMap* spec_process_measure(String command, SpecArray* args) {
-    SpecMap* m = spec_map_new();
+void* spec_process_measure(String command, SpecArray* args) {
+    void* m = HashTable_mapNew();
     long long exit_code = -1;
     long long wall_us = 0;
     long long cpu_us = 0;
@@ -2090,22 +1750,6 @@ long long spec_term_height(void) {
     char* lines = getenv("LINES");
     if (lines) return (long long)atoi(lines);
     return 24;
-}
-
-long long spec_atomic_add(long long slot, long long v) {
-    atomic_llong* p = spec_atomic_slot_ptr(slot);
-    return atomic_fetch_add(p, v) + v;
-}
-
-long long spec_atomic_put(long long slot, long long v) {
-    atomic_llong* p = spec_atomic_slot_ptr(slot);
-    atomic_store(p, v);
-    return v;
-}
-
-long long spec_atomic_get(long long slot) {
-    atomic_llong* p = spec_atomic_slot_ptr(slot);
-    return atomic_load(p);
 }
 
 /* Striped recursive mutexes for Parallel:sync and Parallel:syncWith */
@@ -2752,7 +2396,7 @@ SpecByteBuffer* spec_socket_recv_cb(long long fd, long long max_bytes, SpecClosu
     if (max_bytes <= 0) max_bytes = 4096;
     if (max_bytes > 1048576) max_bytes = 1048576;
 
-    SpecByteBuffer* b = spec_bytebuffer_new();
+    SpecByteBuffer* b = Vector_byteBufNew();
     b->data = (unsigned char*)spec_xmalloc((size_t)max_bytes);
     b->capacity = (size_t)max_bytes;
 
@@ -2786,7 +2430,7 @@ SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
 String spec_socket_recv_str_cb(long long fd, long long max_bytes, SpecClosure* on_error) {
     SpecByteBuffer* b = spec_socket_recv_cb(fd, max_bytes, on_error);
     if (!b) return spec_string_intern("");
-    String s = spec_bytebuffer_to_string(b);
+    String s = (b->length == 0) ? spec_string_intern("") : spec_string_from_bytes((const char*)b->data, b->length);
     spec_release(b);
     return s;
 }

@@ -1243,7 +1243,7 @@ Class is IrBuilder{
 			if({ resArc }, { vkVal: 1; });
 			self:emit(inst: IrInst:ConstInt(dst: vk, value: vkVal));
 			local String is newMap: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: newMap, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new_typed', argTypes: [IrType:I64, IrType:I64], args: [kk, vk]));
+			self:emit(inst: IrInst:IrCall(dst: newMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kk, vk]));
 			self:emit(inst: IrInst:Store(slot: '@' . cacheGlob, val: newMap, ty: IrType:Ptr));
 			self:terminate(inst: IrInst:Br(target: chkLbl));
 
@@ -1931,14 +1931,14 @@ Class is IrBuilder{
 					local Boolean is isByteListVar: varType:name == 'List of Byte' || varType:name == 'List:Byte' || (varType:name == 'List' && listElem == 'Byte');
 					if({ isByteListVar }, {
 						defVal: self:nextTmp();
-						self:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'spec_bytebuffer_new', argTypes: [], args: []));
+						self:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_byteBufNew', argTypes: [], args: []));
 						self:emitClaimPool(val: defVal);
 						self:emit(inst: IrInst:Retain(val: defVal));
 					}, {
 						if({ varType:name == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
-							local String is vecCtor: 'spec_array_new_object';
+							local String is vecCtor: 'Vector_vecNewObject';
 							if({ listElem != '' && !self:isArcSpecType(specType: listElem) }, {
-								vecCtor: 'spec_array_new';
+								vecCtor: 'Vector_vecNew';
 							});
 							defVal: self:nextTmp();
 							self:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [], args: []));
@@ -2645,7 +2645,7 @@ Class is IrBuilder{
 					});
 					if({ isStrCmp && (op == '<' || op == '<=' || op == '>' || op == '>=') }, {
 						local String is cmpRes: self:nextTmp();
-						self:emit(inst: IrInst:IrCall(dst: cmpRes, hasDst: true, retType: IrType:I64, callee: 'spec_string_compare', argTypes: [IrType:Ptr, IrType:Ptr], args: [l, r]));
+						self:emit(inst: IrInst:IrCall(dst: cmpRes, hasDst: true, retType: IrType:I64, callee: 'Buf_stringCompare', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', l, r]));
 						local String is zeroV: self:nextTmp();
 						self:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
 						self:emit(inst: IrInst:Cmp(dst: dst, op: op, lhs: cmpRes, rhs: zeroV, ty: IrType:I64));
@@ -2818,9 +2818,9 @@ Class is IrBuilder{
 					if({ self:irTypeFor(specType: firstItem:resolvedType) == IrType:Ptr }, { isObjArr: true; });
 				});
 				if({ isObjArr }, {
-					self:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_new_object', argTypes: emptyT, args: emptyV));
+					self:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecNewObject', argTypes: emptyT, args: emptyV));
 				}, {
-					self:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_new', argTypes: emptyT, args: emptyV));
+					self:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecNew', argTypes: emptyT, args: emptyV));
 				});
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
@@ -2858,11 +2858,11 @@ Class is IrBuilder{
 					self:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
 					local String is mvkV: self:nextTmp();
 					self:emit(inst: IrInst:ConstInt(dst: mvkV, value: 0));
-					self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new_typed', argTypes: [IrType:I64, IrType:I64], args: [mkkV, mvkV]));
+					self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [mkkV, mvkV]));
 				}, {
 					local Array of IrType is emptyT: [];
 					local Array of String is emptyV: [];
-					self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new', argTypes: emptyT, args: emptyV));
+					self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNew', argTypes: emptyT, args: emptyV));
 				});
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {

@@ -104,16 +104,16 @@ Class of CallLowerer is MapCallLowerer{
 			});
 			if({ kk != 0 || vk != 0 }, {
 				if({ kk == 0 && vk == 1 }, {
-					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new_object', argTypes: [], args: []));
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: [], args: []));
 				}, {
 					local String is kkV: b:nextTmp();
 					b:emit(inst: IrInst:ConstInt(dst: kkV, value: kk));
 					local String is vkV: b:nextTmp();
 					b:emit(inst: IrInst:ConstInt(dst: vkV, value: vk));
-					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new_typed', argTypes: [IrType:I64, IrType:I64], args: [kkV, vkV]));
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kkV, vkV]));
 				});
 			}, {
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new', argTypes: [], args: []));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNew', argTypes: [], args: []));
 			});
 			b:emitClaimPool(val: dst);
 			return dst;
@@ -271,9 +271,9 @@ Class of CallLowerer is MapCallLowerer{
 						b:emit(inst: IrInst:ConstInt(dst: kkV, value: kk));
 						local String is vkV: b:nextTmp();
 						b:emit(inst: IrInst:ConstInt(dst: vkV, value: 0));
-						b:emit(inst: IrInst:IrCall(dst: outMap, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new_typed', argTypes: [IrType:I64, IrType:I64], args: [kkV, vkV]));
+						b:emit(inst: IrInst:IrCall(dst: outMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kkV, vkV]));
 					}, {
-						b:emit(inst: IrInst:IrCall(dst: outMap, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new', argTypes: [], args: []));
+						b:emit(inst: IrInst:IrCall(dst: outMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNew', argTypes: [], args: []));
 					});
 					b:emitClaimPool(val: outMap);
 				});

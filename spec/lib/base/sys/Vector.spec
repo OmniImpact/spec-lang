@@ -34,6 +34,38 @@ Class is Vector{
 		Mem:atomicStoreI64(addr: addr + 32, val: 0);
 	}
 
+	## Destroys this vector, releasing any ARC elements and freeing its backing array.
+	Function is vecDestroy(){
+		local Int is addr: Mem:objToAddr(obj: self);
+		if({ addr == 0 }, { return; });
+		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
+		if({ items != 0 }, {
+			local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 24);
+			if({ kind == 1 }, {
+				local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+				local Int is i: 0;
+				while({ i < len }, {
+					local Int is it: Mem:loadI64(ptr: items, byteOffset: i * 8);
+					if({ it != 0 }, { Mem:releaseAddr(objAddr: it); });
+					i: i + 1;
+				});
+			});
+			Mem:free(ptr: items);
+			Mem:storeI64(ptr: addr, byteOffset: 0, val: 0);
+		});
+	}
+
+	## Destroys this byte buffer, freeing its backing byte array.
+	Function is byteBufDestroy(){
+		local Int is addr: Mem:objToAddr(obj: self);
+		if({ addr == 0 }, { return; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		if({ data != 0 }, {
+			Mem:free(ptr: data);
+			Mem:storeI64(ptr: addr, byteOffset: 0, val: 0);
+		});
+	}
+
 	local Function is notifyError(Function is error, String is msg){
 		local Int is errAddr: Mem:objToAddr(obj: error);
 		if({ errAddr != 0 }, {

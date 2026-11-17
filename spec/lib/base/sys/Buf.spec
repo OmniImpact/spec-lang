@@ -122,6 +122,29 @@ Class is Buf{
 		return Mem:cmp(a: aData, b: bData, bytes: aLen) == 0;
 	}
 
+	## Lexicographical byte comparison of strings [a] and [b].
+	##
+	## @param a: First string.
+	## @param b: Second string.
+	## @return: Negative when [a] < [b], 0 when equal, positive when [a] > [b].
+	Function of Int is stringCompare(String is a, String is b){
+		local Int is aAddr: Mem:objToAddr(obj: a);
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		if({ aAddr == bAddr }, { return 0; });
+		if({ aAddr == 0 }, { return if({ bAddr != 0 }, { -1 }, { 0 }); });
+		if({ bAddr == 0 }, { return 1; });
+		local Int is aLen: Mem:loadI64(ptr: aAddr, byteOffset: 8);
+		local Int is bLen: Mem:loadI64(ptr: bAddr, byteOffset: 8);
+		local Int is n: if({ aLen < bLen }, { aLen }, { bLen });
+		if({ n > 0 }, {
+			local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
+			local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+			local Int is c: Mem:cmp(a: aData, b: bData, bytes: n);
+			if({ c != 0 }, { return c; });
+		});
+		return aLen - bLen;
+	}
+
 	## Returns the process-interned form of [s]: equal contents yield
 	## the SAME string object. Interned strings are immortal.
 	##

@@ -554,9 +554,48 @@ done:
   ret i64 %addr
 }
 define internal ptr @__spec_mem_str_from_bytes(i64 %srcAddr, i64 %len) alwaysinline {
-  %p = inttoptr i64 %srcAddr to ptr
-  %s = call ptr @spec_string_from_bytes(ptr %p, i64 %len)
-  ret ptr %s
+  %b = call noalias ptr @spec_rt_alloc(i64 64, ptr @spec_buf_destroy)
+  %es_p = getelementptr inbounds i8, ptr %b, i64 24
+  store i64 1, ptr %es_p, align 8
+  %has_src = icmp ne i64 %srcAddr, 0
+  %pos_len = icmp sgt i64 %len, 0
+  %non_empty = and i1 %has_src, %pos_len
+  br i1 %non_empty, label %chk_sbo, label %empty
+empty:
+  %ib0 = getelementptr inbounds i8, ptr %b, i64 36
+  store ptr %ib0, ptr %b, align 8
+  %cap_p0 = getelementptr inbounds i8, ptr %b, i64 16
+  store i64 24, ptr %cap_p0, align 8
+  ret ptr %b
+chk_sbo:
+  %len_p = getelementptr inbounds i8, ptr %b, i64 8
+  store i64 %len, ptr %len_p, align 8
+  %src = inttoptr i64 %srcAddr to ptr
+  %fits_sbo = icmp ule i64 %len, 23
+  br i1 %fits_sbo, label %sbo, label %heap
+sbo:
+  %ib1 = getelementptr inbounds i8, ptr %b, i64 36
+  store ptr %ib1, ptr %b, align 8
+  %cap_p1 = getelementptr inbounds i8, ptr %b, i64 16
+  store i64 24, ptr %cap_p1, align 8
+  call ptr @memcpy(ptr %ib1, ptr %src, i64 %len)
+  ret ptr %b
+heap:
+  %need = add i64 %len, 1
+  %hd = call noalias ptr @malloc(i64 %need)
+  %isnull = icmp eq ptr %hd, null
+  br i1 %isnull, label %oom, label %heap_ok
+oom:
+  call void @spec_panic(ptr @.str.oom)
+  br label %heap_ok
+heap_ok:
+  store ptr %hd, ptr %b, align 8
+  %cap_p2 = getelementptr inbounds i8, ptr %b, i64 16
+  store i64 %need, ptr %cap_p2, align 8
+  call ptr @memcpy(ptr %hd, ptr %src, i64 %len)
+  %nul_p = getelementptr inbounds i8, ptr %hd, i64 %len
+  store i8 0, ptr %nul_p, align 1
+  ret ptr %b
 }
 define internal ptr @__spec_mem_intern_str(ptr %b) alwaysinline {
   %c = call ptr @spec_buf_to_cstring(ptr %b)
@@ -720,22 +759,14 @@ define internal ptr @spec_loop_control_with_callback(ptr %cb, ptr %on_complete) 
 	local Function of String is emitTypeAndStringHelpers(){
 		return '''
 declare ptr @spec_string_intern(ptr)
-declare ptr @spec_string_from_bytes(ptr, i64)
-declare ptr @spec_string_concat(ptr, ptr)
-declare i1 @spec_string_equals(ptr, ptr)
-declare i64 @spec_string_compare(ptr, ptr)
-declare ptr @spec_buf_to_cstring(ptr)
-declare ptr @spec_to_string_int(i64)
 declare ptr @spec_to_string_float(double)
-declare ptr @spec_bytebuffer_new()
-declare void @spec_map_destroy(ptr)
-declare void @spec_array_destroy(ptr)
 declare void @spec_buf_destroy(ptr)
 declare void @spec_panic(ptr)
 declare void @spec_panic_byte_range(i64)
 declare void @spec_panic_cast(ptr, ptr)
 declare i32 @strcmp(ptr, ptr)
 declare i64 @strlen(ptr)
+declare noalias ptr @malloc(i64)
 declare ptr @calloc(i64, i64)
 declare ptr @realloc(ptr, i64)
 declare void @free(ptr)
@@ -744,6 +775,21 @@ declare ptr @memmove(ptr, ptr, i64)
 declare ptr @memset(ptr, i32, i64)
 declare i32 @memcmp(ptr, ptr, i64)
 %struct.SpecBuf = type { ptr, i64, i64, i64, i32 }
+@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer
+define internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {
+  %isnull = icmp eq ptr %b, null
+  br i1 %isnull, label %empty, label %chk
+chk:
+  %lp = getelementptr inbounds i8, ptr %b, i64 8
+  %len = load i64, ptr %lp, align 8
+  %is_zero = icmp eq i64 %len, 0
+  br i1 %is_zero, label %empty, label %ok
+ok:
+  %d = load ptr, ptr %b, align 8
+  ret ptr %d
+empty:
+  ret ptr @.str.tn_empty
+}
 define internal ptr @spec_string_copy(ptr %b) alwaysinline {
   %isnull = icmp eq ptr %b, null
   br i1 %isnull, label %empty, label %chk
@@ -752,11 +798,73 @@ chk:
   %len = load i64, ptr %lp
   %dp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 0
   %d = load ptr, ptr %dp
-  %s = call ptr @spec_string_from_bytes(ptr %d, i64 %len)
+  %da = ptrtoint ptr %d to i64
+  %s = call ptr @__spec_mem_str_from_bytes(i64 %da, i64 %len)
   ret ptr %s
 empty:
-  %e = call ptr @spec_string_from_bytes(ptr null, i64 0)
+  %e = call ptr @__spec_mem_str_from_bytes(i64 0, i64 0)
   ret ptr %e
+}
+define internal ptr @spec_string_concat(ptr %a, ptr %b) {
+  %a_null = icmp eq ptr %a, null
+  br i1 %a_null, label %copy_a, label %chk_uniq
+chk_uniq:
+  %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
+  %sf = load atomic i32, ptr %sfp monotonic, align 4
+  %imm = and i32 %sf, 1
+  %is_imm = icmp ne i32 %imm, 0
+  br i1 %is_imm, label %copy_a, label %chk_rc
+chk_rc:
+  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0
+  %rc = load atomic i32, ptr %rcp monotonic, align 4
+  %is_one = icmp eq i32 %rc, 1
+  br i1 %is_one, label %inplace, label %copy_a
+inplace:
+  call void @Buf_bufAppendBuf(ptr null, ptr %a, ptr %b)
+  ret ptr %a
+copy_a:
+  %ac = call ptr @spec_string_copy(ptr %a)
+  call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)
+  call void @spec_rt_release(ptr %a)
+  ret ptr %ac
+}
+define noalias ptr @Vector_vecNew() alwaysinline {
+  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)
+  ret ptr %a
+}
+define noalias ptr @Vector_vecNewObject() alwaysinline {
+  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)
+  %kp = getelementptr inbounds i8, ptr %a, i64 24
+  store i32 1, ptr %kp, align 8
+  ret ptr %a
+}
+define noalias ptr @Vector_byteBufNew() alwaysinline {
+  %b = call noalias ptr @spec_rt_alloc(i64 24, ptr @Vector_byteBufDestroy)
+  ret ptr %b
+}
+define noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinline {
+  %m = call noalias ptr @spec_rt_alloc(i64 48, ptr @HashTable_mapDestroy)
+  %b = call i64 @__spec_mem_alloc(i64 64)
+  %bp = inttoptr i64 %b to ptr
+  store ptr %bp, ptr %m, align 8
+  %nbp = getelementptr inbounds i8, ptr %m, i64 8
+  store i64 8, ptr %nbp, align 8
+  %kk32 = trunc i64 %kk to i32
+  %kkp = getelementptr inbounds i8, ptr %m, i64 24
+  store i32 %kk32, ptr %kkp, align 8
+  %vk32 = trunc i64 %vk to i32
+  %vkp = getelementptr inbounds i8, ptr %m, i64 28
+  store i32 %vk32, ptr %vkp, align 4
+  ret ptr %m
+}
+define noalias ptr @HashTable_mapNew() alwaysinline {
+  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 0)
+  ret ptr %m
+}
+define noalias ptr @HashTable_mapNewObject() alwaysinline {
+  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)
+  ret ptr %m
 }
 define internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {
   %r = call i32 @strcmp(ptr %a, ptr %b)
@@ -774,7 +882,6 @@ fail:
 ok:
   ret i64 %v
 }
-@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer
 @.str.tn_map = private unnamed_addr constant [4 x i8] c"Map\00"
 @.str.tn_arr = private unnamed_addr constant [6 x i8] c"Array\00"
 @.str.tn_str = private unnamed_addr constant [7 x i8] c"String\00"
@@ -796,13 +903,13 @@ ok:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
   %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
   %d = load ptr, ptr %dp
-  %ismap = icmp eq ptr %d, @spec_map_destroy
+  %ismap = icmp eq ptr %d, @HashTable_mapDestroy
   br i1 %ismap, label %ret_map, label %chk_arr
 ret_map:
   %sm = call ptr @spec_string_intern(ptr @.str.tn_map)
   ret ptr %sm
 chk_arr:
-  %isarr = icmp eq ptr %d, @spec_array_destroy
+  %isarr = icmp eq ptr %d, @Vector_vecDestroy
   br i1 %isarr, label %ret_arr, label %chk_str
 ret_arr:
   %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)
@@ -897,9 +1004,91 @@ declare i64 @spec_monitor_avg_mem_kb()
 declare i64 @spec_monitor_peak_mem_kb()
 declare i64 @spec_monitor_avg_cpu_pct()
 declare i64 @spec_monitor_peak_cpu_pct()
-declare i64 @spec_atomic_add(i64, i64)
-declare i64 @spec_atomic_put(i64, i64)
-declare i64 @spec_atomic_get(i64)
+@_spec_atomic_levels = internal global [54 x ptr] zeroinitializer, align 8
+@_spec_atomic_lock = internal global i32 0, align 4
+declare i64 @llvm.ctlz.i64(i64, i1 immarg)
+define internal ptr @__spec_atomic_slot_ptr(i64 %slot) {
+  %lt0 = icmp slt i64 %slot, 0
+  br i1 %lt0, label %ret_null, label %chk_l0
+ret_null:
+  ret ptr null
+chk_l0:
+  %in_l0 = icmp slt i64 %slot, 1024
+  br i1 %in_l0, label %lvl0, label %lvl_hi
+lvl0:
+  br label %lookup
+lvl_hi:
+  %u = add i64 %slot, 1024
+  %lz = call i64 @llvm.ctlz.i64(i64 %u, i1 true)
+  %msb = sub i64 63, %lz
+  %l_hi = sub i64 %msb, 10
+  %ge54 = icmp sge i64 %l_hi, 54
+  br i1 %ge54, label %ret_null, label %calc_hi
+calc_hi:
+  %sh = add i64 %l_hi, 10
+  %base = shl i64 1, %sh
+  %off_hi = sub i64 %u, %base
+  br label %lookup
+lookup:
+  %level = phi i64 [ 0, %lvl0 ], [ %l_hi, %calc_hi ]
+  %offset = phi i64 [ %slot, %lvl0 ], [ %off_hi, %calc_hi ]
+  %seg_sz = phi i64 [ 1024, %lvl0 ], [ %base, %calc_hi ]
+  %lp = getelementptr inbounds [54 x ptr], ptr @_spec_atomic_levels, i64 0, i64 %level
+  %seg = load atomic ptr, ptr %lp acquire, align 8
+  %has_seg = icmp ne ptr %seg, null
+  br i1 %has_seg, label %got_seg, label %spin
+spin:
+  %old = atomicrmw xchg ptr @_spec_atomic_lock, i32 1 acquire, align 4
+  %locked = icmp eq i32 %old, 0
+  br i1 %locked, label %crit, label %spin
+crit:
+  %seg2 = load atomic ptr, ptr %lp monotonic, align 8
+  %has_seg2 = icmp ne ptr %seg2, null
+  br i1 %has_seg2, label %unlock, label %alloc_seg
+alloc_seg:
+  %new_seg = call ptr @calloc(i64 %seg_sz, i64 8)
+  store atomic ptr %new_seg, ptr %lp release, align 8
+  br label %unlock
+unlock:
+  %seg3 = phi ptr [ %seg2, %crit ], [ %new_seg, %alloc_seg ]
+  store atomic i32 0, ptr @_spec_atomic_lock release, align 4
+  br label %got_seg
+got_seg:
+  %s = phi ptr [ %seg, %lookup ], [ %seg3, %unlock ]
+  %ep = getelementptr inbounds i64, ptr %s, i64 %offset
+  ret ptr %ep
+}
+define internal i64 @spec_atomic_add(i64 %slot, i64 %v) {
+  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)
+  %isnull = icmp eq ptr %p, null
+  br i1 %isnull, label %zero, label %ok
+zero:
+  ret i64 0
+ok:
+  %old = atomicrmw add ptr %p, i64 %v seq_cst, align 8
+  %res = add i64 %old, %v
+  ret i64 %res
+}
+define internal i64 @spec_atomic_put(i64 %slot, i64 %v) {
+  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)
+  %isnull = icmp eq ptr %p, null
+  br i1 %isnull, label %zero, label %ok
+zero:
+  ret i64 0
+ok:
+  %old = atomicrmw xchg ptr %p, i64 %v seq_cst, align 8
+  ret i64 %old
+}
+define internal i64 @spec_atomic_get(i64 %slot) {
+  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)
+  %isnull = icmp eq ptr %p, null
+  br i1 %isnull, label %zero, label %ok
+zero:
+  ret i64 0
+ok:
+  %val = load atomic i64, ptr %p seq_cst, align 8
+  ret i64 %val
+}
 declare i64 @spec_parallel_run(i64, i64, ptr)
 declare ptr @spec_parallel_sync(ptr)
 declare ptr @spec_parallel_sync_with(i64, ptr)
@@ -932,11 +1121,6 @@ declare i64 @spec_time_set_interval(i64, i64, ptr)
 declare i1 @spec_time_cancel_timer(i64)
 declare i64 @spec_term_width()
 declare i64 @spec_term_height()
-declare ptr @spec_array_new()
-declare ptr @spec_array_new_object()
-declare ptr @spec_map_new()
-declare ptr @spec_map_new_object()
-declare ptr @spec_map_new_typed(i64, i64)
 declare ptr @spec_cli_args_map(i64, ptr)
 declare void @spec_drain_async_tasks()
 declare i64 @spec_tcp_connect(ptr, i64, i64)

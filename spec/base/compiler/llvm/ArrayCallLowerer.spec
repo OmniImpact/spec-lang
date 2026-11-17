@@ -67,7 +67,7 @@ Class of CallLowerer is ArrayCallLowerer{
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, {
 			local String is dst: b:nextTmp();
-			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_new', argTypes: [], args: []));
+			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecNew', argTypes: [], args: []));
 			b:emitClaimPool(val: dst);
 			return dst;
 		});
@@ -470,15 +470,15 @@ Class of CallLowerer is ArrayCallLowerer{
 					b:emit(inst: IrInst:Store(slot: accSlot, val: zV, ty: IrType:I64));
 				});
 				if({ call:name == 'filter' }, {
-					local String is newCallee: 'spec_array_new';
-					if({ elemTy == IrType:Ptr }, { newCallee: 'spec_array_new_object'; });
+					local String is newCallee: 'Vector_vecNew';
+					if({ elemTy == IrType:Ptr }, { newCallee: 'Vector_vecNewObject'; });
 					outArr: b:nextTmp();
 					b:emit(inst: IrInst:IrCall(dst: outArr, hasDst: true, retType: IrType:Ptr, callee: newCallee, argTypes: [], args: []));
 					b:emitClaimPool(val: outArr);
 				});
 				if({ call:name == 'map' }, {
-					local String is newCallee: 'spec_array_new';
-					if({ outElemTy == IrType:Ptr }, { newCallee: 'spec_array_new_object'; });
+					local String is newCallee: 'Vector_vecNew';
+					if({ outElemTy == IrType:Ptr }, { newCallee: 'Vector_vecNewObject'; });
 					outArr: b:nextTmp();
 					b:emit(inst: IrInst:IrCall(dst: outArr, hasDst: true, retType: IrType:Ptr, callee: newCallee, argTypes: [], args: []));
 					b:emitClaimPool(val: outArr);

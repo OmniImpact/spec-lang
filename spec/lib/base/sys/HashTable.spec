@@ -36,6 +36,38 @@ Class is HashTable{
 		Mem:atomicStoreI64(addr: addr + 40, val: 0);
 	}
 
+	## Destroys this map, releasing any ARC keys/values and freeing its buckets and entries.
+	Function is mapDestroy(){
+		local Int is mAddr: Mem:objToAddr(obj: self);
+		if({ mAddr == 0 }, { return; });
+		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
+		if({ buckets == 0 }, { return; });
+		local Int is nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
+		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24);
+		local Int is valKind: Mem:loadI32(ptr: mAddr, byteOffset: 28);
+		local Int is i: 0;
+		while({ i < nb }, {
+			local Int is curr: Mem:loadI64(ptr: buckets, byteOffset: i * 8);
+			while({ curr != 0 }, {
+				local Int is next: Mem:loadI64(ptr: curr, byteOffset: 24);
+				local Int is kBits: Mem:loadI64(ptr: curr, byteOffset: 0);
+				if({ (keyKind == 0 || keyKind == 3) && kBits != 0 }, {
+					Mem:releaseAddr(objAddr: kBits);
+				});
+				local Int is vBits: Mem:loadI64(ptr: curr, byteOffset: 8);
+				local Int is isArc: Mem:loadByte(ptr: curr, byteOffset: 16);
+				if({ (isArc != 0 || valKind == 1) && vBits != 0 }, {
+					Mem:releaseAddr(objAddr: vBits);
+				});
+				Mem:free(ptr: curr);
+				curr: next;
+			});
+			i: i + 1;
+		});
+		Mem:free(ptr: buckets);
+		Mem:storeI64(ptr: mAddr, byteOffset: 0, val: 0);
+	}
+
 	local Function of Int is mapHashString(Int is strAddr, Int is nbuckets){
 		if({ strAddr == 0 }, { return 0; });
 		local Int is data: Mem:loadI64(ptr: strAddr, byteOffset: 0);

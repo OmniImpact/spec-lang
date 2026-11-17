@@ -294,7 +294,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 		local String is res: '%res';
 		finBlk:append(inst: IrInst:Load(dst: finAddr, slot: bufSlot, ty: IrType:I64));
 		finBlk:append(inst: IrInst:IrCast(dst: finPtr, val: finAddr, fromType: IrType:I64, toType: IrType:Ptr));
-		finBlk:append(inst: IrInst:IrCall(dst: res, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_from_bytes', argTypes: [IrType:Ptr, IrType:I64], args: [finPtr, totalVal]));
+		finBlk:append(inst: IrInst:IrCall(dst: res, hasDst: true, retType: IrType:Ptr, callee: '__spec_mem_str_from_bytes', argTypes: [IrType:I64, IrType:I64], args: [finAddr, totalVal]));
 		finBlk:append(inst: IrInst:CondBr(cond: isSmall, thenLabel: 'ret_blk', elseLabel: 'free_large'));
 
 		local IrBlock is freeBlk: fn:addBlock(label: 'free_large');
