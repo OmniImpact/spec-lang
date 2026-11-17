@@ -13,7 +13,7 @@ Class is LlvmRuntimePrelude{
 		return '''
 @_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer
 @.str.oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
-%struct.SpecHeader = type { i32, ptr, i32, i32 }
+%struct.SpecHeader = type { i32, i32, ptr }
 define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {
   %da = ptrtoint ptr %destroy to i64
   %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)
@@ -660,7 +660,7 @@ define internal ptr @spec_string_concat(ptr %a, ptr %b) {
   br i1 %a_null, label %copy_a, label %chk_uniq
 chk_uniq:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1
-  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
   %sf = load atomic i32, ptr %sfp monotonic, align 4
   %imm = and i32 %sf, 1
   %is_imm = icmp ne i32 %imm, 0
@@ -751,7 +751,7 @@ empty:
   ret ptr %e
 ok:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
-  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
   %d = load ptr, ptr %dp
   %ismap = icmp eq ptr %d, @HashTable_mapDestroy
   br i1 %ismap, label %ret_map, label %chk_arr

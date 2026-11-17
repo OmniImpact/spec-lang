@@ -1,7 +1,7 @@
 ; Spec LLVM IR
 @_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer
 @.str.oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
-%struct.SpecHeader = type { i32, ptr, i32, i32 }
+%struct.SpecHeader = type { i32, i32, ptr }
 define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {
   %da = ptrtoint ptr %destroy to i64
   %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)
@@ -632,7 +632,7 @@ define internal ptr @spec_string_concat(ptr %a, ptr %b) {
   br i1 %a_null, label %copy_a, label %chk_uniq
 chk_uniq:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1
-  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
   %sf = load atomic i32, ptr %sfp monotonic, align 4
   %imm = and i32 %sf, 1
   %is_imm = icmp ne i32 %imm, 0
@@ -723,7 +723,7 @@ empty:
   ret ptr %e
 ok:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
-  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
   %d = load ptr, ptr %dp
   %ismap = icmp eq ptr %d, @HashTable_mapDestroy
   br i1 %ismap, label %ret_map, label %chk_arr
@@ -1541,7 +1541,7 @@ declare void @spec_drain_async_tasks()
 @.mname.Arc.1 = private unnamed_addr constant [7 x i8] c"retain\00"
 @.mname.Arc.2 = private unnamed_addr constant [8 x i8] c"release\00"
 @.mname.Arc.3 = private unnamed_addr constant [14 x i8] c"threadCleanup\00"
-@.methods.Arc = private constant [4 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Arc.0, ptr @Arc_allocObj, i32 0, i32 24 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arc.1, ptr @Arc_retain, i32 0, i32 53 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arc.2, ptr @Arc_release, i32 4, i32 62 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arc.3, ptr @Arc_threadCleanup, i32 6, i32 103 }]
+@.methods.Arc = private constant [4 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Arc.0, ptr @Arc_allocObj, i32 0, i32 24 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arc.1, ptr @Arc_retain, i32 0, i32 52 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arc.2, ptr @Arc_release, i32 4, i32 61 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arc.3, ptr @Arc_threadCleanup, i32 6, i32 102 }]
 @.meta.Arc = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32 } { ptr @.typename.Arc, ptr @.src.Arc, ptr @.bases.Arc, i32 1, ptr null, ptr @.methods.Arc, i32 4 }
 %struct.Pool = type { ptr, ptr }
 @.typename.Pool = private unnamed_addr constant [5 x i8] c"Pool\00"
@@ -1565,7 +1565,7 @@ declare void @spec_drain_async_tasks()
 @.mname.Arena.1 = private unnamed_addr constant [9 x i8] c"allocObj\00"
 @.mname.Arena.2 = private unnamed_addr constant [6 x i8] c"reset\00"
 @.mname.Arena.3 = private unnamed_addr constant [13 x i8] c"destroyArena\00"
-@.methods.Arena = private constant [4 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Arena.0, ptr @Arena_create, i32 0, i32 25 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arena.1, ptr @Arena_allocObj, i32 0, i32 40 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arena.2, ptr @Arena_reset, i32 4, i32 81 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arena.3, ptr @Arena_destroyArena, i32 4, i32 114 }]
+@.methods.Arena = private constant [4 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Arena.0, ptr @Arena_create, i32 0, i32 25 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arena.1, ptr @Arena_allocObj, i32 0, i32 40 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arena.2, ptr @Arena_reset, i32 4, i32 80 }, { ptr, ptr, i32, i32 } { ptr @.mname.Arena.3, ptr @Arena_destroyArena, i32 4, i32 113 }]
 @.meta.Arena = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32 } { ptr @.typename.Arena, ptr @.src.Arena, ptr @.bases.Arena, i32 1, ptr null, ptr @.methods.Arena, i32 4 }
 %struct.Intern = type { ptr, ptr }
 @.typename.Intern = private unnamed_addr constant [7 x i8] c"Intern\00"
@@ -7776,7 +7776,7 @@ define i32 @spec_class_registry_count() {
 @.str.cache.1412 = internal global ptr null, align 8
 @.str.1413 = private unnamed_addr constant [5 x i8] c"ashr\00"
 @.str.cache.1413 = internal global ptr null, align 8
-@.str.1414 = private unnamed_addr constant [1319 x i8] c"@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer\0A@.str.oom = private unnamed_addr constant [14 x i8] c\22Out of memory\5C00\22\0A%struct.SpecHeader = type { i32, ptr, i32, i32 }\0Adefine internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {\0A  %da = ptrtoint ptr %destroy to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  %obj = inttoptr i64 %oa to ptr\0A  ret ptr %obj\0A}\0Adefine internal ptr @spec_rt_retain(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Arc_retain(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine internal void @spec_rt_release(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  call void @Arc_release(ptr null, i64 %oa)\0A  ret void\0A}\0Adefine internal i64 @spec_pool_frame() alwaysinline {\0A  %t = call i64 @Pool_poolFrame(ptr null)\0A  ret i64 %t\0A}\0Adefine internal void @spec_pool_release_to(i64 %mark) alwaysinline {\0A  call void @Pool_poolReleaseTo(ptr null, i64 %mark)\0A  ret void\0A}\0Adefine internal ptr @spec_claim_pool(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Pool_claimPool(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine void @spec_pool_thread_cleanup() nounwind {\0A  call void @Pool_threadCleanup(ptr null)\0A  ret void\0A}\00"
+@.str.1414 = private unnamed_addr constant [1314 x i8] c"@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer\0A@.str.oom = private unnamed_addr constant [14 x i8] c\22Out of memory\5C00\22\0A%struct.SpecHeader = type { i32, i32, ptr }\0Adefine internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {\0A  %da = ptrtoint ptr %destroy to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  %obj = inttoptr i64 %oa to ptr\0A  ret ptr %obj\0A}\0Adefine internal ptr @spec_rt_retain(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Arc_retain(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine internal void @spec_rt_release(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  call void @Arc_release(ptr null, i64 %oa)\0A  ret void\0A}\0Adefine internal i64 @spec_pool_frame() alwaysinline {\0A  %t = call i64 @Pool_poolFrame(ptr null)\0A  ret i64 %t\0A}\0Adefine internal void @spec_pool_release_to(i64 %mark) alwaysinline {\0A  call void @Pool_poolReleaseTo(ptr null, i64 %mark)\0A  ret void\0A}\0Adefine internal ptr @spec_claim_pool(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Pool_claimPool(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine void @spec_pool_thread_cleanup() nounwind {\0A  call void @Pool_threadCleanup(ptr null)\0A  ret void\0A}\00"
 @.str.cache.1414 = internal global ptr null, align 8
 @.str.1415 = private unnamed_addr constant [3497 x i8] c"%struct.SpecClosure = type { ptr, ptr, ptr }\0Adefine internal void @__spec_closure_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 1\0A  %env = load ptr, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %has_env = icmp ne ptr %env, null\0A  %has_d = icmp ne ptr %d, null\0A  %both = and i1 %has_env, %has_d\0A  br i1 %both, label %call_d, label %done\0Acall_d:\0A  call void %d(ptr %env)\0A  store ptr null, ptr %ep\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_closure_new(ptr %fn, ptr %env, ptr %destroy_env) {\0A  %c = call ptr @spec_rt_alloc(i64 24, ptr @__spec_closure_destroy)\0A  %fp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 0\0A  store ptr %fn, ptr %fp\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 1\0A  store ptr %env, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 2\0A  store ptr %destroy_env, ptr %dp\0A  ret ptr %c\0A}\0A%struct.SpecBox = type { i64, i1 }\0Adefine internal void @__spec_box_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  br i1 %is_arc, label %rel, label %done\0Arel:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %nz = icmp ne i64 %vi, 0\0A  br i1 %nz, label %do_rel, label %done\0Ado_rel:\0A  %vptr = inttoptr i64 %vi to ptr\0A  call void @spec_rt_release(ptr %vptr)\0A  store i64 0, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_box_new(i64 %val, i1 %is_arc) {\0A  %b = call ptr @spec_rt_alloc(i64 16, ptr @__spec_box_destroy)\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  store i64 %val, ptr %vp\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  store i1 %is_arc, ptr %ap\0A  ret ptr %b\0A}\0Adefine internal ptr @spec_rt_box_get(ptr %b) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %null_ret, label %ok\0Anull_ret:\0A  ret ptr null\0Aok:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %vptr = inttoptr i64 %vi to ptr\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %nz = icmp ne i64 %vi, 0\0A  %do_arc = and i1 %is_arc, %nz\0A  br i1 %do_arc, label %arc, label %done\0Aarc:\0A  call ptr @spec_rt_retain(ptr %vptr)\0A  call ptr @spec_claim_pool(ptr %vptr)\0A  br label %done\0Adone:\0A  ret ptr %vptr\0A}\0Adefine internal void @spec_rt_box_set(ptr %b, ptr %new_val) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %done, label %ok\0Aok:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %new_i = ptrtoint ptr %new_val to i64\0A  br i1 %is_arc, label %arc, label %store_val\0Aarc:\0A  %nn = icmp ne ptr %new_val, null\0A  br i1 %nn, label %do_ret, label %chk_old\0Ado_ret:\0A  call ptr @spec_rt_retain(ptr %new_val)\0A  br label %chk_old\0Achk_old:\0A  %old_i = load i64, ptr %vp\0A  %onz = icmp ne i64 %old_i, 0\0A  br i1 %onz, label %do_rel, label %store_val\0Ado_rel:\0A  %old_p = inttoptr i64 %old_i to ptr\0A  call void @spec_rt_release(ptr %old_p)\0A  br label %store_val\0Astore_val:\0A  store i64 %new_i, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\00"
 @.str.cache.1415 = internal global ptr null, align 8
@@ -7784,7 +7784,7 @@ define i32 @spec_class_registry_count() {
 @.str.cache.1416 = internal global ptr null, align 8
 @.str.1417 = private unnamed_addr constant [1459 x i8] c"%struct.SpecLoopControl = type { i8, ptr, ptr }\0Adefine internal ptr @LoopControl_new() alwaysinline {\0A  %c = call ptr @spec_rt_alloc(i64 24, ptr null)\0A  ret ptr %c\0A}\0Adefine internal void @LoopControl_stop(ptr %c) alwaysinline {\0A  %nn = icmp ne ptr %c, null\0A  br i1 %nn, label %ok, label %done\0Aok:\0A  store i8 1, ptr %c\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i1 @spec_loop_control_is_stopped(ptr %c) alwaysinline {\0A  %isnull = icmp eq ptr %c, null\0A  br i1 %isnull, label %no, label %ok\0Ano:\0A  ret i1 0\0Aok:\0A  %v = load i8, ptr %c\0A  %b = icmp ne i8 %v, 0\0A  ret i1 %b\0A}\0Adefine internal void @spec_loop_control_complete(ptr %c) alwaysinline {\0A  %isnull = icmp eq ptr %c, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %fnp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 2\0A  %fn = load ptr, ptr %fnp\0A  %fnn = icmp ne ptr %fn, null\0A  br i1 %fnn, label %call, label %done\0Acall:\0A  %cbp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 1\0A  %cb = load ptr, ptr %cbp\0A  call void %fn(ptr %cb, ptr %c)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_loop_control_with_callback(ptr %cb, ptr %on_complete) alwaysinline {\0A  %c = call ptr @spec_rt_alloc(i64 24, ptr null)\0A  %cbp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 1\0A  store ptr %cb, ptr %cbp\0A  %fnp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 2\0A  store ptr %on_complete, ptr %fnp\0A  ret ptr %c\0A}\00"
 @.str.cache.1417 = internal global ptr null, align 8
-@.str.1418 = private unnamed_addr constant [7455 x i8] c"@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8\0Adefine internal ptr @spec_string_intern(ptr %c) nounwind {\0A  %ca = ptrtoint ptr %c to i64\0A  %sa = ptrtoint ptr @_spec_intern_state to i64\0A  %ra = call i64 @Intern_internCstr(ptr null, i64 %ca, i64 %sa)\0A  %s = inttoptr i64 %ra to ptr\0A  ret ptr %s\0A}\0Adeclare void @spec_pal_format_float(double, i64) nounwind\0Adefine internal ptr @spec_to_string_float(double %v) nounwind {\0A  %buf = alloca [64 x i8], align 8\0A  %ba = ptrtoint ptr %buf to i64\0A  call void @spec_pal_format_float(double %v, i64 %ba)\0A  %s = call ptr @spec_string_intern(ptr %buf)\0A  ret ptr %s\0A}\0Adeclare void @spec_panic(ptr) noreturn nounwind\0Adeclare void @spec_panic_byte_range(i64) noreturn nounwind\0Adeclare void @spec_panic_cast(ptr, ptr) noreturn nounwind\0Adeclare i32 @strcmp(ptr nocapture readonly, ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare i64 @strlen(ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare noalias ptr @malloc(i64) nounwind willreturn allockind(\22alloc,uninitialized\22) allocsize(0)\0Adeclare noalias ptr @calloc(i64, i64) nounwind willreturn allockind(\22alloc,zeroed\22) allocsize(0, 1)\0Adeclare ptr @realloc(ptr, i64) nounwind willreturn allockind(\22realloc\22) allocsize(1)\0Adeclare void @free(ptr) nounwind willreturn allockind(\22free\22)\0Adeclare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memset(ptr returned writeonly, i32, i64) nounwind willreturn\0Adeclare i32 @memcmp(ptr nocapture readonly, ptr nocapture readonly, i64) nounwind willreturn memory(read)\0A%struct.SpecBuf = type { ptr, i64, i64, i64, i32 }\0A@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer\0Adefine void @spec_buf_destroy(ptr %self) nounwind {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %d = load ptr, ptr %self, align 8\0A  %dnull = icmp eq ptr %d, null\0A  br i1 %dnull, label %done, label %chk_sbo\0Achk_sbo:\0A  %inl = getelementptr inbounds i8, ptr %self, i64 36\0A  %is_sbo = icmp eq ptr %d, %inl\0A  br i1 %is_sbo, label %done, label %do_free\0Ado_free:\0A  call void @free(ptr %d)\0A  store ptr null, ptr %self, align 8\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds i8, ptr %b, i64 8\0A  %len = load i64, ptr %lp, align 8\0A  %is_zero = icmp eq i64 %len, 0\0A  br i1 %is_zero, label %empty, label %ok\0Aok:\0A  %d = load ptr, ptr %b, align 8\0A  ret ptr %d\0Aempty:\0A  ret ptr @.str.tn_empty\0A}\0Adefine internal ptr @spec_string_copy(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 1\0A  %len = load i64, ptr %lp\0A  %dp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 0\0A  %d = load ptr, ptr %dp\0A  %da = ptrtoint ptr %d to i64\0A  %s = call ptr @__spec_mem_str_from_bytes(i64 %da, i64 %len)\0A  ret ptr %s\0Aempty:\0A  %e = call ptr @__spec_mem_str_from_bytes(i64 0, i64 0)\0A  ret ptr %e\0A}\0Adefine internal ptr @spec_string_concat(ptr %a, ptr %b) {\0A  %a_null = icmp eq ptr %a, null\0A  br i1 %a_null, label %copy_a, label %chk_uniq\0Achk_uniq:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2\0A  %sf = load atomic i32, ptr %sfp monotonic, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %copy_a, label %chk_rc\0Achk_rc:\0A  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0\0A  %rc = load atomic i32, ptr %rcp monotonic, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %inplace, label %copy_a\0Ainplace:\0A  call void @Buf_bufAppendBuf(ptr null, ptr %a, ptr %b)\0A  ret ptr %a\0Acopy_a:\0A  %ac = call ptr @spec_string_copy(ptr %a)\0A  call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)\0A  call void @spec_rt_release(ptr %a)\0A  ret ptr %ac\0A}\0Adefine internal noalias ptr @Vector_vecNew() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_vecNewObject() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  %kp = getelementptr inbounds i8, ptr %a, i64 24\0A  store i32 1, ptr %kp, align 8\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_byteBufNew() alwaysinline {\0A  %b = call noalias ptr @spec_rt_alloc(i64 24, ptr @Vector_byteBufDestroy)\0A  ret ptr %b\0A}\0Adefine internal noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinline {\0A  %m = call noalias ptr @spec_rt_alloc(i64 48, ptr @HashTable_mapDestroy)\0A  %b = call i64 @__spec_mem_alloc(i64 64)\0A  %bp = inttoptr i64 %b to ptr\0A  store ptr %bp, ptr %m, align 8\0A  %nbp = getelementptr inbounds i8, ptr %m, i64 8\0A  store i64 8, ptr %nbp, align 8\0A  %kk32 = trunc i64 %kk to i32\0A  %kkp = getelementptr inbounds i8, ptr %m, i64 24\0A  store i32 %kk32, ptr %kkp, align 8\0A  %vk32 = trunc i64 %vk to i32\0A  %vkp = getelementptr inbounds i8, ptr %m, i64 28\0A  store i32 %vk32, ptr %vkp, align 4\0A  ret ptr %m\0A}\0Adefine internal noalias ptr @HashTable_mapNew() alwaysinline {\0A  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 0)\0A  ret ptr %m\0A}\0Adefine internal noalias ptr @HashTable_mapNewObject() alwaysinline {\0A  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)\0A  ret ptr %m\0A}\0Adefine internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {\0A  %r = call i32 @strcmp(ptr %a, ptr %b)\0A  %eq = icmp eq i32 %r, 0\0A  ret i1 %eq\0A}\0Adefine internal i64 @__spec_check_byte(i64 %v) {\0A  %lt = icmp slt i64 %v, 0\0A  %gt = icmp sgt i64 %v, 255\0A  %bad = or i1 %lt, %gt\0A  br i1 %bad, label %fail, label %ok\0Afail:\0A  call void @spec_panic_byte_range(i64 %v)\0A  br label %ok\0Aok:\0A  ret i64 %v\0A}\0A@.str.tn_map = private unnamed_addr constant [4 x i8] c\22Map\5C00\22\0A@.str.tn_arr = private unnamed_addr constant [6 x i8] c\22Array\5C00\22\0A@.str.tn_str = private unnamed_addr constant [7 x i8] c\22String\5C00\22\0A@.str.bool_true = private unnamed_addr constant [5 x i8] c\22true\5C00\22\0A@.str.bool_false = private unnamed_addr constant [6 x i8] c\22false\5C00\22\0Adefine internal ptr @spec_to_string_bool(i1 %v) alwaysinline {\0A  %c = select i1 %v, ptr @.str.bool_true, ptr @.str.bool_false\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @spec_type_name(ptr %obj) {\0A  %addr = ptrtoint ptr %obj to i64\0A  %bad = icmp ult i64 %addr, 4096\0A  br i1 %bad, label %empty, label %ok\0Aempty:\0A  %e = call ptr @spec_string_intern(ptr @.str.tn_empty)\0A  ret ptr %e\0Aok:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %d = load ptr, ptr %dp\0A  %ismap = icmp eq ptr %d, @HashTable_mapDestroy\0A  br i1 %ismap, label %ret_map, label %chk_arr\0Aret_map:\0A  %sm = call ptr @spec_string_intern(ptr @.str.tn_map)\0A  ret ptr %sm\0Achk_arr:\0A  %isarr = icmp eq ptr %d, @Vector_vecDestroy\0A  br i1 %isarr, label %ret_arr, label %chk_str\0Aret_arr:\0A  %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)\0A  ret ptr %sa\0Achk_str:\0A  %isstr = icmp eq ptr %d, @spec_buf_destroy\0A  br i1 %isstr, label %ret_str, label %ret_cls\0Aret_str:\0A  %ss = call ptr @spec_string_intern(ptr @.str.tn_str)\0A  ret ptr %ss\0Aret_cls:\0A  %tn = load ptr, ptr %obj\0A  %sc = call ptr @spec_string_intern(ptr %tn)\0A  ret ptr %sc\0A}\00"
+@.str.1418 = private unnamed_addr constant [7455 x i8] c"@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8\0Adefine internal ptr @spec_string_intern(ptr %c) nounwind {\0A  %ca = ptrtoint ptr %c to i64\0A  %sa = ptrtoint ptr @_spec_intern_state to i64\0A  %ra = call i64 @Intern_internCstr(ptr null, i64 %ca, i64 %sa)\0A  %s = inttoptr i64 %ra to ptr\0A  ret ptr %s\0A}\0Adeclare void @spec_pal_format_float(double, i64) nounwind\0Adefine internal ptr @spec_to_string_float(double %v) nounwind {\0A  %buf = alloca [64 x i8], align 8\0A  %ba = ptrtoint ptr %buf to i64\0A  call void @spec_pal_format_float(double %v, i64 %ba)\0A  %s = call ptr @spec_string_intern(ptr %buf)\0A  ret ptr %s\0A}\0Adeclare void @spec_panic(ptr) noreturn nounwind\0Adeclare void @spec_panic_byte_range(i64) noreturn nounwind\0Adeclare void @spec_panic_cast(ptr, ptr) noreturn nounwind\0Adeclare i32 @strcmp(ptr nocapture readonly, ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare i64 @strlen(ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare noalias ptr @malloc(i64) nounwind willreturn allockind(\22alloc,uninitialized\22) allocsize(0)\0Adeclare noalias ptr @calloc(i64, i64) nounwind willreturn allockind(\22alloc,zeroed\22) allocsize(0, 1)\0Adeclare ptr @realloc(ptr, i64) nounwind willreturn allockind(\22realloc\22) allocsize(1)\0Adeclare void @free(ptr) nounwind willreturn allockind(\22free\22)\0Adeclare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memset(ptr returned writeonly, i32, i64) nounwind willreturn\0Adeclare i32 @memcmp(ptr nocapture readonly, ptr nocapture readonly, i64) nounwind willreturn memory(read)\0A%struct.SpecBuf = type { ptr, i64, i64, i64, i32 }\0A@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer\0Adefine void @spec_buf_destroy(ptr %self) nounwind {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %d = load ptr, ptr %self, align 8\0A  %dnull = icmp eq ptr %d, null\0A  br i1 %dnull, label %done, label %chk_sbo\0Achk_sbo:\0A  %inl = getelementptr inbounds i8, ptr %self, i64 36\0A  %is_sbo = icmp eq ptr %d, %inl\0A  br i1 %is_sbo, label %done, label %do_free\0Ado_free:\0A  call void @free(ptr %d)\0A  store ptr null, ptr %self, align 8\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds i8, ptr %b, i64 8\0A  %len = load i64, ptr %lp, align 8\0A  %is_zero = icmp eq i64 %len, 0\0A  br i1 %is_zero, label %empty, label %ok\0Aok:\0A  %d = load ptr, ptr %b, align 8\0A  ret ptr %d\0Aempty:\0A  ret ptr @.str.tn_empty\0A}\0Adefine internal ptr @spec_string_copy(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 1\0A  %len = load i64, ptr %lp\0A  %dp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 0\0A  %d = load ptr, ptr %dp\0A  %da = ptrtoint ptr %d to i64\0A  %s = call ptr @__spec_mem_str_from_bytes(i64 %da, i64 %len)\0A  ret ptr %s\0Aempty:\0A  %e = call ptr @__spec_mem_str_from_bytes(i64 0, i64 0)\0A  ret ptr %e\0A}\0Adefine internal ptr @spec_string_concat(ptr %a, ptr %b) {\0A  %a_null = icmp eq ptr %a, null\0A  br i1 %a_null, label %copy_a, label %chk_uniq\0Achk_uniq:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load atomic i32, ptr %sfp monotonic, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %copy_a, label %chk_rc\0Achk_rc:\0A  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0\0A  %rc = load atomic i32, ptr %rcp monotonic, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %inplace, label %copy_a\0Ainplace:\0A  call void @Buf_bufAppendBuf(ptr null, ptr %a, ptr %b)\0A  ret ptr %a\0Acopy_a:\0A  %ac = call ptr @spec_string_copy(ptr %a)\0A  call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)\0A  call void @spec_rt_release(ptr %a)\0A  ret ptr %ac\0A}\0Adefine internal noalias ptr @Vector_vecNew() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_vecNewObject() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  %kp = getelementptr inbounds i8, ptr %a, i64 24\0A  store i32 1, ptr %kp, align 8\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_byteBufNew() alwaysinline {\0A  %b = call noalias ptr @spec_rt_alloc(i64 24, ptr @Vector_byteBufDestroy)\0A  ret ptr %b\0A}\0Adefine internal noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinline {\0A  %m = call noalias ptr @spec_rt_alloc(i64 48, ptr @HashTable_mapDestroy)\0A  %b = call i64 @__spec_mem_alloc(i64 64)\0A  %bp = inttoptr i64 %b to ptr\0A  store ptr %bp, ptr %m, align 8\0A  %nbp = getelementptr inbounds i8, ptr %m, i64 8\0A  store i64 8, ptr %nbp, align 8\0A  %kk32 = trunc i64 %kk to i32\0A  %kkp = getelementptr inbounds i8, ptr %m, i64 24\0A  store i32 %kk32, ptr %kkp, align 8\0A  %vk32 = trunc i64 %vk to i32\0A  %vkp = getelementptr inbounds i8, ptr %m, i64 28\0A  store i32 %vk32, ptr %vkp, align 4\0A  ret ptr %m\0A}\0Adefine internal noalias ptr @HashTable_mapNew() alwaysinline {\0A  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 0)\0A  ret ptr %m\0A}\0Adefine internal noalias ptr @HashTable_mapNewObject() alwaysinline {\0A  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)\0A  ret ptr %m\0A}\0Adefine internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {\0A  %r = call i32 @strcmp(ptr %a, ptr %b)\0A  %eq = icmp eq i32 %r, 0\0A  ret i1 %eq\0A}\0Adefine internal i64 @__spec_check_byte(i64 %v) {\0A  %lt = icmp slt i64 %v, 0\0A  %gt = icmp sgt i64 %v, 255\0A  %bad = or i1 %lt, %gt\0A  br i1 %bad, label %fail, label %ok\0Afail:\0A  call void @spec_panic_byte_range(i64 %v)\0A  br label %ok\0Aok:\0A  ret i64 %v\0A}\0A@.str.tn_map = private unnamed_addr constant [4 x i8] c\22Map\5C00\22\0A@.str.tn_arr = private unnamed_addr constant [6 x i8] c\22Array\5C00\22\0A@.str.tn_str = private unnamed_addr constant [7 x i8] c\22String\5C00\22\0A@.str.bool_true = private unnamed_addr constant [5 x i8] c\22true\5C00\22\0A@.str.bool_false = private unnamed_addr constant [6 x i8] c\22false\5C00\22\0Adefine internal ptr @spec_to_string_bool(i1 %v) alwaysinline {\0A  %c = select i1 %v, ptr @.str.bool_true, ptr @.str.bool_false\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @spec_type_name(ptr %obj) {\0A  %addr = ptrtoint ptr %obj to i64\0A  %bad = icmp ult i64 %addr, 4096\0A  br i1 %bad, label %empty, label %ok\0Aempty:\0A  %e = call ptr @spec_string_intern(ptr @.str.tn_empty)\0A  ret ptr %e\0Aok:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %ismap = icmp eq ptr %d, @HashTable_mapDestroy\0A  br i1 %ismap, label %ret_map, label %chk_arr\0Aret_map:\0A  %sm = call ptr @spec_string_intern(ptr @.str.tn_map)\0A  ret ptr %sm\0Achk_arr:\0A  %isarr = icmp eq ptr %d, @Vector_vecDestroy\0A  br i1 %isarr, label %ret_arr, label %chk_str\0Aret_arr:\0A  %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)\0A  ret ptr %sa\0Achk_str:\0A  %isstr = icmp eq ptr %d, @spec_buf_destroy\0A  br i1 %isstr, label %ret_str, label %ret_cls\0Aret_str:\0A  %ss = call ptr @spec_string_intern(ptr @.str.tn_str)\0A  ret ptr %ss\0Aret_cls:\0A  %tn = load ptr, ptr %obj\0A  %sc = call ptr @spec_string_intern(ptr %tn)\0A  ret ptr %sc\0A}\00"
 @.str.cache.1418 = internal global ptr null, align 8
 @.str.1419 = private unnamed_addr constant [3298 x i8] c"declare double @sqrt(double) nounwind willreturn\0Adeclare double @round(double) nounwind willreturn\0Adeclare double @ceil(double) nounwind willreturn\0Adeclare double @floor(double) nounwind willreturn\0Adeclare double @fabs(double) nounwind willreturn\0Adeclare double @fmin(double, double) nounwind willreturn\0Adeclare double @fmax(double, double) nounwind willreturn\0Adeclare double @fma(double, double, double) nounwind willreturn\0Adeclare double @sin(double) nounwind willreturn\0Adeclare double @cos(double) nounwind willreturn\0Adeclare double @tan(double) nounwind willreturn\0Adeclare double @atan2(double, double) nounwind willreturn\0Adeclare double @log(double) nounwind willreturn\0Adeclare double @log2(double) nounwind willreturn\0Adeclare double @pow(double, double) nounwind willreturn\0Adeclare double @exp(double) nounwind willreturn\0Adeclare double @log10(double) nounwind willreturn\0Adeclare double @cbrt(double) nounwind willreturn\0Adeclare double @asin(double) nounwind willreturn\0Adeclare double @acos(double) nounwind willreturn\0Adeclare double @atan(double) nounwind willreturn\0Adefine internal double @spec_math_log(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log2(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log2(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log10(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log10(double %v)\0A  ret double %r\0A}\0Adefine internal i64 @__spec_rng_next() alwaysinline nounwind {\0A  %x0 = load i64, ptr @_spec_tls_i64, align 8\0A  %s1 = lshr i64 %x0, 12\0A  %x1 = xor i64 %x0, %s1\0A  %s2 = shl i64 %x1, 25\0A  %x2 = xor i64 %x1, %s2\0A  %s3 = lshr i64 %x2, 27\0A  %x3 = xor i64 %x2, %s3\0A  store i64 %x3, ptr @_spec_tls_i64, align 8\0A  %res = mul i64 %x3, 2685821657736338717\0A  ret i64 %res\0A}\0Adefine void @spec_fast_random_seed(i64 %idx) nounwind {\0A  %m = mul i64 %idx, -4658895280553007687\0A  %a = add i64 %m, -7723592293110705685\0A  %s0 = xor i64 %a, -7046029254386353131\0A  %isz = icmp eq i64 %s0, 0\0A  %s1 = select i1 %isz, i64 1, i64 %s0\0A  store i64 %s1, ptr @_spec_tls_i64, align 8\0A  %r1 = call i64 @__spec_rng_next()\0A  %r2 = call i64 @__spec_rng_next()\0A  %r3 = call i64 @__spec_rng_next()\0A  ret void\0A}\0Adeclare i64 @spec_time_monotonic_ns()\0Adefine internal double @spec_math_random(double %min, double %max) alwaysinline nounwind {\0A  %st = load i64, ptr @_spec_tls_i64, align 8\0A  %uninit = icmp eq i64 %st, 0\0A  br i1 %uninit, label %seed, label %gen\0Aseed:\0A  %addr = ptrtoint ptr @_spec_tls_i64 to i64\0A  %ns = call i64 @spec_time_monotonic_ns()\0A  %sd = xor i64 %addr, %ns\0A  call void @spec_fast_random_seed(i64 %sd)\0A  br label %gen\0Agen:\0A  %rnd = call i64 @__spec_rng_next()\0A  %top = lshr i64 %rnd, 11\0A  %flt = uitofp i64 %top to double\0A  %u = fmul double %flt, 0x3CA0000000000000\0A  %ge = fcmp oge double %min, %max\0A  br i1 %ge, label %ret_u, label %scale\0Aret_u:\0A  ret double %u\0Ascale:\0A  %diff = fsub double %max, %min\0A  %prod = fmul double %u, %diff\0A  %res = fadd double %min, %prod\0A  ret double %res\0A}\00"
 @.str.cache.1419 = internal global ptr null, align 8
@@ -23783,7 +23783,7 @@ entry:
 
 define i64 @Arc_allocObj(ptr %self, i64 %p_size, i64 %p_destroyFn) alwaysinline {
 entry:
-  %var_h_74 = alloca i64
+  %var_h_73 = alloca i64
   %var_fc_47 = alloca i64
   %var_next_39 = alloca i64
   %var_obj_35 = alloca i64
@@ -23842,7 +23842,7 @@ if_then_3:
   br i1 %t34, label %if_then_6, label %if_end_8
 if_then_6:
   %t36 = load i64, ptr %var_head_26
-  %t37 = add i64 0, 24
+  %t37 = add i64 0, 16
   %t38 = add i64 %t36, %t37
   store i64 %t38, ptr %var_obj_35
   %t40 = load i64, ptr %var_obj_35
@@ -23875,43 +23875,43 @@ if_then_6:
   %t63 = add i64 0, 1
   call void @__spec_mem_store_i32(i64 %t61, i64 %t62, i64 %t63)
   %t64 = load i64, ptr %var_head_26
-  %t65 = add i64 0, 8
-  %t66 = load i64, ptr %slot_destroyFn
-  call void @__spec_mem_store_i64(i64 %t64, i64 %t65, i64 %t66)
-  %t67 = load i64, ptr %var_head_26
-  %t68 = add i64 0, 16
-  %t69 = add i64 0, 0
-  call void @__spec_mem_store_i32(i64 %t67, i64 %t68, i64 %t69)
-  %t70 = load i64, ptr %var_head_26
-  %t71 = add i64 0, 20
-  %t72 = load i64, ptr %var_slenV_1
-  call void @__spec_mem_store_i32(i64 %t70, i64 %t71, i64 %t72)
-  %t73 = load i64, ptr %var_obj_35
-  ret i64 %t73
+  %t65 = add i64 0, 4
+  %t66 = load i64, ptr %var_slenV_1
+  %t67 = add i64 0, 16
+  %t68 = shl i64 %t66, %t67
+  call void @__spec_mem_store_i32(i64 %t64, i64 %t65, i64 %t68)
+  %t69 = load i64, ptr %var_head_26
+  %t70 = add i64 0, 8
+  %t71 = load i64, ptr %slot_destroyFn
+  call void @__spec_mem_store_i64(i64 %t69, i64 %t70, i64 %t71)
+  %t72 = load i64, ptr %var_obj_35
+  ret i64 %t72
 if_end_8:
   br label %if_end_5
 if_end_5:
-  %t75 = add i64 0, 24
-  %t76 = load i64, ptr %var_allocSize_3
-  %t77 = add i64 %t75, %t76
-  %t78 = call i64 @__spec_mem_alloc(i64 %t77)
-  store i64 %t78, ptr %var_h_74
-  %t79 = load i64, ptr %var_h_74
-  %t80 = add i64 0, 0
-  %t81 = add i64 0, 1
-  call void @__spec_mem_store_i32(i64 %t79, i64 %t80, i64 %t81)
-  %t82 = load i64, ptr %var_h_74
-  %t83 = add i64 0, 8
-  %t84 = load i64, ptr %slot_destroyFn
-  call void @__spec_mem_store_i64(i64 %t82, i64 %t83, i64 %t84)
-  %t85 = load i64, ptr %var_h_74
-  %t86 = add i64 0, 20
-  %t87 = load i64, ptr %var_slenV_1
-  call void @__spec_mem_store_i32(i64 %t85, i64 %t86, i64 %t87)
-  %t88 = load i64, ptr %var_h_74
-  %t89 = add i64 0, 24
-  %t90 = add i64 %t88, %t89
-  ret i64 %t90
+  %t74 = add i64 0, 16
+  %t75 = load i64, ptr %var_allocSize_3
+  %t76 = add i64 %t74, %t75
+  %t77 = call i64 @__spec_mem_alloc(i64 %t76)
+  store i64 %t77, ptr %var_h_73
+  %t78 = load i64, ptr %var_h_73
+  %t79 = add i64 0, 0
+  %t80 = add i64 0, 1
+  call void @__spec_mem_store_i32(i64 %t78, i64 %t79, i64 %t80)
+  %t81 = load i64, ptr %var_h_73
+  %t82 = add i64 0, 4
+  %t83 = load i64, ptr %var_slenV_1
+  %t84 = add i64 0, 16
+  %t85 = shl i64 %t83, %t84
+  call void @__spec_mem_store_i32(i64 %t81, i64 %t82, i64 %t85)
+  %t86 = load i64, ptr %var_h_73
+  %t87 = add i64 0, 8
+  %t88 = load i64, ptr %slot_destroyFn
+  call void @__spec_mem_store_i64(i64 %t86, i64 %t87, i64 %t88)
+  %t89 = load i64, ptr %var_h_73
+  %t90 = add i64 0, 16
+  %t91 = add i64 %t89, %t90
+  ret i64 %t91
 }
 
 define i64 @Arc_retain(ptr %self, i64 %p_objAddr) alwaysinline {
@@ -23931,11 +23931,11 @@ if_then_1:
   ret i64 %t5
 if_end_3:
   %t7 = load i64, ptr %slot_objAddr
-  %t8 = add i64 0, 24
+  %t8 = add i64 0, 16
   %t9 = sub i64 %t7, %t8
   store i64 %t9, ptr %var_h_6
   %t11 = load i64, ptr %var_h_6
-  %t12 = add i64 0, 16
+  %t12 = add i64 0, 4
   %t13 = add i64 %t11, %t12
   %t14 = call i64 @__spec_mem_atomic_load_i32(i64 %t13)
   store i64 %t14, ptr %var_sf_10
@@ -23982,11 +23982,11 @@ if_then_1:
   ret void
 if_end_3:
   %t6 = load i64, ptr %slot_objAddr
-  %t7 = add i64 0, 24
+  %t7 = add i64 0, 16
   %t8 = sub i64 %t6, %t7
   store i64 %t8, ptr %var_h_5
   %t10 = load i64, ptr %var_h_5
-  %t11 = add i64 0, 16
+  %t11 = add i64 0, 4
   %t12 = add i64 %t10, %t11
   %t13 = call i64 @__spec_mem_atomic_load_i32(i64 %t12)
   store i64 %t13, ptr %var_sf_9
@@ -24055,7 +24055,7 @@ if_then_16:
   br label %if_end_18
 if_end_18:
   %t62 = load i64, ptr %var_h_5
-  %t63 = add i64 0, 16
+  %t63 = add i64 0, 4
   %t64 = add i64 %t62, %t63
   %t65 = call i64 @__spec_mem_atomic_load_i32(i64 %t64)
   store i64 %t65, ptr %var_sf2_61
@@ -24068,9 +24068,9 @@ if_end_18:
 if_then_19:
   ret void
 if_end_21:
-  %t73 = load i64, ptr %var_h_5
-  %t74 = add i64 0, 20
-  %t75 = call i64 @__spec_mem_load_i32(i64 %t73, i64 %t74)
+  %t73 = load i64, ptr %var_sf2_61
+  %t74 = add i64 0, 16
+  %t75 = ashr i64 %t73, %t74
   store i64 %t75, ptr %var_slen_72
   %t77 = load i64, ptr %var_slen_72
   %t78 = add i64 0, 0
@@ -24169,7 +24169,7 @@ while_hdr_4:
   br i1 %t16, label %while_body_5, label %while_end_6
 while_body_5:
   %t19 = load i64, ptr %var_cur_8
-  %t20 = add i64 0, 24
+  %t20 = add i64 0, 16
   %t21 = add i64 %t19, %t20
   %t22 = add i64 0, 0
   %t23 = call i64 @__spec_mem_load_i64(i64 %t21, i64 %t22)
@@ -24444,14 +24444,14 @@ if_end_3:
 
 define i64 @Arena_allocObj(ptr %self, i64 %p_arenaAddr, i64 %p_size, i64 %p_destroyFn) alwaysinline {
 entry:
-  %var_list_140 = alloca i64
-  %var_nlist_128 = alloca i64
-  %var_olist_124 = alloca i64
-  %if_res_114 = alloca i64
-  %var_nocap_113 = alloca i64
-  %var_ocap_105 = alloca i64
-  %var_cnt_101 = alloca i64
-  %var_obj_93 = alloca i64
+  %var_list_137 = alloca i64
+  %var_nlist_125 = alloca i64
+  %var_olist_121 = alloca i64
+  %if_res_111 = alloca i64
+  %var_nocap_110 = alloca i64
+  %var_ocap_102 = alloca i64
+  %var_cnt_98 = alloca i64
+  %var_obj_90 = alloca i64
   %var_h_70 = alloca i64
   %var_nch_51 = alloca i64
   %if_res_43 = alloca i64
@@ -24470,7 +24470,7 @@ entry:
   %slot_destroyFn = alloca i64
   store i64 %p_destroyFn, ptr %slot_destroyFn
   %var_rawTotal_1 = alloca i64
-  %t2 = add i64 0, 24
+  %t2 = add i64 0, 16
   %if_res_3 = alloca i64
   %t5 = load i64, ptr %slot_size
   %t6 = add i64 0, 0
@@ -24578,96 +24578,92 @@ if_end_6:
   %t83 = add i64 0, 1
   call void @__spec_mem_store_i32(i64 %t81, i64 %t82, i64 %t83)
   %t84 = load i64, ptr %var_h_70
-  %t85 = add i64 0, 8
-  %t86 = load i64, ptr %slot_destroyFn
-  call void @__spec_mem_store_i64(i64 %t84, i64 %t85, i64 %t86)
+  %t85 = add i64 0, 4
+  %t86 = add i64 0, 4
+  call void @__spec_mem_store_i32(i64 %t84, i64 %t85, i64 %t86)
   %t87 = load i64, ptr %var_h_70
-  %t88 = add i64 0, 16
-  %t89 = add i64 0, 4
-  call void @__spec_mem_store_i32(i64 %t87, i64 %t88, i64 %t89)
-  %t90 = load i64, ptr %var_h_70
-  %t91 = add i64 0, 20
-  %t92 = add i64 0, 0
-  call void @__spec_mem_store_i32(i64 %t90, i64 %t91, i64 %t92)
-  %t94 = load i64, ptr %var_h_70
-  %t95 = add i64 0, 24
-  %t96 = add i64 %t94, %t95
-  store i64 %t96, ptr %var_obj_93
-  %t98 = load i64, ptr %slot_destroyFn
-  %t99 = add i64 0, 0
-  %t100 = icmp ne i64 %t98, %t99
-  br i1 %t100, label %if_then_10, label %if_end_12
+  %t88 = add i64 0, 8
+  %t89 = load i64, ptr %slot_destroyFn
+  call void @__spec_mem_store_i64(i64 %t87, i64 %t88, i64 %t89)
+  %t91 = load i64, ptr %var_h_70
+  %t92 = add i64 0, 16
+  %t93 = add i64 %t91, %t92
+  store i64 %t93, ptr %var_obj_90
+  %t95 = load i64, ptr %slot_destroyFn
+  %t96 = add i64 0, 0
+  %t97 = icmp ne i64 %t95, %t96
+  br i1 %t97, label %if_then_10, label %if_end_12
 if_then_10:
-  %t102 = load i64, ptr %slot_arenaAddr
-  %t103 = add i64 0, 24
-  %t104 = call i64 @__spec_mem_load_i64(i64 %t102, i64 %t103)
-  store i64 %t104, ptr %var_cnt_101
-  %t106 = load i64, ptr %slot_arenaAddr
-  %t107 = add i64 0, 32
-  %t108 = call i64 @__spec_mem_load_i64(i64 %t106, i64 %t107)
-  store i64 %t108, ptr %var_ocap_105
-  %t110 = load i64, ptr %var_cnt_101
-  %t111 = load i64, ptr %var_ocap_105
-  %t112 = icmp eq i64 %t110, %t111
-  br i1 %t112, label %if_then_13, label %if_end_15
+  %t99 = load i64, ptr %slot_arenaAddr
+  %t100 = add i64 0, 24
+  %t101 = call i64 @__spec_mem_load_i64(i64 %t99, i64 %t100)
+  store i64 %t101, ptr %var_cnt_98
+  %t103 = load i64, ptr %slot_arenaAddr
+  %t104 = add i64 0, 32
+  %t105 = call i64 @__spec_mem_load_i64(i64 %t103, i64 %t104)
+  store i64 %t105, ptr %var_ocap_102
+  %t107 = load i64, ptr %var_cnt_98
+  %t108 = load i64, ptr %var_ocap_102
+  %t109 = icmp eq i64 %t107, %t108
+  br i1 %t109, label %if_then_13, label %if_end_15
 if_then_13:
-  %t116 = load i64, ptr %var_ocap_105
-  %t117 = add i64 0, 0
-  %t118 = icmp eq i64 %t116, %t117
-  br i1 %t118, label %if_then_16, label %if_else_17
+  %t113 = load i64, ptr %var_ocap_102
+  %t114 = add i64 0, 0
+  %t115 = icmp eq i64 %t113, %t114
+  br i1 %t115, label %if_then_16, label %if_else_17
 if_then_16:
-  %t119 = add i64 0, 64
-  store i64 %t119, ptr %if_res_114
+  %t116 = add i64 0, 64
+  store i64 %t116, ptr %if_res_111
   br label %if_end_18
 if_else_17:
-  %t120 = load i64, ptr %var_ocap_105
-  %t121 = add i64 0, 2
-  %t122 = mul i64 %t120, %t121
-  store i64 %t122, ptr %if_res_114
+  %t117 = load i64, ptr %var_ocap_102
+  %t118 = add i64 0, 2
+  %t119 = mul i64 %t117, %t118
+  store i64 %t119, ptr %if_res_111
   br label %if_end_18
 if_end_18:
-  %t123 = load i64, ptr %if_res_114
-  store i64 %t123, ptr %var_nocap_113
-  %t125 = load i64, ptr %slot_arenaAddr
-  %t126 = add i64 0, 16
-  %t127 = call i64 @__spec_mem_load_i64(i64 %t125, i64 %t126)
-  store i64 %t127, ptr %var_olist_124
-  %t129 = load i64, ptr %var_olist_124
-  %t130 = load i64, ptr %var_nocap_113
-  %t131 = add i64 0, 8
-  %t132 = mul i64 %t130, %t131
-  %t133 = call i64 @__spec_mem_realloc(i64 %t129, i64 %t132)
-  store i64 %t133, ptr %var_nlist_128
+  %t120 = load i64, ptr %if_res_111
+  store i64 %t120, ptr %var_nocap_110
+  %t122 = load i64, ptr %slot_arenaAddr
+  %t123 = add i64 0, 16
+  %t124 = call i64 @__spec_mem_load_i64(i64 %t122, i64 %t123)
+  store i64 %t124, ptr %var_olist_121
+  %t126 = load i64, ptr %var_olist_121
+  %t127 = load i64, ptr %var_nocap_110
+  %t128 = add i64 0, 8
+  %t129 = mul i64 %t127, %t128
+  %t130 = call i64 @__spec_mem_realloc(i64 %t126, i64 %t129)
+  store i64 %t130, ptr %var_nlist_125
+  %t131 = load i64, ptr %slot_arenaAddr
+  %t132 = add i64 0, 16
+  %t133 = load i64, ptr %var_nlist_125
+  call void @__spec_mem_store_i64(i64 %t131, i64 %t132, i64 %t133)
   %t134 = load i64, ptr %slot_arenaAddr
-  %t135 = add i64 0, 16
-  %t136 = load i64, ptr %var_nlist_128
+  %t135 = add i64 0, 32
+  %t136 = load i64, ptr %var_nocap_110
   call void @__spec_mem_store_i64(i64 %t134, i64 %t135, i64 %t136)
-  %t137 = load i64, ptr %slot_arenaAddr
-  %t138 = add i64 0, 32
-  %t139 = load i64, ptr %var_nocap_113
-  call void @__spec_mem_store_i64(i64 %t137, i64 %t138, i64 %t139)
   br label %if_end_15
 if_end_15:
-  %t141 = load i64, ptr %slot_arenaAddr
-  %t142 = add i64 0, 16
-  %t143 = call i64 @__spec_mem_load_i64(i64 %t141, i64 %t142)
-  store i64 %t143, ptr %var_list_140
-  %t144 = load i64, ptr %var_list_140
-  %t145 = load i64, ptr %var_cnt_101
-  %t146 = add i64 0, 8
-  %t147 = mul i64 %t145, %t146
-  %t148 = load i64, ptr %var_obj_93
-  call void @__spec_mem_store_i64(i64 %t144, i64 %t147, i64 %t148)
-  %t149 = load i64, ptr %slot_arenaAddr
-  %t150 = add i64 0, 24
-  %t151 = load i64, ptr %var_cnt_101
-  %t152 = add i64 0, 1
-  %t153 = add i64 %t151, %t152
-  call void @__spec_mem_store_i64(i64 %t149, i64 %t150, i64 %t153)
+  %t138 = load i64, ptr %slot_arenaAddr
+  %t139 = add i64 0, 16
+  %t140 = call i64 @__spec_mem_load_i64(i64 %t138, i64 %t139)
+  store i64 %t140, ptr %var_list_137
+  %t141 = load i64, ptr %var_list_137
+  %t142 = load i64, ptr %var_cnt_98
+  %t143 = add i64 0, 8
+  %t144 = mul i64 %t142, %t143
+  %t145 = load i64, ptr %var_obj_90
+  call void @__spec_mem_store_i64(i64 %t141, i64 %t144, i64 %t145)
+  %t146 = load i64, ptr %slot_arenaAddr
+  %t147 = add i64 0, 24
+  %t148 = load i64, ptr %var_cnt_98
+  %t149 = add i64 0, 1
+  %t150 = add i64 %t148, %t149
+  call void @__spec_mem_store_i64(i64 %t146, i64 %t147, i64 %t150)
   br label %if_end_12
 if_end_12:
-  %t154 = load i64, ptr %var_obj_93
-  ret i64 %t154
+  %t151 = load i64, ptr %var_obj_90
+  ret i64 %t151
 }
 
 define void @Arena_reset(ptr %self, i64 %p_arenaAddr) {
@@ -24720,7 +24716,7 @@ while_body_5:
   %t26 = call i64 @__spec_mem_load_i64(i64 %t22, i64 %t25)
   store i64 %t26, ptr %var_obj_21
   %t28 = load i64, ptr %var_obj_21
-  %t29 = add i64 0, 24
+  %t29 = add i64 0, 16
   %t30 = sub i64 %t28, %t29
   store i64 %t30, ptr %var_h_27
   %t32 = load i64, ptr %var_h_27
@@ -25362,16 +25358,16 @@ if_end_33:
   %t163 = call i64 @__spec_mem_obj_to_addr(ptr %t162)
   store i64 %t163, ptr %var_newSAddr_161
   %t165 = load i64, ptr %var_newSAddr_161
-  %t166 = add i64 0, 24
+  %t166 = add i64 0, 16
   %t167 = sub i64 %t165, %t166
   store i64 %t167, ptr %var_hdrAddr_164
   %t169 = load i64, ptr %var_hdrAddr_164
-  %t170 = add i64 0, 16
+  %t170 = add i64 0, 4
   %t171 = add i64 %t169, %t170
   %t172 = call i64 @__spec_mem_atomic_load_i32(i64 %t171)
   store i64 %t172, ptr %var_oldFlags_168
   %t173 = load i64, ptr %var_hdrAddr_164
-  %t174 = add i64 0, 16
+  %t174 = add i64 0, 4
   %t175 = add i64 %t173, %t174
   %t176 = load i64, ptr %var_oldFlags_168
   %t177 = add i64 0, 1

@@ -2,11 +2,11 @@
 #! Pure-Spec unmanaged floor for Automated Reference Counting (ARC) and TLS small-object freelists.
 ##
 ## Compiled in unmanaged mode by IrBuilder (no automatic retain/release/pool instrumentation).
-## SpecHeader layout (24 bytes preceding object pointer):
-##   offset  0: ref_count (atomic i32)
-##   offset  8: destroy   (i64 function pointer: void (*)(void*))
-##   offset 16: sflags    (atomic i32: 1 = IMMORTAL, 2 = HASLEN, 4 = ARENA)
-##   offset 20: slen      (i32: 0 = >64B, 1..4 = 16B..64B size class bucket + 1)
+## SpecHeader layout (16 bytes preceding object pointer):
+##   offset  0: ref_count  (atomic i32)
+##   offset  4: flags_slen (i32: low 16 bits = sflags [1=IMMORTAL, 2=HASLEN, 4=ARENA],
+##                              high 16 bits = slen [0 = >64B, 1..4 = 16B..64B bucket + 1])
+##   offset  8: destroy    (i64 function pointer: void (*)(void*))
 ##
 ## TLS slots in @_spec_tls_i64:
 ##   slots  6..9:  freelist head pointer (SpecHeader address) for buckets 0..3
@@ -30,30 +30,29 @@ Class is Arc{
 			allocSize: slenV << 4;
 			local Int is head: Mem:tlsGetI64(slot: 6 + b);
 			if({ head != 0 }, {
-				local Int is obj: head + 24;
+				local Int is obj: head + 16;
 				local Int is next: Mem:loadI64(ptr: obj, byteOffset: 0);
 				Mem:tlsSetI64(slot: 6 + b, val: next);
 				local Int is fc: Mem:tlsGetI64(slot: 10 + b);
 				Mem:tlsSetI64(slot: 10 + b, val: fc - 1);
 				Mem:set(dst: obj, byteVal: 0, bytes: allocSize);
 				Mem:storeI32(ptr: head, byteOffset: 0, val: 1);
+				Mem:storeI32(ptr: head, byteOffset: 4, val: slenV << 16);
 				Mem:storeI64(ptr: head, byteOffset: 8, val: destroyFn);
-				Mem:storeI32(ptr: head, byteOffset: 16, val: 0);
-				Mem:storeI32(ptr: head, byteOffset: 20, val: slenV);
 				return obj;
 			});
 		});
-		local Int is h: Mem:alloc(bytes: 24 + allocSize);
+		local Int is h: Mem:alloc(bytes: 16 + allocSize);
 		Mem:storeI32(ptr: h, byteOffset: 0, val: 1);
+		Mem:storeI32(ptr: h, byteOffset: 4, val: slenV << 16);
 		Mem:storeI64(ptr: h, byteOffset: 8, val: destroyFn);
-		Mem:storeI32(ptr: h, byteOffset: 20, val: slenV);
-		return h + 24;
+		return h + 16;
 	}
 
 	Function of Int is retain(Int is objAddr){
 		if({ objAddr == 0 }, { return 0; });
-		local Int is h: objAddr - 24;
-		local Int is sf: Mem:atomicLoadI32(addr: h + 16);
+		local Int is h: objAddr - 16;
+		local Int is sf: Mem:atomicLoadI32(addr: h + 4);
 		if({ (sf & 1) != 0 }, { return objAddr; });
 		Mem:atomicAddI32(addr: h, delta: 1);
 		return objAddr;
@@ -61,8 +60,8 @@ Class is Arc{
 
 	Function is release(Int is objAddr){
 		if({ objAddr == 0 }, { return; });
-		local Int is h: objAddr - 24;
-		local Int is sf: Mem:atomicLoadI32(addr: h + 16);
+		local Int is h: objAddr - 16;
+		local Int is sf: Mem:atomicLoadI32(addr: h + 4);
 		if({ (sf & 1) != 0 }, { return; });
 		local Int is rc: Mem:atomicLoadI32(addr: h);
 		if({ rc == 0 }, {
@@ -80,9 +79,9 @@ Class is Arc{
 			if({ d != 0 }, {
 				Mem:callDestroy(fnPtr: d, objPtr: objAddr);
 			});
-			local Int is sf2: Mem:atomicLoadI32(addr: h + 16);
+			local Int is sf2: Mem:atomicLoadI32(addr: h + 4);
 			if({ (sf2 & 4) != 0 }, { return; });
-			local Int is slen: Mem:loadI32(ptr: h, byteOffset: 20);
+			local Int is slen: sf2 >> 16;
 			if({ slen != 0 }, {
 				local Int is b: slen - 1;
 				if({ b >= 0 && b < 4 }, {
@@ -105,7 +104,7 @@ Class is Arc{
 		while({ b < 4 }, {
 			local Int is cur: Mem:tlsGetI64(slot: 6 + b);
 			while({ cur != 0 }, {
-				local Int is next: Mem:loadI64(ptr: cur + 24, byteOffset: 0);
+				local Int is next: Mem:loadI64(ptr: cur + 16, byteOffset: 0);
 				Mem:free(ptr: cur);
 				cur: next;
 			});

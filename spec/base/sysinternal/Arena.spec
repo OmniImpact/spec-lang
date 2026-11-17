@@ -38,7 +38,7 @@ Class is Arena{
 	}
 
 	Function of Int is allocObj(Int is arenaAddr, Int is size, Int is destroyFn){
-		local Int is rawTotal: 24 + if({ size > 0 }, { size }, { 8 });
+		local Int is rawTotal: 16 + if({ size > 0 }, { size }, { 8 });
 		local Int is total: ((rawTotal + 7) >> 3) << 3;
 		local Int is ch: Mem:loadI64(ptr: arenaAddr, byteOffset: 0);
 		local Int is used: Mem:loadI64(ptr: ch, byteOffset: 8);
@@ -57,10 +57,9 @@ Class is Arena{
 		local Int is h: ch + 24 + used;
 		Mem:storeI64(ptr: ch, byteOffset: 8, val: used + total);
 		Mem:storeI32(ptr: h, byteOffset: 0, val: 1);
+		Mem:storeI32(ptr: h, byteOffset: 4, val: 4);
 		Mem:storeI64(ptr: h, byteOffset: 8, val: destroyFn);
-		Mem:storeI32(ptr: h, byteOffset: 16, val: 4);
-		Mem:storeI32(ptr: h, byteOffset: 20, val: 0);
-		local Int is obj: h + 24;
+		local Int is obj: h + 16;
 		if({ destroyFn != 0 }, {
 			local Int is cnt: Mem:loadI64(ptr: arenaAddr, byteOffset: 24);
 			local Int is ocap: Mem:loadI64(ptr: arenaAddr, byteOffset: 32);
@@ -85,7 +84,7 @@ Class is Arena{
 		while({ i > 0 }, {
 			i: i - 1;
 			local Int is obj: Mem:loadI64(ptr: list, byteOffset: i * 8);
-			local Int is h: obj - 24;
+			local Int is h: obj - 16;
 			local Int is d: Mem:loadI64(ptr: h, byteOffset: 8);
 			if({ d != 0 }, {
 				Mem:storeI64(ptr: h, byteOffset: 8, val: 0);

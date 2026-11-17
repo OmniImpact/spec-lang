@@ -130,9 +130,9 @@ Class is Intern{
 
 		local String is sObj: Mem:strFromBytes(srcAddr: cstrAddr, len: n);
 		local Int is newSAddr: Mem:objToAddr(obj: sObj);
-		local Int is hdrAddr: newSAddr - 24;
-		local Int is oldFlags: Mem:atomicLoadI32(addr: hdrAddr + 16);
-		Mem:atomicStoreI32(addr: hdrAddr + 16, val: oldFlags | 1);
+		local Int is hdrAddr: newSAddr - 16;
+		local Int is oldFlags: Mem:atomicLoadI32(addr: hdrAddr + 4);
+		Mem:atomicStoreI32(addr: hdrAddr + 4, val: oldFlags | 1);
 		local Int is ne: Mem:alloc(bytes: 24);
 		Mem:storeI64(ptr: ne, byteOffset: 0, val: newSAddr);
 		Mem:storeI64(ptr: ne, byteOffset: 8, val: h);
