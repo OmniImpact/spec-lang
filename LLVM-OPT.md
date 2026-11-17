@@ -138,6 +138,14 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
        - `binary_trees` 8t: `41.19M` → **`58.76M` nodes/s** (`1.738s` → **`1.245s`**, **+42.7%**; **0.65× C**, **0.76× Rust**)
        - `word_freq`: `1.049M` → **`1.168M` lines/s** (`0.956s` → **`0.858s`**, **+11.3%**; **+24.9%** over baseline)
        - `specunit`: 104 passed, 0 failed.
+  7. **24-byte `SpecBuf` Small-Buffer Optimization (SBO) + Structural `InlineHintPass` — DONE:**
+     - **SBO:** Added `char inline_buf[24]` to `SpecBuf` at offset 40 in [RuntimePrelude.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/gen/RuntimePrelude.spec) and [spec_runtime.c](file:///home/daniel/Projects/Spec/bootstrap/spec_runtime.c), with matching SBO growth check in [Buf.spec](file:///home/daniel/Projects/Spec/spec/lib/base/sys/Buf.spec) (`bufAppendBuf`). Eliminates separate `malloc`/`free` for short strings/buffers (`<= 24` bytes).
+     - **`InlineHintPass` (`SpecOptimizer`, `order = 35`):** Replaced hardcoded block/instruction caps in [LlvmEmitter.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/llvm/LlvmEmitter.spec) with [InlineHintPass.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/opt/InlineHintPass.spec) setting `IrFunction:alwaysInline` for acyclic non-recursive functions that are single-block (`blocks:length() == 1`) or belong to a model-type `IrStruct` (`userFields > 0 && userFields >= userMethods`, excluding `init`/`toString`/`className`/`equals`/`hashCode`).
+     - **Result (median of 3):**
+       - `word_freq`: `1.168M` → **`1.195M` lines/s** (`0.858s` → **`0.838s`**, **+2.3%**; peak `1.205M`, **+27.7%** over baseline)
+       - `binary_trees` 1t: `16.71M` → **`16.89M` nodes/s** (`4.161s` → **`4.115s`**, **+1.1%**)
+       - `binary_trees` 8t: `58.76M` → **`59.16M` nodes/s** (`1.245s` → **`1.235s`**, **+0.7%**)
+       - `specunit`: 104 passed, 0 failed.
 
 ---
 

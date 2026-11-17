@@ -1168,55 +1168,6 @@ declare void @spec_audio_close(i64)''';
 		return res;
 	}
 
-	local Function of Boolean is blockCallsFn(IrBlock is blk, String is fnName){
-		local Int is ii: 0;
-		while({ ii < blk:insts:length() }, {
-			local Boolean is hit: match(on: blk:insts:get(index: ii), when: [
-				IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
-					return callee == fnName;
-				},
-				else: { return false; }
-			]);
-			if({ hit }, { return true; });
-			ii++;
-		});
-		return false;
-	}
-
-	local Function of Boolean is fnIsSmallAcyclicLeaf(IrFunction is fn){
-		if({ fn:blocks:length() == 0 || fn:blocks:length() > 6 || fn:name == 'main' }, { return false; });
-		local Map of String to Int is blkIdx: Map:init();
-		local Int is totalInsts: 0;
-		local Int is bi: 0;
-		while({ bi < fn:blocks:length() }, {
-			local IrBlock is blk: fn:blocks:get(index: bi);
-			blkIdx:set(key: blk:label, value: bi);
-			totalInsts: totalInsts + blk:insts:length();
-			if({ totalInsts > 40 }, { return false; });
-			if({ self:blockCallsFn(blk: blk, fnName: fn:name) }, { return false; });
-			bi++;
-		});
-		bi: 0;
-		while({ bi < fn:blocks:length() }, {
-			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Int is n: blk:insts:length();
-			if({ n > 0 }, {
-				local Boolean is backedge: match(on: blk:insts:get(index: n - 1), when: [
-					IrInst:Br: local Function of Boolean(String is target){
-						return blkIdx:get(key: target, default: 0) <= bi;
-					},
-					IrInst:CondBr: local Function of Boolean(String is cond, String is thenLabel, String is elseLabel){
-						return blkIdx:get(key: thenLabel, default: 0) <= bi || blkIdx:get(key: elseLabel, default: 0) <= bi;
-					},
-					else: { return false; }
-				]);
-				if({ backedge }, { return false; });
-			});
-			bi++;
-		});
-		return true;
-	}
-
 	local Function of String is emitFunction(IrFunction is fn){
 		local String is retStr: self:llvmType(ty: fn:retType);
 		local String is paramsStr: '';
@@ -1233,7 +1184,7 @@ declare void @spec_audio_close(i64)''';
 		});
 
 		local String is inlineAttr: '';
-		if({ self:fnIsSmallAcyclicLeaf(fn: fn) }, {
+		if({ fn:alwaysInline }, {
 			inlineAttr: ' alwaysinline';
 		});
 

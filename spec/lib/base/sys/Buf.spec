@@ -282,7 +282,13 @@ Class is Buf{
 			while({ cap < dLen + need }, {
 				cap: cap * 2;
 			});
-			dData: Mem:realloc(ptr: dData, bytes: cap);
+			if({ dData == dAddr + 40 }, {
+				local Int is newData: Mem:alloc(bytes: cap);
+				if({ dLen > 0 }, { Mem:copy(dst: newData, src: dData, bytes: dLen); });
+				dData: newData;
+			}, {
+				dData: Mem:realloc(ptr: dData, bytes: cap);
+			});
 			Mem:storeI64(ptr: dAddr, byteOffset: 0, val: dData);
 			Mem:storeI64(ptr: dAddr, byteOffset: 16, val: cap);
 		});

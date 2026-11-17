@@ -16,6 +16,7 @@ Class is IrFunction{
 	Array of IrParam is params: [];
 	Array of IrBlock is blocks: [];
 	Boolean is isExternal: false;
+	Boolean is alwaysInline: false;
 	String is sourceFile: '';
 	Int is line: 0;
 

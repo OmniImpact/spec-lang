@@ -631,6 +631,7 @@ typedef struct SpecBuf {
     size_t capacity;
     size_t elem_size;
     int elem_kind;
+    char inline_buf[24];
 } SpecBuf;
 
 static void spec_buf_grow(SpecBuf* b, size_t needed) {
@@ -639,7 +640,13 @@ static void spec_buf_grow(SpecBuf* b, size_t needed) {
     size_t cap = (b->capacity == 0) ? 16 : b->capacity * 2;
     while (cap < b->length + need) cap *= 2;
     if (cap > SIZE_MAX / b->elem_size) spec_panic("Buffer capacity overflow");
-    b->data = spec_xrealloc(b->data, cap * b->elem_size);
+    if (b->data == (void*)b->inline_buf) {
+        void* nd = spec_xmalloc(cap * b->elem_size);
+        if (b->length > 0) memcpy(nd, b->inline_buf, b->length + 1);
+        b->data = nd;
+    } else {
+        b->data = spec_xrealloc(b->data, cap * b->elem_size);
+    }
     b->capacity = cap;
 }
 
@@ -1232,7 +1239,7 @@ void spec_drain_async_tasks(void) {
 void spec_buf_destroy(void* self) {
     SpecBuf* b = (SpecBuf*)self;
     if (!b) return;
-    if (b->data) { free(b->data); b->data = NULL; }
+    if (b->data && b->data != (void*)b->inline_buf) { free(b->data); b->data = NULL; }
 }
 
 SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error) {
@@ -1279,9 +1286,15 @@ long long spec_file_size(SpecBuf* path) {
 
 SpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {
     SpecBuf* b = (SpecBuf*)spec_alloc(sizeof(SpecBuf), spec_buf_destroy);
-    b->data = NULL;
+    if (elem_size == 1) {
+        b->data = b->inline_buf;
+        b->capacity = sizeof(b->inline_buf);
+        b->inline_buf[0] = 0;
+    } else {
+        b->data = NULL;
+        b->capacity = 0;
+    }
     b->length = 0;
-    b->capacity = 0;
     b->elem_size = elem_size;
     b->elem_kind = elem_kind;
     return b;
