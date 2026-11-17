@@ -2313,25 +2313,25 @@ Class is IrBuilder{
 						if({ lTy == IrType:I64 }, {
 							ls: self:nextTmp();
 							self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', l]));
-							self:emit(inst: IrInst:Retain(val: ls));
 						}, {
 							if({ lTy == IrType:F64 }, {
 								ls: self:nextTmp();
 								self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [l]));
+								self:emitClaimPool(val: ls);
 							}, {
 								if({ lTy == IrType:I1 }, {
 									ls: self:nextTmp();
 									self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [l]));
+									self:emitClaimPool(val: ls);
 								}, {
 									ls: l;
-									self:emit(inst: IrInst:Retain(val: ls));
 								});
 							});
 						});
 					});
 					local String is rs: self:lowerConcatRight(right: right);
 					local String is dst: self:nextTmp();
-					self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_concat', argTypes: [IrType:Ptr, IrType:Ptr], args: [ls, rs]));
+					self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'String_concat', argTypes: [IrType:Ptr, IrType:Ptr], args: [ls, rs]));
 					return dst;
 				});
 				return self:lowerExpr(expr: expr);
@@ -2621,7 +2621,6 @@ Class is IrBuilder{
 				});
 				if({ op == '.' }, {
 					local String is catDst: self:lowerConcatChainNoClaim(expr: expr);
-					self:emitClaimPool(val: catDst);
 					return catDst;
 				});
 				local String is l: self:lowerExpr(expr: left);

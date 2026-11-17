@@ -146,6 +146,17 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
        - `binary_trees` 1t: `16.71M` → **`16.89M` nodes/s** (`4.161s` → **`4.115s`**, **+1.1%**)
        - `binary_trees` 8t: `58.76M` → **`59.16M` nodes/s** (`1.245s` → **`1.235s`**, **+0.7%**)
        - `specunit`: 104 passed, 0 failed.
+  8. **Shared TLS Small-Object Freelist for Runtime Containers — DONE:**
+     - Exported `_spec_tls_freelist[4]` and `_spec_tls_freecount[4]` from [RuntimePrelude.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/gen/RuntimePrelude.spec) / [spec_runtime.c](file:///home/daniel/Projects/Spec/bootstrap/spec_runtime.c) and marked them `external thread_local` in [LlvmEmitter.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/llvm/LlvmEmitter.spec), routing `spec_alloc`/`spec_release` (`<= 64` bytes: `SpecBuf`, `SpecArray`, `SpecMap`, `SpecClosure`) through the shared TLS freelist.
+     - **Result (`word_freq`, 1M lines, median of 3):** `1.195M` → **`1.433M` lines/s** (`0.838s` → **`0.700s`**, **+20.0%**, `3.0–3.1 MB` RSS); `specunit`: 104 passed, 0 failed.
+  9. **Pure-Spec `String:concat` + Structural `ConcatFusionPass` (`SpecOptimizer`, `order = 32`) — DONE:**
+     - Added [String:concat](file:///home/daniel/Projects/Spec/spec/lib/base/core/String.spec#L448-L473) over `Mem`/`Buf`, fixed `SpecBuf.inline_buf` offset (`36`) in [Buf.spec](file:///home/daniel/Projects/Spec/spec/lib/base/sys/Buf.spec#L285), and routed [IrBuilder.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/llvm/IrBuilder.spec#L2313-L2338) `lowerConcatChainNoClaim` to `String_concat`.
+     - Added [ConcatFusionPass.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/opt/ConcatFusionPass.spec) to structurally detect 2-buffer concat functions (`(Ptr, Ptr) -> Ptr`, `>= 2` `__spec_mem_load_i64`, `>= 2` `__spec_mem_copy`/`memcpy`, `>= 1` `__spec_mem_str_from_bytes`/`spec_string_from_bytes`, non-recursive) and fuse single-use chains into a single pre-sized `__spec_concat_<k>` helper call.
+     - **Result (median of 3):**
+       - `word_freq`: `1.433M` → **`1.486M` lines/s** (`0.700s` → **`0.674s`**, **+3.7%**; peak `1.490M`, **+58.8%** over baseline, `3.1 MB` RSS)
+       - `binary_trees` 1t: `16.89M` → **`17.00M` nodes/s** (`4.115s` → **`4.087s`**, **+0.7%**)
+       - `binary_trees` 8t: `59.16M` → **`59.99M` nodes/s** (`1.235s` → **`1.220s`**, **+1.4%**)
+       - `specunit`: 104 passed, 0 failed.
 
 ---
 

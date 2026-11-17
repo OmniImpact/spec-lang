@@ -12,6 +12,7 @@ Class is OptimizerPipeline{
 		['base', 'compiler', 'opt', ArcPeepholePass],
 		['base', 'compiler', 'opt', PoolElisionPass],
 		['base', 'compiler', 'opt', WrapperUnwrapPass],
+		['base', 'compiler', 'opt', ConcatFusionPass],
 		['base', 'compiler', 'opt', InlineHintPass],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'struct', Array],

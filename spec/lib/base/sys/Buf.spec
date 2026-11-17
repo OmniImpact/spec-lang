@@ -282,7 +282,7 @@ Class is Buf{
 			while({ cap < dLen + need }, {
 				cap: cap * 2;
 			});
-			if({ dData == dAddr + 40 }, {
+			if({ dData == dAddr + 36 }, {
 				local Int is newData: Mem:alloc(bytes: cap);
 				if({ dLen > 0 }, { Mem:copy(dst: newData, src: dData, bytes: dLen); });
 				dData: newData;
