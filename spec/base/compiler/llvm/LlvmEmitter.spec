@@ -38,10 +38,26 @@ Class is LlvmEmitter{
 @_spec_pool_top = external thread_local global i64
 @_spec_pool_cap = external thread_local global i64
 @_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer
+@_spec_tls_freelist = internal thread_local global [4 x ptr] zeroinitializer
+@_spec_tls_freecount = internal thread_local global [4 x i64] zeroinitializer
 @.str.oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
 %struct.SpecHeader = type { i32, ptr, i32, i32 }
-define internal ptr @spec_rt_alloc(i64 %size, ptr %destroy) {
-  %tsz = add i64 %size, 24
+define internal noalias ptr @__spec_rt_alloc_slow(i64 %size, ptr %destroy) {
+  %sm1 = sub i64 %size, 1
+  %is_small = icmp ule i64 %sm1, 63
+  br i1 %is_small, label %small_sz, label %large_sz
+small_sz:
+  %b = lshr i64 %sm1, 4
+  %b1 = add i64 %b, 1
+  %bsz = shl i64 %b1, 4
+  %slen_s = trunc i64 %b1 to i32
+  br label %do_calloc
+large_sz:
+  br label %do_calloc
+do_calloc:
+  %psz = phi i64 [ %bsz, %small_sz ], [ %size, %large_sz ]
+  %slen_v = phi i32 [ %slen_s, %small_sz ], [ 0, %large_sz ]
+  %tsz = add i64 %psz, 24
   %h = call ptr @calloc(i64 1, i64 %tsz)
   %isnull = icmp eq ptr %h, null
   br i1 %isnull, label %oom, label %ok
@@ -53,8 +69,45 @@ ok:
   store i32 1, ptr %rcp
   %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
   store ptr %destroy, ptr %dp
+  %slenp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 3
+  store i32 %slen_v, ptr %slenp
   %obj = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 1
   ret ptr %obj
+}
+define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {
+  %sm1 = sub i64 %size, 1
+  %is_small = icmp ule i64 %sm1, 63
+  br i1 %is_small, label %chk_fl, label %slow
+chk_fl:
+  %b = lshr i64 %sm1, 4
+  %flp = getelementptr inbounds [4 x ptr], ptr @_spec_tls_freelist, i64 0, i64 %b
+  %head = load ptr, ptr %flp
+  %has_head = icmp ne ptr %head, null
+  br i1 %has_head, label %pop_fl, label %slow
+pop_fl:
+  %obj = getelementptr inbounds %struct.SpecHeader, ptr %head, i32 1
+  %next = load ptr, ptr %obj
+  store ptr %next, ptr %flp
+  %fcp = getelementptr inbounds [4 x i64], ptr @_spec_tls_freecount, i64 0, i64 %b
+  %fc = load i64, ptr %fcp
+  %nfc = sub i64 %fc, 1
+  store i64 %nfc, ptr %fcp
+  %b1 = add i64 %b, 1
+  %bsz = shl i64 %b1, 4
+  call ptr @memset(ptr %obj, i32 0, i64 %bsz)
+  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %head, i32 0, i32 0
+  store i32 1, ptr %rcp
+  %dp = getelementptr inbounds %struct.SpecHeader, ptr %head, i32 0, i32 1
+  store ptr %destroy, ptr %dp
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %head, i32 0, i32 2
+  store i32 0, ptr %sfp
+  %slenp = getelementptr inbounds %struct.SpecHeader, ptr %head, i32 0, i32 3
+  %slen_v = trunc i64 %b1 to i32
+  store i32 %slen_v, ptr %slenp
+  ret ptr %obj
+slow:
+  %res = call noalias ptr @__spec_rt_alloc_slow(i64 %size, ptr %destroy)
+  ret ptr %res
 }
 define internal ptr @spec_rt_retain(ptr %obj) alwaysinline {
   %isnull = icmp eq ptr %obj, null
@@ -98,6 +151,26 @@ call_d:
   call void %d(ptr %obj)
   br label %free_h
 free_h:
+  %slenp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 3
+  %slen = load i32, ptr %slenp
+  %is_cached = icmp ne i32 %slen, 0
+  br i1 %is_cached, label %chk_cap, label %do_free
+chk_cap:
+  %slen64 = zext i32 %slen to i64
+  %b = sub i64 %slen64, 1
+  %fcp = getelementptr inbounds [4 x i64], ptr @_spec_tls_freecount, i64 0, i64 %b
+  %fc = load i64, ptr %fcp
+  %under_cap = icmp ult i64 %fc, 2048
+  br i1 %under_cap, label %push_fl, label %do_free
+push_fl:
+  %flp = getelementptr inbounds [4 x ptr], ptr @_spec_tls_freelist, i64 0, i64 %b
+  %old_head = load ptr, ptr %flp
+  store ptr %old_head, ptr %obj
+  store ptr %h, ptr %flp
+  %nfc = add i64 %fc, 1
+  store i64 %nfc, ptr %fcp
+  br label %done
+do_free:
   call void @free(ptr %h)
   br label %done
 done:

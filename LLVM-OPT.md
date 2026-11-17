@@ -95,8 +95,16 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
        - **Result (`word_freq`, 1M lines, median of 3):** `998.0K` → **`1.049M` lines/s**
          (`1.004s` → **`0.956s`**, **+5.1%**; **+12.2%** over baseline).
        - `specunit`: 104 passed, 0 failed.
-     - **Remaining:** `Buf:stringConcat` and `Process` atomics.
-- **Compiler passes (100% structural, no class/function name matching):**
+     - **Pure-Spec `Buf:stringConcat` — REVERTED (in-place `rc == 1` append wins):**
+       Added `Buf:stringConcat` in [Buf.spec](file:///home/daniel/Projects/Spec/spec/lib/base/sys/Buf.spec#L75-L96)
+       over TLS slot 2, and tested routing `lowerConcatChainNoClaim` to it.
+       Because `Buf:stringConcat` allocates a fresh `String` per `.` instead of
+       `spec_string_concat`'s in-place `rc == 1` buffer append, `word_freq`
+       regressed from `1.049M` to `922.5K` lines/s. Reverted `IrBuilder.spec` back
+       to `spec_string_concat` (kept `Buf:stringConcat` as a public `Buf` helper).
+     - **Remaining:** `Process` atomics (`atomic_add`/`put`/`get`, ~8 calls per
+       run in `mc_pi`/`binary_trees`, not on hot loops).
+- **Compiler passes & runtime IR (100% structural, no class/function name matching):**
   1. **Multi-block small-function `alwaysinline` — DONE:** Extended
      `LlvmEmitter.spec` to tag small acyclic non-recursive functions (`<= 6`
      blocks, `<= 40` instructions) with `alwaysinline`.
@@ -114,8 +122,22 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
        - `binary_trees`: 1t **`11.24M` nodes/s** (neutral), 8t `40.82M` → **`41.07M` nodes/s** (+0.6%)
        - `word_freq`: `957.9K` → **`960.6K` lines/s** (+0.3%)
        - `specunit`: 104 passed, 0 failed.
-  4. **Second `PoolElisionPass`:** Run after devirtualization/inlining to clean
-     up newly exposed pool frames.
+  4. **Second `PoolElisionPass` — DONE:** Re-runs `PoolElisionPass` at the end
+     of [OptimizerPipeline.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/opt/OptimizerPipeline.spec#L42-L50)
+     after `WrapperUnwrapPass` to elide newly exposed pool frames.
+  5. **Return-ownership pool round-trip peephole (`ArcPeepholePass` Pass 3) — DONE:**
+     Elides `spec_claim_pool(x); Retain(x); spec_pool_release_to(f); spec_claim_pool(x)`
+     to `spec_pool_release_to(f); spec_claim_pool(x)` in [ArcPeepholePass.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/opt/ArcPeepholePass.spec#L146-L187).
+  6. **Inline `spec_rt_alloc` + 4-bucket TLS small-object free list — DONE:**
+     Tagged `@spec_rt_alloc` as `alwaysinline` `noalias` in [LlvmEmitter.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/llvm/LlvmEmitter.spec#L40-L115)
+     with a 4-bucket (`16`/`32`/`48`/`64`-byte payload, cap `2048` per thread)
+     TLS free list using `SpecHeader.slen` (`free_h` pushes small blocks back
+     onto `@_spec_tls_freelist` instead of calling `free()`).
+     - **Combined Result (steps 4–6, median of 3):**
+       - `binary_trees` 1t: `11.23M` → **`16.71M` nodes/s** (`6.156s` → **`4.161s`**, **+48.8%**; **0.45× C**, **0.64× Rust**)
+       - `binary_trees` 8t: `41.19M` → **`58.76M` nodes/s** (`1.738s` → **`1.245s`**, **+42.7%**; **0.65× C**, **0.76× Rust**)
+       - `word_freq`: `1.049M` → **`1.168M` lines/s** (`0.956s` → **`0.858s`**, **+11.3%**; **+24.9%** over baseline)
+       - `specunit`: 104 passed, 0 failed.
 
 ---
 

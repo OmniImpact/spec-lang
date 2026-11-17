@@ -46,5 +46,7 @@ Class is OptimizerPipeline{
 			pass:runOnModule(mod: mod);
 			i++;
 		});
+		local PoolElisionPass is cleanupPool: PoolElisionPass:init();
+		cleanupPool:runOnModule(mod: mod);
 	}
 }

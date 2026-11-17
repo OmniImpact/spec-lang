@@ -72,6 +72,37 @@ Class is Buf{
 		return Mem:strFromBytes(srcAddr: data, len: len);
 	}
 
+	## Concatenation of strings [a] and [b].
+	##
+	## @param a: First string.
+	## @param b: Second string.
+	## @return: Newly allocated string containing [a] followed by [b].
+	Function of String is stringConcat(String is a, String is b){
+		local Int is aAddr: Mem:objToAddr(obj: a);
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		local Int is aLen: if({ aAddr == 0 }, { 0 }, { Mem:loadI64(ptr: aAddr, byteOffset: 8) });
+		local Int is bLen: if({ bAddr == 0 }, { 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) });
+		local Int is total: aLen + bLen;
+		if({ total == 0 }, { return ''; });
+		if({ aLen == 0 }, { return self:stringCopy(b: b); });
+		if({ bLen == 0 }, { return self:stringCopy(b: a); });
+		local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
+		local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+		if({ total <= 256 }, {
+			local Int is scratch: Mem:tlsGetI64(slot: 2);
+			if({ scratch == 0 }, {
+				scratch: Mem:alloc(bytes: 256);
+				Mem:tlsSetI64(slot: 2, val: scratch);
+			});
+			Mem:copy(dst: scratch, src: aData, bytes: aLen);
+			Mem:copy(dst: scratch + aLen, src: bData, bytes: bLen);
+			return Mem:strFromBytes(srcAddr: scratch, len: total);
+		});
+		local String is out: Mem:strFromBytes(srcAddr: aData, len: aLen);
+		self:bufAppendBuf(dst: out, src: b);
+		return out;
+	}
+
 	## Byte-for-byte equality of strings [a] and [b].
 	##
 	## @param a: First string.

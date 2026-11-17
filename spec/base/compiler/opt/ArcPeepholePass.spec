@@ -143,6 +143,48 @@ Class of SpecOptimizer is ArcPeepholePass{
 			i++;
 		});
 
+		# Pass 3: Elide claim_pool(x); Retain(x); pool_release_to(f); claim_pool(x) -> pool_release_to(f); claim_pool(x).
+		i: 0;
+		while({ i + 3 < n }, {
+			if({ !drop:get(index: i) && !drop:get(index: i + 1) && !drop:get(index: i + 2) && !drop:get(index: i + 3) }, {
+				local String is c1: match(on: blk:insts:get(index: i), when: [
+					IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+						if({ callee == 'spec_claim_pool' && args:length() == 1 }, { return args:get(index: 0); });
+						return '';
+					},
+					else: { return ''; }
+				]);
+				if({ c1 != '' }, {
+					local String is r1: match(on: blk:insts:get(index: i + 1), when: [
+						IrInst:Retain: local Function of String(String is val){ return val; },
+						else: { return ''; }
+					]);
+					if({ r1 == c1 }, {
+						local Boolean is isRel: match(on: blk:insts:get(index: i + 2), when: [
+							IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+								return callee == 'spec_pool_release_to';
+							},
+							else: { return false; }
+						]);
+						if({ isRel }, {
+							local String is c2: match(on: blk:insts:get(index: i + 3), when: [
+								IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+									if({ callee == 'spec_claim_pool' && args:length() == 1 }, { return args:get(index: 0); });
+									return '';
+								},
+								else: { return ''; }
+							]);
+							if({ c2 == c1 }, {
+								drop:set(index: i, item: true);
+								drop:set(index: i + 1, item: true);
+							});
+						});
+					});
+				});
+			});
+			i++;
+		});
+
 		local Array of IrInst is newInsts: [];
 		local Array of Int is newLines: [];
 		i: 0;
