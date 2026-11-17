@@ -58,6 +58,32 @@ Class is Arc{
 		return objAddr;
 	}
 
+	Function is destroyObj(Int is objAddr){
+		local Int is h: objAddr - 16;
+		local Int is d: Mem:loadI64(ptr: h, byteOffset: 8);
+		Mem:storeI64(ptr: h, byteOffset: 8, val: 0);
+		if({ d != 0 }, {
+			Mem:callDestroy(fnPtr: d, objPtr: objAddr);
+		});
+		local Int is sf2: Mem:atomicLoadI32(addr: h + 4);
+		if({ (sf2 & 4) != 0 }, { return; });
+		local Int is slen: sf2 >> 16;
+		if({ slen != 0 }, {
+			local Int is b: slen - 1;
+			if({ b >= 0 && b < 4 }, {
+				local Int is fc: Mem:tlsGetI64(slot: 10 + b);
+				if({ fc < 2048 }, {
+					local Int is oldHead: Mem:tlsGetI64(slot: 6 + b);
+					Mem:storeI64(ptr: objAddr, byteOffset: 0, val: oldHead);
+					Mem:tlsSetI64(slot: 6 + b, val: h);
+					Mem:tlsSetI64(slot: 10 + b, val: fc + 1);
+					return;
+				});
+			});
+		});
+		Mem:free(ptr: h);
+	}
+
 	Function is release(Int is objAddr){
 		if({ objAddr == 0 }, { return; });
 		local Int is h: objAddr - 16;
@@ -74,28 +100,7 @@ Class is Arc{
 		});
 		local Int is old: Mem:atomicSubI32(addr: h, delta: 1);
 		if({ old == 1 }, {
-			local Int is d: Mem:loadI64(ptr: h, byteOffset: 8);
-			Mem:storeI64(ptr: h, byteOffset: 8, val: 0);
-			if({ d != 0 }, {
-				Mem:callDestroy(fnPtr: d, objPtr: objAddr);
-			});
-			local Int is sf2: Mem:atomicLoadI32(addr: h + 4);
-			if({ (sf2 & 4) != 0 }, { return; });
-			local Int is slen: sf2 >> 16;
-			if({ slen != 0 }, {
-				local Int is b: slen - 1;
-				if({ b >= 0 && b < 4 }, {
-					local Int is fc: Mem:tlsGetI64(slot: 10 + b);
-					if({ fc < 2048 }, {
-						local Int is oldHead: Mem:tlsGetI64(slot: 6 + b);
-						Mem:storeI64(ptr: objAddr, byteOffset: 0, val: oldHead);
-						Mem:tlsSetI64(slot: 6 + b, val: h);
-						Mem:tlsSetI64(slot: 10 + b, val: fc + 1);
-						return;
-					});
-				});
-			});
-			Mem:free(ptr: h);
+			self:destroyObj(objAddr: objAddr);
 		});
 	}
 

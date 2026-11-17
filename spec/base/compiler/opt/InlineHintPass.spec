@@ -142,7 +142,7 @@ Class of SpecOptimizer is InlineHintPass{
 		local Int is fi: 0;
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
-			if({ !fn:isExternal && fn:blocks:length() > 0 && fn:name != 'main' }, {
+			if({ !fn:isExternal && fn:blocks:length() > 0 && fn:name != 'main' && fn:name != 'Arc_destroyObj' && fn:name != 'Arc_release' }, {
 				local Boolean is isSingleBlock: fn:blocks:length() == 1;
 				local Boolean is isModelFn: modelFnSet:has(key: fn:name);
 				if({ self:isAcyclicNonRecursive(fn: fn) && (isSingleBlock || isModelFn || self:isIntrinsicLeaf(fn: fn)) }, {

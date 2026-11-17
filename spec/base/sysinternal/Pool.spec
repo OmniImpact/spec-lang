@@ -27,7 +27,7 @@ Class is Pool{
 			local Int is stk: Mem:tlsGetI64(slot: 3);
 			local Int is obj: Mem:loadI64(ptr: stk, byteOffset: ntop * 8);
 			if({ obj != 0 }, {
-				Arc:release(objAddr: obj);
+				Mem:releaseAddr(objAddr: obj);
 			});
 		});
 	}

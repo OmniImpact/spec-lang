@@ -12,6 +12,7 @@ Class is LlvmRuntimePrelude{
 	Function of String is emitArcAndPool(){
 		return '''
 @_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer
+@g_spec_active_threads = external global i32
 @.str.oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
 %struct.SpecHeader = type { i32, i32, ptr }
 define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {
@@ -21,14 +22,89 @@ define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline
   ret ptr %obj
 }
 define internal ptr @spec_rt_retain(ptr %obj) alwaysinline {
-  %oa = ptrtoint ptr %obj to i64
-  %ra = call i64 @Arc_retain(ptr null, i64 %oa)
-  %res = inttoptr i64 %ra to ptr
-  ret ptr %res
+  %isnull = icmp eq ptr %obj, null
+  br i1 %isnull, label %done, label %chk_mt
+chk_mt:
+  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
+  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4
+  %is_mt = icmp sgt i32 %mt, 0
+  br i1 %is_mt, label %atomic_path, label %fast_path
+fast_path:
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %sf = load i32, ptr %sfp, align 4
+  %imm = and i32 %sf, 1
+  %is_imm = icmp ne i32 %imm, 0
+  br i1 %is_imm, label %done, label %fast_inc
+fast_inc:
+  %rc = load i32, ptr %h, align 4
+  %rc1 = add i32 %rc, 1
+  store i32 %rc1, ptr %h, align 4
+  br label %done
+atomic_path:
+  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4
+  %imm2 = and i32 %sf2, 1
+  %is_imm2 = icmp ne i32 %imm2, 0
+  br i1 %is_imm2, label %done, label %atomic_inc
+atomic_inc:
+  %unused = atomicrmw add ptr %h, i32 1 monotonic, align 4
+  br label %done
+done:
+  ret ptr %obj
 }
 define internal void @spec_rt_release(ptr %obj) alwaysinline {
-  %oa = ptrtoint ptr %obj to i64
-  call void @Arc_release(ptr null, i64 %oa)
+  %isnull = icmp eq ptr %obj, null
+  br i1 %isnull, label %done, label %chk_mt
+chk_mt:
+  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
+  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4
+  %is_mt = icmp sgt i32 %mt, 0
+  br i1 %is_mt, label %atomic_path, label %fast_path
+fast_path:
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %sf = load i32, ptr %sfp, align 4
+  %imm = and i32 %sf, 1
+  %is_imm = icmp ne i32 %imm, 0
+  br i1 %is_imm, label %done, label %fast_dec
+fast_dec:
+  %rc = load i32, ptr %h, align 4
+  %is_one = icmp eq i32 %rc, 1
+  br i1 %is_one, label %fast_destroy, label %fast_chk0
+fast_destroy:
+  store i32 0, ptr %h, align 4
+  %oa1 = ptrtoint ptr %obj to i64
+  call void @Arc_destroyObj(ptr null, i64 %oa1)
+  br label %done
+fast_chk0:
+  %is_zero = icmp eq i32 %rc, 0
+  br i1 %is_zero, label %reentrant_slow, label %fast_store
+fast_store:
+  %rc1 = sub i32 %rc, 1
+  store i32 %rc1, ptr %h, align 4
+  br label %done
+atomic_path:
+  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4
+  %imm2 = and i32 %sf2, 1
+  %is_imm2 = icmp ne i32 %imm2, 0
+  br i1 %is_imm2, label %done, label %atomic_chk0
+atomic_chk0:
+  %rc0 = load atomic i32, ptr %h monotonic, align 4
+  %is0 = icmp eq i32 %rc0, 0
+  br i1 %is0, label %reentrant_slow, label %atomic_dec
+atomic_dec:
+  %old = atomicrmw sub ptr %h, i32 1 acq_rel, align 4
+  %is1 = icmp eq i32 %old, 1
+  br i1 %is1, label %atomic_destroy, label %done
+atomic_destroy:
+  %oa2 = ptrtoint ptr %obj to i64
+  call void @Arc_destroyObj(ptr null, i64 %oa2)
+  br label %done
+reentrant_slow:
+  %oa0 = ptrtoint ptr %obj to i64
+  call void @Arc_release(ptr null, i64 %oa0)
+  br label %done
+done:
   ret void
 }
 define internal i64 @spec_pool_frame() alwaysinline {

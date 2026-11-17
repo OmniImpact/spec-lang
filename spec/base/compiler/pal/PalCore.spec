@@ -427,7 +427,7 @@ void spec_pal_format_float(double v, long long buf_addr) {
     if (buf) snprintf(buf, 64, "%.17g", v);
 }
 
-static _Atomic int g_spec_active_threads = 0;
+_Atomic int g_spec_active_threads = 0;
 
 static inline void spec_thread_enter(void) {
     atomic_fetch_add_explicit(&g_spec_active_threads, 1, memory_order_release);
