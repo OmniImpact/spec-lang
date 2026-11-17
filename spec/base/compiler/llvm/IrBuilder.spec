@@ -2870,18 +2870,59 @@ Class is IrBuilder{
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
 				local String is mp: self:nextTmp();
 				local Int is mapKk: 0;
+				local Int is mapVk: 0;
+				local String is resTy: expr:resolvedType;
 				if({ keys:length() > 0 }, {
 					local Expression is k0: keys:get(index: 0);
 					if({ k0:resolvedType == 'Int' || k0:resolvedType == 'Boolean' }, { mapKk: 1; });
 					if({ k0:resolvedType == 'Float' }, { mapKk: 2; });
 					if({ mapKk == 0 && k0:resolvedType != 'String' && k0:resolvedType != 'Any' }, { mapKk: 3; });
+				}, {
+					if({ resTy:startsWith(prefix: 'Map of Int to ') || resTy:startsWith(prefix: 'Map:Int:') || resTy:startsWith(prefix: 'Map of Boolean to ') || resTy:startsWith(prefix: 'Map:Boolean:') }, { mapKk: 1; });
+					if({ resTy:startsWith(prefix: 'Map of Float to ') || resTy:startsWith(prefix: 'Map:Float:') }, { mapKk: 2; });
+					if({ mapKk == 0 && resTy != 'Map' && resTy != '' && !resTy:startsWith(prefix: 'Map of String to ') && !resTy:startsWith(prefix: 'Map:String:') && !resTy:startsWith(prefix: 'Map of Any to ') && !resTy:startsWith(prefix: 'Map:Any:') }, { mapKk: 3; });
+					if({ mapKk == 0 && (resTy == 'Map' || resTy == '') && self:expectedMapKeyType != '' }, {
+						local String is ek: self:expectedMapKeyType;
+						if({ ek == 'Int' || ek == 'Boolean' }, { mapKk: 1; });
+						if({ ek == 'Float' }, { mapKk: 2; });
+						if({ mapKk == 0 && ek != 'String' && ek != 'Any' }, { mapKk: 3; });
+					});
 				});
-				if({ mapKk != 0 }, {
-					local String is mkkV: self:nextTmp();
-					self:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
-					local String is mvkV: self:nextTmp();
-					self:emit(inst: IrInst:ConstInt(dst: mvkV, value: 0));
-					self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [mkkV, mvkV]));
+				if({ values:length() > 0 }, {
+					local Expression is v0: values:get(index: 0);
+					if({ self:isArcSpecType(specType: v0:resolvedType) }, { mapVk: 1; });
+				}, {
+					local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
+					if({ toIdx >= 0 }, {
+						local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
+						if({ self:isArcSpecType(specType: vSpec) }, { mapVk: 1; });
+					}, {
+						if({ resTy:startsWith(prefix: 'Map:') }, {
+							local String is afterMap: resTy:substring(start: 4, end: resTy:length());
+							local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
+							if({ cIdx >= 0 }, {
+								local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
+								if({ self:isArcSpecType(specType: vSpec2) }, { mapVk: 1; });
+							});
+						}, {
+							if({ (resTy == 'Map' || resTy == '') && self:expectedMapValType != '' }, {
+								if({ self:isArcSpecType(specType: self:expectedMapValType) }, { mapVk: 1; });
+							});
+						});
+					});
+				});
+				if({ mapKk != 0 || mapVk != 0 }, {
+					if({ mapKk == 0 && mapVk == 1 }, {
+						local Array of IrType is emptyT: [];
+						local Array of String is emptyV: [];
+						self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: emptyT, args: emptyV));
+					}, {
+						local String is mkkV: self:nextTmp();
+						self:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
+						local String is mvkV: self:nextTmp();
+						self:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
+						self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [mkkV, mvkV]));
+					});
 				}, {
 					local Array of IrType is emptyT: [];
 					local Array of String is emptyV: [];
