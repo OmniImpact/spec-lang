@@ -1098,6 +1098,40 @@ declare void @spec_audio_close(i64)''';
 		return false;
 	}
 
+	local Function of Boolean is fnIsSmallAcyclicLeaf(IrFunction is fn){
+		if({ fn:blocks:length() == 0 || fn:blocks:length() > 6 || fn:name == 'main' }, { return false; });
+		local Map of String to Int is blkIdx: Map:init();
+		local Int is totalInsts: 0;
+		local Int is bi: 0;
+		while({ bi < fn:blocks:length() }, {
+			local IrBlock is blk: fn:blocks:get(index: bi);
+			blkIdx:set(key: blk:label, value: bi);
+			totalInsts: totalInsts + blk:insts:length();
+			if({ totalInsts > 40 }, { return false; });
+			if({ self:blockCallsFn(blk: blk, fnName: fn:name) }, { return false; });
+			bi++;
+		});
+		bi: 0;
+		while({ bi < fn:blocks:length() }, {
+			local IrBlock is blk: fn:blocks:get(index: bi);
+			local Int is n: blk:insts:length();
+			if({ n > 0 }, {
+				local Boolean is backedge: match(on: blk:insts:get(index: n - 1), when: [
+					IrInst:Br: local Function of Boolean(String is target){
+						return blkIdx:get(key: target, default: 0) <= bi;
+					},
+					IrInst:CondBr: local Function of Boolean(String is cond, String is thenLabel, String is elseLabel){
+						return blkIdx:get(key: thenLabel, default: 0) <= bi || blkIdx:get(key: elseLabel, default: 0) <= bi;
+					},
+					else: { return false; }
+				]);
+				if({ backedge }, { return false; });
+			});
+			bi++;
+		});
+		return true;
+	}
+
 	local Function of String is emitFunction(IrFunction is fn){
 		local String is retStr: self:llvmType(ty: fn:retType);
 		local String is paramsStr: '';
@@ -1114,11 +1148,8 @@ declare void @spec_audio_close(i64)''';
 		});
 
 		local String is inlineAttr: '';
-		if({ fn:blocks:length() == 1 && fn:name != 'main' }, {
-			local IrBlock is onlyBlk: fn:blocks:get(index: 0);
-			if({ onlyBlk:insts:length() <= 20 && !self:blockCallsFn(blk: onlyBlk, fnName: fn:name) }, {
-				inlineAttr: ' alwaysinline';
-			});
+		if({ self:fnIsSmallAcyclicLeaf(fn: fn) }, {
+			inlineAttr: ' alwaysinline';
 		});
 
 		local String is out: 'define ' . retStr . ' @' . fn:name . '(' . paramsStr . ')' . inlineAttr . " {\n";

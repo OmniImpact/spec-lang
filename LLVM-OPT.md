@@ -77,13 +77,17 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
      `spec_string_hash` over `Mem` and wire `Process` atomics to `Mem` inline
      LLVM atomics.
 - **Compiler passes (100% structural, no class/function name matching):**
-  1. **Multi-block small-function `alwaysinline` / `InlinePass`:** Extend
-     inlining beyond single-block functions to small non-recursive multi-block
-     `IrFunction`s (e.g. `Math:fastRandom` with its initial-seed branch).
-  2. **Known-Type Devirtualization & Dead-Receiver Elision (`DevirtPass`):**
-     Devirtualize `AllocObj` → `IndirectCall` when concrete type is known, and
-     elide `AllocObj` + `init` + `spec_claim_pool` when `%self` is never read
-     and the receiver does not escape.
+  1. **Multi-block small-function `alwaysinline` — DONE:** Extended
+     `LlvmEmitter.spec` to tag small acyclic non-recursive functions (`<= 6`
+     blocks, `<= 40` instructions) with `alwaysinline`.
+  2. **Known-Type Devirtualization & Dead-Receiver Elision (`DevirtPass`) — DONE:**
+     Added [DevirtPass.spec](file:///home/daniel/Projects/Spec/spec/base/compiler/opt/DevirtPass.spec) (`order = 15`) to devirtualize `AllocObj` → `IndirectCall` → `IrCall` and elide `AllocObj` + no-op `init` + `spec_claim_pool` when `%self` is never read and the receiver does not escape.
+     - **Result (median of 3):**
+       - `spec_rt_alloc` calls in `PiBenchmark.spec`: `80` → **`32`** (**-60%**)
+       - `mc_pi` 1t: **`162.60M` pts/s** (`1.232s`, `0.98× C`); 8t: **`985.22M` pts/s** (`0.204s`, peak `1.005B` pts/s)
+       - `binary_trees` 1t: `11.05M` → **`11.25M` nodes/s** (+1.8%); 8t: `40.17M` → **`40.82M` nodes/s** (+1.6%)
+       - `word_freq`: `951.5K` → **`957.9K` lines/s** (+0.7%)
+       - `specunit`: 104 passed, 0 failed.
   3. **Local `Retain` / `Release` Peephole (`ArcPeepholePass`):** Cancel
      redundant block-local `Retain`/`Release` pairs and null operations.
   4. **Second `PoolElisionPass`:** Run after devirtualization/inlining to clean

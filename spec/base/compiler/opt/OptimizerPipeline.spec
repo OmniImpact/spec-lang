@@ -8,6 +8,7 @@ Class is OptimizerPipeline{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'opt', SpecOptimizer],
 		['base', 'compiler', 'opt', ConstantFoldPass],
+		['base', 'compiler', 'opt', DevirtPass],
 		['base', 'compiler', 'opt', PoolElisionPass],
 		['base', 'compiler', 'opt', WrapperUnwrapPass],
 		['base', 'compiler', 'ir', IrModule],
