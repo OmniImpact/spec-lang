@@ -87,9 +87,15 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
          (+0.3%), 1t **`11.23M` nodes/s** (neutral); `word_freq` **`998.0K` lines/s**
          (within noise; `HashTable` already used pure-Spec `mapStrKeyEquals`).
        - `specunit`: 104 passed, 0 failed.
-     - **Remaining:** `Process` atomics (`atomic_add`/`put`/`get`, ~8 calls per
-       run in `mc_pi`/`binary_trees`, not on hot loops) and `WordFreq` hot-loop
-       allocation/string ops (`spec_string_concat`, `spec_to_string_int`).
+     - **Pure-Spec `Buf:intToString` — DONE:** Ported `spec_to_string_int`
+       into pure Spec ([Buf.spec](file:///home/daniel/Projects/Spec/spec/lib/base/sys/Buf.spec#L280-L315))
+       using a lazy 32-byte per-thread scratch buffer in TLS slot 1 (zero
+       per-call `malloc`/`free` and zero `_spec_intern_lock` contention) and
+       routed `IrBuilder.spec` integer-to-string lowering to `Buf_intToString`.
+       - **Result (`word_freq`, 1M lines, median of 3):** `998.0K` → **`1.049M` lines/s**
+         (`1.004s` → **`0.956s`**, **+5.1%**; **+12.2%** over baseline).
+       - `specunit`: 104 passed, 0 failed.
+     - **Remaining:** `Buf:stringConcat` and `Process` atomics.
 - **Compiler passes (100% structural, no class/function name matching):**
   1. **Multi-block small-function `alwaysinline` — DONE:** Extended
      `LlvmEmitter.spec` to tag small acyclic non-recursive functions (`<= 6`

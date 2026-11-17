@@ -277,6 +277,39 @@ Class is Buf{
 		return b:parseInt(base: base, default: def);
 	}
 
+	## Decimal string representation of signed integer [v].
+	##
+	## @param v: Integer value.
+	## @return: Decimal string.
+	Function of String is intToString(Int is v){
+		if({ v == 0 }, { return '0'; });
+		local Int is buf: Mem:tlsGetI64(slot: 1);
+		if({ buf == 0 }, {
+			buf: Mem:alloc(bytes: 32);
+			Mem:tlsSetI64(slot: 1, val: buf);
+		});
+		local Int is idx: 32;
+		local Boolean is neg: v < 0;
+		local Int is u: v;
+		if({ neg }, {
+			local Int is rem0: 0 - (u % 10);
+			u: 0 - (u / 10);
+			idx: idx - 1;
+			Mem:storeByte(ptr: buf, byteOffset: idx, val: 48 + rem0);
+		});
+		while({ u > 0 }, {
+			local Int is rem: u % 10;
+			u: u / 10;
+			idx: idx - 1;
+			Mem:storeByte(ptr: buf, byteOffset: idx, val: 48 + rem);
+		});
+		if({ neg }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: buf, byteOffset: idx, val: 45);
+		});
+		return Mem:strFromBytes(srcAddr: buf + idx, len: 32 - idx);
+	}
+
 	## Formats integer [v] in [base] (2-36), zero-padded to at least [digits] digits.
 	Function of String is intToBase(Int is v, Int is base, Int is digits){
 		local Int is b: if({ base < 2 || base > 36 }, { 10 }, { base });

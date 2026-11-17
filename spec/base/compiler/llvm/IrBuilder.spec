@@ -2275,8 +2275,7 @@ Class is IrBuilder{
 		local IrType is rTy: self:irTypeFor(specType: right:resolvedType);
 		if({ rTy == IrType:I64 }, {
 			local String is rsI: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: rsI, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [r]));
-			self:emitClaimPool(val: rsI);
+			self:emit(inst: IrInst:IrCall(dst: rsI, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', r]));
 			return rsI;
 		});
 		if({ rTy == IrType:F64 }, {
@@ -2313,7 +2312,8 @@ Class is IrBuilder{
 						local IrType is lTy: self:irTypeFor(specType: left:resolvedType);
 						if({ lTy == IrType:I64 }, {
 							ls: self:nextTmp();
-							self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [l]));
+							self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', l]));
+							self:emit(inst: IrInst:Retain(val: ls));
 						}, {
 							if({ lTy == IrType:F64 }, {
 								ls: self:nextTmp();
@@ -2787,7 +2787,7 @@ Class is IrBuilder{
 						self:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [v]));
 						return dstS;
 					});
-					self:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [v]));
+					self:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', v]));
 					return dstS;
 				});
 				if({ fromTy == toTy }, {
