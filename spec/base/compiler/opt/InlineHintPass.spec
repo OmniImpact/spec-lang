@@ -145,7 +145,8 @@ Class of SpecOptimizer is InlineHintPass{
 			if({ !fn:isExternal && fn:blocks:length() > 0 && fn:name != 'main' && fn:name != 'Arc_destroyObj' && fn:name != 'Arc_release' }, {
 				local Boolean is isSingleBlock: fn:blocks:length() == 1;
 				local Boolean is isModelFn: modelFnSet:has(key: fn:name);
-				if({ self:isAcyclicNonRecursive(fn: fn) && (isSingleBlock || isModelFn || self:isIntrinsicLeaf(fn: fn)) }, {
+				local Boolean is isSlabFast: fn:name == 'Slab_allocObj' || fn:name == 'Slab_classForPayload' || fn:name == 'Slab_slotSizeForClass';
+				if({ isSlabFast || (self:isAcyclicNonRecursive(fn: fn) && (isSingleBlock || isModelFn || self:isIntrinsicLeaf(fn: fn))) }, {
 					fn:alwaysInline: true;
 				});
 			});

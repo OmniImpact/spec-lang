@@ -525,6 +525,7 @@ Class is Loader{
 			'Dir',
 			'CliArgs',
 			'Arc',
+			'Slab',
 			'Pool',
 			'Arena',
 			'Intern'

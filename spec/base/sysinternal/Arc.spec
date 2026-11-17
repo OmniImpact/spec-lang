@@ -18,33 +18,22 @@ Class is Arc{
 	replace Array of Array of String is using: [
 		['base', 'sysinternal', as Mem()],
 		['base', 'sysinternal', as Conditional()],
-		['base', 'sysinternal', as Loops()]
+		['base', 'sysinternal', as Loops()],
+		['base', 'sysinternal', as Slab()]
 	];
 
 	Function of Int is allocObj(Int is size, Int is destroyFn){
-		local Int is slenV: 0;
-		local Int is allocSize: size;
-		if({ size > 0 && size <= 64 }, {
-			local Int is b: (size - 1) >> 4;
-			slenV: b + 1;
-			allocSize: slenV << 4;
-			local Int is head: Mem:tlsGetI64(slot: 6 + b);
-			if({ head != 0 }, {
-				local Int is obj: head + 16;
-				local Int is next: Mem:loadI64(ptr: obj, byteOffset: 0);
-				Mem:tlsSetI64(slot: 6 + b, val: next);
-				local Int is fc: Mem:tlsGetI64(slot: 10 + b);
-				Mem:tlsSetI64(slot: 10 + b, val: fc - 1);
-				Mem:set(dst: obj, byteVal: 0, bytes: allocSize);
-				Mem:storeI32(ptr: head, byteOffset: 0, val: 1);
-				Mem:storeI32(ptr: head, byteOffset: 4, val: slenV << 16);
-				Mem:storeI64(ptr: head, byteOffset: 8, val: destroyFn);
-				return obj;
-			});
+		local Int is cls: Slab:classForPayload(payloadSize: size);
+		if({ cls >= 0 }, {
+			local Int is sh: Slab:allocObj(cls: cls);
+			Mem:storeI32(ptr: sh, byteOffset: 0, val: 1);
+			Mem:storeI32(ptr: sh, byteOffset: 4, val: (cls + 1) << 16);
+			Mem:storeI64(ptr: sh, byteOffset: 8, val: destroyFn);
+			return sh + 16;
 		});
-		local Int is h: Mem:alloc(bytes: 16 + allocSize);
+		local Int is h: Mem:alloc(bytes: 16 + size);
 		Mem:storeI32(ptr: h, byteOffset: 0, val: 1);
-		Mem:storeI32(ptr: h, byteOffset: 4, val: slenV << 16);
+		Mem:storeI32(ptr: h, byteOffset: 4, val: 0);
 		Mem:storeI64(ptr: h, byteOffset: 8, val: destroyFn);
 		return h + 16;
 	}
@@ -69,17 +58,8 @@ Class is Arc{
 		if({ (sf2 & 4) != 0 }, { return; });
 		local Int is slen: sf2 >> 16;
 		if({ slen != 0 }, {
-			local Int is b: slen - 1;
-			if({ b >= 0 && b < 4 }, {
-				local Int is fc: Mem:tlsGetI64(slot: 10 + b);
-				if({ fc < 2048 }, {
-					local Int is oldHead: Mem:tlsGetI64(slot: 6 + b);
-					Mem:storeI64(ptr: objAddr, byteOffset: 0, val: oldHead);
-					Mem:tlsSetI64(slot: 6 + b, val: h);
-					Mem:tlsSetI64(slot: 10 + b, val: fc + 1);
-					return;
-				});
-			});
+			Slab:freeSlot(hdrAddr: h);
+			return;
 		});
 		Mem:free(ptr: h);
 	}
@@ -105,17 +85,6 @@ Class is Arc{
 	}
 
 	Function is threadCleanup(){
-		local Int is b: 0;
-		while({ b < 4 }, {
-			local Int is cur: Mem:tlsGetI64(slot: 6 + b);
-			while({ cur != 0 }, {
-				local Int is next: Mem:loadI64(ptr: cur + 16, byteOffset: 0);
-				Mem:free(ptr: cur);
-				cur: next;
-			});
-			Mem:tlsSetI64(slot: 6 + b, val: 0);
-			Mem:tlsSetI64(slot: 10 + b, val: 0);
-			b: b + 1;
-		});
+		Slab:threadCleanup();
 	}
 }

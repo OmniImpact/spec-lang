@@ -11,6 +11,8 @@ Class is Mem{
 	Function of Int is alloc(Int is bytes);
 	Function of Int is realloc(Int is ptr, Int is bytes);
 	Function is free(Int is ptr);
+	Function of Int is slabAlloc();
+	Function is slabFree(Int is ptr);
 	Function is copy(Int is dst, Int is src, Int is bytes);
 	Function is move(Int is dst, Int is src, Int is bytes);
 	Function is set(Int is dst, Int is byteVal, Int is bytes);
@@ -57,4 +59,5 @@ Class is Mem{
 	Function of String is typeNameOf(Any is obj);
 	Function of Int is tlsGetI64(Int is slot);
 	Function is tlsSetI64(Int is slot, Int is val);
+	Function of Boolean is isMultithreaded();
 }

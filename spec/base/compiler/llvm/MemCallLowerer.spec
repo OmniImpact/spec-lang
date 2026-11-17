@@ -32,8 +32,8 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
 		match(on: call:name, when: [
-			['init', 'classRegistryAddr', 'classRegistryCount', 'heldRegistryAddr']: { ok: true; },
-			['alloc', 'free', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'internStr', 'panic', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64', 'callConstruct', 'cstrToStr', 'typeNameOf', 'tlsGetI64']: { ok: true; },
+			['init', 'classRegistryAddr', 'classRegistryCount', 'heldRegistryAddr', 'slabAlloc', 'isMultithreaded']: { ok: true; },
+			['alloc', 'free', 'slabFree', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'internStr', 'panic', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64', 'callConstruct', 'cstrToStr', 'typeNameOf', 'tlsGetI64']: { ok: true; },
 			['realloc', 'strFromBytes', 'loadI64', 'loadI32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy', 'tlsSetI64']: { ok: argc >= 2; },
 			['copy', 'move', 'set', 'cmp', 'storeI64', 'storeI32', 'storeByte', 'storePtr', 'storeF64', 'atomicCasI64']: { ok: argc >= 3; }
 		]);
@@ -79,6 +79,16 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 			'free': {
 				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
 				res: self:emitSysCall(b: b, retType: IrType:Void, callee: '__spec_mem_free', argTypes: [IrType:I64], args: [p]);
+			},
+			'slabAlloc': {
+				res: self:emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_slab_alloc', argTypes: [], args: []);
+			},
+			'slabFree': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:Void, callee: '__spec_mem_slab_free', argTypes: [IrType:I64], args: [p]);
+			},
+			'isMultithreaded': {
+				res: self:emitSysCall(b: b, retType: IrType:I1, callee: '__spec_mem_is_multithreaded', argTypes: [], args: []);
 			},
 			'copy': {
 				local String is d: self:lowerNamedArg(b: b, call: call, argName: 'dst', posIdx: 0, defVal: '0');

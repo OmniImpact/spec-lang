@@ -662,6 +662,27 @@ define internal ptr @spec_string_intern(ptr %c) nounwind {
   ret ptr %s
 }
 declare void @spec_pal_format_float(double, i64) nounwind
+declare i64 @spec_pal_slab_alloc() nounwind
+declare void @spec_pal_slab_free(i64) nounwind
+define internal i64 @__spec_mem_slab_alloc() alwaysinline {
+  %a = call i64 @spec_pal_slab_alloc()
+  %isnull = icmp eq i64 %a, 0
+  br i1 %isnull, label %oom, label %ok
+oom:
+  call void @spec_panic(ptr @.str.oom)
+  br label %ok
+ok:
+  ret i64 %a
+}
+define internal void @__spec_mem_slab_free(i64 %addr) alwaysinline {
+  call void @spec_pal_slab_free(i64 %addr)
+  ret void
+}
+define internal i1 @__spec_mem_is_multithreaded() alwaysinline {
+  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4
+  %is_mt = icmp sgt i32 %mt, 0
+  ret i1 %is_mt
+}
 define internal ptr @spec_to_string_float(double %v) nounwind {
   %buf = alloca [64 x i8], align 8
   %ba = ptrtoint ptr %buf to i64

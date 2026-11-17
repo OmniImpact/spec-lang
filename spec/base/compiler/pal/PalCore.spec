@@ -32,6 +32,7 @@ Class of OsDispatch is PalCore{
 #include <pthread.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -125,6 +126,20 @@ static long long spec_pal_get_peak_rss_kb(void) {
         return (long long)ru.ru_maxrss;
     }
     return 0;
+}
+
+long long spec_pal_slab_alloc(void) {
+    uintptr_t raw = (uintptr_t)mmap(NULL, 131072, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (raw == (uintptr_t)MAP_FAILED) return 0;
+    uintptr_t aligned = (raw + 65535ULL) & ~65535ULL;
+    if (aligned > raw) munmap((void*)raw, aligned - raw);
+    uintptr_t end = raw + 131072;
+    if (end > aligned + 65536) munmap((void*)(aligned + 65536), end - (aligned + 65536));
+    return (long long)aligned;
+}
+
+void spec_pal_slab_free(long long addr) {
+    if (addr) munmap((void*)(intptr_t)addr, 65536);
 }''';
 	}
 
@@ -154,6 +169,7 @@ static long long spec_pal_get_peak_rss_kb(void) {
 #include <pthread.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -237,6 +253,20 @@ static long long spec_pal_get_peak_rss_kb(void) {
         return (long long)(ru.ru_maxrss / 1024);
     }
     return 0;
+}
+
+long long spec_pal_slab_alloc(void) {
+    uintptr_t raw = (uintptr_t)mmap(NULL, 131072, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (raw == (uintptr_t)MAP_FAILED) return 0;
+    uintptr_t aligned = (raw + 65535ULL) & ~65535ULL;
+    if (aligned > raw) munmap((void*)raw, aligned - raw);
+    uintptr_t end = raw + 131072;
+    if (end > aligned + 65536) munmap((void*)(aligned + 65536), end - (aligned + 65536));
+    return (long long)aligned;
+}
+
+void spec_pal_slab_free(long long addr) {
+    if (addr) munmap((void*)(intptr_t)addr, 65536);
 }''';
 	}
 
@@ -365,6 +395,15 @@ static long long spec_pal_get_peak_rss_kb(void) {
         return (long long)(pmc.PeakWorkingSetSize / 1024);
     }
     return 0;
+}
+
+long long spec_pal_slab_alloc(void) {
+    void* p = VirtualAlloc(NULL, 65536, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    return (long long)(intptr_t)p;
+}
+
+void spec_pal_slab_free(long long addr) {
+    if (addr) VirtualFree((void*)(intptr_t)addr, 0, MEM_RELEASE);
 }''';
 	}
 
