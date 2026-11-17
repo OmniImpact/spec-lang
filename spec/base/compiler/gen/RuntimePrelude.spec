@@ -366,11 +366,34 @@ typedef struct {
 
 #define SPEC_HEADER(obj) (((SpecHeader*)(obj)) - 1)
 
+__thread void* _spec_tls_freelist[4] = {0, 0, 0, 0};
+__thread int64_t _spec_tls_freecount[4] = {0, 0, 0, 0};
+
 static inline void* spec_alloc(size_t size, void (*destroy)(void*)) {
-    SpecHeader* h = (SpecHeader*)calloc(1, sizeof(SpecHeader) + size);
+    uint32_t slen_v = 0;
+    size_t alloc_size = size;
+    if (size > 0 && size <= 64) {
+        size_t b = (size - 1) >> 4;
+        slen_v = (uint32_t)(b + 1);
+        alloc_size = (b + 1) << 4;
+        if (_spec_tls_freelist[b]) {
+            SpecHeader* h = (SpecHeader*)_spec_tls_freelist[b];
+            void* obj = (void*)(h + 1);
+            _spec_tls_freelist[b] = *(void**)obj;
+            _spec_tls_freecount[b]--;
+            memset(obj, 0, alloc_size);
+            atomic_store_explicit(&h->ref_count, 1, memory_order_relaxed);
+            h->destroy = destroy;
+            atomic_store_explicit(&h->sflags, 0, memory_order_relaxed);
+            h->slen = slen_v;
+            return obj;
+        }
+    }
+    SpecHeader* h = (SpecHeader*)calloc(1, sizeof(SpecHeader) + alloc_size);
     if (!h) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
     h->ref_count = 1;
     h->destroy = destroy;
+    h->slen = slen_v;
     return (void*)(h + 1);
 }
 
@@ -421,6 +444,15 @@ static inline void spec_release(void* obj) {
            (freeing the object's malloc'd data) but never free(h) — the
            wholesale drain reclaims the block. */
         if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_ARENA) return;
+        if (h->slen != 0) {
+            size_t b = (size_t)h->slen - 1;
+            if (b < 4 && _spec_tls_freecount[b] < 2048) {
+                *(void**)obj = _spec_tls_freelist[b];
+                _spec_tls_freelist[b] = h;
+                _spec_tls_freecount[b]++;
+                return;
+            }
+        }
         free(h);
     }
 }

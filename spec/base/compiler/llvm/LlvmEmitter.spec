@@ -38,8 +38,8 @@ Class is LlvmEmitter{
 @_spec_pool_top = external thread_local global i64
 @_spec_pool_cap = external thread_local global i64
 @_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer
-@_spec_tls_freelist = internal thread_local global [4 x ptr] zeroinitializer
-@_spec_tls_freecount = internal thread_local global [4 x i64] zeroinitializer
+@_spec_tls_freelist = external thread_local global [4 x ptr]
+@_spec_tls_freecount = external thread_local global [4 x i64]
 @.str.oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
 %struct.SpecHeader = type { i32, ptr, i32, i32 }
 define internal noalias ptr @__spec_rt_alloc_slow(i64 %size, ptr %destroy) {
