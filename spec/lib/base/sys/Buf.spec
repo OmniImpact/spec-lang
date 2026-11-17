@@ -72,6 +72,25 @@ Class is Buf{
 		return Mem:strFromBytes(srcAddr: data, len: len);
 	}
 
+	## Byte-for-byte equality of strings [a] and [b].
+	##
+	## @param a: First string.
+	## @param b: Second string.
+	## @return: true when [a] and [b] have identical length and bytes.
+	Function of Boolean is stringEquals(String is a, String is b){
+		local Int is aAddr: Mem:objToAddr(obj: a);
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		if({ aAddr == bAddr }, { return true; });
+		if({ aAddr == 0 || bAddr == 0 }, { return false; });
+		local Int is aLen: Mem:loadI64(ptr: aAddr, byteOffset: 8);
+		local Int is bLen: Mem:loadI64(ptr: bAddr, byteOffset: 8);
+		if({ aLen != bLen }, { return false; });
+		if({ aLen == 0 }, { return true; });
+		local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
+		local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+		return Mem:cmp(a: aData, b: bData, bytes: aLen) == 0;
+	}
+
 	## Returns the process-interned form of [s]: equal contents yield
 	## the SAME string object. Interned strings are immortal.
 	##

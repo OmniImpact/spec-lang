@@ -2496,7 +2496,7 @@ Class is IrBuilder{
 			local String is strLit: self:nextTmp();
 			self:emit(inst: IrInst:ConstString(dst: strLit, strId: self:mod:internStringLiteral(value: 'String')));
 			local String is isStr: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: isStr, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [tnDst, strLit]));
+			self:emit(inst: IrInst:IrCall(dst: isStr, hasDst: true, retType: IrType:I1, callee: 'Buf_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', tnDst, strLit]));
 			local String is outSlot: '%any_ts_' . (self:nextTmp());
 			outSlot: '%any_ts_' . (self:tmpCounter as String);
 			self:emit(inst: IrInst:Alloca(slot: outSlot, ty: IrType:Ptr));
@@ -2632,14 +2632,14 @@ Class is IrBuilder{
 					if({ cmpTy == IrType:Void }, { cmpTy: IrType:I64; });
 					local Boolean is isStrCmp: cmpTy == IrType:Ptr && (left:resolvedType == 'String' || right:resolvedType == 'String');
 					if({ isStrCmp && (op == '==' || op == '!=') }, {
-						local Array of IrType is sT: [IrType:Ptr, IrType:Ptr];
-						local Array of String is sV: [l, r];
+						local Array of IrType is sT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
+						local Array of String is sV: ['null', l, r];
 						if({ op == '==' }, {
-							self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: sT, args: sV));
+							self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'Buf_stringEquals', argTypes: sT, args: sV));
 							return dst;
 						}, {
 							local String is eqTmp: self:nextTmp();
-							self:emit(inst: IrInst:IrCall(dst: eqTmp, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: sT, args: sV));
+							self:emit(inst: IrInst:IrCall(dst: eqTmp, hasDst: true, retType: IrType:I1, callee: 'Buf_stringEquals', argTypes: sT, args: sV));
 							self:emit(inst: IrInst:UnaryOp(dst: dst, op: '!', operand: eqTmp, ty: IrType:I1));
 							return dst;
 						});

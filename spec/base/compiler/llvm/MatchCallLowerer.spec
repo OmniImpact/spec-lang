@@ -209,7 +209,7 @@ Class of CallLowerer is MatchCallLowerer{
 		});
 		local String is condVal: b:nextTmp();
 		if({ subjTy == IrType:Ptr && (onExpr:resolvedType == 'String' || k:resolvedType == 'String') }, {
-			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [subjVal, kVal]));
+			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'Buf_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', subjVal, kVal]));
 		}, {
 			if({ subjTy == IrType:Ptr && kVal == '0' }, { kVal: 'null'; });
 			b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: subjVal, rhs: kVal, ty: subjTy));

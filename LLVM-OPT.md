@@ -73,12 +73,23 @@ native peers across `mc_pi`, `binary_trees`, and `word_freq`.
        - 1 thread: `75.96M` → **`162.60M` pts/s** (`1.232s` wall, `2.6 MB` RSS, **`0.98× C`**, **2.17× faster than the retired C backend**)
        - 8 threads: `472.81M` → **`995.02M` pts/s** (`0.204s` wall, `2.6 MB` RSS, **`0.98× C`**, matching C/C++/Rust/Go/JVM)
        - `specunit`: 104 passed, 0 failed.
-  2. **Hot string & atomic helpers — PARTIAL (ConstString caching DONE):**
-     Added `@__spec_intern_cached` + `@.str.cache.<id>` in `LlvmEmitter.spec` so
-     constant `ConstString` literals cache their immortal pointer in an atomic
-     global slot instead of calling `spec_string_intern` on every loop iteration.
-     - **Result (`word_freq`, 1M lines, median of 3):** `960.6K` → **`1.021M` lines/s** (`1.043s` → **`0.981s`**, **+6.3%**; **+9.2%** over baseline).
-     - **Remaining:** Port `spec_string_equals` / `spec_string_hash` over `Mem` and wire `Process` atomics to `Mem` inline LLVM atomics.
+  2. **Hot string & atomic helpers — PARTIAL:**
+     - **ConstString caching — DONE:** Added `@__spec_intern_cached` +
+       `@.str.cache.<id>` in `LlvmEmitter.spec` so constant `ConstString`
+       literals cache their immortal pointer in an atomic global slot instead
+       of calling `spec_string_intern` on every loop iteration.
+       - **Result (`word_freq`, 1M lines, median of 3):** `960.6K` → **`1.021M` lines/s** (`1.043s` → **`0.981s`**, **+6.3%**; **+9.2%** over baseline).
+     - **Pure-Spec `Buf:stringEquals` — DONE:** Ported `spec_string_equals`
+       into pure Spec (`Buf:stringEquals` over `Mem` in [Buf.spec](file:///home/daniel/Projects/Spec/spec/lib/base/sys/Buf.spec))
+       and routed `IrBuilder.spec` / `MatchCallLowerer.spec` string equality
+       lowering to `Buf_stringEquals`.
+       - **Result (median of 3):** `binary_trees` 8t `41.07M` → **`41.19M` nodes/s**
+         (+0.3%), 1t **`11.23M` nodes/s** (neutral); `word_freq` **`998.0K` lines/s**
+         (within noise; `HashTable` already used pure-Spec `mapStrKeyEquals`).
+       - `specunit`: 104 passed, 0 failed.
+     - **Remaining:** `Process` atomics (`atomic_add`/`put`/`get`, ~8 calls per
+       run in `mc_pi`/`binary_trees`, not on hot loops) and `WordFreq` hot-loop
+       allocation/string ops (`spec_string_concat`, `spec_to_string_int`).
 - **Compiler passes (100% structural, no class/function name matching):**
   1. **Multi-block small-function `alwaysinline` — DONE:** Extended
      `LlvmEmitter.spec` to tag small acyclic non-recursive functions (`<= 6`
