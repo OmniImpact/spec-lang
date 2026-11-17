@@ -1,16 +1,34 @@
 #! Package base:compiler:pal
-#! Emits the directory and path metadata C PAL (`spec_pal_dir_*`, `spec_exe_dir`, `spec_file_size`).
+#! Emits the directory and path metadata C PAL (`spec_pal_dir_*`, `spec_pal_exe_dir`, `spec_pal_file_size_cstr`).
 
-Class is PalDir{
+Class of OsDispatch is PalDir{
 	namespace: ['base', 'compiler', 'pal'];
+
+	replace Array of Array of String is using: [
+		['base', 'sys', OsDispatch]
+	];
 
 	replace Function is init(){
 	}
 
+	replace Function of String is linux(){
+		return '';
+	}
+
+	replace Function of String is macos(){
+		return '';
+	}
+
+	replace Function of String is windows(){
+		return '''    char* bslash = strrchr(buf, '\\');
+    if (bslash > slash) slash = bslash;''';
+	}
+
 	Function of String is emitBody(){
-		return '''long long spec_pal_dir_open(SpecBuf* path) {
-    if (!path || path->length == 0) return 0;
-    DIR* d = opendir(spec_buf_to_cstring(path));
+		return ```long long spec_pal_dir_open_cstr(long long path_cstr) {
+    const char* p = (const char*)(intptr_t)path_cstr;
+    if (!p || !*p) return 0;
+    DIR* d = opendir(p);
     return (long long)(intptr_t)d;
 }
 
@@ -30,29 +48,36 @@ void spec_pal_dir_close(long long handle) {
     closedir((DIR*)(intptr_t)handle);
 }
 
-String spec_pal_last_error(void) {
+long long spec_pal_last_error_cstr(void) {
     const char* m = strerror(errno);
-    if (!m) m = "Unknown error";
-    return spec_string_from_bytes(m, strlen(m));
+    return (long long)(intptr_t)(m ? m : "Unknown error");
 }
 
-SpecBuf* spec_exe_dir(void) {
-    char buf[4096];
-    if (!spec_pal_get_exe_path(buf, sizeof(buf))) return spec_string_from_bytes(".", 1);
+long long spec_pal_exe_dir(long long buf_addr, long long buf_size) {
+    char* buf = (char*)(intptr_t)buf_addr;
+    if (!buf || buf_size <= 1) return 0;
+    if (!spec_pal_get_exe_path(buf, (size_t)buf_size)) {
+        buf[0] = '.';
+        buf[1] = '\\0';
+        return 1;
+    }
     char* slash = strrchr(buf, '/');
-#if defined(_WIN32)
-    char* bslash = strrchr(buf, '\\');
-    if (bslash > slash) slash = bslash;
-#endif
-    if (!slash) return spec_string_from_bytes(".", 1);
-    return spec_string_from_bytes(buf, (size_t)(slash - buf));
+{{self:getOsBlock(separatePosix: false)}}
+    if (!slash) {
+        buf[0] = '.';
+        buf[1] = '\\0';
+        return 1;
+    }
+    return (long long)(slash - buf);
 }
 
-long long spec_file_size(SpecBuf* path) {
+long long spec_pal_file_size_cstr(long long path_cstr) {
+    const char* p = (const char*)(intptr_t)path_cstr;
+    if (!p || !*p) return -1;
     struct stat st;
-    if (stat(spec_buf_to_cstring(path), &st) != 0) return -1;
+    if (stat(p, &st) != 0) return -1;
     return (long long)st.st_size;
 }
-''';
+```;
 	}
 }

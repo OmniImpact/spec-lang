@@ -2,8 +2,12 @@
 #! Emits the process, concurrency, and resource monitoring C PAL (`spec_pal_process_*`,
 #! `spec_process_*`, `spec_parallel_*`, `spec_monitor_*`).
 
-Class is PalProcess{
+Class of OsDispatch is PalProcess{
 	namespace: ['base', 'compiler', 'pal'];
+
+	replace Array of Array of String is using: [
+		['base', 'sys', OsDispatch]
+	];
 
 	replace Function is init(){
 	}
@@ -73,13 +77,116 @@ static void* _spec_monitor_worker(void* arg) {
 ''';
 	}
 
-	Function of String is emitBody(){
-		return '''long long spec_pal_process_execute(String command, long long argv_addr, long long nargs_ll) {
-    if (!command) return -1;
-    const char* cc = spec_buf_to_cstring((SpecBuf*)command);
+	local Function of String is posixExecuteAndMeasure(String is rssScale, String is osLiteral){
+		return '''long long spec_pal_process_execute_cstr(long long cmd_cstr, long long argv_addr, long long nargs_ll) {
+    const char* cc = (const char*)(intptr_t)cmd_cstr;
+    if (!cc || !*cc) return -1;
     const char** raw_args = (const char**)(intptr_t)argv_addr;
     size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
-#if defined(_WIN32)
+    size_t total_len = strlen(cc) + 1;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        size_t quotes = 0;
+        for (size_t k = 0; a[k]; k++) if (a[k] == 39) quotes++;
+        total_len += strlen(a) + 3 * quotes + 3;
+    }
+    char* cmd_line = (char*)spec_xmalloc(total_len + 1);
+    char* w = cmd_line;
+    size_t cmd_len = strlen(cc);
+    memcpy(w, cc, cmd_len);
+    w += cmd_len;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        *w++ = ' ';
+        *w++ = 39;
+        for (size_t k = 0; a[k]; k++) {
+            if (a[k] == 39) { *w++ = 39; *w++ = 92; *w++ = 39; *w++ = 39; }
+            else *w++ = a[k];
+        }
+        *w++ = 39;
+    }
+    *w = 0;
+    int status = system(cmd_line);
+    free(cmd_line);
+    if (status == -1) return -1;
+    if (WIFSIGNALED(status)) return 128 + (long long)WTERMSIG(status);
+    return (long long)WEXITSTATUS(status);
+}
+
+void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long long nargs_ll, long long out_addr) {
+    long long* out = (long long*)(intptr_t)out_addr;
+    long long exit_code = -1;
+    long long wall_us = 0;
+    long long cpu_us = 0;
+    long long rss_kb = 0;
+    const char* cc = (const char*)(intptr_t)cmd_cstr;
+    if (!cc || !*cc) {
+        if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
+        return;
+    }
+    const char** raw_args = (const char**)(intptr_t)argv_addr;
+    size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
+    fflush(stdout);
+    fflush(stderr);
+    char** argv_exec = (char**)spec_xmalloc((nargs + 2) * sizeof(char*));
+    argv_exec[0] = (char*)cc;
+    for (size_t i = 0; i < nargs; i++) {
+        argv_exec[i + 1] = (char*)(raw_args[i] ? raw_args[i] : "");
+    }
+    argv_exec[nargs + 1] = NULL;
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    pid_t pid = fork();
+    if (pid == 0) {
+        execvp(cc, argv_exec);
+        _exit(127);
+    } else if (pid > 0) {
+        int status = 0;
+        struct rusage ru;
+        memset(&ru, 0, sizeof(ru));
+        pid_t wres;
+        do {
+            wres = wait4(pid, &status, 0, &ru);
+        } while (wres == -1 && errno == EINTR);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        fflush(stdout);
+        fflush(stderr);
+        wall_us = (long long)(t1.tv_sec - t0.tv_sec) * 1000000LL + (long long)(t1.tv_nsec - t0.tv_nsec) / 1000LL;
+        if (wall_us < 0) wall_us = 0;
+        if (wres > 0) {
+            cpu_us = (long long)(ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000LL + (long long)(ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+            rss_kb = (long long)ru.ru_maxrss''' . rssScale . ''';
+            if (WIFEXITED(status)) exit_code = (long long)WEXITSTATUS(status);
+            else if (WIFSIGNALED(status)) exit_code = 128 + (long long)WTERMSIG(status);
+        }
+    }
+    free(argv_exec);
+    if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
+}
+
+long long spec_process_get_pid(void) {
+    return (long long)getpid();
+}
+
+long long spec_pal_os_name(void) {
+    return (long long)(intptr_t)"''' . osLiteral . '''";
+}''';
+	}
+
+	replace Function of String is linux(){
+		return self:posixExecuteAndMeasure(rssScale: '', osLiteral: 'linux');
+	}
+
+	replace Function of String is macos(){
+		return self:posixExecuteAndMeasure(rssScale: ' / 1024', osLiteral: 'macos');
+	}
+
+	replace Function of String is windows(){
+		return '''long long spec_pal_process_execute_cstr(long long cmd_cstr, long long argv_addr, long long nargs_ll) {
+    const char* cc = (const char*)(intptr_t)cmd_cstr;
+    if (!cc || !*cc) return -1;
+    const char** raw_args = (const char**)(intptr_t)argv_addr;
+    size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
     size_t total_len = strlen(cc) + 1;
     for (size_t i = 0; i < nargs; i++) {
         const char* a = raw_args[i] ? raw_args[i] : "";
@@ -142,54 +249,23 @@ static void* _spec_monitor_worker(void* arg) {
     int status = system(cmd_line);
     free(cmd_line);
     return (long long)status;
-#else
-    size_t total_len = strlen(cc) + 1;
-    for (size_t i = 0; i < nargs; i++) {
-        const char* a = raw_args[i] ? raw_args[i] : "";
-        size_t quotes = 0;
-        for (size_t k = 0; a[k]; k++) if (a[k] == 39) quotes++;
-        total_len += strlen(a) + 3 * quotes + 3;
-    }
-    char* cmd_line = (char*)spec_xmalloc(total_len + 1);
-    char* w = cmd_line;
-    size_t cmd_len = strlen(cc);
-    memcpy(w, cc, cmd_len);
-    w += cmd_len;
-    for (size_t i = 0; i < nargs; i++) {
-        const char* a = raw_args[i] ? raw_args[i] : "";
-        *w++ = ' ';
-        *w++ = 39;
-        for (size_t k = 0; a[k]; k++) {
-            if (a[k] == 39) { *w++ = 39; *w++ = 92; *w++ = 39; *w++ = 39; }
-            else *w++ = a[k];
-        }
-        *w++ = 39;
-    }
-    *w = 0;
-    int status = system(cmd_line);
-    free(cmd_line);
-    if (status == -1) return -1;
-    if (WIFSIGNALED(status)) return 128 + (long long)WTERMSIG(status);
-    return (long long)WEXITSTATUS(status);
-#endif
 }
 
-void spec_pal_process_measure(String command, long long argv_addr, long long nargs_ll, long long out_addr) {
+void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long long nargs_ll, long long out_addr) {
     long long* out = (long long*)(intptr_t)out_addr;
     long long exit_code = -1;
     long long wall_us = 0;
     long long cpu_us = 0;
     long long rss_kb = 0;
-    if (!command) {
+    const char* cc = (const char*)(intptr_t)cmd_cstr;
+    if (!cc || !*cc) {
         if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
         return;
     }
-    const char* cc = spec_buf_to_cstring((SpecBuf*)command);
     const char** raw_args = (const char**)(intptr_t)argv_addr;
     size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
     fflush(stdout);
     fflush(stderr);
-#if defined(_WIN32)
     size_t total_len = strlen(cc) + 1;
     for (size_t i = 0; i < nargs; i++) {
         const char* a = raw_args[i] ? raw_args[i] : "";
@@ -270,85 +346,30 @@ void spec_pal_process_measure(String command, long long argv_addr, long long nar
         }
     }
     free(cmd_line);
-#else
-    char** argv_exec = (char**)spec_xmalloc((nargs + 2) * sizeof(char*));
-    argv_exec[0] = (char*)cc;
-    for (size_t i = 0; i < nargs; i++) {
-        argv_exec[i + 1] = (char*)(raw_args[i] ? raw_args[i] : "");
-    }
-    argv_exec[nargs + 1] = NULL;
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-    pid_t pid = fork();
-    if (pid == 0) {
-        execvp(cc, argv_exec);
-        _exit(127);
-    } else if (pid > 0) {
-        int status = 0;
-        struct rusage ru;
-        memset(&ru, 0, sizeof(ru));
-        pid_t wres;
-        do {
-            wres = wait4(pid, &status, 0, &ru);
-        } while (wres == -1 && errno == EINTR);
-        clock_gettime(CLOCK_MONOTONIC, &t1);
-        fflush(stdout);
-        fflush(stderr);
-        wall_us = (long long)(t1.tv_sec - t0.tv_sec) * 1000000LL + (long long)(t1.tv_nsec - t0.tv_nsec) / 1000LL;
-        if (wall_us < 0) wall_us = 0;
-        if (wres > 0) {
-            cpu_us = (long long)(ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000LL + (long long)(ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
-            rss_kb = (long long)ru.ru_maxrss;
-#if defined(__APPLE__)
-            rss_kb /= 1024;
-#endif
-            if (WIFEXITED(status)) exit_code = (long long)WEXITSTATUS(status);
-            else if (WIFSIGNALED(status)) exit_code = 128 + (long long)WTERMSIG(status);
-        }
-    }
-    free(argv_exec);
-#endif
     if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
 }
 
-void spec_process_sleep(long long ms) {
-    if (ms <= 0) return;
-#if defined(_WIN32)
-    Sleep((DWORD)ms);
-#else
-    struct timespec ts;
-    ts.tv_sec = ms / 1000;
-    ts.tv_nsec = (ms % 1000) * 1000000L;
-    nanosleep(&ts, NULL);
-#endif
-}
-
 long long spec_process_get_pid(void) {
-#if defined(_WIN32)
     return (long long)GetCurrentProcessId();
-#else
-    return (long long)getpid();
-#endif
 }
 
-String spec_process_getenv(String key, String def) {
-    if (!key) return def;
-    const char* k = spec_buf_to_cstring((SpecBuf*)key);
+long long spec_pal_os_name(void) {
+    return (long long)(intptr_t)"windows";
+}''';
+	}
+
+	Function of String is emitBody(){
+		return ```{{self:getOsBlock(separatePosix: true)}}
+
+void spec_process_sleep(long long ms) {
+    spec_pal_sleep_ms(ms);
+}
+
+long long spec_pal_getenv(long long key_cstr) {
+    const char* k = (const char*)(intptr_t)key_cstr;
+    if (!k || !*k) return 0;
     const char* val = getenv(k);
-    if (!val) return def;
-    return spec_string_from_bytes(val, strlen(val));
-}
-
-String spec_process_os_name(void) {
-#if defined(_WIN32)
-    return spec_string_intern("windows");
-#elif defined(__APPLE__) && defined(__MACH__)
-    return spec_string_intern("macos");
-#elif defined(__linux__)
-    return spec_string_intern("linux");
-#else
-    return spec_string_intern("unknown");
-#endif
+    return (long long)(intptr_t)val;
 }
 
 /* Striped recursive mutexes for Parallel:sync and Parallel:syncWith */
@@ -366,13 +387,13 @@ static void _spec_init_parallel_striped_mutexes(void) {
 }
 
 void* spec_parallel_sync_with(long long lock_key, void* action_closure) {
-    SpecClosure* cls = (SpecClosure*)action_closure;
-    if (!cls || !cls->fn) spec_panic("Parallel:sync received null action Function");
+    void** cls = (void**)action_closure;
+    if (!cls || !cls[0]) spec_panic("Parallel:sync received null action Function");
     pthread_once(&_spec_parallel_striped_once, _spec_init_parallel_striped_mutexes);
     unsigned long long k = (unsigned long long)lock_key;
     size_t idx = (size_t)(k ^ (k >> 6)) & 63ULL;
     pthread_mutex_lock(&_spec_parallel_striped_mutexes[idx]);
-    void* res = ((void* (*)(void*))cls->fn)(cls->env);
+    void* res = ((void* (*)(void*))cls[0])(cls[1]);
     pthread_mutex_unlock(&_spec_parallel_striped_mutexes[idx]);
     return res;
 }
@@ -383,8 +404,8 @@ void* spec_parallel_sync(void* action_closure) {
 
 long long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {
     if (threads < 1) threads = 1;
-    SpecClosure* cls = (SpecClosure*)worker_closure;
-    if (!cls || !cls->fn) spec_panic("Parallel:run received null worker Function");
+    void** cls = (void**)worker_closure;
+    if (!cls || !cls[0]) spec_panic("Parallel:run received null worker Function");
     spec_thread_enter();
     pthread_t* tids = (pthread_t*)spec_xmalloc(sizeof(pthread_t) * (size_t)threads);
     bool* spawned = (bool*)spec_xmalloc(sizeof(bool) * (size_t)threads);
@@ -393,8 +414,8 @@ long long spec_parallel_run(long long threads, long long iterations, void* worke
     long long rem = iterations % threads;
     for (long long i = 0; i < threads; i++) {
         SpecParallelTask* t = (SpecParallelTask*)spec_xmalloc(sizeof(SpecParallelTask));
-        t->fn = (SpecWorkerFn)cls->fn;
-        t->env = cls->env;
+        t->fn = (SpecWorkerFn)cls[0];
+        t->env = cls[1];
         t->idx = i;
         t->count = base + (i < rem ? 1 : 0);
         spawned[i] = (pthread_create(&tids[i], NULL, spec_parallel_worker, t) == 0);
@@ -485,6 +506,6 @@ void spec_monitor_stop(void) {
 void spec_process_exit(long long status) {
     exit((int)status);
 }
-''';
+```;
 	}
 }

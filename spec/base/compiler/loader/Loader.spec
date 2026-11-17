@@ -523,7 +523,11 @@ Class is Loader{
 			'Buf',
 			'Vector',
 			'Dir',
-			'CliArgs'
+			'CliArgs',
+			'Arc',
+			'Pool',
+			'Arena',
+			'Intern'
 		];
 		preloads:each(action: local Function(String is cls){
 			if({ !self:indexBuilt }, {

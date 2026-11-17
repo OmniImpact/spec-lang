@@ -1,15 +1,32 @@
 #! Package base:compiler:pal
-#! Emits the console I/O and terminal geometry C PAL (`spec_print*`, `spec_error_line`,
-#! `spec_read_*`, `spec_console_binary_mode`, `spec_term_*`).
+#! Emits the console I/O and terminal geometry C PAL (`spec_pal_print*`, `spec_pal_error_line`,
+#! `spec_pal_read_*`, `spec_console_binary_mode`, `spec_term_*`).
 
-Class is PalConsole{
+Class of OsDispatch is PalConsole{
 	namespace: ['base', 'compiler', 'pal'];
+
+	replace Array of Array of String is using: [
+		['base', 'sys', OsDispatch]
+	];
 
 	replace Function is init(){
 	}
 
+	replace Function of String is linux(){
+		return '';
+	}
+
+	replace Function of String is macos(){
+		return '';
+	}
+
+	replace Function of String is windows(){
+		return '''    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);''';
+	}
+
 	Function of String is emitBody(){
-		return '''long long spec_term_width(void) {
+		return ```long long spec_term_width(void) {
     long long w = 0;
     if (spec_pal_get_terminal_size(&w, NULL) && w > 0) return w;
     char* cols = getenv("COLUMNS");
@@ -25,68 +42,64 @@ long long spec_term_height(void) {
     return 24;
 }
 
-void spec_error_line(String s) {
-    const char* cs = s ? spec_buf_to_cstring((SpecBuf*)s) : "";
-    fprintf(stderr, "%s\n", cs);
+void spec_pal_error_line(long long data_addr, long long len) {
+    if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stderr);
+    fputc('\\n', stderr);
 }
 
-void spec_print_line(String s) {
-    printf("%s\n", s ? spec_buf_to_cstring((SpecBuf*)s) : "");
+void spec_pal_print_line(long long data_addr, long long len) {
+    if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stdout);
+    fputc('\\n', stdout);
 }
 
-void spec_print(String s) {
-    printf("%s", s ? spec_buf_to_cstring((SpecBuf*)s) : "");
+void spec_pal_print(long long data_addr, long long len) {
+    if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stdout);
     fflush(stdout);
 }
 
-void spec_read_line(SpecClosure* on_line) {
-#if defined(_WIN32)
-    char buf[4096];
-    if (fgets(buf, sizeof(buf), stdin)) {
-        size_t len = strlen(buf);
-        while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
-            buf[len - 1] = '\0';
-            len--;
+long long spec_pal_read_line(long long out_len_addr) {
+    long long* out_len = (long long*)(intptr_t)out_len_addr;
+    if (out_len) *out_len = 0;
+    size_t cap = 256;
+    size_t len = 0;
+    char* buf = (char*)spec_xmalloc(cap);
+    int ch;
+    bool got_any = false;
+    while ((ch = fgetc(stdin)) != EOF) {
+        got_any = true;
+        if (ch == '\\n') break;
+        if (len + 1 >= cap) {
+            cap *= 2;
+            buf = (char*)spec_xrealloc(buf, cap);
         }
-        String text = spec_string_from_chars(buf);
-        spec_call_closure_str(on_line, text);
-        spec_release(text);
+        buf[len++] = (char)ch;
     }
-#else
-    char* _line = NULL;
-    size_t _cap = 0;
-    ssize_t _n = getline(&_line, &_cap, stdin);
-    if (_n >= 0) {
-        if (_n > 0 && _line[_n - 1] == '\n') _line[_n - 1] = '\0';
-        String text = spec_string_from_chars(_line);
-        spec_call_closure_str(on_line, text);
-        spec_release(text);
+    if (!got_any && len == 0) {
+        free(buf);
+        return 0;
     }
-    free(_line);
-#endif
+    while (len > 0 && (buf[len - 1] == '\\n' || buf[len - 1] == '\\r')) len--;
+    buf[len] = '\\0';
+    if (out_len) *out_len = (long long)len;
+    return (long long)(intptr_t)buf;
 }
 
-String spec_read_bytes(long long count) {
-    if (count <= 0) return spec_string_from_bytes("", 0);
+long long spec_pal_read_bytes(long long dst_addr, long long count) {
+    if (!dst_addr || count <= 0) return 0;
+    char* buf = (char*)(intptr_t)dst_addr;
     size_t want = (size_t)count;
-    char* buf = (char*)spec_xmalloc(want);
     size_t got = 0;
     while (got < want) {
         size_t n = fread(buf + got, 1, want - got, stdin);
         if (n == 0) break;
         got += n;
     }
-    String res = spec_string_from_bytes(buf, got);
-    free(buf);
-    return res;
+    return (long long)got;
 }
 
 void spec_console_binary_mode(void) {
-#if defined(_WIN32)
-    _setmode(_fileno(stdin), _O_BINARY);
-    _setmode(_fileno(stdout), _O_BINARY);
-#endif
+{{self:getOsBlock(separatePosix: false)}}
 }
-''';
+```;
 	}
 }

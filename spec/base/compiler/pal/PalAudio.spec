@@ -1,31 +1,31 @@
 #! Package base:compiler:pal
-#! Emits the PCM audio output C PAL (`spec_audio_*`, `spec_pal_audio_write`).
+#! Emits the PCM audio output C PAL (`spec_pal_audio_*`, `spec_audio_drain`, `spec_audio_close`).
 
-Class is PalAudio{
+Class of OsDispatch is PalAudio{
 	namespace: ['base', 'compiler', 'pal'];
+
+	replace Array of Array of String is using: [
+		['base', 'sys', OsDispatch]
+	];
 
 	replace Function is init(){
 	}
 
 	Function of String is emitHeader(){
-		return '''/* PCM Audio Output Floor */
-typedef struct SpecAudioStream {
+		return '';
+	}
+
+	replace Function of String is linux(){
+		return '''typedef struct SpecAudioStream {
     bool active;
     long long sample_rate;
     long long channels;
     long long format;
-#if defined(__linux__)
     void* alsa_handle;
-#elif defined(__APPLE__) && defined(__MACH__)
-    AudioQueueRef aq_queue;
-#elif defined(_WIN32)
-    HWAVEOUT h_wave_out;
-#endif
 } SpecAudioStream;
 
 static SpecAudioStream _spec_audio_streams[8] = {0};
 
-#if defined(__linux__)
 typedef void* spec_snd_pcm_t;
 typedef int (*spec_pfn_snd_pcm_open)(spec_snd_pcm_t**, const char*, int, int);
 typedef int (*spec_pfn_snd_pcm_set_params)(spec_snd_pcm_t*, int, int, unsigned int, unsigned int, int, unsigned int);
@@ -62,7 +62,94 @@ static bool _spec_init_alsa(void) {
     _spec_snd_pcm_recover = (spec_pfn_snd_pcm_recover)dlsym(_spec_alsa_lib, "snd_pcm_recover");
     return _spec_snd_pcm_open && _spec_snd_pcm_set_params && _spec_snd_pcm_writei;
 }
-#elif defined(__APPLE__) && defined(__MACH__)
+
+long long spec_pal_audio_open(long long sample_rate, long long channels, long long format) {
+    if (sample_rate <= 0) sample_rate = 44100;
+    if (channels <= 0) channels = 2;
+    if (format <= 0) format = 1;
+    int slot = -1;
+    for (int i = 0; i < 8; i++) {
+        if (!_spec_audio_streams[i].active) { slot = i; break; }
+    }
+    if (slot < 0) {
+        _spec_last_audio_err = "Audio error: Maximum concurrent audio streams reached";
+        return -1;
+    }
+    if (!_spec_init_alsa()) {
+        _spec_last_audio_err = "Audio error: Failed to initialize ALSA";
+        return -1;
+    }
+    spec_snd_pcm_t* pcm = NULL;
+    if (_spec_snd_pcm_open(&pcm, "default", 0, 0) != 0) {
+        _spec_last_audio_err = "Audio error: Failed to open ALSA PCM device";
+        return -1;
+    }
+    if (_spec_snd_pcm_set_params(pcm, 2, 3, (unsigned int)channels, (unsigned int)sample_rate, 1, 500000) != 0) {
+        if (_spec_snd_pcm_close) _spec_snd_pcm_close(pcm);
+        _spec_last_audio_err = "Audio error: Failed to configure ALSA PCM parameters";
+        return -1;
+    }
+    _spec_audio_streams[slot].alsa_handle = pcm;
+    _spec_audio_streams[slot].active = true;
+    _spec_audio_streams[slot].sample_rate = sample_rate;
+    _spec_audio_streams[slot].channels = channels;
+    _spec_audio_streams[slot].format = format;
+    return (long long)(slot + 1);
+}
+
+long long spec_pal_audio_write(long long handle, long long data_addr, long long len_ll) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) {
+        _spec_last_audio_err = "Audio error: Audio stream is closed or invalid";
+        return -1;
+    }
+    if (!data_addr || len_ll <= 0) return 0;
+    if (!_spec_snd_pcm_writei) {
+        _spec_last_audio_err = "Audio error: ALSA write function unavailable";
+        return -1;
+    }
+    const void* data_ptr = (const void*)(intptr_t)data_addr;
+    size_t len = (size_t)len_ll;
+    long long bytes_per_frame = _spec_audio_streams[idx].channels * 2;
+    unsigned long frames = (unsigned long)(len / (size_t)bytes_per_frame);
+    long res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, data_ptr, frames);
+    if (res < 0) {
+        if (_spec_snd_pcm_recover) res = _spec_snd_pcm_recover((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, (int)res, 0);
+        if (res == 0) res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, data_ptr, frames);
+    }
+    if (res < 0) {
+        _spec_last_audio_err = "Audio error: Failed to write ALSA audio samples";
+        return res;
+    }
+    return (long long)(res * bytes_per_frame);
+}
+
+long long spec_audio_drain(long long handle) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return 0;
+    if (_spec_snd_pcm_drain) _spec_snd_pcm_drain((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle);
+    return 0;
+}
+
+void spec_audio_close(long long handle) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return;
+    if (_spec_snd_pcm_close) _spec_snd_pcm_close((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle);
+    memset(&_spec_audio_streams[idx], 0, sizeof(SpecAudioStream));
+}''';
+	}
+
+	replace Function of String is macos(){
+		return '''typedef struct SpecAudioStream {
+    bool active;
+    long long sample_rate;
+    long long channels;
+    long long format;
+    AudioQueueRef aq_queue;
+} SpecAudioStream;
+
+static SpecAudioStream _spec_audio_streams[8] = {0};
+
 typedef OSStatus (*spec_pfn_AudioQueueNewOutput)(const AudioStreamBasicDescription*, AudioQueueOutputCallback, void*, CFRunLoopRef, CFStringRef, UInt32, AudioQueueRef*);
 typedef OSStatus (*spec_pfn_AudioQueueStart)(AudioQueueRef, const AudioTimeStamp*);
 typedef OSStatus (*spec_pfn_AudioQueueStop)(AudioQueueRef, Boolean);
@@ -98,7 +185,95 @@ static void _spec_audio_queue_cb(void* custom_data, AudioQueueRef queue, AudioQu
     (void)custom_data;
     if (_spec_AudioQueueFreeBuffer) _spec_AudioQueueFreeBuffer(queue, buffer);
 }
-#elif defined(_WIN32)
+
+long long spec_pal_audio_open(long long sample_rate, long long channels, long long format) {
+    if (sample_rate <= 0) sample_rate = 44100;
+    if (channels <= 0) channels = 2;
+    if (format <= 0) format = 1;
+    int slot = -1;
+    for (int i = 0; i < 8; i++) {
+        if (!_spec_audio_streams[i].active) { slot = i; break; }
+    }
+    if (slot < 0) {
+        _spec_last_audio_err = "Audio error: Maximum concurrent audio streams reached";
+        return -1;
+    }
+    if (!_spec_init_audiotoolbox()) {
+        _spec_last_audio_err = "Audio error: Failed to initialize AudioToolbox";
+        return -1;
+    }
+    AudioStreamBasicDescription desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.mSampleRate = (Float64)sample_rate;
+    desc.mFormatID = kAudioFormatLinearPCM;
+    desc.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    desc.mBytesPerPacket = (UInt32)(channels * 2);
+    desc.mFramesPerPacket = 1;
+    desc.mBytesPerFrame = (UInt32)(channels * 2);
+    desc.mChannelsPerFrame = (UInt32)channels;
+    desc.mBitsPerChannel = 16;
+    AudioQueueRef queue = NULL;
+    if (_spec_AudioQueueNewOutput(&desc, _spec_audio_queue_cb, NULL, NULL, NULL, 0, &queue) != noErr) {
+        _spec_last_audio_err = "Audio error: AudioQueueNewOutput failed";
+        return -1;
+    }
+    _spec_AudioQueueStart(queue, NULL);
+    _spec_audio_streams[slot].aq_queue = queue;
+    _spec_audio_streams[slot].active = true;
+    _spec_audio_streams[slot].sample_rate = sample_rate;
+    _spec_audio_streams[slot].channels = channels;
+    _spec_audio_streams[slot].format = format;
+    return (long long)(slot + 1);
+}
+
+long long spec_pal_audio_write(long long handle, long long data_addr, long long len_ll) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) {
+        _spec_last_audio_err = "Audio error: Audio stream is closed or invalid";
+        return -1;
+    }
+    if (!data_addr || len_ll <= 0) return 0;
+    const void* data_ptr = (const void*)(intptr_t)data_addr;
+    size_t len = (size_t)len_ll;
+    AudioQueueRef queue = _spec_audio_streams[idx].aq_queue;
+    AudioQueueBufferRef buffer = NULL;
+    if (_spec_AudioQueueAllocateBuffer && _spec_AudioQueueAllocateBuffer(queue, (UInt32)len, &buffer) == noErr) {
+        memcpy(buffer->mAudioData, data_ptr, len);
+        buffer->mAudioDataByteSize = (UInt32)len;
+        if (_spec_AudioQueueEnqueueBuffer) _spec_AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
+        return (long long)len;
+    }
+    _spec_last_audio_err = "Audio error: Failed to allocate AudioToolbox buffer";
+    return -1;
+}
+
+long long spec_audio_drain(long long handle) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return 0;
+    if (_spec_AudioQueueStop) _spec_AudioQueueStop(_spec_audio_streams[idx].aq_queue, false);
+    if (_spec_AudioQueueStart) _spec_AudioQueueStart(_spec_audio_streams[idx].aq_queue, NULL);
+    return 0;
+}
+
+void spec_audio_close(long long handle) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return;
+    if (_spec_AudioQueueDispose) _spec_AudioQueueDispose(_spec_audio_streams[idx].aq_queue, true);
+    memset(&_spec_audio_streams[idx], 0, sizeof(SpecAudioStream));
+}''';
+	}
+
+	replace Function of String is windows(){
+		return '''typedef struct SpecAudioStream {
+    bool active;
+    long long sample_rate;
+    long long channels;
+    long long format;
+    HWAVEOUT h_wave_out;
+} SpecAudioStream;
+
+static SpecAudioStream _spec_audio_streams[8] = {0};
+
 typedef MMRESULT (WINAPI *spec_pfn_waveOutOpen)(LPHWAVEOUT, UINT, LPCWAVEFORMATEX, DWORD_PTR, DWORD_PTR, DWORD);
 typedef MMRESULT (WINAPI *spec_pfn_waveOutWrite)(HWAVEOUT, LPWAVEHDR, UINT);
 typedef MMRESULT (WINAPI *spec_pfn_waveOutPrepareHeader)(HWAVEOUT, LPWAVEHDR, UINT);
@@ -123,48 +298,21 @@ static bool _spec_init_winmm(void) {
     _spec_waveOutClose = (spec_pfn_waveOutClose)(void*)GetProcAddress(_spec_winmm_lib, "waveOutClose");
     return _spec_waveOutOpen && _spec_waveOutWrite && _spec_waveOutPrepareHeader;
 }
-#endif
-#endif
-''';
-	}
 
-	Function of String is emitBody(){
-		return '''long long spec_audio_open_cb(long long sample_rate, long long channels, long long format, SpecClosure* on_error) {
+long long spec_pal_audio_open(long long sample_rate, long long channels, long long format) {
     if (sample_rate <= 0) sample_rate = 44100;
     if (channels <= 0) channels = 2;
     if (format <= 0) format = 1;
-
     int slot = -1;
     for (int i = 0; i < 8; i++) {
-        if (!_spec_audio_streams[i].active) {
-            slot = i;
-            break;
-        }
+        if (!_spec_audio_streams[i].active) { slot = i; break; }
     }
     if (slot < 0) {
-        _spec_emit_str_error(on_error, "Audio error: Maximum concurrent audio streams reached");
+        _spec_last_audio_err = "Audio error: Maximum concurrent audio streams reached";
         return -1;
     }
-
-#if defined(__linux__)
-    if (!_spec_init_alsa()) {
-        _spec_emit_str_error(on_error, "Audio error: Failed to initialize ALSA");
-        return -1;
-    }
-    spec_snd_pcm_t* pcm = NULL;
-    if (_spec_snd_pcm_open(&pcm, "default", 0, 0) != 0) {
-        _spec_emit_str_error(on_error, "Audio error: Failed to open ALSA PCM device");
-        return -1;
-    }
-    if (_spec_snd_pcm_set_params(pcm, 2 /* S16_LE */, 3 /* RW_INTERLEAVED */, (unsigned int)channels, (unsigned int)sample_rate, 1, 500000) != 0) {
-        if (_spec_snd_pcm_close) _spec_snd_pcm_close(pcm);
-        _spec_emit_str_error(on_error, "Audio error: Failed to configure ALSA PCM parameters");
-        return -1;
-    }
-    _spec_audio_streams[slot].alsa_handle = pcm;
-#elif defined(_WIN32)
     if (!_spec_init_winmm()) {
-        _spec_emit_str_error(on_error, "Audio error: Failed to initialize WinMM");
+        _spec_last_audio_err = "Audio error: Failed to initialize WinMM";
         return -1;
     }
     WAVEFORMATEX wfx;
@@ -177,34 +325,10 @@ static bool _spec_init_winmm(void) {
     wfx.nAvgBytesPerSec = (DWORD)(sample_rate * wfx.nBlockAlign);
     HWAVEOUT hWave = NULL;
     if (_spec_waveOutOpen(&hWave, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) {
-        _spec_emit_str_error(on_error, "Audio error: waveOutOpen failed");
+        _spec_last_audio_err = "Audio error: waveOutOpen failed";
         return -1;
     }
     _spec_audio_streams[slot].h_wave_out = hWave;
-#elif defined(__APPLE__) && defined(__MACH__)
-    if (!_spec_init_audiotoolbox()) {
-        _spec_emit_str_error(on_error, "Audio error: Failed to initialize AudioToolbox");
-        return -1;
-    }
-    AudioStreamBasicDescription desc;
-    memset(&desc, 0, sizeof(desc));
-    desc.mSampleRate = (Float64)sample_rate;
-    desc.mFormatID = kAudioFormatLinearPCM;
-    desc.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-    desc.mBytesPerPacket = (UInt32)(channels * 2);
-    desc.mFramesPerPacket = 1;
-    desc.mBytesPerFrame = (UInt32)(channels * 2);
-    desc.mChannelsPerFrame = (UInt32)channels;
-    desc.mBitsPerChannel = 16;
-    AudioQueueRef queue = NULL;
-    if (_spec_AudioQueueNewOutput(&desc, _spec_audio_queue_cb, NULL, NULL, NULL, 0, &queue) != noErr) {
-        _spec_emit_str_error(on_error, "Audio error: AudioQueueNewOutput failed");
-        return -1;
-    }
-    _spec_AudioQueueStart(queue, NULL);
-    _spec_audio_streams[slot].aq_queue = queue;
-#endif
-
     _spec_audio_streams[slot].active = true;
     _spec_audio_streams[slot].sample_rate = sample_rate;
     _spec_audio_streams[slot].channels = channels;
@@ -212,37 +336,15 @@ static bool _spec_init_winmm(void) {
     return (long long)(slot + 1);
 }
 
-long long spec_audio_open(long long sample_rate, long long channels, long long format) {
-    return spec_audio_open_cb(sample_rate, channels, format, NULL);
-}
-
-long long spec_pal_audio_write(long long handle, long long data_addr, long long len_ll, SpecClosure* on_error) {
+long long spec_pal_audio_write(long long handle, long long data_addr, long long len_ll) {
     long long idx = handle - 1;
     if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) {
-        _spec_emit_str_error(on_error, "Audio error: Audio stream is closed or invalid");
+        _spec_last_audio_err = "Audio error: Audio stream is closed or invalid";
         return -1;
     }
     if (!data_addr || len_ll <= 0) return 0;
     const void* data_ptr = (const void*)(intptr_t)data_addr;
     size_t len = (size_t)len_ll;
-#if defined(__linux__)
-    if (!_spec_snd_pcm_writei) {
-        _spec_emit_str_error(on_error, "Audio error: ALSA write function unavailable");
-        return -1;
-    }
-    long long bytes_per_frame = _spec_audio_streams[idx].channels * 2;
-    unsigned long frames = (unsigned long)(len / (size_t)bytes_per_frame);
-    long res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, data_ptr, frames);
-    if (res < 0) {
-        if (_spec_snd_pcm_recover) res = _spec_snd_pcm_recover((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, (int)res, 0);
-        if (res == 0) res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, data_ptr, frames);
-    }
-    if (res < 0) {
-        _spec_emit_str_error(on_error, "Audio error: Failed to write ALSA audio samples");
-        return res;
-    }
-    return (long long)(res * bytes_per_frame);
-#elif defined(_WIN32)
     HWAVEOUT hWave = _spec_audio_streams[idx].h_wave_out;
     WAVEHDR* hdr = (WAVEHDR*)spec_xmalloc(sizeof(WAVEHDR));
     memset(hdr, 0, sizeof(WAVEHDR));
@@ -252,49 +354,32 @@ long long spec_pal_audio_write(long long handle, long long data_addr, long long 
     if (_spec_waveOutPrepareHeader) _spec_waveOutPrepareHeader(hWave, hdr, sizeof(WAVEHDR));
     if (_spec_waveOutWrite) _spec_waveOutWrite(hWave, hdr, sizeof(WAVEHDR));
     return (long long)len;
-#elif defined(__APPLE__) && defined(__MACH__)
-    AudioQueueRef queue = _spec_audio_streams[idx].aq_queue;
-    AudioQueueBufferRef buffer = NULL;
-    if (_spec_AudioQueueAllocateBuffer && _spec_AudioQueueAllocateBuffer(queue, (UInt32)len, &buffer) == noErr) {
-        memcpy(buffer->mAudioData, data_ptr, len);
-        buffer->mAudioDataByteSize = (UInt32)len;
-        if (_spec_AudioQueueEnqueueBuffer) _spec_AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
-        return (long long)len;
-    }
-    _spec_emit_str_error(on_error, "Audio error: Failed to allocate AudioToolbox buffer");
-    return -1;
-#endif
-    _spec_emit_str_error(on_error, "Audio error: Unsupported audio backend");
-    return -1;
 }
 
 long long spec_audio_drain(long long handle) {
     long long idx = handle - 1;
     if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return 0;
-#if defined(__linux__)
-    if (_spec_snd_pcm_drain) _spec_snd_pcm_drain((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle);
-#elif defined(_WIN32)
     Sleep(50);
-#elif defined(__APPLE__) && defined(__MACH__)
-    if (_spec_AudioQueueStop) _spec_AudioQueueStop(_spec_audio_streams[idx].aq_queue, false);
-    if (_spec_AudioQueueStart) _spec_AudioQueueStart(_spec_audio_streams[idx].aq_queue, NULL);
-#endif
     return 0;
 }
 
 void spec_audio_close(long long handle) {
     long long idx = handle - 1;
     if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return;
-#if defined(__linux__)
-    if (_spec_snd_pcm_close) _spec_snd_pcm_close((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle);
-#elif defined(_WIN32)
     if (_spec_waveOutReset) _spec_waveOutReset(_spec_audio_streams[idx].h_wave_out);
     if (_spec_waveOutClose) _spec_waveOutClose(_spec_audio_streams[idx].h_wave_out);
-#elif defined(__APPLE__) && defined(__MACH__)
-    if (_spec_AudioQueueDispose) _spec_AudioQueueDispose(_spec_audio_streams[idx].aq_queue, true);
-#endif
     memset(&_spec_audio_streams[idx], 0, sizeof(SpecAudioStream));
+}''';
+	}
+
+	Function of String is emitBody(){
+		return ```static __thread const char* _spec_last_audio_err = "";
+
+long long spec_pal_audio_last_error(void) {
+    return (long long)(intptr_t)(_spec_last_audio_err ? _spec_last_audio_err : "Audio error");
 }
-''';
+
+{{self:getOsBlock(separatePosix: true)}}
+```;
 	}
 }

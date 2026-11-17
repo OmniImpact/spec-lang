@@ -1,17 +1,12 @@
 #! Package base:sys
-#! The console output wrapper: the Spec-side names over the console
-#! floor's C names.
-
-## Standard output. `line` writes with a trailing newline; `consOut`
-## writes inline and flushes — the console-out half of the console I/O
-## pair (`consOut`/`consIn`). The explicit console names keep the
-## generic I/O verbs (`read`/`write`) unambiguous for File under the
-## merged as-import scope.
+#! The console output wrapper: the Spec-side names over the console floor.
 
 Class is Output{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Console]
 	];
 
@@ -19,7 +14,10 @@ Class is Output{
 	##
 	## @param text: Text string to print.
 	Function is line(String is text){
-		base:sysinternal:Console:print_line(text: text);
+		local Int is sAddr: Mem:objToAddr(obj: text);
+		local Int is dAddr: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
+		local Int is len: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 8) }, { 0 });
+		base:sysinternal:Console:pal_print_line(data_addr: dAddr, len: len);
 	}
 
 	## Writes text to standard output without a trailing newline and
@@ -27,6 +25,9 @@ Class is Output{
 	##
 	## @param text: Text string to write inline.
 	Function is consOut(String is text){
-		base:sysinternal:Console:print(text: text);
+		local Int is sAddr: Mem:objToAddr(obj: text);
+		local Int is dAddr: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
+		local Int is len: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 8) }, { 0 });
+		base:sysinternal:Console:pal_print(data_addr: dAddr, len: len);
 	}
 }

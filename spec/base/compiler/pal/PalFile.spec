@@ -1,185 +1,142 @@
 #! Package base:compiler:pal
-#! Emits the file I/O C PAL (`spec_file_read*`, `spec_file_write*`, `spec_file_append`,
-#! `spec_file_exists`, `spec_file_remove*`, `spec_file_temp*`).
+#! Emits the file I/O and async task worker C PAL (`spec_pal_file_*`, `spec_pal_spawn_async`).
 
-Class is PalFile{
+Class of OsDispatch is PalFile{
 	namespace: ['base', 'compiler', 'pal'];
+
+	replace Array of Array of String is using: [
+		['base', 'sys', OsDispatch]
+	];
 
 	replace Function is init(){
 	}
 
 	Function of String is emitHeader(){
-		return '''typedef struct {
-    String path;
-    String content;
-    String def;
-    SpecClosure* on_success_read;
-    SpecClosure* on_success_write;
-    SpecClosure* on_error;
-} SpecFileTask;
+		return '';
+	}
 
-static void* spec_file_read_worker(void* arg) {
-    SpecFileTask* task = (SpecFileTask*)arg;
-    String res = spec_file_read(task->path, task->def, task->on_success_read, task->on_error);
-    if (res) spec_release(res);
-    if (task->path) spec_release(task->path);
-    if (task->def) spec_release(task->def);
-    if (task->on_success_read) spec_release(task->on_success_read);
-    if (task->on_error) spec_release(task->on_error);
-    free(task);
-    spec_pool_thread_cleanup();
-    spec_async_task_finished();
-    return NULL;
+	replace Function of String is linux(){
+		return '''static void _spec_pal_ensure_tmp_dir(const char* pc) {
+    (void)pc;
 }
 
-static void* spec_file_write_worker(void* arg) {
-    SpecFileTask* task = (SpecFileTask*)arg;
-    spec_file_write(task->path, task->content, task->on_success_write, task->on_error);
-    if (task->path) spec_release(task->path);
-    if (task->content) spec_release(task->content);
-    if (task->on_success_write) spec_release(task->on_success_write);
-    if (task->on_error) spec_release(task->on_error);
-    free(task);
-    spec_pool_thread_cleanup();
-    spec_async_task_finished();
-    return NULL;
+static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* suffix, size_t suffix_cap) {
+    (void)tpl; (void)buf_io; (void)suffix; (void)suffix_cap;
+    return -1;
+}''';
+	}
+
+	replace Function of String is macos(){
+		return self:linux();
+	}
+
+	replace Function of String is windows(){
+		return '''static void _spec_pal_ensure_tmp_dir(const char* pc) {
+    if (!pc || strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0 || strcmp(pc, "/tmp") == 0) {
+        CreateDirectoryA("/tmp", NULL);
+    }
 }
-''';
+
+static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* suffix, size_t suffix_cap) {
+    if (strncmp(tpl, "/tmp/", 5) != 0 && strcmp(tpl, "/tmp") != 0) return -1;
+    char temp_dir[MAX_PATH];
+    DWORD td_len = GetTempPathA(MAX_PATH, temp_dir);
+    if (td_len == 0 || td_len >= MAX_PATH) return -1;
+    const char* base = strrchr(tpl, '/');
+    const char* b2 = strrchr(tpl, '\\');
+    if (b2 && (!base || b2 > base)) base = b2;
+    if (base) base++; else base = tpl;
+    free(*buf_io);
+    char* buf = (char*)spec_xmalloc(strlen(temp_dir) + strlen(base) + 32);
+    sprintf(buf, "%s%s", temp_dir, base);
+    suffix[0] = '\0';
+    char* xpos = strstr(buf, "XXXXXX");
+    if (!xpos) {
+        strcat(buf, "_XXXXXX");
+    } else {
+        if (strlen(xpos + 6) < suffix_cap) {
+            strcpy(suffix, xpos + 6);
+        }
+        xpos[6] = '\0';
+    }
+    *buf_io = buf;
+    return mkstemp(buf);
+}''';
 	}
 
 	Function of String is emitBody(){
-		return '''String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {
-    if (!path || path->length == 0) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_intern("File error: Empty or invalid file path provided"));
-        return def ? def : spec_string_intern("");
+		return ```{{self:getOsBlock(separatePosix: false)}}
+
+static void* spec_pal_async_worker(void* arg) {
+    void** cls = (void**)arg;
+    if (cls && cls[0]) {
+        ((void (*)(void*))cls[0])(cls[1]);
     }
-    const char* pc = spec_buf_to_cstring((SpecBuf*)path);
+    if (arg) Arc_release(NULL, (long long)(intptr_t)arg);
+    spec_pool_thread_cleanup();
+    spec_async_task_finished();
+    return NULL;
+}
+
+void spec_pal_spawn_async(void* task_closure) {
+    if (!task_closure) return;
+    spec_async_task_started();
+    pthread_t tid;
+    if (pthread_create(&tid, NULL, spec_pal_async_worker, task_closure) != 0) {
+        spec_pal_async_worker(task_closure);
+        return;
+    }
+    pthread_detach(tid);
+}
+
+long long spec_pal_file_read(long long path_cstr, long long out_len_addr) {
+    long long* out_len = (long long*)(intptr_t)out_len_addr;
+    if (out_len) *out_len = 0;
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return -1;
     FILE* f = fopen(pc, "rb");
-    if (!f) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
-        return def ? def : spec_string_intern("");
-    }
+    if (!f) return -1;
     if (fseek(f, 0, SEEK_END) != 0) {
         fclose(f);
-        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
-        return def ? def : spec_string_intern("");
+        return -1;
     }
     long size = ftell(f);
     if (size < 0) {
         fclose(f);
-        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
-        return def ? def : spec_string_intern("");
+        return -1;
     }
     fseek(f, 0, SEEK_SET);
     char* buf = (char*)malloc((size_t)size + 1);
     if (!buf) {
         fclose(f);
-        if (on_error) spec_call_closure_str(on_error, spec_string_intern("File error: Memory allocation failed during read"));
-        return def ? def : spec_string_intern("");
+        return -2;
     }
-    size_t read_bytes = fread(buf, 1, size, f);
+    size_t read_bytes = fread(buf, 1, (size_t)size, f);
     fclose(f);
-    String out = spec_string_from_bytes(buf, read_bytes);
-    free(buf);
-    if (on_success) spec_call_closure_str(on_success, out);
-    return out;
+    buf[read_bytes] = '\\0';
+    if (out_len) *out_len = (long long)read_bytes;
+    return (long long)(intptr_t)buf;
 }
 
-bool spec_file_write(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {
-    if (!path || path->length == 0) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_intern("File error: Empty or invalid file path provided"));
-        return false;
-    }
-    const char* pc = spec_buf_to_cstring((SpecBuf*)path);
-#if defined(_WIN32)
-    if (pc && (strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0)) {
-        CreateDirectoryA("/tmp", NULL);
-    }
-#endif
-    size_t len = content ? ((SpecBuf*)content)->length : 0;
-    const char* cc = len ? (const char*)((SpecBuf*)content)->data : "";
-    FILE* f = fopen(pc, "wb");
-    if (!f) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
-        return false;
-    }
+long long spec_pal_file_write(long long path_cstr, long long data_addr, long long len_ll, long long append) {
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return -1;
+    _spec_pal_ensure_tmp_dir(pc);
+    size_t len = (len_ll > 0 && data_addr) ? (size_t)len_ll : 0;
+    if (append && len == 0) return 0;
+    const char* cc = len ? (const char*)(intptr_t)data_addr : "";
+    FILE* f = fopen(pc, append ? "ab" : "wb");
+    if (!f) return -1;
     size_t written = fwrite(cc, 1, len, f);
-    if (fclose(f) != 0) written = (size_t)-1;
-    if (written != len) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
-        return false;
-    }
-    if (on_success) spec_call_closure_int(on_success, (long long)written);
-    return true;
+    if (fclose(f) != 0) return -1;
+    if (written != len) return -1;
+    return (long long)written;
 }
 
-bool spec_file_append(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {
-    if (!path || path->length == 0) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_intern("File error: Empty or invalid file path provided"));
-        return false;
-    }
-    const char* pc = spec_buf_to_cstring((SpecBuf*)path);
-#if defined(_WIN32)
-    if (pc && (strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0)) {
-        CreateDirectoryA("/tmp", NULL);
-    }
-#endif
-    size_t len = content ? ((SpecBuf*)content)->length : 0;
-    if (len == 0) {
-        if (on_success) spec_call_closure_int(on_success, 0);
-        return true;
-    }
-    const char* cc = (const char*)((SpecBuf*)content)->data;
-    FILE* f = fopen(pc, "ab");
-    if (!f) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
-        return false;
-    }
-    size_t written = fwrite(cc, 1, len, f);
-    if (fclose(f) != 0) written = (size_t)-1;
-    if (written != len) {
-        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
-        return false;
-    }
-    if (on_success) spec_call_closure_int(on_success, (long long)written);
-    return true;
-}
-
-void spec_file_read_async(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {
-    SpecFileTask* task = (SpecFileTask*)spec_xmalloc(sizeof(SpecFileTask));
-    memset(task, 0, sizeof(SpecFileTask));
-    task->path = path ? (String)spec_retain((void*)path) : NULL;
-    task->def = def ? (String)spec_retain((void*)def) : NULL;
-    task->on_success_read = (SpecClosure*)spec_retain(on_success);
-    task->on_error = (SpecClosure*)spec_retain(on_error);
-    spec_async_task_started();
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, spec_file_read_worker, task) != 0) {
-        spec_file_read_worker(task);
-        return;
-    }
-    pthread_detach(tid);
-}
-
-void spec_file_write_async(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {
-    SpecFileTask* task = (SpecFileTask*)spec_xmalloc(sizeof(SpecFileTask));
-    memset(task, 0, sizeof(SpecFileTask));
-    task->path = path ? (String)spec_retain((void*)path) : NULL;
-    task->content = content ? (String)spec_retain((void*)content) : NULL;
-    task->on_success_write = (SpecClosure*)spec_retain(on_success);
-    task->on_error = (SpecClosure*)spec_retain(on_error);
-    spec_async_task_started();
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, spec_file_write_worker, task) != 0) {
-        spec_file_write_worker(task);
-        return;
-    }
-    pthread_detach(tid);
-}
-
-bool spec_file_exists(String path) {
-    if (!path) return false;
-    FILE* f = fopen(spec_buf_to_cstring((SpecBuf*)path), "r");
+bool spec_pal_file_exists(long long path_cstr) {
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return false;
+    FILE* f = fopen(pc, "r");
     if (f) {
         fclose(f);
         return true;
@@ -187,33 +144,21 @@ bool spec_file_exists(String path) {
     return false;
 }
 
-bool spec_file_remove_cb(String path, SpecClosure* on_error) {
-    if (!path || path->length == 0) {
-        _spec_emit_str_error(on_error, "File error: Empty or invalid file path provided");
-        return false;
-    }
-    if (remove(spec_buf_to_cstring((SpecBuf*)path)) != 0) {
-        _spec_emit_str_error(on_error, strerror(errno));
-        return false;
-    }
-    return true;
+bool spec_pal_file_remove(long long path_cstr) {
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return false;
+    return remove(pc) == 0;
 }
 
-bool spec_file_remove(String path) {
-    return spec_file_remove_cb(path, NULL);
-}
-
-String spec_file_temp_cb(String template, SpecClosure* on_error) {
-#if defined(_WIN32)
-    CreateDirectoryA("/tmp", NULL);
-#endif
-    if (!template || template->length == 0) template = spec_string_intern("/tmp/spec_XXXXXX");
-    const char* tpl = spec_buf_to_cstring((SpecBuf*)template);
+long long spec_pal_file_temp(long long tpl_cstr) {
+    _spec_pal_ensure_tmp_dir(NULL);
+    const char* tpl = (const char*)(intptr_t)tpl_cstr;
+    if (!tpl || !*tpl) tpl = "/tmp/spec_XXXXXX";
     size_t len = strlen(tpl);
     char* buf = (char*)spec_xmalloc(len + 32);
     strcpy(buf, tpl);
     char suffix[64];
-    suffix[0] = '\0';
+    suffix[0] = '\\0';
     char* xpos = strstr(buf, "XXXXXX");
     if (!xpos) {
         strcat(buf, "_XXXXXX");
@@ -221,66 +166,31 @@ String spec_file_temp_cb(String template, SpecClosure* on_error) {
         if (strlen(xpos + 6) < sizeof(suffix)) {
             strcpy(suffix, xpos + 6);
         }
-        xpos[6] = '\0';
+        xpos[6] = '\\0';
     }
     int fd = mkstemp(buf);
-#if defined(_WIN32)
-    if (fd == -1 && (strncmp(tpl, "/tmp/", 5) == 0 || strcmp(tpl, "/tmp") == 0)) {
-        char temp_dir[MAX_PATH];
-        DWORD td_len = GetTempPathA(MAX_PATH, temp_dir);
-        if (td_len > 0 && td_len < MAX_PATH) {
-            const char* base = strrchr(tpl, '/');
-            const char* b2 = strrchr(tpl, '\\');
-            if (b2 && (!base || b2 > base)) base = b2;
-            if (base) base++; else base = tpl;
-            free(buf);
-            buf = (char*)spec_xmalloc(strlen(temp_dir) + strlen(base) + 32);
-            sprintf(buf, "%s%s", temp_dir, base);
-            suffix[0] = '\0';
-            xpos = strstr(buf, "XXXXXX");
-            if (!xpos) {
-                strcat(buf, "_XXXXXX");
-            } else {
-                if (strlen(xpos + 6) < sizeof(suffix)) {
-                    strcpy(suffix, xpos + 6);
-                }
-                xpos[6] = '\0';
-            }
-            fd = mkstemp(buf);
-        }
-    }
-#endif
     if (fd == -1) {
-        int saved_errno = errno;
+        fd = _spec_pal_mkstemp_win_fallback(tpl, &buf, suffix, sizeof(suffix));
+    }
+    if (fd == -1) {
         free(buf);
-        _spec_emit_str_error(on_error, strerror(saved_errno));
-        return spec_string_intern("");
+        return 0;
     }
     close(fd);
-    if (suffix[0] != '\0') {
+    if (suffix[0] != '\\0') {
         size_t final_len = strlen(buf) + strlen(suffix) + 1;
         char* final_path = (char*)spec_xmalloc(final_len);
         sprintf(final_path, "%s%s", buf, suffix);
         if (rename(buf, final_path) != 0) {
-            int saved_errno = errno;
             free(final_path);
             free(buf);
-            _spec_emit_str_error(on_error, strerror(saved_errno));
-            return spec_string_intern("");
+            return 0;
         }
-        String res = spec_string_from_chars(final_path);
-        free(final_path);
         free(buf);
-        return res;
+        return (long long)(intptr_t)final_path;
     }
-    String res = spec_string_from_chars(buf);
-    free(buf);
-    return res;
+    return (long long)(intptr_t)buf;
 }
-
-String spec_file_temp(String template) {
-    return spec_file_temp_cb(template, NULL);
-}
-''';
+```;
 	}
 }

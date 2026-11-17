@@ -21,10 +21,11 @@ Class of OsDispatch is OsLinkFlags{
 	}
 
 	replace Function of String is linux(){
-		if({ self:pieOff }, {
-			return '-ldl -no-pie';
+		return if({ self:pieOff }, {
+			'-ldl -no-pie'
+		}, {
+			'-ldl'
 		});
-		return '-ldl';
 	}
 
 	replace Function of String is macos(){

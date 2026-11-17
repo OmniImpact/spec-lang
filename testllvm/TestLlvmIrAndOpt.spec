@@ -360,8 +360,8 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
-		Assert:isTrue(ll:contains(needle: 'call ptr @spec_process_os_name()'));
-		Assert:isTrue(ll:contains(needle: 'call i1 @spec_file_exists('));
+		Assert:isTrue(ll:contains(needle: 'call i64 @spec_pal_os_name()'));
+		Assert:isTrue(ll:contains(needle: 'call i1 @spec_pal_file_exists('));
 
 		local Int is runRc: Process:execute(command: binPath, args: []);
 		Assert:areEqualInt(0, runRc);
@@ -489,7 +489,7 @@ Class is LlvmP7{
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
 		Assert:isTrue(ll:contains(needle: 'call double @sqrt('));
 		Assert:isTrue(ll:contains(needle: 'call i64 @spec_time_monotonic_ns()'));
-		Assert:isTrue(ll:contains(needle: 'call ptr @spec_exe_dir()'));
+		Assert:isTrue(ll:contains(needle: 'call i64 @spec_pal_exe_dir('));
 
 		local Int is runRc: Process:execute(command: binPath, args: []);
 		Assert:areEqualInt(0, runRc);

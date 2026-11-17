@@ -57,6 +57,7 @@ Class is IrBuilder{
 	Array of Int is scopeMarkStack: [];
 	String is curPoolMark: '';
 	Boolean is curFnRetIsArc: false;
+	Boolean is isUnmanagedClass: false;
 	String is inlineReturnSlot: '';
 	String is inlineReturnEndLbl: '';
 	IrType is inlineReturnTy: IrType:Void;
@@ -110,10 +111,22 @@ Class is IrBuilder{
 	}
 
 	Function of Boolean is isArcSpecType(String is specType){
-		if({ specType == '' || specType == 'Void' || specType == 'Any' || specType == 'Int' || specType == 'Float' || specType == 'Boolean' || specType == 'Byte' || self:curClassTypeParams:has(key: specType) }, {
+		if({ self:isUnmanagedClass || specType == '' || specType == 'Void' || specType == 'Any' || specType == 'Int' || specType == 'Float' || specType == 'Boolean' || specType == 'Byte' || self:curClassTypeParams:has(key: specType) }, {
 			return false;
 		});
 		return true;
+	}
+
+	Function of Boolean is hasMethodBodies(ClassInfo is cls){
+		local Int is i: 0;
+		while({ i < cls:members:length() }, {
+			local Member is m: cls:members:get(index: i);
+			if({ m:kind == MemberKind:METHOD && m:body:length() > 0 }, {
+				return true;
+			});
+			i++;
+		});
+		return false;
 	}
 
 	Function of String is castIfNeeded(String is val, IrType is fromTy, IrType is toTy){
@@ -237,7 +250,9 @@ Class is IrBuilder{
 	}
 
 	local Function of Boolean is isStdlibClass(ClassInfo is cls){
-		if({ self:bindings:isSysinternal(cls: cls) }, { return true; });
+		if({ self:bindings:isSysinternal(cls: cls) }, {
+			return !self:hasMethodBodies(cls: cls);
+		});
 		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Parallel' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
 		return false;
 	}
@@ -311,7 +326,7 @@ Class is IrBuilder{
 	}
 
 	local Function is buildVtable(IrStruct is st, ClassInfo is cls, Map of String to ClassInfo is clsMap){
-		if({ self:bindings:isTransparent(c: cls) }, { return; });
+		if({ self:bindings:isTransparent(c: cls) || self:bindings:isSysinternal(cls: cls) }, { return; });
 		if({ st:vtableMethodNames:length() == 0 && self:globalVtableNames:length() > 0 }, {
 			local Int is gi: 0;
 			while({ gi < self:globalVtableNames:length() }, {
@@ -368,7 +383,7 @@ Class is IrBuilder{
 		local Int is pci: 0;
 		while({ pci < program:classes:length() }, {
 			local ClassInfo is pc0: program:classes:get(index: pci);
-			if({ self:bindings:isSysinternal(cls: pc0) }, {
+			if({ self:bindings:isSysinternal(cls: pc0) && !self:hasMethodBodies(cls: pc0) }, {
 				self:sysinternalClasses:set(key: pc0:name, value: pc0);
 			});
 			if({ !self:isStdlibClass(cls: pc0) }, {
@@ -524,6 +539,8 @@ Class is IrBuilder{
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
 			local Boolean is isTransCls: self:bindings:isTransparent(c: cls);
+			local Boolean is isSysCls: self:bindings:isSysinternal(cls: cls);
+			self:isUnmanagedClass: isSysCls;
 			local String is sname: self:cStructName(qname: cls:qualifiedName());
 			self:currentClass: sname;
 			self:curClassTypeParams: Map:init();
@@ -554,7 +571,7 @@ Class is IrBuilder{
 				});
 				mi++;
 			});
-			if({ !isTransCls }, {
+			if({ !isTransCls && !isSysCls }, {
 				local String is initFnName: sname . '_init';
 				if({ !seenFns:has(key: initFnName) }, {
 					seenFns:set(key: initFnName, value: true);
@@ -572,6 +589,7 @@ Class is IrBuilder{
 			});
 			ci++;
 		});
+		self:isUnmanagedClass: false;
 		self:currentClass: '';
 		self:currentMethod: '';
 
@@ -613,7 +631,7 @@ Class is IrBuilder{
 	}
 
 	local Function is emitPoolEnter(){
-		if({ self:currentClass == 'Vector' && self:currentMethod != 'mapKeys' }, {
+		if({ self:isUnmanagedClass || (self:currentClass == 'Vector' && self:currentMethod != 'mapKeys') }, {
 			self:curPoolMark: '';
 			return;
 		});
@@ -629,7 +647,7 @@ Class is IrBuilder{
 	}
 
 	Function is emitClaimPool(String is val){
-		if({ val != '' && val != 'null' }, {
+		if({ !self:isUnmanagedClass && val != '' && val != 'null' }, {
 			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Ptr, callee: 'spec_claim_pool', argTypes: [IrType:Ptr], args: [val]));
 		});
 	}
@@ -1015,7 +1033,7 @@ Class is IrBuilder{
 			});
 			mi++;
 		});
-		if({ (!hasInitMember || hasZeroArgInit) && !self:bindings:isTransparent(c: cls) && cls:baseClass != 'Enum' }, {
+		if({ (!hasInitMember || hasZeroArgInit) && !self:bindings:isTransparent(c: cls) && !self:bindings:isSysinternal(cls: cls) && cls:baseClass != 'Enum' }, {
 			st:constructFn: sname . '__spec_construct';
 		});
 	}
@@ -1765,7 +1783,7 @@ Class is IrBuilder{
 			# Bind 'self' into stack slot
 			self:localSlots:set(key: 'self', value: '%self_slot');
 			self:localTypes:set(key: 'self', value: IrType:Ptr);
-			self:localIsArc:set(key: 'self', value: true);
+			self:localIsArc:set(key: 'self', value: !self:isUnmanagedClass);
 			self:localSpecTypes:set(key: 'self', value: self:currentClass);
 			self:emit(inst: IrInst:Alloca(slot: '%self_slot', ty: IrType:Ptr));
 			self:emit(inst: IrInst:Store(slot: '%self_slot', val: '%self', ty: IrType:Ptr));
@@ -3709,7 +3727,10 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
+			return 'null';
+		});
+		if({ self:clsMap:has(key: provStruct) && self:bindings:isSysinternal(cls: self:clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {
 			return 'null';
 		});
 		if({ self:currentClass != '' && self:localSlots:has(key: 'self') }, {
