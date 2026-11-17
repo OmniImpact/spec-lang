@@ -1,0 +1,490 @@
+#! Package base:compiler:pal
+#! Emits the process, concurrency, and resource monitoring C PAL (`spec_pal_process_*`,
+#! `spec_process_*`, `spec_parallel_*`, `spec_monitor_*`).
+
+Class is PalProcess{
+	namespace: ['base', 'compiler', 'pal'];
+
+	replace Function is init(){
+	}
+
+	Function of String is emitHeader(){
+		return '''/* Parallel Fan-Out */
+typedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);
+typedef struct { SpecWorkerFn fn; void* env; long long idx; long long count; } SpecParallelTask;
+
+static void* spec_parallel_worker(void* arg) {
+    SpecParallelTask* t = (SpecParallelTask*)arg;
+    spec_fast_random_seed(t->idx);
+    long long r = t->fn(t->env, t->idx, t->count);
+    free(t);
+    spec_pool_thread_cleanup();
+    return (void*)(intptr_t)r;
+}
+
+/* Process Resource Monitoring (instantaneous RSS and CPU sampling) */
+static pthread_t _spec_mon_thread;
+static _Atomic bool _spec_mon_active = false;
+static _Atomic long long _spec_mon_sample_count = 0;
+static _Atomic long long _spec_mon_mem_sum_kb = 0;
+static _Atomic long long _spec_mon_peak_mem_kb = 0;
+static _Atomic long long _spec_mon_peak_cpu_pct = 0;
+static long long _spec_mon_start_wall_us = 0;
+static long long _spec_mon_start_cpu_us = 0;
+static long long _spec_mon_total_wall_us = 0;
+static long long _spec_mon_total_cpu_us = 0;
+
+static void* _spec_monitor_worker(void* arg) {
+    (void)arg;
+    long long page_size = spec_pal_get_page_size();
+
+    long long last_wall_us = spec_pal_get_wall_time_us();
+    long long last_cpu_us = spec_pal_get_cpu_time_us();
+
+    while (_spec_mon_active) {
+        spec_pal_sleep_ms(20);
+        if (!_spec_mon_active) break;
+
+        long long cur_rss_kb = spec_pal_get_current_rss_kb(page_size);
+        if (cur_rss_kb > 0) {
+            _spec_mon_mem_sum_kb += cur_rss_kb;
+            _spec_mon_sample_count++;
+            if (cur_rss_kb > _spec_mon_peak_mem_kb) {
+                _spec_mon_peak_mem_kb = cur_rss_kb;
+            }
+        }
+
+        long long now_wall_us = spec_pal_get_wall_time_us();
+        long long now_cpu_us = spec_pal_get_cpu_time_us();
+
+        long long d_wall = now_wall_us - last_wall_us;
+        long long d_cpu = now_cpu_us - last_cpu_us;
+        if (d_wall >= 15000) {
+            long long cpu_pct = (d_cpu * 100) / d_wall;
+            if (cpu_pct > _spec_mon_peak_cpu_pct) {
+                _spec_mon_peak_cpu_pct = cpu_pct;
+            }
+            last_wall_us = now_wall_us;
+            last_cpu_us = now_cpu_us;
+        }
+    }
+    return NULL;
+}
+''';
+	}
+
+	Function of String is emitBody(){
+		return '''long long spec_pal_process_execute(String command, long long argv_addr, long long nargs_ll) {
+    if (!command) return -1;
+    const char* cc = spec_buf_to_cstring((SpecBuf*)command);
+    const char** raw_args = (const char**)(intptr_t)argv_addr;
+    size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
+#if defined(_WIN32)
+    size_t total_len = strlen(cc) + 1;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        total_len += strlen(a) * 2 + 4;
+    }
+    char* cmd_line = (char*)spec_xmalloc(total_len + 1);
+    char* w = cmd_line;
+    size_t cmd_len = strlen(cc);
+    memcpy(w, cc, cmd_len);
+    w += cmd_len;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        *w++ = ' ';
+        bool needs_quote = (*a == 0);
+        for (size_t k = 0; a[k]; k++) {
+            if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
+                needs_quote = true;
+                break;
+            }
+        }
+        if (!needs_quote) {
+            size_t alen = strlen(a);
+            memcpy(w, a, alen);
+            w += alen;
+        } else {
+            *w++ = '\"';
+            size_t slashes = 0;
+            for (size_t k = 0; a[k]; k++) {
+                if (a[k] == '\\') {
+                    slashes++;
+                } else if (a[k] == '\"') {
+                    for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
+                    *w++ = '\"';
+                    slashes = 0;
+                } else {
+                    for (size_t s = 0; s < slashes; s++) *w++ = '\\';
+                    *w++ = a[k];
+                    slashes = 0;
+                }
+            }
+            for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
+            *w++ = '\"';
+        }
+    }
+    *w = 0;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    memset(&pi, 0, sizeof(pi));
+    DWORD exit_code = 1;
+    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        GetExitCodeProcess(pi.hProcess, &exit_code);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        free(cmd_line);
+        return (long long)exit_code;
+    }
+    int status = system(cmd_line);
+    free(cmd_line);
+    return (long long)status;
+#else
+    size_t total_len = strlen(cc) + 1;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        size_t quotes = 0;
+        for (size_t k = 0; a[k]; k++) if (a[k] == 39) quotes++;
+        total_len += strlen(a) + 3 * quotes + 3;
+    }
+    char* cmd_line = (char*)spec_xmalloc(total_len + 1);
+    char* w = cmd_line;
+    size_t cmd_len = strlen(cc);
+    memcpy(w, cc, cmd_len);
+    w += cmd_len;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        *w++ = ' ';
+        *w++ = 39;
+        for (size_t k = 0; a[k]; k++) {
+            if (a[k] == 39) { *w++ = 39; *w++ = 92; *w++ = 39; *w++ = 39; }
+            else *w++ = a[k];
+        }
+        *w++ = 39;
+    }
+    *w = 0;
+    int status = system(cmd_line);
+    free(cmd_line);
+    if (status == -1) return -1;
+    if (WIFSIGNALED(status)) return 128 + (long long)WTERMSIG(status);
+    return (long long)WEXITSTATUS(status);
+#endif
+}
+
+void spec_pal_process_measure(String command, long long argv_addr, long long nargs_ll, long long out_addr) {
+    long long* out = (long long*)(intptr_t)out_addr;
+    long long exit_code = -1;
+    long long wall_us = 0;
+    long long cpu_us = 0;
+    long long rss_kb = 0;
+    if (!command) {
+        if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
+        return;
+    }
+    const char* cc = spec_buf_to_cstring((SpecBuf*)command);
+    const char** raw_args = (const char**)(intptr_t)argv_addr;
+    size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
+    fflush(stdout);
+    fflush(stderr);
+#if defined(_WIN32)
+    size_t total_len = strlen(cc) + 1;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        total_len += strlen(a) * 2 + 4;
+    }
+    char* cmd_line = (char*)spec_xmalloc(total_len + 1);
+    char* w = cmd_line;
+    size_t cmd_len = strlen(cc);
+    memcpy(w, cc, cmd_len);
+    w += cmd_len;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        *w++ = ' ';
+        bool needs_quote = (*a == 0);
+        for (size_t k = 0; a[k]; k++) {
+            if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
+                needs_quote = true;
+                break;
+            }
+        }
+        if (!needs_quote) {
+            size_t alen = strlen(a);
+            memcpy(w, a, alen);
+            w += alen;
+        } else {
+            *w++ = '\"';
+            size_t slashes = 0;
+            for (size_t k = 0; a[k]; k++) {
+                if (a[k] == '\\') {
+                    slashes++;
+                } else if (a[k] == '\"') {
+                    for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
+                    *w++ = '\"';
+                    slashes = 0;
+                } else {
+                    for (size_t s = 0; s < slashes; s++) *w++ = '\\';
+                    *w++ = a[k];
+                    slashes = 0;
+                }
+            }
+            for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
+            *w++ = '\"';
+        }
+    }
+    *w = 0;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    memset(&pi, 0, sizeof(pi));
+    LARGE_INTEGER freq, q0, q1;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&q0);
+    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        QueryPerformanceCounter(&q1);
+        DWORD dw_exit = 1;
+        if (GetExitCodeProcess(pi.hProcess, &dw_exit)) exit_code = (long long)dw_exit;
+        FILETIME ft_create, ft_exit, ft_kernel, ft_user;
+        if (GetProcessTimes(pi.hProcess, &ft_create, &ft_exit, &ft_kernel, &ft_user)) {
+            ULARGE_INTEGER uk, uu;
+            uk.LowPart = ft_kernel.dwLowDateTime;
+            uk.HighPart = ft_kernel.dwHighDateTime;
+            uu.LowPart = ft_user.dwLowDateTime;
+            uu.HighPart = ft_user.dwHighDateTime;
+            cpu_us = (long long)((uk.QuadPart + uu.QuadPart) / 10ULL);
+        }
+        PROCESS_MEMORY_COUNTERS pmc;
+        memset(&pmc, 0, sizeof(pmc));
+        pmc.cb = sizeof(pmc);
+        if (GetProcessMemoryInfo(pi.hProcess, &pmc, sizeof(pmc))) {
+            rss_kb = (long long)(pmc.PeakWorkingSetSize / 1024ULL);
+        }
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        if (freq.QuadPart > 0) {
+            wall_us = (long long)(((q1.QuadPart - q0.QuadPart) * 1000000LL) / freq.QuadPart);
+        }
+    }
+    free(cmd_line);
+#else
+    char** argv_exec = (char**)spec_xmalloc((nargs + 2) * sizeof(char*));
+    argv_exec[0] = (char*)cc;
+    for (size_t i = 0; i < nargs; i++) {
+        argv_exec[i + 1] = (char*)(raw_args[i] ? raw_args[i] : "");
+    }
+    argv_exec[nargs + 1] = NULL;
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    pid_t pid = fork();
+    if (pid == 0) {
+        execvp(cc, argv_exec);
+        _exit(127);
+    } else if (pid > 0) {
+        int status = 0;
+        struct rusage ru;
+        memset(&ru, 0, sizeof(ru));
+        pid_t wres;
+        do {
+            wres = wait4(pid, &status, 0, &ru);
+        } while (wres == -1 && errno == EINTR);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        fflush(stdout);
+        fflush(stderr);
+        wall_us = (long long)(t1.tv_sec - t0.tv_sec) * 1000000LL + (long long)(t1.tv_nsec - t0.tv_nsec) / 1000LL;
+        if (wall_us < 0) wall_us = 0;
+        if (wres > 0) {
+            cpu_us = (long long)(ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000LL + (long long)(ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+            rss_kb = (long long)ru.ru_maxrss;
+#if defined(__APPLE__)
+            rss_kb /= 1024;
+#endif
+            if (WIFEXITED(status)) exit_code = (long long)WEXITSTATUS(status);
+            else if (WIFSIGNALED(status)) exit_code = 128 + (long long)WTERMSIG(status);
+        }
+    }
+    free(argv_exec);
+#endif
+    if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
+}
+
+void spec_process_sleep(long long ms) {
+    if (ms <= 0) return;
+#if defined(_WIN32)
+    Sleep((DWORD)ms);
+#else
+    struct timespec ts;
+    ts.tv_sec = ms / 1000;
+    ts.tv_nsec = (ms % 1000) * 1000000L;
+    nanosleep(&ts, NULL);
+#endif
+}
+
+long long spec_process_get_pid(void) {
+#if defined(_WIN32)
+    return (long long)GetCurrentProcessId();
+#else
+    return (long long)getpid();
+#endif
+}
+
+String spec_process_getenv(String key, String def) {
+    if (!key) return def;
+    const char* k = spec_buf_to_cstring((SpecBuf*)key);
+    const char* val = getenv(k);
+    if (!val) return def;
+    return spec_string_from_bytes(val, strlen(val));
+}
+
+String spec_process_os_name(void) {
+#if defined(_WIN32)
+    return spec_string_intern("windows");
+#elif defined(__APPLE__) && defined(__MACH__)
+    return spec_string_intern("macos");
+#elif defined(__linux__)
+    return spec_string_intern("linux");
+#else
+    return spec_string_intern("unknown");
+#endif
+}
+
+/* Striped recursive mutexes for Parallel:sync and Parallel:syncWith */
+static pthread_mutex_t _spec_parallel_striped_mutexes[64];
+static pthread_once_t _spec_parallel_striped_once = PTHREAD_ONCE_INIT;
+
+static void _spec_init_parallel_striped_mutexes(void) {
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    for (int i = 0; i < 64; i++) {
+        pthread_mutex_init(&_spec_parallel_striped_mutexes[i], &attr);
+    }
+    pthread_mutexattr_destroy(&attr);
+}
+
+void* spec_parallel_sync_with(long long lock_key, void* action_closure) {
+    SpecClosure* cls = (SpecClosure*)action_closure;
+    if (!cls || !cls->fn) spec_panic("Parallel:sync received null action Function");
+    pthread_once(&_spec_parallel_striped_once, _spec_init_parallel_striped_mutexes);
+    unsigned long long k = (unsigned long long)lock_key;
+    size_t idx = (size_t)(k ^ (k >> 6)) & 63ULL;
+    pthread_mutex_lock(&_spec_parallel_striped_mutexes[idx]);
+    void* res = ((void* (*)(void*))cls->fn)(cls->env);
+    pthread_mutex_unlock(&_spec_parallel_striped_mutexes[idx]);
+    return res;
+}
+
+void* spec_parallel_sync(void* action_closure) {
+    return spec_parallel_sync_with(0, action_closure);
+}
+
+long long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {
+    if (threads < 1) threads = 1;
+    SpecClosure* cls = (SpecClosure*)worker_closure;
+    if (!cls || !cls->fn) spec_panic("Parallel:run received null worker Function");
+    spec_thread_enter();
+    pthread_t* tids = (pthread_t*)spec_xmalloc(sizeof(pthread_t) * (size_t)threads);
+    bool* spawned = (bool*)spec_xmalloc(sizeof(bool) * (size_t)threads);
+    long long total = 0;
+    long long base = iterations / threads;
+    long long rem = iterations % threads;
+    for (long long i = 0; i < threads; i++) {
+        SpecParallelTask* t = (SpecParallelTask*)spec_xmalloc(sizeof(SpecParallelTask));
+        t->fn = (SpecWorkerFn)cls->fn;
+        t->env = cls->env;
+        t->idx = i;
+        t->count = base + (i < rem ? 1 : 0);
+        spawned[i] = (pthread_create(&tids[i], NULL, spec_parallel_worker, t) == 0);
+        if (!spawned[i]) {
+            total += (long long)(intptr_t)spec_parallel_worker(t);
+        }
+    }
+    for (long long i = 0; i < threads; i++) {
+        if (!spawned[i]) continue;
+        void* ret = NULL;
+        pthread_join(tids[i], &ret);
+        total += (long long)(intptr_t)ret;
+    }
+    spec_thread_leave();
+    free(tids);
+    free(spawned);
+    return total;
+}
+
+long long spec_clock_ms(void) {
+    return spec_pal_get_wall_time_us() / 1000;
+}
+
+long long spec_mem_peak_kb(void) {
+    return spec_pal_get_peak_rss_kb();
+}
+
+long long spec_thread_count(void) {
+    return spec_pal_get_cpu_count();
+}
+
+long long spec_monitor_avg_cpu_pct(void) {
+    if (_spec_mon_total_wall_us <= 0) return 0;
+    return (_spec_mon_total_cpu_us * 100) / _spec_mon_total_wall_us;
+}
+
+long long spec_monitor_peak_cpu_pct(void) {
+    return _spec_mon_peak_cpu_pct;
+}
+
+long long spec_monitor_avg_mem_kb(void) {
+    long long count = _spec_mon_sample_count;
+    if (count <= 0) return _spec_mon_peak_mem_kb;
+    return _spec_mon_mem_sum_kb / count;
+}
+
+long long spec_monitor_peak_mem_kb(void) {
+    return _spec_mon_peak_mem_kb;
+}
+
+void spec_monitor_start(void) {
+    if (_spec_mon_active) return;
+    _spec_mon_sample_count = 0;
+    _spec_mon_mem_sum_kb = 0;
+    _spec_mon_peak_mem_kb = 0;
+    _spec_mon_peak_cpu_pct = 0;
+
+    _spec_mon_start_wall_us = spec_pal_get_wall_time_us();
+    _spec_mon_start_cpu_us = spec_pal_get_cpu_time_us();
+
+    _spec_mon_active = true;
+    spec_thread_enter();
+    pthread_create(&_spec_mon_thread, NULL, _spec_monitor_worker, NULL);
+}
+
+void spec_monitor_stop(void) {
+    if (!_spec_mon_active) return;
+    _spec_mon_active = false;
+    pthread_join(_spec_mon_thread, NULL);
+    spec_thread_leave();
+
+    long long end_wall_us = spec_pal_get_wall_time_us();
+    long long end_cpu_us = spec_pal_get_cpu_time_us();
+
+    _spec_mon_total_wall_us = end_wall_us - _spec_mon_start_wall_us;
+    _spec_mon_total_cpu_us = end_cpu_us - _spec_mon_start_cpu_us;
+
+    long long peak_ru = spec_pal_get_peak_rss_kb();
+    if (peak_ru > _spec_mon_peak_mem_kb) {
+        _spec_mon_peak_mem_kb = peak_ru;
+    }
+    long long avg_cpu = spec_monitor_avg_cpu_pct();
+    if (avg_cpu > _spec_mon_peak_cpu_pct) {
+        _spec_mon_peak_cpu_pct = avg_cpu;
+    }
+}
+
+void spec_process_exit(long long status) {
+    exit((int)status);
+}
+''';
+	}
+}

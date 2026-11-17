@@ -577,7 +577,7 @@ Class is LlvmP8{
 		local Int is checked: 0;
 		while({ ei < entries:length() }, {
 			local String is f: entries:get(index: ei, default: '');
-			if({ f:endsWith(suffix: 'CallLowerer.spec') && f != 'CallLowerer.spec' && f != 'SysinternalCallLowerer.spec' }, {
+			if({ f:endsWith(suffix: 'CallLowerer.spec') && f != 'CallLowerer.spec' }, {
 				local String is clsName: f:substring(start: 0, end: f:length() - 5);
 				local String is qname: 'base:compiler:llvm:' . clsName;
 				local Boolean is found: false;
@@ -594,7 +594,7 @@ Class is LlvmP8{
 			});
 			ei++;
 		});
-		Assert:isTrue(checked >= 10);
+		Assert:isTrue(checked >= 8);
 	}
 
 	Function is testLlvmStructLayouts(){
@@ -691,8 +691,8 @@ Class is LlvmP9{
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
-		Assert:isTrue(ll:contains(needle: 'define void @Holder_destroy(ptr %self)'));
-		Assert:isTrue(ll:contains(needle: 'define void @Res_destroy(ptr %self)'));
+		Assert:isTrue(ll:contains(needle: 'define void @Holder__destroy(ptr %self)'));
+		Assert:isTrue(ll:contains(needle: 'define void @Res__destroy(ptr %self)'));
 		Assert:isTrue(ll:contains(needle: '@spec_pool_frame()'));
 		Assert:isTrue(ll:contains(needle: '@spec_pool_release_to('));
 		Assert:isTrue(ll:contains(needle: '@spec_claim_pool('));

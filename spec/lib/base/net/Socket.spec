@@ -7,6 +7,7 @@ Class is Socket{
 	replace Array of Array of String is using: [
 		['base', 'struct', List],
 		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Socket]
 	];
 
@@ -67,7 +68,10 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Number of bytes sent, or -1 on error.
 	Function of Int is send(List of Byte is data, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Socket:socket_send_cb(fd: self:descriptor, data: data, on_error: onError);
+		local Int is bAddr: Mem:objToAddr(obj: data);
+		local Int is ptr: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 0) }, { 0 });
+		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) }, { 0 });
+		return base:sysinternal:Socket:pal_socket_send(fd: self:descriptor, data_addr: ptr, len: len, on_error: onError);
 	}
 
 	## Sends string text [text] over this socket.
@@ -85,11 +89,24 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Received ByteBuffer.
 	Function of List of Byte is receive(Int is maxBytes: 4096, Function is onError: local Function(String is error){}){
-		local List of Byte is b: base:sysinternal:Socket:socket_recv_cb(fd: self:descriptor, max_bytes: maxBytes, on_error: onError);
+		local [Byte] is empty;
 		if({ self:isClosed }, {
-			local [Byte] is empty;
+			base:sysinternal:Socket:pal_socket_recv(fd: -1, dst_addr: 0, max_bytes: 0, on_error: onError);
 			return empty;
 		});
+		local Int is cap: maxBytes;
+		if({ cap <= 0 }, { cap: 4096; });
+		if({ cap > 1048576 }, { cap: 1048576; });
+		local [Byte] is b;
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		local Int is dataPtr: Mem:alloc(bytes: cap);
+		Mem:storeI64(ptr: bAddr, byteOffset: 0, val: dataPtr);
+		Mem:storeI64(ptr: bAddr, byteOffset: 16, val: cap);
+		local Int is n: base:sysinternal:Socket:pal_socket_recv(fd: self:descriptor, dst_addr: dataPtr, max_bytes: cap, on_error: onError);
+		if({ n < 0 }, {
+			return empty;
+		});
+		Mem:storeI64(ptr: bAddr, byteOffset: 8, val: n);
 		return b;
 	}
 
@@ -99,7 +116,8 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Received String.
 	Function of String is receiveString(Int is maxBytes: 4096, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Socket:socket_recv_str_cb(fd: self:descriptor, max_bytes: maxBytes, on_error: onError);
+		local List of Byte is b: self:receive(maxBytes: maxBytes, onError: onError);
+		return b:toString();
 	}
 
 	## Polls the socket for I/O readiness.

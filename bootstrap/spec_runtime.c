@@ -70,8 +70,6 @@
 typedef struct SpecBuf SpecBuf;
 typedef SpecBuf* String;
 typedef struct SpecClosure SpecClosure;
-typedef struct SpecArray SpecArray;
-typedef struct SpecByteBuffer SpecByteBuffer;
 typedef struct SpecAudioStream SpecAudioStream;
 
 void spec_panic(const char* msg);
@@ -82,14 +80,6 @@ String spec_string_intern(const char* c);
 bool spec_string_bytes_equal(String b, const char* c, size_t n);
 const char* spec_buf_to_cstring(SpecBuf* b);
 extern void spec_buf_destroy(void* self);
-extern SpecArray* Vector_vecNewObject(void);
-extern void Vector_vecAdd(void* self, void* v, void* item);
-extern SpecByteBuffer* Vector_byteBufNew(void);
-extern void* HashTable_mapNew(void);
-extern void HashTable_mapSet(void* self, void* m, String key, String val);
-extern void* HashTable_mapGet(void* self, void* m, String key, void* def);
-extern String Buf_intToString(void* self, long long v);
-extern String Buf_stringConcat(void* self, String a, String b);
 void spec_async_task_started(void);
 void spec_async_task_finished(void);
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error);
@@ -319,11 +309,6 @@ static long long spec_pal_get_peak_rss_kb(void) {
 #endif
 }
 
-/* Spec Runtime Panic & Safety Utilities */
-
-
-
-
 /* Spec Automated Reference Counting (ARC) Primitives */
 #define SPEC_S_IMMORTAL 1u
 #define SPEC_S_HASLEN 2u
@@ -368,8 +353,6 @@ static inline void* spec_alloc(size_t size, void (*destroy)(void*)) {
     return (void*)(h + 1);
 }
 
-/* Checked allocation: a failed allocation is a loud panic, never a
-   NULL dereference or a silently dropped (and leaked) block. */
 static inline void* spec_xmalloc(size_t n) {
     void* p = malloc(n ? n : 1);
     if (!p) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
@@ -404,9 +387,6 @@ static inline void spec_release(void* obj) {
         void (*d)(void*) = h->destroy;
         h->destroy = NULL;
         if (d) d(obj);
-        /* Arena-owned headers live in arena blocks: run the destructor
-           (freeing the object's malloc'd data) but never free(h) — the
-           wholesale drain reclaims the block. */
         if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_ARENA) return;
         if (h->slen != 0) {
             size_t b = (size_t)h->slen - 1;
@@ -421,9 +401,7 @@ static inline void spec_release(void* obj) {
     }
 }
 
-/* Spec String Core: refcounted, NUL-terminated, optionally interned.
-   A String value is a char* into a spec_alloc block whose header carries
-   a cached length and an immortal flag for interned literals. */
+/* Spec String Core: refcounted, NUL-terminated, optionally interned. */
 #define SPEC_INTERN_INITIAL_CAP 256
 typedef struct SpecInternEntry {
     String s;
@@ -438,12 +416,6 @@ typedef struct SpecInternTable {
     _Atomic(SpecInternEntry*) buckets[];
 } SpecInternTable;
 
-/* The intern table reads LOCK-FREE — the emitted
-   code interns every string literal on its hottest paths. Entries are
-   immortal and never removed. The table starts low (256 buckets) and doubles
-   on demand under _spec_intern_lock. During a resize, new entry wrappers are
-   built into the new table while the old table and its chains stay untouched,
-   so concurrent readers never experience data races. */
 static _Atomic(SpecInternTable*) _spec_intern_table = NULL;
 static pthread_mutex_t _spec_intern_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -488,13 +460,6 @@ static void spec_intern_resize_under_lock(void) {
     atomic_store_explicit(&_spec_intern_table, new_tbl, memory_order_release);
 }
 
-/* Claim pool: adopts ownership claims in read positions (call arguments,
-   conditions, chain targets). The pool is a THREAD-LOCAL STACK that
-   starts low and grows: spec_pool_frame marks the depth,
-   spec_pool_release_to releases everything above it, and the generated
-   code frames each claimed call (mark before the arguments, release
-   after the dispatch) so transients die exactly at the call boundary —
-   no eviction window, no heuristic tail. */
 extern __thread void** _spec_pool_stack;
 extern __thread size_t _spec_pool_top;
 extern __thread size_t _spec_pool_cap;
@@ -519,25 +484,11 @@ typedef struct SpecClosure {
     void (*destroy_env)(void*);
 } SpecClosure;
 
-/* Spec Runtime String Utilities */
-
-
-/* Spec Dynamic Array Layout */
-typedef struct SpecArray {
-    void** items;
-    size_t length;
-    size_t capacity;
-    int elem_kind;
-    bool frozen;
-    _Atomic uint64_t lock;
-} SpecArray;
-
 /* Spec Async Task Manager */
 static int spec_in_flight_tasks = 0;
 static pthread_mutex_t spec_task_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t spec_task_cond = PTHREAD_COND_INITIALIZER;
 
-/* File Package Primitives with Callbacks and Async Worker Support */
 static inline void spec_call_closure_0(SpecClosure* cls) {
     if (cls && cls->fn) { ((void (*)(void*))cls->fn)(cls->env); }
 }
@@ -584,14 +535,6 @@ static void spec_buf_grow(SpecBuf* b, size_t needed) {
     }
     b->capacity = cap;
 }
-
-/* Spec Byte Buffer: compact [Byte] storage (the string builder floor) */
-typedef struct SpecByteBuffer {
-    unsigned char* data;
-    size_t length;
-    size_t capacity;
-} SpecByteBuffer;
-
 typedef struct {
     String path;
     String content;
@@ -627,7 +570,6 @@ static void* spec_file_write_worker(void* arg) {
     spec_async_task_finished();
     return NULL;
 }
-
 /* Parallel Fan-Out */
 typedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);
 typedef struct { SpecWorkerFn fn; void* env; long long idx; long long count; } SpecParallelTask;
@@ -641,7 +583,6 @@ static void* spec_parallel_worker(void* arg) {
     return (void*)(intptr_t)r;
 }
 
-
 /* Process Resource Monitoring (instantaneous RSS and CPU sampling) */
 static pthread_t _spec_mon_thread;
 static _Atomic bool _spec_mon_active = false;
@@ -653,10 +594,6 @@ static long long _spec_mon_start_wall_us = 0;
 static long long _spec_mon_start_cpu_us = 0;
 static long long _spec_mon_total_wall_us = 0;
 static long long _spec_mon_total_cpu_us = 0;
-
-
-
-
 
 static void* _spec_monitor_worker(void* arg) {
     (void)arg;
@@ -694,19 +631,6 @@ static void* _spec_monitor_worker(void* arg) {
     }
     return NULL;
 }
-
-
-
-/* Error Output Primitive */
-
-/* The console floor (the sysinternal binding targets): the wrappers
-   name these consOut/consIn/line on the Spec side; the C names are
-   the internal provenance. */
-
-
-/* Reads one line from stdin (the trailing newline stripped) and hands
-   it to the on-line closure; at end of input nothing is handed over. */
-
 /* Networking & Sockets Floor */
 #if defined(_WIN32)
 static void _spec_ensure_winsock(void) {
@@ -718,17 +642,6 @@ static void _spec_ensure_winsock(void) {
     }
 }
 #endif
-
-
-
-
-
-
-
-
-
-
-
 /* PCM Audio Output Floor */
 typedef struct SpecAudioStream {
     bool active;
@@ -845,13 +758,6 @@ static bool _spec_init_winmm(void) {
     return _spec_waveOutOpen && _spec_waveOutWrite && _spec_waveOutPrepareHeader;
 }
 #endif
-
-
-
-
-
-/* Terminates the current process with the given exit status. */
-
 #endif
 
 /* Runtime Implementation */
@@ -978,50 +884,6 @@ void spec_drain_async_tasks(void) {
     pthread_mutex_unlock(&spec_task_mutex);
 }
 
-SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error) {
-    SpecArray* res = Vector_vecNewObject();
-    if (!path || path->length == 0) {
-        _spec_emit_str_error(on_error, "Directory error: Empty path provided");
-        return res;
-    }
-    DIR* d = opendir(spec_buf_to_cstring(path));
-    if (!d) {
-        _spec_emit_str_error(on_error, strerror(errno));
-        return res;
-    }
-    struct dirent* ent;
-    while ((ent = readdir(d)) != NULL) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
-        String item = spec_string_from_bytes(ent->d_name, strlen(ent->d_name));
-        Vector_vecAdd(NULL, res, item);
-        spec_release(item);
-    }
-    closedir(d);
-    return res;
-}
-
-SpecArray* spec_dir_list(SpecBuf* path) {
-    return spec_dir_list_cb(path, NULL);
-}
-
-SpecBuf* spec_exe_dir(void) {
-    char buf[4096];
-    if (!spec_pal_get_exe_path(buf, sizeof(buf))) return spec_string_from_bytes(".", 1);
-    char* slash = strrchr(buf, '/');
-#if defined(_WIN32)
-    char* bslash = strrchr(buf, '\\');
-    if (bslash > slash) slash = bslash;
-#endif
-    if (!slash) return spec_string_from_bytes(".", 1);
-    return spec_string_from_bytes(buf, (size_t)(slash - buf));
-}
-
-long long spec_file_size(SpecBuf* path) {
-    struct stat st;
-    if (stat(spec_buf_to_cstring(path), &st) != 0) return -1;
-    return (long long)st.st_size;
-}
-
 SpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {
     SpecBuf* b = (SpecBuf*)spec_alloc(sizeof(SpecBuf), spec_buf_destroy);
     if (elem_size == 1) {
@@ -1059,7 +921,51 @@ bool spec_string_bytes_equal(String b, const char* c, size_t n) {
     if (n == 0) return true;
     return memcmp(b->data, c, n) == 0;
 }
+long long spec_pal_dir_open(SpecBuf* path) {
+    if (!path || path->length == 0) return 0;
+    DIR* d = opendir(spec_buf_to_cstring(path));
+    return (long long)(intptr_t)d;
+}
 
+long long spec_pal_dir_next(long long handle) {
+    if (!handle) return 0;
+    DIR* d = (DIR*)(intptr_t)handle;
+    struct dirent* ent;
+    while ((ent = readdir(d)) != NULL) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        return (long long)(intptr_t)ent->d_name;
+    }
+    return 0;
+}
+
+void spec_pal_dir_close(long long handle) {
+    if (!handle) return;
+    closedir((DIR*)(intptr_t)handle);
+}
+
+String spec_pal_last_error(void) {
+    const char* m = strerror(errno);
+    if (!m) m = "Unknown error";
+    return spec_string_from_bytes(m, strlen(m));
+}
+
+SpecBuf* spec_exe_dir(void) {
+    char buf[4096];
+    if (!spec_pal_get_exe_path(buf, sizeof(buf))) return spec_string_from_bytes(".", 1);
+    char* slash = strrchr(buf, '/');
+#if defined(_WIN32)
+    char* bslash = strrchr(buf, '\\');
+    if (bslash > slash) slash = bslash;
+#endif
+    if (!slash) return spec_string_from_bytes(".", 1);
+    return spec_string_from_bytes(buf, (size_t)(slash - buf));
+}
+
+long long spec_file_size(SpecBuf* path) {
+    struct stat st;
+    if (stat(spec_buf_to_cstring(path), &st) != 0) return -1;
+    return (long long)st.st_size;
+}
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {
     if (!path || path->length == 0) {
         if (on_error) spec_call_closure_str(on_error, spec_string_intern("File error: Empty or invalid file path provided"));
@@ -1293,59 +1199,54 @@ String spec_file_temp_cb(String template, SpecClosure* on_error) {
 String spec_file_temp(String template) {
     return spec_file_temp_cb(template, NULL);
 }
-
-long long spec_process_execute(String command, SpecArray* args) {
+long long spec_pal_process_execute(String command, long long argv_addr, long long nargs_ll) {
     if (!command) return -1;
     const char* cc = spec_buf_to_cstring((SpecBuf*)command);
+    const char** raw_args = (const char**)(intptr_t)argv_addr;
+    size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
 #if defined(_WIN32)
     size_t total_len = strlen(cc) + 1;
-    if (args) {
-        for (size_t i = 0; i < args->length; i++) {
-            if (!args->items[i]) continue;
-            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
-            total_len += strlen(a) * 2 + 4;
-        }
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        total_len += strlen(a) * 2 + 4;
     }
     char* cmd_line = (char*)spec_xmalloc(total_len + 1);
     char* w = cmd_line;
     size_t cmd_len = strlen(cc);
     memcpy(w, cc, cmd_len);
     w += cmd_len;
-    if (args) {
-        for (size_t i = 0; i < args->length; i++) {
-            if (!args->items[i]) continue;
-            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
-            *w++ = ' ';
-            bool needs_quote = (*a == 0);
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        *w++ = ' ';
+        bool needs_quote = (*a == 0);
+        for (size_t k = 0; a[k]; k++) {
+            if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
+                needs_quote = true;
+                break;
+            }
+        }
+        if (!needs_quote) {
+            size_t alen = strlen(a);
+            memcpy(w, a, alen);
+            w += alen;
+        } else {
+            *w++ = '\"';
+            size_t slashes = 0;
             for (size_t k = 0; a[k]; k++) {
-                if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
-                    needs_quote = true;
-                    break;
+                if (a[k] == '\\') {
+                    slashes++;
+                } else if (a[k] == '\"') {
+                    for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
+                    *w++ = '\"';
+                    slashes = 0;
+                } else {
+                    for (size_t s = 0; s < slashes; s++) *w++ = '\\';
+                    *w++ = a[k];
+                    slashes = 0;
                 }
             }
-            if (!needs_quote) {
-                size_t alen = strlen(a);
-                memcpy(w, a, alen);
-                w += alen;
-            } else {
-                *w++ = '\"';
-                size_t slashes = 0;
-                for (size_t k = 0; a[k]; k++) {
-                    if (a[k] == '\\') {
-                        slashes++;
-                    } else if (a[k] == '\"') {
-                        for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
-                        *w++ = '\"';
-                        slashes = 0;
-                    } else {
-                        for (size_t s = 0; s < slashes; s++) *w++ = '\\';
-                        *w++ = a[k];
-                        slashes = 0;
-                    }
-                }
-                for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
-                *w++ = '\"';
-            }
+            for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
+            *w++ = '\"';
         }
     }
     *w = 0;
@@ -1367,37 +1268,27 @@ long long spec_process_execute(String command, SpecArray* args) {
     free(cmd_line);
     return (long long)status;
 #else
-    /* Each argument is passed to the shell as ONE single-quoted word (a
-       quote inside becomes quote, backslash, quote, quote), so spaces and
-       shell metacharacters in arguments stay data. The command word
-       itself is left to the shell. */
     size_t total_len = strlen(cc) + 1;
-    if (args) {
-        for (size_t i = 0; i < args->length; i++) {
-            if (!args->items[i]) continue;
-            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
-            size_t quotes = 0;
-            for (size_t k = 0; a[k]; k++) if (a[k] == 39) quotes++;
-            total_len += strlen(a) + 3 * quotes + 3;
-        }
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        size_t quotes = 0;
+        for (size_t k = 0; a[k]; k++) if (a[k] == 39) quotes++;
+        total_len += strlen(a) + 3 * quotes + 3;
     }
     char* cmd_line = (char*)spec_xmalloc(total_len + 1);
     char* w = cmd_line;
     size_t cmd_len = strlen(cc);
     memcpy(w, cc, cmd_len);
     w += cmd_len;
-    if (args) {
-        for (size_t i = 0; i < args->length; i++) {
-            if (!args->items[i]) continue;
-            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
-            *w++ = ' ';
-            *w++ = 39;
-            for (size_t k = 0; a[k]; k++) {
-                if (a[k] == 39) { *w++ = 39; *w++ = 92; *w++ = 39; *w++ = 39; }
-                else *w++ = a[k];
-            }
-            *w++ = 39;
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        *w++ = ' ';
+        *w++ = 39;
+        for (size_t k = 0; a[k]; k++) {
+            if (a[k] == 39) { *w++ = 39; *w++ = 92; *w++ = 39; *w++ = 39; }
+            else *w++ = a[k];
         }
+        *w++ = 39;
     }
     *w = 0;
     int status = system(cmd_line);
@@ -1408,150 +1299,64 @@ long long spec_process_execute(String command, SpecArray* args) {
 #endif
 }
 
-static int g_spec_argc = 0;
-static char** g_spec_argv = NULL;
-
-void spec_set_cli_args(int argc, char** argv) {
-    g_spec_argc = argc;
-    g_spec_argv = argv;
-}
-
-static void spec_cli_arg_set(void* args, String key, String val) {
-    String prev = (String)HashTable_mapGet(NULL, args, key, NULL);
-    if (prev) {
-        String sep = Buf_stringConcat(NULL, prev, spec_string_intern("\n"));
-        String comb = Buf_stringConcat(NULL, sep, val);
-        HashTable_mapSet(NULL, args, key, comb);
-    } else {
-        HashTable_mapSet(NULL, args, key, val);
-    }
-    spec_release(key);
-    spec_release(val);
-}
-
-void* spec_cli_args_map(long long argc_ll, char** argv) {
-    int argc = (int)argc_ll;
-    spec_set_cli_args(argc, argv);
-    void* args = HashTable_mapNew();
-    int pos_idx = 0;
-    for (int i = 1; i < argc; i++) {
-        if (strncmp(argv[i], "--", 2) == 0) {
-            const char* eq = strchr(argv[i] + 2, '=');
-            if (eq) {
-                int klen = (int)(eq - (argv[i] + 2));
-                spec_cli_arg_set(args, spec_string_from_bytes(argv[i] + 2, klen), spec_string_from_chars(eq + 1));
-            } else {
-                const char* key = argv[i] + 2;
-                const char* val = "true";
-                if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    val = argv[++i];
-                }
-                spec_cli_arg_set(args, spec_string_from_chars(key), spec_string_from_chars(val));
-            }
-        } else if (argv[i][0] == '-' && argv[i][1] != 0) {
-            const char* eq = strchr(argv[i] + 1, '=');
-            if (eq) {
-                int klen = (int)(eq - (argv[i] + 1));
-                spec_cli_arg_set(args, spec_string_from_bytes(argv[i] + 1, klen), spec_string_from_chars(eq + 1));
-            } else {
-                const char* key = argv[i] + 1;
-                const char* val = "true";
-                if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    val = argv[++i];
-                }
-                spec_cli_arg_set(args, spec_string_from_chars(key), spec_string_from_chars(val));
-            }
-        } else {
-            char pos_buf[16];
-            snprintf(pos_buf, sizeof(pos_buf), "%d", pos_idx++);
-            spec_cli_arg_set(args, spec_string_from_chars(pos_buf), spec_string_from_chars(argv[i]));
-            spec_cli_arg_set(args, spec_string_intern(""), spec_string_from_chars(argv[i]));
-        }
-    }
-    return args;
-}
-
-SpecArray* spec_process_raw_args(void) {
-    SpecArray* out = Vector_vecNewObject();
-    for (int i = 1; i < g_spec_argc; i++) {
-        String item = spec_string_from_chars(g_spec_argv[i] ? g_spec_argv[i] : "");
-        Vector_vecAdd(NULL, out, item);
-        spec_release(item);
-    }
-    return out;
-}
-
-static void spec_map_set_owned_int(void* m, const char* key, long long val) {
-    String k = spec_string_intern(key);
-    String v = Buf_intToString(NULL, val);
-    HashTable_mapSet(NULL, m, k, v);
-}
-
-void* spec_process_measure(String command, SpecArray* args) {
-    void* m = HashTable_mapNew();
+void spec_pal_process_measure(String command, long long argv_addr, long long nargs_ll, long long out_addr) {
+    long long* out = (long long*)(intptr_t)out_addr;
     long long exit_code = -1;
     long long wall_us = 0;
     long long cpu_us = 0;
     long long rss_kb = 0;
     if (!command) {
-        spec_map_set_owned_int(m, "exit", exit_code);
-        spec_map_set_owned_int(m, "wall_us", wall_us);
-        spec_map_set_owned_int(m, "cpu_us", cpu_us);
-        spec_map_set_owned_int(m, "rss_kb", rss_kb);
-        return m;
+        if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
+        return;
     }
     const char* cc = spec_buf_to_cstring((SpecBuf*)command);
+    const char** raw_args = (const char**)(intptr_t)argv_addr;
+    size_t nargs = (nargs_ll > 0 && raw_args) ? (size_t)nargs_ll : 0;
     fflush(stdout);
     fflush(stderr);
 #if defined(_WIN32)
     size_t total_len = strlen(cc) + 1;
-    if (args) {
-        for (size_t i = 0; i < args->length; i++) {
-            if (!args->items[i]) continue;
-            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
-            total_len += strlen(a) * 2 + 4;
-        }
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        total_len += strlen(a) * 2 + 4;
     }
     char* cmd_line = (char*)spec_xmalloc(total_len + 1);
     char* w = cmd_line;
     size_t cmd_len = strlen(cc);
     memcpy(w, cc, cmd_len);
     w += cmd_len;
-    if (args) {
-        for (size_t i = 0; i < args->length; i++) {
-            if (!args->items[i]) continue;
-            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
-            *w++ = ' ';
-            bool needs_quote = (*a == 0);
+    for (size_t i = 0; i < nargs; i++) {
+        const char* a = raw_args[i] ? raw_args[i] : "";
+        *w++ = ' ';
+        bool needs_quote = (*a == 0);
+        for (size_t k = 0; a[k]; k++) {
+            if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
+                needs_quote = true;
+                break;
+            }
+        }
+        if (!needs_quote) {
+            size_t alen = strlen(a);
+            memcpy(w, a, alen);
+            w += alen;
+        } else {
+            *w++ = '\"';
+            size_t slashes = 0;
             for (size_t k = 0; a[k]; k++) {
-                if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
-                    needs_quote = true;
-                    break;
+                if (a[k] == '\\') {
+                    slashes++;
+                } else if (a[k] == '\"') {
+                    for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
+                    *w++ = '\"';
+                    slashes = 0;
+                } else {
+                    for (size_t s = 0; s < slashes; s++) *w++ = '\\';
+                    *w++ = a[k];
+                    slashes = 0;
                 }
             }
-            if (!needs_quote) {
-                size_t alen = strlen(a);
-                memcpy(w, a, alen);
-                w += alen;
-            } else {
-                *w++ = '\"';
-                size_t slashes = 0;
-                for (size_t k = 0; a[k]; k++) {
-                    if (a[k] == '\\') {
-                        slashes++;
-                    } else if (a[k] == '\"') {
-                        for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
-                        *w++ = '\"';
-                        slashes = 0;
-                    } else {
-                        for (size_t s = 0; s < slashes; s++) *w++ = '\\';
-                        *w++ = a[k];
-                        slashes = 0;
-                    }
-                }
-                for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
-                *w++ = '\"';
-            }
+            for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
+            *w++ = '\"';
         }
     }
     *w = 0;
@@ -1591,17 +1396,12 @@ void* spec_process_measure(String command, SpecArray* args) {
     }
     free(cmd_line);
 #else
-    size_t nargs = args ? args->length : 0;
     char** argv_exec = (char**)spec_xmalloc((nargs + 2) * sizeof(char*));
     argv_exec[0] = (char*)cc;
-    size_t aidx = 1;
-    if (args) {
-        for (size_t i = 0; i < args->length; i++) {
-            const char* a = args->items[i] ? spec_buf_to_cstring((SpecBuf*)args->items[i]) : "";
-            argv_exec[aidx++] = (char*)a;
-        }
+    for (size_t i = 0; i < nargs; i++) {
+        argv_exec[i + 1] = (char*)(raw_args[i] ? raw_args[i] : "");
     }
-    argv_exec[aidx] = NULL;
+    argv_exec[nargs + 1] = NULL;
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
     pid_t pid = fork();
@@ -1633,11 +1433,7 @@ void* spec_process_measure(String command, SpecArray* args) {
     }
     free(argv_exec);
 #endif
-    spec_map_set_owned_int(m, "exit", exit_code);
-    spec_map_set_owned_int(m, "wall_us", wall_us);
-    spec_map_set_owned_int(m, "cpu_us", cpu_us);
-    spec_map_set_owned_int(m, "rss_kb", rss_kb);
-    return m;
+    if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
 }
 
 void spec_process_sleep(long long ms) {
@@ -1678,22 +1474,6 @@ String spec_process_os_name(void) {
 #else
     return spec_string_intern("unknown");
 #endif
-}
-
-long long spec_term_width(void) {
-    long long w = 0;
-    if (spec_pal_get_terminal_size(&w, NULL) && w > 0) return w;
-    char* cols = getenv("COLUMNS");
-    if (cols) return (long long)atoi(cols);
-    return 78;
-}
-
-long long spec_term_height(void) {
-    long long h = 0;
-    if (spec_pal_get_terminal_size(NULL, &h) && h > 0) return h;
-    char* lines = getenv("LINES");
-    if (lines) return (long long)atoi(lines);
-    return 24;
 }
 
 /* Striped recursive mutexes for Parallel:sync and Parallel:syncWith */
@@ -1763,6 +1543,73 @@ long long spec_clock_ms(void) {
     return spec_pal_get_wall_time_us() / 1000;
 }
 
+long long spec_mem_peak_kb(void) {
+    return spec_pal_get_peak_rss_kb();
+}
+
+long long spec_thread_count(void) {
+    return spec_pal_get_cpu_count();
+}
+
+long long spec_monitor_avg_cpu_pct(void) {
+    if (_spec_mon_total_wall_us <= 0) return 0;
+    return (_spec_mon_total_cpu_us * 100) / _spec_mon_total_wall_us;
+}
+
+long long spec_monitor_peak_cpu_pct(void) {
+    return _spec_mon_peak_cpu_pct;
+}
+
+long long spec_monitor_avg_mem_kb(void) {
+    long long count = _spec_mon_sample_count;
+    if (count <= 0) return _spec_mon_peak_mem_kb;
+    return _spec_mon_mem_sum_kb / count;
+}
+
+long long spec_monitor_peak_mem_kb(void) {
+    return _spec_mon_peak_mem_kb;
+}
+
+void spec_monitor_start(void) {
+    if (_spec_mon_active) return;
+    _spec_mon_sample_count = 0;
+    _spec_mon_mem_sum_kb = 0;
+    _spec_mon_peak_mem_kb = 0;
+    _spec_mon_peak_cpu_pct = 0;
+
+    _spec_mon_start_wall_us = spec_pal_get_wall_time_us();
+    _spec_mon_start_cpu_us = spec_pal_get_cpu_time_us();
+
+    _spec_mon_active = true;
+    spec_thread_enter();
+    pthread_create(&_spec_mon_thread, NULL, _spec_monitor_worker, NULL);
+}
+
+void spec_monitor_stop(void) {
+    if (!_spec_mon_active) return;
+    _spec_mon_active = false;
+    pthread_join(_spec_mon_thread, NULL);
+    spec_thread_leave();
+
+    long long end_wall_us = spec_pal_get_wall_time_us();
+    long long end_cpu_us = spec_pal_get_cpu_time_us();
+
+    _spec_mon_total_wall_us = end_wall_us - _spec_mon_start_wall_us;
+    _spec_mon_total_cpu_us = end_cpu_us - _spec_mon_start_cpu_us;
+
+    long long peak_ru = spec_pal_get_peak_rss_kb();
+    if (peak_ru > _spec_mon_peak_mem_kb) {
+        _spec_mon_peak_mem_kb = peak_ru;
+    }
+    long long avg_cpu = spec_monitor_avg_cpu_pct();
+    if (avg_cpu > _spec_mon_peak_cpu_pct) {
+        _spec_mon_peak_cpu_pct = avg_cpu;
+    }
+}
+
+void spec_process_exit(long long status) {
+    exit((int)status);
+}
 long long spec_time_monotonic_ns(void) {
 #if defined(_WIN32)
     LARGE_INTEGER freq, count;
@@ -1960,69 +1807,20 @@ bool spec_time_cancel_timer(long long timer_id) {
     pthread_mutex_unlock(&_spec_timer_mutex);
     return found;
 }
-
-long long spec_mem_peak_kb(void) {
-    return spec_pal_get_peak_rss_kb();
+long long spec_term_width(void) {
+    long long w = 0;
+    if (spec_pal_get_terminal_size(&w, NULL) && w > 0) return w;
+    char* cols = getenv("COLUMNS");
+    if (cols) return (long long)atoi(cols);
+    return 78;
 }
 
-long long spec_thread_count(void) {
-    return spec_pal_get_cpu_count();
-}
-
-long long spec_monitor_avg_cpu_pct(void) {
-    if (_spec_mon_total_wall_us <= 0) return 0;
-    return (_spec_mon_total_cpu_us * 100) / _spec_mon_total_wall_us;
-}
-
-long long spec_monitor_peak_cpu_pct(void) {
-    return _spec_mon_peak_cpu_pct;
-}
-
-long long spec_monitor_avg_mem_kb(void) {
-    long long count = _spec_mon_sample_count;
-    if (count <= 0) return _spec_mon_peak_mem_kb;
-    return _spec_mon_mem_sum_kb / count;
-}
-
-long long spec_monitor_peak_mem_kb(void) {
-    return _spec_mon_peak_mem_kb;
-}
-
-void spec_monitor_start(void) {
-    if (_spec_mon_active) return;
-    _spec_mon_sample_count = 0;
-    _spec_mon_mem_sum_kb = 0;
-    _spec_mon_peak_mem_kb = 0;
-    _spec_mon_peak_cpu_pct = 0;
-
-    _spec_mon_start_wall_us = spec_pal_get_wall_time_us();
-    _spec_mon_start_cpu_us = spec_pal_get_cpu_time_us();
-
-    _spec_mon_active = true;
-    spec_thread_enter();
-    pthread_create(&_spec_mon_thread, NULL, _spec_monitor_worker, NULL);
-}
-
-void spec_monitor_stop(void) {
-    if (!_spec_mon_active) return;
-    _spec_mon_active = false;
-    pthread_join(_spec_mon_thread, NULL);
-    spec_thread_leave();
-
-    long long end_wall_us = spec_pal_get_wall_time_us();
-    long long end_cpu_us = spec_pal_get_cpu_time_us();
-
-    _spec_mon_total_wall_us = end_wall_us - _spec_mon_start_wall_us;
-    _spec_mon_total_cpu_us = end_cpu_us - _spec_mon_start_cpu_us;
-
-    long long peak_ru = spec_pal_get_peak_rss_kb();
-    if (peak_ru > _spec_mon_peak_mem_kb) {
-        _spec_mon_peak_mem_kb = peak_ru;
-    }
-    long long avg_cpu = spec_monitor_avg_cpu_pct();
-    if (avg_cpu > _spec_mon_peak_cpu_pct) {
-        _spec_mon_peak_cpu_pct = avg_cpu;
-    }
+long long spec_term_height(void) {
+    long long h = 0;
+    if (spec_pal_get_terminal_size(NULL, &h) && h > 0) return h;
+    char* lines = getenv("LINES");
+    if (lines) return (long long)atoi(lines);
+    return 24;
 }
 
 void spec_error_line(String s) {
@@ -2087,7 +1885,6 @@ void spec_console_binary_mode(void) {
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
 }
-
 static inline void _spec_emit_last_sock_error(SpecClosure* on_error, const char* fallback) {
     if (!on_error || !on_error->fn) return;
 #if defined(_WIN32)
@@ -2276,21 +2073,22 @@ long long spec_socket_accept(long long fd) {
     return spec_socket_accept_cb(fd, NULL);
 }
 
-long long spec_socket_send_cb(long long fd, SpecByteBuffer* buf, SpecClosure* on_error) {
+long long spec_pal_socket_send(long long fd, long long data_addr, long long len, SpecClosure* on_error) {
     if (fd < 0) {
         _spec_emit_str_error(on_error, "Socket error: Socket is closed or invalid");
         return -1;
     }
-    if (!buf || buf->length == 0) return 0;
+    if (!data_addr || len <= 0) return 0;
+    const void* ptr = (const void*)(intptr_t)data_addr;
 #if defined(_WIN32)
-    int n = send((SOCKET)fd, (const char*)buf->data, (int)buf->length, 0);
+    int n = send((SOCKET)fd, (const char*)ptr, (int)len, 0);
     if (n == SOCKET_ERROR) {
         _spec_emit_last_sock_error(on_error, "Socket error: send() failed");
         return -1;
     }
     return (long long)n;
 #else
-    ssize_t n = send((int)fd, buf->data, buf->length, 0);
+    ssize_t n = send((int)fd, ptr, (size_t)len, 0);
     if (n < 0) {
         _spec_emit_last_sock_error(on_error, "Socket error: send() failed");
         return -1;
@@ -2299,8 +2097,28 @@ long long spec_socket_send_cb(long long fd, SpecByteBuffer* buf, SpecClosure* on
 #endif
 }
 
-long long spec_socket_send(long long fd, SpecByteBuffer* buf) {
-    return spec_socket_send_cb(fd, buf, NULL);
+long long spec_pal_socket_recv(long long fd, long long dst_addr, long long max_bytes, SpecClosure* on_error) {
+    if (fd < 0) {
+        _spec_emit_str_error(on_error, "Socket error: Socket is closed or invalid");
+        return -1;
+    }
+    if (!dst_addr || max_bytes <= 0) return 0;
+    void* ptr = (void*)(intptr_t)dst_addr;
+#if defined(_WIN32)
+    int n = recv((SOCKET)fd, (char*)ptr, (int)max_bytes, 0);
+    if (n < 0) {
+        _spec_emit_last_sock_error(on_error, "Socket error: recv() failed");
+        return -1;
+    }
+    return (long long)n;
+#else
+    ssize_t n = recv((int)fd, ptr, (size_t)max_bytes, 0);
+    if (n < 0) {
+        _spec_emit_last_sock_error(on_error, "Socket error: recv() failed");
+        return -1;
+    }
+    return (long long)n;
+#endif
 }
 
 long long spec_socket_send_str_cb(long long fd, String str, SpecClosure* on_error) {
@@ -2330,57 +2148,6 @@ long long spec_socket_send_str_cb(long long fd, String str, SpecClosure* on_erro
 
 long long spec_socket_send_str(long long fd, String str) {
     return spec_socket_send_str_cb(fd, str, NULL);
-}
-
-SpecByteBuffer* spec_socket_recv_cb(long long fd, long long max_bytes, SpecClosure* on_error) {
-    if (fd < 0) {
-        _spec_emit_str_error(on_error, "Socket error: Socket is closed or invalid");
-        return NULL;
-    }
-    if (max_bytes <= 0) max_bytes = 4096;
-    if (max_bytes > 1048576) max_bytes = 1048576;
-
-    SpecByteBuffer* b = Vector_byteBufNew();
-    b->data = (unsigned char*)spec_xmalloc((size_t)max_bytes);
-    b->capacity = (size_t)max_bytes;
-
-#if defined(_WIN32)
-    int n = recv((SOCKET)fd, (char*)b->data, (int)max_bytes, 0);
-    if (n <= 0) {
-        if (n == 0) { b->length = 0; return b; }
-        _spec_emit_last_sock_error(on_error, "Socket error: recv() failed");
-        spec_release(b);
-        return NULL;
-    }
-    b->length = (size_t)n;
-    return b;
-#else
-    ssize_t n = recv((int)fd, b->data, (size_t)max_bytes, 0);
-    if (n <= 0) {
-        if (n == 0) { b->length = 0; return b; }
-        _spec_emit_last_sock_error(on_error, "Socket error: recv() failed");
-        spec_release(b);
-        return NULL;
-    }
-    b->length = (size_t)n;
-    return b;
-#endif
-}
-
-SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
-    return spec_socket_recv_cb(fd, max_bytes, NULL);
-}
-
-String spec_socket_recv_str_cb(long long fd, long long max_bytes, SpecClosure* on_error) {
-    SpecByteBuffer* b = spec_socket_recv_cb(fd, max_bytes, on_error);
-    if (!b) return spec_string_intern("");
-    String s = (b->length == 0) ? spec_string_intern("") : spec_string_from_bytes((const char*)b->data, b->length);
-    spec_release(b);
-    return s;
-}
-
-String spec_socket_recv_str(long long fd, long long max_bytes) {
-    return spec_socket_recv_str_cb(fd, max_bytes, NULL);
 }
 
 long long spec_socket_close(long long fd) {
@@ -2433,7 +2200,6 @@ long long spec_socket_set_timeout(long long fd, long long timeout_ms) {
 #endif
     return 0;
 }
-
 long long spec_audio_open_cb(long long sample_rate, long long channels, long long format, SpecClosure* on_error) {
     if (sample_rate <= 0) sample_rate = 44100;
     if (channels <= 0) channels = 2;
@@ -2521,24 +2287,26 @@ long long spec_audio_open(long long sample_rate, long long channels, long long f
     return spec_audio_open_cb(sample_rate, channels, format, NULL);
 }
 
-long long spec_audio_write_cb(long long handle, SpecByteBuffer* buf, SpecClosure* on_error) {
+long long spec_pal_audio_write(long long handle, long long data_addr, long long len_ll, SpecClosure* on_error) {
     long long idx = handle - 1;
     if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) {
         _spec_emit_str_error(on_error, "Audio error: Audio stream is closed or invalid");
         return -1;
     }
-    if (!buf || buf->length == 0) return 0;
+    if (!data_addr || len_ll <= 0) return 0;
+    const void* data_ptr = (const void*)(intptr_t)data_addr;
+    size_t len = (size_t)len_ll;
 #if defined(__linux__)
     if (!_spec_snd_pcm_writei) {
         _spec_emit_str_error(on_error, "Audio error: ALSA write function unavailable");
         return -1;
     }
     long long bytes_per_frame = _spec_audio_streams[idx].channels * 2;
-    unsigned long frames = (unsigned long)(buf->length / bytes_per_frame);
-    long res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, buf->data, frames);
+    unsigned long frames = (unsigned long)(len / (size_t)bytes_per_frame);
+    long res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, data_ptr, frames);
     if (res < 0) {
         if (_spec_snd_pcm_recover) res = _spec_snd_pcm_recover((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, (int)res, 0);
-        if (res == 0) res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, buf->data, frames);
+        if (res == 0) res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, data_ptr, frames);
     }
     if (res < 0) {
         _spec_emit_str_error(on_error, "Audio error: Failed to write ALSA audio samples");
@@ -2549,30 +2317,26 @@ long long spec_audio_write_cb(long long handle, SpecByteBuffer* buf, SpecClosure
     HWAVEOUT hWave = _spec_audio_streams[idx].h_wave_out;
     WAVEHDR* hdr = (WAVEHDR*)spec_xmalloc(sizeof(WAVEHDR));
     memset(hdr, 0, sizeof(WAVEHDR));
-    hdr->lpData = (LPSTR)spec_xmalloc(buf->length);
-    memcpy(hdr->lpData, buf->data, buf->length);
-    hdr->dwBufferLength = (DWORD)buf->length;
+    hdr->lpData = (LPSTR)spec_xmalloc(len);
+    memcpy(hdr->lpData, data_ptr, len);
+    hdr->dwBufferLength = (DWORD)len;
     if (_spec_waveOutPrepareHeader) _spec_waveOutPrepareHeader(hWave, hdr, sizeof(WAVEHDR));
     if (_spec_waveOutWrite) _spec_waveOutWrite(hWave, hdr, sizeof(WAVEHDR));
-    return (long long)buf->length;
+    return (long long)len;
 #elif defined(__APPLE__) && defined(__MACH__)
     AudioQueueRef queue = _spec_audio_streams[idx].aq_queue;
     AudioQueueBufferRef buffer = NULL;
-    if (_spec_AudioQueueAllocateBuffer && _spec_AudioQueueAllocateBuffer(queue, (UInt32)buf->length, &buffer) == noErr) {
-        memcpy(buffer->mAudioData, buf->data, buf->length);
-        buffer->mAudioDataByteSize = (UInt32)buf->length;
+    if (_spec_AudioQueueAllocateBuffer && _spec_AudioQueueAllocateBuffer(queue, (UInt32)len, &buffer) == noErr) {
+        memcpy(buffer->mAudioData, data_ptr, len);
+        buffer->mAudioDataByteSize = (UInt32)len;
         if (_spec_AudioQueueEnqueueBuffer) _spec_AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
-        return (long long)buf->length;
+        return (long long)len;
     }
     _spec_emit_str_error(on_error, "Audio error: Failed to allocate AudioToolbox buffer");
     return -1;
 #endif
     _spec_emit_str_error(on_error, "Audio error: Unsupported audio backend");
     return -1;
-}
-
-long long spec_audio_write(long long handle, SpecByteBuffer* buf) {
-    return spec_audio_write_cb(handle, buf, NULL);
 }
 
 long long spec_audio_drain(long long handle) {
@@ -2601,8 +2365,4 @@ void spec_audio_close(long long handle) {
     if (_spec_AudioQueueDispose) _spec_AudioQueueDispose(_spec_audio_streams[idx].aq_queue, true);
 #endif
     memset(&_spec_audio_streams[idx], 0, sizeof(SpecAudioStream));
-}
-
-void spec_process_exit(long long status) {
-    exit((int)status);
 }

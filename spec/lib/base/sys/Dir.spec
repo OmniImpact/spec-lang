@@ -8,6 +8,10 @@ Class is Dir{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Dir]
 	];
 
@@ -18,7 +22,26 @@ Class is Dir{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Entry names.
 	Function of Array of String is dirList(String is path, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Dir:dir_list_cb(path: path, on_error: onError);
+		local Array of String is out: [];
+		local Int is pathAddr: Mem:objToAddr(obj: path);
+		if({ pathAddr == 0 || Mem:loadI64(ptr: pathAddr, byteOffset: 0) == 0 }, {
+			onError('invalid path');
+			return out;
+		});
+		local Int is handle: base:sysinternal:Dir:pal_dir_open(path: path);
+		if({ handle == 0 }, {
+			local String is errMsg: base:sysinternal:Dir:pal_last_error();
+			onError(errMsg);
+			return out;
+		});
+		local Int is nameAddr: base:sysinternal:Dir:pal_dir_next(handle: handle);
+		while({ nameAddr != 0 }, {
+			local Int is nlen: Mem:cstrLen(cstrAddr: nameAddr);
+			out:add(item: Mem:strFromBytes(srcAddr: nameAddr, len: nlen));
+			nameAddr: base:sysinternal:Dir:pal_dir_next(handle: handle);
+		});
+		base:sysinternal:Dir:pal_dir_close(handle: handle);
+		return out;
 	}
 
 	## Directory containing the running spec executable.

@@ -7,21 +7,17 @@
 Class is Dir{
 	namespace: ['base', 'sysinternal'];
 
-	## Names of the entries in directory [path] ('.' and '..' excluded).
-	## Order is filesystem-dependent; consumers must not rely on it.
-	##
-	## @param path: Directory to list.
-	## @return: Entry names.
-	Function of Array of String is dirList(String is path);
+	## Opens directory [path] for reading. Bound to `spec_pal_dir_open`.
+	Function of Int is pal_dir_open(String is path);
 
-	## Names of the entries in directory [path] ('.' and '..' excluded),
-	## invoking [on_error] with an error description if opening fails.
-	## Bound to `spec_dir_list_cb`.
-	##
-	## @param path: Directory to list.
-	## @param on_error: Optional callback receiving error description.
-	## @return: Entry names, or empty array on failure.
-	Function of Array of String is dir_list_cb(String is path, Function is on_error);
+	## Reads the next entry name C-string address (or 0 on end). Bound to `spec_pal_dir_next`.
+	Function of Int is pal_dir_next(Int is handle);
+
+	## Closes directory handle [handle]. Bound to `spec_pal_dir_close`.
+	Function is pal_dir_close(Int is handle);
+
+	## Last OS error string (`strerror(errno)`). Bound to `spec_pal_last_error`.
+	Function of String is pal_last_error();
 
 	## Directory containing the running spec executable.
 	##

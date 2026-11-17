@@ -6,6 +6,8 @@ Class is AudioDevice{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', List],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Audio]
 	];
 
@@ -14,7 +16,10 @@ Class is AudioDevice{
 	}
 
 	Function of Int is write(Int is handle, List of Byte is buffer, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Audio:audio_write_cb(handle: handle, buffer: buffer, on_error: onError);
+		local Int is bAddr: Mem:objToAddr(obj: buffer);
+		local Int is ptr: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 0) }, { 0 });
+		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) }, { 0 });
+		return base:sysinternal:Audio:pal_audio_write(handle: handle, data_addr: ptr, len: len, on_error: onError);
 	}
 
 	Function of Int is drain(Int is handle){

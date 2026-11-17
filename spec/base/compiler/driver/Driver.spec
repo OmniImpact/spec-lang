@@ -23,7 +23,7 @@ Class is Driver{
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'driver', CompilationReport],
 		['base', 'compiler', 'driver', OsLinkFlags],
-		['base', 'compiler', 'gen', RuntimePrelude],
+		['base', 'compiler', 'pal', RuntimePrelude],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'opt', OptimizerPipeline],
 		['base', 'compiler', 'llvm', IrBuilder],

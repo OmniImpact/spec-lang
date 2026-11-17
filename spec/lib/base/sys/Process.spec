@@ -12,10 +12,28 @@ Class is Process{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', as Conditional()],
 		['base', 'sys', as HashTable()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
 		['base', 'sys', as Vector()],
 		['base', 'sysinternal', Process]
 	];
+
+	local Function of Int is buildCArgv(Array of String is args){
+		local Int is n: args:length();
+		if({ n <= 0 }, { return 0; });
+		local Int is buf: Mem:alloc(bytes: n * 8);
+		local Int is i: 0;
+		while({ i < n }, {
+			local String is s: args:get(index: i, default: '');
+			local Int is sAddr: Mem:objToAddr(obj: s);
+			local Int is cstr: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
+			Mem:storeI64(ptr: buf, byteOffset: i * 8, val: cstr);
+			i: i + 1;
+		});
+		return buf;
+	}
 
 	## Spawns a child process executing [command] with [args], waiting for completion.
 	##
@@ -27,7 +45,11 @@ Class is Process{
 	## local Int is code: Process:execute(command: 'ls', args: ['-la']);
 	## ```
 	Function of Int is execute(String is command, Array of String is args){
-		return base:sysinternal:Process:process_execute(command: command, args: args);
+		local Int is n: args:length();
+		local Int is argvBuf: self:buildCArgv(args: args);
+		local Int is code: base:sysinternal:Process:pal_process_execute(command: command, argv_addr: argvBuf, nargs: n);
+		if({ argvBuf != 0 }, { Mem:free(ptr: argvBuf); });
+		return code;
 	}
 
 	## Returns the raw command-line arguments passed to the program (`argv[1..]`).
@@ -44,7 +66,18 @@ Class is Process{
 	## @param args: Command-line arguments passed to the child process.
 	## @return: Map with stringified integer keys `'exit'`, `'wall_us'`, `'cpu_us'`, `'rss_kb'`.
 	Function of Map of String to String is measure(String is command, Array of String is args){
-		return base:sysinternal:Process:process_measure(command: command, args: args);
+		local Int is n: args:length();
+		local Int is argvBuf: self:buildCArgv(args: args);
+		local Int is outBuf: Mem:alloc(bytes: 32);
+		base:sysinternal:Process:pal_process_measure(command: command, argv_addr: argvBuf, nargs: n, out_addr: outBuf);
+		if({ argvBuf != 0 }, { Mem:free(ptr: argvBuf); });
+		local Map of String to String is m: Map:init();
+		m:set(key: 'exit', value: Mem:loadI64(ptr: outBuf, byteOffset: 0) as String);
+		m:set(key: 'wall_us', value: Mem:loadI64(ptr: outBuf, byteOffset: 8) as String);
+		m:set(key: 'cpu_us', value: Mem:loadI64(ptr: outBuf, byteOffset: 16) as String);
+		m:set(key: 'rss_kb', value: Mem:loadI64(ptr: outBuf, byteOffset: 24) as String);
+		Mem:free(ptr: outBuf);
+		return m;
 	}
 
 	## Suspends execution of the current process for the specified duration.

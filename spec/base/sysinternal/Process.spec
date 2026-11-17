@@ -6,14 +6,10 @@
 Class is Process{
 	namespace: ['base', 'sysinternal'];
 
-	## Executes an external system command with arguments and returns
-	## the process exit status code (`0` for success). Bound to
-	## `spec_process_execute`.
-	##
-	## @param command: The command to execute.
-	## @param args: The command's arguments.
-	## @return: The exit status code.
-	Function of Int is process_execute(String is command, Array of String is args);
+	## Executes an external system command with C-string argument vector at [argv_addr]
+	## of length [nargs] and returns the process exit status code (`0` for success).
+	## Bound to `spec_pal_process_execute`.
+	Function of Int is pal_process_execute(String is command, Int is argv_addr, Int is nargs);
 
 	## Returns the raw command-line arguments passed to the program (`argv[1..]`).
 	## Bound to `spec_process_raw_args`.
@@ -21,14 +17,10 @@ Class is Process{
 	## @return: Array of raw CLI argument strings in order.
 	Function of Array of String is process_raw_args();
 
-	## Spawns [command] directly with [args] (without a shell) and measures
-	## exit code, wall time (us), CPU time (us), and peak RSS (KB).
-	## Bound to `spec_process_measure`.
-	##
-	## @param command: Executable name or path.
-	## @param args: Argument vector.
-	## @return: Map with keys 'exit', 'wall_us', 'cpu_us', 'rss_kb'.
-	Function of Map of String to String is process_measure(String is command, Array of String is args);
+	## Spawns [command] directly with C-string argument vector at [argv_addr] of length
+	## [nargs] (without a shell) and writes 4 `i64` metrics (exit, wall_us, cpu_us, rss_kb)
+	## into [out_addr]. Bound to `spec_pal_process_measure`.
+	Function is pal_process_measure(String is command, Int is argv_addr, Int is nargs, Int is out_addr);
 
 	## Suspends the current thread for [milliseconds]. Bound to
 	## `spec_process_sleep`.
