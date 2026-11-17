@@ -1999,8 +1999,12 @@ String spec_process_os_name(void) {
 }
 
 double spec_math_random(double min, double max) {
-    if (min >= max) return ((double)rand() / ((double)RAND_MAX + 1.0));
-    return min + ((double)rand() / ((double)RAND_MAX + 1.0)) * (max - min);
+    if (_spec_rng_state == 0) {
+        spec_fast_random_seed((long long)((uintptr_t)&_spec_rng_state ^ (unsigned long long)time(NULL)));
+    }
+    double u = (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);
+    if (min >= max) return u;
+    return min + u * (max - min);
 }
 
 long long spec_term_width(void) {

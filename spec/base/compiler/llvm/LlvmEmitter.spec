@@ -37,6 +37,7 @@ Class is LlvmEmitter{
 @_spec_pool_stack = external thread_local global ptr
 @_spec_pool_top = external thread_local global i64
 @_spec_pool_cap = external thread_local global i64
+@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer
 @.str.oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
 %struct.SpecHeader = type { i32, ptr, i32, i32 }
 define internal ptr @spec_rt_alloc(i64 %size, ptr %destroy) {
@@ -374,6 +375,18 @@ define internal i64 @__spec_mem_load_i64(i64 %base, i64 %off) alwaysinline {
 define internal void @__spec_mem_store_i64(i64 %base, i64 %off, i64 %val) alwaysinline {
   %p0 = inttoptr i64 %base to ptr
   %p = getelementptr i8, ptr %p0, i64 %off
+  store i64 %val, ptr %p
+  ret void
+}
+define internal i64 @__spec_mem_tls_get_i64(i64 %slot) alwaysinline {
+  %m = and i64 %slot, 15
+  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m
+  %v = load i64, ptr %p
+  ret i64 %v
+}
+define internal void @__spec_mem_tls_set_i64(i64 %slot, i64 %val) alwaysinline {
+  %m = and i64 %slot, 15
+  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m
   store i64 %val, ptr %p
   ret void
 }
@@ -1070,6 +1083,21 @@ declare void @spec_audio_close(i64)''';
 		return res;
 	}
 
+	local Function of Boolean is blockCallsFn(IrBlock is blk, String is fnName){
+		local Int is ii: 0;
+		while({ ii < blk:insts:length() }, {
+			local Boolean is hit: match(on: blk:insts:get(index: ii), when: [
+				IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					return callee == fnName;
+				},
+				else: { return false; }
+			]);
+			if({ hit }, { return true; });
+			ii++;
+		});
+		return false;
+	}
+
 	local Function of String is emitFunction(IrFunction is fn){
 		local String is retStr: self:llvmType(ty: fn:retType);
 		local String is paramsStr: '';
@@ -1085,7 +1113,15 @@ declare void @spec_audio_close(i64)''';
 			return 'declare ' . retStr . ' @' . fn:name . '(' . paramsStr . ")\n";
 		});
 
-		local String is out: 'define ' . retStr . ' @' . fn:name . '(' . paramsStr . ") {\n";
+		local String is inlineAttr: '';
+		if({ fn:blocks:length() == 1 && fn:name != 'main' }, {
+			local IrBlock is onlyBlk: fn:blocks:get(index: 0);
+			if({ onlyBlk:insts:length() <= 20 && !self:blockCallsFn(blk: onlyBlk, fnName: fn:name) }, {
+				inlineAttr: ' alwaysinline';
+			});
+		});
+
+		local String is out: 'define ' . retStr . ' @' . fn:name . '(' . paramsStr . ')' . inlineAttr . " {\n";
 		local Int is bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);

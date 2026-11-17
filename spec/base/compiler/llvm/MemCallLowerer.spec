@@ -33,8 +33,8 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 		local Boolean is ok: false;
 		match(on: call:name, when: [
 			['init', 'classRegistryAddr', 'classRegistryCount', 'heldRegistryAddr']: { ok: true; },
-			['alloc', 'free', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'internStr', 'panic', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64', 'callConstruct', 'cstrToStr', 'typeNameOf']: { ok: argc >= 1; },
-			['realloc', 'strFromBytes', 'loadI64', 'loadI32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy']: { ok: argc >= 2; },
+			['alloc', 'free', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'internStr', 'panic', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64', 'callConstruct', 'cstrToStr', 'typeNameOf', 'tlsGetI64']: { ok: true; },
+			['realloc', 'strFromBytes', 'loadI64', 'loadI32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy', 'tlsSetI64']: { ok: argc >= 2; },
 			['copy', 'move', 'set', 'cmp', 'storeI64', 'storeI32', 'storeByte', 'storePtr', 'storeF64', 'atomicCasI64']: { ok: argc >= 3; }
 		]);
 		return ok;
@@ -271,6 +271,15 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 			'typeNameOf': {
 				local String is op: self:lowerArgAsPtr(b: b, call: call, argName: 'obj', posIdx: 0);
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [op]);
+			},
+			'tlsGetI64': {
+				local String is sl: self:lowerNamedArg(b: b, call: call, argName: 'slot', posIdx: 0, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_tls_get_i64', argTypes: [IrType:I64], args: [sl]);
+			},
+			'tlsSetI64': {
+				local String is sl: self:lowerNamedArg(b: b, call: call, argName: 'slot', posIdx: 0, defVal: '0');
+				local String is v: self:lowerNamedArg(b: b, call: call, argName: 'val', posIdx: 1, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:Void, callee: '__spec_mem_tls_set_i64', argTypes: [IrType:I64, IrType:I64], args: [sl, v]);
 			}
 		]);
 		return res;

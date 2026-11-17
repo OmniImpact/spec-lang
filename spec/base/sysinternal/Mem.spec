@@ -55,4 +55,6 @@ Class is Mem{
 	Function of Int is heldRegistryAddr();
 	Function of String is cstrToStr(Int is cstrAddr);
 	Function of String is typeNameOf(Any is obj);
+	Function of Int is tlsGetI64(Int is slot);
+	Function is tlsSetI64(Int is slot, Int is val);
 }

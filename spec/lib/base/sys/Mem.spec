@@ -183,4 +183,12 @@ Class is Mem{
 	Function of String is typeNameOf(Any is obj){
 		return base:sysinternal:Mem:typeNameOf(obj: obj);
 	}
+
+	Function of Int is tlsGetI64(Int is slot){
+		return base:sysinternal:Mem:tlsGetI64(slot: slot);
+	}
+
+	Function is tlsSetI64(Int is slot, Int is val){
+		base:sysinternal:Mem:tlsSetI64(slot: slot, val: val);
+	}
 }
