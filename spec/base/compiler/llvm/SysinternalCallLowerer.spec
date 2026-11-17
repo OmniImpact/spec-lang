@@ -10,12 +10,17 @@ Class of CallLowerer is SysinternalCallLowerer{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', IrBuilder],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrInst],
 		['base', 'struct', Array],
+		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -140,5 +145,142 @@ Class of CallLowerer is SysinternalCallLowerer{
 		local String is dst: b:nextTmp();
 		b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: retType, callee: callee, argTypes: argTypes, args: args));
 		return dst;
+	}
+
+	local Function of String is toSnakeCase(String is s){
+		local String is lowerAlpha: 'abcdefghijklmnopqrstuvwxyz';
+		local String is out: '';
+		local Int is i: 0;
+		local Int is n: s:length();
+		while({ i < n }, {
+			local Int is chByte: Buf:bufGetByte(b: s, idx: i, def: 0);
+			if({ chByte >= 65 && chByte <= 90 }, {
+				if({ i > 0 }, {
+					out: out . '_';
+				});
+				out: out . lowerAlpha:substring(start: chByte - 65, end: chByte - 64);
+			}, {
+				out: out . s:substring(start: i, end: i + 1);
+			});
+			i++;
+		});
+		return out;
+	}
+
+	local Function of String is floorDomain(IrBuilder is b, CallData is call){
+		local String is cand: '';
+		if({ call:bareProvider:contains(needle: ':sysinternal:') }, {
+			local Array of String is parts: call:bareProvider:split(separator: ':');
+			if({ parts:length() > 0 }, {
+				cand: parts:get(index: parts:length() - 1, default: '');
+			});
+		});
+		if({ cand == '' }, {
+			match(on: call:target, when: [
+				Expression:Path: local Function(Array of String is segs){
+					local Int is n: segs:length();
+					if({ n >= 2 && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+						cand: segs:get(index: n - 1, default: '');
+					});
+				},
+				Expression:Ident: local Function(String is tn){
+					if({ tn == 'Console' || tn == 'Terminal' }, {
+						cand: tn;
+					});
+				}
+			], default: {});
+		});
+		if({ cand == '' && (call:bareProvider == 'Console' || call:bareProvider == 'Terminal') }, {
+			cand: call:bareProvider;
+		});
+		if({ cand == '' || cand == 'Mem' || cand == 'Math' || cand == 'Reflection' || cand == 'Conditional' || cand == 'Loops' || cand == 'Loadable' }, {
+			return '';
+		});
+		if({ !b:sysinternalClasses:has(key: cand) || !self:isFloorTarget(call: call, domain: cand) }, {
+			return '';
+		});
+		return cand;
+	}
+
+	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
+		local Int is argc: call:args:length();
+		if({ self:isTargetClass(call: call, clsName: 'Parallel') }, {
+			if({ call:name == 'init' }, { return true; });
+			if({ call:name == 'sync' && argc >= 1 }, { return true; });
+			if({ call:name == 'syncWith' && argc >= 2 }, { return true; });
+			if({ call:name == 'run' && argc >= 3 }, { return true; });
+			return false;
+		});
+		local String is dom: self:floorDomain(b: b, call: call);
+		if({ dom == '' }, { return false; });
+		if({ call:name == 'init' }, { return true; });
+		local ClassInfo is cls: b:sysinternalClasses:get(key: dom);
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:METHOD && (m:name == call:name || self:toSnakeCase(s: m:name) == call:name) }, {
+				return true;
+			});
+			mi++;
+		});
+		return false;
+	}
+
+	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
+		if({ call:name == 'init' }, { return 'null'; });
+		if({ self:isTargetClass(call: call, clsName: 'Parallel') }, {
+			if({ call:name == 'run' }, {
+				local String is thr: self:lowerNamedArg(b: b, call: call, argName: 'threads', posIdx: 0, defVal: '1');
+				local String is iters: self:lowerNamedArg(b: b, call: call, argName: 'iterations', posIdx: 1, defVal: '0');
+				local String is wrk: self:lowerNamedArg(b: b, call: call, argName: 'worker', posIdx: 2, defVal: 'null');
+				return self:emitSysCall(b: b, retType: IrType:I64, callee: 'spec_parallel_run', argTypes: [IrType:I64, IrType:I64, IrType:Ptr], args: [thr, iters, wrk]);
+			});
+			if({ call:name == 'sync' }, {
+				local String is act: self:lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 0, defVal: 'null');
+				local String is raw: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync', argTypes: [IrType:Ptr], args: [act]);
+				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
+				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
+			});
+			if({ call:name == 'syncWith' }, {
+				local String is lk: self:lowerNamedArg(b: b, call: call, argName: 'lock', posIdx: 0, defVal: '0');
+				local String is act: self:lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 1, defVal: 'null');
+				local String is raw: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync_with', argTypes: [IrType:I64, IrType:Ptr], args: [lk, act]);
+				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
+				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
+			});
+			return '0';
+		});
+		local String is dom: self:floorDomain(b: b, call: call);
+		local ClassInfo is cls: b:sysinternalClasses:get(key: dom);
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:METHOD && (m:name == call:name || self:toSnakeCase(s: m:name) == call:name) }, {
+				local Array of IrType is argTypes: [];
+				local Array of String is args: [];
+				local Int is pi: 0;
+				while({ pi < m:params:length() }, {
+					local Parameter is p: m:params:get(index: pi);
+					local IrType is pty: b:irTypeFor(specType: p:paramType:name);
+					local String is defVal: 'null';
+					if({ pty == IrType:I64 || pty == IrType:I1 }, { defVal: '0'; });
+					if({ pty == IrType:F64 }, { defVal: '0.0'; });
+					local String is av: self:lowerNamedArg(b: b, call: call, argName: p:name, posIdx: pi, defVal: defVal);
+					argTypes:add(item: pty);
+					args:add(item: av);
+					pi++;
+				});
+				local String is retSpec: b:methodReturnSpecType(mt: m:memberType);
+				local IrType is retTy: b:methodReturnType(mt: m:memberType);
+				local String is callee: 'spec_' . self:toSnakeCase(s: m:name);
+				local String is res: self:emitSysCall(b: b, retType: retTy, callee: callee, argTypes: argTypes, args: args);
+				if({ b:isArcSpecType(specType: retSpec) }, {
+					b:emitClaimPool(val: res);
+				});
+				return res;
+			});
+			mi++;
+		});
+		return '0';
 	}
 }

@@ -51,8 +51,8 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 				res: self:emitSysCall(b: b, retType: IrType:F64, callee: 'spec_math_random', argTypes: [IrType:F64, IrType:F64], args: ['0.0', '1.0']);
 			},
 			'fast_random_seed': {
-				local String is _s: self:lowerNamedArg(b: b, call: call, argName: 'seed', posIdx: 0, defVal: '0');
-				res: '0';
+				local String is s: self:lowerNamedArg(b: b, call: call, argName: 'seed', posIdx: 0, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'spec_fast_random_seed', argTypes: [IrType:I64], args: [s]);
 			},
 			'math_to_int': {
 				local String is v: self:lowerNamedArg(b: b, call: call, argName: 'v', posIdx: 0, defVal: '0.0');

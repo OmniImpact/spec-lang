@@ -261,7 +261,7 @@ Class is Math{
 		x: x ^ ((x >> 27) & 137438953471);
 		tlsSetI64(slot: 0, val: x);
 		local Int is mant: ((x * 2685821657736338717) >> 11) & 9007199254740991;
-		return self:toFloat(value: mant) * (1.0 / 9007199254740992.0);
+		return base:sysinternal:Math:math_to_float(v: mant) * (1.0 / 9007199254740992.0);
 	}
 
 	## Returns the absolute (non-negative) magnitude of [value].

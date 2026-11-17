@@ -12,6 +12,8 @@ Class is Process{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', as HashTable()],
+		['base', 'sys', as Vector()],
 		['base', 'sysinternal', Process]
 	];
 
@@ -162,11 +164,11 @@ Class is Process{
 
 	## Freezes a map for lock-free concurrent reads across worker threads.
 	Function is mapFreeze(Any is m){
-		base:sysinternal:Process:map_freeze(m: m);
+		HashTable:mapFreeze(m: m);
 	}
 
 	## Freezes an array for lock-free concurrent reads across worker threads.
 	Function is arrayFreeze(Any is a){
-		base:sysinternal:Process:array_freeze(a: a);
+		Vector:vecFreeze(v: a);
 	}
 }

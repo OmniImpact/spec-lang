@@ -80,6 +80,32 @@ Class of SpecOptimizer is InlineHintPass{
 		return true;
 	}
 
+	local Function of Boolean is isIntrinsicLeaf(IrFunction is fn){
+		local Int is bi: 0;
+		while({ bi < fn:blocks:length() }, {
+			local IrBlock is blk: fn:blocks:get(index: bi);
+			local Int is ii: 0;
+			while({ ii < blk:insts:length() }, {
+				local Boolean is ok: match(on: blk:insts:get(index: ii), when: [
+					IrInst:AllocObj: local Function of Boolean(String is dst, String is structName, String is destroyFn){
+						return false;
+					},
+					IrInst:IndirectCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+						return false;
+					},
+					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+						return callee:startsWith(prefix: '__spec_') || callee:startsWith(prefix: 'spec_');
+					},
+					else: { return true; }
+				]);
+				if({ !ok }, { return false; });
+				ii++;
+			});
+			bi++;
+		});
+		return true;
+	}
+
 	replace Function is runOnModule(IrModule is mod){
 		local Map of String to Boolean is modelFnSet: Map:init();
 		local Int is si: 0;
@@ -119,7 +145,7 @@ Class of SpecOptimizer is InlineHintPass{
 			if({ !fn:isExternal && fn:blocks:length() > 0 && fn:name != 'main' }, {
 				local Boolean is isSingleBlock: fn:blocks:length() == 1;
 				local Boolean is isModelFn: modelFnSet:has(key: fn:name);
-				if({ (isSingleBlock || isModelFn) && self:isAcyclicNonRecursive(fn: fn) }, {
+				if({ self:isAcyclicNonRecursive(fn: fn) && (isSingleBlock || isModelFn || self:isIntrinsicLeaf(fn: fn)) }, {
 					fn:alwaysInline: true;
 				});
 			});

@@ -64,6 +64,7 @@ Class is IrBuilder{
 	String is expectedMapValType: '';
 	Array of CallLowerer is callLowerers: [];
 	Map of String to ClassInfo is clsMap: Map:init();
+	Map of String to ClassInfo is sysinternalClasses: Map:init();
 	Map of String to String is clsQNameMap: Map:init();
 	Map of String to String is methodParamPtrMask: Map:init();
 	Map of String to Boolean is methodRetIsPtr: Map:init();
@@ -362,10 +363,14 @@ Class is IrBuilder{
 		self:mod: IrModule:init();
 		self:mod:entryFunction: entryClass;
 
+		self:sysinternalClasses: Map:init();
 		local Array of ClassInfo is allClasses: [];
 		local Int is pci: 0;
 		while({ pci < program:classes:length() }, {
 			local ClassInfo is pc0: program:classes:get(index: pci);
+			if({ self:bindings:isSysinternal(cls: pc0) }, {
+				self:sysinternalClasses:set(key: pc0:name, value: pc0);
+			});
 			if({ !self:isStdlibClass(cls: pc0) }, {
 				self:collectAllClasses(cls: pc0, out: allClasses);
 			});
@@ -873,7 +878,7 @@ Class is IrBuilder{
 		self:mod:addFunction(fn: ccFn);
 	}
 
-	local Function of String is methodReturnSpecType(Type is mt){
+	Function of String is methodReturnSpecType(Type is mt){
 		if({ mt:name == 'Function' }, {
 			if({ mt:params:length() > 0 }, {
 				local Type is rt: mt:params:get(index: 0);
@@ -884,7 +889,7 @@ Class is IrBuilder{
 		return mt:name;
 	}
 
-	local Function of IrType is methodReturnType(Type is mt){
+	Function of IrType is methodReturnType(Type is mt){
 		if({ mt:name == 'Function' }, {
 			if({ mt:params:length() > 0 }, {
 				local Type is rt: mt:params:get(index: 0);

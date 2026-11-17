@@ -81,7 +81,7 @@ String spec_string_from_chars(const char* c);
 String spec_string_intern(const char* c);
 bool spec_string_bytes_equal(String b, const char* c, size_t n);
 const char* spec_buf_to_cstring(SpecBuf* b);
-void spec_buf_destroy(void* self);
+extern void spec_buf_destroy(void* self);
 extern SpecArray* Vector_vecNewObject(void);
 extern void Vector_vecAdd(void* self, void* v, void* item);
 extern SpecByteBuffer* Vector_byteBufNew(void);
@@ -94,22 +94,7 @@ void spec_async_task_started(void);
 void spec_async_task_finished(void);
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error);
 bool spec_file_write(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
-extern __thread unsigned long long _spec_rng_state;
-static inline unsigned long long spec_rng_next(void) {
-    unsigned long long x = _spec_rng_state;
-    x ^= x >> 12;
-    x ^= x << 25;
-    x ^= x >> 27;
-    _spec_rng_state = x;
-    return x * 0x2545F4914F6CDD1DULL;
-}
-static inline void spec_fast_random_seed(long long idx) {
-    _spec_rng_state = 0x9E3779B97F4A7C15ULL ^ ((unsigned long long)idx * 0xBF58476D1CE4E5B9ULL + 0x94D049BB133111EBULL);
-    if (_spec_rng_state == 0) _spec_rng_state = 1;
-    spec_rng_next();
-    spec_rng_next();
-    spec_rng_next();
-}
+extern void spec_fast_random_seed(long long idx);
 
 /* Platform Abstraction Layer (PAL) & OS Shims */
 static bool spec_pal_get_exe_path(char* buf, size_t size) {
@@ -873,8 +858,6 @@ static bool _spec_init_winmm(void) {
 __thread void** _spec_pool_stack = NULL;
 __thread size_t _spec_pool_top = 0;
 __thread size_t _spec_pool_cap = 0;
-/* Per-Thread RNG (xorshift64*, lock-free, self-seeding) */
-__thread unsigned long long _spec_rng_state = 0;
 void spec_panic(const char* msg) {
     fprintf(stderr, "[Spec Runtime Panic] %s\n", msg ? msg : "fatal error");
     exit(1);
@@ -993,12 +976,6 @@ void spec_drain_async_tasks(void) {
         pthread_cond_wait(&spec_task_cond, &spec_task_mutex);
     }
     pthread_mutex_unlock(&spec_task_mutex);
-}
-
-void spec_buf_destroy(void* self) {
-    SpecBuf* b = (SpecBuf*)self;
-    if (!b) return;
-    if (b->data && b->data != (void*)b->inline_buf) { free(b->data); b->data = NULL; }
 }
 
 SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error) {
@@ -1701,15 +1678,6 @@ String spec_process_os_name(void) {
 #else
     return spec_string_intern("unknown");
 #endif
-}
-
-double spec_math_random(double min, double max) {
-    if (_spec_rng_state == 0) {
-        spec_fast_random_seed((long long)((uintptr_t)&_spec_rng_state ^ (unsigned long long)time(NULL)));
-    }
-    double u = (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);
-    if (min >= max) return u;
-    return min + u * (max - min);
 }
 
 long long spec_term_width(void) {

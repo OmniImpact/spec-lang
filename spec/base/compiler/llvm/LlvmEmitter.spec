@@ -758,24 +758,41 @@ define internal ptr @spec_loop_control_with_callback(ptr %cb, ptr %on_complete) 
 
 	local Function of String is emitTypeAndStringHelpers(){
 		return '''
-declare ptr @spec_string_intern(ptr)
-declare ptr @spec_to_string_float(double)
-declare void @spec_buf_destroy(ptr)
-declare void @spec_panic(ptr)
-declare void @spec_panic_byte_range(i64)
-declare void @spec_panic_cast(ptr, ptr)
-declare i32 @strcmp(ptr, ptr)
-declare i64 @strlen(ptr)
-declare noalias ptr @malloc(i64)
-declare ptr @calloc(i64, i64)
-declare ptr @realloc(ptr, i64)
-declare void @free(ptr)
-declare ptr @memcpy(ptr, ptr, i64)
-declare ptr @memmove(ptr, ptr, i64)
-declare ptr @memset(ptr, i32, i64)
-declare i32 @memcmp(ptr, ptr, i64)
+declare ptr @spec_string_intern(ptr) nounwind
+declare ptr @spec_to_string_float(double) nounwind
+declare void @spec_panic(ptr) noreturn nounwind
+declare void @spec_panic_byte_range(i64) noreturn nounwind
+declare void @spec_panic_cast(ptr, ptr) noreturn nounwind
+declare i32 @strcmp(ptr nocapture readonly, ptr nocapture readonly) nounwind willreturn memory(read)
+declare i64 @strlen(ptr nocapture readonly) nounwind willreturn memory(read)
+declare noalias ptr @malloc(i64) nounwind willreturn allockind("alloc,uninitialized") allocsize(0)
+declare noalias ptr @calloc(i64, i64) nounwind willreturn allockind("alloc,zeroed") allocsize(0, 1)
+declare ptr @realloc(ptr, i64) nounwind willreturn allockind("realloc") allocsize(1)
+declare void @free(ptr) nounwind willreturn allockind("free")
+declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) nounwind willreturn
+declare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nounwind willreturn
+declare ptr @memset(ptr returned writeonly, i32, i64) nounwind willreturn
+declare i32 @memcmp(ptr nocapture readonly, ptr nocapture readonly, i64) nounwind willreturn memory(read)
 %struct.SpecBuf = type { ptr, i64, i64, i64, i32 }
 @.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer
+define void @spec_buf_destroy(ptr %self) nounwind {
+  %isnull = icmp eq ptr %self, null
+  br i1 %isnull, label %done, label %chk
+chk:
+  %d = load ptr, ptr %self, align 8
+  %dnull = icmp eq ptr %d, null
+  br i1 %dnull, label %done, label %chk_sbo
+chk_sbo:
+  %inl = getelementptr inbounds i8, ptr %self, i64 36
+  %is_sbo = icmp eq ptr %d, %inl
+  br i1 %is_sbo, label %done, label %do_free
+do_free:
+  call void @free(ptr %d)
+  store ptr null, ptr %self, align 8
+  br label %done
+done:
+  ret void
+}
 define internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {
   %isnull = icmp eq ptr %b, null
   br i1 %isnull, label %empty, label %chk
@@ -929,28 +946,28 @@ ret_cls:
 
 	local Function of String is emitMathHelpers(){
 		return '''
-declare double @sqrt(double)
-declare double @round(double)
-declare double @ceil(double)
-declare double @floor(double)
-declare double @fabs(double)
-declare double @fmin(double, double)
-declare double @fmax(double, double)
-declare double @fma(double, double, double)
-declare double @sin(double)
-declare double @cos(double)
-declare double @tan(double)
-declare double @atan2(double, double)
-declare double @log(double)
-declare double @log2(double)
-declare double @pow(double, double)
-declare double @exp(double)
-declare double @log10(double)
-declare double @cbrt(double)
-declare double @asin(double)
-declare double @acos(double)
-declare double @atan(double)
-define internal double @spec_math_log(double %v) alwaysinline {
+declare double @sqrt(double) nounwind willreturn
+declare double @round(double) nounwind willreturn
+declare double @ceil(double) nounwind willreturn
+declare double @floor(double) nounwind willreturn
+declare double @fabs(double) nounwind willreturn
+declare double @fmin(double, double) nounwind willreturn
+declare double @fmax(double, double) nounwind willreturn
+declare double @fma(double, double, double) nounwind willreturn
+declare double @sin(double) nounwind willreturn
+declare double @cos(double) nounwind willreturn
+declare double @tan(double) nounwind willreturn
+declare double @atan2(double, double) nounwind willreturn
+declare double @log(double) nounwind willreturn
+declare double @log2(double) nounwind willreturn
+declare double @pow(double, double) nounwind willreturn
+declare double @exp(double) nounwind willreturn
+declare double @log10(double) nounwind willreturn
+declare double @cbrt(double) nounwind willreturn
+declare double @asin(double) nounwind willreturn
+declare double @acos(double) nounwind willreturn
+declare double @atan(double) nounwind willreturn
+define internal double @spec_math_log(double %v) alwaysinline nounwind {
   %le = fcmp ole double %v, 0.0
   br i1 %le, label %z, label %ok
 z:
@@ -959,7 +976,7 @@ ok:
   %r = call double @log(double %v)
   ret double %r
 }
-define internal double @spec_math_log2(double %v) alwaysinline {
+define internal double @spec_math_log2(double %v) alwaysinline nounwind {
   %le = fcmp ole double %v, 0.0
   br i1 %le, label %z, label %ok
 z:
@@ -968,7 +985,7 @@ ok:
   %r = call double @log2(double %v)
   ret double %r
 }
-define internal double @spec_math_log10(double %v) alwaysinline {
+define internal double @spec_math_log10(double %v) alwaysinline nounwind {
   %le = fcmp ole double %v, 0.0
   br i1 %le, label %z, label %ok
 z:
@@ -977,7 +994,55 @@ ok:
   %r = call double @log10(double %v)
   ret double %r
 }
-declare double @spec_math_random(double, double)''';
+define internal i64 @__spec_rng_next() alwaysinline nounwind {
+  %x0 = load i64, ptr @_spec_tls_i64, align 8
+  %s1 = lshr i64 %x0, 12
+  %x1 = xor i64 %x0, %s1
+  %s2 = shl i64 %x1, 25
+  %x2 = xor i64 %x1, %s2
+  %s3 = lshr i64 %x2, 27
+  %x3 = xor i64 %x2, %s3
+  store i64 %x3, ptr @_spec_tls_i64, align 8
+  %res = mul i64 %x3, 2685821657736338717
+  ret i64 %res
+}
+define void @spec_fast_random_seed(i64 %idx) nounwind {
+  %m = mul i64 %idx, -4658895280553007687
+  %a = add i64 %m, -7723592293110705685
+  %s0 = xor i64 %a, -7046029254386353131
+  %isz = icmp eq i64 %s0, 0
+  %s1 = select i1 %isz, i64 1, i64 %s0
+  store i64 %s1, ptr @_spec_tls_i64, align 8
+  %r1 = call i64 @__spec_rng_next()
+  %r2 = call i64 @__spec_rng_next()
+  %r3 = call i64 @__spec_rng_next()
+  ret void
+}
+define internal double @spec_math_random(double %min, double %max) alwaysinline nounwind {
+  %st = load i64, ptr @_spec_tls_i64, align 8
+  %uninit = icmp eq i64 %st, 0
+  br i1 %uninit, label %seed, label %gen
+seed:
+  %addr = ptrtoint ptr @_spec_tls_i64 to i64
+  %ns = call i64 @spec_time_monotonic_ns()
+  %sd = xor i64 %addr, %ns
+  call void @spec_fast_random_seed(i64 %sd)
+  br label %gen
+gen:
+  %rnd = call i64 @__spec_rng_next()
+  %top = lshr i64 %rnd, 11
+  %flt = uitofp i64 %top to double
+  %u = fmul double %flt, 0x3CA0000000000000
+  %ge = fcmp oge double %min, %max
+  br i1 %ge, label %ret_u, label %scale
+ret_u:
+  ret double %u
+scale:
+  %diff = fsub double %max, %min
+  %prod = fmul double %u, %diff
+  %res = fadd double %min, %prod
+  ret double %res
+}''';
 	}
 
 	local Function of String is emitOsPalDeclarations(){

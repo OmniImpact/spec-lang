@@ -58,10 +58,10 @@ for cycle in 1 2 3; do
 	"${CLANG_BIN}" -O2 -Wno-override-module bootstrap/spec.ll /tmp/spec_bootstrap_runtime.o -o bin/spec -pthread -lm ${EXTRA_LIBS}
 
 	echo "Verifying the self-hosting fixed point (cycle ${cycle})..."
-	bin/spec -i "$DRIVER" --emit-llvm /tmp/spec_fixedpoint_verify.ll --quiet
-	if file_cmp /tmp/spec_fixedpoint_verify.ll bootstrap/spec.ll; then
+	bin/spec -i "$DRIVER" --emit-llvm /tmp/spec_fixedpoint_verify.ll --emit-runtime /tmp/spec_runtime_verify.c --quiet
+	if file_cmp /tmp/spec_fixedpoint_verify.ll bootstrap/spec.ll && file_cmp /tmp/spec_runtime_verify.c bootstrap/spec_runtime.c; then
 		echo "Fixed point verified: the compiler reproduces its own seed byte-for-byte."
-		rm -f /tmp/spec_fixedpoint_verify.ll /tmp/spec_bootstrap_runtime.o
+		rm -f /tmp/spec_fixedpoint_verify.ll /tmp/spec_runtime_verify.c /tmp/spec_bootstrap_runtime.o
 		echo "Spec compiler bootstrapped successfully!"
 		bin/spec --help || true
 		exit 0
@@ -69,8 +69,12 @@ for cycle in 1 2 3; do
 	if [ "$cycle" -lt 3 ]; then
 		echo "Seed drifted (compiler sources changed) — converging..."
 		cp /tmp/spec_fixedpoint_verify.ll bootstrap/spec.ll
+		if ! file_cmp /tmp/spec_runtime_verify.c bootstrap/spec_runtime.c; then
+			cp /tmp/spec_runtime_verify.c bootstrap/spec_runtime.c
+			"${CLANG_BIN}" -O2 -c bootstrap/spec_runtime.c -o /tmp/spec_bootstrap_runtime.o -pthread
+		fi
 	else
-		rm -f /tmp/spec_bootstrap_runtime.o
+		rm -f /tmp/spec_fixedpoint_verify.ll /tmp/spec_runtime_verify.c /tmp/spec_bootstrap_runtime.o
 		echo "Error: the fixed point did not converge in 3 cycles (nondeterministic emission?)" >&2
 		exit 1
 	fi

@@ -285,15 +285,16 @@ Class is Driver{
 			fileRemove(path: runtimeO);
 			fileRemove(path: runtimeC);
 		});
-		if({ !fileExists(path: runtimeO) || args:has(key: 'clean-cache') }, {
+		local RuntimePrelude is rp: RuntimePrelude:init();
+		local String is rtText: rp:emitRuntime();
+		if({ !fileExists(path: runtimeO) || Dir:fileSize(path: runtimeC) != Buf:bufLength(b: rtText) || args:has(key: 'clean-cache') }, {
 			Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
-			local RuntimePrelude is rp: RuntimePrelude:init();
-			if({ !fileWrite(path: runtimeC, content: rp:emitRuntime()) }, {
+			if({ !fileWrite(path: runtimeC, content: rtText) }, {
 				cacheDir: Uri:systemTempDir() . '/spec_cache/runtime';
 				runtimeC: cacheDir . '/spec_runtime.c';
 				runtimeO: cacheDir . '/spec_runtime.o';
 				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
-				fileWrite(path: runtimeC, content: rp:emitRuntime());
+				fileWrite(path: runtimeC, content: rtText);
 			});
 			Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
 		});
