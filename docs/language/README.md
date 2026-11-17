@@ -492,10 +492,13 @@ Rules enforced by the Loader:
 - **Double-Quoted (`"..."`)**: Interprets escape sequences:
   - `\n` (Newline), `\t` (Tab), `\r` (Carriage Return), `\\` (Backslash), `\"` (Quote).
 - **Single-Quoted (`'...'`)**: Raw literals where backslashes are preserved literally.
+- **Triple-Single-Quoted Heredoc (`'''...'''`)**: Raw multiline heredoc strings preserving newlines and backslashes literally.
+- **Triple-Backtick Heredoc (```` ```...{{expr}}...``` ````)**: Escape-processed multiline heredoc strings supporting inline `{{expr}}` expression interpolation.
 
 ```spec
 local String is formatted: "Line 1\tTabbed\nLine 2";
 local String is rawPath: 'C:\Windows\System32';
+local String is banner: ```Hello, {{name}}!```;
 ```
 
 ### Numeric Base Literals
@@ -852,8 +855,8 @@ Loops:run(loop: CounterLoop:init(), control: LoopControl:init());
 ```
 
 ### The `Loops` Provider
-One as-import (`['base', 'sys', as Loops()]`) serves the loop constructs bare. Like the conditionals, the constructs are **real wrapper implementations** — composed in `base:iterator:Loops` from the iteration floor's single `while` primitive (`base:sysinternal:Loops`, the loop-shape counterpart of the conditional floor's `branch`) — with the compiler inlining the literal-closure forms as native C11 loops (zero closure allocation) as the fast path. A call whose closures are not inline literals (Function variables, callbacks held as values) flows to the runtime body:
-- `while({ cond }, { ... })` — the predicate loop; inlined into a native C11 `while` with zero closure allocation for literal closures.
+One as-import (`['base', 'sys', as Loops()]`) serves the loop constructs bare. Like the conditionals, the constructs are **real wrapper implementations** — composed in `base:sys:Loops` from the iteration floor's single `while` primitive (`base:sysinternal:Loops`, the loop-shape counterpart of the conditional floor's `branch`) — with the compiler inlining the literal-closure forms as native LLVM IR basic blocks (zero closure allocation) as the fast path. A call whose closures are not inline literals (Function variables, callbacks held as values) flows to the runtime body:
+- `while({ cond }, { ... })` — the predicate loop; inlined into native LLVM IR basic blocks with zero closure allocation for literal closures.
 - `while([Int is i: 0], { i < n }, { ... i++; })` — the scoped-variable loop.
 - `repeat(count: 10, worker: { ... })` — the counting loop.
 - `until({ cond }, { ... })` — the body-always-runs-once form (do-while).
@@ -879,7 +882,7 @@ repeat(count: 10, worker: {
 });
 ```
 
-- **Zero Overhead**: Inlined directly by the compiler into native C11 statement expressions `({ ... while (1) { ... } ... })` with zero heap allocations, zero closure wrappers, and pure register loop performance.
+- **Zero Overhead**: Inlined directly by the compiler into native LLVM IR loop blocks with zero heap allocations, zero closure wrappers, and pure register loop performance.
 - **Function Block Shorthand**: `{ ... }` acts as an anonymous function argument, auto-returning single-expression bodies `{ i < max }`.
 
 ### Scoped Region Desugaring (`as`)

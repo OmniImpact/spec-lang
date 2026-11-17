@@ -6,85 +6,50 @@
 Class is Process{
 	namespace: ['base', 'sysinternal'];
 
-	## Executes an external system command with arguments and returns
-	## the process exit status code (`0` for success). Bound to
-	## `spec_process_execute`.
-	##
-	## @param command: The command to execute.
-	## @param args: The command's arguments.
-	## @return: The exit status code.
-	Function of Int is process_execute(String is command, Array of String is args);
+	## Executes an external system command [cmd_cstr] with C-string argument vector
+	## at [argv_addr] of length [nargs] and returns the process exit status code.
+	## Bound to `spec_pal_process_execute_cstr`.
+	Function of Int is pal_process_execute_cstr(Int is cmd_cstr, Int is argv_addr, Int is nargs);
 
 	## Returns the raw command-line arguments passed to the program (`argv[1..]`).
 	## Bound to `spec_process_raw_args`.
-	##
-	## @return: Array of raw CLI argument strings in order.
 	Function of Array of String is process_raw_args();
 
-	## Spawns [command] directly with [args] (without a shell) and measures
-	## exit code, wall time (us), CPU time (us), and peak RSS (KB).
-	## Bound to `spec_process_measure`.
-	##
-	## @param command: Executable name or path.
-	## @param args: Argument vector.
-	## @return: Map with keys 'exit', 'wall_us', 'cpu_us', 'rss_kb'.
-	Function of Map of String to String is process_measure(String is command, Array of String is args);
+	## Spawns [cmd_cstr] directly with C-string argument vector at [argv_addr] of length
+	## [nargs] (without a shell) and writes 4 `i64` metrics (exit, wall_us, cpu_us, rss_kb)
+	## into [out_addr]. Bound to `spec_pal_process_measure_cstr`.
+	Function is pal_process_measure_cstr(Int is cmd_cstr, Int is argv_addr, Int is nargs, Int is out_addr);
 
-	## Suspends the current thread for [milliseconds]. Bound to
-	## `spec_process_sleep`.
-	##
-	## @param milliseconds: The sleep duration.
+	## Suspends the current thread for [milliseconds]. Bound to `spec_process_sleep`.
 	Function is process_sleep(Int is milliseconds);
 
 	## Terminates the current process with the given exit status.
 	## Bound to `spec_process_exit`.
-	##
-	## @param status: Process exit code (0 = success).
 	Function is process_exit(Int is status);
 
 	## Returns the current process ID. Bound to `spec_process_get_pid`.
-	##
-	## @return: Current process ID.
 	Function of Int is process_get_pid();
 
-	## Returns the environment variable value for [key], or [default] if unset.
-	## Bound to `spec_process_getenv`.
-	##
-	## @param key: The environment variable name.
-	## @param default: The fallback value if unset.
-	## @return: The environment variable value.
-	Function of String is process_getenv(String is key, String is default);
+	## Returns the C-string address of environment variable [key_cstr], or 0 if unset.
+	## Bound to `spec_pal_getenv`.
+	Function of Int is pal_getenv(Int is key_cstr);
 
-	## Returns the operating system name ('linux', 'macos', 'windows', or 'unknown').
-	## Bound to `spec_process_os_name`.
-	##
-	## @return: Operating system name string.
-	Function of String is process_os_name();
+	## Returns the C-string address of the operating system name ('linux', 'macos', 'windows', or 'unknown').
+	## Bound to `spec_pal_os_name`.
+	Function of Int is pal_os_name();
 
-	## Returns monotonic wall-clock milliseconds since an arbitrary
-	## epoch. Bound to `spec_clock_ms`.
-	##
-	## @return: Monotonic clock reading in milliseconds.
+	## Returns monotonic wall-clock milliseconds since an arbitrary epoch.
+	## Bound to `spec_clock_ms`.
 	Function of Int is clock_ms();
 
-	## Returns the peak resident memory in kilobytes. Bound to
-	## `spec_mem_peak_kb`.
-	##
-	## @return: Peak memory in KB.
+	## Returns the peak resident memory in kilobytes. Bound to `spec_mem_peak_kb`.
 	Function of Int is mem_peak_kb();
 
-	## Returns the number of hardware threads available. Bound to
-	## `spec_thread_count`.
-	##
-	## @return: The hardware thread count.
+	## Returns the number of hardware threads available. Bound to `spec_thread_count`.
 	Function of Int is thread_count();
 
-	## Atomically adds [value] to the slot at [slot] and returns the
-	## previous value. Bound to `spec_atomic_add`.
-	##
-	## @param slot: The atomic slot index.
-	## @param value: The addend.
-	## @return: The previous slot value.
+	## Atomically adds [value] to the slot at [slot] and returns the previous value.
+	## Bound to `spec_atomic_add`.
 	Function of Int is atomic_add(Int is slot, Int is value);
 
 	## Starts the background resource monitor thread (samples RSS and CPU).
@@ -111,24 +76,10 @@ Class is Process{
 	## Bound to `spec_monitor_peak_cpu_pct`.
 	Function of Int is monitor_peak_cpu_pct();
 
-	## Atomically writes [value] into the slot at [slot]. Bound to
-	## `spec_atomic_put`.
-	##
-	## @param slot: The atomic slot index.
-	## @param value: The value to write.
+	## Atomically writes [value] into the slot at [slot].
+	## Bound to `spec_atomic_put`.
 	Function is atomic_put(Int is slot, Int is value);
 
 	## Atomically reads the slot at [slot]. Bound to `spec_atomic_get`.
-	##
-	## @param slot: The atomic slot index.
-	## @return: The slot value.
 	Function of Int is atomic_get(Int is slot);
-
-	## Marks a Map as frozen for lock-free concurrent reads.
-	## Bound to `spec_map_freeze`.
-	Function is map_freeze(Any is m);
-
-	## Marks an Array as frozen for lock-free concurrent reads.
-	## Bound to `spec_array_freeze`.
-	Function is array_freeze(Any is a);
 }

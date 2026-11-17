@@ -1,15 +1,24 @@
 #! Package base:sys
 #! Public wrapper over the sysinternal filesystem-directory floor.
-##
-## Same-name wrapper rule: only base:sys may call base:sysinternal; the
-## floor is addressed by its full qualified chain here.
 
 Class is Dir{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Dir]
 	];
+
+	local Function of Int is cstrOf(String is s){
+		local Int is sAddr: Mem:objToAddr(obj: s);
+		if({ sAddr == 0 || Mem:loadI64(ptr: sAddr, byteOffset: 8) == 0 }, {
+			return 0;
+		});
+		return Mem:loadI64(ptr: sAddr, byteOffset: 0);
+	}
 
 	## Names of the entries in directory [path] ('.' and '..' excluded).
 	## Order is filesystem-dependent; consumers must not rely on it.
@@ -18,14 +27,38 @@ Class is Dir{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Entry names.
 	Function of Array of String is dirList(String is path, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Dir:dir_list_cb(path: path, on_error: onError);
+		local Array of String is out: [];
+		local Int is pc: self:cstrOf(s: path);
+		if({ pc == 0 }, {
+			onError('invalid path');
+			return out;
+		});
+		local Int is handle: base:sysinternal:Dir:pal_dir_open_cstr(path_cstr: pc);
+		if({ handle == 0 }, {
+			local Int is ec: base:sysinternal:Dir:pal_last_error_cstr();
+			local Int is elen: Mem:cstrLen(cstrAddr: ec);
+			onError(Mem:strFromBytes(srcAddr: ec, len: elen));
+			return out;
+		});
+		local Int is nameAddr: base:sysinternal:Dir:pal_dir_next(handle: handle);
+		while({ nameAddr != 0 }, {
+			local Int is nlen: Mem:cstrLen(cstrAddr: nameAddr);
+			out:add(item: Mem:strFromBytes(srcAddr: nameAddr, len: nlen));
+			nameAddr: base:sysinternal:Dir:pal_dir_next(handle: handle);
+		});
+		base:sysinternal:Dir:pal_dir_close(handle: handle);
+		return out;
 	}
 
 	## Directory containing the running spec executable.
 	##
 	## @return: The executable's directory.
 	Function of String is exeDir(){
-		return base:sysinternal:Dir:exeDir();
+		local Int is buf: Mem:alloc(bytes: 4096);
+		local Int is n: base:sysinternal:Dir:pal_exe_dir(buf_addr: buf, buf_size: 4096);
+		local String is res: if({ n > 0 }, { Mem:strFromBytes(srcAddr: buf, len: n) }, { '' });
+		Mem:free(ptr: buf);
+		return res;
 	}
 
 	## Size of the file at [path] in bytes, or -1 when it does not exist.
@@ -33,6 +66,8 @@ Class is Dir{
 	## @param path: File to measure.
 	## @return: Size in bytes, or -1.
 	Function of Int is fileSize(String is path){
-		return base:sysinternal:Dir:fileSize(path: path);
+		local Int is pc: self:cstrOf(s: path);
+		if({ pc == 0 }, { return -1; });
+		return base:sysinternal:Dir:pal_file_size_cstr(path_cstr: pc);
 	}
 }

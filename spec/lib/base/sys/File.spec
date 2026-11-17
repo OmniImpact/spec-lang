@@ -1,98 +1,148 @@
 #! Package base:sys
-#! The filesystem wrapper: the Spec-side names over the file floor's
-#! C names.
-
-## Filesystem read, write, and existence inspection with synchronous
-## and asynchronous callback execution. The Spec-side names
-## (fileRead/fileWrite/...) keep the generic verbs unambiguous under
-## the merged as-import scope; the floor carries the C names
-## (spec_file_read and friends). The `default`, `onSuccess`, and
-## `onError` parameters are optional at call sites.
+#! The filesystem wrapper over the scalar file PAL floor.
 
 Class is File{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
 		['base', 'sysinternal', File]
 	];
 
+	local Function of Int is cstrOf(String is s){
+		local Int is sAddr: Mem:objToAddr(obj: s);
+		if({ sAddr == 0 || Mem:loadI64(ptr: sAddr, byteOffset: 8) == 0 }, {
+			return 0;
+		});
+		return Mem:loadI64(ptr: sAddr, byteOffset: 0);
+	}
+
+	local Function of Boolean is hasClosure(Function is cb){
+		local Int is addr: Mem:objToAddr(obj: cb);
+		if({ addr == 0 }, { return false; });
+		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
+	}
+
+	local Function is emitLastError(Function is onError, String is fallback){
+		if({ !self:hasClosure(cb: onError) }, { return; });
+		local Int is ec: base:sysinternal:File:pal_last_error_cstr();
+		if({ ec != 0 }, {
+			local Int is elen: Mem:cstrLen(cstrAddr: ec);
+			onError(Mem:strFromBytes(srcAddr: ec, len: elen));
+		}, {
+			onError(fallback);
+		});
+	}
+
 	## Reads the entire contents of a file with optional success and error callback handlers.
-	##
-	## @param path: Filesystem path to the target file.
-	## @param onSuccess: Optional callback receiving file contents on successful read: `Function(String is content)`.
-	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
-	## @param default: Optional fallback string returned if reading fails or file is absent.
-	## @return: File contents on success, or [default].
-	## @fallback: Returns [default] and triggers [onError] when the file cannot be opened or read.
-	Function of String is fileRead(String is path, Function is onSuccess, Function is onError, String is default){
-		return base:sysinternal:File:file_read(path: path, default: default, on_success: onSuccess, on_error: onError);
+	Function of String is fileRead(String is path, Function is onSuccess, Function is onError, String is default: ''){
+		local String is defStr: if({ Mem:objToAddr(obj: default) != 0 }, { default }, { '' });
+		local Int is pc: self:cstrOf(s: path);
+		if({ pc == 0 }, {
+			if({ self:hasClosure(cb: onError) }, { onError('invalid path'); });
+			return defStr;
+		});
+		local Int is lenBuf: Mem:alloc(bytes: 8);
+		local Int is bufAddr: base:sysinternal:File:pal_file_read(path_cstr: pc, out_len_addr: lenBuf);
+		local Int is len: Mem:loadI64(ptr: lenBuf, byteOffset: 0);
+		Mem:free(ptr: lenBuf);
+		if({ bufAddr < 0 }, {
+			if({ bufAddr == -2 }, {
+				if({ self:hasClosure(cb: onError) }, { onError('out of memory'); });
+			}, {
+				self:emitLastError(onError: onError, fallback: 'read failed');
+			});
+			return defStr;
+		});
+		local String is res: Mem:strFromBytes(srcAddr: bufAddr, len: len);
+		base:sysinternal:File:pal_file_free(ptr: bufAddr);
+		if({ self:hasClosure(cb: onSuccess) }, {
+			onSuccess(res);
+		});
+		return res;
 	}
 
 	## Reads a file asynchronously on a background worker thread, notifying completion via callbacks.
-	##
-	## @param path: Filesystem path to the target file.
-	## @param onSuccess: Callback receiving file contents on successful read: `Function(String is content)`.
-	## @param onError: Callback receiving error description on failure: `Function(String is error)`.
-	## @param default: Optional fallback string returned if reading fails.
-	Function is fileReadAsync(String is path, Function is onSuccess, Function is onError, String is default){
-		base:sysinternal:File:file_read_async(path: path, default: default, on_success: onSuccess, on_error: onError);
+	Function is fileReadAsync(String is path, Function is onSuccess, Function is onError, String is default: ''){
+		local Function is task: local Function(){
+			self:fileRead(path: path, onSuccess: onSuccess, onError: onError, default: default);
+		};
+		Mem:retainAddr(objAddr: Mem:objToAddr(obj: task));
+		base:sysinternal:File:pal_spawn_async(task: task);
+	}
+
+	local Function of Boolean is writeInternal(String is path, String is content, Int is append, Function is onSuccess, Function is onError){
+		local Int is pc: self:cstrOf(s: path);
+		if({ pc == 0 }, {
+			if({ self:hasClosure(cb: onError) }, { onError('invalid path'); });
+			return false;
+		});
+		local Int is cAddr: Mem:objToAddr(obj: content);
+		local Int is dAddr: if({ cAddr != 0 }, { Mem:loadI64(ptr: cAddr, byteOffset: 0) }, { 0 });
+		local Int is cLen: if({ cAddr != 0 }, { Mem:loadI64(ptr: cAddr, byteOffset: 8) }, { 0 });
+		local Int is written: base:sysinternal:File:pal_file_write(path_cstr: pc, data_addr: dAddr, len: cLen, append: append);
+		if({ written < 0 }, {
+			self:emitLastError(onError: onError, fallback: 'write failed');
+			return false;
+		});
+		if({ self:hasClosure(cb: onSuccess) }, {
+			onSuccess(written);
+		});
+		return true;
 	}
 
 	## Writes string content to a file with optional success and error callback handlers.
-	##
-	## @param path: Filesystem path of the destination file.
-	## @param content: String data to write.
-	## @param onSuccess: Optional callback executed on successful write: `Function(Int is bytesWritten)`.
-	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
-	## @return: `true` if write succeeded, `false` otherwise.
 	Function of Boolean is fileWrite(String is path, String is content, Function is onSuccess, Function is onError){
-		return base:sysinternal:File:file_write(path: path, content: content, on_success: onSuccess, on_error: onError);
+		return self:writeInternal(path: path, content: content, append: 0, onSuccess: onSuccess, onError: onError);
 	}
 
 	## Appends string content to a file with optional success and error callback handlers.
-	##
-	## @param path: Filesystem path of the destination file.
-	## @param content: String data to append.
-	## @param onSuccess: Optional callback executed on successful write: `Function(Int is bytesWritten)`.
-	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
-	## @return: `true` if append succeeded, `false` otherwise.
 	Function of Boolean is fileAppend(String is path, String is content, Function is onSuccess, Function is onError){
-		return base:sysinternal:File:file_append(path: path, content: content, on_success: onSuccess, on_error: onError);
+		return self:writeInternal(path: path, content: content, append: 1, onSuccess: onSuccess, onError: onError);
 	}
 
 	## Writes string content to a file asynchronously on a background worker thread.
-	##
-	## @param path: Filesystem path of the destination file.
-	## @param content: String data to write.
-	## @param onSuccess: Callback executed on successful write: `Function(Int is bytesWritten)`.
-	## @param onError: Callback receiving error description on failure: `Function(String is error)`.
 	Function is fileWriteAsync(String is path, String is content, Function is onSuccess, Function is onError){
-		base:sysinternal:File:file_write_async(path: path, content: content, on_success: onSuccess, on_error: onError);
+		local Function is task: local Function(){
+			self:fileWrite(path: path, content: content, onSuccess: onSuccess, onError: onError);
+		};
+		Mem:retainAddr(objAddr: Mem:objToAddr(obj: task));
+		base:sysinternal:File:pal_spawn_async(task: task);
 	}
 
 	## Tests whether a file or directory exists at the specified path.
-	##
-	## @param path: Path to inspect.
-	## @return: `true` if path exists, `false` otherwise.
 	Function of Boolean is fileExists(String is path){
-		return base:sysinternal:File:file_exists(path: path);
+		local Int is pc: self:cstrOf(s: path);
+		if({ pc == 0 }, { return false; });
+		return base:sysinternal:File:pal_file_exists(path_cstr: pc);
 	}
 
 	## Deletes a file at the specified filesystem path.
-	##
-	## @param path: Path of the file to remove.
-	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
-	## @return: `true` if removed successfully, `false` otherwise.
 	Function of Boolean is fileRemove(String is path, Function is onError: local Function(String is error){}){
-		return base:sysinternal:File:file_remove_cb(path: path, on_error: onError);
+		local Int is pc: self:cstrOf(s: path);
+		if({ pc == 0 }, {
+			if({ self:hasClosure(cb: onError) }, { onError('invalid path'); });
+			return false;
+		});
+		if({ base:sysinternal:File:pal_file_remove(path_cstr: pc) }, {
+			return true;
+		});
+		self:emitLastError(onError: onError, fallback: 'remove failed');
+		return false;
 	}
 
 	## Creates a unique temporary file securely and returns its path.
-	##
-	## @param template: Path template ending in XXXXXX (defaults to '/tmp/spec_XXXXXX.c').
-	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
-	## @return: Created file path, or empty string on failure.
 	Function of String is fileTemp(String is template: '/tmp/spec_XXXXXX.c', Function is onError: local Function(String is error){}){
-		return base:sysinternal:File:file_temp_cb(template: template, on_error: onError);
+		local Int is tc: self:cstrOf(s: template);
+		local Int is outAddr: base:sysinternal:File:pal_file_temp(tpl_cstr: tc);
+		if({ outAddr == 0 }, {
+			self:emitLastError(onError: onError, fallback: 'mkstemp failed');
+			return '';
+		});
+		local Int is olen: Mem:cstrLen(cstrAddr: outAddr);
+		local String is res: Mem:strFromBytes(srcAddr: outAddr, len: olen);
+		base:sysinternal:File:pal_file_free(ptr: outAddr);
+		return res;
 	}
 }

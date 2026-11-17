@@ -14,10 +14,11 @@ Class is Box of T{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['base', 'sysinternal', Box]
+		['base', 'sys', as Mem()],
+		['base', 'sys', as Conditional()]
 	];
 
-	local Any is cell: 0;
+	local T is val;
 	local Boolean is arcManaged: false;
 
 	## Creates a new heap-allocated box containing [value].
@@ -27,21 +28,44 @@ Class is Box of T{
 	## @return: The initialized Box instance.
 	replace Function is init(T is value, Boolean is isArc: true){
 		self:arcManaged: isArc;
-		self:cell: base:sysinternal:Box:boxNew(val: value, isArc: isArc);
+		if({ isArc }, {
+			local Int is addr: Mem:objToAddr(obj: value);
+			if({ addr != 0 }, {
+				Mem:retainAddr(objAddr: addr);
+			});
+		});
+		self:val: value;
 	}
 
 	## Retrieves the current value stored in the box.
 	##
 	## @return: The wrapped value.
 	Function of T is get(){
-		return base:sysinternal:Box:boxGet(b: self:cell);
+		if({ self:arcManaged }, {
+			local Int is addr: Mem:objToAddr(obj: self:val);
+			if({ addr != 0 }, {
+				Mem:retainAddr(objAddr: addr);
+				Mem:claimPoolAddr(objAddr: addr);
+			});
+		});
+		return self:val;
 	}
 
 	## Updates the value stored in the box.
 	##
 	## @param value: The new value.
 	Function is set(T is value){
-		base:sysinternal:Box:boxSet(b: self:cell, newVal: value);
+		if({ self:arcManaged }, {
+			local Int is newAddr: Mem:objToAddr(obj: value);
+			local Int is oldAddr: Mem:objToAddr(obj: self:val);
+			if({ newAddr != 0 }, {
+				Mem:retainAddr(objAddr: newAddr);
+			});
+			if({ oldAddr != 0 }, {
+				Mem:releaseAddr(objAddr: oldAddr);
+			});
+		});
+		self:val: value;
 	}
 
 	## True if the box is configured for ARC-managed references.
@@ -51,10 +75,29 @@ Class is Box of T{
 		return self:arcManaged;
 	}
 
+	## Releases the boxed reference when this Box is destroyed.
+	Function is destroy(){
+		if({ self:arcManaged }, {
+			local Int is oldAddr: Mem:objToAddr(obj: self:val);
+			if({ oldAddr != 0 }, {
+				Mem:releaseAddr(objAddr: oldAddr);
+				self:val: Mem:addrToObj(addr: 0);
+			});
+		});
+	}
+
 	## String representation of the box.
 	##
 	## @return: String representation.
 	replace Function of String is toString(){
-		return base:sysinternal:Box:boxToString(b: self:cell);
+		local Int is raw: Mem:objToAddr(obj: self:val);
+		if({ !self:arcManaged }, {
+			return 'Box(' . (raw as String) . ')';
+		});
+		if({ raw == 0 }, {
+			return 'Box(null)';
+		});
+		local Any is obj: Mem:addrToObj(addr: raw);
+		return 'Box(' . obj . ')';
 	}
 }

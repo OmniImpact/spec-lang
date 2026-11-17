@@ -1,6 +1,6 @@
 # Spec Programming Language
 
-**Spec** is an elegant, concurrent-first, unblockable programming language that compiles directly to optimized C11 — and it is fully self-hosted: the compiler is written in Spec and reproduces its own C seed byte-for-byte on every build. Memory is automatic reference counting over per-scope claim pools — no garbage collector, no GC pauses — and the compiler itself runs on the exact same ARC machinery its generated programs use.
+**Spec** is an elegant, concurrent-first programming language that compiles directly to native machine code via LLVM IR — and it is fully self-hosted: the compiler is written in Spec and reproduces its own LLVM IR (`bootstrap/spec.ll`) and C PAL (`bootstrap/spec_runtime.c`) seeds byte-for-byte on every build. Memory is automatic reference counting over per-scope claim pools implemented in pure Spec — no garbage collector, no GC pauses — and the compiler itself runs on the exact same ARC machinery its generated programs use.
 
 ```spec
 Class is HelloWorld{
@@ -12,7 +12,7 @@ Class is HelloWorld{
 
 	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: 'name', default: 'User');
-		line(greeting . ' ' . name);   # the as-import merges Output's line() into scope
+		line('Hello, ' . name);        # the as-import merges Output's line() into scope
 	}
 
 }
@@ -124,7 +124,7 @@ local Function of Int is multiplier: local Function of Int(Int is x){
 local Int is doubled: numbers:map(action: local Function of Int(Int is n){ return n * factor; });
 ```
 
-Loops are providers too — `as Loops()` serves `while`, `repeat`, and `until` bare, inlined directly to C11 constructs with zero allocations:
+Loops are providers too — `as Loops()` serves `while`, `repeat`, and `until` bare, inlined directly to native LLVM IR basic blocks with zero allocations:
 
 ```spec
 replace Array of Array of String is using: [
@@ -162,7 +162,7 @@ repeat(count: 3, worker: {
 ## Getting Started
 
 ### Prerequisites
-- **GCC or Clang** (C11 compiler with standard POSIX threads)
+- **Clang** (LLVM/C11 toolchain with standard POSIX threads)
 
 ### Bootstrapping the Compiler
 ```bash
@@ -179,13 +179,13 @@ bin/spec -i examples/helloworld.spec -o helloworld
 bin/spec -i examples/scope_as_demo.spec -o scope_demo
 ./scope_demo
 
-# Emit generated C11 source code (optional)
-bin/spec -i examples/helloworld.spec --emit-c helloworld.c
+# Emit generated LLVM IR (optional)
+bin/spec -i examples/helloworld.spec --emit-llvm helloworld.ll
 ```
 
 ### Running Tests
 ```bash
-# Run the complete test suite (130+ unit and integration test suites)
+# Run the complete test suite (100+ unit and integration test suites)
 bin/specunit
 ```
 
@@ -201,7 +201,7 @@ bin/speclint -a -i spec/base/compiler/driver/Driver.spec
 
 ### Debugging
 `--debug` builds with full optimization *and* debugger-friendly metadata: every
-statement carries a `#line` mapping to its Spec source, and locals stay
+statement carries source location metadata mapping to its Spec source, and locals stay
 inspectable under gdb — with all control flow inlined to native branches.
 
 ```bash
@@ -229,11 +229,13 @@ emit no debug metadata and remain byte-identical to the bootstrap seed.
 
 ## Standard Library
 
-The standard library lives in `spec/lib/` — five packages covering the root
+The standard library lives in `spec/lib/` — eight packages covering the root
 lattice (`base:core`), math (`base:math`), collections (`base:struct`),
-iteration (`base:iterator`), and the control-flow, console, file, and process
-surfaces (`base:sys`) — all written in Spec over the `base:sysinternal`
-C floor. A summary table of every package and its functions lives in the
+iteration (`base:iterator`), JSON serialization (`base:data`), networking (`base:net`),
+audio (`base:audio`), and the control-flow, console, file, time, OS dispatch, and
+process surfaces (`base:sys`) — all written in Spec over the `base:sysinternal`
+unmanaged floor (`Arc`, `Slab`, `Heap`, `Pool`, `Arena`, `Intern`, `Mem`) and scalar/byte-slice OS PAL.
+A summary table of every package and its functions lives in the
 **[Standard Library Reference](docs/packages/README.md)**.
 
 ---

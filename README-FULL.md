@@ -13,7 +13,7 @@ compares to the languages it draws on.
    - [Minimal Core & Maximum Standard Library](#1-minimal-core--maximum-standard-library)
    - [Classes and Functions as First-Class Types](#2-classes-and-functions-as-first-class-types-uniform-declarations)
    - [The "Never Null" Safety Standard](#3-the-never-null-safety-standard)
-   - [Unblockable & Concurrency-First Iteration](#4-unblockable--concurrency-first-iteration)
+   - [Concurrency-First Iteration](#4-concurrency-first-iteration)
    - [Scoped Region Desugaring (`as`)](#5-scoped-region-desugaring-as)
    - [Tab-Based Indentation Standard](#6-tab-based-indentation-standard)
    - [Multi-File Module Resolution](#7-multi-file-module-resolution)
@@ -68,9 +68,9 @@ In Spec, `null` does not exist as a runtime value, pointer, or type:
 - **Deferred Initialization**: Class fields may be declared without inline values provided they are assigned in `init(...)` before use.
 - **Default Fallbacks**: Any operation reading from a source that could be empty requires an explicit default fallback argument (e.g., `getString(key, default)`, `pop(default)`, `charAt(index, default)`).
 
-### 4. Unblockable & Concurrency-First Iteration
+### 4. Concurrency-First Iteration
 Spec has no primitive loop keywords (`while`, `for`, `do`). Iteration is decoupled into lifecycle objects or inlined scoped loops through the `Loops` provider (`['base', 'sys', as Loops()]`):
-- **`while({ cond }, { step })`**: The bare predicate loop, inlined directly to a native C11 statement expression with zero closures and zero heap allocations.
+- **`while({ cond }, { step })`**: The bare predicate loop, inlined directly to native LLVM IR basic blocks with zero closures and zero heap allocations.
 - **`while([vars], { cond }, { step })`**: The scoped-variable loop. Variables are scoped strictly to the loop construct:
   ```spec
   replace Array of Array of String is using: [
@@ -278,8 +278,8 @@ replace Array of Array of String is using: [
   );
   ```
 
-- **High-Efficiency C11 Runtime & Memory Model**: Amortized $O(1)$ growable string buffers (`spec_str_append`), zero-allocation character table lookups, cached $O(1)$ string length queries, lazy `SpecArray` buffer allocation, and automatic deallocation of transient `Loop` instances.
-- **One Uniform Memory Path — ARC with Claim Pools, Compiler Included**: Memory is atomic reference counting; every function's temporaries register on a thread-local claim pool drained at scope exit. There is no garbage collector and no separate compiler arena: the compiler runs on the exact same ARC machinery it generates for user programs.
+- **High-Efficiency LLVM IR Backend & Pure-Spec Runtime**: 24-byte `SpecBuf` small-buffer optimization (SBO), 16-byte packed `SpecHeader`, 10-class 64 KiB aligned slab cartons (`Slab.spec`, `32..4096` bytes) with single-threaded non-atomic fast paths in `Arc` and `Slab`, general raw heap (`Heap.spec`) over `Slab` and OS virtual memory (`mmap`/`mremap`/`VirtualAlloc`, zero glibc `malloc`/`free` in Spec-managed memory), structural `SpecOptimizer` passes (`DevirtPass`, `ArcPeepholePass`, `PoolElisionPass`, `WrapperUnwrapPass`, `ConcatFusionPass`, `InlineHintPass`), and zero-allocation character table lookups.
+- **One Uniform Memory Path — Pure-Spec ARC with Claim Pools, Compiler Included**: Memory is automatic reference counting (`base:sysinternal:Arc`) over thread-local claim pools (`base:sysinternal:Pool`) drained at scope exit. `Arc`, `Slab`, `Heap`, `Pool`, `Arena`, and `Intern` are all written in pure Spec over `base:sysinternal:Mem`'s OS virtual memory floor and compiled inside the same `IrModule` as user code. There is no garbage collector and no separate compiler arena: the compiler runs on the exact same ARC machinery it generates for user programs.
 
 - **Scope-Merged Imports (`as ClassName()`)**: Instance imports materialize an owned singleton instance scoped to the declaring class, merging its methods directly into bare scope with zero global namespace pollution:
   ```spec
@@ -302,7 +302,7 @@ replace Array of Array of String is using: [
   - `replace`: Mandatory and compiler-verified when overriding any ancestor field or method (including root contracts `toString()`, `typeName()`, and `init()`).
   - `merge`: Enables structured composition. On methods, the body forwards delegation to the parent implementation via `(args...);`. On Array fields, child items automatically concatenate after parent elements.
 
-- **Predicate Table Matching (`match(when: ...)`)**: Dropping `on:` turns match keys into closures, evaluating each condition in sequence. The first matching predicate executes its arm, returning a value or executing statements with zero allocation and lowering directly to an inlined C11 else-if ladder:
+- **Predicate Table Matching (`match(when: ...)`)**: Dropping `on:` turns match keys into closures, evaluating each condition in sequence. The first matching predicate executes its arm, returning a value or executing statements with zero allocation and lowering directly to an inlined LLVM IR branch ladder:
   ```spec
   replace Array of Array of String is using: [
   	['base', 'sys', as Conditional()]
@@ -316,7 +316,7 @@ replace Array of Array of String is using: [
   ]);
   ```
 
-- **Structural `sysinternal` Floor Isolation**: Low-level C runtime primitives live in `base:sysinternal:*` floor classes bound via the `spec_<snake_case>` naming convention. The compiler structurally enforces that only classes whose declared namespace begins with `['base', 'sys', ...]` may invoke the floor, ensuring all userland code interacts through clean, type-safe Spec wrappers.
+- **Structural `sysinternal` Floor Isolation**: Low-level memory intrinsics (`Mem`), unmanaged runtime primitives (`Arc`, `Slab`, `Heap`, `Pool`, `Arena`, `Intern`), and scalar/byte-slice OS PAL declarations live in `base:sysinternal:*` floor classes. The compiler structurally enforces that only classes whose declared namespace begins with `['base', 'sys', ...]` (plus `base:core`, `base:struct`, `base:math`, `base:net`, `base:audio` stdlib wrappers) may invoke the floor, ensuring all userland code interacts through clean, type-safe Spec wrappers.
 
 ---
 
@@ -329,7 +329,7 @@ through the class name by design), held functions, and the providers.
 
 The **`Conditional` provider** replaces `if`/`else` keywords the same way
 `Loops` replaces loop keywords: conditionals are calls, and the compiler
-inlines them into native C branches with zero closure allocation.
+inlines them into native LLVM IR branches with zero closure allocation.
 
 - **Statement form**: `if({ ... }, { ... }, { ... })` — served bare through the as-import — the check closure returns `Boolean`; the branch bodies are statements that may read and mutate the enclosing scope. Single-branch form `if({ ... }, { ... })` is also supported.
 - **Value form**: a value-yielding call supplies both branches, and the arms' yields unify into the call's type:
@@ -357,12 +357,12 @@ Install syntax highlighting definitions for the KDE Kate editor:
 
 ## Building and Bootstrapping
 
-Spec is **100% self-hosted**. Building it requires only a C compiler (`gcc` or `clang`) with standard POSIX threads:
+Spec is **100% self-hosted**. Building it requires only `clang` with standard POSIX threads:
 
 ```bash
-# Bootstrap the official Spec compiler from the canonical seed and verify
-# the self-hosting fixed point (the compiler recompiles its own sources
-# and the C must match byte-for-byte):
+# Bootstrap the official Spec compiler from the canonical LLVM IR and C PAL seeds
+# and verify the self-hosting fixed point (the compiler recompiles its own sources
+# and both bootstrap/spec.ll and bootstrap/spec_runtime.c must match byte-for-byte):
 ./bootstrap.sh
 
 # Compile any Spec program:
@@ -377,31 +377,32 @@ bin/speclint -i spec/base/compiler/driver/Driver.spec
 
 ## How Spec Compares
 
-Spec is a statically typed, class-based language that transpiles to C and is fully
-self-hosted: the compiler is written in Spec and rebuilds itself from a single
-canonical C file. Where it sits relative to the systems languages it draws on:
+Spec is a statically typed, class-based language that compiles directly to native
+code via LLVM IR and is fully self-hosted: the compiler is written in Spec and
+rebuilds itself from its canonical LLVM IR (`bootstrap/spec.ll`) and scalar OS PAL
+(`bootstrap/spec_runtime.c`) seeds. Where it sits relative to the systems languages it draws on:
 
 | Dimension | **Spec** | **C** | **Java** | **Rust** |
 |---|---|---|---|---|
 | **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness, root-contract calls) | Static, weak — unchecked casts, implicit conversions | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
 | **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `NULL` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
-| **Memory** | Reference counting with per-scope claim pools; the compiler runs on the same ARC as its generated programs — no separate compiler arena; verified crash-free under ASan/UBSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
+| **Memory** | Reference counting with per-scope claim pools over pure-Spec 64 KiB slab cartons and an OS VM floor (`mmap`/`VirtualAlloc`, no glibc `malloc`/`free` in Spec memory); the compiler runs on the same ARC as its generated programs — no separate compiler arena; verified crash-free under ASan/UBSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; four-tier visibility (public / `local` / `contained` / `held`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and the held enum contract (`of`/`values`) dispatch through the class name; the enum identity contract (`name`/`ordinal`) lives on the shared Enum root, reflectively over the metadata floor | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
 | **Enums & matching** | Enhanced Enum algebraic sum types with payloads (used throughout the compiler's own AST); `match` with compile-time exhaustiveness, `default:` closures, and nested early returns | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
-| **Iteration & scopes** | Loop keywords retired; the `Loops` provider's bare `while`, `repeat`, and `until` inline to C11 statement expressions with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
+| **Iteration & scopes** | Loop keywords retired; the `Loops` provider's bare `while`, `repeat`, and `until` inline to native LLVM IR basic blocks with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
 | **Conditionals** | `if({ ... }, { ... }, { ... })`, `match(on:, when:)`, and `match(when:)` calls through the `Conditional` as-import, inlined to native branches; match tables as arm literals | Primitive `if`/`else` | Primitive `if`/`else` | Primitive `if`/`else`, expression-form |
 | **Concurrency** | pthreads; unified shared mutable closure captures (`Box`); `Parallel:run`, `Parallel:sync`/`syncWith` (striped mutexes); async `File`/`Time` timers; atomics | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
-| **Build model** | Transpiles to one C translation unit with an on-demand precompiled runtime cache; `specinit` scaffolder, `specbuild` manifest orchestrator, `specunit`, and `speclint`; self-hosted fixed point verified across GCC and Clang on Linux, macOS, and Windows | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
+| **Build model** | Compiles directly to LLVM IR with a cached OS PAL object (`spec_runtime.o`); `specinit` scaffolder, `specbuild` manifest orchestrator, `specunit`, and `speclint`; self-hosted fixed point verified across Linux, macOS, and Windows | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |
 
 Spec's distinguishing ground: the override discipline (`replace`/`merge`), never-null
 defaults, enforced exhaustiveness, a strict root contract (`Any`-typed values may
 only call root members — cast for the rest), and a compiler written in itself that
-reproduces its own C seed byte-for-byte on every build. Its standard library (`base:data:Json`,
+reproduces its own LLVM IR and C PAL seeds byte-for-byte on every build. Its standard library (`base:data:Json`,
 `base:sys:Time`/`DateTime`, `base:net:Socket`, `base:audio:Audio`, `base:sys:Uri`) and
 CLI toolchain (`specinit`, `specbuild`, `specunit`, `speclint`) cover end-to-end systems
 development with stricter compile-time guarantees than C.

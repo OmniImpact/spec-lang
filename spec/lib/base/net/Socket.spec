@@ -7,11 +7,27 @@ Class is Socket{
 	replace Array of Array of String is using: [
 		['base', 'struct', List],
 		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Socket]
 	];
 
 	local Int is descriptor: -1;
 	local Boolean is isClosed: true;
+
+	local Function of Int is cstrAddr(String is s){
+		local Int is sAddr: Mem:objToAddr(obj: s);
+		return if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
+	}
+
+	local Function is emitLastError(Function is onError){
+		local Int is errCstr: base:sysinternal:Socket:pal_socket_last_error();
+		local String is msg: if({ errCstr != 0 }, {
+			Mem:strFromBytes(srcAddr: errCstr, len: Mem:cstrLen(cstrAddr: errCstr))
+		}, {
+			'Socket error'
+		});
+		onError(error: msg);
+	}
 
 	## Connects to a remote TCP server at [host]:[port].
 	##
@@ -22,10 +38,12 @@ Class is Socket{
 	## @return: A new connected Socket instance, or nil/closed on failure.
 	Function of Socket is connect(String is host, Int is port, Int is timeoutMs: 5000, Function is onError: local Function(String is error){}){
 		local Socket is s: Socket:init();
-		local Int is fd: base:sysinternal:Socket:tcp_connect_cb(host: host, port: port, timeout_ms: timeoutMs, on_error: onError);
+		local Int is fd: base:sysinternal:Socket:pal_tcp_connect(host_cstr: s:cstrAddr(s: host), port: port, timeout_ms: timeoutMs);
 		if({ fd >= 0 }, {
 			s:descriptor: fd;
 			s:isClosed: false;
+		}, {
+			s:emitLastError(onError: onError);
 		});
 		return s;
 	}
@@ -39,10 +57,12 @@ Class is Socket{
 	## @return: A listening Socket instance, or nil/closed on failure.
 	Function of Socket is listen(String is host: '', Int is port, Int is backlog: 128, Function is onError: local Function(String is error){}){
 		local Socket is s: Socket:init();
-		local Int is fd: base:sysinternal:Socket:tcp_listen_cb(host: host, port: port, backlog: backlog, on_error: onError);
+		local Int is fd: base:sysinternal:Socket:pal_tcp_listen(host_cstr: s:cstrAddr(s: host), port: port, backlog: backlog);
 		if({ fd >= 0 }, {
 			s:descriptor: fd;
 			s:isClosed: false;
+		}, {
+			s:emitLastError(onError: onError);
 		});
 		return s;
 	}
@@ -53,10 +73,12 @@ Class is Socket{
 	## @return: Connected client Socket instance.
 	Function of Socket is accept(Function is onError: local Function(String is error){}){
 		local Socket is client: Socket:init();
-		local Int is clientFd: base:sysinternal:Socket:socket_accept_cb(fd: self:descriptor, on_error: onError);
+		local Int is clientFd: base:sysinternal:Socket:pal_socket_accept(fd: self:descriptor);
 		if({ clientFd >= 0 }, {
 			client:descriptor: clientFd;
 			client:isClosed: false;
+		}, {
+			self:emitLastError(onError: onError);
 		});
 		return client;
 	}
@@ -67,7 +89,14 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Number of bytes sent, or -1 on error.
 	Function of Int is send(List of Byte is data, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Socket:socket_send_cb(fd: self:descriptor, data: data, on_error: onError);
+		local Int is bAddr: Mem:objToAddr(obj: data);
+		local Int is ptr: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 0) }, { 0 });
+		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) }, { 0 });
+		local Int is n: base:sysinternal:Socket:pal_socket_send(fd: self:descriptor, data_addr: ptr, len: len);
+		if({ n < 0 }, {
+			self:emitLastError(onError: onError);
+		});
+		return n;
 	}
 
 	## Sends string text [text] over this socket.
@@ -76,7 +105,14 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Number of bytes sent, or -1 on error.
 	Function of Int is sendString(String is text, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Socket:socket_send_str_cb(fd: self:descriptor, str: text, on_error: onError);
+		local Int is sAddr: Mem:objToAddr(obj: text);
+		local Int is ptr: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
+		local Int is len: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 8) }, { 0 });
+		local Int is n: base:sysinternal:Socket:pal_socket_send(fd: self:descriptor, data_addr: ptr, len: len);
+		if({ n < 0 }, {
+			self:emitLastError(onError: onError);
+		});
+		return n;
 	}
 
 	## Receives up to [maxBytes] into a new ByteBuffer.
@@ -85,11 +121,26 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Received ByteBuffer.
 	Function of List of Byte is receive(Int is maxBytes: 4096, Function is onError: local Function(String is error){}){
-		local List of Byte is b: base:sysinternal:Socket:socket_recv_cb(fd: self:descriptor, max_bytes: maxBytes, on_error: onError);
+		local [Byte] is empty;
 		if({ self:isClosed }, {
-			local [Byte] is empty;
+			base:sysinternal:Socket:pal_socket_recv(fd: -1, dst_addr: 0, max_bytes: 0);
+			self:emitLastError(onError: onError);
 			return empty;
 		});
+		local Int is cap: maxBytes;
+		if({ cap <= 0 }, { cap: 4096; });
+		if({ cap > 1048576 }, { cap: 1048576; });
+		local [Byte] is b;
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		local Int is dataPtr: Mem:alloc(bytes: cap);
+		Mem:storeI64(ptr: bAddr, byteOffset: 0, val: dataPtr);
+		Mem:storeI64(ptr: bAddr, byteOffset: 16, val: cap);
+		local Int is n: base:sysinternal:Socket:pal_socket_recv(fd: self:descriptor, dst_addr: dataPtr, max_bytes: cap);
+		if({ n < 0 }, {
+			self:emitLastError(onError: onError);
+			return empty;
+		});
+		Mem:storeI64(ptr: bAddr, byteOffset: 8, val: n);
 		return b;
 	}
 
@@ -99,7 +150,8 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Received String.
 	Function of String is receiveString(Int is maxBytes: 4096, Function is onError: local Function(String is error){}){
-		return base:sysinternal:Socket:socket_recv_str_cb(fd: self:descriptor, max_bytes: maxBytes, on_error: onError);
+		local List of Byte is b: self:receive(maxBytes: maxBytes, onError: onError);
+		return b:toString();
 	}
 
 	## Polls the socket for I/O readiness.

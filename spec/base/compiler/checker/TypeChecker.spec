@@ -1952,7 +1952,7 @@ Class is TypeChecker{
 														already: true;
 													});
 												});
-												if({ !already && self:findMemberOwnerClass(className: className, memberName: methodName) != '' }, {
+												if({ !already && className != self:currentClassName && self:findMemberOwnerClass(className: className, memberName: methodName) != '' }, {
 													acc:add(item: className);
 												});
 											},
@@ -3882,7 +3882,7 @@ Class is TypeChecker{
 				local Array of String is callerSegs: callerCls:namespaceSegments();
 				local String is floorClsName: targetPathSegs:get(index: targetPathSegs:length() - 1);
 				local Boolean is sysWrapper: callerSegs:length() >= 2 && callerSegs:get(index: 0) == 'base' &&
-					(callerSegs:get(index: 1) == 'sys' || callerCls:name == floorClsName);
+					(callerSegs:get(index: 1) == 'sys' || callerSegs:get(index: 1) == 'sysinternal' || callerCls:name == floorClsName);
 				if({ !sysWrapper }, {
 					self:addError(line: self:currentLine, msg: self:errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
 				});

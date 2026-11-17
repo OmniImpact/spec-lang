@@ -33,7 +33,7 @@ This document establishes the official code style conventions, architectural idi
 
 ## 1. Core Design Principles
 
-1. **Minimalist Grammar**: Spec relies on only **10 keywords** (`local`, `contained`, `replace`, `merge`, `held`, `is`, `as`, `of`, `to`, `return`) and **7 primitive types** (`Int`, `Byte`, `Float`, `Boolean`, `String`, `Function`, `Any`). Control flow (`if`, `match`, `while`, `repeat`, `until`) is served as library methods on standard providers (`Conditional`, `Loops`), inlined to zero-allocation native C11 constructs by the compiler.
+1. **Minimalist Grammar**: Spec relies on only **10 keywords** (`local`, `contained`, `replace`, `merge`, `held`, `is`, `as`, `of`, `to`, `return`) and **7 primitive types** (`Int`, `Byte`, `Float`, `Boolean`, `String`, `Function`, `Any`). Control flow (`if`, `match`, `while`, `repeat`, `until`) is served as library methods on standard providers (`Conditional`, `Loops`), inlined to zero-allocation native LLVM IR basic blocks by the compiler.
 2. **Never Null**: Null does not exist in Spec grammar or runtime. Every potentially fallible lookup, query, or extraction accepts a caller-provided `default` fallback or returns an empty representation.
 3. **Decoupled Iteration & Modern Control Flow**: Spec has no primitive `while`, `for`, `if`, or `break` keywords. Iteration and branching are provided by `Loops` and `Conditional` in `base:sys`, merged directly into scope with `as` (`['base', 'sys', as Loops()]`, `['base', 'sys', as Conditional()]`).
 4. **Declarative & English-Like**: Code reads as explicit statements of intent: `local String is name: "Hero";`, `Function of Boolean is isAlive()`.

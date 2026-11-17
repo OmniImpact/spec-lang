@@ -51,15 +51,16 @@ Class is DriverE2E{
 
 		local Map of String to String is cli: Map:init();
 		cli:set(key: 'i', value: 'tests/.driver_app_tmp.spec');
-		cli:set(key: 'emit-c', value: 'tests/.driver_app_tmp.c');
+		cli:set(key: 'emit-llvm', value: 'tests/.driver_app_tmp.ll');
+		cli:set(key: 'quiet', value: 'true');
 		local Driver is d: Driver:init(args: cli);
 
-		local String is cSrc: fileRead(path: 'tests/.driver_app_tmp.c', default: '');
-		Assert:isTrue(cSrc:contains(needle: 'int main('));
-		Assert:isTrue(cSrc:contains(needle: 'LoudGreeter_toString'));
-		Assert:isTrue(cSrc:contains(needle: '_vtable['));
+		local String is llSrc: fileRead(path: 'tests/.driver_app_tmp.ll', default: '');
+		Assert:isTrue(llSrc:contains(needle: '@main('));
+		Assert:isTrue(llSrc:contains(needle: 'LoudGreeter_toString'));
+		Assert:isTrue(llSrc:contains(needle: '@.vtable.LoudGreeter'));
 
-		fileRemove(path: 'tests/.driver_app_tmp.c');
+		fileRemove(path: 'tests/.driver_app_tmp.ll');
 		fileRemove(path: 'tests/.driver_app_tmp.spec');
 	}
 }

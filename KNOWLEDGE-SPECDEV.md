@@ -51,36 +51,37 @@ check, and emit the NEXT generation's sources. Consequences:
 
 ### Seed hygiene
 
-- After ANY failed bootstrap, `git checkout -- bootstrap/spec.c`
+- After ANY failed bootstrap, `git checkout -- bootstrap/spec.ll bootstrap/spec_runtime.c`
   before diagnosing: a failed run's drift-cp can save a partial or
   broken emission, and a stale `bin/spec` makes tests lie.
 - **But never destroy a drifted seed you are debugging** — the drifted
   emission is frequently the artifact itself (rebuild the failing
   binary from it with `-g -no-pie` for symbolized traces). Checkpoint
-  it: `cp bootstrap/spec.c /tmp/seed_checkpoint.c` before any checkout.
-- Never hand-edit `bootstrap/spec.c`; it is generated. Hand patches to
-  it evaporate or poison the next convergence.
-- A gcc failure ON `bootstrap/spec.c` = a poisoned seed. A panic during
-  the VERIFY step = the just-built binary misbehaving on its own
-  sources (a real bug in the new code).
+  it: `cp bootstrap/spec.ll /tmp/seed_checkpoint.ll` before any checkout.
+- Never hand-edit `bootstrap/spec.ll` or `bootstrap/spec_runtime.c`; they
+  are generated. Hand patches to them evaporate or poison the next
+  convergence.
+- A clang failure ON `bootstrap/spec.ll` or `bootstrap/spec_runtime.c` = a
+  poisoned seed. A panic during the VERIFY step = the just-built binary
+  misbehaving on its own sources (a real bug in the new code).
 
 ---
 
 ## 2. Convergence and determinism
 
 - The fixed point is BYTE-exact: the freshly built compiler must
-  re-emit its own seed identically. Every emission-affecting change
+  re-emit its own seeds (`bootstrap/spec.ll` and `bootstrap/spec_runtime.c`)
+  identically. Every emission-affecting change
   must be **deterministic and machine-independent**: no thread-count
-  dependence, no map-iteration order, no timing in the output. The
-  parallel gen merges per-class slots in class order for exactly this
-  reason; verify with N runs + one output hash.
-- Runtime *body* changes go live one bootstrap late (see the two-part
-  landing). Expect the first run's verify to still show the old
-  behavior.
+  dependence, no map-iteration order, no timing in the output. Verify
+  with N runs + one output hash.
+- Runtime *body* changes go live one bootstrap cycle after `spec.ll` (see
+  the two-part landing). Expect the first cycle's verify to still emit
+  the old runtime before cycle 2 converges it.
 - Convergence failure modes, in sighting order:
-  - gcc errors on `bootstrap/spec.c` → poisoned seed (restore).
-  - gcc errors on the DRIFTED seed at cycle 2 → the new sources
-    reference a symbol the old runtime lacks (two-part landing).
+  - clang errors on `bootstrap/spec.ll` or `bootstrap/spec_runtime.c` → poisoned seed (restore).
+  - clang linker errors on the DRIFTED seed at cycle 2 → the new sources
+    reference a PAL symbol the old runtime lacks (two-part landing).
   - LoadErrors/type errors at cycle 1 → the change needs a bridge the
     old binary doesn't have.
   - Runtime panic during the verify → a real bug in the new code; gdb
@@ -112,9 +113,12 @@ check, and emit the NEXT generation's sources. Consequences:
   positional arguments (`if({ cond }, { then })`, `while({ cond }, { step })`);
   regular domain method calls use named arguments (`get(index: i, default: '')`).
   Never mix positional and named arguments in the same call (§I.3).
-- The emitted C lives inside string literals: verify the generated C
-  compiles by emitting (`--emit-c`) and eyeballing the changed region
-  before bootstrapping.
+- The emitted LLVM IR or C PAL lives inside string literals / heredocs:
+  verify the generated IR/C compiles by emitting (`--emit-llvm` / `--emit-runtime`)
+  and eyeballing the changed region before bootstrapping. Note that `'''...'''`
+  is raw (preserves `\n` literally for C strings), whereas ```` ```...{{expr}}...``` ````
+  is interpolated AND processes escapes (so C escapes inside ```` ```...``` ````
+  must be doubled as `\\n`, `\\r`, `\\0`).
 - Verify indentation after script edits — a mis-indented block parses
   but reads wrong, and the next contributor pays.
 
@@ -222,19 +226,21 @@ check, and emit the NEXT generation's sources. Consequences:
   (~90 MB on suite-sized C, ~330 MB on the 62k-line seed at -O2) — not
   the compiler's own usage; use the driver report's `memory X MB peak`
   line for the compiler process itself.
-- **Sanitized gate**: build an ASan+UBSan compiler from the seed, then
+- **Sanitized gate**: build an ASan+UBSan compiler from the seeds, then
   build and run the runner with it — specunit, every suite compile,
   and every produced binary run under the sanitizer; run it after any
   compiler-internal change:
 
   ```
-  gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
-      -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm
+  clang -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+      -fno-omit-frame-pointer -c bootstrap/spec_runtime.c -o /tmp/spec_rt_asan.o -pthread
+  clang -O1 -g -Wno-override-module -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+      -fno-omit-frame-pointer bootstrap/spec.ll /tmp/spec_rt_asan.o -o bin/spec-asan -pthread -lm -ldl -no-pie
   ASAN_OPTIONS=detect_leaks=0 bin/spec-asan --quiet \
       -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
   ASAN_OPTIONS=detect_leaks=0 \
   UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
-      bin/specunit-asan -s bin/spec-asan -t examples -t tests
+      bin/specunit-asan -s bin/spec-asan -t examples -t tests -t testllvm
   ```
 
   Leak detection is OFF by default: strings are refcounted and
@@ -299,7 +305,7 @@ check, and emit the NEXT generation's sources. Consequences:
   measurement).
 - The tools that worked, in the order to reach for them:
   1. Reproduce minimally (a small .spec file isolating the shape).
-  2. Read the generated C at the failing site (`--emit-c` + grep).
+  2. Read the generated LLVM IR at the failing site (`--emit-llvm` + grep).
   3. `gdb -batch -ex "break spec_panic_bounds" -ex run -ex bt` — the
      panics exit(), so post-mortem bt needs the breakpoint.
   4. ASan the seed (`-fsanitize=address`) for the corruption class;
@@ -318,43 +324,25 @@ check, and emit the NEXT generation's sources. Consequences:
 
 ### The sysinternal floor
 
-- `base:sysinternal:X` is the FLOOR: C-level implementations bound by
-  the naming convention `spec_<snake_case(method)>`. Only the
-  `base:sys` wrapper may call it (the checker enforces the wall).
-- The gate is structural: the caller's namespace segment array must
-  begin `['base', 'sys', ...]` — `base:sys` itself or a base:sys
-  sub-package. Segment comparison separates `base:sys` from
-  `base:sysinternal` exactly; a prefix test on the joined string would
-  conflate them. The control-flow providers (Conditional, Loops) live
-  in base:sys and wrap their same-name floors.
-- **What C calls things and what WE call things are not necessarily
-  the same — that is what this pattern is for.** Expose from C with
-  recognizable C names (so the internal provenance is obvious:
-  `spec_file_read`, `spec_print_line`, `spec_error_line`), then
-  immediately wrap them into a Spec class with the names WE want
-  (`fileRead`, `consOut`, `line`). The builtin/floor binding follows
-  the C name; the Spec-side name is ours to change. When this is done
-  right, renaming a Spec-side function edits ONLY the wrapper — the
-  builtin table stops being touched for renames entirely. The console
-  and file surfaces are the model: `base:sysinternal:Console` /
-  `base:sysinternal:File` carry the C names, `base:sys:Output` /
-  `base:sys:File` carry ours.
-- User code calls the wrapper; the wrapper's methods delegate to the
-  floor. Adding a floor function: the C shim in RuntimePrelude.spec
-  (land it ahead of its consumers — the two-part landing), the
-  sysinternal declaration, the wrapper delegation.
-- Runtime-managed classes (transparent): no struct/vtable emitted; the
-  methods are intercepted by the generator. The transparent set lives
-  in ClassBindings.isTransparent — and a transparent-listed class
-  whose methods gain REAL bodies must leave the list (the bodies must
-  emit; the non-empty-body rule carries the bridge).
-- Wrapper bodies are SELF-FREE under the elided dispatch (the call
-  passes no receiver): state must ride parameters, held functions, or
-  reference cells, never `self:`. And the runtime closures capture by
-  value with per-closure write-back — two closures cannot share a
-  frame local; shared mutable state rides the instance or a reference
-  cell. The compiler's literal-closure inlines are the exception: they
-  inline into the frame and share its locals.
+- `base:sysinternal:X` is the FLOOR:
+  1. **Unmanaged pure-Spec runtime primitives (`Arc`, `Pool`, `Arena`, `Intern`)**:
+     written in pure Spec over `base:sysinternal:Mem` and compiled inside
+     `IrModule` without automatic ARC retain/release/pool-frame instrumentation
+     so they never recurse into themselves.
+  2. **Compiler-lowered memory and metadata intrinsics (`Mem`, `Introspection`, `Conditional`, `Loops`)**:
+     lowered directly by the LLVM IR builder and `CallLowerer` plugins.
+  3. **Scalar / byte-slice OS PAL declarations (`Console`, `Dir`, `File`, `Process`, `Socket`, `Audio`, `Time`)**:
+     body-less declarations bound structurally by `SysinternalCallLowerer` to
+     `spec_<method>` in the C PAL (`spec/base/compiler/pal/Pal*.spec`, which
+     subclass `OsDispatch` and emit OS-conditional C blocks via `self:getOsBlock()`).
+- The C PAL accepts and returns only scalar `Int`/`Float`/`Boolean` handles and
+  raw byte pointers — it never allocates or inspects Spec objects (`SpecHeader`,
+  `String`, `Array`, `Map`, `SpecClosure`). All `String`/`Array` construction and
+  `onSuccess`/`onError` closure invocation happen in pure-Spec `base:sys` and
+  `base:net` wrappers.
+- The gate is structural: only `base:sys` (and stdlib packages) may call
+  `base:sysinternal`. User code calls the wrapper; the wrapper's methods
+  delegate to the floor.
 
 ### Compiler design posture: data structures, not known names
 
@@ -511,14 +499,11 @@ legible, and fast:
 
 ### Deferred and documentation debt
 
-- **The floor pattern's remaining application:** Parallel, LoopControl,
-  Math, and the containers (Array/Map/List/String) still bind through
-  the builtin table keyed on their Spec-side names — renaming them
-  touches the table. The console/file/terminal/process surfaces are
-  the converted model (base:sysinternal floors carrying the C names,
-  base:sys wrappers carrying ours); the rest follow when their
-  packaging lands (Math's wrapper is base:math, the containers' are
-  base:struct — the gate question is open).
+- **Pure-Spec floor completed:** `Arc`, `Pool`, `Arena`, `Intern`, `Mem`,
+  `Buf`, `Vector`, `HashTable`, `CliArgs`, `OsDispatch`, `Math`, and the
+  containers (`String`, `Array`, `Map`, `List`) are all implemented in pure
+  Spec over `base:sysinternal:Mem`, with OS-specific C PAL emitters in
+  `spec/base/compiler/pal/Pal*.spec` subclassing `OsDispatch`.
 - **docs/ refresh:** the language guide's runtime-dispatch sections
   should stay in step with the wrapper bodies. Content work, do from
   the code and tests.

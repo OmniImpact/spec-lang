@@ -1,6 +1,6 @@
 #! Package base:sys
 #! The process wrapper: the Spec-side names over the process floor's
-#! C names (spec_process_execute and friends).
+#! C names (spec_pal_process_execute_cstr and friends).
 
 ## Dispatches external system commands, timing, memory and thread
 ## introspection, and lock-free atomic slots. Every method delegates
@@ -12,20 +12,43 @@ Class is Process{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as HashTable()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
+		['base', 'sys', as Vector()],
 		['base', 'sysinternal', Process]
 	];
+
+	local Function of Int is cstrAddr(String is s){
+		local Int is sAddr: Mem:objToAddr(obj: s);
+		return if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
+	}
+
+	local Function of Int is buildCArgv(Array of String is args){
+		local Int is n: args:length();
+		if({ n <= 0 }, { return 0; });
+		local Int is buf: Mem:alloc(bytes: n * 8);
+		local Int is i: 0;
+		while({ i < n }, {
+			local String is s: args:get(index: i, default: '');
+			Mem:storeI64(ptr: buf, byteOffset: i * 8, val: self:cstrAddr(s: s));
+			i: i + 1;
+		});
+		return buf;
+	}
 
 	## Spawns a child process executing [command] with [args], waiting for completion.
 	##
 	## @param command: System binary or executable name to invoke.
 	## @param args: Command-line arguments passed to the process.
 	## @return: Process exit status code (`0` for success).
-	## @example:
-	## ```spec
-	## local Int is code: Process:execute(command: 'ls', args: ['-la']);
-	## ```
 	Function of Int is execute(String is command, Array of String is args){
-		return base:sysinternal:Process:process_execute(command: command, args: args);
+		local Int is n: args:length();
+		local Int is argvBuf: self:buildCArgv(args: args);
+		local Int is code: base:sysinternal:Process:pal_process_execute_cstr(cmd_cstr: self:cstrAddr(s: command), argv_addr: argvBuf, nargs: n);
+		if({ argvBuf != 0 }, { Mem:free(ptr: argvBuf); });
+		return code;
 	}
 
 	## Returns the raw command-line arguments passed to the program (`argv[1..]`).
@@ -42,7 +65,18 @@ Class is Process{
 	## @param args: Command-line arguments passed to the child process.
 	## @return: Map with stringified integer keys `'exit'`, `'wall_us'`, `'cpu_us'`, `'rss_kb'`.
 	Function of Map of String to String is measure(String is command, Array of String is args){
-		return base:sysinternal:Process:process_measure(command: command, args: args);
+		local Int is n: args:length();
+		local Int is argvBuf: self:buildCArgv(args: args);
+		local Int is outBuf: Mem:alloc(bytes: 32);
+		base:sysinternal:Process:pal_process_measure_cstr(cmd_cstr: self:cstrAddr(s: command), argv_addr: argvBuf, nargs: n, out_addr: outBuf);
+		if({ argvBuf != 0 }, { Mem:free(ptr: argvBuf); });
+		local Map of String to String is m: Map:init();
+		m:set(key: 'exit', value: Mem:loadI64(ptr: outBuf, byteOffset: 0) as String);
+		m:set(key: 'wall_us', value: Mem:loadI64(ptr: outBuf, byteOffset: 8) as String);
+		m:set(key: 'cpu_us', value: Mem:loadI64(ptr: outBuf, byteOffset: 16) as String);
+		m:set(key: 'rss_kb', value: Mem:loadI64(ptr: outBuf, byteOffset: 24) as String);
+		Mem:free(ptr: outBuf);
+		return m;
 	}
 
 	## Suspends execution of the current process for the specified duration.
@@ -65,14 +99,18 @@ Class is Process{
 	## @param default: Fallback value if the variable is not set.
 	## @return: The environment variable value.
 	Function of String is getEnv(String is key, String is default){
-		return base:sysinternal:Process:process_getenv(key: key, default: default);
+		local Int is valCstr: base:sysinternal:Process:pal_getenv(key_cstr: self:cstrAddr(s: key));
+		if({ valCstr == 0 }, { return default; });
+		return Mem:strFromBytes(srcAddr: valCstr, len: Mem:cstrLen(cstrAddr: valCstr));
 	}
 
 	## Returns the operating system name ('linux', 'macos', 'windows', or 'unknown').
 	##
 	## @return: Operating system name string.
 	Function of String is osName(){
-		return base:sysinternal:Process:process_os_name();
+		local Int is cstr: base:sysinternal:Process:pal_os_name();
+		if({ cstr == 0 }, { return 'unknown'; });
+		return Mem:strFromBytes(srcAddr: cstr, len: Mem:cstrLen(cstrAddr: cstr));
 	}
 
 	## Terminates the current process with the given exit status.
@@ -83,8 +121,6 @@ Class is Process{
 	}
 
 	## Returns monotonic wall-clock milliseconds since an arbitrary epoch.
-	##
-	## Suitable for measuring elapsed time (differences of two calls).
 	##
 	## @return: Monotonic clock reading in milliseconds.
 	Function of Int is clockMs(){
@@ -106,26 +142,16 @@ Class is Process{
 	}
 
 	## Atomically adds [value] to the slot at [slot] and returns the previous value.
-	##
-	## @param slot: Atomic slot index.
-	## @param value: Addend.
-	## @return: Previous slot value.
 	Function of Int is atomicAdd(Int is slot, Int is value){
 		return base:sysinternal:Process:atomic_add(slot: slot, value: value);
 	}
 
 	## Atomically writes [value] into the slot at [slot].
-	##
-	## @param slot: Atomic slot index.
-	## @param value: Value to write.
 	Function is atomicPut(Int is slot, Int is value){
 		base:sysinternal:Process:atomic_put(slot: slot, value: value);
 	}
 
 	## Atomically reads the slot at [slot].
-	##
-	## @param slot: Atomic slot index.
-	## @return: Slot value.
 	Function of Int is atomicGet(Int is slot){
 		return base:sysinternal:Process:atomic_get(slot: slot);
 	}
@@ -162,11 +188,11 @@ Class is Process{
 
 	## Freezes a map for lock-free concurrent reads across worker threads.
 	Function is mapFreeze(Any is m){
-		base:sysinternal:Process:map_freeze(m: m);
+		HashTable:mapFreeze(m: m);
 	}
 
 	## Freezes an array for lock-free concurrent reads across worker threads.
 	Function is arrayFreeze(Any is a){
-		base:sysinternal:Process:array_freeze(a: a);
+		Vector:vecFreeze(v: a);
 	}
 }

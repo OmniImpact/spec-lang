@@ -522,7 +522,14 @@ Class is Loader{
 			'Map',
 			'Buf',
 			'Vector',
-			'Dir'
+			'Dir',
+			'CliArgs',
+			'Arc',
+			'Slab',
+			'Heap',
+			'Pool',
+			'Arena',
+			'Intern'
 		];
 		preloads:each(action: local Function(String is cls){
 			if({ !self:indexBuilt }, {

@@ -14,6 +14,7 @@ Class is String{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Buf()],
+		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
@@ -36,7 +37,7 @@ Class is String{
 	## @param index: Zero-based byte index.
 	## @param default: Fallback when out of bounds.
 	## @return: The character, or [default].
-	Function of String is charAt(Int is index, String is default){
+	Function of String is charAt(Int is index, String is default: ''){
 		if({ index < 0 || index >= Buf:bufLength(b: self) }, {
 			return Buf:stringCopy(b: default);
 		});
@@ -104,7 +105,7 @@ Class is String{
 	## @param search: Sequence to locate.
 	## @param default: Fallback when absent (conventionally -1).
 	## @return: The index, or [default].
-	Function of Int is indexOf(String is search, Int is default){
+	Function of Int is indexOf(String is search, Int is default: -1){
 		return Buf:stringIndexOf(b: self, needle: search, def: default);
 	}
 
@@ -346,6 +347,22 @@ Class is String{
 	## @param code: The byte value.
 	## @return: The single-character string.
 	Function of String is fromCharCode(Int is code){
+		if({ code < 0 || code > 255 }, {
+			return '';
+		});
+		local Int is tmp: Mem:alloc(bytes: 2);
+		Mem:storeByte(ptr: tmp, byteOffset: 0, val: code);
+		Mem:storeByte(ptr: tmp, byteOffset: 1, val: 0);
+		local String is res: Mem:strFromBytes(srcAddr: tmp, len: 1);
+		Mem:free(ptr: tmp);
+		return res;
+	}
+
+	## Returns the newline string ("\n").
+	##
+	## @return: Single newline character string.
+	Function of String is newline(){
+		return "\n";
 	}
 
 	## Parses this string as an integer in [base] (2-36), accepting 0x/0b/0o
@@ -424,5 +441,35 @@ Class is String{
 			return -val;
 		});
 		return val;
+	}
+
+	## Concatenation of this string and [other].
+	##
+	## @param other: String to append.
+	## @return: Newly allocated string containing this string followed by [other].
+	Function of String is concat(String is other){
+		local Int is aAddr: Mem:objToAddr(obj: self);
+		local Int is bAddr: Mem:objToAddr(obj: other);
+		local Int is aLen: if({ aAddr == 0 }, { 0 }, { Mem:loadI64(ptr: aAddr, byteOffset: 8) });
+		local Int is bLen: if({ bAddr == 0 }, { 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) });
+		local Int is total: aLen + bLen;
+		if({ total == 0 }, { return ''; });
+		if({ aLen == 0 }, { return Buf:stringCopy(b: other); });
+		if({ bLen == 0 }, { return Buf:stringCopy(b: self); });
+		local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
+		local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+		if({ total <= 256 }, {
+			local Int is scratch: Mem:tlsGetI64(slot: 2);
+			if({ scratch == 0 }, {
+				scratch: Mem:alloc(bytes: 256);
+				Mem:tlsSetI64(slot: 2, val: scratch);
+			});
+			Mem:copy(dst: scratch, src: aData, bytes: aLen);
+			Mem:copy(dst: scratch + aLen, src: bData, bytes: bLen);
+			return Mem:strFromBytes(srcAddr: scratch, len: total);
+		});
+		local String is out: Mem:strFromBytes(srcAddr: aData, len: aLen);
+		Buf:bufAppendBuf(dst: out, src: other);
+		return out;
 	}
 }

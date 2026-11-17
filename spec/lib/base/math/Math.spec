@@ -12,6 +12,7 @@ Class is Math{
 
 	replace Array of Array of String is using: [
 		['base', 'sysinternal', Math],
+		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -248,7 +249,19 @@ Class is Math{
 	##
 	## @return: Uniform float in [0, 1).
 	Function of Float is fastRandom(){
-		return base:sysinternal:Math:fast_random();
+		local Int is x: tlsGetI64(slot: 0);
+		if({ x == 0 }, {
+			local Int is p: alloc(bytes: 8);
+			free(ptr: p);
+			x: p ^ -7046029254386353131;
+			if({ x == 0 }, { x: 1; });
+		});
+		x: x ^ ((x >> 12) & 4503599627370495);
+		x: x ^ (x << 25);
+		x: x ^ ((x >> 27) & 137438953471);
+		tlsSetI64(slot: 0, val: x);
+		local Int is mant: ((x * 2685821657736338717) >> 11) & 9007199254740991;
+		return base:sysinternal:Math:math_to_float(v: mant) * (1.0 / 9007199254740992.0);
 	}
 
 	## Returns the absolute (non-negative) magnitude of [value].
