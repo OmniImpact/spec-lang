@@ -16,7 +16,7 @@ This document details the standard library packages available in the Spec runtim
 | **`base:data`** | `Json` (`parse`, `stringify`, `format`, typed getters), `JsonNull`, `JsonBool`, `JsonNumber` | Native recursive-descent JSON parser and serializer. |
 | **`base:net`** | `Socket` (`connect`, `listen`, `accept`, `send`, `receive`, `close`, `poll`, `setTimeout`) | Cross-platform TCP client and server stream sockets. |
 | **`base:audio`** | `Audio` (`open`, `write`, `drain`, `close`, `isOpen`) | Cross-platform raw PCM audio playback. |
-| **`base:sys`** | `Conditional` (`if`, `match`), `Loops` (`while`, `repeat`, `until`, `run`, `loop`), `Output:line/consOut`, `Stderr:line`, `Input:consIn`, `File` (sync & async), `Time` (monotonic ns/us/ms, epoch, `sleepNs`/`Us`/`Ms`, sync & async callback timers), `DateTime` (calendar, arithmetic, ISO-8601), `Uri` (cross-platform paths, temp/home/cache), `Box` (shared mutable heap cells), `Vector`, `AudioDevice`, `Ansi`, `Process`, `Parallel` (`run`, `sync`, `syncWith`), `SourceLocation`, `StackFrame` | Control-flow providers, system I/O, high-resolution timing, paths, concurrency, and process wrappers over `base:sysinternal`. |
+| **`base:sys`** | `Conditional` (`if`, `match`), `Loops` (`while`, `repeat`, `until`, `run`, `loop`), `Output:line/consOut`, `Stderr:line`, `Input:consIn`, `File` (sync & async), `Time` (monotonic ns/us/ms, epoch, `sleepNs`/`Us`/`Ms`, sync & async callback timers), `DateTime` (calendar, arithmetic, ISO-8601), `Uri` (cross-platform paths, temp/home/cache), `OsDispatch` (`linux`, `macos`, `windows`, `value`, `forOs`, `getOsBlock`), `Box` (shared mutable heap cells), `Mem`, `Buf`, `Vector`, `HashTable`, `CliArgs`, `AudioDevice`, `Ansi`, `Process`, `Parallel` (`run`, `sync`, `syncWith`), `SourceLocation`, `StackFrame` | Control-flow providers, system I/O, high-resolution timing, paths, OS dispatch, low-level memory/containers, concurrency, and process wrappers over `base:sysinternal`. |
 | **`base:core`** | `Any`, `Stringable`, `String`, `Enum` | The root class lattice, string type, and shared enum contract. |
 
 Full API reference by package below.
@@ -257,7 +257,7 @@ local Array of Int is primes: [2, 3, 5, 7];
 ---
 
 ### `base:struct:Map`
-A thread-safe, 64-bucket FNV-1a key-value hash table container supporting `String`, `Int`, `Float`, `Boolean`, and arbitrary object value types (`lib/base/struct/Map.spec`).
+A thread-safe, dynamically growing FNV-1a key-value hash table container (starting at 8 buckets and doubling on load) supporting `String`, `Int`, `Float`, `Boolean`, and arbitrary object key and value types (`lib/base/struct/Map.spec` over `base:sys:HashTable`).
 
 #### Literal Initialization & Bracket Syntax
 Maps can be initialized with inline map literals and accessed via bracket notation:
@@ -383,7 +383,7 @@ The conditional provider — served bare through the as-import (`['base', 'sys',
 
 ### `base:sys:Loops` (`lib/base/sys/Loops.spec`)
 The loop provider — served bare through the as-import (`['base', 'sys', as Loops()]`):
-- **`while({ cond }, { ... })`** (or `while(evaluate:, iteration:)`): The bare predicate loop; inlines directly to a C11 statement expression with zero closures and zero heap allocations for literal closures.
+- **`while({ cond }, { ... })`** (or `while(evaluate:, iteration:)`): The bare predicate loop; inlines directly to native LLVM IR basic blocks with zero closures and zero heap allocations for literal closures.
 - **`while([vars], { cond }, { iterate })`**: The scoped-variable loop — binds typed loop variables at block scope (e.g. `while([Int is i: 0], { i < len }, { i++; })`).
 - **`repeat(count: n, worker: { ... })`**: Executes the worker exactly `count` times.
 - **`until({ cond }, { ... })`**: The body-always-runs-once form (do-while).
@@ -449,6 +449,12 @@ Provides external process execution and operating system invocation:
   ```
 - **`Process:getPid() -> Int`**:
   Returns the operating system process identifier (PID) of the current running process.
+
+### `base:sys:OsDispatch` (`lib/base/sys/OsDispatch.spec`)
+Base class for OS-specific value dispatch (`linux()`, `macos()`, `windows()`):
+- **`value() -> String`**: Returns the overridden string for the current host OS (`Process:osName()`).
+- **`forOs(String is os) -> String`**: Returns the overridden string for an explicit target OS name (`'linux'`, `'macos'`, or `'windows'`).
+- **`getOsBlock(Boolean is separatePosix: false) -> String`**: Joins the OS-specific strings inside `#if defined(_WIN32)` / `#elif defined(__APPLE__) && defined(__MACH__)` / `#else` / `#endif` blocks for clean C PAL emission.
 
 ### `base:sys:SourceLocation` (`lib/base/sys/SourceLocation.spec`)
 Encapsulates source file provenance, line numbers, and column offsets:

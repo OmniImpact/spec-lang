@@ -30,7 +30,7 @@ Reference manual for the standard library implemented in Spec (`spec/lib/`):
 
 ### 3. [Tooling & Compiler Guide](tooling/README.md)
 Guide for building, running, linting, and editing Spec code:
-- **[Compiler CLI (`spec`)](tooling/README.md#compiler-cli-spec)**: Self-hosted bootstrap (`./bootstrap.sh`), CLI flags (`-i`, `-o`, `--emit-c`), multi-file compilation, and C11 code generation.
+- **[Compiler CLI (`spec`)](tooling/README.md#compiler-cli-spec)**: Self-hosted bootstrap (`./bootstrap.sh`), CLI flags (`-i`, `-o`, `--emit-llvm`, `--emit-runtime`), multi-file compilation, `SpecOptimizer` passes, and LLVM IR code generation.
 - **[Project Scaffolder & Build Orchestrator (`specinit`, `specbuild`)](tooling/README.md)**: Project initialization and `specbuild.json` manifest-driven builds, tests, and linting.
 - **[Code Standards & Linter (`speclint`)](tooling/README.md#code-standards--built-in-linter)**: Reflection-based lint rules — tab indentation, brace alignment, AST idioms, and instance-model audits.
 - **[Kate Editor Syntax Highlighting](tooling/README.md#kate--kwrite-syntax-highlighting)**: Installation and XML definition rules for Kate and KWrite.

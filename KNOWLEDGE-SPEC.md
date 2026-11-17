@@ -1,12 +1,12 @@
 # Spec — AI Agent Bootstrap
 
-Strictly typed, class-based, compiles to C11 via `gcc`. Written in itself: the compiler is Spec source (`spec/base/compiler/`), bootstrapped from the canonical C seed `bootstrap/spec.c`, with the self-hosting fixed point (the compiler recompiles its own sources to byte-identical C) verified on every `./bootstrap.sh`. Never-null (no null; fallible reads require `default:`). Tabs for indentation.
+Strictly typed, class-based, compiles to native machine code via LLVM IR (`clang`). Written in itself: the compiler is Spec source (`spec/base/compiler/`), bootstrapped from the canonical LLVM IR seed `bootstrap/spec.ll` and scalar C OS PAL `bootstrap/spec_runtime.c`, with the self-hosting fixed point (the compiler recompiles its own sources to byte-identical LLVM IR and C PAL) verified on every `./bootstrap.sh`. Never-null (no null; fallible reads require `default:`). Tabs for indentation.
 
 ## Layout
-- `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String/Enum), `math`, `struct` (Array/Map/List/Stack), `iterator` (Loop/LoopControl/LoopCallback), `data` (Json), `net` (Socket), `audio` (Audio), `sys` (Conditional, Loops, Output/Input/Stderr, File, Ansi, Process, Parallel, Introspection, Buf, Dir, Box, Uri, Vector, Time, DateTime, AudioDevice). The declared namespace IS the package; directories are organization only.
-- `spec/base/sysinternal/` — the C floor (Buf, Dir, Reflection, Introspection, Conditional, Loops): body-less declarations bound to C by the `spec_<snake(method)>` naming convention. Only the `base:sys` wrappers may call the floor; the checker enforces it structurally (the caller's namespace segments begin `['base', 'sys', ...]`).
-- `spec/base/compiler/` — the compiler: lexer, parser, checker, gen (CodeGenerator/BuiltinCallGenerator/DeclarationGenerator/RuntimePrelude), loader, driver. The linter is the standalone `utilities/speclint/` utility.
-- `bootstrap/spec.c` — the canonical seed. `bin/spec` — the built compiler.
+- `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String/Enum), `math`, `struct` (Array/Map/List/Stack), `iterator` (Loop/LoopControl/LoopCallback), `data` (Json), `net` (Socket), `audio` (Audio), `sys` (Conditional, Loops, Output/Input/Stderr, File, Ansi, Process, Parallel, Introspection, Buf, Dir, Box, Uri, Vector, HashTable, Mem, CliArgs, OsDispatch, Time, DateTime, AudioDevice). The declared namespace IS the package; directories are organization only.
+- `spec/base/sysinternal/` — the floor: pure-Spec unmanaged runtime primitives (`Arc`, `Pool`, `Arena`, `Intern`), compiler-lowered memory/metadata intrinsics (`Mem`, `Introspection`, `Conditional`, `Loops`), and body-less scalar/byte-slice OS PAL declarations (`Console`, `Dir`, `File`, `Process`, `Socket`, `Audio`, `Time`) bound to C by the `spec_<method>` naming convention. Only the `base:sys` (and stdlib) wrappers may call the floor; the checker enforces it structurally.
+- `spec/base/compiler/` — the compiler: `lexer`, `parser`, `ast`, `checker`, `ir` (`IrModule`/`IrFunction`/`IrBlock`/`IrInst`/`IrStruct`), `opt` (`OptimizerPipeline`, `ConstFoldPass`, `DevirtPass`, `ArcPeepholePass`, `PoolElisionPass`, `WrapperUnwrapPass`, `ConcatFusionPass`, `InlineHintPass`), `llvm` (`IrBuilder`, `LlvmEmitter`, `LlvmRuntimePrelude`, `CallLowerer` plugins), `pal` (`RuntimePrelude`, `PalCore`, `PalConsole`, `PalDir`, `PalFile`, `PalProcess`, `PalSocket`, `PalAudio`, `PalTime` subclassing `OsDispatch`), `loader`, `driver`. The linter is the standalone `utilities/speclint/` utility.
+- `bootstrap/spec.ll` and `bootstrap/spec_runtime.c` — the canonical seeds. `bin/spec` — the built compiler.
 
 ## Grammar
 Keywords: `local` `contained` `replace` `merge` `held` `is` `as` `of` `to` `return`.
@@ -25,7 +25,7 @@ Declaration grammar: `<modifiers> <Type> is <name>`.
 Operators: `++ --` prefix/postfix increment/decrement; `+ - * / %` arithmetic; `& | ^ << >> ~` bitwise (Int only); `.` string concat; `== != < <= > >= is` comparison; `&& || !` logical; `as` cast.
 `as` targets: `Int` `Float` `String` (numeric/String), `Hex` `Bin` `Oct` (Int↔String base conversion, optional width arg for Int→String padding). Chaining rejected; parse failures yield 0.
 
-String literals: `"..."` (escape-processed), `'...'` (raw).
+String literals: `"..."` (escape-processed), `'...'` (raw), `'''...'''` (raw multiline heredoc), ```` ```...{{expr}}...``` ```` (escape-processed multiline heredoc with `{{expr}}` interpolation).
 Base literals: `0xFF` `0b1010` `0o755` `1_000_000` (underscore separators; bare leading zero stays decimal).
 Casts: `value as Target`.
 
@@ -37,7 +37,7 @@ replace Array of Array of String is using: [
 	['base', 'struct', Array]
 ];
 ```
-The loader scans two trees — the directory of the `.spec` file being compiled and the compiler executable's (walking up while a location holds no `.spec` content) — plus the working directory, recursively, pruning locations with no `.spec` content. It keeps a map (class name → candidate files); resolution loads the candidate and verifies its **declared namespace** — the namespace is the package, the map only says where to find candidates. One class per named file (the map key is the file-name stem). The root classes `String` `Buf` `Dir` `Stringable` `Any` are preloaded before user code; implicit `of Any` is appended to parentless non-enum classes.
+The loader scans two trees — the directory of the `.spec` file being compiled and the compiler executable's (walking up while a location holds no `.spec` content) — plus the working directory, recursively, pruning locations with no `.spec` content. It keeps a map (class name → candidate files); resolution loads the candidate and verifies its **declared namespace** — the namespace is the package, the map only says where to find candidates. One class per named file (the map key is the file-name stem). The root and floor classes `String` `Buf` `Dir` `Stringable` `Any` `CliArgs` `Arc` `Pool` `Arena` `Intern` are preloaded before user code; implicit `of Any` is appended to parentless non-enum classes.
 
 ## Call Model (instance-based)
 Members are callable only through a value of the class's type. Methods may be **overloaded**: same name, distinct signatures (arity, parameter names, or types); resolution is arity → named-argument set → exact type match, exactly one survivor, conversions never choose; positional calls with a unique arity match, otherwise named arguments are required. Identical signatures, mixed positional/named calls (except the scoped-region desugaring's trailing callback), and replacing an overloaded method are compile errors.
@@ -59,7 +59,7 @@ Members are callable only through a value of the class's type. The class name it
 - `replace`/`merge` on non-public ancestor members = error.
 
 ## Control Flow
-Served bare via scope-merged instance imports `['base', 'sys', as Conditional()]` and `['base', 'sys', as Loops()]`. Both inlined to zero-allocation C11 constructs for literal closures.
+Served bare via scope-merged instance imports `['base', 'sys', as Conditional()]` and `['base', 'sys', as Loops()]`. Both inlined to zero-allocation native LLVM IR basic blocks for literal closures.
 ```spec
 replace Array of Array of String is using: [
 	['base', 'sys', as Output()],
@@ -106,7 +106,7 @@ Enum is Result { Ok(String is data), Err(Int is code) }
 # The resolution hook: held Function of T is resolveHeld(String is name, Function of T is missing)
 ```
 
-Loops: the `Loops` provider serves them bare — `while({ cond }, { ... })` and scoped-var form `while([Int is i: 0], { i < n }, { ... i++; })` (inlined to zero-allocation C11 statement expression), `repeat(count: n, worker: { ... })`, `until({ cond }, { ... })`, `Loops:run(loop:, control:)` over a `Loop` subclass; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
+Loops: the `Loops` provider serves them bare — `while({ cond }, { ... })` and scoped-var form `while([Int is i: 0], { i < n }, { ... i++; })` (inlined to zero-allocation LLVM IR basic blocks), `repeat(count: n, worker: { ... })`, `until({ cond }, { ... })`, `Loops:run(loop:, control:)` over a `Loop` subclass; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
 
 Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `return as of Type: call(...)`) desugars the remainder of the enclosing block into an anonymous callback passed as the trailing positional argument to the call, linearizing nested callback pyramids without rightward drift.
 
@@ -126,11 +126,11 @@ Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `retu
 `expr as Target` — `Int` `Float` (numeric), `Hex` `Bin` `Oct` (Int→String format w/ optional width; String→Int parse, failures yield 0), class names (up/downcast, unchecked), `Any` (identity). Chaining rejected. Class instances in concatenation render class name (generated `toString`); enums render variant name.
 
 ## Memory
-Reference counting with scope-end releases; runtime binaries verified leak-free under ASan/LSan. Claim pool for transient expression results (32-slot ring); parameters are borrows. The compiler process's own AST slack at exit is a known item.
+Pure-Spec reference counting (`base:sysinternal:Arc`) with per-scope thread-local claim pools (`base:sysinternal:Pool`), 4-bucket thread-local small-object freelists, and 24-byte `SpecBuf` small-buffer optimization; parameters are borrows.
 
 ## Compiler
-- Exit: 0=ok, 1=compile/load/type/gcc error, 2=usage. Diagnostics on stderr.
-- `bin/spec -i file.spec -o binary`; `--emit-c out.c`; `--gc=boehm`; `--quiet`. Linting: `bin/speclint -i file.spec` (standalone utility).
+- Exit: 0=ok, 1=compile/load/type/clang error, 2=usage. Diagnostics on stderr.
+- `bin/spec -i file.spec -o binary`; `--emit-llvm out.ll`; `--emit-runtime out.c`; `--no-opt`; `--debug`; `--quiet`. Linting: `bin/speclint -i file.spec` (standalone utility).
 
-- Root classes `String` `Buf` `Dir` `Stringable` `Any` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
-- Suite: `bin/specunit -s bin/spec -t examples -t tests` (build the runner first: `bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit`); sanitized wave: KNOWLEDGE-SPECDEV.md §4a.
+- Root and floor classes `String` `Buf` `Dir` `Stringable` `Any` `CliArgs` `Arc` `Pool` `Arena` `Intern` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
+- Suite: `bin/specunit -s bin/spec -t examples -t tests -t testllvm` (build the runner first: `bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit`); sanitized wave: KNOWLEDGE-SPECDEV.md §4a.

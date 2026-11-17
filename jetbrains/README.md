@@ -9,7 +9,7 @@ JetBrains plugin for the **Spec** programming language, compatible with **PhpSto
    - Search for **LSP4IJ** (by Red Hat) and install it, then restart the IDE.
 2. **Java 21+** (for building the plugin with Gradle).
 3. **GDB 14+** (`gdb -i dap`) for source-level `.spec` debugging.
-4. **C11 toolchain** (`gcc` or `clang`, `make`) if `../bin/spec` and the Spec utilities have not been built yet.
+4. **Clang toolchain** (`clang`, `make`) if `../bin/spec` and the Spec utilities have not been built yet.
 
 ## Building the Plugin
 

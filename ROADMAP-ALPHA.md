@@ -8,7 +8,7 @@ This roadmap defines the core milestones, architectural cleanup tasks, tooling a
 
 The 0.1 Alpha release represents Spec's transition from an experimental self-hosting language to an accessible, reliable, and developer-ready systems language. The objectives for 0.1 Alpha are:
 
-1. **Rock-Solid Self-Hosting Core**: Byte-identical compiler fixed point, deterministic C11 code generation, and 100% test-suite green status.
+1. **Rock-Solid Self-Hosting Core**: Byte-identical compiler fixed point (`bootstrap/spec.ll` and `bootstrap/spec_runtime.c`), deterministic LLVM IR code generation with structural `SpecOptimizer` passes, pure-Spec runtime floor (`Arc`, `Pool`, `Arena`, `Intern`), and 100% test-suite green status.
 2. **First-Class Developer Tooling**: A complete toolchain consisting of `spec` (compiler), `specunit` (test runner), `speclint` (linter), `specinit` (project initializer), `specbuild` (build orchestrator), and `speclsp` (Language Server Protocol server for IDE integration).
 3. **Turnkey Installation**: Zero-friction setup on Linux with automated dependency checks and environment configuration.
 4. **Clean, Extensible Architecture**: Modular rule-based linting, unified error reporting, native JSON serialization, and a clear abstraction layer isolating POSIX/platform-specific runtime code.
@@ -256,15 +256,15 @@ A turnkey installation script (`install.sh`) to install Spec on Linux distributi
 ---
 
 ## 6. Cross-Platform Reliability & POSIX Abstraction
-- **Status**: **Completed** (Linux GCC/Clang, macOS Clang, Windows MinGW-w64 UCRT64 all verified in CI).
+- **Status**: **Completed** (Linux Clang, macOS Clang, Windows MinGW-w64 Clang all verified in CI).
 
-Spec compiles to C11. Platform-specific headers and primitives in `RuntimePrelude.spec` and `base:sysinternal` are guarded across Linux, macOS, and Windows:
+Spec compiles directly to LLVM IR and links with a scalar/byte-slice C OS PAL (`spec/base/compiler/pal/Pal*.spec`, subclassing `base:sys:OsDispatch`):
 
 ### 6.1 Implemented Platform Abstraction
-- **Cross-Platform CI Matrix (`.github/workflows/ci.yml`)**: Full bootstrap, tooling build (`specbuild`, `specunit`, `speclint`), and `specunit` regression suite verified on Linux (`gcc` and `clang`), macOS (`clang`), Windows (`MinGW-w64 UCRT64`), and Linux ASan+UBSan.
-- **Cross-Platform Path & Environment Resolution (`base:sys:Uri`)**: Unified path normalization, executable suffix handling, and temp/home/cache directory resolution across POSIX and Windows.
-- **Win32 Runtime Support**: Implemented Win32 `CreateProcessA` execution, CRLF handling, and `spec_file_temp` suffix templates for Windows builds.
-- **Remaining Cleanup**: Continue isolating any residual platform-specific shims into `sysinternal` modules where needed for BSD/other targets.
+- **Cross-Platform CI Matrix (`.github/workflows/ci.yml`)**: Full bootstrap, tooling build (`specbuild`, `specunit`, `speclint`), and `specunit` regression suite verified on Linux (`clang`), macOS (`clang`), Windows (`MinGW-w64 clang`), and Linux ASan+UBSan.
+- **Cross-Platform Path & Environment Resolution (`base:sys:Uri` & `base:sys:OsDispatch`)**: Unified path normalization, executable suffix handling, temp/home/cache directory resolution, and `OsDispatch`-based linker flag and C PAL emission across Linux, macOS, and Windows.
+- **Win32 Runtime Support**: Implemented Win32 `CreateProcessA` execution, CRLF handling, and `spec_pal_file_temp` suffix templates for Windows builds.
+- **Pure-Spec Floor & Scalar OS PAL**: Moved `Arc`, `Pool`, `Arena`, `Intern`, `Buf`, `Vector`, `HashTable`, and `CliArgs` into pure Spec over `base:sysinternal:Mem`, leaving a pure scalar/byte-slice OS PAL.
 
 ---
 

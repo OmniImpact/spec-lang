@@ -24,44 +24,45 @@ This guide covers building, running, linting, and configuring editor support for
 
 ## Compiler CLI (`spec`)
 
-The Spec compiler (`bin/spec`) is **100% self-hosted in pure Spec** (`spec/base/compiler/`). It compiles Spec source files down to portable C11 and links them into native executable binaries using the system C compiler (`gcc`).
+The Spec compiler (`bin/spec`) is **100% self-hosted in pure Spec** (`spec/base/compiler/`). It compiles Spec source files directly to LLVM IR and links them with the scalar OS PAL into native executable binaries using `clang`.
 
 ### Bootstrapping & Building the Compiler
-Building Spec requires only `gcc` (or `clang` via `CC=clang ./bootstrap.sh`) with standard POSIX threads:
+Building Spec requires `clang` with standard POSIX threads:
 
 ```bash
 ./bootstrap.sh
 ```
 
-This compiles the canonical converged C11 source at `bootstrap/spec.c` into the `bin/spec` executable.
+This compiles the canonical converged LLVM IR seed at `bootstrap/spec.ll` and scalar C OS PAL at `bootstrap/spec_runtime.c` into the `bin/spec` executable.
 
 The bootstrap verifies the self-hosting fixed point on every run: the freshly
-built compiler recompiles its own sources and the emitted C must match the
-canonical seed byte-for-byte. After modifying compiler files under
-`spec/base/compiler/`, re-baseline the seed and rebuild:
+built compiler recompiles its own sources and the emitted LLVM IR and C PAL must match the
+canonical seeds byte-for-byte. After modifying compiler files under
+`spec/base/compiler/`, `./bootstrap.sh` automatically converges and verifies the seeds across up to 3 cycles:
 
 ```bash
-bin/spec -i spec/base/compiler/driver/Driver.spec --emit-c bootstrap/spec.c
 ./bootstrap.sh
 ```
 
 ### Continuous Integration & Sanitized Builds
-Every push to `main` and every pull request runs the regression suite on GitHub Actions (`.github/workflows/ci.yml`) in three jobs: a `gcc` bootstrap, a `CC=clang` bootstrap, and an ASan/UBSan-instrumented run. The bootstrap script honors a `$CC` override; the suite runner is `specunit` — point it at any compiler binary with `-s` to test that binary against the full suite.
+Every push to `main` and every pull request runs the regression suite on GitHub Actions (`.github/workflows/ci.yml`) across Linux, macOS, Windows, and an ASan/UBSan-instrumented run. The suite runner is `specunit` — point it at any compiler binary with `-s` to test that binary against the full suite.
 
 To validate compiler crash-freedom (use-after-free, out-of-bounds, undefined behavior) locally, build an instrumented compiler and run the suite under it:
 ```bash
-gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
-    -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm
+clang -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+    -fno-omit-frame-pointer -c bootstrap/spec_runtime.c -o /tmp/spec_rt_asan.o -pthread
+clang -O1 -g -Wno-override-module -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+    -fno-omit-frame-pointer bootstrap/spec.ll /tmp/spec_rt_asan.o -o bin/spec-asan -pthread -lm -ldl -no-pie
 ASAN_OPTIONS=detect_leaks=0 bin/spec-asan --quiet \
     -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
 ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
-    bin/specunit-asan -s bin/spec-asan -t examples -t tests
+    bin/specunit-asan -s bin/spec-asan -t examples -t tests -t testllvm
 ```
-Leak detection is off by default: the ARC engine reclaims the compiler's object graph and an `atexit` shutdown reclaims the string ring, but string-lifetime churn (~0.5 MB per self-compile) remains until string ownership lands; opt in with `ASAN_OPTIONS=detect_leaks=1` on the runner invocation.
+Leak detection is off by default: the ARC engine reclaims the compiler's object graph, while interned strings are immortal by design; opt in with `ASAN_OPTIONS=detect_leaks=1` on the runner invocation.
 
 ### Compiler Exit Codes & Diagnostics
 - **`0`** — success.
-- **`1`** — compile failure: syntax errors, load errors (`[LoadError]`: missing module files, unresolvable imports, invalid class grouping), type errors, or backend `gcc` failure.
+- **`1`** — compile failure: syntax errors, load errors (`[LoadError]`: missing module files, unresolvable imports, invalid class grouping), type errors, or backend `clang` failure.
 - **`2`** — usage error (missing input or output path).
 
 All compiler diagnostics are written to **stderr** (via `Stderr:line`); programs write normal output to stdout via `Output:line` — both console wrappers in `base:sys`, instance-imported as `['base', 'sys', as Output()]` / `as Stderr()`. A program can terminate itself with an explicit status via `Process:exit(status: N)`. This makes the compiler safe to drive from scripts and CI:
@@ -76,11 +77,12 @@ To compile a Spec program into a native executable:
 ./spec -i <input.spec> -o <output_binary>
 ```
 
-To emit the generated C11 source code (either standalone or alongside `-o`):
+To emit the generated LLVM IR or standalone C OS PAL source code (either standalone or alongside `-o`):
 
 ```bash
-./spec -i <input.spec> --emit-c <output.c>
-./spec -i <input.spec> -o <output_binary> --emit-c <output.c>
+./spec -i <input.spec> --emit-llvm <output.ll>
+./spec -i <input.spec> -o <output_binary> --emit-llvm <output.ll>
+./spec -i <input.spec> --emit-runtime <spec_runtime.c>
 ```
 
 #### Example
@@ -112,11 +114,11 @@ All resolved classes are merged into an AST with per-file source provenance befo
 
 ### Compilation Pipeline & Memory Model
 1. **Lexical Analysis (`spec/base/compiler/lexer/Lexer.spec`)**: Tokenizes input source files (`Token.spec`) using $O(1)$ cached string length lookups and a static 256-entry character table with zero per-character heap allocations.
-2. **Multi-File Loader (`spec/base/compiler/loader/Loader.spec`)**: Recursively discovers and parses dependent modules specified in `using` blocks.
+2. **Multi-File Loader (`spec/base/compiler/loader/Loader.spec`)**: Recursively discovers and parses dependent modules specified in `using` blocks, preloading the root lattice and pure-Spec runtime floor (`Arc`, `Pool`, `Arena`, `Intern`, `CliArgs`).
 3. **Syntactic Parsing (`spec/base/compiler/parser/Parser.spec`)**: Constructs the abstract syntax tree (`spec/base/compiler/ast/`) with statement-boundary error recovery and `[file:line:col]` diagnostics.
 4. **Static Type Checking (`spec/base/compiler/checker/TypeChecker.spec`)**: Validates types, generic class substitutions, definite field assignment, interface contracts, and `replace` override rules.
-5. **C11 Code Generation (`spec/base/compiler/gen/`)**: Emits clean C11 code featuring amortized $O(1)$ growable string buffers (`spec_str_append`), lazy `SpecArray` allocation, static small-integer formatting, and automatic deallocation of transient `Loop` objects.
-6. **Native GCC Compilation**: GCC optimizes the generated C11 code (`-O2 -pthread -lm`), producing a standalone native executable. Intermediate `.c` files are automatically removed upon success unless `--emit-c` is specified.
+5. **Typed SSA IR & Structural Optimization (`spec/base/compiler/ir/`, `spec/base/compiler/opt/`)**: Lowers the AST into typed SSA IR (`IrModule`, `IrFunction`, `IrBlock`, `IrInst`, `IrStruct`) and runs structural `SpecOptimizer` passes (`ConstFoldPass`, `DevirtPass`, `ArcPeepholePass`, `PoolElisionPass`, `WrapperUnwrapPass`, `ConcatFusionPass`, `InlineHintPass`).
+6. **LLVM IR Emission & Native Clang Compilation (`spec/base/compiler/llvm/`, `spec/base/compiler/pal/`)**: Emits LLVM IR (`LlvmEmitter.spec`) and links it with the cached scalar C OS PAL object (`spec_runtime.o`, emitted by `Pal*.spec` classes subclassing `OsDispatch`) via `clang -O2`, producing a standalone native executable. Intermediate `.ll` files are automatically removed upon success unless `--emit-llvm` is specified.
 
 ---
 

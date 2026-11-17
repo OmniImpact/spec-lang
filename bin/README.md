@@ -1,12 +1,12 @@
 # Spec Executables (`bin/`)
 
-This directory holds the native binaries built from the canonical bootstrap C seed and Spec utility sources. Binaries are not tracked in git.
+This directory holds the native binaries built from the canonical bootstrap LLVM IR and C PAL seeds and Spec utility sources. Binaries are not tracked in git.
 
 Building the full toolchain starts from zero (no pre-existing binaries):
 
 ## 1. Initial Step: Bootstrap the Spec Compiler
 
-Spec is a self-hosting programming language. The canonical C11 seed is tracked at `bootstrap/spec.c`.
+Spec is a self-hosting programming language. The canonical LLVM IR seed is tracked at `bootstrap/spec.ll` alongside the scalar OS PAL shim at `bootstrap/spec_runtime.c`.
 
 To build the native `spec` compiler binary from source and verify the self-hosting fixed point:
 
@@ -14,13 +14,13 @@ To build the native `spec` compiler binary from source and verify the self-hosti
 ./bootstrap.sh
 ```
 
-Or using an alternate C compiler (such as Clang):
+Or using an explicit Clang binary:
 
 ```bash
-CC=clang ./bootstrap.sh
+CLANG=clang ./bootstrap.sh
 ```
 
-This compiles `bootstrap/spec.c` into `bin/spec` via GCC/Clang and verifies byte-for-byte convergence.
+This compiles `bootstrap/spec_runtime.c` and `bootstrap/spec.ll` into `bin/spec` via Clang and verifies byte-for-byte convergence.
 
 ## 2. Build the SpecBuild Project Orchestrator
 
@@ -59,5 +59,5 @@ bin/specbuild utilities/speclint/speclint.json
 
 Run the full regression test suite:
 ```bash
-bin/specunit -s bin/spec -t tests
+bin/specunit -s bin/spec -t examples -t tests -t testllvm
 ```
