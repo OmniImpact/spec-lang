@@ -490,6 +490,17 @@ define internal ptr @__spec_mem_intern_str(ptr %b) alwaysinline {
   %s = call ptr @spec_string_intern(ptr %c)
   ret ptr %s
 }
+define internal ptr @__spec_intern_cached(ptr %lit, ptr %slot) alwaysinline {
+  %c = load atomic ptr, ptr %slot acquire, align 8
+  %ok = icmp ne ptr %c, null
+  br i1 %ok, label %hit, label %miss
+hit:
+  ret ptr %c
+miss:
+  %s = call ptr @spec_string_intern(ptr %lit)
+  store atomic ptr %s, ptr %slot release, align 8
+  ret ptr %s
+}
 define internal void @__spec_mem_panic(ptr %b) alwaysinline {
   %c = call ptr @spec_buf_to_cstring(ptr %b)
   call void @spec_panic(ptr %c)
@@ -1045,6 +1056,7 @@ declare void @spec_audio_close(i64)''';
 			local Int is byteLen: raw:length() + 1;
 			local String is esc: self:escapeLlvmBytes(s: raw);
 			out: out . '@.str.' . (li as String) . ' = private unnamed_addr constant [' . (byteLen as String) . ' x i8] c"' . esc . "\\00\"\n";
+			out: out . '@.str.cache.' . (li as String) . " = internal global ptr null, align 8\n";
 			li++;
 		});
 		if({ mod:stringLiterals:length() > 0 }, { out: out . "\n"; });
@@ -1181,7 +1193,8 @@ declare void @spec_audio_close(i64)''';
 				return dst . ' = add i1 0, 0';
 			},
 			IrInst:ConstString: local Function of String(String is dst, Int is strId){
-				return dst . ' = call ptr @spec_string_intern(ptr @.str.' . (strId as String) . ')';
+				local String is idStr: strId as String;
+				return dst . ' = call ptr @__spec_intern_cached(ptr @.str.' . idStr . ', ptr @.str.cache.' . idStr . ')';
 			},
 			IrInst:Alloca: local Function of String(String is slot, IrType is ty){
 				return slot . ' = alloca ' . self:llvmType(ty: ty);
