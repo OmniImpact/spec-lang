@@ -46,15 +46,15 @@ Enum is Expression {
 	##
 	## @param line: Source line number.
 	Function of Expression is setLine(Int is line){
-		self:line: line;
-		return self;
+		:line: line;
+		return :;
 	}
 
 	## Sets the checker-resolved type name.
 	##
 	## @param t: Resolved type name.
 	Function is setResolvedType(String is t){
-		self:resolvedType: t;
+		:resolvedType: t;
 	}
 
 	## Returns the value expression of the call argument at [index].
@@ -62,7 +62,7 @@ Enum is Expression {
 	## @param index: The argument index.
 	## @return: The argument's value expression.
 	Function of Expression is argValue(Int is index){
-		return match(on: self, when: [
+		return match(on: :, when: [
 			Expression:Call: local Function of Expression(CallData is call){
 				local NamedArg is arg: call:args:get(index: index);
 				return arg:value;
@@ -76,7 +76,7 @@ Enum is Expression {
 	## @param index: The argument index.
 	## @return: The argument's name (empty for positional).
 	Function of String is argName(Int is index){
-		return match(on: self, when: [
+		return match(on: :, when: [
 			Expression:Call: local Function of String(CallData is call){
 				local NamedArg is arg: call:args:get(index: index);
 				return arg:name;
@@ -89,7 +89,7 @@ Enum is Expression {
 	##
 	## @return: The argument count.
 	Function of Int is argCount(){
-		return match(on: self, when: [
+		return match(on: :, when: [
 			Expression:Call: local Function of Int(CallData is call){
 				return call:args:length();
 			},

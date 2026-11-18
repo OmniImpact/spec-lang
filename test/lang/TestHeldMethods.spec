@@ -78,11 +78,11 @@ Class is HeldCounter{
 	local Int is value: 0;
 
 	Function is bump(){
-		self:value: self:value + 1;
+		:value: :value + 1;
 	}
 
 	Function of Int is get(){
-		return self:value;
+		return :value;
 	}
 }
 

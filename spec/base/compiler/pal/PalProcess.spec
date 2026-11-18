@@ -174,11 +174,11 @@ long long spec_pal_os_name(void) {
 	}
 
 	replace Function of String is linux(){
-		return self:posixExecuteAndMeasure(rssScale: '', osLiteral: 'linux');
+		return :posixExecuteAndMeasure(rssScale: '', osLiteral: 'linux');
 	}
 
 	replace Function of String is macos(){
-		return self:posixExecuteAndMeasure(rssScale: ' / 1024', osLiteral: 'macos');
+		return :posixExecuteAndMeasure(rssScale: ' / 1024', osLiteral: 'macos');
 	}
 
 	replace Function of String is windows(){
@@ -359,7 +359,7 @@ long long spec_pal_os_name(void) {
 	}
 
 	Function of String is emitBody(){
-		return ```{{self:getOsBlock(separatePosix: true)}}
+		return ```{{:getOsBlock(separatePosix: true)}}
 
 void spec_process_sleep(long long ms) {
     spec_pal_sleep_ms(ms);

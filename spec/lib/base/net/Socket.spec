@@ -73,12 +73,12 @@ Class is Socket{
 	## @return: Connected client Socket instance.
 	Function of Socket is accept(Function is onError: local Function(String is error){}){
 		local Socket is client: Socket:init();
-		local Int is clientFd: base:sysinternal:Socket:pal_socket_accept(fd: self:descriptor);
+		local Int is clientFd: base:sysinternal:Socket:pal_socket_accept(fd: :descriptor);
 		if({ clientFd >= 0 }, {
 			client:descriptor: clientFd;
 			client:isClosed: false;
 		}, {
-			self:emitLastError(onError: onError);
+			:emitLastError(onError: onError);
 		});
 		return client;
 	}
@@ -92,9 +92,9 @@ Class is Socket{
 		local Int is bAddr: Mem:objToAddr(obj: data);
 		local Int is ptr: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 0) }, { 0 });
 		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) }, { 0 });
-		local Int is n: base:sysinternal:Socket:pal_socket_send(fd: self:descriptor, data_addr: ptr, len: len);
+		local Int is n: base:sysinternal:Socket:pal_socket_send(fd: :descriptor, data_addr: ptr, len: len);
 		if({ n < 0 }, {
-			self:emitLastError(onError: onError);
+			:emitLastError(onError: onError);
 		});
 		return n;
 	}
@@ -108,9 +108,9 @@ Class is Socket{
 		local Int is sAddr: Mem:objToAddr(obj: text);
 		local Int is ptr: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
 		local Int is len: if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 8) }, { 0 });
-		local Int is n: base:sysinternal:Socket:pal_socket_send(fd: self:descriptor, data_addr: ptr, len: len);
+		local Int is n: base:sysinternal:Socket:pal_socket_send(fd: :descriptor, data_addr: ptr, len: len);
 		if({ n < 0 }, {
-			self:emitLastError(onError: onError);
+			:emitLastError(onError: onError);
 		});
 		return n;
 	}
@@ -122,9 +122,9 @@ Class is Socket{
 	## @return: Received ByteBuffer.
 	Function of List of Byte is receive(Int is maxBytes: 4096, Function is onError: local Function(String is error){}){
 		local [Byte] is empty;
-		if({ self:isClosed }, {
+		if({ :isClosed }, {
 			base:sysinternal:Socket:pal_socket_recv(fd: -1, dst_addr: 0, max_bytes: 0);
-			self:emitLastError(onError: onError);
+			:emitLastError(onError: onError);
 			return empty;
 		});
 		local Int is cap: maxBytes;
@@ -135,9 +135,9 @@ Class is Socket{
 		local Int is dataPtr: Mem:alloc(bytes: cap);
 		Mem:storeI64(ptr: bAddr, byteOffset: 0, val: dataPtr);
 		Mem:storeI64(ptr: bAddr, byteOffset: 16, val: cap);
-		local Int is n: base:sysinternal:Socket:pal_socket_recv(fd: self:descriptor, dst_addr: dataPtr, max_bytes: cap);
+		local Int is n: base:sysinternal:Socket:pal_socket_recv(fd: :descriptor, dst_addr: dataPtr, max_bytes: cap);
 		if({ n < 0 }, {
-			self:emitLastError(onError: onError);
+			:emitLastError(onError: onError);
 			return empty;
 		});
 		Mem:storeI64(ptr: bAddr, byteOffset: 8, val: n);
@@ -150,7 +150,7 @@ Class is Socket{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Received String.
 	Function of String is receiveString(Int is maxBytes: 4096, Function is onError: local Function(String is error){}){
-		local List of Byte is b: self:receive(maxBytes: maxBytes, onError: onError);
+		local List of Byte is b: :receive(maxBytes: maxBytes, onError: onError);
 		return b:toString();
 	}
 
@@ -161,10 +161,10 @@ Class is Socket{
 	## @param timeoutMs: Wait timeout in milliseconds (0 for non-blocking).
 	## @return: true if ready for I/O.
 	Function of Boolean is poll(Int is mode: 1, Int is timeoutMs: 0){
-		if({ self:isClosed }, {
+		if({ :isClosed }, {
 			return false;
 		});
-		return base:sysinternal:Socket:socket_poll(fd: self:descriptor, mode: mode, timeout_ms: timeoutMs) == 1;
+		return base:sysinternal:Socket:socket_poll(fd: :descriptor, mode: mode, timeout_ms: timeoutMs) == 1;
 	}
 
 	## Sets socket send and receive timeout.
@@ -172,23 +172,23 @@ Class is Socket{
 	## @param timeoutMs: Timeout in milliseconds.
 	## @return: true if successfully configured.
 	Function of Boolean is setTimeout(Int is timeoutMs){
-		if({ self:isClosed }, {
+		if({ :isClosed }, {
 			return false;
 		});
-		return base:sysinternal:Socket:socket_set_timeout(fd: self:descriptor, timeout_ms: timeoutMs) == 0;
+		return base:sysinternal:Socket:socket_set_timeout(fd: :descriptor, timeout_ms: timeoutMs) == 0;
 	}
 
 	## Closes the socket connection.
 	Function is close(){
-		if({ !self:isClosed }, {
-			base:sysinternal:Socket:socket_close(fd: self:descriptor);
-			self:isClosed: true;
-			self:descriptor: -1;
+		if({ !:isClosed }, {
+			base:sysinternal:Socket:socket_close(fd: :descriptor);
+			:isClosed: true;
+			:descriptor: -1;
 		});
 	}
 
 	## Returns true if the socket is open and connected.
 	Function of Boolean is isOpen(){
-		return !self:isClosed;
+		return !:isClosed;
 	}
 }

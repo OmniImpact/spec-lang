@@ -42,7 +42,7 @@ Class is Map of K to V{
 	## @param default: Fallback integer returned if key is absent.
 	## @return: Mapped value, or [default].
 	Function of Int is getInt(K is key, Int is default){
-		local String is s: self:getString(key: key, default: '');
+		local String is s: :getString(key: key, default: '');
 		if({ s:length() > 0 }, {
 			return s:parseInt(base: 10, default: default);
 		});
@@ -63,7 +63,7 @@ Class is Map of K to V{
 	## @param default: Fallback boolean returned if key is absent.
 	## @return: Mapped value, or [default].
 	Function of Boolean is getBool(K is key, Boolean is default){
-		local String is s: self:getString(key: key, default: '');
+		local String is s: :getString(key: key, default: '');
 		return match(on: s, when: [
 			'true': { true },
 			'false': { false },
@@ -114,7 +114,7 @@ Class is Map of K to V{
 	##
 	## @return: `true` if empty, `false` otherwise.
 	Function of Boolean is isEmpty(){
-		return self:length() == 0;
+		return :length() == 0;
 	}
 
 	## Returns an array containing all values in key iteration order.
@@ -122,7 +122,7 @@ Class is Map of K to V{
 	## @return: [Array] of values.
 	Function of Array is values(){
 		local Array is out: [];
-		self:each(action: local Function(K is k, Any is v){
+		:each(action: local Function(K is k, Any is v){
 			out:add(item: v);
 		});
 		return out;
@@ -130,9 +130,9 @@ Class is Map of K to V{
 
 	## Removes all entries from the map.
 	Function is clear(){
-		local Array of K is ks: self:keys();
+		local Array of K is ks: :keys();
 		ks:each(action: local Function(K is k){
-			self:remove(key: k);
+			:remove(key: k);
 		});
 	}
 
@@ -144,9 +144,9 @@ Class is Map of K to V{
 		ks:each(action: local Function(K is k){
 			local String is sv: other:getString(key: k, default: '');
 			if({ sv != '' }, {
-				self:set(key: k, value: sv);
+				:set(key: k, value: sv);
 			}, {
-				self:set(key: k, value: other:get(key: k, default: ''));
+				:set(key: k, value: other:get(key: k, default: ''));
 			});
 		});
 	}
@@ -157,7 +157,7 @@ Class is Map of K to V{
 	## @return: Filtered [Map].
 	Function of Map is filter(Function of Boolean is predicate){
 		local Map is out: [:];
-		self:each(action: local Function(K is k, Any is v){
+		:each(action: local Function(K is k, Any is v){
 			if({ predicate(k, v) }, {
 				out:set(key: k, value: v);
 			});
@@ -171,7 +171,7 @@ Class is Map of K to V{
 	## @return: `true` if any entry matches.
 	Function of Boolean is any(Function of Boolean is predicate){
 		local Boolean is found: false;
-		self:each(action: local Function(K is k, Any is v){
+		:each(action: local Function(K is k, Any is v){
 			if({ !found && predicate(k, v) }, {
 				found: true;
 			});
@@ -185,7 +185,7 @@ Class is Map of K to V{
 	## @return: Count of matching entries.
 	Function of Int is count(Function of Boolean is predicate){
 		local Int is total: 0;
-		self:each(action: local Function(K is k, Any is v){
+		:each(action: local Function(K is k, Any is v){
 			if({ predicate(k, v) }, {
 				total: total + 1;
 			});

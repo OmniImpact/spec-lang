@@ -51,7 +51,7 @@ Class of SpecUnitTest is TestFileAsync{
 		);
 
 		# Wait for background thread write to finish
-		local Int is wrote: self:waitForSlot(slot: 50);
+		local Int is wrote: :waitForSlot(slot: 50);
 		local Int is expectedBytes: content:length();
 		Assert:areEqualInt(expectedBytes, wrote);
 	}
@@ -76,7 +76,7 @@ Class of SpecUnitTest is TestFileAsync{
 		);
 
 		# Wait for background thread write to finish
-		local Int is wrote: self:waitForSlot(slot: 50);
+		local Int is wrote: :waitForSlot(slot: 50);
 		local Int is expectedBytes: content:length();
 		Assert:areEqualInt(expectedBytes, wrote);
 
@@ -98,7 +98,7 @@ Class of SpecUnitTest is TestFileAsync{
 		);
 
 		# Wait for background thread read to finish
-		local Int is readOutcome: self:waitForSlot(slot: 51);
+		local Int is readOutcome: :waitForSlot(slot: 51);
 		Assert:areEqualInt(1, readOutcome);
 	}
 }

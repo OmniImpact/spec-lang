@@ -56,7 +56,7 @@ Class of SpecOptimizer is InlineHintPass{
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
 			blkIdx:set(key: blk:label, value: bi);
-			if({ self:blockCallsFn(blk: blk, fnName: fn:name) }, { return false; });
+			if({ :blockCallsFn(blk: blk, fnName: fn:name) }, { return false; });
 			bi++;
 		});
 		bi: 0;
@@ -146,7 +146,7 @@ Class of SpecOptimizer is InlineHintPass{
 				local Boolean is isSingleBlock: fn:blocks:length() == 1;
 				local Boolean is isModelFn: modelFnSet:has(key: fn:name);
 				local Boolean is isSlabFast: fn:name == 'Slab_allocSlot' || fn:name == 'Slab_classForSize' || fn:name == 'Slab_slotSizeForClass';
-				if({ isSlabFast || (self:isAcyclicNonRecursive(fn: fn) && (isSingleBlock || isModelFn || self:isIntrinsicLeaf(fn: fn))) }, {
+				if({ isSlabFast || (:isAcyclicNonRecursive(fn: fn) && (isSingleBlock || isModelFn || :isIntrinsicLeaf(fn: fn))) }, {
 					fn:alwaysInline: true;
 				});
 			});

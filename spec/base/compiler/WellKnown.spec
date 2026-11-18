@@ -42,7 +42,7 @@ Class is WellKnown{
 	## [voidName]: one canonical void spelling across the AST (the
 	## lowercase split was historical legacy; normalized).
 	Function of String is voidMemberType(){
-		return self:voidName();
+		return :voidName();
 	}
 
 	## The rejected legacy class-declaration spelling, recognized only to
@@ -58,7 +58,7 @@ Class is WellKnown{
 
 	## The implicit receiver identifier.
 	Function of String is selfIdent(){
-		return 'self';
+		return ':';
 	}
 
 	## The root class every class declaration derives from.

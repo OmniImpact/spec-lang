@@ -27,35 +27,35 @@ Class is IrModule{
 	}
 
 	Function is addGlobal(String is name, IrType is ty, String is initVal){
-		self:globalNames:add(item: name);
-		self:globalTypes:add(item: ty);
-		self:globalInits:add(item: initVal);
+		:globalNames:add(item: name);
+		:globalTypes:add(item: ty);
+		:globalInits:add(item: initVal);
 	}
 
 	Function of Int is internStringLiteral(String is value){
-		if({ self:stringIds:has(key: value) }, {
-			return self:stringIds:get(key: value, default: 0);
+		if({ :stringIds:has(key: value) }, {
+			return :stringIds:get(key: value, default: 0);
 		});
-		local Int is id: self:stringLiterals:length();
-		self:stringLiterals:add(item: value);
-		self:stringIds:set(key: value, value: id);
+		local Int is id: :stringLiterals:length();
+		:stringLiterals:add(item: value);
+		:stringIds:set(key: value, value: id);
 		return id;
 	}
 
 	Function is addStruct(IrStruct is s){
-		self:structs:add(item: s);
+		:structs:add(item: s);
 	}
 
 	Function is addFunction(IrFunction is fn){
-		self:functions:add(item: fn);
+		:functions:add(item: fn);
 	}
 
 	Function of IrStruct is findStruct(String is name){
 		local Int is i: 0;
 		local Boolean is found: false;
 		local IrStruct is res: IrStruct:init(name: '');
-		while({ i < self:structs:length() && !found }, {
-			local IrStruct is s: self:structs:get(index: i);
+		while({ i < :structs:length() && !found }, {
+			local IrStruct is s: :structs:get(index: i);
 			if({ s:name == name }, {
 				res: s;
 				found: true;

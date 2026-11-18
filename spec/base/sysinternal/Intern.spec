@@ -57,7 +57,7 @@ Class is Intern{
 		local Int is oldCap: Mem:loadI64(ptr: oldTbl, byteOffset: 0);
 		local Int is newCap: oldCap * 2;
 		local Int is newMask: newCap - 1;
-		local Int is newTbl: self:newTable(cap: newCap);
+		local Int is newTbl: :newTable(cap: newCap);
 		Mem:storeI64(ptr: newTbl, byteOffset: 16, val: Mem:loadI64(ptr: oldTbl, byteOffset: 16));
 		local Int is i: 0;
 		while({ i < oldCap }, {
@@ -80,7 +80,7 @@ Class is Intern{
 
 	Function of Int is internCstr(Int is cstrAddr, Int is stateAddr){
 		local Int is n: if({ cstrAddr != 0 }, { Mem:cstrLen(cstrAddr: cstrAddr) }, { 0 });
-		local Int is h: self:hashBytes(cstrAddr: cstrAddr, len: n);
+		local Int is h: :hashBytes(cstrAddr: cstrAddr, len: n);
 		local Int is tbl: Mem:atomicLoadI64(addr: stateAddr);
 		if({ tbl != 0 }, {
 			local Int is mask: Mem:loadI64(ptr: tbl, byteOffset: 8);
@@ -89,7 +89,7 @@ Class is Intern{
 			while({ e != 0 }, {
 				if({ Mem:loadI64(ptr: e, byteOffset: 8) == h }, {
 					local Int is sAddr: Mem:loadI64(ptr: e, byteOffset: 0);
-					if({ self:bytesEqual(sAddr: sAddr, cstrAddr: cstrAddr, len: n) }, {
+					if({ :bytesEqual(sAddr: sAddr, cstrAddr: cstrAddr, len: n) }, {
 						return sAddr;
 					});
 				});
@@ -101,7 +101,7 @@ Class is Intern{
 		});
 		tbl: Mem:atomicLoadI64(addr: stateAddr);
 		if({ tbl == 0 }, {
-			tbl: self:newTable(cap: 256);
+			tbl: :newTable(cap: 256);
 			Mem:atomicStoreI64(addr: stateAddr, val: tbl);
 		});
 		local Int is mask2: Mem:loadI64(ptr: tbl, byteOffset: 8);
@@ -110,7 +110,7 @@ Class is Intern{
 		while({ e2 != 0 }, {
 			if({ Mem:loadI64(ptr: e2, byteOffset: 8) == h }, {
 				local Int is sAddr2: Mem:loadI64(ptr: e2, byteOffset: 0);
-				if({ self:bytesEqual(sAddr: sAddr2, cstrAddr: cstrAddr, len: n) }, {
+				if({ :bytesEqual(sAddr: sAddr2, cstrAddr: cstrAddr, len: n) }, {
 					Mem:atomicStoreI64(addr: stateAddr + 8, val: 0);
 					return sAddr2;
 				});
@@ -121,7 +121,7 @@ Class is Intern{
 		local Int is count: Mem:loadI64(ptr: tbl, byteOffset: 16);
 		local Int is cap: Mem:loadI64(ptr: tbl, byteOffset: 0);
 		if({ count >= cap }, {
-			tbl: self:resizeTable(oldTbl: tbl);
+			tbl: :resizeTable(oldTbl: tbl);
 			Mem:atomicStoreI64(addr: stateAddr, val: tbl);
 			mask2: Mem:loadI64(ptr: tbl, byteOffset: 8);
 			b2: h & mask2;

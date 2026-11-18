@@ -54,7 +54,7 @@ Class is LoggerBase{
 	local String is tag;
 
 	replace Function is init(String is tag){
-		self:tag: tag;
+		:tag: tag;
 	}
 
 	Function of Int is add(Int is a, Int is b){

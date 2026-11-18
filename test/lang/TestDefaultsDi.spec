@@ -41,11 +41,11 @@ Class is DiService{
 	Int is scale: 1;
 
 	replace Function is init(Math2 is m : Math2:init(), Int is scale : 2){
-		self:dep: m;
-		self:scale: scale;
+		:dep: m;
+		:scale: scale;
 	}
 
 	Function of Int is compute(Int is n){
-		return self:dep:half(n) * self:scale;
+		return :dep:half(n) * :scale;
 	}
 }

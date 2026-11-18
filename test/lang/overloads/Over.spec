@@ -26,10 +26,10 @@ Class is Over{
 	}
 
 	replace Function is init(Int is start){
-		self:seed: start;
+		:seed: start;
 	}
 
 	Function of Int is seedValue(){
-		return self:seed;
+		return :seed;
 	}
 }

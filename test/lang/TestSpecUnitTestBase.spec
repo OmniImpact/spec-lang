@@ -14,10 +14,10 @@ Class of SpecUnitTest is TestSpecUnitTestBase{
 	];
 
 	Function is testDefaultName(){
-		Assert:areEqualString('TestSpecUnitTestBase', self:name());
+		Assert:areEqualString('TestSpecUnitTestBase', :name());
 	}
 
 	Function is testDefaultDescription(){
-		Assert:areEqualString('Unit test: TestSpecUnitTestBase has 2 tests', self:description());
+		Assert:areEqualString('Unit test: TestSpecUnitTestBase has 2 tests', :description());
 	}
 }

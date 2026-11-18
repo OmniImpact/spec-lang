@@ -57,11 +57,11 @@ Class is Resource{
 	local String is name;
 
 	replace Function is init(String is name){
-		self:name: name;
+		:name: name;
 	}
 
 	Function of String is getName(){
-		return self:name;
+		return :name;
 	}
 }
 
@@ -75,14 +75,14 @@ Class is Container{
 	local Resource is res;
 
 	replace Function is init(Resource is res){
-		self:res: res;
+		:res: res;
 	}
 
 	Function is setRes(Resource is newRes){
-		self:res: newRes;
+		:res: newRes;
 	}
 
 	Function of Resource is getRes(){
-		return self:res;
+		return :res;
 	}
 }

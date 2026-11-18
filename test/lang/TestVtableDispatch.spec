@@ -61,7 +61,7 @@ Class is LayoutBase{
 	local Int is baseField: 11;
 
 	Function of Int is describeBase(){
-		return self:baseField;
+		return :baseField;
 	}
 
 	Function of Int is poly(){

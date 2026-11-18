@@ -32,7 +32,7 @@ Class is Process{
 		local Int is i: 0;
 		while({ i < n }, {
 			local String is s: args:get(index: i, default: '');
-			Mem:storeI64(ptr: buf, byteOffset: i * 8, val: self:cstrAddr(s: s));
+			Mem:storeI64(ptr: buf, byteOffset: i * 8, val: :cstrAddr(s: s));
 			i: i + 1;
 		});
 		return buf;
@@ -45,8 +45,8 @@ Class is Process{
 	## @return: Process exit status code (`0` for success).
 	Function of Int is execute(String is command, Array of String is args){
 		local Int is n: args:length();
-		local Int is argvBuf: self:buildCArgv(args: args);
-		local Int is code: base:sysinternal:Process:pal_process_execute_cstr(cmd_cstr: self:cstrAddr(s: command), argv_addr: argvBuf, nargs: n);
+		local Int is argvBuf: :buildCArgv(args: args);
+		local Int is code: base:sysinternal:Process:pal_process_execute_cstr(cmd_cstr: :cstrAddr(s: command), argv_addr: argvBuf, nargs: n);
 		if({ argvBuf != 0 }, { Mem:free(ptr: argvBuf); });
 		return code;
 	}
@@ -66,9 +66,9 @@ Class is Process{
 	## @return: Map with stringified integer keys `'exit'`, `'wall_us'`, `'cpu_us'`, `'rss_kb'`.
 	Function of Map of String to String is measure(String is command, Array of String is args){
 		local Int is n: args:length();
-		local Int is argvBuf: self:buildCArgv(args: args);
+		local Int is argvBuf: :buildCArgv(args: args);
 		local Int is outBuf: Mem:alloc(bytes: 32);
-		base:sysinternal:Process:pal_process_measure_cstr(cmd_cstr: self:cstrAddr(s: command), argv_addr: argvBuf, nargs: n, out_addr: outBuf);
+		base:sysinternal:Process:pal_process_measure_cstr(cmd_cstr: :cstrAddr(s: command), argv_addr: argvBuf, nargs: n, out_addr: outBuf);
 		if({ argvBuf != 0 }, { Mem:free(ptr: argvBuf); });
 		local Map of String to String is m: Map:init();
 		m:set(key: 'exit', value: Mem:loadI64(ptr: outBuf, byteOffset: 0) as String);
@@ -99,7 +99,7 @@ Class is Process{
 	## @param default: Fallback value if the variable is not set.
 	## @return: The environment variable value.
 	Function of String is getEnv(String is key, String is default){
-		local Int is valCstr: base:sysinternal:Process:pal_getenv(key_cstr: self:cstrAddr(s: key));
+		local Int is valCstr: base:sysinternal:Process:pal_getenv(key_cstr: :cstrAddr(s: key));
 		if({ valCstr == 0 }, { return default; });
 		return Mem:strFromBytes(srcAddr: valCstr, len: Mem:cstrLen(cstrAddr: valCstr));
 	}

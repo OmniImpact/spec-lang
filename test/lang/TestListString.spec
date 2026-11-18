@@ -115,10 +115,10 @@ Class is Greeting{
 	local String is value: '';
 
 	replace Function is init(String is text){
-		self:value: text;
+		:value: text;
 	}
 
 	Function of String is getValue(){
-		return self:value;
+		return :value;
 	}
 }

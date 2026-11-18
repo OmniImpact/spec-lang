@@ -50,26 +50,26 @@ Class is Member{
 	##
 	## @param kind: Member category.
 	replace Function is init(MemberKind is kind){
-		self:kind: kind;
+		:kind: kind;
 	}
 
 	## Sets the one-based source line.
 	##
 	## @param line: Source line number.
 	Function is setLine(Int is line){
-		self:line: line;
+		:line: line;
 	}
 
 	## Sets the declaring source file.
 	##
 	## @param file: Source file path.
 	Function is setSourceFile(String is file){
-		self:sourceFile: file;
+		:sourceFile: file;
 	}
 
 	## Releases statement and expression nodes once method emission finishes.
 	Function is clearBody(){
-		self:body: [];
+		:body: [];
 	}
 
 	## True when the member carries the given modifier. Modifiers are
@@ -79,6 +79,6 @@ Class is Member{
 	## @param kw: The modifier keyword.
 	## @return: true when present in [modifiers].
 	Function of Boolean is hasModifier(Keyword is kw){
-		return self:modifiers:indexOf(search: kw:value(), default: -1) >= 0;
+		return :modifiers:indexOf(search: kw:value(), default: -1) >= 0;
 	}
 }

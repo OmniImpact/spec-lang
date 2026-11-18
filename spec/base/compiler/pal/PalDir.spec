@@ -62,7 +62,7 @@ long long spec_pal_exe_dir(long long buf_addr, long long buf_size) {
         return 1;
     }
     char* slash = strrchr(buf, '/');
-{{self:getOsBlock(separatePosix: false)}}
+{{:getOsBlock(separatePosix: false)}}
     if (!slash) {
         buf[0] = '.';
         buf[1] = '\\0';

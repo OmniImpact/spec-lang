@@ -50,9 +50,9 @@ Class of SpecUnitTest is TestValueYield{
 
 	# 3. Guard clause inside a value method.
 	Function is testGuardInValueMethod(){
-		Assert:areEqualInt(0 - 1, self:guardy(-5));
-		Assert:areEqualInt(100, self:guardy(0));
-		Assert:areEqualInt(7, self:guardy(7));
+		Assert:areEqualInt(0 - 1, :guardy(-5));
+		Assert:areEqualInt(100, :guardy(0));
+		Assert:areEqualInt(7, :guardy(7));
 	}
 
 	# 4. A yield feeding a binary operand.
@@ -69,8 +69,8 @@ Class of SpecUnitTest is TestValueYield{
 
 	# 6. A nested yield in a check position.
 	Function is testNestedCheckYield(){
-		Assert:areEqualString('gt', self:nestedCheck(5, 2));
-		Assert:areEqualString('le', self:nestedCheck(2, 5));
+		Assert:areEqualString('gt', :nestedCheck(5, 2));
+		Assert:areEqualString('le', :nestedCheck(2, 5));
 	}
 
 	# 7. Bare if() yielding through the scoped provider.

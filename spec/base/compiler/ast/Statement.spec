@@ -29,7 +29,7 @@ Enum is Statement {
 	##
 	## @param line: Source line number.
 	Function of Statement is setLine(Int is line){
-		self:line: line;
-		return self;
+		:line: line;
+		return :;
 	}
 }

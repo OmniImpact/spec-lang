@@ -39,17 +39,17 @@ Class is App{ replace Function is init(Map of String to String is args){} }
 		);
 	}
 
-	## N30: Self inside a held initializer is forbidden.
+	## N30: ':' inside a held initializer is forbidden.
 	Function is testSelfInsideHeldInitializer(){
 		Assert:compilerRejects(
 			source: '''
 Class is N30Self{
 	held String is label: 'seed';
-	held String is fromSelf: self:label;
+	held String is fromSelf: :label;
 	replace Function is init(Map of String to String is args){}
 }
 ''',
-			expect: "'self' is not available"
+			expect: "':' is not available"
 		);
 	}
 
@@ -98,19 +98,19 @@ Class is N31Fn{
 		);
 	}
 
-	## N31: Held function body has no instance: self is not available.
+	## N31: Held function body has no instance: ':' is not available.
 	Function is testHeldFunctionNoSelf(){
 		Assert:compilerRejects(
 			source: '''
 Class is N31NoSelf{
 	held Int is scale: 2;
 	held Function of Int is usesSelf(){
-		return self:scale;
+		return :scale;
 	}
 	replace Function is init(Map of String to String is args){}
 }
 ''',
-			expect: "A held member body has no instance: 'self' is not available"
+			expect: "A held member body has no instance: ':' is not available"
 		);
 	}
 

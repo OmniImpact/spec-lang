@@ -63,49 +63,49 @@ Class is Linter{
 	local Array of String is exemptClasses: [];
 
 	replace Function is init(){
-		self:rules: [];
-		self:auditEnums: Map:init();
-		self:auditClasses: Map:init();
-		self:auditClassNodes: Map:init();
-		self:auditClassList: [];
-		self:auditIssues: [];
-		self:floorAliases: [];
-		self:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
-		self:discoverRules();
+		:rules: [];
+		:auditEnums: Map:init();
+		:auditClasses: Map:init();
+		:auditClassNodes: Map:init();
+		:auditClassList: [];
+		:auditIssues: [];
+		:floorAliases: [];
+		:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
+		:discoverRules();
 	}
 
 	## Discovers rules via reflection over the class registry, falling
 	## back to explicit registration if reflection finds none.
 	Function is discoverRules(){
-		self:rules: [];
+		:rules: [];
 		classNames():each(action: local Function(String is cn){
 			if({ extendsClass(className: cn, baseName: 'LintRule') && cn != 'LintRule' }, {
 				local LintRule is rule: instantiate(className: cn) as LintRule;
-				self:rules:add(item: rule);
+				:rules:add(item: rule);
 			});
 		});
-		if({ self:rules:length() == 0 }, {
-			self:registerDefaultRules();
+		if({ :rules:length() == 0 }, {
+			:registerDefaultRules();
 		});
 	}
 
 	## Explicit fallback registration of default rules.
 	Function is registerDefaultRules(){
-		self:rules:add(item: TabIndentationRule:init());
-		self:rules:add(item: TrailingWhitespaceRule:init());
-		self:rules:add(item: BraceAlignmentRule:init());
-		self:rules:add(item: LoopConstructionRule:init());
-		self:rules:add(item: GetStringDefaultRule:init());
-		self:rules:add(item: MathRandomRule:init());
-		self:rules:add(item: EncourageAsConditionalRule:init());
-		self:rules:add(item: EncourageAsLoopsRule:init());
+		:rules:add(item: TabIndentationRule:init());
+		:rules:add(item: TrailingWhitespaceRule:init());
+		:rules:add(item: BraceAlignmentRule:init());
+		:rules:add(item: LoopConstructionRule:init());
+		:rules:add(item: GetStringDefaultRule:init());
+		:rules:add(item: MathRandomRule:init());
+		:rules:add(item: EncourageAsConditionalRule:init());
+		:rules:add(item: EncourageAsLoopsRule:init());
 	}
 
 	## Adds a custom rule to the linter.
 	##
 	## @param rule: [LintRule] instance to add.
 	Function is addRule(LintRule is rule){
-		self:rules:add(item: rule);
+		:rules:add(item: rule);
 	}
 
 	## Analyzes source code text and optional AST, returning all detected lint issues.
@@ -117,12 +117,12 @@ Class is Linter{
 		local Array of LintIssue is issues: [];
 
 		# 1. Source-level checks across registered rules
-		self:rules:each(action: local Function(LintRule is r){
+		:rules:each(action: local Function(LintRule is r){
 			r:checkSource(source: source, issues: issues);
 		});
 
 		# 2. AST-level checks across registered rules
-		self:rules:each(action: local Function(LintRule is r){
+		:rules:each(action: local Function(LintRule is r){
 			r:checkProgram(program: program, issues: issues);
 		});
 
@@ -167,8 +167,8 @@ Class is Linter{
 			Output:line(issue:toString());
 		});
 
-		local Int is warnings: self:countWarnings(issues: issues);
-		local Int is notices: self:countNotices(issues: issues);
+		local Int is warnings: :countWarnings(issues: issues);
+		local Int is notices: :countNotices(issues: issues);
 		Output:line("\nLint summary for " . filePath . ': ' . (warnings as String) . ' warning(s), ' . (notices as String) . ' notice(s).');
 		if({ warnings == 0 }, {
 			Output:line('All standard checks passed successfully.');
@@ -185,26 +185,26 @@ Class is Linter{
 	## @param program: Loaded [ProgramNode].
 	## @return: [Array] of [LintIssue] worklist notices.
 	Function of Array of LintIssue is auditProgram(ProgramNode is program){
-		self:auditIssues: [];
-		self:buildAuditNameSets(classes: program:classes);
+		:auditIssues: [];
+		:buildAuditNameSets(classes: program:classes);
 		program:classes:each(action: local Function(ClassInfo is c){
-			self:auditClass(classDef: c);
+			:auditClass(classDef: c);
 		});
-		return self:auditIssues;
+		return :auditIssues;
 	}
 
 	## Registers one class or enum name, nested classes included.
 	Function is registerAuditName(ClassInfo is c){
 		if({ c:baseClass == 'Enum' }, {
-			self:auditEnums:set(key: c:name, value: 'true');
+			:auditEnums:set(key: c:name, value: 'true');
 		}, {
-			self:auditClasses:set(key: c:name, value: 'true');
+			:auditClasses:set(key: c:name, value: 'true');
 		});
-		self:auditClassNodes:set(key: c:name, value: c);
-		self:auditClassList:add(item: c);
+		:auditClassNodes:set(key: c:name, value: c);
+		:auditClassList:add(item: c);
 		c:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:CLASS }, {
-				self:registerAuditName(c: m:nestedClass);
+				:registerAuditName(c: m:nestedClass);
 			});
 		});
 	}
@@ -212,28 +212,28 @@ Class is Linter{
 	## Collects class and enum names into the audit sets.
 	Function is buildAuditNameSets(Array of ClassInfo is classes){
 		classes:each(action: local Function(ClassInfo is c){
-			self:registerAuditName(c: c);
+			:registerAuditName(c: c);
 		});
 	}
 
 	## Audits every method body of a class definition, nested classes included.
 	Function is auditClass(ClassInfo is classDef){
-		local ClassInfo is savedOwner: self:auditOwner;
-		self:auditOwner: classDef;
+		local ClassInfo is savedOwner: :auditOwner;
+		:auditOwner: classDef;
 		classDef:members:each(action: local Function(Member is m){
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
-						self:auditStatement(stmt: s, file: m:sourceFile);
+						:auditStatement(stmt: s, file: m:sourceFile);
 					});
 				},
 				MemberKind:CLASS: {
-					self:auditClass(classDef: m:nestedClass);
+					:auditClass(classDef: m:nestedClass);
 				},
 				else: {}
 			]);
 		});
-		self:auditOwner: savedOwner;
+		:auditOwner: savedOwner;
 	}
 
 	## Walks one statement, auditing every expression it contains.
@@ -241,27 +241,27 @@ Class is Linter{
 		match(on: stmt, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				if({ hasInit }, {
-					self:auditExpression(expr: initExpr, file: file);
+					:auditExpression(expr: initExpr, file: file);
 				});
 			},
 			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
-				self:auditExpression(expr: assignTarget, file: file);
-				self:auditExpression(expr: assignValue, file: file);
+				:auditExpression(expr: assignTarget, file: file);
+				:auditExpression(expr: assignValue, file: file);
 			},
 			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
 				if({ hasReturnExpr }, {
-					self:auditExpression(expr: returnExpr, file: file);
+					:auditExpression(expr: returnExpr, file: file);
 				});
 			},
 			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
-				self:auditClass(classDef: nestedClass);
+				:auditClass(classDef: nestedClass);
 			},
 			Statement:Expr: local Function(Expression is exprStmt){
-				self:auditExpression(expr: exprStmt, file: file);
+				:auditExpression(expr: exprStmt, file: file);
 			},
 			Statement:Forward: local Function(Array of NamedArg is forwardArgs){
 				forwardArgs:each(action: local Function(NamedArg is arg){
-					self:auditExpression(expr: arg:value, file: file);
+					:auditExpression(expr: arg:value, file: file);
 				});
 			}
 		]);
@@ -271,48 +271,48 @@ Class is Linter{
 	Function is auditExpression(Expression is expr, String is file){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
-				self:auditReceiver(call: cd, file: file);
-				self:auditExpression(expr: cd:target, file: file);
+				:auditReceiver(call: cd, file: file);
+				:auditExpression(expr: cd:target, file: file);
 				cd:args:each(action: local Function(NamedArg is arg){
-					self:auditExpression(expr: arg:value, file: file);
+					:auditExpression(expr: arg:value, file: file);
 				});
 			},
 			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
-				self:auditExpression(expr: leftExpr, file: file);
-				self:auditExpression(expr: rightExpr, file: file);
+				:auditExpression(expr: leftExpr, file: file);
+				:auditExpression(expr: rightExpr, file: file);
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
-				self:auditExpression(expr: operand, file: file);
+				:auditExpression(expr: operand, file: file);
 			},
 			Expression:ArrayLit: local Function(Array of Expression is items){
 				items:each(action: local Function(Expression is item){
-					self:auditExpression(expr: item, file: file);
+					:auditExpression(expr: item, file: file);
 				});
 			},
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
 				keys:each(action: local Function(Expression is k){
-					self:auditExpression(expr: k, file: file);
+					:auditExpression(expr: k, file: file);
 				});
 				values:each(action: local Function(Expression is v){
-					self:auditExpression(expr: v, file: file);
+					:auditExpression(expr: v, file: file);
 				});
 			},
 			Expression:Cast: local Function(Expression is target, String is targetType, Array of Expression is args){
-				self:auditExpression(expr: target, file: file);
+				:auditExpression(expr: target, file: file);
 				args:each(action: local Function(Expression is a){
-					self:auditExpression(expr: a, file: file);
+					:auditExpression(expr: a, file: file);
 				});
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is field){
-				self:auditExpression(expr: target, file: file);
+				:auditExpression(expr: target, file: file);
 			},
 			Expression:Index: local Function(Expression is target, Expression is index){
-				self:auditExpression(expr: target, file: file);
-				self:auditExpression(expr: index, file: file);
+				:auditExpression(expr: target, file: file);
+				:auditExpression(expr: index, file: file);
 			},
 			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
 				body:each(action: local Function(Statement is s){
-					self:auditStatement(stmt: s, file: file);
+					:auditStatement(stmt: s, file: file);
 				});
 			}
 		], default: {});
@@ -340,18 +340,18 @@ Class is Linter{
 				});
 			}
 		], default: {});
-		if({ !recognizedTarget || isFloorChain || name == '' || name == 'self' }, {
+		if({ !recognizedTarget || isFloorChain || name == '' || name == ':' }, {
 			return;
 		});
 		if({ call:name == 'init' }, {
 			return;
 		});
-		if({ self:isUpperName(name: name) }, {
-			if({ self:auditEnums:has(key: name) }, {
+		if({ :isUpperName(name: name) }, {
+			if({ :auditEnums:has(key: name) }, {
 				return;
 			});
 			local Boolean is isExempt: false;
-			self:exemptClasses:each(action: local Function(String is e){
+			:exemptClasses:each(action: local Function(String is e){
 				if({ e == name }, {
 					isExempt: true;
 				});
@@ -359,18 +359,18 @@ Class is Linter{
 			if({ isExempt }, {
 				return;
 			});
-			if({ !self:auditClasses:has(key: name) }, {
+			if({ !:auditClasses:has(key: name) }, {
 				return;
 			});
-			if({ self:auditOwnerImportsAs(name: name) }, {
+			if({ :auditOwnerImportsAs(name: name) }, {
 				return;
 			});
-			if({ self:isHeldMember(clsName: name, memberName: call:name) }, {
+			if({ :isHeldMember(clsName: name, memberName: call:name) }, {
 				return;
 			});
 		}, {
 			local Boolean is isAlias: false;
-			self:floorAliases:each(action: local Function(String is a){
+			:floorAliases:each(action: local Function(String is a){
 				if({ a == name }, {
 					isAlias: true;
 				});
@@ -380,12 +380,12 @@ Class is Linter{
 			});
 		});
 		local String is msg: 'Instance-model worklist: \'' . name . ':' . call:name . '\' calls a member through a class name (' . file . ').';
-		self:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
+		:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 	}
 
 	## True when the class under audit, or any ancestor, instance-imports [name].
 	Function of Boolean is auditOwnerImportsAs(String is name){
-		return self:auditImportsAsAnywhere(clsName: self:auditOwner:name, targetName: name);
+		return :auditImportsAsAnywhere(clsName: :auditOwner:name, targetName: name);
 	}
 
 	## Recursive import search over the audit's ancestor lattice.
@@ -394,7 +394,7 @@ Class is Linter{
 			return false;
 		});
 		visited:set(key: clsName, value: 'true');
-		local ClassInfo is cls: self:auditClassNodes:get(key: clsName, default: self:auditOwner);
+		local ClassInfo is cls: :auditClassNodes:get(key: clsName, default: :auditOwner);
 		if({ cls:name != clsName }, {
 			return false;
 		});
@@ -403,7 +403,7 @@ Class is Linter{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			if({ !viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, {
+			if({ !viaParent && :auditImportsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, {
 				viaParent: true;
 			});
 		});
@@ -417,7 +417,7 @@ Class is Linter{
 		});
 		visited:set(key: clsName, value: 'true');
 		local Boolean is found: false;
-		self:auditClassList:each(action: local Function(ClassInfo is cls){
+		:auditClassList:each(action: local Function(ClassInfo is cls){
 			if({ !found && cls:name == clsName }, {
 				cls:members:each(action: local Function(Member is m){
 					if({ !found && m:name == memberName && m:hasModifier(kw: Keyword:HELD) }, {
@@ -426,7 +426,7 @@ Class is Linter{
 				});
 				if({ !found }, {
 					cls:baseClasses:each(action: local Function(String is baseName){
-						if({ !found && self:isHeldMember(clsName: baseName, memberName: memberName, visited: visited) }, {
+						if({ !found && :isHeldMember(clsName: baseName, memberName: memberName, visited: visited) }, {
 							found: true;
 						});
 					});

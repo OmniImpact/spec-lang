@@ -18,10 +18,10 @@ Class of SpecUnitTest is TestSpecLoader{
 		return "Class is Greeter{
 	local String is greeting;
 	Function is init(String is g){
-		self:greeting: g;
+		:greeting: g;
 	}
 	replace Function of String is toString(){
-		return 'Greeter(' . self:greeting . ')';
+		return 'Greeter(' . :greeting . ')';
 	}
 }
 Class of Greeter is LoudGreeter{
@@ -32,7 +32,7 @@ Class of Greeter is LoudGreeter{
 		['base', 'sys', as Output()]
 	];
 	replace Function of String is toString(){
-		return 'LOUD ' . self:greeting;
+		return 'LOUD ' . :greeting;
 	}
 }
 Class is LoaderE2E{
@@ -49,7 +49,7 @@ Class is LoaderE2E{
 	}
 
 	Function is testMultiFileLoadWithZeroErrors(){
-		fileWrite(path: 'testcompiler/semantic/.loader_app_tmp.spec', content: self:sampleAppSource());
+		fileWrite(path: 'testcompiler/semantic/.loader_app_tmp.spec', content: :sampleAppSource());
 
 		local Loader is loader: Loader:init();
 		local ProgramNode is prog: loader:loadProgram(rootPath: 'testcompiler/semantic/.loader_app_tmp.spec');
@@ -61,7 +61,7 @@ Class is LoaderE2E{
 	}
 
 	Function is testRootLatticeAndImplicitAny(){
-		fileWrite(path: 'testcompiler/semantic/.loader_app_tmp.spec', content: self:sampleAppSource());
+		fileWrite(path: 'testcompiler/semantic/.loader_app_tmp.spec', content: :sampleAppSource());
 
 		local Loader is probe: Loader:init();
 		local ProgramNode is classes: probe:loadProgram(rootPath: 'testcompiler/semantic/.loader_app_tmp.spec');

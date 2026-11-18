@@ -104,20 +104,20 @@ Class of SpecUnitTest is TestSpecParser{
 	}
 
 	Function is testEnumAndGenericClassParseClean(){
-		local Array of String is errs: self:parseOf(src: "Enum of String is Level { NONE: '', WARN: 'WRN' }
+		local Array of String is errs: :parseOf(src: "Enum of String is Level { NONE: '', WARN: 'WRN' }
 Class is Box of T{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Output()]
 	];
-	replace Function of T is get(){ return self:item; }
+	replace Function of T is get(){ return :item; }
 	local T is item;
 }");
 		Assert:areEqualInt(0, errs:length());
 	}
 
 	Function is testInterfaceStyleDeclarationParses(){
-		local Array of String is errs2: self:parseOf(src: "Class is Floor{ namespace: ['base', 'x'];
+		local Array of String is errs2: :parseOf(src: "Class is Floor{ namespace: ['base', 'x'];
 	Function of Int is op(String is b); }");
 		Assert:areEqualInt(0, errs2:length());
 	}

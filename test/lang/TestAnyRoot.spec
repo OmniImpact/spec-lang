@@ -49,6 +49,6 @@ Class is RootProbe{
 	local Int is id: 5;
 
 	replace Function is init(Int is id){
-		self:id: id;
+		:id: id;
 	}
 }

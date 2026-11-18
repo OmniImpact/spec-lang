@@ -17,11 +17,11 @@ Class of OsDispatch is OsLinkFlags{
 	}
 
 	replace Function is init(Boolean is noPie){
-		self:pieOff: noPie;
+		:pieOff: noPie;
 	}
 
 	replace Function of String is linux(){
-		return if({ self:pieOff }, {
+		return if({ :pieOff }, {
 			'-ldl -no-pie'
 		}, {
 			'-ldl'
@@ -37,6 +37,6 @@ Class of OsDispatch is OsLinkFlags{
 	}
 
 	Function of Array of String is flags(){
-		return self:value():split(delim: ' ');
+		return :value():split(delim: ' ');
 	}
 }

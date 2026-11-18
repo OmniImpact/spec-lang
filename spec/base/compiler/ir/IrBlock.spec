@@ -18,29 +18,29 @@ Class is IrBlock{
 	}
 
 	Function is init(String is label){
-		self:label: label;
+		:label: label;
 	}
 
 	Function is append(IrInst is inst){
-		self:appendAt(inst: inst, line: 0);
+		:appendAt(inst: inst, line: 0);
 	}
 
 	Function is appendAt(IrInst is inst, Int is line){
-		self:insts:add(item: inst);
-		self:instLines:add(item: line);
+		:insts:add(item: inst);
+		:instLines:add(item: line);
 	}
 
 	Function is prependAt(IrInst is inst, Int is line){
-		local Int is n: self:insts:length();
-		self:insts:add(item: inst);
-		self:instLines:add(item: line);
+		local Int is n: :insts:length();
+		:insts:add(item: inst);
+		:instLines:add(item: line);
 		local Int is i: n;
 		while({ i > 0 }, {
-			self:insts:set(index: i, item: self:insts:get(index: i - 1));
-			self:instLines:set(index: i, item: self:instLines:get(index: i - 1));
+			:insts:set(index: i, item: :insts:get(index: i - 1));
+			:instLines:set(index: i, item: :instLines:get(index: i - 1));
 			i--;
 		});
-		self:insts:set(index: 0, item: inst);
-		self:instLines:set(index: 0, item: line);
+		:insts:set(index: 0, item: inst);
+		:instLines:set(index: 0, item: line);
 	}
 }

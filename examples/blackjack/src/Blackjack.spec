@@ -32,7 +32,7 @@ Class is Blackjack{
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
-			self:game: game;
+			:game: game;
 		}
 
 		replace Function of Boolean is evaluate(){
@@ -59,7 +59,7 @@ Class is Blackjack{
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
-			self:game: game;
+			:game: game;
 		}
 
 		replace Function is onComplete(LoopControl is control){
@@ -79,7 +79,7 @@ Class is Blackjack{
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
-			self:game: game;
+			:game: game;
 		}
 
 		replace Function is onInput(String is action){
@@ -126,26 +126,26 @@ Class is Blackjack{
 
 	## Draws a random card value (1..10).
 	Function of Int is drawCard(){
-		return self:deckUtil:drawCard();
+		return :deckUtil:drawCard();
 	}
 
 	## Computes the optimal Blackjack score for [hand], treating Aces (`1`) as 11 or 1.
 	Function of Int is handValue(Array of Int is hand){
-		return self:deckUtil:handValue(hand: hand);
+		return :deckUtil:handValue(hand: hand);
 	}
 
 	## Prompts the player for hit/stand input via [consIn].
 	Function is promptPlayerAction(){
 		line('Would you like to (h)it or (s)tand?');
-		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: self);
+		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: :);
 		consIn(handler: handler);
 	}
 
 	## Runs the dealer's automated draw loop until total >= 17.
 	Function is startDealerTurn(){
 		line("\n--- Starting Dealer's Turn ---");
-		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: self);
-		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: self);
+		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: :);
+		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: :);
 		local LoopControl is control: LoopControl:init(onComplete: onComplete);
 		run(loop: dealerLoop, control: control);
 	}
@@ -172,7 +172,7 @@ Class is Blackjack{
 		line('         Welcome to SpecJack          ');
 		line("======================================\n");
 
-		self:deck: self:deckUtil:createDeck();
+		:deck: :deckUtil:createDeck();
 
 		playerHand:add(item: drawCard());
 		playerHand:add(item: drawCard());

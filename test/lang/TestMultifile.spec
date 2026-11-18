@@ -51,15 +51,15 @@ Class of SpecUnitTest is TestMultifile{
 	## The declared field: uninitialized at declaration, assigned before
 	## the read.
 	Function is testDeclaredFieldInitBeforeUse(){
-		self:title: '=== Multi-File & Pure Spec Library Test ===';
-		Assert:areEqualString('=== Multi-File & Pure Spec Library Test ===', self:title);
+		:title: '=== Multi-File & Pure Spec Library Test ===';
+		Assert:areEqualString('=== Multi-File & Pure Spec Library Test ===', :title);
 	}
 
 	## 3. Decoupled Loop and Control: the loop logic lives in
 	## StepCounterLoop, the runner drives it, the stop at five lands.
 	Function is testDecoupledIteratorLoop(){
-		Loops:run(loop: StepCounterLoop:init(app: self));
-		Assert:areEqualInt(5, self:counter);
+		Loops:run(loop: StepCounterLoop:init(app: :));
+		Assert:areEqualInt(5, :counter);
 	}
 }
 
@@ -79,7 +79,7 @@ Class of Loop is StepCounterLoop{
 	local TestMultifile is app;
 
 	replace Function is init(TestMultifile is app){
-		self:app: app;
+		:app: app;
 	}
 
 	replace Function of Boolean is evaluate(){

@@ -30,7 +30,7 @@ Class is Stats{
 		if({ len == 0 }, {
 			return 0.0;
 		});
-		return toFloat(value: self:sum(values: values)) / toFloat(value: len);
+		return toFloat(value: :sum(values: values)) / toFloat(value: len);
 	}
 
 	## Returns the smallest integer in [values], or [default] when empty.
@@ -102,7 +102,7 @@ Class is Stats{
 		if({ len == 0 }, {
 			return 0.0;
 		});
-		local Float is mean: self:average(values: values);
+		local Float is mean: :average(values: values);
 		local Float is acc: 0.0;
 		local Int is i: 0;
 		while({ i < len }, {
@@ -115,7 +115,7 @@ Class is Stats{
 
 	## Returns the population standard deviation of [values] (`0.0` when empty).
 	Function of Float is stdDev(Array of Int is values){
-		return sqrt(value: self:variance(values: values));
+		return sqrt(value: :variance(values: values));
 	}
 
 }

@@ -38,7 +38,7 @@ Class is HashTable{
 
 	## Destroys this map, releasing any ARC keys/values and freeing its buckets and entries.
 	Function is mapDestroy(){
-		local Int is mAddr: Mem:objToAddr(obj: self);
+		local Int is mAddr: Mem:objToAddr(obj: :);
 		if({ mAddr == 0 }, { return; });
 		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
 		if({ buckets == 0 }, { return; });
@@ -123,9 +123,9 @@ Class is HashTable{
 				local Int is next: Mem:loadI64(ptr: curr, byteOffset: 24);
 				local Int is kBits: Mem:loadI64(ptr: curr, byteOffset: 0);
 				local Int is idx: if({ keyKind == 0 }, {
-					self:mapHashString(strAddr: kBits, nbuckets: newNb)
+					:mapHashString(strAddr: kBits, nbuckets: newNb)
 				}, {
-					self:mapHashBits(k: kBits, nbuckets: newNb)
+					:mapHashBits(k: kBits, nbuckets: newNb)
 				});
 				Mem:storeI64(ptr: curr, byteOffset: 24, val: Mem:loadI64(ptr: grown, byteOffset: idx * 8));
 				Mem:storeI64(ptr: grown, byteOffset: idx * 8, val: curr);
@@ -146,22 +146,22 @@ Class is HashTable{
 		});
 		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24);
 		if({ keyKind == 0 && keyBits == 0 }, { return; });
-		self:mapLock(addr: mAddr);
+		:mapLock(addr: mAddr);
 		local Int is valKind: Mem:loadI32(ptr: mAddr, byteOffset: 28);
 		local Boolean is retainVal: valIsArc || (valKind == 1);
 		local Int is arcByte: if({ retainVal }, { 1 }, { 0 });
 		local Int is nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
 		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
 		local Int is idx: if({ keyKind == 0 }, {
-			self:mapHashString(strAddr: keyBits, nbuckets: nb)
+			:mapHashString(strAddr: keyBits, nbuckets: nb)
 		}, {
-			self:mapHashBits(k: keyBits, nbuckets: nb)
+			:mapHashBits(k: keyBits, nbuckets: nb)
 		});
 		local Int is curr: Mem:loadI64(ptr: buckets, byteOffset: idx * 8);
 		while({ curr != 0 }, {
 			local Int is cKey: Mem:loadI64(ptr: curr, byteOffset: 0);
 			local Boolean is matched: if({ keyKind == 0 }, {
-				self:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
+				:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
 			}, {
 				cKey == keyBits
 			});
@@ -176,7 +176,7 @@ Class is HashTable{
 				});
 				Mem:storeI64(ptr: curr, byteOffset: 8, val: valBits);
 				Mem:storeByte(ptr: curr, byteOffset: 16, val: arcByte);
-				self:mapUnlock(addr: mAddr);
+				:mapUnlock(addr: mAddr);
 				return;
 			});
 			curr: Mem:loadI64(ptr: curr, byteOffset: 24);
@@ -189,13 +189,13 @@ Class is HashTable{
 		});
 		local Int is len: Mem:loadI64(ptr: mAddr, byteOffset: 16);
 		if({ len >= nb }, {
-			self:mapGrow(mAddr: mAddr);
+			:mapGrow(mAddr: mAddr);
 			nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
 			buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
 			idx: if({ keyKind == 0 }, {
-				self:mapHashString(strAddr: keyBits, nbuckets: nb)
+				:mapHashString(strAddr: keyBits, nbuckets: nb)
 			}, {
-				self:mapHashBits(k: keyBits, nbuckets: nb)
+				:mapHashBits(k: keyBits, nbuckets: nb)
 			});
 		});
 		local Int is e: Mem:alloc(bytes: 32);
@@ -205,7 +205,7 @@ Class is HashTable{
 		Mem:storeI64(ptr: e, byteOffset: 24, val: Mem:loadI64(ptr: buckets, byteOffset: idx * 8));
 		Mem:storeI64(ptr: buckets, byteOffset: idx * 8, val: e);
 		Mem:storeI64(ptr: mAddr, byteOffset: 16, val: len + 1);
-		self:mapUnlock(addr: mAddr);
+		:mapUnlock(addr: mAddr);
 	}
 
 	local Function of Any is mapGetRaw(Int is mAddr, Int is keyBits, Any is def){
@@ -213,19 +213,19 @@ Class is HashTable{
 		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24);
 		if({ keyKind == 0 && keyBits == 0 }, { return def; });
 		local Boolean is isFrozen: Mem:loadByte(ptr: mAddr, byteOffset: 32) != 0;
-		if({ !isFrozen }, { self:mapLock(addr: mAddr); });
+		if({ !isFrozen }, { :mapLock(addr: mAddr); });
 		local Int is nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
 		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
 		local Int is idx: if({ keyKind == 0 }, {
-			self:mapHashString(strAddr: keyBits, nbuckets: nb)
+			:mapHashString(strAddr: keyBits, nbuckets: nb)
 		}, {
-			self:mapHashBits(k: keyBits, nbuckets: nb)
+			:mapHashBits(k: keyBits, nbuckets: nb)
 		});
 		local Int is curr: Mem:loadI64(ptr: buckets, byteOffset: idx * 8);
 		while({ curr != 0 }, {
 			local Int is cKey: Mem:loadI64(ptr: curr, byteOffset: 0);
 			local Boolean is matched: if({ keyKind == 0 }, {
-				self:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
+				:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
 			}, {
 				cKey == keyBits
 			});
@@ -237,12 +237,12 @@ Class is HashTable{
 					Mem:retainAddr(objAddr: valBits);
 					Mem:claimPoolAddr(objAddr: valBits);
 				});
-				if({ !isFrozen }, { self:mapUnlock(addr: mAddr); });
+				if({ !isFrozen }, { :mapUnlock(addr: mAddr); });
 				return Mem:addrToObj(addr: valBits);
 			});
 			curr: Mem:loadI64(ptr: curr, byteOffset: 24);
 		});
-		if({ !isFrozen }, { self:mapUnlock(addr: mAddr); });
+		if({ !isFrozen }, { :mapUnlock(addr: mAddr); });
 		return def;
 	}
 
@@ -251,29 +251,29 @@ Class is HashTable{
 		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24);
 		if({ keyKind == 0 && keyBits == 0 }, { return false; });
 		local Boolean is isFrozen: Mem:loadByte(ptr: mAddr, byteOffset: 32) != 0;
-		if({ !isFrozen }, { self:mapLock(addr: mAddr); });
+		if({ !isFrozen }, { :mapLock(addr: mAddr); });
 		local Int is nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
 		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
 		local Int is idx: if({ keyKind == 0 }, {
-			self:mapHashString(strAddr: keyBits, nbuckets: nb)
+			:mapHashString(strAddr: keyBits, nbuckets: nb)
 		}, {
-			self:mapHashBits(k: keyBits, nbuckets: nb)
+			:mapHashBits(k: keyBits, nbuckets: nb)
 		});
 		local Int is curr: Mem:loadI64(ptr: buckets, byteOffset: idx * 8);
 		while({ curr != 0 }, {
 			local Int is cKey: Mem:loadI64(ptr: curr, byteOffset: 0);
 			local Boolean is matched: if({ keyKind == 0 }, {
-				self:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
+				:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
 			}, {
 				cKey == keyBits
 			});
 			if({ matched }, {
-				if({ !isFrozen }, { self:mapUnlock(addr: mAddr); });
+				if({ !isFrozen }, { :mapUnlock(addr: mAddr); });
 				return true;
 			});
 			curr: Mem:loadI64(ptr: curr, byteOffset: 24);
 		});
-		if({ !isFrozen }, { self:mapUnlock(addr: mAddr); });
+		if({ !isFrozen }, { :mapUnlock(addr: mAddr); });
 		return false;
 	}
 
@@ -285,20 +285,20 @@ Class is HashTable{
 		});
 		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24);
 		if({ keyKind == 0 && keyBits == 0 }, { return false; });
-		self:mapLock(addr: mAddr);
+		:mapLock(addr: mAddr);
 		local Int is nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
 		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
 		local Int is idx: if({ keyKind == 0 }, {
-			self:mapHashString(strAddr: keyBits, nbuckets: nb)
+			:mapHashString(strAddr: keyBits, nbuckets: nb)
 		}, {
-			self:mapHashBits(k: keyBits, nbuckets: nb)
+			:mapHashBits(k: keyBits, nbuckets: nb)
 		});
 		local Int is curr: Mem:loadI64(ptr: buckets, byteOffset: idx * 8);
 		local Int is prev: 0;
 		while({ curr != 0 }, {
 			local Int is cKey: Mem:loadI64(ptr: curr, byteOffset: 0);
 			local Boolean is matched: if({ keyKind == 0 }, {
-				self:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
+				:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
 			}, {
 				cKey == keyBits
 			});
@@ -321,94 +321,94 @@ Class is HashTable{
 				Mem:free(ptr: curr);
 				local Int is len: Mem:loadI64(ptr: mAddr, byteOffset: 16);
 				Mem:storeI64(ptr: mAddr, byteOffset: 16, val: len - 1);
-				self:mapUnlock(addr: mAddr);
+				:mapUnlock(addr: mAddr);
 				return true;
 			});
 			prev: curr;
 			curr: Mem:loadI64(ptr: curr, byteOffset: 24);
 		});
-		self:mapUnlock(addr: mAddr);
+		:mapUnlock(addr: mAddr);
 		return false;
 	}
 
 	Function is mapSet(Any is m, String is key, String is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: true);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: true);
 	}
 
 	Function is mapSetAny(Any is m, String is key, Any is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: false);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: false);
 	}
 
 	Function of Any is mapGet(Any is m, String is key, Any is def){
-		return self:mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), def: def);
+		return :mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), def: def);
 	}
 
 	Function of Boolean is mapHas(Any is m, String is key){
-		return self:mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
+		return :mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
 	}
 
 	Function of Boolean is mapRemove(Any is m, String is key){
-		return self:mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
+		return :mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
 	}
 
 	Function is mapSetInt(Any is m, Int is key, String is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key, valBits: Mem:objToAddr(obj: val), valIsArc: true);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key, valBits: Mem:objToAddr(obj: val), valIsArc: true);
 	}
 
 	Function is mapSetIntAny(Any is m, Int is key, Any is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key, valBits: Mem:objToAddr(obj: val), valIsArc: false);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key, valBits: Mem:objToAddr(obj: val), valIsArc: false);
 	}
 
 	Function of Any is mapGetInt(Any is m, Int is key, Any is def){
-		return self:mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key, def: def);
+		return :mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key, def: def);
 	}
 
 	Function of Boolean is mapHasInt(Any is m, Int is key){
-		return self:mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key);
+		return :mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key);
 	}
 
 	Function of Boolean is mapRemoveInt(Any is m, Int is key){
-		return self:mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key);
+		return :mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key);
 	}
 
 	Function is mapSetFlt(Any is m, Float is key, String is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: self:mapFloatToBits(k: key), valBits: Mem:objToAddr(obj: val), valIsArc: true);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: :mapFloatToBits(k: key), valBits: Mem:objToAddr(obj: val), valIsArc: true);
 	}
 
 	Function is mapSetFltAny(Any is m, Float is key, Any is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: self:mapFloatToBits(k: key), valBits: Mem:objToAddr(obj: val), valIsArc: false);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: :mapFloatToBits(k: key), valBits: Mem:objToAddr(obj: val), valIsArc: false);
 	}
 
 	Function of Any is mapGetFlt(Any is m, Float is key, Any is def){
-		return self:mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: self:mapFloatToBits(k: key), def: def);
+		return :mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: :mapFloatToBits(k: key), def: def);
 	}
 
 	Function of Boolean is mapHasFlt(Any is m, Float is key){
-		return self:mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: self:mapFloatToBits(k: key));
+		return :mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: :mapFloatToBits(k: key));
 	}
 
 	Function of Boolean is mapRemoveFlt(Any is m, Float is key){
-		return self:mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: self:mapFloatToBits(k: key));
+		return :mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: :mapFloatToBits(k: key));
 	}
 
 	Function is mapSetObj(Any is m, Any is key, String is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: true);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: true);
 	}
 
 	Function is mapSetObjAny(Any is m, Any is key, Any is val){
-		self:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: false);
+		:mapSetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), valBits: Mem:objToAddr(obj: val), valIsArc: false);
 	}
 
 	Function of Any is mapGetObj(Any is m, Any is key, Any is def){
-		return self:mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), def: def);
+		return :mapGetRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key), def: def);
 	}
 
 	Function of Boolean is mapHasObj(Any is m, Any is key){
-		return self:mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
+		return :mapHasRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
 	}
 
 	Function of Boolean is mapRemoveObj(Any is m, Any is key){
-		return self:mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
+		return :mapRemoveRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
 	}
 
 	Function of Int is mapLength(Any is m){
@@ -417,18 +417,18 @@ Class is HashTable{
 		if({ Mem:loadByte(ptr: mAddr, byteOffset: 32) != 0 }, {
 			return Mem:loadI64(ptr: mAddr, byteOffset: 16);
 		});
-		self:mapLock(addr: mAddr);
+		:mapLock(addr: mAddr);
 		local Int is len: Mem:loadI64(ptr: mAddr, byteOffset: 16);
-		self:mapUnlock(addr: mAddr);
+		:mapUnlock(addr: mAddr);
 		return len;
 	}
 
 	Function is mapFreeze(Any is m){
 		local Int is mAddr: Mem:objToAddr(obj: m);
 		if({ mAddr == 0 }, { return; });
-		self:mapLock(addr: mAddr);
+		:mapLock(addr: mAddr);
 		Mem:storeByte(ptr: mAddr, byteOffset: 32, val: 1);
-		self:mapUnlock(addr: mAddr);
+		:mapUnlock(addr: mAddr);
 	}
 
 	Function of Array is mapKeys(Any is m){
@@ -440,7 +440,7 @@ Class is HashTable{
 			Mem:storeI32(ptr: Mem:objToAddr(obj: a), byteOffset: 24, val: 1);
 		});
 		local Boolean is isFrozen: Mem:loadByte(ptr: mAddr, byteOffset: 32) != 0;
-		if({ !isFrozen }, { self:mapLock(addr: mAddr); });
+		if({ !isFrozen }, { :mapLock(addr: mAddr); });
 		local Int is nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
 		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
 		local Int is i: 0;
@@ -453,7 +453,7 @@ Class is HashTable{
 			});
 			i: i + 1;
 		});
-		if({ !isFrozen }, { self:mapUnlock(addr: mAddr); });
+		if({ !isFrozen }, { :mapUnlock(addr: mAddr); });
 		return a;
 	}
 }

@@ -27,15 +27,15 @@ Class is Parameter{
 	## @param name: Parameter identifier.
 	## @param paramType: Parameter type descriptor.
 	replace Function is init(String is name, Type is paramType){
-		self:name: name;
-		self:paramType: paramType;
+		:name: name;
+		:paramType: paramType;
 	}
 
 	## Attaches a default value expression.
 	##
 	## @param expr: The default value.
 	Function is setDefault(Expression is expr){
-		self:defaultExpr: expr;
-		self:hasDefault: true;
+		:defaultExpr: expr;
+		:hasDefault: true;
 	}
 }

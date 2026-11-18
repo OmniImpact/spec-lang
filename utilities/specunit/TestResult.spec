@@ -33,6 +33,6 @@ Class is TestResult{
 	##
 	## @param testName: The "ClassName.methodName" identity.
 	replace Function is init(String is testName){
-		self:name: testName;
+		:name: testName;
 	}
 }

@@ -84,10 +84,10 @@ Class is LlvmEmitter{
 								local Int is ai: 0;
 								while({ ai < argTypes:length() }, {
 									if({ ai > 0 }, { sig: sig . ', '; });
-									sig: sig . self:llvmType(ty: argTypes:get(index: ai));
+									sig: sig . :llvmType(ty: argTypes:get(index: ai));
 									ai++;
 								});
-								out: out . 'declare ' . self:llvmType(ty: retType) . ' @' . callee . '(' . sig . ")\n";
+								out: out . 'declare ' . :llvmType(ty: retType) . ' @' . callee . '(' . sig . ")\n";
 							});
 						}
 					], default: {});
@@ -105,7 +105,7 @@ Class is LlvmEmitter{
 		local String is out: ```
 ; Spec LLVM IR
 {{prelude:emitAll()}}
-{{self:emitExternalSpecDecls(mod: mod)}}
+{{:emitExternalSpecDecls(mod: mod)}}
 ```;
 
 		# Module globals (held fields, etc.)
@@ -114,7 +114,7 @@ Class is LlvmEmitter{
 			local String is gn: mod:globalNames:get(index: gi, default: '');
 			local IrType is gt: mod:globalTypes:get(index: gi);
 			local String is giv: mod:globalInits:get(index: gi, default: 'zeroinitializer');
-			out: out . '@' . gn . ' = internal global ' . self:llvmType(ty: gt) . ' ' . giv . "\n";
+			out: out . '@' . gn . ' = internal global ' . :llvmType(ty: gt) . ' ' . giv . "\n";
 			gi++;
 		});
 		if({ mod:globalNames:length() > 0 }, { out: out . "\n"; });
@@ -134,12 +134,12 @@ Class is LlvmEmitter{
 			local Int is fi: 0;
 			while({ fi < st:fieldTypes:length() }, {
 				if({ fi > 0 }, { fieldsStr: fieldsStr . ', '; });
-				fieldsStr: fieldsStr . self:llvmType(ty: st:fieldTypes:get(index: fi));
+				fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi));
 				fi++;
 			});
 			out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
 			local String is qn: if({ st:qualifiedName != '' }, { st:qualifiedName }, { st:name });
-			out: out . self:emitCStrGlobal(sym: '@.typename.' . st:name, val: qn);
+			out: out . :emitCStrGlobal(sym: '@.typename.' . st:name, val: qn);
 			local Int is vtLen: st:vtableFns:length();
 			if({ vtLen > 0 }, {
 				local String is vtItems: '';
@@ -160,7 +160,7 @@ Class is LlvmEmitter{
 			});
 
 			# Reflection metadata for this struct
-			out: out . self:emitCStrGlobal(sym: '@.src.' . st:name, val: st:sourceFileBase);
+			out: out . :emitCStrGlobal(sym: '@.src.' . st:name, val: st:sourceFileBase);
 			local String is basesRef: 'null';
 			if({ st:baseNames:length() > 0 }, {
 				local String is bItems: '';
@@ -168,7 +168,7 @@ Class is LlvmEmitter{
 				while({ bi < st:baseNames:length() }, {
 					local String is bn: st:baseNames:get(index: bi, default: '');
 					local String is bSym: '@.bname.' . st:name . '.' . (bi as String);
-					out: out . self:emitCStrGlobal(sym: bSym, val: bn);
+					out: out . :emitCStrGlobal(sym: bSym, val: bn);
 					if({ bi > 0 }, { bItems: bItems . ', '; });
 					bItems: bItems . 'ptr ' . bSym;
 					bi++;
@@ -184,7 +184,7 @@ Class is LlvmEmitter{
 				while({ mi < st:metaMethodNames:length() }, {
 					local String is mn: st:metaMethodNames:get(index: mi, default: '');
 					local String is mSym: '@.mname.' . st:name . '.' . (mi as String);
-					out: out . self:emitCStrGlobal(sym: mSym, val: mn);
+					out: out . :emitCStrGlobal(sym: mSym, val: mn);
 					local String is mfn: st:metaMethodFns:get(index: mi, default: 'null');
 					local String is mfnRef: if({ mfn == 'null' }, { 'null' }, { '@' . mfn });
 					local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
@@ -208,7 +208,7 @@ Class is LlvmEmitter{
 				while({ hi < st:heldNames:length() }, {
 					local String is hn: st:heldNames:get(index: hi, default: '');
 					local String is hSym: '@.hname.' . st:name . '.' . (hi as String);
-					out: out . self:emitCStrGlobal(sym: hSym, val: hn);
+					out: out . :emitCStrGlobal(sym: hSym, val: hn);
 					local String is hg: st:heldGetters:get(index: hi, default: 'null');
 					local String is hgPtr: if({ hg == 'null' }, { 'null' }, { '@' . hg });
 					if({ hi > 0 }, {
@@ -258,7 +258,7 @@ Class is LlvmEmitter{
 		while({ li < mod:stringLiterals:length() }, {
 			local String is raw: mod:stringLiterals:get(index: li, default: '');
 			local Int is byteLen: raw:length() + 1;
-			local String is esc: self:escapeLlvmBytes(s: raw);
+			local String is esc: :escapeLlvmBytes(s: raw);
 			out: out . '@.str.' . (li as String) . ' = private unnamed_addr constant [' . (byteLen as String) . ' x i8] c"' . esc . "\\00\"\n";
 			out: out . '@.str.cache.' . (li as String) . " = internal global ptr null, align 8\n";
 			li++;
@@ -266,30 +266,30 @@ Class is LlvmEmitter{
 		if({ mod:stringLiterals:length() > 0 }, { out: out . "\n"; });
 
 		# Functions
-		if({ self:debugMode }, {
-			self:dbgNodes: [];
-			self:dbgFileIds: Map:init();
-			self:dbgLocIds: Map:init();
+		if({ :debugMode }, {
+			:dbgNodes: [];
+			:dbgFileIds: Map:init();
+			:dbgLocIds: Map:init();
 			# !0 = DICompileUnit, !1 = !{}, !2 = DISubroutineType
-			self:dbgNodes:add(item: '');
-			self:dbgNodes:add(item: '!1 = !{}');
-			self:dbgNodes:add(item: '!2 = !DISubroutineType(types: !1)');
+			:dbgNodes:add(item: '');
+			:dbgNodes:add(item: '!1 = !{}');
+			:dbgNodes:add(item: '!2 = !DISubroutineType(types: !1)');
 		});
 		local Int is fi: 0;
 		while({ fi < mod:functions:length() }, {
-			out: out . self:emitFunction(fn: mod:functions:get(index: fi)) . "\n";
+			out: out . :emitFunction(fn: mod:functions:get(index: fi)) . "\n";
 			fi++;
 		});
-		if({ self:debugMode }, {
-			out: out . self:emitDebugMetadata();
+		if({ :debugMode }, {
+			out: out . :emitDebugMetadata();
 		});
 		return out;
 	}
 
 	local Function of Int is internDebugFile(String is path){
 		local String is norm: if({ path != '' }, { path }, { '<spec>' });
-		if({ self:dbgFileIds:has(key: norm) }, {
-			return self:dbgFileIds:get(key: norm, default: 0);
+		if({ :dbgFileIds:has(key: norm) }, {
+			return :dbgFileIds:get(key: norm, default: 0);
 		});
 		local Int is lastSlash: -1;
 		local Int is n: Buf:bufLength(b: norm);
@@ -306,21 +306,21 @@ Class is LlvmEmitter{
 			dir: if({ lastSlash == 0 }, { '/' }, { Buf:stringSubstring(b: norm, start: 0, end: lastSlash) });
 			file: Buf:stringSubstring(b: norm, start: lastSlash + 1, end: n);
 		});
-		local Int is id: self:dbgNodes:length();
-		self:dbgNodes:add(item: '!' . (id as String) . ' = !DIFile(filename: "' . self:escapeDebugStr(s: file) . '", directory: "' . self:escapeDebugStr(s: dir) . '")');
-		self:dbgFileIds:set(key: norm, value: id);
+		local Int is id: :dbgNodes:length();
+		:dbgNodes:add(item: '!' . (id as String) . ' = !DIFile(filename: "' . :escapeDebugStr(s: file) . '", directory: "' . :escapeDebugStr(s: dir) . '")');
+		:dbgFileIds:set(key: norm, value: id);
 		return id;
 	}
 
 	local Function of Int is internDebugLoc(Int is spId, Int is line){
 		local Int is effLine: if({ line > 0 }, { line }, { 1 });
 		local String is key: (spId as String) . ':' . (effLine as String);
-		if({ self:dbgLocIds:has(key: key) }, {
-			return self:dbgLocIds:get(key: key, default: 0);
+		if({ :dbgLocIds:has(key: key) }, {
+			return :dbgLocIds:get(key: key, default: 0);
 		});
-		local Int is id: self:dbgNodes:length();
-		self:dbgNodes:add(item: '!' . (id as String) . ' = !DILocation(line: ' . (effLine as String) . ', column: 1, scope: !' . (spId as String) . ')');
-		self:dbgLocIds:set(key: key, value: id);
+		local Int is id: :dbgNodes:length();
+		:dbgNodes:add(item: '!' . (id as String) . ' = !DILocation(line: ' . (effLine as String) . ', column: 1, scope: !' . (spId as String) . ')');
+		:dbgLocIds:set(key: key, value: id);
 		return id;
 	}
 
@@ -362,22 +362,22 @@ Class is LlvmEmitter{
 
 	local Function of String is emitDebugMetadata(){
 		local Int is cuFileId: 0;
-		if({ self:dbgNodes:length() <= 3 }, {
-			cuFileId: self:internDebugFile(path: 'main.spec');
+		if({ :dbgNodes:length() <= 3 }, {
+			cuFileId: :internDebugFile(path: 'main.spec');
 		}, {
 			cuFileId: 3;
 		});
-		local Int is dwarfVerId: self:dbgNodes:length();
-		self:dbgNodes:add(item: '!' . (dwarfVerId as String) . ' = !{i32 7, !"Dwarf Version", i32 5}');
-		local Int is dbgVerId: self:dbgNodes:length();
-		self:dbgNodes:add(item: '!' . (dbgVerId as String) . ' = !{i32 2, !"Debug Info Version", i32 3}');
-		self:dbgNodes:set(index: 0, value: '!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !' . (cuFileId as String) . ', producer: "spec", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !1, splitDebugInlining: false, nameTableKind: None)');
+		local Int is dwarfVerId: :dbgNodes:length();
+		:dbgNodes:add(item: '!' . (dwarfVerId as String) . ' = !{i32 7, !"Dwarf Version", i32 5}');
+		local Int is dbgVerId: :dbgNodes:length();
+		:dbgNodes:add(item: '!' . (dbgVerId as String) . ' = !{i32 2, !"Debug Info Version", i32 3}');
+		:dbgNodes:set(index: 0, value: '!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !' . (cuFileId as String) . ', producer: "spec", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !1, splitDebugInlining: false, nameTableKind: None)');
 
 		local String is out: "!llvm.dbg.cu = !{!0}\n";
 		out: out . '!llvm.module.flags = !{!' . (dwarfVerId as String) . ', !' . (dbgVerId as String) . "}\n\n";
 		local Int is ni: 0;
-		while({ ni < self:dbgNodes:length() }, {
-			out: out . self:dbgNodes:get(index: ni, default: '') . "\n";
+		while({ ni < :dbgNodes:length() }, {
+			out: out . :dbgNodes:get(index: ni, default: '') . "\n";
 			ni++;
 		});
 		return out;
@@ -385,7 +385,7 @@ Class is LlvmEmitter{
 
 	local Function of String is emitCStrGlobal(String is sym, String is val){
 		local Int is byteLen: val:length() + 1;
-		local String is esc: self:escapeLlvmBytes(s: val);
+		local String is esc: :escapeLlvmBytes(s: val);
 		return sym . ' = private unnamed_addr constant [' . (byteLen as String) . ' x i8] c"' . esc . "\\00\"\n";
 	}
 
@@ -409,13 +409,13 @@ Class is LlvmEmitter{
 	}
 
 	local Function of String is emitFunction(IrFunction is fn){
-		local String is retStr: self:llvmType(ty: fn:retType);
+		local String is retStr: :llvmType(ty: fn:retType);
 		local String is paramsStr: '';
 		local Int is pi: 0;
 		while({ pi < fn:params:length() }, {
 			if({ pi > 0 }, { paramsStr: paramsStr . ', '; });
 			local IrParam is p: fn:params:get(index: pi);
-			paramsStr: paramsStr . self:llvmType(ty: p:ty) . ' ' . p:name;
+			paramsStr: paramsStr . :llvmType(ty: p:ty) . ' ' . p:name;
 			pi++;
 		});
 
@@ -424,17 +424,17 @@ Class is LlvmEmitter{
 		});
 
 		local String is inlineAttr: '';
-		if({ fn:alwaysInline && !self:debugMode }, {
+		if({ fn:alwaysInline && !:debugMode }, {
 			inlineAttr: ' alwaysinline';
 		});
 
 		local Int is spId: -1;
 		local String is spAttr: '';
-		if({ self:debugMode && fn:sourceFile != '' }, {
-			local Int is fileId: self:internDebugFile(path: fn:sourceFile);
+		if({ :debugMode && fn:sourceFile != '' }, {
+			local Int is fileId: :internDebugFile(path: fn:sourceFile);
 			local Int is fnLine: if({ fn:line > 0 }, { fn:line }, { 1 });
-			spId: self:dbgNodes:length();
-			self:dbgNodes:add(item: '!' . (spId as String) . ' = distinct !DISubprogram(name: "' . self:escapeDebugStr(s: fn:name) . '", scope: !' . (fileId as String) . ', file: !' . (fileId as String) . ', line: ' . (fnLine as String) . ', type: !2, scopeLine: ' . (fnLine as String) . ', spFlags: DISPFlagDefinition, unit: !0)');
+			spId: :dbgNodes:length();
+			:dbgNodes:add(item: '!' . (spId as String) . ' = distinct !DISubprogram(name: "' . :escapeDebugStr(s: fn:name) . '", scope: !' . (fileId as String) . ', file: !' . (fileId as String) . ', line: ' . (fnLine as String) . ', type: !2, scopeLine: ' . (fnLine as String) . ', spFlags: DISPFlagDefinition, unit: !0)');
 			spAttr: ' !dbg !' . (spId as String);
 		});
 
@@ -445,12 +445,12 @@ Class is LlvmEmitter{
 			out: out . blk:label . ":\n";
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
-				local String is instStr: self:emitInst(inst: blk:insts:get(index: ii));
+				local String is instStr: :emitInst(inst: blk:insts:get(index: ii));
 				if({ spId >= 0 }, {
 					local Int is ln: blk:instLines:get(index: ii, default: 0);
 					if({ ln <= 0 }, { ln: fn:line; });
-					local Int is locId: self:internDebugLoc(spId: spId, line: ln);
-					instStr: self:appendDbgToInst(ir: instStr, locId: locId);
+					local Int is locId: :internDebugLoc(spId: spId, line: ln);
+					instStr: :appendDbgToInst(ir: instStr, locId: locId);
 				});
 				out: out . '  ' . instStr . "\n";
 				ii++;
@@ -478,19 +478,19 @@ Class is LlvmEmitter{
 				return dst . ' = call ptr @__spec_intern_cached(ptr @.str.' . idStr . ', ptr @.str.cache.' . idStr . ')';
 			},
 			IrInst:Alloca: local Function of String(String is slot, IrType is ty){
-				return slot . ' = alloca ' . self:llvmType(ty: ty);
+				return slot . ' = alloca ' . :llvmType(ty: ty);
 			},
 			IrInst:Load: local Function of String(String is dst, String is slot, IrType is ty){
-				local String is t: self:llvmType(ty: ty);
+				local String is t: :llvmType(ty: ty);
 				return dst . ' = load ' . t . ', ptr ' . slot;
 			},
 			IrInst:Store: local Function of String(String is slot, String is val, IrType is ty){
-				local String is t: self:llvmType(ty: ty);
+				local String is t: :llvmType(ty: ty);
 				return 'store ' . t . ' ' . val . ', ptr ' . slot;
 			},
 			IrInst:BinOp: local Function of String(String is dst, String is op, String is lhs, String is rhs, IrType is ty){
-				local String is t: self:llvmType(ty: ty);
-				local String is llvmOp: self:llvmBinOp(op: op, ty: ty);
+				local String is t: :llvmType(ty: ty);
+				local String is llvmOp: :llvmBinOp(op: op, ty: ty);
 				return dst . ' = ' . llvmOp . ' ' . t . ' ' . lhs . ', ' . rhs;
 			},
 			IrInst:UnaryOp: local Function of String(String is dst, String is op, String is operand, IrType is ty){
@@ -507,7 +507,7 @@ Class is LlvmEmitter{
 				return dst . ' = add i64 0, ' . operand;
 			},
 			IrInst:Cmp: local Function of String(String is dst, String is op, String is lhs, String is rhs, IrType is ty){
-				local String is t: self:llvmType(ty: ty);
+				local String is t: :llvmType(ty: ty);
 				if({ ty == IrType:F64 }, {
 					local String is fpred: 'oeq';
 					if({ op == '!=' }, { fpred: 'one'; });
@@ -530,10 +530,10 @@ Class is LlvmEmitter{
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
-					argsStr: argsStr . self:llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
+					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
 					ai++;
 				});
-				local String is rt: self:llvmType(ty: retType);
+				local String is rt: :llvmType(ty: retType);
 				if({ hasDst }, {
 					return dst . ' = call ' . rt . ' @' . callee . '(' . argsStr . ')';
 				});
@@ -544,10 +544,10 @@ Class is LlvmEmitter{
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
-					argsStr: argsStr . self:llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
+					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
 					ai++;
 				});
-				local String is rt: self:llvmType(ty: retType);
+				local String is rt: :llvmType(ty: retType);
 				if({ hasDst }, {
 					return dst . ' = call ' . rt . ' ' . fnPtr . '(' . argsStr . ')';
 				});
@@ -582,10 +582,10 @@ Class is LlvmEmitter{
 				if({ fromType == IrType:I64 && toType == IrType:F64 }, { return dst . ' = sitofp i64 ' . val . ' to double'; });
 				if({ fromType == IrType:F64 && toType == IrType:I64 }, { return dst . ' = fptosi double ' . val . ' to i64'; });
 				if({ (fromType == IrType:I64 || fromType == IrType:I1) && toType == IrType:Ptr }, {
-					return dst . ' = inttoptr ' . self:llvmType(ty: fromType) . ' ' . val . ' to ptr';
+					return dst . ' = inttoptr ' . :llvmType(ty: fromType) . ' ' . val . ' to ptr';
 				});
 				if({ fromType == IrType:Ptr && (toType == IrType:I64 || toType == IrType:I1) }, {
-					return dst . ' = ptrtoint ptr ' . val . ' to ' . self:llvmType(ty: toType);
+					return dst . ' = ptrtoint ptr ' . val . ' to ' . :llvmType(ty: toType);
 				});
 				if({ fromType == IrType:F64 && toType == IrType:Ptr }, {
 					local String is bits: dst . '_bits';
@@ -599,7 +599,7 @@ Class is LlvmEmitter{
 				});
 				if({ fromType == IrType:I1 && toType == IrType:I64 }, { return dst . ' = zext i1 ' . val . ' to i64'; });
 				if({ fromType == IrType:I64 && toType == IrType:I1 }, { return dst . ' = icmp ne i64 ' . val . ', 0'; });
-				return dst . ' = bitcast ' . self:llvmType(ty: fromType) . ' ' . val . ' to ' . self:llvmType(ty: toType);
+				return dst . ' = bitcast ' . :llvmType(ty: fromType) . ' ' . val . ' to ' . :llvmType(ty: toType);
 			},
 			IrInst:Retain: local Function of String(String is val){
 				return 'call ptr @spec_rt_retain(ptr ' . val . ')';
@@ -609,7 +609,7 @@ Class is LlvmEmitter{
 			},
 			IrInst:Ret: local Function of String(Boolean is hasVal, String is val, IrType is ty){
 				if({ hasVal }, {
-					return 'ret ' . self:llvmType(ty: ty) . ' ' . val;
+					return 'ret ' . :llvmType(ty: ty) . ' ' . val;
 				});
 				return 'ret void';
 			},

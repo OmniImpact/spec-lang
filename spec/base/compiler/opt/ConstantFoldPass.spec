@@ -32,7 +32,7 @@ Class of SpecOptimizer is ConstantFoldPass{
 		local Int is bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			self:foldBlock(blk: blk);
+			:foldBlock(blk: blk);
 			bi++;
 		});
 	}

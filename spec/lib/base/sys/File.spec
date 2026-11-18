@@ -25,7 +25,7 @@ Class is File{
 	}
 
 	local Function is emitLastError(Function is onError, String is fallback){
-		if({ !self:hasClosure(cb: onError) }, { return; });
+		if({ !:hasClosure(cb: onError) }, { return; });
 		local Int is ec: base:sysinternal:File:pal_last_error_cstr();
 		if({ ec != 0 }, {
 			local Int is elen: Mem:cstrLen(cstrAddr: ec);
@@ -38,9 +38,9 @@ Class is File{
 	## Reads the entire contents of a file with optional success and error callback handlers.
 	Function of String is fileRead(String is path, Function is onSuccess, Function is onError, String is default: ''){
 		local String is defStr: if({ Mem:objToAddr(obj: default) != 0 }, { default }, { '' });
-		local Int is pc: self:cstrOf(s: path);
+		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ self:hasClosure(cb: onError) }, { onError('invalid path'); });
+			if({ :hasClosure(cb: onError) }, { onError('invalid path'); });
 			return defStr;
 		});
 		local Int is lenBuf: Mem:alloc(bytes: 8);
@@ -49,15 +49,15 @@ Class is File{
 		Mem:free(ptr: lenBuf);
 		if({ bufAddr < 0 }, {
 			if({ bufAddr == -2 }, {
-				if({ self:hasClosure(cb: onError) }, { onError('out of memory'); });
+				if({ :hasClosure(cb: onError) }, { onError('out of memory'); });
 			}, {
-				self:emitLastError(onError: onError, fallback: 'read failed');
+				:emitLastError(onError: onError, fallback: 'read failed');
 			});
 			return defStr;
 		});
 		local String is res: Mem:strFromBytes(srcAddr: bufAddr, len: len);
 		base:sysinternal:File:pal_file_free(ptr: bufAddr);
-		if({ self:hasClosure(cb: onSuccess) }, {
+		if({ :hasClosure(cb: onSuccess) }, {
 			onSuccess(res);
 		});
 		return res;
@@ -66,16 +66,16 @@ Class is File{
 	## Reads a file asynchronously on a background worker thread, notifying completion via callbacks.
 	Function is fileReadAsync(String is path, Function is onSuccess, Function is onError, String is default: ''){
 		local Function is task: local Function(){
-			self:fileRead(path: path, onSuccess: onSuccess, onError: onError, default: default);
+			:fileRead(path: path, onSuccess: onSuccess, onError: onError, default: default);
 		};
 		Mem:retainAddr(objAddr: Mem:objToAddr(obj: task));
 		base:sysinternal:File:pal_spawn_async(task: task);
 	}
 
 	local Function of Boolean is writeInternal(String is path, String is content, Int is append, Function is onSuccess, Function is onError){
-		local Int is pc: self:cstrOf(s: path);
+		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ self:hasClosure(cb: onError) }, { onError('invalid path'); });
+			if({ :hasClosure(cb: onError) }, { onError('invalid path'); });
 			return false;
 		});
 		local Int is cAddr: Mem:objToAddr(obj: content);
@@ -83,10 +83,10 @@ Class is File{
 		local Int is cLen: if({ cAddr != 0 }, { Mem:loadI64(ptr: cAddr, byteOffset: 8) }, { 0 });
 		local Int is written: base:sysinternal:File:pal_file_write(path_cstr: pc, data_addr: dAddr, len: cLen, append: append);
 		if({ written < 0 }, {
-			self:emitLastError(onError: onError, fallback: 'write failed');
+			:emitLastError(onError: onError, fallback: 'write failed');
 			return false;
 		});
-		if({ self:hasClosure(cb: onSuccess) }, {
+		if({ :hasClosure(cb: onSuccess) }, {
 			onSuccess(written);
 		});
 		return true;
@@ -94,18 +94,18 @@ Class is File{
 
 	## Writes string content to a file with optional success and error callback handlers.
 	Function of Boolean is fileWrite(String is path, String is content, Function is onSuccess, Function is onError){
-		return self:writeInternal(path: path, content: content, append: 0, onSuccess: onSuccess, onError: onError);
+		return :writeInternal(path: path, content: content, append: 0, onSuccess: onSuccess, onError: onError);
 	}
 
 	## Appends string content to a file with optional success and error callback handlers.
 	Function of Boolean is fileAppend(String is path, String is content, Function is onSuccess, Function is onError){
-		return self:writeInternal(path: path, content: content, append: 1, onSuccess: onSuccess, onError: onError);
+		return :writeInternal(path: path, content: content, append: 1, onSuccess: onSuccess, onError: onError);
 	}
 
 	## Writes string content to a file asynchronously on a background worker thread.
 	Function is fileWriteAsync(String is path, String is content, Function is onSuccess, Function is onError){
 		local Function is task: local Function(){
-			self:fileWrite(path: path, content: content, onSuccess: onSuccess, onError: onError);
+			:fileWrite(path: path, content: content, onSuccess: onSuccess, onError: onError);
 		};
 		Mem:retainAddr(objAddr: Mem:objToAddr(obj: task));
 		base:sysinternal:File:pal_spawn_async(task: task);
@@ -113,31 +113,31 @@ Class is File{
 
 	## Tests whether a file or directory exists at the specified path.
 	Function of Boolean is fileExists(String is path){
-		local Int is pc: self:cstrOf(s: path);
+		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, { return false; });
 		return base:sysinternal:File:pal_file_exists(path_cstr: pc);
 	}
 
 	## Deletes a file at the specified filesystem path.
 	Function of Boolean is fileRemove(String is path, Function is onError: local Function(String is error){}){
-		local Int is pc: self:cstrOf(s: path);
+		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ self:hasClosure(cb: onError) }, { onError('invalid path'); });
+			if({ :hasClosure(cb: onError) }, { onError('invalid path'); });
 			return false;
 		});
 		if({ base:sysinternal:File:pal_file_remove(path_cstr: pc) }, {
 			return true;
 		});
-		self:emitLastError(onError: onError, fallback: 'remove failed');
+		:emitLastError(onError: onError, fallback: 'remove failed');
 		return false;
 	}
 
 	## Creates a unique temporary file securely and returns its path.
 	Function of String is fileTemp(String is template: '/tmp/spec_XXXXXX.c', Function is onError: local Function(String is error){}){
-		local Int is tc: self:cstrOf(s: template);
+		local Int is tc: :cstrOf(s: template);
 		local Int is outAddr: base:sysinternal:File:pal_file_temp(tpl_cstr: tc);
 		if({ outAddr == 0 }, {
-			self:emitLastError(onError: onError, fallback: 'mkstemp failed');
+			:emitLastError(onError: onError, fallback: 'mkstemp failed');
 			return '';
 		});
 		local Int is olen: Mem:cstrLen(cstrAddr: outAddr);

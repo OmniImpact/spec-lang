@@ -50,7 +50,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal && fn:name != mod:entryFunction }, {
-				self:tryAnalyzeWrapper(
+				:tryAnalyzeWrapper(
 					fn: fn,
 					wrapCallee: wrapCallee,
 					wrapRetType: wrapRetType,
@@ -74,7 +74,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 			while({ fi < mod:functions:length() }, {
 				local IrFunction is fn: mod:functions:get(index: fi);
 				if({ !fn:isExternal }, {
-					if({ self:rewriteCallsInFunction(
+					if({ :rewriteCallsInFunction(
 						fn: fn,
 						wrapCallee: wrapCallee,
 						wrapRetType: wrapRetType,
@@ -192,7 +192,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 					},
 					IrInst:Ret: local Function(Boolean is hasVal, String is val, IrType is ty){
 						if({ !sawCall }, { ok: false; }, {
-							if({ !self:sameIrType(a: ty, b: fn:retType) || !self:sameIrType(a: callRetType, b: fn:retType) }, {
+							if({ !:sameIrType(a: ty, b: fn:retType) || !:sameIrType(a: callRetType, b: fn:retType) }, {
 								ok: false;
 							}, {
 								if({ hasVal }, {

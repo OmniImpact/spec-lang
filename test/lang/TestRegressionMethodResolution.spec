@@ -63,12 +63,12 @@ Class is UserRecord{
 
 	## Returns the record identifier. Must NOT be lowered to spec_array_get.
 	Function of Int is get(){
-		return self:identifier;
+		return :identifier;
 	}
 
 	## Control accessor with a non-colliding name.
 	Function of Int is fetchIdentifier(){
-		return self:identifier;
+		return :identifier;
 	}
 }
 
@@ -83,6 +83,6 @@ Class is LogStore{
 
 	## Returns the configured capacity. Must NOT be lowered to spec_array_length.
 	Function of Int is length(){
-		return self:maxEntries;
+		return :maxEntries;
 	}
 }

@@ -13,7 +13,7 @@ Class is HelloWorld{
 	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: 'name', default: 'User');
 		local Greeter is greeter: Greeter:init();
-		line(greeter:greet(greeting: self:greeting, name: name));
+		line(greeter:greet(greeting: :greeting, name: name));
 	}
 
 }

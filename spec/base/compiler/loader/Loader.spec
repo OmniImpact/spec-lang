@@ -52,51 +52,51 @@ Class is Loader{
 
 
 	replace Function is init(){
-		self:loadedFiles: Map:init();
-		self:loadedClasses: [];
-		self:seenClassNames: Map:init();
-		self:seenBareNames: Map:init();
-		self:parseErrors: [];
-		self:extraSourceDirs: [];
+		:loadedFiles: Map:init();
+		:loadedClasses: [];
+		:seenClassNames: Map:init();
+		:seenBareNames: Map:init();
+		:parseErrors: [];
+		:extraSourceDirs: [];
 	}
 
 	Function of Array of String is getParseErrors(){
-		return self:parseErrors;
+		return :parseErrors;
 	}
 
 	## Releases loaded class lists and tracking maps after program assembly.
 	Function is cleanup(){
-		self:loadedFiles: Map:init();
-		self:loadedClasses: [];
-		self:seenClassNames: Map:init();
-		self:seenBareNames: Map:init();
-		self:parseErrors: [];
-		self:extraSourceDirs: [];
+		:loadedFiles: Map:init();
+		:loadedClasses: [];
+		:seenClassNames: Map:init();
+		:seenBareNames: Map:init();
+		:parseErrors: [];
+		:extraSourceDirs: [];
 	}
 
 	## Adds an explicit source directory to scan for packages and modules.
 	Function is addSourceDir(String is dir){
 		if({ dir != '' }, {
-			self:extraSourceDirs:add(item: dir);
+			:extraSourceDirs:add(item: dir);
 		});
 	}
 
 	## Sets explicit source directories to scan for packages and modules.
 	Function is setSourceDirs(Array of String is dirs){
-		self:extraSourceDirs: dirs;
+		:extraSourceDirs: dirs;
 	}
 
 	## Recursively reads, tokenizes, and parses a source file and its transitive dependencies.
 	##
 	## @param filePath: Path to target `.spec` file.
 	Function is loadFile(String is filePath){
-		if({ self:loadedFiles:has(key: filePath) }, {
+		if({ :loadedFiles:has(key: filePath) }, {
 			return;
 		});
-		self:loadedFiles:set(key: filePath, value: 'true');
+		:loadedFiles:set(key: filePath, value: 'true');
 
 		if({ !fileExists(path: filePath) }, {
-			self:parseErrors:add(item: self:errText:errModuleFileNotFound(path: filePath));
+			:parseErrors:add(item: :errText:errModuleFileNotFound(path: filePath));
 			return;
 		});
 
@@ -109,13 +109,13 @@ Class is Loader{
 		if({ lexer:hasErrors() }, {
 			local Array of Error is lexErrors: lexer:getErrors();
 			lexErrors:each(action: local Function(Error is err){
-				self:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . err:toString());
+				:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . err:toString());
 			});
 		});
 		if({ parser:hasErrors() }, {
 			local Array of Error is parseErrs: parser:getErrors();
 			parseErrs:each(action: local Function(Error is err){
-				self:parseErrors:add(item: err:toString());
+				:parseErrors:add(item: err:toString());
 			});
 		});
 
@@ -133,18 +133,18 @@ Class is Loader{
 			# preferred the new tree, so it is skipped.
 			local String is qName: c:namespaceJoined() . ':' . c:name;
 			local Boolean is isFloor: c:namespaceJoined():endsWith(suffix: ':sysinternal') || c:namespaceJoined() == 'sysinternal';
-			local Boolean is dup: self:seenClassNames:has(key: qName);
-			if({ !isFloor && !dup && self:seenBareNames:has(key: c:name) }, {
+			local Boolean is dup: :seenClassNames:has(key: qName);
+			if({ !isFloor && !dup && :seenBareNames:has(key: c:name) }, {
 				dup: true;
 			});
 			if({ !dup }, {
-				self:seenClassNames:set(key: qName, value: 'true');
+				:seenClassNames:set(key: qName, value: 'true');
 				if({ !isFloor }, {
-					self:seenBareNames:set(key: c:name, value: 'true');
+					:seenBareNames:set(key: c:name, value: 'true');
 				});
-				self:loadedClasses:add(item: c);
+				:loadedClasses:add(item: c);
 			});
-			self:collectImportsFromClass(c: c);
+			:collectImportsFromClass(c: c);
 		});
 	}
 
@@ -154,7 +154,7 @@ Class is Loader{
 	Function is collectImportsFromClass(ClassInfo is c){
 		c:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:CLASS }, {
-				self:collectImportsFromClass(c: m:nestedClass);
+				:collectImportsFromClass(c: m:nestedClass);
 			});
 			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
@@ -162,13 +162,13 @@ Class is Loader{
 						items:each(action: local Function(Expression is item){
 							local Boolean is handled: match(on: item, when: [
 								Expression:ArrayLit: local Function(Array of Expression is subItems){
-									self:loadArrayFormUsing(items: subItems, c: c);
+									:loadArrayFormUsing(items: subItems, c: c);
 									return true;
 								},
 								else: { false }
 							]);
 							if({ !handled }, {
-								self:parseErrors:add(item: self:errText:errMalformedImport(className: c:name));
+								:parseErrors:add(item: :errText:errMalformedImport(className: c:name));
 							});
 						});
 					},
@@ -209,18 +209,18 @@ Class is Loader{
 	## its path — determines the package it provides; the map only says
 	## where to find candidates, and resolution verifies the namespace.
 	Function is buildScanIndex(){
-		self:classPaths: Map:init();
-		self:packageDirs: Map:init();
+		:classPaths: Map:init();
+		:packageDirs: Map:init();
 		# 0. User-configured source directories (highest priority project roots).
-		self:extraSourceDirs:each(action: local Function(String is d){
+		:extraSourceDirs:each(action: local Function(String is d){
 			if({ d != '' }, {
-				self:scanTree(dir: d, depth: 0);
+				:scanTree(dir: d, depth: 0);
 			});
 		});
 		# 1. The input file's tree (project packages override).
-		local String is inDir: self:dirOf(path: self:rootInputPath);
+		local String is inDir: :dirOf(path: :rootInputPath);
 		if({ inDir != '' }, {
-			self:scanTree(dir: inDir, depth: 0);
+			:scanTree(dir: inDir, depth: 0);
 		});
 		# 2. The executable's tree — walking UP while the location holds no
 		# .spec content (a bin/-layout install keeps the sources at the
@@ -234,17 +234,17 @@ Class is Loader{
 		# have yielded no .spec content at all.
 		local Int is indexed: 0;
 		while({ indexed == 0 && exeDir != '' && exeDir != '/' && exeDir != '\\' && !exeDir:endsWith(suffix: ':') }, {
-			self:scanTree(dir: exeDir, depth: 0);
-			indexed: self:classPaths:keys():length();
+			:scanTree(dir: exeDir, depth: 0);
+			indexed: :classPaths:keys():length();
 			if({ indexed == 0 }, {
-				exeDir: self:dirOf(path: exeDir);
+				exeDir: :dirOf(path: exeDir);
 			});
 		});
 		# 3. The working directory: for a compiler invoked from a project
 		# whose packages sit at the cwd, or a stage binary run from the
 		# repository root during bootstrap.
-		self:scanTree(dir: '.', depth: 0);
-		self:indexBuilt: true;
+		:scanTree(dir: '.', depth: 0);
+		:indexBuilt: true;
 	}
 
 	## Recursively collects .spec files under [dir] into the scan map.
@@ -272,21 +272,21 @@ Class is Loader{
 			local String is child: Buf:stringCopy(b: dir . '/' . name);
 			if({ name:endsWith(suffix: '.spec') }, {
 				local String is stem: name:substring(start: 0, end: name:length() - 5);
-				if({ self:classPaths:has(key: stem) }, {
-					self:classPaths:set(key: stem, value: self:classPaths:getString(key: stem, default: '') . ';' . child);
+				if({ :classPaths:has(key: stem) }, {
+					:classPaths:set(key: stem, value: :classPaths:getString(key: stem, default: '') . ';' . child);
 				}, {
-					self:classPaths:set(key: stem, value: child);
+					:classPaths:set(key: stem, value: child);
 				});
-				if({ self:packageDirs:has(key: dir) }, {
-					self:packageDirs:set(key: dir, value: self:packageDirs:getString(key: dir, default: '') . ';' . name);
+				if({ :packageDirs:has(key: dir) }, {
+					:packageDirs:set(key: dir, value: :packageDirs:getString(key: dir, default: '') . ';' . name);
 				}, {
-					self:packageDirs:set(key: dir, value: name);
+					:packageDirs:set(key: dir, value: name);
 				});
 				return;
 			});
 			local Array of String is subEntries: Dir:dirList(path: child);
 			if({ subEntries:length() > 0 }, {
-				self:scanTree(dir: child, depth: depth + 1);
+				:scanTree(dir: child, depth: depth + 1);
 			});
 		});
 	}
@@ -296,7 +296,7 @@ Class is Loader{
 	## @param className: The class whose file is wanted.
 	## @return: Candidate paths (first-found wins the try order).
 	Function of Array of String is candidatesFor(String is className){
-		local String is joined: self:classPaths:getString(key: className, default: '');
+		local String is joined: :classPaths:getString(key: className, default: '');
 		# The scan order is the try order; empty segments (doubled or
 		# trailing delimiters) carry no candidate and drop out.
 		return joined:split(delimiter: ';'):filter(predicate: local Function of Boolean(String is seg){
@@ -308,7 +308,7 @@ Class is Loader{
 	##
 	## @return: The loaded-file count.
 	Function of Int is loadedFileCount(){
-		return self:loadedFiles:length();
+		return :loadedFiles:length();
 	}
 
 	## True when the loaded program now provides [className] declaring the
@@ -320,7 +320,7 @@ Class is Loader{
 	## @return: true when provided.
 	Function of Boolean is provides(String is nsJoined, String is className){
 		local Boolean is ok: false;
-		self:loadedClasses:each(action: local Function(ClassInfo is c){
+		:loadedClasses:each(action: local Function(ClassInfo is c){
 			if({ !ok }, {
 				# A package-form request (no class name) accepts any class
 				# declaring the namespace; a class form requires the class.
@@ -346,8 +346,8 @@ Class is Loader{
 	## @param termClass: The trailing class identifier.
 	## @param c: The importing class (for diagnostics).
 	Function is resolveImport(Array of String is parts, String is termClass, ClassInfo is c){
-		if({ !self:indexBuilt }, {
-			self:buildScanIndex();
+		if({ !:indexBuilt }, {
+			:buildScanIndex();
 		});
 		local String is nsJoined: '';
 		parts:each(action: local Function(String is seg){
@@ -358,15 +358,15 @@ Class is Loader{
 			});
 		});
 		local String is wanted: nsJoined . ':' . termClass;
-		local Array of String is cands: self:candidatesFor(className: termClass);
+		local Array of String is cands: :candidatesFor(className: termClass);
 		# Class form: try each candidate file; accept the first whose load
 		# declares the requested class in the requested namespace.
 		local Boolean is resolved: false;
 		if({ termClass != '' }, {
 			cands:each(action: local Function(String is cand){
 				if({ !resolved }, {
-					self:loadFile(filePath: cand);
-					if({ self:provides(nsJoined: nsJoined, className: termClass) }, {
+					:loadFile(filePath: cand);
+					if({ :provides(nsJoined: nsJoined, className: termClass) }, {
 						resolved: true;
 					});
 				});
@@ -381,22 +381,22 @@ Class is Loader{
 			# The keys array is owned (a var-decl init is a consumption
 			# position): nested loadFile calls claim hundreds of pool slots
 			# and would evict a pool-held keys array mid-iteration.
-			local Array of String is allDirs: self:packageDirs:keys();
+			local Array of String is allDirs: :packageDirs:keys();
 			allDirs:each(action: local Function(String is dirPath){
 				if({ dirPath:endsWith(suffix: dirSuffix) }, {
-					local String is namesJoined: self:packageDirs:getString(key: dirPath, default: '');
+					local String is namesJoined: :packageDirs:getString(key: dirPath, default: '');
 					local Array of String is names: namesJoined:split(delimiter: ';');
 					names:each(action: local Function(String is name){
-						self:loadFile(filePath: Buf:stringCopy(b: dirPath . '/' . name));
+						:loadFile(filePath: Buf:stringCopy(b: dirPath . '/' . name));
 					});
 				});
 			});
-			if({ self:provides(nsJoined: nsJoined, className: '') }, {
+			if({ :provides(nsJoined: nsJoined, className: '') }, {
 				resolved: true;
 			});
 		});
 		if({ !resolved }, {
-			self:parseErrors:add(item: self:errText:errCannotResolveImport(wanted: wanted, className: c:name));
+			:parseErrors:add(item: :errText:errCannotResolveImport(wanted: wanted, className: c:name));
 		});
 	}
 
@@ -427,7 +427,7 @@ Class is Loader{
 				else: {}
 			]);
 		});
-		self:resolveImport(parts: parts, termClass: termClass, c: c);
+		:resolveImport(parts: parts, termClass: termClass, c: c);
 	}
 
 	## Directory portion of a file path ('' when the path has no slash).
@@ -485,10 +485,10 @@ Class is Loader{
 	## @param c: [ClassInfo] to remove.
 	Function is removeClassFromLoaded(ClassInfo is c){
 		local Boolean is found: false;
-		while([Int is idx: 0], { !found && idx < self:loadedClasses:length() }, {
-			local ClassInfo is cur: self:loadedClasses:get(index: idx);
+		while([Int is idx: 0], { !found && idx < :loadedClasses:length() }, {
+			local ClassInfo is cur: :loadedClasses:get(index: idx);
 			if({ cur == c }, {
-				self:loadedClasses:removeAt(index: idx, default: c);
+				:loadedClasses:removeAt(index: idx, default: c);
 				found: true;
 			}, {
 				idx++;
@@ -497,14 +497,14 @@ Class is Loader{
 	}
 
 	Function of ProgramNode is loadProgram(String is rootPath){
-		self:loadedFiles: Map:init();
-		self:loadedClasses: [];
-		self:seenClassNames: Map:init();
-		self:seenBareNames: Map:init();
-		self:parseErrors: [];
+		:loadedFiles: Map:init();
+		:loadedClasses: [];
+		:seenClassNames: Map:init();
+		:seenBareNames: Map:init();
+		:parseErrors: [];
 
 		# The input path anchors the scan roots before any resolution.
-		self:rootInputPath: rootPath;
+		:rootInputPath: rootPath;
 
 		# Root class lattice preloads, before any user code. Resolution
 		# prefers the migration stdlib (spec/lib) over the legacy lib.
@@ -532,22 +532,22 @@ Class is Loader{
 			'Intern'
 		];
 		preloads:each(action: local Function(String is cls){
-			if({ !self:indexBuilt }, {
-				self:buildScanIndex();
+			if({ !:indexBuilt }, {
+				:buildScanIndex();
 			});
-			local Array of String is cands: self:candidatesFor(className: cls);
+			local Array of String is cands: :candidatesFor(className: cls);
 			cands:each(action: local Function(String is cand){
-				if({ !self:loadedFiles:has(key: cand) }, {
-					self:loadFile(filePath: cand);
+				if({ !:loadedFiles:has(key: cand) }, {
+					:loadFile(filePath: cand);
 				});
 			});
 		});
 
-		self:loadFile(filePath: rootPath);
-		self:appendImplicitClass();
-		self:synthesizeInstanceImports();
+		:loadFile(filePath: rootPath);
+		:appendImplicitClass();
+		:synthesizeInstanceImports();
 
-		return ProgramNode:init(classes: self:loadedClasses);
+		return ProgramNode:init(classes: :loadedClasses);
 	}
 
 	## E1/E2 full form: a field-ful class instance-imported
@@ -558,7 +558,7 @@ Class is Loader{
 	## imports synthesize nothing: their methods are self-free and
 	## dispatch stays elided (§2.4). Nested classes are included.
 	Function is synthesizeInstanceImports(){
-		self:synthesizeInto(classes: self:loadedClasses);
+		:synthesizeInto(classes: :loadedClasses);
 	}
 
 	## Recursive synthesis walk over a class list (nested classes included).
@@ -584,7 +584,7 @@ Class is Loader{
 													});
 												},
 												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
-													self:synthesizeFor(c: c, asExpr: seg, pkgPrefix: pkgPrefix);
+													:synthesizeFor(c: c, asExpr: seg, pkgPrefix: pkgPrefix);
 												},
 												else: {}
 											]);
@@ -601,13 +601,13 @@ Class is Loader{
 			c:members:each(action: local Function(Member is m){
 				if({ m:kind == MemberKind:CLASS }, {
 					local Array of ClassInfo is one: [m:nestedClass];
-					self:synthesizeInto(classes: one);
+					:synthesizeInto(classes: one);
 				});
 			});
 			# an inner class inherits the enclosing
 			# chain's as-imports — its instances carry their own synthesized
 			# fields, so the inherited functions dispatch on the inner.
-			self:synthesizeInheritedImports(cls: c);
+			:synthesizeInheritedImports(cls: c);
 		});
 	}
 
@@ -624,7 +624,7 @@ Class is Loader{
 		});
 		visited:set(key: cls:name, value: 'true');
 		cls:baseClasses:each(action: local Function(String is baseName){
-			local ClassInfo is base: self:findLoadedClass(name: baseName);
+			local ClassInfo is base: :findLoadedClass(name: baseName);
 			if({ base:name != '' }, {
 				base:members:each(action: local Function(Member is m){
 					if({ m:name == 'using' && m:hasInit }, {
@@ -644,7 +644,7 @@ Class is Loader{
 														});
 													},
 													Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
-														self:synthesizeFor(c: cls, asExpr: seg, pkgPrefix: pkgPrefix);
+														:synthesizeFor(c: cls, asExpr: seg, pkgPrefix: pkgPrefix);
 													},
 													else: {}
 												]);
@@ -658,7 +658,7 @@ Class is Loader{
 						]);
 					});
 				});
-				self:synthesizeInheritedImports(cls: base, visited: visited);
+				:synthesizeInheritedImports(cls: base, visited: visited);
 			});
 		});
 	}
@@ -681,14 +681,14 @@ Class is Loader{
 			else: {}
 		]);
 		local ClassInfo is target: if({ pkgPrefix != '' }, {
-			self:findLoadedClassInNamespace(name: targetName, nsJoined: pkgPrefix);
+			:findLoadedClassInNamespace(name: targetName, nsJoined: pkgPrefix);
 		}, {
-			self:findLoadedClass(name: targetName);
+			:findLoadedClass(name: targetName);
 		});
 		if({ target:name == '' }, {
 			return;
 		});
-		if({ !self:isFieldFul(c: target) }, {
+		if({ !:isFieldFul(c: target) }, {
 			return;
 		});
 		local String is fieldName: '_import_' . targetName;
@@ -712,7 +712,7 @@ Class is Loader{
 				if({ isCallInit }, {
 					already: true;
 				}, {
-					self:parseErrors:add(item: self:errText:errSyntheticImportCollision(fieldName: fieldName, className: c:name));
+					:parseErrors:add(item: :errText:errSyntheticImportCollision(fieldName: fieldName, className: c:name));
 				});
 			});
 		});
@@ -754,12 +754,12 @@ Class is Loader{
 	Function of ClassInfo is findLoadedClass(String is name){
 		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
 		local Boolean is found: false;
-		local Int is count: self:loadedClasses:length();
+		local Int is count: :loadedClasses:length();
 		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
 			{
-				local ClassInfo is cand: self:loadedClasses:get(index: idx);
+				local ClassInfo is cand: :loadedClasses:get(index: idx);
 				idx++;
 				if({ cand:name == name }, {
 					res: cand;
@@ -774,12 +774,12 @@ Class is Loader{
 	Function of ClassInfo is findLoadedClassInNamespace(String is name, String is nsJoined){
 		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
 		local Boolean is found: false;
-		local Int is count: self:loadedClasses:length();
+		local Int is count: :loadedClasses:length();
 		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
 			{
-				local ClassInfo is cand: self:loadedClasses:get(index: idx);
+				local ClassInfo is cand: :loadedClasses:get(index: idx);
 				idx++;
 				if({ cand:name == name && cand:namespaceJoined() == nsJoined }, {
 					res: cand;
@@ -799,7 +799,7 @@ Class is Loader{
 	## implicit Class would cycle). Enum keeps its own root per the
 	## enumHeader contract.
 	Function is appendImplicitClass(){
-		self:loadedClasses:each(action: local Function(ClassInfo is c){
+		:loadedClasses:each(action: local Function(ClassInfo is c){
 			if({ c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' }, {
 				c:withBaseClasses(name: c:name, baseClasses: ['Class'], members: c:members);
 			});

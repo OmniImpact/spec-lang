@@ -45,11 +45,11 @@ Class is HeldEntry{
 	local String is name;
 
 	Function is init(String is n){
-		self:name: n;
+		:name: n;
 	}
 
 	replace Function of String is toString(){
-		return 'Entry(' . self:name . ')';
+		return 'Entry(' . :name . ')';
 	}
 }
 

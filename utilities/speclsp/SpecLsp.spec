@@ -200,7 +200,7 @@ Class is SpecLsp{
 				});
 				searching: false;
 			}, {
-				if({ self:workspaceRoot != '' && dir == self:workspaceRoot }, {
+				if({ :workspaceRoot != '' && dir == :workspaceRoot }, {
 					searching: false;
 				}, {
 					local String is up: Uri:fromFilePath(filePath: Uri:fromFilePath(filePath: dir):dirPath()):toFilePath();
@@ -213,9 +213,9 @@ Class is SpecLsp{
 			});
 		});
 
-		if({ self:workspaceRoot != '' }, {
-			addDirIfExists(loader: loader, dirPath: self:workspaceRoot . '/spec');
-			addDirIfExists(loader: loader, dirPath: self:workspaceRoot . '/utilities/specunit');
+		if({ :workspaceRoot != '' }, {
+			addDirIfExists(loader: loader, dirPath: :workspaceRoot . '/spec');
+			addDirIfExists(loader: loader, dirPath: :workspaceRoot . '/utilities/specunit');
 		});
 
 		local String is exeDir: Dir:exeDir();
@@ -237,8 +237,8 @@ Class is SpecLsp{
 		if({ parentDir != '' }, {
 			loader:addSourceDir(dir: parentDir);
 		});
-		if({ self:workspaceRoot != '' }, {
-			loader:addSourceDir(dir: self:workspaceRoot);
+		if({ :workspaceRoot != '' }, {
+			loader:addSourceDir(dir: :workspaceRoot);
 		});
 		if({ parentDir != '' }, {
 			addProjectSourceDirs(loader: loader, parentDir: parentDir);
@@ -251,7 +251,7 @@ Class is SpecLsp{
 				diags:add(item: makeDiagnosticJson(line: 1, col: 1, length: 1, message: errStr, severity: 1));
 			});
 			loader:cleanup();
-			self:docPrograms[uri]: prog;
+			:docPrograms[uri]: prog;
 			publishDiagnostics(uri: uri, diags: diags);
 			return;
 		});
@@ -267,7 +267,7 @@ Class is SpecLsp{
 			});
 		});
 
-		self:docPrograms[uri]: prog;
+		:docPrograms[uri]: prog;
 		publishDiagnostics(uri: uri, diags: diags);
 	}
 
@@ -405,13 +405,13 @@ Class is SpecLsp{
 		local Int is line0: Json:getInt(obj: pos, key: 'line', default: 0);
 		local Int is char0: Json:getInt(obj: pos, key: 'character', default: 0);
 
-		if({ !self:docTexts:has(key: uri) || !self:docPrograms:has(key: uri) }, {
+		if({ !:docTexts:has(key: uri) || !:docPrograms:has(key: uri) }, {
 			sendResponse(reqId: reqId, result: JsonNull:init());
 			return;
 		});
 
-		local String is text: self:docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: self:docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
+		local String is text: :docTexts:getString(key: uri, default: '');
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
 		local Array of String is sym: extractSymbolAt(text: text, line0: line0, char0: char0);
 		local String is qual: sym:get(index: 0, default: '');
 		local String is word: sym:get(index: 1, default: '');
@@ -445,7 +445,7 @@ Class is SpecLsp{
 		});
 
 		if({ hoverMd == '' }, {
-			local String is filePath: self:docPaths:getString(key: uri, default: '');
+			local String is filePath: :docPaths:getString(key: uri, default: '');
 			prog:classes:each(action: local Function(ClassInfo is c){
 				if({ hoverMd == '' && c:sourceFile == filePath }, {
 					c:members:each(action: local Function(Member is m){
@@ -477,13 +477,13 @@ Class is SpecLsp{
 		local Int is line0: Json:getInt(obj: pos, key: 'line', default: 0);
 		local Int is char0: Json:getInt(obj: pos, key: 'character', default: 0);
 
-		if({ !self:docTexts:has(key: uri) || !self:docPrograms:has(key: uri) }, {
+		if({ !:docTexts:has(key: uri) || !:docPrograms:has(key: uri) }, {
 			sendResponse(reqId: reqId, result: JsonNull:init());
 			return;
 		});
 
-		local String is text: self:docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: self:docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
+		local String is text: :docTexts:getString(key: uri, default: '');
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
 		local Array of String is sym: extractSymbolAt(text: text, line0: line0, char0: char0);
 		local String is qual: sym:get(index: 0, default: '');
 		local String is word: sym:get(index: 1, default: '');
@@ -517,7 +517,7 @@ Class is SpecLsp{
 		});
 
 		if({ targetFile == '' }, {
-			local String is filePath: self:docPaths:getString(key: uri, default: '');
+			local String is filePath: :docPaths:getString(key: uri, default: '');
 			prog:classes:each(action: local Function(ClassInfo is c){
 				if({ targetFile == '' && c:sourceFile == filePath }, {
 					c:members:each(action: local Function(Member is m){
@@ -554,8 +554,8 @@ Class is SpecLsp{
 		local Int is char0: Json:getInt(obj: pos, key: 'character', default: 0);
 
 		local Array of String is items: [];
-		local String is text: self:docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: self:docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
+		local String is text: :docTexts:getString(key: uri, default: '');
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
 
 		local String is lineStr: getLineAt(text: text, targetLine0: line0);
 		local Int is cPos: if({ char0 > lineStr:length() }, { lineStr:length() }, { char0 });
@@ -611,11 +611,11 @@ Class is SpecLsp{
 			'initialize': {
 				local String is rootUri: Json:getString(obj: params, key: 'rootUri', default: '');
 				if({ rootUri != '' }, {
-					self:workspaceRoot: uriToPath(uri: rootUri);
+					:workspaceRoot: uriToPath(uri: rootUri);
 				}, {
 					local String is rootPath: Json:getString(obj: params, key: 'rootPath', default: '');
 					if({ rootPath != '' }, {
-						self:workspaceRoot: rootPath;
+						:workspaceRoot: rootPath;
 					});
 				});
 
@@ -640,11 +640,11 @@ Class is SpecLsp{
 			},
 			'initialized': { },
 			'shutdown': {
-				self:shutdownRequested: true;
+				:shutdownRequested: true;
 				sendResponse(reqId: reqId, result: JsonNull:init());
 			},
 			'exit': {
-				local Int is exitCode: if({ self:shutdownRequested }, { 0 }, { 1 });
+				local Int is exitCode: if({ :shutdownRequested }, { 0 }, { 1 });
 				Process:exit(status: exitCode);
 			},
 			'textDocument/didOpen': {
@@ -652,8 +652,8 @@ Class is SpecLsp{
 				local String is uri: Json:getString(obj: td, key: 'uri', default: '');
 				local String is text: Json:getString(obj: td, key: 'text', default: '');
 				local String is fpath: uriToPath(uri: uri);
-				self:docTexts[uri]: text;
-				self:docPaths[uri]: fpath;
+				:docTexts[uri]: text;
+				:docPaths[uri]: fpath;
 				analyzeFullFile(uri: uri, filePath: fpath);
 			},
 			'textDocument/didSave': {
@@ -661,9 +661,9 @@ Class is SpecLsp{
 				local String is uri: Json:getString(obj: td, key: 'uri', default: '');
 				local String is fpath: uriToPath(uri: uri);
 				if({ fpath != '' && fileExists(path: fpath) }, {
-					self:docTexts[uri]: fileRead(path: fpath, default: '', onSuccess: {}, onError: {});
+					:docTexts[uri]: fileRead(path: fpath, default: '', onSuccess: {}, onError: {});
 				});
-				self:docPaths[uri]: fpath;
+				:docPaths[uri]: fpath;
 				analyzeFullFile(uri: uri, filePath: fpath);
 			},
 			'textDocument/didChange': {
@@ -673,16 +673,16 @@ Class is SpecLsp{
 				if({ changes:length() > 0 }, {
 					local Any is lastChange: changes:get(index: changes:length() - 1);
 					local String is newText: Json:getString(obj: lastChange, key: 'text', default: '');
-					self:docTexts[uri]: newText;
+					:docTexts[uri]: newText;
 					analyzeSyntaxOnly(uri: uri, text: newText);
 				});
 			},
 			'textDocument/didClose': {
 				local Map of String to Any is td: Json:getObject(obj: params, key: 'textDocument');
 				local String is uri: Json:getString(obj: td, key: 'uri', default: '');
-				self:docTexts:remove(key: uri);
-				self:docPaths:remove(key: uri);
-				self:docPrograms:remove(key: uri);
+				:docTexts:remove(key: uri);
+				:docPaths:remove(key: uri);
+				:docPrograms:remove(key: uri);
 				local Array of String is emptyDiags: [];
 				publishDiagnostics(uri: uri, diags: emptyDiags);
 			},
@@ -704,7 +704,7 @@ Class is SpecLsp{
 	}
 
 	Function is init(Map of String to String is args){
-		self:docPrograms: [:];
+		:docPrograms: [:];
 		Input:setBinaryMode();
 		local Boolean is running: true;
 		while({ running }, {

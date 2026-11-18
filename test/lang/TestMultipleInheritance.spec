@@ -53,10 +53,10 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 	replace Int is id: 9001;
 
 	replace Function of String is describe(){
-		return self:name . ' (ID: ' . self:id . ')';
+		return :name . ' (ID: ' . :id . ')';
 	}
 
 	replace Function of String is getTag(){
-		return '[' . self:name . ']';
+		return '[' . :name . ']';
 	}
 }

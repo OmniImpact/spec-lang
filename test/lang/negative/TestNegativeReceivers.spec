@@ -8,19 +8,19 @@ Class of SpecUnitTest is TestNegativeReceivers{
 		['specunit', Assert]
 	];
 
-	## N1: Calling own members through the class name is banned (must use self).
+	## N1: Calling own members through the class name is banned (must use :).
 	Function is testOwnNameReceiverInsideClass(){
 		Assert:compilerRejects(
 			source: '''
 Class is N1SelfRead{
 	local Int is count: 5;
-	Function of Int is bump(){ return self:count + 1; }
+	Function of Int is bump(){ return :count + 1; }
 	replace Function is init(Map of String to String is args){
 		local Int is v: N1SelfRead:bump();
 	}
 }
 ''',
-			expect: "through the class name inside 'N1SelfRead' itself; use self"
+			expect: "through the class name inside 'N1SelfRead' itself; use :"
 		);
 	}
 
@@ -85,6 +85,37 @@ Class is N11PrefixField{
 }
 ''',
 			expect: "Fields are not reachable through the class-name prefix"
+		);
+	}
+
+	## N12: ':' receiver excludes as-merged scope functions.
+	Function is testColonReceiverExcludesMergedScope(){
+		Assert:compilerRejects(
+			source: '''
+Class is N12NoMergedOnColon{
+	replace Array of Array of String is using: [
+		['base', 'math', as Math()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Int is x: :round(value: 1.5);
+	}
+}
+''',
+			expect: "Undefined function 'round' on class 'N12NoMergedOnColon'"
+		);
+	}
+
+	## N13: Undeclared 'self' is rejected (no longer a magic identifier).
+	Function is testMagicSelfRemoved(){
+		Assert:compilerRejects(
+			source: '''
+Class is N13NoMagicSelf{
+	replace Function is init(Map of String to String is args){
+		local N13NoMagicSelf is x: self;
+	}
+}
+''',
+			expect: "Undefined identifier 'self'"
 		);
 	}
 }

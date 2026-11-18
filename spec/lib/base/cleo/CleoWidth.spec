@@ -40,17 +40,17 @@ Class is CleoWidth{
 	Function of Int is resolve(Int is termWidth, Int is minCols: 20, Int is maxCols: 0){
 		local Int is tw: if({ termWidth > 0 }, { termWidth }, { 78 });
 		local Int is target: tw;
-		if({ self:kind == 0 }, {
-			local Int is pct: self:value;
+		if({ :kind == 0 }, {
+			local Int is pct: :value;
 			if({ pct < 1 }, { pct: 1; });
 			if({ pct > 100 }, { pct: 100; });
 			target: (tw * pct) / 100;
 		});
-		if({ self:kind == 1 }, {
-			target: self:value / self:cellPxFallback;
+		if({ :kind == 1 }, {
+			target: :value / :cellPxFallback;
 		});
-		if({ self:kind == 2 }, {
-			target: self:value;
+		if({ :kind == 2 }, {
+			target: :value;
 		});
 		if({ maxCols > 0 && target > maxCols }, { target: maxCols; });
 		if({ target > tw }, { target: tw; });

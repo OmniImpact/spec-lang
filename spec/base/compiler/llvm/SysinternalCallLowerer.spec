@@ -108,7 +108,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 
 	Function of Boolean is matchesSys(CallData is call, String is recvName, String is methodName, Int is minArgs){
 		if({ call:name != methodName || call:args:length() < minArgs }, { return false; });
-		return self:isFloorTarget(call: call, domain: recvName);
+		return :isFloorTarget(call: call, domain: recvName);
 	}
 
 	Function of String is lowerArg(IrBuilder is b, CallData is call, Int is idx){
@@ -196,7 +196,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		if({ cand == '' || cand == 'Mem' || cand == 'Math' || cand == 'Reflection' || cand == 'Conditional' || cand == 'Loops' || cand == 'Loadable' }, {
 			return '';
 		});
-		if({ !b:sysinternalClasses:has(key: cand) || !self:isFloorTarget(call: call, domain: cand) }, {
+		if({ !b:sysinternalClasses:has(key: cand) || !:isFloorTarget(call: call, domain: cand) }, {
 			return '';
 		});
 		return cand;
@@ -204,21 +204,21 @@ Class of CallLowerer is SysinternalCallLowerer{
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
 		local Int is argc: call:args:length();
-		if({ self:isTargetClass(call: call, clsName: 'Parallel') }, {
+		if({ :isTargetClass(call: call, clsName: 'Parallel') }, {
 			if({ call:name == 'init' }, { return true; });
 			if({ call:name == 'sync' && argc >= 1 }, { return true; });
 			if({ call:name == 'syncWith' && argc >= 2 }, { return true; });
 			if({ call:name == 'run' && argc >= 3 }, { return true; });
 			return false;
 		});
-		local String is dom: self:floorDomain(b: b, call: call);
+		local String is dom: :floorDomain(b: b, call: call);
 		if({ dom == '' }, { return false; });
 		if({ call:name == 'init' }, { return true; });
 		local ClassInfo is cls: b:sysinternalClasses:get(key: dom);
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:METHOD && (m:name == call:name || self:toSnakeCase(s: m:name) == call:name) }, {
+			if({ m:kind == MemberKind:METHOD && (m:name == call:name || :toSnakeCase(s: m:name) == call:name) }, {
 				return true;
 			});
 			mi++;
@@ -228,34 +228,34 @@ Class of CallLowerer is SysinternalCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, { return 'null'; });
-		if({ self:isTargetClass(call: call, clsName: 'Parallel') }, {
+		if({ :isTargetClass(call: call, clsName: 'Parallel') }, {
 			if({ call:name == 'run' }, {
-				local String is thr: self:lowerNamedArg(b: b, call: call, argName: 'threads', posIdx: 0, defVal: '1');
-				local String is iters: self:lowerNamedArg(b: b, call: call, argName: 'iterations', posIdx: 1, defVal: '0');
-				local String is wrk: self:lowerNamedArg(b: b, call: call, argName: 'worker', posIdx: 2, defVal: 'null');
-				return self:emitSysCall(b: b, retType: IrType:I64, callee: 'spec_parallel_run', argTypes: [IrType:I64, IrType:I64, IrType:Ptr], args: [thr, iters, wrk]);
+				local String is thr: :lowerNamedArg(b: b, call: call, argName: 'threads', posIdx: 0, defVal: '1');
+				local String is iters: :lowerNamedArg(b: b, call: call, argName: 'iterations', posIdx: 1, defVal: '0');
+				local String is wrk: :lowerNamedArg(b: b, call: call, argName: 'worker', posIdx: 2, defVal: 'null');
+				return :emitSysCall(b: b, retType: IrType:I64, callee: 'spec_parallel_run', argTypes: [IrType:I64, IrType:I64, IrType:Ptr], args: [thr, iters, wrk]);
 			});
 			if({ call:name == 'sync' }, {
-				local String is act: self:lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 0, defVal: 'null');
-				local String is raw: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync', argTypes: [IrType:Ptr], args: [act]);
+				local String is act: :lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 0, defVal: 'null');
+				local String is raw: :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync', argTypes: [IrType:Ptr], args: [act]);
 				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
 				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
 			});
 			if({ call:name == 'syncWith' }, {
-				local String is lk: self:lowerNamedArg(b: b, call: call, argName: 'lock', posIdx: 0, defVal: '0');
-				local String is act: self:lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 1, defVal: 'null');
-				local String is raw: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync_with', argTypes: [IrType:I64, IrType:Ptr], args: [lk, act]);
+				local String is lk: :lowerNamedArg(b: b, call: call, argName: 'lock', posIdx: 0, defVal: '0');
+				local String is act: :lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 1, defVal: 'null');
+				local String is raw: :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync_with', argTypes: [IrType:I64, IrType:Ptr], args: [lk, act]);
 				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
 				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
 			});
 			return '0';
 		});
-		local String is dom: self:floorDomain(b: b, call: call);
+		local String is dom: :floorDomain(b: b, call: call);
 		local ClassInfo is cls: b:sysinternalClasses:get(key: dom);
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:METHOD && (m:name == call:name || self:toSnakeCase(s: m:name) == call:name) }, {
+			if({ m:kind == MemberKind:METHOD && (m:name == call:name || :toSnakeCase(s: m:name) == call:name) }, {
 				local Array of IrType is argTypes: [];
 				local Array of String is args: [];
 				local Int is pi: 0;
@@ -265,15 +265,15 @@ Class of CallLowerer is SysinternalCallLowerer{
 					local String is defVal: 'null';
 					if({ pty == IrType:I64 || pty == IrType:I1 }, { defVal: '0'; });
 					if({ pty == IrType:F64 }, { defVal: '0.0'; });
-					local String is av: self:lowerNamedArg(b: b, call: call, argName: p:name, posIdx: pi, defVal: defVal);
+					local String is av: :lowerNamedArg(b: b, call: call, argName: p:name, posIdx: pi, defVal: defVal);
 					argTypes:add(item: pty);
 					args:add(item: av);
 					pi++;
 				});
 				local String is retSpec: b:methodReturnSpecType(mt: m:memberType);
 				local IrType is retTy: b:methodReturnType(mt: m:memberType);
-				local String is callee: 'spec_' . self:toSnakeCase(s: m:name);
-				local String is res: self:emitSysCall(b: b, retType: retTy, callee: callee, argTypes: argTypes, args: args);
+				local String is callee: 'spec_' . :toSnakeCase(s: m:name);
+				local String is res: :emitSysCall(b: b, retType: retTy, callee: callee, argTypes: argTypes, args: args);
 				if({ b:isArcSpecType(specType: retSpec) }, {
 					b:emitClaimPool(val: res);
 				});

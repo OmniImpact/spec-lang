@@ -33,7 +33,7 @@ Class is AssertHelper{
 	}
 
 	Function of String is workPath(String is suffix, String is stem){
-		local String is dir: self:resolveTempDir();
+		local String is dir: :resolveTempDir();
 		return dir . '/spec_assert_' . (Process:getPid() as String) . '_' . stem . suffix;
 	}
 }

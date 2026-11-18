@@ -179,7 +179,7 @@ long long spec_socket_set_timeout(long long fd, long long timeout_ms) {
 	}
 
 	replace Function of String is macos(){
-		return self:linux();
+		return :linux();
 	}
 
 	replace Function of String is windows(){
@@ -366,7 +366,7 @@ long long spec_pal_socket_last_error(void) {
     return (long long)(intptr_t)_spec_last_sock_err;
 }
 
-{{self:getOsBlock(separatePosix: false)}}
+{{:getOsBlock(separatePosix: false)}}
 ```;
 	}
 }

@@ -19,24 +19,24 @@ Class is LlvmStructLayout{
 	Array of String is fieldTypes: [];
 
 	replace Function is init(String is structName: ''){
-		self:structName: structName;
+		:structName: structName;
 	}
 
 	Function of LlvmStructLayout is addField(String is name, String is llvmType){
-		self:fieldNames:add(item: name);
-		self:fieldTypes:add(item: llvmType);
-		return self;
+		:fieldNames:add(item: name);
+		:fieldTypes:add(item: llvmType);
+		return :;
 	}
 
 	Function of Int is fieldCount(){
-		return self:fieldNames:length();
+		return :fieldNames:length();
 	}
 
 	Function of Int is fieldIndex(String is name){
 		local Int is found: -1;
 		local Int is i: 0;
-		while({ i < self:fieldNames:length() }, {
-			if({ found < 0 && self:fieldNames:get(index: i, default: '') == name }, {
+		while({ i < :fieldNames:length() }, {
+			if({ found < 0 && :fieldNames:get(index: i, default: '') == name }, {
 				found: i;
 			});
 			i++;
@@ -47,9 +47,9 @@ Class is LlvmStructLayout{
 	Function of String is llvmType(){
 		local String is body: '';
 		local Int is i: 0;
-		while({ i < self:fieldTypes:length() }, {
+		while({ i < :fieldTypes:length() }, {
 			if({ i > 0 }, { body: body . ', '; });
-			body: body . self:fieldTypes:get(index: i, default: 'ptr');
+			body: body . :fieldTypes:get(index: i, default: 'ptr');
 			i++;
 		});
 		return '{ ' . body . ' }';
@@ -58,14 +58,14 @@ Class is LlvmStructLayout{
 	Function of String is formatConst(Array of String is values){
 		local String is body: '';
 		local Int is i: 0;
-		while({ i < self:fieldTypes:length() }, {
+		while({ i < :fieldTypes:length() }, {
 			if({ i > 0 }, { body: body . ', '; });
-			local String is ty: self:fieldTypes:get(index: i, default: 'ptr');
+			local String is ty: :fieldTypes:get(index: i, default: 'ptr');
 			local String is val: values:get(index: i, default: 'null');
 			body: body . ty . ' ' . val;
 			i++;
 		});
-		return self:llvmType() . ' { ' . body . ' }';
+		return :llvmType() . ' { ' . body . ' }';
 	}
 
 	held Function of LlvmStructLayout is objHeader(){

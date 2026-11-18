@@ -47,7 +47,7 @@ Class is Heap{
 
 	Function of Int is reallocMem(Int is ptr, Int is bytes){
 		if({ ptr == 0 }, {
-			return self:allocMem(bytes: bytes);
+			return :allocMem(bytes: bytes);
 		});
 		local Int is req: if({ bytes <= 0 }, { 1 }, { bytes });
 		local Int is newTotal: 16 + req;
@@ -59,13 +59,13 @@ Class is Heap{
 			Mem:storeI64(ptr: nh, byteOffset: 0, val: newTotal);
 			return nh + 16;
 		});
-		local Int is np: self:allocMem(bytes: req);
+		local Int is np: :allocMem(bytes: req);
 		local Int is oldPayload: oldTotal - 16;
 		local Int is cp: if({ oldPayload < req }, { oldPayload }, { req });
 		if({ cp > 0 }, {
 			Mem:copy(dst: np, src: ptr, bytes: cp);
 		});
-		self:freeMem(ptr: ptr);
+		:freeMem(ptr: ptr);
 		return np;
 	}
 }

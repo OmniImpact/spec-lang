@@ -44,19 +44,19 @@ Class is LintRule{
 
 	## Inspects the parsed AST program. Default implementation traverses all classes.
 	Function is checkProgram(ProgramNode is program, Array of LintIssue is issues){
-		self:traverseProgram(program: program, issues: issues);
+		:traverseProgram(program: program, issues: issues);
 	}
 
 	## Default AST program traversal.
 	Function is traverseProgram(ProgramNode is program, Array of LintIssue is issues){
 		program:classes:each(action: local Function(ClassInfo is c){
-			self:checkClass(classDef: c, issues: issues);
+			:checkClass(classDef: c, issues: issues);
 		});
 	}
 
 	## Inspects a class definition. Default implementation traverses all members.
 	Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
-		self:traverseClass(classDef: classDef, issues: issues);
+		:traverseClass(classDef: classDef, issues: issues);
 	}
 
 	## Default class member traversal.
@@ -65,11 +65,11 @@ Class is LintRule{
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
-						self:checkStatement(stmt: s, issues: issues);
+						:checkStatement(stmt: s, issues: issues);
 					});
 				},
 				MemberKind:CLASS: {
-					self:checkClass(classDef: m:nestedClass, issues: issues);
+					:checkClass(classDef: m:nestedClass, issues: issues);
 				},
 				else: {}
 			]);
@@ -78,7 +78,7 @@ Class is LintRule{
 
 	## Inspects a statement node. Default implementation traverses expressions.
 	Function is checkStatement(Statement is stmt, Array of LintIssue is issues){
-		self:traverseStatement(stmt: stmt, issues: issues);
+		:traverseStatement(stmt: stmt, issues: issues);
 	}
 
 	## Default statement traversal.
@@ -86,27 +86,27 @@ Class is LintRule{
 		match(on: stmt, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				if({ hasInit }, {
-					self:checkExpression(expr: initExpr, issues: issues);
+					:checkExpression(expr: initExpr, issues: issues);
 				});
 			},
 			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
-				self:checkExpression(expr: assignTarget, issues: issues);
-				self:checkExpression(expr: assignValue, issues: issues);
+				:checkExpression(expr: assignTarget, issues: issues);
+				:checkExpression(expr: assignValue, issues: issues);
 			},
 			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
 				if({ hasReturnExpr }, {
-					self:checkExpression(expr: returnExpr, issues: issues);
+					:checkExpression(expr: returnExpr, issues: issues);
 				});
 			},
 			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
-				self:checkClass(classDef: nestedClass, issues: issues);
+				:checkClass(classDef: nestedClass, issues: issues);
 			},
 			Statement:Expr: local Function(Expression is exprStmt){
-				self:checkExpression(expr: exprStmt, issues: issues);
+				:checkExpression(expr: exprStmt, issues: issues);
 			},
 			Statement:Forward: local Function(Array of NamedArg is forwardArgs){
 				forwardArgs:each(action: local Function(NamedArg is arg){
-					self:checkExpression(expr: arg:value, issues: issues);
+					:checkExpression(expr: arg:value, issues: issues);
 				});
 			}
 		]);
@@ -114,54 +114,54 @@ Class is LintRule{
 
 	## Inspects an expression node. Default implementation traverses child expressions.
 	Function is checkExpression(Expression is expr, Array of LintIssue is issues){
-		self:traverseExpression(expr: expr, issues: issues);
+		:traverseExpression(expr: expr, issues: issues);
 	}
 
 	## Default expression traversal.
 	Function is traverseExpression(Expression is expr, Array of LintIssue is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
-				self:checkExpression(expr: cd:target, issues: issues);
+				:checkExpression(expr: cd:target, issues: issues);
 				cd:args:each(action: local Function(NamedArg is arg){
-					self:checkExpression(expr: arg:value, issues: issues);
+					:checkExpression(expr: arg:value, issues: issues);
 				});
 			},
 			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
-				self:checkExpression(expr: leftExpr, issues: issues);
-				self:checkExpression(expr: rightExpr, issues: issues);
+				:checkExpression(expr: leftExpr, issues: issues);
+				:checkExpression(expr: rightExpr, issues: issues);
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
-				self:checkExpression(expr: operand, issues: issues);
+				:checkExpression(expr: operand, issues: issues);
 			},
 			Expression:ArrayLit: local Function(Array of Expression is items){
 				items:each(action: local Function(Expression is item){
-					self:checkExpression(expr: item, issues: issues);
+					:checkExpression(expr: item, issues: issues);
 				});
 			},
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
 				keys:each(action: local Function(Expression is k){
-					self:checkExpression(expr: k, issues: issues);
+					:checkExpression(expr: k, issues: issues);
 				});
 				values:each(action: local Function(Expression is v){
-					self:checkExpression(expr: v, issues: issues);
+					:checkExpression(expr: v, issues: issues);
 				});
 			},
 			Expression:Cast: local Function(Expression is target, String is targetType, Array of Expression is args){
-				self:checkExpression(expr: target, issues: issues);
+				:checkExpression(expr: target, issues: issues);
 				args:each(action: local Function(Expression is a){
-					self:checkExpression(expr: a, issues: issues);
+					:checkExpression(expr: a, issues: issues);
 				});
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is field){
-				self:checkExpression(expr: target, issues: issues);
+				:checkExpression(expr: target, issues: issues);
 			},
 			Expression:Index: local Function(Expression is target, Expression is index){
-				self:checkExpression(expr: target, issues: issues);
-				self:checkExpression(expr: index, issues: issues);
+				:checkExpression(expr: target, issues: issues);
+				:checkExpression(expr: index, issues: issues);
 			},
 			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
 				body:each(action: local Function(Statement is st){
-					self:checkStatement(stmt: st, issues: issues);
+					:checkStatement(stmt: st, issues: issues);
 				});
 			}
 		], default: {});

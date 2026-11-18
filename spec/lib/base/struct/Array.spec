@@ -21,7 +21,7 @@ Class is Array of T{
 	##
 	## @return: Element count.
 	Function of Int is length(){
-		return Vector:vecLength(v: self);
+		return Vector:vecLength(v: :);
 	}
 
 	## Retrieves an element at the specified zero-based index.
@@ -31,14 +31,14 @@ Class is Array of T{
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
 	Function of T is get(Int is index, Any is default){
-		return Vector:vecGetAt(v: self, idx: index, def: default);
+		return Vector:vecGetAt(v: :, idx: index, def: default);
 	}
 
 	## Appends an element or merges another array into this array.
 	##
 	## @param item: Value or [Array] to append.
 	Function is add(Any is item){
-		Vector:vecAdd(v: self, item: item);
+		Vector:vecAdd(v: :, item: item);
 	}
 
 	## Replaces the element at the specified zero-based [index] with [item].
@@ -46,7 +46,7 @@ Class is Array of T{
 	## @param index: Zero-based position.
 	## @param item: Replacement element value.
 	Function is set(Int is index, Any is item){
-		Vector:vecSetAt(v: self, idx: index, item: item);
+		Vector:vecSetAt(v: :, idx: index, item: item);
 	}
 
 	## Removes and returns the last element in the array.
@@ -55,7 +55,7 @@ Class is Array of T{
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
 	Function of T is pop(Any is default){
-		return Vector:vecPopLast(v: self, def: default);
+		return Vector:vecPopLast(v: :, def: default);
 	}
 
 	## Removes and returns the element at [index], shifting trailing elements.
@@ -65,7 +65,7 @@ Class is Array of T{
 	## @return: The removed element, or [default].
 	## @fallback: Returns [default] when index is out of bounds.
 	Function of T is removeAt(Int is index, Any is default){
-		return Vector:vecRemoveAt(v: self, idx: index, def: default);
+		return Vector:vecRemoveAt(v: :, idx: index, def: default);
 	}
 
 	## Returns a shallow sub-array slice from [start] (inclusive) to [end] (exclusive).
@@ -75,7 +75,7 @@ Class is Array of T{
 	## @return: New sliced [Array].
 	Function of Array of T is slice(Int is start, Int is end){
 		local Array of T is res: [];
-		local Int is len: self:length();
+		local Int is len: :length();
 		local Int is s: match(when: [
 			{ start < 0 }: { 0 },
 			else:          { start }
@@ -86,7 +86,7 @@ Class is Array of T{
 		]);
 		local Int is i: s;
 		while({ i < e }, {
-			res:add(item: self:get(index: i, default: ''));
+			res:add(item: :get(index: i, default: ''));
 			i: i + 1;
 		});
 		return res;
@@ -94,7 +94,7 @@ Class is Array of T{
 
 	## Empties the array, resetting its length to zero.
 	Function is clear(){
-		Vector:vecClear(v: self);
+		Vector:vecClear(v: :);
 	}
 
 	## Searches for the first occurrence of [search], returning its index.
@@ -104,11 +104,11 @@ Class is Array of T{
 	## @return: Matching index, or [default].
 	## @fallback: Returns [default] (conventionally -1) if the item is absent.
 	Function of Int is indexOf(String is search, Int is default: -1){
-		local Int is len: self:length();
+		local Int is len: :length();
 		local Int is i: 0;
 		local Int is found: default;
 		while({ found == default && i < len }, {
-			local String is item: self:get(index: i, default: '') as String;
+			local String is item: :get(index: i, default: '') as String;
 			if({ item == search }, {
 				found: i;
 			});
@@ -164,7 +164,7 @@ Class is Array of T{
 	## @param separator: Delimiter string inserted between adjacent items.
 	## @return: Joined string.
 	Function of String is join(String is separator){
-		local Int is len: self:length();
+		local Int is len: :length();
 		if({ len == 0 }, {
 			return '';
 		});
@@ -174,7 +174,7 @@ Class is Array of T{
 			if({ i > 0 }, {
 				out: out . separator;
 			});
-			out: out . (self:get(index: i, default: '') as String);
+			out: out . (:get(index: i, default: '') as String);
 			i: i + 1;
 		});
 		return out;
@@ -184,7 +184,7 @@ Class is Array of T{
 	##
 	## @return: `true` if empty, `false` otherwise.
 	Function of Boolean is isEmpty(){
-		return self:length() == 0;
+		return :length() == 0;
 	}
 
 	## Returns whether [search] is present in the array.
@@ -192,7 +192,7 @@ Class is Array of T{
 	## @param search: String value to locate.
 	## @return: `true` if found, `false` otherwise.
 	Function of Boolean is contains(String is search){
-		return self:indexOf(search: search, default: -1) >= 0;
+		return :indexOf(search: search, default: -1) >= 0;
 	}
 
 	## Returns the first element, or [default] if the array is empty.
@@ -200,10 +200,10 @@ Class is Array of T{
 	## @param default: Fallback value returned when empty.
 	## @return: First element, or [default].
 	Function of T is first(Any is default){
-		if({ self:length() == 0 }, {
+		if({ :length() == 0 }, {
 			return default;
 		});
-		return self:get(index: 0, default: default);
+		return :get(index: 0, default: default);
 	}
 
 	## Returns the last element, or [default] if the array is empty.
@@ -211,18 +211,18 @@ Class is Array of T{
 	## @param default: Fallback value returned when empty.
 	## @return: Last element, or [default].
 	Function of T is last(Any is default){
-		local Int is len: self:length();
+		local Int is len: :length();
 		if({ len == 0 }, {
 			return default;
 		});
-		return self:get(index: len - 1, default: default);
+		return :get(index: len - 1, default: default);
 	}
 
 	## Returns a shallow copy of this array.
 	##
 	## @return: New [Array] with the same elements.
 	Function of Array of T is copy(){
-		return self:slice(start: 0, end: self:length());
+		return :slice(start: 0, end: :length());
 	}
 
 	## Returns a new array containing the elements in reverse order.
@@ -230,9 +230,9 @@ Class is Array of T{
 	## @return: Reversed [Array].
 	Function of Array of T is reverse(){
 		local Array of T is out: [];
-		local Int is i: self:length() - 1;
+		local Int is i: :length() - 1;
 		while({ i >= 0 }, {
-			out:add(item: self:get(index: i, default: ''));
+			out:add(item: :get(index: i, default: ''));
 			i: i - 1;
 		});
 		return out;
@@ -246,7 +246,7 @@ Class is Array of T{
 		if({ n <= 0 }, {
 			return [];
 		});
-		return self:slice(start: 0, end: n);
+		return :slice(start: 0, end: n);
 	}
 
 	## Returns a new array with the first [n] elements omitted.
@@ -255,9 +255,9 @@ Class is Array of T{
 	## @return: Suffix [Array].
 	Function of Array of T is drop(Int is n){
 		if({ n <= 0 }, {
-			return self:slice(start: 0, end: self:length());
+			return :slice(start: 0, end: :length());
 		});
-		return self:slice(start: n, end: self:length());
+		return :slice(start: n, end: :length());
 	}
 
 	## Evaluates whether every element satisfies [predicate] (vacuously `true` when empty).
@@ -265,11 +265,11 @@ Class is Array of T{
 	## @param predicate: Function returning `true` for matching elements.
 	## @return: `true` if all elements match, `false` otherwise.
 	Function of Boolean is all(Function of Boolean is predicate){
-		local Int is len: self:length();
+		local Int is len: :length();
 		local Boolean is ok: true;
 		local Int is i: 0;
 		while({ ok && i < len }, {
-			if({ !predicate(self:get(index: i, default: 0)) }, {
+			if({ !predicate(:get(index: i, default: 0)) }, {
 				ok: false;
 			});
 			i: i + 1;
@@ -282,11 +282,11 @@ Class is Array of T{
 	## @param predicate: Function returning `true` for matching elements.
 	## @return: `true` if zero elements match, `false` otherwise.
 	Function of Boolean is none(Function of Boolean is predicate){
-		local Int is len: self:length();
+		local Int is len: :length();
 		local Boolean is ok: true;
 		local Int is i: 0;
 		while({ ok && i < len }, {
-			if({ predicate(self:get(index: i, default: 0)) }, {
+			if({ predicate(:get(index: i, default: 0)) }, {
 				ok: false;
 			});
 			i: i + 1;
@@ -300,12 +300,12 @@ Class is Array of T{
 	## @param default: Fallback value returned if no element matches.
 	## @return: First matching element, or [default].
 	Function of T is find(Function of Boolean is predicate, Any is default){
-		local Int is len: self:length();
+		local Int is len: :length();
 		local Any is found: default;
 		local Boolean is hasFound: false;
 		local Int is i: 0;
 		while({ !hasFound && i < len }, {
-			local Any is item: self:get(index: i, default: default);
+			local Any is item: :get(index: i, default: default);
 			if({ predicate(item) }, {
 				found: item;
 				hasFound: true;

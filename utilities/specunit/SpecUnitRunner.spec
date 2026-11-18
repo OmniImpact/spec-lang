@@ -33,16 +33,16 @@ Class is SpecUnitRunner{
 	Function is runAll(String is sourcePrefix){
 		local Int is found: 0;
 		classNames():each(action: local Function(String is cn){
-			if(check: { self:isTestClass(className: cn, sourcePrefix: sourcePrefix) }, then: {
+			if(check: { :isTestClass(className: cn, sourcePrefix: sourcePrefix) }, then: {
 				found: found + 1;
-				self:runClass(className: cn);
+				:runClass(className: cn);
 			});
 		});
 		if(check: { found == 0 }, then: {
 			line('No test classes found in ' . sourcePrefix);
 			exit(status: 1);
 		});
-		self:report();
+		:report();
 	}
 
 	## Whether [className] is a runnable test class: it extends the
@@ -79,7 +79,7 @@ Class is SpecUnitRunner{
 		functions(className: className):each(action: local Function(Array of String is path){
 			local String is m: path:get(index: 1);
 			if(check: { m:startsWith(prefix: 'test') }, then: {
-				self:beginTest(name: className . '.' . m);
+				:beginTest(name: className . '.' . m);
 				local Any is instance: instantiate(className: className);
 				if(check: { hasBefore }, then: {
 					invokeVoid(instance: instance, methodName: 'beforeEach');
@@ -88,7 +88,7 @@ Class is SpecUnitRunner{
 				if(check: { hasAfter }, then: {
 					invokeVoid(instance: instance, methodName: 'afterEach');
 				});
-				self:endTest();
+				:endTest();
 			});
 		});
 	}

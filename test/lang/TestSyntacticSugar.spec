@@ -13,8 +13,27 @@ Class of SpecUnitTest is TestSyntacticSugar{
 		['specunit', as Assert()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'math', as Math()],
 		['base', 'sys', as Loops()]
 	];
+
+	Function of Int is round(){
+		return 77;
+	}
+
+	Function of TestSyntacticSugar is identitySelf(){
+		return :;
+	}
+
+	## 0. ':' disambiguates own method from as-merged Math:round, bare ':' returns receiver, and 'self' is an ordinary identifier.
+	Function is testColonReceiverAndOrdinarySelf(){
+		Assert:areEqualInt(77, :round());
+		Assert:areEqualInt(2, Math:round(value: 1.6));
+		local TestSyntacticSugar is me: :identitySelf();
+		Assert:areEqualInt(77, me:round());
+		local Int is self: 42;
+		Assert:areEqualInt(42, self);
+	}
 
 	## 1. The self:field constructor shorthand.
 	Function is testSelfFieldConstructorShorthand(){
@@ -135,18 +154,18 @@ Class is Issue{
 	Boolean is isWarning;
 
 	## Constructor using self:field initialization shorthand
-	replace Function is init(self:line, self:isWarning, self:message){
+	replace Function is init(:line, :isWarning, :message){
 	}
 
 	Function of Int is getLine(){
-		return self:line;
+		return :line;
 	}
 
 	Function of String is getMessage(){
-		return self:message;
+		return :message;
 	}
 
 	Function of Boolean is getIsWarning(){
-		return self:isWarning;
+		return :isWarning;
 	}
 }

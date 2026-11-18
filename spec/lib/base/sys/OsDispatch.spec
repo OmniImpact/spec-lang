@@ -24,21 +24,21 @@ Class is OsDispatch{
 
 	Function of String is forOs(String is os){
 		return if({ os == 'windows' }, {
-			self:windows()
+			:windows()
 		}, {
-			if({ os == 'macos' }, { self:macos() }, { self:linux() })
+			if({ os == 'macos' }, { :macos() }, { :linux() })
 		});
 	}
 
 	Function of String is value(){
-		return self:forOs(os: Process:osName());
+		return :forOs(os: Process:osName());
 	}
 
 	Function of String is getOsBlock(Boolean is separatePosix: false){
-		local String is win: self:windows();
-		local String is lin: self:linux();
+		local String is win: :windows();
+		local String is lin: :linux();
 		return if({ separatePosix }, {
-			local String is mac: self:macos();
+			local String is mac: :macos();
 			"#if defined(_WIN32)\n" . win . "\n#elif defined(__APPLE__) && defined(__MACH__)\n" . mac . "\n#elif defined(__linux__)\n" . lin . "\n#endif"
 		}, {
 			if({ lin == '' }, {

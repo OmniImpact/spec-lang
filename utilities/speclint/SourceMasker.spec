@@ -15,17 +15,17 @@ Class is SourceMasker{
 	String is quote: '';
 
 	replace Function is init(){
-		self:quote: '';
+		:quote: '';
 	}
 
 	## Resets state before masking a new source file.
 	Function is reset(){
-		self:quote: '';
+		:quote: '';
 	}
 
 	## Returns whether the current position is inside a multi-line string.
 	Function of Boolean is isInsideString(){
-		return self:quote != '';
+		return :quote != '';
 	}
 
 	## Masks strings and comments in a single line with spaces, preserving length.
@@ -37,18 +37,18 @@ Class is SourceMasker{
 		local Int is i: 0;
 		while({ i < line:length() }, {
 			local String is ch: line:charAt(index: i, default: '');
-			if({ self:quote != '' }, {
-				if({ self:quote == "'''" && self:matchTriple(line: line, index: i) }, {
-					self:quote: '';
+			if({ :quote != '' }, {
+				if({ :quote == "'''" && :matchTriple(line: line, index: i) }, {
+					:quote: '';
 					out: out . '   ';
 					i: i + 2;
 				}, {
-					if({ self:quote != "'''" && ch == "\\" }, {
+					if({ :quote != "'''" && ch == "\\" }, {
 						out: out . '  ';
 						i: i + 1;
 					}, {
-						if({ ch == self:quote }, {
-							self:quote: '';
+						if({ ch == :quote }, {
+							:quote: '';
 							out: out . ' ';
 						}, {
 							out: out . ' ';
@@ -58,12 +58,12 @@ Class is SourceMasker{
 			}, {
 				match(on: ch, when: [
 					['"', '\'']: {
-						if({ self:matchTriple(line: line, index: i) }, {
-							self:quote: "'''";
+						if({ :matchTriple(line: line, index: i) }, {
+							:quote: "'''";
 							out: out . '   ';
 							i: i + 2;
 						}, {
-							self:quote: ch;
+							:quote: ch;
 							out: out . ' ';
 						});
 					},

@@ -25,7 +25,7 @@ Class is HeldEntry2{
 	local String is name;
 
 	Function is init(String is n){
-		self:name: n;
+		:name: n;
 	}
 }
 

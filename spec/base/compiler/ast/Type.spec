@@ -23,8 +23,8 @@ Class is Type{
 	##
 	## @param name: Base type name.
 	replace Function is init(String is name){
-		self:name: name;
-		self:params: [];
+		:name: name;
+		:params: [];
 	}
 
 	## Produces a parameterized generic type descriptor. Self-free
@@ -44,7 +44,7 @@ Class is Type{
 	##
 	## @return: true when [params] is non-empty.
 	Function of Boolean is isGeneric(){
-		return self:params:length() > 0;
+		return :params:length() > 0;
 	}
 
 	## Formats the type into canonical Spec syntax
@@ -54,15 +54,15 @@ Class is Type{
 	##
 	## @return: Canonical type string.
 	replace Function of String is toString(){
-		if({ self:params:length() == 0 }, {
-			return self:name;
+		if({ :params:length() == 0 }, {
+			return :name;
 		});
-		if({ self:params:length() == 1 }, {
-			local Type is p0: self:params:get(index: 0);
-			return self:name . ' ' . Keyword:OF:value() . ' ' . p0:toString();
+		if({ :params:length() == 1 }, {
+			local Type is p0: :params:get(index: 0);
+			return :name . ' ' . Keyword:OF:value() . ' ' . p0:toString();
 		});
-		local Type is first: self:params:get(index: 0);
-		local Type is second: self:params:get(index: 1);
-		return self:name . ' ' . Keyword:OF:value() . ' ' . first:toString() . ' ' . Keyword:TO:value() . ' ' . second:toString();
+		local Type is first: :params:get(index: 0);
+		local Type is second: :params:get(index: 1);
+		return :name . ' ' . Keyword:OF:value() . ' ' . first:toString() . ' ' . Keyword:TO:value() . ' ' . second:toString();
 	}
 }

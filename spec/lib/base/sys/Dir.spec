@@ -28,7 +28,7 @@ Class is Dir{
 	## @return: Entry names.
 	Function of Array of String is dirList(String is path, Function is onError: local Function(String is error){}){
 		local Array of String is out: [];
-		local Int is pc: self:cstrOf(s: path);
+		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
 			onError('invalid path');
 			return out;
@@ -66,7 +66,7 @@ Class is Dir{
 	## @param path: File to measure.
 	## @return: Size in bytes, or -1.
 	Function of Int is fileSize(String is path){
-		local Int is pc: self:cstrOf(s: path);
+		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, { return -1; });
 		return base:sysinternal:Dir:pal_file_size_cstr(path_cstr: pc);
 	}

@@ -24,7 +24,7 @@ Class is AudioDevice{
 	Function of Int is open(Int is sampleRate, Int is channels, Int is format, Function is onError: local Function(String is error){}){
 		local Int is h: base:sysinternal:Audio:pal_audio_open(sample_rate: sampleRate, channels: channels, format: format);
 		if({ h < 0 }, {
-			self:emitLastError(onError: onError);
+			:emitLastError(onError: onError);
 		});
 		return h;
 	}
@@ -35,7 +35,7 @@ Class is AudioDevice{
 		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) }, { 0 });
 		local Int is n: base:sysinternal:Audio:pal_audio_write(handle: handle, data_addr: ptr, len: len);
 		if({ n < 0 }, {
-			self:emitLastError(onError: onError);
+			:emitLastError(onError: onError);
 		});
 		return n;
 	}

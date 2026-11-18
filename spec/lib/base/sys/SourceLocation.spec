@@ -31,48 +31,48 @@ Class is SourceLocation{
 	## @param col: One-based column coordinate.
 	## @param length: Span length in characters.
 	replace Function is init(String is file, Int is line, Int is col, Int is length: 0){
-		self:file: file;
-		self:line: line;
-		self:col: col;
-		self:length: length;
+		:file: file;
+		:line: line;
+		:col: col;
+		:length: length;
 	}
 
 	## Returns the source file path.
 	##
 	## @return: File path string.
 	Function of String is getFile(){
-		return self:file;
+		return :file;
 	}
 
 	## Returns the one-based line number.
 	##
 	## @return: Line number.
 	Function of Int is getLine(){
-		return self:line;
+		return :line;
 	}
 
 	## Returns the one-based column number.
 	##
 	## @return: Column number.
 	Function of Int is getCol(){
-		return self:col;
+		return :col;
 	}
 
 	## Returns the span length in characters.
 	##
 	## @return: Span length.
 	Function of Int is getLength(){
-		return self:length;
+		return :length;
 	}
 
 	## Formats the location as a standardized coordinate string.
 	##
 	## @return: "file:line:col", or "line:col" when no file is recorded.
 	replace Function of String is toString(){
-		local String is f: self:file;
+		local String is f: :file;
 		if({ f:length() > 0 }, {
-			return f . ':' . (self:line as String) . ':' . (self:col as String);
+			return f . ':' . (:line as String) . ':' . (:col as String);
 		});
-		return (self:line as String) . ':' . (self:col as String);
+		return (:line as String) . ':' . (:col as String);
 	}
 }

@@ -22,7 +22,7 @@ Class is Input{
 	##
 	## @param handler: An [InputHandler] subclass responding to user input events.
 	Function is consIn(InputHandler is handler){
-		self:readLine(onLine: local Function(String is text){
+		:readLine(onLine: local Function(String is text){
 			handler:onInput(text);
 		});
 	}
@@ -36,7 +36,7 @@ Class is Input{
 		if({ lineAddr != 0 }, {
 			local String is text: Mem:strFromBytes(srcAddr: lineAddr, len: len);
 			base:sysinternal:Console:pal_console_free(ptr: lineAddr);
-			if({ self:hasClosure(cb: onLine) }, {
+			if({ :hasClosure(cb: onLine) }, {
 				onLine(text);
 			});
 		});

@@ -36,10 +36,10 @@ Class is BinaryTrees{
 		local Int is totalChecks: 0;
 
 		local Int is stretchDepth: maxDepth + 1;
-		local TreeNode is stretchTree: self:makeTree(depth: stretchDepth);
-		totalChecks: totalChecks + self:checkTree(node: stretchTree);
+		local TreeNode is stretchTree: :makeTree(depth: stretchDepth);
+		totalChecks: totalChecks + :checkTree(node: stretchTree);
 
-		local TreeNode is longLived: self:makeTree(depth: maxDepth);
+		local TreeNode is longLived: :makeTree(depth: maxDepth);
 
 		local Int is d: minDepth;
 		while({ d <= maxDepth }, {
@@ -48,8 +48,8 @@ Class is BinaryTrees{
 			if({ threads <= 1 }, {
 				local Int is i: 0;
 				while({ i < iterations }, {
-					local TreeNode is t: self:makeTree(depth: d);
-					depthSum: depthSum + self:checkTree(node: t);
+					local TreeNode is t: :makeTree(depth: d);
+					depthSum: depthSum + :checkTree(node: t);
 					i++;
 				});
 			}, {
@@ -59,8 +59,8 @@ Class is BinaryTrees{
 					local Int is localSum: 0;
 					local Int is k: 0;
 					while({ k < count }, {
-						local TreeNode is t: self:makeTree(depth: depthVal);
-						localSum: localSum + self:checkTree(node: t);
+						local TreeNode is t: :makeTree(depth: depthVal);
+						localSum: localSum + :checkTree(node: t);
 						k++;
 					});
 					atomicAdd(slot: 0, value: localSum);
@@ -71,7 +71,7 @@ Class is BinaryTrees{
 			d: d + 2;
 		});
 
-		totalChecks: totalChecks + self:checkTree(node: longLived);
+		totalChecks: totalChecks + :checkTree(node: longLived);
 
 		local Int is ms: clockMs() - t0;
 		if({ ms < 1 }, { ms: 1; });
@@ -83,12 +83,12 @@ Class is BinaryTrees{
 		if({ depth <= 0 }, {
 			return TreeNode:init();
 		});
-		return TreeNode:init(left: self:makeTree(depth: depth - 1), right: self:makeTree(depth: depth - 1));
+		return TreeNode:init(left: :makeTree(depth: depth - 1), right: :makeTree(depth: depth - 1));
 	}
 
 	Function of Int is checkTree(TreeNode is node){
 		if({ node:hasChildren }, {
-			return 1 + self:checkTree(node: node:left) + self:checkTree(node: node:right);
+			return 1 + :checkTree(node: node:left) + :checkTree(node: node:right);
 		});
 		return 1;
 	}
@@ -101,12 +101,12 @@ Class is TreeNode{
 	TreeNode is right;
 
 	replace Function is init(){
-		self:hasChildren: false;
+		:hasChildren: false;
 	}
 
 	Function is init(TreeNode is left, TreeNode is right){
-		self:hasChildren: true;
-		self:left: left;
-		self:right: right;
+		:hasChildren: true;
+		:left: left;
+		:right: right;
 	}
 }

@@ -131,26 +131,26 @@ Class is DateTime{
 		return fromEpochMs(epochMs: ms, offsetSec: offsetSec);
 	}
 
-	Function of Int is getYear(){ return self:year; }
-	Function of Int is getMonth(){ return self:month; }
-	Function of Int is getDay(){ return self:day; }
-	Function of Int is getHour(){ return self:hour; }
-	Function of Int is getMinute(){ return self:minute; }
-	Function of Int is getSecond(){ return self:second; }
-	Function of Int is getMillisecond(){ return self:millisecond; }
-	Function of Int is getDayOfWeek(){ return self:dayOfWeek; }
-	Function of Int is getDayOfYear(){ return self:dayOfYear; }
-	Function of Int is getEpochMs(){ return self:epochMs; }
-	Function of Int is getEpochSec(){ return floorDiv(a: self:epochMs, b: 1000); }
-	Function of Int is getOffsetSec(){ return self:offsetSec; }
+	Function of Int is getYear(){ return :year; }
+	Function of Int is getMonth(){ return :month; }
+	Function of Int is getDay(){ return :day; }
+	Function of Int is getHour(){ return :hour; }
+	Function of Int is getMinute(){ return :minute; }
+	Function of Int is getSecond(){ return :second; }
+	Function of Int is getMillisecond(){ return :millisecond; }
+	Function of Int is getDayOfWeek(){ return :dayOfWeek; }
+	Function of Int is getDayOfYear(){ return :dayOfYear; }
+	Function of Int is getEpochMs(){ return :epochMs; }
+	Function of Int is getEpochSec(){ return floorDiv(a: :epochMs, b: 1000); }
+	Function of Int is getOffsetSec(){ return :offsetSec; }
 
 	Function of Boolean is isLeapYear(){
-		return isLeap(y: self:year);
+		return isLeap(y: :year);
 	}
 
 	## Returns a new DateTime shifted by [ms] milliseconds.
 	Function of DateTime is addMs(Int is ms){
-		return fromEpochMs(epochMs: self:epochMs + ms, offsetSec: self:offsetSec);
+		return fromEpochMs(epochMs: :epochMs + ms, offsetSec: :offsetSec);
 	}
 
 	## Returns a new DateTime shifted by [seconds] seconds.
@@ -175,17 +175,17 @@ Class is DateTime{
 
 	## Returns the signed difference in milliseconds (`self - other`).
 	Function of Int is diffMs(DateTime is other){
-		return self:epochMs - other:epochMs;
+		return :epochMs - other:epochMs;
 	}
 
 	## Returns an equivalent DateTime in UTC (offset 0).
 	Function of DateTime is toUtc(){
-		return fromEpochMs(epochMs: self:epochMs, offsetSec: 0);
+		return fromEpochMs(epochMs: :epochMs, offsetSec: 0);
 	}
 
 	## Returns an equivalent DateTime in the system's local timezone.
 	Function of DateTime is toLocal(){
-		return fromLocalEpochMs(epochMs: self:epochMs);
+		return fromLocalEpochMs(epochMs: :epochMs);
 	}
 
 	local Function of String is pad2(Int is n){
@@ -220,22 +220,22 @@ Class is DateTime{
 
 	## Formats the calendar date as `YYYY-MM-DD`.
 	Function of String is formatDate(){
-		return pad4(n: self:year) . "-" . pad2(n: self:month) . "-" . pad2(n: self:day);
+		return pad4(n: :year) . "-" . pad2(n: :month) . "-" . pad2(n: :day);
 	}
 
 	## Formats the wall-clock time as `HH:MM:SS`.
 	Function of String is formatTime(){
-		return pad2(n: self:hour) . ":" . pad2(n: self:minute) . ":" . pad2(n: self:second);
+		return pad2(n: :hour) . ":" . pad2(n: :minute) . ":" . pad2(n: :second);
 	}
 
 	## Formats the date and time in ISO-8601 format (`YYYY-MM-DDTHH:MM:SS.mmmZ` or `±HH:MM`).
 	Function of String is formatIso(){
-		local String is base: formatDate() . "T" . formatTime() . "." . pad3(n: self:millisecond);
-		if({ self:offsetSec == 0 }, {
+		local String is base: formatDate() . "T" . formatTime() . "." . pad3(n: :millisecond);
+		if({ :offsetSec == 0 }, {
 			return base . "Z";
 		});
-		local String is sign: if({ self:offsetSec >= 0 }, { "+" }, { "-" });
-		local Int is absOff: if({ self:offsetSec >= 0 }, { self:offsetSec }, { -self:offsetSec });
+		local String is sign: if({ :offsetSec >= 0 }, { "+" }, { "-" });
+		local Int is absOff: if({ :offsetSec >= 0 }, { :offsetSec }, { -:offsetSec });
 		local Int is offH: absOff / 3600;
 		local Int is offM: (absOff % 3600) / 60;
 		return base . sign . pad2(n: offH) . ":" . pad2(n: offM);

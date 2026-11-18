@@ -39,7 +39,7 @@ Class is ClassBindings{
 	## @param c: The class.
 	## @return: true when emission-transparent and contract-free.
 	Function of Boolean is isTransparent(ClassInfo is c){
-		if({ self:isSysinternal(cls: c) }, {
+		if({ :isSysinternal(cls: c) }, {
 			return true;
 		});
 		# NOTE: names here must be unambiguous across the whole program —

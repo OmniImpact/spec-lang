@@ -134,8 +134,8 @@ Class of CallLowerer is MapCallLowerer{
 			'remove': {
 				local NamedArg is na0: call:args:get(index: 0);
 				local Expression is kvExpr: na0:value;
-				local String is kSuf: self:keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
-				local IrType is kArgTy: self:keyIrType(kSuf: kSuf);
+				local String is kSuf: :keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
+				local IrType is kArgTy: :keyIrType(kSuf: kSuf);
 				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
 				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: kArgTy);
 				local String is dst: b:nextTmp();
@@ -145,8 +145,8 @@ Class of CallLowerer is MapCallLowerer{
 			'has': {
 				local NamedArg is na0: call:args:get(index: 0);
 				local Expression is kvExpr: na0:value;
-				local String is kSuf: self:keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
-				local IrType is kArgTy: self:keyIrType(kSuf: kSuf);
+				local String is kSuf: :keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
+				local IrType is kArgTy: :keyIrType(kSuf: kSuf);
 				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
 				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: kArgTy);
 				local String is dst: b:nextTmp();
@@ -157,8 +157,8 @@ Class of CallLowerer is MapCallLowerer{
 				local NamedArg is na0: call:args:get(index: 0);
 				local NamedArg is na1: call:args:get(index: 1);
 				local Expression is kvExpr: na0:value;
-				local String is kSuf: self:keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
-				local IrType is kArgTy: self:keyIrType(kSuf: kSuf);
+				local String is kSuf: :keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
+				local IrType is kArgTy: :keyIrType(kSuf: kSuf);
 				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
 				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: kArgTy);
 				local Expression is vvExpr: na1:value;
@@ -174,8 +174,8 @@ Class of CallLowerer is MapCallLowerer{
 			['get', 'getString', 'getFloat']: {
 				local NamedArg is na0: call:args:get(index: 0);
 				local Expression is kvExpr: na0:value;
-				local String is kSuf: self:keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
-				local IrType is kArgTy: self:keyIrType(kSuf: kSuf);
+				local String is kSuf: :keySuffix(recvType: call:target:resolvedType, kSpecType: kvExpr:resolvedType);
+				local IrType is kArgTy: :keyIrType(kSuf: kSuf);
 				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
 				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: kArgTy);
 				local String is defV: 'null';
@@ -259,8 +259,8 @@ Class of CallLowerer is MapCallLowerer{
 					b:emit(inst: IrInst:ConstInt(dst: zV, value: 0));
 					b:emit(inst: IrInst:Store(slot: accSlot, val: zV, ty: IrType:I64));
 				});
-				local String is kSuf: self:keySuffix(recvType: call:target:resolvedType, kSpecType: '');
-				local IrType is kArgTy: self:keyIrType(kSuf: kSuf);
+				local String is kSuf: :keySuffix(recvType: call:target:resolvedType, kSpecType: '');
+				local IrType is kArgTy: :keyIrType(kSuf: kSuf);
 				if({ call:name == 'filter' }, {
 					outMap: b:nextTmp();
 					if({ kSuf != '' }, {

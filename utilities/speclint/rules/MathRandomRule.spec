@@ -39,6 +39,6 @@ Class of LintRule is MathRandomRule{
 			}
 		], default: {});
 
-		self:traverseExpression(expr: expr, issues: issues);
+		:traverseExpression(expr: expr, issues: issues);
 	}
 }

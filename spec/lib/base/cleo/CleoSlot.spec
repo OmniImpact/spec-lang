@@ -47,8 +47,8 @@ Class is CleoSlot{
 	Array of String is asciiLines: [];
 
 	replace Function is init(Int is id, Int is kind){
-		self:id: id;
-		self:kind: kind;
+		:id: id;
+		:kind: kind;
 	}
 
 	Function of String is shapeOnGlyph(ThrobberShape is sh){
@@ -76,45 +76,45 @@ Class is CleoSlot{
 	}
 
 	Function of String is effectivePrefix(Int is tick, CleoColor is fallbackFg){
-		if({ self:kind != 1 && self:kind != 2 }, {
+		if({ :kind != 1 && :kind != 2 }, {
 			return '';
 		});
-		if({ self:resolved }, {
-			local CleoColor is c: if({ self:fgColor:isSet() }, { self:fgColor }, { fallbackFg });
-			return c:fgSeq() . self:badge . Ansi:reset() . ' ';
+		if({ :resolved }, {
+			local CleoColor is c: if({ :fgColor:isSet() }, { :fgColor }, { fallbackFg });
+			return c:fgSeq() . :badge . Ansi:reset() . ' ';
 		});
-		if({ self:queued }, {
-			local CleoColor is c: if({ self:fgColor:isSet() }, { self:fgColor }, { fallbackFg });
-			return c:fgSeq() . self:shapeOffGlyph(sh: self:shape) . Ansi:reset() . ' ';
+		if({ :queued }, {
+			local CleoColor is c: if({ :fgColor:isSet() }, { :fgColor }, { fallbackFg });
+			return c:fgSeq() . :shapeOffGlyph(sh: :shape) . Ansi:reset() . ' ';
 		});
-		if({ self:kind == 1 }, {
-			local Int is n: self:frames:length();
-			local String is f: if({ n > 0 }, { self:frames:get(index: tick % n, default: '*') }, { '*' });
-			local CleoColor is c: if({ self:fgColor:isSet() }, { self:fgColor }, { fallbackFg });
+		if({ :kind == 1 }, {
+			local Int is n: :frames:length();
+			local String is f: if({ n > 0 }, { :frames:get(index: tick % n, default: '*') }, { '*' });
+			local CleoColor is c: if({ :fgColor:isSet() }, { :fgColor }, { fallbackFg });
 			return c:fgSeq() . f . Ansi:reset() . ' ';
 		});
 		# Shape throbber
-		local String is glyph: self:shapeOnGlyph(sh: self:shape);
-		if({ self:effect == ThrobberEffect:BLINK || self:effect == ThrobberEffect:BLINK_AND_COLOR }, {
+		local String is glyph: :shapeOnGlyph(sh: :shape);
+		if({ :effect == ThrobberEffect:BLINK || :effect == ThrobberEffect:BLINK_AND_COLOR }, {
 			if({ (tick % 2) == 1 }, {
-				glyph: self:shapeOffGlyph(sh: self:shape);
+				glyph: :shapeOffGlyph(sh: :shape);
 			});
 		});
-		local CleoColor is activeColor: if({ self:fgColor:isSet() }, { self:fgColor }, { fallbackFg });
-		if({ (self:effect == ThrobberEffect:COLOR_CYCLE || self:effect == ThrobberEffect:BLINK_AND_COLOR) && self:palette:length() > 0 }, {
-			activeColor: self:palette:get(index: tick % self:palette:length(), default: activeColor);
+		local CleoColor is activeColor: if({ :fgColor:isSet() }, { :fgColor }, { fallbackFg });
+		if({ (:effect == ThrobberEffect:COLOR_CYCLE || :effect == ThrobberEffect:BLINK_AND_COLOR) && :palette:length() > 0 }, {
+			activeColor: :palette:get(index: tick % :palette:length(), default: activeColor);
 		});
 		return activeColor:fgSeq() . glyph . Ansi:reset() . ' ';
 	}
 
 	Function of String is styleLine(String is raw, Int is innerW, CleoColor is secFg, CleoColor is secBg){
-		local CleoColor is effFg: if({ self:fgColor:isSet() }, { self:fgColor }, { secFg });
-		local CleoColor is effBg: if({ self:bgColor:isSet() }, { self:bgColor }, { secBg });
+		local CleoColor is effFg: if({ :fgColor:isSet() }, { :fgColor }, { secFg });
+		local CleoColor is effBg: if({ :bgColor:isSet() }, { :bgColor }, { secBg });
 		local String is padded: CleoText:padRight(text: raw, width: innerW);
 		local String is prefix: '';
 		if({ effBg:isSet() }, { prefix: prefix . effBg:bgSeq(); });
 		if({ effFg:isSet() }, { prefix: prefix . effFg:fgSeq(); });
-		if({ self:bold }, { prefix: prefix . Ansi:bold(); });
+		if({ :bold }, { prefix: prefix . Ansi:bold(); });
 		if({ prefix == '' }, {
 			return padded;
 		});
@@ -141,32 +141,32 @@ Class is CleoSlot{
 
 	Function of Array of String is renderInnerLines(Int is innerW, CleoColor is secFg, CleoColor is secBg, Int is tick){
 		local Array of String is out: [];
-		if({ self:kind == 0 || self:kind == 1 || self:kind == 2 }, {
-			local String is pfx: self:effectivePrefix(tick: tick, fallbackFg: secFg);
-			local String is combined: self:formatRowWithRight(leftPart: pfx . self:text, rightPart: self:rightText, innerW: innerW);
-			out:add(item: self:styleLine(raw: combined, innerW: innerW, secFg: secFg, secBg: secBg));
+		if({ :kind == 0 || :kind == 1 || :kind == 2 }, {
+			local String is pfx: :effectivePrefix(tick: tick, fallbackFg: secFg);
+			local String is combined: :formatRowWithRight(leftPart: pfx . :text, rightPart: :rightText, innerW: innerW);
+			out:add(item: :styleLine(raw: combined, innerW: innerW, secFg: secFg, secBg: secBg));
 			return out;
 		});
-		if({ self:kind == 3 }, {
+		if({ :kind == 3 }, {
 			# Progress Area: text block + two-stage overlaid bar
-			if({ self:text != '' }, {
-				local String is header: self:formatRowWithRight(leftPart: self:text, rightPart: self:rightText, innerW: innerW);
-				out:add(item: self:styleLine(raw: header, innerW: innerW, secFg: secFg, secBg: secBg));
+			if({ :text != '' }, {
+				local String is header: :formatRowWithRight(leftPart: :text, rightPart: :rightText, innerW: innerW);
+				out:add(item: :styleLine(raw: header, innerW: innerW, secFg: secFg, secBg: secBg));
 			});
-			local Float is s1: self:stage1;
+			local Float is s1: :stage1;
 			if({ s1 < 0.0 }, { s1: 0.0; });
 			if({ s1 > 1.0 }, { s1: 1.0; });
-			local Float is s2: self:stage2;
+			local Float is s2: :stage2;
 			if({ s2 < s1 }, { s2: s1; });
 			if({ s2 > 1.0 }, { s2: 1.0; });
 
 			local Int is p1: ((s1 * 100.0) + 0.5) as Int;
 			local Int is p2: ((s2 * 100.0) + 0.5) as Int;
 			local String is pctLabel: '';
-			if({ self:showTwoStagePercent }, {
+			if({ :showTwoStagePercent }, {
 				pctLabel: '  ' . (p1 as String) . '% (' . (p2 as String) . '%)';
 			});
-			if({ !self:showTwoStagePercent }, {
+			if({ !:showTwoStagePercent }, {
 				pctLabel: '  ' . (p1 as String) . '%';
 			});
 			local Int is labelW: CleoText:displayWidth(text: pctLabel);
@@ -182,27 +182,27 @@ Class is CleoSlot{
 
 			local String is bar: '';
 			if({ c1 > 0 }, {
-				bar: bar . self:stage1Color:fgSeq() . CleoText:repeatStr(s: '█', count: c1) . Ansi:reset();
+				bar: bar . :stage1Color:fgSeq() . CleoText:repeatStr(s: '█', count: c1) . Ansi:reset();
 			});
 			if({ (c2 - c1) > 0 }, {
-				bar: bar . self:stage2Color:fgSeq() . CleoText:repeatStr(s: '▓', count: c2 - c1) . Ansi:reset();
+				bar: bar . :stage2Color:fgSeq() . CleoText:repeatStr(s: '▓', count: c2 - c1) . Ansi:reset();
 			});
 			if({ c3 > 0 }, {
-				bar: bar . self:trackColor:fgSeq() . CleoText:repeatStr(s: '░', count: c3) . Ansi:reset();
+				bar: bar . :trackColor:fgSeq() . CleoText:repeatStr(s: '░', count: c3) . Ansi:reset();
 			});
 			bar: bar . pctLabel;
-			out:add(item: self:styleLine(raw: bar, innerW: innerW, secFg: secFg, secBg: secBg));
+			out:add(item: :styleLine(raw: bar, innerW: innerW, secFg: secFg, secBg: secBg));
 			return out;
 		});
-		if({ self:kind == 4 }, {
-			if({ self:hasImage }, {
-				self:image:renderLines():each(action: local Function(String is row){
-					out:add(item: self:styleLine(raw: row, innerW: innerW, secFg: secFg, secBg: secBg));
+		if({ :kind == 4 }, {
+			if({ :hasImage }, {
+				:image:renderLines():each(action: local Function(String is row){
+					out:add(item: :styleLine(raw: row, innerW: innerW, secFg: secFg, secBg: secBg));
 				});
 			});
-			if({ !self:hasImage }, {
-				self:asciiLines:each(action: local Function(String is row){
-					out:add(item: self:styleLine(raw: row, innerW: innerW, secFg: secFg, secBg: secBg));
+			if({ !:hasImage }, {
+				:asciiLines:each(action: local Function(String is row){
+					out:add(item: :styleLine(raw: row, innerW: innerW, secFg: secFg, secBg: secBg));
 				});
 			});
 			return out;

@@ -17,7 +17,7 @@ Class is CompilationReport{
 	local Boolean is quiet: false;
 
 	replace Function is init(Boolean is quiet){
-		self:quiet: quiet;
+		:quiet: quiet;
 	}
 
 	## One stage-progress line, e.g. `  [1/4] loading packages · 6 files`.
@@ -26,7 +26,7 @@ Class is CompilationReport{
 	## @param total: Total stage count.
 	## @param label: Stage description.
 	Function is stage(Int is n, Int is total, String is label){
-		if({ self:quiet }, {
+		if({ :quiet }, {
 			return;
 		});
 		line('  [' . (n as String) . '/' . (total as String) . '] ' . label);
@@ -34,7 +34,7 @@ Class is CompilationReport{
 
 	## One-line progress note inside a stage (no numbering).
 	Function is note(String is label){
-		if({ self:quiet }, {
+		if({ :quiet }, {
 			return;
 		});
 		line('  ' . label);
@@ -56,7 +56,7 @@ Class is CompilationReport{
 	## @param peakCpuPct: Process peak interval CPU usage percentage.
 	## @param binKb: Binary size in KB (-1 when no binary was produced).
 	Function is summary(String is inputPath, String is outputPath, Int is classCount, Int is methodCount, Int is specLines, Int is cLines, Int is totalMs, Int is loadMs, Int is checkMs, Int is genMs, Int is ccMs, Int is peakKb, Int is avgMemKb, Int is avgCpuPct, Int is peakCpuPct, Int is binKb){
-		if({ self:quiet }, {
+		if({ :quiet }, {
 			return;
 		});
 		line('');

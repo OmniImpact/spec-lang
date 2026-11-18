@@ -234,15 +234,15 @@ Class is Driver{
 		# neither form exists — a compile-time diagnostic, never a raw
 		# backend-C failure. An entry with no init at all constructs
 		# through its synthesized zero-arg default and is fine.
-		self:entryInitOwner: '';
-		self:entryInitParams: 0;
-		self:entryInitFirstParam: '';
-		self:entryInitOverloadIndex: 0;
-		self:entryInitTakesMap: false;
-		self:entryInitSawAny: false;
+		:entryInitOwner: '';
+		:entryInitParams: 0;
+		:entryInitFirstParam: '';
+		:entryInitOverloadIndex: 0;
+		:entryInitTakesMap: false;
+		:entryInitSawAny: false;
 		local Array of String is latticeVisited: [];
-		self:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
-		if({ self:entryInitOwner == '' && self:entryInitSawAny }, {
+		:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
+		if({ :entryInitOwner == '' && :entryInitSawAny }, {
 			Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
 			Process:exit(status: 1);
 		});
@@ -250,9 +250,9 @@ Class is Driver{
 		# 4. LLVM IR code generation over the FULL loaded class set.
 		local Int is llvmGenT0: Process:clockMs();
 		local IrBuilder is irb: IrBuilder:init();
-		irb:entryInitOwner: self:entryInitOwner;
-		irb:entryInitOverloadIndex: self:entryInitOverloadIndex;
-		irb:entryInitTakesMap: self:entryInitTakesMap;
+		irb:entryInitOwner: :entryInitOwner;
+		irb:entryInitOverloadIndex: :entryInitOverloadIndex;
+		irb:entryInitTakesMap: :entryInitTakesMap;
 		local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
 		if({ !args:has(key: 'no-opt') }, {
 			local OptimizerPipeline is optPipe: OptimizerPipeline:init();
@@ -354,7 +354,7 @@ Class is Driver{
 	## @param all: The full loaded class set (lattice preloads included).
 	## @param visited: Names already probed on this walk.
 	Function is resolveEntryInit(ClassInfo is c, Array of ClassInfo is all, Array of String is visited){
-		if({ visited:indexOf(search: c:name, default: -1) >= 0 || self:entryInitTakesMap }, {
+		if({ visited:indexOf(search: c:name, default: -1) >= 0 || :entryInitTakesMap }, {
 			return;
 		});
 		if({ c:name == 'Loadable' || c:name == 'Class' || c:name == 'Stringable' || c:name == 'Any' || c:name == 'Enum' }, {
@@ -364,28 +364,28 @@ Class is Driver{
 		local Int is initSeen: 0;
 		c:members:each(action: local Function(Member is m){
 			if({ m:name == 'init' && m:kind == MemberKind:METHOD }, {
-				self:entryInitSawAny: true;
+				:entryInitSawAny: true;
 				local Int is arity: m:params:length();
 				local String is first: '';
 				if({ arity == 1 }, {
 					local Parameter is p: m:params:get(index: 0);
 					first: p:paramType:name;
 				});
-				if({ arity == 1 && first == 'Map' && !self:entryInitTakesMap }, {
+				if({ arity == 1 && first == 'Map' && !:entryInitTakesMap }, {
 					# The argv-capable form: overrides any empty choice.
-					self:entryInitOwner: c:qualifiedName();
-					self:entryInitParams: arity;
-					self:entryInitFirstParam: first;
-					self:entryInitOverloadIndex: initSeen;
-					self:entryInitTakesMap: true;
+					:entryInitOwner: c:qualifiedName();
+					:entryInitParams: arity;
+					:entryInitFirstParam: first;
+					:entryInitOverloadIndex: initSeen;
+					:entryInitTakesMap: true;
 				}, {
-					if({ arity == 0 && self:entryInitOwner == '' }, {
+					if({ arity == 0 && :entryInitOwner == '' }, {
 						# Empty fallback: provisional until an argv-capable
 						# init appears further along the lattice.
-						self:entryInitOwner: c:qualifiedName();
-						self:entryInitParams: arity;
-						self:entryInitFirstParam: first;
-						self:entryInitOverloadIndex: initSeen;
+						:entryInitOwner: c:qualifiedName();
+						:entryInitParams: arity;
+						:entryInitFirstParam: first;
+						:entryInitOverloadIndex: initSeen;
 					});
 				});
 				# The declaration-order index among the owner's init
@@ -396,11 +396,11 @@ Class is Driver{
 				initSeen: initSeen + 1;
 			});
 		});
-		if({ !self:entryInitTakesMap }, {
+		if({ !:entryInitTakesMap }, {
 			c:baseClasses:each(action: local Function(String is baseName){
 				all:each(action: local Function(ClassInfo is cand){
-					if({ !self:entryInitTakesMap && cand:name == baseName }, {
-						self:resolveEntryInit(c: cand, all: all, visited: visited);
+					if({ !:entryInitTakesMap && cand:name == baseName }, {
+						:resolveEntryInit(c: cand, all: all, visited: visited);
 					});
 				});
 			});

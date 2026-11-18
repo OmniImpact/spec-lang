@@ -43,6 +43,6 @@ Class of LintRule is GetStringDefaultRule{
 			}
 		], default: {});
 
-		self:traverseExpression(expr: expr, issues: issues);
+		:traverseExpression(expr: expr, issues: issues);
 	}
 }

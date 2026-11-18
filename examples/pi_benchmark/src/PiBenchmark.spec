@@ -34,11 +34,11 @@ Class is PiBenchmark{
 
 		line(clearScreen() . moveTo(row: 1, col: 1) . hideCursor());
 		local String is title: 'Monte Carlo Pi Benchmark';
-		line(bold() . color256(code: 51, text: '╔═ ' . title . ' ' . self:stats:bar(width: 76 - title:length() - 5) . '╗'));
-		line(color256(code: 51, text: self:stats:boxed(inner: 'Threads: ' . threads . '   Points: ' . points . '   Refresh: ' . refreshMs . 'ms', width: 76)));
-		line(bold() . color256(code: 51, text: '╚' . self:stats:bar(width: 74) . '╝'));
+		line(bold() . color256(code: 51, text: '╔═ ' . title . ' ' . :stats:bar(width: 76 - title:length() - 5) . '╗'));
+		line(color256(code: 51, text: :stats:boxed(inner: 'Threads: ' . threads . '   Points: ' . points . '   Refresh: ' . refreshMs . 'ms', width: 76)));
+		line(bold() . color256(code: 51, text: '╚' . :stats:bar(width: 74) . '╝'));
 
-		self:drawDomain(threads: threads);
+		:drawDomain(threads: threads);
 
 		local Function of Int is sampler: local Function of Int(Int is threadIndex, Int is count){
 			local Int is hits: 0;
@@ -70,7 +70,7 @@ Class is PiBenchmark{
 				if({ threadIndex == 0 }, {
 					local Int is now: clockMs();
 					if({ now - lastDraw >= refreshMs }, {
-						self:drawProgress(threads: threads);
+						:drawProgress(threads: threads);
 						lastDraw: now;
 					});
 				});
@@ -82,18 +82,18 @@ Class is PiBenchmark{
 		local Int is totalHits: Parallel:run(threads: threads, iterations: points, worker: sampler);
 		local Int is elapsedMs: clockMs() - startedAtMs;
 
-		self:drawProgress(threads: threads);
+		:drawProgress(threads: threads);
 		line(showCursor());
-		self:printStats(totalHits: totalHits, points: points, elapsedMs: elapsedMs, threads: threads);
+		:printStats(totalHits: totalHits, points: points, elapsedMs: elapsedMs, threads: threads);
 	}
 
 	## Renders the full `[gridW x gridH]` unit-circle domain with live thread markers.
 	local Function is drawDomain(Int is threads){
 		while(
 			[Int is row: 0],
-			{ row < self:gridH },
+			{ row < :gridH },
 			{
-				line(self:domainRow(row: row, threads: threads));
+				line(:domainRow(row: row, threads: threads));
 				row++;
 			}
 		);
@@ -105,16 +105,16 @@ Class is PiBenchmark{
 		local String is buf: '';
 		while(
 			[Int is col: 0],
-			{ col < self:gridW },
+			{ col < :gridW },
 			{
-				local Float is cx: ((toFloat(value: col) + 0.5) / toFloat(value: self:gridW)) * 2.0 - 1.0;
-				local Float is cy: ((toFloat(value: row) + 0.5) / toFloat(value: self:gridH)) * 2.0 - 1.0;
+				local Float is cx: ((toFloat(value: col) + 0.5) / toFloat(value: :gridW)) * 2.0 - 1.0;
+				local Float is cy: ((toFloat(value: row) + 0.5) / toFloat(value: :gridH)) * 2.0 - 1.0;
 				local Float is dist: sqrt(value: cx * cx + cy * cy);
 
-				local Int is marker: self:markerAt(col: col, row: row, threads: threads);
+				local Int is marker: :markerAt(col: col, row: row, threads: threads);
 				match(when: [
 					{ marker >= 0 }: {
-						buf: buf . color256(code: self:stats:threadColor(index: marker), text: '●');
+						buf: buf . color256(code: :stats:threadColor(index: marker), text: '●');
 					},
 					{ dist <= 1.0 }: {
 						buf: buf . color256(code: 236, text: '·');
@@ -136,8 +136,8 @@ Class is PiBenchmark{
 			[Int is i: 0],
 			{ i < threads && found < 0 },
 			{
-				local Int is gx: (atomicGet(slot: i * 2 + 2) * self:gridW) / 1000;
-				local Int is gy: (atomicGet(slot: i * 2 + 3) * self:gridH) / 1000;
+				local Int is gx: (atomicGet(slot: i * 2 + 2) * :gridW) / 1000;
+				local Int is gy: (atomicGet(slot: i * 2 + 3) * :gridH) / 1000;
 				if({ gx == col && gy == row }, {
 					found: i;
 				});
@@ -150,17 +150,17 @@ Class is PiBenchmark{
 	## Redraws the live domain and running `pi` estimate from atomic counters.
 	local Function is drawProgress(Int is threads){
 		line(moveTo(row: 4, col: 1));
-		self:drawDomain(threads: threads);
+		:drawDomain(threads: threads);
 
 		local Int is samples: atomicGet(slot: 0);
 		local Int is hits: atomicGet(slot: 1);
-		local Float is pi: self:stats:estimatePi(hits: hits, samples: samples);
-		line(color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . self:stats:piText(value: pi) . '  threads: ' . threads));
+		local Float is pi: :stats:estimatePi(hits: hits, samples: samples);
+		line(color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . :stats:piText(value: pi) . '  threads: ' . threads));
 	}
 
 	## Prints the final Pi estimate, error, elapsed time, and throughput summary box.
 	local Function is printStats(Int is totalHits, Int is points, Int is elapsedMs, Int is threads){
-		local Float is pi: self:stats:estimatePi(hits: totalHits, samples: points);
+		local Float is pi: :stats:estimatePi(hits: totalHits, samples: points);
 		local Float is err: abs(value: pi - 3.14159265358979);
 		local Int is perSec: 0;
 		if(check: { elapsedMs > 0 }, then: {
@@ -168,11 +168,11 @@ Class is PiBenchmark{
 		});
 
 		line('');
-		line(bold() . color256(code: 51, text: '╔═ Results ' . self:stats:bar(width: 64) . '╗'));
-		line(color256(code: 51, text: '║ Pi ≈ ' . self:stats:piText(value: pi) . '  (error ' . self:stats:piText(value: err) . ')'));
+		line(bold() . color256(code: 51, text: '╔═ Results ' . :stats:bar(width: 64) . '╗'));
+		line(color256(code: 51, text: '║ Pi ≈ ' . :stats:piText(value: pi) . '  (error ' . :stats:piText(value: err) . ')'));
 		line(color256(code: 51, text: '║ Points: ' . points . '  Hits: ' . totalHits . '  Threads: ' . threads));
 		line(color256(code: 51, text: '║ Time: ' . elapsedMs . ' ms  Throughput: ' . perSec . ' points/sec'));
-		line(bold() . color256(code: 51, text: '╚' . self:stats:bar(width: 74) . '╝'));
+		line(bold() . color256(code: 51, text: '╚' . :stats:bar(width: 74) . '╝'));
 	}
 
 }

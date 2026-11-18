@@ -40,27 +40,27 @@ Class is Audio{
 	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Number of bytes written, or -1 on error.
 	Function of Int is write(List of Byte is samples, Function is onError: local Function(String is error){}){
-		return AudioDevice:write(handle: self:handle, buffer: samples, onError: onError);
+		return AudioDevice:write(handle: :handle, buffer: samples, onError: onError);
 	}
 
 	## Drains the output queue, blocking until all buffered audio finishes playing.
 	Function is drain(){
-		if({ !self:isClosed }, {
-			AudioDevice:drain(handle: self:handle);
+		if({ !:isClosed }, {
+			AudioDevice:drain(handle: :handle);
 		});
 	}
 
 	## Closes the audio stream and releases hardware resources.
 	Function is close(){
-		if({ !self:isClosed }, {
-			AudioDevice:close(handle: self:handle);
-			self:isClosed: true;
-			self:handle: -1;
+		if({ !:isClosed }, {
+			AudioDevice:close(handle: :handle);
+			:isClosed: true;
+			:handle: -1;
 		});
 	}
 
 	## Returns true if the audio stream is open.
 	Function of Boolean is isOpen(){
-		return !self:isClosed;
+		return !:isClosed;
 	}
 }

@@ -37,6 +37,6 @@ Class is RuntimePrelude{
 	}
 
 	Function of String is emitRuntime(){
-		return self:emitHeader() . "\n" . self:emitBody();
+		return :emitHeader() . "\n" . :emitBody();
 	}
 }

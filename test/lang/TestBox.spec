@@ -60,9 +60,9 @@ Class of SpecUnitTest is TestBox{
 	## Case 5: Pass-by-reference out-parameter simulation via Box.
 	Function is testPassByReferenceHelper(){
 		local Box of Int is counter: Box:init(value: 0, isArc: false);
-		self:incrementBox(b: counter);
-		self:incrementBox(b: counter);
-		self:incrementBox(b: counter);
+		:incrementBox(b: counter);
+		:incrementBox(b: counter);
+		:incrementBox(b: counter);
 		Assert:areEqualInt(3, counter:get());
 	}
 

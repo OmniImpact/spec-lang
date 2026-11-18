@@ -11,14 +11,14 @@ Class is JsonBool{
 	local Boolean is val: false;
 
 	replace Function is init(Boolean is value){
-		self:val: value;
+		:val: value;
 	}
 
 	Function of Boolean is value(){
-		return self:val;
+		return :val;
 	}
 
 	replace Function of String is toString(){
-		return if({ self:val }, { 'true' }, { 'false' });
+		return if({ :val }, { 'true' }, { 'false' });
 	}
 }

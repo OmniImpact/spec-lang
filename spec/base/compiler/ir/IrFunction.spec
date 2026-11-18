@@ -24,17 +24,17 @@ Class is IrFunction{
 	}
 
 	Function is init(String is name, IrType is retType){
-		self:name: name;
-		self:retType: retType;
+		:name: name;
+		:retType: retType;
 	}
 
 	Function is addParam(String is name, IrType is ty){
-		self:params:add(item: IrParam:init(name: name, ty: ty));
+		:params:add(item: IrParam:init(name: name, ty: ty));
 	}
 
 	Function of IrBlock is addBlock(String is label){
 		local IrBlock is blk: IrBlock:init(label: label);
-		self:blocks:add(item: blk);
+		:blocks:add(item: blk);
 		return blk;
 	}
 }

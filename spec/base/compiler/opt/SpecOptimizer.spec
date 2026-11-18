@@ -35,7 +35,7 @@ Class is SpecOptimizer{
 		while({ i < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: i);
 			if({ !fn:isExternal }, {
-				self:runOnFunction(fn: fn);
+				:runOnFunction(fn: fn);
 			});
 			i++;
 		});

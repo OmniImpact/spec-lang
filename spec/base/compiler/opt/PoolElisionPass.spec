@@ -46,7 +46,7 @@ Class of SpecOptimizer is PoolElisionPass{
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal }, {
 				fnMap:set(key: fn:name, value: fn);
-				balancedFrame:set(key: fn:name, value: self:hasBalancedEntryFrame(fn: fn));
+				balancedFrame:set(key: fn:name, value: :hasBalancedEntryFrame(fn: fn));
 				mayClaimToCaller:set(key: fn:name, value: false);
 			});
 			fi++;
@@ -62,7 +62,7 @@ Class of SpecOptimizer is PoolElisionPass{
 				local IrFunction is fn: mod:functions:get(index: fi);
 				if({ !fn:isExternal && !mayClaimToCaller:get(key: fn:name, default: false) }, {
 					if({ !balancedFrame:get(key: fn:name, default: false) }, {
-						if({ self:fnBodyMayClaim(fn: fn, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
+						if({ :fnBodyMayClaim(fn: fn, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
 							mayClaimToCaller:set(key: fn:name, value: true);
 							changed: true;
 						});
@@ -76,7 +76,7 @@ Class of SpecOptimizer is PoolElisionPass{
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal }, {
-				self:elideInFunction(fn: fn, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller);
+				:elideInFunction(fn: fn, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller);
 			});
 			fi++;
 		});
@@ -133,7 +133,7 @@ Class of SpecOptimizer is PoolElisionPass{
 			local IrBlock is blk: fn:blocks:get(index: bi);
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
-				if({ self:instMayClaim(inst: blk:insts:get(index: ii), fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
+				if({ :instMayClaim(inst: blk:insts:get(index: ii), fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
 					return true;
 				});
 				ii++;
@@ -201,7 +201,7 @@ Class of SpecOptimizer is PoolElisionPass{
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
-				if({ self:instUsesReg(inst: inst, reg: mark) }, {
+				if({ :instUsesReg(inst: inst, reg: mark) }, {
 					local Boolean is isRel: match(on: inst, when: [
 						IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
 							return callee == 'spec_pool_release_to' && args:length() == 1 && args:get(index: 0, default: '') == mark;
@@ -240,8 +240,8 @@ Class of SpecOptimizer is PoolElisionPass{
 					else: { return ''; }
 				]);
 				if({ mark != '' }, {
-					if({ self:markOnlyUsedInRelease(fn: fn, mark: mark) }, {
-						if({ self:regionIsPoolFree(fn: fn, startBlk: bi, startInst: ii + 1, mark: mark, labelToIdx: labelToIdx, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
+					if({ :markOnlyUsedInRelease(fn: fn, mark: mark) }, {
+						if({ :regionIsPoolFree(fn: fn, startBlk: bi, startInst: ii + 1, mark: mark, labelToIdx: labelToIdx, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
 							elideMarks:set(key: mark, value: true);
 						});
 					});
@@ -305,7 +305,7 @@ Class of SpecOptimizer is PoolElisionPass{
 				if({ isRel }, {
 					closed: true;
 				}, {
-					if({ self:instMayClaim(inst: inst, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
+					if({ :instMayClaim(inst: inst, fnMap: fnMap, mayClaimToCaller: mayClaimToCaller) }, {
 						return false;
 					});
 				});

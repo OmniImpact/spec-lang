@@ -113,7 +113,7 @@ Class is Arena{
 
 	Function is destroyArena(Int is arenaAddr){
 		if({ arenaAddr == 0 }, { return; });
-		self:reset(arenaAddr: arenaAddr);
+		:reset(arenaAddr: arenaAddr);
 		local Int is head: Mem:loadI64(ptr: arenaAddr, byteOffset: 0);
 		if({ head != 0 }, {
 			local Int is hcap: Mem:loadI64(ptr: head, byteOffset: 16);

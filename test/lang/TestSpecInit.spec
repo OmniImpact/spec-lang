@@ -26,7 +26,7 @@ Class of SpecUnitTest is TestSpecInit{
 		});
 		local String is specEnv: Process:getEnv(key: 'SPEC_BIN', default: '');
 		if({ specEnv != '' }, {
-			local String is d: self:dirOf(path: specEnv);
+			local String is d: :dirOf(path: specEnv);
 			if({ fileExists(path: d . '/../utilities/specinit/SpecInit.spec') }, {
 				return d . '/..';
 			});
@@ -56,16 +56,16 @@ Class of SpecUnitTest is TestSpecInit{
 		if({ fileExists(path: cand) }, {
 			return cand;
 		});
-		local String is specBin: self:resolveCompiler(root: root);
-		local String is tmpDir: self:dirOf(path: Uri:tempFile());
+		local String is specBin: :resolveCompiler(root: root);
+		local String is tmpDir: :dirOf(path: Uri:tempFile());
 		local String is built: tmpDir . '/specinit_test_bin' . exeSuf;
 		Process:execute(command: specBin, args: ['--quiet', '-i', root . '/utilities/specinit/SpecInit.spec', '-o', built]);
 		return built;
 	}
 
 	Function is testHelpAndScaffoldAppAndLib(){
-		local String is root: self:resolveRoot();
-		local String is si: self:resolveSpecInit(root: root);
+		local String is root: :resolveRoot();
+		local String is si: :resolveSpecInit(root: root);
 		Assert:isTrue(fileExists(path: si));
 		if({ !fileExists(path: si) }, {
 			return;
@@ -75,7 +75,7 @@ Class of SpecUnitTest is TestSpecInit{
 		Assert:areEqualInt(0, helpCode);
 
 		local String is pid: Process:getPid() as String;
-		local String is tmpDir: self:dirOf(path: Uri:tempFile());
+		local String is tmpDir: :dirOf(path: Uri:tempFile());
 		local String is appDir: tmpDir . '/specinit_app_' . pid;
 		local String is libDir: tmpDir . '/specinit_lib_' . pid;
 

@@ -75,19 +75,19 @@ Class of SpecUnitTest is TestNextGenFeatures{
 	## Verifies Feature 3: Default Parameter Values and Call-Site Named-Argument Reordering.
 	Function is testDefaultsAndReordering(){
 		# All defaults used except required name
-		local String is g1: self:greet(name: 'Spec');
+		local String is g1: :greet(name: 'Spec');
 		Assert:areEqualString('Hello, Spec!', g1);
 		# Override suffix only, leaving prefix default
-		local String is g2: self:greet(name: 'World', suffix: '.');
+		local String is g2: :greet(name: 'World', suffix: '.');
 		Assert:areEqualString('Hello, World.', g2);
 		# Reordered named arguments: suffix, prefix, name
-		local String is g3: self:greet(suffix: '!!!', prefix: 'Welcome', name: 'Developer');
+		local String is g3: :greet(suffix: '!!!', prefix: 'Welcome', name: 'Developer');
 		Assert:areEqualString('Welcome, Developer!!!', g3);
 		# Numeric defaults
-		local Int is calc1: self:calculate(a: 5);
+		local Int is calc1: :calculate(a: 5);
 		Assert:areEqualInt(150, calc1);
 		# Reordered numeric call omitting b
-		local Int is calc2: self:calculate(c: 200, a: 3);
+		local Int is calc2: :calculate(c: 200, a: 3);
 		Assert:areEqualInt(230, calc2);
 	}
 
@@ -167,9 +167,9 @@ Class of SpecUnitTest is TestNextGenFeatures{
 		local Result is resPending: Result:Pending;
 		# When statement destructuring, accumulated into a log
 		local Array of String is log: [];
-		self:inspectResult(res: resOk, log: log);
-		self:inspectResult(res: resErr, log: log);
-		self:inspectResult(res: resPending, log: log);
+		:inspectResult(res: resOk, log: log);
+		:inspectResult(res: resErr, log: log);
+		:inspectResult(res: resPending, log: log);
 		Assert:areEqualInt(3, log:length());
 		Assert:areEqualString('Ok:Payload verified', log:get(index: 0));
 		Assert:areEqualString('Err:404:Endpoint missing', log:get(index: 1));
@@ -236,21 +236,21 @@ Class is Box of T{
 	##
 	## @param val: Initial value.
 	replace Function is init(T is val){
-		self:val: val;
+		:val: val;
 	}
 
 	## Retrieves the stored value.
 	##
 	## @return: Stored value of type T.
 	Function of T is get(){
-		return self:val;
+		return :val;
 	}
 
 	## Updates the stored value.
 	##
 	## @param newVal: New value to store.
 	Function is set(T is newVal){
-		self:val: newVal;
+		:val: newVal;
 	}
 
 }
@@ -273,22 +273,22 @@ Class is Pair of A to B{
 	## @param first: First value of type A.
 	## @param second: Second value of type B.
 	replace Function is init(A is first, B is second){
-		self:first: first;
-		self:second: second;
+		:first: first;
+		:second: second;
 	}
 
 	## Retrieves the first value.
 	##
 	## @return: Value of type A.
 	Function of A is getFirst(){
-		return self:first;
+		return :first;
 	}
 
 	## Retrieves the second value.
 	##
 	## @return: Value of type B.
 	Function of B is getSecond(){
-		return self:second;
+		return :second;
 	}
 
 }

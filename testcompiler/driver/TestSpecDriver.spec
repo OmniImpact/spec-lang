@@ -18,13 +18,13 @@ Class of SpecUnitTest is TestSpecDriver{
 		local String is src: "Class is Greeter{
 	local String is greeting;
 	replace Function is init(String is g){
-		self:greeting: g;
+		:greeting: g;
 	}
 	Function of String is text(){
-		return self:greeting;
+		return :greeting;
 	}
 	replace Function of String is toString(){
-		return 'Greeter(' . self:text() . ')';
+		return 'Greeter(' . :text() . ')';
 	}
 }
 Class of Greeter is LoudGreeter{
@@ -34,7 +34,7 @@ Class of Greeter is LoudGreeter{
 		['base', 'sys', as Output()]
 	];
 	replace Function of String is toString(){
-		return 'LOUD ' . self:text();
+		return 'LOUD ' . :text();
 	}
 }
 Class is DriverE2E{

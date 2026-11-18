@@ -22,6 +22,6 @@ Class of Stringable is Class{
 	##
 	## @return: Textual representation.
 	replace Function of String is toString(){
-		return typeName(self) . '@' . (Introspection:objectHash(obj: self) as String);
+		return typeName(:) . '@' . (Introspection:objectHash(obj: :) as String);
 	}
 }

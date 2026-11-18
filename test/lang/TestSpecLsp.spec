@@ -27,7 +27,7 @@ Class of SpecUnitTest is TestSpecLsp{
 		});
 		local String is specEnv: Process:getEnv(key: 'SPEC_BIN', default: '');
 		if({ specEnv != '' }, {
-			local String is d: self:dirOf(path: specEnv);
+			local String is d: :dirOf(path: specEnv);
 			if({ fileExists(path: d . '/../utilities/speclsp/SpecLsp.spec') }, {
 				return d . '/..';
 			});
@@ -57,8 +57,8 @@ Class of SpecUnitTest is TestSpecLsp{
 		if({ fileExists(path: cand) }, {
 			return cand;
 		});
-		local String is specBin: self:resolveCompiler(root: root);
-		local String is tmpDir: self:dirOf(path: Uri:tempFile());
+		local String is specBin: :resolveCompiler(root: root);
+		local String is tmpDir: :dirOf(path: Uri:tempFile());
 		local String is built: tmpDir . '/speclsp_test_bin' . exeSuf;
 		Process:execute(command: specBin, args: ['--quiet', '-i', root . '/utilities/speclsp/SpecLsp.spec', '-o', built]);
 		return built;
@@ -70,12 +70,12 @@ Class of SpecUnitTest is TestSpecLsp{
 	}
 
 	Function is testInitializeDiagnosticsHoverDefinitionCompletionAndShutdown(){
-		local String is root: self:resolveRoot();
-		local String is lsp: self:resolveSpecLsp(root: root);
+		local String is root: :resolveRoot();
+		local String is lsp: :resolveSpecLsp(root: root);
 		Assert:isTrue(fileExists(path: lsp));
 
 		local String is pid: Process:getPid() as String;
-		local String is tmpDir: self:dirOf(path: Uri:tempFile());
+		local String is tmpDir: :dirOf(path: Uri:tempFile());
 		local String is samplePath: tmpDir . '/speclsp_sample_' . pid . '.spec';
 		local String is inPath: tmpDir . '/speclsp_in_' . pid . '.bin';
 		local String is outPath: tmpDir . '/speclsp_out_' . pid . '.bin';
@@ -86,16 +86,16 @@ Class of SpecUnitTest is TestSpecLsp{
 		local String is docUri: Uri:fromFilePath(filePath: samplePath):toString();
 
 		local String is reqs: '';
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"initialized","params":{}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . ',"languageId":"spec","version":1,"text":' . Json:stringify(value: sampleSrc) . '}}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","id":2,"method":"textDocument/hover","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '},"position":{"line":5,"character":18}}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","id":3,"method":"textDocument/definition","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '},"position":{"line":5,"character":18}}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '},"position":{"line":5,"character":18}}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . ',"version":2},"contentChanges":[{"text":"Class is Bad {\n\tFunction is x( {\n}"}]}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"textDocument/didClose","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '}}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","id":5,"method":"shutdown","params":{}}');
-		reqs: reqs . self:lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"exit","params":{}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"initialized","params":{}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . ',"languageId":"spec","version":1,"text":' . Json:stringify(value: sampleSrc) . '}}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","id":2,"method":"textDocument/hover","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '},"position":{"line":5,"character":18}}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","id":3,"method":"textDocument/definition","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '},"position":{"line":5,"character":18}}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '},"position":{"line":5,"character":18}}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . ',"version":2},"contentChanges":[{"text":"Class is Bad {\n\tFunction is x( {\n}"}]}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"textDocument/didClose","params":{"textDocument":{"uri":' . Json:stringify(value: docUri) . '}}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","id":5,"method":"shutdown","params":{}}');
+		reqs: reqs . :lspFrame(jsonBody: '{"jsonrpc":"2.0","method":"exit","params":{}}');
 
 		fileWrite(path: inPath, content: reqs, onSuccess: {}, onError: {});
 

@@ -57,7 +57,7 @@ Class is VisBase{
 
 	## Uses the private member internally.
 	Function of Int is publicViaSecret(){
-		return self:secret() + 1;
+		return :secret() + 1;
 	}
 }
 
@@ -68,7 +68,7 @@ Class of VisBase is VisChild{
 
 	## Contained members are visible here, including through references.
 	Function of Int is viaHelper(){
-		return self:helper() * 2;
+		return :helper() * 2;
 	}
 
 	Function of Int is viaHelperRef(VisBase is ref){

@@ -42,7 +42,7 @@ static bool _spec_pal_localtime_utc(long long epoch_sec, struct tm* local_tm, st
 	}
 
 	replace Function of String is macos(){
-		return self:linux();
+		return :linux();
 	}
 
 	replace Function of String is windows(){
@@ -87,7 +87,7 @@ static bool _spec_pal_localtime_utc(long long epoch_sec, struct tm* local_tm, st
 	}
 
 	Function of String is emitBody(){
-		return ```{{self:getOsBlock(separatePosix: false)}}
+		return ```{{:getOsBlock(separatePosix: false)}}
 
 long long spec_time_monotonic_us(void) {
     return spec_time_monotonic_ns() / 1000LL;

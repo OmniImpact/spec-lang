@@ -78,36 +78,36 @@ Class is Cleo{
 		Int is tickIntervalMs: 140,
 		Boolean is altScreen: false
 	){
-		self:title: title;
-		self:titleColor: titleColor;
-		self:titleBgColor: titleBgColor;
-		self:width: width;
-		self:outerBorder: outerBorder;
-		self:dividerBorder: dividerBorder;
-		self:borderColor: borderColor;
-		self:dividerColor: dividerColor;
-		self:fgColor: fgColor;
-		self:bgColor: bgColor;
-		self:minWidthCols: minWidthCols;
-		self:maxWidthCols: maxWidthCols;
-		self:tickIntervalMs: tickIntervalMs;
-		self:altScreen: altScreen;
-		self:sections: [];
-		self:slotMap: Map:init();
-		self:idCounter: [0];
-		self:prevLines: [];
-		self:pendingCommits: [];
+		:title: title;
+		:titleColor: titleColor;
+		:titleBgColor: titleBgColor;
+		:width: width;
+		:outerBorder: outerBorder;
+		:dividerBorder: dividerBorder;
+		:borderColor: borderColor;
+		:dividerColor: dividerColor;
+		:fgColor: fgColor;
+		:bgColor: bgColor;
+		:minWidthCols: minWidthCols;
+		:maxWidthCols: maxWidthCols;
+		:tickIntervalMs: tickIntervalMs;
+		:altScreen: altScreen;
+		:sections: [];
+		:slotMap: Map:init();
+		:idCounter: [0];
+		:prevLines: [];
+		:pendingCommits: [];
 
-		local CleoSection is defSec: self:createSection(
+		local CleoSection is defSec: :createSection(
 			title: '',
-			titleColor: self:titleColor,
-			titleBgColor: self:titleBgColor,
+			titleColor: :titleColor,
+			titleBgColor: :titleBgColor,
 			titlePlacement: TitlePlacement:INLINE_BORDER,
-			fgColor: self:fgColor,
-			bgColor: self:bgColor
+			fgColor: :fgColor,
+			bgColor: :bgColor
 		);
-		self:defaultSection: defSec;
-		self:sections:add(item: defSec);
+		:defaultSection: defSec;
+		:sections:add(item: defSec);
 	}
 
 	Function of CleoSection is createSection(
@@ -125,9 +125,9 @@ Class is Cleo{
 		sec:titlePlacement: titlePlacement;
 		sec:fgColor: fgColor;
 		sec:bgColor: bgColor;
-		sec:slotMap: self:slotMap;
-		sec:idCounter: self:idCounter;
-		sec:dirtyRef: self:dirtyRef;
+		sec:slotMap: :slotMap;
+		sec:idCounter: :idCounter;
+		sec:dirtyRef: :dirtyRef;
 		return sec;
 	}
 
@@ -139,15 +139,15 @@ Class is Cleo{
 		CleoColor is fgColor: CleoColor:default(),
 		CleoColor is bgColor: CleoColor:default()
 	){
-		local CleoColor is effTC: self:titleColor;
+		local CleoColor is effTC: :titleColor;
 		if({ titleColor:isSet() }, { effTC: titleColor; });
-		local CleoColor is effTB: self:titleBgColor;
+		local CleoColor is effTB: :titleBgColor;
 		if({ titleBgColor:isSet() }, { effTB: titleBgColor; });
-		local CleoColor is effFg: self:fgColor;
+		local CleoColor is effFg: :fgColor;
 		if({ fgColor:isSet() }, { effFg: fgColor; });
-		local CleoColor is effBg: self:bgColor;
+		local CleoColor is effBg: :bgColor;
 		if({ bgColor:isSet() }, { effBg: bgColor; });
-		local CleoSection is sec: self:createSection(
+		local CleoSection is sec: :createSection(
 			title: title,
 			titleColor: effTC,
 			titleBgColor: effTB,
@@ -157,13 +157,13 @@ Class is Cleo{
 		);
 		Parallel:syncWith(lock: 77, action: {
 			# Replace unused empty initial defaultSection if this is the first explicit section
-			if(check: { self:sections:length() == 1 && self:defaultSection:slots:length() == 0 && self:defaultSection:title == '' }, then: {
-				self:sections:set(index: 0, value: sec);
-				self:defaultSection: sec;
+			if(check: { :sections:length() == 1 && :defaultSection:slots:length() == 0 && :defaultSection:title == '' }, then: {
+				:sections:set(index: 0, value: sec);
+				:defaultSection: sec;
 			}, else: {
-				self:sections:add(item: sec);
+				:sections:add(item: sec);
 			});
-			self:dirtyRef:set(index: 0, value: true);
+			:dirtyRef:set(index: 0, value: true);
 		});
 		return sec;
 	}
@@ -173,180 +173,180 @@ Class is Cleo{
 	Function of Int is addLine(String is text, CleoColor is color: CleoColor:default(), String is rightText: '', Boolean is bold: false){
 		local Int is sid: 0;
 		Parallel:syncWith(lock: 77, action: {
-			sid: self:defaultSection:addLine(text: text, color: color, rightText: rightText, bold: bold);
+			sid: :defaultSection:addLine(text: text, color: color, rightText: rightText, bold: bold);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 		return sid;
 	}
 
 	Function of Int is addThrobber(String is text, CleoColor is color: CleoColor:default(), String is rightText: ''){
 		local Int is sid: 0;
 		Parallel:syncWith(lock: 77, action: {
-			sid: self:defaultSection:addThrobber(text: text, color: color, rightText: rightText);
+			sid: :defaultSection:addThrobber(text: text, color: color, rightText: rightText);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 		return sid;
 	}
 
 	Function of Int is addShapeThrobber(ThrobberShape is shape: ThrobberShape:DOT, ThrobberEffect is effect: ThrobberEffect:BLINK, String is text: '', CleoColor is color: CleoColor:default(), Array of CleoColor is palette: [], String is rightText: ''){
 		local Int is sid: 0;
 		Parallel:syncWith(lock: 77, action: {
-			sid: self:defaultSection:addShapeThrobber(shape: shape, effect: effect, text: text, color: color, palette: palette, rightText: rightText);
+			sid: :defaultSection:addShapeThrobber(shape: shape, effect: effect, text: text, color: color, palette: palette, rightText: rightText);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 		return sid;
 	}
 
 	Function of Int is addProgressArea(String is text: '', CleoColor is stage1Color: CleoColor:ansi(code: 252), CleoColor is stage2Color: CleoColor:ansi(code: 243), CleoColor is trackColor: CleoColor:ansi(code: 236), Boolean is showTwoStagePercent: true){
 		local Int is sid: 0;
 		Parallel:syncWith(lock: 77, action: {
-			sid: self:defaultSection:addProgressArea(text: text, stage1Color: stage1Color, stage2Color: stage2Color, trackColor: trackColor, showTwoStagePercent: showTwoStagePercent);
+			sid: :defaultSection:addProgressArea(text: text, stage1Color: stage1Color, stage2Color: stage2Color, trackColor: trackColor, showTwoStagePercent: showTwoStagePercent);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 		return sid;
 	}
 
 	Function of Int is addImage(CleoImage is image){
 		local Int is sid: 0;
 		Parallel:syncWith(lock: 77, action: {
-			sid: self:defaultSection:addImage(image: image);
+			sid: :defaultSection:addImage(image: image);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 		return sid;
 	}
 
 	Function is updateText(Int is index, String is text, String is rightText: ''){
 		Parallel:syncWith(lock: 77, action: {
-			self:defaultSection:updateText(index: index, text: text, rightText: rightText);
+			:defaultSection:updateText(index: index, text: text, rightText: rightText);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 	}
 
 	Function is setColor(Int is index, CleoColor is color){
 		Parallel:syncWith(lock: 77, action: {
-			self:defaultSection:setColor(index: index, color: color);
+			:defaultSection:setColor(index: index, color: color);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 	}
 
 	Function is resolveSlot(Int is index, String is badge, String is text, CleoColor is color: CleoColor:default(), String is rightText: ''){
 		Parallel:syncWith(lock: 77, action: {
-			self:defaultSection:resolveSlot(index: index, badge: badge, text: text, color: color, rightText: rightText);
+			:defaultSection:resolveSlot(index: index, badge: badge, text: text, color: color, rightText: rightText);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 	}
 
 	Function is updateProgress(Int is index, String is text, Float is stage1, Float is stage2, String is rightText: ''){
 		Parallel:syncWith(lock: 77, action: {
-			self:defaultSection:updateProgress(index: index, text: text, stage1: stage1, stage2: stage2, rightText: rightText);
+			:defaultSection:updateProgress(index: index, text: text, stage1: stage1, stage2: stage2, rightText: rightText);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 	}
 
 	Function is updateImage(Int is index, CleoImage is image){
 		Parallel:syncWith(lock: 77, action: {
-			self:defaultSection:updateImage(index: index, image: image);
+			:defaultSection:updateImage(index: index, image: image);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 	}
 
 	Function is commitLineUnlocked(String is text, CleoColor is color: CleoColor:default()){
 		local String is styled: if({ color:isSet() }, { color:fgSeq() . text . Ansi:reset() }, { text });
-		self:pendingCommits:add(item: styled);
-		self:dirtyRef:set(index: 0, value: true);
+		:pendingCommits:add(item: styled);
+		:dirtyRef:set(index: 0, value: true);
 	}
 
 	Function is commitSlotUnlocked(CleoSection is section, Int is slotId){
 		if({ !section:slotMap:has(key: slotId) }, { return; });
 		local Int is termW: Ansi:terminalWidth();
-		local Int is totalW: self:width:resolve(termWidth: termW, minCols: self:minWidthCols, maxCols: self:maxWidthCols);
-		local Boolean is hasOuter: self:outerBorder != BorderStyle:NONE;
+		local Int is totalW: :width:resolve(termWidth: termW, minCols: :minWidthCols, maxCols: :maxWidthCols);
+		local Boolean is hasOuter: :outerBorder != BorderStyle:NONE;
 		local Int is innerW: if({ hasOuter }, { totalW - 4 }, { totalW });
 		if({ innerW < 8 }, { innerW: 8; });
-		local BorderGlyphs is og: BorderGlyphs:forStyle(style: self:outerBorder);
-		local String is bc: self:borderColor:fgSeq();
-		local String is brst: if({ self:borderColor:isSet() }, { Ansi:reset() }, { '' });
+		local BorderGlyphs is og: BorderGlyphs:forStyle(style: :outerBorder);
+		local String is bc: :borderColor:fgSeq();
+		local String is brst: if({ :borderColor:isSet() }, { Ansi:reset() }, { '' });
 		local CleoSlot is slot: section:slotMap:get(key: slotId);
-		local Array of String is rows: slot:renderInnerLines(innerW: innerW, secFg: section:fgColor, secBg: section:bgColor, tick: self:tickCount);
+		local Array of String is rows: slot:renderInnerLines(innerW: innerW, secFg: section:fgColor, secBg: section:bgColor, tick: :tickCount);
 		local Int is ri: 0;
 		while({ ri < rows:length() }, {
 			local String is rowText: rows:get(index: ri, default: '');
 			if(check: { hasOuter }, then: {
 				local String is padBg: if({ section:bgColor:isSet() }, { section:bgColor:bgSeq() . ' ' . Ansi:reset() }, { ' ' });
-				self:pendingCommits:add(item: bc . og:left . brst . padBg . rowText . padBg . bc . og:right . brst);
+				:pendingCommits:add(item: bc . og:left . brst . padBg . rowText . padBg . bc . og:right . brst);
 			}, else: {
-				self:pendingCommits:add(item: rowText);
+				:pendingCommits:add(item: rowText);
 			});
 			ri: ri + 1;
 		});
-		self:dirtyRef:set(index: 0, value: true);
+		:dirtyRef:set(index: 0, value: true);
 	}
 
 	Function is commitLine(String is text, CleoColor is color: CleoColor:default()){
 		local String is styled: if({ color:isSet() }, { color:fgSeq() . text . Ansi:reset() }, { text });
 		Parallel:syncWith(lock: 77, action: {
-			self:pendingCommits:add(item: styled);
-			self:dirtyRef:set(index: 0, value: true);
+			:pendingCommits:add(item: styled);
+			:dirtyRef:set(index: 0, value: true);
 		});
-		if({ self:running }, { self:flush(); });
+		if({ :running }, { :flush(); });
 	}
 
 	# --- Lifecycle ---
 
 	Function is start(){
 		Parallel:syncWith(lock: 77, action: {
-			if({ self:running }, { return; });
-			self:ttyMode: Ansi:isTty();
-			if({ self:ttyMode }, {
+			if({ :running }, { return; });
+			:ttyMode: Ansi:isTty();
+			if({ :ttyMode }, {
 				Ansi:enableVirtualTerminal();
-				if({ self:altScreen }, {
+				if({ :altScreen }, {
 					Output:consOut(text: Ansi:enterAltScreen() . Ansi:hideCursor());
 				}, {
 					Output:consOut(text: Ansi:hideCursor());
 				});
 			});
-			self:running: true;
-			self:dirtyRef:set(index: 0, value: true);
+			:running: true;
+			:dirtyRef:set(index: 0, value: true);
 		});
-		self:flush();
-		if({ self:ttyMode && self:tickIntervalMs > 0 }, {
-			self:timerId: Time:setInterval(ms: self:tickIntervalMs, count: 0, callback: {
-				self:tick();
+		:flush();
+		if({ :ttyMode && :tickIntervalMs > 0 }, {
+			:timerId: Time:setInterval(ms: :tickIntervalMs, count: 0, callback: {
+				:tick();
 			});
 		});
 	}
 
 	Function is tick(){
 		Parallel:syncWith(lock: 77, action: {
-			if({ !self:running }, { return; });
-			self:tickCount: self:tickCount + 1;
-			self:dirtyRef:set(index: 0, value: true);
-			self:flushUnlocked();
+			if({ !:running }, { return; });
+			:tickCount: :tickCount + 1;
+			:dirtyRef:set(index: 0, value: true);
+			:flushUnlocked();
 		});
 	}
 
 	Function is finish(){
 		local Int is tid: -1;
 		Parallel:syncWith(lock: 77, action: {
-			tid: self:timerId;
-			self:timerId: -1;
-			self:running: false;
-			self:dirtyRef:set(index: 0, value: true);
+			tid: :timerId;
+			:timerId: -1;
+			:running: false;
+			:dirtyRef:set(index: 0, value: true);
 		});
 		if({ tid >= 0 }, {
 			Time:cancelTimer(timerId: tid);
 		});
-		if({ self:ttyMode && self:altScreen }, {
+		if({ :ttyMode && :altScreen }, {
 			Parallel:syncWith(lock: 77, action: {
-				self:prevLines: [];
-				self:prevTermW: 0;
-				self:prevTermH: 0;
-				self:lastFrameW: 0;
+				:prevLines: [];
+				:prevTermW: 0;
+				:prevTermH: 0;
+				:lastFrameW: 0;
 				Output:consOut(text: Ansi:exitAltScreen());
 			});
 		});
-		self:flushFinal();
-		if({ self:ttyMode }, {
+		:flushFinal();
+		if({ :ttyMode }, {
 			Output:consOut(text: Ansi:showCursor());
 		});
 	}
@@ -375,9 +375,9 @@ Class is Cleo{
 		local CleoColor is effBg: if({ tBg:isSet() }, { tBg }, { secBg });
 		local String is padded: CleoText:padRight(text: titleText, width: innerW);
 		local String is styled: effBg:bgSeq() . effFg:fgSeq() . Ansi:bold() . padded . Ansi:reset();
-		local String is bc: self:borderColor:fgSeq();
-		local String is brst: if({ self:borderColor:isSet() }, { Ansi:reset() }, { '' });
-		if({ self:outerBorder == BorderStyle:NONE }, {
+		local String is bc: :borderColor:fgSeq();
+		local String is brst: if({ :borderColor:isSet() }, { Ansi:reset() }, { '' });
+		if({ :outerBorder == BorderStyle:NONE }, {
 			return styled;
 		});
 		return bc . leftB . brst . ' ' . styled . ' ' . bc . rightB . brst;
@@ -385,57 +385,57 @@ Class is Cleo{
 
 	Function of Array of String is buildFrameLines(){
 		local Int is termW: Ansi:terminalWidth();
-		local Int is totalW: self:width:resolve(termWidth: termW, minCols: self:minWidthCols, maxCols: self:maxWidthCols);
-		self:lastFrameW: totalW;
-		local Boolean is hasOuter: self:outerBorder != BorderStyle:NONE;
-		local BorderGlyphs is og: BorderGlyphs:forStyle(style: self:outerBorder);
-		local BorderGlyphs is dg: BorderGlyphs:forStyle(style: self:dividerBorder);
+		local Int is totalW: :width:resolve(termWidth: termW, minCols: :minWidthCols, maxCols: :maxWidthCols);
+		:lastFrameW: totalW;
+		local Boolean is hasOuter: :outerBorder != BorderStyle:NONE;
+		local BorderGlyphs is og: BorderGlyphs:forStyle(style: :outerBorder);
+		local BorderGlyphs is dg: BorderGlyphs:forStyle(style: :dividerBorder);
 
 		local Int is innerW: if({ hasOuter }, { totalW - 4 }, { totalW });
 		if({ innerW < 8 }, { innerW: 8; });
 
 		local Array of String is lines: [];
-		if(check: { !self:hasCommittedHeader }, then: {
+		if(check: { !:hasCommittedHeader }, then: {
 			if(check: { hasOuter }, then: {
-				lines:add(item: self:buildRuleLine(
+				lines:add(item: :buildRuleLine(
 					leftCap: og:topLeft, fill: og:top, rightCap: og:topRight,
-					innerW: innerW, lineColor: self:borderColor,
-					titleText: self:title, tFg: self:titleColor, tBg: self:titleBgColor
+					innerW: innerW, lineColor: :borderColor,
+					titleText: :title, tFg: :titleColor, tBg: :titleBgColor
 				));
 			}, else: {
-				if({ self:title != '' }, {
-					lines:add(item: self:buildHeaderRow(
+				if({ :title != '' }, {
+					lines:add(item: :buildHeaderRow(
 						leftB: '', rightB: '', innerW: innerW,
-						titleText: self:title, tFg: self:titleColor, tBg: self:titleBgColor,
-						secFg: self:fgColor, secBg: self:bgColor
+						titleText: :title, tFg: :titleColor, tBg: :titleBgColor,
+						secFg: :fgColor, secBg: :bgColor
 					));
 				});
 			});
 		});
 
-		local String is bc: self:borderColor:fgSeq();
-		local String is brst: if({ self:borderColor:isSet() }, { Ansi:reset() }, { '' });
+		local String is bc: :borderColor:fgSeq();
+		local String is brst: if({ :borderColor:isSet() }, { Ansi:reset() }, { '' });
 		local Int is si: 0;
-		local Int is visIdx: if({ self:hasCommittedHeader }, { 1 }, { 0 });
-		while({ si < self:sections:length() }, {
-			local CleoSection is sec: self:sections:get(index: si);
+		local Int is visIdx: if({ :hasCommittedHeader }, { 1 }, { 0 });
+		while({ si < :sections:length() }, {
+			local CleoSection is sec: :sections:get(index: si);
 			if({ sec:slots:length() > 0 }, {
-				if({ visIdx > 0 && !(self:hasCommittedHeader && si == 0) }, {
+				if({ visIdx > 0 && !(:hasCommittedHeader && si == 0) }, {
 					local Boolean is inlineSecTitle: sec:title != '' && sec:titlePlacement == TitlePlacement:INLINE_BORDER;
-					if(check: { self:dividerBorder != BorderStyle:NONE }, then: {
+					if(check: { :dividerBorder != BorderStyle:NONE }, then: {
 						local String is dl: if({ hasOuter }, { og:divLeft }, { dg:divLeft });
 						local String is dr: if({ hasOuter }, { og:divRight }, { dg:divRight });
 						local String is divTitle: '';
 						if({ inlineSecTitle }, { divTitle: sec:title; });
-						lines:add(item: self:buildRuleLine(
+						lines:add(item: :buildRuleLine(
 							leftCap: dl, fill: dg:divMid, rightCap: dr,
-							innerW: innerW, lineColor: self:dividerColor,
+							innerW: innerW, lineColor: :dividerColor,
 							titleText: divTitle,
 							tFg: sec:titleColor, tBg: sec:titleBgColor
 						));
 					}, else: {
 						if({ inlineSecTitle }, {
-							lines:add(item: self:buildHeaderRow(
+							lines:add(item: :buildHeaderRow(
 								leftB: og:left, rightB: og:right, innerW: innerW,
 								titleText: sec:title, tFg: sec:titleColor, tBg: sec:titleBgColor,
 								secFg: sec:fgColor, secBg: sec:bgColor
@@ -443,8 +443,8 @@ Class is Cleo{
 						});
 					});
 				});
-				if({ !(self:hasCommittedHeader && si == 0) && sec:title != '' && (sec:titlePlacement == TitlePlacement:HEADER_ROW || (visIdx == 0 && self:title != '')) }, {
-					lines:add(item: self:buildHeaderRow(
+				if({ !(:hasCommittedHeader && si == 0) && sec:title != '' && (sec:titlePlacement == TitlePlacement:HEADER_ROW || (visIdx == 0 && :title != '')) }, {
+					lines:add(item: :buildHeaderRow(
 						leftB: og:left, rightB: og:right, innerW: innerW,
 						titleText: sec:title, tFg: sec:titleColor, tBg: sec:titleBgColor,
 						secFg: sec:fgColor, secBg: sec:bgColor
@@ -453,7 +453,7 @@ Class is Cleo{
 				local Int is sli: 0;
 				while({ sli < sec:slots:length() }, {
 					local CleoSlot is slot: sec:slots:get(index: sli);
-					local Array of String is rows: slot:renderInnerLines(innerW: innerW, secFg: sec:fgColor, secBg: sec:bgColor, tick: self:tickCount);
+					local Array of String is rows: slot:renderInnerLines(innerW: innerW, secFg: sec:fgColor, secBg: sec:bgColor, tick: :tickCount);
 					local Int is ri: 0;
 					while({ ri < rows:length() }, {
 						local String is rowText: rows:get(index: ri, default: '');
@@ -473,9 +473,9 @@ Class is Cleo{
 		});
 
 		if({ hasOuter }, {
-			lines:add(item: self:buildRuleLine(
+			lines:add(item: :buildRuleLine(
 				leftCap: og:bottomLeft, fill: og:bottom, rightCap: og:bottomRight,
-				innerW: innerW, lineColor: self:borderColor,
+				innerW: innerW, lineColor: :borderColor,
 				titleText: '', tFg: CleoColor:default(), tBg: CleoColor:default()
 			));
 		});
@@ -483,36 +483,36 @@ Class is Cleo{
 	}
 
 	Function is markDirty(){
-		self:dirtyRef:set(index: 0, value: true);
+		:dirtyRef:set(index: 0, value: true);
 	}
 
 	Function is flushUnlocked(){
-		if({ !self:dirtyRef:get(index: 0, default: false) && self:pendingCommits:length() == 0 }, { return; });
-		self:dirtyRef:set(index: 0, value: false);
+		if({ !:dirtyRef:get(index: 0, default: false) && :pendingCommits:length() == 0 }, { return; });
+		:dirtyRef:set(index: 0, value: false);
 
-		if({ !self:ttyMode }, {
+		if({ !:ttyMode }, {
 			local Int is ci: 0;
-			while({ ci < self:pendingCommits:length() }, {
-				Output:line(text: self:pendingCommits:get(index: ci, default: ''));
+			while({ ci < :pendingCommits:length() }, {
+				Output:line(text: :pendingCommits:get(index: ci, default: ''));
 				ci: ci + 1;
 			});
-			self:pendingCommits: [];
+			:pendingCommits: [];
 			return;
 		});
 
-		local Int is prevFrameW: self:lastFrameW;
+		local Int is prevFrameW: :lastFrameW;
 		local Boolean is pinningNow: false;
-		if({ self:pendingCommits:length() > 0 && !self:hasCommittedHeader }, {
-			self:hasCommittedHeader: true;
+		if({ :pendingCommits:length() > 0 && !:hasCommittedHeader }, {
+			:hasCommittedHeader: true;
 			pinningNow: true;
 		});
-		local Array of String is nextLines: self:buildFrameLines();
-		local Int is prevCount: self:prevLines:length();
+		local Array of String is nextLines: :buildFrameLines();
+		local Int is prevCount: :prevLines:length();
 		local Int is nextCount: nextLines:length();
 		local Int is termW: Ansi:terminalWidth();
 		local Int is termH: Ansi:terminalHeight();
 		local Int is visCap: if({ termH > 1 }, { termH - 1 }, { 23 });
-		local Boolean is resized: (self:prevTermW > 0 && termW != self:prevTermW) || (self:prevTermH > 0 && termH != self:prevTermH);
+		local Boolean is resized: (:prevTermW > 0 && termW != :prevTermW) || (:prevTermH > 0 && termH != :prevTermH);
 		local String is out: Ansi:beginSyncUpdate();
 
 		local Int is startLineIdx: 0;
@@ -520,10 +520,10 @@ Class is Cleo{
 			startLineIdx: nextCount - visCap;
 		});
 
-		if(check: { self:altScreen }, then: {
+		if(check: { :altScreen }, then: {
 			out: out . Ansi:moveTo(row: 1, col: 1) . Ansi:eraseToEnd();
 		}, else: {
-			local Int is prevVisCap: if({ self:prevTermH > 1 }, { self:prevTermH - 1 }, { visCap });
+			local Int is prevVisCap: if({ :prevTermH > 1 }, { :prevTermH - 1 }, { visCap });
 			local Int is drawnPrevLines: if({ prevCount > prevVisCap }, { prevVisCap }, { prevCount });
 			local Int is prevVisRows: drawnPrevLines;
 			if({ drawnPrevLines > 0 && termW > 0 && prevFrameW > termW }, {
@@ -546,11 +546,11 @@ Class is Cleo{
 
 		# Emit any committed lines permanently above the live frame
 		local Int is ci: 0;
-		while({ ci < self:pendingCommits:length() }, {
-			out: out . Ansi:eraseLine() . self:pendingCommits:get(index: ci, default: '') . "\n";
+		while({ ci < :pendingCommits:length() }, {
+			out: out . Ansi:eraseLine() . :pendingCommits:get(index: ci, default: '') . "\n";
 			ci: ci + 1;
 		});
-		self:pendingCommits: [];
+		:pendingCommits: [];
 
 		# Emit live frame lines (visible window when frame exceeds terminal height)
 		local Int is li: startLineIdx;
@@ -562,29 +562,29 @@ Class is Cleo{
 			out: out . Ansi:eraseToEnd();
 		});
 		out: out . Ansi:endSyncUpdate();
-		self:prevLines: nextLines;
-		self:prevTermW: termW;
-		self:prevTermH: termH;
+		:prevLines: nextLines;
+		:prevTermW: termW;
+		:prevTermH: termH;
 		Output:consOut(text: out);
 	}
 
 	Function is flush(){
 		Parallel:syncWith(lock: 77, action: {
-			self:flushUnlocked();
+			:flushUnlocked();
 		});
 	}
 
 	Function is flushFinal(){
 		Parallel:syncWith(lock: 77, action: {
-			self:dirtyRef:set(index: 0, value: false);
-			if({ !self:ttyMode }, {
+			:dirtyRef:set(index: 0, value: false);
+			if({ !:ttyMode }, {
 				local Int is ci: 0;
-				while({ ci < self:pendingCommits:length() }, {
-					Output:line(text: self:pendingCommits:get(index: ci, default: ''));
+				while({ ci < :pendingCommits:length() }, {
+					Output:line(text: :pendingCommits:get(index: ci, default: ''));
 					ci: ci + 1;
 				});
-				self:pendingCommits: [];
-				local Array of String is finalLines: self:buildFrameLines();
+				:pendingCommits: [];
+				local Array of String is finalLines: :buildFrameLines();
 				local Int is fi: 0;
 				while({ fi < finalLines:length() }, {
 					Output:line(text: finalLines:get(index: fi, default: ''));
@@ -593,17 +593,17 @@ Class is Cleo{
 				return;
 			});
 			# Re-render final frame cleanly
-			local Int is prevFrameW: self:lastFrameW;
-			local Array of String is nextLines: self:buildFrameLines();
-			local Int is prevCount: self:prevLines:length();
+			local Int is prevFrameW: :lastFrameW;
+			local Array of String is nextLines: :buildFrameLines();
+			local Int is prevCount: :prevLines:length();
 			local Int is nextCount: nextLines:length();
 			local Int is termW: Ansi:terminalWidth();
 			local Int is termH: Ansi:terminalHeight();
 			local Int is visCap: if({ termH > 1 }, { termH - 1 }, { 23 });
-			local Boolean is resized: (self:prevTermW > 0 && termW != self:prevTermW) || (self:prevTermH > 0 && termH != self:prevTermH);
+			local Boolean is resized: (:prevTermW > 0 && termW != :prevTermW) || (:prevTermH > 0 && termH != :prevTermH);
 			local String is out: Ansi:beginSyncUpdate();
 
-			local Int is prevVisCap: if({ self:prevTermH > 1 }, { self:prevTermH - 1 }, { visCap });
+			local Int is prevVisCap: if({ :prevTermH > 1 }, { :prevTermH - 1 }, { visCap });
 			local Int is drawnPrevLines: if({ prevCount > prevVisCap }, { prevVisCap }, { prevCount });
 			local Int is prevVisRows: drawnPrevLines;
 			if({ drawnPrevLines > 0 && termW > 0 && prevFrameW > termW }, {
@@ -620,20 +620,20 @@ Class is Cleo{
 				out: out . Ansi:eraseToEnd();
 			});
 			local Int is ci: 0;
-			while({ ci < self:pendingCommits:length() }, {
-				out: out . Ansi:eraseLine() . self:pendingCommits:get(index: ci, default: '') . "\n";
+			while({ ci < :pendingCommits:length() }, {
+				out: out . Ansi:eraseLine() . :pendingCommits:get(index: ci, default: '') . "\n";
 				ci: ci + 1;
 			});
-			self:pendingCommits: [];
+			:pendingCommits: [];
 			local Int is li: 0;
 			while({ li < nextCount }, {
 				out: out . Ansi:eraseLine() . nextLines:get(index: li, default: '') . "\n";
 				li: li + 1;
 			});
 			out: out . Ansi:endSyncUpdate();
-			self:prevLines: nextLines;
-			self:prevTermW: termW;
-			self:prevTermH: termH;
+			:prevLines: nextLines;
+			:prevTermW: termW;
+			:prevTermH: termH;
 			Output:consOut(text: out);
 		});
 	}

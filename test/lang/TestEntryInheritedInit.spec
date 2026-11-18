@@ -25,6 +25,6 @@ Class of EntryBaseChain is TestEntryInheritedInit{
 	}
 
 	Function is testSelfIdentitySurvivesTheChain(){
-		Assert:areEqualString('TestEntryInheritedInit', self:name());
+		Assert:areEqualString('TestEntryInheritedInit', :name());
 	}
 }

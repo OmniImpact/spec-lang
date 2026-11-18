@@ -1082,12 +1082,12 @@ ok:
 
 	Function of String is emitAll(){
 		return ```
-{{self:emitArcAndPool()}}
-{{self:emitClosuresAndBoxes()}}
-{{self:emitMemIntrinsics()}}
-{{self:emitLoopControl()}}
-{{self:emitTypeAndStringHelpers()}}
-{{self:emitMathHelpers()}}
-{{self:emitCliAndAtomics()}}```;
+{{:emitArcAndPool()}}
+{{:emitClosuresAndBoxes()}}
+{{:emitMemIntrinsics()}}
+{{:emitLoopControl()}}
+{{:emitTypeAndStringHelpers()}}
+{{:emitMathHelpers()}}
+{{:emitCliAndAtomics()}}```;
 	}
 }

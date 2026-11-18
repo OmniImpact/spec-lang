@@ -37,7 +37,7 @@ Class of SpecOptimizer is ArcPeepholePass{
 		local Int is bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			self:peepholeBlock(blk: blk);
+			:peepholeBlock(blk: blk);
 			bi++;
 		});
 	}
@@ -131,7 +131,7 @@ Class of SpecOptimizer is ArcPeepholePass{
 								drop:set(index: j, item: true);
 								scanning: false;
 							}, {
-								if({ !self:isPureForArc(inst: jInst) }, {
+								if({ !:isPureForArc(inst: jInst) }, {
 									scanning: false;
 								});
 							});

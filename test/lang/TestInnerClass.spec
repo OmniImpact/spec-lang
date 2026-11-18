@@ -33,14 +33,14 @@ Class of SpecUnitTest is TestInnerClass{
 	## enclosing class.
 	Class is Helper{
 		Function of Int is viaParent(Int is n){
-			return self:doubled(n);
+			return :doubled(n);
 		}
 
 		Function of Int is parentFieldTimes(Int is n){
 			# the inherited field starts empty on the inner's instances; the
 			# inner's methods set what they need.
-			self:shared: self:shared + n;
-			return self:shared;
+			:shared: :shared + n;
+			return :shared;
 		}
 
 		## The outer's as-import (Conditional) used bare inside the inner:
@@ -83,11 +83,11 @@ Class of SpecUnitTest is TestInnerClass{
 
 		Class is Deep{
 			Function of Int is all(){
-				return self:doubled(5) + self:midValue() + self:shadowed();
+				return :doubled(5) + :midValue() + :shadowed();
 			}
 
 			Function of Int is shadowPick(){
-				return self:shadowed();
+				return :shadowed();
 			}
 		}
 	}

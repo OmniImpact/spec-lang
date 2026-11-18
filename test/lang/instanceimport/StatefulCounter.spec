@@ -7,7 +7,7 @@ Class is StatefulCounter{
 	local String is label: '';
 
 	replace Function is init(String is label){
-		self:label: label;
+		:label: label;
 	}
 
 	replace Function is init(){
@@ -18,10 +18,10 @@ Class is StatefulCounter{
 	}
 
 	Function is tick(){
-		self:n: self:n + 1;
+		:n: :n + 1;
 	}
 
 	Function of String is report(){
-		return self:label . '=' . (self:n as String);
+		return :label . '=' . (:n as String);
 	}
 }

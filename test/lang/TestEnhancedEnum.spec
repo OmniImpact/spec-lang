@@ -108,7 +108,7 @@ Class of SpecUnitTest is TestEnhancedEnum {
 		Assert:areEqualInt(2, right:line);
 		Assert:areEqualInt(3, add:line);
 
-		local Int is total: self:evalExpr(expr: add);
+		local Int is total: :evalExpr(expr: add);
 		Assert:areEqualInt(30, total);
 	}
 
@@ -121,7 +121,7 @@ Class of SpecUnitTest is TestEnhancedEnum {
 				return 0;
 			},
 			Expr:Add: local Function of Int(Expr is left, Expr is right){
-				return self:evalExpr(expr: left) + self:evalExpr(expr: right);
+				return :evalExpr(expr: left) + :evalExpr(expr: right);
 			},
 			Expr:Nil: { 0 }
 		]);
@@ -138,12 +138,12 @@ Enum is Expr {
 	String is file: 'main.spec';
 
 	Function of String is describe(){
-		return self:name() . ' at ' . self:file . ':' . self:line;
+		return :name() . ' at ' . :file . ':' . :line;
 	}
 
 	Function of Expr is withLine(Int is newLine){
-		self:line: newLine;
-		return self;
+		:line: newLine;
+		return :;
 	}
 }
 
@@ -155,6 +155,6 @@ Enum is SimpleState {
 	Int is retryCount: 0;
 
 	Function of Boolean is isRunning(){
-		return self:name() == 'Running';
+		return :name() == 'Running';
 	}
 }

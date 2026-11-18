@@ -69,7 +69,7 @@ Class of Any is Introspection{
 		local Int is b: 0;
 		while({ b < bCount }, {
 			local String is bName: Mem:cstrToStr(cstrAddr: Mem:loadI64(ptr: bArr, byteOffset: b * 8));
-			local Int is found: self:findMethodMeta(clsMeta: self:findClassMeta(className: bName), methodName: methodName);
+			local Int is found: :findMethodMeta(clsMeta: :findClassMeta(className: bName), methodName: methodName);
 			if({ found != 0 }, { return found; });
 			b: b + 1;
 		});
@@ -83,7 +83,7 @@ Class of Any is Introspection{
 		local Int is b: bCount - 1;
 		while({ b >= 0 }, {
 			local String is bName: Mem:cstrToStr(cstrAddr: Mem:loadI64(ptr: bArr, byteOffset: b * 8));
-			self:collectMethodNames(out: out, clsMeta: self:findClassMeta(className: bName));
+			:collectMethodNames(out: out, clsMeta: :findClassMeta(className: bName));
 			b: b - 1;
 		});
 		local Int is mCount: Mem:loadI32(ptr: clsMeta, byteOffset: 48);
@@ -111,7 +111,7 @@ Class of Any is Introspection{
 		while({ b < bCount }, {
 			local String is bn: Mem:cstrToStr(cstrAddr: Mem:loadI64(ptr: bArr, byteOffset: b * 8));
 			if({ bn == baseName }, { return true; });
-			if({ self:extendsWalk(clsMeta: self:findClassMeta(className: bn), baseName: baseName, depth: depth + 1) }, {
+			if({ :extendsWalk(clsMeta: :findClassMeta(className: bn), baseName: baseName, depth: depth + 1) }, {
 				return true;
 			});
 			b: b + 1;
@@ -137,14 +137,14 @@ Class of Any is Introspection{
 
 	## The number of HELD members the object's class declares.
 	Function of Int is heldCount(Any is obj){
-		local Int is e: self:heldEntryOf(obj: obj);
+		local Int is e: :heldEntryOf(obj: obj);
 		if({ e == 0 }, { return 0; });
 		return Mem:loadI32(ptr: e, byteOffset: 16);
 	}
 
 	## The name of the object's class's held member at the ordinal index.
 	Function of String is heldName(Any is obj, Int is index){
-		local Int is e: self:heldEntryOf(obj: obj);
+		local Int is e: :heldEntryOf(obj: obj);
 		if({ e == 0 || index < 0 }, { return ''; });
 		local Int is cnt: Mem:loadI32(ptr: e, byteOffset: 16);
 		if({ index >= cnt }, { return ''; });
@@ -154,7 +154,7 @@ Class of Any is Introspection{
 
 	## Whether the name is a held member of the object's class.
 	Function of Boolean is hasHeld(Any is obj, String is name){
-		local Int is e: self:heldEntryOf(obj: obj);
+		local Int is e: :heldEntryOf(obj: obj);
 		if({ e == 0 }, { return false; });
 		local Int is cnt: Mem:loadI32(ptr: e, byteOffset: 16);
 		local Int is namesArr: Mem:loadI64(ptr: e, byteOffset: 8);
@@ -171,7 +171,7 @@ Class of Any is Introspection{
 	## The ordinal scan: the first held-FIELD index whose lazily
 	## constructed instance is the object itself.
 	Function of Int is heldIndexOf(Any is obj){
-		local Int is e: self:heldEntryOf(obj: obj);
+		local Int is e: :heldEntryOf(obj: obj);
 		if({ e == 0 }, { return -1; });
 		local Int is gettersArr: Mem:loadI64(ptr: e, byteOffset: 24);
 		if({ gettersArr == 0 }, { return -1; });
@@ -214,7 +214,7 @@ Class of Any is Introspection{
 	Function of Array of Array of String is functions(String is className){
 		local Array of Array of String is out: [];
 		local Array of String is names: [];
-		self:collectMethodNames(out: names, clsMeta: self:findClassMeta(className: className));
+		:collectMethodNames(out: names, clsMeta: :findClassMeta(className: className));
 		names:each(action: local Function(String is m){
 			local Array of String is path: [];
 			path:add(item: className);
@@ -226,7 +226,7 @@ Class of Any is Introspection{
 
 	## The declaring source file's basename for a class.
 	Function of String is classSourceFile(String is className){
-		local Int is m: self:findClassMeta(className: className);
+		local Int is m: :findClassMeta(className: className);
 		if({ m == 0 }, { return ''; });
 		local Int is sfCstr: Mem:loadI64(ptr: m, byteOffset: 8);
 		if({ sfCstr == 0 }, { return ''; });
@@ -235,12 +235,12 @@ Class of Any is Introspection{
 
 	## Whether the class declares or inherits a method of the name.
 	Function of Boolean is hasMethod(String is className, String is methodName){
-		return self:findMethodMeta(clsMeta: self:findClassMeta(className: className), methodName: methodName) != 0;
+		return :findMethodMeta(clsMeta: :findClassMeta(className: className), methodName: methodName) != 0;
 	}
 
 	## Constructs an instance of the class through its registered zero-argument constructor.
 	Function of Any is instantiate(String is className){
-		local Int is m: self:findClassMeta(className: className);
+		local Int is m: :findClassMeta(className: className);
 		if({ m == 0 }, {
 			Mem:panic(msg: 'Introspection:instantiate — unknown class');
 			return Mem:addrToObj(addr: 0);
@@ -261,12 +261,12 @@ Class of Any is Introspection{
 			return;
 		});
 		local Int is tnCstr: Mem:loadI64(ptr: instAddr, byteOffset: 0);
-		local Int is m: self:findClassMeta(className: Mem:cstrToStr(cstrAddr: tnCstr));
+		local Int is m: :findClassMeta(className: Mem:cstrToStr(cstrAddr: tnCstr));
 		if({ m == 0 }, {
 			Mem:panic(msg: 'Introspection:invoke — instance of an unregistered class');
 			return;
 		});
-		local Int is mm: self:findMethodMeta(clsMeta: m, methodName: methodName);
+		local Int is mm: :findMethodMeta(clsMeta: m, methodName: methodName);
 		if({ mm == 0 }, {
 			Mem:panic(msg: 'Introspection:invoke — no such method');
 			return;
@@ -287,18 +287,18 @@ Class of Any is Introspection{
 
 	## Whether [className] inherits [baseName] anywhere up its base lattice.
 	Function of Boolean is extendsClass(String is className, String is baseName){
-		return self:extendsWalk(clsMeta: self:findClassMeta(className: className), baseName: baseName, depth: 0);
+		return :extendsWalk(clsMeta: :findClassMeta(className: className), baseName: baseName, depth: 0);
 	}
 
 	## Discovers every registered strict subclass of [baseName] and instantiates each.
 	Function of Array of Any is instantiateSubclasses(String is baseName){
-		local Array of String is names: self:classNames();
+		local Array of String is names: :classNames();
 		local Array of Any is found: [];
 		local Int is i: 0;
 		while({ i < names:length() }, {
 			local String is cname: names:get(index: i, default: '');
-			if({ cname != baseName && self:extendsClass(className: cname, baseName: baseName) }, {
-				found:add(item: self:instantiate(className: cname));
+			if({ cname != baseName && :extendsClass(className: cname, baseName: baseName) }, {
+				found:add(item: :instantiate(className: cname));
 			});
 			i++;
 		});

@@ -43,72 +43,72 @@ Class is Token{
 	## @param line: One-based line coordinate.
 	## @param col: One-based column coordinate.
 	replace Function is init(TokenKind is kind, String is value, Int is line, Int is col){
-		self:kind: kind;
-		self:value: value;
-		self:line: line;
-		self:col: col;
+		:kind: kind;
+		:value: value;
+		:line: line;
+		:col: col;
 	}
 
 	## Attaches the reserved-word classification to a KEYWORD token.
 	##
 	## @param kw: The [Keyword] variant scanned.
 	Function is setKeyword(Keyword is kw){
-		self:keyword: kw;
+		:keyword: kw;
 	}
 
 	## Returns the token category.
 	##
 	## @return: [TokenKind] variant for `when` dispatch.
 	Function of TokenKind is getTokenKind(){
-		return self:kind;
+		return :kind;
 	}
 
 	## Returns the reserved-word classification.
 	##
 	## @return: [Keyword] variant; [Keyword:NONE] for non-keyword tokens.
 	Function of Keyword is getKeyword(){
-		return self:keyword;
+		return :keyword;
 	}
 
 	## Attaches the operator classification to a SYMBOL token.
 	##
 	## @param op: The [Operator] variant scanned.
 	Function is setOperator(Operator is op){
-		self:operator: op;
+		:operator: op;
 	}
 
 	## Returns the operator classification.
 	##
 	## @return: [Operator] variant; [Operator:NONE] otherwise.
 	Function of Operator is getOperator(){
-		return self:operator;
+		return :operator;
 	}
 
 	## Returns the raw lexeme.
 	##
 	## @return: Value string.
 	Function of String is getValue(){
-		return self:value;
+		return :value;
 	}
 
 	## Returns the one-based line coordinate.
 	##
 	## @return: Line number.
 	Function of Int is getLine(){
-		return self:line;
+		return :line;
 	}
 
 	## Returns the one-based column coordinate.
 	##
 	## @return: Column number.
 	Function of Int is getCol(){
-		return self:col;
+		return :col;
 	}
 
 	## Human-readable diagnostic form, used verbatim in error messages.
 	##
 	## @return: Text like {{KIND}} '{{value}}' at {{line}}:{{col}}.
 	Function of String is describe(){
-		return "{{self:kind:value()}} '{{self:value}}' at {{self:line}}:{{self:col}}";
+		return "{{:kind:value()}} '{{:value}}' at {{:line}}:{{:col}}";
 	}
 }

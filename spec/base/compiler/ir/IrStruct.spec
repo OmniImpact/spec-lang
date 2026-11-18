@@ -33,23 +33,23 @@ Class is IrStruct{
 	}
 
 	Function is init(String is name){
-		self:name: name;
+		:name: name;
 	}
 
 	Function of Int is addField(String is name, IrType is ty){
-		local Int is idx: self:fieldNames:length();
-		self:fieldNames:add(item: name);
-		self:fieldTypes:add(item: ty);
+		local Int is idx: :fieldNames:length();
+		:fieldNames:add(item: name);
+		:fieldTypes:add(item: ty);
 		local Boolean is isPtr: ty == IrType:Ptr;
-		self:fieldIsArc:add(item: isPtr);
+		:fieldIsArc:add(item: isPtr);
 		return idx;
 	}
 
 	Function of Int is addFieldArc(String is name, IrType is ty, Boolean is isArc){
-		local Int is idx: self:fieldNames:length();
-		self:fieldNames:add(item: name);
-		self:fieldTypes:add(item: ty);
-		self:fieldIsArc:add(item: isArc);
+		local Int is idx: :fieldNames:length();
+		:fieldNames:add(item: name);
+		:fieldTypes:add(item: ty);
+		:fieldIsArc:add(item: isArc);
 		return idx;
 	}
 
@@ -57,8 +57,8 @@ Class is IrStruct{
 		local Int is i: 0;
 		local Int is res: -1;
 		local Boolean is found: false;
-		while({ i < self:fieldNames:length() && !found }, {
-			if({ self:fieldNames:get(index: i, default: '') == name }, {
+		while({ i < :fieldNames:length() && !found }, {
+			if({ :fieldNames:get(index: i, default: '') == name }, {
 				res: i;
 				found: true;
 			});
@@ -71,8 +71,8 @@ Class is IrStruct{
 		local Int is i: 0;
 		local Int is res: -1;
 		local Boolean is found: false;
-		while({ i < self:vtableMethodNames:length() && !found }, {
-			if({ self:vtableMethodNames:get(index: i, default: '') == mname }, {
+		while({ i < :vtableMethodNames:length() && !found }, {
+			if({ :vtableMethodNames:get(index: i, default: '') == mname }, {
 				res: i;
 				found: true;
 			});
@@ -82,14 +82,14 @@ Class is IrStruct{
 	}
 
 	Function is setVtableMethod(String is mname, String is fnName){
-		local Int is idx: self:vtableSlot(mname: mname);
+		local Int is idx: :vtableSlot(mname: mname);
 		if({ idx >= 0 }, {
 			if({ fnName != 'null' }, {
-				self:vtableFns:set(index: idx, value: fnName);
+				:vtableFns:set(index: idx, value: fnName);
 			});
 		}, {
-			self:vtableMethodNames:add(item: mname);
-			self:vtableFns:add(item: fnName);
+			:vtableMethodNames:add(item: mname);
+			:vtableFns:add(item: fnName);
 		});
 	}
 }

@@ -49,8 +49,8 @@ Class is ScopeAsDemo{
 			"103,Charlie,Security Analyst,SecOps\n" .
 			"104,Diana,Compiler Engineer,Core Tooling\n";
 
-		as: self:measure(label: "Data Ingestion & Report Pipeline");
-		as (String is path): self:withTempFile(path: tempPath, content: csvData);
+		as: :measure(label: "Data Ingestion & Report Pipeline");
+		as (String is path): :withTempFile(path: tempPath, content: csvData);
 
 		line("[Task] Reading records from " . path . "...");
 		local String is raw: fileRead(path: path, default: "");

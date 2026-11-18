@@ -35,8 +35,8 @@ Class is Measure{
 		local Int is rssKb: res:getInt(key: 'rss_kb', default: 0);
 		local Int is exitCode: res:getInt(key: 'exit', default: -1);
 
-		local String is wallS: self:formatSeconds(us: wallUs);
-		local String is cpuS: self:formatSeconds(us: cpuUs);
+		local String is wallS: :formatSeconds(us: wallUs);
+		local String is cpuS: :formatSeconds(us: cpuUs);
 
 		line('__MEASURE__ wall_s=' . wallS . ' cpu_s=' . cpuS . ' rss_kb=' . rssKb . ' exit=' . exitCode);
 	}

@@ -83,57 +83,57 @@ Class of SpecOptimizer is ConcatFusionPass{
 			while({ ii < blk:insts:length() }, {
 				match(on: blk:insts:get(index: ii), when: [
 					IrInst:Load: local Function(String is dst, String is slot, IrType is ty){
-						self:bumpUse(uses: uses, v: slot);
+						:bumpUse(uses: uses, v: slot);
 					},
 					IrInst:Store: local Function(String is slot, String is val, IrType is ty){
-						self:bumpUse(uses: uses, v: val);
+						:bumpUse(uses: uses, v: val);
 					},
 					IrInst:BinOp: local Function(String is dst, String is op, String is lhs, String is rhs, IrType is ty){
-						self:bumpUse(uses: uses, v: lhs);
-						self:bumpUse(uses: uses, v: rhs);
+						:bumpUse(uses: uses, v: lhs);
+						:bumpUse(uses: uses, v: rhs);
 					},
 					IrInst:UnaryOp: local Function(String is dst, String is op, String is operand, IrType is ty){
-						self:bumpUse(uses: uses, v: operand);
+						:bumpUse(uses: uses, v: operand);
 					},
 					IrInst:Cmp: local Function(String is dst, String is op, String is lhs, String is rhs, IrType is ty){
-						self:bumpUse(uses: uses, v: lhs);
-						self:bumpUse(uses: uses, v: rhs);
+						:bumpUse(uses: uses, v: lhs);
+						:bumpUse(uses: uses, v: rhs);
 					},
 					IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
 						local Int is ai: 0;
 						while({ ai < args:length() }, {
-							self:bumpUse(uses: uses, v: args:get(index: ai));
+							:bumpUse(uses: uses, v: args:get(index: ai));
 							ai++;
 						});
 					},
 					IrInst:IndirectCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
-						self:bumpUse(uses: uses, v: fnPtr);
+						:bumpUse(uses: uses, v: fnPtr);
 						local Int is ai: 0;
 						while({ ai < args:length() }, {
-							self:bumpUse(uses: uses, v: args:get(index: ai));
+							:bumpUse(uses: uses, v: args:get(index: ai));
 							ai++;
 						});
 					},
 					IrInst:FieldPtr: local Function(String is dst, String is objPtr, String is structName, Int is fieldIndex){
-						self:bumpUse(uses: uses, v: objPtr);
+						:bumpUse(uses: uses, v: objPtr);
 					},
 					IrInst:PtrElem: local Function(String is dst, String is basePtr, Int is index){
-						self:bumpUse(uses: uses, v: basePtr);
+						:bumpUse(uses: uses, v: basePtr);
 					},
 					IrInst:IrCast: local Function(String is dst, String is val, IrType is fromType, IrType is toType){
-						self:bumpUse(uses: uses, v: val);
+						:bumpUse(uses: uses, v: val);
 					},
 					IrInst:Retain: local Function(String is val){
-						self:bumpUse(uses: uses, v: val);
+						:bumpUse(uses: uses, v: val);
 					},
 					IrInst:Release: local Function(String is val){
-						self:bumpUse(uses: uses, v: val);
+						:bumpUse(uses: uses, v: val);
 					},
 					IrInst:Ret: local Function(Boolean is hasVal, String is val, IrType is ty){
-						if({ hasVal }, { self:bumpUse(uses: uses, v: val); });
+						if({ hasVal }, { :bumpUse(uses: uses, v: val); });
 					},
 					IrInst:CondBr: local Function(String is cond, String is thenLabel, String is elseLabel){
-						self:bumpUse(uses: uses, v: cond);
+						:bumpUse(uses: uses, v: cond);
 					},
 					else: {}
 				]);
@@ -310,7 +310,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 		local Int is fi: 0;
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
-			if({ self:isBufferConcatFn(fn: fn) }, {
+			if({ :isBufferConcatFn(fn: fn) }, {
 				concatFns:set(key: fn:name, value: true);
 			});
 			fi++;
@@ -324,7 +324,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal && !fn:name:startsWith(prefix: '__spec_concat_') }, {
-				local Map of String to Int is uses: self:countUses(fn: fn);
+				local Map of String to Int is uses: :countUses(fn: fn);
 				local Int is bi: 0;
 				while({ bi < fn:blocks:length() }, {
 					local IrBlock is blk: fn:blocks:get(index: bi);
@@ -453,7 +453,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 		local Int is ai: 0;
 		while({ ai < neededArities:length() }, {
 			local Int is k: neededArities:get(index: ai);
-			mod:functions:add(item: self:buildConcatHelper(k: k));
+			mod:functions:add(item: :buildConcatHelper(k: k));
 			ai++;
 		});
 	}

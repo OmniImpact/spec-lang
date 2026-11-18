@@ -31,7 +31,7 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 		if({ call:name == 'typeName' && call:args:length() == 0 && rt != '' && rt != 'Class' && rt != 'String' && !rt:startsWith(prefix: 'Array') && !rt:startsWith(prefix: 'Map') && !rt:startsWith(prefix: 'List') }, {
 			return true;
 		});
-		if({ self:isFloorTarget(call: call, domain: 'Reflection') }, {
+		if({ :isFloorTarget(call: call, domain: 'Reflection') }, {
 			if({ call:name == 'init' || call:name == 'class' || call:name == 'method' }, { return true; });
 			return false;
 		});
@@ -39,7 +39,7 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 	}
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
-		if({ self:isFloorTarget(call: call, domain: 'Reflection') }, {
+		if({ :isFloorTarget(call: call, domain: 'Reflection') }, {
 			if({ call:name == 'init' }, { return 'null'; });
 			if({ call:name == 'class' }, {
 				local String is dst: b:nextTmp();
@@ -55,6 +55,6 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 			});
 		});
 		local String is o: b:lowerExpr(expr: call:target);
-		return self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [o]);
+		return :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [o]);
 	}
 }

@@ -136,9 +136,9 @@ Class is ErrorText{
 		return 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures.';
 	}
 
-	## Message for calling self method from held member.
+	## Message for calling instance method from held member.
 	Function of String is errHeldNoInstance(String is method){
-		return 'A held member body has no instance: \'' . method . '\' cannot be called on \'self\' from it.';
+		return 'A held member body has no instance: \'' . method . '\' cannot be called on \':\' from it.';
 	}
 
 	## Message for calling held function through instance.

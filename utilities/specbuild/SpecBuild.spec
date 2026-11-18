@@ -148,7 +148,7 @@ Class is SpecBuild{
 
 	replace Function is init(Map of String to String is args){
 		if({ args:has(key: 'h') || args:has(key: 'help') }, {
-			self:printHelp();
+			:printHelp();
 			Process:exit(status: 0);
 		});
 
@@ -189,7 +189,7 @@ Class is SpecBuild{
 		});
 
 		if({ command == 'help' }, {
-			self:printHelp();
+			:printHelp();
 			Process:exit(status: 0);
 		});
 
@@ -230,24 +230,24 @@ Class is SpecBuild{
 		local Array is flags: Json:getArray(obj: cfg, key: 'flags');
 		local Map is testsCfg: Json:getObject(obj: cfg, key: 'tests');
 
-		local String is configDir: self:dirOf(path: configPath);
-		local String is resolvedSource: self:resolvePath(baseDir: configDir, relPath: source);
-		local String is output: self:resolvePath(baseDir: configDir, relPath: rawOutput);
+		local String is configDir: :dirOf(path: configPath);
+		local String is resolvedSource: :resolvePath(baseDir: configDir, relPath: source);
+		local String is output: :resolvePath(baseDir: configDir, relPath: rawOutput);
 
 		local String is rawCompiler: Json:getString(obj: cfg, key: 'compiler', default: '');
 		local String is customCompiler: '';
 		if({ rawCompiler != '' }, {
-			customCompiler: self:resolvePath(baseDir: configDir, relPath: rawCompiler);
+			customCompiler: :resolvePath(baseDir: configDir, relPath: rawCompiler);
 		});
 		local String is rawLinter: Json:getString(obj: cfg, key: 'linter', default: '');
 		local String is customLinter: '';
 		if({ rawLinter != '' }, {
-			customLinter: self:resolvePath(baseDir: configDir, relPath: rawLinter);
+			customLinter: :resolvePath(baseDir: configDir, relPath: rawLinter);
 		});
 
 		if({ command == 'clean' }, {
 			if({ output == '' }, {
-				output: self:resolvePath(baseDir: configDir, relPath: 'bin/' . name);
+				output: :resolvePath(baseDir: configDir, relPath: 'bin/' . name);
 			});
 			if({ fileExists(path: output) }, {
 				File:fileRemove(path: output);
@@ -264,7 +264,7 @@ Class is SpecBuild{
 		});
 
 		if({ command == 'lint' }, {
-			local String is linter: self:resolveLinter(custom: customLinter);
+			local String is linter: :resolveLinter(custom: customLinter);
 			local Array of String is lintArgs: [];
 			local Int is dirCount: sourceDirs:length();
 			if({ dirCount == 0 }, {
@@ -279,7 +279,7 @@ Class is SpecBuild{
 					local String is sd: Json:getStringAt(arr: sourceDirs, index: di, default: '');
 					if({ sd != '' }, {
 						lintArgs:add(item: '-t');
-						lintArgs:add(item: self:resolvePath(baseDir: configDir, relPath: sd));
+						lintArgs:add(item: :resolvePath(baseDir: configDir, relPath: sd));
 					});
 					di++;
 				});
@@ -293,10 +293,10 @@ Class is SpecBuild{
 			local String is runnerName: Json:getString(obj: testsCfg, key: 'runner', default: 'specunit');
 			local String is resolvedRunner: runnerName;
 			if({ runnerName != '' && runnerName != 'specunit' }, {
-				resolvedRunner: self:resolvePath(baseDir: configDir, relPath: runnerName);
+				resolvedRunner: :resolvePath(baseDir: configDir, relPath: runnerName);
 			});
-			local String is runner: self:resolveRunner(custom: resolvedRunner);
-			local String is testCompiler: self:resolveCompiler(custom: customCompiler);
+			local String is runner: :resolveRunner(custom: resolvedRunner);
+			local String is testCompiler: :resolveCompiler(custom: customCompiler);
 			local Array is testDirs: Json:getArray(obj: testsCfg, key: 'dirs');
 			local Array of String is testArgs: ['-s', testCompiler];
 			local Int is sdCount: sourceDirs:length();
@@ -304,20 +304,20 @@ Class is SpecBuild{
 				local String is sd: Json:getStringAt(arr: sourceDirs, index: si, default: '');
 				if({ sd != '' }, {
 					testArgs:add(item: '-S');
-					testArgs:add(item: self:resolvePath(baseDir: configDir, relPath: sd));
+					testArgs:add(item: :resolvePath(baseDir: configDir, relPath: sd));
 				});
 				si++;
 			});
 			local Int is tdCount: testDirs:length();
 			if({ tdCount == 0 }, {
 				testArgs:add(item: '-t');
-				testArgs:add(item: self:resolvePath(baseDir: configDir, relPath: 'tests'));
+				testArgs:add(item: :resolvePath(baseDir: configDir, relPath: 'tests'));
 			}, {
 				while([Int is ti: 0], { ti < tdCount }, {
 					local String is td: Json:getStringAt(arr: testDirs, index: ti, default: '');
 					if({ td != '' }, {
 						testArgs:add(item: '-t');
-						testArgs:add(item: self:resolvePath(baseDir: configDir, relPath: td));
+						testArgs:add(item: :resolvePath(baseDir: configDir, relPath: td));
 					});
 					ti++;
 				});
@@ -339,15 +339,15 @@ Class is SpecBuild{
 		});
 
 		if({ output == '' }, {
-			output: self:resolvePath(baseDir: configDir, relPath: 'bin/' . name);
+			output: :resolvePath(baseDir: configDir, relPath: 'bin/' . name);
 		});
 
-		local String is outParent: self:dirOf(path: output);
+		local String is outParent: :dirOf(path: output);
 		if({ outParent != '' && !fileExists(path: outParent) }, {
 			Process:execute(command: 'mkdir', args: ['-p', outParent]);
 		});
 
-		local String is compiler: self:resolveCompiler(custom: customCompiler);
+		local String is compiler: :resolveCompiler(custom: customCompiler);
 		local Array of String is specArgs: ['-i', resolvedSource, '-o', output];
 
 		local Int is sLen: sourceDirs:length();
@@ -355,7 +355,7 @@ Class is SpecBuild{
 			local String is sd: Json:getStringAt(arr: sourceDirs, index: si, default: '');
 			if({ sd != '' }, {
 				specArgs:add(item: '-s');
-				specArgs:add(item: self:resolvePath(baseDir: configDir, relPath: sd));
+				specArgs:add(item: :resolvePath(baseDir: configDir, relPath: sd));
 			});
 			si++;
 		});

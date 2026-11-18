@@ -41,25 +41,25 @@ Class is CleoColor{
 	}
 
 	Function of Boolean is isSet(){
-		return self:kind != 0;
+		return :kind != 0;
 	}
 
 	Function of String is fgSeq(){
-		if({ self:kind == 1 }, {
-			return Ansi:fg256(code: self:code);
+		if({ :kind == 1 }, {
+			return Ansi:fg256(code: :code);
 		});
-		if({ self:kind == 2 }, {
-			return Ansi:fgRgb(r: self:r, g: self:g, b: self:b);
+		if({ :kind == 2 }, {
+			return Ansi:fgRgb(r: :r, g: :g, b: :b);
 		});
 		return '';
 	}
 
 	Function of String is bgSeq(){
-		if({ self:kind == 1 }, {
-			return Ansi:bg256(code: self:code);
+		if({ :kind == 1 }, {
+			return Ansi:bg256(code: :code);
 		});
-		if({ self:kind == 2 }, {
-			return Ansi:bgRgb(r: self:r, g: self:g, b: self:b);
+		if({ :kind == 2 }, {
+			return Ansi:bgRgb(r: :r, g: :g, b: :b);
 		});
 		return '';
 	}

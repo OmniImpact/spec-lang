@@ -36,7 +36,7 @@ Class is Vector{
 
 	## Destroys this vector, releasing any ARC elements and freeing its backing array.
 	Function is vecDestroy(){
-		local Int is addr: Mem:objToAddr(obj: self);
+		local Int is addr: Mem:objToAddr(obj: :);
 		if({ addr == 0 }, { return; });
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
 		if({ items != 0 }, {
@@ -57,7 +57,7 @@ Class is Vector{
 
 	## Destroys this byte buffer, freeing its backing byte array.
 	Function is byteBufDestroy(){
-		local Int is addr: Mem:objToAddr(obj: self);
+		local Int is addr: Mem:objToAddr(obj: :);
 		if({ addr == 0 }, { return; });
 		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
 		if({ data != 0 }, {
@@ -82,9 +82,9 @@ Class is Vector{
 		if({ Mem:loadByte(ptr: addr, byteOffset: 28) != 0 }, {
 			return Mem:loadI64(ptr: addr, byteOffset: 8);
 		});
-		self:lockVec(addr: addr);
+		:lockVec(addr: addr);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
-		self:unlockVec(addr: addr);
+		:unlockVec(addr: addr);
 		return len;
 	}
 
@@ -93,10 +93,10 @@ Class is Vector{
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return def; });
 		local Boolean is isFrozen: Mem:loadByte(ptr: addr, byteOffset: 28) != 0;
-		if({ !isFrozen }, { self:lockVec(addr: addr); });
+		if({ !isFrozen }, { :lockVec(addr: addr); });
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			if({ !isFrozen }, { self:unlockVec(addr: addr); });
+			if({ !isFrozen }, { :unlockVec(addr: addr); });
 			return def;
 		});
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
@@ -106,7 +106,7 @@ Class is Vector{
 			Mem:retainAddr(objAddr: valAddr);
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
-		if({ !isFrozen }, { self:unlockVec(addr: addr); });
+		if({ !isFrozen }, { :unlockVec(addr: addr); });
 		return Mem:addrToObj(addr: valAddr);
 	}
 
@@ -118,10 +118,10 @@ Class is Vector{
 			return Mem:addrToObj(addr: 0);
 		});
 		local Boolean is isFrozen: Mem:loadByte(ptr: addr, byteOffset: 28) != 0;
-		if({ !isFrozen }, { self:lockVec(addr: addr); });
+		if({ !isFrozen }, { :lockVec(addr: addr); });
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			if({ !isFrozen }, { self:unlockVec(addr: addr); });
+			if({ !isFrozen }, { :unlockVec(addr: addr); });
 			Mem:panic(msg: 'Array index out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
 			return Mem:addrToObj(addr: 0);
 		});
@@ -132,7 +132,7 @@ Class is Vector{
 			Mem:retainAddr(objAddr: valAddr);
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
-		if({ !isFrozen }, { self:unlockVec(addr: addr); });
+		if({ !isFrozen }, { :unlockVec(addr: addr); });
 		return Mem:addrToObj(addr: valAddr);
 	}
 
@@ -147,10 +147,10 @@ Class is Vector{
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return;
 		});
-		self:lockVec(addr: addr);
+		:lockVec(addr: addr);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			self:unlockVec(addr: addr);
+			:unlockVec(addr: addr);
 			Mem:panic(msg: 'Array assignment index out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
 			return;
 		});
@@ -163,7 +163,7 @@ Class is Vector{
 			oldAddr: Mem:loadI64(ptr: items, byteOffset: idx * 8);
 		});
 		Mem:storeI64(ptr: items, byteOffset: idx * 8, val: itemAddr);
-		self:unlockVec(addr: addr);
+		:unlockVec(addr: addr);
 		if({ kind == 1 && oldAddr != 0 }, {
 			Mem:releaseAddr(objAddr: oldAddr);
 		});
@@ -177,7 +177,7 @@ Class is Vector{
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return;
 		});
-		self:lockVec(addr: addr);
+		:lockVec(addr: addr);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		local Int is cap: Mem:loadI64(ptr: addr, byteOffset: 16);
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
@@ -194,7 +194,7 @@ Class is Vector{
 		});
 		Mem:storeI64(ptr: items, byteOffset: len * 8, val: itemAddr);
 		Mem:storeI64(ptr: addr, byteOffset: 8, val: len + 1);
-		self:unlockVec(addr: addr);
+		:unlockVec(addr: addr);
 	}
 
 	## Marks vector [v] as holding ARC objects and appends [item].
@@ -204,7 +204,7 @@ Class is Vector{
 		if({ Mem:loadI32(ptr: addr, byteOffset: 24) == 0 }, {
 			Mem:storeI32(ptr: addr, byteOffset: 24, val: 1);
 		});
-		self:vecAdd(v: v, item: item);
+		:vecAdd(v: v, item: item);
 	}
 
 	## Appends all elements of [other] into [v].
@@ -217,7 +217,7 @@ Class is Vector{
 			return;
 		});
 		if({ aAddr == oAddr }, {
-			self:lockVec(addr: aAddr);
+			:lockVec(addr: aAddr);
 			local Int is n: Mem:loadI64(ptr: aAddr, byteOffset: 8);
 			local Int is cap: Mem:loadI64(ptr: aAddr, byteOffset: 16);
 			local Int is items: Mem:loadI64(ptr: aAddr, byteOffset: 0);
@@ -237,15 +237,15 @@ Class is Vector{
 				i: i + 1;
 			});
 			Mem:storeI64(ptr: aAddr, byteOffset: 8, val: n + n);
-			self:unlockVec(addr: aAddr);
+			:unlockVec(addr: aAddr);
 			return;
 		});
 		if({ aAddr < oAddr }, {
-			self:lockVec(addr: aAddr);
-			self:lockVec(addr: oAddr);
+			:lockVec(addr: aAddr);
+			:lockVec(addr: oAddr);
 		}, {
-			self:lockVec(addr: oAddr);
-			self:lockVec(addr: aAddr);
+			:lockVec(addr: oAddr);
+			:lockVec(addr: aAddr);
 		});
 		local Int is aLen: Mem:loadI64(ptr: aAddr, byteOffset: 8);
 		local Int is oLen: Mem:loadI64(ptr: oAddr, byteOffset: 8);
@@ -268,8 +268,8 @@ Class is Vector{
 			j: j + 1;
 		});
 		Mem:storeI64(ptr: aAddr, byteOffset: 8, val: aLen + oLen);
-		self:unlockVec(addr: aAddr);
-		self:unlockVec(addr: oAddr);
+		:unlockVec(addr: aAddr);
+		:unlockVec(addr: oAddr);
 	}
 
 	## Removes and returns the last element of [v], or [def] when empty.
@@ -280,10 +280,10 @@ Class is Vector{
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return def;
 		});
-		self:lockVec(addr: addr);
+		:lockVec(addr: addr);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ len == 0 }, {
-			self:unlockVec(addr: addr);
+			:unlockVec(addr: addr);
 			return def;
 		});
 		local Int is newLen: len - 1;
@@ -294,7 +294,7 @@ Class is Vector{
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
-		self:unlockVec(addr: addr);
+		:unlockVec(addr: addr);
 		return Mem:addrToObj(addr: valAddr);
 	}
 
@@ -306,10 +306,10 @@ Class is Vector{
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return def;
 		});
-		self:lockVec(addr: addr);
+		:lockVec(addr: addr);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			self:unlockVec(addr: addr);
+			:unlockVec(addr: addr);
 			return def;
 		});
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
@@ -323,7 +323,7 @@ Class is Vector{
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
-		self:unlockVec(addr: addr);
+		:unlockVec(addr: addr);
 		return Mem:addrToObj(addr: valAddr);
 	}
 
@@ -335,14 +335,14 @@ Class is Vector{
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return;
 		});
-		self:lockVec(addr: addr);
+		:lockVec(addr: addr);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
 		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 24);
 		Mem:storeI64(ptr: addr, byteOffset: 0, val: 0);
 		Mem:storeI64(ptr: addr, byteOffset: 8, val: 0);
 		Mem:storeI64(ptr: addr, byteOffset: 16, val: 0);
-		self:unlockVec(addr: addr);
+		:unlockVec(addr: addr);
 		if({ items != 0 }, {
 			if({ kind == 1 }, {
 				local Int is i: 0;
@@ -362,21 +362,21 @@ Class is Vector{
 	Function is vecFreeze(Any is v){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return; });
-		self:lockVec(addr: addr);
+		:lockVec(addr: addr);
 		Mem:storeByte(ptr: addr, byteOffset: 28, val: 1);
-		self:unlockVec(addr: addr);
+		:unlockVec(addr: addr);
 	}
 
 	## List of T get with optional error callback.
 	Function of Any is vecGet(Any is v, Int is idx, Any is def, Function is error){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, {
-			self:notifyError(error: error, msg: 'vector is uninitialized');
+			:notifyError(error: error, msg: 'vector is uninitialized');
 			return def;
 		});
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			self:notifyError(error: error, msg: 'vector index out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
+			:notifyError(error: error, msg: 'vector index out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
 			return def;
 		});
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
@@ -393,12 +393,12 @@ Class is Vector{
 	Function is vecSet(Any is v, Int is idx, Any is item, Function is error){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, {
-			self:notifyError(error: error, msg: 'vector is uninitialized');
+			:notifyError(error: error, msg: 'vector is uninitialized');
 			return;
 		});
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			self:notifyError(error: error, msg: 'vector assignment out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
+			:notifyError(error: error, msg: 'vector assignment out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
 			return;
 		});
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
@@ -416,13 +416,13 @@ Class is Vector{
 	Function of Any is vecPop(Any is v, Any is def, Function is error){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, {
-			self:notifyError(error: error, msg: 'vector is uninitialized');
+			:notifyError(error: error, msg: 'vector is uninitialized');
 			return def;
 		});
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 24);
 		if({ len == 0 }, {
-			self:notifyError(error: error, msg: 'vector pop on empty vector');
+			:notifyError(error: error, msg: 'vector pop on empty vector');
 			return def;
 		});
 		local Int is newLen: len - 1;
@@ -503,12 +503,12 @@ Class is Vector{
 	Function of Int is byteBufGet(Any is b, Int is idx, Int is def, Function is error){
 		local Int is addr: Mem:objToAddr(obj: b);
 		if({ addr == 0 }, {
-			self:notifyError(error: error, msg: 'byte buffer is uninitialized');
+			:notifyError(error: error, msg: 'byte buffer is uninitialized');
 			return def;
 		});
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			self:notifyError(error: error, msg: 'byte buffer index out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
+			:notifyError(error: error, msg: 'byte buffer index out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
 			return def;
 		});
 		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
@@ -519,12 +519,12 @@ Class is Vector{
 	Function is byteBufSet(Any is b, Int is idx, Int is v, Function is error){
 		local Int is addr: Mem:objToAddr(obj: b);
 		if({ addr == 0 }, {
-			self:notifyError(error: error, msg: 'byte buffer is uninitialized');
+			:notifyError(error: error, msg: 'byte buffer is uninitialized');
 			return;
 		});
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ idx < 0 || idx >= len }, {
-			self:notifyError(error: error, msg: 'byte buffer assignment out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
+			:notifyError(error: error, msg: 'byte buffer assignment out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
 			return;
 		});
 		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
@@ -535,12 +535,12 @@ Class is Vector{
 	Function of Int is byteBufPop(Any is b, Int is def, Function is error){
 		local Int is addr: Mem:objToAddr(obj: b);
 		if({ addr == 0 }, {
-			self:notifyError(error: error, msg: 'byte buffer is uninitialized');
+			:notifyError(error: error, msg: 'byte buffer is uninitialized');
 			return def;
 		});
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
 		if({ len == 0 }, {
-			self:notifyError(error: error, msg: 'byte buffer pop on empty buffer');
+			:notifyError(error: error, msg: 'byte buffer pop on empty buffer');
 			return def;
 		});
 		local Int is newLen: len - 1;

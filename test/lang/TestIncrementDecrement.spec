@@ -79,10 +79,10 @@ Class of SpecUnitTest is TestIncrementDecrement{
 
 	## Case 5: field access increment and decrement.
 	Function is testFieldIncrementDecrement(){
-		self:count: 42;
-		self:count++;
-		Assert:areEqualInt(43, self:count);
-		self:count--;
-		Assert:areEqualInt(42, self:count);
+		:count: 42;
+		:count++;
+		Assert:areEqualInt(43, :count);
+		:count--;
+		Assert:areEqualInt(42, :count);
 	}
 }

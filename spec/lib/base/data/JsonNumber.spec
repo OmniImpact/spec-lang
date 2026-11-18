@@ -14,20 +14,20 @@ Class is JsonNumber{
 	local Boolean is isFloat: false;
 
 	replace Function is init(String is rawText, Boolean is isFloating){
-		self:raw: rawText;
-		self:isFloat: isFloating;
+		:raw: rawText;
+		:isFloat: isFloating;
 	}
 
 	replace Function of String is toString(){
-		return self:raw;
+		return :raw;
 	}
 
 	Function of Int is toInt(Int is default: 0){
-		return self:raw:parseInt(base: 10, default: default);
+		return :raw:parseInt(base: 10, default: default);
 	}
 
 	Function of Float is toFloat(Float is default: 0.0){
-		local String is text: self:raw;
+		local String is text: :raw;
 		local Int is len: text:length();
 		if({ len == 0 }, {
 			return default;
@@ -85,6 +85,6 @@ Class is JsonNumber{
 	}
 
 	Function of Boolean is isFloating(){
-		return self:isFloat;
+		return :isFloat;
 	}
 }

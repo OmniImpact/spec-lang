@@ -30,9 +30,9 @@ Class of Loadable is Enum{
 	##
 	## @return: The variant name; '' when the receiver is not a variant.
 	Function of String is name(){
-		local Int is idx: Introspection:heldIndexOf(obj: self);
+		local Int is idx: Introspection:heldIndexOf(obj: :);
 		if({ idx >= 0 }, {
-			return Introspection:heldName(obj: self, index: idx);
+			return Introspection:heldName(obj: :, index: idx);
 		});
 		return '';
 	}
@@ -42,6 +42,6 @@ Class of Loadable is Enum{
 	##
 	## @return: The ordinal; -1 when the receiver is not a variant.
 	Function of Int is ordinal(){
-		return Introspection:heldIndexOf(obj: self);
+		return Introspection:heldIndexOf(obj: :);
 	}
 }

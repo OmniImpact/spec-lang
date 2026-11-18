@@ -71,13 +71,13 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	}
 
 	local Function of Boolean is isBareOrConditionalTarget(CallData is call){
-		if({ self:isSysConditionalTarget(call: call) }, { return true; });
+		if({ :isSysConditionalTarget(call: call) }, { return true; });
 		if({ call:bareProvider == 'Conditional' || call:bareProvider:endsWith(suffix: ':Conditional') }, { return true; });
 		local Boolean is ok: false;
 		match(on: call:target, when: [
 			Expression:Unknown: local Function(){ ok: true; },
 			Expression:Ident: local Function(String is tn){
-				if({ tn == 'Conditional' || tn == '' || (tn == 'self' && call:bareProvider == '') }, { ok: true; });
+				if({ tn == 'Conditional' || tn == '' || (tn == ':' && call:bareProvider == '') }, { ok: true; });
 			},
 			Expression:Path: local Function(Array of String is segs){
 				if({ segs:length() > 0 && segs:get(index: segs:length() - 1, default: '') == 'Conditional' }, { ok: true; });
@@ -87,7 +87,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	}
 
 	local Function of Boolean is isBareOrLoopsTarget(CallData is call){
-		if({ self:isSysLoopsTarget(call: call) }, { return true; });
+		if({ :isSysLoopsTarget(call: call) }, { return true; });
 		if({ call:bareProvider == 'Loops' || call:bareProvider:endsWith(suffix: ':Loops') }, { return true; });
 		local Boolean is ok: false;
 		match(on: call:target, when: [
@@ -95,7 +95,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				if({ call:bareProvider == '' }, { ok: true; });
 			},
 			Expression:Ident: local Function(String is tn){
-				if({ tn == 'Loops' || tn == '' || (tn == 'self' && call:bareProvider == '') }, { ok: true; });
+				if({ tn == 'Loops' || tn == '' || (tn == ':' && call:bareProvider == '') }, { ok: true; });
 			},
 			Expression:Path: local Function(Array of String is segs){
 				if({ segs:length() > 0 && segs:get(index: segs:length() - 1, default: '') == 'Loops' }, { ok: true; });
@@ -134,22 +134,22 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			], default: {});
 			if({ isLc }, { return true; });
 		});
-		if({ nm == 'branch' && call:args:length() >= 2 }, { return self:isSysConditionalTarget(call: call); });
+		if({ nm == 'branch' && call:args:length() >= 2 }, { return :isSysConditionalTarget(call: call); });
 		if({ nm == 'if' && call:args:length() >= 2 }, {
-			return self:isBareOrConditionalTarget(call: call) && self:isAnonArg(call: call, idx: 0) && self:isAnonArg(call: call, idx: 1);
+			return :isBareOrConditionalTarget(call: call) && :isAnonArg(call: call, idx: 0) && :isAnonArg(call: call, idx: 1);
 		});
 		if({ nm == 'while' && call:args:length() >= 2 }, {
-			if({ self:isSysLoopsTarget(call: call) }, { return true; });
-			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: call:args:length() - 2) && self:isAnonArg(call: call, idx: call:args:length() - 1);
+			if({ :isSysLoopsTarget(call: call) }, { return true; });
+			return :isBareOrLoopsTarget(call: call) && :isAnonArg(call: call, idx: call:args:length() - 2) && :isAnonArg(call: call, idx: call:args:length() - 1);
 		});
 		if({ nm == 'repeat' && call:args:length() == 2 }, {
-			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: 1);
+			return :isBareOrLoopsTarget(call: call) && :isAnonArg(call: call, idx: 1);
 		});
 		if({ nm == 'until' && call:args:length() == 2 }, {
-			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: 0) && self:isAnonArg(call: call, idx: 1);
+			return :isBareOrLoopsTarget(call: call) && :isAnonArg(call: call, idx: 0) && :isAnonArg(call: call, idx: 1);
 		});
 		if({ nm == 'loop' && call:args:length() >= 2 }, {
-			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: call:args:length() - 2) && self:isAnonArg(call: call, idx: call:args:length() - 1);
+			return :isBareOrLoopsTarget(call: call) && :isAnonArg(call: call, idx: call:args:length() - 2) && :isAnonArg(call: call, idx: call:args:length() - 1);
 		});
 		return false;
 	}
@@ -198,38 +198,38 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			return '0';
 		});
 		if({ nm == 'if' || nm == 'branch' }, {
-			return self:lowerIfCall(b: b, expr: expr, call: call);
+			return :lowerIfCall(b: b, expr: expr, call: call);
 		});
 		if({ nm == 'while' }, {
-			self:lowerWhileCall(b: b, call: call);
+			:lowerWhileCall(b: b, call: call);
 			return '0';
 		});
 		if({ nm == 'repeat' }, {
-			self:lowerRepeatCall(b: b, call: call);
+			:lowerRepeatCall(b: b, call: call);
 			return '0';
 		});
 		if({ nm == 'until' }, {
-			self:lowerUntilCall(b: b, call: call);
+			:lowerUntilCall(b: b, call: call);
 			return '0';
 		});
 		if({ nm == 'loop' }, {
-			self:lowerLoopCall(b: b, call: call);
+			:lowerLoopCall(b: b, call: call);
 			return '0';
 		});
 		if({ nm == 'times' }, {
-			self:lowerTimesCall(b: b, call: call);
+			:lowerTimesCall(b: b, call: call);
 			return '0';
 		});
 		if({ nm == 'range' }, {
-			self:lowerRangeCall(b: b, call: call);
+			:lowerRangeCall(b: b, call: call);
 			return '0';
 		});
 		if({ nm == 'rangeStep' }, {
-			self:lowerRangeStepCall(b: b, call: call);
+			:lowerRangeStepCall(b: b, call: call);
 			return '0';
 		});
 		if({ nm == 'forever' }, {
-			self:lowerForeverCall(b: b, call: call);
+			:lowerForeverCall(b: b, call: call);
 			return '0';
 		});
 		return '0';
@@ -396,7 +396,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			b:emit(inst: IrInst:Alloca(slot: resSlot, ty: resTy));
 		});
 
-		local String is condVal: self:lowerCondExpr(b: b, condExpr: condNa:value);
+		local String is condVal: :lowerCondExpr(b: b, condExpr: condNa:value);
 		local String is thenLbl: b:nextLabel(prefix: 'if_then');
 		local String is elseLbl: b:nextLabel(prefix: 'if_else');
 		local String is endLbl: b:nextLabel(prefix: 'if_end');
@@ -413,7 +413,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			b:inlineReturnSlot: resSlot;
 			b:inlineReturnEndLbl: endLbl;
 			b:inlineReturnTy: resTy;
-			local String is tv: self:lowerBlockExprVal(b: b, blkExpr: thenNa:value, expectedTy: resTy);
+			local String is tv: :lowerBlockExprVal(b: b, blkExpr: thenNa:value, expectedTy: resTy);
 			b:inlineReturnSlot: prevRetSlot;
 			b:inlineReturnEndLbl: prevRetEnd;
 			b:inlineReturnTy: prevRetTy;
@@ -424,7 +424,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				b:terminate(inst: IrInst:Br(target: endLbl));
 			});
 		}, {
-			self:lowerBlockExpr(b: b, blkExpr: thenNa:value);
+			:lowerBlockExpr(b: b, blkExpr: thenNa:value);
 			if({ !b:blkTerminated }, {
 				b:terminate(inst: IrInst:Br(target: endLbl));
 			});
@@ -440,7 +440,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				b:inlineReturnSlot: resSlot;
 				b:inlineReturnEndLbl: endLbl;
 				b:inlineReturnTy: resTy;
-				local String is ev: self:lowerBlockExprVal(b: b, blkExpr: elseNa:value, expectedTy: resTy);
+				local String is ev: :lowerBlockExprVal(b: b, blkExpr: elseNa:value, expectedTy: resTy);
 				b:inlineReturnSlot: prevRetSlot2;
 				b:inlineReturnEndLbl: prevRetEnd2;
 				b:inlineReturnTy: prevRetTy2;
@@ -451,7 +451,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 					b:terminate(inst: IrInst:Br(target: endLbl));
 				});
 			}, {
-				self:lowerBlockExpr(b: b, blkExpr: elseNa:value);
+				:lowerBlockExpr(b: b, blkExpr: elseNa:value);
 				if({ !b:blkTerminated }, {
 					b:terminate(inst: IrInst:Br(target: endLbl));
 				});
@@ -461,7 +461,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
 		b:switchBlock(blk: endBlk);
 		if({ hasFinally }, {
-			self:lowerBlockExpr(b: b, blkExpr: finallyNa:value);
+			:lowerBlockExpr(b: b, blkExpr: finallyNa:value);
 		});
 		if({ yieldVal }, {
 			local String is outVal: b:nextTmp();
@@ -483,7 +483,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			}
 		], default: {});
 		if({ returnsBool }, {
-			local String is contVal: self:lowerBlockExprVal(b: b, blkExpr: bodyExpr, expectedTy: IrType:I1);
+			local String is contVal: :lowerBlockExprVal(b: b, blkExpr: bodyExpr, expectedTy: IrType:I1);
 			if({ !b:blkTerminated }, {
 				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
 				if({ contVal != '' }, {
@@ -493,7 +493,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				});
 			});
 		}, {
-			self:lowerBlockExpr(b: b, blkExpr: bodyExpr);
+			:lowerBlockExpr(b: b, blkExpr: bodyExpr);
 			if({ !b:blkTerminated }, {
 				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
 				b:terminate(inst: IrInst:Br(target: contLbl));
@@ -589,12 +589,12 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is hdrBlk: b:curFn:addBlock(label: hdrLbl);
 		b:switchBlock(blk: hdrBlk);
-		local String is condVal: self:lowerCondExpr(b: b, condExpr: evalExpr);
+		local String is condVal: :lowerCondExpr(b: b, condExpr: evalExpr);
 		b:terminate(inst: IrInst:CondBr(cond: condVal, thenLabel: bodyLbl, elseLabel: endLbl));
 
 		local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 		b:switchBlock(blk: bodyBlk);
-		self:lowerLoopBody(b: b, bodyExpr: iterExpr, contLbl: hdrLbl, breakLbl: endLbl);
+		:lowerLoopBody(b: b, bodyExpr: iterExpr, contLbl: hdrLbl, breakLbl: endLbl);
 
 		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
 		b:switchBlock(blk: endBlk);
@@ -637,7 +637,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 		b:switchBlock(blk: bodyBlk);
-		self:lowerLoopBody(b: b, bodyExpr: workerExpr, contLbl: stepLbl, breakLbl: endLbl);
+		:lowerLoopBody(b: b, bodyExpr: workerExpr, contLbl: stepLbl, breakLbl: endLbl);
 
 		local IrBlock is stepBlk: b:curFn:addBlock(label: stepLbl);
 		b:switchBlock(blk: stepBlk);
@@ -673,11 +673,11 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 		b:switchBlock(blk: bodyBlk);
-		self:lowerLoopBody(b: b, bodyExpr: iterExpr, contLbl: evalLbl, breakLbl: endLbl);
+		:lowerLoopBody(b: b, bodyExpr: iterExpr, contLbl: evalLbl, breakLbl: endLbl);
 
 		local IrBlock is evalBlk: b:curFn:addBlock(label: evalLbl);
 		b:switchBlock(blk: evalBlk);
-		local String is condVal: self:lowerCondExpr(b: b, condExpr: evalExpr);
+		local String is condVal: :lowerCondExpr(b: b, condExpr: evalExpr);
 		b:terminate(inst: IrInst:CondBr(cond: condVal, thenLabel: endLbl, elseLabel: bodyLbl));
 
 		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
@@ -787,12 +787,12 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is hdrBlk: b:curFn:addBlock(label: hdrLbl);
 		b:switchBlock(blk: hdrBlk);
-		local String is condVal: self:lowerCondExpr(b: b, condExpr: evalExpr);
+		local String is condVal: :lowerCondExpr(b: b, condExpr: evalExpr);
 		b:terminate(inst: IrInst:CondBr(cond: condVal, thenLabel: bodyLbl, elseLabel: endLbl));
 
 		local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 		b:switchBlock(blk: bodyBlk);
-		self:lowerLoopBody(b: b, bodyExpr: iterExpr, contLbl: hdrLbl, breakLbl: endLbl);
+		:lowerLoopBody(b: b, bodyExpr: iterExpr, contLbl: hdrLbl, breakLbl: endLbl);
 
 		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
 		b:switchBlock(blk: endBlk);
@@ -820,7 +820,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Expression is countExpr: na0:value;
 		local Expression is workerExpr: na1:value;
 		local String is endVal: b:lowerExpr(expr: countExpr);
-		self:lowerIntSteppedLoop(b: b, startVal: '0', endVal: endVal, stepVal: '1', workerExpr: workerExpr);
+		:lowerIntSteppedLoop(b: b, startVal: '0', endVal: endVal, stepVal: '1', workerExpr: workerExpr);
 	}
 
 	local Function is lowerRangeCall(IrBuilder is b, CallData is call){
@@ -832,7 +832,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Expression is workerExpr: na2:value;
 		local String is startVal: b:lowerExpr(expr: startExpr);
 		local String is endVal: b:lowerExpr(expr: endExpr);
-		self:lowerIntSteppedLoop(b: b, startVal: startVal, endVal: endVal, stepVal: '1', workerExpr: workerExpr);
+		:lowerIntSteppedLoop(b: b, startVal: startVal, endVal: endVal, stepVal: '1', workerExpr: workerExpr);
 	}
 
 	local Function is lowerRangeStepCall(IrBuilder is b, CallData is call){
@@ -847,7 +847,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local String is startVal: b:lowerExpr(expr: startExpr);
 		local String is endVal: b:lowerExpr(expr: endExpr);
 		local String is stepVal: b:lowerExpr(expr: stepExpr);
-		self:lowerIntSteppedLoop(b: b, startVal: startVal, endVal: endVal, stepVal: stepVal, workerExpr: workerExpr);
+		:lowerIntSteppedLoop(b: b, startVal: startVal, endVal: endVal, stepVal: stepVal, workerExpr: workerExpr);
 	}
 
 	local Function is lowerIntSteppedLoop(IrBuilder is b, String is startVal, String is endVal, String is stepVal, Expression is workerExpr){
@@ -887,8 +887,8 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 		b:switchBlock(blk: bodyBlk);
-		self:bindWorkerParam(b: b, workerExpr: workerExpr, val: curIdx);
-		self:lowerLoopBody(b: b, bodyExpr: workerExpr, contLbl: stepLbl, breakLbl: endLbl);
+		:bindWorkerParam(b: b, workerExpr: workerExpr, val: curIdx);
+		:lowerLoopBody(b: b, bodyExpr: workerExpr, contLbl: stepLbl, breakLbl: endLbl);
 
 		local IrBlock is stepBlk: b:curFn:addBlock(label: stepLbl);
 		b:switchBlock(blk: stepBlk);
@@ -912,7 +912,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 		b:switchBlock(blk: bodyBlk);
-		self:lowerLoopBody(b: b, bodyExpr: workerExpr, contLbl: bodyLbl, breakLbl: endLbl);
+		:lowerLoopBody(b: b, bodyExpr: workerExpr, contLbl: bodyLbl, breakLbl: endLbl);
 
 		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
 		b:switchBlock(blk: endBlk);

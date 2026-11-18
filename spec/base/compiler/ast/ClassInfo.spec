@@ -47,10 +47,10 @@ Class is ClassInfo{
 	## @param baseClass: Parent class name (empty when none).
 	## @param members: The class members.
 	replace Function is init(String is name, String is baseClass, Array of Member is members){
-		self:name: name;
-		self:baseClass: baseClass;
-		self:baseClasses: if({ baseClass != '' }, { [baseClass] }, { [] });
-		self:members: members;
+		:name: name;
+		:baseClass: baseClass;
+		:baseClasses: if({ baseClass != '' }, { [baseClass] }, { [] });
+		:members: members;
 	}
 
 	## Initializes a class definition with multiple inheritance.
@@ -67,7 +67,7 @@ Class is ClassInfo{
 	## @return: true when an as-form entry names [name].
 	Function of Boolean is instanceImportsAs(String is name){
 		local Boolean is found: false;
-		self:members:each(action: local Function(Member is m){
+		:members:each(action: local Function(Member is m){
 			if({ !found && m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
 					Expression:ArrayLit: local Function(Array of Expression is items){
@@ -101,12 +101,12 @@ Class is ClassInfo{
 	## @return: The namespace path, e.g. 'base:sysinternal'.
 	Function of String is namespaceJoined(){
 		local String is joined: '';
-		local Int is count: self:members:length();
+		local Int is count: :members:length();
 		while(
 			[Int is idx: 0],
 			{ joined == '' && idx < count },
 			{
-				local Member is m: self:members:get(index: idx);
+				local Member is m: :members:get(index: idx);
 				idx++;
 				if({ m:name == 'namespace' && m:hasInit }, {
 					match(on: m:initExpr, when: [
@@ -141,12 +141,12 @@ Class is ClassInfo{
 	## @return: The namespace segments, e.g. ['base', 'sysinternal'].
 	Function of Array of String is namespaceSegments(){
 		local Array of String is segs: [];
-		local Int is count: self:members:length();
+		local Int is count: :members:length();
 		while(
 			[Int is idx: 0],
 			{ segs:length() == 0 && idx < count },
 			{
-				local Member is m: self:members:get(index: idx);
+				local Member is m: :members:get(index: idx);
 				idx++;
 				if({ m:name == 'namespace' && m:hasInit }, {
 					match(on: m:initExpr, when: [
@@ -181,7 +181,7 @@ Class is ClassInfo{
 	## @return: true when declared by this class.
 	Function of Boolean is declaresMember(Member is member){
 		local Boolean is found: false;
-		self:members:each(action: local Function(Member is m){
+		:members:each(action: local Function(Member is m){
 			if({ !found && m == member }, {
 				found: true;
 			});
@@ -195,41 +195,41 @@ Class is ClassInfo{
 	##
 	## @return: The qualified class name.
 	Function of String is qualifiedName(){
-		if({ self:outerName != '' }, {
-			return self:outerName . ':' . self:name;
+		if({ :outerName != '' }, {
+			return :outerName . ':' . :name;
 		});
-		return self:name;
+		return :name;
 	}
 
 	Function is setOuter(String is name){
-		self:outerName: name;
+		:outerName: name;
 	}
 
 	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
-		self:name: name;
-		self:baseClasses: baseClasses;
-		self:baseClass: if({ baseClasses:length() > 0 }, { baseClasses:get(index: 0) }, { '' });
-		self:members: members;
+		:name: name;
+		:baseClasses: baseClasses;
+		:baseClass: if({ baseClasses:length() > 0 }, { baseClasses:get(index: 0) }, { '' });
+		:members: members;
 	}
 
 	## Sets the generic type parameter names.
 	##
 	## @param params: Generic parameter identifiers.
 	Function is setTypeParams(Array of String is params){
-		self:typeParams: params;
+		:typeParams: params;
 	}
 
 	## Sets the one-based source line.
 	##
 	## @param line: Source line number.
 	Function is setLine(Int is line){
-		self:line: line;
+		:line: line;
 	}
 
 	## Sets the declaring source file.
 	##
 	## @param file: Source file path.
 	Function is setSourceFile(String is file){
-		self:sourceFile: file;
+		:sourceFile: file;
 	}
 }

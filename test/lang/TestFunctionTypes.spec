@@ -21,19 +21,19 @@ Class of SpecUnitTest is TestFunctionTypes{
 	## a valid, distinct, NON-void return type. The registry records it
 	## under flag 4 (not the Void flag), and the runner invokes it.
 	Function is testParamlessFunctionDeclaration(){
-		self:mark(v: 1);
-		Assert:areEqualInt(1, self:marked);
+		:mark(v: 1);
+		Assert:areEqualInt(1, :marked);
 	}
 
 	## Declared bare — the parser normalizes the untyped form to the
 	## canonical Void spelling; identical runtime behavior to the
 	## paramless form above.
 	testVoidDeclaration(){
-		self:mark(v: 2);
-		Assert:areEqualInt(2, self:marked);
+		:mark(v: 2);
+		Assert:areEqualInt(2, :marked);
 	}
 
 	Function is mark(Int is v){
-		self:marked: v;
+		:marked: v;
 	}
 }

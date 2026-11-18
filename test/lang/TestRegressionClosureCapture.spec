@@ -46,7 +46,7 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 	## Case 2: capture of self (field access through the closure).
 	Function is testSelfCapture(){
 		local Function of Int to Int is timesThree: local Function of Int(Int is x){
-			return x * self:multiplier;
+			return x * :multiplier;
 		};
 		local Int is product: timesThree(7);
 		Assert:areEqualInt(21, product);
@@ -67,14 +67,14 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 		local Function of Int to Int is doubler: local Function of Int(Int is x){
 			return x * 2;
 		};
-		local Int is applied: self:apply(fn: doubler, v: 5);
+		local Int is applied: :apply(fn: doubler, v: 5);
 		Assert:areEqualInt(10, applied);
 	}
 
 	## Case 5 (control): closure inside a helper method with no Map in
 	## scope. This path already works and must keep working.
 	Function is testControlHelperCapture(){
-		local Int is control: self:computeWithLocal();
+		local Int is control: :computeWithLocal();
 		Assert:areEqualInt(124, control);
 	}
 
@@ -138,7 +138,7 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 	}
 
 	Function is testEscapingClosure(){
-		local Function of Int to Int is acc: self:makeAccumulator(start: 100);
+		local Function of Int to Int is acc: :makeAccumulator(start: 100);
 		Assert:areEqualInt(110, acc(10));
 		Assert:areEqualInt(135, acc(25));
 		Assert:areEqualInt(130, acc(-5));

@@ -67,12 +67,12 @@ Class is Lexer{
 	##
 	## @param source: Spec source code to tokenize.
 	replace Function is init(String is source){
-		self:source: source;
-		self:length: source:length();
-		self:pos: 0;
-		self:line: 1;
-		self:col: 1;
-		self:errors: [];
+		:source: source;
+		:length: source:length();
+		:pos: 0;
+		:line: 1;
+		:col: 1;
+		:errors: [];
 	}
 
 	## Records a lexical error at the current scan position: the message
@@ -81,23 +81,23 @@ Class is Lexer{
 	##
 	## @param msg: Error description.
 	Function is addError(String is msg){
-		local Error is e: Error:init(message: "Line {{self:line}}: {{msg}}");
-		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: self:line, col: self:col);
-		self:errors:add(item: e);
+		local Error is e: Error:init(message: "Line {{:line}}: {{msg}}");
+		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: :line, col: :col);
+		:errors:add(item: e);
 	}
 
 	## Returns whether any lexical errors were recorded.
 	##
 	## @return: true when [errors] is non-empty.
 	Function of Boolean is hasErrors(){
-		return self:errors:length() > 0;
+		return :errors:length() > 0;
 	}
 
 	## Returns all recorded lexical errors.
 	##
 	## @return: [Error] values, in scan order.
 	Function of Array of Error is getErrors(){
-		return self:errors;
+		return :errors;
 	}
 
 	## Tokenizes the entire source, ending with an EOF token at the final
@@ -106,40 +106,40 @@ Class is Lexer{
 	## @return: The token stream.
 	Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
-		while({ self:pos < self:length }, {
-			self:skipWhitespaceAndComments();
-			if({ self:pos < self:length }, {
-				local String is ch: self:source:charAt(index: self:pos, default: '');
+		while({ :pos < :length }, {
+			:skipWhitespaceAndComments();
+			if({ :pos < :length }, {
+				local String is ch: :source:charAt(index: :pos, default: '');
 				if({ ch == '"' || ch == '\'' }, {
-					local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+					local String is triple: :source:substring(start: :pos, end: :pos + 3);
 					if({ triple == "'''" }, {
-						tokens:add(item: self:readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
+						tokens:add(item: :readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
 					}, {
-						tokens:add(item: self:readString(quote: ch));
+						tokens:add(item: :readString(quote: ch));
 					});
 				}, {
 					if({ ch == '`' }, {
-						local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+						local String is triple: :source:substring(start: :pos, end: :pos + 3);
 						if({ triple == "```" }, {
-							tokens:add(item: self:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
+							tokens:add(item: :readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
 						}, {
-							tokens:add(item: self:readSymbol());
+							tokens:add(item: :readSymbol());
 						});
 					}, {
 						if({ ch:isDigit() }, {
-							tokens:add(item: self:readNumber());
+							tokens:add(item: :readNumber());
 						}, {
-							if({ self:isIdentifierStart(ch: ch) }, {
-								tokens:add(item: self:readIdentifierOrKeyword());
+							if({ :isIdentifierStart(ch: ch) }, {
+								tokens:add(item: :readIdentifierOrKeyword());
 							}, {
-								tokens:add(item: self:readSymbol());
+								tokens:add(item: :readSymbol());
 							});
 						});
 					});
 				});
 			});
 		});
-		tokens:add(item: Token:init(kind: TokenKind:EOF, value: '', line: self:line, col: self:col));
+		tokens:add(item: Token:init(kind: TokenKind:EOF, value: '', line: :line, col: :col));
 		return tokens;
 	}
 
@@ -148,33 +148,33 @@ Class is Lexer{
 	##
 	## @return: The next Token.
 	Function of Token is nextToken(){
-		self:skipWhitespaceAndComments();
-		if({ self:pos >= self:length }, {
-			return Token:init(kind: TokenKind:EOF, value: '', line: self:line, col: self:col);
+		:skipWhitespaceAndComments();
+		if({ :pos >= :length }, {
+			return Token:init(kind: TokenKind:EOF, value: '', line: :line, col: :col);
 		});
 
-		local String is ch: self:source:charAt(index: self:pos, default: '');
+		local String is ch: :source:charAt(index: :pos, default: '');
 		if({ ch == '"' || ch == '\'' }, {
-			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+			local String is triple: :source:substring(start: :pos, end: :pos + 3);
 			if({ triple == "'''" }, {
-				return self:readTriple(quote: "'''", kind: TokenKind:RAWSTRING);
+				return :readTriple(quote: "'''", kind: TokenKind:RAWSTRING);
 			});
-			return self:readString(quote: ch);
+			return :readString(quote: ch);
 		});
 		if({ ch == '`' }, {
-			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+			local String is triple: :source:substring(start: :pos, end: :pos + 3);
 			if({ triple == "```" }, {
-				return self:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING);
+				return :readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING);
 			});
-			return self:readSymbol();
+			return :readSymbol();
 		});
 		if({ ch:isDigit() }, {
-			return self:readNumber();
+			return :readNumber();
 		});
-		if({ self:isIdentifierStart(ch: ch) }, {
-			return self:readIdentifierOrKeyword();
+		if({ :isIdentifierStart(ch: ch) }, {
+			return :readIdentifierOrKeyword();
 		});
-		return self:readSymbol();
+		return :readSymbol();
 	}
 
 	## Maps a hexadecimal digit character to its value (0..15), or -1.
@@ -199,14 +199,14 @@ Class is Lexer{
 	##
 	## @return: The consumed character ('' at end of source).
 	Function of String is advance(){
-		local Int is b: Buf:bufGetByte(b: self:source, idx: self:pos, def: -1);
+		local Int is b: Buf:bufGetByte(b: :source, idx: :pos, def: -1);
 		if({ b < 0 }, { return ''; });
-		self:pos: self:pos + 1;
+		:pos: :pos + 1;
 		if({ b == 10 }, {
-			self:line: self:line + 1;
-			self:col: 1;
+			:line: :line + 1;
+			:col: 1;
 		}, {
-			self:col: self:col + 1;
+			:col: :col + 1;
 		});
 		return String:fromCharCode(code: b);
 	}
@@ -216,7 +216,7 @@ Class is Lexer{
 	## @param ch: Candidate character.
 	## @return: Classification result.
 	Function of Boolean is isIdentifierStart(String is ch){
-		return self:chars:isIdentifierStart(ch: ch);
+		return :chars:isIdentifierStart(ch: ch);
 	}
 
 	## True when [ch] may continue an identifier.
@@ -224,26 +224,26 @@ Class is Lexer{
 	## @param ch: Candidate character.
 	## @return: Classification result.
 	Function of Boolean is isIdentifierContinue(String is ch){
-		return self:chars:isIdentifierContinue(ch: ch);
+		return :chars:isIdentifierContinue(ch: ch);
 	}
 
 	## Skips whitespace and `#` comment lines before the next token.
 	Function is skipWhitespaceAndComments(){
-		local Int is p: self:pos;
-		local Int is len: self:length;
+		local Int is p: :pos;
+		local Int is len: :length;
 		local Boolean is skipping: true;
 		while(
 			{ skipping && p < len },
 			{
-				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
+				local Int is b: Buf:bufGetByte(b: :source, idx: p, def: -1);
 				if({ b == 32 || b == 9 || b == 13 }, {
 					p++;
-					self:col++;
+					:col++;
 				}, {
 					if({ b == 10 }, {
 						p++;
-						self:line++;
-						self:col: 1;
+						:line++;
+						:col: 1;
 					}, {
 						if({ b == 35 }, {
 							p++;
@@ -251,7 +251,7 @@ Class is Lexer{
 							while(
 								{ inComment && p < len },
 								{
-									local Int is cb: Buf:bufGetByte(b: self:source, idx: p, def: -1);
+									local Int is cb: Buf:bufGetByte(b: :source, idx: p, def: -1);
 									if({ cb == 10 }, {
 										inComment: false;
 									}, {
@@ -266,7 +266,7 @@ Class is Lexer{
 				});
 			}
 		);
-		self:pos: p;
+		:pos: p;
 	}
 
 	## Scans an identifier or reserved word into a token. Reserved words
@@ -274,36 +274,36 @@ Class is Lexer{
 	##
 	## @return: KEYWORD or IDENTIFIER token.
 	Function of Token is readIdentifierOrKeyword(){
-		local Int is startLine: self:line;
-		local Int is startCol: self:col;
-		local Int is startPos: self:pos;
+		local Int is startLine: :line;
+		local Int is startCol: :col;
+		local Int is startPos: :pos;
 
-		local Int is p: self:pos;
-		local Int is len: self:length;
+		local Int is p: :pos;
+		local Int is len: :length;
 		local Boolean is scanning: true;
 		while(
 			{ scanning && p < len },
 			{
-				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
+				local Int is b: Buf:bufGetByte(b: :source, idx: p, def: -1);
 				local Boolean is isId: (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || (b >= 48 && b <= 57) || b == 95;
 				if({ isId }, {
 					p++;
-					self:col++;
+					:col++;
 				}, {
 					scanning: false;
 				});
 			}
 		);
-		self:pos: p;
+		:pos: p;
 
-		local String is text: self:source:substring(start: startPos, end: self:pos);
+		local String is text: :source:substring(start: startPos, end: :pos);
 		local Keyword is kw: Keyword:of(text);
 		local TokenKind is kind: TokenKind:IDENTIFIER;
 		if({ kw != Keyword:NONE }, {
 			kind: TokenKind:KEYWORD;
 		});
 		# Boolean literals are identifier-shaped but scan as their own kind.
-		if({ text == self:names:boolTrue() || text == 'false' }, {
+		if({ text == :names:boolTrue() || text == 'false' }, {
 			kind: TokenKind:BOOL;
 		});
 		local Token is t: Token:init(kind: kind, value: Buf:intern(s: text), line: startLine, col: startCol);
@@ -319,11 +319,11 @@ Class is Lexer{
 	##
 	## @return: INT or FLOAT token.
 	Function of Token is readNumber(){
-		local Int is startLine: self:line;
-		local Int is startCol: self:col;
+		local Int is startLine: :line;
+		local Int is startCol: :col;
 
-		local String is ch: self:source:charAt(index: self:pos, default: '');
-		local String is nextCh: self:source:charAt(index: self:pos + 1, default: '');
+		local String is ch: :source:charAt(index: :pos, default: '');
+		local String is nextCh: :source:charAt(index: :pos + 1, default: '');
 		if({ ch == '0' && nextCh != '' && nextCh != '.' && !nextCh:isDigit() }, {
 			# the base prefix table: 0x/0b/0o (case-insensitive) ground the
 			# literal's base; any other byte falls through to decimal.
@@ -334,26 +334,26 @@ Class is Lexer{
 				else: { 0 }
 			]);
 			if({ base > 0 }, {
-				self:advance();
-				self:advance();
+				:advance();
+				:advance();
 				local Int is val: 0;
 				local Int is digitCount: 0;
 				local Boolean is hadInvalid: false;
 				local Boolean is keepGoing: true;
-				while({ keepGoing && self:pos < self:length }, {
-					local String is dch: self:source:charAt(index: self:pos, default: '');
+				while({ keepGoing && :pos < :length }, {
+					local String is dch: :source:charAt(index: :pos, default: '');
 					if({ dch == '_' }, {
-						self:advance();
+						:advance();
 					}, {
-						local Int is d: self:digitValue(ch: dch);
+						local Int is d: :digitValue(ch: dch);
 						if({ d >= 0 && d < base }, {
 							val: (val * base) + d;
 							digitCount: digitCount + 1;
-							self:advance();
+							:advance();
 						}, {
-							if({ self:chars:isIdentifierContinue(ch: dch) }, {
+							if({ :chars:isIdentifierContinue(ch: dch) }, {
 								hadInvalid: true;
-								self:advance();
+								:advance();
 							}, {
 								keepGoing: false;
 							});
@@ -361,36 +361,36 @@ Class is Lexer{
 					});
 				});
 				if({ hadInvalid }, {
-					self:addError(msg: self:errText:errInvalidDigitInBase(base: base));
+					:addError(msg: :errText:errInvalidDigitInBase(base: base));
 				});
 				if({ digitCount == 0 }, {
-					self:addError(msg: self:errText:errMissingDigitsAfterPrefix());
+					:addError(msg: :errText:errMissingDigitsAfterPrefix());
 				});
 				return Token:init(kind: TokenKind:INT, value: '' . val, line: startLine, col: startCol);
 			});
 		});
 
-		local Int is startPos: self:pos;
+		local Int is startPos: :pos;
 		local Boolean is isFloat: false;
 		local Boolean is keepScanning: true;
-		while({ keepScanning && self:pos < self:length }, {
-			local String is dch: self:source:charAt(index: self:pos, default: '');
+		while({ keepScanning && :pos < :length }, {
+			local String is dch: :source:charAt(index: :pos, default: '');
 			if({ dch == '_' }, {
-				local String is nextD: self:source:charAt(index: self:pos + 1, default: '');
+				local String is nextD: :source:charAt(index: :pos + 1, default: '');
 				if({ nextD:isDigit() }, {
-					self:advance();
+					:advance();
 				}, {
 					keepScanning: false;
 				});
 			}, {
 				if({ dch:isDigit() }, {
-					self:advance();
+					:advance();
 				}, {
 					if({ dch == '.' && !isFloat }, {
-						local String is nextD: self:source:charAt(index: self:pos + 1, default: '');
+						local String is nextD: :source:charAt(index: :pos + 1, default: '');
 						if({ nextD:isDigit() }, {
 							isFloat: true;
-							self:advance();
+							:advance();
 						}, {
 							keepScanning: false;
 						});
@@ -401,7 +401,7 @@ Class is Lexer{
 			});
 		});
 
-		local String is text: self:source:substring(start: startPos, end: self:pos);
+		local String is text: :source:substring(start: startPos, end: :pos);
 		text: text:replaceAll(search: '_', replacement: '');
 
 		local TokenKind is kind: TokenKind:INT;
@@ -430,22 +430,22 @@ Class is Lexer{
 	## @param quote: The quote character being scanned.
 	## @return: TEMPLATESTRING for double quotes, STRING otherwise.
 	Function of Token is readString(String is quote){
-		local Int is startLine: self:line;
-		local Int is startCol: self:col;
-		self:advance();
+		local Int is startLine: :line;
+		local Int is startCol: :col;
+		:advance();
 
 		local String is res: '';
 		local Boolean is keepScanning: true;
-		while({ keepScanning && self:pos < self:length }, {
-			local String is sch: self:source:charAt(index: self:pos, default: '');
+		while({ keepScanning && :pos < :length }, {
+			local String is sch: :source:charAt(index: :pos, default: '');
 			if({ sch == quote }, {
 				keepScanning: false;
 			}, {
 				if({ sch == "\\" }, {
 					if({ quote == '\'' }, {
-						self:advance();
-						if({ self:pos < self:length }, {
-							local String is nextCh: self:advance();
+						:advance();
+						if({ :pos < :length }, {
+							local String is nextCh: :advance();
 							if({ nextCh == '\'' || nextCh == "\\" }, {
 								res: res . nextCh;
 							}, {
@@ -454,21 +454,21 @@ Class is Lexer{
 						});
 					}, {
 						res: res . "\\";
-						self:advance();
-						if({ self:pos < self:length }, {
-							local String is nextCh: self:advance();
+						:advance();
+						if({ :pos < :length }, {
+							local String is nextCh: :advance();
 							res: res . nextCh;
 						});
 					});
 				}, {
 					res: res . sch;
-					self:advance();
+					:advance();
 				});
 			});
 		});
 
-		if({ self:pos < self:length }, {
-			self:advance();
+		if({ :pos < :length }, {
+			:advance();
 		});
 		if({ quote == '"' }, {
 			return Token:init(kind: TokenKind:TEMPLATESTRING, value: res, line: startLine, col: startCol);
@@ -484,31 +484,31 @@ Class is Lexer{
 	## @param kind: RAWSTRING for '''''' or TEMPLATESTRING for backticks.
 	## @return: The heredoc token with raw content.
 	Function of Token is readTriple(String is quote, TokenKind is kind){
-		local Int is startLine: self:line;
-		local Int is startCol: self:col;
-		self:advance();
-		self:advance();
-		self:advance();
-		if({ self:pos < self:length && self:source:charAt(index: self:pos, default: '') == "\n" }, {
-			self:advance();
+		local Int is startLine: :line;
+		local Int is startCol: :col;
+		:advance();
+		:advance();
+		:advance();
+		if({ :pos < :length && :source:charAt(index: :pos, default: '') == "\n" }, {
+			:advance();
 		});
 
 		local String is res: '';
 		local Boolean is closed: false;
-		while({ !closed && self:pos < self:length }, {
-			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+		while({ !closed && :pos < :length }, {
+			local String is triple: :source:substring(start: :pos, end: :pos + 3);
 			if({ triple == quote }, {
-				self:advance();
-				self:advance();
-				self:advance();
+				:advance();
+				:advance();
+				:advance();
 				closed: true;
 			}, {
-				res: res . self:advance();
+				res: res . :advance();
 			});
 		});
 
 		if({ !closed }, {
-			self:addError(msg: self:errText:errUnterminatedHeredoc(quote: quote));
+			:addError(msg: :errText:errUnterminatedHeredoc(quote: quote));
 		});
 		return Token:init(kind: kind, value: res, line: startLine, col: startCol);
 	}
@@ -519,15 +519,15 @@ Class is Lexer{
 	##
 	## @return: SYMBOL token.
 	Function of Token is readSymbol(){
-		local Int is startLine: self:line;
-		local Int is startCol: self:col;
-		local String is ch: self:advance();
-		local String is nextCh: self:source:charAt(index: self:pos, default: '');
+		local Int is startLine: :line;
+		local Int is startCol: :col;
+		local String is ch: :advance();
+		local String is nextCh: :source:charAt(index: :pos, default: '');
 		local String is pair: ch . nextCh;
 
 		local Operator is op: Operator:of(pair);
 		if({ op != Operator:NONE }, {
-			self:advance();
+			:advance();
 			local Token is t: Token:init(kind: TokenKind:SYMBOL, value: Buf:intern(s: pair), line: startLine, col: startCol);
 			t:setOperator(op: op);
 			return t;

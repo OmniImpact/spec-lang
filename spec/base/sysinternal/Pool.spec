@@ -52,7 +52,7 @@ Class is Pool{
 	Function is threadCleanup(){
 		local Int is stk: Mem:tlsGetI64(slot: 3);
 		if({ stk != 0 }, {
-			self:poolReleaseTo(mark: 0);
+			:poolReleaseTo(mark: 0);
 			Mem:free(ptr: stk);
 			Mem:tlsSetI64(slot: 3, val: 0);
 			Mem:tlsSetI64(slot: 4, val: 0);

@@ -61,7 +61,7 @@ Class is SpecLint{
 				Stderr:line('Error: Source file not found: ' . inputPath);
 				Process:exit(status: 1);
 			});
-			self:auditFile(path: inputPath);
+			:auditFile(path: inputPath);
 			Process:exit(status: 0);
 		});
 
@@ -73,7 +73,7 @@ Class is SpecLint{
 				Process:exit(status: 1);
 			});
 			local LintTally is tally: LintTally:init();
-			self:lintOne(path: inputPath, strict: true, tally: tally);
+			:lintOne(path: inputPath, strict: true, tally: tally);
 			# Notices are informational (optional-parameter advisories on
 			# legitimate call sites) — only warnings gate the exit.
 			if({ tally:warnings > 0 }, {
@@ -90,7 +90,7 @@ Class is SpecLint{
 			seg:split(delimiter: ','):each(action: local Function(String is dir){
 				if({ dir != '' }, {
 					roots: roots + 1;
-					self:walkTree(absDir: dir, tally: tally);
+					:walkTree(absDir: dir, tally: tally);
 				});
 			});
 		});
@@ -179,12 +179,12 @@ Class is SpecLint{
 			local String is childAbs: absDir . '/' . name;
 			local Array of String is children: Dir:dirList(path: childAbs);
 			if({ children:length() > 0 }, {
-				self:walkTree(absDir: childAbs, tally: tally);
+				:walkTree(absDir: childAbs, tally: tally);
 			}, {
 				if({ name:endsWith(suffix: '.spec') }, {
 					local String is content: fileRead(path: childAbs, default: '');
-					if({ content != '' && self:bannerKind(content: content) != 'negative' }, {
-						self:lintOne(path: childAbs, strict: false, tally: tally);
+					if({ content != '' && :bannerKind(content: content) != 'negative' }, {
+						:lintOne(path: childAbs, strict: false, tally: tally);
 					});
 				});
 			});

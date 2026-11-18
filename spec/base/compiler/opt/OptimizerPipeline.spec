@@ -36,15 +36,15 @@ Class is OptimizerPipeline{
 		});
 		local Int is i: 0;
 		while({ i < found:length() }, {
-			self:passes:add(item: found:get(index: i) as SpecOptimizer);
+			:passes:add(item: found:get(index: i) as SpecOptimizer);
 			i++;
 		});
 	}
 
 	Function is run(IrModule is mod){
 		local Int is i: 0;
-		while({ i < self:passes:length() }, {
-			local SpecOptimizer is pass: self:passes:get(index: i);
+		while({ i < :passes:length() }, {
+			local SpecOptimizer is pass: :passes:get(index: i);
 			pass:runOnModule(mod: mod);
 			i++;
 		});

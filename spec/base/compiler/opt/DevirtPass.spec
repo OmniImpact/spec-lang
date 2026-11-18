@@ -56,10 +56,10 @@ Class of SpecOptimizer is DevirtPass{
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal }, {
-				if({ self:isNoOpInit(fn: fn) }, {
+				if({ :isNoOpInit(fn: fn) }, {
 					noOpInit:set(key: fn:name, value: true);
 				});
-				if({ self:fnNeverReadsSelf(fn: fn) }, {
+				if({ :fnNeverReadsSelf(fn: fn) }, {
 					unusedSelf:set(key: fn:name, value: true);
 				});
 			});
@@ -70,7 +70,7 @@ Class of SpecOptimizer is DevirtPass{
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal }, {
-				self:processFunction(fn: fn, structMap: structMap, noOpInit: noOpInit, unusedSelf: unusedSelf);
+				:processFunction(fn: fn, structMap: structMap, noOpInit: noOpInit, unusedSelf: unusedSelf);
 			});
 			fi++;
 		});
@@ -318,7 +318,7 @@ Class of SpecOptimizer is DevirtPass{
 
 		# Remove dead vtable lookup instructions (FieldPtr/Load/PtrElem/Load whose
 		# dst is never referenced anywhere in fn).
-		self:removeDeadVtableLoads(fn: fn, vtPtrType: vtPtrType, vtLoadedType: vtLoadedType, fnSlotTarget: fnSlotTarget, fnPtrTarget: fnPtrTarget);
+		:removeDeadVtableLoads(fn: fn, vtPtrType: vtPtrType, vtLoadedType: vtLoadedType, fnSlotTarget: fnSlotTarget, fnPtrTarget: fnPtrTarget);
 
 		# Check which AllocObj registers now have ONLY no-op init and spec_claim_pool uses.
 		local Map of String to Boolean is deadAllocs: Map:init();
@@ -329,7 +329,7 @@ Class of SpecOptimizer is DevirtPass{
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
-				self:scanUsesForAlloc(inst: inst, knownType: knownType, noOpInit: noOpInit, badAllocs: badAllocs);
+				:scanUsesForAlloc(inst: inst, knownType: knownType, noOpInit: noOpInit, badAllocs: badAllocs);
 				ii++;
 			});
 			bi++;
@@ -409,7 +409,7 @@ Class of SpecOptimizer is DevirtPass{
 				local IrBlock is blk: fn:blocks:get(index: bi);
 				local Int is ii: 0;
 				while({ ii < blk:insts:length() }, {
-					self:collectUsedRegs(inst: blk:insts:get(index: ii), usedRegs: usedRegs);
+					:collectUsedRegs(inst: blk:insts:get(index: ii), usedRegs: usedRegs);
 					ii++;
 				});
 				bi++;

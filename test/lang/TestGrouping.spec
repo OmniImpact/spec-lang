@@ -50,10 +50,10 @@ Class is Accumulator{
 	local Int is total: 0;
 
 	replace Function is init(Int is start){
-		self:total: start;
+		:total: start;
 	}
 
 	Function is bump(Int is by){
-		self:total: self:total + by;
+		:total: :total + by;
 	}
 }

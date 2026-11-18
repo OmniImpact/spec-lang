@@ -81,7 +81,7 @@ Class is UnassignedFieldRead{
 	local String is label;
 
 	replace Function is init(Map of String to String is args){
-		Output:line(self:label);
+		Output:line(:label);
 	}
 }
 ''',
@@ -98,7 +98,7 @@ Class is CallArgumentMismatch{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local Int is result: self:double(n: 'not-a-number');
+		local Int is result: :double(n: 'not-a-number');
 	}
 }
 ''',

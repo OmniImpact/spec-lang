@@ -38,7 +38,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 
 	# Step 1: lexing & parsing the target program.
 	Function is testParseFixtureProgram(){
-		local Lexer is lexer: Lexer:init(source: self:fixtureSource());
+		local Lexer is lexer: Lexer:init(source: :fixtureSource());
 		local Array of Token is tokens: lexer:tokenize();
 		local Parser is parser: Parser:init(tokens: tokens);
 		local ProgramNode is prog: parser:parseProgram();
@@ -47,7 +47,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 
 	# Step 2: the loaded program passes static type checking.
 	Function is testLoadedProgramTypechecks(){
-		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: self:fixtureSource());
+		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: :fixtureSource());
 		local Loader is loader: Loader:init();
 		local ProgramNode is prog: loader:loadProgram(rootPath: '/tmp/pure_spec_fixture.spec');
 		Assert:isTrue(prog:classes:length() >= 1);
@@ -58,7 +58,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 
 	# Steps 3-4: generate the LLVM IR module and write it out.
 	Function is testCodegenEmitsAndWritesLlvm(){
-		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: self:fixtureSource());
+		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: :fixtureSource());
 		local Loader is loader: Loader:init();
 		local ProgramNode is prog: loader:loadProgram(rootPath: '/tmp/pure_spec_fixture.spec');
 		local TypeChecker is tc: TypeChecker:init();
@@ -77,7 +77,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 
 	# Steps 5-6: compile via Driver and execute the binary.
 	Function is testGeneratedBinaryCompilesAndRuns(){
-		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: self:fixtureSource());
+		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: :fixtureSource());
 		local Map of String to String is cli: Map:init();
 		cli:set(key: 'i', value: '/tmp/pure_spec_fixture.spec');
 		cli:set(key: 'o', value: '/tmp/pure_spec_hello');

@@ -37,45 +37,45 @@ Class is CliArgs{
 		local Int is posIdx: 0;
 		local Int is i: 1;
 		while({ i < argc }, {
-			local String is arg: self:argvAt(argvAddr: argvAddr, idx: i);
+			local String is arg: :argvAt(argvAddr: argvAddr, idx: i);
 			local Int is alen: Buf:bufLength(b: arg);
 			if({ alen >= 2 && Buf:bufGetByte(b: arg, idx: 0, def: 0) == 45 && Buf:bufGetByte(b: arg, idx: 1, def: 0) == 45 }, {
 				local String is rest: Buf:stringSubstring(b: arg, start: 2, end: alen);
 				local Int is eq: Buf:stringIndexOf(b: rest, needle: '=', def: -1);
 				if({ eq >= 0 }, {
-					self:setArg(args: args, key: Buf:stringSubstring(b: rest, start: 0, end: eq), val: Buf:stringSubstring(b: rest, start: eq + 1, end: Buf:bufLength(b: rest)));
+					:setArg(args: args, key: Buf:stringSubstring(b: rest, start: 0, end: eq), val: Buf:stringSubstring(b: rest, start: eq + 1, end: Buf:bufLength(b: rest)));
 				}, {
 					local String is val: 'true';
 					if({ i + 1 < argc }, {
-						local String is nextArg: self:argvAt(argvAddr: argvAddr, idx: i + 1);
+						local String is nextArg: :argvAt(argvAddr: argvAddr, idx: i + 1);
 						if({ Buf:bufGetByte(b: nextArg, idx: 0, def: 0) != 45 }, {
 							i: i + 1;
 							val: nextArg;
 						});
 					});
-					self:setArg(args: args, key: rest, val: val);
+					:setArg(args: args, key: rest, val: val);
 				});
 			}, {
 				if({ alen >= 2 && Buf:bufGetByte(b: arg, idx: 0, def: 0) == 45 }, {
 					local String is rest: Buf:stringSubstring(b: arg, start: 1, end: alen);
 					local Int is eq: Buf:stringIndexOf(b: rest, needle: '=', def: -1);
 					if({ eq >= 0 }, {
-						self:setArg(args: args, key: Buf:stringSubstring(b: rest, start: 0, end: eq), val: Buf:stringSubstring(b: rest, start: eq + 1, end: Buf:bufLength(b: rest)));
+						:setArg(args: args, key: Buf:stringSubstring(b: rest, start: 0, end: eq), val: Buf:stringSubstring(b: rest, start: eq + 1, end: Buf:bufLength(b: rest)));
 					}, {
 						local String is val: 'true';
 						if({ i + 1 < argc }, {
-							local String is nextArg: self:argvAt(argvAddr: argvAddr, idx: i + 1);
+							local String is nextArg: :argvAt(argvAddr: argvAddr, idx: i + 1);
 							if({ Buf:bufGetByte(b: nextArg, idx: 0, def: 0) != 45 }, {
 								i: i + 1;
 								val: nextArg;
 							});
 						});
-						self:setArg(args: args, key: rest, val: val);
+						:setArg(args: args, key: rest, val: val);
 					});
 				}, {
-					self:setArg(args: args, key: Buf:intToString(v: posIdx), val: arg);
+					:setArg(args: args, key: Buf:intToString(v: posIdx), val: arg);
 					posIdx: posIdx + 1;
-					self:setArg(args: args, key: '', val: arg);
+					:setArg(args: args, key: '', val: arg);
 				});
 			});
 			i: i + 1;
@@ -88,7 +88,7 @@ Class is CliArgs{
 		local Array of String is out: [];
 		local Int is i: 1;
 		while({ i < argc }, {
-			out:add(item: self:argvAt(argvAddr: argvAddr, idx: i));
+			out:add(item: :argvAt(argvAddr: argvAddr, idx: i));
 			i: i + 1;
 		});
 		return out;

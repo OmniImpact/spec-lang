@@ -379,7 +379,7 @@ long long spec_pal_audio_last_error(void) {
     return (long long)(intptr_t)(_spec_last_audio_err ? _spec_last_audio_err : "Audio error");
 }
 
-{{self:getOsBlock(separatePosix: true)}}
+{{:getOsBlock(separatePosix: true)}}
 ```;
 	}
 }

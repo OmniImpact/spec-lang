@@ -24,8 +24,8 @@ Class is Conditional{
 	## @param then: The closure for the true case.
 	## @param else: The closure for the false case.
 	Function is if(Function of Boolean is check, Function is then, Function is else){
-		self:if(check: check, then: then);
-		self:if(check: { return !check(); }, then: else);
+		:if(check: check, then: then);
+		:if(check: { return !check(); }, then: else);
 	}
 
 	## Runs [then] or [else], then [finally] either way.
@@ -35,8 +35,8 @@ Class is Conditional{
 	## @param else: The closure for the false case.
 	## @param finally: Runs after whichever branch ran.
 	Function is if(Function of Boolean is check, Function is then, Function is else, Function is finally){
-		self:if(check: check, then: then);
-		self:if(check: { return !check(); }, then: else);
+		:if(check: check, then: then);
+		:if(check: { return !check(); }, then: else);
 		finally();
 	}
 

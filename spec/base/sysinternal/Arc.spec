@@ -82,7 +82,7 @@ Class is Arc{
 		});
 		local Int is old: Mem:atomicSubI32(addr: h, delta: 1);
 		if({ old == 1 }, {
-			self:destroyObj(objAddr: objAddr);
+			:destroyObj(objAddr: objAddr);
 		});
 	}
 

@@ -28,7 +28,7 @@ Class of SpecUnitTest is TestSpecBuild{
 		});
 		local String is specEnv: Process:getEnv(key: 'SPEC_BIN', default: '');
 		if({ specEnv != '' }, {
-			local String is d: self:dirOf(path: specEnv);
+			local String is d: :dirOf(path: specEnv);
 			if({ fileExists(path: d . '/../utilities/specbuild/SpecBuild.spec') }, {
 				return d . '/..';
 			});
@@ -96,7 +96,7 @@ Class of SpecUnitTest is TestSpecBuild{
 	}
 
 	Function is testBuildAndCleanLifecycle(){
-		local String is root: self:resolveRoot();
+		local String is root: :resolveRoot();
 		local String is specDir: root . '/spec';
 		local String is tmpDir: Uri:systemTempDir();
 		local String is appSrcFile: tmpDir . '/sb_app.spec';
@@ -117,7 +117,7 @@ Class of SpecUnitTest is TestSpecBuild{
 			fileRemove(path: outBinNoExt);
 		});
 
-		local String is sbBin: self:resolveSpecBuild(root: root);
+		local String is sbBin: :resolveSpecBuild(root: root);
 		local Int is buildCode: Process:execute(command: sbBin, args: [manifestFile]);
 		Assert:areEqualInt(0, buildCode);
 		Assert:isTrue(fileExists(path: outBin));

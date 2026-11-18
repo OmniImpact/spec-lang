@@ -34,11 +34,11 @@ Class is Uri{
 
 	## Initializes a URI instance.
 	replace Function is init(String is scheme: '', String is authority: '', String is path: '', String is query: '', String is fragment: ''){
-		self:scheme: scheme;
-		self:authority: authority;
-		self:path: path;
-		self:query: query;
-		self:fragment: fragment;
+		:scheme: scheme;
+		:authority: authority;
+		:path: path;
+		:query: query;
+		:fragment: fragment;
 	}
 
 	## True if [ch] is an ASCII letter.
@@ -55,7 +55,7 @@ Class is Uri{
 		if({ len >= 2 }, {
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
-			if({ self:isAlpha(ch: c0) && c1 == ':' }, {
+			if({ :isAlpha(ch: c0) && c1 == ':' }, {
 				return true;
 			});
 		});
@@ -63,7 +63,7 @@ Class is Uri{
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
 			local String is c2: p:charAt(index: 2, default: '');
-			if({ c0 == '/' && self:isAlpha(ch: c1) && c2 == ':' }, {
+			if({ c0 == '/' && :isAlpha(ch: c1) && c2 == ':' }, {
 				return true;
 			});
 		});
@@ -84,7 +84,7 @@ Class is Uri{
 		if({ p:length() >= 2 }, {
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
-			if({ self:isAlpha(ch: c0) && c1 == ':' }, {
+			if({ :isAlpha(ch: c0) && c1 == ':' }, {
 				drivePrefix: c0 . ':';
 				p: p:substring(start: 2, end: p:length());
 				if({ p:startsWith(prefix: '/') }, {
@@ -96,7 +96,7 @@ Class is Uri{
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
 			local String is c2: p:charAt(index: 2, default: '');
-			if({ c0 == '/' && self:isAlpha(ch: c1) && c2 == ':' }, {
+			if({ c0 == '/' && :isAlpha(ch: c1) && c2 == ':' }, {
 				drivePrefix: '/' . c1 . ':';
 				isAbs: true;
 				p: p:substring(start: 3, end: p:length());
@@ -175,15 +175,15 @@ Class is Uri{
 			});
 			local String is auth: rest:substring(start: 0, end: slashIdx);
 			local String is rem: rest:substring(start: slashIdx, end: rest:length());
-			return Uri:init(scheme: 'file', authority: auth, path: self:cleanPath(rawPath: rem));
+			return Uri:init(scheme: 'file', authority: auth, path: :cleanPath(rawPath: rem));
 		});
 
 		# Windows drive letter: C:/... or C:...
 		if({ p:length() >= 2 }, {
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
-			if({ self:isAlpha(ch: c0) && c1 == ':' }, {
-				local String is norm: self:cleanPath(rawPath: '/' . p);
+			if({ :isAlpha(ch: c0) && c1 == ':' }, {
+				local String is norm: :cleanPath(rawPath: '/' . p);
 				return Uri:init(scheme: 'file', authority: '', path: norm);
 			});
 		});
@@ -191,20 +191,20 @@ Class is Uri{
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
 			local String is c2: p:charAt(index: 2, default: '');
-			if({ c0 == '/' && self:isAlpha(ch: c1) && c2 == ':' }, {
-				local String is norm: self:cleanPath(rawPath: p);
+			if({ c0 == '/' && :isAlpha(ch: c1) && c2 == ':' }, {
+				local String is norm: :cleanPath(rawPath: p);
 				return Uri:init(scheme: 'file', authority: '', path: norm);
 			});
 		});
 
 		# POSIX absolute path: /foo/...
 		if({ p:startsWith(prefix: '/') }, {
-			local String is norm: self:cleanPath(rawPath: p);
+			local String is norm: :cleanPath(rawPath: p);
 			return Uri:init(scheme: 'file', authority: '', path: norm);
 		});
 
 		# Relative path
-		local String is norm: self:cleanPath(rawPath: p);
+		local String is norm: :cleanPath(rawPath: p);
 		return Uri:init(scheme: '', authority: '', path: norm);
 	}
 
@@ -219,7 +219,7 @@ Class is Uri{
 			local String is rest: text:substring(start: 7, end: text:length());
 			if({ rest:startsWith(prefix: '/') }, {
 				# file:///path
-				return self:fromFilePath(filePath: rest);
+				return :fromFilePath(filePath: rest);
 			});
 			local Int is slashIdx: rest:indexOf(search: '/', default: -1);
 			if({ slashIdx < 0 }, {
@@ -227,7 +227,7 @@ Class is Uri{
 			});
 			local String is auth: rest:substring(start: 0, end: slashIdx);
 			local String is rem: rest:substring(start: slashIdx, end: rest:length());
-			return Uri:init(scheme: 'file', authority: auth, path: self:cleanPath(rawPath: rem));
+			return Uri:init(scheme: 'file', authority: auth, path: :cleanPath(rawPath: rem));
 		});
 
 		# Other scheme: scheme://...
@@ -245,38 +245,38 @@ Class is Uri{
 				auth: afterSch:substring(start: 0, end: slashIdx);
 				p: afterSch:substring(start: slashIdx, end: afterSch:length());
 			});
-			return Uri:init(scheme: sch, authority: auth, path: self:cleanPath(rawPath: p));
+			return Uri:init(scheme: sch, authority: auth, path: :cleanPath(rawPath: p));
 		});
 
 		# Schemeless string -> treat as filesystem path
-		return self:fromFilePath(filePath: text);
+		return :fromFilePath(filePath: text);
 	}
 
 	## Returns a standardized filesystem path representation using forward slashes.
 	## Strips leading '/' for Windows drive letters (e.g. '/C:/dir' -> 'C:/dir').
 	Function of String is toFilePath(){
-		if({ self:path == '' }, {
+		if({ :path == '' }, {
 			return '';
 		});
-		local String is p: self:path;
+		local String is p: :path;
 		# Strip leading slash before Windows drive letter: /C:/foo -> C:/foo
 		if({ p:length() >= 3 }, {
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
 			local String is c2: p:charAt(index: 2, default: '');
-			if({ c0 == '/' && self:isAlpha(ch: c1) && c2 == ':' }, {
+			if({ c0 == '/' && :isAlpha(ch: c1) && c2 == ':' }, {
 				return p:substring(start: 1, end: p:length());
 			});
 		});
-		if({ self:authority != '' }, {
-			return '//' . self:authority . p;
+		if({ :authority != '' }, {
+			return '//' . :authority . p;
 		});
 		return p;
 	}
 
 	## Returns an OS-native filesystem path representation (using '\' on Windows).
 	Function of String is toNativeFilePath(){
-		local String is fp: self:toFilePath();
+		local String is fp: :toFilePath();
 		if({ Process:osName() == 'windows' }, {
 			return fp:replaceAll(search: '/', replacement: '\\');
 		});
@@ -285,18 +285,18 @@ Class is Uri{
 
 	## True if this is an absolute URI or path.
 	Function of Boolean is isAbsolute(){
-		if({ self:scheme != '' }, {
+		if({ :scheme != '' }, {
 			return true;
 		});
-		if({ self:path:startsWith(prefix: '/') }, {
+		if({ :path:startsWith(prefix: '/') }, {
 			return true;
 		});
-		return self:hasDrivePrefix(p: self:path);
+		return :hasDrivePrefix(p: :path);
 	}
 
 	## Returns the parent directory path of this URI.
 	Function of String is dirPath(){
-		local String is p: self:path;
+		local String is p: :path;
 		if({ p == '' || p == '/' }, {
 			return p;
 		});
@@ -319,7 +319,7 @@ Class is Uri{
 			local String is c0: p:charAt(index: 0, default: '');
 			local String is c1: p:charAt(index: 1, default: '');
 			local String is c2: p:charAt(index: 2, default: '');
-			if({ c0 == '/' && self:isAlpha(ch: c1) && c2 == ':' }, {
+			if({ c0 == '/' && :isAlpha(ch: c1) && c2 == ':' }, {
 				return p:substring(start: 0, end: 4);
 			});
 		});
@@ -328,7 +328,7 @@ Class is Uri{
 
 	## Returns the filename portion of this URI including extension.
 	Function of String is baseName(){
-		local String is p: self:path;
+		local String is p: :path;
 		if({ p == '' || p == '/' }, {
 			return '';
 		});
@@ -348,7 +348,7 @@ Class is Uri{
 
 	## Returns the file extension including the leading dot, or '' if none.
 	Function of String is extName(){
-		local String is bn: self:baseName();
+		local String is bn: :baseName();
 		if({ bn == '' }, {
 			return '';
 		});
@@ -368,11 +368,11 @@ Class is Uri{
 
 	## Resolves a relative path or URI against this URI.
 	Function of Uri is resolve(String is relativePath){
-		local Uri is rel: self:fromFilePath(filePath: relativePath);
+		local Uri is rel: :fromFilePath(filePath: relativePath);
 		if({ rel:isAbsolute() }, {
 			return rel;
 		});
-		local String is baseDir: self:dirPath();
+		local String is baseDir: :dirPath();
 		local String is joined: '';
 		if({ baseDir != '' }, {
 			if({ baseDir:endsWith(suffix: '/') }, {
@@ -383,8 +383,8 @@ Class is Uri{
 		}, {
 			joined: rel:path;
 		});
-		local String is norm: self:cleanPath(rawPath: joined);
-		return Uri:init(scheme: self:scheme, authority: self:authority, path: norm);
+		local String is norm: :cleanPath(rawPath: joined);
+		return Uri:init(scheme: :scheme, authority: :authority, path: norm);
 	}
 
 	## Returns the cross-platform temporary directory without trailing slash.
@@ -395,13 +395,13 @@ Class is Uri{
 				t: Process:getEnv(key: 'TMP', default: '');
 			});
 			if({ t != '' }, {
-				return self:cleanPath(rawPath: t);
+				return :cleanPath(rawPath: t);
 			});
 			return '/tmp';
 		});
 		local String is p: Process:getEnv(key: 'TMPDIR', default: '');
 		if({ p != '' }, {
-			return self:cleanPath(rawPath: p);
+			return :cleanPath(rawPath: p);
 		});
 		return '/tmp';
 	}
@@ -413,23 +413,23 @@ Class is Uri{
 			h: Process:getEnv(key: 'USERPROFILE', default: '');
 		});
 		if({ h != '' }, {
-			return self:cleanPath(rawPath: h);
+			return :cleanPath(rawPath: h);
 		});
 		return '';
 	}
 
 	## Returns the root Spec cache directory without trailing slash.
 	Function of String is cacheDir(){
-		local String is h: self:homeDir();
+		local String is h: :homeDir();
 		if({ h != '' }, {
 			return h . '/.cache/spec';
 		});
-		return self:systemTempDir() . '/spec_cache';
+		return :systemTempDir() . '/spec_cache';
 	}
 
 	## Returns the precompiled runtime accelerator cache directory without trailing slash.
 	Function of String is runtimeCacheDir(){
-		return self:cacheDir() . '/runtime';
+		return :cacheDir() . '/runtime';
 	}
 
 	## Joins path components with '/' and resolves '.' and '..' segments.
@@ -447,7 +447,7 @@ Class is Uri{
 			return '';
 		});
 		local String is joined: nonEmpties:join(separator: '/');
-		return self:cleanPath(rawPath: joined);
+		return :cleanPath(rawPath: joined);
 	}
 
 	## Returns the executable file suffix for the running platform ('.exe' on Windows, '' elsewhere).
@@ -460,23 +460,23 @@ Class is Uri{
 
 	## Generates a unique temporary file path inside tempDir().
 	Function of String is tempFile(String is prefix: 'spec_', String is suffix: ''){
-		return self:systemTempDir() . '/' . prefix . (Process:getPid() as String) . '_' . (Process:clockMs() as String) . suffix;
+		return :systemTempDir() . '/' . prefix . (Process:getPid() as String) . '_' . (Process:clockMs() as String) . suffix;
 	}
 
 	## Formats as a URI string.
 	replace Function of String is toString(){
-		if({ self:scheme == 'file' }, {
-			if({ self:authority != '' }, {
-				return 'file://' . self:authority . self:path;
+		if({ :scheme == 'file' }, {
+			if({ :authority != '' }, {
+				return 'file://' . :authority . :path;
 			});
-			if({ self:path:startsWith(prefix: '/') }, {
-				return 'file://' . self:path;
+			if({ :path:startsWith(prefix: '/') }, {
+				return 'file://' . :path;
 			});
-			return 'file:///' . self:path;
+			return 'file:///' . :path;
 		});
-		if({ self:scheme != '' }, {
-			return self:scheme . '://' . self:authority . self:path;
+		if({ :scheme != '' }, {
+			return :scheme . '://' . :authority . :path;
 		});
-		return self:path;
+		return :path;
 	}
 }

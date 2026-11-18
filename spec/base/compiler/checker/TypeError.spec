@@ -35,26 +35,26 @@ Class is TypeError{
 	## @param length: Optional span length in characters.
 	## @param file: Optional source file path.
 	replace Function is init(Int is line, String is message, Int is col: 0, Int is length: 0, String is file: ''){
-		self:line: line;
-		self:message: message;
-		self:col: col;
-		self:length: length;
-		self:file: file;
+		:line: line;
+		:message: message;
+		:col: col;
+		:length: length;
+		:file: file;
 	}
 
 	## Returns the structured source location span.
 	##
 	## @return: [SourceLocation] span.
 	Function of SourceLocation is getLocation(){
-		return SourceLocation:init(file: self:file, line: self:line, col: self:col, length: self:length);
+		return SourceLocation:init(file: :file, line: :line, col: :col, length: :length);
 	}
 
 	## Renders the error with its provenance.
 	##
 	## @return: Multi-line diagnostic text.
 	replace Function of String is toString(){
-		local Error is e: Error:init(message: self:message, location: self:getLocation());
-		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: self:line, col: self:col);
+		local Error is e: Error:init(message: :message, location: :getLocation());
+		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: :line, col: :col);
 		return e:toString();
 	}
 }

@@ -22,6 +22,10 @@ Class is CallData{
 	## the as-imported class providing the member; '' for ordinary dispatch.
 	String is bareProvider: '';
 
+	## True when the call was written bare (`foo(...)`) rather than with an
+	## explicit receiver (`:foo(...)` or `obj:foo(...)`).
+	Boolean is isBareCall: false;
+
 	## True when the scoped-region desugarer appended the remainder as the
 	## last argument.
 	Boolean is scopedRemainder: false;
@@ -36,8 +40,8 @@ Class is CallData{
 	## @param name: Method name.
 	## @param args: Call arguments.
 	replace Function is init(Expression is target, String is name, Array of NamedArg is args){
-		self:target: target;
-		self:name: name;
-		self:args: args;
+		:target: target;
+		:name: name;
+		:args: args;
 	}
 }

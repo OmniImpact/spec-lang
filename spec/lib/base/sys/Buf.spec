@@ -84,8 +84,8 @@ Class is Buf{
 		local Int is bLen: if({ bAddr == 0 }, { 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) });
 		local Int is total: aLen + bLen;
 		if({ total == 0 }, { return ''; });
-		if({ aLen == 0 }, { return self:stringCopy(b: b); });
-		if({ bLen == 0 }, { return self:stringCopy(b: a); });
+		if({ aLen == 0 }, { return :stringCopy(b: b); });
+		if({ bLen == 0 }, { return :stringCopy(b: a); });
 		local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
 		local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
 		if({ total <= 256 }, {
@@ -99,7 +99,7 @@ Class is Buf{
 			return Mem:strFromBytes(srcAddr: scratch, len: total);
 		});
 		local String is out: Mem:strFromBytes(srcAddr: aData, len: aLen);
-		self:bufAppendBuf(dst: out, src: b);
+		:bufAppendBuf(dst: out, src: b);
 		return out;
 	}
 
@@ -178,7 +178,7 @@ Class is Buf{
 	## @param def: Fallback when absent (conventionally -1).
 	## @return: The index, or [def].
 	Function of Int is stringIndexOf(String is b, String is needle, Int is def){
-		return self:stringIndexOfFrom(b: b, needle: needle, from: 0, def: def);
+		return :stringIndexOfFrom(b: b, needle: needle, from: 0, def: def);
 	}
 
 	## First index of [needle] within buffer [b] at or after [from], or [def] when absent.

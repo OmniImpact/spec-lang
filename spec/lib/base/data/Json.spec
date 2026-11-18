@@ -61,12 +61,12 @@ Class is Json{
 
 	## Whether the most recent parse operation encountered a syntax error.
 	Function of Boolean is hasError(){
-		return self:parseFailed;
+		return :parseFailed;
 	}
 
 	## The diagnostic message for the most recent parse failure.
 	Function of String is errorMessage(){
-		return self:parseError;
+		return :parseError;
 	}
 
 	## Looks up an integer value from a parsed JSON map.
@@ -81,7 +81,7 @@ Class is Json{
 			return n:toInt(default: default);
 		});
 		if({ t == 'String' }, {
-			local String is s: self:toStr(val: val);
+			local String is s: :toStr(val: val);
 			return s:parseInt(base: 10, default: default);
 		});
 		return default;
@@ -99,7 +99,7 @@ Class is Json{
 			return n:toFloat(default: default);
 		});
 		if({ t == 'String' }, {
-			local String is s: self:toStr(val: val);
+			local String is s: :toStr(val: val);
 			local JsonNumber is tempNum: JsonNumber:init(rawText: s, isFloating: true);
 			return tempNum:toFloat(default: default);
 		});
@@ -114,7 +114,7 @@ Class is Json{
 		local Any is val: obj:get(key: key, default: '');
 		local String is t: Introspection:typeIdentity(obj: val);
 		if({ t == 'String' }, {
-			return self:toStr(val: val);
+			return :toStr(val: val);
 		});
 		if({ t == 'base:data:JsonNumber' || t == 'JsonNumber' }, {
 			local JsonNumber is n: val as JsonNumber;
@@ -139,7 +139,7 @@ Class is Json{
 			return b:value();
 		});
 		if({ t == 'String' }, {
-			local String is s: self:toStr(val: val);
+			local String is s: :toStr(val: val);
 			if({ s == 'true' }, {
 				return true;
 			});
@@ -188,7 +188,7 @@ Class is Json{
 			return n:toInt(default: default);
 		});
 		if({ t == 'String' }, {
-			local String is s: self:toStr(val: val);
+			local String is s: :toStr(val: val);
 			return s:parseInt(base: 10, default: default);
 		});
 		return default;
@@ -202,7 +202,7 @@ Class is Json{
 		local Any is val: arr:get(index: index, default: '');
 		local String is t: Introspection:typeIdentity(obj: val);
 		if({ t == 'String' }, {
-			return self:toStr(val: val);
+			return :toStr(val: val);
 		});
 		if({ t == 'base:data:JsonNumber' || t == 'JsonNumber' }, {
 			local JsonNumber is n: val as JsonNumber;
@@ -227,7 +227,7 @@ Class is Json{
 			return b:value();
 		});
 		if({ t == 'String' }, {
-			local String is s: self:toStr(val: val);
+			local String is s: :toStr(val: val);
 			if({ s == 'true' }, {
 				return true;
 			});
@@ -250,7 +250,7 @@ Class is Json{
 			return n:toFloat(default: default);
 		});
 		if({ t == 'String' }, {
-			local String is s: self:toStr(val: val);
+			local String is s: :toStr(val: val);
 			local JsonNumber is tempNum: JsonNumber:init(rawText: s, isFloating: true);
 			return tempNum:toFloat(default: default);
 		});
@@ -286,10 +286,10 @@ Class is Json{
 	## Advances parse position past ASCII whitespace.
 	Function is skipWhitespace(String is text){
 		local Boolean is checking: true;
-		while({ checking && (self:parsePos < self:textLen) }, {
-			local Int is b: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+		while({ checking && (:parsePos < :textLen) }, {
+			local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 			if({ b == 32 || b == 9 || b == 10 || b == 13 }, {
-				self:parsePos: self:parsePos + 1;
+				:parsePos: :parsePos + 1;
 			}, {
 				checking: false;
 			});
@@ -314,25 +314,25 @@ Class is Json{
 
 	## Parses a JSON string literal at the current position.
 	Function of String is parseString(String is text){
-		self:parsePos: self:parsePos + 1;
-		local Int is startPos: self:parsePos;
+		:parsePos: :parsePos + 1;
+		local Int is startPos: :parsePos;
 		local String is out: '';
 		local Boolean is scanning: true;
 		local Boolean is closed: false;
 
-		while({ scanning && (self:parsePos < self:textLen) }, {
-			local Int is b: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+		while({ scanning && (:parsePos < :textLen) }, {
+			local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 			if({ b < 0 }, {
-				self:parseFailed: true;
-				self:parseError: 'Unexpected end of input inside string literal';
+				:parseFailed: true;
+				:parseError: 'Unexpected end of input inside string literal';
 				scanning: false;
 			});
 			if({ scanning && b == 92 }, {
-				if({ self:parsePos > startPos }, {
-					out: out . text:substring(start: startPos, end: self:parsePos);
+				if({ :parsePos > startPos }, {
+					out: out . text:substring(start: startPos, end: :parsePos);
 				});
-				self:parsePos: self:parsePos + 1;
-				local Int is esc: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+				:parsePos: :parsePos + 1;
+				local Int is esc: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 				if({ esc == 34 }, {
 					out: out . '"';
 				});
@@ -358,90 +358,90 @@ Class is Json{
 					out: out . "\t";
 				});
 				if({ esc == 117 }, {
-					if({ self:parsePos + 4 < self:textLen }, {
-						local String is hexStr: text:substring(start: self:parsePos + 1, end: self:parsePos + 5);
+					if({ :parsePos + 4 < :textLen }, {
+						local String is hexStr: text:substring(start: :parsePos + 1, end: :parsePos + 5);
 						local Int is cp: hexStr:parseInt(base: 16, default: 0);
-						out: out . self:codePointToUtf8(cp: cp);
-						self:parsePos: self:parsePos + 4;
+						out: out . :codePointToUtf8(cp: cp);
+						:parsePos: :parsePos + 4;
 					}, {
-						self:parseFailed: true;
-						self:parseError: 'Incomplete \\uXXXX escape sequence';
+						:parseFailed: true;
+						:parseError: 'Incomplete \\uXXXX escape sequence';
 						scanning: false;
 					});
 				});
-				self:parsePos: self:parsePos + 1;
-				startPos: self:parsePos;
+				:parsePos: :parsePos + 1;
+				startPos: :parsePos;
 			}, {
 				if({ scanning && b == 34 }, {
-					if({ self:parsePos > startPos }, {
-						out: out . text:substring(start: startPos, end: self:parsePos);
+					if({ :parsePos > startPos }, {
+						out: out . text:substring(start: startPos, end: :parsePos);
 					});
-					self:parsePos: self:parsePos + 1;
+					:parsePos: :parsePos + 1;
 					closed: true;
 					scanning: false;
 				}, {
 					if({ scanning }, {
-						self:parsePos: self:parsePos + 1;
+						:parsePos: :parsePos + 1;
 					});
 				});
 			});
 		});
-		if({ !closed && !self:parseFailed }, {
-			self:parseFailed: true;
-			self:parseError: 'Unclosed string literal';
+		if({ !closed && !:parseFailed }, {
+			:parseFailed: true;
+			:parseError: 'Unclosed string literal';
 		});
 		return out;
 	}
 
 	## Parses a JSON numeric literal at the current position.
 	Function of JsonNumber is parseNumber(String is text){
-		local Int is start: self:parsePos;
+		local Int is start: :parsePos;
 		local Boolean is isFloating: false;
 
-		if({ self:parsePos < self:textLen && Buf:bufGetByte(b: text, idx: self:parsePos, def: -1) == 45 }, {
-			self:parsePos: self:parsePos + 1;
+		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 45 }, {
+			:parsePos: :parsePos + 1;
 		});
 
 		local Boolean is readingInt: true;
-		while({ readingInt && (self:parsePos < self:textLen) }, {
-			local Int is b: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+		while({ readingInt && (:parsePos < :textLen) }, {
+			local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 			if({ b >= 48 && b <= 57 }, {
-				self:parsePos: self:parsePos + 1;
+				:parsePos: :parsePos + 1;
 			}, {
 				readingInt: false;
 			});
 		});
 
-		if({ self:parsePos < self:textLen && Buf:bufGetByte(b: text, idx: self:parsePos, def: -1) == 46 }, {
+		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 46 }, {
 			isFloating: true;
-			self:parsePos: self:parsePos + 1;
+			:parsePos: :parsePos + 1;
 			local Boolean is readingFrac: true;
-			while({ readingFrac && (self:parsePos < self:textLen) }, {
-				local Int is b: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+			while({ readingFrac && (:parsePos < :textLen) }, {
+				local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 				if({ b >= 48 && b <= 57 }, {
-					self:parsePos: self:parsePos + 1;
+					:parsePos: :parsePos + 1;
 				}, {
 					readingFrac: false;
 				});
 			});
 		});
 
-		if({ self:parsePos < self:textLen }, {
-			local Int is expCh: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+		if({ :parsePos < :textLen }, {
+			local Int is expCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 			if({ expCh == 101 || expCh == 69 }, {
 				isFloating: true;
-				self:parsePos: self:parsePos + 1;
-				if({ self:parsePos < self:textLen }, {
-					local Int is signCh: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+				:parsePos: :parsePos + 1;
+				if({ :parsePos < :textLen }, {
+					local Int is signCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 					if({ signCh == 43 || signCh == 45 }, {
-						self:parsePos: self:parsePos + 1;
+						:parsePos: :parsePos + 1;
 					});
 				});
 				local Boolean is readingExp: true;
-				while({ readingExp && (self:parsePos < self:textLen) }, {
-					local Int is b: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+				while({ readingExp && (:parsePos < :textLen) }, {
+					local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 					if({ b >= 48 && b <= 57 }, {
-					self:parsePos: self:parsePos + 1;
+					:parsePos: :parsePos + 1;
 					}, {
 						readingExp: false;
 					});
@@ -449,49 +449,49 @@ Class is Json{
 			});
 		});
 
-		local String is numStr: text:substring(start: start, end: self:parsePos);
+		local String is numStr: text:substring(start: start, end: :parsePos);
 		if({ numStr == '-' || numStr == '' }, {
-			self:parseFailed: true;
-			self:parseError: 'Invalid number literal';
+			:parseFailed: true;
+			:parseError: 'Invalid number literal';
 		});
-		return self:numberRaw(rawText: numStr, isFloating: isFloating);
+		return :numberRaw(rawText: numStr, isFloating: isFloating);
 	}
 
 	## Parses a JSON array at the current position.
 	Function of Array is parseArray(String is text){
 		local Array of Any is arr: [];
-		self:parsePos: self:parsePos + 1;
-		self:skipWhitespace(text: text);
+		:parsePos: :parsePos + 1;
+		:skipWhitespace(text: text);
 
-		if({ self:parsePos < self:textLen && Buf:bufGetByte(b: text, idx: self:parsePos, def: -1) == 93 }, {
-			self:parsePos: self:parsePos + 1;
+		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 93 }, {
+			:parsePos: :parsePos + 1;
 			return arr;
 		});
 
 		local Boolean is parsing: true;
 		local Boolean is closed: false;
-		while({ parsing && !self:parseFailed && (self:parsePos < self:textLen) }, {
-			local Any is item: self:parseValue(text: text);
+		while({ parsing && !:parseFailed && (:parsePos < :textLen) }, {
+			local Any is item: :parseValue(text: text);
 			arr:add(item: item);
-			self:skipWhitespace(text: text);
-			local Int is nextCh: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+			:skipWhitespace(text: text);
+			local Int is nextCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 			if({ nextCh == 44 }, {
-				self:parsePos: self:parsePos + 1;
+				:parsePos: :parsePos + 1;
 			}, {
 				if({ nextCh == 93 }, {
-					self:parsePos: self:parsePos + 1;
+					:parsePos: :parsePos + 1;
 					closed: true;
 					parsing: false;
 				}, {
-					self:parseFailed: true;
-					self:parseError: 'Expected \x27,\x27 or \x27]\x27 in array';
+					:parseFailed: true;
+					:parseError: 'Expected \x27,\x27 or \x27]\x27 in array';
 					parsing: false;
 				});
 			});
 		});
-		if({ !closed && !self:parseFailed }, {
-			self:parseFailed: true;
-			self:parseError: 'Unclosed array, expected \x27]\x27';
+		if({ !closed && !:parseFailed }, {
+			:parseFailed: true;
+			:parseError: 'Unclosed array, expected \x27]\x27';
 		});
 		return arr;
 	}
@@ -499,128 +499,128 @@ Class is Json{
 	## Parses a JSON object at the current position.
 	Function of Map is parseObject(String is text){
 		local Map is obj: Map:init();
-		self:parsePos: self:parsePos + 1;
-		self:skipWhitespace(text: text);
+		:parsePos: :parsePos + 1;
+		:skipWhitespace(text: text);
 
-		if({ self:parsePos < self:textLen && Buf:bufGetByte(b: text, idx: self:parsePos, def: -1) == 125 }, {
-			self:parsePos: self:parsePos + 1;
+		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 125 }, {
+			:parsePos: :parsePos + 1;
 			return obj;
 		});
 
 		local Boolean is parsing: true;
 		local Boolean is closed: false;
-		while({ parsing && !self:parseFailed && (self:parsePos < self:textLen) }, {
-			self:skipWhitespace(text: text);
-			if({ Buf:bufGetByte(b: text, idx: self:parsePos, def: -1) != 34 }, {
-				self:parseFailed: true;
-				self:parseError: 'Expected string key in object';
+		while({ parsing && !:parseFailed && (:parsePos < :textLen) }, {
+			:skipWhitespace(text: text);
+			if({ Buf:bufGetByte(b: text, idx: :parsePos, def: -1) != 34 }, {
+				:parseFailed: true;
+				:parseError: 'Expected string key in object';
 				return obj;
 			});
-			local String is key: self:parseString(text: text);
-			self:skipWhitespace(text: text);
-			if({ Buf:bufGetByte(b: text, idx: self:parsePos, def: -1) != 58 }, {
-				self:parseFailed: true;
-				self:parseError: 'Expected \x27:\x27 after key in object';
+			local String is key: :parseString(text: text);
+			:skipWhitespace(text: text);
+			if({ Buf:bufGetByte(b: text, idx: :parsePos, def: -1) != 58 }, {
+				:parseFailed: true;
+				:parseError: 'Expected \x27:\x27 after key in object';
 				return obj;
 			});
-			self:parsePos: self:parsePos + 1;
-			local Any is val: self:parseValue(text: text);
+			:parsePos: :parsePos + 1;
+			local Any is val: :parseValue(text: text);
 			obj:set(key: key, value: val);
-			self:skipWhitespace(text: text);
-			local Int is nextCh: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+			:skipWhitespace(text: text);
+			local Int is nextCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 			if({ nextCh == 44 }, {
-				self:parsePos: self:parsePos + 1;
+				:parsePos: :parsePos + 1;
 			}, {
 				if({ nextCh == 125 }, {
-					self:parsePos: self:parsePos + 1;
+					:parsePos: :parsePos + 1;
 					closed: true;
 					parsing: false;
 				}, {
-					self:parseFailed: true;
-					self:parseError: 'Expected \x27,\x27 or \x27}\x27 in object';
+					:parseFailed: true;
+					:parseError: 'Expected \x27,\x27 or \x27}\x27 in object';
 					parsing: false;
 				});
 			});
 		});
-		if({ !closed && !self:parseFailed }, {
-			self:parseFailed: true;
-			self:parseError: 'Unclosed object, expected \x27}\x27';
+		if({ !closed && !:parseFailed }, {
+			:parseFailed: true;
+			:parseError: 'Unclosed object, expected \x27}\x27';
 		});
 		return obj;
 	}
 
 	## Parses a JSON value at the current position.
 	Function of Any is parseValue(String is text){
-		self:skipWhitespace(text: text);
-		if({ self:parsePos >= self:textLen }, {
-			self:parseFailed: true;
-			self:parseError: 'Unexpected end of input';
-			return self:nullValue();
+		:skipWhitespace(text: text);
+		if({ :parsePos >= :textLen }, {
+			:parseFailed: true;
+			:parseError: 'Unexpected end of input';
+			return :nullValue();
 		});
 
-		local Int is b: Buf:bufGetByte(b: text, idx: self:parsePos, def: -1);
+		local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
 		if({ b == 123 }, {
-			return self:parseObject(text: text);
+			return :parseObject(text: text);
 		});
 		if({ b == 91 }, {
-			return self:parseArray(text: text);
+			return :parseArray(text: text);
 		});
 		if({ b == 34 }, {
-			return self:parseString(text: text);
+			return :parseString(text: text);
 		});
 		if({ b == 116 }, {
-			if({ self:parsePos + 4 <= self:textLen && text:substring(start: self:parsePos, end: self:parsePos + 4) == 'true' }, {
-				self:parsePos: self:parsePos + 4;
-				return self:bool(b: true);
+			if({ :parsePos + 4 <= :textLen && text:substring(start: :parsePos, end: :parsePos + 4) == 'true' }, {
+				:parsePos: :parsePos + 4;
+				return :bool(b: true);
 			});
 		});
 		if({ b == 102 }, {
-			if({ self:parsePos + 5 <= self:textLen && text:substring(start: self:parsePos, end: self:parsePos + 5) == 'false' }, {
-				self:parsePos: self:parsePos + 5;
-				return self:bool(b: false);
+			if({ :parsePos + 5 <= :textLen && text:substring(start: :parsePos, end: :parsePos + 5) == 'false' }, {
+				:parsePos: :parsePos + 5;
+				return :bool(b: false);
 			});
 		});
 		if({ b == 110 }, {
-			if({ self:parsePos + 4 <= self:textLen && text:substring(start: self:parsePos, end: self:parsePos + 4) == 'null' }, {
-				self:parsePos: self:parsePos + 4;
-				return self:nullValue();
+			if({ :parsePos + 4 <= :textLen && text:substring(start: :parsePos, end: :parsePos + 4) == 'null' }, {
+				:parsePos: :parsePos + 4;
+				return :nullValue();
 			});
 		});
 		if({ b == 45 || (b >= 48 && b <= 57) }, {
-			return self:parseNumber(text: text);
+			return :parseNumber(text: text);
 		});
 
-		self:parseFailed: true;
-		self:parseError: 'Unexpected character \x27' . text:substring(start: self:parsePos, end: self:parsePos + 1) . '\x27 at offset ' . (self:parsePos as String);
-		return self:nullValue();
+		:parseFailed: true;
+		:parseError: 'Unexpected character \x27' . text:substring(start: :parsePos, end: :parsePos + 1) . '\x27 at offset ' . (:parsePos as String);
+		return :nullValue();
 	}
 
 	## Parses JSON text into Spec data structures.
 	Function of Any is parse(String is text, Any is default: ''){
-		self:parsePos: 0;
-		self:textLen: text:length();
-		self:parseFailed: false;
-		self:parseError: '';
+		:parsePos: 0;
+		:textLen: text:length();
+		:parseFailed: false;
+		:parseError: '';
 
-		if({ self:textLen == 0 }, {
-			self:parseFailed: true;
-			self:parseError: 'Empty input';
+		if({ :textLen == 0 }, {
+			:parseFailed: true;
+			:parseError: 'Empty input';
 			return default;
 		});
 
-		self:skipWhitespace(text: text);
-		if({ self:parsePos >= self:textLen }, {
-			self:parseFailed: true;
-			self:parseError: 'Empty input';
+		:skipWhitespace(text: text);
+		if({ :parsePos >= :textLen }, {
+			:parseFailed: true;
+			:parseError: 'Empty input';
 			return default;
 		});
 
-		local Any is res: self:parseValue(text: text);
-		self:skipWhitespace(text: text);
-		if({ self:parseFailed || (self:parsePos < self:textLen) }, {
-			if({ !self:parseFailed }, {
-				self:parseFailed: true;
-				self:parseError: 'Unexpected trailing data at offset ' . (self:parsePos as String);
+		local Any is res: :parseValue(text: text);
+		:skipWhitespace(text: text);
+		if({ :parseFailed || (:parsePos < :textLen) }, {
+			if({ !:parseFailed }, {
+				:parseFailed: true;
+				:parseError: 'Unexpected trailing data at offset ' . (:parsePos as String);
 			});
 			return default;
 		});
@@ -629,7 +629,7 @@ Class is Json{
 
 	## Parses JSON text directly into a Map.
 	Function of Map is parseObjectText(String is text){
-		local Any is res: self:parse(text: text, default: Map:init());
+		local Any is res: :parse(text: text, default: Map:init());
 		local String is t: Introspection:typeIdentity(obj: res);
 		if({ t == 'Map' }, {
 			return res as Map;
@@ -639,7 +639,7 @@ Class is Json{
 
 	## Parses JSON text directly into an Array.
 	Function of Array is parseArrayText(String is text){
-		local Any is res: self:parse(text: text, default: []);
+		local Any is res: :parse(text: text, default: []);
 		local String is t: Introspection:typeIdentity(obj: res);
 		if({ t == 'Array' }, {
 			return res as Array;
@@ -686,7 +686,7 @@ Class is Json{
 										out: out . "\\f";
 									}, {
 										if({ b < 32 }, {
-											out: out . "\\u00" . self:hexDigit(d: b / 16) . self:hexDigit(d: b % 16);
+											out: out . "\\u00" . :hexDigit(d: b / 16) . :hexDigit(d: b % 16);
 										}, {
 											out: out . String:fromCharCode(code: b);
 										});
@@ -704,7 +704,7 @@ Class is Json{
 
 	## Serializes a Spec value into a compact JSON string.
 	Function of String is stringify(Any is value){
-		if({ self:isNull(value: value) }, {
+		if({ :isNull(value: value) }, {
 			return 'null';
 		});
 
@@ -721,7 +721,7 @@ Class is Json{
 			return jn:toString();
 		});
 		if({ t == 'String' }, {
-			return '"' . self:escapeString(str: self:toStr(val: value)) . '"';
+			return '"' . :escapeString(str: :toStr(val: value)) . '"';
 		});
 		if({ t == 'Array' }, {
 			local Array of Any is arr: value as Array;
@@ -732,7 +732,7 @@ Class is Json{
 				if({ i > 0 }, {
 					out: out . ',';
 				});
-				out: out . self:stringify(value: arr:get(index: i, default: ''));
+				out: out . :stringify(value: arr:get(index: i, default: ''));
 				i: i + 1;
 			});
 			return out . ']';
@@ -748,7 +748,7 @@ Class is Json{
 					out: out . ',';
 				});
 				local String is k: keys:get(index: i, default: '');
-				out: out . '"' . self:escapeString(str: k) . '":' . self:stringify(value: m:get(key: k, default: ''));
+				out: out . '"' . :escapeString(str: k) . '":' . :stringify(value: m:get(key: k, default: ''));
 				i: i + 1;
 			});
 			return out . '}';
@@ -756,7 +756,7 @@ Class is Json{
 		if({ t == '' }, {
 			return 'null';
 		});
-		return '"' . self:escapeString(str: self:toStr(val: value)) . '"';
+		return '"' . :escapeString(str: :toStr(val: value)) . '"';
 	}
 
 	## Generates indentation whitespace.
@@ -771,7 +771,7 @@ Class is Json{
 
 	## Recursive formatter for pretty-printed JSON.
 	Function of String is formatInner(Any is value, Int is level, Int is indent){
-		if({ self:isNull(value: value) }, {
+		if({ :isNull(value: value) }, {
 			return 'null';
 		});
 
@@ -785,14 +785,14 @@ Class is Json{
 			local String is out: "[\n";
 			local Int is ai: 0;
 			while({ ai < aLen }, {
-				out: out . self:indentSpaces(level: level + 1, indentStep: indent) . self:formatInner(value: arr:get(index: ai, default: ''), level: level + 1, indent: indent);
+				out: out . :indentSpaces(level: level + 1, indentStep: indent) . :formatInner(value: arr:get(index: ai, default: ''), level: level + 1, indent: indent);
 				if({ ai + 1 < aLen }, {
 					out: out . ',';
 				});
 				out: out . "\n";
 				ai: ai + 1;
 			});
-			out: out . self:indentSpaces(level: level, indentStep: indent) . ']';
+			out: out . :indentSpaces(level: level, indentStep: indent) . ']';
 			return out;
 		});
 		if({ t == 'Map' }, {
@@ -806,21 +806,21 @@ Class is Json{
 			local Int is ki: 0;
 			while({ ki < kLen }, {
 				local String is k: keys:get(index: ki, default: '');
-				out: out . self:indentSpaces(level: level + 1, indentStep: indent) . '"' . self:escapeString(str: k) . '": ' . self:formatInner(value: m:get(key: k, default: ''), level: level + 1, indent: indent);
+				out: out . :indentSpaces(level: level + 1, indentStep: indent) . '"' . :escapeString(str: k) . '": ' . :formatInner(value: m:get(key: k, default: ''), level: level + 1, indent: indent);
 				if({ ki + 1 < kLen }, {
 					out: out . ',';
 				});
 				out: out . "\n";
 				ki: ki + 1;
 			});
-			out: out . self:indentSpaces(level: level, indentStep: indent) . '}';
+			out: out . :indentSpaces(level: level, indentStep: indent) . '}';
 			return out;
 		});
-		return self:stringify(value: value);
+		return :stringify(value: value);
 	}
 
 	## Formats a Spec value into pretty-printed JSON with indentation.
 	Function of String is format(Any is value, Int is indent: 2){
-		return self:formatInner(value: value, level: 0, indent: indent);
+		return :formatInner(value: value, level: 0, indent: indent);
 	}
 }

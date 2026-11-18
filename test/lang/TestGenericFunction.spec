@@ -19,7 +19,7 @@ Class of SpecUnitTest is TestGenericFunction{
 
 	Function is testFunctionTypeParameter(){
 		local Function of String to Boolean is myPred;
-		local Boolean is result: self:runPredicate(predicate: myPred, input: 'test');
+		local Boolean is result: :runPredicate(predicate: myPred, input: 'test');
 		Assert:isTrue(result);
 	}
 }

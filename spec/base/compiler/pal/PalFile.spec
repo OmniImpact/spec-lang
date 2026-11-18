@@ -27,7 +27,7 @@ static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* 
 	}
 
 	replace Function of String is macos(){
-		return self:linux();
+		return :linux();
 	}
 
 	replace Function of String is windows(){
@@ -65,7 +65,7 @@ static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* 
 	}
 
 	Function of String is emitBody(){
-		return ```{{self:getOsBlock(separatePosix: false)}}
+		return ```{{:getOsBlock(separatePosix: false)}}
 
 static void* spec_pal_async_worker(void* arg) {
     void** cls = (void**)arg;

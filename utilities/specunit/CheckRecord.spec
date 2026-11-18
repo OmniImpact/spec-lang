@@ -19,7 +19,7 @@ Class is CheckRecord{
 	## @param ok: Whether the assertion held.
 	## @param msg: The failure message.
 	replace Function is init(Boolean is ok, String is msg){
-		self:ok: ok;
-		self:msg: msg;
+		:ok: ok;
+		:msg: msg;
 	}
 }

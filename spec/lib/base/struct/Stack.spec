@@ -22,7 +22,7 @@ Class is Stack of T{
 	##
 	## @param item: The element to push.
 	Function is push(T is item){
-		Vector:vecAdd(v: self:storage, item: item);
+		Vector:vecAdd(v: :storage, item: item);
 	}
 
 	## Removes and returns the top element from the stack.
@@ -30,7 +30,7 @@ Class is Stack of T{
 	## @param default: Fallback returned when the stack is empty.
 	## @return: The popped element, or [default].
 	Function of T is pop(Any is default){
-		return Vector:vecPopLast(v: self:storage, def: default);
+		return Vector:vecPopLast(v: :storage, def: default);
 	}
 
 	## Returns the top element without removing it.
@@ -38,30 +38,30 @@ Class is Stack of T{
 	## @param default: Fallback returned when the stack is empty.
 	## @return: The top element, or [default].
 	Function of T is peek(Any is default){
-		local Int is len: Vector:vecLength(v: self:storage);
+		local Int is len: Vector:vecLength(v: :storage);
 		if({ len == 0 }, {
 			return default;
 		});
-		return Vector:vecGetAt(v: self:storage, idx: len - 1, def: default);
+		return Vector:vecGetAt(v: :storage, idx: len - 1, def: default);
 	}
 
 	## Returns the number of elements in the stack.
 	##
 	## @return: Element count.
 	Function of Int is length(){
-		return Vector:vecLength(v: self:storage);
+		return Vector:vecLength(v: :storage);
 	}
 
 	## Returns whether the stack has zero elements.
 	##
 	## @return: true if empty, false otherwise.
 	Function of Boolean is isEmpty(){
-		return Vector:vecLength(v: self:storage) == 0;
+		return Vector:vecLength(v: :storage) == 0;
 	}
 
 	## Removes all elements from the stack.
 	Function is clear(){
-		Vector:vecClear(v: self:storage);
+		Vector:vecClear(v: :storage);
 	}
 
 	## Returns a new Array snapshot containing the stack elements from bottom to top.
@@ -69,10 +69,10 @@ Class is Stack of T{
 	## @return: Snapshot array.
 	Function of Array of T is toArray(){
 		local Array of T is out: [];
-		local Int is len: Vector:vecLength(v: self:storage);
+		local Int is len: Vector:vecLength(v: :storage);
 		local Int is i: 0;
 		while({ i < len }, {
-			out:add(item: Vector:vecGetAt(v: self:storage, idx: i, def: ''));
+			out:add(item: Vector:vecGetAt(v: :storage, idx: i, def: ''));
 			i: i + 1;
 		});
 		return out;

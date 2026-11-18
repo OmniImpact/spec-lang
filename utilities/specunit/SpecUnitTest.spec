@@ -49,8 +49,8 @@ Class is SpecUnitTest{
 	## fire the hook, hand off to the runner.
 	replace Function is init(Map of String to String is args){
 		SpecUnitTest:entryStamped:add(item: true);
-		self:onEntry(args: args);
-		self:runTests();
+		:onEntry(args: args);
+		:runTests();
 	}
 
 	## The runner invocation: discover and run this file's test
@@ -58,10 +58,10 @@ Class is SpecUnitTest{
 	## entry-selection semantics replaces onEntry; runTests is the
 	## framework hand-off any entry-side code can call.
 	Function is runTests(){
-		local String is cn: Introspection:typeIdentity(obj: self);
+		local String is cn: Introspection:typeIdentity(obj: :);
 		local String is src: Introspection:classSourceFile(className: cn);
 		local SpecUnitRunner is runner: SpecUnitRunner:init();
-		runner:runAll(sourcePrefix: self:sourceBase(path: src));
+		runner:runAll(sourcePrefix: :sourceBase(path: src));
 	}
 
 	## The per-test construction path: the runner instantiates test
@@ -76,7 +76,7 @@ Class is SpecUnitTest{
 	##
 	## @return: The test name.
 	Function of String is name(){
-		return Introspection:typeIdentity(obj: self);
+		return Introspection:typeIdentity(obj: :);
 	}
 
 	## The test description: "Unit test: <name> has <n> tests", where <n>
@@ -84,7 +84,7 @@ Class is SpecUnitTest{
 	##
 	## @return: The test description.
 	Function of String is description(){
-		return 'Unit test: ' . self:name() . ' has ' . (self:methodCount() as String) . ' tests';
+		return 'Unit test: ' . :name() . ' has ' . (:methodCount() as String) . ' tests';
 	}
 
 	## The number of test methods this class declares or inherits.
@@ -92,7 +92,7 @@ Class is SpecUnitTest{
 	## @return: The test-method count.
 	Function of Int is methodCount(){
 		local Int is n: 0;
-		Introspection:functions(className: self:name()):each(action: local Function(Array of String is path){
+		Introspection:functions(className: :name()):each(action: local Function(Array of String is path){
 			if(check: { path:get(index: 1):startsWith(prefix: 'test') }, then: {
 				n: n + 1;
 			});

@@ -85,7 +85,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 			. "\t\tlocal Int is i: 1;\n"
 			. "\t\twhile({ i <= 10 }, {\n"
 			. "\t\t\tsum: sum + i;\n"
-			. "\t\t\ti: self:addOne(x: i);\n"
+			. "\t\t\ti: :addOne(x: i);\n"
 			. "\t\t});\n"
 			. "\t\tlocal Int is folded: 2 + 3 * 4;\n"
 			. "\t\tif({ sum == 55 && folded == 14 }, {\n"
@@ -260,7 +260,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 			. "\t\treturn;\n"
 			. "\t}\n"
 			. "\tFunction of Int is total(){\n"
-			. "\t\treturn self:x + self:y;\n"
+			. "\t\treturn :x + :y;\n"
 			. "\t}\n"
 			. "}\n\n"
 			. "Class is LlvmAdt{\n"
@@ -632,23 +632,23 @@ Class is LlvmP8{
 Class is Res{
 	String is name: '';
 	replace Function is init(String is name){
-		self:name: name;
+		:name: name;
 	}
 	Function of String is getName(){
-		return self:name;
+		return :name;
 	}
 }
 
 Class is Holder{
 	Res is item;
 	replace Function is init(Res is item){
-		self:item: item;
+		:item: item;
 	}
 	Function is setItem(Res is nextItem){
-		self:item: nextItem;
+		:item: nextItem;
 	}
 	Function of Res is getItem(){
-		return self:item;
+		return :item;
 	}
 }
 
@@ -672,7 +672,7 @@ Class is LlvmP9{
 
 		local Int is i: 0;
 		while({ i < 10 }, {
-			h:setItem(nextItem: self:makeRes(tag: 'loop_' . (i as String)));
+			h:setItem(nextItem: :makeRes(tag: 'loop_' . (i as String)));
 			i++;
 		});
 		if({ h:getItem():getName() != 'loop_9' }, { Process:exit(status: 4); });
@@ -732,10 +732,10 @@ Class of Animal is Dog{
 Class is AnyBox{
 	Any is val: 0;
 	replace Function is init(Any is v){
-		self:val: v;
+		:val: v;
 	}
 	Function of Any is getVal(){
-		return self:val;
+		return :val;
 	}
 }
 
@@ -770,7 +770,7 @@ Class is LlvmP10{
 
 		local AnyBox is box: AnyBox:init(v: 99);
 		if({ (box:getVal() as Int) != 99 }, { Process:exit(status: 5); });
-		local Any is echoed: self:echoAny(x: 2.25);
+		local Any is echoed: :echoAny(x: 2.25);
 		local Float is ef: echoed as Float;
 		if({ ef < 2.2 || ef > 2.3 }, { Process:exit(status: 6); });
 

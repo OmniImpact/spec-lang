@@ -27,37 +27,37 @@ Class is Box of T{
 	## @param isArc: True if [value] is an ARC-managed reference (default: true).
 	## @return: The initialized Box instance.
 	replace Function is init(T is value, Boolean is isArc: true){
-		self:arcManaged: isArc;
+		:arcManaged: isArc;
 		if({ isArc }, {
 			local Int is addr: Mem:objToAddr(obj: value);
 			if({ addr != 0 }, {
 				Mem:retainAddr(objAddr: addr);
 			});
 		});
-		self:val: value;
+		:val: value;
 	}
 
 	## Retrieves the current value stored in the box.
 	##
 	## @return: The wrapped value.
 	Function of T is get(){
-		if({ self:arcManaged }, {
-			local Int is addr: Mem:objToAddr(obj: self:val);
+		if({ :arcManaged }, {
+			local Int is addr: Mem:objToAddr(obj: :val);
 			if({ addr != 0 }, {
 				Mem:retainAddr(objAddr: addr);
 				Mem:claimPoolAddr(objAddr: addr);
 			});
 		});
-		return self:val;
+		return :val;
 	}
 
 	## Updates the value stored in the box.
 	##
 	## @param value: The new value.
 	Function is set(T is value){
-		if({ self:arcManaged }, {
+		if({ :arcManaged }, {
 			local Int is newAddr: Mem:objToAddr(obj: value);
-			local Int is oldAddr: Mem:objToAddr(obj: self:val);
+			local Int is oldAddr: Mem:objToAddr(obj: :val);
 			if({ newAddr != 0 }, {
 				Mem:retainAddr(objAddr: newAddr);
 			});
@@ -65,23 +65,23 @@ Class is Box of T{
 				Mem:releaseAddr(objAddr: oldAddr);
 			});
 		});
-		self:val: value;
+		:val: value;
 	}
 
 	## True if the box is configured for ARC-managed references.
 	##
 	## @return: True if ARC managed.
 	Function of Boolean is isArc(){
-		return self:arcManaged;
+		return :arcManaged;
 	}
 
 	## Releases the boxed reference when this Box is destroyed.
 	Function is destroy(){
-		if({ self:arcManaged }, {
-			local Int is oldAddr: Mem:objToAddr(obj: self:val);
+		if({ :arcManaged }, {
+			local Int is oldAddr: Mem:objToAddr(obj: :val);
 			if({ oldAddr != 0 }, {
 				Mem:releaseAddr(objAddr: oldAddr);
-				self:val: Mem:addrToObj(addr: 0);
+				:val: Mem:addrToObj(addr: 0);
 			});
 		});
 	}
@@ -90,8 +90,8 @@ Class is Box of T{
 	##
 	## @return: String representation.
 	replace Function of String is toString(){
-		local Int is raw: Mem:objToAddr(obj: self:val);
-		if({ !self:arcManaged }, {
+		local Int is raw: Mem:objToAddr(obj: :val);
+		if({ !:arcManaged }, {
 			return 'Box(' . (raw as String) . ')';
 		});
 		if({ raw == 0 }, {

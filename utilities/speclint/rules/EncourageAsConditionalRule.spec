@@ -17,7 +17,7 @@ Class of LintRule is EncourageAsConditionalRule{
 	local String is currentClass: '';
 
 	replace Function is init(){
-		self:currentClass: '';
+		:currentClass: '';
 	}
 
 	replace Function of String is id(){
@@ -33,17 +33,17 @@ Class of LintRule is EncourageAsConditionalRule{
 	}
 
 	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
-		self:currentClass: classDef:name;
+		:currentClass: classDef:name;
 		# Exclude Conditional definition itself and compiler-synthesized Enums
-		if({ self:currentClass != 'Conditional' && classDef:baseClass != 'Enum' }, {
-			self:traverseClass(classDef: classDef, issues: issues);
+		if({ :currentClass != 'Conditional' && classDef:baseClass != 'Enum' }, {
+			:traverseClass(classDef: classDef, issues: issues);
 		});
 	}
 
 	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
-				local String is targetName: self:extractTargetName(target: cd:target);
+				local String is targetName: :extractTargetName(target: cd:target);
 				if({ targetName == 'Conditional' }, {
 					local String is msg: 'Direct call to \'Conditional:' . cd:name . '\': import \'as Conditional()\' in using and use bare \'' . cd:name . '(...)\'.';
 					issues:add(item: LintIssue:init(line: expr:line, isWarning: false, message: msg));
@@ -51,6 +51,6 @@ Class of LintRule is EncourageAsConditionalRule{
 			}
 		], default: {});
 
-		self:traverseExpression(expr: expr, issues: issues);
+		:traverseExpression(expr: expr, issues: issues);
 	}
 }

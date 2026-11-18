@@ -126,7 +126,7 @@ long long spec_pal_read_bytes(long long dst_addr, long long count) {
 }
 
 void spec_console_binary_mode(void) {
-{{self:getOsBlock(separatePosix: false)}}
+{{:getOsBlock(separatePosix: false)}}
 }
 ```;
 	}

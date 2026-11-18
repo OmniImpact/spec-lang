@@ -19,7 +19,7 @@ Class is NamedArg{
 	## @param name: Argument key (empty when positional).
 	## @param value: Argument value expression.
 	replace Function is init(String is name, Expression is value){
-		self:name: name;
-		self:value: value;
+		:name: name;
+		:value: value;
 	}
 }

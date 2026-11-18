@@ -15,7 +15,7 @@ Class is Sort{
 	Function is sortInts(Array of Int is values){
 		local Int is len: values:length();
 		if({ len > 1 }, {
-			self:qsortInts(values: values, lo: 0, hi: len - 1, desc: false);
+			:qsortInts(values: values, lo: 0, hi: len - 1, desc: false);
 		});
 	}
 
@@ -23,21 +23,21 @@ Class is Sort{
 	Function is sortIntsDesc(Array of Int is values){
 		local Int is len: values:length();
 		if({ len > 1 }, {
-			self:qsortInts(values: values, lo: 0, hi: len - 1, desc: true);
+			:qsortInts(values: values, lo: 0, hi: len - 1, desc: true);
 		});
 	}
 
 	## Returns a new array containing [values] sorted in ascending integer order.
 	Function of Array of Int is ints(Array of Int is values){
 		local Array of Int is out: values:copy();
-		self:sortInts(values: out);
+		:sortInts(values: out);
 		return out;
 	}
 
 	## Returns a new array containing [values] sorted in descending integer order.
 	Function of Array of Int is intsDesc(Array of Int is values){
 		local Array of Int is out: values:copy();
-		self:sortIntsDesc(values: out);
+		:sortIntsDesc(values: out);
 		return out;
 	}
 
@@ -45,7 +45,7 @@ Class is Sort{
 	Function is sortStrings(Array of String is values){
 		local Int is len: values:length();
 		if({ len > 1 }, {
-			self:qsortStrings(values: values, lo: 0, hi: len - 1, desc: false);
+			:qsortStrings(values: values, lo: 0, hi: len - 1, desc: false);
 		});
 	}
 
@@ -53,21 +53,21 @@ Class is Sort{
 	Function is sortStringsDesc(Array of String is values){
 		local Int is len: values:length();
 		if({ len > 1 }, {
-			self:qsortStrings(values: values, lo: 0, hi: len - 1, desc: true);
+			:qsortStrings(values: values, lo: 0, hi: len - 1, desc: true);
 		});
 	}
 
 	## Returns a new array containing [values] sorted in ascending lexicographical order.
 	Function of Array of String is strings(Array of String is values){
 		local Array of String is out: values:copy();
-		self:sortStrings(values: out);
+		:sortStrings(values: out);
 		return out;
 	}
 
 	## Returns a new array containing [values] sorted in descending lexicographical order.
 	Function of Array of String is stringsDesc(Array of String is values){
 		local Array of String is out: values:copy();
-		self:sortStringsDesc(values: out);
+		:sortStringsDesc(values: out);
 		return out;
 	}
 
@@ -75,14 +75,14 @@ Class is Sort{
 	Function is sortBy(Array is values, Function of Int is compare){
 		local Int is len: values:length();
 		if({ len > 1 }, {
-			self:qsortBy(values: values, lo: 0, hi: len - 1, compare: compare);
+			:qsortBy(values: values, lo: 0, hi: len - 1, compare: compare);
 		});
 	}
 
 	## Returns a new array containing [values] sorted using [compare](a, b).
 	Function of Array is by(Array is values, Function of Int is compare){
 		local Array is out: values:copy();
-		self:sortBy(values: out, compare: compare);
+		:sortBy(values: out, compare: compare);
 		return out;
 	}
 
@@ -109,8 +109,8 @@ Class is Sort{
 				j: j - 1;
 			});
 		});
-		if({ lo < j }, { self:qsortInts(values: values, lo: lo, hi: j, desc: desc); });
-		if({ i < hi }, { self:qsortInts(values: values, lo: i, hi: hi, desc: desc); });
+		if({ lo < j }, { :qsortInts(values: values, lo: lo, hi: j, desc: desc); });
+		if({ i < hi }, { :qsortInts(values: values, lo: i, hi: hi, desc: desc); });
 	}
 
 	local Function is qsortStrings(Array of String is values, Int is lo, Int is hi, Boolean is desc){
@@ -136,8 +136,8 @@ Class is Sort{
 				j: j - 1;
 			});
 		});
-		if({ lo < j }, { self:qsortStrings(values: values, lo: lo, hi: j, desc: desc); });
-		if({ i < hi }, { self:qsortStrings(values: values, lo: i, hi: hi, desc: desc); });
+		if({ lo < j }, { :qsortStrings(values: values, lo: lo, hi: j, desc: desc); });
+		if({ i < hi }, { :qsortStrings(values: values, lo: i, hi: hi, desc: desc); });
 	}
 
 	local Function is qsortBy(Array is values, Int is lo, Int is hi, Function of Int is compare){
@@ -174,8 +174,8 @@ Class is Sort{
 				j: j - 1;
 			});
 		});
-		if({ lo < j }, { self:qsortBy(values: values, lo: lo, hi: j, compare: compare); });
-		if({ i < hi }, { self:qsortBy(values: values, lo: i, hi: hi, compare: compare); });
+		if({ lo < j }, { :qsortBy(values: values, lo: lo, hi: j, compare: compare); });
+		if({ i < hi }, { :qsortBy(values: values, lo: i, hi: hi, compare: compare); });
 	}
 
 }

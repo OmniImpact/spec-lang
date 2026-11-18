@@ -95,7 +95,7 @@ Class of CallLowerer is MatchCallLowerer{
 					local Statement is st: bd:get(index: i);
 					local Boolean is isLast: i == (bd:length() - 1);
 					if({ hasResult && isLast }, {
-						if({ !self:storeLastStmt(b: b, st: st, resSlot: resSlot, resTy: resTy) }, {
+						if({ !:storeLastStmt(b: b, st: st, resSlot: resSlot, resTy: resTy) }, {
 							b:lowerStmts(stmts: [st]);
 						});
 					}, {
@@ -134,10 +134,10 @@ Class of CallLowerer is MatchCallLowerer{
 				b:emit(inst: IrInst:ConstBool(dst: fTmp, value: false));
 				return fTmp;
 			});
-			local String is accCond: self:emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: 0));
+			local String is accCond: :emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: 0));
 			local Int is ai: 1;
 			while({ ai < arrItems:length() }, {
-				local String is nxtCond: self:emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: ai));
+				local String is nxtCond: :emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: ai));
 				local String is orTmp: b:nextTmp();
 				b:emit(inst: IrInst:BinOp(dst: orTmp, op: '||', lhs: accCond, rhs: nxtCond, ty: IrType:I1));
 				accCond: orTmp;
@@ -269,7 +269,7 @@ Class of CallLowerer is MatchCallLowerer{
 		while({ ki < keys:length() }, {
 			local Expression is k: keys:get(index: ki);
 			local Expression is v: vals:get(index: ki);
-			if({ self:isElseKey(key: k) }, {
+			if({ :isElseKey(key: k) }, {
 				hasElse: true;
 				elseExpr: v;
 			}, {
@@ -290,7 +290,7 @@ Class of CallLowerer is MatchCallLowerer{
 							});
 						}
 					], default: {});
-					condVal: self:emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: k);
+					condVal: :emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: k);
 				}, {
 					local Boolean is unwrapped: false;
 					match(on: k, when: [
@@ -373,7 +373,7 @@ Class of CallLowerer is MatchCallLowerer{
 						}
 					], default: {});
 				});
-				self:lowerArmBody(b: b, armExpr: v, resSlot: resSlot, resTy: resTy, hasResult: hasResult, endLbl: endLbl);
+				:lowerArmBody(b: b, armExpr: v, resSlot: resSlot, resTy: resTy, hasResult: hasResult, endLbl: endLbl);
 				b:popScope();
 
 				local IrBlock is nextBlk: b:curFn:addBlock(label: nextLbl);
@@ -384,7 +384,7 @@ Class of CallLowerer is MatchCallLowerer{
 
 		if({ hasElse }, {
 			b:pushScope();
-			self:lowerArmBody(b: b, armExpr: elseExpr, resSlot: resSlot, resTy: resTy, hasResult: hasResult, endLbl: endLbl);
+			:lowerArmBody(b: b, armExpr: elseExpr, resSlot: resSlot, resTy: resTy, hasResult: hasResult, endLbl: endLbl);
 			b:popScope();
 		}, {
 			if({ !b:blkTerminated }, {

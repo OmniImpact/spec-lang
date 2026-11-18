@@ -26,13 +26,13 @@ Class is Math{
 			return value;
 		});
 		if({ value >= 0.0 }, {
-			local Float is fl: self:floor(value: value);
+			local Float is fl: :floor(value: value);
 			if({ (value - fl) >= 0.5 }, {
 				return fl + 1.0;
 			});
 			return fl;
 		});
-		local Float is ce: self:ceil(value: value);
+		local Float is ce: :ceil(value: value);
 		if({ (ce - value) >= 0.5 }, {
 			return ce - 1.0;
 		});
@@ -47,8 +47,8 @@ Class is Math{
 		if({ !(value == value) || value >= 4503599627370496.0 || value <= -4503599627370496.0 }, {
 			return value;
 		});
-		local Int is i: self:toInt(value: value);
-		local Float is f: self:toFloat(value: i);
+		local Int is i: :toInt(value: value);
+		local Float is f: :toFloat(value: i);
 		if({ f > value }, {
 			return f - 1.0;
 		});
@@ -63,8 +63,8 @@ Class is Math{
 		if({ !(value == value) || value >= 4503599627370496.0 || value <= -4503599627370496.0 }, {
 			return value;
 		});
-		local Int is i: self:toInt(value: value);
-		local Float is f: self:toFloat(value: i);
+		local Int is i: :toInt(value: value);
+		local Float is f: :toFloat(value: i);
 		if({ f < value }, {
 			return f + 1.0;
 		});
@@ -170,12 +170,12 @@ Class is Math{
 
 	## Computes the hyperbolic sine of [value].
 	Function of Float is sinh(Float is value){
-		return 0.5 * (self:exp(value: value) - self:exp(value: -value));
+		return 0.5 * (:exp(value: value) - :exp(value: -value));
 	}
 
 	## Computes the hyperbolic cosine of [value].
 	Function of Float is cosh(Float is value){
-		return 0.5 * (self:exp(value: value) + self:exp(value: -value));
+		return 0.5 * (:exp(value: value) + :exp(value: -value));
 	}
 
 	## Computes the hyperbolic tangent of [value].
@@ -186,7 +186,7 @@ Class is Math{
 		if({ value < -20.0 }, {
 			return -1.0;
 		});
-		local Float is e2x: self:exp(value: 2.0 * value);
+		local Float is e2x: :exp(value: 2.0 * value);
 		return (e2x - 1.0) / (e2x + 1.0);
 	}
 
@@ -239,7 +239,7 @@ Class is Math{
 	## @param max: Upper bound (exclusive).
 	## @return: Random float within range.
 	Function of Float is random(Float is min, Float is max){
-		return min + ((max - min) * self:fastRandom());
+		return min + ((max - min) * :fastRandom());
 	}
 
 	## Generates a lock-free per-thread uniform float in [0, 1).
@@ -408,6 +408,6 @@ Class is Math{
 
 	## Computes the Euclidean hypotenuse `sqrt(x*x + y*y)`.
 	Function of Float is hypot(Float is x, Float is y){
-		return self:sqrt(value: (x * x) + (y * y));
+		return :sqrt(value: (x * x) + (y * y));
 	}
 }

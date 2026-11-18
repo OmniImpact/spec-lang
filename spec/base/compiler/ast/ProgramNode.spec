@@ -16,6 +16,6 @@ Class is ProgramNode{
 	##
 	## @param classes: Top-level classes.
 	replace Function is init(Array of ClassInfo is classes){
-		self:classes: classes;
+		:classes: classes;
 	}
 }

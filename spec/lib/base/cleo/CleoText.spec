@@ -66,8 +66,8 @@ Class is CleoText{
 					});
 				});
 			}, else: {
-				local Int is seqLen: self:utf8SeqLen(b0: b);
-				cols: cols + self:charDisplayWidth(s: text, idx: i, len: len);
+				local Int is seqLen: :utf8SeqLen(b0: b);
+				cols: cols + :charDisplayWidth(s: text, idx: i, len: len);
 				i: i + seqLen;
 			});
 		});
@@ -76,7 +76,7 @@ Class is CleoText{
 
 	Function of String is truncate(String is text, Int is maxCols){
 		if({ maxCols <= 0 }, { return ''; });
-		local Int is total: self:displayWidth(text: text);
+		local Int is total: :displayWidth(text: text);
 		if({ total <= maxCols }, { return text; });
 		local Int is limit: if({ maxCols > 3 }, { maxCols - 3 }, { maxCols });
 		local Int is len: Buf:bufLength(b: text);
@@ -98,8 +98,8 @@ Class is CleoText{
 				});
 				cutByte: i;
 			}, else: {
-				local Int is seqLen: self:utf8SeqLen(b0: b);
-				local Int is w: self:charDisplayWidth(s: text, idx: i, len: len);
+				local Int is seqLen: :utf8SeqLen(b0: b);
+				local Int is w: :charDisplayWidth(s: text, idx: i, len: len);
 				if(check: { cols + w > limit }, then: {
 					keepGoing: false;
 				}, else: {
@@ -117,9 +117,9 @@ Class is CleoText{
 	}
 
 	Function of String is padRight(String is text, Int is width){
-		local String is fitted: self:truncate(text: text, maxCols: width);
-		local Int is w: self:displayWidth(text: fitted);
+		local String is fitted: :truncate(text: text, maxCols: width);
+		local Int is w: :displayWidth(text: fitted);
 		if({ w >= width }, { return fitted; });
-		return fitted . self:repeatStr(s: ' ', count: width - w);
+		return fitted . :repeatStr(s: ' ', count: width - w);
 	}
 }

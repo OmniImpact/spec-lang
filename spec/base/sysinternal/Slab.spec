@@ -123,7 +123,7 @@ Class is Slab{
 		if({ lf != 0 }, {
 			local Int is next: Mem:loadI64(ptr: lf, byteOffset: 0);
 			Mem:storeI64(ptr: slab, byteOffset: 40, val: next);
-			self:incLive(slab: slab);
+			:incLive(slab: slab);
 			Mem:set(dst: lf, byteVal: 0, bytes: slotSize);
 			return lf;
 		});
@@ -131,17 +131,17 @@ Class is Slab{
 		if({ bump + slotSize <= 65536 }, {
 			local Int is slot: slab + bump;
 			Mem:storeI64(ptr: slab, byteOffset: 32, val: bump + slotSize);
-			self:incLive(slab: slab);
+			:incLive(slab: slab);
 			if({ Mem:loadI64(ptr: slab, byteOffset: 80) == 0 }, {
 				Mem:set(dst: slot, byteVal: 0, bytes: slotSize);
 			});
 			return slot;
 		});
-		local Int is rf: self:drainRemote(slab: slab);
+		local Int is rf: :drainRemote(slab: slab);
 		if({ rf != 0 }, {
 			local Int is rnext: Mem:loadI64(ptr: rf, byteOffset: 0);
 			Mem:storeI64(ptr: slab, byteOffset: 40, val: rnext);
-			self:incLive(slab: slab);
+			:incLive(slab: slab);
 			Mem:set(dst: rf, byteVal: 0, bytes: slotSize);
 			return rf;
 		});
@@ -153,14 +153,14 @@ Class is Slab{
 		local Int is cur: Mem:loadI64(ptr: base, byteOffset: 8);
 		while({ cur != 0 }, {
 			local Int is nxt: Mem:loadI64(ptr: cur, byteOffset: 56);
-			local Int is slot: self:tryAllocFromSlab(slab: cur, slotSize: slotSize);
+			local Int is slot: :tryAllocFromSlab(slab: cur, slotSize: slotSize);
 			if({ slot != 0 }, {
-				self:unlinkPartial(base: base, slab: cur);
+				:unlinkPartial(base: base, slab: cur);
 				Mem:storeI64(ptr: base, byteOffset: 0, val: cur);
 				return slot;
 			});
 			if({ Mem:atomicLoadI64(addr: cur + 24) == 1 }, {
-				self:unlinkPartial(base: base, slab: cur);
+				:unlinkPartial(base: base, slab: cur);
 				local Int is oldSp: Mem:loadI64(ptr: base, byteOffset: 16);
 				Mem:storeI64(ptr: cur, byteOffset: 56, val: oldSp);
 				Mem:storeI64(ptr: base, byteOffset: 16, val: cur);
@@ -197,9 +197,9 @@ Class is Slab{
 	Function of Int is allocSlot(Int is cls){
 		local Int is state: Mem:tlsGetI64(slot: 14);
 		if({ state == 0 }, {
-			state: self:getThreadState();
+			state: :getThreadState();
 		});
-		local Int is slotSize: self:slotSizeForClass(cls: cls);
+		local Int is slotSize: :slotSizeForClass(cls: cls);
 		local Int is base: state + (cls * 24);
 		local Int is s: Mem:loadI64(ptr: base, byteOffset: 0);
 		if({ s != 0 }, {
@@ -229,7 +229,7 @@ Class is Slab{
 				});
 				return slot;
 			});
-			local Int is rf: self:drainRemote(slab: s);
+			local Int is rf: :drainRemote(slab: s);
 			if({ rf != 0 }, {
 				local Int is rnext: Mem:loadI64(ptr: rf, byteOffset: 0);
 				Mem:storeI64(ptr: s, byteOffset: 40, val: rnext);
@@ -241,10 +241,10 @@ Class is Slab{
 				Mem:set(dst: rf, byteVal: 0, bytes: slotSize);
 				return rf;
 			});
-			self:linkPartial(base: base, slab: s);
+			:linkPartial(base: base, slab: s);
 			Mem:storeI64(ptr: base, byteOffset: 0, val: 0);
 		});
-		return self:allocSlow(state: state, cls: cls, slotSize: slotSize);
+		return :allocSlow(state: state, cls: cls, slotSize: slotSize);
 	}
 
 	Function is freeSlot(Int is slotAddr){
@@ -272,7 +272,7 @@ Class is Slab{
 					Mem:storeI64(ptr: s, byteOffset: 80, val: 0);
 					return;
 				});
-				self:unlinkPartial(base: base, slab: s);
+				:unlinkPartial(base: base, slab: s);
 				local Int is oldSp2: Mem:loadI64(ptr: base, byteOffset: 16);
 				Mem:storeI64(ptr: s, byteOffset: 56, val: oldSp2);
 				Mem:storeI64(ptr: base, byteOffset: 16, val: s);
@@ -310,7 +310,7 @@ Class is Slab{
 			local Int is base: myState + (c * 24);
 			local Int is act: Mem:loadI64(ptr: base, byteOffset: 0);
 			if({ act != 0 }, {
-				self:orphanOrFree(slab: act, state: myState);
+				:orphanOrFree(slab: act, state: myState);
 			});
 			local Int is sp: Mem:loadI64(ptr: base, byteOffset: 16);
 			while({ sp != 0 }, {
@@ -321,7 +321,7 @@ Class is Slab{
 			local Int is cur: Mem:loadI64(ptr: base, byteOffset: 8);
 			while({ cur != 0 }, {
 				local Int is nxt: Mem:loadI64(ptr: cur, byteOffset: 56);
-				self:orphanOrFree(slab: cur, state: myState);
+				:orphanOrFree(slab: cur, state: myState);
 				cur: nxt;
 			});
 			c: c + 1;

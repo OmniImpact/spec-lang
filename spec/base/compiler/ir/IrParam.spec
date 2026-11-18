@@ -15,7 +15,7 @@ Class is IrParam{
 	}
 
 	Function is init(String is name, IrType is ty){
-		self:name: name;
-		self:ty: ty;
+		:name: name;
+		:ty: ty;
 	}
 }
