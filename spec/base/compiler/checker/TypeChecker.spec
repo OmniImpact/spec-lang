@@ -140,6 +140,14 @@ Class is TypeChecker{
 	## context.
 	local String is currentYieldExpected: '';
 
+	## True while checking the body of a `lazy({ ... })` initializer:
+	## external locals and instance fields are read-only inside it.
+	local Boolean is inLazyBlock: false;
+
+	## Local variables declared inside the current `lazy({ ... })` block,
+	## which may be freely mutated within that block.
+	local Map of String to String is lazyLocalVars: Map:init();
+
 	## Accumulated type errors.
 	local Array of TypeError is errors: [];
 
@@ -2976,9 +2984,14 @@ Class is TypeChecker{
 					local String is msg: :errText:errBitwiseComplementInt(innerT: innerT);
 					:addError(line: :currentLine, msg: msg);
 				});
-				if({ (op == '++' || op == '--' || op == 'post++' || op == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
-					local String is msg: :errText:errOperatorRequiresInt(op: op, innerT: innerT);
-					:addError(line: :currentLine, msg: msg);
+				if({ op == '++' || op == '--' || op == 'post++' || op == 'post--' }, {
+					if({ innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
+						local String is msg: :errText:errOperatorRequiresInt(op: op, innerT: innerT);
+						:addError(line: :currentLine, msg: msg);
+					});
+					if({ :inLazyBlock && !:isLazyLocalTarget(expr: operand) }, {
+						:addError(line: :currentLine, msg: "Cannot modify external state inside a 'lazy' initializer; 'lazy' blocks have read-only access to outer variables and fields.");
+					});
 				});
 				if({ op == '!' }, {
 					res: Primitive:BOOLEAN:value();
@@ -3158,6 +3171,13 @@ Class is TypeChecker{
 				existingKeys:each(action: local Function(String is k){
 					savedVars:set(key: k, value: :localVars:getString(key: k, default: ''));
 				});
+				local Map of String to String is savedLazyVars: Map:init();
+				if({ :inLazyBlock }, {
+					local Array of String is lazyKeys: :lazyLocalVars:keys();
+					lazyKeys:each(action: local Function(String is k){
+						savedLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
+					});
+				});
 				local String is savedRet: :currentMethodReturnType;
 				local Expression is savedAnonNode: :currentAnonNode;
 				:currentAnonNode: expr;
@@ -3178,7 +3198,11 @@ Class is TypeChecker{
 					:currentMethodReturnType: :resolveReturnType(t: returnType);
 				});
 				params:each(action: local Function(Parameter is p){
-					:localVars:set(key: p:name, value: :formatVarTypeString(t: p:paramType));
+					local String is pFmt: :formatVarTypeString(t: p:paramType);
+					:localVars:set(key: p:name, value: pFmt);
+					if({ :inLazyBlock }, {
+						:lazyLocalVars:set(key: p:name, value: pFmt);
+					});
 				});
 				local Int is bodyLen: body:length();
 				local Int is bodyIdx: 0;
@@ -3196,6 +3220,9 @@ Class is TypeChecker{
 				});
 
 				:localVars: savedVars;
+				if({ :inLazyBlock }, {
+					:lazyLocalVars: savedLazyVars;
+				});
 				:currentMethodReturnType: savedRet;
 				# the Kotlin convention — the closure
 				# body determines the return. Return-site write-backs happened
@@ -3467,6 +3494,7 @@ Class is TypeChecker{
 					# closures (args 1+) of a Conditional call keep the enclosing
 					# method's return type.
 					local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
+					local Boolean is bareIsLazy: provider == 'Lazy' && call:name == 'lazy';
 					# the bare form carries the value-yield
 					# semantics exactly like the qualified call.
 					local Boolean is bareArg1Anon: false;
@@ -3492,11 +3520,19 @@ Class is TypeChecker{
 					# evaluate closure coerces to Boolean pre-inference, the
 					# same order the qualified machinery runs.
 					local Map of String to String is savedLoopVars;
+					local Map of String to String is savedLoopLazyVars;
 					if({ provider == 'Loops' }, {
 						savedLoopVars: Map:init();
 						local Array of String is lvKeys: :localVars:keys();
 						lvKeys:each(action: local Function(String is k){
 							savedLoopVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+						});
+						if({ :inLazyBlock }, {
+							savedLoopLazyVars: Map:init();
+							local Array of String is llvKeys: :lazyLocalVars:keys();
+							llvKeys:each(action: local Function(String is k){
+								savedLoopLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
+							});
 						});
 						local Boolean is bareHasLoopVars: false;
 						call:args:each(action: local Function(NamedArg is arg){
@@ -3508,7 +3544,11 @@ Class is TypeChecker{
 											if({ p:hasDefault }, {
 												:inferExpressionType(expr: p:defaultExpr);
 											});
-											:localVars:set(key: p:name, value: :formatVarTypeString(t: p:paramType));
+											local String is pFmt: :formatVarTypeString(t: p:paramType);
+											:localVars:set(key: p:name, value: pFmt);
+											if({ :inLazyBlock }, {
+												:lazyLocalVars:set(key: p:name, value: pFmt);
+											});
 										});
 									});
 								}
@@ -3538,58 +3578,63 @@ Class is TypeChecker{
 						});
 					});
 					local Int is bareIdx: 0;
-					if({ provider == 'Loops' }, {
-						# the loop closures are callbacks, not branch
-						# yields — the enclosing branch's flag must not leak.
-						local Boolean is savedLoopBranch: :inBranchClosure;
-						:inBranchClosure: false;
-						call:args:each(action: local Function(NamedArg is arg){
-							if({ arg:name == 'evaluate' }, {
-								match(on: arg:value, when: [
-									Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-										if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-											returnType:name: Primitive:BOOLEAN:value();
-										});
-									}
-								], default: {
-								});
-							});
-							:inferExpressionType(expr: arg:value);
-						});
-						:inBranchClosure: savedLoopBranch;
+					local String is bareLazyRet: 'Any';
+					if({ bareIsLazy }, {
+						bareLazyRet: :inferLazyCall(call: call, expected: expected);
 					}, {
-						# the branch closures type against the branch, not
-						# the enclosing frame — the enclosing branch's flag
-						# must not leak into the check closure (the same
-						# entry reset the qualified branch call makes).
-						:inBranchClosure: false;
-						call:args:each(action: local Function(NamedArg is arg){
-							if({ bareIsBranch && bareIdx == 0 }, {
-								match(on: arg:value, when: [
-									Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-										# the check closure coerces to Boolean
-										# before its body check (the qualified
-										# branch call's arg-0 rule).
-										if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-											returnType:name: Primitive:BOOLEAN:value();
-										});
-									}
-								], default: {
-								});
-							});
-							if({ bareIsBranch && bareIdx >= 1 }, {
-								:inBranchClosure: true;
-								:inValueBranch: bareIsValue;
-								:currentYieldExpected: '';
-								if({ bareIsValue }, {
-									:currentYieldExpected: expected;
-								});
-							});
-							:inferExpressionType(expr: arg:value);
+						if({ provider == 'Loops' }, {
+							# the loop closures are callbacks, not branch
+							# yields — the enclosing branch's flag must not leak.
+							local Boolean is savedLoopBranch: :inBranchClosure;
 							:inBranchClosure: false;
-							:inValueBranch: false;
-							:currentYieldExpected: '';
-							bareIdx: bareIdx + 1;
+							call:args:each(action: local Function(NamedArg is arg){
+								if({ arg:name == 'evaluate' }, {
+									match(on: arg:value, when: [
+										Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+											if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+												returnType:name: Primitive:BOOLEAN:value();
+											});
+										}
+									], default: {
+									});
+								});
+								:inferExpressionType(expr: arg:value);
+							});
+							:inBranchClosure: savedLoopBranch;
+						}, {
+							# the branch closures type against the branch, not
+							# the enclosing frame — the enclosing branch's flag
+							# must not leak into the check closure (the same
+							# entry reset the qualified branch call makes).
+							:inBranchClosure: false;
+							call:args:each(action: local Function(NamedArg is arg){
+								if({ bareIsBranch && bareIdx == 0 }, {
+									match(on: arg:value, when: [
+										Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+											# the check closure coerces to Boolean
+											# before its body check (the qualified
+											# branch call's arg-0 rule).
+											if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+												returnType:name: Primitive:BOOLEAN:value();
+											});
+										}
+									], default: {
+									});
+								});
+								if({ bareIsBranch && bareIdx >= 1 }, {
+									:inBranchClosure: true;
+									:inValueBranch: bareIsValue;
+									:currentYieldExpected: '';
+									if({ bareIsValue }, {
+										:currentYieldExpected: expected;
+									});
+								});
+								:inferExpressionType(expr: arg:value);
+								:inBranchClosure: false;
+								:inValueBranch: false;
+								:currentYieldExpected: '';
+								bareIdx: bareIdx + 1;
+							});
 						});
 					});
 					:selectOverload(className: provider, methodName: call:name, expr: expr);
@@ -3603,8 +3648,17 @@ Class is TypeChecker{
 					});
 					if({ provider == 'Loops' }, {
 						:localVars: savedLoopVars;
+						if({ :inLazyBlock }, {
+							:lazyLocalVars: savedLoopLazyVars;
+						});
 						call:bareProvider: provider;
 						res: 'Void';
+						expr:setResolvedType(t: res);
+						return res;
+					});
+					if({ bareIsLazy }, {
+						call:bareProvider: provider;
+						res: bareLazyRet;
 						expr:setResolvedType(t: res);
 						return res;
 					});
@@ -3709,17 +3763,29 @@ Class is TypeChecker{
 		});
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: :inBranchClosure;
+		local Boolean is savedValBranchFlag: :inValueBranch;
+		local String is savedYieldExpFlag: :currentYieldExpected;
 		:inBranchClosure: false;
+		local Boolean is isLazyCall: ((targetType == 'Lazy' || targetName == 'Lazy') && (method == 'lazy' || method == 'eval')) || (targetIsSelf && :currentClassName == 'Lazy' && method == 'lazy');
+		local String is qualLazyRet: 'Any';
 		# the Loops provider's closure forms share the
 			# loop typing (while/loop/until inline closures; repeat counts).
 			local Boolean is isWhileLoop: (targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'while' || method == 'until' || method == 'repeat');
 		local Map of String to String is savedWhileVars;
+		local Map of String to String is savedWhileLazyVars;
 		local Boolean is hasLoopVars: false;
 		if({ isWhileLoop }, {
 			savedWhileVars: Map:init();
 			local Array of String is existingKeys: :localVars:keys();
 			existingKeys:each(action: local Function(String is k){
 				savedWhileVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+			});
+			if({ :inLazyBlock }, {
+				savedWhileLazyVars: Map:init();
+				local Array of String is lExistingKeys: :lazyLocalVars:keys();
+				lExistingKeys:each(action: local Function(String is k){
+					savedWhileLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
+				});
 			});
 			local Int is posIdx: 0;
 			call:args:each(action: local Function(NamedArg is arg){
@@ -3731,7 +3797,11 @@ Class is TypeChecker{
 								if({ p:hasDefault }, {
 									:inferExpressionType(expr: p:defaultExpr);
 								});
-								:localVars:set(key: p:name, value: :formatVarTypeString(t: p:paramType));
+								local String is pFmt: :formatVarTypeString(t: p:paramType);
+								:localVars:set(key: p:name, value: pFmt);
+								if({ :inLazyBlock }, {
+									:lazyLocalVars:set(key: p:name, value: pFmt);
+								});
 							});
 						});
 					}
@@ -3773,53 +3843,60 @@ Class is TypeChecker{
 		# not branch yields — when the call itself sits inside an
 		# enclosing branch closure, that flag must not leak into them
 		# (their returns type against the closure, not the method).
-		if({ isWhileLoop }, {
-			local Boolean is savedLoopBranch: :inBranchClosure;
-			:inBranchClosure: false;
-			local Int is loopArgIdx: 0;
-			call:args:each(action: local Function(NamedArg is arg){
-				if({ arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0))) }, {
-					match(on: arg:value, when: [
-						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-							if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-								returnType:name: Primitive:BOOLEAN:value();
-							});
-						}
-					], default: {});
-				});
-				:inferExpressionType(expr: arg:value);
-				loopArgIdx: loopArgIdx + 1;
-			});
-			:inBranchClosure: savedLoopBranch;
+		if({ isLazyCall }, {
+			qualLazyRet: :inferLazyCall(call: call, expected: expected);
 		}, {
-			call:args:each(action: local Function(NamedArg is arg){
-				if({ isBranchCall && argIdx == 0 }, {
-					match(on: arg:value, when: [
-						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-							if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-								returnType:name: Primitive:BOOLEAN:value();
-							});
-						}
-					], default: {});
-				});
-				if({ isBranchCall && argIdx >= 1 }, {
-					:inBranchClosure: true;
-					:inValueBranch: isValueBranch;
-					:currentYieldExpected: '';
-					if({ isValueBranch }, {
-						:currentYieldExpected: expected;
-					});
-				});
-				:inferExpressionType(expr: arg:value);
+			if({ isWhileLoop }, {
+				local Boolean is savedLoopBranch: :inBranchClosure;
 				:inBranchClosure: false;
-				:inValueBranch: false;
-				:currentYieldExpected: '';
-				argIdx: argIdx + 1;
+				local Int is loopArgIdx: 0;
+				call:args:each(action: local Function(NamedArg is arg){
+					if({ arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0))) }, {
+						match(on: arg:value, when: [
+							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+									returnType:name: Primitive:BOOLEAN:value();
+								});
+							}
+						], default: {});
+					});
+					:inferExpressionType(expr: arg:value);
+					loopArgIdx: loopArgIdx + 1;
+				});
+				:inBranchClosure: savedLoopBranch;
+			}, {
+				call:args:each(action: local Function(NamedArg is arg){
+					if({ isBranchCall && argIdx == 0 }, {
+						match(on: arg:value, when: [
+							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+									returnType:name: Primitive:BOOLEAN:value();
+								});
+							}
+						], default: {});
+					});
+					if({ isBranchCall && argIdx >= 1 }, {
+						:inBranchClosure: true;
+						:inValueBranch: isValueBranch;
+						:currentYieldExpected: '';
+						if({ isValueBranch }, {
+							:currentYieldExpected: expected;
+						});
+					});
+					:inferExpressionType(expr: arg:value);
+					:inBranchClosure: false;
+					:inValueBranch: false;
+					:currentYieldExpected: '';
+					argIdx: argIdx + 1;
+				});
 			});
 		});
 
 		if({ isWhileLoop }, {
 			:localVars: savedWhileVars;
+			if({ :inLazyBlock }, {
+				:lazyLocalVars: savedWhileLazyVars;
+			});
 			expr:setResolvedType(t: 'Void');
 			return 'Void';
 		});
@@ -3893,6 +3970,9 @@ Class is TypeChecker{
 					:addError(line: :currentLine, msg: :errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
 				});
 				res: :lookupMethodReturnType(className: qJoined, methodName: method);
+				if({ isLazyCall }, {
+					res: qualLazyRet;
+				});
 				expr:setResolvedType(t: res);
 				return res;
 			});
@@ -4188,8 +4268,78 @@ Class is TypeChecker{
 				# Branch calls are statements: void.
 				res: :names:voidName();
 			});
+			if({ isLazyCall }, {
+				res: qualLazyRet;
+			});
 		});
 		return res;
+	}
+
+	## Infers a `lazy({ ... })` or `base:sysinternal:Lazy:eval({ ... })` call,
+	## enforcing read-only access to external state inside the initializer closure
+	## and unwrapping the closure's yielded return type `T`.
+	##
+	## @param call: The CallData node.
+	## @param expected: Contextual expected type from the declaration/assignment site.
+	## @return: The unwrapped return type `T` of the lazy initializer.
+	Function of String is inferLazyCall(CallData is call, String is expected){
+		local Boolean is savedBranch: :inBranchClosure;
+		local Boolean is savedValBranch: :inValueBranch;
+		local String is savedYieldExp: :currentYieldExpected;
+		local Boolean is savedInLazy: :inLazyBlock;
+		local Map of String to String is savedLazyLocals: :lazyLocalVars;
+
+		:inBranchClosure: false;
+		:inValueBranch: expected != '' && !:isVoid(t: expected);
+		:currentYieldExpected: if({ expected != '' && !:isVoid(t: expected) }, { expected }, { '' });
+		:inLazyBlock: true;
+		:lazyLocalVars: Map:init();
+
+		call:args:each(action: local Function(NamedArg is arg){
+			:inferExpressionType(expr: arg:value);
+		});
+
+		:inBranchClosure: savedBranch;
+		:inValueBranch: savedValBranch;
+		:currentYieldExpected: savedYieldExp;
+		:inLazyBlock: savedInLazy;
+		:lazyLocalVars: savedLazyLocals;
+
+		local String is lazyRet: 'Any';
+		if({ call:args:length() > 0 }, {
+			local NamedArg is a0: call:args:get(index: 0);
+			local String is fnT: a0:value:resolvedType;
+			if({ fnT:startsWith(prefix: 'Function:') && fnT:length() > 9 }, {
+				lazyRet: fnT:substring(start: 9, end: fnT:length());
+			}, {
+				if({ fnT == 'Function' }, {
+					lazyRet: :names:voidName();
+				});
+			});
+		});
+		return lazyRet;
+	}
+
+	## True when [expr] is rooted in a local variable declared inside the
+	## current `lazy({ ... })` block (`:lazyLocalVars`).
+	Function of Boolean is isLazyLocalTarget(Expression is expr){
+		return match(on: expr, when: [
+			Expression:Ident: local Function of Boolean(String is name){
+				return name != :names:selfIdent() && :lazyLocalVars:has(key: name);
+			},
+			Expression:Path: local Function of Boolean(Array of String is segs){
+				if({ segs:length() == 0 }, { return false; });
+				local String is root: segs:get(index: 0);
+				return root != :names:selfIdent() && :lazyLocalVars:has(key: root);
+			},
+			Expression:FieldAccess: local Function of Boolean(Expression is target, String is _f){
+				return :isLazyLocalTarget(expr: target);
+			},
+			Expression:Index: local Function of Boolean(Expression is target, Expression is _idx){
+				return :isLazyLocalTarget(expr: target);
+			},
+			else: { false }
+		]);
 	}
 
 	## Declared primitive conversion compatibility for `as` casts: the
@@ -4308,6 +4458,9 @@ Class is TypeChecker{
 				:validateTypeAccess(t: varType, line: stmt:line);
 				local String is fullType: :formatVarTypeString(t: varType);
 				:localVars:set(key: varName, value: fullType);
+				if({ :inLazyBlock }, {
+					:lazyLocalVars:set(key: varName, value: fullType);
+				});
 
 				if({ fullType == 'List' }, {
 					local String is msg: 'Bare List type requires [T] element syntax.';
@@ -4334,6 +4487,9 @@ Class is TypeChecker{
 				});
 			},
 			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
+				if({ :inLazyBlock && !:isLazyLocalTarget(expr: assignTarget) }, {
+					:addError(line: stmt:line, msg: "Cannot modify external state inside a 'lazy' initializer; 'lazy' blocks have read-only access to outer variables and fields.");
+				});
 				# Held members are read-only: a
 				# class-name prefix target resolves to the shared held
 				# slot, and assignment through it is rejected.

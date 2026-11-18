@@ -47,6 +47,8 @@ Class is IrBuilder{
 	Map of String to String is localSpecTypes: Map:init();
 	Map of String to Boolean is boxedLocals: Map:init();
 	Map of String to Boolean is capturedNames: Map:init();
+	Map of String to String is lazyLocalStateSlots: Map:init();
+	Map of String to Expression is lazyLocalExprs: Map:init();
 	Array of String is ownedSlots: [];
 	Array of String is scopeVarStack: [];
 	Array of String is scopeOldSlotStack: [];
@@ -54,6 +56,8 @@ Class is IrBuilder{
 	Array of Boolean is scopeOldArcStack: [];
 	Array of String is scopeOldSpecTypeStack: [];
 	Array of Boolean is scopeOldBoxedStack: [];
+	Array of String is scopeOldLazyStateStack: [];
+	Array of Expression is scopeOldLazyExprStack: [];
 	Array of Int is scopeMarkStack: [];
 	String is curPoolMark: '';
 	Boolean is curFnRetIsArc: false;
@@ -74,6 +78,7 @@ Class is IrBuilder{
 	Map of String to Boolean is curClassTypeParams: Map:init();
 	Map of String to String is heldFields: Map:init();
 	Map of String to String is heldFieldTypes: Map:init();
+	Map of String to String is lazyFields: Map:init();
 	Map of String to Boolean is heldMethods: Map:init();
 	Map of String to String is heldResolvers: Map:init();
 	Map of String to String is heldResolverRetTypes: Map:init();
@@ -178,7 +183,11 @@ Class is IrBuilder{
 		:scopeOldArcStack: [];
 		:scopeOldSpecTypeStack: [];
 		:scopeOldBoxedStack: [];
+		:scopeOldLazyStateStack: [];
+		:scopeOldLazyExprStack: [];
 		:scopeMarkStack: [];
+		:lazyLocalStateSlots: Map:init();
+		:lazyLocalExprs: Map:init();
 	}
 
 	Function is pushScope(){
@@ -194,18 +203,26 @@ Class is IrBuilder{
 				:scopeOldArcStack:add(item: :localIsArc:get(key: name, default: false));
 				:scopeOldSpecTypeStack:add(item: :localSpecTypes:get(key: name, default: ''));
 				:scopeOldBoxedStack:add(item: :boxedLocals:has(key: name));
+				:scopeOldLazyStateStack:add(item: :lazyLocalStateSlots:get(key: name, default: ''));
+				:scopeOldLazyExprStack:add(item: :lazyLocalExprs:get(key: name, default: Expression:Unknown));
 			}, {
 				:scopeOldSlotStack:add(item: '');
 				:scopeOldTypeStack:add(item: IrType:I64);
 				:scopeOldArcStack:add(item: false);
 				:scopeOldSpecTypeStack:add(item: '');
 				:scopeOldBoxedStack:add(item: false);
+				:scopeOldLazyStateStack:add(item: '');
+				:scopeOldLazyExprStack:add(item: Expression:Unknown);
 			});
 		});
 		:localSlots:set(key: name, value: slot);
 		:localTypes:set(key: name, value: ty);
 		:localIsArc:set(key: name, value: isArc);
 		:localSpecTypes:set(key: name, value: specType);
+		if({ :lazyLocalStateSlots:has(key: name) }, {
+			:lazyLocalStateSlots:remove(key: name);
+			:lazyLocalExprs:remove(key: name);
+		});
 		if({ isBoxed }, {
 			:boxedLocals:set(key: name, value: true);
 		}, {
@@ -225,6 +242,8 @@ Class is IrBuilder{
 			local Boolean is oldArc: :scopeOldArcStack:pop(default: false);
 			local String is oldSpec: :scopeOldSpecTypeStack:pop(default: '');
 			local Boolean is oldBoxed: :scopeOldBoxedStack:pop(default: false);
+			local String is oldLazyState: :scopeOldLazyStateStack:pop(default: '');
+			local Expression is oldLazyExpr: :scopeOldLazyExprStack:pop(default: Expression:Unknown);
 			if({ oldSlot == '' }, {
 				:localSlots:remove(key: name);
 				:localTypes:remove(key: name);
@@ -232,6 +251,10 @@ Class is IrBuilder{
 				:localSpecTypes:remove(key: name);
 				if({ :boxedLocals:has(key: name) }, {
 					:boxedLocals:remove(key: name);
+				});
+				if({ :lazyLocalStateSlots:has(key: name) }, {
+					:lazyLocalStateSlots:remove(key: name);
+					:lazyLocalExprs:remove(key: name);
 				});
 			}, {
 				:localSlots:set(key: name, value: oldSlot);
@@ -243,6 +266,15 @@ Class is IrBuilder{
 				}, {
 					if({ :boxedLocals:has(key: name) }, {
 						:boxedLocals:remove(key: name);
+					});
+				});
+				if({ oldLazyState != '' }, {
+					:lazyLocalStateSlots:set(key: name, value: oldLazyState);
+					:lazyLocalExprs:set(key: name, value: oldLazyExpr);
+				}, {
+					if({ :lazyLocalStateSlots:has(key: name) }, {
+						:lazyLocalStateSlots:remove(key: name);
+						:lazyLocalExprs:remove(key: name);
 					});
 				});
 			});
@@ -320,6 +352,12 @@ Class is IrBuilder{
 				});
 				st:addFieldArc(name: m:name, ty: fty, isArc: fIsArc);
 				:fieldSpecTypes:set(key: st:name . ':' . m:name, value: m:memberType:name);
+				if({ m:hasInit && :isLazyCallExpr(expr: m:initExpr) }, {
+					st:addField(name: '_lazy_state_' . m:name, ty: IrType:I64);
+					local String is ownerSname: :cStructName(qname: cls:qualifiedName());
+					:lazyFields:set(key: st:name . ':' . m:name, value: ownerSname);
+					:lazyFields:set(key: cls:name . ':' . m:name, value: ownerSname);
+				});
 			});
 			mi++;
 		});
@@ -413,6 +451,7 @@ Class is IrBuilder{
 		:methodParams: Map:init();
 		:heldFields: Map:init();
 		:heldFieldTypes: Map:init();
+		:lazyFields: Map:init();
 		:heldMethods: Map:init();
 		:globalVtableNames: [];
 		:globalVtableMap: Map:init();
@@ -558,6 +597,13 @@ Class is IrBuilder{
 					if({ !seenFns:has(key: ensureFn) }, {
 						seenFns:set(key: ensureFn, value: true);
 						:buildHeldEnsure(sname: sname, m: m);
+					});
+				});
+				if({ m:kind == MemberKind:FIELD && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && :isLazyCallExpr(expr: m:initExpr) }, {
+					local String is lazyFn: sname . '_' . m:name . '__lazy_init';
+					if({ !seenFns:has(key: lazyFn) }, {
+						seenFns:set(key: lazyFn, value: true);
+						:buildLazyFieldEnsure(cls: cls, sname: sname, m: m);
 					});
 				});
 				if({ m:kind == MemberKind:METHOD }, {
@@ -944,7 +990,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && !:isLazyCallExpr(expr: m:initExpr) }, {
 				local Int is fidx: st:fieldIndex(name: m:name);
 				if({ fidx >= 0 }, {
 					local IrType is fty: st:fieldTypes:get(index: fidx);
@@ -1143,6 +1189,112 @@ Class is IrBuilder{
 		:mod:addFunction(fn: fn);
 	}
 
+	local Function is buildLazyFieldEnsure(ClassInfo is cls, String is sname, Member is m){
+		local IrStruct is st: :mod:findStruct(name: sname);
+		local Int is valIdx: st:fieldIndex(name: m:name);
+		local Int is stateIdx: st:fieldIndex(name: '_lazy_state_' . m:name);
+		if({ valIdx < 0 || stateIdx < 0 }, { return; });
+		local IrType is fty: st:fieldTypes:get(index: valIdx);
+		local Boolean is fIsArc: st:fieldIsArc:get(index: valIdx, default: false);
+		local String is fnName: sname . '_' . m:name . '__lazy_init';
+		local IrFunction is fn: IrFunction:init(name: fnName, retType: fty);
+		fn:sourceFile: cls:sourceFile;
+		fn:line: m:line;
+		:currentLine: m:line;
+		:currentMethod: m:name . '__lazy_init';
+		fn:addParam(name: '%self', ty: IrType:Ptr);
+
+		local IrBlock is entry: fn:addBlock(label: 'entry');
+		:curFn: fn;
+		:switchBlock(blk: entry);
+		:tmpCounter: 0;
+		:lblCounter: 0;
+		:localSlots: Map:init();
+		:localTypes: Map:init();
+		:localIsArc: Map:init();
+		:localSpecTypes: Map:init();
+		:boxedLocals: Map:init();
+		:capturedNames: Map:init();
+		:ownedSlots: [];
+		:resetScopes();
+
+		local Map of String to Boolean is decls: Map:init();
+		:collectDeclNamesInExpr(expr: m:initExpr, decls: decls);
+		:collectAllAnonCapturesInExpr(expr: m:initExpr, decls: decls, out: :capturedNames);
+		:curFnRetIsArc: false;
+		:emitPoolEnter();
+
+		:localSlots:set(key: ':', value: '%self_slot');
+		:localTypes:set(key: ':', value: IrType:Ptr);
+		:localIsArc:set(key: ':', value: !:isUnmanagedClass);
+		:localSpecTypes:set(key: ':', value: sname);
+		:emit(inst: IrInst:Alloca(slot: '%self_slot', ty: IrType:Ptr));
+		:emit(inst: IrInst:Store(slot: '%self_slot', val: '%self', ty: IrType:Ptr));
+
+		local String is valPtr: :nextTmp();
+		:emit(inst: IrInst:FieldPtr(dst: valPtr, objPtr: '%self', structName: sname, fieldIndex: valIdx));
+		local String is statePtr: :nextTmp();
+		:emit(inst: IrInst:FieldPtr(dst: statePtr, objPtr: '%self', structName: sname, fieldIndex: stateIdx));
+		local String is stateAddr: :nextTmp();
+		:emit(inst: IrInst:IrCast(dst: stateAddr, val: statePtr, fromType: IrType:Ptr, toType: IrType:I64));
+
+		local String is zeroVal: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: zeroVal, value: 0));
+		local String is oneVal: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: oneVal, value: 1));
+		local String is twoVal: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: twoVal, value: 2));
+
+		local String is wonCas: :nextTmp();
+		:emit(inst: IrInst:IrCall(dst: wonCas, hasDst: true, retType: IrType:I1, callee: '__spec_mem_atomic_cas_i64', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [stateAddr, zeroVal, oneVal]));
+
+		local String is evalLbl: :nextLabel(prefix: 'lazy_eval');
+		local String is waitLbl: :nextLabel(prefix: 'lazy_wait');
+		local String is doneLbl: :nextLabel(prefix: 'lazy_done');
+		:terminate(inst: IrInst:CondBr(cond: wonCas, thenLabel: evalLbl, elseLabel: waitLbl));
+
+		local IrBlock is evalBlk: fn:addBlock(label: evalLbl);
+		:switchBlock(blk: evalBlk);
+		local String is prevMapK: :expectedMapKeyType;
+		local String is prevMapV: :expectedMapValType;
+		if({ m:memberType:name == 'Map' && m:memberType:params:length() >= 1 }, {
+			local Type is mkp0: m:memberType:params:get(index: 0);
+			:expectedMapKeyType: mkp0:name;
+			if({ m:memberType:params:length() >= 2 }, {
+				local Type is mkp1: m:memberType:params:get(index: 1);
+				:expectedMapValType: mkp1:name;
+			});
+		});
+		local String is iv: :lowerLazyBodyVal(blkExpr: :getLazyBodyExpr(expr: m:initExpr), expectedTy: fty);
+		:expectedMapKeyType: prevMapK;
+		:expectedMapValType: prevMapV;
+		if({ iv == '' }, { iv: :emitDefaultVal(ty: fty); });
+		if({ fIsArc && iv != '' && iv != 'null' }, {
+			:emit(inst: IrInst:Retain(val: iv));
+		});
+		:emit(inst: IrInst:Store(slot: valPtr, val: iv, ty: fty));
+		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_atomic_store_i64', argTypes: [IrType:I64, IrType:I64], args: [stateAddr, twoVal]));
+		:terminate(inst: IrInst:Br(target: doneLbl));
+
+		local IrBlock is waitBlk: fn:addBlock(label: waitLbl);
+		:switchBlock(blk: waitBlk);
+		local String is curState: :nextTmp();
+		:emit(inst: IrInst:IrCall(dst: curState, hasDst: true, retType: IrType:I64, callee: '__spec_mem_atomic_load_i64', argTypes: [IrType:I64], args: [stateAddr]));
+		local String is isDone: :nextTmp();
+		:emit(inst: IrInst:Cmp(dst: isDone, op: '==', lhs: curState, rhs: twoVal, ty: IrType:I64));
+		:terminate(inst: IrInst:CondBr(cond: isDone, thenLabel: doneLbl, elseLabel: waitLbl));
+
+		local IrBlock is doneBlk: fn:addBlock(label: doneLbl);
+		:switchBlock(blk: doneBlk);
+		local String is res: :nextTmp();
+		:emit(inst: IrInst:Load(dst: res, slot: valPtr, ty: fty));
+		:emitReleaseOwnedLocals();
+		:emitPoolExit();
+		:curPoolMark: '';
+		:terminate(inst: IrInst:Ret(hasVal: true, val: res, ty: fty));
+		:mod:addFunction(fn: fn);
+	}
+
 	local Function of String is findParentMethodImpl(String is clsName, String is methodName, String is suffix){
 		if({ !:clsMap:has(key: clsName) }, { return ''; });
 		local ClassInfo is cls: :clsMap:get(key: clsName, default: ClassInfo:init(name: '', baseClass: '', members: []));
@@ -1309,7 +1461,225 @@ Class is IrBuilder{
 		});
 	}
 
+	Function of Boolean is isLazyCallExpr(Expression is expr){
+		local Boolean is res: false;
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is call){
+				if({ call:args:length() >= 1 }, {
+					if({ call:name == 'lazy' && (call:bareProvider == 'Lazy' || call:bareProvider:endsWith(suffix: ':Lazy') || call:target:resolvedType == 'Lazy' || call:isBareCall) }, {
+						res: true;
+					});
+					if({ call:name == 'eval' }, {
+						match(on: call:target, when: [
+							Expression:Path: local Function(Array of String is segs){
+								local Int is n: segs:length();
+								if({ n >= 2 && segs:get(index: n - 1, default: '') == 'Lazy' && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+									res: true;
+								});
+							}
+						], default: {});
+					});
+				});
+			}
+		], default: {});
+		return res;
+	}
+
+	Function of Expression is getLazyBodyExpr(Expression is expr){
+		return match(on: expr, when: [
+			Expression:Call: local Function of Expression(CallData is call){
+				if({ call:args:length() > 0 }, {
+					return call:args:get(index: 0):value;
+				});
+				return Expression:Unknown;
+			},
+			else: { Expression:Unknown }
+		]);
+	}
+
+	Function of String is lowerLazyBodyVal(Expression is blkExpr, IrType is expectedTy){
+		local IrType is resTy: expectedTy;
+		if({ resTy == IrType:Void }, { resTy: IrType:Ptr; });
+		local String is _rtmp: :nextTmp();
+		local String is resSlot: '%lazy_res_' . (:tmpCounter as String);
+		:emit(inst: IrInst:Alloca(slot: resSlot, ty: resTy));
+		local String is defVal: :emitDefaultVal(ty: resTy);
+		:emit(inst: IrInst:Store(slot: resSlot, val: defVal, ty: resTy));
+		local String is endLbl: :nextLabel(prefix: 'lazy_body_end');
+
+		local String is prevRetSlot: :inlineReturnSlot;
+		local String is prevRetEnd: :inlineReturnEndLbl;
+		local IrType is prevRetTy: :inlineReturnTy;
+		:inlineReturnSlot: resSlot;
+		:inlineReturnEndLbl: endLbl;
+		:inlineReturnTy: resTy;
+
+		match(on: blkExpr, when: [
+			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
+				:pushScope();
+				local Int is lastIdx: bd:length() - 1;
+				local Int is i: 0;
+				while({ i < lastIdx && !:blkTerminated }, {
+					:lowerStmt(stmt: bd:get(index: i));
+					i++;
+				});
+				if({ lastIdx >= 0 && !:blkTerminated }, {
+					local Statement is lastStmt: bd:get(index: lastIdx);
+					match(on: lastStmt, when: [
+						Statement:Expr: local Function(Expression is es){
+							local IrType is ety: :irTypeFor(specType: es:resolvedType);
+							local String is ev: :lowerExpr(expr: es);
+							ev: :castIfNeeded(val: ev, fromTy: ety, toTy: resTy);
+							if({ ev != '' }, {
+								:emit(inst: IrInst:Store(slot: resSlot, val: ev, ty: resTy));
+							});
+						},
+						Statement:Return: local Function(Expression is re, Boolean is hr){
+							if({ hr }, {
+								local IrType is rty: :irTypeFor(specType: re:resolvedType);
+								local String is rv: :lowerExpr(expr: re);
+								rv: :castIfNeeded(val: rv, fromTy: rty, toTy: resTy);
+								if({ rv != '' }, {
+									:emit(inst: IrInst:Store(slot: resSlot, val: rv, ty: resTy));
+								});
+							});
+						}
+					], default: {
+						:lowerStmt(stmt: lastStmt);
+					});
+				});
+				:popScope();
+			}
+		], default: {
+			local String is cObj: :lowerExpr(expr: blkExpr);
+			local String is fnPtrAddr: :nextTmp();
+			:emit(inst: IrInst:FieldPtr(dst: fnPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 0));
+			local String is fnPtrVal: :nextTmp();
+			:emit(inst: IrInst:Load(dst: fnPtrVal, slot: fnPtrAddr, ty: IrType:Ptr));
+			local String is envPtrAddr: :nextTmp();
+			:emit(inst: IrInst:FieldPtr(dst: envPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 1));
+			local String is envVal: :nextTmp();
+			:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
+			local String is callDst: :nextTmp();
+			:emit(inst: IrInst:IndirectCall(dst: callDst, hasDst: true, retType: resTy, fnPtr: fnPtrVal, argTypes: [IrType:Ptr], args: [envVal]));
+			:emit(inst: IrInst:Store(slot: resSlot, val: callDst, ty: resTy));
+		});
+
+		:inlineReturnSlot: prevRetSlot;
+		:inlineReturnEndLbl: prevRetEnd;
+		:inlineReturnTy: prevRetTy;
+
+		if({ !:blkTerminated }, {
+			:terminate(inst: IrInst:Br(target: endLbl));
+		});
+		local IrBlock is endBlk: :curFn:addBlock(label: endLbl);
+		:switchBlock(blk: endBlk);
+		local String is finalVal: :nextTmp();
+		:emit(inst: IrInst:Load(dst: finalVal, slot: resSlot, ty: resTy));
+		return finalVal;
+	}
+
+	local Function of String is emitLoadField(String is objPtr, String is sname, IrStruct is st, Int is fidx, String is fieldName){
+		local IrType is fty: st:fieldTypes:get(index: fidx);
+		local Int is stateIdx: st:fieldIndex(name: '_lazy_state_' . fieldName);
+		if({ stateIdx >= 0 && :lazyFields:has(key: sname . ':' . fieldName) }, {
+			local String is ownerSname: :lazyFields:get(key: sname . ':' . fieldName, default: sname);
+			local String is statePtr: :nextTmp();
+			:emit(inst: IrInst:FieldPtr(dst: statePtr, objPtr: objPtr, structName: sname, fieldIndex: stateIdx));
+			local String is stateAddr: :nextTmp();
+			:emit(inst: IrInst:IrCast(dst: stateAddr, val: statePtr, fromType: IrType:Ptr, toType: IrType:I64));
+			local String is stVal: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: stVal, hasDst: true, retType: IrType:I64, callee: '__spec_mem_atomic_load_i64', argTypes: [IrType:I64], args: [stateAddr]));
+			local String is twoV: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: twoV, value: 2));
+			local String is isReady: :nextTmp();
+			:emit(inst: IrInst:Cmp(dst: isReady, op: '==', lhs: stVal, rhs: twoV, ty: IrType:I64));
+
+			local String is _rtmp: :nextTmp();
+			local String is resSlot: '%lazy_fld_' . (:tmpCounter as String);
+			:emit(inst: IrInst:Alloca(slot: resSlot, ty: fty));
+			local String is fastLbl: :nextLabel(prefix: 'lazy_fast');
+			local String is slowLbl: :nextLabel(prefix: 'lazy_slow');
+			local String is endLbl: :nextLabel(prefix: 'lazy_end');
+			:terminate(inst: IrInst:CondBr(cond: isReady, thenLabel: fastLbl, elseLabel: slowLbl));
+
+			local IrBlock is fastBlk: :curFn:addBlock(label: fastLbl);
+			:switchBlock(blk: fastBlk);
+			local String is fptr: :nextTmp();
+			local String is fval: :nextTmp();
+			:emit(inst: IrInst:FieldPtr(dst: fptr, objPtr: objPtr, structName: sname, fieldIndex: fidx));
+			:emit(inst: IrInst:Load(dst: fval, slot: fptr, ty: fty));
+			:emit(inst: IrInst:Store(slot: resSlot, val: fval, ty: fty));
+			:terminate(inst: IrInst:Br(target: endLbl));
+
+			local IrBlock is slowBlk: :curFn:addBlock(label: slowLbl);
+			:switchBlock(blk: slowBlk);
+			local String is sval: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: sval, hasDst: true, retType: fty, callee: ownerSname . '_' . fieldName . '__lazy_init', argTypes: [IrType:Ptr], args: [objPtr]));
+			:emit(inst: IrInst:Store(slot: resSlot, val: sval, ty: fty));
+			:terminate(inst: IrInst:Br(target: endLbl));
+
+			local IrBlock is endBlk: :curFn:addBlock(label: endLbl);
+			:switchBlock(blk: endBlk);
+			local String is finalVal: :nextTmp();
+			:emit(inst: IrInst:Load(dst: finalVal, slot: resSlot, ty: fty));
+			return finalVal;
+		});
+		local String is ptr: :nextTmp();
+		local String is dst: :nextTmp();
+		:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: objPtr, structName: sname, fieldIndex: fidx));
+		:emit(inst: IrInst:Load(dst: dst, slot: ptr, ty: fty));
+		return dst;
+	}
+
+	local Function is emitMarkLazyFieldDone(String is objPtr, String is sname, IrStruct is st, String is fieldName){
+		local Int is stateIdx: st:fieldIndex(name: '_lazy_state_' . fieldName);
+		if({ stateIdx >= 0 }, {
+			local String is statePtr: :nextTmp();
+			:emit(inst: IrInst:FieldPtr(dst: statePtr, objPtr: objPtr, structName: sname, fieldIndex: stateIdx));
+			local String is stateAddr: :nextTmp();
+			:emit(inst: IrInst:IrCast(dst: stateAddr, val: statePtr, fromType: IrType:Ptr, toType: IrType:I64));
+			local String is twoV: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: twoV, value: 2));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_atomic_store_i64', argTypes: [IrType:I64, IrType:I64], args: [stateAddr, twoV]));
+		});
+	}
+
 	local Function of String is emitLoadLocal(String is name, IrType is ty){
+		if({ :lazyLocalStateSlots:has(key: name) }, {
+			local String is stateSlot: :lazyLocalStateSlots:get(key: name, default: '');
+			local Expression is lazyExpr: :lazyLocalExprs:get(key: name, default: Expression:Unknown);
+			local String is curSt: :nextTmp();
+			:emit(inst: IrInst:Load(dst: curSt, slot: stateSlot, ty: IrType:I64));
+			local String is twoV: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: twoV, value: 2));
+			local String is isDone: :nextTmp();
+			:emit(inst: IrInst:Cmp(dst: isDone, op: '==', lhs: curSt, rhs: twoV, ty: IrType:I64));
+
+			local String is initLbl: :nextLabel(prefix: 'lazy_loc_init');
+			local String is doneLbl: :nextLabel(prefix: 'lazy_loc_done');
+			:terminate(inst: IrInst:CondBr(cond: isDone, thenLabel: doneLbl, elseLabel: initLbl));
+
+			local IrBlock is initBlk: :curFn:addBlock(label: initLbl);
+			:switchBlock(blk: initBlk);
+			:lazyLocalStateSlots:remove(key: name);
+			local Boolean is isArc: :localIsArc:get(key: name, default: false);
+			local String is specT: :localSpecTypes:get(key: name, default: '');
+			local String is prevMapK: :expectedMapKeyType;
+			local String is prevMapV: :expectedMapValType;
+			:setMapHintsFromTypeStr(t: specT);
+			local String is initVal: :lowerLazyBodyVal(blkExpr: lazyExpr, expectedTy: ty);
+			:expectedMapKeyType: prevMapK;
+			:expectedMapValType: prevMapV;
+			if({ initVal == '' }, { initVal: :emitDefaultVal(ty: ty); });
+			:emitStoreLocal(name: name, val: initVal, ty: ty, isArc: isArc);
+			:emit(inst: IrInst:Store(slot: stateSlot, val: twoV, ty: IrType:I64));
+			:lazyLocalStateSlots:set(key: name, value: stateSlot);
+			:terminate(inst: IrInst:Br(target: doneLbl));
+
+			local IrBlock is doneBlk: :curFn:addBlock(label: doneLbl);
+			:switchBlock(blk: doneBlk);
+		});
 		local String is slot: :localSlots:get(key: name, default: '');
 		if({ :boxedLocals:has(key: name) }, {
 			local String is boxPtr: :nextTmp();
@@ -1327,6 +1697,12 @@ Class is IrBuilder{
 	}
 
 	local Function is emitStoreLocal(String is name, String is val, IrType is ty, Boolean is isArc){
+		if({ :lazyLocalStateSlots:has(key: name) }, {
+			local String is stSlot: :lazyLocalStateSlots:get(key: name, default: '');
+			local String is twoV: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: twoV, value: 2));
+			:emit(inst: IrInst:Store(slot: stSlot, val: twoV, ty: IrType:I64));
+		});
 		local String is slot: :localSlots:get(key: name, default: '');
 		if({ :boxedLocals:has(key: name) }, {
 			local String is boxPtr: :nextTmp();
@@ -1519,7 +1895,7 @@ Class is IrBuilder{
 			Expression:Call: local Function(CallData is call){
 				:collectAllAnonCapturesInExpr(expr: call:target, decls: decls, out: out);
 				local String is cnm: call:name;
-				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match';
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval';
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ci);
@@ -1695,11 +2071,7 @@ Class is IrBuilder{
 			if({ fidx < 0 }, {
 				ok: false;
 			}, {
-				local IrType is fty: curSt:fieldTypes:get(index: fidx);
-				local String is ptr: :nextTmp();
-				local String is nextObj: :nextTmp();
-				:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
-				:emit(inst: IrInst:Load(dst: nextObj, slot: ptr, ty: fty));
+				local String is nextObj: :emitLoadField(objPtr: obj, sname: sname, st: curSt, fidx: fidx, fieldName: seg);
 				obj: nextObj;
 				local String is fSpec: :baseTypeName(t: :fieldSpecTypes:get(key: sname . ':' . seg, default: ''));
 				local String is fqn: '' . fSpec;
@@ -1891,50 +2263,73 @@ Class is IrBuilder{
 					:emit(inst: IrInst:Alloca(slot: slot, ty: vty));
 				});
 				if({ hasInit }, {
-					local String is prevMapK: :expectedMapKeyType;
-					local String is prevMapV: :expectedMapValType;
-					if({ varType:name == 'Map' && varType:params:length() >= 1 }, {
-						local Type is mkp0: varType:params:get(index: 0);
-						:expectedMapKeyType: mkp0:name;
-						if({ varType:params:length() >= 2 }, {
-							local Type is mkp1: varType:params:get(index: 1);
-							:expectedMapValType: mkp1:name;
+					if({ :isLazyCallExpr(expr: initExpr) }, {
+						local String is _stmp: :nextTmp();
+						local String is stateSlot: '%lazy_state_' . varName . '_' . (:tmpCounter as String);
+						:emit(inst: IrInst:Alloca(slot: stateSlot, ty: IrType:I64));
+						local String is zeroState: :nextTmp();
+						:emit(inst: IrInst:ConstInt(dst: zeroState, value: 0));
+						:emit(inst: IrInst:Store(slot: stateSlot, val: zeroState, ty: IrType:I64));
+						:lazyLocalStateSlots:set(key: varName, value: stateSlot);
+						:lazyLocalExprs:set(key: varName, value: :getLazyBodyExpr(expr: initExpr));
+						local String is lDefVal: :emitDefaultVal(ty: vty);
+						if({ (vIsArc || isBoxed) && !declInEntry }, {
+							local String is prevLazyVal: :nextTmp();
+							:emit(inst: IrInst:Load(dst: prevLazyVal, slot: slot, ty: IrType:Ptr));
+							:emit(inst: IrInst:Release(val: prevLazyVal));
 						});
-					});
-					local String is val: :lowerExpr(expr: initExpr);
-					:expectedMapKeyType: prevMapK;
-					:expectedMapValType: prevMapV;
-					local IrType is initTy: :irTypeFor(specType: initExpr:resolvedType);
-					val: :castIfNeeded(val: val, fromTy: initTy, toTy: vty);
-					if({ val == '' }, { val: :emitDefaultVal(ty: vty); });
-					local Boolean is isStrLitInit: false;
-					match(on: initExpr, when: [
-						Expression:StringLit: local Function(String is sv){ isStrLitInit: true; }
-					], default: {});
-					local Boolean is strCopyOwned: false;
-					if({ varType:name == 'String' && isStrLitInit && val != '' && val != 'null' }, {
-						local String is strCopy: :nextTmp();
-						:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [val]));
 						if({ isBoxed }, {
-							:emitClaimPool(val: strCopy);
+							local String is lBoxPtr: :emitNewBox(initVal: lDefVal, ty: vty, isArc: vIsArc);
+							:emit(inst: IrInst:Store(slot: slot, val: lBoxPtr, ty: IrType:Ptr));
 						}, {
-							strCopyOwned: true;
+							:emit(inst: IrInst:Store(slot: slot, val: lDefVal, ty: vty));
 						});
-						val: strCopy;
-					});
-					if({ vIsArc && !strCopyOwned && val != '' && val != 'null' }, {
-						:emit(inst: IrInst:Retain(val: val));
-					});
-					if({ (vIsArc || isBoxed) && !declInEntry }, {
-						local String is prevSlotVal: :nextTmp();
-						:emit(inst: IrInst:Load(dst: prevSlotVal, slot: slot, ty: IrType:Ptr));
-						:emit(inst: IrInst:Release(val: prevSlotVal));
-					});
-					if({ isBoxed }, {
-						local String is boxPtr: :emitNewBox(initVal: val, ty: vty, isArc: vIsArc);
-						:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
 					}, {
-						:emit(inst: IrInst:Store(slot: slot, val: val, ty: vty));
+						local String is prevMapK: :expectedMapKeyType;
+						local String is prevMapV: :expectedMapValType;
+						if({ varType:name == 'Map' && varType:params:length() >= 1 }, {
+							local Type is mkp0: varType:params:get(index: 0);
+							:expectedMapKeyType: mkp0:name;
+							if({ varType:params:length() >= 2 }, {
+								local Type is mkp1: varType:params:get(index: 1);
+								:expectedMapValType: mkp1:name;
+							});
+						});
+						local String is val: :lowerExpr(expr: initExpr);
+						:expectedMapKeyType: prevMapK;
+						:expectedMapValType: prevMapV;
+						local IrType is initTy: :irTypeFor(specType: initExpr:resolvedType);
+						val: :castIfNeeded(val: val, fromTy: initTy, toTy: vty);
+						if({ val == '' }, { val: :emitDefaultVal(ty: vty); });
+						local Boolean is isStrLitInit: false;
+						match(on: initExpr, when: [
+							Expression:StringLit: local Function(String is sv){ isStrLitInit: true; }
+						], default: {});
+						local Boolean is strCopyOwned: false;
+						if({ varType:name == 'String' && isStrLitInit && val != '' && val != 'null' }, {
+							local String is strCopy: :nextTmp();
+							:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [val]));
+							if({ isBoxed }, {
+								:emitClaimPool(val: strCopy);
+							}, {
+								strCopyOwned: true;
+							});
+							val: strCopy;
+						});
+						if({ vIsArc && !strCopyOwned && val != '' && val != 'null' }, {
+							:emit(inst: IrInst:Retain(val: val));
+						});
+						if({ (vIsArc || isBoxed) && !declInEntry }, {
+							local String is prevSlotVal: :nextTmp();
+							:emit(inst: IrInst:Load(dst: prevSlotVal, slot: slot, ty: IrType:Ptr));
+							:emit(inst: IrInst:Release(val: prevSlotVal));
+						});
+						if({ isBoxed }, {
+							local String is boxPtr: :emitNewBox(initVal: val, ty: vty, isArc: vIsArc);
+							:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
+						}, {
+							:emit(inst: IrInst:Store(slot: slot, val: val, ty: vty));
+						});
 					});
 				}, {
 					local String is defVal: :emitDefaultVal(ty: vty);
@@ -2008,6 +2403,12 @@ Class is IrBuilder{
 								Expression:StringLit: local Function(String is _sv){ isStrLitAsgn: true; }
 							], default: {});
 							if({ isStrLitAsgn && !:boxedLocals:has(key: name) && :localSpecTypes:get(key: name, default: '') == 'String' && cval != '' && cval != 'null' }, {
+								if({ :lazyLocalStateSlots:has(key: name) }, {
+									local String is stSlot: :lazyLocalStateSlots:get(key: name, default: '');
+									local String is twoV: :nextTmp();
+									:emit(inst: IrInst:ConstInt(dst: twoV, value: 2));
+									:emit(inst: IrInst:Store(slot: stSlot, val: twoV, ty: IrType:I64));
+								});
 								local String is slot: :localSlots:get(key: name, default: '');
 								local String is strCopy: :nextTmp();
 								:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [cval]));
@@ -2048,6 +2449,7 @@ Class is IrBuilder{
 											:emit(inst: IrInst:Release(val: oldSfVal));
 										});
 										:emit(inst: IrInst:Store(slot: sptr, val: scval, ty: sfty));
+										:emitMarkLazyFieldDone(objPtr: selfObj, sname: :currentClass, st: selfSt, fieldName: name);
 									});
 								});
 							});
@@ -2073,6 +2475,7 @@ Class is IrBuilder{
 								:emit(inst: IrInst:Release(val: oldFVal));
 							});
 							:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
+							:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: fieldName);
 						});
 					},
 					Expression:Path: local Function(Array of String is segments){
@@ -2107,6 +2510,7 @@ Class is IrBuilder{
 										:emit(inst: IrInst:Release(val: oldPVal));
 									});
 									:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
+									:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: segments:get(index: segments:length() - 1, default: ''));
 								});
 							});
 						});
@@ -2368,7 +2772,7 @@ Class is IrBuilder{
 			Expression:Ident: local Function of String(String is nm){ return nm; },
 			else: { '' }
 		]);
-		if({ targetName == '' || !:localSlots:has(key: targetName) || :boxedLocals:has(key: targetName) }, {
+		if({ targetName == '' || !:localSlots:has(key: targetName) || :boxedLocals:has(key: targetName) || :lazyLocalStateSlots:has(key: targetName) }, {
 			return false;
 		});
 		if({ :localSpecTypes:get(key: targetName, default: '') != 'String' }, {
@@ -2394,17 +2798,20 @@ Class is IrBuilder{
 	}
 
 	local Function of String is lowerIncDec(String is op, Expression is operand, IrType is ty){
-		local String is boxedName: '';
+		local String is localName: '';
 		local String is slot: '';
 		local IrType is slotTy: ty;
+		local String is fldObj: '';
+		local String is fldSname: '';
+		local IrStruct is fldSt: IrStruct:init();
+		local Int is fldIdx: -1;
+		local String is fldName: '';
 		match(on: operand, when: [
 			Expression:Ident: local Function(String is name){
 				if({ :localSlots:has(key: name) }, {
 					slot: :localSlots:get(key: name, default: '');
 					slotTy: :localTypes:get(key: name, default: ty);
-					if({ :boxedLocals:has(key: name) }, {
-						boxedName: name;
-					});
+					localName: name;
 				}, {
 					if({ :localSlots:has(key: ':') }, {
 						local IrStruct is selfSt: :mod:findStruct(name: :currentClass);
@@ -2414,6 +2821,11 @@ Class is IrBuilder{
 							slotTy: selfSt:fieldTypes:get(index: sfidx);
 							slot: :nextTmp();
 							:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: selfObj, structName: :currentClass, fieldIndex: sfidx));
+							fldObj: selfObj;
+							fldSname: :currentClass;
+							fldSt: selfSt;
+							fldIdx: sfidx;
+							fldName: name;
 						});
 					});
 				});
@@ -2427,6 +2839,11 @@ Class is IrBuilder{
 					slotTy: st:fieldTypes:get(index: fidx);
 					slot: :nextTmp();
 					:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: sname, fieldIndex: fidx));
+					fldObj: obj;
+					fldSname: sname;
+					fldSt: st;
+					fldIdx: fidx;
+					fldName: fieldName;
 				});
 			},
 			Expression:Path: local Function(Array of String is segments){
@@ -2438,18 +2855,27 @@ Class is IrBuilder{
 					slotTy: st:fieldTypes:get(index: fidx);
 					slot: :nextTmp();
 					:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: sname, fieldIndex: fidx));
+					fldObj: obj;
+					fldSname: sname;
+					fldSt: st;
+					fldIdx: fidx;
+					fldName: segments:get(index: segments:length() - 1, default: '');
 				});
 			}
 		], default: {});
-		if({ slot == '' && boxedName == '' }, {
+		if({ slot == '' && localName == '' }, {
 			return :emitDefaultVal(ty: ty);
 		});
 		local String is oldVal: '';
-		if({ boxedName != '' }, {
-			oldVal: :emitLoadLocal(name: boxedName, ty: slotTy);
+		if({ localName != '' }, {
+			oldVal: :emitLoadLocal(name: localName, ty: slotTy);
 		}, {
-			oldVal: :nextTmp();
-			:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: slotTy));
+			if({ fldIdx >= 0 }, {
+				oldVal: :emitLoadField(objPtr: fldObj, sname: fldSname, st: fldSt, fidx: fldIdx, fieldName: fldName);
+			}, {
+				oldVal: :nextTmp();
+				:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: slotTy));
+			});
 		});
 		local String is one: :nextTmp();
 		if({ slotTy == IrType:F64 }, {
@@ -2460,10 +2886,13 @@ Class is IrBuilder{
 		local String is binOp: if({ op == 'post++' || op == '++' }, { '+' }, { '-' });
 		local String is newVal: :nextTmp();
 		:emit(inst: IrInst:BinOp(dst: newVal, op: binOp, lhs: oldVal, rhs: one, ty: slotTy));
-		if({ boxedName != '' }, {
-			:emitStoreLocal(name: boxedName, val: newVal, ty: slotTy, isArc: false);
+		if({ localName != '' }, {
+			:emitStoreLocal(name: localName, val: newVal, ty: slotTy, isArc: false);
 		}, {
 			:emit(inst: IrInst:Store(slot: slot, val: newVal, ty: slotTy));
+			if({ fldIdx >= 0 }, {
+				:emitMarkLazyFieldDone(objPtr: fldObj, sname: fldSname, st: fldSt, fieldName: fldName);
+			});
 		});
 		if({ op == 'post++' || op == 'post--' }, {
 			return oldVal;
@@ -2589,12 +3018,7 @@ Class is IrBuilder{
 					local Int is sfidx: selfSt:fieldIndex(name: name);
 					if({ sfidx >= 0 }, {
 						local String is selfObj: :emitLoadLocal(name: ':', ty: IrType:Ptr);
-						local IrType is sfty: selfSt:fieldTypes:get(index: sfidx);
-						local String is sptr: :nextTmp();
-						local String is sdst: :nextTmp();
-						:emit(inst: IrInst:FieldPtr(dst: sptr, objPtr: selfObj, structName: :currentClass, fieldIndex: sfidx));
-						:emit(inst: IrInst:Load(dst: sdst, slot: sptr, ty: sfty));
-						return sdst;
+						return :emitLoadField(objPtr: selfObj, sname: :currentClass, st: selfSt, fidx: sfidx, fieldName: name);
 					});
 				});
 				return '0';
@@ -2692,12 +3116,7 @@ Class is IrBuilder{
 				local IrStruct is st: :mod:findStruct(name: sname);
 				local Int is fidx: st:fieldIndex(name: fieldName);
 				if({ fidx >= 0 }, {
-					local IrType is fty: st:fieldTypes:get(index: fidx);
-					local String is ptr: :nextTmp();
-					local String is dst: :nextTmp();
-					:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
-					:emit(inst: IrInst:Load(dst: dst, slot: ptr, ty: fty));
-					return dst;
+					return :emitLoadField(objPtr: obj, sname: sname, st: st, fidx: fidx, fieldName: fieldName);
 				});
 				return '0';
 			},
@@ -2743,12 +3162,7 @@ Class is IrBuilder{
 						local String is obj: :pathObjPtr;
 						local String is sname: :pathStructName;
 						local IrStruct is st: :mod:findStruct(name: sname);
-						local IrType is fty: st:fieldTypes:get(index: fidx);
-						local String is ptr: :nextTmp();
-						local String is dst: :nextTmp();
-						:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
-						:emit(inst: IrInst:Load(dst: dst, slot: ptr, ty: fty));
-						return dst;
+						return :emitLoadField(objPtr: obj, sname: sname, st: st, fidx: fidx, fieldName: segments:get(index: segments:length() - 1, default: ''));
 					});
 				});
 				if({ :irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
@@ -3213,6 +3627,8 @@ Class is IrBuilder{
 		local Map of String to String is savedSpecTypes: :localSpecTypes;
 		local Map of String to Boolean is savedBoxed: :boxedLocals;
 		local Map of String to Boolean is savedCaptured: :capturedNames;
+		local Map of String to String is savedLazyStateSlots: :lazyLocalStateSlots;
+		local Map of String to Expression is savedLazyExprs: :lazyLocalExprs;
 		local Array of String is savedOwned: :ownedSlots;
 		local Array of String is savedScopeVars: :scopeVarStack;
 		local Array of String is savedScopeOldSlots: :scopeOldSlotStack;
@@ -3220,6 +3636,8 @@ Class is IrBuilder{
 		local Array of Boolean is savedScopeOldArcs: :scopeOldArcStack;
 		local Array of String is savedScopeOldSpecs: :scopeOldSpecTypeStack;
 		local Array of Boolean is savedScopeOldBoxed: :scopeOldBoxedStack;
+		local Array of String is savedScopeOldLazyStates: :scopeOldLazyStateStack;
+		local Array of Expression is savedScopeOldLazyExprs: :scopeOldLazyExprStack;
 		local Array of Int is savedScopeMarks: :scopeMarkStack;
 		local String is savedPoolMark: :curPoolMark;
 		local Boolean is savedRetIsArc: :curFnRetIsArc;
@@ -3378,6 +3796,8 @@ Class is IrBuilder{
 		:localSpecTypes: savedSpecTypes;
 		:boxedLocals: savedBoxed;
 		:capturedNames: savedCaptured;
+		:lazyLocalStateSlots: savedLazyStateSlots;
+		:lazyLocalExprs: savedLazyExprs;
 		:ownedSlots: savedOwned;
 		:scopeVarStack: savedScopeVars;
 		:scopeOldSlotStack: savedScopeOldSlots;
@@ -3385,6 +3805,8 @@ Class is IrBuilder{
 		:scopeOldArcStack: savedScopeOldArcs;
 		:scopeOldSpecTypeStack: savedScopeOldSpecs;
 		:scopeOldBoxedStack: savedScopeOldBoxed;
+		:scopeOldLazyStateStack: savedScopeOldLazyStates;
+		:scopeOldLazyExprStack: savedScopeOldLazyExprs;
 		:scopeMarkStack: savedScopeMarks;
 		:curPoolMark: savedPoolMark;
 		:curFnRetIsArc: savedRetIsArc;
@@ -3401,6 +3823,9 @@ Class is IrBuilder{
 				local String is oSlot: :localSlots:get(key: cname, default: '');
 				local IrType is oTy: :localTypes:get(key: cname, default: IrType:I64);
 				local Boolean is oArc: :localIsArc:get(key: cname, default: false);
+				if({ :lazyLocalStateSlots:has(key: cname) }, {
+					local String is _ensuredLazy: :emitLoadLocal(name: cname, ty: oTy);
+				});
 				local String is dstPtr: :nextTmp();
 				:emit(inst: IrInst:FieldPtr(dst: dstPtr, objPtr: envVal, structName: envStructName, fieldIndex: oci + 2));
 				if({ cname == ':' || :boxedLocals:has(key: cname) }, {
@@ -3448,6 +3873,11 @@ Class is IrBuilder{
 			local String is dst: :nextTmp();
 			:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', iv, baseV, digV]));
 			return dst;
+		});
+
+		if({ :isLazyCallExpr(expr: expr) }, {
+			local IrType is lTy: :irTypeFor(specType: expr:resolvedType);
+			return :lowerLazyBodyVal(blkExpr: :getLazyBodyExpr(expr: expr), expectedTy: lTy);
 		});
 
 		# Pluggable call lowerers (control flow, String, Array, Map, etc.)
