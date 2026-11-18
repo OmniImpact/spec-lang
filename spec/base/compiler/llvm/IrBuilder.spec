@@ -285,7 +285,7 @@ Class is IrBuilder{
 		if({ :bindings:isSysinternal(cls: cls) }, {
 			return !:hasMethodBodies(cls: cls);
 		});
-		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Parallel' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
+		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
 		return false;
 	}
 
@@ -4136,7 +4136,55 @@ Class is IrBuilder{
 			});
 		});
 
-		:lowerCallArgs(fnKey: dirCallee, callArgs: call:args, argTypes: argTypes, argVals: argVals);
+		local Array of NamedArg is effectiveArgs: call:args;
+		if({ dirCallee == 'ThreadScope_spawn' && call:args:length() == 1 }, {
+			local String is taskRetSpec: '';
+			local NamedArg is sa0: call:args:get(index: 0);
+			local String is sFnT: sa0:value:resolvedType;
+			if({ sFnT:startsWith(prefix: 'Function:') && sFnT:length() > 9 }, {
+				taskRetSpec: sFnT:substring(start: 9, end: sFnT:length());
+			});
+			if({ taskRetSpec == '' && expr:resolvedType:startsWith(prefix: 'Task:') && expr:resolvedType:length() > 5 }, {
+				taskRetSpec: expr:resolvedType:substring(start: 5, end: expr:resolvedType:length());
+			});
+			if({ taskRetSpec == '' && expr:resolvedType:startsWith(prefix: 'Task of ') && expr:resolvedType:length() > 8 }, {
+				taskRetSpec: expr:resolvedType:substring(start: 8, end: expr:resolvedType:length());
+			});
+			local Int is tKind: 3;
+			if({ taskRetSpec != '' && taskRetSpec != 'Void' && taskRetSpec != 'void' }, {
+				if({ taskRetSpec == 'Float' }, {
+					tKind: 2;
+				}, {
+					if({ :isArcSpecType(specType: taskRetSpec) }, {
+						tKind: 1;
+					}, {
+						tKind: 0;
+					});
+				});
+			});
+			local Expression is kindLit: Expression:NumberLit(value: tKind, text: tKind as String);
+			kindLit:setResolvedType(t: 'Int');
+			effectiveArgs: [sa0, NamedArg:init(name: 'kind', value: kindLit)];
+		});
+		if({ (dirCallee == 'Channel_unbounded' && call:args:length() == 0) || (dirCallee == 'Channel_bounded' && call:args:length() == 1) }, {
+			local String is chElemSpec: '';
+			if({ expr:resolvedType:startsWith(prefix: 'Channel:') && expr:resolvedType:length() > 8 }, {
+				chElemSpec: expr:resolvedType:substring(start: 8, end: expr:resolvedType:length());
+			});
+			if({ chElemSpec == '' && expr:resolvedType:startsWith(prefix: 'Channel of ') && expr:resolvedType:length() > 11 }, {
+				chElemSpec: expr:resolvedType:substring(start: 11, end: expr:resolvedType:length());
+			});
+			local Boolean is chArc: chElemSpec != '' && :isArcSpecType(specType: chElemSpec);
+			local Expression is arcLit: Expression:BoolLit(value: chArc);
+			arcLit:setResolvedType(t: 'Boolean');
+			if({ call:args:length() == 0 }, {
+				effectiveArgs: [NamedArg:init(name: 'isArc', value: arcLit)];
+			}, {
+				effectiveArgs: [call:args:get(index: 0), NamedArg:init(name: 'isArc', value: arcLit)];
+			});
+		});
+
+		:lowerCallArgs(fnKey: dirCallee, callArgs: effectiveArgs, argTypes: argTypes, argVals: argVals);
 
 		local IrType is callRetTy: retTy;
 		if({ :methodRetTypes:has(key: dirCallee) }, {
@@ -4207,7 +4255,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Str' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Str' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Parallel' || provStruct == 'Thread' || provStruct == 'ThreadScope' || provStruct == 'Channel' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
 			return 'null';
 		});
 		if({ :clsMap:has(key: provStruct) && :bindings:isSysinternal(cls: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {

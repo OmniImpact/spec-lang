@@ -56,7 +56,6 @@ Class is ClassBindings{
 		return name == 'Array' || name == 'Map' || name == 'LoopControl' ||
 			name == 'Math' ||
 			name == 'LoopCallback' ||
-			name == 'Parallel' ||
 			name == 'List' || name == 'Str' || name == 'String';
 	}
 

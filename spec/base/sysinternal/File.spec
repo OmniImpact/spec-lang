@@ -10,6 +10,5 @@ Class is File{
 	Function of Boolean is pal_file_remove(Int is path_cstr);
 	Function of Int is pal_file_temp(Int is tpl_cstr);
 	Function is pal_file_free(Int is ptr);
-	Function is pal_spawn_async(Function is task);
 	Function of Int is pal_last_error_cstr();
 }

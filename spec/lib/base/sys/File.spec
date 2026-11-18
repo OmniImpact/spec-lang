@@ -5,6 +5,8 @@ Class is File{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],
 		['base', 'sysinternal', File]
@@ -63,13 +65,11 @@ Class is File{
 		return res;
 	}
 
-	## Reads a file asynchronously on a background worker thread, notifying completion via callbacks.
-	Function is fileReadAsync(String is path, Function is onSuccess, Function is onError, String is default: ''){
-		local Function is task: local Function(){
-			:fileRead(path: path, onSuccess: onSuccess, onError: onError, default: default);
-		};
-		Mem:retainAddr(objAddr: Mem:objToAddr(obj: task));
-		base:sysinternal:File:pal_spawn_async(task: task);
+	## Reads a file asynchronously inside [scope], notifying completion via callbacks and returning the [Task].
+	Function of Task of String is fileReadAsync(ThreadScope is scope, String is path, Function is onSuccess, Function is onError, String is default: ''){
+		return scope:spawn(task: local Function of String(){
+			return :fileRead(path: path, onSuccess: onSuccess, onError: onError, default: default);
+		});
 	}
 
 	local Function of Boolean is writeInternal(String is path, String is content, Int is append, Function is onSuccess, Function is onError){
@@ -102,13 +102,11 @@ Class is File{
 		return :writeInternal(path: path, content: content, append: 1, onSuccess: onSuccess, onError: onError);
 	}
 
-	## Writes string content to a file asynchronously on a background worker thread.
-	Function is fileWriteAsync(String is path, String is content, Function is onSuccess, Function is onError){
-		local Function is task: local Function(){
-			:fileWrite(path: path, content: content, onSuccess: onSuccess, onError: onError);
-		};
-		Mem:retainAddr(objAddr: Mem:objToAddr(obj: task));
-		base:sysinternal:File:pal_spawn_async(task: task);
+	## Writes string content to a file asynchronously inside [scope], notifying completion via callbacks and returning the [Task].
+	Function of Task of Boolean is fileWriteAsync(ThreadScope is scope, String is path, String is content, Function is onSuccess, Function is onError){
+		return scope:spawn(task: local Function of Boolean(){
+			return :fileWrite(path: path, content: content, onSuccess: onSuccess, onError: onError);
+		});
 	}
 
 	## Tests whether a file or directory exists at the specified path.

@@ -3360,7 +3360,7 @@ Class is TypeChecker{
 		});
 		if({ recvName != '' && call:name != 'init' }, {
 			local Boolean is isSysinternalPath: targetIsPath && targetPathSegs:indexOf(search: 'sysinternal', default: -1) >= 0;
-			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
+			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || recvName == 'ThreadScope' || recvName == 'Channel' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
 			# Desugared enums are type-level by design:
 			# their contract methods dispatch through the class name.
 			# Held functions: the class-name prefix IS
@@ -3878,6 +3878,7 @@ Class is TypeChecker{
 							}
 						], default: {});
 					});
+					local String is spawnArgExp: '';
 					if({ isBranchCall && argIdx >= 1 }, {
 						:inBranchClosure: true;
 						:inValueBranch: isValueBranch;
@@ -3886,7 +3887,15 @@ Class is TypeChecker{
 							:currentYieldExpected: expected;
 						});
 					});
-					:inferExpressionType(expr: arg:value);
+					if({ targetType == 'ThreadScope' && method == 'spawn' && argIdx == 0 }, {
+						if({ expected:startsWith(prefix: 'Task:') && expected:length() > 5 }, {
+							spawnArgExp: 'Function:' . expected:substring(start: 5, end: expected:length());
+						});
+						if({ expected:startsWith(prefix: 'Task of ') && expected:length() > 8 }, {
+							spawnArgExp: 'Function:' . expected:substring(start: 8, end: expected:length());
+						});
+					});
+					:inferExpressionType(expr: arg:value, expected: spawnArgExp);
 					:inBranchClosure: false;
 					:inValueBranch: false;
 					:currentYieldExpected: '';
@@ -4024,6 +4033,14 @@ Class is TypeChecker{
 				fnVarT: :localVars:getString(key: method, default: :fieldTypes:getString(key: method, default: ''));
 			}, {
 				fnVarT: :fieldTypes:getString(key: method, default: '');
+			});
+		});
+		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'init' && :currentClassName != 'ThreadScope' }, {
+			:addError(line: :currentLine, msg: "Cannot construct 'ThreadScope' directly with 'ThreadScope:init'; use 'ThreadScope:open(body: ...)' so all spawned threads are joined before scope exit.");
+		});
+		if({ (targetType == 'Thread' || recvName == 'Thread' || call:bareProvider == 'Thread') && (method == 'threadSpawn' || method == 'threadJoin') }, {
+			if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+				:addError(line: :currentLine, msg: "Raw thread management ('Thread:" . method . "') is restricted to 'base:sys:thread'; all threads must be spawned inside a 'ThreadScope:open' block.");
 			});
 		});
 		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith') }, {
@@ -4174,6 +4191,30 @@ Class is TypeChecker{
 									local Array of String is mkParts: targetType:split(delimiter: ':');
 									local String is kType: if({ mkParts:length() > 1 && mkParts:get(index: 1) != 'Any' }, { mkParts:get(index: 1) }, { Primitive:STRING:value() });
 									res: 'Array:' . kType;
+								});
+								if({ targetType == 'ThreadScope' && method == 'spawn' }, {
+									local String is taskElem: '';
+									if({ call:args:length() > 0 }, {
+										local NamedArg is sa0: call:args:get(index: 0);
+										local String is sFnT: sa0:value:resolvedType;
+										if({ sFnT:startsWith(prefix: 'Function:') && sFnT:length() > 9 }, {
+											taskElem: sFnT:substring(start: 9, end: sFnT:length());
+										});
+									});
+									if({ taskElem == '' && expected:startsWith(prefix: 'Task:') && expected:length() > 5 }, {
+										taskElem: expected:substring(start: 5, end: expected:length());
+									});
+									if({ taskElem == '' && expected:startsWith(prefix: 'Task of ') && expected:length() > 8 }, {
+										taskElem: expected:substring(start: 8, end: expected:length());
+									});
+									if({ taskElem != '' && !:isVoid(t: taskElem) }, {
+										res: 'Task:' . taskElem;
+									});
+								});
+								if({ targetType == 'Channel' && (method == 'unbounded' || method == 'bounded') }, {
+									if({ expected:startsWith(prefix: 'Channel:') || expected:startsWith(prefix: 'Channel of ') }, {
+										res: expected;
+									});
 								});
 							}, {
 								if({ targetType:startsWith(prefix: 'Array') && method == 'map' }, {

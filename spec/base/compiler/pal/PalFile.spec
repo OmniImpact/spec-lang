@@ -69,28 +69,6 @@ static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* 
 	Function of String is emitBody(){
 		return ```{{:getOsBlock(separatePosix: false)}}
 
-static void* spec_pal_async_worker(void* arg) {
-    void** cls = (void**)arg;
-    if (cls && cls[0]) {
-        ((void (*)(void*))cls[0])(cls[1]);
-    }
-    if (arg) Arc_release(NULL, (long long)(intptr_t)arg);
-    spec_pool_thread_cleanup();
-    spec_async_task_finished();
-    return NULL;
-}
-
-void spec_pal_spawn_async(void* task_closure) {
-    if (!task_closure) return;
-    spec_async_task_started();
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, spec_pal_async_worker, task_closure) != 0) {
-        spec_pal_async_worker(task_closure);
-        return;
-    }
-    pthread_detach(tid);
-}
-
 long long spec_pal_file_read(long long path_cstr, long long out_len_addr) {
     long long* out_len = (long long*)(intptr_t)out_len_addr;
     if (out_len) *out_len = 0;

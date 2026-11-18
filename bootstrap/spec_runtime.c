@@ -739,28 +739,6 @@ static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* 
 }
 #endif
 
-static void* spec_pal_async_worker(void* arg) {
-    void** cls = (void**)arg;
-    if (cls && cls[0]) {
-        ((void (*)(void*))cls[0])(cls[1]);
-    }
-    if (arg) Arc_release(NULL, (long long)(intptr_t)arg);
-    spec_pool_thread_cleanup();
-    spec_async_task_finished();
-    return NULL;
-}
-
-void spec_pal_spawn_async(void* task_closure) {
-    if (!task_closure) return;
-    spec_async_task_started();
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, spec_pal_async_worker, task_closure) != 0) {
-        spec_pal_async_worker(task_closure);
-        return;
-    }
-    pthread_detach(tid);
-}
-
 long long spec_pal_file_read(long long path_cstr, long long out_len_addr) {
     long long* out_len = (long long*)(intptr_t)out_len_addr;
     if (out_len) *out_len = 0;
@@ -1408,6 +1386,185 @@ void spec_monitor_stop(void) {
 void spec_process_exit(long long status) {
     exit((int)status);
 }
+
+/* OS Thread, Mutex, and Condition Variable Primitives (base:sysinternal:Thread) */
+static _Atomic long long _spec_thread_seq = 0;
+
+#ifdef _WIN32
+typedef struct {
+    HANDLE hThread;
+} SpecWinThread;
+
+static DWORD WINAPI _spec_win_thread_trampoline(LPVOID arg) {
+    void** cls = (void**)arg;
+    spec_fast_random_seed(atomic_fetch_add_explicit(&_spec_thread_seq, 1, memory_order_relaxed) + 1);
+    if (cls && cls[0]) {
+        ((void (*)(void*))cls[0])(cls[1]);
+    }
+    if (arg) Arc_release(NULL, (long long)(intptr_t)arg);
+    spec_pool_thread_cleanup();
+    spec_thread_leave();
+    return 0;
+}
+
+long long spec_thread_spawn(void* task_closure) {
+    if (!task_closure) return 0;
+    Arc_retain(NULL, (long long)(intptr_t)task_closure);
+    spec_thread_enter();
+    HANDLE h = CreateThread(NULL, 0, _spec_win_thread_trampoline, task_closure, 0, NULL);
+    if (!h) {
+        _spec_win_thread_trampoline(task_closure);
+        return 0;
+    }
+    SpecWinThread* th = (SpecWinThread*)spec_xmalloc(sizeof(SpecWinThread));
+    th->hThread = h;
+    return (long long)(intptr_t)th;
+}
+
+void spec_thread_join(long long handle) {
+    if (!handle) return;
+    SpecWinThread* th = (SpecWinThread*)(intptr_t)handle;
+    if (th->hThread) {
+        WaitForSingleObject(th->hThread, INFINITE);
+        CloseHandle(th->hThread);
+    }
+    free(th);
+}
+
+long long spec_thread_current_id(void) {
+    return (long long)GetCurrentThreadId();
+}
+
+long long spec_mutex_create(void) {
+    SRWLOCK* lk = (SRWLOCK*)spec_xmalloc(sizeof(SRWLOCK));
+    InitializeSRWLock(lk);
+    return (long long)(intptr_t)lk;
+}
+
+void spec_mutex_destroy(long long handle) {
+    if (handle) free((void*)(intptr_t)handle);
+}
+
+void spec_mutex_lock(long long handle) {
+    if (handle) AcquireSRWLockExclusive((SRWLOCK*)(intptr_t)handle);
+}
+
+void spec_mutex_unlock(long long handle) {
+    if (handle) ReleaseSRWLockExclusive((SRWLOCK*)(intptr_t)handle);
+}
+
+long long spec_cond_create(void) {
+    CONDITION_VARIABLE* cv = (CONDITION_VARIABLE*)spec_xmalloc(sizeof(CONDITION_VARIABLE));
+    InitializeConditionVariable(cv);
+    return (long long)(intptr_t)cv;
+}
+
+void spec_cond_destroy(long long handle) {
+    if (handle) free((void*)(intptr_t)handle);
+}
+
+void spec_cond_wait(long long cond, long long mutex) {
+    if (cond && mutex) {
+        SleepConditionVariableSRW((CONDITION_VARIABLE*)(intptr_t)cond, (SRWLOCK*)(intptr_t)mutex, INFINITE, 0);
+    }
+}
+
+void spec_cond_signal(long long cond) {
+    if (cond) WakeConditionVariable((CONDITION_VARIABLE*)(intptr_t)cond);
+}
+
+void spec_cond_broadcast(long long cond) {
+    if (cond) WakeAllConditionVariable((CONDITION_VARIABLE*)(intptr_t)cond);
+}
+#else
+typedef struct {
+    pthread_t tid;
+} SpecPosixThread;
+
+static void* _spec_posix_thread_trampoline(void* arg) {
+    void** cls = (void**)arg;
+    spec_fast_random_seed(atomic_fetch_add_explicit(&_spec_thread_seq, 1, memory_order_relaxed) + 1);
+    if (cls && cls[0]) {
+        ((void (*)(void*))cls[0])(cls[1]);
+    }
+    if (arg) Arc_release(NULL, (long long)(intptr_t)arg);
+    spec_pool_thread_cleanup();
+    spec_thread_leave();
+    return NULL;
+}
+
+long long spec_thread_spawn(void* task_closure) {
+    if (!task_closure) return 0;
+    Arc_retain(NULL, (long long)(intptr_t)task_closure);
+    spec_thread_enter();
+    SpecPosixThread* th = (SpecPosixThread*)spec_xmalloc(sizeof(SpecPosixThread));
+    if (pthread_create(&th->tid, NULL, _spec_posix_thread_trampoline, task_closure) != 0) {
+        free(th);
+        _spec_posix_thread_trampoline(task_closure);
+        return 0;
+    }
+    return (long long)(intptr_t)th;
+}
+
+void spec_thread_join(long long handle) {
+    if (!handle) return;
+    SpecPosixThread* th = (SpecPosixThread*)(intptr_t)handle;
+    pthread_join(th->tid, NULL);
+    free(th);
+}
+
+long long spec_thread_current_id(void) {
+    return (long long)(uintptr_t)pthread_self();
+}
+
+long long spec_mutex_create(void) {
+    pthread_mutex_t* m = (pthread_mutex_t*)spec_xmalloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(m, NULL);
+    return (long long)(intptr_t)m;
+}
+
+void spec_mutex_destroy(long long handle) {
+    if (!handle) return;
+    pthread_mutex_t* m = (pthread_mutex_t*)(intptr_t)handle;
+    pthread_mutex_destroy(m);
+    free(m);
+}
+
+void spec_mutex_lock(long long handle) {
+    if (handle) pthread_mutex_lock((pthread_mutex_t*)(intptr_t)handle);
+}
+
+void spec_mutex_unlock(long long handle) {
+    if (handle) pthread_mutex_unlock((pthread_mutex_t*)(intptr_t)handle);
+}
+
+long long spec_cond_create(void) {
+    pthread_cond_t* c = (pthread_cond_t*)spec_xmalloc(sizeof(pthread_cond_t));
+    pthread_cond_init(c, NULL);
+    return (long long)(intptr_t)c;
+}
+
+void spec_cond_destroy(long long handle) {
+    if (!handle) return;
+    pthread_cond_t* c = (pthread_cond_t*)(intptr_t)handle;
+    pthread_cond_destroy(c);
+    free(c);
+}
+
+void spec_cond_wait(long long cond, long long mutex) {
+    if (cond && mutex) {
+        pthread_cond_wait((pthread_cond_t*)(intptr_t)cond, (pthread_mutex_t*)(intptr_t)mutex);
+    }
+}
+
+void spec_cond_signal(long long cond) {
+    if (cond) pthread_cond_signal((pthread_cond_t*)(intptr_t)cond);
+}
+
+void spec_cond_broadcast(long long cond) {
+    if (cond) pthread_cond_broadcast((pthread_cond_t*)(intptr_t)cond);
+}
+#endif
 #if defined(_WIN32)
 long long spec_time_monotonic_ns(void) {
     LARGE_INTEGER freq, count;

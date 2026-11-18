@@ -208,7 +208,6 @@ Class of CallLowerer is SysinternalCallLowerer{
 			if({ call:name == 'init' }, { return true; });
 			if({ call:name == 'sync' && argc >= 1 }, { return true; });
 			if({ call:name == 'syncWith' && argc >= 2 }, { return true; });
-			if({ call:name == 'run' && argc >= 3 }, { return true; });
 			return false;
 		});
 		local String is dom: :floorDomain(b: b, call: call);
