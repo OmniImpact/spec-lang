@@ -10,6 +10,7 @@ Class of SpecUnitTest is TestTime{
 		['specunit', as Assert()],
 		['base', 'sys', as Time()],
 		['base', 'sys', as DateTime()],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -85,28 +86,26 @@ Class of SpecUnitTest is TestTime{
 
 	Function is testAsyncTimersAndCancellation(){
 		local Int is timeoutHits: 0;
-		local Int is t1: Time:setTimeout(ms: 15, callback: {
-			timeoutHits: timeoutHits + 1;
-		});
-		Assert:isTrue(t1 > 0);
-
 		local Int is intervalHits: 0;
-		local Int is t2: Time:setInterval(ms: 10, count: 3, callback: {
-			intervalHits: intervalHits + 1;
-		});
-		Assert:isTrue(t2 > t1);
-
 		local Int is cancelledHits: 0;
-		local Int is t3: Time:setTimeout(ms: 500, callback: {
-			cancelledHits: cancelledHits + 1;
-		});
-		Assert:isTrue(Time:cancelTimer(timerId: t3));
 
-		# Poll for t1 and t2 to finish with a bounded timeout
-		local Int is waitStart: Time:monotonicMs();
-		while(evaluate: { (timeoutHits < 1 || intervalHits < 3) && (Time:monotonicMs() - waitStart) < 2000 }, iterate: {
-			Time:sleepMs(ms: 5);
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			local Int is t1: Time:setTimeout(scope: scope, ms: 15, callback: {
+				timeoutHits: timeoutHits + 1;
+			});
+			Assert:isTrue(t1 > 0);
+
+			local Int is t2: Time:setInterval(scope: scope, ms: 10, count: 3, callback: {
+				intervalHits: intervalHits + 1;
+			});
+			Assert:isTrue(t2 > t1);
+
+			local Int is t3: Time:setTimeout(scope: scope, ms: 500, callback: {
+				cancelledHits: cancelledHits + 1;
+			});
+			Assert:isTrue(Time:cancelTimer(timerId: t3));
 		});
+
 		Assert:areEqualInt(1, timeoutHits);
 		Assert:areEqualInt(3, intervalHits);
 		Assert:areEqualInt(0, cancelledHits);

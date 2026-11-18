@@ -9,7 +9,8 @@ Class is Mem{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['base', 'sysinternal', Mem]
+		['base', 'sysinternal', Mem],
+		['base', 'sys', as Conditional()]
 	];
 
 	Function of Int is alloc(Int is bytes){
@@ -190,5 +191,31 @@ Class is Mem{
 
 	Function is tlsSetI64(Int is slot, Int is val){
 		base:sysinternal:Mem:tlsSetI64(slot: slot, val: val);
+	}
+
+	Function of Boolean is hasPendingError(){
+		return base:sysinternal:Mem:tlsGetI64(slot: 15) != 0;
+	}
+
+	Function of Int is takePendingErrorAddr(){
+		local Int is addr: base:sysinternal:Mem:tlsGetI64(slot: 15);
+		if({ addr != 0 }, {
+			base:sysinternal:Mem:tlsSetI64(slot: 15, val: 0);
+		});
+		return addr;
+	}
+
+	Function is raisePendingErrorAddr(Int is addr){
+		if({ addr == 0 }, { return; });
+		base:sysinternal:Mem:retainAddr(objAddr: addr);
+		local Int is prev: base:sysinternal:Mem:tlsGetI64(slot: 15);
+		if({ prev != 0 }, {
+			base:sysinternal:Mem:releaseAddr(objAddr: prev);
+		});
+		base:sysinternal:Mem:tlsSetI64(slot: 15, val: addr);
+	}
+
+	Function is raisePendingError(Any is err){
+		:raisePendingErrorAddr(addr: base:sysinternal:Mem:objToAddr(obj: err));
 	}
 }

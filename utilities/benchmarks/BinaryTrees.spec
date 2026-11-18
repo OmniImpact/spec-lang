@@ -15,8 +15,15 @@ Class is BinaryTrees{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Process()],
+		['base', 'core', SpecError],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Parallel()]
 	];
+
+	replace Function is SpecErrorHandler(SpecError is error){
+		line(error:toString());
+		exit(status: 1);
+	}
 
 	replace Function is init(Map of String to String is args){
 		local Array of String is argv: rawArgs();
@@ -55,15 +62,17 @@ Class is BinaryTrees{
 			}, {
 				atomicPut(slot: 0, value: 0);
 				local Int is depthVal: d;
-				Parallel:run(threads: threads, iterations: iterations, worker: local Function(Int is start, Int is count){
-					local Int is localSum: 0;
-					local Int is k: 0;
-					while({ k < count }, {
-						local TreeNode is t: :makeTree(depth: depthVal);
-						localSum: localSum + :checkTree(node: t);
-						k++;
+				ThreadScope:open(body: local Function(ThreadScope is scope){
+					Parallel:run(scope: scope, threads: threads, iterations: iterations, worker: local Function(Int is start, Int is count){
+						local Int is localSum: 0;
+						local Int is k: 0;
+						while({ k < count }, {
+							local TreeNode is t: :makeTree(depth: depthVal);
+							localSum: localSum + :checkTree(node: t);
+							k++;
+						});
+						atomicAdd(slot: 0, value: localSum);
 					});
-					atomicAdd(slot: 0, value: localSum);
 				});
 				depthSum: atomicGet(slot: 0);
 			});

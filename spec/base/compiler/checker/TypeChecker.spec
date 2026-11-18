@@ -578,6 +578,12 @@ Class is TypeChecker{
 		if({ (target == 'String' && source == 'Str') || (target == 'Str' && source == 'String') }, {
 			return true;
 		});
+		if({ (target == 'SpecError' && (source:startsWith(prefix: 'SpecError:') || source:startsWith(prefix: 'SpecError of '))) || (source == 'SpecError' && (target:startsWith(prefix: 'SpecError:') || target:startsWith(prefix: 'SpecError of '))) }, {
+			return true;
+		});
+		if({ (target == 'Flow' && (source:startsWith(prefix: 'Flow:') || source:startsWith(prefix: 'Flow of '))) || (source == 'Flow' && (target:startsWith(prefix: 'Flow:') || target:startsWith(prefix: 'Flow of '))) }, {
+			return true;
+		});
 		# Implicit numeric widening: Int assigns to Float (explicit casts
 		# handle the narrowing directions).
 		if({ target == 'Float' && source == Primitive:INT:value() }, {
@@ -1966,7 +1972,8 @@ Class is TypeChecker{
 														already: true;
 													});
 												});
-												if({ !already && className != :currentClassName && :findMemberOwnerClass(className: className, memberName: methodName) != '' }, {
+												local String is pOwner: :findMemberOwnerClass(className: className, memberName: methodName);
+												if({ !already && className != :currentClassName && pOwner != '' && pOwner != 'Class' && pOwner != 'Stringable' && pOwner != 'Loadable' && pOwner != 'Any' }, {
 													acc:add(item: className);
 												});
 											},
@@ -2307,7 +2314,7 @@ Class is TypeChecker{
 	## @param targetName: The referenced class name.
 	## @return: true when access is granted.
 	Function of Boolean is classHasAccess(String is className, String is targetName){
-		if({ targetName == '' || :isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'Str' || targetName == 'String' || targetName == 'Function' || targetName == 'LoopControl' }, {
+		if({ targetName == '' || :isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'Str' || targetName == 'String' || targetName == 'SpecError' || targetName == 'Function' || targetName == 'LoopControl' }, {
 			return true;
 		});
 		return :accessInClass(className: className, targetName: targetName);
@@ -2828,7 +2835,7 @@ Class is TypeChecker{
 												# prefix keeps its rejection.
 												local Member is resolver: :findHeldMethod(className: root, methodName: ContractMethod:RESOLVE_HELD:value());
 												local Boolean is declaredInstance: :lookupFieldType(className: root, fieldName: segs:get(index: 1)) != '' || :lookupAnyMember(className: root, methodName: segs:get(index: 1)):kind == MemberKind:METHOD;
-												if({ segs:length() >= 2 && !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'Str' && root != 'String' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
+												if({ segs:length() >= 2 && !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'Str' && root != 'String' && root != 'SpecError' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
 													:addError(line: :currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
 													rootType: '';
 												}, {
@@ -3360,7 +3367,7 @@ Class is TypeChecker{
 		});
 		if({ recvName != '' && call:name != 'init' }, {
 			local Boolean is isSysinternalPath: targetIsPath && targetPathSegs:indexOf(search: 'sysinternal', default: -1) >= 0;
-			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || recvName == 'ThreadScope' || recvName == 'Channel' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
+			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'SpecError' || recvName == 'Function' || recvName == 'LoopControl' || recvName == 'ThreadScope' || recvName == 'Channel' || recvName == 'Flow' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
 			# Desugared enums are type-level by design:
 			# their contract methods dispatch through the class name.
 			# Held functions: the class-name prefix IS
@@ -4038,6 +4045,25 @@ Class is TypeChecker{
 		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'init' && :currentClassName != 'ThreadScope' }, {
 			:addError(line: :currentLine, msg: "Cannot construct 'ThreadScope' directly with 'ThreadScope:init'; use 'ThreadScope:open(body: ...)' so all spawned threads are joined before scope exit.");
 		});
+		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'open' && :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+			local Boolean is hasOnErrorArg: false;
+			call:args:each(action: local Function(NamedArg is arg){
+				if({ arg:name == 'onError' }, {
+					hasOnErrorArg: true;
+				});
+			});
+			if({ !hasOnErrorArg && !:classHasCustomErrorHandler(className: :currentClassName) }, {
+				:addError(line: :currentLine, msg: "ThreadScope:open requires either an 'onError:' handler argument or an enclosing class that replaces 'SpecErrorHandler'.");
+			});
+		});
+		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && (method == 'joinAll' || method == 'destroy') && :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+			:addError(line: :currentLine, msg: "Method 'ThreadScope:" . method . "' is internal to 'base:sys:thread'; 'ThreadScope:open' joins all tasks automatically.");
+		});
+		if({ (targetType == 'Task' || targetType:startsWith(prefix: 'Task:') || targetType:startsWith(prefix: 'Task of ') || recvName == 'Task') && (method == 'init' || method == 'start' || method == 'markRunning' || method == 'complete' || method == 'fail' || method == 'failAddr' || method == 'joinOnly' || method == 'destroy') }, {
+			if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+				:addError(line: :currentLine, msg: "Method 'Task:" . method . "' is internal to 'base:sys:thread'; tasks must be spawned via 'scope:spawn(task: ...)' inside a 'ThreadScope:open' block.");
+			});
+		});
 		if({ (targetType == 'Thread' || recvName == 'Thread' || call:bareProvider == 'Thread') && (method == 'threadSpawn' || method == 'threadJoin') }, {
 			if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
 				:addError(line: :currentLine, msg: "Raw thread management ('Thread:" . method . "') is restricted to 'base:sys:thread'; all threads must be spawned inside a 'ThreadScope:open' block.");
@@ -4072,22 +4098,33 @@ Class is TypeChecker{
 			res: actRetT;
 		}, {
 		if({ targetType == 'Parallel' && method == 'run' }, {
+			local Boolean is hasScope: false;
 			local Boolean is hasWorker: false;
 			call:args:each(action: local Function(NamedArg is arg){
 				local String is aName: arg:name;
 				local String is aType: :inferExpressionType(expr: arg:value);
-				if({ aName == 'threads' || aName == 'iterations' }, {
-					if({ aType != Primitive:INT:value() && aType != 'Any' }, {
-						:addError(line: :currentLine, msg: 'Parallel:run \'' . aName . '\' argument must be Int, found \'' . aType . '\'.');
+				if({ aName == 'scope' }, {
+					hasScope: true;
+					if({ aType != 'ThreadScope' && aType != 'Any' }, {
+						:addError(line: :currentLine, msg: 'Parallel:run \'scope\' argument must be ThreadScope, found \'' . aType . '\'.');
 					});
 				}, {
-					if({ aName == 'worker' }, {
-						hasWorker: true;
-						if({ !aType:startsWith(prefix: 'Function') && aType != 'Any' }, {
-							:addError(line: :currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
+					if({ aName == 'threads' || aName == 'iterations' }, {
+						if({ aType != Primitive:INT:value() && aType != 'Any' }, {
+							:addError(line: :currentLine, msg: 'Parallel:run \'' . aName . '\' argument must be Int, found \'' . aType . '\'.');
+						});
+					}, {
+						if({ aName == 'worker' }, {
+							hasWorker: true;
+							if({ !aType:startsWith(prefix: 'Function') && aType != 'Any' }, {
+								:addError(line: :currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
+							});
 						});
 					});
 				});
+			});
+			if({ !hasScope }, {
+				:addError(line: :currentLine, msg: 'Parallel:run requires \'scope\' (ThreadScope) named argument; all parallel execution must run in a ThreadScope.');
 			});
 			if({ !hasWorker }, {
 				:addError(line: :currentLine, msg: 'Parallel:run requires \'worker\' named argument.');
@@ -4117,6 +4154,16 @@ Class is TypeChecker{
 								:addError(line: :currentLine, msg: :errText:errTypeNotImported(targetType: targetType, currentClass: :currentClassName));
 							});
 							res: targetType;
+							if({ targetType == 'SpecError' && call:args:length() > 0 }, {
+								local NamedArg is kArg0: call:args:get(index: 0);
+								local String is kT: kArg0:value:resolvedType;
+								if({ kT != '' && kT != 'Any' }, {
+									res: 'SpecError:' . kT;
+								});
+							});
+							if({ targetType == 'Flow' && (expected:startsWith(prefix: 'Flow:') || expected:startsWith(prefix: 'Flow of ')) }, {
+								res: expected;
+							});
 						}, {
 							if({ :registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !:allEnumNames:has(key: targetType) }, {
 								# List get/pop REQUIRE a 'default:' argument (Never Null).
@@ -4214,6 +4261,32 @@ Class is TypeChecker{
 								if({ targetType == 'Channel' && (method == 'unbounded' || method == 'bounded') }, {
 									if({ expected:startsWith(prefix: 'Channel:') || expected:startsWith(prefix: 'Channel of ') }, {
 										res: expected;
+									});
+								});
+								if({ (targetType == 'Flow' || targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
+									if({ method == 'fromArray' && call:args:length() > 0 }, {
+										local NamedArg is fa0: call:args:get(index: 0);
+										local String is arrT: fa0:value:resolvedType;
+										if({ arrT:startsWith(prefix: 'Array:') && arrT:length() > 6 }, {
+											res: 'Flow:' . arrT:substring(start: 6, end: arrT:length());
+										}, {
+											if({ arrT:startsWith(prefix: 'Array of ') && arrT:length() > 9 }, {
+												res: 'Flow:' . arrT:substring(start: 9, end: arrT:length());
+											});
+										});
+									});
+									if({ method == 'map' && call:args:length() > 0 }, {
+										local NamedArg is ma0: call:args:get(index: 0);
+										local String is mFnT: ma0:value:resolvedType;
+										if({ mFnT:startsWith(prefix: 'Function:') && mFnT:length() > 9 }, {
+											res: 'Flow:' . mFnT:substring(start: 9, end: mFnT:length());
+										});
+									});
+									if({ (method == 'channelFlow' || method == 'merge') && (expected:startsWith(prefix: 'Flow:') || expected:startsWith(prefix: 'Flow of ')) }, {
+										res: expected;
+									});
+									if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && (targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
+										res: targetType;
 									});
 								});
 							}, {
@@ -4364,6 +4437,49 @@ Class is TypeChecker{
 		return lazyRet;
 	}
 
+	## True when [className] or one of its non-root ancestors explicitly declares `SpecErrorHandler`.
+	Function of Boolean is classHasCustomErrorHandler(String is className){
+		return :classHasCustomErrorHandlerWalk(className: className, visited: []);
+	}
+
+	Function of Boolean is classHasCustomErrorHandlerWalk(String is className, Array of String is visited){
+		if({ className == '' || className == 'Class' || className == 'Stringable' || className == 'Loadable' || className == 'Any' || className == 'Enum' }, {
+			return false;
+		});
+		if({ visited:indexOf(search: className, default: -1) >= 0 }, {
+			return false;
+		});
+		visited:add(item: className);
+		local ClassInfo is cls: :findClass(name: className);
+		if({ cls:name == '' }, {
+			return false;
+		});
+		local Boolean is found: false;
+		cls:members:each(action: local Function(Member is m){
+			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' }, {
+				found: true;
+			});
+		});
+		if({ found }, {
+			return true;
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if({ !found && :classHasCustomErrorHandlerWalk(className: baseName, visited: visited) }, {
+				found: true;
+			});
+		});
+		return found;
+	}
+
+	## True when [t] is `ThreadScope` or embeds `ThreadScope` as a type argument.
+	Function of Boolean is containsThreadScopeType(String is t){
+		if({ t == 'ThreadScope' }, { return true; });
+		if({ t:contains(needle: ':ThreadScope') || t:contains(needle: 'ThreadScope:') || t:contains(needle: ' of ThreadScope') }, {
+			return true;
+		});
+		return false;
+	}
+
 	## True when [expr] is rooted in a local variable declared inside the
 	## current `lazy({ ... })` block (`:lazyLocalVars`).
 	Function of Boolean is isLazyLocalTarget(Expression is expr){
@@ -4510,6 +4626,9 @@ Class is TypeChecker{
 					local String is msg: 'Bare List type requires [T] element syntax.';
 					:addError(line: stmt:line, msg: msg);
 				});
+				if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && :containsThreadScopeType(t: fullType) }, {
+					:addError(line: stmt:line, msg: "Cannot declare local variable '" . varName . "' of type '" . :displayType(t: fullType) . "'; 'ThreadScope' is lexically bound to 'ThreadScope:open(body: { (ThreadScope is scope) ... })' and cannot be stored in local variables.");
+				});
 
 				if({ hasInit }, {
 					# Bidirectional: the declared type flows into the
@@ -4563,6 +4682,9 @@ Class is TypeChecker{
 				], default: {});
 				local String is targetType: :inferExpressionType(expr: assignTarget);
 				local String is valType: :inferExpressionType(expr: assignValue, expected: targetType);
+				if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && (:containsThreadScopeType(t: targetType) || :containsThreadScopeType(t: valType)) }, {
+					:addError(line: stmt:line, msg: "Cannot assign 'ThreadScope'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot be reassigned or stored.");
+				});
 				if({ !:isAssignable(target: targetType, source: valType) }, {
 						local String is msg: :errText:errTypeMismatchAssign(valType: valType, targetType: targetType);
 						# the same for assignments.
@@ -4881,6 +5003,9 @@ Class is TypeChecker{
 			});
 		});
 		:currentMethodReturnType: :resolveReturnType(t: method:memberType);
+		if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && :containsThreadScopeType(t: :currentMethodReturnType) }, {
+			:addError(line: method:line, msg: "Method '" . :currentClassName . ":" . method:name . "' cannot return 'ThreadScope'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot escape.");
+		});
 		if({ :currentMethodReturnType == '' || :isVoid(t: :currentMethodReturnType) }, {
 			if({ method:name == ContractMethod:EVALUATE:value() || method:name == ContractMethod:ITERATION:value() }, {
 				:currentMethodReturnType: 'Boolean';
@@ -5616,6 +5741,9 @@ Class is TypeChecker{
 					});
 					if({ m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() && !m:name:startsWith(prefix: '_import_') }, {
 						local String is declaredType: :formatVarTypeString(t: m:memberType);
+						if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && :containsThreadScopeType(t: declaredType) }, {
+							:addError(line: m:line, msg: "Cannot store 'ThreadScope' in field '" . classDef:name . ":" . m:name . "'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot escape.");
+						});
 						if({ m:hasInit }, {
 							# Bidirectional: the declared type flows in.
 							# A HELD initializer has no instance scope

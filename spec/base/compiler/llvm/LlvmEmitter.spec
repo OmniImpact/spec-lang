@@ -16,6 +16,9 @@ Class is LlvmEmitter{
 		['base', 'compiler', 'llvm', LlvmStructLayout],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', 'thread', Task],
+		['base', 'sys', as Process()],
 		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
@@ -100,7 +103,7 @@ Class is LlvmEmitter{
 		return out;
 	}
 
-	Function of String is emitModule(IrModule is mod){
+	local Function of String is emitModuleHeader(IrModule is mod){
 		local LlvmRuntimePrelude is prelude: LlvmRuntimePrelude:init();
 		local String is out: ```
 ; Spec LLVM IR
@@ -264,6 +267,11 @@ Class is LlvmEmitter{
 			li++;
 		});
 		if({ mod:stringLiterals:length() > 0 }, { out: out . "\n"; });
+		return out;
+	}
+
+	Function of String is emitModule(IrModule is mod){
+		local String is out: :emitModuleHeader(mod: mod);
 
 		# Functions
 		if({ :debugMode }, {
@@ -282,6 +290,50 @@ Class is LlvmEmitter{
 		});
 		if({ :debugMode }, {
 			out: out . :emitDebugMetadata();
+		});
+		return out;
+	}
+
+	## Emits an [IrModule] to LLVM IR text, parallelizing per-function emission
+	## across [threads] tasks inside [scope] when debug metadata is disabled.
+	Function of String is emitModuleScoped(IrModule is mod, ThreadScope is scope, Int is threads: 1){
+		if({ :debugMode || threads <= 1 || mod:functions:length() <= 1 }, {
+			return :emitModule(mod: mod);
+		});
+		Process:arrayFreeze(a: mod:functions);
+		local Int is nFn: mod:functions:length();
+		local Int is nWorkers: if({ threads < nFn }, { threads }, { nFn });
+		local Int is baseCount: nFn / nWorkers;
+		local Int is rem: nFn % nWorkers;
+		local Array of Task of String is workerTasks: [];
+		local Int is curStart: 0;
+		local Int is w: 0;
+		while({ w < nWorkers }, {
+			local Int is cnt: baseCount + if({ w < rem }, { 1 }, { 0 });
+			local Int is sIdx: curStart;
+			local Int is eIdx: curStart + cnt;
+			curStart: eIdx;
+			local Task of String is wt: scope:spawn(task: local Function of String(){
+				local String is chunk: '';
+				local Int is k: sIdx;
+				while({ k < eIdx }, {
+					chunk: chunk . :emitFunction(fn: mod:functions:get(index: k)) . "\n";
+					k++;
+				});
+				return chunk;
+			});
+			workerTasks:add(item: wt);
+			w++;
+		});
+
+		# Emit module header, structs, vtables, registries, and string literals on the calling thread
+		local String is out: :emitModuleHeader(mod: mod);
+
+		local Int is wi: 0;
+		while({ wi < workerTasks:length() }, {
+			local Task of String is t: workerTasks:get(index: wi);
+			out: out . t:await();
+			wi++;
 		});
 		return out;
 	}

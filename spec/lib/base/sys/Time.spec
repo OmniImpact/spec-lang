@@ -7,9 +7,15 @@ Class is Time{
 
 	replace Array of Array of String is using: [
 		['base', 'sysinternal', Time],
+		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', 'thread', Task],
+		['base', 'struct', Array],
+		['base', 'sys', as Parallel()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
+
+	held Array of Int is activeTimers: [];
 
 	## Returns a monotonic high-resolution timestamp in nanoseconds.
 	Function of Int is monotonicNs(){
@@ -140,21 +146,84 @@ Class is Time{
 		});
 	}
 
-	## Schedules [callback] to run asynchronously on a background thread after [ms]
+	## Schedules [callback] to run asynchronously inside [scope] after [ms]
 	## milliseconds. Returns a timer ID that can be passed to [cancelTimer].
-	Function of Int is setTimeout(Int is ms, Function is callback){
-		return base:sysinternal:Time:time_set_timeout(ms: ms, callback: callback);
+	Function of Int is setTimeout(ThreadScope is scope, Int is ms, Function is callback){
+		return setInterval(scope: scope, ms: ms, count: 1, callback: callback);
 	}
 
-	## Schedules [callback] to run asynchronously every [ms] milliseconds for [count]
-	## invocations (or indefinitely if [count] <= 0). Returns a timer ID.
-	Function of Int is setInterval(Int is ms, Int is count, Function is callback){
-		return base:sysinternal:Time:time_set_interval(ms: ms, count: count, callback: callback);
+	## Schedules [callback] to run asynchronously inside [scope] every [ms] milliseconds
+	## for [count] invocations (or indefinitely until cancelled if [count] <= 0). Returns a timer ID.
+	Function of Int is setInterval(ThreadScope is scope, Int is ms, Int is count, Function is callback){
+		local Int is tid: 0;
+		Parallel:syncWith(lock: 78, action: {
+			Time:activeTimers:add(item: 0);
+			tid: Time:activeTimers:length();
+		});
+		scope:spawn(task: local Function(){
+			local Int is intervalNs: if({ ms > 0 }, { ms * 1000000 }, { 0 });
+			local Int is targetNs: base:sysinternal:Time:time_monotonic_ns() + intervalNs;
+			local Int is executed: 0;
+			local Boolean is keepGoing: true;
+			while({ keepGoing && (count <= 0 || executed < count) }, {
+				local Boolean is waiting: true;
+				while({ waiting }, {
+					local Boolean is isCancelled: scope:isCancelled();
+					if({ !isCancelled }, {
+						Parallel:syncWith(lock: 78, action: {
+							if({ Time:activeTimers:get(index: tid - 1, default: 1) != 0 }, {
+								isCancelled: true;
+							});
+						});
+					});
+					if({ isCancelled }, {
+						waiting: false;
+						keepGoing: false;
+					}, {
+						local Int is remNs: targetNs - base:sysinternal:Time:time_monotonic_ns();
+						if({ remNs <= 0 }, {
+							waiting: false;
+						}, {
+							local Int is chunkNs: if({ remNs > 5000000 }, { 5000000 }, { remNs });
+							base:sysinternal:Time:time_sleep_ns(ns: chunkNs);
+						});
+					});
+				});
+				if({ keepGoing }, {
+					local Boolean is isCancelledNow: scope:isCancelled();
+					if({ !isCancelledNow }, {
+						Parallel:syncWith(lock: 78, action: {
+							if({ Time:activeTimers:get(index: tid - 1, default: 1) != 0 }, {
+								isCancelledNow: true;
+							});
+						});
+					});
+					if({ !isCancelledNow }, {
+						callback();
+						executed: executed + 1;
+						targetNs: targetNs + intervalNs;
+					}, {
+						keepGoing: false;
+					});
+				});
+			});
+			Parallel:syncWith(lock: 78, action: {
+				Time:activeTimers:set(index: tid - 1, value: 2);
+			});
+		});
+		return tid;
 	}
 
 	## Cancels an active asynchronous timer created by [setTimeout] or [setInterval].
 	## Returns `true` if the timer was found and marked cancelled.
 	Function of Boolean is cancelTimer(Int is timerId){
-		return base:sysinternal:Time:time_cancel_timer(timer_id: timerId);
+		local Boolean is found: false;
+		Parallel:syncWith(lock: 78, action: {
+			if({ timerId >= 1 && timerId <= Time:activeTimers:length() && Time:activeTimers:get(index: timerId - 1, default: 1) == 0 }, {
+				Time:activeTimers:set(index: timerId - 1, value: 1);
+				found: true;
+			});
+		});
+		return found;
 	}
 }

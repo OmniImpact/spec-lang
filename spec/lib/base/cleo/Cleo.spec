@@ -27,7 +27,8 @@ Class is Cleo{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Parallel()],
-		['base', 'sys', as Time()]
+		['base', 'sys', as Time()],
+		['base', 'sys', 'thread', ThreadScope]
 	];
 
 	String is title: '';
@@ -293,7 +294,7 @@ Class is Cleo{
 
 	# --- Lifecycle ---
 
-	Function is start(){
+	Function is start(ThreadScope is scope){
 		Parallel:syncWith(lock: 77, action: {
 			if({ :running }, { return; });
 			:ttyMode: Ansi:isTty();
@@ -310,7 +311,7 @@ Class is Cleo{
 		});
 		:flush();
 		if({ :ttyMode && :tickIntervalMs > 0 }, {
-			:timerId: Time:setInterval(ms: :tickIntervalMs, count: 0, callback: {
+			:timerId: Time:setInterval(scope: scope, ms: :tickIntervalMs, count: 0, callback: {
 				:tick();
 			});
 		});

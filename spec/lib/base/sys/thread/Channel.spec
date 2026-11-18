@@ -197,6 +197,9 @@ Class is Channel of T{
 				});
 				local T is item: Mem:addrToObj(addr: bits);
 				onItem(item);
+				if({ Mem:hasPendingError() }, {
+					active: false;
+				});
 			});
 		});
 	}

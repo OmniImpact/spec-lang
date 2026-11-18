@@ -9,6 +9,8 @@ Class is PiBenchmark{
 		['base', 'math', as Math()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Parallel()],
+		['base', 'core', SpecError],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
@@ -18,6 +20,11 @@ Class is PiBenchmark{
 	local Int is gridW: 44;
 	local Int is gridH: 22;
 	local PiStats is stats: PiStats:init();
+
+	replace Function is SpecErrorHandler(SpecError is error){
+		line(error:toString());
+		exit(status: 1);
+	}
 
 	## Entry point; reads optional [args] (`threads`, `points`, `refresh`) and runs the parallel benchmark.
 	replace Function is init(Map of String to String is args){
@@ -79,7 +86,10 @@ Class is PiBenchmark{
 		};
 
 		local Int is startedAtMs: clockMs();
-		local Int is totalHits: Parallel:run(threads: threads, iterations: points, worker: sampler);
+		local Int is totalHits: 0;
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			totalHits: Parallel:run(scope: scope, threads: threads, iterations: points, worker: sampler);
+		});
 		local Int is elapsedMs: clockMs() - startedAtMs;
 
 		:drawProgress(threads: threads);

@@ -11,6 +11,7 @@ Class of SpecUnitTest is TestThreads{
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', 'thread', Channel],
+		['base', 'sys', 'thread', Flow],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Time()],
 		['base', 'sys', as Loops()],
@@ -184,5 +185,135 @@ Class is BadRawThreadSpawn{
 ''',
 			expect: "restricted to 'base:sys:thread'"
 		);
+
+		Assert:compilerRejects(
+			source: '''
+Class is BadDirectTaskInit{
+	replace Array of Array of String is using: [
+		['base', 'sys', 'thread', Task]
+	];
+	replace Function is init(){
+		local Task is t: Task:init();
+	}
+}
+''',
+			expect: "Method 'Task:init' is internal to 'base:sys:thread'"
+		);
+
+		Assert:compilerRejects(
+			source: '''
+Class is BadScopeFieldEscape{
+	replace Array of Array of String is using: [
+		['base', 'sys', 'thread', ThreadScope]
+	];
+	local ThreadScope is leakedScope;
+	replace Function is init(){
+	}
+}
+''',
+			expect: "Cannot store 'ThreadScope' in field"
+		);
+
+		Assert:compilerRejects(
+			source: '''
+Class is BadScopeReturnEscape{
+	replace Array of Array of String is using: [
+		['base', 'sys', 'thread', ThreadScope]
+	];
+	Function of ThreadScope is leak(ThreadScope is scope){
+		return scope;
+	}
+	replace Function is init(){
+	}
+}
+''',
+			expect: "cannot return 'ThreadScope'"
+		);
+
+		Assert:compilerRejects(
+			source: '''
+Class is BadUnscopedParallelRun{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Parallel()]
+	];
+	replace Function is init(){
+		Parallel:run(threads: 2, iterations: 10, worker: local Function of Int(Int is idx, Int is cnt){ return 0; });
+	}
+}
+''',
+			expect: "Parallel:run requires 'scope' (ThreadScope)"
+		);
+	}
+
+	## 6. Cold Flow of T operators: fromArray, filter, map, take, onEach, onCompletion, and buffer.
+	Function is testColdFlowAndBufferOperators(){
+		local Array of Int is nums: [1, 2, 3, 4, 5, 6, 7, 8];
+		local Int is eachSum: 0;
+		local Boolean is completed: false;
+		local Array of String is out: [];
+
+		local Flow of Int is baseFlow: Flow:fromArray(items: nums);
+		local Flow of Int is evens: baseFlow:filter(predicate: local Function of Boolean(Int is n){
+			return (n % 2) == 0;
+		});
+		local Flow of Int is firstThreeEvens: evens:take(count: 3);
+		local Flow of Int is tracked: firstThreeEvens:onEach(action: local Function(Int is n){
+			eachSum: eachSum + n;
+		});
+		local Flow of String is mapped: tracked:map(transform: local Function of String(Int is n){
+			return 'item-' . (n as String);
+		});
+		local Flow of String is finalFlow: mapped:buffer(capacity: 2):onCompletion(action: local Function(){
+			completed: true;
+		});
+
+		finalFlow:collect(onItem: local Function(String is s){
+			out:add(item: s);
+		});
+
+		# Evens are 2, 4, 6 -> sum = 12, strings = ['item-2', 'item-4', 'item-6']
+		Assert:isTrue(completed);
+		Assert:areEqualInt(12, eachSum);
+		Assert:areEqualInt(3, out:length());
+		Assert:areEqualString('item-2', out:get(index: 0, default: ''));
+		Assert:areEqualString('item-4', out:get(index: 1, default: ''));
+		Assert:areEqualString('item-6', out:get(index: 2, default: ''));
+	}
+
+	## 7. Concurrent Flow:channelFlow and Flow:merge over ThreadScope + Channel.
+	Function is testConcurrentChannelFlowAndMerge(){
+		local Flow of Int is cf: Flow:channelFlow(producer: local Function(ThreadScope is scope, Channel of Int is chan){
+			scope:spawn(task: local Function(){
+				chan:send(item: 10);
+				chan:send(item: 20);
+			});
+			scope:spawn(task: local Function(){
+				chan:send(item: 30);
+				chan:send(item: 40);
+			});
+		});
+
+		local Int is cfSum: 0;
+		local Int is cfCount: 0;
+		cf:collect(onItem: local Function(Int is v){
+			cfSum: cfSum + v;
+			cfCount: cfCount + 1;
+		});
+		Assert:areEqualInt(4, cfCount);
+		Assert:areEqualInt(100, cfSum);
+
+		local Flow of Int is f1: Flow:fromArray(items: [1, 2, 3]);
+		local Flow of Int is f2: Flow:fromArray(items: [10, 20, 30]);
+		local Array of Flow is both: [f1, f2];
+		local Flow of Int is merged: Flow:merge(flows: both);
+
+		local Int is mSum: 0;
+		local Int is mCount: 0;
+		merged:collect(onItem: local Function(Int is v){
+			mSum: mSum + v;
+			mCount: mCount + 1;
+		});
+		Assert:areEqualInt(6, mCount);
+		Assert:areEqualInt(66, mSum);
 	}
 }

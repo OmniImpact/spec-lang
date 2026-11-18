@@ -228,15 +228,10 @@ Class of CallLowerer is SysinternalCallLowerer{
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, { return 'null'; });
 		if({ :isTargetClass(call: call, clsName: 'Parallel') }, {
-			if({ call:name == 'run' }, {
-				local String is thr: :lowerNamedArg(b: b, call: call, argName: 'threads', posIdx: 0, defVal: '1');
-				local String is iters: :lowerNamedArg(b: b, call: call, argName: 'iterations', posIdx: 1, defVal: '0');
-				local String is wrk: :lowerNamedArg(b: b, call: call, argName: 'worker', posIdx: 2, defVal: 'null');
-				return :emitSysCall(b: b, retType: IrType:I64, callee: 'spec_parallel_run', argTypes: [IrType:I64, IrType:I64, IrType:Ptr], args: [thr, iters, wrk]);
-			});
 			if({ call:name == 'sync' }, {
 				local String is act: :lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 0, defVal: 'null');
 				local String is raw: :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync', argTypes: [IrType:Ptr], args: [act]);
+				b:emitCheckUnwindAfterCall(callee: 'Parallel_sync');
 				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
 				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
 			});
@@ -244,6 +239,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 				local String is lk: :lowerNamedArg(b: b, call: call, argName: 'lock', posIdx: 0, defVal: '0');
 				local String is act: :lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 1, defVal: 'null');
 				local String is raw: :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync_with', argTypes: [IrType:I64, IrType:Ptr], args: [lk, act]);
+				b:emitCheckUnwindAfterCall(callee: 'Parallel_sync');
 				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
 				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
 			});

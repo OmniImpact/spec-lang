@@ -49,7 +49,64 @@ Class is Pool{
 		return objAddr;
 	}
 
+	Function of Boolean is pushErrorHandler(Int is objAddr){
+		if({ objAddr == 0 }, { return false; });
+		local Int is top: Mem:tlsGetI64(slot: 7);
+		local Int is stk: Mem:tlsGetI64(slot: 6);
+		if({ top > 0 && stk != 0 && Mem:loadI64(ptr: stk, byteOffset: (top - 1) * 8) == objAddr }, {
+			return false;
+		});
+		local Int is cap: Mem:tlsGetI64(slot: 8);
+		if({ top == cap }, {
+			local Int is ncap: if({ cap == 0 }, { 8 }, { cap * 2 });
+			local Int is nstk: Mem:realloc(ptr: stk, bytes: ncap * 8);
+			Mem:tlsSetI64(slot: 6, val: nstk);
+			Mem:tlsSetI64(slot: 8, val: ncap);
+			stk: nstk;
+		});
+		Mem:storeI64(ptr: stk, byteOffset: top * 8, val: objAddr);
+		Mem:tlsSetI64(slot: 7, val: top + 1);
+		return true;
+	}
+
+	Function is popErrorHandler(Boolean is pushed){
+		if({ pushed }, {
+			local Int is top: Mem:tlsGetI64(slot: 7);
+			if({ top > 0 }, {
+				Mem:tlsSetI64(slot: 7, val: top - 1);
+			});
+		});
+	}
+
+	Function is raisePendingError(Int is errAddr){
+		if({ errAddr == 0 }, { return; });
+		Mem:retainAddr(objAddr: errAddr);
+		local Int is prev: Mem:tlsGetI64(slot: 15);
+		if({ prev != 0 }, {
+			Mem:releaseAddr(objAddr: prev);
+		});
+		Mem:tlsSetI64(slot: 15, val: errAddr);
+	}
+
+	Function of Int is takePendingError(){
+		local Int is cur: Mem:tlsGetI64(slot: 15);
+		Mem:tlsSetI64(slot: 15, val: 0);
+		return cur;
+	}
+
 	Function is threadCleanup(){
+		local Int is pend: Mem:tlsGetI64(slot: 15);
+		if({ pend != 0 }, {
+			Mem:tlsSetI64(slot: 15, val: 0);
+			Mem:releaseAddr(objAddr: pend);
+		});
+		local Int is hstk: Mem:tlsGetI64(slot: 6);
+		if({ hstk != 0 }, {
+			Mem:free(ptr: hstk);
+			Mem:tlsSetI64(slot: 6, val: 0);
+			Mem:tlsSetI64(slot: 7, val: 0);
+			Mem:tlsSetI64(slot: 8, val: 0);
+		});
 		local Int is stk: Mem:tlsGetI64(slot: 3);
 		if({ stk != 0 }, {
 			:poolReleaseTo(mark: 0);

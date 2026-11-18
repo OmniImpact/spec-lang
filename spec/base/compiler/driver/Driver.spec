@@ -37,8 +37,15 @@ Class is Driver{
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'checker', TypeError],
+		['base', 'core', SpecError],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()]
 	];
+
+	replace Function is SpecErrorHandler(SpecError is error){
+		Stderr:line(error:toString());
+		Process:exit(status: 1);
+	}
 
 	## Entry-init probe results (resolveEntryInit): the QUALIFIED name of
 	## the class owning the CHOSEN init ('' when none was chosen — the
@@ -110,7 +117,6 @@ Class is Driver{
 
 		local String is source: fileRead(path: inputPath, default: '');
 		local Int is specLines: source:lines():length();
-		Process:monitorStart();
 		local Int is t0: Process:clockMs();
 		local Int is loadMs: 0;
 		local Int is checkMs: 0;
@@ -133,210 +139,221 @@ Class is Driver{
 			return;
 		});
 
-		# 1. Multi-file module loading and dependency resolution.
-		local Int is loadT0: Process:clockMs();
-		local Loader is loader: Loader:init();
-		sourceDirs:each(action: local Function(String is d){
-			loader:addSourceDir(dir: d);
-		});
-		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
-		loadMs: Process:clockMs() - loadT0;
+		local Int is exitCode: 0;
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			Process:monitorStart(scope: scope);
 
-		local Int is classCount: program:classes:length();
-		local Int is methodCount: 0;
-		program:classes:each(action: local Function(ClassInfo is c){
-			c:members:each(action: local Function(Member is m){
-				if({ m:kind == MemberKind:METHOD }, {
-					methodCount: methodCount + 1;
+			# 1. Multi-file module loading and dependency resolution.
+			local Int is loadT0: Process:clockMs();
+			local Loader is loader: Loader:init();
+			sourceDirs:each(action: local Function(String is d){
+				loader:addSourceDir(dir: d);
+			});
+			local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
+			loadMs: Process:clockMs() - loadT0;
+
+			local Int is classCount: program:classes:length();
+			local Int is methodCount: 0;
+			program:classes:each(action: local Function(ClassInfo is c){
+				c:members:each(action: local Function(Member is m){
+					if({ m:kind == MemberKind:METHOD }, {
+						methodCount: methodCount + 1;
+					});
 				});
 			});
-		});
-		report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
-		if({ loader:getParseErrors():length() > 0 }, {
-			Stderr:line('Compilation errors encountered during loading:');
-			local Array of String is loadErrors: loader:getParseErrors();
-			loadErrors:each(action: local Function(String is err){
-				Stderr:line(err);
+			report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
+			if({ loader:getParseErrors():length() > 0 }, {
+				Stderr:line('Compilation errors encountered during loading:');
+				local Array of String is loadErrors: loader:getParseErrors();
+				loadErrors:each(action: local Function(String is err){
+					Stderr:line(err);
+				});
+				Stderr:line('Compilation aborted due to syntax or load errors.');
+				loader:cleanup();
+				Process:monitorStop();
+				exitCode: 1;
+				return;
 			});
-			Stderr:line('Compilation aborted due to syntax or load errors.');
-			Process:exit(status: 1);
-		});
-		loader:cleanup();
+			loader:cleanup();
 
-		# 2. Semantic static type checking.
-		local Int is checkT0: Process:clockMs();
-		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is typeErrors: tc:checkProgram(program: program);
-		checkMs: Process:clockMs() - checkT0;
-		local Int is errCount: typeErrors:length();
-		tc:cleanup();
-		report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
-		if({ errCount > 0 }, {
-			Stderr:line('Type errors encountered during compilation:');
-			typeErrors:each(action: local Function(TypeError is err){
-				Stderr:line(err:toString());
+			# 2. Semantic static type checking.
+			local Int is checkT0: Process:clockMs();
+			local TypeChecker is tc: TypeChecker:init();
+			local Array of TypeError is typeErrors: tc:checkProgram(program: program);
+			checkMs: Process:clockMs() - checkT0;
+			local Int is errCount: typeErrors:length();
+			tc:cleanup();
+			report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
+			if({ errCount > 0 }, {
+				Stderr:line('Type errors encountered during compilation:');
+				typeErrors:each(action: local Function(TypeError is err){
+					Stderr:line(err:toString());
+				});
+				Stderr:line('Compilation aborted due to type errors.');
+				Process:monitorStop();
+				exitCode: 1;
+				return;
 			});
-			Stderr:line('Compilation aborted due to type errors.');
-			Process:exit(status: 1);
-		});
 
-		# 3. Entry class — scoped to the ROOT FILE's classes. The loader
-		# preloads the root lattice (Any, Loadable, String, ...) into the
-		# program set ahead of user code, so an unscoped fallback would
-		# select a lattice class and emit a main that constructs Any.
-		# The parser stamps every loaded class with its declaring file,
-		# and the root file is this compile's input path.
-		if({ classCount == 0 }, {
-			Stderr:line('Error: No class definitions found in source file.');
-			Process:exit(status: 1);
-		});
-		local Array of ClassInfo is rootClasses: [];
-		program:classes:each(action: local Function(ClassInfo is c){
-			if({ c:sourceFile == inputPath }, {
-				rootClasses:add(item: c);
+			# 3. Entry class — scoped to the ROOT FILE's classes.
+			if({ classCount == 0 }, {
+				Stderr:line('Error: No class definitions found in source file.');
+				Process:monitorStop();
+				exitCode: 1;
+				return;
 			});
-		});
-		if({ rootClasses:length() == 0 }, {
-			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
-			Process:exit(status: 1);
-		});
-		local String is entryName: '';
-		local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
-		rootClasses:each(action: local Function(ClassInfo is c){
-			if({ entryName == '' }, {
-				c:members:each(action: local Function(Member is m){
-					if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
-						local Parameter is p: m:params:get(index: 0);
-						if({ p:paramType:name == 'Map' }, {
-							entryName: c:name;
-							entryClassInfo: c;
+			local Array of ClassInfo is rootClasses: [];
+			program:classes:each(action: local Function(ClassInfo is c){
+				if({ c:sourceFile == inputPath }, {
+					rootClasses:add(item: c);
+				});
+			});
+			if({ rootClasses:length() == 0 }, {
+				Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
+				Process:monitorStop();
+				exitCode: 1;
+				return;
+			});
+			local String is entryName: '';
+			local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
+			rootClasses:each(action: local Function(ClassInfo is c){
+				if({ entryName == '' }, {
+					c:members:each(action: local Function(Member is m){
+						if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
+							local Parameter is p: m:params:get(index: 0);
+							if({ p:paramType:name == 'Map' }, {
+								entryName: c:name;
+								entryClassInfo: c;
+							});
 						});
 					});
 				});
 			});
-		});
-		if({ entryName == '' }, {
-			rootClasses:each(action: local Function(ClassInfo is c){
-				if({ entryName == '' && c:baseClass != 'Enum' }, {
-					entryName: c:name;
-					entryClassInfo: c;
+			if({ entryName == '' }, {
+				rootClasses:each(action: local Function(ClassInfo is c){
+					if({ entryName == '' && c:baseClass != 'Enum' }, {
+						entryName: c:name;
+						entryClassInfo: c;
+					});
 				});
 			});
-		});
-		if({ entryName == '' }, {
-			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
-			Process:exit(status: 1);
-		});
+			if({ entryName == '' }, {
+				Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
+				Process:monitorStop();
+				exitCode: 1;
+				return;
+			});
 
-		# The entry rule: feed the command-line args when an init can
-		# take them (the argv Map), else construct through an empty
-		# init, else — only when the lattice declares overloads but
-		# neither form exists — a compile-time diagnostic, never a raw
-		# backend-C failure. An entry with no init at all constructs
-		# through its synthesized zero-arg default and is fine.
-		:entryInitOwner: '';
-		:entryInitParams: 0;
-		:entryInitFirstParam: '';
-		:entryInitOverloadIndex: 0;
-		:entryInitTakesMap: false;
-		:entryInitSawAny: false;
-		local Array of String is latticeVisited: [];
-		:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
-		if({ :entryInitOwner == '' && :entryInitSawAny }, {
-			Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
-			Process:exit(status: 1);
-		});
+			:entryInitOwner: '';
+			:entryInitParams: 0;
+			:entryInitFirstParam: '';
+			:entryInitOverloadIndex: 0;
+			:entryInitTakesMap: false;
+			:entryInitSawAny: false;
+			local Array of String is latticeVisited: [];
+			:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
+			if({ :entryInitOwner == '' && :entryInitSawAny }, {
+				Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
+				Process:monitorStop();
+				exitCode: 1;
+				return;
+			});
 
-		# 4. LLVM IR code generation over the FULL loaded class set.
-		local Int is llvmGenT0: Process:clockMs();
-		local IrBuilder is irb: IrBuilder:init();
-		irb:entryInitOwner: :entryInitOwner;
-		irb:entryInitOverloadIndex: :entryInitOverloadIndex;
-		irb:entryInitTakesMap: :entryInitTakesMap;
-		local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
-		if({ !args:has(key: 'no-opt') }, {
-			local OptimizerPipeline is optPipe: OptimizerPipeline:init();
-			optPipe:run(mod: irMod);
-		});
-		local LlvmEmitter is emitter: LlvmEmitter:init();
-		emitter:debugMode: debugMode;
-		local String is llText: emitter:emitModule(mod: irMod);
-		genMs: Process:clockMs() - llvmGenT0;
+			# 4. LLVM IR code generation over the FULL loaded class set.
+			local Int is llvmGenT0: Process:clockMs();
+			local IrBuilder is irb: IrBuilder:init();
+			irb:entryInitOwner: :entryInitOwner;
+			irb:entryInitOverloadIndex: :entryInitOverloadIndex;
+			irb:entryInitTakesMap: :entryInitTakesMap;
+			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
+			if({ !args:has(key: 'no-opt') }, {
+				local OptimizerPipeline is optPipe: OptimizerPipeline:init();
+				optPipe:run(mod: irMod);
+			});
+			local LlvmEmitter is emitter: LlvmEmitter:init();
+			emitter:debugMode: debugMode;
+			local String is llText: emitter:emitModuleScoped(mod: irMod, scope: scope, threads: threadCount);
+			genMs: Process:clockMs() - llvmGenT0;
 
-		local Int is llLines: Buf:bufCountByte(b: llText, byteVal: 10);
-		local String is tempLlPath: emitLlvmPath;
-		if({ tempLlPath == '' }, {
-			tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
-		});
-		fileWrite(path: tempLlPath, content: llText);
-		report:stage(n: 3, total: 4, label: 'generating LLVM IR · ' . (llLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
+			local Int is llLines: Buf:bufCountByte(b: llText, byteVal: 10);
+			local String is tempLlPath: emitLlvmPath;
+			if({ tempLlPath == '' }, {
+				tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
+			});
+			fileWrite(path: tempLlPath, content: llText);
+			report:stage(n: 3, total: 4, label: 'generating LLVM IR · ' . (llLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 
-		if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
-			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
-			Process:monitorStop();
-			report:summary(inputPath: inputPath, outputPath: emitLlvmPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: llLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
-			return;
-		});
+			if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
+				if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
+				Process:monitorStop();
+				report:summary(inputPath: inputPath, outputPath: emitLlvmPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: llLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
+				return;
+			});
 
-		# 5. Ensure spec_runtime.o exists and compile/link via clang.
-		local String is cacheDir: Uri:runtimeCacheDir();
-		local String is runtimeC: cacheDir . '/spec_runtime.c';
-		local String is runtimeO: cacheDir . '/spec_runtime.o';
-		if({ args:has(key: 'clean-cache') }, {
-			fileRemove(path: runtimeO);
-			fileRemove(path: runtimeC);
-		});
-		local RuntimePrelude is rp: RuntimePrelude:init();
-		local String is rtText: rp:emitRuntime();
-		if({ !fileExists(path: runtimeO) || Dir:fileSize(path: runtimeC) != Buf:bufLength(b: rtText) || args:has(key: 'clean-cache') }, {
-			Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
-			if({ !fileWrite(path: runtimeC, content: rtText) }, {
-				cacheDir: Uri:systemTempDir() . '/spec_cache/runtime';
-				runtimeC: cacheDir . '/spec_runtime.c';
-				runtimeO: cacheDir . '/spec_runtime.o';
+			# 5. Ensure spec_runtime.o exists and compile/link via clang.
+			local String is cacheDir: Uri:runtimeCacheDir();
+			local String is runtimeC: cacheDir . '/spec_runtime.c';
+			local String is runtimeO: cacheDir . '/spec_runtime.o';
+			if({ args:has(key: 'clean-cache') }, {
+				fileRemove(path: runtimeO);
+				fileRemove(path: runtimeC);
+			});
+			local RuntimePrelude is rp: RuntimePrelude:init();
+			local String is rtText: rp:emitRuntime();
+			if({ !fileExists(path: runtimeO) || Dir:fileSize(path: runtimeC) != Buf:bufLength(b: rtText) || args:has(key: 'clean-cache') }, {
 				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
-				fileWrite(path: runtimeC, content: rtText);
+				if({ !fileWrite(path: runtimeC, content: rtText) }, {
+					cacheDir: Uri:systemTempDir() . '/spec_cache/runtime';
+					runtimeC: cacheDir . '/spec_runtime.c';
+					runtimeO: cacheDir . '/spec_runtime.o';
+					Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
+					fileWrite(path: runtimeC, content: rtText);
+				});
+				Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
 			});
-			Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
-		});
 
-		if({ Process:osName() == 'linux' }, {
-			local Boolean is usesAudio: false;
-			program:classes:each(action: local Function(ClassInfo is cls){
-				if({ cls:name == 'Audio' }, {
-					usesAudio: true;
+			if({ Process:osName() == 'linux' }, {
+				local Boolean is usesAudio: false;
+				program:classes:each(action: local Function(ClassInfo is cls){
+					if({ cls:name == 'Audio' }, {
+						usesAudio: true;
+					});
+				});
+				if({ usesAudio && !fileExists(path: '/usr/include/alsa/asoundlib.h') }, {
+					Stderr:line('Notice: Program uses base:audio. If ALSA development headers are missing, please install:\n  Debian/Ubuntu: sudo apt-get install libasound2-dev\n  Fedora/RHEL:   sudo dnf install alsa-lib-devel');
 				});
 			});
-			if({ usesAudio && !fileExists(path: '/usr/include/alsa/asoundlib.h') }, {
-				Stderr:line('Notice: Program uses base:audio. If ALSA development headers are missing, please install:\n  Debian/Ubuntu: sudo apt-get install libasound2-dev\n  Fedora/RHEL:   sudo dnf install alsa-lib-devel');
+
+			local String is optFlag: if({ debugMode }, { '-O0' }, { '-O2' });
+			local Array of String is llArgs: [optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
+			local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
+			llOsFlags:each(action: local Function(String is fl){
+				llArgs:add(item: fl);
 			});
-		});
+			if({ debugMode }, {
+				llArgs:add(item: '-g');
+			});
+			local Int is llCcT0: Process:clockMs();
+			local Int is llStat: Process:execute(command: 'clang', args: llArgs);
+			ccMs: Process:clockMs() - llCcT0;
+			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
+			if({ llStat != 0 }, {
+				fileRemove(path: runtimeO);
+				fileRemove(path: runtimeC);
+				Process:monitorStop();
+				Stderr:line('Error: clang failed on LLVM IR with exit status ' . (llStat as String));
+				exitCode: 1;
+				return;
+			});
 
-		local String is optFlag: if({ debugMode }, { '-O0' }, { '-O2' });
-		local Array of String is llArgs: [optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
-		local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
-		llOsFlags:each(action: local Function(String is fl){
-			llArgs:add(item: fl);
-		});
-		if({ debugMode }, {
-			llArgs:add(item: '-g');
-		});
-		local Int is llCcT0: Process:clockMs();
-		local Int is llStat: Process:execute(command: 'clang', args: llArgs);
-		ccMs: Process:clockMs() - llCcT0;
-		if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
-		if({ llStat != 0 }, {
-			fileRemove(path: runtimeO);
-			fileRemove(path: runtimeC);
+			local Int is binBytes: Dir:fileSize(path: outputPath);
+			report:stage(n: 4, total: 4, label: 'compiling (clang) · ' . (ccMs as String) . 'ms');
 			Process:monitorStop();
-			Stderr:line('Error: clang failed on LLVM IR with exit status ' . (llStat as String));
-			Process:exit(status: 1);
+			report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: llLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
 		});
-
-		local Int is binBytes: Dir:fileSize(path: outputPath);
-		report:stage(n: 4, total: 4, label: 'compiling (clang) · ' . (ccMs as String) . 'ms');
-		Process:monitorStop();
-		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: llLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
+		if({ exitCode != 0 }, {
+			Process:exit(status: exitCode);
+		});
 	}
 
 	## Walks the inheritance lattice from [c] and classifies every init

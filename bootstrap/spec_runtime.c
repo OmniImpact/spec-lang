@@ -501,22 +501,8 @@ static inline void* spec_xrealloc(void* old, size_t n) {
 static int spec_in_flight_tasks = 0;
 static pthread_mutex_t spec_task_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t spec_task_cond = PTHREAD_COND_INITIALIZER;
-/* Parallel Fan-Out */
-typedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);
-typedef struct { SpecWorkerFn fn; void* env; long long idx; long long count; } SpecParallelTask;
-
-static void* spec_parallel_worker(void* arg) {
-    SpecParallelTask* t = (SpecParallelTask*)arg;
-    spec_fast_random_seed(t->idx);
-    long long r = t->fn(t->env, t->idx, t->count);
-    free(t);
-    spec_pool_thread_cleanup();
-    return (void*)(intptr_t)r;
-}
-
 /* Process Resource Monitoring (instantaneous RSS and CPU sampling) */
-static pthread_t _spec_mon_thread;
-static _Atomic bool _spec_mon_active = false;
+static _Atomic int _spec_mon_state = 0;
 static _Atomic long long _spec_mon_sample_count = 0;
 static _Atomic long long _spec_mon_mem_sum_kb = 0;
 static _Atomic long long _spec_mon_peak_mem_kb = 0;
@@ -525,43 +511,6 @@ static long long _spec_mon_start_wall_us = 0;
 static long long _spec_mon_start_cpu_us = 0;
 static long long _spec_mon_total_wall_us = 0;
 static long long _spec_mon_total_cpu_us = 0;
-
-static void* _spec_monitor_worker(void* arg) {
-    (void)arg;
-    long long page_size = spec_pal_get_page_size();
-
-    long long last_wall_us = spec_pal_get_wall_time_us();
-    long long last_cpu_us = spec_pal_get_cpu_time_us();
-
-    while (_spec_mon_active) {
-        spec_pal_sleep_ms(20);
-        if (!_spec_mon_active) break;
-
-        long long cur_rss_kb = spec_pal_get_current_rss_kb(page_size);
-        if (cur_rss_kb > 0) {
-            _spec_mon_mem_sum_kb += cur_rss_kb;
-            _spec_mon_sample_count++;
-            if (cur_rss_kb > _spec_mon_peak_mem_kb) {
-                _spec_mon_peak_mem_kb = cur_rss_kb;
-            }
-        }
-
-        long long now_wall_us = spec_pal_get_wall_time_us();
-        long long now_cpu_us = spec_pal_get_cpu_time_us();
-
-        long long d_wall = now_wall_us - last_wall_us;
-        long long d_cpu = now_cpu_us - last_cpu_us;
-        if (d_wall >= 15000) {
-            long long cpu_pct = (d_cpu * 100) / d_wall;
-            if (cpu_pct > _spec_mon_peak_cpu_pct) {
-                _spec_mon_peak_cpu_pct = cpu_pct;
-            }
-            last_wall_us = now_wall_us;
-            last_cpu_us = now_cpu_us;
-        }
-    }
-    return NULL;
-}
 
 /* Runtime Implementation */
 void spec_panic(const char* msg) {
@@ -1282,39 +1231,6 @@ void* spec_parallel_sync(void* action_closure) {
     return spec_parallel_sync_with(0, action_closure);
 }
 
-long long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {
-    if (threads < 1) threads = 1;
-    void** cls = (void**)worker_closure;
-    if (!cls || !cls[0]) spec_panic("Parallel:run received null worker Function");
-    spec_thread_enter();
-    pthread_t* tids = (pthread_t*)spec_xmalloc(sizeof(pthread_t) * (size_t)threads);
-    bool* spawned = (bool*)spec_xmalloc(sizeof(bool) * (size_t)threads);
-    long long total = 0;
-    long long base = iterations / threads;
-    long long rem = iterations % threads;
-    for (long long i = 0; i < threads; i++) {
-        SpecParallelTask* t = (SpecParallelTask*)spec_xmalloc(sizeof(SpecParallelTask));
-        t->fn = (SpecWorkerFn)cls[0];
-        t->env = cls[1];
-        t->idx = i;
-        t->count = base + (i < rem ? 1 : 0);
-        spawned[i] = (pthread_create(&tids[i], NULL, spec_parallel_worker, t) == 0);
-        if (!spawned[i]) {
-            total += (long long)(intptr_t)spec_parallel_worker(t);
-        }
-    }
-    for (long long i = 0; i < threads; i++) {
-        if (!spawned[i]) continue;
-        void* ret = NULL;
-        pthread_join(tids[i], &ret);
-        total += (long long)(intptr_t)ret;
-    }
-    spec_thread_leave();
-    free(tids);
-    free(spawned);
-    return total;
-}
-
 long long spec_clock_ms(void) {
     return spec_pal_get_wall_time_us() / 1000;
 }
@@ -1347,7 +1263,11 @@ long long spec_monitor_peak_mem_kb(void) {
 }
 
 void spec_monitor_start(void) {
-    if (_spec_mon_active) return;
+    int expected = 0;
+    if (!atomic_compare_exchange_strong(&_spec_mon_state, &expected, 1)) {
+        _spec_mon_state = 0;
+        return;
+    }
     _spec_mon_sample_count = 0;
     _spec_mon_mem_sum_kb = 0;
     _spec_mon_peak_mem_kb = 0;
@@ -1356,16 +1276,44 @@ void spec_monitor_start(void) {
     _spec_mon_start_wall_us = spec_pal_get_wall_time_us();
     _spec_mon_start_cpu_us = spec_pal_get_cpu_time_us();
 
-    _spec_mon_active = true;
-    spec_thread_enter();
-    pthread_create(&_spec_mon_thread, NULL, _spec_monitor_worker, NULL);
+    long long page_size = spec_pal_get_page_size();
+    long long last_wall_us = _spec_mon_start_wall_us;
+    long long last_cpu_us = _spec_mon_start_cpu_us;
+
+    while (atomic_load(&_spec_mon_state) == 1) {
+        for (int s = 0; s < 4 && atomic_load(&_spec_mon_state) == 1; s++) {
+            spec_pal_sleep_ms(5);
+        }
+        if (atomic_load(&_spec_mon_state) != 1) break;
+
+        long long cur_rss_kb = spec_pal_get_current_rss_kb(page_size);
+        if (cur_rss_kb > 0) {
+            _spec_mon_mem_sum_kb += cur_rss_kb;
+            _spec_mon_sample_count++;
+            if (cur_rss_kb > _spec_mon_peak_mem_kb) {
+                _spec_mon_peak_mem_kb = cur_rss_kb;
+            }
+        }
+
+        long long now_wall_us = spec_pal_get_wall_time_us();
+        long long now_cpu_us = spec_pal_get_cpu_time_us();
+
+        long long d_wall = now_wall_us - last_wall_us;
+        long long d_cpu = now_cpu_us - last_cpu_us;
+        if (d_wall >= 15000) {
+            long long cpu_pct = (d_cpu * 100) / d_wall;
+            if (cpu_pct > _spec_mon_peak_cpu_pct) {
+                _spec_mon_peak_cpu_pct = cpu_pct;
+            }
+            last_wall_us = now_wall_us;
+            last_cpu_us = now_cpu_us;
+        }
+    }
+    _spec_mon_state = 0;
 }
 
 void spec_monitor_stop(void) {
-    if (!_spec_mon_active) return;
-    _spec_mon_active = false;
-    pthread_join(_spec_mon_thread, NULL);
-    spec_thread_leave();
+    atomic_store(&_spec_mon_state, 2);
 
     long long end_wall_us = spec_pal_get_wall_time_us();
     long long end_cpu_us = spec_pal_get_cpu_time_us();
@@ -1673,105 +1621,6 @@ long long spec_time_local_offset_sec(long long epoch_sec) {
     long long local_sec = local_days * 86400LL + (long long)local_tm.tm_hour * 3600LL + (long long)local_tm.tm_min * 60LL + (long long)local_tm.tm_sec;
     long long utc_sec = utc_days * 86400LL + (long long)utc_tm.tm_hour * 3600LL + (long long)utc_tm.tm_min * 60LL + (long long)utc_tm.tm_sec;
     return local_sec - utc_sec;
-}
-
-typedef struct SpecTimerTask {
-    long long id;
-    long long interval_ns;
-    long long count;
-    void* callback;
-    bool cancelled;
-    struct SpecTimerTask* next;
-} SpecTimerTask;
-
-static pthread_mutex_t _spec_timer_mutex = PTHREAD_MUTEX_INITIALIZER;
-static SpecTimerTask* _spec_timer_head = NULL;
-static long long _spec_next_timer_id = 0;
-
-static void* spec_timer_worker(void* arg) {
-    SpecTimerTask* task = (SpecTimerTask*)arg;
-    long long target_ns = spec_time_monotonic_ns() + task->interval_ns;
-    long long executed = 0;
-    while (task->count <= 0 || executed < task->count) {
-        for (;;) {
-            pthread_mutex_lock(&_spec_timer_mutex);
-            bool is_cancelled = task->cancelled;
-            pthread_mutex_unlock(&_spec_timer_mutex);
-            if (is_cancelled) goto done;
-            long long now_ns = spec_time_monotonic_ns();
-            long long rem_ns = target_ns - now_ns;
-            if (rem_ns <= 0) break;
-            long long chunk_ns = rem_ns > 20000000LL ? 20000000LL : rem_ns;
-            spec_time_sleep_ns(chunk_ns);
-        }
-        pthread_mutex_lock(&_spec_timer_mutex);
-        bool is_cancelled = task->cancelled;
-        pthread_mutex_unlock(&_spec_timer_mutex);
-        if (is_cancelled) break;
-        if (task->callback) {
-            void** cls = (void**)task->callback;
-            if (cls[0]) ((void (*)(void*))cls[0])(cls[1]);
-        }
-        executed++;
-        target_ns += task->interval_ns;
-    }
-done:
-    pthread_mutex_lock(&_spec_timer_mutex);
-    SpecTimerTask** cur = &_spec_timer_head;
-    while (*cur) {
-        if (*cur == task) {
-            *cur = task->next;
-            break;
-        }
-        cur = &(*cur)->next;
-    }
-    pthread_mutex_unlock(&_spec_timer_mutex);
-    if (task->callback) Arc_release(NULL, (long long)(intptr_t)task->callback);
-    free(task);
-    spec_pool_thread_cleanup();
-    spec_async_task_finished();
-    return NULL;
-}
-
-long long spec_time_set_interval(long long ms, long long count, void* callback) {
-    SpecTimerTask* task = (SpecTimerTask*)spec_xmalloc(sizeof(SpecTimerTask));
-    task->interval_ns = (ms > 0 ? ms : 0) * 1000000LL;
-    task->count = count;
-    task->callback = callback ? (void*)(intptr_t)Arc_retain(NULL, (long long)(intptr_t)callback) : NULL;
-    task->cancelled = false;
-    pthread_mutex_lock(&_spec_timer_mutex);
-    task->id = ++_spec_next_timer_id;
-    task->next = _spec_timer_head;
-    _spec_timer_head = task;
-    pthread_mutex_unlock(&_spec_timer_mutex);
-    spec_async_task_started();
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, spec_timer_worker, task) != 0) {
-        spec_timer_worker(task);
-        return task->id;
-    }
-    pthread_detach(tid);
-    return task->id;
-}
-
-long long spec_time_set_timeout(long long ms, void* callback) {
-    return spec_time_set_interval(ms, 1, callback);
-}
-
-bool spec_time_cancel_timer(long long timer_id) {
-    pthread_mutex_lock(&_spec_timer_mutex);
-    SpecTimerTask* cur = _spec_timer_head;
-    bool found = false;
-    while (cur) {
-        if (cur->id == timer_id) {
-            cur->cancelled = true;
-            found = true;
-            break;
-        }
-        cur = cur->next;
-    }
-    pthread_mutex_unlock(&_spec_timer_mutex);
-    return found;
 }
 long long spec_term_width(void) {
     long long w = 0;

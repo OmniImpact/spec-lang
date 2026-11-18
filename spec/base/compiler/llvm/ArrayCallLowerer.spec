@@ -393,6 +393,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					b:emit(inst: IrInst:IrCast(dst: elemV, val: raw, fromType: IrType:Ptr, toType: elemTy));
 				});
 				b:emit(inst: IrInst:IndirectCall(dst: '', hasDst: false, retType: IrType:Void, fnPtr: fnPtrVal, argTypes: [IrType:Ptr, elemTy], args: [envVal, elemV]));
+				b:emitCheckUnwindAfterCall(callee: '__indirect__');
 				local String is oneV: b:nextTmp();
 				b:emit(inst: IrInst:ConstInt(dst: oneV, value: 1));
 				local String is nextI: b:nextTmp();

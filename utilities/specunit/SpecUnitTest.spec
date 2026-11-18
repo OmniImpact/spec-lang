@@ -25,6 +25,8 @@ Class is SpecUnitTest{
 
 	replace Array of Array of String is using: [
 		['specunit', SpecUnitRunner],
+		['specunit', Assert],
+		['base', 'core', SpecError],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()]
 	];
@@ -67,6 +69,12 @@ Class is SpecUnitTest{
 	## The per-test construction path: the runner instantiates test
 	## classes with no arguments (the xUnit fresh-instance rule).
 	replace Function is init(){
+	}
+
+	## Intercepts unhandled [SpecError] values raised during a test method
+	## and records them as soft-assertion failures on the active test result.
+	replace Function is SpecErrorHandler(SpecError is error){
+		Assert:fail(message: 'Unhandled SpecError [' . error:kindName . ']: ' . error:description);
 	}
 
 	## The test identity: the instance's own class name by default.

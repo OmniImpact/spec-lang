@@ -12,6 +12,7 @@ Class is Process{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as HashTable()],
 		['base', 'sys', as Loops()],
@@ -156,9 +157,13 @@ Class is Process{
 		return base:sysinternal:Process:atomic_get(slot: slot);
 	}
 
-	## Starts the background resource monitor thread (samples RSS and CPU).
-	Function is monitorStart(){
-		base:sysinternal:Process:monitor_start();
+	## Starts the background resource monitor task inside [scope] (samples RSS and CPU).
+	Function is monitorStart(ThreadScope is scope){
+		scope:spawn(task: local Function(){
+			if({ !scope:isCancelled() }, {
+				base:sysinternal:Process:monitor_start();
+			});
+		});
 	}
 
 	## Stops the background resource monitor thread and computes final metrics.

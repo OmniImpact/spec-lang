@@ -61,6 +61,8 @@ Class is IrBuilder{
 	Array of Int is scopeMarkStack: [];
 	String is curPoolMark: '';
 	Boolean is curFnRetIsArc: false;
+	String is curFnErrHandlerCallee: '';
+	String is curFnErrPushedSlot: '';
 	Boolean is isUnmanagedClass: false;
 	String is inlineReturnSlot: '';
 	String is inlineReturnEndLbl: '';
@@ -769,6 +771,9 @@ Class is IrBuilder{
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: initOwner . '_init' . initSuf, argTypes: initArgTypes, args: initArgs));
 		});
 		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_drain_async_tasks', argTypes: [], args: []));
+		if({ :clsQNameMap:has(key: 'SpecError') }, {
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'SpecError_panicPending', argTypes: [IrType:Ptr], args: ['null']));
+		});
 		:emitPoolExit();
 		:emit(inst: IrInst:Release(val: argsMap));
 		:emit(inst: IrInst:Release(val: obj));
@@ -1167,7 +1172,19 @@ Class is IrBuilder{
 		:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
 		:emit(inst: IrInst:Store(slot: initGlob, val: trueTmp, ty: IrType:I1));
 		if({ m:hasInit }, {
+			local String is prevMapK: :expectedMapKeyType;
+			local String is prevMapV: :expectedMapValType;
+			if({ m:memberType:name == 'Map' && m:memberType:params:length() >= 1 }, {
+				local Type is kp: m:memberType:params:get(index: 0);
+				:expectedMapKeyType: kp:name;
+				if({ m:memberType:params:length() >= 2 }, {
+					local Type is vp: m:memberType:params:get(index: 1);
+					:expectedMapValType: vp:name;
+				});
+			});
 			local String is iv: :lowerExpr(expr: m:initExpr);
+			:expectedMapKeyType: prevMapK;
+			:expectedMapValType: prevMapV;
 			if({ iv == '' }, { iv: :emitDefaultVal(ty: hty); });
 			if({ hty == IrType:Ptr && iv != 'null' }, {
 				:emit(inst: IrInst:Retain(val: iv));
@@ -2149,6 +2166,8 @@ Class is IrBuilder{
 		:collectDeclNamesInStmts(stmts: m:body, decls: decls);
 		:collectAllAnonCapturesInStmts(stmts: m:body, decls: decls, out: :capturedNames);
 		:curFnRetIsArc: :isArcSpecType(specType: :methodReturnSpecType(mt: m:memberType));
+		:curFnErrHandlerCallee: '';
+		:curFnErrPushedSlot: '';
 		:emitPoolEnter();
 
 		if({ !isHeldMethod }, {
@@ -2159,6 +2178,19 @@ Class is IrBuilder{
 			:localSpecTypes:set(key: ':', value: :currentClass);
 			:emit(inst: IrInst:Alloca(slot: '%self_slot', ty: IrType:Ptr));
 			:emit(inst: IrInst:Store(slot: '%self_slot', val: '%self', ty: IrType:Ptr));
+			if({ !:isUnmanagedClass && :clsQNameMap:has(key: 'SpecError') && :clsQNameMap:has(key: 'Pool') && m:name != 'SpecErrorHandler' && m:name != 'destroy' }, {
+				local String is errCallee: :findCustomErrorHandlerCallee(clsName: cls:qualifiedName());
+				if({ errCallee != '' }, {
+					:curFnErrHandlerCallee: errCallee;
+					:curFnErrPushedSlot: '%err_pushed_slot';
+					:emit(inst: IrInst:Alloca(slot: '%err_pushed_slot', ty: IrType:I1));
+					local String is selfAddr: :nextTmp();
+					:emit(inst: IrInst:IrCast(dst: selfAddr, val: '%self', fromType: IrType:Ptr, toType: IrType:I64));
+					local String is pushedVal: :nextTmp();
+					:emit(inst: IrInst:IrCall(dst: pushedVal, hasDst: true, retType: IrType:I1, callee: 'Pool_pushErrorHandler', argTypes: [IrType:Ptr, IrType:I64], args: ['null', selfAddr]));
+					:emit(inst: IrInst:Store(slot: '%err_pushed_slot', val: pushedVal, ty: IrType:I1));
+				});
+			});
 		});
 
 		pi: 0;
@@ -2204,11 +2236,172 @@ Class is IrBuilder{
 			});
 		});
 		:curPoolMark: '';
+		:curFnErrHandlerCallee: '';
+		:curFnErrPushedSlot: '';
 
 		:mod:addFunction(fn: fn);
 	}
 
+	local Function of String is findCustomErrorHandlerCallee(String is clsName){
+		return :findCustomErrorHandlerWalk(clsName: clsName, visited: Map:init());
+	}
+
+	local Function of String is findCustomErrorHandlerWalk(String is clsName, Map of String to Boolean is visited){
+		if({ clsName == '' || clsName == 'Class' || clsName == 'Stringable' || clsName == 'Loadable' || clsName == 'Any' || clsName == 'Enum' }, {
+			return '';
+		});
+		local String is qn: clsName;
+		if({ :clsQNameMap:has(key: clsName) }, {
+			qn: '' . :clsQNameMap:get(key: clsName, default: '');
+		});
+		if({ visited:has(key: qn) || !:clsMap:has(key: qn) }, {
+			return '';
+		});
+		visited:set(key: qn, value: true);
+		local ClassInfo is cls: :clsMap:get(key: qn, default: ClassInfo:init(name: '', baseClass: '', members: []));
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' && !m:hasModifier(kw: Keyword:HELD) }, {
+				return :cStructName(qname: cls:qualifiedName()) . '_SpecErrorHandler';
+			});
+			mi++;
+		});
+		local Int is bi: 0;
+		while({ bi < cls:baseClasses:length() }, {
+			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: bname, clsMap: :clsMap);
+			if({ bcls:qualifiedName() != cls:qualifiedName() }, {
+				local String is found: :findCustomErrorHandlerWalk(clsName: bcls:qualifiedName(), visited: visited);
+				if({ found != '' }, {
+					return found;
+				});
+			});
+			bi++;
+		});
+		return '';
+	}
+
+	local Function of String is emitConstStrVal(String is value){
+		local String is dst: :nextTmp();
+		local Int is sid: :mod:internStringLiteral(value: value);
+		:emit(inst: IrInst:ConstString(dst: dst, strId: sid));
+		return dst;
+	}
+
+	local Function of Boolean is shouldEmitUnwindCheck(String is callee){
+		if({ :isUnmanagedClass }, { return false; });
+		if({ !:clsQNameMap:has(key: 'SpecError') || !:clsQNameMap:has(key: 'Pool') }, { return false; });
+		if({ :currentClass == 'SpecError' || :currentClass == 'StackFrame' || :currentClass == 'SourceLocation' || :currentClass == 'ThreadScope' || :currentClass == 'Task' || :currentClass == 'Channel' || :currentClass == 'Flow' || :currentClass == 'Thread' || :currentClass == 'Mem' || :currentClass == 'Buf' || :currentClass == 'Str' || :currentClass == 'String' || :currentClass == 'Vector' || :currentClass == 'HashTable' || :currentClass == 'Array' || :currentClass == 'Map' || :currentClass == 'List' || :currentClass == 'Introspection' || :currentClass == 'CliArgs' || :currentClass == 'OsDispatch' || :currentClass == 'Math' || :currentClass == 'Ansi' || :currentClass == 'Output' || :currentClass == 'Stderr' || :currentClass == 'Input' || :currentClass == 'Dir' || :currentClass == 'Uri' || :currentClass == 'Time' || :currentClass == 'DateTime' }, {
+			return false;
+		});
+		if({ :currentMethod == 'destroy' || :currentMethod:endsWith(suffix: '__ensure') || :currentMethod:endsWith(suffix: '__lazy_init') }, {
+			return false;
+		});
+		if({ callee == '__indirect__' || callee == 'ThreadScope_open' || callee == 'Task_await' || callee == 'Flow_collect' || callee == 'Channel_collect' || callee == 'Parallel_run' || callee == 'Parallel_sync' }, {
+			return true;
+		});
+		if({ callee:startsWith(prefix: 'spec_') || callee:startsWith(prefix: '__spec_') || callee:startsWith(prefix: 'Arc_') || callee:startsWith(prefix: 'Slab_') || callee:startsWith(prefix: 'Heap_') || callee:startsWith(prefix: 'Pool_') || callee:startsWith(prefix: 'Arena_') || callee:startsWith(prefix: 'Intern_') || callee:startsWith(prefix: 'Mem_') || callee:startsWith(prefix: 'Buf_') || callee:startsWith(prefix: 'Str_') || callee:startsWith(prefix: 'String_') || callee:startsWith(prefix: 'Vector_') || callee:startsWith(prefix: 'HashTable_') || callee:startsWith(prefix: 'Array_') || callee:startsWith(prefix: 'Map_') || callee:startsWith(prefix: 'List_') || callee:startsWith(prefix: 'Introspection_') || callee:startsWith(prefix: 'Reflection_') || callee:startsWith(prefix: 'CliArgs_') || callee:startsWith(prefix: 'OsDispatch_') || callee:startsWith(prefix: 'Math_') || callee:startsWith(prefix: 'Ansi_') || callee:startsWith(prefix: 'Output_') || callee:startsWith(prefix: 'Stderr_') || callee:startsWith(prefix: 'Input_') || callee:startsWith(prefix: 'SourceLocation_') || callee:startsWith(prefix: 'StackFrame_') || callee:startsWith(prefix: 'SpecError_') || callee:startsWith(prefix: 'Thread_') || callee:startsWith(prefix: 'ThreadScope_') || callee:startsWith(prefix: 'Task_') || callee:startsWith(prefix: 'Channel_') || callee:startsWith(prefix: 'Flow_') || callee:startsWith(prefix: 'Time_') || callee:startsWith(prefix: 'DateTime_') || callee:startsWith(prefix: 'Dir_') || callee:startsWith(prefix: 'Uri_') || callee:startsWith(prefix: 'Process_') }, {
+			return false;
+		});
+		if({ callee:endsWith(suffix: '_destroy') || callee:endsWith(suffix: '__ensure') || callee:endsWith(suffix: '__lazy_init') }, {
+			return false;
+		});
+		return true;
+	}
+
+	Function is emitUnwindCurrentFrame(Boolean is recordFrame){
+		if({ recordFrame && :clsQNameMap:has(key: 'SpecError') }, {
+			local String is cStr: :emitConstStrVal(value: :currentClass);
+			local String is mStr: :emitConstStrVal(value: :currentMethod);
+			local String is fStr: :emitConstStrVal(value: :curFn:sourceFile);
+			local String is lVal: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: lVal, value: :currentLine));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'SpecError_recordPendingFrame', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', cStr, mStr, fStr, lVal]));
+		});
+		if({ :curFnErrHandlerCallee != '' && :curFnErrPushedSlot != '' }, {
+			local String is pushedVal: :nextTmp();
+			:emit(inst: IrInst:Load(dst: pushedVal, slot: :curFnErrPushedSlot, ty: IrType:I1));
+			local String is handleLbl: :nextLabel(prefix: 'err_handle');
+			local String is exitLbl: :nextLabel(prefix: 'err_exit');
+			:terminate(inst: IrInst:CondBr(cond: pushedVal, thenLabel: handleLbl, elseLabel: exitLbl));
+
+			local IrBlock is handleBlk: :curFn:addBlock(label: handleLbl);
+			:switchBlock(blk: handleBlk);
+			local String is trueB: :nextTmp();
+			:emit(inst: IrInst:ConstBool(dst: trueB, value: true));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_popErrorHandler', argTypes: [IrType:Ptr, IrType:I1], args: ['null', trueB]));
+			local String is falseB: :nextTmp();
+			:emit(inst: IrInst:ConstBool(dst: falseB, value: false));
+			:emit(inst: IrInst:Store(slot: :curFnErrPushedSlot, val: falseB, ty: IrType:I1));
+
+			local String is errAddr: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: errAddr, hasDst: true, retType: IrType:I64, callee: 'Pool_takePendingError', argTypes: [IrType:Ptr], args: ['null']));
+			local String is errPtr: :nextTmp();
+			:emit(inst: IrInst:IrCast(dst: errPtr, val: errAddr, fromType: IrType:I64, toType: IrType:Ptr));
+			local String is selfVal: :emitLoadLocal(name: ':', ty: IrType:Ptr);
+			local IrStruct is curSt: :mod:findStruct(name: :currentClass);
+			local Int is ehSlot: curSt:vtableSlot(mname: 'SpecErrorHandler');
+			if({ ehSlot >= 0 }, {
+				local String is vtPtrAddr: :nextTmp();
+				:emit(inst: IrInst:FieldPtr(dst: vtPtrAddr, objPtr: selfVal, structName: :currentClass, fieldIndex: 1));
+				local String is vtBase: :nextTmp();
+				:emit(inst: IrInst:Load(dst: vtBase, slot: vtPtrAddr, ty: IrType:Ptr));
+				local String is slotPtr: :nextTmp();
+				:emit(inst: IrInst:PtrElem(dst: slotPtr, basePtr: vtBase, index: ehSlot));
+				local String is fnPtr: :nextTmp();
+				:emit(inst: IrInst:Load(dst: fnPtr, slot: slotPtr, ty: IrType:Ptr));
+				:emit(inst: IrInst:IndirectCall(dst: '', hasDst: false, retType: IrType:Void, fnPtr: fnPtr, argTypes: [IrType:Ptr, IrType:Ptr], args: [selfVal, errPtr]));
+			}, {
+				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: :curFnErrHandlerCallee, argTypes: [IrType:Ptr, IrType:Ptr], args: [selfVal, errPtr]));
+			});
+			:emit(inst: IrInst:Release(val: errPtr));
+			:terminate(inst: IrInst:Br(target: exitLbl));
+
+			local IrBlock is exitBlk: :curFn:addBlock(label: exitLbl);
+			:switchBlock(blk: exitBlk);
+		});
+		:emitReleaseOwnedLocals();
+		:emitPoolExit();
+		if({ :curFn:retType == IrType:Void }, {
+			:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
+		}, {
+			local String is defVal: :emitDefaultVal(ty: :curFn:retType);
+			:terminate(inst: IrInst:Ret(hasVal: true, val: defVal, ty: :curFn:retType));
+		});
+	}
+
+	Function is emitCheckUnwindAfterCall(String is callee){
+		if({ !:shouldEmitUnwindCheck(callee: callee) }, { return; });
+		local String is fifteenVal: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: fifteenVal, value: 15));
+		local String is pendAddr: :nextTmp();
+		:emit(inst: IrInst:IrCall(dst: pendAddr, hasDst: true, retType: IrType:I64, callee: '__spec_mem_tls_get_i64', argTypes: [IrType:I64], args: [fifteenVal]));
+		local String is zeroAddr: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: zeroAddr, value: 0));
+		local String is hasPend: :nextTmp();
+		:emit(inst: IrInst:Cmp(dst: hasPend, op: '!=', lhs: pendAddr, rhs: zeroAddr, ty: IrType:I64));
+		local String is unwindLbl: :nextLabel(prefix: 'err_unwind');
+		local String is contLbl: :nextLabel(prefix: 'err_cont');
+		:terminate(inst: IrInst:CondBr(cond: hasPend, thenLabel: unwindLbl, elseLabel: contLbl));
+
+		local IrBlock is unwindBlk: :curFn:addBlock(label: unwindLbl);
+		:switchBlock(blk: unwindBlk);
+		:emitUnwindCurrentFrame(recordFrame: true);
+
+		local IrBlock is contBlk: :curFn:addBlock(label: contLbl);
+		:switchBlock(blk: contBlk);
+	}
+
 	local Function is emitReleaseOwnedLocals(){
+		if({ :curFnErrPushedSlot != '' }, {
+			local String is pushedNow: :nextTmp();
+			:emit(inst: IrInst:Load(dst: pushedNow, slot: :curFnErrPushedSlot, ty: IrType:I1));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_popErrorHandler', argTypes: [IrType:Ptr, IrType:I1], args: ['null', pushedNow]));
+			local String is falseVal: :nextTmp();
+			:emit(inst: IrInst:ConstBool(dst: falseVal, value: false));
+			:emit(inst: IrInst:Store(slot: :curFnErrPushedSlot, val: falseVal, ty: IrType:I1));
+		});
 		local Int is oi: 0;
 		while({ oi < :ownedSlots:length() }, {
 			local String is oslot: :ownedSlots:get(index: oi, default: '');
@@ -3641,6 +3834,10 @@ Class is IrBuilder{
 		local Array of Int is savedScopeMarks: :scopeMarkStack;
 		local String is savedPoolMark: :curPoolMark;
 		local Boolean is savedRetIsArc: :curFnRetIsArc;
+		local String is savedErrCallee: :curFnErrHandlerCallee;
+		local String is savedErrSlot: :curFnErrPushedSlot;
+		:curFnErrHandlerCallee: '';
+		:curFnErrPushedSlot: '';
 
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: retTy);
 		fn:sourceFile: savedFn:sourceFile;
@@ -3810,6 +4007,8 @@ Class is IrBuilder{
 		:scopeMarkStack: savedScopeMarks;
 		:curPoolMark: savedPoolMark;
 		:curFnRetIsArc: savedRetIsArc;
+		:curFnErrHandlerCallee: savedErrCallee;
+		:curFnErrPushedSlot: savedErrSlot;
 
 		# Allocate and populate %env in outer function if captures exist
 		local String is envVal: 'null';
@@ -3880,6 +4079,16 @@ Class is IrBuilder{
 			return :lowerLazyBodyVal(blkExpr: :getLazyBodyExpr(expr: expr), expectedTy: lTy);
 		});
 
+		if({ nm == 'raiseError' && call:args:length() == 1 && :clsQNameMap:has(key: 'Pool') }, {
+			local NamedArg is rArg0: call:args:get(index: 0);
+			local String is errObj: :lowerExpr(expr: rArg0:value);
+			local String is errAddr: :nextTmp();
+			:emit(inst: IrInst:IrCast(dst: errAddr, val: errObj, fromType: IrType:Ptr, toType: IrType:I64));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_raisePendingError', argTypes: [IrType:Ptr, IrType:I64], args: ['null', errAddr]));
+			:emitUnwindCurrentFrame(recordFrame: false);
+			return '0';
+		});
+
 		# Pluggable call lowerers (control flow, String, Array, Map, etc.)
 		local Int is cli: 0;
 		local Boolean is handled: false;
@@ -3922,6 +4131,7 @@ Class is IrBuilder{
 			local String is cDst: '';
 			if({ cHasDst }, { cDst: :nextTmp(); });
 			:emit(inst: IrInst:IndirectCall(dst: cDst, hasDst: cHasDst, retType: cRetTy, fnPtr: fnPtrVal, argTypes: cArgT, args: cArgV));
+			:emitCheckUnwindAfterCall(callee: '__indirect__');
 			return cDst;
 		});
 
@@ -4051,6 +4261,18 @@ Class is IrBuilder{
 				});
 				:lowerCallArgs(fnKey: ctorKey, callArgs: call:args, argTypes: argTypes, argVals: argVals);
 				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: ctorKey, argTypes: argTypes, args: argVals));
+				if({ clsName == 'SpecError' && :clsQNameMap:has(key: 'SpecError') }, {
+					local String is cStr: :emitConstStrVal(value: :currentClass);
+					local String is mStr: :emitConstStrVal(value: :currentMethod);
+					local String is fStr: :emitConstStrVal(value: :curFn:sourceFile);
+					local String is lVal: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: lVal, value: :currentLine));
+					local String is colVal: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: colVal, value: 1));
+					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'SpecError_addFrameAt', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64, IrType:I64], args: [obj, cStr, mStr, fStr, lVal, colVal]));
+				}, {
+					:emitCheckUnwindAfterCall(callee: ctorKey);
+				});
 				:emitClaimPool(val: obj);
 				return obj;
 			});
@@ -4183,6 +4405,31 @@ Class is IrBuilder{
 				effectiveArgs: [call:args:get(index: 0), NamedArg:init(name: 'isArc', value: arcLit)];
 			});
 		});
+		if({ dirCallee == 'Flow_fromArray' || dirCallee == 'Flow_map' || dirCallee == 'Flow_channelFlow' || dirCallee == 'Flow_merge' }, {
+			local String is flElemSpec: '';
+			if({ expr:resolvedType:startsWith(prefix: 'Flow:') && expr:resolvedType:length() > 5 }, {
+				flElemSpec: expr:resolvedType:substring(start: 5, end: expr:resolvedType:length());
+			});
+			if({ flElemSpec == '' && expr:resolvedType:startsWith(prefix: 'Flow of ') && expr:resolvedType:length() > 8 }, {
+				flElemSpec: expr:resolvedType:substring(start: 8, end: expr:resolvedType:length());
+			});
+			local Boolean is flArc: flElemSpec != '' && :isArcSpecType(specType: flElemSpec);
+			local Expression is flArcLit: Expression:BoolLit(value: flArc);
+			flArcLit:setResolvedType(t: 'Boolean');
+			local String is arcArgName: if({ dirCallee == 'Flow_map' }, { 'outIsArc' }, { 'isArc' });
+			if({ (dirCallee == 'Flow_fromArray' || dirCallee == 'Flow_map') && call:args:length() == 1 }, {
+				effectiveArgs: [call:args:get(index: 0), NamedArg:init(name: arcArgName, value: flArcLit)];
+			});
+			if({ (dirCallee == 'Flow_channelFlow' || dirCallee == 'Flow_merge') && call:args:length() <= 2 }, {
+				local Expression is capExpr: Expression:NumberLit(value: 0, text: '0');
+				capExpr:setResolvedType(t: 'Int');
+				if({ call:args:length() == 2 }, {
+					local NamedArg is ca1: call:args:get(index: 1);
+					capExpr: ca1:value;
+				});
+				effectiveArgs: [call:args:get(index: 0), NamedArg:init(name: 'capacity', value: capExpr), NamedArg:init(name: 'isArc', value: flArcLit)];
+			});
+		});
 
 		:lowerCallArgs(fnKey: dirCallee, callArgs: effectiveArgs, argTypes: argTypes, argVals: argVals);
 
@@ -4244,9 +4491,11 @@ Class is IrBuilder{
 				if({ hasDst }, {
 					:emit(inst: IrInst:Load(dst: dst, slot: resSlot, ty: callRetTy));
 				});
+				:emitCheckUnwindAfterCall(callee: '__indirect__');
 			});
 		}, {
 			:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: callRetTy, callee: dirCallee, argTypes: argTypes, args: argVals));
+			:emitCheckUnwindAfterCall(callee: dirCallee);
 		});
 		if({ callRetTy != retTy && hasDst }, {
 			dst: :castIfNeeded(val: dst, fromTy: callRetTy, toTy: retTy);
@@ -4255,7 +4504,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Str' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Parallel' || provStruct == 'Thread' || provStruct == 'ThreadScope' || provStruct == 'Channel' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Str' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Parallel' || provStruct == 'Thread' || provStruct == 'ThreadScope' || provStruct == 'Channel' || provStruct == 'Flow' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
 			return 'null';
 		});
 		if({ :clsMap:has(key: provStruct) && :bindings:isSysinternal(cls: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {

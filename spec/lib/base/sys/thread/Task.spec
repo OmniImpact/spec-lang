@@ -23,8 +23,9 @@ Class is Task of T{
 	local Boolean is joined: false;
 	local Boolean is arcManaged: false;
 	local T is resultVal;
-	local Any is errorVal: '';
+	local Int is errorAddr: 0;
 	local Boolean is hasError: false;
+	local Boolean is errorConsumed: false;
 
 	replace Function is init(Boolean is isArc: false){
 		:arcManaged: isArc;
@@ -33,7 +34,9 @@ Class is Task of T{
 		:mutex: Thread:mutexCreate();
 		:cond: Thread:condCreate();
 		:joined: false;
+		:errorAddr: 0;
 		:hasError: false;
+		:errorConsumed: false;
 	}
 
 	## Spawns [worker] on an OS thread and records its handle under `:mutex`.
@@ -68,12 +71,19 @@ Class is Task of T{
 
 	## Marks this task as failed with [err] and wakes all waiting threads.
 	Function is fail(Any is err){
+		:failAddr(errAddr: Mem:objToAddr(obj: err));
+	}
+
+	## Marks this task as failed with [errAddr] (retaining it) and wakes all waiting threads.
+	Function is failAddr(Int is errAddr){
 		Thread:mutexLock(handle: :mutex);
-		local Int is addr: Mem:objToAddr(obj: err);
-		if({ addr != 0 }, {
-			Mem:retainAddr(objAddr: addr);
+		if({ errAddr != 0 }, {
+			Mem:retainAddr(objAddr: errAddr);
 		});
-		:errorVal: err;
+		if({ :errorAddr != 0 }, {
+			Mem:releaseAddr(objAddr: :errorAddr);
+		});
+		:errorAddr: errAddr;
 		:hasError: true;
 		Mem:atomicStoreI64(addr: :stateAddr, val: 3);
 		Thread:condBroadcast(cond: :cond);
@@ -92,9 +102,24 @@ Class is Task of T{
 		return Mem:atomicLoadI64(addr: :stateAddr) == 3;
 	}
 
+	## Returns the raw address of any captured error object from the worker thread.
+	Function of Int is getErrorAddr(){
+		return :errorAddr;
+	}
+
 	## Returns any captured error object from the worker thread.
 	Function of Any is getError(){
-		return :errorVal;
+		return Mem:addrToObj(addr: :errorAddr);
+	}
+
+	## True when the task's error has already been consumed by `await()` or `joinAll()`.
+	Function of Boolean is isErrorConsumed(){
+		return :errorConsumed;
+	}
+
+	## Marks the task's error as consumed.
+	Function is markErrorConsumed(){
+		:errorConsumed: true;
 	}
 
 	## Waits for the task to finish and joins the underlying OS thread once.
@@ -114,9 +139,14 @@ Class is Task of T{
 		Thread:mutexUnlock(handle: :mutex);
 	}
 
-	## Waits for the task to finish and returns its result [T].
+	## Waits for the task to finish and returns its result [T] (or re-raises its captured error).
 	Function of T is await(){
 		:joinOnly();
+		if({ :hasError }, {
+			:errorConsumed: true;
+			Mem:raisePendingErrorAddr(addr: :errorAddr);
+			return :resultVal;
+		});
 		if({ :arcManaged }, {
 			local Int is addr: Mem:objToAddr(obj: :resultVal);
 			if({ addr != 0 }, {
@@ -141,12 +171,9 @@ Class is Task of T{
 					:resultVal: Mem:addrToObj(addr: 0);
 				});
 			});
-			if({ :hasError }, {
-				local Int is eAddr: Mem:objToAddr(obj: :errorVal);
-				if({ eAddr != 0 }, {
-					Mem:releaseAddr(objAddr: eAddr);
-					:errorVal: Mem:addrToObj(addr: 0);
-				});
+			if({ :hasError && :errorAddr != 0 }, {
+				Mem:releaseAddr(objAddr: :errorAddr);
+				:errorAddr: 0;
 			});
 			if({ :cond != 0 }, {
 				Thread:condDestroy(handle: :cond);

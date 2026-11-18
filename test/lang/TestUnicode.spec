@@ -13,6 +13,7 @@ Class of SpecUnitTest is TestUnicode{
 		['base', 'cleo', as CleoText()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Parallel()],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array]
 	];
@@ -145,22 +146,26 @@ Class of SpecUnitTest is TestUnicode{
 		Assert:areEqualInt(300, longUtf8:byteLength());
 
 		# Concurrent threads racing to build and query checkpoints on the same String
-		local Int is sumRunes: Parallel:run(
-			threads: 4,
-			iterations: 4,
-			worker: local Function of Int(Int is threadIdx, Int is _count){
-				local Int is rc: longUtf8:runeCount();
-				local Int is cp0: longUtf8:codePointAtRune(runeIndex: 0);
-				local Int is cp31: longUtf8:codePointAtRune(runeIndex: 31);
-				local Int is cp32: longUtf8:codePointAtRune(runeIndex: 32);
-				local Int is cp64: longUtf8:codePointAtRune(runeIndex: 64);
-				local Int is cp99: longUtf8:codePointAtRune(runeIndex: 99);
-				if({ rc == 120 && cp0 == 97 && cp31 == 128640 && cp32 == 97 && cp64 == 97 && cp99 == 128640 }, {
-					return 1;
-				});
-				return 0;
-			}
-		);
+		local Int is sumRunes: 0;
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			sumRunes: Parallel:run(
+				scope: scope,
+				threads: 4,
+				iterations: 4,
+				worker: local Function of Int(Int is threadIdx, Int is _count){
+					local Int is rc: longUtf8:runeCount();
+					local Int is cp0: longUtf8:codePointAtRune(runeIndex: 0);
+					local Int is cp31: longUtf8:codePointAtRune(runeIndex: 31);
+					local Int is cp32: longUtf8:codePointAtRune(runeIndex: 32);
+					local Int is cp64: longUtf8:codePointAtRune(runeIndex: 64);
+					local Int is cp99: longUtf8:codePointAtRune(runeIndex: 99);
+					if({ rc == 120 && cp0 == 97 && cp31 == 128640 && cp32 == 97 && cp64 == 97 && cp99 == 128640 }, {
+						return 1;
+					});
+					return 0;
+				}
+			);
+		});
 		Assert:areEqualInt(4, sumRunes);
 
 		# Verify sliceRunes across checkpoint boundaries (runes 30..66)

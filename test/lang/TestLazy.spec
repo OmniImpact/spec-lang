@@ -11,6 +11,7 @@ Class of SpecUnitTest is TestLazy{
 		['base', 'sys', as Lazy()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Parallel()],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'struct', Array]
 	];
 
@@ -107,15 +108,19 @@ Class of SpecUnitTest is TestLazy{
 	Function is testConcurrentLazyFieldInit(){
 		local LazySample is shared: LazySample:init(seed: 50);
 		local Array of Int is results: [0, 0, 0, 0];
-		local Int is sum: Parallel:run(
-			threads: 4,
-			iterations: 4,
-			worker: local Function of Int(Int is threadIdx, Int is _count){
-				local Int is v: shared:computedInt;
-				results:set(index: threadIdx, item: v);
-				return v;
-			}
-		);
+		local Int is sum: 0;
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			sum: Parallel:run(
+				scope: scope,
+				threads: 4,
+				iterations: 4,
+				worker: local Function of Int(Int is threadIdx, Int is _count){
+					local Int is v: shared:computedInt;
+					results:set(index: threadIdx, item: v);
+					return v;
+				}
+			);
+		});
 		Assert:areEqualInt(1, shared:counter:calls);
 		Assert:areEqualInt(240, sum);
 		while([Int is i: 0], { i < 4 }, {

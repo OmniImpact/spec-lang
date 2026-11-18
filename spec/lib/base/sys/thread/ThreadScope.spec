@@ -10,6 +10,7 @@ Class is ThreadScope{
 	namespace: ['base', 'sys', 'thread'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
@@ -21,7 +22,7 @@ Class is ThreadScope{
 	local Array of Task is tasks: [];
 	local Int is mutex: 0;
 	local Int is cancelledAddr: 0;
-	local Any is errorHandler: '';
+	local Int is errorHandlerAddr: 0;
 	local Boolean is hasErrorHandler: false;
 
 	local Function of Boolean is hasClosure(Function is cb){
@@ -34,23 +35,39 @@ Class is ThreadScope{
 		cb(err);
 	}
 
-	replace Function is init(Function is onError: local Function(Any is _err){}){
+	replace Function is init(Function is onError: local Function(SpecError is _err){ :raiseError(error: _err); }){
 		:tasks: [];
 		:mutex: Thread:mutexCreate();
 		:cancelledAddr: Mem:alloc(bytes: 8);
 		Mem:storeI64(ptr: :cancelledAddr, byteOffset: 0, val: 0);
-		:errorHandler: Mem:addrToObj(addr: Mem:objToAddr(obj: onError));
+		local Int is ehAddr: Mem:objToAddr(obj: onError);
+		if({ ehAddr != 0 }, {
+			Mem:retainAddr(objAddr: ehAddr);
+		});
+		:errorHandlerAddr: ehAddr;
 		:hasErrorHandler: :hasClosure(cb: onError);
 	}
 
 	## Opens a structured concurrency scope, executes [body] with the scope,
 	## and joins all spawned tasks before returning.
-	Function is open(Function is body, Function is onError: local Function(Any is _err){}){
+	Function is open(Function is body, Function is onError: local Function(SpecError is _err){ :raiseError(error: _err); }){
 		local ThreadScope is scope: ThreadScope:init(onError: onError);
 		if({ :hasClosure(cb: body) }, {
 			body(scope);
 		});
+		local Int is bodyErrAddr: Mem:takePendingErrorAddr();
+		if({ bodyErrAddr != 0 }, {
+			scope:cancel();
+		});
 		scope:joinAll();
+		if({ bodyErrAddr != 0 }, {
+			if({ scope:hasErrorHandler && scope:errorHandlerAddr != 0 }, {
+				scope:invokeErrorHandler(cb: Mem:addrToObj(addr: scope:errorHandlerAddr), err: Mem:addrToObj(addr: bodyErrAddr));
+			}, {
+				Mem:raisePendingErrorAddr(addr: bodyErrAddr);
+			});
+			Mem:releaseAddr(objAddr: bodyErrAddr);
+		});
 	}
 
 	## Spawns [task] on a new thread bound to this scope and returns a [Task].
@@ -65,10 +82,24 @@ Class is ThreadScope{
 			t:markRunning();
 			if({ kind == 3 }, {
 				task();
-				t:complete(value: Mem:addrToObj(addr: 0));
+				local Int is errAddr: Mem:takePendingErrorAddr();
+				if({ errAddr != 0 }, {
+					:cancel();
+					t:failAddr(errAddr: errAddr);
+					Mem:releaseAddr(objAddr: errAddr);
+				}, {
+					t:complete(value: Mem:addrToObj(addr: 0));
+				});
 			}, {
 				local Any is res: task();
-				t:complete(value: res);
+				local Int is errAddr: Mem:takePendingErrorAddr();
+				if({ errAddr != 0 }, {
+					:cancel();
+					t:failAddr(errAddr: errAddr);
+					Mem:releaseAddr(objAddr: errAddr);
+				}, {
+					t:complete(value: res);
+				});
 			});
 		};
 		t:start(worker: worker);
@@ -123,10 +154,18 @@ Class is ThreadScope{
 			if({ hasNext }, {
 				if({ Mem:objToAddr(obj: nextTask) != 0 }, {
 					nextTask:joinOnly();
-					if({ nextTask:isFailed() }, {
+					if({ nextTask:isFailed() && !nextTask:isErrorConsumed() }, {
+						nextTask:markErrorConsumed();
 						:cancel();
-						if({ :hasErrorHandler }, {
-							:invokeErrorHandler(cb: :errorHandler, err: nextTask:getError());
+						local Int is taskErrAddr: nextTask:getErrorAddr();
+						if({ :hasErrorHandler && :errorHandlerAddr != 0 }, {
+							if({ !Mem:hasPendingError() && taskErrAddr != 0 }, {
+								:invokeErrorHandler(cb: Mem:addrToObj(addr: :errorHandlerAddr), err: Mem:addrToObj(addr: taskErrAddr));
+							});
+						}, {
+							if({ !Mem:hasPendingError() && taskErrAddr != 0 }, {
+								Mem:raisePendingErrorAddr(addr: taskErrAddr);
+							});
 						});
 					});
 				});
@@ -139,6 +178,10 @@ Class is ThreadScope{
 
 	Function is destroy(){
 		:joinAll();
+		if({ :errorHandlerAddr != 0 }, {
+			Mem:releaseAddr(objAddr: :errorHandlerAddr);
+			:errorHandlerAddr: 0;
+		});
 		if({ :mutex != 0 }, {
 			Thread:mutexDestroy(handle: :mutex);
 			:mutex: 0;

@@ -380,8 +380,16 @@ Class is SpecUnit{
 		['base', 'sys', as Dir()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', as Time()]
+		['base', 'sys', as Time()],
+		['base', 'core', SpecError],
+		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', 'thread', Task]
 	];
+
+	replace Function is SpecErrorHandler(SpecError is error){
+		line(color256(code: 203, text: 'specunit: unhandled error: ' . error:toString()));
+		exit(status: 1);
+	}
 
 	replace Function is init(Map of String to String is args){
 		local String is specBin: args:getString(key: 's', default: args:getString(key: 'spec', default: '.'));
@@ -476,37 +484,44 @@ Class is SpecUnit{
 
 		SpecTestRegistry:setupUi(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, threads: threads, nameToSlot: nameToSlot);
 		local Int is startMs: Time:monotonicMs();
-		ui:start();
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			ui:start(scope: scope);
 
-		Parallel:run(threads: threads, iterations: total, worker: local Function of Int(Int is threadIndex, Int is count){
-			local Int is ti: threadIndex;
-			local Int is failures: 0;
-			local Boolean is keepGoing: true;
-			while({ keepGoing }, {
-				local Int is idx: SpecTestRegistry:nextWorkIndex();
-				if(check: { idx < 0 }, then: {
-					keepGoing: false;
-				}, else: {
-					local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
-					SpecTestRegistry:markStarted(tiStr: (ti as String), itemPath: item:path);
-					if(check: { item:kind == 'negative' }, then: {
-						failures: failures + :runNegative(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
-					}, else: {
-						if(check: { item:kind == 'run-fail' }, then: {
-							failures: failures + :runRunFail(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+			local Array of Task is workers: [];
+			local Int is wIdx: 0;
+			while({ wIdx < threads }, {
+				local Int is ti: wIdx;
+				local Task is wt: scope:spawn(task: local Function(){
+					local Boolean is keepGoing: true;
+					while({ keepGoing }, {
+						local Int is idx: SpecTestRegistry:nextWorkIndex();
+						if(check: { idx < 0 }, then: {
+							keepGoing: false;
 						}, else: {
-							failures: failures + :runSuite(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+							local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
+							SpecTestRegistry:markStarted(tiStr: (ti as String), itemPath: item:path);
+							if(check: { item:kind == 'negative' }, then: {
+								:runNegative(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+							}, else: {
+								if(check: { item:kind == 'run-fail' }, then: {
+									:runRunFail(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+								}, else: {
+									:runSuite(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+								});
+							});
+							SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
 						});
 					});
-					SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
 				});
+				workers:add(item: wt);
+				wIdx: wIdx + 1;
 			});
-			return failures;
-		});
+			scope:awaitAll(group: workers);
 
-		local Int is wallMs: Time:monotonicMs() - startMs;
-		SpecTestRegistry:showResults(wallMsStr: (wallMs as String));
-		ui:finish();
+			local Int is wallMs: Time:monotonicMs() - startMs;
+			SpecTestRegistry:showResults(wallMsStr: (wallMs as String));
+			ui:finish();
+		});
 		:report();
 	}
 

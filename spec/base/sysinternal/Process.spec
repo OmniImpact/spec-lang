@@ -52,11 +52,11 @@ Class is Process{
 	## Bound to `spec_atomic_add`.
 	Function of Int is atomic_add(Int is slot, Int is value);
 
-	## Starts the background resource monitor thread (samples RSS and CPU).
+	## Runs the resource monitor sampling loop until `monitor_stop` is called.
 	## Bound to `spec_monitor_start`.
 	Function is monitor_start();
 
-	## Stops the resource monitor thread and computes summary metrics.
+	## Stops the resource monitor loop and computes summary metrics.
 	## Bound to `spec_monitor_stop`.
 	Function is monitor_stop();
 

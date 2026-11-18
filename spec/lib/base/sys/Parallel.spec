@@ -24,16 +24,17 @@ Class is Parallel{
 		return Mem:objToAddr(obj: res);
 	}
 
-	## Executes [worker] across [threads] OS threads inside a [ThreadScope] over
+	## Executes [worker] across [threads] OS threads inside [scope] over
 	## [iterations] total work units and returns the sum of all worker return values.
 	##
 	## Worker signature: `Function of Int is worker(Int is threadIndex, Int is count)`.
 	##
+	## @param scope: Active [ThreadScope] in which worker tasks are spawned.
 	## @param threads: Number of threads to spawn (no upper-bound clamp).
 	## @param iterations: Total work units, split evenly across threads.
 	## @param worker: Worker closure invoked once per thread.
 	## @return: Sum of every worker's return value.
-	Function of Int is run(Int is threads, Int is iterations, Function is worker){
+	Function of Int is run(ThreadScope is scope, Int is threads, Int is iterations, Function is worker){
 		local Int is wAddr: Mem:objToAddr(obj: worker);
 		if({ wAddr == 0 || Mem:loadI64(ptr: wAddr, byteOffset: 0) == 0 }, {
 			return 0;
@@ -42,17 +43,15 @@ Class is Parallel{
 		local Int is baseCount: iterations / nThreads;
 		local Int is rem: iterations % nThreads;
 		local Array of Task of Int is tasks: [];
-		ThreadScope:open(body: local Function(ThreadScope is scope){
-			local Int is i: 0;
-			while({ i < nThreads }, {
-				local Int is tid: i;
-				local Int is cnt: baseCount + if({ tid < rem }, { 1 }, { 0 });
-				local Task of Int is t: scope:spawn(task: local Function of Int(){
-					return :invokeWorker(w: worker, tid: tid, cnt: cnt);
-				});
-				tasks:add(item: t);
-				i: i + 1;
+		local Int is i: 0;
+		while({ i < nThreads }, {
+			local Int is tid: i;
+			local Int is cnt: baseCount + if({ tid < rem }, { 1 }, { 0 });
+			local Task of Int is t: scope:spawn(task: local Function of Int(){
+				return :invokeWorker(w: worker, tid: tid, cnt: cnt);
 			});
+			tasks:add(item: t);
+			i: i + 1;
 		});
 		local Int is total: 0;
 		local Int is k: 0;

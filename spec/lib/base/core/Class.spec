@@ -14,6 +14,7 @@ Class of Stringable is Class{
 	namespace: ['base', 'core'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
 		['base', 'sys', as Introspection()]
 	];
 	## Default rendering: the declaring type name and the object's
@@ -23,5 +24,18 @@ Class of Stringable is Class{
 	## @return: Textual representation.
 	replace Function of String is toString(){
 		return typeName(:) . '@' . (Introspection:objectHash(obj: :) as String);
+	}
+
+	## Root fallback error handler: prints the unhandled [error]'s kind,
+	## description, and stack trace, then terminates the process.
+	## Subclasses opt into intercepting bubbling errors with `replace`.
+	Function is SpecErrorHandler(SpecError is error){
+		return;
+	}
+
+	## Raises [error] on the current thread, unwinding the call stack cleanly
+	## to the nearest enclosing [SpecErrorHandler] (or [Class:SpecErrorHandler]).
+	Function is raiseError(SpecError is error){
+		return;
 	}
 }

@@ -13,6 +13,7 @@ Class of SpecUnitTest is TestParallelAtomics{
 		['base', 'math', as Math()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Parallel()],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
@@ -23,7 +24,10 @@ Class of SpecUnitTest is TestParallelAtomics{
 		local Function of Int is counter: local Function of Int(Int is threadIndex, Int is count){
 			return count;
 		};
-		local Int is total: Parallel:run(threads: 4, iterations: 1000, worker: counter);
+		local Int is total: 0;
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			total: Parallel:run(scope: scope, threads: 4, iterations: 1000, worker: counter);
+		});
 		Assert:areEqualInt(1000, total);
 	}
 
@@ -34,7 +38,9 @@ Class of SpecUnitTest is TestParallelAtomics{
 			Process:atomicAdd(slot: 40, value: threadIndex + 1);
 			return 0;
 		};
-		Parallel:run(threads: 4, iterations: 4, worker: marker);
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			Parallel:run(scope: scope, threads: 4, iterations: 4, worker: marker);
+		});
 		local Int is indexSum: Process:atomicGet(slot: 40);
 		Assert:areEqualInt(10, indexSum);
 	}
@@ -53,7 +59,9 @@ Class of SpecUnitTest is TestParallelAtomics{
 			);
 			return 0;
 		};
-		Parallel:run(threads: 4, iterations: 400, worker: adder);
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			Parallel:run(scope: scope, threads: 4, iterations: 400, worker: adder);
+		});
 		local Int is added: Process:atomicGet(slot: 41);
 		Assert:areEqualInt(400, added);
 	}
@@ -99,7 +107,9 @@ Class of SpecUnitTest is TestParallelAtomics{
 			);
 			return 0;
 		};
-		Parallel:run(threads: 4, iterations: 200, worker: worker);
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			Parallel:run(scope: scope, threads: 4, iterations: 200, worker: worker);
+		});
 		Assert:areEqualInt(200, sharedCounter);
 	}
 
@@ -123,7 +133,9 @@ Class of SpecUnitTest is TestParallelAtomics{
 			);
 			return 0;
 		};
-		Parallel:run(threads: 4, iterations: 100, worker: worker);
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			Parallel:run(scope: scope, threads: 4, iterations: 100, worker: worker);
+		});
 		Assert:areEqualInt(100, slotA);
 		Assert:areEqualInt(200, slotB);
 	}
