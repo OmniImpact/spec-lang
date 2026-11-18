@@ -55,6 +55,7 @@ long long spec_term_is_tty(void) {
 long long spec_term_enable_vt(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return 0;
     DWORD mode = 0;
@@ -66,17 +67,31 @@ long long spec_term_enable_vt(void) {
 #endif
 }
 
+static inline void _spec_win_init_utf8_console(void) {
+#ifdef _WIN32
+    static _Atomic int _inited = 0;
+    if (atomic_load_explicit(&_inited, memory_order_relaxed) == 0) {
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
+        atomic_store_explicit(&_inited, 1, memory_order_relaxed);
+    }
+#endif
+}
+
 void spec_pal_error_line(long long data_addr, long long len) {
+    _spec_win_init_utf8_console();
     if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stderr);
     fputc('\\n', stderr);
 }
 
 void spec_pal_print_line(long long data_addr, long long len) {
+    _spec_win_init_utf8_console();
     if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stdout);
     fputc('\\n', stdout);
 }
 
 void spec_pal_print(long long data_addr, long long len) {
+    _spec_win_init_utf8_console();
     if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stdout);
     fflush(stdout);
 }

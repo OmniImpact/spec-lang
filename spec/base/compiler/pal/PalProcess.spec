@@ -232,13 +232,15 @@ long long spec_pal_os_name(void) {
         }
     }
     *w = 0;
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(si);
     memset(&pi, 0, sizeof(pi));
     DWORD exit_code = 1;
-    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+    wchar_t* wcmd = spec_win_utf8_to_wide(cmd_line);
+    if (wcmd && CreateProcessW(NULL, wcmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        free(wcmd);
         WaitForSingleObject(pi.hProcess, INFINITE);
         GetExitCodeProcess(pi.hProcess, &exit_code);
         CloseHandle(pi.hProcess);
@@ -246,6 +248,7 @@ long long spec_pal_os_name(void) {
         free(cmd_line);
         return (long long)exit_code;
     }
+    free(wcmd);
     int status = system(cmd_line);
     free(cmd_line);
     return (long long)status;
@@ -311,7 +314,7 @@ void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long
         }
     }
     *w = 0;
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(si);
@@ -319,7 +322,8 @@ void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long
     LARGE_INTEGER freq, q0, q1;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&q0);
-    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+    wchar_t* wcmd = spec_win_utf8_to_wide(cmd_line);
+    if (wcmd && CreateProcessW(NULL, wcmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
         WaitForSingleObject(pi.hProcess, INFINITE);
         QueryPerformanceCounter(&q1);
         DWORD dw_exit = 1;
@@ -345,6 +349,7 @@ void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long
             wall_us = (long long)(((q1.QuadPart - q0.QuadPart) * 1000000LL) / freq.QuadPart);
         }
     }
+    free(wcmd);
     free(cmd_line);
     if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
 }

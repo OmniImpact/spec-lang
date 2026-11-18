@@ -717,6 +717,13 @@ do_free:
   %da = ptrtoint ptr %d to i64
   call void @__spec_mem_free(i64 %da)
   store ptr null, ptr %self, align 8
+  %ck_p = getelementptr inbounds i8, ptr %self, i64 40
+  %ck = load i64, ptr %ck_p, align 8
+  %has_ck = icmp sgt i64 %ck, 0
+  br i1 %has_ck, label %free_ck, label %done
+free_ck:
+  call void @__spec_mem_free(i64 %ck)
+  store i64 0, ptr %ck_p, align 8
   br label %done
 done:
   ret void

@@ -575,6 +575,9 @@ Class is TypeChecker{
 		if({ target == source || target == Primitive:ANY:value() || source == Primitive:ANY:value() || target == '' || source == '' }, {
 			return true;
 		});
+		if({ (target == 'String' && source == 'Str') || (target == 'Str' && source == 'String') }, {
+			return true;
+		});
 		# Implicit numeric widening: Int assigns to Float (explicit casts
 		# handle the narrowing directions).
 		if({ target == 'Float' && source == Primitive:INT:value() }, {
@@ -877,7 +880,7 @@ Class is TypeChecker{
 		# owner class, so it is not a match subject — EXCEPT String,
 		# whose string-literal keys compare by value (the CBackendUtils/
 		# TemplateEscapes shape).
-		if({ :isPrimitive(t: subjT) && subjT != Primitive:STRING:value() }, {
+		if({ :isPrimitive(t: subjT) && subjT != Primitive:STRING:value() && subjT != 'Str' }, {
 			:addError(line: :currentLine, msg: 'Match subjects are class instances; primitive-typed held constants are compared directly with == or spec_string_equals.');
 			return 'Any';
 		});
@@ -2304,7 +2307,7 @@ Class is TypeChecker{
 	## @param targetName: The referenced class name.
 	## @return: true when access is granted.
 	Function of Boolean is classHasAccess(String is className, String is targetName){
-		if({ targetName == '' || :isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'String' || targetName == 'Function' || targetName == 'LoopControl' }, {
+		if({ targetName == '' || :isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'Str' || targetName == 'String' || targetName == 'Function' || targetName == 'LoopControl' }, {
 			return true;
 		});
 		return :accessInClass(className: className, targetName: targetName);
@@ -2825,7 +2828,7 @@ Class is TypeChecker{
 												# prefix keeps its rejection.
 												local Member is resolver: :findHeldMethod(className: root, methodName: ContractMethod:RESOLVE_HELD:value());
 												local Boolean is declaredInstance: :lookupFieldType(className: root, fieldName: segs:get(index: 1)) != '' || :lookupAnyMember(className: root, methodName: segs:get(index: 1)):kind == MemberKind:METHOD;
-												if({ segs:length() >= 2 && !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
+												if({ segs:length() >= 2 && !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'Str' && root != 'String' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
 													:addError(line: :currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
 													rootType: '';
 												}, {
@@ -2894,8 +2897,8 @@ Class is TypeChecker{
 						# hardening (D5): relational ordering on
 						# String is lexicographic — and only String-to-String.
 						local Boolean is isRel: op == '<' || op == '<=' || op == '>' || op == '>=';
-						local Boolean is leftStr: leftT == 'String';
-						local Boolean is rightStr: rightT == 'String';
+						local Boolean is leftStr: leftT == 'String' || leftT == 'Str';
+						local Boolean is rightStr: rightT == 'String' || rightT == 'Str';
 						if({ isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, {
 							:addError(line: :currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
 						});
@@ -2932,10 +2935,10 @@ Class is TypeChecker{
 						if({ args:length() > 1 }, {
 							:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
 						});
-						if({ src != 'Any' && src != 'String' && src != Primitive:INT:value() }, {
+						if({ src != 'Any' && src != 'String' && src != 'Str' && src != Primitive:INT:value() }, {
 							:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' requires an Int or String operand (got \'' . src . '\').');
 						});
-						res: if({ src == 'String' }, { Primitive:INT:value() }, { 'String' });
+						res: if({ src == 'String' || src == 'Str' }, { Primitive:INT:value() }, { 'String' });
 					},
 					else: {
 						if({ :allEnumNames:has(key: target) }, {
@@ -3357,7 +3360,7 @@ Class is TypeChecker{
 		});
 		if({ recvName != '' && call:name != 'init' }, {
 			local Boolean is isSysinternalPath: targetIsPath && targetPathSegs:indexOf(search: 'sysinternal', default: -1) >= 0;
-			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
+			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
 			# Desugared enums are type-level by design:
 			# their contract methods dispatch through the class name.
 			# Held functions: the class-name prefix IS
@@ -4354,7 +4357,7 @@ Class is TypeChecker{
 			return true;
 		});
 		if({ target == Primitive:INT:value() }, {
-			return src == 'Float' || src == 'String' || src == 'Byte';
+			return src == 'Float' || src == 'String' || src == 'Str' || src == 'Byte';
 		});
 		if({ target == 'Float' }, {
 			return src == Primitive:INT:value();
@@ -4362,7 +4365,7 @@ Class is TypeChecker{
 		if({ target == 'Byte' }, {
 			return src == Primitive:INT:value();
 		});
-		if({ target == 'String' }, {
+		if({ target == 'String' || target == 'Str' }, {
 			return true;
 		});
 		return false;

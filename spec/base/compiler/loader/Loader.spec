@@ -517,6 +517,7 @@ Class is Loader{
 			'Stringable',
 			'Class',
 			'Enum',
+			'Str',
 			'String',
 			'Array',
 			'Map',

@@ -33,15 +33,17 @@ static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* 
 	replace Function of String is windows(){
 		return '''static void _spec_pal_ensure_tmp_dir(const char* pc) {
     if (!pc || strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0 || strcmp(pc, "/tmp") == 0) {
-        CreateDirectoryA("/tmp", NULL);
+        CreateDirectoryW(L"/tmp", NULL);
     }
 }
 
 static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* suffix, size_t suffix_cap) {
     if (strncmp(tpl, "/tmp/", 5) != 0 && strcmp(tpl, "/tmp") != 0) return -1;
-    char temp_dir[MAX_PATH];
-    DWORD td_len = GetTempPathA(MAX_PATH, temp_dir);
+    wchar_t wtemp_dir[MAX_PATH];
+    DWORD td_len = GetTempPathW(MAX_PATH, wtemp_dir);
     if (td_len == 0 || td_len >= MAX_PATH) return -1;
+    char temp_dir[MAX_PATH * 4];
+    if (!spec_win_wide_to_utf8_buf(wtemp_dir, temp_dir, sizeof(temp_dir))) return -1;
     const char* base = strrchr(tpl, '/');
     const char* b2 = strrchr(tpl, '\\');
     if (b2 && (!base || b2 > base)) base = b2;
@@ -94,7 +96,13 @@ long long spec_pal_file_read(long long path_cstr, long long out_len_addr) {
     if (out_len) *out_len = 0;
     const char* pc = (const char*)(intptr_t)path_cstr;
     if (!pc || !*pc) return -1;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, L"rb") : NULL;
+    free(wpc);
+#else
     FILE* f = fopen(pc, "rb");
+#endif
     if (!f) return -1;
     if (fseek(f, 0, SEEK_END) != 0) {
         fclose(f);
@@ -125,7 +133,13 @@ long long spec_pal_file_write(long long path_cstr, long long data_addr, long lon
     size_t len = (len_ll > 0 && data_addr) ? (size_t)len_ll : 0;
     if (append && len == 0) return 0;
     const char* cc = len ? (const char*)(intptr_t)data_addr : "";
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, append ? L"ab" : L"wb") : NULL;
+    free(wpc);
+#else
     FILE* f = fopen(pc, append ? "ab" : "wb");
+#endif
     if (!f) return -1;
     size_t written = fwrite(cc, 1, len, f);
     if (fclose(f) != 0) return -1;
@@ -136,7 +150,13 @@ long long spec_pal_file_write(long long path_cstr, long long data_addr, long lon
 bool spec_pal_file_exists(long long path_cstr) {
     const char* pc = (const char*)(intptr_t)path_cstr;
     if (!pc || !*pc) return false;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, L"r") : NULL;
+    free(wpc);
+#else
     FILE* f = fopen(pc, "r");
+#endif
     if (f) {
         fclose(f);
         return true;
@@ -147,7 +167,15 @@ bool spec_pal_file_exists(long long path_cstr) {
 bool spec_pal_file_remove(long long path_cstr) {
     const char* pc = (const char*)(intptr_t)path_cstr;
     if (!pc || !*pc) return false;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    if (!wpc) return false;
+    int r = _wremove(wpc);
+    free(wpc);
+    return r == 0;
+#else
     return remove(pc) == 0;
+#endif
 }
 
 long long spec_pal_file_temp(long long tpl_cstr) {

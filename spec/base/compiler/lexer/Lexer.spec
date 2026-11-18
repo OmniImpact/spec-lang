@@ -458,6 +458,9 @@ Class is Lexer{
 						if({ :pos < :length }, {
 							local String is nextCh: :advance();
 							res: res . nextCh;
+							if({ nextCh == 'u' }, {
+								:validateUnicodeEscapeAt(uPos: :pos);
+							});
 						});
 					});
 				}, {
@@ -474,6 +477,78 @@ Class is Lexer{
 			return Token:init(kind: TokenKind:TEMPLATESTRING, value: res, line: startLine, col: startCol);
 		});
 		return Token:init(kind: TokenKind:STRING, value: res, line: startLine, col: startCol);
+	}
+
+	## Validates a `\uXXXX` or `\u{...}` Unicode escape starting immediately
+	## after `\u` at byte offset [uPos] in [:source], recording a lexical error
+	## if the hex sequence is malformed, out of range (`> 0x10FFFF`), or a lone
+	## surrogate (`0xD800..0xDFFF`).
+	Function is validateUnicodeEscapeAt(Int is uPos){
+		if({ uPos >= :length }, {
+			:addError(msg: "Invalid Unicode escape: expected 4 hex digits (\\uXXXX) or braced hex (\\u{...}).");
+			return;
+		});
+		local String is first: :source:charAt(index: uPos, default: '');
+		if({ first == '{' }, {
+			local Int is p: uPos + 1;
+			local Int is digits: 0;
+			local Int is val: 0;
+			local Boolean is closed: false;
+			local Boolean is badChar: false;
+			while({ p < :length && !closed && !badChar }, {
+				local String is ch: :source:charAt(index: p, default: '');
+				if({ ch == '}' }, {
+					closed: true;
+				}, {
+					local Int is d: :digitValue(ch: ch);
+					if({ d < 0 }, {
+						badChar: true;
+					}, {
+						digits: digits + 1;
+						if({ digits <= 6 }, {
+							val: (val * 16) + d;
+						});
+						p: p + 1;
+					});
+				});
+			});
+			if({ !closed || badChar || digits == 0 || digits > 6 }, {
+				:addError(msg: "Invalid Unicode escape: \\u{...} requires 1 to 6 hexadecimal digits.");
+				return;
+			});
+			if({ val > 1114111 }, {
+				:addError(msg: "Invalid Unicode escape: code point exceeds maximum U+10FFFF.");
+				return;
+			});
+			if({ val >= 55296 && val <= 57343 }, {
+				:addError(msg: "Invalid Unicode escape: lone surrogate code points (U+D800..U+DFFF) are not valid Unicode scalar values.");
+				return;
+			});
+			return;
+		});
+		if({ uPos + 4 > :length }, {
+			:addError(msg: "Invalid Unicode escape: \\uXXXX requires 4 hexadecimal digits.");
+			return;
+		});
+		local Int is val4: 0;
+		local Int is k: 0;
+		local Boolean is ok4: true;
+		while({ k < 4 }, {
+			local Int is d: :digitValue(ch: :source:charAt(index: uPos + k, default: ''));
+			if({ d < 0 }, {
+				ok4: false;
+			}, {
+				val4: (val4 * 16) + d;
+			});
+			k: k + 1;
+		});
+		if({ !ok4 }, {
+			:addError(msg: "Invalid Unicode escape: \\uXXXX requires 4 hexadecimal digits.");
+			return;
+		});
+		if({ val4 >= 55296 && val4 <= 57343 }, {
+			:addError(msg: "Invalid Unicode escape: lone surrogate code points (U+D800..U+DFFF) are not valid Unicode scalar values.");
+		});
 	}
 
 	## Scans a triple-delimiter heredoc. The delimiter line's own newline is

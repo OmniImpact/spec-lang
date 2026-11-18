@@ -25,13 +25,32 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
+static wchar_t* spec_win_utf8_to_wide(const char* u8) {
+    if (!u8) return NULL;
+    int n = MultiByteToWideChar(CP_UTF8, 0, u8, -1, NULL, 0);
+    if (n <= 0) return NULL;
+    wchar_t* w = (wchar_t*)malloc((size_t)n * sizeof(wchar_t));
+    if (!w) return NULL;
+    MultiByteToWideChar(CP_UTF8, 0, u8, -1, w, n);
+    return w;
+}
+
+static bool spec_win_wide_to_utf8_buf(const wchar_t* w, char* out, size_t cap) {
+    if (!w || !out || cap == 0) return false;
+    int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, out, (int)cap, NULL, NULL);
+    return n > 0 && (size_t)n <= cap;
+}
+
 static bool spec_pal_get_exe_path(char* buf, size_t size) {
-    DWORD n = GetModuleFileNameA(NULL, buf, (DWORD)size);
-    if (n > 0 && n < size) {
-        for (DWORD i = 0; i < n; i++) {
-            if (buf[i] == '\\') buf[i] = '/';
+    wchar_t wbuf[MAX_PATH * 4];
+    DWORD n = GetModuleFileNameW(NULL, wbuf, (DWORD)(sizeof(wbuf) / sizeof(wchar_t)));
+    if (n > 0 && n < (DWORD)(sizeof(wbuf) / sizeof(wchar_t))) {
+        if (spec_win_wide_to_utf8_buf(wbuf, buf, size)) {
+            for (size_t i = 0; buf[i]; i++) {
+                if (buf[i] == '\\') buf[i] = '/';
+            }
+            return true;
         }
-        return true;
     }
     return false;
 }
@@ -661,22 +680,34 @@ long long spec_pal_exe_dir(long long buf_addr, long long buf_size) {
 long long spec_pal_file_size_cstr(long long path_cstr) {
     const char* p = (const char*)(intptr_t)path_cstr;
     if (!p || !*p) return -1;
+#ifdef _WIN32
+    wchar_t* wp = spec_win_utf8_to_wide(p);
+    if (!wp) return -1;
+    struct _stat64 st;
+    int r = _wstat64(wp, &st);
+    free(wp);
+    if (r != 0) return -1;
+    return (long long)st.st_size;
+#else
     struct stat st;
     if (stat(p, &st) != 0) return -1;
     return (long long)st.st_size;
+#endif
 }
 #if defined(_WIN32)
 static void _spec_pal_ensure_tmp_dir(const char* pc) {
     if (!pc || strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0 || strcmp(pc, "/tmp") == 0) {
-        CreateDirectoryA("/tmp", NULL);
+        CreateDirectoryW(L"/tmp", NULL);
     }
 }
 
 static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* suffix, size_t suffix_cap) {
     if (strncmp(tpl, "/tmp/", 5) != 0 && strcmp(tpl, "/tmp") != 0) return -1;
-    char temp_dir[MAX_PATH];
-    DWORD td_len = GetTempPathA(MAX_PATH, temp_dir);
+    wchar_t wtemp_dir[MAX_PATH];
+    DWORD td_len = GetTempPathW(MAX_PATH, wtemp_dir);
     if (td_len == 0 || td_len >= MAX_PATH) return -1;
+    char temp_dir[MAX_PATH * 4];
+    if (!spec_win_wide_to_utf8_buf(wtemp_dir, temp_dir, sizeof(temp_dir))) return -1;
     const char* base = strrchr(tpl, '/');
     const char* b2 = strrchr(tpl, '\\');
     if (b2 && (!base || b2 > base)) base = b2;
@@ -735,7 +766,13 @@ long long spec_pal_file_read(long long path_cstr, long long out_len_addr) {
     if (out_len) *out_len = 0;
     const char* pc = (const char*)(intptr_t)path_cstr;
     if (!pc || !*pc) return -1;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, L"rb") : NULL;
+    free(wpc);
+#else
     FILE* f = fopen(pc, "rb");
+#endif
     if (!f) return -1;
     if (fseek(f, 0, SEEK_END) != 0) {
         fclose(f);
@@ -766,7 +803,13 @@ long long spec_pal_file_write(long long path_cstr, long long data_addr, long lon
     size_t len = (len_ll > 0 && data_addr) ? (size_t)len_ll : 0;
     if (append && len == 0) return 0;
     const char* cc = len ? (const char*)(intptr_t)data_addr : "";
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, append ? L"ab" : L"wb") : NULL;
+    free(wpc);
+#else
     FILE* f = fopen(pc, append ? "ab" : "wb");
+#endif
     if (!f) return -1;
     size_t written = fwrite(cc, 1, len, f);
     if (fclose(f) != 0) return -1;
@@ -777,7 +820,13 @@ long long spec_pal_file_write(long long path_cstr, long long data_addr, long lon
 bool spec_pal_file_exists(long long path_cstr) {
     const char* pc = (const char*)(intptr_t)path_cstr;
     if (!pc || !*pc) return false;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, L"r") : NULL;
+    free(wpc);
+#else
     FILE* f = fopen(pc, "r");
+#endif
     if (f) {
         fclose(f);
         return true;
@@ -788,7 +837,15 @@ bool spec_pal_file_exists(long long path_cstr) {
 bool spec_pal_file_remove(long long path_cstr) {
     const char* pc = (const char*)(intptr_t)path_cstr;
     if (!pc || !*pc) return false;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    if (!wpc) return false;
+    int r = _wremove(wpc);
+    free(wpc);
+    return r == 0;
+#else
     return remove(pc) == 0;
+#endif
 }
 
 long long spec_pal_file_temp(long long tpl_cstr) {
@@ -887,13 +944,15 @@ long long spec_pal_process_execute_cstr(long long cmd_cstr, long long argv_addr,
         }
     }
     *w = 0;
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(si);
     memset(&pi, 0, sizeof(pi));
     DWORD exit_code = 1;
-    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+    wchar_t* wcmd = spec_win_utf8_to_wide(cmd_line);
+    if (wcmd && CreateProcessW(NULL, wcmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        free(wcmd);
         WaitForSingleObject(pi.hProcess, INFINITE);
         GetExitCodeProcess(pi.hProcess, &exit_code);
         CloseHandle(pi.hProcess);
@@ -901,6 +960,7 @@ long long spec_pal_process_execute_cstr(long long cmd_cstr, long long argv_addr,
         free(cmd_line);
         return (long long)exit_code;
     }
+    free(wcmd);
     int status = system(cmd_line);
     free(cmd_line);
     return (long long)status;
@@ -966,7 +1026,7 @@ void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long
         }
     }
     *w = 0;
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(si);
@@ -974,7 +1034,8 @@ void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long
     LARGE_INTEGER freq, q0, q1;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&q0);
-    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+    wchar_t* wcmd = spec_win_utf8_to_wide(cmd_line);
+    if (wcmd && CreateProcessW(NULL, wcmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
         WaitForSingleObject(pi.hProcess, INFINITE);
         QueryPerformanceCounter(&q1);
         DWORD dw_exit = 1;
@@ -1000,6 +1061,7 @@ void spec_pal_process_measure_cstr(long long cmd_cstr, long long argv_addr, long
             wall_us = (long long)(((q1.QuadPart - q0.QuadPart) * 1000000LL) / freq.QuadPart);
         }
     }
+    free(wcmd);
     free(cmd_line);
     if (out) { out[0] = exit_code; out[1] = wall_us; out[2] = cpu_us; out[3] = rss_kb; }
 }
@@ -1583,6 +1645,7 @@ long long spec_term_is_tty(void) {
 long long spec_term_enable_vt(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return 0;
     DWORD mode = 0;
@@ -1594,17 +1657,31 @@ long long spec_term_enable_vt(void) {
 #endif
 }
 
+static inline void _spec_win_init_utf8_console(void) {
+#ifdef _WIN32
+    static _Atomic int _inited = 0;
+    if (atomic_load_explicit(&_inited, memory_order_relaxed) == 0) {
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
+        atomic_store_explicit(&_inited, 1, memory_order_relaxed);
+    }
+#endif
+}
+
 void spec_pal_error_line(long long data_addr, long long len) {
+    _spec_win_init_utf8_console();
     if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stderr);
     fputc('\n', stderr);
 }
 
 void spec_pal_print_line(long long data_addr, long long len) {
+    _spec_win_init_utf8_console();
     if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stdout);
     fputc('\n', stdout);
 }
 
 void spec_pal_print(long long data_addr, long long len) {
+    _spec_win_init_utf8_console();
     if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stdout);
     fflush(stdout);
 }

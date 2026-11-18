@@ -74,9 +74,19 @@ long long spec_pal_exe_dir(long long buf_addr, long long buf_size) {
 long long spec_pal_file_size_cstr(long long path_cstr) {
     const char* p = (const char*)(intptr_t)path_cstr;
     if (!p || !*p) return -1;
+#ifdef _WIN32
+    wchar_t* wp = spec_win_utf8_to_wide(p);
+    if (!wp) return -1;
+    struct _stat64 st;
+    int r = _wstat64(wp, &st);
+    free(wp);
+    if (r != 0) return -1;
+    return (long long)st.st_size;
+#else
     struct stat st;
     if (stat(p, &st) != 0) return -1;
     return (long long)st.st_size;
+#endif
 }
 ```;
 	}

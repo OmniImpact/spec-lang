@@ -1607,6 +1607,98 @@ Class is Parser{
 		return Expression:ArrayLit(items: items);
 	}
 
+	## Next byte position in `raw` after `expandUnicodeEscape` completes.
+	local Int is unicodeEscEndPos: 0;
+
+	## Maps a hex character to 0..15, or -1 if not hex.
+	local Function of Int is hexDigitVal(String is ch){
+		if({ ch:length() == 0 }, { return -1; });
+		local Int is b: ch:charCodeAt(index: 0, default: -1);
+		if({ b >= 48 && b <= 57 }, { return b - 48; });
+		if({ b >= 97 && b <= 102 }, { return b - 97 + 10; });
+		if({ b >= 65 && b <= 70 }, { return b - 65 + 10; });
+		return -1;
+	}
+
+	## Parses and expands a `\uXXXX` or `\u{...}` escape starting immediately
+	## after `\u` at [uPos] in [raw], setting `:unicodeEscEndPos` to the new
+	## position in [raw] and reporting a parser error on [originTok] if invalid.
+	local Function of String is expandUnicodeEscape(String is raw, Int is uPos, Token is originTok){
+		local Int is rlen: raw:length();
+		if({ uPos >= rlen }, {
+			:unicodeEscEndPos: uPos;
+			:addError(tok: originTok, message: "Invalid Unicode escape: expected 4 hex digits (\\uXXXX) or braced hex (\\u{...}).");
+			return '';
+		});
+		local String is first: raw:charAt(index: uPos, default: '');
+		if({ first == '{' }, {
+			local Int is p: uPos + 1;
+			local Int is digits: 0;
+			local Int is val: 0;
+			local Boolean is closed: false;
+			local Boolean is badChar: false;
+			while({ p < rlen && !closed && !badChar }, {
+				local String is ch: raw:charAt(index: p, default: '');
+				if({ ch == '}' }, {
+					closed: true;
+					p: p + 1;
+				}, {
+					local Int is d: :hexDigitVal(ch: ch);
+					if({ d < 0 }, {
+						badChar: true;
+					}, {
+						digits: digits + 1;
+						if({ digits <= 6 }, {
+							val: (val * 16) + d;
+						});
+						p: p + 1;
+					});
+				});
+			});
+			:unicodeEscEndPos: p;
+			if({ !closed || badChar || digits == 0 || digits > 6 }, {
+				:addError(tok: originTok, message: "Invalid Unicode escape: \\u{...} requires 1 to 6 hexadecimal digits.");
+				return '';
+			});
+			if({ val > 1114111 }, {
+				:addError(tok: originTok, message: "Invalid Unicode escape: code point exceeds maximum U+10FFFF.");
+				return '';
+			});
+			if({ val >= 55296 && val <= 57343 }, {
+				:addError(tok: originTok, message: "Invalid Unicode escape: lone surrogate code points (U+D800..U+DFFF) are not valid Unicode scalar values.");
+				return '';
+			});
+			return String:fromCodePoint(code: val);
+		});
+		if({ uPos + 4 > rlen }, {
+			:unicodeEscEndPos: rlen;
+			:addError(tok: originTok, message: "Invalid Unicode escape: \\uXXXX requires 4 hexadecimal digits.");
+			return '';
+		});
+		local Int is val4: 0;
+		local Int is k: 0;
+		local Boolean is ok4: true;
+		while({ k < 4 }, {
+			local Int is d: :hexDigitVal(ch: raw:charAt(index: uPos + k, default: ''));
+			if({ d < 0 }, {
+				ok4: false;
+			}, {
+				val4: (val4 * 16) + d;
+			});
+			k: k + 1;
+		});
+		:unicodeEscEndPos: uPos + 4;
+		if({ !ok4 }, {
+			:addError(tok: originTok, message: "Invalid Unicode escape: \\uXXXX requires 4 hexadecimal digits.");
+			return '';
+		});
+		if({ val4 >= 55296 && val4 <= 57343 }, {
+			:addError(tok: originTok, message: "Invalid Unicode escape: lone surrogate code points (U+D800..U+DFFF) are not valid Unicode scalar values.");
+			return '';
+		});
+		return String:fromCodePoint(code: val4);
+	}
+
 	## Desugars template-family string content ("..." and backtick
 	## heredocs): splits literal chunks from {{expr}} holes, sub-parses each
 	## hole, and folds everything into the same concat chain a programmer
@@ -1630,7 +1722,12 @@ Class is Parser{
 					if({ dPos < raw:length() }, {
 						local String is nextCh: raw:charAt(index: dPos, default: '');
 						dPos: dPos + 1;
-						dRes: dRes . esc:expand(escaped: nextCh);
+						if({ nextCh == 'u' }, {
+							dRes: dRes . :expandUnicodeEscape(raw: raw, uPos: dPos, originTok: originTok);
+							dPos: :unicodeEscEndPos;
+						}, {
+							dRes: dRes . esc:expand(escaped: nextCh);
+						});
 					}, {
 						dRes: dRes . "\\";
 					});
@@ -1666,8 +1763,13 @@ Class is Parser{
 					if({ ch == "\\" }, {
 						if({ sPos + 1 < raw:length() }, {
 							local String is nextCh: raw:charAt(index: sPos + 1, default: '');
-							lit: lit . esc:expand(escaped: nextCh);
-							sPos: sPos + 2;
+							if({ nextCh == 'u' }, {
+								lit: lit . :expandUnicodeEscape(raw: raw, uPos: sPos + 2, originTok: originTok);
+								sPos: :unicodeEscEndPos;
+							}, {
+								lit: lit . esc:expand(escaped: nextCh);
+								sPos: sPos + 2;
+							});
 						}, {
 							lit: lit . "\\";
 							sPos: sPos + 1;

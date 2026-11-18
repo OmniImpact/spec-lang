@@ -300,6 +300,15 @@ Class is Buf{
 		local Int is dCap: Mem:loadI64(ptr: dAddr, byteOffset: 16);
 		local Int is need: sLen + 1;
 		local Int is dData: Mem:loadI64(ptr: dAddr, byteOffset: 0);
+		if({ dData != dAddr + 36 }, {
+			local Int is oldCk: Mem:loadI64(ptr: dAddr, byteOffset: 40);
+			if({ oldCk != 0 }, {
+				if({ oldCk > 0 }, {
+					Mem:free(ptr: oldCk);
+				});
+				Mem:storeI64(ptr: dAddr, byteOffset: 40, val: 0);
+			});
+		});
 		if({ dLen + need > dCap }, {
 			local Int is cap: if({ dCap == 0 }, { 16 }, { dCap * 2 });
 			while({ cap < dLen + need }, {
@@ -308,6 +317,8 @@ Class is Buf{
 			if({ dData == dAddr + 36 }, {
 				local Int is newData: Mem:alloc(bytes: cap);
 				if({ dLen > 0 }, { Mem:copy(dst: newData, src: dData, bytes: dLen); });
+				Mem:storeI64(ptr: dAddr, byteOffset: 40, val: 0);
+				Mem:storeI64(ptr: dAddr, byteOffset: 48, val: 0);
 				dData: newData;
 			}, {
 				dData: Mem:realloc(ptr: dData, bytes: cap);

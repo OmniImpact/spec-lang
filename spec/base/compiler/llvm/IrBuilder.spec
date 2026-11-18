@@ -2402,7 +2402,7 @@ Class is IrBuilder{
 							match(on: assignValue, when: [
 								Expression:StringLit: local Function(String is _sv){ isStrLitAsgn: true; }
 							], default: {});
-							if({ isStrLitAsgn && !:boxedLocals:has(key: name) && :localSpecTypes:get(key: name, default: '') == 'String' && cval != '' && cval != 'null' }, {
+							if({ isStrLitAsgn && !:boxedLocals:has(key: name) && (:localSpecTypes:get(key: name, default: '') == 'String' || :localSpecTypes:get(key: name, default: '') == 'Str') && cval != '' && cval != 'null' }, {
 								if({ :lazyLocalStateSlots:has(key: name) }, {
 									local String is stSlot: :lazyLocalStateSlots:get(key: name, default: '');
 									local String is twoV: :nextTmp();
@@ -2717,7 +2717,7 @@ Class is IrBuilder{
 			:emitClaimPool(val: rsB);
 			return rsB;
 		});
-		if({ rTy == IrType:Ptr && right:resolvedType != 'String' && (:clsMap:has(key: right:resolvedType) || right:resolvedType == 'Any') }, {
+		if({ rTy == IrType:Ptr && right:resolvedType != 'String' && right:resolvedType != 'Str' && (:clsMap:has(key: right:resolvedType) || right:resolvedType == 'Any') }, {
 			return :emitObjectToString(objVal: r, specType: right:resolvedType);
 		});
 		return r;
@@ -2775,7 +2775,7 @@ Class is IrBuilder{
 		if({ targetName == '' || !:localSlots:has(key: targetName) || :boxedLocals:has(key: targetName) || :lazyLocalStateSlots:has(key: targetName) }, {
 			return false;
 		});
-		if({ :localSpecTypes:get(key: targetName, default: '') != 'String' }, {
+		if({ :localSpecTypes:get(key: targetName, default: '') != 'String' && :localSpecTypes:get(key: targetName, default: '') != 'Str' }, {
 			return false;
 		});
 		local Array of Expression is rhsList: [];
@@ -3076,7 +3076,7 @@ Class is IrBuilder{
 				if({ op == '==' || op == '!=' || op == '<' || op == '<=' || op == '>' || op == '>=' }, {
 					local IrType is cmpTy: :irTypeFor(specType: left:resolvedType);
 					if({ cmpTy == IrType:Void }, { cmpTy: IrType:I64; });
-					local Boolean is isStrCmp: cmpTy == IrType:Ptr && (left:resolvedType == 'String' || right:resolvedType == 'String');
+					local Boolean is isStrCmp: cmpTy == IrType:Ptr && (left:resolvedType == 'String' || right:resolvedType == 'String' || left:resolvedType == 'Str' || right:resolvedType == 'Str');
 					if({ isStrCmp && (op == '==' || op == '!=') }, {
 						local Array of IrType is sT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
 						local Array of String is sV: ['null', l, r];
@@ -3183,7 +3183,7 @@ Class is IrBuilder{
 						local String is defVal: :nextTmp();
 						:emit(inst: IrInst:ConstInt(dst: defVal, value: 0));
 						local String is dstP: :nextTmp();
-						:emit(inst: IrInst:IrCall(dst: dstP, hasDst: true, retType: IrType:I64, callee: 'String_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [v, baseVal, defVal]));
+						:emit(inst: IrInst:IrCall(dst: dstP, hasDst: true, retType: IrType:I64, callee: 'Str_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [v, baseVal, defVal]));
 						return dstP;
 					});
 					local String is digitsVal: '';
@@ -3204,16 +3204,16 @@ Class is IrBuilder{
 					:emit(inst: IrInst:IrCall(dst: dstByte, hasDst: true, retType: IrType:I64, callee: '__spec_check_byte', argTypes: [IrType:I64], args: [bv]));
 					return dstByte;
 				});
-				if({ inner:resolvedType == 'String' && target == 'Int' }, {
+				if({ (inner:resolvedType == 'String' || inner:resolvedType == 'Str') && target == 'Int' }, {
 					local String is base10: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: base10, value: 10));
 					local String is def0: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: def0, value: 0));
 					local String is dstI: :nextTmp();
-					:emit(inst: IrInst:IrCall(dst: dstI, hasDst: true, retType: IrType:I64, callee: 'String_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [v, base10, def0]));
+					:emit(inst: IrInst:IrCall(dst: dstI, hasDst: true, retType: IrType:I64, callee: 'Str_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [v, base10, def0]));
 					return dstI;
 				});
-				if({ target == 'String' && fromTy != IrType:Ptr }, {
+				if({ (target == 'String' || target == 'Str') && fromTy != IrType:Ptr }, {
 					local String is dstS: :nextTmp();
 					if({ fromTy == IrType:F64 }, {
 						:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [v]));
@@ -3227,10 +3227,10 @@ Class is IrBuilder{
 					return dstS;
 				});
 				if({ fromTy == toTy }, {
-					if({ fromTy == IrType:Ptr && target == 'String' && inner:resolvedType != 'String' && (:clsMap:has(key: inner:resolvedType) || inner:resolvedType == 'Any') }, {
+					if({ fromTy == IrType:Ptr && (target == 'String' || target == 'Str') && inner:resolvedType != 'String' && inner:resolvedType != 'Str' && (:clsMap:has(key: inner:resolvedType) || inner:resolvedType == 'Any') }, {
 						return :emitObjectToString(objVal: v, specType: inner:resolvedType);
 					});
-					if({ fromTy == IrType:Ptr && target != 'Any' && target != '' && target != 'String' && target != 'Array' && target != 'Map' && !target:startsWith(prefix: 'Array of ') && !target:startsWith(prefix: 'Map of ') && :clsQNameMap:has(key: target) }, {
+					if({ fromTy == IrType:Ptr && target != 'Any' && target != '' && target != 'String' && target != 'Str' && target != 'Buf' && target != 'Array' && target != 'Map' && !target:startsWith(prefix: 'Array of ') && !target:startsWith(prefix: 'Map of ') && :clsQNameMap:has(key: target) }, {
 						local String is tQName: :clsQNameMap:get(key: target, default: '');
 						local Int is tStrId: :mod:internStringLiteral(value: tQName);
 						local String is tPtr: :nextTmp();
@@ -4092,6 +4092,17 @@ Class is IrBuilder{
 		local Int is vslot: -1;
 		local String is dirCallee: calleeName;
 		local String is recvStruct: :currentClass;
+		local String is ovSuf: if({ call:overloadIndex > 0 }, { '_' . ((call:overloadIndex + 1) as String) }, { '' });
+		if({ !hasRecv && staticTargetName != '' && !:heldMethods:has(key: calleeName) && !:methodParams:has(key: dirCallee) }, {
+			local String is stStruct: :cStructName(qname: staticTargetName);
+			if({ :mod:findStruct(name: stStruct):name == '' && :clsQNameMap:has(key: staticTargetName) }, {
+				stStruct: :cStructName(qname: :clsQNameMap:get(key: staticTargetName, default: staticTargetName));
+			});
+			local String is parentStFn: :findParentMethodImpl(clsName: stStruct, methodName: nm, suffix: ovSuf);
+			if({ parentStFn != 'null' && parentStFn != '' }, {
+				dirCallee: parentStFn;
+			});
+		});
 		if({ hasRecv && nm != 'init' && nm != 'destroy' && !:heldMethods:has(key: calleeName) }, {
 			local Boolean is isSelfTarget: false;
 			match(on: call:target, when: [
@@ -4105,7 +4116,7 @@ Class is IrBuilder{
 					recvStruct: :cStructName(qname: :clsQNameMap:get(key: recvType, default: recvType));
 				});
 			});
-			if({ recvStruct != 'String' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' }, {
+			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' }, {
 				local IrStruct is rst: :mod:findStruct(name: recvStruct);
 				local String is vkey: if({ call:overloadIndex > 0 }, { nm . '_' . ((call:overloadIndex + 1) as String) }, { nm });
 				vslot: rst:vtableSlot(mname: vkey);
@@ -4113,6 +4124,13 @@ Class is IrBuilder{
 					local String is vtFn: rst:vtableFns:get(index: vslot, default: calleeName);
 					if({ vtFn != '' && vtFn != 'null' }, {
 						dirCallee: vtFn;
+					});
+				});
+			}, {
+				if({ !:methodParams:has(key: dirCallee) }, {
+					local String is parentFn: :findParentMethodImpl(clsName: recvStruct, methodName: nm, suffix: ovSuf);
+					if({ parentFn != 'null' && parentFn != '' }, {
+						dirCallee: parentFn;
 					});
 				});
 			});
@@ -4180,7 +4198,7 @@ Class is IrBuilder{
 				});
 			});
 		}, {
-			:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: callRetTy, callee: calleeName, argTypes: argTypes, args: argVals));
+			:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: callRetTy, callee: dirCallee, argTypes: argTypes, args: argVals));
 		});
 		if({ callRetTy != retTy && hasDst }, {
 			dst: :castIfNeeded(val: dst, fromTy: callRetTy, toTy: retTy);
@@ -4189,7 +4207,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Str' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
 			return 'null';
 		});
 		if({ :clsMap:has(key: provStruct) && :bindings:isSysinternal(cls: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {

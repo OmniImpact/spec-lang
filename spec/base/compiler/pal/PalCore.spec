@@ -342,13 +342,32 @@ long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new
 #include <pthread.h>
 #include <stdatomic.h>
 
+static wchar_t* spec_win_utf8_to_wide(const char* u8) {
+    if (!u8) return NULL;
+    int n = MultiByteToWideChar(CP_UTF8, 0, u8, -1, NULL, 0);
+    if (n <= 0) return NULL;
+    wchar_t* w = (wchar_t*)malloc((size_t)n * sizeof(wchar_t));
+    if (!w) return NULL;
+    MultiByteToWideChar(CP_UTF8, 0, u8, -1, w, n);
+    return w;
+}
+
+static bool spec_win_wide_to_utf8_buf(const wchar_t* w, char* out, size_t cap) {
+    if (!w || !out || cap == 0) return false;
+    int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, out, (int)cap, NULL, NULL);
+    return n > 0 && (size_t)n <= cap;
+}
+
 static bool spec_pal_get_exe_path(char* buf, size_t size) {
-    DWORD n = GetModuleFileNameA(NULL, buf, (DWORD)size);
-    if (n > 0 && n < size) {
-        for (DWORD i = 0; i < n; i++) {
-            if (buf[i] == '\\') buf[i] = '/';
+    wchar_t wbuf[MAX_PATH * 4];
+    DWORD n = GetModuleFileNameW(NULL, wbuf, (DWORD)(sizeof(wbuf) / sizeof(wchar_t)));
+    if (n > 0 && n < (DWORD)(sizeof(wbuf) / sizeof(wchar_t))) {
+        if (spec_win_wide_to_utf8_buf(wbuf, buf, size)) {
+            for (size_t i = 0; buf[i]; i++) {
+                if (buf[i] == '\\') buf[i] = '/';
+            }
+            return true;
         }
-        return true;
     }
     return false;
 }

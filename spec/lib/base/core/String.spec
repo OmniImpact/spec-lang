@@ -1,18 +1,18 @@
 #! Package base:core
-#! The String type: a refcounted, NUL-terminated byte buffer with a cached length.
+#! The String type: full Unicode support layered on top of Str (`Buf -> Str -> String`).
 ##
-## String is a transparent runtime-managed class.
-## The type system and class registry know its method surface below, but no
-## C struct, vtable, or constructor is emitted for the class: a String value
-## IS the managed buffer (`SpecBuf*`). The bodies here run directly over the
-## sysinternal byte-buffer floor; the generator routes the hot methods to
-## routes the hot methods to their `spec_string_*` floor equivalents, and
-## these bodies as the only implementation when the floor interception retires.
+## String inherits the fast byte/ASCII and UTF-8 validation/sanitization methods
+## from `Str` (`Buf -> Str -> String`), and adds full Unicode code-point decoding,
+## encoding (`fromCodePoint`), Unicode case conversion (`toLower`/`toUpper`), and
+## lazy sparse checkpoint indexing (`K = 32` runes at `SpecBuf` offset 40) for
+## bounded-O(1) character/rune operations (`runeCount`, `runeAt`, `codePointAtRune`,
+## `sliceRunes`, `codePoints`).
 
-Class is String{
+Class of Str is String{
 	namespace: ['base', 'core'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', Str],
 		['base', 'sys', as Buf()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
@@ -25,429 +25,430 @@ Class is String{
 		[Int, parseInt]
 	];
 
-	## Number of bytes in this string.
+	## Encodes Unicode scalar value [code] (`U+0000..U+10FFFF`, excluding
+	## surrogates `0xD800..0xDFFF`) into a 1–4 byte UTF-8 string. Invalid code
+	## points produce the UTF-8 replacement character `U+FFFD`.
 	##
-	## @return: Byte count.
-	Function of Int is length(){
-		return Buf:bufLength(b: :);
+	## @param code: Unicode code point.
+	## @return: UTF-8 string for [code] (or `U+FFFD` if invalid).
+	Function of String is fromCodePoint(Int is code){
+		local Int is cp: code;
+		if({ cp < 0 || cp > 1114111 || (cp >= 55296 && cp <= 57343) }, {
+			cp: 65533;
+		});
+		local Int is scratch: Mem:tlsGetI64(slot: 2);
+		if({ scratch == 0 }, {
+			scratch: Mem:alloc(bytes: 256);
+			Mem:tlsSetI64(slot: 2, val: scratch);
+		});
+		if({ cp <= 127 }, {
+			Mem:storeByte(ptr: scratch, byteOffset: 0, val: cp);
+			Mem:storeByte(ptr: scratch, byteOffset: 1, val: 0);
+			return Mem:strFromBytes(srcAddr: scratch, len: 1);
+		});
+		if({ cp <= 2047 }, {
+			Mem:storeByte(ptr: scratch, byteOffset: 0, val: 192 | (cp >> 6));
+			Mem:storeByte(ptr: scratch, byteOffset: 1, val: 128 | (cp & 63));
+			Mem:storeByte(ptr: scratch, byteOffset: 2, val: 0);
+			return Mem:strFromBytes(srcAddr: scratch, len: 2);
+		});
+		if({ cp <= 65535 }, {
+			Mem:storeByte(ptr: scratch, byteOffset: 0, val: 224 | (cp >> 12));
+			Mem:storeByte(ptr: scratch, byteOffset: 1, val: 128 | ((cp >> 6) & 63));
+			Mem:storeByte(ptr: scratch, byteOffset: 2, val: 128 | (cp & 63));
+			Mem:storeByte(ptr: scratch, byteOffset: 3, val: 0);
+			return Mem:strFromBytes(srcAddr: scratch, len: 3);
+		});
+		Mem:storeByte(ptr: scratch, byteOffset: 0, val: 240 | (cp >> 18));
+		Mem:storeByte(ptr: scratch, byteOffset: 1, val: 128 | ((cp >> 12) & 63));
+		Mem:storeByte(ptr: scratch, byteOffset: 2, val: 128 | ((cp >> 6) & 63));
+		Mem:storeByte(ptr: scratch, byteOffset: 3, val: 128 | (cp & 63));
+		Mem:storeByte(ptr: scratch, byteOffset: 4, val: 0);
+		return Mem:strFromBytes(srcAddr: scratch, len: 4);
 	}
 
-	## One-character string at [index], or [default] when out of bounds.
+	## Decodes the UTF-8 code point starting at [byteIndex], returning [default]
+	## when [byteIndex] is out of bounds or `0xFFFD` (`65533`) on an ill-formed
+	## byte sequence.
 	##
-	## @param index: Zero-based byte index.
+	## @param byteIndex: Zero-based byte offset.
 	## @param default: Fallback when out of bounds.
-	## @return: The character, or [default].
-	Function of String is charAt(Int is index, String is default: ''){
-		if({ index < 0 || index >= Buf:bufLength(b: :) }, {
-			return Buf:stringCopy(b: default);
+	## @return: Decoded Unicode scalar value, `65533`, or [default].
+	Function of Int is codePointAt(Int is byteIndex, Int is default: -1){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return default; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ byteIndex < 0 || byteIndex >= len }, { return default; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is b0: Mem:loadByte(ptr: data, byteOffset: byteIndex);
+		if({ b0 < 128 }, { return b0; });
+		local Int is vlen: :validUtf8SeqLen(data: data, idx: byteIndex, len: len);
+		if({ vlen == 2 }, {
+			local Int is b1: Mem:loadByte(ptr: data, byteOffset: byteIndex + 1);
+			return ((b0 & 31) << 6) | (b1 & 63);
 		});
-		return String:fromCharCode(code: Buf:bufGetByte(b: :, idx: index, def: -1));
+		if({ vlen == 3 }, {
+			local Int is b1: Mem:loadByte(ptr: data, byteOffset: byteIndex + 1);
+			local Int is b2: Mem:loadByte(ptr: data, byteOffset: byteIndex + 2);
+			return ((b0 & 15) << 12) | ((b1 & 63) << 6) | (b2 & 63);
+		});
+		if({ vlen == 4 }, {
+			local Int is b1: Mem:loadByte(ptr: data, byteOffset: byteIndex + 1);
+			local Int is b2: Mem:loadByte(ptr: data, byteOffset: byteIndex + 2);
+			local Int is b3: Mem:loadByte(ptr: data, byteOffset: byteIndex + 3);
+			return ((b0 & 7) << 18) | ((b1 & 63) << 12) | ((b2 & 63) << 6) | (b3 & 63);
+		});
+		return 65533;
 	}
 
-	## Bytes from [start] (inclusive) to [end] (exclusive), clamped to bounds.
-	##
-	## @param start: Inclusive start index.
-	## @param end: Exclusive end index.
-	## @return: The sub-string.
-	Function of String is substring(Int is start, Int is end){
-		local Int is s: start;
-		local Int is e: end;
-		if({ s < 0 }, {
-			s: 0;
-		});
-		if({ e > Buf:bufLength(b: :) }, {
-			e: Buf:bufLength(b: :);
-		});
-		return Buf:stringSubstring(b: :, start: s, end: e);
-	}
+	## Lazily builds and publishes the sparse checkpoint table (`K = 32` runes)
+	## at offset 40 of `SpecBuf` for strings with `byteLength() > 64`.
+	## Returns `-1` when verified pure ASCII, `> 0` for the checkpoint table
+	## address on non-ASCII strings, or `0` for short strings (`<= 64` bytes).
+	local Function of Int is ensureCheckpoints(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return 0; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 64 }, { return 0; });
+		local Int is ck: Mem:atomicLoadI64(addr: addr + 40);
+		if({ ck != 0 }, { return ck; });
 
-	## True when this string begins with [prefix].
-	##
-	## @param prefix: The prefix to test.
-	## @return: true when present.
-	Function of Boolean is startsWith(String is prefix){
-		local Int is pl: Buf:bufLength(b: prefix);
-		if({ pl == 0 }, {
-			return true;
-		});
-		if({ pl > Buf:bufLength(b: :) }, {
-			return false;
-		});
-		return Buf:stringSubstring(b: :, start: 0, end: pl) == prefix;
-	}
-
-	## True when this string ends with [suffix].
-	##
-	## @param suffix: The suffix to test.
-	## @return: true when present.
-	Function of Boolean is endsWith(String is suffix){
-		local Int is sl: Buf:bufLength(b: suffix);
-		if({ sl == 0 }, {
-			return true;
-		});
-		local Int is bl: Buf:bufLength(b: :);
-		if({ sl > bl }, {
-			return false;
-		});
-		return Buf:stringSubstring(b: :, start: bl - sl, end: bl) == suffix;
-	}
-
-	## True when [needle] occurs anywhere in this string (empty needle: true).
-	##
-	## @param needle: Sequence to locate.
-	## @return: true when present.
-	Function of Boolean is contains(String is needle){
-		return :indexOf(search: needle, default: -1) >= 0;
-	}
-
-	## First occurrence of [needle] at or after the start, or [default].
-	##
-	## @param search: Sequence to locate.
-	## @param default: Fallback when absent (conventionally -1).
-	## @return: The index, or [default].
-	Function of Int is indexOf(String is search, Int is default: -1){
-		return Buf:stringIndexOf(b: :, needle: search, def: default);
-	}
-
-	## Every [search] occurrence replaced by [replacement].
-	##
-	## @param search: Sequence to replace.
-	## @param replacement: Replacement sequence.
-	## @return: The replaced copy.
-	Function of String is replaceAll(String is search, String is replacement){
-		local Int is slen: Buf:bufLength(b: search);
-		if({ slen == 0 }, {
-			return Buf:stringCopy(b: :);
-		});
-		local Int is total: Buf:bufLength(b: :);
-		local String is out: '';
-		local Int is pos: 0;
-		local Boolean is running: true;
-		while({ running }, {
-			local Int is idx: Buf:stringIndexOfFrom(b: :, needle: search, from: pos, def: -1);
-			if({ idx < 0 }, {
-				running: false;
-			}, {
-				out: out . :substring(start: pos, end: idx) . replacement;
-				pos: idx + slen;
-			});
-		});
-		out: out . :substring(start: pos, end: total);
-		return out;
-	}
-
-	## Splits on [delimiter]; the trailing part is always present.
-	##
-	## @param delimiter: Split boundary.
-	## @return: The parts.
-	Function of Array of String is split(String is delimiter){
-		local Array of String is res: [];
-		local Int is slen: Buf:bufLength(b: :);
-		if({ slen == 0 }, {
-			return res;
-		});
-		local Int is dlen: Buf:bufLength(b: delimiter);
-		if({ dlen == 0 }, {
-			local Int is i: 0;
-			repeat(count: slen, worker: {
-				res:add(item: Buf:stringSubstring(b: :, start: i, end: i + 1));
-				i: i + 1;
-			});
-			return res;
-		});
-		local Int is pos: 0;
-		local Int is idx: Buf:stringIndexOfFrom(b: :, needle: delimiter, from: 0, def: -1);
-		while({ idx >= 0 }, {
-			res:add(item: Buf:stringSubstring(b: :, start: pos, end: idx));
-			pos: idx + dlen;
-			idx: Buf:stringIndexOfFrom(b: :, needle: delimiter, from: pos, def: -1);
-		});
-		res:add(item: Buf:stringSubstring(b: :, start: pos, end: slen));
-		return res;
-	}
-
-	## Lines of this string (split on '\n', trailing '\r' stripped).
-	##
-	## @return: The lines.
-	Function of Array of String is lines(){
-		local Array of String is res: [];
-		local Int is len: Buf:bufLength(b: :);
-		if({ len == 0 }, {
-			return res;
-		});
-		local Int is start: 0;
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is runes: 0;
 		local Int is i: 0;
-		repeat(count: len, worker: {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
-			if({ b == 10 }, {
-				local Int is endIdx: i;
-				if({ endIdx > start }, {
-					local Int is prev: Buf:bufGetByte(b: :, idx: endIdx - 1, def: -1);
-					if({ prev == 13 }, {
-						endIdx: endIdx - 1;
-					});
-				});
-				res:add(item: :substring(start: start, end: endIdx));
-				start: i + 1;
-			});
-			i: i + 1;
-		});
-		if({ start < len }, {
-			local Int is endIdx: len;
-			local Int is prev: Buf:bufGetByte(b: :, idx: endIdx - 1, def: -1);
-			if({ prev == 13 }, {
-				endIdx: endIdx - 1;
-			});
-			res:add(item: :substring(start: start, end: endIdx));
-		});
-		return res;
-	}
-
-	## Count occurrences of [byteVal] in this string.
-	Function of Int is countByte(Int is byteVal){
-		return Buf:bufCountByte(b: :, byteVal: byteVal);
-	}
-
-	## Total number of lines in this string without allocating line arrays.
-	Function of Int is lineCount(){
-		local Int is len: Buf:bufLength(b: :);
-		if({ len == 0 }, {
-			return 0;
-		});
-		local Int is nl: Buf:bufCountByte(b: :, byteVal: 10);
-		local Int is lastByte: Buf:bufGetByte(b: :, idx: len - 1, def: -1);
-		if({ lastByte != 10 }, {
-			nl: nl + 1;
-		});
-		return nl;
-	}
-
-	## Whitespace-trimmed copy (' ', '\t', '\n', '\r').
-	##
-	## @return: The trimmed copy.
-	Function of String is trim(){
-		local Int is len: Buf:bufLength(b: :);
-		if({ len == 0 }, {
-			return '';
-		});
-		local Int is s: 0;
-		local Boolean is sTrimming: true;
-		while({ sTrimming && (s < len) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: s, def: -1);
-			if({ b == 32 || b == 9 || b == 10 || b == 13 }, {
-				s: s + 1;
+		while({ i < len }, {
+			local Int is b0: Mem:loadByte(ptr: data, byteOffset: i);
+			if({ b0 < 128 }, {
+				i: i + 1;
 			}, {
-				sTrimming: false;
+				local Int is vlen: :validUtf8SeqLen(data: data, idx: i, len: len);
+				i: i + if({ vlen > 0 }, { vlen }, { 1 });
 			});
+			runes: runes + 1;
 		});
-		if({ s >= len }, {
-			return '';
+		if({ runes == len }, {
+			Mem:atomicCasI64(addr: addr + 40, expected: 0, desired: -1);
+			return -1;
 		});
-		local Int is e: len;
-		local Boolean is eTrimming: true;
-		while({ eTrimming && (e > s) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: e - 1, def: -1);
-			if({ b == 32 || b == 9 || b == 10 || b == 13 }, {
-				e: e - 1;
+
+		local Int is numCk: (runes >> 5) + 1;
+		local Int is newCk: Mem:alloc(bytes: 16 + (numCk * 4));
+		Mem:storeI64(ptr: newCk, byteOffset: 0, val: runes);
+		Mem:storeI64(ptr: newCk, byteOffset: 8, val: numCk);
+		local Int is rIdx: 0;
+		i: 0;
+		while({ i < len }, {
+			if({ (rIdx & 31) == 0 }, {
+				Mem:storeI32(ptr: newCk, byteOffset: 16 + ((rIdx >> 5) * 4), val: i);
+			});
+			local Int is b0: Mem:loadByte(ptr: data, byteOffset: i);
+			if({ b0 < 128 }, {
+				i: i + 1;
 			}, {
-				eTrimming: false;
+				local Int is vlen: :validUtf8SeqLen(data: data, idx: i, len: len);
+				i: i + if({ vlen > 0 }, { vlen }, { 1 });
 			});
+			rIdx: rIdx + 1;
 		});
-		return :substring(start: s, end: e);
+		if({ Mem:atomicCasI64(addr: addr + 40, expected: 0, desired: newCk) }, {
+			return newCk;
+		});
+		Mem:free(ptr: newCk);
+		return Mem:atomicLoadI64(addr: addr + 40);
 	}
 
-	## Number of leading [search] repetitions.
+	## Number of UTF-8 code points (runes) in this string.
+	## Uses lazy sparse checkpoints on strings > 64 bytes for O(1) repeat queries.
 	##
-	## @param search: The repetition unit.
-	## @return: Repetition count.
-	Function of Int is countLeading(String is search){
-		local Int is slen: Buf:bufLength(b: search);
-		local Int is blen: Buf:bufLength(b: :);
-		if({ slen == 0 || blen == 0 }, {
-			return 0;
+	## @return: Code-point count.
+	Function of Int is runeCount(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return 0; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return 0; });
+		if({ len > 64 }, {
+			local Int is ck: :ensureCheckpoints();
+			if({ ck == -1 }, { return len; });
+			if({ ck > 0 }, { return Mem:loadI64(ptr: ck, byteOffset: 0); });
 		});
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
 		local Int is count: 0;
-		local Int is pos: 0;
-		local Boolean is matching: true;
-		while({ matching && (pos + slen <= blen) }, {
-			if({ Buf:stringSubstring(b: :, start: pos, end: pos + slen) == search }, {
-				count: count + 1;
-				pos: pos + slen;
+		local Int is i: 0;
+		while({ i < len }, {
+			local Int is b0: Mem:loadByte(ptr: data, byteOffset: i);
+			if({ b0 < 128 }, {
+				i: i + 1;
 			}, {
-				matching: false;
+				local Int is vlen: :validUtf8SeqLen(data: data, idx: i, len: len);
+				i: i + if({ vlen > 0 }, { vlen }, { 1 });
 			});
+			count: count + 1;
 		});
 		return count;
 	}
 
-	## True when every byte is a digit and the string is non-empty.
+	## Maps a zero-based code-point index [runeIndex] to its byte offset in bounded
+	## O(1) time using lazy sparse checkpoints (`K = 32`).
 	##
-	## @return: true when all digits.
-	Function of Boolean is isDigit(){
-		local Int is n: Buf:bufLength(b: :);
-		if({ n == 0 }, {
-			return false;
-		});
-		local Int is i: 0;
-		local Boolean is ok: true;
-		while({ ok && (i < n) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
-			if({ b < 48 || b > 57 }, {
-				ok: false;
+	## @param runeIndex: Zero-based code-point index.
+	## @return: Byte offset in `0..byteLength()`.
+	Function of Int is runeToByteOffset(Int is runeIndex){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 || runeIndex <= 0 }, { return 0; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return 0; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is bPos: 0;
+		local Int is rem: runeIndex;
+		if({ len > 64 }, {
+			local Int is ck: :ensureCheckpoints();
+			if({ ck == -1 }, {
+				return if({ runeIndex >= len }, { len }, { runeIndex });
 			});
-			i: i + 1;
+			if({ ck > 0 }, {
+				local Int is totalRunes: Mem:loadI64(ptr: ck, byteOffset: 0);
+				if({ runeIndex >= totalRunes }, { return len; });
+				local Int is chunk: runeIndex >> 5;
+				rem: runeIndex & 31;
+				bPos: Mem:loadI32(ptr: ck, byteOffset: 16 + (chunk * 4));
+			});
 		});
-		return ok;
+		while({ rem > 0 && bPos < len }, {
+			local Int is b0: Mem:loadByte(ptr: data, byteOffset: bPos);
+			if({ b0 < 128 }, {
+				bPos: bPos + 1;
+			}, {
+				local Int is vlen: :validUtf8SeqLen(data: data, idx: bPos, len: len);
+				bPos: bPos + if({ vlen > 0 }, { vlen }, { 1 });
+			});
+			rem: rem - 1;
+		});
+		return bPos;
 	}
 
-	## True when every byte is a letter and the string is non-empty.
+	## Returns the Unicode code point at zero-based code-point index [runeIndex],
+	## or [default] when out of bounds. Accelerated by lazy sparse checkpoints.
 	##
-	## @return: true when all letters.
-	Function of Boolean is isAlpha(){
-		local Int is n: Buf:bufLength(b: :);
-		if({ n == 0 }, {
-			return false;
-		});
-		local Int is i: 0;
-		local Boolean is ok: true;
-		while({ ok && (i < n) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
-			local Boolean is isUpper: (b >= 65 && b <= 90);
-			local Boolean is isLower: (b >= 97 && b <= 122);
-			if({ !isUpper && !isLower }, {
-				ok: false;
-			});
-			i: i + 1;
-		});
-		return ok;
+	## @param runeIndex: Zero-based code-point index.
+	## @param default: Fallback when out of bounds.
+	## @return: Decoded code point, or [default].
+	Function of Int is codePointAtRune(Int is runeIndex, Int is default: -1){
+		if({ runeIndex < 0 }, { return default; });
+		local Int is total: :runeCount();
+		if({ runeIndex >= total }, { return default; });
+		local Int is bOff: :runeToByteOffset(runeIndex: runeIndex);
+		return :codePointAt(byteIndex: bOff, default: default);
 	}
 
-	## True when every byte is whitespace and the string is non-empty.
+	## Returns the single UTF-8 character substring at zero-based code-point
+	## index [runeIndex], or [default] when out of bounds.
 	##
-	## @return: true when all whitespace.
-	Function of Boolean is isWhitespace(){
-		local Int is n: Buf:bufLength(b: :);
-		if({ n == 0 }, {
-			return false;
-		});
-		local Int is i: 0;
-		local Boolean is ok: true;
-		while({ ok && (i < n) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
-			if({ b != 32 && b != 9 && b != 10 && b != 13 && b != 11 && b != 12 }, {
-				ok: false;
-			});
-			i: i + 1;
-		});
-		return ok;
+	## @param runeIndex: Zero-based code-point index.
+	## @param default: Fallback when out of bounds.
+	## @return: UTF-8 character string, or [default].
+	Function of String is runeAt(Int is runeIndex, String is default: ''){
+		if({ runeIndex < 0 }, { return Buf:stringCopy(b: default); });
+		local Int is total: :runeCount();
+		if({ runeIndex >= total }, { return Buf:stringCopy(b: default); });
+		local Int is bStart: :runeToByteOffset(runeIndex: runeIndex);
+		local Int is bLen: :codePointByteLen(byteIndex: bStart);
+		return :substring(start: bStart, end: bStart + bLen);
 	}
 
-	## One-character string for [code] (0-255); empty when out of range.
+	## Code-point slice from [start] (inclusive) to [end] (exclusive), clamped
+	## to `0..runeCount()`. Accelerated by lazy sparse checkpoints on long strings.
 	##
-	## @param code: The byte value.
-	## @return: The single-character string.
-	Function of String is fromCharCode(Int is code){
-		if({ code < 0 || code > 255 }, {
-			return '';
+	## @param start: Inclusive code-point start index.
+	## @param end: Exclusive code-point end index.
+	## @return: UTF-8 substring covering runes `[start, end)`.
+	Function of String is sliceRunes(Int is start, Int is end){
+		local Int is s: if({ start < 0 }, { 0 }, { start });
+		local Int is e: end;
+		if({ e <= s }, { return ''; });
+		local Int is bStart: :runeToByteOffset(runeIndex: s);
+		local Int is bEnd: :runeToByteOffset(runeIndex: e);
+		if({ bStart >= bEnd }, { return ''; });
+		return :substring(start: bStart, end: bEnd);
+	}
+
+	## Decodes all UTF-8 code points in this string into an [Array] of [Int].
+	##
+	## @return: Array of Unicode scalar values.
+	Function of Array of Int is codePoints(){
+		local Array of Int is res: [];
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return res; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return res; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is i: 0;
+		while({ i < len }, {
+			local Int is b0: Mem:loadByte(ptr: data, byteOffset: i);
+			if({ b0 < 128 }, {
+				res:add(item: b0);
+				i: i + 1;
+			}, {
+				local Int is vlen: :validUtf8SeqLen(data: data, idx: i, len: len);
+				if({ vlen == 0 }, {
+					res:add(item: 65533);
+					i: i + 1;
+				}, {
+					res:add(item: :codePointAt(byteIndex: i, default: 65533));
+					i: i + vlen;
+				});
+			});
 		});
-		local Int is tmp: Mem:alloc(bytes: 2);
-		Mem:storeByte(ptr: tmp, byteOffset: 0, val: code);
-		Mem:storeByte(ptr: tmp, byteOffset: 1, val: 0);
-		local String is res: Mem:strFromBytes(srcAddr: tmp, len: 1);
-		Mem:free(ptr: tmp);
 		return res;
 	}
 
-	## Returns the newline string ("\n").
-	##
-	## @return: Single newline character string.
-	Function of String is newline(){
-		return "\n";
-	}
-
-	## Parses this string as an integer in [base] (2-36), accepting 0x/0b/0o
-	## prefixes and _ separators. Returns [default] on any invalid input.
-	##
-	## @param base: Number base (2-36).
-	## @param default: Fallback on invalid input.
-	## @return: The parsed value, or [default].
-	Function of Int is parseInt(Int is base: 10, Int is default: -1){
-		local Int is len: Buf:bufLength(b: :);
-		if({ len == 0 }, {
-			return default;
-		});
-		local Int is b: base;
-		local Int is start: 0;
-		if({ len >= 2 && Buf:bufGetByte(b: :, idx: 0, def: -1) == 48 }, {
-			local Int is prefixCh: Buf:bufGetByte(b: :, idx: 1, def: -1);
-			if({ prefixCh == 120 || prefixCh == 88 }, {
-				b: 16;
-				start: 2;
-			}, {
-				if({ prefixCh == 98 || prefixCh == 66 }, {
-					b: 2;
-					start: 2;
-				}, {
-					if({ prefixCh == 111 || prefixCh == 79 }, {
-						b: 8;
-						start: 2;
-					});
-				});
-			});
-		});
-		if({ b < 2 || b > 36 }, {
-			return default;
-		});
-		local Boolean is neg: false;
-		if({ start < len && Buf:bufGetByte(b: :, idx: start, def: -1) == 45 }, {
-			neg: true;
-			start: start + 1;
-		});
-		if({ start >= len }, {
-			return default;
-		});
-		local Int is val: 0;
-		local Int is i: start;
-		local Boolean is ok: true;
-		local Boolean is anyDigits: false;
-		while({ ok && (i < len) }, {
-			local Int is ch: Buf:bufGetByte(b: :, idx: i, def: -1);
-			if({ ch != 95 }, {
-				local Int is digit: -1;
-				if({ ch >= 48 && ch <= 57 }, {
-					digit: ch - 48;
-				}, {
-					if({ ch >= 97 && ch <= 122 }, {
-						digit: ch - 97 + 10;
-					}, {
-						if({ ch >= 65 && ch <= 90 }, {
-							digit: ch - 65 + 10;
-						});
-					});
-				});
-				if({ digit < 0 || digit >= b }, {
-					ok: false;
-				}, {
-					val: (val * b) + digit;
-					anyDigits: true;
-				});
+	## Lowercase copy of this string (uses `Str`'s fast ASCII path when all bytes
+	## are `< 128`, or maps Unicode case when non-ASCII bytes are present).
+	replace Function of String is toLower(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return ''; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return ''; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Boolean is allAscii: true;
+		local Int is i: 0;
+		while({ allAscii && i < len }, {
+			if({ Mem:loadByte(ptr: data, byteOffset: i) >= 128 }, {
+				allAscii: false;
 			});
 			i: i + 1;
 		});
-		if({ !ok || !anyDigits }, {
-			return default;
+		if({ allAscii }, {
+			local Int is tmp: Mem:alloc(bytes: len + 1);
+			i: 0;
+			while({ i < len }, {
+				local Int is b: Mem:loadByte(ptr: data, byteOffset: i);
+				if({ b >= 65 && b <= 90 }, {
+					Mem:storeByte(ptr: tmp, byteOffset: i, val: b + 32);
+				}, {
+					Mem:storeByte(ptr: tmp, byteOffset: i, val: b);
+				});
+				i: i + 1;
+			});
+			Mem:storeByte(ptr: tmp, byteOffset: len, val: 0);
+			local String is res: Mem:strFromBytes(srcAddr: tmp, len: len);
+			Mem:free(ptr: tmp);
+			return res;
 		});
-		if({ neg }, {
-			return -val;
+		local String is out: '';
+		i: 0;
+		while({ i < len }, {
+			local Int is b0: Mem:loadByte(ptr: data, byteOffset: i);
+			if({ b0 < 128 }, {
+				if({ b0 >= 65 && b0 <= 90 }, {
+					out: out . :fromCharCode(code: b0 + 32);
+				}, {
+					out: out . :fromCharCode(code: b0);
+				});
+				i: i + 1;
+			}, {
+				local Int is vlen: :validUtf8SeqLen(data: data, idx: i, len: len);
+				if({ vlen == 0 }, {
+					out: out . String:fromCodePoint(code: 65533);
+					i: i + 1;
+				}, {
+					local Int is cp: :codePointAt(byteIndex: i, default: 65533);
+					local Int is mapped: cp;
+					if({ (cp >= 192 && cp <= 214) || (cp >= 216 && cp <= 222) || (cp >= 913 && cp <= 937 && cp != 930) || (cp >= 1040 && cp <= 1071) || (cp >= 65313 && cp <= 65338) }, {
+						mapped: cp + 32;
+					}, {
+						if({ cp >= 256 && cp <= 310 && (cp & 1) == 0 }, {
+							mapped: cp + 1;
+						});
+						if({ cp >= 1024 && cp <= 1039 }, {
+							mapped: cp + 80;
+						});
+					});
+					out: out . String:fromCodePoint(code: mapped);
+					i: i + vlen;
+				});
+			});
 		});
-		return val;
+		return out;
+	}
+
+	## Uppercase copy of this string (uses `Str`'s fast ASCII path when all bytes
+	## are `< 128`, or maps Unicode case when non-ASCII bytes are present).
+	replace Function of String is toUpper(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return ''; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return ''; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Boolean is allAscii: true;
+		local Int is i: 0;
+		while({ allAscii && i < len }, {
+			if({ Mem:loadByte(ptr: data, byteOffset: i) >= 128 }, {
+				allAscii: false;
+			});
+			i: i + 1;
+		});
+		if({ allAscii }, {
+			local Int is tmp: Mem:alloc(bytes: len + 1);
+			i: 0;
+			while({ i < len }, {
+				local Int is b: Mem:loadByte(ptr: data, byteOffset: i);
+				if({ b >= 97 && b <= 122 }, {
+					Mem:storeByte(ptr: tmp, byteOffset: i, val: b - 32);
+				}, {
+					Mem:storeByte(ptr: tmp, byteOffset: i, val: b);
+				});
+				i: i + 1;
+			});
+			Mem:storeByte(ptr: tmp, byteOffset: len, val: 0);
+			local String is res: Mem:strFromBytes(srcAddr: tmp, len: len);
+			Mem:free(ptr: tmp);
+			return res;
+		});
+		local String is out: '';
+		i: 0;
+		while({ i < len }, {
+			local Int is b0: Mem:loadByte(ptr: data, byteOffset: i);
+			if({ b0 < 128 }, {
+				if({ b0 >= 97 && b0 <= 122 }, {
+					out: out . :fromCharCode(code: b0 - 32);
+				}, {
+					out: out . :fromCharCode(code: b0);
+				});
+				i: i + 1;
+			}, {
+				local Int is vlen: :validUtf8SeqLen(data: data, idx: i, len: len);
+				if({ vlen == 0 }, {
+					out: out . String:fromCodePoint(code: 65533);
+					i: i + 1;
+				}, {
+					local Int is cp: :codePointAt(byteIndex: i, default: 65533);
+					local Int is mapped: cp;
+					if({ (cp >= 224 && cp <= 246) || (cp >= 248 && cp <= 254) || (cp >= 945 && cp <= 969 && cp != 962) || (cp >= 1072 && cp <= 1103) || (cp >= 65345 && cp <= 65370) }, {
+						mapped: cp - 32;
+					}, {
+						if({ cp == 962 }, {
+							mapped: 931;
+						});
+						if({ cp >= 257 && cp <= 311 && (cp & 1) == 1 }, {
+							mapped: cp - 1;
+						});
+						if({ cp >= 1104 && cp <= 1119 }, {
+							mapped: cp - 80;
+						});
+					});
+					out: out . String:fromCodePoint(code: mapped);
+					i: i + vlen;
+				});
+			});
+		});
+		return out;
 	}
 
 	## Concatenation of this string and [other].
 	##
 	## @param other: String to append.
 	## @return: Newly allocated string containing this string followed by [other].
-	Function of String is concat(String is other){
+	replace Function of String is concat(String is other){
 		local Int is aAddr: Mem:objToAddr(obj: :);
 		local Int is bAddr: Mem:objToAddr(obj: other);
 		local Int is aLen: if({ aAddr == 0 }, { 0 }, { Mem:loadI64(ptr: aAddr, byteOffset: 8) });

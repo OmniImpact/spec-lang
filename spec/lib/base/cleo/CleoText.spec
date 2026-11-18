@@ -32,16 +32,35 @@ Class is CleoText{
 
 	Function of Int is charDisplayWidth(String is s, Int is idx, Int is len){
 		local Int is b0: Buf:bufGetByte(b: s, idx: idx, def: 0);
-		if({ b0 < 32 }, { return 0; });
+		if({ b0 < 32 || b0 == 127 }, { return 0; });
 		if({ b0 < 128 }, { return 1; });
-		if({ b0 >= 192 && b0 < 224 }, { return 1; });
-		if({ b0 >= 240 }, { return 2; });
+		if({ b0 >= 192 && b0 < 224 && (idx + 1) < len }, {
+			local Int is b1: Buf:bufGetByte(b: s, idx: idx + 1, def: 0);
+			local Int is cp2: ((b0 & 31) << 6) | (b1 & 63);
+			if({ (cp2 >= 128 && cp2 <= 159) || cp2 == 173 || (cp2 >= 768 && cp2 <= 879) || (cp2 >= 1155 && cp2 <= 1161) || (cp2 >= 1425 && cp2 <= 1469) }, {
+				return 0;
+			});
+			return 1;
+		});
+		if({ b0 >= 240 && (idx + 3) < len }, {
+			local Int is b1: Buf:bufGetByte(b: s, idx: idx + 1, def: 0);
+			local Int is b2: Buf:bufGetByte(b: s, idx: idx + 2, def: 0);
+			local Int is b3: Buf:bufGetByte(b: s, idx: idx + 3, def: 0);
+			local Int is cp4: ((b0 & 7) << 18) | ((b1 & 63) << 12) | ((b2 & 63) << 6) | (b3 & 63);
+			if({ cp4 >= 917760 && cp4 <= 917999 }, { return 0; });
+			if({ (cp4 >= 126976 && cp4 <= 129791) || (cp4 >= 131072 && cp4 <= 262141) }, { return 2; });
+			return 1;
+		});
 		if({ b0 >= 224 && b0 < 240 && (idx + 2) < len }, {
 			local Int is b1: Buf:bufGetByte(b: s, idx: idx + 1, def: 0);
 			local Int is b2: Buf:bufGetByte(b: s, idx: idx + 2, def: 0);
 			local Int is cp: ((b0 - 224) * 4096) + ((b1 - 128) * 64) + (b2 - 128);
-			# CJK / Hangul / Fullwidth ranges
-			if({ (cp >= 12288 && cp <= 40959) || (cp >= 44032 && cp <= 55203) || (cp >= 65281 && cp <= 65376) }, {
+			# Combining marks, zero-width spaces/joiners, and variation selectors
+			if({ (cp >= 6832 && cp <= 6911) || (cp >= 7616 && cp <= 7679) || (cp >= 8203 && cp <= 8207) || (cp >= 8400 && cp <= 8447) || (cp >= 65024 && cp <= 65039) || (cp >= 65056 && cp <= 65071) || cp == 65279 }, {
+				return 0;
+			});
+			# East Asian Wide / Fullwidth / CJK / Hangul / Emoji ranges
+			if({ (cp >= 4352 && cp <= 4447) || (cp >= 8986 && cp <= 8987) || (cp >= 9001 && cp <= 9002) || (cp >= 11904 && cp <= 42191 && cp != 12349) || (cp >= 44032 && cp <= 55203) || (cp >= 63744 && cp <= 64255) || (cp >= 65040 && cp <= 65049) || (cp >= 65072 && cp <= 65135) || (cp >= 65281 && cp <= 65376) || (cp >= 65504 && cp <= 65510) }, {
 				return 2;
 			});
 			return 1;

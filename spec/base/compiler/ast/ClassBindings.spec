@@ -57,7 +57,7 @@ Class is ClassBindings{
 			name == 'Math' ||
 			name == 'LoopCallback' ||
 			name == 'Parallel' ||
-			name == 'List' || name == 'String';
+			name == 'List' || name == 'Str' || name == 'String';
 	}
 
 	## True when [c]'s namespace ends with the segment `sysinternal` — the
