@@ -2556,6 +2556,7 @@ Class is IrBuilder{
 			local String is errPtr: :nextTmp();
 			:emit(inst: IrInst:IrCast(dst: errPtr, val: errAddr, fromType: IrType:I64, toType: IrType:Ptr));
 			local String is selfVal: :emitLoadLocal(name: ':', ty: IrType:Ptr);
+			local String is handledVal: :nextTmp();
 			local IrStruct is curSt: :mod:findStruct(name: :currentClass);
 			local Int is ehSlot: curSt:vtableSlot(mname: 'SpecErrorHandler');
 			if({ ehSlot >= 0 }, {
@@ -2567,11 +2568,11 @@ Class is IrBuilder{
 				:emit(inst: IrInst:PtrElem(dst: slotPtr, basePtr: vtBase, index: ehSlot));
 				local String is fnPtr: :nextTmp();
 				:emit(inst: IrInst:Load(dst: fnPtr, slot: slotPtr, ty: IrType:Ptr));
-				:emit(inst: IrInst:IndirectCall(dst: '', hasDst: false, retType: IrType:Void, fnPtr: fnPtr, argTypes: [IrType:Ptr, IrType:Ptr], args: [selfVal, errPtr]));
+				:emit(inst: IrInst:IndirectCall(dst: handledVal, hasDst: true, retType: IrType:I1, fnPtr: fnPtr, argTypes: [IrType:Ptr, IrType:Ptr], args: [selfVal, errPtr]));
 			}, {
-				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: :curFnErrHandlerCallee, argTypes: [IrType:Ptr, IrType:Ptr], args: [selfVal, errPtr]));
+				:emit(inst: IrInst:IrCall(dst: handledVal, hasDst: true, retType: IrType:I1, callee: :curFnErrHandlerCallee, argTypes: [IrType:Ptr, IrType:Ptr], args: [selfVal, errPtr]));
 			});
-			:emit(inst: IrInst:Release(val: errPtr));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_finishErrorHandler', argTypes: [IrType:Ptr, IrType:I64, IrType:I1], args: ['null', errAddr, handledVal]));
 			:terminate(inst: IrInst:Br(target: exitLbl));
 
 			local IrBlock is exitBlk: :curFn:addBlock(label: exitLbl);

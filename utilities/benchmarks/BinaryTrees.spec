@@ -20,9 +20,8 @@ Class is BinaryTrees{
 		['base', 'sys', as Parallel()]
 	];
 
-	replace Function is SpecErrorHandler(SpecError is error){
-		line(error:toString());
-		exit(status: 1);
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
+		return false;
 	}
 
 	replace Function is init(Map of String to String is args){

@@ -21,9 +21,8 @@ Class is PiBenchmark{
 	local Int is gridH: 22;
 	local PiStats is stats: PiStats:init();
 
-	replace Function is SpecErrorHandler(SpecError is error){
-		line(error:toString());
-		exit(status: 1);
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
+		return false;
 	}
 
 	## Entry point; reads optional [args] (`threads`, `points`, `refresh`) and runs the parallel benchmark.

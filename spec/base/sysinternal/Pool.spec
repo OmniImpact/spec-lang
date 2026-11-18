@@ -94,6 +94,15 @@ Class is Pool{
 		return cur;
 	}
 
+	Function is finishErrorHandler(Int is errAddr, Boolean is handled){
+		if({ !handled && Mem:tlsGetI64(slot: 15) == 0 }, {
+			:raisePendingError(errAddr: errAddr);
+		});
+		if({ errAddr != 0 }, {
+			Mem:releaseAddr(objAddr: errAddr);
+		});
+	}
+
 	local Function is invokeFrameRecorder(Function is cb, Any is errObj, String is clsName, String is methodName, String is file, Int is line){
 		cb(errObj, clsName, methodName, file, line);
 	}

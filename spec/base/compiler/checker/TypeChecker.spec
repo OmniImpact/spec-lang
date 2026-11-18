@@ -3953,6 +3953,14 @@ Class is TypeChecker{
 				call:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'onError' }, {
 						hasOnErrorArg: true;
+						match(on: arg:value, when: [
+							Expression:AnonFn: local Function(Type is fnRetT, Array of Parameter is _p, Array of Statement is _b){
+								local String is rt: :resolveReturnType(t: fnRetT);
+								if({ rt != Primitive:BOOLEAN:value() }, {
+									:addError(line: :currentLine, msg: "ThreadScope:open 'onError' handler must return Boolean (true if handled, false to keep bubbling), found '" . rt . "'.");
+								});
+							}
+						], default: {});
 					});
 				});
 				if({ !hasOnErrorArg && !:classHasCustomErrorHandler(className: :currentClassName) }, {
@@ -4088,6 +4096,14 @@ Class is TypeChecker{
 			call:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'onError' }, {
 					hasOnErrorArg: true;
+					match(on: arg:value, when: [
+						Expression:AnonFn: local Function(Type is fnRetT, Array of Parameter is _p, Array of Statement is _b){
+							local String is rt: :resolveReturnType(t: fnRetT);
+							if({ rt != Primitive:BOOLEAN:value() }, {
+								:addError(line: :currentLine, msg: "ThreadScope:open 'onError' handler must return Boolean (true if handled, false to keep bubbling), found '" . rt . "'.");
+							});
+						}
+					], default: {});
 				});
 			});
 			if({ !hasOnErrorArg && !:classHasCustomErrorHandler(className: :currentClassName) }, {

@@ -98,9 +98,15 @@ Class of SpecUnitTest is TestErrors{
 		Assert:isTrue(svc:outerCaughtFrames >= 4);
 		Assert:areEqualInt(2, svc:traceLog:length());
 		Assert:areEqualString('outer-caught:NOT_FOUND', svc:traceLog:get(index: 1, default: ''));
+
+		svc:callInnerWrapped();
+		Assert:areEqualString('CORRUPT_DATA', svc:outerCaughtKind);
+		Assert:areEqualString('wrapped:missing config.json', svc:outerCaughtDesc);
+		Assert:areEqualInt(1, svc:outerSecondaryCount);
+		Assert:areEqualString('NOT_FOUND', svc:outerFirstSecondaryKind);
 	}
 
-	## 3. Worker thread SpecError capture and re-raising on the joining thread via Task:await, scope exit, and onError.
+	## 3. Worker thread SpecError capture and re-raising on the joining thread via Task:await, awaitAll, scope exit, and onError.
 	Function is testCrossThreadErrorPropagation(){
 		local ScopedErrorWorker is sw1: ScopedErrorWorker:init();
 		sw1:runAwaitFailedTask();
@@ -112,7 +118,15 @@ Class of SpecUnitTest is TestErrors{
 		Assert:areEqualString('PERMISSION_DENIED', sw2:handledKind);
 		Assert:areEqualString('worker denied access', sw2:handledDesc);
 
-		# Explicit onError callback on ThreadScope:open intercepts child task errors locally
+		# awaitAll with multiple failing tasks merges secondary unhandled errors and skips `then`
+		local ScopedErrorWorker is sw3: ScopedErrorWorker:init();
+		sw3:runAwaitAllMultipleFailedTasks();
+		Assert:isFalse(sw3:thenExecuted);
+		Assert:isTrue(sw3:handledKind == 'NOT_FOUND' || sw3:handledKind == 'CORRUPT_DATA');
+		Assert:areEqualInt(1, sw3:secondaryCount);
+		Assert:isTrue(sw3:secondaryText:contains(needle: 'Secondary: ['));
+
+		# Explicit onError callback returning true consumes the error locally
 		local String is localScopeErr: '';
 		ThreadScope:open(
 			body: local Function(ThreadScope is scope){
@@ -120,15 +134,23 @@ Class of SpecUnitTest is TestErrors{
 					:raiseError(error: SpecError:init(kind: FileOpError:NOT_FOUND, description: 'scoped callback error'));
 				});
 			},
-			onError: local Function(SpecError is err){
+			onError: local Function of Boolean(SpecError is err){
 				localScopeErr: err:kindName . ':' . err:description;
+				return true;
 			}
 		);
 		Assert:areEqualString('NOT_FOUND:scoped callback error', localScopeErr);
+
+		# Explicit onError callback returning false for unhandled kinds bubbles only the unhandled error
+		local ScopedErrorWorker is sw4: ScopedErrorWorker:init();
+		sw4:runPartialScopeOnError();
+		Assert:areEqualString('CORRUPT_DATA', sw4:handledKind);
+		Assert:areEqualInt(0, sw4:secondaryCount);
 	}
 
 	## 4. Root Class:SpecErrorHandler fallback aborts with formatted kindName, description, and stack trace;
-	##    and ThreadScope:open without onError or SpecErrorHandler is rejected at compile time.
+	##    a handler returning false bubbles to top of stack and crashes;
+	##    and ThreadScope:open without Boolean-returning onError or SpecErrorHandler is rejected at compile time.
 	Function is testRootFallbackAndCompileTimeScopeCheck(){
 		Assert:runFails(
 			source: '''
@@ -147,6 +169,26 @@ Class is UnhandledApp{
 			expect: '[FATAL_BOOM] uncaught root failure'
 		);
 
+		Assert:runFails(
+			source: '''
+Enum is CrashKind{
+	BUBBLED_TO_TOP
+}
+Class is BubblingApp{
+	replace Array of Array of String is using: [
+		['base', 'core', SpecError]
+	];
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
+		return false;
+	}
+	replace Function is init(){
+		:raiseError(error: SpecError:init(kind: CrashKind:BUBBLED_TO_TOP, description: 'handler returned false at root'));
+	}
+}
+''',
+			expect: '[BUBBLED_TO_TOP] handler returned false at root'
+		);
+
 		Assert:compilerRejects(
 			source: '''
 Class is UnhandledScopeCaller{
@@ -160,6 +202,26 @@ Class is UnhandledScopeCaller{
 }
 ''',
 			expect: "ThreadScope:open requires either an 'onError:' handler argument or an enclosing class that replaces 'SpecErrorHandler'"
+		);
+
+		Assert:compilerRejects(
+			source: '''
+Class is VoidOnErrorCaller{
+	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', 'thread', ThreadScope]
+	];
+	replace Function is init(){
+		ThreadScope:open(
+			body: local Function(ThreadScope is scope){
+			},
+			onError: local Function(SpecError is err){
+			}
+		);
+	}
+}
+''',
+			expect: "ThreadScope:open 'onError' handler must return Boolean"
 		);
 	}
 }
@@ -175,21 +237,33 @@ Class is InnerWorker{
 	String is caughtDesc: '';
 	Int is caughtFrames: 0;
 	Boolean is shouldReraise: false;
+	Boolean is shouldWrap: false;
 	Array of String is steps: [];
 
-	replace Function is init(Boolean is reraise: false){
+	replace Function is init(Boolean is reraise: false, Boolean is wrap: false){
 		:shouldReraise: reraise;
+		:shouldWrap: wrap;
 		:steps: [];
 	}
 
-	replace Function is SpecErrorHandler(SpecError is error){
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
 		:caughtKind: error:kindName;
 		:caughtDesc: error:description;
 		:caughtFrames: error:stackTrace:length();
 		:steps:add(item: 'inner-handler:' . error:kindName);
-		if({ :shouldReraise }, {
-			:raiseError(error: error);
+		if({ :shouldWrap }, {
+			local SpecError of FileOpError is wrapped: SpecError:init(
+				kind: FileOpError:CORRUPT_DATA,
+				description: 'wrapped:' . error:description
+			);
+			wrapped:addSecondary(error: error);
+			:raiseError(error: wrapped);
+			return false;
 		});
+		if({ :shouldReraise }, {
+			return false;
+		});
+		return true;
 	}
 
 	Function is leafRaise(){
@@ -223,31 +297,45 @@ Class is OuterService{
 	String is outerCaughtKind: '';
 	String is outerCaughtDesc: '';
 	Int is outerCaughtFrames: 0;
+	Int is outerSecondaryCount: 0;
+	String is outerFirstSecondaryKind: '';
 	Array of String is traceLog: [];
 
 	replace Function is init(){
 		:traceLog: [];
 	}
 
-	replace Function is SpecErrorHandler(SpecError is error){
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
 		:outerCaughtKind: error:kindName;
 		:outerCaughtDesc: error:description;
 		:outerCaughtFrames: error:stackTrace:length();
+		:outerSecondaryCount: error:getSecondaryErrors():length();
+		if({ :outerSecondaryCount > 0 }, {
+			local SpecError is sec0: error:getSecondaryErrors():get(index: 0);
+			:outerFirstSecondaryKind: sec0:kindName;
+		});
 		:traceLog:add(item: 'outer-caught:' . error:kindName);
+		return true;
 	}
 
 	Function is callInnerConsumed(){
 		local InnerWorker is w: InnerWorker:init(reraise: false);
 		w:runWork();
-		# Because w consumed the error in InnerWorker:SpecErrorHandler, execution resumes here!
+		# Because w returned true in InnerWorker:SpecErrorHandler, execution resumes here!
 		:traceLog:add(item: 'after-inner-consumed:' . w:caughtKind);
 	}
 
 	Function is callInnerReraised(){
 		local InnerWorker is w: InnerWorker:init(reraise: true);
 		w:runWork();
-		# Unreachable because w re-raised the error
+		# Unreachable because w returned false in InnerWorker:SpecErrorHandler
 		:traceLog:add(item: 'after-inner-reraised-unreachable');
+	}
+
+	Function is callInnerWrapped(){
+		local InnerWorker is w: InnerWorker:init(reraise: false, wrap: true);
+		w:runWork();
+		:traceLog:add(item: 'after-inner-wrapped-unreachable');
 	}
 }
 
@@ -256,15 +344,22 @@ Class is ScopedErrorWorker{
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'struct', Array]
 	];
 
 	String is handledKind: '';
 	String is handledDesc: '';
+	Int is secondaryCount: 0;
+	String is secondaryText: '';
+	Boolean is thenExecuted: false;
 
-	replace Function is SpecErrorHandler(SpecError is error){
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
 		:handledKind: error:kindName;
 		:handledDesc: error:description;
+		:secondaryCount: error:getSecondaryErrors():length();
+		:secondaryText: error:toString();
+		return true;
 	}
 
 	Function is runAwaitFailedTask(){
@@ -283,5 +378,42 @@ Class is ScopedErrorWorker{
 				:raiseError(error: SpecError:init(kind: FileOpError:PERMISSION_DENIED, description: 'worker denied access'));
 			});
 		});
+	}
+
+	Function is runAwaitAllMultipleFailedTasks(){
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			local Task is t1: scope:spawn(task: local Function(){
+				:raiseError(error: SpecError:init(kind: FileOpError:NOT_FOUND, description: 'missing shard 1'));
+			});
+			local Task is t2: scope:spawn(task: local Function(){
+				:raiseError(error: SpecError:init(kind: FileOpError:CORRUPT_DATA, description: 'corrupt shard 2'));
+			});
+			scope:awaitAll(
+				group: [t1, t2],
+				then: local Function(){
+					:thenExecuted: true;
+				}
+			);
+		});
+	}
+
+	Function is runPartialScopeOnError(){
+		ThreadScope:open(
+			body: local Function(ThreadScope is scope){
+				local Task is t1: scope:spawn(task: local Function(){
+					:raiseError(error: SpecError:init(kind: FileOpError:NOT_FOUND, description: 'recoverable missing cache'));
+				});
+				local Task is t2: scope:spawn(task: local Function(){
+					:raiseError(error: SpecError:init(kind: FileOpError:CORRUPT_DATA, description: 'unrecoverable corruption'));
+				});
+				scope:awaitAll(group: [t1, t2]);
+			},
+			onError: local Function of Boolean(SpecError is err){
+				if({ err:kindName == 'NOT_FOUND' }, {
+					return true;
+				});
+				return false;
+			}
+		);
 	}
 }

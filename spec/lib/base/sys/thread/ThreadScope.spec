@@ -32,11 +32,68 @@ Class is ThreadScope{
 		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
 	}
 
-	local Function is invokeErrorHandler(Function is cb, Any is err){
-		cb(err);
+	local Function of Boolean is invokeErrorHandler(Function is cb, Any is err){
+		return cb(err);
 	}
 
-	replace Function is init(Function is onError: local Function(SpecError is _err){ :raiseError(error: _err); }){
+	local Function of Int is mergeUnhandledError(Int is primaryAddr, Int is nextAddr){
+		if({ nextAddr == 0 }, { return primaryAddr; });
+		if({ primaryAddr == 0 }, { return nextAddr; });
+		if({ primaryAddr != nextAddr }, {
+			local SpecError is primaryErr: Mem:addrToObj(addr: primaryAddr) as SpecError;
+			local SpecError is nextErr: Mem:addrToObj(addr: nextAddr) as SpecError;
+			primaryErr:addSecondary(error: nextErr);
+		});
+		Mem:releaseAddr(objAddr: nextAddr);
+		return primaryAddr;
+	}
+
+	local Function of Int is handleSingleErrorAddr(Int is errAddr){
+		if({ errAddr == 0 }, { return 0; });
+		if({ !:hasErrorHandler || :errorHandlerAddr == 0 }, {
+			Mem:retainAddr(objAddr: errAddr);
+			return errAddr;
+		});
+		local Boolean is handled: false;
+		local Int is raisedAddr: Mem:callCatching(action: local Function(){
+			handled: :invokeErrorHandler(cb: Mem:addrToObj(addr: :errorHandlerAddr), err: Mem:addrToObj(addr: errAddr));
+		});
+		if({ raisedAddr != 0 }, {
+			return raisedAddr;
+		});
+		if({ handled }, {
+			return 0;
+		});
+		Mem:retainAddr(objAddr: errAddr);
+		return errAddr;
+	}
+
+	local Function of Int is handleErrorAddr(Int is errAddr){
+		if({ errAddr == 0 }, { return 0; });
+		local SpecError is errObj: Mem:addrToObj(addr: errAddr) as SpecError;
+		local Array of SpecError is secs: errObj:getSecondaryErrors();
+		if({ secs:length() == 0 }, {
+			return :handleSingleErrorAddr(errAddr: errAddr);
+		});
+		local Array of SpecError is savedSecs: [];
+		local Int is i: 0;
+		while({ i < secs:length() }, {
+			savedSecs:add(item: secs:get(index: i));
+			i: i + 1;
+		});
+		secs:clear();
+		local Int is mergedAddr: :handleSingleErrorAddr(errAddr: errAddr);
+		i: 0;
+		while({ i < savedSecs:length() }, {
+			local SpecError is sErr: savedSecs:get(index: i);
+			local Int is uSecAddr: :handleSingleErrorAddr(errAddr: Mem:objToAddr(obj: sErr));
+			mergedAddr: :mergeUnhandledError(primaryAddr: mergedAddr, nextAddr: uSecAddr);
+			i: i + 1;
+		});
+		return mergedAddr;
+	}
+
+	replace Function is init(Function is onError: local Function of Boolean(SpecError is _err){ return false; }){
 		:tasks: [];
 		:mutex: Thread:mutexCreate();
 		:cancelledAddr: Mem:alloc(bytes: 8);
@@ -51,7 +108,7 @@ Class is ThreadScope{
 
 	## Opens a structured concurrency scope, executes [body] with the scope,
 	## and joins all spawned tasks before returning.
-	held Function is open(Function is body, Function is onError: local Function(SpecError is _err){ Mem:raisePendingError(err: _err); }){
+	held Function is open(Function is body, Function is onError: local Function of Boolean(SpecError is _err){ return false; }){
 		local ThreadScope is scope: ThreadScope:init(onError: onError);
 		scope:runOpen(body: body);
 	}
@@ -68,27 +125,18 @@ Class is ThreadScope{
 		local Int is joinErrAddr: Mem:callCatching(action: local Function(){
 			:joinAll();
 		});
+		local Int is finalUnhandledAddr: 0;
 		if({ bodyErrAddr != 0 }, {
-			if({ joinErrAddr != 0 }, {
-				Mem:releaseAddr(objAddr: joinErrAddr);
-			});
-			local Int is hErrAddr: Mem:callCatching(action: local Function(){
-				if({ :hasErrorHandler && :errorHandlerAddr != 0 }, {
-					:invokeErrorHandler(cb: Mem:addrToObj(addr: :errorHandlerAddr), err: Mem:addrToObj(addr: bodyErrAddr));
-				}, {
-					Mem:raisePendingErrorAddr(addr: bodyErrAddr);
-				});
-			});
+			local Int is uBodyAddr: :handleErrorAddr(errAddr: bodyErrAddr);
 			Mem:releaseAddr(objAddr: bodyErrAddr);
-			if({ hErrAddr != 0 }, {
-				Mem:raisePendingErrorAddr(addr: hErrAddr);
-				Mem:releaseAddr(objAddr: hErrAddr);
-			});
-		}, {
-			if({ joinErrAddr != 0 }, {
-				Mem:raisePendingErrorAddr(addr: joinErrAddr);
-				Mem:releaseAddr(objAddr: joinErrAddr);
-			});
+			finalUnhandledAddr: :mergeUnhandledError(primaryAddr: finalUnhandledAddr, nextAddr: uBodyAddr);
+		});
+		if({ joinErrAddr != 0 }, {
+			finalUnhandledAddr: :mergeUnhandledError(primaryAddr: finalUnhandledAddr, nextAddr: joinErrAddr);
+		});
+		if({ finalUnhandledAddr != 0 }, {
+			Mem:raisePendingErrorAddr(addr: finalUnhandledAddr);
+			Mem:releaseAddr(objAddr: finalUnhandledAddr);
 		});
 	}
 
@@ -145,22 +193,41 @@ Class is ThreadScope{
 	}
 
 	## Waits for all tasks in [group] to complete, then invokes [then] if provided.
+	## If any tasks in [group] fail, merges their errors (attaching secondary errors)
+	## and raises the failure immediately without executing [then].
 	Function is awaitAll(Array of Task is group, Function is then: local Function(){}){
+		local Int is primaryErrAddr: 0;
 		local Int is i: 0;
 		while({ i < group:length() }, {
 			local Task is t: group:get(index: i);
-			t:joinOnly();
+			if({ Mem:objToAddr(obj: t) != 0 }, {
+				t:joinOnly();
+				if({ t:isFailed() && !t:isErrorConsumed() }, {
+					t:markErrorConsumed();
+					:cancel();
+					local Int is tErrAddr: t:getErrorAddr();
+					if({ tErrAddr != 0 }, {
+						Mem:retainAddr(objAddr: tErrAddr);
+						primaryErrAddr: :mergeUnhandledError(primaryAddr: primaryErrAddr, nextAddr: tErrAddr);
+					});
+				});
+			});
 			i: i + 1;
+		});
+		if({ primaryErrAddr != 0 }, {
+			Mem:raisePendingErrorAddr(addr: primaryErrAddr);
+			Mem:releaseAddr(objAddr: primaryErrAddr);
+			return;
 		});
 		if({ :hasClosure(cb: then) }, {
 			then();
 		});
 	}
 
-	## Joins all tasks currently in the scope and invokes [then].
+	## Joins all tasks currently in the scope and invokes [then] if no unhandled errors occurred.
 	Function is onComplete(Function is then){
 		:joinAll();
-		if({ :hasClosure(cb: then) }, {
+		if({ !Mem:hasPendingError() && :hasClosure(cb: then) }, {
 			then();
 		});
 	}
@@ -170,7 +237,7 @@ Class is ThreadScope{
 		if({ :mutex == 0 }, { return; });
 		local Int is idx: 0;
 		local Boolean is more: true;
-		local Int is firstReraisedAddr: 0;
+		local Int is primaryUnhandledAddr: 0;
 		while({ more }, {
 			Thread:mutexLock(handle: :mutex);
 			local Int is total: :tasks:length();
@@ -183,19 +250,8 @@ Class is ThreadScope{
 					if({ nextTask:isFailed() && !nextTask:isErrorConsumed() }, {
 						nextTask:markErrorConsumed();
 						:cancel();
-						local Int is taskErrAddr: nextTask:getErrorAddr();
-						if({ :hasErrorHandler && :errorHandlerAddr != 0 }, {
-							if({ firstReraisedAddr == 0 && taskErrAddr != 0 }, {
-								firstReraisedAddr: Mem:callCatching(action: local Function(){
-									:invokeErrorHandler(cb: Mem:addrToObj(addr: :errorHandlerAddr), err: Mem:addrToObj(addr: taskErrAddr));
-								});
-							});
-						}, {
-							if({ firstReraisedAddr == 0 && taskErrAddr != 0 }, {
-								Mem:retainAddr(objAddr: taskErrAddr);
-								firstReraisedAddr: taskErrAddr;
-							});
-						});
+						local Int is uAddr: :handleErrorAddr(errAddr: nextTask:getErrorAddr());
+						primaryUnhandledAddr: :mergeUnhandledError(primaryAddr: primaryUnhandledAddr, nextAddr: uAddr);
 					});
 				});
 				idx: idx + 1;
@@ -203,9 +259,9 @@ Class is ThreadScope{
 				more: false;
 			});
 		});
-		if({ firstReraisedAddr != 0 }, {
-			Mem:raisePendingErrorAddr(addr: firstReraisedAddr);
-			Mem:releaseAddr(objAddr: firstReraisedAddr);
+		if({ primaryUnhandledAddr != 0 }, {
+			Mem:raisePendingErrorAddr(addr: primaryUnhandledAddr);
+			Mem:releaseAddr(objAddr: primaryUnhandledAddr);
 		});
 	}
 

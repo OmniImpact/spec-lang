@@ -23,6 +23,7 @@ Class is SpecError of T{
 	T is kind;
 	Any is kindBox: '';
 	Array of StackFrame is stackTrace: [];
+	Array of SpecError is secondaryErrors: [];
 
 	local Function of String is resolveKindName(Any is k){
 		local Int is addr: Mem:objToAddr(obj: k);
@@ -67,7 +68,19 @@ Class is SpecError of T{
 			:kindName: :resolveKindName(k: :kindBox);
 		});
 		:stackTrace: [];
+		:secondaryErrors: [];
 		:addFrameAt(className: callerClass, methodName: callerMethod, file: callerFile, line: callerLine, col: 1);
+	}
+
+	Function is addSecondary(SpecError is error){
+		local Int is eAddr: Mem:objToAddr(obj: error);
+		if({ eAddr != 0 && eAddr != Mem:objToAddr(obj: :) }, {
+			:secondaryErrors:add(item: error);
+		});
+	}
+
+	Function of Array of SpecError is getSecondaryErrors(){
+		return :secondaryErrors;
 	}
 
 	Function of String is getDescription(){
@@ -109,6 +122,12 @@ Class is SpecError of T{
 			local StackFrame is f: :stackTrace:get(index: i);
 			out: out . "\n  at " . f:toString();
 			i: i + 1;
+		});
+		local Int is si: 0;
+		while({ si < :secondaryErrors:length() }, {
+			local SpecError is sec: :secondaryErrors:get(index: si);
+			out: out . "\n  Secondary: " . sec:toString();
+			si: si + 1;
 		});
 		return out;
 	}

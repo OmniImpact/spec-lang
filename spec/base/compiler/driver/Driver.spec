@@ -42,9 +42,8 @@ Class is Driver{
 		['base', 'sys', as Conditional()]
 	];
 
-	replace Function is SpecErrorHandler(SpecError is error){
-		Stderr:line(error:toString());
-		Process:exit(status: 1);
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
+		return false;
 	}
 
 	## Entry-init probe results (resolveEntryInit): the QUALIFIED name of

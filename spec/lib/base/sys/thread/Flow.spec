@@ -210,16 +210,16 @@ Class is Flow of T{
 							body: local Function(ThreadScope is innerScope){
 								producer(innerScope, chan);
 							},
-							onError: local Function(Any is err){
-								Mem:raisePendingError(err: err);
+							onError: local Function of Boolean(Any is _err){
+								return false;
 							}
 						);
 						chan:close();
 					});
 					chan:collect(onItem: emit);
 				},
-				onError: local Function(Any is err){
-					Mem:raisePendingError(err: err);
+				onError: local Function of Boolean(Any is _err){
+					return false;
 				}
 			);
 		}, isArc: isArc);
@@ -258,8 +258,8 @@ Class is Flow of T{
 					});
 					chan:collect(onItem: emit);
 				},
-				onError: local Function(Any is err){
-					Mem:raisePendingError(err: err);
+				onError: local Function of Boolean(Any is _err){
+					return false;
 				}
 			);
 		}, isArc: isArc);

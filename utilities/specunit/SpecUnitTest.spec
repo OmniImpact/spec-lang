@@ -83,10 +83,11 @@ Class is SpecUnitTest{
 		return :timeout() * 1000;
 	}
 
-	## Intercepts unhandled [SpecError] values raised during a test method
-	## and records them as soft-assertion failures on the active test result.
-	replace Function is SpecErrorHandler(SpecError is error){
-		Assert:fail(message: 'Unhandled SpecError [' . error:kindName . ']: ' . error:description);
+	## Default error handler for unit tests: returns `false` so unhandled
+	## [SpecError] values bubble out of the test method to [SpecUnitRunner],
+	## which records the failure, runs `afterEach` cleanup, and continues.
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
+		return false;
 	}
 
 	## The test identity: the instance's own class name by default.

@@ -386,9 +386,10 @@ Class is SpecUnit{
 		['base', 'sys', 'thread', Task]
 	];
 
-	replace Function is SpecErrorHandler(SpecError is error){
+	replace Function of Boolean is SpecErrorHandler(SpecError is error){
 		line(color256(code: 203, text: 'specunit: unhandled error: ' . error:toString()));
 		exit(status: 1);
+		return true;
 	}
 
 	replace Function is init(Map of String to String is args){

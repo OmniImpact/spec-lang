@@ -26,11 +26,12 @@ Class of Stringable is Class{
 		return typeName(:) . '@' . (Introspection:objectHash(obj: :) as String);
 	}
 
-	## Root fallback error handler: prints the unhandled [error]'s kind,
-	## description, and stack trace, then terminates the process.
+	## Root fallback error handler: returns `false` so unhandled errors keep
+	## bubbling up the stack until an enclosing handler returns `true` or the
+	## error reaches the top of the stack and terminates the process.
 	## Subclasses opt into intercepting bubbling errors with `replace`.
-	Function is SpecErrorHandler(SpecError is error){
-		return;
+	Function of Boolean is SpecErrorHandler(SpecError is error){
+		return false;
 	}
 
 	## Raises [error] on the current thread, unwinding the call stack cleanly

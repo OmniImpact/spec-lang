@@ -13,6 +13,8 @@ Class is SpecUnitRunner{
 		['specunit', SpecUnitState],
 		['specunit', TestResult],
 		['specunit', CheckRecord],
+		['base', 'core', SpecError],
+		['base', 'sys', as Mem()],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Output()],
@@ -69,9 +71,23 @@ Class is SpecUnitRunner{
 		return has;
 	}
 
+	local Function is recordUnhandledError(Int is errAddr, String is phase){
+		if(check: { errAddr == 0 }, then: { return; });
+		local SpecError is err: Mem:addrToObj(addr: errAddr) as SpecError;
+		local Array of TestResult is cell: SpecUnitState:currentCell;
+		if(check: { cell:length() > 0 }, then: {
+			local TestResult is r: cell:get(index: 0);
+			r:passed: false;
+			r:failures:add(item: 'Unhandled SpecError in ' . phase . ': ' . err:toString());
+		});
+		Mem:releaseAddr(objAddr: errAddr);
+	}
+
 	## Runs one test class: every `test*` method on a fresh instance,
 	## bracketed by `beforeEach`/`afterEach` when the class declares
 	## them (lifecycle by convention — hasMethod, no annotations).
+	## Unhandled [SpecError]s are caught at each phase boundary so
+	## `afterEach` cleanup and `:endTest` always execute.
 	##
 	## @param className: The test class name.
 	## @param timeoutMs: Maximum allowed duration per test in milliseconds (default: 30000ms).
@@ -83,12 +99,29 @@ Class is SpecUnitRunner{
 			if(check: { m:startsWith(prefix: 'test') }, then: {
 				:beginTest(name: className . '.' . m);
 				local Any is instance: instantiate(className: className);
+				local Int is beforeErrAddr: 0;
 				if(check: { hasBefore }, then: {
-					invokeVoid(instance: instance, methodName: 'beforeEach');
+					beforeErrAddr: Mem:callCatching(action: local Function(){
+						invokeVoid(instance: instance, methodName: 'beforeEach');
+					});
 				});
-				invokeVoid(instance: instance, methodName: m);
+				if(check: { beforeErrAddr != 0 }, then: {
+					:recordUnhandledError(errAddr: beforeErrAddr, phase: 'beforeEach');
+				}, else: {
+					local Int is testErrAddr: Mem:callCatching(action: local Function(){
+						invokeVoid(instance: instance, methodName: m);
+					});
+					if(check: { testErrAddr != 0 }, then: {
+						:recordUnhandledError(errAddr: testErrAddr, phase: m);
+					});
+				});
 				if(check: { hasAfter }, then: {
-					invokeVoid(instance: instance, methodName: 'afterEach');
+					local Int is afterErrAddr: Mem:callCatching(action: local Function(){
+						invokeVoid(instance: instance, methodName: 'afterEach');
+					});
+					if(check: { afterErrAddr != 0 }, then: {
+						:recordUnhandledError(errAddr: afterErrAddr, phase: 'afterEach');
+					});
 				});
 				:endTest(timeoutMs: timeoutMs);
 			});
