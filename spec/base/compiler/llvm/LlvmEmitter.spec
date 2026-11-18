@@ -21,6 +21,14 @@ Class is LlvmEmitter{
 		['base', 'sys', as Loops()]
 	];
 
+	Boolean is debugMode: false;
+	Array of String is dbgNodes: [];
+	Map of String to Int is dbgFileIds: Map:init();
+	Map of String to Int is dbgLocIds: Map:init();
+	Int is dbgUnitId: 0;
+	Int is dbgEmptyId: 1;
+	Int is dbgSubTypeId: 2;
+
 	replace Function is init(){
 	}
 
@@ -258,10 +266,119 @@ Class is LlvmEmitter{
 		if({ mod:stringLiterals:length() > 0 }, { out: out . "\n"; });
 
 		# Functions
+		if({ self:debugMode }, {
+			self:dbgNodes: [];
+			self:dbgFileIds: Map:init();
+			self:dbgLocIds: Map:init();
+			# !0 = DICompileUnit, !1 = !{}, !2 = DISubroutineType
+			self:dbgNodes:add(item: '');
+			self:dbgNodes:add(item: '!1 = !{}');
+			self:dbgNodes:add(item: '!2 = !DISubroutineType(types: !1)');
+		});
 		local Int is fi: 0;
 		while({ fi < mod:functions:length() }, {
 			out: out . self:emitFunction(fn: mod:functions:get(index: fi)) . "\n";
 			fi++;
+		});
+		if({ self:debugMode }, {
+			out: out . self:emitDebugMetadata();
+		});
+		return out;
+	}
+
+	local Function of Int is internDebugFile(String is path){
+		local String is norm: if({ path != '' }, { path }, { '<spec>' });
+		if({ self:dbgFileIds:has(key: norm) }, {
+			return self:dbgFileIds:get(key: norm, default: 0);
+		});
+		local Int is lastSlash: -1;
+		local Int is n: Buf:bufLength(b: norm);
+		local Int is idx: 0;
+		while({ idx < n }, {
+			if({ Buf:bufGetByte(b: norm, idx: idx, def: 0) == 47 }, {
+				lastSlash: idx;
+			});
+			idx++;
+		});
+		local String is dir: '.';
+		local String is file: norm;
+		if({ lastSlash >= 0 }, {
+			dir: if({ lastSlash == 0 }, { '/' }, { Buf:stringSubstring(b: norm, start: 0, end: lastSlash) });
+			file: Buf:stringSubstring(b: norm, start: lastSlash + 1, end: n);
+		});
+		local Int is id: self:dbgNodes:length();
+		self:dbgNodes:add(item: '!' . (id as String) . ' = !DIFile(filename: "' . self:escapeDebugStr(s: file) . '", directory: "' . self:escapeDebugStr(s: dir) . '")');
+		self:dbgFileIds:set(key: norm, value: id);
+		return id;
+	}
+
+	local Function of Int is internDebugLoc(Int is spId, Int is line){
+		local Int is effLine: if({ line > 0 }, { line }, { 1 });
+		local String is key: (spId as String) . ':' . (effLine as String);
+		if({ self:dbgLocIds:has(key: key) }, {
+			return self:dbgLocIds:get(key: key, default: 0);
+		});
+		local Int is id: self:dbgNodes:length();
+		self:dbgNodes:add(item: '!' . (id as String) . ' = !DILocation(line: ' . (effLine as String) . ', column: 1, scope: !' . (spId as String) . ')');
+		self:dbgLocIds:set(key: key, value: id);
+		return id;
+	}
+
+	local Function of String is escapeDebugStr(String is s){
+		local String is res: '';
+		local Int is len: Buf:bufLength(b: s);
+		local Int is i: 0;
+		while({ i < len }, {
+			local Int is b: Buf:bufGetByte(b: s, idx: i, def: 0);
+			if({ b == 34 }, {
+				res: res . '\\"';
+			}, {
+				if({ b == 92 }, {
+					res: res . '\\\\';
+				}, {
+					res: res . Buf:stringSubstring(b: s, start: i, end: i + 1);
+				});
+			});
+			i++;
+		});
+		return res;
+	}
+
+	local Function of String is appendDbgToInst(String is ir, Int is locId){
+		local String is suffix: ', !dbg !' . (locId as String);
+		local Array of String is parts: ir:split(delimiter: "\n");
+		if({ parts:length() <= 1 }, {
+			return ir . suffix;
+		});
+		local String is out: '';
+		local Int is pi: 0;
+		while({ pi < parts:length() }, {
+			if({ pi > 0 }, { out: out . "\n"; });
+			out: out . parts:get(index: pi, default: '') . suffix;
+			pi++;
+		});
+		return out;
+	}
+
+	local Function of String is emitDebugMetadata(){
+		local Int is cuFileId: 0;
+		if({ self:dbgNodes:length() <= 3 }, {
+			cuFileId: self:internDebugFile(path: 'main.spec');
+		}, {
+			cuFileId: 3;
+		});
+		local Int is dwarfVerId: self:dbgNodes:length();
+		self:dbgNodes:add(item: '!' . (dwarfVerId as String) . ' = !{i32 7, !"Dwarf Version", i32 5}');
+		local Int is dbgVerId: self:dbgNodes:length();
+		self:dbgNodes:add(item: '!' . (dbgVerId as String) . ' = !{i32 2, !"Debug Info Version", i32 3}');
+		self:dbgNodes:set(index: 0, value: '!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !' . (cuFileId as String) . ', producer: "spec", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !1, splitDebugInlining: false, nameTableKind: None)');
+
+		local String is out: "!llvm.dbg.cu = !{!0}\n";
+		out: out . '!llvm.module.flags = !{!' . (dwarfVerId as String) . ', !' . (dbgVerId as String) . "}\n\n";
+		local Int is ni: 0;
+		while({ ni < self:dbgNodes:length() }, {
+			out: out . self:dbgNodes:get(index: ni, default: '') . "\n";
+			ni++;
 		});
 		return out;
 	}
@@ -307,18 +424,35 @@ Class is LlvmEmitter{
 		});
 
 		local String is inlineAttr: '';
-		if({ fn:alwaysInline }, {
+		if({ fn:alwaysInline && !self:debugMode }, {
 			inlineAttr: ' alwaysinline';
 		});
 
-		local String is out: 'define ' . retStr . ' @' . fn:name . '(' . paramsStr . ')' . inlineAttr . " {\n";
+		local Int is spId: -1;
+		local String is spAttr: '';
+		if({ self:debugMode && fn:sourceFile != '' }, {
+			local Int is fileId: self:internDebugFile(path: fn:sourceFile);
+			local Int is fnLine: if({ fn:line > 0 }, { fn:line }, { 1 });
+			spId: self:dbgNodes:length();
+			self:dbgNodes:add(item: '!' . (spId as String) . ' = distinct !DISubprogram(name: "' . self:escapeDebugStr(s: fn:name) . '", scope: !' . (fileId as String) . ', file: !' . (fileId as String) . ', line: ' . (fnLine as String) . ', type: !2, scopeLine: ' . (fnLine as String) . ', spFlags: DISPFlagDefinition, unit: !0)');
+			spAttr: ' !dbg !' . (spId as String);
+		});
+
+		local String is out: 'define ' . retStr . ' @' . fn:name . '(' . paramsStr . ')' . inlineAttr . spAttr . " {\n";
 		local Int is bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
 			out: out . blk:label . ":\n";
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
-				out: out . '  ' . self:emitInst(inst: blk:insts:get(index: ii)) . "\n";
+				local String is instStr: self:emitInst(inst: blk:insts:get(index: ii));
+				if({ spId >= 0 }, {
+					local Int is ln: blk:instLines:get(index: ii, default: 0);
+					if({ ln <= 0 }, { ln: fn:line; });
+					local Int is locId: self:internDebugLoc(spId: spId, line: ln);
+					instStr: self:appendDbgToInst(ir: instStr, locId: locId);
+				});
+				out: out . '  ' . instStr . "\n";
 				ii++;
 			});
 			bi++;

@@ -1570,6 +1570,30 @@ long long spec_term_height(void) {
     return 24;
 }
 
+long long spec_term_is_tty(void) {
+#ifdef _WIN32
+    DWORD mode = 0;
+    if (GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode)) return 1;
+    return _isatty(_fileno(stdout)) ? 1 : 0;
+#else
+    return isatty(1) ? 1 : 0;
+#endif
+}
+
+long long spec_term_enable_vt(void) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) return 0;
+    DWORD mode = 0;
+    if (!GetConsoleMode(hOut, &mode)) return 0;
+    if (SetConsoleMode(hOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) return 1;
+    return 0;
+#else
+    return isatty(1) ? 1 : 0;
+#endif
+}
+
 void spec_pal_error_line(long long data_addr, long long len) {
     if (data_addr && len > 0) fwrite((const void*)(intptr_t)data_addr, 1, (size_t)len, stderr);
     fputc('\n', stderr);

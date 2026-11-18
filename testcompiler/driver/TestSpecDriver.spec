@@ -47,20 +47,20 @@ Class is DriverE2E{
 		['base', 'sys', as Output()]
 	];
 }";
-		fileWrite(path: 'tests/.driver_app_tmp.spec', content: src);
+		fileWrite(path: 'testcompiler/driver/.driver_app_tmp.spec', content: src);
 
 		local Map of String to String is cli: Map:init();
-		cli:set(key: 'i', value: 'tests/.driver_app_tmp.spec');
-		cli:set(key: 'emit-llvm', value: 'tests/.driver_app_tmp.ll');
+		cli:set(key: 'i', value: 'testcompiler/driver/.driver_app_tmp.spec');
+		cli:set(key: 'emit-llvm', value: 'testcompiler/driver/.driver_app_tmp.ll');
 		cli:set(key: 'quiet', value: 'true');
 		local Driver is d: Driver:init(args: cli);
 
-		local String is llSrc: fileRead(path: 'tests/.driver_app_tmp.ll', default: '');
+		local String is llSrc: fileRead(path: 'testcompiler/driver/.driver_app_tmp.ll', default: '');
 		Assert:isTrue(llSrc:contains(needle: '@main('));
 		Assert:isTrue(llSrc:contains(needle: 'LoudGreeter_toString'));
 		Assert:isTrue(llSrc:contains(needle: '@.vtable.LoudGreeter'));
 
-		fileRemove(path: 'tests/.driver_app_tmp.ll');
-		fileRemove(path: 'tests/.driver_app_tmp.spec');
+		fileRemove(path: 'testcompiler/driver/.driver_app_tmp.ll');
+		fileRemove(path: 'testcompiler/driver/.driver_app_tmp.spec');
 	}
 }

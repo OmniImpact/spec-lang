@@ -259,6 +259,7 @@ Class is Driver{
 			optPipe:run(mod: irMod);
 		});
 		local LlvmEmitter is emitter: LlvmEmitter:init();
+		emitter:debugMode: debugMode;
 		local String is llText: emitter:emitModule(mod: irMod);
 		genMs: Process:clockMs() - llvmGenT0;
 
@@ -311,7 +312,8 @@ Class is Driver{
 			});
 		});
 
-		local Array of String is llArgs: ['-O2', '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
+		local String is optFlag: if({ debugMode }, { '-O0' }, { '-O2' });
+		local Array of String is llArgs: [optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
 		local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
 		llOsFlags:each(action: local Function(String is fl){
 			llArgs:add(item: fl);

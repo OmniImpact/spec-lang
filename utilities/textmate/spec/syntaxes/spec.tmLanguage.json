@@ -93,23 +93,23 @@
       "patterns": [
         {
           "name": "constant.numeric.hex.spec",
-          "match": "\\b0x[0-9a-fA-F]+\\b"
+          "match": "\\b0[xX][0-9a-fA-F_]+\\b"
         },
         {
           "name": "constant.numeric.binary.spec",
-          "match": "\\b0b[01]+\\b"
+          "match": "\\b0[bB][01_]+\\b"
         },
         {
           "name": "constant.numeric.octal.spec",
-          "match": "\\b0o[0-7]+\\b"
+          "match": "\\b0[oO][0-7_]+\\b"
         },
         {
           "name": "constant.numeric.float.spec",
-          "match": "\\b[0-9]+\\.[0-9]+([eE][+-]?[0-9]+)?\\b"
+          "match": "\\b[0-9][0-9_]*\\.[0-9][0-9_]*([eE][+-]?[0-9_]+)?\\b"
         },
         {
           "name": "constant.numeric.integer.spec",
-          "match": "\\b[0-9]+\\b"
+          "match": "\\b[0-9][0-9_]*\\b"
         }
       ]
     },
@@ -161,11 +161,11 @@
       "patterns": [
         {
           "name": "support.function.control.spec",
-          "match": "\\b(while|until|repeat|loop|run|each|map|fold|filter)\\b"
+          "match": "\\b(if|when|cases|match|while|until|repeat|loop|run|each|map|fold|filter)\\b"
         },
         {
           "name": "support.class.library.spec",
-          "match": "\\b(Conditional|Loops|Output|Input|Stderr|File|Process|Math|Buf|Dir|Ansi|Parallel|Error|Reflection)\\b"
+          "match": "\\b(Conditional|Loops|Output|Input|Stderr|File|Process|Math|Stats|Buf|Dir|Ansi|Parallel|Error|Reflection|Introspection|Time|DateTime|Uri|Mem|Box|Vector|Stack|Sort|HashTable|CliArgs|OsDispatch|SourceLocation|StackFrame|Audio|AudioDevice|Socket|Json|JsonNull|JsonBool|JsonNumber|Cleo|CleoSection|CleoSlot|CleoColor|CleoWidth|CleoText|CleoImage|BorderStyle|BorderGlyphs|ThrobberShape|ThrobberEffect|TitlePlacement|Stringable|Loadable)\\b"
         }
       ]
     },

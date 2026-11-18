@@ -143,6 +143,10 @@ class SpecBuildRunConfigurationProducer : LazyRunConfigurationProducer<SpecBuild
         val root = Path.of(basePath).normalize()
         val isTestContext = vf.path.contains("/tests/") ||
             vf.path.endsWith("/tests") ||
+            vf.path.contains("/test/") ||
+            vf.path.endsWith("/test") ||
+            vf.path.contains("/testcompiler/") ||
+            vf.path.endsWith("/testcompiler") ||
             (vf.name.startsWith("Test") && vf.extension.equals("spec", ignoreCase = true))
 
         val manifestPath = SpecToolchain.findManifestFor(vf.path, basePath)
@@ -208,11 +212,12 @@ class SpecBuildDebugRunner : ProgramRunner<RunnerSettings> {
             "test" -> {
                 val active = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
                 if (active != null && active.extension.equals("spec", ignoreCase = true) &&
-                    (active.path.contains("/tests/") || active.name.startsWith("Test"))
+                    (active.path.contains("/tests/") || active.path.contains("/test/") || active.path.contains("/testcompiler/") || active.name.startsWith("Test"))
                 ) {
                     Path.of(active.path)
                 } else {
-                    findFirstSpecTest(targetPath.parent?.resolve("tests") ?: targetPath.parent)
+                    findFirstSpecTest(targetPath.parent?.resolve("tests"))
+                        ?: findFirstSpecTest(targetPath.parent?.resolve("test"))
                         ?: SpecToolchain.readManifestSource(targetPath)
                 }
             }

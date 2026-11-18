@@ -4,7 +4,7 @@
 <!-- v3: the post-flip language — if/else are methods (removed as keywords); -->
 <!-- the Loops control-flow constructs highlight as builtins; triple-quoted -->
 <!-- raw strings and backtick templates with ${...} interpolation. -->
-<language name="Spec" version="3" kateversion="5.0" section="Sources" extensions="*.spec;*.SPEC" mimetype="text/x-spec" priority="10" author="Spec Language Team" license="MIT">
+<language name="Spec" version="4" kateversion="5.0" section="Sources" extensions="*.spec;*.SPEC" mimetype="text/x-spec" priority="10" author="Spec Language Team" license="MIT">
   <highlighting>
     <list name="keywords">
       <item>local</item>
@@ -40,6 +40,10 @@
     <!-- The Loops provider's constructs and the container callbacks: bare
          calls, highlighted as builtins (they are methods, not keywords). -->
     <list name="control">
+      <item>if</item>
+      <item>when</item>
+      <item>cases</item>
+      <item>match</item>
       <item>while</item>
       <item>until</item>
       <item>repeat</item>
@@ -52,11 +56,15 @@
     </list>
     <list name="std">
       <item>base</item>
-      <item>io</item>
+      <item>audio</item>
+      <item>cleo</item>
       <item>core</item>
-      <item>struct</item>
-      <item>math</item>
+      <item>data</item>
+      <item>io</item>
       <item>iterator</item>
+      <item>math</item>
+      <item>net</item>
+      <item>struct</item>
       <item>sys</item>
       <item>Conditional</item>
       <item>Loops</item>
@@ -66,16 +74,52 @@
       <item>File</item>
       <item>Process</item>
       <item>Math</item>
+      <item>Stats</item>
       <item>Buf</item>
       <item>Dir</item>
       <item>Ansi</item>
       <item>Parallel</item>
       <item>Error</item>
       <item>Reflection</item>
+      <item>Introspection</item>
       <item>Loop</item>
       <item>LoopControl</item>
       <item>LoopCallback</item>
       <item>InputHandler</item>
+      <item>Time</item>
+      <item>DateTime</item>
+      <item>Uri</item>
+      <item>Mem</item>
+      <item>Box</item>
+      <item>Vector</item>
+      <item>Stack</item>
+      <item>Sort</item>
+      <item>HashTable</item>
+      <item>CliArgs</item>
+      <item>OsDispatch</item>
+      <item>SourceLocation</item>
+      <item>StackFrame</item>
+      <item>Audio</item>
+      <item>AudioDevice</item>
+      <item>Socket</item>
+      <item>Json</item>
+      <item>JsonNull</item>
+      <item>JsonBool</item>
+      <item>JsonNumber</item>
+      <item>Cleo</item>
+      <item>CleoSection</item>
+      <item>CleoSlot</item>
+      <item>CleoColor</item>
+      <item>CleoWidth</item>
+      <item>CleoText</item>
+      <item>CleoImage</item>
+      <item>BorderStyle</item>
+      <item>BorderGlyphs</item>
+      <item>ThrobberShape</item>
+      <item>ThrobberEffect</item>
+      <item>TitlePlacement</item>
+      <item>Stringable</item>
+      <item>Loadable</item>
     </list>
 
     <contexts>
@@ -95,7 +139,12 @@
         <DetectChar attribute="String" context="TemplateString" char="`"/>
         <DetectChar attribute="String" context="SingleQuoteString" char="'"/>
 
-        <!-- Numbers -->
+        <!-- Numbers (hex, binary, octal, floats, underscore-separated ints) -->
+        <RegExpr attribute="Decimal" context="#stay" String="\b0[xX][0-9a-fA-F_]+\b"/>
+        <RegExpr attribute="Decimal" context="#stay" String="\b0[bB][01_]+\b"/>
+        <RegExpr attribute="Decimal" context="#stay" String="\b0[oO][0-7_]+\b"/>
+        <RegExpr attribute="Float" context="#stay" String="\b[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9_]+)?\b"/>
+        <RegExpr attribute="Decimal" context="#stay" String="\b[0-9][0-9_]*\b"/>
         <Float attribute="Float" context="#stay"/>
         <Int attribute="Decimal" context="#stay"/>
 
@@ -107,7 +156,7 @@
         <keyword attribute="Standard Package" context="#stay" String="std"/>
 
         <!-- Operators and Delimiters -->
-        <AnyChar attribute="Operator" context="#stay" String=":=+*/%&lt;&gt;!-."/>
+        <AnyChar attribute="Operator" context="#stay" String=":=+*/%&lt;&gt;!-.&amp;|^~"/>
         <AnyChar attribute="Delimiter" context="#stay" String="{}()[],;"/>
       </context>
 

@@ -17,4 +17,12 @@ Class is Terminal{
 	##
 	## @return: Height in rows.
 	Function of Int is term_height();
+
+	## Returns 1 when stdout is an interactive terminal, 0 otherwise.
+	## Bound to `spec_term_is_tty`.
+	Function of Int is term_is_tty();
+
+	## Enables UTF-8 and virtual terminal escape processing on Windows,
+	## or returns `term_is_tty()` on POSIX. Bound to `spec_term_enable_vt`.
+	Function of Int is term_enable_vt();
 }

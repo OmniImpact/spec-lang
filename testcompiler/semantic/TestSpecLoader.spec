@@ -49,22 +49,22 @@ Class is LoaderE2E{
 	}
 
 	Function is testMultiFileLoadWithZeroErrors(){
-		fileWrite(path: 'tests/.loader_app_tmp.spec', content: self:sampleAppSource());
+		fileWrite(path: 'testcompiler/semantic/.loader_app_tmp.spec', content: self:sampleAppSource());
 
 		local Loader is loader: Loader:init();
-		local ProgramNode is prog: loader:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
+		local ProgramNode is prog: loader:loadProgram(rootPath: 'testcompiler/semantic/.loader_app_tmp.spec');
 
 		Assert:isTrue(loader:loadedFileCount() >= 6);
 		Assert:areEqualInt(0, loader:getParseErrors():length());
 
-		fileRemove(path: 'tests/.loader_app_tmp.spec');
+		fileRemove(path: 'testcompiler/semantic/.loader_app_tmp.spec');
 	}
 
 	Function is testRootLatticeAndImplicitAny(){
-		fileWrite(path: 'tests/.loader_app_tmp.spec', content: self:sampleAppSource());
+		fileWrite(path: 'testcompiler/semantic/.loader_app_tmp.spec', content: self:sampleAppSource());
 
 		local Loader is probe: Loader:init();
-		local ProgramNode is classes: probe:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
+		local ProgramNode is classes: probe:loadProgram(rootPath: 'testcompiler/semantic/.loader_app_tmp.spec');
 		local LoaderE2EHelper is h: LoaderE2EHelper:init();
 
 		Assert:isTrue(h:hasClass(classes: classes, name: 'String'));
@@ -76,11 +76,11 @@ Class is LoaderE2E{
 		Assert:areEqualString('Loadable', h:baseOf(classes: classes, name: 'Stringable'));
 		Assert:isTrue(h:baseOf(classes: classes, name: 'Loadable') == 'Any' || h:baseOf(classes: classes, name: 'Loadable') == 'base:sysinternal:Loadable');
 
-		fileRemove(path: 'tests/.loader_app_tmp.spec');
+		fileRemove(path: 'testcompiler/semantic/.loader_app_tmp.spec');
 	}
 
 	Function is testUnresolvableImportReported(){
-		fileWrite(path: 'tests/.loader_bad_tmp.spec', content: "Class is BadImporter{
+		fileWrite(path: 'testcompiler/semantic/.loader_bad_tmp.spec', content: "Class is BadImporter{
 	replace Function is init(Map of String to String is args){
 	}
 	replace Array of Array of String is using: [
@@ -91,11 +91,11 @@ Class is LoaderE2E{
 	];
 }");
 		local Loader is bloader: Loader:init();
-		bloader:loadProgram(rootPath: 'tests/.loader_bad_tmp.spec');
+		bloader:loadProgram(rootPath: 'testcompiler/semantic/.loader_bad_tmp.spec');
 
 		Assert:isTrue(bloader:getParseErrors():length() > 0);
 
-		fileRemove(path: 'tests/.loader_bad_tmp.spec');
+		fileRemove(path: 'testcompiler/semantic/.loader_bad_tmp.spec');
 	}
 }
 

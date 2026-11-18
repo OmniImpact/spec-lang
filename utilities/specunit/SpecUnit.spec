@@ -65,6 +65,189 @@ Class is WorkItem{
 	}
 }
 
+Class is SpecTestUi{
+	namespace: ['specunit'];
+
+	replace Array of Array of String is using: [
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
+	];
+
+	Cleo is ui;
+	CleoSection is wSec;
+	Int is wBarSlot: 0;
+	CleoSection is sSec;
+	CleoSection is rSec;
+	CleoSection is pSec;
+	Int is pSlot: 0;
+	Int is total: 0;
+	Int is maxSuiteRows: 16;
+
+	Array of Int is workerActive: [];
+	Map of String to Int is suiteNameToSlotId: Map:init();
+	Int is startedCount: 0;
+	Int is completedCount: 0;
+	Int is passedCount: 0;
+	Int is failedCount: 0;
+	Int is totalCpuUs: 0;
+	Int is totalRssKb: 0;
+	Int is peakRssKb: 0;
+	Int is metricSamples: 0;
+
+	replace Function is init(Cleo is ui, CleoSection is wSec, Int is wBarSlot, CleoSection is sSec, CleoSection is rSec, CleoSection is pSec, Int is pSlot, Int is total, Int is threads, Map of String to Int is nameToSlot){
+		self:ui: ui;
+		self:wSec: wSec;
+		self:wBarSlot: wBarSlot;
+		self:sSec: sSec;
+		self:rSec: rSec;
+		self:pSec: pSec;
+		self:pSlot: pSlot;
+		self:total: total;
+		self:suiteNameToSlotId: nameToSlot;
+		self:workerActive: [];
+		local Int is i: 0;
+		while({ i < threads }, {
+			self:workerActive:add(item: 0);
+			i: i + 1;
+		});
+		self:renderWorkersBar();
+	}
+
+	Function is renderWorkersBar(){
+		local Int is n: self:workerActive:length();
+		local Int is activeCount: 0;
+		local String is boxes: '';
+		local Int is i: 0;
+		while({ i < n }, {
+			local Int is st: self:workerActive:get(index: i, default: 0);
+			if({ i > 0 }, { boxes: boxes . ' '; });
+			if(check: { st != 0 }, then: {
+				boxes: boxes . '■';
+				activeCount: activeCount + 1;
+			}, else: {
+				boxes: boxes . '□';
+			});
+			i: i + 1;
+		});
+		local String is rt: (activeCount as String) . '/' . (n as String) . ' active';
+		self:wSec:updateText(index: self:wBarSlot, text: boxes, rightText: rt);
+	}
+
+	Function is syncProgress(){
+		local Float is s1: if({ self:total > 0 }, { (self:completedCount as Float) / (self:total as Float) }, { 1.0 });
+		local Float is s2: if({ self:total > 0 }, { (self:startedCount as Float) / (self:total as Float) }, { 1.0 });
+		local String is msg: (self:completedCount as String) . '/' . (self:total as String) . ' completed (' . (self:startedCount as String) . ' queued/active, ' . (self:failedCount as String) . ' failed)';
+		self:pSec:updateProgress(index: self:pSlot, text: msg, stage1: s1, stage2: s2);
+	}
+
+	Function is onStarted(Int is threadIndex, String is itemPath){
+		self:startedCount: self:startedCount + 1;
+		if({ threadIndex >= 0 && threadIndex < self:workerActive:length() }, {
+			self:workerActive:set(index: threadIndex, value: 1);
+		});
+		self:renderWorkersBar();
+
+		local Int is slotId: self:sSec:addShapeThrobber(
+			shape: ThrobberShape:CIRCLE_DOT,
+			effect: ThrobberEffect:BLINK,
+			color: CleoColor:ansi(code: 254),
+			text: itemPath,
+			rightText: 'compiling'
+		);
+		self:suiteNameToSlotId:set(key: itemPath, value: slotId);
+		self:syncProgress();
+		self:ui:markDirty();
+		self:ui:flushUnlocked();
+	}
+
+	Function is onRunning(String is itemPath){
+		if({ self:suiteNameToSlotId:has(key: itemPath) }, {
+			local Int is slotId: self:suiteNameToSlotId:get(key: itemPath);
+			self:sSec:updateText(index: slotId, text: itemPath, rightText: 'running');
+			self:ui:markDirty();
+			self:ui:flushUnlocked();
+		});
+	}
+
+	Function is onWorkerIdle(Int is threadIndex){
+		if({ threadIndex >= 0 && threadIndex < self:workerActive:length() }, {
+			self:workerActive:set(index: threadIndex, value: 0);
+		});
+		self:renderWorkersBar();
+	}
+
+	Function is onResult(String is name, Boolean is passed, String is note){
+		self:completedCount: self:completedCount + 1;
+		if({ passed }, { self:passedCount: self:passedCount + 1; });
+		if({ !passed }, { self:failedCount: self:failedCount + 1; });
+
+		if({ self:suiteNameToSlotId:has(key: name) }, {
+			local Int is slotId: self:suiteNameToSlotId:get(key: name);
+			local String is rt: if({ passed }, { 'passed' }, { 'failed' });
+			local CleoColor is c: if({ passed }, { CleoColor:ansi(code: 255) }, { CleoColor:ansi(code: 242) });
+			self:sSec:resolveSlot(index: slotId, badge: '●', text: name, color: c, rightText: rt);
+			self:ui:commitSlotUnlocked(section: self:sSec, slotId: slotId);
+			self:sSec:removeSlot(index: slotId);
+		});
+
+		self:syncProgress();
+		self:ui:markDirty();
+		self:ui:flushUnlocked();
+	}
+
+	Function is onMetrics(Int is cpuUs, Int is rssKb){
+		self:totalCpuUs: self:totalCpuUs + cpuUs;
+		if({ rssKb > 0 }, {
+			self:totalRssKb: self:totalRssKb + rssKb;
+			self:metricSamples: self:metricSamples + 1;
+			if({ rssKb > self:peakRssKb }, { self:peakRssKb: rssKb; });
+		});
+	}
+
+	Function of String is fmtSec(Int is ms){
+		local Int is whole: ms / 1000;
+		local Int is frac: (ms % 1000) / 10;
+		local String is fStr: if({ frac < 10 }, { '0' . (frac as String) }, { (frac as String) });
+		return (whole as String) . '.' . fStr . 's';
+	}
+
+	Function of String is fmtMb(Int is kb){
+		local Int is mb10: (kb * 10) / 1024;
+		local Int is whole: mb10 / 10;
+		local Int is frac: mb10 % 10;
+		return (whole as String) . '.' . (frac as String) . ' MB';
+	}
+
+	Function is showResults(Int is wallMs){
+		local String is badge: if({ self:failedCount == 0 }, { '✔ ALL PASSED' }, { '✘ ' . (self:failedCount as String) . ' FAILED' });
+		local CleoColor is c: if({ self:failedCount == 0 }, { CleoColor:ansi(code: 254) }, { CleoColor:ansi(code: 255) });
+		self:rSec:addLine(
+			text: (self:passedCount as String) . ' passed, ' . (self:failedCount as String) . ' failed  (' . (self:completedCount as String) . ' suites)',
+			color: c,
+			rightText: badge,
+			bold: true
+		);
+		local Int is cpuMs: self:totalCpuUs / 1000;
+		self:rSec:addLine(
+			text: 'Wall time: ' . self:fmtSec(ms: wallMs),
+			color: CleoColor:ansi(code: 250),
+			rightText: 'CPU time: ' . self:fmtSec(ms: cpuMs)
+		);
+		local Int is avgKb: if({ self:metricSamples > 0 }, { self:totalRssKb / self:metricSamples }, { 0 });
+		self:rSec:addLine(
+			text: 'Memory avg: ' . self:fmtMb(kb: avgKb),
+			color: CleoColor:ansi(code: 250),
+			rightText: 'Peak: ' . self:fmtMb(kb: self:peakRssKb)
+		);
+	}
+}
+
 ## The held registry: the work queue and the results. Held arrays and
 ## maps are mutex-protected — the Parallel wave reads the queue and
 ## records results from every worker thread safely.
@@ -72,33 +255,102 @@ Class is SpecTestRegistry{
 	namespace: ['specunit'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', Output],
-		['base', 'sys', Ansi],
-		['base', 'sys', Conditional]
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'sys', Conditional],
+		['base', 'sys', as Parallel()]
 	];
 
 	held Array of WorkItem is queue: [];
 	held Array of SuiteResult is results: [];
 	held Map of String to SuiteResult is byName: Map:init();
+	held Array of Int is nextIdxRef: [0];
+	held Array of SpecTestUi is uiHolder: [];
+
+	held Function is setupUi(Cleo is ui, CleoSection is wSec, Int is wBarSlot, CleoSection is sSec, CleoSection is rSec, CleoSection is pSec, Int is pSlot, Int is total, Int is threads, Map of String to Int is nameToSlot){
+		local SpecTestUi is helper: SpecTestUi:init(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, threads: threads, nameToSlot: nameToSlot);
+		SpecTestRegistry:uiHolder:add(item: helper);
+	}
+
+	held Function is recordMetrics(String is cpuStr, String is rssStr){
+		Parallel:syncWith(lock: 77, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
+				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
+				h:onMetrics(cpuUs: cpuStr:parseInt(default: 0), rssKb: rssStr:parseInt(default: 0));
+			});
+		});
+	}
+
+	held Function is showResults(String is wallMsStr){
+		Parallel:syncWith(lock: 77, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
+				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
+				h:showResults(wallMs: wallMsStr:parseInt(default: 0));
+			});
+		});
+	}
+
+	held Function of Int is nextWorkIndex(){
+		local Int is res: -1;
+		Parallel:syncWith(lock: 17, action: {
+			local Int is idx: SpecTestRegistry:nextIdxRef:get(index: 0, default: 0);
+			local Int is tot: SpecTestRegistry:queue:length();
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return idx < tot; }, then: {
+				SpecTestRegistry:nextIdxRef:set(index: 0, value: idx + 1);
+				res: idx;
+			});
+		});
+		return res;
+	}
+
+	held Function is markStarted(String is tiStr, String is itemPath){
+		Parallel:syncWith(lock: 77, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
+				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
+				h:onStarted(threadIndex: tiStr:parseInt(default: 0), itemPath: itemPath);
+			});
+		});
+	}
+
+	held Function is markRunning(String is itemPath){
+		Parallel:syncWith(lock: 77, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
+				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
+				h:onRunning(itemPath: itemPath);
+			});
+		});
+	}
+
+	held Function is markWorkerIdle(String is tiStr){
+		Parallel:syncWith(lock: 77, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
+				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
+				h:onWorkerIdle(threadIndex: tiStr:parseInt(default: 0));
+			});
+		});
+	}
 
 	held Function is addResult(String is name, Boolean is passed, String is note, String is report){
-		local SuiteResult is r: SuiteResult:init(suiteName: name);
-		r:passed: passed;
-		r:note: note;
-		r:report: report;
-		SpecTestRegistry:results:add(item: r);
-		SpecTestRegistry:byName:set(key: name, value: r);
-
-		local Output is out: Output:init();
-		local Ansi is ansi: Ansi:init();
-		local Conditional is cond: Conditional:init();
-		cond:if(check: { return passed; }, then: {
-			out:line(text: ansi:color256(code: 114, text: '[PASS]') . ' ' . name);
+		Parallel:syncWith(lock: 17, action: {
+			local SuiteResult is r: SuiteResult:init(suiteName: name);
+			r:passed: passed;
+			r:note: note;
+			r:report: report;
+			SpecTestRegistry:results:add(item: r);
+			SpecTestRegistry:byName:set(key: name, value: r);
 		});
-		cond:if(check: { return !passed; }, then: {
-			local String is lineNote: '';
-			cond:if(check: { return note != ''; }, then: { lineNote: '  ' . note; });
-			out:line(text: ansi:color256(code: 203, text: '[FAIL]') . ' ' . name . lineNote);
+		Parallel:syncWith(lock: 77, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
+				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
+				h:onResult(name: name, passed: passed, note: note);
+			});
 		});
 	}
 }
@@ -109,6 +361,16 @@ Class is SpecUnit{
 	replace Array of Array of String is using: [
 		# The plain form grants construction (the report's locals), the
 		# as-form grants the bare call surface (the overloads pattern).
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'cleo', CleoWidth],
+		['base', 'cleo', as CleoWidth()],
+		['base', 'cleo', BorderStyle],
+		['base', 'cleo', ThrobberShape],
+		['base', 'cleo', ThrobberEffect],
+		['base', 'cleo', TitlePlacement],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
@@ -117,7 +379,8 @@ Class is SpecUnit{
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Dir()],
 		['base', 'sys', as File()],
-		['base', 'sys', as Uri()]
+		['base', 'sys', as Uri()],
+		['base', 'sys', as Time()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -126,7 +389,11 @@ Class is SpecUnit{
 			specBin: 'bin/spec';
 		});
 		local String is root: args:getString(key: 'root', default: '.');
-		local String is dirsRaw: args:getString(key: 't', default: args:getString(key: 'tests', default: 'tests'));
+		local String is dirsRaw: args:getString(key: 't', default: args:getString(key: 'tests', default: ''));
+		if(check: { dirsRaw == '' }, then: {
+			line(color256(code: 203, text: 'specunit: missing required -t <dir> (or --tests <dir>)'));
+			exit(status: 1);
+		});
 		local String is srcDirsRaw: args:getString(key: 'S', default: args:getString(key: 'source-dirs', default: ''));
 		local Boolean is useLlvm: args:has(key: 'llvm');
 		local String is srcDirFlags: self:buildSourceDirFlags(raw: srcDirsRaw);
@@ -144,35 +411,102 @@ Class is SpecUnit{
 		if(check: { threads < 1 }, then: {
 			threads: 1;
 		});
-		line(bold() . color256(code: 51, text: '== specunit =='));
-		line('compiler: ' . specBin);
-		line('workers: ' . (threads as String) . ' (of ' . (cores as String) . ' cores)');
-
 		self:enqueueDirs(dirsRaw: dirsRaw, root: root);
 		local Int is total: SpecTestRegistry:queue:length();
-		line('work items: ' . (total as String));
+		if(check: { total == 0 }, then: {
+			line(color256(code: 203, text: 'specunit: no test suites found in: ' . dirsRaw));
+			exit(status: 1);
+		});
+		if(check: { threads > total }, then: {
+			threads: total;
+		});
+
+		# Grayscale Cleo UI at 100% terminal width
+		local Cleo is ui: Cleo:init(
+			title: ' specunit ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is sSec: ui:addSection(
+			title: ' Test Suites ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		sSec:groupResolvedFirst: true;
+		local Map of String to Int is nameToSlot: Map:init();
+
+		local CleoSection is wSec: ui:addSection(
+			title: ' Workers (' . (threads as String) . '/' . (cores as String) . ' cores) ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		local Int is wBarSlot: wSec:addLine(text: '', color: CleoColor:ansi(code: 252), rightText: '0/' . (threads as String) . ' active');
+
+		local CleoSection is rSec: ui:addSection(
+			title: ' Results ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+
+		local CleoSection is pSec: ui:addSection(
+			title: ' Suite Progress ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		local Int is pSlot: pSec:addProgressArea(
+			text: '0/' . (total as String) . ' completed (' . specBin . ')',
+			stage1Color: CleoColor:ansi(code: 252),
+			stage2Color: CleoColor:ansi(code: 243),
+			trackColor: CleoColor:ansi(code: 236),
+			showTwoStagePercent: true
+		);
+
+		SpecTestRegistry:setupUi(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, threads: threads, nameToSlot: nameToSlot);
+		local Int is startMs: Time:monotonicMs();
+		ui:start();
 
 		Parallel:run(threads: threads, iterations: total, worker: local Function of Int(Int is threadIndex, Int is count){
-			local Int is k: 0;
-			local Int is idx: threadIndex;
+			local Int is ti: threadIndex;
 			local Int is failures: 0;
-			while({ k < count && idx < total }, {
-				local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
-				if(check: { item:kind == 'negative' }, then: {
-					failures: failures + self:runNegative(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+			local Boolean is keepGoing: true;
+			while({ keepGoing }, {
+				local Int is idx: SpecTestRegistry:nextWorkIndex();
+				if(check: { idx < 0 }, then: {
+					keepGoing: false;
 				}, else: {
-					if(check: { item:kind == 'run-fail' }, then: {
-						failures: failures + self:runRunFail(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+					local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
+					SpecTestRegistry:markStarted(tiStr: (ti as String), itemPath: item:path);
+					if(check: { item:kind == 'negative' }, then: {
+						failures: failures + self:runNegative(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
 					}, else: {
-						failures: failures + self:runSuite(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+						if(check: { item:kind == 'run-fail' }, then: {
+							failures: failures + self:runRunFail(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+						}, else: {
+							failures: failures + self:runSuite(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+						});
 					});
+					SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
 				});
-				k: k + 1;
-				idx: idx + threads;
 			});
 			return failures;
 		});
 
+		local Int is wallMs: Time:monotonicMs() - startMs;
+		SpecTestRegistry:showResults(wallMsStr: (wallMs as String));
+		ui:finish();
 		self:report();
 	}
 
@@ -215,7 +549,12 @@ Class is SpecUnit{
 			seg:split(delimiter: ','):each(action: local Function(String is dirRaw){
 				local String is dir: if(check: { dirRaw:endsWith(suffix: "\r") }, then: { dirRaw:substring(start: 0, end: dirRaw:length() - 1); }, else: { dirRaw; });
 				if(check: { dir != '' }, then: {
-					self:enqueueTree(absDir: self:resolveItemPath(root: root, relOrAbs: dir), relDir: dir . '/');
+					local String is absDir: self:resolveItemPath(root: root, relOrAbs: dir);
+					if(check: { !fileExists(path: absDir) }, then: {
+						line(color256(code: 203, text: 'specunit: test directory not found: ' . dir));
+						exit(status: 1);
+					});
+					self:enqueueTree(absDir: absDir, relDir: dir . '/');
 				});
 			});
 		});
@@ -283,18 +622,28 @@ Class is SpecUnit{
 		local String is bin: self:workPath(suffix: exeSuffix, idx: idx, stem: self:fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
 		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
-		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
+		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
+		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
+		local Int is cCpu: cRes:getInt(key: 'cpu_us', default: 0);
+		local Int is cRss: cRes:getInt(key: 'rss_kb', default: 0);
 		if(check: { cStatus != 0 }, then: {
+			SpecTestRegistry:recordMetrics(cpuStr: (cCpu as String), rssStr: (cRss as String));
 			local String is diag: fileRead(path: compileOut, default: '');
 			SpecTestRegistry:addResult(name: item:path, passed: false, note: 'compilation failed: ' . self:firstLine(text: diag), report: diag);
 			fileRemove(path: compileOut);
 			return 1;
 		});
 		fileRemove(path: compileOut);
+		SpecTestRegistry:markRunning(itemPath: item:path);
 
 		local String is runOut: bin . '.out';
 		local Array of String is rArgs: ['-c', 'cd "' . root . '" && export SPEC_BIN="' . specBin . '" && "' . bin . '" < /dev/null > "' . runOut . '" 2>&1'];
-		local Int is rStatus: Process:execute(command: 'sh', args: rArgs);
+		local Map of String to String is rRes: Process:measure(command: 'sh', args: rArgs);
+		local Int is rStatus: rRes:getInt(key: 'exit', default: -1);
+		local Int is totalCpu: cCpu + rRes:getInt(key: 'cpu_us', default: 0);
+		local Int is rRss: rRes:getInt(key: 'rss_kb', default: 0);
+		local Int is maxRss: if(check: { rRss > cRss }, then: { rRss; }, else: { cRss; });
+		SpecTestRegistry:recordMetrics(cpuStr: (totalCpu as String), rssStr: (maxRss as String));
 		local String is out: fileRead(path: runOut, default: '');
 		local Boolean is passed: rStatus == 0;
 		local String is note: '';
@@ -323,7 +672,9 @@ Class is SpecUnit{
 		local String is src: self:resolveItemPath(root: root, relOrAbs: item:path);
 		local String is compileOut: self:workPath(suffix: '.compile', idx: idx, stem: self:fileStem(path: item:path));
 		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "/dev/null" > "' . compileOut . '" 2>&1'];
-		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
+		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
+		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
+		SpecTestRegistry:recordMetrics(cpuStr: (cRes:getInt(key: 'cpu_us', default: 0) as String), rssStr: (cRes:getInt(key: 'rss_kb', default: 0) as String));
 		local String is cText: fileRead(path: compileOut, default: '');
 		local Boolean is passed: true;
 		local String is note: '';
@@ -357,19 +708,29 @@ Class is SpecUnit{
 		local String is bin: self:workPath(suffix: exeSuffix, idx: idx, stem: self:fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
 		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
-		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
+		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
+		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
+		local Int is cCpu: cRes:getInt(key: 'cpu_us', default: 0);
+		local Int is cRss: cRes:getInt(key: 'rss_kb', default: 0);
 		local Boolean is passed: true;
 		local String is note: '';
 		local String is evidence: '';
 		if(check: { cStatus != 0 }, then: {
+			SpecTestRegistry:recordMetrics(cpuStr: (cCpu as String), rssStr: (cRss as String));
 			passed: false;
 			evidence: fileRead(path: compileOut, default: '');
 			note: 'compilation failed: ' . self:firstLine(text: evidence);
 		}, else: {
 			fileRemove(path: compileOut);
+			SpecTestRegistry:markRunning(itemPath: item:path);
 			local String is runOut: bin . '.out';
 			local Array of String is rArgs: ['-c', 'cd "' . root . '" && "' . bin . '" < /dev/null > "' . runOut . '" 2>&1'];
-			local Int is rStatus: Process:execute(command: 'sh', args: rArgs);
+			local Map of String to String is rRes: Process:measure(command: 'sh', args: rArgs);
+			local Int is rStatus: rRes:getInt(key: 'exit', default: -1);
+			local Int is totalCpu: cCpu + rRes:getInt(key: 'cpu_us', default: 0);
+			local Int is rRss: rRes:getInt(key: 'rss_kb', default: 0);
+			local Int is maxRss: if(check: { rRss > cRss }, then: { rRss; }, else: { cRss; });
+			SpecTestRegistry:recordMetrics(cpuStr: (totalCpu as String), rssStr: (maxRss as String));
 			evidence: fileRead(path: runOut, default: '');
 			if(check: { rStatus == 0 }, then: {
 				passed: false;
@@ -420,9 +781,6 @@ Class is SpecUnit{
 				});
 			});
 		});
-		line('');
-		local String is verdict: if(check: { failed == 0 }, then: { color256(code: 114, text: 'ALL GREEN'); }, else: { color256(code: 203, text: 'FAILED'); });
-		line(bold() . color256(code: 51, text: '== ' . (passed as String) . ' passed, ' . (failed as String) . ' failed — ' . verdict . ' =='));
 		local Int is exitCode: if(check: { failed > 0 }, then: { 1 }, else: { 0 });
 		exit(status: exitCode);
 	}

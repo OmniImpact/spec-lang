@@ -33,6 +33,19 @@ Class is Ansi{
 		return base:sysinternal:Terminal:term_height();
 	}
 
+	## Returns `true` when stdout is an interactive terminal (TTY).
+	##
+	## @return: `true` if stdout is a terminal, `false` when piped/redirected.
+	Function of Boolean is isTty(){
+		return base:sysinternal:Terminal:term_is_tty() != 0;
+	}
+
+	## Enables virtual terminal escape processing and UTF-8 output (Windows)
+	## or checks TTY status (POSIX). Returns `true` if VT output is ready.
+	Function of Boolean is enableVirtualTerminal(){
+		return base:sysinternal:Terminal:term_enable_vt() != 0;
+	}
+
 	## Returns the ANSI sequence to reset all terminal colors and attributes.
 	##
 	## @return: ANSI reset sequence.
@@ -123,8 +136,53 @@ Class is Ansi{
 	## @param g: Green channel (0..255).
 	## @param b: Blue channel (0..255).
 	## @return: ANSI TrueColor background sequence.
-	local Function of String is bgRgb(Int is r, Int is g, Int is b){
+	Function of String is bgRgb(Int is r, Int is g, Int is b){
 		return "\e[48;2;" . r . ';' . g . ';' . b . 'm';
+	}
+
+	## Returns the sequence moving the cursor up [n] lines.
+	Function of String is cursorUp(Int is n){
+		return "\e[" . n . 'A';
+	}
+
+	## Returns the sequence moving the cursor down [n] lines.
+	Function of String is cursorDown(Int is n){
+		return "\e[" . n . 'B';
+	}
+
+	## Returns a carriage return (`\r`) moving to column 1 of the current line.
+	Function of String is carriageReturn(){
+		return "\r";
+	}
+
+	## Returns the sequence erasing the entire current line.
+	Function of String is eraseLine(){
+		return "\e[2K";
+	}
+
+	## Returns the sequence erasing from the cursor to the end of the screen.
+	Function of String is eraseToEnd(){
+		return "\e[0J";
+	}
+
+	## Begins a DEC Synchronized Output update (`\e[?2026h`).
+	Function of String is beginSyncUpdate(){
+		return "\e[?2026h";
+	}
+
+	## Ends a DEC Synchronized Output update (`\e[?2026l`).
+	Function of String is endSyncUpdate(){
+		return "\e[?2026l";
+	}
+
+	## Enters the alternate screen buffer (`\e[?1049h`).
+	Function of String is enterAltScreen(){
+		return "\e[?1049h";
+	}
+
+	## Exits the alternate screen buffer (`\e[?1049l`).
+	Function of String is exitAltScreen(){
+		return "\e[?1049l";
 	}
 
 	## Returns the sequence clearing the screen and homing the cursor.

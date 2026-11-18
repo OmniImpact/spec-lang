@@ -159,7 +159,7 @@ Class is Slab{
 				Mem:storeI64(ptr: base, byteOffset: 0, val: cur);
 				return slot;
 			});
-			if({ Mem:atomicLoadI64(addr: cur + 24) == 0 }, {
+			if({ Mem:atomicLoadI64(addr: cur + 24) == 1 }, {
 				self:unlinkPartial(base: base, slab: cur);
 				local Int is oldSp: Mem:loadI64(ptr: base, byteOffset: 16);
 				Mem:storeI64(ptr: cur, byteOffset: 56, val: oldSp);
@@ -176,7 +176,7 @@ Class is Slab{
 			Mem:storeI64(ptr: sp, byteOffset: 32, val: 96 + slotSize);
 			Mem:storeI64(ptr: sp, byteOffset: 40, val: 0);
 			Mem:storeI64(ptr: sp, byteOffset: 80, val: 0);
-			Mem:storeI64(ptr: sp, byteOffset: 24, val: 1);
+			Mem:storeI64(ptr: sp, byteOffset: 24, val: 2);
 			Mem:storeI64(ptr: base, byteOffset: 0, val: sp);
 			local Int is spSlot: sp + 96;
 			Mem:set(dst: spSlot, byteVal: 0, bytes: slotSize);
@@ -187,7 +187,7 @@ Class is Slab{
 		Mem:storeI64(ptr: ns, byteOffset: 0, val: slotSize);
 		Mem:storeI64(ptr: ns, byteOffset: 8, val: cls);
 		Mem:atomicStoreI64(addr: ns + 16, val: state);
-		Mem:atomicStoreI64(addr: ns + 24, val: 1);
+		Mem:atomicStoreI64(addr: ns + 24, val: 2);
 		Mem:storeI64(ptr: ns, byteOffset: 32, val: 96 + slotSize);
 		Mem:storeI64(ptr: ns, byteOffset: 80, val: 1);
 		Mem:storeI64(ptr: base, byteOffset: 0, val: ns);
@@ -263,7 +263,7 @@ Class is Slab{
 				oldLive: Mem:loadI64(ptr: s, byteOffset: 24);
 				Mem:storeI64(ptr: s, byteOffset: 24, val: oldLive - 1);
 			});
-			if({ oldLive == 1 }, {
+			if({ oldLive == 2 }, {
 				local Int is cls: Mem:loadI64(ptr: s, byteOffset: 8);
 				local Int is base: myState + (cls * 24);
 				if({ s == Mem:loadI64(ptr: base, byteOffset: 0) }, {
@@ -288,17 +288,15 @@ Class is Slab{
 		});
 		local Int is oldLiveR: Mem:atomicAddI64(addr: s + 24, delta: -1);
 		if({ oldLiveR == 1 }, {
-			local Int is curOwner: Mem:atomicLoadI64(addr: s + 16);
-			if({ curOwner == 0 }, {
-				base:sysinternal:Mem:slabFree(ptr: s);
-			});
+			base:sysinternal:Mem:slabFree(ptr: s);
 		});
 	}
 
 	Function is orphanOrFree(Int is slab, Int is state){
 		if({ slab == 0 }, { return; });
 		Mem:atomicCasI64(addr: slab + 16, expected: state, desired: 0);
-		if({ Mem:atomicLoadI64(addr: slab + 24) == 0 }, {
+		local Int is oldLive: Mem:atomicAddI64(addr: slab + 24, delta: -1);
+		if({ oldLive == 1 }, {
 			base:sysinternal:Mem:slabFree(ptr: slab);
 		});
 	}

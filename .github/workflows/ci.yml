@@ -29,7 +29,7 @@ jobs:
           bin/specbuild utilities/speclsp/speclsp.json
       - name: Regression suite
         run: |
-          bin/specunit -s bin/spec -t examples -t tests -t testllvm
+          bin/specunit -s bin/spec -t examples -t test -t testcompiler
       - name: Package Linux Artifact
         run: |
           mkdir -p dist
@@ -54,7 +54,7 @@ jobs:
         run: bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
       - name: Regression suite
         run: |
-          bin/specunit -s bin/spec -t examples -t tests -t testllvm
+          bin/specunit -s bin/spec -t examples -t test -t testcompiler
 
   macos:
     runs-on: macos-latest
@@ -73,7 +73,7 @@ jobs:
           bin/specbuild utilities/speclsp/speclsp.json
       - name: Regression suite
         run: |
-          bin/specunit -s bin/spec -t examples -t tests -t testllvm
+          bin/specunit -s bin/spec -t examples -t test -t testcompiler
       - name: Package macOS Artifact
         run: |
           ARCH=$(uname -m)
@@ -109,7 +109,7 @@ jobs:
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
           export SPEC_BIN="bin/spec-asan"
           bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
-          bin/specunit-asan -s bin/spec-asan -t examples -t tests -t testllvm -j 2
+          bin/specunit-asan -s bin/spec-asan -t examples -t test -t testcompiler -j 2
 
   windows:
     runs-on: windows-latest
@@ -144,7 +144,7 @@ jobs:
           bin/specbuild.exe utilities/speclint/speclint.json
           bin/specbuild.exe utilities/specinit/specinit.json
           bin/specbuild.exe utilities/speclsp/speclsp.json
-          bin/specunit.exe -s bin/spec.exe -t examples -t tests -t testllvm
+          bin/specunit.exe -s bin/spec.exe -t examples -t test -t testcompiler
       - name: Package Windows Artifact
         run: |
           mkdir -p dist
