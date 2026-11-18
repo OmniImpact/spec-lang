@@ -8,6 +8,7 @@ Class is SpecError of T{
 	replace Array of Array of String is using: [
 		['base', 'sys', StackFrame],
 		['base', 'sys', SourceLocation],
+		['base', 'sys', as Reflection()],
 		['base', 'struct', Array],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Mem()],
@@ -15,6 +16,8 @@ Class is SpecError of T{
 		['base', 'sys', as Loops()]
 	];
 
+	Any is frameRecorder: '';
+	Any is panicRunner: '';
 	String is description: '';
 	String is kindName: '';
 	T is kind;
@@ -41,7 +44,17 @@ Class is SpecError of T{
 		return ti;
 	}
 
-	replace Function is init(T is kind, String is description: '', String is kindName: ''){
+	replace Function is init(T is kind, String is description: '', String is kindName: '', String is callerClass: Reflection:class(), String is callerMethod: Reflection:method(), String is callerFile: Reflection:file(), Int is callerLine: Reflection:line()){
+		:frameRecorder: local Function(Any is errObj, String is cName, String is mName, String is fName, Int is ln){
+			local SpecError is se: errObj as SpecError;
+			se:addFrameAt(className: cName, methodName: mName, file: fName, line: ln, col: 1);
+		};
+		Mem:retainAddr(objAddr: Mem:objToAddr(obj: :frameRecorder));
+		:panicRunner: local Function(Any is errObj){
+			local SpecError is se: errObj as SpecError;
+			Mem:panic(msg: se:toString());
+		};
+		Mem:retainAddr(objAddr: Mem:objToAddr(obj: :panicRunner));
 		:kind: kind;
 		local Int is kAddr: Mem:objToAddr(obj: kind);
 		if({ kAddr >= 4096 }, {
@@ -54,6 +67,7 @@ Class is SpecError of T{
 			:kindName: :resolveKindName(k: :kindBox);
 		});
 		:stackTrace: [];
+		:addFrameAt(className: callerClass, methodName: callerMethod, file: callerFile, line: callerLine, col: 1);
 	}
 
 	Function of String is getDescription(){
@@ -82,27 +96,6 @@ Class is SpecError of T{
 
 	Function is addFrameAt(String is className, String is methodName, String is file: '', Int is line: 0, Int is col: 1){
 		:stackTrace:add(item: StackFrame:init(location: SourceLocation:init(file: file, line: line, col: col), className: className, methodName: methodName));
-	}
-
-	## Appends a [StackFrame] to the currently pending TLS [SpecError] (if any).
-	Function is recordPendingFrame(String is className, String is methodName, String is file, Int is line){
-		local Int is errAddr: Mem:tlsGetI64(slot: 15);
-		if({ errAddr == 0 }, { return; });
-		Mem:tlsSetI64(slot: 15, val: 0);
-		Mem:retainAddr(objAddr: errAddr);
-		local SpecError is err: Mem:addrToObj(addr: errAddr) as SpecError;
-		err:addFrameAt(className: className, methodName: methodName, file: file, line: line, col: 1);
-		Mem:tlsSetI64(slot: 15, val: errAddr);
-	}
-
-	## Invokes the root fallback handler on the currently pending TLS [SpecError] (if any).
-	Function is panicPending(){
-		local Int is errAddr: Mem:tlsGetI64(slot: 15);
-		if({ errAddr == 0 }, { return; });
-		Mem:tlsSetI64(slot: 15, val: 0);
-		Mem:retainAddr(objAddr: errAddr);
-		local SpecError is err: Mem:addrToObj(addr: errAddr) as SpecError;
-		Mem:panic(msg: err:toString());
 	}
 
 	replace Function of String is toString(){

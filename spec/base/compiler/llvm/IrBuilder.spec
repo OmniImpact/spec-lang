@@ -69,6 +69,7 @@ Class is IrBuilder{
 	IrType is inlineReturnTy: IrType:Void;
 	String is expectedMapKeyType: '';
 	String is expectedMapValType: '';
+	Expression is currentCallExpr: Expression:Unknown;
 	Array of CallLowerer is callLowerers: [];
 	Map of String to ClassInfo is clsMap: Map:init();
 	Map of String to ClassInfo is sysinternalClasses: Map:init();
@@ -91,6 +92,8 @@ Class is IrBuilder{
 	Array of String is globalVtableNames: [];
 	Map of String to Int is globalVtableMap: Map:init();
 	Map of String to String is fieldSpecTypes: Map:init();
+	Map of String to Boolean is canUnwindCallees: Map:init();
+	Map of String to Boolean is canUnwindMethodNames: Map:init();
 	String is pathObjPtr: '';
 	String is pathStructName: '';
 	Int is pathFieldIndex: -1;
@@ -575,6 +578,7 @@ Class is IrBuilder{
 		});
 
 		# 2. Lower methods, construct helpers, and held field __ensure accessors
+		:computeCanUnwind(allClasses: allClasses);
 		local Map of String to Boolean is seenFns: Map:init();
 		ci: 0;
 		while({ ci < allClasses:length() }, {
@@ -771,8 +775,8 @@ Class is IrBuilder{
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: initOwner . '_init' . initSuf, argTypes: initArgTypes, args: initArgs));
 		});
 		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_drain_async_tasks', argTypes: [], args: []));
-		if({ :clsQNameMap:has(key: 'SpecError') }, {
-			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'SpecError_panicPending', argTypes: [IrType:Ptr], args: ['null']));
+		if({ :clsQNameMap:has(key: 'Pool') }, {
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_panicPending', argTypes: [IrType:Ptr], args: ['null']));
 		});
 		:emitPoolExit();
 		:emit(inst: IrInst:Release(val: argsMap));
@@ -2178,7 +2182,7 @@ Class is IrBuilder{
 			:localSpecTypes:set(key: ':', value: :currentClass);
 			:emit(inst: IrInst:Alloca(slot: '%self_slot', ty: IrType:Ptr));
 			:emit(inst: IrInst:Store(slot: '%self_slot', val: '%self', ty: IrType:Ptr));
-			if({ !:isUnmanagedClass && :clsQNameMap:has(key: 'SpecError') && :clsQNameMap:has(key: 'Pool') && m:name != 'SpecErrorHandler' && m:name != 'destroy' }, {
+			if({ !:isUnmanagedClass && :clsQNameMap:has(key: 'Pool') && m:name != 'SpecErrorHandler' && m:name != 'destroy' }, {
 				local String is errCallee: :findCustomErrorHandlerCallee(clsName: cls:qualifiedName());
 				if({ errCallee != '' }, {
 					:curFnErrHandlerCallee: errCallee;
@@ -2289,35 +2293,247 @@ Class is IrBuilder{
 		return dst;
 	}
 
+	local Function is collectCallsInStmts(Array of Statement is stmts, Map of String to Boolean is fnVars, Array of String is outCalls){
+		local Int is i: 0;
+		while({ i < stmts:length() }, {
+			local Statement is st: stmts:get(index: i);
+			match(on: st, when: [
+				Statement:VarDecl: local Function(Array of String is _m, Type is vt, String is vn, Expression is ie, Boolean is hi){
+					if({ vt:name:startsWith(prefix: 'Function') }, {
+						fnVars:set(key: vn, value: true);
+					});
+					if({ hi }, {
+						:collectCallsInExpr(expr: ie, fnVars: fnVars, outCalls: outCalls);
+					});
+				},
+				Statement:Assign: local Function(Expression is at, Expression is av){
+					:collectCallsInExpr(expr: at, fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: av, fnVars: fnVars, outCalls: outCalls);
+				},
+				Statement:Return: local Function(Expression is re, Boolean is hr){
+					if({ hr }, {
+						:collectCallsInExpr(expr: re, fnVars: fnVars, outCalls: outCalls);
+					});
+				},
+				Statement:Expr: local Function(Expression is es){
+					:collectCallsInExpr(expr: es, fnVars: fnVars, outCalls: outCalls);
+				}
+			], default: {});
+			i++;
+		});
+	}
+
+	local Function is collectCallsInExpr(Expression is expr, Map of String to Boolean is fnVars, Array of String is outCalls){
+		match(on: expr, when: [
+			Expression:Unary: local Function(String is _op, Expression is opnd){
+				:collectCallsInExpr(expr: opnd, fnVars: fnVars, outCalls: outCalls);
+			},
+			Expression:Binary: local Function(String is _op, Expression is l, Expression is r){
+				:collectCallsInExpr(expr: l, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: r, fnVars: fnVars, outCalls: outCalls);
+			},
+			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+				:collectCallsInExpr(expr: inner, fnVars: fnVars, outCalls: outCalls);
+				local Int is ai: 0;
+				while({ ai < args:length() }, {
+					:collectCallsInExpr(expr: args:get(index: ai), fnVars: fnVars, outCalls: outCalls);
+					ai++;
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is t, String is _f){
+				:collectCallsInExpr(expr: t, fnVars: fnVars, outCalls: outCalls);
+			},
+			Expression:Index: local Function(Expression is t, Expression is idx){
+				:collectCallsInExpr(expr: t, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: idx, fnVars: fnVars, outCalls: outCalls);
+			},
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				local Int is ii: 0;
+				while({ ii < items:length() }, {
+					:collectCallsInExpr(expr: items:get(index: ii), fnVars: fnVars, outCalls: outCalls);
+					ii++;
+				});
+			},
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is vals){
+				local Int is mi: 0;
+				while({ mi < keys:length() }, {
+					:collectCallsInExpr(expr: keys:get(index: mi), fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: vals:get(index: mi), fnVars: fnVars, outCalls: outCalls);
+					mi++;
+				});
+			},
+			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+				local Int is pi: 0;
+				while({ pi < subParams:length() }, {
+					local Parameter is sp: subParams:get(index: pi);
+					if({ sp:paramType:name:startsWith(prefix: 'Function') }, {
+						fnVars:set(key: sp:name, value: true);
+					});
+					pi++;
+				});
+				:collectCallsInStmts(stmts: subBody, fnVars: fnVars, outCalls: outCalls);
+			},
+			Expression:Call: local Function(CallData is call){
+				local String is cnm: call:name;
+				if({ cnm == 'callCatching' }, {
+					return;
+				});
+				if({ cnm == 'raiseError' || cnm == 'raisePendingError' || cnm == 'raisePendingErrorAddr' || cnm == 'invokeVoid' || cnm == 'invoke_void' }, {
+					outCalls:add(item: '__UNWIND_SEED__');
+				});
+				if({ call:isBareCall && fnVars:has(key: cnm) }, {
+					outCalls:add(item: '__UNWIND_SEED__');
+				});
+				if({ cnm == 'init' }, {
+					match(on: call:target, when: [
+						Expression:Ident: local Function(String is tname){
+							if({ tname != ':' && tname != '' }, {
+								outCalls:add(item: tname . '_init');
+							});
+						}
+					], default: {});
+				}, {
+					if({ cnm != 'if' && cnm != 'while' && cnm != 'until' && cnm != 'repeat' && cnm != 'match' && cnm != 'branch' && cnm != 'lazy' && cnm != 'eval' && cnm != 'get' && cnm != 'set' && cnm != 'add' && cnm != 'length' && cnm != 'has' && cnm != 'toString' && cnm != 'destroy' }, {
+						outCalls:add(item: cnm);
+					});
+				});
+				:collectCallsInExpr(expr: call:target, fnVars: fnVars, outCalls: outCalls);
+				local Int is cai: 0;
+				while({ cai < call:args:length() }, {
+					local NamedArg is cna: call:args:get(index: cai);
+					:collectCallsInExpr(expr: cna:value, fnVars: fnVars, outCalls: outCalls);
+					cai++;
+				});
+			}
+		], default: {});
+	}
+
+	local Function is computeCanUnwind(Array of ClassInfo is allClasses){
+		:canUnwindCallees: Map:init();
+		:canUnwindMethodNames: Map:init();
+		local Array of String is methodSyms: [];
+		local Array of String is methodBareNames: [];
+		local Array of Int is methodCallStarts: [];
+		local Array of Int is methodCallEnds: [];
+		local Array of String is flatCalls: [];
+
+		local Int is ci: 0;
+		while({ ci < allClasses:length() }, {
+			local ClassInfo is cls: allClasses:get(index: ci);
+			if({ !:bindings:isSysinternal(cls: cls) }, {
+				local String is sname: :cStructName(qname: cls:qualifiedName());
+				local Map of String to Int is mCounts: Map:init();
+				local Int is mi: 0;
+				while({ mi < cls:members:length() }, {
+					local Member is m: cls:members:get(index: mi);
+					if({ m:kind == MemberKind:METHOD && m:body:length() > 0 && m:name != 'destroy' }, {
+						local Int is ovIdx: mCounts:get(key: m:name, default: 0);
+						mCounts:set(key: m:name, value: ovIdx + 1);
+						local String is fnSym: if({ ovIdx > 0 }, { sname . '_' . m:name . '_' . ((ovIdx + 1) as String) }, { sname . '_' . m:name });
+						local Map of String to Boolean is fnVars: Map:init();
+						local Int is pi: 0;
+						while({ pi < m:params:length() }, {
+							local Parameter is p: m:params:get(index: pi);
+							if({ p:paramType:name:startsWith(prefix: 'Function') }, {
+								fnVars:set(key: p:name, value: true);
+							});
+							pi++;
+						});
+						local Int is startIdx: flatCalls:length();
+						:collectCallsInStmts(stmts: m:body, fnVars: fnVars, outCalls: flatCalls);
+						local Int is endIdx: flatCalls:length();
+						local Boolean is hasSeed: false;
+						local Int is ki: startIdx;
+						while({ ki < endIdx }, {
+							if({ flatCalls:get(index: ki, default: '') == '__UNWIND_SEED__' }, {
+								hasSeed: true;
+							});
+							ki++;
+						});
+						if({ hasSeed }, {
+							:canUnwindCallees:set(key: fnSym, value: true);
+							if({ m:name != 'init' }, {
+								:canUnwindMethodNames:set(key: m:name, value: true);
+							});
+						}, {
+							methodSyms:add(item: fnSym);
+							methodBareNames:add(item: m:name);
+							methodCallStarts:add(item: startIdx);
+							methodCallEnds:add(item: endIdx);
+						});
+					});
+					mi++;
+				});
+			});
+			ci++;
+		});
+
+		local Boolean is changed: true;
+		while({ changed }, {
+			changed: false;
+			local Int is idx: 0;
+			while({ idx < methodSyms:length() }, {
+				local String is sym: methodSyms:get(index: idx, default: '');
+				if({ !:canUnwindCallees:has(key: sym) }, {
+					local Int is sIdx: methodCallStarts:get(index: idx, default: 0);
+					local Int is eIdx: methodCallEnds:get(index: idx, default: 0);
+					local Boolean is hits: false;
+					local Int is ki: sIdx;
+					while({ ki < eIdx && !hits }, {
+						local String is c: flatCalls:get(index: ki, default: '');
+						if({ :canUnwindCallees:has(key: c) || :canUnwindMethodNames:has(key: c) }, {
+							hits: true;
+						});
+						ki++;
+					});
+					if({ hits }, {
+						:canUnwindCallees:set(key: sym, value: true);
+						local String is bname: methodBareNames:get(index: idx, default: '');
+						if({ bname != 'init' }, {
+							:canUnwindMethodNames:set(key: bname, value: true);
+						});
+						changed: true;
+					});
+				});
+				idx++;
+			});
+		});
+	}
+
 	local Function of Boolean is shouldEmitUnwindCheck(String is callee){
 		if({ :isUnmanagedClass }, { return false; });
-		if({ !:clsQNameMap:has(key: 'SpecError') || !:clsQNameMap:has(key: 'Pool') }, { return false; });
-		if({ :currentClass == 'SpecError' || :currentClass == 'StackFrame' || :currentClass == 'SourceLocation' || :currentClass == 'ThreadScope' || :currentClass == 'Task' || :currentClass == 'Channel' || :currentClass == 'Flow' || :currentClass == 'Thread' || :currentClass == 'Mem' || :currentClass == 'Buf' || :currentClass == 'Str' || :currentClass == 'String' || :currentClass == 'Vector' || :currentClass == 'HashTable' || :currentClass == 'Array' || :currentClass == 'Map' || :currentClass == 'List' || :currentClass == 'Introspection' || :currentClass == 'CliArgs' || :currentClass == 'OsDispatch' || :currentClass == 'Math' || :currentClass == 'Ansi' || :currentClass == 'Output' || :currentClass == 'Stderr' || :currentClass == 'Input' || :currentClass == 'Dir' || :currentClass == 'Uri' || :currentClass == 'Time' || :currentClass == 'DateTime' }, {
-			return false;
-		});
+		if({ !:clsQNameMap:has(key: 'Pool') }, { return false; });
 		if({ :currentMethod == 'destroy' || :currentMethod:endsWith(suffix: '__ensure') || :currentMethod:endsWith(suffix: '__lazy_init') }, {
 			return false;
 		});
-		if({ callee == '__indirect__' || callee == 'ThreadScope_open' || callee == 'Task_await' || callee == 'Flow_collect' || callee == 'Channel_collect' || callee == 'Parallel_run' || callee == 'Parallel_sync' }, {
+		if({ callee == '__indirect__' }, {
 			return true;
 		});
-		if({ callee:startsWith(prefix: 'spec_') || callee:startsWith(prefix: '__spec_') || callee:startsWith(prefix: 'Arc_') || callee:startsWith(prefix: 'Slab_') || callee:startsWith(prefix: 'Heap_') || callee:startsWith(prefix: 'Pool_') || callee:startsWith(prefix: 'Arena_') || callee:startsWith(prefix: 'Intern_') || callee:startsWith(prefix: 'Mem_') || callee:startsWith(prefix: 'Buf_') || callee:startsWith(prefix: 'Str_') || callee:startsWith(prefix: 'String_') || callee:startsWith(prefix: 'Vector_') || callee:startsWith(prefix: 'HashTable_') || callee:startsWith(prefix: 'Array_') || callee:startsWith(prefix: 'Map_') || callee:startsWith(prefix: 'List_') || callee:startsWith(prefix: 'Introspection_') || callee:startsWith(prefix: 'Reflection_') || callee:startsWith(prefix: 'CliArgs_') || callee:startsWith(prefix: 'OsDispatch_') || callee:startsWith(prefix: 'Math_') || callee:startsWith(prefix: 'Ansi_') || callee:startsWith(prefix: 'Output_') || callee:startsWith(prefix: 'Stderr_') || callee:startsWith(prefix: 'Input_') || callee:startsWith(prefix: 'SourceLocation_') || callee:startsWith(prefix: 'StackFrame_') || callee:startsWith(prefix: 'SpecError_') || callee:startsWith(prefix: 'Thread_') || callee:startsWith(prefix: 'ThreadScope_') || callee:startsWith(prefix: 'Task_') || callee:startsWith(prefix: 'Channel_') || callee:startsWith(prefix: 'Flow_') || callee:startsWith(prefix: 'Time_') || callee:startsWith(prefix: 'DateTime_') || callee:startsWith(prefix: 'Dir_') || callee:startsWith(prefix: 'Uri_') || callee:startsWith(prefix: 'Process_') }, {
-			return false;
+		if({ :canUnwindCallees:has(key: callee) }, {
+			return true;
 		});
-		if({ callee:endsWith(suffix: '_destroy') || callee:endsWith(suffix: '__ensure') || callee:endsWith(suffix: '__lazy_init') }, {
-			return false;
+		local Int is uIdx: callee:indexOf(search: '_', default: -1);
+		if({ uIdx > 0 }, {
+			local String is cPref: callee:substring(start: 0, end: uIdx);
+			local String is mPart: callee:substring(start: uIdx + 1, end: callee:length());
+			if({ :sysinternalClasses:has(key: cPref) || cPref == 'Arc' || cPref == 'Slab' || cPref == 'Heap' || cPref == 'Pool' || cPref == 'Arena' || cPref == 'Intern' }, {
+				return false;
+			});
+			if({ mPart != 'init' && :canUnwindMethodNames:has(key: mPart) }, {
+				return true;
+			});
 		});
-		return true;
+		return false;
 	}
 
 	Function is emitUnwindCurrentFrame(Boolean is recordFrame){
-		if({ recordFrame && :clsQNameMap:has(key: 'SpecError') }, {
+		if({ recordFrame && :clsQNameMap:has(key: 'Pool') }, {
 			local String is cStr: :emitConstStrVal(value: :currentClass);
 			local String is mStr: :emitConstStrVal(value: :currentMethod);
 			local String is fStr: :emitConstStrVal(value: :curFn:sourceFile);
 			local String is lVal: :nextTmp();
 			:emit(inst: IrInst:ConstInt(dst: lVal, value: :currentLine));
-			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'SpecError_recordPendingFrame', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', cStr, mStr, fStr, lVal]));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_recordPendingFrame', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', cStr, mStr, fStr, lVal]));
 		});
 		if({ :curFnErrHandlerCallee != '' && :curFnErrPushedSlot != '' }, {
 			local String is pushedVal: :nextTmp();
@@ -4259,20 +4475,12 @@ Class is IrBuilder{
 						});
 					});
 				});
+				local Expression is prevCtorCallExpr: :currentCallExpr;
+				:currentCallExpr: expr;
 				:lowerCallArgs(fnKey: ctorKey, callArgs: call:args, argTypes: argTypes, argVals: argVals);
+				:currentCallExpr: prevCtorCallExpr;
 				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: ctorKey, argTypes: argTypes, args: argVals));
-				if({ clsName == 'SpecError' && :clsQNameMap:has(key: 'SpecError') }, {
-					local String is cStr: :emitConstStrVal(value: :currentClass);
-					local String is mStr: :emitConstStrVal(value: :currentMethod);
-					local String is fStr: :emitConstStrVal(value: :curFn:sourceFile);
-					local String is lVal: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: lVal, value: :currentLine));
-					local String is colVal: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: colVal, value: 1));
-					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'SpecError_addFrameAt', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64, IrType:I64], args: [obj, cStr, mStr, fStr, lVal, colVal]));
-				}, {
-					:emitCheckUnwindAfterCall(callee: ctorKey);
-				});
+				:emitCheckUnwindAfterCall(callee: ctorKey);
 				:emitClaimPool(val: obj);
 				return obj;
 			});
@@ -4358,80 +4566,10 @@ Class is IrBuilder{
 			});
 		});
 
-		local Array of NamedArg is effectiveArgs: call:args;
-		if({ dirCallee == 'ThreadScope_spawn' && call:args:length() == 1 }, {
-			local String is taskRetSpec: '';
-			local NamedArg is sa0: call:args:get(index: 0);
-			local String is sFnT: sa0:value:resolvedType;
-			if({ sFnT:startsWith(prefix: 'Function:') && sFnT:length() > 9 }, {
-				taskRetSpec: sFnT:substring(start: 9, end: sFnT:length());
-			});
-			if({ taskRetSpec == '' && expr:resolvedType:startsWith(prefix: 'Task:') && expr:resolvedType:length() > 5 }, {
-				taskRetSpec: expr:resolvedType:substring(start: 5, end: expr:resolvedType:length());
-			});
-			if({ taskRetSpec == '' && expr:resolvedType:startsWith(prefix: 'Task of ') && expr:resolvedType:length() > 8 }, {
-				taskRetSpec: expr:resolvedType:substring(start: 8, end: expr:resolvedType:length());
-			});
-			local Int is tKind: 3;
-			if({ taskRetSpec != '' && taskRetSpec != 'Void' && taskRetSpec != 'void' }, {
-				if({ taskRetSpec == 'Float' }, {
-					tKind: 2;
-				}, {
-					if({ :isArcSpecType(specType: taskRetSpec) }, {
-						tKind: 1;
-					}, {
-						tKind: 0;
-					});
-				});
-			});
-			local Expression is kindLit: Expression:NumberLit(value: tKind, text: tKind as String);
-			kindLit:setResolvedType(t: 'Int');
-			effectiveArgs: [sa0, NamedArg:init(name: 'kind', value: kindLit)];
-		});
-		if({ (dirCallee == 'Channel_unbounded' && call:args:length() == 0) || (dirCallee == 'Channel_bounded' && call:args:length() == 1) }, {
-			local String is chElemSpec: '';
-			if({ expr:resolvedType:startsWith(prefix: 'Channel:') && expr:resolvedType:length() > 8 }, {
-				chElemSpec: expr:resolvedType:substring(start: 8, end: expr:resolvedType:length());
-			});
-			if({ chElemSpec == '' && expr:resolvedType:startsWith(prefix: 'Channel of ') && expr:resolvedType:length() > 11 }, {
-				chElemSpec: expr:resolvedType:substring(start: 11, end: expr:resolvedType:length());
-			});
-			local Boolean is chArc: chElemSpec != '' && :isArcSpecType(specType: chElemSpec);
-			local Expression is arcLit: Expression:BoolLit(value: chArc);
-			arcLit:setResolvedType(t: 'Boolean');
-			if({ call:args:length() == 0 }, {
-				effectiveArgs: [NamedArg:init(name: 'isArc', value: arcLit)];
-			}, {
-				effectiveArgs: [call:args:get(index: 0), NamedArg:init(name: 'isArc', value: arcLit)];
-			});
-		});
-		if({ dirCallee == 'Flow_fromArray' || dirCallee == 'Flow_map' || dirCallee == 'Flow_channelFlow' || dirCallee == 'Flow_merge' }, {
-			local String is flElemSpec: '';
-			if({ expr:resolvedType:startsWith(prefix: 'Flow:') && expr:resolvedType:length() > 5 }, {
-				flElemSpec: expr:resolvedType:substring(start: 5, end: expr:resolvedType:length());
-			});
-			if({ flElemSpec == '' && expr:resolvedType:startsWith(prefix: 'Flow of ') && expr:resolvedType:length() > 8 }, {
-				flElemSpec: expr:resolvedType:substring(start: 8, end: expr:resolvedType:length());
-			});
-			local Boolean is flArc: flElemSpec != '' && :isArcSpecType(specType: flElemSpec);
-			local Expression is flArcLit: Expression:BoolLit(value: flArc);
-			flArcLit:setResolvedType(t: 'Boolean');
-			local String is arcArgName: if({ dirCallee == 'Flow_map' }, { 'outIsArc' }, { 'isArc' });
-			if({ (dirCallee == 'Flow_fromArray' || dirCallee == 'Flow_map') && call:args:length() == 1 }, {
-				effectiveArgs: [call:args:get(index: 0), NamedArg:init(name: arcArgName, value: flArcLit)];
-			});
-			if({ (dirCallee == 'Flow_channelFlow' || dirCallee == 'Flow_merge') && call:args:length() <= 2 }, {
-				local Expression is capExpr: Expression:NumberLit(value: 0, text: '0');
-				capExpr:setResolvedType(t: 'Int');
-				if({ call:args:length() == 2 }, {
-					local NamedArg is ca1: call:args:get(index: 1);
-					capExpr: ca1:value;
-				});
-				effectiveArgs: [call:args:get(index: 0), NamedArg:init(name: 'capacity', value: capExpr), NamedArg:init(name: 'isArc', value: flArcLit)];
-			});
-		});
-
-		:lowerCallArgs(fnKey: dirCallee, callArgs: effectiveArgs, argTypes: argTypes, argVals: argVals);
+		local Expression is prevCallExpr: :currentCallExpr;
+		:currentCallExpr: expr;
+		:lowerCallArgs(fnKey: dirCallee, callArgs: call:args, argTypes: argTypes, argVals: argVals);
+		:currentCallExpr: prevCallExpr;
 
 		local IrType is callRetTy: retTy;
 		if({ :methodRetTypes:has(key: dirCallee) }, {
@@ -4445,6 +4583,7 @@ Class is IrBuilder{
 			local String is recvPtr: argVals:get(index: 0, default: 'null');
 			if({ recvPtr == 'null' }, {
 				:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: callRetTy, callee: dirCallee, argTypes: argTypes, args: argVals));
+				:emitCheckUnwindAfterCall(callee: dirCallee);
 			}, {
 				local String is resSlot: '';
 				if({ hasDst }, {
@@ -4491,7 +4630,7 @@ Class is IrBuilder{
 				if({ hasDst }, {
 					:emit(inst: IrInst:Load(dst: dst, slot: resSlot, ty: callRetTy));
 				});
-				:emitCheckUnwindAfterCall(callee: '__indirect__');
+				:emitCheckUnwindAfterCall(callee: dirCallee);
 			});
 		}, {
 			:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: callRetTy, callee: dirCallee, argTypes: argTypes, args: argVals));
@@ -4504,10 +4643,10 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Str' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Parallel' || provStruct == 'Thread' || provStruct == 'ThreadScope' || provStruct == 'Channel' || provStruct == 'Flow' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
+		if({ :mod:findStruct(name: provStruct):fieldNames:length() <= 2 }, {
 			return 'null';
 		});
-		if({ :clsMap:has(key: provStruct) && :bindings:isSysinternal(cls: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {
+		if({ :clsMap:has(key: provStruct) && :bindings:isTransparent(c: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {
 			return 'null';
 		});
 		if({ :currentClass != '' && :localSlots:has(key: ':') }, {
@@ -4533,6 +4672,7 @@ Class is IrBuilder{
 	}
 
 	local Function is lowerCallArgs(String is fnKey, Array of NamedArg is callArgs, Array of IrType is argTypes, Array of String is argVals){
+		local Expression is callExprForDefaults: :currentCallExpr;
 		if({ !:methodParams:has(key: fnKey) }, {
 			local Int is ai: 0;
 			local String is calleeMask: :methodParamPtrMask:get(key: fnKey, default: '');
@@ -4607,6 +4747,7 @@ Class is IrBuilder{
 				aval: :lowerExpr(expr: av);
 			}, {
 				if({ p:hasDefault }, {
+					:currentCallExpr: callExprForDefaults;
 					aty: :irTypeFor(specType: p:defaultExpr:resolvedType);
 					if({ aty == IrType:Void }, { aty: IrType:I64; });
 					aval: :lowerExpr(expr: p:defaultExpr);

@@ -8,6 +8,7 @@ Class is Channel of T{
 	namespace: ['base', 'sys', 'thread'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Reflection()],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
@@ -42,14 +43,20 @@ Class is Channel of T{
 	}
 
 	## Creates an unbounded channel whose ring buffer grows dynamically as needed.
-	Function of Channel is unbounded(Boolean is isArc: false){
+	held Function of Channel is unbounded(Boolean is isArc: Reflection:isArcTypeParam()){
 		return Channel:init(maxCap: 0, isArc: isArc);
 	}
 
 	## Creates a bounded channel with backpressure capacity [capacity] (`>= 1`).
-	Function of Channel is bounded(Int is capacity, Boolean is isArc: false){
-		local Int is cap: if({ capacity < 1 }, { 1 }, { capacity });
-		return Channel:init(maxCap: cap, isArc: isArc);
+	held Function of Channel is bounded(Int is capacity, Boolean is isArc: Reflection:isArcTypeParam()){
+		return Channel:init(maxCap: capacity, isArc: isArc):ensureBounded();
+	}
+
+	local Function of Channel is ensureBounded(){
+		if({ :maxCapacity < 1 }, {
+			:maxCapacity: 1;
+		});
+		return :;
 	}
 
 	local Function is growBuffer(){

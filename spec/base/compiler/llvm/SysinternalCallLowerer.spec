@@ -203,13 +203,6 @@ Class of CallLowerer is SysinternalCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		local Int is argc: call:args:length();
-		if({ :isTargetClass(call: call, clsName: 'Parallel') }, {
-			if({ call:name == 'init' }, { return true; });
-			if({ call:name == 'sync' && argc >= 1 }, { return true; });
-			if({ call:name == 'syncWith' && argc >= 2 }, { return true; });
-			return false;
-		});
 		local String is dom: :floorDomain(b: b, call: call);
 		if({ dom == '' }, { return false; });
 		if({ call:name == 'init' }, { return true; });
@@ -227,24 +220,6 @@ Class of CallLowerer is SysinternalCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, { return 'null'; });
-		if({ :isTargetClass(call: call, clsName: 'Parallel') }, {
-			if({ call:name == 'sync' }, {
-				local String is act: :lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 0, defVal: 'null');
-				local String is raw: :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync', argTypes: [IrType:Ptr], args: [act]);
-				b:emitCheckUnwindAfterCall(callee: 'Parallel_sync');
-				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
-				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
-			});
-			if({ call:name == 'syncWith' }, {
-				local String is lk: :lowerNamedArg(b: b, call: call, argName: 'lock', posIdx: 0, defVal: '0');
-				local String is act: :lowerNamedArg(b: b, call: call, argName: 'action', posIdx: 1, defVal: 'null');
-				local String is raw: :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_parallel_sync_with', argTypes: [IrType:I64, IrType:Ptr], args: [lk, act]);
-				b:emitCheckUnwindAfterCall(callee: 'Parallel_sync');
-				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
-				return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
-			});
-			return '0';
-		});
 		local String is dom: :floorDomain(b: b, call: call);
 		local ClassInfo is cls: b:sysinternalClasses:get(key: dom);
 		local Int is mi: 0;

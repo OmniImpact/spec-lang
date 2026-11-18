@@ -3367,7 +3367,7 @@ Class is TypeChecker{
 		});
 		if({ recvName != '' && call:name != 'init' }, {
 			local Boolean is isSysinternalPath: targetIsPath && targetPathSegs:indexOf(search: 'sysinternal', default: -1) >= 0;
-			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'SpecError' || recvName == 'Function' || recvName == 'LoopControl' || recvName == 'ThreadScope' || recvName == 'Channel' || recvName == 'Flow' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
+			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
 			# Desugared enums are type-level by design:
 			# their contract methods dispatch through the class name.
 			# Held functions: the class-name prefix IS
@@ -3946,8 +3946,46 @@ Class is TypeChecker{
 			});
 		});
 		if({ heldCallFn:name != '' }, {
-			:checkMemberVisibility(ownerClass: :findHeldMethodOwner(className: heldRoot, methodName: method), member: heldCallFn, memberName: method);
+			local String is heldOwner: :findHeldMethodOwner(className: heldRoot, methodName: method);
+			:checkMemberVisibility(ownerClass: heldOwner, member: heldCallFn, memberName: method);
+			if({ heldRoot == 'ThreadScope' && method == 'open' && :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+				local Boolean is hasOnErrorArg: false;
+				call:args:each(action: local Function(NamedArg is arg){
+					if({ arg:name == 'onError' }, {
+						hasOnErrorArg: true;
+					});
+				});
+				if({ !hasOnErrorArg && !:classHasCustomErrorHandler(className: :currentClassName) }, {
+					:addError(line: :currentLine, msg: "ThreadScope:open requires either an 'onError:' handler argument or an enclosing class that replaces 'SpecErrorHandler'.");
+				});
+			});
 			local String is heldRet: :resolveReturnType(t: heldCallFn:memberType);
+			local ClassInfo is hOwnerCls: :findClass(name: heldOwner);
+			if({ hOwnerCls:typeParams:length() > 0 }, {
+				local String is tp0: hOwnerCls:typeParams:get(index: 0);
+				if({ heldRet == hOwnerCls:name . ':' . tp0 || heldRet == hOwnerCls:name }, {
+					local String is inferredArgT: '';
+					if({ heldCallFn:params:length() > 0 && call:args:length() > 0 }, {
+						local Parameter is hp0: heldCallFn:params:get(index: 0);
+						local String is hp0Str: :formatVarTypeString(t: hp0:paramType);
+						if({ hp0Str:endsWith(suffix: ':' . tp0) }, {
+							local String is hpPrefix: hp0Str:substring(start: 0, end: hp0Str:length() - tp0:length());
+							local NamedArg is ca0: call:args:get(index: 0);
+							local String is ca0T: ca0:value:resolvedType;
+							if({ ca0T:startsWith(prefix: hpPrefix) && ca0T:length() > hpPrefix:length() }, {
+								inferredArgT: ca0T:substring(start: hpPrefix:length(), end: ca0T:length());
+							});
+						});
+					});
+					if({ inferredArgT != '' && inferredArgT != tp0 }, {
+						heldRet: hOwnerCls:name . ':' . inferredArgT;
+					}, {
+						if({ expected:startsWith(prefix: hOwnerCls:name . ':') || expected:startsWith(prefix: hOwnerCls:name . ' of ') }, {
+							heldRet: expected;
+						});
+					});
+				});
+			});
 			expr:setResolvedType(t: heldRet);
 			return heldRet;
 		});
@@ -4258,32 +4296,13 @@ Class is TypeChecker{
 										res: 'Task:' . taskElem;
 									});
 								});
-								if({ targetType == 'Channel' && (method == 'unbounded' || method == 'bounded') }, {
-									if({ expected:startsWith(prefix: 'Channel:') || expected:startsWith(prefix: 'Channel of ') }, {
-										res: expected;
-									});
-								});
 								if({ (targetType == 'Flow' || targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
-									if({ method == 'fromArray' && call:args:length() > 0 }, {
-										local NamedArg is fa0: call:args:get(index: 0);
-										local String is arrT: fa0:value:resolvedType;
-										if({ arrT:startsWith(prefix: 'Array:') && arrT:length() > 6 }, {
-											res: 'Flow:' . arrT:substring(start: 6, end: arrT:length());
-										}, {
-											if({ arrT:startsWith(prefix: 'Array of ') && arrT:length() > 9 }, {
-												res: 'Flow:' . arrT:substring(start: 9, end: arrT:length());
-											});
-										});
-									});
 									if({ method == 'map' && call:args:length() > 0 }, {
 										local NamedArg is ma0: call:args:get(index: 0);
 										local String is mFnT: ma0:value:resolvedType;
 										if({ mFnT:startsWith(prefix: 'Function:') && mFnT:length() > 9 }, {
 											res: 'Flow:' . mFnT:substring(start: 9, end: mFnT:length());
 										});
-									});
-									if({ (method == 'channelFlow' || method == 'merge') && (expected:startsWith(prefix: 'Flow:') || expected:startsWith(prefix: 'Flow of ')) }, {
-										res: expected;
 									});
 									if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && (targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
 										res: targetType;

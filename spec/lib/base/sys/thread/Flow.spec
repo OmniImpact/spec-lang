@@ -9,6 +9,7 @@ Class is Flow of T{
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', 'thread', Channel],
+		['base', 'sys', as Reflection()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
@@ -41,13 +42,26 @@ Class is Flow of T{
 		return (Mem:objToAddr(obj: r) & 1) != 0;
 	}
 
-	replace Function is init(Function is producer, Boolean is isArc: false){
+	replace Function is init(Function is producer: local Function(Function is _emit){}, Boolean is isArc: false){
 		local Int is pAddr: Mem:objToAddr(obj: producer);
 		if({ pAddr != 0 }, {
 			Mem:retainAddr(objAddr: pAddr);
 		});
 		:producerAddr: pAddr;
 		:arcManaged: isArc;
+	}
+
+	local Function of Flow of T is setProducer(Function is producer, Boolean is isArc){
+		local Int is pAddr: Mem:objToAddr(obj: producer);
+		if({ pAddr != 0 }, {
+			Mem:retainAddr(objAddr: pAddr);
+		});
+		if({ :producerAddr != 0 }, {
+			Mem:releaseAddr(objAddr: :producerAddr);
+		});
+		:producerAddr: pAddr;
+		:arcManaged: isArc;
+		return :;
 	}
 
 	Function is destroy(){
@@ -58,8 +72,13 @@ Class is Flow of T{
 	}
 
 	## Creates a cold [Flow] that emits each element of [items] in order.
-	Function of Flow of T is fromArray(Array of T is items, Boolean is isArc: false){
-		return Flow:init(producer: local Function(Function is emit){
+	held Function of Flow of T is fromArray(Array of T is items, Boolean is isArc: Reflection:isArcTypeParam()){
+		local Flow of T is fl: Flow:init();
+		return fl:buildFromArray(items: items, isArc: isArc);
+	}
+
+	local Function of Flow of T is buildFromArray(Array of T is items, Boolean is isArc){
+		return :setProducer(producer: local Function(Function is emit){
 			local Int is i: 0;
 			while({ i < items:length() && !Mem:hasPendingError() }, {
 				emit(items:get(index: i));
@@ -79,7 +98,7 @@ Class is Flow of T{
 	}
 
 	## Transforms each emitted item using [transform].
-	Function of Flow is map(Function is transform, Boolean is outIsArc: false){
+	Function of Flow is map(Function is transform, Boolean is outIsArc: Reflection:isArcTypeParam()){
 		local Flow of T is upstream: :;
 		return Flow:init(producer: local Function(Function is emit){
 			upstream:collect(onItem: local Function(T is item){
@@ -172,52 +191,77 @@ Class is Flow of T{
 
 	## Creates a concurrent [Flow of T] whose [producer] receives `(ThreadScope is scope, Channel of T is channel)`.
 	## When all tasks spawned in `scope` by `producer` finish, `channel` is closed automatically.
-	Function of Flow of T is channelFlow(Function is producer, Int is capacity: 0, Boolean is isArc: false){
-		return Flow:init(producer: local Function(Function is emit){
+	held Function of Flow of T is channelFlow(Function is producer, Int is capacity: 0, Boolean is isArc: Reflection:isArcTypeParam()){
+		local Flow of T is fl: Flow:init();
+		return fl:buildChannelFlow(producer: producer, capacity: capacity, isArc: isArc);
+	}
+
+	local Function of Flow of T is buildChannelFlow(Function is producer, Int is capacity, Boolean is isArc){
+		return :setProducer(producer: local Function(Function is emit){
 			local Channel of T is chan: if({ capacity > 0 }, {
 				Channel:bounded(capacity: capacity, isArc: isArc)
 			}, {
 				Channel:unbounded(isArc: isArc)
 			});
-			ThreadScope:open(body: local Function(ThreadScope is outerScope){
-				outerScope:spawn(task: local Function(){
-					ThreadScope:open(body: local Function(ThreadScope is innerScope){
-						producer(innerScope, chan);
+			ThreadScope:open(
+				body: local Function(ThreadScope is outerScope){
+					outerScope:spawn(task: local Function(){
+						ThreadScope:open(
+							body: local Function(ThreadScope is innerScope){
+								producer(innerScope, chan);
+							},
+							onError: local Function(Any is err){
+								Mem:raisePendingError(err: err);
+							}
+						);
+						chan:close();
 					});
-					chan:close();
-				});
-				chan:collect(onItem: emit);
-			});
+					chan:collect(onItem: emit);
+				},
+				onError: local Function(Any is err){
+					Mem:raisePendingError(err: err);
+				}
+			);
 		}, isArc: isArc);
 	}
 
 	## Merges multiple [flows] concurrently inside a [ThreadScope] into a single [Flow of T].
-	Function of Flow of T is merge(Array of Flow is flows, Int is capacity: 0, Boolean is isArc: false){
-		return Flow:init(producer: local Function(Function is emit){
+	held Function of Flow of T is merge(Array of Flow is flows, Int is capacity: 0, Boolean is isArc: Reflection:isArcTypeParam()){
+		local Flow of T is fl: Flow:init();
+		return fl:buildMerge(flows: flows, capacity: capacity, isArc: isArc);
+	}
+
+	local Function of Flow of T is buildMerge(Array of Flow is flows, Int is capacity, Boolean is isArc){
+		return :setProducer(producer: local Function(Function is emit){
 			local Channel of T is chan: if({ capacity > 0 }, {
 				Channel:bounded(capacity: capacity, isArc: isArc)
 			}, {
 				Channel:unbounded(isArc: isArc)
 			});
-			ThreadScope:open(body: local Function(ThreadScope is scope){
-				local Array of Task is producers: [];
-				local Int is i: 0;
-				while({ i < flows:length() }, {
-					local Flow of T is f: flows:get(index: i);
-					local Task is pt: scope:spawn(task: local Function(){
-						f:collect(onItem: local Function(T is item){
-							chan:send(item: item);
+			ThreadScope:open(
+				body: local Function(ThreadScope is scope){
+					local Array of Task is producers: [];
+					local Int is i: 0;
+					while({ i < flows:length() }, {
+						local Flow of T is f: flows:get(index: i);
+						local Task is pt: scope:spawn(task: local Function(){
+							f:collect(onItem: local Function(T is item){
+								chan:send(item: item);
+							});
 						});
+						producers:add(item: pt);
+						i: i + 1;
 					});
-					producers:add(item: pt);
-					i: i + 1;
-				});
-				scope:spawn(task: local Function(){
-					scope:awaitAll(group: producers);
-					chan:close();
-				});
-				chan:collect(onItem: emit);
-			});
+					scope:spawn(task: local Function(){
+						scope:awaitAll(group: producers);
+						chan:close();
+					});
+					chan:collect(onItem: emit);
+				},
+				onError: local Function(Any is err){
+					Mem:raisePendingError(err: err);
+				}
+			);
 		}, isArc: isArc);
 	}
 }

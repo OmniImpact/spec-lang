@@ -94,6 +94,45 @@ Class is Pool{
 		return cur;
 	}
 
+	local Function is invokeFrameRecorder(Function is cb, Any is errObj, String is clsName, String is methodName, String is file, Int is line){
+		cb(errObj, clsName, methodName, file, line);
+	}
+
+	local Function is invokePanicRunner(Function is cb, Any is errObj){
+		cb(errObj);
+	}
+
+	Function is recordPendingFrame(String is clsName, String is methodName, String is file, Int is line){
+		local Int is errAddr: Mem:tlsGetI64(slot: 15);
+		if({ errAddr == 0 }, { return; });
+		local Int is cbAddr: Mem:loadI64(ptr: errAddr, byteOffset: 16);
+		if({ cbAddr == 0 }, { return; });
+		Mem:tlsSetI64(slot: 15, val: 0);
+		:invokeFrameRecorder(cb: Mem:addrToObj(addr: cbAddr), errObj: Mem:addrToObj(addr: errAddr), clsName: clsName, methodName: methodName, file: file, line: line);
+		Mem:tlsSetI64(slot: 15, val: errAddr);
+	}
+
+	Function is panicPending(){
+		local Int is errAddr: Mem:tlsGetI64(slot: 15);
+		if({ errAddr == 0 }, { return; });
+		local Int is cbAddr: Mem:loadI64(ptr: errAddr, byteOffset: 24);
+		if({ cbAddr == 0 }, { return; });
+		Mem:tlsSetI64(slot: 15, val: 0);
+		:invokePanicRunner(cb: Mem:addrToObj(addr: cbAddr), errObj: Mem:addrToObj(addr: errAddr));
+	}
+
+	Function of Int is callCatching(Function is action){
+		local Int is addr: Mem:objToAddr(obj: action);
+		if({ addr != 0 && Mem:loadI64(ptr: addr, byteOffset: 0) != 0 }, {
+			action();
+		});
+		local Int is errAddr: Mem:tlsGetI64(slot: 15);
+		if({ errAddr != 0 }, {
+			Mem:tlsSetI64(slot: 15, val: 0);
+		});
+		return errAddr;
+	}
+
 	Function is threadCleanup(){
 		local Int is pend: Mem:tlsGetI64(slot: 15);
 		if({ pend != 0 }, {

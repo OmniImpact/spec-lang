@@ -63,12 +63,24 @@ Class is SpecUnitTest{
 		local String is cn: Introspection:typeIdentity(obj: :);
 		local String is src: Introspection:classSourceFile(className: cn);
 		local SpecUnitRunner is runner: SpecUnitRunner:init();
-		runner:runAll(sourcePrefix: :sourceBase(path: src));
+		runner:runAll(sourcePrefix: :sourceBase(path: src), timeoutMs: :timeoutMs());
 	}
 
 	## The per-test construction path: the runner instantiates test
 	## classes with no arguments (the xUnit fresh-instance rule).
 	replace Function is init(){
+	}
+
+	## Default timeout for unit tests in seconds (30 seconds).
+	## Subclasses override with `replace Function of Int is timeout()`.
+	Function of Int is timeout(){
+		return 30;
+	}
+
+	## Default timeout for unit tests in milliseconds (30000ms).
+	## Subclasses override with `replace Function of Int is timeoutMs()`.
+	Function of Int is timeoutMs(){
+		return :timeout() * 1000;
 	}
 
 	## Intercepts unhandled [SpecError] values raised during a test method

@@ -19,5 +19,7 @@ Class of SpecUnitTest is TestSpecUnitTestBase{
 
 	Function is testDefaultDescription(){
 		Assert:areEqualString('Unit test: TestSpecUnitTestBase has 2 tests', :description());
+		Assert:areEqualInt(30, :timeout());
+		Assert:areEqualInt(30000, :timeoutMs());
 	}
 }

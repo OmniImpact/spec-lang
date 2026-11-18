@@ -30,12 +30,13 @@ Class is SpecUnitRunner{
 	## contract instead of reporting a silent all-green.
 	##
 	## @param sourcePrefix: The root source basename prefix.
-	Function is runAll(String is sourcePrefix){
+	## @param timeoutMs: Maximum allowed duration per test in milliseconds (default: 30000ms).
+	Function is runAll(String is sourcePrefix, Int is timeoutMs: 30000){
 		local Int is found: 0;
 		classNames():each(action: local Function(String is cn){
 			if(check: { :isTestClass(className: cn, sourcePrefix: sourcePrefix) }, then: {
 				found: found + 1;
-				:runClass(className: cn);
+				:runClass(className: cn, timeoutMs: timeoutMs);
 			});
 		});
 		if(check: { found == 0 }, then: {
@@ -73,7 +74,8 @@ Class is SpecUnitRunner{
 	## them (lifecycle by convention — hasMethod, no annotations).
 	##
 	## @param className: The test class name.
-	Function is runClass(String is className){
+	## @param timeoutMs: Maximum allowed duration per test in milliseconds (default: 30000ms).
+	Function is runClass(String is className, Int is timeoutMs: 30000){
 		local Boolean is hasBefore: hasMethod(className: className, methodName: 'beforeEach');
 		local Boolean is hasAfter: hasMethod(className: className, methodName: 'afterEach');
 		functions(className: className):each(action: local Function(Array of String is path){
@@ -88,7 +90,7 @@ Class is SpecUnitRunner{
 				if(check: { hasAfter }, then: {
 					invokeVoid(instance: instance, methodName: 'afterEach');
 				});
-				:endTest();
+				:endTest(timeoutMs: timeoutMs);
 			});
 		});
 	}
@@ -110,11 +112,15 @@ Class is SpecUnitRunner{
 	## checksBefore): a failing record flips the result and joins its
 	## failure list. Runs in the runner, where branching is available —
 	## the held-side Assert appended records unconditionally.
-	Function is endTest(){
+	Function is endTest(Int is timeoutMs: 30000){
 		local Array of TestResult is cell: SpecUnitState:currentCell;
 		if(check: { cell:length() > 0 }, then: {
 			local TestResult is r: cell:get(index: 0);
 			r:durationMs: clockMs() - r:startedAtMs;
+			if(check: { timeoutMs > 0 && r:durationMs > timeoutMs }, then: {
+				r:passed: false;
+				r:failures:add(item: 'test exceeded timeout of ' . (timeoutMs as String) . 'ms (' . (r:durationMs as String) . 'ms)');
+			});
 			local Int is idx: r:checksBefore;
 			while({ idx < SpecUnitState:checks:length() }, {
 				local CheckRecord is rec: SpecUnitState:checks:get(index: idx);

@@ -326,36 +326,6 @@ long long spec_pal_getenv(long long key_cstr) {
     return (long long)(intptr_t)val;
 }
 
-/* Striped recursive mutexes for Parallel:sync and Parallel:syncWith */
-static pthread_mutex_t _spec_parallel_striped_mutexes[64];
-static pthread_once_t _spec_parallel_striped_once = PTHREAD_ONCE_INIT;
-
-static void _spec_init_parallel_striped_mutexes(void) {
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    for (int i = 0; i < 64; i++) {
-        pthread_mutex_init(&_spec_parallel_striped_mutexes[i], &attr);
-    }
-    pthread_mutexattr_destroy(&attr);
-}
-
-void* spec_parallel_sync_with(long long lock_key, void* action_closure) {
-    void** cls = (void**)action_closure;
-    if (!cls || !cls[0]) spec_panic("Parallel:sync received null action Function");
-    pthread_once(&_spec_parallel_striped_once, _spec_init_parallel_striped_mutexes);
-    unsigned long long k = (unsigned long long)lock_key;
-    size_t idx = (size_t)(k ^ (k >> 6)) & 63ULL;
-    pthread_mutex_lock(&_spec_parallel_striped_mutexes[idx]);
-    void* res = ((void* (*)(void*))cls[0])(cls[1]);
-    pthread_mutex_unlock(&_spec_parallel_striped_mutexes[idx]);
-    return res;
-}
-
-void* spec_parallel_sync(void* action_closure) {
-    return spec_parallel_sync_with(0, action_closure);
-}
-
 long long spec_clock_ms(void) {
     return spec_pal_get_wall_time_us() / 1000;
 }

@@ -10,6 +10,7 @@ Class is Mem{
 
 	replace Array of Array of String is using: [
 		['base', 'sysinternal', Mem],
+		['base', 'sysinternal', Pool],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -217,5 +218,9 @@ Class is Mem{
 
 	Function is raisePendingError(Any is err){
 		:raisePendingErrorAddr(addr: base:sysinternal:Mem:objToAddr(obj: err));
+	}
+
+	Function of Int is callCatching(Function is action){
+		return base:sysinternal:Pool:callCatching(action: action);
 	}
 }

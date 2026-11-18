@@ -13,11 +13,32 @@ Class is Parallel{
 	replace Array of Array of String is using: [
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
+		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
-		['base', 'struct', Array]
+		['base', 'struct', Array],
+		['base', 'struct', Map]
 	];
+
+	held Int is tableMutex: Thread:mutexCreate();
+	held Map of Int to Int is lockSlots: Map:init();
+
+	local Function of Int is getLockSlot(Int is key){
+		Thread:mutexLock(handle: Parallel:tableMutex);
+		local Int is slot: 0;
+		if({ Parallel:lockSlots:has(key: key) }, {
+			slot: Parallel:lockSlots:get(key: key, default: 0);
+		}, {
+			slot: Mem:alloc(bytes: 24);
+			Mem:storeI64(ptr: slot, byteOffset: 0, val: Thread:mutexCreate());
+			Mem:storeI64(ptr: slot, byteOffset: 8, val: 0);
+			Mem:storeI64(ptr: slot, byteOffset: 16, val: 0);
+			Parallel:lockSlots:set(key: key, value: slot);
+		});
+		Thread:mutexUnlock(handle: Parallel:tableMutex);
+		return slot;
+	}
 
 	local Function of Int is invokeWorker(Function is w, Int is tid, Int is cnt){
 		local Any is res: w(tid, cnt);
@@ -70,15 +91,37 @@ Class is Parallel{
 	## @param action: Closure to execute under mutual exclusion.
 	## @return: Value returned by [action], or void if none.
 	Function of Any is sync(Function is action){
+		return :syncWith(lock: 0, action: action);
 	}
 
 	## Executes [action] inside a critical section locked specifically on [lock].
-	## Distinct lock keys map to striped recursive mutexes (64 stripes), allowing
+	## Distinct lock keys map to dynamically allocated recursive mutex slots, allowing
 	## fine-grained concurrency across disjoint data structures or slots.
 	##
-	## @param lock: Integer key designating the lock stripe.
+	## @param lock: Integer key designating the lock slot.
 	## @param action: Closure to execute under mutual exclusion for [lock].
 	## @return: Value returned by [action], or void if none.
 	Function of Any is syncWith(Int is lock, Function is action){
+		local Int is aAddr: Mem:objToAddr(obj: action);
+		if({ aAddr == 0 || Mem:loadI64(ptr: aAddr, byteOffset: 0) == 0 }, {
+			return Mem:addrToObj(addr: 0);
+		});
+		local Int is slot: :getLockSlot(key: lock);
+		local Int is tid: Thread:currentId();
+		if({ Mem:atomicLoadI64(addr: slot + 8) == tid }, {
+			Mem:storeI64(ptr: slot, byteOffset: 16, val: Mem:loadI64(ptr: slot, byteOffset: 16) + 1);
+			local Any is resInner: action();
+			Mem:storeI64(ptr: slot, byteOffset: 16, val: Mem:loadI64(ptr: slot, byteOffset: 16) - 1);
+			return resInner;
+		});
+		local Int is mtx: Mem:loadI64(ptr: slot, byteOffset: 0);
+		Thread:mutexLock(handle: mtx);
+		Mem:atomicStoreI64(addr: slot + 8, val: tid);
+		Mem:storeI64(ptr: slot, byteOffset: 16, val: 1);
+		local Any is res: action();
+		Mem:storeI64(ptr: slot, byteOffset: 16, val: 0);
+		Mem:atomicStoreI64(addr: slot + 8, val: 0);
+		Thread:mutexUnlock(handle: mtx);
+		return res;
 	}
 }

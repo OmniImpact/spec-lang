@@ -27,4 +27,33 @@ Class is Reflection{
 	Function of String is method(){
 		return base:sysinternal:Reflection:method();
 	}
+
+	## The enclosing source file path at the call site, injected by the generator.
+	##
+	## @return: The call site's source file path.
+	Function of String is file(){
+		return base:sysinternal:Reflection:file();
+	}
+
+	## The source line number at the call site, injected by the generator.
+	##
+	## @return: The call site's 1-based line number.
+	Function of Int is line(){
+		return base:sysinternal:Reflection:line();
+	}
+
+	## True when the enclosing call's resolved type parameter T is an ARC-managed reference type.
+	##
+	## @return: True when the call site's type argument is ARC-managed.
+	Function of Boolean is isArcTypeParam(){
+		return base:sysinternal:Reflection:isArcTypeParam();
+	}
+
+	## Returns the return-type category of the closure argument at the call site
+	## (`0` = scalar Int/Boolean/Byte, `1` = ARC reference, `2` = Float, `3` = Void).
+	##
+	## @return: Closure return kind code.
+	Function of Int is closureReturnKind(){
+		return base:sysinternal:Reflection:closureReturnKind();
+	}
 }

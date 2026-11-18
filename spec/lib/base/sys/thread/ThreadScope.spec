@@ -12,6 +12,7 @@ Class is ThreadScope{
 	replace Array of Array of String is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', Task],
+		['base', 'sys', as Reflection()],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
@@ -50,29 +51,50 @@ Class is ThreadScope{
 
 	## Opens a structured concurrency scope, executes [body] with the scope,
 	## and joins all spawned tasks before returning.
-	Function is open(Function is body, Function is onError: local Function(SpecError is _err){ :raiseError(error: _err); }){
+	held Function is open(Function is body, Function is onError: local Function(SpecError is _err){ Mem:raisePendingError(err: _err); }){
 		local ThreadScope is scope: ThreadScope:init(onError: onError);
-		if({ :hasClosure(cb: body) }, {
-			body(scope);
+		scope:runOpen(body: body);
+	}
+
+	local Function is runOpen(Function is body){
+		local Int is bodyErrAddr: Mem:callCatching(action: local Function(){
+			if({ :hasClosure(cb: body) }, {
+				body(:);
+			});
 		});
-		local Int is bodyErrAddr: Mem:takePendingErrorAddr();
 		if({ bodyErrAddr != 0 }, {
-			scope:cancel();
+			:cancel();
 		});
-		scope:joinAll();
+		local Int is joinErrAddr: Mem:callCatching(action: local Function(){
+			:joinAll();
+		});
 		if({ bodyErrAddr != 0 }, {
-			if({ scope:hasErrorHandler && scope:errorHandlerAddr != 0 }, {
-				scope:invokeErrorHandler(cb: Mem:addrToObj(addr: scope:errorHandlerAddr), err: Mem:addrToObj(addr: bodyErrAddr));
-			}, {
-				Mem:raisePendingErrorAddr(addr: bodyErrAddr);
+			if({ joinErrAddr != 0 }, {
+				Mem:releaseAddr(objAddr: joinErrAddr);
+			});
+			local Int is hErrAddr: Mem:callCatching(action: local Function(){
+				if({ :hasErrorHandler && :errorHandlerAddr != 0 }, {
+					:invokeErrorHandler(cb: Mem:addrToObj(addr: :errorHandlerAddr), err: Mem:addrToObj(addr: bodyErrAddr));
+				}, {
+					Mem:raisePendingErrorAddr(addr: bodyErrAddr);
+				});
 			});
 			Mem:releaseAddr(objAddr: bodyErrAddr);
+			if({ hErrAddr != 0 }, {
+				Mem:raisePendingErrorAddr(addr: hErrAddr);
+				Mem:releaseAddr(objAddr: hErrAddr);
+			});
+		}, {
+			if({ joinErrAddr != 0 }, {
+				Mem:raisePendingErrorAddr(addr: joinErrAddr);
+				Mem:releaseAddr(objAddr: joinErrAddr);
+			});
 		});
 	}
 
 	## Spawns [task] on a new thread bound to this scope and returns a [Task].
 	## [kind] is supplied by the compiler (`0` = Int/Bool/Byte, `1` = ARC ptr, `2` = Float, `3` = Void).
-	Function of Task is spawn(Function is task, Int is kind: 0){
+	Function of Task is spawn(Function is task, Int is kind: Reflection:closureReturnKind()){
 		local Task is t: Task:init(isArc: kind == 1);
 		Thread:mutexLock(handle: :mutex);
 		:tasks:add(item: t);
@@ -81,8 +103,9 @@ Class is ThreadScope{
 		local Function is worker: local Function(){
 			t:markRunning();
 			if({ kind == 3 }, {
-				task();
-				local Int is errAddr: Mem:takePendingErrorAddr();
+				local Int is errAddr: Mem:callCatching(action: local Function(){
+					task();
+				});
 				if({ errAddr != 0 }, {
 					:cancel();
 					t:failAddr(errAddr: errAddr);
@@ -91,14 +114,16 @@ Class is ThreadScope{
 					t:complete(value: Mem:addrToObj(addr: 0));
 				});
 			}, {
-				local Any is res: task();
-				local Int is errAddr: Mem:takePendingErrorAddr();
+				local Int is errAddr: Mem:callCatching(action: local Function(){
+					local Any is res: task();
+					if({ !Mem:hasPendingError() }, {
+						t:complete(value: res);
+					});
+				});
 				if({ errAddr != 0 }, {
 					:cancel();
 					t:failAddr(errAddr: errAddr);
 					Mem:releaseAddr(objAddr: errAddr);
-				}, {
-					t:complete(value: res);
 				});
 			});
 		};
@@ -145,6 +170,7 @@ Class is ThreadScope{
 		if({ :mutex == 0 }, { return; });
 		local Int is idx: 0;
 		local Boolean is more: true;
+		local Int is firstReraisedAddr: 0;
 		while({ more }, {
 			Thread:mutexLock(handle: :mutex);
 			local Int is total: :tasks:length();
@@ -159,12 +185,15 @@ Class is ThreadScope{
 						:cancel();
 						local Int is taskErrAddr: nextTask:getErrorAddr();
 						if({ :hasErrorHandler && :errorHandlerAddr != 0 }, {
-							if({ !Mem:hasPendingError() && taskErrAddr != 0 }, {
-								:invokeErrorHandler(cb: Mem:addrToObj(addr: :errorHandlerAddr), err: Mem:addrToObj(addr: taskErrAddr));
+							if({ firstReraisedAddr == 0 && taskErrAddr != 0 }, {
+								firstReraisedAddr: Mem:callCatching(action: local Function(){
+									:invokeErrorHandler(cb: Mem:addrToObj(addr: :errorHandlerAddr), err: Mem:addrToObj(addr: taskErrAddr));
+								});
 							});
 						}, {
-							if({ !Mem:hasPendingError() && taskErrAddr != 0 }, {
-								Mem:raisePendingErrorAddr(addr: taskErrAddr);
+							if({ firstReraisedAddr == 0 && taskErrAddr != 0 }, {
+								Mem:retainAddr(objAddr: taskErrAddr);
+								firstReraisedAddr: taskErrAddr;
 							});
 						});
 					});
@@ -173,6 +202,10 @@ Class is ThreadScope{
 			}, {
 				more: false;
 			});
+		});
+		if({ firstReraisedAddr != 0 }, {
+			Mem:raisePendingErrorAddr(addr: firstReraisedAddr);
+			Mem:releaseAddr(objAddr: firstReraisedAddr);
 		});
 	}
 
