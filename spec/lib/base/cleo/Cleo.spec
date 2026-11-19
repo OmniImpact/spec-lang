@@ -430,6 +430,34 @@ Class is Cleo{
 		});
 	}
 
+	## Starts direct line-by-line output mode without requiring a ThreadScope.
+	Function is startDirect(){
+		Parallel:syncWith(lock: 77, action: {
+			if({ :running }, { return; });
+			:directOutput: true;
+			:directRef:set(index: 0, value: true);
+			:ttyMode: false;
+			:running: true;
+			:directStartedRef:set(index: 0, value: true);
+			:emitDirectTopUnlocked();
+			local Int is si: 0;
+			while({ si < :sections:length() }, {
+				local CleoSection is sec: :sections:get(index: si);
+				local Int is sli: 0;
+				while({ sli < sec:slots:length() }, {
+					local CleoSlot is sl: sec:slots:get(index: sli);
+					if({ sl:kind == 0 }, {
+						:emitDirectSlotUnlocked(section: sec, slot: sl);
+					});
+					sli: sli + 1;
+				});
+				si: si + 1;
+			});
+			:dirtyRef:set(index: 0, value: true);
+		});
+		:flush();
+	}
+
 	Function is start(ThreadScope is scope){
 		local Boolean is isDirect: false;
 		Parallel:syncWith(lock: 77, action: {

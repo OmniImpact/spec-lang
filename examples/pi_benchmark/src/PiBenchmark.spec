@@ -1,7 +1,8 @@
-#! Monte Carlo Pi benchmark: parallel point sampling with a live domain
-#! visualization, per-thread sample markers, and a running approximation.
+#! Monte Carlo Pi benchmark: parallel point sampling wrapped in a live
+#! dynamic Cleo UI with thick green/blue borders, worker activity bar,
+#! running stats, and progress bar.
 
-## Parallel Monte Carlo Pi benchmark with live terminal domain rendering.
+## Parallel Monte Carlo Pi benchmark with live Cleo terminal UI.
 Class is PiBenchmark{
 
 	replace Array of Array of String is using: [
@@ -22,11 +23,12 @@ Class is PiBenchmark{
 		['base', 'sys', as Process()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
+		['base', 'struct', Array],
 		[PiStats]
 	];
 
 	local Int is gridW: 44;
-	local Int is gridH: 22;
+	local Int is gridH: 20;
 	local PiStats is stats: PiStats:init();
 
 	replace Function of Boolean is SpecErrorHandler(SpecError is error){
@@ -46,30 +48,116 @@ Class is PiBenchmark{
 			threads: 16;
 		});
 
-		line(clearScreen() . moveTo(row: 1, col: 1) . hideCursor());
-		local Cleo is hdrUi: Cleo:init(
-			title: ' pi_benchmark ',
-			titleColor: CleoColor:ansi(code: 255),
-			titleBgColor: CleoColor:ansi(code: 236),
-			width: CleoWidth:percent(pct: 100),
-			outerBorder: BorderStyle:ROUNDED,
-			dividerBorder: BorderStyle:THIN,
-			borderColor: CleoColor:ansi(code: 240),
-			dividerColor: CleoColor:ansi(code: 237)
-		);
-		local CleoSection is hdrSec: hdrUi:addSection(
-			title: ' Configuration ',
-			titleColor: CleoColor:ansi(code: 254),
-			titleBgColor: CleoColor:ansi(code: 237),
-			titlePlacement: TitlePlacement:INLINE_BORDER,
-			fgColor: CleoColor:ansi(code: 250)
-		);
-		hdrSec:addLine(text: 'Threads: ' . threads . ' · Points: ' . points, color: CleoColor:ansi(code: 252), rightText: 'Refresh: ' . refreshMs . ' ms');
-		hdrUi:flushFinal();
+		# Reset atomic slots: 0=samples, 1=hits, 2..33=thread coords, 100..115=worker active
+		atomicPut(slot: 0, value: 0);
+		atomicPut(slot: 1, value: 0);
+		while([Int is wi: 0], { wi < threads }, {
+			atomicPut(slot: wi * 2 + 2, value: 500);
+			atomicPut(slot: wi * 2 + 3, value: 500);
+			atomicPut(slot: 100 + wi, value: 0);
+			wi++;
+		});
 
-		:drawDomain(threads: threads);
+		local Cleo is ui: Cleo:init(
+			title: ' pi_benchmark ',
+			titleColor: CleoColor:ansi(code: 231),
+			titleBgColor: CleoColor:ansi(code: 24),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:THICK,
+			dividerBorder: BorderStyle:THICK,
+			borderColor: CleoColor:ansi(code: 33),
+			dividerColor: CleoColor:ansi(code: 30),
+			tickIntervalMs: 0
+		);
+
+		local CleoSection is domainSec: ui:addSection(
+			title: ' Unit Circle Domain (' . (threads as String) . ' threads · ' . (points as String) . ' pts) ',
+			titleColor: CleoColor:ansi(code: 159),
+			titleBgColor: CleoColor:ansi(code: 23),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 195)
+		);
+		local Array of Int is domainSlots: [];
+		while([Int is r: 0], { r < :gridH }, {
+			domainSlots:add(item: domainSec:addLine(text: :domainRow(row: r, threads: threads), color: CleoColor:ansi(code: 195)));
+			r++;
+		});
+
+		local CleoSection is wSec: ui:addSection(
+			title: ' Workers (' . (threads as String) . ' threads) ',
+			titleColor: CleoColor:ansi(code: 120),
+			titleBgColor: CleoColor:ansi(code: 22),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 82)
+		);
+		local Int is wBarSlot: wSec:addLine(text: '', color: CleoColor:ansi(code: 82), rightText: '0/' . (threads as String) . ' active');
+
+		local CleoSection is sSec: ui:addSection(
+			title: ' Live Stats ',
+			titleColor: CleoColor:ansi(code: 159),
+			titleBgColor: CleoColor:ansi(code: 23),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 195)
+		);
+		local Int is estSlot: sSec:addLine(text: 'Pi ≈ 0.000', color: CleoColor:ansi(code: 82), rightText: 'error 3.142', bold: true);
+		local Int is statSlot: sSec:addLine(text: 'Samples: 0 · Hits: 0', color: CleoColor:ansi(code: 117), rightText: '0 ms · 0 pts/sec');
+
+		local CleoSection is pSec: ui:addSection(
+			title: ' Progress ',
+			titleColor: CleoColor:ansi(code: 120),
+			titleBgColor: CleoColor:ansi(code: 22),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 195)
+		);
+		local Int is pSlot: pSec:addProgressArea(
+			text: '0/' . (points as String) . ' points',
+			stage1Color: CleoColor:ansi(code: 46),
+			stage2Color: CleoColor:ansi(code: 39),
+			trackColor: CleoColor:ansi(code: 236),
+			showTwoStagePercent: false
+		);
+
+		local Int is startedAtMs: clockMs();
+
+		local Function is syncUi: local Function(Int is curSamples, Int is curHits, Int is nowMs){
+			local Int is r2: 0;
+			while({ r2 < :gridH }, {
+				domainSec:updateText(index: domainSlots:get(index: r2), text: :domainRow(row: r2, threads: threads));
+				r2: r2 + 1;
+			});
+
+			local Int is activeCount: 0;
+			local String is boxes: '';
+			local Int is wi2: 0;
+			while({ wi2 < threads }, {
+				if({ wi2 > 0 }, { boxes: boxes . ' '; });
+				if(check: { atomicGet(slot: 100 + wi2) != 0 }, then: {
+					boxes: boxes . '■';
+					activeCount: activeCount + 1;
+				}, else: {
+					boxes: boxes . '□';
+				});
+				wi2: wi2 + 1;
+			});
+			wSec:updateText(index: wBarSlot, text: boxes, rightText: (activeCount as String) . '/' . (threads as String) . ' active');
+
+			local Float is pi: :stats:estimatePi(hits: curHits, samples: curSamples);
+			local Float is err: abs(value: pi - 3.14159265358979);
+			local Int is elapsed: nowMs - startedAtMs;
+			local Int is perSec: if({ elapsed > 0 }, { (curSamples * 1000) / elapsed }, { 0 });
+			sSec:updateText(index: estSlot, text: 'Pi ≈ ' . :stats:piText(value: pi), rightText: 'error ' . :stats:piText(value: err));
+			sSec:updateText(index: statSlot, text: 'Samples: ' . (curSamples as String) . ' · Hits: ' . (curHits as String), rightText: (elapsed as String) . ' ms · ' . (perSec as String) . ' pts/sec');
+
+			local Float is pct: if({ points > 0 }, { (curSamples as Float) / (points as Float) }, { 1.0 });
+			if({ pct > 1.0 }, { pct: 1.0; });
+			pSec:updateProgress(index: pSlot, text: (curSamples as String) . '/' . (points as String) . ' points', stage1: pct, stage2: 0.0);
+
+			ui:markDirty();
+			ui:flush();
+		};
 
 		local Function of Int is sampler: local Function of Int(Int is threadIndex, Int is count){
+			atomicPut(slot: 100 + threadIndex, value: 1);
 			local Int is hits: 0;
 			local Int is done: 0;
 			local Int is batch: count / 100 + 1;
@@ -99,37 +187,22 @@ Class is PiBenchmark{
 				if({ threadIndex == 0 }, {
 					local Int is now: clockMs();
 					if({ now - lastDraw >= refreshMs }, {
-						:drawProgress(threads: threads);
+						syncUi(curSamples: atomicGet(slot: 0), curHits: atomicGet(slot: 1), nowMs: now);
 						lastDraw: now;
 					});
 				});
 			});
+			atomicPut(slot: 100 + threadIndex, value: 0);
 			return hits;
 		};
 
-		local Int is startedAtMs: clockMs();
 		local Int is totalHits: 0;
 		ThreadScope:open(body: local Function(ThreadScope is scope){
+			ui:start(scope: scope);
 			totalHits: Parallel:run(scope: scope, threads: threads, iterations: points, worker: sampler);
+			syncUi(curSamples: points, curHits: totalHits, nowMs: clockMs());
+			ui:finish();
 		});
-		local Int is elapsedMs: clockMs() - startedAtMs;
-
-		:drawProgress(threads: threads);
-		line(showCursor());
-		:printStats(totalHits: totalHits, points: points, elapsedMs: elapsedMs, threads: threads);
-	}
-
-	## Renders the full `[gridW x gridH]` unit-circle domain with live thread markers.
-	local Function is drawDomain(Int is threads){
-		while(
-			[Int is row: 0],
-			{ row < :gridH },
-			{
-				line(:domainRow(row: row, threads: threads));
-				row++;
-			}
-		);
-		line('');
 	}
 
 	## Builds one rendered [row] of the unit-circle visualization across [threads].
@@ -149,7 +222,7 @@ Class is PiBenchmark{
 						buf: buf . color256(code: :stats:threadColor(index: marker), text: '●');
 					},
 					{ dist <= 1.0 }: {
-						buf: buf . color256(code: 236, text: '·');
+						buf: buf . color256(code: 24, text: '·');
 					},
 					else: {
 						buf: buf . ' ';
@@ -177,48 +250,4 @@ Class is PiBenchmark{
 		});
 		return found;
 	}
-
-	## Redraws the live domain and running `pi` estimate from atomic counters.
-	local Function is drawProgress(Int is threads){
-		line(moveTo(row: 4, col: 1));
-		:drawDomain(threads: threads);
-
-		local Int is samples: atomicGet(slot: 0);
-		local Int is hits: atomicGet(slot: 1);
-		local Float is pi: :stats:estimatePi(hits: hits, samples: samples);
-		line(color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . :stats:piText(value: pi) . '  threads: ' . threads));
-	}
-
-	## Prints the final Pi estimate, error, elapsed time, and throughput summary via Cleo.
-	local Function is printStats(Int is totalHits, Int is points, Int is elapsedMs, Int is threads){
-		local Float is pi: :stats:estimatePi(hits: totalHits, samples: points);
-		local Float is err: abs(value: pi - 3.14159265358979);
-		local Int is perSec: 0;
-		if(check: { elapsedMs > 0 }, then: {
-			perSec: (points * 1000) / elapsedMs;
-		});
-
-		local Cleo is ui: Cleo:init(
-			title: ' pi_benchmark ',
-			titleColor: CleoColor:ansi(code: 255),
-			titleBgColor: CleoColor:ansi(code: 236),
-			width: CleoWidth:percent(pct: 100),
-			outerBorder: BorderStyle:ROUNDED,
-			dividerBorder: BorderStyle:THIN,
-			borderColor: CleoColor:ansi(code: 240),
-			dividerColor: CleoColor:ansi(code: 237)
-		);
-		local CleoSection is rSec: ui:addSection(
-			title: ' Results ',
-			titleColor: CleoColor:ansi(code: 254),
-			titleBgColor: CleoColor:ansi(code: 237),
-			titlePlacement: TitlePlacement:INLINE_BORDER,
-			fgColor: CleoColor:ansi(code: 250)
-		);
-		rSec:addLine(text: 'Pi ≈ ' . :stats:piText(value: pi), color: CleoColor:ansi(code: 255), rightText: 'error ' . :stats:piText(value: err));
-		rSec:addLine(text: 'Points: ' . points . ' · Hits: ' . totalHits, color: CleoColor:ansi(code: 250), rightText: 'Threads: ' . threads);
-		rSec:addLine(text: 'Time: ' . elapsedMs . ' ms', color: CleoColor:ansi(code: 250), rightText: 'Throughput: ' . perSec . ' points/sec');
-		ui:flushFinal();
-	}
-
 }

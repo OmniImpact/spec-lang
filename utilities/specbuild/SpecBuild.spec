@@ -377,10 +377,9 @@ Class is SpecBuild{
 			fi++;
 		});
 
-		Output:line('[specbuild] Building ' . name . ' v' . version);
-		Output:line('  source:  ' . resolvedSource);
-		Output:line('  output:  ' . output);
-
+		local Cleo is prepUi: Cleo:toolUi(title: ' specbuild ', directOutput: true);
+		local CleoSection is prepSec: prepUi:addToolSection(title: ' Building · ' . name . ' v' . version . ' ');
+		prepSec:addLine(text: 'Source: ' . resolvedSource, color: CleoColor:ansi(code: 250), rightText: 'Output: ' . output);
 		if({ verbose }, {
 			local String is cmdLine: compiler;
 			local Int is aiLen: specArgs:length();
@@ -388,8 +387,10 @@ Class is SpecBuild{
 				cmdLine: cmdLine . ' ' . specArgs:get(index: ai, default: '');
 				ai++;
 			});
-			Output:line('  command: ' . cmdLine);
+			prepSec:addLine(text: 'Command: ' . cmdLine, color: CleoColor:ansi(code: 245));
 		});
+		prepUi:startDirect();
+		prepUi:finish();
 
 		local Int is exitCode: Process:execute(command: compiler, args: specArgs);
 

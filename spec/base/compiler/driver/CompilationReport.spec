@@ -19,9 +19,22 @@ Class is CompilationReport{
 
 	## True when stage lines and the summary are suppressed.
 	local Boolean is quiet: false;
+	local Cleo is ui: Cleo:toolUi(title: ' spec ', directOutput: true);
+	local CleoSection is stageSec: CleoSection:init();
+	local Boolean is uiStarted: false;
 
 	replace Function is init(Boolean is quiet){
 		:quiet: quiet;
+		:ui: Cleo:toolUi(title: ' spec ', directOutput: true);
+		:uiStarted: false;
+	}
+
+	local Function is ensureStarted(){
+		if({ !:uiStarted }, {
+			:uiStarted: true;
+			:stageSec: :ui:addToolSection(title: ' Stages ');
+			:ui:startDirect();
+		});
 	}
 
 	## One stage-progress line, e.g. `  [1/4] loading packages · 6 files`.
@@ -33,7 +46,13 @@ Class is CompilationReport{
 		if({ :quiet }, {
 			return;
 		});
-		line('  [' . (n as String) . '/' . (total as String) . '] ' . label);
+		:ensureStarted();
+		local Int is pct: if({ total > 0 }, { (n * 100) / total }, { 100 });
+		:stageSec:addLine(
+			text: '[' . (n as String) . '/' . (total as String) . '] ' . label,
+			color: CleoColor:ansi(code: 250),
+			rightText: (pct as String) . '%'
+		);
 	}
 
 	## One-line progress note inside a stage (no numbering).
@@ -41,7 +60,8 @@ Class is CompilationReport{
 		if({ :quiet }, {
 			return;
 		});
-		line('  ' . label);
+		:ensureStarted();
+		:stageSec:addLine(text: label, color: CleoColor:ansi(code: 245));
 	}
 
 	## Prints the end-of-run summary: paths, counts, time breakdown.
@@ -63,8 +83,8 @@ Class is CompilationReport{
 		if({ :quiet }, {
 			return;
 		});
-		local Cleo is ui: Cleo:toolUi(title: ' spec ');
-		local CleoSection is bSec: ui:addToolSection(title: ' Build ');
+		:ensureStarted();
+		local CleoSection is bSec: :ui:addToolSection(title: ' Build ');
 		bSec:addLine(
 			text: inputPath . ' -> ' . outputPath,
 			color: CleoColor:ansi(code: 252),
@@ -74,7 +94,7 @@ Class is CompilationReport{
 			text: (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of LLVM IR',
 			color: CleoColor:ansi(code: 250)
 		);
-		local CleoSection is mSec: ui:addToolSection(title: ' Metrics ');
+		local CleoSection is mSec: :ui:addToolSection(title: ' Metrics ');
 		local String is times: 'time ' . (totalMs as String) . 'ms  (load ' . (loadMs as String) . ' · check ' . (checkMs as String) . ' · gen ' . (genMs as String);
 		if({ ccMs >= 0 }, {
 			times: times . ' · cc ' . (ccMs as String);
@@ -85,8 +105,8 @@ Class is CompilationReport{
 			memLine: memLine . ' · binary ' . ((binKb / 1024) as String) . ' KB';
 		});
 		local String is cpuLine: 'cpu ' . (avgCpuPct as String) . '% avg · ' . (peakCpuPct as String) . '% peak';
-		mSec:addLine(text: times, color: CleoColor:ansi(code: 250), rightText: cpuLine);
-		mSec:addLine(text: memLine, color: CleoColor:ansi(code: 250));
-		ui:render();
+		mSec:addLine(text: times, color: CleoColor:ansi(code: 250));
+		mSec:addLine(text: memLine, color: CleoColor:ansi(code: 250), rightText: cpuLine);
+		:ui:finish();
 	}
 }
