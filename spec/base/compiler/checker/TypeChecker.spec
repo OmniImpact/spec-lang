@@ -35,6 +35,7 @@ Class is TypeChecker{
 		['base', 'compiler', ErrorText],
 		['base', 'sys', SourceLocation],
 		['base', 'compiler', 'checker', TypeError],
+		['base', 'compiler', 'checker', as TypeDomain()],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Reflection()],
@@ -45,6 +46,7 @@ Class is TypeChecker{
 	## Registered classes: name -> "true".
 	local Map of String to String is registeredClasses: Map:init();
 	local ErrorText is errText: ErrorText:init();
+	local Map of String to Type is typeNodeCache: Map:init();
 
 	## the per-scope nested-type map — bare
 	## nested-class name -> ';'-joined qualified identities visible in
@@ -234,7 +236,7 @@ Class is TypeChecker{
 		if({ Primitive:of(t:name) == Primitive:FUNCTION }, {
 			if({ t:params:length() > 0 }, {
 				local Type is ret: if({ t:params:length() >= 2 }, { t:params:get(index: 1) }, { t:params:get(index: 0) });
-				return 'Function:' . :formatTypeString(t: ret);
+				return TypeDomain:makeFunction(ret: :formatTypeString(t: ret));
 			});
 			return 'Function';
 		});
@@ -301,11 +303,18 @@ Class is TypeChecker{
 	## Converts a canonical type name string into a structured [Type] tree (`name` + `Array of Type`).
 	Function of Type is parseTypeNode(String is s){
 		if({ s == '' }, { return Type:init(name: ''); });
+		if({ :typeNodeCache:has(key: s) }, {
+			return :typeNodeCache:get(key: s);
+		});
 		if({ !s:contains(needle: ':') && !s:contains(needle: ' of ') }, {
-			return Type:init(name: s);
+			local Type is simpleT: Type:init(name: s);
+			:typeNodeCache:set(key: s, value: simpleT);
+			return simpleT;
 		});
 		if({ :registeredClasses:has(key: s) }, {
-			return Type:init(name: s);
+			local Type is clsT: Type:init(name: s);
+			:typeNodeCache:set(key: s, value: clsT);
+			return clsT;
 		});
 		local String is norm: :normalizeContainerType(t: s);
 		local Array of String is rawParts: norm:split(delimiter: ':');
@@ -339,10 +348,9 @@ Class is TypeChecker{
 			});
 			idx: idx - 1;
 		});
-		if({ stack:length() > 0 }, {
-			return stack:get(index: stack:length() - 1);
-		});
-		return Type:init(name: s);
+		local Type is parsedT: if({ stack:length() > 0 }, { stack:get(index: stack:length() - 1) }, { Type:init(name: s) });
+		:typeNodeCache:set(key: s, value: parsedT);
+		return parsedT;
 	}
 
 	## Substitutes a class's generic type parameters in a member type name.
@@ -606,10 +614,10 @@ Class is TypeChecker{
 			return firstT;
 		});
 		# Function references / closures.
-		if({ firstT:startsWith(prefix: 'Function') }, {
+		if({ TypeDomain:isFunction(t: firstT) }, {
 			local String is badFn: '';
 			concrete:each(action: local Function(String is ct){
-				if({ badFn == '' && !ct:startsWith(prefix: 'Function') }, {
+				if({ badFn == '' && !TypeDomain:isFunction(t: ct) }, {
 					badFn: ct;
 				});
 			});
@@ -631,11 +639,11 @@ Class is TypeChecker{
 			return '';
 		});
 		# Nested container types (Array, List, Map).
-		if({ firstT == 'Array' || firstT:startsWith(prefix: 'Array:') || firstT == 'List' || firstT:startsWith(prefix: 'List:') || firstT == 'Map' || firstT:startsWith(prefix: 'Map:') }, {
-			local String is firstBase: firstT:split(delimiter: ':'):get(index: 0);
+		if({ TypeDomain:isContainer(t: firstT) }, {
+			local String is firstBase: TypeDomain:baseName(t: firstT);
 			local String is badCont: '';
 			concrete:each(action: local Function(String is ct){
-				if({ badCont == '' && ct:split(delimiter: ':'):get(index: 0) != firstBase }, {
+				if({ badCont == '' && TypeDomain:baseName(t: ct) != firstBase }, {
 					badCont: ct;
 				});
 			});
@@ -646,8 +654,9 @@ Class is TypeChecker{
 			if({ firstBase == 'Array' || firstBase == 'List' }, {
 				local Array of String is innerTypes: [];
 				concrete:each(action: local Function(String is ct){
-					if({ ct:length() > firstBase:length() + 1 }, {
-						innerTypes:add(item: ct:substring(start: firstBase:length() + 1, end: ct:length()));
+					local String is et: TypeDomain:elemType(t: ct);
+					if({ et != '' }, {
+						innerTypes:add(item: et);
 					});
 				});
 				if({ innerTypes:length() == 0 }, {
@@ -657,7 +666,7 @@ Class is TypeChecker{
 				if({ innerU == '' }, {
 					return '';
 				});
-				return firstBase . ':' . innerU;
+				return (firstBase . ':' . innerU):intern();
 			});
 			return firstT;
 		});
@@ -666,7 +675,7 @@ Class is TypeChecker{
 		local String is mismatchT: '';
 		concrete:each(action: local Function(String is ct){
 			if({ mismatchT == '' && ct != firstT }, {
-				if({ :isPrimitive(t: ct) || ct:startsWith(prefix: 'Function') || ct == 'Array' || ct:startsWith(prefix: 'Array:') || ct == 'List' || ct:startsWith(prefix: 'List:') || ct == 'Map' || ct:startsWith(prefix: 'Map:') || :allEnumNames:has(key: firstT) || :allEnumNames:has(key: ct) }, {
+				if({ :isPrimitive(t: ct) || TypeDomain:isFunction(t: ct) || TypeDomain:isContainer(t: ct) || :allEnumNames:has(key: firstT) || :allEnumNames:has(key: ct) }, {
 					mismatchT: ct;
 				});
 			});
@@ -3166,19 +3175,8 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferArrayLitExpr(Array of Expression is items, String is expected){
-		local Boolean is hasExpectedContainer: expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List'));
-		local String is elemT: '';
-		if({ hasExpectedContainer }, {
-			local Int is eColon: expected:indexOf(search: ':', default: -1);
-			local Int is eOf: expected:indexOf(search: ' of ', default: -1);
-			if({ eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:')) }, {
-				elemT: expected:substring(start: eColon + 1, end: expected:length());
-			}, {
-				if({ eOf >= 0 }, {
-					elemT: expected:substring(start: eOf + 4, end: expected:length());
-				});
-			});
-		});
+		local Boolean is hasExpectedContainer: TypeDomain:isOfBase(t: expected, base: 'Array') || TypeDomain:isOfBase(t: expected, base: 'List');
+		local String is elemT: if({ hasExpectedContainer }, { TypeDomain:elemType(t: expected) }, { '' });
 		local Array of String is itemTypes: [];
 		items:each(action: local Function(Expression is item){
 			local String is itemT: :inferExpressionType(expr: item, expected: elemT);
@@ -3195,7 +3193,7 @@ Class is TypeChecker{
 			if({ elemT != '' && elemT != Primitive:ANY:value() }, {
 				itemTypes:each(action: local Function(String is itemT){
 					local Boolean is elemOk: :isAssignable(target: elemT, source: itemT);
-					if({ :isPrimitive(t: elemT) && !elemT:startsWith(prefix: 'Function') && itemT != elemT }, {
+					if({ :isPrimitive(t: elemT) && !TypeDomain:isFunction(t: elemT) && itemT != elemT }, {
 						elemOk: false;
 					});
 					if({ !elemOk }, {
@@ -3204,35 +3202,17 @@ Class is TypeChecker{
 				});
 			});
 			if({ elemT == '' && expected == 'Array' && unifiedElemType != '' }, {
-				return 'Array:' . unifiedElemType;
+				return TypeDomain:makeArray(elem: unifiedElemType);
 			});
 			return expected;
 		});
-		if({ unifiedElemType != '' }, {
-			return 'Array:' . unifiedElemType;
-		});
-		return 'Array';
+		return TypeDomain:makeArray(elem: unifiedElemType);
 	}
 
 	local Function of String is inferMapLitExpr(Array of Expression is keys, Array of Expression is values, String is expected){
-		if({ expected != '' && expected:startsWith(prefix: 'Map') }, {
-			local String is keyT: '';
-			local String is valT: '';
-			local Array of String is mParts: expected:split(delimiter: ':');
-			if({ mParts:length() > 2 }, {
-				keyT: mParts:get(index: 1);
-				valT: mParts:get(index: 2);
-			}, {
-				local String is kv: expected:substring(start: 4, end: expected:length());
-				if({ kv:startsWith(prefix: ' of ') }, {
-					kv: kv:substring(start: 4, end: kv:length());
-				});
-				local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
-				if({ toIdx >= 0 }, {
-					keyT: kv:substring(start: 0, end: toIdx);
-					valT: kv:substring(start: toIdx + 4, end: kv:length());
-				});
-			});
+		if({ TypeDomain:isOfBase(t: expected, base: 'Map') }, {
+			local String is keyT: TypeDomain:mapKeyType(t: expected);
+			local String is valT: TypeDomain:mapValType(t: expected);
 			keys:each(action: local Function(Expression is k){
 				local String is kT: :inferExpressionType(expr: k);
 				if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !:isAssignable(target: keyT, source: kT) }, {
@@ -3263,10 +3243,7 @@ Class is TypeChecker{
 				firstValType: vt;
 			});
 		});
-		if({ firstKeyType != '' && firstValType != '' }, {
-			return 'Map:' . firstKeyType . ':' . firstValType;
-		});
-		return 'Map';
+		return TypeDomain:makeMap(key: firstKeyType, val: firstValType);
 	}
 
 	local Function of String is inferFieldAccessExpr(Expression is target, String is fName){
@@ -3274,8 +3251,7 @@ Class is TypeChecker{
 		if({ leftT == '' || leftT == 'Any' || :isPrimitive(t: leftT) }, {
 			return 'Any';
 		});
-		local Array of String is faParts: leftT:split(delimiter: ':');
-		local String is faBase: faParts:get(index: 0);
+		local String is faBase: TypeDomain:baseName(t: leftT);
 		local String is fOwner: :findMemberOwnerClass(className: faBase, memberName: fName);
 		if({ fOwner != '' }, {
 			:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: faBase, memberName: fName), memberName: fName);
@@ -3290,22 +3266,12 @@ Class is TypeChecker{
 	local Function of String is inferIndexExpr(Expression is target, Expression is index){
 		local String is leftT: :inferExpressionType(expr: target);
 		:inferExpressionType(expr: index);
-		if({ leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, {
-			return leftT:substring(start: 9, end: leftT:length());
+		if({ TypeDomain:isParameterized(t: leftT, base: 'Array') }, {
+			return TypeDomain:elemType(t: leftT);
 		});
-		if({ leftT:startsWith(prefix: 'Array:') && leftT:length() > 6 }, {
-			return leftT:substring(start: 6, end: leftT:length());
-		});
-		if({ leftT:startsWith(prefix: 'Map:') && leftT:length() > 4 }, {
-			local String is afterMap: leftT:substring(start: 4, end: leftT:length());
-			local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
-			if({ colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, {
-				return afterMap:substring(start: colonIdx + 1, end: afterMap:length());
-			});
-			return Primitive:STRING:value();
-		});
-		if({ leftT == 'Map' }, {
-			return Primitive:STRING:value();
+		if({ TypeDomain:isOfBase(t: leftT, base: 'Map') }, {
+			local String is mv: TypeDomain:mapValType(t: leftT);
+			return if({ mv != '' }, { mv }, { Primitive:STRING:value() });
 		});
 		return 'Any';
 	}
@@ -3330,8 +3296,8 @@ Class is TypeChecker{
 		:checkingValueYield: false;
 
 		if({ !:inBranchClosure }, {
-			if({ expected:startsWith(prefix: 'Function:') && :isVoid(t: :resolveReturnType(t: returnType)) }, {
-				returnType:name: expected:substring(start: 9, end: expected:length());
+			if({ TypeDomain:hasFunctionReturn(t: expected) && :isVoid(t: :resolveReturnType(t: returnType)) }, {
+				returnType:name: TypeDomain:functionReturn(t: expected);
 				returnType:params: [];
 			});
 			:currentMethodReturnType: :resolveReturnType(t: returnType);
@@ -3985,7 +3951,7 @@ Class is TypeChecker{
 		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && (method == 'joinAll' || method == 'destroy' || method == 'registerTask') && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 			:addError(line: :currentLine, msg: "Method 'ThreadScope:" . method . "' is internal to 'base:sys:thread'; 'ThreadScope:open' joins all tasks automatically.");
 		});
-		if({ (targetType == 'Task' || targetType:startsWith(prefix: 'Task:') || targetType:startsWith(prefix: 'Task of ') || recvName == 'Task') && (method == 'init' || method == 'start' || method == 'markRunning' || method == 'complete' || method == 'completeVoid' || method == 'spawnInScope' || method == 'fail' || method == 'failAddr' || method == 'joinOnly' || method == 'destroy') }, {
+		if({ (TypeDomain:isOfBase(t: targetType, base: 'Task') || recvName == 'Task') && (method == 'init' || method == 'start' || method == 'markRunning' || method == 'complete' || method == 'completeVoid' || method == 'spawnInScope' || method == 'fail' || method == 'failAddr' || method == 'joinOnly' || method == 'destroy') }, {
 			if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 				:addError(line: :currentLine, msg: "Method 'Task:" . method . "' is internal to 'base:sys:thread'; tasks must be spawned via 'scope:spawn(task: ...)' inside a 'ThreadScope:open' block.");
 			});
@@ -4061,7 +4027,7 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferRegisteredClassCall(Expression is expr, CallData is call, String is targetType, String is method, Boolean is targetIsSelf){
-		if({ (targetType == 'List' || targetType:startsWith(prefix: 'List:') || targetType:startsWith(prefix: 'List of ')) && (method == 'get' || method == 'pop') }, {
+		if({ TypeDomain:isOfBase(t: targetType, base: 'List') && (method == 'get' || method == 'pop') }, {
 			local Boolean is hasDefault: false;
 			call:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'default' }, {
@@ -4077,7 +4043,7 @@ Class is TypeChecker{
 			local Member is typedVariant: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
 			if({ typedVariant:name != '' }, {
 				local NamedArg is tvArg0: call:args:get(index: 0);
-				if({ tvArg0:value:resolvedType:startsWith(prefix: 'Function:') }, {
+				if({ TypeDomain:hasFunctionReturn(t: tvArg0:value:resolvedType) }, {
 					selected: typedVariant;
 				});
 			});
@@ -4088,7 +4054,6 @@ Class is TypeChecker{
 		});
 		if({ res == '' }, {
 			res: targetType;
-			local Array of String is scParts: targetType:split(delimiter: ':');
 			match(on: method, when: [
 				'toString': { res: Primitive:STRING:value(); },
 				'length': { res: Primitive:INT:value(); },
@@ -4103,7 +4068,8 @@ Class is TypeChecker{
 				'indexOf': { res: Primitive:INT:value(); },
 				'join': { res: Primitive:STRING:value(); },
 				'keys': {
-					res: if({ targetType:startsWith(prefix: 'Map:') && scParts:length() > 1 }, { 'Array:' . scParts:get(index: 1) }, { 'Array of String' });
+					local String is mk: TypeDomain:mapKeyType(t: targetType);
+					res: if({ mk != '' }, { TypeDomain:makeArray(elem: mk) }, { 'Array of String' });
 				},
 				'add': { res: :names:voidName(); },
 				'set': { res: :names:voidName(); },
@@ -4114,28 +4080,28 @@ Class is TypeChecker{
 				else: {}
 			]);
 			if({ res == targetType }, {
-				if({ (targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt') }, {
-					res: scParts:get(index: 1);
+				if({ (TypeDomain:isParameterized(t: targetType, base: 'Array') || TypeDomain:isParameterized(t: targetType, base: 'List')) && (method == 'get' || method == 'pop' || method == 'removeAt') }, {
+					res: TypeDomain:elemType(t: targetType);
 				});
-				if({ targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString') }, {
-					res: scParts:get(index: 2);
+				if({ TypeDomain:isParameterized(t: targetType, base: 'Map') && (method == 'get' || method == 'getString') }, {
+					local String is mv: TypeDomain:mapValType(t: targetType);
+					if({ mv != '' }, { res: mv; });
 				});
 			});
 		});
-		if({ (targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
-			local Array of String is mkParts: targetType:split(delimiter: ':');
-			local String is kType: if({ mkParts:length() > 1 && mkParts:get(index: 1) != 'Any' }, { mkParts:get(index: 1) }, { Primitive:STRING:value() });
-			res: 'Array:' . kType;
+		if({ TypeDomain:isOfBase(t: targetType, base: 'Map') && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
+			local String is kRaw: TypeDomain:mapKeyType(t: targetType);
+			local String is kType: if({ kRaw != '' && kRaw != 'Any' }, { kRaw }, { Primitive:STRING:value() });
+			res: TypeDomain:makeArray(elem: kType);
 		});
-		if({ (targetType == 'Flow' || targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
+		if({ TypeDomain:isOfBase(t: targetType, base: 'Flow') }, {
 			if({ method == 'map' && call:args:length() > 0 }, {
-				local NamedArg is ma0: call:args:get(index: 0);
-				local String is mFnT: ma0:value:resolvedType;
-				if({ mFnT:startsWith(prefix: 'Function:') && mFnT:length() > 9 }, {
-					res: 'Flow:' . mFnT:substring(start: 9, end: mFnT:length());
+				local String is mFnRet: TypeDomain:functionReturn(t: call:args:get(index: 0):value:resolvedType);
+				if({ mFnRet != '' }, {
+					res: TypeDomain:makeFlow(elem: mFnRet);
 				});
 			});
-			if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && (targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
+			if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && TypeDomain:isParameterized(t: targetType, base: 'Flow') }, {
 				res: targetType;
 			});
 		});
@@ -4285,7 +4251,7 @@ Class is TypeChecker{
 			return :inferHeldCall(expr: expr, call: call, heldRoot: heldRoot, method: method, heldCallFn: heldCallFn, expected: expected);
 		});
 		if({ targetType != '' && targetType != Primitive:ANY:value() && !:allEnumNames:has(key: targetType) }, {
-			local String is iBase: targetType:split(delimiter: ':'):get(index: 0);
+			local String is iBase: TypeDomain:baseName(t: targetType);
 			if({ :registeredClasses:has(key: iBase) && :lookupMethodReturnType(className: iBase, methodName: method) == '' && :findHeldMethod(className: iBase, methodName: method):name != '' }, {
 				:addError(line: :currentLine, msg: :errText:errHeldClassScoped(className: iBase, method: method));
 			});
@@ -4332,7 +4298,7 @@ Class is TypeChecker{
 		});
 
 		if({ !:allEnumNames:has(key: targetType) && targetType != '' && targetType != 'Any' }, {
-			local String is cBase: targetType:split(delimiter: ':'):get(index: 0);
+			local String is cBase: TypeDomain:baseName(t: targetType);
 			local String is mOwner: :findMemberOwnerClass(className: cBase, memberName: method);
 			if({ mOwner != '' }, {
 				:checkMemberVisibility(ownerClass: mOwner, member: :lookupAnyMember(className: cBase, methodName: method), memberName: method);
@@ -4351,8 +4317,8 @@ Class is TypeChecker{
 		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith' || method == 'run') }, {
 			res: :inferParallelCall(call: call, method: method);
 		}, {
-			if({ fnVarT:startsWith(prefix: 'Function') }, {
-				res: if({ fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, { fnVarT:substring(start: 9, end: fnVarT:length()) }, { 'Any' });
+			if({ TypeDomain:isFunction(t: fnVarT) }, {
+				res: TypeDomain:functionReturn(t: fnVarT, default: 'Any');
 			}, {
 				if({ :allEnumVariants:has(key: method) && (:allEnumNames:has(key: targetType) || targetType == :currentClassName) }, {
 					res: :allEnumVariants:getString(key: method, default: Primitive:ANY:value());
@@ -4362,16 +4328,16 @@ Class is TypeChecker{
 					}, {
 						if({ method == 'init' && :registeredClasses:has(key: targetType) && !:allEnumNames:has(key: targetType) }, {
 							local Member is selInit: :selectOverload(className: targetType, methodName: 'init', expr: expr);
-							local String is initBaseName: targetType:split(delimiter: ':'):get(index: 0);
+							local String is initBaseName: TypeDomain:baseName(t: targetType);
 							if({ !:classHasAccess(className: :currentClassName, targetName: initBaseName) }, {
 								:addError(line: :currentLine, msg: :errText:errTypeNotImported(targetType: targetType, currentClass: :currentClassName));
 							});
 							res: :inferGenericInitType(baseClassName: initBaseName, targetType: targetType, initMem: selInit, call: call, expected: expected);
 						}, {
-							if({ :registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !:allEnumNames:has(key: targetType) }, {
+							if({ :registeredClasses:has(key: TypeDomain:baseName(t: targetType)) && !:allEnumNames:has(key: targetType) }, {
 								res: :inferRegisteredClassCall(expr: expr, call: call, targetType: targetType, method: method, targetIsSelf: targetIsSelf);
 							}, {
-								if({ targetType:startsWith(prefix: 'Array') && method == 'map' }, {
+								if({ TypeDomain:isOfBase(t: targetType, base: 'Array') && method == 'map' }, {
 									local String is mappedElem: Primitive:ANY:value();
 									if({ call:args:length() > 0 }, {
 										local NamedArg is a0: call:args:get(index: 0);
@@ -4384,16 +4350,16 @@ Class is TypeChecker{
 											}
 										], default: {});
 									});
-									res: if({ mappedElem != Primitive:ANY:value() }, { 'Array:' . mappedElem }, { 'Array' });
+									res: if({ mappedElem != Primitive:ANY:value() }, { TypeDomain:makeArray(elem: mappedElem) }, { 'Array' });
 								}, {
-									if({ targetType:startsWith(prefix: 'Array') && method == 'fold' }, {
+									if({ TypeDomain:isOfBase(t: targetType, base: 'Array') && method == 'fold' }, {
 										res: if({ call:args:length() > 0 }, { call:args:get(index: 0):value:resolvedType }, { 'Any' });
 									}, {
 										if({ :allEnumNames:has(key: targetType) }, {
 											match(on: method, when: [
 												'name': { res: Primitive:STRING:value(); },
 												'ordinal': { res: Primitive:INT:value(); },
-												'values': { res: 'Array:' . targetType; },
+												'values': { res: TypeDomain:makeArray(elem: targetType); },
 												'of': { res: targetType; },
 												'value': { res: if({ :allStringBackedEnums:has(key: targetType) }, { 'String' }, { Primitive:INT:value() }); },
 												else: { res: 'Any'; }
@@ -4402,8 +4368,8 @@ Class is TypeChecker{
 											if({ targetType == Primitive:INT:value() && method == 'toBase' }, {
 												res: Primitive:STRING:value();
 											}, {
-												local Array of String is uParts: targetType:split(delimiter: ':');
-												if({ :registeredClasses:has(key: uParts:get(index: 0)) && :findClass(name: uParts:get(index: 0)):name != '' }, {
+												local String is uBase: TypeDomain:baseName(t: targetType);
+												if({ :registeredClasses:has(key: uBase) && :findClass(name: uBase):name != '' }, {
 													:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
 												});
 												res: 'Any';
