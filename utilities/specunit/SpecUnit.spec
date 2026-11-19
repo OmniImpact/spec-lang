@@ -332,22 +332,22 @@ Class is SpecTestRegistry{
 		SpecTestRegistry:uiHolder:add(item: helper);
 	}
 
-	held Function is recordMetrics(String is cpuStr, String is rssStr){
+	held Function is recordMetrics(Int is cpuUs, Int is rssKb){
 		Parallel:syncWith(lock: 77, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
 				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
-				h:onMetrics(cpuUs: cpuStr:parseInt(default: 0), rssKb: rssStr:parseInt(default: 0));
+				h:onMetrics(cpuUs: cpuUs, rssKb: rssKb);
 			});
 		});
 	}
 
-	held Function is showResults(String is wallMsStr){
+	held Function is showResults(Int is wallMs){
 		Parallel:syncWith(lock: 77, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
 				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
-				h:showResults(wallMs: wallMsStr:parseInt(default: 0));
+				h:showResults(wallMs: wallMs);
 			});
 		});
 	}
@@ -416,32 +416,32 @@ Class is SpecTestRegistry{
 		return pending;
 	}
 
-	held Function is markStarted(String is tiStr, String is itemPath){
+	held Function is markStarted(Int is threadIndex, String is itemPath){
 		Parallel:syncWith(lock: 77, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
 				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
-				h:onStarted(threadIndex: tiStr:parseInt(default: 0), itemPath: itemPath);
+				h:onStarted(threadIndex: threadIndex, itemPath: itemPath);
 			});
 		});
 	}
 
-	held Function is markRunning(String is tiStr, String is itemPath){
+	held Function is markRunning(Int is threadIndex, String is itemPath){
 		Parallel:syncWith(lock: 77, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
 				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
-				h:onRunning(threadIndex: tiStr:parseInt(default: 0), itemPath: itemPath);
+				h:onRunning(threadIndex: threadIndex, itemPath: itemPath);
 			});
 		});
 	}
 
-	held Function is markWorkerIdle(String is tiStr){
+	held Function is markWorkerIdle(Int is threadIndex){
 		Parallel:syncWith(lock: 77, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
 				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
-				h:onWorkerIdle(threadIndex: tiStr:parseInt(default: 0));
+				h:onWorkerIdle(threadIndex: threadIndex);
 			});
 		});
 	}
@@ -623,16 +623,16 @@ Class is SpecUnit{
 						# Running takes precedence over compiling whenever a compiled test is ready.
 						local ReadyRunItem is rItem: SpecTestRegistry:nextReadyRun();
 						if(check: { rItem:idx >= 0 }, then: {
-							SpecTestRegistry:markRunning(tiStr: (ti as String), itemPath: rItem:item:path);
+							SpecTestRegistry:markRunning(threadIndex: ti, itemPath: rItem:item:path);
 							:executeReadyItem(rItem: rItem, specBin: specBin, root: root, timeoutSec: timeoutSec);
-							SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
+							SpecTestRegistry:markWorkerIdle(threadIndex: ti);
 						}, else: {
 							local Int is idx: SpecTestRegistry:nextCompileIndex();
 							if(check: { idx >= 0 }, then: {
 								local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
-								SpecTestRegistry:markStarted(tiStr: (ti as String), itemPath: item:path);
+								SpecTestRegistry:markStarted(threadIndex: ti, itemPath: item:path);
 								:compileItem(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags, timeoutSec: compileTimeoutSec);
-								SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
+								SpecTestRegistry:markWorkerIdle(threadIndex: ti);
 							}, else: {
 								if(check: { SpecTestRegistry:hasPendingWork() }, then: {
 									Process:sleep(milliseconds: 10);
@@ -649,7 +649,7 @@ Class is SpecUnit{
 			scope:awaitAll(group: workers);
 
 			local Int is wallMs: Time:monotonicMs() - startMs;
-			SpecTestRegistry:showResults(wallMsStr: (wallMs as String));
+			SpecTestRegistry:showResults(wallMs: wallMs);
 			ui:finish();
 		});
 		:report();
@@ -874,7 +874,7 @@ Class is SpecUnit{
 		local Int is cCpu: cRes:getInt(key: 'cpu_us', default: 0);
 		local Int is cRss: cRes:getInt(key: 'rss_kb', default: 0);
 		if(check: { cStatus != 0 }, then: {
-			SpecTestRegistry:recordMetrics(cpuStr: (cCpu as String), rssStr: (cRss as String));
+			SpecTestRegistry:recordMetrics(cpuUs: cCpu, rssKb: cRss);
 			local String is diag: fileRead(path: compileOut, default: '');
 			local String is note: if(check: { cStatus == 124 || cStatus == 137 }, then: { 'compilation timed out after ' . (timeoutSec as String) . 's (killed)'; }, else: { 'compilation failed: ' . :firstLine(text: diag); });
 			SpecTestRegistry:addResult(name: item:path, passed: false, note: note, report: diag, expectedTests: item:expectedTests, tPassed: 0, tFailed: item:expectedTests);
@@ -900,7 +900,7 @@ Class is SpecUnit{
 		local Int is totalCpu: rItem:compileCpuUs + rRes:getInt(key: 'cpu_us', default: 0);
 		local Int is rRss: rRes:getInt(key: 'rss_kb', default: 0);
 		local Int is maxRss: if(check: { rRss > rItem:compileRssKb }, then: { rRss; }, else: { rItem:compileRssKb; });
-		SpecTestRegistry:recordMetrics(cpuStr: (totalCpu as String), rssStr: (maxRss as String));
+		SpecTestRegistry:recordMetrics(cpuUs: totalCpu, rssKb: maxRss);
 		local String is out: fileRead(path: runOut, default: '');
 		local Boolean is timedOut: rStatus == 124 || rStatus == 137;
 		local Boolean is passed: true;
@@ -964,7 +964,7 @@ Class is SpecUnit{
 		local Array of String is cArgs: ['-c', 'cd "' . root . '" && ' . compileCmd . ' > "' . compileOut . '" 2>&1'];
 		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
 		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
-		SpecTestRegistry:recordMetrics(cpuStr: (cRes:getInt(key: 'cpu_us', default: 0) as String), rssStr: (cRes:getInt(key: 'rss_kb', default: 0) as String));
+		SpecTestRegistry:recordMetrics(cpuUs: cRes:getInt(key: 'cpu_us', default: 0), rssKb: cRes:getInt(key: 'rss_kb', default: 0));
 		local String is cText: fileRead(path: compileOut, default: '');
 		local Boolean is passed: true;
 		local String is note: '';

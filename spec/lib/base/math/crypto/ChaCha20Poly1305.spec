@@ -1,8 +1,8 @@
-#! Package base:net:tls
+#! Package base:math:crypto
 #! Pure-Spec ChaCha20-Poly1305 AEAD (RFC 8439).
 
 Class is ChaCha20Poly1305{
-	namespace: ['base', 'net', 'tls'];
+	namespace: ['base', 'math', 'crypto'];
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],

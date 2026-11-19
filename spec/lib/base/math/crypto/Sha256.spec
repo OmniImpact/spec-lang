@@ -1,9 +1,9 @@
-#! Package base:net:tls
+#! Package base:math:crypto
 #! Pure-Spec SHA-256 (FIPS 180-4), HMAC-SHA256 (RFC 2104), and
 #! HKDF-SHA256 / HKDF-Expand-Label (RFC 5869, RFC 8446 §7.1).
 
 Class is Sha256{
-	namespace: ['base', 'net', 'tls'];
+	namespace: ['base', 'math', 'crypto'];
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],

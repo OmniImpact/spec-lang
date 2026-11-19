@@ -1,15 +1,18 @@
 #! Package base:net:tls
-#! Minimal pure-Spec TLS 1.3 client (RFC 8446) over base:net:Socket.
-#! Negotiates TLS_CHACHA20_POLY1305_SHA256 (0x1303) with X25519 key exchange.
+#! Pure-Spec TLS 1.3 client (RFC 8446) over base:net:Socket.
+#! Negotiates TLS_AES_128_GCM_SHA256 (0x1301) or TLS_CHACHA20_POLY1305_SHA256 (0x1303)
+#! with X25519 key exchange, OS CSPRNG, and X.509 certificate chain verification.
 
 Class is TlsClient{
 	namespace: ['base', 'net', 'tls'];
 
 	replace Array of Array of String is using: [
 		['base', 'net', Socket],
-		['base', 'net', 'tls', as Sha256()],
-		['base', 'net', 'tls', as X25519()],
-		['base', 'net', 'tls', as ChaCha20Poly1305()],
+		['base', 'net', 'tls', as TlsVerifier()],
+		['base', 'math', 'crypto', as Sha256()],
+		['base', 'math', 'crypto', as X25519()],
+		['base', 'math', 'crypto', as ChaCha20Poly1305()],
+		['base', 'math', 'crypto', as Aes128Gcm()],
 		['base', 'struct', Array],
 		['base', 'struct', List],
 		['base', 'sys', as Conditional()],
@@ -20,6 +23,7 @@ Class is TlsClient{
 	local Socket is sock: Socket:init();
 	local Boolean is connected: false;
 	local String is lastErr: '';
+	local Int is cipherSuite: 0;
 
 	local List of Byte is rxBuf;
 	local Int is rxPos: 0;
@@ -174,6 +178,20 @@ Class is TlsClient{
 		return payload;
 	}
 
+	local Function of Array of Int is aeadSeal(Array of Int is key, Array of Int is nonce, Array of Int is aad, Array of Int is plaintext){
+		if({ :cipherSuite == 4865 }, {
+			return Aes128Gcm:seal(key: key, nonce: nonce, aad: aad, plaintext: plaintext);
+		});
+		return ChaCha20Poly1305:seal(key: key, nonce: nonce, aad: aad, plaintext: plaintext);
+	}
+
+	local Function of Array of Int is aeadOpen(Array of Int is key, Array of Int is nonce, Array of Int is aad, Array of Int is ctWithTag, Array of Boolean is okOut){
+		if({ :cipherSuite == 4865 }, {
+			return Aes128Gcm:open(key: key, nonce: nonce, aad: aad, ctWithTag: ctWithTag, okOut: okOut);
+		});
+		return ChaCha20Poly1305:open(key: key, nonce: nonce, aad: aad, ctWithTag: ctWithTag, okOut: okOut);
+	}
+
 	local Function of Boolean is sendEncryptedRecord(Array of Int is key, Array of Int is iv, Int is seq, Int is innerType, Array of Int is plaintext){
 		local Array of Int is inner: [];
 		:appendBytes(dst: inner, src: plaintext);
@@ -182,7 +200,7 @@ Class is TlsClient{
 		local Int is encLen: inner:length() + 16;
 		local Array of Int is aad: [23, 3, 3, (encLen >> 8) & 255, encLen & 255];
 		local Array of Int is nonce: :makeNonce(iv: iv, seq: seq);
-		local Array of Int is ctTag: ChaCha20Poly1305:seal(key: key, nonce: nonce, aad: aad, plaintext: inner);
+		local Array of Int is ctTag: :aeadSeal(key: key, nonce: nonce, aad: aad, plaintext: inner);
 
 		local Array of Int is rec: [];
 		:appendBytes(dst: rec, src: aad);
@@ -200,9 +218,11 @@ Class is TlsClient{
 		# legacy_session_id (32 bytes for middlebox compat)
 		body:add(item: 32);
 		:appendBytes(dst: body, src: :makeRandom32());
-		# cipher_suites: TLS_CHACHA20_POLY1305_SHA256 (0x1303)
+		# cipher_suites: TLS_AES_128_GCM_SHA256 (0x1301), TLS_CHACHA20_POLY1305_SHA256 (0x1303)
 		body:add(item: 0);
-		body:add(item: 2);
+		body:add(item: 4);
+		body:add(item: 19);
+		body:add(item: 1);
 		body:add(item: 19);
 		body:add(item: 3);
 		# legacy_compression_methods: [null]
@@ -265,8 +285,30 @@ Class is TlsClient{
 		return hsMsg;
 	}
 
+	local Function is parseCertificateMessage(Array of Int is fullMsg, Array of Array of Int is outChain){
+		if({ fullMsg:length() < 8 }, { return; });
+		local Int is ctxLen: fullMsg:get(index: 4, default: 0) & 255;
+		local Int is pos: 5 + ctxLen;
+		if({ pos + 3 > fullMsg:length() }, { return; });
+		local Int is listLen: (fullMsg:get(index: pos, default: 0) << 16) | (fullMsg:get(index: pos + 1, default: 0) << 8) | fullMsg:get(index: pos + 2, default: 0);
+		pos: pos + 3;
+		local Int is listEnd: pos + listLen;
+		if({ listEnd > fullMsg:length() }, { listEnd: fullMsg:length(); });
+		while({ pos + 3 <= listEnd }, local Function of Boolean(){
+			local Int is cLen: (fullMsg:get(index: pos, default: 0) << 16) | (fullMsg:get(index: pos + 1, default: 0) << 8) | fullMsg:get(index: pos + 2, default: 0);
+			pos: pos + 3;
+			if({ pos + cLen > listEnd }, { return false; });
+			outChain:add(item: :sliceBytes(src: fullMsg, start: pos, count: cLen));
+			pos: pos + cLen;
+			if({ pos + 2 > listEnd }, { return false; });
+			local Int is extLen: (fullMsg:get(index: pos, default: 0) << 8) | fullMsg:get(index: pos + 1, default: 0);
+			pos: pos + 2 + extLen;
+			return true;
+		});
+	}
+
 	## Connects to [host]:[port] over TCP and performs the TLS 1.3 handshake.
-	Function of Boolean is connect(String is host, Int is port: 443, Int is timeoutMs: 15000){
+	Function of Boolean is connect(String is host, Int is port: 443, Int is timeoutMs: 15000, Boolean is verifyCert: true){
 		local String is errMsg: '';
 		:sock: Socket:init():connect(host: host, port: port, timeoutMs: timeoutMs, onError: local Function(String is e){
 			errMsg: e;
@@ -325,11 +367,13 @@ Class is TlsClient{
 		pos: pos + 1 + sidLen;
 		local Int is csHi: shMsg:get(index: pos, default: 0);
 		local Int is csLo: shMsg:get(index: pos + 1, default: 0);
-		if({ csHi != 19 || csLo != 3 }, {
+		if({ csHi != 19 || (csLo != 1 && csLo != 3) }, {
 			:lastErr: 'Server selected unsupported cipher suite (' . (csHi as String) . ',' . (csLo as String) . ')';
 			:close();
 			return false;
 		});
+		:cipherSuite: (csHi << 8) | csLo;
+		local Int is keyLen: if({ :cipherSuite == 4865 }, { 16 }, { 32 });
 		pos: pos + 3; # cipher_suite(2) + compression(1)
 		local Int is extsLen: (shMsg:get(index: pos, default: 0) << 8) | shMsg:get(index: pos + 1, default: 0);
 		pos: pos + 2;
@@ -368,9 +412,9 @@ Class is TlsClient{
 		local Array of Int is cHsTraffic: Sha256:deriveSecret(secret: hsSecret, label: 'c hs traffic', transcriptHash: chShHash);
 		local Array of Int is sHsTraffic: Sha256:deriveSecret(secret: hsSecret, label: 's hs traffic', transcriptHash: chShHash);
 
-		local Array of Int is sHsKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'key', context: [], length: 32);
+		local Array of Int is sHsKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'key', context: [], length: keyLen);
 		local Array of Int is sHsIv: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'iv', context: [], length: 12);
-		local Array of Int is cHsKey: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'key', context: [], length: 32);
+		local Array of Int is cHsKey: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'key', context: [], length: keyLen);
 		local Array of Int is cHsIv: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'iv', context: [], length: 12);
 
 		# Decrypt server encrypted handshake flight until server Finished (type 20)
@@ -378,6 +422,7 @@ Class is TlsClient{
 		local Array of Int is hsStream: [];
 		local Int is hsPos: 0;
 		local Boolean is gotFinished: false;
+		local Array of Array of Int is serverCertChain: [];
 
 		while({ !gotFinished }, {
 			local Array of Int is hdr: [];
@@ -397,7 +442,7 @@ Class is TlsClient{
 				local Array of Int is nonce: :makeNonce(iv: sHsIv, seq: sHsSeq);
 				sHsSeq: sHsSeq + 1;
 				local Array of Boolean is okOut: [];
-				local Array of Int is inner: ChaCha20Poly1305:open(key: sHsKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
+				local Array of Int is inner: :aeadOpen(key: sHsKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
 				if({ !okOut:get(index: 0, default: false) }, {
 					:lastErr: 'AEAD authentication failed on server handshake record';
 					:close();
@@ -451,6 +496,9 @@ Class is TlsClient{
 							gotFinished: true;
 							return false;
 						});
+						if({ mType == 11 }, {
+							:parseCertificateMessage(fullMsg: fullMsg, outChain: serverCertChain);
+						});
 						:appendBytes(dst: transcript, src: fullMsg);
 						return true;
 					});
@@ -461,6 +509,15 @@ Class is TlsClient{
 			});
 		});
 
+		if({ verifyCert }, {
+			local Array of String is certErr: [];
+			if({ !TlsVerifier:verifyServerChain(certChain: serverCertChain, host: host, errOut: certErr) }, {
+				:lastErr: if({ certErr:length() > 0 }, { certErr:get(index: 0, default: 'X.509 verification failed') }, { 'X.509 verification failed' });
+				:close();
+				return false;
+			});
+		});
+
 		# Application Traffic Key Schedule
 		local Array of Int is sFinHash: Sha256:digest(data: transcript);
 		local Array of Int is derived2: Sha256:deriveSecret(secret: hsSecret, label: 'derived', transcriptHash: emptyHash);
@@ -468,11 +525,11 @@ Class is TlsClient{
 		local Array of Int is cAppTraffic: Sha256:deriveSecret(secret: masterSecret, label: 'c ap traffic', transcriptHash: sFinHash);
 		local Array of Int is sAppTraffic: Sha256:deriveSecret(secret: masterSecret, label: 's ap traffic', transcriptHash: sFinHash);
 
-		:cAppKey: Sha256:hkdfExpandLabel(secret: cAppTraffic, label: 'key', context: [], length: 32);
+		:cAppKey: Sha256:hkdfExpandLabel(secret: cAppTraffic, label: 'key', context: [], length: keyLen);
 		:cAppIv: Sha256:hkdfExpandLabel(secret: cAppTraffic, label: 'iv', context: [], length: 12);
 		:cAppSeq: 0;
 
-		:sAppKey: Sha256:hkdfExpandLabel(secret: sAppTraffic, label: 'key', context: [], length: 32);
+		:sAppKey: Sha256:hkdfExpandLabel(secret: sAppTraffic, label: 'key', context: [], length: keyLen);
 		:sAppIv: Sha256:hkdfExpandLabel(secret: sAppTraffic, label: 'iv', context: [], length: 12);
 		:sAppSeq: 0;
 
@@ -538,7 +595,7 @@ Class is TlsClient{
 			local Array of Int is nonce: :makeNonce(iv: :sAppIv, seq: :sAppSeq);
 			:sAppSeq: :sAppSeq + 1;
 			local Array of Boolean is okOut: [];
-			local Array of Int is inner: ChaCha20Poly1305:open(key: :sAppKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
+			local Array of Int is inner: :aeadOpen(key: :sAppKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
 			if({ !okOut:get(index: 0, default: false) }, {
 				:lastErr: 'AEAD authentication failed on application data';
 				return false;

@@ -7,9 +7,13 @@ Class of SpecUnitTest is TestTlsCrypto{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'net', 'tls', as Sha256()],
-		['base', 'net', 'tls', as X25519()],
-		['base', 'net', 'tls', as ChaCha20Poly1305()],
+		['base', 'math', 'crypto', as Sha256()],
+		['base', 'math', 'crypto', as X25519()],
+		['base', 'math', 'crypto', as ChaCha20Poly1305()],
+		['base', 'math', 'crypto', as Aes128Gcm()],
+		['base', 'math', 'crypto', X509Cert],
+		['base', 'math', 'crypto', as X509()],
+		['base', 'net', 'tls', as TlsVerifier()],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
@@ -78,5 +82,54 @@ Class of SpecUnitTest is TestTlsCrypto{
 		local Array of Int is dec: ChaCha20Poly1305:open(key: key, nonce: nonce, aad: aad, ctWithTag: ctTag, okOut: okOut);
 		Assert:isTrue(okOut:get(index: 0, default: false));
 		Assert:areEqualString(Sha256:toHex(bytes: pt), Sha256:toHex(bytes: dec));
+	}
+
+	Function is testAes128GcmNistVector(){
+		# NIST SP 800-38D Test Case 4 (AES-128-GCM with 96-bit IV, AAD, 60-byte plaintext)
+		local Array of Int is key: :hexBytes(hex: 'feffe9928665731c6d6a8f9467308308');
+		local Array of Int is iv: :hexBytes(hex: 'cafebabefacedbaddecaf888');
+		local Array of Int is pt: :hexBytes(hex: 'd9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39');
+		local Array of Int is aad: :hexBytes(hex: 'feedfacedeadbeeffeedfacedeadbeefabaddad2');
+
+		local Array of Int is ctTag: Aes128Gcm:seal(key: key, nonce: iv, aad: aad, plaintext: pt);
+		local String is expectedHex: '42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e0915bc94fbc3221a5db94fae95ae7121a47';
+		Assert:areEqualString(expectedHex, Sha256:toHex(bytes: ctTag));
+
+		local Array of Boolean is okOut: [];
+		local Array of Int is dec: Aes128Gcm:open(key: key, nonce: iv, aad: aad, ctWithTag: ctTag, okOut: okOut);
+		Assert:isTrue(okOut:get(index: 0, default: false));
+		Assert:areEqualString(Sha256:toHex(bytes: pt), Sha256:toHex(bytes: dec));
+	}
+
+	Function is testX509Base64AndEmptyChain(){
+		local Array of Int is decoded: X509:decodeBase64(text: 'SGVsbG8sIFNwZWMh');
+		Assert:areEqualString(Sha256:toHex(bytes: :strBytes(s: 'Hello, Spec!')), Sha256:toHex(bytes: decoded));
+
+		local Array of X509Cert is parsed: [];
+		local Array of String is errs: [];
+		Assert:isFalse(X509:verifyTrustChain(certChain: [], parsedOut: parsed, errOut: errs));
+		Assert:isTrue(errs:length() > 0);
+	}
+
+	Function is testTlsVerifierHostnameMatching(){
+		Assert:isTrue(TlsVerifier:patternMatchesHost(pattern: 'api.weather.gov', host: 'api.weather.gov'));
+		Assert:isTrue(TlsVerifier:patternMatchesHost(pattern: 'API.Weather.GOV', host: 'api.weather.gov'));
+		Assert:isTrue(TlsVerifier:patternMatchesHost(pattern: '*.weather.gov', host: 'api.weather.gov'));
+		Assert:isFalse(TlsVerifier:patternMatchesHost(pattern: '*.weather.gov', host: 'a.b.weather.gov'));
+		Assert:isFalse(TlsVerifier:patternMatchesHost(pattern: '*.weather.gov', host: 'weather.gov'));
+
+		# SAN takes precedence over CN when present
+		local X509Cert is cert: X509Cert:init();
+		cert:valid: true;
+		cert:commonName: 'fallback.example.com';
+		cert:sanDnsNames:add(item: '*.weather.gov');
+		Assert:isTrue(TlsVerifier:matchesHost(cert: cert, host: 'api.weather.gov'));
+		Assert:isFalse(TlsVerifier:matchesHost(cert: cert, host: 'fallback.example.com'));
+
+		# CN fallback when no SAN entries exist
+		local X509Cert is cnOnly: X509Cert:init();
+		cnOnly:valid: true;
+		cnOnly:commonName: 'fallback.example.com';
+		Assert:isTrue(TlsVerifier:matchesHost(cert: cnOnly, host: 'fallback.example.com'));
 	}
 }

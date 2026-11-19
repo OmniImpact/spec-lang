@@ -1,10 +1,10 @@
-#! Package base:net:tls
+#! Package base:math:crypto
 #! Pure-Spec X25519 Elliptic Curve Diffie-Hellman (RFC 7748).
 #! Uses TweetNaCl's 16-limb 16-bit signed field representation over GF(2^255 - 19),
 #! keeping all intermediate products safely within signed 64-bit Int.
 
 Class is X25519{
-	namespace: ['base', 'net', 'tls'];
+	namespace: ['base', 'math', 'crypto'];
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
