@@ -10,17 +10,16 @@ Class is ChaCha20Poly1305{
 		['base', 'sys', as Loops()]
 	];
 
-	local Function of Int is rotl32(Int is x, Int is n){
-		local Int is u: x & 4294967295;
-		return ((u << n) | (u >> (32 - n))) & 4294967295;
+	local Function of UInt32 is rotl32(UInt32 is x, Int is n){
+		return (x << n) | (x >> (32 - n));
 	}
 
-	local Function of Int is loadLe32(Array of Int is b, Int is off){
+	local Function of UInt32 is loadLe32(Array of Int is b, Int is off){
 		local Int is b0: b:get(index: off, default: 0) & 255;
 		local Int is b1: b:get(index: off + 1, default: 0) & 255;
 		local Int is b2: b:get(index: off + 2, default: 0) & 255;
 		local Int is b3: b:get(index: off + 3, default: 0) & 255;
-		return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) & 4294967295;
+		return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) as UInt32;
 	}
 
 	local Function is storeLe32(Array of Int is out, Int is v){
@@ -30,19 +29,19 @@ Class is ChaCha20Poly1305{
 		out:add(item: (v >> 24) & 255);
 	}
 
-	local Function is quarterRound(Array of Int is st, Int is a, Int is b, Int is c, Int is d){
-		local Int is sa: st:get(index: a, default: 0);
-		local Int is sb: st:get(index: b, default: 0);
-		local Int is sc: st:get(index: c, default: 0);
-		local Int is sd: st:get(index: d, default: 0);
+	local Function is quarterRound(Array of UInt32 is st, Int is a, Int is b, Int is c, Int is d){
+		local UInt32 is sa: st:get(index: a, default: 0 as UInt32);
+		local UInt32 is sb: st:get(index: b, default: 0 as UInt32);
+		local UInt32 is sc: st:get(index: c, default: 0 as UInt32);
+		local UInt32 is sd: st:get(index: d, default: 0 as UInt32);
 
-		sa: (sa + sb) & 4294967295;
+		sa: sa + sb;
 		sd: :rotl32(x: sd ^ sa, n: 16);
-		sc: (sc + sd) & 4294967295;
+		sc: sc + sd;
 		sb: :rotl32(x: sb ^ sc, n: 12);
-		sa: (sa + sb) & 4294967295;
+		sa: sa + sb;
 		sd: :rotl32(x: sd ^ sa, n: 8);
-		sc: (sc + sd) & 4294967295;
+		sc: sc + sd;
 		sb: :rotl32(x: sb ^ sc, n: 7);
 
 		st:set(index: a, item: sa);
@@ -54,17 +53,17 @@ Class is ChaCha20Poly1305{
 	## Computes one 64-byte ChaCha20 keystream block for 32-byte [key],
 	## 32-bit [counter], and 12-byte [nonce].
 	Function of Array of Int is chacha20Block(Array of Int is key, Int is counter, Array of Int is nonce){
-		local Array of Int is initSt: [
-			1634760805, 857760878, 2036477234, 1797285236,
+		local Array of UInt32 is initSt: [
+			1634760805 as UInt32, 857760878 as UInt32, 2036477234 as UInt32, 1797285236 as UInt32,
 			:loadLe32(b: key, off: 0),  :loadLe32(b: key, off: 4),  :loadLe32(b: key, off: 8),  :loadLe32(b: key, off: 12),
 			:loadLe32(b: key, off: 16), :loadLe32(b: key, off: 20), :loadLe32(b: key, off: 24), :loadLe32(b: key, off: 28),
-			counter & 4294967295,
+			counter as UInt32,
 			:loadLe32(b: nonce, off: 0), :loadLe32(b: nonce, off: 4), :loadLe32(b: nonce, off: 8)
 		];
-		local Array of Int is st: [];
+		local Array of UInt32 is st: [];
 		local Int is i: 0;
 		while({ i < 16 }, {
-			st:add(item: initSt:get(index: i, default: 0));
+			st:add(item: initSt:get(index: i, default: 0 as UInt32));
 			i: i + 1;
 		});
 		local Int is r: 0;
@@ -82,8 +81,8 @@ Class is ChaCha20Poly1305{
 		local Array of Int is out: [];
 		i: 0;
 		while({ i < 16 }, {
-			local Int is w: (st:get(index: i, default: 0) + initSt:get(index: i, default: 0)) & 4294967295;
-			:storeLe32(out: out, v: w);
+			local UInt32 is w: st:get(index: i, default: 0 as UInt32) + initSt:get(index: i, default: 0 as UInt32);
+			:storeLe32(out: out, v: w as Int);
 			i: i + 1;
 		});
 		return out;
@@ -111,10 +110,10 @@ Class is ChaCha20Poly1305{
 	## Computes 16-byte Poly1305 MAC over [msg] using 32-byte one-time [otk].
 	## Uses 5 x 26-bit limbs (Donna-32 style) so all products fit in signed 64-bit Int.
 	Function of Array of Int is poly1305Mac(Array of Int is otk, Array of Int is msg){
-		local Int is t0: :loadLe32(b: otk, off: 0);
-		local Int is t1: :loadLe32(b: otk, off: 4);
-		local Int is t2: :loadLe32(b: otk, off: 8);
-		local Int is t3: :loadLe32(b: otk, off: 12);
+		local Int is t0: :loadLe32(b: otk, off: 0) as Int;
+		local Int is t1: :loadLe32(b: otk, off: 4) as Int;
+		local Int is t2: :loadLe32(b: otk, off: 8) as Int;
+		local Int is t3: :loadLe32(b: otk, off: 12) as Int;
 
 		local Int is r0: t0 & 67108863;
 		local Int is r1: ((t0 >> 26) | (t1 << 6)) & 67108611;
@@ -149,10 +148,10 @@ Class is ChaCha20Poly1305{
 				blk:set(index: blkLen, item: 1);
 			});
 
-			local Int is b0: :loadLe32(b: blk, off: 0);
-			local Int is b1: :loadLe32(b: blk, off: 4);
-			local Int is b2: :loadLe32(b: blk, off: 8);
-			local Int is b3: :loadLe32(b: blk, off: 12);
+			local Int is b0: :loadLe32(b: blk, off: 0) as Int;
+			local Int is b1: :loadLe32(b: blk, off: 4) as Int;
+			local Int is b2: :loadLe32(b: blk, off: 8) as Int;
+			local Int is b3: :loadLe32(b: blk, off: 12) as Int;
 
 			h0: h0 + (b0 & 67108863);
 			h1: h1 + (((b0 >> 26) | (b1 << 6)) & 67108863);
@@ -191,7 +190,6 @@ Class is ChaCha20Poly1305{
 		local Int is g3: h3 + cf; cf: g3 >> 26; g3: g3 & 67108863;
 		local Int is g4: h4 + cf - 67108864;
 
-		local Int is mask: (g4 >> 31) & 4294967295;
 		local Int is nmask: if({ g4 < 0 }, { 0 }, { 67108863 });
 		local Int is kmask: if({ g4 < 0 }, { 67108863 }, { 0 });
 		h0: (h0 & kmask) | (g0 & nmask);
@@ -205,10 +203,10 @@ Class is ChaCha20Poly1305{
 		local Int is f2: ((h2 >> 12) | (h3 << 14)) & 4294967295;
 		local Int is f3: ((h3 >> 18) | (h4 << 8)) & 4294967295;
 
-		local Int is p0: f0 + :loadLe32(b: otk, off: 16);
-		local Int is p1: f1 + :loadLe32(b: otk, off: 20) + (p0 >> 32);
-		local Int is p2: f2 + :loadLe32(b: otk, off: 24) + (p1 >> 32);
-		local Int is p3: f3 + :loadLe32(b: otk, off: 28) + (p2 >> 32);
+		local Int is p0: f0 + (:loadLe32(b: otk, off: 16) as Int);
+		local Int is p1: f1 + (:loadLe32(b: otk, off: 20) as Int) + (p0 >> 32);
+		local Int is p2: f2 + (:loadLe32(b: otk, off: 24) as Int) + (p1 >> 32);
+		local Int is p3: f3 + (:loadLe32(b: otk, off: 28) as Int) + (p2 >> 32);
 
 		local Array of Int is tag: [];
 		:storeLe32(out: tag, v: p0 & 4294967295);

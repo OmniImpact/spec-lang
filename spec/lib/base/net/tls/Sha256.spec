@@ -22,9 +22,8 @@ Class is Sha256{
 		1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298
 	];
 
-	local Function of Int is rotr32(Int is x, Int is n){
-		local Int is u: x & 4294967295;
-		return ((u >> n) | (u << (32 - n))) & 4294967295;
+	local Function of UInt32 is rotr32(UInt32 is x, Int is n){
+		return (x >> n) | (x << (32 - n));
 	}
 
 	## Computes SHA-256 over [data] (array of byte values 0..255).
@@ -48,19 +47,19 @@ Class is Sha256{
 			s: s - 8;
 		});
 
-		local Int is h0: 1779033703;
-		local Int is h1: 3144134277;
-		local Int is h2: 1013904242;
-		local Int is h3: 2773480762;
-		local Int is h4: 1359893119;
-		local Int is h5: 2600822924;
-		local Int is h6: 528734635;
-		local Int is h7: 1541459225;
+		local UInt32 is h0: 1779033703 as UInt32;
+		local UInt32 is h1: 3144134277 as UInt32;
+		local UInt32 is h2: 1013904242 as UInt32;
+		local UInt32 is h3: 2773480762 as UInt32;
+		local UInt32 is h4: 1359893119 as UInt32;
+		local UInt32 is h5: 2600822924 as UInt32;
+		local UInt32 is h6: 528734635 as UInt32;
+		local UInt32 is h7: 1541459225 as UInt32;
 
-		local Array of Int is w: [];
+		local Array of UInt32 is w: [];
 		i: 0;
 		while({ i < 64 }, {
-			w:add(item: 0);
+			w:add(item: 0 as UInt32);
 			i: i + 1;
 		});
 
@@ -72,68 +71,68 @@ Class is Sha256{
 				local Int is b1: msg:get(index: off + t * 4 + 1, default: 0);
 				local Int is b2: msg:get(index: off + t * 4 + 2, default: 0);
 				local Int is b3: msg:get(index: off + t * 4 + 3, default: 0);
-				w:set(index: t, item: ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3) & 4294967295);
+				w:set(index: t, item: ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3) as UInt32);
 				t: t + 1;
 			});
 			while({ t < 64 }, {
-				local Int is w15: w:get(index: t - 15, default: 0);
-				local Int is w2: w:get(index: t - 2, default: 0);
-				local Int is s0: :rotr32(x: w15, n: 7) ^ :rotr32(x: w15, n: 18) ^ (w15 >> 3);
-				local Int is s1: :rotr32(x: w2, n: 17) ^ :rotr32(x: w2, n: 19) ^ (w2 >> 10);
-				local Int is wt: (w:get(index: t - 16, default: 0) + s0 + w:get(index: t - 7, default: 0) + s1) & 4294967295;
+				local UInt32 is w15: w:get(index: t - 15, default: 0 as UInt32);
+				local UInt32 is w2: w:get(index: t - 2, default: 0 as UInt32);
+				local UInt32 is s0: :rotr32(x: w15, n: 7) ^ :rotr32(x: w15, n: 18) ^ (w15 >> 3);
+				local UInt32 is s1: :rotr32(x: w2, n: 17) ^ :rotr32(x: w2, n: 19) ^ (w2 >> 10);
+				local UInt32 is wt: w:get(index: t - 16, default: 0 as UInt32) + s0 + w:get(index: t - 7, default: 0 as UInt32) + s1;
 				w:set(index: t, item: wt);
 				t: t + 1;
 			});
 
-			local Int is a: h0;
-			local Int is b: h1;
-			local Int is c: h2;
-			local Int is d: h3;
-			local Int is e: h4;
-			local Int is f: h5;
-			local Int is g: h6;
-			local Int is h: h7;
+			local UInt32 is a: h0;
+			local UInt32 is b: h1;
+			local UInt32 is c: h2;
+			local UInt32 is d: h3;
+			local UInt32 is e: h4;
+			local UInt32 is f: h5;
+			local UInt32 is g: h6;
+			local UInt32 is h: h7;
 
 			t: 0;
 			while({ t < 64 }, {
-				local Int is S1: :rotr32(x: e, n: 6) ^ :rotr32(x: e, n: 11) ^ :rotr32(x: e, n: 25);
-				local Int is ch: (e & f) ^ ((e ^ 4294967295) & g);
-				local Int is temp1: (h + S1 + ch + :kTable:get(index: t, default: 0) + w:get(index: t, default: 0)) & 4294967295;
-				local Int is S0: :rotr32(x: a, n: 2) ^ :rotr32(x: a, n: 13) ^ :rotr32(x: a, n: 22);
-				local Int is maj: (a & b) ^ (a & c) ^ (b & c);
-				local Int is temp2: (S0 + maj) & 4294967295;
+				local UInt32 is S1: :rotr32(x: e, n: 6) ^ :rotr32(x: e, n: 11) ^ :rotr32(x: e, n: 25);
+				local UInt32 is ch: (e & f) ^ ((~e) & g);
+				local UInt32 is temp1: h + S1 + ch + (:kTable:get(index: t, default: 0) as UInt32) + w:get(index: t, default: 0 as UInt32);
+				local UInt32 is S0: :rotr32(x: a, n: 2) ^ :rotr32(x: a, n: 13) ^ :rotr32(x: a, n: 22);
+				local UInt32 is maj: (a & b) ^ (a & c) ^ (b & c);
+				local UInt32 is temp2: S0 + maj;
 
 				h: g;
 				g: f;
 				f: e;
-				e: (d + temp1) & 4294967295;
+				e: d + temp1;
 				d: c;
 				c: b;
 				b: a;
-				a: (temp1 + temp2) & 4294967295;
+				a: temp1 + temp2;
 				t: t + 1;
 			});
 
-			h0: (h0 + a) & 4294967295;
-			h1: (h1 + b) & 4294967295;
-			h2: (h2 + c) & 4294967295;
-			h3: (h3 + d) & 4294967295;
-			h4: (h4 + e) & 4294967295;
-			h5: (h5 + f) & 4294967295;
-			h6: (h6 + g) & 4294967295;
-			h7: (h7 + h) & 4294967295;
+			h0: h0 + a;
+			h1: h1 + b;
+			h2: h2 + c;
+			h3: h3 + d;
+			h4: h4 + e;
+			h5: h5 + f;
+			h6: h6 + g;
+			h7: h7 + h;
 			off: off + 64;
 		});
 
-		local Array of Int is hs: [h0, h1, h2, h3, h4, h5, h6, h7];
+		local Array of UInt32 is hs: [h0, h1, h2, h3, h4, h5, h6, h7];
 		local Array of Int is out: [];
 		i: 0;
 		while({ i < 8 }, {
-			local Int is hv: hs:get(index: i, default: 0);
-			out:add(item: (hv >> 24) & 255);
-			out:add(item: (hv >> 16) & 255);
-			out:add(item: (hv >> 8) & 255);
-			out:add(item: hv & 255);
+			local UInt32 is hv: hs:get(index: i, default: 0 as UInt32);
+			out:add(item: ((hv >> 24) as Int) & 255);
+			out:add(item: ((hv >> 16) as Int) & 255);
+			out:add(item: ((hv >> 8) as Int) & 255);
+			out:add(item: (hv as Int) & 255);
 			i: i + 1;
 		});
 		return out;

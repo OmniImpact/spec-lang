@@ -21,8 +21,13 @@ Class is TlsClient{
 	local Boolean is connected: false;
 	local String is lastErr: '';
 
-	local Array of Int is rxBuf: [];
+	local List of Byte is rxBuf;
 	local Int is rxPos: 0;
+
+	replace Function is init(){
+		local [Byte] is emptyRx;
+		:rxBuf: emptyRx;
+	}
 
 	local Array of Int is cAppKey: [];
 	local Array of Int is cAppIv: [];
@@ -116,15 +121,9 @@ Class is TlsClient{
 	}
 
 	local Function of Boolean is ensureRxBytes(Int is needed){
-		while({ (:rxBuf:length() - :rxPos) < needed }, {
+		while({ (:rxBuf:length() - :rxPos) < needed }, local Function of Boolean(){
 			if({ :rxPos >= 4096 && :rxPos * 2 >= :rxBuf:length() }, {
-				local Array of Int is compact: [];
-				local Int is ci: :rxPos;
-				while({ ci < :rxBuf:length() }, {
-					compact:add(item: :rxBuf:get(index: ci, default: 0));
-					ci: ci + 1;
-				});
-				:rxBuf: compact;
+				:rxBuf: :rxBuf:slice(:rxPos, :rxBuf:length());
 				:rxPos: 0;
 			});
 			local String is errMsg: '';
@@ -138,27 +137,24 @@ Class is TlsClient{
 			if({ chunk:length() == 0 }, {
 				return false;
 			});
-			local Int is i: 0;
-			while({ i < chunk:length() }, {
-				:rxBuf:add(item: (chunk:get(index: i, default: 0 as Byte) as Int) & 255);
-				i: i + 1;
-			});
+			:rxBuf:appendBytes(chunk);
+			return true;
 		});
-		return true;
+		return (:rxBuf:length() - :rxPos) >= needed;
 	}
 
 	local Function of Array of Int is readRecord(Array of Int is headerOut){
 		if({ !:ensureRxBytes(needed: 5) }, {
 			return [];
 		});
-		local Int is h0: :rxBuf:get(index: :rxPos, default: 0);
-		local Int is h1: :rxBuf:get(index: :rxPos + 1, default: 0);
-		local Int is h2: :rxBuf:get(index: :rxPos + 2, default: 0);
-		local Int is h3: :rxBuf:get(index: :rxPos + 3, default: 0);
-		local Int is h4: :rxBuf:get(index: :rxPos + 4, default: 0);
+		local Int is h0: (:rxBuf:get(index: :rxPos, default: 0 as Byte) as Int) & 255;
+		local Int is h1: (:rxBuf:get(index: :rxPos + 1, default: 0 as Byte) as Int) & 255;
+		local Int is h2: (:rxBuf:get(index: :rxPos + 2, default: 0 as Byte) as Int) & 255;
+		local Int is h3: (:rxBuf:get(index: :rxPos + 3, default: 0 as Byte) as Int) & 255;
+		local Int is h4: (:rxBuf:get(index: :rxPos + 4, default: 0 as Byte) as Int) & 255;
+		local Int is recLen: :rxBuf:readU16BE(:rxPos + 3);
 		:rxPos: :rxPos + 5;
 
-		local Int is recLen: (h3 << 8) | h4;
 		if({ !:ensureRxBytes(needed: recLen) }, {
 			return [];
 		});
@@ -168,7 +164,12 @@ Class is TlsClient{
 		headerOut:add(item: h3);
 		headerOut:add(item: h4);
 
-		local Array of Int is payload: :sliceBytes(src: :rxBuf, start: :rxPos, count: recLen);
+		local Array of Int is payload: [];
+		local Int is pi: 0;
+		while({ pi < recLen }, {
+			payload:add(item: (:rxBuf:get(index: :rxPos + pi, default: 0 as Byte) as Int) & 255);
+			pi: pi + 1;
+		});
 		:rxPos: :rxPos + recLen;
 		return payload;
 	}
@@ -423,36 +424,38 @@ Class is TlsClient{
 						hsStream:add(item: inner:get(index: pi, default: 0));
 						pi: pi + 1;
 					});
-					local Boolean is moreMsgs: true;
-					while({ !gotFinished && moreMsgs && (hsStream:length() - hsPos) >= 4 }, {
+					while({ !gotFinished && (hsStream:length() - hsPos) >= 4 }, local Function of Boolean(){
 						local Int is mType: hsStream:get(index: hsPos, default: 0);
 						local Int is mLen: (hsStream:get(index: hsPos + 1, default: 0) << 16) | (hsStream:get(index: hsPos + 2, default: 0) << 8) | hsStream:get(index: hsPos + 3, default: 0);
 						if({ (hsStream:length() - hsPos) < (4 + mLen) }, {
-							moreMsgs: false;
-						}, {
-							local Array of Int is fullMsg: :sliceBytes(src: hsStream, start: hsPos, count: 4 + mLen);
-							hsPos: hsPos + 4 + mLen;
-							if({ mType == 20 }, {
-								# Verify server Finished MAC
-								local Array of Int is sFinKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'finished', context: [], length: 32);
-								local Array of Int is expMac: Sha256:hmac(key: sFinKey, msg: Sha256:digest(data: transcript));
-								local Int is diff: 0;
-								local Int is fi: 0;
-								while({ fi < 32 }, {
-									diff: diff | (expMac:get(index: fi, default: 0) ^ fullMsg:get(index: 4 + fi, default: 0));
-									fi: fi + 1;
-								});
-								if({ mLen != 32 || diff != 0 }, {
-									:lastErr: 'Server Finished MAC verification failed';
-									:close();
-									return false;
-								});
-								:appendBytes(dst: transcript, src: fullMsg);
-								gotFinished: true;
-							}, {
-								:appendBytes(dst: transcript, src: fullMsg);
-							});
+							return false;
 						});
+						local Array of Int is fullMsg: :sliceBytes(src: hsStream, start: hsPos, count: 4 + mLen);
+						hsPos: hsPos + 4 + mLen;
+						if({ mType == 20 }, {
+							# Verify server Finished MAC
+							local Array of Int is sFinKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'finished', context: [], length: 32);
+							local Array of Int is expMac: Sha256:hmac(key: sFinKey, msg: Sha256:digest(data: transcript));
+							local Int is diff: 0;
+							local Int is fi: 0;
+							while({ fi < 32 }, {
+								diff: diff | (expMac:get(index: fi, default: 0) ^ fullMsg:get(index: 4 + fi, default: 0));
+								fi: fi + 1;
+							});
+							if({ mLen != 32 || diff != 0 }, {
+								:lastErr: 'Server Finished MAC verification failed';
+								:close();
+								return false;
+							});
+							:appendBytes(dst: transcript, src: fullMsg);
+							gotFinished: true;
+							return false;
+						});
+						:appendBytes(dst: transcript, src: fullMsg);
+						return true;
+					});
+					if({ :lastErr != '' }, {
+						return false;
 					});
 				});
 			});
@@ -519,48 +522,46 @@ Class is TlsClient{
 		if({ !:connected }, {
 			return '';
 		});
-		local Boolean is reading: true;
-		while({ reading }, {
+		while({ true }, local Function of Boolean(){
 			local Array of Int is hdr: [];
 			local Array of Int is payload: :readRecord(headerOut: hdr);
 			if({ hdr:length() < 5 }, {
-				reading: false;
-			}, {
-				local Int is rType: hdr:get(index: 0, default: 0);
-				if({ rType == 23 }, {
-					local Array of Int is nonce: :makeNonce(iv: :sAppIv, seq: :sAppSeq);
-					:sAppSeq: :sAppSeq + 1;
-					local Array of Boolean is okOut: [];
-					local Array of Int is inner: ChaCha20Poly1305:open(key: :sAppKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
-					if({ !okOut:get(index: 0, default: false) }, {
-						:lastErr: 'AEAD authentication failed on application data';
-						reading: false;
-					}, {
-						local Int is endIdx: inner:length() - 1;
-						while({ endIdx >= 0 && inner:get(index: endIdx, default: 0) == 0 }, {
-							endIdx: endIdx - 1;
-						});
-						if({ endIdx >= 0 }, {
-							local Int is innerType: inner:get(index: endIdx, default: 0);
-							if({ innerType == 23 }, {
-								local Int is i: 0;
-								while({ i < endIdx }, {
-									out:push((inner:get(index: i, default: 0) & 255) as Byte);
-									i: i + 1;
-								});
-							}, {
-								if({ innerType == 21 }, {
-									reading: false;
-								});
-							});
-						});
-					});
-				}, {
-					if({ rType == 21 }, {
-						reading: false;
-					});
+				return false;
+			});
+			local Int is rType: hdr:get(index: 0, default: 0);
+			if({ rType == 21 }, {
+				return false;
+			});
+			if({ rType != 23 }, {
+				return true;
+			});
+			local Array of Int is nonce: :makeNonce(iv: :sAppIv, seq: :sAppSeq);
+			:sAppSeq: :sAppSeq + 1;
+			local Array of Boolean is okOut: [];
+			local Array of Int is inner: ChaCha20Poly1305:open(key: :sAppKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
+			if({ !okOut:get(index: 0, default: false) }, {
+				:lastErr: 'AEAD authentication failed on application data';
+				return false;
+			});
+			local Int is endIdx: inner:length() - 1;
+			while({ endIdx >= 0 && inner:get(index: endIdx, default: 0) == 0 }, {
+				endIdx: endIdx - 1;
+			});
+			if({ endIdx < 0 }, {
+				return true;
+			});
+			local Int is innerType: inner:get(index: endIdx, default: 0);
+			if({ innerType == 21 }, {
+				return false;
+			});
+			if({ innerType == 23 }, {
+				local Int is i: 0;
+				while({ i < endIdx }, {
+					out:push((inner:get(index: i, default: 0) & 255) as Byte);
+					i: i + 1;
 				});
 			});
+			return true;
 		});
 		return out:toString();
 	}

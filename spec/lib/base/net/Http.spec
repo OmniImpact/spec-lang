@@ -6,6 +6,8 @@ Class is Http{
 	namespace: ['base', 'net'];
 
 	replace Array of Array of String is using: [
+		['base', 'net', Url],
+		['base', 'net', HttpRequest],
 		['base', 'net', HttpResponse],
 		['base', 'net', Socket],
 		['base', 'net', 'tls', TlsClient],
@@ -15,7 +17,8 @@ Class is Http{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Mem()],
 		['base', 'struct', Array],
-		['base', 'struct', List]
+		['base', 'struct', List],
+		['base', 'struct', Map]
 	];
 
 	local Function of Boolean is hasClosure(Function is cb){
@@ -28,133 +31,201 @@ Class is Http{
 		local [Byte] is out;
 		local Int is pos: 0;
 		local Int is n: raw:byteLength();
-		local Boolean is done: false;
-		while({ !done && pos < n }, {
+		while({ pos < n }, local Function of Boolean(){
 			local Int is crlf: raw:indexOfFrom(search: "\r\n", start: pos, default: -1);
 			if({ crlf < 0 }, {
-				done: true;
-			}, {
-				local String is sizeLine: raw:substring(start: pos, end: crlf):trim();
-				local Int is semi: sizeLine:indexOf(search: ';', default: -1);
-				if({ semi >= 0 }, {
-					sizeLine: sizeLine:substring(start: 0, end: semi):trim();
-				});
-				local Int is chunkSize: sizeLine:parseInt(base: 16, default: 0);
-				pos: crlf + 2;
-				if({ chunkSize <= 0 }, {
-					done: true;
-				}, {
-					local Int is i: 0;
-					while({ i < chunkSize && (pos + i) < n }, {
-						out:push((raw:byteAt(index: pos + i, default: 0) & 255) as Byte);
-						i: i + 1;
-					});
-					pos: pos + chunkSize + 2;
-				});
+				return false;
 			});
+			local String is sizeLine: raw:substring(start: pos, end: crlf):trim();
+			local Int is semi: sizeLine:indexOf(search: ';', default: -1);
+			if({ semi >= 0 }, {
+				sizeLine: sizeLine:substring(start: 0, end: semi):trim();
+			});
+			local Int is chunkSize: sizeLine:parseInt(base: 16, default: 0);
+			pos: crlf + 2;
+			if({ chunkSize <= 0 }, {
+				return false;
+			});
+			local Int is endPos: if({ pos + chunkSize > n }, { n }, { pos + chunkSize });
+			out:appendString(raw:substring(start: pos, end: endPos));
+			pos: pos + chunkSize + 2;
+			return true;
 		});
 		return out:toString();
 	}
 
-	local Function of HttpResponse is fetchSync(String is url, Function is onSuccess, Function is onError, String is userAgent){
-		local Boolean is useTls: false;
-		local String is rest: url;
-		if({ rest:startsWith(prefix: 'https://') }, {
-			useTls: true;
-			rest: rest:substring(start: 8, end: rest:length());
-		}, {
-			if({ rest:startsWith(prefix: 'http://') }, {
-				rest: rest:substring(start: 7, end: rest:length());
-			});
+	local Function of String is buildRawRequest(Url is u, HttpRequest is req){
+		local String is out: req:method . ' ' . u:requestTarget() . " HTTP/1.1\r\n"
+			. 'Host: ' . u:hostHeader() . "\r\n";
+
+		local Boolean is hasUa: false;
+		local Boolean is hasAccept: false;
+		local Boolean is hasAcceptEnc: false;
+		local Boolean is hasConn: false;
+		local Boolean is hasContentLen: false;
+
+		local Array of String is hKeys: req:headers:keys();
+		local Int is i: 0;
+		while({ i < hKeys:length() }, {
+			local String is k: hKeys:get(index: i, default: '');
+			local String is v: req:headers:getString(key: k, default: '');
+			local String is kl: k:toLower();
+			if({ kl == 'user-agent' }, { hasUa: true; });
+			if({ kl == 'accept' }, { hasAccept: true; });
+			if({ kl == 'accept-encoding' }, { hasAcceptEnc: true; });
+			if({ kl == 'connection' }, { hasConn: true; });
+			if({ kl == 'content-length' }, { hasContentLen: true; });
+			out: out . k . ': ' . v . "\r\n";
+			i: i + 1;
 		});
 
-		local Int is slashIdx: rest:indexOf(search: '/', default: -1);
-		local String is hostPort: if({ slashIdx >= 0 }, { rest:substring(start: 0, end: slashIdx) }, { rest });
-		local String is path: if({ slashIdx >= 0 }, { rest:substring(start: slashIdx, end: rest:length()) }, { '/' });
-
-		local String is host: hostPort;
-		local Int is port: if({ useTls }, { 443 }, { 80 });
-		local Int is colonIdx: hostPort:indexOf(search: ':', default: -1);
-		if({ colonIdx >= 0 }, {
-			host: hostPort:substring(start: 0, end: colonIdx);
-			port: hostPort:substring(start: colonIdx + 1, end: hostPort:length()):parseInt(default: port);
+		if({ !hasUa }, { out: out . "User-Agent: SpecNet/0.1\r\n"; });
+		if({ !hasAccept }, { out: out . "Accept: application/geo+json, application/json, */*\r\n"; });
+		if({ !hasAcceptEnc }, { out: out . "Accept-Encoding: identity\r\n"; });
+		if({ !hasConn }, { out: out . "Connection: close\r\n"; });
+		if({ !hasContentLen && req:body:byteLength() > 0 }, {
+			out: out . 'Content-Length: ' . (req:body:byteLength() as String) . "\r\n";
 		});
 
-		local String is req: 'GET ' . path . " HTTP/1.1\r\n"
-			. 'Host: ' . host . "\r\n"
-			. 'User-Agent: ' . userAgent . "\r\n"
-			. "Accept: application/geo+json, application/json, */*\r\n"
-			. "Accept-Encoding: identity\r\n"
-			. "Connection: close\r\n\r\n";
+		return out . "\r\n" . req:body;
+	}
 
-		local String is rawResp: '';
-		if({ useTls }, {
-			local TlsClient is tls: TlsClient:init();
-			if({ !tls:connect(host: host, port: port, timeoutMs: 15000) }, {
-				local String is err: 'TLS connect failed: ' . tls:lastError();
-				if({ :hasClosure(cb: onError) }, { onError(err); });
-				return HttpResponse:init(status: 0, body: '');
-			});
-			if({ !tls:sendString(text: req) }, {
-				local String is err: 'TLS send failed: ' . tls:lastError();
-				tls:close();
-				if({ :hasClosure(cb: onError) }, { onError(err); });
-				return HttpResponse:init(status: 0, body: '');
-			});
-			rawResp: tls:recvAllString();
-			tls:close();
-		}, {
-			local String is errMsg: '';
-			local Socket is sock: Socket:init():connect(host: host, port: port, timeoutMs: 15000, onError: local Function(String is e){
-				errMsg: e;
-			});
-			if({ !sock:isOpen() }, {
-				local String is err: if({ errMsg != '' }, { errMsg }, { 'TCP connect failed to ' . host });
-				if({ :hasClosure(cb: onError) }, { onError(err); });
-				return HttpResponse:init(status: 0, body: '');
-			});
-			sock:setTimeout(timeoutMs: 15000);
-			sock:sendString(text: req);
-			local [Byte] is acc;
-			local Boolean is reading: true;
-			while({ reading }, {
-				local List of Byte is chunk: sock:receive(maxBytes: 16384);
-				if({ chunk:length() == 0 }, {
-					reading: false;
-				}, {
-					local Int is ci: 0;
-					while({ ci < chunk:length() }, {
-						acc:push(chunk:get(index: ci, default: 0 as Byte));
-						ci: ci + 1;
-					});
-				});
-			});
-			sock:close();
-			rawResp: acc:toString();
-		});
-
+	local Function of HttpResponse is parseResponse(String is rawResp){
 		local Int is sep: rawResp:indexOf(search: "\r\n\r\n", default: -1);
 		if({ sep < 0 }, {
-			local String is err: 'Invalid HTTP response (missing header separator)';
-			if({ :hasClosure(cb: onError) }, { onError(err); });
-			return HttpResponse:init(status: 0, body: rawResp);
+			return HttpResponse:init(status: 0, statusText: 'Invalid HTTP response', body: rawResp);
 		});
 
 		local String is headerBlock: rawResp:substring(start: 0, end: sep);
 		local String is body: rawResp:substring(start: sep + 4, end: rawResp:length());
+		local Array of String is lines: headerBlock:split(delimiter: "\r\n");
 
-		local Int is firstNl: headerBlock:indexOf(search: "\r\n", default: headerBlock:length());
-		local String is statusLine: headerBlock:substring(start: 0, end: firstNl);
-		local Array of String is statusParts: statusLine:split(delimiter: ' ');
-		local Int is status: if({ statusParts:length() >= 2 }, { statusParts:get(index: 1, default: '0'):parseInt(default: 0) }, { 0 });
-
-		if({ headerBlock:toLower():contains(needle: 'transfer-encoding: chunked') }, {
-			body: :decodeChunked(raw: body);
+		local Int is status: 0;
+		local String is statusText: '';
+		if({ lines:length() > 0 }, {
+			local String is sLine: lines:get(index: 0, default: '');
+			local Int is sp1: sLine:indexOf(search: ' ', default: -1);
+			if({ sp1 >= 0 }, {
+				local String is afterProto: sLine:substring(start: sp1 + 1, end: sLine:length()):trim();
+				local Int is sp2: afterProto:indexOf(search: ' ', default: -1);
+				if({ sp2 >= 0 }, {
+					status: afterProto:substring(start: 0, end: sp2):parseInt(default: 0);
+					statusText: afterProto:substring(start: sp2 + 1, end: afterProto:length()):trim();
+				}, {
+					status: afterProto:parseInt(default: 0);
+				});
+			});
 		});
 
-		local HttpResponse is resp: HttpResponse:init(status: status, body: body);
-		if({ status < 200 || status >= 400 }, {
-			local String is msg: 'HTTP ' . (status as String) . ' for ' . url;
+		local HttpResponse is resp: HttpResponse:init(status: status, statusText: statusText, body: '');
+		local Int is li: 1;
+		while({ li < lines:length() }, {
+			local String is ln: lines:get(index: li, default: '');
+			local Int is col: ln:indexOf(search: ':', default: -1);
+			if({ col > 0 }, {
+				local String is hName: ln:substring(start: 0, end: col):trim():toLower();
+				local String is hVal: ln:substring(start: col + 1, end: ln:length()):trim();
+				resp:headers:set(key: hName, value: hVal);
+			});
+			li: li + 1;
+		});
+
+		if({ resp:header(name: 'transfer-encoding'):toLower():contains(needle: 'chunked') }, {
+			body: :decodeChunked(raw: body);
+		}, {
+			local String is clStr: resp:header(name: 'content-length');
+			if({ clStr != '' }, {
+				local Int is cl: clStr:parseInt(default: -1);
+				if({ cl >= 0 && cl < body:byteLength() }, {
+					body: body:substring(start: 0, end: cl);
+				});
+			});
+		});
+
+		resp:body: body;
+		return resp;
+	}
+
+	local Function of String is exchangeOnce(Url is u, String is rawReq, Int is timeoutMs, Array of String is errOut){
+		if({ u:isHttps() }, {
+			local TlsClient is tls: TlsClient:init();
+			if({ !tls:connect(host: u:host, port: u:port, timeoutMs: timeoutMs) }, {
+				errOut:add(item: 'TLS connect failed: ' . tls:lastError());
+				return '';
+			});
+			if({ !tls:sendString(text: rawReq) }, {
+				errOut:add(item: 'TLS send failed: ' . tls:lastError());
+				tls:close();
+				return '';
+			});
+			local String is raw: tls:recvAllString();
+			tls:close();
+			return raw;
+		});
+
+		local String is errMsg: '';
+		local Socket is sock: Socket:init():connect(host: u:host, port: u:port, timeoutMs: timeoutMs, onError: local Function(String is e){
+			errMsg: e;
+		});
+		if({ !sock:isOpen() }, {
+			local String is eStr: if({ errMsg != '' }, { errMsg }, { 'TCP connect failed to ' . u:host });
+			errOut:add(item: eStr);
+			return '';
+		});
+		sock:setTimeout(timeoutMs: timeoutMs);
+		sock:sendString(text: rawReq);
+		local [Byte] is acc;
+		while({ true }, local Function of Boolean(){
+			local List of Byte is chunk: sock:receive(maxBytes: 16384);
+			if({ chunk:length() == 0 }, {
+				return false;
+			});
+			acc:appendBytes(chunk);
+			return true;
+		});
+		sock:close();
+		return acc:toString();
+	}
+
+	local Function of HttpResponse is sendSync(HttpRequest is req, Function is onSuccess, Function is onError){
+		local Url is curUrl: Url:parse(raw: req:url);
+		local HttpRequest is curReq: req;
+		local Int is hops: 0;
+		local HttpResponse is resp: HttpResponse:init(status: 0, body: '');
+
+		while({ hops <= req:maxRedirects }, local Function of Boolean(){
+			local String is rawReq: :buildRawRequest(u: curUrl, req: curReq);
+			local Array of String is errOut: [];
+			local String is rawResp: :exchangeOnce(u: curUrl, rawReq: rawReq, timeoutMs: curReq:timeoutMs, errOut: errOut);
+			if({ errOut:length() > 0 }, {
+				if({ :hasClosure(cb: onError) }, { onError(errOut:get(index: 0, default: 'HTTP error')); });
+				resp: HttpResponse:init(status: 0, body: '');
+				return false;
+			});
+			resp: :parseResponse(rawResp: rawResp);
+			if({ resp:status == 0 }, {
+				if({ :hasClosure(cb: onError) }, { onError('Invalid HTTP response from ' . curUrl:toString()); });
+				return false;
+			});
+			if({ resp:isRedirect() && hops < req:maxRedirects }, {
+				local String is loc: resp:header(name: 'location');
+				if({ loc != '' }, {
+					curUrl: curUrl:resolve(location: loc);
+					if({ resp:status == 303 }, {
+						curReq: HttpRequest:init(method: 'GET', url: curUrl:toString(), timeoutMs: curReq:timeoutMs, maxRedirects: curReq:maxRedirects);
+					});
+					hops: hops + 1;
+					return true;
+				});
+			});
+			return false;
+		});
+
+		if({ resp:status == 0 }, {
+			return resp;
+		});
+		if({ resp:status < 200 || resp:status >= 400 }, {
+			local String is msg: 'HTTP ' . (resp:status as String) . ' for ' . curUrl:toString();
 			if({ :hasClosure(cb: onError) }, { onError(msg); });
 			return resp;
 		});
@@ -162,11 +233,28 @@ Class is Http{
 		return resp;
 	}
 
+	## Sends an asynchronous [HttpRequest] inside [scope], invoking
+	## [onSuccess](HttpResponse) or [onError](String) on the worker thread.
+	Function of Task of HttpResponse is send(ThreadScope is scope, HttpRequest is request, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(String is _e){}){
+		return scope:spawn(task: local Function of HttpResponse(){
+			return :sendSync(req: request, onSuccess: onSuccess, onError: onError);
+		});
+	}
+
 	## Performs an asynchronous HTTP/HTTPS GET inside [scope], invoking
 	## [onSuccess](HttpResponse) or [onError](String) on the worker thread.
 	Function of Task of HttpResponse is get(ThreadScope is scope, String is url, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(String is _e){}, String is userAgent: 'SpecNet/0.1'){
-		return scope:spawn(task: local Function of HttpResponse(){
-			return :fetchSync(url: url, onSuccess: onSuccess, onError: onError, userAgent: userAgent);
-		});
+		local HttpRequest is req: HttpRequest:init(method: 'GET', url: url);
+		req:setHeader(name: 'User-Agent', value: userAgent);
+		return :send(scope: scope, request: req, onSuccess: onSuccess, onError: onError);
+	}
+
+	## Performs an asynchronous HTTP/HTTPS POST inside [scope], invoking
+	## [onSuccess](HttpResponse) or [onError](String) on the worker thread.
+	Function of Task of HttpResponse is post(ThreadScope is scope, String is url, String is body, String is contentType: 'application/json', Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(String is _e){}, String is userAgent: 'SpecNet/0.1'){
+		local HttpRequest is req: HttpRequest:init(method: 'POST', url: url);
+		req:setHeader(name: 'User-Agent', value: userAgent);
+		req:withBody(body: body, contentType: contentType);
+		return :send(scope: scope, request: req, onSuccess: onSuccess, onError: onError);
 	}
 }
