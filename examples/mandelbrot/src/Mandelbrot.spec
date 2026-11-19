@@ -5,6 +5,14 @@
 Class is Mandelbrot{
 
 	replace Array of Array of String is using: [
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'cleo', CleoWidth],
+		['base', 'cleo', as CleoWidth()],
+		['base', 'cleo', BorderStyle],
+		['base', 'cleo', TitlePlacement],
 		['base', 'struct', Map],
 		['base', 'math', as Math()],
 		['base', 'sys', as Ansi()],
@@ -17,21 +25,33 @@ Class is Mandelbrot{
 
 	local FractalMath is fractal: FractalMath:init();
 
-	## Prints render statistics (resolution, points sampled, elapsed time, memory, and thread count).
+	## Prints render statistics (resolution, points sampled, elapsed time, memory, and thread count) via Cleo.
 	local Function is printStats(Int is width, Int is height, Int is maxIter, Int is elapsedMs){
 		local Int is peakKb: peakMemoryKb();
 		local Int is peakMb: peakKb / 1024;
 		local Int is elapsedSec: elapsedMs / 1000;
-		local String is bar: :repeatBar(count: width);
 
-		line('');
-		line(bold() . color256(code: 51, text: '╔═ Statistics ' . :repeatBar(count: width - 14) . '╗'));
-		line(color256(code: 51, text: '║ Resolution: ' . width . ' x ' . height . ', maxIter ' . maxIter));
-		line(color256(code: 51, text: '║ Points sampled: ' . :fractal:pointsRendered));
-		line(color256(code: 51, text: '║ Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)'));
-		line(color256(code: 51, text: '║ Peak memory: ' . peakKb . ' KB (' . peakMb . ' MB)'));
-		line(color256(code: 51, text: '║ Threads used: ' . threadCount()));
-		line(bold() . color256(code: 51, text: '╚' . bar . '╝'));
+		local Cleo is ui: Cleo:init(
+			title: ' mandelbrot ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is sSec: ui:addSection(
+			title: ' Statistics ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		sSec:addLine(text: 'Resolution: ' . width . ' x ' . height . ' · maxIter ' . maxIter, color: CleoColor:ansi(code: 252), rightText: 'Points: ' . :fractal:pointsRendered);
+		sSec:addLine(text: 'Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)', color: CleoColor:ansi(code: 250), rightText: 'Peak memory: ' . peakMb . ' MB (' . peakKb . ' KB)');
+		sSec:addLine(text: 'Threads available: ' . threadCount(), color: CleoColor:ansi(code: 245));
+		ui:flushFinal();
 	}
 
 	## Returns a horizontal box-drawing bar of [count] `═` characters.

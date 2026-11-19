@@ -1,10 +1,20 @@
-#! Weather forecast proof-of-concept using base:net:Http and base:data:Json.
+#! Weather forecast example using base:net:Http, base:data:Json, and base:cleo:Cleo.
 #! Fetches https://api.weather.gov/gridpoints/RAH/74,58/forecast on a worker
-#! thread with callbacks and displays a forecast summary.
+#! thread with callbacks and renders the forecast in a SpecUnit-style Cleo UI.
 
 Class is Weather{
 	replace Array of Array of String is using: [
 		['base', 'core', SpecError],
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'cleo', CleoWidth],
+		['base', 'cleo', as CleoWidth()],
+		['base', 'cleo', BorderStyle],
+		['base', 'cleo', ThrobberShape],
+		['base', 'cleo', ThrobberEffect],
+		['base', 'cleo', TitlePlacement],
 		['base', 'net', HttpResponse],
 		['base', 'net', as Http()],
 		['base', 'data', as Json()],
@@ -23,26 +33,61 @@ Class is Weather{
 
 	replace Function is init(){
 		local String is url: 'https://api.weather.gov/gridpoints/RAH/74,58/forecast';
-		Output:line('Fetching forecast from ' . url . ' ...');
+
+		local Cleo is ui: Cleo:init(
+			title: ' weather ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is statusSec: ui:addSection(
+			title: ' Request ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		local Int is reqSlot: statusSec:addShapeThrobber(
+			shape: ThrobberShape:CIRCLE_DOT,
+			effect: ThrobberEffect:BLINK,
+			text: url,
+			color: CleoColor:ansi(code: 252),
+			rightText: 'fetching'
+		);
+		local CleoSection is fcSec: ui:addSection(
+			title: ' Raleigh / RAH (74,58) Forecast ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
 
 		ThreadScope:open(body: local Function(ThreadScope is scope){
+			ui:start(scope: scope);
 			Http:get(
 				scope: scope,
 				url: url,
 				onSuccess: local Function(HttpResponse is resp){
-					:displayForecast(rawJson: resp:body);
+					statusSec:resolveSlot(index: reqSlot, badge: '●', text: url, color: CleoColor:ansi(code: 252), rightText: 'HTTP ' . (resp:statusCode as String));
+					:populateForecast(rawJson: resp:body, fcSec: fcSec);
 				},
 				onError: local Function(String is err){
-					Output:line('Error fetching forecast: ' . err);
+					statusSec:resolveSlot(index: reqSlot, badge: '✖', text: url, color: CleoColor:ansi(code: 203), rightText: 'failed');
+					fcSec:addLine(text: 'Error fetching forecast: ' . err, color: CleoColor:ansi(code: 203));
 				}
 			);
+			ui:finish();
 		});
 	}
 
-	Function is displayForecast(String is rawJson){
+	Function is populateForecast(String is rawJson, CleoSection is fcSec){
 		local Any is rootAny: Json:parse(text: rawJson);
 		if({ Json:hasError() }, {
-			Output:line('JSON parse error: ' . Json:errorMessage());
+			fcSec:addLine(text: 'JSON parse error: ' . Json:errorMessage(), color: CleoColor:ansi(code: 203));
 			return;
 		});
 		local Map is root: rootAny as Map;
@@ -50,10 +95,7 @@ Class is Weather{
 		local String is updated: Json:getString(obj: props, key: 'updateTime', default: Json:getString(obj: props, key: 'updated', default: 'unknown'));
 		local Array is periods: Json:getArray(obj: props, key: 'periods');
 
-		Output:line('');
-		Output:line('=== Raleigh / RAH (74,58) Forecast ===');
-		Output:line('Updated: ' . updated);
-		Output:line('');
+		fcSec:addLine(text: 'Updated: ' . updated, color: CleoColor:ansi(code: 245));
 
 		local Int is limit: if({ periods:length() < 6 }, { periods:length() }, { 6 });
 		local Int is i: 0;
@@ -65,7 +107,11 @@ Class is Weather{
 			local String is wind: Json:getString(obj: p, key: 'windSpeed', default: '');
 			local String is dir: Json:getString(obj: p, key: 'windDirection', default: '');
 			local String is shortFc: Json:getString(obj: p, key: 'shortForecast', default: '');
-			Output:line('  ' . name . ': ' . (temp as String) . '°' . unit . ' | ' . shortFc . ' | Wind ' . wind . ' ' . dir);
+			fcSec:addLine(
+				text: name . ': ' . (temp as String) . '°' . unit . ' · ' . shortFc,
+				color: CleoColor:ansi(code: 252),
+				rightText: 'Wind ' . wind . ' ' . dir
+			);
 			i: i + 1;
 		});
 	}

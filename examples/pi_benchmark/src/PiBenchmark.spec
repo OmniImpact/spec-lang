@@ -5,6 +5,14 @@
 Class is PiBenchmark{
 
 	replace Array of Array of String is using: [
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'cleo', CleoWidth],
+		['base', 'cleo', as CleoWidth()],
+		['base', 'cleo', BorderStyle],
+		['base', 'cleo', TitlePlacement],
 		['base', 'sys', as Ansi()],
 		['base', 'math', as Math()],
 		['base', 'sys', as Output()],
@@ -141,18 +149,17 @@ Class is PiBenchmark{
 	## Returns the thread index currently occupying `(col, row)`, or `-1` if none.
 	local Function of Int is markerAt(Int is col, Int is row, Int is threads){
 		local Int is found: -1;
-		while(
-			[Int is i: 0],
-			{ i < threads && found < 0 },
-			{
-				local Int is gx: (atomicGet(slot: i * 2 + 2) * :gridW) / 1000;
-				local Int is gy: (atomicGet(slot: i * 2 + 3) * :gridH) / 1000;
-				if({ gx == col && gy == row }, {
-					found: i;
-				});
-				i++;
-			}
-		);
+		local Int is i: 0;
+		while({ i < threads }, local Function of Boolean(){
+			local Int is gx: (atomicGet(slot: i * 2 + 2) * :gridW) / 1000;
+			local Int is gy: (atomicGet(slot: i * 2 + 3) * :gridH) / 1000;
+			if({ gx == col && gy == row }, {
+				found: i;
+				return false;
+			});
+			i++;
+			return true;
+		});
 		return found;
 	}
 
@@ -167,7 +174,7 @@ Class is PiBenchmark{
 		line(color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . :stats:piText(value: pi) . '  threads: ' . threads));
 	}
 
-	## Prints the final Pi estimate, error, elapsed time, and throughput summary box.
+	## Prints the final Pi estimate, error, elapsed time, and throughput summary via Cleo.
 	local Function is printStats(Int is totalHits, Int is points, Int is elapsedMs, Int is threads){
 		local Float is pi: :stats:estimatePi(hits: totalHits, samples: points);
 		local Float is err: abs(value: pi - 3.14159265358979);
@@ -176,12 +183,27 @@ Class is PiBenchmark{
 			perSec: (points * 1000) / elapsedMs;
 		});
 
-		line('');
-		line(bold() . color256(code: 51, text: '╔═ Results ' . :stats:bar(width: 64) . '╗'));
-		line(color256(code: 51, text: '║ Pi ≈ ' . :stats:piText(value: pi) . '  (error ' . :stats:piText(value: err) . ')'));
-		line(color256(code: 51, text: '║ Points: ' . points . '  Hits: ' . totalHits . '  Threads: ' . threads));
-		line(color256(code: 51, text: '║ Time: ' . elapsedMs . ' ms  Throughput: ' . perSec . ' points/sec'));
-		line(bold() . color256(code: 51, text: '╚' . :stats:bar(width: 74) . '╝'));
+		local Cleo is ui: Cleo:init(
+			title: ' pi_benchmark ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is rSec: ui:addSection(
+			title: ' Results ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		rSec:addLine(text: 'Pi ≈ ' . :stats:piText(value: pi), color: CleoColor:ansi(code: 255), rightText: 'error ' . :stats:piText(value: err));
+		rSec:addLine(text: 'Points: ' . points . ' · Hits: ' . totalHits, color: CleoColor:ansi(code: 250), rightText: 'Threads: ' . threads);
+		rSec:addLine(text: 'Time: ' . elapsedMs . ' ms', color: CleoColor:ansi(code: 250), rightText: 'Throughput: ' . perSec . ' points/sec');
+		ui:flushFinal();
 	}
 
 }

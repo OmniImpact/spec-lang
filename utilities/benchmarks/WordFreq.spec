@@ -26,16 +26,16 @@ Class is WordFreq{
 		});
 		if({ count < 1 }, { count: 1; });
 
-		local Array of String is services: [
+		local Array of Str is services: [
 			'auth', 'api', 'billing', 'cache',
 			'db', 'edge', 'feed', 'gateway',
 			'ingest', 'jobs', 'kv', 'logs',
 			'metrics', 'notify', 'proxy', 'search'
 		];
-		local Array of String is levels: ['INFO', 'WARN', 'ERR'];
+		local Array of Str is levels: ['INFO', 'WARN', 'ERR'];
 
-		# Deterministic xorshift64 seeded identically across languages
-		local Int is st: 11400714819323198485; # 0x9E3779B97F4A7C15
+		# Deterministic xorshift64 (unsigned 64-bit) seeded identically across languages
+		local UInt64 is st: 11400714819323198485 as UInt64; # 0x9E3779B97F4A7C15
 		st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
 		st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
 		st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
@@ -46,11 +46,11 @@ Class is WordFreq{
 		local Int is i: 0;
 		while({ i < count }, {
 			st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
-			local Int is r1: st & 15;
+			local Int is r1: (st & 15) as Int;
 			st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
-			local Int is r2: (st & 2147483647) % 3;
+			local Int is r2: ((st & 2147483647) as Int) % 3;
 			st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
-			local Int is r3: (st & 2147483647) % 500;
+			local Int is r3: ((st & 2147483647) as Int) % 500;
 
 			local String is logLine: services:get(index: r1, default: 'api') . ':' . levels:get(index: r2, default: 'INFO') . ':' . r3;
 			local Array of String is parts: logLine:split(delimiter: ':');

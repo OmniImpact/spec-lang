@@ -4,7 +4,7 @@
 Class is Greeter{
 
 	## Returns "[greeting] [name]".
-	Function of String is greet(String is greeting, String is name){
+	Function of String is greet(Str is greeting, Str is name){
 		return greeting . ' ' . name;
 	}
 

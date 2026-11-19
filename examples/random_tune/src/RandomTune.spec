@@ -1,12 +1,20 @@
 #! Random Pentatonic Sine-Wave Tune
 #! Exercises high-resolution timing (base:sys:Time, base:sys:DateTime),
-#! trigonometry & RNG (base:math:Math), and raw PCM audio (base:audio:Audio).
+#! trigonometry & RNG (base:math:Math), raw PCM audio (base:audio:Audio),
+#! and SpecUnit-style Cleo terminal output.
 
 ## Generates and plays a 12-note random pentatonic melody with high-resolution interval timing.
 Class is RandomTune{
 
 	replace Array of Array of String is using: [
-		['base', 'sys', as Output()],
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'cleo', CleoWidth],
+		['base', 'cleo', as CleoWidth()],
+		['base', 'cleo', BorderStyle],
+		['base', 'cleo', TitlePlacement],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Time()],
 		['base', 'sys', as DateTime()],
@@ -20,10 +28,40 @@ Class is RandomTune{
 	## Entry point; opens the audio device (falling back to silent timing if unavailable) and plays 12 notes.
 	Function is init(){
 		local DateTime is startedAt: DateTime:now();
-		Output:line(text: "RandomTune started at " . startedAt:formatIso());
+		local Cleo is ui: Cleo:init(
+			title: ' random_tune ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is infoSec: ui:addSection(
+			title: ' Session ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		local CleoSection is notesSec: ui:addSection(
+			title: ' Pentatonic Sequence ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		local CleoSection is summarySec: ui:addSection(
+			title: ' Timing Summary ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
 
 		local Array of Int is scaleMidi: [60, 62, 64, 67, 69, 72, 74, 76];
-		local Array of String is scaleNames: ["C4", "D4", "E4", "G4", "A4", "C5", "D5", "E5"];
+		local Array of Str is scaleNames: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5'];
 		local Int is sampleRate: 44100;
 		local Int is noteCount: 12;
 		local Int is stepMs: 180;
@@ -39,9 +77,8 @@ Class is RandomTune{
 				audioErr: error;
 			}
 		);
-		if({ !audio:isOpen() }, {
-			Output:line(text: "Audio device unavailable (" . audioErr . "); running silent timing & synthesis pass.");
-		});
+		local String is audioStatus: if({ audio:isOpen() }, { '44100 Hz stereo PCM' }, { 'silent mode (' . audioErr . ')' });
+		infoSec:addLine(text: 'Started: ' . startedAt:formatIso(), color: CleoColor:ansi(code: 252), rightText: audioStatus);
 
 		local Int is idx: 0;
 		local Int is maxJitterUs: 0;
@@ -60,7 +97,7 @@ Class is RandomTune{
 				pick: scaleMidi:length() - 1;
 			});
 			local Int is midi: scaleMidi:get(index: pick, default: 60);
-			local String is noteName: scaleNames:get(index: pick, default: "C4");
+			local Str is noteName: scaleNames:get(index: pick, default: 'C4');
 			local Float is freq: synth:midiToFreq(midi: midi);
 
 			local List of Byte is pcm: synth:synthesizeSine(freqHz: freq, durationMs: noteMs, sampleRate: sampleRate);
@@ -68,7 +105,11 @@ Class is RandomTune{
 				audio:write(samples: pcm);
 			});
 
-			Output:line(text: "  Note " . ((idx + 1) as String) . ": " . noteName . " (" . (Math:toInt(value: freq) as String) . " Hz)");
+			notesSec:addLine(
+				text: 'Note ' . ((idx + 1) as String) . ': ' . noteName,
+				color: CleoColor:ansi(code: 252),
+				rightText: (Math:toInt(value: freq) as String) . ' Hz'
+			);
 			idx: idx + 1;
 		});
 
@@ -78,7 +119,12 @@ Class is RandomTune{
 		});
 
 		local Int is totalMs: (Time:monotonicNs() - startNs) / 1000000;
-		Output:line(text: "Finished in " . (totalMs as String) . " ms (max timer jitter: " . (maxJitterUs as String) . " us)");
+		summarySec:addLine(
+			text: 'Finished in ' . (totalMs as String) . ' ms',
+			color: CleoColor:ansi(code: 255),
+			rightText: 'Max timer jitter: ' . (maxJitterUs as String) . ' us'
+		);
+		ui:flushFinal();
 	}
 
 }

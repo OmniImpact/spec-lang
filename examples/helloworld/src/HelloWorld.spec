@@ -1,7 +1,7 @@
 ## Minimal greeting application demonstrating CLI arguments and utility delegation.
 Class is HelloWorld{
 
-	local String is greeting: 'Hello';
+	local Str is greeting: 'Hello';
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Map],

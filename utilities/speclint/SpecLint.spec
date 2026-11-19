@@ -30,6 +30,14 @@ Class is SpecLint{
 		['base', 'compiler', 'loader', Loader],
 		['speclint', Linter],
 		['speclint', LintIssue],
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'cleo', CleoWidth],
+		['base', 'cleo', as CleoWidth()],
+		['base', 'cleo', BorderStyle],
+		['base', 'cleo', TitlePlacement],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Stderr()],
 		['base', 'sys', as Process()],
@@ -101,15 +109,32 @@ Class is SpecLint{
 		});
 		local String is tail: '';
 		if({ tally:broken > 0 }, {
-			tail: ', ' . (tally:broken as String) . ' syntax-broken';
+			tail: ' · ' . (tally:broken as String) . ' syntax-broken';
 		});
-		local String is text: '== ' . (tally:files as String) . ' file(s) linted, ' . (tally:warnings as String) . ' warning(s), ' . (tally:notices as String) . ' notice(s)' . tail . ' ==';
-		if({ (tally:warnings + tally:broken) > 0 }, {
-			Output:line(bold() . color256(code: 203, text: text));
-		}, {
-			Output:line(bold() . color256(code: 114, text: text));
-		});
-		if({ (tally:warnings + tally:broken) > 0 }, {
+		local Boolean is clean: (tally:warnings + tally:broken) == 0;
+		local Cleo is ui: Cleo:init(
+			title: ' speclint ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is rSec: ui:addSection(
+			title: ' Lint Summary ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		local String is summaryText: (tally:files as String) . ' file(s) linted · ' . (tally:warnings as String) . ' warning(s) · ' . (tally:notices as String) . ' notice(s)' . tail;
+		local String is badge: if({ clean }, { '✔ CLEAN' }, { '✖ ISSUES FOUND' });
+		local CleoColor is badgeColor: if({ clean }, { CleoColor:ansi(code: 252) }, { CleoColor:ansi(code: 203) });
+		rSec:addLine(text: summaryText, color: badgeColor, rightText: badge);
+		ui:flushFinal();
+		if({ !clean }, {
 			Process:exit(status: 1);
 		});
 		Process:exit(status: 0);
