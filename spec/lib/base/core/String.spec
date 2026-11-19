@@ -714,4 +714,41 @@ Class of Str is String{
 		out: out . :sliceRunes(start: pos, end: hlen);
 		return out;
 	}
+
+	local Function of String is sPadBuild(Int is needed, String is fill){
+		local Int is flen: fill:runeCount();
+		if({ needed <= 0 || flen == 0 }, {
+			return '';
+		});
+		local String is out: '';
+		local Int is remaining: needed;
+		while({ remaining >= flen }, {
+			out: out . fill;
+			remaining: remaining - flen;
+		});
+		if({ remaining > 0 }, {
+			out: out . fill:sliceRunes(start: 0, end: remaining);
+		});
+		return out;
+	}
+
+	## Pads the start of this Unicode string with [fill] until its rune count reaches [width].
+	Function of String is sPadStart(Int is width, Str is fill: ' '){
+		local String is fillStr: fill:copy();
+		local Int is needed: width - :runeCount();
+		if({ needed <= 0 || fillStr:runeCount() == 0 }, {
+			return :copy();
+		});
+		return :sPadBuild(needed: needed, fill: fillStr) . :;
+	}
+
+	## Pads the end of this Unicode string with [fill] until its rune count reaches [width].
+	Function of String is sPadEnd(Int is width, Str is fill: ' '){
+		local String is fillStr: fill:copy();
+		local Int is needed: width - :runeCount();
+		if({ needed <= 0 || fillStr:runeCount() == 0 }, {
+			return :copy();
+		});
+		return : . :sPadBuild(needed: needed, fill: fillStr);
+	}
 }

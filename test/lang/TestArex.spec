@@ -439,5 +439,204 @@ Class of SpecUnitTest is TestArex{
 		Assert:areEqualString('Tea Tea', uni:sReplaceAll(search: 'CAFÉ', replacement: 'Tea', caseSensitive: false));
 		Assert:areEqualString('C|a|f|é', ('Café':sSplit(delimiter: '')):join(separator: '|'));
 		Assert:areEqualString('<Café> <café>', uni:sReplaceAllWith(search: 'café', replacer: local Function of Str(String is m, Int is s, Int is e){ return '<' . m . '>'; }, caseSensitive: false));
+
+		Assert:areEqualString('  hi', ('hi' as Str):padStart(width: 4));
+		Assert:areEqualString('hi..', ('hi' as Str):padEnd(width: 4, fill: '.'));
+		Assert:areEqualString('abaX', ('X' as Str):padStart(width: 4, fill: 'ab'));
+		Assert:areEqualString('★★Café', 'Café':sPadStart(width: 6, fill: '★'));
+		Assert:areEqualString('Café——', 'Café':sPadEnd(width: 6, fill: '—'));
+		Assert:areEqualString('Café', 'Café':sPadStart(width: 2, fill: '.'));
+	}
+
+	## Error callback fires on invalid syntax and gated features without calling result.
+	Function is testErrorCallbacks(){
+		local Arex is rx: Arex();
+		local Channel of Str is errCh: Channel();
+		Process:atomicPut(slot: 620, value: 0);
+		rx:rCompile(
+			pattern: '(unclosed',
+			result: local Function(ArexPattern is _p){
+				Process:atomicPut(slot: 620, value: 1);
+			},
+			onError: local Function(Str is err){
+				errCh:send(item: err);
+				return;
+			}
+		);
+		Assert:isTrue(errCh:receive(default: ''):length() > 0);
+		Assert:areEqualInt(0, Process:atomicGet(slot: 620));
+
+		local Channel of Str is gateCh: Channel();
+		rx:setOnError(handler: local Function(Str is err){
+			gateCh:send(item: err);
+			return;
+		});
+		rx:rContains(
+			input: '10px',
+			pattern: '\\d+(?=px)',
+			result: local Function(Boolean is _m){
+				Process:atomicPut(slot: 620, value: 2);
+			}
+		);
+		Assert:isTrue(gateCh:receive(default: ''):contains(needle: 'Lookaround is disabled'));
+		Assert:areEqualInt(0, Process:atomicGet(slot: 620));
+
+		local Channel of Str is brGateCh: Channel();
+		local Arex is rx2: Arex();
+		rx2:setOnError(handler: local Function(Str is err){
+			brGateCh:send(item: err);
+			return;
+		});
+		rx2:rContains(
+			input: 'aa',
+			pattern: '(\\w)\\1',
+			result: local Function(Boolean is _m){}
+		);
+		Assert:isTrue(brGateCh:receive(default: ''):contains(needle: 'Backreferences are disabled'));
+	}
+
+	## Capture groups, non-capturing groups, named groups, and $1/$2 replacement expansion.
+	Function is testCaptureGroups(){
+		local Channel of Str is capCh: Channel();
+		ar:rCaptures(
+			input: 'Grace Brewster Hopper',
+			pattern: '(\\S+)\\s+(?:\\S+)\\s+(?<last>\\S+)',
+			result: local Function(Boolean is found, Array of Str is groups){
+				if({ found }, {
+					capCh:send(item: (groups:length() as String) . ':' . groups:get(index: 1) . ':' . groups:get(index: 2));
+				}, {
+					capCh:send(item: 'MISS');
+				});
+				return;
+			}
+		);
+		Assert:areEqualString('3:Grace:Hopper', capCh:receive(default: ''));
+
+		local Channel of Str is repCh: Channel();
+		ar:rReplaceAll(
+			input: 'Grace Hopper',
+			pattern: '(\\S+)\\s+(\\S+)',
+			replacement: '$2, $1',
+			result: local Function(Str is out){
+				repCh:send(item: out);
+				return;
+			}
+		);
+		Assert:areEqualString('Hopper, Grace', repCh:receive(default: ''));
+	}
+
+	## Flags (i, m, s, u), lazy quantifiers, and word boundaries (\b, \B).
+	Function is testFlagsLazyBoundariesUnicode(){
+		local Arex is rx: Arex();
+		rx:setFlags(flags: 'ims');
+		Process:atomicPut(slot: 621, value: -1);
+		rx:rContains(
+			input: "line1\nHELLO",
+			pattern: '^hello$',
+			result: local Function(Boolean is m){
+				local Int is v: 0;
+				if({ m }, { v: 1; });
+				Process:atomicPut(slot: 621, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 621));
+
+		Process:atomicPut(slot: 622, value: -1);
+		rx:rEquals(
+			input: "a\nb",
+			pattern: 'a.b',
+			result: local Function(Boolean is m){
+				local Int is v: 0;
+				if({ m }, { v: 1; });
+				Process:atomicPut(slot: 622, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 622));
+
+		# Unicode mode ('u'): '.' matches a multi-byte rune ('é') as 1 unit.
+		local Channel of ArexPattern is uCh: Channel();
+		ar:rCompile(
+			pattern: '^Caf.$',
+			flags: 'u',
+			result: local Function(ArexPattern is p){
+				uCh:send(item: p);
+				return;
+			}
+		);
+		local ArexPattern is uPat: uCh:receive(default: ArexPattern());
+		Process:atomicPut(slot: 623, value: -1);
+		ar:rEquals(
+			input: 'Café',
+			pattern: uPat,
+			result: local Function(Boolean is m){
+				local Int is v: 0;
+				if({ m }, { v: 1; });
+				Process:atomicPut(slot: 623, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 623));
+
+		# Lazy quantifiers: <.*?> matches '<a1>', not '<a1><b2>'.
+		local Channel of Str is lazyCh: Channel();
+		ar:rFind(
+			input: '<a1><b2>',
+			pattern: '<.*?>',
+			result: local Function(Boolean is found, Str is match, Int is s, Int is e){
+				if({ found }, { lazyCh:send(item: match); }, { lazyCh:send(item: 'MISS'); });
+				return;
+			}
+		);
+		Assert:areEqualString('<a1>', lazyCh:receive(default: ''));
+
+		# Word boundaries \b and \B.
+		Process:atomicPut(slot: 624, value: -1);
+		ar:rCount(
+			input: 'cat scatter',
+			pattern: '\\bcat\\b',
+			result: local Function(Int is c){
+				Process:atomicPut(slot: 624, value: c);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 624));
+	}
+
+	## Opt-in lookaround and backreference execution via enableLookaround / enableBackreference.
+	Function is testLookaroundAndBackreferences(){
+		local Arex is rx: Arex();
+		rx:enableLookaround(enabled: true);
+		rx:enableBackreference(enabled: true);
+
+		local Channel of Str is laCh: Channel();
+		rx:rFind(
+			input: '5em 12px 9pt',
+			pattern: '\\d+(?=px)',
+			result: local Function(Boolean is found, Str is match, Int is s, Int is e){
+				if({ found }, { laCh:send(item: match); }, { laCh:send(item: 'MISS'); });
+				return;
+			}
+		);
+		Assert:areEqualString('12', laCh:receive(default: ''));
+
+		local Channel of Str is lbCh: Channel();
+		rx:rFind(
+			input: 'id=7 $42',
+			pattern: '(?<=\\$)\\d+',
+			result: local Function(Boolean is found, Str is match, Int is s, Int is e){
+				if({ found }, { lbCh:send(item: match); }, { lbCh:send(item: 'MISS'); });
+				return;
+			}
+		);
+		Assert:areEqualString('42', lbCh:receive(default: ''));
+
+		local Channel of Str is brCh: Channel();
+		rx:rFind(
+			input: 'one two two three',
+			pattern: '(\\w+)\\s+\\1',
+			result: local Function(Boolean is found, Str is match, Int is s, Int is e){
+				if({ found }, { brCh:send(item: match); }, { brCh:send(item: 'MISS'); });
+				return;
+			}
+		);
+		Assert:areEqualString('two two', brCh:receive(default: ''));
 	}
 }

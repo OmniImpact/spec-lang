@@ -647,6 +647,41 @@ Class of Buf is Str{
 		return :substring(start: s, end: e);
 	}
 
+	local Function of String is padBuild(Int is needed, Str is fill){
+		local Int is flen: fill:length();
+		if({ needed <= 0 || flen == 0 }, {
+			return '';
+		});
+		local String is out: '';
+		local Int is remaining: needed;
+		while({ remaining >= flen }, {
+			out: out . fill;
+			remaining: remaining - flen;
+		});
+		if({ remaining > 0 }, {
+			out: out . fill:substring(start: 0, end: remaining);
+		});
+		return out;
+	}
+
+	## Pads the start of this string with [fill] until its byte length reaches [width].
+	Function of String is padStart(Int is width, Str is fill: ' '){
+		local Int is needed: width - :length();
+		if({ needed <= 0 || fill:length() == 0 }, {
+			return :copy();
+		});
+		return :padBuild(needed: needed, fill: fill) . :;
+	}
+
+	## Pads the end of this string with [fill] until its byte length reaches [width].
+	Function of String is padEnd(Int is width, Str is fill: ' '){
+		local Int is needed: width - :length();
+		if({ needed <= 0 || fill:length() == 0 }, {
+			return :copy();
+		});
+		return : . :padBuild(needed: needed, fill: fill);
+	}
+
 	## Number of leading [search] repetitions.
 	##
 	## @param search: The repetition unit.
