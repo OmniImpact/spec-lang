@@ -9,7 +9,7 @@ Class is LlvmRuntimePrelude{
 	replace Function is init(){
 	}
 
-	Function of String is emitArcAndPool(){
+	Function of Str is emitArcAndPool(){
 		return '''
 @_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer
 @g_spec_active_threads = external global i32
@@ -127,7 +127,7 @@ define void @spec_pool_thread_cleanup() nounwind {
 }''';
 	}
 
-	Function of String is emitClosuresAndBoxes(){
+	Function of Str is emitClosuresAndBoxes(){
 		return '''
 %struct.SpecClosure = type { ptr, ptr, ptr }
 define internal void @__spec_closure_destroy(ptr %self) {
@@ -240,7 +240,7 @@ done:
 }''';
 	}
 
-	Function of String is emitMemIntrinsics(){
+	Function of Str is emitMemIntrinsics(){
 		return '''
 define internal i64 @__spec_mem_alloc(i64 %bytes) alwaysinline {
   %a = call i64 @Heap_allocMem(ptr null, i64 %bytes)
@@ -573,7 +573,7 @@ define internal ptr @__spec_mem_cstr_to_str(i64 %cstrAddr) alwaysinline {
 }''';
 	}
 
-	Function of String is emitLoopControl(){
+	Function of Str is emitLoopControl(){
 		return '''
 %struct.SpecLoopControl = type { i8, ptr, ptr }
 define internal ptr @LoopControl_new() alwaysinline {
@@ -625,7 +625,7 @@ define internal ptr @spec_loop_control_with_callback(ptr %cb, ptr %on_complete) 
 }''';
 	}
 
-	Function of String is emitTypeAndStringHelpers(){
+	Function of Str is emitTypeAndStringHelpers(){
 		return '''
 @_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8
 define internal ptr @spec_string_intern(ptr %c) nounwind {
@@ -884,7 +884,7 @@ ret_cls:
 }''';
 	}
 
-	Function of String is emitMathHelpers(){
+	Function of Str is emitMathHelpers(){
 		return '''
 declare double @sqrt(double) nounwind willreturn
 declare double @round(double) nounwind willreturn
@@ -986,7 +986,7 @@ scale:
 }''';
 	}
 
-	Function of String is emitCliAndAtomics(){
+	Function of Str is emitCliAndAtomics(){
 		return '''
 @_spec_cli_argc = internal global i64 0, align 8
 @_spec_cli_argv = internal global i64 0, align 8
@@ -1092,7 +1092,7 @@ ok:
 }''';
 	}
 
-	Function of String is emitAll(){
+	Function of Str is emitAll(){
 		return ```
 {{:emitArcAndPool()}}
 {{:emitClosuresAndBoxes()}}

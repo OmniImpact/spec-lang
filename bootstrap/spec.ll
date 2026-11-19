@@ -137487,10 +137487,12 @@ if_then_11:
   ret ptr %t44
 if_end_13:
   %t45 = load ptr, ptr %slot_t
-  call ptr @spec_rt_retain(ptr %t45)
+  %t46 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
+  %t47 = call ptr @String_concat(ptr %t45, ptr %t46)
+  call ptr @spec_rt_retain(ptr %t47)
   call void @spec_pool_release_to(i64 %t1)
-  call ptr @spec_claim_pool(ptr %t45)
-  ret ptr %t45
+  call ptr @spec_claim_pool(ptr %t47)
+  ret ptr %t47
 }
 
 define i1 @TypeDomain_isOfBase(ptr %self, ptr %p_t, ptr %p_base) {
@@ -137925,10 +137927,10 @@ if_end_14:
 
 define ptr @TypeDomain_mapKeyType(ptr %self, ptr %p_t) {
 entry:
-  %var_toIdx_53 = alloca i64
-  %var_rest_46 = alloca ptr
-  store ptr null, ptr %var_rest_46
-  %t37 = alloca i1
+  %var_toIdx_55 = alloca i64
+  %var_rest_48 = alloca ptr
+  store ptr null, ptr %var_rest_48
+  %t39 = alloca i1
   %var_sep_19 = alloca i64
   %var_rest_12 = alloca ptr
   store ptr null, ptr %var_rest_12
@@ -137986,73 +137988,75 @@ if_then_6:
   ret ptr %t32
 if_end_8:
   %t34 = load ptr, ptr %var_rest_12
-  call ptr @spec_rt_retain(ptr %t34)
-  %t35 = load ptr, ptr %var_rest_12
-  call void @spec_rt_release(ptr %t35)
+  %t35 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
+  %t36 = call ptr @String_concat(ptr %t34, ptr %t35)
+  call ptr @spec_rt_retain(ptr %t36)
+  %t37 = load ptr, ptr %var_rest_12
+  call void @spec_rt_release(ptr %t37)
   call void @spec_pool_release_to(i64 %t1)
-  call ptr @spec_claim_pool(ptr %t34)
-  ret ptr %t34
+  call ptr @spec_claim_pool(ptr %t36)
+  ret ptr %t36
 if_end_5:
-  %t38 = load ptr, ptr %slot_t
-  %t39 = call ptr @__spec_intern_cached(ptr @.str.807, ptr @.str.cache.807)
-  %t40 = call i1 @Str_startsWith(ptr %t38, ptr %t39)
-  store i1 %t40, ptr %t37
-  br i1 %t40, label %sc_rhs_9, label %sc_end_10
+  %t40 = load ptr, ptr %slot_t
+  %t41 = call ptr @__spec_intern_cached(ptr @.str.807, ptr @.str.cache.807)
+  %t42 = call i1 @Str_startsWith(ptr %t40, ptr %t41)
+  store i1 %t42, ptr %t39
+  br i1 %t42, label %sc_rhs_9, label %sc_end_10
 sc_rhs_9:
-  %t41 = load ptr, ptr %slot_t
-  %t42 = call i64 @Str_length(ptr %t41)
-  %t43 = add i64 0, 7
-  %t44 = icmp sgt i64 %t42, %t43
-  store i1 %t44, ptr %t37
+  %t43 = load ptr, ptr %slot_t
+  %t44 = call i64 @Str_length(ptr %t43)
+  %t45 = add i64 0, 7
+  %t46 = icmp sgt i64 %t44, %t45
+  store i1 %t46, ptr %t39
   br label %sc_end_10
 sc_end_10:
-  %t45 = load i1, ptr %t37
-  br i1 %t45, label %if_then_11, label %if_end_13
+  %t47 = load i1, ptr %t39
+  br i1 %t47, label %if_then_11, label %if_end_13
 if_then_11:
-  %t47 = load ptr, ptr %slot_t
-  %t48 = add i64 0, 7
   %t49 = load ptr, ptr %slot_t
-  %t50 = call i64 @Str_length(ptr %t49)
-  %t51 = call ptr @Str_substring(ptr %t47, i64 %t48, i64 %t50)
-  call ptr @spec_rt_retain(ptr %t51)
-  %t52 = load ptr, ptr %var_rest_46
-  call void @spec_rt_release(ptr %t52)
-  store ptr %t51, ptr %var_rest_46
-  %t54 = load ptr, ptr %var_rest_46
-  %t55 = call ptr @__spec_intern_cached(ptr @.str.265, ptr @.str.cache.265)
-  %t56 = add i64 0, 1
-  %t57 = sub i64 0, %t56
-  %t58 = call i64 @Str_indexOfFrom(ptr %t54, ptr %t55, i64 0, i64 %t57)
-  store i64 %t58, ptr %var_toIdx_53
-  %t60 = load i64, ptr %var_toIdx_53
-  %t61 = add i64 0, 0
-  %t62 = icmp sgt i64 %t60, %t61
-  br i1 %t62, label %if_then_14, label %if_end_16
+  %t50 = add i64 0, 7
+  %t51 = load ptr, ptr %slot_t
+  %t52 = call i64 @Str_length(ptr %t51)
+  %t53 = call ptr @Str_substring(ptr %t49, i64 %t50, i64 %t52)
+  call ptr @spec_rt_retain(ptr %t53)
+  %t54 = load ptr, ptr %var_rest_48
+  call void @spec_rt_release(ptr %t54)
+  store ptr %t53, ptr %var_rest_48
+  %t56 = load ptr, ptr %var_rest_48
+  %t57 = call ptr @__spec_intern_cached(ptr @.str.265, ptr @.str.cache.265)
+  %t58 = add i64 0, 1
+  %t59 = sub i64 0, %t58
+  %t60 = call i64 @Str_indexOfFrom(ptr %t56, ptr %t57, i64 0, i64 %t59)
+  store i64 %t60, ptr %var_toIdx_55
+  %t62 = load i64, ptr %var_toIdx_55
+  %t63 = add i64 0, 0
+  %t64 = icmp sgt i64 %t62, %t63
+  br i1 %t64, label %if_then_14, label %if_end_16
 if_then_14:
-  %t63 = load ptr, ptr %var_rest_46
-  %t64 = add i64 0, 0
-  %t65 = load i64, ptr %var_toIdx_53
-  %t66 = call ptr @Str_substring(ptr %t63, i64 %t64, i64 %t65)
-  call ptr @spec_rt_retain(ptr %t66)
-  %t67 = load ptr, ptr %var_rest_12
-  call void @spec_rt_release(ptr %t67)
-  %t68 = load ptr, ptr %var_rest_46
-  call void @spec_rt_release(ptr %t68)
+  %t65 = load ptr, ptr %var_rest_48
+  %t66 = add i64 0, 0
+  %t67 = load i64, ptr %var_toIdx_55
+  %t68 = call ptr @Str_substring(ptr %t65, i64 %t66, i64 %t67)
+  call ptr @spec_rt_retain(ptr %t68)
+  %t69 = load ptr, ptr %var_rest_12
+  call void @spec_rt_release(ptr %t69)
+  %t70 = load ptr, ptr %var_rest_48
+  call void @spec_rt_release(ptr %t70)
   call void @spec_pool_release_to(i64 %t1)
-  call ptr @spec_claim_pool(ptr %t66)
-  ret ptr %t66
+  call ptr @spec_claim_pool(ptr %t68)
+  ret ptr %t68
 if_end_16:
   br label %if_end_13
 if_end_13:
-  %t69 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
-  call ptr @spec_rt_retain(ptr %t69)
-  %t70 = load ptr, ptr %var_rest_12
-  call void @spec_rt_release(ptr %t70)
-  %t71 = load ptr, ptr %var_rest_46
-  call void @spec_rt_release(ptr %t71)
+  %t71 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
+  call ptr @spec_rt_retain(ptr %t71)
+  %t72 = load ptr, ptr %var_rest_12
+  call void @spec_rt_release(ptr %t72)
+  %t73 = load ptr, ptr %var_rest_48
+  call void @spec_rt_release(ptr %t73)
   call void @spec_pool_release_to(i64 %t1)
-  call ptr @spec_claim_pool(ptr %t69)
-  ret ptr %t69
+  call ptr @spec_claim_pool(ptr %t71)
+  ret ptr %t71
 }
 
 define ptr @TypeDomain_mapValType(ptr %self, ptr %p_t) {
@@ -146675,66 +146679,66 @@ vt_end_50:
 
 define i64 @Lexer_digitValue(ptr %self, ptr %p_ch) {
 entry:
-  %var_u_21 = alloca i64
-  %var_upper_17 = alloca ptr
-  store ptr null, ptr %var_upper_17
+  %var_u_19 = alloca i64
+  %var_upper_16 = alloca ptr
+  store ptr null, ptr %var_upper_16
   %self_slot = alloca ptr
   store ptr %self, ptr %self_slot
   %slot_ch = alloca ptr
   store ptr %p_ch, ptr %slot_ch
   %var_lower_2 = alloca ptr
   %t3 = call ptr @__spec_intern_cached(ptr @.str.844, ptr @.str.cache.844)
-  %t4 = call ptr @spec_string_copy(ptr %t3)
-  store ptr %t4, ptr %var_lower_2
-  %var_d_5 = alloca i64
-  %t6 = load ptr, ptr %var_lower_2
-  %t7 = load ptr, ptr %slot_ch
-  %t8 = add i64 0, 1
-  %t9 = sub i64 0, %t8
-  %t10 = call i64 @Str_indexOfFrom(ptr %t6, ptr %t7, i64 0, i64 %t9)
-  store i64 %t10, ptr %var_d_5
-  %t12 = load i64, ptr %var_d_5
-  %t13 = add i64 0, 0
-  %t14 = icmp sge i64 %t12, %t13
-  br i1 %t14, label %if_then_1, label %if_end_3
+  call ptr @spec_rt_retain(ptr %t3)
+  store ptr %t3, ptr %var_lower_2
+  %var_d_4 = alloca i64
+  %t5 = load ptr, ptr %var_lower_2
+  %t6 = load ptr, ptr %slot_ch
+  %t7 = add i64 0, 1
+  %t8 = sub i64 0, %t7
+  %t9 = call i64 @Str_indexOfFrom(ptr %t5, ptr %t6, i64 0, i64 %t8)
+  store i64 %t9, ptr %var_d_4
+  %t11 = load i64, ptr %var_d_4
+  %t12 = add i64 0, 0
+  %t13 = icmp sge i64 %t11, %t12
+  br i1 %t13, label %if_then_1, label %if_end_3
 if_then_1:
-  %t15 = load i64, ptr %var_d_5
-  %t16 = load ptr, ptr %var_lower_2
-  call void @spec_rt_release(ptr %t16)
-  ret i64 %t15
+  %t14 = load i64, ptr %var_d_4
+  %t15 = load ptr, ptr %var_lower_2
+  call void @spec_rt_release(ptr %t15)
+  ret i64 %t14
 if_end_3:
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.845, ptr @.str.cache.845)
-  %t19 = call ptr @spec_string_copy(ptr %t18)
-  %t20 = load ptr, ptr %var_upper_17
-  call void @spec_rt_release(ptr %t20)
-  store ptr %t19, ptr %var_upper_17
-  %t22 = load ptr, ptr %var_upper_17
-  %t23 = load ptr, ptr %slot_ch
-  %t24 = add i64 0, 1
-  %t25 = sub i64 0, %t24
-  %t26 = call i64 @Str_indexOfFrom(ptr %t22, ptr %t23, i64 0, i64 %t25)
-  store i64 %t26, ptr %var_u_21
-  %t28 = load i64, ptr %var_u_21
-  %t29 = add i64 0, 0
-  %t30 = icmp sge i64 %t28, %t29
-  br i1 %t30, label %if_then_4, label %if_end_6
+  %t17 = call ptr @__spec_intern_cached(ptr @.str.845, ptr @.str.cache.845)
+  call ptr @spec_rt_retain(ptr %t17)
+  %t18 = load ptr, ptr %var_upper_16
+  call void @spec_rt_release(ptr %t18)
+  store ptr %t17, ptr %var_upper_16
+  %t20 = load ptr, ptr %var_upper_16
+  %t21 = load ptr, ptr %slot_ch
+  %t22 = add i64 0, 1
+  %t23 = sub i64 0, %t22
+  %t24 = call i64 @Str_indexOfFrom(ptr %t20, ptr %t21, i64 0, i64 %t23)
+  store i64 %t24, ptr %var_u_19
+  %t26 = load i64, ptr %var_u_19
+  %t27 = add i64 0, 0
+  %t28 = icmp sge i64 %t26, %t27
+  br i1 %t28, label %if_then_4, label %if_end_6
 if_then_4:
-  %t31 = load i64, ptr %var_u_21
-  %t32 = add i64 0, 10
-  %t33 = add i64 %t31, %t32
-  %t34 = load ptr, ptr %var_lower_2
-  call void @spec_rt_release(ptr %t34)
-  %t35 = load ptr, ptr %var_upper_17
-  call void @spec_rt_release(ptr %t35)
-  ret i64 %t33
+  %t29 = load i64, ptr %var_u_19
+  %t30 = add i64 0, 10
+  %t31 = add i64 %t29, %t30
+  %t32 = load ptr, ptr %var_lower_2
+  call void @spec_rt_release(ptr %t32)
+  %t33 = load ptr, ptr %var_upper_16
+  call void @spec_rt_release(ptr %t33)
+  ret i64 %t31
 if_end_6:
-  %t36 = add i64 0, 1
-  %t37 = sub i64 0, %t36
-  %t38 = load ptr, ptr %var_lower_2
-  call void @spec_rt_release(ptr %t38)
-  %t39 = load ptr, ptr %var_upper_17
-  call void @spec_rt_release(ptr %t39)
-  ret i64 %t37
+  %t34 = add i64 0, 1
+  %t35 = sub i64 0, %t34
+  %t36 = load ptr, ptr %var_lower_2
+  call void @spec_rt_release(ptr %t36)
+  %t37 = load ptr, ptr %var_upper_16
+  call void @spec_rt_release(ptr %t37)
+  ret i64 %t35
 }
 
 define ptr @Lexer_advance(ptr %self) {
@@ -149648,18 +149652,18 @@ entry:
   store ptr %p_ch, ptr %slot_ch
   %var_uppers_2 = alloca ptr
   %t3 = call ptr @__spec_intern_cached(ptr @.str.858, ptr @.str.cache.858)
-  %t4 = call ptr @spec_string_copy(ptr %t3)
-  store ptr %t4, ptr %var_uppers_2
-  %t5 = load ptr, ptr %var_uppers_2
-  %t6 = load ptr, ptr %slot_ch
-  %t7 = add i64 0, 1
-  %t8 = sub i64 0, %t7
-  %t9 = call i64 @Str_indexOfFrom(ptr %t5, ptr %t6, i64 0, i64 %t8)
-  %t10 = add i64 0, 0
-  %t11 = icmp sge i64 %t9, %t10
-  %t12 = load ptr, ptr %var_uppers_2
-  call void @spec_rt_release(ptr %t12)
-  ret i1 %t11
+  call ptr @spec_rt_retain(ptr %t3)
+  store ptr %t3, ptr %var_uppers_2
+  %t4 = load ptr, ptr %var_uppers_2
+  %t5 = load ptr, ptr %slot_ch
+  %t6 = add i64 0, 1
+  %t7 = sub i64 0, %t6
+  %t8 = call i64 @Str_indexOfFrom(ptr %t4, ptr %t5, i64 0, i64 %t7)
+  %t9 = add i64 0, 0
+  %t10 = icmp sge i64 %t8, %t9
+  %t11 = load ptr, ptr %var_uppers_2
+  call void @spec_rt_release(ptr %t11)
+  ret i1 %t10
 }
 
 define void @Chars_init(ptr %self) alwaysinline {
@@ -286172,8 +286176,8 @@ vt_end_12:
 
 define ptr @SysinternalCallLowerer_toSnakeCase(ptr %self, ptr %p_s) {
 entry:
-  %t24 = alloca i1
-  %var_chByte_18 = alloca i64
+  %t23 = alloca i1
+  %var_chByte_17 = alloca i64
   %t1 = call i64 @spec_pool_frame()
   %self_slot = alloca ptr
   store ptr %self, ptr %self_slot
@@ -286181,98 +286185,98 @@ entry:
   store ptr %p_s, ptr %slot_s
   %var_lowerAlpha_2 = alloca ptr
   %t3 = call ptr @__spec_intern_cached(ptr @.str.1336, ptr @.str.cache.1336)
-  %t4 = call ptr @spec_string_copy(ptr %t3)
-  store ptr %t4, ptr %var_lowerAlpha_2
-  %var_out_5 = alloca ptr
-  %t6 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
-  %t7 = call ptr @spec_string_copy(ptr %t6)
-  store ptr %t7, ptr %var_out_5
-  %var_i_8 = alloca i64
-  %t9 = add i64 0, 0
-  store i64 %t9, ptr %var_i_8
-  %var_n_10 = alloca i64
-  %t11 = load ptr, ptr %slot_s
-  %t12 = call i64 @Str_length(ptr %t11)
-  store i64 %t12, ptr %var_n_10
+  call ptr @spec_rt_retain(ptr %t3)
+  store ptr %t3, ptr %var_lowerAlpha_2
+  %var_out_4 = alloca ptr
+  %t5 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
+  %t6 = call ptr @spec_string_copy(ptr %t5)
+  store ptr %t6, ptr %var_out_4
+  %var_i_7 = alloca i64
+  %t8 = add i64 0, 0
+  store i64 %t8, ptr %var_i_7
+  %var_n_9 = alloca i64
+  %t10 = load ptr, ptr %slot_s
+  %t11 = call i64 @Str_length(ptr %t10)
+  store i64 %t11, ptr %var_n_9
   br label %while_hdr_1
 while_hdr_1:
-  %t14 = load i64, ptr %var_i_8
-  %t15 = load i64, ptr %var_n_10
-  %t16 = icmp slt i64 %t14, %t15
-  br i1 %t16, label %while_body_2, label %while_end_3
+  %t13 = load i64, ptr %var_i_7
+  %t14 = load i64, ptr %var_n_9
+  %t15 = icmp slt i64 %t13, %t14
+  br i1 %t15, label %while_body_2, label %while_end_3
 while_body_2:
-  %t17 = call i64 @spec_pool_frame()
-  %t19 = load ptr, ptr %slot_s
-  %t20 = load i64, ptr %var_i_8
-  %t21 = add i64 0, 0
-  %t22 = call i64 @Str_byteAt(ptr %t19, i64 %t20, i64 %t21)
-  store i64 %t22, ptr %var_chByte_18
-  %t25 = load i64, ptr %var_chByte_18
-  %t26 = add i64 0, 65
-  %t27 = icmp sge i64 %t25, %t26
-  store i1 %t27, ptr %t24
-  br i1 %t27, label %sc_rhs_4, label %sc_end_5
+  %t16 = call i64 @spec_pool_frame()
+  %t18 = load ptr, ptr %slot_s
+  %t19 = load i64, ptr %var_i_7
+  %t20 = add i64 0, 0
+  %t21 = call i64 @Str_byteAt(ptr %t18, i64 %t19, i64 %t20)
+  store i64 %t21, ptr %var_chByte_17
+  %t24 = load i64, ptr %var_chByte_17
+  %t25 = add i64 0, 65
+  %t26 = icmp sge i64 %t24, %t25
+  store i1 %t26, ptr %t23
+  br i1 %t26, label %sc_rhs_4, label %sc_end_5
 sc_rhs_4:
-  %t28 = load i64, ptr %var_chByte_18
-  %t29 = add i64 0, 90
-  %t30 = icmp sle i64 %t28, %t29
-  store i1 %t30, ptr %t24
+  %t27 = load i64, ptr %var_chByte_17
+  %t28 = add i64 0, 90
+  %t29 = icmp sle i64 %t27, %t28
+  store i1 %t29, ptr %t23
   br label %sc_end_5
 sc_end_5:
-  %t31 = load i1, ptr %t24
-  br i1 %t31, label %if_then_6, label %if_else_7
+  %t30 = load i1, ptr %t23
+  br i1 %t30, label %if_then_6, label %if_else_7
 if_then_6:
-  %t33 = load i64, ptr %var_i_8
-  %t34 = add i64 0, 0
-  %t35 = icmp sgt i64 %t33, %t34
-  br i1 %t35, label %if_then_9, label %if_end_11
+  %t32 = load i64, ptr %var_i_7
+  %t33 = add i64 0, 0
+  %t34 = icmp sgt i64 %t32, %t33
+  br i1 %t34, label %if_then_9, label %if_end_11
 if_then_9:
-  %t36 = load ptr, ptr %var_out_5
-  %t37 = call ptr @__spec_intern_cached(ptr @.str.2, ptr @.str.cache.2)
-  %t38 = call ptr @spec_string_concat(ptr %t36, ptr %t37)
-  store ptr %t38, ptr %var_out_5
+  %t35 = load ptr, ptr %var_out_4
+  %t36 = call ptr @__spec_intern_cached(ptr @.str.2, ptr @.str.cache.2)
+  %t37 = call ptr @spec_string_concat(ptr %t35, ptr %t36)
+  store ptr %t37, ptr %var_out_4
   br label %if_end_11
 if_end_11:
-  %t39 = load ptr, ptr %var_out_5
-  %t40 = load ptr, ptr %var_lowerAlpha_2
-  %t41 = load i64, ptr %var_chByte_18
-  %t42 = add i64 0, 65
-  %t43 = sub i64 %t41, %t42
-  %t44 = load i64, ptr %var_chByte_18
-  %t45 = add i64 0, 64
-  %t46 = sub i64 %t44, %t45
-  %t47 = call ptr @Str_substring(ptr %t40, i64 %t43, i64 %t46)
-  %t48 = call ptr @spec_string_concat(ptr %t39, ptr %t47)
-  store ptr %t48, ptr %var_out_5
+  %t38 = load ptr, ptr %var_out_4
+  %t39 = load ptr, ptr %var_lowerAlpha_2
+  %t40 = load i64, ptr %var_chByte_17
+  %t41 = add i64 0, 65
+  %t42 = sub i64 %t40, %t41
+  %t43 = load i64, ptr %var_chByte_17
+  %t44 = add i64 0, 64
+  %t45 = sub i64 %t43, %t44
+  %t46 = call ptr @Str_substring(ptr %t39, i64 %t42, i64 %t45)
+  %t47 = call ptr @spec_string_concat(ptr %t38, ptr %t46)
+  store ptr %t47, ptr %var_out_4
   br label %if_end_8
 if_else_7:
-  %t49 = load ptr, ptr %var_out_5
-  %t50 = load ptr, ptr %slot_s
-  %t51 = load i64, ptr %var_i_8
-  %t52 = load i64, ptr %var_i_8
-  %t53 = add i64 0, 1
-  %t54 = add i64 %t52, %t53
-  %t55 = call ptr @Str_substring(ptr %t50, i64 %t51, i64 %t54)
-  %t56 = call ptr @spec_string_concat(ptr %t49, ptr %t55)
-  store ptr %t56, ptr %var_out_5
+  %t48 = load ptr, ptr %var_out_4
+  %t49 = load ptr, ptr %slot_s
+  %t50 = load i64, ptr %var_i_7
+  %t51 = load i64, ptr %var_i_7
+  %t52 = add i64 0, 1
+  %t53 = add i64 %t51, %t52
+  %t54 = call ptr @Str_substring(ptr %t49, i64 %t50, i64 %t53)
+  %t55 = call ptr @spec_string_concat(ptr %t48, ptr %t54)
+  store ptr %t55, ptr %var_out_4
   br label %if_end_8
 if_end_8:
-  %t57 = load i64, ptr %var_i_8
-  %t58 = add i64 0, 1
-  %t59 = add i64 %t57, %t58
-  store i64 %t59, ptr %var_i_8
-  call void @spec_pool_release_to(i64 %t17)
+  %t56 = load i64, ptr %var_i_7
+  %t57 = add i64 0, 1
+  %t58 = add i64 %t56, %t57
+  store i64 %t58, ptr %var_i_7
+  call void @spec_pool_release_to(i64 %t16)
   br label %while_hdr_1
 while_end_3:
-  %t60 = load ptr, ptr %var_out_5
-  call ptr @spec_rt_retain(ptr %t60)
-  %t61 = load ptr, ptr %var_lowerAlpha_2
+  %t59 = load ptr, ptr %var_out_4
+  call ptr @spec_rt_retain(ptr %t59)
+  %t60 = load ptr, ptr %var_lowerAlpha_2
+  call void @spec_rt_release(ptr %t60)
+  %t61 = load ptr, ptr %var_out_4
   call void @spec_rt_release(ptr %t61)
-  %t62 = load ptr, ptr %var_out_5
-  call void @spec_rt_release(ptr %t62)
   call void @spec_pool_release_to(i64 %t1)
-  call ptr @spec_claim_pool(ptr %t60)
-  ret ptr %t60
+  call ptr @spec_claim_pool(ptr %t59)
+  ret ptr %t59
 }
 
 define ptr @SysinternalCallLowerer_floorDomain(ptr %self, ptr %p_b, ptr %p_call) {
@@ -332269,12 +332273,12 @@ vt_end_3:
 
 define ptr @LlvmEmitter_escapeLlvmBytes(ptr %self, ptr %p_s) {
 entry:
-  %var_lo_48 = alloca i64
-  %var_hi_42 = alloca i64
-  %t26 = alloca i1
+  %var_lo_47 = alloca i64
+  %var_hi_41 = alloca i64
   %t25 = alloca i1
   %t24 = alloca i1
-  %var_b_18 = alloca i64
+  %t23 = alloca i1
+  %var_b_17 = alloca i64
   %t1 = call i64 @spec_pool_frame()
   %self_slot = alloca ptr
   store ptr %self, ptr %self_slot
@@ -332282,124 +332286,124 @@ entry:
   store ptr %p_s, ptr %slot_s
   %var_hex_2 = alloca ptr
   %t3 = call ptr @__spec_intern_cached(ptr @.str.1653, ptr @.str.cache.1653)
-  %t4 = call ptr @spec_string_copy(ptr %t3)
-  store ptr %t4, ptr %var_hex_2
-  %var_res_5 = alloca ptr
-  %t6 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
-  %t7 = call ptr @spec_string_copy(ptr %t6)
-  store ptr %t7, ptr %var_res_5
-  %var_len_8 = alloca i64
-  %t9 = load ptr, ptr %slot_s
-  %t10 = call i64 @Str_length(ptr %t9)
-  store i64 %t10, ptr %var_len_8
-  %var_i_11 = alloca i64
-  %t12 = add i64 0, 0
-  store i64 %t12, ptr %var_i_11
+  call ptr @spec_rt_retain(ptr %t3)
+  store ptr %t3, ptr %var_hex_2
+  %var_res_4 = alloca ptr
+  %t5 = call ptr @__spec_intern_cached(ptr @.str.3, ptr @.str.cache.3)
+  %t6 = call ptr @spec_string_copy(ptr %t5)
+  store ptr %t6, ptr %var_res_4
+  %var_len_7 = alloca i64
+  %t8 = load ptr, ptr %slot_s
+  %t9 = call i64 @Str_length(ptr %t8)
+  store i64 %t9, ptr %var_len_7
+  %var_i_10 = alloca i64
+  %t11 = add i64 0, 0
+  store i64 %t11, ptr %var_i_10
   br label %while_hdr_1
 while_hdr_1:
-  %t14 = load i64, ptr %var_i_11
-  %t15 = load i64, ptr %var_len_8
-  %t16 = icmp slt i64 %t14, %t15
-  br i1 %t16, label %while_body_2, label %while_end_3
+  %t13 = load i64, ptr %var_i_10
+  %t14 = load i64, ptr %var_len_7
+  %t15 = icmp slt i64 %t13, %t14
+  br i1 %t15, label %while_body_2, label %while_end_3
 while_body_2:
-  %t17 = call i64 @spec_pool_frame()
-  %t19 = load ptr, ptr %slot_s
-  %t20 = load i64, ptr %var_i_11
-  %t21 = add i64 0, 0
-  %t22 = call i64 @Str_byteAt(ptr %t19, i64 %t20, i64 %t21)
-  store i64 %t22, ptr %var_b_18
-  %t27 = load i64, ptr %var_b_18
-  %t28 = add i64 0, 32
-  %t29 = icmp slt i64 %t27, %t28
-  store i1 %t29, ptr %t26
-  br i1 %t29, label %sc_end_5, label %sc_rhs_4
+  %t16 = call i64 @spec_pool_frame()
+  %t18 = load ptr, ptr %slot_s
+  %t19 = load i64, ptr %var_i_10
+  %t20 = add i64 0, 0
+  %t21 = call i64 @Str_byteAt(ptr %t18, i64 %t19, i64 %t20)
+  store i64 %t21, ptr %var_b_17
+  %t26 = load i64, ptr %var_b_17
+  %t27 = add i64 0, 32
+  %t28 = icmp slt i64 %t26, %t27
+  store i1 %t28, ptr %t25
+  br i1 %t28, label %sc_end_5, label %sc_rhs_4
 sc_rhs_4:
-  %t30 = load i64, ptr %var_b_18
-  %t31 = add i64 0, 127
-  %t32 = icmp sge i64 %t30, %t31
-  store i1 %t32, ptr %t26
+  %t29 = load i64, ptr %var_b_17
+  %t30 = add i64 0, 127
+  %t31 = icmp sge i64 %t29, %t30
+  store i1 %t31, ptr %t25
   br label %sc_end_5
 sc_end_5:
-  %t33 = load i1, ptr %t26
-  store i1 %t33, ptr %t25
-  br i1 %t33, label %sc_end_7, label %sc_rhs_6
+  %t32 = load i1, ptr %t25
+  store i1 %t32, ptr %t24
+  br i1 %t32, label %sc_end_7, label %sc_rhs_6
 sc_rhs_6:
-  %t34 = load i64, ptr %var_b_18
-  %t35 = add i64 0, 34
-  %t36 = icmp eq i64 %t34, %t35
-  store i1 %t36, ptr %t25
+  %t33 = load i64, ptr %var_b_17
+  %t34 = add i64 0, 34
+  %t35 = icmp eq i64 %t33, %t34
+  store i1 %t35, ptr %t24
   br label %sc_end_7
 sc_end_7:
-  %t37 = load i1, ptr %t25
-  store i1 %t37, ptr %t24
-  br i1 %t37, label %sc_end_9, label %sc_rhs_8
+  %t36 = load i1, ptr %t24
+  store i1 %t36, ptr %t23
+  br i1 %t36, label %sc_end_9, label %sc_rhs_8
 sc_rhs_8:
-  %t38 = load i64, ptr %var_b_18
-  %t39 = add i64 0, 92
-  %t40 = icmp eq i64 %t38, %t39
-  store i1 %t40, ptr %t24
+  %t37 = load i64, ptr %var_b_17
+  %t38 = add i64 0, 92
+  %t39 = icmp eq i64 %t37, %t38
+  store i1 %t39, ptr %t23
   br label %sc_end_9
 sc_end_9:
-  %t41 = load i1, ptr %t24
-  br i1 %t41, label %if_then_10, label %if_else_11
+  %t40 = load i1, ptr %t23
+  br i1 %t40, label %if_then_10, label %if_else_11
 if_then_10:
-  %t43 = load i64, ptr %var_b_18
-  %t44 = add i64 0, 4
-  %t45 = ashr i64 %t43, %t44
-  %t46 = add i64 0, 15
-  %t47 = and i64 %t45, %t46
-  store i64 %t47, ptr %var_hi_42
-  %t49 = load i64, ptr %var_b_18
-  %t50 = add i64 0, 15
-  %t51 = and i64 %t49, %t50
-  store i64 %t51, ptr %var_lo_48
-  %t52 = load ptr, ptr %var_res_5
-  %t53 = call ptr @__spec_intern_cached(ptr @.str.817, ptr @.str.cache.817)
-  %t54 = call ptr @spec_string_concat(ptr %t52, ptr %t53)
-  %t55 = load ptr, ptr %var_hex_2
-  %t56 = load i64, ptr %var_hi_42
-  %t57 = load i64, ptr %var_hi_42
-  %t58 = add i64 0, 1
-  %t59 = add i64 %t57, %t58
-  %t60 = call ptr @Str_substring(ptr %t55, i64 %t56, i64 %t59)
-  %t61 = call ptr @spec_string_concat(ptr %t54, ptr %t60)
-  %t62 = load ptr, ptr %var_hex_2
-  %t63 = load i64, ptr %var_lo_48
-  %t64 = load i64, ptr %var_lo_48
-  %t65 = add i64 0, 1
-  %t66 = add i64 %t64, %t65
-  %t67 = call ptr @Str_substring(ptr %t62, i64 %t63, i64 %t66)
-  %t68 = call ptr @spec_string_concat(ptr %t61, ptr %t67)
-  store ptr %t68, ptr %var_res_5
+  %t42 = load i64, ptr %var_b_17
+  %t43 = add i64 0, 4
+  %t44 = ashr i64 %t42, %t43
+  %t45 = add i64 0, 15
+  %t46 = and i64 %t44, %t45
+  store i64 %t46, ptr %var_hi_41
+  %t48 = load i64, ptr %var_b_17
+  %t49 = add i64 0, 15
+  %t50 = and i64 %t48, %t49
+  store i64 %t50, ptr %var_lo_47
+  %t51 = load ptr, ptr %var_res_4
+  %t52 = call ptr @__spec_intern_cached(ptr @.str.817, ptr @.str.cache.817)
+  %t53 = call ptr @spec_string_concat(ptr %t51, ptr %t52)
+  %t54 = load ptr, ptr %var_hex_2
+  %t55 = load i64, ptr %var_hi_41
+  %t56 = load i64, ptr %var_hi_41
+  %t57 = add i64 0, 1
+  %t58 = add i64 %t56, %t57
+  %t59 = call ptr @Str_substring(ptr %t54, i64 %t55, i64 %t58)
+  %t60 = call ptr @spec_string_concat(ptr %t53, ptr %t59)
+  %t61 = load ptr, ptr %var_hex_2
+  %t62 = load i64, ptr %var_lo_47
+  %t63 = load i64, ptr %var_lo_47
+  %t64 = add i64 0, 1
+  %t65 = add i64 %t63, %t64
+  %t66 = call ptr @Str_substring(ptr %t61, i64 %t62, i64 %t65)
+  %t67 = call ptr @spec_string_concat(ptr %t60, ptr %t66)
+  store ptr %t67, ptr %var_res_4
   br label %if_end_12
 if_else_11:
-  %t69 = load ptr, ptr %var_res_5
-  %t70 = load ptr, ptr %slot_s
-  %t71 = load i64, ptr %var_i_11
-  %t72 = load i64, ptr %var_i_11
-  %t73 = add i64 0, 1
-  %t74 = add i64 %t72, %t73
-  %t75 = call ptr @Str_substring(ptr %t70, i64 %t71, i64 %t74)
-  %t76 = call ptr @spec_string_concat(ptr %t69, ptr %t75)
-  store ptr %t76, ptr %var_res_5
+  %t68 = load ptr, ptr %var_res_4
+  %t69 = load ptr, ptr %slot_s
+  %t70 = load i64, ptr %var_i_10
+  %t71 = load i64, ptr %var_i_10
+  %t72 = add i64 0, 1
+  %t73 = add i64 %t71, %t72
+  %t74 = call ptr @Str_substring(ptr %t69, i64 %t70, i64 %t73)
+  %t75 = call ptr @spec_string_concat(ptr %t68, ptr %t74)
+  store ptr %t75, ptr %var_res_4
   br label %if_end_12
 if_end_12:
-  %t77 = load i64, ptr %var_i_11
-  %t78 = add i64 0, 1
-  %t79 = add i64 %t77, %t78
-  store i64 %t79, ptr %var_i_11
-  call void @spec_pool_release_to(i64 %t17)
+  %t76 = load i64, ptr %var_i_10
+  %t77 = add i64 0, 1
+  %t78 = add i64 %t76, %t77
+  store i64 %t78, ptr %var_i_10
+  call void @spec_pool_release_to(i64 %t16)
   br label %while_hdr_1
 while_end_3:
-  %t80 = load ptr, ptr %var_res_5
-  call ptr @spec_rt_retain(ptr %t80)
-  %t81 = load ptr, ptr %var_hex_2
+  %t79 = load ptr, ptr %var_res_4
+  call ptr @spec_rt_retain(ptr %t79)
+  %t80 = load ptr, ptr %var_hex_2
+  call void @spec_rt_release(ptr %t80)
+  %t81 = load ptr, ptr %var_res_4
   call void @spec_rt_release(ptr %t81)
-  %t82 = load ptr, ptr %var_res_5
-  call void @spec_rt_release(ptr %t82)
   call void @spec_pool_release_to(i64 %t1)
-  call ptr @spec_claim_pool(ptr %t80)
-  ret ptr %t80
+  call ptr @spec_claim_pool(ptr %t79)
+  ret ptr %t79
 }
 
 define ptr @LlvmEmitter_emitFunction(ptr %self, ptr %p_fn) {

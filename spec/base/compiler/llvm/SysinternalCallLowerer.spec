@@ -146,8 +146,8 @@ Class of CallLowerer is SysinternalCallLowerer{
 		return dst;
 	}
 
-	local Function of String is toSnakeCase(String is s){
-		local String is lowerAlpha: 'abcdefghijklmnopqrstuvwxyz';
+	local Function of String is toSnakeCase(Str is s){
+		local Str is lowerAlpha: 'abcdefghijklmnopqrstuvwxyz';
 		local String is out: '';
 		local Int is i: 0;
 		local Int is n: s:length();

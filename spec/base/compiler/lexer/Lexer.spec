@@ -35,7 +35,7 @@ Class is Lexer{
 	## The full source text being scanned. Public because the scan loops
 	## are collaborators that drive the cursor; lifecycle stays with the
 	## lexer.
-	String is source: '';
+	Str is source: '';
 
 	## Source length, cached to keep loop guards cheap.
 	Int is length: 0;
@@ -65,7 +65,7 @@ Class is Lexer{
 	## Initializes a lexer over the given source text.
 	##
 	## @param source: Spec source code to tokenize.
-	replace Function is init(String is source){
+	replace Function is init(Str is source){
 		:source: source;
 		:length: source:length();
 		:pos: 0;
@@ -180,13 +180,13 @@ Class is Lexer{
 	##
 	## @param ch: Digit character.
 	## @return: Digit value, or -1 when not a hex digit.
-	Function of Int is digitValue(String is ch){
-		local String is lower: '0123456789abcdef';
+	Function of Int is digitValue(Str is ch){
+		local Str is lower: '0123456789abcdef';
 		local Int is d: lower:indexOf(search: ch, default: -1);
 		if({ d >= 0 }, {
 			return d;
 		});
-		local String is upper: 'ABCDEF';
+		local Str is upper: 'ABCDEF';
 		local Int is u: upper:indexOf(search: ch, default: -1);
 		if({ u >= 0 }, {
 			return u + 10;

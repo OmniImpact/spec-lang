@@ -440,8 +440,8 @@ Class is LlvmEmitter{
 		return sym . ' = private unnamed_addr constant [' . (byteLen as String) . ' x i8] c"' . esc . "\\00\"\n";
 	}
 
-	local Function of String is escapeLlvmBytes(String is s){
-		local String is hex: '0123456789ABCDEF';
+	local Function of String is escapeLlvmBytes(Str is s){
+		local Str is hex: '0123456789ABCDEF';
 		local String is res: '';
 		local Int is len: s:length();
 		local Int is i: 0;

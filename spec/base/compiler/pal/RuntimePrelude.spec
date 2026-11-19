@@ -31,20 +31,20 @@ Class is RuntimePrelude{
 		return '';
 	}
 
-	local Function of String is readPart(String is dir, String is name){
+	local Function of String is readPart(Str is dir, Str is name){
 		return fileRead(path: dir . '/' . name, default: '');
 	}
 
 	Function of String is emitHeader(){
-		local String is dir: :resolveRuntimeDir();
+		local Str is dir: :resolveRuntimeDir();
 		if({ dir == '' }, { return ''; });
 		return :readPart(dir: dir, name: 'pal_headers.h');
 	}
 
 	Function of String is emitBody(){
-		local String is dir: :resolveRuntimeDir();
+		local Str is dir: :resolveRuntimeDir();
 		if({ dir == '' }, { return ''; });
-		local Array of String is parts: [
+		local Array of Str is parts: [
 			'pal_core.c',
 			'pal_dir.c',
 			'pal_file.c',
