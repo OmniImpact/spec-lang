@@ -24,7 +24,7 @@ Class is Map of K to V{
 	## @param default: Fallback value returned if key is absent.
 	## @return: Mapped value, or [default].
 	## @fallback: Returns [default] when [key] does not exist in the map.
-	Function of V is get(K is key, Any is default){
+	Function of V is get(K is key, V is default){
 	}
 
 	## Looks up a string value by key, returning [default] if not found.
@@ -75,7 +75,7 @@ Class is Map of K to V{
 	##
 	## @param key: Entry key.
 	## @param value: Entry value.
-	Function is set(K is key, Any is value){
+	Function is set(K is key, V is value){
 	}
 
 	## Determines whether an entry exists for the specified key.
@@ -140,14 +140,8 @@ Class is Map of K to V{
 	##
 	## @param other: Source map to merge in.
 	Function is merge(Map of K to V is other){
-		local Array of K is ks: other:keys();
-		ks:each(action: local Function(K is k){
-			local String is sv: other:getString(key: k, default: '');
-			if({ sv != '' }, {
-				:set(key: k, value: sv);
-			}, {
-				:set(key: k, value: other:get(key: k, default: ''));
-			});
+		other:each(action: local Function(K is k, V is v){
+			:set(key: k, value: v);
 		});
 	}
 
@@ -155,9 +149,9 @@ Class is Map of K to V{
 	##
 	## @param predicate: Function taking (key, value) and returning `Boolean`.
 	## @return: Filtered [Map].
-	Function of Map is filter(Function of Boolean is predicate){
-		local Map is out: [:];
-		:each(action: local Function(K is k, Any is v){
+	Function of Map of K to V is filter(Function of Boolean is predicate){
+		local Map of K to V is out: [:];
+		:each(action: local Function(K is k, V is v){
 			if({ predicate(k, v) }, {
 				out:set(key: k, value: v);
 			});

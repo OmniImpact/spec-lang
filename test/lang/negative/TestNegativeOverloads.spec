@@ -1,31 +1,15 @@
-#! specunit: suite
+#! specunit: negative-suite
 
-Class of SpecUnitTest is TestNegativeOverloads{
-
-	replace Array of Array of String is using: [
-		['specunit', SpecUnitTest],
-		['specunit', SpecUnitRunner],
-		['specunit', Assert]
-	];
-
-	## N12: Identical-signature overloads are rejected as duplicate declarations.
-	Function is testIdenticalSignaturesDuplicate(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testIdenticalSignaturesDuplicate
+#! expect: declare identical signatures
 Class is N12Identical{
 	Function of Int is f(Int is v){ return v; }
 	Function of Int is f(Int is v){ return v + 1; }
 	replace Function is init(Map of String to String is args){}
 }
-''',
-			expect: "declare identical signatures"
-		);
-	}
 
-	## N13: Same-arity overloads sharing types are ambiguous for positional calls.
-	Function is testAmbiguousPositionalCall(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testAmbiguousPositionalCall
+#! expect: the arguments match multiple overloads; use named arguments
 Class is N13Ambiguous{
 	Function of Int is f(Int is a){ return a; }
 	Function of Int is f(Int is b){ return b; }
@@ -33,15 +17,9 @@ Class is N13Ambiguous{
 		local Int is x: f(1);
 	}
 }
-''',
-			expect: "the arguments match multiple overloads; use named arguments"
-		);
-	}
 
-	## N14: Any-typed argument matches no overload exactly.
-	Function is testNoExactMatchForAny(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testNoExactMatchForAny
+#! expect: No exact overload of 'N14NoExact.f' for (Any)
 Class is N14NoExact{
 	Function of Int is f(Int is v){ return v; }
 	Function of Float is f(Float is v){ return v; }
@@ -50,30 +28,18 @@ Class is N14NoExact{
 		local Int is x: f(anything);
 	}
 }
-''',
-			expect: "No exact overload of 'N14NoExact.f' for (Any)"
-		);
-	}
 
-	## N15: Mixing positional and named arguments is rejected.
-	Function is testMixedPositionalAndNamed(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testMixedPositionalAndNamed
+#! expect: Mixed positional and named arguments are not supported
 Class is N15Mixed{
 	Function of Int is f(Int is a, Int is b){ return a + b; }
 	replace Function is init(Map of String to String is args){
 		local Int is x: f(1, b: 2);
 	}
 }
-''',
-			expect: "Mixed positional and named arguments are not supported"
-		);
-	}
 
-	## N16: Parent's overloaded method cannot be replaced.
-	Function is testCannotReplaceOverloadedMethod(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testCannotReplaceOverloadedMethod
+#! expect: Cannot replace or merge an overloaded method
 Class is N16Parent{
 	Function of Int is f(Int is v){ return v; }
 	Function of String is f(String is v){ return v; }
@@ -83,15 +49,9 @@ Class of N16Parent is N16Child{
 	replace Function of Int is f(Int is v){ return v; }
 	replace Function is init(Map of String to String is args){}
 }
-''',
-			expect: "Cannot replace or merge an overloaded method"
-		);
-	}
 
-	## Merge rules: forward statement required, array required, parent exists.
-	Function is testMergeRequirements(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testMergeRequirements
+#! expect: must contain a forward statement
 Class is MergeBase{
 	replace Function of Int is signal(){ return 1; }
 	local Int is count: 1;
@@ -104,15 +64,9 @@ Class of MergeBase is MergeChild{
 Class is App{
 	replace Function is init(Map of String to String is args){}
 }
-''',
-			expect: "must contain a forward statement"
-		);
-	}
 
-	## Merge function validation: forwarding checks and argument types.
-	Function is testMergeFunctionValidation(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testMergeFunctionValidation
+#! expect: cannot assign 'String' to 'Int'
 Class is FwdBase{
 	replace Function of Int is double(Int is n){ return n * 2; }
 }
@@ -123,9 +77,4 @@ Class of FwdBase is FwdChild{
 }
 Class is App{
 	replace Function is init(Map of String to String is args){}
-}
-''',
-			expect: "cannot assign 'String' to 'Int'"
-		);
-	}
 }

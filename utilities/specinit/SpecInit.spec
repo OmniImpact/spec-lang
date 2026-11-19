@@ -17,7 +17,6 @@ Class is SpecInit{
 		['base', 'sys', as Stderr()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as File()],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Uri()]
@@ -69,7 +68,7 @@ Class is SpecInit{
 		local Int is len: raw:length();
 		while([Int is i: 0], { i < len }, {
 			local String is ch: raw:substring(start: i, end: i + 1);
-			local Int is code: Buf:bufGetByte(b: raw, idx: i, def: 0);
+			local Int is code: raw:byteAt(index: i, default: 0);
 			local Boolean is isLower: code >= 97 && code <= 122;
 			local Boolean is isUpper: code >= 65 && code <= 90;
 			local Boolean is isDigit: code >= 48 && code <= 57;

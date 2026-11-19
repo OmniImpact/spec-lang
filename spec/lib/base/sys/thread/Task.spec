@@ -3,8 +3,8 @@
 ##
 ## Holds the OS thread handle, completion state (`0 = PENDING`, `1 = RUNNING`,
 ## `2 = DONE`, `3 = FAILED`), synchronization primitives (`mutex` + `cond`) for
-## non-spinning multi-waiter `await()`, the result slot `T`, and any captured
-## error value.
+## non-spinning multi-waiter `await()`, any captured error value, and the
+## monomorphized result slot `T`.
 
 Class is Task of T{
 	namespace: ['base', 'sys', 'thread'];
@@ -21,14 +21,12 @@ Class is Task of T{
 	local Int is mutex: 0;
 	local Int is cond: 0;
 	local Boolean is joined: false;
-	local Boolean is arcManaged: false;
-	local T is resultVal;
 	local Int is errorAddr: 0;
 	local Boolean is hasError: false;
 	local Boolean is errorConsumed: false;
+	local T is resultVal;
 
-	replace Function is init(Boolean is isArc: false){
-		:arcManaged: isArc;
+	replace Function is init(){
 		:stateAddr: Mem:alloc(bytes: 8);
 		Mem:storeI64(ptr: :stateAddr, byteOffset: 0, val: 0);
 		:mutex: Thread:mutexCreate();
@@ -54,15 +52,17 @@ Class is Task of T{
 		Mem:atomicCasI64(addr: :stateAddr, expected: 0, desired: 1);
 	}
 
+	## Completes a void task and wakes all waiting threads.
+	Function is completeVoid(){
+		Thread:mutexLock(handle: :mutex);
+		Mem:atomicStoreI64(addr: :stateAddr, val: 2);
+		Thread:condBroadcast(cond: :cond);
+		Thread:mutexUnlock(handle: :mutex);
+	}
+
 	## Completes this task with [value] and wakes all waiting threads.
 	Function is complete(T is value){
 		Thread:mutexLock(handle: :mutex);
-		if({ :arcManaged }, {
-			local Int is addr: Mem:objToAddr(obj: value);
-			if({ addr != 0 }, {
-				Mem:retainAddr(objAddr: addr);
-			});
-		});
 		:resultVal: value;
 		Mem:atomicStoreI64(addr: :stateAddr, val: 2);
 		Thread:condBroadcast(cond: :cond);
@@ -147,13 +147,6 @@ Class is Task of T{
 			Mem:raisePendingErrorAddr(addr: :errorAddr);
 			return :resultVal;
 		});
-		if({ :arcManaged }, {
-			local Int is addr: Mem:objToAddr(obj: :resultVal);
-			if({ addr != 0 }, {
-				Mem:retainAddr(objAddr: addr);
-				Mem:claimPoolAddr(objAddr: addr);
-			});
-		});
 		return :resultVal;
 	}
 
@@ -163,13 +156,6 @@ Class is Task of T{
 				Thread:threadJoin(handle: :handle);
 				:handle: 0;
 				:joined: true;
-			});
-			if({ :arcManaged }, {
-				local Int is rAddr: Mem:objToAddr(obj: :resultVal);
-				if({ rAddr != 0 }, {
-					Mem:releaseAddr(objAddr: rAddr);
-					:resultVal: Mem:addrToObj(addr: 0);
-				});
 			});
 			if({ :hasError && :errorAddr != 0 }, {
 				Mem:releaseAddr(objAddr: :errorAddr);

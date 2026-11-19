@@ -1,3 +1,4 @@
+#! priorityPosition: -100
 #! SpecUnit sweep (from phase6_codegen_test.spec): the pure-Spec code
 #! generator pipeline — parse the target program, load it through the
 #! resolver cascade, typecheck, emit LLVM IR, compile it with clang,

@@ -37,8 +37,8 @@ Class is Synth{
 			if({ s < 0 }, {
 				s: s + 65536;
 			});
-			local Int is lo: s & 255;
-			local Int is hi: (s >> 8) & 255;
+			local Byte is lo: (s & 255) as Byte;
+			local Byte is hi: ((s >> 8) & 255) as Byte;
 
 			buf:push(lo);
 			buf:push(hi);

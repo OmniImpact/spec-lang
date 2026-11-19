@@ -247,9 +247,9 @@ Class of Str is String{
 	## @param default: Fallback when out of bounds.
 	## @return: UTF-8 character string, or [default].
 	Function of String is runeAt(Int is runeIndex, String is default: ''){
-		if({ runeIndex < 0 }, { return Buf:stringCopy(b: default); });
+		if({ runeIndex < 0 }, { return default:copy(); });
 		local Int is total: :runeCount();
-		if({ runeIndex >= total }, { return Buf:stringCopy(b: default); });
+		if({ runeIndex >= total }, { return default:copy(); });
 		local Int is bStart: :runeToByteOffset(runeIndex: runeIndex);
 		local Int is bLen: :codePointByteLen(byteIndex: bStart);
 		return :substring(start: bStart, end: bStart + bLen);
@@ -448,15 +448,15 @@ Class of Str is String{
 	##
 	## @param other: String to append.
 	## @return: Newly allocated string containing this string followed by [other].
-	replace Function of String is concat(String is other){
+	replace Function of String is concat(Str is other){
 		local Int is aAddr: Mem:objToAddr(obj: :);
 		local Int is bAddr: Mem:objToAddr(obj: other);
 		local Int is aLen: if({ aAddr == 0 }, { 0 }, { Mem:loadI64(ptr: aAddr, byteOffset: 8) });
 		local Int is bLen: if({ bAddr == 0 }, { 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) });
 		local Int is total: aLen + bLen;
 		if({ total == 0 }, { return ''; });
-		if({ aLen == 0 }, { return Buf:stringCopy(b: other); });
-		if({ bLen == 0 }, { return Buf:stringCopy(b: :); });
+		if({ aLen == 0 }, { return other:copy(); });
+		if({ bLen == 0 }, { return :copy(); });
 		local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
 		local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
 		if({ total <= 256 }, {

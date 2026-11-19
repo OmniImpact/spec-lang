@@ -277,7 +277,21 @@ Class of CallLowerer is ArrayCallLowerer{
 					local IrType is ity: b:irTypeFor(specType: ivTyName);
 					local String is ip: b:castIfNeeded(val: iv, fromTy: ity, toTy: IrType:Ptr);
 					local String is addCallee: 'Vector_vecAdd';
-					if({ b:isArcSpecType(specType: ivTyName) }, {
+					local Boolean is isArcItem: b:isArcSpecType(specType: ivTyName);
+					if({ !isArcItem }, {
+						local String is arrElemSpec: '';
+						if({ lRecvType:startsWith(prefix: 'Array of ') }, {
+							arrElemSpec: lRecvType:substring(start: 9, end: lRecvType:length());
+						}, {
+							if({ lRecvType:startsWith(prefix: 'Array:') }, {
+								arrElemSpec: lRecvType:substring(start: 6, end: lRecvType:length());
+							});
+						});
+						if({ arrElemSpec != '' && b:isArcSpecType(specType: arrElemSpec) }, {
+							isArcItem: true;
+						});
+					});
+					if({ isArcItem }, {
 						addCallee: 'Vector_vecAddObject';
 					});
 					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: addCallee, argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, ip]));

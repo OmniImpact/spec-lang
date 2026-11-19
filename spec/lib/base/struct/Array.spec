@@ -30,7 +30,7 @@ Class is Array of T{
 	## @param default: Fallback value returned if [index] is out of bounds.
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
-	Function of T is get(Int is index, Any is default){
+	Function of T is get(Int is index, T is default){
 		return Vector:vecGetAt(v: :, idx: index, def: default);
 	}
 
@@ -45,7 +45,7 @@ Class is Array of T{
 	##
 	## @param index: Zero-based position.
 	## @param item: Replacement element value.
-	Function is set(Int is index, Any is item){
+	Function is set(Int is index, T is item){
 		Vector:vecSetAt(v: :, idx: index, item: item);
 	}
 
@@ -54,7 +54,7 @@ Class is Array of T{
 	## @param default: Fallback value returned if the array is empty.
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
-	Function of T is pop(Any is default){
+	Function of T is pop(T is default){
 		return Vector:vecPopLast(v: :, def: default);
 	}
 
@@ -64,7 +64,7 @@ Class is Array of T{
 	## @param default: Fallback value returned if [index] is out of bounds.
 	## @return: The removed element, or [default].
 	## @fallback: Returns [default] when index is out of bounds.
-	Function of T is removeAt(Int is index, Any is default){
+	Function of T is removeAt(Int is index, T is default){
 		return Vector:vecRemoveAt(v: :, idx: index, def: default);
 	}
 
@@ -86,7 +86,7 @@ Class is Array of T{
 		]);
 		local Int is i: s;
 		while({ i < e }, {
-			res:add(item: :get(index: i, default: ''));
+			res:add(item: :get(index: i));
 			i: i + 1;
 		});
 		return res;
@@ -108,7 +108,7 @@ Class is Array of T{
 		local Int is i: 0;
 		local Int is found: default;
 		while({ found == default && i < len }, {
-			local String is item: :get(index: i, default: '') as String;
+			local String is item: :get(index: i) as String;
 			if({ item == search }, {
 				found: i;
 			});
@@ -174,7 +174,7 @@ Class is Array of T{
 			if({ i > 0 }, {
 				out: out . separator;
 			});
-			out: out . (:get(index: i, default: '') as String);
+			out: out . (:get(index: i) as String);
 			i: i + 1;
 		});
 		return out;
@@ -199,7 +199,7 @@ Class is Array of T{
 	##
 	## @param default: Fallback value returned when empty.
 	## @return: First element, or [default].
-	Function of T is first(Any is default){
+	Function of T is first(T is default){
 		if({ :length() == 0 }, {
 			return default;
 		});
@@ -210,7 +210,7 @@ Class is Array of T{
 	##
 	## @param default: Fallback value returned when empty.
 	## @return: Last element, or [default].
-	Function of T is last(Any is default){
+	Function of T is last(T is default){
 		local Int is len: :length();
 		if({ len == 0 }, {
 			return default;
@@ -232,7 +232,7 @@ Class is Array of T{
 		local Array of T is out: [];
 		local Int is i: :length() - 1;
 		while({ i >= 0 }, {
-			out:add(item: :get(index: i, default: ''));
+			out:add(item: :get(index: i));
 			i: i - 1;
 		});
 		return out;
@@ -269,7 +269,7 @@ Class is Array of T{
 		local Boolean is ok: true;
 		local Int is i: 0;
 		while({ ok && i < len }, {
-			if({ !predicate(:get(index: i, default: 0)) }, {
+			if({ !predicate(:get(index: i)) }, {
 				ok: false;
 			});
 			i: i + 1;
@@ -286,7 +286,7 @@ Class is Array of T{
 		local Boolean is ok: true;
 		local Int is i: 0;
 		while({ ok && i < len }, {
-			if({ predicate(:get(index: i, default: 0)) }, {
+			if({ predicate(:get(index: i)) }, {
 				ok: false;
 			});
 			i: i + 1;
@@ -299,7 +299,7 @@ Class is Array of T{
 	## @param predicate: Function returning `true` for the target element.
 	## @param default: Fallback value returned if no element matches.
 	## @return: First matching element, or [default].
-	Function of T is find(Function of Boolean is predicate, Any is default){
+	Function of T is find(Function of Boolean is predicate, T is default){
 		local Int is len: :length();
 		local Any is found: default;
 		local Boolean is hasFound: false;

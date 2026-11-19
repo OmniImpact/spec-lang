@@ -20,16 +20,11 @@ Class is SpecError of T{
 	Any is panicRunner: '';
 	String is description: '';
 	String is kindName: '';
-	T is kind;
-	Any is kindBox: '';
 	Array of StackFrame is stackTrace: [];
 	Array of SpecError is secondaryErrors: [];
+	T is kind;
 
-	local Function of String is resolveKindName(Any is k){
-		local Int is addr: Mem:objToAddr(obj: k);
-		if({ addr < 4096 }, {
-			return 'Unknown';
-		});
+	local Function of String is resolveKindName(T is k){
 		local Int is idx: Introspection:heldIndexOf(obj: k);
 		if({ idx >= 0 }, {
 			return Introspection:heldName(obj: k, index: idx);
@@ -57,15 +52,11 @@ Class is SpecError of T{
 		};
 		Mem:retainAddr(objAddr: Mem:objToAddr(obj: :panicRunner));
 		:kind: kind;
-		local Int is kAddr: Mem:objToAddr(obj: kind);
-		if({ kAddr >= 4096 }, {
-			:kindBox: Mem:addrToObj(addr: kAddr);
-		});
 		:description: description;
 		if({ kindName != '' }, {
 			:kindName: kindName;
 		}, {
-			:kindName: :resolveKindName(k: :kindBox);
+			:kindName: :resolveKindName(k: kind);
 		});
 		:stackTrace: [];
 		:secondaryErrors: [];
@@ -93,10 +84,6 @@ Class is SpecError of T{
 
 	Function of T is getKind(){
 		return :kind;
-	}
-
-	Function of Any is getKindBox(){
-		return :kindBox;
 	}
 
 	Function of Array of StackFrame is getStackTrace(){

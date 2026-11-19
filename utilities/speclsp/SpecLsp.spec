@@ -28,7 +28,6 @@ Class is SpecLsp{
 		['base', 'sys', as Output()],
 		['base', 'sys', as Input()],
 		['base', 'sys', as Process()],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
@@ -48,7 +47,7 @@ Class is SpecLsp{
 		local Int is start: 0;
 		local Boolean is scanningStart: true;
 		while({ scanningStart && start < len }, {
-			local Int is b: Buf:bufGetByte(b: s, idx: start, def: 0);
+			local Int is b: s:byteAt(index: start, default: 0);
 			if({ b == 32 || b == 9 || b == 13 || b == 10 }, {
 				start: start + 1;
 			}, {
@@ -58,7 +57,7 @@ Class is SpecLsp{
 		local Int is end: len;
 		local Boolean is scanningEnd: true;
 		while({ scanningEnd && end > start }, {
-			local Int is b: Buf:bufGetByte(b: s, idx: end - 1, def: 0);
+			local Int is b: s:byteAt(index: end - 1, default: 0);
 			if({ b == 32 || b == 9 || b == 13 || b == 10 }, {
 				end: end - 1;
 			}, {
@@ -107,7 +106,7 @@ Class is SpecLsp{
 	}
 
 	local Function is sendRawMessage(String is body){
-		local Int is byteLen: Buf:bufLength(b: body);
+		local Int is byteLen: body:length();
 		Output:consOut(text: "Content-Length: " . (byteLen as String) . "\r\n\r\n" . body);
 	}
 
@@ -298,11 +297,11 @@ Class is SpecLsp{
 		local Boolean is found: false;
 		while({ !found && i <= len }, {
 			local Boolean is isEnd: i == len;
-			local Int is b: if({ !isEnd }, { Buf:bufGetByte(b: text, idx: i, def: 0) }, { 10 });
+			local Int is b: if({ !isEnd }, { text:byteAt(index: i, default: 0) }, { 10 });
 			if({ b == 10 || isEnd }, {
 				if({ curLine == targetLine0 }, {
 					local Int is endIdx: i;
-					if({ endIdx > lineStart && Buf:bufGetByte(b: text, idx: endIdx - 1, def: 0) == 13 }, {
+					if({ endIdx > lineStart && text:byteAt(index: endIdx - 1, default: 0) == 13 }, {
 						endIdx: endIdx - 1;
 					});
 					result: text:substring(start: lineStart, end: endIdx);
@@ -326,20 +325,20 @@ Class is SpecLsp{
 		if({ pos < 0 }, { pos: 0; });
 
 		local Int is start: pos;
-		while({ start > 0 && isIdentChar(b: Buf:bufGetByte(b: lineStr, idx: start - 1, def: 0)) }, {
+		while({ start > 0 && isIdentChar(b: lineStr:byteAt(index: start - 1, default: 0)) }, {
 			start: start - 1;
 		});
 		local Int is end: pos;
-		while({ end < len && isIdentChar(b: Buf:bufGetByte(b: lineStr, idx: end, def: 0)) }, {
+		while({ end < len && isIdentChar(b: lineStr:byteAt(index: end, default: 0)) }, {
 			end: end + 1;
 		});
 		local String is word: lineStr:substring(start: start, end: end);
 		local String is qualifier: '';
 
-		if({ start >= 2 && Buf:bufGetByte(b: lineStr, idx: start - 1, def: 0) == 58 }, {
+		if({ start >= 2 && lineStr:byteAt(index: start - 1, default: 0) == 58 }, {
 			local Int is qEnd: start - 1;
 			local Int is qStart: qEnd;
-			while({ qStart > 0 && isIdentChar(b: Buf:bufGetByte(b: lineStr, idx: qStart - 1, def: 0)) }, {
+			while({ qStart > 0 && isIdentChar(b: lineStr:byteAt(index: qStart - 1, default: 0)) }, {
 				qStart: qStart - 1;
 			});
 			qualifier: lineStr:substring(start: qStart, end: qEnd);
@@ -562,11 +561,11 @@ Class is SpecLsp{
 		local Boolean is hasColonPrefix: false;
 		local String is receiverName: '';
 
-		if({ cPos > 0 && Buf:bufGetByte(b: lineStr, idx: cPos - 1, def: 0) == 58 }, {
+		if({ cPos > 0 && lineStr:byteAt(index: cPos - 1, default: 0) == 58 }, {
 			hasColonPrefix: true;
 			local Int is rEnd: cPos - 1;
 			local Int is rStart: rEnd;
-			while({ rStart > 0 && isIdentChar(b: Buf:bufGetByte(b: lineStr, idx: rStart - 1, def: 0)) }, {
+			while({ rStart > 0 && isIdentChar(b: lineStr:byteAt(index: rStart - 1, default: 0)) }, {
 				rStart: rStart - 1;
 			});
 			receiverName: lineStr:substring(start: rStart, end: rEnd);

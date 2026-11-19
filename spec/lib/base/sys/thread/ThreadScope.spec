@@ -12,7 +12,6 @@ Class is ThreadScope{
 	replace Array of Array of String is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', Task],
-		['base', 'sys', as Reflection()],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
@@ -140,39 +139,63 @@ Class is ThreadScope{
 		});
 	}
 
-	## Spawns [task] on a new thread bound to this scope and returns a [Task].
-	## [kind] is supplied by the compiler (`0` = Int/Bool/Byte, `1` = ARC ptr, `2` = Float, `3` = Void).
-	Function of Task is spawn(Function is task, Int is kind: Reflection:closureReturnKind()){
-		local Task is t: Task:init(isArc: kind == 1);
+	local Function is registerTask(Task is task){
 		Thread:mutexLock(handle: :mutex);
-		:tasks:add(item: t);
+		:tasks:add(item: task);
 		Thread:mutexUnlock(handle: :mutex);
+	}
+
+	## Spawns a void [task] on a new thread bound to this scope and returns a [Task].
+	Function of Task is spawn(Function is task, Boolean is hasResult: false){
+		local Task is t: Task:init();
+		:registerTask(task: t);
 
 		local Function is worker: local Function(){
 			t:markRunning();
-			if({ kind == 3 }, {
-				local Int is errAddr: Mem:callCatching(action: local Function(){
-					task();
-				});
-				if({ errAddr != 0 }, {
-					:cancel();
-					t:failAddr(errAddr: errAddr);
-					Mem:releaseAddr(objAddr: errAddr);
-				}, {
-					t:complete(value: Mem:addrToObj(addr: 0));
-				});
-			}, {
-				local Int is errAddr: Mem:callCatching(action: local Function(){
+			local Int is errAddr: Mem:callCatching(action: local Function(){
+				if({ hasResult }, {
 					local Any is res: task();
 					if({ !Mem:hasPendingError() }, {
+						local Int is rAddr: Mem:objToAddr(obj: res);
+						if({ rAddr != 0 }, {
+							Mem:retainAddr(objAddr: rAddr);
+						});
 						t:complete(value: res);
 					});
+				}, {
+					task();
+					if({ !Mem:hasPendingError() }, {
+						t:completeVoid();
+					});
 				});
-				if({ errAddr != 0 }, {
-					:cancel();
-					t:failAddr(errAddr: errAddr);
-					Mem:releaseAddr(objAddr: errAddr);
+			});
+			if({ errAddr != 0 }, {
+				:cancel();
+				t:failAddr(errAddr: errAddr);
+				Mem:releaseAddr(objAddr: errAddr);
+			});
+		};
+		t:start(worker: worker);
+		return t;
+	}
+
+	## Spawns a value-returning [task] of type [T] on a new thread bound to this scope and returns a [Task of T].
+	Function of Task of T is spawnTyped(Function of T is task, Boolean is hasResult: true){
+		local Task of T is t: Task:init();
+		:registerTask(task: t);
+
+		local Function is worker: local Function(){
+			t:markRunning();
+			local Int is errAddr: Mem:callCatching(action: local Function(){
+				local T is res: task();
+				if({ !Mem:hasPendingError() }, {
+					t:complete(value: res);
 				});
+			});
+			if({ errAddr != 0 }, {
+				:cancel();
+				t:failAddr(errAddr: errAddr);
+				Mem:releaseAddr(objAddr: errAddr);
 			});
 		};
 		t:start(worker: worker);

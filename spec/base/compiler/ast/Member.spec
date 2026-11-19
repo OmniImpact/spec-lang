@@ -28,7 +28,7 @@ Class is Member{
 	Array of String is modifiers: [];
 
 	## Return type for methods; value type for fields.
-	Type is memberType;
+	Type is memberType: Type:init(name: '');
 
 	## Member identifier.
 	String is name: '';

@@ -6,7 +6,6 @@ Class is ClassInfo{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Member],
-		['base', 'sys', as Buf()],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
@@ -129,7 +128,7 @@ Class is ClassInfo{
 				});
 			}
 		);
-		return Buf:stringCopy(b: joined);
+		return joined:copy();
 	}
 
 	## The class's declared namespace as its segment array (empty when

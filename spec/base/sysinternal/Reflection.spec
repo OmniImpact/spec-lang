@@ -30,15 +30,4 @@ Class is Reflection{
 	##
 	## @return: The call site's 1-based line number.
 	Function of Int is line();
-
-	## True when the enclosing call's resolved type parameter T is an ARC-managed reference type.
-	##
-	## @return: True when the call site's type argument is ARC-managed.
-	Function of Boolean is isArcTypeParam();
-
-	## Returns the return-type category of the closure argument at the call site
-	## (`0` = scalar Int/Boolean/Byte, `1` = ARC reference, `2` = Float, `3` = Void).
-	##
-	## @return: Closure return kind code.
-	Function of Int is closureReturnKind();
 }

@@ -1,59 +1,33 @@
-Class of SpecUnitTest is TestNegativeTypeSafety{
-	replace Array of Array of String is using: [
-		['specunit', Assert],
-		['specunit', SpecUnitTest],
-		['specunit', SpecUnitRunner]
-	];
+#! specunit: negative-suite
 
-	Function is testNarrowFloatField(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testNarrowFloatField
+#! expect: cannot assign 'Float' to 'Int'
 Class is NarrowFloatField{
 	local Int is samples: 3.7;
 }
-''',
-			expect: "cannot assign 'Float' to 'Int'"
-		);
-	}
 
-	Function is testArrayElementMismatch(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testArrayElementMismatch
+#! expect: Cannot assign 'Array:String' to 'Array:Int'
 Class is ArrayElementMismatch{
 	local Array of Int is flags: ['on', 'off'];
 }
-''',
-			expect: "Cannot assign 'Array:String' to 'Array:Int'"
-		);
-	}
 
-	Function is testMapValueMismatch(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testMapValueMismatch
+#! expect: Cannot assign 'Map:String:String' to 'Map:String:Int'
 Class is MapValueMismatch{
 	local Map of String to Int is ages: ['ana': 'ten'];
 }
-''',
-			expect: "Cannot assign 'Map:String:String' to 'Map:String:Int'"
-		);
-	}
 
-	Function is testUndefinedIdentifier(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testUndefinedIdentifier
+#! expect: Undefined identifier 'untrackedTotal'
 Class is UndefinedIdentifier{
 	replace Function is init(Map of String to String is args){
 		local Int is total: untrackedTotal + 1;
 	}
 }
-''',
-			expect: "Undefined identifier 'untrackedTotal'"
-		);
-	}
 
-	Function is testNonBooleanConditionControl(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testNonBooleanConditionControl
+#! expect: Method declared return type 'Boolean', but returned 'Int'
 Class is NonBooleanConditionControl{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]
@@ -65,14 +39,9 @@ Class is NonBooleanConditionControl{
 		});
 	}
 }
-''',
-			expect: "Method declared return type 'Boolean', but returned 'Int'"
-		);
-	}
 
-	Function is testUnassignedFieldRead(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testUnassignedFieldRead
+#! expect: is read before being initialized
 Class is UnassignedFieldRead{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Output()]
@@ -84,14 +53,9 @@ Class is UnassignedFieldRead{
 		Output:line(:label);
 	}
 }
-''',
-			expect: "is read before being initialized"
-		);
-	}
 
-	Function is testCallArgumentMismatch(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testCallArgumentMismatch
+#! expect: Argument 'n' for 'CallArgumentMismatch.double': cannot assign 'String' to 'Int'
 Class is CallArgumentMismatch{
 	Function of Int is double(Int is n){
 		return n * 2;
@@ -101,14 +65,9 @@ Class is CallArgumentMismatch{
 		local Int is result: :double(n: 'not-a-number');
 	}
 }
-''',
-			expect: "Argument 'n' for 'CallArgumentMismatch.double': cannot assign 'String' to 'Int'"
-		);
-	}
 
-	Function is testIncompleteWhenBranches(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testIncompleteWhenBranches
+#! expect: Non-exhaustive match: missing arm(s) TransportMode:BIKE
 Enum is TransportMode{
 	CAR,
 	BIKE
@@ -125,111 +84,72 @@ Class is IncompleteWhenBranches{
 		]);
 	}
 }
-''',
-			expect: "Non-exhaustive match: missing arm(s) TransportMode:BIKE"
-		);
-	}
 
-	Function is testIncompatibleArrayElements(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testIncompatibleArrayElements
+#! expect: Incompatible array element types
 Class is IncompatibleArrayElements{
 	replace Function is init(Map of String to String is args){
 		local Int is n: [1, 'mixed']:length();
 	}
 }
-''',
-			expect: "Incompatible array element types"
-		);
-	}
 
-	Function is testByteAssignmentAndCast(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testByteAssignmentAndCast_1
+#! expect: cannot assign 'Int' to 'Byte'
 Class is ByteAssignmentMismatch{
 	replace Function is init(Map of String to String is args){
 		local Byte is direct: 5;
 	}
 }
-''',
-			expect: "cannot assign 'Int' to 'Byte'"
-		);
 
-		Assert:compilerRejects(
-			source: '''
+#! case: testByteAssignmentAndCast_2
+#! expect: Cannot cast 'String' to 'Byte'
 Class is ByteStringCastMismatch{
 	replace Function is init(Map of String to String is args){
 		local Byte is fromString: 'hello' as Byte;
 	}
 }
-''',
-			expect: "Cannot cast 'String' to 'Byte'"
-		);
-	}
 
-	Function is testBitwiseOperands(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testBitwiseOperands_1
+#! expect: Bitwise operator '&' requires Int operands
 Class is BitwiseOperandMismatch{
 	replace Function is init(Map of String to String is args){
 		local Int is bad: 'oops' & 1;
 	}
 }
-''',
-			expect: "Bitwise operator '&' requires Int operands"
-		);
 
-		Assert:compilerRejects(
-			source: '''
+#! case: testBitwiseOperands_2
+#! expect: Bitwise complement '~' requires an Int operand
 Class is BitwiseComplementMismatch{
 	replace Function is init(Map of String to String is args){
 		local Int is badComplement: ~2.5;
 	}
 }
-''',
-			expect: "Bitwise complement '~' requires an Int operand"
-		);
-	}
 
-	Function is testInvalidHexLiteral(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testInvalidHexLiteral
+#! expect: Invalid digit in base-16 number literal
 Class is InvalidHexLiteral{
 	local Int is mask: 0xGG;
 }
-''',
-			expect: "Invalid digit in base-16 number literal"
-		);
-	}
 
-	Function is testListGuard(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testListGuard_1
+#! expect: Bare List type requires
 Class is BareListGuard{
 	replace Function is init(Map of String to String is args){
 		local List is bare;
 	}
 }
-''',
-			expect: "Bare List type requires"
-		);
 
-		Assert:compilerRejects(
-			source: '''
+#! case: testListGuard_2
+#! expect: requires a 'default:' argument
 Class is ListGetGuard{
 	replace Function is init(Map of String to String is args){
 		local [Byte] is buf;
 		local Byte is b: buf:get(index: 0);
 	}
 }
-''',
-			expect: "requires a 'default:' argument"
-		);
-	}
 
-	Function is testAnyContractRootOnly(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testAnyContractRootOnly
+#! expect: Member 'fetch' is not part of the root contract
 Class is StrictAnimal{
 	Function of String is speak(){
 		return '...';
@@ -248,14 +168,9 @@ Class is StrictNegativeTest{
 		anyRef:fetch();
 	}
 }
-''',
-			expect: "Member 'fetch' is not part of the root contract"
-		);
-	}
 
-	Function is testStringRelationalMixed(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testStringRelationalMixed
+#! expect: requires two String operands
 Class is N17StringRelationalMixed{
 	replace Function is init(Map of String to String is args){
 		local String is s: 'm';
@@ -263,14 +178,9 @@ Class is N17StringRelationalMixed{
 		local Boolean is b: s >= n;
 	}
 }
-''',
-			expect: "requires two String operands"
-		);
-	}
 
-	Function is testFunctionTypedParam(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testFunctionTypedParam
+#! expect: Argument 'check' for 'Conditional.if': cannot assign 'Function' to 'Function of Boolean'
 Class is N22FunctionTypedParam{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
@@ -284,14 +194,9 @@ Class is N22FunctionTypedParam{
 		});
 	}
 }
-''',
-			expect: "Argument 'check' for 'Conditional.if': cannot assign 'Function' to 'Function of Boolean'"
-		);
-	}
 
-	Function is testVoidInValueContext(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testVoidInValueContext
+#! expect: 'Conditional.if' declares no return value
 Class is N23VoidInValueContext{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]
@@ -301,21 +206,51 @@ Class is N23VoidInValueContext{
 		local String is a: Conditional:if(check: { true }, then: { 'x' });
 	}
 }
-''',
-			expect: "'Conditional.if' declares no return value"
-		);
-	}
 
-	Function is testFunctionColonSyntaxRejected(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testFunctionColonSyntaxRejected
+#! expect: Function type must use 'Function of <Ret>' or 'Function of <Arg> to <Ret>', not colon syntax.
 Class is N24FunctionColonSyntax{
 	replace Function is init(Map of String to String is args){
 		local Function:Int is fn: { 42 };
 	}
 }
-''',
-			expect: "Function type must use 'Function of <Ret>' or 'Function of <Arg> to <Ret>', not colon syntax."
-		);
+
+#! case: testMethodSignatureTypoRejected
+#! expect: Unknown or unimported type 'Strng'
+Class is MethodSigTypo{
+	Function is greet(Strng is name){}
+	replace Function is init(){}
+}
+
+#! case: testUngroundedGenericMethodRejected
+#! expect: defined but never grounded by any concrete call
+Class is UngroundedGenericMethod{
+	Function of T is identity(T is x){
+		return x;
+	}
+	replace Function is init(){}
+}
+
+#! case: testArrayGetDefaultTypeMismatch
+#! expect: cannot assign 'String' to 'Int'
+Class is ArrayDefaultMismatch{
+	replace Array of Array of String is using: [
+		['base', 'struct', Array]
+	];
+	replace Function is init(){
+		local Array of Int is nums: [1, 2, 3];
+		local Int is v: nums:get(index: 0, default: 'bad');
+	}
+}
+
+#! case: testMapGetDefaultTypeMismatch
+#! expect: cannot assign 'String' to 'Int'
+Class is MapDefaultMismatch{
+	replace Array of Array of String is using: [
+		['base', 'struct', Map]
+	];
+	replace Function is init(){
+		local Map of String to Int is ages: ['a': 1];
+		local Int is v: ages:get(key: 'a', default: 'bad');
 	}
 }

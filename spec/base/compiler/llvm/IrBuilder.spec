@@ -25,6 +25,7 @@ Class is IrBuilder{
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', CallLowererRegistry],
+		['base', 'compiler', 'llvm', GenericSpecializer],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'sys', as Conditional()],
@@ -73,6 +74,7 @@ Class is IrBuilder{
 	Array of CallLowerer is callLowerers: [];
 	Map of String to ClassInfo is clsMap: Map:init();
 	Map of String to ClassInfo is sysinternalClasses: Map:init();
+	Map of String to String is specBaseMap: Map:init();
 	Map of String to String is clsQNameMap: Map:init();
 	Map of String to String is methodParamPtrMask: Map:init();
 	Map of String to Boolean is methodRetIsPtr: Map:init();
@@ -434,6 +436,9 @@ Class is IrBuilder{
 			});
 			pci++;
 		});
+		local GenericSpecializer is specializer: GenericSpecializer:init();
+		specializer:specialize(program: program, allClasses: allClasses);
+		:specBaseMap: specializer:specBaseMap;
 
 		local Map of String to ClassInfo is clsMap: Map:init();
 		local Map of String to String is clsQNameMap: Map:init();
@@ -862,6 +867,12 @@ Class is IrBuilder{
 			if({ !:isStdlibClass(cls: cls) || cls:baseClasses:length() > 0 }, {
 				local Array of String is ancs: [];
 				:collectAncestors(cls: cls, seen: Map:init(), out: ancs);
+				if({ :specBaseMap:has(key: cls:qualifiedName()) }, {
+					local String is genBase: :specBaseMap:get(key: cls:qualifiedName(), default: '');
+					if({ genBase != '' }, {
+						ancs:add(item: genBase);
+					});
+				});
 				if({ ancs:length() > 0 }, {
 					local Int is qnId: :mod:internStringLiteral(value: cls:qualifiedName());
 					local String is qnPtr: :nextTmp();
@@ -1032,6 +1043,18 @@ Class is IrBuilder{
 					});
 					seen:set(key: m:name, value: true);
 					:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
+				});
+			}, {
+				if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && !m:hasModifier(kw: Keyword:HELD) && !m:hasInit && !seen:has(key: m:name) }, {
+					local Int is fidx0: st:fieldIndex(name: m:name);
+					if({ fidx0 >= 0 }, {
+						local IrType is fty0: st:fieldTypes:get(index: fidx0);
+						local String is ptr0: :nextTmp();
+						:emit(inst: IrInst:FieldPtr(dst: ptr0, objPtr: '%self', structName: :currentClass, fieldIndex: fidx0));
+						local String is defVal0: :emitDefaultVal(ty: fty0);
+						seen:set(key: m:name, value: true);
+						:emit(inst: IrInst:Store(slot: ptr0, val: defVal0, ty: fty0));
+					});
 				});
 			});
 			mi++;
@@ -1832,21 +1855,106 @@ Class is IrBuilder{
 			},
 			Expression:Call: local Function(CallData is call){
 				:collectDeclNamesInExpr(expr: call:target, decls: decls);
+				local String is cnm: call:name;
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval';
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ci);
-					:collectDeclNamesInExpr(expr: na:value, decls: decls);
+					if({ isInlineCf }, {
+						local Boolean is handledInl: false;
+						match(on: na:value, when: [
+							Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+								handledInl: true;
+								local Int is pi: 0;
+								while({ pi < subParams:length() }, {
+									local Parameter is sp: subParams:get(index: pi);
+									decls:set(key: sp:name, value: true);
+									pi++;
+								});
+								:collectDeclNamesInStmts(stmts: subBody, decls: decls);
+							},
+							Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+								if({ cnm == 'match' }, {
+									handledInl: true;
+									local Int is mi: 0;
+									while({ mi < keys:length() }, {
+										local Expression is mk: keys:get(index: mi);
+										local Expression is mv: values:get(index: mi);
+										match(on: mk, when: [
+											Expression:AnonFn: local Function(Type is _krt, Array of Parameter is kParams, Array of Statement is kBody){
+												local Int is kpi: 0;
+												while({ kpi < kParams:length() }, {
+													local Parameter is kp: kParams:get(index: kpi);
+													decls:set(key: kp:name, value: true);
+													kpi++;
+												});
+												:collectDeclNamesInStmts(stmts: kBody, decls: decls);
+											}
+										], default: {
+											:collectDeclNamesInExpr(expr: mk, decls: decls);
+										});
+										match(on: mv, when: [
+											Expression:AnonFn: local Function(Type is _vrt, Array of Parameter is vParams, Array of Statement is vBody){
+												local Int is vpi: 0;
+												while({ vpi < vParams:length() }, {
+													local Parameter is vp: vParams:get(index: vpi);
+													decls:set(key: vp:name, value: true);
+													vpi++;
+												});
+												:collectDeclNamesInStmts(stmts: vBody, decls: decls);
+											}
+										], default: {
+											:collectDeclNamesInExpr(expr: mv, decls: decls);
+										});
+										mi++;
+									});
+								});
+							},
+							Expression:ArrayLit: local Function(Array of Expression is items){
+								if({ cnm == 'branch' }, {
+									handledInl: true;
+									local Int is bi: 0;
+									while({ bi < items:length() }, {
+										local Expression is bItem: items:get(index: bi);
+										match(on: bItem, when: [
+											Expression:ArrayLit: local Function(Array of Expression is pair){
+												local Int is pi: 0;
+												while({ pi < pair:length() }, {
+													local Expression is pItem: pair:get(index: pi);
+													match(on: pItem, when: [
+														Expression:AnonFn: local Function(Type is _prt, Array of Parameter is pParams, Array of Statement is pBody){
+															local Int is ppi: 0;
+															while({ ppi < pParams:length() }, {
+																local Parameter is pp: pParams:get(index: ppi);
+																decls:set(key: pp:name, value: true);
+																ppi++;
+															});
+															:collectDeclNamesInStmts(stmts: pBody, decls: decls);
+														}
+													], default: {
+														:collectDeclNamesInExpr(expr: pItem, decls: decls);
+													});
+													pi++;
+												});
+											}
+										], default: {
+											:collectDeclNamesInExpr(expr: bItem, decls: decls);
+										});
+										bi++;
+									});
+								});
+							}
+						], default: {});
+						if({ !handledInl }, {
+							:collectDeclNamesInExpr(expr: na:value, decls: decls);
+						});
+					}, {
+						:collectDeclNamesInExpr(expr: na:value, decls: decls);
+					});
 					ci++;
 				});
 			},
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
-				local Int is pi: 0;
-				while({ pi < subParams:length() }, {
-					local Parameter is sp: subParams:get(index: pi);
-					decls:set(key: sp:name, value: true);
-					pi++;
-				});
-				:collectDeclNamesInStmts(stmts: subBody, decls: decls);
+			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _subParams, Array of Statement is _subBody){
 			}
 		], default: {});
 	}
@@ -2009,6 +2117,7 @@ Class is IrBuilder{
 					});
 					ci++;
 				});
+				:collectAllAnonCapturesInStmts(stmts: subBody, decls: decls, out: out);
 			}
 		], default: {});
 	}
@@ -2293,7 +2402,7 @@ Class is IrBuilder{
 		return dst;
 	}
 
-	local Function is collectCallsInStmts(Array of Statement is stmts, Map of String to Boolean is fnVars, Array of String is outCalls){
+	local Function is collectCallsInStmts(Array of Statement is stmts, Map of String to Boolean is fnVars, Array of String is outCalls, String is curClsName: ''){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -2303,62 +2412,62 @@ Class is IrBuilder{
 						fnVars:set(key: vn, value: true);
 					});
 					if({ hi }, {
-						:collectCallsInExpr(expr: ie, fnVars: fnVars, outCalls: outCalls);
+						:collectCallsInExpr(expr: ie, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 					});
 				},
 				Statement:Assign: local Function(Expression is at, Expression is av){
-					:collectCallsInExpr(expr: at, fnVars: fnVars, outCalls: outCalls);
-					:collectCallsInExpr(expr: av, fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: at, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
+					:collectCallsInExpr(expr: av, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 				},
 				Statement:Return: local Function(Expression is re, Boolean is hr){
 					if({ hr }, {
-						:collectCallsInExpr(expr: re, fnVars: fnVars, outCalls: outCalls);
+						:collectCallsInExpr(expr: re, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 					});
 				},
 				Statement:Expr: local Function(Expression is es){
-					:collectCallsInExpr(expr: es, fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: es, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 				}
 			], default: {});
 			i++;
 		});
 	}
 
-	local Function is collectCallsInExpr(Expression is expr, Map of String to Boolean is fnVars, Array of String is outCalls){
+	local Function is collectCallsInExpr(Expression is expr, Map of String to Boolean is fnVars, Array of String is outCalls, String is curClsName: ''){
 		match(on: expr, when: [
 			Expression:Unary: local Function(String is _op, Expression is opnd){
-				:collectCallsInExpr(expr: opnd, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: opnd, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 			},
 			Expression:Binary: local Function(String is _op, Expression is l, Expression is r){
-				:collectCallsInExpr(expr: l, fnVars: fnVars, outCalls: outCalls);
-				:collectCallsInExpr(expr: r, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: l, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
+				:collectCallsInExpr(expr: r, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 			},
 			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
-				:collectCallsInExpr(expr: inner, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: inner, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
-					:collectCallsInExpr(expr: args:get(index: ai), fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: args:get(index: ai), fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 					ai++;
 				});
 			},
 			Expression:FieldAccess: local Function(Expression is t, String is _f){
-				:collectCallsInExpr(expr: t, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: t, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 			},
 			Expression:Index: local Function(Expression is t, Expression is idx){
-				:collectCallsInExpr(expr: t, fnVars: fnVars, outCalls: outCalls);
-				:collectCallsInExpr(expr: idx, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: t, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
+				:collectCallsInExpr(expr: idx, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 			},
 			Expression:ArrayLit: local Function(Array of Expression is items){
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
-					:collectCallsInExpr(expr: items:get(index: ii), fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: items:get(index: ii), fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 					ii++;
 				});
 			},
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is vals){
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {
-					:collectCallsInExpr(expr: keys:get(index: mi), fnVars: fnVars, outCalls: outCalls);
-					:collectCallsInExpr(expr: vals:get(index: mi), fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: keys:get(index: mi), fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
+					:collectCallsInExpr(expr: vals:get(index: mi), fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 					mi++;
 				});
 			},
@@ -2371,7 +2480,7 @@ Class is IrBuilder{
 					});
 					pi++;
 				});
-				:collectCallsInStmts(stmts: subBody, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInStmts(stmts: subBody, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 			},
 			Expression:Call: local Function(CallData is call){
 				local String is cnm: call:name;
@@ -2388,24 +2497,83 @@ Class is IrBuilder{
 					match(on: call:target, when: [
 						Expression:Ident: local Function(String is tname){
 							if({ tname != ':' && tname != '' }, {
-								outCalls:add(item: tname . '_init');
+								outCalls:add(item: :cStructName(qname: tname) . '_init');
 							});
 						}
 					], default: {});
 				}, {
 					if({ cnm != 'if' && cnm != 'while' && cnm != 'until' && cnm != 'repeat' && cnm != 'match' && cnm != 'branch' && cnm != 'lazy' && cnm != 'eval' && cnm != 'get' && cnm != 'set' && cnm != 'add' && cnm != 'length' && cnm != 'has' && cnm != 'toString' && cnm != 'destroy' }, {
-						outCalls:add(item: cnm);
+						local String is rt: call:target:resolvedType;
+						local String is recvStruct: '';
+						if({ rt != '' && rt != ':' && rt != 'Any' }, {
+							local String is rBase: rt;
+							local Int is ofIdx: rBase:indexOf(search: ' of ', default: -1);
+							if({ ofIdx > 0 }, {
+								rBase: rBase:substring(start: 0, end: ofIdx);
+							});
+							if({ !:clsMap:has(key: rBase) }, {
+								local Int is colIdx: rBase:indexOf(search: ':', default: -1);
+								if({ colIdx > 0 }, {
+									rBase: rBase:substring(start: 0, end: colIdx);
+								});
+							});
+							if({ :clsMap:has(key: rBase) }, {
+								recvStruct: :cStructName(qname: rBase);
+							});
+						});
+						if({ recvStruct == '' }, {
+							match(on: call:target, when: [
+								Expression:Ident: local Function(String is tname){
+									if({ tname == ':' && curClsName != '' }, {
+										recvStruct: curClsName;
+									}, {
+										if({ tname != '' && :clsMap:has(key: tname) }, {
+											recvStruct: :cStructName(qname: tname);
+										});
+									});
+								}
+							], default: {});
+						});
+						if({ recvStruct != '' }, {
+							outCalls:add(item: recvStruct . '_' . cnm);
+						}, {
+							outCalls:add(item: '__ANY__:' . cnm);
+						});
 					});
 				});
-				:collectCallsInExpr(expr: call:target, fnVars: fnVars, outCalls: outCalls);
+				:collectCallsInExpr(expr: call:target, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 				local Int is cai: 0;
 				while({ cai < call:args:length() }, {
 					local NamedArg is cna: call:args:get(index: cai);
-					:collectCallsInExpr(expr: cna:value, fnVars: fnVars, outCalls: outCalls);
+					:collectCallsInExpr(expr: cna:value, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 					cai++;
 				});
 			}
 		], default: {});
+	}
+
+	local Function is markMethodCanUnwind(ClassInfo is cls, String is sname, String is bareName, String is fnSym){
+		:canUnwindCallees:set(key: fnSym, value: true);
+		:canUnwindCallees:set(key: sname . '_' . bareName, value: true);
+		if({ bareName != 'init' }, {
+			:canUnwindMethodNames:set(key: bareName, value: true);
+			local Array of String is ancs: [];
+			:collectAncestors(cls: cls, seen: Map:init(), out: ancs);
+			if({ :specBaseMap:has(key: cls:qualifiedName()) }, {
+				local String is gb: :specBaseMap:get(key: cls:qualifiedName(), default: '');
+				if({ gb != '' }, {
+					ancs:add(item: gb);
+				});
+			});
+			local Int is ai: 0;
+			while({ ai < ancs:length() }, {
+				local String is anc: ancs:get(index: ai, default: '');
+				if({ anc != '' }, {
+					:canUnwindCallees:set(key: :cStructName(qname: anc) . '_' . bareName, value: true);
+				});
+				ai++;
+			});
+		});
 	}
 
 	local Function is computeCanUnwind(Array of ClassInfo is allClasses){
@@ -2413,6 +2581,8 @@ Class is IrBuilder{
 		:canUnwindMethodNames: Map:init();
 		local Array of String is methodSyms: [];
 		local Array of String is methodBareNames: [];
+		local Array of String is methodSnames: [];
+		local Array of ClassInfo is methodClasses: [];
 		local Array of Int is methodCallStarts: [];
 		local Array of Int is methodCallEnds: [];
 		local Array of String is flatCalls: [];
@@ -2440,7 +2610,7 @@ Class is IrBuilder{
 							pi++;
 						});
 						local Int is startIdx: flatCalls:length();
-						:collectCallsInStmts(stmts: m:body, fnVars: fnVars, outCalls: flatCalls);
+						:collectCallsInStmts(stmts: m:body, fnVars: fnVars, outCalls: flatCalls, curClsName: sname);
 						local Int is endIdx: flatCalls:length();
 						local Boolean is hasSeed: false;
 						local Int is ki: startIdx;
@@ -2451,13 +2621,12 @@ Class is IrBuilder{
 							ki++;
 						});
 						if({ hasSeed }, {
-							:canUnwindCallees:set(key: fnSym, value: true);
-							if({ m:name != 'init' }, {
-								:canUnwindMethodNames:set(key: m:name, value: true);
-							});
+							:markMethodCanUnwind(cls: cls, sname: sname, bareName: m:name, fnSym: fnSym);
 						}, {
 							methodSyms:add(item: fnSym);
 							methodBareNames:add(item: m:name);
+							methodSnames:add(item: sname);
+							methodClasses:add(item: cls);
 							methodCallStarts:add(item: startIdx);
 							methodCallEnds:add(item: endIdx);
 						});
@@ -2481,17 +2650,22 @@ Class is IrBuilder{
 					local Int is ki: sIdx;
 					while({ ki < eIdx && !hits }, {
 						local String is c: flatCalls:get(index: ki, default: '');
-						if({ :canUnwindCallees:has(key: c) || :canUnwindMethodNames:has(key: c) }, {
-							hits: true;
+						if({ c:startsWith(prefix: '__ANY__:') }, {
+							if({ :canUnwindMethodNames:has(key: c:substring(start: 8, end: c:length())) }, {
+								hits: true;
+							});
+						}, {
+							if({ :canUnwindCallees:has(key: c) }, {
+								hits: true;
+							});
 						});
 						ki++;
 					});
 					if({ hits }, {
-						:canUnwindCallees:set(key: sym, value: true);
 						local String is bname: methodBareNames:get(index: idx, default: '');
-						if({ bname != 'init' }, {
-							:canUnwindMethodNames:set(key: bname, value: true);
-						});
+						local String is msname: methodSnames:get(index: idx, default: '');
+						local ClassInfo is mcls: methodClasses:get(index: idx);
+						:markMethodCanUnwind(cls: mcls, sname: msname, bareName: bname, fnSym: sym);
 						changed: true;
 					});
 				});
@@ -2511,17 +2685,6 @@ Class is IrBuilder{
 		});
 		if({ :canUnwindCallees:has(key: callee) }, {
 			return true;
-		});
-		local Int is uIdx: callee:indexOf(search: '_', default: -1);
-		if({ uIdx > 0 }, {
-			local String is cPref: callee:substring(start: 0, end: uIdx);
-			local String is mPart: callee:substring(start: uIdx + 1, end: callee:length());
-			if({ :sysinternalClasses:has(key: cPref) || cPref == 'Arc' || cPref == 'Slab' || cPref == 'Heap' || cPref == 'Pool' || cPref == 'Arena' || cPref == 'Intern' }, {
-				return false;
-			});
-			if({ mPart != 'init' && :canUnwindMethodNames:has(key: mPart) }, {
-				return true;
-			});
 		});
 		return false;
 	}
@@ -3112,7 +3275,7 @@ Class is IrBuilder{
 		local IrType is rTy: :irTypeFor(specType: right:resolvedType);
 		if({ rTy == IrType:I64 }, {
 			local String is rsI: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: rsI, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', r]));
+			:emit(inst: IrInst:IrCall(dst: rsI, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', r]));
 			return rsI;
 		});
 		if({ rTy == IrType:F64 }, {
@@ -3149,7 +3312,7 @@ Class is IrBuilder{
 						local IrType is lTy: :irTypeFor(specType: left:resolvedType);
 						if({ lTy == IrType:I64 }, {
 							ls: :nextTmp();
-							:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', l]));
+							:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', l]));
 						}, {
 							if({ lTy == IrType:F64 }, {
 								ls: :nextTmp();
@@ -3358,7 +3521,7 @@ Class is IrBuilder{
 			local String is strLit: :nextTmp();
 			:emit(inst: IrInst:ConstString(dst: strLit, strId: :mod:internStringLiteral(value: 'String')));
 			local String is isStr: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: isStr, hasDst: true, retType: IrType:I1, callee: 'Buf_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', tnDst, strLit]));
+			:emit(inst: IrInst:IrCall(dst: isStr, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', tnDst, strLit]));
 			local String is outSlot: '%any_ts_' . (:nextTmp());
 			outSlot: '%any_ts_' . (:tmpCounter as String);
 			:emit(inst: IrInst:Alloca(slot: outSlot, ty: IrType:Ptr));
@@ -3491,18 +3654,18 @@ Class is IrBuilder{
 						local Array of IrType is sT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
 						local Array of String is sV: ['null', l, r];
 						if({ op == '==' }, {
-							:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'Buf_stringEquals', argTypes: sT, args: sV));
+							:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: sT, args: sV));
 							return dst;
 						}, {
 							local String is eqTmp: :nextTmp();
-							:emit(inst: IrInst:IrCall(dst: eqTmp, hasDst: true, retType: IrType:I1, callee: 'Buf_stringEquals', argTypes: sT, args: sV));
+							:emit(inst: IrInst:IrCall(dst: eqTmp, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: sT, args: sV));
 							:emit(inst: IrInst:UnaryOp(dst: dst, op: '!', operand: eqTmp, ty: IrType:I1));
 							return dst;
 						});
 					});
 					if({ isStrCmp && (op == '<' || op == '<=' || op == '>' || op == '>=') }, {
 						local String is cmpRes: :nextTmp();
-						:emit(inst: IrInst:IrCall(dst: cmpRes, hasDst: true, retType: IrType:I64, callee: 'Buf_stringCompare', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', l, r]));
+						:emit(inst: IrInst:IrCall(dst: cmpRes, hasDst: true, retType: IrType:I64, callee: 'Str_stringCompare', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', l, r]));
 						local String is zeroV: :nextTmp();
 						:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
 						:emit(inst: IrInst:Cmp(dst: dst, op: op, lhs: cmpRes, rhs: zeroV, ty: IrType:I64));
@@ -3604,7 +3767,7 @@ Class is IrBuilder{
 						:emit(inst: IrInst:ConstInt(dst: digitsVal, value: 0));
 					});
 					local String is dstB: :nextTmp();
-					:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', v, baseVal, digitsVal]));
+					:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', v, baseVal, digitsVal]));
 					return dstB;
 				});
 				local IrType is toTy: :irTypeFor(specType: target);
@@ -3633,7 +3796,7 @@ Class is IrBuilder{
 						:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [v]));
 						return dstS;
 					});
-					:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', v]));
+					:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', v]));
 					return dstS;
 				});
 				if({ fromTy == toTy }, {
@@ -3850,7 +4013,7 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is collectFreeInStmts(Array of Statement is stmts, Map of String to Boolean is bound, Map of String to String is outerSlots, Map of String to Boolean is seen, Array of String is out){
+	local Function is collectFreeInStmts(Array of Statement is stmts, Map of String to Boolean is bound, Map is outerSlots, Map of String to Boolean is seen, Array of String is out){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -3878,7 +4041,7 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is collectFreeInExpr(Expression is expr, Map of String to Boolean is bound, Map of String to String is outerSlots, Map of String to Boolean is seen, Array of String is out){
+	local Function is collectFreeInExpr(Expression is expr, Map of String to Boolean is bound, Map is outerSlots, Map of String to Boolean is seen, Array of String is out){
 		match(on: expr, when: [
 			Expression:Ident: local Function(String is name){
 				if({ !bound:has(key: name) }, {
@@ -4287,7 +4450,7 @@ Class is IrBuilder{
 				if({ na1:name == 'base' }, { baseV: :lowerExpr(expr: na1:value); }, { digV: :lowerExpr(expr: na1:value); });
 			});
 			local String is dst: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', iv, baseV, digV]));
+			:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', iv, baseV, digV]));
 			return dst;
 		});
 

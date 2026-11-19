@@ -12,8 +12,7 @@ Class of SpecUnitTest is TestSpecLsp{
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Conditional()],
-		['base', 'sys', as Uri()],
-		['base', 'sys', as Buf()]
+		['base', 'sys', as Uri()]
 	];
 
 	local Function of String is dirOf(String is path){
@@ -65,7 +64,7 @@ Class of SpecUnitTest is TestSpecLsp{
 	}
 
 	local Function of String is lspFrame(String is jsonBody){
-		local Int is byteLen: Buf:bufLength(b: jsonBody);
+		local Int is byteLen: jsonBody:length();
 		return "Content-Length: " . (byteLen as String) . "\r\n\r\n" . jsonBody;
 	}
 

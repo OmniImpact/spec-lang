@@ -19,7 +19,6 @@ Class is LlvmEmitter{
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Process()],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -344,10 +343,10 @@ Class is LlvmEmitter{
 			return :dbgFileIds:get(key: norm, default: 0);
 		});
 		local Int is lastSlash: -1;
-		local Int is n: Buf:bufLength(b: norm);
+		local Int is n: norm:length();
 		local Int is idx: 0;
 		while({ idx < n }, {
-			if({ Buf:bufGetByte(b: norm, idx: idx, def: 0) == 47 }, {
+			if({ norm:byteAt(index: idx, default: 0) == 47 }, {
 				lastSlash: idx;
 			});
 			idx++;
@@ -355,8 +354,8 @@ Class is LlvmEmitter{
 		local String is dir: '.';
 		local String is file: norm;
 		if({ lastSlash >= 0 }, {
-			dir: if({ lastSlash == 0 }, { '/' }, { Buf:stringSubstring(b: norm, start: 0, end: lastSlash) });
-			file: Buf:stringSubstring(b: norm, start: lastSlash + 1, end: n);
+			dir: if({ lastSlash == 0 }, { '/' }, { norm:substring(start: 0, end: lastSlash) });
+			file: norm:substring(start: lastSlash + 1, end: n);
 		});
 		local Int is id: :dbgNodes:length();
 		:dbgNodes:add(item: '!' . (id as String) . ' = !DIFile(filename: "' . :escapeDebugStr(s: file) . '", directory: "' . :escapeDebugStr(s: dir) . '")');
@@ -378,17 +377,17 @@ Class is LlvmEmitter{
 
 	local Function of String is escapeDebugStr(String is s){
 		local String is res: '';
-		local Int is len: Buf:bufLength(b: s);
+		local Int is len: s:length();
 		local Int is i: 0;
 		while({ i < len }, {
-			local Int is b: Buf:bufGetByte(b: s, idx: i, def: 0);
+			local Int is b: s:byteAt(index: i, default: 0);
 			if({ b == 34 }, {
 				res: res . '\\"';
 			}, {
 				if({ b == 92 }, {
 					res: res . '\\\\';
 				}, {
-					res: res . Buf:stringSubstring(b: s, start: i, end: i + 1);
+					res: res . s:substring(start: i, end: i + 1);
 				});
 			});
 			i++;
@@ -444,16 +443,16 @@ Class is LlvmEmitter{
 	local Function of String is escapeLlvmBytes(String is s){
 		local String is hex: '0123456789ABCDEF';
 		local String is res: '';
-		local Int is len: Buf:bufLength(b: s);
+		local Int is len: s:length();
 		local Int is i: 0;
 		while({ i < len }, {
-			local Int is b: Buf:bufGetByte(b: s, idx: i, def: 0);
+			local Int is b: s:byteAt(index: i, default: 0);
 			if({ b < 32 || b >= 127 || b == 34 || b == 92 }, {
 				local Int is hi: (b >> 4) & 15;
 				local Int is lo: b & 15;
-				res: res . '\\' . Buf:stringSubstring(b: hex, start: hi, end: hi + 1) . Buf:stringSubstring(b: hex, start: lo, end: lo + 1);
+				res: res . '\\' . hex:substring(start: hi, end: hi + 1) . hex:substring(start: lo, end: lo + 1);
 			}, {
-				res: res . Buf:stringSubstring(b: s, start: i, end: i + 1);
+				res: res . s:substring(start: i, end: i + 1);
 			});
 			i++;
 		});

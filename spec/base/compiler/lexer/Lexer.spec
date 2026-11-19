@@ -27,7 +27,6 @@ Class is Lexer{
 		['base', 'compiler', Error],
 		['base', 'compiler', ErrorText],
 		['base', 'sys', as Reflection()],
-		['base', 'sys', as Buf()],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
@@ -199,7 +198,7 @@ Class is Lexer{
 	##
 	## @return: The consumed character ('' at end of source).
 	Function of String is advance(){
-		local Int is b: Buf:bufGetByte(b: :source, idx: :pos, def: -1);
+		local Int is b: :source:byteAt(index: :pos, default: -1);
 		if({ b < 0 }, { return ''; });
 		:pos: :pos + 1;
 		if({ b == 10 }, {
@@ -235,7 +234,7 @@ Class is Lexer{
 		while(
 			{ skipping && p < len },
 			{
-				local Int is b: Buf:bufGetByte(b: :source, idx: p, def: -1);
+				local Int is b: :source:byteAt(index: p, default: -1);
 				if({ b == 32 || b == 9 || b == 13 }, {
 					p++;
 					:col++;
@@ -251,7 +250,7 @@ Class is Lexer{
 							while(
 								{ inComment && p < len },
 								{
-									local Int is cb: Buf:bufGetByte(b: :source, idx: p, def: -1);
+									local Int is cb: :source:byteAt(index: p, default: -1);
 									if({ cb == 10 }, {
 										inComment: false;
 									}, {
@@ -284,7 +283,7 @@ Class is Lexer{
 		while(
 			{ scanning && p < len },
 			{
-				local Int is b: Buf:bufGetByte(b: :source, idx: p, def: -1);
+				local Int is b: :source:byteAt(index: p, default: -1);
 				local Boolean is isId: (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || (b >= 48 && b <= 57) || b == 95;
 				if({ isId }, {
 					p++;
@@ -306,7 +305,7 @@ Class is Lexer{
 		if({ text == :names:boolTrue() || text == 'false' }, {
 			kind: TokenKind:BOOL;
 		});
-		local Token is t: Token:init(kind: kind, value: Buf:intern(s: text), line: startLine, col: startCol);
+		local Token is t: Token:init(kind: kind, value: text:intern(), line: startLine, col: startCol);
 		if({ kw != Keyword:NONE }, {
 			t:setKeyword(kw: kw);
 		});
@@ -603,11 +602,11 @@ Class is Lexer{
 		local Operator is op: Operator:of(pair);
 		if({ op != Operator:NONE }, {
 			:advance();
-			local Token is t: Token:init(kind: TokenKind:SYMBOL, value: Buf:intern(s: pair), line: startLine, col: startCol);
+			local Token is t: Token:init(kind: TokenKind:SYMBOL, value: pair:intern(), line: startLine, col: startCol);
 			t:setOperator(op: op);
 			return t;
 		});
-		return Token:init(kind: TokenKind:SYMBOL, value: Buf:intern(s: ch), line: startLine, col: startCol);
+		return Token:init(kind: TokenKind:SYMBOL, value: ch:intern(), line: startLine, col: startCol);
 	}
 
 }

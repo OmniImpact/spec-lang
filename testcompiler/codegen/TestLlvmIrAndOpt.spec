@@ -1,3 +1,4 @@
+#! priorityPosition: -100
 #! Unit and end-to-end tests for the experimental Spec IR, SpecOptimizer
 #! pipeline, and LLVM (.ll) backend.
 

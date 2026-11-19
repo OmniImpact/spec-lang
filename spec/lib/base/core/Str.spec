@@ -26,15 +26,33 @@ Class of Buf is Str{
 	## Number of bytes in this string.
 	##
 	## @return: Byte count.
-	Function of Int is length(){
-		return Buf:bufLength(b: :);
+	replace Function of Int is length(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return 0; });
+		return Mem:loadI64(ptr: addr, byteOffset: 8);
 	}
 
 	## Number of bytes in this string (explicit byte-length alias for [length]).
 	##
 	## @return: Byte count.
-	Function of Int is byteLength(){
-		return Buf:bufLength(b: :);
+	replace Function of Int is byteLength(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return 0; });
+		return Mem:loadI64(ptr: addr, byteOffset: 8);
+	}
+
+	## Raw byte value (0..255) at [index], or [default] when out of bounds.
+	##
+	## @param index: Zero-based byte index.
+	## @param default: Fallback when out of bounds.
+	## @return: Byte value, or [default].
+	replace Function of Int is byteAt(Int is index, Int is default: -1){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return default; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ index < 0 || index >= len }, { return default; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		return Mem:loadByte(ptr: data, byteOffset: index);
 	}
 
 	## Raw byte value (0..255) at [index], or [default] when out of bounds.
@@ -43,7 +61,147 @@ Class of Buf is Str{
 	## @param default: Fallback when out of bounds.
 	## @return: Byte value, or [default].
 	Function of Int is charCodeAt(Int is index, Int is default: -1){
-		return Buf:bufGetByte(b: :, idx: index, def: default);
+		return :byteAt(index: index, default: default);
+	}
+
+	## Refcounted copy of this string.
+	##
+	## @return: An owned copy sharing no storage with this string.
+	Function of String is copy(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		return Mem:strFromBytes(srcAddr: data, len: len);
+	}
+
+	## Returns the process-interned form of this string: equal contents yield
+	## the SAME string object. Interned strings are immortal.
+	##
+	## @return: The interned string.
+	Function of String is intern(){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return ''; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		return Mem:internStr(s: Mem:strFromBytes(srcAddr: data, len: len));
+	}
+
+	## Byte-for-byte equality of strings [a] and [b].
+	##
+	## @param a: First string.
+	## @param b: Second string.
+	## @return: true when [a] and [b] have identical length and bytes.
+	Function of Boolean is stringEquals(Str is a, Str is b){
+		local Int is aAddr: Mem:objToAddr(obj: a);
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		if({ aAddr == bAddr }, { return true; });
+		if({ aAddr == 0 || bAddr == 0 }, { return false; });
+		local Int is aLen: Mem:loadI64(ptr: aAddr, byteOffset: 8);
+		local Int is bLen: Mem:loadI64(ptr: bAddr, byteOffset: 8);
+		if({ aLen != bLen }, { return false; });
+		if({ aLen == 0 }, { return true; });
+		local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
+		local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+		return Mem:cmp(a: aData, b: bData, bytes: aLen) == 0;
+	}
+
+	## Lexicographical byte comparison of strings [a] and [b].
+	##
+	## @param a: First string.
+	## @param b: Second string.
+	## @return: Negative when [a] < [b], 0 when equal, positive when [a] > [b].
+	Function of Int is stringCompare(Str is a, Str is b){
+		local Int is aAddr: Mem:objToAddr(obj: a);
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		if({ aAddr == bAddr }, { return 0; });
+		if({ aAddr == 0 }, { return if({ bAddr != 0 }, { -1 }, { 0 }); });
+		if({ bAddr == 0 }, { return 1; });
+		local Int is aLen: Mem:loadI64(ptr: aAddr, byteOffset: 8);
+		local Int is bLen: Mem:loadI64(ptr: bAddr, byteOffset: 8);
+		local Int is n: if({ aLen < bLen }, { aLen }, { bLen });
+		if({ n > 0 }, {
+			local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
+			local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+			local Int is c: Mem:cmp(a: aData, b: bData, bytes: n);
+			if({ c != 0 }, { return c; });
+		});
+		return aLen - bLen;
+	}
+
+	## Decimal string representation of signed integer [v].
+	##
+	## @param v: Integer value.
+	## @return: Decimal string.
+	Function of String is intToString(Int is v){
+		if({ v == 0 }, { return '0'; });
+		local Int is buf: Mem:tlsGetI64(slot: 1);
+		if({ buf == 0 }, {
+			buf: Mem:alloc(bytes: 32);
+			Mem:tlsSetI64(slot: 1, val: buf);
+		});
+		local Int is idx: 32;
+		local Boolean is neg: v < 0;
+		local Int is u: v;
+		if({ neg }, {
+			local Int is rem0: 0 - (u % 10);
+			u: 0 - (u / 10);
+			idx: idx - 1;
+			Mem:storeByte(ptr: buf, byteOffset: idx, val: 48 + rem0);
+		});
+		while({ u > 0 }, {
+			local Int is rem: u % 10;
+			u: u / 10;
+			idx: idx - 1;
+			Mem:storeByte(ptr: buf, byteOffset: idx, val: 48 + rem);
+		});
+		if({ neg }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: buf, byteOffset: idx, val: 45);
+		});
+		return Mem:strFromBytes(srcAddr: buf + idx, len: 32 - idx);
+	}
+
+	## Formats integer [v] in [base] (2-36), zero-padded to at least [digits] digits.
+	Function of String is intToBase(Int is v, Int is base, Int is digits){
+		local Int is b: if({ base < 2 || base > 36 }, { 10 }, { base });
+		local Int is minDig: if({ digits < 0 }, { 0 }, { digits });
+		local Int is cap: if({ minDig + 4 > 80 }, { minDig + 4 }, { 80 });
+		local Int is scratch: Mem:alloc(bytes: cap);
+		local Int is idx: cap;
+		local Boolean is neg: v < 0;
+		local Int is u: v;
+		if({ u == 0 }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: scratch, byteOffset: idx, val: 48);
+		}, {
+			if({ neg }, {
+				local Int is rem0: 0 - (u % b);
+				u: 0 - (u / b);
+				idx: idx - 1;
+				local Int is ch0: if({ rem0 < 10 }, { 48 + rem0 }, { 87 + rem0 });
+				Mem:storeByte(ptr: scratch, byteOffset: idx, val: ch0);
+			});
+			while({ u > 0 }, {
+				local Int is rem: u % b;
+				u: u / b;
+				idx: idx - 1;
+				local Int is ch: if({ rem < 10 }, { 48 + rem }, { 87 + rem });
+				Mem:storeByte(ptr: scratch, byteOffset: idx, val: ch);
+			});
+		});
+		while({ (cap - idx) < minDig && idx > 1 }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: scratch, byteOffset: idx, val: 48);
+		});
+		if({ neg && idx > 0 }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: scratch, byteOffset: idx, val: 45);
+		});
+		local String is out: Mem:strFromBytes(srcAddr: scratch + idx, len: cap - idx);
+		Mem:free(ptr: scratch);
+		return out;
 	}
 
 	## One-byte string at [index], or [default] when out of bounds.
@@ -52,10 +210,10 @@ Class of Buf is Str{
 	## @param default: Fallback when out of bounds.
 	## @return: The character, or [default].
 	Function of String is charAt(Int is index, String is default: ''){
-		if({ index < 0 || index >= Buf:bufLength(b: :) }, {
-			return Buf:stringCopy(b: default);
+		if({ index < 0 || index >= :length() }, {
+			return default:copy();
 		});
-		return :fromCharCode(code: Buf:bufGetByte(b: :, idx: index, def: -1));
+		return :fromCharCode(code: :byteAt(index: index, default: -1));
 	}
 
 	## Bytes from [start] (inclusive) to [end] (exclusive), clamped to bounds.
@@ -64,63 +222,96 @@ Class of Buf is Str{
 	## @param end: Exclusive end byte index.
 	## @return: The sub-string.
 	Function of String is substring(Int is start, Int is end){
-		local Int is s: start;
-		local Int is e: end;
-		if({ s < 0 }, {
-			s: 0;
-		});
-		if({ e > Buf:bufLength(b: :) }, {
-			e: Buf:bufLength(b: :);
-		});
-		return Buf:stringSubstring(b: :, start: s, end: e);
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		local Int is s: if({ start < 0 }, { 0 }, { start });
+		local Int is e: if({ end > len }, { len }, { end });
+		if({ s >= e }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		return Mem:strFromBytes(srcAddr: data + s, len: e - s);
 	}
 
 	## True when this string begins with [prefix].
 	##
 	## @param prefix: The prefix to test.
 	## @return: true when present.
-	Function of Boolean is startsWith(String is prefix){
-		local Int is pl: Buf:bufLength(b: prefix);
+	Function of Boolean is startsWith(Str is prefix){
+		local Int is pl: prefix:length();
 		if({ pl == 0 }, {
 			return true;
 		});
-		if({ pl > Buf:bufLength(b: :) }, {
+		if({ pl > :length() }, {
 			return false;
 		});
-		return Buf:stringSubstring(b: :, start: 0, end: pl) == prefix;
+		return :substring(start: 0, end: pl) == prefix;
 	}
 
 	## True when this string ends with [suffix].
 	##
 	## @param suffix: The suffix to test.
 	## @return: true when present.
-	Function of Boolean is endsWith(String is suffix){
-		local Int is sl: Buf:bufLength(b: suffix);
+	Function of Boolean is endsWith(Str is suffix){
+		local Int is sl: suffix:length();
 		if({ sl == 0 }, {
 			return true;
 		});
-		local Int is bl: Buf:bufLength(b: :);
+		local Int is bl: :length();
 		if({ sl > bl }, {
 			return false;
 		});
-		return Buf:stringSubstring(b: :, start: bl - sl, end: bl) == suffix;
+		return :substring(start: bl - sl, end: bl) == suffix;
 	}
 
 	## True when [needle] occurs anywhere in this string (empty needle: true).
 	##
 	## @param needle: Sequence to locate.
 	## @return: true when present.
-	Function of Boolean is contains(String is needle){
+	Function of Boolean is contains(Str is needle){
 		return :indexOf(search: needle, default: -1) >= 0;
 	}
 
-	## First occurrence of [needle] at or after the start, or [default].
+	## First occurrence of [search] at or after [from], or [default] when absent.
+	##
+	## @param search: Byte sequence to locate.
+	## @param from: Zero-based start position.
+	## @param default: Fallback when absent (conventionally -1).
+	## @return: The index, or [default].
+	Function of Int is indexOfFrom(Str is search, Int is from, Int is default: -1){
+		local Int is bAddr: Mem:objToAddr(obj: :);
+		local Int is nAddr: Mem:objToAddr(obj: search);
+		if({ bAddr == 0 || nAddr == 0 }, { return default; });
+		local Int is start: from;
+		if({ start < 0 }, { start: 0; });
+		local Int is slen: Mem:loadI64(ptr: bAddr, byteOffset: 8);
+		local Int is nlen: Mem:loadI64(ptr: nAddr, byteOffset: 8);
+		if({ nlen == 0 }, {
+			if({ start <= slen }, { return start; });
+			return default;
+		});
+		if({ start + nlen > slen }, { return default; });
+		local Int is hay: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+		local Int is nd: Mem:loadI64(ptr: nAddr, byteOffset: 0);
+		local Int is firstByte: Mem:loadByte(ptr: nd, byteOffset: 0);
+		local Int is i: start;
+		while({ i + nlen <= slen }, {
+			if({ Mem:loadByte(ptr: hay, byteOffset: i) == firstByte }, {
+				if({ Mem:cmp(a: hay + i, b: nd, bytes: nlen) == 0 }, {
+					return i;
+				});
+			});
+			i: i + 1;
+		});
+		return default;
+	}
+
+	## First occurrence of [search] at or after the start, or [default].
 	##
 	## @param search: Sequence to locate.
 	## @param default: Fallback when absent (conventionally -1).
 	## @return: The index, or [default].
-	Function of Int is indexOf(String is search, Int is default: -1){
-		return Buf:stringIndexOf(b: :, needle: search, def: default);
+	Function of Int is indexOf(Str is search, Int is default: -1){
+		return :indexOfFrom(search: search, from: 0, default: default);
 	}
 
 	## Every [search] occurrence replaced by [replacement].
@@ -128,17 +319,17 @@ Class of Buf is Str{
 	## @param search: Sequence to replace.
 	## @param replacement: Replacement sequence.
 	## @return: The replaced copy.
-	Function of String is replaceAll(String is search, String is replacement){
-		local Int is slen: Buf:bufLength(b: search);
+	Function of String is replaceAll(Str is search, Str is replacement){
+		local Int is slen: search:length();
 		if({ slen == 0 }, {
-			return Buf:stringCopy(b: :);
+			return :copy();
 		});
-		local Int is total: Buf:bufLength(b: :);
+		local Int is total: :length();
 		local String is out: '';
 		local Int is pos: 0;
 		local Boolean is running: true;
 		while({ running }, {
-			local Int is idx: Buf:stringIndexOfFrom(b: :, needle: search, from: pos, def: -1);
+			local Int is idx: :indexOfFrom(search: search, from: pos, default: -1);
 			if({ idx < 0 }, {
 				running: false;
 			}, {
@@ -154,29 +345,29 @@ Class of Buf is Str{
 	##
 	## @param delimiter: Split boundary.
 	## @return: The parts.
-	Function of Array of String is split(String is delimiter){
+	Function of Array of String is split(Str is delimiter){
 		local Array of String is res: [];
-		local Int is slen: Buf:bufLength(b: :);
+		local Int is slen: :length();
 		if({ slen == 0 }, {
 			return res;
 		});
-		local Int is dlen: Buf:bufLength(b: delimiter);
+		local Int is dlen: delimiter:length();
 		if({ dlen == 0 }, {
 			local Int is i: 0;
 			repeat(count: slen, worker: {
-				res:add(item: Buf:stringSubstring(b: :, start: i, end: i + 1));
+				res:add(item: :substring(start: i, end: i + 1));
 				i: i + 1;
 			});
 			return res;
 		});
 		local Int is pos: 0;
-		local Int is idx: Buf:stringIndexOfFrom(b: :, needle: delimiter, from: 0, def: -1);
+		local Int is idx: :indexOfFrom(search: delimiter, from: 0, default: -1);
 		while({ idx >= 0 }, {
-			res:add(item: Buf:stringSubstring(b: :, start: pos, end: idx));
+			res:add(item: :substring(start: pos, end: idx));
 			pos: idx + dlen;
-			idx: Buf:stringIndexOfFrom(b: :, needle: delimiter, from: pos, def: -1);
+			idx: :indexOfFrom(search: delimiter, from: pos, default: -1);
 		});
-		res:add(item: Buf:stringSubstring(b: :, start: pos, end: slen));
+		res:add(item: :substring(start: pos, end: slen));
 		return res;
 	}
 
@@ -185,18 +376,18 @@ Class of Buf is Str{
 	## @return: The lines.
 	Function of Array of String is lines(){
 		local Array of String is res: [];
-		local Int is len: Buf:bufLength(b: :);
+		local Int is len: :length();
 		if({ len == 0 }, {
 			return res;
 		});
 		local Int is start: 0;
 		local Int is i: 0;
 		repeat(count: len, worker: {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
+			local Int is b: :byteAt(index: i, default: -1);
 			if({ b == 10 }, {
 				local Int is endIdx: i;
 				if({ endIdx > start }, {
-					local Int is prev: Buf:bufGetByte(b: :, idx: endIdx - 1, def: -1);
+					local Int is prev: :byteAt(index: endIdx - 1, default: -1);
 					if({ prev == 13 }, {
 						endIdx: endIdx - 1;
 					});
@@ -208,7 +399,7 @@ Class of Buf is Str{
 		});
 		if({ start < len }, {
 			local Int is endIdx: len;
-			local Int is prev: Buf:bufGetByte(b: :, idx: endIdx - 1, def: -1);
+			local Int is prev: :byteAt(index: endIdx - 1, default: -1);
 			if({ prev == 13 }, {
 				endIdx: endIdx - 1;
 			});
@@ -218,18 +409,32 @@ Class of Buf is Str{
 	}
 
 	## Count occurrences of [byteVal] in this string.
-	Function of Int is countByte(Int is byteVal){
-		return Buf:bufCountByte(b: :, byteVal: byteVal);
+	replace Function of Int is countByte(Int is byteVal){
+		local Int is addr: Mem:objToAddr(obj: :);
+		if({ addr == 0 }, { return 0; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return 0; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is target: byteVal & 255;
+		local Int is count: 0;
+		local Int is i: 0;
+		while({ i < len }, {
+			if({ Mem:loadByte(ptr: data, byteOffset: i) == target }, {
+				count: count + 1;
+			});
+			i: i + 1;
+		});
+		return count;
 	}
 
 	## Total number of lines in this string without allocating line arrays.
 	Function of Int is lineCount(){
-		local Int is len: Buf:bufLength(b: :);
+		local Int is len: :length();
 		if({ len == 0 }, {
 			return 0;
 		});
-		local Int is nl: Buf:bufCountByte(b: :, byteVal: 10);
-		local Int is lastByte: Buf:bufGetByte(b: :, idx: len - 1, def: -1);
+		local Int is nl: :countByte(byteVal: 10);
+		local Int is lastByte: :byteAt(index: len - 1, default: -1);
 		if({ lastByte != 10 }, {
 			nl: nl + 1;
 		});
@@ -240,14 +445,14 @@ Class of Buf is Str{
 	##
 	## @return: The trimmed copy.
 	Function of String is trim(){
-		local Int is len: Buf:bufLength(b: :);
+		local Int is len: :length();
 		if({ len == 0 }, {
 			return '';
 		});
 		local Int is s: 0;
 		local Boolean is sTrimming: true;
 		while({ sTrimming && (s < len) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: s, def: -1);
+			local Int is b: :byteAt(index: s, default: -1);
 			if({ b == 32 || b == 9 || b == 10 || b == 13 }, {
 				s: s + 1;
 			}, {
@@ -260,7 +465,7 @@ Class of Buf is Str{
 		local Int is e: len;
 		local Boolean is eTrimming: true;
 		while({ eTrimming && (e > s) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: e - 1, def: -1);
+			local Int is b: :byteAt(index: e - 1, default: -1);
 			if({ b == 32 || b == 9 || b == 10 || b == 13 }, {
 				e: e - 1;
 			}, {
@@ -274,9 +479,9 @@ Class of Buf is Str{
 	##
 	## @param search: The repetition unit.
 	## @return: Repetition count.
-	Function of Int is countLeading(String is search){
-		local Int is slen: Buf:bufLength(b: search);
-		local Int is blen: Buf:bufLength(b: :);
+	Function of Int is countLeading(Str is search){
+		local Int is slen: search:length();
+		local Int is blen: :length();
 		if({ slen == 0 || blen == 0 }, {
 			return 0;
 		});
@@ -284,7 +489,7 @@ Class of Buf is Str{
 		local Int is pos: 0;
 		local Boolean is matching: true;
 		while({ matching && (pos + slen <= blen) }, {
-			if({ Buf:stringSubstring(b: :, start: pos, end: pos + slen) == search }, {
+			if({ :substring(start: pos, end: pos + slen) == search }, {
 				count: count + 1;
 				pos: pos + slen;
 			}, {
@@ -298,14 +503,14 @@ Class of Buf is Str{
 	##
 	## @return: true when all digits.
 	Function of Boolean is isDigit(){
-		local Int is n: Buf:bufLength(b: :);
+		local Int is n: :length();
 		if({ n == 0 }, {
 			return false;
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
 		while({ ok && (i < n) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
+			local Int is b: :byteAt(index: i, default: -1);
 			if({ b < 48 || b > 57 }, {
 				ok: false;
 			});
@@ -318,14 +523,14 @@ Class of Buf is Str{
 	##
 	## @return: true when all letters.
 	Function of Boolean is isAlpha(){
-		local Int is n: Buf:bufLength(b: :);
+		local Int is n: :length();
 		if({ n == 0 }, {
 			return false;
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
 		while({ ok && (i < n) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
+			local Int is b: :byteAt(index: i, default: -1);
 			local Boolean is isUpper: (b >= 65 && b <= 90);
 			local Boolean is isLower: (b >= 97 && b <= 122);
 			if({ !isUpper && !isLower }, {
@@ -340,14 +545,14 @@ Class of Buf is Str{
 	##
 	## @return: true when all whitespace.
 	Function of Boolean is isWhitespace(){
-		local Int is n: Buf:bufLength(b: :);
+		local Int is n: :length();
 		if({ n == 0 }, {
 			return false;
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
 		while({ ok && (i < n) }, {
-			local Int is b: Buf:bufGetByte(b: :, idx: i, def: -1);
+			local Int is b: :byteAt(index: i, default: -1);
 			if({ b != 32 && b != 9 && b != 10 && b != 13 && b != 11 && b != 12 }, {
 				ok: false;
 			});
@@ -388,14 +593,14 @@ Class of Buf is Str{
 	## @param default: Fallback on invalid input.
 	## @return: The parsed value, or [default].
 	Function of Int is parseInt(Int is base: 10, Int is default: -1){
-		local Int is len: Buf:bufLength(b: :);
+		local Int is len: :length();
 		if({ len == 0 }, {
 			return default;
 		});
 		local Int is b: base;
 		local Int is start: 0;
-		if({ len >= 2 && Buf:bufGetByte(b: :, idx: 0, def: -1) == 48 }, {
-			local Int is prefixCh: Buf:bufGetByte(b: :, idx: 1, def: -1);
+		if({ len >= 2 && :byteAt(index: 0, default: -1) == 48 }, {
+			local Int is prefixCh: :byteAt(index: 1, default: -1);
 			if({ prefixCh == 120 || prefixCh == 88 }, {
 				b: 16;
 				start: 2;
@@ -415,7 +620,7 @@ Class of Buf is Str{
 			return default;
 		});
 		local Boolean is neg: false;
-		if({ start < len && Buf:bufGetByte(b: :, idx: start, def: -1) == 45 }, {
+		if({ start < len && :byteAt(index: start, default: -1) == 45 }, {
 			neg: true;
 			start: start + 1;
 		});
@@ -427,7 +632,7 @@ Class of Buf is Str{
 		local Boolean is ok: true;
 		local Boolean is anyDigits: false;
 		while({ ok && (i < len) }, {
-			local Int is ch: Buf:bufGetByte(b: :, idx: i, def: -1);
+			local Int is ch: :byteAt(index: i, default: -1);
 			if({ ch != 95 }, {
 				local Int is digit: -1;
 				if({ ch >= 48 && ch <= 57 }, {
@@ -587,7 +792,7 @@ Class of Buf is Str{
 	## @return: Sanitized UTF-8 string.
 	Function of String is sanitizeUtf8(){
 		if({ :isValidUtf8() }, {
-			return Buf:stringCopy(b: :);
+			return :copy();
 		});
 		local Int is addr: Mem:objToAddr(obj: :);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
@@ -646,22 +851,22 @@ Class of Buf is Str{
 			e: e - 1;
 		});
 		if({ s >= e }, { return ''; });
-		return Buf:stringSubstring(b: :, start: s, end: e);
+		return :substring(start: s, end: e);
 	}
 
 	## Concatenation of this string and [other].
 	##
 	## @param other: String to append.
 	## @return: Newly allocated string containing this string followed by [other].
-	Function of String is concat(String is other){
+	Function of String is concat(Str is other){
 		local Int is aAddr: Mem:objToAddr(obj: :);
 		local Int is bAddr: Mem:objToAddr(obj: other);
 		local Int is aLen: if({ aAddr == 0 }, { 0 }, { Mem:loadI64(ptr: aAddr, byteOffset: 8) });
 		local Int is bLen: if({ bAddr == 0 }, { 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) });
 		local Int is total: aLen + bLen;
 		if({ total == 0 }, { return ''; });
-		if({ aLen == 0 }, { return Buf:stringCopy(b: other); });
-		if({ bLen == 0 }, { return Buf:stringCopy(b: :); });
+		if({ aLen == 0 }, { return other:copy(); });
+		if({ bLen == 0 }, { return :copy(); });
 		local Int is aData: Mem:loadI64(ptr: aAddr, byteOffset: 0);
 		local Int is bData: Mem:loadI64(ptr: bAddr, byteOffset: 0);
 		if({ total <= 256 }, {

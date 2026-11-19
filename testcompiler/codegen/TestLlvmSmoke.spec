@@ -1,3 +1,4 @@
+#! priorityPosition: -100
 #! LLVM backend baseline smoke tests (SpecUnit).
 #!
 #! Verifies the cross-platform prerequisites for the experimental LLVM backend:

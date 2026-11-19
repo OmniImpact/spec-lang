@@ -6,7 +6,6 @@ Class is CliArgs{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as HashTable()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
@@ -23,7 +22,7 @@ Class is CliArgs{
 	local Function is setArg(Any is args, String is key, String is val){
 		if({ HashTable:mapHas(m: args, key: key) }, {
 			local String is prev: HashTable:mapGet(m: args, key: key, def: '') as String;
-			HashTable:mapSet(m: args, key: key, val: Buf:stringConcat(a: Buf:stringConcat(a: prev, b: "\n"), b: val));
+			HashTable:mapSet(m: args, key: key, val: prev . "\n" . val);
 		}, {
 			HashTable:mapSet(m: args, key: key, val: val);
 		});
@@ -38,17 +37,17 @@ Class is CliArgs{
 		local Int is i: 1;
 		while({ i < argc }, {
 			local String is arg: :argvAt(argvAddr: argvAddr, idx: i);
-			local Int is alen: Buf:bufLength(b: arg);
-			if({ alen >= 2 && Buf:bufGetByte(b: arg, idx: 0, def: 0) == 45 && Buf:bufGetByte(b: arg, idx: 1, def: 0) == 45 }, {
-				local String is rest: Buf:stringSubstring(b: arg, start: 2, end: alen);
-				local Int is eq: Buf:stringIndexOf(b: rest, needle: '=', def: -1);
+			local Int is alen: arg:length();
+			if({ alen >= 2 && arg:byteAt(index: 0, default: 0) == 45 && arg:byteAt(index: 1, default: 0) == 45 }, {
+				local String is rest: arg:substring(start: 2, end: alen);
+				local Int is eq: rest:indexOf(search: '=', default: -1);
 				if({ eq >= 0 }, {
-					:setArg(args: args, key: Buf:stringSubstring(b: rest, start: 0, end: eq), val: Buf:stringSubstring(b: rest, start: eq + 1, end: Buf:bufLength(b: rest)));
+					:setArg(args: args, key: rest:substring(start: 0, end: eq), val: rest:substring(start: eq + 1, end: rest:length()));
 				}, {
 					local String is val: 'true';
 					if({ i + 1 < argc }, {
 						local String is nextArg: :argvAt(argvAddr: argvAddr, idx: i + 1);
-						if({ Buf:bufGetByte(b: nextArg, idx: 0, def: 0) != 45 }, {
+						if({ nextArg:byteAt(index: 0, default: 0) != 45 }, {
 							i: i + 1;
 							val: nextArg;
 						});
@@ -56,16 +55,16 @@ Class is CliArgs{
 					:setArg(args: args, key: rest, val: val);
 				});
 			}, {
-				if({ alen >= 2 && Buf:bufGetByte(b: arg, idx: 0, def: 0) == 45 }, {
-					local String is rest: Buf:stringSubstring(b: arg, start: 1, end: alen);
-					local Int is eq: Buf:stringIndexOf(b: rest, needle: '=', def: -1);
+				if({ alen >= 2 && arg:byteAt(index: 0, default: 0) == 45 }, {
+					local String is rest: arg:substring(start: 1, end: alen);
+					local Int is eq: rest:indexOf(search: '=', default: -1);
 					if({ eq >= 0 }, {
-						:setArg(args: args, key: Buf:stringSubstring(b: rest, start: 0, end: eq), val: Buf:stringSubstring(b: rest, start: eq + 1, end: Buf:bufLength(b: rest)));
+						:setArg(args: args, key: rest:substring(start: 0, end: eq), val: rest:substring(start: eq + 1, end: rest:length()));
 					}, {
 						local String is val: 'true';
 						if({ i + 1 < argc }, {
 							local String is nextArg: :argvAt(argvAddr: argvAddr, idx: i + 1);
-							if({ Buf:bufGetByte(b: nextArg, idx: 0, def: 0) != 45 }, {
+							if({ nextArg:byteAt(index: 0, default: 0) != 45 }, {
 								i: i + 1;
 								val: nextArg;
 							});
@@ -73,7 +72,7 @@ Class is CliArgs{
 						:setArg(args: args, key: rest, val: val);
 					});
 				}, {
-					:setArg(args: args, key: Buf:intToString(v: posIdx), val: arg);
+					:setArg(args: args, key: posIdx as String, val: arg);
 					posIdx: posIdx + 1;
 					:setArg(args: args, key: '', val: arg);
 				});

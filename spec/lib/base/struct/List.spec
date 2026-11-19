@@ -11,7 +11,7 @@ Class is List of T{
 	namespace: ['base', 'struct'];
 
 	## Appends a byte to a [Byte] buffer. Infallible: the buffer grows.
-	Function is push(Any is b){
+	Function is push(T is b){
 	}
 
 	## Appends the bytes of [s] to a [Byte] buffer. Infallible: the buffer grows.
@@ -23,7 +23,7 @@ Class is List of T{
 	## @param index: Zero-based position.
 	## @param default: Fallback value used when there is no successful answer.
 	## @param error: Optional callback receiving a diagnostic message.
-	Function of T is get(Int is index, Any is default, Function is error){
+	Function of T is get(Int is index, T is default, Function is error){
 	}
 
 	## Overwrites the byte at [index]; [error] notified if out of bounds.
@@ -31,7 +31,7 @@ Class is List of T{
 	}
 
 	## Removes and returns the last byte, or [default] if empty ([error] notified).
-	Function of T is pop(Any is default, Function is error){
+	Function of T is pop(T is default, Function is error){
 	}
 
 	## Returns the number of elements.

@@ -432,6 +432,8 @@ define internal ptr @__spec_mem_str_from_bytes(i64 %srcAddr, i64 %len) alwaysinl
   %non_empty = and i1 %has_src, %pos_len
   br i1 %non_empty, label %chk_sbo, label %empty
 empty:
+  %len_p0 = getelementptr inbounds i8, ptr %b, i64 8
+  store i64 0, ptr %len_p0, align 8
   %ib0 = getelementptr inbounds i8, ptr %b, i64 36
   store ptr %ib0, ptr %b, align 8
   %cap_p0 = getelementptr inbounds i8, ptr %b, i64 16
@@ -457,6 +459,8 @@ heap:
   store ptr %hd, ptr %b, align 8
   %cap_p2 = getelementptr inbounds i8, ptr %b, i64 16
   store i64 %need, ptr %cap_p2, align 8
+  %ck_p2 = getelementptr inbounds i8, ptr %b, i64 40
+  store i64 0, ptr %ck_p2, align 8
   call ptr @memcpy(ptr %hd, ptr %src, i64 %len)
   %nul_p = getelementptr inbounds i8, ptr %hd, i64 %len
   store i8 0, ptr %nul_p, align 1

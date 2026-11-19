@@ -20,7 +20,6 @@ Class of CallLowerer is SysinternalCallLowerer{
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrInst],
 		['base', 'struct', Array],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -153,7 +152,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		local Int is i: 0;
 		local Int is n: s:length();
 		while({ i < n }, {
-			local Int is chByte: Buf:bufGetByte(b: s, idx: i, def: 0);
+			local Int is chByte: s:byteAt(index: i, default: 0);
 			if({ chByte >= 65 && chByte <= 90 }, {
 				if({ i > 0 }, {
 					out: out . '_';

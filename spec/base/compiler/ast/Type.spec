@@ -10,7 +10,8 @@ Class is Type{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'lexer', Keyword],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	## Base type identifier (e.g. Int, String, Array).
@@ -34,10 +35,42 @@ Class is Type{
 	## @param name: Base type name.
 	## @param params: Generic type arguments.
 	## @return: The new [Type].
-	Function of Type is withParams(String is name, Array of Type is params){
+	held Function of Type is withParams(String is name, Array of Type is params){
 		local Type is t: Type:init(name: name);
 		t:params: params;
 		return t;
+	}
+
+	## Structural equality over the [Type] tree (`:name` and `:params`).
+	Function of Boolean is equals(Type is other){
+		if({ :name != other:name || :params:length() != other:params:length() }, {
+			return false;
+		});
+		local Int is i: 0;
+		while({ i < :params:length() }, {
+			local Type is pA: :params:get(index: i);
+			local Type is pB: other:params:get(index: i);
+			if({ !pA:equals(other: pB) }, {
+				return false;
+			});
+			i++;
+		});
+		return true;
+	}
+
+	## Deep clone of this [Type] tree.
+	Function of Type is clone(){
+		if({ :params:length() == 0 }, {
+			return Type:init(name: :name);
+		});
+		local Array of Type is cp: [];
+		local Int is i: 0;
+		while({ i < :params:length() }, {
+			local Type is p: :params:get(index: i);
+			cp:add(item: p:clone());
+			i++;
+		});
+		return Type:withParams(name: :name, params: cp);
 	}
 
 	## True when this type carries generic arguments.

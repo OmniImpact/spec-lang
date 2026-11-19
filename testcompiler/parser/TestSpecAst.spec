@@ -23,7 +23,7 @@ Class of SpecUnitTest is TestSpecAst{
 	Function is testExpressionRecordsCrossReference(){
 		local Expression is lhs: Expression:Ident(name: 'a');
 		local Expression is rhs: Expression:Ident(name: 'b');
-		local Expression is bin: Expression:Binary(op: '+', leftExpr: lhs, rightExpr: rhs);
+		local Expression is bin: Expression:Binary(op: '+', left: lhs, right: rhs);
 		local Boolean is ok: false;
 		Conditional:match(on: bin, when: [
 			Expression:Binary: local Function(String is op, Expression is l, Expression is r){
@@ -45,7 +45,7 @@ Class of SpecUnitTest is TestSpecAst{
 
 	# Enum dispatch on the kind (the style contract's string-tag removal).
 	Function is testMatchDispatchOnKind(){
-		local Expression is bin: Expression:Binary(op: '+', leftExpr: Expression:Ident(name: 'a'), rightExpr: Expression:Ident(name: 'b'));
+		local Expression is bin: Expression:Binary(op: '+', left: Expression:Ident(name: 'a'), right: Expression:Ident(name: 'b'));
 		local String is tag: '';
 		Conditional:match(on: bin, when: [
 			Expression:Binary: local Function(String is op, Expression is l, Expression is r){ tag: 'binary'; },
@@ -88,7 +88,7 @@ Class of SpecUnitTest is TestSpecAst{
 
 	# Statements carry their variant's payload fields.
 	Function is testStatementFields(){
-		local Expression is bin: Expression:Binary(op: '+', leftExpr: Expression:Ident(name: 'a'), rightExpr: Expression:Ident(name: 'b'));
+		local Expression is bin: Expression:Binary(op: '+', left: Expression:Ident(name: 'a'), right: Expression:Ident(name: 'b'));
 		local Statement is st: Statement:Return(returnExpr: bin, hasReturnExpr: true);
 		st:setLine(line: 9);
 		Assert:areEqualInt(9, st:line);

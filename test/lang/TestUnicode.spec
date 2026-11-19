@@ -28,11 +28,10 @@ Class of SpecUnitTest is TestUnicode{
 		Assert:areEqualString('HELLO, WORLD!', rawAscii:toUpper());
 		Assert:isTrue(rawAscii:isValidUtf8());
 
-		# Seamless assignability between Str and String
-		local String is promoted: rawAscii;
-		local Str is demoted: promoted;
+		# String is a subclass of Str (Class of Str is String): a String assigns to a Str target
+		local Str is promoted: 'Hello, World!';
+		Assert:areEqualString('Hello, World!', rawAscii);
 		Assert:areEqualString('Hello, World!', promoted);
-		Assert:areEqualString('Hello, World!', demoted);
 
 		# Construct an ill-formed byte sequence using raw byte codes:
 		# 'A' (0x41), orphan continuation (0x80), 'B' (0x42), truncated 2-byte lead (0xC3), 'C' (0x43)

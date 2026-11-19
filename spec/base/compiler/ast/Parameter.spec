@@ -14,7 +14,7 @@ Class is Parameter{
 	String is name: '';
 
 	## Parameter type descriptor.
-	Type is paramType;
+	Type is paramType: Type:init(name: '');
 
 	## Default value expression (declaration-side defaults).
 	Expression is defaultExpr;

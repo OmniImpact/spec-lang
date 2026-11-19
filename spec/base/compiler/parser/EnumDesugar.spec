@@ -389,10 +389,14 @@ Class is EnumDesugar{
 	Function of Member is synthValues(String is name, Array of Member is variants){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
 		m:modifiers: ['held'];
-		m:memberType: Type:init(name: 'Array of ' . name);
+		local Type is arrT: Type:init(name: 'Array');
+		arrT:params: [Type:init(name: name)];
+		m:memberType: arrT;
 		m:name: 'values';
 		local Array of Statement is body: [];
-		local Statement is decl: Statement:VarDecl(modifiers: ['local'], varType: Type:init(name: 'Array of ' . name), varName: 'all', initExpr: Expression:ArrayLit(items: []), hasInit: true);
+		local Type is declT: Type:init(name: 'Array');
+		declT:params: [Type:init(name: name)];
+		local Statement is decl: Statement:VarDecl(modifiers: ['local'], varType: declT, varName: 'all', initExpr: Expression:ArrayLit(items: []), hasInit: true);
 		body:add(item: decl);
 		variants:each(action: local Function(Member is v){
 			local Array of NamedArg is args: [];

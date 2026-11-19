@@ -57,11 +57,35 @@ Class is WorkItem{
 	String is path;
 	String is kind;
 	Array of String is expect: [];
+	String is inlineSource: '';
+	Int is expectedTests: 1;
+	Int is priorityPosition: 0;
 
-	replace Function is init(String is itemPath, String is itemKind, Array of String is itemExpect){
+	replace Function is init(String is itemPath, String is itemKind, Array of String is itemExpect, String is source: '', Int is expectedTests: 1, Int is priorityPosition: 0){
 		:path: itemPath;
 		:kind: itemKind;
 		:expect: itemExpect;
+		:inlineSource: source;
+		:expectedTests: expectedTests;
+		:priorityPosition: priorityPosition;
+	}
+}
+
+Class is ReadyRunItem{
+	namespace: ['specunit'];
+
+	WorkItem is item;
+	Int is idx: -1;
+	String is binPath: '';
+	Int is compileCpuUs: 0;
+	Int is compileRssKb: 0;
+
+	replace Function is init(WorkItem is item, Int is idx, String is binPath, Int is compileCpuUs, Int is compileRssKb){
+		:item: item;
+		:idx: idx;
+		:binPath: binPath;
+		:compileCpuUs: compileCpuUs;
+		:compileRssKb: compileRssKb;
 	}
 }
 
@@ -87,7 +111,7 @@ Class is SpecTestUi{
 	CleoSection is pSec;
 	Int is pSlot: 0;
 	Int is total: 0;
-	Int is maxSuiteRows: 16;
+	Int is testsTotal: 0;
 
 	Array of Int is workerActive: [];
 	Map of String to Int is suiteNameToSlotId: Map:init();
@@ -95,12 +119,15 @@ Class is SpecTestUi{
 	Int is completedCount: 0;
 	Int is passedCount: 0;
 	Int is failedCount: 0;
+	Int is testsCompleted: 0;
+	Int is testsPassed: 0;
+	Int is testsFailed: 0;
 	Int is totalCpuUs: 0;
 	Int is totalRssKb: 0;
 	Int is peakRssKb: 0;
 	Int is metricSamples: 0;
 
-	replace Function is init(Cleo is ui, CleoSection is wSec, Int is wBarSlot, CleoSection is sSec, CleoSection is rSec, CleoSection is pSec, Int is pSlot, Int is total, Int is threads, Map of String to Int is nameToSlot){
+	replace Function is init(Cleo is ui, CleoSection is wSec, Int is wBarSlot, CleoSection is sSec, CleoSection is rSec, CleoSection is pSec, Int is pSlot, Int is total, Int is testsTotal, Int is threads, Map of String to Int is nameToSlot){
 		:ui: ui;
 		:wSec: wSec;
 		:wBarSlot: wBarSlot;
@@ -109,6 +136,7 @@ Class is SpecTestUi{
 		:pSec: pSec;
 		:pSlot: pSlot;
 		:total: total;
+		:testsTotal: testsTotal;
 		:suiteNameToSlotId: nameToSlot;
 		:workerActive: [];
 		local Int is i: 0;
@@ -140,9 +168,11 @@ Class is SpecTestUi{
 	}
 
 	Function is syncProgress(){
-		local Float is s1: if({ :total > 0 }, { (:completedCount as Float) / (:total as Float) }, { 1.0 });
+		local Float is s1: if({ :testsTotal > 0 }, { (:testsCompleted as Float) / (:testsTotal as Float) }, { if({ :total > 0 }, { (:completedCount as Float) / (:total as Float) }, { 1.0 }) });
 		local Float is s2: if({ :total > 0 }, { (:startedCount as Float) / (:total as Float) }, { 1.0 });
-		local String is msg: (:completedCount as String) . '/' . (:total as String) . ' completed (' . (:startedCount as String) . ' queued/active, ' . (:failedCount as String) . ' failed)';
+		if({ s1 > 1.0 }, { s1: 1.0; });
+		if({ s2 > 1.0 }, { s2: 1.0; });
+		local String is msg: (:completedCount as String) . '/' . (:total as String) . ' suites · ' . (:testsCompleted as String) . '/' . (:testsTotal as String) . ' tests (' . (:failedCount as String) . ' failed)';
 		:pSec:updateProgress(index: :pSlot, text: msg, stage1: s1, stage2: s2);
 	}
 
@@ -166,9 +196,22 @@ Class is SpecTestUi{
 		:ui:flushUnlocked();
 	}
 
-	Function is onRunning(String is itemPath){
+	Function is onCompiledReady(String is itemPath){
 		if({ :suiteNameToSlotId:has(key: itemPath) }, {
-			local Int is slotId: :suiteNameToSlotId:get(key: itemPath);
+			local Int is slotId: :suiteNameToSlotId:get(key: itemPath, default: 0);
+			:sSec:updateText(index: slotId, text: itemPath, rightText: 'queued');
+			:ui:markDirty();
+			:ui:flushUnlocked();
+		});
+	}
+
+	Function is onRunning(Int is threadIndex, String is itemPath){
+		if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
+			:workerActive:set(index: threadIndex, value: 1);
+		});
+		:renderWorkersBar();
+		if({ :suiteNameToSlotId:has(key: itemPath) }, {
+			local Int is slotId: :suiteNameToSlotId:get(key: itemPath, default: 0);
 			:sSec:updateText(index: slotId, text: itemPath, rightText: 'running');
 			:ui:markDirty();
 			:ui:flushUnlocked();
@@ -182,13 +225,28 @@ Class is SpecTestUi{
 		:renderWorkersBar();
 	}
 
-	Function is onResult(String is name, Boolean is passed, String is note){
+	Function is onResult(String is name, Boolean is passed, String is note, Int is expectedTests, Int is tPassed, Int is tFailed){
 		:completedCount: :completedCount + 1;
 		if({ passed }, { :passedCount: :passedCount + 1; });
 		if({ !passed }, { :failedCount: :failedCount + 1; });
+		local Int is actualTests: tPassed + tFailed;
+		if({ actualTests <= 0 }, {
+			actualTests: if({ expectedTests > 0 }, { expectedTests }, { 1 });
+			if({ passed }, {
+				tPassed: actualTests;
+				tFailed: 0;
+			}, {
+				tPassed: 0;
+				tFailed: actualTests;
+			});
+		});
+		:testsTotal: :testsTotal + (actualTests - expectedTests);
+		:testsCompleted: :testsCompleted + actualTests;
+		:testsPassed: :testsPassed + tPassed;
+		:testsFailed: :testsFailed + tFailed;
 
 		if({ :suiteNameToSlotId:has(key: name) }, {
-			local Int is slotId: :suiteNameToSlotId:get(key: name);
+			local Int is slotId: :suiteNameToSlotId:get(key: name, default: 0);
 			local String is rt: if({ passed }, { 'passed' }, { 'failed' });
 			local CleoColor is c: if({ passed }, { CleoColor:ansi(code: 255) }, { CleoColor:ansi(code: 242) });
 			:sSec:resolveSlot(index: slotId, badge: '●', text: name, color: c, rightText: rt);
@@ -228,7 +286,7 @@ Class is SpecTestUi{
 		local String is badge: if({ :failedCount == 0 }, { '✔ ALL PASSED' }, { '✘ ' . (:failedCount as String) . ' FAILED' });
 		local CleoColor is c: if({ :failedCount == 0 }, { CleoColor:ansi(code: 254) }, { CleoColor:ansi(code: 255) });
 		:rSec:addLine(
-			text: (:passedCount as String) . ' passed, ' . (:failedCount as String) . ' failed  (' . (:completedCount as String) . ' suites)',
+			text: (:passedCount as String) . ' passed, ' . (:failedCount as String) . ' failed  (' . (:completedCount as String) . ' suites, ' . (:testsPassed as String) . '/' . (:testsCompleted as String) . ' tests)',
 			color: c,
 			rightText: badge,
 			bold: true
@@ -248,8 +306,8 @@ Class is SpecTestUi{
 	}
 }
 
-## The held registry: the work queue and the results. Held arrays and
-## maps are mutex-protected — the Parallel wave reads the queue and
+## The held registry: the compile queue, the ready-to-run queue, and the results.
+## Held arrays and maps are mutex-protected — the worker pool reads queues and
 ## records results from every worker thread safely.
 Class is SpecTestRegistry{
 	namespace: ['specunit'];
@@ -262,13 +320,15 @@ Class is SpecTestRegistry{
 	];
 
 	held Array of WorkItem is queue: [];
+	held Array of ReadyRunItem is readyRuns: [];
 	held Array of SuiteResult is results: [];
 	held Map of String to SuiteResult is byName: Map:init();
 	held Array of Int is nextIdxRef: [0];
+	held Array of Int is inFlightCompilesRef: [0];
 	held Array of SpecTestUi is uiHolder: [];
 
-	held Function is setupUi(Cleo is ui, CleoSection is wSec, Int is wBarSlot, CleoSection is sSec, CleoSection is rSec, CleoSection is pSec, Int is pSlot, Int is total, Int is threads, Map of String to Int is nameToSlot){
-		local SpecTestUi is helper: SpecTestUi:init(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, threads: threads, nameToSlot: nameToSlot);
+	held Function is setupUi(Cleo is ui, CleoSection is wSec, Int is wBarSlot, CleoSection is sSec, CleoSection is rSec, CleoSection is pSec, Int is pSlot, Int is total, Int is testsTotal, Int is threads, Map of String to Int is nameToSlot){
+		local SpecTestUi is helper: SpecTestUi:init(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, testsTotal: testsTotal, threads: threads, nameToSlot: nameToSlot);
 		SpecTestRegistry:uiHolder:add(item: helper);
 	}
 
@@ -292,7 +352,18 @@ Class is SpecTestRegistry{
 		});
 	}
 
-	held Function of Int is nextWorkIndex(){
+	held Function of ReadyRunItem is nextReadyRun(){
+		local ReadyRunItem is res: ReadyRunItem:init(item: WorkItem:init(itemPath: '', itemKind: '', itemExpect: []), idx: -1, binPath: '', compileCpuUs: 0, compileRssKb: 0);
+		Parallel:syncWith(lock: 17, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:readyRuns:length() > 0; }, then: {
+				res: SpecTestRegistry:readyRuns:removeAt(index: 0, default: res);
+			});
+		});
+		return res;
+	}
+
+	held Function of Int is nextCompileIndex(){
 		local Int is res: -1;
 		Parallel:syncWith(lock: 17, action: {
 			local Int is idx: SpecTestRegistry:nextIdxRef:get(index: 0, default: 0);
@@ -300,10 +371,49 @@ Class is SpecTestRegistry{
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return idx < tot; }, then: {
 				SpecTestRegistry:nextIdxRef:set(index: 0, value: idx + 1);
+				local Int is inf: SpecTestRegistry:inFlightCompilesRef:get(index: 0, default: 0);
+				SpecTestRegistry:inFlightCompilesRef:set(index: 0, value: inf + 1);
 				res: idx;
 			});
 		});
 		return res;
+	}
+
+	held Function is enqueueReadyRun(ReadyRunItem is rItem){
+		Parallel:syncWith(lock: 17, action: {
+			SpecTestRegistry:readyRuns:add(item: rItem);
+			local Int is inf: SpecTestRegistry:inFlightCompilesRef:get(index: 0, default: 0);
+			SpecTestRegistry:inFlightCompilesRef:set(index: 0, value: inf - 1);
+		});
+		Parallel:syncWith(lock: 77, action: {
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
+				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
+				h:onCompiledReady(itemPath: rItem:item:path);
+			});
+		});
+	}
+
+	held Function is finishCompileOnly(){
+		Parallel:syncWith(lock: 17, action: {
+			local Int is inf: SpecTestRegistry:inFlightCompilesRef:get(index: 0, default: 0);
+			SpecTestRegistry:inFlightCompilesRef:set(index: 0, value: inf - 1);
+		});
+	}
+
+	held Function of Boolean is hasPendingWork(){
+		local Boolean is pending: false;
+		Parallel:syncWith(lock: 17, action: {
+			local Int is idx: SpecTestRegistry:nextIdxRef:get(index: 0, default: 0);
+			local Int is tot: SpecTestRegistry:queue:length();
+			local Int is rdy: SpecTestRegistry:readyRuns:length();
+			local Int is inf: SpecTestRegistry:inFlightCompilesRef:get(index: 0, default: 0);
+			local Conditional is cond: Conditional:init();
+			cond:if(check: { return idx < tot || rdy > 0 || inf > 0; }, then: {
+				pending: true;
+			});
+		});
+		return pending;
 	}
 
 	held Function is markStarted(String is tiStr, String is itemPath){
@@ -316,12 +426,12 @@ Class is SpecTestRegistry{
 		});
 	}
 
-	held Function is markRunning(String is itemPath){
+	held Function is markRunning(String is tiStr, String is itemPath){
 		Parallel:syncWith(lock: 77, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
 				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
-				h:onRunning(itemPath: itemPath);
+				h:onRunning(threadIndex: tiStr:parseInt(default: 0), itemPath: itemPath);
 			});
 		});
 	}
@@ -336,7 +446,7 @@ Class is SpecTestRegistry{
 		});
 	}
 
-	held Function is addResult(String is name, Boolean is passed, String is note, String is report){
+	held Function is addResult(String is name, Boolean is passed, String is note, String is report, Int is expectedTests: 1, Int is tPassed: 0, Int is tFailed: 0){
 		Parallel:syncWith(lock: 17, action: {
 			local SuiteResult is r: SuiteResult:init(suiteName: name);
 			r:passed: passed;
@@ -349,7 +459,7 @@ Class is SpecTestRegistry{
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:uiHolder:length() > 0; }, then: {
 				local SpecTestUi is h: SpecTestRegistry:uiHolder:get(index: 0);
-				h:onResult(name: name, passed: passed, note: note);
+				h:onResult(name: name, passed: passed, note: note, expectedTests: expectedTests, tPassed: tPassed, tFailed: tFailed);
 			});
 		});
 	}
@@ -420,11 +530,26 @@ Class is SpecUnit{
 		if(check: { threads < 1 }, then: {
 			threads: 1;
 		});
+		local String is tArg: args:getString(key: 'timeout', default: '');
+		local Int is timeoutSec: if(check: { tArg != '' }, then: { tArg:parseInt(default: 120); }, else: { 120; });
+		if(check: { timeoutSec < 5 }, then: {
+			timeoutSec: 5;
+		});
+		local String is ctArg: args:getString(key: 'compile-timeout', default: '');
+		local Int is compileTimeoutSec: if(check: { ctArg != '' }, then: { ctArg:parseInt(default: 300); }, else: { 300; });
+		if(check: { compileTimeoutSec < 10 }, then: {
+			compileTimeoutSec: 10;
+		});
 		:enqueueDirs(dirsRaw: dirsRaw, root: root);
+		:sortQueueByPriority();
 		local Int is total: SpecTestRegistry:queue:length();
 		if(check: { total == 0 }, then: {
 			line(color256(code: 203, text: 'specunit: no test suites found in: ' . dirsRaw));
 			exit(status: 1);
+		});
+		local Int is testsTotal: 0;
+		SpecTestRegistry:queue:each(action: local Function(WorkItem is wi){
+			testsTotal: testsTotal + wi:expectedTests;
 		});
 		if(check: { threads > total }, then: {
 			threads: total;
@@ -476,14 +601,14 @@ Class is SpecUnit{
 			fgColor: CleoColor:ansi(code: 250)
 		);
 		local Int is pSlot: pSec:addProgressArea(
-			text: '0/' . (total as String) . ' completed (' . specBin . ')',
+			text: '0/' . (total as String) . ' suites · 0/' . (testsTotal as String) . ' tests (' . specBin . ')',
 			stage1Color: CleoColor:ansi(code: 252),
 			stage2Color: CleoColor:ansi(code: 243),
 			trackColor: CleoColor:ansi(code: 236),
 			showTwoStagePercent: true
 		);
 
-		SpecTestRegistry:setupUi(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, threads: threads, nameToSlot: nameToSlot);
+		SpecTestRegistry:setupUi(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, testsTotal: testsTotal, threads: threads, nameToSlot: nameToSlot);
 		local Int is startMs: Time:monotonicMs();
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			ui:start(scope: scope);
@@ -495,22 +620,26 @@ Class is SpecUnit{
 				local Task is wt: scope:spawn(task: local Function(){
 					local Boolean is keepGoing: true;
 					while({ keepGoing }, {
-						local Int is idx: SpecTestRegistry:nextWorkIndex();
-						if(check: { idx < 0 }, then: {
-							keepGoing: false;
+						# Running takes precedence over compiling whenever a compiled test is ready.
+						local ReadyRunItem is rItem: SpecTestRegistry:nextReadyRun();
+						if(check: { rItem:idx >= 0 }, then: {
+							SpecTestRegistry:markRunning(tiStr: (ti as String), itemPath: rItem:item:path);
+							:executeReadyItem(rItem: rItem, specBin: specBin, root: root, timeoutSec: timeoutSec);
+							SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
 						}, else: {
-							local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
-							SpecTestRegistry:markStarted(tiStr: (ti as String), itemPath: item:path);
-							if(check: { item:kind == 'negative' }, then: {
-								:runNegative(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+							local Int is idx: SpecTestRegistry:nextCompileIndex();
+							if(check: { idx >= 0 }, then: {
+								local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
+								SpecTestRegistry:markStarted(tiStr: (ti as String), itemPath: item:path);
+								:compileItem(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags, timeoutSec: compileTimeoutSec);
+								SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
 							}, else: {
-								if(check: { item:kind == 'run-fail' }, then: {
-									:runRunFail(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+								if(check: { SpecTestRegistry:hasPendingWork() }, then: {
+									Process:sleep(milliseconds: 10);
 								}, else: {
-									:runSuite(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
+									keepGoing: false;
 								});
 							});
-							SpecTestRegistry:markWorkerIdle(tiStr: (ti as String));
 						});
 					});
 				});
@@ -598,22 +727,63 @@ Class is SpecUnit{
 		});
 	}
 
+	## Counts test methods declared in a suite source file (`Function is test...(`)
+	## so the progress bar has a fine-grained test total before suites finish.
+	Function of Int is estimateTestCount(String is content){
+		local Int is count: 0;
+		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
+			local String is t: segRaw:trim();
+			if(check: { t:startsWith(prefix: 'Function is test') && t:contains(needle: '(') }, then: {
+				count: count + 1;
+			});
+		});
+		return if(check: { count > 0 }, then: { count; }, else: { 1; });
+	}
+
+	## Stable insertion sort of `SpecTestRegistry:queue` by `priorityPosition`
+	## ascending (lower numbers such as -100 are queued first).
+	Function is sortQueueByPriority(){
+		local Int is n: SpecTestRegistry:queue:length();
+		local Int is i: 1;
+		while({ i < n }, {
+			local WorkItem is keyItem: SpecTestRegistry:queue:get(index: i);
+			local Int is keyPrio: keyItem:priorityPosition;
+			local Int is j: i - 1;
+			while({ j >= 0 && SpecTestRegistry:queue:get(index: j):priorityPosition > keyPrio }, {
+				SpecTestRegistry:queue:set(index: j + 1, item: SpecTestRegistry:queue:get(index: j));
+				j: j - 1;
+			});
+			SpecTestRegistry:queue:set(index: j + 1, item: keyItem);
+			i: i + 1;
+		});
+	}
+
 	## Classifies one candidate: every suite MUST extend the SpecUnitTest
 	## base class and produce a SpecUnit report table. Candidates that do not
 	## extend the base test class are not runnable as suites.
+	## A `#! specunit: negative-suite` file splits into parallel `#! case:` items.
 	Function is enqueueFile(String is relPath){
 		local String is content: fileRead(path: relPath, default: '');
 		local String is kind: '';
+		local Int is prio: 0;
 		local Array of String is expect: [];
 		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
 			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
 			if(check: { seg:startsWith(prefix: '#! specunit: ') }, then: {
-				kind: seg:substring(start: 13, end: seg:length());
+				kind: seg:substring(start: 13, end: seg:length()):trim();
 			}, else: {
-				if(check: { seg:startsWith(prefix: '#! expect: ') }, then: {
-					expect:add(item: seg:substring(start: 11, end: seg:length()));
+				if(check: { seg:startsWith(prefix: '#! priorityPosition: ') }, then: {
+					prio: seg:substring(start: 21, end: seg:length()):trim():parseInt(default: 0);
+				}, else: {
+					if(check: { seg:startsWith(prefix: '#! expect: ') }, then: {
+						expect:add(item: seg:substring(start: 11, end: seg:length()));
+					});
 				});
 			});
+		});
+		if(check: { kind == 'negative-suite' }, then: {
+			:enqueueNegativeSuite(relPath: relPath, content: content, prio: prio);
+			return;
 		});
 		if(check: { (kind == '' || kind == 'suite') && content:contains(needle: 'SpecUnitTest') }, then: {
 			kind: 'suite';
@@ -625,19 +795,80 @@ Class is SpecUnit{
 		if(check: { kind == '' || kind == 'helper' }, then: {
 			return;
 		});
-		SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath, itemKind: kind, itemExpect: expect));
+		local Int is estTests: if(check: { kind == 'suite' }, then: { :estimateTestCount(content: content); }, else: { 1; });
+		SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath, itemKind: kind, itemExpect: expect, source: '', expectedTests: estTests, priorityPosition: prio));
 	}
 
-	## Compiles one suite (one compiler thread), executes the produced
-	## binary, records the verdict, and deletes the compiled test.
-	##
-	## @return: 1 when anything failed, 0 when green.
-	Function of Int is runSuite(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags){
+	## Splits a `#! specunit: negative-suite` file on `#! case: <name>` headers
+	## into independent parallel `negative-case` work items.
+	Function is enqueueNegativeSuite(String is relPath, String is content, Int is prio: 0){
+		local String is curCase: '';
+		local Array of String is curExpect: [];
+		local String is curSrc: '';
+		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
+			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
+			if(check: { seg:startsWith(prefix: '#! case: ') }, then: {
+				if(check: { curCase != '' }, then: {
+					SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath . '#' . curCase, itemKind: 'negative-case', itemExpect: curExpect, source: curSrc, expectedTests: 1, priorityPosition: prio));
+				});
+				curCase: seg:substring(start: 9, end: seg:length()):trim();
+				curExpect: [];
+				curSrc: '';
+			}, else: {
+				if(check: { curCase != '' }, then: {
+					if(check: { seg:startsWith(prefix: '#! expect: ') }, then: {
+						curExpect:add(item: seg:substring(start: 11, end: seg:length()));
+					}, else: {
+						curSrc: curSrc . seg . "\n";
+					});
+				});
+			});
+		});
+		if(check: { curCase != '' }, then: {
+			SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath . '#' . curCase, itemKind: 'negative-case', itemExpect: curExpect, source: curSrc, expectedTests: 1, priorityPosition: prio));
+		});
+	}
+
+	## Wraps a shell command with `timeout --kill-after=5 <timeoutSec>s` on POSIX
+	## so hung compiles or hung test binaries are cleanly terminated.
+	Function of String is withTimeout(String is cmd, Int is timeoutSec){
+		if(check: { Process:osName() == 'windows' }, then: {
+			return cmd;
+		});
+		return 'timeout --kill-after=5 ' . (timeoutSec as String) . 's ' . cmd;
+	}
+
+	## Parses `[PASS]` and `[FAIL]` counts from SpecUnit suite output.
+	Function of Array of Int is countReportTests(String is out){
+		local Int is p: 0;
+		local Int is f: 0;
+		out:split(delimiter: "\n"):each(action: local Function(String is ln){
+			if(check: { ln:startsWith(prefix: '[PASS] ') }, then: {
+				p: p + 1;
+			}, else: {
+				if(check: { ln:startsWith(prefix: '[FAIL] ') }, then: {
+					f: f + 1;
+				});
+			});
+		});
+		return [p, f];
+	}
+
+	## Compiles one work item. Negative items finish right here; runnable
+	## items (`suite`, `run-fail`) enqueue their compiled binary onto
+	## `SpecTestRegistry:readyRuns` so any free worker runs it with priority.
+	Function is compileItem(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags, Int is timeoutSec){
+		if(check: { item:kind == 'negative' || item:kind == 'negative-case' }, then: {
+			:runNegative(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags, timeoutSec: timeoutSec);
+			SpecTestRegistry:finishCompileOnly();
+			return;
+		});
 		local String is src: :resolveItemPath(root: root, relOrAbs: item:path);
 		local String is exeSuffix: if(check: { Process:osName() == 'windows' }, then: { '.exe' }, else: { '.bin' });
 		local String is bin: :workPath(suffix: exeSuffix, idx: idx, stem: :fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
+		local String is compileCmd: :withTimeout(cmd: '"' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '"', timeoutSec: timeoutSec);
+		local Array of String is cArgs: ['-c', 'cd "' . root . '" && ' . compileCmd . ' > "' . compileOut . '" 2>&1'];
 		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
 		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
 		local Int is cCpu: cRes:getInt(key: 'cpu_us', default: 0);
@@ -645,127 +876,119 @@ Class is SpecUnit{
 		if(check: { cStatus != 0 }, then: {
 			SpecTestRegistry:recordMetrics(cpuStr: (cCpu as String), rssStr: (cRss as String));
 			local String is diag: fileRead(path: compileOut, default: '');
-			SpecTestRegistry:addResult(name: item:path, passed: false, note: 'compilation failed: ' . :firstLine(text: diag), report: diag);
+			local String is note: if(check: { cStatus == 124 || cStatus == 137 }, then: { 'compilation timed out after ' . (timeoutSec as String) . 's (killed)'; }, else: { 'compilation failed: ' . :firstLine(text: diag); });
+			SpecTestRegistry:addResult(name: item:path, passed: false, note: note, report: diag, expectedTests: item:expectedTests, tPassed: 0, tFailed: item:expectedTests);
 			fileRemove(path: compileOut);
-			return 1;
+			fileRemove(path: bin);
+			SpecTestRegistry:finishCompileOnly();
+			return;
 		});
 		fileRemove(path: compileOut);
-		SpecTestRegistry:markRunning(itemPath: item:path);
+		SpecTestRegistry:enqueueReadyRun(rItem: ReadyRunItem:init(item: item, idx: idx, binPath: bin, compileCpuUs: cCpu, compileRssKb: cRss));
+	}
 
+	## Executes a previously compiled `suite` or `run-fail` binary under timeout,
+	## records metrics + test counts, and deletes the compiled binary.
+	Function is executeReadyItem(ReadyRunItem is rItem, String is specBin, String is root, Int is timeoutSec){
+		local WorkItem is item: rItem:item;
+		local String is bin: rItem:binPath;
 		local String is runOut: bin . '.out';
-		local Array of String is rArgs: ['-c', 'cd "' . root . '" && export SPEC_BIN="' . specBin . '" && "' . bin . '" < /dev/null > "' . runOut . '" 2>&1'];
+		local String is runCmd: :withTimeout(cmd: '"' . bin . '"', timeoutSec: timeoutSec);
+		local Array of String is rArgs: ['-c', 'cd "' . root . '" && export SPEC_BIN="' . specBin . '" && ' . runCmd . ' < /dev/null > "' . runOut . '" 2>&1'];
 		local Map of String to String is rRes: Process:measure(command: 'sh', args: rArgs);
 		local Int is rStatus: rRes:getInt(key: 'exit', default: -1);
-		local Int is totalCpu: cCpu + rRes:getInt(key: 'cpu_us', default: 0);
+		local Int is totalCpu: rItem:compileCpuUs + rRes:getInt(key: 'cpu_us', default: 0);
 		local Int is rRss: rRes:getInt(key: 'rss_kb', default: 0);
-		local Int is maxRss: if(check: { rRss > cRss }, then: { rRss; }, else: { cRss; });
+		local Int is maxRss: if(check: { rRss > rItem:compileRssKb }, then: { rRss; }, else: { rItem:compileRssKb; });
 		SpecTestRegistry:recordMetrics(cpuStr: (totalCpu as String), rssStr: (maxRss as String));
 		local String is out: fileRead(path: runOut, default: '');
-		local Boolean is passed: rStatus == 0;
+		local Boolean is timedOut: rStatus == 124 || rStatus == 137;
+		local Boolean is passed: true;
 		local String is note: '';
-		if(check: { passed && !out:contains(needle: '== SpecUnit ==') }, then: {
-			passed: false;
-			note: 'exited 0 but produced no SpecUnit report table';
+		local Int is tPassed: 0;
+		local Int is tFailed: 0;
+		if(check: { item:kind == 'run-fail' }, then: {
+			if(check: { timedOut }, then: {
+				passed: false;
+				note: 'timed out after ' . (timeoutSec as String) . 's (killed)';
+			}, else: {
+				if(check: { rStatus == 0 }, then: {
+					passed: false;
+					note: 'exited 0 but must fail';
+				}, else: {
+					if(check: { !:allPresent(text: out, expect: item:expect) }, then: {
+						passed: false;
+						note: 'missing expected run diagnostic';
+					});
+				});
+			});
+			tPassed: if(check: { passed }, then: { 1; }, else: { 0; });
+			tFailed: if(check: { passed }, then: { 0; }, else: { 1; });
+		}, else: {
+			passed: rStatus == 0;
+			local Array of Int is counts: :countReportTests(out: out);
+			tPassed: counts:get(index: 0, default: 0);
+			tFailed: counts:get(index: 1, default: 0);
+			if(check: { timedOut }, then: {
+				passed: false;
+				note: 'timed out after ' . (timeoutSec as String) . 's (killed)';
+			}, else: {
+				if(check: { passed && !out:contains(needle: '== SpecUnit ==') }, then: {
+					passed: false;
+					note: 'exited 0 but produced no SpecUnit report table';
+				});
+				if(check: { !passed && note == '' }, then: {
+					note: 'exit ' . (rStatus as String) . ' — ' . :firstLine(text: out);
+				});
+			});
 		});
-		if(check: { !passed && note == '' }, then: {
-			note: 'exit ' . (rStatus as String) . ' — ' . :firstLine(text: out);
-		});
-		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: out);
+		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: out, expectedTests: item:expectedTests, tPassed: tPassed, tFailed: tFailed);
 		fileRemove(path: bin);
 		fileRemove(path: runOut);
-		if(check: { passed }, then: {
-			return 0;
-		});
-		return 1;
 	}
 
 	## Compile-must-fail: the produced diagnostics must contain every
-	## `#! expect:` string from the file's banner.
-	##
-	## @return: 1 when the compile succeeds or an expect is missing, 0
-	##          when green.
-	Function of Int is runNegative(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags){
-		local String is src: :resolveItemPath(root: root, relOrAbs: item:path);
+	## `#! expect:` string from the file's or case's banner.
+	Function is runNegative(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags, Int is timeoutSec){
+		local String is src: '';
+		local Boolean is tempSrc: false;
+		if(check: { item:kind == 'negative-case' }, then: {
+			src: :workPath(suffix: '.spec', idx: idx, stem: 'negcase');
+			fileWrite(path: src, content: item:inlineSource, onSuccess: local Function(Int is _n){}, onError: local Function(String is _e){});
+			tempSrc: true;
+		}, else: {
+			src: :resolveItemPath(root: root, relOrAbs: item:path);
+		});
 		local String is compileOut: :workPath(suffix: '.compile', idx: idx, stem: :fileStem(path: item:path));
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "/dev/null" > "' . compileOut . '" 2>&1'];
+		local String is compileCmd: :withTimeout(cmd: '"' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "/dev/null"', timeoutSec: timeoutSec);
+		local Array of String is cArgs: ['-c', 'cd "' . root . '" && ' . compileCmd . ' > "' . compileOut . '" 2>&1'];
 		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
 		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
 		SpecTestRegistry:recordMetrics(cpuStr: (cRes:getInt(key: 'cpu_us', default: 0) as String), rssStr: (cRes:getInt(key: 'rss_kb', default: 0) as String));
 		local String is cText: fileRead(path: compileOut, default: '');
 		local Boolean is passed: true;
 		local String is note: '';
-		if(check: { cStatus == 0 }, then: {
+		if(check: { cStatus == 124 || cStatus == 137 }, then: {
 			passed: false;
-			note: 'compilation succeeded but must fail';
+			note: 'compilation timed out after ' . (timeoutSec as String) . 's (killed)';
 		}, else: {
-			if(check: { !:allPresent(text: cText, expect: item:expect) }, then: {
+			if(check: { cStatus == 0 }, then: {
 				passed: false;
-				note: 'missing expected diagnostic';
-			});
-		});
-		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: cText);
-		fileRemove(path: compileOut);
-		if(check: { passed }, then: {
-			return 0;
-		});
-		return 1;
-	}
-
-	## Compile-then-run-must-fail: the binary must exit non-zero and its
-	## output must contain every expected string — the framework's
-	## graceful failures (an empty suite) and the reflection floor's
-	## panics (a non-void or parametered test method, an
-	## unconstructible test class).
-	##
-	## @return: 1 when anything failed, 0 when green.
-	Function of Int is runRunFail(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags){
-		local String is src: :resolveItemPath(root: root, relOrAbs: item:path);
-		local String is exeSuffix: if(check: { Process:osName() == 'windows' }, then: { '.exe' }, else: { '.bin' });
-		local String is bin: :workPath(suffix: exeSuffix, idx: idx, stem: :fileStem(path: item:path));
-		local String is compileOut: bin . '.compile';
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
-		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
-		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
-		local Int is cCpu: cRes:getInt(key: 'cpu_us', default: 0);
-		local Int is cRss: cRes:getInt(key: 'rss_kb', default: 0);
-		local Boolean is passed: true;
-		local String is note: '';
-		local String is evidence: '';
-		if(check: { cStatus != 0 }, then: {
-			SpecTestRegistry:recordMetrics(cpuStr: (cCpu as String), rssStr: (cRss as String));
-			passed: false;
-			evidence: fileRead(path: compileOut, default: '');
-			note: 'compilation failed: ' . :firstLine(text: evidence);
-		}, else: {
-			fileRemove(path: compileOut);
-			SpecTestRegistry:markRunning(itemPath: item:path);
-			local String is runOut: bin . '.out';
-			local Array of String is rArgs: ['-c', 'cd "' . root . '" && "' . bin . '" < /dev/null > "' . runOut . '" 2>&1'];
-			local Map of String to String is rRes: Process:measure(command: 'sh', args: rArgs);
-			local Int is rStatus: rRes:getInt(key: 'exit', default: -1);
-			local Int is totalCpu: cCpu + rRes:getInt(key: 'cpu_us', default: 0);
-			local Int is rRss: rRes:getInt(key: 'rss_kb', default: 0);
-			local Int is maxRss: if(check: { rRss > cRss }, then: { rRss; }, else: { cRss; });
-			SpecTestRegistry:recordMetrics(cpuStr: (totalCpu as String), rssStr: (maxRss as String));
-			evidence: fileRead(path: runOut, default: '');
-			if(check: { rStatus == 0 }, then: {
-				passed: false;
-				note: 'exited 0 but must fail';
+				note: 'compilation succeeded but must fail';
 			}, else: {
-				if(check: { !:allPresent(text: evidence, expect: item:expect) }, then: {
+				if(check: { !:allPresent(text: cText, expect: item:expect) }, then: {
 					passed: false;
-					note: 'missing expected run diagnostic';
+					note: 'missing expected diagnostic';
 				});
 			});
-			fileRemove(path: runOut);
 		});
-		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: evidence);
+		local Int is tp: if(check: { passed }, then: { 1; }, else: { 0; });
+		local Int is tf: if(check: { passed }, then: { 0; }, else: { 1; });
+		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: cText, expectedTests: 1, tPassed: tp, tFailed: tf);
 		fileRemove(path: compileOut);
-		fileRemove(path: bin);
-		if(check: { passed }, then: {
-			return 0;
+		if(check: { tempSrc }, then: {
+			fileRemove(path: src);
 		});
-		return 1;
 	}
 
 	## The flat work path for one item's artifacts: pid + queue

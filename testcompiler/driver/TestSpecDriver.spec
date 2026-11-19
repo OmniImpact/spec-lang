@@ -1,3 +1,4 @@
+#! priorityPosition: -100
 #! Driver + CompilationReport check: the new driver compiles a source
 #! file end to end (load, check, generate, cc) and its checker rejects
 #! invalid programs.

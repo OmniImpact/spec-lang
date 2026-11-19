@@ -41,19 +41,4 @@ Class is Reflection{
 	Function of Int is line(){
 		return base:sysinternal:Reflection:line();
 	}
-
-	## True when the enclosing call's resolved type parameter T is an ARC-managed reference type.
-	##
-	## @return: True when the call site's type argument is ARC-managed.
-	Function of Boolean is isArcTypeParam(){
-		return base:sysinternal:Reflection:isArcTypeParam();
-	}
-
-	## Returns the return-type category of the closure argument at the call site
-	## (`0` = scalar Int/Boolean/Byte, `1` = ARC reference, `2` = Float, `3` = Void).
-	##
-	## @return: Closure return kind code.
-	Function of Int is closureReturnKind(){
-		return base:sysinternal:Reflection:closureReturnKind();
-	}
 }

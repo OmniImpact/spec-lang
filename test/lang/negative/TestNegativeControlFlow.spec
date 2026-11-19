@@ -1,17 +1,7 @@
-#! specunit: suite
+#! specunit: negative-suite
 
-Class of SpecUnitTest is TestNegativeControlFlow{
-
-	replace Array of Array of String is using: [
-		['specunit', SpecUnitTest],
-		['specunit', SpecUnitRunner],
-		['specunit', Assert]
-	];
-
-	## N19: Scoped region without open slot is rejected.
-	Function is testScopedRegionNoOpenSlot(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testScopedRegionNoOpenSlot
+#! expect: has no open scope slot
 Class is App{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]
@@ -20,15 +10,9 @@ Class is App{
 		as: if(check: true, then: {});
 	}
 }
-''',
-			expect: "has no open scope slot"
-		);
-	}
 
-	## N20: Value branch yield types must unify.
-	Function is testValueBranchMismatch(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testValueBranchMismatch
+#! expect: Branch yields mismatched types: 'String' and 'Int'
 Class is App{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]
@@ -37,15 +21,9 @@ Class is App{
 		local String is x: if({ 1 > 0 }, { 'text' }, { 42 });
 	}
 }
-''',
-			expect: "Branch yields mismatched types: 'String' and 'Int'"
-		);
-	}
 
-	## N33: Keys in Cases:match must resolve to held members of the subject's class.
-	Function is testCasesMatchForeignClassKey(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testCasesMatchForeignClassKey
+#! expect: is not a held member of 'Sink'
 Class of Enum is Mode{
 	held Mode is on: Mode:init();
 	held Mode is off: Mode:init();
@@ -65,15 +43,9 @@ Class is App{
 		]);
 	}
 }
-''',
-			expect: "is not a held member of 'Sink'"
-		);
-	}
 
-	## N33: Enum-rooted matches must be exhaustive.
-	Function is testCasesMatchNonExhaustive(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testCasesMatchNonExhaustive
+#! expect: Non-exhaustive match: missing arm(s) Mode:off
 Class of Enum is Mode{
 	held Mode is on: Mode:init();
 	held Mode is off: Mode:init();
@@ -88,15 +60,9 @@ Class is App{
 		]);
 	}
 }
-''',
-			expect: "Non-exhaustive match: missing arm(s) Mode:off"
-		);
-	}
 
-	## Void-form enum matches must also be exhaustive.
-	Function is testVoidEnumMatchNonExhaustive(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testVoidEnumMatchNonExhaustive
+#! expect: Non-exhaustive match: missing arm(s) Mode:off
 Class of Enum is Mode{
 	held Mode is on: Mode:init();
 	held Mode is off: Mode:init();
@@ -111,15 +77,9 @@ Class is App{
 		]);
 	}
 }
-''',
-			expect: "Non-exhaustive match: missing arm(s) Mode:off"
-		);
-	}
 
-	## Redundant else on an already-exhaustive enum match is rejected.
-	Function is testRedundantElseOnEnumMatch(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testRedundantElseOnEnumMatch
+#! expect: Redundant else arm in exhaustive match on 'Mode'
 Class of Enum is Mode{
 	held Mode is on: Mode:init();
 	held Mode is off: Mode:init();
@@ -136,15 +96,9 @@ Class is App{
 		]);
 	}
 }
-''',
-			expect: "Redundant else arm in exhaustive match on 'Mode'"
-		);
-	}
 
-	## Tagged-variant payload closure with excess parameters is rejected.
-	Function is testTaggedPayloadArityMismatch(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testTaggedPayloadArityMismatch
+#! expect: binds 2 parameter(s), but the variant declares 1
 Enum is Shape{
 	Circle(Int is r),
 	Point
@@ -161,15 +115,9 @@ Class is App{
 		]);
 	}
 }
-''',
-			expect: "binds 2 parameter(s), but the variant declares 1"
-		);
-	}
 
-	## Tagged-variant payload closure with wrong explicit parameter type is rejected.
-	Function is testTaggedPayloadTypeMismatch(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testTaggedPayloadTypeMismatch
+#! expect: has type 'String', expected 'Int'
 Enum is Shape{
 	Circle(Int is r),
 	Point
@@ -186,15 +134,9 @@ Class is App{
 		]);
 	}
 }
-''',
-			expect: "has type 'String', expected 'Int'"
-		);
-	}
 
-	## N34: Loop vars require inline literal closures.
-	Function is testLoopVarsRequireLiterals(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testLoopVarsRequireLiterals
+#! expect: requires inline literal closures
 Class is App{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Loops()]
@@ -205,15 +147,9 @@ Class is App{
 		while([Int is i: 0], cond, body);
 	}
 }
-''',
-			expect: "requires inline literal closures"
-		);
-	}
 
-	## N35: Predicate match table must be a compile-time literal.
-	Function is testPredicateTableMustBeLiteral(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testPredicateTableMustBeLiteral
+#! expect: predicate match table is compile-time
 Class is App{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]
@@ -223,15 +159,9 @@ Class is App{
 		match(when: table);
 	}
 }
-''',
-			expect: "predicate match table is compile-time"
-		);
-	}
 
-	## N36: Predicate match arms take no parameters.
-	Function is testPredicateArmsTakeNoParameters(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testPredicateArmsTakeNoParameters
+#! expect: Predicate match arms take no parameters
 Class is App{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]
@@ -242,10 +172,5 @@ Class is App{
 			{ n > 1 }: local Function(Int is x){},
 			else: {}
 		]);
-	}
-}
-''',
-			expect: "Predicate match arms take no parameters"
-		);
 	}
 }

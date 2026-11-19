@@ -14,7 +14,6 @@ Class is Driver{
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
-		['base', 'sys', as Buf()],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
@@ -274,7 +273,7 @@ Class is Driver{
 			local String is llText: emitter:emitModuleScoped(mod: irMod, scope: scope, threads: threadCount);
 			genMs: Process:clockMs() - llvmGenT0;
 
-			local Int is llLines: Buf:bufCountByte(b: llText, byteVal: 10);
+			local Int is llLines: llText:countByte(byteVal: 10);
 			local String is tempLlPath: emitLlvmPath;
 			if({ tempLlPath == '' }, {
 				tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
@@ -299,7 +298,7 @@ Class is Driver{
 			});
 			local RuntimePrelude is rp: RuntimePrelude:init();
 			local String is rtText: rp:emitRuntime();
-			if({ !fileExists(path: runtimeO) || Dir:fileSize(path: runtimeC) != Buf:bufLength(b: rtText) || args:has(key: 'clean-cache') }, {
+			if({ !fileExists(path: runtimeO) || Dir:fileSize(path: runtimeC) != rtText:length() || args:has(key: 'clean-cache') }, {
 				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
 				if({ !fileWrite(path: runtimeC, content: rtText) }, {
 					cacheDir: Uri:systemTempDir() . '/spec_cache/runtime';

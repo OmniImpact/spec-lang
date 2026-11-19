@@ -10,7 +10,6 @@ Class is Json{
 		['base', 'data', JsonNumber],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as Introspection()]
 	];
 
@@ -52,11 +51,11 @@ Class is Json{
 
 	## Safely extracts a String from an Any value holding a String.
 	Function of String is asString(Any is val){
-		return Buf:stringCopy(b: val);
+		return (val as String):copy();
 	}
 
 	Function of String is toStr(Any is val){
-		return Buf:stringCopy(b: val);
+		return (val as String):copy();
 	}
 
 	## Whether the most recent parse operation encountered a syntax error.
@@ -287,7 +286,7 @@ Class is Json{
 	Function is skipWhitespace(String is text){
 		local Boolean is checking: true;
 		while({ checking && (:parsePos < :textLen) }, {
-			local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+			local Int is b: text:byteAt(index: :parsePos, default: -1);
 			if({ b == 32 || b == 9 || b == 10 || b == 13 }, {
 				:parsePos: :parsePos + 1;
 			}, {
@@ -321,7 +320,7 @@ Class is Json{
 		local Boolean is closed: false;
 
 		while({ scanning && (:parsePos < :textLen) }, {
-			local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+			local Int is b: text:byteAt(index: :parsePos, default: -1);
 			if({ b < 0 }, {
 				:parseFailed: true;
 				:parseError: 'Unexpected end of input inside string literal';
@@ -332,7 +331,7 @@ Class is Json{
 					out: out . text:substring(start: startPos, end: :parsePos);
 				});
 				:parsePos: :parsePos + 1;
-				local Int is esc: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+				local Int is esc: text:byteAt(index: :parsePos, default: -1);
 				if({ esc == 34 }, {
 					out: out . '"';
 				});
@@ -398,13 +397,13 @@ Class is Json{
 		local Int is start: :parsePos;
 		local Boolean is isFloating: false;
 
-		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 45 }, {
+		if({ :parsePos < :textLen && text:byteAt(index: :parsePos, default: -1) == 45 }, {
 			:parsePos: :parsePos + 1;
 		});
 
 		local Boolean is readingInt: true;
 		while({ readingInt && (:parsePos < :textLen) }, {
-			local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+			local Int is b: text:byteAt(index: :parsePos, default: -1);
 			if({ b >= 48 && b <= 57 }, {
 				:parsePos: :parsePos + 1;
 			}, {
@@ -412,12 +411,12 @@ Class is Json{
 			});
 		});
 
-		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 46 }, {
+		if({ :parsePos < :textLen && text:byteAt(index: :parsePos, default: -1) == 46 }, {
 			isFloating: true;
 			:parsePos: :parsePos + 1;
 			local Boolean is readingFrac: true;
 			while({ readingFrac && (:parsePos < :textLen) }, {
-				local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+				local Int is b: text:byteAt(index: :parsePos, default: -1);
 				if({ b >= 48 && b <= 57 }, {
 					:parsePos: :parsePos + 1;
 				}, {
@@ -427,19 +426,19 @@ Class is Json{
 		});
 
 		if({ :parsePos < :textLen }, {
-			local Int is expCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+			local Int is expCh: text:byteAt(index: :parsePos, default: -1);
 			if({ expCh == 101 || expCh == 69 }, {
 				isFloating: true;
 				:parsePos: :parsePos + 1;
 				if({ :parsePos < :textLen }, {
-					local Int is signCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+					local Int is signCh: text:byteAt(index: :parsePos, default: -1);
 					if({ signCh == 43 || signCh == 45 }, {
 						:parsePos: :parsePos + 1;
 					});
 				});
 				local Boolean is readingExp: true;
 				while({ readingExp && (:parsePos < :textLen) }, {
-					local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+					local Int is b: text:byteAt(index: :parsePos, default: -1);
 					if({ b >= 48 && b <= 57 }, {
 					:parsePos: :parsePos + 1;
 					}, {
@@ -463,7 +462,7 @@ Class is Json{
 		:parsePos: :parsePos + 1;
 		:skipWhitespace(text: text);
 
-		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 93 }, {
+		if({ :parsePos < :textLen && text:byteAt(index: :parsePos, default: -1) == 93 }, {
 			:parsePos: :parsePos + 1;
 			return arr;
 		});
@@ -474,7 +473,7 @@ Class is Json{
 			local Any is item: :parseValue(text: text);
 			arr:add(item: item);
 			:skipWhitespace(text: text);
-			local Int is nextCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+			local Int is nextCh: text:byteAt(index: :parsePos, default: -1);
 			if({ nextCh == 44 }, {
 				:parsePos: :parsePos + 1;
 			}, {
@@ -502,7 +501,7 @@ Class is Json{
 		:parsePos: :parsePos + 1;
 		:skipWhitespace(text: text);
 
-		if({ :parsePos < :textLen && Buf:bufGetByte(b: text, idx: :parsePos, def: -1) == 125 }, {
+		if({ :parsePos < :textLen && text:byteAt(index: :parsePos, default: -1) == 125 }, {
 			:parsePos: :parsePos + 1;
 			return obj;
 		});
@@ -511,14 +510,14 @@ Class is Json{
 		local Boolean is closed: false;
 		while({ parsing && !:parseFailed && (:parsePos < :textLen) }, {
 			:skipWhitespace(text: text);
-			if({ Buf:bufGetByte(b: text, idx: :parsePos, def: -1) != 34 }, {
+			if({ text:byteAt(index: :parsePos, default: -1) != 34 }, {
 				:parseFailed: true;
 				:parseError: 'Expected string key in object';
 				return obj;
 			});
 			local String is key: :parseString(text: text);
 			:skipWhitespace(text: text);
-			if({ Buf:bufGetByte(b: text, idx: :parsePos, def: -1) != 58 }, {
+			if({ text:byteAt(index: :parsePos, default: -1) != 58 }, {
 				:parseFailed: true;
 				:parseError: 'Expected \x27:\x27 after key in object';
 				return obj;
@@ -527,7 +526,7 @@ Class is Json{
 			local Any is val: :parseValue(text: text);
 			obj:set(key: key, value: val);
 			:skipWhitespace(text: text);
-			local Int is nextCh: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+			local Int is nextCh: text:byteAt(index: :parsePos, default: -1);
 			if({ nextCh == 44 }, {
 				:parsePos: :parsePos + 1;
 			}, {
@@ -558,7 +557,7 @@ Class is Json{
 			return :nullValue();
 		});
 
-		local Int is b: Buf:bufGetByte(b: text, idx: :parsePos, def: -1);
+		local Int is b: text:byteAt(index: :parsePos, default: -1);
 		if({ b == 123 }, {
 			return :parseObject(text: text);
 		});
@@ -663,7 +662,7 @@ Class is Json{
 		local Int is i: 0;
 
 		while({ i < len }, {
-			local Int is b: Buf:bufGetByte(b: str, idx: i, def: -1);
+			local Int is b: str:byteAt(index: i, default: -1);
 			if({ b == 34 }, {
 				out: out . "\\\"";
 			}, {

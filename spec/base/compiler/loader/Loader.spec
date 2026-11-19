@@ -21,7 +21,6 @@ Class is Loader{
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as Dir()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
@@ -269,7 +268,7 @@ Class is Loader{
 			if({ name:startsWith(prefix: '.') }, {
 				return;
 			});
-			local String is child: Buf:stringCopy(b: dir . '/' . name);
+			local String is child: (dir . '/' . name):copy();
 			if({ name:endsWith(suffix: '.spec') }, {
 				local String is stem: name:substring(start: 0, end: name:length() - 5);
 				if({ :classPaths:has(key: stem) }, {
@@ -387,7 +386,7 @@ Class is Loader{
 					local String is namesJoined: :packageDirs:getString(key: dirPath, default: '');
 					local Array of String is names: namesJoined:split(delimiter: ';');
 					names:each(action: local Function(String is name){
-						:loadFile(filePath: Buf:stringCopy(b: dirPath . '/' . name));
+						:loadFile(filePath: (dirPath . '/' . name):copy());
 					});
 				});
 			});

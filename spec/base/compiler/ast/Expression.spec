@@ -42,6 +42,10 @@ Enum is Expression {
 	## Type resolved by the checker (its canonical name).
 	String is resolvedType: '';
 
+	## Structured [Type] node resolved by the checker (base name + generic `Array of Type` params).
+	Type is resolvedTypeNode;
+	Boolean is hasResolvedTypeNode: false;
+
 	## Sets the one-based source line.
 	##
 	## @param line: Source line number.
@@ -55,6 +59,21 @@ Enum is Expression {
 	## @param t: Resolved type name.
 	Function is setResolvedType(String is t){
 		:resolvedType: t;
+	}
+
+	## Sets the structured checker-resolved [Type] node together with its canonical string name.
+	Function is setResolvedTypeNode(Type is tn, String is t){
+		:resolvedTypeNode: tn;
+		:hasResolvedTypeNode: true;
+		:resolvedType: t;
+	}
+
+	## Returns the structured checker-resolved [Type] node, or an empty [Type] if unset.
+	Function of Type is getResolvedTypeNode(){
+		if({ !:hasResolvedTypeNode }, {
+			return Type:init(name: '');
+		});
+		return :resolvedTypeNode;
 	}
 
 	## Returns the value expression of the call argument at [index].

@@ -39,7 +39,6 @@ Class is TypeChecker{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Reflection()],
 		['base', 'sys', as Output()],
-		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()]
 ];
 
@@ -148,6 +147,14 @@ Class is TypeChecker{
 	## which may be freely mutated within that block.
 	local Map of String to String is lazyLocalVars: Map:init();
 
+	## Method-level generic templates discovered during type checking (`Owner:method -> tpName`),
+	## their grounding status (`Owner:method -> true`), and their declaring source locations.
+	local Map of String to String is genericMethodTemplates: Map:init();
+	local Map of String to Boolean is groundedGenericMethods: Map:init();
+	local Map of String to Int is genericMethodLines: Map:init();
+	local Map of String to String is genericMethodFiles: Map:init();
+	local Map of String to Boolean is currentMethodTypeParams: Map:init();
+
 	## Accumulated type errors.
 	local Array of TypeError is errors: [];
 
@@ -166,6 +173,11 @@ Class is TypeChecker{
 		:allEnumNames: Map:init();
 		:allEnumVariants: Map:init();
 		:allStringBackedEnums: Map:init();
+		:genericMethodTemplates: Map:init();
+		:groundedGenericMethods: Map:init();
+		:genericMethodLines: Map:init();
+		:genericMethodFiles: Map:init();
+		:currentMethodTypeParams: Map:init();
 		:localVars: Map:init();
 		:fieldTypes: Map:init();
 		:unassignedFields: Map:init();
@@ -242,14 +254,87 @@ Class is TypeChecker{
 			local Type is p0: t:params:get(index: 0);
 			# the stamp vocabulary repeats — the
 			# interning collapses the retained copies to one object.
-			return Buf:intern(s: baseName . ':' . :formatTypeString(t: p0));
+			return (baseName . ':' . :formatTypeString(t: p0)):intern();
 		});
 		if({ t:params:length() >= 2 }, {
 			local Type is p0: t:params:get(index: 0);
 			local Type is p1: t:params:get(index: 1);
-			return Buf:intern(s: baseName . ':' . :formatTypeString(t: p0) . ':' . :formatTypeString(t: p1));
+			return (baseName . ':' . :formatTypeString(t: p0) . ':' . :formatTypeString(t: p1)):intern();
 		});
 		return baseName;
+	}
+
+	## Substitutes a class's generic type parameters in a structured [Type] node.
+	Function of Type is substituteTypeNode(Type is t, ClassInfo is cls, Array of Type is typeArgs){
+		local Array of String is tps: cls:typeParams;
+		if({ tps:length() == 0 || typeArgs:length() == 0 || t:name == '' }, {
+			return t;
+		});
+		local Int is idx: tps:indexOf(search: t:name, default: -1);
+		if({ idx >= 0 && t:params:length() == 0 }, {
+			if({ idx < typeArgs:length() }, {
+				return typeArgs:get(index: idx):clone();
+			});
+			return Type:init(name: Primitive:ANY:value());
+		});
+		local Array of Type is newParams: [];
+		local Int is pi: 0;
+		while({ pi < t:params:length() }, {
+			newParams:add(item: :substituteTypeNode(t: t:params:get(index: pi), cls: cls, typeArgs: typeArgs));
+			pi++;
+		});
+		local String is bName: t:name;
+		if({ idx >= 0 && idx < typeArgs:length() }, {
+			bName: typeArgs:get(index: idx):name;
+		});
+		return Type:withParams(name: bName, params: newParams);
+	}
+
+	## Converts a canonical type name string into a structured [Type] tree (`name` + `Array of Type`).
+	Function of Type is parseTypeNode(String is s){
+		if({ s == '' }, { return Type:init(name: ''); });
+		if({ !s:contains(needle: ':') && !s:contains(needle: ' of ') }, {
+			return Type:init(name: s);
+		});
+		if({ :registeredClasses:has(key: s) }, {
+			return Type:init(name: s);
+		});
+		local String is norm: :normalizeContainerType(t: s);
+		local Array of String is rawParts: norm:split(delimiter: ':');
+		local Array of Type is stack: [];
+		local Int is idx: rawParts:length() - 1;
+		while({ idx >= 0 }, {
+			local String is seg: rawParts:get(index: idx, default: '');
+			local Int is arity: 0;
+			if({ seg == 'Array' || seg == 'List' || seg == 'Function' }, {
+				arity: 1;
+			}, {
+				if({ seg == 'Map' }, {
+					arity: 2;
+				}, {
+					local ClassInfo is cls: :findClass(name: seg);
+					if({ cls:name != '' && cls:typeParams:length() > 0 }, {
+						arity: cls:typeParams:length();
+					});
+				});
+			});
+			if({ arity > 0 && stack:length() >= arity }, {
+				local Array of Type is tArgs: [];
+				local Int is ki: 0;
+				while({ ki < arity }, {
+					tArgs:add(item: stack:pop(default: Type:init(name: '')));
+					ki++;
+				});
+				stack:add(item: Type:withParams(name: seg, params: tArgs));
+			}, {
+				stack:add(item: Type:init(name: seg));
+			});
+			idx: idx - 1;
+		});
+		if({ stack:length() > 0 }, {
+			return stack:get(index: stack:length() - 1);
+		});
+		return Type:init(name: s);
 	}
 
 	## Substitutes a class's generic type parameters in a member type name.
@@ -263,30 +348,68 @@ Class is TypeChecker{
 		if({ tps:length() == 0 || typeArgs:length() == 0 }, {
 			return rawType;
 		});
-		local Int is idx: tps:indexOf(search: rawType, default: -1);
-		if({ idx >= 0 }, {
-			# Grounded when the container carries type arguments; a bare
-			# container ('Array' without 'of T') degrades to Any.
-			if({ idx < typeArgs:length() }, {
-				return typeArgs:get(index: idx);
-			});
-			return Primitive:ANY:value();
+		local Array of Type is argNodes: [];
+		typeArgs:each(action: local Function(String is ta){
+			argNodes:add(item: :parseTypeNode(s: ta));
 		});
-		if({ rawType:startsWith(prefix: 'Array:') && rawType:length() > 6 }, {
-			local String is elem: rawType:substring(start: 6, end: rawType:length());
-			local Int is eIdx: tps:indexOf(search: elem, default: -1);
-			if({ eIdx >= 0 && eIdx < typeArgs:length() }, {
-				return 'Array:' . typeArgs:get(index: eIdx);
-			});
+		local Type is rawNode: :parseTypeNode(s: rawType);
+		local Type is subNode: :substituteTypeNode(t: rawNode, cls: cls, typeArgs: argNodes);
+		return :formatVarTypeString(t: subNode);
+	}
+
+	## Infers the grounded generic type ('Box:String', 'Pair:String:Int', 'SpecError:FileOpError')
+	## for a constructor call `C:init(...)` from contextual expectation and/or argument types,
+	## operating over structured [Type] trees (`Array of Type`).
+	Function of String is inferGenericInitType(String is baseClassName, String is targetType, Member is initMem, CallData is call, String is expected){
+		local ClassInfo is cls: :findClass(name: baseClassName);
+		if({ cls:name == '' || cls:typeParams:length() == 0 }, {
+			return targetType;
 		});
-		if({ rawType:startsWith(prefix: 'List:') && rawType:length() > 5 }, {
-			local String is elem: rawType:substring(start: 5, end: rawType:length());
-			local Int is eIdx: tps:indexOf(search: elem, default: -1);
-			if({ eIdx >= 0 && eIdx < typeArgs:length() }, {
-				return 'List:' . typeArgs:get(index: eIdx);
+		local Type is expNode: :parseTypeNode(s: expected);
+		local Array of Type is expParams: if({ expNode:name == cls:name }, { expNode:params }, { [] });
+		local Array of Type is resolvedArgs: [];
+		local Boolean is allResolved: true;
+		local Int is tpIdx: 0;
+		while({ tpIdx < cls:typeParams:length() }, {
+			local String is tpName: cls:typeParams:get(index: tpIdx);
+			local Type is argNode: Type:init(name: '');
+			if({ expParams:length() > tpIdx }, {
+				argNode: expParams:get(index: tpIdx);
 			});
+			if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
+				local Int is pIdx: 0;
+				initMem:params:each(action: local Function(Parameter is p){
+					if({ (argNode:name == '' || argNode:name == Primitive:ANY:value()) && p:paramType:name == tpName }, {
+						local Int is posIdx: 0;
+						call:args:each(action: local Function(NamedArg is a){
+							if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
+								if({ (p:name != '' && a:name == p:name) || (a:name == '' && posIdx == pIdx) }, {
+									local String is candT: a:value:resolvedType;
+									if({ candT != '' && candT != Primitive:ANY:value() }, {
+										argNode: :parseTypeNode(s: candT);
+									});
+								});
+							});
+							posIdx: posIdx + 1;
+						});
+					});
+					pIdx: pIdx + 1;
+				});
+			});
+			if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
+				allResolved: false;
+			}, {
+				resolvedArgs:add(item: argNode);
+			});
+			tpIdx: tpIdx + 1;
 		});
-		return rawType;
+		if({ allResolved && resolvedArgs:length() == cls:typeParams:length() }, {
+			return :formatTypeString(t: Type:withParams(name: cls:name, params: resolvedArgs));
+		});
+		if({ expNode:name == cls:name && expParams:length() > 0 }, {
+			return :formatTypeString(t: expNode);
+		});
+		return targetType;
 	}
 
 	## Finds a class descriptor by name.
@@ -313,7 +436,8 @@ Class is TypeChecker{
 					});
 				}, {
 					if({ cand:name == name }, {
-						local Boolean is isFloor: cand:namespaceJoined():endsWith(suffix: ':sysinternal') || cand:namespaceJoined() == 'sysinternal';
+						local Array of String is cSegs: cand:namespaceSegments();
+						local Boolean is isFloor: cSegs:length() > 0 && cSegs:get(index: cSegs:length() - 1) == 'sysinternal';
 						if({ !isFloor }, {
 							res: cand;
 							found: true;
@@ -361,6 +485,13 @@ Class is TypeChecker{
 		local ClassInfo is subCls: :findClass(name: subName);
 		if({ subCls:name == '' }, {
 			return false;
+		});
+		if({ subCls:qualifiedName() == baseName }, {
+			return true;
+		});
+		local ClassInfo is baseCls: :findClass(name: baseName);
+		if({ baseCls:name != '' && subCls:qualifiedName() == baseCls:qualifiedName() }, {
+			return true;
 		});
 		local Boolean is matched: false;
 		subCls:baseClasses:each(action: local Function(String is pName){
@@ -566,6 +697,52 @@ Class is TypeChecker{
 		return '';
 	}
 
+	## Determines whether a structured source [Type] node is assignable to a target [Type] node.
+	Function of Boolean is isAssignableNode(Type is targetNode, Type is sourceNode){
+		local String is tBase: targetNode:name;
+		local String is sBase: sourceNode:name;
+		if({ tBase == '' || sBase == '' || tBase == Primitive:ANY:value() || sBase == Primitive:ANY:value() }, {
+			return true;
+		});
+		if({ targetNode:equals(other: sourceNode) }, {
+			return true;
+		});
+		if({ tBase == 'Float' && sBase == Primitive:INT:value() }, {
+			return true;
+		});
+		if({ tBase == 'Function' && sBase == 'Function' }, {
+			if({ targetNode:params:length() == 0 }, {
+				return true;
+			});
+			if({ sourceNode:params:length() == 0 }, {
+				return false;
+			});
+			local Type is tRet: if({ targetNode:params:length() >= 2 }, { targetNode:params:get(index: 1) }, { targetNode:params:get(index: 0) });
+			local Type is sRet: if({ sourceNode:params:length() >= 2 }, { sourceNode:params:get(index: 1) }, { sourceNode:params:get(index: 0) });
+			if({ tRet:name == Primitive:ANY:value() || sRet:name == Primitive:ANY:value() || tRet:equals(other: sRet) }, {
+				return true;
+			});
+			return false;
+		});
+		if({ tBase == sBase || :isSubclassOf(subName: sBase, baseName: tBase) }, {
+			if({ targetNode:params:length() > 0 && sourceNode:params:length() > 0 }, {
+				local Boolean is argsOk: true;
+				local Int is pIdx: 0;
+				while({ argsOk && pIdx < targetNode:params:length() && pIdx < sourceNode:params:length() }, {
+					local Type is tp: targetNode:params:get(index: pIdx);
+					local Type is sp: sourceNode:params:get(index: pIdx);
+					if({ !:isAssignableNode(targetNode: tp, sourceNode: sp) }, {
+						argsOk: false;
+					});
+					pIdx: pIdx + 1;
+				});
+				return argsOk;
+			});
+			return true;
+		});
+		return false;
+	}
+
 	## Determines whether a source type is assignable to a target type.
 	##
 	## @param target: Target type name.
@@ -575,91 +752,7 @@ Class is TypeChecker{
 		if({ target == source || target == Primitive:ANY:value() || source == Primitive:ANY:value() || target == '' || source == '' }, {
 			return true;
 		});
-		if({ (target == 'String' && source == 'Str') || (target == 'Str' && source == 'String') }, {
-			return true;
-		});
-		if({ (target == 'SpecError' && (source:startsWith(prefix: 'SpecError:') || source:startsWith(prefix: 'SpecError of '))) || (source == 'SpecError' && (target:startsWith(prefix: 'SpecError:') || target:startsWith(prefix: 'SpecError of '))) }, {
-			return true;
-		});
-		if({ (target == 'Flow' && (source:startsWith(prefix: 'Flow:') || source:startsWith(prefix: 'Flow of '))) || (source == 'Flow' && (target:startsWith(prefix: 'Flow:') || target:startsWith(prefix: 'Flow of '))) }, {
-			return true;
-		});
-		# Implicit numeric widening: Int assigns to Float (explicit casts
-		# handle the narrowing directions).
-		if({ target == 'Float' && source == Primitive:INT:value() }, {
-			return true;
-		});
-		# Function assignability is directional. A
-		# typed closure feeds an untyped param (covariance — the callback
-		# idiom); a TYPED param accepts only a closure promising the same
-		# return type. A void or differently-typed closure would read
-		# garbage through the typed invocation (the check closure's bool
-		# cast), so the narrowing direction rejects.
-		if({ target:startsWith(prefix: 'Function') && source:startsWith(prefix: 'Function') }, {
-			if({ !target:startsWith(prefix: 'Function:') }, {
-				return true;
-			});
-			if({ !source:startsWith(prefix: 'Function:') }, {
-				return false;
-			});
-			local String is tRet: target:substring(start: 9, end: target:length());
-			local String is sRet: source:substring(start: 9, end: source:length());
-			if({ tRet == sRet || tRet == Primitive:ANY:value() || sRet == Primitive:ANY:value() }, {
-				return true;
-			});
-			return false;
-		});
-		local ClassInfo is curCls: :currentClassDef;
-		if({ curCls:typeParams:indexOf(search: target, default: -1) >= 0 || curCls:typeParams:indexOf(search: source, default: -1) >= 0 }, {
-			return true;
-		});
-		# Of-form containers ('Array of String'): normalize to the colon
-		# form so the type-argument comparison below sees the args. Map's
-		# two args join with ' to ' — split them back out.
-		local String is tNorm: target;
-		local String is sNorm: source;
-		local Int is tOf: target:indexOf(search: ' of ', default: -1);
-		local Int is sOf: source:indexOf(search: ' of ', default: -1);
-		if({ tOf > 0 }, {
-			tNorm: target:substring(start: 0, end: tOf) . ':' . target:substring(start: tOf + 4, end: target:length());
-		});
-		if({ sOf > 0 }, {
-			sNorm: source:substring(start: 0, end: sOf) . ':' . source:substring(start: sOf + 4, end: source:length());
-		});
-		local Int is tTo: tNorm:indexOf(search: ' to ', default: -1);
-		local Int is sTo: sNorm:indexOf(search: ' to ', default: -1);
-		if({ tTo > 0 }, {
-			tNorm: tNorm:substring(start: 0, end: tTo) . ':' . tNorm:substring(start: tTo + 4, end: tNorm:length());
-		});
-		if({ sTo > 0 }, {
-			sNorm: sNorm:substring(start: 0, end: sTo) . ':' . sNorm:substring(start: sTo + 4, end: sNorm:length());
-		});
-		local Array of String is tParts: tNorm:split(delimiter: ':');
-		local Array of String is sParts: sNorm:split(delimiter: ':');
-		if({ tParts:length() > 0 && sParts:length() > 0 }, {
-			local String is tBase: tParts:get(index: 0);
-			local String is sBase: sParts:get(index: 0);
-			if({ tBase == sBase || :isSubclassOf(subName: sBase, baseName: tBase) }, {
-				if({ tParts:length() > 1 && sParts:length() > 1 }, {
-					local Boolean is argsOk: true;
-					local Int is pIdx: 1;
-					while({ argsOk && pIdx < tParts:length() && pIdx < sParts:length() }, {
-						local String is tp: tParts:get(index: pIdx);
-						local String is sp: sParts:get(index: pIdx);
-						if({ !:isAssignable(target: tp, source: sp) }, {
-							argsOk: false;
-						});
-						pIdx: pIdx + 1;
-					});
-					return argsOk;
-				});
-				return true;
-			});
-		});
-		if({ :isSubclassOf(subName: source, baseName: target) }, {
-			return true;
-		});
-		return false;
+		return :isAssignableNode(targetNode: :parseTypeNode(s: target), sourceNode: :parseTypeNode(s: source));
 	}
 
 	## the member-lookup root for a (possibly
@@ -739,21 +832,8 @@ Class is TypeChecker{
 		if({ className == '' || className == Primitive:ANY:value() }, {
 			return '';
 		});
-		local String is baseClassName: :memberLookupRoot(className: className);
-		local Array of String is typeArgs: [];
-		# The resolved qualified root absorbs the colon chain ; bare
-		# colon forms ground their segments as type arguments.
-		if({ baseClassName != className }, {
-			local Array of String is parts: className:split(delimiter: ':');
-			typeArgs: parts:slice(start: 1, end: parts:length());
-		});
-		# Of-form generic receivers ('Box of Int'): split the base and the
-		# type argument so substitution can ground T.
-		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
-		if({ ofIdx > 0 && typeArgs:length() == 0 }, {
-			baseClassName: className:substring(start: 0, end: ofIdx);
-			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
-		});
+		local Type is recvNode: :parseTypeNode(s: className);
+		local String is baseClassName: if({ recvNode:params:length() > 0 }, { recvNode:name }, { :memberLookupRoot(className: className) });
 		local ClassInfo is cls: :findClass(name: baseClassName);
 		if({ cls:name == '' }, {
 			return '';
@@ -765,8 +845,8 @@ Class is TypeChecker{
 			});
 		});
 		if({ foundM:name != '' }, {
-			local String is rawT: :formatTypeString(t: foundM:memberType);
-			return :substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
+			local Type is subNode: :substituteTypeNode(t: foundM:memberType, cls: cls, typeArgs: recvNode:params);
+			return :formatVarTypeString(t: subNode);
 		});
 		local String is inherited: '';
 		cls:baseClasses:each(action: local Function(String is baseName){
@@ -786,22 +866,8 @@ Class is TypeChecker{
 		if({ className == '' || className == Primitive:ANY:value() }, {
 			return '';
 		});
-		local String is baseClassName: :memberLookupRoot(className: className);
-		local Array of String is typeArgs: [];
-		# The resolved qualified root absorbs the colon chain — the segments
-		# after it are the nested path, not type arguments ('LibA:Helper').
-		# Bare colon forms ground as before ('Array:String').
-		if({ baseClassName != className }, {
-			local Array of String is parts: className:split(delimiter: ':');
-			typeArgs: parts:slice(start: 1, end: parts:length());
-		});
-		# Of-form generic receivers ('Box of Int'): split the base and the
-		# type argument so substitution can ground T.
-		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
-		if({ ofIdx > 0 && typeArgs:length() == 0 }, {
-			baseClassName: className:substring(start: 0, end: ofIdx);
-			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
-		});
+		local Type is recvNode: :parseTypeNode(s: className);
+		local String is baseClassName: if({ recvNode:params:length() > 0 }, { recvNode:name }, { :memberLookupRoot(className: className) });
 		if({ methodName == ContractMethod:INIT:value() && :registeredClasses:has(key: baseClassName) && !:allEnumNames:has(key: baseClassName) }, {
 			return className;
 		});
@@ -816,8 +882,8 @@ Class is TypeChecker{
 			});
 		});
 		if({ foundM:name != '' }, {
-			local String is rawT: :formatTypeString(t: foundM:memberType);
-			return :substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
+			local Type is subNode: :substituteTypeNode(t: foundM:memberType, cls: cls, typeArgs: recvNode:params);
+			return :formatTypeString(t: subNode);
 		});
 		local String is inherited: '';
 		cls:baseClasses:each(action: local Function(String is baseName){
@@ -1419,10 +1485,21 @@ Class is TypeChecker{
 				});
 			});
 		});
-		if({ m:kind != MemberKind:METHOD }, {
+		if({ m:kind != MemberKind:METHOD || m:name == '' }, {
 			return;
 		});
-		:validateArgsAgainstSignature(callExpr: callExpr, params: m:params, recvCls: :findClass(name: baseClassName), displayTarget: sigDisplay);
+		local String is groundedTarget: targetType;
+		if({ (cd:name == 'init' || m:hasModifier(kw: Keyword:HELD)) && callExpr:resolvedType != '' }, {
+			groundedTarget: callExpr:resolvedType;
+		});
+		local Type is gNode: :parseTypeNode(s: groundedTarget);
+		local Array of String is recvTypeArgs: [];
+		gNode:params:each(action: local Function(Type is pt){
+			recvTypeArgs:add(item: :formatTypeString(t: pt));
+		});
+		local ClassInfo is recvClsInfo: :findClass(name: baseClassName);
+		local String is mTp: :detectMethodTypeParamForMember(m: m, cls: recvClsInfo);
+		:validateArgsAgainstSignature(callExpr: callExpr, params: m:params, recvCls: recvClsInfo, displayTarget: sigDisplay, recvTypeArgs: recvTypeArgs, methodTypeParam: mTp);
 	}
 
 	## Validates a call's arguments against an explicit parameter list:
@@ -1432,9 +1509,11 @@ Class is TypeChecker{
 	##
 	## @param callExpr: The CALL expression.
 	## @param params: The signature's parameters.
-	## @param recvCls: The declaring class (its type params are exempt).
+	## @param recvCls: The declaring class.
 	## @param displayTarget: The display spelling for diagnostics.
-	Function is validateArgsAgainstSignature(Expression is callExpr, Array of Parameter is params, ClassInfo is recvCls, String is displayTarget){
+	## @param recvTypeArgs: Concrete generic type arguments of the receiver.
+	## @param methodTypeParam: Method-level type parameter name ('' when none).
+	Function is validateArgsAgainstSignature(Expression is callExpr, Array of Parameter is params, ClassInfo is recvCls, String is displayTarget, Array of String is recvTypeArgs: [], String is methodTypeParam: ''){
 		if({ params:length() == 0 }, {
 			return;
 		});
@@ -1452,10 +1531,15 @@ Class is TypeChecker{
 			# every Function param to plain Function (the void-into-check
 			# hole).
 			local String is pTF: pT;
-			if({ pT:startsWith(prefix: 'Function') }, {
+			if({ pT:startsWith(prefix: 'Function') || p:paramType:params:length() > 0 }, {
 				pTF: :formatVarTypeString(t: p:paramType);
 			});
-			if({ pT != :names:selfFieldMarker() && pT != Primitive:ANY:value() && pT != '' && recvTypeParams:indexOf(search: pT, default: -1) < 0 }, {
+			if({ recvTypeParams:length() > 0 && recvTypeArgs:length() > 0 }, {
+				pTF: :substituteTypeParam(rawType: pTF, cls: recvCls, typeArgs: recvTypeArgs);
+			});
+			local Boolean is isMethodGenericParam: methodTypeParam != '' && (pTF == methodTypeParam || pTF == 'Function:' . methodTypeParam);
+			local Boolean is isUngroundedExternalGeneric: isMethodGenericParam || (recvTypeArgs:length() == 0 && recvCls:name != :currentClassName && recvTypeParams:indexOf(search: pTF, default: -1) >= 0);
+			if({ pT != :names:selfFieldMarker() && pTF != Primitive:ANY:value() && pTF != '' && !isUngroundedExternalGeneric }, {
 				local Expression is matchedValue: Expression:Unknown;
 				local Boolean is found: false;
 				local Int is posIdx: 0;
@@ -1752,6 +1836,67 @@ Class is TypeChecker{
 		return slot:paramType:name == 'Function';
 	}
 
+	Function of Boolean is isUnboundTypeIdent(String is tp, ClassInfo is cls){
+		if({ tp == '' || tp == :names:selfFieldMarker() || :isPrimitive(t: tp) || :registeredClasses:has(key: tp) || :allEnumNames:has(key: tp) }, {
+			return false;
+		});
+		if({ cls:typeParams:indexOf(search: tp, default: -1) >= 0 }, {
+			return false;
+		});
+		return true;
+	}
+
+	Function is collectUnboundTypeIdents(Type is t, ClassInfo is cls, Array of String is out){
+		if({ :isUnboundTypeIdent(tp: t:name, cls: cls) && out:indexOf(search: t:name, default: -1) < 0 }, {
+			out:add(item: t:name);
+		});
+		t:params:each(action: local Function(Type is p){
+			:collectUnboundTypeIdents(t: p, cls: cls, out: out);
+		});
+	}
+
+	## Detects a valid method-level type parameter on [m] in [cls]: an unbound
+	## identifier that appears in at least one parameter type AND in at least
+	## one other parameter type or the method's return type. A single-position
+	## unknown identifier is NOT a method type parameter (it is an unknown/typo'd type).
+	Function of String is detectMethodTypeParamForMember(Member is m, ClassInfo is cls){
+		if({ m:name == '' || m:kind != MemberKind:METHOD }, {
+			return '';
+		});
+		local Map of String to Int is paramCounts: Map:init();
+		m:params:each(action: local Function(Parameter is p){
+			local Array of String is idents: [];
+			:collectUnboundTypeIdents(t: p:paramType, cls: cls, out: idents);
+			idents:each(action: local Function(String is id){
+				paramCounts:set(key: id, value: paramCounts:get(key: id, default: 0) + 1);
+			});
+		});
+		local Array of String is retIdents: [];
+		:collectUnboundTypeIdents(t: m:memberType, cls: cls, out: retIdents);
+		local String is foundTp: '';
+		local Array of String is pKeys: paramCounts:keys();
+		pKeys:each(action: local Function(String is id){
+			if({ foundTp == '' }, {
+				local Int is cnt: paramCounts:get(key: id, default: 0);
+				if({ cnt >= 2 || retIdents:indexOf(search: id, default: -1) >= 0 }, {
+					foundTp: id;
+				});
+			});
+		});
+		return foundTp;
+	}
+
+	Function of Boolean is isMethodTypeParam(String is tp, Member is m: Member:init(kind: MemberKind:METHOD), ClassInfo is cls: ClassInfo:init(name: '', baseClass: '', members: [])){
+		local ClassInfo is effCls: if({ cls:name != '' }, { cls }, { :currentClassDef });
+		if({ !:isUnboundTypeIdent(tp: tp, cls: effCls) }, {
+			return false;
+		});
+		if({ m:name != '' }, {
+			return :detectMethodTypeParamForMember(m: m, cls: effCls) == tp;
+		});
+		return :currentMethodTypeParams:has(key: tp);
+	}
+
 	## True when every argument's inferred type equals the bound
 	## parameter's declared type (positional by index, named by name).
 	##
@@ -1790,8 +1935,25 @@ Class is TypeChecker{
 			if({ pT:startsWith(prefix: 'Function') }, {
 				pT: :formatVarTypeString(t: p:paramType);
 			});
-			if({ !found || bound:resolvedType == '' || bound:resolvedType != pT }, {
+			if({ !found || bound:resolvedType == '' }, {
 				allMatch: false;
+			}, {
+				if({ bound:resolvedType != pT }, {
+					local Boolean is genericMatch: false;
+					if({ pT:startsWith(prefix: 'Function:') && bound:resolvedType:startsWith(prefix: 'Function:') }, {
+						local String is pRet: pT:substring(start: 9, end: pT:length());
+						local String is bRet: bound:resolvedType:substring(start: 9, end: bound:resolvedType:length());
+						if({ :isMethodTypeParam(tp: pRet, m: m) && bRet != '' && !:isVoid(t: bRet) }, {
+							genericMatch: true;
+						});
+					});
+					if({ :isMethodTypeParam(tp: pT, m: m) && !:isVoid(t: bound:resolvedType) }, {
+						genericMatch: true;
+					});
+					if({ !genericMatch }, {
+						allMatch: false;
+					});
+				});
 			});
 			posIdx: posIdx + 1;
 		});
@@ -1820,29 +1982,78 @@ Class is TypeChecker{
 	##
 	## @param className: The (possibly grounded) receiver class name.
 	## @param selected: The stamped, selected member.
+	## @param expr: The CALL expression (for method-level type parameter substitution).
 	## @return: The resolved return type.
-	Function of String is selectedReturnType(String is className, Member is selected){
+	Function of String is selectedReturnType(String is className, Member is selected, Expression is expr: Expression:Unknown){
 		local String is baseName: :memberLookupRoot(className: className);
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
 		:collectOverloadGroup(className: baseName, methodName: selected:name, acc: group, ownerAcc: ownerAcc);
+		local String is ownerName: if({ ownerAcc:length() > 0 }, { ownerAcc:get(index: 0) }, { baseName });
+		local ClassInfo is ownerCls: :findClass(name: ownerName);
+		local String is rawT: :formatTypeString(t: selected:memberType);
+		local String is mTp: :detectMethodTypeParamForMember(m: selected, cls: ownerCls);
+		local CallData is cd: match(on: expr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
+		if({ cd:args:length() > 0 && rawT != '' && mTp != '' }, {
+			local Int is posIdx: 0;
+			selected:params:each(action: local Function(Parameter is p){
+				local Expression is bound: Expression:Unknown;
+				local Boolean is found: false;
+				if({ p:name != '' }, {
+					cd:args:each(action: local Function(NamedArg is a){
+						if({ !found && a:name == p:name }, {
+							bound: a:value;
+							found: true;
+						});
+					});
+				});
+				if({ !found && posIdx < cd:args:length() }, {
+					local NamedArg is pa: cd:args:get(index: posIdx);
+					if({ pa:name == '' }, {
+						bound: pa:value;
+						found: true;
+					});
+				});
+				if({ found && bound:resolvedType != '' }, {
+					local String is pTF: :formatVarTypeString(t: p:paramType);
+					if({ pTF:startsWith(prefix: 'Function:') && bound:resolvedType:startsWith(prefix: 'Function:') }, {
+						local String is pRet: pTF:substring(start: 9, end: pTF:length());
+						local String is bRet: bound:resolvedType:substring(start: 9, end: bound:resolvedType:length());
+						if({ pRet == mTp && bRet != '' }, {
+							:groundedGenericMethods:set(key: ownerName . ':' . selected:name, value: true);
+							if({ rawT == pRet }, { rawT: bRet; });
+							if({ rawT:endsWith(suffix: ':' . pRet) }, {
+								rawT: rawT:substring(start: 0, end: rawT:length() - pRet:length()) . bRet;
+							});
+						});
+					});
+					if({ pTF == mTp }, {
+						:groundedGenericMethods:set(key: ownerName . ':' . selected:name, value: true);
+						if({ rawT == pTF }, { rawT: bound:resolvedType; });
+						if({ rawT:endsWith(suffix: ':' . pTF) }, {
+							rawT: rawT:substring(start: 0, end: rawT:length() - pTF:length()) . bound:resolvedType;
+						});
+					});
+				});
+				posIdx: posIdx + 1;
+			});
+		});
 		if({ group:length() <= 1 || ownerAcc:length() == 0 }, {
+			if({ rawT != :formatTypeString(t: selected:memberType) }, {
+				return rawT;
+			});
 			return :lookupMethodReturnType(className: className, methodName: selected:name);
 		});
-		local String is owner: ownerAcc:get(index: 0);
-		local ClassInfo is ownerCls: :findClass(name: owner);
 		if({ ownerCls:name == '' }, {
 			return '';
 		});
-		local Array of String is typeArgs: [];
-		# The resolved qualified root absorbs the colon chain ; bare
-		# colon forms ground their segments as type arguments.
-		if({ baseName != className }, {
-			local Array of String is parts: className:split(delimiter: ':');
-			typeArgs: parts:slice(start: 1, end: parts:length());
-		});
-		local String is rawT: :formatTypeString(t: selected:memberType);
-		return :substituteTypeParam(rawType: rawT, cls: ownerCls, typeArgs: typeArgs);
+		local Type is recvNode: :parseTypeNode(s: className);
+		local Type is rawNode: :parseTypeNode(s: rawT);
+		local Type is subNode: :substituteTypeNode(t: rawNode, cls: ownerCls, typeArgs: recvNode:params);
+		return :formatTypeString(t: subNode);
 	}
 	## The stamped member for a call: the idx-th same-name METHOD member at
 	## the nearest declaring ancestor (idx below zero resolves as the
@@ -2320,15 +2531,38 @@ Class is TypeChecker{
 		return :accessInClass(className: className, targetName: targetName);
 	}
 
+	## True when segment array [fullSegs] equals [prefixSegs] or begins with [prefixSegs] as a package prefix.
+	Function of Boolean is namespaceHasPrefix(Array of String is fullSegs, Array of String is prefixSegs){
+		if({ prefixSegs:length() == 0 || fullSegs:length() < prefixSegs:length() }, {
+			return false;
+		});
+		local Int is i: 0;
+		while({ i < prefixSegs:length() }, {
+			if({ fullSegs:get(index: i) != prefixSegs:get(index: i) }, {
+				return false;
+			});
+			i: i + 1;
+		});
+		return true;
+	}
+
+	## True when segment array [segs] exactly equals [want].
+	Function of Boolean is namespaceEquals(Array of String is segs, Array of String is want){
+		if({ segs:length() != want:length() }, {
+			return false;
+		});
+		return :namespaceHasPrefix(fullSegs: segs, prefixSegs: want);
+	}
+
 	## The compilation-unit grant: any class declared in [sourceFile] is
 	## accessible, and any same-file class's using entries grant the
 	## target (type import, as-import, or package wildcard).
 	##
 	## @param sourceFile: The visiting class's source file.
 	## @param targetName: The referenced class name.
-	## @param targetNs: The target's declared namespace ('' when unknown).
+	## @param targetNsSegs: The target's declared namespace segments ([] when unknown).
 	## @return: true when the file grants access.
-	Function of Boolean is fileGrants(String is sourceFile, String is targetName, String is targetNs){
+	Function of Boolean is fileGrants(String is sourceFile, String is targetName, Array of String is targetNsSegs){
 		# An empty sourceFile is one anonymous unit (the self-checking
 		# snippets): its classes grant one another.
 		local Boolean is granted: false;
@@ -2350,7 +2584,7 @@ Class is TypeChecker{
 										match(on: item, when: [
 											Expression:ArrayLit: local Function(Array of Expression is segs){
 												local String is terminal: '';
-												local String is nsJoined: '';
+												local Array of String is nsSegs: [];
 												segs:each(action: local Function(Expression is seg){
 													match(on: seg, when: [
 														Expression:Ident: local Function(String is s){
@@ -2360,11 +2594,7 @@ Class is TypeChecker{
 															terminal: className;
 														},
 														Expression:StringLit: local Function(String is s){
-															if({ nsJoined == '' }, {
-																nsJoined: s;
-															}, {
-																nsJoined: nsJoined . ':' . s;
-															});
+															nsSegs:add(item: s);
 														}
 													], default: {
 													});
@@ -2376,7 +2606,7 @@ Class is TypeChecker{
 												if({ terminal == targetName || terminal == targetRoot }, {
 													granted: true;
 												});
-												if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
+												if({ terminal == '' && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
 													granted: true;
 												});
 											}
@@ -2414,15 +2644,15 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return false;
 		});
-		local String is targetNs: '';
+		local Array of String is targetNsSegs: [];
 		local ClassInfo is tgt: :findClass(name: targetName);
 		if({ tgt:name != '' }, {
-			targetNs: tgt:namespaceJoined();
+			targetNsSegs: tgt:namespaceSegments();
 		});
 		# The file's compilation unit: same-file classes are accessible, and
 		# every same-file class's using declaration grants (nested classes
 		# live under the outer class's using).
-		if({ :fileGrants(sourceFile: cls:sourceFile, targetName: targetName, targetNs: targetNs) }, {
+		if({ :fileGrants(sourceFile: cls:sourceFile, targetName: targetName, targetNsSegs: targetNsSegs) }, {
 			return true;
 		});
 		local Boolean is granted: false;
@@ -2435,7 +2665,7 @@ Class is TypeChecker{
 								match(on: item, when: [
 									Expression:ArrayLit: local Function(Array of Expression is segs){
 										local String is terminal: '';
-										local String is nsJoined: '';
+										local Array of String is nsSegs: [];
 										segs:each(action: local Function(Expression is seg){
 											match(on: seg, when: [
 												Expression:Ident: local Function(String is s){
@@ -2445,11 +2675,7 @@ Class is TypeChecker{
 													terminal: className;
 												},
 												Expression:StringLit: local Function(String is s){
-													if({ nsJoined == '' }, {
-														nsJoined: s;
-													}, {
-														nsJoined: nsJoined . ':' . s;
-													});
+													nsSegs:add(item: s);
 												}
 											], default: {});
 										});
@@ -2460,7 +2686,7 @@ Class is TypeChecker{
 										if({ terminal == targetName || terminal == targetRoot2 }, {
 											granted: true;
 										});
-										if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
+										if({ terminal == '' && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
 											granted: true;
 										});
 									}
@@ -2524,6 +2750,10 @@ Class is TypeChecker{
 		});
 		if({ :registeredClasses:has(key: t:name) && !:classHasAccess(className: :currentClassName, targetName: t:name) }, {
 			:addError(line: line, msg: '\'' . t:name . '\' is not imported by \'' . :currentClassName . '\'; add it to the using declaration (§I.6).');
+		}, {
+			if({ t:name != :names:selfFieldMarker() && !:isPrimitive(t: t:name) && !:registeredClasses:has(key: t:name) && !:allEnumNames:has(key: t:name) && :currentClassDef:typeParams:indexOf(search: t:name, default: -1) < 0 && !:currentMethodTypeParams:has(key: t:name) }, {
+				:addError(line: line, msg: 'Unknown or unimported type \'' . t:name . '\' in \'' . :currentClassName . '\'.');
+			});
 		});
 		t:params:each(action: local Function(Type is p){
 			:validateTypeAccess(t: p, line: line);
@@ -2539,20 +2769,16 @@ Class is TypeChecker{
 	## @param method: The container method name.
 	## @param expr: The CALL expression.
 	Function is bindContainerCallbackParams(String is targetType, String is method, Expression is expr){
-		local String is cbElem: Primitive:ANY:value();
-		if({ targetType:startsWith(prefix: 'Array of ') && targetType:length() > 9 }, {
-			cbElem: targetType:substring(start: 9, end: targetType:length());
-		}, {
-			if({ targetType:startsWith(prefix: 'Array:') && targetType:length() > 6 }, {
-				cbElem: targetType:substring(start: 6, end: targetType:length());
-			});
+		local Type is targetNode: :parseTypeNode(s: targetType);
+		local Type is cbElemNode: Type:init(name: Primitive:ANY:value());
+		if({ (targetNode:name == 'Array' || targetNode:name == 'List') && targetNode:params:length() > 0 }, {
+			cbElemNode: targetNode:params:get(index: 0);
 		});
 		local CallData is cd: match(on: expr, when: [
 			Expression:Call: local Function of CallData(CallData is call){ return call; },
 			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
 		]);
-		if({ cbElem != Primitive:ANY:value() }, {
-			local String is elemTypeName: cbElem;
+		if({ cbElemNode:name != Primitive:ANY:value() && cbElemNode:name != '' }, {
 			if({ method == 'fold' && cd:args:length() >= 2 }, {
 				local NamedArg is a0: cd:args:get(index: 0);
 				local String is initType: :inferExpressionType(expr: a0:value);
@@ -2563,13 +2789,13 @@ Class is TypeChecker{
 						if({ params:length() >= 1 }, {
 							local Parameter is p0: params:get(index: 0);
 							if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
-								p0:paramType: Type:init(name: initType);
+								p0:paramType: :parseTypeNode(s: initType);
 							});
 						});
 						if({ params:length() >= 2 }, {
 							local Parameter is p1: params:get(index: 1);
 							if({ p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, {
-								p1:paramType: Type:init(name: elemTypeName);
+								p1:paramType: cbElemNode:clone();
 							});
 						});
 					},
@@ -2582,7 +2808,7 @@ Class is TypeChecker{
 						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
 							params:each(action: local Function(Parameter is p){
 								if({ p:paramType:name == Primitive:ANY:value() || p:paramType:name == '' }, {
-									p:paramType: Type:init(name: elemTypeName);
+									p:paramType: cbElemNode:clone();
 								});
 							});
 						},
@@ -2591,13 +2817,9 @@ Class is TypeChecker{
 				});
 			});
 		}, {
-			if({ targetType:startsWith(prefix: 'Map:') && method == 'each' }, {
-				local String is afterMap: targetType:substring(start: 4, end: targetType:length());
-				local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
-				local String is valTypeName: Primitive:STRING:value();
-				if({ colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, {
-					valTypeName: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
-				});
+			if({ targetNode:name == 'Map' && method == 'each' }, {
+				local Type is keyNode: if({ targetNode:params:length() >= 1 }, { targetNode:params:get(index: 0) }, { Type:init(name: 'String') });
+				local Type is valNode: if({ targetNode:params:length() >= 2 }, { targetNode:params:get(index: 1) }, { Type:init(name: Primitive:STRING:value()) });
 				cd:args:each(action: local Function(NamedArg is arg){
 					local Expression is av: arg:value;
 					match(on: av, when: [
@@ -2605,13 +2827,13 @@ Class is TypeChecker{
 							if({ params:length() >= 1 }, {
 								local Parameter is p0: params:get(index: 0);
 								if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
-									p0:paramType: Type:init(name: 'String');
+									p0:paramType: keyNode:clone();
 								});
 							});
 							if({ params:length() >= 2 }, {
 								local Parameter is p1: params:get(index: 1);
 								if({ p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, {
-									p1:paramType: Type:init(name: valTypeName);
+									p1:paramType: valNode:clone();
 								});
 							});
 						},
@@ -2729,6 +2951,7 @@ Class is TypeChecker{
 					# after a class-name root resolved as a held field — the
 					# The path resolution loop below then consumes it via lookupHeldFieldType.
 					local Boolean is heldAdmitted: false;
+					local Boolean is chainResolved: false;
 					if({ root == :names:selfIdent() }, {
 						# A held member body has no instance.
 						if({ :inHeldInit || :inHeldFunction }, {
@@ -2774,7 +2997,6 @@ Class is TypeChecker{
 										# 'Outer:Inner' and the inner-of-inner 'Outer:Mid:Deep' —
 										# walks CLASS-kind members per segment and resolves to
 										# the deepest class's qualified identity.
-										local Boolean is chainResolved: false;
 										if({ segs:length() >= 2 }, {
 											local ClassInfo is chainCls: :findClass(name: root);
 											local Boolean is chainOk: chainCls:name != '';
@@ -2862,7 +3084,7 @@ Class is TypeChecker{
 					});
 					local String is currType: rootType;
 					local Int is pIdx: 1;
-					while({ currType != '' && pIdx < segs:length() }, {
+					while({ !chainResolved && currType != '' && pIdx < segs:length() }, {
 						local String is seg: segs:get(index: pIdx);
 						pIdx: pIdx + 1;
 						if({ !:allEnumNames:has(key: currType) }, {
@@ -3202,8 +3424,9 @@ Class is TypeChecker{
 					# a closure literal assigned into a `Function of X` context
 					# types its body against X, so its own type comes out
 					# `Function of X` and the narrowed param accepts it.
-					if({ expected:startsWith(prefix: 'Function:') && :isVoid(t: returnType:name) }, {
+					if({ expected:startsWith(prefix: 'Function:') && :isVoid(t: :resolveReturnType(t: returnType)) }, {
 						returnType:name: expected:substring(start: 9, end: expected:length());
+						returnType:params: [];
 					});
 					:currentMethodReturnType: :resolveReturnType(t: returnType);
 				});
@@ -3246,13 +3469,15 @@ Class is TypeChecker{
 					match(on: lastStmt, when: [
 						Statement:Expr: local Function(Expression is exprStmt){
 							local String is lastT: exprStmt:resolvedType;
-							if({ :isVoid(t: returnType:name) }, {
+							local String is curRetT: :resolveReturnType(t: returnType);
+							if({ :isVoid(t: curRetT) }, {
 								if({ lastT != '' && !:isVoid(t: lastT) }, {
 									returnType:name: lastT;
+									returnType:params: [];
 								});
 							}, {
-								if({ lastT != '' && !:isAssignable(target: returnType:name, source: lastT) }, {
-									local String is msg: :errText:errClosureReturnType(actual: lastT, expected: returnType:name);
+								if({ lastT != '' && !:isAssignable(target: curRetT, source: lastT) }, {
+									local String is msg: :errText:errClosureReturnType(actual: lastT, expected: curRetT);
 									:addError(line: :currentLine, msg: msg);
 								});
 							});
@@ -3262,15 +3487,16 @@ Class is TypeChecker{
 				});
 				:currentAnonNode: savedAnonNode;
 				:checkingValueYield: savedYieldFlag;
-				local String is anonRetName: returnType:name;
-				if({ anonRetName != '' && !:isVoid(t: anonRetName) }, {
-					res: 'Function:' . :formatTypeString(t: returnType);
+				local String is anonRetStr: :resolveReturnType(t: returnType);
+				if({ anonRetStr != '' && !:isVoid(t: anonRetStr) }, {
+					res: 'Function:' . anonRetStr;
 				}, {
 					res: 'Function';
 				});
 			},
 			Expression:Call: local Function(CallData is call){
 				res: :inferCall(expr: expr, call: call, expected: expected);
+				expr:setResolvedTypeNode(tn: :parseTypeNode(s: res), t: res);
 				:checkCallArguments(callExpr: expr);
 			},
 			else: {
@@ -3278,7 +3504,7 @@ Class is TypeChecker{
 			}
 		], default: {});
 
-		expr:setResolvedType(t: res);
+		expr:setResolvedTypeNode(tn: :parseTypeNode(s: res), t: res);
 		return res;
 	}
 
@@ -3673,7 +3899,13 @@ Class is TypeChecker{
 						return res;
 					});
 				call:bareProvider: provider;
-				local String is providerRet: :lookupMethodReturnType(className: provider, methodName: call:name);
+				local String is providerRet: '';
+				if({ bareSelected:name != '' }, {
+					providerRet: :selectedReturnType(className: provider, selected: bareSelected, expr: expr);
+				});
+				if({ providerRet == '' }, {
+					providerRet: :lookupMethodReturnType(className: provider, methodName: call:name);
+				});
 				if({ providerRet == '' }, {
 					providerRet: 'Any';
 				});
@@ -3682,13 +3914,13 @@ Class is TypeChecker{
 					local String is bareElseT: '';
 					match(on: expr:argValue(index: 1), when: [
 						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-							bareThenT: rt:name;
+							bareThenT: :resolveReturnType(t: rt);
 						}
 					], default: {
 					});
 					match(on: expr:argValue(index: 2), when: [
 						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-							bareElseT: rt:name;
+							bareElseT: :resolveReturnType(t: rt);
 						}
 					], default: {
 					});
@@ -3885,7 +4117,7 @@ Class is TypeChecker{
 							}
 						], default: {});
 					});
-					local String is spawnArgExp: '';
+					local String is callArgExp: '';
 					if({ isBranchCall && argIdx >= 1 }, {
 						:inBranchClosure: true;
 						:inValueBranch: isValueBranch;
@@ -3894,15 +4126,41 @@ Class is TypeChecker{
 							:currentYieldExpected: expected;
 						});
 					});
-					if({ targetType == 'ThreadScope' && method == 'spawn' && argIdx == 0 }, {
-						if({ expected:startsWith(prefix: 'Task:') && expected:length() > 5 }, {
-							spawnArgExp: 'Function:' . expected:substring(start: 5, end: expected:length());
-						});
-						if({ expected:startsWith(prefix: 'Task of ') && expected:length() > 8 }, {
-							spawnArgExp: 'Function:' . expected:substring(start: 8, end: expected:length());
+					if({ !isBranchCall && expected != '' && !:isVoid(t: expected) }, {
+						local Type is expNode: :parseTypeNode(s: expected);
+						if({ expNode:params:length() == 1 }, {
+							local Type is expArg0: expNode:params:get(index: 0);
+							if({ expArg0:name != '' && !:isVoid(t: expArg0:name) && expArg0:name != Primitive:ANY:value() }, {
+								local Boolean is paramExpectsTypedFn: false;
+								local Member is expCallee: :lookupAnyMember(className: targetType, methodName: method);
+								if({ expCallee:name == '' }, {
+									expCallee: :findHeldMethod(className: targetType, methodName: method);
+								});
+								local Member is expTypedCallee: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
+								local Array of Member is expCandidates: [expCallee, expTypedCallee];
+								expCandidates:each(action: local Function(Member is cm){
+									if({ !paramExpectsTypedFn && cm:name != '' }, {
+										local Int is pi: 0;
+										cm:params:each(action: local Function(Parameter is cp){
+											local Boolean is pMatch: if({ arg:name != '' }, { cp:name == arg:name }, { pi == argIdx });
+											if({ pMatch && cp:paramType:name == 'Function' && cp:paramType:params:length() > 0 }, {
+												paramExpectsTypedFn: true;
+											});
+											pi++;
+										});
+									});
+								});
+								if({ paramExpectsTypedFn }, {
+									match(on: arg:value, when: [
+										Expression:AnonFn: local Function(Type is _fnRt, Array of Parameter is _fnPs, Array of Statement is _fnBd){
+											callArgExp: 'Function:' . :formatTypeString(t: expArg0);
+										}
+									], default: {});
+								});
+							});
 						});
 					});
-					:inferExpressionType(expr: arg:value, expected: spawnArgExp);
+					:inferExpressionType(expr: arg:value, expected: callArgExp);
 					:inBranchClosure: false;
 					:inValueBranch: false;
 					:currentYieldExpected: '';
@@ -3948,7 +4206,7 @@ Class is TypeChecker{
 		if({ heldCallFn:name != '' }, {
 			local String is heldOwner: :findHeldMethodOwner(className: heldRoot, methodName: method);
 			:checkMemberVisibility(ownerClass: heldOwner, member: heldCallFn, memberName: method);
-			if({ heldRoot == 'ThreadScope' && method == 'open' && :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+			if({ heldRoot == 'ThreadScope' && method == 'open' && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 				local Boolean is hasOnErrorArg: false;
 				call:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'onError' }, {
@@ -4091,7 +4349,7 @@ Class is TypeChecker{
 		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'init' && :currentClassName != 'ThreadScope' }, {
 			:addError(line: :currentLine, msg: "Cannot construct 'ThreadScope' directly with 'ThreadScope:init'; use 'ThreadScope:open(body: ...)' so all spawned threads are joined before scope exit.");
 		});
-		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'open' && :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'open' && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 			local Boolean is hasOnErrorArg: false;
 			call:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'onError' }, {
@@ -4110,16 +4368,16 @@ Class is TypeChecker{
 				:addError(line: :currentLine, msg: "ThreadScope:open requires either an 'onError:' handler argument or an enclosing class that replaces 'SpecErrorHandler'.");
 			});
 		});
-		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && (method == 'joinAll' || method == 'destroy') && :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && (method == 'joinAll' || method == 'destroy' || method == 'registerTask') && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 			:addError(line: :currentLine, msg: "Method 'ThreadScope:" . method . "' is internal to 'base:sys:thread'; 'ThreadScope:open' joins all tasks automatically.");
 		});
-		if({ (targetType == 'Task' || targetType:startsWith(prefix: 'Task:') || targetType:startsWith(prefix: 'Task of ') || recvName == 'Task') && (method == 'init' || method == 'start' || method == 'markRunning' || method == 'complete' || method == 'fail' || method == 'failAddr' || method == 'joinOnly' || method == 'destroy') }, {
-			if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+		if({ (targetType == 'Task' || targetType:startsWith(prefix: 'Task:') || targetType:startsWith(prefix: 'Task of ') || recvName == 'Task') && (method == 'init' || method == 'start' || method == 'markRunning' || method == 'complete' || method == 'completeVoid' || method == 'spawnInScope' || method == 'fail' || method == 'failAddr' || method == 'joinOnly' || method == 'destroy') }, {
+			if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 				:addError(line: :currentLine, msg: "Method 'Task:" . method . "' is internal to 'base:sys:thread'; tasks must be spawned via 'scope:spawn(task: ...)' inside a 'ThreadScope:open' block.");
 			});
 		});
 		if({ (targetType == 'Thread' || recvName == 'Thread' || call:bareProvider == 'Thread') && (method == 'threadSpawn' || method == 'threadJoin') }, {
-			if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' }, {
+			if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 				:addError(line: :currentLine, msg: "Raw thread management ('Thread:" . method . "') is restricted to 'base:sys:thread'; all threads must be spawned inside a 'ThreadScope:open' block.");
 			});
 		});
@@ -4200,24 +4458,15 @@ Class is TypeChecker{
 					}, {
 						if({ method == 'init' && :registeredClasses:has(key: targetType) && !:allEnumNames:has(key: targetType) }, {
 							# §I.2: init overloads are selected and stamped like any member.
-							:selectOverload(className: targetType, methodName: 'init', expr: expr);
+							local Member is selInit: :selectOverload(className: targetType, methodName: 'init', expr: expr);
 							# §I.6: construction requires the import too — the
 							# X3 stratum, the class itself, an ancestor, the same file, or the
 							# class's own using grants it.
-							if({ !:classHasAccess(className: :currentClassName, targetName: targetType:split(delimiter: ':'):get(index: 0)) }, {
+							local String is initBaseName: targetType:split(delimiter: ':'):get(index: 0);
+							if({ !:classHasAccess(className: :currentClassName, targetName: initBaseName) }, {
 								:addError(line: :currentLine, msg: :errText:errTypeNotImported(targetType: targetType, currentClass: :currentClassName));
 							});
-							res: targetType;
-							if({ targetType == 'SpecError' && call:args:length() > 0 }, {
-								local NamedArg is kArg0: call:args:get(index: 0);
-								local String is kT: kArg0:value:resolvedType;
-								if({ kT != '' && kT != 'Any' }, {
-									res: 'SpecError:' . kT;
-								});
-							});
-							if({ targetType == 'Flow' && (expected:startsWith(prefix: 'Flow:') || expected:startsWith(prefix: 'Flow of ')) }, {
-								res: expected;
-							});
+							res: :inferGenericInitType(baseClassName: initBaseName, targetType: targetType, initMem: selInit, call: call, expected: expected);
 						}, {
 							if({ :registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !:allEnumNames:has(key: targetType) }, {
 								# List get/pop REQUIRE a 'default:' argument (Never Null).
@@ -4237,9 +4486,18 @@ Class is TypeChecker{
 								# when the declaration is not loaded, the element type comes
 								# from the type string itself.
 								local Member is selected: :selectOverload(className: targetType, methodName: method, expr: expr);
+								if({ selected:name != '' && call:args:length() > 0 }, {
+									local Member is typedVariant: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
+									if({ typedVariant:name != '' }, {
+										local NamedArg is tvArg0: call:args:get(index: 0);
+										if({ tvArg0:value:resolvedType:startsWith(prefix: 'Function:') }, {
+											selected: typedVariant;
+										});
+									});
+								});
 								local String is cRet: '';
 								if({ selected:name != '' }, {
-									cRet: :selectedReturnType(className: targetType, selected: selected);
+									cRet: :selectedReturnType(className: targetType, selected: selected, expr: expr);
 								});
 								# a LOADED void declaration keeps
 								# its void — the fallback below is for UNLOADED classes
@@ -4288,29 +4546,10 @@ Class is TypeChecker{
 										});
 									});
 								});
-								if({ (targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) && method == 'keys' }, {
+								if({ (targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
 									local Array of String is mkParts: targetType:split(delimiter: ':');
 									local String is kType: if({ mkParts:length() > 1 && mkParts:get(index: 1) != 'Any' }, { mkParts:get(index: 1) }, { Primitive:STRING:value() });
 									res: 'Array:' . kType;
-								});
-								if({ targetType == 'ThreadScope' && method == 'spawn' }, {
-									local String is taskElem: '';
-									if({ call:args:length() > 0 }, {
-										local NamedArg is sa0: call:args:get(index: 0);
-										local String is sFnT: sa0:value:resolvedType;
-										if({ sFnT:startsWith(prefix: 'Function:') && sFnT:length() > 9 }, {
-											taskElem: sFnT:substring(start: 9, end: sFnT:length());
-										});
-									});
-									if({ taskElem == '' && expected:startsWith(prefix: 'Task:') && expected:length() > 5 }, {
-										taskElem: expected:substring(start: 5, end: expected:length());
-									});
-									if({ taskElem == '' && expected:startsWith(prefix: 'Task of ') && expected:length() > 8 }, {
-										taskElem: expected:substring(start: 8, end: expected:length());
-									});
-									if({ taskElem != '' && !:isVoid(t: taskElem) }, {
-										res: 'Task:' . taskElem;
-									});
 								});
 								if({ (targetType == 'Flow' || targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
 									if({ method == 'map' && call:args:length() > 0 }, {
@@ -4394,13 +4633,13 @@ Class is TypeChecker{
 			local String is elseT: '';
 			match(on: expr:argValue(index: 1), when: [
 				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-					thenT: rt:name;
+					thenT: :resolveReturnType(t: rt);
 				}
 			], default: {
 			});
 			match(on: expr:argValue(index: 2), when: [
 				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-					elseT: rt:name;
+					elseT: :resolveReturnType(t: rt);
 				}
 			], default: {
 			});
@@ -4661,7 +4900,7 @@ Class is TypeChecker{
 					local String is msg: 'Bare List type requires [T] element syntax.';
 					:addError(line: stmt:line, msg: msg);
 				});
-				if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && :containsThreadScopeType(t: fullType) }, {
+				if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) && :containsThreadScopeType(t: fullType) }, {
 					:addError(line: stmt:line, msg: "Cannot declare local variable '" . varName . "' of type '" . :displayType(t: fullType) . "'; 'ThreadScope' is lexically bound to 'ThreadScope:open(body: { (ThreadScope is scope) ... })' and cannot be stored in local variables.");
 				});
 
@@ -4717,7 +4956,7 @@ Class is TypeChecker{
 				], default: {});
 				local String is targetType: :inferExpressionType(expr: assignTarget);
 				local String is valType: :inferExpressionType(expr: assignValue, expected: targetType);
-				if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && (:containsThreadScopeType(t: targetType) || :containsThreadScopeType(t: valType)) }, {
+				if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) && (:containsThreadScopeType(t: targetType) || :containsThreadScopeType(t: valType)) }, {
 					:addError(line: stmt:line, msg: "Cannot assign 'ThreadScope'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot be reassigned or stored.");
 				});
 				if({ !:isAssignable(target: targetType, source: valType) }, {
@@ -4752,12 +4991,14 @@ Class is TypeChecker{
 					if({ :checkingValueYield }, {
 						match(on: :currentAnonNode, when: [
 							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-								if({ :isVoid(t: returnType:name) }, {
+								local String is curRetT: :resolveReturnType(t: returnType);
+								if({ :isVoid(t: curRetT) }, {
 									returnType:name: retType;
+									returnType:params: [];
 									:currentMethodReturnType: retType;
 								}, {
-									if({ !:isAssignable(target: returnType:name, source: retType) }, {
-										local String is msg: 'Branch yields mismatched types: expected \'' . returnType:name . '\', found \'' . retType . '\'.';
+									if({ !:isAssignable(target: curRetT, source: retType) }, {
+										local String is msg: 'Branch yields mismatched types: expected \'' . curRetT . '\', found \'' . retType . '\'.';
 										:addError(line: stmt:line, msg: msg);
 									});
 								});
@@ -4775,8 +5016,9 @@ Class is TypeChecker{
 						if({ :anonDepth > 0 && !:checkingValueYield && :isVoid(t: :currentMethodReturnType) }, {
 							match(on: :currentAnonNode, when: [
 								Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-									if({ :isVoid(t: returnType:name) }, {
+									if({ :isVoid(t: :resolveReturnType(t: returnType)) }, {
 										returnType:name: retType;
+										returnType:params: [];
 										:currentMethodReturnType: retType;
 										inferredClosureRet: true;
 									});
@@ -5013,6 +5255,15 @@ Class is TypeChecker{
 		:forwardSeen: false;
 		:anonDepth: 0;
 		:currentMethodIsMerge: method:hasModifier(kw: Keyword:MERGE);
+		:currentMethodTypeParams: Map:init();
+		local String is mTp: :detectMethodTypeParamForMember(m: method, cls: :currentClassDef);
+		if({ mTp != '' }, {
+			:currentMethodTypeParams:set(key: mTp, value: true);
+			local String is gmKey: :currentClassName . ':' . method:name;
+			:genericMethodTemplates:set(key: gmKey, value: mTp);
+			:genericMethodLines:set(key: gmKey, value: method:line);
+			:genericMethodFiles:set(key: gmKey, value: :currentSourceFile);
+		});
 		method:params:each(action: local Function(Parameter is p){
 			:validateTypeAccess(t: p:paramType, line: method:line);
 			# IV.6 strictness: the declaration-side default is construction
@@ -5033,12 +5284,22 @@ Class is TypeChecker{
 		method:params:each(action: local Function(Parameter is p){
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
 				local String is ft: :fieldTypes:getString(key: p:name, default: Primitive:ANY:value());
-				p:paramType: Type:init(name: ft);
+				p:paramType: :parseTypeNode(s: ft);
 				:unassignedFields:remove(key: p:name);
+			});
+			if({ p:hasDefault }, {
+				local String is pTypeStr: :formatVarTypeString(t: p:paramType);
+				local String is defType: p:defaultExpr:resolvedType;
+				if({ defType == '' }, {
+					defType: :inferExpressionType(expr: p:defaultExpr, expected: pTypeStr);
+				});
+				if({ pTypeStr != '' && defType != '' && !:isAssignable(target: pTypeStr, source: defType) }, {
+					:addError(line: method:line, msg: "Default value for parameter '" . p:name . "' in '" . :currentClassName . ":" . method:name . "' has type '" . :displayType(t: defType) . "', expected '" . :displayType(t: pTypeStr) . "'.");
+				});
 			});
 		});
 		:currentMethodReturnType: :resolveReturnType(t: method:memberType);
-		if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && :containsThreadScopeType(t: :currentMethodReturnType) }, {
+		if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) && :containsThreadScopeType(t: :currentMethodReturnType) }, {
 			:addError(line: method:line, msg: "Method '" . :currentClassName . ":" . method:name . "' cannot return 'ThreadScope'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot escape.");
 		});
 		if({ :currentMethodReturnType == '' || :isVoid(t: :currentMethodReturnType) }, {
@@ -5060,6 +5321,7 @@ Class is TypeChecker{
 		if({ :currentMethodIsMerge && !:forwardSeen && method:body:length() > 0 }, {
 			:addError(line: method:line, msg: :errText:errMergeMustForward(method: method:name, className: :currentClassName));
 		});
+		:currentMethodTypeParams: Map:init();
 		:currentMethodIsMerge: false;
 		:currentMethodName: '';
 	}
@@ -5776,7 +6038,7 @@ Class is TypeChecker{
 					});
 					if({ m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() && !m:name:startsWith(prefix: '_import_') }, {
 						local String is declaredType: :formatVarTypeString(t: m:memberType);
-						if({ :currentClassDef:namespaceJoined() != 'base:sys:thread' && :containsThreadScopeType(t: declaredType) }, {
+						if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) && :containsThreadScopeType(t: declaredType) }, {
 							:addError(line: m:line, msg: "Cannot store 'ThreadScope' in field '" . classDef:name . ":" . m:name . "'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot escape.");
 						});
 						if({ m:hasInit }, {
@@ -6036,6 +6298,11 @@ Class is TypeChecker{
 		:allEnumNames: Map:init();
 		:allEnumVariants: Map:init();
 		:allStringBackedEnums: Map:init();
+		:genericMethodTemplates: Map:init();
+		:groundedGenericMethods: Map:init();
+		:genericMethodLines: Map:init();
+		:genericMethodFiles: Map:init();
+		:currentMethodTypeParams: Map:init();
 
 		# Builtin container types resolve like primitives: their methods
 		# work with or without an import (the container branches
@@ -6095,6 +6362,26 @@ Class is TypeChecker{
 			:checkClass(classDef: c);
 		});
 
+		local Array of String is gmKeys: :genericMethodTemplates:keys();
+		gmKeys:each(action: local Function(String is gmKey){
+			if({ !:groundedGenericMethods:has(key: gmKey) }, {
+				local Int is cIdx: gmKey:indexOf(search: ':', default: -1);
+				local String is ownerName: if({ cIdx > 0 }, { gmKey:substring(start: 0, end: cIdx) }, { gmKey });
+				local String is mName: if({ cIdx > 0 }, { gmKey:substring(start: cIdx + 1, end: gmKey:length()) }, { gmKey });
+				local ClassInfo is ownerCls: :findClass(name: ownerName);
+				local Array of String is nsSegs: ownerCls:namespaceSegments();
+				local Boolean is isStdlibOwner: nsSegs:length() > 0 && nsSegs:get(index: 0) == 'base';
+				if({ !isStdlibOwner }, {
+					local String is tpName: :genericMethodTemplates:getString(key: gmKey, default: '');
+					local Int is ln: :genericMethodLines:get(key: gmKey, default: 0);
+					local String is savedFile: :currentSourceFile;
+					:currentSourceFile: :genericMethodFiles:getString(key: gmKey, default: '');
+					:addError(line: ln, msg: "Generic method '" . ownerName . ":" . mName . "' (type parameter '" . tpName . "') is defined but never grounded by any concrete call.");
+					:currentSourceFile: savedFile;
+				});
+			});
+		});
+
 		return :errors;
 	}
 
@@ -6110,6 +6397,11 @@ Class is TypeChecker{
 		:fieldTypes: Map:init();
 		:unassignedFields: Map:init();
 		:currentClassDef: ClassInfo:init(name: '', baseClass: '', members: []);
+		:genericMethodTemplates: Map:init();
+		:groundedGenericMethods: Map:init();
+		:genericMethodLines: Map:init();
+		:genericMethodFiles: Map:init();
+		:currentMethodTypeParams: Map:init();
 		:errors: [];
 	}
 }

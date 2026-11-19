@@ -1,17 +1,7 @@
-#! specunit: suite
+#! specunit: negative-suite
 
-Class of SpecUnitTest is TestNegativeReceivers{
-
-	replace Array of Array of String is using: [
-		['specunit', SpecUnitTest],
-		['specunit', SpecUnitRunner],
-		['specunit', Assert]
-	];
-
-	## N1: Calling own members through the class name is banned (must use :).
-	Function is testOwnNameReceiverInsideClass(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testOwnNameReceiverInsideClass
+#! expect: through the class name inside 'N1SelfRead' itself; use :
 Class is N1SelfRead{
 	local Int is count: 5;
 	Function of Int is bump(){ return :count + 1; }
@@ -19,29 +9,17 @@ Class is N1SelfRead{
 		local Int is v: N1SelfRead:bump();
 	}
 }
-''',
-			expect: "through the class name inside 'N1SelfRead' itself; use :"
-		);
-	}
 
-	## N2: Bare call with zero providers is rejected.
-	Function is testUndefinedBareCall(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testUndefinedBareCall
+#! expect: Undefined function 'nope' on class 'N2UndefinedBare'
 Class is N2UndefinedBare{
 	replace Function is init(Map of String to String is args){
 		nope();
 	}
 }
-''',
-			expect: "Undefined function 'nope' on class 'N2UndefinedBare'"
-		);
-	}
 
-	## N3: Bare call with multiple providers must qualify.
-	Function is testAmbiguousBareCollision(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testAmbiguousBareCollision
+#! expect: provided by the enclosing class and Math; qualify the call
 Class is N3Collision{
 	replace Array of Array of String is using: [
 		['base', 'math', as Math()]
@@ -51,30 +29,18 @@ Class is N3Collision{
 		round();
 	}
 }
-''',
-			expect: "provided by the enclosing class and Math; qualify the call"
-		);
-	}
 
-	## N10: Calling init on an instance is banned (construct-only).
-	Function is testInitOnInstanceReceiver(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testInitOnInstanceReceiver
+#! expect: 'init' is construct-only
 Class is N10InitOnInstance{
 	replace Function is init(Map of String to String is args){
 		local N10InitOnInstance is again: N10InitOnInstance:init();
 		again:init();
 	}
 }
-''',
-			expect: "'init' is construct-only"
-		);
-	}
 
-	## N11: Fields are not reachable through a class-name prefix.
-	Function is testFieldThroughClassPrefix(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testFieldThroughClassPrefix
+#! expect: Fields are not reachable through the class-name prefix
 Class is Target{
 	Int is n: 5;
 }
@@ -83,15 +49,9 @@ Class is N11PrefixField{
 		local Int is x: Target:n;
 	}
 }
-''',
-			expect: "Fields are not reachable through the class-name prefix"
-		);
-	}
 
-	## N12: ':' receiver excludes as-merged scope functions.
-	Function is testColonReceiverExcludesMergedScope(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testColonReceiverExcludesMergedScope
+#! expect: Undefined function 'round' on class 'N12NoMergedOnColon'
 Class is N12NoMergedOnColon{
 	replace Array of Array of String is using: [
 		['base', 'math', as Math()]
@@ -100,22 +60,11 @@ Class is N12NoMergedOnColon{
 		local Int is x: :round(value: 1.5);
 	}
 }
-''',
-			expect: "Undefined function 'round' on class 'N12NoMergedOnColon'"
-		);
-	}
 
-	## N13: Undeclared 'self' is rejected (no longer a magic identifier).
-	Function is testMagicSelfRemoved(){
-		Assert:compilerRejects(
-			source: '''
+#! case: testMagicSelfRemoved
+#! expect: Undefined identifier 'self'
 Class is N13NoMagicSelf{
 	replace Function is init(Map of String to String is args){
 		local N13NoMagicSelf is x: self;
-	}
-}
-''',
-			expect: "Undefined identifier 'self'"
-		);
 	}
 }
