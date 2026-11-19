@@ -1,4 +1,4 @@
-#! SpecUnit tests for `base:regex:Arex` asynchronous callback-based regex matching.
+#! SpecUnit tests for `base:regex:Arex` (`r*`), `Str`, and `String` (`s*`) parity APIs.
 
 Class of SpecUnitTest is TestArex{
 
@@ -6,8 +6,10 @@ Class of SpecUnitTest is TestArex{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
+		['base', 'core', Str],
 		['base', 'regex', as Arex() is ar],
 		['base', 'regex', ArexPattern],
+		['base', 'struct', Array],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Channel],
 		['base', 'sys', as Process()],
@@ -18,7 +20,7 @@ Class of SpecUnitTest is TestArex{
 	local Function of Int is expectSync(Str is input, Str is pattern, Boolean is want){
 		local Int is slot: 600;
 		Process:atomicPut(slot: slot, value: -1);
-		ar:test(
+		ar:rContains(
 			input: input,
 			pattern: pattern,
 			result: local Function(Boolean is matched){
@@ -34,7 +36,7 @@ Class of SpecUnitTest is TestArex{
 		return got;
 	}
 
-	## Outside ThreadScope:open, Arex:test waits for completion before returning.
+	## Outside ThreadScope:open, ar:rContains waits for completion before returning.
 	Function is testSyncOutsideScope(){
 		Assert:isFalse(ThreadScope:inScope());
 
@@ -55,16 +57,16 @@ Class of SpecUnitTest is TestArex{
 		:expectSync(input: 'aaaaaaaaaaaaaaaaaaaaab', pattern: 'a*a*a*a*a*a*c', want: false);
 	}
 
-	## Inside ThreadScope:open, Arex:test runs asynchronously on the scope and is joined on exit.
+	## Inside ThreadScope:open, ar:rContains runs asynchronously on the scope and is joined on exit.
 	Function is testAsyncInsideScope(){
-		local Arex is rx: Arex:init();
+		local Arex is rx: Arex();
 		Process:atomicPut(slot: 601, value: -1);
 		Process:atomicPut(slot: 602, value: -1);
 		Process:atomicPut(slot: 603, value: -1);
 
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			Assert:isTrue(ThreadScope:inScope());
-			rx:test(
+			rx:rContains(
 				input: 'async spec regex',
 				pattern: '^async .* regex$',
 				result: local Function(Boolean is matched){
@@ -73,7 +75,7 @@ Class of SpecUnitTest is TestArex{
 					Process:atomicPut(slot: 601, value: v);
 				}
 			);
-			rx:test(
+			rx:rContains(
 				input: 'no match here',
 				pattern: '^async',
 				result: local Function(Boolean is matched){
@@ -82,7 +84,7 @@ Class of SpecUnitTest is TestArex{
 					Process:atomicPut(slot: 602, value: v);
 				}
 			);
-			rx:test(
+			rx:rContains(
 				input: 'abbbbbc',
 				pattern: 'ab*c',
 				result: local Function(Boolean is matched){
@@ -128,10 +130,10 @@ Class of SpecUnitTest is TestArex{
 		:expectSync(input: '5', pattern: '^[^0-9]$', want: false);
 	}
 
-	## Arex:find returns leftmost-longest match text and byte span via callback.
+	## rFind returns leftmost-longest match text and byte span via callback.
 	Function is testFind(){
 		local Channel of Str is ch: Channel();
-		ar:find(
+		ar:rFind(
 			input: 'order #1234 and #5678',
 			pattern: '#\\d+',
 			result: local Function(Boolean is found, Str is match, Int is start, Int is end){
@@ -140,13 +142,14 @@ Class of SpecUnitTest is TestArex{
 				}, {
 					ch:send(item: 'ERR');
 				});
+				return;
 			}
 		);
 		Assert:areEqualString('#1234', ch:receive(default: ''));
 
 		local Channel of Str is chMiss: Channel();
 		ThreadScope:open(body: local Function(ThreadScope is scope){
-			ar:find(
+			ar:rFind(
 				input: 'no numbers here',
 				pattern: '\\d+',
 				result: local Function(Boolean is found, Str is match, Int is start, Int is end){
@@ -155,30 +158,30 @@ Class of SpecUnitTest is TestArex{
 					}, {
 						chMiss:send(item: 'ERR');
 					});
+					return;
 				}
 			);
 		});
 		Assert:areEqualString('MISS', chMiss:receive(default: ''));
 	}
 
-	## Compiled ArexPattern via callback-based compile works with overloaded test and find.
+	## Compiled ArexPattern via callback-based rCompile works with overloaded rContains and rFind.
 	Function is testCompiledPatternReuse(){
 		local Arex is rx: Arex();
 		local Channel of ArexPattern is patCh: Channel();
 
-		# Outside ThreadScope:open, rx:compile waits for compilation before returning.
-		rx:compile(
+		rx:rCompile(
 			pattern: '[a-z]+-\\d+',
 			result: local Function(ArexPattern is compiled){
 				patCh:send(item: compiled);
+				return;
 			}
 		);
 		local ArexPattern is pat: patCh:receive(default: ArexPattern());
 		Assert:areEqualString('[a-z]+-\\d+', pat:pattern());
 
-		# Overloaded rx:test with precompiled ArexPattern outside scope (waits).
 		Process:atomicPut(slot: 604, value: -1);
-		rx:test(
+		rx:rContains(
 			input: 'item-42',
 			pattern: pat,
 			result: local Function(Boolean is matched){
@@ -189,29 +192,29 @@ Class of SpecUnitTest is TestArex{
 		);
 		Assert:areEqualInt(1, Process:atomicGet(slot: 604));
 
-		# Overloaded ar:find with precompiled ArexPattern inside ThreadScope:open (async).
 		local Channel of Str is chA: Channel();
 		local Channel of Str is chB: Channel();
 		ThreadScope:open(body: local Function(ThreadScope is scope){
-			ar:find(
+			ar:rFind(
 				input: 'first alpha-100 end',
 				pattern: pat,
 				result: local Function(Boolean is found, Str is match, Int is start, Int is end){
 					if({ found }, { chA:send(item: match); }, { chA:send(item: 'ERR'); });
+					return;
 				}
 			);
-			ar:find(
+			ar:rFind(
 				input: 'second beta-2026 end',
 				pattern: pat,
 				result: local Function(Boolean is found, Str is match, Int is start, Int is end){
 					if({ found }, { chB:send(item: match); }, { chB:send(item: 'ERR'); });
+					return;
 				}
 			);
-			# Async ar:compile chaining into overloaded ar:test inside the same scope.
-			ar:compile(
+			ar:rCompile(
 				pattern: '^v\\d+$',
 				result: local Function(ArexPattern is verPat){
-					ar:test(
+					ar:rContains(
 						input: 'v12',
 						pattern: verPat,
 						result: local Function(Boolean is matched){
@@ -234,7 +237,7 @@ Class of SpecUnitTest is TestArex{
 		Assert:areEqualInt(7, ar);
 
 		Process:atomicPut(slot: 606, value: -1);
-		:ar:test(
+		:ar:rContains(
 			input: 'spec-2026',
 			pattern: '^spec-\\d+$',
 			result: local Function(Boolean is matched){
@@ -244,5 +247,197 @@ Class of SpecUnitTest is TestArex{
 			}
 		);
 		Assert:areEqualInt(1, Process:atomicGet(slot: 606));
+	}
+
+	## rEquals, rStartsWith, and rEndsWith match anchored regions safely even with alternation.
+	Function is testEqualsStartsEnds(){
+		Process:atomicPut(slot: 607, value: -1);
+		ar:rEquals(
+			input: 'ax',
+			pattern: 'a|b',
+			result: local Function(Boolean is matched){
+				local Int is v: 0;
+				if({ matched }, { v: 1; });
+				Process:atomicPut(slot: 607, value: v);
+			}
+		);
+		Assert:areEqualInt(0, Process:atomicGet(slot: 607));
+
+		Process:atomicPut(slot: 608, value: -1);
+		ar:rEquals(
+			input: 'b',
+			pattern: 'a|b',
+			result: local Function(Boolean is matched){
+				local Int is v: 0;
+				if({ matched }, { v: 1; });
+				Process:atomicPut(slot: 608, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 608));
+
+		Process:atomicPut(slot: 609, value: -1);
+		ar:rStartsWith(
+			input: '2026-spec',
+			pattern: '\\d+',
+			result: local Function(Boolean is matched){
+				local Int is v: 0;
+				if({ matched }, { v: 1; });
+				Process:atomicPut(slot: 609, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 609));
+
+		Process:atomicPut(slot: 610, value: -1);
+		ar:rEndsWith(
+			input: 'spec-2026',
+			pattern: '\\d+',
+			result: local Function(Boolean is matched){
+				local Int is v: 0;
+				if({ matched }, { v: 1; });
+				Process:atomicPut(slot: 610, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 610));
+	}
+
+	## rCount and rFindAll return all non-overlapping matches.
+	Function is testCountAndFindAll(){
+		Process:atomicPut(slot: 611, value: -1);
+		ar:rCount(
+			input: 'a1 b22 c333',
+			pattern: '\\d+',
+			result: local Function(Int is total){
+				Process:atomicPut(slot: 611, value: total);
+			}
+		);
+		Assert:areEqualInt(3, Process:atomicGet(slot: 611));
+
+		local Channel of Str is chJoined: Channel();
+		ar:rFindAll(
+			input: 'Grace   Brewster  Hopper',
+			pattern: '\\S+',
+			result: local Function(Array of Str is matches){
+				local String is joined: matches:join(separator: '|');
+				chJoined:send(item: joined);
+				return;
+			}
+		);
+		Assert:areEqualString('Grace|Brewster|Hopper', chJoined:receive(default: ''));
+	}
+
+	## rSplit separates on regex matches and respects optional limit.
+	Function is testSplit(){
+		local Channel of Str is ch1: Channel();
+		ar:rSplit(
+			input: 'Grace   Brewster  Hopper',
+			pattern: '\\s+',
+			result: local Function(Array of Str is parts){
+				ch1:send(item: parts:join(separator: '|'));
+				return;
+			}
+		);
+		Assert:areEqualString('Grace|Brewster|Hopper', ch1:receive(default: ''));
+
+		local Channel of Str is ch2: Channel();
+		ar:rSplit(
+			input: 'a=b=c',
+			pattern: '=',
+			limit: 2,
+			result: local Function(Array of Str is parts){
+				ch2:send(item: parts:join(separator: '|'));
+				return;
+			}
+		);
+		Assert:areEqualString('a|b=c', ch2:receive(default: ''));
+
+		local Channel of Str is ch3: Channel();
+		ar:rSplit(
+			input: 'a,b,',
+			pattern: ',',
+			result: local Function(Array of Str is parts){
+				ch3:send(item: (parts:length() as String) . ':' . parts:join(separator: '|'));
+				return;
+			}
+		);
+		Assert:areEqualString('3:a|b|', ch3:receive(default: ''));
+	}
+
+	## rReplace, rReplaceWith, rReplaceAll, and rReplaceAllWith.
+	Function is testReplaceAndReplaceAll(){
+		local Channel of Str is ch1: Channel();
+		ar:rReplace(
+			input: 'a1 b2 c3',
+			pattern: '\\d+',
+			replacement: 'X',
+			result: local Function(Str is out){
+				ch1:send(item: out);
+				return;
+			}
+		);
+		Assert:areEqualString('aX b2 c3', ch1:receive(default: ''));
+
+		local Channel of Str is ch2: Channel();
+		ar:rReplaceAll(
+			input: 'a1 b2 c3',
+			pattern: '\\d+',
+			replacement: 'X',
+			result: local Function(Str is out){
+				ch2:send(item: out);
+				return;
+			}
+		);
+		Assert:areEqualString('aX bX cX', ch2:receive(default: ''));
+
+		local Channel of Str is ch3: Channel();
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			ar:rCompile(
+				pattern: '\\d+',
+				result: local Function(ArexPattern is numPat){
+					ar:rReplaceAllWith(
+						input: '[10] + [20]',
+						pattern: numPat,
+						replacer: local Function of Str(Str is m, Int is start, Int is end){
+							return '<' . (m as String) . '>';
+						},
+						result: local Function(Str is out){
+							ch3:send(item: out);
+							return;
+						}
+					);
+				}
+			);
+		});
+		Assert:areEqualString('[<10>] + [<20>]', ch3:receive(default: ''));
+	}
+
+	## Str byte-level and String Unicode rune-aware parity methods with caseSensitive.
+	Function is testStrAndStringParity(){
+		local Str is raw: 'Hello Spec hello';
+		Assert:isTrue(raw:contains(needle: 'SPEC', caseSensitive: false));
+		Assert:isFalse(raw:contains(needle: 'SPEC'));
+		Assert:isTrue(raw:startsWith(prefix: 'hello', caseSensitive: false));
+		Assert:isTrue(raw:endsWith(suffix: 'HELLO', caseSensitive: false));
+		Assert:isTrue(('Spec':equals(other: 'SPEC', caseSensitive: false)));
+		Assert:areEqualInt(0, raw:find(needle: 'hello', caseSensitive: false));
+		Assert:areEqualInt(11, raw:find(needle: 'hello', from: 1, caseSensitive: false));
+		Assert:areEqualInt(2, raw:count(needle: 'hello', caseSensitive: false));
+		Assert:areEqualString('Hello|hello', raw:findAll(needle: 'hello', caseSensitive: false):join(separator: '|'));
+		Assert:areEqualString('Hi Spec hello', raw:replaceFirst(search: 'hello', replacement: 'Hi', caseSensitive: false));
+		Assert:areEqualString('[Hello] Spec [hello]', raw:replaceAllWith(search: 'hello', replacer: local Function of Str(Str is m, Int is s, Int is e){ return '[' . (m as String) . ']'; }, caseSensitive: false));
+		Assert:areEqualString('a|b=c', ('a=b=c' as Str):split(delimiter: '=', limit: 2):join(separator: '|'));
+
+		local String is uni: 'Café café';
+		Assert:isTrue(uni:sContains(needle: 'CAFÉ', caseSensitive: false));
+		Assert:isFalse(uni:sContains(needle: 'CAFÉ'));
+		Assert:isTrue(uni:sStartsWith(prefix: 'café', caseSensitive: false));
+		Assert:isTrue(uni:sEndsWith(suffix: 'CAFÉ', caseSensitive: false));
+		Assert:isTrue(('Café':sEquals(other: 'CAFÉ', caseSensitive: false)));
+		Assert:areEqualInt(5, uni:sFind(needle: 'CAFÉ', fromRune: 1, caseSensitive: false));
+		Assert:areEqualInt(2, uni:sCount(needle: 'café', caseSensitive: false));
+		Assert:areEqualString('Café|café', uni:sFindAll(needle: 'café', caseSensitive: false):join(separator: '|'));
+		Assert:areEqualString('Tea café', uni:sReplace(search: 'CAFÉ', replacement: 'Tea', caseSensitive: false));
+		Assert:areEqualString('Tea Tea', uni:sReplaceAll(search: 'CAFÉ', replacement: 'Tea', caseSensitive: false));
+		Assert:areEqualString('C|a|f|é', ('Café':sSplit(delimiter: '')):join(separator: '|'));
+		Assert:areEqualString('<Café> <café>', uni:sReplaceAllWith(search: 'café', replacer: local Function of Str(String is m, Int is s, Int is e){ return '<' . m . '>'; }, caseSensitive: false));
 	}
 }

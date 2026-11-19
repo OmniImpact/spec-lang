@@ -473,4 +473,245 @@ Class of Str is String{
 		Buf:bufAppendBuf(dst: out, src: other);
 		return out;
 	}
+
+	local Function of Array of Int is sRunesFor(Str is s, Boolean is caseSensitive){
+		local String is str: s:copy();
+		if({ !caseSensitive }, {
+			str: str:toLower();
+		});
+		return str:codePoints();
+	}
+
+	local Function of Boolean is sMatchRunesAt(Array of Int is hay, Int is pos, Array of Int is nd){
+		local Int is nlen: nd:length();
+		if({ pos + nlen > hay:length() }, {
+			return false;
+		});
+		local Int is j: 0;
+		while({ j < nlen }, {
+			if({ hay:get(index: pos + j) != nd:get(index: j) }, {
+				return false;
+			});
+			j: j + 1;
+		});
+		return true;
+	}
+
+	local Function of Int is sFindInRunes(Array of Int is hay, Array of Int is nd, Int is fromRune, Int is defaultVal){
+		local Int is hlen: hay:length();
+		local Int is nlen: nd:length();
+		local Int is start: fromRune;
+		if({ start < 0 }, { start: 0; });
+		if({ nlen == 0 }, {
+			if({ start <= hlen }, { return start; });
+			return defaultVal;
+		});
+		local Int is i: start;
+		while({ i + nlen <= hlen }, {
+			if({ :sMatchRunesAt(hay: hay, pos: i, nd: nd) }, {
+				return i;
+			});
+			i: i + 1;
+		});
+		return defaultVal;
+	}
+
+	## True when this Unicode string equals [other] (optionally case-insensitive via Unicode `toLower`).
+	Function of Boolean is sEquals(Str is other, Boolean is caseSensitive: true){
+		if({ caseSensitive }, {
+			return : == other;
+		});
+		local Array of Int is a: :sRunesFor(s: :, caseSensitive: false);
+		local Array of Int is b: :sRunesFor(s: other, caseSensitive: false);
+		if({ a:length() != b:length() }, {
+			return false;
+		});
+		return :sMatchRunesAt(hay: a, pos: 0, nd: b);
+	}
+
+	## True when this Unicode string begins with [prefix].
+	Function of Boolean is sStartsWith(Str is prefix, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: prefix, caseSensitive: caseSensitive);
+		return :sMatchRunesAt(hay: hay, pos: 0, nd: nd);
+	}
+
+	## True when this Unicode string ends with [suffix].
+	Function of Boolean is sEndsWith(Str is suffix, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: suffix, caseSensitive: caseSensitive);
+		local Int is hlen: hay:length();
+		local Int is nlen: nd:length();
+		if({ nlen > hlen }, {
+			return false;
+		});
+		return :sMatchRunesAt(hay: hay, pos: hlen - nlen, nd: nd);
+	}
+
+	## First rune index of [needle] at or after [fromRune], or [default] when absent.
+	Function of Int is sFind(Str is needle, Int is fromRune: 0, Int is default: -1, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: needle, caseSensitive: caseSensitive);
+		return :sFindInRunes(hay: hay, nd: nd, fromRune: fromRune, defaultVal: default);
+	}
+
+	## True when [needle] occurs anywhere in this Unicode string.
+	Function of Boolean is sContains(Str is needle, Boolean is caseSensitive: true){
+		return :sFind(needle: needle, fromRune: 0, default: -1, caseSensitive: caseSensitive) >= 0;
+	}
+
+	## All non-overlapping occurrences of [needle] in this Unicode string.
+	Function of Array of String is sFindAll(Str is needle, Boolean is caseSensitive: true){
+		local Array of String is out: [];
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: needle, caseSensitive: caseSensitive);
+		local Int is nlen: nd:length();
+		if({ nlen == 0 }, {
+			return out;
+		});
+		local Int is pos: 0;
+		local Int is idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		while({ idx >= 0 }, {
+			out:add(item: :sliceRunes(start: idx, end: idx + nlen));
+			pos: idx + nlen;
+			idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		});
+		return out;
+	}
+
+	## Number of non-overlapping occurrences of [needle] in this Unicode string.
+	Function of Int is sCount(Str is needle, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: needle, caseSensitive: caseSensitive);
+		local Int is nlen: nd:length();
+		if({ nlen == 0 }, {
+			return 0;
+		});
+		local Int is total: 0;
+		local Int is pos: 0;
+		local Int is idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		while({ idx >= 0 }, {
+			total: total + 1;
+			pos: idx + nlen;
+			idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		});
+		return total;
+	}
+
+	## Splits on [delimiter] at Unicode rune boundaries (empty delimiter splits into runes).
+	Function of Array of String is sSplit(Str is delimiter, Int is limit: -1, Boolean is caseSensitive: true){
+		local Array of String is res: [];
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Int is hlen: hay:length();
+		if({ hlen == 0 }, {
+			return res;
+		});
+		if({ limit == 1 }, {
+			res:add(item: :copy());
+			return res;
+		});
+		local Array of Int is nd: :sRunesFor(s: delimiter, caseSensitive: caseSensitive);
+		local Int is dlen: nd:length();
+		if({ dlen == 0 }, {
+			local Int is i: 0;
+			while({ i < hlen }, {
+				if({ limit > 0 && res:length() + 1 >= limit }, {
+					res:add(item: :sliceRunes(start: i, end: hlen));
+					return res;
+				});
+				res:add(item: :runeAt(runeIndex: i, default: ''));
+				i: i + 1;
+			});
+			return res;
+		});
+		local Int is pos: 0;
+		local Int is idx: :sFindInRunes(hay: hay, nd: nd, fromRune: 0, defaultVal: -1);
+		while({ idx >= 0 }, {
+			if({ limit > 0 && res:length() + 1 >= limit }, {
+				res:add(item: :sliceRunes(start: pos, end: hlen));
+				return res;
+			});
+			res:add(item: :sliceRunes(start: pos, end: idx));
+			pos: idx + dlen;
+			idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		});
+		res:add(item: :sliceRunes(start: pos, end: hlen));
+		return res;
+	}
+
+	## First [search] occurrence replaced by [replacement] (Unicode rune-aware).
+	Function of String is sReplace(Str is search, Str is replacement, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: search, caseSensitive: caseSensitive);
+		local Int is nlen: nd:length();
+		if({ nlen == 0 }, {
+			return :copy();
+		});
+		local Int is idx: :sFindInRunes(hay: hay, nd: nd, fromRune: 0, defaultVal: -1);
+		if({ idx < 0 }, {
+			return :copy();
+		});
+		return :sliceRunes(start: 0, end: idx) . replacement . :sliceRunes(start: idx + nlen, end: hay:length());
+	}
+
+	## First [search] occurrence replaced using [replacer] `(String is match, Int is startRune, Int is endRune) -> Str`.
+	Function of String is sReplaceWith(Str is search, Function of Str is replacer, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: search, caseSensitive: caseSensitive);
+		local Int is nlen: nd:length();
+		if({ nlen == 0 }, {
+			return :copy();
+		});
+		local Int is idx: :sFindInRunes(hay: hay, nd: nd, fromRune: 0, defaultVal: -1);
+		if({ idx < 0 }, {
+			return :copy();
+		});
+		local String is m: :sliceRunes(start: idx, end: idx + nlen);
+		local Str is rep: replacer(m, idx, idx + nlen);
+		return :sliceRunes(start: 0, end: idx) . rep . :sliceRunes(start: idx + nlen, end: hay:length());
+	}
+
+	## Every [search] occurrence replaced by [replacement] (Unicode rune-aware).
+	Function of String is sReplaceAll(Str is search, Str is replacement, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: search, caseSensitive: caseSensitive);
+		local Int is nlen: nd:length();
+		if({ nlen == 0 }, {
+			return :copy();
+		});
+		local Int is hlen: hay:length();
+		local String is out: '';
+		local Int is pos: 0;
+		local Int is idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		while({ idx >= 0 }, {
+			out: out . :sliceRunes(start: pos, end: idx) . replacement;
+			pos: idx + nlen;
+			idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		});
+		out: out . :sliceRunes(start: pos, end: hlen);
+		return out;
+	}
+
+	## Every [search] occurrence replaced using [replacer] `(String is match, Int is startRune, Int is endRune) -> Str`.
+	Function of String is sReplaceAllWith(Str is search, Function of Str is replacer, Boolean is caseSensitive: true){
+		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
+		local Array of Int is nd: :sRunesFor(s: search, caseSensitive: caseSensitive);
+		local Int is nlen: nd:length();
+		if({ nlen == 0 }, {
+			return :copy();
+		});
+		local Int is hlen: hay:length();
+		local String is out: '';
+		local Int is pos: 0;
+		local Int is idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		while({ idx >= 0 }, {
+			local String is m: :sliceRunes(start: idx, end: idx + nlen);
+			local Str is rep: replacer(m, idx, idx + nlen);
+			out: out . :sliceRunes(start: pos, end: idx) . rep;
+			pos: idx + nlen;
+			idx: :sFindInRunes(hay: hay, nd: nd, fromRune: pos, defaultVal: -1);
+		});
+		out: out . :sliceRunes(start: pos, end: hlen);
+		return out;
+	}
 }

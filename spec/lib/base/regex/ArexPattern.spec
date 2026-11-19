@@ -517,8 +517,10 @@ Class is ArexPattern{
 		});
 	}
 
-	## Returns `[found(0|1), start, end]` for the leftmost-longest match in [input].
-	Function of Array of Int is findFirstSync(Str is input){
+	## Returns `[found(0|1), start, end]` for the leftmost-longest match in [input]
+	## starting at or after [startOffset]. [anchorStart] requires matching from index 0;
+	## [anchorEnd] requires the match to end at `input:length()`.
+	Function of Array of Int is findMatchSync(Str is input, Int is startOffset, Boolean is anchorStart, Boolean is anchorEnd){
 		local Int is numStates: :ops:length();
 		local Int is inLen: input:length();
 
@@ -546,9 +548,9 @@ Class is ArexPattern{
 		local Int is bestStart: -1;
 		local Int is bestEnd: -1;
 
-		local Int is idx: 0;
+		local Int is idx: startOffset;
 		while({ idx <= inLen }, {
-			if({ !found }, {
+			if({ (!anchorStart && !found) || (anchorStart && idx == 0) }, {
 				:addStateWithStart(
 					state: :startState,
 					threadStart: idx,
@@ -571,7 +573,7 @@ Class is ArexPattern{
 				if({ ts < minActiveStart }, {
 					minActiveStart: ts;
 				});
-				if({ :ops:get(index: s) == 6 }, {
+				if({ :ops:get(index: s) == 6 && (!anchorEnd || idx == inLen) }, {
 					if({ !found || ts < bestStart || (ts == bestStart && idx > bestEnd) }, {
 						found: true;
 						bestStart: ts;
@@ -581,7 +583,7 @@ Class is ArexPattern{
 				k: k + 1;
 			});
 
-			if({ found && minActiveStart > bestStart }, {
+			if({ (found && minActiveStart > bestStart) || (anchorStart && currStates:length() == 0) }, {
 				idx: inLen + 1;
 			}, {
 				if({ idx < inLen }, {
@@ -644,15 +646,47 @@ Class is ArexPattern{
 		return res;
 	}
 
-	## Runs `test` synchronously on the calling thread and invokes [result].
-	Function is testSync(Str is input, Function is result){
-		local Array of Int is matchRes: :findFirstSync(input: input);
+	## Returns `[found(0|1), start, end]` for the leftmost-longest match in [input]
+	## starting at or after [startOffset].
+	Function of Array of Int is findFirstFromSync(Str is input, Int is startOffset){
+		return :findMatchSync(input: input, startOffset: startOffset, anchorStart: false, anchorEnd: false);
+	}
+
+	## Returns `[found(0|1), start, end]` for the leftmost-longest match in [input].
+	Function of Array of Int is findFirstSync(Str is input){
+		return :findFirstFromSync(input: input, startOffset: 0);
+	}
+
+	## Runs `rContains` synchronously on the calling thread and invokes [result].
+	Function is rContainsSync(Str is input, Function is result){
+		local Array of Int is matchRes: :findMatchSync(input: input, startOffset: 0, anchorStart: false, anchorEnd: false);
 		local Boolean is matched: matchRes:get(index: 0) == 1;
 		result(matched);
 	}
 
-	## Runs `find` synchronously on the calling thread and invokes [result].
-	Function is findSync(Str is input, Function is result){
+	## Runs `rEquals` synchronously on the calling thread and invokes [result].
+	Function is rEqualsSync(Str is input, Function is result){
+		local Array of Int is matchRes: :findMatchSync(input: input, startOffset: 0, anchorStart: true, anchorEnd: true);
+		local Boolean is matched: matchRes:get(index: 0) == 1;
+		result(matched);
+	}
+
+	## Runs `rStartsWith` synchronously on the calling thread and invokes [result].
+	Function is rStartsWithSync(Str is input, Function is result){
+		local Array of Int is matchRes: :findMatchSync(input: input, startOffset: 0, anchorStart: true, anchorEnd: false);
+		local Boolean is matched: matchRes:get(index: 0) == 1;
+		result(matched);
+	}
+
+	## Runs `rEndsWith` synchronously on the calling thread and invokes [result].
+	Function is rEndsWithSync(Str is input, Function is result){
+		local Array of Int is matchRes: :findMatchSync(input: input, startOffset: 0, anchorStart: false, anchorEnd: true);
+		local Boolean is matched: matchRes:get(index: 0) == 1;
+		result(matched);
+	}
+
+	## Runs `rFind` synchronously on the calling thread and invokes [result].
+	Function is rFindSync(Str is input, Function is result){
 		local Array of Int is matchRes: :findFirstSync(input: input);
 		local Boolean is found: matchRes:get(index: 0) == 1;
 		local Int is start: matchRes:get(index: 1);
@@ -664,19 +698,255 @@ Class is ArexPattern{
 		result(found, matchedText, start, end);
 	}
 
-	## Tests whether [input] matches this compiled pattern and invokes [result] with a `Boolean`.
-	## Runs asynchronously inside an active `ThreadScope:open`, or waits if called outside one.
-	Function is test(Str is input, Function is result){
+	## Runs `rCount` synchronously on the calling thread and invokes [result].
+	Function is rCountSync(Str is input, Function is result){
+		local Int is inLen: input:length();
+		local Int is cursor: 0;
+		local Int is total: 0;
+		local Boolean is running: true;
+		while({ running && cursor <= inLen }, {
+			local Array of Int is m: :findFirstFromSync(input: input, startOffset: cursor);
+			if({ m:get(index: 0) == 1 }, {
+				total: total + 1;
+				local Int is s: m:get(index: 1);
+				local Int is e: m:get(index: 2);
+				if({ e > s }, {
+					cursor: e;
+				}, {
+					cursor: e + 1;
+					if({ e >= inLen }, { running: false; });
+				});
+			}, {
+				running: false;
+			});
+		});
+		result(total);
+	}
+
+	## Runs `rFindAll` synchronously on the calling thread and invokes [result].
+	Function is rFindAllSync(Str is input, Function is result){
+		local Int is inLen: input:length();
+		local Array of Str is matches: [];
+		local Int is cursor: 0;
+		local Boolean is running: true;
+		while({ running && cursor <= inLen }, {
+			local Array of Int is m: :findFirstFromSync(input: input, startOffset: cursor);
+			if({ m:get(index: 0) == 1 }, {
+				local Int is s: m:get(index: 1);
+				local Int is e: m:get(index: 2);
+				matches:add(item: input:substring(start: s, end: e));
+				if({ e > s }, {
+					cursor: e;
+				}, {
+					cursor: e + 1;
+					if({ e >= inLen }, { running: false; });
+				});
+			}, {
+				running: false;
+			});
+		});
+		result(matches);
+	}
+
+	## Runs `rSplit` synchronously on the calling thread and invokes [result].
+	Function is rSplitSync(Str is input, Function is result, Int is limit: -1){
+		local Int is inLen: input:length();
+		local Array of Str is parts: [];
+		if({ limit == 1 }, {
+			parts:add(item: input);
+			result(parts);
+			return;
+		});
+		local Int is cursor: 0;
+		local Boolean is running: true;
+		while({ running && cursor <= inLen }, {
+			if({ limit > 0 && parts:length() + 1 >= limit }, {
+				parts:add(item: input:substring(start: cursor, end: inLen));
+				cursor: inLen + 1;
+				running: false;
+			}, {
+				local Array of Int is m: :findFirstFromSync(input: input, startOffset: cursor);
+				if({ m:get(index: 0) == 1 }, {
+					local Int is s: m:get(index: 1);
+					local Int is e: m:get(index: 2);
+					parts:add(item: input:substring(start: cursor, end: s));
+					if({ e > s }, {
+						cursor: e;
+					}, {
+						cursor: e + 1;
+						if({ e >= inLen }, { running: false; });
+					});
+				}, {
+					parts:add(item: input:substring(start: cursor, end: inLen));
+					cursor: inLen + 1;
+					running: false;
+				});
+			});
+		});
+		if({ cursor == inLen }, {
+			parts:add(item: '');
+		});
+		result(parts);
+	}
+
+	## Runs `rReplace` / `rReplaceAll` with a static [replacement] string.
+	Function is rReplaceStrSync(Str is input, Str is replacement, Boolean is all, Function is result){
+		local Int is inLen: input:length();
+		local Array of String is chunks: [];
+		local Int is cursor: 0;
+		local Boolean is running: true;
+		while({ running && cursor <= inLen }, {
+			local Array of Int is m: :findFirstFromSync(input: input, startOffset: cursor);
+			if({ m:get(index: 0) == 1 }, {
+				local Int is s: m:get(index: 1);
+				local Int is e: m:get(index: 2);
+				chunks:add(item: input:substring(start: cursor, end: s));
+				chunks:add(item: replacement as String);
+				if({ e > s }, {
+					cursor: e;
+				}, {
+					if({ e < inLen }, {
+						chunks:add(item: input:substring(start: e, end: e + 1));
+					});
+					cursor: e + 1;
+					if({ e >= inLen }, { running: false; });
+				});
+				if({ !all }, {
+					running: false;
+				});
+			}, {
+				running: false;
+			});
+		});
+		if({ cursor <= inLen }, {
+			chunks:add(item: input:substring(start: cursor, end: inLen));
+		});
+		local Str is out: chunks:join(separator: '');
+		result(out);
+	}
+
+	## Runs `rReplaceWith` / `rReplaceAllWith` with a dynamic [replacer] callback `(Str is match, Int is start, Int is end) -> Str`.
+	Function is rReplaceFnSync(Str is input, Function is replacer, Boolean is all, Function is result){
+		local Int is inLen: input:length();
+		local Array of String is chunks: [];
+		local Int is cursor: 0;
+		local Boolean is running: true;
+		while({ running && cursor <= inLen }, {
+			local Array of Int is m: :findFirstFromSync(input: input, startOffset: cursor);
+			if({ m:get(index: 0) == 1 }, {
+				local Int is s: m:get(index: 1);
+				local Int is e: m:get(index: 2);
+				chunks:add(item: input:substring(start: cursor, end: s));
+				local Str is matchedStr: input:substring(start: s, end: e);
+				local Str is rep: replacer(matchedStr, s, e);
+				chunks:add(item: rep as String);
+				if({ e > s }, {
+					cursor: e;
+				}, {
+					if({ e < inLen }, {
+						chunks:add(item: input:substring(start: e, end: e + 1));
+					});
+					cursor: e + 1;
+					if({ e >= inLen }, { running: false; });
+				});
+				if({ !all }, {
+					running: false;
+				});
+			}, {
+				running: false;
+			});
+		});
+		if({ cursor <= inLen }, {
+			chunks:add(item: input:substring(start: cursor, end: inLen));
+		});
+		local Str is out: chunks:join(separator: '');
+		result(out);
+	}
+
+	## Tests whether this compiled pattern matches anywhere in [input] and invokes [result] with a `Boolean`.
+	Function is rContains(Str is input, Function is result){
 		ThreadScope:dispatch(task: local Function(){
-			:testSync(input: input, result: result);
+			:rContainsSync(input: input, result: result);
+		});
+	}
+
+	## Tests whether the entire [input] matches this compiled pattern and invokes [result] with a `Boolean`.
+	Function is rEquals(Str is input, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rEqualsSync(input: input, result: result);
+		});
+	}
+
+	## Tests whether [input] starts with a match of this compiled pattern and invokes [result] with a `Boolean`.
+	Function is rStartsWith(Str is input, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rStartsWithSync(input: input, result: result);
+		});
+	}
+
+	## Tests whether [input] ends with a match of this compiled pattern and invokes [result] with a `Boolean`.
+	Function is rEndsWith(Str is input, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rEndsWithSync(input: input, result: result);
 		});
 	}
 
 	## Finds the leftmost-longest match of this compiled pattern in [input] and invokes [result]
 	## with `(Boolean is found, Str is match, Int is start, Int is end)`.
-	Function is find(Str is input, Function is result){
+	Function is rFind(Str is input, Function is result){
 		ThreadScope:dispatch(task: local Function(){
-			:findSync(input: input, result: result);
+			:rFindSync(input: input, result: result);
+		});
+	}
+
+	## Counts non-overlapping matches of this compiled pattern in [input] and invokes [result] with an `Int`.
+	Function is rCount(Str is input, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rCountSync(input: input, result: result);
+		});
+	}
+
+	## Finds all non-overlapping matches of this compiled pattern in [input] and invokes [result]
+	## with an `Array of Str`.
+	Function is rFindAll(Str is input, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rFindAllSync(input: input, result: result);
+		});
+	}
+
+	## Splits [input] around non-overlapping matches of this compiled pattern (at most [limit] parts
+	## when `limit > 0`) and invokes [result] with an `Array of Str`.
+	Function is rSplit(Str is input, Function is result, Int is limit: -1){
+		ThreadScope:dispatch(task: local Function(){
+			:rSplitSync(input: input, result: result, limit: limit);
+		});
+	}
+
+	## Replaces the first match of this compiled pattern in [input] with [replacement].
+	Function is rReplace(Str is input, Str is replacement, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rReplaceStrSync(input: input, replacement: replacement, all: false, result: result);
+		});
+	}
+
+	## Replaces the first match of this compiled pattern in [input] using [replacer] `(Str is match, Int is start, Int is end) -> Str`.
+	Function is rReplaceWith(Str is input, Function of Str is replacer, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rReplaceFnSync(input: input, replacer: replacer, all: false, result: result);
+		});
+	}
+
+	## Replaces all non-overlapping matches of this compiled pattern in [input] with [replacement].
+	Function is rReplaceAll(Str is input, Str is replacement, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rReplaceStrSync(input: input, replacement: replacement, all: true, result: result);
+		});
+	}
+
+	## Replaces all non-overlapping matches of this compiled pattern in [input] using [replacer] `(Str is match, Int is start, Int is end) -> Str`.
+	Function is rReplaceAllWith(Str is input, Function of Str is replacer, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:rReplaceFnSync(input: input, replacer: replacer, all: true, result: result);
 		});
 	}
 }

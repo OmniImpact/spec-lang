@@ -232,11 +232,59 @@ Class of Buf is Str{
 		return Mem:strFromBytes(srcAddr: data + s, len: e - s);
 	}
 
+	local Function of Int is asciiLowerByte(Int is b){
+		if({ b >= 65 && b <= 90 }, {
+			return b + 32;
+		});
+		return b;
+	}
+
+	local Function of Boolean is bytesEqualAt(Int is hayPtr, Int is hayOffset, Int is ndPtr, Int is len, Boolean is caseSensitive){
+		if({ caseSensitive }, {
+			return Mem:cmp(a: hayPtr + hayOffset, b: ndPtr, bytes: len) == 0;
+		});
+		local Int is j: 0;
+		while({ j < len }, {
+			local Int is a: :asciiLowerByte(b: Mem:loadByte(ptr: hayPtr, byteOffset: hayOffset + j));
+			local Int is b: :asciiLowerByte(b: Mem:loadByte(ptr: ndPtr, byteOffset: j));
+			if({ a != b }, {
+				return false;
+			});
+			j: j + 1;
+		});
+		return true;
+	}
+
+	## True when this string equals [other] (optionally case-insensitive for ASCII).
+	Function of Boolean is equals(Str is other, Boolean is caseSensitive: true){
+		if({ caseSensitive }, {
+			return : == other;
+		});
+		local Int is len: :length();
+		if({ len != other:length() }, {
+			return false;
+		});
+		if({ len == 0 }, {
+			return true;
+		});
+		local Int is aAddr: Mem:objToAddr(obj: :);
+		local Int is bAddr: Mem:objToAddr(obj: other);
+		if({ aAddr == 0 || bAddr == 0 }, { return false; });
+		return :bytesEqualAt(
+			hayPtr: Mem:loadI64(ptr: aAddr, byteOffset: 0),
+			hayOffset: 0,
+			ndPtr: Mem:loadI64(ptr: bAddr, byteOffset: 0),
+			len: len,
+			caseSensitive: false
+		);
+	}
+
 	## True when this string begins with [prefix].
 	##
 	## @param prefix: The prefix to test.
+	## @param caseSensitive: Whether ASCII case must match.
 	## @return: true when present.
-	Function of Boolean is startsWith(Str is prefix){
+	Function of Boolean is startsWith(Str is prefix, Boolean is caseSensitive: true){
 		local Int is pl: prefix:length();
 		if({ pl == 0 }, {
 			return true;
@@ -244,14 +292,18 @@ Class of Buf is Str{
 		if({ pl > :length() }, {
 			return false;
 		});
-		return :substring(start: 0, end: pl) == prefix;
+		if({ caseSensitive }, {
+			return :substring(start: 0, end: pl) == prefix;
+		});
+		return :substring(start: 0, end: pl):equals(other: prefix, caseSensitive: false);
 	}
 
 	## True when this string ends with [suffix].
 	##
 	## @param suffix: The suffix to test.
+	## @param caseSensitive: Whether ASCII case must match.
 	## @return: true when present.
-	Function of Boolean is endsWith(Str is suffix){
+	Function of Boolean is endsWith(Str is suffix, Boolean is caseSensitive: true){
 		local Int is sl: suffix:length();
 		if({ sl == 0 }, {
 			return true;
@@ -260,15 +312,19 @@ Class of Buf is Str{
 		if({ sl > bl }, {
 			return false;
 		});
-		return :substring(start: bl - sl, end: bl) == suffix;
+		if({ caseSensitive }, {
+			return :substring(start: bl - sl, end: bl) == suffix;
+		});
+		return :substring(start: bl - sl, end: bl):equals(other: suffix, caseSensitive: false);
 	}
 
 	## True when [needle] occurs anywhere in this string (empty needle: true).
 	##
 	## @param needle: Sequence to locate.
+	## @param caseSensitive: Whether ASCII case must match.
 	## @return: true when present.
-	Function of Boolean is contains(Str is needle){
-		return :indexOf(search: needle, default: -1) >= 0;
+	Function of Boolean is contains(Str is needle, Boolean is caseSensitive: true){
+		return :indexOf(search: needle, default: -1, caseSensitive: caseSensitive) >= 0;
 	}
 
 	## First occurrence of [search] at or after [from], or [default] when absent.
@@ -276,8 +332,9 @@ Class of Buf is Str{
 	## @param search: Byte sequence to locate.
 	## @param from: Zero-based start position.
 	## @param default: Fallback when absent (conventionally -1).
+	## @param caseSensitive: Whether ASCII case must match.
 	## @return: The index, or [default].
-	Function of Int is indexOfFrom(Str is search, Int is from, Int is default: -1){
+	Function of Int is indexOfFrom(Str is search, Int is from, Int is default: -1, Boolean is caseSensitive: true){
 		local Int is bAddr: Mem:objToAddr(obj: :);
 		local Int is nAddr: Mem:objToAddr(obj: search);
 		if({ bAddr == 0 || nAddr == 0 }, { return default; });
@@ -293,10 +350,17 @@ Class of Buf is Str{
 		local Int is hay: Mem:loadI64(ptr: bAddr, byteOffset: 0);
 		local Int is nd: Mem:loadI64(ptr: nAddr, byteOffset: 0);
 		local Int is firstByte: Mem:loadByte(ptr: nd, byteOffset: 0);
+		if({ !caseSensitive }, {
+			firstByte: :asciiLowerByte(b: firstByte);
+		});
 		local Int is i: start;
 		while({ i + nlen <= slen }, {
-			if({ Mem:loadByte(ptr: hay, byteOffset: i) == firstByte }, {
-				if({ Mem:cmp(a: hay + i, b: nd, bytes: nlen) == 0 }, {
+			local Int is hb: Mem:loadByte(ptr: hay, byteOffset: i);
+			if({ !caseSensitive }, {
+				hb: :asciiLowerByte(b: hb);
+			});
+			if({ hb == firstByte }, {
+				if({ :bytesEqualAt(hayPtr: hay, hayOffset: i, ndPtr: nd, len: nlen, caseSensitive: caseSensitive) }, {
 					return i;
 				});
 			});
@@ -309,17 +373,86 @@ Class of Buf is Str{
 	##
 	## @param search: Sequence to locate.
 	## @param default: Fallback when absent (conventionally -1).
+	## @param caseSensitive: Whether ASCII case must match.
 	## @return: The index, or [default].
-	Function of Int is indexOf(Str is search, Int is default: -1){
-		return :indexOfFrom(search: search, from: 0, default: default);
+	Function of Int is indexOf(Str is search, Int is default: -1, Boolean is caseSensitive: true){
+		return :indexOfFrom(search: search, from: 0, default: default, caseSensitive: caseSensitive);
+	}
+
+	## First byte index of [needle] at or after [from], or [default] when absent.
+	Function of Int is find(Str is needle, Int is from: 0, Int is default: -1, Boolean is caseSensitive: true){
+		return :indexOfFrom(search: needle, from: from, default: default, caseSensitive: caseSensitive);
+	}
+
+	## All non-overlapping occurrences of [needle] in this string.
+	Function of Array of String is findAll(Str is needle, Boolean is caseSensitive: true){
+		local Array of String is out: [];
+		local Int is nlen: needle:length();
+		if({ nlen == 0 }, {
+			return out;
+		});
+		local Int is pos: 0;
+		local Int is idx: :indexOfFrom(search: needle, from: pos, default: -1, caseSensitive: caseSensitive);
+		while({ idx >= 0 }, {
+			out:add(item: :substring(start: idx, end: idx + nlen));
+			pos: idx + nlen;
+			idx: :indexOfFrom(search: needle, from: pos, default: -1, caseSensitive: caseSensitive);
+		});
+		return out;
+	}
+
+	## Number of non-overlapping occurrences of [needle] in this string.
+	Function of Int is count(Str is needle, Boolean is caseSensitive: true){
+		local Int is nlen: needle:length();
+		if({ nlen == 0 }, {
+			return 0;
+		});
+		local Int is total: 0;
+		local Int is pos: 0;
+		local Int is idx: :indexOfFrom(search: needle, from: pos, default: -1, caseSensitive: caseSensitive);
+		while({ idx >= 0 }, {
+			total: total + 1;
+			pos: idx + nlen;
+			idx: :indexOfFrom(search: needle, from: pos, default: -1, caseSensitive: caseSensitive);
+		});
+		return total;
+	}
+
+	## First [search] occurrence replaced by [replacement].
+	Function of String is replaceFirst(Str is search, Str is replacement, Boolean is caseSensitive: true){
+		local Int is slen: search:length();
+		if({ slen == 0 }, {
+			return :copy();
+		});
+		local Int is idx: :indexOfFrom(search: search, from: 0, default: -1, caseSensitive: caseSensitive);
+		if({ idx < 0 }, {
+			return :copy();
+		});
+		return :substring(start: 0, end: idx) . replacement . :substring(start: idx + slen, end: :length());
+	}
+
+	## First [search] occurrence replaced using [replacer] `(Str is match, Int is start, Int is end) -> Str`.
+	Function of String is replaceWith(Str is search, Function of Str is replacer, Boolean is caseSensitive: true){
+		local Int is slen: search:length();
+		if({ slen == 0 }, {
+			return :copy();
+		});
+		local Int is idx: :indexOfFrom(search: search, from: 0, default: -1, caseSensitive: caseSensitive);
+		if({ idx < 0 }, {
+			return :copy();
+		});
+		local Str is m: :substring(start: idx, end: idx + slen);
+		local Str is rep: replacer(m, idx, idx + slen);
+		return :substring(start: 0, end: idx) . rep . :substring(start: idx + slen, end: :length());
 	}
 
 	## Every [search] occurrence replaced by [replacement].
 	##
 	## @param search: Sequence to replace.
 	## @param replacement: Replacement sequence.
+	## @param caseSensitive: Whether ASCII case must match.
 	## @return: The replaced copy.
-	Function of String is replaceAll(Str is search, Str is replacement){
+	Function of String is replaceAll(Str is search, Str is replacement, Boolean is caseSensitive: true){
 		local Int is slen: search:length();
 		if({ slen == 0 }, {
 			return :copy();
@@ -329,7 +462,7 @@ Class of Buf is Str{
 		local Int is pos: 0;
 		local Boolean is running: true;
 		while({ running }, {
-			local Int is idx: :indexOfFrom(search: search, from: pos, default: -1);
+			local Int is idx: :indexOfFrom(search: search, from: pos, default: -1, caseSensitive: caseSensitive);
 			if({ idx < 0 }, {
 				running: false;
 			}, {
@@ -341,31 +474,70 @@ Class of Buf is Str{
 		return out;
 	}
 
-	## Splits on [delimiter]; the trailing part is always present.
+	## Every [search] occurrence replaced using [replacer] `(Str is match, Int is start, Int is end) -> Str`.
+	Function of String is replaceAllWith(Str is search, Function of Str is replacer, Boolean is caseSensitive: true){
+		local Int is slen: search:length();
+		if({ slen == 0 }, {
+			return :copy();
+		});
+		local Int is total: :length();
+		local String is out: '';
+		local Int is pos: 0;
+		local Boolean is running: true;
+		while({ running }, {
+			local Int is idx: :indexOfFrom(search: search, from: pos, default: -1, caseSensitive: caseSensitive);
+			if({ idx < 0 }, {
+				running: false;
+			}, {
+				local Str is m: :substring(start: idx, end: idx + slen);
+				local Str is rep: replacer(m, idx, idx + slen);
+				out: out . :substring(start: pos, end: idx) . rep;
+				pos: idx + slen;
+			});
+		});
+		out: out . :substring(start: pos, end: total);
+		return out;
+	}
+
+	## Splits on [delimiter] (at most [limit] parts when `limit > 0`); the trailing part is always present.
 	##
 	## @param delimiter: Split boundary.
+	## @param limit: Maximum number of parts (`-1` for unlimited).
+	## @param caseSensitive: Whether ASCII case must match.
 	## @return: The parts.
-	Function of Array of String is split(Str is delimiter){
+	Function of Array of String is split(Str is delimiter, Int is limit: -1, Boolean is caseSensitive: true){
 		local Array of String is res: [];
 		local Int is slen: :length();
 		if({ slen == 0 }, {
 			return res;
 		});
+		if({ limit == 1 }, {
+			res:add(item: :copy());
+			return res;
+		});
 		local Int is dlen: delimiter:length();
 		if({ dlen == 0 }, {
 			local Int is i: 0;
-			repeat(count: slen, worker: {
+			while({ i < slen }, {
+				if({ limit > 0 && res:length() + 1 >= limit }, {
+					res:add(item: :substring(start: i, end: slen));
+					return res;
+				});
 				res:add(item: :substring(start: i, end: i + 1));
 				i: i + 1;
 			});
 			return res;
 		});
 		local Int is pos: 0;
-		local Int is idx: :indexOfFrom(search: delimiter, from: 0, default: -1);
+		local Int is idx: :indexOfFrom(search: delimiter, from: 0, default: -1, caseSensitive: caseSensitive);
 		while({ idx >= 0 }, {
+			if({ limit > 0 && res:length() + 1 >= limit }, {
+				res:add(item: :substring(start: pos, end: slen));
+				return res;
+			});
 			res:add(item: :substring(start: pos, end: idx));
 			pos: idx + dlen;
-			idx: :indexOfFrom(search: delimiter, from: pos, default: -1);
+			idx: :indexOfFrom(search: delimiter, from: pos, default: -1, caseSensitive: caseSensitive);
 		});
 		res:add(item: :substring(start: pos, end: slen));
 		return res;
