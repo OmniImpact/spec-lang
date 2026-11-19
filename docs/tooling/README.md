@@ -137,7 +137,7 @@ Build the linter binary, then lint one file or whole trees:
 bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
 
 bin/speclint -i path/to/file.spec
-bin/speclint -t examples -t tests
+bin/speclint -t examples -t test
 ```
 
 `-t` is a directory, repeatable or comma-separated, scanned recursively

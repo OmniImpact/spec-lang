@@ -8,8 +8,8 @@ Welcome to the **Spec** language documentation portal. Use the links below to ex
 
 ### 1. [Language Guide](language/README.md)
 Comprehensive reference for the Spec language syntax, typing rules, and execution semantics:
-- **[Syntax & Structure](language/README.md#language-syntax--structure)**: Classes, entrypoints, variable declarations, generic classes (`class Box of T`), default parameter values, capturing closures, and `using` imports.
-- **[Types & Literals](language/README.md#types--literals)**: `Int`, `Float`, `String` (double vs single quote), `Boolean`, `Any`, generic collections (`Array of T`, `Map of K to V`), map literals (`["k": v]`), and algebraic tagged union `Enum`s.
+- **[Syntax & Structure](language/README.md#language-syntax--structure)**: Classes, entrypoints, variable declarations, monomorphized generic classes (`Class is Box of T`), default parameter values, capturing closures, and `using` imports.
+- **[Types & Literals](language/README.md#types--literals)**: `Int`, `Byte`/`UInt8`/`UInt16`/`UInt32`/`UInt64`, `Float`, `Str`/`String` (double vs single quote), `Boolean`, `Any`, generic collections (`Array of T`, `List of T`, `Map of K to V`), map literals (`['k': v]`), and algebraic tagged union `Enum`s.
 - **[Never Null Philosophy](language/README.md#the-never-null-standard)**: Why `null` values do not exist in Spec, deferred initialization, and default fallbacks.
 - **[Control Flow & Iteration](language/README.md#control-flow--branching)**: `if` branching, pattern and predicate `match` with payload destructuring, and the decoupled iterator model (`Loops`).
 - **[Unblockable Concurrency Model](language/README.md#unblockable-concurrency--iteration-model)**: Decoupled iterators (`Loop`, `LoopControl`) and event-driven I/O (`InputHandler`).
@@ -18,13 +18,14 @@ Comprehensive reference for the Spec language syntax, typing rules, and executio
 
 ### 2. [Standard Library Packages](packages/README.md)
 Reference manual for the standard library implemented in Spec (`spec/lib/`):
-- **[`base:math`](packages/README.md#2-basemath)**: Trigonometry, rounding, random generation, and pure Spec helpers (`abs`, `min`, `max`, `clamp`).
-- **[`base:struct`](packages/README.md#3-basestruct)**: Dynamic array containers (`Array` with `map`, `fold`, `filter`, `each`) and 64-bucket hash tables (`Map` with `each`, literals, and bracket indexing).
+- **[`base:math`](packages/README.md#2-basemath)** & **`base:math:crypto`**: Trigonometry, rounding, random generation, pure Spec helpers (`abs`, `min`, `max`, `clamp`), plus SHA-256/HMAC/HKDF, X25519, ChaCha20-Poly1305, AES-128-GCM, and X.509 DER/PEM/CA verification.
+- **[`base:struct`](packages/README.md#3-basestruct)**: Dynamic arrays (`Array` with `map`, `fold`, `filter`, `each`), growing hash tables (`Map` with `each`, literals, and bracket indexing), and typed `List` (with `List of Byte` binary helpers).
 - **[`base:iterator`](packages/README.md#4-baseiterator)**: The decoupled iteration abstractions (`Loop`, `LoopControl`).
 - **[`base:data`](packages/README.md)**: Native JSON parser and serializer (`Json`).
-- **[`base:net`](packages/README.md)**: TCP client/server stream sockets (`Socket`).
+- **[`base:net`](packages/README.md)**: TCP sockets (`Socket`), `Url`, async HTTP/1.1 client (`Http`), and pure-Spec TLS 1.3 (`TlsClient`, `TlsVerifier`).
+- **[`base:cleo`](packages/README.md)**: Thread-safe terminal UI framework with bordered sections, live throbbers, and two-stage progress bars.
 - **[`base:audio`](packages/README.md)**: Raw PCM audio output (`Audio`).
-- **[`base:sys`](packages/README.md#5-basesys)**: Control-flow providers (`Conditional`, `Loops`), console and file I/O (`Output`, `Input`, `Stderr`, `File`), high-resolution timing and calendar dates (`Time`, `DateTime`), cross-platform paths (`Uri`), terminal escapes (`Ansi`), and process/thread execution (`Process`, `Parallel`, `Box`).
+- **[`base:sys`](packages/README.md#5-basesys)**: Control-flow providers (`Conditional`, `Loops`), console and file I/O (`Output`, `Input`, `Stderr`, `File`), OS CSPRNG (`Mem:randomBytes`), high-resolution timing and calendar dates (`Time`, `DateTime`), cross-platform paths (`Uri`), terminal escapes (`Ansi`), and structured concurrency (`ThreadScope`, `Task`, `Process`, `Parallel`, `Box`).
 
 ---
 
@@ -59,7 +60,7 @@ Tracks the evolution of the Spec compiler to full self-hosting in Spec.
 | 🛠️ **Tooling Guide** | Compiler, linter, editor plugins | [docs/tooling/README.md](tooling/README.md) |
 | 📜 **Code Style & SpecDoc** | Style guide and SpecDoc documentation standard | [docs/STYLE_GUIDE.md](STYLE_GUIDE.md) |
 | 📂 **Examples** | Demo programs | [examples/](../examples) |
-| 🧪 **Tests** | Positive test suites | [tests/](../tests) |
-| 🚫 **Negative tests** | Must-fail suites asserting diagnostics | [tests/negative/](../tests/negative) |
+| 🧪 **Library & Language Tests** | Unit and negative test suites | [test/](../test) |
+| 🔬 **Compiler Tests** | Lexer, parser, checker, optimizer, and LLVM IR suites | [testcompiler/](../testcompiler) |
 | 🗺️ **Alpha Roadmap** | 0.1 Alpha milestones and status | [ROADMAP-ALPHA.md](../ROADMAP-ALPHA.md) |
 | ⚙️ **Compiler Dev Guide** | Bootstrap ratchet and contributor discipline | [KNOWLEDGE-SPECDEV.md](../KNOWLEDGE-SPECDEV.md) |

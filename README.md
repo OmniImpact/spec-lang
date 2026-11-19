@@ -182,7 +182,7 @@ bin/spec -i examples/scope_as_demo/src/ScopeAsDemo.spec -s examples/scope_as_dem
 ./scope_demo
 
 # Run the pure-Spec HTTPS + TLS 1.3 weather forecast example
-bin/spec -i examples/weather/Weather.spec -o weather
+bin/spec -i examples/weather/src/Weather.spec -s examples/weather/src -o weather
 ./weather
 
 # Emit generated LLVM IR (optional)

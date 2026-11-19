@@ -366,7 +366,7 @@ Spec is **100% self-hosted**. Building it requires only `clang` with standard PO
 ./bootstrap.sh
 
 # Compile any Spec program:
-bin/spec -i examples/helloworld.spec -o helloworld
+bin/spec -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src -o helloworld
 ./helloworld --name "Spec Developer"
 
 # Run the strict whitespace and style linter:
@@ -391,18 +391,18 @@ rebuilds itself from its canonical LLVM IR (`bootstrap/spec.ll`) and scalar OS P
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and the held enum contract (`of`/`values`) dispatch through the class name; the enum identity contract (`name`/`ordinal`) lives on the shared Enum root, reflectively over the metadata floor | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
 | **Enums & matching** | Enhanced Enum algebraic sum types with payloads (used throughout the compiler's own AST); `match` with compile-time exhaustiveness, `default:` closures, and nested early returns | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
-| **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
-| **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
-| **Iteration & scopes** | Loop keywords retired; the `Loops` provider's bare `while`, `repeat`, and `until` inline to native LLVM IR basic blocks with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
+| **Generics** | `Class is Name of T`, monomorphized per concrete type argument (`GenericSpecializer`) | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
+| **Error handling** | Required defaults, callback pairs, `Result`-style ADTs, `SpecError` / `SpecErrorHandler` | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
+| **Iteration & scopes** | Loop keywords retired; the `Loops` provider's bare `while`, `repeat`, and `until` inline to native LLVM IR basic blocks with zero allocation and `Function of Boolean` early break/continue; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
 | **Conditionals** | `if({ ... }, { ... }, { ... })`, `match(on:, when:)`, and `match(when:)` calls through the `Conditional` as-import, inlined to native branches; match tables as arm literals | Primitive `if`/`else` | Primitive `if`/`else` | Primitive `if`/`else`, expression-form |
-| **Concurrency** | pthreads; unified shared mutable closure captures (`Box`); `Parallel:run`, `Parallel:sync`/`syncWith` (striped mutexes); async `File`/`Time` timers; atomics | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
-| **Build model** | Compiles directly to LLVM IR with a cached OS PAL object (`spec_runtime.o`); `specinit` scaffolder, `specbuild` manifest orchestrator, `specunit`, and `speclint`; self-hosted fixed point verified across Linux, macOS, and Windows | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
+| **Concurrency** | Structured concurrency via `ThreadScope:open` + `Task` over pthreads; unified shared mutable closure captures (`Box`); `Parallel:run`, `Parallel:sync`/`syncWith` (striped mutexes); async `File`/`Time`/`Http`; atomics | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
+| **Build model** | Compiles directly to LLVM IR with a cached OS PAL object (`spec_runtime.o` built from `spec/runtime/*.c`); `specinit`, `specbuild`, `specunit`, `speclint`, and `speclsp`; self-hosted fixed point verified across Linux, macOS, and Windows | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |
 
 Spec's distinguishing ground: the override discipline (`replace`/`merge`), never-null
 defaults, enforced exhaustiveness, a strict root contract (`Any`-typed values may
 only call root members — cast for the rest), and a compiler written in itself that
 reproduces its own LLVM IR and C PAL seeds byte-for-byte on every build. Its standard library (`base:data:Json`,
-`base:sys:Time`/`DateTime`, `base:net:Socket`, `base:audio:Audio`, `base:sys:Uri`) and
-CLI toolchain (`specinit`, `specbuild`, `specunit`, `speclint`) cover end-to-end systems
+`base:math:crypto`, `base:net` TCP/TLS 1.3/HTTP, `base:cleo`, `base:sys:Time`/`DateTime`, `base:audio:Audio`, `base:sys:Uri`) and
+CLI toolchain (`specinit`, `specbuild`, `specunit`, `speclint`, `speclsp`) cover end-to-end systems
 development with stricter compile-time guarantees than C.

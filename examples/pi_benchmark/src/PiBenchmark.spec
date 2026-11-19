@@ -47,10 +47,25 @@ Class is PiBenchmark{
 		});
 
 		line(clearScreen() . moveTo(row: 1, col: 1) . hideCursor());
-		local String is title: 'Monte Carlo Pi Benchmark';
-		line(bold() . color256(code: 51, text: '╔═ ' . title . ' ' . :stats:bar(width: 76 - title:length() - 5) . '╗'));
-		line(color256(code: 51, text: :stats:boxed(inner: 'Threads: ' . threads . '   Points: ' . points . '   Refresh: ' . refreshMs . 'ms', width: 76)));
-		line(bold() . color256(code: 51, text: '╚' . :stats:bar(width: 74) . '╝'));
+		local Cleo is hdrUi: Cleo:init(
+			title: ' pi_benchmark ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is hdrSec: hdrUi:addSection(
+			title: ' Configuration ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		hdrSec:addLine(text: 'Threads: ' . threads . ' · Points: ' . points, color: CleoColor:ansi(code: 252), rightText: 'Refresh: ' . refreshMs . ' ms');
+		hdrUi:flushFinal();
 
 		:drawDomain(threads: threads);
 

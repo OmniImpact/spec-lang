@@ -50,7 +50,9 @@ From zero to complete toolchain:
 ./bootstrap.sh && \
 bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild && \
 bin/specbuild utilities/specunit/specunit.json && \
-bin/specbuild utilities/speclint/speclint.json
+bin/specbuild utilities/speclint/speclint.json && \
+bin/specbuild utilities/specinit/specinit.json && \
+bin/specbuild utilities/speclsp/speclsp.json
 ```
 
 *(Note: SpecBuild manifests are also provided for `spec` at [`spec/spec.json`](../spec/spec.json) and `specbuild` at [`utilities/specbuild/specbuild.json`](../utilities/specbuild/specbuild.json) for convenient subsequent rebuilds.)*
@@ -59,5 +61,5 @@ bin/specbuild utilities/speclint/speclint.json
 
 Run the full regression test suite:
 ```bash
-bin/specunit -s bin/spec -t examples -t tests -t testllvm
+bin/specunit -s bin/spec -t test -t testcompiler
 ```

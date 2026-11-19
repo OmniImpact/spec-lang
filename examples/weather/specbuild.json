@@ -1,0 +1,16 @@
+{
+  "name": "weather",
+  "version": "0.1.0",
+  "source": "src/Weather.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/weather",
+  "tests": {
+    "runner": "specunit",
+    "dirs": [
+      "tests"
+    ]
+  }
+}

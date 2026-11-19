@@ -134,4 +134,4 @@ Pure-Spec reference counting (`base:sysinternal:Arc`) with per-scope thread-loca
 - `bin/spec -i file.spec -o binary`; `--emit-llvm out.ll`; `--emit-runtime out.c`; `--no-opt`; `--debug`; `--quiet`. Linting: `bin/speclint -i file.spec` (standalone utility).
 
 - Root and floor classes `String` `Buf` `Dir` `Stringable` `Any` `CliArgs` `Arc` `Pool` `Arena` `Intern` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
-- Suite: `bin/specunit -s bin/spec -t examples -t tests -t testllvm` (build the runner first: `bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit`); sanitized wave: KNOWLEDGE-SPECDEV.md §4a.
+- Suite: `bin/specunit -s bin/spec -t test -t testcompiler` (build the runner first: `bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit`); sanitized wave: KNOWLEDGE-SPECDEV.md §4a.

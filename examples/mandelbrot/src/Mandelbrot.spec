@@ -104,9 +104,25 @@ Class is Mandelbrot{
 			});
 		});
 
-		line(bold() . color256(code: 51, text: '╔' . :repeatBar(count: width) . '╗'));
-		line(bold() . color256(code: 51, text: :centerTitle(title: 'Spec 256-Color Mandelbrot Set Renderer', width: width)));
-		line(bold() . color256(code: 51, text: '╚' . :repeatBar(count: width) . '╝'));
+		local Cleo is hdrUi: Cleo:init(
+			title: ' mandelbrot ',
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237)
+		);
+		local CleoSection is hdrSec: hdrUi:addSection(
+			title: ' 256-Color Mandelbrot Set Renderer ',
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
+		hdrSec:addLine(text: 'Mode: ' . mode . ' · Resolution: ' . width . ' x ' . height, color: CleoColor:ansi(code: 252), rightText: 'maxIter ' . maxIter);
+		hdrUi:flushFinal();
 
 		if(check: { mode == 'both' || mode == 'shaded' }, then: {
 			line(color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));

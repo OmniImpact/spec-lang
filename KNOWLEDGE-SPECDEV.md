@@ -137,7 +137,7 @@ check, and emit the NEXT generation's sources. Consequences:
 
   ```
   bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
-  bin/specunit -s bin/spec -t examples -t tests
+  bin/specunit -s bin/spec -t test -t testcompiler
   ```
 
   `-s` is the compiler executable the tests are compiled with (default
@@ -240,7 +240,7 @@ check, and emit the NEXT generation's sources. Consequences:
       -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
   ASAN_OPTIONS=detect_leaks=0 \
   UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
-      bin/specunit-asan -s bin/spec-asan -t examples -t tests -t testllvm
+      bin/specunit-asan -s bin/spec-asan -t test -t testcompiler -j 2
   ```
 
   Leak detection is OFF by default: strings are refcounted and
@@ -265,7 +265,7 @@ check, and emit the NEXT generation's sources. Consequences:
   ```
   bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
   bin/speclint -i path/to/file.spec        # one file (the old `spec --lint`)
-  bin/speclint -t examples -t tests        # trees, recursive, repeatable
+  bin/speclint -t examples -t test         # trees, recursive, repeatable
   bin/speclint -a -i file.spec             # the instance-model audit
   ```
 
@@ -278,7 +278,7 @@ check, and emit the NEXT generation's sources. Consequences:
   and tab-indented alike) against the tab indent of the line that
   opened its block, with statement-indent tracking across operator
   continuations. The whole tree lints clean: `bin/speclint -t examples
-  -t tests -t spec -t utilities` reports zero warnings.
+  -t test -t testcompiler -t spec -t utilities` reports zero warnings.
 - **`utilities/speclint/` layout**: `SpecLint.spec` (the entry program
   + `LintTally`), `Linter.spec` (the rules: indentation, AST idioms,
   and the audit), `LintIssue.spec`. `tests/TestSpeclint.spec` is the

@@ -85,6 +85,15 @@ Class is Weather{
 		});
 	}
 
+	## Formats a single NWS forecast period object as a summary line.
+	Function of String is formatPeriod(Map is p){
+		local String is name: Json:getString(obj: p, key: 'name', default: '?');
+		local Int is temp: Json:getInt(obj: p, key: 'temperature', default: 0);
+		local String is unit: Json:getString(obj: p, key: 'temperatureUnit', default: 'F');
+		local String is shortFc: Json:getString(obj: p, key: 'shortForecast', default: '');
+		return name . ': ' . (temp as String) . '°' . unit . ' · ' . shortFc;
+	}
+
 	Function is populateForecast(String is rawJson, CleoSection is fcSec){
 		local Any is rootAny: Json:parse(text: rawJson);
 		if({ Json:hasError() }, {
@@ -102,14 +111,10 @@ Class is Weather{
 		local Int is i: 0;
 		while({ i < limit }, {
 			local Map is p: Json:getObjectAt(arr: periods, index: i);
-			local String is name: Json:getString(obj: p, key: 'name', default: '?');
-			local Int is temp: Json:getInt(obj: p, key: 'temperature', default: 0);
-			local String is unit: Json:getString(obj: p, key: 'temperatureUnit', default: 'F');
 			local String is wind: Json:getString(obj: p, key: 'windSpeed', default: '');
 			local String is dir: Json:getString(obj: p, key: 'windDirection', default: '');
-			local String is shortFc: Json:getString(obj: p, key: 'shortForecast', default: '');
 			fcSec:addLine(
-				text: name . ': ' . (temp as String) . '°' . unit . ' · ' . shortFc,
+				text: :formatPeriod(p: p),
 				color: CleoColor:ansi(code: 252),
 				rightText: 'Wind ' . wind . ' ' . dir
 			);
