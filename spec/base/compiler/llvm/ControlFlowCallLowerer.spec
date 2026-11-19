@@ -483,15 +483,33 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			}
 		], default: {});
 		if({ returnsBool }, {
+			local String is _lrtmp: b:nextTmp();
+			local String is loopRetSlot: '%loop_ret_' . (b:tmpCounter as String);
+			local String is loopRetEnd: b:nextLabel(prefix: 'loop_ret');
+			b:emit(inst: IrInst:Alloca(slot: loopRetSlot, ty: IrType:I1));
+			b:emit(inst: IrInst:Store(slot: loopRetSlot, val: '1', ty: IrType:I1));
+			local String is prevRetSlot: b:inlineReturnSlot;
+			local String is prevRetEnd: b:inlineReturnEndLbl;
+			local IrType is prevRetTy: b:inlineReturnTy;
+			b:inlineReturnSlot: loopRetSlot;
+			b:inlineReturnEndLbl: loopRetEnd;
+			b:inlineReturnTy: IrType:I1;
 			local String is contVal: :lowerBlockExprVal(b: b, blkExpr: bodyExpr, expectedTy: IrType:I1);
+			b:inlineReturnSlot: prevRetSlot;
+			b:inlineReturnEndLbl: prevRetEnd;
+			b:inlineReturnTy: prevRetTy;
 			if({ !b:blkTerminated }, {
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
 				if({ contVal != '' }, {
-					b:terminate(inst: IrInst:CondBr(cond: contVal, thenLabel: contLbl, elseLabel: breakLbl));
-				}, {
-					b:terminate(inst: IrInst:Br(target: contLbl));
+					b:emit(inst: IrInst:Store(slot: loopRetSlot, val: contVal, ty: IrType:I1));
 				});
+				b:terminate(inst: IrInst:Br(target: loopRetEnd));
 			});
+			local IrBlock is retBlk: b:curFn:addBlock(label: loopRetEnd);
+			b:switchBlock(blk: retBlk);
+			local String is finalCont: b:nextTmp();
+			b:emit(inst: IrInst:Load(dst: finalCont, slot: loopRetSlot, ty: IrType:I1));
+			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
+			b:terminate(inst: IrInst:CondBr(cond: finalCont, thenLabel: contLbl, elseLabel: breakLbl));
 		}, {
 			:lowerBlockExpr(b: b, blkExpr: bodyExpr);
 			if({ !b:blkTerminated }, {

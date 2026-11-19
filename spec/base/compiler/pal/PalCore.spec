@@ -552,6 +552,27 @@ void spec_pal_format_float(double v, long long buf_addr) {
     if (buf) snprintf(buf, 64, "%.17g", v);
 }
 
+#ifdef _WIN32
+extern unsigned char __stdcall SystemFunction036(void* buf, unsigned long len);
+#endif
+
+long long spec_pal_random_bytes(long long dst_addr, long long len) {
+    if (dst_addr == 0 || len <= 0) return -1;
+    unsigned char* dst = (unsigned char*)(intptr_t)dst_addr;
+#ifdef _WIN32
+    return SystemFunction036(dst, (unsigned long)len) ? 0 : -1;
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+    arc4random_buf(dst, (size_t)len);
+    return 0;
+#else
+    FILE* f = fopen("/dev/urandom", "rb");
+    if (!f) return -1;
+    size_t got = fread(dst, 1, (size_t)len, f);
+    fclose(f);
+    return (got == (size_t)len) ? 0 : -1;
+#endif
+}
+
 _Atomic int g_spec_active_threads = 0;
 
 static inline void spec_thread_enter(void) {

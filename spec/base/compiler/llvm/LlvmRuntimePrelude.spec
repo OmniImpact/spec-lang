@@ -636,6 +636,7 @@ define internal ptr @spec_string_intern(ptr %c) nounwind {
   ret ptr %s
 }
 declare void @spec_pal_format_float(double, i64) nounwind
+declare i64 @spec_pal_random_bytes(i64, i64) nounwind
 declare i64 @spec_pal_slab_alloc() nounwind
 declare void @spec_pal_slab_free(i64) nounwind
 declare i64 @spec_pal_vm_alloc(i64) nounwind

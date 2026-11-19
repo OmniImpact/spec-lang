@@ -15,6 +15,10 @@ Enum of String is Primitive {
 	BOOLEAN: 'Boolean',
 	STRING: 'String',
 	BYTE: 'Byte',
+	UINT8: 'UInt8',
+	UINT16: 'UInt16',
+	UINT32: 'UInt32',
+	UINT64: 'UInt64',
 	VOID: 'Void',
 	ANY: 'Any',
 	FUNCTION: 'Function'

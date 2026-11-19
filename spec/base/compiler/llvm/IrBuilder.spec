@@ -115,15 +115,26 @@ Class is IrBuilder{
 	}
 
 	Function of IrType is irTypeFor(String is specType){
-		if({ specType == 'Int' || specType == 'Byte' }, { return IrType:I64; });
+		if({ specType == 'Int' || specType == 'Byte' || specType == 'UInt8' || specType == 'UInt16' || specType == 'UInt32' || specType == 'UInt64' }, { return IrType:I64; });
 		if({ specType == 'Float' }, { return IrType:F64; });
 		if({ specType == 'Boolean' }, { return IrType:I1; });
 		if({ specType == 'Void' || specType == '' }, { return IrType:Void; });
 		return IrType:Ptr;
 	}
 
+	Function of Boolean is isUnsignedSpecType(String is specType){
+		return specType == 'UInt8' || specType == 'UInt16' || specType == 'UInt32' || specType == 'UInt64';
+	}
+
+	Function of Int is unsignedMaskFor(String is specType){
+		if({ specType == 'UInt8' }, { return 255; });
+		if({ specType == 'UInt16' }, { return 65535; });
+		if({ specType == 'UInt32' }, { return 4294967295; });
+		return 0;
+	}
+
 	Function of Boolean is isArcSpecType(String is specType){
-		if({ :isUnmanagedClass || specType == '' || specType == 'Void' || specType == 'Any' || specType == 'Int' || specType == 'Float' || specType == 'Boolean' || specType == 'Byte' || :curClassTypeParams:has(key: specType) }, {
+		if({ :isUnmanagedClass || specType == '' || specType == 'Void' || specType == 'Any' || specType == 'Int' || specType == 'Float' || specType == 'Boolean' || specType == 'Byte' || specType == 'UInt8' || specType == 'UInt16' || specType == 'UInt32' || specType == 'UInt64' || :curClassTypeParams:has(key: specType) }, {
 			return false;
 		});
 		return true;
@@ -292,7 +303,7 @@ Class is IrBuilder{
 		if({ :bindings:isSysinternal(cls: cls) }, {
 			return !:hasMethodBodies(cls: cls);
 		});
-		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
+		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
 		return false;
 	}
 
@@ -3605,6 +3616,13 @@ Class is IrBuilder{
 				local String is v: :lowerExpr(expr: operand);
 				local String is dst: :nextTmp();
 				:emit(inst: IrInst:UnaryOp(dst: dst, op: op, operand: v, ty: ty));
+				if({ op == '~' && :unsignedMaskFor(specType: expr:resolvedType) != 0 }, {
+					local String is maskC: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: maskC, value: :unsignedMaskFor(specType: expr:resolvedType)));
+					local String is mDst: :nextTmp();
+					:emit(inst: IrInst:BinOp(dst: mDst, op: '&', lhs: dst, rhs: maskC, ty: IrType:I64));
+					return mDst;
+				});
 				return dst;
 			},
 			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
@@ -3675,12 +3693,31 @@ Class is IrBuilder{
 						if({ l == '0' }, { l: 'null'; });
 						if({ r == '0' }, { r: 'null'; });
 					});
-					:emit(inst: IrInst:Cmp(dst: dst, op: op, lhs: l, rhs: r, ty: cmpTy));
+					local String is cmpOp: op;
+					if({ cmpTy == IrType:I64 && (op == '<' || op == '<=' || op == '>' || op == '>=') && (:isUnsignedSpecType(specType: left:resolvedType) || :isUnsignedSpecType(specType: right:resolvedType)) }, {
+						cmpOp: 'u' . op;
+					});
+					:emit(inst: IrInst:Cmp(dst: dst, op: cmpOp, lhs: l, rhs: r, ty: cmpTy));
 					return dst;
 				});
 				local IrType is ty: :irTypeFor(specType: expr:resolvedType);
 				if({ ty == IrType:Void }, { ty: IrType:I64; });
-				:emit(inst: IrInst:BinOp(dst: dst, op: op, lhs: l, rhs: r, ty: ty));
+				local String is binOp: op;
+				if({ ty == IrType:I64 && (:isUnsignedSpecType(specType: expr:resolvedType) || :isUnsignedSpecType(specType: left:resolvedType)) }, {
+					if({ op == '>>' }, { binOp: '>>>'; });
+					if({ op == '/' }, { binOp: 'u/'; });
+					if({ op == '%' }, { binOp: 'u%'; });
+				});
+				:emit(inst: IrInst:BinOp(dst: dst, op: binOp, lhs: l, rhs: r, ty: ty));
+				if({ :unsignedMaskFor(specType: expr:resolvedType) != 0 }, {
+					if({ op == '+' || op == '-' || op == '*' || op == '<<' }, {
+						local String is maskC: :nextTmp();
+						:emit(inst: IrInst:ConstInt(dst: maskC, value: :unsignedMaskFor(specType: expr:resolvedType)));
+						local String is mDst: :nextTmp();
+						:emit(inst: IrInst:BinOp(dst: mDst, op: '&', lhs: dst, rhs: maskC, ty: IrType:I64));
+						return mDst;
+					});
+				});
 				return dst;
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
@@ -3776,6 +3813,29 @@ Class is IrBuilder{
 					local String is dstByte: :nextTmp();
 					:emit(inst: IrInst:IrCall(dst: dstByte, hasDst: true, retType: IrType:I64, callee: '__spec_check_byte', argTypes: [IrType:I64], args: [bv]));
 					return dstByte;
+				});
+				if({ :isUnsignedSpecType(specType: target) }, {
+					local String is uv: v;
+					if({ inner:resolvedType == 'String' || inner:resolvedType == 'Str' }, {
+						local String is base10u: :nextTmp();
+						:emit(inst: IrInst:ConstInt(dst: base10u, value: 10));
+						local String is def0u: :nextTmp();
+						:emit(inst: IrInst:ConstInt(dst: def0u, value: 0));
+						local String is parsedU: :nextTmp();
+						:emit(inst: IrInst:IrCall(dst: parsedU, hasDst: true, retType: IrType:I64, callee: 'Str_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [v, base10u, def0u]));
+						uv: parsedU;
+					}, {
+						uv: :castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64);
+					});
+					local Int is uMaskVal: :unsignedMaskFor(specType: target);
+					if({ uMaskVal != 0 }, {
+						local String is uMask: :nextTmp();
+						:emit(inst: IrInst:ConstInt(dst: uMask, value: uMaskVal));
+						local String is dstU: :nextTmp();
+						:emit(inst: IrInst:BinOp(dst: dstU, op: '&', lhs: uv, rhs: uMask, ty: IrType:I64));
+						return dstU;
+					});
+					return uv;
 				});
 				if({ (inner:resolvedType == 'String' || inner:resolvedType == 'Str') && target == 'Int' }, {
 					local String is base10: :nextTmp();

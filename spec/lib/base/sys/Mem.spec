@@ -223,4 +223,10 @@ Class is Mem{
 	Function of Int is callCatching(Function is action){
 		return base:sysinternal:Pool:callCatching(action: action);
 	}
+
+	## Fills [len] bytes at raw memory address [dstAddr] from the OS CSPRNG.
+	## Returns 0 on success, -1 on failure.
+	Function of Int is randomBytes(Int is dstAddr, Int is len){
+		return base:sysinternal:Mem:randomBytes(dstAddr: dstAddr, len: len);
+	}
 }

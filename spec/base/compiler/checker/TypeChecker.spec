@@ -217,6 +217,14 @@ Class is TypeChecker{
 		return Primitive:of(t) != Primitive:NONE;
 	}
 
+	Function of Boolean is isUnsignedInt(String is t){
+		return t == 'UInt8' || t == 'UInt16' || t == 'UInt32' || t == 'UInt64';
+	}
+
+	Function of Boolean is isIntLike(String is t){
+		return t == Primitive:INT:value() || t == 'Byte' || :isUnsignedInt(t: t);
+	}
+
 	## Formats a [Type] descriptor for a variable or field (preserving
 	## "Function:RetType").
 	##
@@ -3136,12 +3144,24 @@ Class is TypeChecker{
 						res: Primitive:BOOLEAN:value();
 					},
 					['+', '-', '*', '/', '%']: {
-						res: if({ leftT == 'Float' || rightT == 'Float' }, { 'Float' }, { Primitive:INT:value() });
+						if({ leftT == 'Float' || rightT == 'Float' }, {
+							res: 'Float';
+						}, {
+							if({ :isUnsignedInt(t: leftT) }, {
+								res: leftT;
+							}, {
+								if({ :isUnsignedInt(t: rightT) }, {
+									res: rightT;
+								}, {
+									res: Primitive:INT:value();
+								});
+							});
+						});
 					},
 					['&', '|', '^', '<<', '>>']: {
-						res: Primitive:INT:value();
-						if({ (leftT != '' && leftT != 'Any' && leftT != Primitive:INT:value()) ||
-							(rightT != '' && rightT != 'Any' && rightT != Primitive:INT:value()) }, {
+						res: if({ :isUnsignedInt(t: leftT) }, { leftT }, { if({ :isUnsignedInt(t: rightT) }, { rightT }, { Primitive:INT:value() }) });
+						if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
+							(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
 							local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
 							:addError(line: :currentLine, msg: msg);
 						});
@@ -3212,12 +3232,12 @@ Class is TypeChecker{
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
 				local String is innerT: :inferExpressionType(expr: operand);
-				if({ op == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
+				if({ op == '~' && innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
 					local String is msg: :errText:errBitwiseComplementInt(innerT: innerT);
 					:addError(line: :currentLine, msg: msg);
 				});
 				if({ op == '++' || op == '--' || op == 'post++' || op == 'post--' }, {
-					if({ innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
+					if({ innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
 						local String is msg: :errText:errOperatorRequiresInt(op: op, innerT: innerT);
 						:addError(line: :currentLine, msg: msg);
 					});
@@ -4788,13 +4808,16 @@ Class is TypeChecker{
 			return true;
 		});
 		if({ target == Primitive:INT:value() }, {
-			return src == 'Float' || src == 'String' || src == 'Str' || src == 'Byte';
+			return src == 'Float' || src == 'String' || src == 'Str' || src == 'Byte' || :isUnsignedInt(t: src);
 		});
 		if({ target == 'Float' }, {
-			return src == Primitive:INT:value();
+			return :isIntLike(t: src);
 		});
 		if({ target == 'Byte' }, {
-			return src == Primitive:INT:value();
+			return :isIntLike(t: src);
+		});
+		if({ :isUnsignedInt(t: target) }, {
+			return :isIntLike(t: src) || src == 'Float' || src == 'String' || src == 'Str';
 		});
 		if({ target == 'String' || target == 'Str' }, {
 			return true;

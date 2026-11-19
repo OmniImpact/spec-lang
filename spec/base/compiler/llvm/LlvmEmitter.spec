@@ -56,7 +56,7 @@ Class is LlvmEmitter{
 			'spec_buf_destroy', 'spec_buf_to_cstring', 'spec_string_copy', 'spec_string_concat', 'spec_type_name',
 			'spec_math_log', 'spec_math_log2', 'spec_math_log10', 'spec_fast_random_seed', 'spec_math_random',
 			'spec_time_monotonic_ns', 'spec_atomic_add', 'spec_atomic_put', 'spec_atomic_get',
-			'spec_cli_args_map', 'spec_process_raw_args'
+			'spec_cli_args_map', 'spec_process_raw_args', 'spec_pal_random_bytes'
 		];
 		local Int is pi: 0;
 		while({ pi < preludeSyms:length() }, {
@@ -574,6 +574,10 @@ Class is LlvmEmitter{
 				if({ op == '<=' }, { ipred: 'sle'; });
 				if({ op == '>' }, { ipred: 'sgt'; });
 				if({ op == '>=' }, { ipred: 'sge'; });
+				if({ op == 'u<' }, { ipred: 'ult'; });
+				if({ op == 'u<=' }, { ipred: 'ule'; });
+				if({ op == 'u>' }, { ipred: 'ugt'; });
+				if({ op == 'u>=' }, { ipred: 'uge'; });
 				return dst . ' = icmp ' . ipred . ' ' . t . ' ' . lhs . ', ' . rhs;
 			},
 			IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
@@ -686,11 +690,14 @@ Class is LlvmEmitter{
 		if({ op == '*' }, { return 'mul'; });
 		if({ op == '/' }, { return 'sdiv'; });
 		if({ op == '%' }, { return 'srem'; });
+		if({ op == 'u/' }, { return 'udiv'; });
+		if({ op == 'u%' }, { return 'urem'; });
 		if({ op == '&' || op == '&&' }, { return 'and'; });
 		if({ op == '|' || op == '||' }, { return 'or'; });
 		if({ op == '^' }, { return 'xor'; });
 		if({ op == '<<' }, { return 'shl'; });
 		if({ op == '>>' }, { return 'ashr'; });
+		if({ op == '>>>' }, { return 'lshr'; });
 		return 'add';
 	}
 }

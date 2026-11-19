@@ -63,4 +63,5 @@ Class is Mem{
 	Function of Int is tlsGetI64(Int is slot);
 	Function is tlsSetI64(Int is slot, Int is val);
 	Function of Boolean is isMultithreaded();
+	Function of Int is randomBytes(Int is dstAddr, Int is len);
 }

@@ -46,4 +46,40 @@ Class is List of T{
 	replace Function of String is toString(){
 	}
 
+	## Appends all bytes of [other] into this [Byte] buffer.
+	Function is appendBytes(List of Byte is other){
+	}
+
+	## Appends [count] bytes starting at [start] from [other] into this [Byte] buffer.
+	Function is appendRange(List of Byte is other, Int is start, Int is count){
+	}
+
+	## Returns a new [List of Byte] containing bytes [start..end).
+	Function of List of Byte is slice(Int is start, Int is end){
+	}
+
+	## Appends a 16-bit big-endian unsigned integer.
+	Function is pushU16BE(Int is v){
+	}
+
+	## Appends a 32-bit big-endian unsigned integer.
+	Function is pushU32BE(Int is v){
+	}
+
+	## Appends a 32-bit little-endian unsigned integer.
+	Function is pushU32LE(Int is v){
+	}
+
+	## Reads a 16-bit big-endian unsigned integer at [offset], or [default] if out of bounds.
+	Function of Int is readU16BE(Int is offset, Int is default: 0){
+	}
+
+	## Reads a 32-bit big-endian unsigned integer at [offset], or [default] if out of bounds.
+	Function of Int is readU32BE(Int is offset, Int is default: 0){
+	}
+
+	## Reads a 32-bit little-endian unsigned integer at [offset], or [default] if out of bounds.
+	Function of Int is readU32LE(Int is offset, Int is default: 0){
+	}
+
 }

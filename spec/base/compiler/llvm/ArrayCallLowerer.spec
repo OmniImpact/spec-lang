@@ -51,8 +51,9 @@ Class of CallLowerer is ArrayCallLowerer{
 		if({ isList }, {
 			match(on: call:name, when: [
 				['length', 'clear', 'isEmpty', 'toString', 'pop']: { ok: true; },
-				['get', 'push', 'appendString']: { ok: argc >= 1; },
-				'set': { ok: argc >= 2; }
+				['get', 'push', 'appendString', 'appendBytes', 'pushU16BE', 'pushU32BE', 'pushU32LE', 'readU16BE', 'readU32BE', 'readU32LE']: { ok: argc >= 1; },
+				['set', 'slice']: { ok: argc >= 2; },
+				'appendRange': { ok: argc >= 3; }
 			]);
 		}, {
 			match(on: call:name, when: [
@@ -160,6 +161,51 @@ Class of CallLowerer is ArrayCallLowerer{
 					if({ b:irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
 						return b:castIfNeeded(val: dst, fromTy: IrType:I64, toTy: IrType:Ptr);
 					});
+					return dst;
+				});
+				if({ call:name == 'appendBytes' }, {
+					local NamedArg is na0: call:args:get(index: 0);
+					local String is ov: b:lowerExpr(expr: na0:value);
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_byteBufAppendBytes', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, ov]));
+					return '0';
+				});
+				if({ call:name == 'appendRange' }, {
+					local NamedArg is na0: call:args:get(index: 0);
+					local NamedArg is na1: call:args:get(index: 1);
+					local NamedArg is na2: call:args:get(index: 2);
+					local String is ov: b:lowerExpr(expr: na0:value);
+					local String is sv: b:lowerExpr(expr: na1:value);
+					local String is cv: b:lowerExpr(expr: na2:value);
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_byteBufAppendRange', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64, IrType:I64], args: ['null', aRecv, ov, sv, cv]));
+					return '0';
+				});
+				if({ call:name == 'slice' }, {
+					local NamedArg is na0: call:args:get(index: 0);
+					local NamedArg is na1: call:args:get(index: 1);
+					local String is sv: b:lowerExpr(expr: na0:value);
+					local String is ev: b:lowerExpr(expr: na1:value);
+					local String is dst: b:nextTmp();
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_byteBufSlice', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:I64], args: ['null', aRecv, sv, ev]));
+					return dst;
+				});
+				if({ call:name == 'pushU16BE' || call:name == 'pushU32BE' || call:name == 'pushU32LE' }, {
+					local NamedArg is na0: call:args:get(index: 0);
+					local String is vv: b:castIfNeeded(val: b:lowerExpr(expr: na0:value), fromTy: b:irTypeFor(specType: na0:value:resolvedType), toTy: IrType:I64);
+					local String is calleeName: if({ call:name == 'pushU16BE' }, { 'Vector_byteBufPushU16BE' }, { if({ call:name == 'pushU32BE' }, { 'Vector_byteBufPushU32BE' }, { 'Vector_byteBufPushU32LE' }) });
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: calleeName, argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', aRecv, vv]));
+					return '0';
+				});
+				if({ call:name == 'readU16BE' || call:name == 'readU32BE' || call:name == 'readU32LE' }, {
+					local NamedArg is na0: call:args:get(index: 0);
+					local String is ov: b:lowerExpr(expr: na0:value);
+					local String is defV: '0';
+					if({ call:args:length() >= 2 }, {
+						local NamedArg is na1: call:args:get(index: 1);
+						defV: b:castIfNeeded(val: b:lowerExpr(expr: na1:value), fromTy: b:irTypeFor(specType: na1:value:resolvedType), toTy: IrType:I64);
+					});
+					local String is calleeName: if({ call:name == 'readU16BE' }, { 'Vector_byteBufReadU16BE' }, { if({ call:name == 'readU32BE' }, { 'Vector_byteBufReadU32BE' }, { 'Vector_byteBufReadU32LE' }) });
+					local String is dst: b:nextTmp();
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: calleeName, argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:I64], args: ['null', aRecv, ov, defV]));
 					return dst;
 				});
 			});

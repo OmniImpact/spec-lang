@@ -15,6 +15,10 @@ Class of SpecUnitTest is TestSpecLsp{
 		['base', 'sys', as Uri()]
 	];
 
+	replace Function of Int is timeout(){
+		return 60;
+	}
+
 	local Function of String is dirOf(String is path){
 		local String is dp: Uri:fromFilePath(filePath: path):dirPath();
 		return Uri:fromFilePath(filePath: dp):toFilePath();

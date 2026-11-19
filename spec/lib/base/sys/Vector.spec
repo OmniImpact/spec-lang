@@ -548,4 +548,135 @@ Class is Vector{
 		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
 		return Mem:loadByte(ptr: data, byteOffset: newLen);
 	}
+
+	## Appends all bytes of [other] into byte buffer [b].
+	Function is byteBufAppendBytes(Any is b, Any is other){
+		local Int is addr: Mem:objToAddr(obj: b);
+		local Int is oAddr: Mem:objToAddr(obj: other);
+		if({ addr == 0 || oAddr == 0 }, { return; });
+		local Int is n: Mem:loadI64(ptr: oAddr, byteOffset: 8);
+		if({ n <= 0 }, { return; });
+		local Int is oData: Mem:loadI64(ptr: oAddr, byteOffset: 0);
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		local Int is cap: Mem:loadI64(ptr: addr, byteOffset: 16);
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		if({ len + n > cap }, {
+			if({ cap == 0 }, { cap: 16; });
+			while({ cap < len + n }, { cap: cap * 2; });
+			data: Mem:realloc(ptr: data, bytes: cap);
+			Mem:storeI64(ptr: addr, byteOffset: 0, val: data);
+			Mem:storeI64(ptr: addr, byteOffset: 16, val: cap);
+		});
+		if({ addr == oAddr }, {
+			Mem:move(dst: data + len, src: data, bytes: n);
+		}, {
+			Mem:copy(dst: data + len, src: oData, bytes: n);
+		});
+		Mem:storeI64(ptr: addr, byteOffset: 8, val: len + n);
+	}
+
+	## Appends [count] bytes starting at [start] from [other] into byte buffer [b].
+	Function is byteBufAppendRange(Any is b, Any is other, Int is start, Int is count){
+		local Int is addr: Mem:objToAddr(obj: b);
+		local Int is oAddr: Mem:objToAddr(obj: other);
+		if({ addr == 0 || oAddr == 0 || count <= 0 }, { return; });
+		local Int is oLen: Mem:loadI64(ptr: oAddr, byteOffset: 8);
+		local Int is s: if({ start < 0 }, { 0 }, { start });
+		if({ s >= oLen }, { return; });
+		local Int is n: if({ s + count > oLen }, { oLen - s }, { count });
+		if({ n <= 0 }, { return; });
+		local Int is oData: Mem:loadI64(ptr: oAddr, byteOffset: 0);
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		local Int is cap: Mem:loadI64(ptr: addr, byteOffset: 16);
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		if({ len + n > cap }, {
+			if({ cap == 0 }, { cap: 16; });
+			while({ cap < len + n }, { cap: cap * 2; });
+			data: Mem:realloc(ptr: data, bytes: cap);
+			Mem:storeI64(ptr: addr, byteOffset: 0, val: data);
+			Mem:storeI64(ptr: addr, byteOffset: 16, val: cap);
+		});
+		if({ addr == oAddr }, {
+			Mem:move(dst: data + len, src: data + s, bytes: n);
+		}, {
+			Mem:copy(dst: data + len, src: oData + s, bytes: n);
+		});
+		Mem:storeI64(ptr: addr, byteOffset: 8, val: len + n);
+	}
+
+	## Returns a new byte buffer containing bytes [start..end) of [b].
+	Function of Any is byteBufSlice(Any is b, Int is start, Int is end){
+		local [Byte] is out;
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return out; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		local Int is s: if({ start < 0 }, { 0 }, { start });
+		local Int is e: if({ end > len }, { len }, { end });
+		if({ e > s }, {
+			:byteBufAppendRange(b: out, other: b, start: s, count: e - s);
+		});
+		return out;
+	}
+
+	## Appends a 16-bit big-endian unsigned integer to byte buffer [b].
+	Function is byteBufPushU16BE(Any is b, Int is v){
+		:byteBufPush(b: b, v: (v >> 8) & 255);
+		:byteBufPush(b: b, v: v & 255);
+	}
+
+	## Appends a 32-bit big-endian unsigned integer to byte buffer [b].
+	Function is byteBufPushU32BE(Any is b, Int is v){
+		:byteBufPush(b: b, v: (v >> 24) & 255);
+		:byteBufPush(b: b, v: (v >> 16) & 255);
+		:byteBufPush(b: b, v: (v >> 8) & 255);
+		:byteBufPush(b: b, v: v & 255);
+	}
+
+	## Appends a 32-bit little-endian unsigned integer to byte buffer [b].
+	Function is byteBufPushU32LE(Any is b, Int is v){
+		:byteBufPush(b: b, v: v & 255);
+		:byteBufPush(b: b, v: (v >> 8) & 255);
+		:byteBufPush(b: b, v: (v >> 16) & 255);
+		:byteBufPush(b: b, v: (v >> 24) & 255);
+	}
+
+	## Reads a 16-bit big-endian unsigned integer at [offset], or [def] if out of bounds.
+	Function of Int is byteBufReadU16BE(Any is b, Int is offset, Int is def){
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return def; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ offset < 0 || offset + 2 > len }, { return def; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is b0: Mem:loadByte(ptr: data, byteOffset: offset);
+		local Int is b1: Mem:loadByte(ptr: data, byteOffset: offset + 1);
+		return (b0 << 8) | b1;
+	}
+
+	## Reads a 32-bit big-endian unsigned integer at [offset], or [def] if out of bounds.
+	Function of Int is byteBufReadU32BE(Any is b, Int is offset, Int is def){
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return def; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ offset < 0 || offset + 4 > len }, { return def; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is b0: Mem:loadByte(ptr: data, byteOffset: offset);
+		local Int is b1: Mem:loadByte(ptr: data, byteOffset: offset + 1);
+		local Int is b2: Mem:loadByte(ptr: data, byteOffset: offset + 2);
+		local Int is b3: Mem:loadByte(ptr: data, byteOffset: offset + 3);
+		return ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3) & 4294967295;
+	}
+
+	## Reads a 32-bit little-endian unsigned integer at [offset], or [def] if out of bounds.
+	Function of Int is byteBufReadU32LE(Any is b, Int is offset, Int is def){
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return def; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ offset < 0 || offset + 4 > len }, { return def; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is b0: Mem:loadByte(ptr: data, byteOffset: offset);
+		local Int is b1: Mem:loadByte(ptr: data, byteOffset: offset + 1);
+		local Int is b2: Mem:loadByte(ptr: data, byteOffset: offset + 2);
+		local Int is b3: Mem:loadByte(ptr: data, byteOffset: offset + 3);
+		return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) & 4294967295;
+	}
 }

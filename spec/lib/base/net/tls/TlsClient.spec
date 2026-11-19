@@ -14,8 +14,7 @@ Class is TlsClient{
 		['base', 'struct', List],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
-		['base', 'sys', as Process()],
-		['base', 'sys', as Time()]
+		['base', 'sys', as Mem()]
 	];
 
 	local Socket is sock: Socket:init();
@@ -67,18 +66,18 @@ Class is TlsClient{
 		return out;
 	}
 
-	local Function of Array of Int is makeRandom32(Int is salt){
-		local Array of Int is seed: [];
-		local Int is t: Time:monotonicNs();
-		local Int is pid: Process:getPid();
-		local Int is s: 56;
-		while({ s >= 0 }, {
-			seed:add(item: (t >> s) & 255);
-			seed:add(item: (pid >> s) & 255);
-			seed:add(item: (salt >> s) & 255);
-			s: s - 8;
+	local Function of Array of Int is makeRandom32(){
+		local Int is buf: Mem:alloc(bytes: 32);
+		local Int is rc: Mem:randomBytes(dstAddr: buf, len: 32);
+		local Array of Int is out: [];
+		local Int is i: 0;
+		while({ i < 32 }, {
+			local Int is bVal: if({ rc == 0 }, { Mem:loadByte(ptr: buf, byteOffset: i) }, { 0 });
+			out:add(item: bVal);
+			i: i + 1;
 		});
-		return Sha256:digest(data: seed);
+		Mem:free(ptr: buf);
+		return out;
 	}
 
 	local Function of Array of Int is makeNonce(Array of Int is iv, Int is seq){
@@ -196,10 +195,10 @@ Class is TlsClient{
 		body:add(item: 3);
 		body:add(item: 3);
 		# random (32 bytes)
-		:appendBytes(dst: body, src: :makeRandom32(salt: 1));
+		:appendBytes(dst: body, src: :makeRandom32());
 		# legacy_session_id (32 bytes for middlebox compat)
 		body:add(item: 32);
-		:appendBytes(dst: body, src: :makeRandom32(salt: 2));
+		:appendBytes(dst: body, src: :makeRandom32());
 		# cipher_suites: TLS_CHACHA20_POLY1305_SHA256 (0x1303)
 		body:add(item: 0);
 		body:add(item: 2);
@@ -277,7 +276,7 @@ Class is TlsClient{
 		});
 		:sock:setTimeout(timeoutMs: timeoutMs);
 
-		local Array of Int is clientPriv: :makeRandom32(salt: 3);
+		local Array of Int is clientPriv: :makeRandom32();
 		local Array of Int is clientPub: X25519:publicKey(privateKey: clientPriv);
 		local Array of Int is chMsg: :buildClientHello(host: host, clientPub: clientPub);
 
