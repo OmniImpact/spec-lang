@@ -14,6 +14,9 @@ Class is CleoSection{
 		['base', 'cleo', TitlePlacement],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', as Ansi()],
+		['base', 'sys', as Output()],
+		['base', 'sys', as Parallel()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -29,6 +32,11 @@ Class is CleoSection{
 	Map of Int to CleoSlot is slotMap: Map:init();
 	Array of Int is idCounter: [0];
 	Array of Boolean is dirtyRef: [false];
+	Array of Boolean is directRef: [false];
+	Array of Boolean is directStartedRef: [false];
+	Boolean is directHeaderPrinted: false;
+	Boolean is hasDirectEmitCb: false;
+	Function is directEmitCb: local Function(CleoSection is _sec, CleoSlot is _s){};
 	Boolean is groupResolvedFirst: false;
 
 	replace Function is init(){
@@ -54,7 +62,14 @@ Class is CleoSection{
 		s:rightText: rightText;
 		s:fgColor: color;
 		s:bold: bold;
-		return :allocSlot(slot: s);
+		local Int is sid: :allocSlot(slot: s);
+		if({ :directRef:get(index: 0, default: false) && :directStartedRef:get(index: 0, default: false) && :hasDirectEmitCb }, {
+			Parallel:syncWith(lock: 77, action: {
+				local Function is cb: :directEmitCb;
+				cb(:, s);
+			});
+		});
+		return sid;
 	}
 
 	Function of Int is addThrobber(String is text, CleoColor is color: CleoColor:default(), String is rightText: ''){
@@ -159,6 +174,12 @@ Class is CleoSection{
 			});
 		});
 		:markDirty();
+		if({ :directRef:get(index: 0, default: false) && :directStartedRef:get(index: 0, default: false) && :hasDirectEmitCb }, {
+			Parallel:syncWith(lock: 77, action: {
+				local Function is cb: :directEmitCb;
+				cb(:, s);
+			});
+		});
 	}
 
 	Function is reopenThrobber(Int is index, String is text, CleoColor is color: CleoColor:default(), String is rightText: ''){

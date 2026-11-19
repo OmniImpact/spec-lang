@@ -45,6 +45,7 @@ Class is Cleo{
 	Int is maxWidthCols: 0;
 	Int is tickIntervalMs: 140;
 	Boolean is altScreen: false;
+	Boolean is directOutput: false;
 
 	Array of CleoSection is sections: [];
 	CleoSection is defaultSection: CleoSection:init();
@@ -58,6 +59,10 @@ Class is Cleo{
 	Array of String is prevLines: [];
 	Array of String is pendingCommits: [];
 	Array of Boolean is dirtyRef: [false];
+	Array of Boolean is directRef: [false];
+	Array of Boolean is directStartedRef: [false];
+	Boolean is directTopPrinted: false;
+	Int is directSectionsEmitted: 0;
 	Boolean is hasCommittedHeader: false;
 	Int is prevTermW: 0;
 	Int is prevTermH: 0;
@@ -77,7 +82,8 @@ Class is Cleo{
 		Int is minWidthCols: 24,
 		Int is maxWidthCols: 0,
 		Int is tickIntervalMs: 140,
-		Boolean is altScreen: false
+		Boolean is altScreen: false,
+		Boolean is directOutput: false
 	){
 		:title: title;
 		:titleColor: titleColor;
@@ -93,6 +99,9 @@ Class is Cleo{
 		:maxWidthCols: maxWidthCols;
 		:tickIntervalMs: tickIntervalMs;
 		:altScreen: altScreen;
+		:directOutput: directOutput;
+		:directRef: [directOutput];
+		:directStartedRef: [false];
 		:sections: [];
 		:slotMap: Map:init();
 		:idCounter: [0];
@@ -109,6 +118,32 @@ Class is Cleo{
 		);
 		:defaultSection: defSec;
 		:sections:add(item: defSec);
+	}
+
+	## Creates a standard grayscale rounded Cleo surface for Spec CLI tools.
+	held Function of Cleo is toolUi(String is title, Boolean is directOutput: false){
+		return Cleo:init(
+			title: title,
+			titleColor: CleoColor:ansi(code: 255),
+			titleBgColor: CleoColor:ansi(code: 236),
+			width: CleoWidth:percent(pct: 100),
+			outerBorder: BorderStyle:ROUNDED,
+			dividerBorder: BorderStyle:THIN,
+			borderColor: CleoColor:ansi(code: 240),
+			dividerColor: CleoColor:ansi(code: 237),
+			directOutput: directOutput
+		);
+	}
+
+	## Adds a standard grayscale section for Spec CLI tools.
+	Function of CleoSection is addToolSection(String is title){
+		return :addSection(
+			title: title,
+			titleColor: CleoColor:ansi(code: 254),
+			titleBgColor: CleoColor:ansi(code: 237),
+			titlePlacement: TitlePlacement:INLINE_BORDER,
+			fgColor: CleoColor:ansi(code: 250)
+		);
 	}
 
 	Function of CleoSection is createSection(
@@ -129,7 +164,18 @@ Class is Cleo{
 		sec:slotMap: :slotMap;
 		sec:idCounter: :idCounter;
 		sec:dirtyRef: :dirtyRef;
+		sec:directRef: :directRef;
+		sec:directStartedRef: :directStartedRef;
+		sec:hasDirectEmitCb: true;
+		sec:directEmitCb: local Function(CleoSection is targetSec, CleoSlot is slot){
+			:emitDirectSlotUnlocked(section: targetSec, slot: slot);
+		};
 		return sec;
+	}
+
+	Function is setDirectOutput(Boolean is enabled){
+		:directOutput: enabled;
+		:directRef:set(index: 0, value: enabled);
 	}
 
 	Function of CleoSection is addSection(
@@ -258,6 +304,7 @@ Class is Cleo{
 	}
 
 	Function is commitSlotUnlocked(CleoSection is section, Int is slotId){
+		if({ :directOutput }, { return; });
 		if({ !section:slotMap:has(key: slotId) }, { return; });
 		local Int is termW: Ansi:terminalWidth();
 		local Int is totalW: :width:resolve(termWidth: termW, minCols: :minWidthCols, maxCols: :maxWidthCols);
@@ -294,9 +341,121 @@ Class is Cleo{
 
 	# --- Lifecycle ---
 
+	Function is emitDirectTopUnlocked(){
+		if({ :directTopPrinted }, { return; });
+		:directTopPrinted: true;
+		local Int is termW: Ansi:terminalWidth();
+		local Int is totalW: :width:resolve(termWidth: termW, minCols: :minWidthCols, maxCols: :maxWidthCols);
+		:lastFrameW: totalW;
+		local Boolean is hasOuter: :outerBorder != BorderStyle:NONE;
+		local BorderGlyphs is og: BorderGlyphs:forStyle(style: :outerBorder);
+		local Int is innerW: if({ hasOuter }, { totalW - 4 }, { totalW });
+		if({ innerW < 8 }, { innerW: 8; });
+		if(check: { hasOuter }, then: {
+			Output:line(text: :buildRuleLine(
+				leftCap: og:topLeft, fill: og:top, rightCap: og:topRight,
+				innerW: innerW, lineColor: :borderColor,
+				titleText: :title, tFg: :titleColor, tBg: :titleBgColor
+			));
+		}, else: {
+			if({ :title != '' }, {
+				Output:line(text: :buildHeaderRow(
+					leftB: '', rightB: '', innerW: innerW,
+					titleText: :title, tFg: :titleColor, tBg: :titleBgColor,
+					secFg: :fgColor, secBg: :bgColor
+				));
+			});
+		});
+	}
+
+	Function is emitDirectSlotUnlocked(CleoSection is section, CleoSlot is slot){
+		:emitDirectTopUnlocked();
+		local Int is termW: Ansi:terminalWidth();
+		local Int is totalW: :width:resolve(termWidth: termW, minCols: :minWidthCols, maxCols: :maxWidthCols);
+		local Boolean is hasOuter: :outerBorder != BorderStyle:NONE;
+		local Int is innerW: if({ hasOuter }, { totalW - 4 }, { totalW });
+		if({ innerW < 8 }, { innerW: 8; });
+		local BorderGlyphs is og: BorderGlyphs:forStyle(style: :outerBorder);
+		local BorderGlyphs is dg: BorderGlyphs:forStyle(style: :dividerBorder);
+		local String is bc: :borderColor:fgSeq();
+		local String is brst: if({ :borderColor:isSet() }, { Ansi:reset() }, { '' });
+
+		if({ !section:directHeaderPrinted }, {
+			section:directHeaderPrinted: true;
+			local Int is visIdx: :directSectionsEmitted;
+			:directSectionsEmitted: :directSectionsEmitted + 1;
+			if({ visIdx > 0 }, {
+				local Boolean is inlineSecTitle: section:title != '' && section:titlePlacement == TitlePlacement:INLINE_BORDER;
+				if(check: { :dividerBorder != BorderStyle:NONE }, then: {
+					local String is dl: if({ hasOuter }, { og:divLeft }, { dg:divLeft });
+					local String is dr: if({ hasOuter }, { og:divRight }, { dg:divRight });
+					local String is divTitle: '';
+					if({ inlineSecTitle }, { divTitle: section:title; });
+					Output:line(text: :buildRuleLine(
+						leftCap: dl, fill: dg:divMid, rightCap: dr,
+						innerW: innerW, lineColor: :dividerColor,
+						titleText: divTitle,
+						tFg: section:titleColor, tBg: section:titleBgColor
+					));
+				}, else: {
+					if({ inlineSecTitle }, {
+						Output:line(text: :buildHeaderRow(
+							leftB: og:left, rightB: og:right, innerW: innerW,
+							titleText: section:title, tFg: section:titleColor, tBg: section:titleBgColor,
+							secFg: section:fgColor, secBg: section:bgColor
+						));
+					});
+				});
+			});
+			if({ section:title != '' && (section:titlePlacement == TitlePlacement:HEADER_ROW || (visIdx == 0 && :title != '')) }, {
+				Output:line(text: :buildHeaderRow(
+					leftB: og:left, rightB: og:right, innerW: innerW,
+					titleText: section:title, tFg: section:titleColor, tBg: section:titleBgColor,
+					secFg: section:fgColor, secBg: section:bgColor
+				));
+			});
+		});
+
+		local Array of String is rows: slot:renderInnerLines(innerW: innerW, secFg: section:fgColor, secBg: section:bgColor, tick: 0);
+		local Int is ri: 0;
+		while({ ri < rows:length() }, {
+			local String is rowText: rows:get(index: ri, default: '');
+			if(check: { hasOuter }, then: {
+				local String is padBg: if({ section:bgColor:isSet() }, { section:bgColor:bgSeq() . ' ' . Ansi:reset() }, { ' ' });
+				Output:line(text: bc . og:left . brst . padBg . rowText . padBg . bc . og:right . brst);
+			}, else: {
+				Output:line(text: rowText);
+			});
+			ri: ri + 1;
+		});
+	}
+
 	Function is start(ThreadScope is scope){
+		local Boolean is isDirect: false;
 		Parallel:syncWith(lock: 77, action: {
 			if({ :running }, { return; });
+			isDirect: :directOutput;
+			if({ isDirect }, {
+				:ttyMode: false;
+				:running: true;
+				:directStartedRef:set(index: 0, value: true);
+				:emitDirectTopUnlocked();
+				local Int is si: 0;
+				while({ si < :sections:length() }, {
+					local CleoSection is sec: :sections:get(index: si);
+					local Int is sli: 0;
+					while({ sli < sec:slots:length() }, {
+						local CleoSlot is sl: sec:slots:get(index: sli);
+						if({ sl:kind == 0 }, {
+							:emitDirectSlotUnlocked(section: sec, slot: sl);
+						});
+						sli: sli + 1;
+					});
+					si: si + 1;
+				});
+				:dirtyRef:set(index: 0, value: true);
+				return;
+			});
 			:ttyMode: Ansi:isTty();
 			if({ :ttyMode }, {
 				Ansi:enableVirtualTerminal();
@@ -310,7 +469,7 @@ Class is Cleo{
 			:dirtyRef:set(index: 0, value: true);
 		});
 		:flush();
-		if({ :ttyMode && :tickIntervalMs > 0 }, {
+		if({ !isDirect && :ttyMode && :tickIntervalMs > 0 }, {
 			:timerId: Time:setInterval(scope: scope, ms: :tickIntervalMs, count: 0, callback: {
 				:tick();
 			});
@@ -585,6 +744,21 @@ Class is Cleo{
 					ci: ci + 1;
 				});
 				:pendingCommits: [];
+				if({ :directOutput }, {
+					if({ :directTopPrinted && :outerBorder != BorderStyle:NONE }, {
+						local Int is termW: Ansi:terminalWidth();
+						local Int is totalW: :width:resolve(termWidth: termW, minCols: :minWidthCols, maxCols: :maxWidthCols);
+						local Int is innerW: totalW - 4;
+						if({ innerW < 8 }, { innerW: 8; });
+						local BorderGlyphs is og: BorderGlyphs:forStyle(style: :outerBorder);
+						Output:line(text: :buildRuleLine(
+							leftCap: og:bottomLeft, fill: og:bottom, rightCap: og:bottomRight,
+							innerW: innerW, lineColor: :borderColor,
+							titleText: '', tFg: CleoColor:default(), tBg: CleoColor:default()
+						));
+					});
+					return;
+				});
 				local Array of String is finalLines: :buildFrameLines();
 				local Int is fi: 0;
 				while({ fi < finalLines:length() }, {
@@ -636,6 +810,17 @@ Class is Cleo{
 			:prevTermW: termW;
 			:prevTermH: termH;
 			Output:consOut(text: out);
+		});
+	}
+
+	## Single-buffer mode: builds the current UI buffer once and outputs it immediately
+	## without starting a ThreadScope, timer, or cursor control.
+	Function is render(){
+		local Array of String is lines: :buildFrameLines();
+		local Int is i: 0;
+		while({ i < lines:length() }, {
+			Output:line(text: lines:get(index: i, default: ''));
+			i: i + 1;
 		});
 	}
 }

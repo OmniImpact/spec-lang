@@ -393,31 +393,16 @@ Class is SpecBuild{
 
 		local Int is exitCode: Process:execute(command: compiler, args: specArgs);
 
-		local Cleo is ui: Cleo:init(
-			title: ' specbuild ',
-			titleColor: CleoColor:ansi(code: 255),
-			titleBgColor: CleoColor:ansi(code: 236),
-			width: CleoWidth:percent(pct: 100),
-			outerBorder: BorderStyle:ROUNDED,
-			dividerBorder: BorderStyle:THIN,
-			borderColor: CleoColor:ansi(code: 240),
-			dividerColor: CleoColor:ansi(code: 237)
-		);
-		local CleoSection is bSec: ui:addSection(
-			title: ' Build · ' . name . ' v' . version . ' ',
-			titleColor: CleoColor:ansi(code: 254),
-			titleBgColor: CleoColor:ansi(code: 237),
-			titlePlacement: TitlePlacement:INLINE_BORDER,
-			fgColor: CleoColor:ansi(code: 250)
-		);
+		local Cleo is ui: Cleo:toolUi(title: ' specbuild ');
+		local CleoSection is bSec: ui:addToolSection(title: ' Build · ' . name . ' v' . version . ' ');
 		bSec:addLine(text: 'Source: ' . resolvedSource, color: CleoColor:ansi(code: 250), rightText: 'Output: ' . output);
 		if({ exitCode != 0 }, {
 			bSec:addLine(text: 'Build failed (exit ' . (exitCode as String) . ')', color: CleoColor:ansi(code: 203), rightText: '✖ FAILED');
-			ui:flushFinal();
+			ui:render();
 			Process:exit(status: exitCode);
 		});
 		bSec:addLine(text: 'Build succeeded -> ' . output, color: CleoColor:ansi(code: 252), rightText: '✔ BUILT');
-		ui:flushFinal();
+		ui:render();
 
 		if({ command == 'run' }, {
 			local Int is runCode: Process:execute(command: output, args: []);

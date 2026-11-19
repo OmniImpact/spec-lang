@@ -178,10 +178,12 @@ Class is SpecTestUi{
 
 	Function is onStarted(Int is threadIndex, String is itemPath){
 		:startedCount: :startedCount + 1;
-		if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
-			:workerActive:set(index: threadIndex, value: 1);
+		if({ !:ui:directOutput }, {
+			if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
+				:workerActive:set(index: threadIndex, value: 1);
+			});
+			:renderWorkersBar();
 		});
-		:renderWorkersBar();
 
 		local Int is slotId: :sSec:addShapeThrobber(
 			shape: ThrobberShape:CIRCLE_DOT,
@@ -191,12 +193,15 @@ Class is SpecTestUi{
 			rightText: 'compiling'
 		);
 		:suiteNameToSlotId:set(key: itemPath, value: slotId);
-		:syncProgress();
-		:ui:markDirty();
-		:ui:flushUnlocked();
+		if({ !:ui:directOutput }, {
+			:syncProgress();
+			:ui:markDirty();
+			:ui:flushUnlocked();
+		});
 	}
 
 	Function is onCompiledReady(String is itemPath){
+		if({ :ui:directOutput }, { return; });
 		if({ :suiteNameToSlotId:has(key: itemPath) }, {
 			local Int is slotId: :suiteNameToSlotId:get(key: itemPath, default: 0);
 			:sSec:updateText(index: slotId, text: itemPath, rightText: 'queued');
@@ -206,6 +211,7 @@ Class is SpecTestUi{
 	}
 
 	Function is onRunning(Int is threadIndex, String is itemPath){
+		if({ :ui:directOutput }, { return; });
 		if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
 			:workerActive:set(index: threadIndex, value: 1);
 		});
@@ -219,6 +225,7 @@ Class is SpecTestUi{
 	}
 
 	Function is onWorkerIdle(Int is threadIndex){
+		if({ :ui:directOutput }, { return; });
 		if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
 			:workerActive:set(index: threadIndex, value: 0);
 		});
@@ -248,15 +255,22 @@ Class is SpecTestUi{
 		if({ :suiteNameToSlotId:has(key: name) }, {
 			local Int is slotId: :suiteNameToSlotId:get(key: name, default: 0);
 			local String is rt: if({ passed }, { 'passed' }, { 'failed' });
+			if({ :ui:directOutput }, {
+				local Int is pct: if({ :total > 0 }, { (:completedCount * 100) / :total }, { 100 });
+				rt: rt . ' · ' . (pct as String) . '% (' . (:completedCount as String) . '/' . (:total as String) . ')';
+			});
+			local String is badge: if({ passed }, { '●' }, { '✘' });
 			local CleoColor is c: if({ passed }, { CleoColor:ansi(code: 255) }, { CleoColor:ansi(code: 242) });
-			:sSec:resolveSlot(index: slotId, badge: '●', text: name, color: c, rightText: rt);
+			:sSec:resolveSlot(index: slotId, badge: badge, text: name, color: c, rightText: rt);
 			:ui:commitSlotUnlocked(section: :sSec, slotId: slotId);
 			:sSec:removeSlot(index: slotId);
 		});
 
-		:syncProgress();
-		:ui:markDirty();
-		:ui:flushUnlocked();
+		if({ !:ui:directOutput }, {
+			:syncProgress();
+			:ui:markDirty();
+			:ui:flushUnlocked();
+		});
 	}
 
 	Function is onMetrics(Int is cpuUs, Int is rssKb){
@@ -533,6 +547,7 @@ Class is SpecUnit{
 		});
 		local String is srcDirsRaw: args:getString(key: 'S', default: args:getString(key: 'source-dirs', default: ''));
 		local Boolean is useLlvm: args:has(key: 'llvm');
+		local Boolean is prettyMode: args:has(key: 'pretty');
 		local String is srcDirFlags: :buildSourceDirFlags(raw: srcDirsRaw);
 		if(check: { useLlvm }, then: {
 			srcDirFlags: ' --llvm' . srcDirFlags;
@@ -573,7 +588,7 @@ Class is SpecUnit{
 			threads: total;
 		});
 
-		# Grayscale Cleo UI at 100% terminal width
+		# Grayscale Cleo UI at 100% terminal width (direct line-by-line by default; interactive with --pretty)
 		local Cleo is ui: Cleo:init(
 			title: ' specunit ',
 			titleColor: CleoColor:ansi(code: 255),
@@ -582,7 +597,8 @@ Class is SpecUnit{
 			outerBorder: BorderStyle:ROUNDED,
 			dividerBorder: BorderStyle:THIN,
 			borderColor: CleoColor:ansi(code: 240),
-			dividerColor: CleoColor:ansi(code: 237)
+			dividerColor: CleoColor:ansi(code: 237),
+			directOutput: !prettyMode
 		);
 		local CleoSection is sSec: ui:addSection(
 			title: ' Test Suites ',
@@ -601,7 +617,10 @@ Class is SpecUnit{
 			titlePlacement: TitlePlacement:INLINE_BORDER,
 			fgColor: CleoColor:ansi(code: 250)
 		);
-		local Int is wBarSlot: wSec:addLine(text: '', color: CleoColor:ansi(code: 252), rightText: '0/' . (threads as String) . ' active');
+		local Int is wBarSlot: -1;
+		if(check: { prettyMode }, then: {
+			wBarSlot: wSec:addLine(text: '', color: CleoColor:ansi(code: 252), rightText: '0/' . (threads as String) . ' active');
+		});
 
 		local CleoSection is rSec: ui:addSection(
 			title: ' Results ',
@@ -618,13 +637,16 @@ Class is SpecUnit{
 			titlePlacement: TitlePlacement:INLINE_BORDER,
 			fgColor: CleoColor:ansi(code: 250)
 		);
-		local Int is pSlot: pSec:addProgressArea(
-			text: '0/' . (total as String) . ' suites · 0/' . (testsTotal as String) . ' tests (' . specBin . ')',
-			stage1Color: CleoColor:ansi(code: 252),
-			stage2Color: CleoColor:ansi(code: 243),
-			trackColor: CleoColor:ansi(code: 236),
-			showTwoStagePercent: true
-		);
+		local Int is pSlot: -1;
+		if(check: { prettyMode }, then: {
+			pSlot: pSec:addProgressArea(
+				text: '0/' . (total as String) . ' suites · 0/' . (testsTotal as String) . ' tests (' . specBin . ')',
+				stage1Color: CleoColor:ansi(code: 252),
+				stage2Color: CleoColor:ansi(code: 243),
+				trackColor: CleoColor:ansi(code: 236),
+				showTwoStagePercent: true
+			);
+		});
 
 		SpecTestRegistry:setupUi(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, testsTotal: testsTotal, threads: threads, nameToSlot: nameToSlot);
 		local Int is startMs: Time:monotonicMs();

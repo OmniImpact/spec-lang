@@ -10,6 +10,10 @@ Class is SpecInit{
 	namespace: ['specinit'];
 
 	replace Array of Array of String is using: [
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
 		['base', 'data', as Json()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
@@ -285,6 +289,13 @@ Class is SpecInit{
 		});
 
 		local String is modeLabel: if({ isLib }, { 'library' }, { 'application' });
-		Output:line(text: "Initialized Spec " . modeLabel . " project '" . projectName . "' at " . targetPath);
+		local Cleo is ui: Cleo:toolUi(title: ' specinit ');
+		local CleoSection is pSec: ui:addToolSection(title: ' Project · ' . projectName . ' ');
+		pSec:addLine(
+			text: "Initialized Spec " . modeLabel . " project '" . projectName . "' at " . targetPath,
+			color: CleoColor:ansi(code: 252),
+			rightText: '✔ CREATED'
+		);
+		ui:render();
 	}
 }

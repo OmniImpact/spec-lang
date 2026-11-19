@@ -9,6 +9,10 @@ Class is CompilationReport{
 	namespace: ['base', 'compiler', 'driver'];
 
 	replace Array of Array of String is using: [
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
@@ -59,21 +63,30 @@ Class is CompilationReport{
 		if({ :quiet }, {
 			return;
 		});
-		line('');
-		line('  ' . inputPath . ' -> ' . outputPath);
-		line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of LLVM IR');
-		local String is times: '  time ' . (totalMs as String) . 'ms  (load ' . (loadMs as String) . ' · check ' . (checkMs as String) . ' · gen ' . (genMs as String);
+		local Cleo is ui: Cleo:toolUi(title: ' spec ');
+		local CleoSection is bSec: ui:addToolSection(title: ' Build ');
+		bSec:addLine(
+			text: inputPath . ' -> ' . outputPath,
+			color: CleoColor:ansi(code: 252),
+			rightText: '✔ COMPILED'
+		);
+		bSec:addLine(
+			text: (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of LLVM IR',
+			color: CleoColor:ansi(code: 250)
+		);
+		local CleoSection is mSec: ui:addToolSection(title: ' Metrics ');
+		local String is times: 'time ' . (totalMs as String) . 'ms  (load ' . (loadMs as String) . ' · check ' . (checkMs as String) . ' · gen ' . (genMs as String);
 		if({ ccMs >= 0 }, {
 			times: times . ' · cc ' . (ccMs as String);
 		});
 		times: times . ')';
-		line(times);
-		local String is memLine: '  memory ' . ((avgMemKb / 1024) as String) . ' MB avg · ' . ((peakKb / 1024) as String) . ' MB peak';
+		local String is memLine: 'memory ' . ((avgMemKb / 1024) as String) . ' MB avg · ' . ((peakKb / 1024) as String) . ' MB peak';
 		if({ binKb >= 0 }, {
 			memLine: memLine . ' · binary ' . ((binKb / 1024) as String) . ' KB';
 		});
-		line(memLine);
-		local String is cpuLine: '  cpu ' . (avgCpuPct as String) . '% avg · ' . (peakCpuPct as String) . '% peak';
-		line(cpuLine);
+		local String is cpuLine: 'cpu ' . (avgCpuPct as String) . '% avg · ' . (peakCpuPct as String) . '% peak';
+		mSec:addLine(text: times, color: CleoColor:ansi(code: 250), rightText: cpuLine);
+		mSec:addLine(text: memLine, color: CleoColor:ansi(code: 250));
+		ui:render();
 	}
 }
