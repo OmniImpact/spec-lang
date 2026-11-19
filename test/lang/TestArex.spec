@@ -6,7 +6,8 @@ Class of SpecUnitTest is TestArex{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'regex', Arex],
+		['base', 'regex', as Arex() is ar],
+		['base', 'regex', ArexPattern],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Channel],
 		['base', 'sys', as Process()],
@@ -17,7 +18,7 @@ Class of SpecUnitTest is TestArex{
 	local Function of Int is expectSync(Str is input, Str is pattern, Boolean is want){
 		local Int is slot: 600;
 		Process:atomicPut(slot: slot, value: -1);
-		Arex:test(
+		ar:test(
 			input: input,
 			pattern: pattern,
 			result: local Function(Boolean is matched){
@@ -56,13 +57,14 @@ Class of SpecUnitTest is TestArex{
 
 	## Inside ThreadScope:open, Arex:test runs asynchronously on the scope and is joined on exit.
 	Function is testAsyncInsideScope(){
+		local Arex is rx: Arex:init();
 		Process:atomicPut(slot: 601, value: -1);
 		Process:atomicPut(slot: 602, value: -1);
 		Process:atomicPut(slot: 603, value: -1);
 
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			Assert:isTrue(ThreadScope:inScope());
-			Arex:test(
+			rx:test(
 				input: 'async spec regex',
 				pattern: '^async .* regex$',
 				result: local Function(Boolean is matched){
@@ -71,7 +73,7 @@ Class of SpecUnitTest is TestArex{
 					Process:atomicPut(slot: 601, value: v);
 				}
 			);
-			Arex:test(
+			rx:test(
 				input: 'no match here',
 				pattern: '^async',
 				result: local Function(Boolean is matched){
@@ -80,7 +82,7 @@ Class of SpecUnitTest is TestArex{
 					Process:atomicPut(slot: 602, value: v);
 				}
 			);
-			Arex:test(
+			rx:test(
 				input: 'abbbbbc',
 				pattern: 'ab*c',
 				result: local Function(Boolean is matched){
@@ -128,8 +130,8 @@ Class of SpecUnitTest is TestArex{
 
 	## Arex:find returns leftmost-longest match text and byte span via callback.
 	Function is testFind(){
-		local Channel of Str is ch: Channel:init();
-		Arex:find(
+		local Channel of Str is ch: Channel();
+		ar:find(
 			input: 'order #1234 and #5678',
 			pattern: '#\\d+',
 			result: local Function(Boolean is found, Str is match, Int is start, Int is end){
@@ -142,9 +144,9 @@ Class of SpecUnitTest is TestArex{
 		);
 		Assert:areEqualString('#1234', ch:receive(default: ''));
 
-		local Channel of Str is chMiss: Channel:init();
+		local Channel of Str is chMiss: Channel();
 		ThreadScope:open(body: local Function(ThreadScope is scope){
-			Arex:find(
+			ar:find(
 				input: 'no numbers here',
 				pattern: '\\d+',
 				result: local Function(Boolean is found, Str is match, Int is start, Int is end){
@@ -157,5 +159,90 @@ Class of SpecUnitTest is TestArex{
 			);
 		});
 		Assert:areEqualString('MISS', chMiss:receive(default: ''));
+	}
+
+	## Compiled ArexPattern via callback-based compile works with overloaded test and find.
+	Function is testCompiledPatternReuse(){
+		local Arex is rx: Arex();
+		local Channel of ArexPattern is patCh: Channel();
+
+		# Outside ThreadScope:open, rx:compile waits for compilation before returning.
+		rx:compile(
+			pattern: '[a-z]+-\\d+',
+			result: local Function(ArexPattern is compiled){
+				patCh:send(item: compiled);
+			}
+		);
+		local ArexPattern is pat: patCh:receive(default: ArexPattern());
+		Assert:areEqualString('[a-z]+-\\d+', pat:pattern());
+
+		# Overloaded rx:test with precompiled ArexPattern outside scope (waits).
+		Process:atomicPut(slot: 604, value: -1);
+		rx:test(
+			input: 'item-42',
+			pattern: pat,
+			result: local Function(Boolean is matched){
+				local Int is v: 0;
+				if({ matched }, { v: 1; });
+				Process:atomicPut(slot: 604, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 604));
+
+		# Overloaded ar:find with precompiled ArexPattern inside ThreadScope:open (async).
+		local Channel of Str is chA: Channel();
+		local Channel of Str is chB: Channel();
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			ar:find(
+				input: 'first alpha-100 end',
+				pattern: pat,
+				result: local Function(Boolean is found, Str is match, Int is start, Int is end){
+					if({ found }, { chA:send(item: match); }, { chA:send(item: 'ERR'); });
+				}
+			);
+			ar:find(
+				input: 'second beta-2026 end',
+				pattern: pat,
+				result: local Function(Boolean is found, Str is match, Int is start, Int is end){
+					if({ found }, { chB:send(item: match); }, { chB:send(item: 'ERR'); });
+				}
+			);
+			# Async ar:compile chaining into overloaded ar:test inside the same scope.
+			ar:compile(
+				pattern: '^v\\d+$',
+				result: local Function(ArexPattern is verPat){
+					ar:test(
+						input: 'v12',
+						pattern: verPat,
+						result: local Function(Boolean is matched){
+							local Int is v: 0;
+							if({ matched }, { v: 1; });
+							Process:atomicPut(slot: 605, value: v);
+						}
+					);
+				}
+			);
+		});
+		Assert:areEqualString('alpha-100', chA:receive(default: ''));
+		Assert:areEqualString('beta-2026', chB:receive(default: ''));
+		Assert:areEqualInt(1, Process:atomicGet(slot: 605));
+	}
+
+	## Leading colon `:ar` disambiguates the class-level `as Arex() is ar` import from a local `ar`.
+	Function is testAliasedImportDisambiguation(){
+		local Int is ar: 7;
+		Assert:areEqualInt(7, ar);
+
+		Process:atomicPut(slot: 606, value: -1);
+		:ar:test(
+			input: 'spec-2026',
+			pattern: '^spec-\\d+$',
+			result: local Function(Boolean is matched){
+				local Int is v: 0;
+				if({ matched }, { v: 1; });
+				Process:atomicPut(slot: 606, value: v);
+			}
+		);
+		Assert:areEqualInt(1, Process:atomicGet(slot: 606));
 	}
 }

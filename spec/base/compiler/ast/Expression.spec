@@ -46,6 +46,9 @@ Enum is Expression {
 	Type is resolvedTypeNode;
 	Boolean is hasResolvedTypeNode: false;
 
+	## Optional alias for `UsingAs` (`as ClassName(args) is alias`).
+	String is usingAsAlias: '';
+
 	## Sets the one-based source line.
 	##
 	## @param line: Source line number.

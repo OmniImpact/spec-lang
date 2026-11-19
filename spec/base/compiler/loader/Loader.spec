@@ -689,10 +689,11 @@ Class is Loader{
 		if({ target:name == '' }, {
 			return;
 		});
-		if({ !:isFieldFul(c: target) }, {
+		local String is alias: asExpr:usingAsAlias;
+		if({ alias == '' && !:isFieldFul(c: target) }, {
 			return;
 		});
-		local String is fieldName: '_import_' . targetName;
+		local String is fieldName: if({ alias != '' }, { alias }, { '_import_' . targetName });
 		local Boolean is already: false;
 		local Array of Member is members: c:members;
 		members:each(action: local Function(Member is m){

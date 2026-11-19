@@ -2194,15 +2194,17 @@ Class is TypeChecker{
 									subItems:each(action: local Function(Expression is seg){
 										match(on: seg, when: [
 											Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
-												local Boolean is already: false;
-												acc:each(action: local Function(String is got){
-													if({ got == className }, {
-														already: true;
+												if({ seg:usingAsAlias == '' }, {
+													local Boolean is already: false;
+													acc:each(action: local Function(String is got){
+														if({ got == className }, {
+															already: true;
+														});
 													});
-												});
-												local String is pOwner: :findMemberOwnerClass(className: className, memberName: methodName);
-												if({ !already && className != :currentClassName && pOwner != '' && pOwner != 'Class' && pOwner != 'Stringable' && pOwner != 'Loadable' && pOwner != 'Any' }, {
-													acc:add(item: className);
+													local String is pOwner: :findMemberOwnerClass(className: className, memberName: methodName);
+													if({ !already && className != :currentClassName && pOwner != '' && pOwner != 'Class' && pOwner != 'Stringable' && pOwner != 'Loadable' && pOwner != 'Any' }, {
+														acc:add(item: className);
+													});
 												});
 											},
 											else: {}
@@ -4134,6 +4136,15 @@ Class is TypeChecker{
 				targetPathSegs: segs;
 			}
 		], default: {});
+		if({ targetIsSelf && call:isBareCall && :registeredClasses:has(key: call:name) && !:allEnumNames:has(key: call:name) && !:shadowsAsFunction(name: call:name, isBareCall: true) && :findMemberOwnerClass(className: :currentClassName, memberName: call:name) == '' && :bareScopeProviders(methodName: call:name):length() == 0 }, {
+			local String is ctorCls: call:name;
+			call:target: Expression:Ident(name: ctorCls);
+			call:name: 'init';
+			call:isBareCall: false;
+			targetIsIdent: true;
+			targetIsSelf: false;
+			targetStr: ctorCls;
+		});
 		if({ targetIsSelf && call:isBareCall && :localVars:getString(key: call:name, default: ''):startsWith(prefix: 'Function') }, {
 			:inHeldFnVarTarget: true;
 		});
@@ -5904,21 +5915,24 @@ Class is TypeChecker{
 						match(on: item, when: [
 							Expression:ArrayLit: local Function(Array of Expression is segs){
 								local String is asName: '';
+								local String is asAlias: '';
 								segs:each(action: local Function(Expression is seg){
 									match(on: seg, when: [
 										Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 											asName: className;
+											asAlias: seg:usingAsAlias;
 										}
 									], default: {});
 								});
 								if({ asName == '' }, {
 									return;
 								});
-								if({ seen:has(key: asName) }, {
-									:addError(line: m:line, msg: :errText:errDuplicateInstanceImport(className: classDef:name, asName: asName));
+								local String is seenKey: if({ asAlias != '' }, { asAlias }, { asName });
+								if({ seen:has(key: seenKey) }, {
+									:addError(line: m:line, msg: :errText:errDuplicateInstanceImport(className: classDef:name, asName: seenKey));
 									return;
 								});
-								seen:set(key: asName, value: 'true');
+								seen:set(key: seenKey, value: 'true');
 								local ClassInfo is target: :findClass(name: asName);
 								if({ target:name == '' }, {
 									return;

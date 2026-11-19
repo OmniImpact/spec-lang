@@ -1186,7 +1186,20 @@ Class is Parser{
 		}, {
 			:addError(tok: clsTok, message: :errText:errInstanceImportParens(target: clsName));
 		});
-		return Expression:UsingAs(className: clsName, args: args);
+		local String is alias: '';
+		if({ :checkKeyword(kw: Keyword:IS) }, {
+			:advance();
+			local Token is aliasTok: :peek();
+			if({ aliasTok:getTokenKind() != TokenKind:IDENTIFIER }, {
+				:addError(tok: aliasTok, message: 'Instance-import alias after \'is\' must be an identifier.');
+				return Expression:Unknown;
+			});
+			:advance();
+			alias: aliasTok:getValue();
+		});
+		local Expression is node: Expression:UsingAs(className: clsName, args: args);
+		node:usingAsAlias: alias;
+		return node;
 	}
 
 	## Parses a type cast: `value as Target` or `value as Target(width)`.
@@ -1438,6 +1451,10 @@ Class is Parser{
 	##
 	## @return: true when declaration list.
 	Function of Boolean is isDeclListStart(){
+		local Token is firstTok: :peekAhead(offset: 1);
+		if({ firstTok:getTokenKind() == TokenKind:KEYWORD && firstTok:getValue() == Keyword:AS:value() }, {
+			return false;
+		});
 		local Int is offset: 1;
 		local Int is depth: 0;
 		local Boolean is running: true;

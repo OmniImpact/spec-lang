@@ -76,7 +76,7 @@ Class is ClassInfo{
 									subItems:each(action: local Function(Expression is seg){
 										match(on: seg, when: [
 											Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
-												if({ className == name }, {
+												if({ className == name && seg:usingAsAlias == '' }, {
 													found: true;
 												});
 											},

@@ -1,12 +1,13 @@
 #! Package base:regex
-#! Compiled Thompson NFA regular expression program (`ArexProgram`).
+#! Compiled, immutable, reusable Thompson NFA regular expression pattern (`ArexPattern`).
 
-Class is ArexProgram{
+Class is ArexPattern{
 	namespace: ['base', 'regex'];
 
 	replace Array of Array of String is using: [
 		['base', 'core', Str],
 		['base', 'struct', Array],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -49,10 +50,16 @@ Class is ArexProgram{
 		:startState: 0;
 	}
 
-	held Function of ArexProgram is compile(Str is pattern){
-		local ArexProgram is prog: ArexProgram:init();
-		prog:compilePattern(pattern: pattern);
-		return prog;
+	## Compiles [pattern] into a reusable [ArexPattern].
+	held Function of ArexPattern is compile(Str is pattern){
+		local ArexPattern is compiled: ArexPattern:init();
+		compiled:compilePattern(pattern: pattern);
+		return compiled;
+	}
+
+	## Returns the original pattern source string.
+	Function of Str is pattern(){
+		return :pat;
 	}
 
 	local Function of Int is addNode(Int is op, Int is arg1, Int is out1, Int is out2){
@@ -429,7 +436,7 @@ Class is ArexProgram{
 		return left;
 	}
 
-	Function is compilePattern(Str is pattern){
+	local Function is compilePattern(Str is pattern){
 		:pat: pattern;
 		:pLen: pattern:length();
 		:pos: 0;
@@ -635,5 +642,41 @@ Class is ArexProgram{
 		res:add(item: bestStart);
 		res:add(item: bestEnd);
 		return res;
+	}
+
+	## Runs `test` synchronously on the calling thread and invokes [result].
+	Function is testSync(Str is input, Function is result){
+		local Array of Int is matchRes: :findFirstSync(input: input);
+		local Boolean is matched: matchRes:get(index: 0) == 1;
+		result(matched);
+	}
+
+	## Runs `find` synchronously on the calling thread and invokes [result].
+	Function is findSync(Str is input, Function is result){
+		local Array of Int is matchRes: :findFirstSync(input: input);
+		local Boolean is found: matchRes:get(index: 0) == 1;
+		local Int is start: matchRes:get(index: 1);
+		local Int is end: matchRes:get(index: 2);
+		local Str is matchedText: '';
+		if({ found }, {
+			matchedText: input:substring(start: start, end: end);
+		});
+		result(found, matchedText, start, end);
+	}
+
+	## Tests whether [input] matches this compiled pattern and invokes [result] with a `Boolean`.
+	## Runs asynchronously inside an active `ThreadScope:open`, or waits if called outside one.
+	Function is test(Str is input, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:testSync(input: input, result: result);
+		});
+	}
+
+	## Finds the leftmost-longest match of this compiled pattern in [input] and invokes [result]
+	## with `(Boolean is found, Str is match, Int is start, Int is end)`.
+	Function is find(Str is input, Function is result){
+		ThreadScope:dispatch(task: local Function(){
+			:findSync(input: input, result: result);
+		});
 	}
 }
