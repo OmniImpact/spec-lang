@@ -2872,6 +2872,526 @@ Class is TypeChecker{
 	}
 
 	## directly, replacing the previous compiler's mutable container hint.
+	local Function of String is inferIdentExpr(String is name){
+		if({ name == :names:selfIdent() }, {
+			# A held member body has no instance
+			# — except a function-variable call target: the closure
+			# invocation never touches the instance.
+			if({ (:inHeldInit || :inHeldFunction) && !:inHeldFnVarTarget }, {
+				:addError(line: :currentLine, msg: 'A held member body has no instance: \':\' is not available.');
+			});
+			return :currentClassName;
+		});
+		if({ :localVars:has(key: name) }, {
+			return :localVars:getString(key: name, default: Primitive:ANY:value());
+		});
+		if({ :fieldTypes:has(key: name) }, {
+			# A held initializer has no instance: instance fields
+			# are not reachable from it.
+			if({ :inHeldInit }, {
+				:addError(line: :currentLine, msg: 'A held initializer has no instance: field \'' . name . '\' is not reachable from it.');
+			});
+			if({ :unassignedFields:has(key: name) }, {
+				:addError(line: :currentLine, msg: 'Field \'' . name . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
+			});
+			local String is owner: :findMemberOwnerClass(className: :currentClassName, memberName: name);
+			if({ owner != '' }, {
+				:checkMemberVisibility(ownerClass: owner, member: :findAncestorMember(className: :currentClassName, memberName: name), memberName: name);
+			});
+			return :fieldTypes:getString(key: name, default: Primitive:ANY:value());
+		});
+		if({ :allEnumVariants:has(key: name) }, {
+			return :allEnumVariants:getString(key: name, default: Primitive:ANY:value());
+		});
+		if({ :registeredClasses:has(key: name) }, {
+			return name;
+		});
+		if({ :isPrimitive(t: name) }, {
+			return name;
+		});
+		if({ name != '' }, {
+			:addError(line: :currentLine, msg: 'Undefined identifier \'' . name . '\'.');
+		});
+		return 'Any';
+	}
+
+	local Function of String is inferPathExpr(Array of String is segs){
+		local String is res: 'Any';
+		if({ segs:length() == 0 }, {
+			return res;
+		});
+		local String is root: segs:get(index: 0);
+		local String is rootType: '';
+		# Held admission: the first segment after a class-name root resolved as a held field —
+		# the path resolution loop below then consumes it via lookupHeldFieldType.
+		local Boolean is heldAdmitted: false;
+		local Boolean is chainResolved: false;
+		if({ root == :names:selfIdent() }, {
+			if({ :inHeldInit || :inHeldFunction }, {
+				:addError(line: :currentLine, msg: 'A held member body has no instance: \':\' is not available.');
+			});
+			rootType: :currentClassName;
+			if({ segs:length() >= 2 && :unassignedFields:has(key: segs:get(index: 1)) }, {
+				:addError(line: :currentLine, msg: 'Field \'' . segs:get(index: 1) . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
+			});
+			if({ segs:length() >= 2 }, {
+				local String is fName: segs:get(index: 1);
+				if({ :lookupFieldType(className: :currentClassName, fieldName: fName) != '' }, {
+					local String is fOwner: :findMemberOwnerClass(className: :currentClassName, memberName: fName);
+					if({ fOwner != '' }, {
+						:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: :currentClassName, memberName: fName), memberName: fName);
+					});
+				}, {
+					if({ :findHeldMember(className: :currentClassName, memberName: fName):name != '' }, {
+						:addError(line: :currentLine, msg: 'Held member \'' . :currentClassName . ':' . fName . '\' is class-scoped: reach it through the class name, not an instance.');
+					});
+				});
+			});
+		}, {
+			if({ :localVars:has(key: root) }, {
+				rootType: :localVars:getString(key: root, default: '');
+			}, {
+				if({ :fieldTypes:has(key: root) }, {
+					if({ :unassignedFields:has(key: root) }, {
+						:addError(line: :currentLine, msg: 'Field \'' . root . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
+					});
+					rootType: :fieldTypes:getString(key: root, default: '');
+				}, {
+					if({ :allEnumNames:has(key: root) }, {
+						rootType: root;
+					}, {
+						if({ :registeredClasses:has(key: root) }, {
+							rootType: root;
+							if({ segs:length() >= 2 }, {
+								local ClassInfo is chainCls: :findClass(name: root);
+								local Boolean is chainOk: chainCls:name != '';
+								local Int is chainIdx: 1;
+								while({ chainOk && chainIdx < segs:length() }, {
+									local String is nextType: '';
+									chainCls:members:each(action: local Function(Member is m){
+										if({ m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, {
+											nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
+										});
+									});
+									if({ nextType != '' }, {
+										chainCls: :findClass(name: nextType);
+										if({ chainCls:name == '' }, {
+											chainOk: false;
+										});
+										chainIdx: chainIdx + 1;
+									}, {
+										chainOk: false;
+									});
+								});
+								if({ chainOk && chainIdx == segs:length() }, {
+									rootType: chainCls:qualifiedName();
+									chainResolved: true;
+								});
+							});
+							local Member is heldM: Member:init(kind: MemberKind:FIELD);
+							if({ segs:length() >= 2 && !chainResolved }, {
+								heldM: :findHeldMember(className: root, memberName: segs:get(index: 1));
+							});
+							if({ heldM:name != '' && heldM:kind == MemberKind:FIELD }, {
+								local String is heldOwner: :findHeldOwnerClass(className: root, memberName: heldM:name);
+								if({ :inHeldInit && heldOwner == :currentClassName }, {
+									:addError(line: :currentLine, msg: 'Held initializer of \'' . :currentClassName . '\' cannot reference held member \'' . root . ':' . heldM:name . '\' of the same class; the once-guards would deadlock.');
+								});
+								:checkMemberVisibility(ownerClass: heldOwner, member: heldM, memberName: heldM:name);
+								heldAdmitted: true;
+							}, {
+								if({ segs:length() >= 2 && :findHeldMethod(className: root, methodName: segs:get(index: 1)):name != '' }, {
+									:addError(line: :currentLine, msg: 'Held function \'' . root . ':' . segs:get(index: 1) . '\' must be called; bare references to held functions are not supported (the call form is ' . root . ':' . segs:get(index: 1) . '(...)).');
+									rootType: '';
+								}, {
+									if({ segs:length() >= 2 }, {
+										local Member is resolver: :findHeldMethod(className: root, methodName: ContractMethod:RESOLVE_HELD:value());
+										local Boolean is declaredInstance: :lookupFieldType(className: root, fieldName: segs:get(index: 1)) != '' || :lookupAnyMember(className: root, methodName: segs:get(index: 1)):kind == MemberKind:METHOD;
+										if({ !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'Str' && root != 'String' && root != 'SpecError' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
+											:addError(line: :currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
+											rootType: '';
+										}, {
+											if({ resolver:name != '' && !declaredInstance }, {
+												if({ :inHeldFunction && :currentMethodName == ContractMethod:RESOLVE_HELD:value() && root == :currentClassName }, {
+													:addError(line: :currentLine, msg: 'The resolution hook cannot resolve through its own class prefix (\'' . root . ':' . segs:get(index: 1) . '\'); declare the member, or return it from the resolver directly.');
+												});
+												:checkMemberVisibility(ownerClass: :findHeldMethodOwner(className: root, methodName: ContractMethod:RESOLVE_HELD:value()), member: resolver, memberName: ContractMethod:RESOLVE_HELD:value());
+												res: :formatTypeString(t: resolver:memberType);
+												heldAdmitted: true;
+											});
+										});
+									});
+								});
+							});
+						});
+					});
+				});
+			});
+		});
+		local String is currType: rootType;
+		local Int is pIdx: 1;
+		while({ !chainResolved && currType != '' && pIdx < segs:length() }, {
+			local String is seg: segs:get(index: pIdx);
+			pIdx: pIdx + 1;
+			if({ !:allEnumNames:has(key: currType) }, {
+				if({ heldAdmitted && pIdx == 2 }, {
+					currType: :lookupHeldFieldType(className: currType, fieldName: seg);
+				}, {
+					currType: :lookupFieldType(className: currType, fieldName: seg);
+				});
+			});
+		});
+		if({ currType != '' }, {
+			res: currType;
+		}, {
+			if({ segs:length() >= 2 && !heldAdmitted && rootType != '' && rootType != Primitive:ANY:value() }, {
+				local String is rBase: rootType:split(delimiter: ':'):get(index: 0);
+				if({ :registeredClasses:has(key: rBase) && :findHeldMember(className: rBase, memberName: segs:get(index: 1)):name != '' }, {
+					:addError(line: :currentLine, msg: 'Held member \'' . rBase . ':' . segs:get(index: 1) . '\' is class-scoped: reach it through the class name, not an instance.');
+				});
+			});
+		});
+		return res;
+	}
+
+	local Function of String is inferBinaryExpr(String is op, Expression is left, Expression is right, String is expected){
+		local String is leftT: :inferExpressionType(expr: left, expected: expected);
+		local String is rightT: :inferExpressionType(expr: right, expected: expected);
+		local String is res: Primitive:INT:value();
+		match(on: op, when: [
+			'.': {
+				res: Primitive:STRING:value();
+			},
+			['==', '!=', 'is', '<', '<=', '>', '>=']: {
+				res: Primitive:BOOLEAN:value();
+				local Boolean is isRel: op == '<' || op == '<=' || op == '>' || op == '>=';
+				local Boolean is leftStr: leftT == 'String' || leftT == 'Str';
+				local Boolean is rightStr: rightT == 'String' || rightT == 'Str';
+				if({ isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, {
+					:addError(line: :currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
+				});
+			},
+			['&&', '||']: {
+				res: Primitive:BOOLEAN:value();
+			},
+			['+', '-', '*', '/', '%']: {
+				if({ leftT == 'Float' || rightT == 'Float' }, {
+					res: 'Float';
+				}, {
+					if({ :isUnsignedInt(t: leftT) }, {
+						res: leftT;
+					}, {
+						if({ :isUnsignedInt(t: rightT) }, {
+							res: rightT;
+						}, {
+							res: Primitive:INT:value();
+						});
+					});
+				});
+			},
+			['&', '|', '^', '<<', '>>']: {
+				res: if({ :isUnsignedInt(t: leftT) }, { leftT }, { if({ :isUnsignedInt(t: rightT) }, { rightT }, { Primitive:INT:value() }) });
+				if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
+					(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
+					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
+					:addError(line: :currentLine, msg: msg);
+				});
+			},
+			else: {
+				res: Primitive:INT:value();
+			}
+		]);
+		return res;
+	}
+
+	local Function of String is inferCastExpr(Expression is inner, String is target, Array of Expression is args){
+		local String is innerT: :inferExpressionType(expr: inner);
+		local String is src: if({ innerT != '' }, { innerT }, { Primitive:ANY:value() });
+		local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
+		if({ args:length() > 0 && !isFormat }, {
+			:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' takes no arguments.');
+		});
+		if({ isFormat }, {
+			if({ args:length() > 1 }, {
+				:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
+			});
+			if({ src != 'Any' && src != 'String' && src != 'Str' && src != Primitive:INT:value() }, {
+				:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' requires an Int or String operand (got \'' . src . '\').');
+			});
+			return if({ src == 'String' || src == 'Str' }, { Primitive:INT:value() }, { 'String' });
+		});
+		if({ :allEnumNames:has(key: target) }, {
+			:addError(line: :currentLine, msg: 'Cannot cast to enum \'' . target . '\'; construct a variant instead.');
+			return target;
+		});
+		if({ :castableMethod(srcType: src, target: target) != '' }, {
+			return target;
+		});
+		if({ :isPrimitive(t: target) && target != Primitive:ANY:value() }, {
+			if({ !:isCastable(src: src, target: target) }, {
+				:addError(line: :currentLine, msg: 'Cannot cast \'' . src . '\' to \'' . target . '\'.');
+			});
+			return target;
+		});
+		if({ :registeredClasses:has(key: target) || :registeredClasses:has(key: target:split(delimiter: ':'):get(index: 0)) }, {
+			local Boolean is related: src == Primitive:ANY:value() || :isSubclassOf(subName: src, baseName: target) || :isSubclassOf(subName: target, baseName: src);
+			if({ !related }, {
+				:addError(line: :currentLine, msg: 'Cannot cast \'' . src . '\' to unrelated class \'' . target . '\'.');
+			});
+			return target;
+		});
+		:addError(line: :currentLine, msg: 'Unknown cast target \'' . target . '\'.');
+		return 'Any';
+	}
+
+	local Function of String is inferUnaryExpr(String is op, Expression is operand){
+		local String is innerT: :inferExpressionType(expr: operand);
+		if({ op == '~' && innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
+			local String is msg: :errText:errBitwiseComplementInt(innerT: innerT);
+			:addError(line: :currentLine, msg: msg);
+		});
+		if({ op == '++' || op == '--' || op == 'post++' || op == 'post--' }, {
+			if({ innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
+				local String is msg: :errText:errOperatorRequiresInt(op: op, innerT: innerT);
+				:addError(line: :currentLine, msg: msg);
+			});
+			if({ :inLazyBlock && !:isLazyLocalTarget(expr: operand) }, {
+				:addError(line: :currentLine, msg: "Cannot modify external state inside a 'lazy' initializer; 'lazy' blocks have read-only access to outer variables and fields.");
+			});
+		});
+		if({ op == '!' }, {
+			return Primitive:BOOLEAN:value();
+		});
+		return innerT;
+	}
+
+	local Function of String is inferArrayLitExpr(Array of Expression is items, String is expected){
+		local Boolean is hasExpectedContainer: expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List'));
+		local String is elemT: '';
+		if({ hasExpectedContainer }, {
+			local Int is eColon: expected:indexOf(search: ':', default: -1);
+			local Int is eOf: expected:indexOf(search: ' of ', default: -1);
+			if({ eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:')) }, {
+				elemT: expected:substring(start: eColon + 1, end: expected:length());
+			}, {
+				if({ eOf >= 0 }, {
+					elemT: expected:substring(start: eOf + 4, end: expected:length());
+				});
+			});
+		});
+		local Array of String is itemTypes: [];
+		items:each(action: local Function(Expression is item){
+			local String is itemT: :inferExpressionType(expr: item, expected: elemT);
+			if({ :isVoid(t: itemT) }, {
+				:addError(line: :currentLine, msg: 'Array elements cannot be void.');
+			}, {
+				if({ itemT != '' && itemT != Primitive:ANY:value() }, {
+					itemTypes:add(item: itemT);
+				});
+			});
+		});
+		local String is unifiedElemType: :unifyArrayElementTypes(elemTypes: itemTypes);
+		if({ hasExpectedContainer }, {
+			if({ elemT != '' && elemT != Primitive:ANY:value() }, {
+				itemTypes:each(action: local Function(String is itemT){
+					local Boolean is elemOk: :isAssignable(target: elemT, source: itemT);
+					if({ :isPrimitive(t: elemT) && !elemT:startsWith(prefix: 'Function') && itemT != elemT }, {
+						elemOk: false;
+					});
+					if({ !elemOk }, {
+						:addError(line: :currentLine, msg: "Cannot assign 'Array:" . itemT . "' to 'Array:" . elemT . "'.");
+					});
+				});
+			});
+			if({ elemT == '' && expected == 'Array' && unifiedElemType != '' }, {
+				return 'Array:' . unifiedElemType;
+			});
+			return expected;
+		});
+		if({ unifiedElemType != '' }, {
+			return 'Array:' . unifiedElemType;
+		});
+		return 'Array';
+	}
+
+	local Function of String is inferMapLitExpr(Array of Expression is keys, Array of Expression is values, String is expected){
+		if({ expected != '' && expected:startsWith(prefix: 'Map') }, {
+			local String is keyT: '';
+			local String is valT: '';
+			local Array of String is mParts: expected:split(delimiter: ':');
+			if({ mParts:length() > 2 }, {
+				keyT: mParts:get(index: 1);
+				valT: mParts:get(index: 2);
+			}, {
+				local String is kv: expected:substring(start: 4, end: expected:length());
+				if({ kv:startsWith(prefix: ' of ') }, {
+					kv: kv:substring(start: 4, end: kv:length());
+				});
+				local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
+				if({ toIdx >= 0 }, {
+					keyT: kv:substring(start: 0, end: toIdx);
+					valT: kv:substring(start: toIdx + 4, end: kv:length());
+				});
+			});
+			keys:each(action: local Function(Expression is k){
+				local String is kT: :inferExpressionType(expr: k);
+				if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !:isAssignable(target: keyT, source: kT) }, {
+					local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
+					:addError(line: :currentLine, msg: "Cannot assign '" . kT . "' key to 'Map:" . kDisplay . ":" . valT . "'.");
+				});
+			});
+			values:each(action: local Function(Expression is v){
+				local String is vT: :inferExpressionType(expr: v);
+				if({ valT != '' && vT != '' && vT != Primitive:ANY:value() && !:isAssignable(target: valT, source: vT) }, {
+					local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
+					:addError(line: :currentLine, msg: "Cannot assign 'Map:" . kDisplay . ":" . vT . "' to 'Map:" . kDisplay . ":" . valT . "'.");
+				});
+			});
+			return expected;
+		});
+		local String is firstKeyType: '';
+		local String is firstValType: '';
+		keys:each(action: local Function(Expression is k){
+			local String is kt: :inferExpressionType(expr: k);
+			if({ firstKeyType == '' && kt != '' && kt != Primitive:ANY:value() }, {
+				firstKeyType: kt;
+			});
+		});
+		values:each(action: local Function(Expression is v){
+			local String is vt: :inferExpressionType(expr: v);
+			if({ firstValType == '' && vt != '' && vt != Primitive:ANY:value() }, {
+				firstValType: vt;
+			});
+		});
+		if({ firstKeyType != '' && firstValType != '' }, {
+			return 'Map:' . firstKeyType . ':' . firstValType;
+		});
+		return 'Map';
+	}
+
+	local Function of String is inferFieldAccessExpr(Expression is target, String is fName){
+		local String is leftT: :inferExpressionType(expr: target);
+		if({ leftT == '' || leftT == 'Any' || :isPrimitive(t: leftT) }, {
+			return 'Any';
+		});
+		local Array of String is faParts: leftT:split(delimiter: ':');
+		local String is faBase: faParts:get(index: 0);
+		local String is fOwner: :findMemberOwnerClass(className: faBase, memberName: fName);
+		if({ fOwner != '' }, {
+			:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: faBase, memberName: fName), memberName: fName);
+		});
+		local String is fT: :lookupFieldType(className: leftT, fieldName: fName);
+		if({ fT == '' && :registeredClasses:has(key: faBase) && :findHeldMember(className: faBase, memberName: fName):name != '' }, {
+			:addError(line: :currentLine, msg: 'Held member \'' . faBase . ':' . fName . '\' is class-scoped: reach it through the class name, not an instance.');
+		});
+		return if({ fT != '' }, { fT }, { 'Any' });
+	}
+
+	local Function of String is inferIndexExpr(Expression is target, Expression is index){
+		local String is leftT: :inferExpressionType(expr: target);
+		:inferExpressionType(expr: index);
+		if({ leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, {
+			return leftT:substring(start: 9, end: leftT:length());
+		});
+		if({ leftT:startsWith(prefix: 'Array:') && leftT:length() > 6 }, {
+			return leftT:substring(start: 6, end: leftT:length());
+		});
+		if({ leftT:startsWith(prefix: 'Map:') && leftT:length() > 4 }, {
+			local String is afterMap: leftT:substring(start: 4, end: leftT:length());
+			local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
+			if({ colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, {
+				return afterMap:substring(start: colonIdx + 1, end: afterMap:length());
+			});
+			return Primitive:STRING:value();
+		});
+		if({ leftT == 'Map' }, {
+			return Primitive:STRING:value();
+		});
+		return 'Any';
+	}
+
+	local Function of String is inferAnonFnExpr(Expression is expr, Type is returnType, Array of Parameter is params, Array of Statement is body, String is expected){
+		local Map of String to String is savedVars: Map:init();
+		local Array of String is existingKeys: :localVars:keys();
+		existingKeys:each(action: local Function(String is k){
+			savedVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+		});
+		local Map of String to String is savedLazyVars: Map:init();
+		if({ :inLazyBlock }, {
+			local Array of String is lazyKeys: :lazyLocalVars:keys();
+			lazyKeys:each(action: local Function(String is k){
+				savedLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
+			});
+		});
+		local String is savedRet: :currentMethodReturnType;
+		local Expression is savedAnonNode: :currentAnonNode;
+		:currentAnonNode: expr;
+		local Boolean is savedYieldFlag: :checkingValueYield;
+		:checkingValueYield: false;
+
+		if({ !:inBranchClosure }, {
+			if({ expected:startsWith(prefix: 'Function:') && :isVoid(t: :resolveReturnType(t: returnType)) }, {
+				returnType:name: expected:substring(start: 9, end: expected:length());
+				returnType:params: [];
+			});
+			:currentMethodReturnType: :resolveReturnType(t: returnType);
+		});
+		params:each(action: local Function(Parameter is p){
+			local String is pFmt: :formatVarTypeString(t: p:paramType);
+			:localVars:set(key: p:name, value: pFmt);
+			if({ :inLazyBlock }, {
+				:lazyLocalVars:set(key: p:name, value: pFmt);
+			});
+		});
+		local Int is bodyLen: body:length();
+		local Int is bodyIdx: 0;
+		body:each(action: local Function(Statement is s){
+			:anonDepth: :anonDepth + 1;
+			if({ :inValueBranch && bodyIdx == bodyLen - 1 }, {
+				:checkingValueYield: true;
+			});
+			:checkStatement(stmt: s);
+			:checkingValueYield: false;
+			:anonDepth: :anonDepth - 1;
+			bodyIdx: bodyIdx + 1;
+		});
+
+		:localVars: savedVars;
+		if({ :inLazyBlock }, {
+			:lazyLocalVars: savedLazyVars;
+		});
+		:currentMethodReturnType: savedRet;
+		local Int is lastIdx: body:length() - 1;
+		if({ lastIdx >= 0 }, {
+			local Statement is lastStmt: body:get(index: lastIdx);
+			match(on: lastStmt, when: [
+				Statement:Expr: local Function(Expression is exprStmt){
+					local String is lastT: exprStmt:resolvedType;
+					local String is curRetT: :resolveReturnType(t: returnType);
+					if({ :isVoid(t: curRetT) }, {
+						if({ lastT != '' && !:isVoid(t: lastT) }, {
+							returnType:name: lastT;
+							returnType:params: [];
+						});
+					}, {
+						if({ lastT != '' && !:isAssignable(target: curRetT, source: lastT) }, {
+							local String is msg: :errText:errClosureReturnType(actual: lastT, expected: curRetT);
+							:addError(line: :currentLine, msg: msg);
+						});
+					});
+				},
+				else: {}
+			]);
+		});
+		:currentAnonNode: savedAnonNode;
+		:checkingValueYield: savedYieldFlag;
+		local String is anonRetStr: :resolveReturnType(t: returnType);
+		if({ anonRetStr != '' && !:isVoid(t: anonRetStr) }, {
+			return 'Function:' . anonRetStr;
+		});
+		return 'Function';
+	}
+
 	##
 	## @param expr: AST expression node.
 	## @param expected: Contextual type ('' when none).
@@ -2905,614 +3425,34 @@ Class is TypeChecker{
 				res: Primitive:BOOLEAN:value();
 			},
 			Expression:Ident: local Function(String is name){
-				if({ name == :names:selfIdent() }, {
-					# A held member body has no instance
-					# — except a function-variable call target: the closure
-					# invocation never touches the instance.
-					if({ (:inHeldInit || :inHeldFunction) && !:inHeldFnVarTarget }, {
-						:addError(line: :currentLine, msg: 'A held member body has no instance: \':\' is not available.');
-					});
-					res: :currentClassName;
-				}, {
-					if({ :localVars:has(key: name) }, {
-						res: :localVars:getString(key: name, default: Primitive:ANY:value());
-					}, {
-						if({ :fieldTypes:has(key: name) }, {
-							# A held initializer has no instance: instance fields
-							# are not reachable from it.
-							if({ :inHeldInit }, {
-								:addError(line: :currentLine, msg: 'A held initializer has no instance: field \'' . name . '\' is not reachable from it.');
-							});
-							if({ :unassignedFields:has(key: name) }, {
-								:addError(line: :currentLine, msg: 'Field \'' . name . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
-							});
-							local String is owner: :findMemberOwnerClass(className: :currentClassName, memberName: name);
-							if({ owner != '' }, {
-								:checkMemberVisibility(ownerClass: owner, member: :findAncestorMember(className: :currentClassName, memberName: name), memberName: name);
-							});
-							res: :fieldTypes:getString(key: name, default: Primitive:ANY:value());
-						}, {
-							if({ :allEnumVariants:has(key: name) }, {
-								res: :allEnumVariants:getString(key: name, default: Primitive:ANY:value());
-							}, {
-								if({ :registeredClasses:has(key: name) }, {
-									res: name;
-								}, {
-									if({ :isPrimitive(t: name) }, {
-										res: name;
-									}, {
-										if({ name != '' }, {
-											:addError(line: :currentLine, msg: 'Undefined identifier \'' . name . '\'.');
-										});
-									});
-								});
-							});
-						});
-					});
-				});
+				res: :inferIdentExpr(name: name);
 			},
 			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() > 0 }, {
-					local String is root: segs:get(index: 0);
-					local String is rootType: '';
-					# Held admission: the first segment
-					# after a class-name root resolved as a held field — the
-					# The path resolution loop below then consumes it via lookupHeldFieldType.
-					local Boolean is heldAdmitted: false;
-					local Boolean is chainResolved: false;
-					if({ root == :names:selfIdent() }, {
-						# A held member body has no instance.
-						if({ :inHeldInit || :inHeldFunction }, {
-							:addError(line: :currentLine, msg: 'A held member body has no instance: \':\' is not available.');
-						});
-						rootType: :currentClassName;
-						if({ segs:length() >= 2 && :unassignedFields:has(key: segs:get(index: 1)) }, {
-							:addError(line: :currentLine, msg: 'Field \'' . segs:get(index: 1) . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
-						});
-						if({ segs:length() >= 2 }, {
-							local String is fName: segs:get(index: 1);
-							# Strict held resolution: the
-							# instance lookup is the truth — a held name through
-							# self is the class-scoped slot reached by its
-							# class-name prefix, never by an instance.
-							if({ :lookupFieldType(className: :currentClassName, fieldName: fName) != '' }, {
-								local String is fOwner: :findMemberOwnerClass(className: :currentClassName, memberName: fName);
-								if({ fOwner != '' }, {
-									:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: :currentClassName, memberName: fName), memberName: fName);
-								});
-							}, {
-								if({ :findHeldMember(className: :currentClassName, memberName: fName):name != '' }, {
-									:addError(line: :currentLine, msg: 'Held member \'' . :currentClassName . ':' . fName . '\' is class-scoped: reach it through the class name, not an instance.');
-								});
-							});
-						});
-					}, {
-						if({ :localVars:has(key: root) }, {
-							rootType: :localVars:getString(key: root, default: '');
-						}, {
-							if({ :fieldTypes:has(key: root) }, {
-								if({ :unassignedFields:has(key: root) }, {
-									:addError(line: :currentLine, msg: 'Field \'' . root . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
-								});
-								rootType: :fieldTypes:getString(key: root, default: '');
-							}, {
-								if({ :allEnumNames:has(key: root) }, {
-									rootType: root;
-								}, {
-									if({ :registeredClasses:has(key: root) }, {
-										rootType: root;
-										# the nested-class chain —
-										# 'Outer:Inner' and the inner-of-inner 'Outer:Mid:Deep' —
-										# walks CLASS-kind members per segment and resolves to
-										# the deepest class's qualified identity.
-										if({ segs:length() >= 2 }, {
-											local ClassInfo is chainCls: :findClass(name: root);
-											local Boolean is chainOk: chainCls:name != '';
-											local Int is chainIdx: 1;
-											while({ chainOk && chainIdx < segs:length() }, {
-												local String is nextType: '';
-												chainCls:members:each(action: local Function(Member is m){
-													if({ m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, {
-														nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
-													});
-												});
-												if({ nextType != '' }, {
-													chainCls: :findClass(name: nextType);
-													if({ chainCls:name == '' }, {
-														chainOk: false;
-													});
-													chainIdx: chainIdx + 1;
-												}, {
-													chainOk: false;
-												});
-											});
-											if({ chainOk && chainIdx == segs:length() }, {
-												rootType: chainCls:qualifiedName();
-												chainResolved: true;
-											});
-										});
-										# §2.3, generalized by the
-										# class-name prefix reaches exactly the HELD members —
-										# an instance reference reaches exactly the instance
-										# members. The first segment after a class root resolves
-										# as a held field (own, then the lattice, nearest wins);
-										# anything else through the prefix stays rejected.
-										# The resolved nested-class chains are exempt.
-										local Member is heldM: Member:init(kind: MemberKind:FIELD);
-										if({ segs:length() >= 2 && !chainResolved }, {
-											heldM: :findHeldMember(className: root, memberName: segs:get(index: 1));
-										});
-										if({ heldM:name != '' && heldM:kind == MemberKind:FIELD }, {
-											local String is heldOwner: :findHeldOwnerClass(className: root, memberName: heldM:name);
-											# The held cycle rule: a held initializer may not
-											# reference a held member of its own class — the
-											# mutual once-guards would deadlock. Ancestors'
-											# held members initialize independently.
-											if({ :inHeldInit && heldOwner == :currentClassName }, {
-												:addError(line: :currentLine, msg: 'Held initializer of \'' . :currentClassName . '\' cannot reference held member \'' . root . ':' . heldM:name . '\' of the same class; the once-guards would deadlock.');
-											});
-											:checkMemberVisibility(ownerClass: heldOwner, member: heldM, memberName: heldM:name);
-											heldAdmitted: true;
-										}, {
-											if({ :findHeldMethod(className: root, methodName: segs:get(index: 1)):name != '' }, {
-												:addError(line: :currentLine, msg: 'Held function \'' . root . ':' . segs:get(index: 1) . '\' must be called; bare references to held functions are not supported (the call form is ' . root . ':' . segs:get(index: 1) . '(...)).');
-												rootType: '';
-											}, {
-												# The resolution hook: a name
-												# matching no declared member resolves through the
-												# class's 'resolveHeld' contract — declared members
-												# always win, so an instance member through the
-												# prefix keeps its rejection.
-												local Member is resolver: :findHeldMethod(className: root, methodName: ContractMethod:RESOLVE_HELD:value());
-												local Boolean is declaredInstance: :lookupFieldType(className: root, fieldName: segs:get(index: 1)) != '' || :lookupAnyMember(className: root, methodName: segs:get(index: 1)):kind == MemberKind:METHOD;
-												if({ segs:length() >= 2 && !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'Str' && root != 'String' && root != 'SpecError' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
-													:addError(line: :currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
-													rootType: '';
-												}, {
-														if({ resolver:name != '' && !declaredInstance }, {
-															# The hook admits — the reference types as the
-															# resolver's declared return type
-															# §5.4). Anti-recursion: inside the hook body,
-															# an unknown name through its own class prefix
-															# would recurse forever.
-															if({ :inHeldFunction && :currentMethodName == ContractMethod:RESOLVE_HELD:value() && root == :currentClassName }, {
-																:addError(line: :currentLine, msg: 'The resolution hook cannot resolve through its own class prefix (\'' . root . ':' . segs:get(index: 1) . '\'); declare the member, or return it from the resolver directly.');
-															});
-															:checkMemberVisibility(ownerClass: :findHeldMethodOwner(className: root, methodName: ContractMethod:RESOLVE_HELD:value()), member: resolver, memberName: ContractMethod:RESOLVE_HELD:value());
-															res: :formatTypeString(t: resolver:memberType);
-															heldAdmitted: true;
-														});
-												});
-											});
-										});
-									});
-								});
-							});
-						});
-					});
-					local String is currType: rootType;
-					local Int is pIdx: 1;
-					while({ !chainResolved && currType != '' && pIdx < segs:length() }, {
-						local String is seg: segs:get(index: pIdx);
-						pIdx: pIdx + 1;
-						if({ !:allEnumNames:has(key: currType) }, {
-							if({ heldAdmitted && pIdx == 2 }, {
-								currType: :lookupHeldFieldType(className: currType, fieldName: seg);
-							}, {
-								currType: :lookupFieldType(className: currType, fieldName: seg);
-							});
-						});
-					});
-					if({ currType != '' }, {
-						res: currType;
-					}, {
-						# Strict held resolution: an
-						# instance-typed receiver (a local, a field) whose
-						# segment 1 is a held member gets the pointed
-						# diagnostic instead of a silent Any.
-						if({ segs:length() >= 2 && !heldAdmitted && rootType != '' && rootType != Primitive:ANY:value() }, {
-							local String is rBase: rootType:split(delimiter: ':'):get(index: 0);
-							if({ :registeredClasses:has(key: rBase) && :findHeldMember(className: rBase, memberName: segs:get(index: 1)):name != '' }, {
-								:addError(line: :currentLine, msg: 'Held member \'' . rBase . ':' . segs:get(index: 1) . '\' is class-scoped: reach it through the class name, not an instance.');
-							});
-						});
-					});
-				});
+				res: :inferPathExpr(segs: segs);
 			},
 			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
-				# the expected type flows into the
-				# operands so a value-yielding branch call nested in an
-				# expression (e.g. `n + if(...)`) types in context.
-				local String is leftT: :inferExpressionType(expr: left, expected: expected);
-				local String is rightT: :inferExpressionType(expr: right, expected: expected);
-				match(on: op, when: [
-					'.': {
-						res: Primitive:STRING:value();
-					},
-					['==', '!=', 'is', '<', '<=', '>', '>=']: {
-						res: Primitive:BOOLEAN:value();
-						# hardening (D5): relational ordering on
-						# String is lexicographic — and only String-to-String.
-						local Boolean is isRel: op == '<' || op == '<=' || op == '>' || op == '>=';
-						local Boolean is leftStr: leftT == 'String' || leftT == 'Str';
-						local Boolean is rightStr: rightT == 'String' || rightT == 'Str';
-						if({ isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, {
-							:addError(line: :currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
-						});
-					},
-					['&&', '||']: {
-						res: Primitive:BOOLEAN:value();
-					},
-					['+', '-', '*', '/', '%']: {
-						if({ leftT == 'Float' || rightT == 'Float' }, {
-							res: 'Float';
-						}, {
-							if({ :isUnsignedInt(t: leftT) }, {
-								res: leftT;
-							}, {
-								if({ :isUnsignedInt(t: rightT) }, {
-									res: rightT;
-								}, {
-									res: Primitive:INT:value();
-								});
-							});
-						});
-					},
-					['&', '|', '^', '<<', '>>']: {
-						res: if({ :isUnsignedInt(t: leftT) }, { leftT }, { if({ :isUnsignedInt(t: rightT) }, { rightT }, { Primitive:INT:value() }) });
-						if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
-							(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
-							local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
-							:addError(line: :currentLine, msg: msg);
-						});
-					},
-					else: {
-						res: Primitive:INT:value();
-					}
-				]);
+				res: :inferBinaryExpr(op: op, left: left, right: right, expected: expected);
 			},
 			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
-				local String is innerT: :inferExpressionType(expr: inner);
-				local String is src: if({ innerT != '' }, { innerT }, { Primitive:ANY:value() });
-				local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
-				# Every non-format cast takes no arguments.
-				if({ args:length() > 0 && !isFormat }, {
-					:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' takes no arguments.');
-				});
-				match(on: target, when: [
-					['Hex', 'Bin', 'Oct']: {
-						if({ args:length() > 1 }, {
-							:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
-						});
-						if({ src != 'Any' && src != 'String' && src != 'Str' && src != Primitive:INT:value() }, {
-							:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' requires an Int or String operand (got \'' . src . '\').');
-						});
-						res: if({ src == 'String' || src == 'Str' }, { Primitive:INT:value() }, { 'String' });
-					},
-					else: {
-						if({ :allEnumNames:has(key: target) }, {
-							:addError(line: :currentLine, msg: 'Cannot cast to enum \'' . target . '\'; construct a variant instead.');
-							res: target;
-						}, {
-							if({ :castableMethod(srcType: src, target: target) != '' }, {
-								# Declared cast: the source class maps the target to a
-								# producing method (G6 emits the call).
-								res: target;
-							}, {
-								if({ :isPrimitive(t: target) && target != Primitive:ANY:value() }, {
-									# Primitive conversion casts take priority over the
-									# class-cast path: Int as String is the machine
-									# conversion even though a String class is loaded.
-									# Any is excluded — it is the universal class-cast
-									# target, always related. These die when the
-									# primitive classes land in Spec and declare their
-									# conversions.
-									if({ !:isCastable(src: src, target: target) }, {
-										:addError(line: :currentLine, msg: 'Cannot cast \'' . src . '\' to \'' . target . '\'.');
-									});
-									res: target;
-								}, {
-									if({ :registeredClasses:has(key: target) || :registeredClasses:has(key: target:split(delimiter: ':'):get(index: 0)) }, {
-										# Class casts are inheritance-based: unrelated classes
-										# cannot cast, Any casts to anything.
-										local Boolean is related: src == Primitive:ANY:value() || :isSubclassOf(subName: src, baseName: target) || :isSubclassOf(subName: target, baseName: src);
-										if({ !related }, {
-											:addError(line: :currentLine, msg: 'Cannot cast \'' . src . '\' to unrelated class \'' . target . '\'.');
-										});
-										res: target;
-									}, {
-										:addError(line: :currentLine, msg: 'Unknown cast target \'' . target . '\'.');
-										res: 'Any';
-									});
-								});
-							});
-						});
-					}
-				]);
+				res: :inferCastExpr(inner: inner, target: target, args: args);
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
-				local String is innerT: :inferExpressionType(expr: operand);
-				if({ op == '~' && innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
-					local String is msg: :errText:errBitwiseComplementInt(innerT: innerT);
-					:addError(line: :currentLine, msg: msg);
-				});
-				if({ op == '++' || op == '--' || op == 'post++' || op == 'post--' }, {
-					if({ innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
-						local String is msg: :errText:errOperatorRequiresInt(op: op, innerT: innerT);
-						:addError(line: :currentLine, msg: msg);
-					});
-					if({ :inLazyBlock && !:isLazyLocalTarget(expr: operand) }, {
-						:addError(line: :currentLine, msg: "Cannot modify external state inside a 'lazy' initializer; 'lazy' blocks have read-only access to outer variables and fields.");
-					});
-				});
-				if({ op == '!' }, {
-					res: Primitive:BOOLEAN:value();
-				}, {
-					res: innerT;
-				});
+				res: :inferUnaryExpr(op: op, operand: operand);
 			},
 			Expression:ArrayLit: local Function(Array of Expression is items){
-				# Bidirectional: a container expectation from the declaration
-				# site types the literal directly — no hint state. The
-				# elements must all be mutually compatible (same primitive
-				# type, same class type, or sharing a parent class via
-				# inheritance) and assignable to any declared element type.
-				local Boolean is hasExpectedContainer: expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List'));
-				local String is elemT: '';
-				if({ hasExpectedContainer }, {
-					local Int is eColon: expected:indexOf(search: ':', default: -1);
-					local Int is eOf: expected:indexOf(search: ' of ', default: -1);
-					if({ eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:')) }, {
-						elemT: expected:substring(start: eColon + 1, end: expected:length());
-					}, {
-						if({ eOf >= 0 }, {
-							elemT: expected:substring(start: eOf + 4, end: expected:length());
-						});
-					});
-				});
-				local Array of String is itemTypes: [];
-				items:each(action: local Function(Expression is item){
-					local String is itemT: :inferExpressionType(expr: item, expected: elemT);
-					if({ :isVoid(t: itemT) }, {
-						:addError(line: :currentLine, msg: 'Array elements cannot be void.');
-					}, {
-						if({ itemT != '' && itemT != Primitive:ANY:value() }, {
-							itemTypes:add(item: itemT);
-						});
-					});
-				});
-				local String is unifiedElemType: :unifyArrayElementTypes(elemTypes: itemTypes);
-				if({ hasExpectedContainer }, {
-					if({ elemT != '' && elemT != Primitive:ANY:value() }, {
-						itemTypes:each(action: local Function(String is itemT){
-							local Boolean is elemOk: :isAssignable(target: elemT, source: itemT);
-							if({ :isPrimitive(t: elemT) && !elemT:startsWith(prefix: 'Function') && itemT != elemT }, {
-								elemOk: false;
-							});
-							if({ !elemOk }, {
-								:addError(line: :currentLine, msg: "Cannot assign 'Array:" . itemT . "' to 'Array:" . elemT . "'.");
-							});
-						});
-					});
-					if({ elemT == '' && expected == 'Array' && unifiedElemType != '' }, {
-						res: 'Array:' . unifiedElemType;
-					}, {
-						res: expected;
-					});
-				}, {
-					if({ unifiedElemType != '' }, {
-						res: 'Array:' . unifiedElemType;
-					}, {
-						res: 'Array';
-					});
-				});
+				res: :inferArrayLitExpr(items: items, expected: expected);
 			},
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
-				if({ expected != '' && expected:startsWith(prefix: 'Map') }, {
-					# Value type from the expectation ('Map of K to V' both
-					# spellings); values must be assignable to it.
-					local String is keyT: '';
-					local String is valT: '';
-					# Both spellings: 'Map of K to V' and the canonical
-					# colon form 'Map:K:V' (formatTypeString's output).
-					local Array of String is mParts: expected:split(delimiter: ':');
-					if({ mParts:length() > 2 }, {
-						keyT: mParts:get(index: 1);
-						valT: mParts:get(index: 2);
-					}, {
-						local String is kv: expected:substring(start: 4, end: expected:length());
-						if({ kv:startsWith(prefix: ' of ') }, {
-							kv: kv:substring(start: 4, end: kv:length());
-						});
-						local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
-						if({ toIdx >= 0 }, {
-							keyT: kv:substring(start: 0, end: toIdx);
-							valT: kv:substring(start: toIdx + 4, end: kv:length());
-						});
-					});
-					keys:each(action: local Function(Expression is k){
-						local String is kT: :inferExpressionType(expr: k);
-						if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !:isAssignable(target: keyT, source: kT) }, {
-							local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
-							:addError(line: :currentLine, msg: "Cannot assign '" . kT . "' key to 'Map:" . kDisplay . ":" . valT . "'.");
-						});
-					});
-					values:each(action: local Function(Expression is v){
-						local String is vT: :inferExpressionType(expr: v);
-						if({ valT != '' && vT != '' && vT != Primitive:ANY:value() && !:isAssignable(target: valT, source: vT) }, {
-							local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
-							:addError(line: :currentLine, msg: "Cannot assign 'Map:" . kDisplay . ":" . vT . "' to 'Map:" . kDisplay . ":" . valT . "'.");
-						});
-					});
-					res: expected;
-				}, {
-					local String is firstKeyType: '';
-					local String is firstValType: '';
-					keys:each(action: local Function(Expression is k){
-						local String is kt: :inferExpressionType(expr: k);
-						if({ firstKeyType == '' && kt != '' && kt != Primitive:ANY:value() }, {
-							firstKeyType: kt;
-						});
-					});
-					values:each(action: local Function(Expression is v){
-						local String is vt: :inferExpressionType(expr: v);
-						if({ firstValType == '' && vt != '' && vt != Primitive:ANY:value() }, {
-							firstValType: vt;
-						});
-					});
-					if({ firstKeyType != '' && firstValType != '' }, {
-						res: 'Map:' . firstKeyType . ':' . firstValType;
-					}, {
-						res: 'Map';
-					});
-				});
+				res: :inferMapLitExpr(keys: keys, values: values, expected: expected);
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is fName){
-				local String is leftT: :inferExpressionType(expr: target);
-				if({ leftT == '' || leftT == 'Any' || :isPrimitive(t: leftT) }, {
-					res: 'Any';
-				}, {
-					local Array of String is faParts: leftT:split(delimiter: ':');
-					local String is faBase: faParts:get(index: 0);
-						local String is fOwner: :findMemberOwnerClass(className: faBase, memberName: fName);
-						if({ fOwner != '' }, {
-							:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: faBase, memberName: fName), memberName: fName);
-						});
-						local String is fT: :lookupFieldType(className: leftT, fieldName: fName);
-						# Strict held resolution: the
-						# class-name prefix reaches exactly the held members;
-						# an instance receiver reaches exactly the instance
-						# members.
-						if({ fT == '' && :registeredClasses:has(key: faBase) && :findHeldMember(className: faBase, memberName: fName):name != '' }, {
-							:addError(line: :currentLine, msg: 'Held member \'' . faBase . ':' . fName . '\' is class-scoped: reach it through the class name, not an instance.');
-						});
-					res: if({ fT != '' }, { fT }, { 'Any' });
-				});
+				res: :inferFieldAccessExpr(target: target, fName: fName);
 			},
 			Expression:Index: local Function(Expression is target, Expression is index){
-				local String is leftT: :inferExpressionType(expr: target);
-				:inferExpressionType(expr: index);
-				# Element extraction accepts both container spellings.
-				if({ leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, {
-					res: leftT:substring(start: 9, end: leftT:length());
-				}, {
-					if({ leftT:startsWith(prefix: 'Array:') && leftT:length() > 6 }, {
-						res: leftT:substring(start: 6, end: leftT:length());
-					}, {
-						if({ leftT:startsWith(prefix: 'Map:') && leftT:length() > 4 }, {
-							local String is afterMap: leftT:substring(start: 4, end: leftT:length());
-							local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
-							if({ colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, {
-								res: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
-							}, {
-								res: Primitive:STRING:value();
-							});
-						}, {
-							if({ leftT == 'Map' }, {
-								res: Primitive:STRING:value();
-							}, {
-								res: 'Any';
-							});
-						});
-					});
-				});
+				res: :inferIndexExpr(target: target, index: index);
 			},
 			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
-				local Map of String to String is savedVars: Map:init();
-				local Array of String is existingKeys: :localVars:keys();
-				existingKeys:each(action: local Function(String is k){
-					savedVars:set(key: k, value: :localVars:getString(key: k, default: ''));
-				});
-				local Map of String to String is savedLazyVars: Map:init();
-				if({ :inLazyBlock }, {
-					local Array of String is lazyKeys: :lazyLocalVars:keys();
-					lazyKeys:each(action: local Function(String is k){
-						savedLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
-					});
-				});
-				local String is savedRet: :currentMethodReturnType;
-				local Expression is savedAnonNode: :currentAnonNode;
-				:currentAnonNode: expr;
-				# the yield flag scopes to THIS closure —
-				# the enclosing closure's last-statement check must not leak
-				# into nested closures' return typing.
-				local Boolean is savedYieldFlag: :checkingValueYield;
-				:checkingValueYield: false;
-
-				if({ !:inBranchClosure }, {
-					# the bidirectional closure typing —
-					# a closure literal assigned into a `Function of X` context
-					# types its body against X, so its own type comes out
-					# `Function of X` and the narrowed param accepts it.
-					if({ expected:startsWith(prefix: 'Function:') && :isVoid(t: :resolveReturnType(t: returnType)) }, {
-						returnType:name: expected:substring(start: 9, end: expected:length());
-						returnType:params: [];
-					});
-					:currentMethodReturnType: :resolveReturnType(t: returnType);
-				});
-				params:each(action: local Function(Parameter is p){
-					local String is pFmt: :formatVarTypeString(t: p:paramType);
-					:localVars:set(key: p:name, value: pFmt);
-					if({ :inLazyBlock }, {
-						:lazyLocalVars:set(key: p:name, value: pFmt);
-					});
-				});
-				local Int is bodyLen: body:length();
-				local Int is bodyIdx: 0;
-				body:each(action: local Function(Statement is s){
-					:anonDepth: :anonDepth + 1;
-					# the last statement of a
-					# value-yielding branch closure is the branch's yield.
-					if({ :inValueBranch && bodyIdx == bodyLen - 1 }, {
-						:checkingValueYield: true;
-					});
-					:checkStatement(stmt: s);
-					:checkingValueYield: false;
-					:anonDepth: :anonDepth - 1;
-					bodyIdx: bodyIdx + 1;
-				});
-
-				:localVars: savedVars;
-				if({ :inLazyBlock }, {
-					:lazyLocalVars: savedLazyVars;
-				});
-				:currentMethodReturnType: savedRet;
-				# the Kotlin convention — the closure
-				# body determines the return. Return-site write-backs happened
-				# during the body check (the RETURN arm); here only the
-				# explicit-terminator last-expression form is handled, reading
-				# the type the body check already resolved — never
-				# re-inferring.
-				local Int is lastIdx: body:length() - 1;
-				if({ lastIdx >= 0 }, {
-					local Statement is lastStmt: body:get(index: lastIdx);
-					match(on: lastStmt, when: [
-						Statement:Expr: local Function(Expression is exprStmt){
-							local String is lastT: exprStmt:resolvedType;
-							local String is curRetT: :resolveReturnType(t: returnType);
-							if({ :isVoid(t: curRetT) }, {
-								if({ lastT != '' && !:isVoid(t: lastT) }, {
-									returnType:name: lastT;
-									returnType:params: [];
-								});
-							}, {
-								if({ lastT != '' && !:isAssignable(target: curRetT, source: lastT) }, {
-									local String is msg: :errText:errClosureReturnType(actual: lastT, expected: curRetT);
-									:addError(line: :currentLine, msg: msg);
-								});
-							});
-						},
-						else: {}
-					]);
-				});
-				:currentAnonNode: savedAnonNode;
-				:checkingValueYield: savedYieldFlag;
-				local String is anonRetStr: :resolveReturnType(t: returnType);
-				if({ anonRetStr != '' && !:isVoid(t: anonRetStr) }, {
-					res: 'Function:' . anonRetStr;
-				}, {
-					res: 'Function';
-				});
+				res: :inferAnonFnExpr(expr: expr, returnType: returnType, params: params, body: body, expected: expected);
 			},
 			Expression:Call: local Function(CallData is call){
 				res: :inferCall(expr: expr, call: call, expected: expected);
@@ -3528,97 +3468,10 @@ Class is TypeChecker{
 		return res;
 	}
 
-	## Infers a CALL expression: container methods, enum methods, registered
-	## class methods, and the builtin fallback table. Container callback
-	## parameters are typed here (bidirectional flow into anonymous
-	## functions); arguments then infer bottom-up.
-	##
-	## @param expr: The CALL expression.
-	## @param expected: Contextual type ('' when none).
-	## @return: Resolved type name string.
-	Function of String is inferCall(Expression is expr, CallData is call, String is expected: ''){
-		# A function-variable invocation (self:missing()) inside a held
-		# body infers its target through the IDENT arm — exempt the
-		# no-instance error for exactly that shape.
-		local Boolean is savedFnVarTarget: :inHeldFnVarTarget;
-		local Boolean is targetIsSelf: false;
-		local Boolean is targetIsIdent: false;
-		local Boolean is targetIsPath: false;
-		local String is targetStr: '';
-		local Array of String is targetPathSegs: [];
-		match(on: call:target, when: [
-			Expression:Ident: local Function(String is name){
-				targetIsIdent: true;
-				targetStr: name;
-				targetIsSelf: name == :names:selfIdent();
-			},
-			Expression:Path: local Function(Array of String is segs){
-				targetIsPath: true;
-				targetPathSegs: segs;
-			}
-		], default: {
-		});
-		if({ targetIsSelf && call:isBareCall && :localVars:getString(key: call:name, default: ''):startsWith(prefix: 'Function') }, {
-			:inHeldFnVarTarget: true;
-		});
-		local String is targetType: :inferExpressionType(expr: call:target);
-		:inHeldFnVarTarget: savedFnVarTarget;
-		local String is method: call:name;
-		local String is res: 'Any';
-
-		local String is targetName: targetStr;
-		if({ targetName == '' && targetIsPath && targetPathSegs:length() > 0 }, {
-			targetName: targetPathSegs:get(index: targetPathSegs:length() - 1);
-		});
-
-		# Nested-construction shorthand: a class-name
-		# receiver naming a nested class constructs it —
-		# `Result:Ok(data: 'x')` ≡ `Result:Ok:init(data: 'x')`. The call
-		# rewrites in place and falls through to the init path.
-		if({ (targetIsIdent || targetIsPath) && method != 'init' && :registeredClasses:has(key: targetName) && !:localVars:has(key: targetName) && !:fieldTypes:has(key: targetName) }, {
-			local ClassInfo is ncCls: :findClass(name: targetName);
-			local Boolean is hasNested: false;
-			if({ ncCls:name != '' }, {
-				ncCls:members:each(action: local Function(Member is m){
-					if({ !hasNested && m:kind == MemberKind:CLASS && m:nestedClass:name == method }, {
-						hasNested: true;
-					});
-				});
-			});
-			if({ hasNested }, {
-				local Array of String is segs: [targetName, method];
-				call:target: Expression:Path(segments: segs);
-				call:name: 'init';
-				targetIsIdent: false;
-				targetIsSelf: false;
-				targetIsPath: true;
-				targetPathSegs: segs;
-				targetName: method;
-				method: 'init';
-				targetType: :inferExpressionType(expr: call:target);
-			});
-		});
-
-		# E5/E7: the call model. A class-name receiver admits
-		# only init, unless the enclosing class instance-imports the class
-		# (elided dispatch) or the stratum is type-level by design (enums,
-		# primitives, containers, transparent runtime types). Conversely,
-		# init on a non-class receiver is construct-only and banned.
-		local String is recvName: '';
-		if({ targetIsIdent || targetIsPath }, {
-			local String is cand: targetName;
-			if({ cand != '' && cand != :names:selfIdent() && :registeredClasses:has(key: cand) && !:localVars:has(key: cand) && !:fieldTypes:has(key: cand) }, {
-				recvName: cand;
-			});
-		});
+	local Function is validateCallReceiverModel(String is recvName, CallData is call, Boolean is targetIsPath, Array of String is targetPathSegs){
 		if({ recvName != '' && call:name != 'init' }, {
 			local Boolean is isSysinternalPath: targetIsPath && targetPathSegs:indexOf(search: 'sysinternal', default: -1) >= 0;
 			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
-			# Desugared enums are type-level by design:
-			# their contract methods dispatch through the class name.
-			# Held functions: the class-name prefix IS
-			# their dispatch — the call is type-level by design, inside
-			# the class and out.
 			if({ :findHeldMethod(className: recvName, methodName: call:name):name != '' }, {
 				isTypeLevel: true;
 			});
@@ -3635,426 +3488,122 @@ Class is TypeChecker{
 		if({ recvName == '' && call:name == 'init' }, {
 			:addError(line: :currentLine, msg: '\'init\' is construct-only; call it on the class name (E7).');
 		});
+	}
 
-		# Conditional:match: the arm-table recognizer —
-		# BEFORE the generic argument inference, which would type the
-		# table's keys as ordinary expressions (the else key is not one).
-		# Keys resolve against the subject's class's held members,
-		# exhaustiveness keys on the Enum root, arm closures type here.
-		# The bare form (self-receiver, the parser's bare-call shape)
-		# is recognized here too — the recognizer returns before the
-		# bare-scope branch runs, so the bareProvider stamp happens
-		# HERE: the backend's match interceptor keys on it.
-		if({ method == 'match' && (call:bareProvider == 'Conditional' || targetType == 'Conditional' || (targetIsIdent && ((targetStr == 'match' && :isAsImportedInherited(className: 'Conditional')) || (targetIsSelf && call:isBareCall && :isAsImportedInherited(className: 'Conditional'))))) }, {
-			if({ targetIsSelf }, {
-				call:bareProvider: 'Conditional';
+	local Function of String is inferMatchCall(Expression is expr, CallData is call, String is expected, Boolean is targetIsSelf){
+		if({ targetIsSelf }, {
+			call:bareProvider: 'Conditional';
+		});
+		local Expression is matchSubj: Expression:Unknown;
+		local Expression is matchArms: Expression:Unknown;
+		local Expression is matchDefault: Expression:Unknown;
+		local Boolean is hasMatchSubj: false;
+		local Boolean is hasMatchArms: false;
+		local Boolean is hasMatchDefault: false;
+		local Boolean is matchArmsIsMap: false;
+		call:args:each(action: local Function(NamedArg is arg){
+			if({ arg:name == 'on' }, {
+				matchSubj: arg:value;
+				hasMatchSubj: true;
 			});
-			local Expression is matchSubj: Expression:Unknown;
-			local Expression is matchArms: Expression:Unknown;
-			local Expression is matchDefault: Expression:Unknown;
-			local Boolean is hasMatchSubj: false;
-			local Boolean is hasMatchArms: false;
-			local Boolean is hasMatchDefault: false;
-			local Boolean is matchArmsIsMap: false;
-			call:args:each(action: local Function(NamedArg is arg){
-				if({ arg:name == 'on' }, {
-					matchSubj: arg:value;
-					hasMatchSubj: true;
-				});
-				if({ arg:name == 'when' }, {
-					matchArms: arg:value;
-					hasMatchArms: true;
-				});
-				if({ arg:name == 'default' }, {
-					matchDefault: arg:value;
-					hasMatchDefault: true;
-				});
+			if({ arg:name == 'when' }, {
+				matchArms: arg:value;
+				hasMatchArms: true;
 			});
-			if({ hasMatchArms }, {
-				match(on: matchArms, when: [
-					Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
-						matchArmsIsMap: true;
-					}
-				], default: {
-				});
-			});
-			if({ matchArmsIsMap }, {
-				local Boolean is defaultActive: hasMatchDefault && :isNonEmptyMatchDefault(expr: matchDefault);
-				if({ hasMatchSubj }, {
-					local String is matchRes: :checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive, hasExplicitDefault: hasMatchDefault);
-					expr:setResolvedType(t: matchRes);
-					return matchRes;
-				}, {
-					# The PREDICATE form: no subject — the keys are the
-					# closures, the first that holds runs its arm.
-					local String is predRes: :checkPredicateArms(arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive);
-					expr:setResolvedType(t: predRes);
-					return predRes;
-				});
-			});
-			# A non-literal table — a Map built at runtime, arms held as
-			# Function values — flows to the runtime dispatch: the
-			# Conditional wrapper's match body serves it (string keys,
-			# array keys, identity over the held singletons, else as the
-			# fallback). The ordinary call machinery below checks the
-			# argument types; payload arms are compile-time by design.
-			# The PREDICATE form has no runtime path at all — a runtime
-			# map can neither preserve scan order nor carry closure
-			# keys — so a non-literal predicate table is a pointed
-			# error instead of silent garbage.
-			if({ !hasMatchSubj && hasMatchArms }, {
-				:addError(line: :currentLine, msg: 'A predicate match table is compile-time: the keys are closures and the scan order matters — write the arm table as a literal.');
-				expr:setResolvedType(t: Primitive:ANY:value());
-				return Primitive:ANY:value();
+			if({ arg:name == 'default' }, {
+				matchDefault: arg:value;
+				hasMatchDefault: true;
 			});
 		});
-
-		# §2.3/E9: bare-scope resolution for self-receiver
-		# calls. The providers are the enclosing class (own and inherited
-		# members) plus its as-imported classes, one level deep. Exactly
-		# one provider resolves; two or more collide and force
-		# qualification; zero is an error — the old behavior silently
-		# invented CurrentClass_method and died in gcc.
-		if({ recvName == '' && targetIsSelf && call:name != 'init' && call:name != 'typeName' && !:shadowsAsFunction(name: call:name, isBareCall: call:isBareCall) }, {
-			local String is ownOwner: :findMemberOwnerClass(className: :currentClassName, memberName: call:name);
-			local Array of String is bsProviders: [];
-			if({ call:isBareCall }, {
-				bsProviders: :bareScopeProviders(methodName: call:name);
-			});
-			local Int is providerTotal: bsProviders:length() + if({ ownOwner != '' }, { 1 }, { 0 });
-			if({ providerTotal > 1 }, {
-				local String is listed: '';
-				if({ ownOwner != '' }, {
-					listed: 'the enclosing class';
-				});
-				bsProviders:each(action: local Function(String is prov){
-					if({ listed == '' }, {
-						listed: prov;
-					}, {
-						listed: listed . ' and ' . prov;
-					});
-				});
-				:addError(line: :currentLine, msg: 'Function \'' . call:name . '\' is provided by ' . listed . '; qualify the call (:' . call:name . ' or the class name) (§2.3).');
-				expr:setResolvedType(t: '');
-				return '';
-			});
-			if({ providerTotal == 0 }, {
-				:addError(line: :currentLine, msg: 'Undefined function \'' . call:name . '\' on class \'' . :currentClassName . '\' (E9).');
-				expr:setResolvedType(t: '');
-				return '';
-			});
-				if({ ownOwner == '' }, {
-					local String is provider: bsProviders:get(index: 0);
-					# The bare-scope branch runs before arg inference: type the
-					# arguments now so overload selection sees exact types. Branch
-					# closures (args 1+) of a Conditional call keep the enclosing
-					# method's return type.
-					local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
-					local Boolean is bareIsLazy: provider == 'Lazy' && call:name == 'lazy';
-					# the bare form carries the value-yield
-					# semantics exactly like the qualified call.
-					local Boolean is bareArg1Anon: false;
-					local Boolean is bareArg2Anon: false;
-					if({ bareIsBranch && expr:argCount() == 3 }, {
-						match(on: expr:argValue(index: 1), when: [
-							Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-								bareArg1Anon: true;
-							}
-						], default: {
-						});
-						match(on: expr:argValue(index: 2), when: [
-							Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-								bareArg2Anon: true;
-							}
-						], default: {
-						});
-					});
-					local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !:isVoid(t: expected) && bareArg1Anon && bareArg2Anon;
-					# the bare loop constructs — the vars
-					# closure's parameters scope over the closure bodies, so
-					# they bind BEFORE the inference and restore after. The
-					# evaluate closure coerces to Boolean pre-inference, the
-					# same order the qualified machinery runs.
-					local Map of String to String is savedLoopVars;
-					local Map of String to String is savedLoopLazyVars;
-					if({ provider == 'Loops' }, {
-						savedLoopVars: Map:init();
-						local Array of String is lvKeys: :localVars:keys();
-						lvKeys:each(action: local Function(String is k){
-							savedLoopVars:set(key: k, value: :localVars:getString(key: k, default: ''));
-						});
-						if({ :inLazyBlock }, {
-							savedLoopLazyVars: Map:init();
-							local Array of String is llvKeys: :lazyLocalVars:keys();
-							llvKeys:each(action: local Function(String is k){
-								savedLoopLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
-							});
-						});
-						local Boolean is bareHasLoopVars: false;
-						call:args:each(action: local Function(NamedArg is arg){
-							match(on: arg:value, when: [
-								Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-									if({ ps:length() > 0 && bd:length() == 0 }, {
-										bareHasLoopVars: true;
-										ps:each(action: local Function(Parameter is p){
-											if({ p:hasDefault }, {
-												:inferExpressionType(expr: p:defaultExpr);
-											});
-											local String is pFmt: :formatVarTypeString(t: p:paramType);
-											:localVars:set(key: p:name, value: pFmt);
-											if({ :inLazyBlock }, {
-												:lazyLocalVars:set(key: p:name, value: pFmt);
-											});
-										});
-									});
-								}
-							], default: {
-							});
-						});
-						# the [vars] parameters scope the closures at
-						# the call site — compile-time only. A closure held
-						# as a variable was built before these parameters
-						# existed and cannot capture them.
-						local Int is barePos: 0;
-						call:args:each(action: local Function(NamedArg is arg){
-							local Boolean is bareClosureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || (arg:name == '' && barePos > 0);
-							if({ bareHasLoopVars && bareClosureSlot }, {
-								local Boolean is valIsAnon: false;
-								match(on: arg:value, when: [
-									Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-										valIsAnon: true;
-									}
-								], default: {
-								});
-								if({ !valIsAnon }, {
-									:addError(line: :currentLine, msg: :errText:errLoopVarsClosureLiteral());
-								});
-							});
-							barePos: barePos + 1;
-						});
-					});
-					local Int is bareIdx: 0;
-					local String is bareLazyRet: 'Any';
-					if({ bareIsLazy }, {
-						bareLazyRet: :inferLazyCall(call: call, expected: expected);
-					}, {
-						if({ provider == 'Loops' }, {
-							# the loop closures are callbacks, not branch
-							# yields — the enclosing branch's flag must not leak.
-							local Boolean is savedLoopBranch: :inBranchClosure;
-							:inBranchClosure: false;
-							call:args:each(action: local Function(NamedArg is arg){
-								if({ arg:name == 'evaluate' }, {
-									match(on: arg:value, when: [
-										Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-											if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-												returnType:name: Primitive:BOOLEAN:value();
-											});
-										}
-									], default: {
-									});
-								});
-								:inferExpressionType(expr: arg:value);
-							});
-							:inBranchClosure: savedLoopBranch;
-						}, {
-							# the branch closures type against the branch, not
-							# the enclosing frame — the enclosing branch's flag
-							# must not leak into the check closure (the same
-							# entry reset the qualified branch call makes).
-							:inBranchClosure: false;
-							call:args:each(action: local Function(NamedArg is arg){
-								if({ bareIsBranch && bareIdx == 0 }, {
-									match(on: arg:value, when: [
-										Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-											# the check closure coerces to Boolean
-											# before its body check (the qualified
-											# branch call's arg-0 rule).
-											if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-												returnType:name: Primitive:BOOLEAN:value();
-											});
-										}
-									], default: {
-									});
-								});
-								if({ bareIsBranch && bareIdx >= 1 }, {
-									:inBranchClosure: true;
-									:inValueBranch: bareIsValue;
-									:currentYieldExpected: '';
-									if({ bareIsValue }, {
-										:currentYieldExpected: expected;
-									});
-								});
-								:inferExpressionType(expr: arg:value);
-								:inBranchClosure: false;
-								:inValueBranch: false;
-								:currentYieldExpected: '';
-								bareIdx: bareIdx + 1;
-							});
-						});
-					});
-					:selectOverload(className: provider, methodName: call:name, expr: expr);
-					# the as-import grants FUNCTIONS
-					# ONLY under the callee's visibility — a `local` member of the
-					# imported class is not callable through the import. The same
-					# check the qualified path runs.
-					local Member is bareSelected: :lookupOverloadedMember(className: provider, methodName: call:name, idx: call:overloadIndex);
-					if({ bareSelected:name != '' }, {
-						:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: call:name);
-					});
-					if({ provider == 'Loops' }, {
-						:localVars: savedLoopVars;
-						if({ :inLazyBlock }, {
-							:lazyLocalVars: savedLoopLazyVars;
-						});
-						call:bareProvider: provider;
-						res: 'Void';
-						expr:setResolvedType(t: res);
-						return res;
-					});
-					if({ bareIsLazy }, {
-						call:bareProvider: provider;
-						res: bareLazyRet;
-						expr:setResolvedType(t: res);
-						return res;
-					});
-				call:bareProvider: provider;
-				local String is providerRet: '';
-				if({ bareSelected:name != '' }, {
-					providerRet: :selectedReturnType(className: provider, selected: bareSelected, expr: expr);
-				});
-				if({ providerRet == '' }, {
-					providerRet: :lookupMethodReturnType(className: provider, methodName: call:name);
-				});
-				if({ providerRet == '' }, {
-					providerRet: 'Any';
-				});
-				if({ bareIsValue }, {
-					local String is bareThenT: '';
-					local String is bareElseT: '';
-					match(on: expr:argValue(index: 1), when: [
-						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-							bareThenT: :resolveReturnType(t: rt);
-						}
-					], default: {
-					});
-					match(on: expr:argValue(index: 2), when: [
-						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-							bareElseT: :resolveReturnType(t: rt);
-						}
-					], default: {
-					});
-					if({ :isVoid(t: bareThenT) || :isVoid(t: bareElseT) }, {
-						:addError(line: :currentLine, msg: :errText:errBranchRequiresExpressions());
-						res: :names:voidName();
-					}, {
-						if({ !:isAssignable(target: bareThenT, source: bareElseT) && !:isAssignable(target: bareElseT, source: bareThenT) }, {
-							:addError(line: :currentLine, msg: :errText:errBranchMismatchedTypes(thenType: bareThenT, elseType: bareElseT));
-							res: bareThenT;
-						}, {
-							res: if({ bareThenT == Primitive:ANY:value() }, { bareElseT }, { bareThenT });
-						});
-					});
-					expr:setResolvedType(t: res);
-					return res;
-				});
-				res: providerRet;
-				expr:setResolvedType(t: res);
-				return res;
-				});
+		if({ hasMatchArms }, {
+			match(on: matchArms, when: [
+				Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+					matchArmsIsMap: true;
+				}
+			], default: {});
 		});
-		# is this a Conditional branch call? Branch
-		# closure bodies (arguments 1+) type-check against the enclosing
-		# method's return type — they inline into it. The self-call
-		# disjunct lets the wrapper's own self-calls pre-type their check
-		# closures too.
-		local Boolean is isBranchCall: call:name == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && targetIsIdent) || (targetIsSelf && :currentClassName == 'Conditional')) || call:bareProvider == 'Conditional' || (targetIsIdent && targetStr == 'if' && :isAsImportedInherited(className: 'Conditional')));
-		# the value-yielding form — a 3-arg branch
-		# call in a context that expects a value (a declaration, an
-		# assignment, a return). Both branch closures must be inline
-		# literals; their last expressions are the yields.
-		local Boolean is arg1IsAnon: false;
-		local Boolean is arg2IsAnon: false;
-		local Array of Statement is tAnonBody: [];
-		local Array of Statement is eAnonBody: [];
-		if({ isBranchCall && expr:argCount() == 3 && expected != '' && !:isVoid(t: expected) }, {
+		if({ matchArmsIsMap }, {
+			local Boolean is defaultActive: hasMatchDefault && :isNonEmptyMatchDefault(expr: matchDefault);
+			if({ hasMatchSubj }, {
+				local String is matchRes: :checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive, hasExplicitDefault: hasMatchDefault);
+				expr:setResolvedType(t: matchRes);
+				return matchRes;
+			});
+			local String is predRes: :checkPredicateArms(arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive);
+			expr:setResolvedType(t: predRes);
+			return predRes;
+		});
+		if({ !hasMatchSubj && hasMatchArms }, {
+			:addError(line: :currentLine, msg: 'A predicate match table is compile-time: the keys are closures and the scan order matters — write the arm table as a literal.');
+			expr:setResolvedType(t: Primitive:ANY:value());
+			return Primitive:ANY:value();
+		});
+		return '';
+	}
+
+	local Function of String is unifyValueBranchTypes(Expression is expr){
+		local String is thenT: '';
+		local String is elseT: '';
+		match(on: expr:argValue(index: 1), when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				thenT: :resolveReturnType(t: rt);
+			}
+		], default: {});
+		match(on: expr:argValue(index: 2), when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				elseT: :resolveReturnType(t: rt);
+			}
+		], default: {});
+		if({ :isVoid(t: thenT) || :isVoid(t: elseT) }, {
+			:addError(line: :currentLine, msg: :errText:errBranchRequiresExpressions());
+			return :names:voidName();
+		});
+		if({ !:isAssignable(target: thenT, source: elseT) && !:isAssignable(target: elseT, source: thenT) }, {
+			:addError(line: :currentLine, msg: :errText:errBranchMismatchedTypes(thenType: thenT, elseType: elseT));
+			return thenT;
+		});
+		return if({ thenT == Primitive:ANY:value() }, { elseT }, { thenT });
+	}
+
+	local Function of String is inferBareScopeCall(Expression is expr, CallData is call, String is expected, String is provider){
+		local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
+		local Boolean is bareIsLazy: provider == 'Lazy' && call:name == 'lazy';
+		local Boolean is bareArg1Anon: false;
+		local Boolean is bareArg2Anon: false;
+		if({ bareIsBranch && expr:argCount() == 3 }, {
 			match(on: expr:argValue(index: 1), when: [
 				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-					arg1IsAnon: true;
-					tAnonBody: bd;
+					bareArg1Anon: true;
 				}
-			], default: {
-			});
+			], default: {});
 			match(on: expr:argValue(index: 2), when: [
 				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-					arg2IsAnon: true;
-					eAnonBody: bd;
+					bareArg2Anon: true;
 				}
-			], default: {
-			});
+			], default: {});
 		});
-		local Boolean is isValueBranch: isBranchCall && expr:argCount() == 3 && expected != '' && !:isVoid(t: expected) && arg1IsAnon && arg2IsAnon;
-		# the value form is structural — BOTH branch
-		# closures must end in a return-expression (the yield). Closures that
-		# end in assignments are statement-style branches even in a
-		# value-typed context; they stay void-routed.
-		if({ isValueBranch }, {
-			local Int is tLen: tAnonBody:length();
-			local Int is eLen: eAnonBody:length();
-			if({ tLen == 0 || eLen == 0 }, {
-				isValueBranch: false;
-			}, {
-				local Statement is tLast: tAnonBody:get(index: tLen - 1);
-				local Statement is eLast: eAnonBody:get(index: eLen - 1);
-				local Boolean is tHasRet: match(on: tLast, when: [
-					Statement:Return: local Function of Boolean(Expression is returnExpr, Boolean is hasReturnExpr){
-						return hasReturnExpr;
-					},
-					else: { false }
-				]);
-				local Boolean is eHasRet: match(on: eLast, when: [
-					Statement:Return: local Function of Boolean(Expression is returnExpr, Boolean is hasReturnExpr){
-						return hasReturnExpr;
-					},
-					else: { false }
-				]);
-				if({ !tHasRet || !eHasRet }, {
-					isValueBranch: false;
-				});
-			});
-		});
-		local Int is argIdx: 0;
-		local Boolean is savedBranchFlag: :inBranchClosure;
-		local Boolean is savedValBranchFlag: :inValueBranch;
-		local String is savedYieldExpFlag: :currentYieldExpected;
-		:inBranchClosure: false;
-		local Boolean is isLazyCall: ((targetType == 'Lazy' || targetName == 'Lazy') && (method == 'lazy' || method == 'eval')) || (targetIsSelf && :currentClassName == 'Lazy' && method == 'lazy');
-		local String is qualLazyRet: 'Any';
-		# the Loops provider's closure forms share the
-			# loop typing (while/loop/until inline closures; repeat counts).
-			local Boolean is isWhileLoop: (targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'while' || method == 'until' || method == 'repeat');
-		local Map of String to String is savedWhileVars;
-		local Map of String to String is savedWhileLazyVars;
-		local Boolean is hasLoopVars: false;
-		if({ isWhileLoop }, {
-			savedWhileVars: Map:init();
-			local Array of String is existingKeys: :localVars:keys();
-			existingKeys:each(action: local Function(String is k){
-				savedWhileVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+		local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !:isVoid(t: expected) && bareArg1Anon && bareArg2Anon;
+		local Map of String to String is savedLoopVars;
+		local Map of String to String is savedLoopLazyVars;
+		if({ provider == 'Loops' }, {
+			savedLoopVars: Map:init();
+			local Array of String is lvKeys: :localVars:keys();
+			lvKeys:each(action: local Function(String is k){
+				savedLoopVars:set(key: k, value: :localVars:getString(key: k, default: ''));
 			});
 			if({ :inLazyBlock }, {
-				savedWhileLazyVars: Map:init();
-				local Array of String is lExistingKeys: :lazyLocalVars:keys();
-				lExistingKeys:each(action: local Function(String is k){
-					savedWhileLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
+				savedLoopLazyVars: Map:init();
+				local Array of String is llvKeys: :lazyLocalVars:keys();
+				llvKeys:each(action: local Function(String is k){
+					savedLoopLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
 				});
 			});
-			local Int is posIdx: 0;
+			local Boolean is bareHasLoopVars: false;
 			call:args:each(action: local Function(NamedArg is arg){
 				match(on: arg:value, when: [
 					Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
 						if({ ps:length() > 0 && bd:length() == 0 }, {
-							hasLoopVars: true;
+							bareHasLoopVars: true;
 							ps:each(action: local Function(Parameter is p){
 								if({ p:hasDefault }, {
 									:inferExpressionType(expr: p:defaultExpr);
@@ -4068,52 +3617,34 @@ Class is TypeChecker{
 						});
 					}
 				], default: {});
-				# the [vars] parameters scope the closures at the
-				# call site — compile-time only. A closure held as a
-				# variable was built before these parameters existed and
-				# cannot capture them: reject the combination instead of
-				# running it with free identifiers.
-				local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((hasLoopVars && (posIdx == 1 || posIdx == 2)) || (!hasLoopVars && (posIdx == 0 || posIdx == 1))));
-				local Boolean is argIsAnon: false;
-				match(on: arg:value, when: [
-					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
-						argIsAnon: true;
-						if({ arg:name == 'evaluate' }, {
-							if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-								returnType:name: Primitive:BOOLEAN:value();
-							});
-						}, {
-							if({ arg:name == '' }, {
-								if({ (hasLoopVars && posIdx == 1) || (!hasLoopVars && posIdx == 0) }, {
-									if({ returnType:name == '' || returnType:name == :names:voidName() }, {
-										returnType:name: Primitive:BOOLEAN:value();
-									});
-								});
-							});
-						});
-					}
-				], default: {});
-				if({ hasLoopVars && closureSlot && !argIsAnon }, {
-					:addError(line: :currentLine, msg: :errText:errLoopVarsClosureLiteral());
+			});
+			local Int is barePos: 0;
+			call:args:each(action: local Function(NamedArg is arg){
+				local Boolean is bareClosureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || (arg:name == '' && barePos > 0);
+				if({ bareHasLoopVars && bareClosureSlot }, {
+					local Boolean is valIsAnon: false;
+					match(on: arg:value, when: [
+						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+							valIsAnon: true;
+						}
+					], default: {});
+					if({ !valIsAnon }, {
+						:addError(line: :currentLine, msg: :errText:errLoopVarsClosureLiteral());
+					});
 				});
-				posIdx: posIdx + 1;
+				barePos: barePos + 1;
 			});
 		});
-
-		:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
-		# the loop constructs' closures are callbacks,
-		# not branch yields — when the call itself sits inside an
-		# enclosing branch closure, that flag must not leak into them
-		# (their returns type against the closure, not the method).
-		if({ isLazyCall }, {
-			qualLazyRet: :inferLazyCall(call: call, expected: expected);
+		local Int is bareIdx: 0;
+		local String is bareLazyRet: 'Any';
+		if({ bareIsLazy }, {
+			bareLazyRet: :inferLazyCall(call: call, expected: expected);
 		}, {
-			if({ isWhileLoop }, {
+			if({ provider == 'Loops' }, {
 				local Boolean is savedLoopBranch: :inBranchClosure;
 				:inBranchClosure: false;
-				local Int is loopArgIdx: 0;
 				call:args:each(action: local Function(NamedArg is arg){
-					if({ arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0))) }, {
+					if({ arg:name == 'evaluate' }, {
 						match(on: arg:value, when: [
 							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
 								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
@@ -4123,12 +3654,12 @@ Class is TypeChecker{
 						], default: {});
 					});
 					:inferExpressionType(expr: arg:value);
-					loopArgIdx: loopArgIdx + 1;
 				});
 				:inBranchClosure: savedLoopBranch;
 			}, {
+				:inBranchClosure: false;
 				call:args:each(action: local Function(NamedArg is arg){
-					if({ isBranchCall && argIdx == 0 }, {
+					if({ bareIsBranch && bareIdx == 0 }, {
 						match(on: arg:value, when: [
 							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
 								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
@@ -4137,256 +3668,319 @@ Class is TypeChecker{
 							}
 						], default: {});
 					});
-					local String is callArgExp: '';
-					if({ isBranchCall && argIdx >= 1 }, {
+					if({ bareIsBranch && bareIdx >= 1 }, {
 						:inBranchClosure: true;
-						:inValueBranch: isValueBranch;
+						:inValueBranch: bareIsValue;
 						:currentYieldExpected: '';
-						if({ isValueBranch }, {
+						if({ bareIsValue }, {
 							:currentYieldExpected: expected;
 						});
 					});
-					if({ !isBranchCall && expected != '' && !:isVoid(t: expected) }, {
-						local Type is expNode: :parseTypeNode(s: expected);
-						if({ expNode:params:length() == 1 }, {
-							local Type is expArg0: expNode:params:get(index: 0);
-							if({ expArg0:name != '' && !:isVoid(t: expArg0:name) && expArg0:name != Primitive:ANY:value() }, {
-								local Boolean is paramExpectsTypedFn: false;
-								local Member is expCallee: :lookupAnyMember(className: targetType, methodName: method);
-								if({ expCallee:name == '' }, {
-									expCallee: :findHeldMethod(className: targetType, methodName: method);
-								});
-								local Member is expTypedCallee: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
-								local Array of Member is expCandidates: [expCallee, expTypedCallee];
-								expCandidates:each(action: local Function(Member is cm){
-									if({ !paramExpectsTypedFn && cm:name != '' }, {
-										local Int is pi: 0;
-										cm:params:each(action: local Function(Parameter is cp){
-											local Boolean is pMatch: if({ arg:name != '' }, { cp:name == arg:name }, { pi == argIdx });
-											if({ pMatch && cp:paramType:name == 'Function' && cp:paramType:params:length() > 0 }, {
-												paramExpectsTypedFn: true;
-											});
-											pi++;
-										});
-									});
-								});
-								if({ paramExpectsTypedFn }, {
-									match(on: arg:value, when: [
-										Expression:AnonFn: local Function(Type is _fnRt, Array of Parameter is _fnPs, Array of Statement is _fnBd){
-											callArgExp: 'Function:' . :formatTypeString(t: expArg0);
-										}
-									], default: {});
-								});
-							});
-						});
-					});
-					:inferExpressionType(expr: arg:value, expected: callArgExp);
+					:inferExpressionType(expr: arg:value);
 					:inBranchClosure: false;
 					:inValueBranch: false;
 					:currentYieldExpected: '';
-					argIdx: argIdx + 1;
+					bareIdx: bareIdx + 1;
 				});
 			});
 		});
-
-		if({ isWhileLoop }, {
-			:localVars: savedWhileVars;
+		:selectOverload(className: provider, methodName: call:name, expr: expr);
+		local Member is bareSelected: :lookupOverloadedMember(className: provider, methodName: call:name, idx: call:overloadIndex);
+		if({ bareSelected:name != '' }, {
+			:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: call:name);
+		});
+		if({ provider == 'Loops' }, {
+			:localVars: savedLoopVars;
 			if({ :inLazyBlock }, {
-				:lazyLocalVars: savedWhileLazyVars;
+				:lazyLocalVars: savedLoopLazyVars;
 			});
+			call:bareProvider: provider;
 			expr:setResolvedType(t: 'Void');
 			return 'Void';
 		});
+		if({ bareIsLazy }, {
+			call:bareProvider: provider;
+			expr:setResolvedType(t: bareLazyRet);
+			return bareLazyRet;
+		});
+		call:bareProvider: provider;
+		local String is providerRet: '';
+		if({ bareSelected:name != '' }, {
+			providerRet: :selectedReturnType(className: provider, selected: bareSelected, expr: expr);
+		});
+		if({ providerRet == '' }, {
+			providerRet: :lookupMethodReturnType(className: provider, methodName: call:name);
+		});
+		if({ providerRet == '' }, {
+			providerRet: 'Any';
+		});
+		if({ bareIsValue }, {
+			local String is valRes: :unifyValueBranchTypes(expr: expr);
+			expr:setResolvedType(t: valRes);
+			return valRes;
+		});
+		expr:setResolvedType(t: providerRet);
+		return providerRet;
+	}
 
-		if({ targetType == :names:selfIdent() || targetType == '' }, {
-			targetType: :currentClassName;
-			# A held member body has no instance: implicit-self and self
-			# calls are not available from it.
-			if({ :inHeldInit || :inHeldFunction }, {
-				:addError(line: :currentLine, msg: :errText:errHeldNoInstance(method: method));
+	local Function of Boolean is isValueBranchCall(Expression is expr, Boolean is isBranchCall, String is expected){
+		if({ !isBranchCall || expr:argCount() != 3 || expected == '' || :isVoid(t: expected) }, {
+			return false;
+		});
+		local Boolean is arg1IsAnon: false;
+		local Boolean is arg2IsAnon: false;
+		local Array of Statement is tAnonBody: [];
+		local Array of Statement is eAnonBody: [];
+		match(on: expr:argValue(index: 1), when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				arg1IsAnon: true;
+				tAnonBody: bd;
+			}
+		], default: {});
+		match(on: expr:argValue(index: 2), when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				arg2IsAnon: true;
+				eAnonBody: bd;
+			}
+		], default: {});
+		if({ !arg1IsAnon || !arg2IsAnon }, {
+			return false;
+		});
+		local Int is tLen: tAnonBody:length();
+		local Int is eLen: eAnonBody:length();
+		if({ tLen == 0 || eLen == 0 }, {
+			return false;
+		});
+		local Statement is tLast: tAnonBody:get(index: tLen - 1);
+		local Statement is eLast: eAnonBody:get(index: eLen - 1);
+		local Boolean is tHasRet: match(on: tLast, when: [
+			Statement:Return: local Function of Boolean(Expression is returnExpr, Boolean is hasReturnExpr){
+				return hasReturnExpr;
+			},
+			else: { false }
+		]);
+		local Boolean is eHasRet: match(on: eLast, when: [
+			Statement:Return: local Function of Boolean(Expression is returnExpr, Boolean is hasReturnExpr){
+				return hasReturnExpr;
+			},
+			else: { false }
+		]);
+		return tHasRet && eHasRet;
+	}
+
+	local Function of String is inferWhileLoopCall(Expression is expr, CallData is call, String is targetType, String is method){
+		local Map of String to String is savedWhileVars: Map:init();
+		local Array of String is existingKeys: :localVars:keys();
+		existingKeys:each(action: local Function(String is k){
+			savedWhileVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+		});
+		local Map of String to String is savedWhileLazyVars: Map:init();
+		if({ :inLazyBlock }, {
+			local Array of String is lExistingKeys: :lazyLocalVars:keys();
+			lExistingKeys:each(action: local Function(String is k){
+				savedWhileLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
 			});
 		});
-
-		# Held functions: a bare class-name target
-		# with a held member dispatches the class-scoped call — a
-		# receiver-free C function, no vtable.
-		local Member is heldCallFn: Member:init(kind: MemberKind:METHOD);
-		local String is heldRoot: '';
-		if({ targetIsIdent || targetIsPath }, {
-			heldRoot: targetStr;
-			if({ targetIsPath && targetPathSegs:length() > 0 }, {
-				heldRoot: targetPathSegs:get(index: 0);
-			});
-			if({ heldRoot != '' && heldRoot != :names:selfIdent() && !:localVars:has(key: heldRoot) && !:fieldTypes:has(key: heldRoot) && :registeredClasses:has(key: heldRoot) }, {
-				if({ method != 'init' }, {
-					heldCallFn: :findHeldMethod(className: heldRoot, methodName: method);
-				});
-			});
-		});
-		if({ heldCallFn:name != '' }, {
-			local String is heldOwner: :findHeldMethodOwner(className: heldRoot, methodName: method);
-			:checkMemberVisibility(ownerClass: heldOwner, member: heldCallFn, memberName: method);
-			if({ heldRoot == 'ThreadScope' && method == 'open' && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
-				local Boolean is hasOnErrorArg: false;
-				call:args:each(action: local Function(NamedArg is arg){
-					if({ arg:name == 'onError' }, {
-						hasOnErrorArg: true;
-						match(on: arg:value, when: [
-							Expression:AnonFn: local Function(Type is fnRetT, Array of Parameter is _p, Array of Statement is _b){
-								local String is rt: :resolveReturnType(t: fnRetT);
-								if({ rt != Primitive:BOOLEAN:value() }, {
-									:addError(line: :currentLine, msg: "ThreadScope:open 'onError' handler must return Boolean (true if handled, false to keep bubbling), found '" . rt . "'.");
-								});
-							}
-						], default: {});
-					});
-				});
-				if({ !hasOnErrorArg && !:classHasCustomErrorHandler(className: :currentClassName) }, {
-					:addError(line: :currentLine, msg: "ThreadScope:open requires either an 'onError:' handler argument or an enclosing class that replaces 'SpecErrorHandler'.");
-				});
-			});
-			local String is heldRet: :resolveReturnType(t: heldCallFn:memberType);
-			local ClassInfo is hOwnerCls: :findClass(name: heldOwner);
-			if({ hOwnerCls:typeParams:length() > 0 }, {
-				local String is tp0: hOwnerCls:typeParams:get(index: 0);
-				if({ heldRet == hOwnerCls:name . ':' . tp0 || heldRet == hOwnerCls:name }, {
-					local String is inferredArgT: '';
-					if({ heldCallFn:params:length() > 0 && call:args:length() > 0 }, {
-						local Parameter is hp0: heldCallFn:params:get(index: 0);
-						local String is hp0Str: :formatVarTypeString(t: hp0:paramType);
-						if({ hp0Str:endsWith(suffix: ':' . tp0) }, {
-							local String is hpPrefix: hp0Str:substring(start: 0, end: hp0Str:length() - tp0:length());
-							local NamedArg is ca0: call:args:get(index: 0);
-							local String is ca0T: ca0:value:resolvedType;
-							if({ ca0T:startsWith(prefix: hpPrefix) && ca0T:length() > hpPrefix:length() }, {
-								inferredArgT: ca0T:substring(start: hpPrefix:length(), end: ca0T:length());
+		local Boolean is hasLoopVars: false;
+		local Int is posIdx: 0;
+		call:args:each(action: local Function(NamedArg is arg){
+			match(on: arg:value, when: [
+				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+					if({ ps:length() > 0 && bd:length() == 0 }, {
+						hasLoopVars: true;
+						ps:each(action: local Function(Parameter is p){
+							if({ p:hasDefault }, {
+								:inferExpressionType(expr: p:defaultExpr);
+							});
+							local String is pFmt: :formatVarTypeString(t: p:paramType);
+							:localVars:set(key: p:name, value: pFmt);
+							if({ :inLazyBlock }, {
+								:lazyLocalVars:set(key: p:name, value: pFmt);
 							});
 						});
 					});
-					if({ inferredArgT != '' && inferredArgT != tp0 }, {
-						heldRet: hOwnerCls:name . ':' . inferredArgT;
+				}
+			], default: {});
+			local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((hasLoopVars && (posIdx == 1 || posIdx == 2)) || (!hasLoopVars && (posIdx == 0 || posIdx == 1))));
+			local Boolean is argIsAnon: false;
+			match(on: arg:value, when: [
+				Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+					argIsAnon: true;
+					if({ arg:name == 'evaluate' }, {
+						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+							returnType:name: Primitive:BOOLEAN:value();
+						});
 					}, {
-						if({ expected:startsWith(prefix: hOwnerCls:name . ':') || expected:startsWith(prefix: hOwnerCls:name . ' of ') }, {
-							heldRet: expected;
+						if({ arg:name == '' }, {
+							if({ (hasLoopVars && posIdx == 1) || (!hasLoopVars && posIdx == 0) }, {
+								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+									returnType:name: Primitive:BOOLEAN:value();
+								});
+							});
+						});
+					});
+				}
+			], default: {});
+			if({ hasLoopVars && closureSlot && !argIsAnon }, {
+				:addError(line: :currentLine, msg: :errText:errLoopVarsClosureLiteral());
+			});
+			posIdx: posIdx + 1;
+		});
+		:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
+		local Boolean is savedLoopBranch: :inBranchClosure;
+		:inBranchClosure: false;
+		local Int is loopArgIdx: 0;
+		call:args:each(action: local Function(NamedArg is arg){
+			if({ arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0))) }, {
+				match(on: arg:value, when: [
+					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+							returnType:name: Primitive:BOOLEAN:value();
+						});
+					}
+				], default: {});
+			});
+			:inferExpressionType(expr: arg:value);
+			loopArgIdx: loopArgIdx + 1;
+		});
+		:inBranchClosure: savedLoopBranch;
+		:localVars: savedWhileVars;
+		if({ :inLazyBlock }, {
+			:lazyLocalVars: savedWhileLazyVars;
+		});
+		expr:setResolvedType(t: 'Void');
+		return 'Void';
+	}
+
+	local Function is inferCallArgs(CallData is call, String is targetType, String is method, String is expected, Boolean is isBranchCall, Boolean is isValueBranch){
+		local Int is argIdx: 0;
+		call:args:each(action: local Function(NamedArg is arg){
+			if({ isBranchCall && argIdx == 0 }, {
+				match(on: arg:value, when: [
+					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+							returnType:name: Primitive:BOOLEAN:value();
+						});
+					}
+				], default: {});
+			});
+			local String is callArgExp: '';
+			if({ isBranchCall && argIdx >= 1 }, {
+				:inBranchClosure: true;
+				:inValueBranch: isValueBranch;
+				:currentYieldExpected: '';
+				if({ isValueBranch }, {
+					:currentYieldExpected: expected;
+				});
+			});
+			if({ !isBranchCall && expected != '' && !:isVoid(t: expected) }, {
+				local Type is expNode: :parseTypeNode(s: expected);
+				if({ expNode:params:length() == 1 }, {
+					local Type is expArg0: expNode:params:get(index: 0);
+					if({ expArg0:name != '' && !:isVoid(t: expArg0:name) && expArg0:name != Primitive:ANY:value() }, {
+						local Boolean is paramExpectsTypedFn: false;
+						local Member is expCallee: :lookupAnyMember(className: targetType, methodName: method);
+						if({ expCallee:name == '' }, {
+							expCallee: :findHeldMethod(className: targetType, methodName: method);
+						});
+						local Member is expTypedCallee: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
+						local Array of Member is expCandidates: [expCallee, expTypedCallee];
+						expCandidates:each(action: local Function(Member is cm){
+							if({ !paramExpectsTypedFn && cm:name != '' }, {
+								local Int is pi: 0;
+								cm:params:each(action: local Function(Parameter is cp){
+									local Boolean is pMatch: if({ arg:name != '' }, { cp:name == arg:name }, { pi == argIdx });
+									if({ pMatch && cp:paramType:name == 'Function' && cp:paramType:params:length() > 0 }, {
+										paramExpectsTypedFn: true;
+									});
+									pi++;
+								});
+							});
+						});
+						if({ paramExpectsTypedFn }, {
+							match(on: arg:value, when: [
+								Expression:AnonFn: local Function(Type is _fnRt, Array of Parameter is _fnPs, Array of Statement is _fnBd){
+									callArgExp: 'Function:' . :formatTypeString(t: expArg0);
+								}
+							], default: {});
 						});
 					});
 				});
 			});
-			expr:setResolvedType(t: heldRet);
-			return heldRet;
+			:inferExpressionType(expr: arg:value, expected: callArgExp);
+			:inBranchClosure: false;
+			:inValueBranch: false;
+			:currentYieldExpected: '';
+			argIdx: argIdx + 1;
 		});
-		# Strict held resolution: an instance
-		# receiver never reaches a held function.
-		if({ targetType != '' && targetType != Primitive:ANY:value() && !:allEnumNames:has(key: targetType) && heldCallFn:name == '' }, {
-			local String is iBase: targetType:split(delimiter: ':'):get(index: 0);
-			if({ :registeredClasses:has(key: iBase) && :lookupMethodReturnType(className: iBase, methodName: method) == '' && :findHeldMethod(className: iBase, methodName: method):name != '' }, {
-				:addError(line: :currentLine, msg: :errText:errHeldClassScoped(className: iBase, method: method));
-			});
-		});
+	}
 
-		# Sysinternal floor access by qualified chain: ONLY base:sys
-		# wrappers may call the floor — everyone else goes through the
-		# same-name wrapper (the sysinternal discipline).
-		if({ targetIsPath }, {
-			local String is qJoined: '';
-			targetPathSegs:each(action: local Function(String is seg){
-				if({ qJoined == '' }, {
-					qJoined: seg;
-				}, {
-					qJoined: qJoined . ':' . seg;
-				});
-			});
-			if({ qJoined:contains(needle: ':sysinternal:') }, {
-				local ClassInfo is callerCls: :currentClassDef;
-				# The sysinternal discipline: the floor is reachable from
-				# the base:sys wrappers — structurally: the caller's
-				# namespace segment array begins ['base', 'sys', ...] (the
-				# sub-packages included). Segment comparison is what
-				# separates the wrapper package from the floor's own
-				# base:sysinternal; a prefix test on the joined string
-				# would conflate them.
-				local Array of String is callerSegs: callerCls:namespaceSegments();
-				local String is floorClsName: targetPathSegs:get(index: targetPathSegs:length() - 1);
-				local Boolean is sysWrapper: callerSegs:length() >= 2 && callerSegs:get(index: 0) == 'base' &&
-					(callerSegs:get(index: 1) == 'sys' || callerSegs:get(index: 1) == 'sysinternal' || callerCls:name == floorClsName);
-				if({ !sysWrapper }, {
-					:addError(line: :currentLine, msg: :errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
-				});
-				res: :lookupMethodReturnType(className: qJoined, methodName: method);
-				if({ isLazyCall }, {
-					res: qualLazyRet;
-				});
-				expr:setResolvedType(t: res);
-				return res;
-			});
+	local Function is checkThreadScopeOpenArgs(CallData is call){
+		if({ :namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
+			return;
 		});
-
-		# Namespace-qualified chains: `base:sysinternal:Buf()` and method
-		# calls on one — the chain's type is the named class.
-		if({ targetType == Primitive:ANY:value() || targetType == '' }, {
-			if({ targetIsPath }, {
-				local ClassInfo is qCls: :findClass(name: method);
-				if({ qCls:name == method }, {
-					targetType: method;
-				});
-			}, {
-				match(on: call:target, when: [
-					Expression:Call: local Function(CallData is qInnerCall){
-						match(on: qInnerCall:target, when: [
-							Expression:Path: local Function(Array of String is qSegs){
-								local String is qCand: qInnerCall:name;
-								local ClassInfo is qCls: :findClass(name: qCand);
-								if({ qCand != '' && qCls:name == qCand }, {
-									targetType: qCand;
-								});
-							}
-						], default: {});
+		local Boolean is hasOnErrorArg: false;
+		call:args:each(action: local Function(NamedArg is arg){
+			if({ arg:name == 'onError' }, {
+				hasOnErrorArg: true;
+				match(on: arg:value, when: [
+					Expression:AnonFn: local Function(Type is fnRetT, Array of Parameter is _p, Array of Statement is _b){
+						local String is rt: :resolveReturnType(t: fnRetT);
+						if({ rt != Primitive:BOOLEAN:value() }, {
+							:addError(line: :currentLine, msg: "ThreadScope:open 'onError' handler must return Boolean (true if handled, false to keep bubbling), found '" . rt . "'.");
+						});
 					}
 				], default: {});
 			});
 		});
+		if({ !hasOnErrorArg && !:classHasCustomErrorHandler(className: :currentClassName) }, {
+			:addError(line: :currentLine, msg: "ThreadScope:open requires either an 'onError:' handler argument or an enclosing class that replaces 'SpecErrorHandler'.");
+		});
+	}
 
-		if({ !:allEnumNames:has(key: targetType) && targetType != '' && targetType != 'Any' }, {
-			local Array of String is cParts: targetType:split(delimiter: ':');
-			local String is cBase: cParts:get(index: 0);
-			local String is mOwner: :findMemberOwnerClass(className: cBase, memberName: method);
-			if({ mOwner != '' }, {
-				:checkMemberVisibility(ownerClass: mOwner, member: :lookupAnyMember(className: cBase, methodName: method), memberName: method);
+	local Function of String is inferHeldCall(Expression is expr, CallData is call, String is heldRoot, String is method, Member is heldCallFn, String is expected){
+		local String is heldOwner: :findHeldMethodOwner(className: heldRoot, methodName: method);
+		:checkMemberVisibility(ownerClass: heldOwner, member: heldCallFn, memberName: method);
+		if({ heldRoot == 'ThreadScope' && method == 'open' }, {
+			:checkThreadScopeOpenArgs(call: call);
+		});
+		local String is heldRet: :resolveReturnType(t: heldCallFn:memberType);
+		local ClassInfo is hOwnerCls: :findClass(name: heldOwner);
+		if({ hOwnerCls:typeParams:length() > 0 }, {
+			local String is tp0: hOwnerCls:typeParams:get(index: 0);
+			if({ heldRet == hOwnerCls:name . ':' . tp0 || heldRet == hOwnerCls:name }, {
+				local String is inferredArgT: '';
+				if({ heldCallFn:params:length() > 0 && call:args:length() > 0 }, {
+					local Parameter is hp0: heldCallFn:params:get(index: 0);
+					local String is hp0Str: :formatVarTypeString(t: hp0:paramType);
+					if({ hp0Str:endsWith(suffix: ':' . tp0) }, {
+						local String is hpPrefix: hp0Str:substring(start: 0, end: hp0Str:length() - tp0:length());
+						local NamedArg is ca0: call:args:get(index: 0);
+						local String is ca0T: ca0:value:resolvedType;
+						if({ ca0T:startsWith(prefix: hpPrefix) && ca0T:length() > hpPrefix:length() }, {
+							inferredArgT: ca0T:substring(start: hpPrefix:length(), end: ca0T:length());
+						});
+					});
+				});
+				if({ inferredArgT != '' && inferredArgT != tp0 }, {
+					heldRet: hOwnerCls:name . ':' . inferredArgT;
+				}, {
+					if({ expected:startsWith(prefix: hOwnerCls:name . ':') || expected:startsWith(prefix: hOwnerCls:name . ' of ') }, {
+						heldRet: expected;
+					});
+				});
 			});
 		});
-		if({ targetType == Primitive:ANY:value() && method != 'toString' && method != 'typeName' && method != 'init' }, {
-			:addError(line: :currentLine, msg: :errText:errMemberNotRootContract(member: method));
-		});
+		expr:setResolvedType(t: heldRet);
+		return heldRet;
+	}
 
-		local String is fnVarT: '';
-		if({ targetIsSelf }, {
-			if({ call:isBareCall }, {
-				fnVarT: :localVars:getString(key: method, default: :fieldTypes:getString(key: method, default: ''));
-			}, {
-				fnVarT: :fieldTypes:getString(key: method, default: '');
-			});
-		});
+	local Function is checkThreadingCallRules(String is targetType, String is recvName, CallData is call, String is method){
 		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'init' && :currentClassName != 'ThreadScope' }, {
 			:addError(line: :currentLine, msg: "Cannot construct 'ThreadScope' directly with 'ThreadScope:init'; use 'ThreadScope:open(body: ...)' so all spawned threads are joined before scope exit.");
 		});
-		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'open' && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
-			local Boolean is hasOnErrorArg: false;
-			call:args:each(action: local Function(NamedArg is arg){
-				if({ arg:name == 'onError' }, {
-					hasOnErrorArg: true;
-					match(on: arg:value, when: [
-						Expression:AnonFn: local Function(Type is fnRetT, Array of Parameter is _p, Array of Statement is _b){
-							local String is rt: :resolveReturnType(t: fnRetT);
-							if({ rt != Primitive:BOOLEAN:value() }, {
-								:addError(line: :currentLine, msg: "ThreadScope:open 'onError' handler must return Boolean (true if handled, false to keep bubbling), found '" . rt . "'.");
-							});
-						}
-					], default: {});
-				});
-			});
-			if({ !hasOnErrorArg && !:classHasCustomErrorHandler(className: :currentClassName) }, {
-				:addError(line: :currentLine, msg: "ThreadScope:open requires either an 'onError:' handler argument or an enclosing class that replaces 'SpecErrorHandler'.");
-			});
+		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && method == 'open' }, {
+			:checkThreadScopeOpenArgs(call: call);
 		});
 		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && (method == 'joinAll' || method == 'destroy' || method == 'registerTask') && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) }, {
 			:addError(line: :currentLine, msg: "Method 'ThreadScope:" . method . "' is internal to 'base:sys:thread'; 'ThreadScope:open' joins all tasks automatically.");
@@ -4401,7 +3995,10 @@ Class is TypeChecker{
 				:addError(line: :currentLine, msg: "Raw thread management ('Thread:" . method . "') is restricted to 'base:sys:thread'; all threads must be spawned inside a 'ThreadScope:open' block.");
 			});
 		});
-		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith') }, {
+	}
+
+	local Function of String is inferParallelCall(CallData is call, String is method){
+		if({ method == 'sync' || method == 'syncWith' }, {
 			local Boolean is hasAction: false;
 			local String is actRetT: 'Void';
 			call:args:each(action: local Function(NamedArg is arg){
@@ -4427,48 +4024,335 @@ Class is TypeChecker{
 			if({ !hasAction }, {
 				:addError(line: :currentLine, msg: "Parallel:" . method . " requires 'action' named argument.");
 			});
-			res: actRetT;
-		}, {
-		if({ targetType == 'Parallel' && method == 'run' }, {
-			local Boolean is hasScope: false;
-			local Boolean is hasWorker: false;
-			call:args:each(action: local Function(NamedArg is arg){
-				local String is aName: arg:name;
-				local String is aType: :inferExpressionType(expr: arg:value);
-				if({ aName == 'scope' }, {
-					hasScope: true;
-					if({ aType != 'ThreadScope' && aType != 'Any' }, {
-						:addError(line: :currentLine, msg: 'Parallel:run \'scope\' argument must be ThreadScope, found \'' . aType . '\'.');
+			return actRetT;
+		});
+		local Boolean is hasScope: false;
+		local Boolean is hasWorker: false;
+		call:args:each(action: local Function(NamedArg is arg){
+			local String is aName: arg:name;
+			local String is aType: :inferExpressionType(expr: arg:value);
+			if({ aName == 'scope' }, {
+				hasScope: true;
+				if({ aType != 'ThreadScope' && aType != 'Any' }, {
+					:addError(line: :currentLine, msg: 'Parallel:run \'scope\' argument must be ThreadScope, found \'' . aType . '\'.');
+				});
+			}, {
+				if({ aName == 'threads' || aName == 'iterations' }, {
+					if({ aType != Primitive:INT:value() && aType != 'Any' }, {
+						:addError(line: :currentLine, msg: 'Parallel:run \'' . aName . '\' argument must be Int, found \'' . aType . '\'.');
 					});
 				}, {
-					if({ aName == 'threads' || aName == 'iterations' }, {
-						if({ aType != Primitive:INT:value() && aType != 'Any' }, {
-							:addError(line: :currentLine, msg: 'Parallel:run \'' . aName . '\' argument must be Int, found \'' . aType . '\'.');
-						});
-					}, {
-						if({ aName == 'worker' }, {
-							hasWorker: true;
-							if({ !aType:startsWith(prefix: 'Function') && aType != 'Any' }, {
-								:addError(line: :currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
-							});
+					if({ aName == 'worker' }, {
+						hasWorker: true;
+						if({ !aType:startsWith(prefix: 'Function') && aType != 'Any' }, {
+							:addError(line: :currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
 						});
 					});
 				});
 			});
-			if({ !hasScope }, {
-				:addError(line: :currentLine, msg: 'Parallel:run requires \'scope\' (ThreadScope) named argument; all parallel execution must run in a ThreadScope.');
+		});
+		if({ !hasScope }, {
+			:addError(line: :currentLine, msg: 'Parallel:run requires \'scope\' (ThreadScope) named argument; all parallel execution must run in a ThreadScope.');
+		});
+		if({ !hasWorker }, {
+			:addError(line: :currentLine, msg: 'Parallel:run requires \'worker\' named argument.');
+		});
+		return Primitive:INT:value();
+	}
+
+	local Function of String is inferRegisteredClassCall(Expression is expr, CallData is call, String is targetType, String is method, Boolean is targetIsSelf){
+		if({ (targetType == 'List' || targetType:startsWith(prefix: 'List:') || targetType:startsWith(prefix: 'List of ')) && (method == 'get' || method == 'pop') }, {
+			local Boolean is hasDefault: false;
+			call:args:each(action: local Function(NamedArg is arg){
+				if({ arg:name == 'default' }, {
+					hasDefault: true;
+				});
 			});
-			if({ !hasWorker }, {
-				:addError(line: :currentLine, msg: 'Parallel:run requires \'worker\' named argument.');
+			if({ !hasDefault }, {
+				:addError(line: :currentLine, msg: 'List \'' . method . '\' requires a \'default:\' argument.');
 			});
-			res: Primitive:INT:value();
+		});
+		local Member is selected: :selectOverload(className: targetType, methodName: method, expr: expr);
+		if({ selected:name != '' && call:args:length() > 0 }, {
+			local Member is typedVariant: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
+			if({ typedVariant:name != '' }, {
+				local NamedArg is tvArg0: call:args:get(index: 0);
+				if({ tvArg0:value:resolvedType:startsWith(prefix: 'Function:') }, {
+					selected: typedVariant;
+				});
+			});
+		});
+		local String is res: '';
+		if({ selected:name != '' }, {
+			res: :selectedReturnType(className: targetType, selected: selected, expr: expr);
+		});
+		if({ res == '' }, {
+			res: targetType;
+			local Array of String is scParts: targetType:split(delimiter: ':');
+			match(on: method, when: [
+				'toString': { res: Primitive:STRING:value(); },
+				'length': { res: Primitive:INT:value(); },
+				'isEmpty': { res: Primitive:BOOLEAN:value(); },
+				'count': { res: Primitive:INT:value(); },
+				'any': { res: Primitive:BOOLEAN:value(); },
+				'has': { res: Primitive:BOOLEAN:value(); },
+				'getString': { res: Primitive:STRING:value(); },
+				'getInt': { res: Primitive:INT:value(); },
+				'getFloat': { res: Primitive:FLOAT:value(); },
+				'getBool': { res: Primitive:BOOLEAN:value(); },
+				'indexOf': { res: Primitive:INT:value(); },
+				'join': { res: Primitive:STRING:value(); },
+				'keys': {
+					res: if({ targetType:startsWith(prefix: 'Map:') && scParts:length() > 1 }, { 'Array:' . scParts:get(index: 1) }, { 'Array of String' });
+				},
+				'add': { res: :names:voidName(); },
+				'set': { res: :names:voidName(); },
+				'clear': { res: :names:voidName(); },
+				'each': { res: :names:voidName(); },
+				'push': { res: :names:voidName(); },
+				'remove': { res: Primitive:BOOLEAN:value(); },
+				else: {}
+			]);
+			if({ res == targetType }, {
+				if({ (targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt') }, {
+					res: scParts:get(index: 1);
+				});
+				if({ targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString') }, {
+					res: scParts:get(index: 2);
+				});
+			});
+		});
+		if({ (targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
+			local Array of String is mkParts: targetType:split(delimiter: ':');
+			local String is kType: if({ mkParts:length() > 1 && mkParts:get(index: 1) != 'Any' }, { mkParts:get(index: 1) }, { Primitive:STRING:value() });
+			res: 'Array:' . kType;
+		});
+		if({ (targetType == 'Flow' || targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
+			if({ method == 'map' && call:args:length() > 0 }, {
+				local NamedArg is ma0: call:args:get(index: 0);
+				local String is mFnT: ma0:value:resolvedType;
+				if({ mFnT:startsWith(prefix: 'Function:') && mFnT:length() > 9 }, {
+					res: 'Flow:' . mFnT:substring(start: 9, end: mFnT:length());
+				});
+			});
+			if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && (targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
+				res: targetType;
+			});
+		});
+		return res;
+	}
+
+	## Infers a CALL expression: container methods, enum methods, registered
+	## class methods, and the builtin fallback table. Container callback
+	## parameters are typed here (bidirectional flow into anonymous
+	## functions); arguments then infer bottom-up.
+	##
+	## @param expr: The CALL expression.
+	## @param expected: Contextual type ('' when none).
+	## @return: Resolved type name string.
+	Function of String is inferCall(Expression is expr, CallData is call, String is expected: ''){
+		local Boolean is savedFnVarTarget: :inHeldFnVarTarget;
+		local Boolean is targetIsSelf: false;
+		local Boolean is targetIsIdent: false;
+		local Boolean is targetIsPath: false;
+		local String is targetStr: '';
+		local Array of String is targetPathSegs: [];
+		match(on: call:target, when: [
+			Expression:Ident: local Function(String is name){
+				targetIsIdent: true;
+				targetStr: name;
+				targetIsSelf: name == :names:selfIdent();
+			},
+			Expression:Path: local Function(Array of String is segs){
+				targetIsPath: true;
+				targetPathSegs: segs;
+			}
+		], default: {});
+		if({ targetIsSelf && call:isBareCall && :localVars:getString(key: call:name, default: ''):startsWith(prefix: 'Function') }, {
+			:inHeldFnVarTarget: true;
+		});
+		local String is targetType: :inferExpressionType(expr: call:target);
+		:inHeldFnVarTarget: savedFnVarTarget;
+		local String is method: call:name;
+		local String is res: 'Any';
+
+		local String is targetName: targetStr;
+		if({ targetName == '' && targetIsPath && targetPathSegs:length() > 0 }, {
+			targetName: targetPathSegs:get(index: targetPathSegs:length() - 1);
+		});
+
+		# Nested-construction shorthand: `Result:Ok(data: 'x')` ≡ `Result:Ok:init(data: 'x')`.
+		if({ (targetIsIdent || targetIsPath) && method != 'init' && :registeredClasses:has(key: targetName) && !:localVars:has(key: targetName) && !:fieldTypes:has(key: targetName) }, {
+			local ClassInfo is ncCls: :findClass(name: targetName);
+			local Boolean is hasNested: false;
+			if({ ncCls:name != '' }, {
+				ncCls:members:each(action: local Function(Member is m){
+					if({ !hasNested && m:kind == MemberKind:CLASS && m:nestedClass:name == method }, {
+						hasNested: true;
+					});
+				});
+			});
+			if({ hasNested }, {
+				local Array of String is segs: [targetName, method];
+				call:target: Expression:Path(segments: segs);
+				call:name: 'init';
+				targetIsIdent: false;
+				targetIsSelf: false;
+				targetIsPath: true;
+				targetPathSegs: segs;
+				targetName: method;
+				method: 'init';
+				targetType: :inferExpressionType(expr: call:target);
+			});
+		});
+
+		local String is recvName: '';
+		if({ targetIsIdent || targetIsPath }, {
+			local String is cand: targetName;
+			if({ cand != '' && cand != :names:selfIdent() && :registeredClasses:has(key: cand) && !:localVars:has(key: cand) && !:fieldTypes:has(key: cand) }, {
+				recvName: cand;
+			});
+		});
+		:validateCallReceiverModel(recvName: recvName, call: call, targetIsPath: targetIsPath, targetPathSegs: targetPathSegs);
+
+		if({ method == 'match' && (call:bareProvider == 'Conditional' || targetType == 'Conditional' || (targetIsIdent && ((targetStr == 'match' && :isAsImportedInherited(className: 'Conditional')) || (targetIsSelf && call:isBareCall && :isAsImportedInherited(className: 'Conditional'))))) }, {
+			local String is matchRes: :inferMatchCall(expr: expr, call: call, expected: expected, targetIsSelf: targetIsSelf);
+			if({ matchRes != '' }, {
+				return matchRes;
+			});
+		});
+
+		if({ recvName == '' && targetIsSelf && call:name != 'init' && call:name != 'typeName' && !:shadowsAsFunction(name: call:name, isBareCall: call:isBareCall) }, {
+			local String is ownOwner: :findMemberOwnerClass(className: :currentClassName, memberName: call:name);
+			local Array of String is bsProviders: [];
+			if({ call:isBareCall }, {
+				bsProviders: :bareScopeProviders(methodName: call:name);
+			});
+			local Int is providerTotal: bsProviders:length() + if({ ownOwner != '' }, { 1 }, { 0 });
+			if({ providerTotal > 1 }, {
+				local String is listed: if({ ownOwner != '' }, { 'the enclosing class' }, { '' });
+				bsProviders:each(action: local Function(String is prov){
+					listed: if({ listed == '' }, { prov }, { listed . ' and ' . prov });
+				});
+				:addError(line: :currentLine, msg: 'Function \'' . call:name . '\' is provided by ' . listed . '; qualify the call (:' . call:name . ' or the class name) (§2.3).');
+				expr:setResolvedType(t: '');
+				return '';
+			});
+			if({ providerTotal == 0 }, {
+				:addError(line: :currentLine, msg: 'Undefined function \'' . call:name . '\' on class \'' . :currentClassName . '\' (E9).');
+				expr:setResolvedType(t: '');
+				return '';
+			});
+			if({ ownOwner == '' }, {
+				return :inferBareScopeCall(expr: expr, call: call, expected: expected, provider: bsProviders:get(index: 0));
+			});
+		});
+
+		local Boolean is isBranchCall: call:name == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && targetIsIdent) || (targetIsSelf && :currentClassName == 'Conditional')) || call:bareProvider == 'Conditional' || (targetIsIdent && targetStr == 'if' && :isAsImportedInherited(className: 'Conditional')));
+		local Boolean is isValueBranch: :isValueBranchCall(expr: expr, isBranchCall: isBranchCall, expected: expected);
+		:inBranchClosure: false;
+		local Boolean is isLazyCall: ((targetType == 'Lazy' || targetName == 'Lazy') && (method == 'lazy' || method == 'eval')) || (targetIsSelf && :currentClassName == 'Lazy' && method == 'lazy');
+		local String is qualLazyRet: 'Any';
+		local Boolean is isWhileLoop: (targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'while' || method == 'until' || method == 'repeat');
+
+		if({ isWhileLoop }, {
+			return :inferWhileLoopCall(expr: expr, call: call, targetType: targetType, method: method);
+		});
+
+		:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
+		if({ isLazyCall }, {
+			qualLazyRet: :inferLazyCall(call: call, expected: expected);
+		}, {
+			:inferCallArgs(call: call, targetType: targetType, method: method, expected: expected, isBranchCall: isBranchCall, isValueBranch: isValueBranch);
+		});
+
+		if({ targetType == :names:selfIdent() || targetType == '' }, {
+			targetType: :currentClassName;
+			if({ :inHeldInit || :inHeldFunction }, {
+				:addError(line: :currentLine, msg: :errText:errHeldNoInstance(method: method));
+			});
+		});
+
+		local Member is heldCallFn: Member:init(kind: MemberKind:METHOD);
+		local String is heldRoot: '';
+		if({ targetIsIdent || targetIsPath }, {
+			heldRoot: if({ targetIsPath && targetPathSegs:length() > 0 }, { targetPathSegs:get(index: 0) }, { targetStr });
+			if({ heldRoot != '' && heldRoot != :names:selfIdent() && !:localVars:has(key: heldRoot) && !:fieldTypes:has(key: heldRoot) && :registeredClasses:has(key: heldRoot) && method != 'init' }, {
+				heldCallFn: :findHeldMethod(className: heldRoot, methodName: method);
+			});
+		});
+		if({ heldCallFn:name != '' }, {
+			return :inferHeldCall(expr: expr, call: call, heldRoot: heldRoot, method: method, heldCallFn: heldCallFn, expected: expected);
+		});
+		if({ targetType != '' && targetType != Primitive:ANY:value() && !:allEnumNames:has(key: targetType) }, {
+			local String is iBase: targetType:split(delimiter: ':'):get(index: 0);
+			if({ :registeredClasses:has(key: iBase) && :lookupMethodReturnType(className: iBase, methodName: method) == '' && :findHeldMethod(className: iBase, methodName: method):name != '' }, {
+				:addError(line: :currentLine, msg: :errText:errHeldClassScoped(className: iBase, method: method));
+			});
+		});
+
+		if({ targetIsPath }, {
+			local String is qJoined: targetPathSegs:join(sep: ':');
+			if({ qJoined:contains(needle: ':sysinternal:') }, {
+				local ClassInfo is callerCls: :currentClassDef;
+				local Array of String is callerSegs: callerCls:namespaceSegments();
+				local String is floorClsName: targetPathSegs:get(index: targetPathSegs:length() - 1);
+				local Boolean is sysWrapper: callerSegs:length() >= 2 && callerSegs:get(index: 0) == 'base' &&
+					(callerSegs:get(index: 1) == 'sys' || callerSegs:get(index: 1) == 'sysinternal' || callerCls:name == floorClsName);
+				if({ !sysWrapper }, {
+					:addError(line: :currentLine, msg: :errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
+				});
+				res: if({ isLazyCall }, { qualLazyRet }, { :lookupMethodReturnType(className: qJoined, methodName: method) });
+				expr:setResolvedType(t: res);
+				return res;
+			});
+		});
+
+		if({ targetType == Primitive:ANY:value() || targetType == '' }, {
+			if({ targetIsPath }, {
+				local ClassInfo is qCls: :findClass(name: method);
+				if({ qCls:name == method }, {
+					targetType: method;
+				});
+			}, {
+				match(on: call:target, when: [
+					Expression:Call: local Function(CallData is qInnerCall){
+						match(on: qInnerCall:target, when: [
+							Expression:Path: local Function(Array of String is qSegs){
+								local String is qCand: qInnerCall:name;
+								local ClassInfo is qCls: :findClass(name: qCand);
+								if({ qCand != '' && qCls:name == qCand }, {
+									targetType: qCand;
+								});
+							}
+						], default: {});
+					}
+				], default: {});
+			});
+		});
+
+		if({ !:allEnumNames:has(key: targetType) && targetType != '' && targetType != 'Any' }, {
+			local String is cBase: targetType:split(delimiter: ':'):get(index: 0);
+			local String is mOwner: :findMemberOwnerClass(className: cBase, memberName: method);
+			if({ mOwner != '' }, {
+				:checkMemberVisibility(ownerClass: mOwner, member: :lookupAnyMember(className: cBase, methodName: method), memberName: method);
+			});
+		});
+		if({ targetType == Primitive:ANY:value() && method != 'toString' && method != 'typeName' && method != 'init' }, {
+			:addError(line: :currentLine, msg: :errText:errMemberNotRootContract(member: method));
+		});
+
+		local String is fnVarT: '';
+		if({ targetIsSelf }, {
+			fnVarT: if({ call:isBareCall }, { :localVars:getString(key: method, default: :fieldTypes:getString(key: method, default: '')) }, { :fieldTypes:getString(key: method, default: '') });
+		});
+		:checkThreadingCallRules(targetType: targetType, recvName: recvName, call: call, method: method);
+
+		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith' || method == 'run') }, {
+			res: :inferParallelCall(call: call, method: method);
 		}, {
 			if({ fnVarT:startsWith(prefix: 'Function') }, {
-				if({ fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, {
-					res: fnVarT:substring(start: 9, end: fnVarT:length());
-				}, {
-					res: 'Any';
-				});
+				res: if({ fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, { fnVarT:substring(start: 9, end: fnVarT:length()) }, { 'Any' });
 			}, {
 				if({ :allEnumVariants:has(key: method) && (:allEnumNames:has(key: targetType) || targetType == :currentClassName) }, {
 					res: :allEnumVariants:getString(key: method, default: Primitive:ANY:value());
@@ -4477,11 +4361,7 @@ Class is TypeChecker{
 						res: Primitive:STRING:value();
 					}, {
 						if({ method == 'init' && :registeredClasses:has(key: targetType) && !:allEnumNames:has(key: targetType) }, {
-							# §I.2: init overloads are selected and stamped like any member.
 							local Member is selInit: :selectOverload(className: targetType, methodName: 'init', expr: expr);
-							# §I.6: construction requires the import too — the
-							# X3 stratum, the class itself, an ancestor, the same file, or the
-							# class's own using grants it.
 							local String is initBaseName: targetType:split(delimiter: ':'):get(index: 0);
 							if({ !:classHasAccess(className: :currentClassName, targetName: initBaseName) }, {
 								:addError(line: :currentLine, msg: :errText:errTypeNotImported(targetType: targetType, currentClass: :currentClassName));
@@ -4489,100 +4369,7 @@ Class is TypeChecker{
 							res: :inferGenericInitType(baseClassName: initBaseName, targetType: targetType, initMem: selInit, call: call, expected: expected);
 						}, {
 							if({ :registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !:allEnumNames:has(key: targetType) }, {
-								# List get/pop REQUIRE a 'default:' argument (Never Null).
-								if({ (targetType == 'List' || targetType:startsWith(prefix: 'List:') || targetType:startsWith(prefix: 'List of ')) && (method == 'get' || method == 'pop') }, {
-									local Boolean is hasDefault: false;
-									call:args:each(action: local Function(NamedArg is arg){
-										if({ arg:name == 'default' }, {
-											hasDefault: true;
-										});
-									});
-									if({ !hasDefault }, {
-										:addError(line: :currentLine, msg: 'List \'' . method . '\' requires a \'default:\' argument.');
-									});
-								});
-								# Specialized containers ('Array:String') resolve through their
-								# base class's declarations with type-argument substitution;
-								# when the declaration is not loaded, the element type comes
-								# from the type string itself.
-								local Member is selected: :selectOverload(className: targetType, methodName: method, expr: expr);
-								if({ selected:name != '' && call:args:length() > 0 }, {
-									local Member is typedVariant: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
-									if({ typedVariant:name != '' }, {
-										local NamedArg is tvArg0: call:args:get(index: 0);
-										if({ tvArg0:value:resolvedType:startsWith(prefix: 'Function:') }, {
-											selected: typedVariant;
-										});
-									});
-								});
-								local String is cRet: '';
-								if({ selected:name != '' }, {
-									cRet: :selectedReturnType(className: targetType, selected: selected, expr: expr);
-								});
-								# a LOADED void declaration keeps
-								# its void — the fallback below is for UNLOADED classes
-								# only. Resolving a void member as the receiver made
-								# every void call lie about its type.
-								if({ cRet != '' }, {
-									res: cRet;
-								}, {
-									# Unloaded declaration: resolve from the builtin method table
-									# with element types from the type string.
-									res: targetType;
-									# Unloaded declaration: resolve from the builtin method table
-									# with element types from the type string.
-									res: targetType;
-									local Array of String is scParts: targetType:split(delimiter: ':');
-									match(on: method, when: [
-										'toString': { res: Primitive:STRING:value(); },
-										'length': { res: Primitive:INT:value(); },
-										'isEmpty': { res: Primitive:BOOLEAN:value(); },
-										'count': { res: Primitive:INT:value(); },
-										'any': { res: Primitive:BOOLEAN:value(); },
-										'has': { res: Primitive:BOOLEAN:value(); },
-										'getString': { res: Primitive:STRING:value(); },
-										'getInt': { res: Primitive:INT:value(); },
-										'getFloat': { res: Primitive:FLOAT:value(); },
-										'getBool': { res: Primitive:BOOLEAN:value(); },
-										'indexOf': { res: Primitive:INT:value(); },
-										'join': { res: Primitive:STRING:value(); },
-										'keys': {
-											res: if({ targetType:startsWith(prefix: 'Map:') && scParts:length() > 1 }, { 'Array:' . scParts:get(index: 1) }, { 'Array of String' });
-										},
-										'add': { res: :names:voidName(); },
-										'set': { res: :names:voidName(); },
-										'clear': { res: :names:voidName(); },
-										'each': { res: :names:voidName(); },
-										'push': { res: :names:voidName(); },
-										'remove': { res: Primitive:BOOLEAN:value(); },
-										else: {}
-									]);
-									if({ res == targetType }, {
-										if({ (targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt') }, {
-											res: scParts:get(index: 1);
-										});
-										if({ targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString') }, {
-											res: scParts:get(index: 2);
-										});
-									});
-								});
-								if({ (targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
-									local Array of String is mkParts: targetType:split(delimiter: ':');
-									local String is kType: if({ mkParts:length() > 1 && mkParts:get(index: 1) != 'Any' }, { mkParts:get(index: 1) }, { Primitive:STRING:value() });
-									res: 'Array:' . kType;
-								});
-								if({ (targetType == 'Flow' || targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
-									if({ method == 'map' && call:args:length() > 0 }, {
-										local NamedArg is ma0: call:args:get(index: 0);
-										local String is mFnT: ma0:value:resolvedType;
-										if({ mFnT:startsWith(prefix: 'Function:') && mFnT:length() > 9 }, {
-											res: 'Flow:' . mFnT:substring(start: 9, end: mFnT:length());
-										});
-									});
-									if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && (targetType:startsWith(prefix: 'Flow:') || targetType:startsWith(prefix: 'Flow of ')) }, {
-										res: targetType;
-									});
-								});
+								res: :inferRegisteredClassCall(expr: expr, call: call, targetType: targetType, method: method, targetIsSelf: targetIsSelf);
 							}, {
 								if({ targetType:startsWith(prefix: 'Array') && method == 'map' }, {
 									local String is mappedElem: Primitive:ANY:value();
@@ -4595,18 +4382,12 @@ Class is TypeChecker{
 													mappedElem: :formatTypeString(t: fnRetType);
 												});
 											}
-										], default: {
-										});
+										], default: {});
 									});
 									res: if({ mappedElem != Primitive:ANY:value() }, { 'Array:' . mappedElem }, { 'Array' });
 								}, {
 									if({ targetType:startsWith(prefix: 'Array') && method == 'fold' }, {
-										if({ call:args:length() > 0 }, {
-											local NamedArg is a0: call:args:get(index: 0);
-											res: a0:value:resolvedType;
-										}, {
-											res: 'Any';
-										});
+										res: if({ call:args:length() > 0 }, { call:args:get(index: 0):value:resolvedType }, { 'Any' });
 									}, {
 										if({ :allEnumNames:has(key: targetType) }, {
 											match(on: method, when: [
@@ -4614,20 +4395,13 @@ Class is TypeChecker{
 												'ordinal': { res: Primitive:INT:value(); },
 												'values': { res: 'Array:' . targetType; },
 												'of': { res: targetType; },
-												'value': {
-													res: if({ :allStringBackedEnums:has(key: targetType) }, { 'String' }, { Primitive:INT:value() });
-												},
+												'value': { res: if({ :allStringBackedEnums:has(key: targetType) }, { 'String' }, { Primitive:INT:value() }); },
 												else: { res: 'Any'; }
 											]);
 										}, {
 											if({ targetType == Primitive:INT:value() && method == 'toBase' }, {
-												# Int:toBase is a floor binding (spec_int_to_base) returning a
-												# String; Int has no loaded declaration to consult.
 												res: Primitive:STRING:value();
 											}, {
-												# Undeclared members are compile errors on LOADED classes; an
-												# unloaded class (floor singleton used without import) resolves
-												# as Any — the runtime magic defines it.
 												local Array of String is uParts: targetType:split(delimiter: ':');
 												if({ :registeredClasses:has(key: uParts:get(index: 0)) && :findClass(name: uParts:get(index: 0)):name != '' }, {
 													:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
@@ -4643,40 +4417,11 @@ Class is TypeChecker{
 				});
 			});
 		});
-		});
+
 		if({ isValueBranch }, {
-			# the value-yielding form — both branch
-			# closures' established return types must unify. Read from the
-			# nodes (the write-backs happened during the body check); never
-			# re-infer.
-			local String is thenT: '';
-			local String is elseT: '';
-			match(on: expr:argValue(index: 1), when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-					thenT: :resolveReturnType(t: rt);
-				}
-			], default: {
-			});
-			match(on: expr:argValue(index: 2), when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-					elseT: :resolveReturnType(t: rt);
-				}
-			], default: {
-			});
-			if({ :isVoid(t: thenT) || :isVoid(t: elseT) }, {
-				:addError(line: :currentLine, msg: :errText:errBranchRequiresExpressions());
-				res: :names:voidName();
-			}, {
-				if({ !:isAssignable(target: thenT, source: elseT) && !:isAssignable(target: elseT, source: thenT) }, {
-					:addError(line: :currentLine, msg: :errText:errBranchMismatchedTypes(thenType: thenT, elseType: elseT));
-					res: thenT;
-				}, {
-					res: if({ thenT == Primitive:ANY:value() }, { elseT }, { thenT });
-				});
-			});
+			res: :unifyValueBranchTypes(expr: expr);
 		}, {
 			if({ isBranchCall }, {
-				# Branch calls are statements: void.
 				res: :names:voidName();
 			});
 			if({ isLazyCall }, {
