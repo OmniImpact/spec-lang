@@ -32,7 +32,8 @@ Class is Weather{
 	}
 
 	replace Function is init(){
-		local String is url: 'https://api.weather.gov/gridpoints/RAH/74,58/forecast';
+		local Str is url: 'https://api.weather.gov/gridpoints/RAH/74,58/forecast';
+		local String is urlStr: url as String;
 
 		local Cleo is ui: Cleo:init(
 			title: ' weather ',
@@ -54,7 +55,7 @@ Class is Weather{
 		local Int is reqSlot: statusSec:addShapeThrobber(
 			shape: ThrobberShape:CIRCLE_DOT,
 			effect: ThrobberEffect:BLINK,
-			text: url,
+			text: urlStr,
 			color: CleoColor:ansi(code: 252),
 			rightText: 'fetching'
 		);
@@ -70,13 +71,13 @@ Class is Weather{
 			ui:start(scope: scope);
 			Http:get(
 				scope: scope,
-				url: url,
+				url: urlStr,
 				onSuccess: local Function(HttpResponse is resp){
-					statusSec:resolveSlot(index: reqSlot, badge: '●', text: url, color: CleoColor:ansi(code: 252), rightText: 'HTTP ' . (resp:statusCode as String));
+					statusSec:resolveSlot(index: reqSlot, badge: '●', text: urlStr, color: CleoColor:ansi(code: 252), rightText: 'HTTP ' . (resp:statusCode as String));
 					:populateForecast(rawJson: resp:body, fcSec: fcSec);
 				},
 				onError: local Function(String is err){
-					statusSec:resolveSlot(index: reqSlot, badge: '✖', text: url, color: CleoColor:ansi(code: 203), rightText: 'failed');
+					statusSec:resolveSlot(index: reqSlot, badge: '✖', text: urlStr, color: CleoColor:ansi(code: 203), rightText: 'failed');
 					fcSec:addLine(text: 'Error fetching forecast: ' . err, color: CleoColor:ansi(code: 203));
 				}
 			);

@@ -20,7 +20,7 @@ check, and emit the NEXT generation's sources. Consequences:
   prerequisites first, each converging alone; the semantic change last,
   once the seed can carry it.
 - Every step: converge (`./bootstrap.sh`), gate
-  (`bin/specunit -s bin/spec -t examples -t tests` — see §4a for
+  (`bin/specunit -s bin/spec -t test -t testcompiler` — see §4a for
   building the runner and the sanitized wave), commit.
 
 ### The escape patterns (when the old binary blocks the change)

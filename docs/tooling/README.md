@@ -56,7 +56,7 @@ clang -O1 -g -Wno-override-module -fsanitize=address,undefined -fno-sanitize-rec
 ASAN_OPTIONS=detect_leaks=0 bin/spec-asan --quiet \
     -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
 ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
-    bin/specunit-asan -s bin/spec-asan -t examples -t tests -t testllvm
+    bin/specunit-asan -s bin/spec-asan -t test -t testcompiler -j 2
 ```
 Leak detection is off by default: the ARC engine reclaims the compiler's object graph, while interned strings are immortal by design; opt in with `ASAN_OPTIONS=detect_leaks=1` on the runner invocation.
 
@@ -87,9 +87,9 @@ To emit the generated LLVM IR or standalone C OS PAL source code (either standal
 
 #### Example
 ```bash
-./spec -i examples/helloworld.spec -o hello
+bin/spec -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src -o hello
 ./hello --name Daniel
-# Output: Hello, Daniel!
+# Output: Hello Daniel
 ```
 
 ### Multi-File Module Resolution

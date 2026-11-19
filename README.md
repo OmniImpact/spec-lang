@@ -47,10 +47,12 @@ Members without a visibility modifier are **public by default**: overridable via
 | Primitive Type | Meaning |
 |---|---|
 | `Int` | 64-bit signed integer |
-| `Byte` | Unsigned 8-bit value (`Int`↔`Byte` via `as`) |
+| `Byte` / `UInt8` | Unsigned 8-bit integer |
+| `UInt16` / `UInt32` / `UInt64` | Fixed-width unsigned integers (`as` casts to/from `Int`) |
 | `Float` | 64-bit IEEE double |
 | `Boolean` | `true` / `false` |
-| `String` | UTF-8 text |
+| `Str` | Lightweight UTF-8-safe byte/ASCII string (`Buf -> Str -> String`) |
+| `String` | Full Unicode UTF-8 text (subclass of `Str`) |
 | `Function` | First-class callable, typed by return (`Function of Int`) |
 | `Any` | Arbitrary typed reference |
 
@@ -172,28 +174,33 @@ repeat(count: 3, worker: {
 ### Compiling and Running a Program
 ```bash
 # Compile and run a basic program
-bin/spec -i examples/helloworld.spec -o helloworld
+bin/spec -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src -o helloworld
 ./helloworld --name Daniel
 
-# Run the scoped region and resource management demo
-bin/spec -i examples/scope_as_demo.spec -o scope_demo
+# Run the scoped region and resource management demo (with Cleo UI)
+bin/spec -i examples/scope_as_demo/src/ScopeAsDemo.spec -s examples/scope_as_demo/src -o scope_demo
 ./scope_demo
 
+# Run the pure-Spec HTTPS + TLS 1.3 weather forecast example
+bin/spec -i examples/weather/Weather.spec -o weather
+./weather
+
 # Emit generated LLVM IR (optional)
-bin/spec -i examples/helloworld.spec --emit-llvm helloworld.ll
+bin/spec -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src --emit-llvm helloworld.ll
 ```
 
 ### Running Tests
 ```bash
-# Run the complete test suite (100+ unit and integration test suites)
-bin/specunit
+# Build and run the full compiler + library regression suite (177 suites, 591 tests)
+bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+bin/specunit -s bin/spec -t test -t testcompiler
 ```
 
 ### Running the Linter
 ```bash
 # Lint a single file or entire directory trees
-bin/speclint -i examples/blackjack.spec
-bin/speclint -t examples -t tests
+bin/speclint -i examples/blackjack/src/Blackjack.spec
+bin/speclint -t examples -t test
 
 # Run the instance-model audit
 bin/speclint -a -i spec/base/compiler/driver/Driver.spec
@@ -205,9 +212,9 @@ statement carries source location metadata mapping to its Spec source, and local
 inspectable under gdb — with all control flow inlined to native branches.
 
 ```bash
-bin/spec --debug -i examples/helloworld.spec -o helloworld_dbg
+bin/spec --debug -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src -o helloworld_dbg
 gdb ./helloworld_dbg
-(gdb) break helloworld.spec:19   # breakpoint on a Spec line
+(gdb) break HelloWorld.spec:16   # breakpoint on a Spec line
 (gdb) run
 (gdb) print name                 # "User" — Spec strings render as text
 ```
@@ -229,12 +236,18 @@ emit no debug metadata and remain byte-identical to the bootstrap seed.
 
 ## Standard Library
 
-The standard library lives in `spec/lib/` — eight packages covering the root
-lattice (`base:core`), math (`base:math`), collections (`base:struct`),
-iteration (`base:iterator`), JSON serialization (`base:data`), networking (`base:net`),
-audio (`base:audio`), and the control-flow, console, file, time, OS dispatch, and
-process surfaces (`base:sys`) — all written in Spec over the `base:sysinternal`
-unmanaged floor (`Arc`, `Slab`, `Heap`, `Pool`, `Arena`, `Intern`, `Mem`) and scalar/byte-slice OS PAL.
+The standard library lives in `spec/lib/` — packages covering the root
+lattice (`base:core`: `Any`, `Str`, `String`, `Enum`, `SpecError`), math and
+cryptography (`base:math`, `base:math:crypto`: SHA-256/HMAC/HKDF, X25519,
+ChaCha20-Poly1305, AES-128-GCM, X.509 DER/PEM/CA trust verification),
+collections (`base:struct`: `Array`, `Map`, `List`, `Stack`), iteration
+(`base:iterator`), JSON serialization (`base:data`), networking (`base:net`:
+TCP `Socket`, `Url`, async HTTP/1.1 client, and pure-Spec TLS 1.3 `TlsClient` +
+`TlsVerifier`), terminal UI (`base:cleo`), audio (`base:audio`), and the
+control-flow, console, file, time, OS dispatch, threading (`ThreadScope`/`Task`),
+and process surfaces (`base:sys`) — all written in Spec over the
+`base:sysinternal` unmanaged floor (`Arc`, `Slab`, `Heap`, `Pool`, `Arena`,
+`Intern`, `Mem`) and the C OS PAL in `spec/runtime/`.
 A summary table of every package and its functions lives in the
 **[Standard Library Reference](docs/packages/README.md)**.
 
