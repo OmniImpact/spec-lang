@@ -502,7 +502,25 @@ Class is SpecUnit{
 		return true;
 	}
 
+	local String is timeoutTool: '';
+
+	## Probes once at startup for GNU `timeout` or Homebrew `gtimeout`.
+	## Returns empty string on Windows or POSIX hosts without either (e.g. vanilla macOS).
+	Function of String is detectTimeoutTool(){
+		if(check: { Process:osName() == 'windows' }, then: {
+			return '';
+		});
+		if(check: { Process:execute(command: 'sh', args: ['-c', 'command -v timeout >/dev/null 2>&1']) == 0 }, then: {
+			return 'timeout';
+		});
+		if(check: { Process:execute(command: 'sh', args: ['-c', 'command -v gtimeout >/dev/null 2>&1']) == 0 }, then: {
+			return 'gtimeout';
+		});
+		return '';
+	}
+
 	replace Function is init(Map of String to String is args){
+		:timeoutTool: :detectTimeoutTool();
 		local String is specBin: args:getString(key: 's', default: args:getString(key: 'spec', default: '.'));
 		if(check: { specBin == '.' }, then: {
 			specBin: 'bin/spec';
@@ -829,13 +847,14 @@ Class is SpecUnit{
 		});
 	}
 
-	## Wraps a shell command with `timeout --kill-after=5 <timeoutSec>s` on POSIX
-	## so hung compiles or hung test binaries are cleanly terminated.
+	## Wraps a shell command with `<timeoutTool> --kill-after=5 <timeoutSec>s`
+	## when GNU `timeout` or `gtimeout` is available so hung compiles or hung
+	## test binaries are cleanly terminated.
 	Function of String is withTimeout(String is cmd, Int is timeoutSec){
-		if(check: { Process:osName() == 'windows' }, then: {
+		if(check: { :timeoutTool == '' }, then: {
 			return cmd;
 		});
-		return 'timeout --kill-after=5 ' . (timeoutSec as String) . 's ' . cmd;
+		return :timeoutTool . ' --kill-after=5 ' . (timeoutSec as String) . 's ' . cmd;
 	}
 
 	## Parses `[PASS]` and `[FAIL]` counts from SpecUnit suite output.

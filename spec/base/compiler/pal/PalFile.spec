@@ -130,16 +130,14 @@ bool spec_pal_file_exists(long long path_cstr) {
     if (!pc || !*pc) return false;
 #ifdef _WIN32
     wchar_t* wpc = spec_win_utf8_to_wide(pc);
-    FILE* f = wpc ? _wfopen(wpc, L"r") : NULL;
+    if (!wpc) return false;
+    DWORD attrs = GetFileAttributesW(wpc);
     free(wpc);
+    return attrs != INVALID_FILE_ATTRIBUTES;
 #else
-    FILE* f = fopen(pc, "r");
+    struct stat st;
+    return stat(pc, &st) == 0;
 #endif
-    if (f) {
-        fclose(f);
-        return true;
-    }
-    return false;
 }
 
 bool spec_pal_file_remove(long long path_cstr) {
