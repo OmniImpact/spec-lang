@@ -81,12 +81,12 @@ Class of SpecUnitTest is TestSpecInit{
 
 		local Int is appCode: Process:execute(command: si, args: [appDir, '--app', '--force']);
 		Assert:areEqualInt(0, appCode);
-		Assert:isTrue(fileExists(path: appDir . '/specbuild.json'));
+		Assert:isTrue(fileExists(path: "{{appDir}}/specinit_app_{{pid}}.json"));
 		Assert:isTrue(fileExists(path: appDir . '/.gitignore'));
 		Assert:isTrue(fileExists(path: appDir . '/src/Main.spec'));
 		Assert:isTrue(fileExists(path: appDir . '/tests/MainTest.spec'));
 
-		local String is appManifestRaw: fileRead(path: appDir . '/specbuild.json', default: '', onSuccess: {}, onError: {});
+		local String is appManifestRaw: fileRead(path: "{{appDir}}/specinit_app_{{pid}}.json", default: '', onSuccess: {}, onError: {});
 		local Any is parsedApp: Json:parse(text: appManifestRaw);
 		Assert:areEqualString('src/Main.spec', Json:getString(obj: parsedApp, key: 'source', default: ''));
 
@@ -96,9 +96,9 @@ Class of SpecUnitTest is TestSpecInit{
 
 		local Int is libCode: Process:execute(command: si, args: [libDir, '--lib', '--force']);
 		Assert:areEqualInt(0, libCode);
-		Assert:isTrue(fileExists(path: libDir . '/specbuild.json'));
+		Assert:isTrue(fileExists(path: "{{libDir}}/specinit_lib_{{pid}}.json"));
 		Assert:isTrue(fileExists(path: libDir . '/.gitignore'));
-		local String is libManifestRaw: fileRead(path: libDir . '/specbuild.json', default: '', onSuccess: {}, onError: {});
+		local String is libManifestRaw: fileRead(path: "{{libDir}}/specinit_lib_{{pid}}.json", default: '', onSuccess: {}, onError: {});
 		local Any is parsedLib: Json:parse(text: libManifestRaw);
 		Assert:areEqualString('0.1.0', Json:getString(obj: parsedLib, key: 'version', default: ''));
 	}

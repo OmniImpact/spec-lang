@@ -149,9 +149,42 @@ Class is SpecBuild{
 		Output:line('  help     Display usage instructions');
 		Output:line('');
 		Output:line('Options:');
-		Output:line('  -c, --config <file.json>   Path to build manifest (default: specbuild.json)');
+		Output:line('  -c, --config <file.json>   Path to build manifest (default: <project>.json or specbuild.json)');
 		Output:line('  -v, --verbose              Display detailed compiler commands');
 		Output:line('  -h, --help                 Display this help message');
+	}
+
+	## Resolves the project manifest inside [dir]: checks `<dirname>.json`,
+	## then a single `*.json` file in [dir], falling back to `specbuild.json`.
+	Function of String is resolveDirManifest(String is dir){
+		if({ dir != '.' }, {
+			local String is cleanDir: dir;
+			if({ cleanDir:endsWith(suffix: '/') && cleanDir:length() > 1 }, {
+				cleanDir: cleanDir:substring(start: 0, end: cleanDir:length() - 1);
+			});
+			local Array of String is parts: cleanDir:split(delimiter: '/');
+			local String is baseName: parts:get(index: parts:length() - 1, default: '');
+			local String is named: "{{cleanDir}}/{{baseName}}.json";
+			if({ baseName != '' && fileExists(path: named) }, {
+				return named;
+			});
+		});
+		local String is fallback: if({ dir == '.' }, { 'specbuild.json' }, { "{{dir}}/specbuild.json" });
+		if({ fileExists(path: fallback) }, {
+			return fallback;
+		});
+		local String is found: '';
+		local Int is count: 0;
+		Dir:dirList(path: dir):each(action: local Function(String is entry){
+			if({ entry:endsWith(suffix: '.json') && !entry:startsWith(prefix: '.') }, {
+				found: if({ dir == '.' }, { entry }, { "{{dir}}/{{entry}}" });
+				count: count + 1;
+			});
+		});
+		if({ count == 1 }, {
+			return found;
+		});
+		return fallback;
 	}
 
 	replace Function is init(Map of String to String is args){
@@ -202,14 +235,18 @@ Class is SpecBuild{
 		});
 
 		if({ configPath == '' }, {
-			configPath: 'specbuild.json';
+			configPath: resolveDirManifest(dir: '.');
+		}, {
+			if({ Dir:dirList(path: configPath):length() > 0 }, {
+				configPath: resolveDirManifest(dir: configPath);
+			});
 		});
 
 		if({ !fileExists(path: configPath) }, {
-			if({ fileExists(path: configPath . '.json') }, {
-				configPath: configPath . '.json';
+			if({ fileExists(path: "{{configPath}}.json") }, {
+				configPath: "{{configPath}}.json";
 			}, {
-				Stderr:line('[specbuild] Error: Configuration file not found: ' . configPath);
+				Stderr:line("[specbuild] Error: Configuration file not found: {{configPath}}");
 				Process:exit(status: 1);
 			});
 		});

@@ -180,7 +180,10 @@ Class is SpecLsp{
 	local Function is addProjectSourceDirs(Loader is loader, String is parentDir){
 		local String is dir: parentDir;
 		while([Boolean is searching: dir != ''], { searching }, {
-			local String is manifestPath: dir . '/specbuild.json';
+			local Array of String is parts: dir:split(delimiter: '/');
+			local String is baseName: parts:get(index: parts:length() - 1, default: '');
+			local String is namedPath: "{{dir}}/{{baseName}}.json";
+			local String is manifestPath: if({ baseName != '' && fileExists(path: namedPath) }, { namedPath }, { "{{dir}}/specbuild.json" });
 			if({ fileExists(path: manifestPath) }, {
 				local String is raw: fileRead(path: manifestPath, default: '');
 				if({ raw != '' }, {

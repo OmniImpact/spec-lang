@@ -33,7 +33,7 @@ Class is SpecInit{
 		Output:line(text: "Options:");
 		Output:line(text: "  --app     Create an executable application project (default)");
 		Output:line(text: "  --lib     Create a reusable library project");
-		Output:line(text: "  --force   Overwrite existing files if specbuild.json already exists");
+		Output:line(text: "  --force   Overwrite existing files if the manifest already exists");
 		Output:line(text: "  --help    Display this help message");
 	}
 
@@ -237,7 +237,7 @@ Class is SpecInit{
 		local String is pkgName: sanitizeIdent(raw: projectName, isPascal: false);
 		local String is pascalName: sanitizeIdent(raw: projectName, isPascal: true);
 
-		local String is manifestPath: joinPath(baseDir: targetPath, relPath: 'specbuild.json');
+		local String is manifestPath: joinPath(baseDir: targetPath, relPath: "{{projectName}}.json");
 		if({ File:fileExists(path: manifestPath) && !force }, {
 			Stderr:line(text: "Error: '" . manifestPath . "' already exists. Pass --force to overwrite.");
 			Process:exit(status: 1);
