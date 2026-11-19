@@ -44,15 +44,25 @@ Class is SpecLint{
 		['base', 'sys', as Dir()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Ansi()],
+		['base', 'sys', as Time()],
 		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){
+		local Int is startMs: Time:monotonicMs();
 		local String is inputPath: args:getString(key: 'i', default: '');
 		if({ inputPath == '' }, {
 			inputPath: args:getString(key: 'input', default: '');
 		});
 		local String is dirsRaw: args:getString(key: 't', default: '');
+		local String is pos0: args:getString(key: '0', default: '');
+		if({ inputPath == '' && dirsRaw == '' && pos0 != '' }, {
+			if({ Dir:dirList(path: pos0):length() > 0 }, {
+				dirsRaw: pos0;
+			}, {
+				inputPath: pos0;
+			});
+		});
 		local Boolean is auditMode: args:has(key: 'a');
 		if({ !auditMode }, {
 			auditMode: args:has(key: 'audit');
@@ -73,15 +83,19 @@ Class is SpecLint{
 			Process:exit(status: 0);
 		});
 
-		# Single file: the old `spec --lint <file>` shape, byte-identical
-		# report, with the standalone exit contract (1 on findings).
+		# Single file: the old `spec --lint <file>` shape, with Cleo output
+		# and the standalone exit contract (1 on warnings).
 		if({ inputPath != '' }, {
 			if({ !fileExists(path: inputPath) }, {
 				Stderr:line('Error: Source file not found: ' . inputPath);
 				Process:exit(status: 1);
 			});
+			local Cleo is ui: Cleo:toolUi(title: ' speclint ');
 			local LintTally is tally: LintTally:init();
-			:lintOne(path: inputPath, strict: true, tally: tally);
+			:lintOne(path: inputPath, strict: true, tally: tally, ui: ui);
+			local CleoSection is sumSec: ui:addToolSection(title: ' Lint Summary ');
+			:populateSummary(sumSec: sumSec, tally: tally, startMs: startMs);
+			ui:render();
 			# Notices are informational (optional-parameter advisories on
 			# legitimate call sites) — only warnings gate the exit.
 			if({ tally:warnings > 0 }, {
@@ -92,50 +106,84 @@ Class is SpecLint{
 
 		# Tree walk: every .spec under the -t roots (repeatable,
 		# comma/newline separated — the argv parser accumulates repeats).
-		local LintTally is tally: LintTally:init();
+		local Array of String is files: [];
 		local Int is roots: 0;
 		dirsRaw:split(delimiter: "\n"):each(action: local Function(String is seg){
 			seg:split(delimiter: ','):each(action: local Function(String is dir){
 				if({ dir != '' }, {
 					roots: roots + 1;
-					:walkTree(absDir: dir, tally: tally);
+					:collectTreeFiles(absDir: dir, files: files);
 				});
 			});
 		});
 		if({ roots == 0 }, {
 			Output:line('SpecLint (Pure Spec)');
-			Stderr:line('Usage: speclint -i <file.spec> | speclint -t <dir> [-t <dir> ...] | speclint -a -i <file.spec>');
+			Stderr:line('Usage: speclint <file_or_dir> | speclint -i <file.spec> | speclint -t <dir> [-t <dir> ...] | speclint -a -i <file.spec>');
 			Process:exit(status: 2);
 		});
-		local String is tail: '';
-		if({ tally:broken > 0 }, {
-			tail: ' · ' . (tally:broken as String) . ' syntax-broken';
-		});
-		local Boolean is clean: (tally:warnings + tally:broken) == 0;
 		local Cleo is ui: Cleo:toolUi(title: ' speclint ');
-		local CleoSection is rSec: ui:addToolSection(title: ' Lint Summary ');
-		local String is summaryText: (tally:files as String) . ' file(s) linted · ' . (tally:warnings as String) . ' warning(s) · ' . (tally:notices as String) . ' notice(s)' . tail;
-		local String is badge: if({ clean }, { '✔ CLEAN' }, { '✖ ISSUES FOUND' });
-		local CleoColor is badgeColor: if({ clean }, { CleoColor:ansi(code: 252) }, { CleoColor:ansi(code: 203) });
-		rSec:addLine(text: summaryText, color: badgeColor, rightText: badge);
+		local LintTally is tally: LintTally:init();
+		local Int is total: files:length();
+		local Int is idx: 0;
+		files:each(action: local Function(String is fpath){
+			if({ total > 1 }, {
+				Output:consOut(text: "\r\u001b[2K  " . (idx as String) . '/' . (total as String) . ' files · ' . fpath);
+			});
+			:lintOne(path: fpath, strict: false, tally: tally, ui: ui);
+			idx: idx + 1;
+		});
+		if({ total > 1 }, {
+			Output:consOut(text: "\r\u001b[2K");
+		});
+		local CleoSection is sumSec: ui:addToolSection(title: ' Lint Summary ');
+		:populateSummary(sumSec: sumSec, tally: tally, startMs: startMs);
+		if({ total > 1 }, {
+			local CleoSection is pSec: ui:addToolSection(title: ' Progress ');
+			local Int is pSlot: pSec:addProgressArea(
+				text: (total as String) . '/' . (total as String) . ' files',
+				stage1Color: CleoColor:ansi(code: 255),
+				stage2Color: CleoColor:ansi(code: 243),
+				trackColor: CleoColor:ansi(code: 236),
+				showTwoStagePercent: true
+			);
+			pSec:updateProgress(
+				index: pSlot,
+				text: (total as String) . '/' . (total as String) . ' files',
+				stage1: 1.0,
+				stage2: 1.0
+			);
+		});
 		ui:render();
+		local Boolean is clean: (tally:warnings + tally:broken) == 0;
 		if({ !clean }, {
 			Process:exit(status: 1);
 		});
 		Process:exit(status: 0);
 	}
 
-	## Lints one file: lex, parse, run the standards walk, print the
-	## per-file report — byte-identical to what the compiler's retired
-	## --lint mode printed, because it is the same Linter.report. With
-	## [strict] (single-file mode) lex/parse errors abort with exit 1
-	## exactly as the old mode did; in tree mode they are tallied and
-	## the walk continues.
+	Function is populateSummary(CleoSection is sumSec, LintTally is tally, Int is startMs){
+		local String is tail: '';
+		if({ tally:broken > 0 }, {
+			tail: ' · ' . (tally:broken as String) . ' syntax-broken';
+		});
+		local Boolean is clean: (tally:warnings + tally:broken) == 0;
+		local String is summaryText: (tally:files as String) . ' file(s) linted · ' . (tally:warnings as String) . ' warning(s) · ' . (tally:notices as String) . ' notice(s)' . tail;
+		local String is badge: if({ clean }, { '✔ CLEAN' }, { '✖ ISSUES FOUND' });
+		local CleoColor is badgeColor: if({ clean }, { CleoColor:ansi(code: 252) }, { CleoColor:ansi(code: 203) });
+		sumSec:addLine(text: summaryText, color: badgeColor, rightText: badge);
+		local Int is elapsedMs: Time:monotonicMs() - startMs;
+		local Int is memMb: Process:peakMemoryKb() / 1024;
+		sumSec:addLine(text: 'Elapsed: ' . (elapsedMs as String) . 'ms', color: CleoColor:ansi(code: 245), rightText: 'Peak memory: ' . (memMb as String) . ' MB');
+	}
+
+	## Lints one file: lex, parse, run the standards walk, and record
+	## findings into a per-file section in [ui].
 	##
 	## @param path: The file to lint.
 	## @param strict: Abort on syntax errors instead of tallying them.
 	## @param tally: The run tally to update.
-	Function is lintOne(String is path, Boolean is strict, LintTally is tally){
+	## @param ui: The Cleo UI to append file sections to.
+	Function is lintOne(String is path, Boolean is strict, LintTally is tally, Cleo is ui){
 		local String is source: fileRead(path: path, default: '');
 		local Lexer is lexer: Lexer:init(source: source);
 		local Parser is parser: Parser:init(tokens: []);
@@ -168,20 +216,31 @@ Class is SpecLint{
 		});
 		local Linter is linter: Linter:init();
 		local Array of LintIssue is issues: linter:lint(source: source, program: program);
-		linter:report(filePath: path, issues: issues);
+		if({ strict || issues:length() > 0 }, {
+			local CleoSection is fSec: ui:addSection(
+				title: ' ' . path . ' ',
+				titleColor: CleoColor:ansi(code: 254),
+				titleBgColor: CleoColor:ansi(code: 237),
+				titlePlacement: TitlePlacement:HEADER_ROW,
+				fgColor: CleoColor:ansi(code: 250)
+			);
+			if({ issues:length() == 0 }, {
+				fSec:addLine(text: Ansi:color256(code: 114, text: '●') . ' All standard checks passed.', color: CleoColor:ansi(code: 255), rightText: '✔ CLEAN');
+			}, {
+				issues:each(action: local Function(LintIssue is issue){
+					local String is dot: if({ issue:isWarning }, { Ansi:color256(code: 203, text: '●') }, { Ansi:color256(code: 220, text: '●') });
+					local String is loc: if({ issue:line > 0 }, { 'line ' . (issue:line as String) }, { '' });
+					fSec:addLine(text: dot . ' ' . issue:message, color: CleoColor:ansi(code: 255), rightText: loc);
+				});
+			});
+		});
 		tally:files: tally:files + 1;
 		tally:warnings: tally:warnings + linter:countWarnings(issues: issues);
 		tally:notices: tally:notices + linter:countNotices(issues: issues);
 	}
 
-	## Walks [absDir] recursively (dot entries skipped), linting every
-	## non-empty .spec file. A directory is any entry whose dirList is
-	## non-empty (spec_dir_list on a file returns empty) — the specunit
-	## discovery convention.
-	##
-	## @param absDir: The tree root to walk.
-	## @param tally: The run tally to update.
-	Function is walkTree(String is absDir, LintTally is tally){
+	## Collects all non-empty non-negative `.spec` file paths under [absDir] recursively.
+	Function is collectTreeFiles(String is absDir, Array of String is files){
 		Dir:dirList(path: absDir):each(action: local Function(String is name){
 			if({ name:startsWith(prefix: '.') }, {
 				return;
@@ -189,12 +248,12 @@ Class is SpecLint{
 			local String is childAbs: absDir . '/' . name;
 			local Array of String is children: Dir:dirList(path: childAbs);
 			if({ children:length() > 0 }, {
-				:walkTree(absDir: childAbs, tally: tally);
+				:collectTreeFiles(absDir: childAbs, files: files);
 			}, {
 				if({ name:endsWith(suffix: '.spec') }, {
 					local String is content: fileRead(path: childAbs, default: '');
 					if({ content != '' && :bannerKind(content: content) != 'negative' }, {
-						:lintOne(path: childAbs, strict: false, tally: tally);
+						files:add(item: childAbs);
 					});
 				});
 			});

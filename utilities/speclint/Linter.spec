@@ -32,6 +32,12 @@ Class is Linter{
 		['speclint', 'rules', MathRandomRule],
 		['speclint', 'rules', EncourageAsConditionalRule],
 		['speclint', 'rules', EncourageAsLoopsRule],
+		['speclint', 'rules', BracketIndentationRule],
+		['speclint', 'rules', BlankLinesRule],
+		['speclint', 'rules', UnnecessarySelfColonRule],
+		['speclint', 'rules', InitShorthandRule],
+		['speclint', 'rules', UnusedUsingRule],
+		['speclint', 'rules', TemplateStringRule],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()]
 	];
@@ -99,6 +105,12 @@ Class is Linter{
 		:rules:add(item: MathRandomRule:init());
 		:rules:add(item: EncourageAsConditionalRule:init());
 		:rules:add(item: EncourageAsLoopsRule:init());
+		:rules:add(item: BracketIndentationRule:init());
+		:rules:add(item: BlankLinesRule:init());
+		:rules:add(item: UnnecessarySelfColonRule:init());
+		:rules:add(item: InitShorthandRule:init());
+		:rules:add(item: UnusedUsingRule:init());
+		:rules:add(item: TemplateStringRule:init());
 	}
 
 	## Adds a custom rule to the linter.

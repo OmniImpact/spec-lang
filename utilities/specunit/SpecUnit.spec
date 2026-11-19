@@ -974,7 +974,7 @@ Class is SpecUnit{
 				passed: false;
 				note: 'timed out after ' . (timeoutSec as String) . 's (killed)';
 			}, else: {
-				if(check: { passed && !out:contains(needle: '== SpecUnit ==') }, then: {
+				if(check: { passed && !out:contains(needle: 'SpecUnit') }, then: {
 					passed: false;
 					note: 'exited 0 but produced no SpecUnit report table';
 				});

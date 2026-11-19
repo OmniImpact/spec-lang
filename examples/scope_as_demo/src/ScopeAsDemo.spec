@@ -26,27 +26,27 @@ Class is ScopeAsDemo{
 
 	## Measures and logs the wall-clock duration of [block] under [label].
 	Function is measure(String is label, CleoSection is sec, Function is block){
-		sec:addLine(text: '[Timer] Starting: ' . label, color: CleoColor:ansi(code: 250));
+		sec:addLine(text: "[Timer] Starting: {{label}}", color: CleoColor:ansi(code: 250));
 		local Int is start: clockMs();
 		block();
 		local Int is elapsed: clockMs() - start;
-		sec:addLine(text: '[Timer] Finished: ' . label, color: CleoColor:ansi(code: 255), rightText: (elapsed as String) . ' ms');
+		sec:addLine(text: "[Timer] Finished: {{label}}", color: CleoColor:ansi(code: 255), rightText: "{{elapsed}} ms");
 	}
 
 	## Writes [content] to [path], invokes [block] with [path], and removes the file on exit.
 	Function is withTempFile(String is path, String is content, CleoSection is sec, Function is block){
-		sec:addLine(text: '[File] Creating managed resource: ' . path, color: CleoColor:ansi(code: 250));
+		sec:addLine(text: "[File] Creating managed resource: {{path}}", color: CleoColor:ansi(code: 250));
 		fileWrite(path: path, content: content);
 		block(path);
 		if({ fileExists(path: path) }, {
 			fileRemove(path: path);
-			sec:addLine(text: '[File] Cleaned up managed resource: ' . path, color: CleoColor:ansi(code: 245));
+			sec:addLine(text: "[File] Cleaned up managed resource: {{path}}", color: CleoColor:ansi(code: 245));
 		});
 	}
 
 	## Entry point; runs a temp-file CSV ingestion pipeline inside nested `as` scopes.
 	replace Function is init(Map of String to String is args){
-		local Cleo is ui: Cleo:init(
+		local Cleo is ui: Cleo(
 			title: ' scope_as_demo ',
 			titleColor: CleoColor:ansi(code: 255),
 			titleBgColor: CleoColor:ansi(code: 236),
@@ -78,28 +78,28 @@ Class is ScopeAsDemo{
 			"103,Charlie,Security Analyst,SecOps\n" .
 			"104,Diana,Compiler Engineer,Core Tooling\n";
 
-		:runPipeline(tempPath: tempPath, csvData: csvData, recSec: recSec, logSec: logSec);
+		runPipeline(tempPath: tempPath, csvData: csvData, recSec: recSec, logSec: logSec);
 		ui:flushFinal();
 	}
 
 	local Function is runPipeline(String is tempPath, Str is csvData, CleoSection is recSec, CleoSection is logSec){
-		as: :measure(label: 'Data Ingestion & Report Pipeline', sec: logSec);
-		as (String is path): :withTempFile(path: tempPath, content: csvData . '', sec: logSec);
+		as: measure(label: 'Data Ingestion & Report Pipeline', sec: logSec);
+		as (String is path): withTempFile(path: tempPath, content: "{{csvData}}", sec: logSec);
 
 		local String is raw: fileRead(path: path, default: '');
-		local CsvParser is parser: CsvParser:init();
+		local CsvParser is parser: CsvParser();
 		local Array of Array of String is rows: parser:parseRows(raw: raw, skipHeader: true);
 
 		rows:each(action: local Function(Array of String is fields){
 			if({ fields:length() >= 4 }, {
 				recSec:addLine(
-					text: '#' . fields:get(index: 0) . ' · ' . fields:get(index: 1),
+					text: "#{{fields:get(index: 0)}} · {{fields:get(index: 1)}}",
 					color: CleoColor:ansi(code: 252),
-					rightText: fields:get(index: 2) . ' (' . fields:get(index: 3) . ')'
+					rightText: "{{fields:get(index: 2)}} ({{fields:get(index: 3)}})"
 				);
 			});
 		});
-		logSec:addLine(text: '[Report] Processed ' . (rows:length() as String) . ' employee profiles; unwinding scopes in LIFO order', color: CleoColor:ansi(code: 250));
+		logSec:addLine(text: "[Report] Processed {{rows:length()}} employee profiles; unwinding scopes in LIFO order", color: CleoColor:ansi(code: 250));
 	}
 
 }

@@ -23,7 +23,7 @@ Class is Mandelbrot{
 		[FractalMath]
 	];
 
-	local FractalMath is fractal: FractalMath:init();
+	local FractalMath is fractal: FractalMath();
 
 	## Prints render statistics (resolution, points sampled, elapsed time, memory, and thread count) via Cleo.
 	local Function is printStats(Int is width, Int is height, Int is maxIter, Int is elapsedMs){
@@ -31,7 +31,7 @@ Class is Mandelbrot{
 		local Int is peakMb: peakKb / 1024;
 		local Int is elapsedSec: elapsedMs / 1000;
 
-		local Cleo is ui: Cleo:init(
+		local Cleo is ui: Cleo(
 			title: ' mandelbrot ',
 			titleColor: CleoColor:ansi(code: 255),
 			titleBgColor: CleoColor:ansi(code: 236),
@@ -48,9 +48,9 @@ Class is Mandelbrot{
 			titlePlacement: TitlePlacement:INLINE_BORDER,
 			fgColor: CleoColor:ansi(code: 250)
 		);
-		sSec:addLine(text: 'Resolution: ' . width . ' x ' . height . ' · maxIter ' . maxIter, color: CleoColor:ansi(code: 252), rightText: 'Points: ' . :fractal:pointsRendered);
-		sSec:addLine(text: 'Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)', color: CleoColor:ansi(code: 250), rightText: 'Peak memory: ' . peakMb . ' MB (' . peakKb . ' KB)');
-		sSec:addLine(text: 'Threads available: ' . threadCount(), color: CleoColor:ansi(code: 245));
+		sSec:addLine(text: "Resolution: {{width}} x {{height}} · maxIter {{maxIter}}", color: CleoColor:ansi(code: 252), rightText: "Points: {{fractal:pointsRendered}}");
+		sSec:addLine(text: "Render time: {{elapsedMs}} ms ({{elapsedSec}} s)", color: CleoColor:ansi(code: 250), rightText: "Peak memory: {{peakMb}} MB ({{peakKb}} KB)");
+		sSec:addLine(text: "Threads available: {{threadCount()}}", color: CleoColor:ansi(code: 245));
 		ui:flushFinal();
 	}
 
@@ -104,7 +104,7 @@ Class is Mandelbrot{
 			});
 		});
 
-		local Cleo is hdrUi: Cleo:init(
+		local Cleo is hdrUi: Cleo(
 			title: ' mandelbrot ',
 			titleColor: CleoColor:ansi(code: 255),
 			titleBgColor: CleoColor:ansi(code: 236),
@@ -121,12 +121,12 @@ Class is Mandelbrot{
 			titlePlacement: TitlePlacement:INLINE_BORDER,
 			fgColor: CleoColor:ansi(code: 250)
 		);
-		hdrSec:addLine(text: 'Mode: ' . mode . ' · Resolution: ' . width . ' x ' . height, color: CleoColor:ansi(code: 252), rightText: 'maxIter ' . maxIter);
+		hdrSec:addLine(text: "Mode: {{mode}} · Resolution: {{width}} x {{height}}", color: CleoColor:ansi(code: 252), rightText: "maxIter {{maxIter}}");
 		hdrUi:flushFinal();
 
 		if(check: { mode == 'both' || mode == 'shaded' }, then: {
 			line(color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));
-			:renderShaded(
+			renderShaded(
 				width: width,
 				rows: height,
 				maxIter: maxIter,
@@ -140,7 +140,7 @@ Class is Mandelbrot{
 		if(check: { mode == 'both' || mode == 'halfblock' }, then: {
 			line('');
 			line(color256(code: 213, text: '▸ Mode 2: Sub-Pixel Half-Block (\'▀\') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]'));
-			:renderHalfBlock(
+			renderHalfBlock(
 				width: width,
 				rows: height / 2,
 				maxIter: maxIter + 40,
@@ -151,7 +151,7 @@ Class is Mandelbrot{
 			);
 		});
 
-		:printStats(width: width, height: height, maxIter: maxIter, elapsedMs: clockMs() - startedAtMs);
+		printStats(width: width, height: height, maxIter: maxIter, elapsedMs: clockMs() - startedAtMs);
 	}
 
 	## Renders the region `[minRe..maxRe, minIm..maxIm]` using 2x vertical sub-pixel `▀` half-blocks.
@@ -171,13 +171,13 @@ Class is Mandelbrot{
 			local Int is col: 0;
 			while({ col < width }, {
 				local Float is cr: minRe + ((toFloat(value: col) / wFloat) * (maxRe - minRe));
-				local Float is muTop: :fractal:smoothEscape(cr: cr, ci: ciTop, maxIter: maxIter);
-				local Float is muBot: :fractal:smoothEscape(cr: cr, ci: ciBot, maxIter: maxIter);
+				local Float is muTop: fractal:smoothEscape(cr: cr, ci: ciTop, maxIter: maxIter);
+				local Float is muBot: fractal:smoothEscape(cr: cr, ci: ciBot, maxIter: maxIter);
 
-				local Int is fgCode: :fractal:palette256(mu: muTop);
-				local Int is bgCode: :fractal:palette256(mu: muBot);
+				local Int is fgCode: fractal:palette256(mu: muTop);
+				local Int is bgCode: fractal:palette256(mu: muBot);
 
-				lineBuf: lineBuf . paint256(fg: fgCode, bg: bgCode, text: '▀');
+				lineBuf: "{{lineBuf}}{{paint256(fg: fgCode, bg: bgCode, text: '▀')}}";
 				col: col + 1;
 			});
 			line(lineBuf);
@@ -198,14 +198,14 @@ Class is Mandelbrot{
 
 			while({ col < width }, {
 				local Float is cr: minRe + ((toFloat(value: col) / wFloat) * (maxRe - minRe));
-				local Float is mu: :fractal:smoothEscape(cr: cr, ci: ci, maxIter: maxIter);
-				local Int is fgCode: :fractal:palette256(mu: mu);
-				local String is glyph: :fractal:shadeGlyph(mu: mu);
+				local Float is mu: fractal:smoothEscape(cr: cr, ci: ci, maxIter: maxIter);
+				local Int is fgCode: fractal:palette256(mu: mu);
+				local String is glyph: fractal:shadeGlyph(mu: mu);
 
-				lineBuf: lineBuf . fg256(code: fgCode) . glyph;
+				lineBuf: "{{lineBuf}}{{fg256(code: fgCode)}}{{glyph}}";
 				col: col + 1;
 			});
-			lineBuf: lineBuf . reset();
+			lineBuf: "{{lineBuf}}{{reset()}}";
 			line(lineBuf);
 			row: row + 1;
 		});

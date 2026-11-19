@@ -5,7 +5,7 @@ Class is Greeter{
 
 	## Returns "[greeting] [name]".
 	Function of String is greet(Str is greeting, Str is name){
-		return greeting . ' ' . name;
+		return "{{greeting}} {{name}}";
 	}
 
 }

@@ -24,11 +24,11 @@ Class is PiStats{
 		local Int is whole: thousandths / 1000;
 		local Int is frac: thousandths % 1000;
 		local String is padded: match(when: [
-			{ frac < 10 }:  { '00' . (frac as String); },
-			{ frac < 100 }: { '0' . (frac as String); },
-			else:           { '' . frac }
+			{ frac < 10 }:  { "00{{frac}}"; },
+			{ frac < 100 }: { "0{{frac}}"; },
+			else:           { "{{frac}}" }
 		]);
-		return '' . whole . '.' . padded;
+		return "{{whole}}.{{padded}}";
 	}
 
 	## Returns a distinct 256-color palette index for worker [index].
@@ -38,22 +38,22 @@ Class is PiStats{
 
 	## Pads [inner] inside a `║ ... ║` box row of [width] columns.
 	Function of String is boxed(String is inner, Int is width){
-		local String is line: '║ ' . inner;
+		local String is line: "║ {{inner}}";
 		local Int is pad: width - 2 - inner:length();
 		if({ pad < 1 }, {
 			pad: 1;
 		});
 		repeat(count: pad, worker: {
-			line: line . ' ';
+			line: "{{line}} ";
 		});
-		return line . '║';
+		return "{{line}}║";
 	}
 
 	## Returns a horizontal bar of [width] `═` characters.
 	Function of String is bar(Int is width){
 		local String is barText: '';
 		repeat(count: width, worker: {
-			barText: barText . '═';
+			barText: "{{barText}}═";
 		});
 		return barText;
 	}

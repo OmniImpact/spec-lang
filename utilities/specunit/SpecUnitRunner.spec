@@ -14,6 +14,14 @@ Class is SpecUnitRunner{
 		['specunit', TestResult],
 		['specunit', CheckRecord],
 		['base', 'core', SpecError],
+		['base', 'cleo', Cleo],
+		['base', 'cleo', CleoSection],
+		['base', 'cleo', CleoColor],
+		['base', 'cleo', as CleoColor()],
+		['base', 'cleo', CleoWidth],
+		['base', 'cleo', as CleoWidth()],
+		['base', 'cleo', BorderStyle],
+		['base', 'cleo', TitlePlacement],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Ansi()],
@@ -184,21 +192,20 @@ Class is SpecUnitRunner{
 			});
 			totalMs: totalMs + r:durationMs;
 		});
-		line(bold() . color256(code: 51, text: '== SpecUnit =='));
+		local Cleo is ui: Cleo:toolUi(title: ' SpecUnit ');
+		local CleoSection is rSec: ui:addToolSection(title: ' Results ');
 		SpecUnitState:results:each(action: local Function(TestResult is r){
-			local String is status: if(check: { r:passed }, then: { color256(code: 114, text: '[PASS]'); }, else: { color256(code: 203, text: '[FAIL]'); });
-			local String is pad: '';
-			repeat(count: nameLen - r:name:length(), worker: {
-				pad: pad . ' ';
-			});
-			line(status . ' ' . r:name . pad . '  ' . (r:durationMs as String) . 'ms');
+			local String is status: if(check: { r:passed }, then: { '[PASS]' }, else: { '[FAIL]' });
+			local CleoColor is c: if(check: { r:passed }, then: { CleoColor:ansi(code: 114) }, else: { CleoColor:ansi(code: 203) });
+			rSec:addLine(text: status . ' ' . r:name, color: c, rightText: (r:durationMs as String) . 'ms');
 			if(check: { !r:passed }, then: {
 				r:failures:each(action: local Function(String is f){
-					line(color256(code: 203, text: '       - ' . f));
+					rSec:addLine(text: '       - ' . f, color: CleoColor:ansi(code: 203));
 				});
 			});
 		});
-		local String is verdict: if(check: { failed == 0 }, then: { color256(code: 114, text: 'ALL GREEN'); }, else: { color256(code: 203, text: 'FAILED'); });
+		local String is verdict: if(check: { failed == 0 }, then: { 'ALL GREEN' }, else: { 'FAILED' });
+		local CleoColor is vColor: if(check: { failed == 0 }, then: { CleoColor:ansi(code: 114) }, else: { CleoColor:ansi(code: 203) });
 		# A test GROUP is a class (the "Class" prefix of each
 		# "Class.method" result); a TEST is one method's execution. A
 		# class's tests run consecutively, so the group count is the
@@ -215,7 +222,9 @@ Class is SpecUnitRunner{
 				});
 			});
 		});
-		line(bold() . color256(code: 51, text: '== ' . (groups as String) . ' test groups, ' . (passed as String) . ' tests passed, ' . (failed as String) . ' failed in ' . (totalMs as String) . 'ms — ' . verdict . ' =='));
+		local CleoSection is sumSec: ui:addToolSection(title: ' Summary ');
+		sumSec:addLine(text: (groups as String) . ' test groups · ' . (passed as String) . ' passed · ' . (failed as String) . ' failed · ' . (totalMs as String) . 'ms', color: vColor, rightText: verdict);
+		ui:render();
 		# the branch-yield works in local-init position; nested as a call
 		# argument the builtin if emits statement-form, so bind first.
 		local Int is exitCode: if(check: { failed > 0 }, then: { 1 }, else: { 0 });

@@ -28,7 +28,7 @@ Class is RandomTune{
 	## Entry point; opens the audio device (falling back to silent timing if unavailable) and plays 12 notes.
 	Function is init(){
 		local DateTime is startedAt: DateTime:now();
-		local Cleo is ui: Cleo:init(
+		local Cleo is ui: Cleo(
 			title: ' random_tune ',
 			titleColor: CleoColor:ansi(code: 255),
 			titleBgColor: CleoColor:ansi(code: 236),
@@ -66,7 +66,7 @@ Class is RandomTune{
 		local Int is noteCount: 12;
 		local Int is stepMs: 180;
 		local Int is noteMs: 150;
-		local Synth is synth: Synth:init();
+		local Synth is synth: Synth();
 
 		local String is audioErr: '';
 		local Audio is audio: Audio:open(
@@ -77,8 +77,8 @@ Class is RandomTune{
 				audioErr: error;
 			}
 		);
-		local String is audioStatus: if({ audio:isOpen() }, { '44100 Hz stereo PCM' }, { 'silent mode (' . audioErr . ')' });
-		infoSec:addLine(text: 'Started: ' . startedAt:formatIso(), color: CleoColor:ansi(code: 252), rightText: audioStatus);
+		local String is audioStatus: if({ audio:isOpen() }, { '44100 Hz stereo PCM' }, { "silent mode ({{audioErr}})" });
+		infoSec:addLine(text: "Started: {{startedAt:formatIso()}}", color: CleoColor:ansi(code: 252), rightText: audioStatus);
 
 		local Int is idx: 0;
 		local Int is maxJitterUs: 0;
@@ -106,9 +106,9 @@ Class is RandomTune{
 			});
 
 			notesSec:addLine(
-				text: 'Note ' . ((idx + 1) as String) . ': ' . noteName,
+				text: "Note {{idx + 1}}: {{noteName}}",
 				color: CleoColor:ansi(code: 252),
-				rightText: (Math:toInt(value: freq) as String) . ' Hz'
+				rightText: "{{Math:toInt(value: freq)}} Hz"
 			);
 			idx: idx + 1;
 		});
@@ -120,9 +120,9 @@ Class is RandomTune{
 
 		local Int is totalMs: (Time:monotonicNs() - startNs) / 1000000;
 		summarySec:addLine(
-			text: 'Finished in ' . (totalMs as String) . ' ms',
+			text: "Finished in {{totalMs}} ms",
 			color: CleoColor:ansi(code: 255),
-			rightText: 'Max timer jitter: ' . (maxJitterUs as String) . ' us'
+			rightText: "Max timer jitter: {{maxJitterUs}} us"
 		);
 		ui:flushFinal();
 	}

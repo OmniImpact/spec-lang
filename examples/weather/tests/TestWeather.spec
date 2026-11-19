@@ -3,7 +3,6 @@
 Class of SpecUnitTest is TestWeather{
 	replace Array of Array of String is using: [
 		['specunit', SpecUnitTest],
-		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'data', as Json()],
 		['base', 'struct', Map],

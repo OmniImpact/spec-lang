@@ -15,7 +15,7 @@ Class is FractalMath{
 
 	## Computes the smooth escape-time value for `(cr, ci)` up to [maxIter], or `-1.0` if inside the set.
 	Function of Float is smoothEscape(Float is cr, Float is ci, Int is maxIter){
-		:pointsRendered: :pointsRendered + 1;
+		pointsRendered: pointsRendered + 1;
 
 		local Float is q: ((cr - 0.25) * (cr - 0.25)) + (ci * ci);
 		if({ (q * (q + (cr - 0.25))) <= (0.25 * ci * ci) }, {
@@ -62,9 +62,9 @@ Class is FractalMath{
 		local Float is gf: (0.5 + (0.5 * cos(value: t + 2.094))) * 5.0;
 		local Float is bf: (0.5 + (0.5 * cos(value: t + 4.188))) * 5.0;
 
-		local Int is r: toInt(value: round(value: :clampFloat(v: rf, lo: 0.0, hi: 5.0)));
-		local Int is g: toInt(value: round(value: :clampFloat(v: gf, lo: 0.0, hi: 5.0)));
-		local Int is b: toInt(value: round(value: :clampFloat(v: bf, lo: 0.0, hi: 5.0)));
+		local Int is r: toInt(value: round(value: clampFloat(v: rf, lo: 0.0, hi: 5.0)));
+		local Int is g: toInt(value: round(value: clampFloat(v: gf, lo: 0.0, hi: 5.0)));
+		local Int is b: toInt(value: round(value: clampFloat(v: bf, lo: 0.0, hi: 5.0)));
 		return cubeIndex(r: r, g: g, b: b);
 	}
 

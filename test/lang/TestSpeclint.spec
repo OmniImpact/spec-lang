@@ -96,7 +96,7 @@ Class of SpecUnitTest is TestSpeclint{
 	Function is testLoopConstructionWarns(){
 		local Array of LintIssue is issues: :lintSource(src: "Class is F{\n\tFunction is go(){\n\t\twhile(evaluate: { true }, iteration: {\n\t\t\tlocal Widget is w: Widget:init();\n\t\t});\n\t}\n}\n");
 		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: true));
-		Assert:areEqualInt(0, :countKind(issues: issues, wantWarnings: false));
+		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: false));
 	}
 
 	Function is testEncourageAsConditionalNotice(){
@@ -120,5 +120,43 @@ Class of SpecUnitTest is TestSpeclint{
 	Function is testModularRuleDiscovery(){
 		local Linter is linter: Linter:init();
 		Assert:isTrue(linter:rules:length() >= 8);
+	}
+
+	Function is testBracketIndentationWarns(){
+		local Array of LintIssue is bad: :lintSource(src: "Class is F{\n\tArray of Int is xs: [\n\t1,\n\t2\n\t\t];\n}\n");
+		Assert:isTrue(:countKind(issues: bad, wantWarnings: true) >= 2);
+		local Array of LintIssue is good: :lintSource(src: "Class is F{\n\tArray of Int is xs: [\n\t\t1,\n\t\t2\n\t];\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: true));
+	}
+
+	Function is testUnnecessarySelfColonNotice(){
+		local Array of LintIssue is unshadowed: :lintSource(src: "Class is F{\n\tInt is x: 0;\n\tFunction of Int is get(){\n\t\treturn :x;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: unshadowed, wantWarnings: true));
+		Assert:areEqualInt(1, :countKind(issues: unshadowed, wantWarnings: false));
+		local Array of LintIssue is shadowed: :lintSource(src: "Class is F{\n\tInt is x: 0;\n\tFunction of Int is get(Int is x){\n\t\treturn :x;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: shadowed, wantWarnings: false));
+	}
+
+	Function is testInitShorthandNotice(){
+		local Array of LintIssue is issues: :lintSource(src: "Class is F{\n\tFunction is go(){\n\t\tlocal Widget is w: Widget:init();\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: issues, wantWarnings: true));
+		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: false));
+	}
+
+	Function is testUnusedUsingWarns(){
+		local Array of LintIssue is issues: :lintSource(src: "Class is F{\n\treplace Array of Array of String is using: [\n\t\t['base', 'struct', Map]\n\t];\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: true));
+	}
+
+	Function is testBlankLinesNotice(){
+		local Array of LintIssue is issues: :lintSource(src: "Class is F{\n\n\n\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}");
+		Assert:areEqualInt(0, :countKind(issues: issues, wantWarnings: true));
+		Assert:areEqualInt(2, :countKind(issues: issues, wantWarnings: false));
+	}
+
+	Function is testTemplateStringNotice(){
+		local Array of LintIssue is issues: :lintSource(src: "Class is F{\n\tFunction of String is greet(String is name){\n\t\treturn 'hi ' . name;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: issues, wantWarnings: true));
+		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: false));
 	}
 }

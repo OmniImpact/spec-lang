@@ -27,7 +27,7 @@ Class is Weather{
 	];
 
 	replace Function of Boolean is SpecErrorHandler(SpecError is error){
-		Output:line('Unhandled error: ' . error:toString());
+		Output:line("Unhandled error: {{error:toString()}}");
 		return true;
 	}
 
@@ -35,7 +35,7 @@ Class is Weather{
 		local Str is url: 'https://api.weather.gov/gridpoints/RAH/74,58/forecast';
 		local String is urlStr: url as String;
 
-		local Cleo is ui: Cleo:init(
+		local Cleo is ui: Cleo(
 			title: ' weather ',
 			titleColor: CleoColor:ansi(code: 255),
 			titleBgColor: CleoColor:ansi(code: 236),
@@ -73,12 +73,12 @@ Class is Weather{
 				scope: scope,
 				url: urlStr,
 				onSuccess: local Function(HttpResponse is resp){
-					statusSec:resolveSlot(index: reqSlot, badge: '●', text: urlStr, color: CleoColor:ansi(code: 252), rightText: 'HTTP ' . (resp:statusCode as String));
-					:populateForecast(rawJson: resp:body, fcSec: fcSec);
+					statusSec:resolveSlot(index: reqSlot, badge: '●', text: urlStr, color: CleoColor:ansi(code: 252), rightText: "HTTP {{resp:statusCode}}");
+					populateForecast(rawJson: resp:body, fcSec: fcSec);
 				},
 				onError: local Function(String is err){
 					statusSec:resolveSlot(index: reqSlot, badge: '✖', text: urlStr, color: CleoColor:ansi(code: 203), rightText: 'failed');
-					fcSec:addLine(text: 'Error fetching forecast: ' . err, color: CleoColor:ansi(code: 203));
+					fcSec:addLine(text: "Error fetching forecast: {{err}}", color: CleoColor:ansi(code: 203));
 				}
 			);
 			ui:finish();
@@ -91,13 +91,13 @@ Class is Weather{
 		local Int is temp: Json:getInt(obj: p, key: 'temperature', default: 0);
 		local String is unit: Json:getString(obj: p, key: 'temperatureUnit', default: 'F');
 		local String is shortFc: Json:getString(obj: p, key: 'shortForecast', default: '');
-		return name . ': ' . (temp as String) . '°' . unit . ' · ' . shortFc;
+		return "{{name}}: {{temp}}°{{unit}} · {{shortFc}}";
 	}
 
 	Function is populateForecast(String is rawJson, CleoSection is fcSec){
 		local Any is rootAny: Json:parse(text: rawJson);
 		if({ Json:hasError() }, {
-			fcSec:addLine(text: 'JSON parse error: ' . Json:errorMessage(), color: CleoColor:ansi(code: 203));
+			fcSec:addLine(text: "JSON parse error: {{Json:errorMessage()}}", color: CleoColor:ansi(code: 203));
 			return;
 		});
 		local Map is root: rootAny as Map;
@@ -105,7 +105,7 @@ Class is Weather{
 		local String is updated: Json:getString(obj: props, key: 'updateTime', default: Json:getString(obj: props, key: 'updated', default: 'unknown'));
 		local Array is periods: Json:getArray(obj: props, key: 'periods');
 
-		fcSec:addLine(text: 'Updated: ' . updated, color: CleoColor:ansi(code: 245));
+		fcSec:addLine(text: "Updated: {{updated}}", color: CleoColor:ansi(code: 245));
 
 		local Int is limit: if({ periods:length() < 6 }, { periods:length() }, { 6 });
 		local Int is i: 0;
@@ -114,9 +114,9 @@ Class is Weather{
 			local String is wind: Json:getString(obj: p, key: 'windSpeed', default: '');
 			local String is dir: Json:getString(obj: p, key: 'windDirection', default: '');
 			fcSec:addLine(
-				text: :formatPeriod(p: p),
+				text: formatPeriod(p: p),
 				color: CleoColor:ansi(code: 252),
-				rightText: 'Wind ' . wind . ' ' . dir
+				rightText: "Wind {{wind}} {{dir}}"
 			);
 			i: i + 1;
 		});

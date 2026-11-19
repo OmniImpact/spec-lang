@@ -17,7 +17,7 @@ Class is Blackjack{
 		[Deck]
 	];
 
-	local Deck is deckUtil: Deck:init();
+	local Deck is deckUtil: Deck();
 	local Array of Int is deck: [];
 	local Array of Int is playerHand: [];
 	local Array of Int is dealerHand: [];
@@ -44,7 +44,7 @@ Class is Blackjack{
 			local Int is card: game:drawCard();
 			game:dealerHand:add(item: card);
 			local Int is newScore: game:handValue(hand: game:dealerHand);
-			line('Dealer draws: ' . card . ' (Total: ' . newScore . ')');
+			line("Dealer draws: {{card}} (Total: {{newScore}})");
 			return true;
 		}
 
@@ -92,10 +92,10 @@ Class is Blackjack{
 				['h', 'hit']: {
 					local Int is card: game:drawCard();
 					game:playerHand:add(item: card);
-					line('You drew: ' . card);
+					line("You drew: {{card}}");
 
 					local Int is score: game:handValue(hand: game:playerHand);
-					line('Your total is now: ' . score);
+					line("Your total is now: {{score}}");
 
 					match(when: [
 						{ score > 21 }: {
@@ -112,7 +112,7 @@ Class is Blackjack{
 					]);
 				},
 				['s', 'stand']: {
-					line('You stand with total: ' . game:handValue(hand: game:playerHand));
+					line("You stand with total: {{game:handValue(hand: game:playerHand)}}");
 					game:startDealerTurn();
 				},
 				else: {
@@ -126,27 +126,27 @@ Class is Blackjack{
 
 	## Draws a random card value (1..10).
 	Function of Int is drawCard(){
-		return :deckUtil:drawCard();
+		return deckUtil:drawCard();
 	}
 
 	## Computes the optimal Blackjack score for [hand], treating Aces (`1`) as 11 or 1.
 	Function of Int is handValue(Array of Int is hand){
-		return :deckUtil:handValue(hand: hand);
+		return deckUtil:handValue(hand: hand);
 	}
 
 	## Prompts the player for hit/stand input via [consIn].
 	Function is promptPlayerAction(){
 		line('Would you like to (h)it or (s)tand?');
-		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: :);
+		local PlayerTurnHandler is handler: PlayerTurnHandler(game: :);
 		consIn(handler: handler);
 	}
 
 	## Runs the dealer's automated draw loop until total >= 17.
 	Function is startDealerTurn(){
 		line("\n--- Starting Dealer's Turn ---");
-		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: :);
-		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: :);
-		local LoopControl is control: LoopControl:init(onComplete: onComplete);
+		local DealerTurnLoop is dealerLoop: DealerTurnLoop(game: :);
+		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback(game: :);
+		local LoopControl is control: LoopControl(onComplete: onComplete);
 		run(loop: dealerLoop, control: control);
 	}
 
@@ -156,7 +156,7 @@ Class is Blackjack{
 		local Int is dealerScore: handValue(hand: dealerHand);
 
 		line("\n=== Final Results ===");
-		line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
+		line("Player: {{playerScore}} | Dealer: {{dealerScore}}");
 
 		match(when: [
 			{ dealerScore > 21 }:          { line('Dealer busts! You win!'); },
@@ -172,15 +172,15 @@ Class is Blackjack{
 		line('         Welcome to SpecJack          ');
 		line("======================================\n");
 
-		:deck: :deckUtil:createDeck();
+		deck: deckUtil:createDeck();
 
 		playerHand:add(item: drawCard());
 		playerHand:add(item: drawCard());
 		dealerHand:add(item: drawCard());
 		dealerHand:add(item: drawCard());
 
-		line('Your hand: ' . playerHand[0] . ', ' . playerHand[1] . ' (Total: ' . handValue(hand: playerHand) . ')');
-		line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
+		line("Your hand: {{playerHand[0]}}, {{playerHand[1]}} (Total: {{handValue(hand: playerHand)}})");
+		line("Dealer's up card: {{dealerHand[0]}} [Hidden Card]\n");
 
 		if({ handValue(hand: playerHand) == 21 }, {
 			line('Natural Blackjack! You win!');

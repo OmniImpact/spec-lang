@@ -29,7 +29,7 @@ Class is PiBenchmark{
 
 	local Int is gridW: 44;
 	local Int is gridH: 20;
-	local PiStats is stats: PiStats:init();
+	local PiStats is stats: PiStats();
 
 	replace Function of Boolean is SpecErrorHandler(SpecError is error){
 		return false;
@@ -58,7 +58,7 @@ Class is PiBenchmark{
 			wi++;
 		});
 
-		local Cleo is ui: Cleo:init(
+		local Cleo is ui: Cleo(
 			title: ' pi_benchmark ',
 			titleColor: CleoColor:ansi(code: 231),
 			titleBgColor: CleoColor:ansi(code: 24),
@@ -71,26 +71,26 @@ Class is PiBenchmark{
 		);
 
 		local CleoSection is domainSec: ui:addSection(
-			title: ' Unit Circle Domain (' . (threads as String) . ' threads · ' . (points as String) . ' pts) ',
+			title: " Unit Circle Domain ({{threads}} threads · {{points}} pts) ",
 			titleColor: CleoColor:ansi(code: 159),
 			titleBgColor: CleoColor:ansi(code: 23),
 			titlePlacement: TitlePlacement:INLINE_BORDER,
 			fgColor: CleoColor:ansi(code: 195)
 		);
 		local Array of Int is domainSlots: [];
-		while([Int is r: 0], { r < :gridH }, {
-			domainSlots:add(item: domainSec:addLine(text: :domainRow(row: r, threads: threads), color: CleoColor:ansi(code: 195)));
+		while([Int is r: 0], { r < gridH }, {
+			domainSlots:add(item: domainSec:addLine(text: domainRow(row: r, threads: threads), color: CleoColor:ansi(code: 195)));
 			r++;
 		});
 
 		local CleoSection is wSec: ui:addSection(
-			title: ' Workers (' . (threads as String) . ' threads) ',
+			title: " Workers ({{threads}} threads) ",
 			titleColor: CleoColor:ansi(code: 120),
 			titleBgColor: CleoColor:ansi(code: 22),
 			titlePlacement: TitlePlacement:INLINE_BORDER,
 			fgColor: CleoColor:ansi(code: 82)
 		);
-		local Int is wBarSlot: wSec:addLine(text: '', color: CleoColor:ansi(code: 82), rightText: '0/' . (threads as String) . ' active');
+		local Int is wBarSlot: wSec:addLine(text: '', color: CleoColor:ansi(code: 82), rightText: "0/{{threads}} active");
 
 		local CleoSection is sSec: ui:addSection(
 			title: ' Live Stats ',
@@ -110,7 +110,7 @@ Class is PiBenchmark{
 			fgColor: CleoColor:ansi(code: 195)
 		);
 		local Int is pSlot: pSec:addProgressArea(
-			text: '0/' . (points as String) . ' points',
+			text: "0/{{points}} points",
 			stage1Color: CleoColor:ansi(code: 46),
 			stage2Color: CleoColor:ansi(code: 39),
 			trackColor: CleoColor:ansi(code: 236),
@@ -121,8 +121,8 @@ Class is PiBenchmark{
 
 		local Function is syncUi: local Function(Int is curSamples, Int is curHits, Int is nowMs){
 			local Int is r2: 0;
-			while({ r2 < :gridH }, {
-				domainSec:updateText(index: domainSlots:get(index: r2), text: :domainRow(row: r2, threads: threads));
+			while({ r2 < gridH }, {
+				domainSec:updateText(index: domainSlots:get(index: r2), text: domainRow(row: r2, threads: threads));
 				r2: r2 + 1;
 			});
 
@@ -130,27 +130,27 @@ Class is PiBenchmark{
 			local String is boxes: '';
 			local Int is wi2: 0;
 			while({ wi2 < threads }, {
-				if({ wi2 > 0 }, { boxes: boxes . ' '; });
+				if({ wi2 > 0 }, { boxes: "{{boxes}} "; });
 				if(check: { atomicGet(slot: 100 + wi2) != 0 }, then: {
-					boxes: boxes . '■';
+					boxes: "{{boxes}}■";
 					activeCount: activeCount + 1;
 				}, else: {
-					boxes: boxes . '□';
+					boxes: "{{boxes}}□";
 				});
 				wi2: wi2 + 1;
 			});
-			wSec:updateText(index: wBarSlot, text: boxes, rightText: (activeCount as String) . '/' . (threads as String) . ' active');
+			wSec:updateText(index: wBarSlot, text: boxes, rightText: "{{activeCount}}/{{threads}} active");
 
-			local Float is pi: :stats:estimatePi(hits: curHits, samples: curSamples);
+			local Float is pi: stats:estimatePi(hits: curHits, samples: curSamples);
 			local Float is err: abs(value: pi - 3.14159265358979);
 			local Int is elapsed: nowMs - startedAtMs;
 			local Int is perSec: if({ elapsed > 0 }, { (curSamples * 1000) / elapsed }, { 0 });
-			sSec:updateText(index: estSlot, text: 'Pi ≈ ' . :stats:piText(value: pi), rightText: 'error ' . :stats:piText(value: err));
-			sSec:updateText(index: statSlot, text: 'Samples: ' . (curSamples as String) . ' · Hits: ' . (curHits as String), rightText: (elapsed as String) . ' ms · ' . (perSec as String) . ' pts/sec');
+			sSec:updateText(index: estSlot, text: "Pi ≈ {{stats:piText(value: pi)}}", rightText: "error {{stats:piText(value: err)}}");
+			sSec:updateText(index: statSlot, text: "Samples: {{curSamples}} · Hits: {{curHits}}", rightText: "{{elapsed}} ms · {{perSec}} pts/sec");
 
 			local Float is pct: if({ points > 0 }, { (curSamples as Float) / (points as Float) }, { 1.0 });
 			if({ pct > 1.0 }, { pct: 1.0; });
-			pSec:updateProgress(index: pSlot, text: (curSamples as String) . '/' . (points as String) . ' points', stage1: pct, stage2: 0.0);
+			pSec:updateProgress(index: pSlot, text: "{{curSamples}}/{{points}} points", stage1: pct, stage2: 0.0);
 
 			ui:markDirty();
 			ui:flush();
@@ -210,22 +210,22 @@ Class is PiBenchmark{
 		local String is buf: '';
 		while(
 			[Int is col: 0],
-			{ col < :gridW },
+			{ col < gridW },
 			{
-				local Float is cx: ((toFloat(value: col) + 0.5) / toFloat(value: :gridW)) * 2.0 - 1.0;
-				local Float is cy: ((toFloat(value: row) + 0.5) / toFloat(value: :gridH)) * 2.0 - 1.0;
+				local Float is cx: ((toFloat(value: col) + 0.5) / toFloat(value: gridW)) * 2.0 - 1.0;
+				local Float is cy: ((toFloat(value: row) + 0.5) / toFloat(value: gridH)) * 2.0 - 1.0;
 				local Float is dist: sqrt(value: cx * cx + cy * cy);
 
-				local Int is marker: :markerAt(col: col, row: row, threads: threads);
+				local Int is marker: markerAt(col: col, row: row, threads: threads);
 				match(when: [
 					{ marker >= 0 }: {
-						buf: buf . color256(code: :stats:threadColor(index: marker), text: '●');
+						buf: buf . color256(code: stats:threadColor(index: marker), text: '●');
 					},
 					{ dist <= 1.0 }: {
 						buf: buf . color256(code: 24, text: '·');
 					},
 					else: {
-						buf: buf . ' ';
+						buf: "{{buf}} ";
 					}
 				]);
 				col++;
@@ -239,8 +239,8 @@ Class is PiBenchmark{
 		local Int is found: -1;
 		local Int is i: 0;
 		while({ i < threads }, local Function of Boolean(){
-			local Int is gx: (atomicGet(slot: i * 2 + 2) * :gridW) / 1000;
-			local Int is gy: (atomicGet(slot: i * 2 + 3) * :gridH) / 1000;
+			local Int is gx: (atomicGet(slot: i * 2 + 2) * gridW) / 1000;
+			local Int is gy: (atomicGet(slot: i * 2 + 3) * gridH) / 1000;
 			if({ gx == col && gy == row }, {
 				found: i;
 				return false;
