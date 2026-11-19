@@ -12,6 +12,7 @@ Class is ThreadScope{
 	replace Array of Array of String is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', Task],
+		['base', 'sys', 'thread', ThreadScopeRegistry],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
@@ -24,6 +25,39 @@ Class is ThreadScope{
 	local Int is cancelledAddr: 0;
 	local Int is errorHandlerAddr: 0;
 	local Boolean is hasErrorHandler: false;
+
+	held local ThreadScopeRegistry is activeRegistry: ThreadScopeRegistry:init();
+	held local Conditional is heldCond: Conditional:init();
+
+	held local Function is pushActiveScope(Int is tid, Int is scopeAddr){
+		ThreadScope:activeRegistry:push(tid: tid, scopeAddr: scopeAddr);
+	}
+
+	held local Function is popActiveScope(Int is tid){
+		ThreadScope:activeRegistry:pop(tid: tid);
+	}
+
+	## True when the calling thread is executing inside a [ThreadScope:open] block.
+	held Function of Boolean is inScope(){
+		return ThreadScope:activeRegistry:current() != 0;
+	}
+
+	## Spawns [task] on the enclosing [ThreadScope] when called inside [ThreadScope:open],
+	## or opens a temporary [ThreadScope:open] and waits for [task] to finish otherwise.
+	held Function is dispatch(Function is task){
+		local Int is addr: ThreadScope:activeRegistry:current();
+		ThreadScope:heldCond:if({ addr != 0 }, {
+			local ThreadScope is activeScope: Mem:addrToObj(addr: addr) as ThreadScope;
+			activeScope:spawn(task: task);
+		}, {
+			ThreadScope:open(
+				onError: local Function of Boolean(SpecError is _err){ return false; },
+				body: local Function(ThreadScope is scope){
+					scope:spawn(task: task);
+				}
+			);
+		});
+	}
 
 	local Function of Boolean is hasClosure(Function is cb){
 		local Int is addr: Mem:objToAddr(obj: cb);
@@ -113,11 +147,14 @@ Class is ThreadScope{
 	}
 
 	local Function is runOpen(Function is body){
+		local Int is tid: Thread:currentId();
+		ThreadScope:pushActiveScope(tid: tid, scopeAddr: Mem:objToAddr(obj: :));
 		local Int is bodyErrAddr: Mem:callCatching(action: local Function(){
 			if({ :hasClosure(cb: body) }, {
 				body(:);
 			});
 		});
+		ThreadScope:popActiveScope(tid: tid);
 		if({ bodyErrAddr != 0 }, {
 			:cancel();
 		});
@@ -152,6 +189,8 @@ Class is ThreadScope{
 
 		local Function is worker: local Function(){
 			t:markRunning();
+			local Int is workerTid: Thread:currentId();
+			ThreadScope:pushActiveScope(tid: workerTid, scopeAddr: Mem:objToAddr(obj: :));
 			local Int is errAddr: Mem:callCatching(action: local Function(){
 				if({ hasResult }, {
 					local Any is res: task();
@@ -169,6 +208,7 @@ Class is ThreadScope{
 					});
 				});
 			});
+			ThreadScope:popActiveScope(tid: workerTid);
 			if({ errAddr != 0 }, {
 				:cancel();
 				t:failAddr(errAddr: errAddr);
@@ -186,12 +226,15 @@ Class is ThreadScope{
 
 		local Function is worker: local Function(){
 			t:markRunning();
+			local Int is workerTid: Thread:currentId();
+			ThreadScope:pushActiveScope(tid: workerTid, scopeAddr: Mem:objToAddr(obj: :));
 			local Int is errAddr: Mem:callCatching(action: local Function(){
 				local T is res: task();
 				if({ !Mem:hasPendingError() }, {
 					t:complete(value: res);
 				});
 			});
+			ThreadScope:popActiveScope(tid: workerTid);
 			if({ errAddr != 0 }, {
 				:cancel();
 				t:failAddr(errAddr: errAddr);
