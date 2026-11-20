@@ -2,29 +2,15 @@
 
 Class of Frame is FileManagerFrame{
 	replace Array of Array of String is using: [
-		['base', 'theo', Frame],
-		['base', 'theo', Widget],
-		['base', 'theo', Grid],
-		['base', 'theo', Panel],
-		['base', 'theo', Row],
-		['base', 'theo', Spacer],
-		['base', 'theo', TextLine],
-		['base', 'theo', TextInput],
-		['base', 'theo', ListView],
-		['base', 'theo', Button],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', TheoTheme],
+		['base', 'theo', '*'],
 		['base', 'signal', TextEmitter],
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()]
+		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
 	String is mode: 'open';
 	String is curDir: '.';
-	TheoTheme is theme: TheoTheme();
 	Function is onConfirm;
 	Function is onCancel;
 
@@ -43,14 +29,12 @@ Class of Frame is FileManagerFrame{
 		String is initialDir: '.',
 		String is initialName: '',
 		Function is onConfirm,
-		Function is onCancel,
-		TheoTheme is theme: TheoTheme()
+		Function is onCancel
 	){
 		:mode: mode;
 		:curDir: Uri:fromFilePath(filePath: initialDir):toFilePath();
 		:onConfirm: onConfirm;
 		:onCancel: onCancel;
-		:theme: theme;
 		if({ mode == 'saveAs' }, {
 			:listFocus: FocusTarget(initial: false);
 			:inputFocus: FocusTarget(initial: true);
@@ -61,30 +45,25 @@ Class of Frame is FileManagerFrame{
 		local ListView is lv: ListView(
 			items: :dirEntries,
 			focusTarget: listFocus,
-			fg: theme:foreground,
-			selectedFg: theme:buttonFocusFg,
-			selectedBg: theme:buttonFocusBg
+			onActivate: local Function(String is entry){
+				handleEntryActivate(entry: entry);
+			},
+			onSelectChange: local Function(String is entry){
+				if({ entry != '..' && !entry:endsWith(suffix: '/') && nameInputs:length() > 0 }, {
+					nameInputs:get(index: 0):setText(value: entry);
+				});
+			}
 		);
-		lv:bindOnActivate(cb: local Function(String is entry){
-			handleEntryActivate(entry: entry);
-		});
-		lv:bindOnSelectChange(cb: local Function(String is entry){
-			if({ entry != '..' && !entry:endsWith(suffix: '/') && nameInputs:length() > 0 }, {
-				nameInputs:get(index: 0):setText(value: entry);
-			});
-		});
 		:listViews: [lv];
 
 		local TextInput is ti: TextInput(
 			value: initialName,
 			placeholder: 'filename',
 			focusTarget: inputFocus,
-			fg: theme:titleColor,
-			placeholderFg: theme:mutedColor
+			onSubmit: local Function(String is _typed){
+				submitCurrent();
+			}
 		);
-		ti:bindOnSubmit(cb: local Function(String is typed){
-			submitCurrent();
-		});
 		:nameInputs: [ti];
 	}
 
@@ -99,7 +78,7 @@ Class of Frame is FileManagerFrame{
 				out:add(item: name);
 			});
 		});
-		return out;
+		out;
 	}
 
 	local Function is navigateTo(String is nextDir){
@@ -141,14 +120,12 @@ Class of Frame is FileManagerFrame{
 		local String is full: if({ typed:startsWith(prefix: '/') }, { typed }, {
 			if({ curDir == '/' }, { "/{{typed}}" }, { "{{curDir}}/{{typed}}" })
 		});
-		local Function is fn: onConfirm;
-		fn(full);
+		onConfirm(full);
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() }, {
-			local Function is fn: onCancel;
-			fn();
+			onCancel();
 			return true;
 		});
 		if({ (event:ctrl || event:alt) && event:key == 'm' }, {
@@ -171,19 +148,9 @@ Class of Frame is FileManagerFrame{
 			});
 			return true;
 		});
-		if({ okFocus:focused || cancelFocus:focused }, {
-			if({ event:isUp() }, {
-				inputFocus:requestFocus();
-				return true;
-			});
-			if({ event:isLeft() }, {
-				cancelFocus:requestFocus();
-				return true;
-			});
-			if({ event:isRight() }, {
-				okFocus:requestFocus();
-				return true;
-			});
+		if({ (okFocus:focused || cancelFocus:focused) && event:isUp() }, {
+			inputFocus:requestFocus();
+			return true;
 		});
 		return false;
 	}
@@ -199,21 +166,19 @@ Class of Frame is FileManagerFrame{
 					size: 3,
 					child: Panel(
 						border: true,
-						borderColor: theme:borderColor,
-						rounded: theme:roundedBorders,
 						padX: 1,
 						padY: 0,
 						child: Row(
 							children: [
 								TextLine(
 									value: headerTitle,
-									color: theme:titleColor,
+									color: activeTheme:titleColor,
 									bold: true
 								),
 								Spacer(weight: 1.0),
 								TextLine(
 									value: 'Ctrl+M: menu · Ctrl+F: files/name',
-									color: theme:mutedColor
+									color: activeTheme:mutedColor
 								)
 							]
 						)
@@ -223,8 +188,6 @@ Class of Frame is FileManagerFrame{
 					weight: 1.0,
 					child: Panel(
 						border: true,
-						borderColor: theme:borderColor,
-						rounded: theme:roundedBorders,
 						padX: 1,
 						padY: 0,
 						scrollable: true,
@@ -235,8 +198,6 @@ Class of Frame is FileManagerFrame{
 					size: 3,
 					child: Panel(
 						border: true,
-						borderColor: theme:borderColor,
-						rounded: theme:roundedBorders,
 						padX: 1,
 						padY: 0,
 						child: Row(
@@ -244,7 +205,7 @@ Class of Frame is FileManagerFrame{
 							children: [
 								TextLine(
 									value: 'Name: ',
-									color: theme:mutedColor
+									color: activeTheme:mutedColor
 								),
 								nameInputs:get(index: 0)
 							]
@@ -255,21 +216,16 @@ Class of Frame is FileManagerFrame{
 					size: 3,
 					child: Panel(
 						border: true,
-						borderColor: theme:borderColor,
-						rounded: theme:roundedBorders,
 						padX: 1,
 						padY: 0,
 						child: Row(
 							gap: 2,
+							arrowFocus: true,
 							children: [
 								Button(
 									label: ' Cancel ',
 									shortcutKey: 'c',
 									focusTarget: cancelFocus,
-									fg: theme:buttonFg,
-									bg: theme:buttonBg,
-									focusFg: theme:buttonFocusFg,
-									focusBg: theme:buttonFocusBg,
 									onClick: onCancel
 								),
 								Spacer(weight: 1.0),
@@ -277,13 +233,7 @@ Class of Frame is FileManagerFrame{
 									label: actionLabel,
 									shortcutKey: actionKey,
 									focusTarget: okFocus,
-									fg: theme:buttonFg,
-									bg: theme:buttonBg,
-									focusFg: theme:buttonFocusFg,
-									focusBg: theme:buttonFocusBg,
-									onClick: {
-										submitCurrent();
-									}
+									onClick: { submitCurrent(); }
 								)
 							]
 						)

@@ -6,12 +6,11 @@ Class is TheoScreen{
 
 	replace Array of Array of String is using: [
 		['base', 'theo', Frame],
-		['base', 'theo', TheoCallback],
 		['base', 'sys', as Conditional()]
 	];
 
 	Array of Frame is stack: [];
-	Array of TheoCallback is dirtyHooks: [];
+	Array of Function is dirtyHooks: [];
 
 	replace Function is init(Frame is root){
 		:stack: [];
@@ -20,7 +19,7 @@ Class is TheoScreen{
 	}
 
 	Function is bindDirty(Function is cb){
-		:dirtyHooks: [TheoCallback(fn: cb)];
+		:dirtyHooks: [cb];
 		stack:each(action: local Function(Frame is f){
 			f:bindDirty(cb: cb);
 		});
@@ -28,7 +27,8 @@ Class is TheoScreen{
 
 	Function is markDirty(){
 		if({ dirtyHooks:length() > 0 }, {
-			dirtyHooks:get(index: 0):call();
+			local Function is fn: dirtyHooks:get(index: 0);
+			fn();
 		});
 	}
 
@@ -41,8 +41,7 @@ Class is TheoScreen{
 			current():onPause();
 		});
 		if({ dirtyHooks:length() > 0 }, {
-			local TheoCallback is dcb: dirtyHooks:get(index: 0);
-			frame:bindDirty(cb: dcb:cb);
+			frame:bindDirty(cb: dirtyHooks:get(index: 0));
 		});
 		stack:add(item: frame);
 		frame:onEnter();
@@ -67,8 +66,7 @@ Class is TheoScreen{
 			stack:removeAt(index: topIdx);
 		});
 		if({ dirtyHooks:length() > 0 }, {
-			local TheoCallback is dcb: dirtyHooks:get(index: 0);
-			frame:bindDirty(cb: dcb:cb);
+			frame:bindDirty(cb: dirtyHooks:get(index: 0));
 		});
 		stack:add(item: frame);
 		frame:onEnter();

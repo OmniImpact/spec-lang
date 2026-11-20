@@ -2,22 +2,12 @@
 
 Class of Frame is MessagePanel{
 	replace Array of Array of String is using: [
-		['base', 'theo', Frame],
-		['base', 'theo', Widget],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', TheoTheme],
-		['base', 'theo', Panel],
-		['base', 'theo', Row],
-		['base', 'theo', Spacer],
-		['base', 'theo', TextLine],
-		['base', 'theo', Button],
+		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, TextLine, Button]],
 		['base', 'sys', as Conditional()],
 		[EditorViewModel]
 	];
 
 	EditorViewModel is vm;
-	TheoTheme is theme: TheoTheme();
 	FocusTarget is saveFocus;
 	FocusTarget is discardFocus;
 	FocusTarget is cancelFocus;
@@ -32,8 +22,7 @@ Class of Frame is MessagePanel{
 		FocusTarget is cancelFocus,
 		Function is onSave,
 		Function is onDiscard,
-		Function is onCancel,
-		TheoTheme is theme: TheoTheme()
+		Function is onCancel
 	){
 		:vm: vm;
 		:saveFocus: saveFocus;
@@ -42,26 +31,11 @@ Class of Frame is MessagePanel{
 		:onSave: onSave;
 		:onDiscard: onDiscard;
 		:onCancel: onCancel;
-		:theme: theme;
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
-		if({ !saveFocus:focused && !discardFocus:focused && !cancelFocus:focused }, {
-			return false;
-		});
-		if({ event:isEsc() }, {
-			local Function is fn: onCancel;
-			fn();
-			return true;
-		});
-		if({ event:isLeft() }, {
-			if({ cancelFocus:focused }, { discardFocus:requestFocus(); return true; });
-			if({ discardFocus:focused }, { saveFocus:requestFocus(); return true; });
-			return true;
-		});
-		if({ event:isRight() }, {
-			if({ saveFocus:focused }, { discardFocus:requestFocus(); return true; });
-			if({ discardFocus:focused }, { cancelFocus:requestFocus(); return true; });
+		if({ (saveFocus:focused || discardFocus:focused || cancelFocus:focused) && event:isEsc() }, {
+			onCancel();
 			return true;
 		});
 		return false;
@@ -70,16 +44,15 @@ Class of Frame is MessagePanel{
 	replace Function of Widget is ui(){
 		Panel(
 			border: true,
-			borderColor: theme:borderColor,
-			rounded: theme:roundedBorders,
 			padX: 1,
 			padY: 0,
 			child: Row(
 				gap: 1,
+				arrowFocus: true,
 				children: [
 					TextLine(
 						value: vm:messageText,
-						color: theme:titleColor,
+						color: activeTheme:titleColor,
 						bold: true
 					),
 					Spacer(weight: 1.0),
@@ -87,30 +60,18 @@ Class of Frame is MessagePanel{
 						label: ' Save ',
 						shortcutKey: 's',
 						focusTarget: saveFocus,
-						fg: theme:buttonFg,
-						bg: theme:buttonBg,
-						focusFg: theme:buttonFocusFg,
-						focusBg: theme:buttonFocusBg,
 						onClick: onSave
 					),
 					Button(
 						label: ' Discard ',
 						shortcutKey: 'd',
 						focusTarget: discardFocus,
-						fg: theme:buttonFg,
-						bg: theme:buttonBg,
-						focusFg: theme:buttonFocusFg,
-						focusBg: theme:buttonFocusBg,
 						onClick: onDiscard
 					),
 					Button(
 						label: ' Cancel ',
 						shortcutKey: 'c',
 						focusTarget: cancelFocus,
-						fg: theme:buttonFg,
-						bg: theme:buttonBg,
-						focusFg: theme:buttonFocusFg,
-						focusBg: theme:buttonFocusBg,
 						onClick: onCancel
 					)
 				]

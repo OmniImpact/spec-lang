@@ -5,39 +5,32 @@ Class of Widget is Button{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', TheoColor],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()]
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
 	String is label: '';
 	String is shortcutKey: '';
 	FocusTarget is focusTarget: FocusTarget();
-	TheoColor is fg: TheoColor:ansi(code: 252);
-	TheoColor is bg: TheoColor:ansi(code: 237);
-	TheoColor is focusFg: TheoColor:ansi(code: 16);
-	TheoColor is focusBg: TheoColor:ansi(code: 255);
-	Array of TheoCallback is clickHooks: [];
+	TheoColor is fg: TheoColor:none();
+	TheoColor is bg: TheoColor:none();
+	TheoColor is focusFg: TheoColor:none();
+	TheoColor is focusBg: TheoColor:none();
+	Function is onClick: {};
 
 	replace Function is init(
 		String is label,
-		Function is onClick,
+		Function is onClick: {},
 		FocusTarget is focusTarget: FocusTarget(),
 		String is shortcutKey: '',
-		TheoColor is fg: TheoColor:ansi(code: 252),
-		TheoColor is bg: TheoColor:ansi(code: 237),
-		TheoColor is focusFg: TheoColor:ansi(code: 16),
-		TheoColor is focusBg: TheoColor:ansi(code: 255)
+		TheoColor is fg: TheoColor:none(),
+		TheoColor is bg: TheoColor:none(),
+		TheoColor is focusFg: TheoColor:none(),
+		TheoColor is focusBg: TheoColor:none()
 	){
 		:label: label;
 		:shortcutKey: shortcutKey:toLower();
-		:clickHooks: [TheoCallback(fn: onClick)];
+		:onClick: onClick;
 		:focusTarget: focusTarget;
 		:fg: fg;
 		:bg: bg;
@@ -56,8 +49,12 @@ Class of Widget is Button{
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });
 		local Boolean is foc: focusTarget:focused;
-		local TheoColor is useFg: if({ foc }, { focusFg }, { fg });
-		local TheoColor is useBg: if({ foc }, { focusBg }, { bg });
+		local TheoColor is effFg: if({ fg:isSet() }, { fg }, { activeTheme:buttonFg });
+		local TheoColor is effBg: if({ bg:isSet() }, { bg }, { activeTheme:buttonBg });
+		local TheoColor is effFocusFg: if({ focusFg:isSet() }, { focusFg }, { activeTheme:buttonFocusFg });
+		local TheoColor is effFocusBg: if({ focusBg:isSet() }, { focusBg }, { activeTheme:buttonFocusBg });
+		local TheoColor is useFg: if({ foc }, { effFocusFg }, { effFg });
+		local TheoColor is useBg: if({ foc }, { effFocusBg }, { effBg });
 		local Boolean is underlinedShortcut: false;
 		local Int is n: label:length();
 		local Int is i: 0;
@@ -75,16 +72,12 @@ Class of Widget is Button{
 
 	replace Function of Boolean is handleKey(KeyEvent is event){
 		if({ shortcutKey != '' && event:ctrl && event:key:toLower() == shortcutKey }, {
-			if({ clickHooks:length() > 0 }, {
-				clickHooks:get(index: 0):call();
-			});
+			onClick();
 			return true;
 		});
 		if({ !focusTarget:focused }, { return false; });
 		if({ event:isEnter() || (event:isChar() && event:key == ' ') }, {
-			if({ clickHooks:length() > 0 }, {
-				clickHooks:get(index: 0):call();
-			});
+			onClick();
 			return true;
 		});
 		return false;

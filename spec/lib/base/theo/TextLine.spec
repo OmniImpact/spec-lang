@@ -5,12 +5,8 @@ Class of Widget is TextLine{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', TheoColor],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'signal', TextEmitter],
-		['base', 'signal', TextCollector],
+		['base', 'theo', [Widget, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'signal', [TextEmitter, TextCollector]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -20,23 +16,24 @@ Class of Widget is TextLine{
 	Array of TextEmitter is boundEmitters: [];
 	Array of TextCollector is boundCollectors: [];
 
-	replace Function is init(Any is value: '', TheoColor is color: TheoColor:none(), Boolean is bold: false){
+	replace Function is init(String is value: '', TheoColor is color: TheoColor:none(), Boolean is bold: false){
 		:color: color;
 		:bold: bold;
 		:boundEmitters: [];
 		:boundCollectors: [];
-		if({ value:typeName() == 'TextEmitter' }, {
-			local TextEmitter is em: value as TextEmitter;
-			:textValue: em:current();
-			:boundEmitters: [em];
-			local TextCollector is col: em:collect(onEmit: local Function(String is next){
-				:textValue: next;
-				invalidate();
-			});
-			:boundCollectors: [col];
-		}, {
-			:textValue: value as String;
+		:textValue: value;
+	}
+
+	replace Function is init(TextEmitter is value, TheoColor is color: TheoColor:none(), Boolean is bold: false){
+		:color: color;
+		:bold: bold;
+		:textValue: value:current();
+		:boundEmitters: [value];
+		local TextCollector is col: value:collect(onEmit: local Function(String is next){
+			:textValue: next;
+			invalidate();
 		});
+		:boundCollectors: [col];
 	}
 
 	replace Function of Int is measureWidth(Int is maxW){
@@ -51,7 +48,8 @@ Class of Widget is TextLine{
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });
-		buf:drawText(x: boxX, y: boxY, text: textValue, fg: color, bold: bold);
+		local TheoColor is effColor: if({ color:isSet() }, { color }, { activeTheme:foreground });
+		buf:drawText(x: boxX, y: boxY, text: textValue, fg: effColor, bold: bold);
 	}
 
 	replace Function is dispose(){

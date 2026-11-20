@@ -5,15 +5,8 @@ Class of Widget is Grid{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', GridPane],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', FocusTarget],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()],
+		['base', 'theo', [Widget, GridPane, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, FocusTarget]],
+		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'math', as Math()]
 	];
 
@@ -33,8 +26,15 @@ Class of Widget is Grid{
 		return GridPane(isFixed: false, fixedSize: 0, weightVal: weight, child: child);
 	}
 
+	replace Function is applyTheme(TheoTheme is theme){
+		:activeTheme: theme;
+		panes:each(action: local Function(GridPane is gp){
+			gp:child:applyTheme(theme: theme);
+		});
+	}
+
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [TheoCallback(fn: cb)];
+		:dirtyListeners: [cb];
 		panes:each(action: local Function(GridPane is gp){
 			gp:child:bindDirty(cb: cb);
 		});

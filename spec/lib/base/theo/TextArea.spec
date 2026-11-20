@@ -5,17 +5,9 @@ Class of Widget is TextArea{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', TheoColor],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'signal', TextEmitter],
-		['base', 'signal', TextCollector],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()]
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'signal', [TextEmitter, TextCollector]],
+		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
 	Array of String is lines: [''];
@@ -23,34 +15,31 @@ Class of Widget is TextArea{
 	Int is cursorCol: 0;
 	Int is scrollY: 0;
 	FocusTarget is focusTarget: FocusTarget();
-	Array of TheoCallback is changeHandlers: [];
+	Function is onChange: local Function(String is _s){};
 	Array of TextEmitter is boundEmitters: [];
 	Array of TextCollector is boundCollectors: [];
 	Boolean is suppressSync: false;
 
-	replace Function is init(Any is value: '', FocusTarget is focusTarget: FocusTarget(), Function is onChange: local Function(String is _s){}){
+	replace Function is init(String is value: '', FocusTarget is focusTarget: FocusTarget(), Function is onChange: local Function(String is _s){}){
 		:focusTarget: focusTarget;
-		:changeHandlers: [TheoCallback(fn: onChange)];
+		:onChange: onChange;
 		:boundEmitters: [];
 		:boundCollectors: [];
-		initValue(value: value);
+		setText(text: value);
 	}
 
-	local Function is initValue(Any is value){
-		if({ value:typeName() == 'TextEmitter' }, {
-			local TextEmitter is em: value as TextEmitter;
-			:boundEmitters: [em];
-			setText(text: em:current());
-			local TextCollector is col: em:collect(onEmit: local Function(String is next){
-				if({ !suppressSync }, {
-					setText(text: next);
-					invalidate();
-				});
+	replace Function is init(TextEmitter is value, FocusTarget is focusTarget: FocusTarget(), Function is onChange: local Function(String is _s){}){
+		:focusTarget: focusTarget;
+		:onChange: onChange;
+		:boundEmitters: [value];
+		setText(text: value:current());
+		local TextCollector is col: value:collect(onEmit: local Function(String is next){
+			if({ !suppressSync }, {
+				setText(text: next);
+				invalidate();
 			});
-			:boundCollectors: [col];
-		}, {
-			setText(text: value as String);
 		});
+		:boundCollectors: [col];
 	}
 
 	Function is setText(String is text){
@@ -73,10 +62,7 @@ Class of Widget is TextArea{
 
 	local Function is notifyChanged(){
 		:suppressSync: true;
-		local String is full: getText();
-		if({ changeHandlers:length() > 0 }, {
-			changeHandlers:get(index: 0):callStr(s: full);
-		});
+		onChange(getText());
 		:suppressSync: false;
 		invalidate();
 	}

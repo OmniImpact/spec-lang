@@ -1,20 +1,11 @@
-#! Bottom action bar with Save, Save As, Open, and Quit buttons.
+#! Bottom action bar with Quit (left) and Save, Save As, Open (right) buttons.
 
 Class of Frame is BottomActionBar{
 	replace Array of Array of String is using: [
-		['base', 'theo', Frame],
-		['base', 'theo', Widget],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', TheoTheme],
-		['base', 'theo', Panel],
-		['base', 'theo', Row],
-		['base', 'theo', Spacer],
-		['base', 'theo', Button],
+		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, Button]],
 		['base', 'sys', as Conditional()]
 	];
 
-	TheoTheme is theme: TheoTheme();
 	FocusTarget is saveFocus;
 	FocusTarget is saveAsFocus;
 	FocusTarget is openFocus;
@@ -34,8 +25,7 @@ Class of Frame is BottomActionBar{
 		Function is onSaveAs,
 		Function is onOpen,
 		Function is onQuit,
-		Function is onReturnToEditor,
-		TheoTheme is theme: TheoTheme()
+		Function is onReturnToEditor
 	){
 		:saveFocus: saveFocus;
 		:saveAsFocus: saveAsFocus;
@@ -46,28 +36,11 @@ Class of Frame is BottomActionBar{
 		:onOpen: onOpen;
 		:onQuit: onQuit;
 		:onReturnToEditor: onReturnToEditor;
-		:theme: theme;
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
-		if({ !saveFocus:focused && !saveAsFocus:focused && !openFocus:focused && !exitFocus:focused }, {
-			return false;
-		});
-		if({ event:isUp() }, {
-			local Function is fn: onReturnToEditor;
-			fn();
-			return true;
-		});
-		if({ event:isLeft() }, {
-			if({ openFocus:focused }, { saveAsFocus:requestFocus(); return true; });
-			if({ saveAsFocus:focused }, { saveFocus:requestFocus(); return true; });
-			if({ saveFocus:focused }, { exitFocus:requestFocus(); return true; });
-			return true;
-		});
-		if({ event:isRight() }, {
-			if({ exitFocus:focused }, { saveFocus:requestFocus(); return true; });
-			if({ saveFocus:focused }, { saveAsFocus:requestFocus(); return true; });
-			if({ saveAsFocus:focused }, { openFocus:requestFocus(); return true; });
+		if({ (saveFocus:focused || saveAsFocus:focused || openFocus:focused || exitFocus:focused) && event:isUp() }, {
+			onReturnToEditor();
 			return true;
 		});
 		return false;
@@ -76,21 +49,16 @@ Class of Frame is BottomActionBar{
 	replace Function of Widget is ui(){
 		Panel(
 			border: true,
-			borderColor: theme:borderColor,
-			rounded: theme:roundedBorders,
 			padX: 1,
 			padY: 0,
 			child: Row(
 				gap: 2,
+				arrowFocus: true,
 				children: [
 					Button(
 						label: ' Quit ',
 						shortcutKey: 'q',
 						focusTarget: exitFocus,
-						fg: theme:buttonFg,
-						bg: theme:buttonBg,
-						focusFg: theme:buttonFocusFg,
-						focusBg: theme:buttonFocusBg,
 						onClick: onQuit
 					),
 					Spacer(weight: 1.0),
@@ -98,30 +66,18 @@ Class of Frame is BottomActionBar{
 						label: ' Save ',
 						shortcutKey: 's',
 						focusTarget: saveFocus,
-						fg: theme:buttonFg,
-						bg: theme:buttonBg,
-						focusFg: theme:buttonFocusFg,
-						focusBg: theme:buttonFocusBg,
 						onClick: onSave
 					),
 					Button(
 						label: ' Save As ',
 						shortcutKey: 'a',
 						focusTarget: saveAsFocus,
-						fg: theme:buttonFg,
-						bg: theme:buttonBg,
-						focusFg: theme:buttonFocusFg,
-						focusBg: theme:buttonFocusBg,
 						onClick: onSaveAs
 					),
 					Button(
 						label: ' Open ',
 						shortcutKey: 'o',
 						focusTarget: openFocus,
-						fg: theme:buttonFg,
-						bg: theme:buttonBg,
-						focusFg: theme:buttonFocusFg,
-						focusBg: theme:buttonFocusBg,
 						onClick: onOpen
 					)
 				]

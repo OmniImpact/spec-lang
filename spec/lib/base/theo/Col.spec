@@ -5,27 +5,30 @@ Class of Widget is Col{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', FocusTarget],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()],
+		['base', 'theo', [Widget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, FocusTarget]],
+		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'math', as Math()]
 	];
 
 	Int is gap: 0;
+	Boolean is arrowFocus: false;
 	Array of Widget is children: [];
 
-	replace Function is init(Int is gap: 0, Array of Widget is children: []){
+	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Array of Widget is children: []){
 		:gap: gap;
+		:arrowFocus: arrowFocus;
 		:children: children;
 	}
 
+	replace Function is applyTheme(TheoTheme is theme){
+		:activeTheme: theme;
+		children:each(action: local Function(Widget is ch){
+			ch:applyTheme(theme: theme);
+		});
+	}
+
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [TheoCallback(fn: cb)];
+		:dirtyListeners: [cb];
 		children:each(action: local Function(Widget is ch){
 			ch:bindDirty(cb: cb);
 		});
@@ -84,6 +87,25 @@ Class of Widget is Col{
 				return true;
 			});
 			i: i + 1;
+		});
+		if({ arrowFocus && (event:isUp() || event:isDown()) }, {
+			local Array of FocusTarget is fts: [];
+			local Array of Widget is fws: [];
+			collectFocus(targets: fts, owners: fws);
+			local Int is n: fts:length();
+			if({ n > 1 }, {
+				local Int is cur: -1;
+				local Int is fi: 0;
+				while({ fi < n }, {
+					if({ fts:get(index: fi):focused }, { cur: fi; });
+					fi: fi + 1;
+				});
+				if({ cur >= 0 }, {
+					local Int is next: if({ event:isUp() }, { (cur - 1 + n) % n }, { (cur + 1) % n });
+					fts:get(index: next):requestFocus();
+					return true;
+				});
+			});
 		});
 		return false;
 	}

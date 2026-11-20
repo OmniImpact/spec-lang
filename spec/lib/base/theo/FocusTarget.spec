@@ -5,13 +5,12 @@ Class is FocusTarget{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', TheoCallback],
 		['base', 'sys', as Conditional()]
 	];
 
 	Boolean is focused: false;
 	Boolean is initial: false;
-	Array of TheoCallback is ownerHooks: [];
+	Array of Function is ownerHooks: [];
 
 	replace Function is init(Boolean is initial: false){
 		:initial: initial;
@@ -20,13 +19,14 @@ Class is FocusTarget{
 	}
 
 	Function is bindOwner(Function is handler){
-		:ownerHooks: [TheoCallback(fn: handler)];
+		:ownerHooks: [handler];
 	}
 
 	Function is requestFocus(){
 		:focused: true;
 		if({ ownerHooks:length() > 0 }, {
-			ownerHooks:get(index: 0):callAny(v: :);
+			local Function is fn: ownerHooks:get(index: 0);
+			fn(:);
 		});
 	}
 }

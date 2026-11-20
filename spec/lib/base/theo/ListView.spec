@@ -5,51 +5,46 @@ Class of Widget is ListView{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', TheoColor],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()]
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
 	Array of String is items: [];
 	Int is selectedIdx: 0;
 	Int is scrollY: 0;
 	FocusTarget is focusTarget: FocusTarget();
-	TheoColor is fg: TheoColor:ansi(code: 252);
-	TheoColor is selectedFg: TheoColor:ansi(code: 16);
-	TheoColor is selectedBg: TheoColor:ansi(code: 255);
-	Array of TheoCallback is activateHooks: [];
-	Array of TheoCallback is changeHooks: [];
+	TheoColor is fg: TheoColor:none();
+	TheoColor is selectedFg: TheoColor:none();
+	TheoColor is selectedBg: TheoColor:none();
+	Function is onActivate: local Function(String is _item){};
+	Function is onSelectChange: local Function(String is _item){};
 
 	replace Function is init(
 		Array of String is items: [],
 		FocusTarget is focusTarget: FocusTarget(),
-		TheoColor is fg: TheoColor:ansi(code: 252),
-		TheoColor is selectedFg: TheoColor:ansi(code: 16),
-		TheoColor is selectedBg: TheoColor:ansi(code: 255)
+		Function is onActivate: local Function(String is _item){},
+		Function is onSelectChange: local Function(String is _item){},
+		TheoColor is fg: TheoColor:none(),
+		TheoColor is selectedFg: TheoColor:none(),
+		TheoColor is selectedBg: TheoColor:none()
 	){
 		:items: items;
 		:selectedIdx: 0;
 		:scrollY: 0;
 		:focusTarget: focusTarget;
+		:onActivate: onActivate;
+		:onSelectChange: onSelectChange;
 		:fg: fg;
 		:selectedFg: selectedFg;
 		:selectedBg: selectedBg;
-		:activateHooks: [];
-		:changeHooks: [];
 	}
 
 	Function is bindOnActivate(Function is cb){
-		:activateHooks: [TheoCallback(fn: cb)];
+		:onActivate: cb;
 	}
 
 	Function is bindOnSelectChange(Function is cb){
-		:changeHooks: [TheoCallback(fn: cb)];
+		:onSelectChange: cb;
 	}
 
 	Function is setItems(Array of String is nextItems){
@@ -76,18 +71,21 @@ Class of Widget is ListView{
 		if({ selectedIdx >= scrollY + boxH }, { :scrollY: selectedIdx - boxH + 1; });
 		if({ scrollY < 0 }, { :scrollY: 0; });
 
+		local TheoColor is effFg: if({ fg:isSet() }, { fg }, { activeTheme:foreground });
+		local TheoColor is effSelFg: if({ selectedFg:isSet() }, { selectedFg }, { activeTheme:buttonFocusFg });
+		local TheoColor is effSelBg: if({ selectedBg:isSet() }, { selectedBg }, { activeTheme:buttonFocusBg });
 		local Int is r: 0;
 		while({ r < boxH && scrollY + r < items:length() }, {
 			local Int is idx: scrollY + r;
 			local String is item: items:get(index: idx);
 			if({ idx == selectedIdx && focusTarget:focused }, {
-				buf:fillRect(x: boxX, y: boxY + r, w: boxW, h: 1, fg: selectedFg, bg: selectedBg);
-				buf:drawText(x: boxX, y: boxY + r, text: "  {{item}}", fg: selectedFg, bg: selectedBg, bold: true);
+				buf:fillRect(x: boxX, y: boxY + r, w: boxW, h: 1, fg: effSelFg, bg: effSelBg);
+				buf:drawText(x: boxX, y: boxY + r, text: "  {{item}}", fg: effSelFg, bg: effSelBg, bold: true);
 			}, {
 				if({ idx == selectedIdx }, {
-					buf:drawText(x: boxX, y: boxY + r, text: "> {{item}}", fg: fg, bold: true);
+					buf:drawText(x: boxX, y: boxY + r, text: "> {{item}}", fg: effFg, bold: true);
 				}, {
-					buf:drawText(x: boxX, y: boxY + r, text: "  {{item}}", fg: fg);
+					buf:drawText(x: boxX, y: boxY + r, text: "  {{item}}", fg: effFg);
 				});
 			});
 			r: r + 1;
@@ -100,9 +98,7 @@ Class of Widget is ListView{
 		if({ event:isUp() }, {
 			if({ selectedIdx > 0 }, {
 				:selectedIdx: selectedIdx - 1;
-				if({ changeHooks:length() > 0 }, {
-					changeHooks:get(index: 0):callStr(s: selectedItem());
-				});
+				onSelectChange(selectedItem());
 				invalidate();
 			});
 			return true;
@@ -110,17 +106,13 @@ Class of Widget is ListView{
 		if({ event:isDown() }, {
 			if({ selectedIdx + 1 < items:length() }, {
 				:selectedIdx: selectedIdx + 1;
-				if({ changeHooks:length() > 0 }, {
-					changeHooks:get(index: 0):callStr(s: selectedItem());
-				});
+				onSelectChange(selectedItem());
 				invalidate();
 			});
 			return true;
 		});
 		if({ event:isEnter() }, {
-			if({ activateHooks:length() > 0 }, {
-				activateHooks:get(index: 0):callStr(s: selectedItem());
-			});
+			onActivate(selectedItem());
 			return true;
 		});
 		return false;

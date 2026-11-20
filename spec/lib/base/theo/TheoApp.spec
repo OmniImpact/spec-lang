@@ -5,19 +5,8 @@ Class is TheoApp{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', TheoScreen],
-		['base', 'theo', Frame],
-		['base', 'theo', Widget],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', TheoTheme],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', KeyReader],
-		['base', 'sys', as Ansi()],
-		['base', 'sys', as Input()],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()]
+		['base', 'theo', [TheoScreen, Frame, Widget, FocusTarget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, KeyReader]],
+		['base', 'sys', [as Ansi(), as Input(), as Conditional(), as Loops()]]
 	];
 
 	Boolean is running: false;
@@ -120,6 +109,7 @@ Class is TheoApp{
 				:dirty: false;
 				buf:clear();
 				renderer:setCursor(visible: false);
+				activeFrame:applyTheme(theme: theme);
 				activeFrame:layout(x: 0, y: 0, w: w, h: h);
 				syncFocus(frame: activeFrame);
 				activeFrame:paint(buf: buf, renderer: renderer);

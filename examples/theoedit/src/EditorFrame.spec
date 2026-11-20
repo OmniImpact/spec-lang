@@ -2,14 +2,7 @@
 
 Class of Frame is EditorFrame{
 	replace Array of Array of String is using: [
-		['base', 'theo', Frame],
-		['base', 'theo', TheoScreen],
-		['base', 'theo', Widget],
-		['base', 'theo', Grid],
-		['base', 'theo', GridPane],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', TheoTheme],
+		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, FocusTarget, KeyEvent]],
 		['base', 'sys', as Conditional()],
 		[EditorViewModel],
 		[TopBar],
@@ -20,7 +13,6 @@ Class of Frame is EditorFrame{
 	];
 
 	EditorViewModel is vm;
-	TheoTheme is theme: TheoTheme();
 	Function is onQuit;
 	Array of TheoScreen is screenRefs: [];
 
@@ -34,10 +26,9 @@ Class of Frame is EditorFrame{
 	FocusTarget is msgDiscardFocus: FocusTarget();
 	FocusTarget is msgCancelFocus: FocusTarget();
 
-	replace Function is init(EditorViewModel is vm, Function is onQuit, TheoTheme is theme: TheoTheme()){
+	replace Function is init(EditorViewModel is vm, Function is onQuit){
 		:vm: vm;
 		:onQuit: onQuit;
-		:theme: theme;
 		:screenRefs: [];
 	}
 
@@ -53,14 +44,12 @@ Class of Frame is EditorFrame{
 			mode: mode,
 			initialDir: '.',
 			initialName: initName,
-			theme: theme,
 			onConfirm: local Function(String is chosenPath){
 				if({ mode == 'saveAs' }, {
 					local Boolean is saved: vm:saveTo(path: chosenPath);
 					scr:pop();
 					if({ saved && quitAfterSave }, {
-						local Function is qfn: onQuit;
-						qfn();
+						onQuit();
 					}, {
 						editorFocus:requestFocus();
 					});
@@ -101,8 +90,7 @@ Class of Frame is EditorFrame{
 			msgSaveFocus:requestFocus();
 			return;
 		});
-		local Function is fn: onQuit;
-		fn();
+		onQuit();
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
@@ -129,16 +117,14 @@ Class of Frame is EditorFrame{
 				size: 3,
 				child: TopBar(
 					title: vm:title,
-					status: vm:status,
-					theme: theme
+					status: vm:status
 				)
 			),
 			Grid:weight(
 				weight: 1.0,
 				child: EditorBody(
 					vm: vm,
-					focusTarget: editorFocus,
-					theme: theme
+					focusTarget: editorFocus
 				)
 			)
 		];
@@ -150,7 +136,6 @@ Class of Frame is EditorFrame{
 					saveFocus: msgSaveFocus,
 					discardFocus: msgDiscardFocus,
 					cancelFocus: msgCancelFocus,
-					theme: theme,
 					onSave: {
 						vm:clearMessage();
 						rebuild();
@@ -158,14 +143,12 @@ Class of Frame is EditorFrame{
 							openFileManager(mode: 'saveAs', quitAfterSave: true);
 						}, {
 							if({ vm:save() }, {
-								local Function is fn: onQuit;
-								fn();
+								onQuit();
 							});
 						});
 					},
 					onDiscard: {
-						local Function is fn: onQuit;
-						fn();
+						onQuit();
 					},
 					onCancel: {
 						vm:clearMessage();
@@ -182,25 +165,14 @@ Class of Frame is EditorFrame{
 				saveAsFocus: saveAsFocus,
 				openFocus: openFocus,
 				exitFocus: exitFocus,
-				theme: theme,
-				onSave: {
-					triggerSave();
-				},
-				onSaveAs: {
-					openFileManager(mode: 'saveAs', quitAfterSave: false);
-				},
-				onOpen: {
-					openFileManager(mode: 'open', quitAfterSave: false);
-				},
-				onQuit: {
-					triggerQuit();
-				},
-				onReturnToEditor: {
-					editorFocus:requestFocus();
-				}
+				onSave: { triggerSave(); },
+				onSaveAs: { openFileManager(mode: 'saveAs', quitAfterSave: false); },
+				onOpen: { openFileManager(mode: 'open', quitAfterSave: false); },
+				onQuit: { triggerQuit(); },
+				onReturnToEditor: { editorFocus:requestFocus(); }
 			)
 		));
-		return Grid(
+		Grid(
 			orientation: 'vertical',
 			panes: panes
 		);

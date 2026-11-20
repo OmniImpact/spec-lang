@@ -2,30 +2,21 @@
 
 Class of Frame is EditorBody{
 	replace Array of Array of String is using: [
-		['base', 'theo', Frame],
-		['base', 'theo', Widget],
-		['base', 'theo', FocusTarget],
-		['base', 'theo', TheoTheme],
-		['base', 'theo', Panel],
-		['base', 'theo', TextArea],
+		['base', 'theo', [Frame, Widget, FocusTarget, Panel, TextArea]],
 		[EditorViewModel]
 	];
 
 	EditorViewModel is vm;
 	FocusTarget is focusTarget;
-	TheoTheme is theme: TheoTheme();
 
-	replace Function is init(EditorViewModel is vm, FocusTarget is focusTarget, TheoTheme is theme: TheoTheme()){
+	replace Function is init(EditorViewModel is vm, FocusTarget is focusTarget){
 		:vm: vm;
 		:focusTarget: focusTarget;
-		:theme: theme;
 	}
 
 	replace Function of Widget is ui(){
 		Panel(
 			border: true,
-			borderColor: theme:borderColor,
-			rounded: theme:roundedBorders,
 			padding: 0,
 			scrollable: true,
 			child: TextArea(

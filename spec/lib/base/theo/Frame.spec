@@ -5,12 +5,7 @@ Class of Widget is Frame{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', FocusTarget],
+		['base', 'theo', [Widget, TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, FocusTarget]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -42,10 +37,17 @@ Class of Widget is Frame{
 		if({ !built }, {
 			:rootWidget: ui();
 			:built: true;
+			rootWidget:applyTheme(theme: activeTheme);
 			if({ dirtyListeners:length() > 0 }, {
-				local TheoCallback is dcb: dirtyListeners:get(index: 0);
-				rootWidget:bindDirty(cb: dcb:cb);
+				rootWidget:bindDirty(cb: dirtyListeners:get(index: 0));
 			});
+		});
+	}
+
+	replace Function is applyTheme(TheoTheme is theme){
+		:activeTheme: theme;
+		if({ built }, {
+			rootWidget:applyTheme(theme: theme);
 		});
 	}
 
@@ -59,7 +61,7 @@ Class of Widget is Frame{
 	}
 
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [TheoCallback(fn: cb)];
+		:dirtyListeners: [cb];
 		if({ built }, {
 			rootWidget:bindDirty(cb: cb);
 		});

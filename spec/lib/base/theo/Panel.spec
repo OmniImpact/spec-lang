@@ -5,13 +5,7 @@ Class of Widget is Panel{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', Widget],
-		['base', 'theo', TheoColor],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', FocusTarget],
+		['base', 'theo', [Widget, TheoColor, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, FocusTarget]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -19,7 +13,7 @@ Class of Widget is Panel{
 	TheoColor is background: TheoColor:none();
 	Boolean is border: false;
 	TheoColor is borderColor: TheoColor:none();
-	TheoColor is focusBorderColor: TheoColor:ansi(code: 255);
+	TheoColor is focusBorderColor: TheoColor:none();
 	Boolean is rounded: true;
 	Int is padding: 0;
 	Int is padX: -1;
@@ -33,7 +27,7 @@ Class of Widget is Panel{
 		TheoColor is background: TheoColor:none(),
 		Boolean is border: false,
 		TheoColor is borderColor: TheoColor:none(),
-		TheoColor is focusBorderColor: TheoColor:ansi(code: 255),
+		TheoColor is focusBorderColor: TheoColor:none(),
 		Boolean is rounded: true,
 		Int is padding: 0,
 		Int is padX: -1,
@@ -53,8 +47,13 @@ Class of Widget is Panel{
 		:scrollable: scrollable;
 	}
 
+	replace Function is applyTheme(TheoTheme is theme){
+		:activeTheme: theme;
+		child:applyTheme(theme: theme);
+	}
+
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [TheoCallback(fn: cb)];
+		:dirtyListeners: [cb];
 		child:bindDirty(cb: cb);
 	}
 
@@ -86,7 +85,9 @@ Class of Widget is Panel{
 			fts:each(action: local Function(FocusTarget is ft){
 				if({ ft:focused }, { hasFocused: true; });
 			});
-			local TheoColor is useBorder: if({ hasFocused && focusBorderColor:isSet() }, { focusBorderColor }, { borderColor });
+			local TheoColor is effBorder: if({ borderColor:isSet() }, { borderColor }, { activeTheme:borderColor });
+			local TheoColor is effFocusBorder: if({ focusBorderColor:isSet() }, { focusBorderColor }, { activeTheme:focusBorderColor });
+			local TheoColor is useBorder: if({ hasFocused && effFocusBorder:isSet() }, { effFocusBorder }, { effBorder });
 			buf:drawBox(x: boxX, y: boxY, w: boxW, h: boxH, borderColor: useBorder, bg: background, rounded: rounded);
 		});
 		local Int is bPad: if({ border }, { 1 }, { 0 });

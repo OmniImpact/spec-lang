@@ -5,11 +5,7 @@ Class is Widget{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoCallback],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', FocusTarget],
+		['base', 'theo', [TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, FocusTarget]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -17,19 +13,25 @@ Class is Widget{
 	Int is boxY: 0;
 	Int is boxW: 0;
 	Int is boxH: 0;
-	Array of TheoCallback is dirtyListeners: [];
+	TheoTheme is activeTheme: TheoTheme();
+	Array of Function is dirtyListeners: [];
 
 	replace Function is init(){
 		:dirtyListeners: [];
 	}
 
+	Function is applyTheme(TheoTheme is theme){
+		:activeTheme: theme;
+	}
+
 	Function is bindDirty(Function is cb){
-		:dirtyListeners: [TheoCallback(fn: cb)];
+		:dirtyListeners: [cb];
 	}
 
 	Function is invalidate(){
 		if({ dirtyListeners:length() > 0 }, {
-			dirtyListeners:get(index: 0):call();
+			local Function is fn: dirtyListeners:get(index: 0);
+			fn();
 		});
 	}
 
