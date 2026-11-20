@@ -17,6 +17,8 @@ Class of SpecUnitTest is TestFileAsync{
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Time()],
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Process()],
@@ -40,7 +42,7 @@ Class of SpecUnitTest is TestFileAsync{
 				onSuccess: local Function(Int is bytes){
 					Process:atomicPut(slot: 50, value: bytes);
 				},
-				onError: local Function(String is err){
+				onError: local Function(SpecError of FileError is err){
 					Process:atomicPut(slot: 50, value: -2);
 				}
 			);
@@ -66,7 +68,7 @@ Class of SpecUnitTest is TestFileAsync{
 				onSuccess: local Function(Int is bytes){
 					Process:atomicPut(slot: 50, value: bytes);
 				},
-				onError: local Function(String is err){
+				onError: local Function(SpecError of FileError is err){
 					Process:atomicPut(slot: 50, value: -2);
 				}
 			);
@@ -90,7 +92,7 @@ Class of SpecUnitTest is TestFileAsync{
 						Process:atomicPut(slot: 51, value: 0);
 					});
 				},
-				onError: local Function(String is err){
+				onError: local Function(SpecError of FileError is err){
 					Process:atomicPut(slot: 51, value: -2);
 				}
 			);

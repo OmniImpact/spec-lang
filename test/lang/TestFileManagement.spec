@@ -13,6 +13,8 @@ Class of SpecUnitTest is TestFileManagement{
 		['specunit', as Assert()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Process()],
@@ -35,7 +37,7 @@ Class of SpecUnitTest is TestFileManagement{
 			onSuccess: local Function(Int is bytes){
 				Process:atomicPut(slot: 60, value: bytes);
 			},
-			onError: local Function(String is err){
+			onError: local Function(SpecError of FileError is err){
 				Process:atomicPut(slot: 60, value: -2);
 			}
 		);
@@ -57,7 +59,7 @@ Class of SpecUnitTest is TestFileManagement{
 					Process:atomicPut(slot: 61, value: 0);
 				});
 			},
-			onError: local Function(String is err){
+			onError: local Function(SpecError of FileError is err){
 				Process:atomicPut(slot: 61, value: -2);
 			}
 		);
@@ -78,7 +80,7 @@ Class of SpecUnitTest is TestFileManagement{
 			onSuccess: local Function(String is content){
 				Process:atomicPut(slot: 60, value: -2);
 			},
-			onError: local Function(String is err){
+			onError: local Function(SpecError of FileError is err){
 				Process:atomicPut(slot: 60, value: 1);
 			}
 		);
@@ -100,7 +102,7 @@ Class of SpecUnitTest is TestFileManagement{
 			onSuccess: local Function(Int is bytes){
 				Process:atomicPut(slot: 60, value: -2);
 			},
-			onError: local Function(String is err){
+			onError: local Function(SpecError of FileError is err){
 				Process:atomicPut(slot: 60, value: 1);
 			}
 		);

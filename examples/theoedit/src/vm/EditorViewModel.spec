@@ -5,6 +5,8 @@ Class is EditorViewModel{
 	namespace: ['theoedit', 'vm'];
 
 	merge Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'signal', TextEmitter],
 		['base', 'sys', as File()]
 	];
@@ -75,8 +77,8 @@ Class is EditorViewModel{
 				status:emit(value: 'Saved');
 				ok: true;
 			},
-			onError: local Function(String is err){
-				status:emit(value: "Save failed: {{err}}");
+			onError: local Function(SpecError of FileError is err){
+				status:emit(value: "Save failed: {{err:description}}");
 			}
 		);
 		ok;

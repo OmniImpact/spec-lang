@@ -5,6 +5,8 @@ Class is File{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Conditional()],
@@ -26,15 +28,18 @@ Class is File{
 		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
 	}
 
-	local Function is emitLastError(Function is onError, String is fallback){
+	## Reports a failure through [onError] as the full error currency:
+	## a `SpecError of FileError` whose kind is [kind] and whose
+	## description is the OS errno text when available, else [fallback].
+	local Function is emitLastError(FileError is kind, Function is onError, String is fallback){
 		if({ !:hasClosure(cb: onError) }, { return; });
+		local String is detail: fallback;
 		local Int is ec: base:sysinternal:File:pal_last_error_cstr();
 		if({ ec != 0 }, {
 			local Int is elen: Mem:cstrLen(cstrAddr: ec);
-			onError(Mem:strFromBytes(srcAddr: ec, len: elen));
-		}, {
-			onError(fallback);
+			detail: Mem:strFromBytes(srcAddr: ec, len: elen);
 		});
+		onError(SpecError:init(kind: kind, description: detail));
 	}
 
 	## Reads the entire contents of a file with optional success and error callback handlers.
@@ -42,7 +47,7 @@ Class is File{
 		local String is defStr: if({ Mem:objToAddr(obj: default) != 0 }, { default }, { '' });
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ :hasClosure(cb: onError) }, { onError('invalid path'); });
+			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
 			return defStr;
 		});
 		local Int is lenBuf: Mem:alloc(bytes: 8);
@@ -51,9 +56,9 @@ Class is File{
 		Mem:free(ptr: lenBuf);
 		if({ bufAddr < 0 }, {
 			if({ bufAddr == -2 }, {
-				if({ :hasClosure(cb: onError) }, { onError('out of memory'); });
+				if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:OUT_OF_MEMORY, description: 'out of memory')); });
 			}, {
-				:emitLastError(onError: onError, fallback: 'read failed');
+				:emitLastError(kind: FileError:IO_ERROR, onError: onError, fallback: 'read failed');
 			});
 			return defStr;
 		});
@@ -75,7 +80,7 @@ Class is File{
 	local Function of Boolean is writeInternal(String is path, String is content, Int is append, Function is onSuccess, Function is onError){
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ :hasClosure(cb: onError) }, { onError('invalid path'); });
+			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
 			return false;
 		});
 		local Int is cAddr: Mem:objToAddr(obj: content);
@@ -83,7 +88,7 @@ Class is File{
 		local Int is cLen: if({ cAddr != 0 }, { Mem:loadI64(ptr: cAddr, byteOffset: 8) }, { 0 });
 		local Int is written: base:sysinternal:File:pal_file_write(path_cstr: pc, data_addr: dAddr, len: cLen, append: append);
 		if({ written < 0 }, {
-			:emitLastError(onError: onError, fallback: 'write failed');
+			:emitLastError(kind: FileError:IO_ERROR, onError: onError, fallback: 'write failed');
 			return false;
 		});
 		if({ :hasClosure(cb: onSuccess) }, {
@@ -120,13 +125,13 @@ Class is File{
 	Function of Boolean is fileRemove(String is path, Function is onError: local Function(String is error){}){
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ :hasClosure(cb: onError) }, { onError('invalid path'); });
+			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
 			return false;
 		});
 		if({ base:sysinternal:File:pal_file_remove(path_cstr: pc) }, {
 			return true;
 		});
-		:emitLastError(onError: onError, fallback: 'remove failed');
+		:emitLastError(kind: FileError:IO_ERROR, onError: onError, fallback: 'remove failed');
 		return false;
 	}
 
@@ -135,7 +140,7 @@ Class is File{
 		local Int is tc: :cstrOf(s: template);
 		local Int is outAddr: base:sysinternal:File:pal_file_temp(tpl_cstr: tc);
 		if({ outAddr == 0 }, {
-			:emitLastError(onError: onError, fallback: 'mkstemp failed');
+			:emitLastError(kind: FileError:IO_ERROR, onError: onError, fallback: 'mkstemp failed');
 			return '';
 		});
 		local Int is olen: Mem:cstrLen(cstrAddr: outAddr);

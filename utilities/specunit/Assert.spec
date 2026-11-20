@@ -14,6 +14,8 @@ Class is Assert{
 		['specunit', SpecUnitState],
 		['specunit', CheckRecord],
 		['specunit', AssertHelper],
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'sys', File],
 		['base', 'sys', Process],
 		['base', 'struct', Array]
@@ -57,11 +59,11 @@ Class is Assert{
 		local String is stem: helper:nextStem();
 		local String is tmp: helper:workPath(suffix: '.spec', stem: stem);
 		local String is outPath: helper:workPath(suffix: '.out', stem: stem);
-		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
+		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(SpecError of FileError is s){});
 		local String is bin: helper:resolveSpecBin();
 		local Array of String is args: ['-c', 'cd "." && "' . bin . '" --quiet --threads 1 -i "' . tmp . '" -o /dev/null > "' . outPath . '" 2>&1'];
 		local Int is status: proc:execute(command: 'sh', args: args);
-		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(SpecError of FileError is s){}, default: '');
 		files:fileRemove(path: tmp);
 		files:fileRemove(path: outPath);
 
@@ -84,7 +86,7 @@ Class is Assert{
 		local String is inPath: filePath:replaceAll(search: '\\', replacement: '/');
 		local Array of String is args: ['-c', 'cd "." && "' . bin . '" --quiet --threads 1 -i "' . inPath . '" -o /dev/null > "' . outPath . '" 2>&1'];
 		local Int is status: proc:execute(command: 'sh', args: args);
-		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(SpecError of FileError is s){}, default: '');
 		files:fileRemove(path: outPath);
 
 		local Boolean is ok: status != 0 && output:contains(needle: expect);
@@ -104,13 +106,13 @@ Class is Assert{
 		local String is tmp: helper:workPath(suffix: '.spec', stem: stem);
 		local String is targetBin: helper:workPath(suffix: helper:resolveExeSuffix(), stem: stem);
 		local String is outPath: helper:workPath(suffix: '.out', stem: stem);
-		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
+		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(SpecError of FileError is s){});
 		local String is bin: helper:resolveSpecBin();
 		local Array of String is cArgs: ['-c', 'cd "." && "' . bin . '" --quiet --threads 1 -i "' . tmp . '" -o "' . targetBin . '" > "' . outPath . '" 2>&1'];
 		local Int is cStatus: proc:execute(command: 'sh', args: cArgs);
 		local Array of String is rArgs: ['-c', 'cd "." && "' . targetBin . '" < /dev/null > "' . outPath . '" 2>&1'];
 		local Int is rStatus: proc:execute(command: 'sh', args: rArgs);
-		local String is rOut: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		local String is rOut: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(SpecError of FileError is s){}, default: '');
 		files:fileRemove(path: tmp);
 		files:fileRemove(path: targetBin);
 		files:fileRemove(path: outPath);
@@ -132,13 +134,13 @@ Class is Assert{
 		local String is tmp: helper:workPath(suffix: '.spec', stem: stem);
 		local String is targetBin: helper:workPath(suffix: helper:resolveExeSuffix(), stem: stem);
 		local String is outPath: helper:workPath(suffix: '.out', stem: stem);
-		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
+		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(SpecError of FileError is s){});
 		local String is bin: helper:resolveSpecBin();
 		local Array of String is cArgs: ['-c', 'cd "." && "' . bin . '" --quiet --threads 1 -i "' . tmp . '" -o "' . targetBin . '" > "' . outPath . '" 2>&1'];
 		local Int is cStatus: proc:execute(command: 'sh', args: cArgs);
 		local Array of String is rArgs: ['-c', 'cd "." && "' . targetBin . '" < /dev/null > "' . outPath . '" 2>&1'];
 		local Int is rStatus: proc:execute(command: 'sh', args: rArgs);
-		local String is rOut: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		local String is rOut: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(SpecError of FileError is s){}, default: '');
 		files:fileRemove(path: tmp);
 		files:fileRemove(path: targetBin);
 		files:fileRemove(path: outPath);

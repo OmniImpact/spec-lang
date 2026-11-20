@@ -9,6 +9,8 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		['specunit', as Assert()],
 		['base', 'struct', Array],
 		['base', 'struct', List],
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'sys', as File()],
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Process()],
@@ -21,8 +23,8 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		Process:atomicPut(slot: 65, value: 0);
 		local Boolean is ok: fileRemove(
 			path: '/tmp/spec_nonexistent_remove_target_xyz_987.txt',
-			onError: local Function(String is error){
-				if({ error:length() > 0 }, {
+			onError: local Function(SpecError of FileError is error){
+				if({ error:description:length() > 0 }, {
 					Process:atomicPut(slot: 65, value: 1);
 				});
 			}
@@ -35,8 +37,8 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		Process:atomicPut(slot: 66, value: 0);
 		local String is tmpPath: fileTemp(
 			template: '/non_existent_dir_xyz_987/spec_XXXXXX.txt',
-			onError: local Function(String is error){
-				if({ error:length() > 0 }, {
+			onError: local Function(SpecError of FileError is error){
+				if({ error:description:length() > 0 }, {
 					Process:atomicPut(slot: 66, value: 1);
 				});
 			}

@@ -19,6 +19,8 @@ Class is X509{
 
 	replace Array of Array of String is using: [
 		['base', 'math', 'crypto', X509Cert],
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'math', 'crypto', as Sha256()],
 		['base', 'struct', Array],
 		['base', 'struct', List],
@@ -274,7 +276,7 @@ Class is X509{
 			while({ pi < paths:length() && pemText == '' }, {
 				local String is cand: paths:get(index: pi, default: '');
 				if({ File:fileExists(path: cand) }, {
-					pemText: File:fileRead(path: cand, onSuccess: local Function(String is _s){}, onError: local Function(String is _e){}, default: '');
+					pemText: File:fileRead(path: cand, onSuccess: local Function(String is _s){}, onError: local Function(SpecError of FileError is _e){}, default: '');
 				});
 				pi: pi + 1;
 			});

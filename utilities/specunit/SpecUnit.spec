@@ -502,6 +502,7 @@ Class is SpecUnit{
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Dir()],
+		['base', 'sys', FileError],
 		['base', 'sys', as File()],
 		['base', 'sys', as Uri()],
 		['base', 'sys', as Time()],
@@ -995,7 +996,7 @@ Class is SpecUnit{
 		local Boolean is tempSrc: false;
 		if(check: { item:kind == 'negative-case' }, then: {
 			src: :workPath(suffix: '.spec', idx: idx, stem: 'negcase');
-			fileWrite(path: src, content: item:inlineSource, onSuccess: local Function(Int is _n){}, onError: local Function(String is _e){});
+			fileWrite(path: src, content: item:inlineSource, onSuccess: local Function(Int is _n){}, onError: local Function(SpecError of FileError is _e){});
 			tempSrc: true;
 		}, else: {
 			src: :resolveItemPath(root: root, relOrAbs: item:path);
