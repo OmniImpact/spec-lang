@@ -618,6 +618,22 @@ Class is Parser{
 		:matchKeyword(kw: Keyword:IS);
 		local Token is nameTok: :advance();
 		local String is name: nameTok:getValue();
+
+		# Post-name `of`: generic type parameters over the tagged shape —
+		# the same grammar as `Class is Box of T`. The pre-name `of` keeps
+		# its meaning: the value-enum backing type.
+		local Array of String is enumTypeParams: [];
+		if({ :checkKeyword(kw: Keyword:OF) }, {
+			:advance();
+			local Token is ep1: :advance();
+			enumTypeParams:add(item: ep1:getValue());
+			if({ :checkKeyword(kw: Keyword:TO) }, {
+				:advance();
+				local Token is ep2: :advance();
+				enumTypeParams:add(item: ep2:getValue());
+			});
+		});
+
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
 
 		local Array of Member is members: [];
@@ -672,12 +688,14 @@ Class is Parser{
 		# desugar branches on the variant shapes).
 		local EnumDesugar is ds: EnumDesugar:init();
 		local ClassInfo is dc: ClassInfo:init(name: name, baseClass: :names:enumHeader(), members: members);
+		dc:setTypeParams(params: enumTypeParams);
 		local ClassInfo is desugared: ds:desugar(c: dc, backingType: backingType);
 		members: desugared:members;
 
 		local ClassInfo is c: ClassInfo:init(name: name, baseClass: :names:enumHeader(), members: members);
 		c:setLine(line: nameTok:getLine());
 		c:setSourceFile(file: :sourceFile);
+		c:setTypeParams(params: enumTypeParams);
 		c:withBaseClasses(name: name, baseClasses: [:names:enumHeader()], members: members);
 		return c;
 	}

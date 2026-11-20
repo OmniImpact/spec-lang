@@ -131,6 +131,10 @@ Class is EnumDesugar{
 			subInit:memberType: Type:init(name: '');
 			subInit:name: 'init';
 			subInit:params: m:params;
+			# Generic enums: the nested variant checks as its own class, so it
+			# carries the root's type parameters — payload field types bound
+			# to them pass validation and substitute at instantiation.
+			sub:setTypeParams(params: c:typeParams);
 			local Array of Statement is initBody: [];
 			m:params:each(action: local Function(Parameter is p){
 				local Statement is a: Statement:Assign(assignTarget: :selfPath(member: p:name), assignValue: :ident(name: p:name));
