@@ -953,6 +953,10 @@ Class is TypeChecker{
 
 	Function of String is checkMatchArms(Expression is subj, Expression is arms, String is expected, Expression is defaultArm, Boolean is hasDefault, Boolean is hasExplicitDefault: false){
 		local String is subjT: :inferExpressionType(expr: subj);
+		# The full subject type, generic spellings included. The stripping
+		# below feeds held-member resolution; generic variant payload
+		# binding grounds its type args from the full spelling.
+		local String is subjFull: subjT;
 		# Strip container/generic spellings to the base class name.
 		if({ subjT:contains(needle: ' of ') }, {
 			subjT: subjT:substring(start: 0, end: subjT:indexOf(search: ' of ', default: 0));
@@ -1106,52 +1110,71 @@ Class is TypeChecker{
 										match(on: val, when: [
 											Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
 												if({ params:length() > 0 }, {
-													# The variant's parameter surface: the legacy
-													# member (today's enums) or the desugared
-													# nested subclass's init.
-													local Member is pvMem: Member:init(kind: MemberKind:FIELD);
-													if({ :allEnumNames:has(key: owner) }, {
-														local ClassInfo is pvCls: :findClass(name: owner);
-														pvCls:members:each(action: local Function(Member is m){
-															local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
-																Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
-																else: { false }
-															]);
-															if({ pvMem:name == '' && m:name == keyName && !initIsArr }, {
-																pvMem: m;
-															});
-														});
-													}, {
+												# The variant's parameter surface: the legacy
+														# member (today's enums) or the desugared
+														# nested subclass's init.
+														local Member is pvMem: Member:init(kind: MemberKind:FIELD);
 														local ClassInfo is subCls: :findClass(name: owner . ':' . keyName);
-														if({ subCls:name != '' }, {
-															subCls:members:each(action: local Function(Member is m){
-																if({ pvMem:name == '' && m:kind == MemberKind:METHOD && m:name == 'init' }, {
+														if({ :allEnumNames:has(key: owner) }, {
+															local ClassInfo is pvCls: :findClass(name: owner);
+															pvCls:members:each(action: local Function(Member is m){
+																local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
+																	Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+																	else: { false }
+																]);
+																if({ pvMem:name == '' && m:name == keyName && !initIsArr }, {
 																	pvMem: m;
 																});
 															});
-														});
-													});
-													if({ params:length() > pvMem:params:length() }, {
-														:addError(line: :currentLine, msg: 'Match arm for \'' . owner . ':' . keyName . '\' binds ' . (params:length() as String) . ' parameter(s), but the variant declares ' . (pvMem:params:length() as String) . '.');
-														bad: true;
-													});
-													local Int is pbi: 0;
-													params:each(action: local Function(Parameter is bp){
-														if({ pbi < pvMem:params:length() }, {
-															local Parameter is vp: pvMem:params:get(index: pbi);
-															if({ bp:paramType:name == '' || bp:paramType:name == Primitive:ANY:value() }, {
-																bp:paramType: vp:paramType;
-															}, {
-																local String is bpT: :formatVarTypeString(t: bp:paramType);
-																local String is vpT: :formatVarTypeString(t: vp:paramType);
-																if({ !:isAssignable(target: bpT, source: vpT) }, {
-																	:addError(line: :currentLine, msg: 'Match arm parameter \'' . bp:name . '\' for \'' . owner . ':' . keyName . '\' has type \'' . bpT . '\', expected \'' . vpT . '\'.');
-																	bad: true;
+														}, {
+															if({ subCls:name != '' }, {
+																subCls:members:each(action: local Function(Member is m){
+																	if({ pvMem:name == '' && m:kind == MemberKind:METHOD && m:name == 'init' }, {
+																		pvMem: m;
+																	});
 																});
 															});
 														});
-														pbi: pbi + 1;
-													});
+														if({ params:length() > pvMem:params:length() }, {
+															:addError(line: :currentLine, msg: 'Match arm for \'' . owner . ':' . keyName . '\' binds ' . (params:length() as String) . ' parameter(s), but the variant declares ' . (pvMem:params:length() as String) . '.');
+															bad: true;
+														});
+														# Generic variants: the grounded subject type
+														# ('Maybe:Int') supplies the type args the
+														# variant's parameters are read against.
+														local Array of String is groundedArgs: [];
+														if({ subCls:typeParams:length() > 0 }, {
+															local Type is subjNode: :parseTypeNode(s: subjFull);
+															if({ subjNode:name == subCls:name || subjNode:name == owner }, {
+																subjNode:params:each(action: local Function(Type is pa){
+																	groundedArgs:add(item: :formatVarTypeString(t: pa));
+																});
+															});
+														});
+														local Int is pbi: 0;
+														params:each(action: local Function(Parameter is bp){
+															if({ pbi < pvMem:params:length() }, {
+																local Parameter is vp: pvMem:params:get(index: pbi);
+																if({ bp:paramType:name == '' || bp:paramType:name == Primitive:ANY:value() }, {
+																	if({ groundedArgs:length() > pbi }, {
+																		bp:paramType: :parseTypeNode(s: groundedArgs:get(index: pbi)):clone();
+																	}, {
+																		bp:paramType: vp:paramType;
+																	});
+																}, {
+																	local String is bpT: :formatVarTypeString(t: bp:paramType);
+																	local String is vpT: :formatVarTypeString(t: vp:paramType);
+																	if({ groundedArgs:length() > 0 }, {
+																		vpT: :substituteTypeParam(rawType: vpT, cls: subCls, typeArgs: groundedArgs);
+																	});
+																	if({ !:isAssignable(target: bpT, source: vpT) }, {
+																		:addError(line: :currentLine, msg: 'Match arm parameter \'' . bp:name . '\' for \'' . owner . ':' . keyName . '\' has type \'' . bpT . '\', expected \'' . vpT . '\'.');
+																		bad: true;
+																	});
+																});
+															});
+															pbi: pbi + 1;
+														});
 												});
 											},
 											else: {}
