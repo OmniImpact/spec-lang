@@ -43,20 +43,26 @@ File/Http/Socket, `parseError` in Json).
 Goal: the language can *express* the target model. Minimal set; everything
 else is library work.
 
-- [ ] **1.1 Verify exhaustive `when`.** Confirm whether the TypeChecker
-      *enforces* exhaustiveness over payload-variant enums
-      (`test/lang/TestCasesMatch.spec` exercises shapes; check whether a
-      missing case is a compile error, not a runtime miss). Deliverable:
-      either "enforced — add a negative test locking it" or a gap list that
-      becomes task 1.2b. Result-safety rests on this.
-- [ ] **1.2 Generic tagged-union enums.** Make `EnumDesugar` +
-      `GenericSpecializer` handle payload-variant enums with type parameters
-      (needed for `Result of T, E`). Step 0: verify current support — if
-      generic enums already desugar, this task shrinks to tests. Touches:
-      `spec/base/compiler/parser/EnumDesugar.spec`,
-      `spec/base/compiler/llvm/GenericSpecializer.spec`. Gate: fixed point +
-      extended `TestEnhancedEnum` / `TestNextGenFeatures` (Feature 7) +
-      negative test for a malformed variant.
+- [x] **1.1 Verify exhaustive `when`.** DONE (a26f0ce). Verdict: enforced —
+      plain enums (expression + statement forms), payload-variant enums, and
+      the predicate-table form (which requires an `else` when
+      value-yielding); the checker also rejects redundant `else` arms on
+      exhaustive tables (TypeChecker.spec:1282/:1285). Two gaps locked with
+      negative tests: payload-variant non-exhaustiveness and the
+      predicate-table else rule (TestNegativeControlFlow.spec). Result-
+      safety's keystone holds with no compiler change.
+- [x] **1.2 Generic tagged-union enums.** DONE (656d7af, 15d93cc, f093946,
+      235f62f). Spelling: post-name params mirroring the class grammar —
+      `Enum is Maybe of T { Some(T is value), None }` and
+      `Enum is Result of T to E { Ok(T is value), Err(E is error) }` (the
+      plan's `Result of T, E` shorthand is spelled `of T to E` in the real
+      grammar; pre-name `of` stays the value-enum backing type). Landed in
+      four steps: (A) parser+desugar params, (B) grounded match-arm payload
+      validation, (C) specializer descends into nested variants + dispatch
+      through the subject's spec class, (D) TestGenericEnum.spec suite +
+      grounded arm-mismatch negative lock. Bootstrap fixed point re-verified
+      byte-identical; full wave identical to the seed baseline (9 failures
+      pre-exist on main — flagged separately).
 - [ ] **1.3 Defer floor (sysinternal).** Cleanup-stack intrinsics over the
       pending-error machinery: push/pop a cleanup closure per frame, and the
       unwind path runs registered cleanups **before** the handler walk.
@@ -82,11 +88,12 @@ facility wrapper in 2.6, as one gated task), Json changes (pure library).
 Goal: the standard building blocks exist and the async transports stop
 flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
 
-- [ ] **2.1 `Result of T, E` in `base:core`.** Generic payload-variant enum
-      (`Ok` value variant, `Err` error variant), consumed via `when`
-      destructuring + value yield. Depends on 1.2. Gate: suite covering
-      construction, destructuring, yield-in-branch, ARC of the payload
-      across branches.
+- [ ] **2.1 `Result of T to E` in `base:core`.** Generic payload-variant enum
+      (spelled `Enum is Result of T to E { Ok(T is value), Err(E is error) }`
+      — 1.2's grammar; the plan's `Result of T, E` shorthand maps to it),
+      consumed via `when` destructuring + value yield. Depends on 1.2
+      (done). Gate: suite covering construction, destructuring,
+      yield-in-branch, ARC of the payload across branches.
 - [ ] **2.2 Error-kind enums.** One enum per transport-owning package:
       `FileError`, `HttpError`, `NetError` (Socket/Url), `ThreadError`
       (ThreadScope/Task/Channel), `JsonError`. Plain `Enum is X{ ... }`
