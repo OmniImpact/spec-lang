@@ -46,7 +46,8 @@ Class of SpecUnitTest is TestAsCast{
 	Function is testToStringRenders(){
 		local Dog is dog: Dog:init();
 		local String is label: 'instance: ' . dog;
-		Assert:areEqualString('instance: Dog', label);
+		# Concat goes through toString(): the documented TypeName@hash default.
+		Assert:isTrue(label:startsWith(prefix: 'instance: Dog@'));
 	}
 
 	Function is testEnumRender(){
