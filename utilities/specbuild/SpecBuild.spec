@@ -150,6 +150,8 @@ Class is SpecBuild{
 		Output:line('');
 		Output:line('Options:');
 		Output:line('  -c, --config <file.json>   Path to build manifest (default: <project>.json or specbuild.json)');
+		Output:line('  --release, --prod          Build with -O2 optimization for production (default: debug -O0)');
+		Output:line('  --debug                    Force debug -O0 build');
 		Output:line('  -v, --verbose              Display detailed compiler commands');
 		Output:line('  -h, --help                 Display this help message');
 	}
@@ -394,6 +396,12 @@ Class is SpecBuild{
 
 		local String is compiler: :resolveCompiler(custom: customCompiler);
 		local Array of String is specArgs: ['-i', resolvedSource, '-o', output];
+		if({ (args:has(key: 'release') || args:has(key: 'prod')) && !args:has(key: 'debug') }, {
+			specArgs:add(item: '--release');
+		});
+		if({ args:has(key: 'debug') }, {
+			specArgs:add(item: '--debug');
+		});
 
 		local Int is sLen: sourceDirs:length();
 		while([Int is si: 0], { si < sLen }, {

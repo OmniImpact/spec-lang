@@ -167,7 +167,7 @@ else
 	echo "   [SKIP] kotlinc not found"
 fi
 if [ -x "$ROOT/bin/spec" ]; then
-	measure_step spec "$ROOT/bin/spec" --quiet -i "$ROOT/examples/pi_benchmark/src/PiBenchmark.spec" -o "$OUT/spec_pi" | tee -a "$BUILDS"
+	measure_step spec "$ROOT/bin/spec" --release --quiet -i "$ROOT/examples/pi_benchmark/src/PiBenchmark.spec" -o "$OUT/spec_pi" | tee -a "$BUILDS"
 else
 	echo "   [SKIP] bin/spec not found (run ./bootstrap.sh first)"
 fi
@@ -315,7 +315,7 @@ if want_suite binary_trees; then
 		measure_step bt_kotlin "$KOTLINC_BIN" "$BENCH/bt.kt" -include-runtime -d "$OUT/bt_kt.jar" | tee -a "$BUILDS"
 	fi
 	if [ -x "$ROOT/bin/spec" ]; then
-		measure_step bt_spec "$ROOT/bin/spec" --quiet -i "$BENCH/BinaryTrees.spec" -o "$OUT/bt_spec" | tee -a "$BUILDS"
+		measure_step bt_spec "$ROOT/bin/spec" --release --quiet -i "$BENCH/BinaryTrees.spec" -o "$OUT/bt_spec" | tee -a "$BUILDS"
 	fi
 
 	echo ""
@@ -404,7 +404,7 @@ if want_suite word_freq; then
 		measure_step wf_kotlin "$KOTLINC_BIN" "$BENCH/wf.kt" -include-runtime -d "$OUT/wf_kt.jar" | tee -a "$BUILDS"
 	fi
 	if [ -x "$ROOT/bin/spec" ]; then
-		measure_step wf_spec "$ROOT/bin/spec" --quiet -i "$BENCH/WordFreq.spec" -o "$OUT/wf_spec" | tee -a "$BUILDS"
+		measure_step wf_spec "$ROOT/bin/spec" --release --quiet -i "$BENCH/WordFreq.spec" -o "$OUT/wf_spec" | tee -a "$BUILDS"
 	fi
 
 	echo ""

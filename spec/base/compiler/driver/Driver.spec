@@ -72,7 +72,8 @@ Class is Driver{
 		if({ outputPath == '' }, {
 			outputPath: args:getString(key: 'output', default: '');
 		});
-		local Boolean is debugMode: args:has(key: 'debug');
+		local Boolean is releaseMode: (args:has(key: 'release') || args:has(key: 'prod')) && !args:has(key: 'debug');
+		local Boolean is debugMode: !releaseMode;
 		local Boolean is quiet: args:has(key: 'quiet');
 		local String is threadsStr: args:getString(key: 'threads', default: '');
 		if({ threadsStr == '' }, {
@@ -104,7 +105,7 @@ Class is Driver{
 
 		if({ inputPath == '' }, {
 			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [-s <source_dir>...] [--emit-llvm <file>] [--threads <N>] [--debug] [--quiet]');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [-s <source_dir>...] [--emit-llvm <file>] [--threads <N>] [--release] [--debug] [--quiet]');
 			Process:exit(status: 2);
 		});
 

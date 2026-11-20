@@ -112,7 +112,7 @@ Class is TreeNode{
 		:hasChildren: false;
 	}
 
-	Function is init(TreeNode is left, TreeNode is right){
+	replace Function is init(TreeNode is left, TreeNode is right){
 		:hasChildren: true;
 		:left: left;
 		:right: right;
