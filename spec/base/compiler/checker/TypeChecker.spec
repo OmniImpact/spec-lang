@@ -1551,7 +1551,11 @@ Class is TypeChecker{
 	local Function is checkVariadicInitRequiredFields(ClassInfo is recvCls, CallData is cd){
 		if({ recvCls:name == '' || :isBindingDeclaration(cls: recvCls) }, { return; });
 		recvCls:members:each(action: local Function(Member is fm){
-			if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && fm:name != 'using' && fm:name != 'namespace' && fm:name != 'castable' && fm:name != 'group' }, {
+			# Required-field validation covers PUBLIC fields only: `local`/
+			# `contained` fields are invisible outside the declaring class,
+			# so no caller can ever supply them (e.g. Stack's private
+			# `T is zeroDefault` Never-Null fallback).
+			if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && !fm:hasModifier(kw: Keyword:LOCAL) && !fm:hasModifier(kw: Keyword:CONTAINED) && fm:name != 'using' && fm:name != 'namespace' && fm:name != 'castable' && fm:name != 'group' }, {
 				local String is fTypeStr: :formatVarTypeString(t: fm:memberType);
 				local Boolean is supplied: false;
 				cd:args:each(action: local Function(NamedArg is a){
