@@ -41,8 +41,7 @@ Class is Parser{
 		['base', 'compiler', 'utils', Chars],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
-		['base', 'sys', as Conditional()],
-
+		['base', 'sys', as Conditional()]
 	];
 
 	local Array of Token is tokens: [];
@@ -639,6 +638,13 @@ Class is Parser{
 		local Array of Member is members: [];
 		local Int is count: 0;
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
+			# Stray terminator between body members: shorthand metadata
+			# (`namespace: [...]`) may end with ';' while the variant branch
+			# consumes only separators — skip it rather than reading it as
+			# a variant.
+			if({ :checkPunct(p: Punctuation:TERMINATOR) }, {
+				:advance();
+			});
 			if({ :atEnumMember() }, {
 				members:add(item: :parseMember());
 			}, {
