@@ -3921,7 +3921,18 @@ Class is IrBuilder{
 				});
 				if({ fromTy == toTy }, {
 					if({ fromTy == IrType:Ptr && (target == 'String' || target == 'Str') && inner:resolvedType != 'String' && inner:resolvedType != 'Str' && (:clsMap:has(key: inner:resolvedType) || inner:resolvedType == 'Any') }, {
-						return :emitObjectToString(objVal: v, specType: inner:resolvedType);
+						# Cast-to-String is the TYPE-IDENTITY conversion, uniformly
+						# for concrete classes and Any holdings — the same value
+						# renders the same regardless of the reference's static
+						# type. The RENDERING contract (toString, TypeName@hash
+						# by default) belongs to concat/templates. An Any holding
+						# a String yields the string itself.
+						if({ inner:resolvedType == 'Any' }, {
+							return :emitObjectToString(objVal: v, specType: 'Any');
+						});
+						local String is tnCast: :nextTmp();
+						:emit(inst: IrInst:IrCall(dst: tnCast, hasDst: true, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [v]));
+						return tnCast;
 					});
 					if({ fromTy == IrType:Ptr && target != 'Any' && target != '' && target != 'String' && target != 'Str' && target != 'Buf' && target != 'Array' && target != 'Map' && !target:startsWith(prefix: 'Array of ') && !target:startsWith(prefix: 'Map of ') && :clsQNameMap:has(key: target) }, {
 						local String is tQName: :clsQNameMap:get(key: target, default: '');

@@ -610,9 +610,9 @@ Class is LlvmP8{
 		Assert:areEqualString('{ ptr, ptr, i32, i32 } { ptr @n, ptr @f, i32 1, i32 42 }', mm:formatConst(values: ['@n', '@f', '1', '42']));
 
 		local LlvmStructLayout is cm: LlvmStructLayout:classMeta();
-		Assert:areEqualInt(7, cm:fieldCount());
+		Assert:areEqualInt(9, cm:fieldCount());
 		Assert:areEqualInt(4, cm:fieldIndex(name: 'construct'));
-		Assert:areEqualString('{ ptr, ptr, ptr, i32, ptr, ptr, i32 }', cm:llvmType());
+		Assert:areEqualString('{ ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 }', cm:llvmType());
 
 		local LlvmStructLayout is he: LlvmStructLayout:heldEntry();
 		Assert:areEqualInt(4, he:fieldCount());
