@@ -35,6 +35,12 @@ Class of SpecUnitTest is TestMerge{
 		local MergeChild is child: MergeChild:init();
 		Assert:areEqualInt(20, child:baseValue());
 	}
+
+	Function is testMergeInheritsClassControlFlow(){
+		# `merge` on `using` inherits `as Conditional()` and `as Loops()` from Class.
+		local MergeControlFlow is cf: MergeControlFlow();
+		Assert:areEqualInt(6, cf:sumTo(n: 3));
+	}
 }
 
 Class is MergeBase{
@@ -59,5 +65,21 @@ Class of MergeBase is MergeChild{
 
 	replace Function of Int is baseValue(){
 		return 20;
+	}
+}
+
+Class is MergeControlFlow{
+	merge Array of Array of String is using: [];
+
+	Function of Int is sumTo(Int is n){
+		local Int is total: 0;
+		local Int is i: 1;
+		while({ i <= n }, {
+			if({ i > 0 }, {
+				total: total + i;
+			});
+			i: i + 1;
+		});
+		total;
 	}
 }

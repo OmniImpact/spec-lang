@@ -15,7 +15,9 @@ Class of Stringable is Class{
 
 	replace Array of Array of String is using: [
 		['base', 'core', SpecError],
-		['base', 'sys', as Introspection()]
+		['base', 'sys', as Introspection()],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 	## Default rendering: the declaring type name and the object's
 	## identity hash (`TypeName@hash`). Implements the [Stringable]

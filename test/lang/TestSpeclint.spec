@@ -159,4 +159,20 @@ Class of SpecUnitTest is TestSpeclint{
 		Assert:areEqualInt(0, :countKind(issues: issues, wantWarnings: true));
 		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: false));
 	}
+
+	Function is testMergeUsingNotice(){
+		local Array of LintIssue is bad: :lintSource(src: "Class is F{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Conditional()],\n\t\t['base', 'sys', as Loops()]\n\t];\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: bad, wantWarnings: true));
+		Assert:areEqualInt(1, :countKind(issues: bad, wantWarnings: false));
+		local Array of LintIssue is good: :lintSource(src: "Class is F{\n\tmerge Array of Array of String is using: [\n\t\t['base', 'struct', Map]\n\t];\n\tFunction is go(Map of String to Int is m){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: false));
+	}
+
+	Function is testCompactUsingNotice(){
+		local Array of LintIssue is bad: :lintSource(src: "Class is F{\n\tmerge Array of Array of String is using: [\n\t\t['base', 'theo', Panel],\n\t\t['base', 'theo', Row],\n\t\t['base', 'theo', Button]\n\t];\n\tFunction is go(Panel is p, Row is r, Button is b){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: bad, wantWarnings: true));
+		Assert:areEqualInt(1, :countKind(issues: bad, wantWarnings: false));
+		local Array of LintIssue is good: :lintSource(src: "Class is F{\n\tmerge Array of Array of String is using: [\n\t\t['base', 'theo', [Panel, Row, Button]]\n\t];\n\tFunction is go(Panel is p, Row is r, Button is b){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: false));
+	}
 }

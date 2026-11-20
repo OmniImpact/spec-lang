@@ -38,6 +38,8 @@ Class is Linter{
 		['speclint', 'rules', InitShorthandRule],
 		['speclint', 'rules', UnusedUsingRule],
 		['speclint', 'rules', TemplateStringRule],
+		['speclint', 'rules', MergeUsingRule],
+		['speclint', 'rules', CompactUsingRule],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()]
 	];
@@ -111,6 +113,8 @@ Class is Linter{
 		:rules:add(item: InitShorthandRule:init());
 		:rules:add(item: UnusedUsingRule:init());
 		:rules:add(item: TemplateStringRule:init());
+		:rules:add(item: MergeUsingRule:init());
+		:rules:add(item: CompactUsingRule:init());
 	}
 
 	## Adds a custom rule to the linter.
