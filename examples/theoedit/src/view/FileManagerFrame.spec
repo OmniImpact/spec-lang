@@ -8,7 +8,9 @@ Class of Frame is FileManagerFrame{
 		['base', 'theo', '*'],
 		['base', 'signal', TextEmitter],
 		['base', 'sys', as Dir()],
-		['base', 'sys', as Uri()]
+		['base', 'sys', as Uri()],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	String is mode: 'open';
@@ -69,17 +71,47 @@ Class of Frame is FileManagerFrame{
 		nameInputs: [ti];
 	}
 
+	local Function is sortAlpha(Array of String is items){
+		local Int is n: items:length();
+		local Int is i: 1;
+		while({ i < n }, {
+			local String is key: items:get(index: i);
+			local String is keyLow: key:toLower();
+			local Int is j: i - 1;
+			local Boolean is done: false;
+			while({ !done && j >= 0 }, {
+				local String is cur: items:get(index: j);
+				local String is curLow: cur:toLower();
+				local Boolean is gt: curLow > keyLow || (curLow == keyLow && cur > key);
+				if({ gt }, {
+					items:set(index: j + 1, value: cur);
+					j: j - 1;
+				}, {
+					done: true;
+				});
+			});
+			items:set(index: j + 1, value: key);
+			i: i + 1;
+		});
+	}
+
 	local Function of Array of String is buildEntries(String is dir){
-		local Array of String is out: ['..'];
+		local Array of String is dirs: [];
+		local Array of String is files: [];
 		Dir:dirList(path: dir):each(action: local Function(String is name){
 			if({ name:startsWith(prefix: '.') }, { return; });
 			local String is full: "{{dir}}/{{name}}";
 			if({ Dir:dirList(path: full):length() > 0 }, {
-				out:add(item: "{{name}}/");
+				dirs:add(item: "{{name}}/");
 			}, {
-				out:add(item: name);
+				files:add(item: name);
 			});
 		});
+		sortAlpha(items: dirs);
+		sortAlpha(items: files);
+		local Array of String is out: ['..'];
+		dirs:each(action: local Function(String is d){ out:add(item: d); });
+		files:each(action: local Function(String is f){ out:add(item: f); });
 		out;
 	}
 

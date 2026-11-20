@@ -242,4 +242,32 @@ Class of SpecUnitTest is TestTheoEditor{
 		Assert:areEqualString(savePath, vm:title:current());
 		fileRemove(path: savePath);
 	}
+
+	Function is testFileManagerDirectoriesFirstAlphabetical(){
+		local String is rootDir: "/tmp/theo_fm_sort_{{Process:getPid()}}";
+		local String is subZ: "{{rootDir}}/zebraDir";
+		local String is subA: "{{rootDir}}/AlphaDir";
+		Process:execute(command: 'mkdir', args: ['-p', subZ, subA]);
+		fileWrite(path: "{{subZ}}/keep", content: '1');
+		fileWrite(path: "{{subA}}/keep", content: '1');
+		fileWrite(path: "{{rootDir}}/zeta.txt", content: 'z');
+		fileWrite(path: "{{rootDir}}/beta.txt", content: 'b');
+		fileWrite(path: "{{rootDir}}/Alpha.txt", content: 'a');
+
+		local FileManagerFrame is fm: FileManagerFrame(
+			mode: 'open',
+			initialDir: rootDir,
+			onConfirm: local Function(String is _p){},
+			onCancel: {}
+		);
+		Assert:areEqualInt(6, fm:dirEntries:length());
+		Assert:areEqualString('..', fm:dirEntries:get(index: 0));
+		Assert:areEqualString('AlphaDir/', fm:dirEntries:get(index: 1));
+		Assert:areEqualString('zebraDir/', fm:dirEntries:get(index: 2));
+		Assert:areEqualString('Alpha.txt', fm:dirEntries:get(index: 3));
+		Assert:areEqualString('beta.txt', fm:dirEntries:get(index: 4));
+		Assert:areEqualString('zeta.txt', fm:dirEntries:get(index: 5));
+
+		Process:execute(command: 'rm', args: ['-rf', rootDir]);
+	}
 }

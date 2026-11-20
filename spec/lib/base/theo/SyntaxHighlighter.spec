@@ -11,10 +11,12 @@ Class is SyntaxHighlighter{
 
 	String is language: 'plain';
 	Array of Int is lineStates: [];
+	Int is drawCol: 0;
 
 	replace Function is init(String is language: 'plain'){
 		:language: language;
 		:lineStates: [];
+		:drawCol: 0;
 	}
 
 	Function is setLanguageFromPath(String is path){
@@ -168,16 +170,31 @@ Class is SyntaxHighlighter{
 		});
 	}
 
+	local Function of Int is utf8Step(String is s, Int is index){
+		local Int is b: s:byteAt(index: index, default: 32);
+		if({ b >= 240 && b < 248 }, { return 4; });
+		if({ b >= 224 && b < 240 }, { return 3; });
+		if({ b >= 192 && b < 224 }, { return 2; });
+		return 1;
+	}
+
 	local Function is drawSpan(TheoBuffer is buf, Int is x, Int is y, Int is maxW, Int is scrollX, Int is pos, String is text, TheoColor is fg){
 		local Int is len: text:length();
 		if({ len == 0 }, { return; });
 		local Int is visStart: scrollX;
 		local Int is visEnd: scrollX + maxW;
-		local Int is segStart: if({ pos > visStart }, { pos }, { visStart });
-		local Int is segEnd: if({ pos + len < visEnd }, { pos + len }, { visEnd });
-		if({ segStart >= segEnd }, { return; });
-		local String is slice: text:substring(start: segStart - pos, end: segEnd - pos);
-		buf:drawText(x: x + (segStart - visStart), y: y, text: slice, fg: fg);
+		local Int is bi: 0;
+		while({ bi < len }, {
+			local Int is step: utf8Step(s: text, index: bi);
+			local Int is endBi: bi + step;
+			if({ endBi > len }, { endBi: len; });
+			if({ drawCol >= visStart && drawCol < visEnd }, {
+				local String is ch: text:substring(start: bi, end: endBi);
+				buf:setCell(x: x + (drawCol - visStart), y: y, ch: ch, fg: fg);
+			});
+			:drawCol: drawCol + 1;
+			bi: endBi;
+		});
 	}
 
 	local Function is paintJsonLine(TheoBuffer is buf, Int is x, Int is y, Int is maxW, Int is scrollX, String is ln, SyntaxTheme is theme){
@@ -212,9 +229,12 @@ Class is SyntaxHighlighter{
 						local TheoColor is col: if({ word == 'true' || word == 'false' || word == 'null' }, { theme:boolean }, { theme:plain });
 						drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: start, text: word, fg: col);
 					}, {
+						local Int is step: utf8Step(s: ln, index: i);
+						local Int is endI: i + step;
+						if({ endI > n }, { endI: n; });
 						local TheoColor is pCol: if({ ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ':' || ch == ',' }, { theme:punctuation }, { theme:plain });
-						drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: i, text: ch, fg: pCol);
-						i: i + 1;
+						drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: i, text: ln:substring(start: i, end: endI), fg: pCol);
+						i: endI;
 					});
 				});
 			});
@@ -246,8 +266,11 @@ Class is SyntaxHighlighter{
 						if({ i < n }, { i: i + 1; });
 						drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: start, text: ln:substring(start: start, end: i), fg: theme:key);
 					}, {
-						drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: i, text: ch, fg: baseFg);
-						i: i + 1;
+						local Int is step: utf8Step(s: ln, index: i);
+						local Int is endI: i + step;
+						if({ endI > n }, { endI: n; });
+						drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: i, text: ln:substring(start: i, end: endI), fg: baseFg);
+						i: endI;
 					});
 				});
 			});
@@ -365,9 +388,12 @@ Class is SyntaxHighlighter{
 										});
 										drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: start, text: word, fg: col);
 									}, {
+										local Int is step: utf8Step(s: ln, index: i);
+										local Int is endI: i + step;
+										if({ endI > n }, { endI: n; });
 										local TheoColor is pCol: if({ isSpace(ch: ch) }, { theme:plain }, { theme:punctuation });
-										drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: i, text: ch, fg: pCol);
-										i: i + 1;
+										drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: i, text: ln:substring(start: i, end: endI), fg: pCol);
+										i: endI;
 									});
 								});
 							});
@@ -379,6 +405,7 @@ Class is SyntaxHighlighter{
 	}
 
 	Function is paintLine(TheoBuffer is buf, Int is x, Int is y, Int is maxW, Int is scrollX, String is rawLine, Int is lineIndex, SyntaxTheme is theme){
+		:drawCol: 0;
 		local String is ln: rawLine:replaceAll(target: "\t", replacement: '    ');
 		if({ language == 'plain' }, {
 			drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: 0, text: ln, fg: theme:plain);

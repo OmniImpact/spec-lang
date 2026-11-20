@@ -103,13 +103,22 @@ Class of Widget is TextArea{
 	local Function of Int is visualCol(String is ln, Int is col){
 		local Int is vis: 0;
 		local Int is i: 0;
-		while({ i < col && i < ln:length() }, {
-			if({ ln:charAt(index: i, default: '') == "\t" }, {
+		local Int is n: ln:length();
+		while({ i < col && i < n }, {
+			local Int is b: ln:byteAt(index: i, default: 32);
+			if({ b == 9 }, {
 				vis: vis + 4;
+				i: i + 1;
 			}, {
+				local Int is step: 1;
+				if({ b >= 240 && b < 248 }, { step: 4; }, {
+					if({ b >= 224 && b < 240 }, { step: 3; }, {
+						if({ b >= 192 && b < 224 }, { step: 2; });
+					});
+				});
 				vis: vis + 1;
+				i: i + step;
 			});
-			i: i + 1;
 		});
 		return vis;
 	}

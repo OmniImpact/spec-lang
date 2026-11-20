@@ -213,5 +213,25 @@ Class of SpecUnitTest is TestTheoBuffer{
 		mdTa:paint(buf: buf, renderer: renderer);
 		Assert:areEqualInt(180, buf:cellAt(x: 0, y: 0):fg:c1);
 		Assert:areEqualInt(245, buf:cellAt(x: 0, y: 1):fg:c1);
+
+		# 5. UTF-8 multi-byte characters in Markdown inside scrollable Panel keep scrollbar aligned
+		local CodeTextArea is utfMd: CodeTextArea(
+			value: "Title — sub · item",
+			filePath: 'doc.md'
+		);
+		local Panel is utfPanel: Panel(
+			border: true,
+			padding: 0,
+			scrollable: true,
+			child: utfMd
+		);
+		local TheoBuffer is utfBuf: TheoBuffer(width: 24, height: 5);
+		utfPanel:layout(x: 0, y: 0, w: 24, h: 5);
+		utfPanel:paint(buf: utfBuf, renderer: renderer);
+		Assert:areEqualString('—', utfBuf:cellAt(x: 7, y: 1):ch);
+		Assert:areEqualString('·', utfBuf:cellAt(x: 13, y: 1):ch);
+		Assert:areEqualString(' ', utfBuf:cellAt(x: 21, y: 1):ch);
+		Assert:areEqualString('▐', utfBuf:cellAt(x: 22, y: 1):ch);
+		Assert:areEqualString('│', utfBuf:cellAt(x: 23, y: 1):ch);
 	}
 }

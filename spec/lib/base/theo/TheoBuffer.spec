@@ -113,10 +113,21 @@ Class is TheoBuffer{
 	Function is drawText(Int is x, Int is y, String is text, TheoColor is fg: TheoColor:none(), TheoColor is bg: TheoColor:none(), Boolean is bold: false, Boolean is underline: false, Boolean is reverse: false){
 		local Int is n: text:length();
 		local Int is i: 0;
+		local Int is col: 0;
 		while({ i < n }, {
-			local String is ch: text:charAt(index: i, default: ' ');
-			setCell(x: x + i, y: y, ch: ch, fg: fg, bg: bg, bold: bold, underline: underline, reverse: reverse);
-			i: i + 1;
+			local Int is b: text:byteAt(index: i, default: 32);
+			local Int is step: 1;
+			if({ b >= 240 && b < 248 }, { step: 4; }, {
+				if({ b >= 224 && b < 240 }, { step: 3; }, {
+					if({ b >= 192 && b < 224 }, { step: 2; });
+				});
+			});
+			local Int is endIdx: i + step;
+			if({ endIdx > n }, { endIdx: n; });
+			local String is ch: text:substring(start: i, end: endIdx);
+			setCell(x: x + col, y: y, ch: ch, fg: fg, bg: bg, bold: bold, underline: underline, reverse: reverse);
+			col: col + 1;
+			i: endIdx;
 		});
 	}
 
