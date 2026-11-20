@@ -254,3 +254,25 @@ Class is MapDefaultMismatch{
 		local Int is v: ages:get(key: 'a', default: 'bad');
 	}
 }
+
+#! case: testGenericVariantArmMismatch
+#! expect: Match arm parameter 'v' for 'Maybe:Some' has type 'String', expected 'Int'
+#! Generic variant payload types are grounded through the subject's
+#! instantiation before the comparison — the diagnostic names the
+#! concrete type ('Int'), not the parameter ('T').
+Enum is Maybe of T {
+	Some(T is value),
+	None
+}
+Class is App{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Maybe of Int is m: Maybe:Some(value: 42);
+		local Int is v: match(on: m, when: [
+			Maybe:Some: local Function of Int(String is v){ return 1; },
+			Maybe:None: { 0 }
+		]);
+	}
+}
