@@ -1,10 +1,12 @@
+#! Package theoedit:vm
 #! ViewModel for the Theo simple text editor.
 
 Class is EditorViewModel{
-	replace Array of Array of String is using: [
+	namespace: ['theoedit', 'vm'];
+
+	merge Array of Array of String is using: [
 		['base', 'signal', TextEmitter],
-		['base', 'sys', as File()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as File()]
 	];
 
 	String is filePath: '';
@@ -27,16 +29,16 @@ Class is EditorViewModel{
 		if({ filePath != '' && fileExists(path: filePath) }, {
 			initialText: fileRead(path: filePath, default: '');
 		});
-		:dirty: false;
+		dirty: false;
 		local String is displayTitle: if({ filePath != '' }, { filePath }, { '[untitled]' });
 		title:emit(value: displayTitle);
 		content:emit(value: initialText);
 	}
 
 	Function is openFile(String is path){
-		:filePath: path;
-		:messageMode: 'none';
-		:quitAfterSave: false;
+		filePath: path;
+		messageMode: 'none';
+		quitAfterSave: false;
 		load();
 		status:emit(value: 'Opened');
 	}
@@ -44,7 +46,7 @@ Class is EditorViewModel{
 	Function is onTextChanged(String is nextText){
 		content:emit(value: nextText);
 		if({ !dirty }, {
-			:dirty: true;
+			dirty: true;
 			local String is baseTitle: if({ filePath != '' }, { filePath }, { '[untitled]' });
 			title:emit(value: "{{baseTitle}} *");
 		});
@@ -54,7 +56,7 @@ Class is EditorViewModel{
 		if({ filePath == '' }, {
 			return false;
 		});
-		return saveTo(path: filePath);
+		saveTo(path: filePath);
 	}
 
 	Function of Boolean is saveTo(String is path){
@@ -63,9 +65,9 @@ Class is EditorViewModel{
 			path: path,
 			content: content:current(),
 			onSuccess: local Function(Int is _bytes){
-				:filePath: path;
-				:dirty: false;
-				:messageMode: 'none';
+				filePath: path;
+				dirty: false;
+				messageMode: 'none';
 				title:emit(value: path);
 				status:emit(value: 'Saved');
 				ok: true;
@@ -74,17 +76,17 @@ Class is EditorViewModel{
 				status:emit(value: "Save failed: {{err}}");
 			}
 		);
-		return ok;
+		ok;
 	}
 
 	Function is showUnsavedPrompt(){
-		:messageMode: 'confirmQuit';
+		messageMode: 'confirmQuit';
 		messageText:emit(value: 'Unsaved changes — save before quitting?');
 	}
 
 	Function is clearMessage(){
-		:messageMode: 'none';
-		:quitAfterSave: false;
+		messageMode: 'none';
+		quitAfterSave: false;
 		messageText:emit(value: '');
 	}
 }

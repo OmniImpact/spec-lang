@@ -1,15 +1,13 @@
+#! Package theoedit:view
 #! Root Frame for the Theo simple text editor.
 
 Class of Frame is EditorFrame{
-	replace Array of Array of String is using: [
+	namespace: ['theoedit', 'view'];
+
+	merge Array of Array of String is using: [
 		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, FocusTarget, KeyEvent]],
-		['base', 'sys', as Conditional()],
-		[EditorViewModel],
-		[TopBar],
-		[EditorBody],
-		[MessagePanel],
-		[BottomActionBar],
-		[FileManagerFrame]
+		['theoedit', 'vm', EditorViewModel],
+		['theoedit', 'view', [TopBar, EditorBody, MessagePanel, BottomActionBar, FileManagerFrame]]
 	];
 
 	EditorViewModel is vm;
@@ -29,11 +27,11 @@ Class of Frame is EditorFrame{
 	replace Function is init(EditorViewModel is vm, Function is onQuit){
 		:vm: vm;
 		:onQuit: onQuit;
-		:screenRefs: [];
+		screenRefs: [];
 	}
 
 	Function is bindScreen(TheoScreen is screen){
-		:screenRefs: [screen];
+		screenRefs: [screen];
 	}
 
 	local Function is openFileManager(String is mode, Boolean is quitAfterSave){
@@ -78,13 +76,13 @@ Class of Frame is EditorFrame{
 
 	local Function is triggerQuit(){
 		if({ vm:dirty }, {
-			:editorFocus:focused: false;
-			:saveFocus:focused: false;
-			:saveAsFocus:focused: false;
-			:openFocus:focused: false;
-			:exitFocus:focused: false;
-			:msgDiscardFocus:focused: false;
-			:msgCancelFocus:focused: false;
+			editorFocus:focused: false;
+			saveFocus:focused: false;
+			saveAsFocus:focused: false;
+			openFocus:focused: false;
+			exitFocus:focused: false;
+			msgDiscardFocus:focused: false;
+			msgCancelFocus:focused: false;
 			vm:showUnsavedPrompt();
 			rebuild();
 			msgSaveFocus:requestFocus();
@@ -108,7 +106,7 @@ Class of Frame is EditorFrame{
 			});
 			return true;
 		});
-		return false;
+		false;
 	}
 
 	replace Function of Widget is ui(){

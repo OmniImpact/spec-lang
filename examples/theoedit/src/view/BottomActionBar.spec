@@ -1,9 +1,11 @@
+#! Package theoedit:view
 #! Bottom action bar with Quit (left) and Save, Save As, Open (right) buttons.
 
 Class of Frame is BottomActionBar{
-	replace Array of Array of String is using: [
-		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, Button]],
-		['base', 'sys', as Conditional()]
+	namespace: ['theoedit', 'view'];
+
+	merge Array of Array of String is using: [
+		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, Button]]
 	];
 
 	FocusTarget is saveFocus;
@@ -43,7 +45,7 @@ Class of Frame is BottomActionBar{
 			onReturnToEditor();
 			return true;
 		});
-		return false;
+		false;
 	}
 
 	replace Function of Widget is ui(){

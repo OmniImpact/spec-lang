@@ -1,10 +1,12 @@
+#! Package theoedit:view
 #! Dynamic message/prompt panel shown between the editor and bottom action bar.
 
 Class of Frame is MessagePanel{
-	replace Array of Array of String is using: [
+	namespace: ['theoedit', 'view'];
+
+	merge Array of Array of String is using: [
 		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, TextLine, Button]],
-		['base', 'sys', as Conditional()],
-		[EditorViewModel]
+		['theoedit', 'vm', EditorViewModel]
 	];
 
 	EditorViewModel is vm;
@@ -38,7 +40,7 @@ Class of Frame is MessagePanel{
 			onCancel();
 			return true;
 		});
-		return false;
+		false;
 	}
 
 	replace Function of Widget is ui(){

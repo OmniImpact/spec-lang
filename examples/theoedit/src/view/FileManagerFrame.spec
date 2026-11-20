@@ -1,12 +1,14 @@
+#! Package theoedit:view
 #! File manager screen for Open and Save As, pushed onto [TheoScreen].
 
 Class of Frame is FileManagerFrame{
-	replace Array of Array of String is using: [
+	namespace: ['theoedit', 'view'];
+
+	merge Array of Array of String is using: [
 		['base', 'theo', '*'],
 		['base', 'signal', TextEmitter],
 		['base', 'sys', as Dir()],
-		['base', 'sys', as Uri()],
-		['base', 'sys', [as Conditional(), as Loops()]]
+		['base', 'sys', as Uri()]
 	];
 
 	String is mode: 'open';
@@ -32,18 +34,18 @@ Class of Frame is FileManagerFrame{
 		Function is onCancel
 	){
 		:mode: mode;
-		:curDir: Uri:fromFilePath(filePath: initialDir):toFilePath();
+		curDir: Uri:fromFilePath(filePath: initialDir):toFilePath();
 		:onConfirm: onConfirm;
 		:onCancel: onCancel;
 		if({ mode == 'saveAs' }, {
-			:listFocus: FocusTarget(initial: false);
-			:inputFocus: FocusTarget(initial: true);
+			listFocus: FocusTarget(initial: false);
+			inputFocus: FocusTarget(initial: true);
 		});
-		:dirEntries: buildEntries(dir: :curDir);
-		headerTitle:emit(value: "File Manager — {{:curDir}}");
+		dirEntries: buildEntries(dir: curDir);
+		headerTitle:emit(value: "File Manager — {{curDir}}");
 
 		local ListView is lv: ListView(
-			items: :dirEntries,
+			items: dirEntries,
 			focusTarget: listFocus,
 			onActivate: local Function(String is entry){
 				handleEntryActivate(entry: entry);
@@ -54,7 +56,7 @@ Class of Frame is FileManagerFrame{
 				});
 			}
 		);
-		:listViews: [lv];
+		listViews: [lv];
 
 		local TextInput is ti: TextInput(
 			value: initialName,
@@ -64,7 +66,7 @@ Class of Frame is FileManagerFrame{
 				submitCurrent();
 			}
 		);
-		:nameInputs: [ti];
+		nameInputs: [ti];
 	}
 
 	local Function of Array of String is buildEntries(String is dir){
@@ -82,8 +84,8 @@ Class of Frame is FileManagerFrame{
 	}
 
 	local Function is navigateTo(String is nextDir){
-		:curDir: nextDir;
-		:dirEntries: buildEntries(dir: curDir);
+		curDir: nextDir;
+		dirEntries: buildEntries(dir: curDir);
 		if({ listViews:length() > 0 }, {
 			listViews:get(index: 0):setItems(nextItems: dirEntries);
 		});
@@ -152,7 +154,7 @@ Class of Frame is FileManagerFrame{
 			inputFocus:requestFocus();
 			return true;
 		});
-		return false;
+		false;
 	}
 
 	replace Function of Widget is ui(){

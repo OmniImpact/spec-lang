@@ -1,22 +1,13 @@
 #! specunit: suite
 
 Class of SpecUnitTest is TestTheoEditor{
-	replace Array of Array of String is using: [
-		['specunit', SpecUnitTest],
-		['specunit', as Assert()],
-		['base', 'theo', TheoBuffer],
-		['base', 'theo', TheoRenderer],
-		['base', 'theo', TheoScreen],
-		['base', 'theo', KeyEvent],
-		['base', 'theo', Frame],
-		['base', 'theo', FocusTarget],
+	merge Array of Array of String is using: [
+		['specunit', [SpecUnitTest, as Assert()]],
+		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, Frame, FocusTarget]],
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
-		['base', 'sys', as Loops()],
-		['base', 'sys', as Conditional()],
-		[EditorViewModel],
-		[EditorFrame],
-		[FileManagerFrame]
+		['theoedit', 'vm', EditorViewModel],
+		['theoedit', 'view', [EditorFrame, FileManagerFrame]]
 	];
 
 	local Function is wireEditorFocus(EditorFrame is frame){
