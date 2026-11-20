@@ -1558,13 +1558,16 @@ Class is TypeChecker{
 	## @param recvTypeArgs: Concrete generic type arguments of the receiver.
 	## @param methodTypeParam: Method-level type parameter name ('' when none).
 	Function is validateArgsAgainstSignature(Expression is callExpr, Array of Parameter is params, ClassInfo is recvCls, String is displayTarget, Array of String is recvTypeArgs: [], String is methodTypeParam: ''){
-		if({ params:length() == 0 }, {
-			return;
-		});
 		local CallData is cd: match(on: callExpr, when: [
 			Expression:Call: local Function of CallData(CallData is call){ return call; },
 			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
 		]);
+		if({ params:length() == 0 }, {
+			if({ cd:args:length() > 0 && !:isBindingDeclaration(cls: recvCls) && displayTarget != 'Conditional' && displayTarget != 'Loops' }, {
+				:addError(line: :currentLine, msg: "No signature of '" . displayTarget . "." . cd:name . "' takes " . (cd:args:length() as String) . " argument(s).");
+			});
+			return;
+		});
 		local Array of String is recvTypeParams: recvCls:typeParams;
 		local Int is pIdx: 0;
 		params:each(action: local Function(Parameter is p){

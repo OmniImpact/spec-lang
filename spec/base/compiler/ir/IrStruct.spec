@@ -36,7 +36,7 @@ Class is IrStruct{
 	replace Function is init(){
 	}
 
-	Function is init(String is name){
+	replace Function is init(String is name){
 		:name: name;
 	}
 

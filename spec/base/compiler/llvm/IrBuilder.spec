@@ -94,6 +94,7 @@ Class is IrBuilder{
 	Array of String is globalVtableNames: [];
 	Map of String to Int is globalVtableMap: Map:init();
 	Map of String to String is fieldSpecTypes: Map:init();
+	Map of String to Boolean is variadicFieldInitFns: Map:init();
 	Map of String to Boolean is canUnwindCallees: Map:init();
 	Map of String to Boolean is canUnwindMethodNames: Map:init();
 	String is pathObjPtr: '';
@@ -303,7 +304,7 @@ Class is IrBuilder{
 		if({ :bindings:isSysinternal(cls: cls) }, {
 			return !:hasMethodBodies(cls: cls);
 		});
-		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
+		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
 		return false;
 	}
 
@@ -580,6 +581,9 @@ Class is IrBuilder{
 						});
 						:methodParamPtrMask:set(key: mSym, value: mask);
 						:methodParams:set(key: mSym, value: mm:params);
+						if({ mm:params:length() == 1 && mm:params:get(index: 0):isVariadic && mm:params:get(index: 0):paramType:name == 'Map' && :stmtsCallMethod(stmts: mm:body, methodName: 'setField') }, {
+							:variadicFieldInitFns:set(key: mSym, value: true);
+						});
 						local IrType is mRetTy: :methodReturnType(mt: mm:memberType);
 						:methodRetTypes:set(key: mSym, value: mRetTy);
 						if({ mRetTy == IrType:Ptr }, {
@@ -1385,6 +1389,17 @@ Class is IrBuilder{
 				});
 			});
 			bi++;
+		});
+		if({ found == '' && cls:baseClasses:length() == 0 && cls:name != 'Class' && cls:name != 'Any' && :clsMap:has(key: 'Class') }, {
+			local ClassInfo is rootCls: :clsMap:get(key: 'Class', default: ClassInfo:init(name: '', baseClass: '', members: []));
+			local Int is rmi: 0;
+			while({ found == '' && rmi < rootCls:members:length() }, {
+				local Member is rm: rootCls:members:get(index: rmi);
+				if({ rm:kind == MemberKind:METHOD && rm:name == methodName && !rm:hasModifier(kw: Keyword:HELD) }, {
+					found: :cStructName(qname: rootCls:qualifiedName()) . '_' . methodName . suffix;
+				});
+				rmi++;
+			});
 		});
 		return found;
 	}
@@ -4791,6 +4806,11 @@ Class is IrBuilder{
 						});
 					});
 				});
+				if({ :variadicFieldInitFns:has(key: ctorKey) }, {
+					:emitUnwrappedFieldAssigns(obj: obj, structName: clsName, callArgs: call:args);
+					:emitClaimPool(val: obj);
+					return obj;
+				});
 				local Expression is prevCtorCallExpr: :currentCallExpr;
 				:currentCallExpr: expr;
 				:lowerCallArgs(fnKey: ctorKey, callArgs: call:args, argTypes: argTypes, argVals: argVals);
@@ -4985,6 +5005,83 @@ Class is IrBuilder{
 		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: provStruct . '_init', argTypes: [IrType:Ptr], args: [provObj]));
 		:emitClaimPool(val: provObj);
 		return provObj;
+	}
+
+	local Function of Boolean is stmtsCallMethod(Array of Statement is stmts, String is methodName){
+		local Int is si: 0;
+		while({ si < stmts:length() }, {
+			local Boolean is hit: match(on: stmts:get(index: si), when: [
+				Statement:Expr: local Function of Boolean(Expression is e){ return :exprCallsMethod(expr: e, methodName: methodName); },
+				Statement:VarDecl: local Function of Boolean(Array of String is _m, Type is _t, String is _n, Expression is initE, Boolean is hasI){
+					return if({ hasI }, { :exprCallsMethod(expr: initE, methodName: methodName) }, { false });
+				},
+				Statement:Assign: local Function of Boolean(Expression is _t, Expression is v){ return :exprCallsMethod(expr: v, methodName: methodName); },
+				Statement:Return: local Function of Boolean(Expression is e, Boolean is hasE){
+					return if({ hasE }, { :exprCallsMethod(expr: e, methodName: methodName) }, { false });
+				},
+				else: { false }
+			]);
+			if({ hit }, { return true; });
+			si++;
+		});
+		return false;
+	}
+
+	local Function of Boolean is exprCallsMethod(Expression is expr, String is methodName){
+		return match(on: expr, when: [
+			Expression:Call: local Function of Boolean(CallData is cd){
+				if({ cd:name == methodName }, { return true; });
+				if({ :exprCallsMethod(expr: cd:target, methodName: methodName) }, { return true; });
+				local Int is ai: 0;
+				while({ ai < cd:args:length() }, {
+					if({ :exprCallsMethod(expr: cd:args:get(index: ai):value, methodName: methodName) }, { return true; });
+					ai++;
+				});
+				return false;
+			},
+			Expression:AnonFn: local Function of Boolean(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
+				return :stmtsCallMethod(stmts: bd, methodName: methodName);
+			},
+			else: { false }
+		]);
+	}
+
+	local Function is emitUnwrappedFieldAssigns(String is obj, String is structName, Array of NamedArg is callArgs){
+		if({ callArgs:length() == 0 }, { return; });
+		local IrStruct is st: :mod:findStruct(name: structName);
+		if({ st:name == '' }, { return; });
+		local Int is ai: 0;
+		while({ ai < callArgs:length() }, {
+			local NamedArg is na: callArgs:get(index: ai);
+			if({ na:name != '' }, {
+				local Int is fidx: st:fieldIndex(name: na:name);
+				if({ fidx >= 2 }, {
+					local String is fSpec: :fieldSpecTypes:get(key: structName . ':' . na:name, default: '');
+					local String is argSpec: na:value:resolvedType;
+					local String is fBase: :baseTypeName(t: fSpec);
+					local String is aBase: :baseTypeName(t: argSpec);
+					if({ fSpec == argSpec || (fBase != '' && fBase == aBase) }, {
+						local IrType is fty: st:fieldTypes:get(index: fidx);
+						local IrType is aty: :irTypeFor(specType: argSpec);
+						if({ aty == IrType:Void }, { aty: fty; });
+						local String is val: :lowerExpr(expr: na:value);
+						if({ aty != fty }, {
+							val: :castIfNeeded(val: val, fromTy: aty, toTy: fty);
+						});
+						local String is fPtr: :nextTmp();
+						:emit(inst: IrInst:FieldPtr(dst: fPtr, objPtr: obj, structName: structName, fieldIndex: fidx));
+						if({ st:fieldIsArc:get(index: fidx) }, {
+							:emit(inst: IrInst:Retain(val: val));
+							local String is oldVal: :nextTmp();
+							:emit(inst: IrInst:Load(dst: oldVal, slot: fPtr, ty: IrType:Ptr));
+							:emit(inst: IrInst:Release(val: oldVal));
+						});
+						:emit(inst: IrInst:Store(slot: fPtr, val: val, ty: fty));
+					});
+				});
+			});
+			ai++;
+		});
 	}
 
 	local Function is lowerCallArgs(String is fnKey, Array of NamedArg is callArgs, Array of IrType is argTypes, Array of String is argVals){

@@ -254,6 +254,7 @@ Class is GenericSpecializer{
 	Function of Parameter is transformParam(Parameter is p, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
 		local Type is newPT: :transformType(t: p:paramType, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 		local Parameter is np: Parameter:init(name: p:name, paramType: newPT);
+		np:isVariadic: p:isVariadic;
 		if({ p:hasDefault }, {
 			np:setDefault(expr: :transformExpr(expr: p:defaultExpr, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
 		});

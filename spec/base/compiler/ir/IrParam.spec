@@ -14,7 +14,7 @@ Class is IrParam{
 	replace Function is init(){
 	}
 
-	Function is init(String is name, IrType is ty){
+	replace Function is init(String is name, IrType is ty){
 		:name: name;
 		:ty: ty;
 	}

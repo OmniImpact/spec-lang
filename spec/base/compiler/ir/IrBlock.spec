@@ -17,7 +17,7 @@ Class is IrBlock{
 	replace Function is init(){
 	}
 
-	Function is init(String is label){
+	replace Function is init(String is label){
 		:label: label;
 	}
 

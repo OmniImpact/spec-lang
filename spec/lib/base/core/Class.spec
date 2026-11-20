@@ -15,17 +15,34 @@ Class of Stringable is Class{
 
 	replace Array of Array of String is using: [
 		['base', 'core', SpecError],
+		['base', 'struct', Map],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
+
+	## Default initializer: assigns every named argument whose name and type
+	## match an instance field on this object; unmatched entries are ignored.
+	## Subclasses override with `replace Function is init(){}` to block it.
+	replace Function is init(Map of String to Any is *args){
+		args:keys():each(action: local Function(String is name){
+			local Any is val: args:get(key: name);
+			if({ Introspection:hasField(obj: :, name: name) }, {
+				local String is expected: Introspection:fieldType(obj: :, name: name);
+				local String is actual: val:typeName();
+				if({ actual == expected || actual == '' }, {
+					Introspection:setField(obj: :, name: name, value: val);
+				});
+			});
+		});
+	}
 	## Default rendering: the declaring type name and the object's
 	## identity hash (`TypeName@hash`). Implements the [Stringable]
 	## contract; classes override with `replace` to customize.
 	##
 	## @return: Textual representation.
 	replace Function of String is toString(){
-		return typeName(:) . '@' . (Introspection:objectHash(obj: :) as String);
+		return Introspection:typeIdentity(obj: :) . '@' . (Introspection:objectHash(obj: :) as String);
 	}
 
 	## Root fallback error handler: returns `false` so unhandled errors keep

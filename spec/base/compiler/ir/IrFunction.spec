@@ -23,7 +23,7 @@ Class is IrFunction{
 	replace Function is init(){
 	}
 
-	Function is init(String is name, IrType is retType){
+	replace Function is init(String is name, IrType is retType){
 		:name: name;
 		:retType: retType;
 	}
