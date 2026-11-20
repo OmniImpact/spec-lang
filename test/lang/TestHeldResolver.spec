@@ -44,7 +44,7 @@ Class is HeldEntry{
 
 	local String is name;
 
-	Function is init(String is n){
+	replace Function is init(String is n){
 		:name: n;
 	}
 

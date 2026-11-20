@@ -24,7 +24,7 @@ Class is ByteRangePanicTest{
 Class is HeldEntry2{
 	local String is name;
 
-	Function is init(String is n){
+	replace Function is init(String is n){
 		:name: n;
 	}
 }

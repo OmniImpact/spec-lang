@@ -3,7 +3,7 @@
 #! case: testEntryBadInit
 #! expect: requires an init
 Class is EntryBadInit{
-	Function is init(String is name){
+	replace Function is init(String is name){
 	}
 }
 
