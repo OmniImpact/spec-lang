@@ -211,3 +211,33 @@ gone.
 - `try`/`guard` (task 2.6) if alpha ships with explicit `when`.
 - Weak references / cycle-breaking for ARC (out of scope here; noted because
   unwind tests will keep exercising ARC behavior).
+
+## Test-failure repairs carried on this branch (pre-existing main drift)
+
+Fixed while the error workstream was in flight (all failed identically under
+the pre-branch seed binary; none were error-plan work):
+
+- TestStack — checker required-field validation covered private
+  (`local`/`contained`) fields that no caller can ever supply (dedcbcd).
+- TestHeldResolver + testEntryBadInit + testByteHeldResolverPanic — tests
+  adopting the Stage 3–5 init-override contract (`replace` on subclass
+  inits); the latter's compile failure had masked the intended panic
+  (6f957f2).
+- TestAnyRoot.testDefaultToString — pins the documented `TypeName@hash`
+  toString contract (282ddf0).
+- TestSpeclint.testTemplateStringNotice — two real bugs: silent kwarg-drop
+  (`contains(substring:)` → `needle:`; 17 sites incl. vacuous TestTheoEditor
+  assertions and live SyntaxHighlighter checks) and Binary expressions
+  carrying line=0 from foldBinary (282ddf0, 4b0ff2a).
+- TestLlvmIrAndOpt (2) — cast-to-String unified to type identity (Any vs
+  concrete paths disagreed); stale 7-field classMeta expectation → 9
+  (d16fe30).
+- TestPackageResolution — loader bare-name dedup dropped (namespace-
+  qualified identity is the contract) + failed resolution candidates now
+  unload (c42054f).
+- TestAsCast — assertions updated (f2545fb); the suite's FLAKY SEGV remains
+  OPEN: ASan makes it deterministic — SEGV in Slab_allocSlot <-
+  Arc_allocObj <- Intern_internCstr <- spec_string_intern <-
+  testEnumRender; minimal enum-concat repro is clean under ASan, so the
+  corruption is injected by earlier tests in the suite (cross-test
+  allocator state). Needs a dedicated bisect session before alpha.
