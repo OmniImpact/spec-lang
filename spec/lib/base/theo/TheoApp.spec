@@ -118,20 +118,28 @@ Class is TheoApp{
 
 			local KeyEvent is ev: reader:pollKey(timeoutMs: 16);
 			if({ !ev:isNone() }, {
-				local Boolean is handled: activeFrame:handleKey(event: ev);
-				if({ !handled }, {
-					if({ ev:isTab() }, {
-						cycleFocus(frame: activeFrame, reverse: false);
-						handled: true;
+				if({ ev:isMouse() }, {
+					local Boolean is mHandled: activeFrame:handleMouse(event: reader:lastMouse);
+					if({ mHandled }, {
+						syncFocus(frame: screen:current());
+						:dirty: true;
 					});
-					if({ ev:isBackTab() }, {
-						cycleFocus(frame: activeFrame, reverse: true);
-						handled: true;
+				}, {
+					local Boolean is handled: activeFrame:handleKey(event: ev);
+					if({ !handled }, {
+						if({ ev:isTab() }, {
+							cycleFocus(frame: activeFrame, reverse: false);
+							handled: true;
+						});
+						if({ ev:isBackTab() }, {
+							cycleFocus(frame: activeFrame, reverse: true);
+							handled: true;
+						});
 					});
-				});
-				if({ handled }, {
-					syncFocus(frame: screen:current());
-					:dirty: true;
+					if({ handled }, {
+						syncFocus(frame: screen:current());
+						:dirty: true;
+					});
 				});
 			});
 		});

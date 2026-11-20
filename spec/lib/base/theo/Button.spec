@@ -5,7 +5,7 @@ Class of Widget is Button{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', [Widget, FocusTarget, KeyEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
@@ -16,6 +16,9 @@ Class of Widget is Button{
 	TheoColor is bg: TheoColor:none();
 	TheoColor is focusFg: TheoColor:none();
 	TheoColor is focusBg: TheoColor:none();
+	TheoColor is hoverFg: TheoColor:none();
+	TheoColor is hoverBg: TheoColor:none();
+	Boolean is hovered: false;
 	Function is onClick: {};
 
 	replace Function is init(
@@ -26,7 +29,9 @@ Class of Widget is Button{
 		TheoColor is fg: TheoColor:none(),
 		TheoColor is bg: TheoColor:none(),
 		TheoColor is focusFg: TheoColor:none(),
-		TheoColor is focusBg: TheoColor:none()
+		TheoColor is focusBg: TheoColor:none(),
+		TheoColor is hoverFg: TheoColor:none(),
+		TheoColor is hoverBg: TheoColor:none()
 	){
 		:label: label;
 		:shortcutKey: shortcutKey:toLower();
@@ -36,6 +41,9 @@ Class of Widget is Button{
 		:bg: bg;
 		:focusFg: focusFg;
 		:focusBg: focusBg;
+		:hoverFg: hoverFg;
+		:hoverBg: hoverBg;
+		:hovered: false;
 	}
 
 	replace Function of Int is measureWidth(Int is maxW){
@@ -53,8 +61,10 @@ Class of Widget is Button{
 		local TheoColor is effBg: if({ bg:isSet() }, { bg }, { activeTheme:buttonBg });
 		local TheoColor is effFocusFg: if({ focusFg:isSet() }, { focusFg }, { activeTheme:buttonFocusFg });
 		local TheoColor is effFocusBg: if({ focusBg:isSet() }, { focusBg }, { activeTheme:buttonFocusBg });
-		local TheoColor is useFg: if({ foc }, { effFocusFg }, { effFg });
-		local TheoColor is useBg: if({ foc }, { effFocusBg }, { effBg });
+		local TheoColor is effHoverFg: if({ hoverFg:isSet() }, { hoverFg }, { activeTheme:buttonHoverFg });
+		local TheoColor is effHoverBg: if({ hoverBg:isSet() }, { hoverBg }, { activeTheme:buttonHoverBg });
+		local TheoColor is useFg: if({ foc }, { effFocusFg }, { if({ hovered }, { effHoverFg }, { effFg }) });
+		local TheoColor is useBg: if({ foc }, { effFocusBg }, { if({ hovered }, { effHoverBg }, { effBg }) });
 		local Boolean is underlinedShortcut: false;
 		local Int is n: label:length();
 		local Int is i: 0;
@@ -65,9 +75,26 @@ Class of Widget is Button{
 				under: true;
 				underlinedShortcut: true;
 			});
-			buf:setCell(x: boxX + i, y: boxY, ch: ch, fg: useFg, bg: useBg, bold: foc, underline: under);
+			buf:setCell(x: boxX + i, y: boxY, ch: ch, fg: useFg, bg: useBg, bold: foc || hovered, underline: under);
 			i: i + 1;
 		});
+	}
+
+	replace Function of Boolean is handleMouse(MouseEvent is event){
+		local Boolean is inside: containsPoint(x: event:x, y: event:y);
+		if({ event:isMove() }, {
+			if({ hovered != inside }, {
+				:hovered: inside;
+				return true;
+			});
+			return false;
+		});
+		if({ event:isLeftPress() && inside }, {
+			focusTarget:requestFocus();
+			onClick();
+			return true;
+		});
+		return false;
 	}
 
 	replace Function of Boolean is handleKey(KeyEvent is event){

@@ -5,7 +5,7 @@ Class is Widget{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', [TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, FocusTarget]],
+		['base', 'theo', [TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -39,6 +39,30 @@ Class is Widget{
 		return 1;
 	}
 
+	Function of Int is scrollOffsetY(){
+		return 0;
+	}
+
+	Function of Int is scrollContentH(){
+		return 0;
+	}
+
+	Function of Int is scrollViewportH(){
+		return boxH;
+	}
+
+	Function of Int is scrollOffsetX(){
+		return 0;
+	}
+
+	Function of Int is scrollContentW(){
+		return 0;
+	}
+
+	Function of Int is scrollViewportW(){
+		return boxW;
+	}
+
 	Function of Float is flexWeight(){
 		return 0.0;
 	}
@@ -52,6 +76,14 @@ Class is Widget{
 
 	Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		return;
+	}
+
+	Function of Boolean is containsPoint(Int is x, Int is y){
+		return x >= boxX && x < boxX + boxW && y >= boxY && y < boxY + boxH;
+	}
+
+	Function of Boolean is handleMouse(MouseEvent is event){
+		return false;
 	}
 
 	Function of Boolean is handleKey(KeyEvent is event){

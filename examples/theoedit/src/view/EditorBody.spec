@@ -5,7 +5,7 @@ Class of Frame is EditorBody{
 	namespace: ['theoedit', 'view'];
 
 	merge Array of Array of String is using: [
-		['base', 'theo', [Frame, Widget, FocusTarget, Panel, TextArea]],
+		['base', 'theo', [Frame, Widget, FocusTarget, Panel, CodeTextArea]],
 		['theoedit', 'vm', EditorViewModel]
 	];
 
@@ -17,8 +17,9 @@ Class of Frame is EditorBody{
 			border: true,
 			padding: 0,
 			scrollable: true,
-			child: TextArea(
+			child: CodeTextArea:fromEmitters(
 				value: vm:content,
+				filePath: vm:currentPath,
 				focusTarget: focusTarget,
 				onChange: local Function(String is nextText){
 					vm:onTextChanged(nextText: nextText);

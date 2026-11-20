@@ -5,7 +5,7 @@ Class of Widget is TextInput{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', [Widget, FocusTarget, KeyEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -69,6 +69,19 @@ Class of Widget is TextInput{
 			if({ cx >= boxW }, { cx: boxW - 1; });
 			renderer:setCursor(visible: true, x: boxX + cx, y: boxY);
 		});
+	}
+
+	replace Function of Boolean is handleMouse(MouseEvent is event){
+		if({ event:isLeftPress() && containsPoint(x: event:x, y: event:y) }, {
+			focusTarget:requestFocus();
+			local Int is targetCol: event:x - boxX;
+			if({ targetCol < 0 }, { targetCol: 0; });
+			if({ targetCol > text:length() }, { targetCol: text:length(); });
+			:cursor: targetCol;
+			invalidate();
+			return true;
+		});
+		return false;
 	}
 
 	replace Function of Boolean is handleKey(KeyEvent is event){

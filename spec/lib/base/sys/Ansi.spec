@@ -214,4 +214,29 @@ Class is Ansi{
 	Function of String is showCursor(){
 		return "\e[?25h";
 	}
+
+	## Returns the DECSCUSR sequence setting the terminal cursor shape.
+	## (0 = default, 1 = blinking block, 2 = steady block, 3 = blinking underline,
+	## 4 = steady underline, 5 = blinking bar, 6 = steady bar).
+	##
+	## @param style: DECSCUSR cursor style code (0..6).
+	## @return: ANSI DECSCUSR sequence.
+	Function of String is cursorStyle(Int is style){
+		return "\e[" . style . ' q';
+	}
+
+	## Returns the OSC 12 sequence setting the terminal cursor color.
+	##
+	## @param color: Color specification (e.g. `#ffffff` or `white`).
+	## @return: OSC 12 cursor-color sequence.
+	Function of String is cursorColor(String is color){
+		return "\e]12;" . color . "\e\\";
+	}
+
+	## Returns the OSC 112 sequence resetting the terminal cursor color to default.
+	##
+	## @return: OSC 112 reset-cursor-color sequence.
+	Function of String is resetCursorColor(){
+		return "\e]112\e\\";
+	}
 }

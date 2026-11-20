@@ -5,7 +5,7 @@ Class of Widget is TextArea{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', [Widget, FocusTarget, KeyEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'signal', [TextEmitter, TextCollector]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
@@ -13,7 +13,9 @@ Class of Widget is TextArea{
 	Array of String is lines: [''];
 	Int is cursorRow: 0;
 	Int is cursorCol: 0;
+	Int is scrollX: 0;
 	Int is scrollY: 0;
+	Boolean is followCursor: true;
 	FocusTarget is focusTarget: FocusTarget();
 	Function is onChange: local Function(String is _s){};
 	Array of TextEmitter is boundEmitters: [];
@@ -28,9 +30,10 @@ Class of Widget is TextArea{
 		setText(text: value);
 	}
 
-	replace Function is init(TextEmitter is value, FocusTarget is focusTarget: FocusTarget(), Function is onChange: local Function(String is _s){}){
-		:focusTarget: focusTarget;
-		:onChange: onChange;
+	Function is bindValue(TextEmitter is value){
+		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
+			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
+		});
 		:boundEmitters: [value];
 		setText(text: value:current());
 		local TextCollector is col: value:collect(onEmit: local Function(String is next){
@@ -54,6 +57,23 @@ Class of Widget is TextArea{
 		if({ cursorRow >= :lines:length() }, { :cursorRow: :lines:length() - 1; });
 		local Int is rowLen: :lines:get(index: cursorRow):length();
 		if({ cursorCol > rowLen }, { :cursorCol: rowLen; });
+		onLinesChanged();
+	}
+
+	Function is onLinesChanged(){
+		return;
+	}
+
+	Function is paintLine(TheoBuffer is buf, Int is y, Int is lineIndex, String is rawLine, Int is scrollX){
+		local String is ln: rawLine:replaceAll(target: "\t", replacement: '    ');
+		if({ scrollX > 0 }, {
+			if({ scrollX < ln:length() }, {
+				ln: ln:substring(start: scrollX, end: ln:length());
+			}, {
+				ln: '';
+			});
+		});
+		buf:drawText(x: boxX, y: y, text: ln);
 	}
 
 	Function of String is getText(){
@@ -61,6 +81,7 @@ Class of Widget is TextArea{
 	}
 
 	local Function is notifyChanged(){
+		onLinesChanged();
 		:suppressSync: true;
 		onChange(getText());
 		:suppressSync: false;
@@ -79,37 +100,141 @@ Class of Widget is TextArea{
 		return maxH;
 	}
 
+	local Function of Int is visualCol(String is ln, Int is col){
+		local Int is vis: 0;
+		local Int is i: 0;
+		while({ i < col && i < ln:length() }, {
+			if({ ln:charAt(index: i, default: '') == "\t" }, {
+				vis: vis + 4;
+			}, {
+				vis: vis + 1;
+			});
+			i: i + 1;
+		});
+		return vis;
+	}
+
+	replace Function of Int is scrollOffsetY(){
+		return scrollY;
+	}
+
+	replace Function of Int is scrollContentH(){
+		return lines:length();
+	}
+
+	replace Function of Int is scrollViewportH(){
+		return boxH;
+	}
+
+	replace Function of Int is scrollOffsetX(){
+		return scrollX;
+	}
+
+	replace Function of Int is scrollContentW(){
+		local Int is maxW: 0;
+		local Int is i: 0;
+		while({ i < lines:length() }, {
+			local String is ln: lines:get(index: i);
+			local Int is w: visualCol(ln: ln, col: ln:length());
+			if({ w > maxW }, { maxW: w; });
+			i: i + 1;
+		});
+		return maxW;
+	}
+
+	replace Function of Int is scrollViewportW(){
+		return boxW;
+	}
+
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });
-		if({ cursorRow < scrollY }, { :scrollY: cursorRow; });
-		if({ cursorRow >= scrollY + boxH }, { :scrollY: cursorRow - boxH + 1; });
+		if({ followCursor }, {
+			if({ cursorRow < scrollY }, { :scrollY: cursorRow; });
+			if({ cursorRow >= scrollY + boxH }, { :scrollY: cursorRow - boxH + 1; });
+		});
 		if({ scrollY < 0 }, { :scrollY: 0; });
+
+		local Int is visCol: 0;
+		if({ focusTarget:focused }, {
+			local String is curLine: lines:get(index: cursorRow);
+			visCol: visualCol(ln: curLine, col: cursorCol);
+			if({ followCursor }, {
+				if({ visCol < scrollX }, { :scrollX: visCol; });
+				if({ visCol >= scrollX + boxW }, { :scrollX: visCol - boxW + 1; });
+			});
+			if({ scrollX < 0 }, { :scrollX: 0; });
+		});
 
 		local Int is r: 0;
 		while({ r < boxH && scrollY + r < lines:length() }, {
-			local String is ln: lines:get(index: scrollY + r):replaceAll(target: "\t", replacement: '    ');
-			buf:drawText(x: boxX, y: boxY + r, text: ln);
+			paintLine(buf: buf, y: boxY + r, lineIndex: scrollY + r, rawLine: lines:get(index: scrollY + r), scrollX: scrollX);
 			r: r + 1;
 		});
 		if({ focusTarget:focused }, {
-			local String is curLine: lines:get(index: cursorRow);
-			local Int is visCol: 0;
-			local Int is ci: 0;
-			while({ ci < cursorCol && ci < curLine:length() }, {
-				if({ curLine:charAt(index: ci, default: '') == "\t" }, {
-					visCol: visCol + 4;
-				}, {
-					visCol: visCol + 1;
-				});
-				ci: ci + 1;
+			local Int is drawRow: cursorRow - scrollY;
+			local Int is drawCol: visCol - scrollX;
+			if({ drawRow >= 0 && drawRow < boxH && drawCol >= 0 && drawCol < boxW }, {
+				renderer:setCursor(visible: true, x: boxX + drawCol, y: boxY + drawRow, style: 5, color: '#ffffff');
 			});
-			if({ visCol >= boxW }, { visCol: boxW - 1; });
-			renderer:setCursor(visible: true, x: boxX + visCol, y: boxY + (cursorRow - scrollY));
 		});
+	}
+
+	replace Function of Boolean is handleMouse(MouseEvent is event){
+		if({ !containsPoint(x: event:x, y: event:y) }, { return false; });
+		if({ event:isWheelUp() }, {
+			if({ scrollY > 0 }, {
+				:scrollY: scrollY - 3;
+				if({ scrollY < 0 }, { :scrollY: 0; });
+				:followCursor: false;
+				invalidate();
+				return true;
+			});
+			return false;
+		});
+		if({ event:isWheelDown() }, {
+			local Int is maxScroll: lines:length() - boxH;
+			if({ maxScroll < 0 }, { maxScroll: 0; });
+			if({ scrollY < maxScroll }, {
+				:scrollY: scrollY + 3;
+				if({ scrollY > maxScroll }, { :scrollY: maxScroll; });
+				:followCursor: false;
+				invalidate();
+				return true;
+			});
+			return false;
+		});
+		if({ event:isLeftPress() }, {
+			focusTarget:requestFocus();
+			local Int is targetRow: scrollY + (event:y - boxY);
+			if({ targetRow < 0 }, { targetRow: 0; });
+			if({ targetRow >= lines:length() }, { targetRow: lines:length() - 1; });
+			local Int is targetVis: scrollX + (event:x - boxX);
+			if({ targetVis < 0 }, { targetVis: 0; });
+			local String is ln: lines:get(index: targetRow);
+			local Int is col: 0;
+			local Int is vis: 0;
+			local Boolean is done: false;
+			while({ !done && col < ln:length() && vis < targetVis }, {
+				local Int is step: if({ ln:charAt(index: col, default: '') == "\t" }, { 4 }, { 1 });
+				if({ vis + step > targetVis }, {
+					done: true;
+				}, {
+					vis: vis + step;
+					col: col + 1;
+				});
+			});
+			:cursorRow: targetRow;
+			:cursorCol: col;
+			:followCursor: true;
+			invalidate();
+			return true;
+		});
+		return false;
 	}
 
 	replace Function of Boolean is handleKey(KeyEvent is event){
 		if({ !focusTarget:focused }, { return false; });
+		:followCursor: true;
 		if({ event:isUp() }, {
 			if({ cursorRow > 0 }, { :cursorRow: cursorRow - 1; clampCursor(); invalidate(); });
 			return true;

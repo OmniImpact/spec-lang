@@ -5,7 +5,7 @@ Class is TheoTheme{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', TheoColor]
+		['base', 'theo', [TheoColor, SyntaxTheme]]
 	];
 
 	TheoColor is foreground: TheoColor:ansi(code: 252);
@@ -19,6 +19,11 @@ Class is TheoTheme{
 	TheoColor is buttonBg: TheoColor:ansi(code: 237);
 	TheoColor is buttonFocusFg: TheoColor:ansi(code: 16);
 	TheoColor is buttonFocusBg: TheoColor:ansi(code: 255);
+	TheoColor is buttonHoverFg: TheoColor:ansi(code: 255);
+	TheoColor is buttonHoverBg: TheoColor:ansi(code: 242);
+	TheoColor is scrollTrackColor: TheoColor:ansi(code: 240);
+	TheoColor is scrollThumbColor: TheoColor:ansi(code: 250);
+	SyntaxTheme is syntaxTheme: SyntaxTheme();
 
 	replace Function is init(
 		TheoColor is foreground: TheoColor:ansi(code: 252),
@@ -31,7 +36,12 @@ Class is TheoTheme{
 		TheoColor is buttonFg: TheoColor:ansi(code: 252),
 		TheoColor is buttonBg: TheoColor:ansi(code: 237),
 		TheoColor is buttonFocusFg: TheoColor:ansi(code: 16),
-		TheoColor is buttonFocusBg: TheoColor:ansi(code: 255)
+		TheoColor is buttonFocusBg: TheoColor:ansi(code: 255),
+		TheoColor is buttonHoverFg: TheoColor:ansi(code: 255),
+		TheoColor is buttonHoverBg: TheoColor:ansi(code: 242),
+		TheoColor is scrollTrackColor: TheoColor:ansi(code: 240),
+		TheoColor is scrollThumbColor: TheoColor:ansi(code: 250),
+		SyntaxTheme is syntaxTheme: SyntaxTheme()
 	){
 		:foreground: foreground;
 		:background: background;
@@ -44,5 +54,10 @@ Class is TheoTheme{
 		:buttonBg: buttonBg;
 		:buttonFocusFg: buttonFocusFg;
 		:buttonFocusBg: buttonFocusBg;
+		:buttonHoverFg: buttonHoverFg;
+		:buttonHoverBg: buttonHoverBg;
+		:scrollTrackColor: scrollTrackColor;
+		:scrollThumbColor: scrollThumbColor;
+		:syntaxTheme: syntaxTheme;
 	}
 }

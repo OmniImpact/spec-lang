@@ -17,22 +17,26 @@ Class is TheoRenderer{
 	Boolean is cursorVisible: false;
 	Int is cursorX: 0;
 	Int is cursorY: 0;
+	Int is cursorStyle: 0;
+	String is cursorColor: '';
 
 	replace Function is init(){
 	}
 
 	Function is enterAltScreenMode(){
-		Output:consOut(text: enterAltScreen() . clearScreen() . hideCursor() . esc() . '[>1u');
+		Output:consOut(text: enterAltScreen() . clearScreen() . hideCursor() . esc() . '[>1u' . esc() . '[?1003h' . esc() . '[?1006h');
 	}
 
 	Function is exitAltScreenMode(){
-		Output:consOut(text: esc() . '[<u' . showCursor() . exitAltScreen());
+		Output:consOut(text: esc() . '[?1006l' . esc() . '[?1003l' . esc() . '[<u' . Ansi:cursorStyle(style: 0) . resetCursorColor() . showCursor() . exitAltScreen());
 	}
 
-	Function is setCursor(Boolean is visible, Int is x: 0, Int is y: 0){
+	Function is setCursor(Boolean is visible, Int is x: 0, Int is y: 0, Int is style: 0, String is color: ''){
 		:cursorVisible: visible;
 		:cursorX: x;
 		:cursorY: y;
+		:cursorStyle: style;
+		:cursorColor: color;
 	}
 
 	## Renders the full [buffer] inside a synchronized update frame.
@@ -69,6 +73,12 @@ Class is TheoRenderer{
 			y: y + 1;
 		});
 		if({ cursorVisible }, {
+			frame: frame . Ansi:cursorStyle(style: cursorStyle);
+			if({ cursorColor != '' }, {
+				frame: frame . Ansi:cursorColor(color: cursorColor);
+			}, {
+				frame: frame . resetCursorColor();
+			});
 			frame: frame . moveTo(row: cursorY + 1, col: cursorX + 1) . showCursor();
 		});
 		frame: frame . endSyncUpdate();

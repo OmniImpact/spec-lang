@@ -32,4 +32,5 @@ Class is KeyEvent{
 	Function of Boolean is isEnd(){ return kind == 'end'; }
 	Function of Boolean is isPageUp(){ return kind == 'pageUp'; }
 	Function of Boolean is isPageDown(){ return kind == 'pageDown'; }
+	Function of Boolean is isMouse(){ return kind == 'mouse'; }
 }

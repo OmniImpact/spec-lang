@@ -5,7 +5,7 @@ Class of Widget is Row{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', [Widget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, FocusTarget]],
+		['base', 'theo', [Widget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'math', as Math()]
 	];
@@ -110,6 +110,20 @@ Class of Widget is Row{
 			});
 		});
 		return false;
+	}
+
+	replace Function of Boolean is handleMouse(MouseEvent is event){
+		local Boolean is isMove: event:isMove();
+		local Boolean is anyChanged: false;
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			if({ children:get(index: i):handleMouse(event: event) }, {
+				if({ !isMove }, { return true; });
+				anyChanged: true;
+			});
+			i: i + 1;
+		});
+		return anyChanged;
 	}
 
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){

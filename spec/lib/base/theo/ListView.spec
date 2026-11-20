@@ -5,7 +5,7 @@ Class of Widget is ListView{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', [Widget, FocusTarget, KeyEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
@@ -65,6 +65,18 @@ Class of Widget is ListView{
 		return maxH;
 	}
 
+	replace Function of Int is scrollOffsetY(){
+		return scrollY;
+	}
+
+	replace Function of Int is scrollContentH(){
+		return items:length();
+	}
+
+	replace Function of Int is scrollViewportH(){
+		return boxH;
+	}
+
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });
 		if({ selectedIdx < scrollY }, { :scrollY: selectedIdx; });
@@ -90,6 +102,44 @@ Class of Widget is ListView{
 			});
 			r: r + 1;
 		});
+	}
+
+	replace Function of Boolean is handleMouse(MouseEvent is event){
+		if({ !containsPoint(x: event:x, y: event:y) }, { return false; });
+		if({ items:length() == 0 }, { return false; });
+		if({ event:isWheelUp() }, {
+			if({ scrollY > 0 }, {
+				:scrollY: scrollY - 1;
+				invalidate();
+				return true;
+			});
+			return false;
+		});
+		if({ event:isWheelDown() }, {
+			local Int is maxScroll: items:length() - boxH;
+			if({ maxScroll < 0 }, { maxScroll: 0; });
+			if({ scrollY < maxScroll }, {
+				:scrollY: scrollY + 1;
+				invalidate();
+				return true;
+			});
+			return false;
+		});
+		if({ event:isLeftPress() }, {
+			focusTarget:requestFocus();
+			local Int is idx: scrollY + (event:y - boxY);
+			if({ idx >= 0 && idx < items:length() }, {
+				if({ idx == selectedIdx }, {
+					onActivate(selectedItem());
+				}, {
+					:selectedIdx: idx;
+					onSelectChange(selectedItem());
+				});
+				invalidate();
+			});
+			return true;
+		});
+		return false;
 	}
 
 	replace Function of Boolean is handleKey(KeyEvent is event){

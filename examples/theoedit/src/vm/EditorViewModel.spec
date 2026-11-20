@@ -15,6 +15,7 @@ Class is EditorViewModel{
 	Boolean is quitAfterSave: false;
 
 	TextEmitter is title: TextEmitter(initial: '[untitled]');
+	TextEmitter is currentPath: TextEmitter(initial: '');
 	TextEmitter is content: TextEmitter(initial: '');
 	TextEmitter is status: TextEmitter(initial: 'Ctrl+M: menu');
 	TextEmitter is messageText: TextEmitter(initial: '');
@@ -31,6 +32,7 @@ Class is EditorViewModel{
 		});
 		dirty: false;
 		local String is displayTitle: if({ filePath != '' }, { filePath }, { '[untitled]' });
+		currentPath:emit(value: filePath);
 		title:emit(value: displayTitle);
 		content:emit(value: initialText);
 	}
@@ -68,6 +70,7 @@ Class is EditorViewModel{
 				filePath: path;
 				dirty: false;
 				messageMode: 'none';
+				currentPath:emit(value: path);
 				title:emit(value: path);
 				status:emit(value: 'Saved');
 				ok: true;

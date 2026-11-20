@@ -5,14 +5,17 @@ Class is KeyReader{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', KeyEvent],
+		['base', 'theo', [KeyEvent, MouseEvent]],
 		['base', 'sys', as Input()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
+	MouseEvent is lastMouse: MouseEvent();
+
 	replace Function is init(){
+		:lastMouse: MouseEvent();
 	}
 
 	local Function of String is byteToStr(Int is b){
@@ -53,6 +56,57 @@ Class is KeyReader{
 				if({ b2 == 72 }, { return KeyEvent(kind: 'home'); });
 				if({ b2 == 70 }, { return KeyEvent(kind: 'end'); });
 				if({ b2 == 90 }, { return KeyEvent(kind: 'backtab'); });
+				if({ b2 == 60 }, {
+					# SGR mouse event: ESC [ < btn ; col ; row M/m
+					local Int is btn: 0;
+					local Int is col: 0;
+					local Int is row: 0;
+					local Int is field: 0;
+					local Int is cur: pollByte(timeoutMs: 15);
+					while({ cur >= 0 && ((cur >= 48 && cur <= 57) || cur == 59) }, {
+						if({ cur == 59 }, {
+							field: field + 1;
+						}, {
+							local Int is d: cur - 48;
+							if({ field == 0 }, { btn: (btn * 10) + d; });
+							if({ field == 1 }, { col: (col * 10) + d; });
+							if({ field == 2 }, { row: (row * 10) + d; });
+						});
+						cur: pollByte(timeoutMs: 15);
+					});
+					if({ cur == 77 || cur == 109 }, {
+						local Boolean is isShift: ((btn / 4) % 2) == 1;
+						local Boolean is isAlt: ((btn / 8) % 2) == 1;
+						local Boolean is isCtrl: ((btn / 16) % 2) == 1;
+						local Boolean is isMotion: ((btn / 32) % 2) == 1;
+						local Boolean is isWheel: ((btn / 64) % 2) == 1;
+						local Int is lowBtn: btn % 4;
+						local String is mKind: 'press';
+						if({ isWheel }, {
+							mKind: if({ lowBtn == 0 }, { 'wheelUp' }, { 'wheelDown' });
+						}, {
+							if({ isMotion }, {
+								mKind: 'move';
+							}, {
+								if({ cur == 109 }, { mKind: 'release'; });
+							});
+						});
+						local Int is mx: col - 1;
+						if({ mx < 0 }, { mx: 0; });
+						local Int is my: row - 1;
+						if({ my < 0 }, { my: 0; });
+						:lastMouse: MouseEvent(
+							kind: mKind,
+							x: mx,
+							y: my,
+							button: lowBtn,
+							ctrl: isCtrl,
+							alt: isAlt,
+							shift: isShift
+						);
+						return KeyEvent(kind: 'mouse');
+					});
+				});
 				if({ b2 >= 48 && b2 <= 57 }, {
 					# Parse CSI numeric params: `<code>~` or `<code>;<mod>u` (Kitty keyboard protocol)
 					local Int is p1: b2 - 48;

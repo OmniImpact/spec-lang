@@ -5,7 +5,7 @@ Class of Widget is Frame{
 	namespace: ['base', 'theo'];
 
 	replace Array of Array of String is using: [
-		['base', 'theo', [Widget, TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, FocusTarget]],
+		['base', 'theo', [Widget, TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -94,6 +94,11 @@ Class of Widget is Frame{
 		});
 		ensureBuilt();
 		return rootWidget:handleKey(event: event);
+	}
+
+	replace Function of Boolean is handleMouse(MouseEvent is event){
+		ensureBuilt();
+		return rootWidget:handleMouse(event: event);
 	}
 
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
