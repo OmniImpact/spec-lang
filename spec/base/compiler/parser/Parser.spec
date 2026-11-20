@@ -1143,7 +1143,12 @@ Class is Parser{
 			}, {
 				right: :parseLevel(level: next);
 			});
-			left: Expression:Binary(op: op, left: left, right: right);
+			# Real-syntax binaries carry the operator token's line —
+			# lint rules key source lines off it. The template-string
+			# desugar's synthetic concat chains stay line-0 (exempt).
+			local Expression is bin: Expression:Binary(op: op, left: left, right: right);
+			bin:setLine(line: opTok:getLine());
+			left: bin;
 		});
 		return left;
 	}
