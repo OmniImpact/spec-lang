@@ -100,7 +100,7 @@ Class of LintRule is TemplateStringRule{
 			if({ expr:line >= 1 && expr:line <= :maskedLines:length() }, {
 				mline: :maskedLines:get(index: expr:line - 1);
 			});
-			if({ mline:contains(substring: '.') && :chainHasStrLit(expr: expr) && :chainHasNonLit(expr: expr) }, {
+			if({ mline:contains(needle: '.') && :chainHasStrLit(expr: expr) && :chainHasNonLit(expr: expr) }, {
 				issues:add(item: LintIssue:init(
 					ruleId: :id(),
 					line: expr:line,

@@ -14,9 +14,12 @@ Class of SpecUnitTest is TestAnyRoot{
 	];
 
 	Function is testDefaultToString(){
+		# The Class root's default rendering is the documented
+		# `TypeName@hash` (the identity hash distinguishes instances);
+		# the bare-typeName form is the CAST-to-String conversion.
 		local RootProbe is probe: RootProbe:init(id: 5);
 		local String is label: 'probe: ' . probe;
-		Assert:areEqualString('probe: RootProbe', label);
+		Assert:isTrue(label:startsWith(prefix: 'probe: RootProbe@'));
 	}
 
 	Function is testTypeNameBuiltin(){

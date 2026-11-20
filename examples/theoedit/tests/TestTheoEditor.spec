@@ -90,13 +90,13 @@ Class of SpecUnitTest is TestTheoEditor{
 		frame:layout(x: 0, y: 0, w: 60, h: 14);
 		frame:paint(buf: buf, renderer: renderer);
 
-		Assert:isTrue(buf:rowText(y: 1):contains(substring: tmpPath));
-		Assert:isTrue(buf:rowText(y: 4):contains(substring: 'hello'));
-		Assert:isTrue(buf:rowText(y: 5):contains(substring: 'world'));
-		Assert:isTrue(buf:rowText(y: 12):contains(substring: ' Save '));
-		Assert:isTrue(buf:rowText(y: 12):contains(substring: ' Save As '));
-		Assert:isTrue(buf:rowText(y: 12):contains(substring: ' Open '));
-		Assert:isTrue(buf:rowText(y: 12):contains(substring: ' Quit '));
+		Assert:isTrue(buf:rowText(y: 1):contains(needle: tmpPath));
+		Assert:isTrue(buf:rowText(y: 4):contains(needle: 'hello'));
+		Assert:isTrue(buf:rowText(y: 5):contains(needle: 'world'));
+		Assert:isTrue(buf:rowText(y: 12):contains(needle: ' Save '));
+		Assert:isTrue(buf:rowText(y: 12):contains(needle: ' Save As '));
+		Assert:isTrue(buf:rowText(y: 12):contains(needle: ' Open '));
+		Assert:isTrue(buf:rowText(y: 12):contains(needle: ' Quit '));
 		Assert:areEqualInt(255, buf:cellAt(x: 0, y: 3):fg:c1);
 		Assert:areEqualInt(240, buf:cellAt(x: 0, y: 11):fg:c1);
 
@@ -151,7 +151,7 @@ Class of SpecUnitTest is TestTheoEditor{
 		local TheoRenderer is renderer: TheoRenderer();
 		frame:layout(x: 0, y: 0, w: 72, h: 16);
 		frame:paint(buf: buf, renderer: renderer);
-		Assert:isTrue(buf:rowText(y: 1):contains(substring: '[untitled]'));
+		Assert:isTrue(buf:rowText(y: 1):contains(needle: '[untitled]'));
 
 		# Edit buffer and press Ctrl+Q -> MessagePanel appears between editor and bottom bar
 		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'x')));
@@ -162,8 +162,8 @@ Class of SpecUnitTest is TestTheoEditor{
 		buf:clear();
 		frame:layout(x: 0, y: 0, w: 72, h: 16);
 		frame:paint(buf: buf, renderer: renderer);
-		Assert:isTrue(buf:rowText(y: 11):contains(substring: 'Unsaved changes'));
-		Assert:isTrue(buf:rowText(y: 11):contains(substring: ' Discard '));
+		Assert:isTrue(buf:rowText(y: 11):contains(needle: 'Unsaved changes'));
+		Assert:isTrue(buf:rowText(y: 11):contains(needle: ' Discard '));
 
 		# Right moves to Discard button, Enter discards and exits
 		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'right')));
@@ -182,11 +182,11 @@ Class of SpecUnitTest is TestTheoEditor{
 		buf:clear();
 		top:layout(x: 0, y: 0, w: 72, h: 16);
 		top:paint(buf: buf, renderer: renderer);
-		Assert:isTrue(buf:rowText(y: 1):contains(substring: 'File Manager'));
-		Assert:isTrue(buf:rowText(y: 1):contains(substring: 'Ctrl+M: menu'));
-		Assert:isTrue(buf:rowText(y: 11):contains(substring: 'Name:'));
-		Assert:isTrue(buf:rowText(y: 14):contains(substring: ' Save '));
-		Assert:isTrue(buf:rowText(y: 14):contains(substring: ' Cancel '));
+		Assert:isTrue(buf:rowText(y: 1):contains(needle: 'File Manager'));
+		Assert:isTrue(buf:rowText(y: 1):contains(needle: 'Ctrl+M: menu'));
+		Assert:isTrue(buf:rowText(y: 11):contains(needle: 'Name:'));
+		Assert:isTrue(buf:rowText(y: 14):contains(needle: ' Save '));
+		Assert:isTrue(buf:rowText(y: 14):contains(needle: ' Cancel '));
 
 		# Ctrl+F toggles between filename input and file list
 		local FileManagerFrame is fmTop: top as FileManagerFrame;

@@ -53,7 +53,7 @@ Class is SyntaxHighlighter{
 	}
 
 	local Function of Boolean is isWordInList(String is word, String is spaceWrappedList){
-		return spaceWrappedList:contains(substring: " {{word}} ");
+		return spaceWrappedList:contains(needle: " {{word}} ");
 	}
 
 	local Function of String is keywordsForLanguage(){
