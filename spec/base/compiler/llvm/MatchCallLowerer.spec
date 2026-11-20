@@ -159,6 +159,17 @@ Class of CallLowerer is MatchCallLowerer{
 				if({ joined != '' && b:mod:findStruct(name: joined):name != '' }, {
 					variantStruct: joined;
 				});
+				# Generic enums: the key names the TEMPLATE's variant
+				# ('Box2:Full') while the subject is a spec instantiation
+				# ('Box2__Float'). Resolve the variant struct through the
+				# subject's spec class so dispatch and payload binding hit
+				# the concrete layout.
+				if({ segs:length() >= 2 && b:specBaseMap:has(key: onExpr:resolvedType) }, {
+					local String is alt: onExpr:resolvedType . '_' . segs:get(index: segs:length() - 1, default: '');
+					if({ b:mod:findStruct(name: alt):name != '' }, {
+						variantStruct: alt;
+					});
+				});
 			}
 		], default: {});
 		if({ variantStruct != '' }, {

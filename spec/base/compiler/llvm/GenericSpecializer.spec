@@ -277,6 +277,27 @@ Class is GenericSpecializer{
 			Statement:VarDecl: local Function of Statement(Array of String is mods, Type is vt, String is vn, Expression is ie, Boolean is hi){
 				local Type is nvt: :transformType(t: vt, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				local Expression is nie: if({ hi }, { :transformExpr(expr: ie, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName) }, { Expression:Unknown });
+				# Bare nested-variant construction (`local Maybe2 of String is
+				# n: Maybe2:None;`): the init path names the TEMPLATE's
+				# variant while the declared type grounds the instantiation —
+				# rewrite the head so the emitter constructs the SPEC class's
+				# variant (concrete layout, matching typename).
+				if({ hi && nvt:name != '' && vt:name != nvt:name }, {
+					match(on: nie, when: [
+						Expression:Path: local Function(Array of String is psegs){
+							if({ psegs:length() >= 2 && vt:name != '' && psegs:get(index: 0) == vt:name }, {
+								local Array of String is nsegs: [nvt:name];
+								local Int is psi: 1;
+								while({ psi < psegs:length() }, {
+									nsegs:add(item: psegs:get(index: psi));
+									psi++;
+								});
+								nie: Expression:Path(segments: nsegs);
+								nie:setResolvedType(t: nvt:name);
+							});
+						}
+					], default: {});
+				});
 				return Statement:VarDecl(modifiers: mods, varType: nvt, varName: vn, initExpr: nie, hasInit: hi);
 			},
 			Statement:Assign: local Function of Statement(Expression is at, Expression is av){
@@ -465,6 +486,38 @@ Class is GenericSpecializer{
 								});
 							});
 						});
+					},
+					Expression:Path: local Function(Array of String is psegs){
+						# Nested-shorthand construction (`Box2:Full(...)`) and
+						# other Path-target calls: rewrite the head segment to
+						# the mangled instantiation the same way the Ident case
+						# rewrites a bare template name, so the call resolves
+						# against the SPEC class's nested members. The captured
+						# ntarget rides the shared frame, as in the Ident case.
+						if({ psegs:length() > 0 }, {
+							local String is phead: psegs:get(index: 0);
+							if({ :templates:has(key: phead) || (phead == selfTemplateName && selfSpecName != '') }, {
+								local String is specHead: '';
+								if({ newResT:startsWith(prefix: phead . '__') }, {
+									specHead: newResT;
+								}, {
+									if({ phead == selfTemplateName && selfSpecName != '' }, {
+										specHead: selfSpecName;
+									});
+								});
+								if({ specHead != '' }, {
+									local Array of String is nsegs: [specHead];
+									local Int is si: 1;
+									while({ si < psegs:length() }, {
+										nsegs:add(item: psegs:get(index: si));
+										si++;
+									});
+									ntarget: Expression:Path(segments: nsegs);
+									ntarget:setLine(line: ln);
+									ntarget:setResolvedType(t: newResT);
+								});
+							});
+						});
 					}
 				], default: {});
 				local String is callName: call:name;
@@ -551,6 +604,40 @@ Class is GenericSpecializer{
 			nm:params: nps;
 			nm:body: :transformStmts(stmts: m:body, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 			return nm;
+		});
+		if({ m:kind == MemberKind:CLASS }, {
+			# Generic templates: descend into nested classes (enum variants,
+			# inner classes) so the specialization carries CONCRETE members.
+			# The template's own nested shape stays unspecialized — only the
+			# mangled instantiation gets the substituted clone.
+			local ClassInfo is sub: m:nestedClass;
+			if({ sub:name == '' }, {
+				return m;
+			});
+			local Array of Member is subMembers: [];
+			local Int is smi: 0;
+			while({ smi < sub:members:length() }, {
+				subMembers:add(item: :transformMember(m: sub:members:get(index: smi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
+				smi++;
+			});
+			local ClassInfo is nsub: ClassInfo:init(name: sub:name, baseClass: sub:baseClass, members: subMembers);
+			nsub:withBaseClasses(name: sub:name, baseClasses: sub:baseClasses, members: subMembers);
+			nsub:setLine(line: sub:line);
+			nsub:setSourceFile(file: sub:sourceFile);
+			nsub:setTypeParams(params: []);
+			if({ selfSpecName != '' }, {
+				nsub:setOuter(name: selfSpecName);
+			}, {
+				nsub:setOuter(name: sub:outerName);
+			});
+			local Member is nest: Member:init(kind: MemberKind:CLASS);
+			nest:setLine(line: m:line);
+			nest:setSourceFile(file: m:sourceFile);
+			nest:name: m:name;
+			nest:modifiers: m:modifiers;
+			nest:nestedClass: nsub;
+			nest:line: m:line;
+			return nest;
 		});
 		return m;
 	}
@@ -733,6 +820,30 @@ Class is GenericSpecializer{
 					:specClassArgsMap:set(key: mangledName, value: tArgs);
 					allClasses:add(item: specCls);
 					program:classes:add(item: specCls);
+					# Nested members of the spec class (enum variants, inner
+					# classes) must be visible to emission: the IrBuilder
+					# collected the program's own nested classes BEFORE the
+					# specializer ran, so flatten the spec clones here —
+					# mirroring the Loader's flattening of declared nesting.
+					local Array of ClassInfo is nestedQueue: [];
+					local Int is nqi: 0;
+					while({ nqi < specCls:members:length() }, {
+						local Member is qm: specCls:members:get(index: nqi);
+						if({ qm:kind == MemberKind:CLASS }, {
+							nestedQueue:add(item: qm:nestedClass);
+						});
+						nqi++;
+					});
+					while({ nestedQueue:length() > 0 }, {
+						local ClassInfo is nq: nestedQueue:pop(default: ClassInfo:init(name: '', baseClass: '', members: []));
+						allClasses:add(item: nq);
+						program:classes:add(item: nq);
+						nq:members:each(action: local Function(Member is dm){
+							if({ dm:kind == MemberKind:CLASS }, {
+								nestedQueue:add(item: dm:nestedClass);
+							});
+						});
+					});
 				});
 				wi++;
 			});
