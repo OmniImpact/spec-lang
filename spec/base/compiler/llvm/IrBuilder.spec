@@ -5060,7 +5060,11 @@ Class is IrBuilder{
 					local String is argSpec: na:value:resolvedType;
 					local String is fBase: :baseTypeName(t: fSpec);
 					local String is aBase: :baseTypeName(t: argSpec);
-					if({ fSpec == argSpec || (fBase != '' && fBase == aBase) }, {
+					local Boolean is isAnonVal: match(on: na:value, when: [
+						Expression:AnonFn: local Function of Boolean(Type is _rt, Array of Parameter is _ps, Array of Statement is _bd){ return true; },
+						else: { false }
+					]);
+					if({ fSpec == argSpec || (fBase != '' && fBase == aBase) || (fBase == 'Function' && (isAnonVal || argSpec:startsWith(prefix: 'Function'))) }, {
 						local IrType is fty: st:fieldTypes:get(index: fidx);
 						local IrType is aty: :irTypeFor(specType: argSpec);
 						if({ aty == IrType:Void }, { aty: fty; });

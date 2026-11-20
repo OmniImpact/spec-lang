@@ -18,28 +18,6 @@ Class of Frame is BottomActionBar{
 	Function is onQuit;
 	Function is onReturnToEditor;
 
-	replace Function is init(
-		FocusTarget is saveFocus,
-		FocusTarget is saveAsFocus,
-		FocusTarget is openFocus,
-		FocusTarget is exitFocus,
-		Function is onSave,
-		Function is onSaveAs,
-		Function is onOpen,
-		Function is onQuit,
-		Function is onReturnToEditor
-	){
-		:saveFocus: saveFocus;
-		:saveAsFocus: saveAsFocus;
-		:openFocus: openFocus;
-		:exitFocus: exitFocus;
-		:onSave: onSave;
-		:onSaveAs: onSaveAs;
-		:onOpen: onOpen;
-		:onQuit: onQuit;
-		:onReturnToEditor: onReturnToEditor;
-	}
-
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ (saveFocus:focused || saveAsFocus:focused || openFocus:focused || exitFocus:focused) && event:isUp() }, {
 			onReturnToEditor();

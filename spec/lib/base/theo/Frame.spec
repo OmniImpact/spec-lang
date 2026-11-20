@@ -12,9 +12,6 @@ Class of Widget is Frame{
 	Boolean is built: false;
 	Widget is rootWidget: Widget();
 
-	replace Function is init(){
-	}
-
 	## Override to declare this frame's widget tree.
 	Function of Widget is ui(){
 		return Widget();

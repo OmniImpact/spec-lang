@@ -12,11 +12,6 @@ Class of Frame is TopBar{
 	TextEmitter is title;
 	TextEmitter is status;
 
-	replace Function is init(TextEmitter is title, TextEmitter is status){
-		:title: title;
-		:status: status;
-	}
-
 	replace Function of Widget is ui(){
 		Panel(
 			border: true,

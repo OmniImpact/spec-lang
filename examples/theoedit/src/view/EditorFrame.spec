@@ -24,12 +24,6 @@ Class of Frame is EditorFrame{
 	FocusTarget is msgDiscardFocus: FocusTarget();
 	FocusTarget is msgCancelFocus: FocusTarget();
 
-	replace Function is init(EditorViewModel is vm, Function is onQuit){
-		:vm: vm;
-		:onQuit: onQuit;
-		screenRefs: [];
-	}
-
 	Function is bindScreen(TheoScreen is screen){
 		screenRefs: [screen];
 	}

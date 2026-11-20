@@ -16,10 +16,6 @@ Class is Widget{
 	TheoTheme is activeTheme: TheoTheme();
 	Array of Function is dirtyListeners: [];
 
-	replace Function is init(){
-		:dirtyListeners: [];
-	}
-
 	Function is applyTheme(TheoTheme is theme){
 		:activeTheme: theme;
 	}

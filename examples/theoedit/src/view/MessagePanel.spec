@@ -17,24 +17,6 @@ Class of Frame is MessagePanel{
 	Function is onDiscard;
 	Function is onCancel;
 
-	replace Function is init(
-		EditorViewModel is vm,
-		FocusTarget is saveFocus,
-		FocusTarget is discardFocus,
-		FocusTarget is cancelFocus,
-		Function is onSave,
-		Function is onDiscard,
-		Function is onCancel
-	){
-		:vm: vm;
-		:saveFocus: saveFocus;
-		:discardFocus: discardFocus;
-		:cancelFocus: cancelFocus;
-		:onSave: onSave;
-		:onDiscard: onDiscard;
-		:onCancel: onCancel;
-	}
-
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ (saveFocus:focused || discardFocus:focused || cancelFocus:focused) && event:isEsc() }, {
 			onCancel();

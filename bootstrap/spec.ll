@@ -5423,7 +5423,7 @@ declare void @spec_drain_async_tasks()
 @.mname.IrBuilder.91 = private unnamed_addr constant [16 x i8] c"exprCallsMethod\00"
 @.mname.IrBuilder.92 = private unnamed_addr constant [26 x i8] c"emitUnwrappedFieldAssigns\00"
 @.mname.IrBuilder.93 = private unnamed_addr constant [14 x i8] c"lowerCallArgs\00"
-@.methods.IrBuilder = private constant [94 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.0, ptr @IrBuilder_init, i32 6, i32 104 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.1, ptr @IrBuilder_nextTmp, i32 2, i32 108 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.2, ptr @IrBuilder_nextLabel, i32 0, i32 113 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.3, ptr @IrBuilder_irTypeFor, i32 0, i32 118 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.4, ptr @IrBuilder_isUnsignedSpecType, i32 0, i32 126 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.5, ptr @IrBuilder_unsignedMaskFor, i32 0, i32 130 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.6, ptr @IrBuilder_isArcSpecType, i32 0, i32 137 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.7, ptr @IrBuilder_hasMethodBodies, i32 0, i32 144 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.8, ptr @IrBuilder_castIfNeeded, i32 0, i32 156 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.9, ptr @IrBuilder_emit, i32 4, i32 163 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.10, ptr @IrBuilder_terminate, i32 4, i32 186 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.11, ptr @IrBuilder_switchBlock, i32 4, i32 193 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.12, ptr @IrBuilder_resetScopes, i32 6, i32 198 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.13, ptr @IrBuilder_pushScope, i32 6, i32 212 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.14, ptr @IrBuilder_bindLocal, i32 4, i32 216 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.15, ptr @IrBuilder_popScope, i32 6, i32 254 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.16, ptr @IrBuilder_isStdlibClass, i32 0, i32 303 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.17, ptr @IrBuilder_baseTypeName, i32 0, i32 311 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.18, ptr @IrBuilder_cStructName, i32 0, i32 329 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.19, ptr @IrBuilder_resolveBaseClass, i32 0, i32 333 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.20, ptr @IrBuilder_addInheritedFields, i32 4, i32 349 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.21, ptr @IrBuilder_buildVtable, i32 4, i32 398 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.22, ptr @IrBuilder_collectAllClasses, i32 4, i32 435 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.23, ptr @IrBuilder_buildProgram, i32 0, i32 447 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.24, ptr @IrBuilder_inheritHeldFromAncestors, i32 4, i32 691 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.25, ptr @IrBuilder_emitPoolEnter, i32 6, i32 718 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.26, ptr @IrBuilder_emitPoolExit, i32 6, i32 728 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.27, ptr @IrBuilder_emitClaimPool, i32 4, i32 734 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.28, ptr @IrBuilder_destroyFnFor, i32 0, i32 740 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.29, ptr @IrBuilder_buildDestroyHelper, i32 4, i32 748 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.30, ptr @IrBuilder_buildMainEntry, i32 4, i32 780 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.31, ptr @IrBuilder_collectAncestors, i32 4, i32 824 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.32, ptr @IrBuilder_buildRttiHelpers, i32 4, i32 840 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.33, ptr @IrBuilder_methodReturnSpecType, i32 0, i32 993 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.34, ptr @IrBuilder_methodReturnType, i32 0, i32 1004 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.35, ptr @IrBuilder_emitFieldDefaults, i32 4, i32 1015 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.36, ptr @IrBuilder_registerClassMetaAndHeld, i32 4, i32 1092 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.37, ptr @IrBuilder_buildConstructHelper, i32 4, i32 1147 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.38, ptr @IrBuilder_buildDefaultInit, i32 4, i32 1175 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.39, ptr @IrBuilder_buildHeldEnsure, i32 4, i32 1195 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.40, ptr @IrBuilder_buildLazyFieldEnsure, i32 4, i32 1264 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.41, ptr @IrBuilder_findParentMethodImpl, i32 0, i32 1370 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.42, ptr @IrBuilder_findHeldResolver, i32 0, i32 1407 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.43, ptr @IrBuilder_buildHeldResolvers, i32 6, i32 1431 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.44, ptr @IrBuilder_isLazyCallExpr, i32 0, i32 1547 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.45, ptr @IrBuilder_getLazyBodyExpr, i32 0, i32 1571 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.46, ptr @IrBuilder_lowerLazyBodyVal, i32 0, i32 1583 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.47, ptr @IrBuilder_emitLoadField, i32 0, i32 1665 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.48, ptr @IrBuilder_emitMarkLazyFieldDone, i32 4, i32 1718 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.49, ptr @IrBuilder_emitLoadLocal, i32 0, i32 1731 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.50, ptr @IrBuilder_emitStoreLocal, i32 4, i32 1782 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.51, ptr @IrBuilder_emitNewBox, i32 0, i32 1812 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.52, ptr @IrBuilder_collectDeclNamesInStmts, i32 4, i32 1832 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.53, ptr @IrBuilder_collectDeclNamesInExpr, i32 4, i32 1856 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.54, ptr @IrBuilder_collectAllAnonCapturesInStmts, i32 4, i32 2001 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.55, ptr @IrBuilder_collectAllAnonCapturesInExpr, i32 4, i32 2024 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.56, ptr @IrBuilder_structNameForLocal, i32 0, i32 2164 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.57, ptr @IrBuilder_resolvePathField, i32 0, i32 2176 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.58, ptr @IrBuilder_structNameForExpr, i32 0, i32 2268 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.59, ptr @IrBuilder_buildMethod, i32 4, i32 2279 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.60, ptr @IrBuilder_findCustomErrorHandlerCallee, i32 0, i32 2397 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.61, ptr @IrBuilder_findCustomErrorHandlerWalk, i32 0, i32 2401 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.62, ptr @IrBuilder_emitConstStrVal, i32 0, i32 2437 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.63, ptr @IrBuilder_collectCallsInStmts, i32 4, i32 2444 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.64, ptr @IrBuilder_collectCallsInExpr, i32 4, i32 2474 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.65, ptr @IrBuilder_markMethodCanUnwind, i32 4, i32 2594 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.66, ptr @IrBuilder_computeCanUnwind, i32 4, i32 2618 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.67, ptr @IrBuilder_shouldEmitUnwindCheck, i32 0, i32 2716 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.68, ptr @IrBuilder_emitUnwindCurrentFrame, i32 4, i32 2731 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.69, ptr @IrBuilder_emitCheckUnwindAfterCall, i32 4, i32 2793 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.70, ptr @IrBuilder_emitReleaseOwnedLocals, i32 6, i32 2815 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.71, ptr @IrBuilder_emitDefaultVal, i32 0, i32 2834 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.72, ptr @IrBuilder_lowerStmts, i32 4, i32 2851 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.73, ptr @IrBuilder_lowerFnBody, i32 4, i32 2859 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.74, ptr @IrBuilder_lowerStmt, i32 4, i32 2891 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.75, ptr @IrBuilder_setMapHintsFromTypeStr, i32 4, i32 3273 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.76, ptr @IrBuilder_setAssignTargetMapHints, i32 4, i32 3290 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.77, ptr @IrBuilder_collectAppendChainRhs, i32 0, i32 3322 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.78, ptr @IrBuilder_lowerConcatRight, i32 0, i32 3344 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.79, ptr @IrBuilder_lowerConcatChainNoClaim, i32 0, i32 3370 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.80, ptr @IrBuilder_tryLowerAppendChain, i32 0, i32 3414 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.81, ptr @IrBuilder_lowerIncDec, i32 0, i32 3444 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.82, ptr @IrBuilder_emitObjectToString, i32 0, i32 3547 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.83, ptr @IrBuilder_lowerExpr, i32 0, i32 3620 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.84, ptr @IrBuilder_collectFreeInStmts, i32 4, i32 4136 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.85, ptr @IrBuilder_collectFreeInExpr, i32 4, i32 4164 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.86, ptr @IrBuilder_lowerAnonFn, i32 0, i32 4268 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.87, ptr @IrBuilder_emitClosureCall, i32 0, i32 4557 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.88, ptr @IrBuilder_lowerCall, i32 0, i32 4597 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.89, ptr @IrBuilder_emitImportFieldOrAlloc, i32 0, i32 4981 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.90, ptr @IrBuilder_stmtsCallMethod, i32 0, i32 5010 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.91, ptr @IrBuilder_exprCallsMethod, i32 0, i32 5030 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.92, ptr @IrBuilder_emitUnwrappedFieldAssigns, i32 4, i32 5049 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.93, ptr @IrBuilder_lowerCallArgs, i32 4, i32 5087 }]
+@.methods.IrBuilder = private constant [94 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.0, ptr @IrBuilder_init, i32 6, i32 104 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.1, ptr @IrBuilder_nextTmp, i32 2, i32 108 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.2, ptr @IrBuilder_nextLabel, i32 0, i32 113 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.3, ptr @IrBuilder_irTypeFor, i32 0, i32 118 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.4, ptr @IrBuilder_isUnsignedSpecType, i32 0, i32 126 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.5, ptr @IrBuilder_unsignedMaskFor, i32 0, i32 130 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.6, ptr @IrBuilder_isArcSpecType, i32 0, i32 137 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.7, ptr @IrBuilder_hasMethodBodies, i32 0, i32 144 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.8, ptr @IrBuilder_castIfNeeded, i32 0, i32 156 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.9, ptr @IrBuilder_emit, i32 4, i32 163 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.10, ptr @IrBuilder_terminate, i32 4, i32 186 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.11, ptr @IrBuilder_switchBlock, i32 4, i32 193 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.12, ptr @IrBuilder_resetScopes, i32 6, i32 198 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.13, ptr @IrBuilder_pushScope, i32 6, i32 212 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.14, ptr @IrBuilder_bindLocal, i32 4, i32 216 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.15, ptr @IrBuilder_popScope, i32 6, i32 254 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.16, ptr @IrBuilder_isStdlibClass, i32 0, i32 303 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.17, ptr @IrBuilder_baseTypeName, i32 0, i32 311 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.18, ptr @IrBuilder_cStructName, i32 0, i32 329 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.19, ptr @IrBuilder_resolveBaseClass, i32 0, i32 333 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.20, ptr @IrBuilder_addInheritedFields, i32 4, i32 349 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.21, ptr @IrBuilder_buildVtable, i32 4, i32 398 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.22, ptr @IrBuilder_collectAllClasses, i32 4, i32 435 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.23, ptr @IrBuilder_buildProgram, i32 0, i32 447 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.24, ptr @IrBuilder_inheritHeldFromAncestors, i32 4, i32 691 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.25, ptr @IrBuilder_emitPoolEnter, i32 6, i32 718 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.26, ptr @IrBuilder_emitPoolExit, i32 6, i32 728 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.27, ptr @IrBuilder_emitClaimPool, i32 4, i32 734 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.28, ptr @IrBuilder_destroyFnFor, i32 0, i32 740 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.29, ptr @IrBuilder_buildDestroyHelper, i32 4, i32 748 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.30, ptr @IrBuilder_buildMainEntry, i32 4, i32 780 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.31, ptr @IrBuilder_collectAncestors, i32 4, i32 824 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.32, ptr @IrBuilder_buildRttiHelpers, i32 4, i32 840 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.33, ptr @IrBuilder_methodReturnSpecType, i32 0, i32 993 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.34, ptr @IrBuilder_methodReturnType, i32 0, i32 1004 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.35, ptr @IrBuilder_emitFieldDefaults, i32 4, i32 1015 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.36, ptr @IrBuilder_registerClassMetaAndHeld, i32 4, i32 1092 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.37, ptr @IrBuilder_buildConstructHelper, i32 4, i32 1147 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.38, ptr @IrBuilder_buildDefaultInit, i32 4, i32 1175 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.39, ptr @IrBuilder_buildHeldEnsure, i32 4, i32 1195 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.40, ptr @IrBuilder_buildLazyFieldEnsure, i32 4, i32 1264 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.41, ptr @IrBuilder_findParentMethodImpl, i32 0, i32 1370 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.42, ptr @IrBuilder_findHeldResolver, i32 0, i32 1407 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.43, ptr @IrBuilder_buildHeldResolvers, i32 6, i32 1431 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.44, ptr @IrBuilder_isLazyCallExpr, i32 0, i32 1547 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.45, ptr @IrBuilder_getLazyBodyExpr, i32 0, i32 1571 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.46, ptr @IrBuilder_lowerLazyBodyVal, i32 0, i32 1583 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.47, ptr @IrBuilder_emitLoadField, i32 0, i32 1665 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.48, ptr @IrBuilder_emitMarkLazyFieldDone, i32 4, i32 1718 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.49, ptr @IrBuilder_emitLoadLocal, i32 0, i32 1731 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.50, ptr @IrBuilder_emitStoreLocal, i32 4, i32 1782 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.51, ptr @IrBuilder_emitNewBox, i32 0, i32 1812 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.52, ptr @IrBuilder_collectDeclNamesInStmts, i32 4, i32 1832 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.53, ptr @IrBuilder_collectDeclNamesInExpr, i32 4, i32 1856 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.54, ptr @IrBuilder_collectAllAnonCapturesInStmts, i32 4, i32 2001 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.55, ptr @IrBuilder_collectAllAnonCapturesInExpr, i32 4, i32 2024 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.56, ptr @IrBuilder_structNameForLocal, i32 0, i32 2164 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.57, ptr @IrBuilder_resolvePathField, i32 0, i32 2176 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.58, ptr @IrBuilder_structNameForExpr, i32 0, i32 2268 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.59, ptr @IrBuilder_buildMethod, i32 4, i32 2279 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.60, ptr @IrBuilder_findCustomErrorHandlerCallee, i32 0, i32 2397 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.61, ptr @IrBuilder_findCustomErrorHandlerWalk, i32 0, i32 2401 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.62, ptr @IrBuilder_emitConstStrVal, i32 0, i32 2437 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.63, ptr @IrBuilder_collectCallsInStmts, i32 4, i32 2444 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.64, ptr @IrBuilder_collectCallsInExpr, i32 4, i32 2474 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.65, ptr @IrBuilder_markMethodCanUnwind, i32 4, i32 2594 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.66, ptr @IrBuilder_computeCanUnwind, i32 4, i32 2618 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.67, ptr @IrBuilder_shouldEmitUnwindCheck, i32 0, i32 2716 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.68, ptr @IrBuilder_emitUnwindCurrentFrame, i32 4, i32 2731 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.69, ptr @IrBuilder_emitCheckUnwindAfterCall, i32 4, i32 2793 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.70, ptr @IrBuilder_emitReleaseOwnedLocals, i32 6, i32 2815 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.71, ptr @IrBuilder_emitDefaultVal, i32 0, i32 2834 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.72, ptr @IrBuilder_lowerStmts, i32 4, i32 2851 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.73, ptr @IrBuilder_lowerFnBody, i32 4, i32 2859 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.74, ptr @IrBuilder_lowerStmt, i32 4, i32 2891 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.75, ptr @IrBuilder_setMapHintsFromTypeStr, i32 4, i32 3273 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.76, ptr @IrBuilder_setAssignTargetMapHints, i32 4, i32 3290 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.77, ptr @IrBuilder_collectAppendChainRhs, i32 0, i32 3322 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.78, ptr @IrBuilder_lowerConcatRight, i32 0, i32 3344 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.79, ptr @IrBuilder_lowerConcatChainNoClaim, i32 0, i32 3370 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.80, ptr @IrBuilder_tryLowerAppendChain, i32 0, i32 3414 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.81, ptr @IrBuilder_lowerIncDec, i32 0, i32 3444 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.82, ptr @IrBuilder_emitObjectToString, i32 0, i32 3547 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.83, ptr @IrBuilder_lowerExpr, i32 0, i32 3620 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.84, ptr @IrBuilder_collectFreeInStmts, i32 4, i32 4136 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.85, ptr @IrBuilder_collectFreeInExpr, i32 4, i32 4164 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.86, ptr @IrBuilder_lowerAnonFn, i32 0, i32 4268 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.87, ptr @IrBuilder_emitClosureCall, i32 0, i32 4557 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.88, ptr @IrBuilder_lowerCall, i32 0, i32 4597 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.89, ptr @IrBuilder_emitImportFieldOrAlloc, i32 0, i32 4981 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.90, ptr @IrBuilder_stmtsCallMethod, i32 0, i32 5010 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.91, ptr @IrBuilder_exprCallsMethod, i32 0, i32 5030 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.92, ptr @IrBuilder_emitUnwrappedFieldAssigns, i32 4, i32 5049 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.93, ptr @IrBuilder_lowerCallArgs, i32 4, i32 5091 }]
 @.fname.IrBuilder.0 = private unnamed_addr constant [4 x i8] c"mod\00"
 @.ftype.IrBuilder.0 = private unnamed_addr constant [9 x i8] c"IrModule\00"
 @.fname.IrBuilder.1 = private unnamed_addr constant [11 x i8] c"tmpCounter\00"
@@ -308516,28 +308516,40 @@ match_end_1:
 
 define void @IrBuilder_emitUnwrappedFieldAssigns(ptr %self, ptr %p_obj, ptr %p_structName, ptr %p_callArgs) {
 entry:
-  %t229 = alloca ptr
-  store ptr null, ptr %t229
-  %var_oldVal_226 = alloca ptr
-  store ptr null, ptr %var_oldVal_226
-  %t191 = alloca ptr
-  store ptr null, ptr %t191
-  %var_fPtr_188 = alloca ptr
-  store ptr null, ptr %var_fPtr_188
-  %t179 = alloca ptr
-  store ptr null, ptr %t179
-  %t161 = alloca ptr
-  store ptr null, ptr %t161
-  %var_val_155 = alloca ptr
-  store ptr null, ptr %var_val_155
-  %t140 = alloca ptr
-  store ptr null, ptr %t140
-  %var_aty_136 = alloca ptr
-  store ptr null, ptr %var_aty_136
-  %var_fty_129 = alloca ptr
-  store ptr null, ptr %var_fty_129
-  %t119 = alloca i1
-  %t115 = alloca i1
+  %t269 = alloca ptr
+  store ptr null, ptr %t269
+  %var_oldVal_266 = alloca ptr
+  store ptr null, ptr %var_oldVal_266
+  %t231 = alloca ptr
+  store ptr null, ptr %t231
+  %var_fPtr_228 = alloca ptr
+  store ptr null, ptr %var_fPtr_228
+  %t219 = alloca ptr
+  store ptr null, ptr %t219
+  %t201 = alloca ptr
+  store ptr null, ptr %t201
+  %var_val_195 = alloca ptr
+  store ptr null, ptr %var_val_195
+  %t180 = alloca ptr
+  store ptr null, ptr %t180
+  %var_aty_176 = alloca ptr
+  store ptr null, ptr %var_aty_176
+  %var_fty_169 = alloca ptr
+  store ptr null, ptr %var_fty_169
+  %t160 = alloca i1
+  %t156 = alloca i1
+  %t146 = alloca i1
+  %t142 = alloca i1
+  %t141 = alloca i1
+  %arm__bd_136 = alloca ptr
+  store ptr null, ptr %arm__bd_136
+  %arm__ps_133 = alloca ptr
+  store ptr null, ptr %arm__ps_133
+  %arm__rt_130 = alloca ptr
+  store ptr null, ptr %arm__rt_130
+  %t120 = alloca i1
+  %match_res_115 = alloca i1
+  %var_isAnonVal_114 = alloca i1
   %t105 = alloca ptr
   store ptr null, ptr %t105
   %var_aBase_101 = alloca ptr
@@ -308737,350 +308749,418 @@ vt_end_27:
   %t113 = load ptr, ptr %var_aBase_101
   call void @spec_rt_release(ptr %t113)
   store ptr %t104, ptr %var_aBase_101
-  %t116 = load ptr, ptr %var_fSpec_67
-  %t117 = load ptr, ptr %var_argSpec_81
-  %t118 = call i1 @Str_stringEquals(ptr null, ptr %t116, ptr %t117)
-  store i1 %t118, ptr %t115
-  br i1 %t118, label %sc_end_29, label %sc_rhs_28
-sc_rhs_28:
-  %t120 = load ptr, ptr %var_fBase_88
-  %t121 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0)
-  %t123 = call i1 @Str_stringEquals(ptr null, ptr %t120, ptr %t121)
-  %t122 = xor i1 %t123, 1
-  store i1 %t122, ptr %t119
-  br i1 %t122, label %sc_rhs_30, label %sc_end_31
-sc_rhs_30:
-  %t124 = load ptr, ptr %var_fBase_88
-  %t125 = load ptr, ptr %var_aBase_101
-  %t126 = call i1 @Str_stringEquals(ptr null, ptr %t124, ptr %t125)
-  store i1 %t126, ptr %t119
-  br label %sc_end_31
-sc_end_31:
-  %t127 = load i1, ptr %t119
-  store i1 %t127, ptr %t115
-  br label %sc_end_29
-sc_end_29:
-  %t128 = load i1, ptr %t115
-  br i1 %t128, label %if_then_32, label %if_end_34
-if_then_32:
-  %t130 = load ptr, ptr %var_st_7
-  %t131 = getelementptr inbounds %struct.IrStruct, ptr %t130, i32 0, i32 6
+  %t116 = add i1 0, 0
+  store i1 %t116, ptr %match_res_115
+  %t117 = load ptr, ptr %var_na_37
+  %t118 = getelementptr inbounds %struct.NamedArg, ptr %t117, i32 0, i32 3
+  %t119 = load ptr, ptr %t118
+  %t121 = add i1 0, 0
+  store i1 %t121, ptr %t120
+  %t122 = icmp ne ptr %t119, null
+  br i1 %t122, label %var_chk_29, label %var_done_30
+var_chk_29:
+  %t123 = getelementptr inbounds %struct.Expression_AnonFn, ptr %t119, i32 0, i32 0
+  %t124 = load ptr, ptr %t123
+  %t125 = getelementptr i8, ptr @.typename.Expression_AnonFn, i64 0
+  %t126 = icmp eq ptr %t124, %t125
+  store i1 %t126, ptr %t120
+  br label %var_done_30
+var_done_30:
+  %t127 = load i1, ptr %t120
+  br i1 %t127, label %match_arm_31, label %match_next_32
+match_arm_31:
+  %t128 = getelementptr inbounds %struct.Expression_AnonFn, ptr %t119, i32 0, i32 9
+  %t129 = load ptr, ptr %t128
+  store ptr %t129, ptr %arm__rt_130
+  %t131 = getelementptr inbounds %struct.Expression_AnonFn, ptr %t119, i32 0, i32 10
   %t132 = load ptr, ptr %t131
-  %t133 = load i64, ptr %var_fidx_49
-  %t134 = call ptr @Vector_vecGetChecked(ptr null, ptr %t132, i64 %t133)
-  call ptr @spec_rt_retain(ptr %t134)
-  %t135 = load ptr, ptr %var_fty_129
-  call void @spec_rt_release(ptr %t135)
-  store ptr %t134, ptr %var_fty_129
-  %t137 = load ptr, ptr %self_slot
-  %t138 = load ptr, ptr %var_argSpec_81
-  %t141 = icmp ne ptr %t137, null
-  br i1 %t141, label %vt_call_35, label %dir_call_36
-vt_call_35:
-  %t142 = getelementptr inbounds %struct.IrBuilder, ptr %t137, i32 0, i32 1
-  %t143 = load ptr, ptr %t142
-  %t144 = getelementptr ptr, ptr %t143, i64 960
-  %t145 = load ptr, ptr %t144
-  %t146 = call ptr %t145(ptr %t137, ptr %t138)
-  store ptr %t146, ptr %t140
-  br label %vt_end_37
-dir_call_36:
-  %t147 = call ptr @IrBuilder_irTypeFor(ptr null, ptr %t138)
-  store ptr %t147, ptr %t140
-  br label %vt_end_37
-vt_end_37:
-  %t139 = load ptr, ptr %t140
-  call ptr @spec_rt_retain(ptr %t139)
-  %t148 = load ptr, ptr %var_aty_136
-  call void @spec_rt_release(ptr %t148)
-  store ptr %t139, ptr %var_aty_136
-  %t149 = call i64 @spec_pool_frame()
-  %t150 = load ptr, ptr %var_aty_136
-  %t151 = call ptr @IrType_Void__ensure()
-  call ptr @spec_claim_pool(ptr %t151)
-  %t152 = icmp eq ptr %t150, %t151
-  call void @spec_pool_release_to(i64 %t149)
-  br i1 %t152, label %if_then_38, label %if_end_40
-if_then_38:
-  %t153 = load ptr, ptr %var_fty_129
-  call ptr @spec_rt_retain(ptr %t153)
-  %t154 = load ptr, ptr %var_aty_136
-  call void @spec_rt_release(ptr %t154)
-  store ptr %t153, ptr %var_aty_136
-  br label %if_end_40
-if_end_40:
-  %t156 = load ptr, ptr %self_slot
-  %t157 = load ptr, ptr %var_na_37
-  %t158 = getelementptr inbounds %struct.NamedArg, ptr %t157, i32 0, i32 3
-  %t159 = load ptr, ptr %t158
-  %t162 = icmp ne ptr %t156, null
-  br i1 %t162, label %vt_call_41, label %dir_call_42
-vt_call_41:
-  %t163 = getelementptr inbounds %struct.IrBuilder, ptr %t156, i32 0, i32 1
-  %t164 = load ptr, ptr %t163
-  %t165 = getelementptr ptr, ptr %t164, i64 1040
-  %t166 = load ptr, ptr %t165
-  %t167 = call ptr %t166(ptr %t156, ptr %t159)
-  store ptr %t167, ptr %t161
-  br label %vt_end_43
-dir_call_42:
-  %t168 = call ptr @IrBuilder_lowerExpr(ptr %t156, ptr %t159)
-  store ptr %t168, ptr %t161
-  br label %vt_end_43
-vt_end_43:
-  %t160 = load ptr, ptr %t161
-  call ptr @spec_rt_retain(ptr %t160)
-  %t169 = load ptr, ptr %var_val_155
-  call void @spec_rt_release(ptr %t169)
-  store ptr %t160, ptr %var_val_155
-  %t171 = load ptr, ptr %var_aty_136
-  %t172 = load ptr, ptr %var_fty_129
-  %t173 = icmp ne ptr %t171, %t172
-  br i1 %t173, label %if_then_44, label %if_end_46
-if_then_44:
-  %t174 = load ptr, ptr %self_slot
-  %t175 = load ptr, ptr %var_val_155
-  %t176 = load ptr, ptr %var_aty_136
-  %t177 = load ptr, ptr %var_fty_129
-  %t180 = icmp ne ptr %t174, null
-  br i1 %t180, label %vt_call_47, label %dir_call_48
-vt_call_47:
-  %t181 = getelementptr inbounds %struct.IrBuilder, ptr %t174, i32 0, i32 1
-  %t182 = load ptr, ptr %t181
-  %t183 = getelementptr ptr, ptr %t182, i64 965
-  %t184 = load ptr, ptr %t183
-  %t185 = call ptr %t184(ptr %t174, ptr %t175, ptr %t176, ptr %t177)
-  store ptr %t185, ptr %t179
-  br label %vt_end_49
-dir_call_48:
-  %t186 = call ptr @IrBuilder_castIfNeeded(ptr %t174, ptr %t175, ptr %t176, ptr %t177)
-  store ptr %t186, ptr %t179
-  br label %vt_end_49
-vt_end_49:
-  %t178 = load ptr, ptr %t179
-  call ptr @spec_rt_retain(ptr %t178)
-  %t187 = load ptr, ptr %var_val_155
-  call void @spec_rt_release(ptr %t187)
-  store ptr %t178, ptr %var_val_155
-  br label %if_end_46
-if_end_46:
-  %t189 = load ptr, ptr %self_slot
-  %t192 = icmp ne ptr %t189, null
-  br i1 %t192, label %vt_call_50, label %dir_call_51
-vt_call_50:
-  %t193 = getelementptr inbounds %struct.IrBuilder, ptr %t189, i32 0, i32 1
-  %t194 = load ptr, ptr %t193
-  %t195 = getelementptr ptr, ptr %t194, i64 958
-  %t196 = load ptr, ptr %t195
-  %t197 = call ptr %t196(ptr %t189)
-  store ptr %t197, ptr %t191
-  br label %vt_end_52
-dir_call_51:
-  %t198 = call ptr @IrBuilder_nextTmp(ptr %t189)
-  store ptr %t198, ptr %t191
-  br label %vt_end_52
-vt_end_52:
-  %t190 = load ptr, ptr %t191
-  call ptr @spec_rt_retain(ptr %t190)
-  %t199 = load ptr, ptr %var_fPtr_188
-  call void @spec_rt_release(ptr %t199)
-  store ptr %t190, ptr %var_fPtr_188
-  %t200 = load ptr, ptr %self_slot
-  %t201_szp = getelementptr %struct.IrInst_FieldPtr, ptr null, i32 1
-  %t201_sz = ptrtoint ptr %t201_szp to i64
-  %t201 = call ptr @spec_rt_alloc(i64 %t201_sz, ptr @IrInst_FieldPtr__destroy)
-  %t201_tnp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t201, i32 0, i32 0
-  store ptr @.typename.IrInst_FieldPtr, ptr %t201_tnp
-  %t201_vtp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t201, i32 0, i32 1
-  store ptr @.vtable.IrInst_FieldPtr, ptr %t201_vtp
-  %t202 = load ptr, ptr %var_fPtr_188
-  %t203 = load ptr, ptr %slot_obj
-  %t204 = load ptr, ptr %slot_structName
-  %t205 = load i64, ptr %var_fidx_49
-  call void @IrInst_FieldPtr_init(ptr %t201, ptr %t202, ptr %t203, ptr %t204, i64 %t205)
-  call ptr @spec_claim_pool(ptr %t201)
-  %t206 = icmp ne ptr %t200, null
-  br i1 %t206, label %vt_call_53, label %dir_call_54
-vt_call_53:
-  %t207 = getelementptr inbounds %struct.IrBuilder, ptr %t200, i32 0, i32 1
-  %t208 = load ptr, ptr %t207
-  %t209 = getelementptr ptr, ptr %t208, i64 966
-  %t210 = load ptr, ptr %t209
-  call void %t210(ptr %t200, ptr %t201)
-  br label %vt_end_55
-dir_call_54:
-  call void @IrBuilder_emit(ptr %t200, ptr %t201)
-  br label %vt_end_55
-vt_end_55:
-  %t211 = call i64 @spec_pool_frame()
-  %t212 = load ptr, ptr %var_st_7
-  %t213 = getelementptr inbounds %struct.IrStruct, ptr %t212, i32 0, i32 7
-  %t214 = load ptr, ptr %t213
-  %t215 = load i64, ptr %var_fidx_49
-  %t216 = call ptr @Vector_vecGetChecked(ptr null, ptr %t214, i64 %t215)
-  %t217 = ptrtoint ptr %t216 to i1
-  call void @spec_pool_release_to(i64 %t211)
-  br i1 %t217, label %if_then_56, label %if_end_58
-if_then_56:
-  %t218 = load ptr, ptr %self_slot
-  %t219_szp = getelementptr %struct.IrInst_Retain, ptr null, i32 1
-  %t219_sz = ptrtoint ptr %t219_szp to i64
-  %t219 = call ptr @spec_rt_alloc(i64 %t219_sz, ptr @IrInst_Retain__destroy)
-  %t219_tnp = getelementptr inbounds %struct.IrInst_Retain, ptr %t219, i32 0, i32 0
-  store ptr @.typename.IrInst_Retain, ptr %t219_tnp
-  %t219_vtp = getelementptr inbounds %struct.IrInst_Retain, ptr %t219, i32 0, i32 1
-  store ptr @.vtable.IrInst_Retain, ptr %t219_vtp
-  %t220 = load ptr, ptr %var_val_155
-  call void @IrInst_Retain_init(ptr %t219, ptr %t220)
-  call ptr @spec_claim_pool(ptr %t219)
-  %t221 = icmp ne ptr %t218, null
-  br i1 %t221, label %vt_call_59, label %dir_call_60
-vt_call_59:
-  %t222 = getelementptr inbounds %struct.IrBuilder, ptr %t218, i32 0, i32 1
-  %t223 = load ptr, ptr %t222
-  %t224 = getelementptr ptr, ptr %t223, i64 966
-  %t225 = load ptr, ptr %t224
-  call void %t225(ptr %t218, ptr %t219)
-  br label %vt_end_61
-dir_call_60:
-  call void @IrBuilder_emit(ptr %t218, ptr %t219)
-  br label %vt_end_61
-vt_end_61:
-  %t227 = load ptr, ptr %self_slot
-  %t230 = icmp ne ptr %t227, null
-  br i1 %t230, label %vt_call_62, label %dir_call_63
-vt_call_62:
-  %t231 = getelementptr inbounds %struct.IrBuilder, ptr %t227, i32 0, i32 1
-  %t232 = load ptr, ptr %t231
-  %t233 = getelementptr ptr, ptr %t232, i64 958
+  store ptr %t132, ptr %arm__ps_133
+  %t134 = getelementptr inbounds %struct.Expression_AnonFn, ptr %t119, i32 0, i32 11
+  %t135 = load ptr, ptr %t134
+  store ptr %t135, ptr %arm__bd_136
+  %t137 = add i1 0, 1
+  store i1 %t137, ptr %match_res_115
+  br label %match_end_28
+match_next_32:
+  %t138 = add i1 0, 0
+  store i1 %t138, ptr %match_res_115
+  br label %match_end_28
+match_end_28:
+  %t139 = load i1, ptr %match_res_115
+  store i1 %t139, ptr %var_isAnonVal_114
+  %t143 = load ptr, ptr %var_fSpec_67
+  %t144 = load ptr, ptr %var_argSpec_81
+  %t145 = call i1 @Str_stringEquals(ptr null, ptr %t143, ptr %t144)
+  store i1 %t145, ptr %t142
+  br i1 %t145, label %sc_end_34, label %sc_rhs_33
+sc_rhs_33:
+  %t147 = load ptr, ptr %var_fBase_88
+  %t148 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0)
+  %t150 = call i1 @Str_stringEquals(ptr null, ptr %t147, ptr %t148)
+  %t149 = xor i1 %t150, 1
+  store i1 %t149, ptr %t146
+  br i1 %t149, label %sc_rhs_35, label %sc_end_36
+sc_rhs_35:
+  %t151 = load ptr, ptr %var_fBase_88
+  %t152 = load ptr, ptr %var_aBase_101
+  %t153 = call i1 @Str_stringEquals(ptr null, ptr %t151, ptr %t152)
+  store i1 %t153, ptr %t146
+  br label %sc_end_36
+sc_end_36:
+  %t154 = load i1, ptr %t146
+  store i1 %t154, ptr %t142
+  br label %sc_end_34
+sc_end_34:
+  %t155 = load i1, ptr %t142
+  store i1 %t155, ptr %t141
+  br i1 %t155, label %sc_end_38, label %sc_rhs_37
+sc_rhs_37:
+  %t157 = load ptr, ptr %var_fBase_88
+  %t158 = call ptr @__spec_intern_cached(ptr @.str.264, ptr @.str.cache.264)
+  %t159 = call i1 @Str_stringEquals(ptr null, ptr %t157, ptr %t158)
+  store i1 %t159, ptr %t156
+  br i1 %t159, label %sc_rhs_39, label %sc_end_40
+sc_rhs_39:
+  %t161 = load i1, ptr %var_isAnonVal_114
+  store i1 %t161, ptr %t160
+  br i1 %t161, label %sc_end_42, label %sc_rhs_41
+sc_rhs_41:
+  %t162 = load ptr, ptr %var_argSpec_81
+  %t163 = call ptr @__spec_intern_cached(ptr @.str.264, ptr @.str.cache.264)
+  %t164 = add i1 0, 1
+  %t165 = call i1 @Str_startsWith(ptr %t162, ptr %t163, i1 %t164)
+  store i1 %t165, ptr %t160
+  br label %sc_end_42
+sc_end_42:
+  %t166 = load i1, ptr %t160
+  store i1 %t166, ptr %t156
+  br label %sc_end_40
+sc_end_40:
+  %t167 = load i1, ptr %t156
+  store i1 %t167, ptr %t141
+  br label %sc_end_38
+sc_end_38:
+  %t168 = load i1, ptr %t141
+  br i1 %t168, label %if_then_43, label %if_end_45
+if_then_43:
+  %t170 = load ptr, ptr %var_st_7
+  %t171 = getelementptr inbounds %struct.IrStruct, ptr %t170, i32 0, i32 6
+  %t172 = load ptr, ptr %t171
+  %t173 = load i64, ptr %var_fidx_49
+  %t174 = call ptr @Vector_vecGetChecked(ptr null, ptr %t172, i64 %t173)
+  call ptr @spec_rt_retain(ptr %t174)
+  %t175 = load ptr, ptr %var_fty_169
+  call void @spec_rt_release(ptr %t175)
+  store ptr %t174, ptr %var_fty_169
+  %t177 = load ptr, ptr %self_slot
+  %t178 = load ptr, ptr %var_argSpec_81
+  %t181 = icmp ne ptr %t177, null
+  br i1 %t181, label %vt_call_46, label %dir_call_47
+vt_call_46:
+  %t182 = getelementptr inbounds %struct.IrBuilder, ptr %t177, i32 0, i32 1
+  %t183 = load ptr, ptr %t182
+  %t184 = getelementptr ptr, ptr %t183, i64 960
+  %t185 = load ptr, ptr %t184
+  %t186 = call ptr %t185(ptr %t177, ptr %t178)
+  store ptr %t186, ptr %t180
+  br label %vt_end_48
+dir_call_47:
+  %t187 = call ptr @IrBuilder_irTypeFor(ptr null, ptr %t178)
+  store ptr %t187, ptr %t180
+  br label %vt_end_48
+vt_end_48:
+  %t179 = load ptr, ptr %t180
+  call ptr @spec_rt_retain(ptr %t179)
+  %t188 = load ptr, ptr %var_aty_176
+  call void @spec_rt_release(ptr %t188)
+  store ptr %t179, ptr %var_aty_176
+  %t189 = call i64 @spec_pool_frame()
+  %t190 = load ptr, ptr %var_aty_176
+  %t191 = call ptr @IrType_Void__ensure()
+  call ptr @spec_claim_pool(ptr %t191)
+  %t192 = icmp eq ptr %t190, %t191
+  call void @spec_pool_release_to(i64 %t189)
+  br i1 %t192, label %if_then_49, label %if_end_51
+if_then_49:
+  %t193 = load ptr, ptr %var_fty_169
+  call ptr @spec_rt_retain(ptr %t193)
+  %t194 = load ptr, ptr %var_aty_176
+  call void @spec_rt_release(ptr %t194)
+  store ptr %t193, ptr %var_aty_176
+  br label %if_end_51
+if_end_51:
+  %t196 = load ptr, ptr %self_slot
+  %t197 = load ptr, ptr %var_na_37
+  %t198 = getelementptr inbounds %struct.NamedArg, ptr %t197, i32 0, i32 3
+  %t199 = load ptr, ptr %t198
+  %t202 = icmp ne ptr %t196, null
+  br i1 %t202, label %vt_call_52, label %dir_call_53
+vt_call_52:
+  %t203 = getelementptr inbounds %struct.IrBuilder, ptr %t196, i32 0, i32 1
+  %t204 = load ptr, ptr %t203
+  %t205 = getelementptr ptr, ptr %t204, i64 1040
+  %t206 = load ptr, ptr %t205
+  %t207 = call ptr %t206(ptr %t196, ptr %t199)
+  store ptr %t207, ptr %t201
+  br label %vt_end_54
+dir_call_53:
+  %t208 = call ptr @IrBuilder_lowerExpr(ptr %t196, ptr %t199)
+  store ptr %t208, ptr %t201
+  br label %vt_end_54
+vt_end_54:
+  %t200 = load ptr, ptr %t201
+  call ptr @spec_rt_retain(ptr %t200)
+  %t209 = load ptr, ptr %var_val_195
+  call void @spec_rt_release(ptr %t209)
+  store ptr %t200, ptr %var_val_195
+  %t211 = load ptr, ptr %var_aty_176
+  %t212 = load ptr, ptr %var_fty_169
+  %t213 = icmp ne ptr %t211, %t212
+  br i1 %t213, label %if_then_55, label %if_end_57
+if_then_55:
+  %t214 = load ptr, ptr %self_slot
+  %t215 = load ptr, ptr %var_val_195
+  %t216 = load ptr, ptr %var_aty_176
+  %t217 = load ptr, ptr %var_fty_169
+  %t220 = icmp ne ptr %t214, null
+  br i1 %t220, label %vt_call_58, label %dir_call_59
+vt_call_58:
+  %t221 = getelementptr inbounds %struct.IrBuilder, ptr %t214, i32 0, i32 1
+  %t222 = load ptr, ptr %t221
+  %t223 = getelementptr ptr, ptr %t222, i64 965
+  %t224 = load ptr, ptr %t223
+  %t225 = call ptr %t224(ptr %t214, ptr %t215, ptr %t216, ptr %t217)
+  store ptr %t225, ptr %t219
+  br label %vt_end_60
+dir_call_59:
+  %t226 = call ptr @IrBuilder_castIfNeeded(ptr %t214, ptr %t215, ptr %t216, ptr %t217)
+  store ptr %t226, ptr %t219
+  br label %vt_end_60
+vt_end_60:
+  %t218 = load ptr, ptr %t219
+  call ptr @spec_rt_retain(ptr %t218)
+  %t227 = load ptr, ptr %var_val_195
+  call void @spec_rt_release(ptr %t227)
+  store ptr %t218, ptr %var_val_195
+  br label %if_end_57
+if_end_57:
+  %t229 = load ptr, ptr %self_slot
+  %t232 = icmp ne ptr %t229, null
+  br i1 %t232, label %vt_call_61, label %dir_call_62
+vt_call_61:
+  %t233 = getelementptr inbounds %struct.IrBuilder, ptr %t229, i32 0, i32 1
   %t234 = load ptr, ptr %t233
-  %t235 = call ptr %t234(ptr %t227)
-  store ptr %t235, ptr %t229
-  br label %vt_end_64
-dir_call_63:
-  %t236 = call ptr @IrBuilder_nextTmp(ptr %t227)
-  store ptr %t236, ptr %t229
-  br label %vt_end_64
-vt_end_64:
-  %t228 = load ptr, ptr %t229
-  call ptr @spec_rt_retain(ptr %t228)
-  %t237 = load ptr, ptr %var_oldVal_226
-  call void @spec_rt_release(ptr %t237)
-  store ptr %t228, ptr %var_oldVal_226
-  %t238 = load ptr, ptr %self_slot
-  %t239_szp = getelementptr %struct.IrInst_Load, ptr null, i32 1
-  %t239_sz = ptrtoint ptr %t239_szp to i64
-  %t239 = call ptr @spec_rt_alloc(i64 %t239_sz, ptr @IrInst_Load__destroy)
-  %t239_tnp = getelementptr inbounds %struct.IrInst_Load, ptr %t239, i32 0, i32 0
-  store ptr @.typename.IrInst_Load, ptr %t239_tnp
-  %t239_vtp = getelementptr inbounds %struct.IrInst_Load, ptr %t239, i32 0, i32 1
-  store ptr @.vtable.IrInst_Load, ptr %t239_vtp
-  %t240 = load ptr, ptr %var_oldVal_226
-  %t241 = load ptr, ptr %var_fPtr_188
-  %t242 = call ptr @IrType_Ptr__ensure()
-  call ptr @spec_claim_pool(ptr %t242)
-  call void @IrInst_Load_init(ptr %t239, ptr %t240, ptr %t241, ptr %t242)
-  call ptr @spec_claim_pool(ptr %t239)
-  %t243 = icmp ne ptr %t238, null
-  br i1 %t243, label %vt_call_65, label %dir_call_66
-vt_call_65:
-  %t244 = getelementptr inbounds %struct.IrBuilder, ptr %t238, i32 0, i32 1
-  %t245 = load ptr, ptr %t244
-  %t246 = getelementptr ptr, ptr %t245, i64 966
-  %t247 = load ptr, ptr %t246
-  call void %t247(ptr %t238, ptr %t239)
-  br label %vt_end_67
-dir_call_66:
-  call void @IrBuilder_emit(ptr %t238, ptr %t239)
-  br label %vt_end_67
-vt_end_67:
-  %t248 = load ptr, ptr %self_slot
-  %t249_szp = getelementptr %struct.IrInst_Release, ptr null, i32 1
-  %t249_sz = ptrtoint ptr %t249_szp to i64
-  %t249 = call ptr @spec_rt_alloc(i64 %t249_sz, ptr @IrInst_Release__destroy)
-  %t249_tnp = getelementptr inbounds %struct.IrInst_Release, ptr %t249, i32 0, i32 0
-  store ptr @.typename.IrInst_Release, ptr %t249_tnp
-  %t249_vtp = getelementptr inbounds %struct.IrInst_Release, ptr %t249, i32 0, i32 1
-  store ptr @.vtable.IrInst_Release, ptr %t249_vtp
-  %t250 = load ptr, ptr %var_oldVal_226
-  call void @IrInst_Release_init(ptr %t249, ptr %t250)
-  call ptr @spec_claim_pool(ptr %t249)
-  %t251 = icmp ne ptr %t248, null
-  br i1 %t251, label %vt_call_68, label %dir_call_69
-vt_call_68:
-  %t252 = getelementptr inbounds %struct.IrBuilder, ptr %t248, i32 0, i32 1
-  %t253 = load ptr, ptr %t252
-  %t254 = getelementptr ptr, ptr %t253, i64 966
-  %t255 = load ptr, ptr %t254
-  call void %t255(ptr %t248, ptr %t249)
-  br label %vt_end_70
-dir_call_69:
-  call void @IrBuilder_emit(ptr %t248, ptr %t249)
-  br label %vt_end_70
-vt_end_70:
-  br label %if_end_58
-if_end_58:
-  %t256 = load ptr, ptr %self_slot
-  %t257_szp = getelementptr %struct.IrInst_Store, ptr null, i32 1
-  %t257_sz = ptrtoint ptr %t257_szp to i64
-  %t257 = call ptr @spec_rt_alloc(i64 %t257_sz, ptr @IrInst_Store__destroy)
-  %t257_tnp = getelementptr inbounds %struct.IrInst_Store, ptr %t257, i32 0, i32 0
-  store ptr @.typename.IrInst_Store, ptr %t257_tnp
-  %t257_vtp = getelementptr inbounds %struct.IrInst_Store, ptr %t257, i32 0, i32 1
-  store ptr @.vtable.IrInst_Store, ptr %t257_vtp
-  %t258 = load ptr, ptr %var_fPtr_188
-  %t259 = load ptr, ptr %var_val_155
-  %t260 = load ptr, ptr %var_fty_129
-  call void @IrInst_Store_init(ptr %t257, ptr %t258, ptr %t259, ptr %t260)
-  call ptr @spec_claim_pool(ptr %t257)
-  %t261 = icmp ne ptr %t256, null
-  br i1 %t261, label %vt_call_71, label %dir_call_72
-vt_call_71:
-  %t262 = getelementptr inbounds %struct.IrBuilder, ptr %t256, i32 0, i32 1
+  %t235 = getelementptr ptr, ptr %t234, i64 958
+  %t236 = load ptr, ptr %t235
+  %t237 = call ptr %t236(ptr %t229)
+  store ptr %t237, ptr %t231
+  br label %vt_end_63
+dir_call_62:
+  %t238 = call ptr @IrBuilder_nextTmp(ptr %t229)
+  store ptr %t238, ptr %t231
+  br label %vt_end_63
+vt_end_63:
+  %t230 = load ptr, ptr %t231
+  call ptr @spec_rt_retain(ptr %t230)
+  %t239 = load ptr, ptr %var_fPtr_228
+  call void @spec_rt_release(ptr %t239)
+  store ptr %t230, ptr %var_fPtr_228
+  %t240 = load ptr, ptr %self_slot
+  %t241_szp = getelementptr %struct.IrInst_FieldPtr, ptr null, i32 1
+  %t241_sz = ptrtoint ptr %t241_szp to i64
+  %t241 = call ptr @spec_rt_alloc(i64 %t241_sz, ptr @IrInst_FieldPtr__destroy)
+  %t241_tnp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t241, i32 0, i32 0
+  store ptr @.typename.IrInst_FieldPtr, ptr %t241_tnp
+  %t241_vtp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t241, i32 0, i32 1
+  store ptr @.vtable.IrInst_FieldPtr, ptr %t241_vtp
+  %t242 = load ptr, ptr %var_fPtr_228
+  %t243 = load ptr, ptr %slot_obj
+  %t244 = load ptr, ptr %slot_structName
+  %t245 = load i64, ptr %var_fidx_49
+  call void @IrInst_FieldPtr_init(ptr %t241, ptr %t242, ptr %t243, ptr %t244, i64 %t245)
+  call ptr @spec_claim_pool(ptr %t241)
+  %t246 = icmp ne ptr %t240, null
+  br i1 %t246, label %vt_call_64, label %dir_call_65
+vt_call_64:
+  %t247 = getelementptr inbounds %struct.IrBuilder, ptr %t240, i32 0, i32 1
+  %t248 = load ptr, ptr %t247
+  %t249 = getelementptr ptr, ptr %t248, i64 966
+  %t250 = load ptr, ptr %t249
+  call void %t250(ptr %t240, ptr %t241)
+  br label %vt_end_66
+dir_call_65:
+  call void @IrBuilder_emit(ptr %t240, ptr %t241)
+  br label %vt_end_66
+vt_end_66:
+  %t251 = call i64 @spec_pool_frame()
+  %t252 = load ptr, ptr %var_st_7
+  %t253 = getelementptr inbounds %struct.IrStruct, ptr %t252, i32 0, i32 7
+  %t254 = load ptr, ptr %t253
+  %t255 = load i64, ptr %var_fidx_49
+  %t256 = call ptr @Vector_vecGetChecked(ptr null, ptr %t254, i64 %t255)
+  %t257 = ptrtoint ptr %t256 to i1
+  call void @spec_pool_release_to(i64 %t251)
+  br i1 %t257, label %if_then_67, label %if_end_69
+if_then_67:
+  %t258 = load ptr, ptr %self_slot
+  %t259_szp = getelementptr %struct.IrInst_Retain, ptr null, i32 1
+  %t259_sz = ptrtoint ptr %t259_szp to i64
+  %t259 = call ptr @spec_rt_alloc(i64 %t259_sz, ptr @IrInst_Retain__destroy)
+  %t259_tnp = getelementptr inbounds %struct.IrInst_Retain, ptr %t259, i32 0, i32 0
+  store ptr @.typename.IrInst_Retain, ptr %t259_tnp
+  %t259_vtp = getelementptr inbounds %struct.IrInst_Retain, ptr %t259, i32 0, i32 1
+  store ptr @.vtable.IrInst_Retain, ptr %t259_vtp
+  %t260 = load ptr, ptr %var_val_195
+  call void @IrInst_Retain_init(ptr %t259, ptr %t260)
+  call ptr @spec_claim_pool(ptr %t259)
+  %t261 = icmp ne ptr %t258, null
+  br i1 %t261, label %vt_call_70, label %dir_call_71
+vt_call_70:
+  %t262 = getelementptr inbounds %struct.IrBuilder, ptr %t258, i32 0, i32 1
   %t263 = load ptr, ptr %t262
   %t264 = getelementptr ptr, ptr %t263, i64 966
   %t265 = load ptr, ptr %t264
-  call void %t265(ptr %t256, ptr %t257)
-  br label %vt_end_73
-dir_call_72:
-  call void @IrBuilder_emit(ptr %t256, ptr %t257)
-  br label %vt_end_73
-vt_end_73:
-  br label %if_end_34
-if_end_34:
+  call void %t265(ptr %t258, ptr %t259)
+  br label %vt_end_72
+dir_call_71:
+  call void @IrBuilder_emit(ptr %t258, ptr %t259)
+  br label %vt_end_72
+vt_end_72:
+  %t267 = load ptr, ptr %self_slot
+  %t270 = icmp ne ptr %t267, null
+  br i1 %t270, label %vt_call_73, label %dir_call_74
+vt_call_73:
+  %t271 = getelementptr inbounds %struct.IrBuilder, ptr %t267, i32 0, i32 1
+  %t272 = load ptr, ptr %t271
+  %t273 = getelementptr ptr, ptr %t272, i64 958
+  %t274 = load ptr, ptr %t273
+  %t275 = call ptr %t274(ptr %t267)
+  store ptr %t275, ptr %t269
+  br label %vt_end_75
+dir_call_74:
+  %t276 = call ptr @IrBuilder_nextTmp(ptr %t267)
+  store ptr %t276, ptr %t269
+  br label %vt_end_75
+vt_end_75:
+  %t268 = load ptr, ptr %t269
+  call ptr @spec_rt_retain(ptr %t268)
+  %t277 = load ptr, ptr %var_oldVal_266
+  call void @spec_rt_release(ptr %t277)
+  store ptr %t268, ptr %var_oldVal_266
+  %t278 = load ptr, ptr %self_slot
+  %t279_szp = getelementptr %struct.IrInst_Load, ptr null, i32 1
+  %t279_sz = ptrtoint ptr %t279_szp to i64
+  %t279 = call ptr @spec_rt_alloc(i64 %t279_sz, ptr @IrInst_Load__destroy)
+  %t279_tnp = getelementptr inbounds %struct.IrInst_Load, ptr %t279, i32 0, i32 0
+  store ptr @.typename.IrInst_Load, ptr %t279_tnp
+  %t279_vtp = getelementptr inbounds %struct.IrInst_Load, ptr %t279, i32 0, i32 1
+  store ptr @.vtable.IrInst_Load, ptr %t279_vtp
+  %t280 = load ptr, ptr %var_oldVal_266
+  %t281 = load ptr, ptr %var_fPtr_228
+  %t282 = call ptr @IrType_Ptr__ensure()
+  call ptr @spec_claim_pool(ptr %t282)
+  call void @IrInst_Load_init(ptr %t279, ptr %t280, ptr %t281, ptr %t282)
+  call ptr @spec_claim_pool(ptr %t279)
+  %t283 = icmp ne ptr %t278, null
+  br i1 %t283, label %vt_call_76, label %dir_call_77
+vt_call_76:
+  %t284 = getelementptr inbounds %struct.IrBuilder, ptr %t278, i32 0, i32 1
+  %t285 = load ptr, ptr %t284
+  %t286 = getelementptr ptr, ptr %t285, i64 966
+  %t287 = load ptr, ptr %t286
+  call void %t287(ptr %t278, ptr %t279)
+  br label %vt_end_78
+dir_call_77:
+  call void @IrBuilder_emit(ptr %t278, ptr %t279)
+  br label %vt_end_78
+vt_end_78:
+  %t288 = load ptr, ptr %self_slot
+  %t289_szp = getelementptr %struct.IrInst_Release, ptr null, i32 1
+  %t289_sz = ptrtoint ptr %t289_szp to i64
+  %t289 = call ptr @spec_rt_alloc(i64 %t289_sz, ptr @IrInst_Release__destroy)
+  %t289_tnp = getelementptr inbounds %struct.IrInst_Release, ptr %t289, i32 0, i32 0
+  store ptr @.typename.IrInst_Release, ptr %t289_tnp
+  %t289_vtp = getelementptr inbounds %struct.IrInst_Release, ptr %t289, i32 0, i32 1
+  store ptr @.vtable.IrInst_Release, ptr %t289_vtp
+  %t290 = load ptr, ptr %var_oldVal_266
+  call void @IrInst_Release_init(ptr %t289, ptr %t290)
+  call ptr @spec_claim_pool(ptr %t289)
+  %t291 = icmp ne ptr %t288, null
+  br i1 %t291, label %vt_call_79, label %dir_call_80
+vt_call_79:
+  %t292 = getelementptr inbounds %struct.IrBuilder, ptr %t288, i32 0, i32 1
+  %t293 = load ptr, ptr %t292
+  %t294 = getelementptr ptr, ptr %t293, i64 966
+  %t295 = load ptr, ptr %t294
+  call void %t295(ptr %t288, ptr %t289)
+  br label %vt_end_81
+dir_call_80:
+  call void @IrBuilder_emit(ptr %t288, ptr %t289)
+  br label %vt_end_81
+vt_end_81:
+  br label %if_end_69
+if_end_69:
+  %t296 = load ptr, ptr %self_slot
+  %t297_szp = getelementptr %struct.IrInst_Store, ptr null, i32 1
+  %t297_sz = ptrtoint ptr %t297_szp to i64
+  %t297 = call ptr @spec_rt_alloc(i64 %t297_sz, ptr @IrInst_Store__destroy)
+  %t297_tnp = getelementptr inbounds %struct.IrInst_Store, ptr %t297, i32 0, i32 0
+  store ptr @.typename.IrInst_Store, ptr %t297_tnp
+  %t297_vtp = getelementptr inbounds %struct.IrInst_Store, ptr %t297, i32 0, i32 1
+  store ptr @.vtable.IrInst_Store, ptr %t297_vtp
+  %t298 = load ptr, ptr %var_fPtr_228
+  %t299 = load ptr, ptr %var_val_195
+  %t300 = load ptr, ptr %var_fty_169
+  call void @IrInst_Store_init(ptr %t297, ptr %t298, ptr %t299, ptr %t300)
+  call ptr @spec_claim_pool(ptr %t297)
+  %t301 = icmp ne ptr %t296, null
+  br i1 %t301, label %vt_call_82, label %dir_call_83
+vt_call_82:
+  %t302 = getelementptr inbounds %struct.IrBuilder, ptr %t296, i32 0, i32 1
+  %t303 = load ptr, ptr %t302
+  %t304 = getelementptr ptr, ptr %t303, i64 966
+  %t305 = load ptr, ptr %t304
+  call void %t305(ptr %t296, ptr %t297)
+  br label %vt_end_84
+dir_call_83:
+  call void @IrBuilder_emit(ptr %t296, ptr %t297)
+  br label %vt_end_84
+vt_end_84:
+  br label %if_end_45
+if_end_45:
   br label %if_end_21
 if_end_21:
   br label %if_end_15
 if_end_15:
-  %t266 = load i64, ptr %var_ai_29
-  %t267 = add i64 0, 1
-  %t268 = add i64 %t266, %t267
-  store i64 %t268, ptr %var_ai_29
+  %t306 = load i64, ptr %var_ai_29
+  %t307 = add i64 0, 1
+  %t308 = add i64 %t306, %t307
+  store i64 %t308, ptr %var_ai_29
   call void @spec_pool_release_to(i64 %t36)
   br label %while_hdr_10
 while_end_12:
-  %t269 = load ptr, ptr %var_st_7
-  call void @spec_rt_release(ptr %t269)
-  %t270 = load ptr, ptr %var_na_37
-  call void @spec_rt_release(ptr %t270)
-  %t271 = load ptr, ptr %var_fSpec_67
-  call void @spec_rt_release(ptr %t271)
-  %t272 = load ptr, ptr %var_argSpec_81
-  call void @spec_rt_release(ptr %t272)
-  %t273 = load ptr, ptr %var_fBase_88
-  call void @spec_rt_release(ptr %t273)
-  %t274 = load ptr, ptr %var_aBase_101
-  call void @spec_rt_release(ptr %t274)
-  %t275 = load ptr, ptr %var_fty_129
-  call void @spec_rt_release(ptr %t275)
-  %t276 = load ptr, ptr %var_aty_136
-  call void @spec_rt_release(ptr %t276)
-  %t277 = load ptr, ptr %var_val_155
-  call void @spec_rt_release(ptr %t277)
-  %t278 = load ptr, ptr %var_fPtr_188
-  call void @spec_rt_release(ptr %t278)
-  %t279 = load ptr, ptr %var_oldVal_226
-  call void @spec_rt_release(ptr %t279)
+  %t309 = load ptr, ptr %var_st_7
+  call void @spec_rt_release(ptr %t309)
+  %t310 = load ptr, ptr %var_na_37
+  call void @spec_rt_release(ptr %t310)
+  %t311 = load ptr, ptr %var_fSpec_67
+  call void @spec_rt_release(ptr %t311)
+  %t312 = load ptr, ptr %var_argSpec_81
+  call void @spec_rt_release(ptr %t312)
+  %t313 = load ptr, ptr %var_fBase_88
+  call void @spec_rt_release(ptr %t313)
+  %t314 = load ptr, ptr %var_aBase_101
+  call void @spec_rt_release(ptr %t314)
+  %t315 = load ptr, ptr %var_fty_169
+  call void @spec_rt_release(ptr %t315)
+  %t316 = load ptr, ptr %var_aty_176
+  call void @spec_rt_release(ptr %t316)
+  %t317 = load ptr, ptr %var_val_195
+  call void @spec_rt_release(ptr %t317)
+  %t318 = load ptr, ptr %var_fPtr_228
+  call void @spec_rt_release(ptr %t318)
+  %t319 = load ptr, ptr %var_oldVal_266
+  call void @spec_rt_release(ptr %t319)
   call void @spec_pool_release_to(i64 %t1)
   ret void
 }

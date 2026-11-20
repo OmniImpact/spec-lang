@@ -12,11 +12,6 @@ Class of Frame is EditorBody{
 	EditorViewModel is vm;
 	FocusTarget is focusTarget;
 
-	replace Function is init(EditorViewModel is vm, FocusTarget is focusTarget){
-		:vm: vm;
-		:focusTarget: focusTarget;
-	}
-
 	replace Function of Widget is ui(){
 		Panel(
 			border: true,
