@@ -264,12 +264,12 @@ Class is TypeChecker{
 			local Type is p0: t:params:get(index: 0);
 			# the stamp vocabulary repeats — the
 			# interning collapses the retained copies to one object.
-			return (baseName . ':' . :formatTypeString(t: p0)):intern();
+			return (baseName . ':' . :formatVarTypeString(t: p0)):intern();
 		});
 		if({ t:params:length() >= 2 }, {
 			local Type is p0: t:params:get(index: 0);
 			local Type is p1: t:params:get(index: 1);
-			return (baseName . ':' . :formatTypeString(t: p0) . ':' . :formatTypeString(t: p1)):intern();
+			return (baseName . ':' . :formatVarTypeString(t: p0) . ':' . :formatVarTypeString(t: p1)):intern();
 		});
 		return baseName;
 	}
@@ -1683,26 +1683,51 @@ Class is TypeChecker{
 		# last parameter Function-typed — the open scope slot.
 		local Int is wantCount: args:length();
 		group:each(action: local Function(Member is m){
-			if({ m:params:length() != wantCount }, {
+			if({ m:params:length() < wantCount || (isScoped && m:params:length() != wantCount) }, {
 				return;
 			});
 			if({ allPos }, {
-				survivors:add(item: m);
+				local Boolean is tailDefaulted: true;
+				local Int is pi: wantCount;
+				while({ tailDefaulted && pi < m:params:length() }, {
+					local Parameter is tp: m:params:get(index: pi);
+					if({ !tp:hasDefault }, {
+						tailDefaulted: false;
+					});
+					pi++;
+				});
+				if({ tailDefaulted }, {
+					survivors:add(item: m);
+				});
 				return;
 			});
 			local Boolean is namesMatch: true;
+			# Every supplied named argument must correspond to a parameter of m.
+			args:each(action: local Function(NamedArg is a){
+				if({ namesMatch }, {
+					local Boolean is known: false;
+					m:params:each(action: local Function(Parameter is p){
+						if({ p:name == a:name }, {
+							known: true;
+						});
+					});
+					if({ !known }, {
+						namesMatch: false;
+					});
+				});
+			});
 			local Int is npIdx: 0;
 			m:params:each(action: local Function(Parameter is p){
 				# The scope slot (the last parameter) is bound by the
 				# remainder, not by a named argument.
-				if({ !(isScoped && npIdx == m:params:length() - 1) }, {
+				if({ namesMatch && !(isScoped && npIdx == m:params:length() - 1) }, {
 					local Boolean is present: false;
 					args:each(action: local Function(NamedArg is a){
 						if({ a:name == p:name }, {
 							present: true;
 						});
 					});
-					if({ !present }, {
+					if({ !present && !p:hasDefault }, {
 						namesMatch: false;
 					});
 				});
@@ -1776,6 +1801,22 @@ Class is TypeChecker{
 			});
 		});
 		if({ exact:length() > 1 }, {
+			# Prefer an exact-arity match over one that relies on default parameters.
+			local Array of Member is exactArity: [];
+			exact:each(action: local Function(Member is m){
+				if({ m:params:length() == wantCount }, {
+					exactArity:add(item: m);
+				});
+			});
+			if({ exactArity:length() == 1 }, {
+				local Member is sel: exactArity:get(index: 0);
+				if({ isScoped && !:scopeSlotOk(m: sel, explicitCount: args:length()) }, {
+					:addError(line: :currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (§as).');
+					return none;
+				});
+				cd:overloadIndex: :indexOfMember(group: group, m: sel);
+				return sel;
+			});
 			:addError(line: :currentLine, msg: 'Ambiguous call to \'' . baseName . '.' . methodName . '\': the arguments match multiple overloads; use named arguments (§I.2).');
 			return none;
 		});
@@ -1952,23 +1993,29 @@ Class is TypeChecker{
 			if({ pT:startsWith(prefix: 'Function') }, {
 				pT: :formatVarTypeString(t: p:paramType);
 			});
-			if({ !found || bound:resolvedType == '' }, {
-				allMatch: false;
+			if({ !found }, {
+				if({ !p:hasDefault }, {
+					allMatch: false;
+				});
 			}, {
-				if({ bound:resolvedType != pT }, {
-					local Boolean is genericMatch: false;
-					if({ pT:startsWith(prefix: 'Function:') && bound:resolvedType:startsWith(prefix: 'Function:') }, {
-						local String is pRet: pT:substring(start: 9, end: pT:length());
-						local String is bRet: bound:resolvedType:substring(start: 9, end: bound:resolvedType:length());
-						if({ :isMethodTypeParam(tp: pRet, m: m) && bRet != '' && !:isVoid(t: bRet) }, {
+				if({ bound:resolvedType == '' }, {
+					allMatch: false;
+				}, {
+					if({ bound:resolvedType != pT }, {
+						local Boolean is genericMatch: false;
+						if({ pT:startsWith(prefix: 'Function:') && bound:resolvedType:startsWith(prefix: 'Function:') }, {
+							local String is pRet: pT:substring(start: 9, end: pT:length());
+							local String is bRet: bound:resolvedType:substring(start: 9, end: bound:resolvedType:length());
+							if({ :isMethodTypeParam(tp: pRet, m: m) && bRet != '' && !:isVoid(t: bRet) }, {
+								genericMatch: true;
+							});
+						});
+						if({ :isMethodTypeParam(tp: pT, m: m) && !:isVoid(t: bound:resolvedType) }, {
 							genericMatch: true;
 						});
-					});
-					if({ :isMethodTypeParam(tp: pT, m: m) && !:isVoid(t: bound:resolvedType) }, {
-						genericMatch: true;
-					});
-					if({ !genericMatch }, {
-						allMatch: false;
+						if({ !genericMatch }, {
+							allMatch: false;
+						});
 					});
 				});
 			});
@@ -2205,6 +2252,27 @@ Class is TypeChecker{
 													if({ !already && className != :currentClassName && pOwner != '' && pOwner != 'Class' && pOwner != 'Stringable' && pOwner != 'Loadable' && pOwner != 'Any' }, {
 														acc:add(item: className);
 													});
+												});
+											},
+											Expression:ArrayLit: local Function(Array of Expression is grpItems){
+												grpItems:each(action: local Function(Expression is gseg){
+													match(on: gseg, when: [
+														Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+															if({ gseg:usingAsAlias == '' }, {
+																local Boolean is already: false;
+																acc:each(action: local Function(String is got){
+																	if({ got == className }, {
+																		already: true;
+																	});
+																});
+																local String is pOwner: :findMemberOwnerClass(className: className, memberName: methodName);
+																if({ !already && className != :currentClassName && pOwner != '' && pOwner != 'Class' && pOwner != 'Stringable' && pOwner != 'Loadable' && pOwner != 'Any' }, {
+																	acc:add(item: className);
+																});
+															});
+														},
+														else: {}
+													]);
 												});
 											},
 											else: {}
@@ -2603,6 +2671,7 @@ Class is TypeChecker{
 										match(on: item, when: [
 											Expression:ArrayLit: local Function(Array of Expression is segs){
 												local String is terminal: '';
+												local Array of String is terminals: [];
 												local Array of String is nsSegs: [];
 												segs:each(action: local Function(Expression is seg){
 													match(on: seg, when: [
@@ -2612,8 +2681,22 @@ Class is TypeChecker{
 														Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 															terminal: className;
 														},
+														Expression:ArrayLit: local Function(Array of Expression is grpItems){
+															grpItems:each(action: local Function(Expression is g){
+																match(on: g, when: [
+																	Expression:Ident: local Function(String is gs){
+																		terminals:add(item: gs);
+																	},
+																	Expression:UsingAs: local Function(String is gclassName, Array of NamedArg is gargs){
+																		terminals:add(item: gclassName);
+																	}
+																], default: {});
+															});
+														},
 														Expression:StringLit: local Function(String is s){
-															nsSegs:add(item: s);
+															if({ s != '*' }, {
+																nsSegs:add(item: s);
+															});
 														}
 													], default: {
 													});
@@ -2625,7 +2708,12 @@ Class is TypeChecker{
 												if({ terminal == targetName || terminal == targetRoot }, {
 													granted: true;
 												});
-												if({ terminal == '' && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
+												terminals:each(action: local Function(String is tm){
+													if({ tm == targetName || tm == targetRoot }, {
+														granted: true;
+													});
+												});
+												if({ terminal == '' && terminals:length() == 0 && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
 													granted: true;
 												});
 											}
@@ -2684,6 +2772,7 @@ Class is TypeChecker{
 								match(on: item, when: [
 									Expression:ArrayLit: local Function(Array of Expression is segs){
 										local String is terminal: '';
+										local Array of String is terminals: [];
 										local Array of String is nsSegs: [];
 										segs:each(action: local Function(Expression is seg){
 											match(on: seg, when: [
@@ -2693,8 +2782,22 @@ Class is TypeChecker{
 												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 													terminal: className;
 												},
+												Expression:ArrayLit: local Function(Array of Expression is grpItems){
+													grpItems:each(action: local Function(Expression is g){
+														match(on: g, when: [
+															Expression:Ident: local Function(String is gs){
+																terminals:add(item: gs);
+															},
+															Expression:UsingAs: local Function(String is gclassName, Array of NamedArg is gargs){
+																terminals:add(item: gclassName);
+															}
+														], default: {});
+													});
+												},
 												Expression:StringLit: local Function(String is s){
-													nsSegs:add(item: s);
+													if({ s != '*' }, {
+														nsSegs:add(item: s);
+													});
 												}
 											], default: {});
 										});
@@ -2705,7 +2808,12 @@ Class is TypeChecker{
 										if({ terminal == targetName || terminal == targetRoot2 }, {
 											granted: true;
 										});
-										if({ terminal == '' && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
+										terminals:each(action: local Function(String is tm){
+											if({ tm == targetName || tm == targetRoot2 }, {
+												granted: true;
+											});
+										});
+										if({ terminal == '' && terminals:length() == 0 && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
 											granted: true;
 										});
 									}
@@ -4322,6 +4430,13 @@ Class is TypeChecker{
 		local String is fnVarT: '';
 		if({ targetIsSelf }, {
 			fnVarT: if({ call:isBareCall }, { :localVars:getString(key: method, default: :fieldTypes:getString(key: method, default: '')) }, { :fieldTypes:getString(key: method, default: '') });
+		}, {
+			if({ targetType != '' && targetType != Primitive:ANY:value() && !:allEnumNames:has(key: targetType) }, {
+				local String is ft: :lookupFieldType(className: TypeDomain:baseName(t: targetType), fieldName: method);
+				if({ TypeDomain:isFunction(t: ft) }, {
+					fnVarT: ft;
+				});
+			});
 		});
 		:checkThreadingCallRules(targetType: targetType, recvName: recvName, call: call, method: method);
 

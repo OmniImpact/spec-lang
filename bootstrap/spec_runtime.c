@@ -1742,7 +1742,7 @@ static bool _spec_raw_atexit_reg = false;
 static void _spec_restore_termios(void) {
     if (_spec_raw_active) {
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &_spec_orig_termios);
-        const char* seq = "\x1b[?25h\x1b[?1049l";
+        const char* seq = "\x1b[<u\x1b[?25h\x1b[?1049l";
         ssize_t _unused = write(STDOUT_FILENO, seq, strlen(seq));
         (void)_unused;
         _spec_raw_active = false;

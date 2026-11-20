@@ -4526,6 +4526,46 @@ Class is IrBuilder{
 		return clsTmp;
 	}
 
+	local Function of String is emitClosureCall(String is cObj, Expression is expr, CallData is call){
+		local String is fnPtrAddr: :nextTmp();
+		:emit(inst: IrInst:FieldPtr(dst: fnPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 0));
+		local String is fnPtrVal: :nextTmp();
+		:emit(inst: IrInst:Load(dst: fnPtrVal, slot: fnPtrAddr, ty: IrType:Ptr));
+		local String is envPtrAddr: :nextTmp();
+		:emit(inst: IrInst:FieldPtr(dst: envPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 1));
+		local String is envVal: :nextTmp();
+		:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
+		local IrType is cRetTy: :irTypeFor(specType: expr:resolvedType);
+		local Array of IrType is cArgT: [IrType:Ptr];
+		local Array of String is cArgV: [envVal];
+		local Int is cai: 0;
+		while({ cai < call:args:length() }, {
+			local NamedArg is cna: call:args:get(index: cai);
+			local Expression is cav: cna:value;
+			local IrType is caty: :irTypeFor(specType: cav:resolvedType);
+			if({ caty == IrType:Void }, {
+				caty: match(on: cav, when: [
+					Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
+					Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
+					Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
+					Expression:AnonFn: local Function of IrType(Type is retT, Array of Parameter is ps, Array of Statement is bs){ return IrType:Ptr; },
+					Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
+					Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },
+					else: { IrType:I64 }
+				]);
+			});
+			cArgT:add(item: caty);
+			cArgV:add(item: :lowerExpr(expr: cav));
+			cai++;
+		});
+		local Boolean is cHasDst: cRetTy != IrType:Void;
+		local String is cDst: '';
+		if({ cHasDst }, { cDst: :nextTmp(); });
+		:emit(inst: IrInst:IndirectCall(dst: cDst, hasDst: cHasDst, retType: cRetTy, fnPtr: fnPtrVal, argTypes: cArgT, args: cArgV));
+		:emitCheckUnwindAfterCall(callee: '__indirect__');
+		return cDst;
+	}
+
 	local Function of String is lowerCall(Expression is expr, CallData is call){
 		local String is nm: call:name;
 
@@ -4578,36 +4618,43 @@ Class is IrBuilder{
 		# Closure local variable call: fn(...)
 		if({ call:isBareCall && :localSlots:has(key: nm) && :localTypes:get(key: nm, default: IrType:I64) == IrType:Ptr }, {
 			local String is cObj: :emitLoadLocal(name: nm, ty: IrType:Ptr);
-			local String is fnPtrAddr: :nextTmp();
-			:emit(inst: IrInst:FieldPtr(dst: fnPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 0));
-			local String is fnPtrVal: :nextTmp();
-			:emit(inst: IrInst:Load(dst: fnPtrVal, slot: fnPtrAddr, ty: IrType:Ptr));
-			local String is envPtrAddr: :nextTmp();
-			:emit(inst: IrInst:FieldPtr(dst: envPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 1));
-			local String is envVal: :nextTmp();
-			:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
-			local IrType is cRetTy: :irTypeFor(specType: expr:resolvedType);
-			local Array of IrType is cArgT: [IrType:Ptr];
-			local Array of String is cArgV: [envVal];
-			local Int is cai: 0;
-			while({ cai < call:args:length() }, {
-				local NamedArg is cna: call:args:get(index: cai);
-				local Expression is cav: cna:value;
-				local IrType is caty: :irTypeFor(specType: cav:resolvedType);
-				if({ caty == IrType:Void }, { caty: IrType:I64; });
-				cArgT:add(item: caty);
-				cArgV:add(item: :lowerExpr(expr: cav));
-				cai++;
-			});
-			local Boolean is cHasDst: cRetTy != IrType:Void;
-			local String is cDst: '';
-			if({ cHasDst }, { cDst: :nextTmp(); });
-			:emit(inst: IrInst:IndirectCall(dst: cDst, hasDst: cHasDst, retType: cRetTy, fnPtr: fnPtrVal, argTypes: cArgT, args: cArgV));
-			:emitCheckUnwindAfterCall(callee: '__indirect__');
-			return cDst;
+			return :emitClosureCall(cObj: cObj, expr: expr, call: call);
 		});
 
 		local String is recvType: :baseTypeName(t: call:target:resolvedType);
+
+		# Closure field call: onQuit(...), :onQuit(...), or obj:onQuit(...)
+		local Boolean is targetIsSelfCall: call:isBareCall || match(on: call:target, when: [
+			Expression:Ident: local Function of Boolean(String is tname){ return tname == ':'; },
+			else: { false }
+		]);
+		if({ targetIsSelfCall && :localSlots:has(key: ':') && :fieldSpecTypes:get(key: :currentClass . ':' . nm, default: '') == 'Function' }, {
+			local IrStruct is curSt: :mod:findStruct(name: :currentClass);
+			local Int is cfIdx: curSt:fieldIndex(name: nm);
+			if({ cfIdx >= 0 }, {
+				local String is selfObj: :emitLoadLocal(name: ':', ty: IrType:Ptr);
+				local String is cfPtr: :nextTmp();
+				:emit(inst: IrInst:FieldPtr(dst: cfPtr, objPtr: selfObj, structName: :currentClass, fieldIndex: cfIdx));
+				local String is cObj: :nextTmp();
+				:emit(inst: IrInst:Load(dst: cObj, slot: cfPtr, ty: IrType:Ptr));
+				return :emitClosureCall(cObj: cObj, expr: expr, call: call);
+			});
+		});
+		if({ !targetIsSelfCall && recvType != '' }, {
+			local String is recvStName: :cStructName(qname: recvType);
+			if({ :fieldSpecTypes:get(key: recvStName . ':' . nm, default: '') == 'Function' }, {
+				local IrStruct is recvSt: :mod:findStruct(name: recvStName);
+				local Int is rfIdx: recvSt:fieldIndex(name: nm);
+				if({ rfIdx >= 0 }, {
+					local String is recvObj: :lowerExpr(expr: call:target);
+					local String is rfPtr: :nextTmp();
+					:emit(inst: IrInst:FieldPtr(dst: rfPtr, objPtr: recvObj, structName: recvStName, fieldIndex: rfIdx));
+					local String is cObj: :nextTmp();
+					:emit(inst: IrInst:Load(dst: cObj, slot: rfPtr, ty: IrType:Ptr));
+					return :emitClosureCall(cObj: cObj, expr: expr, call: call);
+				});
+			});
+		});
 
 		# Method / constructor call
 		local IrType is retTy: :irTypeFor(specType: expr:resolvedType);
@@ -4721,7 +4768,7 @@ Class is IrBuilder{
 					});
 					local String is parentInit: :findParentMethodImpl(clsName: qLookup, methodName: 'init', suffix: ctorSuf);
 					if({ parentInit != '' }, {
-						if({ call:args:length() == 0 && :mod:findStruct(name: clsName):name != '' }, {
+						if({ !:methodParams:has(key: clsName . '_init') && :mod:findStruct(name: clsName):name != '' }, {
 							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: clsName . '_init', argTypes: [IrType:Ptr], args: [obj]));
 						});
 						ctorKey: parentInit;
@@ -5005,7 +5052,18 @@ Class is IrBuilder{
 				if({ p:hasDefault }, {
 					:currentCallExpr: callExprForDefaults;
 					aty: :irTypeFor(specType: p:defaultExpr:resolvedType);
-					if({ aty == IrType:Void }, { aty: IrType:I64; });
+					if({ aty == IrType:Void }, {
+						aty: match(on: p:defaultExpr, when: [
+							Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
+							Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
+							Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
+							Expression:AnonFn: local Function of IrType(Type is retT, Array of Parameter is ps, Array of Statement is bs){ return IrType:Ptr; },
+							Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
+							Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },
+							Expression:NumberLit: local Function of IrType(Int is i, String is t){ return IrType:I64; },
+							else: { pty }
+						]);
+					});
 					aval: :lowerExpr(expr: p:defaultExpr);
 				}, {
 					aval: :emitDefaultVal(ty: pty);

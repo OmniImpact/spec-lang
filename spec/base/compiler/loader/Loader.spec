@@ -409,6 +409,7 @@ Class is Loader{
 		});
 		local Array of String is parts: [];
 		local String is termClass: '';
+		local Array of String is groupedClasses: [];
 		items:each(action: local Function(Expression is seg){
 			match(on: seg, when: [
 				Expression:Ident: local Function(String is name){
@@ -420,13 +421,34 @@ Class is Loader{
 					# for the checker, generator, and audit.
 					termClass: className;
 				},
+				Expression:ArrayLit: local Function(Array of Expression is grpItems){
+					grpItems:each(action: local Function(Expression is g){
+						match(on: g, when: [
+							Expression:Ident: local Function(String is gname){
+								groupedClasses:add(item: gname);
+							},
+							Expression:UsingAs: local Function(String is gclassName, Array of NamedArg is gargs){
+								groupedClasses:add(item: gclassName);
+							},
+							else: {}
+						]);
+					});
+				},
 				Expression:StringLit: local Function(String is value){
-					parts:add(item: value);
+					if({ value != '*' }, {
+						parts:add(item: value);
+					});
 				},
 				else: {}
 			]);
 		});
-		:resolveImport(parts: parts, termClass: termClass, c: c);
+		if({ groupedClasses:length() > 0 }, {
+			groupedClasses:each(action: local Function(String is gc){
+				:resolveImport(parts: parts, termClass: gc, c: c);
+			});
+		}, {
+			:resolveImport(parts: parts, termClass: termClass, c: c);
+		});
 	}
 
 	## Directory portion of a file path ('' when the path has no slash).
@@ -578,14 +600,26 @@ Class is Loader{
 										subItems:each(action: local Function(Expression is seg){
 											match(on: seg, when: [
 												Expression:StringLit: local Function(String is value){
-													if({ pkgPrefix == '' }, {
-														pkgPrefix: value;
-													}, {
-														pkgPrefix: pkgPrefix . ':' . value;
+													if({ value != '*' }, {
+														if({ pkgPrefix == '' }, {
+															pkgPrefix: value;
+														}, {
+															pkgPrefix: pkgPrefix . ':' . value;
+														});
 													});
 												},
 												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 													:synthesizeFor(c: c, asExpr: seg, pkgPrefix: pkgPrefix);
+												},
+												Expression:ArrayLit: local Function(Array of Expression is grpItems){
+													grpItems:each(action: local Function(Expression is g){
+														match(on: g, when: [
+															Expression:UsingAs: local Function(String is gclassName, Array of NamedArg is gargs){
+																:synthesizeFor(c: c, asExpr: g, pkgPrefix: pkgPrefix);
+															},
+															else: {}
+														]);
+													});
 												},
 												else: {}
 											]);
