@@ -355,8 +355,14 @@ Class is Parser{
 				}, {
 					local Type is pType: :parseType();
 					:matchKeyword(kw: Keyword:IS);
+					local Boolean is isVar: false;
+					if({ :peek():getValue() == '*' }, {
+						:advance();
+						isVar: true;
+					});
 					local Token is pTok: :advance();
 					local Parameter is param: Parameter:init(name: pTok:getValue(), paramType: pType);
+					param:isVariadic: isVar;
 					if({ :checkPunct(p: Punctuation:DEFAULT) }, {
 						:advance();
 						param:setDefault(expr: :parseExpression());

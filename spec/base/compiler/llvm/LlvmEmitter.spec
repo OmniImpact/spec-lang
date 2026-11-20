@@ -123,9 +123,11 @@ Class is LlvmEmitter{
 
 		# Struct types, vtables, and reflection metadata
 		local LlvmStructLayout is methodMetaLayout: LlvmStructLayout:methodMeta();
+		local LlvmStructLayout is fieldMetaLayout: LlvmStructLayout:fieldMeta();
 		local LlvmStructLayout is classMetaLayout: LlvmStructLayout:classMeta();
 		local LlvmStructLayout is heldEntryLayout: LlvmStructLayout:heldEntry();
 		local String is methodMetaType: methodMetaLayout:llvmType();
+		local String is fieldMetaType: fieldMetaLayout:llvmType();
 		local String is heldEntryType: heldEntryLayout:llvmType();
 		local Array of String is classMetaRefs: [];
 		local Array of String is heldEntryItems: [];
@@ -199,8 +201,30 @@ Class is LlvmEmitter{
 				methodsRef: '@.methods.' . st:name;
 			});
 
+			local String is fieldsRef: 'null';
+			if({ st:metaFieldNames:length() > 0 }, {
+				local String is mfItems: '';
+				local Int is mfi: 0;
+				while({ mfi < st:metaFieldNames:length() }, {
+					local String is mfnm: st:metaFieldNames:get(index: mfi, default: '');
+					local String is mfty: st:metaFieldTypes:get(index: mfi, default: '');
+					local Int is mfidx: st:metaFieldIndices:get(index: mfi, default: 0);
+					local Int is mffl: st:metaFieldFlags:get(index: mfi, default: 0);
+					local String is fnSym: '@.fname.' . st:name . '.' . (mfi as String);
+					local String is ftSym: '@.ftype.' . st:name . '.' . (mfi as String);
+					out: out . :emitCStrGlobal(sym: fnSym, val: mfnm);
+					out: out . :emitCStrGlobal(sym: ftSym, val: mfty);
+					local String is offExpr: 'ptrtoint (ptr getelementptr (%struct.' . st:name . ', ptr null, i32 0, i32 ' . (mfidx as String) . ') to i32)';
+					if({ mfi > 0 }, { mfItems: mfItems . ', '; });
+					mfItems: mfItems . fieldMetaLayout:formatConst(values: [fnSym, ftSym, offExpr, mffl as String]);
+					mfi++;
+				});
+				out: out . '@.fields.' . st:name . ' = private constant [' . (st:metaFieldNames:length() as String) . ' x ' . fieldMetaType . '] [' . mfItems . "]\n";
+				fieldsRef: '@.fields.' . st:name;
+			});
+
 			local String is ctorPtr: if({ st:constructFn == 'null' }, { 'null' }, { '@' . st:constructFn });
-			out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: ['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String]) . "\n";
+			out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: ['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String, fieldsRef, st:metaFieldNames:length() as String]) . "\n";
 			classMetaRefs:add(item: 'ptr @.meta.' . st:name);
 
 			if({ st:heldNames:length() > 0 }, {

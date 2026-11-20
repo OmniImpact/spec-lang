@@ -368,8 +368,21 @@ Class is IrBuilder{
 					if({ cls:typeParams:get(index: bti, default: '') == m:memberType:name }, { fIsArc: false; });
 					bti++;
 				});
-				st:addFieldArc(name: m:name, ty: fty, isArc: fIsArc);
+				local Int is fIdx: st:addFieldArc(name: m:name, ty: fty, isArc: fIsArc);
 				:fieldSpecTypes:set(key: st:name . ':' . m:name, value: m:memberType:name);
+				if({ !m:name:startsWith(prefix: '_import_') }, {
+					local Int is fflags: 0;
+					if({ fIsArc }, { fflags: fflags + 1; });
+					if({ fty == IrType:I1 }, { fflags: fflags + 2; });
+					if({ fty == IrType:F64 }, { fflags: fflags + 4; });
+					if({ fty == IrType:I64 }, { fflags: fflags + 8; });
+					if({ fty == IrType:Ptr }, { fflags: fflags + 16; });
+					if({ m:hasModifier(kw: Keyword:LOCAL) }, { fflags: fflags + 128; });
+					st:metaFieldNames:add(item: m:name);
+					st:metaFieldTypes:add(item: m:memberType:name);
+					st:metaFieldIndices:add(item: fIdx);
+					st:metaFieldFlags:add(item: fflags);
+				});
 				if({ m:hasInit && :isLazyCallExpr(expr: m:initExpr) }, {
 					st:addField(name: '_lazy_state_' . m:name, ty: IrType:I64);
 					local String is ownerSname: :cStructName(qname: cls:qualifiedName());
@@ -5001,6 +5014,48 @@ Class is IrBuilder{
 		local Int is pi: 0;
 		while({ pi < params:length() }, {
 			local Parameter is p: params:get(index: pi);
+			if({ p:isVariadic }, {
+				if({ p:paramType:name == 'Array' }, {
+					local Array of Expression is vItems: [];
+					local Int is vi: pi;
+					while({ vi < callArgs:length() }, {
+						local NamedArg is vna: callArgs:get(index: vi);
+						if({ vna:name == '' }, {
+							vItems:add(item: vna:value);
+						});
+						vi++;
+					});
+					local Expression is arrExpr: Expression:ArrayLit(items: vItems);
+					arrExpr:setResolvedType(t: 'Array');
+					argTypes:add(item: IrType:Ptr);
+					argVals:add(item: :lowerExpr(expr: arrExpr));
+				}, {
+					local Map of String to Boolean is fixedNames: Map:init();
+					local Int is fni: 0;
+					while({ fni < pi }, {
+						fixedNames:set(key: params:get(index: fni):name, value: true);
+						fni++;
+					});
+					local Array of Expression is vKeys: [];
+					local Array of Expression is vVals: [];
+					local Int is vi: 0;
+					while({ vi < callArgs:length() }, {
+						local NamedArg is vna: callArgs:get(index: vi);
+						if({ vna:name != '' && !fixedNames:has(key: vna:name) }, {
+							local Expression is kExpr: Expression:StringLit(value: vna:name);
+							kExpr:setResolvedType(t: 'String');
+							vKeys:add(item: kExpr);
+							vVals:add(item: vna:value);
+						});
+						vi++;
+					});
+					local Expression is mapExpr: Expression:MapLit(keys: vKeys, values: vVals);
+					mapExpr:setResolvedType(t: 'Map:String:Any');
+					argTypes:add(item: IrType:Ptr);
+					argVals:add(item: :lowerExpr(expr: mapExpr));
+				});
+				pi++;
+			}, {
 			local IrType is pty: :irTypeFor(specType: p:paramType:name);
 			if({ pty == IrType:Void }, { pty: IrType:Ptr; });
 			local Boolean is found: false;
@@ -5076,6 +5131,7 @@ Class is IrBuilder{
 			argTypes:add(item: pty);
 			argVals:add(item: aval);
 			pi++;
+			});
 		});
 	}
 }

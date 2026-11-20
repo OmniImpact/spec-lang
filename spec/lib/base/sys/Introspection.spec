@@ -304,4 +304,89 @@ Class of Any is Introspection{
 		});
 		return found;
 	}
+
+	local Function of Int is findFieldMeta(Any is obj, String is name){
+		local Int is objAddr: Mem:objToAddr(obj: obj);
+		if({ objAddr < 4096 }, { return 0; });
+		local Int is tnCstr: Mem:loadI64(ptr: objAddr, byteOffset: 0);
+		if({ tnCstr == 0 }, { return 0; });
+		local Int is clsMeta: :findClassMeta(className: Mem:cstrToStr(cstrAddr: tnCstr));
+		if({ clsMeta == 0 }, { return 0; });
+		local Int is fCount: Mem:loadI32(ptr: clsMeta, byteOffset: 64);
+		local Int is fArr: Mem:loadI64(ptr: clsMeta, byteOffset: 56);
+		if({ fArr == 0 || fCount <= 0 }, { return 0; });
+		local Int is i: 0;
+		while({ i < fCount }, {
+			local Int is fAddr: fArr + (i * 24);
+			local Int is fnCstr: Mem:loadI64(ptr: fAddr, byteOffset: 0);
+			if({ fnCstr != 0 && Mem:cstrToStr(cstrAddr: fnCstr) == name }, {
+				return fAddr;
+			});
+			i: i + 1;
+		});
+		return 0;
+	}
+
+	## Whether [obj]'s class has an instance field named [name].
+	Function of Boolean is hasField(Any is obj, String is name){
+		return :findFieldMeta(obj: obj, name: name) != 0;
+	}
+
+	## Declared Spec type name of field [name] on [obj], or '' when absent.
+	Function of String is fieldType(Any is obj, String is name){
+		local Int is fm: :findFieldMeta(obj: obj, name: name);
+		if({ fm == 0 }, { return ''; });
+		local Int is ftCstr: Mem:loadI64(ptr: fm, byteOffset: 8);
+		if({ ftCstr == 0 }, { return ''; });
+		return Mem:cstrToStr(cstrAddr: ftCstr);
+	}
+
+	## Reads field [name] on [obj] as [Any].
+	Function of Any is getField(Any is obj, String is name){
+		local Int is fm: :findFieldMeta(obj: obj, name: name);
+		if({ fm == 0 }, { return Mem:addrToObj(addr: 0); });
+		local Int is objAddr: Mem:objToAddr(obj: obj);
+		local Int is off: Mem:loadI32(ptr: fm, byteOffset: 16);
+		local Int is flags: Mem:loadI32(ptr: fm, byteOffset: 20);
+		if({ (flags & 16) != 0 }, {
+			return Mem:loadPtr(ptr: objAddr, byteOffset: off);
+		});
+		if({ (flags & 2) != 0 || (flags & 32) != 0 }, {
+			return Mem:addrToObj(addr: Mem:loadByte(ptr: objAddr, byteOffset: off));
+		});
+		if({ (flags & 64) != 0 }, {
+			return Mem:addrToObj(addr: Mem:loadI32(ptr: objAddr, byteOffset: off));
+		});
+		return Mem:addrToObj(addr: Mem:loadI64(ptr: objAddr, byteOffset: off));
+	}
+
+	## Assigns [value] into field [name] on [obj] (handling ARC retain/release for pointer fields).
+	Function is setField(Any is obj, String is name, Any is value){
+		local Int is fm: :findFieldMeta(obj: obj, name: name);
+		if({ fm == 0 }, { return; });
+		local Int is objAddr: Mem:objToAddr(obj: obj);
+		local Int is off: Mem:loadI32(ptr: fm, byteOffset: 16);
+		local Int is flags: Mem:loadI32(ptr: fm, byteOffset: 20);
+		if({ (flags & 16) != 0 }, {
+			local Int is newAddr: Mem:objToAddr(obj: value);
+			if({ (flags & 1) != 0 }, {
+				local Int is oldAddr: Mem:loadI64(ptr: objAddr, byteOffset: off);
+				if({ newAddr != oldAddr }, {
+					if({ newAddr != 0 }, { Mem:retainAddr(objAddr: newAddr); });
+					if({ oldAddr != 0 }, { Mem:releaseAddr(objAddr: oldAddr); });
+				});
+			});
+			Mem:storePtr(ptr: objAddr, byteOffset: off, val: value);
+			return;
+		});
+		if({ (flags & 2) != 0 || (flags & 32) != 0 }, {
+			Mem:storeByte(ptr: objAddr, byteOffset: off, val: Mem:objToAddr(obj: value));
+			return;
+		});
+		if({ (flags & 64) != 0 }, {
+			Mem:storeI32(ptr: objAddr, byteOffset: off, val: Mem:objToAddr(obj: value));
+			return;
+		});
+		Mem:storeI64(ptr: objAddr, byteOffset: off, val: Mem:objToAddr(obj: value));
+	}
 }

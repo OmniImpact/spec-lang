@@ -1517,6 +1517,33 @@ Class is TypeChecker{
 		local ClassInfo is recvClsInfo: :findClass(name: baseClassName);
 		local String is mTp: :detectMethodTypeParamForMember(m: m, cls: recvClsInfo);
 		:validateArgsAgainstSignature(callExpr: callExpr, params: m:params, recvCls: recvClsInfo, displayTarget: sigDisplay, recvTypeArgs: recvTypeArgs, methodTypeParam: mTp);
+		if({ cd:name == 'init' && m:params:length() > 0 }, {
+			local Parameter is lastP: m:params:get(index: m:params:length() - 1);
+			if({ lastP:isVariadic && lastP:paramType:name == 'Map' }, {
+				:checkVariadicInitRequiredFields(recvCls: recvClsInfo, cd: cd);
+			});
+		});
+	}
+
+	local Function is checkVariadicInitRequiredFields(ClassInfo is recvCls, CallData is cd){
+		if({ recvCls:name == '' || :isBindingDeclaration(cls: recvCls) }, { return; });
+		recvCls:members:each(action: local Function(Member is fm){
+			if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && fm:name != 'using' && fm:name != 'namespace' && fm:name != 'castable' && fm:name != 'group' }, {
+				local String is fTypeStr: :formatVarTypeString(t: fm:memberType);
+				local Boolean is supplied: false;
+				cd:args:each(action: local Function(NamedArg is a){
+					if({ !supplied && a:name == fm:name }, {
+						local String is argT: a:value:resolvedType;
+						if({ argT != '' && (argT == fTypeStr || :isAssignable(target: fTypeStr, source: argT)) }, {
+							supplied: true;
+						});
+					});
+				});
+				if({ !supplied }, {
+					:addError(line: :currentLine, msg: "Field '" . fm:name . "' of '" . recvCls:name . "' has no default value and is not assigned with matching type '" . :displayType(t: fTypeStr) . "' in constructor call.");
+				});
+			});
+		});
 	}
 
 	## Validates a call's arguments against an explicit parameter list:
@@ -1543,6 +1570,53 @@ Class is TypeChecker{
 		params:each(action: local Function(Parameter is p){
 			local String is pName: p:name;
 			local String is pT: p:paramType:name;
+			if({ p:isVariadic }, {
+				if({ pT == 'Array' }, {
+					local String is elemT: Primitive:ANY:value();
+					if({ p:paramType:params:length() >= 1 }, {
+						elemT: :formatVarTypeString(t: p:paramType:params:get(index: 0));
+						if({ recvTypeParams:length() > 0 && recvTypeArgs:length() > 0 }, {
+							elemT: :substituteTypeParam(rawType: elemT, cls: recvCls, typeArgs: recvTypeArgs);
+						});
+					});
+					local Int is ai: 0;
+					cd:args:each(action: local Function(NamedArg is a){
+						if({ ai >= pIdx && a:name == '' }, {
+							local String is argT: a:value:resolvedType;
+							if({ elemT != Primitive:ANY:value() && argT != '' && argT != Primitive:ANY:value() && !:isAssignable(target: elemT, source: argT) }, {
+								local String is msg: :errText:errCannotAssignArg(label: 'position ' . (ai + 1), target: displayTarget, method: cd:name, fromType: argT, toType: :displayType(t: elemT));
+								:addError(line: :currentLine, msg: msg);
+							});
+						});
+						ai: ai + 1;
+					});
+				}, {
+					local String is valT: Primitive:ANY:value();
+					if({ p:paramType:params:length() >= 2 }, {
+						valT: :formatVarTypeString(t: p:paramType:params:get(index: 1));
+						if({ recvTypeParams:length() > 0 && recvTypeArgs:length() > 0 }, {
+							valT: :substituteTypeParam(rawType: valT, cls: recvCls, typeArgs: recvTypeArgs);
+						});
+					});
+					local Map of String to String is fixedNames: Map:init();
+					local Int is fni: 0;
+					while({ fni < pIdx }, {
+						fixedNames:set(key: params:get(index: fni):name, value: '1');
+						fni++;
+					});
+					cd:args:each(action: local Function(NamedArg is a){
+						if({ a:name != '' && !fixedNames:has(key: a:name) }, {
+							local String is argT: a:value:resolvedType;
+							if({ valT != Primitive:ANY:value() && argT != '' && argT != Primitive:ANY:value() && !:isAssignable(target: valT, source: argT) }, {
+								local String is msg: :errText:errCannotAssignArg(label: a:name, target: displayTarget, method: cd:name, fromType: argT, toType: :displayType(t: valT));
+								:addError(line: :currentLine, msg: msg);
+							});
+						});
+					});
+				});
+				pIdx: pIdx + 1;
+				return;
+			});
 			# a Function-typed param enforces
 			# assignability in the colon form — the raw name would broaden
 			# every Function param to plain Function (the void-into-check
@@ -1683,6 +1757,38 @@ Class is TypeChecker{
 		# last parameter Function-typed — the open scope slot.
 		local Int is wantCount: args:length();
 		group:each(action: local Function(Member is m){
+			local Boolean is hasVar: m:params:length() > 0 && m:params:get(index: m:params:length() - 1):isVariadic;
+			if({ hasVar && !isScoped }, {
+				local Parameter is vp: m:params:get(index: m:params:length() - 1);
+				local Int is fixedCount: m:params:length() - 1;
+				if({ allPos }, {
+					if({ vp:paramType:name == 'Array' || wantCount == 0 }, {
+						local Boolean is fixedOk: true;
+						local Int is pi: wantCount;
+						while({ fixedOk && pi < fixedCount }, {
+							if({ !m:params:get(index: pi):hasDefault }, { fixedOk: false; });
+							pi++;
+						});
+						if({ fixedOk }, { survivors:add(item: m); });
+					});
+					return;
+				});
+				if({ vp:paramType:name == 'Map' }, {
+					local Boolean is fixedMatch: true;
+					local Int is fi: 0;
+					while({ fixedMatch && fi < fixedCount }, {
+						local Parameter is fp: m:params:get(index: fi);
+						local Boolean is present: false;
+						args:each(action: local Function(NamedArg is a){
+							if({ a:name == fp:name }, { present: true; });
+						});
+						if({ !present && !fp:hasDefault }, { fixedMatch: false; });
+						fi++;
+					});
+					if({ fixedMatch }, { survivors:add(item: m); });
+				});
+				return;
+			});
 			if({ m:params:length() < wantCount || (isScoped && m:params:length() != wantCount) }, {
 				return;
 			});
@@ -1969,6 +2075,10 @@ Class is TypeChecker{
 		local Boolean is allMatch: true;
 		local Int is posIdx: 0;
 		m:params:each(action: local Function(Parameter is p){
+			if({ p:isVariadic }, {
+				posIdx: posIdx + 1;
+				return;
+			});
 			local Expression is bound: Expression:Unknown;
 			local Boolean is found: false;
 			if({ p:name != '' }, {
@@ -5124,7 +5234,17 @@ Class is TypeChecker{
 			:genericMethodLines:set(key: gmKey, value: method:line);
 			:genericMethodFiles:set(key: gmKey, value: :currentSourceFile);
 		});
+		local Int is declPIdx: 0;
 		method:params:each(action: local Function(Parameter is p){
+			if({ p:isVariadic }, {
+				if({ declPIdx != method:params:length() - 1 }, {
+					:addError(line: method:line, msg: "Variadic parameter '*" . p:name . "' in '" . :currentClassName . ":" . method:name . "' must be the last parameter.");
+				});
+				local String is vtn: p:paramType:name;
+				if({ vtn != 'Array' && vtn != 'Map' }, {
+					:addError(line: method:line, msg: "Variadic parameter '*" . p:name . "' must have type 'Array' or 'Map', got '" . vtn . "'.");
+				});
+			});
 			:validateTypeAccess(t: p:paramType, line: method:line);
 			# IV.6 strictness: the declaration-side default is construction
 			# the declaring class bakes in — it gates against the declaring
@@ -5132,6 +5252,7 @@ Class is TypeChecker{
 			if({ p:hasDefault }, {
 				:inferExpressionType(expr: p:defaultExpr);
 			});
+			declPIdx: declPIdx + 1;
 		});
 		:validateTypeAccess(t: method:memberType, line: method:line);
 		local Member is mergeTarget: :findFirstSuperMethod(className: :currentClassName, methodName: method:name);

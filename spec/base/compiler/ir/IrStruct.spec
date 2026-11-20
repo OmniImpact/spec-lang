@@ -26,6 +26,10 @@ Class is IrStruct{
 	Array of String is metaMethodFns: [];
 	Array of Int is metaMethodFlags: [];
 	Array of Int is metaMethodLines: [];
+	Array of String is metaFieldNames: [];
+	Array of String is metaFieldTypes: [];
+	Array of Int is metaFieldIndices: [];
+	Array of Int is metaFieldFlags: [];
 	Array of String is heldNames: [];
 	Array of String is heldGetters: [];
 

@@ -84,6 +84,15 @@ Class is LlvmStructLayout{
 		return s;
 	}
 
+	held Function of LlvmStructLayout is fieldMeta(){
+		local LlvmStructLayout is s: LlvmStructLayout:init(structName: 'SpecFieldMeta');
+		s:addField(name: 'name', llvmType: 'ptr');
+		s:addField(name: 'type_name', llvmType: 'ptr');
+		s:addField(name: 'byte_offset', llvmType: 'i32');
+		s:addField(name: 'flags', llvmType: 'i32');
+		return s;
+	}
+
 	held Function of LlvmStructLayout is classMeta(){
 		local LlvmStructLayout is s: LlvmStructLayout:init(structName: 'SpecClassMeta');
 		s:addField(name: 'name', llvmType: 'ptr');
@@ -93,6 +102,8 @@ Class is LlvmStructLayout{
 		s:addField(name: 'construct', llvmType: 'ptr');
 		s:addField(name: 'methods', llvmType: 'ptr');
 		s:addField(name: 'method_count', llvmType: 'i32');
+		s:addField(name: 'fields', llvmType: 'ptr');
+		s:addField(name: 'field_count', llvmType: 'i32');
 		return s;
 	}
 

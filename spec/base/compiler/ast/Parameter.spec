@@ -22,6 +22,9 @@ Class is Parameter{
 	## True when a default value is present.
 	Boolean is hasDefault: false;
 
+	## True when declared with `*name` to capture remaining positional or named args.
+	Boolean is isVariadic: false;
+
 	## Initializes a parameter.
 	##
 	## @param name: Parameter identifier.
