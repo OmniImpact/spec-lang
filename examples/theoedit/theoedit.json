@@ -1,0 +1,10 @@
+{
+  "name": "theoedit",
+  "version": "0.1.0",
+  "source": "src/EditorApp.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/theoedit"
+}

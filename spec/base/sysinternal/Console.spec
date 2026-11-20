@@ -11,4 +11,6 @@ Class is Console{
 	Function is pal_console_free(Int is ptr);
 	Function of Int is pal_read_bytes(Int is dst_addr, Int is count);
 	Function is console_binary_mode();
+	Function is pal_raw_mode(Int is enable);
+	Function of Int is pal_poll_byte(Int is timeout_ms);
 }

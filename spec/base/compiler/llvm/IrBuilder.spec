@@ -2347,7 +2347,7 @@ Class is IrBuilder{
 			:emitFieldDefaults(cls: cls, seen: Map:init());
 		});
 
-		:lowerStmts(stmts: m:body);
+		:lowerFnBody(stmts: m:body, retTy: retTy);
 
 		if({ !:blkTerminated }, {
 			:emitReleaseOwnedLocals();
@@ -2825,6 +2825,38 @@ Class is IrBuilder{
 		while({ i < stmts:length() && !:blkTerminated }, {
 			:lowerStmt(stmt: stmts:get(index: i));
 			i++;
+		});
+	}
+
+	Function is lowerFnBody(Array of Statement is stmts, IrType is retTy){
+		local Int is n: stmts:length();
+		if({ retTy == IrType:Void || n == 0 }, {
+			:lowerStmts(stmts: stmts);
+			return;
+		});
+		local Int is i: 0;
+		while({ i < n - 1 && !:blkTerminated }, {
+			:lowerStmt(stmt: stmts:get(index: i));
+			i++;
+		});
+		if({ !:blkTerminated }, {
+			local Statement is lastStmt: stmts:get(index: n - 1);
+			local Boolean is promoted: false;
+			match(on: lastStmt, when: [
+				Statement:Expr: local Function(Expression is exprStmt){
+					local String is rt: exprStmt:resolvedType;
+					if({ rt != '' && rt != 'Void' }, {
+						promoted: true;
+						local Statement is retStmt: Statement:Return(returnExpr: exprStmt, hasReturnExpr: true);
+						retStmt:line: lastStmt:line;
+						:lowerStmt(stmt: retStmt);
+					});
+				},
+				else: {}
+			]);
+			if({ !promoted }, {
+				:lowerStmt(stmt: lastStmt);
+			});
 		});
 	}
 
@@ -4378,7 +4410,7 @@ Class is IrBuilder{
 			pi++;
 		});
 
-		:lowerStmts(stmts: body);
+		:lowerFnBody(stmts: body, retTy: retTy);
 		if({ !:blkTerminated }, {
 			:emitReleaseOwnedLocals();
 			:emitPoolExit();

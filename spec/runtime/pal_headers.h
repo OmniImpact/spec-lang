@@ -209,6 +209,7 @@ long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new
 #include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <termios.h>
 #include <stdatomic.h>
 
 static bool spec_pal_get_exe_path(char* buf, size_t size) {
@@ -353,6 +354,7 @@ long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new
 #include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <termios.h>
 #include <stdatomic.h>
 
 static bool spec_pal_get_exe_path(char* buf, size_t size) {

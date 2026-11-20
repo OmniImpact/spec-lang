@@ -5063,6 +5063,19 @@ Class is TypeChecker{
 			:checkStatement(stmt: stmt);
 		});
 
+		if({ !:isVoid(t: :currentMethodReturnType) && method:body:length() > 0 }, {
+			local Statement is lastStmt: method:body:get(index: method:body:length() - 1);
+			match(on: lastStmt, when: [
+				Statement:Expr: local Function(Expression is exprStmt){
+					local String is lastT: exprStmt:resolvedType;
+					if({ lastT != '' && !:isVoid(t: lastT) && !:isAssignable(target: :currentMethodReturnType, source: lastT) }, {
+						:addError(line: lastStmt:line, msg: "Implicit return value in '" . :currentClassName . ":" . method:name . "' has type '" . :displayType(t: lastT) . "', expected '" . :displayType(t: :currentMethodReturnType) . "'.");
+					});
+				},
+				else: {}
+			]);
+		});
+
 		if({ :currentMethodIsMerge && !:forwardSeen && method:body:length() > 0 }, {
 			:addError(line: method:line, msg: :errText:errMergeMustForward(method: method:name, className: :currentClassName));
 		});

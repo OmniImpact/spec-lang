@@ -209,6 +209,7 @@ long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new
 #include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <termios.h>
 #include <stdatomic.h>
 
 static bool spec_pal_get_exe_path(char* buf, size_t size) {
@@ -353,6 +354,7 @@ long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new
 #include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <termios.h>
 #include <stdatomic.h>
 
 static bool spec_pal_get_exe_path(char* buf, size_t size) {
@@ -1729,6 +1731,75 @@ void spec_console_binary_mode(void) {
 #if defined(_WIN32)
     _setmode(_fileno(stdin), _O_BINARY);
     _setmode(_fileno(stdout), _O_BINARY);
+#endif
+}
+
+#if !defined(_WIN32)
+static struct termios _spec_orig_termios;
+static bool _spec_raw_active = false;
+static bool _spec_raw_atexit_reg = false;
+
+static void _spec_restore_termios(void) {
+    if (_spec_raw_active) {
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &_spec_orig_termios);
+        const char* seq = "\x1b[?25h\x1b[?1049l";
+        ssize_t _unused = write(STDOUT_FILENO, seq, strlen(seq));
+        (void)_unused;
+        _spec_raw_active = false;
+    }
+}
+#endif
+
+void spec_pal_raw_mode(long long enable) {
+#if !defined(_WIN32)
+    if (!isatty(STDIN_FILENO)) return;
+    if (enable) {
+        if (!_spec_raw_active) {
+            if (tcgetattr(STDIN_FILENO, &_spec_orig_termios) == 0) {
+                if (!_spec_raw_atexit_reg) {
+                    atexit(_spec_restore_termios);
+                    _spec_raw_atexit_reg = true;
+                }
+                struct termios raw = _spec_orig_termios;
+                raw.c_iflag &= ~(unsigned long)(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+                raw.c_oflag &= ~(unsigned long)(OPOST);
+                raw.c_cflag |= (unsigned long)(CS8);
+                raw.c_lflag &= ~(unsigned long)(ECHO | ICANON | IEXTEN | ISIG);
+                raw.c_cc[VMIN] = 0;
+                raw.c_cc[VTIME] = 0;
+                if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == 0) {
+                    _spec_raw_active = true;
+                }
+            }
+        }
+    } else {
+        if (_spec_raw_active) {
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, &_spec_orig_termios);
+            _spec_raw_active = false;
+        }
+    }
+#else
+    (void)enable;
+#endif
+}
+
+long long spec_pal_poll_byte(long long timeout_ms) {
+#if !defined(_WIN32)
+    struct pollfd pfd;
+    pfd.fd = STDIN_FILENO;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    int t = timeout_ms < 0 ? -1 : (int)timeout_ms;
+    int rc = poll(&pfd, 1, t);
+    if (rc > 0 && (pfd.revents & POLLIN)) {
+        unsigned char ch = 0;
+        ssize_t n = read(STDIN_FILENO, &ch, 1);
+        if (n == 1) return (long long)ch;
+    }
+    return -1;
+#else
+    (void)timeout_ms;
+    return -1;
 #endif
 }
 static __thread char _spec_last_sock_err[128] = "";

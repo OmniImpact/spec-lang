@@ -56,4 +56,16 @@ Class is Input{
 	Function is setBinaryMode(){
 		base:sysinternal:Console:console_binary_mode();
 	}
+
+	## Enables or disables raw terminal input mode (registers an exit restore guard).
+	Function is setRawMode(Boolean is enabled){
+		local Int is flag: 0;
+		if({ enabled }, { flag: 1; });
+		base:sysinternal:Console:pal_raw_mode(enable: flag);
+	}
+
+	## Polls stdin for a single byte up to [timeoutMs] milliseconds (-1 when timed out or EOF).
+	Function of Int is pollByte(Int is timeoutMs: 0){
+		return base:sysinternal:Console:pal_poll_byte(timeout_ms: timeoutMs);
+	}
 }
