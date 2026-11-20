@@ -88,26 +88,33 @@ facility wrapper in 2.6, as one gated task), Json changes (pure library).
 Goal: the standard building blocks exist and the async transports stop
 flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
 
-- [ ] **2.1 `Result of T to E` in `base:core`.** Generic payload-variant enum
-      (spelled `Enum is Result of T to E { Ok(T is value), Err(E is error) }`
-      — 1.2's grammar; the plan's `Result of T, E` shorthand maps to it),
-      consumed via `when` destructuring + value yield. Depends on 1.2
-      (done). Gate: suite covering construction, destructuring,
-      yield-in-branch, ARC of the payload across branches.
-- [ ] **2.2 Error-kind enums.** One enum per transport-owning package:
-      `FileError`, `HttpError`, `NetError` (Socket/Url), `ThreadError`
-      (ThreadScope/Task/Channel), `JsonError`. Plain `Enum is X{ ... }`
-      variant lists. Small, mechanical.
+- [x] **2.1 `Result of T to E` in `base:core`.** DONE (668f103). The Err
+      variant carries the FULL currency (`SpecError of E` — kind,
+      description, captured stack trace), so a result converts to an unwind
+      without information loss. Generic-in-generic payload needed no
+      compiler change beyond 1.2. Suite: TestResultCore.spec (construction
+      grounding, destructuring, yield-in-operand, ref payloads across
+      coexisting instantiations, identity contract, exhaustiveness).
+      Compiler IR never imports Result — stdlib additions don't move the
+      seed (verified byte-identical).
+- [x] **2.2 Error-kind enums.** DONE (8bb1c8d). FileError, HttpError,
+      NetError, ThreadError, JsonError — variant sets surveyed from each
+      surface's ACTUAL failure strings. Two-part landing: kinds ahead of
+      consumers.
 - [ ] **2.3 Currency upgrade on the async transports.** `onError` payloads
       become `SpecError of E`:
-      - `base:sys:File`: kill the `emitLastError` String flattening; wrap
-        runtime errno bytes into `SpecError of FileError` at the boundary.
-      - `base:net:Http` / `Socket`: same; internal thread capture already
+      - [x] `base:sys:File` DONE (bd1288f): `emitLastError` builds the
+        currency (errno text → description, category → kind); all consumers
+        migrated (tests, specunit Assert/SpecUnit, X509, theoedit). NOTE
+        DISCOVERED: File's callback params are untyped `Function` and the
+        checker does not validate closure-invocation arguments — a stale
+        String-declaring caller compiles silently. Enforcement moved to a
+        speclint rule (3.5) + the final grep gate.
+      - [ ] `base:net:Http` / `Socket`: same; internal thread capture already
         transports `SpecError` objects.
-      - `base:sys:thread:Task` / `ThreadScope`: await/scope-exit re-raise
+      - [ ] `base:sys:thread:Task` / `ThreadScope`: await/scope-exit re-raise
         path verified to carry kinded errors unchanged.
-      Gate: `TestErrors`, `TestErrorCallbacks`, `TestFileAsync`,
-      `TestThreads` updated; examples still compile.
+      Gate per batch: wave identical to baseline; examples still compile.
 - [ ] **2.4 No silent swallow.** Remove the no-op default closures
       (`Http:send` currently defaults *both* callbacks to no-ops). New APIs:
       `onError` required. Existing APIs: default = re-raise via
