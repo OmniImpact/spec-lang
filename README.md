@@ -24,6 +24,48 @@ Class is HelloWorld{
 
 ---
 
+## Constructs Are Libraries, Not Keywords
+
+The keyword table below is frozen at ten words. Control flow, error
+transport, and every future construct enter the language as **facility
+classes** — ordinary Spec classes resolved through the `using` table, the
+way `as Conditional()` serves `if` and `match` and `as Loops()` serves
+`while`. The compiler recognizes their calls and inlines them; the lexer
+never learns their names. This is a contract, not a style preference:
+
+1. **No new keywords. Ever.** If a feature cannot be expressed as a
+   facility method call, it does not go in the language.
+2. **Two tiers or it does not ship.** Every construct MUST ship with
+   (a) a compiler-lowered fast path for literal-closure calls — real
+   basic blocks, zero allocation — and (b) a complete runtime twin that
+   behaves identically when the call receives function values. A construct
+   that only works when its arguments are literals is a trap, not a
+   feature.
+3. **Done means all six gates.** Lowering. Runtime twin. Checker typing
+   with pointed diagnostics. Negative tests asserting those diagnostics.
+   Lint rules steering correct use. Documented jurisdiction. Four of six
+   is not done, and we do not merge four of six.
+4. **Nothing is reserved.** `if`, `while`, `match`, and the future `try`
+   remain ordinary method names; user code may define its own and shadow
+   ours.
+
+The error story holds the same line — the phased rollout lives in
+[ERRORS-PLAN.md](ERRORS-PLAN.md):
+
+- **One currency.** Every error in every transport is a `SpecError of E`.
+  Nothing ever flattens an error to `String`.
+- **Three transports, fixed jurisdictions.** Result-return for sync,
+  expected, default-less failures; callbacks for async observation at the
+  call site; unwinding as the fallback and the cross-thread carrier.
+  No fourth transport.
+- **No facility-held error state.** A parser that parks its failure on a
+  field for the caller to check afterwards is banned; the
+  `Json:hasError()` pattern is being removed, not reformed.
+- **Failures cannot be swallowed.** "Never Null" defaults are sugar over
+  results; an absent `onError` re-raises — it never no-ops.
+
+---
+
 ## The Language in Brief
 
 The entire grammar fits one small table — these are the only keywords:
