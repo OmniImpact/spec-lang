@@ -126,21 +126,18 @@ Class is Loader{
 				});
 			});
 			# Class identity is namespace-qualified: a base:sys wrapper and
-			# its same-name sysinternal floor coexist in one program. A
-			# NON-floor class whose bare name is already registered is a
-			# legacy/migration duplicate — the scan-root priority already
-			# preferred the new tree, so it is skipped.
+			# its same-name sysinternal floor coexist in one program, and
+			# same-bare-name classes from DIFFERENT namespaces (base:theo
+			# Widget vs a pkgres fixture Widget) are distinct classes —
+			# exact-duplicate detection keys on the qualified name alone.
+			# A bare-name dedup here would let a scan-root-loaded class
+			# shadow a namespace-matching fixture (the input-dir scan runs
+			# after the -s roots), failing the import wholesale.
 			local String is qName: c:namespaceJoined() . ':' . c:name;
 			local Boolean is isFloor: c:namespaceJoined():endsWith(suffix: ':sysinternal') || c:namespaceJoined() == 'sysinternal';
 			local Boolean is dup: :seenClassNames:has(key: qName);
-			if({ !isFloor && !dup && :seenBareNames:has(key: c:name) }, {
-				dup: true;
-			});
 			if({ !dup }, {
 				:seenClassNames:set(key: qName, value: 'true');
-				if({ !isFloor }, {
-					:seenBareNames:set(key: c:name, value: 'true');
-				});
 				:loadedClasses:add(item: c);
 			});
 			:collectImportsFromClass(c: c);
@@ -310,6 +307,18 @@ Class is Loader{
 		return :loadedFiles:length();
 	}
 
+	## Rolls the loaded-class set back to [index]: pops every class loaded
+	## after it and removes its qualified name from the dedup registry.
+	## Used when a resolution candidate fails its namespace check.
+	##
+	## @param index: The loadedClasses length to restore.
+	Function is unloadClassesFrom(Int is index){
+		while({ :loadedClasses:length() > index }, {
+			local ClassInfo is c: :loadedClasses:pop(default: ClassInfo:init(name: '', baseClass: '', members: []));
+			:seenClassNames:remove(key: c:namespaceJoined() . ':' . c:name);
+		});
+	}
+
 	## True when the loaded program now provides [className] declaring the
 	## namespace [nsJoined] — the namespace IS the package, so this is the
 	## resolution's acceptance test.
@@ -359,14 +368,21 @@ Class is Loader{
 		local String is wanted: nsJoined . ':' . termClass;
 		local Array of String is cands: :candidatesFor(className: termClass);
 		# Class form: try each candidate file; accept the first whose load
-		# declares the requested class in the requested namespace.
+		# declares the requested class in the requested namespace. A failed
+		# try UNLOADS its file's classes — a wrong-namespace candidate (the
+		# bundled-spec scan root's base:theo Widget shadowing a pkgres
+		# fixture Widget) must never stay visible to the checker or to
+		# later resolutions.
 		local Boolean is resolved: false;
 		if({ termClass != '' }, {
 			cands:each(action: local Function(String is cand){
 				if({ !resolved }, {
+					local Int is classBefore: :loadedClasses:length();
 					:loadFile(filePath: cand);
 					if({ :provides(nsJoined: nsJoined, className: termClass) }, {
 						resolved: true;
+					}, {
+						:unloadClassesFrom(index: classBefore);
 					});
 				});
 			});
