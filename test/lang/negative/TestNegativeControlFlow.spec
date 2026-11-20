@@ -174,3 +174,38 @@ Class is App{
 		]);
 	}
 }
+
+#! case: testTaggedPayloadNonExhaustive
+#! expect: Non-exhaustive match: missing arm(s) Shape:Dot
+Enum is Shape{
+	Circle(Int is r),
+	Rect(Int is w, Int is h),
+	Dot
+}
+Class is App{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Shape is sh: Shape:Dot;
+		local String is r: match(on: sh, when: [
+			Shape:Circle: local Function(Int is r){ return 'circle'; },
+			Shape:Rect:  local Function(Int is w, Int is h){ return 'rect'; }
+		]);
+	}
+}
+
+#! case: testValuePredicateMatchRequiresElse
+#! expect: A value-yielding predicate match requires an else arm
+Class is App{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Int is score: 50;
+		local String is r: match(when: [
+			{ score >= 90 }: { 'excellent' },
+			{ score >= 70 }: { 'good' }
+		]);
+	}
+}
