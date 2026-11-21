@@ -21,6 +21,14 @@ define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline
   %obj = inttoptr i64 %oa to ptr
   ret ptr %obj
 }
+define internal noalias ptr @spec_rt_alloc_kinded(i64 %size, i64 %kind) alwaysinline {
+  %isone = icmp eq i64 %kind, 1
+  %dp = select i1 %isone, ptr @HashTable_mapDestroy, ptr null
+  %da = ptrtoint ptr %dp to i64
+  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)
+  %obj = inttoptr i64 %oa to ptr
+  ret ptr %obj
+}
 @.str.uaf_retain = private unnamed_addr constant [36 x i8] c"arc: retain of already-freed object\00"
 @.str.uaf_release = private unnamed_addr constant [37 x i8] c"arc: release of already-freed object\00"
 define internal ptr @spec_rt_retain(ptr %obj) alwaysinline {
