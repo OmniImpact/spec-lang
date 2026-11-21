@@ -5868,7 +5868,7 @@ Class is TypeChecker{
 				:addError(line: m:line, msg: :errText:errHeldCombinesReplaceMerge(member: m:name, className: classDef:name));
 				return;
 			});
-			if({ m:name == MetadataField:USING:value() || m:name == MetadataField:NAMESPACE:value() || m:name == MetadataField:CASTABLE:value() }, {
+			if({ m:name == MetadataField:USING:value() || m:name == MetadataField:NAMESPACE:value() || m:name == MetadataField:CASTABLE:value() || m:name == MetadataField:BINDING:value() }, {
 				:addError(line: m:line, msg: 'Loader directive \'' . m:name . '\' in class \'' . classDef:name . '\' cannot be \'held\'.');
 				return;
 			});
@@ -6045,7 +6045,7 @@ Class is TypeChecker{
 					});
 					# Declarative metadata (namespace/using/group) is per-class
 					# by design and never participates in override matching.
-					if({ subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:CASTABLE:value() }, {
+					if({ subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:CASTABLE:value() || subM:name == MetadataField:BINDING:value() }, {
 						return;
 					});
 					parent:members:each(action: local Function(Member is parentM){
@@ -6327,7 +6327,7 @@ Class is TypeChecker{
 					if({ !m:name:startsWith(prefix: '_import_') }, {
 						:validateTypeAccess(t: m:memberType, line: m:line);
 					});
-					if({ m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() && !m:name:startsWith(prefix: '_import_') }, {
+					if({ m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() && m:name != MetadataField:BINDING:value() && !m:name:startsWith(prefix: '_import_') }, {
 						local String is declaredType: :formatVarTypeString(t: m:memberType);
 						if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: ['base', 'sys', 'thread']) && :containsThreadScopeType(t: declaredType) }, {
 							:addError(line: m:line, msg: "Cannot store 'ThreadScope' in field '" . classDef:name . ":" . m:name . "'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot escape.");

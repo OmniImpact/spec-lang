@@ -792,7 +792,7 @@ Class is Loader{
 	Function of Boolean is isFieldFul(ClassInfo is c){
 		local Boolean is found: false;
 		c:members:each(action: local Function(Member is m){
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' && m:name != 'binding' }, {
 				found: true;
 			});
 		});
