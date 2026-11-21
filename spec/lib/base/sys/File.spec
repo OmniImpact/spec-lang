@@ -122,7 +122,7 @@ Class is File{
 	}
 
 	## Deletes a file at the specified filesystem path.
-	Function of Boolean is fileRemove(String is path, Function is onError: local Function(String is error){}){
+	Function of Boolean is fileRemove(String is path, Function is onError: local Function(SpecError of FileError is e){ :raiseError(error: e); }){
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
 			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
@@ -136,7 +136,7 @@ Class is File{
 	}
 
 	## Creates a unique temporary file securely and returns its path.
-	Function of String is fileTemp(String is template: '/tmp/spec_XXXXXX.c', Function is onError: local Function(String is error){}){
+	Function of String is fileTemp(String is template: '/tmp/spec_XXXXXX.c', Function is onError: local Function(SpecError of FileError is e){ :raiseError(error: e); }){
 		local Int is tc: :cstrOf(s: template);
 		local Int is outAddr: base:sysinternal:File:pal_file_temp(tpl_cstr: tc);
 		if({ outAddr == 0 }, {

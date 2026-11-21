@@ -102,6 +102,25 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		Assert:areEqualInt(1, Process:atomicGet(slot: 70));
 	}
 
+	## A Socket operation without an explicit handler re-raises to the
+	## caller's frame instead of vanishing.
+	Function is testMissingSocketHandlerReraises(){
+		local String is caughtKind: try(
+			body: local Function of String(){
+				local Socket is sock: connect(
+					host: '127.0.0.1',
+					port: 1,
+					timeoutMs: 100
+				);
+				return 'no-raise';
+			},
+			guard: local Function of String(SpecError is e){
+				return e:kindName;
+			}
+		);
+		Assert:areEqualString('CONNECT_FAILED', caughtKind);
+	}
+
 	Function is testClosedAudioWriteOnError(){
 		Process:atomicPut(slot: 71, value: 0);
 		local Audio is audio: Audio:init();

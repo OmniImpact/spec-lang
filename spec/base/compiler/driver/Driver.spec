@@ -283,7 +283,7 @@ Class is Driver{
 			report:stage(n: 3, total: 4, label: 'generating LLVM IR · ' . (llLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 
 			if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
-				if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
+				if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath, onError: local Function(SpecError of FileError is e){}); });
 				Process:monitorStop();
 				report:summary(inputPath: inputPath, outputPath: emitLlvmPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: llLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
 				return;
@@ -294,8 +294,8 @@ Class is Driver{
 			local String is runtimeC: cacheDir . '/spec_runtime.c';
 			local String is runtimeO: cacheDir . '/spec_runtime.o';
 			if({ args:has(key: 'clean-cache') }, {
-				fileRemove(path: runtimeO);
-				fileRemove(path: runtimeC);
+				fileRemove(path: runtimeO, onError: local Function(SpecError of FileError is e){});
+				fileRemove(path: runtimeC, onError: local Function(SpecError of FileError is e){});
 			});
 			local RuntimePrelude is rp: RuntimePrelude:init();
 			local String is rtText: rp:emitRuntime();
@@ -335,10 +335,10 @@ Class is Driver{
 			local Int is llCcT0: Process:clockMs();
 			local Int is llStat: Process:execute(command: 'clang', args: llArgs);
 			ccMs: Process:clockMs() - llCcT0;
-			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
+			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath, onError: local Function(SpecError of FileError is e){}); });
 			if({ llStat != 0 }, {
-				fileRemove(path: runtimeO);
-				fileRemove(path: runtimeC);
+				fileRemove(path: runtimeO, onError: local Function(SpecError of FileError is e){});
+				fileRemove(path: runtimeC, onError: local Function(SpecError of FileError is e){});
 				Process:monitorStop();
 				Stderr:line('Error: clang failed on LLVM IR with exit status ' . (llStat as String));
 				exitCode: 1;

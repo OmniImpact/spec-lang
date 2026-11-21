@@ -3783,6 +3783,7 @@ Class is TypeChecker{
 
 	local Function of String is inferBareScopeCall(Expression is expr, CallData is call, String is expected, String is provider){
 		if({ (provider == 'Conditional' || provider:endsWith(suffix: ':Conditional')) && call:name == 'try' && expr:argCount() == 2 }, {
+			:addError(line: :currentLine, msg: 'TRYHOOK-BARE-REACHED');
 			return :inferTryCall(expr: expr, call: call, expected: expected);
 		});
 		local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
@@ -3876,7 +3877,6 @@ Class is TypeChecker{
 				});
 				:inBranchClosure: savedLoopBranch;
 			}, {
-				:inBranchClosure: false;
 				call:args:each(action: local Function(NamedArg is arg){
 					if({ bareIsBranch && bareIdx == 0 }, {
 						match(on: arg:value, when: [
@@ -3887,13 +3887,16 @@ Class is TypeChecker{
 							}
 						], default: {});
 					});
-					if({ bareIsBranch && bareIdx >= 1 }, {
+					# Only VALUE-yielding branch regions route their returns
+					# through the yield context; non-value branch regions
+					# (2-arg ifs, try bodies) type against their own
+					# declared return type — flagging them here left their
+					# non-void closures validating against the enclosing
+					# method's return type.
+					if({ bareIsBranch && bareIdx >= 1 && bareIsValue }, {
 						:inBranchClosure: true;
-						:inValueBranch: bareIsValue;
-						:currentYieldExpected: '';
-						if({ bareIsValue }, {
-							:currentYieldExpected: expected;
-						});
+						:inValueBranch: true;
+						:currentYieldExpected: expected;
 					});
 					:inferExpressionType(expr: arg:value);
 					:inBranchClosure: false;
@@ -4003,19 +4006,11 @@ Class is TypeChecker{
 				resTy: 'Any';
 			});
 		});
-		# Infer both regions with the construct's type flowing as the yield
-		# expectation (the branch-closure mechanism value-yielding `if` uses).
-		:inBranchClosure: true;
-		:inValueBranch: true;
-		:currentYieldExpected: resTy;
+		# Both regions declare their own return type (`of T`), so their
+		# returns type against that declaration — no ambient yield context
+		# is needed, and nested calls inside the regions cannot disturb it.
 		:inferExpressionType(expr: bodyNa:value, expected: resTy);
-		:inBranchClosure: true;
-		:inValueBranch: true;
-		:currentYieldExpected: resTy;
 		:inferExpressionType(expr: guardNa:value, expected: resTy);
-		:inBranchClosure: false;
-		:inValueBranch: false;
-		:currentYieldExpected: '';
 		expr:setResolvedType(t: resTy);
 		return resTy;
 	}
@@ -4537,7 +4532,10 @@ Class is TypeChecker{
 			});
 		});
 
-		if({ method == 'try' && expr:argCount() == 2 && (call:bareProvider == 'Conditional' || call:bareProvider:endsWith(suffix: ':Conditional') || targetType == 'Conditional' || (targetIsIdent && targetStr == 'try' && :isAsImportedInherited(className: 'Conditional')) || (targetIsSelf && call:isBareCall && :isAsImportedInherited(className: 'Conditional'))) }, {
+		# try(body:, guard:) resolves by NAME + arity + the Conditional
+		# import: bare calls may arrive with an empty/unknown receiver
+		# shape, so the routing must not depend on it.
+		if({ method == 'try' && expr:argCount() == 2 && (:isAsImportedInherited(className: 'Conditional') || call:bareProvider:endsWith(suffix: ':Conditional') || targetType == 'Conditional') }, {
 			return :inferTryCall(expr: expr, call: call, expected: expected);
 		});
 
@@ -6140,6 +6138,8 @@ Class is TypeChecker{
 	## kind, most-specific (kinded) first, and leaves non-matching kinds
 	## unhandled (re-raise) unless the catch-all claims them.
 	Function is checkSpecErrorHandlerGroup(ClassInfo is classDef){
+		local Int is probe: 0;
+		probe: probe;
 		local Array of Member is handlers: [];
 		classDef:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' && !m:hasModifier(kw: Keyword:HELD) }, {

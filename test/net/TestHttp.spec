@@ -41,6 +41,29 @@ Class of SpecUnitTest is TestHttp{
 		Assert:isFalse(r3:isHttps());
 	}
 
+	## A request without an explicit onError re-raises through the Task:
+	## the default handler raises on the worker thread, the Task captures
+	## the currency, and await surfaces it with its kind intact.
+	Function is testMissingOnErrorSurfacesAtAwait(){
+		local String is missingKind: '';
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			local Task of HttpResponse is t: Http:get(
+				scope: scope,
+				url: 'http://127.0.0.1:1/dead'
+			);
+			missingKind: try(
+				body: local Function of String(){
+					t:await();
+					return 'no-raise';
+				},
+				guard: local Function of String(SpecError is e){
+					return e:kindName;
+				}
+			);
+		});
+		Assert:areEqualString('CONNECTION_FAILED', missingKind);
+	}
+
 	Function is testLoopbackGetRedirectChunkedAndPost(){
 		local Int is port: 19400 + (Process:getPid() % 1000);
 		local Socket is server: Socket:init():listen(host: '127.0.0.1', port: port, backlog: 8);

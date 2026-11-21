@@ -238,7 +238,7 @@ Class is Http{
 	## Sends an asynchronous [HttpRequest] inside [scope], invoking
 	## [onSuccess](HttpResponse) or [onError] (a `SpecError of HttpError`)
 	## on the worker thread.
-	Function of Task of HttpResponse is send(ThreadScope is scope, HttpRequest is request, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is _e){}){
+	Function of Task of HttpResponse is send(ThreadScope is scope, HttpRequest is request, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is e){ :raiseError(error: e); }){
 		return scope:spawn(task: local Function of HttpResponse(){
 			return :sendSync(req: request, onSuccess: onSuccess, onError: onError);
 		});
@@ -247,7 +247,7 @@ Class is Http{
 	## Performs an asynchronous HTTP/HTTPS GET inside [scope], invoking
 	## [onSuccess](HttpResponse) or [onError] (a `SpecError of HttpError`)
 	## on the worker thread.
-	Function of Task of HttpResponse is get(ThreadScope is scope, String is url, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is _e){}, String is userAgent: 'SpecNet/0.1'){
+	Function of Task of HttpResponse is get(ThreadScope is scope, String is url, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is e){ :raiseError(error: e); }, String is userAgent: 'SpecNet/0.1'){
 		local HttpRequest is req: HttpRequest:init(method: 'GET', url: url);
 		req:setHeader(name: 'User-Agent', value: userAgent);
 		return :send(scope: scope, request: req, onSuccess: onSuccess, onError: onError);
@@ -256,7 +256,7 @@ Class is Http{
 	## Performs an asynchronous HTTP/HTTPS POST inside [scope], invoking
 	## [onSuccess](HttpResponse) or [onError] (a `SpecError of HttpError`)
 	## on the worker thread.
-	Function of Task of HttpResponse is post(ThreadScope is scope, String is url, String is body, String is contentType: 'application/json', Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is _e){}, String is userAgent: 'SpecNet/0.1'){
+	Function of Task of HttpResponse is post(ThreadScope is scope, String is url, String is body, String is contentType: 'application/json', Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is e){ :raiseError(error: e); }, String is userAgent: 'SpecNet/0.1'){
 		local HttpRequest is req: HttpRequest:init(method: 'POST', url: url);
 		req:setHeader(name: 'User-Agent', value: userAgent);
 		req:withBody(body: body, contentType: contentType);
