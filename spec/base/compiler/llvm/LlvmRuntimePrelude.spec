@@ -791,6 +791,10 @@ define internal noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinlin
   store i32 %vk32, ptr %vkp, align 4
   ret ptr %m
 }
+define internal noalias ptr @HashTable_mapNew() alwaysinline {
+  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 0)
+  ret ptr %m
+}
 define internal noalias ptr @HashTable_mapNewObject() alwaysinline {
   %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)
   ret ptr %m
@@ -962,6 +966,13 @@ scale:
 		return '''
 @_spec_cli_argc = internal global i64 0, align 8
 @_spec_cli_argv = internal global i64 0, align 8
+define internal ptr @spec_cli_args_map(i64 %argc, ptr %argv) {
+  store i64 %argc, ptr @_spec_cli_argc, align 8
+  %av = ptrtoint ptr %argv to i64
+  store i64 %av, ptr @_spec_cli_argv, align 8
+  %m = call ptr @CliArgs_parseMap(ptr null, i64 %argc, i64 %av)
+  ret ptr %m
+}
 define internal ptr @spec_process_raw_args() {
   %ac = load i64, ptr @_spec_cli_argc, align 8
   %av = load i64, ptr @_spec_cli_argv, align 8
