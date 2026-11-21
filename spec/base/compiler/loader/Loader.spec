@@ -568,7 +568,8 @@ Class is Loader{
 			'Heap',
 			'Pool',
 			'Arena',
-			'Intern'
+			'Intern',
+			'Defer'
 		];
 		preloads:each(action: local Function(String is cls){
 			if({ !:indexBuilt }, {
