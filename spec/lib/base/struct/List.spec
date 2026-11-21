@@ -10,6 +10,11 @@
 Class is List of T{
 	namespace: ['base', 'struct'];
 
+	## Runtime binding: the implementations for this class's
+	## declaration-only methods live in the runtime floor; the backend
+	## emits no struct, vtable, or constructor for it.
+	binding: true;
+
 	## Appends a byte to a [Byte] buffer. Infallible: the buffer grows.
 	Function is push(T is b){
 	}

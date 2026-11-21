@@ -11,6 +11,11 @@
 Class of Str is String{
 	namespace: ['base', 'core'];
 
+	## Runtime binding: the implementations for this class's
+	## declaration-only methods live in the runtime floor; the backend
+	## emits no struct, vtable, or constructor for it.
+	binding: true;
+
 	replace Array of Array of String is using: [
 		['base', 'core', Str],
 		['base', 'sys', as Buf()],

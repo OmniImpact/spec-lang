@@ -24,7 +24,9 @@ Class is ClassBindings{
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', MetadataField],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()]
@@ -33,8 +35,10 @@ Class is ClassBindings{
 	## True when the backend must not emit a struct, vtable, or constructor
 	## for [c], and the checker must not hold its declarations as call
 	## contracts: either the class is a `sysinternal` binding (structural,
-	## permanent) or its instances are C-runtime-managed (transitional until the
-	## containers are reimplemented over the byte-buffer floor).
+	## permanent) or it DECLARES itself a runtime binding with the
+	## `binding: true;` metadata field — the declaration travels with the
+	## class, replacing the old hardcoded name list (which silently
+	## suppressed the emission of any user class sharing a listed name).
 	##
 	## @param c: The class.
 	## @return: true when emission-transparent and contract-free.
@@ -42,21 +46,28 @@ Class is ClassBindings{
 		if({ :isSysinternal(cls: c) }, {
 			return true;
 		});
-		# NOTE: names here must be unambiguous across the whole program —
-		# a user class sharing a listed name would silently lose its
-		# emission. Common names (Error, Token, ...) stay OFF the list;
-		# floor singletons like error:line need no class at all.
-		local String is name: c:name;
 		# Ansi is NOT transparent: its sequence builders are real Spec
 		# bodies and the size queries delegate to the terminal floor.
 		# Loops, Loop, Output, Input, Stderr, File, InputHandler, and
 		# Process are NOT transparent either: their methods are the real
 		# wrapper bodies composed from the sysinternal floors — their
 		# prototypes and definitions emit.
-		return name == 'Array' || name == 'Map' || name == 'LoopControl' ||
-			name == 'Math' ||
-			name == 'LoopCallback' ||
-			name == 'List' || name == 'Str' || name == 'String';
+		local Boolean is declared: false;
+		local Array of Member is members: c:members;
+		local Int is count: members:length();
+		local Int is idx: 0;
+		while({ !declared && idx < count }, {
+			local Member is m: members:get(index: idx);
+			idx++;
+			if({ m:kind == MemberKind:FIELD && m:name == MetadataField:BINDING:value() && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:BoolLit: local Function(Boolean is v){
+						declared: v;
+					}
+				], default: {});
+			});
+		});
+		return declared;
 	}
 
 	## True when [c]'s namespace ends with the segment `sysinternal` — the
