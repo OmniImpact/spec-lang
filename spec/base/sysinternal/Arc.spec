@@ -43,6 +43,9 @@ Class is Arc{
 	Function of Int is retain(Int is objAddr){
 		if({ objAddr == 0 }, { return 0; });
 		local Int is h: objAddr - 16;
+		if({ Mem:loadI64(ptr: h, byteOffset: 8) == 73083690742142 }, {
+			Mem:panic(msg: 'arc: retain of already-freed object');
+		});
 		local Int is sf: Mem:atomicLoadI32(addr: h + 4);
 		if({ (sf & 1) != 0 }, { return objAddr; });
 		Mem:atomicAddI32(addr: h, delta: 1);
@@ -52,6 +55,9 @@ Class is Arc{
 	Function is destroyObj(Int is objAddr){
 		local Int is h: objAddr - 16;
 		local Int is d: Mem:loadI64(ptr: h, byteOffset: 8);
+		if({ d == 73083690742142 }, {
+			Mem:panic(msg: 'arc: destroyObj of already-freed object');
+		});
 		Mem:storeI64(ptr: h, byteOffset: 8, val: 0);
 		if({ d != 0 }, {
 			Mem:callDestroy(fnPtr: d, objPtr: objAddr);
@@ -69,6 +75,9 @@ Class is Arc{
 	Function is release(Int is objAddr){
 		if({ objAddr == 0 }, { return; });
 		local Int is h: objAddr - 16;
+		if({ Mem:loadI64(ptr: h, byteOffset: 8) == 73083690742142 }, {
+			Mem:panic(msg: 'arc: release of already-freed object');
+		});
 		local Int is sf: Mem:atomicLoadI32(addr: h + 4);
 		if({ (sf & 1) != 0 }, { return; });
 		local Int is rc: Mem:atomicLoadI32(addr: h);

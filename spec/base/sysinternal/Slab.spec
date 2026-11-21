@@ -264,11 +264,10 @@ Class is Slab{
 		if({ slotAddr < s + 96 || slotAddr >= s + 65536 }, {
 			Mem:panic(msg: 'slab: freeSlot slot outside its slab');
 		});
-		local Int is hdr: slotAddr - 16;
-		if({ Mem:loadI64(ptr: hdr, byteOffset: 8) == 73083690742142 }, {
+		if({ Mem:loadI64(ptr: slotAddr, byteOffset: 8) == 73083690742142 }, {
 			Mem:panic(msg: 'slab: double free of already-freed slot');
 		});
-		Mem:storeI64(ptr: hdr, byteOffset: 8, val: 73083690742142);
+		Mem:storeI64(ptr: slotAddr, byteOffset: 8, val: 73083690742142);
 		local Int is myState: Mem:tlsGetI64(slot: 14);
 		local Boolean is mt: base:sysinternal:Mem:isMultithreaded();
 		local Int is owner: if({ mt }, { Mem:atomicLoadI64(addr: s + 16) }, { Mem:loadI64(ptr: s, byteOffset: 16) });

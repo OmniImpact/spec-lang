@@ -87,18 +87,18 @@ Class of CallLowerer is MapCallLowerer{
 			local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
 			if({ toIdx >= 0 }, {
 				local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
-				if({ b:isArcSpecType(specType: vSpec) }, { vk: 1; });
+				if({ b:isArcSpecType(specType: vSpec) || vSpec == 'Any' }, { vk: 1; });
 			}, {
 				if({ resTy:startsWith(prefix: 'Map:') }, {
 					local String is afterMap: resTy:substring(start: 4, end: resTy:length());
 					local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
 					if({ cIdx >= 0 }, {
 						local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
-						if({ b:isArcSpecType(specType: vSpec2) }, { vk: 1; });
+						if({ b:isArcSpecType(specType: vSpec2) || vSpec2 == 'Any' }, { vk: 1; });
 					});
 				}, {
 					if({ (resTy == 'Map' || resTy == '') && b:expectedMapValType != '' }, {
-						if({ b:isArcSpecType(specType: b:expectedMapValType) }, { vk: 1; });
+						if({ b:isArcSpecType(specType: b:expectedMapValType) || b:expectedMapValType == 'Any' }, { vk: 1; });
 					});
 				});
 			});
@@ -166,7 +166,7 @@ Class of CallLowerer is MapCallLowerer{
 				local IrType is vty: b:irTypeFor(specType: vvExpr:resolvedType);
 				local String is vp: b:castIfNeeded(val: vv, fromTy: vty, toTy: IrType:Ptr);
 				local String is setCallee: 'HashTable_mapSet' . kSuf . 'Any';
-				if({ vvExpr:resolvedType == 'String' }, {
+				if({ b:isArcSpecType(specType: vvExpr:resolvedType) }, {
 					setCallee: 'HashTable_mapSet' . kSuf;
 				});
 				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', mRecv, kv, vp]));

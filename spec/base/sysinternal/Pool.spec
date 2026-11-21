@@ -32,6 +32,30 @@ Class is Pool{
 		});
 	}
 
+	## Drains the current frame's pool down to [mark], preserving [keepAddr]
+	## into the caller's frame pool when [keepAddr] was claimed in this frame.
+	## Safe for `Any` returns that may hold non-pointer values (which are never
+	## present in the pool).
+	Function is releaseToTransferring(Int is mark, Int is keepAddr){
+		local Int is count: Mem:tlsGetI64(slot: 4);
+		local Int is stk: Mem:tlsGetI64(slot: 3);
+		local Boolean is found: false;
+		if({ keepAddr != 0 && stk != 0 && mark < count }, {
+			local Int is i: count - 1;
+			while({ i >= mark && !found }, {
+				if({ Mem:loadI64(ptr: stk, byteOffset: i * 8) == keepAddr }, {
+					Mem:storeI64(ptr: stk, byteOffset: i * 8, val: 0);
+					found: true;
+				});
+				i: i - 1;
+			});
+		});
+		:poolReleaseTo(mark: mark);
+		if({ found }, {
+			:claimPool(objAddr: keepAddr);
+		});
+	}
+
 	## Removes the TOPMOST pool entry matching [objAddr] WITHOUT releasing
 	## it — the ownership transfer for a RETURNED claimed object. Without
 	## this, a function returning a claimed allocation leaves its entry on
@@ -64,13 +88,9 @@ Class is Pool{
 
 	Function of Int is claimPool(Int is objAddr){
 		if({ objAddr == 0 }, { return 0; });
-		# The claim holds its OWN reference (retain): the creator's reference
-		# belongs to the consuming local (released at reassignment/scope —
-		# each such release is preceded by unclaimAddr, popping this entry
-		# so the drain does not also release it), and the frame drain
-		# releases this reference for values never consumed. Claim without
-		# retain + any local release = the freelist-corruption double free.
-		Mem:retainAddr(objAddr: objAddr);
+		# Autorelease ownership: claimPool ADOPTS an existing +1 reference
+		# (from Arc:allocObj, container retain+claim, or return transfer) into
+		# the current frame's pool. The frame drain releases it exactly once.
 		local Int is top: Mem:tlsGetI64(slot: 4);
 		local Int is cap: Mem:tlsGetI64(slot: 5);
 		if({ top == cap }, {

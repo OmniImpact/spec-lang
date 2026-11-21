@@ -768,7 +768,6 @@ Class is IrBuilder{
 				:emit(inst: IrInst:FieldPtr(dst: fptr, objPtr: '%self', structName: st:name, fieldIndex: fi));
 				local String is fval: :nextTmp();
 				:emit(inst: IrInst:Load(dst: fval, slot: fptr, ty: IrType:Ptr));
-				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [fval]));
 				:emit(inst: IrInst:Release(val: fval));
 				:emit(inst: IrInst:Store(slot: fptr, val: 'null', ty: IrType:Ptr));
 			});
@@ -1067,8 +1066,7 @@ Class is IrBuilder{
 						if({ seen:has(key: m:name) }, {
 							local String is oldF: :nextTmp();
 							:emit(inst: IrInst:Load(dst: oldF, slot: ptr, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldF]));
-				:emit(inst: IrInst:Release(val: oldF));
+							:emitClaimPool(val: oldF);
 						});
 					});
 					seen:set(key: m:name, value: true);
@@ -1800,19 +1798,17 @@ Class is IrBuilder{
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_rt_box_set', argTypes: [IrType:Ptr, IrType:Ptr], args: [boxPtr, vPtr]));
 			return;
 		});
-		if({ isArc }, {
-			if({ val != '' && val != 'null' }, {
-				:emit(inst: IrInst:Retain(val: val));
-			});
-			local String is oldVal: :nextTmp();
-			:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: IrType:Ptr));
-			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldVal]));
-				:emit(inst: IrInst:Release(val: oldVal));
+		if({ isArc && ty == IrType:Ptr && :curPoolMark != '' && val != '' && val != 'null' }, {
+			:emit(inst: IrInst:Retain(val: val));
+			:emitClaimPool(val: val);
 		});
 		:emit(inst: IrInst:Store(slot: slot, val: val, ty: ty));
 	}
 
 	Function of String is emitNewBox(String is initVal, IrType is ty, Boolean is isArc){
+		if({ isArc && initVal != '' && initVal != 'null' }, {
+			:emit(inst: IrInst:Retain(val: initVal));
+		});
 		local String is valI64: initVal;
 		if({ ty == IrType:F64 }, {
 			local String is pTmp: :nextTmp();
@@ -1829,6 +1825,7 @@ Class is IrBuilder{
 		:emit(inst: IrInst:ConstBool(dst: arcConst, value: isArc));
 		local String is boxPtr: :nextTmp();
 		:emit(inst: IrInst:IrCall(dst: boxPtr, hasDst: true, retType: IrType:Ptr, callee: 'spec_rt_box_new', argTypes: [IrType:I64, IrType:I1], args: [valI64, arcConst]));
+		:emitClaimPool(val: boxPtr);
 		return boxPtr;
 	}
 
@@ -2361,12 +2358,8 @@ Class is IrBuilder{
 			if({ :capturedNames:has(key: p:name) }, {
 				:boxedLocals:set(key: p:name, value: true);
 				:emit(inst: IrInst:Alloca(slot: slot, ty: IrType:Ptr));
-				if({ pArc }, {
-					:emit(inst: IrInst:Retain(val: '%p_' . p:name));
-				});
 				local String is boxPtr: :emitNewBox(initVal: '%p_' . p:name, ty: pty, isArc: pArc);
 				:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
-				:ownedSlots:add(item: slot);
 			}, {
 				:emit(inst: IrInst:Alloca(slot: slot, ty: pty));
 				:emit(inst: IrInst:Store(slot: slot, val: '%p_' . p:name, ty: pty));
@@ -2824,15 +2817,8 @@ Class is IrBuilder{
 			:emit(inst: IrInst:ConstBool(dst: falseVal, value: false));
 			:emit(inst: IrInst:Store(slot: :curFnErrPushedSlot, val: falseVal, ty: IrType:I1));
 		});
-		local Int is oi: 0;
-		while({ oi < :ownedSlots:length() }, {
-			local String is oslot: :ownedSlots:get(index: oi, default: '');
-			local String is oval: :nextTmp();
-			:emit(inst: IrInst:Load(dst: oval, slot: oslot, ty: IrType:Ptr));
-			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oval]));
-				:emit(inst: IrInst:Release(val: oval));
-			oi++;
-		});
+		# Autorelease ownership: locals own NOTHING; every fresh allocation is
+		# claimed once to the frame pool and released by emitPoolExit().
 	}
 
 	Function of String is emitDefaultVal(IrType is ty){
@@ -2921,12 +2907,6 @@ Class is IrBuilder{
 						:lazyLocalStateSlots:set(key: varName, value: stateSlot);
 						:lazyLocalExprs:set(key: varName, value: :getLazyBodyExpr(expr: initExpr));
 						local String is lDefVal: :emitDefaultVal(ty: vty);
-						if({ (vIsArc || isBoxed) && !declInEntry }, {
-							local String is prevLazyVal: :nextTmp();
-							:emit(inst: IrInst:Load(dst: prevLazyVal, slot: slot, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevLazyVal]));
-				:emit(inst: IrInst:Release(val: prevLazyVal));
-						});
 						if({ isBoxed }, {
 							local String is lBoxPtr: :emitNewBox(initVal: lDefVal, ty: vty, isArc: vIsArc);
 							:emit(inst: IrInst:Store(slot: slot, val: lBoxPtr, ty: IrType:Ptr));
@@ -2954,30 +2934,20 @@ Class is IrBuilder{
 						match(on: initExpr, when: [
 							Expression:StringLit: local Function(String is sv){ isStrLitInit: true; }
 						], default: {});
-						local Boolean is strCopyOwned: false;
 						if({ varType:name == 'String' && isStrLitInit && val != '' && val != 'null' }, {
 							local String is strCopy: :nextTmp();
 							:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [val]));
-							if({ isBoxed }, {
-								:emitClaimPool(val: strCopy);
-							}, {
-								strCopyOwned: true;
-							});
+							:emitClaimPool(val: strCopy);
 							val: strCopy;
-						});
-						if({ vIsArc && !strCopyOwned && val != '' && val != 'null' }, {
-							:emit(inst: IrInst:Retain(val: val));
-						});
-						if({ (vIsArc || isBoxed) && !declInEntry }, {
-							local String is prevSlotVal: :nextTmp();
-							:emit(inst: IrInst:Load(dst: prevSlotVal, slot: slot, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevSlotVal]));
-				:emit(inst: IrInst:Release(val: prevSlotVal));
 						});
 						if({ isBoxed }, {
 							local String is boxPtr: :emitNewBox(initVal: val, ty: vty, isArc: vIsArc);
 							:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
 						}, {
+							if({ vIsArc && vty == IrType:Ptr && :curPoolMark != '' && val != '' && val != 'null' }, {
+								:emit(inst: IrInst:Retain(val: val));
+								:emitClaimPool(val: val);
+							});
 							:emit(inst: IrInst:Store(slot: slot, val: val, ty: vty));
 						});
 					});
@@ -3001,7 +2971,6 @@ Class is IrBuilder{
 						defVal: :nextTmp();
 						:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_byteBufNew', argTypes: [], args: []));
 						:emitClaimPool(val: defVal);
-						:emit(inst: IrInst:Retain(val: defVal));
 					}, {
 						if({ varType:name == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
 							local String is vecCtor: 'Vector_vecNewObject';
@@ -3011,14 +2980,7 @@ Class is IrBuilder{
 							defVal: :nextTmp();
 							:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [], args: []));
 							:emitClaimPool(val: defVal);
-							:emit(inst: IrInst:Retain(val: defVal));
 						});
-					});
-					if({ (vIsArc || isBoxed) && !declInEntry }, {
-						local String is prevSlotVal2: :nextTmp();
-						:emit(inst: IrInst:Load(dst: prevSlotVal2, slot: slot, ty: IrType:Ptr));
-						:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevSlotVal2]));
-				:emit(inst: IrInst:Release(val: prevSlotVal2));
 					});
 					if({ isBoxed }, {
 						local String is boxPtr: :emitNewBox(initVal: defVal, ty: vty, isArc: vIsArc);
@@ -3026,9 +2988,6 @@ Class is IrBuilder{
 					}, {
 						:emit(inst: IrInst:Store(slot: slot, val: defVal, ty: vty));
 					});
-				});
-				if({ vIsArc || isBoxed }, {
-					:ownedSlots:add(item: slot);
 				});
 			},
 			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
@@ -3063,10 +3022,7 @@ Class is IrBuilder{
 								local String is slot: :localSlots:get(key: name, default: '');
 								local String is strCopy: :nextTmp();
 								:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [cval]));
-								local String is oldVal: :nextTmp();
-								:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: IrType:Ptr));
-								:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldVal]));
-				:emit(inst: IrInst:Release(val: oldVal));
+								:emitClaimPool(val: strCopy);
 								:emit(inst: IrInst:Store(slot: slot, val: strCopy, ty: IrType:Ptr));
 							}, {
 								:emitStoreLocal(name: name, val: cval, ty: ty, isArc: isArc);
@@ -3098,8 +3054,7 @@ Class is IrBuilder{
 											});
 											local String is oldSfVal: :nextTmp();
 											:emit(inst: IrInst:Load(dst: oldSfVal, slot: sptr, ty: IrType:Ptr));
-											:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldSfVal]));
-				:emit(inst: IrInst:Release(val: oldSfVal));
+											:emitClaimPool(val: oldSfVal);
 										});
 										:emit(inst: IrInst:Store(slot: sptr, val: scval, ty: sfty));
 										:emitMarkLazyFieldDone(objPtr: selfObj, sname: :currentClass, st: selfSt, fieldName: name);
@@ -3125,8 +3080,7 @@ Class is IrBuilder{
 								});
 								local String is oldFVal: :nextTmp();
 								:emit(inst: IrInst:Load(dst: oldFVal, slot: ptr, ty: IrType:Ptr));
-								:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldFVal]));
-				:emit(inst: IrInst:Release(val: oldFVal));
+								:emitClaimPool(val: oldFVal);
 							});
 							:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
 							:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: fieldName);
@@ -3161,8 +3115,7 @@ Class is IrBuilder{
 										});
 										local String is oldPVal: :nextTmp();
 										:emit(inst: IrInst:Load(dst: oldPVal, slot: ptr, ty: IrType:Ptr));
-										:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldPVal]));
-				:emit(inst: IrInst:Release(val: oldPVal));
+										:emitClaimPool(val: oldPVal);
 									});
 									:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
 									:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: segments:get(index: segments:length() - 1, default: ''));
@@ -3228,20 +3181,19 @@ Class is IrBuilder{
 						val: 'null';
 					});
 					local Boolean is retExprIsArc: :isArcSpecType(specType: returnExpr:resolvedType);
-					if({ (:curFnRetIsArc || retExprIsArc) && :curFn:retType == IrType:Ptr && val != 'null' }, {
+					local Boolean is retNeedsTransfer: (:curFnRetIsArc || retExprIsArc) && :curFn:retType == IrType:Ptr && val != 'null';
+					if({ retNeedsTransfer }, {
 						:emit(inst: IrInst:Retain(val: val));
-					});
-					:emitReleaseOwnedLocals();
-					# The returned object's claim transfers to the caller: pop
-					# its pool entry WITHOUT releasing — otherwise this
-					# frame's drain frees the object the caller now owns,
-					# and the caller's own release double-frees it.
-					if({ :curPoolMark != '' && val != 'null' && :curFn:retType == IrType:Ptr }, {
-						:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [val]));
-					});
-					:emitPoolExit();
-					if({ :curFnRetIsArc && :curFn:retType == IrType:Ptr && val != 'null' }, {
+						:emitReleaseOwnedLocals();
+						:emitPoolExit();
 						:emitClaimPool(val: val);
+					}, {
+						:emitReleaseOwnedLocals();
+						if({ :curFn:retType == IrType:Ptr && :curPoolMark != '' && val != 'null' }, {
+							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to_transfer', argTypes: [IrType:I64, IrType:Ptr], args: [:curPoolMark, val]));
+						}, {
+							:emitPoolExit();
+						});
 					});
 					:terminate(inst: IrInst:Ret(hasVal: true, val: val, ty: :curFn:retType));
 				}, {
@@ -3588,7 +3540,6 @@ Class is IrBuilder{
 				:switchBlock(blk: tsCallBlk);
 				local String is tsDst: :nextTmp();
 				:emit(inst: IrInst:IndirectCall(dst: tsDst, hasDst: true, retType: IrType:Ptr, fnPtr: fnPtr, argTypes: [IrType:Ptr], args: [objVal]));
-				:emitClaimPool(val: tsDst);
 				:emit(inst: IrInst:Store(slot: tsResSlot, val: tsDst, ty: IrType:Ptr));
 				:terminate(inst: IrInst:Br(target: tsEndLbl));
 				local IrBlock is tsFbBlk: :curFn:addBlock(label: tsFallbackLbl);
@@ -3975,6 +3926,33 @@ Class is IrBuilder{
 				if({ items:length() > 0 }, {
 					local Expression is firstItem: items:get(index: 0);
 					if({ :irTypeFor(specType: firstItem:resolvedType) == IrType:Ptr }, { isObjArr: true; });
+				}, {
+					local String is elemSpec: '';
+					local Type is arrTn: expr:getResolvedTypeNode();
+					if({ arrTn:params:length() > 0 }, {
+						elemSpec: arrTn:params:get(index: 0):name;
+					});
+					if({ elemSpec == '' }, {
+						local String is rtStr: expr:resolvedType;
+						if({ rtStr:startsWith(prefix: 'Array of ') && rtStr:length() > 9 }, {
+							elemSpec: rtStr:substring(start: 9, end: rtStr:length());
+						}, {
+							if({ rtStr:startsWith(prefix: 'Array:') && rtStr:length() > 6 }, {
+								elemSpec: rtStr:substring(start: 6, end: rtStr:length());
+							}, {
+								if({ rtStr:startsWith(prefix: 'List of ') && rtStr:length() > 8 }, {
+									elemSpec: rtStr:substring(start: 8, end: rtStr:length());
+								}, {
+									if({ rtStr:startsWith(prefix: 'List:') && rtStr:length() > 5 }, {
+										elemSpec: rtStr:substring(start: 5, end: rtStr:length());
+									});
+								});
+							});
+						});
+					});
+					if({ elemSpec != '' && (:isArcSpecType(specType: elemSpec) || elemSpec == 'Any') }, {
+						isObjArr: true;
+					});
 				});
 				if({ isObjArr }, {
 					:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecNewObject', argTypes: emptyT, args: emptyV));
@@ -4031,18 +4009,18 @@ Class is IrBuilder{
 					local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
 					if({ toIdx >= 0 }, {
 						local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
-						if({ :isArcSpecType(specType: vSpec) }, { mapVk: 1; });
+						if({ :isArcSpecType(specType: vSpec) || vSpec == 'Any' }, { mapVk: 1; });
 					}, {
 						if({ resTy:startsWith(prefix: 'Map:') }, {
 							local String is afterMap: resTy:substring(start: 4, end: resTy:length());
 							local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
 							if({ cIdx >= 0 }, {
 								local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
-								if({ :isArcSpecType(specType: vSpec2) }, { mapVk: 1; });
+								if({ :isArcSpecType(specType: vSpec2) || vSpec2 == 'Any' }, { mapVk: 1; });
 							});
 						}, {
 							if({ (resTy == 'Map' || resTy == '') && :expectedMapValType != '' }, {
-								if({ :isArcSpecType(specType: :expectedMapValType) }, { mapVk: 1; });
+								if({ :isArcSpecType(specType: :expectedMapValType) || :expectedMapValType == 'Any' }, { mapVk: 1; });
 							});
 						});
 					});
@@ -4422,10 +4400,6 @@ Class is IrBuilder{
 				local String is capSlot: '%cap__recv';
 				:localSlots:set(key: cname, value: capSlot);
 				:emit(inst: IrInst:Alloca(slot: capSlot, ty: cty));
-				if({ cArc }, {
-					:emit(inst: IrInst:Retain(val: loaded));
-					:ownedSlots:add(item: capSlot);
-				});
 				:emit(inst: IrInst:Store(slot: capSlot, val: loaded, ty: cty));
 			}, {
 				if({ savedBoxed:has(key: cname) }, {
@@ -4454,12 +4428,8 @@ Class is IrBuilder{
 			if({ :capturedNames:has(key: p:name) }, {
 				:boxedLocals:set(key: p:name, value: true);
 				:emit(inst: IrInst:Alloca(slot: slot, ty: IrType:Ptr));
-				if({ pArc }, {
-					:emit(inst: IrInst:Retain(val: '%p_' . p:name));
-				});
 				local String is boxPtr: :emitNewBox(initVal: '%p_' . p:name, ty: pty, isArc: pArc);
 				:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
-				:ownedSlots:add(item: slot);
 			}, {
 				:emit(inst: IrInst:Alloca(slot: slot, ty: pty));
 				:emit(inst: IrInst:Store(slot: slot, val: '%p_' . p:name, ty: pty));
@@ -4501,8 +4471,7 @@ Class is IrBuilder{
 					:emit(inst: IrInst:FieldPtr(dst: dfPtr, objPtr: '%env', structName: envStructName, fieldIndex: dci + 2));
 					local String is dVal: :nextTmp();
 					:emit(inst: IrInst:Load(dst: dVal, slot: dfPtr, ty: IrType:Ptr));
-					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [dVal]));
-				:emit(inst: IrInst:Release(val: dVal));
+					:emit(inst: IrInst:Release(val: dVal));
 				});
 				dci++;
 			});
@@ -5108,8 +5077,7 @@ Class is IrBuilder{
 							:emit(inst: IrInst:Retain(val: val));
 							local String is oldVal: :nextTmp();
 							:emit(inst: IrInst:Load(dst: oldVal, slot: fPtr, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldVal]));
-				:emit(inst: IrInst:Release(val: oldVal));
+							:emitClaimPool(val: oldVal);
 						});
 						:emit(inst: IrInst:Store(slot: fPtr, val: val, ty: fty));
 					});

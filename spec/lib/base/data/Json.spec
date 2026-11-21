@@ -497,7 +497,7 @@ Class is Json{
 
 	## Parses a JSON object at the current position.
 	Function of Map is parseObject(String is text){
-		local Map is obj: Map:init();
+		local Map of String to Any is obj: Map:init();
 		:parsePos: :parsePos + 1;
 		:skipWhitespace(text: text);
 

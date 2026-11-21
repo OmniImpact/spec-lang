@@ -21,11 +21,21 @@ define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline
   %obj = inttoptr i64 %oa to ptr
   ret ptr %obj
 }
+@.str.uaf_retain = private unnamed_addr constant [36 x i8] c"arc: retain of already-freed object\00"
+@.str.uaf_release = private unnamed_addr constant [37 x i8] c"arc: release of already-freed object\00"
 define internal ptr @spec_rt_retain(ptr %obj) alwaysinline {
   %isnull = icmp eq ptr %obj, null
   br i1 %isnull, label %done, label %chk_mt
 chk_mt:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
+  %dfp = getelementptr inbounds i8, ptr %h, i64 8
+  %df = load i64, ptr %dfp, align 8
+  %is_freed = icmp eq i64 %df, 73083690742142
+  br i1 %is_freed, label %uaf, label %chk_mt_ok
+uaf:
+  call void @spec_panic(ptr @.str.uaf_retain)
+  unreachable
+chk_mt_ok:
   %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4
   %is_mt = icmp sgt i32 %mt, 0
   br i1 %is_mt, label %atomic_path, label %fast_path
@@ -57,6 +67,14 @@ define internal void @spec_rt_release(ptr %obj) alwaysinline {
   br i1 %isnull, label %done, label %chk_mt
 chk_mt:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
+  %dfp = getelementptr inbounds i8, ptr %h, i64 8
+  %df = load i64, ptr %dfp, align 8
+  %is_freed = icmp eq i64 %df, 73083690742142
+  br i1 %is_freed, label %uaf, label %chk_mt_ok
+uaf:
+  call void @spec_panic(ptr @.str.uaf_release)
+  unreachable
+chk_mt_ok:
   %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4
   %is_mt = icmp sgt i32 %mt, 0
   br i1 %is_mt, label %atomic_path, label %fast_path
@@ -113,6 +131,11 @@ define internal i64 @spec_pool_frame() alwaysinline {
 }
 define internal void @spec_pool_release_to(i64 %mark) alwaysinline {
   call void @Pool_poolReleaseTo(ptr null, i64 %mark)
+  ret void
+}
+define internal void @spec_pool_release_to_transfer(i64 %mark, ptr %keep) alwaysinline {
+  %ka = ptrtoint ptr %keep to i64
+  call void @Pool_releaseToTransferring(ptr null, i64 %mark, i64 %ka)
   ret void
 }
 define internal void @spec_pool_unclaim_addr(i64 %addr) alwaysinline {
@@ -234,7 +257,7 @@ chk_old:
   br i1 %onz, label %do_rel, label %store_val
 do_rel:
   %old_p = inttoptr i64 %old_i to ptr
-  call void @spec_rt_release(ptr %old_p)
+  call ptr @spec_claim_pool(ptr %old_p)
   br label %store_val
 store_val:
   store i64 %new_i, ptr %vp
@@ -787,7 +810,7 @@ inplace:
 copy_a:
   %ac = call ptr @spec_string_copy(ptr %a)
   call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)
-  call void @spec_rt_release(ptr %a)
+  call ptr @spec_claim_pool(ptr %ac)
   ret ptr %ac
 }
 define internal noalias ptr @Vector_vecNew() alwaysinline {
@@ -1005,6 +1028,7 @@ define internal ptr @spec_process_raw_args() {
   %ac = load i64, ptr @_spec_cli_argc, align 8
   %av = load i64, ptr @_spec_cli_argv, align 8
   %r = call ptr @CliArgs_rawArgs(ptr null, i64 %ac, i64 %av)
+  call ptr @spec_rt_retain(ptr %r)
   ret ptr %r
 }
 @_spec_atomic_levels = internal global [54 x ptr] zeroinitializer, align 8

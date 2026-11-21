@@ -236,8 +236,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	}
 
 	local Function of String is lowerCondExpr(IrBuilder is b, Expression is condExpr){
-		local String is cMark: b:nextTmp();
-		b:emit(inst: IrInst:IrCall(dst: cMark, hasDst: true, retType: IrType:I64, callee: 'spec_pool_frame', argTypes: [], args: []));
 		local String is condVal: '0';
 		match(on: condExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
@@ -279,9 +277,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			}, {
 				condVal: b:lowerExpr(expr: condExpr);
 			});
-		});
-		if({ !b:blkTerminated }, {
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [cMark]));
 		});
 		return condVal;
 	}
@@ -472,8 +467,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	}
 
 	local Function is lowerLoopBody(IrBuilder is b, Expression is bodyExpr, String is contLbl, String is breakLbl){
-		local String is iterMark: b:nextTmp();
-		b:emit(inst: IrInst:IrCall(dst: iterMark, hasDst: true, retType: IrType:I64, callee: 'spec_pool_frame', argTypes: [], args: []));
 		local Boolean is returnsBool: false;
 		match(on: bodyExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
@@ -508,12 +501,10 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			b:switchBlock(blk: retBlk);
 			local String is finalCont: b:nextTmp();
 			b:emit(inst: IrInst:Load(dst: finalCont, slot: loopRetSlot, ty: IrType:I1));
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
 			b:terminate(inst: IrInst:CondBr(cond: finalCont, thenLabel: contLbl, elseLabel: breakLbl));
 		}, {
 			:lowerBlockExpr(b: b, blkExpr: bodyExpr);
 			if({ !b:blkTerminated }, {
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
 				b:terminate(inst: IrInst:Br(target: contLbl));
 			});
 		});
@@ -574,15 +565,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 							local IrType is vty: b:irTypeFor(specType: p:defaultExpr:resolvedType);
 							val: b:castIfNeeded(val: val, fromTy: vty, toTy: pty);
 							if({ val == '' }, { val: b:emitDefaultVal(ty: pty); });
-							if({ pArc && val != '' && val != 'null' }, {
-								b:emit(inst: IrInst:Retain(val: val));
-							});
-						});
-						if({ (pArc || pBoxed) && !pInEntry }, {
-							local String is prevWVal: b:nextTmp();
-							b:emit(inst: IrInst:Load(dst: prevWVal, slot: slot, ty: IrType:Ptr));
-							b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevWVal]));
-							b:emit(inst: IrInst:Release(val: prevWVal));
 						});
 						if({ pBoxed }, {
 							local String is boxPtr: b:emitNewBox(initVal: val, ty: pty, isArc: pArc);
@@ -590,7 +572,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						}, {
 							b:emit(inst: IrInst:Store(slot: slot, val: val, ty: pty));
 						});
-						if({ pArc || pBoxed }, { b:ownedSlots:add(item: slot); });
 						pi++;
 					});
 					if({ bd:length() > 0 }, {
@@ -776,15 +757,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 							local IrType is ity: b:irTypeFor(specType: p:defaultExpr:resolvedType);
 							ival: b:lowerExpr(expr: p:defaultExpr);
 							ival: b:castIfNeeded(val: ival, fromTy: ity, toTy: vty);
-							if({ vArc && ival != '' && ival != 'null' }, {
-								b:emit(inst: IrInst:Retain(val: ival));
-							});
-						});
-						if({ (vArc || vBoxed) && !vInEntry }, {
-							local String is prevLVal: b:nextTmp();
-							b:emit(inst: IrInst:Load(dst: prevLVal, slot: slot, ty: IrType:Ptr));
-							b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevLVal]));
-							b:emit(inst: IrInst:Release(val: prevLVal));
 						});
 						if({ vBoxed }, {
 							local String is boxPtr: b:emitNewBox(initVal: ival, ty: vty, isArc: vArc);
@@ -792,7 +764,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						}, {
 							b:emit(inst: IrInst:Store(slot: slot, val: ival, ty: vty));
 						});
-						if({ vArc || vBoxed }, { b:ownedSlots:add(item: slot); });
 						pi++;
 					});
 				}
