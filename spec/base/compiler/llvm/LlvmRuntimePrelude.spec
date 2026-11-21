@@ -149,7 +149,7 @@ define internal ptr @spec_claim_pool(ptr %obj) alwaysinline {
   ret ptr %res
 }
 define void @spec_pool_thread_cleanup() nounwind {
-  call void @Defer_threadCleanup(ptr null)
+  call void @Cleanup_threadCleanup(ptr null)
   call void @Pool_threadCleanup(ptr null)
   ret void
 }''';

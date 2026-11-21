@@ -63,34 +63,45 @@ else is library work.
       grounded arm-mismatch negative lock. Bootstrap fixed point re-verified
       byte-identical; full wave identical to the seed baseline (9 failures
       pre-exist on main — flagged separately).
-- [ ] **1.3 Defer floor (sysinternal).** Cleanup-stack intrinsics over the
-      pending-error machinery: push/pop a cleanup closure per frame, and the
-      unwind path runs registered cleanups **before** the handler walk.
-      Land ahead of consumers (two-part landing). Broken into:
-  - [ ] **1.3a Floor intrinsics (inert).** New class `base:sysinternal:Defer`
-        over TLS slots 9/10/11 (stack ptr, top, cap — 0-2 are Str scratch,
-        3-8 pool + handler stack, 14 thread state, 15 pending error).
-        `frameMark()` snapshots depth; `pushCleanup(action)` retains the
-        closure object and adopts the +1 (registrations own themselves, so
-        pool timing can never dangle them); `runTo(mark)` runs everything
-        above the mark newest-first, releasing each registration after it
-        runs; `threadCleanup` frees the buffer (wired into the prelude's
-        thread-exit path). `runTo` stashes/clears/restores the pending
-        error around the invocations (the `recordPendingFrame` precedent)
-        so a cleanup's own calls never observe a set pending error.
-        No emitter changes, no consumers. Gate: fixed point + wave
-        (behaviorally inert).
-  - [ ] **1.3b Unwind + exit wiring.** ONE wiring point:
-        `IrBuilder.emitUnwindCurrentFrame` — both raise sites and post-call
-        pending checks funnel through it. Frames whose body uses the defer
-        facility (syntactic scan; `collectDeclNamesInStmts` precedent)
-        snapshot the mark at frame entry and emit `Defer_runTo(mark)` at
-        the start of the unwind block (after `Pool_recordPendingFrame`,
-        before the handler walk) and at every normal-exit return path.
-        Defer-less frames emit NOTHING (zero cost for existing code).
-        Gate: fixed point + wave identical (empty cleanup stack must be a
-        behavioral no-op); the behavioral proof lands with 2.5's ordering
-        suite.
+- [x] **1.3 Defer floor (sysinternal).** DONE. Cleanup-stack intrinsics over
+      the pending-error machinery; the unwind path runs registered cleanups
+      **before** the handler walk. Land ahead of consumers (two-part
+      landing). Landed as:
+  - [x] **1.3a Floor intrinsics (inert).** DONE (1e900d4) as a mark-based
+        API (`frameMark`/`runTo(mark)`) over TLS slots 9/10/11. Superseded
+        by the barrier API below — see 1.3b for why.
+  - [x] **1.3b Barrier API + unwind/exit wiring.** DONE. Two discoveries
+        reshaped the design. (1) The mark-based API breaks under
+        helper-mediated pushes: a mark snapshotted at frame entry cannot
+        own a registration pushed by a callee. The floor became
+        barrier-based — `frameEnter()` pushes a barrier (0) on ONE shared
+        thread-local stack, `pushCleanup(action)` retains the closure and
+        pushes its address above the innermost barrier, `frameExit()` runs
+        everything above the frame's barrier newest-first (releasing each
+        registration after its action runs, stashing/restoring the pending
+        error per the `recordPendingFrame` precedent) and pops the barrier.
+        Ownership is Go-style: a registration belongs to the frame whose
+        body performed the push. (2) The floor is named `Cleanup`, NOT
+        `Defer`: body-bearing floors must have a bare name unique in the
+        program — the checker resolves `findClass` by bare name (a
+        same-named wrapper shadows the floor's as-imports and self-calls)
+        and emitted `@.typename`/`@.vtable` globals would collide. The
+        only same-named floor, Mem, is declaration-only and emits nothing.
+        The base:sys `Defer` wrapper (`push`) is the sole floor consumer.
+        Wiring: `emitDeferFrameEnter` after pool-enter in method and
+        closure prologues (body scan keyed on Defer-facility calls, same
+        inline-CF traversal as `collectDeclNamesInExpr`); `Cleanup_frameExit`
+        on every exit — via `emitReleaseOwnedLocals` for normal paths, and
+        a prefix in `emitUnwindCurrentFrame` (after `recordPendingFrame`,
+        BEFORE the handler walk; the `curFnDeferExitRan` flag makes the
+        later teardown call a no-op). Defer-less frames emit NOTHING (IR
+        verified: 5 enter/exit pairs in the defer suite, 0 in defer-less).
+        Gate: fixed point byte-for-byte (two converge runs — one with a
+        wrapper `threadCleanup` bridge for the seed's baked prelude
+        symbol, one after removing it); wave 189/189 suites, 604/604
+        tests; TestDeferCleanup: normal-exit LIFO, nested-frame barrier
+        scoping, unwind-runs-cleanup-before-handler, helper-frame push
+        ownership.
 - [ ] **1.4 (optional — may slip) Typed `SpecErrorHandler` overloads.**
       Checker resolves handler overload sets by error-kind (most-specific
       wins); `IrBuilder` handler walk consults the kind. This is

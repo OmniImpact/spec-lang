@@ -64,6 +64,8 @@ Class is IrBuilder{
 	Boolean is curFnRetIsArc: false;
 	String is curFnErrHandlerCallee: '';
 	String is curFnErrPushedSlot: '';
+	Boolean is curFnUsesDefer: false;
+	Boolean is curFnDeferExitRan: false;
 	Boolean is isUnmanagedClass: false;
 	String is inlineReturnSlot: '';
 	String is inlineReturnEndLbl: '';
@@ -737,6 +739,26 @@ Class is IrBuilder{
 		});
 	}
 
+	## Frame prologue for defer-ful frames: scan the body for Defer facility
+	## usage and, if found, open this frame's cleanup barrier. Defer-less
+	## frames (and the Defer classes' own frames) emit nothing.
+	Function is emitDeferFrameEnter(Array of Statement is bodyStmts){
+		:curFnUsesDefer: false;
+		:curFnDeferExitRan: false;
+		if({ :frameDeferExcluded() }, { return; });
+		if({ !:bodyUsesDeferInStmts(stmts: bodyStmts) }, { return; });
+		:curFnUsesDefer: true;
+		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Cleanup_frameEnter', argTypes: [IrType:Ptr], args: ['null']));
+	}
+
+	## Runs this frame's deferred cleanups down to its barrier. Called once
+	## per exit path: on the unwind path it runs BEFORE the handler walk and
+	## sets curFnDeferExitRan so the later teardown emission skips it.
+	Function is emitDeferFrameExit(){
+		if({ !:curFnUsesDefer || :curFnDeferExitRan }, { return; });
+		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Cleanup_frameExit', argTypes: [IrType:Ptr], args: ['null']));
+	}
+
 	local Function of String is destroyFnFor(String is structName){
 		local IrStruct is st: :mod:findStruct(name: structName);
 		if({ st:name != '' && st:destroyFn != 'null' }, {
@@ -1294,6 +1316,8 @@ Class is IrBuilder{
 		:collectDeclNamesInExpr(expr: m:initExpr, decls: decls);
 		:collectAllAnonCapturesInExpr(expr: m:initExpr, decls: decls, out: :capturedNames);
 		:curFnRetIsArc: false;
+		:curFnUsesDefer: false;
+		:curFnDeferExitRan: false;
 		:emitPoolEnter();
 
 		:localSlots:set(key: ':', value: '%self_slot');
@@ -1829,6 +1853,151 @@ Class is IrBuilder{
 		return boxPtr;
 	}
 
+	## True when [call] resolves to a Defer facility call (the base:sys
+	## wrapper or the sysinternal floor — both bare-named Defer).
+	local Function of Boolean is callTargetsDefer(CallData is call){
+		if({ call:bareProvider == 'Defer' }, { return true; });
+		if({ call:bareProvider:endsWith(suffix: ':Defer') }, { return true; });
+		if({ call:target:resolvedType == 'Defer' }, { return true; });
+		return false;
+	}
+
+	## True when the enclosing frame is one of the Defer classes themselves —
+	## their frames are transparent: they never take a cleanup barrier, so a
+	## push made inside them binds to the caller whose source performed it.
+	local Function of Boolean is frameDeferExcluded(){
+		local String is qn: :clsQNameMap:get(key: :currentClass, default: '');
+		return qn == 'base:sys:Defer' || qn == 'base:sysinternal:Cleanup';
+	}
+
+	## Defer-usage scan: whether any Defer facility call appears in [expr]'s
+	## SAME-FRAME code. Mirrors collectDeclNamesInExpr's traversal — inline
+	## control-flow regions (if/while/match/branch closure args) belong to
+	## this frame, while closures passed to regular calls are separate
+	## frames and are scanned when their own bodies are lowered.
+	local Function of Boolean is bodyUsesDeferInExpr(Expression is expr){
+		local Boolean is found: false;
+		match(on: expr, when: [
+			Expression:Unary: local Function(String is _op, Expression is operand){
+				if({ :bodyUsesDeferInExpr(expr: operand) }, { found: true; });
+			},
+			Expression:Binary: local Function(String is _op, Expression is left, Expression is right){
+				if({ :bodyUsesDeferInExpr(expr: left) }, { found: true; });
+				if({ !found && :bodyUsesDeferInExpr(expr: right) }, { found: true; });
+			},
+			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+				if({ :bodyUsesDeferInExpr(expr: inner) }, { found: true; });
+				local Int is ai: 0;
+				while({ ai < args:length() && !found }, {
+					if({ :bodyUsesDeferInExpr(expr: args:get(index: ai)) }, { found: true; });
+					ai++;
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is target, String is _f){
+				if({ :bodyUsesDeferInExpr(expr: target) }, { found: true; });
+			},
+			Expression:Index: local Function(Expression is target, Expression is index){
+				if({ :bodyUsesDeferInExpr(expr: target) }, { found: true; });
+				if({ !found && :bodyUsesDeferInExpr(expr: index) }, { found: true; });
+			},
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				local Int is ii: 0;
+				while({ ii < items:length() && !found }, {
+					if({ :bodyUsesDeferInExpr(expr: items:get(index: ii)) }, { found: true; });
+					ii++;
+				});
+			},
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				local Int is mi: 0;
+				while({ mi < keys:length() && !found }, {
+					if({ :bodyUsesDeferInExpr(expr: keys:get(index: mi)) }, { found: true; });
+					if({ !found && :bodyUsesDeferInExpr(expr: values:get(index: mi)) }, { found: true; });
+					mi++;
+				});
+			},
+			Expression:Call: local Function(CallData is call){
+				if({ :callTargetsDefer(call: call) }, { found: true; });
+				local String is cnm: call:name;
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval';
+				local Int is ci: 0;
+				while({ ci < call:args:length() && !found }, {
+					local NamedArg is na: call:args:get(index: ci);
+					if({ isInlineCf }, {
+						match(on: na:value, when: [
+							Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _sp, Array of Statement is subBody){
+								if({ :bodyUsesDeferInStmts(stmts: subBody) }, { found: true; });
+							},
+							Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+								local Int is mi: 0;
+								while({ mi < keys:length() && !found }, {
+									match(on: keys:get(index: mi), when: [
+										Expression:AnonFn: local Function(Type is _krt, Array of Parameter is _kp, Array of Statement is kBody){
+											if({ :bodyUsesDeferInStmts(stmts: kBody) }, { found: true; });
+										}
+									], default: {
+										if({ :bodyUsesDeferInExpr(expr: keys:get(index: mi)) }, { found: true; });
+									});
+									match(on: values:get(index: mi), when: [
+										Expression:AnonFn: local Function(Type is _vrt, Array of Parameter is _vp, Array of Statement is vBody){
+											if({ :bodyUsesDeferInStmts(stmts: vBody) }, { found: true; });
+										}
+									], default: {
+										if({ !found && :bodyUsesDeferInExpr(expr: values:get(index: mi)) }, { found: true; });
+									});
+									mi++;
+								});
+							},
+							Expression:ArrayLit: local Function(Array of Expression is items){
+								local Int is bi: 0;
+								while({ bi < items:length() && !found }, {
+									match(on: items:get(index: bi), when: [
+										Expression:AnonFn: local Function(Type is _prt, Array of Parameter is _pp, Array of Statement is pBody){
+											if({ :bodyUsesDeferInStmts(stmts: pBody) }, { found: true; });
+										}
+									], default: {
+										if({ :bodyUsesDeferInExpr(expr: items:get(index: bi)) }, { found: true; });
+									});
+									bi++;
+								});
+							}
+						], default: {
+							if({ :bodyUsesDeferInExpr(expr: na:value) }, { found: true; });
+						});
+					}, {
+						if({ :bodyUsesDeferInExpr(expr: na:value) }, { found: true; });
+					});
+					ci++;
+				});
+			}
+		], default: {});
+		return found;
+	}
+
+	local Function of Boolean is bodyUsesDeferInStmts(Array of Statement is stmts){
+		local Int is i: 0;
+		while({ i < stmts:length() }, {
+			local Statement is st: stmts:get(index: i);
+			local Boolean is hit: false;
+			match(on: st, when: [
+				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is _n, Expression is initExpr, Boolean is hasInit){
+					if({ hasInit && :bodyUsesDeferInExpr(expr: initExpr) }, { hit: true; });
+				},
+				Statement:Assign: local Function(Expression is t, Expression is v){
+					if({ :bodyUsesDeferInExpr(expr: t) || :bodyUsesDeferInExpr(expr: v) }, { hit: true; });
+				},
+				Statement:Return: local Function(Expression is e, Boolean is hr){
+					if({ hr && :bodyUsesDeferInExpr(expr: e) }, { hit: true; });
+				},
+				Statement:Expr: local Function(Expression is e){
+					if({ :bodyUsesDeferInExpr(expr: e) }, { hit: true; });
+				}
+			], default: {});
+			if({ hit }, { return true; });
+			i++;
+		});
+		return false;
+	}
+
 	local Function is collectDeclNamesInStmts(Array of Statement is stmts, Map of String to Boolean is decls){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
@@ -2321,6 +2490,7 @@ Class is IrBuilder{
 		:curFnErrHandlerCallee: '';
 		:curFnErrPushedSlot: '';
 		:emitPoolEnter();
+		:emitDeferFrameEnter(bodyStmts: m:body);
 
 		if({ !isHeldMethod }, {
 			# Bind ':' receiver into stack slot
@@ -2386,6 +2556,8 @@ Class is IrBuilder{
 		:curPoolMark: '';
 		:curFnErrHandlerCallee: '';
 		:curFnErrPushedSlot: '';
+		:curFnUsesDefer: false;
+		:curFnDeferExitRan: false;
 
 		:mod:addFunction(fn: fn);
 	}
@@ -2733,6 +2905,13 @@ Class is IrBuilder{
 			:emit(inst: IrInst:ConstInt(dst: lVal, value: :currentLine));
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_recordPendingFrame', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', cStr, mStr, fStr, lVal]));
 		});
+		# Deferred cleanups run BEFORE the handler walk (plan 1.3 contract):
+		# both unwind entries (raise sites and post-call pending checks)
+		# funnel through here.
+		if({ :curFnUsesDefer && !:curFnDeferExitRan }, {
+			:emitDeferFrameExit();
+			:curFnDeferExitRan: true;
+		});
 		if({ :curFnErrHandlerCallee != '' && :curFnErrPushedSlot != '' }, {
 			local String is pushedVal: :nextTmp();
 			:emit(inst: IrInst:Load(dst: pushedVal, slot: :curFnErrPushedSlot, ty: IrType:I1));
@@ -2809,6 +2988,13 @@ Class is IrBuilder{
 	}
 
 	local Function is emitReleaseOwnedLocals(){
+		# Deferred cleanups of this frame run before any teardown on normal
+		# exits. On the unwind path the frame-exit emission has already run
+		# them (before the handler walk) and set curFnDeferExitRan, so this
+		# is a no-op there.
+		if({ :curFnUsesDefer && !:curFnDeferExitRan }, {
+			:emitDeferFrameExit();
+		});
 		if({ :curFnErrPushedSlot != '' }, {
 			local String is pushedNow: :nextTmp();
 			:emit(inst: IrInst:Load(dst: pushedNow, slot: :curFnErrPushedSlot, ty: IrType:I1));
@@ -4343,6 +4529,8 @@ Class is IrBuilder{
 		local Boolean is savedRetIsArc: :curFnRetIsArc;
 		local String is savedErrCallee: :curFnErrHandlerCallee;
 		local String is savedErrSlot: :curFnErrPushedSlot;
+		local Boolean is savedUsesDefer: :curFnUsesDefer;
+		local Boolean is savedDeferExitRan: :curFnDeferExitRan;
 		:curFnErrHandlerCallee: '';
 		:curFnErrPushedSlot: '';
 
@@ -4382,6 +4570,7 @@ Class is IrBuilder{
 		:collectAllAnonCapturesInStmts(stmts: body, decls: decls, out: :capturedNames);
 		:curFnRetIsArc: :isArcSpecType(specType: retSpecType);
 		:emitPoolEnter();
+		:emitDeferFrameEnter(bodyStmts: body);
 
 		# Unpack captured variables from %env into local slots
 		local Int is uci: 0;
@@ -4508,6 +4697,8 @@ Class is IrBuilder{
 		:curFnRetIsArc: savedRetIsArc;
 		:curFnErrHandlerCallee: savedErrCallee;
 		:curFnErrPushedSlot: savedErrSlot;
+		:curFnUsesDefer: savedUsesDefer;
+		:curFnDeferExitRan: savedDeferExitRan;
 
 		# Allocate and populate %env in outer function if captures exist
 		local String is envVal: 'null';
