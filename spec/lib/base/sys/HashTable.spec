@@ -51,7 +51,7 @@ Class is HashTable{
 			while({ curr != 0 }, {
 				local Int is next: Mem:loadI64(ptr: curr, byteOffset: 24);
 				local Int is kBits: Mem:loadI64(ptr: curr, byteOffset: 0);
-				if({ (keyKind == 0 || keyKind == 3) && kBits != 0 }, {
+				if({ keyKind == 0 && kBits != 0 }, {
 					Mem:releaseAddr(objAddr: kBits);
 				});
 				local Int is vBits: Mem:loadI64(ptr: curr, byteOffset: 8);
@@ -184,7 +184,7 @@ Class is HashTable{
 		if({ retainVal && valBits != 0 }, {
 			Mem:retainAddr(objAddr: valBits);
 		});
-		if({ (keyKind == 0 || keyKind == 3) && keyBits != 0 }, {
+		if({ keyKind == 0 && keyBits != 0 }, {
 			Mem:retainAddr(objAddr: keyBits);
 		});
 		local Int is len: Mem:loadI64(ptr: mAddr, byteOffset: 16);
@@ -309,7 +309,7 @@ Class is HashTable{
 				}, {
 					Mem:storeI64(ptr: buckets, byteOffset: idx * 8, val: next);
 				});
-				if({ (keyKind == 0 || keyKind == 3) && cKey != 0 }, {
+				if({ keyKind == 0 && cKey != 0 }, {
 					Mem:releaseAddr(objAddr: cKey);
 				});
 				local Int is valBits: Mem:loadI64(ptr: curr, byteOffset: 8);
