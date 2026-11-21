@@ -4476,9 +4476,11 @@ Class is IrBuilder{
 						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [mkkV, mvkV]));
 					});
 				}, {
-					local Array of IrType is emptyT: [];
-					local Array of String is emptyV: [];
-					:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNew', argTypes: emptyT, args: emptyV));
+					local String is mkkV0: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: mkkV0, value: 0));
+					local String is mvkV0: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: mvkV0, value: 0));
+					:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [mkkV0, mvkV0]));
 				});
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {

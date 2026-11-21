@@ -791,10 +791,6 @@ define internal noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinlin
   store i32 %vk32, ptr %vkp, align 4
   ret ptr %m
 }
-define internal noalias ptr @HashTable_mapNew() alwaysinline {
-  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 0)
-  ret ptr %m
-}
 define internal noalias ptr @HashTable_mapNewObject() alwaysinline {
   %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)
   ret ptr %m

@@ -600,6 +600,20 @@ void spec_drain_async_tasks(void) {
     }
     pthread_mutex_unlock(&spec_task_mutex);
 }
+
+/* Runtime kind registry for ARC allocations whose destroy behavior cannot
+ * be referenced from Spec source (Spec cannot take a function's address).
+ * Kind 1 installs the map destructor — the same emitted symbol the type
+ * machinery compares against for map identity — so kinded-allocated maps
+ * carry full ARC semantics and downcast identity. Both callees are
+ * emitted Spec symbols, resolved at program link time. */
+extern long long Arc_allocObj(void* self, long long size, long long destroy);
+void HashTable_mapDestroy(void* self);
+
+long long spec_arc_alloc_obj_kinded(void* self, long long size, long long kind) {
+    long long destroy = (kind == 1) ? (long long)(intptr_t)&HashTable_mapDestroy : 0;
+    return Arc_allocObj(self, size, destroy);
+}
 long long spec_pal_dir_open_cstr(long long path_cstr) {
     const char* p = (const char*)(intptr_t)path_cstr;
     if (!p || !*p) return 0;
