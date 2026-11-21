@@ -13,6 +13,7 @@ Class is Parallel{
 	replace Array of Array of String is using: [
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
+		['base', 'sys', as Defer()],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],
@@ -109,19 +110,31 @@ Class is Parallel{
 		local Int is slot: :getLockSlot(key: lock);
 		local Int is tid: Thread:currentId();
 		if({ Mem:atomicLoadI64(addr: slot + 8) == tid }, {
-			Mem:storeI64(ptr: slot, byteOffset: 16, val: Mem:loadI64(ptr: slot, byteOffset: 16) + 1);
+			# Reentrant: the depth counter rises for this frame and is
+			# restored by a deferred cleanup, so an unwinding action cannot
+			# strand the count.
+			local Int is depth: Mem:loadI64(ptr: slot, byteOffset: 16);
+			Mem:storeI64(ptr: slot, byteOffset: 16, val: depth + 1);
+			Defer:push(action: local Function(){
+				Mem:storeI64(ptr: slot, byteOffset: 16, val: Mem:loadI64(ptr: slot, byteOffset: 16) - 1);
+			});
 			local Any is resInner: action();
-			Mem:storeI64(ptr: slot, byteOffset: 16, val: Mem:loadI64(ptr: slot, byteOffset: 16) - 1);
 			return resInner;
 		});
 		local Int is mtx: Mem:loadI64(ptr: slot, byteOffset: 0);
 		Thread:mutexLock(handle: mtx);
 		Mem:atomicStoreI64(addr: slot + 8, val: tid);
 		Mem:storeI64(ptr: slot, byteOffset: 16, val: 1);
+		# The lock and its bookkeeping are released by a deferred cleanup,
+		# which runs on the normal return AND on an unwinding action before
+		# the error propagates outward — a raising action can no longer
+		# deadlock every later entrant.
+		Defer:push(action: local Function(){
+			Mem:storeI64(ptr: slot, byteOffset: 16, val: 0);
+			Mem:atomicStoreI64(addr: slot + 8, val: 0);
+			Thread:mutexUnlock(handle: mtx);
+		});
 		local Any is res: action();
-		Mem:storeI64(ptr: slot, byteOffset: 16, val: 0);
-		Mem:atomicStoreI64(addr: slot + 8, val: 0);
-		Thread:mutexUnlock(handle: mtx);
 		return res;
 	}
 }

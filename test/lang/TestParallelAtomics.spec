@@ -12,6 +12,7 @@ Class of SpecUnitTest is TestParallelAtomics{
 		['specunit', as Assert()],
 		['base', 'math', as Math()],
 		['base', 'sys', as Output()],
+		['base', 'core', SpecError],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Process()],
@@ -139,4 +140,55 @@ Class of SpecUnitTest is TestParallelAtomics{
 		Assert:areEqualInt(100, slotA);
 		Assert:areEqualInt(200, slotB);
 	}
+
+	## An action that unwinds must not strand the slot mutex: the
+	## deferred release runs on the unwind path, so the next entrant
+	## (a later syncWith on the same key) completes normally.
+	Function is testSyncWithReleasesLockOnUnwind(){
+		local Int is completed: 0;
+		local String is caughtKind: try(
+			body: local Function of String(){
+				Parallel:syncWith(lock: 7, action: local Function(){
+					:raiseError(error: SpecError:init(kind: ParallelProbeKind:WORKER_FAILED, description: 'inside critical section'));
+				});
+				return 'no-raise';
+			},
+			guard: local Function of String(SpecError is e){
+				return e:kindName;
+			}
+		);
+		Assert:areEqualString('WORKER_FAILED', caughtKind);
+		Parallel:syncWith(lock: 7, action: local Function(){
+			completed: completed + 1;
+		});
+		Assert:areEqualInt(1, completed);
+	}
+
+	## A raising worker's error joins through its Task and surfaces at
+	## the run's join point with its kind intact.
+	Function is testRunSurfacesWorkerErrorAtJoin(){
+		local Function of Int is failingWorker: local Function of Int(Int is threadIndex, Int is count){
+			if({ threadIndex == 0 }, {
+				:raiseError(error: SpecError:init(kind: ParallelProbeKind:WORKER_FAILED, description: 'worker boom'));
+			});
+			return count;
+		};
+		local String is caughtDesc: '';
+		ThreadScope:open(body: local Function(ThreadScope is scope){
+			caughtDesc: try(
+				body: local Function of String(){
+					Parallel:run(scope: scope, threads: 2, iterations: 10, worker: failingWorker);
+					return 'no-raise';
+				},
+				guard: local Function of String(SpecError is e){
+					return 'joined:' . e:description;
+				}
+			);
+		});
+		Assert:areEqualString('joined:worker boom', caughtDesc);
+	}
+}
+
+Enum is ParallelProbeKind{
+	WORKER_FAILED
 }

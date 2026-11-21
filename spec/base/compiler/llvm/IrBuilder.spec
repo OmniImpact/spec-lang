@@ -71,6 +71,12 @@ Class is IrBuilder{
 	## instead of the frame's unwind path. The pending error is consumed by
 	## the catch block's takePendingError.
 	String is curInlineCatchLbl: '';
+	## When set (inside a generated lazy-field initializer between the
+	## winning CAS and the ready stamp), every unwind path through the
+	## frame first resets the lazy state to 0, so a failed initializer is
+	## retried by the next accessor instead of stranding the field in the
+	## in-progress state (whose waiters spin forever).
+	String is curLazyStateResetSlot: '';
 	Boolean is isUnmanagedClass: false;
 	String is inlineReturnSlot: '';
 	String is inlineReturnEndLbl: '';
@@ -1560,6 +1566,10 @@ Class is IrBuilder{
 
 		local IrBlock is evalBlk: fn:addBlock(label: evalLbl);
 		:switchBlock(blk: evalBlk);
+		local String is resetSlot: '%lazy_reset_addr_' . (:tmpCounter as String);
+		:emit(inst: IrInst:Alloca(slot: resetSlot, ty: IrType:I64));
+		:emit(inst: IrInst:Store(slot: resetSlot, val: stateAddr, ty: IrType:I64));
+		:curLazyStateResetSlot: resetSlot;
 		local String is prevMapK: :expectedMapKeyType;
 		local String is prevMapV: :expectedMapValType;
 		if({ m:memberType:name == 'Map' && m:memberType:params:length() >= 1 }, {
@@ -1574,6 +1584,7 @@ Class is IrBuilder{
 		:expectedMapKeyType: prevMapK;
 		:expectedMapValType: prevMapV;
 		if({ iv == '' }, { iv: :emitDefaultVal(ty: fty); });
+		:curLazyStateResetSlot: '';
 		if({ fIsArc && iv != '' && iv != 'null' }, {
 			:emit(inst: IrInst:Retain(val: iv));
 		});
@@ -3106,6 +3117,27 @@ Class is IrBuilder{
 	}
 
 	Function is emitUnwindCurrentFrame(Boolean is recordFrame){
+		if({ :curLazyStateResetSlot != '' }, {
+			local String is rsp: :nextTmp();
+			:emit(inst: IrInst:Load(dst: rsp, slot: :curLazyStateResetSlot, ty: IrType:I64));
+			local String is rstate: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: rstate, hasDst: true, retType: IrType:I64, callee: '__spec_mem_atomic_load_i64', argTypes: [IrType:I64], args: [rsp]));
+			local String is rOne: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: rOne, value: 1));
+			local String is rPending: :nextTmp();
+			:emit(inst: IrInst:Cmp(dst: rPending, op: '==', lhs: rstate, rhs: rOne, ty: IrType:I64));
+			local String is rDoLbl: :nextLabel(prefix: 'lazy_reset');
+			local String is rSkipLbl: :nextLabel(prefix: 'lazy_keep');
+			:terminate(inst: IrInst:CondBr(cond: rPending, thenLabel: rDoLbl, elseLabel: rSkipLbl));
+			local IrBlock is rDoBlk: :curFn:addBlock(label: rDoLbl);
+			:switchBlock(blk: rDoBlk);
+			local String is rZero: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: rZero, value: 0));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_atomic_store_i64', argTypes: [IrType:I64, IrType:I64], args: [rsp, rZero]));
+			:terminate(inst: IrInst:Br(target: rSkipLbl));
+			local IrBlock is rSkipBlk: :curFn:addBlock(label: rSkipLbl);
+			:switchBlock(blk: rSkipBlk);
+		});
 		if({ recordFrame && :clsQNameMap:has(key: 'Pool') }, {
 			local String is cStr: :emitConstStrVal(value: :currentClass);
 			local String is mStr: :emitConstStrVal(value: :currentMethod);
@@ -3166,6 +3198,10 @@ Class is IrBuilder{
 		});
 		:emitReleaseOwnedLocals();
 		:emitPoolExit();
+		# The defer-exit dedup flag is scoped to THIS unwind block: every
+		# unwind block and every normal return is an independent exit
+		# path, and each must run this frame's cleanups.
+		:curFnDeferExitRan: false;
 		if({ :curFn:retType == IrType:Void }, {
 			:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 		}, {

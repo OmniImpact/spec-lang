@@ -8,7 +8,9 @@ Class of SpecUnitTest is TestLazy{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
+		['base', 'core', SpecError],
 		['base', 'sys', as Lazy()],
+		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', 'thread', ThreadScope],
@@ -243,4 +245,38 @@ Class is LazySample{
 	Function is overwriteInt(Int is v){
 		:computedInt: v;
 	}
+
+## A lazy initializer that unwinds resets the once-state, so the next
+	## read retries the initializer instead of spinning forever on the
+	## in-progress state.
+	Function is testFailedInitRetriesOnNextRead(){
+		local FailingLazy is f: FailingLazy:init();
+		local Int is first: try(
+			body: local Function of Int(){ return f:prized; },
+			guard: local Function of Int(SpecError is e){ return 0 - 1; }
+		);
+		Assert:areEqualInt(0 - 1, first);
+		local Int is second: try(
+			body: local Function of Int(){ return f:prized; },
+			guard: local Function of Int(SpecError is e){ return 0 - 2; }
+		);
+		Assert:areEqualInt(0 - 2, second);
+	}
+}
+
+Enum is LazyProbeKind{
+	INIT_FAILED
+}
+
+Class is FailingLazy{
+	Int is prized: lazy({ 
+		:raiseError(error: SpecError:init(kind: LazyProbeKind:INIT_FAILED, description: 'init boom'));
+		return 0;
+	});
+
+	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', as Lazy()],
+		['base', 'struct', Map]
+	];
 }
