@@ -1,5 +1,5 @@
 #! specunit: suite
-#! Value-yield matrix for the try/guard construct (plan 2.6):
+#! Value-yield matrix for the try/guard construct:
 #! 1. Success yields the body value; the guard never runs.
 #! 2. An in-region raiseError yields the guard value with the error bound.
 #! 3. An unwind from a CALLED function is caught (post-call check retarget).

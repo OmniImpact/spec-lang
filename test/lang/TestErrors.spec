@@ -229,7 +229,7 @@ Class is VoidOnErrorCaller{
 		);
 	}
 
-	## Typed SpecErrorHandler boundary (plan 1.4): a kind-typed handler
+	## Typed SpecErrorHandler boundary: a kind-typed handler
 	## declares `SpecError of FileOpError`, so `when` on its `e:kind` is
 	## exhaustive WITHOUT else (1.1 enforcement), and signature violations
 	## are compile-time errors.
@@ -306,7 +306,7 @@ Class is DupKindHandler{
 		);
 	}
 
-	## Typed dispatch (plan 1.4 step 2): the class declares a kinded
+	## Typed dispatch: the class declares a kinded
 	## handler and a catch-all; the dispatcher routes by the raised error's
 	## kind. The catch-all returning false leaves the error unhandled, so
 	## it re-raises outward — observed through an enclosing try.

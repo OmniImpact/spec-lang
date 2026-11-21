@@ -6,7 +6,7 @@
 ## decoding, lookups that can legitimately miss. "Never Null"
 ## default-parameter APIs remain the convenience face; this is the
 ## core they unwrap. Consume via `when` destructuring (construct
-## dispatch) or `try(...)` once the construct lands (2.6).
+## dispatch) or the `try(...)` construct.
 ##
 ## The Err variant carries the full error currency — a `SpecError of
 ## E` with its kind enum, description, and captured stack trace — so

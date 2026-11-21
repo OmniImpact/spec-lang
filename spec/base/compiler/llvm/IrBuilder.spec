@@ -635,7 +635,7 @@ Class is IrBuilder{
 				tpi++;
 			});
 			local Map of String to Int is mCounts2: Map:init();
-			# Typed SpecErrorHandler dispatch (1.4): whenever a class
+			# Typed SpecErrorHandler dispatch: whenever a class
 			# declares a KINDED handler (or several handlers), every handler
 			# emits at a 1-based suffixed symbol ('_1', '_2', ...) and the
 			# CANONICAL symbol becomes the generated dispatcher — the unwind
@@ -834,7 +834,7 @@ Class is IrBuilder{
 		:mod:addFunction(fn: fn);
 	}
 
-	## Typed SpecErrorHandler dispatch (plan 1.4 step 2): for a class with
+	## Typed SpecErrorHandler dispatch: for a class with
 	## several handlers, the canonical '<S>_SpecErrorHandler' symbol is the
 	## DISPATCHER — it reads the raised error's kind value and routes by
 	## pointer identity against each kind enum's interned variant
@@ -3114,7 +3114,7 @@ Class is IrBuilder{
 			:emit(inst: IrInst:ConstInt(dst: lVal, value: :currentLine));
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_recordPendingFrame', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', cStr, mStr, fStr, lVal]));
 		});
-		# Deferred cleanups run BEFORE the handler walk (plan 1.3 contract):
+		# Deferred cleanups run BEFORE the handler walk:
 		# both unwind entries (raise sites and post-call pending checks)
 		# funnel through here.
 		if({ :curFnUsesDefer && !:curFnDeferExitRan }, {

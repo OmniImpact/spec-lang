@@ -1,5 +1,5 @@
 #! specunit: suite
-#! Cleanup-ordering tests for the Defer floor (plan 1.3):
+#! Cleanup-ordering tests for the Defer floor:
 #! 1. A frame's registrations run newest-first on its normal exit.
 #! 2. Barriers scope regions: nested defer-ful frames run only their own
 #!    registrations at their own exits.

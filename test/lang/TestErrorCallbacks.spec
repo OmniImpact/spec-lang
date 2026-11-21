@@ -15,6 +15,7 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Conditional()],
+		['base', 'net', NetError],
 		['base', 'net', as Socket()],
 		['base', 'audio', as Audio()]
 	];
@@ -67,8 +68,8 @@ Class of SpecUnitTest is TestErrorCallbacks{
 			host: '127.0.0.1',
 			port: 0,
 			timeoutMs: 100,
-			onError: local Function(String is error){
-				if({ error:length() > 0 }, {
+			onError: local Function(SpecError of NetError is error){
+				if({ error:description:length() > 0 }, {
 					Process:atomicPut(slot: 68, value: 1);
 				});
 			}
@@ -79,8 +80,8 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		Process:atomicPut(slot: 69, value: 0);
 		local Int is sent: sock:sendString(
 			text: 'hello',
-			onError: local Function(String is error){
-				if({ error:length() > 0 }, {
+			onError: local Function(SpecError of NetError is error){
+				if({ error:description:length() > 0 }, {
 					Process:atomicPut(slot: 69, value: 1);
 				});
 			}
@@ -91,8 +92,8 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		Process:atomicPut(slot: 70, value: 0);
 		local String is recvd: sock:receiveString(
 			maxBytes: 64,
-			onError: local Function(String is error){
-				if({ error:length() > 0 }, {
+			onError: local Function(SpecError of NetError is error){
+				if({ error:description:length() > 0 }, {
 					Process:atomicPut(slot: 70, value: 1);
 				});
 			}

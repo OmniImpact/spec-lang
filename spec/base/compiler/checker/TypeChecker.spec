@@ -6134,7 +6134,7 @@ Class is TypeChecker{
 	## Boolean (the unwind walk consumes the result as handled), take
 	## exactly one parameter, and that parameter must be the error
 	## currency — bare `SpecError` (the catch-all) or `SpecError of <kind
-	## enum>` (typed dispatch, plan 1.4). A class may declare several
+	## enum>` (typed dispatch). A class may declare several
 	## handlers: at most one catch-all and no duplicate kind enums; the
 	## emitter generates a dispatcher that routes by the raised error's
 	## kind, most-specific (kinded) first, and leaves non-matching kinds

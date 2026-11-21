@@ -6,6 +6,8 @@ Class is Http{
 	namespace: ['base', 'net'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'net', HttpError],
 		['base', 'net', Url],
 		['base', 'net', HttpRequest],
 		['base', 'net', HttpResponse],
@@ -146,15 +148,15 @@ Class is Http{
 		return resp;
 	}
 
-	local Function of String is exchangeOnce(Url is u, String is rawReq, Int is timeoutMs, Array of String is errOut){
+	local Function of String is exchangeOnce(Url is u, String is rawReq, Int is timeoutMs, Array of SpecError of HttpError is errOut){
 		if({ u:isHttps() }, {
 			local TlsClient is tls: TlsClient:init();
 			if({ !tls:connect(host: u:host, port: u:port, timeoutMs: timeoutMs) }, {
-				errOut:add(item: 'TLS connect failed: ' . tls:lastError());
+				errOut:add(item: SpecError:init(kind: HttpError:CONNECTION_FAILED, description: 'TLS connect failed: ' . tls:lastError()));
 				return '';
 			});
 			if({ !tls:sendString(text: rawReq) }, {
-				errOut:add(item: 'TLS send failed: ' . tls:lastError());
+				errOut:add(item: SpecError:init(kind: HttpError:SEND_FAILED, description: 'TLS send failed: ' . tls:lastError()));
 				tls:close();
 				return '';
 			});
@@ -164,12 +166,12 @@ Class is Http{
 		});
 
 		local String is errMsg: '';
-		local Socket is sock: Socket:init():connect(host: u:host, port: u:port, timeoutMs: timeoutMs, onError: local Function(String is e){
-			errMsg: e;
+		local Socket is sock: Socket:init():connect(host: u:host, port: u:port, timeoutMs: timeoutMs, onError: local Function(SpecError of NetError is e){
+			errMsg: e:description;
 		});
 		if({ !sock:isOpen() }, {
 			local String is eStr: if({ errMsg != '' }, { errMsg }, { 'TCP connect failed to ' . u:host });
-			errOut:add(item: eStr);
+			errOut:add(item: SpecError:init(kind: HttpError:CONNECTION_FAILED, description: eStr));
 			return '';
 		});
 		sock:setTimeout(timeoutMs: timeoutMs);
@@ -195,16 +197,16 @@ Class is Http{
 
 		while({ hops <= req:maxRedirects }, local Function of Boolean(){
 			local String is rawReq: :buildRawRequest(u: curUrl, req: curReq);
-			local Array of String is errOut: [];
+			local Array of SpecError of HttpError is errOut: [];
 			local String is rawResp: :exchangeOnce(u: curUrl, rawReq: rawReq, timeoutMs: curReq:timeoutMs, errOut: errOut);
 			if({ errOut:length() > 0 }, {
-				if({ :hasClosure(cb: onError) }, { onError(errOut:get(index: 0, default: 'HTTP error')); });
+				if({ :hasClosure(cb: onError) }, { onError(errOut:get(index: 0)); });
 				resp: HttpResponse:init(status: 0, body: '');
 				return false;
 			});
 			resp: :parseResponse(rawResp: rawResp);
 			if({ resp:status == 0 }, {
-				if({ :hasClosure(cb: onError) }, { onError('Invalid HTTP response from ' . curUrl:toString()); });
+				if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: HttpError:INVALID_RESPONSE, description: 'Invalid HTTP response from ' . curUrl:toString())); });
 				return false;
 			});
 			if({ resp:isRedirect() && hops < req:maxRedirects }, {
@@ -226,7 +228,7 @@ Class is Http{
 		});
 		if({ resp:status < 200 || resp:status >= 400 }, {
 			local String is msg: 'HTTP ' . (resp:status as String) . ' for ' . curUrl:toString();
-			if({ :hasClosure(cb: onError) }, { onError(msg); });
+			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: HttpError:HTTP_ERROR, description: msg)); });
 			return resp;
 		});
 		if({ :hasClosure(cb: onSuccess) }, { onSuccess(resp); });
@@ -234,24 +236,27 @@ Class is Http{
 	}
 
 	## Sends an asynchronous [HttpRequest] inside [scope], invoking
-	## [onSuccess](HttpResponse) or [onError](String) on the worker thread.
-	Function of Task of HttpResponse is send(ThreadScope is scope, HttpRequest is request, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(String is _e){}){
+	## [onSuccess](HttpResponse) or [onError] (a `SpecError of HttpError`)
+	## on the worker thread.
+	Function of Task of HttpResponse is send(ThreadScope is scope, HttpRequest is request, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is _e){}){
 		return scope:spawn(task: local Function of HttpResponse(){
 			return :sendSync(req: request, onSuccess: onSuccess, onError: onError);
 		});
 	}
 
 	## Performs an asynchronous HTTP/HTTPS GET inside [scope], invoking
-	## [onSuccess](HttpResponse) or [onError](String) on the worker thread.
-	Function of Task of HttpResponse is get(ThreadScope is scope, String is url, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(String is _e){}, String is userAgent: 'SpecNet/0.1'){
+	## [onSuccess](HttpResponse) or [onError] (a `SpecError of HttpError`)
+	## on the worker thread.
+	Function of Task of HttpResponse is get(ThreadScope is scope, String is url, Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is _e){}, String is userAgent: 'SpecNet/0.1'){
 		local HttpRequest is req: HttpRequest:init(method: 'GET', url: url);
 		req:setHeader(name: 'User-Agent', value: userAgent);
 		return :send(scope: scope, request: req, onSuccess: onSuccess, onError: onError);
 	}
 
 	## Performs an asynchronous HTTP/HTTPS POST inside [scope], invoking
-	## [onSuccess](HttpResponse) or [onError](String) on the worker thread.
-	Function of Task of HttpResponse is post(ThreadScope is scope, String is url, String is body, String is contentType: 'application/json', Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(String is _e){}, String is userAgent: 'SpecNet/0.1'){
+	## [onSuccess](HttpResponse) or [onError] (a `SpecError of HttpError`)
+	## on the worker thread.
+	Function of Task of HttpResponse is post(ThreadScope is scope, String is url, String is body, String is contentType: 'application/json', Function is onSuccess: local Function(HttpResponse is _r){}, Function is onError: local Function(SpecError of HttpError is _e){}, String is userAgent: 'SpecNet/0.1'){
 		local HttpRequest is req: HttpRequest:init(method: 'POST', url: url);
 		req:setHeader(name: 'User-Agent', value: userAgent);
 		req:withBody(body: body, contentType: contentType);

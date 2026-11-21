@@ -16,6 +16,7 @@ Class is Weather{
 		['base', 'cleo', ThrobberEffect],
 		['base', 'cleo', TitlePlacement],
 		['base', 'net', HttpResponse],
+		['base', 'net', HttpError],
 		['base', 'net', as Http()],
 		['base', 'data', as Json()],
 		['base', 'sys', 'thread', ThreadScope],
@@ -76,9 +77,9 @@ Class is Weather{
 					statusSec:resolveSlot(index: reqSlot, badge: '●', text: urlStr, color: CleoColor:ansi(code: 252), rightText: "HTTP {{resp:statusCode}}");
 					populateForecast(rawJson: resp:body, fcSec: fcSec);
 				},
-				onError: local Function(String is err){
+				onError: local Function(SpecError of HttpError is err){
 					statusSec:resolveSlot(index: reqSlot, badge: '✖', text: urlStr, color: CleoColor:ansi(code: 203), rightText: 'failed');
-					fcSec:addLine(text: "Error fetching forecast: {{err}}", color: CleoColor:ansi(code: 203));
+					fcSec:addLine(text: "Error fetching forecast: {{err:description}}", color: CleoColor:ansi(code: 203));
 				}
 			);
 			ui:finish();
