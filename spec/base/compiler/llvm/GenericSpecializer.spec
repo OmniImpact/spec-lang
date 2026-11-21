@@ -505,6 +505,7 @@ Class is GenericSpecializer{
 									ntarget:setResolvedType(t: selfSpecName);
 									if({ call:name == 'init' }, {
 										newResT: selfSpecName;
+										newResNode: Type:init(name: selfSpecName);
 									});
 								});
 							});
@@ -574,9 +575,11 @@ Class is GenericSpecializer{
 						retSubst:set(key: tpName, value: specBound);
 						local Type is specRet: :transformType(t: gm:memberType, subst: retSubst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 						if({ specRet:name == 'Function' && specRet:params:length() > 0 }, {
-							newResT: :typeToResolvedStr(t: specRet:params:get(index: 0));
+							newResNode: specRet:params:get(index: 0);
+							newResT: :typeToResolvedStr(t: newResNode);
 						}, {
 							if({ specRet:name != '' }, {
+								newResNode: specRet;
 								newResT: :typeToResolvedStr(t: specRet);
 							});
 						});
@@ -595,7 +598,14 @@ Class is GenericSpecializer{
 			else: { expr }
 		]);
 		res:setLine(line: ln);
-		res:setResolvedTypeNode(tn: :resolvedStrToType(s: newResT, subst: Map:init()), t: newResT);
+		# The transformed node rides alongside its string: an override arm
+		# (method return, self-init rename) sets it directly, so the tail
+		# re-parse only runs for paths that never had a node.
+		if({ newResNode:name != '' }, {
+			res:setResolvedTypeNode(tn: newResNode, t: newResT);
+		}, {
+			res:setResolvedTypeNode(tn: :resolvedStrToType(s: newResT, subst: Map:init()), t: newResT);
+		});
 		return res;
 	}
 
