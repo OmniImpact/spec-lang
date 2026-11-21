@@ -581,6 +581,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						if({ (pArc || pBoxed) && !pInEntry }, {
 							local String is prevWVal: b:nextTmp();
 							b:emit(inst: IrInst:Load(dst: prevWVal, slot: slot, ty: IrType:Ptr));
+							b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevWVal]));
 							b:emit(inst: IrInst:Release(val: prevWVal));
 						});
 						if({ pBoxed }, {
@@ -782,6 +783,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						if({ (vArc || vBoxed) && !vInEntry }, {
 							local String is prevLVal: b:nextTmp();
 							b:emit(inst: IrInst:Load(dst: prevLVal, slot: slot, ty: IrType:Ptr));
+							b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevLVal]));
 							b:emit(inst: IrInst:Release(val: prevLVal));
 						});
 						if({ vBoxed }, {

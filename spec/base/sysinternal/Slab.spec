@@ -205,6 +205,12 @@ Class is Slab{
 		if({ s != 0 }, {
 			local Int is lf: Mem:loadI64(ptr: s, byteOffset: 40);
 			if({ lf != 0 }, {
+				# Freelist-integrity guard: the head must point inside this
+				# slab. A foreign head means a prior corruption — panic at
+				# the fault site instead of dereferencing a wild pointer.
+				if({ lf < s + 96 || lf >= s + 65536 }, {
+					Mem:panic(msg: 'slab: allocSlot freelist head outside its slab');
+				});
 				local Int is next: Mem:loadI64(ptr: lf, byteOffset: 0);
 				Mem:storeI64(ptr: s, byteOffset: 40, val: next);
 				if({ base:sysinternal:Mem:isMultithreaded() }, {
@@ -249,6 +255,20 @@ Class is Slab{
 
 	Function is freeSlot(Int is slotAddr){
 		local Int is s: slotAddr & (-65536);
+		# Freelist-integrity guards: a slot must lie inside its 64 KiB slab,
+		# past the 96-byte header, and a slot already carrying the freed
+		# marker is a DOUBLE FREE (its dead destroyFn/kind field holds the
+		# marker). Both conditions otherwise poison the freelist silently
+		# and surface later as wild-pointer faults far from the cause —
+		# panic here instead, where the freeing stack is attributable.
+		if({ slotAddr < s + 96 || slotAddr >= s + 65536 }, {
+			Mem:panic(msg: 'slab: freeSlot slot outside its slab');
+		});
+		local Int is hdr: slotAddr - 16;
+		if({ Mem:loadI64(ptr: hdr, byteOffset: 8) == 73083690742142 }, {
+			Mem:panic(msg: 'slab: double free of already-freed slot');
+		});
+		Mem:storeI64(ptr: hdr, byteOffset: 8, val: 73083690742142);
 		local Int is myState: Mem:tlsGetI64(slot: 14);
 		local Boolean is mt: base:sysinternal:Mem:isMultithreaded();
 		local Int is owner: if({ mt }, { Mem:atomicLoadI64(addr: s + 16) }, { Mem:loadI64(ptr: s, byteOffset: 16) });

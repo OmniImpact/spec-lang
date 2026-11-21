@@ -115,6 +115,10 @@ define internal void @spec_pool_release_to(i64 %mark) alwaysinline {
   call void @Pool_poolReleaseTo(ptr null, i64 %mark)
   ret void
 }
+define internal void @spec_pool_unclaim_addr(i64 %addr) alwaysinline {
+  call void @Pool_unclaimAddr(ptr null, i64 %addr)
+  ret void
+}
 define internal ptr @spec_claim_pool(ptr %obj) alwaysinline {
   %oa = ptrtoint ptr %obj to i64
   %ra = call i64 @Pool_claimPool(ptr null, i64 %oa)

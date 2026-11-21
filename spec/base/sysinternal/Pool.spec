@@ -32,8 +32,45 @@ Class is Pool{
 		});
 	}
 
+	## Removes the TOPMOST pool entry matching [objAddr] WITHOUT releasing
+	## it — the ownership transfer for a RETURNED claimed object. Without
+	## this, a function returning a claimed allocation leaves its entry on
+	## the stack; the frame-exit drain then releases the object the caller
+	## now owns, and the caller's own release double-frees it.
+	##
+	## @param objAddr: The returned object's address.
+	Function is unclaimAddr(Int is objAddr){
+		if({ objAddr == 0 }, { return; });
+		local Int is top: Mem:tlsGetI64(slot: 4);
+		if({ top == 0 }, { return; });
+		local Int is stk: Mem:tlsGetI64(slot: 3);
+		if({ stk == 0 }, { return; });
+		local Int is idx: top - 1;
+		while({ idx >= 0 }, {
+			local Int is entry: Mem:loadI64(ptr: stk, byteOffset: idx * 8);
+			if({ entry == objAddr }, {
+				local Int is shift: idx;
+				while({ shift < top - 1 }, {
+					local Int is nxt: Mem:loadI64(ptr: stk, byteOffset: (shift + 1) * 8);
+					Mem:storeI64(ptr: stk, byteOffset: shift * 8, val: nxt);
+					shift: shift + 1;
+				});
+				Mem:tlsSetI64(slot: 4, val: top - 1);
+				return;
+			});
+			idx: idx - 1;
+		});
+	}
+
 	Function of Int is claimPool(Int is objAddr){
 		if({ objAddr == 0 }, { return 0; });
+		# The claim holds its OWN reference (retain): the creator's reference
+		# belongs to the consuming local (released at reassignment/scope —
+		# each such release is preceded by unclaimAddr, popping this entry
+		# so the drain does not also release it), and the frame drain
+		# releases this reference for values never consumed. Claim without
+		# retain + any local release = the freelist-corruption double free.
+		Mem:retainAddr(objAddr: objAddr);
 		local Int is top: Mem:tlsGetI64(slot: 4);
 		local Int is cap: Mem:tlsGetI64(slot: 5);
 		if({ top == cap }, {
