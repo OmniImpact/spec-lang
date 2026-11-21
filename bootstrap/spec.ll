@@ -26179,11 +26179,10 @@ entry:
 
 define void @HashTable_mapDestroy(ptr %self) !dbg !1974 {
 entry:
-  %t72 = alloca i1, !dbg !1975
-  %t71 = alloca i1, !dbg !1975
-  %var_isArc_67 = alloca i64, !dbg !1976
-  %var_vBits_63 = alloca i64, !dbg !1977
-  %t50 = alloca i1, !dbg !1978
+  %t67 = alloca i1, !dbg !1975
+  %t66 = alloca i1, !dbg !1975
+  %var_isArc_62 = alloca i64, !dbg !1976
+  %var_vBits_58 = alloca i64, !dbg !1977
   %t49 = alloca i1, !dbg !1978
   %var_kBits_45 = alloca i64, !dbg !1979
   %var_next_41 = alloca i64, !dbg !1980
@@ -26259,90 +26258,80 @@ while_body_11:
   %t47 = add i64 0, 0, !dbg !1979
   %t48 = call i64 @__spec_mem_load_i64(i64 %t46, i64 %t47), !dbg !1979
   store i64 %t48, ptr %var_kBits_45, !dbg !1979
-  %t51 = load i64, ptr %var_keyKind_19, !dbg !1978
-  %t52 = add i64 0, 0, !dbg !1978
-  %t53 = icmp eq i64 %t51, %t52, !dbg !1978
-  store i1 %t53, ptr %t50, !dbg !1978
-  br i1 %t53, label %sc_end_14, label %sc_rhs_13, !dbg !1978
+  %t50 = load i64, ptr %var_keyKind_19, !dbg !1978
+  %t51 = add i64 0, 0, !dbg !1978
+  %t52 = icmp eq i64 %t50, %t51, !dbg !1978
+  store i1 %t52, ptr %t49, !dbg !1978
+  br i1 %t52, label %sc_rhs_13, label %sc_end_14, !dbg !1978
 sc_rhs_13:
-  %t54 = load i64, ptr %var_keyKind_19, !dbg !1978
-  %t55 = add i64 0, 3, !dbg !1978
-  %t56 = icmp eq i64 %t54, %t55, !dbg !1978
-  store i1 %t56, ptr %t50, !dbg !1978
+  %t53 = load i64, ptr %var_kBits_45, !dbg !1978
+  %t54 = add i64 0, 0, !dbg !1978
+  %t55 = icmp ne i64 %t53, %t54, !dbg !1978
+  store i1 %t55, ptr %t49, !dbg !1978
   br label %sc_end_14, !dbg !1978
 sc_end_14:
-  %t57 = load i1, ptr %t50, !dbg !1978
-  store i1 %t57, ptr %t49, !dbg !1978
-  br i1 %t57, label %sc_rhs_15, label %sc_end_16, !dbg !1978
-sc_rhs_15:
-  %t58 = load i64, ptr %var_kBits_45, !dbg !1978
-  %t59 = add i64 0, 0, !dbg !1978
-  %t60 = icmp ne i64 %t58, %t59, !dbg !1978
-  store i1 %t60, ptr %t49, !dbg !1978
-  br label %sc_end_16, !dbg !1978
-sc_end_16:
-  %t61 = load i1, ptr %t49, !dbg !1978
-  br i1 %t61, label %if_then_17, label %if_end_19, !dbg !1978
-if_then_17:
-  %t62 = load i64, ptr %var_kBits_45, !dbg !1993
-  call void @__spec_mem_release_addr(i64 %t62), !dbg !1993
-  br label %if_end_19, !dbg !1978
-if_end_19:
-  %t64 = load i64, ptr %var_curr_32, !dbg !1977
-  %t65 = add i64 0, 8, !dbg !1977
-  %t66 = call i64 @__spec_mem_load_i64(i64 %t64, i64 %t65), !dbg !1977
-  store i64 %t66, ptr %var_vBits_63, !dbg !1977
-  %t68 = load i64, ptr %var_curr_32, !dbg !1976
-  %t69 = add i64 0, 16, !dbg !1976
-  %t70 = call i64 @__spec_mem_load_byte(i64 %t68, i64 %t69), !dbg !1976
-  store i64 %t70, ptr %var_isArc_67, !dbg !1976
-  %t73 = load i64, ptr %var_isArc_67, !dbg !1975
-  %t74 = add i64 0, 0, !dbg !1975
-  %t75 = icmp ne i64 %t73, %t74, !dbg !1975
-  store i1 %t75, ptr %t72, !dbg !1975
-  br i1 %t75, label %sc_end_21, label %sc_rhs_20, !dbg !1975
+  %t56 = load i1, ptr %t49, !dbg !1978
+  br i1 %t56, label %if_then_15, label %if_end_17, !dbg !1978
+if_then_15:
+  %t57 = load i64, ptr %var_kBits_45, !dbg !1993
+  call void @__spec_mem_release_addr(i64 %t57), !dbg !1993
+  br label %if_end_17, !dbg !1978
+if_end_17:
+  %t59 = load i64, ptr %var_curr_32, !dbg !1977
+  %t60 = add i64 0, 8, !dbg !1977
+  %t61 = call i64 @__spec_mem_load_i64(i64 %t59, i64 %t60), !dbg !1977
+  store i64 %t61, ptr %var_vBits_58, !dbg !1977
+  %t63 = load i64, ptr %var_curr_32, !dbg !1976
+  %t64 = add i64 0, 16, !dbg !1976
+  %t65 = call i64 @__spec_mem_load_byte(i64 %t63, i64 %t64), !dbg !1976
+  store i64 %t65, ptr %var_isArc_62, !dbg !1976
+  %t68 = load i64, ptr %var_isArc_62, !dbg !1975
+  %t69 = add i64 0, 0, !dbg !1975
+  %t70 = icmp ne i64 %t68, %t69, !dbg !1975
+  store i1 %t70, ptr %t67, !dbg !1975
+  br i1 %t70, label %sc_end_19, label %sc_rhs_18, !dbg !1975
+sc_rhs_18:
+  %t71 = load i64, ptr %var_valKind_23, !dbg !1975
+  %t72 = add i64 0, 1, !dbg !1975
+  %t73 = icmp eq i64 %t71, %t72, !dbg !1975
+  store i1 %t73, ptr %t67, !dbg !1975
+  br label %sc_end_19, !dbg !1975
+sc_end_19:
+  %t74 = load i1, ptr %t67, !dbg !1975
+  store i1 %t74, ptr %t66, !dbg !1975
+  br i1 %t74, label %sc_rhs_20, label %sc_end_21, !dbg !1975
 sc_rhs_20:
-  %t76 = load i64, ptr %var_valKind_23, !dbg !1975
-  %t77 = add i64 0, 1, !dbg !1975
-  %t78 = icmp eq i64 %t76, %t77, !dbg !1975
-  store i1 %t78, ptr %t72, !dbg !1975
+  %t75 = load i64, ptr %var_vBits_58, !dbg !1975
+  %t76 = add i64 0, 0, !dbg !1975
+  %t77 = icmp ne i64 %t75, %t76, !dbg !1975
+  store i1 %t77, ptr %t66, !dbg !1975
   br label %sc_end_21, !dbg !1975
 sc_end_21:
-  %t79 = load i1, ptr %t72, !dbg !1975
-  store i1 %t79, ptr %t71, !dbg !1975
-  br i1 %t79, label %sc_rhs_22, label %sc_end_23, !dbg !1975
-sc_rhs_22:
-  %t80 = load i64, ptr %var_vBits_63, !dbg !1975
-  %t81 = add i64 0, 0, !dbg !1975
-  %t82 = icmp ne i64 %t80, %t81, !dbg !1975
-  store i1 %t82, ptr %t71, !dbg !1975
-  br label %sc_end_23, !dbg !1975
-sc_end_23:
-  %t83 = load i1, ptr %t71, !dbg !1975
-  br i1 %t83, label %if_then_24, label %if_end_26, !dbg !1975
-if_then_24:
-  %t84 = load i64, ptr %var_vBits_63, !dbg !1994
-  call void @__spec_mem_release_addr(i64 %t84), !dbg !1994
-  br label %if_end_26, !dbg !1975
-if_end_26:
-  %t85 = load i64, ptr %var_curr_32, !dbg !1995
-  call void @__spec_mem_free(i64 %t85), !dbg !1995
-  %t86 = load i64, ptr %var_next_41, !dbg !1996
-  store i64 %t86, ptr %var_curr_32, !dbg !1996
+  %t78 = load i1, ptr %t66, !dbg !1975
+  br i1 %t78, label %if_then_22, label %if_end_24, !dbg !1975
+if_then_22:
+  %t79 = load i64, ptr %var_vBits_58, !dbg !1994
+  call void @__spec_mem_release_addr(i64 %t79), !dbg !1994
+  br label %if_end_24, !dbg !1975
+if_end_24:
+  %t80 = load i64, ptr %var_curr_32, !dbg !1995
+  call void @__spec_mem_free(i64 %t80), !dbg !1995
+  %t81 = load i64, ptr %var_next_41, !dbg !1996
+  store i64 %t81, ptr %var_curr_32, !dbg !1996
   br label %while_hdr_10, !dbg !1992
 while_end_12:
-  %t87 = load i64, ptr %var_i_27, !dbg !1997
-  %t88 = add i64 0, 1, !dbg !1997
-  %t89 = add i64 %t87, %t88, !dbg !1997
-  store i64 %t89, ptr %var_i_27, !dbg !1997
+  %t82 = load i64, ptr %var_i_27, !dbg !1997
+  %t83 = add i64 0, 1, !dbg !1997
+  %t84 = add i64 %t82, %t83, !dbg !1997
+  store i64 %t84, ptr %var_i_27, !dbg !1997
   br label %while_hdr_7, !dbg !1991
 while_end_9:
-  %t90 = load i64, ptr %var_buckets_8, !dbg !1998
-  call void @__spec_mem_free(i64 %t90), !dbg !1998
-  %t91 = load i64, ptr %var_mAddr_2, !dbg !1999
-  %t92 = add i64 0, 0, !dbg !1999
-  %t93 = add i64 0, 0, !dbg !1999
-  call void @__spec_mem_store_i64(i64 %t91, i64 %t92, i64 %t93), !dbg !1999
+  %t85 = load i64, ptr %var_buckets_8, !dbg !1998
+  call void @__spec_mem_free(i64 %t85), !dbg !1998
+  %t86 = load i64, ptr %var_mAddr_2, !dbg !1999
+  %t87 = add i64 0, 0, !dbg !1999
+  %t88 = add i64 0, 0, !dbg !1999
+  call void @__spec_mem_store_i64(i64 %t86, i64 %t87, i64 %t88), !dbg !1999
   ret void, !dbg !1987
 }
 
@@ -26735,12 +26724,11 @@ while_end_6:
 
 define void @HashTable_mapSetRaw(ptr %self, i64 %p_mAddr, i64 %p_keyBits, i64 %p_valBits, i1 %p_valIsArc) !dbg !2058 {
 entry:
-  %var_e_238 = alloca i64, !dbg !2059
-  %t229 = alloca i64, !dbg !2060
-  %t217 = alloca i64, !dbg !2060
-  %if_res_209 = alloca i64, !dbg !2060
-  %var_len_189 = alloca i64, !dbg !2061
-  %t175 = alloca i1, !dbg !2062
+  %var_e_233 = alloca i64, !dbg !2059
+  %t224 = alloca i64, !dbg !2060
+  %t212 = alloca i64, !dbg !2060
+  %if_res_204 = alloca i64, !dbg !2060
+  %var_len_184 = alloca i64, !dbg !2061
   %t174 = alloca i1, !dbg !2062
   %t166 = alloca i1, !dbg !2063
   %t137 = alloca i1, !dbg !2064
@@ -27080,170 +27068,160 @@ if_then_58:
   %t173 = call i64 @__spec_mem_retain_addr(i64 %t172), !dbg !2094
   br label %if_end_60, !dbg !2063
 if_end_60:
-  %t176 = load i64, ptr %var_keyKind_11, !dbg !2062
-  %t177 = add i64 0, 0, !dbg !2062
-  %t178 = icmp eq i64 %t176, %t177, !dbg !2062
-  store i1 %t178, ptr %t175, !dbg !2062
-  br i1 %t178, label %sc_end_62, label %sc_rhs_61, !dbg !2062
+  %t175 = load i64, ptr %var_keyKind_11, !dbg !2062
+  %t176 = add i64 0, 0, !dbg !2062
+  %t177 = icmp eq i64 %t175, %t176, !dbg !2062
+  store i1 %t177, ptr %t174, !dbg !2062
+  br i1 %t177, label %sc_rhs_61, label %sc_end_62, !dbg !2062
 sc_rhs_61:
-  %t179 = load i64, ptr %var_keyKind_11, !dbg !2062
-  %t180 = add i64 0, 3, !dbg !2062
-  %t181 = icmp eq i64 %t179, %t180, !dbg !2062
-  store i1 %t181, ptr %t175, !dbg !2062
+  %t178 = load i64, ptr %slot_keyBits, !dbg !2062
+  %t179 = add i64 0, 0, !dbg !2062
+  %t180 = icmp ne i64 %t178, %t179, !dbg !2062
+  store i1 %t180, ptr %t174, !dbg !2062
   br label %sc_end_62, !dbg !2062
 sc_end_62:
-  %t182 = load i1, ptr %t175, !dbg !2062
-  store i1 %t182, ptr %t174, !dbg !2062
-  br i1 %t182, label %sc_rhs_63, label %sc_end_64, !dbg !2062
-sc_rhs_63:
-  %t183 = load i64, ptr %slot_keyBits, !dbg !2062
-  %t184 = add i64 0, 0, !dbg !2062
-  %t185 = icmp ne i64 %t183, %t184, !dbg !2062
-  store i1 %t185, ptr %t174, !dbg !2062
-  br label %sc_end_64, !dbg !2062
-sc_end_64:
-  %t186 = load i1, ptr %t174, !dbg !2062
-  br i1 %t186, label %if_then_65, label %if_end_67, !dbg !2062
-if_then_65:
-  %t187 = load i64, ptr %slot_keyBits, !dbg !2095
-  %t188 = call i64 @__spec_mem_retain_addr(i64 %t187), !dbg !2095
-  br label %if_end_67, !dbg !2062
-if_end_67:
-  %t190 = load i64, ptr %slot_mAddr, !dbg !2061
-  %t191 = add i64 0, 16, !dbg !2061
-  %t192 = call i64 @__spec_mem_load_i64(i64 %t190, i64 %t191), !dbg !2061
-  store i64 %t192, ptr %var_len_189, !dbg !2061
-  %t193 = load i64, ptr %var_len_189, !dbg !2096
-  %t194 = load i64, ptr %var_nb_47, !dbg !2096
-  %t195 = icmp sge i64 %t193, %t194, !dbg !2096
-  br i1 %t195, label %if_then_68, label %if_end_70, !dbg !2096
-if_then_68:
-  %t196 = load ptr, ptr %self_slot, !dbg !2097
-  %t197 = load i64, ptr %slot_mAddr, !dbg !2097
-  %t198 = icmp ne ptr %t196, null, !dbg !2097
-  br i1 %t198, label %vt_call_71, label %dir_call_72, !dbg !2097
-vt_call_71:
-  %t199 = getelementptr inbounds %struct.HashTable, ptr %t196, i32 0, i32 1, !dbg !2097
-  %t200 = load ptr, ptr %t199, !dbg !2097
-  %t201 = getelementptr ptr, ptr %t200, i64 227, !dbg !2097
-  %t202 = load ptr, ptr %t201, !dbg !2097
-  call void %t202(ptr %t196, i64 %t197), !dbg !2097
-  br label %vt_end_73, !dbg !2097
-dir_call_72:
-  call void @HashTable_mapGrow(ptr %t196, i64 %t197), !dbg !2097
-  br label %vt_end_73, !dbg !2097
-vt_end_73:
-  %t203 = load i64, ptr %slot_mAddr, !dbg !2098
-  %t204 = add i64 0, 8, !dbg !2098
-  %t205 = call i64 @__spec_mem_load_i64(i64 %t203, i64 %t204), !dbg !2098
-  store i64 %t205, ptr %var_nb_47, !dbg !2098
-  %t206 = load i64, ptr %slot_mAddr, !dbg !2099
-  %t207 = add i64 0, 0, !dbg !2099
-  %t208 = call i64 @__spec_mem_load_i64(i64 %t206, i64 %t207), !dbg !2099
-  store i64 %t208, ptr %var_buckets_51, !dbg !2099
-  %t210 = load i64, ptr %var_keyKind_11, !dbg !2060
-  %t211 = add i64 0, 0, !dbg !2060
-  %t212 = icmp eq i64 %t210, %t211, !dbg !2060
-  br i1 %t212, label %if_then_74, label %if_else_75, !dbg !2060
-if_then_74:
-  %t213 = load ptr, ptr %self_slot, !dbg !2060
-  %t214 = load i64, ptr %slot_keyBits, !dbg !2060
-  %t215 = load i64, ptr %var_nb_47, !dbg !2060
-  %t218 = icmp ne ptr %t213, null, !dbg !2060
-  br i1 %t218, label %vt_call_77, label %dir_call_78, !dbg !2060
-vt_call_77:
-  %t219 = getelementptr inbounds %struct.HashTable, ptr %t213, i32 0, i32 1, !dbg !2060
-  %t220 = load ptr, ptr %t219, !dbg !2060
-  %t221 = getelementptr ptr, ptr %t220, i64 223, !dbg !2060
-  %t222 = load ptr, ptr %t221, !dbg !2060
-  %t223 = call i64 %t222(ptr %t213, i64 %t214, i64 %t215), !dbg !2060
-  store i64 %t223, ptr %t217, !dbg !2060
-  br label %vt_end_79, !dbg !2060
-dir_call_78:
-  %t224 = call i64 @HashTable_mapHashString(ptr null, i64 %t214, i64 %t215), !dbg !2060
-  store i64 %t224, ptr %t217, !dbg !2060
-  br label %vt_end_79, !dbg !2060
-vt_end_79:
-  %t216 = load i64, ptr %t217, !dbg !2060
-  store i64 %t216, ptr %if_res_209, !dbg !2060
-  br label %if_end_76, !dbg !2060
-if_else_75:
-  %t225 = load ptr, ptr %self_slot, !dbg !2060
-  %t226 = load i64, ptr %slot_keyBits, !dbg !2060
-  %t227 = load i64, ptr %var_nb_47, !dbg !2060
-  %t230 = icmp ne ptr %t225, null, !dbg !2060
-  br i1 %t230, label %vt_call_80, label %dir_call_81, !dbg !2060
-vt_call_80:
-  %t231 = getelementptr inbounds %struct.HashTable, ptr %t225, i32 0, i32 1, !dbg !2060
-  %t232 = load ptr, ptr %t231, !dbg !2060
-  %t233 = getelementptr ptr, ptr %t232, i64 224, !dbg !2060
-  %t234 = load ptr, ptr %t233, !dbg !2060
-  %t235 = call i64 %t234(ptr %t225, i64 %t226, i64 %t227), !dbg !2060
-  store i64 %t235, ptr %t229, !dbg !2060
-  br label %vt_end_82, !dbg !2060
-dir_call_81:
-  %t236 = call i64 @HashTable_mapHashBits(ptr null, i64 %t226, i64 %t227), !dbg !2060
-  store i64 %t236, ptr %t229, !dbg !2060
-  br label %vt_end_82, !dbg !2060
-vt_end_82:
-  %t228 = load i64, ptr %t229, !dbg !2060
-  store i64 %t228, ptr %if_res_209, !dbg !2060
-  br label %if_end_76, !dbg !2060
-if_end_76:
-  %t237 = load i64, ptr %if_res_209, !dbg !2060
-  store i64 %t237, ptr %var_idx_55, !dbg !2060
-  br label %if_end_70, !dbg !2096
-if_end_70:
-  %t239 = add i64 0, 32, !dbg !2059
-  %t240 = call i64 @__spec_mem_alloc(i64 %t239), !dbg !2059
-  store i64 %t240, ptr %var_e_238, !dbg !2059
-  %t241 = load i64, ptr %var_e_238, !dbg !2100
-  %t242 = add i64 0, 0, !dbg !2100
-  %t243 = load i64, ptr %slot_keyBits, !dbg !2100
-  call void @__spec_mem_store_i64(i64 %t241, i64 %t242, i64 %t243), !dbg !2100
-  %t244 = load i64, ptr %var_e_238, !dbg !2101
-  %t245 = add i64 0, 8, !dbg !2101
-  %t246 = load i64, ptr %slot_valBits, !dbg !2101
-  call void @__spec_mem_store_i64(i64 %t244, i64 %t245, i64 %t246), !dbg !2101
-  %t247 = load i64, ptr %var_e_238, !dbg !2102
-  %t248 = add i64 0, 16, !dbg !2102
-  %t249 = load i64, ptr %var_arcByte_41, !dbg !2102
-  call void @__spec_mem_store_byte(i64 %t247, i64 %t248, i64 %t249), !dbg !2102
-  %t250 = load i64, ptr %var_e_238, !dbg !2103
-  %t251 = add i64 0, 24, !dbg !2103
-  %t252 = load i64, ptr %var_buckets_51, !dbg !2103
-  %t253 = load i64, ptr %var_idx_55, !dbg !2103
-  %t254 = add i64 0, 8, !dbg !2103
-  %t255 = mul i64 %t253, %t254, !dbg !2103
-  %t256 = call i64 @__spec_mem_load_i64(i64 %t252, i64 %t255), !dbg !2103
-  call void @__spec_mem_store_i64(i64 %t250, i64 %t251, i64 %t256), !dbg !2103
-  %t257 = load i64, ptr %var_buckets_51, !dbg !2104
-  %t258 = load i64, ptr %var_idx_55, !dbg !2104
-  %t259 = add i64 0, 8, !dbg !2104
-  %t260 = mul i64 %t258, %t259, !dbg !2104
-  %t261 = load i64, ptr %var_e_238, !dbg !2104
-  call void @__spec_mem_store_i64(i64 %t257, i64 %t260, i64 %t261), !dbg !2104
-  %t262 = load i64, ptr %slot_mAddr, !dbg !2105
-  %t263 = add i64 0, 16, !dbg !2105
-  %t264 = load i64, ptr %var_len_189, !dbg !2105
-  %t265 = add i64 0, 1, !dbg !2105
-  %t266 = add i64 %t264, %t265, !dbg !2105
-  call void @__spec_mem_store_i64(i64 %t262, i64 %t263, i64 %t266), !dbg !2105
-  %t267 = load ptr, ptr %self_slot, !dbg !2106
-  %t268 = load i64, ptr %slot_mAddr, !dbg !2106
-  %t269 = icmp ne ptr %t267, null, !dbg !2106
-  br i1 %t269, label %vt_call_83, label %dir_call_84, !dbg !2106
-vt_call_83:
-  %t270 = getelementptr inbounds %struct.HashTable, ptr %t267, i32 0, i32 1, !dbg !2106
-  %t271 = load ptr, ptr %t270, !dbg !2106
-  %t272 = getelementptr ptr, ptr %t271, i64 221, !dbg !2106
-  %t273 = load ptr, ptr %t272, !dbg !2106
-  call void %t273(ptr %t267, i64 %t268), !dbg !2106
-  br label %vt_end_85, !dbg !2106
-dir_call_84:
-  call void @HashTable_mapUnlock(ptr null, i64 %t268), !dbg !2106
-  br label %vt_end_85, !dbg !2106
-vt_end_85:
+  %t181 = load i1, ptr %t174, !dbg !2062
+  br i1 %t181, label %if_then_63, label %if_end_65, !dbg !2062
+if_then_63:
+  %t182 = load i64, ptr %slot_keyBits, !dbg !2095
+  %t183 = call i64 @__spec_mem_retain_addr(i64 %t182), !dbg !2095
+  br label %if_end_65, !dbg !2062
+if_end_65:
+  %t185 = load i64, ptr %slot_mAddr, !dbg !2061
+  %t186 = add i64 0, 16, !dbg !2061
+  %t187 = call i64 @__spec_mem_load_i64(i64 %t185, i64 %t186), !dbg !2061
+  store i64 %t187, ptr %var_len_184, !dbg !2061
+  %t188 = load i64, ptr %var_len_184, !dbg !2096
+  %t189 = load i64, ptr %var_nb_47, !dbg !2096
+  %t190 = icmp sge i64 %t188, %t189, !dbg !2096
+  br i1 %t190, label %if_then_66, label %if_end_68, !dbg !2096
+if_then_66:
+  %t191 = load ptr, ptr %self_slot, !dbg !2097
+  %t192 = load i64, ptr %slot_mAddr, !dbg !2097
+  %t193 = icmp ne ptr %t191, null, !dbg !2097
+  br i1 %t193, label %vt_call_69, label %dir_call_70, !dbg !2097
+vt_call_69:
+  %t194 = getelementptr inbounds %struct.HashTable, ptr %t191, i32 0, i32 1, !dbg !2097
+  %t195 = load ptr, ptr %t194, !dbg !2097
+  %t196 = getelementptr ptr, ptr %t195, i64 227, !dbg !2097
+  %t197 = load ptr, ptr %t196, !dbg !2097
+  call void %t197(ptr %t191, i64 %t192), !dbg !2097
+  br label %vt_end_71, !dbg !2097
+dir_call_70:
+  call void @HashTable_mapGrow(ptr %t191, i64 %t192), !dbg !2097
+  br label %vt_end_71, !dbg !2097
+vt_end_71:
+  %t198 = load i64, ptr %slot_mAddr, !dbg !2098
+  %t199 = add i64 0, 8, !dbg !2098
+  %t200 = call i64 @__spec_mem_load_i64(i64 %t198, i64 %t199), !dbg !2098
+  store i64 %t200, ptr %var_nb_47, !dbg !2098
+  %t201 = load i64, ptr %slot_mAddr, !dbg !2099
+  %t202 = add i64 0, 0, !dbg !2099
+  %t203 = call i64 @__spec_mem_load_i64(i64 %t201, i64 %t202), !dbg !2099
+  store i64 %t203, ptr %var_buckets_51, !dbg !2099
+  %t205 = load i64, ptr %var_keyKind_11, !dbg !2060
+  %t206 = add i64 0, 0, !dbg !2060
+  %t207 = icmp eq i64 %t205, %t206, !dbg !2060
+  br i1 %t207, label %if_then_72, label %if_else_73, !dbg !2060
+if_then_72:
+  %t208 = load ptr, ptr %self_slot, !dbg !2060
+  %t209 = load i64, ptr %slot_keyBits, !dbg !2060
+  %t210 = load i64, ptr %var_nb_47, !dbg !2060
+  %t213 = icmp ne ptr %t208, null, !dbg !2060
+  br i1 %t213, label %vt_call_75, label %dir_call_76, !dbg !2060
+vt_call_75:
+  %t214 = getelementptr inbounds %struct.HashTable, ptr %t208, i32 0, i32 1, !dbg !2060
+  %t215 = load ptr, ptr %t214, !dbg !2060
+  %t216 = getelementptr ptr, ptr %t215, i64 223, !dbg !2060
+  %t217 = load ptr, ptr %t216, !dbg !2060
+  %t218 = call i64 %t217(ptr %t208, i64 %t209, i64 %t210), !dbg !2060
+  store i64 %t218, ptr %t212, !dbg !2060
+  br label %vt_end_77, !dbg !2060
+dir_call_76:
+  %t219 = call i64 @HashTable_mapHashString(ptr null, i64 %t209, i64 %t210), !dbg !2060
+  store i64 %t219, ptr %t212, !dbg !2060
+  br label %vt_end_77, !dbg !2060
+vt_end_77:
+  %t211 = load i64, ptr %t212, !dbg !2060
+  store i64 %t211, ptr %if_res_204, !dbg !2060
+  br label %if_end_74, !dbg !2060
+if_else_73:
+  %t220 = load ptr, ptr %self_slot, !dbg !2060
+  %t221 = load i64, ptr %slot_keyBits, !dbg !2060
+  %t222 = load i64, ptr %var_nb_47, !dbg !2060
+  %t225 = icmp ne ptr %t220, null, !dbg !2060
+  br i1 %t225, label %vt_call_78, label %dir_call_79, !dbg !2060
+vt_call_78:
+  %t226 = getelementptr inbounds %struct.HashTable, ptr %t220, i32 0, i32 1, !dbg !2060
+  %t227 = load ptr, ptr %t226, !dbg !2060
+  %t228 = getelementptr ptr, ptr %t227, i64 224, !dbg !2060
+  %t229 = load ptr, ptr %t228, !dbg !2060
+  %t230 = call i64 %t229(ptr %t220, i64 %t221, i64 %t222), !dbg !2060
+  store i64 %t230, ptr %t224, !dbg !2060
+  br label %vt_end_80, !dbg !2060
+dir_call_79:
+  %t231 = call i64 @HashTable_mapHashBits(ptr null, i64 %t221, i64 %t222), !dbg !2060
+  store i64 %t231, ptr %t224, !dbg !2060
+  br label %vt_end_80, !dbg !2060
+vt_end_80:
+  %t223 = load i64, ptr %t224, !dbg !2060
+  store i64 %t223, ptr %if_res_204, !dbg !2060
+  br label %if_end_74, !dbg !2060
+if_end_74:
+  %t232 = load i64, ptr %if_res_204, !dbg !2060
+  store i64 %t232, ptr %var_idx_55, !dbg !2060
+  br label %if_end_68, !dbg !2096
+if_end_68:
+  %t234 = add i64 0, 32, !dbg !2059
+  %t235 = call i64 @__spec_mem_alloc(i64 %t234), !dbg !2059
+  store i64 %t235, ptr %var_e_233, !dbg !2059
+  %t236 = load i64, ptr %var_e_233, !dbg !2100
+  %t237 = add i64 0, 0, !dbg !2100
+  %t238 = load i64, ptr %slot_keyBits, !dbg !2100
+  call void @__spec_mem_store_i64(i64 %t236, i64 %t237, i64 %t238), !dbg !2100
+  %t239 = load i64, ptr %var_e_233, !dbg !2101
+  %t240 = add i64 0, 8, !dbg !2101
+  %t241 = load i64, ptr %slot_valBits, !dbg !2101
+  call void @__spec_mem_store_i64(i64 %t239, i64 %t240, i64 %t241), !dbg !2101
+  %t242 = load i64, ptr %var_e_233, !dbg !2102
+  %t243 = add i64 0, 16, !dbg !2102
+  %t244 = load i64, ptr %var_arcByte_41, !dbg !2102
+  call void @__spec_mem_store_byte(i64 %t242, i64 %t243, i64 %t244), !dbg !2102
+  %t245 = load i64, ptr %var_e_233, !dbg !2103
+  %t246 = add i64 0, 24, !dbg !2103
+  %t247 = load i64, ptr %var_buckets_51, !dbg !2103
+  %t248 = load i64, ptr %var_idx_55, !dbg !2103
+  %t249 = add i64 0, 8, !dbg !2103
+  %t250 = mul i64 %t248, %t249, !dbg !2103
+  %t251 = call i64 @__spec_mem_load_i64(i64 %t247, i64 %t250), !dbg !2103
+  call void @__spec_mem_store_i64(i64 %t245, i64 %t246, i64 %t251), !dbg !2103
+  %t252 = load i64, ptr %var_buckets_51, !dbg !2104
+  %t253 = load i64, ptr %var_idx_55, !dbg !2104
+  %t254 = add i64 0, 8, !dbg !2104
+  %t255 = mul i64 %t253, %t254, !dbg !2104
+  %t256 = load i64, ptr %var_e_233, !dbg !2104
+  call void @__spec_mem_store_i64(i64 %t252, i64 %t255, i64 %t256), !dbg !2104
+  %t257 = load i64, ptr %slot_mAddr, !dbg !2105
+  %t258 = add i64 0, 16, !dbg !2105
+  %t259 = load i64, ptr %var_len_184, !dbg !2105
+  %t260 = add i64 0, 1, !dbg !2105
+  %t261 = add i64 %t259, %t260, !dbg !2105
+  call void @__spec_mem_store_i64(i64 %t257, i64 %t258, i64 %t261), !dbg !2105
+  %t262 = load ptr, ptr %self_slot, !dbg !2106
+  %t263 = load i64, ptr %slot_mAddr, !dbg !2106
+  %t264 = icmp ne ptr %t262, null, !dbg !2106
+  br i1 %t264, label %vt_call_81, label %dir_call_82, !dbg !2106
+vt_call_81:
+  %t265 = getelementptr inbounds %struct.HashTable, ptr %t262, i32 0, i32 1, !dbg !2106
+  %t266 = load ptr, ptr %t265, !dbg !2106
+  %t267 = getelementptr ptr, ptr %t266, i64 221, !dbg !2106
+  %t268 = load ptr, ptr %t267, !dbg !2106
+  call void %t268(ptr %t262, i64 %t263), !dbg !2106
+  br label %vt_end_83, !dbg !2106
+dir_call_82:
+  call void @HashTable_mapUnlock(ptr null, i64 %t263), !dbg !2106
+  br label %vt_end_83, !dbg !2106
+vt_end_83:
   call void @spec_pool_release_to(i64 %t1), !dbg !2079
   ret void, !dbg !2079
 }
@@ -27807,13 +27785,12 @@ if_end_44:
 
 define i1 @HashTable_mapRemoveRaw(ptr %self, i64 %p_mAddr, i64 %p_keyBits) !dbg !2153 {
 entry:
-  %var_len_164 = alloca i64, !dbg !2154
-  %t150 = alloca i1, !dbg !2155
-  %t149 = alloca i1, !dbg !2155
-  %var_valKind_145 = alloca i64, !dbg !2156
-  %var_isArc_141 = alloca i64, !dbg !2157
-  %var_valBits_137 = alloca i64, !dbg !2158
-  %t124 = alloca i1, !dbg !2159
+  %var_len_159 = alloca i64, !dbg !2154
+  %t145 = alloca i1, !dbg !2155
+  %t144 = alloca i1, !dbg !2155
+  %var_valKind_140 = alloca i64, !dbg !2156
+  %var_isArc_136 = alloca i64, !dbg !2157
+  %var_valBits_132 = alloca i64, !dbg !2158
   %t123 = alloca i1, !dbg !2159
   %var_next_108 = alloca i64, !dbg !2160
   %t95 = alloca i1, !dbg !2161
@@ -28036,133 +28013,123 @@ if_else_37:
   call void @__spec_mem_store_i64(i64 %t118, i64 %t121, i64 %t122), !dbg !2180
   br label %if_end_38, !dbg !2178
 if_end_38:
-  %t125 = load i64, ptr %var_keyKind_13, !dbg !2159
-  %t126 = add i64 0, 0, !dbg !2159
-  %t127 = icmp eq i64 %t125, %t126, !dbg !2159
-  store i1 %t127, ptr %t124, !dbg !2159
-  br i1 %t127, label %sc_end_40, label %sc_rhs_39, !dbg !2159
+  %t124 = load i64, ptr %var_keyKind_13, !dbg !2159
+  %t125 = add i64 0, 0, !dbg !2159
+  %t126 = icmp eq i64 %t124, %t125, !dbg !2159
+  store i1 %t126, ptr %t123, !dbg !2159
+  br i1 %t126, label %sc_rhs_39, label %sc_end_40, !dbg !2159
 sc_rhs_39:
-  %t128 = load i64, ptr %var_keyKind_13, !dbg !2159
-  %t129 = add i64 0, 3, !dbg !2159
-  %t130 = icmp eq i64 %t128, %t129, !dbg !2159
-  store i1 %t130, ptr %t124, !dbg !2159
+  %t127 = load i64, ptr %var_cKey_82, !dbg !2159
+  %t128 = add i64 0, 0, !dbg !2159
+  %t129 = icmp ne i64 %t127, %t128, !dbg !2159
+  store i1 %t129, ptr %t123, !dbg !2159
   br label %sc_end_40, !dbg !2159
 sc_end_40:
-  %t131 = load i1, ptr %t124, !dbg !2159
-  store i1 %t131, ptr %t123, !dbg !2159
-  br i1 %t131, label %sc_rhs_41, label %sc_end_42, !dbg !2159
-sc_rhs_41:
-  %t132 = load i64, ptr %var_cKey_82, !dbg !2159
-  %t133 = add i64 0, 0, !dbg !2159
-  %t134 = icmp ne i64 %t132, %t133, !dbg !2159
-  store i1 %t134, ptr %t123, !dbg !2159
-  br label %sc_end_42, !dbg !2159
-sc_end_42:
-  %t135 = load i1, ptr %t123, !dbg !2159
-  br i1 %t135, label %if_then_43, label %if_end_45, !dbg !2159
-if_then_43:
-  %t136 = load i64, ptr %var_cKey_82, !dbg !2181
-  call void @__spec_mem_release_addr(i64 %t136), !dbg !2181
-  br label %if_end_45, !dbg !2159
-if_end_45:
-  %t138 = load i64, ptr %var_curr_71, !dbg !2158
-  %t139 = add i64 0, 8, !dbg !2158
-  %t140 = call i64 @__spec_mem_load_i64(i64 %t138, i64 %t139), !dbg !2158
-  store i64 %t140, ptr %var_valBits_137, !dbg !2158
-  %t142 = load i64, ptr %var_curr_71, !dbg !2157
-  %t143 = add i64 0, 16, !dbg !2157
-  %t144 = call i64 @__spec_mem_load_byte(i64 %t142, i64 %t143), !dbg !2157
-  store i64 %t144, ptr %var_isArc_141, !dbg !2157
-  %t146 = load i64, ptr %slot_mAddr, !dbg !2156
-  %t147 = add i64 0, 28, !dbg !2156
-  %t148 = call i64 @__spec_mem_load_i32(i64 %t146, i64 %t147), !dbg !2156
-  store i64 %t148, ptr %var_valKind_145, !dbg !2156
-  %t151 = load i64, ptr %var_isArc_141, !dbg !2155
-  %t152 = add i64 0, 0, !dbg !2155
-  %t153 = icmp ne i64 %t151, %t152, !dbg !2155
-  store i1 %t153, ptr %t150, !dbg !2155
-  br i1 %t153, label %sc_end_47, label %sc_rhs_46, !dbg !2155
+  %t130 = load i1, ptr %t123, !dbg !2159
+  br i1 %t130, label %if_then_41, label %if_end_43, !dbg !2159
+if_then_41:
+  %t131 = load i64, ptr %var_cKey_82, !dbg !2181
+  call void @__spec_mem_release_addr(i64 %t131), !dbg !2181
+  br label %if_end_43, !dbg !2159
+if_end_43:
+  %t133 = load i64, ptr %var_curr_71, !dbg !2158
+  %t134 = add i64 0, 8, !dbg !2158
+  %t135 = call i64 @__spec_mem_load_i64(i64 %t133, i64 %t134), !dbg !2158
+  store i64 %t135, ptr %var_valBits_132, !dbg !2158
+  %t137 = load i64, ptr %var_curr_71, !dbg !2157
+  %t138 = add i64 0, 16, !dbg !2157
+  %t139 = call i64 @__spec_mem_load_byte(i64 %t137, i64 %t138), !dbg !2157
+  store i64 %t139, ptr %var_isArc_136, !dbg !2157
+  %t141 = load i64, ptr %slot_mAddr, !dbg !2156
+  %t142 = add i64 0, 28, !dbg !2156
+  %t143 = call i64 @__spec_mem_load_i32(i64 %t141, i64 %t142), !dbg !2156
+  store i64 %t143, ptr %var_valKind_140, !dbg !2156
+  %t146 = load i64, ptr %var_isArc_136, !dbg !2155
+  %t147 = add i64 0, 0, !dbg !2155
+  %t148 = icmp ne i64 %t146, %t147, !dbg !2155
+  store i1 %t148, ptr %t145, !dbg !2155
+  br i1 %t148, label %sc_end_45, label %sc_rhs_44, !dbg !2155
+sc_rhs_44:
+  %t149 = load i64, ptr %var_valKind_140, !dbg !2155
+  %t150 = add i64 0, 1, !dbg !2155
+  %t151 = icmp eq i64 %t149, %t150, !dbg !2155
+  store i1 %t151, ptr %t145, !dbg !2155
+  br label %sc_end_45, !dbg !2155
+sc_end_45:
+  %t152 = load i1, ptr %t145, !dbg !2155
+  store i1 %t152, ptr %t144, !dbg !2155
+  br i1 %t152, label %sc_rhs_46, label %sc_end_47, !dbg !2155
 sc_rhs_46:
-  %t154 = load i64, ptr %var_valKind_145, !dbg !2155
-  %t155 = add i64 0, 1, !dbg !2155
-  %t156 = icmp eq i64 %t154, %t155, !dbg !2155
-  store i1 %t156, ptr %t150, !dbg !2155
+  %t153 = load i64, ptr %var_valBits_132, !dbg !2155
+  %t154 = add i64 0, 0, !dbg !2155
+  %t155 = icmp ne i64 %t153, %t154, !dbg !2155
+  store i1 %t155, ptr %t144, !dbg !2155
   br label %sc_end_47, !dbg !2155
 sc_end_47:
-  %t157 = load i1, ptr %t150, !dbg !2155
-  store i1 %t157, ptr %t149, !dbg !2155
-  br i1 %t157, label %sc_rhs_48, label %sc_end_49, !dbg !2155
-sc_rhs_48:
-  %t158 = load i64, ptr %var_valBits_137, !dbg !2155
-  %t159 = add i64 0, 0, !dbg !2155
-  %t160 = icmp ne i64 %t158, %t159, !dbg !2155
-  store i1 %t160, ptr %t149, !dbg !2155
-  br label %sc_end_49, !dbg !2155
-sc_end_49:
-  %t161 = load i1, ptr %t149, !dbg !2155
-  br i1 %t161, label %if_then_50, label %if_end_52, !dbg !2155
-if_then_50:
-  %t162 = load i64, ptr %var_valBits_137, !dbg !2182
-  call void @__spec_mem_release_addr(i64 %t162), !dbg !2182
-  br label %if_end_52, !dbg !2155
-if_end_52:
-  %t163 = load i64, ptr %var_curr_71, !dbg !2183
-  call void @__spec_mem_free(i64 %t163), !dbg !2183
-  %t165 = load i64, ptr %slot_mAddr, !dbg !2154
-  %t166 = add i64 0, 16, !dbg !2154
-  %t167 = call i64 @__spec_mem_load_i64(i64 %t165, i64 %t166), !dbg !2154
-  store i64 %t167, ptr %var_len_164, !dbg !2154
-  %t168 = load i64, ptr %slot_mAddr, !dbg !2184
-  %t169 = add i64 0, 16, !dbg !2184
-  %t170 = load i64, ptr %var_len_164, !dbg !2184
-  %t171 = add i64 0, 1, !dbg !2184
-  %t172 = sub i64 %t170, %t171, !dbg !2184
-  call void @__spec_mem_store_i64(i64 %t168, i64 %t169, i64 %t172), !dbg !2184
-  %t173 = load ptr, ptr %self_slot, !dbg !2185
-  %t174 = load i64, ptr %slot_mAddr, !dbg !2185
-  %t175 = icmp ne ptr %t173, null, !dbg !2185
-  br i1 %t175, label %vt_call_53, label %dir_call_54, !dbg !2185
-vt_call_53:
-  %t176 = getelementptr inbounds %struct.HashTable, ptr %t173, i32 0, i32 1, !dbg !2185
-  %t177 = load ptr, ptr %t176, !dbg !2185
-  %t178 = getelementptr ptr, ptr %t177, i64 221, !dbg !2185
-  %t179 = load ptr, ptr %t178, !dbg !2185
-  call void %t179(ptr %t173, i64 %t174), !dbg !2185
-  br label %vt_end_55, !dbg !2185
-dir_call_54:
-  call void @HashTable_mapUnlock(ptr null, i64 %t174), !dbg !2185
-  br label %vt_end_55, !dbg !2185
-vt_end_55:
-  %t180 = add i1 0, 1, !dbg !2186
+  %t156 = load i1, ptr %t144, !dbg !2155
+  br i1 %t156, label %if_then_48, label %if_end_50, !dbg !2155
+if_then_48:
+  %t157 = load i64, ptr %var_valBits_132, !dbg !2182
+  call void @__spec_mem_release_addr(i64 %t157), !dbg !2182
+  br label %if_end_50, !dbg !2155
+if_end_50:
+  %t158 = load i64, ptr %var_curr_71, !dbg !2183
+  call void @__spec_mem_free(i64 %t158), !dbg !2183
+  %t160 = load i64, ptr %slot_mAddr, !dbg !2154
+  %t161 = add i64 0, 16, !dbg !2154
+  %t162 = call i64 @__spec_mem_load_i64(i64 %t160, i64 %t161), !dbg !2154
+  store i64 %t162, ptr %var_len_159, !dbg !2154
+  %t163 = load i64, ptr %slot_mAddr, !dbg !2184
+  %t164 = add i64 0, 16, !dbg !2184
+  %t165 = load i64, ptr %var_len_159, !dbg !2184
+  %t166 = add i64 0, 1, !dbg !2184
+  %t167 = sub i64 %t165, %t166, !dbg !2184
+  call void @__spec_mem_store_i64(i64 %t163, i64 %t164, i64 %t167), !dbg !2184
+  %t168 = load ptr, ptr %self_slot, !dbg !2185
+  %t169 = load i64, ptr %slot_mAddr, !dbg !2185
+  %t170 = icmp ne ptr %t168, null, !dbg !2185
+  br i1 %t170, label %vt_call_51, label %dir_call_52, !dbg !2185
+vt_call_51:
+  %t171 = getelementptr inbounds %struct.HashTable, ptr %t168, i32 0, i32 1, !dbg !2185
+  %t172 = load ptr, ptr %t171, !dbg !2185
+  %t173 = getelementptr ptr, ptr %t172, i64 221, !dbg !2185
+  %t174 = load ptr, ptr %t173, !dbg !2185
+  call void %t174(ptr %t168, i64 %t169), !dbg !2185
+  br label %vt_end_53, !dbg !2185
+dir_call_52:
+  call void @HashTable_mapUnlock(ptr null, i64 %t169), !dbg !2185
+  br label %vt_end_53, !dbg !2185
+vt_end_53:
+  %t175 = add i1 0, 1, !dbg !2186
   call void @spec_pool_release_to(i64 %t1), !dbg !2186
-  ret i1 %t180, !dbg !2186
+  ret i1 %t175, !dbg !2186
 if_end_35:
-  %t181 = load i64, ptr %var_curr_71, !dbg !2187
-  store i64 %t181, ptr %var_prev_77, !dbg !2187
-  %t182 = load i64, ptr %var_curr_71, !dbg !2188
-  %t183 = add i64 0, 24, !dbg !2188
-  %t184 = call i64 @__spec_mem_load_i64(i64 %t182, i64 %t183), !dbg !2188
-  store i64 %t184, ptr %var_curr_71, !dbg !2188
+  %t176 = load i64, ptr %var_curr_71, !dbg !2187
+  store i64 %t176, ptr %var_prev_77, !dbg !2187
+  %t177 = load i64, ptr %var_curr_71, !dbg !2188
+  %t178 = add i64 0, 24, !dbg !2188
+  %t179 = call i64 @__spec_mem_load_i64(i64 %t177, i64 %t178), !dbg !2188
+  store i64 %t179, ptr %var_curr_71, !dbg !2188
   br label %while_hdr_24, !dbg !2176
 while_end_26:
-  %t185 = load ptr, ptr %self_slot, !dbg !2189
-  %t186 = load i64, ptr %slot_mAddr, !dbg !2189
-  %t187 = icmp ne ptr %t185, null, !dbg !2189
-  br i1 %t187, label %vt_call_56, label %dir_call_57, !dbg !2189
-vt_call_56:
-  %t188 = getelementptr inbounds %struct.HashTable, ptr %t185, i32 0, i32 1, !dbg !2189
-  %t189 = load ptr, ptr %t188, !dbg !2189
-  %t190 = getelementptr ptr, ptr %t189, i64 221, !dbg !2189
-  %t191 = load ptr, ptr %t190, !dbg !2189
-  call void %t191(ptr %t185, i64 %t186), !dbg !2189
-  br label %vt_end_58, !dbg !2189
-dir_call_57:
-  call void @HashTable_mapUnlock(ptr null, i64 %t186), !dbg !2189
-  br label %vt_end_58, !dbg !2189
-vt_end_58:
-  %t192 = add i1 0, 0, !dbg !2190
+  %t180 = load ptr, ptr %self_slot, !dbg !2189
+  %t181 = load i64, ptr %slot_mAddr, !dbg !2189
+  %t182 = icmp ne ptr %t180, null, !dbg !2189
+  br i1 %t182, label %vt_call_54, label %dir_call_55, !dbg !2189
+vt_call_54:
+  %t183 = getelementptr inbounds %struct.HashTable, ptr %t180, i32 0, i32 1, !dbg !2189
+  %t184 = load ptr, ptr %t183, !dbg !2189
+  %t185 = getelementptr ptr, ptr %t184, i64 221, !dbg !2189
+  %t186 = load ptr, ptr %t185, !dbg !2189
+  call void %t186(ptr %t180, i64 %t181), !dbg !2189
+  br label %vt_end_56, !dbg !2189
+dir_call_55:
+  call void @HashTable_mapUnlock(ptr null, i64 %t181), !dbg !2189
+  br label %vt_end_56, !dbg !2189
+vt_end_56:
+  %t187 = add i1 0, 0, !dbg !2190
   call void @spec_pool_release_to(i64 %t1), !dbg !2190
-  ret i1 %t192, !dbg !2190
+  ret i1 %t187, !dbg !2190
 }
 
 define void @HashTable_mapSet(ptr %self, ptr %p_m, ptr %p_key, ptr %p_val) !dbg !2191 {
