@@ -113,7 +113,11 @@ Class of CallLowerer is MapCallLowerer{
 					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kkV, vkV]));
 				});
 			}, {
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNew', argTypes: [], args: []));
+				local String is kkV0: b:nextTmp();
+				b:emit(inst: IrInst:ConstInt(dst: kkV0, value: 0));
+				local String is vkV0: b:nextTmp();
+				b:emit(inst: IrInst:ConstInt(dst: vkV0, value: 0));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kkV0, vkV0]));
 			});
 			b:emitClaimPool(val: dst);
 			return dst;
@@ -273,7 +277,11 @@ Class of CallLowerer is MapCallLowerer{
 						b:emit(inst: IrInst:ConstInt(dst: vkV, value: 0));
 						b:emit(inst: IrInst:IrCall(dst: outMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kkV, vkV]));
 					}, {
-						b:emit(inst: IrInst:IrCall(dst: outMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNew', argTypes: [], args: []));
+						local String is kkV0: b:nextTmp();
+						b:emit(inst: IrInst:ConstInt(dst: kkV0, value: 0));
+						local String is vkV0: b:nextTmp();
+						b:emit(inst: IrInst:ConstInt(dst: vkV0, value: 0));
+						b:emit(inst: IrInst:IrCall(dst: outMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kkV0, vkV0]));
 					});
 					b:emitClaimPool(val: outMap);
 				});

@@ -18,6 +18,16 @@ Class is Mem{
 		return base:sysinternal:Mem:alloc(bytes: bytes);
 	}
 
+	## Allocates an ARC object whose destroy behavior is selected by
+	## [kind] from the runtime's fixed registry (kind 1: the map
+	## destructor — buckets released, and the destroy pointer doubles as
+	## the runtime's map type identity). The only route to ARC identity
+	## for objects whose destroy function cannot be referenced from Spec
+	## source. Lowered to the runtime kind registry; the body stays
+	## empty.
+	Function of Int is allocArcKind(Int is bytes, Int is kind){
+	}
+
 	Function of Int is realloc(Int is ptr, Int is bytes){
 		return base:sysinternal:Mem:realloc(ptr: ptr, bytes: bytes);
 	}

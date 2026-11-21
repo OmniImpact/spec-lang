@@ -4473,7 +4473,6 @@ Class is TypeChecker{
 					local String is mk: TypeDomain:mapKeyType(t: targetType);
 					res: if({ mk != '' }, { TypeDomain:makeArray(elem: mk) }, { 'Array of String' });
 				},
-				'mapNew': { res: 'Map'; },
 				'mapNewObject': { res: 'Map'; },
 				'add': { res: :names:voidName(); },
 				'set': { res: :names:voidName(); },
