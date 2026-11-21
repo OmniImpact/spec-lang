@@ -18,6 +18,9 @@ Class is Weather{
 		['base', 'net', HttpResponse],
 		['base', 'net', HttpError],
 		['base', 'net', as Http()],
+		['base', 'core', Result],
+		['base', 'core', SpecError],
+		['base', 'data', JsonError],
 		['base', 'data', as Json()],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()],
@@ -96,12 +99,21 @@ Class is Weather{
 	}
 
 	Function is populateForecast(String is rawJson, CleoSection is fcSec){
-		local Any is rootAny: Json:parse(text: rawJson);
-		if({ Json:hasError() }, {
-			fcSec:addLine(text: "JSON parse error: {{Json:errorMessage()}}", color: CleoColor:ansi(code: 203));
+		local Result of Map to JsonError is rootR: Json:parseMapResult(text: rawJson);
+		local Map is root: Map:init();
+		local String is parseMsg: '';
+		match(on: rootR, when: [
+			Result:Ok: local Function of Void(Map is v){
+				root: v;
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+				parseMsg: e:description;
+			}
+		]);
+		if({ parseMsg != '' }, {
+			fcSec:addLine(text: "JSON parse error: {{parseMsg}}", color: CleoColor:ansi(code: 203));
 			return;
 		});
-		local Map is root: rootAny as Map;
 		local Map is props: Json:getObject(obj: root, key: 'properties');
 		local String is updated: Json:getString(obj: props, key: 'updateTime', default: Json:getString(obj: props, key: 'updated', default: 'unknown'));
 		local Array is periods: Json:getArray(obj: props, key: 'periods');

@@ -7,6 +7,9 @@ Class of SpecUnitTest is TestSpecBuild{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
+		['base', 'core', Result],
+		['base', 'core', SpecError],
+		['base', 'data', JsonError],
 		['base', 'data', as Json()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
@@ -82,9 +85,16 @@ Class of SpecUnitTest is TestSpecBuild{
 
 	Function is testSpecBuildConfigParsing(){
 		local String is manifest: '{"name": "test_app", "version": "1.2.3", "source": "src/Main.spec", "source_dirs": ["src", "lib"], "output": "bin/test_app"}';
-		local Any is parsed: Json:parse(text: manifest);
-		Assert:isFalse(Json:hasError());
-		local Map is cfg: parsed as Map;
+		local Result of Map to JsonError is r: Json:parseMapResult(text: manifest);
+		local Map is cfg: Map:init();
+		match(on: r, when: [
+			Result:Ok: local Function of Void(Map is v){
+				cfg: v;
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+			}
+		]);
+		Assert:isTrue(cfg:has(key: 'name'));
 		Assert:areEqualString('test_app', Json:getString(obj: cfg, key: 'name'));
 		Assert:areEqualString('1.2.3', Json:getString(obj: cfg, key: 'version'));
 		Assert:areEqualString('src/Main.spec', Json:getString(obj: cfg, key: 'source'));

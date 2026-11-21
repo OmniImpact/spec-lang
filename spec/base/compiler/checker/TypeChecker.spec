@@ -3994,8 +3994,24 @@ Class is TypeChecker{
 			expr:setResolvedType(t: '');
 			return '';
 		});
-		if({ guardParams:length() != 1 || :formatVarTypeString(t: guardParams:get(index: 0):paramType) != 'SpecError' }, {
-			:addError(line: :currentLine, msg: 'try guard region takes exactly one SpecError parameter.');
+		local String is gTy: '';
+		local Boolean is guardOk: guardParams:length() == 1;
+		if({ guardOk }, {
+			gTy: :formatVarTypeString(t: guardParams:get(index: 0):paramType);
+			guardOk: gTy == 'SpecError';
+			if({ !guardOk && (gTy:startsWith(prefix: 'SpecError of ') || gTy:startsWith(prefix: 'SpecError:')) }, {
+				local String is kindTy: '';
+				if({ gTy:startsWith(prefix: 'SpecError of ') }, {
+					kindTy: gTy:substring(start: 12, end: gTy:length());
+				}, {
+					kindTy: gTy:substring(start: 10, end: gTy:length());
+				});
+				local ClassInfo is kindCls: :findClass(name: kindTy);
+				guardOk: kindCls:name != '' && kindCls:baseClass == :names:enumHeader();
+			});
+		});
+		if({ !guardOk }, {
+			:addError(line: :currentLine, msg: 'try guard region takes exactly one SpecError or SpecError of <kind enum> parameter.');
 			expr:setResolvedType(t: '');
 			return '';
 		});

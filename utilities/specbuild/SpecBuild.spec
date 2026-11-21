@@ -29,6 +29,9 @@ Class is SpecBuild{
 		['base', 'cleo', as CleoWidth()],
 		['base', 'cleo', BorderStyle],
 		['base', 'cleo', TitlePlacement],
+		['base', 'core', Result],
+		['base', 'core', SpecError],
+		['base', 'data', JsonError],
 		['base', 'data', as Json()],
 		['base', 'data', JsonNumber],
 		['base', 'data', JsonBool],
@@ -254,18 +257,33 @@ Class is SpecBuild{
 		});
 
 		local String is rawText: fileRead(path: configPath, default: '');
-		local Any is parsedConfig: Json:parse(text: rawText);
-		if({ Json:hasError() }, {
-			Stderr:line('[specbuild] Error: Failed to parse ' . configPath . ': ' . Json:errorMessage());
+		local Result of Map to JsonError is cfgR: Json:parseMapResult(text: rawText);
+		local String is parseMsg: '';
+		match(on: cfgR, when: [
+			Result:Ok: local Function of Void(Map is v){
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+				parseMsg: e:description;
+			}
+		]);
+		if({ parseMsg != '' }, {
+			Stderr:line('[specbuild] Error: Failed to parse ' . configPath . ': ' . parseMsg);
 			Process:exit(status: 1);
 		});
+		local Map is cfg: Map:init();
+		match(on: cfgR, when: [
+			Result:Ok: local Function of Void(Map is v){
+				cfg: v;
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+			}
+		]);
 
 		if({ !rawText:trim():startsWith(prefix: '{') }, {
 			Stderr:line('[specbuild] Error: Configuration root in ' . configPath . ' must be a JSON object');
 			Process:exit(status: 1);
 		});
 
-		local Map is cfg: parsedConfig as Map;
 		local String is name: Json:getString(obj: cfg, key: 'name', default: 'app');
 		local String is version: Json:getString(obj: cfg, key: 'version', default: '0.1.0');
 		local String is source: Json:getString(obj: cfg, key: 'source', default: '');

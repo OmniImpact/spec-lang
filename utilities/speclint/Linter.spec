@@ -37,6 +37,7 @@ Class is Linter{
 		['speclint', 'rules', UnnecessarySelfColonRule],
 		['speclint', 'rules', InitShorthandRule],
 		['speclint', 'rules', UnusedUsingRule],
+		['speclint', 'rules', HeldErrorStateRule],
 		['speclint', 'rules', TemplateStringRule],
 		['speclint', 'rules', MergeUsingRule],
 		['speclint', 'rules', CompactUsingRule],

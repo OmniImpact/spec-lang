@@ -7,7 +7,10 @@ Class of SpecUnitTest is TestJson{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
+		['base', 'core', Result],
+		['base', 'core', SpecError],
 		['base', 'data', as Json()],
+		['base', 'data', JsonError],
 		['base', 'data', JsonNull],
 		['base', 'data', JsonBool],
 		['base', 'data', JsonNumber]
@@ -107,14 +110,68 @@ Class of SpecUnitTest is TestJson{
 	}
 
 	Function is testMalformedJson(){
+		# The result-return core carries the failure as the full currency:
+		# kind, description, and a captured stack trace.
+		local Result of Map to JsonError is r1: Json:parseMapResult(text: '{ invalid json }');
+		local String is msg1: '';
+		local String is kind1: '';
+		local Int is frames1: 0;
+		match(on: r1, when: [
+			Result:Ok: local Function of Void(Map is v){
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+				msg1: e:description;
+				kind1: e:kindName;
+				frames1: e:stackTrace:length();
+			}
+		]);
+		Assert:areEqualString('SYNTAX_ERROR', kind1);
+		Assert:isTrue(msg1:length() > 0);
+		Assert:isTrue(frames1 > 0);
+
+		# A type-mismatched root is its own kind.
+		local Result of Map to JsonError is r2: Json:parseMapResult(text: '[1, 2]');
+		local String is kind2: '';
+		match(on: r2, when: [
+			Result:Ok: local Function of Void(Map is v){
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+				kind2: e:kindName;
+			}
+		]);
+		Assert:areEqualString('TYPE_MISMATCH', kind2);
+
+		# The default-parameter form stays the sugar face: failures fall
+		# back to the default, and a successful parse yields the value.
 		local Any is bad1: Json:parse(text: '{ invalid json }', default: 'fallback');
 		Assert:areEqualString('fallback', Json:asString(val: bad1));
-		Assert:isTrue(Json:hasError());
-		Assert:isTrue(Json:errorMessage():length() > 0);
 
-		local Any is bad2: Json:parse(text: '[1, 2,', default: 'bad_array');
-		Assert:areEqualString('bad_array', Json:asString(val: bad2));
-		Assert:isTrue(Json:hasError());
+		local Result of Map to JsonError is okR: Json:parseMapResult(text: '{"k": 7}');
+		local Int is okVal: 0 - 1;
+		match(on: okR, when: [
+			Result:Ok: local Function of Void(Map is v){
+				okVal: Json:getInt(obj: v, key: 'k', default: 0 - 1);
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+			}
+		]);
+		Assert:areEqualInt(7, okVal);
+
+		# The side channel is removed, not deprecated: the pollable fields
+		# and their accessors no longer exist.
+		Assert:compilerRejects(
+			source: '''
+Class is SideChannelCaller{
+	replace Array of Array of String is using: [
+		['base', 'data', as Json()]
+	];
+	replace Function is init(Map of String to String is args){
+		:hasError();
+	}
+}
+''',
+			expect: "Undefined function 'hasError' on class 'SideChannelCaller' (E9)."
+		);
 	}
 
 	Function is testRoundTrip(){

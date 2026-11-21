@@ -19,6 +19,9 @@ Class is SpecLsp{
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', Error],
+		['base', 'core', Result],
+		['base', 'core', SpecError],
+		['base', 'data', JsonError],
 		['base', 'data', as Json()],
 		['base', 'data', JsonNull],
 		['base', 'data', JsonBool],
@@ -187,18 +190,22 @@ Class is SpecLsp{
 			if({ fileExists(path: manifestPath) }, {
 				local String is raw: fileRead(path: manifestPath, default: '');
 				if({ raw != '' }, {
-					local Any is parsed: Json:parse(text: raw);
-					if({ !Json:hasError() }, {
-						local Array is srcDirs: Json:getArray(obj: parsed, key: 'source_dirs');
-						local Int is n: srcDirs:length();
-						while([Int is i: 0], { i < n }, {
-							local String is sd: Json:getStringAt(arr: srcDirs, index: i, default: '');
-							if({ sd != '' }, {
-								addDirIfExists(loader: loader, dirPath: dir . '/' . sd);
+					local Result of Map to JsonError is manR: Json:parseMapResult(text: raw);
+					match(on: manR, when: [
+						Result:Ok: local Function of Void(Map is parsed){
+							local Array is srcDirs: Json:getArray(obj: parsed, key: 'source_dirs');
+							local Int is n: srcDirs:length();
+							while([Int is i: 0], { i < n }, {
+								local String is sd: Json:getStringAt(arr: srcDirs, index: i, default: '');
+								if({ sd != '' }, {
+									addDirIfExists(loader: loader, dirPath: dir . '/' . sd);
+								});
+								i++;
 							});
-							i++;
-						});
-					});
+						},
+						Result:Err: local Function of Void(SpecError of JsonError is e){
+						}
+					]);
 				});
 				searching: false;
 			}, {

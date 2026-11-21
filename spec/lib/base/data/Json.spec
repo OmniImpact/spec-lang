@@ -5,6 +5,9 @@ Class is Json{
 	namespace: ['base', 'data'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', Result],
+		['base', 'core', SpecError],
+		['base', 'data', JsonError],
 		['base', 'data', JsonNull],
 		['base', 'data', JsonBool],
 		['base', 'data', JsonNumber],
@@ -15,8 +18,6 @@ Class is Json{
 
 	local Int is parsePos: 0;
 	local Int is textLen: 0;
-	local Boolean is parseFailed: false;
-	local String is parseError: '';
 
 	## Returns a JSON null instance.
 	Function of JsonNull is nullValue(){
@@ -58,14 +59,61 @@ Class is Json{
 		return (val as String):copy();
 	}
 
-	## Whether the most recent parse operation encountered a syntax error.
-	Function of Boolean is hasError(){
-		return :parseFailed;
+	## Raises a SYNTAX_ERROR currency with [msg] as the description
+	## (offsets ride it). The parser's internal transport: a malformed
+	## document unwinds from deep in the recursion to the public face,
+	## which converts it to a result (or a default) at the boundary.
+	local Function is syntaxFail(String is msg){
+		:raiseError(error: SpecError:init(kind: JsonError:SYNTAX_ERROR, description: msg));
 	}
 
-	## The diagnostic message for the most recent parse failure.
-	Function of String is errorMessage(){
-		return :parseError;
+	## Parses a complete JSON document, raising the error currency on any
+	## failure. The core the public faces unwrap.
+	local Function of Any is parseText(String is text){
+		:parsePos: 0;
+		:textLen: text:length();
+
+		if({ :textLen == 0 }, {
+			:syntaxFail(msg: 'Empty input');
+		});
+
+		:skipWhitespace(text: text);
+		if({ :parsePos >= :textLen }, {
+			:syntaxFail(msg: 'Empty input');
+		});
+
+		local Any is res: :parseValue(text: text);
+		:skipWhitespace(text: text);
+		if({ :parsePos < :textLen }, {
+			:syntaxFail(msg: 'Unexpected trailing data at offset ' . (:parsePos as String));
+		});
+		return res;
+	}
+
+	## Parses a JSON document whose root must be an object, returning the
+	## Map or the parse failure as the full error currency.
+	Function of Result of Map to JsonError is parseMapResult(String is text){
+		local SpecError of JsonError is failErr: SpecError:init(kind: JsonError:SYNTAX_ERROR, description: '');
+		local Map is m: try(
+			body: local Function of Map(){
+				local Any is v: :parseText(text: text);
+				local String is vt: Introspection:typeIdentity(obj: v);
+				if({ vt != 'Map' }, {
+					:raiseError(error: SpecError:init(kind: JsonError:TYPE_MISMATCH, description: 'document root is not an object'));
+				});
+				return v as Map;
+			},
+			guard: local Function of Map(SpecError of JsonError is e){
+				failErr: e;
+				return Map:init();
+			}
+		);
+		if({ failErr:description == '' }, {
+			local Result of Map to JsonError is okR: Result:Ok(value: m);
+			return okR;
+		});
+		local Result of Map to JsonError is errR: Result:Err(error: failErr);
+		return errR;
 	}
 
 	## Looks up an integer value from a parsed JSON map.
@@ -322,9 +370,7 @@ Class is Json{
 		while({ scanning && (:parsePos < :textLen) }, {
 			local Int is b: text:byteAt(index: :parsePos, default: -1);
 			if({ b < 0 }, {
-				:parseFailed: true;
-				:parseError: 'Unexpected end of input inside string literal';
-				scanning: false;
+				:syntaxFail(msg: 'Unexpected end of input inside string literal');
 			});
 			if({ scanning && b == 92 }, {
 				if({ :parsePos > startPos }, {
@@ -363,9 +409,7 @@ Class is Json{
 						out: out . :codePointToUtf8(cp: cp);
 						:parsePos: :parsePos + 4;
 					}, {
-						:parseFailed: true;
-						:parseError: 'Incomplete \\uXXXX escape sequence';
-						scanning: false;
+						:syntaxFail(msg: 'Incomplete \\uXXXX escape sequence');
 					});
 				});
 				:parsePos: :parsePos + 1;
@@ -385,9 +429,8 @@ Class is Json{
 				});
 			});
 		});
-		if({ !closed && !:parseFailed }, {
-			:parseFailed: true;
-			:parseError: 'Unclosed string literal';
+		if({ !closed }, {
+			:syntaxFail(msg: 'Unclosed string literal');
 		});
 		return out;
 	}
@@ -450,8 +493,7 @@ Class is Json{
 
 		local String is numStr: text:substring(start: start, end: :parsePos);
 		if({ numStr == '-' || numStr == '' }, {
-			:parseFailed: true;
-			:parseError: 'Invalid number literal';
+			:syntaxFail(msg: 'Invalid number literal');
 		});
 		return :numberRaw(rawText: numStr, isFloating: isFloating);
 	}
@@ -469,7 +511,7 @@ Class is Json{
 
 		local Boolean is parsing: true;
 		local Boolean is closed: false;
-		while({ parsing && !:parseFailed && (:parsePos < :textLen) }, {
+		while({ parsing && (:parsePos < :textLen) }, {
 			local Any is item: :parseValue(text: text);
 			arr:add(item: item);
 			:skipWhitespace(text: text);
@@ -482,15 +524,12 @@ Class is Json{
 					closed: true;
 					parsing: false;
 				}, {
-					:parseFailed: true;
-					:parseError: 'Expected \x27,\x27 or \x27]\x27 in array';
-					parsing: false;
+					:syntaxFail(msg: 'Expected \x27,\x27 or \x27]\x27 in array');
 				});
 			});
 		});
-		if({ !closed && !:parseFailed }, {
-			:parseFailed: true;
-			:parseError: 'Unclosed array, expected \x27]\x27';
+		if({ !closed }, {
+			:syntaxFail(msg: 'Unclosed array, expected \x27]\x27');
 		});
 		return arr;
 	}
@@ -508,19 +547,15 @@ Class is Json{
 
 		local Boolean is parsing: true;
 		local Boolean is closed: false;
-		while({ parsing && !:parseFailed && (:parsePos < :textLen) }, {
+		while({ parsing && (:parsePos < :textLen) }, {
 			:skipWhitespace(text: text);
 			if({ text:byteAt(index: :parsePos, default: -1) != 34 }, {
-				:parseFailed: true;
-				:parseError: 'Expected string key in object';
-				return obj;
+				:syntaxFail(msg: 'Expected string key in object');
 			});
 			local String is key: :parseString(text: text);
 			:skipWhitespace(text: text);
 			if({ text:byteAt(index: :parsePos, default: -1) != 58 }, {
-				:parseFailed: true;
-				:parseError: 'Expected \x27:\x27 after key in object';
-				return obj;
+				:syntaxFail(msg: 'Expected \x27:\x27 after key in object');
 			});
 			:parsePos: :parsePos + 1;
 			local Any is val: :parseValue(text: text);
@@ -535,15 +570,12 @@ Class is Json{
 					closed: true;
 					parsing: false;
 				}, {
-					:parseFailed: true;
-					:parseError: 'Expected \x27,\x27 or \x27}\x27 in object';
-					parsing: false;
+					:syntaxFail(msg: 'Expected \x27,\x27 or \x27}\x27 in object');
 				});
 			});
 		});
-		if({ !closed && !:parseFailed }, {
-			:parseFailed: true;
-			:parseError: 'Unclosed object, expected \x27}\x27';
+		if({ !closed }, {
+			:syntaxFail(msg: 'Unclosed object, expected \x27}\x27');
 		});
 		return obj;
 	}
@@ -552,9 +584,7 @@ Class is Json{
 	Function of Any is parseValue(String is text){
 		:skipWhitespace(text: text);
 		if({ :parsePos >= :textLen }, {
-			:parseFailed: true;
-			:parseError: 'Unexpected end of input';
-			return :nullValue();
+			:syntaxFail(msg: 'Unexpected end of input');
 		});
 
 		local Int is b: text:byteAt(index: :parsePos, default: -1);
@@ -589,41 +619,25 @@ Class is Json{
 			return :parseNumber(text: text);
 		});
 
-		:parseFailed: true;
-		:parseError: 'Unexpected character \x27' . text:substring(start: :parsePos, end: :parsePos + 1) . '\x27 at offset ' . (:parsePos as String);
+		:syntaxFail(msg: 'Unexpected character \x27' . text:substring(start: :parsePos, end: :parsePos + 1) . '\x27 at offset ' . (:parsePos as String));
 		return :nullValue();
 	}
 
-	## Parses JSON text into Spec data structures.
+	## Parses JSON text into Spec data structures, falling back to
+	## [default] on any parse failure. Convenience sugar over the typed
+	## result faces — callers that need the failure's kind and
+	## description call `parseMapResult` / `parseArrayResult`.
 	Function of Any is parse(String is text, Any is default: ''){
-		:parsePos: 0;
-		:textLen: text:length();
-		:parseFailed: false;
-		:parseError: '';
-
-		if({ :textLen == 0 }, {
-			:parseFailed: true;
-			:parseError: 'Empty input';
-			return default;
-		});
-
-		:skipWhitespace(text: text);
-		if({ :parsePos >= :textLen }, {
-			:parseFailed: true;
-			:parseError: 'Empty input';
-			return default;
-		});
-
-		local Any is res: :parseValue(text: text);
-		:skipWhitespace(text: text);
-		if({ :parseFailed || (:parsePos < :textLen) }, {
-			if({ !:parseFailed }, {
-				:parseFailed: true;
-				:parseError: 'Unexpected trailing data at offset ' . (:parsePos as String);
-			});
-			return default;
-		});
-		return res;
+		local Any is out: default;
+		out: try(
+			body: local Function of Any(){
+				return :parseText(text: text);
+			},
+			guard: local Function of Any(SpecError is e){
+				return default;
+			}
+		);
+		return out;
 	}
 
 	## Parses JSON text directly into a Map.

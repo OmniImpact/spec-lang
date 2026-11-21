@@ -143,6 +143,19 @@ Class of SpecUnitTest is TestSpeclint{
 		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: false));
 	}
 
+	## Held-error-state fields (the removed Json side channel's shape) are
+	## flagged wherever they reappear.
+	Function is testHeldErrorStateNotice(){
+		local Array of LintIssue is issues: :lintSource(src: "Class is F{\n\tBoolean is parseFailed: false;\n\tString is parseError: '';\n\tInt is errorCount: 0;\n}\n");
+		local Int is n: 0;
+		issues:each(action: local Function(LintIssue is issue){
+			if({ issue:message:contains(needle: 'facility-held error state') }, {
+				n: n + 1;
+			});
+		});
+		Assert:areEqualInt(2, n);
+	}
+
 	Function is testUnusedUsingWarns(){
 		local Array of LintIssue is issues: :lintSource(src: "Class is F{\n\treplace Array of Array of String is using: [\n\t\t['base', 'struct', Map]\n\t];\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
 		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: true));
