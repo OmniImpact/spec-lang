@@ -64,6 +64,13 @@ Class is Pool{
 
 	Function of Int is claimPool(Int is objAddr){
 		if({ objAddr == 0 }, { return 0; });
+		# The claim holds its OWN reference (retain): the creator's reference
+		# belongs to the consuming local (released at reassignment/scope —
+		# each such release is preceded by unclaimAddr, popping this entry
+		# so the drain does not also release it), and the frame drain
+		# releases this reference for values never consumed. Claim without
+		# retain + any local release = the freelist-corruption double free.
+		Mem:retainAddr(objAddr: objAddr);
 		local Int is top: Mem:tlsGetI64(slot: 4);
 		local Int is cap: Mem:tlsGetI64(slot: 5);
 		if({ top == cap }, {

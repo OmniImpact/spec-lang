@@ -370,7 +370,9 @@ Class of CallLowerer is MatchCallLowerer{
 									if({ b:curBlk:label != 'entry' }, {
 										local String is prevArmBox: b:nextTmp();
 										b:emit(inst: IrInst:Load(dst: prevArmBox, slot: pSlot, ty: IrType:Ptr));
-																										});
+										b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevArmBox]));
+							b:emit(inst: IrInst:Release(val: prevArmBox));
+									});
 									local String is boxPtr: b:emitNewBox(initVal: pVal, ty: pty, isArc: pIsArc);
 									b:emit(inst: IrInst:Store(slot: pSlot, val: boxPtr, ty: IrType:Ptr));
 									b:ownedSlots:add(item: pSlot);

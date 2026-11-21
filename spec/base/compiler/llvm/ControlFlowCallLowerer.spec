@@ -581,7 +581,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						if({ (pArc || pBoxed) && !pInEntry }, {
 							local String is prevWVal: b:nextTmp();
 							b:emit(inst: IrInst:Load(dst: prevWVal, slot: slot, ty: IrType:Ptr));
-																				});
+							b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevWVal]));
+							b:emit(inst: IrInst:Release(val: prevWVal));
+						});
 						if({ pBoxed }, {
 							local String is boxPtr: b:emitNewBox(initVal: val, ty: pty, isArc: pArc);
 							b:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
@@ -781,7 +783,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						if({ (vArc || vBoxed) && !vInEntry }, {
 							local String is prevLVal: b:nextTmp();
 							b:emit(inst: IrInst:Load(dst: prevLVal, slot: slot, ty: IrType:Ptr));
-																				});
+							b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevLVal]));
+							b:emit(inst: IrInst:Release(val: prevLVal));
+						});
 						if({ vBoxed }, {
 							local String is boxPtr: b:emitNewBox(initVal: ival, ty: vty, isArc: vArc);
 							b:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
