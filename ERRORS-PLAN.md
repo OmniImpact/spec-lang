@@ -66,11 +66,31 @@ else is library work.
 - [ ] **1.3 Defer floor (sysinternal).** Cleanup-stack intrinsics over the
       pending-error machinery: push/pop a cleanup closure per frame, and the
       unwind path runs registered cleanups **before** the handler walk.
-      Touches: `spec/base/sysinternal/` (new floor class),
-      `spec/base/compiler/llvm/LlvmRuntimePrelude.spec` / `IrBuilder.spec`
-      (raise path). Land ahead of consumers (two-part landing). Gate:
-      fixed point + a `TestArcDestruction`-style test asserting cleanup
-      ordering on unwind (cleanup runs, then handler, then ARC releases).
+      Land ahead of consumers (two-part landing). Broken into:
+  - [ ] **1.3a Floor intrinsics (inert).** New class `base:sysinternal:Defer`
+        over TLS slots 9/10/11 (stack ptr, top, cap — 0-2 are Str scratch,
+        3-8 pool + handler stack, 14 thread state, 15 pending error).
+        `frameMark()` snapshots depth; `pushCleanup(action)` retains the
+        closure object and adopts the +1 (registrations own themselves, so
+        pool timing can never dangle them); `runTo(mark)` runs everything
+        above the mark newest-first, releasing each registration after it
+        runs; `threadCleanup` frees the buffer (wired into the prelude's
+        thread-exit path). `runTo` stashes/clears/restores the pending
+        error around the invocations (the `recordPendingFrame` precedent)
+        so a cleanup's own calls never observe a set pending error.
+        No emitter changes, no consumers. Gate: fixed point + wave
+        (behaviorally inert).
+  - [ ] **1.3b Unwind + exit wiring.** ONE wiring point:
+        `IrBuilder.emitUnwindCurrentFrame` — both raise sites and post-call
+        pending checks funnel through it. Frames whose body uses the defer
+        facility (syntactic scan; `collectDeclNamesInStmts` precedent)
+        snapshot the mark at frame entry and emit `Defer_runTo(mark)` at
+        the start of the unwind block (after `Pool_recordPendingFrame`,
+        before the handler walk) and at every normal-exit return path.
+        Defer-less frames emit NOTHING (zero cost for existing code).
+        Gate: fixed point + wave identical (empty cleanup stack must be a
+        behavioral no-op); the behavioral proof lands with 2.5's ordering
+        suite.
 - [ ] **1.4 (optional — may slip) Typed `SpecErrorHandler` overloads.**
       Checker resolves handler overload sets by error-kind (most-specific
       wins); `IrBuilder` handler walk consults the kind. This is
@@ -124,12 +144,17 @@ flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
       the 1.3 floor, in the `Conditional`/`Loops` family style. Gate:
       cleanup-order tests (normal exit, unwind exit, nested defers).
 - [ ] **2.6 `try`/`guard` construct (spans compiler; skippable for alpha).**
-      Facility in the control-flow family + `ControlFlowCallLowerer` inline
-      fast path for literal closures, runtime fallback otherwise (the
-      `Conditional:if` two-tier precedent). Yields the unwrapped value or
+      Facility in the control-flow family; yields the unwrapped value or
       unwinds with the `Err` payload. Skippable: explicit `when` is
-      functional, just noisier at call sites. Gate: fixed point +
-      value-yield matrix test (extend `TestValueYield` shapes).
+      functional, just noisier at call sites. Broken into:
+  - [ ] **2.6a Facility + runtime fallback.** The facility spelling surfaces
+        and lowers through the generic call machinery (correct-but-slower
+        path). Gate: fixed point + value-yield matrix test (extend
+        `TestValueYield` shapes).
+  - [ ] **2.6b Inline fast path.** `ControlFlowCallLowerer` fast path for
+        literal closures (the `Conditional:if` two-tier precedent);
+        semantics identical to 2.6a. Gate: fixed point + matrix test + IR
+        shape assertion (fast path must not allocate a closure object).
 - [ ] **2.7 Never Null sugar pilot.** Re-implement one default-parameter
       getter family over a result-returning core (`Json:getString(obj:,
       key:, default:)` is the pilot) to prove the sugar pattern before the
