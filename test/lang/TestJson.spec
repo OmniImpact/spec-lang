@@ -172,6 +172,59 @@ Class is SideChannelCaller{
 ''',
 			expect: "Undefined function 'hasError' on class 'SideChannelCaller' (E9)."
 		);
+
+		# A removed member called in statement position is a compile error
+		# too — the old silent receiver-typed fallback is gone.
+		Assert:compilerRejects(
+			source: '''
+Class is SilentCaller{
+	replace Array of Array of String is using: [
+		['base', 'data', as Json()]
+	];
+	replace Function is init(Map of String to String is args){
+		Json:errorMessage();
+	}
+}
+''',
+			expect: "Member 'errorMessage' is not declared on class 'Json'."
+		);
+	}
+
+	## Array-root documents ground the same way: Result of Array to
+	## JsonError constructs, dispatches, and carries the currency.
+	Function is testParseArrayResult(){
+		local Result of Array to JsonError is okR: Json:parseArrayResult(text: '[1, 2, 3]');
+		local Int is count: 0 - 1;
+		match(on: okR, when: [
+			Result:Ok: local Function of Void(Array is a){
+				count: a:length();
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+			}
+		]);
+		Assert:areEqualInt(3, count);
+
+		local Result of Array to JsonError is badR: Json:parseArrayResult(text: '[1, 2,');
+		local String is kind: '';
+		match(on: badR, when: [
+			Result:Ok: local Function of Void(Array is a){
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+				kind: e:kindName;
+			}
+		]);
+		Assert:areEqualString('SYNTAX_ERROR', kind);
+
+		local Result of Array to JsonError is mismatchR: Json:parseArrayResult(text: '{"not": "an array"}');
+		local String is mismatchKind: '';
+		match(on: mismatchR, when: [
+			Result:Ok: local Function of Void(Array is a){
+			},
+			Result:Err: local Function of Void(SpecError of JsonError is e){
+				mismatchKind: e:kindName;
+			}
+		]);
+		Assert:areEqualString('TYPE_MISMATCH', mismatchKind);
 	}
 
 	Function is testRoundTrip(){

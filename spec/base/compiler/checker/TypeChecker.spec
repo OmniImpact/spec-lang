@@ -318,13 +318,36 @@ Class is TypeChecker{
 		});
 		local String is norm: :normalizeContainerType(t: s);
 		local Array of String is rawParts: norm:split(delimiter: ':');
+		# The flat encoding is pre-order: the outer type's segments come
+		# first, then each argument's segments contiguously. The greedy
+		# right-to-left arity machine mis-parses when a BARE arity-1
+		# container (Array/List/Function) is a NON-LAST argument —
+		# 'Result:Array:JsonError' (Result of Array to JsonError): Array
+		# steals JsonError, leaving the outer type with an unfilled arity.
+		# Well-formedness test: the final stack's top must carry exactly
+		# its arity in params. On failure, re-run with the hardcoded
+		# containers parsed BARE — the writer emits the bare spelling
+		# exactly when the argument has no parameters.
+		local Type is parsedT: :rebuildTypeNode(rawParts: rawParts, bareContainers: false);
+		if({ parsedT:name == '' }, {
+			parsedT: :rebuildTypeNode(rawParts: rawParts, bareContainers: true);
+		});
+		:typeNodeCache:set(key: s, value: parsedT);
+		return parsedT;
+	}
+
+	## The right-to-left arity reconstruction of a flat type string.
+	## With [bareContainers] the hardcoded containers (Array/List/
+	## Function) never absorb arguments — the retry pass for the
+	## bare-non-last-argument spelling.
+	Function of Type is rebuildTypeNode(Array of String is rawParts, Boolean is bareContainers){
 		local Array of Type is stack: [];
 		local Int is idx: rawParts:length() - 1;
 		while({ idx >= 0 }, {
 			local String is seg: rawParts:get(index: idx, default: '');
 			local Int is arity: 0;
 			if({ seg == 'Array' || seg == 'List' || seg == 'Function' }, {
-				arity: 1;
+				arity: if({ bareContainers }, { 0 }, { 1 });
 			}, {
 				if({ seg == 'Map' }, {
 					arity: 2;
@@ -348,9 +371,27 @@ Class is TypeChecker{
 			});
 			idx: idx - 1;
 		});
-		local Type is parsedT: if({ stack:length() > 0 }, { stack:get(index: stack:length() - 1) }, { Type:init(name: s) });
-		:typeNodeCache:set(key: s, value: parsedT);
-		return parsedT;
+		if({ stack:length() == 0 }, {
+			return Type:init(name: '');
+		});
+		local Type is top: stack:get(index: stack:length() - 1);
+		local Int is topArity: 0;
+		if({ top:name == 'Array' || top:name == 'List' || top:name == 'Function' }, {
+			topArity: if({ bareContainers }, { 0 }, { 1 });
+		}, {
+			if({ top:name == 'Map' }, {
+				topArity: 2;
+			}, {
+				local ClassInfo is cls: :findClass(name: top:name);
+				if({ cls:name != '' && cls:typeParams:length() > 0 }, {
+					topArity: cls:typeParams:length();
+				});
+			});
+		});
+		if({ topArity > 0 && top:params:length() != topArity }, {
+			return Type:init(name: '');
+		});
+		return top;
 	}
 
 	## Substitutes a class's generic type parameters in a member type name.
@@ -3934,6 +3975,16 @@ Class is TypeChecker{
 			providerRet: :lookupMethodReturnType(className: provider, methodName: call:name);
 		});
 		if({ providerRet == '' }, {
+			# Member existence: a real (non-binding) provider class with
+			# no such member is a compile error, not a silent Any — the
+			# silent fallback once let removed members (the Json side
+			# channel) keep compiling in call-statement position.
+			local ClassInfo is provCls: :findClass(name: provider);
+			if({ provCls:name != '' && !:isBindingDeclaration(cls: provCls) }, {
+				:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: call:name, targetType: provider));
+				expr:setResolvedType(t: '');
+				return '';
+			});
 			providerRet: 'Any';
 		});
 		if({ bareIsValue }, {
@@ -4422,6 +4473,8 @@ Class is TypeChecker{
 					local String is mk: TypeDomain:mapKeyType(t: targetType);
 					res: if({ mk != '' }, { TypeDomain:makeArray(elem: mk) }, { 'Array of String' });
 				},
+				'mapNew': { res: 'Map'; },
+				'mapNewObject': { res: 'Map'; },
 				'add': { res: :names:voidName(); },
 				'set': { res: :names:voidName(); },
 				'clear': { res: :names:voidName(); },
@@ -4437,6 +4490,25 @@ Class is TypeChecker{
 				if({ TypeDomain:isParameterized(t: targetType, base: 'Map') && (method == 'get' || method == 'getString') }, {
 					local String is mv: TypeDomain:mapValType(t: targetType);
 					if({ mv != '' }, { res: mv; });
+				});
+			});
+			# Member existence: a real (non-binding) class whose call
+			# resolves to NOTHING (no method, held member, or vocabulary
+			# entry) is a compile error, not a silently receiver-typed
+			# call — the fallback once let removed members keep compiling.
+			# Runs AFTER the vocabulary table and container branches: any
+			# of them claiming the call is authoritative.
+			if({ res == targetType }, {
+				local String is existBase: TypeDomain:baseName(t: targetType);
+				local Boolean is memberExists: :lookupAnyMember(className: existBase, methodName: method):name != '';
+				if({ !memberExists }, {
+					memberExists: :findHeldMethod(className: existBase, methodName: method):name != '';
+				});
+				local ClassInfo is existCls: :findClass(name: existBase);
+				if({ !memberExists && existCls:name != '' && !:isBindingDeclaration(cls: existCls) }, {
+					:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
+					expr:setResolvedType(t: '');
+					return '';
 				});
 			});
 		});

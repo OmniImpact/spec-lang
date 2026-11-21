@@ -90,6 +90,32 @@ Class is Json{
 		return res;
 	}
 
+	## Parses a JSON document whose root must be an array, returning the
+	## Array or the parse failure as the full error currency.
+	Function of Result of Array to JsonError is parseArrayResult(String is text){
+		local SpecError of JsonError is failErr: SpecError:init(kind: JsonError:SYNTAX_ERROR, description: '');
+		local Array is arr: try(
+			body: local Function of Array(){
+				local Any is v: :parseText(text: text);
+				local String is vt: Introspection:typeIdentity(obj: v);
+				if({ vt != 'Array' }, {
+					:raiseError(error: SpecError:init(kind: JsonError:TYPE_MISMATCH, description: 'document root is not an array'));
+				});
+				return v as Array;
+			},
+			guard: local Function of Array(SpecError of JsonError is e){
+				failErr: e;
+				return [];
+			}
+		);
+		if({ failErr:description == '' }, {
+			local Result of Array to JsonError is okR: Result:Ok(value: arr);
+			return okR;
+		});
+		local Result of Array to JsonError is errR: Result:Err(error: failErr);
+		return errR;
+	}
+
 	## Parses a JSON document whose root must be an object, returning the
 	## Map or the parse failure as the full error currency.
 	Function of Result of Map to JsonError is parseMapResult(String is text){

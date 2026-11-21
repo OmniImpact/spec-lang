@@ -205,6 +205,35 @@ Class is GenericSpecializer{
 		});
 		local String is norm: s:replaceAll(target: ' of ', replacement: ':'):replaceAll(target: ' to ', replacement: ':');
 		local Array of String is rawParts: norm:split(delimiter: ':');
+		# Greedy pass first; on an ill-formed outer type (an arity-1
+		# container absorbing a sibling argument of the outer generic),
+		# retry with the hardcoded containers parsed bare. Mirrors the
+		# checker's rebuildTypeNode repair.
+		local Type is parsedT: :rebuildResolvedType(rawParts: rawParts, subst: subst, bareContainers: false);
+		if({ parsedT:name == '' }, {
+			parsedT: :rebuildResolvedType(rawParts: rawParts, subst: subst, bareContainers: true);
+		});
+		if({ parsedT:name != '' }, {
+			return parsedT;
+		});
+		return Type:init(name: s);
+	}
+
+	local Function of Int is segArity(String is seg, Boolean is bareContainers){
+		if({ :templates:has(key: seg) }, {
+			local ClassInfo is tpl: :templates:get(key: seg, default: ClassInfo:init(name: '', baseClass: '', members: []));
+			return tpl:typeParams:length();
+		});
+		if({ seg == 'Array' || seg == 'List' || seg == 'Function' }, {
+			return if({ bareContainers }, { 0 }, { 1 });
+		});
+		if({ seg == 'Map' }, {
+			return 2;
+		});
+		return 0;
+	}
+
+	local Function of Type is rebuildResolvedType(Array of String is rawParts, Map of String to Type is subst, Boolean is bareContainers){
 		local Array of Type is stack: [];
 		local Int is idx: rawParts:length() - 1;
 		while({ idx >= 0 }, {
@@ -212,18 +241,7 @@ Class is GenericSpecializer{
 			if({ subst:has(key: seg) }, {
 				stack:add(item: :cloneType(t: subst:get(key: seg, default: Type:init(name: seg))));
 			}, {
-				local Int is arity: 0;
-				if({ :templates:has(key: seg) }, {
-					local ClassInfo is tpl: :templates:get(key: seg, default: ClassInfo:init(name: '', baseClass: '', members: []));
-					arity: tpl:typeParams:length();
-				}, {
-					if({ seg == 'Array' || seg == 'List' || seg == 'Function' }, {
-						arity: 1;
-					});
-					if({ seg == 'Map' }, {
-						arity: 2;
-					});
-				});
+				local Int is arity: :segArity(seg: seg, bareContainers: bareContainers);
 				if({ arity > 0 && stack:length() >= arity }, {
 					local Array of Type is tArgs: [];
 					local Int is ki: 0;
@@ -238,10 +256,15 @@ Class is GenericSpecializer{
 			});
 			idx: idx - 1;
 		});
-		if({ stack:length() > 0 }, {
-			return stack:get(index: stack:length() - 1);
+		if({ stack:length() == 0 }, {
+			return Type:init(name: '');
 		});
-		return Type:init(name: s);
+		local Type is top: stack:get(index: stack:length() - 1);
+		local Int is topArity: :segArity(seg: top:name, bareContainers: bareContainers);
+		if({ topArity > 0 && top:params:length() != topArity }, {
+			return Type:init(name: '');
+		});
+		return top;
 	}
 
 	Function of String is transformTypeStr(String is s, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
