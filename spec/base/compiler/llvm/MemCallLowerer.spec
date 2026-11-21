@@ -86,7 +86,7 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 			'allocArcKind': {
 				local String is n: :lowerNamedArg(b: b, call: call, argName: 'bytes', posIdx: 0, defVal: '0');
 				local String is k: :lowerNamedArg(b: b, call: call, argName: 'kind', posIdx: 1, defVal: '0');
-				res: :emitSysCall(b: b, retType: IrType:I64, callee: 'spec_rt_alloc_kinded', argTypes: [IrType:I64, IrType:I64], args: [n, k]);
+				res: :emitSysCall(b: b, retType: IrType:I64, callee: '_spec_rt_alloc_kinded', argTypes: [IrType:I64, IrType:I64], args: [n, k]);
 			},
 			'slabFree': {
 				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
