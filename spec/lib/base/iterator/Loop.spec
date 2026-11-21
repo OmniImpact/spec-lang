@@ -12,6 +12,10 @@
 Class is Loop{
 	namespace: ['base', 'iterator'];
 
+	replace Array of Array of String is using: [
+		['base', 'iterator', LoopControl]
+	];
+
 	## Evaluates whether another loop iteration should proceed.
 	##
 	## @return: `true` to continue running, `false` to terminate the loop.

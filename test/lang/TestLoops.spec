@@ -7,6 +7,7 @@
 Class of SpecUnitTest is TestLoops{
 
 	replace Array of Array of String is using: [
+		['base', 'iterator', LoopControl],
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -93,5 +94,27 @@ Class of SpecUnitTest is TestLoops{
 		);
 		Assert:areEqualInt(6, grid);
 		Assert:areEqualInt(3, row);
+	}
+
+## LoopControl is a real ARC class: stop raises the flag, isStopped
+	## reads it, and complete fires the assigned completion callback.
+	Function is testLoopControlLifecycle(){
+		local LoopControl is c: LoopControl();
+		Assert:isFalse(c:isStopped());
+		c:stop();
+		Assert:isTrue(c:isStopped());
+
+		local Int is fired: 0;
+		c:onComplete: local Function(){
+			fired: fired + 1;
+		};
+		c:complete();
+		c:complete();
+		Assert:areEqualInt(2, fired);
+
+		## A fresh control with the default callback completes as a no-op.
+		local LoopControl is fresh: LoopControl();
+		fresh:complete();
+		Assert:isFalse(fresh:isStopped());
 	}
 }

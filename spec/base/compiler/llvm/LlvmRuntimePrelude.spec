@@ -601,58 +601,6 @@ define internal ptr @__spec_mem_cstr_to_str(i64 %cstrAddr) alwaysinline {
 }''';
 	}
 
-	Function of Str is emitLoopControl(){
-		return '''
-%struct.SpecLoopControl = type { i8, ptr, ptr }
-define internal ptr @LoopControl_new() alwaysinline {
-  %c = call ptr @spec_rt_alloc(i64 24, ptr null)
-  ret ptr %c
-}
-define internal void @LoopControl_stop(ptr %c) alwaysinline {
-  %nn = icmp ne ptr %c, null
-  br i1 %nn, label %ok, label %done
-ok:
-  store i8 1, ptr %c
-  br label %done
-done:
-  ret void
-}
-define internal i1 @spec_loop_control_is_stopped(ptr %c) alwaysinline {
-  %isnull = icmp eq ptr %c, null
-  br i1 %isnull, label %no, label %ok
-no:
-  ret i1 0
-ok:
-  %v = load i8, ptr %c
-  %b = icmp ne i8 %v, 0
-  ret i1 %b
-}
-define internal void @spec_loop_control_complete(ptr %c) alwaysinline {
-  %isnull = icmp eq ptr %c, null
-  br i1 %isnull, label %done, label %chk
-chk:
-  %fnp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 2
-  %fn = load ptr, ptr %fnp
-  %fnn = icmp ne ptr %fn, null
-  br i1 %fnn, label %call, label %done
-call:
-  %cbp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 1
-  %cb = load ptr, ptr %cbp
-  call void %fn(ptr %cb, ptr %c)
-  br label %done
-done:
-  ret void
-}
-define internal ptr @spec_loop_control_with_callback(ptr %cb, ptr %on_complete) alwaysinline {
-  %c = call ptr @spec_rt_alloc(i64 24, ptr null)
-  %cbp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 1
-  store ptr %cb, ptr %cbp
-  %fnp = getelementptr inbounds %struct.SpecLoopControl, ptr %c, i32 0, i32 2
-  store ptr %on_complete, ptr %fnp
-  ret ptr %c
-}''';
-	}
-
 	Function of Str is emitTypeAndStringHelpers(){
 		return '''
 @_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8
@@ -1126,7 +1074,6 @@ ok:
 {{:emitArcAndPool()}}
 {{:emitClosuresAndBoxes()}}
 {{:emitMemIntrinsics()}}
-{{:emitLoopControl()}}
 {{:emitTypeAndStringHelpers()}}
 {{:emitMathHelpers()}}
 {{:emitCliAndAtomics()}}```;

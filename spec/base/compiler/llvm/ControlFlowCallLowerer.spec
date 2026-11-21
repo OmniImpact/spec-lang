@@ -112,9 +112,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ nm == 'init' }, {
 			local Boolean is isCf: false;
 			match(on: call:target, when: [
-				Expression:Ident: local Function(String is tn){
-					if({ tn == 'LoopControl' }, { isCf: true; });
-				},
 				Expression:Path: local Function(Array of String is segs){
 					local Int is n: segs:length();
 					if({ n >= 2 && segs:get(index: n - 2, default: '') == 'sysinternal' && (segs:get(index: n - 1, default: '') == 'Conditional' || segs:get(index: n - 1, default: '') == 'Loops') }, {
@@ -123,16 +120,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				}
 			], default: {});
 			return isCf;
-		});
-		if({ nm == 'stop' || nm == 'isStopped' || nm == 'complete' }, {
-			if({ call:target:resolvedType == 'LoopControl' }, { return true; });
-			local Boolean is isLc: false;
-			match(on: call:target, when: [
-				Expression:Ident: local Function(String is tn){
-					if({ tn == 'LoopControl' }, { isLc: true; });
-				}
-			], default: {});
-			if({ isLc }, { return true; });
 		});
 		if({ nm == 'branch' && call:args:length() >= 2 }, { return :isSysConditionalTarget(call: call); });
 		if({ nm == 'if' && call:args:length() >= 2 }, {
@@ -160,45 +147,10 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		local String is nm: call:name;
 		if({ nm == 'init' }, {
-			local Boolean is isLcInit: false;
-			match(on: call:target, when: [
-				Expression:Ident: local Function(String is tn){
-					if({ tn == 'LoopControl' }, { isLcInit: true; });
-				}
-			], default: {});
-			if({ isLcInit }, {
-				if({ call:args:length() == 0 }, {
-					local String is dst0: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: dst0, hasDst: true, retType: IrType:Ptr, callee: 'LoopControl_new', argTypes: [], args: []));
-					return dst0;
-				});
-				local NamedArg is cbArg: call:args:get(index: 0);
-				local Expression is cbExpr: cbArg:value;
-				local String is cbV: b:lowerExpr(expr: cbExpr);
-				local String is cbClass: cbExpr:resolvedType:replaceAll(target: ':', replacement: '_');
-				local String is fnRef: 'null';
-				if({ cbClass != '' }, { fnRef: '@' . cbClass . '_onComplete'; });
-				local String is dst1: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst1, hasDst: true, retType: IrType:Ptr, callee: 'spec_loop_control_with_callback', argTypes: [IrType:Ptr, IrType:Ptr], args: [cbV, fnRef]));
-				return dst1;
-			});
+			# The Conditional/Loops floor init binds the runtime branch
+			# primitive; LoopControl constructions flow through the normal
+			# generic-init path (the class is a real ARC class).
 			return 'null';
-		});
-		if({ nm == 'stop' }, {
-			local String is recv: b:lowerExpr(expr: call:target);
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'LoopControl_stop', argTypes: [IrType:Ptr], args: [recv]));
-			return '0';
-		});
-		if({ nm == 'isStopped' }, {
-			local String is recv: b:lowerExpr(expr: call:target);
-			local String is dst2: b:nextTmp();
-			b:emit(inst: IrInst:IrCall(dst: dst2, hasDst: true, retType: IrType:I1, callee: 'spec_loop_control_is_stopped', argTypes: [IrType:Ptr], args: [recv]));
-			return dst2;
-		});
-		if({ nm == 'complete' }, {
-			local String is recv: b:lowerExpr(expr: call:target);
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_loop_control_complete', argTypes: [IrType:Ptr], args: [recv]));
-			return '0';
 		});
 		if({ nm == 'if' || nm == 'branch' }, {
 			return :lowerIfCall(b: b, expr: expr, call: call);

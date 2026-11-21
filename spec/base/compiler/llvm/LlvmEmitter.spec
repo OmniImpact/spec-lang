@@ -50,7 +50,6 @@ Class is LlvmEmitter{
 			'spec_rt_alloc', 'spec_rt_retain', 'spec_rt_release',
 			'spec_pool_frame', 'spec_pool_release_to', 'spec_pool_release_to_transfer', 'spec_claim_pool',
 			'spec_rt_closure_new', 'spec_rt_box_new', 'spec_rt_box_get', 'spec_rt_box_set',
-			'spec_loop_control_is_stopped', 'spec_loop_control_complete', 'spec_loop_control_with_callback',
 			'spec_string_intern', 'spec_to_string_float', 'spec_to_string_bool',
 			'spec_panic', 'spec_panic_byte_range', 'spec_panic_cast',
 			'spec_buf_destroy', 'spec_buf_to_cstring', 'spec_string_copy', 'spec_string_concat', 'spec_type_name',

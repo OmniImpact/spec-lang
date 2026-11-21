@@ -24,6 +24,7 @@ Class is Loops{
 
 	replace Array of Array of String is using: [
 		['base', 'iterator', Loop],
+		['base', 'iterator', LoopControl],
 		['base', 'sysinternal', Loops],
 		['base', 'sys', as Conditional()]
 	];
@@ -40,10 +41,14 @@ Class is Loops{
 	##
 	## @param loop: The [Loop] instance executing iterations.
 	## @param control: Optional [LoopControl] coordinator.
-	Function is run(Loop is loop, LoopControl is control){
+	Function is run(Loop is loop, LoopControl is control: LoopControl()){
+		# BRIDGE (transitional): the completion poll re-enters with the
+		# control's real methods in the next landing; LoopControl is
+		# graduating from a runtime-bound declaration to a real class and
+		# the prelude accessors die in the same landing.
 		local Boolean is running: true;
 		base:sysinternal:Loops:while(
-			evaluate: { return running && loop:evaluate() && !control:isStopped(); },
+			evaluate: { return running && loop:evaluate(); },
 			iterate: {
 				running: loop:iteration(control: control);
 			}
