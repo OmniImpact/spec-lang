@@ -930,13 +930,6 @@ scale:
 }
 @_spec_cli_argc = internal global i64 0, align 8
 @_spec_cli_argv = internal global i64 0, align 8
-define internal ptr @spec_cli_args_map(i64 %argc, ptr %argv) {
-  store i64 %argc, ptr @_spec_cli_argc, align 8
-  %av = ptrtoint ptr %argv to i64
-  store i64 %av, ptr @_spec_cli_argv, align 8
-  %m = call ptr @CliArgs_parseMap(ptr null, i64 %argc, i64 %av)
-  ret ptr %m
-}
 define internal ptr @spec_process_raw_args() {
   %ac = load i64, ptr @_spec_cli_argc, align 8
   %av = load i64, ptr @_spec_cli_argv, align 8
@@ -5922,7 +5915,7 @@ declare void @spec_drain_async_tasks()
 @.mname.LlvmRuntimePrelude.5 = private unnamed_addr constant [16 x i8] c"emitMathHelpers\00"
 @.mname.LlvmRuntimePrelude.6 = private unnamed_addr constant [18 x i8] c"emitCliAndAtomics\00"
 @.mname.LlvmRuntimePrelude.7 = private unnamed_addr constant [8 x i8] c"emitAll\00"
-@.methods.LlvmRuntimePrelude = private constant [8 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.0, ptr @LlvmRuntimePrelude_init, i32 6, i32 9 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.1, ptr @LlvmRuntimePrelude_emitArcAndPool, i32 2, i32 12 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.2, ptr @LlvmRuntimePrelude_emitClosuresAndBoxes, i32 2, i32 158 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.3, ptr @LlvmRuntimePrelude_emitMemIntrinsics, i32 2, i32 271 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.4, ptr @LlvmRuntimePrelude_emitTypeAndStringHelpers, i32 2, i32 604 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.5, ptr @LlvmRuntimePrelude_emitMathHelpers, i32 2, i32 859 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.6, ptr @LlvmRuntimePrelude_emitCliAndAtomics, i32 2, i32 961 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.7, ptr @LlvmRuntimePrelude_emitAll, i32 2, i32 1068 }]
+@.methods.LlvmRuntimePrelude = private constant [8 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.0, ptr @LlvmRuntimePrelude_init, i32 6, i32 9 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.1, ptr @LlvmRuntimePrelude_emitArcAndPool, i32 2, i32 12 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.2, ptr @LlvmRuntimePrelude_emitClosuresAndBoxes, i32 2, i32 158 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.3, ptr @LlvmRuntimePrelude_emitMemIntrinsics, i32 2, i32 271 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.4, ptr @LlvmRuntimePrelude_emitTypeAndStringHelpers, i32 2, i32 604 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.5, ptr @LlvmRuntimePrelude_emitMathHelpers, i32 2, i32 859 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.6, ptr @LlvmRuntimePrelude_emitCliAndAtomics, i32 2, i32 961 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.7, ptr @LlvmRuntimePrelude_emitAll, i32 2, i32 1061 }]
 @.meta.LlvmRuntimePrelude = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.LlvmRuntimePrelude, ptr @.src.LlvmRuntimePrelude, ptr @.bases.LlvmRuntimePrelude, i32 1, ptr @LlvmRuntimePrelude__spec_construct, ptr @.methods.LlvmRuntimePrelude, i32 8, ptr null, i32 0 }
 %struct.LlvmStructLayout = type { ptr, ptr, ptr, ptr, ptr }
 @.typename.LlvmStructLayout = private unnamed_addr constant [17 x i8] c"LlvmStructLayout\00"
@@ -11585,654 +11578,652 @@ define i32 @spec_class_registry_count() {
 @.str.cache.1810 = internal global ptr null, align 8
 @.str.1811 = private unnamed_addr constant [16 x i8] c"spec_atomic_get\00"
 @.str.cache.1811 = internal global ptr null, align 8
-@.str.1812 = private unnamed_addr constant [18 x i8] c"spec_cli_args_map\00"
+@.str.1812 = private unnamed_addr constant [22 x i8] c"spec_process_raw_args\00"
 @.str.cache.1812 = internal global ptr null, align 8
-@.str.1813 = private unnamed_addr constant [22 x i8] c"spec_process_raw_args\00"
+@.str.1813 = private unnamed_addr constant [9 x i8] c"declare \00"
 @.str.cache.1813 = internal global ptr null, align 8
-@.str.1814 = private unnamed_addr constant [9 x i8] c"declare \00"
+@.str.1814 = private unnamed_addr constant [3 x i8] c" @\00"
 @.str.cache.1814 = internal global ptr null, align 8
-@.str.1815 = private unnamed_addr constant [3 x i8] c" @\00"
+@.str.1815 = private unnamed_addr constant [3 x i8] c")\0A\00"
 @.str.cache.1815 = internal global ptr null, align 8
-@.str.1816 = private unnamed_addr constant [3 x i8] c")\0A\00"
+@.str.1816 = private unnamed_addr constant [16 x i8] c"; Spec LLVM IR\0A\00"
 @.str.cache.1816 = internal global ptr null, align 8
-@.str.1817 = private unnamed_addr constant [16 x i8] c"; Spec LLVM IR\0A\00"
+@.str.1817 = private unnamed_addr constant [20 x i8] c" = internal global \00"
 @.str.cache.1817 = internal global ptr null, align 8
-@.str.1818 = private unnamed_addr constant [20 x i8] c" = internal global \00"
+@.str.1818 = private unnamed_addr constant [9 x i8] c"%struct.\00"
 @.str.cache.1818 = internal global ptr null, align 8
-@.str.1819 = private unnamed_addr constant [9 x i8] c"%struct.\00"
+@.str.1819 = private unnamed_addr constant [11 x i8] c" = type { \00"
 @.str.cache.1819 = internal global ptr null, align 8
-@.str.1820 = private unnamed_addr constant [11 x i8] c" = type { \00"
+@.str.1820 = private unnamed_addr constant [4 x i8] c" }\0A\00"
 @.str.cache.1820 = internal global ptr null, align 8
-@.str.1821 = private unnamed_addr constant [4 x i8] c" }\0A\00"
+@.str.1821 = private unnamed_addr constant [12 x i8] c"@.typename.\00"
 @.str.cache.1821 = internal global ptr null, align 8
-@.str.1822 = private unnamed_addr constant [12 x i8] c"@.typename.\00"
+@.str.1822 = private unnamed_addr constant [9 x i8] c"ptr null\00"
 @.str.cache.1822 = internal global ptr null, align 8
-@.str.1823 = private unnamed_addr constant [9 x i8] c"ptr null\00"
+@.str.1823 = private unnamed_addr constant [6 x i8] c"ptr @\00"
 @.str.cache.1823 = internal global ptr null, align 8
-@.str.1824 = private unnamed_addr constant [6 x i8] c"ptr @\00"
+@.str.1824 = private unnamed_addr constant [10 x i8] c"@.vtable.\00"
 @.str.cache.1824 = internal global ptr null, align 8
-@.str.1825 = private unnamed_addr constant [10 x i8] c"@.vtable.\00"
+@.str.1825 = private unnamed_addr constant [14 x i8] c" = constant [\00"
 @.str.cache.1825 = internal global ptr null, align 8
-@.str.1826 = private unnamed_addr constant [14 x i8] c" = constant [\00"
+@.str.1826 = private unnamed_addr constant [10 x i8] c" x ptr] [\00"
 @.str.cache.1826 = internal global ptr null, align 8
-@.str.1827 = private unnamed_addr constant [10 x i8] c" x ptr] [\00"
+@.str.1827 = private unnamed_addr constant [3 x i8] c"]\0A\00"
 @.str.cache.1827 = internal global ptr null, align 8
-@.str.1828 = private unnamed_addr constant [3 x i8] c"]\0A\00"
+@.str.1828 = private unnamed_addr constant [39 x i8] c" = constant [1 x ptr] zeroinitializer\0A\00"
 @.str.cache.1828 = internal global ptr null, align 8
-@.str.1829 = private unnamed_addr constant [39 x i8] c" = constant [1 x ptr] zeroinitializer\0A\00"
+@.str.1829 = private unnamed_addr constant [7 x i8] c"@.src.\00"
 @.str.cache.1829 = internal global ptr null, align 8
-@.str.1830 = private unnamed_addr constant [7 x i8] c"@.src.\00"
+@.str.1830 = private unnamed_addr constant [9 x i8] c"@.bname.\00"
 @.str.cache.1830 = internal global ptr null, align 8
-@.str.1831 = private unnamed_addr constant [9 x i8] c"@.bname.\00"
+@.str.1831 = private unnamed_addr constant [5 x i8] c"ptr \00"
 @.str.cache.1831 = internal global ptr null, align 8
-@.str.1832 = private unnamed_addr constant [5 x i8] c"ptr \00"
+@.str.1832 = private unnamed_addr constant [9 x i8] c"@.bases.\00"
 @.str.cache.1832 = internal global ptr null, align 8
-@.str.1833 = private unnamed_addr constant [9 x i8] c"@.bases.\00"
+@.str.1833 = private unnamed_addr constant [22 x i8] c" = private constant [\00"
 @.str.cache.1833 = internal global ptr null, align 8
-@.str.1834 = private unnamed_addr constant [22 x i8] c" = private constant [\00"
+@.str.1834 = private unnamed_addr constant [9 x i8] c"@.mname.\00"
 @.str.cache.1834 = internal global ptr null, align 8
-@.str.1835 = private unnamed_addr constant [9 x i8] c"@.mname.\00"
+@.str.1835 = private unnamed_addr constant [11 x i8] c"@.methods.\00"
 @.str.cache.1835 = internal global ptr null, align 8
-@.str.1836 = private unnamed_addr constant [11 x i8] c"@.methods.\00"
+@.str.1836 = private unnamed_addr constant [4 x i8] c" x \00"
 @.str.cache.1836 = internal global ptr null, align 8
-@.str.1837 = private unnamed_addr constant [4 x i8] c" x \00"
+@.str.1837 = private unnamed_addr constant [4 x i8] c"] [\00"
 @.str.cache.1837 = internal global ptr null, align 8
-@.str.1838 = private unnamed_addr constant [4 x i8] c"] [\00"
+@.str.1838 = private unnamed_addr constant [9 x i8] c"@.fname.\00"
 @.str.cache.1838 = internal global ptr null, align 8
-@.str.1839 = private unnamed_addr constant [9 x i8] c"@.fname.\00"
+@.str.1839 = private unnamed_addr constant [9 x i8] c"@.ftype.\00"
 @.str.cache.1839 = internal global ptr null, align 8
-@.str.1840 = private unnamed_addr constant [9 x i8] c"@.ftype.\00"
+@.str.1840 = private unnamed_addr constant [38 x i8] c"ptrtoint (ptr getelementptr (%struct.\00"
 @.str.cache.1840 = internal global ptr null, align 8
-@.str.1841 = private unnamed_addr constant [38 x i8] c"ptrtoint (ptr getelementptr (%struct.\00"
+@.str.1841 = private unnamed_addr constant [24 x i8] c", ptr null, i32 0, i32 \00"
 @.str.cache.1841 = internal global ptr null, align 8
-@.str.1842 = private unnamed_addr constant [24 x i8] c", ptr null, i32 0, i32 \00"
+@.str.1842 = private unnamed_addr constant [10 x i8] c") to i32)\00"
 @.str.cache.1842 = internal global ptr null, align 8
-@.str.1843 = private unnamed_addr constant [10 x i8] c") to i32)\00"
+@.str.1843 = private unnamed_addr constant [10 x i8] c"@.fields.\00"
 @.str.cache.1843 = internal global ptr null, align 8
-@.str.1844 = private unnamed_addr constant [10 x i8] c"@.fields.\00"
+@.str.1844 = private unnamed_addr constant [8 x i8] c"@.meta.\00"
 @.str.cache.1844 = internal global ptr null, align 8
-@.str.1845 = private unnamed_addr constant [8 x i8] c"@.meta.\00"
+@.str.1845 = private unnamed_addr constant [21 x i8] c" = private constant \00"
 @.str.cache.1845 = internal global ptr null, align 8
-@.str.1846 = private unnamed_addr constant [21 x i8] c" = private constant \00"
+@.str.1846 = private unnamed_addr constant [12 x i8] c"ptr @.meta.\00"
 @.str.cache.1846 = internal global ptr null, align 8
-@.str.1847 = private unnamed_addr constant [12 x i8] c"ptr @.meta.\00"
+@.str.1847 = private unnamed_addr constant [9 x i8] c"@.hname.\00"
 @.str.cache.1847 = internal global ptr null, align 8
-@.str.1848 = private unnamed_addr constant [9 x i8] c"@.hname.\00"
+@.str.1848 = private unnamed_addr constant [14 x i8] c"@.held_names.\00"
 @.str.cache.1848 = internal global ptr null, align 8
-@.str.1849 = private unnamed_addr constant [14 x i8] c"@.held_names.\00"
+@.str.1849 = private unnamed_addr constant [16 x i8] c"@.held_getters.\00"
 @.str.cache.1849 = internal global ptr null, align 8
-@.str.1850 = private unnamed_addr constant [16 x i8] c"@.held_getters.\00"
+@.str.1850 = private unnamed_addr constant [34 x i8] c"@spec_class_registry = constant [\00"
 @.str.cache.1850 = internal global ptr null, align 8
-@.str.1851 = private unnamed_addr constant [34 x i8] c"@spec_class_registry = constant [\00"
+@.str.1851 = private unnamed_addr constant [59 x i8] c"@spec_class_registry = constant [1 x ptr] zeroinitializer\0A\00"
 @.str.cache.1851 = internal global ptr null, align 8
-@.str.1852 = private unnamed_addr constant [59 x i8] c"@spec_class_registry = constant [1 x ptr] zeroinitializer\0A\00"
+@.str.1852 = private unnamed_addr constant [42 x i8] c"define i32 @spec_class_registry_count() {\00"
 @.str.cache.1852 = internal global ptr null, align 8
-@.str.1853 = private unnamed_addr constant [42 x i8] c"define i32 @spec_class_registry_count() {\00"
+@.str.1853 = private unnamed_addr constant [12 x i8] c"\0A  ret i32 \00"
 @.str.cache.1853 = internal global ptr null, align 8
-@.str.1854 = private unnamed_addr constant [12 x i8] c"\0A  ret i32 \00"
+@.str.1854 = private unnamed_addr constant [4 x i8] c"\0A}\0A\00"
 @.str.cache.1854 = internal global ptr null, align 8
-@.str.1855 = private unnamed_addr constant [4 x i8] c"\0A}\0A\00"
+@.str.1855 = private unnamed_addr constant [17 x i8] c" zeroinitializer\00"
 @.str.cache.1855 = internal global ptr null, align 8
-@.str.1856 = private unnamed_addr constant [17 x i8] c" zeroinitializer\00"
+@.str.1856 = private unnamed_addr constant [33 x i8] c"@spec_held_registry = constant [\00"
 @.str.cache.1856 = internal global ptr null, align 8
-@.str.1857 = private unnamed_addr constant [33 x i8] c"@spec_held_registry = constant [\00"
+@.str.1857 = private unnamed_addr constant [4 x i8] c"]\0A\0A\00"
 @.str.cache.1857 = internal global ptr null, align 8
-@.str.1858 = private unnamed_addr constant [4 x i8] c"]\0A\0A\00"
+@.str.1858 = private unnamed_addr constant [7 x i8] c"@.str.\00"
 @.str.cache.1858 = internal global ptr null, align 8
-@.str.1859 = private unnamed_addr constant [7 x i8] c"@.str.\00"
+@.str.1859 = private unnamed_addr constant [35 x i8] c" = private unnamed_addr constant [\00"
 @.str.cache.1859 = internal global ptr null, align 8
-@.str.1860 = private unnamed_addr constant [35 x i8] c" = private unnamed_addr constant [\00"
+@.str.1860 = private unnamed_addr constant [10 x i8] c" x i8] c\22\00"
 @.str.cache.1860 = internal global ptr null, align 8
-@.str.1861 = private unnamed_addr constant [10 x i8] c" x i8] c\22\00"
+@.str.1861 = private unnamed_addr constant [6 x i8] c"\5C00\22\0A\00"
 @.str.cache.1861 = internal global ptr null, align 8
-@.str.1862 = private unnamed_addr constant [6 x i8] c"\5C00\22\0A\00"
+@.str.1862 = private unnamed_addr constant [13 x i8] c"@.str.cache.\00"
 @.str.cache.1862 = internal global ptr null, align 8
-@.str.1863 = private unnamed_addr constant [13 x i8] c"@.str.cache.\00"
+@.str.1863 = private unnamed_addr constant [38 x i8] c" = internal global ptr null, align 8\0A\00"
 @.str.cache.1863 = internal global ptr null, align 8
-@.str.1864 = private unnamed_addr constant [38 x i8] c" = internal global ptr null, align 8\0A\00"
+@.str.1864 = private unnamed_addr constant [9 x i8] c"!1 = !{}\00"
 @.str.cache.1864 = internal global ptr null, align 8
-@.str.1865 = private unnamed_addr constant [9 x i8] c"!1 = !{}\00"
+@.str.1865 = private unnamed_addr constant [34 x i8] c"!2 = !DISubroutineType(types: !1)\00"
 @.str.cache.1865 = internal global ptr null, align 8
-@.str.1866 = private unnamed_addr constant [34 x i8] c"!2 = !DISubroutineType(types: !1)\00"
+@.str.1866 = private unnamed_addr constant [12 x i8] c"LlvmEmitter\00"
 @.str.cache.1866 = internal global ptr null, align 8
-@.str.1867 = private unnamed_addr constant [12 x i8] c"LlvmEmitter\00"
+@.str.1867 = private unnamed_addr constant [17 x i8] c"emitModuleScoped\00"
 @.str.cache.1867 = internal global ptr null, align 8
-@.str.1868 = private unnamed_addr constant [17 x i8] c"emitModuleScoped\00"
+@.str.1868 = private unnamed_addr constant [43 x i8] c"./spec/base/compiler/llvm/LlvmEmitter.spec\00"
 @.str.cache.1868 = internal global ptr null, align 8
-@.str.1869 = private unnamed_addr constant [43 x i8] c"./spec/base/compiler/llvm/LlvmEmitter.spec\00"
+@.str.1869 = private unnamed_addr constant [7 x i8] c"<spec>\00"
 @.str.cache.1869 = internal global ptr null, align 8
-@.str.1870 = private unnamed_addr constant [7 x i8] c"<spec>\00"
+@.str.1870 = private unnamed_addr constant [23 x i8] c" = !DIFile(filename: \22\00"
 @.str.cache.1870 = internal global ptr null, align 8
-@.str.1871 = private unnamed_addr constant [23 x i8] c" = !DIFile(filename: \22\00"
+@.str.1871 = private unnamed_addr constant [16 x i8] c"\22, directory: \22\00"
 @.str.cache.1871 = internal global ptr null, align 8
-@.str.1872 = private unnamed_addr constant [16 x i8] c"\22, directory: \22\00"
+@.str.1872 = private unnamed_addr constant [3 x i8] c"\22)\00"
 @.str.cache.1872 = internal global ptr null, align 8
-@.str.1873 = private unnamed_addr constant [3 x i8] c"\22)\00"
+@.str.1873 = private unnamed_addr constant [22 x i8] c" = !DILocation(line: \00"
 @.str.cache.1873 = internal global ptr null, align 8
-@.str.1874 = private unnamed_addr constant [22 x i8] c" = !DILocation(line: \00"
+@.str.1874 = private unnamed_addr constant [22 x i8] c", column: 1, scope: !\00"
 @.str.cache.1874 = internal global ptr null, align 8
-@.str.1875 = private unnamed_addr constant [22 x i8] c", column: 1, scope: !\00"
+@.str.1875 = private unnamed_addr constant [3 x i8] c"\5C\22\00"
 @.str.cache.1875 = internal global ptr null, align 8
-@.str.1876 = private unnamed_addr constant [3 x i8] c"\5C\22\00"
+@.str.1876 = private unnamed_addr constant [3 x i8] c"\5C\5C\00"
 @.str.cache.1876 = internal global ptr null, align 8
-@.str.1877 = private unnamed_addr constant [3 x i8] c"\5C\5C\00"
+@.str.1877 = private unnamed_addr constant [9 x i8] c", !dbg !\00"
 @.str.cache.1877 = internal global ptr null, align 8
-@.str.1878 = private unnamed_addr constant [9 x i8] c", !dbg !\00"
+@.str.1878 = private unnamed_addr constant [10 x i8] c"main.spec\00"
 @.str.cache.1878 = internal global ptr null, align 8
-@.str.1879 = private unnamed_addr constant [10 x i8] c"main.spec\00"
+@.str.1879 = private unnamed_addr constant [37 x i8] c" = !{i32 7, !\22Dwarf Version\22, i32 5}\00"
 @.str.cache.1879 = internal global ptr null, align 8
-@.str.1880 = private unnamed_addr constant [37 x i8] c" = !{i32 7, !\22Dwarf Version\22, i32 5}\00"
+@.str.1880 = private unnamed_addr constant [42 x i8] c" = !{i32 2, !\22Debug Info Version\22, i32 3}\00"
 @.str.cache.1880 = internal global ptr null, align 8
-@.str.1881 = private unnamed_addr constant [42 x i8] c" = !{i32 2, !\22Debug Info Version\22, i32 3}\00"
+@.str.1881 = private unnamed_addr constant [60 x i8] c"!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !\00"
 @.str.cache.1881 = internal global ptr null, align 8
-@.str.1882 = private unnamed_addr constant [60 x i8] c"!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !\00"
+@.str.1882 = private unnamed_addr constant [148 x i8] c", producer: \22spec\22, isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !1, splitDebugInlining: false, nameTableKind: None)\00"
 @.str.cache.1882 = internal global ptr null, align 8
-@.str.1883 = private unnamed_addr constant [148 x i8] c", producer: \22spec\22, isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !1, splitDebugInlining: false, nameTableKind: None)\00"
+@.str.1883 = private unnamed_addr constant [22 x i8] c"!llvm.dbg.cu = !{!0}\0A\00"
 @.str.cache.1883 = internal global ptr null, align 8
-@.str.1884 = private unnamed_addr constant [22 x i8] c"!llvm.dbg.cu = !{!0}\0A\00"
+@.str.1884 = private unnamed_addr constant [25 x i8] c"!llvm.module.flags = !{!\00"
 @.str.cache.1884 = internal global ptr null, align 8
-@.str.1885 = private unnamed_addr constant [25 x i8] c"!llvm.module.flags = !{!\00"
+@.str.1885 = private unnamed_addr constant [4 x i8] c", !\00"
 @.str.cache.1885 = internal global ptr null, align 8
-@.str.1886 = private unnamed_addr constant [4 x i8] c", !\00"
+@.str.1886 = private unnamed_addr constant [4 x i8] c"}\0A\0A\00"
 @.str.cache.1886 = internal global ptr null, align 8
-@.str.1887 = private unnamed_addr constant [4 x i8] c"}\0A\0A\00"
+@.str.1887 = private unnamed_addr constant [17 x i8] c"0123456789ABCDEF\00"
 @.str.cache.1887 = internal global ptr null, align 8
-@.str.1888 = private unnamed_addr constant [17 x i8] c"0123456789ABCDEF\00"
+@.str.1888 = private unnamed_addr constant [14 x i8] c" alwaysinline\00"
 @.str.cache.1888 = internal global ptr null, align 8
-@.str.1889 = private unnamed_addr constant [14 x i8] c" alwaysinline\00"
+@.str.1889 = private unnamed_addr constant [34 x i8] c" = distinct !DISubprogram(name: \22\00"
 @.str.cache.1889 = internal global ptr null, align 8
-@.str.1890 = private unnamed_addr constant [34 x i8] c" = distinct !DISubprogram(name: \22\00"
+@.str.1890 = private unnamed_addr constant [12 x i8] c"\22, scope: !\00"
 @.str.cache.1890 = internal global ptr null, align 8
-@.str.1891 = private unnamed_addr constant [12 x i8] c"\22, scope: !\00"
+@.str.1891 = private unnamed_addr constant [10 x i8] c", file: !\00"
 @.str.cache.1891 = internal global ptr null, align 8
-@.str.1892 = private unnamed_addr constant [10 x i8] c", file: !\00"
+@.str.1892 = private unnamed_addr constant [9 x i8] c", line: \00"
 @.str.cache.1892 = internal global ptr null, align 8
-@.str.1893 = private unnamed_addr constant [9 x i8] c", line: \00"
+@.str.1893 = private unnamed_addr constant [24 x i8] c", type: !2, scopeLine: \00"
 @.str.cache.1893 = internal global ptr null, align 8
-@.str.1894 = private unnamed_addr constant [24 x i8] c", type: !2, scopeLine: \00"
+@.str.1894 = private unnamed_addr constant [41 x i8] c", spFlags: DISPFlagDefinition, unit: !0)\00"
 @.str.cache.1894 = internal global ptr null, align 8
-@.str.1895 = private unnamed_addr constant [41 x i8] c", spFlags: DISPFlagDefinition, unit: !0)\00"
+@.str.1895 = private unnamed_addr constant [8 x i8] c" !dbg !\00"
 @.str.cache.1895 = internal global ptr null, align 8
-@.str.1896 = private unnamed_addr constant [8 x i8] c" !dbg !\00"
+@.str.1896 = private unnamed_addr constant [8 x i8] c"define \00"
 @.str.cache.1896 = internal global ptr null, align 8
-@.str.1897 = private unnamed_addr constant [8 x i8] c"define \00"
+@.str.1897 = private unnamed_addr constant [4 x i8] c" {\0A\00"
 @.str.cache.1897 = internal global ptr null, align 8
-@.str.1898 = private unnamed_addr constant [4 x i8] c" {\0A\00"
+@.str.1898 = private unnamed_addr constant [3 x i8] c":\0A\00"
 @.str.cache.1898 = internal global ptr null, align 8
-@.str.1899 = private unnamed_addr constant [3 x i8] c":\0A\00"
+@.str.1899 = private unnamed_addr constant [3 x i8] c"}\0A\00"
 @.str.cache.1899 = internal global ptr null, align 8
-@.str.1900 = private unnamed_addr constant [3 x i8] c"}\0A\00"
+@.str.1900 = private unnamed_addr constant [15 x i8] c" = add i64 0, \00"
 @.str.cache.1900 = internal global ptr null, align 8
-@.str.1901 = private unnamed_addr constant [15 x i8] c" = add i64 0, \00"
+@.str.1901 = private unnamed_addr constant [21 x i8] c" = fadd double 0.0, \00"
 @.str.cache.1901 = internal global ptr null, align 8
-@.str.1902 = private unnamed_addr constant [21 x i8] c" = fadd double 0.0, \00"
+@.str.1902 = private unnamed_addr constant [15 x i8] c" = add i1 0, 1\00"
 @.str.cache.1902 = internal global ptr null, align 8
-@.str.1903 = private unnamed_addr constant [15 x i8] c" = add i1 0, 1\00"
+@.str.1903 = private unnamed_addr constant [15 x i8] c" = add i1 0, 0\00"
 @.str.cache.1903 = internal global ptr null, align 8
-@.str.1904 = private unnamed_addr constant [15 x i8] c" = add i1 0, 0\00"
+@.str.1904 = private unnamed_addr constant [45 x i8] c" = call ptr @__spec_intern_cached(ptr @.str.\00"
 @.str.cache.1904 = internal global ptr null, align 8
-@.str.1905 = private unnamed_addr constant [45 x i8] c" = call ptr @__spec_intern_cached(ptr @.str.\00"
+@.str.1905 = private unnamed_addr constant [19 x i8] c", ptr @.str.cache.\00"
 @.str.cache.1905 = internal global ptr null, align 8
-@.str.1906 = private unnamed_addr constant [19 x i8] c", ptr @.str.cache.\00"
+@.str.1906 = private unnamed_addr constant [11 x i8] c" = alloca \00"
 @.str.cache.1906 = internal global ptr null, align 8
-@.str.1907 = private unnamed_addr constant [11 x i8] c" = alloca \00"
+@.str.1907 = private unnamed_addr constant [9 x i8] c" = load \00"
 @.str.cache.1907 = internal global ptr null, align 8
-@.str.1908 = private unnamed_addr constant [9 x i8] c" = load \00"
+@.str.1908 = private unnamed_addr constant [7 x i8] c", ptr \00"
 @.str.cache.1908 = internal global ptr null, align 8
-@.str.1909 = private unnamed_addr constant [7 x i8] c", ptr \00"
+@.str.1909 = private unnamed_addr constant [7 x i8] c"store \00"
 @.str.cache.1909 = internal global ptr null, align 8
-@.str.1910 = private unnamed_addr constant [7 x i8] c"store \00"
+@.str.1910 = private unnamed_addr constant [4 x i8] c" = \00"
 @.str.cache.1910 = internal global ptr null, align 8
-@.str.1911 = private unnamed_addr constant [4 x i8] c" = \00"
+@.str.1911 = private unnamed_addr constant [16 x i8] c" = fneg double \00"
 @.str.cache.1911 = internal global ptr null, align 8
-@.str.1912 = private unnamed_addr constant [16 x i8] c" = fneg double \00"
+@.str.1912 = private unnamed_addr constant [15 x i8] c" = sub i64 0, \00"
 @.str.cache.1912 = internal global ptr null, align 8
-@.str.1913 = private unnamed_addr constant [15 x i8] c" = sub i64 0, \00"
+@.str.1913 = private unnamed_addr constant [11 x i8] c" = xor i1 \00"
 @.str.cache.1913 = internal global ptr null, align 8
-@.str.1914 = private unnamed_addr constant [11 x i8] c" = xor i1 \00"
+@.str.1914 = private unnamed_addr constant [4 x i8] c", 1\00"
 @.str.cache.1914 = internal global ptr null, align 8
-@.str.1915 = private unnamed_addr constant [4 x i8] c", 1\00"
+@.str.1915 = private unnamed_addr constant [12 x i8] c" = xor i64 \00"
 @.str.cache.1915 = internal global ptr null, align 8
-@.str.1916 = private unnamed_addr constant [12 x i8] c" = xor i64 \00"
+@.str.1916 = private unnamed_addr constant [5 x i8] c", -1\00"
 @.str.cache.1916 = internal global ptr null, align 8
-@.str.1917 = private unnamed_addr constant [5 x i8] c", -1\00"
+@.str.1917 = private unnamed_addr constant [4 x i8] c"oeq\00"
 @.str.cache.1917 = internal global ptr null, align 8
-@.str.1918 = private unnamed_addr constant [4 x i8] c"oeq\00"
+@.str.1918 = private unnamed_addr constant [4 x i8] c"one\00"
 @.str.cache.1918 = internal global ptr null, align 8
-@.str.1919 = private unnamed_addr constant [4 x i8] c"one\00"
+@.str.1919 = private unnamed_addr constant [4 x i8] c"olt\00"
 @.str.cache.1919 = internal global ptr null, align 8
-@.str.1920 = private unnamed_addr constant [4 x i8] c"olt\00"
+@.str.1920 = private unnamed_addr constant [4 x i8] c"ole\00"
 @.str.cache.1920 = internal global ptr null, align 8
-@.str.1921 = private unnamed_addr constant [4 x i8] c"ole\00"
+@.str.1921 = private unnamed_addr constant [4 x i8] c"ogt\00"
 @.str.cache.1921 = internal global ptr null, align 8
-@.str.1922 = private unnamed_addr constant [4 x i8] c"ogt\00"
+@.str.1922 = private unnamed_addr constant [4 x i8] c"oge\00"
 @.str.cache.1922 = internal global ptr null, align 8
-@.str.1923 = private unnamed_addr constant [4 x i8] c"oge\00"
+@.str.1923 = private unnamed_addr constant [9 x i8] c" = fcmp \00"
 @.str.cache.1923 = internal global ptr null, align 8
-@.str.1924 = private unnamed_addr constant [9 x i8] c" = fcmp \00"
+@.str.1924 = private unnamed_addr constant [9 x i8] c" double \00"
 @.str.cache.1924 = internal global ptr null, align 8
-@.str.1925 = private unnamed_addr constant [9 x i8] c" double \00"
+@.str.1925 = private unnamed_addr constant [3 x i8] c"eq\00"
 @.str.cache.1925 = internal global ptr null, align 8
-@.str.1926 = private unnamed_addr constant [3 x i8] c"eq\00"
+@.str.1926 = private unnamed_addr constant [3 x i8] c"ne\00"
 @.str.cache.1926 = internal global ptr null, align 8
-@.str.1927 = private unnamed_addr constant [3 x i8] c"ne\00"
+@.str.1927 = private unnamed_addr constant [4 x i8] c"slt\00"
 @.str.cache.1927 = internal global ptr null, align 8
-@.str.1928 = private unnamed_addr constant [4 x i8] c"slt\00"
+@.str.1928 = private unnamed_addr constant [4 x i8] c"sle\00"
 @.str.cache.1928 = internal global ptr null, align 8
-@.str.1929 = private unnamed_addr constant [4 x i8] c"sle\00"
+@.str.1929 = private unnamed_addr constant [4 x i8] c"sgt\00"
 @.str.cache.1929 = internal global ptr null, align 8
-@.str.1930 = private unnamed_addr constant [4 x i8] c"sgt\00"
+@.str.1930 = private unnamed_addr constant [4 x i8] c"sge\00"
 @.str.cache.1930 = internal global ptr null, align 8
-@.str.1931 = private unnamed_addr constant [4 x i8] c"sge\00"
+@.str.1931 = private unnamed_addr constant [3 x i8] c"u<\00"
 @.str.cache.1931 = internal global ptr null, align 8
-@.str.1932 = private unnamed_addr constant [3 x i8] c"u<\00"
+@.str.1932 = private unnamed_addr constant [4 x i8] c"ult\00"
 @.str.cache.1932 = internal global ptr null, align 8
-@.str.1933 = private unnamed_addr constant [4 x i8] c"ult\00"
+@.str.1933 = private unnamed_addr constant [4 x i8] c"u<=\00"
 @.str.cache.1933 = internal global ptr null, align 8
-@.str.1934 = private unnamed_addr constant [4 x i8] c"u<=\00"
+@.str.1934 = private unnamed_addr constant [4 x i8] c"ule\00"
 @.str.cache.1934 = internal global ptr null, align 8
-@.str.1935 = private unnamed_addr constant [4 x i8] c"ule\00"
+@.str.1935 = private unnamed_addr constant [3 x i8] c"u>\00"
 @.str.cache.1935 = internal global ptr null, align 8
-@.str.1936 = private unnamed_addr constant [3 x i8] c"u>\00"
+@.str.1936 = private unnamed_addr constant [4 x i8] c"ugt\00"
 @.str.cache.1936 = internal global ptr null, align 8
-@.str.1937 = private unnamed_addr constant [4 x i8] c"ugt\00"
+@.str.1937 = private unnamed_addr constant [4 x i8] c"u>=\00"
 @.str.cache.1937 = internal global ptr null, align 8
-@.str.1938 = private unnamed_addr constant [4 x i8] c"u>=\00"
+@.str.1938 = private unnamed_addr constant [4 x i8] c"uge\00"
 @.str.cache.1938 = internal global ptr null, align 8
-@.str.1939 = private unnamed_addr constant [4 x i8] c"uge\00"
+@.str.1939 = private unnamed_addr constant [9 x i8] c" = icmp \00"
 @.str.cache.1939 = internal global ptr null, align 8
-@.str.1940 = private unnamed_addr constant [9 x i8] c" = icmp \00"
+@.str.1940 = private unnamed_addr constant [9 x i8] c" = call \00"
 @.str.cache.1940 = internal global ptr null, align 8
-@.str.1941 = private unnamed_addr constant [9 x i8] c" = call \00"
+@.str.1941 = private unnamed_addr constant [6 x i8] c"call \00"
 @.str.cache.1941 = internal global ptr null, align 8
-@.str.1942 = private unnamed_addr constant [6 x i8] c"call \00"
+@.str.1942 = private unnamed_addr constant [27 x i8] c" = getelementptr i8, ptr @\00"
 @.str.cache.1942 = internal global ptr null, align 8
-@.str.1943 = private unnamed_addr constant [27 x i8] c" = getelementptr i8, ptr @\00"
+@.str.1943 = private unnamed_addr constant [8 x i8] c", i64 0\00"
 @.str.cache.1943 = internal global ptr null, align 8
-@.str.1944 = private unnamed_addr constant [8 x i8] c", i64 0\00"
+@.str.1944 = private unnamed_addr constant [10 x i8] c"type_name\00"
 @.str.cache.1944 = internal global ptr null, align 8
-@.str.1945 = private unnamed_addr constant [10 x i8] c"type_name\00"
+@.str.1945 = private unnamed_addr constant [7 x i8] c"vtable\00"
 @.str.cache.1945 = internal global ptr null, align 8
-@.str.1946 = private unnamed_addr constant [7 x i8] c"vtable\00"
+@.str.1946 = private unnamed_addr constant [5 x i8] c"_szp\00"
 @.str.cache.1946 = internal global ptr null, align 8
-@.str.1947 = private unnamed_addr constant [5 x i8] c"_szp\00"
+@.str.1947 = private unnamed_addr constant [4 x i8] c"_sz\00"
 @.str.cache.1947 = internal global ptr null, align 8
-@.str.1948 = private unnamed_addr constant [4 x i8] c"_sz\00"
+@.str.1948 = private unnamed_addr constant [5 x i8] c"_tnp\00"
 @.str.cache.1948 = internal global ptr null, align 8
-@.str.1949 = private unnamed_addr constant [5 x i8] c"_tnp\00"
+@.str.1949 = private unnamed_addr constant [5 x i8] c"_vtp\00"
 @.str.cache.1949 = internal global ptr null, align 8
-@.str.1950 = private unnamed_addr constant [5 x i8] c"_vtp\00"
+@.str.1950 = private unnamed_addr constant [26 x i8] c" = getelementptr %struct.\00"
 @.str.cache.1950 = internal global ptr null, align 8
-@.str.1951 = private unnamed_addr constant [26 x i8] c" = getelementptr %struct.\00"
+@.str.1951 = private unnamed_addr constant [21 x i8] c", ptr null, i32 1\0A  \00"
 @.str.cache.1951 = internal global ptr null, align 8
-@.str.1952 = private unnamed_addr constant [21 x i8] c", ptr null, i32 1\0A  \00"
+@.str.1952 = private unnamed_addr constant [17 x i8] c" = ptrtoint ptr \00"
 @.str.cache.1952 = internal global ptr null, align 8
-@.str.1953 = private unnamed_addr constant [17 x i8] c" = ptrtoint ptr \00"
+@.str.1953 = private unnamed_addr constant [11 x i8] c" to i64\0A  \00"
 @.str.cache.1953 = internal global ptr null, align 8
-@.str.1954 = private unnamed_addr constant [11 x i8] c" to i64\0A  \00"
+@.str.1954 = private unnamed_addr constant [32 x i8] c" = call ptr @spec_rt_alloc(i64 \00"
 @.str.cache.1954 = internal global ptr null, align 8
-@.str.1955 = private unnamed_addr constant [32 x i8] c" = call ptr @spec_rt_alloc(i64 \00"
+@.str.1955 = private unnamed_addr constant [5 x i8] c")\0A  \00"
 @.str.cache.1955 = internal global ptr null, align 8
-@.str.1956 = private unnamed_addr constant [5 x i8] c")\0A  \00"
+@.str.1956 = private unnamed_addr constant [35 x i8] c" = getelementptr inbounds %struct.\00"
 @.str.cache.1956 = internal global ptr null, align 8
-@.str.1957 = private unnamed_addr constant [35 x i8] c" = getelementptr inbounds %struct.\00"
+@.str.1957 = private unnamed_addr constant [14 x i8] c", i32 0, i32 \00"
 @.str.cache.1957 = internal global ptr null, align 8
-@.str.1958 = private unnamed_addr constant [14 x i8] c", i32 0, i32 \00"
+@.str.1958 = private unnamed_addr constant [4 x i8] c"\0A  \00"
 @.str.cache.1958 = internal global ptr null, align 8
-@.str.1959 = private unnamed_addr constant [4 x i8] c"\0A  \00"
+@.str.1959 = private unnamed_addr constant [22 x i8] c"store ptr @.typename.\00"
 @.str.cache.1959 = internal global ptr null, align 8
-@.str.1960 = private unnamed_addr constant [22 x i8] c"store ptr @.typename.\00"
+@.str.1960 = private unnamed_addr constant [20 x i8] c"store ptr @.vtable.\00"
 @.str.cache.1960 = internal global ptr null, align 8
-@.str.1961 = private unnamed_addr constant [20 x i8] c"store ptr @.vtable.\00"
+@.str.1961 = private unnamed_addr constant [27 x i8] c" = getelementptr ptr, ptr \00"
 @.str.cache.1961 = internal global ptr null, align 8
-@.str.1962 = private unnamed_addr constant [27 x i8] c" = getelementptr ptr, ptr \00"
+@.str.1962 = private unnamed_addr constant [7 x i8] c", i64 \00"
 @.str.cache.1962 = internal global ptr null, align 8
-@.str.1963 = private unnamed_addr constant [7 x i8] c", i64 \00"
+@.str.1963 = private unnamed_addr constant [15 x i8] c" = sitofp i64 \00"
 @.str.cache.1963 = internal global ptr null, align 8
-@.str.1964 = private unnamed_addr constant [15 x i8] c" = sitofp i64 \00"
+@.str.1964 = private unnamed_addr constant [11 x i8] c" to double\00"
 @.str.cache.1964 = internal global ptr null, align 8
-@.str.1965 = private unnamed_addr constant [11 x i8] c" to double\00"
+@.str.1965 = private unnamed_addr constant [18 x i8] c" = fptosi double \00"
 @.str.cache.1965 = internal global ptr null, align 8
-@.str.1966 = private unnamed_addr constant [18 x i8] c" = fptosi double \00"
+@.str.1966 = private unnamed_addr constant [8 x i8] c" to i64\00"
 @.str.cache.1966 = internal global ptr null, align 8
-@.str.1967 = private unnamed_addr constant [8 x i8] c" to i64\00"
+@.str.1967 = private unnamed_addr constant [13 x i8] c" = inttoptr \00"
 @.str.cache.1967 = internal global ptr null, align 8
-@.str.1968 = private unnamed_addr constant [13 x i8] c" = inttoptr \00"
+@.str.1968 = private unnamed_addr constant [8 x i8] c" to ptr\00"
 @.str.cache.1968 = internal global ptr null, align 8
-@.str.1969 = private unnamed_addr constant [8 x i8] c" to ptr\00"
+@.str.1969 = private unnamed_addr constant [6 x i8] c"_bits\00"
 @.str.cache.1969 = internal global ptr null, align 8
-@.str.1970 = private unnamed_addr constant [6 x i8] c"_bits\00"
+@.str.1970 = private unnamed_addr constant [19 x i8] c" = bitcast double \00"
 @.str.cache.1970 = internal global ptr null, align 8
-@.str.1971 = private unnamed_addr constant [19 x i8] c" = bitcast double \00"
+@.str.1971 = private unnamed_addr constant [17 x i8] c" = inttoptr i64 \00"
 @.str.cache.1971 = internal global ptr null, align 8
-@.str.1972 = private unnamed_addr constant [17 x i8] c" = inttoptr i64 \00"
+@.str.1972 = private unnamed_addr constant [16 x i8] c" = bitcast i64 \00"
 @.str.cache.1972 = internal global ptr null, align 8
-@.str.1973 = private unnamed_addr constant [16 x i8] c" = bitcast i64 \00"
+@.str.1973 = private unnamed_addr constant [12 x i8] c" = zext i1 \00"
 @.str.cache.1973 = internal global ptr null, align 8
-@.str.1974 = private unnamed_addr constant [12 x i8] c" = zext i1 \00"
+@.str.1974 = private unnamed_addr constant [16 x i8] c" = icmp ne i64 \00"
 @.str.cache.1974 = internal global ptr null, align 8
-@.str.1975 = private unnamed_addr constant [16 x i8] c" = icmp ne i64 \00"
+@.str.1975 = private unnamed_addr constant [4 x i8] c", 0\00"
 @.str.cache.1975 = internal global ptr null, align 8
-@.str.1976 = private unnamed_addr constant [4 x i8] c", 0\00"
+@.str.1976 = private unnamed_addr constant [12 x i8] c" = bitcast \00"
 @.str.cache.1976 = internal global ptr null, align 8
-@.str.1977 = private unnamed_addr constant [12 x i8] c" = bitcast \00"
+@.str.1977 = private unnamed_addr constant [30 x i8] c"call ptr @spec_rt_retain(ptr \00"
 @.str.cache.1977 = internal global ptr null, align 8
-@.str.1978 = private unnamed_addr constant [30 x i8] c"call ptr @spec_rt_retain(ptr \00"
+@.str.1978 = private unnamed_addr constant [32 x i8] c"call void @spec_rt_release(ptr \00"
 @.str.cache.1978 = internal global ptr null, align 8
-@.str.1979 = private unnamed_addr constant [32 x i8] c"call void @spec_rt_release(ptr \00"
+@.str.1979 = private unnamed_addr constant [5 x i8] c"ret \00"
 @.str.cache.1979 = internal global ptr null, align 8
-@.str.1980 = private unnamed_addr constant [5 x i8] c"ret \00"
+@.str.1980 = private unnamed_addr constant [9 x i8] c"ret void\00"
 @.str.cache.1980 = internal global ptr null, align 8
-@.str.1981 = private unnamed_addr constant [9 x i8] c"ret void\00"
+@.str.1981 = private unnamed_addr constant [11 x i8] c"br label %\00"
 @.str.cache.1981 = internal global ptr null, align 8
-@.str.1982 = private unnamed_addr constant [11 x i8] c"br label %\00"
+@.str.1982 = private unnamed_addr constant [7 x i8] c"br i1 \00"
 @.str.cache.1982 = internal global ptr null, align 8
-@.str.1983 = private unnamed_addr constant [7 x i8] c"br i1 \00"
+@.str.1983 = private unnamed_addr constant [10 x i8] c", label %\00"
 @.str.cache.1983 = internal global ptr null, align 8
-@.str.1984 = private unnamed_addr constant [10 x i8] c", label %\00"
+@.str.1984 = private unnamed_addr constant [5 x i8] c"fadd\00"
 @.str.cache.1984 = internal global ptr null, align 8
-@.str.1985 = private unnamed_addr constant [5 x i8] c"fadd\00"
+@.str.1985 = private unnamed_addr constant [5 x i8] c"fsub\00"
 @.str.cache.1985 = internal global ptr null, align 8
-@.str.1986 = private unnamed_addr constant [5 x i8] c"fsub\00"
+@.str.1986 = private unnamed_addr constant [5 x i8] c"fmul\00"
 @.str.cache.1986 = internal global ptr null, align 8
-@.str.1987 = private unnamed_addr constant [5 x i8] c"fmul\00"
+@.str.1987 = private unnamed_addr constant [5 x i8] c"fdiv\00"
 @.str.cache.1987 = internal global ptr null, align 8
-@.str.1988 = private unnamed_addr constant [5 x i8] c"fdiv\00"
+@.str.1988 = private unnamed_addr constant [4 x i8] c"sub\00"
 @.str.cache.1988 = internal global ptr null, align 8
-@.str.1989 = private unnamed_addr constant [4 x i8] c"sub\00"
+@.str.1989 = private unnamed_addr constant [4 x i8] c"mul\00"
 @.str.cache.1989 = internal global ptr null, align 8
-@.str.1990 = private unnamed_addr constant [4 x i8] c"mul\00"
+@.str.1990 = private unnamed_addr constant [5 x i8] c"sdiv\00"
 @.str.cache.1990 = internal global ptr null, align 8
-@.str.1991 = private unnamed_addr constant [5 x i8] c"sdiv\00"
+@.str.1991 = private unnamed_addr constant [5 x i8] c"srem\00"
 @.str.cache.1991 = internal global ptr null, align 8
-@.str.1992 = private unnamed_addr constant [5 x i8] c"srem\00"
+@.str.1992 = private unnamed_addr constant [5 x i8] c"udiv\00"
 @.str.cache.1992 = internal global ptr null, align 8
-@.str.1993 = private unnamed_addr constant [5 x i8] c"udiv\00"
+@.str.1993 = private unnamed_addr constant [5 x i8] c"urem\00"
 @.str.cache.1993 = internal global ptr null, align 8
-@.str.1994 = private unnamed_addr constant [5 x i8] c"urem\00"
+@.str.1994 = private unnamed_addr constant [4 x i8] c"and\00"
 @.str.cache.1994 = internal global ptr null, align 8
-@.str.1995 = private unnamed_addr constant [4 x i8] c"and\00"
+@.str.1995 = private unnamed_addr constant [3 x i8] c"or\00"
 @.str.cache.1995 = internal global ptr null, align 8
-@.str.1996 = private unnamed_addr constant [3 x i8] c"or\00"
+@.str.1996 = private unnamed_addr constant [4 x i8] c"xor\00"
 @.str.cache.1996 = internal global ptr null, align 8
-@.str.1997 = private unnamed_addr constant [4 x i8] c"xor\00"
+@.str.1997 = private unnamed_addr constant [4 x i8] c"shl\00"
 @.str.cache.1997 = internal global ptr null, align 8
-@.str.1998 = private unnamed_addr constant [4 x i8] c"shl\00"
+@.str.1998 = private unnamed_addr constant [5 x i8] c"ashr\00"
 @.str.cache.1998 = internal global ptr null, align 8
-@.str.1999 = private unnamed_addr constant [5 x i8] c"ashr\00"
+@.str.1999 = private unnamed_addr constant [5 x i8] c"lshr\00"
 @.str.cache.1999 = internal global ptr null, align 8
-@.str.2000 = private unnamed_addr constant [5 x i8] c"lshr\00"
+@.str.2000 = private unnamed_addr constant [5034 x i8] c"@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer\0A@g_spec_active_threads = external global i32\0A@.str.oom = private unnamed_addr constant [14 x i8] c\22Out of memory\5C00\22\0A%struct.SpecHeader = type { i32, i32, ptr }\0Adefine internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {\0A  %da = ptrtoint ptr %destroy to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  %obj = inttoptr i64 %oa to ptr\0A  ret ptr %obj\0A}\0A@.str.uaf_retain = private unnamed_addr constant [36 x i8] c\22arc: retain of already-freed object\5C00\22\0A@.str.uaf_release = private unnamed_addr constant [37 x i8] c\22arc: release of already-freed object\5C00\22\0Adefine internal ptr @spec_rt_retain(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_retain)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_inc\0Afast_inc:\0A  %rc = load i32, ptr %h, align 4\0A  %rc1 = add i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_inc\0Aatomic_inc:\0A  %unused = atomicrmw add ptr %h, i32 1 monotonic, align 4\0A  br label %done\0Adone:\0A  ret ptr %obj\0A}\0Adefine internal void @spec_rt_release(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_release)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_dec\0Afast_dec:\0A  %rc = load i32, ptr %h, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %fast_destroy, label %fast_chk0\0Afast_destroy:\0A  store i32 0, ptr %h, align 4\0A  %oa1 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa1)\0A  br label %done\0Afast_chk0:\0A  %is_zero = icmp eq i32 %rc, 0\0A  br i1 %is_zero, label %reentrant_slow, label %fast_store\0Afast_store:\0A  %rc1 = sub i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_chk0\0Aatomic_chk0:\0A  %rc0 = load atomic i32, ptr %h monotonic, align 4\0A  %is0 = icmp eq i32 %rc0, 0\0A  br i1 %is0, label %reentrant_slow, label %atomic_dec\0Aatomic_dec:\0A  %old = atomicrmw sub ptr %h, i32 1 acq_rel, align 4\0A  %is1 = icmp eq i32 %old, 1\0A  br i1 %is1, label %atomic_destroy, label %done\0Aatomic_destroy:\0A  %oa2 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa2)\0A  br label %done\0Areentrant_slow:\0A  %oa0 = ptrtoint ptr %obj to i64\0A  call void @Arc_release(ptr null, i64 %oa0)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @spec_pool_frame() alwaysinline {\0A  %t = call i64 @Pool_poolFrame(ptr null)\0A  ret i64 %t\0A}\0Adefine internal void @spec_pool_release_to(i64 %mark) alwaysinline {\0A  call void @Pool_poolReleaseTo(ptr null, i64 %mark)\0A  ret void\0A}\0Adefine internal void @spec_pool_release_to_transfer(i64 %mark, ptr %keep) alwaysinline {\0A  %ka = ptrtoint ptr %keep to i64\0A  call void @Pool_releaseToTransferring(ptr null, i64 %mark, i64 %ka)\0A  ret void\0A}\0Adefine internal void @spec_pool_unclaim_addr(i64 %addr) alwaysinline {\0A  call void @Pool_unclaimAddr(ptr null, i64 %addr)\0A  ret void\0A}\0Adefine internal ptr @spec_claim_pool(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Pool_claimPool(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine void @spec_pool_thread_cleanup() nounwind {\0A  call void @Cleanup_threadCleanup(ptr null)\0A  call void @Pool_threadCleanup(ptr null)\0A  ret void\0A}\00"
 @.str.cache.2000 = internal global ptr null, align 8
-@.str.2001 = private unnamed_addr constant [5034 x i8] c"@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer\0A@g_spec_active_threads = external global i32\0A@.str.oom = private unnamed_addr constant [14 x i8] c\22Out of memory\5C00\22\0A%struct.SpecHeader = type { i32, i32, ptr }\0Adefine internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {\0A  %da = ptrtoint ptr %destroy to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  %obj = inttoptr i64 %oa to ptr\0A  ret ptr %obj\0A}\0A@.str.uaf_retain = private unnamed_addr constant [36 x i8] c\22arc: retain of already-freed object\5C00\22\0A@.str.uaf_release = private unnamed_addr constant [37 x i8] c\22arc: release of already-freed object\5C00\22\0Adefine internal ptr @spec_rt_retain(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_retain)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_inc\0Afast_inc:\0A  %rc = load i32, ptr %h, align 4\0A  %rc1 = add i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_inc\0Aatomic_inc:\0A  %unused = atomicrmw add ptr %h, i32 1 monotonic, align 4\0A  br label %done\0Adone:\0A  ret ptr %obj\0A}\0Adefine internal void @spec_rt_release(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_release)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_dec\0Afast_dec:\0A  %rc = load i32, ptr %h, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %fast_destroy, label %fast_chk0\0Afast_destroy:\0A  store i32 0, ptr %h, align 4\0A  %oa1 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa1)\0A  br label %done\0Afast_chk0:\0A  %is_zero = icmp eq i32 %rc, 0\0A  br i1 %is_zero, label %reentrant_slow, label %fast_store\0Afast_store:\0A  %rc1 = sub i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_chk0\0Aatomic_chk0:\0A  %rc0 = load atomic i32, ptr %h monotonic, align 4\0A  %is0 = icmp eq i32 %rc0, 0\0A  br i1 %is0, label %reentrant_slow, label %atomic_dec\0Aatomic_dec:\0A  %old = atomicrmw sub ptr %h, i32 1 acq_rel, align 4\0A  %is1 = icmp eq i32 %old, 1\0A  br i1 %is1, label %atomic_destroy, label %done\0Aatomic_destroy:\0A  %oa2 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa2)\0A  br label %done\0Areentrant_slow:\0A  %oa0 = ptrtoint ptr %obj to i64\0A  call void @Arc_release(ptr null, i64 %oa0)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @spec_pool_frame() alwaysinline {\0A  %t = call i64 @Pool_poolFrame(ptr null)\0A  ret i64 %t\0A}\0Adefine internal void @spec_pool_release_to(i64 %mark) alwaysinline {\0A  call void @Pool_poolReleaseTo(ptr null, i64 %mark)\0A  ret void\0A}\0Adefine internal void @spec_pool_release_to_transfer(i64 %mark, ptr %keep) alwaysinline {\0A  %ka = ptrtoint ptr %keep to i64\0A  call void @Pool_releaseToTransferring(ptr null, i64 %mark, i64 %ka)\0A  ret void\0A}\0Adefine internal void @spec_pool_unclaim_addr(i64 %addr) alwaysinline {\0A  call void @Pool_unclaimAddr(ptr null, i64 %addr)\0A  ret void\0A}\0Adefine internal ptr @spec_claim_pool(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Pool_claimPool(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine void @spec_pool_thread_cleanup() nounwind {\0A  call void @Cleanup_threadCleanup(ptr null)\0A  call void @Pool_threadCleanup(ptr null)\0A  ret void\0A}\00"
+@.str.2001 = private unnamed_addr constant [3496 x i8] c"%struct.SpecClosure = type { ptr, ptr, ptr }\0Adefine internal void @__spec_closure_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 1\0A  %env = load ptr, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %has_env = icmp ne ptr %env, null\0A  %has_d = icmp ne ptr %d, null\0A  %both = and i1 %has_env, %has_d\0A  br i1 %both, label %call_d, label %done\0Acall_d:\0A  call void %d(ptr %env)\0A  store ptr null, ptr %ep\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_closure_new(ptr %fn, ptr %env, ptr %destroy_env) {\0A  %c = call ptr @spec_rt_alloc(i64 24, ptr @__spec_closure_destroy)\0A  %fp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 0\0A  store ptr %fn, ptr %fp\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 1\0A  store ptr %env, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 2\0A  store ptr %destroy_env, ptr %dp\0A  ret ptr %c\0A}\0A%struct.SpecBox = type { i64, i1 }\0Adefine internal void @__spec_box_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  br i1 %is_arc, label %rel, label %done\0Arel:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %nz = icmp ne i64 %vi, 0\0A  br i1 %nz, label %do_rel, label %done\0Ado_rel:\0A  %vptr = inttoptr i64 %vi to ptr\0A  call void @spec_rt_release(ptr %vptr)\0A  store i64 0, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_box_new(i64 %val, i1 %is_arc) {\0A  %b = call ptr @spec_rt_alloc(i64 16, ptr @__spec_box_destroy)\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  store i64 %val, ptr %vp\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  store i1 %is_arc, ptr %ap\0A  ret ptr %b\0A}\0Adefine internal ptr @spec_rt_box_get(ptr %b) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %null_ret, label %ok\0Anull_ret:\0A  ret ptr null\0Aok:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %vptr = inttoptr i64 %vi to ptr\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %nz = icmp ne i64 %vi, 0\0A  %do_arc = and i1 %is_arc, %nz\0A  br i1 %do_arc, label %arc, label %done\0Aarc:\0A  call ptr @spec_rt_retain(ptr %vptr)\0A  call ptr @spec_claim_pool(ptr %vptr)\0A  br label %done\0Adone:\0A  ret ptr %vptr\0A}\0Adefine internal void @spec_rt_box_set(ptr %b, ptr %new_val) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %done, label %ok\0Aok:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %new_i = ptrtoint ptr %new_val to i64\0A  br i1 %is_arc, label %arc, label %store_val\0Aarc:\0A  %nn = icmp ne ptr %new_val, null\0A  br i1 %nn, label %do_ret, label %chk_old\0Ado_ret:\0A  call ptr @spec_rt_retain(ptr %new_val)\0A  br label %chk_old\0Achk_old:\0A  %old_i = load i64, ptr %vp\0A  %onz = icmp ne i64 %old_i, 0\0A  br i1 %onz, label %do_rel, label %store_val\0Ado_rel:\0A  %old_p = inttoptr i64 %old_i to ptr\0A  call ptr @spec_claim_pool(ptr %old_p)\0A  br label %store_val\0Astore_val:\0A  store i64 %new_i, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\00"
 @.str.cache.2001 = internal global ptr null, align 8
-@.str.2002 = private unnamed_addr constant [3496 x i8] c"%struct.SpecClosure = type { ptr, ptr, ptr }\0Adefine internal void @__spec_closure_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 1\0A  %env = load ptr, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %has_env = icmp ne ptr %env, null\0A  %has_d = icmp ne ptr %d, null\0A  %both = and i1 %has_env, %has_d\0A  br i1 %both, label %call_d, label %done\0Acall_d:\0A  call void %d(ptr %env)\0A  store ptr null, ptr %ep\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_closure_new(ptr %fn, ptr %env, ptr %destroy_env) {\0A  %c = call ptr @spec_rt_alloc(i64 24, ptr @__spec_closure_destroy)\0A  %fp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 0\0A  store ptr %fn, ptr %fp\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 1\0A  store ptr %env, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 2\0A  store ptr %destroy_env, ptr %dp\0A  ret ptr %c\0A}\0A%struct.SpecBox = type { i64, i1 }\0Adefine internal void @__spec_box_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  br i1 %is_arc, label %rel, label %done\0Arel:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %nz = icmp ne i64 %vi, 0\0A  br i1 %nz, label %do_rel, label %done\0Ado_rel:\0A  %vptr = inttoptr i64 %vi to ptr\0A  call void @spec_rt_release(ptr %vptr)\0A  store i64 0, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_box_new(i64 %val, i1 %is_arc) {\0A  %b = call ptr @spec_rt_alloc(i64 16, ptr @__spec_box_destroy)\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  store i64 %val, ptr %vp\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  store i1 %is_arc, ptr %ap\0A  ret ptr %b\0A}\0Adefine internal ptr @spec_rt_box_get(ptr %b) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %null_ret, label %ok\0Anull_ret:\0A  ret ptr null\0Aok:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %vptr = inttoptr i64 %vi to ptr\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %nz = icmp ne i64 %vi, 0\0A  %do_arc = and i1 %is_arc, %nz\0A  br i1 %do_arc, label %arc, label %done\0Aarc:\0A  call ptr @spec_rt_retain(ptr %vptr)\0A  call ptr @spec_claim_pool(ptr %vptr)\0A  br label %done\0Adone:\0A  ret ptr %vptr\0A}\0Adefine internal void @spec_rt_box_set(ptr %b, ptr %new_val) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %done, label %ok\0Aok:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %new_i = ptrtoint ptr %new_val to i64\0A  br i1 %is_arc, label %arc, label %store_val\0Aarc:\0A  %nn = icmp ne ptr %new_val, null\0A  br i1 %nn, label %do_ret, label %chk_old\0Ado_ret:\0A  call ptr @spec_rt_retain(ptr %new_val)\0A  br label %chk_old\0Achk_old:\0A  %old_i = load i64, ptr %vp\0A  %onz = icmp ne i64 %old_i, 0\0A  br i1 %onz, label %do_rel, label %store_val\0Ado_rel:\0A  %old_p = inttoptr i64 %old_i to ptr\0A  call ptr @spec_claim_pool(ptr %old_p)\0A  br label %store_val\0Astore_val:\0A  store i64 %new_i, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\00"
+@.str.2002 = private unnamed_addr constant [10628 x i8] c"define internal i64 @__spec_mem_alloc(i64 %bytes) alwaysinline {\0A  %a = call i64 @Heap_allocMem(ptr null, i64 %bytes)\0A  ret i64 %a\0A}\0Adefine internal i64 @__spec_mem_realloc(i64 %ptr, i64 %bytes) alwaysinline {\0A  %a = call i64 @Heap_reallocMem(ptr null, i64 %ptr, i64 %bytes)\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_free(i64 %ptr) alwaysinline {\0A  call void @Heap_freeMem(ptr null, i64 %ptr)\0A  ret void\0A}\0Adefine internal void @__spec_mem_copy(i64 %dst, i64 %src, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_cp, label %done\0Ado_cp:\0A  %d = inttoptr i64 %dst to ptr\0A  %s = inttoptr i64 %src to ptr\0A  call ptr @memcpy(ptr %d, ptr %s, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal void @__spec_mem_move(i64 %dst, i64 %src, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_mv, label %done\0Ado_mv:\0A  %d = inttoptr i64 %dst to ptr\0A  %s = inttoptr i64 %src to ptr\0A  call ptr @memmove(ptr %d, ptr %s, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal void @__spec_mem_set(i64 %dst, i64 %val, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_set, label %done\0Ado_set:\0A  %d = inttoptr i64 %dst to ptr\0A  %v32 = trunc i64 %val to i32\0A  call ptr @memset(ptr %d, i32 %v32, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_cmp(i64 %a, i64 %b, i64 %bytes) alwaysinline {\0A  %le = icmp sle i64 %bytes, 0\0A  br i1 %le, label %zero, label %do_cmp\0Azero:\0A  ret i64 0\0Ado_cmp:\0A  %pa = inttoptr i64 %a to ptr\0A  %pb = inttoptr i64 %b to ptr\0A  %r32 = call i32 @memcmp(ptr %pa, ptr %pb, i64 %bytes)\0A  %r64 = sext i32 %r32 to i64\0A  ret i64 %r64\0A}\0Adefine internal i64 @__spec_mem_cstr_len(i64 %addr) alwaysinline {\0A  %eq = icmp eq i64 %addr, 0\0A  br i1 %eq, label %zero, label %do_len\0Azero:\0A  ret i64 0\0Ado_len:\0A  %p = inttoptr i64 %addr to ptr\0A  %n = call i64 @strlen(ptr %p)\0A  ret i64 %n\0A}\0Adefine internal i64 @__spec_mem_load_i64(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i64, ptr %p\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_store_i64(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store i64 %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_tls_get_i64(i64 %slot) alwaysinline {\0A  %m = and i64 %slot, 15\0A  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m\0A  %v = load i64, ptr %p\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_tls_set_i64(i64 %slot, i64 %val) alwaysinline {\0A  %m = and i64 %slot, 15\0A  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m\0A  store i64 %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_load_i32(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i32, ptr %p\0A  %ext = zext i32 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_store_i32(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %tr = trunc i64 %val to i32\0A  store i32 %tr, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_load_byte(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i8, ptr %p\0A  %ext = zext i8 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_store_byte(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %tr = trunc i64 %val to i8\0A  store i8 %tr, ptr %p\0A  ret void\0A}\0Adefine internal ptr @__spec_mem_load_ptr(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load ptr, ptr %p\0A  ret ptr %v\0A}\0Adefine internal void @__spec_mem_store_ptr(i64 %base, i64 %off, ptr %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store ptr %val, ptr %p\0A  ret void\0A}\0Adefine internal double @__spec_mem_load_f64(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load double, ptr %p\0A  ret double %v\0A}\0Adefine internal void @__spec_mem_store_f64(i64 %base, i64 %off, double %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store double %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_obj_to_addr(ptr %obj) alwaysinline {\0A  %a = ptrtoint ptr %obj to i64\0A  ret i64 %a\0A}\0Adefine internal ptr @__spec_mem_addr_to_obj(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  ret ptr %p\0A}\0Adefine internal i64 @__spec_mem_retain_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_ret, label %done\0Ado_ret:\0A  %p = inttoptr i64 %addr to ptr\0A  call ptr @spec_rt_retain(ptr %p)\0A  br label %done\0Adone:\0A  ret i64 %addr\0A}\0Adefine internal void @__spec_mem_release_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_rel, label %done\0Ado_rel:\0A  %p = inttoptr i64 %addr to ptr\0A  call void @spec_rt_release(ptr %p)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_claim_pool_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_cl, label %done\0Ado_cl:\0A  %p = inttoptr i64 %addr to ptr\0A  call ptr @spec_claim_pool(ptr %p)\0A  br label %done\0Adone:\0A  ret i64 %addr\0A}\0Adefine internal ptr @__spec_mem_str_from_bytes(i64 %srcAddr, i64 %len) alwaysinline {\0A  %b = call noalias ptr @spec_rt_alloc(i64 64, ptr @spec_buf_destroy)\0A  %es_p = getelementptr inbounds i8, ptr %b, i64 24\0A  store i64 1, ptr %es_p, align 8\0A  %has_src = icmp ne i64 %srcAddr, 0\0A  %pos_len = icmp sgt i64 %len, 0\0A  %non_empty = and i1 %has_src, %pos_len\0A  br i1 %non_empty, label %chk_sbo, label %empty\0Aempty:\0A  %len_p0 = getelementptr inbounds i8, ptr %b, i64 8\0A  store i64 0, ptr %len_p0, align 8\0A  %ib0 = getelementptr inbounds i8, ptr %b, i64 36\0A  store ptr %ib0, ptr %b, align 8\0A  %cap_p0 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 24, ptr %cap_p0, align 8\0A  ret ptr %b\0Achk_sbo:\0A  %len_p = getelementptr inbounds i8, ptr %b, i64 8\0A  store i64 %len, ptr %len_p, align 8\0A  %src = inttoptr i64 %srcAddr to ptr\0A  %fits_sbo = icmp ule i64 %len, 23\0A  br i1 %fits_sbo, label %sbo, label %heap\0Asbo:\0A  %ib1 = getelementptr inbounds i8, ptr %b, i64 36\0A  store ptr %ib1, ptr %b, align 8\0A  %cap_p1 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 24, ptr %cap_p1, align 8\0A  call ptr @memcpy(ptr %ib1, ptr %src, i64 %len)\0A  ret ptr %b\0Aheap:\0A  %need = add i64 %len, 1\0A  %hda = call i64 @__spec_mem_alloc(i64 %need)\0A  %hd = inttoptr i64 %hda to ptr\0A  store ptr %hd, ptr %b, align 8\0A  %cap_p2 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 %need, ptr %cap_p2, align 8\0A  %ck_p2 = getelementptr inbounds i8, ptr %b, i64 40\0A  store i64 0, ptr %ck_p2, align 8\0A  call ptr @memcpy(ptr %hd, ptr %src, i64 %len)\0A  %nul_p = getelementptr inbounds i8, ptr %hd, i64 %len\0A  store i8 0, ptr %nul_p, align 1\0A  ret ptr %b\0A}\0Adefine internal ptr @__spec_mem_intern_str(ptr %b) alwaysinline {\0A  %c = call ptr @spec_buf_to_cstring(ptr %b)\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @__spec_intern_cached(ptr %lit, ptr %slot) alwaysinline {\0A  %c = load atomic ptr, ptr %slot acquire, align 8\0A  %ok = icmp ne ptr %c, null\0A  br i1 %ok, label %hit, label %miss\0Ahit:\0A  ret ptr %c\0Amiss:\0A  %s = call ptr @spec_string_intern(ptr %lit)\0A  store atomic ptr %s, ptr %slot release, align 8\0A  ret ptr %s\0A}\0Adefine internal void @__spec_mem_panic(ptr %b) alwaysinline {\0A  %c = call ptr @spec_buf_to_cstring(ptr %b)\0A  call void @spec_panic(ptr %c)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_float_to_bits(double %v) alwaysinline {\0A  %b = bitcast double %v to i64\0A  ret i64 %b\0A}\0Adefine internal double @__spec_mem_bits_to_float(i64 %b) alwaysinline {\0A  %v = bitcast i64 %b to double\0A  ret double %v\0A}\0Adefine internal i64 @__spec_mem_atomic_load_i32(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %v = load atomic i32, ptr %p monotonic, align 4\0A  %ext = zext i32 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_atomic_store_i32(i64 %addr, i64 %val) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %val to i32\0A  store atomic i32 %tr, ptr %p release, align 4\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_atomic_add_i32(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %delta to i32\0A  %old = atomicrmw add ptr %p, i32 %tr monotonic, align 4\0A  %ext = zext i32 %old to i64\0A  ret i64 %ext\0A}\0Adefine internal i64 @__spec_mem_atomic_sub_i32(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %delta to i32\0A  %old = atomicrmw sub ptr %p, i32 %tr acq_rel, align 4\0A  %ext = zext i32 %old to i64\0A  ret i64 %ext\0A}\0Adefine internal i64 @__spec_mem_atomic_load_i64(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %v = load atomic i64, ptr %p acquire, align 8\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_atomic_store_i64(i64 %addr, i64 %val) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  store atomic i64 %val, ptr %p release, align 8\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_atomic_add_i64(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %old = atomicrmw add ptr %p, i64 %delta seq_cst, align 8\0A  ret i64 %old\0A}\0Adefine internal i1 @__spec_mem_atomic_cas_i64(i64 %addr, i64 %exp, i64 %des) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %res = cmpxchg ptr %p, i64 %exp, i64 %des acq_rel monotonic, align 8\0A  %ok = extractvalue { i64, i1 } %res, 1\0A  ret i1 %ok\0A}\0Adefine internal void @__spec_mem_call_destroy(i64 %fnAddr, i64 %objAddr) alwaysinline {\0A  %fn = inttoptr i64 %fnAddr to ptr\0A  %obj = inttoptr i64 %objAddr to ptr\0A  call void %fn(ptr %obj)\0A  ret void\0A}\0Adefine internal ptr @__spec_mem_call_construct(i64 %fnAddr) alwaysinline {\0A  %fn = inttoptr i64 %fnAddr to ptr\0A  %obj = call ptr %fn()\0A  ret ptr %obj\0A}\0Adefine internal i64 @__spec_mem_class_reg_addr() alwaysinline {\0A  %a = ptrtoint ptr @spec_class_registry to i64\0A  ret i64 %a\0A}\0Adefine internal i64 @__spec_mem_class_reg_count() alwaysinline {\0A  %c32 = call i32 @spec_class_registry_count()\0A  %c64 = zext i32 %c32 to i64\0A  ret i64 %c64\0A}\0Adefine internal i64 @__spec_mem_held_reg_addr() alwaysinline {\0A  %a = ptrtoint ptr @spec_held_registry to i64\0A  ret i64 %a\0A}\0Adefine internal ptr @__spec_mem_cstr_to_str(i64 %cstrAddr) alwaysinline {\0A  %p = inttoptr i64 %cstrAddr to ptr\0A  %s = call ptr @spec_string_intern(ptr %p)\0A  ret ptr %s\0A}\00"
 @.str.cache.2002 = internal global ptr null, align 8
-@.str.2003 = private unnamed_addr constant [10628 x i8] c"define internal i64 @__spec_mem_alloc(i64 %bytes) alwaysinline {\0A  %a = call i64 @Heap_allocMem(ptr null, i64 %bytes)\0A  ret i64 %a\0A}\0Adefine internal i64 @__spec_mem_realloc(i64 %ptr, i64 %bytes) alwaysinline {\0A  %a = call i64 @Heap_reallocMem(ptr null, i64 %ptr, i64 %bytes)\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_free(i64 %ptr) alwaysinline {\0A  call void @Heap_freeMem(ptr null, i64 %ptr)\0A  ret void\0A}\0Adefine internal void @__spec_mem_copy(i64 %dst, i64 %src, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_cp, label %done\0Ado_cp:\0A  %d = inttoptr i64 %dst to ptr\0A  %s = inttoptr i64 %src to ptr\0A  call ptr @memcpy(ptr %d, ptr %s, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal void @__spec_mem_move(i64 %dst, i64 %src, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_mv, label %done\0Ado_mv:\0A  %d = inttoptr i64 %dst to ptr\0A  %s = inttoptr i64 %src to ptr\0A  call ptr @memmove(ptr %d, ptr %s, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal void @__spec_mem_set(i64 %dst, i64 %val, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_set, label %done\0Ado_set:\0A  %d = inttoptr i64 %dst to ptr\0A  %v32 = trunc i64 %val to i32\0A  call ptr @memset(ptr %d, i32 %v32, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_cmp(i64 %a, i64 %b, i64 %bytes) alwaysinline {\0A  %le = icmp sle i64 %bytes, 0\0A  br i1 %le, label %zero, label %do_cmp\0Azero:\0A  ret i64 0\0Ado_cmp:\0A  %pa = inttoptr i64 %a to ptr\0A  %pb = inttoptr i64 %b to ptr\0A  %r32 = call i32 @memcmp(ptr %pa, ptr %pb, i64 %bytes)\0A  %r64 = sext i32 %r32 to i64\0A  ret i64 %r64\0A}\0Adefine internal i64 @__spec_mem_cstr_len(i64 %addr) alwaysinline {\0A  %eq = icmp eq i64 %addr, 0\0A  br i1 %eq, label %zero, label %do_len\0Azero:\0A  ret i64 0\0Ado_len:\0A  %p = inttoptr i64 %addr to ptr\0A  %n = call i64 @strlen(ptr %p)\0A  ret i64 %n\0A}\0Adefine internal i64 @__spec_mem_load_i64(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i64, ptr %p\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_store_i64(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store i64 %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_tls_get_i64(i64 %slot) alwaysinline {\0A  %m = and i64 %slot, 15\0A  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m\0A  %v = load i64, ptr %p\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_tls_set_i64(i64 %slot, i64 %val) alwaysinline {\0A  %m = and i64 %slot, 15\0A  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m\0A  store i64 %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_load_i32(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i32, ptr %p\0A  %ext = zext i32 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_store_i32(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %tr = trunc i64 %val to i32\0A  store i32 %tr, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_load_byte(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i8, ptr %p\0A  %ext = zext i8 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_store_byte(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %tr = trunc i64 %val to i8\0A  store i8 %tr, ptr %p\0A  ret void\0A}\0Adefine internal ptr @__spec_mem_load_ptr(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load ptr, ptr %p\0A  ret ptr %v\0A}\0Adefine internal void @__spec_mem_store_ptr(i64 %base, i64 %off, ptr %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store ptr %val, ptr %p\0A  ret void\0A}\0Adefine internal double @__spec_mem_load_f64(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load double, ptr %p\0A  ret double %v\0A}\0Adefine internal void @__spec_mem_store_f64(i64 %base, i64 %off, double %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store double %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_obj_to_addr(ptr %obj) alwaysinline {\0A  %a = ptrtoint ptr %obj to i64\0A  ret i64 %a\0A}\0Adefine internal ptr @__spec_mem_addr_to_obj(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  ret ptr %p\0A}\0Adefine internal i64 @__spec_mem_retain_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_ret, label %done\0Ado_ret:\0A  %p = inttoptr i64 %addr to ptr\0A  call ptr @spec_rt_retain(ptr %p)\0A  br label %done\0Adone:\0A  ret i64 %addr\0A}\0Adefine internal void @__spec_mem_release_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_rel, label %done\0Ado_rel:\0A  %p = inttoptr i64 %addr to ptr\0A  call void @spec_rt_release(ptr %p)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_claim_pool_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_cl, label %done\0Ado_cl:\0A  %p = inttoptr i64 %addr to ptr\0A  call ptr @spec_claim_pool(ptr %p)\0A  br label %done\0Adone:\0A  ret i64 %addr\0A}\0Adefine internal ptr @__spec_mem_str_from_bytes(i64 %srcAddr, i64 %len) alwaysinline {\0A  %b = call noalias ptr @spec_rt_alloc(i64 64, ptr @spec_buf_destroy)\0A  %es_p = getelementptr inbounds i8, ptr %b, i64 24\0A  store i64 1, ptr %es_p, align 8\0A  %has_src = icmp ne i64 %srcAddr, 0\0A  %pos_len = icmp sgt i64 %len, 0\0A  %non_empty = and i1 %has_src, %pos_len\0A  br i1 %non_empty, label %chk_sbo, label %empty\0Aempty:\0A  %len_p0 = getelementptr inbounds i8, ptr %b, i64 8\0A  store i64 0, ptr %len_p0, align 8\0A  %ib0 = getelementptr inbounds i8, ptr %b, i64 36\0A  store ptr %ib0, ptr %b, align 8\0A  %cap_p0 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 24, ptr %cap_p0, align 8\0A  ret ptr %b\0Achk_sbo:\0A  %len_p = getelementptr inbounds i8, ptr %b, i64 8\0A  store i64 %len, ptr %len_p, align 8\0A  %src = inttoptr i64 %srcAddr to ptr\0A  %fits_sbo = icmp ule i64 %len, 23\0A  br i1 %fits_sbo, label %sbo, label %heap\0Asbo:\0A  %ib1 = getelementptr inbounds i8, ptr %b, i64 36\0A  store ptr %ib1, ptr %b, align 8\0A  %cap_p1 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 24, ptr %cap_p1, align 8\0A  call ptr @memcpy(ptr %ib1, ptr %src, i64 %len)\0A  ret ptr %b\0Aheap:\0A  %need = add i64 %len, 1\0A  %hda = call i64 @__spec_mem_alloc(i64 %need)\0A  %hd = inttoptr i64 %hda to ptr\0A  store ptr %hd, ptr %b, align 8\0A  %cap_p2 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 %need, ptr %cap_p2, align 8\0A  %ck_p2 = getelementptr inbounds i8, ptr %b, i64 40\0A  store i64 0, ptr %ck_p2, align 8\0A  call ptr @memcpy(ptr %hd, ptr %src, i64 %len)\0A  %nul_p = getelementptr inbounds i8, ptr %hd, i64 %len\0A  store i8 0, ptr %nul_p, align 1\0A  ret ptr %b\0A}\0Adefine internal ptr @__spec_mem_intern_str(ptr %b) alwaysinline {\0A  %c = call ptr @spec_buf_to_cstring(ptr %b)\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @__spec_intern_cached(ptr %lit, ptr %slot) alwaysinline {\0A  %c = load atomic ptr, ptr %slot acquire, align 8\0A  %ok = icmp ne ptr %c, null\0A  br i1 %ok, label %hit, label %miss\0Ahit:\0A  ret ptr %c\0Amiss:\0A  %s = call ptr @spec_string_intern(ptr %lit)\0A  store atomic ptr %s, ptr %slot release, align 8\0A  ret ptr %s\0A}\0Adefine internal void @__spec_mem_panic(ptr %b) alwaysinline {\0A  %c = call ptr @spec_buf_to_cstring(ptr %b)\0A  call void @spec_panic(ptr %c)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_float_to_bits(double %v) alwaysinline {\0A  %b = bitcast double %v to i64\0A  ret i64 %b\0A}\0Adefine internal double @__spec_mem_bits_to_float(i64 %b) alwaysinline {\0A  %v = bitcast i64 %b to double\0A  ret double %v\0A}\0Adefine internal i64 @__spec_mem_atomic_load_i32(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %v = load atomic i32, ptr %p monotonic, align 4\0A  %ext = zext i32 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_atomic_store_i32(i64 %addr, i64 %val) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %val to i32\0A  store atomic i32 %tr, ptr %p release, align 4\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_atomic_add_i32(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %delta to i32\0A  %old = atomicrmw add ptr %p, i32 %tr monotonic, align 4\0A  %ext = zext i32 %old to i64\0A  ret i64 %ext\0A}\0Adefine internal i64 @__spec_mem_atomic_sub_i32(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %delta to i32\0A  %old = atomicrmw sub ptr %p, i32 %tr acq_rel, align 4\0A  %ext = zext i32 %old to i64\0A  ret i64 %ext\0A}\0Adefine internal i64 @__spec_mem_atomic_load_i64(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %v = load atomic i64, ptr %p acquire, align 8\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_atomic_store_i64(i64 %addr, i64 %val) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  store atomic i64 %val, ptr %p release, align 8\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_atomic_add_i64(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %old = atomicrmw add ptr %p, i64 %delta seq_cst, align 8\0A  ret i64 %old\0A}\0Adefine internal i1 @__spec_mem_atomic_cas_i64(i64 %addr, i64 %exp, i64 %des) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %res = cmpxchg ptr %p, i64 %exp, i64 %des acq_rel monotonic, align 8\0A  %ok = extractvalue { i64, i1 } %res, 1\0A  ret i1 %ok\0A}\0Adefine internal void @__spec_mem_call_destroy(i64 %fnAddr, i64 %objAddr) alwaysinline {\0A  %fn = inttoptr i64 %fnAddr to ptr\0A  %obj = inttoptr i64 %objAddr to ptr\0A  call void %fn(ptr %obj)\0A  ret void\0A}\0Adefine internal ptr @__spec_mem_call_construct(i64 %fnAddr) alwaysinline {\0A  %fn = inttoptr i64 %fnAddr to ptr\0A  %obj = call ptr %fn()\0A  ret ptr %obj\0A}\0Adefine internal i64 @__spec_mem_class_reg_addr() alwaysinline {\0A  %a = ptrtoint ptr @spec_class_registry to i64\0A  ret i64 %a\0A}\0Adefine internal i64 @__spec_mem_class_reg_count() alwaysinline {\0A  %c32 = call i32 @spec_class_registry_count()\0A  %c64 = zext i32 %c32 to i64\0A  ret i64 %c64\0A}\0Adefine internal i64 @__spec_mem_held_reg_addr() alwaysinline {\0A  %a = ptrtoint ptr @spec_held_registry to i64\0A  ret i64 %a\0A}\0Adefine internal ptr @__spec_mem_cstr_to_str(i64 %cstrAddr) alwaysinline {\0A  %p = inttoptr i64 %cstrAddr to ptr\0A  %s = call ptr @spec_string_intern(ptr %p)\0A  ret ptr %s\0A}\00"
+@.str.2003 = private unnamed_addr constant [9191 x i8] c"@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8\0Adefine internal ptr @spec_string_intern(ptr %c) nounwind {\0A  %ca = ptrtoint ptr %c to i64\0A  %sa = ptrtoint ptr @_spec_intern_state to i64\0A  %ra = call i64 @Intern_internCstr(ptr null, i64 %ca, i64 %sa)\0A  %s = inttoptr i64 %ra to ptr\0A  ret ptr %s\0A}\0Adeclare void @spec_pal_format_float(double, i64) nounwind\0Adeclare i64 @spec_pal_random_bytes(i64, i64) nounwind\0Adeclare i64 @spec_pal_slab_alloc() nounwind\0Adeclare void @spec_pal_slab_free(i64) nounwind\0Adeclare i64 @spec_pal_vm_alloc(i64) nounwind\0Adeclare void @spec_pal_vm_free(i64, i64) nounwind\0Adeclare i64 @spec_pal_vm_realloc(i64, i64, i64) nounwind\0Adefine internal i64 @__spec_mem_slab_alloc() alwaysinline {\0A  %a = call i64 @spec_pal_slab_alloc()\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_slab_free(i64 %addr) alwaysinline {\0A  call void @spec_pal_slab_free(i64 %addr)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_alloc(i64 %bytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_alloc(i64 %bytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_vm_free(i64 %addr, i64 %bytes) alwaysinline {\0A  call void @spec_pal_vm_free(i64 %addr, i64 %bytes)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal i1 @__spec_mem_is_multithreaded() alwaysinline {\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  ret i1 %is_mt\0A}\0Adefine internal ptr @spec_to_string_float(double %v) nounwind {\0A  %buf = alloca [64 x i8], align 8\0A  %ba = ptrtoint ptr %buf to i64\0A  call void @spec_pal_format_float(double %v, i64 %ba)\0A  %s = call ptr @spec_string_intern(ptr %buf)\0A  ret ptr %s\0A}\0Adeclare void @spec_panic(ptr) noreturn nounwind\0Adeclare void @spec_panic_byte_range(i64) noreturn nounwind\0Adeclare void @spec_panic_cast(ptr, ptr) noreturn nounwind\0Adeclare i32 @strcmp(ptr nocapture readonly, ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare i64 @strlen(ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare noalias ptr @malloc(i64) nounwind willreturn allockind(\22alloc,uninitialized\22) allocsize(0)\0Adeclare noalias ptr @calloc(i64, i64) nounwind willreturn allockind(\22alloc,zeroed\22) allocsize(0, 1)\0Adeclare ptr @realloc(ptr, i64) nounwind willreturn allockind(\22realloc\22) allocsize(1)\0Adeclare void @free(ptr) nounwind willreturn allockind(\22free\22)\0Adeclare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memset(ptr returned writeonly, i32, i64) nounwind willreturn\0Adeclare i32 @memcmp(ptr nocapture readonly, ptr nocapture readonly, i64) nounwind willreturn memory(read)\0A%struct.SpecBuf = type { ptr, i64, i64, i64, i32 }\0A@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer\0Adefine void @spec_buf_destroy(ptr %self) nounwind {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %d = load ptr, ptr %self, align 8\0A  %dnull = icmp eq ptr %d, null\0A  br i1 %dnull, label %done, label %chk_sbo\0Achk_sbo:\0A  %inl = getelementptr inbounds i8, ptr %self, i64 36\0A  %is_sbo = icmp eq ptr %d, %inl\0A  br i1 %is_sbo, label %done, label %do_free\0Ado_free:\0A  %da = ptrtoint ptr %d to i64\0A  call void @__spec_mem_free(i64 %da)\0A  store ptr null, ptr %self, align 8\0A  %ck_p = getelementptr inbounds i8, ptr %self, i64 40\0A  %ck = load i64, ptr %ck_p, align 8\0A  %has_ck = icmp sgt i64 %ck, 0\0A  br i1 %has_ck, label %free_ck, label %done\0Afree_ck:\0A  call void @__spec_mem_free(i64 %ck)\0A  store i64 0, ptr %ck_p, align 8\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds i8, ptr %b, i64 8\0A  %len = load i64, ptr %lp, align 8\0A  %is_zero = icmp eq i64 %len, 0\0A  br i1 %is_zero, label %empty, label %ok\0Aok:\0A  %d = load ptr, ptr %b, align 8\0A  ret ptr %d\0Aempty:\0A  ret ptr @.str.tn_empty\0A}\0Adefine internal ptr @spec_string_copy(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 1\0A  %len = load i64, ptr %lp\0A  %dp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 0\0A  %d = load ptr, ptr %dp\0A  %da = ptrtoint ptr %d to i64\0A  %s = call ptr @__spec_mem_str_from_bytes(i64 %da, i64 %len)\0A  ret ptr %s\0Aempty:\0A  %e = call ptr @__spec_mem_str_from_bytes(i64 0, i64 0)\0A  ret ptr %e\0A}\0Adefine internal ptr @spec_string_concat(ptr %a, ptr %b) {\0A  %a_null = icmp eq ptr %a, null\0A  br i1 %a_null, label %copy_a, label %chk_uniq\0Achk_uniq:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load atomic i32, ptr %sfp monotonic, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %copy_a, label %chk_rc\0Achk_rc:\0A  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0\0A  %rc = load atomic i32, ptr %rcp monotonic, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %inplace, label %copy_a\0Ainplace:\0A  call void @Buf_bufAppendBuf(ptr null, ptr %a, ptr %b)\0A  ret ptr %a\0Acopy_a:\0A  %ac = call ptr @spec_string_copy(ptr %a)\0A  call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)\0A  call ptr @spec_claim_pool(ptr %ac)\0A  ret ptr %ac\0A}\0Adefine internal noalias ptr @Vector_vecNew() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_vecNewObject() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  %kp = getelementptr inbounds i8, ptr %a, i64 24\0A  store i32 1, ptr %kp, align 8\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_byteBufNew() alwaysinline {\0A  %b = call noalias ptr @spec_rt_alloc(i64 24, ptr @Vector_byteBufDestroy)\0A  ret ptr %b\0A}\0Adefine internal noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinline {\0A  %m = call noalias ptr @spec_rt_alloc(i64 48, ptr @HashTable_mapDestroy)\0A  %b = call i64 @__spec_mem_alloc(i64 64)\0A  %bp = inttoptr i64 %b to ptr\0A  store ptr %bp, ptr %m, align 8\0A  %nbp = getelementptr inbounds i8, ptr %m, i64 8\0A  store i64 8, ptr %nbp, align 8\0A  %kk32 = trunc i64 %kk to i32\0A  %kkp = getelementptr inbounds i8, ptr %m, i64 24\0A  store i32 %kk32, ptr %kkp, align 8\0A  %vk32 = trunc i64 %vk to i32\0A  %vkp = getelementptr inbounds i8, ptr %m, i64 28\0A  store i32 %vk32, ptr %vkp, align 4\0A  ret ptr %m\0A}\0Adefine internal noalias ptr @HashTable_mapNewObject() alwaysinline {\0A  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)\0A  ret ptr %m\0A}\0Adefine internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {\0A  %r = call i32 @strcmp(ptr %a, ptr %b)\0A  %eq = icmp eq i32 %r, 0\0A  ret i1 %eq\0A}\0Adefine internal i64 @__spec_check_byte(i64 %v) {\0A  %lt = icmp slt i64 %v, 0\0A  %gt = icmp sgt i64 %v, 255\0A  %bad = or i1 %lt, %gt\0A  br i1 %bad, label %fail, label %ok\0Afail:\0A  call void @spec_panic_byte_range(i64 %v)\0A  br label %ok\0Aok:\0A  ret i64 %v\0A}\0A@.str.tn_map = private unnamed_addr constant [4 x i8] c\22Map\5C00\22\0A@.str.tn_arr = private unnamed_addr constant [6 x i8] c\22Array\5C00\22\0A@.str.tn_str = private unnamed_addr constant [7 x i8] c\22String\5C00\22\0A@.str.bool_true = private unnamed_addr constant [5 x i8] c\22true\5C00\22\0A@.str.bool_false = private unnamed_addr constant [6 x i8] c\22false\5C00\22\0Adefine internal ptr @spec_to_string_bool(i1 %v) alwaysinline {\0A  %c = select i1 %v, ptr @.str.bool_true, ptr @.str.bool_false\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @spec_type_name(ptr %obj) {\0A  %addr = ptrtoint ptr %obj to i64\0A  %bad = icmp ult i64 %addr, 4096\0A  br i1 %bad, label %empty, label %ok\0Aempty:\0A  %e = call ptr @spec_string_intern(ptr @.str.tn_empty)\0A  ret ptr %e\0Aok:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %ismap = icmp eq ptr %d, @HashTable_mapDestroy\0A  br i1 %ismap, label %ret_map, label %chk_arr\0Aret_map:\0A  %sm = call ptr @spec_string_intern(ptr @.str.tn_map)\0A  ret ptr %sm\0Achk_arr:\0A  %isarr = icmp eq ptr %d, @Vector_vecDestroy\0A  br i1 %isarr, label %ret_arr, label %chk_str\0Aret_arr:\0A  %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)\0A  ret ptr %sa\0Achk_str:\0A  %isstr = icmp eq ptr %d, @spec_buf_destroy\0A  br i1 %isstr, label %ret_str, label %ret_cls\0Aret_str:\0A  %ss = call ptr @spec_string_intern(ptr @.str.tn_str)\0A  ret ptr %ss\0Aret_cls:\0A  %tn = load ptr, ptr %obj\0A  %sc = call ptr @spec_string_intern(ptr %tn)\0A  ret ptr %sc\0A}\00"
 @.str.cache.2003 = internal global ptr null, align 8
-@.str.2004 = private unnamed_addr constant [9191 x i8] c"@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8\0Adefine internal ptr @spec_string_intern(ptr %c) nounwind {\0A  %ca = ptrtoint ptr %c to i64\0A  %sa = ptrtoint ptr @_spec_intern_state to i64\0A  %ra = call i64 @Intern_internCstr(ptr null, i64 %ca, i64 %sa)\0A  %s = inttoptr i64 %ra to ptr\0A  ret ptr %s\0A}\0Adeclare void @spec_pal_format_float(double, i64) nounwind\0Adeclare i64 @spec_pal_random_bytes(i64, i64) nounwind\0Adeclare i64 @spec_pal_slab_alloc() nounwind\0Adeclare void @spec_pal_slab_free(i64) nounwind\0Adeclare i64 @spec_pal_vm_alloc(i64) nounwind\0Adeclare void @spec_pal_vm_free(i64, i64) nounwind\0Adeclare i64 @spec_pal_vm_realloc(i64, i64, i64) nounwind\0Adefine internal i64 @__spec_mem_slab_alloc() alwaysinline {\0A  %a = call i64 @spec_pal_slab_alloc()\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_slab_free(i64 %addr) alwaysinline {\0A  call void @spec_pal_slab_free(i64 %addr)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_alloc(i64 %bytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_alloc(i64 %bytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_vm_free(i64 %addr, i64 %bytes) alwaysinline {\0A  call void @spec_pal_vm_free(i64 %addr, i64 %bytes)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal i1 @__spec_mem_is_multithreaded() alwaysinline {\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  ret i1 %is_mt\0A}\0Adefine internal ptr @spec_to_string_float(double %v) nounwind {\0A  %buf = alloca [64 x i8], align 8\0A  %ba = ptrtoint ptr %buf to i64\0A  call void @spec_pal_format_float(double %v, i64 %ba)\0A  %s = call ptr @spec_string_intern(ptr %buf)\0A  ret ptr %s\0A}\0Adeclare void @spec_panic(ptr) noreturn nounwind\0Adeclare void @spec_panic_byte_range(i64) noreturn nounwind\0Adeclare void @spec_panic_cast(ptr, ptr) noreturn nounwind\0Adeclare i32 @strcmp(ptr nocapture readonly, ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare i64 @strlen(ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare noalias ptr @malloc(i64) nounwind willreturn allockind(\22alloc,uninitialized\22) allocsize(0)\0Adeclare noalias ptr @calloc(i64, i64) nounwind willreturn allockind(\22alloc,zeroed\22) allocsize(0, 1)\0Adeclare ptr @realloc(ptr, i64) nounwind willreturn allockind(\22realloc\22) allocsize(1)\0Adeclare void @free(ptr) nounwind willreturn allockind(\22free\22)\0Adeclare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memset(ptr returned writeonly, i32, i64) nounwind willreturn\0Adeclare i32 @memcmp(ptr nocapture readonly, ptr nocapture readonly, i64) nounwind willreturn memory(read)\0A%struct.SpecBuf = type { ptr, i64, i64, i64, i32 }\0A@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer\0Adefine void @spec_buf_destroy(ptr %self) nounwind {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %d = load ptr, ptr %self, align 8\0A  %dnull = icmp eq ptr %d, null\0A  br i1 %dnull, label %done, label %chk_sbo\0Achk_sbo:\0A  %inl = getelementptr inbounds i8, ptr %self, i64 36\0A  %is_sbo = icmp eq ptr %d, %inl\0A  br i1 %is_sbo, label %done, label %do_free\0Ado_free:\0A  %da = ptrtoint ptr %d to i64\0A  call void @__spec_mem_free(i64 %da)\0A  store ptr null, ptr %self, align 8\0A  %ck_p = getelementptr inbounds i8, ptr %self, i64 40\0A  %ck = load i64, ptr %ck_p, align 8\0A  %has_ck = icmp sgt i64 %ck, 0\0A  br i1 %has_ck, label %free_ck, label %done\0Afree_ck:\0A  call void @__spec_mem_free(i64 %ck)\0A  store i64 0, ptr %ck_p, align 8\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds i8, ptr %b, i64 8\0A  %len = load i64, ptr %lp, align 8\0A  %is_zero = icmp eq i64 %len, 0\0A  br i1 %is_zero, label %empty, label %ok\0Aok:\0A  %d = load ptr, ptr %b, align 8\0A  ret ptr %d\0Aempty:\0A  ret ptr @.str.tn_empty\0A}\0Adefine internal ptr @spec_string_copy(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 1\0A  %len = load i64, ptr %lp\0A  %dp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 0\0A  %d = load ptr, ptr %dp\0A  %da = ptrtoint ptr %d to i64\0A  %s = call ptr @__spec_mem_str_from_bytes(i64 %da, i64 %len)\0A  ret ptr %s\0Aempty:\0A  %e = call ptr @__spec_mem_str_from_bytes(i64 0, i64 0)\0A  ret ptr %e\0A}\0Adefine internal ptr @spec_string_concat(ptr %a, ptr %b) {\0A  %a_null = icmp eq ptr %a, null\0A  br i1 %a_null, label %copy_a, label %chk_uniq\0Achk_uniq:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load atomic i32, ptr %sfp monotonic, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %copy_a, label %chk_rc\0Achk_rc:\0A  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0\0A  %rc = load atomic i32, ptr %rcp monotonic, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %inplace, label %copy_a\0Ainplace:\0A  call void @Buf_bufAppendBuf(ptr null, ptr %a, ptr %b)\0A  ret ptr %a\0Acopy_a:\0A  %ac = call ptr @spec_string_copy(ptr %a)\0A  call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)\0A  call ptr @spec_claim_pool(ptr %ac)\0A  ret ptr %ac\0A}\0Adefine internal noalias ptr @Vector_vecNew() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_vecNewObject() alwaysinline {\0A  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)\0A  %kp = getelementptr inbounds i8, ptr %a, i64 24\0A  store i32 1, ptr %kp, align 8\0A  ret ptr %a\0A}\0Adefine internal noalias ptr @Vector_byteBufNew() alwaysinline {\0A  %b = call noalias ptr @spec_rt_alloc(i64 24, ptr @Vector_byteBufDestroy)\0A  ret ptr %b\0A}\0Adefine internal noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinline {\0A  %m = call noalias ptr @spec_rt_alloc(i64 48, ptr @HashTable_mapDestroy)\0A  %b = call i64 @__spec_mem_alloc(i64 64)\0A  %bp = inttoptr i64 %b to ptr\0A  store ptr %bp, ptr %m, align 8\0A  %nbp = getelementptr inbounds i8, ptr %m, i64 8\0A  store i64 8, ptr %nbp, align 8\0A  %kk32 = trunc i64 %kk to i32\0A  %kkp = getelementptr inbounds i8, ptr %m, i64 24\0A  store i32 %kk32, ptr %kkp, align 8\0A  %vk32 = trunc i64 %vk to i32\0A  %vkp = getelementptr inbounds i8, ptr %m, i64 28\0A  store i32 %vk32, ptr %vkp, align 4\0A  ret ptr %m\0A}\0Adefine internal noalias ptr @HashTable_mapNewObject() alwaysinline {\0A  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)\0A  ret ptr %m\0A}\0Adefine internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {\0A  %r = call i32 @strcmp(ptr %a, ptr %b)\0A  %eq = icmp eq i32 %r, 0\0A  ret i1 %eq\0A}\0Adefine internal i64 @__spec_check_byte(i64 %v) {\0A  %lt = icmp slt i64 %v, 0\0A  %gt = icmp sgt i64 %v, 255\0A  %bad = or i1 %lt, %gt\0A  br i1 %bad, label %fail, label %ok\0Afail:\0A  call void @spec_panic_byte_range(i64 %v)\0A  br label %ok\0Aok:\0A  ret i64 %v\0A}\0A@.str.tn_map = private unnamed_addr constant [4 x i8] c\22Map\5C00\22\0A@.str.tn_arr = private unnamed_addr constant [6 x i8] c\22Array\5C00\22\0A@.str.tn_str = private unnamed_addr constant [7 x i8] c\22String\5C00\22\0A@.str.bool_true = private unnamed_addr constant [5 x i8] c\22true\5C00\22\0A@.str.bool_false = private unnamed_addr constant [6 x i8] c\22false\5C00\22\0Adefine internal ptr @spec_to_string_bool(i1 %v) alwaysinline {\0A  %c = select i1 %v, ptr @.str.bool_true, ptr @.str.bool_false\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @spec_type_name(ptr %obj) {\0A  %addr = ptrtoint ptr %obj to i64\0A  %bad = icmp ult i64 %addr, 4096\0A  br i1 %bad, label %empty, label %ok\0Aempty:\0A  %e = call ptr @spec_string_intern(ptr @.str.tn_empty)\0A  ret ptr %e\0Aok:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %ismap = icmp eq ptr %d, @HashTable_mapDestroy\0A  br i1 %ismap, label %ret_map, label %chk_arr\0Aret_map:\0A  %sm = call ptr @spec_string_intern(ptr @.str.tn_map)\0A  ret ptr %sm\0Achk_arr:\0A  %isarr = icmp eq ptr %d, @Vector_vecDestroy\0A  br i1 %isarr, label %ret_arr, label %chk_str\0Aret_arr:\0A  %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)\0A  ret ptr %sa\0Achk_str:\0A  %isstr = icmp eq ptr %d, @spec_buf_destroy\0A  br i1 %isstr, label %ret_str, label %ret_cls\0Aret_str:\0A  %ss = call ptr @spec_string_intern(ptr @.str.tn_str)\0A  ret ptr %ss\0Aret_cls:\0A  %tn = load ptr, ptr %obj\0A  %sc = call ptr @spec_string_intern(ptr %tn)\0A  ret ptr %sc\0A}\00"
+@.str.2004 = private unnamed_addr constant [3298 x i8] c"declare double @sqrt(double) nounwind willreturn\0Adeclare double @round(double) nounwind willreturn\0Adeclare double @ceil(double) nounwind willreturn\0Adeclare double @floor(double) nounwind willreturn\0Adeclare double @fabs(double) nounwind willreturn\0Adeclare double @fmin(double, double) nounwind willreturn\0Adeclare double @fmax(double, double) nounwind willreturn\0Adeclare double @fma(double, double, double) nounwind willreturn\0Adeclare double @sin(double) nounwind willreturn\0Adeclare double @cos(double) nounwind willreturn\0Adeclare double @tan(double) nounwind willreturn\0Adeclare double @atan2(double, double) nounwind willreturn\0Adeclare double @log(double) nounwind willreturn\0Adeclare double @log2(double) nounwind willreturn\0Adeclare double @pow(double, double) nounwind willreturn\0Adeclare double @exp(double) nounwind willreturn\0Adeclare double @log10(double) nounwind willreturn\0Adeclare double @cbrt(double) nounwind willreturn\0Adeclare double @asin(double) nounwind willreturn\0Adeclare double @acos(double) nounwind willreturn\0Adeclare double @atan(double) nounwind willreturn\0Adefine internal double @spec_math_log(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log2(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log2(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log10(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log10(double %v)\0A  ret double %r\0A}\0Adefine internal i64 @__spec_rng_next() alwaysinline nounwind {\0A  %x0 = load i64, ptr @_spec_tls_i64, align 8\0A  %s1 = lshr i64 %x0, 12\0A  %x1 = xor i64 %x0, %s1\0A  %s2 = shl i64 %x1, 25\0A  %x2 = xor i64 %x1, %s2\0A  %s3 = lshr i64 %x2, 27\0A  %x3 = xor i64 %x2, %s3\0A  store i64 %x3, ptr @_spec_tls_i64, align 8\0A  %res = mul i64 %x3, 2685821657736338717\0A  ret i64 %res\0A}\0Adefine void @spec_fast_random_seed(i64 %idx) nounwind {\0A  %m = mul i64 %idx, -4658895280553007687\0A  %a = add i64 %m, -7723592293110705685\0A  %s0 = xor i64 %a, -7046029254386353131\0A  %isz = icmp eq i64 %s0, 0\0A  %s1 = select i1 %isz, i64 1, i64 %s0\0A  store i64 %s1, ptr @_spec_tls_i64, align 8\0A  %r1 = call i64 @__spec_rng_next()\0A  %r2 = call i64 @__spec_rng_next()\0A  %r3 = call i64 @__spec_rng_next()\0A  ret void\0A}\0Adeclare i64 @spec_time_monotonic_ns()\0Adefine internal double @spec_math_random(double %min, double %max) alwaysinline nounwind {\0A  %st = load i64, ptr @_spec_tls_i64, align 8\0A  %uninit = icmp eq i64 %st, 0\0A  br i1 %uninit, label %seed, label %gen\0Aseed:\0A  %addr = ptrtoint ptr @_spec_tls_i64 to i64\0A  %ns = call i64 @spec_time_monotonic_ns()\0A  %sd = xor i64 %addr, %ns\0A  call void @spec_fast_random_seed(i64 %sd)\0A  br label %gen\0Agen:\0A  %rnd = call i64 @__spec_rng_next()\0A  %top = lshr i64 %rnd, 11\0A  %flt = uitofp i64 %top to double\0A  %u = fmul double %flt, 0x3CA0000000000000\0A  %ge = fcmp oge double %min, %max\0A  br i1 %ge, label %ret_u, label %scale\0Aret_u:\0A  ret double %u\0Ascale:\0A  %diff = fsub double %max, %min\0A  %prod = fmul double %u, %diff\0A  %res = fadd double %min, %prod\0A  ret double %res\0A}\00"
 @.str.cache.2004 = internal global ptr null, align 8
-@.str.2005 = private unnamed_addr constant [3298 x i8] c"declare double @sqrt(double) nounwind willreturn\0Adeclare double @round(double) nounwind willreturn\0Adeclare double @ceil(double) nounwind willreturn\0Adeclare double @floor(double) nounwind willreturn\0Adeclare double @fabs(double) nounwind willreturn\0Adeclare double @fmin(double, double) nounwind willreturn\0Adeclare double @fmax(double, double) nounwind willreturn\0Adeclare double @fma(double, double, double) nounwind willreturn\0Adeclare double @sin(double) nounwind willreturn\0Adeclare double @cos(double) nounwind willreturn\0Adeclare double @tan(double) nounwind willreturn\0Adeclare double @atan2(double, double) nounwind willreturn\0Adeclare double @log(double) nounwind willreturn\0Adeclare double @log2(double) nounwind willreturn\0Adeclare double @pow(double, double) nounwind willreturn\0Adeclare double @exp(double) nounwind willreturn\0Adeclare double @log10(double) nounwind willreturn\0Adeclare double @cbrt(double) nounwind willreturn\0Adeclare double @asin(double) nounwind willreturn\0Adeclare double @acos(double) nounwind willreturn\0Adeclare double @atan(double) nounwind willreturn\0Adefine internal double @spec_math_log(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log2(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log2(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log10(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log10(double %v)\0A  ret double %r\0A}\0Adefine internal i64 @__spec_rng_next() alwaysinline nounwind {\0A  %x0 = load i64, ptr @_spec_tls_i64, align 8\0A  %s1 = lshr i64 %x0, 12\0A  %x1 = xor i64 %x0, %s1\0A  %s2 = shl i64 %x1, 25\0A  %x2 = xor i64 %x1, %s2\0A  %s3 = lshr i64 %x2, 27\0A  %x3 = xor i64 %x2, %s3\0A  store i64 %x3, ptr @_spec_tls_i64, align 8\0A  %res = mul i64 %x3, 2685821657736338717\0A  ret i64 %res\0A}\0Adefine void @spec_fast_random_seed(i64 %idx) nounwind {\0A  %m = mul i64 %idx, -4658895280553007687\0A  %a = add i64 %m, -7723592293110705685\0A  %s0 = xor i64 %a, -7046029254386353131\0A  %isz = icmp eq i64 %s0, 0\0A  %s1 = select i1 %isz, i64 1, i64 %s0\0A  store i64 %s1, ptr @_spec_tls_i64, align 8\0A  %r1 = call i64 @__spec_rng_next()\0A  %r2 = call i64 @__spec_rng_next()\0A  %r3 = call i64 @__spec_rng_next()\0A  ret void\0A}\0Adeclare i64 @spec_time_monotonic_ns()\0Adefine internal double @spec_math_random(double %min, double %max) alwaysinline nounwind {\0A  %st = load i64, ptr @_spec_tls_i64, align 8\0A  %uninit = icmp eq i64 %st, 0\0A  br i1 %uninit, label %seed, label %gen\0Aseed:\0A  %addr = ptrtoint ptr @_spec_tls_i64 to i64\0A  %ns = call i64 @spec_time_monotonic_ns()\0A  %sd = xor i64 %addr, %ns\0A  call void @spec_fast_random_seed(i64 %sd)\0A  br label %gen\0Agen:\0A  %rnd = call i64 @__spec_rng_next()\0A  %top = lshr i64 %rnd, 11\0A  %flt = uitofp i64 %top to double\0A  %u = fmul double %flt, 0x3CA0000000000000\0A  %ge = fcmp oge double %min, %max\0A  br i1 %ge, label %ret_u, label %scale\0Aret_u:\0A  ret double %u\0Ascale:\0A  %diff = fsub double %max, %min\0A  %prod = fmul double %u, %diff\0A  %res = fadd double %min, %prod\0A  ret double %res\0A}\00"
+@.str.2005 = private unnamed_addr constant [3160 x i8] c"@_spec_cli_argc = internal global i64 0, align 8\0A@_spec_cli_argv = internal global i64 0, align 8\0Adefine internal ptr @spec_process_raw_args() {\0A  %ac = load i64, ptr @_spec_cli_argc, align 8\0A  %av = load i64, ptr @_spec_cli_argv, align 8\0A  %r = call ptr @CliArgs_rawArgs(ptr null, i64 %ac, i64 %av)\0A  call ptr @spec_rt_retain(ptr %r)\0A  ret ptr %r\0A}\0A@_spec_atomic_levels = internal global [54 x ptr] zeroinitializer, align 8\0A@_spec_atomic_lock = internal global i32 0, align 4\0Adeclare i64 @llvm.ctlz.i64(i64, i1 immarg)\0Adefine internal ptr @__spec_atomic_slot_ptr(i64 %slot) {\0A  %lt0 = icmp slt i64 %slot, 0\0A  br i1 %lt0, label %ret_null, label %chk_l0\0Aret_null:\0A  ret ptr null\0Achk_l0:\0A  %in_l0 = icmp slt i64 %slot, 1024\0A  br i1 %in_l0, label %lvl0, label %lvl_hi\0Alvl0:\0A  br label %lookup\0Alvl_hi:\0A  %u = add i64 %slot, 1024\0A  %lz = call i64 @llvm.ctlz.i64(i64 %u, i1 true)\0A  %msb = sub i64 63, %lz\0A  %l_hi = sub i64 %msb, 10\0A  %ge54 = icmp sge i64 %l_hi, 54\0A  br i1 %ge54, label %ret_null, label %calc_hi\0Acalc_hi:\0A  %sh = add i64 %l_hi, 10\0A  %base = shl i64 1, %sh\0A  %off_hi = sub i64 %u, %base\0A  br label %lookup\0Alookup:\0A  %level = phi i64 [ 0, %lvl0 ], [ %l_hi, %calc_hi ]\0A  %offset = phi i64 [ %slot, %lvl0 ], [ %off_hi, %calc_hi ]\0A  %seg_sz = phi i64 [ 1024, %lvl0 ], [ %base, %calc_hi ]\0A  %lp = getelementptr inbounds [54 x ptr], ptr @_spec_atomic_levels, i64 0, i64 %level\0A  %seg = load atomic ptr, ptr %lp acquire, align 8\0A  %has_seg = icmp ne ptr %seg, null\0A  br i1 %has_seg, label %got_seg, label %spin\0Aspin:\0A  %old = atomicrmw xchg ptr @_spec_atomic_lock, i32 1 acquire, align 4\0A  %locked = icmp eq i32 %old, 0\0A  br i1 %locked, label %crit, label %spin\0Acrit:\0A  %seg2 = load atomic ptr, ptr %lp monotonic, align 8\0A  %has_seg2 = icmp ne ptr %seg2, null\0A  br i1 %has_seg2, label %unlock, label %alloc_seg\0Aalloc_seg:\0A  %seg_bytes = mul i64 %seg_sz, 8\0A  %new_seg_a = call i64 @__spec_mem_alloc(i64 %seg_bytes)\0A  %new_seg = inttoptr i64 %new_seg_a to ptr\0A  store atomic ptr %new_seg, ptr %lp release, align 8\0A  br label %unlock\0Aunlock:\0A  %seg3 = phi ptr [ %seg2, %crit ], [ %new_seg, %alloc_seg ]\0A  store atomic i32 0, ptr @_spec_atomic_lock release, align 4\0A  br label %got_seg\0Agot_seg:\0A  %s = phi ptr [ %seg, %lookup ], [ %seg3, %unlock ]\0A  %ep = getelementptr inbounds i64, ptr %s, i64 %offset\0A  ret ptr %ep\0A}\0Adefine internal i64 @spec_atomic_add(i64 %slot, i64 %v) {\0A  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)\0A  %isnull = icmp eq ptr %p, null\0A  br i1 %isnull, label %zero, label %ok\0Azero:\0A  ret i64 0\0Aok:\0A  %old = atomicrmw add ptr %p, i64 %v seq_cst, align 8\0A  %res = add i64 %old, %v\0A  ret i64 %res\0A}\0Adefine internal i64 @spec_atomic_put(i64 %slot, i64 %v) {\0A  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)\0A  %isnull = icmp eq ptr %p, null\0A  br i1 %isnull, label %zero, label %ok\0Azero:\0A  ret i64 0\0Aok:\0A  %old = atomicrmw xchg ptr %p, i64 %v seq_cst, align 8\0A  ret i64 %old\0A}\0Adefine internal i64 @spec_atomic_get(i64 %slot) {\0A  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)\0A  %isnull = icmp eq ptr %p, null\0A  br i1 %isnull, label %zero, label %ok\0Azero:\0A  ret i64 0\0Aok:\0A  %val = load atomic i64, ptr %p seq_cst, align 8\0A  ret i64 %val\0A}\00"
 @.str.cache.2005 = internal global ptr null, align 8
-@.str.2006 = private unnamed_addr constant [3430 x i8] c"@_spec_cli_argc = internal global i64 0, align 8\0A@_spec_cli_argv = internal global i64 0, align 8\0Adefine internal ptr @spec_cli_args_map(i64 %argc, ptr %argv) {\0A  store i64 %argc, ptr @_spec_cli_argc, align 8\0A  %av = ptrtoint ptr %argv to i64\0A  store i64 %av, ptr @_spec_cli_argv, align 8\0A  %m = call ptr @CliArgs_parseMap(ptr null, i64 %argc, i64 %av)\0A  ret ptr %m\0A}\0Adefine internal ptr @spec_process_raw_args() {\0A  %ac = load i64, ptr @_spec_cli_argc, align 8\0A  %av = load i64, ptr @_spec_cli_argv, align 8\0A  %r = call ptr @CliArgs_rawArgs(ptr null, i64 %ac, i64 %av)\0A  call ptr @spec_rt_retain(ptr %r)\0A  ret ptr %r\0A}\0A@_spec_atomic_levels = internal global [54 x ptr] zeroinitializer, align 8\0A@_spec_atomic_lock = internal global i32 0, align 4\0Adeclare i64 @llvm.ctlz.i64(i64, i1 immarg)\0Adefine internal ptr @__spec_atomic_slot_ptr(i64 %slot) {\0A  %lt0 = icmp slt i64 %slot, 0\0A  br i1 %lt0, label %ret_null, label %chk_l0\0Aret_null:\0A  ret ptr null\0Achk_l0:\0A  %in_l0 = icmp slt i64 %slot, 1024\0A  br i1 %in_l0, label %lvl0, label %lvl_hi\0Alvl0:\0A  br label %lookup\0Alvl_hi:\0A  %u = add i64 %slot, 1024\0A  %lz = call i64 @llvm.ctlz.i64(i64 %u, i1 true)\0A  %msb = sub i64 63, %lz\0A  %l_hi = sub i64 %msb, 10\0A  %ge54 = icmp sge i64 %l_hi, 54\0A  br i1 %ge54, label %ret_null, label %calc_hi\0Acalc_hi:\0A  %sh = add i64 %l_hi, 10\0A  %base = shl i64 1, %sh\0A  %off_hi = sub i64 %u, %base\0A  br label %lookup\0Alookup:\0A  %level = phi i64 [ 0, %lvl0 ], [ %l_hi, %calc_hi ]\0A  %offset = phi i64 [ %slot, %lvl0 ], [ %off_hi, %calc_hi ]\0A  %seg_sz = phi i64 [ 1024, %lvl0 ], [ %base, %calc_hi ]\0A  %lp = getelementptr inbounds [54 x ptr], ptr @_spec_atomic_levels, i64 0, i64 %level\0A  %seg = load atomic ptr, ptr %lp acquire, align 8\0A  %has_seg = icmp ne ptr %seg, null\0A  br i1 %has_seg, label %got_seg, label %spin\0Aspin:\0A  %old = atomicrmw xchg ptr @_spec_atomic_lock, i32 1 acquire, align 4\0A  %locked = icmp eq i32 %old, 0\0A  br i1 %locked, label %crit, label %spin\0Acrit:\0A  %seg2 = load atomic ptr, ptr %lp monotonic, align 8\0A  %has_seg2 = icmp ne ptr %seg2, null\0A  br i1 %has_seg2, label %unlock, label %alloc_seg\0Aalloc_seg:\0A  %seg_bytes = mul i64 %seg_sz, 8\0A  %new_seg_a = call i64 @__spec_mem_alloc(i64 %seg_bytes)\0A  %new_seg = inttoptr i64 %new_seg_a to ptr\0A  store atomic ptr %new_seg, ptr %lp release, align 8\0A  br label %unlock\0Aunlock:\0A  %seg3 = phi ptr [ %seg2, %crit ], [ %new_seg, %alloc_seg ]\0A  store atomic i32 0, ptr @_spec_atomic_lock release, align 4\0A  br label %got_seg\0Agot_seg:\0A  %s = phi ptr [ %seg, %lookup ], [ %seg3, %unlock ]\0A  %ep = getelementptr inbounds i64, ptr %s, i64 %offset\0A  ret ptr %ep\0A}\0Adefine internal i64 @spec_atomic_add(i64 %slot, i64 %v) {\0A  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)\0A  %isnull = icmp eq ptr %p, null\0A  br i1 %isnull, label %zero, label %ok\0Azero:\0A  ret i64 0\0Aok:\0A  %old = atomicrmw add ptr %p, i64 %v seq_cst, align 8\0A  %res = add i64 %old, %v\0A  ret i64 %res\0A}\0Adefine internal i64 @spec_atomic_put(i64 %slot, i64 %v) {\0A  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)\0A  %isnull = icmp eq ptr %p, null\0A  br i1 %isnull, label %zero, label %ok\0Azero:\0A  ret i64 0\0Aok:\0A  %old = atomicrmw xchg ptr %p, i64 %v seq_cst, align 8\0A  ret i64 %old\0A}\0Adefine internal i64 @spec_atomic_get(i64 %slot) {\0A  %p = call ptr @__spec_atomic_slot_ptr(i64 %slot)\0A  %isnull = icmp eq ptr %p, null\0A  br i1 %isnull, label %zero, label %ok\0Azero:\0A  ret i64 0\0Aok:\0A  %val = load atomic i64, ptr %p seq_cst, align 8\0A  ret i64 %val\0A}\00"
+@.str.2006 = private unnamed_addr constant [3 x i8] c"{ \00"
 @.str.cache.2006 = internal global ptr null, align 8
-@.str.2007 = private unnamed_addr constant [3 x i8] c"{ \00"
+@.str.2007 = private unnamed_addr constant [3 x i8] c" }\00"
 @.str.cache.2007 = internal global ptr null, align 8
-@.str.2008 = private unnamed_addr constant [3 x i8] c" }\00"
+@.str.2008 = private unnamed_addr constant [4 x i8] c" { \00"
 @.str.cache.2008 = internal global ptr null, align 8
-@.str.2009 = private unnamed_addr constant [4 x i8] c" { \00"
+@.str.2009 = private unnamed_addr constant [10 x i8] c"ObjHeader\00"
 @.str.cache.2009 = internal global ptr null, align 8
-@.str.2010 = private unnamed_addr constant [10 x i8] c"ObjHeader\00"
+@.str.2010 = private unnamed_addr constant [15 x i8] c"SpecMethodMeta\00"
 @.str.cache.2010 = internal global ptr null, align 8
-@.str.2011 = private unnamed_addr constant [15 x i8] c"SpecMethodMeta\00"
+@.str.2011 = private unnamed_addr constant [3 x i8] c"fn\00"
 @.str.cache.2011 = internal global ptr null, align 8
-@.str.2012 = private unnamed_addr constant [3 x i8] c"fn\00"
+@.str.2012 = private unnamed_addr constant [6 x i8] c"flags\00"
 @.str.cache.2012 = internal global ptr null, align 8
-@.str.2013 = private unnamed_addr constant [6 x i8] c"flags\00"
+@.str.2013 = private unnamed_addr constant [4 x i8] c"i32\00"
 @.str.cache.2013 = internal global ptr null, align 8
-@.str.2014 = private unnamed_addr constant [4 x i8] c"i32\00"
+@.str.2014 = private unnamed_addr constant [14 x i8] c"SpecFieldMeta\00"
 @.str.cache.2014 = internal global ptr null, align 8
-@.str.2015 = private unnamed_addr constant [14 x i8] c"SpecFieldMeta\00"
+@.str.2015 = private unnamed_addr constant [12 x i8] c"byte_offset\00"
 @.str.cache.2015 = internal global ptr null, align 8
-@.str.2016 = private unnamed_addr constant [12 x i8] c"byte_offset\00"
+@.str.2016 = private unnamed_addr constant [14 x i8] c"SpecClassMeta\00"
 @.str.cache.2016 = internal global ptr null, align 8
-@.str.2017 = private unnamed_addr constant [14 x i8] c"SpecClassMeta\00"
+@.str.2017 = private unnamed_addr constant [12 x i8] c"source_file\00"
 @.str.cache.2017 = internal global ptr null, align 8
-@.str.2018 = private unnamed_addr constant [12 x i8] c"source_file\00"
+@.str.2018 = private unnamed_addr constant [11 x i8] c"base_names\00"
 @.str.cache.2018 = internal global ptr null, align 8
-@.str.2019 = private unnamed_addr constant [11 x i8] c"base_names\00"
+@.str.2019 = private unnamed_addr constant [11 x i8] c"base_count\00"
 @.str.cache.2019 = internal global ptr null, align 8
-@.str.2020 = private unnamed_addr constant [11 x i8] c"base_count\00"
+@.str.2020 = private unnamed_addr constant [10 x i8] c"construct\00"
 @.str.cache.2020 = internal global ptr null, align 8
-@.str.2021 = private unnamed_addr constant [10 x i8] c"construct\00"
+@.str.2021 = private unnamed_addr constant [8 x i8] c"methods\00"
 @.str.cache.2021 = internal global ptr null, align 8
-@.str.2022 = private unnamed_addr constant [8 x i8] c"methods\00"
+@.str.2022 = private unnamed_addr constant [13 x i8] c"method_count\00"
 @.str.cache.2022 = internal global ptr null, align 8
-@.str.2023 = private unnamed_addr constant [13 x i8] c"method_count\00"
+@.str.2023 = private unnamed_addr constant [7 x i8] c"fields\00"
 @.str.cache.2023 = internal global ptr null, align 8
-@.str.2024 = private unnamed_addr constant [7 x i8] c"fields\00"
+@.str.2024 = private unnamed_addr constant [12 x i8] c"field_count\00"
 @.str.cache.2024 = internal global ptr null, align 8
-@.str.2025 = private unnamed_addr constant [12 x i8] c"field_count\00"
+@.str.2025 = private unnamed_addr constant [14 x i8] c"SpecHeldEntry\00"
 @.str.cache.2025 = internal global ptr null, align 8
-@.str.2026 = private unnamed_addr constant [14 x i8] c"SpecHeldEntry\00"
+@.str.2026 = private unnamed_addr constant [6 x i8] c"names\00"
 @.str.cache.2026 = internal global ptr null, align 8
-@.str.2027 = private unnamed_addr constant [6 x i8] c"names\00"
+@.str.2027 = private unnamed_addr constant [8 x i8] c"getters\00"
 @.str.cache.2027 = internal global ptr null, align 8
-@.str.2028 = private unnamed_addr constant [8 x i8] c"getters\00"
+@.str.2028 = private unnamed_addr constant [2 x i8] c"z\00"
 @.str.cache.2028 = internal global ptr null, align 8
-@.str.2029 = private unnamed_addr constant [2 x i8] c"z\00"
+@.str.2029 = private unnamed_addr constant [2 x i8] c"Z\00"
 @.str.cache.2029 = internal global ptr null, align 8
-@.str.2030 = private unnamed_addr constant [2 x i8] c"Z\00"
+@.str.2030 = private unnamed_addr constant [3 x i8] c"..\00"
 @.str.cache.2030 = internal global ptr null, align 8
-@.str.2031 = private unnamed_addr constant [3 x i8] c"..\00"
+@.str.2031 = private unnamed_addr constant [3 x i8] c"//\00"
 @.str.cache.2031 = internal global ptr null, align 8
-@.str.2032 = private unnamed_addr constant [3 x i8] c"//\00"
+@.str.2032 = private unnamed_addr constant [8 x i8] c"file://\00"
 @.str.cache.2032 = internal global ptr null, align 8
-@.str.2033 = private unnamed_addr constant [8 x i8] c"file://\00"
+@.str.2033 = private unnamed_addr constant [4 x i8] c"://\00"
 @.str.cache.2033 = internal global ptr null, align 8
-@.str.2034 = private unnamed_addr constant [4 x i8] c"://\00"
+@.str.2034 = private unnamed_addr constant [5 x i8] c"TEMP\00"
 @.str.cache.2034 = internal global ptr null, align 8
-@.str.2035 = private unnamed_addr constant [5 x i8] c"TEMP\00"
+@.str.2035 = private unnamed_addr constant [4 x i8] c"TMP\00"
 @.str.cache.2035 = internal global ptr null, align 8
-@.str.2036 = private unnamed_addr constant [4 x i8] c"TMP\00"
+@.str.2036 = private unnamed_addr constant [5 x i8] c"/tmp\00"
 @.str.cache.2036 = internal global ptr null, align 8
-@.str.2037 = private unnamed_addr constant [5 x i8] c"/tmp\00"
+@.str.2037 = private unnamed_addr constant [7 x i8] c"TMPDIR\00"
 @.str.cache.2037 = internal global ptr null, align 8
-@.str.2038 = private unnamed_addr constant [7 x i8] c"TMPDIR\00"
+@.str.2038 = private unnamed_addr constant [5 x i8] c"HOME\00"
 @.str.cache.2038 = internal global ptr null, align 8
-@.str.2039 = private unnamed_addr constant [5 x i8] c"HOME\00"
+@.str.2039 = private unnamed_addr constant [12 x i8] c"USERPROFILE\00"
 @.str.cache.2039 = internal global ptr null, align 8
-@.str.2040 = private unnamed_addr constant [12 x i8] c"USERPROFILE\00"
+@.str.2040 = private unnamed_addr constant [13 x i8] c"/.cache/spec\00"
 @.str.cache.2040 = internal global ptr null, align 8
-@.str.2041 = private unnamed_addr constant [13 x i8] c"/.cache/spec\00"
+@.str.2041 = private unnamed_addr constant [12 x i8] c"/spec_cache\00"
 @.str.cache.2041 = internal global ptr null, align 8
-@.str.2042 = private unnamed_addr constant [12 x i8] c"/spec_cache\00"
+@.str.2042 = private unnamed_addr constant [9 x i8] c"/runtime\00"
 @.str.cache.2042 = internal global ptr null, align 8
-@.str.2043 = private unnamed_addr constant [9 x i8] c"/runtime\00"
+@.str.2043 = private unnamed_addr constant [5 x i8] c".exe\00"
 @.str.cache.2043 = internal global ptr null, align 8
-@.str.2044 = private unnamed_addr constant [5 x i8] c".exe\00"
+@.str.2044 = private unnamed_addr constant [9 x i8] c"file:///\00"
 @.str.cache.2044 = internal global ptr null, align 8
-@.str.2045 = private unnamed_addr constant [9 x i8] c"file:///\00"
+@.str.2045 = private unnamed_addr constant [21 x i8] c"SpecError__FileError\00"
 @.str.cache.2045 = internal global ptr null, align 8
-@.str.2046 = private unnamed_addr constant [21 x i8] c"SpecError__FileError\00"
+@.str.2046 = private unnamed_addr constant [11 x i8] c"StackFrame\00"
 @.str.cache.2046 = internal global ptr null, align 8
-@.str.2047 = private unnamed_addr constant [11 x i8] c"StackFrame\00"
+@.str.2047 = private unnamed_addr constant [15 x i8] c"SourceLocation\00"
 @.str.cache.2047 = internal global ptr null, align 8
-@.str.2048 = private unnamed_addr constant [15 x i8] c"SourceLocation\00"
+@.str.2048 = private unnamed_addr constant [10 x i8] c"HashTable\00"
 @.str.cache.2048 = internal global ptr null, align 8
-@.str.2049 = private unnamed_addr constant [10 x i8] c"HashTable\00"
+@.str.2049 = private unnamed_addr constant [20 x i8] c"ThreadScopeRegistry\00"
 @.str.cache.2049 = internal global ptr null, align 8
-@.str.2050 = private unnamed_addr constant [20 x i8] c"ThreadScopeRegistry\00"
+@.str.2050 = private unnamed_addr constant [12 x i8] c"ProgramNode\00"
 @.str.cache.2050 = internal global ptr null, align 8
-@.str.2051 = private unnamed_addr constant [12 x i8] c"ProgramNode\00"
+@.str.2051 = private unnamed_addr constant [7 x i8] c"Member\00"
 @.str.cache.2051 = internal global ptr null, align 8
-@.str.2052 = private unnamed_addr constant [7 x i8] c"Member\00"
+@.str.2052 = private unnamed_addr constant [5 x i8] c"Type\00"
 @.str.cache.2052 = internal global ptr null, align 8
-@.str.2053 = private unnamed_addr constant [5 x i8] c"Type\00"
+@.str.2053 = private unnamed_addr constant [10 x i8] c"Parameter\00"
 @.str.cache.2053 = internal global ptr null, align 8
-@.str.2054 = private unnamed_addr constant [10 x i8] c"Parameter\00"
+@.str.2054 = private unnamed_addr constant [21 x i8] c"Expression:StringLit\00"
 @.str.cache.2054 = internal global ptr null, align 8
-@.str.2055 = private unnamed_addr constant [21 x i8] c"Expression:StringLit\00"
+@.str.2055 = private unnamed_addr constant [21 x i8] c"Expression:NumberLit\00"
 @.str.cache.2055 = internal global ptr null, align 8
-@.str.2056 = private unnamed_addr constant [21 x i8] c"Expression:NumberLit\00"
+@.str.2056 = private unnamed_addr constant [20 x i8] c"Expression:FloatLit\00"
 @.str.cache.2056 = internal global ptr null, align 8
-@.str.2057 = private unnamed_addr constant [20 x i8] c"Expression:FloatLit\00"
+@.str.2057 = private unnamed_addr constant [19 x i8] c"Expression:BoolLit\00"
 @.str.cache.2057 = internal global ptr null, align 8
-@.str.2058 = private unnamed_addr constant [19 x i8] c"Expression:BoolLit\00"
+@.str.2058 = private unnamed_addr constant [17 x i8] c"Expression:Ident\00"
 @.str.cache.2058 = internal global ptr null, align 8
-@.str.2059 = private unnamed_addr constant [17 x i8] c"Expression:Ident\00"
+@.str.2059 = private unnamed_addr constant [16 x i8] c"Expression:Path\00"
 @.str.cache.2059 = internal global ptr null, align 8
-@.str.2060 = private unnamed_addr constant [16 x i8] c"Expression:Path\00"
+@.str.2060 = private unnamed_addr constant [20 x i8] c"Expression:ArrayLit\00"
 @.str.cache.2060 = internal global ptr null, align 8
-@.str.2061 = private unnamed_addr constant [20 x i8] c"Expression:ArrayLit\00"
+@.str.2061 = private unnamed_addr constant [18 x i8] c"Expression:MapLit\00"
 @.str.cache.2061 = internal global ptr null, align 8
-@.str.2062 = private unnamed_addr constant [18 x i8] c"Expression:MapLit\00"
+@.str.2062 = private unnamed_addr constant [16 x i8] c"Expression:Cast\00"
 @.str.cache.2062 = internal global ptr null, align 8
-@.str.2063 = private unnamed_addr constant [16 x i8] c"Expression:Cast\00"
+@.str.2063 = private unnamed_addr constant [23 x i8] c"Expression:FieldAccess\00"
 @.str.cache.2063 = internal global ptr null, align 8
-@.str.2064 = private unnamed_addr constant [23 x i8] c"Expression:FieldAccess\00"
+@.str.2064 = private unnamed_addr constant [17 x i8] c"Expression:Index\00"
 @.str.cache.2064 = internal global ptr null, align 8
-@.str.2065 = private unnamed_addr constant [17 x i8] c"Expression:Index\00"
+@.str.2065 = private unnamed_addr constant [16 x i8] c"Expression:Call\00"
 @.str.cache.2065 = internal global ptr null, align 8
-@.str.2066 = private unnamed_addr constant [16 x i8] c"Expression:Call\00"
+@.str.2066 = private unnamed_addr constant [18 x i8] c"Expression:Binary\00"
 @.str.cache.2066 = internal global ptr null, align 8
-@.str.2067 = private unnamed_addr constant [18 x i8] c"Expression:Binary\00"
+@.str.2067 = private unnamed_addr constant [17 x i8] c"Expression:Unary\00"
 @.str.cache.2067 = internal global ptr null, align 8
-@.str.2068 = private unnamed_addr constant [17 x i8] c"Expression:Unary\00"
+@.str.2068 = private unnamed_addr constant [18 x i8] c"Expression:AnonFn\00"
 @.str.cache.2068 = internal global ptr null, align 8
-@.str.2069 = private unnamed_addr constant [18 x i8] c"Expression:AnonFn\00"
+@.str.2069 = private unnamed_addr constant [19 x i8] c"Expression:UsingAs\00"
 @.str.cache.2069 = internal global ptr null, align 8
-@.str.2070 = private unnamed_addr constant [19 x i8] c"Expression:UsingAs\00"
+@.str.2070 = private unnamed_addr constant [19 x i8] c"Expression:Unknown\00"
 @.str.cache.2070 = internal global ptr null, align 8
-@.str.2071 = private unnamed_addr constant [19 x i8] c"Expression:Unknown\00"
+@.str.2071 = private unnamed_addr constant [9 x i8] c"NamedArg\00"
 @.str.cache.2071 = internal global ptr null, align 8
-@.str.2072 = private unnamed_addr constant [9 x i8] c"NamedArg\00"
+@.str.2072 = private unnamed_addr constant [10 x i8] c"Statement\00"
 @.str.cache.2072 = internal global ptr null, align 8
-@.str.2073 = private unnamed_addr constant [10 x i8] c"Statement\00"
+@.str.2073 = private unnamed_addr constant [18 x i8] c"Statement:VarDecl\00"
 @.str.cache.2073 = internal global ptr null, align 8
-@.str.2074 = private unnamed_addr constant [18 x i8] c"Statement:VarDecl\00"
+@.str.2074 = private unnamed_addr constant [17 x i8] c"Statement:Assign\00"
 @.str.cache.2074 = internal global ptr null, align 8
-@.str.2075 = private unnamed_addr constant [17 x i8] c"Statement:Assign\00"
+@.str.2075 = private unnamed_addr constant [17 x i8] c"Statement:Return\00"
 @.str.cache.2075 = internal global ptr null, align 8
-@.str.2076 = private unnamed_addr constant [17 x i8] c"Statement:Return\00"
+@.str.2076 = private unnamed_addr constant [20 x i8] c"Statement:ClassDecl\00"
 @.str.cache.2076 = internal global ptr null, align 8
-@.str.2077 = private unnamed_addr constant [20 x i8] c"Statement:ClassDecl\00"
+@.str.2077 = private unnamed_addr constant [15 x i8] c"Statement:Expr\00"
 @.str.cache.2077 = internal global ptr null, align 8
-@.str.2078 = private unnamed_addr constant [15 x i8] c"Statement:Expr\00"
+@.str.2078 = private unnamed_addr constant [18 x i8] c"Statement:Forward\00"
 @.str.cache.2078 = internal global ptr null, align 8
-@.str.2079 = private unnamed_addr constant [18 x i8] c"Statement:Forward\00"
+@.str.2079 = private unnamed_addr constant [9 x i8] c"CallData\00"
 @.str.cache.2079 = internal global ptr null, align 8
-@.str.2080 = private unnamed_addr constant [9 x i8] c"CallData\00"
+@.str.2080 = private unnamed_addr constant [10 x i8] c"WellKnown\00"
 @.str.cache.2080 = internal global ptr null, align 8
-@.str.2081 = private unnamed_addr constant [10 x i8] c"WellKnown\00"
+@.str.2081 = private unnamed_addr constant [10 x i8] c"ErrorText\00"
 @.str.cache.2081 = internal global ptr null, align 8
-@.str.2082 = private unnamed_addr constant [10 x i8] c"ErrorText\00"
+@.str.2082 = private unnamed_addr constant [11 x i8] c"TypeDomain\00"
 @.str.cache.2082 = internal global ptr null, align 8
-@.str.2083 = private unnamed_addr constant [11 x i8] c"TypeDomain\00"
+@.str.2083 = private unnamed_addr constant [6 x i8] c"Chars\00"
 @.str.cache.2083 = internal global ptr null, align 8
-@.str.2084 = private unnamed_addr constant [6 x i8] c"Chars\00"
+@.str.2084 = private unnamed_addr constant [6 x i8] c"Token\00"
 @.str.cache.2084 = internal global ptr null, align 8
-@.str.2085 = private unnamed_addr constant [6 x i8] c"Token\00"
+@.str.2085 = private unnamed_addr constant [16 x i8] c"TemplateEscapes\00"
 @.str.cache.2085 = internal global ptr null, align 8
-@.str.2086 = private unnamed_addr constant [16 x i8] c"TemplateEscapes\00"
+@.str.2086 = private unnamed_addr constant [13 x i8] c"BorderGlyphs\00"
 @.str.cache.2086 = internal global ptr null, align 8
-@.str.2087 = private unnamed_addr constant [13 x i8] c"BorderGlyphs\00"
+@.str.2087 = private unnamed_addr constant [10 x i8] c"CleoColor\00"
 @.str.cache.2087 = internal global ptr null, align 8
-@.str.2088 = private unnamed_addr constant [10 x i8] c"CleoColor\00"
+@.str.2088 = private unnamed_addr constant [10 x i8] c"CleoWidth\00"
 @.str.cache.2088 = internal global ptr null, align 8
-@.str.2089 = private unnamed_addr constant [10 x i8] c"CleoWidth\00"
+@.str.2089 = private unnamed_addr constant [9 x i8] c"CleoText\00"
 @.str.cache.2089 = internal global ptr null, align 8
-@.str.2090 = private unnamed_addr constant [9 x i8] c"CleoText\00"
+@.str.2090 = private unnamed_addr constant [10 x i8] c"CleoImage\00"
 @.str.cache.2090 = internal global ptr null, align 8
-@.str.2091 = private unnamed_addr constant [10 x i8] c"CleoImage\00"
+@.str.2091 = private unnamed_addr constant [12 x i8] c"OsLinkFlags\00"
 @.str.cache.2091 = internal global ptr null, align 8
-@.str.2092 = private unnamed_addr constant [12 x i8] c"OsLinkFlags\00"
+@.str.2092 = private unnamed_addr constant [11 x i8] c"OsDispatch\00"
 @.str.cache.2092 = internal global ptr null, align 8
-@.str.2093 = private unnamed_addr constant [11 x i8] c"OsDispatch\00"
+@.str.2093 = private unnamed_addr constant [9 x i8] c"IrModule\00"
 @.str.cache.2093 = internal global ptr null, align 8
-@.str.2094 = private unnamed_addr constant [9 x i8] c"IrModule\00"
+@.str.2094 = private unnamed_addr constant [9 x i8] c"IrStruct\00"
 @.str.cache.2094 = internal global ptr null, align 8
-@.str.2095 = private unnamed_addr constant [9 x i8] c"IrStruct\00"
+@.str.2095 = private unnamed_addr constant [11 x i8] c"IrFunction\00"
 @.str.cache.2095 = internal global ptr null, align 8
-@.str.2096 = private unnamed_addr constant [11 x i8] c"IrFunction\00"
+@.str.2096 = private unnamed_addr constant [8 x i8] c"IrParam\00"
 @.str.cache.2096 = internal global ptr null, align 8
-@.str.2097 = private unnamed_addr constant [8 x i8] c"IrParam\00"
+@.str.2097 = private unnamed_addr constant [8 x i8] c"IrBlock\00"
 @.str.cache.2097 = internal global ptr null, align 8
-@.str.2098 = private unnamed_addr constant [8 x i8] c"IrBlock\00"
+@.str.2098 = private unnamed_addr constant [7 x i8] c"IrInst\00"
 @.str.cache.2098 = internal global ptr null, align 8
-@.str.2099 = private unnamed_addr constant [7 x i8] c"IrInst\00"
+@.str.2099 = private unnamed_addr constant [16 x i8] c"IrInst:ConstInt\00"
 @.str.cache.2099 = internal global ptr null, align 8
-@.str.2100 = private unnamed_addr constant [16 x i8] c"IrInst:ConstInt\00"
+@.str.2100 = private unnamed_addr constant [18 x i8] c"IrInst:ConstFloat\00"
 @.str.cache.2100 = internal global ptr null, align 8
-@.str.2101 = private unnamed_addr constant [18 x i8] c"IrInst:ConstFloat\00"
+@.str.2101 = private unnamed_addr constant [17 x i8] c"IrInst:ConstBool\00"
 @.str.cache.2101 = internal global ptr null, align 8
-@.str.2102 = private unnamed_addr constant [17 x i8] c"IrInst:ConstBool\00"
+@.str.2102 = private unnamed_addr constant [19 x i8] c"IrInst:ConstString\00"
 @.str.cache.2102 = internal global ptr null, align 8
-@.str.2103 = private unnamed_addr constant [19 x i8] c"IrInst:ConstString\00"
+@.str.2103 = private unnamed_addr constant [14 x i8] c"IrInst:Alloca\00"
 @.str.cache.2103 = internal global ptr null, align 8
-@.str.2104 = private unnamed_addr constant [14 x i8] c"IrInst:Alloca\00"
+@.str.2104 = private unnamed_addr constant [12 x i8] c"IrInst:Load\00"
 @.str.cache.2104 = internal global ptr null, align 8
-@.str.2105 = private unnamed_addr constant [12 x i8] c"IrInst:Load\00"
+@.str.2105 = private unnamed_addr constant [13 x i8] c"IrInst:Store\00"
 @.str.cache.2105 = internal global ptr null, align 8
-@.str.2106 = private unnamed_addr constant [13 x i8] c"IrInst:Store\00"
+@.str.2106 = private unnamed_addr constant [13 x i8] c"IrInst:BinOp\00"
 @.str.cache.2106 = internal global ptr null, align 8
-@.str.2107 = private unnamed_addr constant [13 x i8] c"IrInst:BinOp\00"
+@.str.2107 = private unnamed_addr constant [15 x i8] c"IrInst:UnaryOp\00"
 @.str.cache.2107 = internal global ptr null, align 8
-@.str.2108 = private unnamed_addr constant [15 x i8] c"IrInst:UnaryOp\00"
+@.str.2108 = private unnamed_addr constant [11 x i8] c"IrInst:Cmp\00"
 @.str.cache.2108 = internal global ptr null, align 8
-@.str.2109 = private unnamed_addr constant [11 x i8] c"IrInst:Cmp\00"
+@.str.2109 = private unnamed_addr constant [14 x i8] c"IrInst:IrCall\00"
 @.str.cache.2109 = internal global ptr null, align 8
-@.str.2110 = private unnamed_addr constant [14 x i8] c"IrInst:IrCall\00"
+@.str.2110 = private unnamed_addr constant [20 x i8] c"IrInst:IndirectCall\00"
 @.str.cache.2110 = internal global ptr null, align 8
-@.str.2111 = private unnamed_addr constant [20 x i8] c"IrInst:IndirectCall\00"
+@.str.2111 = private unnamed_addr constant [18 x i8] c"IrInst:GlobalAddr\00"
 @.str.cache.2111 = internal global ptr null, align 8
-@.str.2112 = private unnamed_addr constant [18 x i8] c"IrInst:GlobalAddr\00"
+@.str.2112 = private unnamed_addr constant [16 x i8] c"IrInst:AllocObj\00"
 @.str.cache.2112 = internal global ptr null, align 8
-@.str.2113 = private unnamed_addr constant [16 x i8] c"IrInst:AllocObj\00"
+@.str.2113 = private unnamed_addr constant [16 x i8] c"IrInst:FieldPtr\00"
 @.str.cache.2113 = internal global ptr null, align 8
-@.str.2114 = private unnamed_addr constant [16 x i8] c"IrInst:FieldPtr\00"
+@.str.2114 = private unnamed_addr constant [15 x i8] c"IrInst:PtrElem\00"
 @.str.cache.2114 = internal global ptr null, align 8
-@.str.2115 = private unnamed_addr constant [15 x i8] c"IrInst:PtrElem\00"
+@.str.2115 = private unnamed_addr constant [14 x i8] c"IrInst:IrCast\00"
 @.str.cache.2115 = internal global ptr null, align 8
-@.str.2116 = private unnamed_addr constant [14 x i8] c"IrInst:IrCast\00"
+@.str.2116 = private unnamed_addr constant [14 x i8] c"IrInst:Retain\00"
 @.str.cache.2116 = internal global ptr null, align 8
-@.str.2117 = private unnamed_addr constant [14 x i8] c"IrInst:Retain\00"
+@.str.2117 = private unnamed_addr constant [15 x i8] c"IrInst:Release\00"
 @.str.cache.2117 = internal global ptr null, align 8
-@.str.2118 = private unnamed_addr constant [15 x i8] c"IrInst:Release\00"
+@.str.2118 = private unnamed_addr constant [11 x i8] c"IrInst:Ret\00"
 @.str.cache.2118 = internal global ptr null, align 8
-@.str.2119 = private unnamed_addr constant [11 x i8] c"IrInst:Ret\00"
+@.str.2119 = private unnamed_addr constant [10 x i8] c"IrInst:Br\00"
 @.str.cache.2119 = internal global ptr null, align 8
-@.str.2120 = private unnamed_addr constant [10 x i8] c"IrInst:Br\00"
+@.str.2120 = private unnamed_addr constant [14 x i8] c"IrInst:CondBr\00"
 @.str.cache.2120 = internal global ptr null, align 8
-@.str.2121 = private unnamed_addr constant [14 x i8] c"IrInst:CondBr\00"
+@.str.2121 = private unnamed_addr constant [17 x i8] c"ConstantFoldPass\00"
 @.str.cache.2121 = internal global ptr null, align 8
-@.str.2122 = private unnamed_addr constant [17 x i8] c"ConstantFoldPass\00"
+@.str.2122 = private unnamed_addr constant [11 x i8] c"DevirtPass\00"
 @.str.cache.2122 = internal global ptr null, align 8
-@.str.2123 = private unnamed_addr constant [11 x i8] c"DevirtPass\00"
+@.str.2123 = private unnamed_addr constant [16 x i8] c"ArcPeepholePass\00"
 @.str.cache.2123 = internal global ptr null, align 8
-@.str.2124 = private unnamed_addr constant [16 x i8] c"ArcPeepholePass\00"
+@.str.2124 = private unnamed_addr constant [16 x i8] c"PoolElisionPass\00"
 @.str.cache.2124 = internal global ptr null, align 8
-@.str.2125 = private unnamed_addr constant [16 x i8] c"PoolElisionPass\00"
+@.str.2125 = private unnamed_addr constant [18 x i8] c"WrapperUnwrapPass\00"
 @.str.cache.2125 = internal global ptr null, align 8
-@.str.2126 = private unnamed_addr constant [18 x i8] c"WrapperUnwrapPass\00"
+@.str.2126 = private unnamed_addr constant [17 x i8] c"ConcatFusionPass\00"
 @.str.cache.2126 = internal global ptr null, align 8
-@.str.2127 = private unnamed_addr constant [17 x i8] c"ConcatFusionPass\00"
+@.str.2127 = private unnamed_addr constant [15 x i8] c"InlineHintPass\00"
 @.str.cache.2127 = internal global ptr null, align 8
-@.str.2128 = private unnamed_addr constant [15 x i8] c"InlineHintPass\00"
+@.str.2128 = private unnamed_addr constant [19 x i8] c"LlvmRuntimePrelude\00"
 @.str.cache.2128 = internal global ptr null, align 8
-@.str.2129 = private unnamed_addr constant [19 x i8] c"LlvmRuntimePrelude\00"
+@.str.2129 = private unnamed_addr constant [17 x i8] c"LlvmStructLayout\00"
 @.str.cache.2129 = internal global ptr null, align 8
-@.str.2130 = private unnamed_addr constant [17 x i8] c"LlvmStructLayout\00"
+@.str.2130 = private unnamed_addr constant [7 x i8] c"Stderr\00"
 @.str.cache.2130 = internal global ptr null, align 8
-@.str.2131 = private unnamed_addr constant [7 x i8] c"Stderr\00"
+@.str.2131 = private unnamed_addr constant [4 x i8] c"Uri\00"
 @.str.cache.2131 = internal global ptr null, align 8
-@.str.2132 = private unnamed_addr constant [4 x i8] c"Uri\00"
+@.str.2132 = private unnamed_addr constant [13 x i8] c"Task__String\00"
 @.str.cache.2132 = internal global ptr null, align 8
-@.str.2133 = private unnamed_addr constant [13 x i8] c"Task__String\00"
+@.str.2133 = private unnamed_addr constant [14 x i8] c"Task__Boolean\00"
 @.str.cache.2133 = internal global ptr null, align 8
-@.str.2134 = private unnamed_addr constant [14 x i8] c"Task__Boolean\00"
+@.str.2134 = private unnamed_addr constant [10 x i8] c"Task__Int\00"
 @.str.cache.2134 = internal global ptr null, align 8
-@.str.2135 = private unnamed_addr constant [10 x i8] c"Task__Int\00"
-@.str.cache.2135 = internal global ptr null, align 8
 
 define void @Loadable_init(ptr %self) {
 entry:
@@ -352621,37 +352612,37 @@ match_end_1:
 
 define ptr @LlvmEmitter_emitExternalSpecDecls(ptr %self, ptr %p_mod) !dbg !23115 {
 entry:
-  %t203 = alloca ptr, !dbg !23116
-  store ptr null, ptr %t203, !dbg !23116
-  %t185 = alloca ptr, !dbg !23117
-  store ptr null, ptr %t185, !dbg !23117
-  %var_ai_167 = alloca i64, !dbg !23118
-  %var_sig_164 = alloca ptr, !dbg !23119
-  store ptr null, ptr %var_sig_164, !dbg !23119
-  %t150 = alloca i1, !dbg !23120
-  %arm_args_149 = alloca ptr, !dbg !23121
-  store ptr null, ptr %arm_args_149, !dbg !23121
-  %arm_argTypes_146 = alloca ptr, !dbg !23121
-  store ptr null, ptr %arm_argTypes_146, !dbg !23121
-  %arm_callee_143 = alloca ptr, !dbg !23121
-  store ptr null, ptr %arm_callee_143, !dbg !23121
-  %arm_retType_140 = alloca ptr, !dbg !23121
-  store ptr null, ptr %arm_retType_140, !dbg !23121
-  %arm_hasDst_137 = alloca i1, !dbg !23121
-  %arm_dst_134 = alloca ptr, !dbg !23121
-  store ptr null, ptr %arm_dst_134, !dbg !23121
-  %t124 = alloca i1, !dbg !23121
-  %var_ii_111 = alloca i64, !dbg !23122
-  %var_blk_105 = alloca ptr, !dbg !23123
-  store ptr null, ptr %var_blk_105, !dbg !23123
-  %var_bi_97 = alloca i64, !dbg !23124
-  %var_fn_91 = alloca ptr, !dbg !23125
-  store ptr null, ptr %var_fn_91, !dbg !23125
-  %var_out_81 = alloca ptr, !dbg !23126
-  store ptr null, ptr %var_out_81, !dbg !23126
-  %var_fn0_66 = alloca ptr, !dbg !23127
-  store ptr null, ptr %var_fn0_66, !dbg !23127
-  %var_fi_58 = alloca i64, !dbg !23128
+  %t202 = alloca ptr, !dbg !23116
+  store ptr null, ptr %t202, !dbg !23116
+  %t184 = alloca ptr, !dbg !23117
+  store ptr null, ptr %t184, !dbg !23117
+  %var_ai_166 = alloca i64, !dbg !23118
+  %var_sig_163 = alloca ptr, !dbg !23119
+  store ptr null, ptr %var_sig_163, !dbg !23119
+  %t149 = alloca i1, !dbg !23120
+  %arm_args_148 = alloca ptr, !dbg !23121
+  store ptr null, ptr %arm_args_148, !dbg !23121
+  %arm_argTypes_145 = alloca ptr, !dbg !23121
+  store ptr null, ptr %arm_argTypes_145, !dbg !23121
+  %arm_callee_142 = alloca ptr, !dbg !23121
+  store ptr null, ptr %arm_callee_142, !dbg !23121
+  %arm_retType_139 = alloca ptr, !dbg !23121
+  store ptr null, ptr %arm_retType_139, !dbg !23121
+  %arm_hasDst_136 = alloca i1, !dbg !23121
+  %arm_dst_133 = alloca ptr, !dbg !23121
+  store ptr null, ptr %arm_dst_133, !dbg !23121
+  %t123 = alloca i1, !dbg !23121
+  %var_ii_110 = alloca i64, !dbg !23122
+  %var_blk_104 = alloca ptr, !dbg !23123
+  store ptr null, ptr %var_blk_104, !dbg !23123
+  %var_bi_96 = alloca i64, !dbg !23124
+  %var_fn_90 = alloca ptr, !dbg !23125
+  store ptr null, ptr %var_fn_90, !dbg !23125
+  %var_out_80 = alloca ptr, !dbg !23126
+  store ptr null, ptr %var_out_80, !dbg !23126
+  %var_fn0_65 = alloca ptr, !dbg !23127
+  store ptr null, ptr %var_fn0_65, !dbg !23127
+  %var_fi_57 = alloca i64, !dbg !23128
   %t1 = call i64 @spec_pool_frame(), !dbg !23129
   %self_slot = alloca ptr, !dbg !23129
   store ptr %self, ptr %self_slot, !dbg !23129
@@ -352731,308 +352722,306 @@ entry:
   call void @Vector_vecAdd(ptr null, ptr %t7, ptr %t38), !dbg !23131
   %t39 = call ptr @__spec_intern_cached(ptr @.str.1812, ptr @.str.cache.1812), !dbg !23131
   call void @Vector_vecAdd(ptr null, ptr %t7, ptr %t39), !dbg !23131
-  %t40 = call ptr @__spec_intern_cached(ptr @.str.1813, ptr @.str.cache.1813), !dbg !23131
+  %t40 = call ptr @__spec_intern_cached(ptr @.str.1627, ptr @.str.cache.1627), !dbg !23131
   call void @Vector_vecAdd(ptr null, ptr %t7, ptr %t40), !dbg !23131
-  %t41 = call ptr @__spec_intern_cached(ptr @.str.1627, ptr @.str.cache.1627), !dbg !23131
-  call void @Vector_vecAdd(ptr null, ptr %t7, ptr %t41), !dbg !23131
   call ptr @spec_claim_pool(ptr %t7), !dbg !23131
   call ptr @spec_rt_retain(ptr %t7), !dbg !23131
   call ptr @spec_claim_pool(ptr %t7), !dbg !23131
   store ptr %t7, ptr %var_preludeSyms_6, !dbg !23131
-  %var_pi_42 = alloca i64, !dbg !23132
-  %t43 = add i64 0, 0, !dbg !23132
-  store i64 %t43, ptr %var_pi_42, !dbg !23132
+  %var_pi_41 = alloca i64, !dbg !23132
+  %t42 = add i64 0, 0, !dbg !23132
+  store i64 %t42, ptr %var_pi_41, !dbg !23132
   br label %while_hdr_1, !dbg !23133
 while_hdr_1:
-  %t44 = load i64, ptr %var_pi_42, !dbg !23133
-  %t45 = load ptr, ptr %var_preludeSyms_6, !dbg !23133
-  %t46 = call i64 @Vector_vecLength(ptr null, ptr %t45), !dbg !23133
-  %t47 = icmp slt i64 %t44, %t46, !dbg !23133
-  br i1 %t47, label %while_body_2, label %while_end_3, !dbg !23133
+  %t43 = load i64, ptr %var_pi_41, !dbg !23133
+  %t44 = load ptr, ptr %var_preludeSyms_6, !dbg !23133
+  %t45 = call i64 @Vector_vecLength(ptr null, ptr %t44), !dbg !23133
+  %t46 = icmp slt i64 %t43, %t45, !dbg !23133
+  br i1 %t46, label %while_body_2, label %while_end_3, !dbg !23133
 while_body_2:
-  %t48 = load ptr, ptr %var_known_2, !dbg !23134
-  %t49 = load ptr, ptr %var_preludeSyms_6, !dbg !23134
-  %t50 = load i64, ptr %var_pi_42, !dbg !23134
-  %t52 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23134
-  %t51 = call ptr @Vector_vecGetAt(ptr null, ptr %t49, i64 %t50, ptr %t52), !dbg !23134
-  %t53 = add i1 0, 1, !dbg !23134
-  %t54 = inttoptr i1 %t53 to ptr, !dbg !23134
-  call void @HashTable_mapSetAny(ptr null, ptr %t48, ptr %t51, ptr %t54), !dbg !23134
-  %t55 = load i64, ptr %var_pi_42, !dbg !23135
-  %t56 = add i64 0, 1, !dbg !23135
-  %t57 = add i64 %t55, %t56, !dbg !23135
-  store i64 %t57, ptr %var_pi_42, !dbg !23135
+  %t47 = load ptr, ptr %var_known_2, !dbg !23134
+  %t48 = load ptr, ptr %var_preludeSyms_6, !dbg !23134
+  %t49 = load i64, ptr %var_pi_41, !dbg !23134
+  %t51 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23134
+  %t50 = call ptr @Vector_vecGetAt(ptr null, ptr %t48, i64 %t49, ptr %t51), !dbg !23134
+  %t52 = add i1 0, 1, !dbg !23134
+  %t53 = inttoptr i1 %t52 to ptr, !dbg !23134
+  call void @HashTable_mapSetAny(ptr null, ptr %t47, ptr %t50, ptr %t53), !dbg !23134
+  %t54 = load i64, ptr %var_pi_41, !dbg !23135
+  %t55 = add i64 0, 1, !dbg !23135
+  %t56 = add i64 %t54, %t55, !dbg !23135
+  store i64 %t56, ptr %var_pi_41, !dbg !23135
   br label %while_hdr_1, !dbg !23133
 while_end_3:
-  %t59 = add i64 0, 0, !dbg !23128
-  store i64 %t59, ptr %var_fi_58, !dbg !23128
+  %t58 = add i64 0, 0, !dbg !23128
+  store i64 %t58, ptr %var_fi_57, !dbg !23128
   br label %while_hdr_4, !dbg !23136
 while_hdr_4:
-  %t60 = load i64, ptr %var_fi_58, !dbg !23136
-  %t61 = load ptr, ptr %slot_mod, !dbg !23136
-  %t62 = getelementptr inbounds %struct.IrModule, ptr %t61, i32 0, i32 3, !dbg !23136
-  %t63 = load ptr, ptr %t62, !dbg !23136
-  %t64 = call i64 @Vector_vecLength(ptr null, ptr %t63), !dbg !23136
-  %t65 = icmp slt i64 %t60, %t64, !dbg !23136
-  br i1 %t65, label %while_body_5, label %while_end_6, !dbg !23136
+  %t59 = load i64, ptr %var_fi_57, !dbg !23136
+  %t60 = load ptr, ptr %slot_mod, !dbg !23136
+  %t61 = getelementptr inbounds %struct.IrModule, ptr %t60, i32 0, i32 3, !dbg !23136
+  %t62 = load ptr, ptr %t61, !dbg !23136
+  %t63 = call i64 @Vector_vecLength(ptr null, ptr %t62), !dbg !23136
+  %t64 = icmp slt i64 %t59, %t63, !dbg !23136
+  br i1 %t64, label %while_body_5, label %while_end_6, !dbg !23136
 while_body_5:
-  %t67 = load ptr, ptr %slot_mod, !dbg !23127
-  %t68 = getelementptr inbounds %struct.IrModule, ptr %t67, i32 0, i32 3, !dbg !23127
-  %t69 = load ptr, ptr %t68, !dbg !23127
-  %t70 = load i64, ptr %var_fi_58, !dbg !23127
-  %t71 = call ptr @Vector_vecGetChecked(ptr null, ptr %t69, i64 %t70), !dbg !23127
-  call ptr @spec_rt_retain(ptr %t71), !dbg !23127
-  call ptr @spec_claim_pool(ptr %t71), !dbg !23127
-  store ptr %t71, ptr %var_fn0_66, !dbg !23127
-  %t72 = load ptr, ptr %var_known_2, !dbg !23137
-  %t73 = load ptr, ptr %var_fn0_66, !dbg !23137
-  %t74 = getelementptr inbounds %struct.IrFunction, ptr %t73, i32 0, i32 2, !dbg !23137
-  %t75 = load ptr, ptr %t74, !dbg !23137
-  %t76 = add i1 0, 1, !dbg !23137
-  %t77 = inttoptr i1 %t76 to ptr, !dbg !23137
-  call void @HashTable_mapSetAny(ptr null, ptr %t72, ptr %t75, ptr %t77), !dbg !23137
-  %t78 = load i64, ptr %var_fi_58, !dbg !23138
-  %t79 = add i64 0, 1, !dbg !23138
-  %t80 = add i64 %t78, %t79, !dbg !23138
-  store i64 %t80, ptr %var_fi_58, !dbg !23138
+  %t66 = load ptr, ptr %slot_mod, !dbg !23127
+  %t67 = getelementptr inbounds %struct.IrModule, ptr %t66, i32 0, i32 3, !dbg !23127
+  %t68 = load ptr, ptr %t67, !dbg !23127
+  %t69 = load i64, ptr %var_fi_57, !dbg !23127
+  %t70 = call ptr @Vector_vecGetChecked(ptr null, ptr %t68, i64 %t69), !dbg !23127
+  call ptr @spec_rt_retain(ptr %t70), !dbg !23127
+  call ptr @spec_claim_pool(ptr %t70), !dbg !23127
+  store ptr %t70, ptr %var_fn0_65, !dbg !23127
+  %t71 = load ptr, ptr %var_known_2, !dbg !23137
+  %t72 = load ptr, ptr %var_fn0_65, !dbg !23137
+  %t73 = getelementptr inbounds %struct.IrFunction, ptr %t72, i32 0, i32 2, !dbg !23137
+  %t74 = load ptr, ptr %t73, !dbg !23137
+  %t75 = add i1 0, 1, !dbg !23137
+  %t76 = inttoptr i1 %t75 to ptr, !dbg !23137
+  call void @HashTable_mapSetAny(ptr null, ptr %t71, ptr %t74, ptr %t76), !dbg !23137
+  %t77 = load i64, ptr %var_fi_57, !dbg !23138
+  %t78 = add i64 0, 1, !dbg !23138
+  %t79 = add i64 %t77, %t78, !dbg !23138
+  store i64 %t79, ptr %var_fi_57, !dbg !23138
   br label %while_hdr_4, !dbg !23136
 while_end_6:
-  %t82 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23126
-  %t83 = call ptr @spec_string_copy(ptr %t82), !dbg !23126
-  call ptr @spec_claim_pool(ptr %t83), !dbg !23126
-  call ptr @spec_rt_retain(ptr %t83), !dbg !23126
-  call ptr @spec_claim_pool(ptr %t83), !dbg !23126
-  store ptr %t83, ptr %var_out_81, !dbg !23126
-  %t84 = add i64 0, 0, !dbg !23139
-  store i64 %t84, ptr %var_fi_58, !dbg !23139
+  %t81 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23126
+  %t82 = call ptr @spec_string_copy(ptr %t81), !dbg !23126
+  call ptr @spec_claim_pool(ptr %t82), !dbg !23126
+  call ptr @spec_rt_retain(ptr %t82), !dbg !23126
+  call ptr @spec_claim_pool(ptr %t82), !dbg !23126
+  store ptr %t82, ptr %var_out_80, !dbg !23126
+  %t83 = add i64 0, 0, !dbg !23139
+  store i64 %t83, ptr %var_fi_57, !dbg !23139
   br label %while_hdr_7, !dbg !23140
 while_hdr_7:
-  %t85 = load i64, ptr %var_fi_58, !dbg !23140
-  %t86 = load ptr, ptr %slot_mod, !dbg !23140
-  %t87 = getelementptr inbounds %struct.IrModule, ptr %t86, i32 0, i32 3, !dbg !23140
-  %t88 = load ptr, ptr %t87, !dbg !23140
-  %t89 = call i64 @Vector_vecLength(ptr null, ptr %t88), !dbg !23140
-  %t90 = icmp slt i64 %t85, %t89, !dbg !23140
-  br i1 %t90, label %while_body_8, label %while_end_9, !dbg !23140
+  %t84 = load i64, ptr %var_fi_57, !dbg !23140
+  %t85 = load ptr, ptr %slot_mod, !dbg !23140
+  %t86 = getelementptr inbounds %struct.IrModule, ptr %t85, i32 0, i32 3, !dbg !23140
+  %t87 = load ptr, ptr %t86, !dbg !23140
+  %t88 = call i64 @Vector_vecLength(ptr null, ptr %t87), !dbg !23140
+  %t89 = icmp slt i64 %t84, %t88, !dbg !23140
+  br i1 %t89, label %while_body_8, label %while_end_9, !dbg !23140
 while_body_8:
-  %t92 = load ptr, ptr %slot_mod, !dbg !23125
-  %t93 = getelementptr inbounds %struct.IrModule, ptr %t92, i32 0, i32 3, !dbg !23125
-  %t94 = load ptr, ptr %t93, !dbg !23125
-  %t95 = load i64, ptr %var_fi_58, !dbg !23125
-  %t96 = call ptr @Vector_vecGetChecked(ptr null, ptr %t94, i64 %t95), !dbg !23125
-  call ptr @spec_rt_retain(ptr %t96), !dbg !23125
-  call ptr @spec_claim_pool(ptr %t96), !dbg !23125
-  store ptr %t96, ptr %var_fn_91, !dbg !23125
-  %t98 = add i64 0, 0, !dbg !23124
-  store i64 %t98, ptr %var_bi_97, !dbg !23124
+  %t91 = load ptr, ptr %slot_mod, !dbg !23125
+  %t92 = getelementptr inbounds %struct.IrModule, ptr %t91, i32 0, i32 3, !dbg !23125
+  %t93 = load ptr, ptr %t92, !dbg !23125
+  %t94 = load i64, ptr %var_fi_57, !dbg !23125
+  %t95 = call ptr @Vector_vecGetChecked(ptr null, ptr %t93, i64 %t94), !dbg !23125
+  call ptr @spec_rt_retain(ptr %t95), !dbg !23125
+  call ptr @spec_claim_pool(ptr %t95), !dbg !23125
+  store ptr %t95, ptr %var_fn_90, !dbg !23125
+  %t97 = add i64 0, 0, !dbg !23124
+  store i64 %t97, ptr %var_bi_96, !dbg !23124
   br label %while_hdr_10, !dbg !23141
 while_hdr_10:
-  %t99 = load i64, ptr %var_bi_97, !dbg !23141
-  %t100 = load ptr, ptr %var_fn_91, !dbg !23141
-  %t101 = getelementptr inbounds %struct.IrFunction, ptr %t100, i32 0, i32 5, !dbg !23141
-  %t102 = load ptr, ptr %t101, !dbg !23141
-  %t103 = call i64 @Vector_vecLength(ptr null, ptr %t102), !dbg !23141
-  %t104 = icmp slt i64 %t99, %t103, !dbg !23141
-  br i1 %t104, label %while_body_11, label %while_end_12, !dbg !23141
+  %t98 = load i64, ptr %var_bi_96, !dbg !23141
+  %t99 = load ptr, ptr %var_fn_90, !dbg !23141
+  %t100 = getelementptr inbounds %struct.IrFunction, ptr %t99, i32 0, i32 5, !dbg !23141
+  %t101 = load ptr, ptr %t100, !dbg !23141
+  %t102 = call i64 @Vector_vecLength(ptr null, ptr %t101), !dbg !23141
+  %t103 = icmp slt i64 %t98, %t102, !dbg !23141
+  br i1 %t103, label %while_body_11, label %while_end_12, !dbg !23141
 while_body_11:
-  %t106 = load ptr, ptr %var_fn_91, !dbg !23123
-  %t107 = getelementptr inbounds %struct.IrFunction, ptr %t106, i32 0, i32 5, !dbg !23123
-  %t108 = load ptr, ptr %t107, !dbg !23123
-  %t109 = load i64, ptr %var_bi_97, !dbg !23123
-  %t110 = call ptr @Vector_vecGetChecked(ptr null, ptr %t108, i64 %t109), !dbg !23123
-  call ptr @spec_rt_retain(ptr %t110), !dbg !23123
-  call ptr @spec_claim_pool(ptr %t110), !dbg !23123
-  store ptr %t110, ptr %var_blk_105, !dbg !23123
-  %t112 = add i64 0, 0, !dbg !23122
-  store i64 %t112, ptr %var_ii_111, !dbg !23122
+  %t105 = load ptr, ptr %var_fn_90, !dbg !23123
+  %t106 = getelementptr inbounds %struct.IrFunction, ptr %t105, i32 0, i32 5, !dbg !23123
+  %t107 = load ptr, ptr %t106, !dbg !23123
+  %t108 = load i64, ptr %var_bi_96, !dbg !23123
+  %t109 = call ptr @Vector_vecGetChecked(ptr null, ptr %t107, i64 %t108), !dbg !23123
+  call ptr @spec_rt_retain(ptr %t109), !dbg !23123
+  call ptr @spec_claim_pool(ptr %t109), !dbg !23123
+  store ptr %t109, ptr %var_blk_104, !dbg !23123
+  %t111 = add i64 0, 0, !dbg !23122
+  store i64 %t111, ptr %var_ii_110, !dbg !23122
   br label %while_hdr_13, !dbg !23142
 while_hdr_13:
-  %t113 = load i64, ptr %var_ii_111, !dbg !23142
-  %t114 = load ptr, ptr %var_blk_105, !dbg !23142
-  %t115 = getelementptr inbounds %struct.IrBlock, ptr %t114, i32 0, i32 3, !dbg !23142
-  %t116 = load ptr, ptr %t115, !dbg !23142
-  %t117 = call i64 @Vector_vecLength(ptr null, ptr %t116), !dbg !23142
-  %t118 = icmp slt i64 %t113, %t117, !dbg !23142
-  br i1 %t118, label %while_body_14, label %while_end_15, !dbg !23142
+  %t112 = load i64, ptr %var_ii_110, !dbg !23142
+  %t113 = load ptr, ptr %var_blk_104, !dbg !23142
+  %t114 = getelementptr inbounds %struct.IrBlock, ptr %t113, i32 0, i32 3, !dbg !23142
+  %t115 = load ptr, ptr %t114, !dbg !23142
+  %t116 = call i64 @Vector_vecLength(ptr null, ptr %t115), !dbg !23142
+  %t117 = icmp slt i64 %t112, %t116, !dbg !23142
+  br i1 %t117, label %while_body_14, label %while_end_15, !dbg !23142
 while_body_14:
-  %t119 = load ptr, ptr %var_blk_105, !dbg !23121
-  %t120 = getelementptr inbounds %struct.IrBlock, ptr %t119, i32 0, i32 3, !dbg !23121
-  %t121 = load ptr, ptr %t120, !dbg !23121
-  %t122 = load i64, ptr %var_ii_111, !dbg !23121
-  %t123 = call ptr @Vector_vecGetChecked(ptr null, ptr %t121, i64 %t122), !dbg !23121
-  %t125 = add i1 0, 0, !dbg !23121
-  store i1 %t125, ptr %t124, !dbg !23121
-  %t126 = icmp ne ptr %t123, null, !dbg !23121
-  br i1 %t126, label %var_chk_17, label %var_done_18, !dbg !23121
+  %t118 = load ptr, ptr %var_blk_104, !dbg !23121
+  %t119 = getelementptr inbounds %struct.IrBlock, ptr %t118, i32 0, i32 3, !dbg !23121
+  %t120 = load ptr, ptr %t119, !dbg !23121
+  %t121 = load i64, ptr %var_ii_110, !dbg !23121
+  %t122 = call ptr @Vector_vecGetChecked(ptr null, ptr %t120, i64 %t121), !dbg !23121
+  %t124 = add i1 0, 0, !dbg !23121
+  store i1 %t124, ptr %t123, !dbg !23121
+  %t125 = icmp ne ptr %t122, null, !dbg !23121
+  br i1 %t125, label %var_chk_17, label %var_done_18, !dbg !23121
 var_chk_17:
-  %t127 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t123, i32 0, i32 0, !dbg !23121
-  %t128 = load ptr, ptr %t127, !dbg !23121
-  %t129 = getelementptr i8, ptr @.typename.IrInst_IrCall, i64 0, !dbg !23121
-  %t130 = icmp eq ptr %t128, %t129, !dbg !23121
-  store i1 %t130, ptr %t124, !dbg !23121
+  %t126 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t122, i32 0, i32 0, !dbg !23121
+  %t127 = load ptr, ptr %t126, !dbg !23121
+  %t128 = getelementptr i8, ptr @.typename.IrInst_IrCall, i64 0, !dbg !23121
+  %t129 = icmp eq ptr %t127, %t128, !dbg !23121
+  store i1 %t129, ptr %t123, !dbg !23121
   br label %var_done_18, !dbg !23121
 var_done_18:
-  %t131 = load i1, ptr %t124, !dbg !23121
-  br i1 %t131, label %match_arm_19, label %match_next_20, !dbg !23121
+  %t130 = load i1, ptr %t123, !dbg !23121
+  br i1 %t130, label %match_arm_19, label %match_next_20, !dbg !23121
 match_arm_19:
-  %t132 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t123, i32 0, i32 4, !dbg !23121
-  %t133 = load ptr, ptr %t132, !dbg !23121
-  store ptr %t133, ptr %arm_dst_134, !dbg !23121
-  %t135 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t123, i32 0, i32 5, !dbg !23121
-  %t136 = load i1, ptr %t135, !dbg !23121
-  store i1 %t136, ptr %arm_hasDst_137, !dbg !23121
-  %t138 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t123, i32 0, i32 6, !dbg !23121
-  %t139 = load ptr, ptr %t138, !dbg !23121
-  store ptr %t139, ptr %arm_retType_140, !dbg !23121
-  %t141 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t123, i32 0, i32 7, !dbg !23121
-  %t142 = load ptr, ptr %t141, !dbg !23121
-  store ptr %t142, ptr %arm_callee_143, !dbg !23121
-  %t144 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t123, i32 0, i32 8, !dbg !23121
-  %t145 = load ptr, ptr %t144, !dbg !23121
-  store ptr %t145, ptr %arm_argTypes_146, !dbg !23121
-  %t147 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t123, i32 0, i32 9, !dbg !23121
-  %t148 = load ptr, ptr %t147, !dbg !23121
-  store ptr %t148, ptr %arm_args_149, !dbg !23121
-  %t151 = load ptr, ptr %arm_callee_143, !dbg !23120
-  %t152 = call ptr @__spec_intern_cached(ptr @.str.1301, ptr @.str.cache.1301), !dbg !23120
-  %t153 = add i1 0, 1, !dbg !23120
-  %t154 = call i1 @Str_startsWith(ptr %t151, ptr %t152, i1 %t153), !dbg !23120
-  store i1 %t154, ptr %t150, !dbg !23120
-  br i1 %t154, label %sc_rhs_21, label %sc_end_22, !dbg !23120
+  %t131 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t122, i32 0, i32 4, !dbg !23121
+  %t132 = load ptr, ptr %t131, !dbg !23121
+  store ptr %t132, ptr %arm_dst_133, !dbg !23121
+  %t134 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t122, i32 0, i32 5, !dbg !23121
+  %t135 = load i1, ptr %t134, !dbg !23121
+  store i1 %t135, ptr %arm_hasDst_136, !dbg !23121
+  %t137 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t122, i32 0, i32 6, !dbg !23121
+  %t138 = load ptr, ptr %t137, !dbg !23121
+  store ptr %t138, ptr %arm_retType_139, !dbg !23121
+  %t140 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t122, i32 0, i32 7, !dbg !23121
+  %t141 = load ptr, ptr %t140, !dbg !23121
+  store ptr %t141, ptr %arm_callee_142, !dbg !23121
+  %t143 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t122, i32 0, i32 8, !dbg !23121
+  %t144 = load ptr, ptr %t143, !dbg !23121
+  store ptr %t144, ptr %arm_argTypes_145, !dbg !23121
+  %t146 = getelementptr inbounds %struct.IrInst_IrCall, ptr %t122, i32 0, i32 9, !dbg !23121
+  %t147 = load ptr, ptr %t146, !dbg !23121
+  store ptr %t147, ptr %arm_args_148, !dbg !23121
+  %t150 = load ptr, ptr %arm_callee_142, !dbg !23120
+  %t151 = call ptr @__spec_intern_cached(ptr @.str.1301, ptr @.str.cache.1301), !dbg !23120
+  %t152 = add i1 0, 1, !dbg !23120
+  %t153 = call i1 @Str_startsWith(ptr %t150, ptr %t151, i1 %t152), !dbg !23120
+  store i1 %t153, ptr %t149, !dbg !23120
+  br i1 %t153, label %sc_rhs_21, label %sc_end_22, !dbg !23120
 sc_rhs_21:
-  %t155 = load ptr, ptr %var_known_2, !dbg !23120
-  %t156 = load ptr, ptr %arm_callee_143, !dbg !23120
-  %t157 = call i1 @HashTable_mapHas(ptr null, ptr %t155, ptr %t156), !dbg !23120
-  %t158 = xor i1 %t157, 1, !dbg !23120
-  store i1 %t158, ptr %t150, !dbg !23120
+  %t154 = load ptr, ptr %var_known_2, !dbg !23120
+  %t155 = load ptr, ptr %arm_callee_142, !dbg !23120
+  %t156 = call i1 @HashTable_mapHas(ptr null, ptr %t154, ptr %t155), !dbg !23120
+  %t157 = xor i1 %t156, 1, !dbg !23120
+  store i1 %t157, ptr %t149, !dbg !23120
   br label %sc_end_22, !dbg !23120
 sc_end_22:
-  %t159 = load i1, ptr %t150, !dbg !23120
-  br i1 %t159, label %if_then_23, label %if_end_25, !dbg !23120
+  %t158 = load i1, ptr %t149, !dbg !23120
+  br i1 %t158, label %if_then_23, label %if_end_25, !dbg !23120
 if_then_23:
-  %t160 = load ptr, ptr %var_known_2, !dbg !23143
-  %t161 = load ptr, ptr %arm_callee_143, !dbg !23143
-  %t162 = add i1 0, 1, !dbg !23143
-  %t163 = inttoptr i1 %t162 to ptr, !dbg !23143
-  call void @HashTable_mapSetAny(ptr null, ptr %t160, ptr %t161, ptr %t163), !dbg !23143
-  %t165 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23119
-  %t166 = call ptr @spec_string_copy(ptr %t165), !dbg !23119
-  call ptr @spec_claim_pool(ptr %t166), !dbg !23119
-  call ptr @spec_rt_retain(ptr %t166), !dbg !23119
-  call ptr @spec_claim_pool(ptr %t166), !dbg !23119
-  store ptr %t166, ptr %var_sig_164, !dbg !23119
-  %t168 = add i64 0, 0, !dbg !23118
-  store i64 %t168, ptr %var_ai_167, !dbg !23118
+  %t159 = load ptr, ptr %var_known_2, !dbg !23143
+  %t160 = load ptr, ptr %arm_callee_142, !dbg !23143
+  %t161 = add i1 0, 1, !dbg !23143
+  %t162 = inttoptr i1 %t161 to ptr, !dbg !23143
+  call void @HashTable_mapSetAny(ptr null, ptr %t159, ptr %t160, ptr %t162), !dbg !23143
+  %t164 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23119
+  %t165 = call ptr @spec_string_copy(ptr %t164), !dbg !23119
+  call ptr @spec_claim_pool(ptr %t165), !dbg !23119
+  call ptr @spec_rt_retain(ptr %t165), !dbg !23119
+  call ptr @spec_claim_pool(ptr %t165), !dbg !23119
+  store ptr %t165, ptr %var_sig_163, !dbg !23119
+  %t167 = add i64 0, 0, !dbg !23118
+  store i64 %t167, ptr %var_ai_166, !dbg !23118
   br label %while_hdr_26, !dbg !23144
 while_hdr_26:
-  %t169 = load i64, ptr %var_ai_167, !dbg !23144
-  %t170 = load ptr, ptr %arm_argTypes_146, !dbg !23144
-  %t171 = call i64 @Vector_vecLength(ptr null, ptr %t170), !dbg !23144
-  %t172 = icmp slt i64 %t169, %t171, !dbg !23144
-  br i1 %t172, label %while_body_27, label %while_end_28, !dbg !23144
+  %t168 = load i64, ptr %var_ai_166, !dbg !23144
+  %t169 = load ptr, ptr %arm_argTypes_145, !dbg !23144
+  %t170 = call i64 @Vector_vecLength(ptr null, ptr %t169), !dbg !23144
+  %t171 = icmp slt i64 %t168, %t170, !dbg !23144
+  br i1 %t171, label %while_body_27, label %while_end_28, !dbg !23144
 while_body_27:
-  %t173 = load i64, ptr %var_ai_167, !dbg !23145
-  %t174 = add i64 0, 0, !dbg !23145
-  %t175 = icmp sgt i64 %t173, %t174, !dbg !23145
-  br i1 %t175, label %if_then_29, label %if_end_31, !dbg !23145
+  %t172 = load i64, ptr %var_ai_166, !dbg !23145
+  %t173 = add i64 0, 0, !dbg !23145
+  %t174 = icmp sgt i64 %t172, %t173, !dbg !23145
+  br i1 %t174, label %if_then_29, label %if_end_31, !dbg !23145
 if_then_29:
-  %t176 = load ptr, ptr %var_sig_164, !dbg !23145
-  %t177 = call ptr @__spec_intern_cached(ptr @.str.330, ptr @.str.cache.330), !dbg !23145
-  %t178 = call ptr @spec_string_concat(ptr %t176, ptr %t177), !dbg !23145
-  store ptr %t178, ptr %var_sig_164, !dbg !23145
+  %t175 = load ptr, ptr %var_sig_163, !dbg !23145
+  %t176 = call ptr @__spec_intern_cached(ptr @.str.330, ptr @.str.cache.330), !dbg !23145
+  %t177 = call ptr @spec_string_concat(ptr %t175, ptr %t176), !dbg !23145
+  store ptr %t177, ptr %var_sig_163, !dbg !23145
   br label %if_end_31, !dbg !23145
 if_end_31:
-  %t179 = load ptr, ptr %var_sig_164, !dbg !23117
-  %t180 = load ptr, ptr %self_slot, !dbg !23117
-  %t181 = load ptr, ptr %arm_argTypes_146, !dbg !23117
-  %t182 = load i64, ptr %var_ai_167, !dbg !23117
-  %t183 = call ptr @Vector_vecGetChecked(ptr null, ptr %t181, i64 %t182), !dbg !23117
-  %t186 = icmp ne ptr %t180, null, !dbg !23117
-  br i1 %t186, label %vt_call_32, label %dir_call_33, !dbg !23117
+  %t178 = load ptr, ptr %var_sig_163, !dbg !23117
+  %t179 = load ptr, ptr %self_slot, !dbg !23117
+  %t180 = load ptr, ptr %arm_argTypes_145, !dbg !23117
+  %t181 = load i64, ptr %var_ai_166, !dbg !23117
+  %t182 = call ptr @Vector_vecGetChecked(ptr null, ptr %t180, i64 %t181), !dbg !23117
+  %t185 = icmp ne ptr %t179, null, !dbg !23117
+  br i1 %t185, label %vt_call_32, label %dir_call_33, !dbg !23117
 vt_call_32:
-  %t187 = getelementptr inbounds %struct.LlvmEmitter, ptr %t180, i32 0, i32 1, !dbg !23117
-  %t188 = load ptr, ptr %t187, !dbg !23117
-  %t189 = getelementptr ptr, ptr %t188, i64 1139, !dbg !23117
-  %t190 = load ptr, ptr %t189, !dbg !23117
-  %t191 = call ptr %t190(ptr %t180, ptr %t183), !dbg !23117
-  store ptr %t191, ptr %t185, !dbg !23117
+  %t186 = getelementptr inbounds %struct.LlvmEmitter, ptr %t179, i32 0, i32 1, !dbg !23117
+  %t187 = load ptr, ptr %t186, !dbg !23117
+  %t188 = getelementptr ptr, ptr %t187, i64 1139, !dbg !23117
+  %t189 = load ptr, ptr %t188, !dbg !23117
+  %t190 = call ptr %t189(ptr %t179, ptr %t182), !dbg !23117
+  store ptr %t190, ptr %t184, !dbg !23117
   br label %vt_end_34, !dbg !23117
 dir_call_33:
-  %t192 = call ptr @LlvmEmitter_llvmType(ptr null, ptr %t183), !dbg !23117
-  store ptr %t192, ptr %t185, !dbg !23117
+  %t191 = call ptr @LlvmEmitter_llvmType(ptr null, ptr %t182), !dbg !23117
+  store ptr %t191, ptr %t184, !dbg !23117
   br label %vt_end_34, !dbg !23117
 vt_end_34:
-  %t184 = load ptr, ptr %t185, !dbg !23117
-  %t193 = call ptr @spec_string_concat(ptr %t179, ptr %t184), !dbg !23117
-  store ptr %t193, ptr %var_sig_164, !dbg !23117
-  %t194 = load i64, ptr %var_ai_167, !dbg !23146
-  %t195 = add i64 0, 1, !dbg !23146
-  %t196 = add i64 %t194, %t195, !dbg !23146
-  store i64 %t196, ptr %var_ai_167, !dbg !23146
+  %t183 = load ptr, ptr %t184, !dbg !23117
+  %t192 = call ptr @spec_string_concat(ptr %t178, ptr %t183), !dbg !23117
+  store ptr %t192, ptr %var_sig_163, !dbg !23117
+  %t193 = load i64, ptr %var_ai_166, !dbg !23146
+  %t194 = add i64 0, 1, !dbg !23146
+  %t195 = add i64 %t193, %t194, !dbg !23146
+  store i64 %t195, ptr %var_ai_166, !dbg !23146
   br label %while_hdr_26, !dbg !23144
 while_end_28:
-  %t197 = load ptr, ptr %var_out_81, !dbg !23116
-  %t198 = call ptr @__spec_intern_cached(ptr @.str.1814, ptr @.str.cache.1814), !dbg !23116
-  %t199 = call ptr @spec_string_concat(ptr %t197, ptr %t198), !dbg !23116
-  %t200 = load ptr, ptr %self_slot, !dbg !23116
-  %t201 = load ptr, ptr %arm_retType_140, !dbg !23116
-  %t204 = icmp ne ptr %t200, null, !dbg !23116
-  br i1 %t204, label %vt_call_35, label %dir_call_36, !dbg !23116
+  %t196 = load ptr, ptr %var_out_80, !dbg !23116
+  %t197 = call ptr @__spec_intern_cached(ptr @.str.1813, ptr @.str.cache.1813), !dbg !23116
+  %t198 = call ptr @spec_string_concat(ptr %t196, ptr %t197), !dbg !23116
+  %t199 = load ptr, ptr %self_slot, !dbg !23116
+  %t200 = load ptr, ptr %arm_retType_139, !dbg !23116
+  %t203 = icmp ne ptr %t199, null, !dbg !23116
+  br i1 %t203, label %vt_call_35, label %dir_call_36, !dbg !23116
 vt_call_35:
-  %t205 = getelementptr inbounds %struct.LlvmEmitter, ptr %t200, i32 0, i32 1, !dbg !23116
-  %t206 = load ptr, ptr %t205, !dbg !23116
-  %t207 = getelementptr ptr, ptr %t206, i64 1139, !dbg !23116
-  %t208 = load ptr, ptr %t207, !dbg !23116
-  %t209 = call ptr %t208(ptr %t200, ptr %t201), !dbg !23116
-  store ptr %t209, ptr %t203, !dbg !23116
+  %t204 = getelementptr inbounds %struct.LlvmEmitter, ptr %t199, i32 0, i32 1, !dbg !23116
+  %t205 = load ptr, ptr %t204, !dbg !23116
+  %t206 = getelementptr ptr, ptr %t205, i64 1139, !dbg !23116
+  %t207 = load ptr, ptr %t206, !dbg !23116
+  %t208 = call ptr %t207(ptr %t199, ptr %t200), !dbg !23116
+  store ptr %t208, ptr %t202, !dbg !23116
   br label %vt_end_37, !dbg !23116
 dir_call_36:
-  %t210 = call ptr @LlvmEmitter_llvmType(ptr null, ptr %t201), !dbg !23116
-  store ptr %t210, ptr %t203, !dbg !23116
+  %t209 = call ptr @LlvmEmitter_llvmType(ptr null, ptr %t200), !dbg !23116
+  store ptr %t209, ptr %t202, !dbg !23116
   br label %vt_end_37, !dbg !23116
 vt_end_37:
-  %t202 = load ptr, ptr %t203, !dbg !23116
-  %t211 = call ptr @spec_string_concat(ptr %t199, ptr %t202), !dbg !23116
-  %t212 = call ptr @__spec_intern_cached(ptr @.str.1815, ptr @.str.cache.1815), !dbg !23116
-  %t213 = call ptr @spec_string_concat(ptr %t211, ptr %t212), !dbg !23116
-  %t214 = load ptr, ptr %arm_callee_143, !dbg !23116
-  %t215 = call ptr @spec_string_concat(ptr %t213, ptr %t214), !dbg !23116
-  %t216 = call ptr @__spec_intern_cached(ptr @.str.938, ptr @.str.cache.938), !dbg !23116
-  %t217 = call ptr @spec_string_concat(ptr %t215, ptr %t216), !dbg !23116
-  %t218 = load ptr, ptr %var_sig_164, !dbg !23116
-  %t219 = call ptr @spec_string_concat(ptr %t217, ptr %t218), !dbg !23116
-  %t220 = call ptr @__spec_intern_cached(ptr @.str.1816, ptr @.str.cache.1816), !dbg !23116
-  %t221 = call ptr @spec_string_concat(ptr %t219, ptr %t220), !dbg !23116
-  store ptr %t221, ptr %var_out_81, !dbg !23116
+  %t201 = load ptr, ptr %t202, !dbg !23116
+  %t210 = call ptr @spec_string_concat(ptr %t198, ptr %t201), !dbg !23116
+  %t211 = call ptr @__spec_intern_cached(ptr @.str.1814, ptr @.str.cache.1814), !dbg !23116
+  %t212 = call ptr @spec_string_concat(ptr %t210, ptr %t211), !dbg !23116
+  %t213 = load ptr, ptr %arm_callee_142, !dbg !23116
+  %t214 = call ptr @spec_string_concat(ptr %t212, ptr %t213), !dbg !23116
+  %t215 = call ptr @__spec_intern_cached(ptr @.str.938, ptr @.str.cache.938), !dbg !23116
+  %t216 = call ptr @spec_string_concat(ptr %t214, ptr %t215), !dbg !23116
+  %t217 = load ptr, ptr %var_sig_163, !dbg !23116
+  %t218 = call ptr @spec_string_concat(ptr %t216, ptr %t217), !dbg !23116
+  %t219 = call ptr @__spec_intern_cached(ptr @.str.1815, ptr @.str.cache.1815), !dbg !23116
+  %t220 = call ptr @spec_string_concat(ptr %t218, ptr %t219), !dbg !23116
+  store ptr %t220, ptr %var_out_80, !dbg !23116
   br label %if_end_25, !dbg !23120
 if_end_25:
   br label %match_end_16, !dbg !23121
 match_next_20:
   br label %match_end_16, !dbg !23121
 match_end_16:
-  %t222 = load i64, ptr %var_ii_111, !dbg !23147
-  %t223 = add i64 0, 1, !dbg !23147
-  %t224 = add i64 %t222, %t223, !dbg !23147
-  store i64 %t224, ptr %var_ii_111, !dbg !23147
+  %t221 = load i64, ptr %var_ii_110, !dbg !23147
+  %t222 = add i64 0, 1, !dbg !23147
+  %t223 = add i64 %t221, %t222, !dbg !23147
+  store i64 %t223, ptr %var_ii_110, !dbg !23147
   br label %while_hdr_13, !dbg !23142
 while_end_15:
-  %t225 = load i64, ptr %var_bi_97, !dbg !23148
-  %t226 = add i64 0, 1, !dbg !23148
-  %t227 = add i64 %t225, %t226, !dbg !23148
-  store i64 %t227, ptr %var_bi_97, !dbg !23148
+  %t224 = load i64, ptr %var_bi_96, !dbg !23148
+  %t225 = add i64 0, 1, !dbg !23148
+  %t226 = add i64 %t224, %t225, !dbg !23148
+  store i64 %t226, ptr %var_bi_96, !dbg !23148
   br label %while_hdr_10, !dbg !23141
 while_end_12:
-  %t228 = load i64, ptr %var_fi_58, !dbg !23149
-  %t229 = add i64 0, 1, !dbg !23149
-  %t230 = add i64 %t228, %t229, !dbg !23149
-  store i64 %t230, ptr %var_fi_58, !dbg !23149
+  %t227 = load i64, ptr %var_fi_57, !dbg !23149
+  %t228 = add i64 0, 1, !dbg !23149
+  %t229 = add i64 %t227, %t228, !dbg !23149
+  store i64 %t229, ptr %var_fi_57, !dbg !23149
   br label %while_hdr_7, !dbg !23140
 while_end_9:
-  %t231 = load ptr, ptr %var_out_81, !dbg !23150
-  call ptr @spec_rt_retain(ptr %t231), !dbg !23150
+  %t230 = load ptr, ptr %var_out_80, !dbg !23150
+  call ptr @spec_rt_retain(ptr %t230), !dbg !23150
   call void @spec_pool_release_to(i64 %t1), !dbg !23150
-  call ptr @spec_claim_pool(ptr %t231), !dbg !23150
-  ret ptr %t231, !dbg !23150
+  call ptr @spec_claim_pool(ptr %t230), !dbg !23150
+  ret ptr %t230, !dbg !23150
 }
 
 define ptr @LlvmEmitter_emitModuleHeader(ptr %self, ptr %p_mod) !dbg !23151 {
@@ -353208,7 +353197,7 @@ entry:
   call ptr @spec_claim_pool(ptr %t3), !dbg !23230
   store ptr %t3, ptr %var_prelude_2, !dbg !23230
   %var_out_4 = alloca ptr, !dbg !23228
-  %t5 = call ptr @__spec_intern_cached(ptr @.str.1817, ptr @.str.cache.1817), !dbg !23228
+  %t5 = call ptr @__spec_intern_cached(ptr @.str.1816, ptr @.str.cache.1816), !dbg !23228
   %t6 = load ptr, ptr %var_prelude_2, !dbg !23228
   %t8 = alloca ptr, !dbg !23228
   %t9 = icmp ne ptr %t6, null, !dbg !23228
@@ -353295,7 +353284,7 @@ while_body_8:
   %t63 = call ptr @spec_string_concat(ptr %t61, ptr %t62), !dbg !23223
   %t64 = load ptr, ptr %var_gn_41, !dbg !23223
   %t65 = call ptr @spec_string_concat(ptr %t63, ptr %t64), !dbg !23223
-  %t66 = call ptr @__spec_intern_cached(ptr @.str.1818, ptr @.str.cache.1818), !dbg !23223
+  %t66 = call ptr @__spec_intern_cached(ptr @.str.1817, ptr @.str.cache.1817), !dbg !23223
   %t67 = call ptr @spec_string_concat(ptr %t65, ptr %t66), !dbg !23223
   %t68 = load ptr, ptr %self_slot, !dbg !23223
   %t69 = load ptr, ptr %var_gt_48, !dbg !23223
@@ -353510,17 +353499,17 @@ vt_end_36:
   br label %while_hdr_28, !dbg !23235
 while_end_30:
   %t194 = load ptr, ptr %var_out_4, !dbg !23238
-  %t195 = call ptr @__spec_intern_cached(ptr @.str.1819, ptr @.str.cache.1819), !dbg !23238
+  %t195 = call ptr @__spec_intern_cached(ptr @.str.1818, ptr @.str.cache.1818), !dbg !23238
   %t196 = call ptr @spec_string_concat(ptr %t194, ptr %t195), !dbg !23238
   %t197 = load ptr, ptr %var_st_151, !dbg !23238
   %t198 = getelementptr inbounds %struct.IrStruct, ptr %t197, i32 0, i32 2, !dbg !23238
   %t199 = load ptr, ptr %t198, !dbg !23238
   %t200 = call ptr @spec_string_concat(ptr %t196, ptr %t199), !dbg !23238
-  %t201 = call ptr @__spec_intern_cached(ptr @.str.1820, ptr @.str.cache.1820), !dbg !23238
+  %t201 = call ptr @__spec_intern_cached(ptr @.str.1819, ptr @.str.cache.1819), !dbg !23238
   %t202 = call ptr @spec_string_concat(ptr %t200, ptr %t201), !dbg !23238
   %t203 = load ptr, ptr %var_fieldsStr_157, !dbg !23238
   %t204 = call ptr @spec_string_concat(ptr %t202, ptr %t203), !dbg !23238
-  %t205 = call ptr @__spec_intern_cached(ptr @.str.1821, ptr @.str.cache.1821), !dbg !23238
+  %t205 = call ptr @__spec_intern_cached(ptr @.str.1820, ptr @.str.cache.1820), !dbg !23238
   %t206 = call ptr @spec_string_concat(ptr %t204, ptr %t205), !dbg !23238
   store ptr %t206, ptr %var_out_4, !dbg !23238
   %t209 = load ptr, ptr %var_st_151, !dbg !23208
@@ -353549,7 +353538,7 @@ if_end_39:
   store ptr %t221, ptr %var_qn_207, !dbg !23208
   %t222 = load ptr, ptr %var_out_4, !dbg !23207
   %t223 = load ptr, ptr %self_slot, !dbg !23207
-  %t224 = call ptr @__spec_intern_cached(ptr @.str.1822, ptr @.str.cache.1822), !dbg !23207
+  %t224 = call ptr @__spec_intern_cached(ptr @.str.1821, ptr @.str.cache.1821), !dbg !23207
   %t225 = load ptr, ptr %var_st_151, !dbg !23207
   %t226 = getelementptr inbounds %struct.IrStruct, ptr %t225, i32 0, i32 2, !dbg !23207
   %t227 = load ptr, ptr %t226, !dbg !23207
@@ -353624,13 +353613,13 @@ if_end_51:
   br i1 %t271, label %if_then_52, label %if_else_53, !dbg !23242
 if_then_52:
   %t272 = load ptr, ptr %var_vtItems_248, !dbg !23243
-  %t273 = call ptr @__spec_intern_cached(ptr @.str.1823, ptr @.str.cache.1823), !dbg !23243
+  %t273 = call ptr @__spec_intern_cached(ptr @.str.1822, ptr @.str.cache.1822), !dbg !23243
   %t274 = call ptr @spec_string_concat(ptr %t272, ptr %t273), !dbg !23243
   store ptr %t274, ptr %var_vtItems_248, !dbg !23243
   br label %if_end_54, !dbg !23242
 if_else_53:
   %t275 = load ptr, ptr %var_vtItems_248, !dbg !23244
-  %t276 = call ptr @__spec_intern_cached(ptr @.str.1824, ptr @.str.cache.1824), !dbg !23244
+  %t276 = call ptr @__spec_intern_cached(ptr @.str.1823, ptr @.str.cache.1823), !dbg !23244
   %t277 = call ptr @spec_string_concat(ptr %t275, ptr %t276), !dbg !23244
   %t278 = load ptr, ptr %var_vfn_262, !dbg !23244
   %t279 = call ptr @spec_string_concat(ptr %t277, ptr %t278), !dbg !23244
@@ -353644,41 +353633,41 @@ if_end_54:
   br label %while_hdr_46, !dbg !23240
 while_end_48:
   %t283 = load ptr, ptr %var_out_4, !dbg !23246
-  %t284 = call ptr @__spec_intern_cached(ptr @.str.1825, ptr @.str.cache.1825), !dbg !23246
+  %t284 = call ptr @__spec_intern_cached(ptr @.str.1824, ptr @.str.cache.1824), !dbg !23246
   %t285 = call ptr @spec_string_concat(ptr %t283, ptr %t284), !dbg !23246
   %t286 = load ptr, ptr %var_st_151, !dbg !23246
   %t287 = getelementptr inbounds %struct.IrStruct, ptr %t286, i32 0, i32 2, !dbg !23246
   %t288 = load ptr, ptr %t287, !dbg !23246
   %t289 = call ptr @spec_string_concat(ptr %t285, ptr %t288), !dbg !23246
-  %t290 = call ptr @__spec_intern_cached(ptr @.str.1826, ptr @.str.cache.1826), !dbg !23246
+  %t290 = call ptr @__spec_intern_cached(ptr @.str.1825, ptr @.str.cache.1825), !dbg !23246
   %t291 = call ptr @spec_string_concat(ptr %t289, ptr %t290), !dbg !23246
   %t292 = load i64, ptr %var_vtLen_240, !dbg !23246
   %t293 = call ptr @Str_intToString(ptr null, i64 %t292), !dbg !23246
   %t294 = call ptr @spec_string_concat(ptr %t291, ptr %t293), !dbg !23246
-  %t295 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23246
+  %t295 = call ptr @__spec_intern_cached(ptr @.str.1826, ptr @.str.cache.1826), !dbg !23246
   %t296 = call ptr @spec_string_concat(ptr %t294, ptr %t295), !dbg !23246
   %t297 = load ptr, ptr %var_vtItems_248, !dbg !23246
   %t298 = call ptr @spec_string_concat(ptr %t296, ptr %t297), !dbg !23246
-  %t299 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23246
+  %t299 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23246
   %t300 = call ptr @spec_string_concat(ptr %t298, ptr %t299), !dbg !23246
   store ptr %t300, ptr %var_out_4, !dbg !23246
   br label %if_end_45, !dbg !23239
 if_else_44:
   %t301 = load ptr, ptr %var_out_4, !dbg !23247
-  %t302 = call ptr @__spec_intern_cached(ptr @.str.1825, ptr @.str.cache.1825), !dbg !23247
+  %t302 = call ptr @__spec_intern_cached(ptr @.str.1824, ptr @.str.cache.1824), !dbg !23247
   %t303 = call ptr @spec_string_concat(ptr %t301, ptr %t302), !dbg !23247
   %t304 = load ptr, ptr %var_st_151, !dbg !23247
   %t305 = getelementptr inbounds %struct.IrStruct, ptr %t304, i32 0, i32 2, !dbg !23247
   %t306 = load ptr, ptr %t305, !dbg !23247
   %t307 = call ptr @spec_string_concat(ptr %t303, ptr %t306), !dbg !23247
-  %t308 = call ptr @__spec_intern_cached(ptr @.str.1829, ptr @.str.cache.1829), !dbg !23247
+  %t308 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23247
   %t309 = call ptr @spec_string_concat(ptr %t307, ptr %t308), !dbg !23247
   store ptr %t309, ptr %var_out_4, !dbg !23247
   br label %if_end_45, !dbg !23239
 if_end_45:
   %t310 = load ptr, ptr %var_out_4, !dbg !23202
   %t311 = load ptr, ptr %self_slot, !dbg !23202
-  %t312 = call ptr @__spec_intern_cached(ptr @.str.1830, ptr @.str.cache.1830), !dbg !23202
+  %t312 = call ptr @__spec_intern_cached(ptr @.str.1829, ptr @.str.cache.1829), !dbg !23202
   %t313 = load ptr, ptr %var_st_151, !dbg !23202
   %t314 = getelementptr inbounds %struct.IrStruct, ptr %t313, i32 0, i32 2, !dbg !23202
   %t315 = load ptr, ptr %t314, !dbg !23202
@@ -353745,7 +353734,7 @@ while_body_62:
   call ptr @spec_rt_retain(ptr %t355), !dbg !23198
   call ptr @spec_claim_pool(ptr %t355), !dbg !23198
   store ptr %t355, ptr %var_bn_350, !dbg !23198
-  %t358 = call ptr @__spec_intern_cached(ptr @.str.1831, ptr @.str.cache.1831), !dbg !23197
+  %t358 = call ptr @__spec_intern_cached(ptr @.str.1830, ptr @.str.cache.1830), !dbg !23197
   %t359 = load ptr, ptr %var_st_151, !dbg !23197
   %t360 = getelementptr inbounds %struct.IrStruct, ptr %t359, i32 0, i32 2, !dbg !23197
   %t361 = load ptr, ptr %t360, !dbg !23197
@@ -353790,7 +353779,7 @@ if_then_67:
   br label %if_end_69, !dbg !23250
 if_end_69:
   %t388 = load ptr, ptr %var_bItems_339, !dbg !23251
-  %t389 = call ptr @__spec_intern_cached(ptr @.str.1832, ptr @.str.cache.1832), !dbg !23251
+  %t389 = call ptr @__spec_intern_cached(ptr @.str.1831, ptr @.str.cache.1831), !dbg !23251
   %t390 = call ptr @spec_string_concat(ptr %t388, ptr %t389), !dbg !23251
   %t391 = load ptr, ptr %var_bSym_357, !dbg !23251
   %t392 = call ptr @spec_string_concat(ptr %t390, ptr %t391), !dbg !23251
@@ -353802,13 +353791,13 @@ if_end_69:
   br label %while_hdr_61, !dbg !23249
 while_end_63:
   %t396 = load ptr, ptr %var_out_4, !dbg !23253
-  %t397 = call ptr @__spec_intern_cached(ptr @.str.1833, ptr @.str.cache.1833), !dbg !23253
+  %t397 = call ptr @__spec_intern_cached(ptr @.str.1832, ptr @.str.cache.1832), !dbg !23253
   %t398 = call ptr @spec_string_concat(ptr %t396, ptr %t397), !dbg !23253
   %t399 = load ptr, ptr %var_st_151, !dbg !23253
   %t400 = getelementptr inbounds %struct.IrStruct, ptr %t399, i32 0, i32 2, !dbg !23253
   %t401 = load ptr, ptr %t400, !dbg !23253
   %t402 = call ptr @spec_string_concat(ptr %t398, ptr %t401), !dbg !23253
-  %t403 = call ptr @__spec_intern_cached(ptr @.str.1834, ptr @.str.cache.1834), !dbg !23253
+  %t403 = call ptr @__spec_intern_cached(ptr @.str.1833, ptr @.str.cache.1833), !dbg !23253
   %t404 = call ptr @spec_string_concat(ptr %t402, ptr %t403), !dbg !23253
   %t405 = load ptr, ptr %var_st_151, !dbg !23253
   %t406 = getelementptr inbounds %struct.IrStruct, ptr %t405, i32 0, i32 10, !dbg !23253
@@ -353816,14 +353805,14 @@ while_end_63:
   %t408 = call i64 @Vector_vecLength(ptr null, ptr %t407), !dbg !23253
   %t409 = call ptr @Str_intToString(ptr null, i64 %t408), !dbg !23253
   %t410 = call ptr @spec_string_concat(ptr %t404, ptr %t409), !dbg !23253
-  %t411 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23253
+  %t411 = call ptr @__spec_intern_cached(ptr @.str.1826, ptr @.str.cache.1826), !dbg !23253
   %t412 = call ptr @spec_string_concat(ptr %t410, ptr %t411), !dbg !23253
   %t413 = load ptr, ptr %var_bItems_339, !dbg !23253
   %t414 = call ptr @spec_string_concat(ptr %t412, ptr %t413), !dbg !23253
-  %t415 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23253
+  %t415 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23253
   %t416 = call ptr @spec_string_concat(ptr %t414, ptr %t415), !dbg !23253
   store ptr %t416, ptr %var_out_4, !dbg !23253
-  %t417 = call ptr @__spec_intern_cached(ptr @.str.1833, ptr @.str.cache.1833), !dbg !23254
+  %t417 = call ptr @__spec_intern_cached(ptr @.str.1832, ptr @.str.cache.1832), !dbg !23254
   %t418 = load ptr, ptr %var_st_151, !dbg !23254
   %t419 = getelementptr inbounds %struct.IrStruct, ptr %t418, i32 0, i32 2, !dbg !23254
   %t420 = load ptr, ptr %t419, !dbg !23254
@@ -353874,7 +353863,7 @@ while_body_74:
   call ptr @spec_rt_retain(ptr %t447), !dbg !23192
   call ptr @spec_claim_pool(ptr %t447), !dbg !23192
   store ptr %t447, ptr %var_mn_442, !dbg !23192
-  %t450 = call ptr @__spec_intern_cached(ptr @.str.1835, ptr @.str.cache.1835), !dbg !23191
+  %t450 = call ptr @__spec_intern_cached(ptr @.str.1834, ptr @.str.cache.1834), !dbg !23191
   %t451 = load ptr, ptr %var_st_151, !dbg !23191
   %t452 = getelementptr inbounds %struct.IrStruct, ptr %t451, i32 0, i32 2, !dbg !23191
   %t453 = load ptr, ptr %t452, !dbg !23191
@@ -354003,13 +353992,13 @@ vt_end_87:
   br label %while_hdr_73, !dbg !23256
 while_end_75:
   %t537 = load ptr, ptr %var_out_4, !dbg !23259
-  %t538 = call ptr @__spec_intern_cached(ptr @.str.1836, ptr @.str.cache.1836), !dbg !23259
+  %t538 = call ptr @__spec_intern_cached(ptr @.str.1835, ptr @.str.cache.1835), !dbg !23259
   %t539 = call ptr @spec_string_concat(ptr %t537, ptr %t538), !dbg !23259
   %t540 = load ptr, ptr %var_st_151, !dbg !23259
   %t541 = getelementptr inbounds %struct.IrStruct, ptr %t540, i32 0, i32 2, !dbg !23259
   %t542 = load ptr, ptr %t541, !dbg !23259
   %t543 = call ptr @spec_string_concat(ptr %t539, ptr %t542), !dbg !23259
-  %t544 = call ptr @__spec_intern_cached(ptr @.str.1834, ptr @.str.cache.1834), !dbg !23259
+  %t544 = call ptr @__spec_intern_cached(ptr @.str.1833, ptr @.str.cache.1833), !dbg !23259
   %t545 = call ptr @spec_string_concat(ptr %t543, ptr %t544), !dbg !23259
   %t546 = load ptr, ptr %var_st_151, !dbg !23259
   %t547 = getelementptr inbounds %struct.IrStruct, ptr %t546, i32 0, i32 13, !dbg !23259
@@ -354017,18 +354006,18 @@ while_end_75:
   %t549 = call i64 @Vector_vecLength(ptr null, ptr %t548), !dbg !23259
   %t550 = call ptr @Str_intToString(ptr null, i64 %t549), !dbg !23259
   %t551 = call ptr @spec_string_concat(ptr %t545, ptr %t550), !dbg !23259
-  %t552 = call ptr @__spec_intern_cached(ptr @.str.1837, ptr @.str.cache.1837), !dbg !23259
+  %t552 = call ptr @__spec_intern_cached(ptr @.str.1836, ptr @.str.cache.1836), !dbg !23259
   %t553 = call ptr @spec_string_concat(ptr %t551, ptr %t552), !dbg !23259
   %t554 = load ptr, ptr %var_methodMetaType_106, !dbg !23259
   %t555 = call ptr @spec_string_concat(ptr %t553, ptr %t554), !dbg !23259
-  %t556 = call ptr @__spec_intern_cached(ptr @.str.1838, ptr @.str.cache.1838), !dbg !23259
+  %t556 = call ptr @__spec_intern_cached(ptr @.str.1837, ptr @.str.cache.1837), !dbg !23259
   %t557 = call ptr @spec_string_concat(ptr %t555, ptr %t556), !dbg !23259
   %t558 = load ptr, ptr %var_mItems_431, !dbg !23259
   %t559 = call ptr @spec_string_concat(ptr %t557, ptr %t558), !dbg !23259
-  %t560 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23259
+  %t560 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23259
   %t561 = call ptr @spec_string_concat(ptr %t559, ptr %t560), !dbg !23259
   store ptr %t561, ptr %var_out_4, !dbg !23259
-  %t562 = call ptr @__spec_intern_cached(ptr @.str.1836, ptr @.str.cache.1836), !dbg !23260
+  %t562 = call ptr @__spec_intern_cached(ptr @.str.1835, ptr @.str.cache.1835), !dbg !23260
   %t563 = load ptr, ptr %var_st_151, !dbg !23260
   %t564 = getelementptr inbounds %struct.IrStruct, ptr %t563, i32 0, i32 2, !dbg !23260
   %t565 = load ptr, ptr %t564, !dbg !23260
@@ -354106,7 +354095,7 @@ while_body_92:
   %t615 = call ptr @Vector_vecGetAt(ptr null, ptr %t613, i64 %t614, ptr %t617), !dbg !23178
   %t618 = ptrtoint ptr %t615 to i64, !dbg !23178
   store i64 %t618, ptr %var_mffl_610, !dbg !23178
-  %t620 = call ptr @__spec_intern_cached(ptr @.str.1839, ptr @.str.cache.1839), !dbg !23177
+  %t620 = call ptr @__spec_intern_cached(ptr @.str.1838, ptr @.str.cache.1838), !dbg !23177
   %t621 = load ptr, ptr %var_st_151, !dbg !23177
   %t622 = getelementptr inbounds %struct.IrStruct, ptr %t621, i32 0, i32 2, !dbg !23177
   %t623 = load ptr, ptr %t622, !dbg !23177
@@ -354117,7 +354106,7 @@ while_body_92:
   call ptr @spec_rt_retain(ptr %t629), !dbg !23177
   call ptr @spec_claim_pool(ptr %t629), !dbg !23177
   store ptr %t629, ptr %var_fnSym_619, !dbg !23177
-  %t631 = call ptr @__spec_intern_cached(ptr @.str.1840, ptr @.str.cache.1840), !dbg !23177
+  %t631 = call ptr @__spec_intern_cached(ptr @.str.1839, ptr @.str.cache.1839), !dbg !23177
   %t632 = load ptr, ptr %var_st_151, !dbg !23177
   %t633 = getelementptr inbounds %struct.IrStruct, ptr %t632, i32 0, i32 2, !dbg !23176
   %t634 = load ptr, ptr %t633, !dbg !23176
@@ -354172,14 +354161,14 @@ vt_end_99:
   %t659 = load ptr, ptr %t660, !dbg !23174
   %t668 = call ptr @spec_string_concat(ptr %t655, ptr %t659), !dbg !23174
   store ptr %t668, ptr %var_out_4, !dbg !23174
-  %t670 = call ptr @__spec_intern_cached(ptr @.str.1841, ptr @.str.cache.1841), !dbg !23173
+  %t670 = call ptr @__spec_intern_cached(ptr @.str.1840, ptr @.str.cache.1840), !dbg !23173
   %t671 = load ptr, ptr %var_st_151, !dbg !23173
   %t672 = getelementptr inbounds %struct.IrStruct, ptr %t671, i32 0, i32 2, !dbg !23173
   %t673 = load ptr, ptr %t672, !dbg !23173
-  %t675 = call ptr @__spec_intern_cached(ptr @.str.1842, ptr @.str.cache.1842), !dbg !23173
+  %t675 = call ptr @__spec_intern_cached(ptr @.str.1841, ptr @.str.cache.1841), !dbg !23173
   %t677 = load i64, ptr %var_mfidx_601, !dbg !23173
   %t678 = call ptr @Str_intToString(ptr null, i64 %t677), !dbg !23173
-  %t680 = call ptr @__spec_intern_cached(ptr @.str.1843, ptr @.str.cache.1843), !dbg !23173
+  %t680 = call ptr @__spec_intern_cached(ptr @.str.1842, ptr @.str.cache.1842), !dbg !23173
   %t681 = call ptr @__spec_concat_5(ptr %t670, ptr %t673, ptr %t675, ptr %t678, ptr %t680), !dbg !23173
   call ptr @spec_rt_retain(ptr %t681), !dbg !23173
   call ptr @spec_claim_pool(ptr %t681), !dbg !23173
@@ -354233,13 +354222,13 @@ vt_end_105:
   br label %while_hdr_91, !dbg !23262
 while_end_93:
   %t709 = load ptr, ptr %var_out_4, !dbg !23265
-  %t710 = call ptr @__spec_intern_cached(ptr @.str.1844, ptr @.str.cache.1844), !dbg !23265
+  %t710 = call ptr @__spec_intern_cached(ptr @.str.1843, ptr @.str.cache.1843), !dbg !23265
   %t711 = call ptr @spec_string_concat(ptr %t709, ptr %t710), !dbg !23265
   %t712 = load ptr, ptr %var_st_151, !dbg !23265
   %t713 = getelementptr inbounds %struct.IrStruct, ptr %t712, i32 0, i32 2, !dbg !23265
   %t714 = load ptr, ptr %t713, !dbg !23265
   %t715 = call ptr @spec_string_concat(ptr %t711, ptr %t714), !dbg !23265
-  %t716 = call ptr @__spec_intern_cached(ptr @.str.1834, ptr @.str.cache.1834), !dbg !23265
+  %t716 = call ptr @__spec_intern_cached(ptr @.str.1833, ptr @.str.cache.1833), !dbg !23265
   %t717 = call ptr @spec_string_concat(ptr %t715, ptr %t716), !dbg !23265
   %t718 = load ptr, ptr %var_st_151, !dbg !23265
   %t719 = getelementptr inbounds %struct.IrStruct, ptr %t718, i32 0, i32 17, !dbg !23265
@@ -354247,18 +354236,18 @@ while_end_93:
   %t721 = call i64 @Vector_vecLength(ptr null, ptr %t720), !dbg !23265
   %t722 = call ptr @Str_intToString(ptr null, i64 %t721), !dbg !23265
   %t723 = call ptr @spec_string_concat(ptr %t717, ptr %t722), !dbg !23265
-  %t724 = call ptr @__spec_intern_cached(ptr @.str.1837, ptr @.str.cache.1837), !dbg !23265
+  %t724 = call ptr @__spec_intern_cached(ptr @.str.1836, ptr @.str.cache.1836), !dbg !23265
   %t725 = call ptr @spec_string_concat(ptr %t723, ptr %t724), !dbg !23265
   %t726 = load ptr, ptr %var_fieldMetaType_117, !dbg !23265
   %t727 = call ptr @spec_string_concat(ptr %t725, ptr %t726), !dbg !23265
-  %t728 = call ptr @__spec_intern_cached(ptr @.str.1838, ptr @.str.cache.1838), !dbg !23265
+  %t728 = call ptr @__spec_intern_cached(ptr @.str.1837, ptr @.str.cache.1837), !dbg !23265
   %t729 = call ptr @spec_string_concat(ptr %t727, ptr %t728), !dbg !23265
   %t730 = load ptr, ptr %var_mfItems_576, !dbg !23265
   %t731 = call ptr @spec_string_concat(ptr %t729, ptr %t730), !dbg !23265
-  %t732 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23265
+  %t732 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23265
   %t733 = call ptr @spec_string_concat(ptr %t731, ptr %t732), !dbg !23265
   store ptr %t733, ptr %var_out_4, !dbg !23265
-  %t734 = call ptr @__spec_intern_cached(ptr @.str.1844, ptr @.str.cache.1844), !dbg !23266
+  %t734 = call ptr @__spec_intern_cached(ptr @.str.1843, ptr @.str.cache.1843), !dbg !23266
   %t735 = load ptr, ptr %var_st_151, !dbg !23266
   %t736 = getelementptr inbounds %struct.IrStruct, ptr %t735, i32 0, i32 2, !dbg !23266
   %t737 = load ptr, ptr %t736, !dbg !23266
@@ -354292,23 +354281,23 @@ if_end_108:
   call ptr @spec_claim_pool(ptr %t752), !dbg !23171
   store ptr %t752, ptr %var_ctorPtr_739, !dbg !23171
   %t753 = load ptr, ptr %var_out_4, !dbg !23170
-  %t754 = call ptr @__spec_intern_cached(ptr @.str.1845, ptr @.str.cache.1845), !dbg !23170
+  %t754 = call ptr @__spec_intern_cached(ptr @.str.1844, ptr @.str.cache.1844), !dbg !23170
   %t755 = call ptr @spec_string_concat(ptr %t753, ptr %t754), !dbg !23170
   %t756 = load ptr, ptr %var_st_151, !dbg !23170
   %t757 = getelementptr inbounds %struct.IrStruct, ptr %t756, i32 0, i32 2, !dbg !23170
   %t758 = load ptr, ptr %t757, !dbg !23170
   %t759 = call ptr @spec_string_concat(ptr %t755, ptr %t758), !dbg !23170
-  %t760 = call ptr @__spec_intern_cached(ptr @.str.1846, ptr @.str.cache.1846), !dbg !23170
+  %t760 = call ptr @__spec_intern_cached(ptr @.str.1845, ptr @.str.cache.1845), !dbg !23170
   %t761 = call ptr @spec_string_concat(ptr %t759, ptr %t760), !dbg !23170
   %t762 = load ptr, ptr %var_classMetaLayout_102, !dbg !23170
   %t763 = call ptr @Vector_vecNewObject(), !dbg !23170
-  %t764 = call ptr @__spec_intern_cached(ptr @.str.1822, ptr @.str.cache.1822), !dbg !23170
+  %t764 = call ptr @__spec_intern_cached(ptr @.str.1821, ptr @.str.cache.1821), !dbg !23170
   %t765 = load ptr, ptr %var_st_151, !dbg !23170
   %t766 = getelementptr inbounds %struct.IrStruct, ptr %t765, i32 0, i32 2, !dbg !23170
   %t767 = load ptr, ptr %t766, !dbg !23170
   %t768 = call ptr @String_concat(ptr %t764, ptr %t767), !dbg !23170
   call void @Vector_vecAdd(ptr null, ptr %t763, ptr %t768), !dbg !23170
-  %t769 = call ptr @__spec_intern_cached(ptr @.str.1830, ptr @.str.cache.1830), !dbg !23170
+  %t769 = call ptr @__spec_intern_cached(ptr @.str.1829, ptr @.str.cache.1829), !dbg !23170
   %t770 = load ptr, ptr %var_st_151, !dbg !23170
   %t771 = getelementptr inbounds %struct.IrStruct, ptr %t770, i32 0, i32 2, !dbg !23170
   %t772 = load ptr, ptr %t771, !dbg !23170
@@ -354362,7 +354351,7 @@ vt_end_111:
   %t804 = call ptr @spec_string_concat(ptr %t802, ptr %t803), !dbg !23170
   store ptr %t804, ptr %var_out_4, !dbg !23170
   %t805 = load ptr, ptr %var_classMetaRefs_139, !dbg !23267
-  %t806 = call ptr @__spec_intern_cached(ptr @.str.1847, ptr @.str.cache.1847), !dbg !23267
+  %t806 = call ptr @__spec_intern_cached(ptr @.str.1846, ptr @.str.cache.1846), !dbg !23267
   %t807 = load ptr, ptr %var_st_151, !dbg !23267
   %t808 = getelementptr inbounds %struct.IrStruct, ptr %t807, i32 0, i32 2, !dbg !23267
   %t809 = load ptr, ptr %t808, !dbg !23267
@@ -354409,7 +354398,7 @@ while_body_116:
   call ptr @spec_rt_retain(ptr %t836), !dbg !23166
   call ptr @spec_claim_pool(ptr %t836), !dbg !23166
   store ptr %t836, ptr %var_hn_831, !dbg !23166
-  %t839 = call ptr @__spec_intern_cached(ptr @.str.1848, ptr @.str.cache.1848), !dbg !23165
+  %t839 = call ptr @__spec_intern_cached(ptr @.str.1847, ptr @.str.cache.1847), !dbg !23165
   %t840 = load ptr, ptr %var_st_151, !dbg !23165
   %t841 = getelementptr inbounds %struct.IrStruct, ptr %t840, i32 0, i32 2, !dbg !23165
   %t842 = load ptr, ptr %t841, !dbg !23165
@@ -354486,13 +354475,13 @@ if_then_124:
   br label %if_end_126, !dbg !23270
 if_end_126:
   %t889 = load ptr, ptr %var_hnItems_817, !dbg !23273
-  %t890 = call ptr @__spec_intern_cached(ptr @.str.1832, ptr @.str.cache.1832), !dbg !23273
+  %t890 = call ptr @__spec_intern_cached(ptr @.str.1831, ptr @.str.cache.1831), !dbg !23273
   %t891 = call ptr @spec_string_concat(ptr %t889, ptr %t890), !dbg !23273
   %t892 = load ptr, ptr %var_hSym_838, !dbg !23273
   %t893 = call ptr @spec_string_concat(ptr %t891, ptr %t892), !dbg !23273
   store ptr %t893, ptr %var_hnItems_817, !dbg !23273
   %t894 = load ptr, ptr %var_hgItems_820, !dbg !23274
-  %t895 = call ptr @__spec_intern_cached(ptr @.str.1832, ptr @.str.cache.1832), !dbg !23274
+  %t895 = call ptr @__spec_intern_cached(ptr @.str.1831, ptr @.str.cache.1831), !dbg !23274
   %t896 = call ptr @spec_string_concat(ptr %t894, ptr %t895), !dbg !23274
   %t897 = load ptr, ptr %var_hgPtr_870, !dbg !23274
   %t898 = call ptr @spec_string_concat(ptr %t896, ptr %t897), !dbg !23274
@@ -354504,13 +354493,13 @@ if_end_126:
   br label %while_hdr_115, !dbg !23269
 while_end_117:
   %t902 = load ptr, ptr %var_out_4, !dbg !23276
-  %t903 = call ptr @__spec_intern_cached(ptr @.str.1849, ptr @.str.cache.1849), !dbg !23276
+  %t903 = call ptr @__spec_intern_cached(ptr @.str.1848, ptr @.str.cache.1848), !dbg !23276
   %t904 = call ptr @spec_string_concat(ptr %t902, ptr %t903), !dbg !23276
   %t905 = load ptr, ptr %var_st_151, !dbg !23276
   %t906 = getelementptr inbounds %struct.IrStruct, ptr %t905, i32 0, i32 2, !dbg !23276
   %t907 = load ptr, ptr %t906, !dbg !23276
   %t908 = call ptr @spec_string_concat(ptr %t904, ptr %t907), !dbg !23276
-  %t909 = call ptr @__spec_intern_cached(ptr @.str.1834, ptr @.str.cache.1834), !dbg !23276
+  %t909 = call ptr @__spec_intern_cached(ptr @.str.1833, ptr @.str.cache.1833), !dbg !23276
   %t910 = call ptr @spec_string_concat(ptr %t908, ptr %t909), !dbg !23276
   %t911 = load ptr, ptr %var_st_151, !dbg !23276
   %t912 = getelementptr inbounds %struct.IrStruct, ptr %t911, i32 0, i32 21, !dbg !23276
@@ -354518,21 +354507,21 @@ while_end_117:
   %t914 = call i64 @Vector_vecLength(ptr null, ptr %t913), !dbg !23276
   %t915 = call ptr @Str_intToString(ptr null, i64 %t914), !dbg !23276
   %t916 = call ptr @spec_string_concat(ptr %t910, ptr %t915), !dbg !23276
-  %t917 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23276
+  %t917 = call ptr @__spec_intern_cached(ptr @.str.1826, ptr @.str.cache.1826), !dbg !23276
   %t918 = call ptr @spec_string_concat(ptr %t916, ptr %t917), !dbg !23276
   %t919 = load ptr, ptr %var_hnItems_817, !dbg !23276
   %t920 = call ptr @spec_string_concat(ptr %t918, ptr %t919), !dbg !23276
-  %t921 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23276
+  %t921 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23276
   %t922 = call ptr @spec_string_concat(ptr %t920, ptr %t921), !dbg !23276
   store ptr %t922, ptr %var_out_4, !dbg !23276
   %t923 = load ptr, ptr %var_out_4, !dbg !23277
-  %t924 = call ptr @__spec_intern_cached(ptr @.str.1850, ptr @.str.cache.1850), !dbg !23277
+  %t924 = call ptr @__spec_intern_cached(ptr @.str.1849, ptr @.str.cache.1849), !dbg !23277
   %t925 = call ptr @spec_string_concat(ptr %t923, ptr %t924), !dbg !23277
   %t926 = load ptr, ptr %var_st_151, !dbg !23277
   %t927 = getelementptr inbounds %struct.IrStruct, ptr %t926, i32 0, i32 2, !dbg !23277
   %t928 = load ptr, ptr %t927, !dbg !23277
   %t929 = call ptr @spec_string_concat(ptr %t925, ptr %t928), !dbg !23277
-  %t930 = call ptr @__spec_intern_cached(ptr @.str.1834, ptr @.str.cache.1834), !dbg !23277
+  %t930 = call ptr @__spec_intern_cached(ptr @.str.1833, ptr @.str.cache.1833), !dbg !23277
   %t931 = call ptr @spec_string_concat(ptr %t929, ptr %t930), !dbg !23277
   %t932 = load ptr, ptr %var_st_151, !dbg !23277
   %t933 = getelementptr inbounds %struct.IrStruct, ptr %t932, i32 0, i32 22, !dbg !23277
@@ -354540,23 +354529,23 @@ while_end_117:
   %t935 = call i64 @Vector_vecLength(ptr null, ptr %t934), !dbg !23277
   %t936 = call ptr @Str_intToString(ptr null, i64 %t935), !dbg !23277
   %t937 = call ptr @spec_string_concat(ptr %t931, ptr %t936), !dbg !23277
-  %t938 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23277
+  %t938 = call ptr @__spec_intern_cached(ptr @.str.1826, ptr @.str.cache.1826), !dbg !23277
   %t939 = call ptr @spec_string_concat(ptr %t937, ptr %t938), !dbg !23277
   %t940 = load ptr, ptr %var_hgItems_820, !dbg !23277
   %t941 = call ptr @spec_string_concat(ptr %t939, ptr %t940), !dbg !23277
-  %t942 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23277
+  %t942 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23277
   %t943 = call ptr @spec_string_concat(ptr %t941, ptr %t942), !dbg !23277
   store ptr %t943, ptr %var_out_4, !dbg !23277
   %t944 = load ptr, ptr %var_heldEntryItems_141, !dbg !23161
   %t945 = load ptr, ptr %var_heldEntryLayout_104, !dbg !23161
   %t946 = call ptr @Vector_vecNewObject(), !dbg !23161
-  %t947 = call ptr @__spec_intern_cached(ptr @.str.1822, ptr @.str.cache.1822), !dbg !23161
+  %t947 = call ptr @__spec_intern_cached(ptr @.str.1821, ptr @.str.cache.1821), !dbg !23161
   %t948 = load ptr, ptr %var_st_151, !dbg !23161
   %t949 = getelementptr inbounds %struct.IrStruct, ptr %t948, i32 0, i32 2, !dbg !23161
   %t950 = load ptr, ptr %t949, !dbg !23161
   %t951 = call ptr @String_concat(ptr %t947, ptr %t950), !dbg !23161
   call void @Vector_vecAdd(ptr null, ptr %t946, ptr %t951), !dbg !23161
-  %t952 = call ptr @__spec_intern_cached(ptr @.str.1849, ptr @.str.cache.1849), !dbg !23161
+  %t952 = call ptr @__spec_intern_cached(ptr @.str.1848, ptr @.str.cache.1848), !dbg !23161
   %t953 = load ptr, ptr %var_st_151, !dbg !23161
   %t954 = getelementptr inbounds %struct.IrStruct, ptr %t953, i32 0, i32 2, !dbg !23161
   %t955 = load ptr, ptr %t954, !dbg !23161
@@ -354568,7 +354557,7 @@ while_end_117:
   %t960 = call i64 @Vector_vecLength(ptr null, ptr %t959), !dbg !23161
   %t961 = call ptr @Str_intToString(ptr null, i64 %t960), !dbg !23161
   call void @Vector_vecAdd(ptr null, ptr %t946, ptr %t961), !dbg !23161
-  %t962 = call ptr @__spec_intern_cached(ptr @.str.1850, ptr @.str.cache.1850), !dbg !23161
+  %t962 = call ptr @__spec_intern_cached(ptr @.str.1849, ptr @.str.cache.1849), !dbg !23161
   %t963 = load ptr, ptr %var_st_151, !dbg !23161
   %t964 = getelementptr inbounds %struct.IrStruct, ptr %t963, i32 0, i32 2, !dbg !23161
   %t965 = load ptr, ptr %t964, !dbg !23161
@@ -354651,7 +354640,7 @@ if_end_141:
   %t1008 = load ptr, ptr %var_cmList_994, !dbg !23283
   %t1009 = load ptr, ptr %var_classMetaRefs_139, !dbg !23283
   %t1010 = load i64, ptr %var_ci_997, !dbg !23283
-  %t1012 = call ptr @__spec_intern_cached(ptr @.str.1823, ptr @.str.cache.1823), !dbg !23283
+  %t1012 = call ptr @__spec_intern_cached(ptr @.str.1822, ptr @.str.cache.1822), !dbg !23283
   %t1011 = call ptr @Vector_vecGetAt(ptr null, ptr %t1009, i64 %t1010, ptr %t1012), !dbg !23283
   %t1013 = call ptr @spec_string_concat(ptr %t1008, ptr %t1011), !dbg !23283
   store ptr %t1013, ptr %var_cmList_994, !dbg !23283
@@ -354662,40 +354651,40 @@ if_end_141:
   br label %while_hdr_136, !dbg !23281
 while_end_138:
   %t1017 = load ptr, ptr %var_out_4, !dbg !23285
-  %t1018 = call ptr @__spec_intern_cached(ptr @.str.1851, ptr @.str.cache.1851), !dbg !23285
+  %t1018 = call ptr @__spec_intern_cached(ptr @.str.1850, ptr @.str.cache.1850), !dbg !23285
   %t1019 = call ptr @spec_string_concat(ptr %t1017, ptr %t1018), !dbg !23285
   %t1020 = load i64, ptr %var_cmCount_988, !dbg !23285
   %t1021 = call ptr @Str_intToString(ptr null, i64 %t1020), !dbg !23285
   %t1022 = call ptr @spec_string_concat(ptr %t1019, ptr %t1021), !dbg !23285
-  %t1023 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23285
+  %t1023 = call ptr @__spec_intern_cached(ptr @.str.1826, ptr @.str.cache.1826), !dbg !23285
   %t1024 = call ptr @spec_string_concat(ptr %t1022, ptr %t1023), !dbg !23285
   %t1025 = load ptr, ptr %var_cmList_994, !dbg !23285
   %t1026 = call ptr @spec_string_concat(ptr %t1024, ptr %t1025), !dbg !23285
-  %t1027 = call ptr @__spec_intern_cached(ptr @.str.1828, ptr @.str.cache.1828), !dbg !23285
+  %t1027 = call ptr @__spec_intern_cached(ptr @.str.1827, ptr @.str.cache.1827), !dbg !23285
   %t1028 = call ptr @spec_string_concat(ptr %t1026, ptr %t1027), !dbg !23285
   store ptr %t1028, ptr %var_out_4, !dbg !23285
   br label %if_end_135, !dbg !23280
 if_else_134:
   %t1029 = load ptr, ptr %var_out_4, !dbg !23286
-  %t1030 = call ptr @__spec_intern_cached(ptr @.str.1852, ptr @.str.cache.1852), !dbg !23286
+  %t1030 = call ptr @__spec_intern_cached(ptr @.str.1851, ptr @.str.cache.1851), !dbg !23286
   %t1031 = call ptr @spec_string_concat(ptr %t1029, ptr %t1030), !dbg !23286
   store ptr %t1031, ptr %var_out_4, !dbg !23286
   br label %if_end_135, !dbg !23280
 if_end_135:
   %t1032 = load ptr, ptr %var_out_4, !dbg !23287
-  %t1033 = call ptr @__spec_intern_cached(ptr @.str.1853, ptr @.str.cache.1853), !dbg !23287
+  %t1033 = call ptr @__spec_intern_cached(ptr @.str.1852, ptr @.str.cache.1852), !dbg !23287
   %t1034 = call ptr @spec_string_concat(ptr %t1032, ptr %t1033), !dbg !23287
-  %t1035 = call ptr @__spec_intern_cached(ptr @.str.1854, ptr @.str.cache.1854), !dbg !23287
+  %t1035 = call ptr @__spec_intern_cached(ptr @.str.1853, ptr @.str.cache.1853), !dbg !23287
   %t1036 = call ptr @spec_string_concat(ptr %t1034, ptr %t1035), !dbg !23287
   %t1037 = load i64, ptr %var_cmCount_988, !dbg !23287
   %t1038 = call ptr @Str_intToString(ptr null, i64 %t1037), !dbg !23287
   %t1039 = call ptr @spec_string_concat(ptr %t1036, ptr %t1038), !dbg !23287
-  %t1040 = call ptr @__spec_intern_cached(ptr @.str.1855, ptr @.str.cache.1855), !dbg !23287
+  %t1040 = call ptr @__spec_intern_cached(ptr @.str.1854, ptr @.str.cache.1854), !dbg !23287
   %t1041 = call ptr @spec_string_concat(ptr %t1039, ptr %t1040), !dbg !23287
   store ptr %t1041, ptr %var_out_4, !dbg !23287
   %t1042 = load ptr, ptr %var_heldEntryItems_141, !dbg !23288
   %t1043 = load ptr, ptr %var_heldEntryType_128, !dbg !23288
-  %t1044 = call ptr @__spec_intern_cached(ptr @.str.1856, ptr @.str.cache.1856), !dbg !23288
+  %t1044 = call ptr @__spec_intern_cached(ptr @.str.1855, ptr @.str.cache.1855), !dbg !23288
   %t1045 = call ptr @String_concat(ptr %t1043, ptr %t1044), !dbg !23288
   call void @Vector_vecAddObject(ptr null, ptr %t1042, ptr %t1045), !dbg !23288
   %t1047 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23157
@@ -354739,21 +354728,21 @@ if_end_147:
   br label %while_hdr_142, !dbg !23289
 while_end_144:
   %t1070 = load ptr, ptr %var_out_4, !dbg !23293
-  %t1071 = call ptr @__spec_intern_cached(ptr @.str.1857, ptr @.str.cache.1857), !dbg !23293
+  %t1071 = call ptr @__spec_intern_cached(ptr @.str.1856, ptr @.str.cache.1856), !dbg !23293
   %t1072 = call ptr @spec_string_concat(ptr %t1070, ptr %t1071), !dbg !23293
   %t1073 = load ptr, ptr %var_heldEntryItems_141, !dbg !23293
   %t1074 = call i64 @Vector_vecLength(ptr null, ptr %t1073), !dbg !23293
   %t1075 = call ptr @Str_intToString(ptr null, i64 %t1074), !dbg !23293
   %t1076 = call ptr @spec_string_concat(ptr %t1072, ptr %t1075), !dbg !23293
-  %t1077 = call ptr @__spec_intern_cached(ptr @.str.1837, ptr @.str.cache.1837), !dbg !23293
+  %t1077 = call ptr @__spec_intern_cached(ptr @.str.1836, ptr @.str.cache.1836), !dbg !23293
   %t1078 = call ptr @spec_string_concat(ptr %t1076, ptr %t1077), !dbg !23293
   %t1079 = load ptr, ptr %var_heldEntryType_128, !dbg !23293
   %t1080 = call ptr @spec_string_concat(ptr %t1078, ptr %t1079), !dbg !23293
-  %t1081 = call ptr @__spec_intern_cached(ptr @.str.1838, ptr @.str.cache.1838), !dbg !23293
+  %t1081 = call ptr @__spec_intern_cached(ptr @.str.1837, ptr @.str.cache.1837), !dbg !23293
   %t1082 = call ptr @spec_string_concat(ptr %t1080, ptr %t1081), !dbg !23293
   %t1083 = load ptr, ptr %var_heList_1046, !dbg !23293
   %t1084 = call ptr @spec_string_concat(ptr %t1082, ptr %t1083), !dbg !23293
-  %t1085 = call ptr @__spec_intern_cached(ptr @.str.1858, ptr @.str.cache.1858), !dbg !23293
+  %t1085 = call ptr @__spec_intern_cached(ptr @.str.1857, ptr @.str.cache.1857), !dbg !23293
   %t1086 = call ptr @spec_string_concat(ptr %t1084, ptr %t1085), !dbg !23293
   store ptr %t1086, ptr %var_out_4, !dbg !23293
   %t1088 = add i64 0, 0, !dbg !23155
@@ -354804,30 +354793,30 @@ vt_end_153:
   call ptr @spec_claim_pool(ptr %t1110), !dbg !23152
   store ptr %t1110, ptr %var_esc_1107, !dbg !23152
   %t1119 = load ptr, ptr %var_out_4, !dbg !23295
-  %t1120 = call ptr @__spec_intern_cached(ptr @.str.1859, ptr @.str.cache.1859), !dbg !23295
+  %t1120 = call ptr @__spec_intern_cached(ptr @.str.1858, ptr @.str.cache.1858), !dbg !23295
   %t1121 = call ptr @spec_string_concat(ptr %t1119, ptr %t1120), !dbg !23295
   %t1122 = load i64, ptr %var_li_1087, !dbg !23295
   %t1123 = call ptr @Str_intToString(ptr null, i64 %t1122), !dbg !23295
   %t1124 = call ptr @spec_string_concat(ptr %t1121, ptr %t1123), !dbg !23295
-  %t1125 = call ptr @__spec_intern_cached(ptr @.str.1860, ptr @.str.cache.1860), !dbg !23295
+  %t1125 = call ptr @__spec_intern_cached(ptr @.str.1859, ptr @.str.cache.1859), !dbg !23295
   %t1126 = call ptr @spec_string_concat(ptr %t1124, ptr %t1125), !dbg !23295
   %t1127 = load i64, ptr %var_byteLen_1102, !dbg !23295
   %t1128 = call ptr @Str_intToString(ptr null, i64 %t1127), !dbg !23295
   %t1129 = call ptr @spec_string_concat(ptr %t1126, ptr %t1128), !dbg !23295
-  %t1130 = call ptr @__spec_intern_cached(ptr @.str.1861, ptr @.str.cache.1861), !dbg !23295
+  %t1130 = call ptr @__spec_intern_cached(ptr @.str.1860, ptr @.str.cache.1860), !dbg !23295
   %t1131 = call ptr @spec_string_concat(ptr %t1129, ptr %t1130), !dbg !23295
   %t1132 = load ptr, ptr %var_esc_1107, !dbg !23295
   %t1133 = call ptr @spec_string_concat(ptr %t1131, ptr %t1132), !dbg !23295
-  %t1134 = call ptr @__spec_intern_cached(ptr @.str.1862, ptr @.str.cache.1862), !dbg !23295
+  %t1134 = call ptr @__spec_intern_cached(ptr @.str.1861, ptr @.str.cache.1861), !dbg !23295
   %t1135 = call ptr @spec_string_concat(ptr %t1133, ptr %t1134), !dbg !23295
   store ptr %t1135, ptr %var_out_4, !dbg !23295
   %t1136 = load ptr, ptr %var_out_4, !dbg !23296
-  %t1137 = call ptr @__spec_intern_cached(ptr @.str.1863, ptr @.str.cache.1863), !dbg !23296
+  %t1137 = call ptr @__spec_intern_cached(ptr @.str.1862, ptr @.str.cache.1862), !dbg !23296
   %t1138 = call ptr @spec_string_concat(ptr %t1136, ptr %t1137), !dbg !23296
   %t1139 = load i64, ptr %var_li_1087, !dbg !23296
   %t1140 = call ptr @Str_intToString(ptr null, i64 %t1139), !dbg !23296
   %t1141 = call ptr @spec_string_concat(ptr %t1138, ptr %t1140), !dbg !23296
-  %t1142 = call ptr @__spec_intern_cached(ptr @.str.1864, ptr @.str.cache.1864), !dbg !23296
+  %t1142 = call ptr @__spec_intern_cached(ptr @.str.1863, ptr @.str.cache.1863), !dbg !23296
   %t1143 = call ptr @spec_string_concat(ptr %t1141, ptr %t1142), !dbg !23296
   store ptr %t1143, ptr %var_out_4, !dbg !23296
   %t1144 = load i64, ptr %var_li_1087, !dbg !23297
@@ -354933,12 +354922,12 @@ if_then_4:
   %t37 = load ptr, ptr %self_slot, !dbg !23311
   %t38 = getelementptr inbounds %struct.LlvmEmitter, ptr %t37, i32 0, i32 3, !dbg !23311
   %t39 = load ptr, ptr %t38, !dbg !23311
-  %t40 = call ptr @__spec_intern_cached(ptr @.str.1865, ptr @.str.cache.1865), !dbg !23311
+  %t40 = call ptr @__spec_intern_cached(ptr @.str.1864, ptr @.str.cache.1864), !dbg !23311
   call void @Vector_vecAddObject(ptr null, ptr %t39, ptr %t40), !dbg !23311
   %t41 = load ptr, ptr %self_slot, !dbg !23312
   %t42 = getelementptr inbounds %struct.LlvmEmitter, ptr %t41, i32 0, i32 3, !dbg !23312
   %t43 = load ptr, ptr %t42, !dbg !23312
-  %t44 = call ptr @__spec_intern_cached(ptr @.str.1866, ptr @.str.cache.1866), !dbg !23312
+  %t44 = call ptr @__spec_intern_cached(ptr @.str.1865, ptr @.str.cache.1865), !dbg !23312
   call void @Vector_vecAddObject(ptr null, ptr %t43, ptr %t44), !dbg !23312
   br label %if_end_6, !dbg !23306
 if_end_6:
@@ -355425,9 +355414,9 @@ vt_end_31:
   %t158 = icmp ne i64 %t156, %t157, !dbg !23328
   br i1 %t158, label %err_unwind_32, label %err_cont_33, !dbg !23328
 err_unwind_32:
-  %t159 = call ptr @__spec_intern_cached(ptr @.str.1867, ptr @.str.cache.1867), !dbg !23328
-  %t160 = call ptr @__spec_intern_cached(ptr @.str.1868, ptr @.str.cache.1868), !dbg !23328
-  %t161 = call ptr @__spec_intern_cached(ptr @.str.1869, ptr @.str.cache.1869), !dbg !23328
+  %t159 = call ptr @__spec_intern_cached(ptr @.str.1866, ptr @.str.cache.1866), !dbg !23328
+  %t160 = call ptr @__spec_intern_cached(ptr @.str.1867, ptr @.str.cache.1867), !dbg !23328
+  %t161 = call ptr @__spec_intern_cached(ptr @.str.1868, ptr @.str.cache.1868), !dbg !23328
   %t162 = add i64 0, 357, !dbg !23328
   call void @Pool_recordPendingFrame(ptr null, ptr %t159, ptr %t160, ptr %t161, i64 %t162), !dbg !23328
   call void @spec_pool_release_to(i64 %t1), !dbg !23328
@@ -355481,7 +355470,7 @@ if_then_1:
   store ptr %t8, ptr %if_res_3, !dbg !23364
   br label %if_end_3, !dbg !23364
 if_else_2:
-  %t9 = call ptr @__spec_intern_cached(ptr @.str.1870, ptr @.str.cache.1870), !dbg !23364
+  %t9 = call ptr @__spec_intern_cached(ptr @.str.1869, ptr @.str.cache.1869), !dbg !23364
   store ptr %t9, ptr %if_res_3, !dbg !23364
   br label %if_end_3, !dbg !23364
 if_end_3:
@@ -355597,7 +355586,7 @@ if_end_15:
   %t77 = call ptr @__spec_intern_cached(ptr @.str.465, ptr @.str.cache.465), !dbg !23355
   %t78 = load i64, ptr %var_id_69, !dbg !23355
   %t79 = call ptr @Str_intToString(ptr null, i64 %t78), !dbg !23355
-  %t81 = call ptr @__spec_intern_cached(ptr @.str.1871, ptr @.str.cache.1871), !dbg !23355
+  %t81 = call ptr @__spec_intern_cached(ptr @.str.1870, ptr @.str.cache.1870), !dbg !23355
   %t82 = call ptr @__spec_concat_3(ptr %t77, ptr %t79, ptr %t81), !dbg !23355
   %t83 = load ptr, ptr %self_slot, !dbg !23355
   %t84 = load ptr, ptr %var_file_48, !dbg !23355
@@ -355617,7 +355606,7 @@ dir_call_20:
   br label %vt_end_21, !dbg !23355
 vt_end_21:
   %t85 = load ptr, ptr %t86, !dbg !23355
-  %t95 = call ptr @__spec_intern_cached(ptr @.str.1872, ptr @.str.cache.1872), !dbg !23355
+  %t95 = call ptr @__spec_intern_cached(ptr @.str.1871, ptr @.str.cache.1871), !dbg !23355
   %t96 = call ptr @__spec_concat_3(ptr %t82, ptr %t85, ptr %t95), !dbg !23355
   %t97 = load ptr, ptr %self_slot, !dbg !23355
   %t98 = load ptr, ptr %var_dir_45, !dbg !23355
@@ -355637,7 +355626,7 @@ dir_call_23:
   br label %vt_end_24, !dbg !23355
 vt_end_24:
   %t99 = load ptr, ptr %t100, !dbg !23355
-  %t109 = call ptr @__spec_intern_cached(ptr @.str.1873, ptr @.str.cache.1873), !dbg !23355
+  %t109 = call ptr @__spec_intern_cached(ptr @.str.1872, ptr @.str.cache.1872), !dbg !23355
   %t110 = call ptr @__spec_concat_3(ptr %t96, ptr %t99, ptr %t109), !dbg !23355
   call void @Vector_vecAddObject(ptr null, ptr %t76, ptr %t110), !dbg !23355
   %t111 = load ptr, ptr %self_slot, !dbg !23355
@@ -355719,10 +355708,10 @@ if_end_6:
   %t39 = call ptr @__spec_intern_cached(ptr @.str.465, ptr @.str.cache.465), !dbg !23382
   %t40 = load i64, ptr %var_id_31, !dbg !23382
   %t41 = call ptr @Str_intToString(ptr null, i64 %t40), !dbg !23382
-  %t43 = call ptr @__spec_intern_cached(ptr @.str.1874, ptr @.str.cache.1874), !dbg !23382
+  %t43 = call ptr @__spec_intern_cached(ptr @.str.1873, ptr @.str.cache.1873), !dbg !23382
   %t45 = load i64, ptr %var_effLine_2, !dbg !23382
   %t46 = call ptr @Str_intToString(ptr null, i64 %t45), !dbg !23382
-  %t48 = call ptr @__spec_intern_cached(ptr @.str.1875, ptr @.str.cache.1875), !dbg !23382
+  %t48 = call ptr @__spec_intern_cached(ptr @.str.1874, ptr @.str.cache.1874), !dbg !23382
   %t50 = load i64, ptr %slot_spId, !dbg !23382
   %t51 = call ptr @Str_intToString(ptr null, i64 %t50), !dbg !23382
   %t53 = call ptr @__spec_intern_cached(ptr @.str.15, ptr @.str.cache.15), !dbg !23382
@@ -355780,7 +355769,7 @@ while_body_2:
   br i1 %t20, label %if_then_4, label %if_else_5, !dbg !23391
 if_then_4:
   %t21 = load ptr, ptr %var_res_2, !dbg !23392
-  %t22 = call ptr @__spec_intern_cached(ptr @.str.1876, ptr @.str.cache.1876), !dbg !23392
+  %t22 = call ptr @__spec_intern_cached(ptr @.str.1875, ptr @.str.cache.1875), !dbg !23392
   %t23 = call ptr @spec_string_concat(ptr %t21, ptr %t22), !dbg !23392
   store ptr %t23, ptr %var_res_2, !dbg !23392
   br label %if_end_6, !dbg !23391
@@ -355791,7 +355780,7 @@ if_else_5:
   br i1 %t26, label %if_then_7, label %if_else_8, !dbg !23393
 if_then_7:
   %t27 = load ptr, ptr %var_res_2, !dbg !23394
-  %t28 = call ptr @__spec_intern_cached(ptr @.str.1877, ptr @.str.cache.1877), !dbg !23394
+  %t28 = call ptr @__spec_intern_cached(ptr @.str.1876, ptr @.str.cache.1876), !dbg !23394
   %t29 = call ptr @spec_string_concat(ptr %t27, ptr %t28), !dbg !23394
   store ptr %t29, ptr %var_res_2, !dbg !23394
   br label %if_end_9, !dbg !23393
@@ -355835,7 +355824,7 @@ entry:
   %slot_locId = alloca i64, !dbg !23401
   store i64 %p_locId, ptr %slot_locId, !dbg !23401
   %var_suffix_2 = alloca ptr, !dbg !23402
-  %t3 = call ptr @__spec_intern_cached(ptr @.str.1878, ptr @.str.cache.1878), !dbg !23402
+  %t3 = call ptr @__spec_intern_cached(ptr @.str.1877, ptr @.str.cache.1877), !dbg !23402
   %t4 = load i64, ptr %slot_locId, !dbg !23402
   %t5 = call ptr @Str_intToString(ptr null, i64 %t4), !dbg !23402
   %t6 = call ptr @String_concat(ptr %t3, ptr %t5), !dbg !23402
@@ -355938,7 +355927,7 @@ entry:
   br i1 %t9, label %if_then_1, label %if_else_2, !dbg !23419
 if_then_1:
   %t10 = load ptr, ptr %self_slot, !dbg !23416
-  %t11 = call ptr @__spec_intern_cached(ptr @.str.1879, ptr @.str.cache.1879), !dbg !23416
+  %t11 = call ptr @__spec_intern_cached(ptr @.str.1878, ptr @.str.cache.1878), !dbg !23416
   %t14 = icmp ne ptr %t10, null, !dbg !23416
   br i1 %t14, label %vt_call_4, label %dir_call_5, !dbg !23416
 vt_call_4:
@@ -355973,7 +355962,7 @@ if_end_3:
   %t30 = call ptr @__spec_intern_cached(ptr @.str.465, ptr @.str.cache.465), !dbg !23421
   %t31 = load i64, ptr %var_dwarfVerId_22, !dbg !23421
   %t32 = call ptr @Str_intToString(ptr null, i64 %t31), !dbg !23421
-  %t34 = call ptr @__spec_intern_cached(ptr @.str.1880, ptr @.str.cache.1880), !dbg !23421
+  %t34 = call ptr @__spec_intern_cached(ptr @.str.1879, ptr @.str.cache.1879), !dbg !23421
   %t35 = call ptr @__spec_concat_3(ptr %t30, ptr %t32, ptr %t34), !dbg !23421
   call void @Vector_vecAddObject(ptr null, ptr %t29, ptr %t35), !dbg !23421
   %t37 = load ptr, ptr %self_slot, !dbg !23421
@@ -355987,37 +355976,37 @@ if_end_3:
   %t44 = call ptr @__spec_intern_cached(ptr @.str.465, ptr @.str.cache.465), !dbg !23422
   %t45 = load i64, ptr %var_dbgVerId_36, !dbg !23422
   %t46 = call ptr @Str_intToString(ptr null, i64 %t45), !dbg !23422
-  %t48 = call ptr @__spec_intern_cached(ptr @.str.1881, ptr @.str.cache.1881), !dbg !23422
+  %t48 = call ptr @__spec_intern_cached(ptr @.str.1880, ptr @.str.cache.1880), !dbg !23422
   %t49 = call ptr @__spec_concat_3(ptr %t44, ptr %t46, ptr %t48), !dbg !23422
   call void @Vector_vecAddObject(ptr null, ptr %t43, ptr %t49), !dbg !23422
   %t50 = load ptr, ptr %self_slot, !dbg !23422
   %t51 = getelementptr inbounds %struct.LlvmEmitter, ptr %t50, i32 0, i32 3, !dbg !23422
   %t52 = load ptr, ptr %t51, !dbg !23423
   %t53 = add i64 0, 0, !dbg !23423
-  %t54 = call ptr @__spec_intern_cached(ptr @.str.1882, ptr @.str.cache.1882), !dbg !23423
+  %t54 = call ptr @__spec_intern_cached(ptr @.str.1881, ptr @.str.cache.1881), !dbg !23423
   %t55 = load i64, ptr %var_cuFileId_2, !dbg !23423
   %t56 = call ptr @Str_intToString(ptr null, i64 %t55), !dbg !23423
-  %t58 = call ptr @__spec_intern_cached(ptr @.str.1883, ptr @.str.cache.1883), !dbg !23423
+  %t58 = call ptr @__spec_intern_cached(ptr @.str.1882, ptr @.str.cache.1882), !dbg !23423
   %t59 = call ptr @__spec_concat_3(ptr %t54, ptr %t56, ptr %t58), !dbg !23423
   call void @Vector_vecSetAt(ptr null, ptr %t52, i64 %t53, ptr %t59), !dbg !23423
-  %t61 = call ptr @__spec_intern_cached(ptr @.str.1884, ptr @.str.cache.1884), !dbg !23423
+  %t61 = call ptr @__spec_intern_cached(ptr @.str.1883, ptr @.str.cache.1883), !dbg !23423
   %t62 = call ptr @spec_string_copy(ptr %t61), !dbg !23423
   call ptr @spec_claim_pool(ptr %t62), !dbg !23423
   call ptr @spec_rt_retain(ptr %t62), !dbg !23413
   call ptr @spec_claim_pool(ptr %t62), !dbg !23413
   store ptr %t62, ptr %var_out_60, !dbg !23413
   %t63 = load ptr, ptr %var_out_60, !dbg !23413
-  %t64 = call ptr @__spec_intern_cached(ptr @.str.1885, ptr @.str.cache.1885), !dbg !23413
+  %t64 = call ptr @__spec_intern_cached(ptr @.str.1884, ptr @.str.cache.1884), !dbg !23413
   %t65 = call ptr @spec_string_concat(ptr %t63, ptr %t64), !dbg !23413
   %t66 = load i64, ptr %var_dwarfVerId_22, !dbg !23424
   %t67 = call ptr @Str_intToString(ptr null, i64 %t66), !dbg !23424
   %t68 = call ptr @spec_string_concat(ptr %t65, ptr %t67), !dbg !23424
-  %t69 = call ptr @__spec_intern_cached(ptr @.str.1886, ptr @.str.cache.1886), !dbg !23424
+  %t69 = call ptr @__spec_intern_cached(ptr @.str.1885, ptr @.str.cache.1885), !dbg !23424
   %t70 = call ptr @spec_string_concat(ptr %t68, ptr %t69), !dbg !23424
   %t71 = load i64, ptr %var_dbgVerId_36, !dbg !23424
   %t72 = call ptr @Str_intToString(ptr null, i64 %t71), !dbg !23424
   %t73 = call ptr @spec_string_concat(ptr %t70, ptr %t72), !dbg !23424
-  %t74 = call ptr @__spec_intern_cached(ptr @.str.1887, ptr @.str.cache.1887), !dbg !23424
+  %t74 = call ptr @__spec_intern_cached(ptr @.str.1886, ptr @.str.cache.1886), !dbg !23424
   %t75 = call ptr @spec_string_concat(ptr %t73, ptr %t74), !dbg !23424
   store ptr %t75, ptr %var_out_60, !dbg !23424
   %t77 = add i64 0, 0, !dbg !23424
@@ -356095,12 +356084,12 @@ vt_end_3:
   call ptr @spec_claim_pool(ptr %t10), !dbg !23432
   store ptr %t10, ptr %var_esc_7, !dbg !23432
   %t19 = load ptr, ptr %slot_sym, !dbg !23433
-  %t20 = call ptr @__spec_intern_cached(ptr @.str.1860, ptr @.str.cache.1860), !dbg !23433
+  %t20 = call ptr @__spec_intern_cached(ptr @.str.1859, ptr @.str.cache.1859), !dbg !23433
   %t22 = load i64, ptr %var_byteLen_2, !dbg !23433
   %t23 = call ptr @Str_intToString(ptr null, i64 %t22), !dbg !23433
-  %t25 = call ptr @__spec_intern_cached(ptr @.str.1861, ptr @.str.cache.1861), !dbg !23433
+  %t25 = call ptr @__spec_intern_cached(ptr @.str.1860, ptr @.str.cache.1860), !dbg !23433
   %t27 = load ptr, ptr %var_esc_7, !dbg !23433
-  %t29 = call ptr @__spec_intern_cached(ptr @.str.1862, ptr @.str.cache.1862), !dbg !23433
+  %t29 = call ptr @__spec_intern_cached(ptr @.str.1861, ptr @.str.cache.1861), !dbg !23433
   %t30 = call ptr @__spec_concat_6(ptr %t19, ptr %t20, ptr %t23, ptr %t25, ptr %t27, ptr %t29), !dbg !23433
   call ptr @spec_rt_retain(ptr %t30), !dbg !23433
   call void @spec_pool_release_to(i64 %t1), !dbg !23433
@@ -356122,7 +356111,7 @@ entry:
   %slot_s = alloca ptr, !dbg !23439
   store ptr %p_s, ptr %slot_s, !dbg !23439
   %var_hex_2 = alloca ptr, !dbg !23440
-  %t3 = call ptr @__spec_intern_cached(ptr @.str.1888, ptr @.str.cache.1888), !dbg !23440
+  %t3 = call ptr @__spec_intern_cached(ptr @.str.1887, ptr @.str.cache.1887), !dbg !23440
   call ptr @spec_rt_retain(ptr %t3), !dbg !23440
   call ptr @spec_claim_pool(ptr %t3), !dbg !23440
   store ptr %t3, ptr %var_hex_2, !dbg !23440
@@ -356385,15 +356374,15 @@ while_end_6:
   %t65 = load i1, ptr %t64, !dbg !23475
   br i1 %t65, label %if_then_13, label %if_end_15, !dbg !23475
 if_then_13:
-  %t66 = call ptr @__spec_intern_cached(ptr @.str.1814, ptr @.str.cache.1814), !dbg !23476
+  %t66 = call ptr @__spec_intern_cached(ptr @.str.1813, ptr @.str.cache.1813), !dbg !23476
   %t67 = load ptr, ptr %var_retStr_2, !dbg !23476
-  %t69 = call ptr @__spec_intern_cached(ptr @.str.1815, ptr @.str.cache.1815), !dbg !23476
+  %t69 = call ptr @__spec_intern_cached(ptr @.str.1814, ptr @.str.cache.1814), !dbg !23476
   %t71 = load ptr, ptr %slot_fn, !dbg !23476
   %t72 = getelementptr inbounds %struct.IrFunction, ptr %t71, i32 0, i32 2, !dbg !23476
   %t73 = load ptr, ptr %t72, !dbg !23476
   %t75 = call ptr @__spec_intern_cached(ptr @.str.938, ptr @.str.cache.938), !dbg !23476
   %t77 = load ptr, ptr %var_paramsStr_16, !dbg !23476
-  %t79 = call ptr @__spec_intern_cached(ptr @.str.1816, ptr @.str.cache.1816), !dbg !23476
+  %t79 = call ptr @__spec_intern_cached(ptr @.str.1815, ptr @.str.cache.1815), !dbg !23476
   %t80 = call ptr @__spec_concat_7(ptr %t66, ptr %t67, ptr %t69, ptr %t73, ptr %t75, ptr %t77, ptr %t79), !dbg !23476
   call ptr @spec_rt_retain(ptr %t80), !dbg !23476
   call void @spec_pool_release_to(i64 %t1), !dbg !23476
@@ -356422,7 +356411,7 @@ sc_end_17:
   %t92 = load i1, ptr %t84, !dbg !23464
   br i1 %t92, label %if_then_18, label %if_end_20, !dbg !23464
 if_then_18:
-  %t93 = call ptr @__spec_intern_cached(ptr @.str.1889, ptr @.str.cache.1889), !dbg !23477
+  %t93 = call ptr @__spec_intern_cached(ptr @.str.1888, ptr @.str.cache.1888), !dbg !23477
   %t94 = call ptr @spec_string_copy(ptr %t93), !dbg !23477
   call ptr @spec_claim_pool(ptr %t94), !dbg !23477
   store ptr %t94, ptr %var_inlineAttr_81, !dbg !23477
@@ -356506,7 +356495,7 @@ if_end_31:
   %t145 = call ptr @__spec_intern_cached(ptr @.str.465, ptr @.str.cache.465), !dbg !23458
   %t146 = load i64, ptr %var_spId_95, !dbg !23458
   %t147 = call ptr @Str_intToString(ptr null, i64 %t146), !dbg !23458
-  %t149 = call ptr @__spec_intern_cached(ptr @.str.1890, ptr @.str.cache.1890), !dbg !23458
+  %t149 = call ptr @__spec_intern_cached(ptr @.str.1889, ptr @.str.cache.1889), !dbg !23458
   %t150 = call ptr @__spec_concat_3(ptr %t145, ptr %t147, ptr %t149), !dbg !23458
   %t151 = load ptr, ptr %self_slot, !dbg !23458
   %t152 = load ptr, ptr %slot_fn, !dbg !23458
@@ -356528,22 +356517,22 @@ dir_call_33:
   br label %vt_end_34, !dbg !23458
 vt_end_34:
   %t155 = load ptr, ptr %t156, !dbg !23458
-  %t165 = call ptr @__spec_intern_cached(ptr @.str.1891, ptr @.str.cache.1891), !dbg !23458
+  %t165 = call ptr @__spec_intern_cached(ptr @.str.1890, ptr @.str.cache.1890), !dbg !23458
   %t167 = load i64, ptr %var_fileId_112, !dbg !23458
   %t168 = call ptr @Str_intToString(ptr null, i64 %t167), !dbg !23458
-  %t170 = call ptr @__spec_intern_cached(ptr @.str.1892, ptr @.str.cache.1892), !dbg !23458
+  %t170 = call ptr @__spec_intern_cached(ptr @.str.1891, ptr @.str.cache.1891), !dbg !23458
   %t172 = load i64, ptr %var_fileId_112, !dbg !23458
   %t173 = call ptr @Str_intToString(ptr null, i64 %t172), !dbg !23458
-  %t175 = call ptr @__spec_intern_cached(ptr @.str.1893, ptr @.str.cache.1893), !dbg !23458
+  %t175 = call ptr @__spec_intern_cached(ptr @.str.1892, ptr @.str.cache.1892), !dbg !23458
   %t177 = load i64, ptr %var_fnLine_126, !dbg !23458
   %t178 = call ptr @Str_intToString(ptr null, i64 %t177), !dbg !23458
-  %t180 = call ptr @__spec_intern_cached(ptr @.str.1894, ptr @.str.cache.1894), !dbg !23458
+  %t180 = call ptr @__spec_intern_cached(ptr @.str.1893, ptr @.str.cache.1893), !dbg !23458
   %t182 = load i64, ptr %var_fnLine_126, !dbg !23458
   %t183 = call ptr @Str_intToString(ptr null, i64 %t182), !dbg !23458
-  %t185 = call ptr @__spec_intern_cached(ptr @.str.1895, ptr @.str.cache.1895), !dbg !23458
+  %t185 = call ptr @__spec_intern_cached(ptr @.str.1894, ptr @.str.cache.1894), !dbg !23458
   %t186 = call ptr @__spec_concat_11(ptr %t150, ptr %t155, ptr %t165, ptr %t168, ptr %t170, ptr %t173, ptr %t175, ptr %t178, ptr %t180, ptr %t183, ptr %t185), !dbg !23458
   call void @Vector_vecAddObject(ptr null, ptr %t144, ptr %t186), !dbg !23458
-  %t187 = call ptr @__spec_intern_cached(ptr @.str.1896, ptr @.str.cache.1896), !dbg !23458
+  %t187 = call ptr @__spec_intern_cached(ptr @.str.1895, ptr @.str.cache.1895), !dbg !23458
   %t188 = load i64, ptr %var_spId_95, !dbg !23458
   %t189 = call ptr @Str_intToString(ptr null, i64 %t188), !dbg !23458
   %t190 = call ptr @String_concat(ptr %t187, ptr %t189), !dbg !23458
@@ -356552,9 +356541,9 @@ vt_end_34:
   store ptr %t190, ptr %var_spAttr_98, !dbg !23458
   br label %if_end_25, !dbg !23458
 if_end_25:
-  %t192 = call ptr @__spec_intern_cached(ptr @.str.1897, ptr @.str.cache.1897), !dbg !23457
+  %t192 = call ptr @__spec_intern_cached(ptr @.str.1896, ptr @.str.cache.1896), !dbg !23457
   %t193 = load ptr, ptr %var_retStr_2, !dbg !23457
-  %t195 = call ptr @__spec_intern_cached(ptr @.str.1815, ptr @.str.cache.1815), !dbg !23457
+  %t195 = call ptr @__spec_intern_cached(ptr @.str.1814, ptr @.str.cache.1814), !dbg !23457
   %t197 = load ptr, ptr %slot_fn, !dbg !23457
   %t198 = getelementptr inbounds %struct.IrFunction, ptr %t197, i32 0, i32 2, !dbg !23457
   %t199 = load ptr, ptr %t198, !dbg !23457
@@ -356563,7 +356552,7 @@ if_end_25:
   %t205 = call ptr @__spec_intern_cached(ptr @.str.15, ptr @.str.cache.15), !dbg !23457
   %t207 = load ptr, ptr %var_inlineAttr_81, !dbg !23457
   %t209 = load ptr, ptr %var_spAttr_98, !dbg !23457
-  %t211 = call ptr @__spec_intern_cached(ptr @.str.1898, ptr @.str.cache.1898), !dbg !23457
+  %t211 = call ptr @__spec_intern_cached(ptr @.str.1897, ptr @.str.cache.1897), !dbg !23457
   %t212 = call ptr @__spec_concat_10(ptr %t192, ptr %t193, ptr %t195, ptr %t199, ptr %t201, ptr %t203, ptr %t205, ptr %t207, ptr %t209, ptr %t211), !dbg !23457
   call ptr @spec_rt_retain(ptr %t212), !dbg !23457
   call ptr @spec_claim_pool(ptr %t212), !dbg !23457
@@ -356593,7 +356582,7 @@ while_body_36:
   %t229 = getelementptr inbounds %struct.IrBlock, ptr %t228, i32 0, i32 2, !dbg !23480
   %t230 = load ptr, ptr %t229, !dbg !23480
   %t231 = call ptr @spec_string_concat(ptr %t227, ptr %t230), !dbg !23480
-  %t232 = call ptr @__spec_intern_cached(ptr @.str.1899, ptr @.str.cache.1899), !dbg !23480
+  %t232 = call ptr @__spec_intern_cached(ptr @.str.1898, ptr @.str.cache.1898), !dbg !23480
   %t233 = call ptr @spec_string_concat(ptr %t231, ptr %t232), !dbg !23480
   store ptr %t233, ptr %var_out_191, !dbg !23480
   %t235 = add i64 0, 0, !dbg !23454
@@ -356723,7 +356712,7 @@ while_end_40:
   br label %while_hdr_35, !dbg !23479
 while_end_37:
   %t314 = load ptr, ptr %var_out_191, !dbg !23487
-  %t315 = call ptr @__spec_intern_cached(ptr @.str.1900, ptr @.str.cache.1900), !dbg !23487
+  %t315 = call ptr @__spec_intern_cached(ptr @.str.1899, ptr @.str.cache.1899), !dbg !23487
   %t316 = call ptr @spec_string_concat(ptr %t314, ptr %t315), !dbg !23487
   store ptr %t316, ptr %var_out_191, !dbg !23487
   %t317 = load ptr, ptr %var_out_191, !dbg !23488
@@ -356999,7 +356988,7 @@ match_arm_4:
   %t17 = load i64, ptr %t16, !dbg !23490
   store i64 %t17, ptr %arm_value_18, !dbg !23490
   %t19 = load ptr, ptr %arm_dst_15, !dbg !23490
-  %t20 = call ptr @__spec_intern_cached(ptr @.str.1901, ptr @.str.cache.1901), !dbg !23490
+  %t20 = call ptr @__spec_intern_cached(ptr @.str.1900, ptr @.str.cache.1900), !dbg !23490
   %t22 = load i64, ptr %arm_value_18, !dbg !23490
   %t23 = call ptr @Str_intToString(ptr null, i64 %t22), !dbg !23490
   %t24 = call ptr @__spec_concat_3(ptr %t19, ptr %t20, ptr %t23), !dbg !23490
@@ -357028,7 +357017,7 @@ match_arm_8:
   %t37 = load ptr, ptr %t36, !dbg !23490
   store ptr %t37, ptr %arm_text_38, !dbg !23490
   %t39 = load ptr, ptr %arm_dst_35, !dbg !23490
-  %t40 = call ptr @__spec_intern_cached(ptr @.str.1902, ptr @.str.cache.1902), !dbg !23490
+  %t40 = call ptr @__spec_intern_cached(ptr @.str.1901, ptr @.str.cache.1901), !dbg !23490
   %t42 = load ptr, ptr %arm_text_38, !dbg !23490
   %t43 = call ptr @__spec_concat_3(ptr %t39, ptr %t40, ptr %t42), !dbg !23490
   store ptr %t43, ptr %match_res_2, !dbg !23490
@@ -357059,13 +357048,13 @@ match_arm_12:
   br i1 %t58, label %if_then_14, label %if_end_16, !dbg !23528
 if_then_14:
   %t59 = load ptr, ptr %arm_dst_54, !dbg !23528
-  %t60 = call ptr @__spec_intern_cached(ptr @.str.1903, ptr @.str.cache.1903), !dbg !23528
+  %t60 = call ptr @__spec_intern_cached(ptr @.str.1902, ptr @.str.cache.1902), !dbg !23528
   %t61 = call ptr @String_concat(ptr %t59, ptr %t60), !dbg !23528
   store ptr %t61, ptr %match_res_2, !dbg !23528
   br label %match_end_1, !dbg !23528
 if_end_16:
   %t62 = load ptr, ptr %arm_dst_54, !dbg !23490
-  %t63 = call ptr @__spec_intern_cached(ptr @.str.1904, ptr @.str.cache.1904), !dbg !23490
+  %t63 = call ptr @__spec_intern_cached(ptr @.str.1903, ptr @.str.cache.1903), !dbg !23490
   %t64 = call ptr @String_concat(ptr %t62, ptr %t63), !dbg !23490
   store ptr %t64, ptr %match_res_2, !dbg !23490
   br label %match_end_1, !dbg !23490
@@ -357097,9 +357086,9 @@ match_arm_19:
   call ptr @spec_claim_pool(ptr %t81), !dbg !23526
   store ptr %t81, ptr %var_idStr_79, !dbg !23526
   %t82 = load ptr, ptr %arm_dst_75, !dbg !23490
-  %t83 = call ptr @__spec_intern_cached(ptr @.str.1905, ptr @.str.cache.1905), !dbg !23490
+  %t83 = call ptr @__spec_intern_cached(ptr @.str.1904, ptr @.str.cache.1904), !dbg !23490
   %t85 = load ptr, ptr %var_idStr_79, !dbg !23490
-  %t87 = call ptr @__spec_intern_cached(ptr @.str.1906, ptr @.str.cache.1906), !dbg !23490
+  %t87 = call ptr @__spec_intern_cached(ptr @.str.1905, ptr @.str.cache.1905), !dbg !23490
   %t89 = load ptr, ptr %var_idStr_79, !dbg !23490
   %t91 = call ptr @__spec_intern_cached(ptr @.str.15, ptr @.str.cache.15), !dbg !23490
   %t92 = call ptr @__spec_concat_6(ptr %t82, ptr %t83, ptr %t85, ptr %t87, ptr %t89, ptr %t91), !dbg !23490
@@ -357128,7 +357117,7 @@ match_arm_23:
   %t105 = load ptr, ptr %t104, !dbg !23490
   store ptr %t105, ptr %arm_ty_106, !dbg !23490
   %t107 = load ptr, ptr %arm_slot_103, !dbg !23490
-  %t108 = call ptr @__spec_intern_cached(ptr @.str.1907, ptr @.str.cache.1907), !dbg !23490
+  %t108 = call ptr @__spec_intern_cached(ptr @.str.1906, ptr @.str.cache.1906), !dbg !23490
   %t109 = call ptr @String_concat(ptr %t107, ptr %t108), !dbg !23490
   %t110 = load ptr, ptr %self_slot, !dbg !23490
   %t111 = load ptr, ptr %arm_ty_106, !dbg !23490
@@ -357198,9 +357187,9 @@ vt_end_34:
   call ptr @spec_claim_pool(ptr %t142), !dbg !23525
   store ptr %t142, ptr %var_t_139, !dbg !23525
   %t151 = load ptr, ptr %arm_dst_132, !dbg !23490
-  %t152 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
+  %t152 = call ptr @__spec_intern_cached(ptr @.str.1907, ptr @.str.cache.1907), !dbg !23490
   %t154 = load ptr, ptr %var_t_139, !dbg !23490
-  %t156 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t156 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t158 = load ptr, ptr %arm_slot_135, !dbg !23490
   %t159 = call ptr @__spec_concat_5(ptr %t151, ptr %t152, ptr %t154, ptr %t156, ptr %t158), !dbg !23490
   store ptr %t159, ptr %match_res_2, !dbg !23490
@@ -357251,11 +357240,11 @@ vt_end_41:
   call ptr @spec_rt_retain(ptr %t180), !dbg !23524
   call ptr @spec_claim_pool(ptr %t180), !dbg !23524
   store ptr %t180, ptr %var_t_177, !dbg !23524
-  %t189 = call ptr @__spec_intern_cached(ptr @.str.1910, ptr @.str.cache.1910), !dbg !23490
+  %t189 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
   %t190 = load ptr, ptr %var_t_177, !dbg !23490
   %t192 = call ptr @__spec_intern_cached(ptr @.str.11, ptr @.str.cache.11), !dbg !23490
   %t194 = load ptr, ptr %arm_val_173, !dbg !23490
-  %t196 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t196 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t198 = load ptr, ptr %arm_slot_170, !dbg !23490
   %t199 = call ptr @__spec_concat_6(ptr %t189, ptr %t190, ptr %t192, ptr %t194, ptr %t196, ptr %t198), !dbg !23490
   store ptr %t199, ptr %match_res_2, !dbg !23490
@@ -357335,7 +357324,7 @@ vt_end_51:
   call ptr @spec_claim_pool(ptr %t239), !dbg !23522
   store ptr %t239, ptr %var_llvmOp_235, !dbg !23522
   %t248 = load ptr, ptr %arm_dst_210, !dbg !23490
-  %t249 = call ptr @__spec_intern_cached(ptr @.str.1911, ptr @.str.cache.1911), !dbg !23490
+  %t249 = call ptr @__spec_intern_cached(ptr @.str.1910, ptr @.str.cache.1910), !dbg !23490
   %t251 = load ptr, ptr %var_llvmOp_235, !dbg !23490
   %t253 = call ptr @__spec_intern_cached(ptr @.str.11, ptr @.str.cache.11), !dbg !23490
   %t255 = load ptr, ptr %var_t_223, !dbg !23490
@@ -357386,14 +357375,14 @@ if_then_56:
   br i1 %t290, label %if_then_59, label %if_end_61, !dbg !23530
 if_then_59:
   %t291 = load ptr, ptr %arm_dst_275, !dbg !23530
-  %t292 = call ptr @__spec_intern_cached(ptr @.str.1912, ptr @.str.cache.1912), !dbg !23530
+  %t292 = call ptr @__spec_intern_cached(ptr @.str.1911, ptr @.str.cache.1911), !dbg !23530
   %t294 = load ptr, ptr %arm_operand_281, !dbg !23530
   %t295 = call ptr @__spec_concat_3(ptr %t291, ptr %t292, ptr %t294), !dbg !23530
   store ptr %t295, ptr %match_res_2, !dbg !23530
   br label %match_end_1, !dbg !23530
 if_end_61:
   %t296 = load ptr, ptr %arm_dst_275, !dbg !23531
-  %t297 = call ptr @__spec_intern_cached(ptr @.str.1913, ptr @.str.cache.1913), !dbg !23531
+  %t297 = call ptr @__spec_intern_cached(ptr @.str.1912, ptr @.str.cache.1912), !dbg !23531
   %t299 = load ptr, ptr %arm_operand_281, !dbg !23531
   %t300 = call ptr @__spec_concat_3(ptr %t296, ptr %t297, ptr %t299), !dbg !23531
   store ptr %t300, ptr %match_res_2, !dbg !23531
@@ -357405,9 +357394,9 @@ if_end_58:
   br i1 %t303, label %if_then_62, label %if_end_64, !dbg !23532
 if_then_62:
   %t304 = load ptr, ptr %arm_dst_275, !dbg !23533
-  %t305 = call ptr @__spec_intern_cached(ptr @.str.1914, ptr @.str.cache.1914), !dbg !23533
+  %t305 = call ptr @__spec_intern_cached(ptr @.str.1913, ptr @.str.cache.1913), !dbg !23533
   %t307 = load ptr, ptr %arm_operand_281, !dbg !23533
-  %t309 = call ptr @__spec_intern_cached(ptr @.str.1915, ptr @.str.cache.1915), !dbg !23533
+  %t309 = call ptr @__spec_intern_cached(ptr @.str.1914, ptr @.str.cache.1914), !dbg !23533
   %t310 = call ptr @__spec_concat_4(ptr %t304, ptr %t305, ptr %t307, ptr %t309), !dbg !23533
   store ptr %t310, ptr %match_res_2, !dbg !23533
   br label %match_end_1, !dbg !23533
@@ -357418,15 +357407,15 @@ if_end_64:
   br i1 %t313, label %if_then_65, label %if_end_67, !dbg !23534
 if_then_65:
   %t314 = load ptr, ptr %arm_dst_275, !dbg !23535
-  %t315 = call ptr @__spec_intern_cached(ptr @.str.1916, ptr @.str.cache.1916), !dbg !23535
+  %t315 = call ptr @__spec_intern_cached(ptr @.str.1915, ptr @.str.cache.1915), !dbg !23535
   %t317 = load ptr, ptr %arm_operand_281, !dbg !23535
-  %t319 = call ptr @__spec_intern_cached(ptr @.str.1917, ptr @.str.cache.1917), !dbg !23535
+  %t319 = call ptr @__spec_intern_cached(ptr @.str.1916, ptr @.str.cache.1916), !dbg !23535
   %t320 = call ptr @__spec_concat_4(ptr %t314, ptr %t315, ptr %t317, ptr %t319), !dbg !23535
   store ptr %t320, ptr %match_res_2, !dbg !23535
   br label %match_end_1, !dbg !23535
 if_end_67:
   %t321 = load ptr, ptr %arm_dst_275, !dbg !23490
-  %t322 = call ptr @__spec_intern_cached(ptr @.str.1901, ptr @.str.cache.1901), !dbg !23490
+  %t322 = call ptr @__spec_intern_cached(ptr @.str.1900, ptr @.str.cache.1900), !dbg !23490
   %t324 = load ptr, ptr %arm_operand_281, !dbg !23490
   %t325 = call ptr @__spec_concat_3(ptr %t321, ptr %t322, ptr %t324), !dbg !23490
   store ptr %t325, ptr %match_res_2, !dbg !23490
@@ -357489,7 +357478,7 @@ vt_end_74:
   %t363 = icmp eq ptr %t361, %t362, !dbg !23536
   br i1 %t363, label %if_then_75, label %if_end_77, !dbg !23536
 if_then_75:
-  %t365 = call ptr @__spec_intern_cached(ptr @.str.1918, ptr @.str.cache.1918), !dbg !23520
+  %t365 = call ptr @__spec_intern_cached(ptr @.str.1917, ptr @.str.cache.1917), !dbg !23520
   %t366 = call ptr @spec_string_copy(ptr %t365), !dbg !23520
   call ptr @spec_claim_pool(ptr %t366), !dbg !23520
   call ptr @spec_rt_retain(ptr %t366), !dbg !23520
@@ -357500,7 +357489,7 @@ if_then_75:
   %t369 = call i1 @Str_stringEquals(ptr null, ptr %t367, ptr %t368), !dbg !23537
   br i1 %t369, label %if_then_78, label %if_end_80, !dbg !23537
 if_then_78:
-  %t370 = call ptr @__spec_intern_cached(ptr @.str.1919, ptr @.str.cache.1919), !dbg !23537
+  %t370 = call ptr @__spec_intern_cached(ptr @.str.1918, ptr @.str.cache.1918), !dbg !23537
   %t371 = call ptr @spec_string_copy(ptr %t370), !dbg !23537
   call ptr @spec_claim_pool(ptr %t371), !dbg !23537
   store ptr %t371, ptr %var_fpred_364, !dbg !23537
@@ -357511,7 +357500,7 @@ if_end_80:
   %t374 = call i1 @Str_stringEquals(ptr null, ptr %t372, ptr %t373), !dbg !23538
   br i1 %t374, label %if_then_81, label %if_end_83, !dbg !23538
 if_then_81:
-  %t375 = call ptr @__spec_intern_cached(ptr @.str.1920, ptr @.str.cache.1920), !dbg !23538
+  %t375 = call ptr @__spec_intern_cached(ptr @.str.1919, ptr @.str.cache.1919), !dbg !23538
   %t376 = call ptr @spec_string_copy(ptr %t375), !dbg !23538
   call ptr @spec_claim_pool(ptr %t376), !dbg !23538
   store ptr %t376, ptr %var_fpred_364, !dbg !23538
@@ -357522,7 +357511,7 @@ if_end_83:
   %t379 = call i1 @Str_stringEquals(ptr null, ptr %t377, ptr %t378), !dbg !23539
   br i1 %t379, label %if_then_84, label %if_end_86, !dbg !23539
 if_then_84:
-  %t380 = call ptr @__spec_intern_cached(ptr @.str.1921, ptr @.str.cache.1921), !dbg !23539
+  %t380 = call ptr @__spec_intern_cached(ptr @.str.1920, ptr @.str.cache.1920), !dbg !23539
   %t381 = call ptr @spec_string_copy(ptr %t380), !dbg !23539
   call ptr @spec_claim_pool(ptr %t381), !dbg !23539
   store ptr %t381, ptr %var_fpred_364, !dbg !23539
@@ -357533,7 +357522,7 @@ if_end_86:
   %t384 = call i1 @Str_stringEquals(ptr null, ptr %t382, ptr %t383), !dbg !23540
   br i1 %t384, label %if_then_87, label %if_end_89, !dbg !23540
 if_then_87:
-  %t385 = call ptr @__spec_intern_cached(ptr @.str.1922, ptr @.str.cache.1922), !dbg !23540
+  %t385 = call ptr @__spec_intern_cached(ptr @.str.1921, ptr @.str.cache.1921), !dbg !23540
   %t386 = call ptr @spec_string_copy(ptr %t385), !dbg !23540
   call ptr @spec_claim_pool(ptr %t386), !dbg !23540
   store ptr %t386, ptr %var_fpred_364, !dbg !23540
@@ -357544,16 +357533,16 @@ if_end_89:
   %t389 = call i1 @Str_stringEquals(ptr null, ptr %t387, ptr %t388), !dbg !23541
   br i1 %t389, label %if_then_90, label %if_end_92, !dbg !23541
 if_then_90:
-  %t390 = call ptr @__spec_intern_cached(ptr @.str.1923, ptr @.str.cache.1923), !dbg !23541
+  %t390 = call ptr @__spec_intern_cached(ptr @.str.1922, ptr @.str.cache.1922), !dbg !23541
   %t391 = call ptr @spec_string_copy(ptr %t390), !dbg !23541
   call ptr @spec_claim_pool(ptr %t391), !dbg !23541
   store ptr %t391, ptr %var_fpred_364, !dbg !23541
   br label %if_end_92, !dbg !23541
 if_end_92:
   %t392 = load ptr, ptr %arm_dst_336, !dbg !23542
-  %t393 = call ptr @__spec_intern_cached(ptr @.str.1924, ptr @.str.cache.1924), !dbg !23542
+  %t393 = call ptr @__spec_intern_cached(ptr @.str.1923, ptr @.str.cache.1923), !dbg !23542
   %t395 = load ptr, ptr %var_fpred_364, !dbg !23542
-  %t397 = call ptr @__spec_intern_cached(ptr @.str.1925, ptr @.str.cache.1925), !dbg !23542
+  %t397 = call ptr @__spec_intern_cached(ptr @.str.1924, ptr @.str.cache.1924), !dbg !23542
   %t399 = load ptr, ptr %arm_lhs_342, !dbg !23542
   %t401 = call ptr @__spec_intern_cached(ptr @.str.330, ptr @.str.cache.330), !dbg !23542
   %t403 = load ptr, ptr %arm_rhs_345, !dbg !23542
@@ -357561,7 +357550,7 @@ if_end_92:
   store ptr %t404, ptr %match_res_2, !dbg !23542
   br label %match_end_1, !dbg !23542
 if_end_77:
-  %t406 = call ptr @__spec_intern_cached(ptr @.str.1926, ptr @.str.cache.1926), !dbg !23519
+  %t406 = call ptr @__spec_intern_cached(ptr @.str.1925, ptr @.str.cache.1925), !dbg !23519
   %t407 = call ptr @spec_string_copy(ptr %t406), !dbg !23519
   call ptr @spec_claim_pool(ptr %t407), !dbg !23519
   call ptr @spec_rt_retain(ptr %t407), !dbg !23519
@@ -357572,7 +357561,7 @@ if_end_77:
   %t410 = call i1 @Str_stringEquals(ptr null, ptr %t408, ptr %t409), !dbg !23543
   br i1 %t410, label %if_then_93, label %if_end_95, !dbg !23543
 if_then_93:
-  %t411 = call ptr @__spec_intern_cached(ptr @.str.1927, ptr @.str.cache.1927), !dbg !23543
+  %t411 = call ptr @__spec_intern_cached(ptr @.str.1926, ptr @.str.cache.1926), !dbg !23543
   %t412 = call ptr @spec_string_copy(ptr %t411), !dbg !23543
   call ptr @spec_claim_pool(ptr %t412), !dbg !23543
   store ptr %t412, ptr %var_ipred_405, !dbg !23543
@@ -357583,7 +357572,7 @@ if_end_95:
   %t415 = call i1 @Str_stringEquals(ptr null, ptr %t413, ptr %t414), !dbg !23544
   br i1 %t415, label %if_then_96, label %if_end_98, !dbg !23544
 if_then_96:
-  %t416 = call ptr @__spec_intern_cached(ptr @.str.1928, ptr @.str.cache.1928), !dbg !23544
+  %t416 = call ptr @__spec_intern_cached(ptr @.str.1927, ptr @.str.cache.1927), !dbg !23544
   %t417 = call ptr @spec_string_copy(ptr %t416), !dbg !23544
   call ptr @spec_claim_pool(ptr %t417), !dbg !23544
   store ptr %t417, ptr %var_ipred_405, !dbg !23544
@@ -357594,7 +357583,7 @@ if_end_98:
   %t420 = call i1 @Str_stringEquals(ptr null, ptr %t418, ptr %t419), !dbg !23545
   br i1 %t420, label %if_then_99, label %if_end_101, !dbg !23545
 if_then_99:
-  %t421 = call ptr @__spec_intern_cached(ptr @.str.1929, ptr @.str.cache.1929), !dbg !23545
+  %t421 = call ptr @__spec_intern_cached(ptr @.str.1928, ptr @.str.cache.1928), !dbg !23545
   %t422 = call ptr @spec_string_copy(ptr %t421), !dbg !23545
   call ptr @spec_claim_pool(ptr %t422), !dbg !23545
   store ptr %t422, ptr %var_ipred_405, !dbg !23545
@@ -357605,7 +357594,7 @@ if_end_101:
   %t425 = call i1 @Str_stringEquals(ptr null, ptr %t423, ptr %t424), !dbg !23546
   br i1 %t425, label %if_then_102, label %if_end_104, !dbg !23546
 if_then_102:
-  %t426 = call ptr @__spec_intern_cached(ptr @.str.1930, ptr @.str.cache.1930), !dbg !23546
+  %t426 = call ptr @__spec_intern_cached(ptr @.str.1929, ptr @.str.cache.1929), !dbg !23546
   %t427 = call ptr @spec_string_copy(ptr %t426), !dbg !23546
   call ptr @spec_claim_pool(ptr %t427), !dbg !23546
   store ptr %t427, ptr %var_ipred_405, !dbg !23546
@@ -357616,58 +357605,58 @@ if_end_104:
   %t430 = call i1 @Str_stringEquals(ptr null, ptr %t428, ptr %t429), !dbg !23547
   br i1 %t430, label %if_then_105, label %if_end_107, !dbg !23547
 if_then_105:
-  %t431 = call ptr @__spec_intern_cached(ptr @.str.1931, ptr @.str.cache.1931), !dbg !23547
+  %t431 = call ptr @__spec_intern_cached(ptr @.str.1930, ptr @.str.cache.1930), !dbg !23547
   %t432 = call ptr @spec_string_copy(ptr %t431), !dbg !23547
   call ptr @spec_claim_pool(ptr %t432), !dbg !23547
   store ptr %t432, ptr %var_ipred_405, !dbg !23547
   br label %if_end_107, !dbg !23547
 if_end_107:
   %t433 = load ptr, ptr %arm_op_339, !dbg !23548
-  %t434 = call ptr @__spec_intern_cached(ptr @.str.1932, ptr @.str.cache.1932), !dbg !23548
+  %t434 = call ptr @__spec_intern_cached(ptr @.str.1931, ptr @.str.cache.1931), !dbg !23548
   %t435 = call i1 @Str_stringEquals(ptr null, ptr %t433, ptr %t434), !dbg !23548
   br i1 %t435, label %if_then_108, label %if_end_110, !dbg !23548
 if_then_108:
-  %t436 = call ptr @__spec_intern_cached(ptr @.str.1933, ptr @.str.cache.1933), !dbg !23548
+  %t436 = call ptr @__spec_intern_cached(ptr @.str.1932, ptr @.str.cache.1932), !dbg !23548
   %t437 = call ptr @spec_string_copy(ptr %t436), !dbg !23548
   call ptr @spec_claim_pool(ptr %t437), !dbg !23548
   store ptr %t437, ptr %var_ipred_405, !dbg !23548
   br label %if_end_110, !dbg !23548
 if_end_110:
   %t438 = load ptr, ptr %arm_op_339, !dbg !23549
-  %t439 = call ptr @__spec_intern_cached(ptr @.str.1934, ptr @.str.cache.1934), !dbg !23549
+  %t439 = call ptr @__spec_intern_cached(ptr @.str.1933, ptr @.str.cache.1933), !dbg !23549
   %t440 = call i1 @Str_stringEquals(ptr null, ptr %t438, ptr %t439), !dbg !23549
   br i1 %t440, label %if_then_111, label %if_end_113, !dbg !23549
 if_then_111:
-  %t441 = call ptr @__spec_intern_cached(ptr @.str.1935, ptr @.str.cache.1935), !dbg !23549
+  %t441 = call ptr @__spec_intern_cached(ptr @.str.1934, ptr @.str.cache.1934), !dbg !23549
   %t442 = call ptr @spec_string_copy(ptr %t441), !dbg !23549
   call ptr @spec_claim_pool(ptr %t442), !dbg !23549
   store ptr %t442, ptr %var_ipred_405, !dbg !23549
   br label %if_end_113, !dbg !23549
 if_end_113:
   %t443 = load ptr, ptr %arm_op_339, !dbg !23550
-  %t444 = call ptr @__spec_intern_cached(ptr @.str.1936, ptr @.str.cache.1936), !dbg !23550
+  %t444 = call ptr @__spec_intern_cached(ptr @.str.1935, ptr @.str.cache.1935), !dbg !23550
   %t445 = call i1 @Str_stringEquals(ptr null, ptr %t443, ptr %t444), !dbg !23550
   br i1 %t445, label %if_then_114, label %if_end_116, !dbg !23550
 if_then_114:
-  %t446 = call ptr @__spec_intern_cached(ptr @.str.1937, ptr @.str.cache.1937), !dbg !23550
+  %t446 = call ptr @__spec_intern_cached(ptr @.str.1936, ptr @.str.cache.1936), !dbg !23550
   %t447 = call ptr @spec_string_copy(ptr %t446), !dbg !23550
   call ptr @spec_claim_pool(ptr %t447), !dbg !23550
   store ptr %t447, ptr %var_ipred_405, !dbg !23550
   br label %if_end_116, !dbg !23550
 if_end_116:
   %t448 = load ptr, ptr %arm_op_339, !dbg !23551
-  %t449 = call ptr @__spec_intern_cached(ptr @.str.1938, ptr @.str.cache.1938), !dbg !23551
+  %t449 = call ptr @__spec_intern_cached(ptr @.str.1937, ptr @.str.cache.1937), !dbg !23551
   %t450 = call i1 @Str_stringEquals(ptr null, ptr %t448, ptr %t449), !dbg !23551
   br i1 %t450, label %if_then_117, label %if_end_119, !dbg !23551
 if_then_117:
-  %t451 = call ptr @__spec_intern_cached(ptr @.str.1939, ptr @.str.cache.1939), !dbg !23551
+  %t451 = call ptr @__spec_intern_cached(ptr @.str.1938, ptr @.str.cache.1938), !dbg !23551
   %t452 = call ptr @spec_string_copy(ptr %t451), !dbg !23551
   call ptr @spec_claim_pool(ptr %t452), !dbg !23551
   store ptr %t452, ptr %var_ipred_405, !dbg !23551
   br label %if_end_119, !dbg !23551
 if_end_119:
   %t453 = load ptr, ptr %arm_dst_336, !dbg !23490
-  %t454 = call ptr @__spec_intern_cached(ptr @.str.1940, ptr @.str.cache.1940), !dbg !23490
+  %t454 = call ptr @__spec_intern_cached(ptr @.str.1939, ptr @.str.cache.1939), !dbg !23490
   %t456 = load ptr, ptr %var_ipred_405, !dbg !23490
   %t458 = call ptr @__spec_intern_cached(ptr @.str.11, ptr @.str.cache.11), !dbg !23490
   %t460 = load ptr, ptr %var_t_349, !dbg !23490
@@ -357800,9 +357789,9 @@ vt_end_135:
   br i1 %t548, label %if_then_136, label %if_end_138, !dbg !23555
 if_then_136:
   %t549 = load ptr, ptr %arm_dst_480, !dbg !23556
-  %t550 = call ptr @__spec_intern_cached(ptr @.str.1941, ptr @.str.cache.1941), !dbg !23556
+  %t550 = call ptr @__spec_intern_cached(ptr @.str.1940, ptr @.str.cache.1940), !dbg !23556
   %t552 = load ptr, ptr %var_rt_536, !dbg !23556
-  %t554 = call ptr @__spec_intern_cached(ptr @.str.1815, ptr @.str.cache.1815), !dbg !23556
+  %t554 = call ptr @__spec_intern_cached(ptr @.str.1814, ptr @.str.cache.1814), !dbg !23556
   %t556 = load ptr, ptr %arm_callee_489, !dbg !23556
   %t558 = call ptr @__spec_intern_cached(ptr @.str.938, ptr @.str.cache.938), !dbg !23556
   %t560 = load ptr, ptr %var_argsStr_496, !dbg !23556
@@ -357811,9 +357800,9 @@ if_then_136:
   store ptr %t563, ptr %match_res_2, !dbg !23556
   br label %match_end_1, !dbg !23556
 if_end_138:
-  %t564 = call ptr @__spec_intern_cached(ptr @.str.1942, ptr @.str.cache.1942), !dbg !23490
+  %t564 = call ptr @__spec_intern_cached(ptr @.str.1941, ptr @.str.cache.1941), !dbg !23490
   %t565 = load ptr, ptr %var_rt_536, !dbg !23490
-  %t567 = call ptr @__spec_intern_cached(ptr @.str.1815, ptr @.str.cache.1815), !dbg !23490
+  %t567 = call ptr @__spec_intern_cached(ptr @.str.1814, ptr @.str.cache.1814), !dbg !23490
   %t569 = load ptr, ptr %arm_callee_489, !dbg !23490
   %t571 = call ptr @__spec_intern_cached(ptr @.str.938, ptr @.str.cache.938), !dbg !23490
   %t573 = load ptr, ptr %var_argsStr_496, !dbg !23490
@@ -357943,7 +357932,7 @@ vt_end_154:
   br i1 %t655, label %if_then_155, label %if_end_157, !dbg !23560
 if_then_155:
   %t656 = load ptr, ptr %arm_dst_587, !dbg !23561
-  %t657 = call ptr @__spec_intern_cached(ptr @.str.1941, ptr @.str.cache.1941), !dbg !23561
+  %t657 = call ptr @__spec_intern_cached(ptr @.str.1940, ptr @.str.cache.1940), !dbg !23561
   %t659 = load ptr, ptr %var_rt_643, !dbg !23561
   %t661 = call ptr @__spec_intern_cached(ptr @.str.11, ptr @.str.cache.11), !dbg !23561
   %t663 = load ptr, ptr %arm_fnPtr_596, !dbg !23561
@@ -357954,7 +357943,7 @@ if_then_155:
   store ptr %t670, ptr %match_res_2, !dbg !23561
   br label %match_end_1, !dbg !23561
 if_end_157:
-  %t671 = call ptr @__spec_intern_cached(ptr @.str.1942, ptr @.str.cache.1942), !dbg !23490
+  %t671 = call ptr @__spec_intern_cached(ptr @.str.1941, ptr @.str.cache.1941), !dbg !23490
   %t672 = load ptr, ptr %var_rt_643, !dbg !23490
   %t674 = call ptr @__spec_intern_cached(ptr @.str.11, ptr @.str.cache.11), !dbg !23490
   %t676 = load ptr, ptr %arm_fnPtr_596, !dbg !23490
@@ -357987,9 +357976,9 @@ match_arm_160:
   %t696 = load ptr, ptr %t695, !dbg !23490
   store ptr %t696, ptr %arm_globalName_697, !dbg !23490
   %t698 = load ptr, ptr %arm_dst_694, !dbg !23490
-  %t699 = call ptr @__spec_intern_cached(ptr @.str.1943, ptr @.str.cache.1943), !dbg !23490
+  %t699 = call ptr @__spec_intern_cached(ptr @.str.1942, ptr @.str.cache.1942), !dbg !23490
   %t701 = load ptr, ptr %arm_globalName_697, !dbg !23490
-  %t703 = call ptr @__spec_intern_cached(ptr @.str.1944, ptr @.str.cache.1944), !dbg !23490
+  %t703 = call ptr @__spec_intern_cached(ptr @.str.1943, ptr @.str.cache.1943), !dbg !23490
   %t704 = call ptr @__spec_concat_4(ptr %t698, ptr %t699, ptr %t701, ptr %t703), !dbg !23490
   store ptr %t704, ptr %match_res_2, !dbg !23490
   br label %match_end_1, !dbg !23490
@@ -358023,7 +358012,7 @@ match_arm_164:
   call ptr @spec_claim_pool(ptr %t723), !dbg !23510
   store ptr %t723, ptr %var_hdr_722, !dbg !23510
   %t725 = load ptr, ptr %var_hdr_722, !dbg !23509
-  %t726 = call ptr @__spec_intern_cached(ptr @.str.1945, ptr @.str.cache.1945), !dbg !23509
+  %t726 = call ptr @__spec_intern_cached(ptr @.str.1944, ptr @.str.cache.1944), !dbg !23509
   %t729 = icmp ne ptr %t725, null, !dbg !23509
   br i1 %t729, label %vt_call_166, label %dir_call_167, !dbg !23509
 vt_call_166:
@@ -358045,7 +358034,7 @@ vt_end_168:
   call ptr @spec_claim_pool(ptr %t736), !dbg !23509
   store ptr %t736, ptr %var_tnIdx_724, !dbg !23509
   %t738 = load ptr, ptr %var_hdr_722, !dbg !23508
-  %t739 = call ptr @__spec_intern_cached(ptr @.str.1946, ptr @.str.cache.1946), !dbg !23508
+  %t739 = call ptr @__spec_intern_cached(ptr @.str.1945, ptr @.str.cache.1945), !dbg !23508
   %t742 = icmp ne ptr %t738, null, !dbg !23508
   br i1 %t742, label %vt_call_169, label %dir_call_170, !dbg !23508
 vt_call_169:
@@ -358067,67 +358056,67 @@ vt_end_171:
   call ptr @spec_claim_pool(ptr %t749), !dbg !23508
   store ptr %t749, ptr %var_vtIdx_737, !dbg !23508
   %t751 = load ptr, ptr %arm_dst_715, !dbg !23507
-  %t752 = call ptr @__spec_intern_cached(ptr @.str.1947, ptr @.str.cache.1947), !dbg !23507
+  %t752 = call ptr @__spec_intern_cached(ptr @.str.1946, ptr @.str.cache.1946), !dbg !23507
   %t753 = call ptr @String_concat(ptr %t751, ptr %t752), !dbg !23507
   call ptr @spec_rt_retain(ptr %t753), !dbg !23507
   call ptr @spec_claim_pool(ptr %t753), !dbg !23507
   store ptr %t753, ptr %var_szPtr_750, !dbg !23507
   %t755 = load ptr, ptr %arm_dst_715, !dbg !23506
-  %t756 = call ptr @__spec_intern_cached(ptr @.str.1948, ptr @.str.cache.1948), !dbg !23506
+  %t756 = call ptr @__spec_intern_cached(ptr @.str.1947, ptr @.str.cache.1947), !dbg !23506
   %t757 = call ptr @String_concat(ptr %t755, ptr %t756), !dbg !23506
   call ptr @spec_rt_retain(ptr %t757), !dbg !23506
   call ptr @spec_claim_pool(ptr %t757), !dbg !23506
   store ptr %t757, ptr %var_szVal_754, !dbg !23506
   %t759 = load ptr, ptr %arm_dst_715, !dbg !23505
-  %t760 = call ptr @__spec_intern_cached(ptr @.str.1949, ptr @.str.cache.1949), !dbg !23505
+  %t760 = call ptr @__spec_intern_cached(ptr @.str.1948, ptr @.str.cache.1948), !dbg !23505
   %t761 = call ptr @String_concat(ptr %t759, ptr %t760), !dbg !23505
   call ptr @spec_rt_retain(ptr %t761), !dbg !23505
   call ptr @spec_claim_pool(ptr %t761), !dbg !23505
   store ptr %t761, ptr %var_tnPtr_758, !dbg !23505
   %t763 = load ptr, ptr %arm_dst_715, !dbg !23504
-  %t764 = call ptr @__spec_intern_cached(ptr @.str.1950, ptr @.str.cache.1950), !dbg !23504
+  %t764 = call ptr @__spec_intern_cached(ptr @.str.1949, ptr @.str.cache.1949), !dbg !23504
   %t765 = call ptr @String_concat(ptr %t763, ptr %t764), !dbg !23504
   call ptr @spec_rt_retain(ptr %t765), !dbg !23504
   call ptr @spec_claim_pool(ptr %t765), !dbg !23504
   store ptr %t765, ptr %var_vtPtr_762, !dbg !23504
   %t766 = load ptr, ptr %var_szPtr_750, !dbg !23490
-  %t767 = call ptr @__spec_intern_cached(ptr @.str.1951, ptr @.str.cache.1951), !dbg !23490
+  %t767 = call ptr @__spec_intern_cached(ptr @.str.1950, ptr @.str.cache.1950), !dbg !23490
   %t769 = load ptr, ptr %arm_structName_718, !dbg !23490
-  %t771 = call ptr @__spec_intern_cached(ptr @.str.1952, ptr @.str.cache.1952), !dbg !23490
+  %t771 = call ptr @__spec_intern_cached(ptr @.str.1951, ptr @.str.cache.1951), !dbg !23490
   %t773 = load ptr, ptr %var_szVal_754, !dbg !23490
-  %t775 = call ptr @__spec_intern_cached(ptr @.str.1953, ptr @.str.cache.1953), !dbg !23490
+  %t775 = call ptr @__spec_intern_cached(ptr @.str.1952, ptr @.str.cache.1952), !dbg !23490
   %t777 = load ptr, ptr %var_szPtr_750, !dbg !23490
-  %t779 = call ptr @__spec_intern_cached(ptr @.str.1954, ptr @.str.cache.1954), !dbg !23490
+  %t779 = call ptr @__spec_intern_cached(ptr @.str.1953, ptr @.str.cache.1953), !dbg !23490
   %t781 = load ptr, ptr %arm_dst_715, !dbg !23490
-  %t783 = call ptr @__spec_intern_cached(ptr @.str.1955, ptr @.str.cache.1955), !dbg !23490
+  %t783 = call ptr @__spec_intern_cached(ptr @.str.1954, ptr @.str.cache.1954), !dbg !23490
   %t785 = load ptr, ptr %var_szVal_754, !dbg !23490
-  %t787 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t787 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t789 = load ptr, ptr %arm_destroyFn_721, !dbg !23490
-  %t791 = call ptr @__spec_intern_cached(ptr @.str.1956, ptr @.str.cache.1956), !dbg !23490
+  %t791 = call ptr @__spec_intern_cached(ptr @.str.1955, ptr @.str.cache.1955), !dbg !23490
   %t793 = load ptr, ptr %var_tnPtr_758, !dbg !23490
-  %t795 = call ptr @__spec_intern_cached(ptr @.str.1957, ptr @.str.cache.1957), !dbg !23490
+  %t795 = call ptr @__spec_intern_cached(ptr @.str.1956, ptr @.str.cache.1956), !dbg !23490
   %t797 = load ptr, ptr %arm_structName_718, !dbg !23490
-  %t799 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t799 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t801 = load ptr, ptr %arm_dst_715, !dbg !23490
-  %t803 = call ptr @__spec_intern_cached(ptr @.str.1958, ptr @.str.cache.1958), !dbg !23490
+  %t803 = call ptr @__spec_intern_cached(ptr @.str.1957, ptr @.str.cache.1957), !dbg !23490
   %t805 = load ptr, ptr %var_tnIdx_724, !dbg !23490
-  %t807 = call ptr @__spec_intern_cached(ptr @.str.1959, ptr @.str.cache.1959), !dbg !23490
-  %t809 = call ptr @__spec_intern_cached(ptr @.str.1960, ptr @.str.cache.1960), !dbg !23490
+  %t807 = call ptr @__spec_intern_cached(ptr @.str.1958, ptr @.str.cache.1958), !dbg !23490
+  %t809 = call ptr @__spec_intern_cached(ptr @.str.1959, ptr @.str.cache.1959), !dbg !23490
   %t811 = load ptr, ptr %arm_structName_718, !dbg !23490
-  %t813 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t813 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t815 = load ptr, ptr %var_tnPtr_758, !dbg !23490
-  %t817 = call ptr @__spec_intern_cached(ptr @.str.1959, ptr @.str.cache.1959), !dbg !23490
+  %t817 = call ptr @__spec_intern_cached(ptr @.str.1958, ptr @.str.cache.1958), !dbg !23490
   %t819 = load ptr, ptr %var_vtPtr_762, !dbg !23490
-  %t821 = call ptr @__spec_intern_cached(ptr @.str.1957, ptr @.str.cache.1957), !dbg !23490
+  %t821 = call ptr @__spec_intern_cached(ptr @.str.1956, ptr @.str.cache.1956), !dbg !23490
   %t823 = load ptr, ptr %arm_structName_718, !dbg !23490
-  %t825 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t825 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t827 = load ptr, ptr %arm_dst_715, !dbg !23490
-  %t829 = call ptr @__spec_intern_cached(ptr @.str.1958, ptr @.str.cache.1958), !dbg !23490
+  %t829 = call ptr @__spec_intern_cached(ptr @.str.1957, ptr @.str.cache.1957), !dbg !23490
   %t831 = load ptr, ptr %var_vtIdx_737, !dbg !23490
-  %t833 = call ptr @__spec_intern_cached(ptr @.str.1959, ptr @.str.cache.1959), !dbg !23490
-  %t835 = call ptr @__spec_intern_cached(ptr @.str.1961, ptr @.str.cache.1961), !dbg !23490
+  %t833 = call ptr @__spec_intern_cached(ptr @.str.1958, ptr @.str.cache.1958), !dbg !23490
+  %t835 = call ptr @__spec_intern_cached(ptr @.str.1960, ptr @.str.cache.1960), !dbg !23490
   %t837 = load ptr, ptr %arm_structName_718, !dbg !23490
-  %t839 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t839 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t841 = load ptr, ptr %var_vtPtr_762, !dbg !23490
   %t842 = call ptr @__spec_concat_39(ptr %t766, ptr %t767, ptr %t769, ptr %t771, ptr %t773, ptr %t775, ptr %t777, ptr %t779, ptr %t781, ptr %t783, ptr %t785, ptr %t787, ptr %t789, ptr %t791, ptr %t793, ptr %t795, ptr %t797, ptr %t799, ptr %t801, ptr %t803, ptr %t805, ptr %t807, ptr %t809, ptr %t811, ptr %t813, ptr %t815, ptr %t817, ptr %t819, ptr %t821, ptr %t823, ptr %t825, ptr %t827, ptr %t829, ptr %t831, ptr %t833, ptr %t835, ptr %t837, ptr %t839, ptr %t841), !dbg !23490
   store ptr %t842, ptr %match_res_2, !dbg !23490
@@ -358161,11 +358150,11 @@ match_arm_174:
   %t861 = load i64, ptr %t860, !dbg !23490
   store i64 %t861, ptr %arm_fieldIndex_862, !dbg !23490
   %t863 = load ptr, ptr %arm_dst_853, !dbg !23490
-  %t864 = call ptr @__spec_intern_cached(ptr @.str.1957, ptr @.str.cache.1957), !dbg !23490
+  %t864 = call ptr @__spec_intern_cached(ptr @.str.1956, ptr @.str.cache.1956), !dbg !23490
   %t866 = load ptr, ptr %arm_structName_859, !dbg !23490
-  %t868 = call ptr @__spec_intern_cached(ptr @.str.1909, ptr @.str.cache.1909), !dbg !23490
+  %t868 = call ptr @__spec_intern_cached(ptr @.str.1908, ptr @.str.cache.1908), !dbg !23490
   %t870 = load ptr, ptr %arm_objPtr_856, !dbg !23490
-  %t872 = call ptr @__spec_intern_cached(ptr @.str.1958, ptr @.str.cache.1958), !dbg !23490
+  %t872 = call ptr @__spec_intern_cached(ptr @.str.1957, ptr @.str.cache.1957), !dbg !23490
   %t874 = load i64, ptr %arm_fieldIndex_862, !dbg !23490
   %t875 = call ptr @Str_intToString(ptr null, i64 %t874), !dbg !23490
   %t876 = call ptr @__spec_concat_7(ptr %t863, ptr %t864, ptr %t866, ptr %t868, ptr %t870, ptr %t872, ptr %t875), !dbg !23490
@@ -358197,9 +358186,9 @@ match_arm_178:
   %t892 = load i64, ptr %t891, !dbg !23490
   store i64 %t892, ptr %arm_index_893, !dbg !23490
   %t894 = load ptr, ptr %arm_dst_887, !dbg !23490
-  %t895 = call ptr @__spec_intern_cached(ptr @.str.1962, ptr @.str.cache.1962), !dbg !23490
+  %t895 = call ptr @__spec_intern_cached(ptr @.str.1961, ptr @.str.cache.1961), !dbg !23490
   %t897 = load ptr, ptr %arm_basePtr_890, !dbg !23490
-  %t899 = call ptr @__spec_intern_cached(ptr @.str.1963, ptr @.str.cache.1963), !dbg !23490
+  %t899 = call ptr @__spec_intern_cached(ptr @.str.1962, ptr @.str.cache.1962), !dbg !23490
   %t901 = load i64, ptr %arm_index_893, !dbg !23490
   %t902 = call ptr @Str_intToString(ptr null, i64 %t901), !dbg !23490
   %t903 = call ptr @__spec_concat_5(ptr %t894, ptr %t895, ptr %t897, ptr %t899, ptr %t902), !dbg !23490
@@ -358251,9 +358240,9 @@ sc_end_185:
   br i1 %t931, label %if_then_186, label %if_end_188, !dbg !23503
 if_then_186:
   %t932 = load ptr, ptr %arm_dst_914, !dbg !23503
-  %t933 = call ptr @__spec_intern_cached(ptr @.str.1964, ptr @.str.cache.1964), !dbg !23503
+  %t933 = call ptr @__spec_intern_cached(ptr @.str.1963, ptr @.str.cache.1963), !dbg !23503
   %t935 = load ptr, ptr %arm_val_917, !dbg !23503
-  %t937 = call ptr @__spec_intern_cached(ptr @.str.1965, ptr @.str.cache.1965), !dbg !23503
+  %t937 = call ptr @__spec_intern_cached(ptr @.str.1964, ptr @.str.cache.1964), !dbg !23503
   %t938 = call ptr @__spec_concat_4(ptr %t932, ptr %t933, ptr %t935, ptr %t937), !dbg !23503
   store ptr %t938, ptr %match_res_2, !dbg !23503
   br label %match_end_1, !dbg !23503
@@ -358276,9 +358265,9 @@ sc_end_190:
   br i1 %t946, label %if_then_191, label %if_end_193, !dbg !23502
 if_then_191:
   %t947 = load ptr, ptr %arm_dst_914, !dbg !23502
-  %t948 = call ptr @__spec_intern_cached(ptr @.str.1966, ptr @.str.cache.1966), !dbg !23502
+  %t948 = call ptr @__spec_intern_cached(ptr @.str.1965, ptr @.str.cache.1965), !dbg !23502
   %t950 = load ptr, ptr %arm_val_917, !dbg !23502
-  %t952 = call ptr @__spec_intern_cached(ptr @.str.1967, ptr @.str.cache.1967), !dbg !23502
+  %t952 = call ptr @__spec_intern_cached(ptr @.str.1966, ptr @.str.cache.1966), !dbg !23502
   %t953 = call ptr @__spec_concat_4(ptr %t947, ptr %t948, ptr %t950, ptr %t952), !dbg !23502
   store ptr %t953, ptr %match_res_2, !dbg !23502
   br label %match_end_1, !dbg !23502
@@ -358312,7 +358301,7 @@ sc_end_197:
   br i1 %t966, label %if_then_198, label %if_end_200, !dbg !23501
 if_then_198:
   %t967 = load ptr, ptr %arm_dst_914, !dbg !23500
-  %t968 = call ptr @__spec_intern_cached(ptr @.str.1968, ptr @.str.cache.1968), !dbg !23500
+  %t968 = call ptr @__spec_intern_cached(ptr @.str.1967, ptr @.str.cache.1967), !dbg !23500
   %t969 = call ptr @String_concat(ptr %t967, ptr %t968), !dbg !23500
   %t970 = load ptr, ptr %self_slot, !dbg !23500
   %t971 = load ptr, ptr %arm_fromType_920, !dbg !23500
@@ -358334,7 +358323,7 @@ vt_end_203:
   %t972 = load ptr, ptr %t973, !dbg !23500
   %t982 = call ptr @__spec_intern_cached(ptr @.str.11, ptr @.str.cache.11), !dbg !23500
   %t984 = load ptr, ptr %arm_val_917, !dbg !23500
-  %t986 = call ptr @__spec_intern_cached(ptr @.str.1969, ptr @.str.cache.1969), !dbg !23500
+  %t986 = call ptr @__spec_intern_cached(ptr @.str.1968, ptr @.str.cache.1968), !dbg !23500
   %t987 = call ptr @__spec_concat_5(ptr %t969, ptr %t972, ptr %t982, ptr %t984, ptr %t986), !dbg !23500
   store ptr %t987, ptr %match_res_2, !dbg !23500
   br label %match_end_1, !dbg !23500
@@ -358368,7 +358357,7 @@ sc_end_205:
   br i1 %t1000, label %if_then_208, label %if_end_210, !dbg !23499
 if_then_208:
   %t1001 = load ptr, ptr %arm_dst_914, !dbg !23498
-  %t1002 = call ptr @__spec_intern_cached(ptr @.str.1953, ptr @.str.cache.1953), !dbg !23498
+  %t1002 = call ptr @__spec_intern_cached(ptr @.str.1952, ptr @.str.cache.1952), !dbg !23498
   %t1004 = load ptr, ptr %arm_val_917, !dbg !23498
   %t1006 = call ptr @__spec_intern_cached(ptr @.str.290, ptr @.str.cache.290), !dbg !23498
   %t1007 = call ptr @__spec_concat_4(ptr %t1001, ptr %t1002, ptr %t1004, ptr %t1006), !dbg !23498
@@ -358412,19 +358401,19 @@ sc_end_215:
   br i1 %t1027, label %if_then_216, label %if_end_218, !dbg !23497
 if_then_216:
   %t1029 = load ptr, ptr %arm_dst_914, !dbg !23496
-  %t1030 = call ptr @__spec_intern_cached(ptr @.str.1970, ptr @.str.cache.1970), !dbg !23496
+  %t1030 = call ptr @__spec_intern_cached(ptr @.str.1969, ptr @.str.cache.1969), !dbg !23496
   %t1031 = call ptr @String_concat(ptr %t1029, ptr %t1030), !dbg !23496
   call ptr @spec_rt_retain(ptr %t1031), !dbg !23496
   call ptr @spec_claim_pool(ptr %t1031), !dbg !23496
   store ptr %t1031, ptr %var_bits_1028, !dbg !23496
   %t1032 = load ptr, ptr %var_bits_1028, !dbg !23562
-  %t1033 = call ptr @__spec_intern_cached(ptr @.str.1971, ptr @.str.cache.1971), !dbg !23562
+  %t1033 = call ptr @__spec_intern_cached(ptr @.str.1970, ptr @.str.cache.1970), !dbg !23562
   %t1035 = load ptr, ptr %arm_val_917, !dbg !23562
-  %t1037 = call ptr @__spec_intern_cached(ptr @.str.1954, ptr @.str.cache.1954), !dbg !23562
+  %t1037 = call ptr @__spec_intern_cached(ptr @.str.1953, ptr @.str.cache.1953), !dbg !23562
   %t1039 = load ptr, ptr %arm_dst_914, !dbg !23562
-  %t1041 = call ptr @__spec_intern_cached(ptr @.str.1972, ptr @.str.cache.1972), !dbg !23562
+  %t1041 = call ptr @__spec_intern_cached(ptr @.str.1971, ptr @.str.cache.1971), !dbg !23562
   %t1043 = load ptr, ptr %var_bits_1028, !dbg !23562
-  %t1045 = call ptr @__spec_intern_cached(ptr @.str.1969, ptr @.str.cache.1969), !dbg !23562
+  %t1045 = call ptr @__spec_intern_cached(ptr @.str.1968, ptr @.str.cache.1968), !dbg !23562
   %t1046 = call ptr @__spec_concat_8(ptr %t1032, ptr %t1033, ptr %t1035, ptr %t1037, ptr %t1039, ptr %t1041, ptr %t1043, ptr %t1045), !dbg !23562
   store ptr %t1046, ptr %match_res_2, !dbg !23562
   br label %match_end_1, !dbg !23562
@@ -358447,19 +358436,19 @@ sc_end_220:
   br i1 %t1054, label %if_then_221, label %if_end_223, !dbg !23495
 if_then_221:
   %t1056 = load ptr, ptr %arm_dst_914, !dbg !23494
-  %t1057 = call ptr @__spec_intern_cached(ptr @.str.1970, ptr @.str.cache.1970), !dbg !23494
+  %t1057 = call ptr @__spec_intern_cached(ptr @.str.1969, ptr @.str.cache.1969), !dbg !23494
   %t1058 = call ptr @String_concat(ptr %t1056, ptr %t1057), !dbg !23494
   call ptr @spec_rt_retain(ptr %t1058), !dbg !23494
   call ptr @spec_claim_pool(ptr %t1058), !dbg !23494
   store ptr %t1058, ptr %var_bits_1055, !dbg !23494
   %t1059 = load ptr, ptr %var_bits_1055, !dbg !23563
-  %t1060 = call ptr @__spec_intern_cached(ptr @.str.1953, ptr @.str.cache.1953), !dbg !23563
+  %t1060 = call ptr @__spec_intern_cached(ptr @.str.1952, ptr @.str.cache.1952), !dbg !23563
   %t1062 = load ptr, ptr %arm_val_917, !dbg !23563
-  %t1064 = call ptr @__spec_intern_cached(ptr @.str.1954, ptr @.str.cache.1954), !dbg !23563
+  %t1064 = call ptr @__spec_intern_cached(ptr @.str.1953, ptr @.str.cache.1953), !dbg !23563
   %t1066 = load ptr, ptr %arm_dst_914, !dbg !23563
-  %t1068 = call ptr @__spec_intern_cached(ptr @.str.1973, ptr @.str.cache.1973), !dbg !23563
+  %t1068 = call ptr @__spec_intern_cached(ptr @.str.1972, ptr @.str.cache.1972), !dbg !23563
   %t1070 = load ptr, ptr %var_bits_1055, !dbg !23563
-  %t1072 = call ptr @__spec_intern_cached(ptr @.str.1965, ptr @.str.cache.1965), !dbg !23563
+  %t1072 = call ptr @__spec_intern_cached(ptr @.str.1964, ptr @.str.cache.1964), !dbg !23563
   %t1073 = call ptr @__spec_concat_8(ptr %t1059, ptr %t1060, ptr %t1062, ptr %t1064, ptr %t1066, ptr %t1068, ptr %t1070, ptr %t1072), !dbg !23563
   store ptr %t1073, ptr %match_res_2, !dbg !23563
   br label %match_end_1, !dbg !23563
@@ -358482,9 +358471,9 @@ sc_end_225:
   br i1 %t1081, label %if_then_226, label %if_end_228, !dbg !23493
 if_then_226:
   %t1082 = load ptr, ptr %arm_dst_914, !dbg !23493
-  %t1083 = call ptr @__spec_intern_cached(ptr @.str.1974, ptr @.str.cache.1974), !dbg !23493
+  %t1083 = call ptr @__spec_intern_cached(ptr @.str.1973, ptr @.str.cache.1973), !dbg !23493
   %t1085 = load ptr, ptr %arm_val_917, !dbg !23493
-  %t1087 = call ptr @__spec_intern_cached(ptr @.str.1967, ptr @.str.cache.1967), !dbg !23493
+  %t1087 = call ptr @__spec_intern_cached(ptr @.str.1966, ptr @.str.cache.1966), !dbg !23493
   %t1088 = call ptr @__spec_concat_4(ptr %t1082, ptr %t1083, ptr %t1085, ptr %t1087), !dbg !23493
   store ptr %t1088, ptr %match_res_2, !dbg !23493
   br label %match_end_1, !dbg !23493
@@ -358507,15 +358496,15 @@ sc_end_230:
   br i1 %t1096, label %if_then_231, label %if_end_233, !dbg !23492
 if_then_231:
   %t1097 = load ptr, ptr %arm_dst_914, !dbg !23492
-  %t1098 = call ptr @__spec_intern_cached(ptr @.str.1975, ptr @.str.cache.1975), !dbg !23492
+  %t1098 = call ptr @__spec_intern_cached(ptr @.str.1974, ptr @.str.cache.1974), !dbg !23492
   %t1100 = load ptr, ptr %arm_val_917, !dbg !23492
-  %t1102 = call ptr @__spec_intern_cached(ptr @.str.1976, ptr @.str.cache.1976), !dbg !23492
+  %t1102 = call ptr @__spec_intern_cached(ptr @.str.1975, ptr @.str.cache.1975), !dbg !23492
   %t1103 = call ptr @__spec_concat_4(ptr %t1097, ptr %t1098, ptr %t1100, ptr %t1102), !dbg !23492
   store ptr %t1103, ptr %match_res_2, !dbg !23492
   br label %match_end_1, !dbg !23492
 if_end_233:
   %t1104 = load ptr, ptr %arm_dst_914, !dbg !23490
-  %t1105 = call ptr @__spec_intern_cached(ptr @.str.1977, ptr @.str.cache.1977), !dbg !23490
+  %t1105 = call ptr @__spec_intern_cached(ptr @.str.1976, ptr @.str.cache.1976), !dbg !23490
   %t1106 = call ptr @String_concat(ptr %t1104, ptr %t1105), !dbg !23490
   %t1107 = load ptr, ptr %self_slot, !dbg !23490
   %t1108 = load ptr, ptr %arm_fromType_920, !dbg !23490
@@ -358579,7 +358568,7 @@ match_arm_242:
   %t1145 = getelementptr inbounds %struct.IrInst_Retain, ptr %t4, i32 0, i32 4, !dbg !23490
   %t1146 = load ptr, ptr %t1145, !dbg !23490
   store ptr %t1146, ptr %arm_val_1147, !dbg !23490
-  %t1148 = call ptr @__spec_intern_cached(ptr @.str.1978, ptr @.str.cache.1978), !dbg !23490
+  %t1148 = call ptr @__spec_intern_cached(ptr @.str.1977, ptr @.str.cache.1977), !dbg !23490
   %t1149 = load ptr, ptr %arm_val_1147, !dbg !23490
   %t1151 = call ptr @__spec_intern_cached(ptr @.str.15, ptr @.str.cache.15), !dbg !23490
   %t1152 = call ptr @__spec_concat_3(ptr %t1148, ptr %t1149, ptr %t1151), !dbg !23490
@@ -358604,7 +358593,7 @@ match_arm_246:
   %t1161 = getelementptr inbounds %struct.IrInst_Release, ptr %t4, i32 0, i32 4, !dbg !23490
   %t1162 = load ptr, ptr %t1161, !dbg !23490
   store ptr %t1162, ptr %arm_val_1163, !dbg !23490
-  %t1164 = call ptr @__spec_intern_cached(ptr @.str.1979, ptr @.str.cache.1979), !dbg !23490
+  %t1164 = call ptr @__spec_intern_cached(ptr @.str.1978, ptr @.str.cache.1978), !dbg !23490
   %t1165 = load ptr, ptr %arm_val_1163, !dbg !23490
   %t1167 = call ptr @__spec_intern_cached(ptr @.str.15, ptr @.str.cache.15), !dbg !23490
   %t1168 = call ptr @__spec_concat_3(ptr %t1164, ptr %t1165, ptr %t1167), !dbg !23490
@@ -358638,7 +358627,7 @@ match_arm_250:
   %t1186 = load i1, ptr %arm_hasVal_1179, !dbg !23564
   br i1 %t1186, label %if_then_252, label %if_end_254, !dbg !23564
 if_then_252:
-  %t1187 = call ptr @__spec_intern_cached(ptr @.str.1980, ptr @.str.cache.1980), !dbg !23491
+  %t1187 = call ptr @__spec_intern_cached(ptr @.str.1979, ptr @.str.cache.1979), !dbg !23491
   %t1188 = load ptr, ptr %self_slot, !dbg !23491
   %t1189 = load ptr, ptr %arm_ty_1185, !dbg !23491
   %t1192 = icmp ne ptr %t1188, null, !dbg !23491
@@ -358663,7 +358652,7 @@ vt_end_257:
   store ptr %t1203, ptr %match_res_2, !dbg !23491
   br label %match_end_1, !dbg !23491
 if_end_254:
-  %t1204 = call ptr @__spec_intern_cached(ptr @.str.1981, ptr @.str.cache.1981), !dbg !23490
+  %t1204 = call ptr @__spec_intern_cached(ptr @.str.1980, ptr @.str.cache.1980), !dbg !23490
   store ptr %t1204, ptr %match_res_2, !dbg !23490
   br label %match_end_1, !dbg !23490
 match_next_251:
@@ -358685,7 +358674,7 @@ match_arm_260:
   %t1213 = getelementptr inbounds %struct.IrInst_Br, ptr %t4, i32 0, i32 4, !dbg !23490
   %t1214 = load ptr, ptr %t1213, !dbg !23490
   store ptr %t1214, ptr %arm_target_1215, !dbg !23490
-  %t1216 = call ptr @__spec_intern_cached(ptr @.str.1982, ptr @.str.cache.1982), !dbg !23490
+  %t1216 = call ptr @__spec_intern_cached(ptr @.str.1981, ptr @.str.cache.1981), !dbg !23490
   %t1217 = load ptr, ptr %arm_target_1215, !dbg !23490
   %t1218 = call ptr @String_concat(ptr %t1216, ptr %t1217), !dbg !23490
   store ptr %t1218, ptr %match_res_2, !dbg !23490
@@ -358715,11 +358704,11 @@ match_arm_264:
   %t1233 = getelementptr inbounds %struct.IrInst_CondBr, ptr %t4, i32 0, i32 6, !dbg !23490
   %t1234 = load ptr, ptr %t1233, !dbg !23490
   store ptr %t1234, ptr %arm_elseLabel_1235, !dbg !23490
-  %t1236 = call ptr @__spec_intern_cached(ptr @.str.1983, ptr @.str.cache.1983), !dbg !23490
+  %t1236 = call ptr @__spec_intern_cached(ptr @.str.1982, ptr @.str.cache.1982), !dbg !23490
   %t1237 = load ptr, ptr %arm_cond_1229, !dbg !23490
-  %t1239 = call ptr @__spec_intern_cached(ptr @.str.1984, ptr @.str.cache.1984), !dbg !23490
+  %t1239 = call ptr @__spec_intern_cached(ptr @.str.1983, ptr @.str.cache.1983), !dbg !23490
   %t1241 = load ptr, ptr %arm_thenLabel_1232, !dbg !23490
-  %t1243 = call ptr @__spec_intern_cached(ptr @.str.1984, ptr @.str.cache.1984), !dbg !23490
+  %t1243 = call ptr @__spec_intern_cached(ptr @.str.1983, ptr @.str.cache.1983), !dbg !23490
   %t1245 = load ptr, ptr %arm_elseLabel_1235, !dbg !23490
   %t1246 = call ptr @__spec_concat_6(ptr %t1236, ptr %t1237, ptr %t1239, ptr %t1241, ptr %t1243, ptr %t1245), !dbg !23490
   store ptr %t1246, ptr %match_res_2, !dbg !23490
@@ -358756,7 +358745,7 @@ if_then_1:
   %t7 = call i1 @Str_stringEquals(ptr null, ptr %t5, ptr %t6), !dbg !23570
   br i1 %t7, label %if_then_4, label %if_end_6, !dbg !23570
 if_then_4:
-  %t8 = call ptr @__spec_intern_cached(ptr @.str.1985, ptr @.str.cache.1985), !dbg !23570
+  %t8 = call ptr @__spec_intern_cached(ptr @.str.1984, ptr @.str.cache.1984), !dbg !23570
   call ptr @spec_rt_retain(ptr %t8), !dbg !23570
   call void @spec_pool_release_to(i64 %t1), !dbg !23570
   call ptr @spec_claim_pool(ptr %t8), !dbg !23570
@@ -358767,7 +358756,7 @@ if_end_6:
   %t11 = call i1 @Str_stringEquals(ptr null, ptr %t9, ptr %t10), !dbg !23571
   br i1 %t11, label %if_then_7, label %if_end_9, !dbg !23571
 if_then_7:
-  %t12 = call ptr @__spec_intern_cached(ptr @.str.1986, ptr @.str.cache.1986), !dbg !23571
+  %t12 = call ptr @__spec_intern_cached(ptr @.str.1985, ptr @.str.cache.1985), !dbg !23571
   call ptr @spec_rt_retain(ptr %t12), !dbg !23571
   call void @spec_pool_release_to(i64 %t1), !dbg !23571
   call ptr @spec_claim_pool(ptr %t12), !dbg !23571
@@ -358778,7 +358767,7 @@ if_end_9:
   %t15 = call i1 @Str_stringEquals(ptr null, ptr %t13, ptr %t14), !dbg !23572
   br i1 %t15, label %if_then_10, label %if_end_12, !dbg !23572
 if_then_10:
-  %t16 = call ptr @__spec_intern_cached(ptr @.str.1987, ptr @.str.cache.1987), !dbg !23572
+  %t16 = call ptr @__spec_intern_cached(ptr @.str.1986, ptr @.str.cache.1986), !dbg !23572
   call ptr @spec_rt_retain(ptr %t16), !dbg !23572
   call void @spec_pool_release_to(i64 %t1), !dbg !23572
   call ptr @spec_claim_pool(ptr %t16), !dbg !23572
@@ -358789,13 +358778,13 @@ if_end_12:
   %t19 = call i1 @Str_stringEquals(ptr null, ptr %t17, ptr %t18), !dbg !23573
   br i1 %t19, label %if_then_13, label %if_end_15, !dbg !23573
 if_then_13:
-  %t20 = call ptr @__spec_intern_cached(ptr @.str.1988, ptr @.str.cache.1988), !dbg !23573
+  %t20 = call ptr @__spec_intern_cached(ptr @.str.1987, ptr @.str.cache.1987), !dbg !23573
   call ptr @spec_rt_retain(ptr %t20), !dbg !23573
   call void @spec_pool_release_to(i64 %t1), !dbg !23573
   call ptr @spec_claim_pool(ptr %t20), !dbg !23573
   ret ptr %t20, !dbg !23573
 if_end_15:
-  %t21 = call ptr @__spec_intern_cached(ptr @.str.1985, ptr @.str.cache.1985), !dbg !23574
+  %t21 = call ptr @__spec_intern_cached(ptr @.str.1984, ptr @.str.cache.1984), !dbg !23574
   call ptr @spec_rt_retain(ptr %t21), !dbg !23574
   call void @spec_pool_release_to(i64 %t1), !dbg !23574
   call ptr @spec_claim_pool(ptr %t21), !dbg !23574
@@ -358817,7 +358806,7 @@ if_end_18:
   %t28 = call i1 @Str_stringEquals(ptr null, ptr %t26, ptr %t27), !dbg !23576
   br i1 %t28, label %if_then_19, label %if_end_21, !dbg !23576
 if_then_19:
-  %t29 = call ptr @__spec_intern_cached(ptr @.str.1989, ptr @.str.cache.1989), !dbg !23576
+  %t29 = call ptr @__spec_intern_cached(ptr @.str.1988, ptr @.str.cache.1988), !dbg !23576
   call ptr @spec_rt_retain(ptr %t29), !dbg !23576
   call void @spec_pool_release_to(i64 %t1), !dbg !23576
   call ptr @spec_claim_pool(ptr %t29), !dbg !23576
@@ -358828,7 +358817,7 @@ if_end_21:
   %t32 = call i1 @Str_stringEquals(ptr null, ptr %t30, ptr %t31), !dbg !23577
   br i1 %t32, label %if_then_22, label %if_end_24, !dbg !23577
 if_then_22:
-  %t33 = call ptr @__spec_intern_cached(ptr @.str.1990, ptr @.str.cache.1990), !dbg !23577
+  %t33 = call ptr @__spec_intern_cached(ptr @.str.1989, ptr @.str.cache.1989), !dbg !23577
   call ptr @spec_rt_retain(ptr %t33), !dbg !23577
   call void @spec_pool_release_to(i64 %t1), !dbg !23577
   call ptr @spec_claim_pool(ptr %t33), !dbg !23577
@@ -358839,7 +358828,7 @@ if_end_24:
   %t36 = call i1 @Str_stringEquals(ptr null, ptr %t34, ptr %t35), !dbg !23578
   br i1 %t36, label %if_then_25, label %if_end_27, !dbg !23578
 if_then_25:
-  %t37 = call ptr @__spec_intern_cached(ptr @.str.1991, ptr @.str.cache.1991), !dbg !23578
+  %t37 = call ptr @__spec_intern_cached(ptr @.str.1990, ptr @.str.cache.1990), !dbg !23578
   call ptr @spec_rt_retain(ptr %t37), !dbg !23578
   call void @spec_pool_release_to(i64 %t1), !dbg !23578
   call ptr @spec_claim_pool(ptr %t37), !dbg !23578
@@ -358850,7 +358839,7 @@ if_end_27:
   %t40 = call i1 @Str_stringEquals(ptr null, ptr %t38, ptr %t39), !dbg !23579
   br i1 %t40, label %if_then_28, label %if_end_30, !dbg !23579
 if_then_28:
-  %t41 = call ptr @__spec_intern_cached(ptr @.str.1992, ptr @.str.cache.1992), !dbg !23579
+  %t41 = call ptr @__spec_intern_cached(ptr @.str.1991, ptr @.str.cache.1991), !dbg !23579
   call ptr @spec_rt_retain(ptr %t41), !dbg !23579
   call void @spec_pool_release_to(i64 %t1), !dbg !23579
   call ptr @spec_claim_pool(ptr %t41), !dbg !23579
@@ -358861,7 +358850,7 @@ if_end_30:
   %t44 = call i1 @Str_stringEquals(ptr null, ptr %t42, ptr %t43), !dbg !23580
   br i1 %t44, label %if_then_31, label %if_end_33, !dbg !23580
 if_then_31:
-  %t45 = call ptr @__spec_intern_cached(ptr @.str.1993, ptr @.str.cache.1993), !dbg !23580
+  %t45 = call ptr @__spec_intern_cached(ptr @.str.1992, ptr @.str.cache.1992), !dbg !23580
   call ptr @spec_rt_retain(ptr %t45), !dbg !23580
   call void @spec_pool_release_to(i64 %t1), !dbg !23580
   call ptr @spec_claim_pool(ptr %t45), !dbg !23580
@@ -358872,7 +358861,7 @@ if_end_33:
   %t48 = call i1 @Str_stringEquals(ptr null, ptr %t46, ptr %t47), !dbg !23581
   br i1 %t48, label %if_then_34, label %if_end_36, !dbg !23581
 if_then_34:
-  %t49 = call ptr @__spec_intern_cached(ptr @.str.1994, ptr @.str.cache.1994), !dbg !23581
+  %t49 = call ptr @__spec_intern_cached(ptr @.str.1993, ptr @.str.cache.1993), !dbg !23581
   call ptr @spec_rt_retain(ptr %t49), !dbg !23581
   call void @spec_pool_release_to(i64 %t1), !dbg !23581
   call ptr @spec_claim_pool(ptr %t49), !dbg !23581
@@ -358893,7 +358882,7 @@ sc_end_38:
   %t57 = load i1, ptr %t50, !dbg !23567
   br i1 %t57, label %if_then_39, label %if_end_41, !dbg !23567
 if_then_39:
-  %t58 = call ptr @__spec_intern_cached(ptr @.str.1995, ptr @.str.cache.1995), !dbg !23567
+  %t58 = call ptr @__spec_intern_cached(ptr @.str.1994, ptr @.str.cache.1994), !dbg !23567
   call ptr @spec_rt_retain(ptr %t58), !dbg !23567
   call void @spec_pool_release_to(i64 %t1), !dbg !23567
   call ptr @spec_claim_pool(ptr %t58), !dbg !23567
@@ -358914,7 +358903,7 @@ sc_end_43:
   %t66 = load i1, ptr %t59, !dbg !23566
   br i1 %t66, label %if_then_44, label %if_end_46, !dbg !23566
 if_then_44:
-  %t67 = call ptr @__spec_intern_cached(ptr @.str.1996, ptr @.str.cache.1996), !dbg !23566
+  %t67 = call ptr @__spec_intern_cached(ptr @.str.1995, ptr @.str.cache.1995), !dbg !23566
   call ptr @spec_rt_retain(ptr %t67), !dbg !23566
   call void @spec_pool_release_to(i64 %t1), !dbg !23566
   call ptr @spec_claim_pool(ptr %t67), !dbg !23566
@@ -358925,7 +358914,7 @@ if_end_46:
   %t70 = call i1 @Str_stringEquals(ptr null, ptr %t68, ptr %t69), !dbg !23582
   br i1 %t70, label %if_then_47, label %if_end_49, !dbg !23582
 if_then_47:
-  %t71 = call ptr @__spec_intern_cached(ptr @.str.1997, ptr @.str.cache.1997), !dbg !23582
+  %t71 = call ptr @__spec_intern_cached(ptr @.str.1996, ptr @.str.cache.1996), !dbg !23582
   call ptr @spec_rt_retain(ptr %t71), !dbg !23582
   call void @spec_pool_release_to(i64 %t1), !dbg !23582
   call ptr @spec_claim_pool(ptr %t71), !dbg !23582
@@ -358936,7 +358925,7 @@ if_end_49:
   %t74 = call i1 @Str_stringEquals(ptr null, ptr %t72, ptr %t73), !dbg !23583
   br i1 %t74, label %if_then_50, label %if_end_52, !dbg !23583
 if_then_50:
-  %t75 = call ptr @__spec_intern_cached(ptr @.str.1998, ptr @.str.cache.1998), !dbg !23583
+  %t75 = call ptr @__spec_intern_cached(ptr @.str.1997, ptr @.str.cache.1997), !dbg !23583
   call ptr @spec_rt_retain(ptr %t75), !dbg !23583
   call void @spec_pool_release_to(i64 %t1), !dbg !23583
   call ptr @spec_claim_pool(ptr %t75), !dbg !23583
@@ -358947,7 +358936,7 @@ if_end_52:
   %t78 = call i1 @Str_stringEquals(ptr null, ptr %t76, ptr %t77), !dbg !23584
   br i1 %t78, label %if_then_53, label %if_end_55, !dbg !23584
 if_then_53:
-  %t79 = call ptr @__spec_intern_cached(ptr @.str.1999, ptr @.str.cache.1999), !dbg !23584
+  %t79 = call ptr @__spec_intern_cached(ptr @.str.1998, ptr @.str.cache.1998), !dbg !23584
   call ptr @spec_rt_retain(ptr %t79), !dbg !23584
   call void @spec_pool_release_to(i64 %t1), !dbg !23584
   call ptr @spec_claim_pool(ptr %t79), !dbg !23584
@@ -358958,7 +358947,7 @@ if_end_55:
   %t82 = call i1 @Str_stringEquals(ptr null, ptr %t80, ptr %t81), !dbg !23585
   br i1 %t82, label %if_then_56, label %if_end_58, !dbg !23585
 if_then_56:
-  %t83 = call ptr @__spec_intern_cached(ptr @.str.2000, ptr @.str.cache.2000), !dbg !23585
+  %t83 = call ptr @__spec_intern_cached(ptr @.str.1999, ptr @.str.cache.1999), !dbg !23585
   call ptr @spec_rt_retain(ptr %t83), !dbg !23585
   call void @spec_pool_release_to(i64 %t1), !dbg !23585
   call ptr @spec_claim_pool(ptr %t83), !dbg !23585
@@ -359012,7 +359001,7 @@ define ptr @LlvmRuntimePrelude_emitArcAndPool(ptr %self) !dbg !23590 {
 entry:
   %self_slot = alloca ptr, !dbg !23591
   store ptr %self, ptr %self_slot, !dbg !23591
-  %t2 = call ptr @__spec_intern_cached(ptr @.str.2001, ptr @.str.cache.2001), !dbg !23592
+  %t2 = call ptr @__spec_intern_cached(ptr @.str.2000, ptr @.str.cache.2000), !dbg !23592
   call ptr @spec_rt_retain(ptr %t2), !dbg !23592
   call ptr @spec_claim_pool(ptr %t2), !dbg !23592
   ret ptr %t2, !dbg !23592
@@ -359022,7 +359011,7 @@ define ptr @LlvmRuntimePrelude_emitClosuresAndBoxes(ptr %self) !dbg !23593 {
 entry:
   %self_slot = alloca ptr, !dbg !23594
   store ptr %self, ptr %self_slot, !dbg !23594
-  %t2 = call ptr @__spec_intern_cached(ptr @.str.2002, ptr @.str.cache.2002), !dbg !23595
+  %t2 = call ptr @__spec_intern_cached(ptr @.str.2001, ptr @.str.cache.2001), !dbg !23595
   call ptr @spec_rt_retain(ptr %t2), !dbg !23595
   call ptr @spec_claim_pool(ptr %t2), !dbg !23595
   ret ptr %t2, !dbg !23595
@@ -359032,7 +359021,7 @@ define ptr @LlvmRuntimePrelude_emitMemIntrinsics(ptr %self) !dbg !23596 {
 entry:
   %self_slot = alloca ptr, !dbg !23597
   store ptr %self, ptr %self_slot, !dbg !23597
-  %t2 = call ptr @__spec_intern_cached(ptr @.str.2003, ptr @.str.cache.2003), !dbg !23598
+  %t2 = call ptr @__spec_intern_cached(ptr @.str.2002, ptr @.str.cache.2002), !dbg !23598
   call ptr @spec_rt_retain(ptr %t2), !dbg !23598
   call ptr @spec_claim_pool(ptr %t2), !dbg !23598
   ret ptr %t2, !dbg !23598
@@ -359042,7 +359031,7 @@ define ptr @LlvmRuntimePrelude_emitTypeAndStringHelpers(ptr %self) !dbg !23599 {
 entry:
   %self_slot = alloca ptr, !dbg !23600
   store ptr %self, ptr %self_slot, !dbg !23600
-  %t2 = call ptr @__spec_intern_cached(ptr @.str.2004, ptr @.str.cache.2004), !dbg !23601
+  %t2 = call ptr @__spec_intern_cached(ptr @.str.2003, ptr @.str.cache.2003), !dbg !23601
   call ptr @spec_rt_retain(ptr %t2), !dbg !23601
   call ptr @spec_claim_pool(ptr %t2), !dbg !23601
   ret ptr %t2, !dbg !23601
@@ -359052,7 +359041,7 @@ define ptr @LlvmRuntimePrelude_emitMathHelpers(ptr %self) !dbg !23602 {
 entry:
   %self_slot = alloca ptr, !dbg !23603
   store ptr %self, ptr %self_slot, !dbg !23603
-  %t2 = call ptr @__spec_intern_cached(ptr @.str.2005, ptr @.str.cache.2005), !dbg !23604
+  %t2 = call ptr @__spec_intern_cached(ptr @.str.2004, ptr @.str.cache.2004), !dbg !23604
   call ptr @spec_rt_retain(ptr %t2), !dbg !23604
   call ptr @spec_claim_pool(ptr %t2), !dbg !23604
   ret ptr %t2, !dbg !23604
@@ -359062,7 +359051,7 @@ define ptr @LlvmRuntimePrelude_emitCliAndAtomics(ptr %self) !dbg !23605 {
 entry:
   %self_slot = alloca ptr, !dbg !23606
   store ptr %self, ptr %self_slot, !dbg !23606
-  %t2 = call ptr @__spec_intern_cached(ptr @.str.2006, ptr @.str.cache.2006), !dbg !23607
+  %t2 = call ptr @__spec_intern_cached(ptr @.str.2005, ptr @.str.cache.2005), !dbg !23607
   call ptr @spec_rt_retain(ptr %t2), !dbg !23607
   call ptr @spec_claim_pool(ptr %t2), !dbg !23607
   ret ptr %t2, !dbg !23607
@@ -359400,9 +359389,9 @@ if_end_6:
   store i64 %t29, ptr %var_i_5, !dbg !23639
   br label %while_hdr_1, !dbg !23636
 while_end_3:
-  %t30 = call ptr @__spec_intern_cached(ptr @.str.2007, ptr @.str.cache.2007), !dbg !23640
+  %t30 = call ptr @__spec_intern_cached(ptr @.str.2006, ptr @.str.cache.2006), !dbg !23640
   %t31 = load ptr, ptr %var_body_2, !dbg !23640
-  %t33 = call ptr @__spec_intern_cached(ptr @.str.2008, ptr @.str.cache.2008), !dbg !23640
+  %t33 = call ptr @__spec_intern_cached(ptr @.str.2007, ptr @.str.cache.2007), !dbg !23640
   %t34 = call ptr @__spec_concat_3(ptr %t30, ptr %t31, ptr %t33), !dbg !23640
   call ptr @spec_rt_retain(ptr %t34), !dbg !23640
   call void @spec_pool_release_to(i64 %t1), !dbg !23640
@@ -359501,9 +359490,9 @@ dir_call_8:
   br label %vt_end_9, !dbg !23642
 vt_end_9:
   %t42 = load ptr, ptr %t43, !dbg !23642
-  %t51 = call ptr @__spec_intern_cached(ptr @.str.2009, ptr @.str.cache.2009), !dbg !23642
+  %t51 = call ptr @__spec_intern_cached(ptr @.str.2008, ptr @.str.cache.2008), !dbg !23642
   %t53 = load ptr, ptr %var_body_2, !dbg !23642
-  %t55 = call ptr @__spec_intern_cached(ptr @.str.2008, ptr @.str.cache.2008), !dbg !23642
+  %t55 = call ptr @__spec_intern_cached(ptr @.str.2007, ptr @.str.cache.2007), !dbg !23642
   %t56 = call ptr @__spec_concat_4(ptr %t42, ptr %t51, ptr %t53, ptr %t55), !dbg !23642
   call ptr @spec_rt_retain(ptr %t56), !dbg !23642
   call void @spec_pool_release_to(i64 %t1), !dbg !23642
@@ -359524,14 +359513,14 @@ entry:
   store ptr @.typename.LlvmStructLayout, ptr %t3_tnp, !dbg !23655
   %t3_vtp = getelementptr inbounds %struct.LlvmStructLayout, ptr %t3, i32 0, i32 1, !dbg !23655
   store ptr @.vtable.LlvmStructLayout, ptr %t3_vtp, !dbg !23655
-  %t4 = call ptr @__spec_intern_cached(ptr @.str.2010, ptr @.str.cache.2010), !dbg !23655
+  %t4 = call ptr @__spec_intern_cached(ptr @.str.2009, ptr @.str.cache.2009), !dbg !23655
   call void @LlvmStructLayout_init(ptr %t3, ptr %t4), !dbg !23655
   call ptr @spec_claim_pool(ptr %t3), !dbg !23655
   call ptr @spec_rt_retain(ptr %t3), !dbg !23655
   call ptr @spec_claim_pool(ptr %t3), !dbg !23655
   store ptr %t3, ptr %var_s_2, !dbg !23655
   %t5 = load ptr, ptr %var_s_2, !dbg !23656
-  %t6 = call ptr @__spec_intern_cached(ptr @.str.1945, ptr @.str.cache.1945), !dbg !23656
+  %t6 = call ptr @__spec_intern_cached(ptr @.str.1944, ptr @.str.cache.1944), !dbg !23656
   %t7 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23656
   %t9 = alloca ptr, !dbg !23656
   %t10 = icmp ne ptr %t5, null, !dbg !23656
@@ -359551,7 +359540,7 @@ dir_call_2:
 vt_end_3:
   %t8 = load ptr, ptr %t9, !dbg !23656
   %t17 = load ptr, ptr %var_s_2, !dbg !23653
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.1946, ptr @.str.cache.1946), !dbg !23653
+  %t18 = call ptr @__spec_intern_cached(ptr @.str.1945, ptr @.str.cache.1945), !dbg !23653
   %t19 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23653
   %t22 = icmp ne ptr %t17, null, !dbg !23653
   br i1 %t22, label %vt_call_4, label %dir_call_5, !dbg !23653
@@ -359593,7 +359582,7 @@ entry:
   store ptr @.typename.LlvmStructLayout, ptr %t3_tnp, !dbg !23663
   %t3_vtp = getelementptr inbounds %struct.LlvmStructLayout, ptr %t3, i32 0, i32 1, !dbg !23663
   store ptr @.vtable.LlvmStructLayout, ptr %t3_vtp, !dbg !23663
-  %t4 = call ptr @__spec_intern_cached(ptr @.str.2011, ptr @.str.cache.2011), !dbg !23663
+  %t4 = call ptr @__spec_intern_cached(ptr @.str.2010, ptr @.str.cache.2010), !dbg !23663
   call void @LlvmStructLayout_init(ptr %t3, ptr %t4), !dbg !23663
   call ptr @spec_claim_pool(ptr %t3), !dbg !23663
   call ptr @spec_rt_retain(ptr %t3), !dbg !23663
@@ -359620,7 +359609,7 @@ dir_call_2:
 vt_end_3:
   %t8 = load ptr, ptr %t9, !dbg !23664
   %t17 = load ptr, ptr %var_s_2, !dbg !23661
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.2012, ptr @.str.cache.2012), !dbg !23661
+  %t18 = call ptr @__spec_intern_cached(ptr @.str.2011, ptr @.str.cache.2011), !dbg !23661
   %t19 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23661
   %t22 = icmp ne ptr %t17, null, !dbg !23661
   br i1 %t22, label %vt_call_4, label %dir_call_5, !dbg !23661
@@ -359639,8 +359628,8 @@ dir_call_5:
 vt_end_6:
   %t20 = load ptr, ptr %t21, !dbg !23661
   %t29 = load ptr, ptr %var_s_2, !dbg !23660
-  %t30 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23660
-  %t31 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23660
+  %t30 = call ptr @__spec_intern_cached(ptr @.str.2012, ptr @.str.cache.2012), !dbg !23660
+  %t31 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23660
   %t34 = icmp ne ptr %t29, null, !dbg !23660
   br i1 %t34, label %vt_call_7, label %dir_call_8, !dbg !23660
 vt_call_7:
@@ -359659,7 +359648,7 @@ vt_end_9:
   %t32 = load ptr, ptr %t33, !dbg !23660
   %t41 = load ptr, ptr %var_s_2, !dbg !23659
   %t42 = call ptr @__spec_intern_cached(ptr @.str.1682, ptr @.str.cache.1682), !dbg !23659
-  %t43 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23659
+  %t43 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23659
   %t46 = icmp ne ptr %t41, null, !dbg !23659
   br i1 %t46, label %vt_call_10, label %dir_call_11, !dbg !23659
 vt_call_10:
@@ -359700,7 +359689,7 @@ entry:
   store ptr @.typename.LlvmStructLayout, ptr %t3_tnp, !dbg !23671
   %t3_vtp = getelementptr inbounds %struct.LlvmStructLayout, ptr %t3, i32 0, i32 1, !dbg !23671
   store ptr @.vtable.LlvmStructLayout, ptr %t3_vtp, !dbg !23671
-  %t4 = call ptr @__spec_intern_cached(ptr @.str.2015, ptr @.str.cache.2015), !dbg !23671
+  %t4 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23671
   call void @LlvmStructLayout_init(ptr %t3, ptr %t4), !dbg !23671
   call ptr @spec_claim_pool(ptr %t3), !dbg !23671
   call ptr @spec_rt_retain(ptr %t3), !dbg !23671
@@ -359727,7 +359716,7 @@ dir_call_2:
 vt_end_3:
   %t8 = load ptr, ptr %t9, !dbg !23672
   %t17 = load ptr, ptr %var_s_2, !dbg !23669
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.1945, ptr @.str.cache.1945), !dbg !23669
+  %t18 = call ptr @__spec_intern_cached(ptr @.str.1944, ptr @.str.cache.1944), !dbg !23669
   %t19 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23669
   %t22 = icmp ne ptr %t17, null, !dbg !23669
   br i1 %t22, label %vt_call_4, label %dir_call_5, !dbg !23669
@@ -359746,8 +359735,8 @@ dir_call_5:
 vt_end_6:
   %t20 = load ptr, ptr %t21, !dbg !23669
   %t29 = load ptr, ptr %var_s_2, !dbg !23668
-  %t30 = call ptr @__spec_intern_cached(ptr @.str.2016, ptr @.str.cache.2016), !dbg !23668
-  %t31 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23668
+  %t30 = call ptr @__spec_intern_cached(ptr @.str.2015, ptr @.str.cache.2015), !dbg !23668
+  %t31 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23668
   %t34 = icmp ne ptr %t29, null, !dbg !23668
   br i1 %t34, label %vt_call_7, label %dir_call_8, !dbg !23668
 vt_call_7:
@@ -359765,8 +359754,8 @@ dir_call_8:
 vt_end_9:
   %t32 = load ptr, ptr %t33, !dbg !23668
   %t41 = load ptr, ptr %var_s_2, !dbg !23667
-  %t42 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23667
-  %t43 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23667
+  %t42 = call ptr @__spec_intern_cached(ptr @.str.2012, ptr @.str.cache.2012), !dbg !23667
+  %t43 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23667
   %t46 = icmp ne ptr %t41, null, !dbg !23667
   br i1 %t46, label %vt_call_10, label %dir_call_11, !dbg !23667
 vt_call_10:
@@ -359817,7 +359806,7 @@ entry:
   store ptr @.typename.LlvmStructLayout, ptr %t3_tnp, !dbg !23684
   %t3_vtp = getelementptr inbounds %struct.LlvmStructLayout, ptr %t3, i32 0, i32 1, !dbg !23684
   store ptr @.vtable.LlvmStructLayout, ptr %t3_vtp, !dbg !23684
-  %t4 = call ptr @__spec_intern_cached(ptr @.str.2017, ptr @.str.cache.2017), !dbg !23684
+  %t4 = call ptr @__spec_intern_cached(ptr @.str.2016, ptr @.str.cache.2016), !dbg !23684
   call void @LlvmStructLayout_init(ptr %t3, ptr %t4), !dbg !23684
   call ptr @spec_claim_pool(ptr %t3), !dbg !23684
   call ptr @spec_rt_retain(ptr %t3), !dbg !23684
@@ -359844,7 +359833,7 @@ dir_call_2:
 vt_end_3:
   %t8 = load ptr, ptr %t9, !dbg !23685
   %t17 = load ptr, ptr %var_s_2, !dbg !23682
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.2018, ptr @.str.cache.2018), !dbg !23682
+  %t18 = call ptr @__spec_intern_cached(ptr @.str.2017, ptr @.str.cache.2017), !dbg !23682
   %t19 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23682
   %t22 = icmp ne ptr %t17, null, !dbg !23682
   br i1 %t22, label %vt_call_4, label %dir_call_5, !dbg !23682
@@ -359863,7 +359852,7 @@ dir_call_5:
 vt_end_6:
   %t20 = load ptr, ptr %t21, !dbg !23682
   %t29 = load ptr, ptr %var_s_2, !dbg !23681
-  %t30 = call ptr @__spec_intern_cached(ptr @.str.2019, ptr @.str.cache.2019), !dbg !23681
+  %t30 = call ptr @__spec_intern_cached(ptr @.str.2018, ptr @.str.cache.2018), !dbg !23681
   %t31 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23681
   %t34 = icmp ne ptr %t29, null, !dbg !23681
   br i1 %t34, label %vt_call_7, label %dir_call_8, !dbg !23681
@@ -359882,8 +359871,8 @@ dir_call_8:
 vt_end_9:
   %t32 = load ptr, ptr %t33, !dbg !23681
   %t41 = load ptr, ptr %var_s_2, !dbg !23680
-  %t42 = call ptr @__spec_intern_cached(ptr @.str.2020, ptr @.str.cache.2020), !dbg !23680
-  %t43 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23680
+  %t42 = call ptr @__spec_intern_cached(ptr @.str.2019, ptr @.str.cache.2019), !dbg !23680
+  %t43 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23680
   %t46 = icmp ne ptr %t41, null, !dbg !23680
   br i1 %t46, label %vt_call_10, label %dir_call_11, !dbg !23680
 vt_call_10:
@@ -359901,7 +359890,7 @@ dir_call_11:
 vt_end_12:
   %t44 = load ptr, ptr %t45, !dbg !23680
   %t53 = load ptr, ptr %var_s_2, !dbg !23679
-  %t54 = call ptr @__spec_intern_cached(ptr @.str.2021, ptr @.str.cache.2021), !dbg !23679
+  %t54 = call ptr @__spec_intern_cached(ptr @.str.2020, ptr @.str.cache.2020), !dbg !23679
   %t55 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23679
   %t58 = icmp ne ptr %t53, null, !dbg !23679
   br i1 %t58, label %vt_call_13, label %dir_call_14, !dbg !23679
@@ -359920,7 +359909,7 @@ dir_call_14:
 vt_end_15:
   %t56 = load ptr, ptr %t57, !dbg !23679
   %t65 = load ptr, ptr %var_s_2, !dbg !23678
-  %t66 = call ptr @__spec_intern_cached(ptr @.str.2022, ptr @.str.cache.2022), !dbg !23678
+  %t66 = call ptr @__spec_intern_cached(ptr @.str.2021, ptr @.str.cache.2021), !dbg !23678
   %t67 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23678
   %t70 = icmp ne ptr %t65, null, !dbg !23678
   br i1 %t70, label %vt_call_16, label %dir_call_17, !dbg !23678
@@ -359939,8 +359928,8 @@ dir_call_17:
 vt_end_18:
   %t68 = load ptr, ptr %t69, !dbg !23678
   %t77 = load ptr, ptr %var_s_2, !dbg !23677
-  %t78 = call ptr @__spec_intern_cached(ptr @.str.2023, ptr @.str.cache.2023), !dbg !23677
-  %t79 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23677
+  %t78 = call ptr @__spec_intern_cached(ptr @.str.2022, ptr @.str.cache.2022), !dbg !23677
+  %t79 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23677
   %t82 = icmp ne ptr %t77, null, !dbg !23677
   br i1 %t82, label %vt_call_19, label %dir_call_20, !dbg !23677
 vt_call_19:
@@ -359958,7 +359947,7 @@ dir_call_20:
 vt_end_21:
   %t80 = load ptr, ptr %t81, !dbg !23677
   %t89 = load ptr, ptr %var_s_2, !dbg !23676
-  %t90 = call ptr @__spec_intern_cached(ptr @.str.2024, ptr @.str.cache.2024), !dbg !23676
+  %t90 = call ptr @__spec_intern_cached(ptr @.str.2023, ptr @.str.cache.2023), !dbg !23676
   %t91 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23676
   %t94 = icmp ne ptr %t89, null, !dbg !23676
   br i1 %t94, label %vt_call_22, label %dir_call_23, !dbg !23676
@@ -359977,8 +359966,8 @@ dir_call_23:
 vt_end_24:
   %t92 = load ptr, ptr %t93, !dbg !23676
   %t101 = load ptr, ptr %var_s_2, !dbg !23675
-  %t102 = call ptr @__spec_intern_cached(ptr @.str.2025, ptr @.str.cache.2025), !dbg !23675
-  %t103 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23675
+  %t102 = call ptr @__spec_intern_cached(ptr @.str.2024, ptr @.str.cache.2024), !dbg !23675
+  %t103 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23675
   %t106 = icmp ne ptr %t101, null, !dbg !23675
   br i1 %t106, label %vt_call_25, label %dir_call_26, !dbg !23675
 vt_call_25:
@@ -360019,14 +360008,14 @@ entry:
   store ptr @.typename.LlvmStructLayout, ptr %t3_tnp, !dbg !23692
   %t3_vtp = getelementptr inbounds %struct.LlvmStructLayout, ptr %t3, i32 0, i32 1, !dbg !23692
   store ptr @.vtable.LlvmStructLayout, ptr %t3_vtp, !dbg !23692
-  %t4 = call ptr @__spec_intern_cached(ptr @.str.2026, ptr @.str.cache.2026), !dbg !23692
+  %t4 = call ptr @__spec_intern_cached(ptr @.str.2025, ptr @.str.cache.2025), !dbg !23692
   call void @LlvmStructLayout_init(ptr %t3, ptr %t4), !dbg !23692
   call ptr @spec_claim_pool(ptr %t3), !dbg !23692
   call ptr @spec_rt_retain(ptr %t3), !dbg !23692
   call ptr @spec_claim_pool(ptr %t3), !dbg !23692
   store ptr %t3, ptr %var_s_2, !dbg !23692
   %t5 = load ptr, ptr %var_s_2, !dbg !23693
-  %t6 = call ptr @__spec_intern_cached(ptr @.str.1945, ptr @.str.cache.1945), !dbg !23693
+  %t6 = call ptr @__spec_intern_cached(ptr @.str.1944, ptr @.str.cache.1944), !dbg !23693
   %t7 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23693
   %t9 = alloca ptr, !dbg !23693
   %t10 = icmp ne ptr %t5, null, !dbg !23693
@@ -360046,7 +360035,7 @@ dir_call_2:
 vt_end_3:
   %t8 = load ptr, ptr %t9, !dbg !23693
   %t17 = load ptr, ptr %var_s_2, !dbg !23690
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.2027, ptr @.str.cache.2027), !dbg !23690
+  %t18 = call ptr @__spec_intern_cached(ptr @.str.2026, ptr @.str.cache.2026), !dbg !23690
   %t19 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23690
   %t22 = icmp ne ptr %t17, null, !dbg !23690
   br i1 %t22, label %vt_call_4, label %dir_call_5, !dbg !23690
@@ -360066,7 +360055,7 @@ vt_end_6:
   %t20 = load ptr, ptr %t21, !dbg !23690
   %t29 = load ptr, ptr %var_s_2, !dbg !23689
   %t30 = call ptr @__spec_intern_cached(ptr @.str.87, ptr @.str.cache.87), !dbg !23689
-  %t31 = call ptr @__spec_intern_cached(ptr @.str.2014, ptr @.str.cache.2014), !dbg !23689
+  %t31 = call ptr @__spec_intern_cached(ptr @.str.2013, ptr @.str.cache.2013), !dbg !23689
   %t34 = icmp ne ptr %t29, null, !dbg !23689
   br i1 %t34, label %vt_call_7, label %dir_call_8, !dbg !23689
 vt_call_7:
@@ -360084,7 +360073,7 @@ dir_call_8:
 vt_end_9:
   %t32 = load ptr, ptr %t33, !dbg !23689
   %t41 = load ptr, ptr %var_s_2, !dbg !23688
-  %t42 = call ptr @__spec_intern_cached(ptr @.str.2028, ptr @.str.cache.2028), !dbg !23688
+  %t42 = call ptr @__spec_intern_cached(ptr @.str.2027, ptr @.str.cache.2027), !dbg !23688
   %t43 = call ptr @__spec_intern_cached(ptr @.str.1614, ptr @.str.cache.1614), !dbg !23688
   %t46 = icmp ne ptr %t41, null, !dbg !23688
   br i1 %t46, label %vt_call_10, label %dir_call_11, !dbg !23688
@@ -360299,7 +360288,7 @@ if_end_3:
   br i1 %t11, label %sc_rhs_4, label %sc_end_5, !dbg !23711
 sc_rhs_4:
   %t14 = load ptr, ptr %slot_ch, !dbg !23711
-  %t15 = call ptr @__spec_intern_cached(ptr @.str.2029, ptr @.str.cache.2029), !dbg !23711
+  %t15 = call ptr @__spec_intern_cached(ptr @.str.2028, ptr @.str.cache.2028), !dbg !23711
   %t17 = call i64 @Str_stringCompare(ptr null, ptr %t14, ptr %t15), !dbg !23711
   %t18 = add i64 0, 0, !dbg !23711
   %t16 = icmp sle i64 %t17, %t18, !dbg !23711
@@ -360319,7 +360308,7 @@ sc_rhs_6:
   br i1 %t23, label %sc_rhs_8, label %sc_end_9, !dbg !23711
 sc_rhs_8:
   %t26 = load ptr, ptr %slot_ch, !dbg !23711
-  %t27 = call ptr @__spec_intern_cached(ptr @.str.2030, ptr @.str.cache.2030), !dbg !23711
+  %t27 = call ptr @__spec_intern_cached(ptr @.str.2029, ptr @.str.cache.2029), !dbg !23711
   %t29 = call i64 @Str_stringCompare(ptr null, ptr %t26, ptr %t27), !dbg !23711
   %t30 = add i64 0, 0, !dbg !23711
   %t28 = icmp sle i64 %t29, %t30, !dbg !23711
@@ -360791,7 +360780,7 @@ sc_end_37:
   br i1 %t151, label %if_then_38, label %if_end_40, !dbg !23733
 if_then_38:
   %t152 = load ptr, ptr %var_seg_137, !dbg !23761
-  %t153 = call ptr @__spec_intern_cached(ptr @.str.2031, ptr @.str.cache.2031), !dbg !23761
+  %t153 = call ptr @__spec_intern_cached(ptr @.str.2030, ptr @.str.cache.2030), !dbg !23761
   %t154 = call i1 @Str_stringEquals(ptr null, ptr %t152, ptr %t153), !dbg !23761
   br i1 %t154, label %if_then_41, label %if_else_42, !dbg !23761
 if_then_41:
@@ -360812,7 +360801,7 @@ if_then_44:
   call ptr @spec_claim_pool(ptr %t165), !dbg !23732
   store ptr %t165, ptr %var_top_159, !dbg !23732
   %t167 = load ptr, ptr %var_top_159, !dbg !23763
-  %t168 = call ptr @__spec_intern_cached(ptr @.str.2031, ptr @.str.cache.2031), !dbg !23763
+  %t168 = call ptr @__spec_intern_cached(ptr @.str.2030, ptr @.str.cache.2030), !dbg !23763
   %t169 = call i1 @Str_stringEquals(ptr null, ptr %t167, ptr %t168), !dbg !23763
   br i1 %t169, label %if_then_47, label %if_else_48, !dbg !23763
 if_then_47:
@@ -360821,7 +360810,7 @@ if_then_47:
   br i1 %t171, label %if_then_50, label %if_end_52, !dbg !23764
 if_then_50:
   %t172 = load ptr, ptr %var_segs_126, !dbg !23765
-  %t173 = call ptr @__spec_intern_cached(ptr @.str.2031, ptr @.str.cache.2031), !dbg !23765
+  %t173 = call ptr @__spec_intern_cached(ptr @.str.2030, ptr @.str.cache.2030), !dbg !23765
   call void @Vector_vecAddObject(ptr null, ptr %t172, ptr %t173), !dbg !23765
   br label %if_end_52, !dbg !23764
 if_end_52:
@@ -360839,7 +360828,7 @@ if_else_45:
   br i1 %t178, label %if_then_53, label %if_end_55, !dbg !23767
 if_then_53:
   %t179 = load ptr, ptr %var_segs_126, !dbg !23768
-  %t180 = call ptr @__spec_intern_cached(ptr @.str.2031, ptr @.str.cache.2031), !dbg !23768
+  %t180 = call ptr @__spec_intern_cached(ptr @.str.2030, ptr @.str.cache.2030), !dbg !23768
   call void @Vector_vecAddObject(ptr null, ptr %t179, ptr %t180), !dbg !23768
   br label %if_end_55, !dbg !23767
 if_end_55:
@@ -361033,7 +361022,7 @@ if_end_3:
   call ptr @spec_claim_pool(ptr %t16), !dbg !23801
   store ptr %t16, ptr %var_p_11, !dbg !23801
   %t17 = load ptr, ptr %var_p_11, !dbg !23805
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.2032, ptr @.str.cache.2032), !dbg !23805
+  %t18 = call ptr @__spec_intern_cached(ptr @.str.2031, ptr @.str.cache.2031), !dbg !23805
   %t19 = add i1 0, 1, !dbg !23805
   %t20 = call i1 @Str_startsWith(ptr %t17, ptr %t18, i1 %t19), !dbg !23805
   br i1 %t20, label %if_then_4, label %if_end_6, !dbg !23805
@@ -361461,7 +361450,7 @@ if_then_1:
   ret ptr %t5, !dbg !23832
 if_end_3:
   %t11 = load ptr, ptr %slot_text, !dbg !23833
-  %t12 = call ptr @__spec_intern_cached(ptr @.str.2033, ptr @.str.cache.2033), !dbg !23833
+  %t12 = call ptr @__spec_intern_cached(ptr @.str.2032, ptr @.str.cache.2032), !dbg !23833
   %t13 = add i1 0, 1, !dbg !23833
   %t14 = call i1 @Str_startsWith(ptr %t11, ptr %t12, i1 %t13), !dbg !23833
   br i1 %t14, label %if_then_4, label %if_end_6, !dbg !23833
@@ -361582,13 +361571,13 @@ vt_end_18:
   ret ptr %t63, !dbg !23824
 if_end_6:
   %t79 = load ptr, ptr %slot_text, !dbg !23837
-  %t80 = call ptr @__spec_intern_cached(ptr @.str.2034, ptr @.str.cache.2034), !dbg !23837
+  %t80 = call ptr @__spec_intern_cached(ptr @.str.2033, ptr @.str.cache.2033), !dbg !23837
   %t81 = add i1 0, 1, !dbg !23837
   %t82 = call i1 @Str_contains(ptr %t79, ptr %t80, i1 %t81), !dbg !23837
   br i1 %t82, label %if_then_19, label %if_end_21, !dbg !23837
 if_then_19:
   %t84 = load ptr, ptr %slot_text, !dbg !23823
-  %t85 = call ptr @__spec_intern_cached(ptr @.str.2034, ptr @.str.cache.2034), !dbg !23823
+  %t85 = call ptr @__spec_intern_cached(ptr @.str.2033, ptr @.str.cache.2033), !dbg !23823
   %t86 = add i64 0, 1, !dbg !23823
   %t87 = sub i64 0, %t86, !dbg !23823
   %t88 = add i1 0, 1, !dbg !23823
@@ -361842,7 +361831,7 @@ if_end_6:
   %t61 = xor i1 %t62, 1, !dbg !23854
   br i1 %t61, label %if_then_17, label %if_end_19, !dbg !23854
 if_then_17:
-  %t63 = call ptr @__spec_intern_cached(ptr @.str.2032, ptr @.str.cache.2032), !dbg !23855
+  %t63 = call ptr @__spec_intern_cached(ptr @.str.2031, ptr @.str.cache.2031), !dbg !23855
   %t64 = load ptr, ptr %self_slot, !dbg !23855
   %t65 = getelementptr inbounds %struct.Uri, ptr %t64, i32 0, i32 3, !dbg !23855
   %t66 = load ptr, ptr %t65, !dbg !23855
@@ -362550,7 +362539,7 @@ entry:
   %t4 = call i1 @Str_stringEquals(ptr null, ptr %t2, ptr %t3), !dbg !23940
   br i1 %t4, label %if_then_1, label %if_end_3, !dbg !23940
 if_then_1:
-  %t6 = call ptr @__spec_intern_cached(ptr @.str.2035, ptr @.str.cache.2035), !dbg !23938
+  %t6 = call ptr @__spec_intern_cached(ptr @.str.2034, ptr @.str.cache.2034), !dbg !23938
   %t7 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23938
   %t8 = call ptr @Process_getEnv(ptr null, ptr %t6, ptr %t7), !dbg !23938
   call ptr @spec_rt_retain(ptr %t8), !dbg !23938
@@ -362561,7 +362550,7 @@ if_then_1:
   %t11 = call i1 @Str_stringEquals(ptr null, ptr %t9, ptr %t10), !dbg !23941
   br i1 %t11, label %if_then_4, label %if_end_6, !dbg !23941
 if_then_4:
-  %t12 = call ptr @__spec_intern_cached(ptr @.str.2036, ptr @.str.cache.2036), !dbg !23942
+  %t12 = call ptr @__spec_intern_cached(ptr @.str.2035, ptr @.str.cache.2035), !dbg !23942
   %t13 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23942
   %t14 = call ptr @Process_getEnv(ptr null, ptr %t12, ptr %t13), !dbg !23942
   call ptr @spec_rt_retain(ptr %t14), !dbg !23942
@@ -362598,13 +362587,13 @@ vt_end_12:
   call ptr @spec_claim_pool(ptr %t21), !dbg !23937
   ret ptr %t21, !dbg !23937
 if_end_9:
-  %t30 = call ptr @__spec_intern_cached(ptr @.str.2037, ptr @.str.cache.2037), !dbg !23944
+  %t30 = call ptr @__spec_intern_cached(ptr @.str.2036, ptr @.str.cache.2036), !dbg !23944
   call ptr @spec_rt_retain(ptr %t30), !dbg !23944
   call void @spec_pool_release_to(i64 %t1), !dbg !23944
   call ptr @spec_claim_pool(ptr %t30), !dbg !23944
   ret ptr %t30, !dbg !23944
 if_end_3:
-  %t32 = call ptr @__spec_intern_cached(ptr @.str.2038, ptr @.str.cache.2038), !dbg !23936
+  %t32 = call ptr @__spec_intern_cached(ptr @.str.2037, ptr @.str.cache.2037), !dbg !23936
   %t33 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23936
   %t34 = call ptr @Process_getEnv(ptr null, ptr %t32, ptr %t33), !dbg !23936
   call ptr @spec_rt_retain(ptr %t34), !dbg !23936
@@ -362639,7 +362628,7 @@ vt_end_18:
   call ptr @spec_claim_pool(ptr %t41), !dbg !23935
   ret ptr %t41, !dbg !23935
 if_end_15:
-  %t50 = call ptr @__spec_intern_cached(ptr @.str.2037, ptr @.str.cache.2037), !dbg !23946
+  %t50 = call ptr @__spec_intern_cached(ptr @.str.2036, ptr @.str.cache.2036), !dbg !23946
   call ptr @spec_rt_retain(ptr %t50), !dbg !23946
   call void @spec_pool_release_to(i64 %t1), !dbg !23946
   call ptr @spec_claim_pool(ptr %t50), !dbg !23946
@@ -362654,7 +362643,7 @@ entry:
   %self_slot = alloca ptr, !dbg !23949
   store ptr %self, ptr %self_slot, !dbg !23949
   %var_h_2 = alloca ptr, !dbg !23950
-  %t3 = call ptr @__spec_intern_cached(ptr @.str.2039, ptr @.str.cache.2039), !dbg !23950
+  %t3 = call ptr @__spec_intern_cached(ptr @.str.2038, ptr @.str.cache.2038), !dbg !23950
   %t4 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23950
   %t5 = call ptr @Process_getEnv(ptr null, ptr %t3, ptr %t4), !dbg !23950
   call ptr @spec_rt_retain(ptr %t5), !dbg !23950
@@ -362665,7 +362654,7 @@ entry:
   %t8 = call i1 @Str_stringEquals(ptr null, ptr %t6, ptr %t7), !dbg !23951
   br i1 %t8, label %if_then_1, label %if_end_3, !dbg !23951
 if_then_1:
-  %t9 = call ptr @__spec_intern_cached(ptr @.str.2040, ptr @.str.cache.2040), !dbg !23952
+  %t9 = call ptr @__spec_intern_cached(ptr @.str.2039, ptr @.str.cache.2039), !dbg !23952
   %t10 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23952
   %t11 = call ptr @Process_getEnv(ptr null, ptr %t9, ptr %t10), !dbg !23952
   call ptr @spec_rt_retain(ptr %t11), !dbg !23952
@@ -362745,7 +362734,7 @@ vt_end_3:
   br i1 %t15, label %if_then_4, label %if_end_6, !dbg !23959
 if_then_4:
   %t17 = load ptr, ptr %var_h_2, !dbg !23960
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.2041, ptr @.str.cache.2041), !dbg !23960
+  %t18 = call ptr @__spec_intern_cached(ptr @.str.2040, ptr @.str.cache.2040), !dbg !23960
   %t19 = call ptr @String_concat(ptr %t17, ptr %t18), !dbg !23960
   call ptr @spec_rt_retain(ptr %t19), !dbg !23960
   call void @spec_pool_release_to(i64 %t1), !dbg !23960
@@ -362769,7 +362758,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !23956
 vt_end_9:
   %t21 = load ptr, ptr %t22, !dbg !23956
-  %t30 = call ptr @__spec_intern_cached(ptr @.str.2042, ptr @.str.cache.2042), !dbg !23956
+  %t30 = call ptr @__spec_intern_cached(ptr @.str.2041, ptr @.str.cache.2041), !dbg !23956
   %t31 = call ptr @String_concat(ptr %t21, ptr %t30), !dbg !23956
   call ptr @spec_rt_retain(ptr %t31), !dbg !23956
   call void @spec_pool_release_to(i64 %t1), !dbg !23956
@@ -362800,7 +362789,7 @@ dir_call_2:
   br label %vt_end_3, !dbg !23963
 vt_end_3:
   %t3 = load ptr, ptr %t4, !dbg !23963
-  %t12 = call ptr @__spec_intern_cached(ptr @.str.2043, ptr @.str.cache.2043), !dbg !23963
+  %t12 = call ptr @__spec_intern_cached(ptr @.str.2042, ptr @.str.cache.2042), !dbg !23963
   %t13 = call ptr @String_concat(ptr %t3, ptr %t12), !dbg !23963
   call ptr @spec_rt_retain(ptr %t13), !dbg !23963
   call void @spec_pool_release_to(i64 %t1), !dbg !23963
@@ -362918,7 +362907,7 @@ entry:
   %t4 = call i1 @Str_stringEquals(ptr null, ptr %t2, ptr %t3), !dbg !23979
   br i1 %t4, label %if_then_1, label %if_end_3, !dbg !23979
 if_then_1:
-  %t5 = call ptr @__spec_intern_cached(ptr @.str.2044, ptr @.str.cache.2044), !dbg !23980
+  %t5 = call ptr @__spec_intern_cached(ptr @.str.2043, ptr @.str.cache.2043), !dbg !23980
   call ptr @spec_rt_retain(ptr %t5), !dbg !23980
   call void @spec_pool_release_to(i64 %t1), !dbg !23980
   call ptr @spec_claim_pool(ptr %t5), !dbg !23980
@@ -362993,7 +362982,7 @@ if_then_1:
   %t11 = xor i1 %t12, 1, !dbg !23988
   br i1 %t11, label %if_then_4, label %if_end_6, !dbg !23988
 if_then_4:
-  %t13 = call ptr @__spec_intern_cached(ptr @.str.2033, ptr @.str.cache.2033), !dbg !23989
+  %t13 = call ptr @__spec_intern_cached(ptr @.str.2032, ptr @.str.cache.2032), !dbg !23989
   %t14 = load ptr, ptr %self_slot, !dbg !23989
   %t15 = getelementptr inbounds %struct.Uri, ptr %t14, i32 0, i32 3, !dbg !23989
   %t16 = load ptr, ptr %t15, !dbg !23989
@@ -363014,7 +363003,7 @@ if_end_6:
   %t27 = call i1 @Str_startsWith(ptr %t24, ptr %t25, i1 %t26), !dbg !23990
   br i1 %t27, label %if_then_7, label %if_end_9, !dbg !23990
 if_then_7:
-  %t28 = call ptr @__spec_intern_cached(ptr @.str.2033, ptr @.str.cache.2033), !dbg !23991
+  %t28 = call ptr @__spec_intern_cached(ptr @.str.2032, ptr @.str.cache.2032), !dbg !23991
   %t29 = load ptr, ptr %self_slot, !dbg !23991
   %t30 = getelementptr inbounds %struct.Uri, ptr %t29, i32 0, i32 4, !dbg !23991
   %t31 = load ptr, ptr %t30, !dbg !23991
@@ -363024,7 +363013,7 @@ if_then_7:
   call ptr @spec_claim_pool(ptr %t32), !dbg !23991
   ret ptr %t32, !dbg !23991
 if_end_9:
-  %t33 = call ptr @__spec_intern_cached(ptr @.str.2045, ptr @.str.cache.2045), !dbg !23992
+  %t33 = call ptr @__spec_intern_cached(ptr @.str.2044, ptr @.str.cache.2044), !dbg !23992
   %t34 = load ptr, ptr %self_slot, !dbg !23992
   %t35 = getelementptr inbounds %struct.Uri, ptr %t34, i32 0, i32 4, !dbg !23992
   %t36 = load ptr, ptr %t35, !dbg !23992
@@ -363045,7 +363034,7 @@ if_then_10:
   %t44 = load ptr, ptr %self_slot, !dbg !23994
   %t45 = getelementptr inbounds %struct.Uri, ptr %t44, i32 0, i32 2, !dbg !23994
   %t46 = load ptr, ptr %t45, !dbg !23994
-  %t47 = call ptr @__spec_intern_cached(ptr @.str.2034, ptr @.str.cache.2034), !dbg !23994
+  %t47 = call ptr @__spec_intern_cached(ptr @.str.2033, ptr @.str.cache.2033), !dbg !23994
   %t49 = load ptr, ptr %self_slot, !dbg !23994
   %t50 = getelementptr inbounds %struct.Uri, ptr %t49, i32 0, i32 3, !dbg !23994
   %t51 = load ptr, ptr %t50, !dbg !23994
@@ -363207,7 +363196,7 @@ entry:
   store i64 %p_ln, ptr %slot_ln, !dbg !24009
   %var_se_2 = alloca ptr, !dbg !24010
   %t3 = load ptr, ptr %slot_errObj, !dbg !24010
-  %t4 = getelementptr i8, ptr @.str.2046, i64 0, !dbg !24010
+  %t4 = getelementptr i8, ptr @.str.2045, i64 0, !dbg !24010
   %t5 = call ptr @spec_cast_check(ptr %t3, ptr %t4), !dbg !24010
   call ptr @spec_rt_retain(ptr %t5), !dbg !24010
   call ptr @spec_claim_pool(ptr %t5), !dbg !24010
@@ -363242,7 +363231,7 @@ entry:
   store ptr %p_errObj, ptr %slot_errObj, !dbg !24013
   %var_se_2 = alloca ptr, !dbg !24014
   %t3 = load ptr, ptr %slot_errObj, !dbg !24014
-  %t4 = getelementptr i8, ptr @.str.2046, i64 0, !dbg !24014
+  %t4 = getelementptr i8, ptr @.str.2045, i64 0, !dbg !24014
   %t5 = call ptr @spec_cast_check(ptr %t3, ptr %t4), !dbg !24014
   call ptr @spec_rt_retain(ptr %t5), !dbg !24014
   call ptr @spec_claim_pool(ptr %t5), !dbg !24014
@@ -365673,7 +365662,7 @@ rtti_a_26:
 rtti_a_27:
   br label %rtti_false_1
 rtti_n_23:
-  %t41 = getelementptr i8, ptr @.str.2047, i64 0
+  %t41 = getelementptr i8, ptr @.str.2046, i64 0
   %t42 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t41)
   br i1 %t42, label %rtti_m_28, label %rtti_n_29
 rtti_m_28:
@@ -365695,7 +365684,7 @@ rtti_a_32:
 rtti_a_33:
   br label %rtti_false_1
 rtti_n_29:
-  %t51 = getelementptr i8, ptr @.str.2048, i64 0
+  %t51 = getelementptr i8, ptr @.str.2047, i64 0
   %t52 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t51)
   br i1 %t52, label %rtti_m_34, label %rtti_n_35
 rtti_m_34:
@@ -366013,7 +366002,7 @@ rtti_a_119:
 rtti_a_120:
   br label %rtti_false_1
 rtti_n_116:
-  %t195 = getelementptr i8, ptr @.str.2049, i64 0
+  %t195 = getelementptr i8, ptr @.str.2048, i64 0
   %t196 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t195)
   br i1 %t196, label %rtti_m_121, label %rtti_n_122
 rtti_m_121:
@@ -366365,7 +366354,7 @@ rtti_a_215:
 rtti_a_216:
   br label %rtti_false_1
 rtti_n_212:
-  %t355 = getelementptr i8, ptr @.str.2050, i64 0
+  %t355 = getelementptr i8, ptr @.str.2049, i64 0
   %t356 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t355)
   br i1 %t356, label %rtti_m_217, label %rtti_n_218
 rtti_m_217:
@@ -366409,7 +366398,7 @@ rtti_a_227:
 rtti_a_228:
   br label %rtti_false_1
 rtti_n_224:
-  %t375 = getelementptr i8, ptr @.str.2051, i64 0
+  %t375 = getelementptr i8, ptr @.str.2050, i64 0
   %t376 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t375)
   br i1 %t376, label %rtti_m_229, label %rtti_n_230
 rtti_m_229:
@@ -366453,7 +366442,7 @@ rtti_a_239:
 rtti_a_240:
   br label %rtti_false_1
 rtti_n_236:
-  %t395 = getelementptr i8, ptr @.str.2052, i64 0
+  %t395 = getelementptr i8, ptr @.str.2051, i64 0
   %t396 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t395)
   br i1 %t396, label %rtti_m_241, label %rtti_n_242
 rtti_m_241:
@@ -366493,7 +366482,7 @@ rtti_a_250:
 rtti_a_251:
   br label %rtti_false_1
 rtti_n_248:
-  %t413 = getelementptr i8, ptr @.str.2053, i64 0
+  %t413 = getelementptr i8, ptr @.str.2052, i64 0
   %t414 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t413)
   br i1 %t414, label %rtti_m_252, label %rtti_n_253
 rtti_m_252:
@@ -366533,7 +366522,7 @@ rtti_a_261:
 rtti_a_262:
   br label %rtti_false_1
 rtti_n_259:
-  %t431 = getelementptr i8, ptr @.str.2054, i64 0
+  %t431 = getelementptr i8, ptr @.str.2053, i64 0
   %t432 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t431)
   br i1 %t432, label %rtti_m_263, label %rtti_n_264
 rtti_m_263:
@@ -366573,7 +366562,7 @@ rtti_a_272:
 rtti_a_273:
   br label %rtti_false_1
 rtti_n_270:
-  %t449 = getelementptr i8, ptr @.str.2055, i64 0
+  %t449 = getelementptr i8, ptr @.str.2054, i64 0
   %t450 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t449)
   br i1 %t450, label %rtti_m_274, label %rtti_n_275
 rtti_m_274:
@@ -366595,7 +366584,7 @@ rtti_a_278:
 rtti_a_279:
   br label %rtti_false_1
 rtti_n_275:
-  %t459 = getelementptr i8, ptr @.str.2056, i64 0
+  %t459 = getelementptr i8, ptr @.str.2055, i64 0
   %t460 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t459)
   br i1 %t460, label %rtti_m_280, label %rtti_n_281
 rtti_m_280:
@@ -366617,7 +366606,7 @@ rtti_a_284:
 rtti_a_285:
   br label %rtti_false_1
 rtti_n_281:
-  %t469 = getelementptr i8, ptr @.str.2057, i64 0
+  %t469 = getelementptr i8, ptr @.str.2056, i64 0
   %t470 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t469)
   br i1 %t470, label %rtti_m_286, label %rtti_n_287
 rtti_m_286:
@@ -366639,7 +366628,7 @@ rtti_a_290:
 rtti_a_291:
   br label %rtti_false_1
 rtti_n_287:
-  %t479 = getelementptr i8, ptr @.str.2058, i64 0
+  %t479 = getelementptr i8, ptr @.str.2057, i64 0
   %t480 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t479)
   br i1 %t480, label %rtti_m_292, label %rtti_n_293
 rtti_m_292:
@@ -366661,7 +366650,7 @@ rtti_a_296:
 rtti_a_297:
   br label %rtti_false_1
 rtti_n_293:
-  %t489 = getelementptr i8, ptr @.str.2059, i64 0
+  %t489 = getelementptr i8, ptr @.str.2058, i64 0
   %t490 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t489)
   br i1 %t490, label %rtti_m_298, label %rtti_n_299
 rtti_m_298:
@@ -366683,7 +366672,7 @@ rtti_a_302:
 rtti_a_303:
   br label %rtti_false_1
 rtti_n_299:
-  %t499 = getelementptr i8, ptr @.str.2060, i64 0
+  %t499 = getelementptr i8, ptr @.str.2059, i64 0
   %t500 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t499)
   br i1 %t500, label %rtti_m_304, label %rtti_n_305
 rtti_m_304:
@@ -366705,7 +366694,7 @@ rtti_a_308:
 rtti_a_309:
   br label %rtti_false_1
 rtti_n_305:
-  %t509 = getelementptr i8, ptr @.str.2061, i64 0
+  %t509 = getelementptr i8, ptr @.str.2060, i64 0
   %t510 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t509)
   br i1 %t510, label %rtti_m_310, label %rtti_n_311
 rtti_m_310:
@@ -366727,7 +366716,7 @@ rtti_a_314:
 rtti_a_315:
   br label %rtti_false_1
 rtti_n_311:
-  %t519 = getelementptr i8, ptr @.str.2062, i64 0
+  %t519 = getelementptr i8, ptr @.str.2061, i64 0
   %t520 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t519)
   br i1 %t520, label %rtti_m_316, label %rtti_n_317
 rtti_m_316:
@@ -366749,7 +366738,7 @@ rtti_a_320:
 rtti_a_321:
   br label %rtti_false_1
 rtti_n_317:
-  %t529 = getelementptr i8, ptr @.str.2063, i64 0
+  %t529 = getelementptr i8, ptr @.str.2062, i64 0
   %t530 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t529)
   br i1 %t530, label %rtti_m_322, label %rtti_n_323
 rtti_m_322:
@@ -366771,7 +366760,7 @@ rtti_a_326:
 rtti_a_327:
   br label %rtti_false_1
 rtti_n_323:
-  %t539 = getelementptr i8, ptr @.str.2064, i64 0
+  %t539 = getelementptr i8, ptr @.str.2063, i64 0
   %t540 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t539)
   br i1 %t540, label %rtti_m_328, label %rtti_n_329
 rtti_m_328:
@@ -366793,7 +366782,7 @@ rtti_a_332:
 rtti_a_333:
   br label %rtti_false_1
 rtti_n_329:
-  %t549 = getelementptr i8, ptr @.str.2065, i64 0
+  %t549 = getelementptr i8, ptr @.str.2064, i64 0
   %t550 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t549)
   br i1 %t550, label %rtti_m_334, label %rtti_n_335
 rtti_m_334:
@@ -366815,7 +366804,7 @@ rtti_a_338:
 rtti_a_339:
   br label %rtti_false_1
 rtti_n_335:
-  %t559 = getelementptr i8, ptr @.str.2066, i64 0
+  %t559 = getelementptr i8, ptr @.str.2065, i64 0
   %t560 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t559)
   br i1 %t560, label %rtti_m_340, label %rtti_n_341
 rtti_m_340:
@@ -366837,7 +366826,7 @@ rtti_a_344:
 rtti_a_345:
   br label %rtti_false_1
 rtti_n_341:
-  %t569 = getelementptr i8, ptr @.str.2067, i64 0
+  %t569 = getelementptr i8, ptr @.str.2066, i64 0
   %t570 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t569)
   br i1 %t570, label %rtti_m_346, label %rtti_n_347
 rtti_m_346:
@@ -366859,7 +366848,7 @@ rtti_a_350:
 rtti_a_351:
   br label %rtti_false_1
 rtti_n_347:
-  %t579 = getelementptr i8, ptr @.str.2068, i64 0
+  %t579 = getelementptr i8, ptr @.str.2067, i64 0
   %t580 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t579)
   br i1 %t580, label %rtti_m_352, label %rtti_n_353
 rtti_m_352:
@@ -366881,7 +366870,7 @@ rtti_a_356:
 rtti_a_357:
   br label %rtti_false_1
 rtti_n_353:
-  %t589 = getelementptr i8, ptr @.str.2069, i64 0
+  %t589 = getelementptr i8, ptr @.str.2068, i64 0
   %t590 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t589)
   br i1 %t590, label %rtti_m_358, label %rtti_n_359
 rtti_m_358:
@@ -366903,7 +366892,7 @@ rtti_a_362:
 rtti_a_363:
   br label %rtti_false_1
 rtti_n_359:
-  %t599 = getelementptr i8, ptr @.str.2070, i64 0
+  %t599 = getelementptr i8, ptr @.str.2069, i64 0
   %t600 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t599)
   br i1 %t600, label %rtti_m_364, label %rtti_n_365
 rtti_m_364:
@@ -366925,7 +366914,7 @@ rtti_a_368:
 rtti_a_369:
   br label %rtti_false_1
 rtti_n_365:
-  %t609 = getelementptr i8, ptr @.str.2071, i64 0
+  %t609 = getelementptr i8, ptr @.str.2070, i64 0
   %t610 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t609)
   br i1 %t610, label %rtti_m_370, label %rtti_n_371
 rtti_m_370:
@@ -366947,7 +366936,7 @@ rtti_a_374:
 rtti_a_375:
   br label %rtti_false_1
 rtti_n_371:
-  %t619 = getelementptr i8, ptr @.str.2072, i64 0
+  %t619 = getelementptr i8, ptr @.str.2071, i64 0
   %t620 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t619)
   br i1 %t620, label %rtti_m_376, label %rtti_n_377
 rtti_m_376:
@@ -366969,7 +366958,7 @@ rtti_a_380:
 rtti_a_381:
   br label %rtti_false_1
 rtti_n_377:
-  %t629 = getelementptr i8, ptr @.str.2073, i64 0
+  %t629 = getelementptr i8, ptr @.str.2072, i64 0
   %t630 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t629)
   br i1 %t630, label %rtti_m_382, label %rtti_n_383
 rtti_m_382:
@@ -366987,11 +366976,11 @@ rtti_a_385:
 rtti_a_386:
   br label %rtti_false_1
 rtti_n_383:
-  %t637 = getelementptr i8, ptr @.str.2074, i64 0
+  %t637 = getelementptr i8, ptr @.str.2073, i64 0
   %t638 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t637)
   br i1 %t638, label %rtti_m_387, label %rtti_n_388
 rtti_m_387:
-  %t639 = getelementptr i8, ptr @.str.2073, i64 0
+  %t639 = getelementptr i8, ptr @.str.2072, i64 0
   %t640 = call i1 @__spec_cstr_eq(ptr %target, ptr %t639)
   br i1 %t640, label %rtti_true_3, label %rtti_a_389
 rtti_a_389:
@@ -367009,11 +366998,11 @@ rtti_a_391:
 rtti_a_392:
   br label %rtti_false_1
 rtti_n_388:
-  %t647 = getelementptr i8, ptr @.str.2075, i64 0
+  %t647 = getelementptr i8, ptr @.str.2074, i64 0
   %t648 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t647)
   br i1 %t648, label %rtti_m_393, label %rtti_n_394
 rtti_m_393:
-  %t649 = getelementptr i8, ptr @.str.2073, i64 0
+  %t649 = getelementptr i8, ptr @.str.2072, i64 0
   %t650 = call i1 @__spec_cstr_eq(ptr %target, ptr %t649)
   br i1 %t650, label %rtti_true_3, label %rtti_a_395
 rtti_a_395:
@@ -367031,11 +367020,11 @@ rtti_a_397:
 rtti_a_398:
   br label %rtti_false_1
 rtti_n_394:
-  %t657 = getelementptr i8, ptr @.str.2076, i64 0
+  %t657 = getelementptr i8, ptr @.str.2075, i64 0
   %t658 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t657)
   br i1 %t658, label %rtti_m_399, label %rtti_n_400
 rtti_m_399:
-  %t659 = getelementptr i8, ptr @.str.2073, i64 0
+  %t659 = getelementptr i8, ptr @.str.2072, i64 0
   %t660 = call i1 @__spec_cstr_eq(ptr %target, ptr %t659)
   br i1 %t660, label %rtti_true_3, label %rtti_a_401
 rtti_a_401:
@@ -367053,11 +367042,11 @@ rtti_a_403:
 rtti_a_404:
   br label %rtti_false_1
 rtti_n_400:
-  %t667 = getelementptr i8, ptr @.str.2077, i64 0
+  %t667 = getelementptr i8, ptr @.str.2076, i64 0
   %t668 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t667)
   br i1 %t668, label %rtti_m_405, label %rtti_n_406
 rtti_m_405:
-  %t669 = getelementptr i8, ptr @.str.2073, i64 0
+  %t669 = getelementptr i8, ptr @.str.2072, i64 0
   %t670 = call i1 @__spec_cstr_eq(ptr %target, ptr %t669)
   br i1 %t670, label %rtti_true_3, label %rtti_a_407
 rtti_a_407:
@@ -367075,11 +367064,11 @@ rtti_a_409:
 rtti_a_410:
   br label %rtti_false_1
 rtti_n_406:
-  %t677 = getelementptr i8, ptr @.str.2078, i64 0
+  %t677 = getelementptr i8, ptr @.str.2077, i64 0
   %t678 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t677)
   br i1 %t678, label %rtti_m_411, label %rtti_n_412
 rtti_m_411:
-  %t679 = getelementptr i8, ptr @.str.2073, i64 0
+  %t679 = getelementptr i8, ptr @.str.2072, i64 0
   %t680 = call i1 @__spec_cstr_eq(ptr %target, ptr %t679)
   br i1 %t680, label %rtti_true_3, label %rtti_a_413
 rtti_a_413:
@@ -367097,11 +367086,11 @@ rtti_a_415:
 rtti_a_416:
   br label %rtti_false_1
 rtti_n_412:
-  %t687 = getelementptr i8, ptr @.str.2079, i64 0
+  %t687 = getelementptr i8, ptr @.str.2078, i64 0
   %t688 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t687)
   br i1 %t688, label %rtti_m_417, label %rtti_n_418
 rtti_m_417:
-  %t689 = getelementptr i8, ptr @.str.2073, i64 0
+  %t689 = getelementptr i8, ptr @.str.2072, i64 0
   %t690 = call i1 @__spec_cstr_eq(ptr %target, ptr %t689)
   br i1 %t690, label %rtti_true_3, label %rtti_a_419
 rtti_a_419:
@@ -367119,7 +367108,7 @@ rtti_a_421:
 rtti_a_422:
   br label %rtti_false_1
 rtti_n_418:
-  %t697 = getelementptr i8, ptr @.str.2080, i64 0
+  %t697 = getelementptr i8, ptr @.str.2079, i64 0
   %t698 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t697)
   br i1 %t698, label %rtti_m_423, label %rtti_n_424
 rtti_m_423:
@@ -367239,7 +367228,7 @@ rtti_a_454:
 rtti_a_455:
   br label %rtti_false_1
 rtti_n_452:
-  %t751 = getelementptr i8, ptr @.str.2081, i64 0
+  %t751 = getelementptr i8, ptr @.str.2080, i64 0
   %t752 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t751)
   br i1 %t752, label %rtti_m_456, label %rtti_n_457
 rtti_m_456:
@@ -367283,7 +367272,7 @@ rtti_a_466:
 rtti_a_467:
   br label %rtti_false_1
 rtti_n_463:
-  %t771 = getelementptr i8, ptr @.str.2082, i64 0
+  %t771 = getelementptr i8, ptr @.str.2081, i64 0
   %t772 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t771)
   br i1 %t772, label %rtti_m_468, label %rtti_n_469
 rtti_m_468:
@@ -367327,7 +367316,7 @@ rtti_a_478:
 rtti_a_479:
   br label %rtti_false_1
 rtti_n_475:
-  %t791 = getelementptr i8, ptr @.str.2083, i64 0
+  %t791 = getelementptr i8, ptr @.str.2082, i64 0
   %t792 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t791)
   br i1 %t792, label %rtti_m_480, label %rtti_n_481
 rtti_m_480:
@@ -367415,7 +367404,7 @@ rtti_a_502:
 rtti_a_503:
   br label %rtti_false_1
 rtti_n_499:
-  %t831 = getelementptr i8, ptr @.str.2084, i64 0
+  %t831 = getelementptr i8, ptr @.str.2083, i64 0
   %t832 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t831)
   br i1 %t832, label %rtti_m_504, label %rtti_n_505
 rtti_m_504:
@@ -367437,7 +367426,7 @@ rtti_a_508:
 rtti_a_509:
   br label %rtti_false_1
 rtti_n_505:
-  %t841 = getelementptr i8, ptr @.str.2085, i64 0
+  %t841 = getelementptr i8, ptr @.str.2084, i64 0
   %t842 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t841)
   br i1 %t842, label %rtti_m_510, label %rtti_n_511
 rtti_m_510:
@@ -367553,7 +367542,7 @@ rtti_a_540:
 rtti_a_541:
   br label %rtti_false_1
 rtti_n_538:
-  %t893 = getelementptr i8, ptr @.str.2086, i64 0
+  %t893 = getelementptr i8, ptr @.str.2085, i64 0
   %t894 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t893)
   br i1 %t894, label %rtti_m_542, label %rtti_n_543
 rtti_m_542:
@@ -367659,7 +367648,7 @@ rtti_a_569:
 rtti_a_570:
   br label %rtti_false_1
 rtti_n_567:
-  %t941 = getelementptr i8, ptr @.str.2087, i64 0
+  %t941 = getelementptr i8, ptr @.str.2086, i64 0
   %t942 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t941)
   br i1 %t942, label %rtti_m_571, label %rtti_n_572
 rtti_m_571:
@@ -367681,7 +367670,7 @@ rtti_a_575:
 rtti_a_576:
   br label %rtti_false_1
 rtti_n_572:
-  %t951 = getelementptr i8, ptr @.str.2088, i64 0
+  %t951 = getelementptr i8, ptr @.str.2087, i64 0
   %t952 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t951)
   br i1 %t952, label %rtti_m_577, label %rtti_n_578
 rtti_m_577:
@@ -367725,7 +367714,7 @@ rtti_a_587:
 rtti_a_588:
   br label %rtti_false_1
 rtti_n_584:
-  %t971 = getelementptr i8, ptr @.str.2089, i64 0
+  %t971 = getelementptr i8, ptr @.str.2088, i64 0
   %t972 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t971)
   br i1 %t972, label %rtti_m_589, label %rtti_n_590
 rtti_m_589:
@@ -367747,7 +367736,7 @@ rtti_a_593:
 rtti_a_594:
   br label %rtti_false_1
 rtti_n_590:
-  %t981 = getelementptr i8, ptr @.str.2090, i64 0
+  %t981 = getelementptr i8, ptr @.str.2089, i64 0
   %t982 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t981)
   br i1 %t982, label %rtti_m_595, label %rtti_n_596
 rtti_m_595:
@@ -367791,7 +367780,7 @@ rtti_a_605:
 rtti_a_606:
   br label %rtti_false_1
 rtti_n_602:
-  %t1001 = getelementptr i8, ptr @.str.2091, i64 0
+  %t1001 = getelementptr i8, ptr @.str.2090, i64 0
   %t1002 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1001)
   br i1 %t1002, label %rtti_m_607, label %rtti_n_608
 rtti_m_607:
@@ -367955,11 +367944,11 @@ rtti_a_650:
 rtti_a_651:
   br label %rtti_false_1
 rtti_n_647:
-  %t1075 = getelementptr i8, ptr @.str.2092, i64 0
+  %t1075 = getelementptr i8, ptr @.str.2091, i64 0
   %t1076 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1075)
   br i1 %t1076, label %rtti_m_652, label %rtti_n_653
 rtti_m_652:
-  %t1077 = getelementptr i8, ptr @.str.2093, i64 0
+  %t1077 = getelementptr i8, ptr @.str.2092, i64 0
   %t1078 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1077)
   br i1 %t1078, label %rtti_true_3, label %rtti_a_654
 rtti_a_654:
@@ -367981,7 +367970,7 @@ rtti_a_657:
 rtti_a_658:
   br label %rtti_false_1
 rtti_n_653:
-  %t1087 = getelementptr i8, ptr @.str.2093, i64 0
+  %t1087 = getelementptr i8, ptr @.str.2092, i64 0
   %t1088 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1087)
   br i1 %t1088, label %rtti_m_659, label %rtti_n_660
 rtti_m_659:
@@ -368025,7 +368014,7 @@ rtti_a_669:
 rtti_a_670:
   br label %rtti_false_1
 rtti_n_666:
-  %t1107 = getelementptr i8, ptr @.str.2094, i64 0
+  %t1107 = getelementptr i8, ptr @.str.2093, i64 0
   %t1108 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1107)
   br i1 %t1108, label %rtti_m_671, label %rtti_n_672
 rtti_m_671:
@@ -368065,7 +368054,7 @@ rtti_a_680:
 rtti_a_681:
   br label %rtti_false_1
 rtti_n_678:
-  %t1125 = getelementptr i8, ptr @.str.2095, i64 0
+  %t1125 = getelementptr i8, ptr @.str.2094, i64 0
   %t1126 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1125)
   br i1 %t1126, label %rtti_m_682, label %rtti_n_683
 rtti_m_682:
@@ -368087,7 +368076,7 @@ rtti_a_686:
 rtti_a_687:
   br label %rtti_false_1
 rtti_n_683:
-  %t1135 = getelementptr i8, ptr @.str.2096, i64 0
+  %t1135 = getelementptr i8, ptr @.str.2095, i64 0
   %t1136 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1135)
   br i1 %t1136, label %rtti_m_688, label %rtti_n_689
 rtti_m_688:
@@ -368109,7 +368098,7 @@ rtti_a_692:
 rtti_a_693:
   br label %rtti_false_1
 rtti_n_689:
-  %t1145 = getelementptr i8, ptr @.str.2097, i64 0
+  %t1145 = getelementptr i8, ptr @.str.2096, i64 0
   %t1146 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1145)
   br i1 %t1146, label %rtti_m_694, label %rtti_n_695
 rtti_m_694:
@@ -368131,7 +368120,7 @@ rtti_a_698:
 rtti_a_699:
   br label %rtti_false_1
 rtti_n_695:
-  %t1155 = getelementptr i8, ptr @.str.2098, i64 0
+  %t1155 = getelementptr i8, ptr @.str.2097, i64 0
   %t1156 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1155)
   br i1 %t1156, label %rtti_m_700, label %rtti_n_701
 rtti_m_700:
@@ -368153,7 +368142,7 @@ rtti_a_704:
 rtti_a_705:
   br label %rtti_false_1
 rtti_n_701:
-  %t1165 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1165 = getelementptr i8, ptr @.str.2098, i64 0
   %t1166 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1165)
   br i1 %t1166, label %rtti_m_706, label %rtti_n_707
 rtti_m_706:
@@ -368171,11 +368160,11 @@ rtti_a_709:
 rtti_a_710:
   br label %rtti_false_1
 rtti_n_707:
-  %t1173 = getelementptr i8, ptr @.str.2100, i64 0
+  %t1173 = getelementptr i8, ptr @.str.2099, i64 0
   %t1174 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1173)
   br i1 %t1174, label %rtti_m_711, label %rtti_n_712
 rtti_m_711:
-  %t1175 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1175 = getelementptr i8, ptr @.str.2098, i64 0
   %t1176 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1175)
   br i1 %t1176, label %rtti_true_3, label %rtti_a_713
 rtti_a_713:
@@ -368193,11 +368182,11 @@ rtti_a_715:
 rtti_a_716:
   br label %rtti_false_1
 rtti_n_712:
-  %t1183 = getelementptr i8, ptr @.str.2101, i64 0
+  %t1183 = getelementptr i8, ptr @.str.2100, i64 0
   %t1184 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1183)
   br i1 %t1184, label %rtti_m_717, label %rtti_n_718
 rtti_m_717:
-  %t1185 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1185 = getelementptr i8, ptr @.str.2098, i64 0
   %t1186 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1185)
   br i1 %t1186, label %rtti_true_3, label %rtti_a_719
 rtti_a_719:
@@ -368215,11 +368204,11 @@ rtti_a_721:
 rtti_a_722:
   br label %rtti_false_1
 rtti_n_718:
-  %t1193 = getelementptr i8, ptr @.str.2102, i64 0
+  %t1193 = getelementptr i8, ptr @.str.2101, i64 0
   %t1194 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1193)
   br i1 %t1194, label %rtti_m_723, label %rtti_n_724
 rtti_m_723:
-  %t1195 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1195 = getelementptr i8, ptr @.str.2098, i64 0
   %t1196 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1195)
   br i1 %t1196, label %rtti_true_3, label %rtti_a_725
 rtti_a_725:
@@ -368237,11 +368226,11 @@ rtti_a_727:
 rtti_a_728:
   br label %rtti_false_1
 rtti_n_724:
-  %t1203 = getelementptr i8, ptr @.str.2103, i64 0
+  %t1203 = getelementptr i8, ptr @.str.2102, i64 0
   %t1204 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1203)
   br i1 %t1204, label %rtti_m_729, label %rtti_n_730
 rtti_m_729:
-  %t1205 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1205 = getelementptr i8, ptr @.str.2098, i64 0
   %t1206 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1205)
   br i1 %t1206, label %rtti_true_3, label %rtti_a_731
 rtti_a_731:
@@ -368259,11 +368248,11 @@ rtti_a_733:
 rtti_a_734:
   br label %rtti_false_1
 rtti_n_730:
-  %t1213 = getelementptr i8, ptr @.str.2104, i64 0
+  %t1213 = getelementptr i8, ptr @.str.2103, i64 0
   %t1214 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1213)
   br i1 %t1214, label %rtti_m_735, label %rtti_n_736
 rtti_m_735:
-  %t1215 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1215 = getelementptr i8, ptr @.str.2098, i64 0
   %t1216 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1215)
   br i1 %t1216, label %rtti_true_3, label %rtti_a_737
 rtti_a_737:
@@ -368281,11 +368270,11 @@ rtti_a_739:
 rtti_a_740:
   br label %rtti_false_1
 rtti_n_736:
-  %t1223 = getelementptr i8, ptr @.str.2105, i64 0
+  %t1223 = getelementptr i8, ptr @.str.2104, i64 0
   %t1224 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1223)
   br i1 %t1224, label %rtti_m_741, label %rtti_n_742
 rtti_m_741:
-  %t1225 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1225 = getelementptr i8, ptr @.str.2098, i64 0
   %t1226 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1225)
   br i1 %t1226, label %rtti_true_3, label %rtti_a_743
 rtti_a_743:
@@ -368303,11 +368292,11 @@ rtti_a_745:
 rtti_a_746:
   br label %rtti_false_1
 rtti_n_742:
-  %t1233 = getelementptr i8, ptr @.str.2106, i64 0
+  %t1233 = getelementptr i8, ptr @.str.2105, i64 0
   %t1234 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1233)
   br i1 %t1234, label %rtti_m_747, label %rtti_n_748
 rtti_m_747:
-  %t1235 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1235 = getelementptr i8, ptr @.str.2098, i64 0
   %t1236 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1235)
   br i1 %t1236, label %rtti_true_3, label %rtti_a_749
 rtti_a_749:
@@ -368325,11 +368314,11 @@ rtti_a_751:
 rtti_a_752:
   br label %rtti_false_1
 rtti_n_748:
-  %t1243 = getelementptr i8, ptr @.str.2107, i64 0
+  %t1243 = getelementptr i8, ptr @.str.2106, i64 0
   %t1244 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1243)
   br i1 %t1244, label %rtti_m_753, label %rtti_n_754
 rtti_m_753:
-  %t1245 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1245 = getelementptr i8, ptr @.str.2098, i64 0
   %t1246 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1245)
   br i1 %t1246, label %rtti_true_3, label %rtti_a_755
 rtti_a_755:
@@ -368347,11 +368336,11 @@ rtti_a_757:
 rtti_a_758:
   br label %rtti_false_1
 rtti_n_754:
-  %t1253 = getelementptr i8, ptr @.str.2108, i64 0
+  %t1253 = getelementptr i8, ptr @.str.2107, i64 0
   %t1254 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1253)
   br i1 %t1254, label %rtti_m_759, label %rtti_n_760
 rtti_m_759:
-  %t1255 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1255 = getelementptr i8, ptr @.str.2098, i64 0
   %t1256 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1255)
   br i1 %t1256, label %rtti_true_3, label %rtti_a_761
 rtti_a_761:
@@ -368369,11 +368358,11 @@ rtti_a_763:
 rtti_a_764:
   br label %rtti_false_1
 rtti_n_760:
-  %t1263 = getelementptr i8, ptr @.str.2109, i64 0
+  %t1263 = getelementptr i8, ptr @.str.2108, i64 0
   %t1264 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1263)
   br i1 %t1264, label %rtti_m_765, label %rtti_n_766
 rtti_m_765:
-  %t1265 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1265 = getelementptr i8, ptr @.str.2098, i64 0
   %t1266 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1265)
   br i1 %t1266, label %rtti_true_3, label %rtti_a_767
 rtti_a_767:
@@ -368391,11 +368380,11 @@ rtti_a_769:
 rtti_a_770:
   br label %rtti_false_1
 rtti_n_766:
-  %t1273 = getelementptr i8, ptr @.str.2110, i64 0
+  %t1273 = getelementptr i8, ptr @.str.2109, i64 0
   %t1274 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1273)
   br i1 %t1274, label %rtti_m_771, label %rtti_n_772
 rtti_m_771:
-  %t1275 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1275 = getelementptr i8, ptr @.str.2098, i64 0
   %t1276 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1275)
   br i1 %t1276, label %rtti_true_3, label %rtti_a_773
 rtti_a_773:
@@ -368413,11 +368402,11 @@ rtti_a_775:
 rtti_a_776:
   br label %rtti_false_1
 rtti_n_772:
-  %t1283 = getelementptr i8, ptr @.str.2111, i64 0
+  %t1283 = getelementptr i8, ptr @.str.2110, i64 0
   %t1284 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1283)
   br i1 %t1284, label %rtti_m_777, label %rtti_n_778
 rtti_m_777:
-  %t1285 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1285 = getelementptr i8, ptr @.str.2098, i64 0
   %t1286 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1285)
   br i1 %t1286, label %rtti_true_3, label %rtti_a_779
 rtti_a_779:
@@ -368435,11 +368424,11 @@ rtti_a_781:
 rtti_a_782:
   br label %rtti_false_1
 rtti_n_778:
-  %t1293 = getelementptr i8, ptr @.str.2112, i64 0
+  %t1293 = getelementptr i8, ptr @.str.2111, i64 0
   %t1294 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1293)
   br i1 %t1294, label %rtti_m_783, label %rtti_n_784
 rtti_m_783:
-  %t1295 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1295 = getelementptr i8, ptr @.str.2098, i64 0
   %t1296 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1295)
   br i1 %t1296, label %rtti_true_3, label %rtti_a_785
 rtti_a_785:
@@ -368457,11 +368446,11 @@ rtti_a_787:
 rtti_a_788:
   br label %rtti_false_1
 rtti_n_784:
-  %t1303 = getelementptr i8, ptr @.str.2113, i64 0
+  %t1303 = getelementptr i8, ptr @.str.2112, i64 0
   %t1304 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1303)
   br i1 %t1304, label %rtti_m_789, label %rtti_n_790
 rtti_m_789:
-  %t1305 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1305 = getelementptr i8, ptr @.str.2098, i64 0
   %t1306 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1305)
   br i1 %t1306, label %rtti_true_3, label %rtti_a_791
 rtti_a_791:
@@ -368479,11 +368468,11 @@ rtti_a_793:
 rtti_a_794:
   br label %rtti_false_1
 rtti_n_790:
-  %t1313 = getelementptr i8, ptr @.str.2114, i64 0
+  %t1313 = getelementptr i8, ptr @.str.2113, i64 0
   %t1314 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1313)
   br i1 %t1314, label %rtti_m_795, label %rtti_n_796
 rtti_m_795:
-  %t1315 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1315 = getelementptr i8, ptr @.str.2098, i64 0
   %t1316 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1315)
   br i1 %t1316, label %rtti_true_3, label %rtti_a_797
 rtti_a_797:
@@ -368501,11 +368490,11 @@ rtti_a_799:
 rtti_a_800:
   br label %rtti_false_1
 rtti_n_796:
-  %t1323 = getelementptr i8, ptr @.str.2115, i64 0
+  %t1323 = getelementptr i8, ptr @.str.2114, i64 0
   %t1324 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1323)
   br i1 %t1324, label %rtti_m_801, label %rtti_n_802
 rtti_m_801:
-  %t1325 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1325 = getelementptr i8, ptr @.str.2098, i64 0
   %t1326 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1325)
   br i1 %t1326, label %rtti_true_3, label %rtti_a_803
 rtti_a_803:
@@ -368523,11 +368512,11 @@ rtti_a_805:
 rtti_a_806:
   br label %rtti_false_1
 rtti_n_802:
-  %t1333 = getelementptr i8, ptr @.str.2116, i64 0
+  %t1333 = getelementptr i8, ptr @.str.2115, i64 0
   %t1334 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1333)
   br i1 %t1334, label %rtti_m_807, label %rtti_n_808
 rtti_m_807:
-  %t1335 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1335 = getelementptr i8, ptr @.str.2098, i64 0
   %t1336 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1335)
   br i1 %t1336, label %rtti_true_3, label %rtti_a_809
 rtti_a_809:
@@ -368545,11 +368534,11 @@ rtti_a_811:
 rtti_a_812:
   br label %rtti_false_1
 rtti_n_808:
-  %t1343 = getelementptr i8, ptr @.str.2117, i64 0
+  %t1343 = getelementptr i8, ptr @.str.2116, i64 0
   %t1344 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1343)
   br i1 %t1344, label %rtti_m_813, label %rtti_n_814
 rtti_m_813:
-  %t1345 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1345 = getelementptr i8, ptr @.str.2098, i64 0
   %t1346 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1345)
   br i1 %t1346, label %rtti_true_3, label %rtti_a_815
 rtti_a_815:
@@ -368567,11 +368556,11 @@ rtti_a_817:
 rtti_a_818:
   br label %rtti_false_1
 rtti_n_814:
-  %t1353 = getelementptr i8, ptr @.str.2118, i64 0
+  %t1353 = getelementptr i8, ptr @.str.2117, i64 0
   %t1354 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1353)
   br i1 %t1354, label %rtti_m_819, label %rtti_n_820
 rtti_m_819:
-  %t1355 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1355 = getelementptr i8, ptr @.str.2098, i64 0
   %t1356 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1355)
   br i1 %t1356, label %rtti_true_3, label %rtti_a_821
 rtti_a_821:
@@ -368589,11 +368578,11 @@ rtti_a_823:
 rtti_a_824:
   br label %rtti_false_1
 rtti_n_820:
-  %t1363 = getelementptr i8, ptr @.str.2119, i64 0
+  %t1363 = getelementptr i8, ptr @.str.2118, i64 0
   %t1364 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1363)
   br i1 %t1364, label %rtti_m_825, label %rtti_n_826
 rtti_m_825:
-  %t1365 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1365 = getelementptr i8, ptr @.str.2098, i64 0
   %t1366 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1365)
   br i1 %t1366, label %rtti_true_3, label %rtti_a_827
 rtti_a_827:
@@ -368611,11 +368600,11 @@ rtti_a_829:
 rtti_a_830:
   br label %rtti_false_1
 rtti_n_826:
-  %t1373 = getelementptr i8, ptr @.str.2120, i64 0
+  %t1373 = getelementptr i8, ptr @.str.2119, i64 0
   %t1374 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1373)
   br i1 %t1374, label %rtti_m_831, label %rtti_n_832
 rtti_m_831:
-  %t1375 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1375 = getelementptr i8, ptr @.str.2098, i64 0
   %t1376 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1375)
   br i1 %t1376, label %rtti_true_3, label %rtti_a_833
 rtti_a_833:
@@ -368633,11 +368622,11 @@ rtti_a_835:
 rtti_a_836:
   br label %rtti_false_1
 rtti_n_832:
-  %t1383 = getelementptr i8, ptr @.str.2121, i64 0
+  %t1383 = getelementptr i8, ptr @.str.2120, i64 0
   %t1384 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1383)
   br i1 %t1384, label %rtti_m_837, label %rtti_n_838
 rtti_m_837:
-  %t1385 = getelementptr i8, ptr @.str.2099, i64 0
+  %t1385 = getelementptr i8, ptr @.str.2098, i64 0
   %t1386 = call i1 @__spec_cstr_eq(ptr %target, ptr %t1385)
   br i1 %t1386, label %rtti_true_3, label %rtti_a_839
 rtti_a_839:
@@ -368699,7 +368688,7 @@ rtti_a_853:
 rtti_a_854:
   br label %rtti_false_1
 rtti_n_850:
-  %t1413 = getelementptr i8, ptr @.str.2122, i64 0
+  %t1413 = getelementptr i8, ptr @.str.2121, i64 0
   %t1414 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1413)
   br i1 %t1414, label %rtti_m_855, label %rtti_n_856
 rtti_m_855:
@@ -368725,7 +368714,7 @@ rtti_a_860:
 rtti_a_861:
   br label %rtti_false_1
 rtti_n_856:
-  %t1425 = getelementptr i8, ptr @.str.2123, i64 0
+  %t1425 = getelementptr i8, ptr @.str.2122, i64 0
   %t1426 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1425)
   br i1 %t1426, label %rtti_m_862, label %rtti_n_863
 rtti_m_862:
@@ -368751,7 +368740,7 @@ rtti_a_867:
 rtti_a_868:
   br label %rtti_false_1
 rtti_n_863:
-  %t1437 = getelementptr i8, ptr @.str.2124, i64 0
+  %t1437 = getelementptr i8, ptr @.str.2123, i64 0
   %t1438 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1437)
   br i1 %t1438, label %rtti_m_869, label %rtti_n_870
 rtti_m_869:
@@ -368777,7 +368766,7 @@ rtti_a_874:
 rtti_a_875:
   br label %rtti_false_1
 rtti_n_870:
-  %t1449 = getelementptr i8, ptr @.str.2125, i64 0
+  %t1449 = getelementptr i8, ptr @.str.2124, i64 0
   %t1450 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1449)
   br i1 %t1450, label %rtti_m_876, label %rtti_n_877
 rtti_m_876:
@@ -368803,7 +368792,7 @@ rtti_a_881:
 rtti_a_882:
   br label %rtti_false_1
 rtti_n_877:
-  %t1461 = getelementptr i8, ptr @.str.2126, i64 0
+  %t1461 = getelementptr i8, ptr @.str.2125, i64 0
   %t1462 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1461)
   br i1 %t1462, label %rtti_m_883, label %rtti_n_884
 rtti_m_883:
@@ -368829,7 +368818,7 @@ rtti_a_888:
 rtti_a_889:
   br label %rtti_false_1
 rtti_n_884:
-  %t1473 = getelementptr i8, ptr @.str.2127, i64 0
+  %t1473 = getelementptr i8, ptr @.str.2126, i64 0
   %t1474 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1473)
   br i1 %t1474, label %rtti_m_890, label %rtti_n_891
 rtti_m_890:
@@ -368855,7 +368844,7 @@ rtti_a_895:
 rtti_a_896:
   br label %rtti_false_1
 rtti_n_891:
-  %t1485 = getelementptr i8, ptr @.str.2128, i64 0
+  %t1485 = getelementptr i8, ptr @.str.2127, i64 0
   %t1486 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1485)
   br i1 %t1486, label %rtti_m_897, label %rtti_n_898
 rtti_m_897:
@@ -369211,7 +369200,7 @@ rtti_a_991:
 rtti_a_992:
   br label %rtti_false_1
 rtti_n_988:
-  %t1649 = getelementptr i8, ptr @.str.1867, i64 0
+  %t1649 = getelementptr i8, ptr @.str.1866, i64 0
   %t1650 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1649)
   br i1 %t1650, label %rtti_m_993, label %rtti_n_994
 rtti_m_993:
@@ -369233,7 +369222,7 @@ rtti_a_997:
 rtti_a_998:
   br label %rtti_false_1
 rtti_n_994:
-  %t1659 = getelementptr i8, ptr @.str.2129, i64 0
+  %t1659 = getelementptr i8, ptr @.str.2128, i64 0
   %t1660 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1659)
   br i1 %t1660, label %rtti_m_999, label %rtti_n_1000
 rtti_m_999:
@@ -369255,7 +369244,7 @@ rtti_a_1003:
 rtti_a_1004:
   br label %rtti_false_1
 rtti_n_1000:
-  %t1669 = getelementptr i8, ptr @.str.2130, i64 0
+  %t1669 = getelementptr i8, ptr @.str.2129, i64 0
   %t1670 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1669)
   br i1 %t1670, label %rtti_m_1005, label %rtti_n_1006
 rtti_m_1005:
@@ -369277,7 +369266,7 @@ rtti_a_1009:
 rtti_a_1010:
   br label %rtti_false_1
 rtti_n_1006:
-  %t1679 = getelementptr i8, ptr @.str.2131, i64 0
+  %t1679 = getelementptr i8, ptr @.str.2130, i64 0
   %t1680 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1679)
   br i1 %t1680, label %rtti_m_1011, label %rtti_n_1012
 rtti_m_1011:
@@ -369299,7 +369288,7 @@ rtti_a_1015:
 rtti_a_1016:
   br label %rtti_false_1
 rtti_n_1012:
-  %t1689 = getelementptr i8, ptr @.str.2132, i64 0
+  %t1689 = getelementptr i8, ptr @.str.2131, i64 0
   %t1690 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1689)
   br i1 %t1690, label %rtti_m_1017, label %rtti_n_1018
 rtti_m_1017:
@@ -369321,7 +369310,7 @@ rtti_a_1021:
 rtti_a_1022:
   br label %rtti_false_1
 rtti_n_1018:
-  %t1699 = getelementptr i8, ptr @.str.2046, i64 0
+  %t1699 = getelementptr i8, ptr @.str.2045, i64 0
   %t1700 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1699)
   br i1 %t1700, label %rtti_m_1023, label %rtti_n_1024
 rtti_m_1023:
@@ -369347,7 +369336,7 @@ rtti_a_1028:
 rtti_a_1029:
   br label %rtti_false_1
 rtti_n_1024:
-  %t1711 = getelementptr i8, ptr @.str.2133, i64 0
+  %t1711 = getelementptr i8, ptr @.str.2132, i64 0
   %t1712 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1711)
   br i1 %t1712, label %rtti_m_1030, label %rtti_n_1031
 rtti_m_1030:
@@ -369373,7 +369362,7 @@ rtti_a_1035:
 rtti_a_1036:
   br label %rtti_false_1
 rtti_n_1031:
-  %t1723 = getelementptr i8, ptr @.str.2134, i64 0
+  %t1723 = getelementptr i8, ptr @.str.2133, i64 0
   %t1724 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1723)
   br i1 %t1724, label %rtti_m_1037, label %rtti_n_1038
 rtti_m_1037:
@@ -369399,7 +369388,7 @@ rtti_a_1042:
 rtti_a_1043:
   br label %rtti_false_1
 rtti_n_1038:
-  %t1735 = getelementptr i8, ptr @.str.2135, i64 0
+  %t1735 = getelementptr i8, ptr @.str.2134, i64 0
   %t1736 = call i1 @__spec_cstr_eq(ptr %actual, ptr %t1735)
   br i1 %t1736, label %rtti_m_1044, label %rtti_n_1045
 rtti_m_1044:
@@ -397171,9 +397160,9 @@ ret_blk:
 !23605 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitCliAndAtomics", scope: !23587, file: !23587, line: 961, type: !2, scopeLine: 961, spFlags: DISPFlagDefinition, unit: !0)
 !23606 = !DILocation(line: 961, column: 1, scope: !23605)
 !23607 = !DILocation(line: 962, column: 1, scope: !23605)
-!23608 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitAll", scope: !23587, file: !23587, line: 1068, type: !2, scopeLine: 1068, spFlags: DISPFlagDefinition, unit: !0)
-!23609 = !DILocation(line: 1069, column: 1, scope: !23608)
-!23610 = !DILocation(line: 1068, column: 1, scope: !23608)
+!23608 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitAll", scope: !23587, file: !23587, line: 1061, type: !2, scopeLine: 1061, spFlags: DISPFlagDefinition, unit: !0)
+!23609 = !DILocation(line: 1062, column: 1, scope: !23608)
+!23610 = !DILocation(line: 1061, column: 1, scope: !23608)
 !23611 = !DIFile(filename: "LlvmStructLayout.spec", directory: "./spec/base/compiler/llvm")
 !23612 = distinct !DISubprogram(name: "LlvmStructLayout_init", scope: !23611, file: !23611, line: 21, type: !2, scopeLine: 21, spFlags: DISPFlagDefinition, unit: !0)
 !23613 = !DILocation(line: 21, column: 1, scope: !23612)

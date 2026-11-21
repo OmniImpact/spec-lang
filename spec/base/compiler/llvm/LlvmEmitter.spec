@@ -55,7 +55,7 @@ Class is LlvmEmitter{
 			'spec_buf_destroy', 'spec_buf_to_cstring', 'spec_string_copy', 'spec_string_concat', 'spec_type_name',
 			'spec_math_log', 'spec_math_log2', 'spec_math_log10', 'spec_fast_random_seed', 'spec_math_random',
 			'spec_time_monotonic_ns', 'spec_atomic_add', 'spec_atomic_put', 'spec_atomic_get',
-			'spec_cli_args_map', 'spec_process_raw_args', 'spec_pal_random_bytes'
+			'spec_process_raw_args', 'spec_pal_random_bytes'
 		];
 		local Int is pi: 0;
 		while({ pi < preludeSyms:length() }, {
