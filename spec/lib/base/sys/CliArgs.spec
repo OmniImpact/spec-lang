@@ -12,6 +12,17 @@ Class is CliArgs{
 		['base', 'sys', as Conditional()]
 	];
 
+	## Constructs the CLI args map from the raw argc/argv that the entry
+	## template stored in TLS slots 12/13. Pure Spec: reads the raw
+	## values, iterates the C-string array, and delegates to the existing
+	## parse logic. This replaces the prelude's spec_cli_args_map
+	## C-to-Spec map-construction call.
+	Function of Any is fromGlobals(){
+		local Int is argc: Mem:tlsGetI64(slot: 12);
+		local Int is av: Mem:tlsGetI64(slot: 13);
+		return :parseMap(argc: argc, argvAddr: av);
+	}
+
 	local Function of String is argvAt(Int is argvAddr, Int is idx){
 		if({ argvAddr == 0 }, { return ''; });
 		local Int is cstr: Mem:loadI64(ptr: argvAddr, byteOffset: idx * 8);

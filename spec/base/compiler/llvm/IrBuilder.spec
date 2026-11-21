@@ -1024,8 +1024,19 @@ Class is IrBuilder{
 		:tmpCounter: 0;
 		:emitPoolEnter();
 
+		# Raw argc/argv go into TLS slots 12/13; the pure-Spec args helper
+		# reads them and constructs the map. Replaces the prelude's
+		# spec_cli_args_map C-to-Spec map-construction call.
+		local String is tlsArgc: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: tlsArgc, value: 12));
+		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_tls_set_i64', argTypes: [IrType:I64, IrType:I64], args: [tlsArgc, '%argc']));
+		local String is tlsArgv: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: tlsArgv, value: 13));
+		local String is argvInt: :nextTmp();
+		:emit(inst: IrInst:IrCast(dst: argvInt, val: '%argv', fromType: IrType:Ptr, toType: IrType:I64));
+		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_tls_set_i64', argTypes: [IrType:I64, IrType:I64], args: [tlsArgv, argvInt]));
 		local String is argsMap: :nextTmp();
-		:emit(inst: IrInst:IrCall(dst: argsMap, hasDst: true, retType: IrType:Ptr, callee: 'spec_cli_args_map', argTypes: [IrType:I64, IrType:Ptr], args: ['%argc', '%argv']));
+		:emit(inst: IrInst:IrCall(dst: argsMap, hasDst: true, retType: IrType:Ptr, callee: 'CliArgs_fromGlobals', argTypes: [IrType:Ptr], args: ['null']));
 
 		# Allocate entry object and call the resolved entry init
 		local String is obj: :nextTmp();
