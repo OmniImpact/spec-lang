@@ -66,6 +66,11 @@ Class is IrBuilder{
 	String is curFnErrPushedSlot: '';
 	Boolean is curFnUsesDefer: false;
 	Boolean is curFnDeferExitRan: false;
+	## When set (inside a try body region), post-call unwind checks and
+	## raiseError statements branch to this label — the try's local catch —
+	## instead of the frame's unwind path. The pending error is consumed by
+	## the catch block's takePendingError.
+	String is curInlineCatchLbl: '';
 	Boolean is isUnmanagedClass: false;
 	String is inlineReturnSlot: '';
 	String is inlineReturnEndLbl: '';
@@ -1918,7 +1923,7 @@ Class is IrBuilder{
 			Expression:Call: local Function(CallData is call){
 				if({ :callTargetsDefer(call: call) }, { found: true; });
 				local String is cnm: call:name;
-				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval';
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval' || cnm == 'try';
 				local Int is ci: 0;
 				while({ ci < call:args:length() && !found }, {
 					local NamedArg is na: call:args:get(index: ci);
@@ -2064,7 +2069,7 @@ Class is IrBuilder{
 			Expression:Call: local Function(CallData is call){
 				:collectDeclNamesInExpr(expr: call:target, decls: decls);
 				local String is cnm: call:name;
-				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval';
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval' || cnm == 'try';
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ci);
@@ -2232,7 +2237,7 @@ Class is IrBuilder{
 			Expression:Call: local Function(CallData is call){
 				:collectAllAnonCapturesInExpr(expr: call:target, decls: decls, out: out);
 				local String is cnm: call:name;
-				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval';
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval' || cnm == 'try';
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ci);
@@ -2975,13 +2980,20 @@ Class is IrBuilder{
 		:emit(inst: IrInst:ConstInt(dst: zeroAddr, value: 0));
 		local String is hasPend: :nextTmp();
 		:emit(inst: IrInst:Cmp(dst: hasPend, op: '!=', lhs: pendAddr, rhs: zeroAddr, ty: IrType:I64));
-		local String is unwindLbl: :nextLabel(prefix: 'err_unwind');
+		# Inside a try body region the local catch consumes the pending
+		# error instead of the frame's unwind path.
+		local String is unwindLbl: :curInlineCatchLbl;
+		if({ unwindLbl == '' }, {
+			unwindLbl: :nextLabel(prefix: 'err_unwind');
+		});
 		local String is contLbl: :nextLabel(prefix: 'err_cont');
 		:terminate(inst: IrInst:CondBr(cond: hasPend, thenLabel: unwindLbl, elseLabel: contLbl));
 
-		local IrBlock is unwindBlk: :curFn:addBlock(label: unwindLbl);
-		:switchBlock(blk: unwindBlk);
-		:emitUnwindCurrentFrame(recordFrame: true);
+		if({ :curInlineCatchLbl == '' }, {
+			local IrBlock is unwindBlk: :curFn:addBlock(label: unwindLbl);
+			:switchBlock(blk: unwindBlk);
+			:emitUnwindCurrentFrame(recordFrame: true);
+		});
 
 		local IrBlock is contBlk: :curFn:addBlock(label: contLbl);
 		:switchBlock(blk: contBlk);
@@ -4531,8 +4543,10 @@ Class is IrBuilder{
 		local String is savedErrSlot: :curFnErrPushedSlot;
 		local Boolean is savedUsesDefer: :curFnUsesDefer;
 		local Boolean is savedDeferExitRan: :curFnDeferExitRan;
+		local String is savedInlineCatch: :curInlineCatchLbl;
 		:curFnErrHandlerCallee: '';
 		:curFnErrPushedSlot: '';
+		:curInlineCatchLbl: '';
 
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: retTy);
 		fn:sourceFile: savedFn:sourceFile;
@@ -4699,6 +4713,7 @@ Class is IrBuilder{
 		:curFnErrPushedSlot: savedErrSlot;
 		:curFnUsesDefer: savedUsesDefer;
 		:curFnDeferExitRan: savedDeferExitRan;
+		:curInlineCatchLbl: savedInlineCatch;
 
 		# Allocate and populate %env in outer function if captures exist
 		local String is envVal: 'null';
@@ -4815,6 +4830,12 @@ Class is IrBuilder{
 			local String is errAddr: :nextTmp();
 			:emit(inst: IrInst:IrCast(dst: errAddr, val: errObj, fromType: IrType:Ptr, toType: IrType:I64));
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Pool_raisePendingError', argTypes: [IrType:Ptr, IrType:I64], args: ['null', errAddr]));
+			# Inside a try body region the raise jumps to the region's local
+			# catch instead of unwinding the whole frame.
+			if({ :curInlineCatchLbl != '' }, {
+				:terminate(inst: IrInst:Br(target: :curInlineCatchLbl));
+				return '0';
+			});
 			:emitUnwindCurrentFrame(recordFrame: false);
 			return '0';
 		});

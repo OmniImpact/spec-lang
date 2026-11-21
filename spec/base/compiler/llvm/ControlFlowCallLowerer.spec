@@ -151,6 +151,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ nm == 'loop' && call:args:length() >= 2 }, {
 			return :isBareOrLoopsTarget(call: call) && :isAnonArg(call: call, idx: call:args:length() - 2) && :isAnonArg(call: call, idx: call:args:length() - 1);
 		});
+		if({ nm == 'try' && call:args:length() == 2 }, {
+			return :isBareOrConditionalTarget(call: call) && :isAnonArg(call: call, idx: 0) && :isAnonArg(call: call, idx: 1);
+		});
 		return false;
 	}
 
@@ -215,6 +218,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ nm == 'loop' }, {
 			:lowerLoopCall(b: b, call: call);
 			return '0';
+		});
+		if({ nm == 'try' }, {
+			return :lowerTryCall(b: b, expr: expr, call: call);
 		});
 		if({ nm == 'times' }, {
 			:lowerTimesCall(b: b, call: call);
@@ -462,6 +468,119 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			local String is outVal: b:nextTmp();
 			b:emit(inst: IrInst:Load(dst: outVal, slot: resSlot, ty: resTy));
 			return outVal;
+		});
+		return '0';
+	}
+
+	## `try(body, guard)` — runs the body region inline in the calling frame
+	## with the frame's unwind checks retargeted to a local catch; on an
+	## in-region unwind the guard runs with the consumed SpecError and its
+	## value becomes the construct's value. The error reference is claimed
+	## to the frame pool so every exit path (normal, guard re-raise, later
+	## frame unwind) releases it exactly once.
+	local Function of String is lowerTryCall(IrBuilder is b, Expression is expr, CallData is call){
+		local NamedArg is bodyNa: call:args:get(index: 0);
+		local NamedArg is guardNa: call:args:get(index: 1);
+		local Int is nai: 0;
+		while({ nai < call:args:length() }, {
+			local NamedArg is na: call:args:get(index: nai);
+			if({ na:name == 'body' }, {
+				bodyNa: na;
+			}, {
+				if({ na:name == 'guard' }, {
+					guardNa: na;
+				});
+			});
+			nai++;
+		});
+		local IrType is resTy: b:irTypeFor(specType: expr:resolvedType);
+		local Boolean is yieldVal: resTy != IrType:Void;
+		local String is resSlot: '';
+		if({ yieldVal }, {
+			resSlot: b:nextTmp();
+			b:emit(inst: IrInst:Alloca(slot: resSlot, ty: resTy));
+		});
+
+		local String is catchLbl: b:nextLabel(prefix: 'try_catch');
+		local String is endLbl: b:nextLabel(prefix: 'try_end');
+
+		# Body region — inline in this frame. Internal unwind checks and
+		# raiseError statements branch to the local catch while the catch
+		# context is set.
+		local String is savedCatch: b:curInlineCatchLbl;
+		local String is prevRetSlot: b:inlineReturnSlot;
+		local String is prevRetEnd: b:inlineReturnEndLbl;
+		local IrType is prevRetTy: b:inlineReturnTy;
+		b:curInlineCatchLbl: catchLbl;
+		if({ yieldVal }, {
+			b:inlineReturnSlot: resSlot;
+			b:inlineReturnEndLbl: endLbl;
+			b:inlineReturnTy: resTy;
+		});
+		local String is bodyVal: :lowerBlockExprVal(b: b, blkExpr: bodyNa:value, expectedTy: resTy);
+		b:curInlineCatchLbl: savedCatch;
+		if({ yieldVal }, {
+			b:inlineReturnSlot: prevRetSlot;
+			b:inlineReturnEndLbl: prevRetEnd;
+			b:inlineReturnTy: prevRetTy;
+		});
+		if({ !b:blkTerminated }, {
+			if({ yieldVal && bodyVal != '' }, {
+				b:emit(inst: IrInst:Store(slot: resSlot, val: bodyVal, ty: resTy));
+			});
+			local String is fifteenVal: b:nextTmp();
+			b:emit(inst: IrInst:ConstInt(dst: fifteenVal, value: 15));
+			local String is pendAddr: b:nextTmp();
+			b:emit(inst: IrInst:IrCall(dst: pendAddr, hasDst: true, retType: IrType:I64, callee: '__spec_mem_tls_get_i64', argTypes: [IrType:I64], args: [fifteenVal]));
+			local String is zeroAddr: b:nextTmp();
+			b:emit(inst: IrInst:ConstInt(dst: zeroAddr, value: 0));
+			local String is noPend: b:nextTmp();
+			b:emit(inst: IrInst:Cmp(dst: noPend, op: '==', lhs: pendAddr, rhs: zeroAddr, ty: IrType:I64));
+			b:terminate(inst: IrInst:CondBr(cond: noPend, thenLabel: endLbl, elseLabel: catchLbl));
+		});
+
+		local IrBlock is catchBlk: b:curFn:addBlock(label: catchLbl);
+		b:switchBlock(blk: catchBlk);
+		local String is errAddr: b:nextTmp();
+		b:emit(inst: IrInst:IrCall(dst: errAddr, hasDst: true, retType: IrType:I64, callee: 'Pool_takePendingError', argTypes: [IrType:Ptr], args: ['null']));
+		local String is errPtr: b:nextTmp();
+		b:emit(inst: IrInst:IrCast(dst: errPtr, val: errAddr, fromType: IrType:I64, toType: IrType:Ptr));
+		b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Ptr, callee: 'spec_claim_pool', argTypes: [IrType:Ptr], args: [errPtr]));
+		match(on: guardNa:value, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				if({ ps:length() > 0 }, {
+					local Parameter is p: ps:get(index: 0);
+					local String is slot: b:nextTmp();
+					b:bindLocal(name: p:name, slot: slot, ty: IrType:Ptr, isArc: true, specType: 'SpecError', isBoxed: false);
+					b:emit(inst: IrInst:Alloca(slot: slot, ty: IrType:Ptr));
+					b:emit(inst: IrInst:Store(slot: slot, val: errPtr, ty: IrType:Ptr));
+				});
+			}
+		], default: {});
+		if({ yieldVal }, {
+			b:inlineReturnSlot: resSlot;
+			b:inlineReturnEndLbl: endLbl;
+			b:inlineReturnTy: resTy;
+		});
+		local String is guardVal: :lowerBlockExprVal(b: b, blkExpr: guardNa:value, expectedTy: resTy);
+		if({ yieldVal }, {
+			b:inlineReturnSlot: prevRetSlot;
+			b:inlineReturnEndLbl: prevRetEnd;
+			b:inlineReturnTy: prevRetTy;
+		});
+		if({ !b:blkTerminated }, {
+			if({ yieldVal && guardVal != '' }, {
+				b:emit(inst: IrInst:Store(slot: resSlot, val: guardVal, ty: resTy));
+			});
+			b:terminate(inst: IrInst:Br(target: endLbl));
+		});
+
+		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
+		b:switchBlock(blk: endBlk);
+		if({ yieldVal }, {
+			local String is rv: b:nextTmp();
+			b:emit(inst: IrInst:Load(dst: rv, slot: resSlot, ty: resTy));
+			return rv;
 		});
 		return '0';
 	}

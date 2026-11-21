@@ -58,6 +58,22 @@ Class is Conditional{
 		base:sysinternal:Conditional:branch(check: check, then: else);
 	}
 
+	## Runs [body]; if it unwinds with a `SpecError`, runs [guard] with that
+	## error and yields the guard's value instead. The guard may re-raise.
+	##
+	## Both regions lower INLINE in the calling frame (ControlFlowCallLowerer):
+	## the body's and guard's statements execute there, so a plain method
+	## call could never catch and resume — the post-call unwind check is
+	## frame-terminal. The generic path below is therefore unreachable for
+	## well-typed calls (the checker requires two literal regions) and
+	## exists only so the bare call resolves.
+	##
+	## @param body: The zero-parameter region whose value is the result.
+	## @param guard: The one-parameter `SpecError` region yielding the
+	##   fallback value.
+	Function of Any is try(Function is body, Function of Any is guard){
+	}
+
 	## Returns `true` only when every Boolean in [checks] is `false`.
 	## Literal array arguments are inlined to short-circuiting C `&&` checks.
 	##

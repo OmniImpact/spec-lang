@@ -151,21 +151,37 @@ flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
       `onError` required. Existing APIs: default = re-raise via
       `raiseError`. Gate: negative test asserting the missing-handler path
       surfaces; `TestOsDispatch`-style suites still pass.
-- [ ] **2.5 `Defer` wrapper in `base:sys`.** Same-name public wrapper over
-      the 1.3 floor, in the `Conditional`/`Loops` family style. Gate:
-      cleanup-order tests (normal exit, unwind exit, nested defers).
-- [ ] **2.6 `try`/`guard` construct (spans compiler; skippable for alpha).**
-      Facility in the control-flow family; yields the unwrapped value or
-      unwinds with the `Err` payload. Skippable: explicit `when` is
-      functional, just noisier at call sites. Broken into:
-  - [ ] **2.6a Facility + runtime fallback.** The facility spelling surfaces
-        and lowers through the generic call machinery (correct-but-slower
-        path). Gate: fixed point + value-yield matrix test (extend
-        `TestValueYield` shapes).
-  - [ ] **2.6b Inline fast path.** `ControlFlowCallLowerer` fast path for
-        literal closures (the `Conditional:if` two-tier precedent);
-        semantics identical to 2.6a. Gate: fixed point + matrix test + IR
-        shape assertion (fast path must not allocate a closure object).
+- [x] **2.5 `Defer` wrapper in `base:sys`.** DONE via 1.3b (6ccf8cb): the
+      `base:sys:Defer` wrapper (`push`) over the `base:sysinternal:Cleanup`
+      floor, with the full ordering suite (normal-exit LIFO, unwind exit,
+      nested barriers, helper-frame ownership) — TestDeferCleanup.
+- [x] **2.6 `try`/`guard` construct.** DONE. Spelling:
+      `try(body: local Function of T(){...}, guard: local Function of T(SpecError
+      is e){...})` on the Conditional facility — the construct's type is the
+      expected type when one flows in, else the body region's declared yield
+      type. DESIGN CORRECTION discovered during the resume analysis: the
+      plan's runtime-fallback tier is UNSOUND for this construct — a plain
+      call cannot catch and resume because the post-call unwind check is
+      frame-terminal — so the construct REQUIRES literal regions (the
+      checker rejects non-region args) and 2.6a's landed lowering IS the
+      inline one: body and guard regions lower in the calling frame; the
+      emitter's `curInlineCatchLbl` catch-context retargets post-call
+      unwind checks AND raiseError statements inside the body to a local
+      catch block, which consumes the pending error (claimed to the frame
+      pool so every exit path releases it exactly once) and runs the guard
+      with it. The guard inherits the ENCLOSING catch context, so a
+      re-raise inside a guard propagates to an outer try naturally (nested
+      test proves it). Defers pushed in a body region run at the FRAME's
+      exit (Go-style), not at the catch. 2.6b's fast-path tier is absorbed:
+      the inline lowering allocates no closure objects, so there is nothing
+      left to optimize. Checker fix landed with it (latent bug): inferCallArgs
+      cleared the ambient branch-closure flags unconditionally, so ANY
+      nested call inside a multi-statement region (if-branches included)
+      silently dropped the region's yield expectation — it now restores
+      the enclosing state. Gates: bootstrap fixed point byte-for-byte;
+      wave 190/190 suites, 610/610 tests; TestTryGuard value-yield matrix
+      (success yield, in-region raise, callee-unwind catch, guard re-raise
+      through nesting, Int/String grounding, defer-vs-catch ordering).
 - [ ] **2.7 Never Null sugar pilot.** Re-implement one default-parameter
       getter family over a result-returning core (`Json:getString(obj:,
       key:, default:)` is the pilot) to prove the sugar pattern before the

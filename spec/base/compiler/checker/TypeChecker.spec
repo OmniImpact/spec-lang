@@ -3671,7 +3671,7 @@ Class is TypeChecker{
 				res: :inferAnonFnExpr(expr: expr, returnType: returnType, params: params, body: body, expected: expected);
 			},
 			Expression:Call: local Function(CallData is call){
-				res: :inferCall(expr: expr, call: call, expected: expected);
+					res: :inferCall(expr: expr, call: call, expected: expected);
 				expr:setResolvedTypeNode(tn: :parseTypeNode(s: res), t: res);
 				:checkCallArguments(callExpr: expr);
 			},
@@ -3782,6 +3782,9 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferBareScopeCall(Expression is expr, CallData is call, String is expected, String is provider){
+		if({ (provider == 'Conditional' || provider:endsWith(suffix: ':Conditional')) && call:name == 'try' && expr:argCount() == 2 }, {
+			return :inferTryCall(expr: expr, call: call, expected: expected);
+		});
 		local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
 		local Boolean is bareIsLazy: provider == 'Lazy' && call:name == 'lazy';
 		local Boolean is bareArg1Anon: false;
@@ -3939,6 +3942,84 @@ Class is TypeChecker{
 		return providerRet;
 	}
 
+	## `try(body:, guard:)` — runs the body region; if it unwinds with a
+	## `SpecError`, runs the guard with that error and yields the guard's
+	## value. Both args must be literal regions: the lowering is frame-local
+	## (a plain call cannot catch and resume — the post-call unwind check is
+	## frame-terminal). The construct's type is the expected type when one
+	## flows in, else the body region's declared yield type.
+	local Function of String is inferTryCall(Expression is expr, CallData is call, String is expected){
+		local NamedArg is bodyNa: call:args:get(index: 0);
+		local NamedArg is guardNa: call:args:get(index: 1);
+		local Int is nai: 0;
+		while({ nai < call:args:length() }, {
+			local NamedArg is na: call:args:get(index: nai);
+			if({ na:name == 'body' }, {
+				bodyNa: na;
+			}, {
+				if({ na:name == 'guard' }, {
+					guardNa: na;
+				});
+			});
+			nai++;
+		});
+		local Boolean is bodyAnon: false;
+		local Boolean is guardAnon: false;
+		local Type is bodyRet: Type:init(name: '');
+		local Array of Parameter is bodyParams: [];
+		local Array of Parameter is guardParams: [];
+		match(on: bodyNa:value, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				bodyAnon: true;
+				bodyRet: rt;
+				bodyParams: ps;
+			}
+		], default: {});
+		match(on: guardNa:value, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				guardAnon: true;
+				guardParams: ps;
+			}
+		], default: {});
+		if({ !bodyAnon || !guardAnon }, {
+			:addError(line: :currentLine, msg: 'try requires literal body and guard regions — a plain call cannot catch and resume.');
+			expr:setResolvedType(t: '');
+			return '';
+		});
+		if({ bodyParams:length() != 0 }, {
+			:addError(line: :currentLine, msg: 'try body region takes no parameters.');
+			expr:setResolvedType(t: '');
+			return '';
+		});
+		if({ guardParams:length() != 1 || :formatVarTypeString(t: guardParams:get(index: 0):paramType) != 'SpecError' }, {
+			:addError(line: :currentLine, msg: 'try guard region takes exactly one SpecError parameter.');
+			expr:setResolvedType(t: '');
+			return '';
+		});
+		local String is resTy: expected;
+		if({ resTy == '' }, {
+			resTy: bodyRet:name;
+			if({ resTy == '' || :isVoid(t: resTy) }, {
+				resTy: 'Any';
+			});
+		});
+		# Infer both regions with the construct's type flowing as the yield
+		# expectation (the branch-closure mechanism value-yielding `if` uses).
+		:inBranchClosure: true;
+		:inValueBranch: true;
+		:currentYieldExpected: resTy;
+		:inferExpressionType(expr: bodyNa:value, expected: resTy);
+		:inBranchClosure: true;
+		:inValueBranch: true;
+		:currentYieldExpected: resTy;
+		:inferExpressionType(expr: guardNa:value, expected: resTy);
+		:inBranchClosure: false;
+		:inValueBranch: false;
+		:currentYieldExpected: '';
+		expr:setResolvedType(t: resTy);
+		return resTy;
+	}
+
 	local Function of Boolean is isValueBranchCall(Expression is expr, Boolean is isBranchCall, String is expected){
 		if({ !isBranchCall || expr:argCount() != 3 || expected == '' || :isVoid(t: expected) }, {
 			return false;
@@ -4070,6 +4151,12 @@ Class is TypeChecker{
 
 	local Function is inferCallArgs(CallData is call, String is targetType, String is method, String is expected, Boolean is isBranchCall, Boolean is isValueBranch){
 		local Int is argIdx: 0;
+		# Ambient branch-closure state belongs to the ENCLOSING region
+		# inference (a try body's flags must survive a nested call's own
+		# arg inference), so this function restores rather than clears.
+		local Boolean is savedBranch: :inBranchClosure;
+		local Boolean is savedValue: :inValueBranch;
+		local String is savedYieldExp: :currentYieldExpected;
 		call:args:each(action: local Function(NamedArg is arg){
 			if({ isBranchCall && argIdx == 0 }, {
 				match(on: arg:value, when: [
@@ -4124,11 +4211,14 @@ Class is TypeChecker{
 				});
 			});
 			:inferExpressionType(expr: arg:value, expected: callArgExp);
-			:inBranchClosure: false;
-			:inValueBranch: false;
-			:currentYieldExpected: '';
+			:inBranchClosure: savedBranch;
+			:inValueBranch: savedValue;
+			:currentYieldExpected: savedYieldExp;
 			argIdx: argIdx + 1;
 		});
+		:inBranchClosure: savedBranch;
+		:inValueBranch: savedValue;
+		:currentYieldExpected: savedYieldExp;
 	}
 
 	local Function is checkThreadScopeOpenArgs(CallData is call){
@@ -4445,6 +4535,10 @@ Class is TypeChecker{
 			if({ matchRes != '' }, {
 				return matchRes;
 			});
+		});
+
+		if({ method == 'try' && expr:argCount() == 2 && (call:bareProvider == 'Conditional' || call:bareProvider:endsWith(suffix: ':Conditional') || targetType == 'Conditional' || (targetIsIdent && targetStr == 'try' && :isAsImportedInherited(className: 'Conditional')) || (targetIsSelf && call:isBareCall && :isAsImportedInherited(className: 'Conditional'))) }, {
+			return :inferTryCall(expr: expr, call: call, expected: expected);
 		});
 
 		if({ recvName == '' && targetIsSelf && call:name != 'init' && call:name != 'typeName' && !:shadowsAsFunction(name: call:name, isBareCall: call:isBareCall) }, {
