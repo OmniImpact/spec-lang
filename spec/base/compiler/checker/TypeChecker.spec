@@ -6130,6 +6130,70 @@ Class is TypeChecker{
 	## Validates all members of a class definition.
 	##
 	## @param classDef: Class definition.
+	## The SpecErrorHandler boundary is typed: the handler must return
+	## Boolean (the unwind walk consumes the result as handled), take
+	## exactly one parameter, and that parameter must be the error
+	## currency — bare `SpecError` (the catch-all) or `SpecError of <kind
+	## enum>` (typed dispatch, plan 1.4). Until the kind-dispatch walk
+	## lands, a class declares at most one handler.
+	Function is checkSpecErrorHandlerGroup(ClassInfo is classDef){
+		local Array of Member is handlers: [];
+		classDef:members:each(action: local Function(Member is m){
+			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' && !m:hasModifier(kw: Keyword:HELD) }, {
+				handlers:add(item: m);
+			});
+		});
+		if({ handlers:length() == 0 }, { return; });
+		if({ handlers:length() > 1 }, {
+			local Member is second: handlers:get(index: 1);
+			:currentLine: second:line;
+			if({ second:sourceFile != '' }, {
+				:currentSourceFile: second:sourceFile;
+			});
+			:addError(line: second:line, msg: 'A class may declare only one SpecErrorHandler; found ' . (handlers:length() as String) . '.');
+			return;
+		});
+		local Member is m: handlers:get(index: 0);
+		:currentLine: m:line;
+		if({ m:sourceFile != '' }, {
+			:currentSourceFile: m:sourceFile;
+		});
+		if({ m:params:length() != 1 }, {
+			:addError(line: m:line, msg: 'SpecErrorHandler must take exactly one parameter; found ' . (m:params:length() as String) . '.');
+			return;
+		});
+		local Parameter is p: m:params:get(index: 0);
+		local String is pTy: :formatVarTypeString(t: p:paramType);
+		# The currency parameter normalizes to 'SpecError' (bare, the
+		# catch-all), 'SpecError:Any' (same), or 'SpecError:<KindEnum>'
+		# ('SpecError of K' source spelling); accept all renderings. Enum
+		# recognition goes through the class model (every enum desugars to
+		# an Enum-rooted class) — allEnumNames is vestigial and stays empty.
+		local Boolean is paramOk: false;
+		local String is kindTy: '';
+		if({ pTy == 'SpecError' || pTy == 'SpecError:Any' }, {
+			paramOk: true;
+		}, {
+			if({ pTy:startsWith(prefix: 'SpecError:') }, {
+				kindTy: pTy:substring(start: 10, end: pTy:length());
+			}, {
+				if({ pTy:startsWith(prefix: 'SpecError of ') }, {
+					kindTy: pTy:substring(start: 12, end: pTy:length());
+				});
+			});
+			local ClassInfo is kindCls: :findClass(name: kindTy);
+			paramOk: kindCls:name != '' && kindCls:baseClass == :names:enumHeader();
+		});
+		if({ !paramOk }, {
+			:addError(line: m:line, msg: 'SpecErrorHandler parameter must be SpecError or SpecError of <kind enum>; found \'' . pTy . '\'.');
+			return;
+		});
+		local String is retTy: :resolveReturnType(t: m:memberType);
+		if({ retTy != 'Boolean' }, {
+			:addError(line: m:line, msg: 'SpecErrorHandler must return Boolean; found \'' . retTy . '\'.');
+		});
+	}
+
 	Function is checkClass(ClassInfo is classDef){
 		:currentClassName: classDef:name;
 		:currentClassDef: classDef;
@@ -6180,6 +6244,8 @@ Class is TypeChecker{
 				else: {}
 			]);
 		});
+
+		:checkSpecErrorHandlerGroup(classDef: classDef);
 
 		classDef:members:each(action: local Function(Member is m){
 			match(on: m:kind, when: [

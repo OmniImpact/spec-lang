@@ -224,6 +224,96 @@ Class is VoidOnErrorCaller{
 			expect: "ThreadScope:open 'onError' handler must return Boolean"
 		);
 	}
+
+	## Typed SpecErrorHandler boundary (plan 1.4): a kind-typed handler
+	## declares `SpecError of FileOpError`, so `when` on its `e:kind` is
+	## exhaustive WITHOUT else (1.1 enforcement), and signature violations
+	## are compile-time errors.
+	Function is testTypedHandlerKindExhaustiveWhen(){
+		local TypedHandlerWorker is w: TypedHandlerWorker:init();
+		w:raiseNotFound();
+		Assert:areEqualString('not-found', w:observed);
+		Assert:areEqualString('typed handler probe', w:observedDesc);
+	}
+
+	Function is testHandlerSignatureValidation(){
+		Assert:compilerRejects(
+			source: '''
+Class is BadParamHandler{
+	replace Function of Boolean is SpecErrorHandler(String is e){
+		return true;
+	}
+}
+''',
+			expect: "SpecErrorHandler parameter must be SpecError or SpecError of <kind enum>; found 'String'."
+		);
+
+		Assert:compilerRejects(
+			source: '''
+Class is NoParamHandler{
+	replace Function of Boolean is SpecErrorHandler(){
+		return true;
+	}
+}
+''',
+			expect: 'SpecErrorHandler must take exactly one parameter; found 0.'
+		);
+
+		Assert:compilerRejects(
+			source: '''
+Class is WrongReturnHandler{
+	replace Function of String is SpecErrorHandler(SpecError is e){
+		return '';
+	}
+}
+''',
+			expect: "SpecErrorHandler must return Boolean; found 'String'."
+		);
+
+		Assert:compilerRejects(
+			source: '''
+Enum is ProbeKind{
+	PROBE
+}
+Class is TwoHandlerClass{
+	replace Function of Boolean is SpecErrorHandler(SpecError is e){
+		return true;
+	}
+	replace Function of Boolean is SpecErrorHandler(SpecError of ProbeKind is e){
+		return false;
+	}
+}
+''',
+			expect: 'A class may declare only one SpecErrorHandler; found 2.'
+		);
+	}
+}
+
+## Kind-typed handler: the parameter is `SpecError of FileOpError`, so the
+## body's `when` on `e:kind` is exhaustive without an else arm.
+Class is TypedHandlerWorker{
+	String is observed: '';
+	String is observedDesc: '';
+
+	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', as Conditional()],
+		['base', 'struct', Array]
+	];
+
+	replace Function of Boolean is SpecErrorHandler(SpecError of FileOpError is e){
+		match(on: e:kind, when: [
+			FileOpError:NOT_FOUND: { :observed: 'not-found'; },
+			FileOpError:PERMISSION_DENIED: { :observed: 'perm-denied'; },
+			FileOpError:CORRUPT_DATA: { :observed: 'corrupt'; }
+		]);
+		:observedDesc: e:description;
+		return true;
+	}
+
+	Function is raiseNotFound(){
+		:raiseError(error: SpecError:init(kind: FileOpError:NOT_FOUND, description: 'typed handler probe'));
+	}
 }
 
 Class is InnerWorker{
