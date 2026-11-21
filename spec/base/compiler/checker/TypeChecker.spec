@@ -2708,7 +2708,7 @@ Class is TypeChecker{
 							if({ nonConcrete }, {
 								:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (§I.3).');
 							});
-							if({ m:name != 'init' && :ancestorDeclares(className: c:name, methodName: m:name) }, {
+							if({ m:name != 'init' && m:name != 'SpecErrorHandler' && :ancestorDeclares(className: c:name, methodName: m:name) }, {
 								:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (§I.3).');
 							});
 						});
@@ -6130,12 +6130,15 @@ Class is TypeChecker{
 	## Validates all members of a class definition.
 	##
 	## @param classDef: Class definition.
-	## The SpecErrorHandler boundary is typed: the handler must return
+	## The SpecErrorHandler boundary is typed: every handler must return
 	## Boolean (the unwind walk consumes the result as handled), take
 	## exactly one parameter, and that parameter must be the error
 	## currency — bare `SpecError` (the catch-all) or `SpecError of <kind
-	## enum>` (typed dispatch, plan 1.4). Until the kind-dispatch walk
-	## lands, a class declares at most one handler.
+	## enum>` (typed dispatch, plan 1.4). A class may declare several
+	## handlers: at most one catch-all and no duplicate kind enums; the
+	## emitter generates a dispatcher that routes by the raised error's
+	## kind, most-specific (kinded) first, and leaves non-matching kinds
+	## unhandled (re-raise) unless the catch-all claims them.
 	Function is checkSpecErrorHandlerGroup(ClassInfo is classDef){
 		local Array of Member is handlers: [];
 		classDef:members:each(action: local Function(Member is m){
@@ -6144,53 +6147,71 @@ Class is TypeChecker{
 			});
 		});
 		if({ handlers:length() == 0 }, { return; });
-		if({ handlers:length() > 1 }, {
-			local Member is second: handlers:get(index: 1);
-			:currentLine: second:line;
-			if({ second:sourceFile != '' }, {
-				:currentSourceFile: second:sourceFile;
+		local Int is catchAllCount: 0;
+		local Array of String is seenKinds: [];
+		local Int is hi: 0;
+		while({ hi < handlers:length() }, {
+			local Member is m: handlers:get(index: hi);
+			:currentLine: m:line;
+			if({ m:sourceFile != '' }, {
+				:currentSourceFile: m:sourceFile;
 			});
-			:addError(line: second:line, msg: 'A class may declare only one SpecErrorHandler; found ' . (handlers:length() as String) . '.');
-			return;
-		});
-		local Member is m: handlers:get(index: 0);
-		:currentLine: m:line;
-		if({ m:sourceFile != '' }, {
-			:currentSourceFile: m:sourceFile;
-		});
-		if({ m:params:length() != 1 }, {
-			:addError(line: m:line, msg: 'SpecErrorHandler must take exactly one parameter; found ' . (m:params:length() as String) . '.');
-			return;
-		});
-		local Parameter is p: m:params:get(index: 0);
-		local String is pTy: :formatVarTypeString(t: p:paramType);
-		# The currency parameter normalizes to 'SpecError' (bare, the
-		# catch-all), 'SpecError:Any' (same), or 'SpecError:<KindEnum>'
-		# ('SpecError of K' source spelling); accept all renderings. Enum
-		# recognition goes through the class model (every enum desugars to
-		# an Enum-rooted class) — allEnumNames is vestigial and stays empty.
-		local Boolean is paramOk: false;
-		local String is kindTy: '';
-		if({ pTy == 'SpecError' || pTy == 'SpecError:Any' }, {
-			paramOk: true;
-		}, {
-			if({ pTy:startsWith(prefix: 'SpecError:') }, {
-				kindTy: pTy:substring(start: 10, end: pTy:length());
+			if({ m:params:length() != 1 }, {
+				:addError(line: m:line, msg: 'SpecErrorHandler must take exactly one parameter; found ' . (m:params:length() as String) . '.');
 			}, {
-				if({ pTy:startsWith(prefix: 'SpecError of ') }, {
-					kindTy: pTy:substring(start: 12, end: pTy:length());
+				local Parameter is p: m:params:get(index: 0);
+				local String is pTy: :formatVarTypeString(t: p:paramType);
+				# The currency parameter normalizes to 'SpecError' (bare, the
+				# catch-all), 'SpecError:Any' (same), or 'SpecError:<KindEnum>'
+				# ('SpecError of K' source spelling); accept all renderings. Enum
+				# recognition goes through the class model (every enum desugars to
+				# an Enum-rooted class) — allEnumNames is vestigial and stays empty.
+				local Boolean is paramOk: false;
+				local String is kindTy: '';
+				if({ pTy == 'SpecError' || pTy == 'SpecError:Any' }, {
+					paramOk: true;
+					catchAllCount: catchAllCount + 1;
+				}, {
+					if({ pTy:startsWith(prefix: 'SpecError:') }, {
+						kindTy: pTy:substring(start: 10, end: pTy:length());
+					}, {
+						if({ pTy:startsWith(prefix: 'SpecError of ') }, {
+							kindTy: pTy:substring(start: 12, end: pTy:length());
+						});
+					});
+					local ClassInfo is kindCls: :findClass(name: kindTy);
+					paramOk: kindCls:name != '' && kindCls:baseClass == :names:enumHeader();
+				});
+				if({ !paramOk }, {
+					:addError(line: m:line, msg: 'SpecErrorHandler parameter must be SpecError or SpecError of <kind enum>; found \'' . pTy . '\'.');
+				}, {
+					if({ kindTy != '' }, {
+						local Boolean is dup: false;
+						local Int is si: 0;
+						while({ si < seenKinds:length() }, {
+							if({ seenKinds:get(index: si, default: '') == kindTy }, {
+								dup: true;
+							});
+							si++;
+						});
+						if({ dup }, {
+							:addError(line: m:line, msg: 'Duplicate SpecErrorHandler kind \'' . kindTy . '\'; a class declares each kind at most once.');
+						}, {
+							seenKinds:add(item: kindTy);
+						});
+					});
 				});
 			});
-			local ClassInfo is kindCls: :findClass(name: kindTy);
-			paramOk: kindCls:name != '' && kindCls:baseClass == :names:enumHeader();
+			local String is retTy: :resolveReturnType(t: m:memberType);
+			if({ retTy != 'Boolean' }, {
+				:addError(line: m:line, msg: 'SpecErrorHandler must return Boolean; found \'' . retTy . '\'.');
+			});
+			hi++;
 		});
-		if({ !paramOk }, {
-			:addError(line: m:line, msg: 'SpecErrorHandler parameter must be SpecError or SpecError of <kind enum>; found \'' . pTy . '\'.');
-			return;
-		});
-		local String is retTy: :resolveReturnType(t: m:memberType);
-		if({ retTy != 'Boolean' }, {
-			:addError(line: m:line, msg: 'SpecErrorHandler must return Boolean; found \'' . retTy . '\'.');
+		if({ catchAllCount > 1 }, {
+			local Member is second: handlers:get(index: 1);
+			:currentLine: second:line;
+			:addError(line: second:line, msg: 'A class may declare at most one catch-all SpecErrorHandler; found ' . (catchAllCount as String) . '.');
 		});
 	}
 

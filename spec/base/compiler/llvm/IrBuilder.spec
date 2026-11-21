@@ -635,6 +635,30 @@ Class is IrBuilder{
 				tpi++;
 			});
 			local Map of String to Int is mCounts2: Map:init();
+			# Typed SpecErrorHandler dispatch (1.4): whenever a class
+			# declares a KINDED handler (or several handlers), every handler
+			# emits at a 1-based suffixed symbol ('_1', '_2', ...) and the
+			# CANONICAL symbol becomes the generated dispatcher — the unwind
+			# walk and the vtable bind the canonical slot, so routing
+			# changes without touching either. A lone catch-all keeps the
+			# canonical symbol directly (nothing to dispatch).
+			local Int is ehCount: 0;
+			local Boolean is ehKinded: false;
+			local Int is ehScan: 0;
+			while({ ehScan < cls:members:length() }, {
+				local Member is em: cls:members:get(index: ehScan);
+				if({ em:kind == MemberKind:METHOD && em:name == 'SpecErrorHandler' && !em:hasModifier(kw: Keyword:HELD) }, {
+					ehCount: ehCount + 1;
+					if({ em:params:length() == 1 }, {
+						local String is en: em:params:get(index: 0):paramType:name;
+						if({ en:startsWith(prefix: 'SpecError__') || en:startsWith(prefix: 'SpecError:') || en:startsWith(prefix: 'SpecError of ') }, {
+							ehKinded: true;
+						});
+					});
+				});
+				ehScan++;
+			});
+			local Boolean is ehDispatch: ehKinded || ehCount > 1;
 			local Int is mi: 0;
 			while({ mi < cls:members:length() }, {
 				local Member is m: cls:members:get(index: mi);
@@ -656,12 +680,18 @@ Class is IrBuilder{
 					local Int is ovIdx: mCounts2:get(key: m:name, default: 0);
 					mCounts2:set(key: m:name, value: ovIdx + 1);
 					local String is fnName: if({ ovIdx > 0 }, { sname . '_' . m:name . '_' . ((ovIdx + 1) as String) }, { sname . '_' . m:name });
+					if({ m:name == 'SpecErrorHandler' && ehDispatch }, {
+						fnName: sname . '_' . m:name . '_' . ((ovIdx + 1) as String);
+					});
 					if({ (!isTransCls || m:body:length() > 0) && !seenFns:has(key: fnName) }, {
 						seenFns:set(key: fnName, value: true);
 						:buildMethod(cls: cls, m: m, fnName: fnName);
 					});
 				});
 				mi++;
+			});
+			if({ ehDispatch }, {
+				:buildSpecErrorHandlerDispatcher(cls: cls, sname: sname);
 			});
 			if({ !isTransCls && !isSysCls }, {
 				local String is initFnName: sname . '_init';
@@ -801,6 +831,180 @@ Class is IrBuilder{
 			fi++;
 		});
 		:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
+		:mod:addFunction(fn: fn);
+	}
+
+	## Typed SpecErrorHandler dispatch (plan 1.4 step 2): for a class with
+	## several handlers, the canonical '<S>_SpecErrorHandler' symbol is the
+	## DISPATCHER — it reads the raised error's kind value and routes by
+	## pointer identity against each kind enum's interned variant
+	## singletons (the same primitive the match lowering uses), most
+	## specific first; the bare-SpecError catch-all runs when no kind
+	## matches; with no catch-all the dispatcher returns false (unhandled
+	## → re-raise). Individual handlers live at '<S>_SpecErrorHandler_<n>'
+	## (n = 1-based declaration index) — exactly the call-site overload
+	## suffix scheme and the vtable's per-overload keys — so the unwind
+	## walk and the vtable bind the canonical slot unchanged.
+	Function is buildSpecErrorHandlerDispatcher(ClassInfo is cls, String is sname){
+		local Array of Member is handlers: [];
+		local Int is hmi: 0;
+		while({ hmi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: hmi);
+			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' && !m:hasModifier(kw: Keyword:HELD) }, {
+				handlers:add(item: m);
+			});
+			hmi++;
+		});
+		if({ handlers:length() == 0 }, { return; });
+		if({ handlers:length() == 1 }, {
+			# A lone catch-all needs no dispatcher; a lone KINDED handler
+			# does (it must not swallow non-matching kinds).
+			local String is onlyTy: handlers:get(index: 0):params:get(index: 0):paramType:name;
+			if({ onlyTy == 'SpecError' }, { return; });
+		});
+		local IrStruct is specErrSt: :mod:findStruct(name: 'SpecError');
+		local Int is kindIdx: -1;
+		if({ specErrSt:name != '' }, {
+			kindIdx: specErrSt:fieldIndex(name: 'kind');
+		});
+		local IrFunction is fn: IrFunction:init(name: sname . '_SpecErrorHandler', retType: IrType:I1);
+		fn:sourceFile: cls:sourceFile;
+		fn:addParam(name: '%self', ty: IrType:Ptr);
+		fn:addParam(name: '%err', ty: IrType:Ptr);
+		local IrBlock is entry: fn:addBlock(label: 'entry');
+		:curFn: fn;
+		:switchBlock(blk: entry);
+		:tmpCounter: 0;
+		:lblCounter: 0;
+		:curPoolMark: '';
+		:curFnErrHandlerCallee: '';
+		:curFnErrPushedSlot: '';
+		:curFnUsesDefer: false;
+		:curFnDeferExitRan: false;
+		:curInlineCatchLbl: '';
+
+		local String is kindVal: '';
+		if({ kindIdx >= 0 }, {
+			local String is kindPtr: :nextTmp();
+			:emit(inst: IrInst:FieldPtr(dst: kindPtr, objPtr: '%err', structName: 'SpecError', fieldIndex: kindIdx));
+			local String is kv: :nextTmp();
+			:emit(inst: IrInst:Load(dst: kv, slot: kindPtr, ty: IrType:Ptr));
+			kindVal: kv;
+		});
+
+		local Array of Member is kinded: [];
+		local Array of String is kindedTypes: [];
+		local Int is catchAllIdx: -1;
+		local Int is hi: 0;
+		while({ hi < handlers:length() }, {
+			local Member is m: handlers:get(index: hi);
+			if({ m:params:length() == 1 }, {
+				local Type is pt: m:params:get(index: 0):paramType;
+				# The bare 'SpecError' (no type params) is the catch-all.
+				# A kinded parameter arrives under the specializer's
+				# mangled instantiation name ('SpecError__Pk') or, before
+				# specialization spellings, 'SpecError:K' / 'SpecError of K'.
+				if({ pt:name == 'SpecError' && pt:params:length() == 0 }, {
+					catchAllIdx: hi;
+				}, {
+					local String is k: '';
+					if({ pt:name:startsWith(prefix: 'SpecError__') }, {
+						k: pt:name:substring(start: 11, end: pt:name:length());
+					}, {
+						if({ pt:name:startsWith(prefix: 'SpecError:') }, {
+							k: pt:name:substring(start: 10, end: pt:name:length());
+						}, {
+							if({ pt:name:startsWith(prefix: 'SpecError of ') }, {
+								k: pt:name:substring(start: 12, end: pt:name:length());
+							});
+						});
+					});
+					if({ k != '' }, {
+						kinded:add(item: m);
+						kindedTypes:add(item: k);
+					});
+				});
+			});
+			hi++;
+		});
+
+		local String is doneLbl: :nextLabel(prefix: 'eh_tail');
+		if({ kindIdx < 0 || kinded:length() == 0 }, {
+			:terminate(inst: IrInst:Br(target: doneLbl));
+		}, {
+			local String is curLbl: :nextLabel(prefix: 'eh_chk');
+			:terminate(inst: IrInst:Br(target: curLbl));
+			local Int is ki: 0;
+			while({ ki < kinded:length() }, {
+				local IrBlock is chkBlk: :curFn:addBlock(label: curLbl);
+				:switchBlock(blk: chkBlk);
+				local String is k: kindedTypes:get(index: ki, default: '');
+				# The kind enum's variants: the desugared class model holds
+				# them as HELD fields; their singleton getters are
+				# '<Enum>_<Variant>__ensure' (the match-lowering primitive).
+				local ClassInfo is kcls: :clsMap:get(key: k, default: ClassInfo:init(name: '', baseClass: '', members: []));
+				local Array of String is variants: [];
+				local Int is vmi: 0;
+				while({ vmi < kcls:members:length() }, {
+					local Member is vm: kcls:members:get(index: vmi);
+					if({ vm:kind == MemberKind:FIELD && vm:hasModifier(kw: Keyword:HELD) }, {
+						variants:add(item: vm:name);
+					});
+					vmi++;
+				});
+				local String is afterLbl: :nextLabel(prefix: 'eh_next');
+				# The variant compare chain is loop-carried: each variant's
+				# else target IS the next variant's block label.
+				local String is vCurLbl: curLbl;
+				local Int is vi: 0;
+				while({ vi < variants:length() }, {
+					local String is getter: k . '_' . variants:get(index: vi, default: '') . '__ensure';
+					if({ vi > 0 }, {
+						local IrBlock is vBlk: :curFn:addBlock(label: vCurLbl);
+						:switchBlock(blk: vBlk);
+					});
+					local String is v: :nextTmp();
+					:emit(inst: IrInst:IrCall(dst: v, hasDst: true, retType: IrType:Ptr, callee: getter, argTypes: [], args: []));
+					:emit(inst: IrInst:Release(val: v));
+					local String is eq: :nextTmp();
+					:emit(inst: IrInst:Cmp(dst: eq, op: '==', lhs: kindVal, rhs: v, ty: IrType:Ptr));
+					local String is hitLbl: :nextLabel(prefix: 'eh_hit');
+					local Boolean is lastV: vi == variants:length() - 1;
+					local String is vNxtLbl: if({ lastV }, { afterLbl }, { :nextLabel(prefix: 'eh_vchk') });
+					:terminate(inst: IrInst:CondBr(cond: eq, thenLabel: hitLbl, elseLabel: vNxtLbl));
+					local IrBlock is hitBlk: :curFn:addBlock(label: hitLbl);
+					:switchBlock(blk: hitBlk);
+					local String is hres: :nextTmp();
+					:emit(inst: IrInst:IrCall(dst: hres, hasDst: true, retType: IrType:I1, callee: sname . '_SpecErrorHandler_' . ((ki + 1) as String), argTypes: [IrType:Ptr, IrType:Ptr], args: ['%self', '%err']));
+					:terminate(inst: IrInst:Ret(hasVal: true, val: hres, ty: IrType:I1));
+					vCurLbl: vNxtLbl;
+					vi++;
+				});
+				if({ variants:length() == 0 }, {
+					:terminate(inst: IrInst:Br(target: afterLbl));
+				});
+				local IrBlock is nextBlk: :curFn:addBlock(label: afterLbl);
+				:switchBlock(blk: nextBlk);
+				ki++;
+				if({ ki < kinded:length() }, {
+					local String is nxt: :nextLabel(prefix: 'eh_chk');
+					:terminate(inst: IrInst:Br(target: nxt));
+					curLbl: nxt;
+				}, {
+					:terminate(inst: IrInst:Br(target: doneLbl));
+				});
+			});
+		});
+		local IrBlock is tailBlk: :curFn:addBlock(label: doneLbl);
+		:switchBlock(blk: tailBlk);
+		if({ catchAllIdx >= 0 }, {
+			local String is cres: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: cres, hasDst: true, retType: IrType:I1, callee: sname . '_SpecErrorHandler_' . ((catchAllIdx + 1) as String), argTypes: [IrType:Ptr, IrType:Ptr], args: ['%self', '%err']));
+			:terminate(inst: IrInst:Ret(hasVal: true, val: cres, ty: IrType:I1));
+		}, {
+			local String is fv: :emitDefaultVal(ty: IrType:I1);
+			:terminate(inst: IrInst:Ret(hasVal: true, val: fv, ty: IrType:I1));
+		});
 		:mod:addFunction(fn: fn);
 	}
 

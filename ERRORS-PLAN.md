@@ -102,12 +102,29 @@ else is library work.
         tests; TestDeferCleanup: normal-exit LIFO, nested-frame barrier
         scoping, unwind-runs-cleanup-before-handler, helper-frame push
         ownership.
-- [ ] **1.4 (optional — may slip) Typed `SpecErrorHandler` overloads.**
-      Checker resolves handler overload sets by error-kind (most-specific
-      wins); `IrBuilder` handler walk consults the kind. This is
-      catch-clause precision; the unified model works without it. Touches:
-      `checker/TypeChecker.spec`, `llvm/IrBuilder.spec` (vtable handler slot
-      at the `SpecErrorHandler` walk).
+- [x] **1.4 Typed `SpecErrorHandler` overloads.** DONE (780e42f, this
+      commit). The handler boundary is typed: every handler must return
+      Boolean, take exactly one parameter, and that parameter must be the
+      error currency — bare `SpecError` (catch-all) or `SpecError of <kind
+      enum>`. A class may declare several handlers (at most one catch-all,
+      no duplicate kinds); the emitter generates a per-class DISPATCHER at
+      the canonical `<S>_SpecErrorHandler` symbol that routes by the raised
+      error's kind — pointer identity against each kind enum's interned
+      variant singletons (the match-lowering primitive), most-specific
+      first — and leaves non-matching kinds UNHANDLED (re-raise) unless the
+      catch-all claims them. A lone kinded handler also gets a dispatcher
+      (it must not swallow non-matching kinds). Individual handlers emit at
+      1-based suffixed symbols ('_1', '_2', ...) — exactly the call-site
+      overload suffix scheme and the vtable's per-overload keys — so the
+      unwind walk and the vtable bind the canonical slot UNCHANGED, and
+      §I.3's ancestor-overload rule gained the SpecErrorHandler exemption
+      (the group deliberately replaces the root Class handler). The
+      handler body's `e:kind` is a typed kind enum, so `match` on it is
+      exhaustiveness-checked (1.1). Tests: kinded-handled / catch-all
+      fallback / unmatched re-raise (observed through an enclosing try) /
+      kinded-only unmatched re-raise, plus four compilerRejects signature
+      locks. Gates per step: bootstrap fixed point byte-for-byte; wave
+      190/190 suites, 614/614 tests.
 
 Explicitly **not** in phase 1: `try/guard` lowering (it ships with its
 facility wrapper in 2.6, as one gated task), Json changes (pure library).

@@ -13,6 +13,10 @@ Enum is FileOpError{
 	CORRUPT_DATA
 }
 
+Enum is ProbeOtherKind{
+	OTHER
+}
+
 Class of SpecUnitTest is TestErrors{
 
 	replace Array of Array of String is using: [
@@ -272,11 +276,25 @@ Class is WrongReturnHandler{
 
 		Assert:compilerRejects(
 			source: '''
+Class is TwoCatchAllClass{
+	replace Function of Boolean is SpecErrorHandler(SpecError is e){
+		return true;
+	}
+	replace Function of Boolean is SpecErrorHandler(SpecError is e){
+		return false;
+	}
+}
+''',
+			expect: 'A class may declare at most one catch-all SpecErrorHandler; found 2.'
+		);
+
+		Assert:compilerRejects(
+			source: '''
 Enum is ProbeKind{
 	PROBE
 }
-Class is TwoHandlerClass{
-	replace Function of Boolean is SpecErrorHandler(SpecError is e){
+Class is DupKindHandler{
+	replace Function of Boolean is SpecErrorHandler(SpecError of ProbeKind is e){
 		return true;
 	}
 	replace Function of Boolean is SpecErrorHandler(SpecError of ProbeKind is e){
@@ -284,8 +302,46 @@ Class is TwoHandlerClass{
 	}
 }
 ''',
-			expect: 'A class may declare only one SpecErrorHandler; found 2.'
+			expect: 'Duplicate SpecErrorHandler kind \'ProbeKind\'; a class declares each kind at most once.'
 		);
+	}
+
+	## Typed dispatch (plan 1.4 step 2): the class declares a kinded
+	## handler and a catch-all; the dispatcher routes by the raised error's
+	## kind. The catch-all returning false leaves the error unhandled, so
+	## it re-raises outward — observed through an enclosing try.
+	Function is testTypedHandlerDispatch(){
+		local MultiKindHandler is w: MultiKindHandler:init();
+		w:raiseFile();
+		Assert:areEqualString('file:NOT_FOUND', w:observed);
+		local String is caught: try(
+			body: local Function of String(){
+				w:raiseOther();
+				return 'no-raise';
+			},
+			guard: local Function of String(SpecError is e){
+				return 'reraised:' . e:kindName;
+			}
+		);
+		Assert:areEqualString('any:OTHER', w:observed);
+		Assert:areEqualString('reraised:OTHER', caught);
+	}
+
+	Function is testKindedOnlyHandlerReraisesUnmatched(){
+		local KindedOnlyHandler is w: KindedOnlyHandler:init();
+		w:raiseFile();
+		Assert:areEqualString('file:CORRUPT', w:observed);
+		local String is caught: try(
+			body: local Function of String(){
+				w:raiseOther();
+				return 'no-raise';
+			},
+			guard: local Function of String(SpecError is e){
+				return 'unhandled:' . e:kindName;
+			}
+		);
+		Assert:areEqualString('unhandled:OTHER', caught);
+		Assert:areEqualString('file:CORRUPT', w:observed);
 	}
 }
 
@@ -313,6 +369,65 @@ Class is TypedHandlerWorker{
 
 	Function is raiseNotFound(){
 		:raiseError(error: SpecError:init(kind: FileOpError:NOT_FOUND, description: 'typed handler probe'));
+	}
+}
+
+## Two handlers: a kinded one and a catch-all — the dispatcher routes
+## by the error's kind; the catch-all returning false re-raises.
+Class is MultiKindHandler{
+	String is observed: '';
+
+	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', as Conditional()],
+		['base', 'struct', Array]
+	];
+
+	replace Function of Boolean is SpecErrorHandler(SpecError of FileOpError is e){
+		:observed: 'file:' . e:kindName;
+		return true;
+	}
+
+	replace Function of Boolean is SpecErrorHandler(SpecError is e){
+		:observed: 'any:' . e:kindName;
+		return false;
+	}
+
+	Function is raiseFile(){
+		:raiseError(error: SpecError:init(kind: FileOpError:NOT_FOUND, description: 'multi probe'));
+	}
+
+	Function is raiseOther(){
+		:raiseError(error: SpecError:init(kind: ProbeOtherKind:OTHER, description: 'multi probe other'));
+	}
+}
+
+## A single kinded handler with no catch-all: non-matching kinds stay
+## unhandled and re-raise outward.
+Class is KindedOnlyHandler{
+	String is observed: '';
+
+	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', as Conditional()],
+		['base', 'struct', Array]
+	];
+
+	replace Function of Boolean is SpecErrorHandler(SpecError of FileOpError is e){
+		match(on: e:kind, when: [
+			FileOpError:NOT_FOUND: { :observed: 'file:NOT_FOUND'; },
+			FileOpError:PERMISSION_DENIED: { :observed: 'file:PERMISSION_DENIED'; },
+			FileOpError:CORRUPT_DATA: { :observed: 'file:CORRUPT'; }
+		]);
+		return true;
+	}
+
+	Function is raiseFile(){
+		:raiseError(error: SpecError:init(kind: FileOpError:CORRUPT_DATA, description: 'kinded-only probe'));
+	}
+
+	Function is raiseOther(){
+		:raiseError(error: SpecError:init(kind: ProbeOtherKind:OTHER, description: 'kinded-only other'));
 	}
 }
 
