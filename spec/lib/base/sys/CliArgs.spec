@@ -16,7 +16,10 @@ Class is CliArgs{
 		if({ argvAddr == 0 }, { return ''; });
 		local Int is cstr: Mem:loadI64(ptr: argvAddr, byteOffset: idx * 8);
 		if({ cstr == 0 }, { return ''; });
-		return Mem:strFromBytes(srcAddr: cstr, len: Mem:cstrLen(cstrAddr: cstr));
+		# Interned: argv strings live for the process (the args map holds
+		# them regardless), and the immortal flag makes every release a
+		# no-op — immune to claim-pool release-ledger imbalances.
+		return Mem:strFromBytes(srcAddr: cstr, len: Mem:cstrLen(cstrAddr: cstr)):intern();
 	}
 
 	local Function is setArg(Any is args, String is key, String is val){

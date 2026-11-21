@@ -768,8 +768,6 @@ Class is IrBuilder{
 				:emit(inst: IrInst:FieldPtr(dst: fptr, objPtr: '%self', structName: st:name, fieldIndex: fi));
 				local String is fval: :nextTmp();
 				:emit(inst: IrInst:Load(dst: fval, slot: fptr, ty: IrType:Ptr));
-				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [fval]));
-				:emit(inst: IrInst:Release(val: fval));
 				:emit(inst: IrInst:Store(slot: fptr, val: 'null', ty: IrType:Ptr));
 			});
 			fi++;
@@ -1067,9 +1065,7 @@ Class is IrBuilder{
 						if({ seen:has(key: m:name) }, {
 							local String is oldF: :nextTmp();
 							:emit(inst: IrInst:Load(dst: oldF, slot: ptr, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldF]));
-				:emit(inst: IrInst:Release(val: oldF));
-						});
+									});
 					});
 					seen:set(key: m:name, value: true);
 					:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
@@ -1807,7 +1803,6 @@ Class is IrBuilder{
 			local String is oldVal: :nextTmp();
 			:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: IrType:Ptr));
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldVal]));
-				:emit(inst: IrInst:Release(val: oldVal));
 		});
 		:emit(inst: IrInst:Store(slot: slot, val: val, ty: ty));
 	}
@@ -2824,15 +2819,10 @@ Class is IrBuilder{
 			:emit(inst: IrInst:ConstBool(dst: falseVal, value: false));
 			:emit(inst: IrInst:Store(slot: :curFnErrPushedSlot, val: falseVal, ty: IrType:I1));
 		});
-		local Int is oi: 0;
-		while({ oi < :ownedSlots:length() }, {
-			local String is oslot: :ownedSlots:get(index: oi, default: '');
-			local String is oval: :nextTmp();
-			:emit(inst: IrInst:Load(dst: oval, slot: oslot, ty: IrType:Ptr));
-			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oval]));
-				:emit(inst: IrInst:Release(val: oval));
-			oi++;
-		});
+		# Autorelease ownership: locals own NOTHING — every synthesized value
+		# is claimed to the frame pool and released by the frame drain
+		# (spec_pool_release_to). No local/exit releases here: they were the
+		# double-release source (the freelist-corruption segfault).
 	}
 
 	Function of String is emitDefaultVal(IrType is ty){
@@ -2924,9 +2914,7 @@ Class is IrBuilder{
 						if({ (vIsArc || isBoxed) && !declInEntry }, {
 							local String is prevLazyVal: :nextTmp();
 							:emit(inst: IrInst:Load(dst: prevLazyVal, slot: slot, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevLazyVal]));
-				:emit(inst: IrInst:Release(val: prevLazyVal));
-						});
+									});
 						if({ isBoxed }, {
 							local String is lBoxPtr: :emitNewBox(initVal: lDefVal, ty: vty, isArc: vIsArc);
 							:emit(inst: IrInst:Store(slot: slot, val: lBoxPtr, ty: IrType:Ptr));
@@ -2971,9 +2959,7 @@ Class is IrBuilder{
 						if({ (vIsArc || isBoxed) && !declInEntry }, {
 							local String is prevSlotVal: :nextTmp();
 							:emit(inst: IrInst:Load(dst: prevSlotVal, slot: slot, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevSlotVal]));
-				:emit(inst: IrInst:Release(val: prevSlotVal));
-						});
+									});
 						if({ isBoxed }, {
 							local String is boxPtr: :emitNewBox(initVal: val, ty: vty, isArc: vIsArc);
 							:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
@@ -3017,9 +3003,7 @@ Class is IrBuilder{
 					if({ (vIsArc || isBoxed) && !declInEntry }, {
 						local String is prevSlotVal2: :nextTmp();
 						:emit(inst: IrInst:Load(dst: prevSlotVal2, slot: slot, ty: IrType:Ptr));
-						:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [prevSlotVal2]));
-				:emit(inst: IrInst:Release(val: prevSlotVal2));
-					});
+							});
 					if({ isBoxed }, {
 						local String is boxPtr: :emitNewBox(initVal: defVal, ty: vty, isArc: vIsArc);
 						:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
@@ -3065,9 +3049,7 @@ Class is IrBuilder{
 								:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [cval]));
 								local String is oldVal: :nextTmp();
 								:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: IrType:Ptr));
-								:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldVal]));
-				:emit(inst: IrInst:Release(val: oldVal));
-								:emit(inst: IrInst:Store(slot: slot, val: strCopy, ty: IrType:Ptr));
+												:emit(inst: IrInst:Store(slot: slot, val: strCopy, ty: IrType:Ptr));
 							}, {
 								:emitStoreLocal(name: name, val: cval, ty: ty, isArc: isArc);
 							});
@@ -3098,9 +3080,7 @@ Class is IrBuilder{
 											});
 											local String is oldSfVal: :nextTmp();
 											:emit(inst: IrInst:Load(dst: oldSfVal, slot: sptr, ty: IrType:Ptr));
-											:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldSfVal]));
-				:emit(inst: IrInst:Release(val: oldSfVal));
-										});
+																	});
 										:emit(inst: IrInst:Store(slot: sptr, val: scval, ty: sfty));
 										:emitMarkLazyFieldDone(objPtr: selfObj, sname: :currentClass, st: selfSt, fieldName: name);
 									});
@@ -3125,9 +3105,7 @@ Class is IrBuilder{
 								});
 								local String is oldFVal: :nextTmp();
 								:emit(inst: IrInst:Load(dst: oldFVal, slot: ptr, ty: IrType:Ptr));
-								:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldFVal]));
-				:emit(inst: IrInst:Release(val: oldFVal));
-							});
+											});
 							:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
 							:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: fieldName);
 						});
@@ -3161,9 +3139,7 @@ Class is IrBuilder{
 										});
 										local String is oldPVal: :nextTmp();
 										:emit(inst: IrInst:Load(dst: oldPVal, slot: ptr, ty: IrType:Ptr));
-										:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldPVal]));
-				:emit(inst: IrInst:Release(val: oldPVal));
-									});
+															});
 									:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
 									:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: segments:get(index: segments:length() - 1, default: ''));
 								});
@@ -4501,9 +4477,7 @@ Class is IrBuilder{
 					:emit(inst: IrInst:FieldPtr(dst: dfPtr, objPtr: '%env', structName: envStructName, fieldIndex: dci + 2));
 					local String is dVal: :nextTmp();
 					:emit(inst: IrInst:Load(dst: dVal, slot: dfPtr, ty: IrType:Ptr));
-					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [dVal]));
-				:emit(inst: IrInst:Release(val: dVal));
-				});
+					});
 				dci++;
 			});
 			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_rt_release', argTypes: [IrType:Ptr], args: ['%env']));
@@ -5108,9 +5082,7 @@ Class is IrBuilder{
 							:emit(inst: IrInst:Retain(val: val));
 							local String is oldVal: :nextTmp();
 							:emit(inst: IrInst:Load(dst: oldVal, slot: fPtr, ty: IrType:Ptr));
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_unclaim_addr', argTypes: [IrType:Ptr], args: [oldVal]));
-				:emit(inst: IrInst:Release(val: oldVal));
-						});
+									});
 						:emit(inst: IrInst:Store(slot: fPtr, val: val, ty: fty));
 					});
 				});
