@@ -4472,23 +4472,9 @@ Class is TypeChecker{
 				'toString': { res: Primitive:STRING:value(); },
 				'length': { res: Primitive:INT:value(); },
 				'isEmpty': { res: Primitive:BOOLEAN:value(); },
-				'count': { res: Primitive:INT:value(); },
-				'any': { res: Primitive:BOOLEAN:value(); },
 				'indexOf': { res: Primitive:INT:value(); },
-				'join': { res: Primitive:STRING:value(); },
-				'add': { res: :names:voidName(); },
-				'set': { res: :names:voidName(); },
-				'clear': { res: :names:voidName(); },
-				'each': { res: :names:voidName(); },
-				'push': { res: :names:voidName(); },
-				'remove': { res: Primitive:BOOLEAN:value(); },
 				else: {}
 			]);
-			if({ res == targetType }, {
-				if({ (TypeDomain:isParameterized(t: targetType, base: 'Array') || TypeDomain:isParameterized(t: targetType, base: 'List')) && (method == 'get' || method == 'pop' || method == 'removeAt') }, {
-					res: TypeDomain:elemType(t: targetType);
-				});
-			});
 			# Member existence: a real (non-binding) class whose call
 			# resolves to NOTHING (no method, held member, or vocabulary
 			# entry) is a compile error, not a silently receiver-typed
