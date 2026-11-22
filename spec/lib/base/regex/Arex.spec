@@ -15,6 +15,8 @@ Class is Arex{
 	replace Array of Array of String is using: [
 		['base', 'core', Str],
 		['base', 'core', String],
+		['base', 'core', SpecError],
+		['base', 'regex', RegexError],
 		['base', 'regex', ArexPattern],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()]
@@ -23,14 +25,14 @@ Class is Arex{
 	local Str is defaultFlags: '';
 	local Boolean is lookaroundEnabled: false;
 	local Boolean is backrefEnabled: false;
-	local Function is errorHandler: local Function(Str is _err){};
+	local Function is errorHandler: local Function(SpecError of RegexError is _err){};
 	local Boolean is hasErrorHandler: false;
 
 	replace Function is init(){
 		:defaultFlags: '';
 		:lookaroundEnabled: false;
 		:backrefEnabled: false;
-		:errorHandler: local Function(Str is _err){};
+		:errorHandler: local Function(SpecError of RegexError is _err){};
 		:hasErrorHandler: false;
 	}
 
@@ -72,7 +74,7 @@ Class is Arex{
 			enableBackreference: br
 		);
 		if({ prog:hasError() && hasErrCb }, {
-			errCb(prog:errorMessage());
+			errCb(SpecError:init(kind: RegexError:COMPILE_FAILED, description: 'regex compile failed: ' . prog:errorMessage()));
 		});
 		return prog;
 	}
@@ -83,7 +85,7 @@ Class is Arex{
 		Str is pattern,
 		Function is result,
 		Str is flags: '',
-		Function is onError: local Function(Str is _err){}
+		Function is onError: local Function(SpecError of RegexError is _err){}
 	){
 		local Str is effFlags: :defaultFlags . flags;
 		local Boolean is la: :lookaroundEnabled;
@@ -99,9 +101,9 @@ Class is Arex{
 			);
 			if({ compiled:hasError() }, {
 				local Str is msg: compiled:errorMessage();
-				onError(msg);
+				onError(SpecError:init(kind: RegexError:COMPILE_FAILED, description: 'regex compile failed: ' . msg));
 				if({ hasDefErr }, {
-					defErr(msg);
+					defErr(SpecError:init(kind: RegexError:COMPILE_FAILED, description: 'regex compile failed: ' . msg));
 				});
 			}, {
 				result(compiled);

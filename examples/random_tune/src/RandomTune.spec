@@ -20,13 +20,15 @@ Class is RandomTune{
 		['base', 'sys', as DateTime()],
 		['base', 'math', as Math()],
 		['base', 'audio', as Audio()],
+		['base', 'core', SpecError],
+		['base', 'sys', AudioError],
 		['base', 'struct', Array],
 		['base', 'struct', List],
 		[Synth]
 	];
 
 	## Entry point; opens the audio device (falling back to silent timing if unavailable) and plays 12 notes.
-	Function is init(){
+	replace Function is init(){
 		local DateTime is startedAt: DateTime:now();
 		local Cleo is ui: Cleo(
 			title: ' random_tune ',
@@ -73,8 +75,8 @@ Class is RandomTune{
 			sampleRate: sampleRate,
 			channels: 2,
 			format: 1,
-			onError: local Function(String is error){
-				audioErr: error;
+			onError: local Function(SpecError of AudioError is error){
+				audioErr: error:description;
 			}
 		);
 		local String is audioStatus: if({ audio:isOpen() }, { '44100 Hz stereo PCM' }, { "silent mode ({{audioErr}})" });

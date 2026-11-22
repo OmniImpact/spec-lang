@@ -5,12 +5,20 @@ Class is Dir{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
+		['base', 'sys', FileError],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Dir]
 	];
+
+	local Function of Boolean is hasClosure(Function is cb){
+		local Int is addr: Mem:objToAddr(obj: cb);
+		if({ addr == 0 }, { return false; });
+		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
+	}
 
 	local Function of Int is cstrOf(String is s){
 		local Int is sAddr: Mem:objToAddr(obj: s);
@@ -24,20 +32,26 @@ Class is Dir{
 	## Order is filesystem-dependent; consumers must not rely on it.
 	##
 	## @param path: Directory to list.
-	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
+	## @param onError: Optional callback receiving the failure as the full
+	##   error currency: `Function(SpecError of FileError)`. Absent the
+	##   callback, failures return the empty listing (Never Null).
 	## @return: Entry names.
-	Function of Array of String is dirList(String is path, Function is onError: local Function(String is error){}){
+	Function of Array of String is dirList(String is path, Function is onError: local Function(SpecError of FileError is error){}){
 		local Array of String is out: [];
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			onError('invalid path');
+			if({ :hasClosure(cb: onError) }, {
+				onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path'));
+			});
 			return out;
 		});
 		local Int is handle: base:sysinternal:Dir:pal_dir_open_cstr(path_cstr: pc);
 		if({ handle == 0 }, {
 			local Int is ec: base:sysinternal:Dir:pal_last_error_cstr();
 			local Int is elen: Mem:cstrLen(cstrAddr: ec);
-			onError(Mem:strFromBytes(srcAddr: ec, len: elen));
+			if({ :hasClosure(cb: onError) }, {
+				onError(SpecError:init(kind: FileError:IO_ERROR, description: Mem:strFromBytes(srcAddr: ec, len: elen)));
+			});
 			return out;
 		});
 		local Int is nameAddr: base:sysinternal:Dir:pal_dir_next(handle: handle);

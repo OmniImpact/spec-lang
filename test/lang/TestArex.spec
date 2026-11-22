@@ -6,7 +6,9 @@ Class of SpecUnitTest is TestArex{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
+		['base', 'core', SpecError],
 		['base', 'core', Str],
+		['base', 'regex', RegexError],
 		['base', 'regex', as Arex() is ar],
 		['base', 'regex', ArexPattern],
 		['base', 'struct', Array],
@@ -458,8 +460,8 @@ Class of SpecUnitTest is TestArex{
 			result: local Function(ArexPattern is _p){
 				Process:atomicPut(slot: 620, value: 1);
 			},
-			onError: local Function(Str is err){
-				errCh:send(item: err);
+			onError: local Function(SpecError of RegexError is err){
+				errCh:send(item: err:description);
 				return;
 			}
 		);
@@ -467,8 +469,8 @@ Class of SpecUnitTest is TestArex{
 		Assert:areEqualInt(0, Process:atomicGet(slot: 620));
 
 		local Channel of Str is gateCh: Channel();
-		rx:setOnError(handler: local Function(Str is err){
-			gateCh:send(item: err);
+		rx:setOnError(handler: local Function(SpecError of RegexError is err){
+			gateCh:send(item: err:description);
 			return;
 		});
 		rx:rContains(
@@ -483,8 +485,8 @@ Class of SpecUnitTest is TestArex{
 
 		local Channel of Str is brGateCh: Channel();
 		local Arex is rx2: Arex();
-		rx2:setOnError(handler: local Function(Str is err){
-			brGateCh:send(item: err);
+		rx2:setOnError(handler: local Function(SpecError of RegexError is err){
+			brGateCh:send(item: err:description);
 			return;
 		});
 		rx2:rContains(

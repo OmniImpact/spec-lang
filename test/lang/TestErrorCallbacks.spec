@@ -52,8 +52,8 @@ Class of SpecUnitTest is TestErrorCallbacks{
 		Process:atomicPut(slot: 67, value: 0);
 		local Array of String is entries: dirList(
 			path: '/non_existent_dir_xyz_987',
-			onError: local Function(String is error){
-				if({ error:length() > 0 }, {
+			onError: local Function(SpecError of FileError is error){
+				if({ error:kindName == 'IO_ERROR' && error:description:length() > 0 }, {
 					Process:atomicPut(slot: 67, value: 1);
 				});
 			}
