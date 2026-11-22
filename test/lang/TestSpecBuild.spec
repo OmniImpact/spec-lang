@@ -85,10 +85,10 @@ Class of SpecUnitTest is TestSpecBuild{
 
 	Function is testSpecBuildConfigParsing(){
 		local String is manifest: '{"name": "test_app", "version": "1.2.3", "source": "src/Main.spec", "source_dirs": ["src", "lib"], "output": "bin/test_app"}';
-		local Result of Map to JsonError is r: Json:parseMapResult(text: manifest);
-		local Map is cfg: Map:init();
+		local Result of Map of String to Any to JsonError is r: Json:parseMapResult(text: manifest);
+		local Map of String to Any is cfg: [:];
 		match(on: r, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 				cfg: v;
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){
