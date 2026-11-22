@@ -304,7 +304,7 @@ Class is TypeChecker{
 	Function of Type is parseTypeNode(String is s){
 		if({ s == '' }, { return Type:init(name: ''); });
 		if({ :typeNodeCache:has(key: s) }, {
-			return :typeNodeCache:get(key: s);
+			return :typeNodeCache:get(key: s, default: Type:init(name: ''));
 		});
 		if({ !s:contains(needle: ':') && !s:contains(needle: ' of ') }, {
 			local Type is simpleT: Type:init(name: s);

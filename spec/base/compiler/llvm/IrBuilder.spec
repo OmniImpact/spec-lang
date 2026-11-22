@@ -5378,7 +5378,12 @@ Class is IrBuilder{
 					recvStruct: :cStructName(qname: :clsQNameMap:get(key: recvType, default: recvType));
 				});
 			});
-			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' }, {
+			# A Map specialization's instances are floor-built SpecMaps —
+			# their headers carry bucket state, not a typename/vtable pair —
+			# so dispatch is static through the specialization's own
+			# method, never a vtable indirection into the object.
+			local Boolean is floorMapRecv: :specBaseMap:get(key: recvStruct, default: '') == 'Map' || :specBaseMap:get(key: recvType, default: '') == 'Map';
+			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' && !floorMapRecv }, {
 				local IrStruct is rst: :mod:findStruct(name: recvStruct);
 				local String is vkey: if({ call:overloadIndex > 0 }, { nm . '_' . ((call:overloadIndex + 1) as String) }, { nm });
 				vslot: rst:vtableSlot(mname: vkey);

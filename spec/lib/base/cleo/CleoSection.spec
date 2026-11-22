@@ -129,7 +129,7 @@ Class is CleoSection{
 
 	Function is updateText(Int is index, String is text, String is rightText: ''){
 		if({ !:slotMap:has(key: index) }, { return; });
-		local CleoSlot is s: :slotMap:get(key: index);
+		local CleoSlot is s: :slotMap:get(key: index, default: CleoSlot:init(id: 0, kind: 0));
 		s:text: text;
 		if({ rightText != '' }, { s:rightText: rightText; });
 		:markDirty();
@@ -137,14 +137,14 @@ Class is CleoSection{
 
 	Function is setColor(Int is index, CleoColor is color){
 		if({ !:slotMap:has(key: index) }, { return; });
-		local CleoSlot is s: :slotMap:get(key: index);
+		local CleoSlot is s: :slotMap:get(key: index, default: CleoSlot:init(id: 0, kind: 0));
 		s:fgColor: color;
 		:markDirty();
 	}
 
 	Function is resolveSlot(Int is index, String is badge, String is text, CleoColor is color: CleoColor:default(), String is rightText: ''){
 		if({ !:slotMap:has(key: index) }, { return; });
-		local CleoSlot is s: :slotMap:get(key: index);
+		local CleoSlot is s: :slotMap:get(key: index, default: CleoSlot:init(id: 0, kind: 0));
 		s:queued: false;
 		s:resolved: true;
 		s:badge: badge;
@@ -185,7 +185,7 @@ Class is CleoSection{
 
 	Function is reopenThrobber(Int is index, String is text, CleoColor is color: CleoColor:default(), String is rightText: ''){
 		if({ !:slotMap:has(key: index) }, { return; });
-		local CleoSlot is s: :slotMap:get(key: index);
+		local CleoSlot is s: :slotMap:get(key: index, default: CleoSlot:init(id: 0, kind: 0));
 		s:queued: false;
 		s:resolved: false;
 		s:badge: '';
@@ -197,7 +197,7 @@ Class is CleoSection{
 
 	Function is updateProgress(Int is index, String is text, Float is stage1, Float is stage2, String is rightText: ''){
 		if({ !:slotMap:has(key: index) }, { return; });
-		local CleoSlot is s: :slotMap:get(key: index);
+		local CleoSlot is s: :slotMap:get(key: index, default: CleoSlot:init(id: 0, kind: 0));
 		s:text: text;
 		s:stage1: stage1;
 		s:stage2: stage2;
@@ -207,7 +207,7 @@ Class is CleoSection{
 
 	Function is updateImage(Int is index, CleoImage is image){
 		if({ !:slotMap:has(key: index) }, { return; });
-		local CleoSlot is s: :slotMap:get(key: index);
+		local CleoSlot is s: :slotMap:get(key: index, default: CleoSlot:init(id: 0, kind: 0));
 		s:hasImage: true;
 		s:image: image;
 		:markDirty();

@@ -205,7 +205,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		local String is dom: :floorDomain(b: b, call: call);
 		if({ dom == '' }, { return false; });
 		if({ call:name == 'init' }, { return true; });
-		local ClassInfo is cls: b:sysinternalClasses:get(key: dom);
+		local ClassInfo is cls: b:sysinternalClasses:get(key: dom, default: ClassInfo:init(name: '', baseClass: '', members: []));
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
@@ -220,7 +220,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, { return 'null'; });
 		local String is dom: :floorDomain(b: b, call: call);
-		local ClassInfo is cls: b:sysinternalClasses:get(key: dom);
+		local ClassInfo is cls: b:sysinternalClasses:get(key: dom, default: ClassInfo:init(name: '', baseClass: '', members: []));
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);

@@ -349,8 +349,8 @@ Class of SpecOptimizer is ConcatFusionPass{
 									local Boolean is fuseRight: a1 != a0 && isRoot:get(key: a1, default: false) && uses:get(key: a1, default: 0) == 1 && calleeMap:get(key: a1, default: '') == callee;
 
 									if({ fuseLeft }, {
-										local Array of String is lp: partsMap:get(key: a0);
-										local Array of Int is lc: callsMap:get(key: a0);
+										local Array of String is lp: partsMap:get(key: a0, default: []);
+										local Array of Int is lc: callsMap:get(key: a0, default: []);
 										local Int is li: 0;
 										while({ li < lp:length() }, { parts:add(item: lp:get(index: li)); li++; });
 										li: 0;
@@ -361,8 +361,8 @@ Class of SpecOptimizer is ConcatFusionPass{
 									});
 
 									if({ fuseRight }, {
-										local Array of String is rp: partsMap:get(key: a1);
-										local Array of Int is rc: callsMap:get(key: a1);
+										local Array of String is rp: partsMap:get(key: a1, default: []);
+										local Array of Int is rc: callsMap:get(key: a1, default: []);
 										local Int is ri: 0;
 										while({ ri < rp:length() }, { parts:add(item: rp:get(index: ri)); ri++; });
 										ri: 0;
@@ -392,7 +392,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 					while({ ri < rootOrder:length() }, {
 						local String is rDst: rootOrder:get(index: ri);
 						if({ isRoot:get(key: rDst, default: false) }, {
-							local Array of Int is cIdxs: callsMap:get(key: rDst);
+							local Array of Int is cIdxs: callsMap:get(key: rDst, default: []);
 							if({ cIdxs:length() >= 2 }, {
 								local Int is ci: 0;
 								while({ ci < cIdxs:length() - 1 }, {
@@ -400,7 +400,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 									ci++;
 								});
 								local Int is lastIdx: cIdxs:get(index: cIdxs:length() - 1);
-								local Array of String is rParts: partsMap:get(key: rDst);
+								local Array of String is rParts: partsMap:get(key: rDst, default: []);
 								replaceMap:set(key: lastIdx, value: rParts);
 								replaceDstMap:set(key: lastIdx, value: rDst);
 								local Int is k: rParts:length();
@@ -419,8 +419,8 @@ Class of SpecOptimizer is ConcatFusionPass{
 						while({ ii < blk:insts:length() }, {
 							if({ !deleteSet:get(key: ii, default: false) }, {
 								if({ replaceMap:has(key: ii) }, {
-									local Array of String is rParts: replaceMap:get(key: ii);
-									local String is rDst: replaceDstMap:get(key: ii);
+									local Array of String is rParts: replaceMap:get(key: ii, default: []);
+									local String is rDst: replaceDstMap:get(key: ii, default: '');
 									local Array of IrType is rTys: [];
 									local Int is ti: 0;
 									while({ ti < rParts:length() }, {

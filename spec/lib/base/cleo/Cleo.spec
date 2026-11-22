@@ -314,7 +314,7 @@ Class is Cleo{
 		local BorderGlyphs is og: BorderGlyphs:forStyle(style: :outerBorder);
 		local String is bc: :borderColor:fgSeq();
 		local String is brst: if({ :borderColor:isSet() }, { Ansi:reset() }, { '' });
-		local CleoSlot is slot: section:slotMap:get(key: slotId);
+		local CleoSlot is slot: section:slotMap:get(key: slotId, default: CleoSlot:init(id: 0, kind: 0));
 		local Array of String is rows: slot:renderInnerLines(innerW: innerW, secFg: section:fgColor, secBg: section:bgColor, tick: :tickCount);
 		local Int is ri: 0;
 		while({ ri < rows:length() }, {
