@@ -882,7 +882,7 @@ Class is IrBuilder{
 	}
 
 	local Function is emitPoolEnter(){
-		if({ :isUnmanagedClass || (:currentClass == 'Vector' && :currentMethod != 'mapKeys') }, {
+		if({ :isUnmanagedClass }, {
 			:curPoolMark: '';
 			return;
 		});

@@ -560,7 +560,6 @@ Class is Loader{
 			'Array',
 			'Map',
 			'Buf',
-			'Vector',
 			'Dir',
 			'CliArgs',
 			'Arc',

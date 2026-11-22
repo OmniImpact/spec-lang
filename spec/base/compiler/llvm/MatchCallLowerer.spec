@@ -222,7 +222,10 @@ Class of CallLowerer is MatchCallLowerer{
 		if({ subjTy == IrType:Ptr && (onExpr:resolvedType == 'String' || k:resolvedType == 'String' || onExpr:resolvedType == 'Str' || k:resolvedType == 'Str') }, {
 			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', subjVal, kVal]));
 		}, {
-			if({ subjTy == IrType:Ptr && kVal == '0' }, { kVal: 'null'; });
+			if({ subjTy == IrType:Ptr && kVal == '0' }, {
+				b:addError(msg: 'Invalid zero/void match key compared against pointer subject in ' . b:currentClass . ':' . b:currentMethod . ' (line ' . (b:currentLine as String) . ').');
+				kVal: 'null';
+			});
 			b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: subjVal, rhs: kVal, ty: subjTy));
 		});
 		return condVal;
