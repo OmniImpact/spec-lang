@@ -3,18 +3,14 @@
 
 ## An associative key-value map.
 ##
-## Runtime-managed: instances are the runtime's
-## SpecMap objects (8-bucket growing hash table); this declaration is the API
-## surface. Values are stored either as refcounted strings or in the any
-## slot, per the value's type; the typed getters read the matching slot.
+## Monomorphized per instantiation (Map__String__Int and friends) over
+## the base:sys:HashTable floor: instances are SpecMap objects whose
+## header carries the key/value storage kinds the instantiation bakes
+## at construction. Methods delegate through the kind-driven raw layer,
+## so one generic body serves every instantiation.
 
 Class is Map of K to V{
 	namespace: ['base', 'struct'];
-
-	## Runtime binding: the implementations for this class's
-	## declaration-only methods live in the runtime floor; the backend
-	## emits no struct, vtable, or constructor for it.
-	binding: true;
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],

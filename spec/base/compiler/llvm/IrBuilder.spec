@@ -166,6 +166,42 @@ Class is IrBuilder{
 		return 3;
 	}
 
+	## Whether [specType] names a Map — the parameterized spelling or a
+	## specialized instantiation of the Map floor.
+	Function of Boolean is isMapRecvType(String is specType){
+		if({ specType == 'Map' || specType:startsWith(prefix: 'Map:') || specType:startsWith(prefix: 'Map of ') }, {
+			return true;
+		});
+		return :specBaseMap:get(key: specType, default: '') == 'Map';
+	}
+
+	## The HashTable variant suffix for a key read or written on
+	## [recvType]. A mangled instantiation resolves from its own key
+	## argument; parameterized spellings fall to the prefix machine and
+	## the key's static type.
+	Function of String is mapKeySuffixFor(String is recvType, String is keySpec){
+		if({ :specBaseMap:get(key: recvType, default: '') == 'Map' && :specClassArgsMap:has(key: recvType) }, {
+			local Array of Type is mArgs: :specClassArgsMap:get(key: recvType, default: []);
+			if({ mArgs:length() >= 1 }, {
+				local Int is kk: :mapKeyKindFor(specType: mArgs:get(index: 0, default: Type:init(name: '')):name);
+				if({ kk == 1 }, { return 'Int'; });
+				if({ kk == 2 }, { return 'Flt'; });
+				if({ kk == 3 }, { return 'Obj'; });
+			});
+			return '';
+		});
+		if({ keySpec == 'Int' || keySpec == 'Boolean' || recvType:startsWith(prefix: 'Map of Int to ') || recvType:startsWith(prefix: 'Map:Int:') || recvType:startsWith(prefix: 'Map of Boolean to ') || recvType:startsWith(prefix: 'Map:Boolean:') }, { return 'Int'; });
+		if({ keySpec == 'Float' || recvType:startsWith(prefix: 'Map of Float to ') || recvType:startsWith(prefix: 'Map:Float:') }, { return 'Flt'; });
+		if({ keySpec != 'String' && keySpec != 'Any' && recvType != 'Map' && !recvType:startsWith(prefix: 'Map of String to ') && !recvType:startsWith(prefix: 'Map:String:') && !recvType:startsWith(prefix: 'Map of Any to ') && !recvType:startsWith(prefix: 'Map:Any:') }, { return 'Obj'; });
+		return '';
+	}
+
+	Function of IrType is mapKeyIrTypeFor(String is kSuf){
+		if({ kSuf == 'Int' }, { return IrType:I64; });
+		if({ kSuf == 'Flt' }, { return IrType:F64; });
+		return IrType:Ptr;
+	}
+
 	Function of Boolean is hasMethodBodies(ClassInfo is cls){
 		local Int is i: 0;
 		while({ i < cls:members:length() }, {
@@ -3589,24 +3625,10 @@ Class is IrBuilder{
 						local String is tv: :lowerExpr(expr: target);
 						local String is iv: :lowerExpr(expr: index);
 						local String is tType: target:resolvedType;
-						if({ tType == 'Map' || tType:startsWith(prefix: 'Map:') || tType:startsWith(prefix: 'Map of ') }, {
-							local String is kSpec: index:resolvedType;
-							local String is kSuf: '';
-							local IrType is kArgTy: IrType:Ptr;
-							if({ kSpec == 'Int' || kSpec == 'Boolean' || tType:startsWith(prefix: 'Map of Int to ') || tType:startsWith(prefix: 'Map:Int:') || tType:startsWith(prefix: 'Map of Boolean to ') || tType:startsWith(prefix: 'Map:Boolean:') }, {
-								kSuf: 'Int';
-								kArgTy: IrType:I64;
-							}, {
-								if({ kSpec == 'Float' || tType:startsWith(prefix: 'Map of Float to ') || tType:startsWith(prefix: 'Map:Float:') }, {
-									kSuf: 'Flt';
-									kArgTy: IrType:F64;
-								}, {
-									if({ kSpec != 'String' && kSpec != 'Any' && tType != 'Map' && !tType:startsWith(prefix: 'Map of String to ') && !tType:startsWith(prefix: 'Map:String:') && !tType:startsWith(prefix: 'Map of Any to ') }, {
-										kSuf: 'Obj';
-									});
-								});
-							});
-							local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: kSpec), toTy: kArgTy);
+						if({ :isMapRecvType(specType: tType) }, {
+							local String is kSuf: :mapKeySuffixFor(recvType: tType, keySpec: index:resolvedType);
+							local IrType is kArgTy: :mapKeyIrTypeFor(kSuf: kSuf);
+							local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: kArgTy);
 							local String is vp: :castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
 							local String is setCallee: 'HashTable_mapSet' . kSuf . 'Any';
 							if({ assignValue:resolvedType == 'String' }, {
@@ -4570,25 +4592,10 @@ Class is IrBuilder{
 				local String is tv: :lowerExpr(expr: target);
 				local String is iv: :lowerExpr(expr: index);
 				local String is raw: :nextTmp();
-				if({ target:resolvedType == 'Map' || target:resolvedType:startsWith(prefix: 'Map:') || target:resolvedType:startsWith(prefix: 'Map of ') }, {
-					local String is kSpec: index:resolvedType;
-					local String is tType: target:resolvedType;
-					local String is kSuf: '';
-					local IrType is kArgTy: IrType:Ptr;
-					if({ kSpec == 'Int' || kSpec == 'Boolean' || tType:startsWith(prefix: 'Map of Int to ') || tType:startsWith(prefix: 'Map:Int:') || tType:startsWith(prefix: 'Map of Boolean to ') || tType:startsWith(prefix: 'Map:Boolean:') }, {
-						kSuf: 'Int';
-						kArgTy: IrType:I64;
-					}, {
-						if({ kSpec == 'Float' || tType:startsWith(prefix: 'Map of Float to ') || tType:startsWith(prefix: 'Map:Float:') }, {
-							kSuf: 'Flt';
-							kArgTy: IrType:F64;
-						}, {
-							if({ kSpec != 'String' && kSpec != 'Any' && tType != 'Map' && !tType:startsWith(prefix: 'Map of String to ') && !tType:startsWith(prefix: 'Map:String:') && !tType:startsWith(prefix: 'Map of Any to ') }, {
-								kSuf: 'Obj';
-							});
-						});
-					});
-					local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: kSpec), toTy: kArgTy);
+				if({ :isMapRecvType(specType: target:resolvedType) }, {
+					local String is kSuf: :mapKeySuffixFor(recvType: target:resolvedType, keySpec: index:resolvedType);
+					local IrType is kArgTy: :mapKeyIrTypeFor(kSuf: kSuf);
+					local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: kArgTy);
 					local String is mDef: 'null';
 					if({ expr:resolvedType == 'String' || expr:resolvedType == '' }, {
 						mDef: :nextTmp();

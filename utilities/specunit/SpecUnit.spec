@@ -921,7 +921,9 @@ Class is SpecUnit{
 			local String is note: if(check: { cStatus == 124 || cStatus == 137 }, then: { 'compilation timed out after ' . (timeoutSec as String) . 's (killed)'; }, else: { 'compilation failed: ' . :firstLine(text: diag); });
 			SpecTestRegistry:addResult(name: item:path, passed: false, note: note, report: diag, expectedTests: item:expectedTests, tPassed: 0, tFailed: item:expectedTests);
 			fileRemove(path: compileOut);
-			fileRemove(path: bin);
+			if(check: { File:fileExists(path: bin) }, then: {
+				fileRemove(path: bin);
+			});
 			SpecTestRegistry:finishCompileOnly();
 			return;
 		});
