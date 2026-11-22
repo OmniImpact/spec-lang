@@ -98,9 +98,8 @@ Class is Socket{
 	## (`SpecError of NetError`).
 	## @return: Number of bytes sent, or -1 on error.
 	Function of Int is send(List of Byte is data, Function is onError: local Function(SpecError of NetError is error){ :raiseError(error: error); }){
-		local Int is bAddr: Mem:objToAddr(obj: data);
-		local Int is ptr: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 16) }, { 0 });
-		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 24) }, { 0 });
+		local Int is ptr: data:rawDataAddr();
+		local Int is len: data:length();
 		local Int is n: base:sysinternal:Socket:pal_socket_send(fd: :descriptor, data_addr: ptr, len: len);
 		if({ n < 0 }, {
 			:emitLastError(kind: NetError:IO_ERROR, onError: onError);
@@ -142,16 +141,14 @@ Class is Socket{
 		if({ cap <= 0 }, { cap: 4096; });
 		if({ cap > 1048576 }, { cap: 1048576; });
 		local [Byte] is b;
-		local Int is bAddr: Mem:objToAddr(obj: b);
 		local Int is dataPtr: Mem:alloc(bytes: cap);
-		Mem:storeI64(ptr: bAddr, byteOffset: 16, val: dataPtr);
-		Mem:storeI64(ptr: bAddr, byteOffset: 32, val: cap);
 		local Int is n: base:sysinternal:Socket:pal_socket_recv(fd: :descriptor, dst_addr: dataPtr, max_bytes: cap);
 		if({ n < 0 }, {
+			Mem:free(ptr: dataPtr);
 			:emitLastError(kind: NetError:IO_ERROR, onError: onError);
 			return empty;
 		});
-		Mem:storeI64(ptr: bAddr, byteOffset: 24, val: n);
+		b:adoptRawBuffer(dataPtr: dataPtr, length: n, capacity: cap);
 		return b;
 	}
 

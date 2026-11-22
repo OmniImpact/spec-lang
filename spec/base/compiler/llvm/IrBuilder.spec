@@ -683,7 +683,9 @@ Class is IrBuilder{
 			if({ !seenStructs:has(key: sname) }, {
 				seenStructs:set(key: sname, value: true);
 				local IrStruct is st: IrStruct:init(name: sname);
-				st:qualifiedName: cls:qualifiedName();
+				local String is qnName: cls:qualifiedName();
+				if({ sname == 'List__Byte' }, { qnName: 'ByteBuf'; });
+				st:qualifiedName: qnName;
 				if({ cls:sourceFile != '' }, {
 					local Array of String is srcSegs: cls:sourceFile:split(delimiter: '/');
 					if({ srcSegs:length() > 0 }, {
@@ -3719,19 +3721,32 @@ Class is IrBuilder{
 						});
 					});
 					local Boolean is isByteListVar: varType:name == 'List of Byte' || varType:name == 'List:Byte' || ((varType:name == 'List' || varBase == 'List') && listElem == 'Byte');
-					if({ isByteListVar }, {
-						defVal: :nextTmp();
-						:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newByteBuf', argTypes: [IrType:Ptr], args: ['null']));
-						:emitClaimPool(val: defVal);
-					}, {
-						if({ varType:name == 'List' || varBase == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
-							local String is vecCtor: 'Vector_newVecObject';
-							if({ listElem != '' && !:isArcSpecType(specType: listElem) }, {
-								vecCtor: 'Vector_newVec';
-							});
+					if({ isByteListVar || varType:name == 'List' || varBase == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
+						local String is listStruct: :cStructName(qname: varType:name);
+						if({ :mod:findStruct(name: listStruct):name != '' }, {
 							defVal: :nextTmp();
-							:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [IrType:Ptr], args: ['null']));
+							:emit(inst: IrInst:AllocObj(dst: defVal, structName: listStruct, destroyFn: :destroyFnFor(structName: listStruct)));
+							local String is bmV: :nextTmp();
+							:emit(inst: IrInst:ConstBool(dst: bmV, value: isByteListVar));
+							local String is ekV: :nextTmp();
+							local Int is ekInt: if({ !isByteListVar && (listElem == '' || :isArcSpecType(specType: listElem) || listElem == 'Any') }, { 1 }, { 0 });
+							:emit(inst: IrInst:ConstInt(dst: ekV, value: ekInt));
+							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: listStruct . '_init', argTypes: [IrType:Ptr, IrType:I1, IrType:I64], args: [defVal, bmV, ekV]));
 							:emitClaimPool(val: defVal);
+						}, {
+							if({ isByteListVar }, {
+								defVal: :nextTmp();
+								:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newByteBuf', argTypes: [IrType:Ptr], args: ['null']));
+								:emitClaimPool(val: defVal);
+							}, {
+								local String is vecCtor: 'Vector_newVecObject';
+								if({ listElem != '' && !:isArcSpecType(specType: listElem) }, {
+									vecCtor: 'Vector_newVec';
+								});
+								defVal: :nextTmp();
+								:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [IrType:Ptr], args: ['null']));
+								:emitClaimPool(val: defVal);
+							});
 						});
 					});
 					if({ isBoxed }, {
@@ -4658,6 +4673,44 @@ Class is IrBuilder{
 			},
 			Expression:ArrayLit: local Function(Array of Expression is items){
 				local String is arr: :nextTmp();
+				local String is rtStr: expr:resolvedType;
+				local String is rtBase: :specBaseMap:get(key: rtStr, default: '');
+				local Boolean is isListLit: rtBase == 'List' || rtStr == 'List' || rtStr:startsWith(prefix: 'List of ') || rtStr:startsWith(prefix: 'List:');
+				if({ isListLit }, {
+					local String is listStruct: :cStructName(qname: rtStr);
+					local String is lElemSpec: '';
+					if({ :specClassArgsMap:has(key: rtStr) }, {
+						local Array of Type is lArgs: :specClassArgsMap:get(key: rtStr, default: []);
+						if({ lArgs:length() >= 1 }, {
+							lElemSpec: lArgs:get(index: 0, default: Type:init(name: '')):name;
+						});
+					});
+					local Boolean is isByteLit: lElemSpec == 'Byte' || rtStr == 'List of Byte' || rtStr == 'List:Byte';
+					local Int is lEk: if({ !isByteLit && (lElemSpec == '' || :isArcSpecType(specType: lElemSpec) || lElemSpec == 'Any') }, { 1 }, { 0 });
+					local IrType is lElemIrTy: if({ lElemSpec != '' }, { :irTypeFor(specType: lElemSpec) }, { IrType:Ptr });
+					if({ lElemIrTy == IrType:Void }, { lElemIrTy: IrType:Ptr; });
+					:emit(inst: IrInst:AllocObj(dst: arr, structName: listStruct, destroyFn: :destroyFnFor(structName: listStruct)));
+					local String is lBmV: :nextTmp();
+					:emit(inst: IrInst:ConstBool(dst: lBmV, value: isByteLit));
+					local String is lEkV: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: lEkV, value: lEk));
+					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: listStruct . '_init', argTypes: [IrType:Ptr, IrType:I1, IrType:I64], args: [arr, lBmV, lEkV]));
+					local Int is li: 0;
+					while({ li < items:length() }, {
+						local Expression is lit: items:get(index: li);
+						local String is liv: :lowerExpr(expr: lit);
+						local IrType is lity: :irTypeFor(specType: lit:resolvedType);
+						if({ lity == IrType:Void }, {
+							:addError(msg: 'Cannot store Void expression in List literal in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
+						}, {
+							local String is lArg: :castIfNeeded(val: liv, fromTy: lity, toTy: lElemIrTy);
+							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: listStruct . '_push', argTypes: [IrType:Ptr, lElemIrTy], args: [arr, lArg]));
+						});
+						li++;
+					});
+					:emitClaimPool(val: arr);
+					return arr;
+				});
 				local Array of IrType is emptyT: [];
 				local Array of String is emptyV: [];
 				local Boolean is isObjArr: false;
@@ -4673,8 +4726,6 @@ Class is IrBuilder{
 					if({ allObj }, { isObjArr: true; });
 				}, {
 					local String is elemSpec: '';
-					local String is rtStr: expr:resolvedType;
-					local String is rtBase: :specBaseMap:get(key: rtStr, default: '');
 					if({ (rtBase == 'Array' || rtBase == 'List') && :specClassArgsMap:has(key: rtStr) }, {
 						local Array of Type is aArgs: :specClassArgsMap:get(key: rtStr, default: []);
 						if({ aArgs:length() >= 1 }, {
@@ -5692,7 +5743,7 @@ Class is IrBuilder{
 			# so dispatch is static through the specialization's own method.
 			local String is recvBase: :specBaseMap:get(key: recvStruct, default: '');
 			if({ recvBase == '' }, { recvBase: :specBaseMap:get(key: recvType, default: ''); });
-			local Boolean is floorRecv: recvBase == 'Map' || recvBase == 'Array' || recvBase == 'List';
+			local Boolean is floorRecv: recvBase == 'Map' || recvBase == 'Array';
 			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' && !floorRecv }, {
 				local IrStruct is rst: :mod:findStruct(name: recvStruct);
 				local String is vkey: if({ call:overloadIndex > 0 }, { nm . '_' . ((call:overloadIndex + 1) as String) }, { nm });

@@ -24,15 +24,12 @@ define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline
 define internal i64 @_spec_rt_alloc_kinded(i64 %size, i64 %kind) alwaysinline {
   %is1 = icmp eq i64 %kind, 1
   %is2 = icmp eq i64 %kind, 2
-  %is3 = icmp eq i64 %kind, 3
   %d1 = select i1 %is1, ptr @HashTable_mapDestroy, ptr null
-  %d2 = select i1 %is2, ptr @Vector_vecDestroy, ptr %d1
-  %dp = select i1 %is3, ptr @Vector_byteBufDestroy, ptr %d2
+  %dp = select i1 %is2, ptr @Vector_vecDestroy, ptr %d1
   %da = ptrtoint ptr %dp to i64
   %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)
   %tn1 = select i1 %is1, ptr @.str.tn_map, ptr null
-  %tn2 = select i1 %is2, ptr @.str.tn_arr, ptr %tn1
-  %tnp = select i1 %is3, ptr @.str.tn_bb, ptr %tn2
+  %tnp = select i1 %is2, ptr @.str.tn_arr, ptr %tn1
   %obj = inttoptr i64 %oa to ptr
   store ptr %tnp, ptr %obj, align 8
   ret i64 %oa
