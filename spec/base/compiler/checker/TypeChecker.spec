@@ -3857,8 +3857,8 @@ Class is TypeChecker{
 			], default: {});
 		});
 		local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !:isVoid(t: expected) && bareArg1Anon && bareArg2Anon;
-		local Map of String to String is savedLoopVars;
-		local Map of String to String is savedLoopLazyVars;
+		local Map of String to String is savedLoopVars: Map:init();
+		local Map of String to String is savedLoopLazyVars: Map:init();
 		if({ provider == 'Loops' }, {
 			savedLoopVars: Map:init();
 			local Array of String is lvKeys: :localVars:keys();
@@ -5073,6 +5073,12 @@ Class is TypeChecker{
 							});
 						});
 						:addError(line: stmt:line, msg: msg);
+					});
+				}, {
+					local Boolean is isValuePrim: :isIntLike(t: fullType) || fullType == Primitive:FLOAT:value() || fullType == Primitive:BOOLEAN:value();
+					local Boolean is isAutoInitList: fullType == 'List' || fullType:startsWith(prefix: 'List of ') || fullType:startsWith(prefix: 'List:');
+					if({ !isValuePrim && !isAutoInitList }, {
+						:addError(line: stmt:line, msg: "Local variable '" . varName . "' of type '" . :displayType(t: fullType) . "' must be initialized (Spec does not have null).");
 					});
 				});
 			},

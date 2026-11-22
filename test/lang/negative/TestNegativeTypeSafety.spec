@@ -276,3 +276,11 @@ Class is App{
 		]);
 	}
 }
+
+#! case: testUninitializedObjectLocalRejected
+#! expect: must be initialized (Spec does not have null)
+Class is UninitLocalApp{
+	replace Function is init(Map of String to String is args){
+		local String is s;
+	}
+}

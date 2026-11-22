@@ -34,7 +34,7 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 	## Int local — with the original hazard shape in scope: an unused
 	## Map-typed local named args that the lambda never references.
 	Function is testInitScopeIntCapture(){
-		local Map of String to String is args;
+		local Map of String to String is args: Map:init();
 		local Int is offset: 10;
 		local Function of Int to Int is addOffset: local Function of Int(Int is x){
 			return x + offset;

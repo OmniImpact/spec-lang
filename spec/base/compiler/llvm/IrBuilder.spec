@@ -1479,6 +1479,12 @@ Class is IrBuilder{
 						local String is ptr0: :nextTmp();
 						:emit(inst: IrInst:FieldPtr(dst: ptr0, objPtr: '%self', structName: :currentClass, fieldIndex: fidx0));
 						local String is defVal0: :emitDefaultVal(ty: fty0);
+						if({ m:memberType:name == 'String' || m:memberType:name == 'Str' }, {
+							defVal0: :nextTmp();
+							local Int is esid0: :mod:internStringLiteral(value: '');
+							:emit(inst: IrInst:ConstString(dst: defVal0, strId: esid0));
+							:emit(inst: IrInst:Retain(val: defVal0));
+						});
 						seen:set(key: m:name, value: true);
 						:emit(inst: IrInst:Store(slot: ptr0, val: defVal0, ty: fty0));
 					});
@@ -5981,7 +5987,7 @@ Class is IrBuilder{
 			if({ pty == IrType:Void }, { pty: IrType:Ptr; });
 			local Boolean is found: false;
 			local Int is ai: 0;
-			local NamedArg is matched;
+			local NamedArg is matched: NamedArg:init(name: '', value: Expression:Unknown);
 			while({ ai < callArgs:length() && !found }, {
 				local NamedArg is na: callArgs:get(index: ai);
 				if({ na:name == p:name || (na:name == '' && ai == pi) }, {

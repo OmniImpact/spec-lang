@@ -814,7 +814,7 @@ Class is Parser{
 		});
 
 		# Field
-		local Expression is initExpr;
+		local Expression is initExpr: Expression:Unknown;
 		local Boolean is hasInit: false;
 		if({ :checkPunct(p: Punctuation:ASSIGN) }, {
 			:advance();
