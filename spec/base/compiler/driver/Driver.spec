@@ -79,9 +79,13 @@ Class is Driver{
 		if({ threadsStr == '' }, {
 			threadsStr: args:getString(key: 'j', default: '');
 		});
-		local Int is threadCount: 2;
+		local Int is defaultThreads: Process:threadCount() / 2;
+		if({ defaultThreads < 1 }, {
+			defaultThreads: 1;
+		});
+		local Int is threadCount: defaultThreads;
 		if({ threadsStr != '' }, {
-			threadCount: threadsStr:parseInt(base: 10, default: 2);
+			threadCount: threadsStr:parseInt(base: 10, default: defaultThreads);
 			if({ threadCount < 1 }, {
 				threadCount: 1;
 			});
