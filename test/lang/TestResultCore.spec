@@ -1,4 +1,4 @@
-#! base:core:Result — the result-return transport (ERRORS-PLAN.md 2.1).
+#! base:core:Result — the result-return transport (SPECDEV §8).
 #! Generic payload-variant enum `Result of T to E` whose Err variant
 #! carries the full error currency (SpecError of E: kind, description,
 #! stack trace). Covers construction grounding, when-destructuring,

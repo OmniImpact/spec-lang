@@ -1,5 +1,5 @@
 #! specunit: suite
-#! Tests for Error Handling & Unwinding (ERRORS.md):
+#! Tests for Error Handling & Unwinding (SPECDEV §8):
 #! - SpecError and SpecError of T (enum kind, kindName, description, stackTrace)
 #! - Local onError callbacks with typed match(on: err:kind, ...)
 #! - Unwinding across intermediate stack frames with ARC locals to an enclosing SpecErrorHandler

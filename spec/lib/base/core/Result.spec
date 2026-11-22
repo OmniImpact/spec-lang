@@ -1,7 +1,7 @@
 #! Package base:core
 #! The result-return transport: a value or the error that replaced it.
 ##
-## Jurisdiction (ERRORS-PLAN.md): sync operations whose failure is
+## Jurisdiction (SPECDEV §8): sync operations whose failure is
 ## EXPECTED and for which no sensible default exists — parsing,
 ## decoding, lookups that can legitimately miss. "Never Null"
 ## default-parameter APIs remain the convenience face; this is the
