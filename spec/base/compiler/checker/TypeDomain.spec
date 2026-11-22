@@ -144,4 +144,78 @@ Class is TypeDomain{
 		if({ elem == '' }, { return 'Flow'; });
 		return ('Flow:' . elem):intern();
 	}
+
+	## --- Structured Type-node twins (zero string-prefix slicing) ---
+
+	Function of String is baseNameOf(Type is t){
+		return t:name;
+	}
+
+	Function of Boolean is isOfBaseNode(Type is t, Str is base){
+		return t:name == base;
+	}
+
+	Function of Boolean is isParameterizedNode(Type is t, Str is base){
+		return t:name == base && t:params:length() > 0;
+	}
+
+	Function of Boolean is isContainerNode(Type is t){
+		return t:name == 'Array' || t:name == 'List' || t:name == 'Map';
+	}
+
+	Function of Boolean is isFunctionNode(Type is t){
+		return t:name == 'Function';
+	}
+
+	Function of Boolean is hasFunctionReturnNode(Type is t){
+		return t:name == 'Function' && t:params:length() > 0;
+	}
+
+	Function of Type is functionReturnNode(Type is t){
+		if({ t:name == 'Function' && t:params:length() > 0 }, {
+			return t:params:get(index: 0);
+		});
+		return Type:init(name: '');
+	}
+
+	Function of Type is elemTypeNode(Type is t){
+		if({ t:params:length() >= 1 }, {
+			return t:params:get(index: 0);
+		});
+		return Type:init(name: '');
+	}
+
+	Function of Type is mapKeyTypeNode(Type is t){
+		if({ t:name == 'Map' && t:params:length() >= 1 }, {
+			return t:params:get(index: 0);
+		});
+		return Type:init(name: '');
+	}
+
+	Function of Type is mapValTypeNode(Type is t){
+		if({ t:name == 'Map' && t:params:length() >= 2 }, {
+			return t:params:get(index: 1);
+		});
+		return Type:init(name: '');
+	}
+
+	Function of Type is makeArrayNode(Type is elem){
+		if({ elem:name == '' }, { return Type:init(name: 'Array'); });
+		return Type:init(name: 'Array', params: [elem]);
+	}
+
+	Function of Type is makeMapNode(Type is key, Type is val){
+		if({ key:name == '' || val:name == '' }, { return Type:init(name: 'Map'); });
+		return Type:init(name: 'Map', params: [key, val]);
+	}
+
+	Function of Type is makeFunctionNode(Type is ret){
+		if({ ret:name == '' || ret:name == 'Void' }, { return Type:init(name: 'Function'); });
+		return Type:init(name: 'Function', params: [ret]);
+	}
+
+	Function of Type is makeFlowNode(Type is elem){
+		if({ elem:name == '' }, { return Type:init(name: 'Flow'); });
+		return Type:init(name: 'Flow', params: [elem]);
+	}
 }

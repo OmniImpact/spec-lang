@@ -171,6 +171,16 @@ Class is IrBuilder{
 		return IrType:Ptr;
 	}
 
+	## Structured Type-node twin of irTypeFor: inspects t:name directly.
+	Function of IrType is irTypeForNode(Type is t){
+		return :irTypeFor(specType: t:name);
+	}
+
+	## Structured Type-node twin of isArcSpecType: inspects t:name directly.
+	Function of Boolean is isArcTypeNode(Type is t){
+		return :isArcSpecType(specType: t:name);
+	}
+
 	Function of Boolean is isUnsignedSpecType(String is specType){
 		return specType == 'UInt8' || specType == 'UInt16' || specType == 'UInt32' || specType == 'UInt64';
 	}

@@ -3513,9 +3513,10 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferMapLitExpr(Array of Expression is keys, Array of Expression is values, String is expected){
-		if({ TypeDomain:isOfBase(t: expected, base: 'Map') }, {
-			local String is keyT: TypeDomain:mapKeyType(t: expected);
-			local String is valT: TypeDomain:mapValType(t: expected);
+		local Type is expNode: :parseTypeNode(s: expected);
+		if({ TypeDomain:isOfBaseNode(t: expNode, base: 'Map') }, {
+			local String is keyT: :formatVarTypeString(t: TypeDomain:mapKeyTypeNode(t: expNode));
+			local String is valT: :formatVarTypeString(t: TypeDomain:mapValTypeNode(t: expNode));
 			keys:each(action: local Function(Expression is k){
 				local String is kT: :inferExpressionType(expr: k);
 				if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !:isAssignable(target: keyT, source: kT) }, {
