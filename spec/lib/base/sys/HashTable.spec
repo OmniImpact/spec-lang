@@ -269,6 +269,67 @@ Class is HashTable{
 		return def;
 	}
 
+	local Function of Any is mapGetCheckedRaw(Int is mAddr, Int is keyBits){
+		if({ mAddr == 0 }, {
+			Mem:panic(msg: 'Map key not found');
+			return Mem:addrToObj(addr: 0);
+		});
+		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24);
+		if({ keyKind == 0 && keyBits == 0 }, {
+			Mem:panic(msg: 'Map key not found');
+			return Mem:addrToObj(addr: 0);
+		});
+		local Boolean is isFrozen: Mem:loadByte(ptr: mAddr, byteOffset: 32) != 0;
+		if({ !isFrozen }, { :mapLock(addr: mAddr); });
+		local Int is nb: Mem:loadI64(ptr: mAddr, byteOffset: 8);
+		local Int is buckets: Mem:loadI64(ptr: mAddr, byteOffset: 0);
+		local Int is idx: if({ keyKind == 0 }, {
+			:mapHashString(strAddr: keyBits, nbuckets: nb)
+		}, {
+			:mapHashBits(k: keyBits, nbuckets: nb)
+		});
+		local Int is curr: Mem:loadI64(ptr: buckets, byteOffset: idx * 8);
+		while({ curr != 0 }, {
+			local Int is cKey: Mem:loadI64(ptr: curr, byteOffset: 0);
+			local Boolean is matched: if({ keyKind == 0 }, {
+				:mapStrKeyEquals(aAddr: cKey, bAddr: keyBits)
+			}, {
+				cKey == keyBits
+			});
+			if({ matched }, {
+				local Int is valBits: Mem:loadI64(ptr: curr, byteOffset: 8);
+				local Int is isArc: Mem:loadByte(ptr: curr, byteOffset: 16);
+				local Int is valKind: Mem:loadI32(ptr: mAddr, byteOffset: 28);
+				if({ (isArc != 0 || valKind == 1) && valBits != 0 }, {
+					Mem:retainAddr(objAddr: valBits);
+					Mem:claimPoolAddr(objAddr: valBits);
+				});
+				if({ !isFrozen }, { :mapUnlock(addr: mAddr); });
+				return Mem:addrToObj(addr: valBits);
+			});
+			curr: Mem:loadI64(ptr: curr, byteOffset: 24);
+		});
+		if({ !isFrozen }, { :mapUnlock(addr: mAddr); });
+		Mem:panic(msg: 'Map key not found');
+		return Mem:addrToObj(addr: 0);
+	}
+
+	Function of Any is mapGetChecked(Any is m, String is key){
+		return :mapGetCheckedRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
+	}
+
+	Function of Any is mapGetIntChecked(Any is m, Int is key){
+		return :mapGetCheckedRaw(mAddr: Mem:objToAddr(obj: m), keyBits: key);
+	}
+
+	Function of Any is mapGetFltChecked(Any is m, Float is key){
+		return :mapGetCheckedRaw(mAddr: Mem:objToAddr(obj: m), keyBits: :mapFloatToBits(k: key));
+	}
+
+	Function of Any is mapGetObjChecked(Any is m, Any is key){
+		return :mapGetCheckedRaw(mAddr: Mem:objToAddr(obj: m), keyBits: Mem:objToAddr(obj: key));
+	}
+
 	local Function of Boolean is mapHasRaw(Int is mAddr, Int is keyBits){
 		if({ mAddr == 0 }, { return false; });
 		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24);

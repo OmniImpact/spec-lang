@@ -57,9 +57,9 @@ Class is Array of T{
 		Vector:vecSetAt(v: :, idx: index, item: item);
 	}
 
-	## Removes and returns the last element in the array.
+	## Removes and returns the last element in the array (panics if empty).
 	Function of T is pop(){
-		return Vector:vecPopLast(v: :, def: 0);
+		return Vector:vecPopChecked(v: :);
 	}
 
 	## Removes and returns the last element in the array.
@@ -71,9 +71,9 @@ Class is Array of T{
 		return Vector:vecPopLast(v: :, def: default);
 	}
 
-	## Removes and returns the element at [index], shifting trailing elements.
+	## Removes and returns the element at [index], panicking if out of bounds.
 	Function of T is removeAt(Int is index){
-		return Vector:vecRemoveAt(v: :, idx: index, def: 0);
+		return Vector:vecRemoveAtChecked(v: :, idx: index);
 	}
 
 	## Removes and returns the element at [index], shifting trailing elements.

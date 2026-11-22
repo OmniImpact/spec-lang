@@ -347,6 +347,69 @@ Class is Vector{
 		:unlockVec(addr: oAddr);
 	}
 
+	## Removes and returns the last element of [v], panicking when empty.
+	Function of Any is vecPopChecked(Any is v){
+		local Int is addr: Mem:objToAddr(obj: v);
+		if({ addr == 0 }, {
+			Mem:panic(msg: 'Array pop on empty array');
+			return Mem:addrToObj(addr: 0);
+		});
+		if({ Mem:loadByte(ptr: addr, byteOffset: 28) != 0 }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return Mem:addrToObj(addr: 0);
+		});
+		:lockVec(addr: addr);
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len == 0 }, {
+			:unlockVec(addr: addr);
+			Mem:panic(msg: 'Array pop on empty array');
+			return Mem:addrToObj(addr: 0);
+		});
+		local Int is newLen: len - 1;
+		Mem:storeI64(ptr: addr, byteOffset: 8, val: newLen);
+		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is valAddr: Mem:loadI64(ptr: items, byteOffset: newLen * 8);
+		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 24);
+		if({ kind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		:unlockVec(addr: addr);
+		return Mem:addrToObj(addr: valAddr);
+	}
+
+	## Removes and returns the element at [idx] from [v], panicking if out of bounds.
+	Function of Any is vecRemoveAtChecked(Any is v, Int is idx){
+		local Int is addr: Mem:objToAddr(obj: v);
+		if({ addr == 0 }, {
+			Mem:panic(msg: 'Array index out of bounds');
+			return Mem:addrToObj(addr: 0);
+		});
+		if({ Mem:loadByte(ptr: addr, byteOffset: 28) != 0 }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return Mem:addrToObj(addr: 0);
+		});
+		:lockVec(addr: addr);
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ idx < 0 || idx >= len }, {
+			:unlockVec(addr: addr);
+			Mem:panic(msg: 'Array index out of bounds: index ' . (idx as String) . ' for length ' . (len as String));
+			return Mem:addrToObj(addr: 0);
+		});
+		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is valAddr: Mem:loadI64(ptr: items, byteOffset: idx * 8);
+		local Int is tailCount: len - idx - 1;
+		if({ tailCount > 0 }, {
+			Mem:move(dst: items + (idx * 8), src: items + ((idx + 1) * 8), bytes: tailCount * 8);
+		});
+		Mem:storeI64(ptr: addr, byteOffset: 8, val: len - 1);
+		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 24);
+		if({ kind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		:unlockVec(addr: addr);
+		return Mem:addrToObj(addr: valAddr);
+	}
+
 	## Removes and returns the last element of [v], or [def] when empty.
 	Function of Any is vecPopLast(Any is v, Any is def){
 		local Int is addr: Mem:objToAddr(obj: v);

@@ -4720,6 +4720,7 @@ Class is IrBuilder{
 					local IrType is ity: :irTypeFor(specType: it:resolvedType);
 					local String is ip: iv;
 					if({ ity == IrType:Void }, {
+						:addError(msg: 'Cannot store Void expression in Array literal in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
 						ip: 'null';
 					}, {
 						if({ ity != IrType:Ptr }, {
@@ -4885,13 +4886,17 @@ Class is IrBuilder{
 					local String is kSuf: :mapKeySuffixFor(recvType: target:resolvedType, keySpec: index:resolvedType);
 					local IrType is kArgTy: :mapKeyIrTypeFor(kSuf: kSuf);
 					local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: kArgTy);
-					local String is mDef: 'null';
-					if({ expr:resolvedType == 'String' || expr:resolvedType == '' }, {
-						mDef: :nextTmp();
-						local Int is esid: :mod:internStringLiteral(value: '');
-						:emit(inst: IrInst:ConstString(dst: mDef, strId: esid));
+					if({ expr:resolvedType != 'String' && expr:resolvedType != '' && :isArcSpecType(specType: expr:resolvedType) }, {
+						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet' . kSuf . 'Checked', argTypes: [IrType:Ptr, IrType:Ptr, kArgTy], args: ['null', tv, kp]));
+					}, {
+						local String is mDef: 'null';
+						if({ expr:resolvedType == 'String' || expr:resolvedType == '' }, {
+							mDef: :nextTmp();
+							local Int is esid: :mod:internStringLiteral(value: '');
+							:emit(inst: IrInst:ConstString(dst: mDef, strId: esid));
+						});
+						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, mDef]));
 					});
-					:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, mDef]));
 				}, {
 					local Array of IrType is gT: [IrType:Ptr, IrType:Ptr, IrType:I64];
 					local Array of String is gV: ['null', tv, iv];
@@ -4912,6 +4917,7 @@ Class is IrBuilder{
 				return :lowerCall(expr: expr, call: call);
 			}
 		], default: {
+			:addError(msg: 'Unhandled expression node in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
 			if({ :irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
 				return 'null';
 			});
