@@ -30,6 +30,7 @@ Class is Map of K to V{
 	## @return: Mapped value, or [default].
 	## @fallback: Returns [default] when [key] does not exist in the map.
 	Function of V is get(K is key, V is default){
+		return HashTable:mapGetObj(m: :, key: key, def: default);
 	}
 
 	## Looks up a string value by key, returning [default] if not found.
@@ -39,6 +40,7 @@ Class is Map of K to V{
 	## @return: Mapped value, or [default].
 	## @fallback: Returns [default] when [key] does not exist in the map.
 	Function of String is getString(K is key, String is default){
+		return HashTable:mapGetObj(m: :, key: key, def: default) as String;
 	}
 
 	## Looks up an integer value by key, returning [default] if not found.
@@ -60,6 +62,7 @@ Class is Map of K to V{
 	## @param default: Fallback float returned if key is absent.
 	## @return: Mapped value, or [default].
 	Function of Float is getFloat(K is key, Float is default){
+		return HashTable:mapGetObj(m: :, key: key, def: default) as Float;
 	}
 
 	## Looks up a boolean value by key, returning [default] if not found.
@@ -81,6 +84,7 @@ Class is Map of K to V{
 	## @param key: Entry key.
 	## @param value: Entry value.
 	Function is set(K is key, V is value){
+		HashTable:mapSetObjAny(m: :, key: key, val: value);
 	}
 
 	## Determines whether an entry exists for the specified key.
@@ -88,6 +92,7 @@ Class is Map of K to V{
 	## @param key: Key to test.
 	## @return: `true` if key is present, `false` otherwise.
 	Function of Boolean is has(K is key){
+		return HashTable:mapHasObj(m: :, key: key);
 	}
 
 	## Removes the entry associated with [key].
@@ -95,24 +100,34 @@ Class is Map of K to V{
 	## @param key: Key to remove.
 	## @return: `true` if removed, `false` if key was not present.
 	Function of Boolean is remove(K is key){
+		return HashTable:mapRemoveObj(m: :, key: key);
 	}
 
 	## Returns an array containing all keys currently present in the map.
 	##
 	## @return: [Array] of keys.
 	Function of Array of K is keys(){
+		return HashTable:mapKeys(m: :);
 	}
 
 	## Returns the total number of entries in the map.
 	##
 	## @return: Entry count.
 	Function of Int is length(){
+		return HashTable:mapLength(m: :);
 	}
 
 	## Iterates through each key-value pair, invoking [action] with (key, value).
 	##
 	## @param action: Function invoked with (key, value) for each entry.
 	Function is each(Function is action){
+		local Array is ks: HashTable:mapKeys(m: :);
+		local Int is i: 0;
+		while({ i < ks:length() }, {
+			local K is k: ks:get(index: i, default: 0) as K;
+			action(k, HashTable:mapGetObj(m: :, key: k, def: 0));
+			i: i + 1;
+		});
 	}
 
 	## Returns whether the map contains zero entries.
