@@ -56,12 +56,13 @@ Class is CleoSection{
 		return sid;
 	}
 
-	Function of Int is addLine(String is text, CleoColor is color: CleoColor:default(), String is rightText: '', Boolean is bold: false){
+	Function of Int is addLine(String is text, CleoColor is color: CleoColor:default(), String is rightText: '', Boolean is bold: false, Boolean is wrap: false){
 		local CleoSlot is s: CleoSlot:init(id: 0, kind: 0);
 		s:text: text;
 		s:rightText: rightText;
 		s:fgColor: color;
 		s:bold: bold;
+		s:wrap: wrap;
 		local Int is sid: :allocSlot(slot: s);
 		if({ :directRef:get(index: 0, default: false) && :directStartedRef:get(index: 0, default: false) && :hasDirectEmitCb }, {
 			Parallel:syncWith(lock: 77, action: {

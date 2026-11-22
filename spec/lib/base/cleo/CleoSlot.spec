@@ -23,6 +23,9 @@ Class is CleoSlot{
 	CleoColor is fgColor: CleoColor:default();
 	CleoColor is bgColor: CleoColor:default();
 	Boolean is bold: false;
+	# Wrap (never truncate) overlong text at render time — for error
+	# and diagnostic lines where content must not be lost.
+	Boolean is wrap: false;
 
 	# Throbber state
 	Array of String is frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -143,6 +146,15 @@ Class is CleoSlot{
 		local Array of String is out: [];
 		if({ :kind == 0 || :kind == 1 || :kind == 2 }, {
 			local String is pfx: :effectivePrefix(tick: tick, fallbackFg: secFg);
+			if(check: { :wrap && :rightText == '' && pfx == '' }, then: {
+				local Array of String is wrapped: CleoText:wrap(text: :text, maxCols: innerW);
+				local Int is wi: 0;
+				while({ wi < wrapped:length() }, {
+					out:add(item: :styleLine(raw: wrapped:get(index: wi, default: ''), innerW: innerW, secFg: secFg, secBg: secBg));
+					wi++;
+				});
+				return out;
+			});
 			local String is combined: :formatRowWithRight(leftPart: pfx . :text, rightPart: :rightText, innerW: innerW);
 			out:add(item: :styleLine(raw: combined, innerW: innerW, secFg: secFg, secBg: secBg));
 			return out;

@@ -217,10 +217,10 @@ Class is Cleo{
 
 	# --- Convenience slot methods delegating to defaultSection under lock ---
 
-	Function of Int is addLine(String is text, CleoColor is color: CleoColor:default(), String is rightText: '', Boolean is bold: false){
+	Function of Int is addLine(String is text, CleoColor is color: CleoColor:default(), String is rightText: '', Boolean is bold: false, Boolean is wrap: false){
 		local Int is sid: 0;
 		Parallel:syncWith(lock: 77, action: {
-			sid: :defaultSection:addLine(text: text, color: color, rightText: rightText, bold: bold);
+			sid: :defaultSection:addLine(text: text, color: color, rightText: rightText, bold: bold, wrap: wrap);
 		});
 		if({ :running }, { :flush(); });
 		return sid;
