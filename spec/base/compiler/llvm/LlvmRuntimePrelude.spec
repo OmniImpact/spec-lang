@@ -791,6 +791,7 @@ ok:
 }
 @.str.tn_map = private unnamed_addr constant [4 x i8] c"Map\00"
 @.str.tn_arr = private unnamed_addr constant [6 x i8] c"Array\00"
+@.str.tn_bb = private unnamed_addr constant [8 x i8] c"ByteBuf\00"
 @.str.tn_str = private unnamed_addr constant [7 x i8] c"String\00"
 @.str.bool_true = private unnamed_addr constant [5 x i8] c"true\00"
 @.str.bool_false = private unnamed_addr constant [6 x i8] c"false\00"
@@ -817,10 +818,16 @@ ret_map:
   ret ptr %sm
 chk_arr:
   %isarr = icmp eq ptr %d, @Vector_vecDestroy
-  br i1 %isarr, label %ret_arr, label %chk_str
+  br i1 %isarr, label %ret_arr, label %chk_bb
 ret_arr:
   %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)
   ret ptr %sa
+chk_bb:
+  %isbb = icmp eq ptr %d, @Vector_byteBufDestroy
+  br i1 %isbb, label %ret_bb, label %chk_str
+ret_bb:
+  %sbb = call ptr @spec_string_intern(ptr @.str.tn_bb)
+  ret ptr %sbb
 chk_str:
   %isstr = icmp eq ptr %d, @spec_buf_destroy
   br i1 %isstr, label %ret_str, label %ret_cls

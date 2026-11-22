@@ -62,6 +62,53 @@ Class is Vector{
 		return Mem:addrToObj(addr: bAddr);
 	}
 
+	local Function of Boolean is isByteBuf(Any is v){
+		return Mem:typeNameOf(obj: v) == 'ByteBuf';
+	}
+
+	Function of Int is listLength(Any is v){
+		if({ :isByteBuf(v: v) }, { return :byteBufLength(b: v); });
+		return :vecLength(v: v);
+	}
+
+	Function is listClear(Any is v){
+		if({ :isByteBuf(v: v) }, {
+			:byteBufClear(b: v);
+		}, {
+			:vecClear(v: v);
+		});
+	}
+
+	Function is listPush(Any is v, Any is item){
+		if({ :isByteBuf(v: v) }, {
+			:byteBufPush(b: v, v: Mem:objToAddr(obj: item));
+		}, {
+			:vecAdd(v: v, item: item);
+		});
+	}
+
+	Function of Any is listGet(Any is v, Int is idx, Any is def, Function is error){
+		if({ :isByteBuf(v: v) }, {
+			return Mem:addrToObj(addr: :byteBufGet(b: v, idx: idx, def: Mem:objToAddr(obj: def), error: error));
+		});
+		return :vecGet(v: v, idx: idx, def: def, error: error);
+	}
+
+	Function is listSet(Any is v, Int is idx, Any is item, Function is error){
+		if({ :isByteBuf(v: v) }, {
+			:byteBufSet(b: v, idx: idx, v: Mem:objToAddr(obj: item), error: error);
+		}, {
+			:vecSet(v: v, idx: idx, item: item, error: error);
+		});
+	}
+
+	Function of Any is listPop(Any is v, Any is def, Function is error){
+		if({ :isByteBuf(v: v) }, {
+			return Mem:addrToObj(addr: :byteBufPop(b: v, def: Mem:objToAddr(obj: def), error: error));
+		});
+		return :vecPop(v: v, def: def, error: error);
+	}
+
 	## Destroys this vector, releasing any ARC elements and freeing its backing array.
 	Function is vecDestroy(){
 		local Int is addr: Mem:objToAddr(obj: :);

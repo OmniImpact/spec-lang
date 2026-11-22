@@ -417,7 +417,7 @@ Class is IrBuilder{
 		if({ :bindings:isSysinternal(cls: cls) }, {
 			return !:hasMethodBodies(cls: cls);
 		});
-		if({ cls:name == 'List' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
+		if({ cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
 		return false;
 	}
 
@@ -3701,13 +3701,20 @@ Class is IrBuilder{
 							});
 						});
 					});
-					local Boolean is isByteListVar: varType:name == 'List of Byte' || varType:name == 'List:Byte' || (varType:name == 'List' && listElem == 'Byte');
+					local String is varBase: :specBaseMap:get(key: varType:name, default: '');
+					if({ listElem == '' && varBase == 'List' && :specClassArgsMap:has(key: varType:name) }, {
+						local Array of Type is lArgs: :specClassArgsMap:get(key: varType:name, default: []);
+						if({ lArgs:length() >= 1 }, {
+							listElem: lArgs:get(index: 0, default: Type:init(name: '')):name;
+						});
+					});
+					local Boolean is isByteListVar: varType:name == 'List of Byte' || varType:name == 'List:Byte' || ((varType:name == 'List' || varBase == 'List') && listElem == 'Byte');
 					if({ isByteListVar }, {
 						defVal: :nextTmp();
 						:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newByteBuf', argTypes: [IrType:Ptr], args: ['null']));
 						:emitClaimPool(val: defVal);
 					}, {
-						if({ varType:name == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
+						if({ varType:name == 'List' || varBase == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
 							local String is vecCtor: 'Vector_newVecObject';
 							if({ listElem != '' && !:isArcSpecType(specType: listElem) }, {
 								vecCtor: 'Vector_newVec';
