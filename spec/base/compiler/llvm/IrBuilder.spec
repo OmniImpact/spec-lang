@@ -4645,16 +4645,32 @@ Class is IrBuilder{
 				local Array of String is emptyV: [];
 				local Boolean is isObjArr: false;
 				if({ items:length() > 0 }, {
-					local Expression is firstItem: items:get(index: 0);
-					if({ :irTypeFor(specType: firstItem:resolvedType) == IrType:Ptr }, { isObjArr: true; });
+					local Boolean is allObj: true;
+					local Int is oi: 0;
+					while({ oi < items:length() && allObj }, {
+						if({ :irTypeFor(specType: items:get(index: oi):resolvedType) != IrType:Ptr }, {
+							allObj: false;
+						});
+						oi++;
+					});
+					if({ allObj }, { isObjArr: true; });
 				}, {
 					local String is elemSpec: '';
-					local Type is arrTn: expr:getResolvedTypeNode();
-					if({ arrTn:params:length() > 0 }, {
-						elemSpec: arrTn:params:get(index: 0):name;
+					local String is rtStr: expr:resolvedType;
+					local String is rtBase: :specBaseMap:get(key: rtStr, default: '');
+					if({ (rtBase == 'Array' || rtBase == 'List') && :specClassArgsMap:has(key: rtStr) }, {
+						local Array of Type is aArgs: :specClassArgsMap:get(key: rtStr, default: []);
+						if({ aArgs:length() >= 1 }, {
+							elemSpec: aArgs:get(index: 0, default: Type:init(name: '')):name;
+						});
 					});
 					if({ elemSpec == '' }, {
-						local String is rtStr: expr:resolvedType;
+						local Type is arrTn: expr:getResolvedTypeNode();
+						if({ arrTn:params:length() > 0 }, {
+							elemSpec: arrTn:params:get(index: 0):name;
+						});
+					});
+					if({ elemSpec == '' }, {
 						if({ rtStr:startsWith(prefix: 'Array of ') && rtStr:length() > 9 }, {
 							elemSpec: rtStr:substring(start: 9, end: rtStr:length());
 						}, {
@@ -5648,12 +5664,14 @@ Class is IrBuilder{
 					recvStruct: :cStructName(qname: :clsQNameMap:get(key: recvType, default: recvType));
 				});
 			});
-			# A Map specialization's instances are floor-built SpecMaps —
-			# their headers carry bucket state, not a typename/vtable pair —
-			# so dispatch is static through the specialization's own
-			# method, never a vtable indirection into the object.
-			local Boolean is floorMapRecv: :specBaseMap:get(key: recvStruct, default: '') == 'Map' || :specBaseMap:get(key: recvType, default: '') == 'Map';
-			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' && !floorMapRecv }, {
+			# A Map/Array/List specialization's instances are floor-built
+			# runtime structs — their headers carry bucket/vector state, not
+			# a typename/vtable pair — so dispatch is static through the
+			# specialization's own method, never a vtable indirection.
+			local String is recvBase: :specBaseMap:get(key: recvStruct, default: '');
+			if({ recvBase == '' }, { recvBase: :specBaseMap:get(key: recvType, default: ''); });
+			local Boolean is floorRecv: recvBase == 'Map' || recvBase == 'Array' || recvBase == 'List';
+			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' && !floorRecv }, {
 				local IrStruct is rst: :mod:findStruct(name: recvStruct);
 				local String is vkey: if({ call:overloadIndex > 0 }, { nm . '_' . ((call:overloadIndex + 1) as String) }, { nm });
 				vslot: rst:vtableSlot(mname: vkey);

@@ -34,6 +34,34 @@ Class is Vector{
 		Mem:atomicStoreI64(addr: addr + 32, val: 0);
 	}
 
+	## Allocates a new primitive-element SpecArray (elem_kind = 0).
+	Function of Any is newVec(){
+		local Int is aAddr: Mem:allocArcKind(bytes: 40, kind: 2);
+		return Mem:addrToObj(addr: aAddr);
+	}
+
+	## Allocates a new ARC-element SpecArray (elem_kind = 1).
+	Function of Any is newVecObject(){
+		local Int is aAddr: Mem:allocArcKind(bytes: 40, kind: 2);
+		Mem:storeI32(ptr: aAddr, byteOffset: 24, val: 1);
+		return Mem:addrToObj(addr: aAddr);
+	}
+
+	## Allocates a new empty SpecArray with the same elem_kind as [v].
+	Function of Any is newVecLike(Any is v){
+		local Int is vAddr: Mem:objToAddr(obj: v);
+		if({ vAddr != 0 && Mem:loadI32(ptr: vAddr, byteOffset: 24) == 1 }, {
+			return :newVecObject();
+		});
+		return :newVec();
+	}
+
+	## Allocates a new compact SpecByteBuffer (24 bytes).
+	Function of Any is newByteBuf(){
+		local Int is bAddr: Mem:allocArcKind(bytes: 24, kind: 3);
+		return Mem:addrToObj(addr: bAddr);
+	}
+
 	## Destroys this vector, releasing any ARC elements and freeing its backing array.
 	Function is vecDestroy(){
 		local Int is addr: Mem:objToAddr(obj: :);
