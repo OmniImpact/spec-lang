@@ -3440,6 +3440,9 @@ Class is TypeChecker{
 			});
 			return target;
 		});
+		if({ :currentClassDef:typeParams:indexOf(search: target, default: -1) >= 0 || :currentMethodTypeParams:has(key: target) }, {
+			return target;
+		});
 		:addError(line: :currentLine, msg: 'Unknown cast target \'' . target . '\'.');
 		return 'Any';
 	}
