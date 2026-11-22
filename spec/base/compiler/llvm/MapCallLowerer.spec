@@ -31,7 +31,7 @@ Class of CallLowerer is MapCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		if({ call:name != 'init' }, { return false; });
+		if({ call:name != 'init' || call:args:length() > 0 }, { return false; });
 		local Boolean is isMapCtor: false;
 		match(on: call:target, when: [
 			Expression:Ident: local Function(String is tn){
@@ -101,22 +101,32 @@ Class of CallLowerer is MapCallLowerer{
 				});
 			});
 		});
-		if({ kk != 0 || vk != 0 }, {
-			if({ kk == 0 && vk == 1 }, {
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: [IrType:Ptr], args: ['null']));
-			}, {
-				local String is kkV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: kkV, value: kk));
-				local String is vkV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: vkV, value: vk));
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', kkV, vkV]));
-			});
+		local String is mapStruct: b:cStructName(qname: resTy);
+		if({ (b:specBaseMap:get(key: resTy, default: '') == 'Map' || resTy == 'Map') && b:mod:findStruct(name: mapStruct):name != '' }, {
+			b:emit(inst: IrInst:AllocObj(dst: dst, structName: mapStruct, destroyFn: b:destroyFnFor(structName: mapStruct)));
+			local String is kkV: b:nextTmp();
+			b:emit(inst: IrInst:ConstInt(dst: kkV, value: kk));
+			local String is vkV: b:nextTmp();
+			b:emit(inst: IrInst:ConstInt(dst: vkV, value: vk));
+			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: mapStruct . '_init', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [dst, kkV, vkV]));
 		}, {
-			local String is kkV0: b:nextTmp();
-			b:emit(inst: IrInst:ConstInt(dst: kkV0, value: 0));
-			local String is vkV0: b:nextTmp();
-			b:emit(inst: IrInst:ConstInt(dst: vkV0, value: 0));
-			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', kkV0, vkV0]));
+			if({ kk != 0 || vk != 0 }, {
+				if({ kk == 0 && vk == 1 }, {
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: [IrType:Ptr], args: ['null']));
+				}, {
+					local String is kkV: b:nextTmp();
+					b:emit(inst: IrInst:ConstInt(dst: kkV, value: kk));
+					local String is vkV: b:nextTmp();
+					b:emit(inst: IrInst:ConstInt(dst: vkV, value: vk));
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', kkV, vkV]));
+				});
+			}, {
+				local String is kkV0: b:nextTmp();
+				b:emit(inst: IrInst:ConstInt(dst: kkV0, value: 0));
+				local String is vkV0: b:nextTmp();
+				b:emit(inst: IrInst:ConstInt(dst: vkV0, value: 0));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', kkV0, vkV0]));
+			});
 		});
 		b:emitClaimPool(val: dst);
 		return dst;

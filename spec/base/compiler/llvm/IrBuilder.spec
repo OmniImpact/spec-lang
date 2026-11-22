@@ -686,6 +686,7 @@ Class is IrBuilder{
 				local String is qnName: cls:qualifiedName();
 				if({ sname == 'List__Byte' }, { qnName: 'ByteBuf'; });
 				if({ sname == 'Array' || :specBaseMap:get(key: sname, default: '') == 'Array' }, { qnName: 'Array'; });
+				if({ sname == 'Map' || :specBaseMap:get(key: sname, default: '') == 'Map' }, { qnName: 'Map'; });
 				st:qualifiedName: qnName;
 				if({ cls:sourceFile != '' }, {
 					local Array of String is srcSegs: cls:sourceFile:split(delimiter: '/');
@@ -4881,22 +4882,32 @@ Class is IrBuilder{
 						});
 					});
 				});
-				if({ mapKk != 0 || mapVk != 0 }, {
-					if({ mapKk == 0 && mapVk == 1 }, {
-						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: [IrType:Ptr], args: ['null']));
-					}, {
-						local String is mkkV: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
-						local String is mvkV: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
-						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV, mvkV]));
-					});
+				local String is mapStruct: :cStructName(qname: resTy);
+				if({ (:specBaseMap:get(key: resTy, default: '') == 'Map' || resTy == 'Map') && :mod:findStruct(name: mapStruct):name != '' }, {
+					:emit(inst: IrInst:AllocObj(dst: mp, structName: mapStruct, destroyFn: :destroyFnFor(structName: mapStruct)));
+					local String is mkkV: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
+					local String is mvkV: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
+					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: mapStruct . '_init', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [mp, mkkV, mvkV]));
 				}, {
-					local String is mkkV0: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: mkkV0, value: 0));
-					local String is mvkV0: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: mvkV0, value: 0));
-					:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV0, mvkV0]));
+					if({ mapKk != 0 || mapVk != 0 }, {
+						if({ mapKk == 0 && mapVk == 1 }, {
+							:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: [IrType:Ptr], args: ['null']));
+						}, {
+							local String is mkkV: :nextTmp();
+							:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
+							local String is mvkV: :nextTmp();
+							:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
+							:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV, mvkV]));
+						});
+					}, {
+						local String is mkkV0: :nextTmp();
+						:emit(inst: IrInst:ConstInt(dst: mkkV0, value: 0));
+						local String is mvkV0: :nextTmp();
+						:emit(inst: IrInst:ConstInt(dst: mvkV0, value: 0));
+						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV0, mvkV0]));
+					});
 				});
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {
@@ -5748,13 +5759,12 @@ Class is IrBuilder{
 					recvStruct: :cStructName(qname: :clsQNameMap:get(key: recvType, default: recvType));
 				});
 			});
-			# A Map/Array/List specialization's instances are floor-allocated
-			# and type-erased across specializations (and never subclassed),
-			# so dispatch is static through the specialization's own method.
+			# Map and Array specializations are final containers (never subclassed),
+			# so dispatch is always static through the specialization's own method.
 			local String is recvBase: :specBaseMap:get(key: recvStruct, default: '');
 			if({ recvBase == '' }, { recvBase: :specBaseMap:get(key: recvType, default: ''); });
-			local Boolean is floorRecv: recvBase == 'Map' || recvBase == 'Array';
-			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' && !floorRecv }, {
+			local Boolean is finalContainerRecv: recvBase == 'Map' || recvBase == 'Array';
+			if({ recvStruct != 'String' && recvStruct != 'Str' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' && !finalContainerRecv }, {
 				local IrStruct is rst: :mod:findStruct(name: recvStruct);
 				local String is vkey: if({ call:overloadIndex > 0 }, { nm . '_' . ((call:overloadIndex + 1) as String) }, { nm });
 				vslot: rst:vtableSlot(mname: vkey);
