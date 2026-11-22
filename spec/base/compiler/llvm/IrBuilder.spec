@@ -1633,7 +1633,12 @@ Class is IrBuilder{
 			local String is iv: :lowerExpr(expr: m:initExpr);
 			:expectedMapKeyType: prevMapK;
 			:expectedMapValType: prevMapV;
-			if({ iv == '' }, { iv: :emitDefaultVal(ty: hty); });
+			if({ iv == '' }, {
+				if({ hty == IrType:Ptr }, {
+					:addError(msg: 'Held field initializer for ' . sname . ':' . m:name . ' lowered to empty value.');
+				});
+				iv: :emitDefaultVal(ty: hty);
+			});
 			if({ hty == IrType:Ptr && iv != 'null' }, {
 				:emit(inst: IrInst:Retain(val: iv));
 			});
@@ -1748,7 +1753,12 @@ Class is IrBuilder{
 		local String is iv: :lowerLazyBodyVal(blkExpr: :getLazyBodyExpr(expr: m:initExpr), expectedTy: fty);
 		:expectedMapKeyType: prevMapK;
 		:expectedMapValType: prevMapV;
-		if({ iv == '' }, { iv: :emitDefaultVal(ty: fty); });
+		if({ iv == '' }, {
+			if({ fty == IrType:Ptr }, {
+				:addError(msg: 'Lazy field initializer for ' . sname . ':' . m:name . ' lowered to empty value.');
+			});
+			iv: :emitDefaultVal(ty: fty);
+		});
 		:curLazyStateResetSlot: '';
 		if({ fIsArc && iv != '' && iv != 'null' }, {
 			:emit(inst: IrInst:Retain(val: iv));
@@ -2164,7 +2174,12 @@ Class is IrBuilder{
 			local String is initVal: :lowerLazyBodyVal(blkExpr: lazyExpr, expectedTy: ty);
 			:expectedMapKeyType: prevMapK;
 			:expectedMapValType: prevMapV;
-			if({ initVal == '' }, { initVal: :emitDefaultVal(ty: ty); });
+			if({ initVal == '' }, {
+				if({ ty == IrType:Ptr }, {
+					:addError(msg: 'Lazy local initializer for \'' . name . '\' in ' . :currentClass . ':' . :currentMethod . ' lowered to empty value.');
+				});
+				initVal: :emitDefaultVal(ty: ty);
+			});
 			:emitStoreLocal(name: name, val: initVal, ty: ty, isArc: isArc);
 			:emit(inst: IrInst:Store(slot: stateSlot, val: twoV, ty: IrType:I64));
 			:lazyLocalStateSlots:set(key: name, value: stateSlot);
@@ -3682,7 +3697,12 @@ Class is IrBuilder{
 						:expectedMapValType: prevMapV;
 						local IrType is initTy: :irTypeFor(specType: initExpr:resolvedType);
 						val: :castIfNeeded(val: val, fromTy: initTy, toTy: vty);
-						if({ val == '' }, { val: :emitDefaultVal(ty: vty); });
+						if({ val == '' }, {
+							if({ vty == IrType:Ptr }, {
+								:addError(msg: 'Variable initializer for \'' . varName . '\' in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ') lowered to empty value.');
+							});
+							val: :emitDefaultVal(ty: vty);
+						});
 						local Boolean is isStrLitInit: false;
 						match(on: initExpr, when: [
 							Expression:StringLit: local Function(String is sv){ isStrLitInit: true; }
@@ -3792,9 +3812,19 @@ Class is IrBuilder{
 							local String is hk: :currentClass . ':' . name;
 							if({ :heldFields:has(key: hk) }, {
 								local String is owner: :heldFields:get(key: hk, default: '');
-								local IrType is hty: :irTypeFor(specType: :heldFieldTypes:get(key: owner . ':' . name, default: ''));
+								local String is hSpecType: :heldFieldTypes:get(key: owner . ':' . name, default: '');
+								local IrType is hty: :irTypeFor(specType: hSpecType);
 								if({ hty == IrType:Void }, { hty: IrType:Ptr; });
-								:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . name, val: val, ty: hty));
+								local String is hcval: :castIfNeeded(val: val, fromTy: valTy, toTy: hty);
+								if({ :isArcSpecType(specType: hSpecType) && hty == IrType:Ptr }, {
+									if({ hcval != '' && hcval != 'null' }, {
+										:emit(inst: IrInst:Retain(val: hcval));
+									});
+									local String is oldHVal: :nextTmp();
+									:emit(inst: IrInst:Load(dst: oldHVal, slot: '@.held_val.' . owner . '.' . name, ty: IrType:Ptr));
+									:emitClaimPool(val: oldHVal);
+								});
+								:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . name, val: hcval, ty: hty));
 								local String is hStateAddr: :nextTmp();
 								:emit(inst: IrInst:IrCast(dst: hStateAddr, val: '@.held_init.' . owner . '.' . name, fromType: IrType:Ptr, toType: IrType:I64));
 								local String is hTwo: :nextTmp();
@@ -3855,9 +3885,19 @@ Class is IrBuilder{
 							local String is seg1: segments:get(index: 1, default: '');
 							if({ segments:length() == 2 && !:localSlots:has(key: seg0) && :heldFields:has(key: seg0 . ':' . seg1) }, {
 								local String is owner: :heldFields:get(key: seg0 . ':' . seg1, default: '');
-								local IrType is hty: :irTypeFor(specType: :heldFieldTypes:get(key: owner . ':' . seg1, default: ''));
+								local String is hpSpecType: :heldFieldTypes:get(key: owner . ':' . seg1, default: '');
+								local IrType is hty: :irTypeFor(specType: hpSpecType);
 								if({ hty == IrType:Void }, { hty: IrType:Ptr; });
-								:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . seg1, val: val, ty: hty));
+								local String is hpcval: :castIfNeeded(val: val, fromTy: valTy, toTy: hty);
+								if({ :isArcSpecType(specType: hpSpecType) && hty == IrType:Ptr }, {
+									if({ hpcval != '' && hpcval != 'null' }, {
+										:emit(inst: IrInst:Retain(val: hpcval));
+									});
+									local String is oldHpVal: :nextTmp();
+									:emit(inst: IrInst:Load(dst: oldHpVal, slot: '@.held_val.' . owner . '.' . seg1, ty: IrType:Ptr));
+									:emitClaimPool(val: oldHpVal);
+								});
+								:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . seg1, val: hpcval, ty: hty));
 								local String is hpStateAddr: :nextTmp();
 								:emit(inst: IrInst:IrCast(dst: hpStateAddr, val: '@.held_init.' . owner . '.' . seg1, fromType: IrType:Ptr, toType: IrType:I64));
 								local String is hpTwo: :nextTmp();
@@ -3922,6 +3962,9 @@ Class is IrBuilder{
 					local IrType is valTy: :irTypeFor(specType: returnExpr:resolvedType);
 					val: :castIfNeeded(val: val, fromTy: valTy, toTy: :curFn:retType);
 					if({ val == '' }, {
+						if({ :curFn:retType == IrType:Ptr }, {
+							:addError(msg: 'Return expression in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ') lowered to empty value.');
+						});
 						val: :emitDefaultVal(ty: :curFn:retType);
 					});
 					if({ val == '0' && :curFn:retType == IrType:Ptr }, {
@@ -4226,6 +4269,7 @@ Class is IrBuilder{
 			}
 		], default: {});
 		if({ slot == '' && localName == '' }, {
+			:addError(msg: 'Unary mutation target could not be resolved in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
 			return :emitDefaultVal(ty: ty);
 		});
 		local String is oldVal: '';
@@ -6053,6 +6097,9 @@ Class is IrBuilder{
 					});
 					aval: :lowerExpr(expr: p:defaultExpr);
 				}, {
+					if({ pty == IrType:Ptr && p:paramType:name != 'Function' }, {
+						:addError(msg: 'Missing required pointer argument \'' . p:name . '\' in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
+					});
 					aval: :emitDefaultVal(ty: pty);
 					aty: pty;
 				});

@@ -26,7 +26,7 @@ Class of Stringable is Class{
 	## Subclasses override with `replace Function is init(){}` to block it.
 	replace Function is init(Map of String to Any is *args){
 		args:keys():each(action: local Function(String is name){
-			local Any is val: args:get(key: name);
+			local Any is val: args:getChecked(key: name);
 			if({ Introspection:hasField(obj: :, name: name) }, {
 				local String is expected: Introspection:fieldType(obj: :, name: name);
 				local String is actual: val:typeName();
