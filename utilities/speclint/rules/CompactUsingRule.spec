@@ -60,7 +60,7 @@ Class of LintRule is CompactUsingRule{
 										], default: {});
 									});
 									if({ nsSegs:length() > 0 && hasTarget && !isWildcard }, {
-										local String is key: nsSegs:join(sep: ':');
+										local String is key: nsSegs:join(separator: ':');
 										if({ !pkgCounts:has(key: key) }, {
 											pkgOrder:add(item: key);
 											pkgCounts:set(key: key, value: 1);
@@ -69,7 +69,7 @@ Class of LintRule is CompactUsingRule{
 											nsSegs:each(action: local Function(String is ns){
 												quoted:add(item: "'" . ns . "'");
 											});
-											pkgDisplay:set(key: key, value: quoted:join(sep: ', '));
+											pkgDisplay:set(key: key, value: quoted:join(separator: ', '));
 										}, {
 											pkgCounts:set(key: key, value: pkgCounts:get(key: key, default: 0) + 1);
 										});

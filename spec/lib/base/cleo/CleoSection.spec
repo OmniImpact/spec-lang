@@ -43,12 +43,12 @@ Class is CleoSection{
 	}
 
 	Function is markDirty(){
-		:dirtyRef:set(index: 0, value: true);
+		:dirtyRef:set(index: 0, item: true);
 	}
 
 	Function of Int is allocSlot(CleoSlot is slot){
 		local Int is sid: :idCounter:get(index: 0, default: 0);
-		:idCounter:set(index: 0, value: sid + 1);
+		:idCounter:set(index: 0, item: sid + 1);
 		slot:id: sid;
 		:slots:add(item: slot);
 		:slotMap:set(key: sid, value: slot);
@@ -167,10 +167,10 @@ Class is CleoSection{
 				if({ insPos < curPos }, {
 					local Int is sh: curPos;
 					while({ sh > insPos }, {
-						:slots:set(index: sh, value: :slots:get(index: sh - 1));
+						:slots:set(index: sh, item: :slots:get(index: sh - 1));
 						sh: sh - 1;
 					});
-					:slots:set(index: insPos, value: s);
+					:slots:set(index: insPos, item: s);
 				});
 			});
 		});

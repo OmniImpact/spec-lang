@@ -32,9 +32,9 @@ Class is CleoImage{
 			return;
 		});
 		local Int is base: ((y * :pixelWidth) + x) * 3;
-		:pixels:set(index: base, value: r);
-		:pixels:set(index: base + 1, value: g);
-		:pixels:set(index: base + 2, value: b);
+		:pixels:set(index: base, item: r);
+		:pixels:set(index: base + 1, item: g);
+		:pixels:set(index: base + 2, item: b);
 	}
 
 	Function of Array of String is renderLines(){

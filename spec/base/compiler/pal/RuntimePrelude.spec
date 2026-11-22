@@ -60,7 +60,7 @@ Class is RuntimePrelude{
 			chunks:add(item: :readPart(dir: dir, name: parts:get(index: i)));
 			i: i + 1;
 		});
-		return chunks:join(sep: '');
+		return chunks:join(separator: '');
 	}
 
 	Function of String is emitRuntime(){

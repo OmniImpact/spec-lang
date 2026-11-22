@@ -208,7 +208,7 @@ Class is Time{
 				});
 			});
 			Parallel:syncWith(lock: 78, action: {
-				Time:activeTimers:set(index: tid - 1, value: 2);
+				Time:activeTimers:set(index: tid - 1, item: 2);
 			});
 		});
 		return tid;
@@ -220,7 +220,7 @@ Class is Time{
 		local Boolean is found: false;
 		Parallel:syncWith(lock: 78, action: {
 			if({ timerId >= 1 && timerId <= Time:activeTimers:length() && Time:activeTimers:get(index: timerId - 1, default: 1) == 0 }, {
-				Time:activeTimers:set(index: timerId - 1, value: 1);
+				Time:activeTimers:set(index: timerId - 1, item: 1);
 				found: true;
 			});
 		});

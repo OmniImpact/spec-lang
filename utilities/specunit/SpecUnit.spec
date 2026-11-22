@@ -180,7 +180,7 @@ Class is SpecTestUi{
 		:startedCount: :startedCount + 1;
 		if({ !:ui:directOutput }, {
 			if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
-				:workerActive:set(index: threadIndex, value: 1);
+				:workerActive:set(index: threadIndex, item: 1);
 			});
 			:renderWorkersBar();
 		});
@@ -213,7 +213,7 @@ Class is SpecTestUi{
 	Function is onRunning(Int is threadIndex, String is itemPath){
 		if({ :ui:directOutput }, { return; });
 		if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
-			:workerActive:set(index: threadIndex, value: 1);
+			:workerActive:set(index: threadIndex, item: 1);
 		});
 		:renderWorkersBar();
 		if({ :suiteNameToSlotId:has(key: itemPath) }, {
@@ -227,7 +227,7 @@ Class is SpecTestUi{
 	Function is onWorkerIdle(Int is threadIndex){
 		if({ :ui:directOutput }, { return; });
 		if({ threadIndex >= 0 && threadIndex < :workerActive:length() }, {
-			:workerActive:set(index: threadIndex, value: 0);
+			:workerActive:set(index: threadIndex, item: 0);
 		});
 		:renderWorkersBar();
 	}
@@ -384,9 +384,9 @@ Class is SpecTestRegistry{
 			local Int is tot: SpecTestRegistry:queue:length();
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return idx < tot; }, then: {
-				SpecTestRegistry:nextIdxRef:set(index: 0, value: idx + 1);
+				SpecTestRegistry:nextIdxRef:set(index: 0, item: idx + 1);
 				local Int is inf: SpecTestRegistry:inFlightCompilesRef:get(index: 0, default: 0);
-				SpecTestRegistry:inFlightCompilesRef:set(index: 0, value: inf + 1);
+				SpecTestRegistry:inFlightCompilesRef:set(index: 0, item: inf + 1);
 				res: idx;
 			});
 		});
@@ -397,7 +397,7 @@ Class is SpecTestRegistry{
 		Parallel:syncWith(lock: 17, action: {
 			SpecTestRegistry:readyRuns:add(item: rItem);
 			local Int is inf: SpecTestRegistry:inFlightCompilesRef:get(index: 0, default: 0);
-			SpecTestRegistry:inFlightCompilesRef:set(index: 0, value: inf - 1);
+			SpecTestRegistry:inFlightCompilesRef:set(index: 0, item: inf - 1);
 		});
 		Parallel:syncWith(lock: 77, action: {
 			local Conditional is cond: Conditional:init();
@@ -411,7 +411,7 @@ Class is SpecTestRegistry{
 	held Function is finishCompileOnly(){
 		Parallel:syncWith(lock: 17, action: {
 			local Int is inf: SpecTestRegistry:inFlightCompilesRef:get(index: 0, default: 0);
-			SpecTestRegistry:inFlightCompilesRef:set(index: 0, value: inf - 1);
+			SpecTestRegistry:inFlightCompilesRef:set(index: 0, item: inf - 1);
 		});
 	}
 

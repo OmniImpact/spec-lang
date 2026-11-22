@@ -160,7 +160,7 @@ Class is SpecLsp{
 	}
 
 	local Function is publishDiagnostics(String is uri, Array of String is diags){
-		sendNotificationRaw(method: 'textDocument/publishDiagnostics', paramsJson: '{"uri":' . Json:stringify(value: uri) . ',"diagnostics":[' . diags:join(sep: ',') . ']}');
+		sendNotificationRaw(method: 'textDocument/publishDiagnostics', paramsJson: '{"uri":' . Json:stringify(value: uri) . ',"diagnostics":[' . diags:join(separator: ',') . ']}');
 	}
 
 	local Function of String is uriToPath(String is uri){
@@ -447,7 +447,7 @@ Class is SpecLsp{
 			if({ cls:name != '' }, {
 				local String is parents: '';
 				if({ cls:baseClasses:length() > 0 }, {
-					parents: ' of ' . cls:baseClasses:join(sep: ', ');
+					parents: ' of ' . cls:baseClasses:join(separator: ', ');
 				});
 				hoverMd: "```spec\nClass" . parents . " is " . cls:name . "\n```";
 			});
@@ -589,7 +589,7 @@ Class is SpecLsp{
 					items:add(item: makeCompletionItemJson(label: m:name, kind: kind, detail: formatMemberSig(cls: rc, m: m)));
 				});
 			});
-			sendRawMessage(body: '{"jsonrpc":"2.0","id":' . Json:stringify(value: reqId) . ',"result":[' . items:join(sep: ',') . ']}');
+			sendRawMessage(body: '{"jsonrpc":"2.0","id":' . Json:stringify(value: reqId) . ',"result":[' . items:join(separator: ',') . ']}');
 			return;
 		});
 
@@ -607,7 +607,7 @@ Class is SpecLsp{
 			items:add(item: makeCompletionItemJson(label: c:name, kind: 7, detail: 'Class'));
 		});
 
-		sendRawMessage(body: '{"jsonrpc":"2.0","id":' . Json:stringify(value: reqId) . ',"result":[' . items:join(sep: ',') . ']}');
+		sendRawMessage(body: '{"jsonrpc":"2.0","id":' . Json:stringify(value: reqId) . ',"result":[' . items:join(separator: ',') . ']}');
 	}
 
 	local Function is handleRequest(Map of String to Any is req){

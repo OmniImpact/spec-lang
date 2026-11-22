@@ -2741,9 +2741,13 @@ Class is TypeChecker{
 								if({ g:kind != MemberKind:METHOD || g:name != m:name }, {
 									return false;
 								});
+								local Boolean is sharesArity: members:any(predicate: local Function of Boolean(Member is other){
+									return other != g && other:kind == MemberKind:METHOD && other:name == m:name && other:params:length() == g:params:length();
+								});
 								return g:params:any(predicate: local Function of Boolean(Parameter is pp){
 									local String is pt: pp:paramType:name;
-									return pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0;
+									if({ pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() }, { return true; });
+									return sharesArity && c:typeParams:indexOf(search: pt, default: -1) >= 0;
 								});
 							});
 							if({ nonConcrete }, {
@@ -4690,7 +4694,7 @@ Class is TypeChecker{
 		});
 
 		if({ targetIsPath }, {
-			local String is qJoined: targetPathSegs:join(sep: ':');
+			local String is qJoined: targetPathSegs:join(separator: ':');
 			if({ qJoined:contains(needle: ':sysinternal:') }, {
 				local ClassInfo is callerCls: :currentClassDef;
 				local Array of String is callerSegs: callerCls:namespaceSegments();

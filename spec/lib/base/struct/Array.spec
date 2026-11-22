@@ -39,9 +39,9 @@ Class is Array of T{
 		return Vector:vecGetAt(v: :, idx: index, def: default);
 	}
 
-	## Appends an element or merges another array into this array.
+	## Appends an element to this array.
 	##
-	## @param item: Value or [Array] to append.
+	## @param item: Value to append.
 	Function is add(Any is item){
 		Vector:vecAdd(v: :, item: item);
 	}
@@ -79,7 +79,7 @@ Class is Array of T{
 	## @param end: Exclusive end index.
 	## @return: New sliced [Array].
 	Function of Array of T is slice(Int is start, Int is end){
-		local Array of T is res: [];
+		local Array of T is res: Vector:newVecLike(v: :);
 		local Int is len: :length();
 		local Int is s: match(when: [
 			{ start < 0 }: { 0 },
@@ -126,27 +126,63 @@ Class is Array of T{
 	##
 	## @param action: Function invoked for each item.
 	Function is each(Function is action){
+		local Int is len: :length();
+		local Int is i: 0;
+		while({ i < len }, {
+			action(:get(index: i));
+			i: i + 1;
+		});
 	}
 
 	## Evaluates whether any element in the array satisfies the [predicate].
 	##
 	## @param predicate: Function returning `true` for a match.
 	## @return: `true` if any element matches, `false` otherwise.
-	Function of Boolean is any(Function is predicate){
+	Function of Boolean is any(Function of Boolean is predicate){
+		local Int is len: :length();
+		local Int is i: 0;
+		while({ i < len }, {
+			if({ predicate(:get(index: i)) }, {
+				return true;
+			});
+			i: i + 1;
+		});
+		return false;
 	}
 
 	## Counts how many elements in the array satisfy the [predicate].
 	##
 	## @param predicate: Function returning `true` for elements to count.
 	## @return: Count of matching elements.
-	Function of Int is count(Function is predicate){
+	Function of Int is count(Function of Boolean is predicate){
+		local Int is len: :length();
+		local Int is total: 0;
+		local Int is i: 0;
+		while({ i < len }, {
+			if({ predicate(:get(index: i)) }, {
+				total: total + 1;
+			});
+			i: i + 1;
+		});
+		return total;
 	}
 
 	## Returns a new array containing all elements that satisfy the [predicate].
 	##
 	## @param predicate: Function returning `true` for elements to retain.
 	## @return: Filtered [Array].
-	Function of Array of T is filter(Function is predicate){
+	Function of Array of T is filter(Function of Boolean is predicate){
+		local Array of T is out: Vector:newVecLike(v: :);
+		local Int is len: :length();
+		local Int is i: 0;
+		while({ i < len }, {
+			local T is item: :get(index: i);
+			if({ predicate(item) }, {
+				out:add(item: item);
+			});
+			i: i + 1;
+		});
+		return out;
 	}
 
 	## Transforms each element in the array using [transform], returning a new [Array].
@@ -154,6 +190,14 @@ Class is Array of T{
 	## @param transform: Function mapping each item to a transformed value.
 	## @return: Mapped [Array].
 	Function of Array of T is map(Function is transform){
+		local Array of T is out: Vector:newVecLike(v: :);
+		local Int is len: :length();
+		local Int is i: 0;
+		while({ i < len }, {
+			out:add(item: transform(:get(index: i)));
+			i: i + 1;
+		});
+		return out;
 	}
 
 	## Reduces the array to a single accumulated value starting from [initial].
@@ -162,6 +206,14 @@ Class is Array of T{
 	## @param accumulate: Function combining (accumulator, item) into the next accumulator.
 	## @return: Final accumulated value.
 	Function of Any is fold(Any is initial, Function is accumulate){
+		local Any is acc: initial;
+		local Int is len: :length();
+		local Int is i: 0;
+		while({ i < len }, {
+			acc: accumulate(acc, :get(index: i));
+			i: i + 1;
+		});
+		return acc;
 	}
 
 	## Joins all string elements of the array into one string separated by [separator].
@@ -234,7 +286,7 @@ Class is Array of T{
 	##
 	## @return: Reversed [Array].
 	Function of Array of T is reverse(){
-		local Array of T is out: [];
+		local Array of T is out: Vector:newVecLike(v: :);
 		local Int is i: :length() - 1;
 		while({ i >= 0 }, {
 			out:add(item: :get(index: i));
@@ -249,7 +301,7 @@ Class is Array of T{
 	## @return: Prefix [Array].
 	Function of Array of T is take(Int is n){
 		if({ n <= 0 }, {
-			return [];
+			return Vector:newVecLike(v: :);
 		});
 		return :slice(start: 0, end: n);
 	}

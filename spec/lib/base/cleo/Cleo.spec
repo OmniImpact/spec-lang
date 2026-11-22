@@ -175,7 +175,7 @@ Class is Cleo{
 
 	Function is setDirectOutput(Boolean is enabled){
 		:directOutput: enabled;
-		:directRef:set(index: 0, value: enabled);
+		:directRef:set(index: 0, item: enabled);
 	}
 
 	Function of CleoSection is addSection(
@@ -205,12 +205,12 @@ Class is Cleo{
 		Parallel:syncWith(lock: 77, action: {
 			# Replace unused empty initial defaultSection if this is the first explicit section
 			if(check: { :sections:length() == 1 && :defaultSection:slots:length() == 0 && :defaultSection:title == '' }, then: {
-				:sections:set(index: 0, value: sec);
+				:sections:set(index: 0, item: sec);
 				:defaultSection: sec;
 			}, else: {
 				:sections:add(item: sec);
 			});
-			:dirtyRef:set(index: 0, value: true);
+			:dirtyRef:set(index: 0, item: true);
 		});
 		return sec;
 	}
@@ -300,7 +300,7 @@ Class is Cleo{
 	Function is commitLineUnlocked(String is text, CleoColor is color: CleoColor:default()){
 		local String is styled: if({ color:isSet() }, { color:fgSeq() . text . Ansi:reset() }, { text });
 		:pendingCommits:add(item: styled);
-		:dirtyRef:set(index: 0, value: true);
+		:dirtyRef:set(index: 0, item: true);
 	}
 
 	Function is commitSlotUnlocked(CleoSection is section, Int is slotId){
@@ -327,14 +327,14 @@ Class is Cleo{
 			});
 			ri: ri + 1;
 		});
-		:dirtyRef:set(index: 0, value: true);
+		:dirtyRef:set(index: 0, item: true);
 	}
 
 	Function is commitLine(String is text, CleoColor is color: CleoColor:default()){
 		local String is styled: if({ color:isSet() }, { color:fgSeq() . text . Ansi:reset() }, { text });
 		Parallel:syncWith(lock: 77, action: {
 			:pendingCommits:add(item: styled);
-			:dirtyRef:set(index: 0, value: true);
+			:dirtyRef:set(index: 0, item: true);
 		});
 		if({ :running }, { :flush(); });
 	}
@@ -435,10 +435,10 @@ Class is Cleo{
 		Parallel:syncWith(lock: 77, action: {
 			if({ :running }, { return; });
 			:directOutput: true;
-			:directRef:set(index: 0, value: true);
+			:directRef:set(index: 0, item: true);
 			:ttyMode: false;
 			:running: true;
-			:directStartedRef:set(index: 0, value: true);
+			:directStartedRef:set(index: 0, item: true);
 			:emitDirectTopUnlocked();
 			local Int is si: 0;
 			while({ si < :sections:length() }, {
@@ -453,7 +453,7 @@ Class is Cleo{
 				});
 				si: si + 1;
 			});
-			:dirtyRef:set(index: 0, value: true);
+			:dirtyRef:set(index: 0, item: true);
 		});
 		:flush();
 	}
@@ -466,7 +466,7 @@ Class is Cleo{
 			if({ isDirect }, {
 				:ttyMode: false;
 				:running: true;
-				:directStartedRef:set(index: 0, value: true);
+				:directStartedRef:set(index: 0, item: true);
 				:emitDirectTopUnlocked();
 				local Int is si: 0;
 				while({ si < :sections:length() }, {
@@ -481,7 +481,7 @@ Class is Cleo{
 					});
 					si: si + 1;
 				});
-				:dirtyRef:set(index: 0, value: true);
+				:dirtyRef:set(index: 0, item: true);
 				return;
 			});
 			:ttyMode: Ansi:isTty();
@@ -494,7 +494,7 @@ Class is Cleo{
 				});
 			});
 			:running: true;
-			:dirtyRef:set(index: 0, value: true);
+			:dirtyRef:set(index: 0, item: true);
 		});
 		:flush();
 		if({ !isDirect && :ttyMode && :tickIntervalMs > 0 }, {
@@ -508,7 +508,7 @@ Class is Cleo{
 		Parallel:syncWith(lock: 77, action: {
 			if({ !:running }, { return; });
 			:tickCount: :tickCount + 1;
-			:dirtyRef:set(index: 0, value: true);
+			:dirtyRef:set(index: 0, item: true);
 			:flushUnlocked();
 		});
 	}
@@ -519,7 +519,7 @@ Class is Cleo{
 			tid: :timerId;
 			:timerId: -1;
 			:running: false;
-			:dirtyRef:set(index: 0, value: true);
+			:dirtyRef:set(index: 0, item: true);
 		});
 		if({ tid >= 0 }, {
 			Time:cancelTimer(timerId: tid);
@@ -671,12 +671,12 @@ Class is Cleo{
 	}
 
 	Function is markDirty(){
-		:dirtyRef:set(index: 0, value: true);
+		:dirtyRef:set(index: 0, item: true);
 	}
 
 	Function is flushUnlocked(){
 		if({ !:dirtyRef:get(index: 0, default: false) && :pendingCommits:length() == 0 }, { return; });
-		:dirtyRef:set(index: 0, value: false);
+		:dirtyRef:set(index: 0, item: false);
 
 		if({ !:ttyMode }, {
 			local Int is ci: 0;
@@ -764,7 +764,7 @@ Class is Cleo{
 
 	Function is flushFinal(){
 		Parallel:syncWith(lock: 77, action: {
-			:dirtyRef:set(index: 0, value: false);
+			:dirtyRef:set(index: 0, item: false);
 			if({ !:ttyMode }, {
 				local Int is ci: 0;
 				while({ ci < :pendingCommits:length() }, {

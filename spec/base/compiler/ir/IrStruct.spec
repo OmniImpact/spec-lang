@@ -89,7 +89,7 @@ Class is IrStruct{
 		local Int is idx: :vtableSlot(mname: mname);
 		if({ idx >= 0 }, {
 			if({ fnName != 'null' }, {
-				:vtableFns:set(index: idx, value: fnName);
+				:vtableFns:set(index: idx, item: fnName);
 			});
 		}, {
 			:vtableMethodNames:add(item: mname);

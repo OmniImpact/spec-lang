@@ -15,7 +15,7 @@ Class of SpecUnitTest is TestVariadicAndDefaultInit{
 	}
 
 	Function of String is joinWith(String is sep, Array of String is *parts){
-		parts:join(sep: sep);
+		parts:join(separator: sep);
 	}
 
 	Function of Int is sumScores(Int is bonus: 0, Map of String to Int is *scores){
