@@ -335,3 +335,41 @@ Class is MissingReturnApp{
 		local String is s: :maybeName(flag: true);
 	}
 }
+
+#! case: testMixedSignedUnsignedCompareRejected
+#! expect: Operator '<' cannot mix 'Int' and 'UInt8'
+Class is MixedSignedUnsignedCompare{
+	replace Function is init(Map of String to String is args){
+		local Int is a: -1;
+		local UInt8 is b: 1 as UInt8;
+		local Boolean is c: a < b;
+	}
+}
+
+#! case: testMixedUnsignedWidthsRejected
+#! expect: Operator '+' cannot mix 'UInt8' and 'UInt32'
+Class is MixedUnsignedWidths{
+	replace Function is init(Map of String to String is args){
+		local UInt8 is a: 1 as UInt8;
+		local UInt32 is b: 1000 as UInt32;
+		local UInt8 is c: a + b;
+	}
+}
+
+#! case: testMixedSignedUnsignedAddRejected
+#! expect: Operator '+' cannot mix 'UInt8' and 'Int'
+Class is MixedSignedUnsignedAdd{
+	replace Function is init(Map of String to String is args){
+		local UInt8 is a: 1 as UInt8;
+		local UInt8 is b: a + 1;
+	}
+}
+
+#! case: testMixedSignedUnsignedBitwiseRejected
+#! expect: Operator '&' cannot mix 'UInt32' and 'Int'
+Class is MixedSignedUnsignedBitwise{
+	replace Function is init(Map of String to String is args){
+		local UInt32 is a: 255 as UInt32;
+		local UInt32 is b: a & 15;
+	}
+}

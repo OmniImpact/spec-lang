@@ -3377,6 +3377,9 @@ Class is TypeChecker{
 				if({ isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, {
 					:addError(line: :currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
 				});
+				if({ op != 'is' && (:isUnsignedInt(t: leftT) || :isUnsignedInt(t: rightT)) && leftT != '' && rightT != '' && leftT != 'Any' && rightT != 'Any' && leftT != rightT }, {
+					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same integer type.');
+				});
 			},
 			['&&', '||']: {
 				res: Primitive:BOOLEAN:value();
@@ -3385,6 +3388,9 @@ Class is TypeChecker{
 				if({ leftT == 'Float' || rightT == 'Float' }, {
 					res: 'Float';
 				}, {
+					if({ (:isUnsignedInt(t: leftT) || :isUnsignedInt(t: rightT)) && leftT != '' && rightT != '' && leftT != 'Any' && rightT != 'Any' && leftT != rightT }, {
+						:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same integer type.');
+					});
 					if({ :isUnsignedInt(t: leftT) }, {
 						res: leftT;
 					}, {
@@ -3396,8 +3402,20 @@ Class is TypeChecker{
 					});
 				});
 			},
-			['&', '|', '^', '<<', '>>']: {
+			['&', '|', '^']: {
 				res: if({ :isUnsignedInt(t: leftT) }, { leftT }, { if({ :isUnsignedInt(t: rightT) }, { rightT }, { Primitive:INT:value() }) });
+				if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
+					(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
+					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
+					:addError(line: :currentLine, msg: msg);
+				}, {
+					if({ (:isUnsignedInt(t: leftT) || :isUnsignedInt(t: rightT)) && leftT != '' && rightT != '' && leftT != 'Any' && rightT != 'Any' && leftT != rightT }, {
+						:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same integer type.');
+					});
+				});
+			},
+			['<<', '>>']: {
+				res: if({ :isUnsignedInt(t: leftT) }, { leftT }, { Primitive:INT:value() });
 				if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
 					(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
 					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);

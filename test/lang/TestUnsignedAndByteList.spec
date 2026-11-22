@@ -58,6 +58,45 @@ Class of SpecUnitTest is TestUnsignedAndByteList{
 		Assert:areEqualInt(9223372036854775807, half as Int);
 	}
 
+	Function is testUIntUnaryNegAndIncDecWrap(){
+		local UInt8 is neg1u8: -(1 as UInt8);
+		Assert:areEqualInt(255, neg1u8 as Int);
+		local UInt8 is neg0u8: -(0 as UInt8);
+		Assert:areEqualInt(0, neg0u8 as Int);
+
+		local UInt16 is neg1u16: -(1 as UInt16);
+		Assert:areEqualInt(65535, neg1u16 as Int);
+
+		local UInt32 is neg1u32: -(1 as UInt32);
+		Assert:areEqualInt(4294967295, neg1u32 as Int);
+
+		local UInt8 is c8: 255 as UInt8;
+		local UInt8 is prev8: c8++;
+		Assert:areEqualInt(255, prev8 as Int);
+		Assert:areEqualInt(0, c8 as Int);
+		local UInt8 is dec8: --c8;
+		Assert:areEqualInt(255, dec8 as Int);
+		Assert:areEqualInt(255, c8 as Int);
+
+		local UInt16 is c16: 65535 as UInt16;
+		c16++;
+		Assert:areEqualInt(0, c16 as Int);
+		c16--;
+		Assert:areEqualInt(65535, c16 as Int);
+
+		local UInt32 is c32: 4294967295 as UInt32;
+		c32++;
+		Assert:areEqualInt(0, c32 as Int);
+		c32--;
+		Assert:areEqualInt(4294967295, c32 as Int);
+
+		# Shift result type follows LHS (Int << UInt8 stays Int, UInt32 << Int stays UInt32)
+		local Int is wideShift: 1 << (10 as UInt8);
+		Assert:areEqualInt(1024, wideShift);
+		local UInt32 is u32Shift: (1 as UInt32) << 31;
+		Assert:areEqualInt(2147483648, u32Shift as Int);
+	}
+
 	Function is testWhileEarlyBreakAndContinue(){
 		local Int is sum: 0;
 		local Int is i: 0;

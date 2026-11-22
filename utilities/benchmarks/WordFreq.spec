@@ -46,11 +46,11 @@ Class is WordFreq{
 		local Int is i: 0;
 		while({ i < count }, {
 			st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
-			local Int is r1: (st & 15) as Int;
+			local Int is r1: (st & (15 as UInt64)) as Int;
 			st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
-			local Int is r2: ((st & 2147483647) as Int) % 3;
+			local Int is r2: ((st & (2147483647 as UInt64)) as Int) % 3;
 			st: st ^ (st << 13); st: st ^ (st >> 7); st: st ^ (st << 17);
-			local Int is r3: ((st & 2147483647) as Int) % 500;
+			local Int is r3: ((st & (2147483647 as UInt64)) as Int) % 500;
 
 			local String is logLine: services:get(index: r1, default: 'api') . ':' . levels:get(index: r2, default: 'INFO') . ':' . r3;
 			local Array of String is parts: logLine:split(delimiter: ':');

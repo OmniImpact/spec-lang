@@ -4292,6 +4292,14 @@ Class is IrBuilder{
 		local String is binOp: if({ op == 'post++' || op == '++' }, { '+' }, { '-' });
 		local String is newVal: :nextTmp();
 		:emit(inst: IrInst:BinOp(dst: newVal, op: binOp, lhs: oldVal, rhs: one, ty: slotTy));
+		local Int is uMaskVal: :unsignedMaskFor(specType: operand:resolvedType);
+		if({ uMaskVal != 0 }, {
+			local String is uMaskC: :nextTmp();
+			:emit(inst: IrInst:ConstInt(dst: uMaskC, value: uMaskVal));
+			local String is maskedVal: :nextTmp();
+			:emit(inst: IrInst:BinOp(dst: maskedVal, op: '&', lhs: newVal, rhs: uMaskC, ty: IrType:I64));
+			newVal: maskedVal;
+		});
 		if({ localName != '' }, {
 			:emitStoreLocal(name: localName, val: newVal, ty: slotTy, isArc: false);
 		}, {
@@ -4437,7 +4445,7 @@ Class is IrBuilder{
 				local String is v: :lowerExpr(expr: operand);
 				local String is dst: :nextTmp();
 				:emit(inst: IrInst:UnaryOp(dst: dst, op: op, operand: v, ty: ty));
-				if({ op == '~' && :unsignedMaskFor(specType: expr:resolvedType) != 0 }, {
+				if({ (op == '~' || op == '-') && :unsignedMaskFor(specType: expr:resolvedType) != 0 }, {
 					local String is maskC: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: maskC, value: :unsignedMaskFor(specType: expr:resolvedType)));
 					local String is mDst: :nextTmp();
@@ -4534,7 +4542,7 @@ Class is IrBuilder{
 				});
 				:emit(inst: IrInst:BinOp(dst: dst, op: binOp, lhs: l, rhs: r, ty: ty));
 				if({ :unsignedMaskFor(specType: expr:resolvedType) != 0 }, {
-					if({ op == '+' || op == '-' || op == '*' || op == '<<' }, {
+					if({ op == '+' || op == '-' || op == '*' || op == '<<' || op == '|' || op == '^' }, {
 						local String is maskC: :nextTmp();
 						:emit(inst: IrInst:ConstInt(dst: maskC, value: :unsignedMaskFor(specType: expr:resolvedType)));
 						local String is mDst: :nextTmp();
