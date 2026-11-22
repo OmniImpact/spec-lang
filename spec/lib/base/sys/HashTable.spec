@@ -52,15 +52,6 @@ Class is HashTable{
 		return :mapNewTyped(keyKind: 0, valKind: 1);
 	}
 
-	## Interim aliases for the seed ratchet (removed in the next landing).
-	Function of Any is newTyped(Int is keyKind, Int is valKind){
-		return :mapNewTyped(keyKind: keyKind, valKind: valKind);
-	}
-
-	Function of Any is newObject(){
-		return :mapNewObject();
-	}
-
 	## Destroys this map, releasing any ARC keys/values and freeing its buckets and entries.
 	Function is mapDestroy(){
 		local Int is mAddr: Mem:objToAddr(obj: :);
