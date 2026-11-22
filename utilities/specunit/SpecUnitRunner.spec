@@ -200,7 +200,7 @@ Class is SpecUnitRunner{
 			rSec:addLine(text: status . ' ' . r:name, color: c, rightText: (r:durationMs as String) . 'ms');
 			if(check: { !r:passed }, then: {
 				r:failures:each(action: local Function(String is f){
-					rSec:addLine(text: '       - ' . f, color: CleoColor:ansi(code: 203));
+					rSec:addLine(text: '       - ' . f, color: CleoColor:ansi(code: 203), wrap: true);
 				});
 			});
 		});
