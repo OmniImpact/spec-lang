@@ -298,3 +298,40 @@ Class is UninitFieldApp{
 		local UninitFieldHolder is h: UninitFieldHolder:init();
 	}
 }
+
+#! case: testUninitializedHeldFieldRejected
+#! expect: must be initialized (Spec does not have null)
+Class is UninitHeldApp{
+	held String is cached;
+	replace Function is init(Map of String to String is args){
+		local Int is x: 1;
+	}
+}
+
+#! case: testUninitializedPublicFieldRejected
+#! expect: must be initialized or assigned in 'init' (Spec does not have null)
+Class is UninitPubDummy{}
+Class is UninitPubHolder{
+	UninitPubDummy is item;
+}
+Class is UninitPubApp{
+	replace Function is init(Map of String to String is args){
+		local UninitPubHolder is h: UninitPubHolder:init();
+	}
+}
+
+#! case: testMissingReturnPathRejected
+#! expect: not all control-flow paths return a value
+Class is MissingReturnApp{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	Function of String is maybeName(Boolean is flag){
+		if({ flag }, {
+			return 'ok';
+		});
+	}
+	replace Function is init(Map of String to String is args){
+		local String is s: :maybeName(flag: true);
+	}
+}

@@ -17,7 +17,7 @@ Class is Parameter{
 	Type is paramType: Type:init(name: '');
 
 	## Default value expression (declaration-side defaults).
-	Expression is defaultExpr;
+	Expression is defaultExpr: Expression:Unknown;
 
 	## True when a default value is present.
 	Boolean is hasDefault: false;

@@ -5524,6 +5524,9 @@ Class is TypeChecker{
 				},
 				else: {}
 			]);
+			if({ :currentMethodReturnType != '' && !:bindings:isSysinternal(cls: :currentClassDef) && !:stmtsAlwaysReturn(stmts: method:body) }, {
+				:addError(line: method:line, msg: "Method '" . :currentClassName . ":" . method:name . "' declares return type '" . :displayType(t: :currentMethodReturnType) . "' but not all control-flow paths return a value.");
+			});
 		});
 
 		if({ :currentMethodIsMerge && !:forwardSeen && method:body:length() > 0 }, {
@@ -5532,6 +5535,158 @@ Class is TypeChecker{
 		:currentMethodTypeParams: Map:init();
 		:currentMethodIsMerge: false;
 		:currentMethodName: '';
+	}
+
+	local Function of Boolean is stmtsAlwaysReturn(Array of Statement is stmts){
+		local Int is n: stmts:length();
+		local Int is i: 0;
+		while({ i < n }, {
+			local Statement is s: stmts:get(index: i);
+			local Boolean is terminates: false;
+			match(on: s, when: [
+				Statement:Return: local Function(Expression is _re, Boolean is _hr){
+					terminates: true;
+				},
+				Statement:Forward: local Function(Array of NamedArg is _fa){
+					terminates: true;
+				},
+				Statement:Expr: local Function(Expression is exprStmt){
+					if({ :exprAlwaysTerminates(expr: exprStmt) }, {
+						terminates: true;
+					}, {
+						if({ i == n - 1 }, {
+							local String is rt: exprStmt:resolvedType;
+							if({ rt != '' && !:isVoid(t: rt) }, {
+								terminates: true;
+							});
+						});
+					});
+				},
+				else: {}
+			]);
+			if({ terminates }, { return true; });
+			i: i + 1;
+		});
+		return false;
+	}
+
+	local Function of Boolean is anonAlwaysTerminates(Expression is expr){
+		local Boolean is res: false;
+		match(on: expr, when: [
+			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
+				res: :stmtsAlwaysReturn(stmts: bd);
+			},
+			else: {}
+		]);
+		return res;
+	}
+
+	local Function of Boolean is exprAlwaysTerminates(Expression is expr){
+		local Boolean is res: false;
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				if({ cd:name == 'raiseError' || cd:name == 'exit' }, {
+					res: true;
+				}, {
+				if({ cd:name == 'if' && cd:args:length() >= 3 }, {
+					local Expression is thenArg: cd:args:get(index: 1):value;
+					local Expression is elseArg: cd:args:get(index: 2):value;
+					if({ :anonAlwaysTerminates(expr: thenArg) && :anonAlwaysTerminates(expr: elseArg) }, {
+						res: true;
+					});
+				}, {
+				if({ cd:name == 'try' }, {
+					local Boolean is hasBody: false;
+					local Boolean is bodyTerm: false;
+					local Boolean is hasGuard: false;
+					local Boolean is guardTerm: false;
+					cd:args:each(action: local Function(NamedArg is a){
+						if({ a:name == 'body' }, {
+							hasBody: true;
+							bodyTerm: :anonAlwaysTerminates(expr: a:value);
+						});
+						if({ a:name == 'guard' || a:name == 'catch' }, {
+							hasGuard: true;
+							guardTerm: :anonAlwaysTerminates(expr: a:value);
+						});
+					});
+					if({ hasBody && bodyTerm && hasGuard && guardTerm }, {
+						res: true;
+					});
+				}, {
+				if({ cd:name == 'match' }, {
+					local Boolean is hasDefault: false;
+					local Boolean is allArmsTerm: true;
+					local Int is armCount: 0;
+					cd:args:each(action: local Function(NamedArg is a){
+						if({ a:name == 'default' || a:name == 'else' }, {
+							hasDefault: true;
+							if({ !:anonAlwaysTerminates(expr: a:value) }, {
+								allArmsTerm: false;
+							});
+						});
+						if({ a:name == 'when' }, {
+							match(on: a:value, when: [
+								Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+									local Int is ki: 0;
+									while({ ki < keys:length() && ki < values:length() }, {
+										armCount: armCount + 1;
+										match(on: keys:get(index: ki), when: [
+											Expression:Ident: local Function(String is kn){
+												if({ kn == 'else' || kn == 'default' }, {
+													hasDefault: true;
+												});
+											},
+											else: {}
+										]);
+										if({ !:anonAlwaysTerminates(expr: values:get(index: ki)) }, {
+											allArmsTerm: false;
+										});
+										ki: ki + 1;
+									});
+								},
+								Expression:ArrayLit: local Function(Array of Expression is items){
+									items:each(action: local Function(Expression is it){
+										match(on: it, when: [
+											Expression:MapLit: local Function(Array of Expression is mKeys, Array of Expression is mVals){
+												local Int is mki: 0;
+												while({ mki < mKeys:length() && mki < mVals:length() }, {
+													armCount: armCount + 1;
+													match(on: mKeys:get(index: mki), when: [
+														Expression:Ident: local Function(String is kn){
+															if({ kn == 'else' || kn == 'default' }, {
+																hasDefault: true;
+															});
+														},
+														else: {}
+													]);
+													if({ !:anonAlwaysTerminates(expr: mVals:get(index: mki)) }, {
+														allArmsTerm: false;
+													});
+													mki: mki + 1;
+												});
+											},
+											else: {
+												allArmsTerm: false;
+											}
+										]);
+									});
+								},
+								else: {}
+							]);
+						});
+					});
+					if({ hasDefault && armCount > 0 && allArmsTerm }, {
+						res: true;
+					});
+				});
+				});
+				});
+				});
+			},
+			else: {}
+		]);
+		return res;
 	}
 
 	## Finds the nearest parent implementation of a method (merge target),
@@ -6385,13 +6540,13 @@ Class is TypeChecker{
 					:checkMethod(method: m);
 					if({ m:name == ContractMethod:INIT:value() && m:body:length() > 0 }, {
 						classDef:members:each(action: local Function(Member is fm){
-							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:hasModifier(kw: Keyword:LOCAL) && !fm:hasModifier(kw: Keyword:HELD) && :unassignedFields:has(key: fm:name) }, {
+							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') && :unassignedFields:has(key: fm:name) }, {
 								local String is fType: :formatVarTypeString(t: fm:memberType);
 								local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
 								local Boolean is isAutoList: fType == 'List' || fType:startsWith(prefix: 'List of ') || fType:startsWith(prefix: 'List:');
 								local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
 								if({ !isValPrim && !isAutoList && !isTypeParam }, {
-									:addError(line: m:line, msg: "Local field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' is not initialized by 'init' (Spec does not have null).");
+									:addError(line: m:line, msg: "Field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' is not initialized by 'init' (Spec does not have null).");
 								});
 							});
 						});
@@ -6424,15 +6579,22 @@ Class is TypeChecker{
 				else: {}
 			]);
 		});
-		if({ !classHasInit && !:isBindingDeclaration(cls: classDef) && !:bindings:isSysinternal(cls: classDef) && classDef:baseClass != :names:enumHeader() }, {
+		if({ !:bindings:isSysinternal(cls: classDef) && classDef:baseClass != :names:enumHeader() }, {
 			classDef:members:each(action: local Function(Member is fm){
-				if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:hasModifier(kw: Keyword:LOCAL) && !fm:hasModifier(kw: Keyword:HELD) }, {
+				if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') }, {
 					local String is fType: :formatVarTypeString(t: fm:memberType);
 					local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
 					local Boolean is isAutoList: fType == 'List' || fType:startsWith(prefix: 'List of ') || fType:startsWith(prefix: 'List:');
 					local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
 					if({ !isValPrim && !isAutoList && !isTypeParam }, {
-						:addError(line: fm:line, msg: "Local field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' must be initialized or assigned in 'init' (Spec does not have null).");
+						if({ fm:hasModifier(kw: Keyword:HELD) }, {
+							:addError(line: fm:line, msg: "Held field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' must be initialized (Spec does not have null).");
+						}, {
+							local Boolean is isPubDefaultStr: !fm:hasModifier(kw: Keyword:LOCAL) && (fType == 'String' || fType == 'Str');
+							if({ !classHasInit && !isPubDefaultStr }, {
+								:addError(line: fm:line, msg: "Field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' must be initialized or assigned in 'init' (Spec does not have null).");
+							});
+						});
 					});
 				});
 			});

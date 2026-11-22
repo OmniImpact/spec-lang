@@ -40,11 +40,11 @@ Class is Member{
 	Array of Statement is body: [];
 
 	## FIELD: initializer expression and its presence flag.
-	Expression is initExpr;
+	Expression is initExpr: Expression:Unknown;
 	Boolean is hasInit: false;
 
 	## CLASS: the nested class descriptor.
-	ClassInfo is nestedClass;
+	ClassInfo is nestedClass: ClassInfo:init(name: '', baseClass: '', members: []);
 
 	## Initializes a member descriptor.
 	##
