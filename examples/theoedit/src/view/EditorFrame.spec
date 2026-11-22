@@ -10,8 +10,8 @@ Class of Frame is EditorFrame{
 		['theoedit', 'view', [TopBar, EditorBody, MessagePanel, BottomActionBar, FileManagerFrame]]
 	];
 
-	EditorViewModel is vm;
-	Function is onQuit;
+	EditorViewModel is vm: EditorViewModel(filePath: '');
+	Function is onQuit: local Function(){};
 	Array of TheoScreen is screenRefs: [];
 
 	FocusTarget is editorFocus: FocusTarget(initial: true);

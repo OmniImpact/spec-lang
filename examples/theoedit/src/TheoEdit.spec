@@ -22,7 +22,7 @@ Class is TheoEdit{
 			return;
 		});
 
-		local String is filePath: args:getString(key: '0');
+		local String is filePath: args:getString(key: '0', default: '');
 		local TheoApp is app: TheoApp();
 		local EditorViewModel is vm: EditorViewModel(filePath: filePath);
 		local EditorFrame is rootFrame: EditorFrame(

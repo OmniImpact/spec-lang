@@ -83,23 +83,24 @@ Class is ScopeAsDemo{
 	}
 
 	local Function is runPipeline(String is tempPath, Str is csvData, CleoSection is recSec, CleoSection is logSec){
-		as: measure(label: 'Data Ingestion & Report Pipeline', sec: logSec);
-		as (String is path): withTempFile(path: tempPath, content: "{{csvData}}", sec: logSec);
+		:measure(label: 'Data Ingestion & Report Pipeline', sec: logSec, block: local Function(){
+			:withTempFile(path: tempPath, content: "{{csvData}}", sec: logSec, block: local Function(String is path){
+				local String is raw: fileRead(path: path, default: '');
+				local CsvParser is parser: CsvParser();
+				local Array of Array of String is rows: parser:parseRows(raw: raw, skipHeader: true);
 
-		local String is raw: fileRead(path: path, default: '');
-		local CsvParser is parser: CsvParser();
-		local Array of Array of String is rows: parser:parseRows(raw: raw, skipHeader: true);
-
-		rows:each(action: local Function(Array of String is fields){
-			if({ fields:length() >= 4 }, {
-				recSec:addLine(
-					text: "#{{fields:get(index: 0)}} · {{fields:get(index: 1)}}",
-					color: CleoColor:ansi(code: 252),
-					rightText: "{{fields:get(index: 2)}} ({{fields:get(index: 3)}})"
-				);
+				rows:each(action: local Function(Array of String is fields){
+					if({ fields:length() >= 4 }, {
+						recSec:addLine(
+							text: "#{{fields:get(index: 0)}} · {{fields:get(index: 1)}}",
+							color: CleoColor:ansi(code: 252),
+							rightText: "{{fields:get(index: 2)}} ({{fields:get(index: 3)}})"
+						);
+					});
+				});
+				logSec:addLine(text: "[Report] Processed {{rows:length()}} employee profiles; unwinding scopes in LIFO order", color: CleoColor:ansi(code: 250));
 			});
 		});
-		logSec:addLine(text: "[Report] Processed {{rows:length()}} employee profiles; unwinding scopes in LIFO order", color: CleoColor:ansi(code: 250));
 	}
 
 }

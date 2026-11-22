@@ -9,13 +9,13 @@ Class of Frame is MessagePanel{
 		['theoedit', 'vm', EditorViewModel]
 	];
 
-	EditorViewModel is vm;
-	FocusTarget is saveFocus;
-	FocusTarget is discardFocus;
-	FocusTarget is cancelFocus;
-	Function is onSave;
-	Function is onDiscard;
-	Function is onCancel;
+	EditorViewModel is vm: EditorViewModel(filePath: '');
+	FocusTarget is saveFocus: FocusTarget();
+	FocusTarget is discardFocus: FocusTarget();
+	FocusTarget is cancelFocus: FocusTarget();
+	Function is onSave: local Function(){};
+	Function is onDiscard: local Function(){};
+	Function is onCancel: local Function(){};
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ (saveFocus:focused || discardFocus:focused || cancelFocus:focused) && event:isEsc() }, {

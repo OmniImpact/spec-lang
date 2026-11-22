@@ -8,15 +8,15 @@ Class of Frame is BottomActionBar{
 		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, Button]]
 	];
 
-	FocusTarget is saveFocus;
-	FocusTarget is saveAsFocus;
-	FocusTarget is openFocus;
-	FocusTarget is exitFocus;
-	Function is onSave;
-	Function is onSaveAs;
-	Function is onOpen;
-	Function is onQuit;
-	Function is onReturnToEditor;
+	FocusTarget is saveFocus: FocusTarget();
+	FocusTarget is saveAsFocus: FocusTarget();
+	FocusTarget is openFocus: FocusTarget();
+	FocusTarget is exitFocus: FocusTarget();
+	Function is onSave: local Function(){};
+	Function is onSaveAs: local Function(){};
+	Function is onOpen: local Function(){};
+	Function is onQuit: local Function(){};
+	Function is onReturnToEditor: local Function(){};
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ (saveFocus:focused || saveAsFocus:focused || openFocus:focused || exitFocus:focused) && event:isUp() }, {

@@ -84,13 +84,13 @@ Class of Frame is FileManagerFrame{
 				local String is curLow: cur:toLower();
 				local Boolean is gt: curLow > keyLow || (curLow == keyLow && cur > key);
 				if({ gt }, {
-					items:set(index: j + 1, value: cur);
+					items:set(index: j + 1, item: cur);
 					j: j - 1;
 				}, {
 					done: true;
 				});
 			});
-			items:set(index: j + 1, value: key);
+			items:set(index: j + 1, item: key);
 			i: i + 1;
 		});
 	}
@@ -129,7 +129,7 @@ Class of Frame is FileManagerFrame{
 			local Array of String is parts: curDir:split(delimiter: '/');
 			if({ parts:length() > 2 }, {
 				parts:removeAt(index: parts:length() - 1);
-				navigateTo(nextDir: parts:join(sep: '/'));
+				navigateTo(nextDir: parts:join(separator: '/'));
 			}, {
 				navigateTo(nextDir: '/');
 			});

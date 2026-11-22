@@ -9,8 +9,8 @@ Class of Frame is EditorBody{
 		['theoedit', 'vm', EditorViewModel]
 	];
 
-	EditorViewModel is vm;
-	FocusTarget is focusTarget;
+	EditorViewModel is vm: EditorViewModel(filePath: '');
+	FocusTarget is focusTarget: FocusTarget();
 
 	replace Function of Widget is ui(){
 		Panel(

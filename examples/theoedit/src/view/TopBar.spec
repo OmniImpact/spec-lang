@@ -9,8 +9,8 @@ Class of Frame is TopBar{
 		['base', 'signal', TextEmitter]
 	];
 
-	TextEmitter is title;
-	TextEmitter is status;
+	TextEmitter is title: TextEmitter();
+	TextEmitter is status: TextEmitter();
 
 	replace Function of Widget is ui(){
 		Panel(
