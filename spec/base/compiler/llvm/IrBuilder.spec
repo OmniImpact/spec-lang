@@ -1843,7 +1843,7 @@ Class is IrBuilder{
 			if({ resArc }, { vkVal: 1; });
 			:emit(inst: IrInst:ConstInt(dst: vk, value: vkVal));
 			local String is newMap: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: newMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [kk, vk]));
+			:emit(inst: IrInst:IrCall(dst: newMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_newTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', kk, vk]));
 			:emit(inst: IrInst:Store(slot: '@' . cacheGlob, val: newMap, ty: IrType:Ptr));
 			:terminate(inst: IrInst:Br(target: chkLbl));
 
@@ -4715,22 +4715,20 @@ Class is IrBuilder{
 				});
 				if({ mapKk != 0 || mapVk != 0 }, {
 					if({ mapKk == 0 && mapVk == 1 }, {
-						local Array of IrType is emptyT: [];
-						local Array of String is emptyV: [];
-						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: emptyT, args: emptyV));
+						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_newObject', argTypes: [IrType:Ptr], args: ['null']));
 					}, {
 						local String is mkkV: :nextTmp();
 						:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
 						local String is mvkV: :nextTmp();
 						:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
-						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [mkkV, mvkV]));
+						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_newTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV, mvkV]));
 					});
 				}, {
 					local String is mkkV0: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: mkkV0, value: 0));
 					local String is mvkV0: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: mvkV0, value: 0));
-					:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:I64, IrType:I64], args: [mkkV0, mvkV0]));
+					:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_newTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV0, mvkV0]));
 				});
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {

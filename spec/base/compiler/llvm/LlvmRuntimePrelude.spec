@@ -783,29 +783,6 @@ define internal noalias ptr @Vector_byteBufNew() alwaysinline {
   %b = call noalias ptr @spec_rt_alloc(i64 24, ptr @Vector_byteBufDestroy)
   ret ptr %b
 }
-define internal noalias ptr @HashTable_mapNewTyped(i64 %kk, i64 %vk) alwaysinline {
-  %m = call noalias ptr @spec_rt_alloc(i64 48, ptr @HashTable_mapDestroy)
-  %b = call i64 @__spec_mem_alloc(i64 64)
-  %bp = inttoptr i64 %b to ptr
-  store ptr %bp, ptr %m, align 8
-  %nbp = getelementptr inbounds i8, ptr %m, i64 8
-  store i64 8, ptr %nbp, align 8
-  %kk32 = trunc i64 %kk to i32
-  %kkp = getelementptr inbounds i8, ptr %m, i64 24
-  store i32 %kk32, ptr %kkp, align 8
-  %vk32 = trunc i64 %vk to i32
-  %vkp = getelementptr inbounds i8, ptr %m, i64 28
-  store i32 %vk32, ptr %vkp, align 4
-  ret ptr %m
-}
-define internal noalias ptr @HashTable_mapNew() alwaysinline {
-  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 0)
-  ret ptr %m
-}
-define internal noalias ptr @HashTable_mapNewObject() alwaysinline {
-  %m = call noalias ptr @HashTable_mapNewTyped(i64 0, i64 1)
-  ret ptr %m
-}
 define internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {
   %r = call i32 @strcmp(ptr %a, ptr %b)
   %eq = icmp eq i32 %r, 0

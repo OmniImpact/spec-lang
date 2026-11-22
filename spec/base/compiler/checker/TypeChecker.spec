@@ -4481,10 +4481,6 @@ Class is TypeChecker{
 					local String is mk: TypeDomain:mapKeyType(t: targetType);
 					res: if({ mk != '' }, { TypeDomain:makeArray(elem: mk) }, { 'Array of String' });
 				},
-				# The declared HashTable member supersedes this contract the
-				# moment the seed carries it; until then the vocabulary is
-				# the only typing the frozen checker has for bare calls.
-				'mapNewObject': { res: 'Map'; },
 				'add': { res: :names:voidName(); },
 				'set': { res: :names:voidName(); },
 				'clear': { res: :names:voidName(); },

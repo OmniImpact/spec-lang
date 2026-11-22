@@ -43,13 +43,7 @@ Class is CliArgs{
 	## `Map of String to String` (supporting `--key=val`, `--key val`, `-k=val`,
 	## `-k val`, indexed positionals `'0'`, `'1'`, ..., and newline-joined `''`).
 	Function of Any is parseMap(Int is argc, Int is argvAddr){
-		# Bridge (transitional): mapNew graduates to a declared HashTable
-		# member in the next landing; mapNewObject is its ARC-value form —
-		# semantically correct for the String values stored here.
-		# mapNewObject: the prelude shim (mapNewTyped(0,1)) — the proven
-		# startup path. ARC-value tracking is semantically correct for
-		# the String values stored here.
-		local Any is args: HashTable:mapNewObject();
+		local Any is args: HashTable:newObject();
 		local Int is posIdx: 0;
 		local Int is i: 1;
 		while({ i < argc }, {
