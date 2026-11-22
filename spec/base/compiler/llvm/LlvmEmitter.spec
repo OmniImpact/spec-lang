@@ -292,6 +292,377 @@ Class is LlvmEmitter{
 		return out;
 	}
 
+	local Function of String is emitShardHeader(IrModule is mod, Boolean is isPrimary){
+		local LlvmRuntimePrelude is prelude: LlvmRuntimePrelude:init();
+		local String is out: ```
+; Spec LLVM IR (shard)
+{{prelude:emitAllForShard(isPrimary: isPrimary)}}
+{{:emitExternalSpecDecls(mod: mod)}}
+```;
+		if({ isPrimary }, {
+			local Int is gi: 0;
+			while({ gi < mod:globalNames:length() }, {
+				local String is gn: mod:globalNames:get(index: gi, default: '');
+				local IrType is gt: mod:globalTypes:get(index: gi);
+				local String is giv: mod:globalInits:get(index: gi, default: 'zeroinitializer');
+				out: out . '@' . gn . ' = hidden global ' . :llvmType(ty: gt) . ' ' . giv . "\n";
+				gi++;
+			});
+			if({ mod:globalNames:length() > 0 }, { out: out . "\n"; });
+
+			local LlvmStructLayout is methodMetaLayout: LlvmStructLayout:methodMeta();
+			local LlvmStructLayout is fieldMetaLayout: LlvmStructLayout:fieldMeta();
+			local LlvmStructLayout is classMetaLayout: LlvmStructLayout:classMeta();
+			local LlvmStructLayout is heldEntryLayout: LlvmStructLayout:heldEntry();
+			local String is methodMetaType: methodMetaLayout:llvmType();
+			local String is fieldMetaType: fieldMetaLayout:llvmType();
+			local String is heldEntryType: heldEntryLayout:llvmType();
+			local Array of String is classMetaRefs: [];
+			local Array of String is heldEntryItems: [];
+			local Int is si: 0;
+			while({ si < mod:structs:length() }, {
+				local IrStruct is st: mod:structs:get(index: si);
+				local String is fieldsStr: '';
+				local Int is fi: 0;
+				while({ fi < st:fieldTypes:length() }, {
+					if({ fi > 0 }, { fieldsStr: fieldsStr . ', '; });
+					fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi));
+					fi++;
+				});
+				out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
+				local String is qn: if({ st:qualifiedName != '' }, { st:qualifiedName }, { st:name });
+				local Int is qnByteLen: qn:length() + 1;
+				out: out . '@.typename.' . st:name . ' = hidden unnamed_addr constant [' . (qnByteLen as String) . ' x i8] c"' . :escapeLlvmBytes(s: qn) . "\\00\"\n";
+				local Int is vtLen: st:vtableFns:length();
+				if({ vtLen > 0 }, {
+					local String is vtItems: '';
+					local Int is vi: 0;
+					while({ vi < vtLen }, {
+						if({ vi > 0 }, { vtItems: vtItems . ', '; });
+						local String is vfn: st:vtableFns:get(index: vi, default: 'null');
+						if({ vfn == 'null' }, {
+							vtItems: vtItems . 'ptr null';
+						}, {
+							vtItems: vtItems . 'ptr @' . vfn;
+						});
+						vi++;
+					});
+					out: out . '@.vtable.' . st:name . ' = hidden constant [' . (vtLen as String) . ' x ptr] [' . vtItems . "]\n";
+				}, {
+					out: out . '@.vtable.' . st:name . " = hidden constant [1 x ptr] zeroinitializer\n";
+				});
+
+				out: out . :emitCStrGlobal(sym: '@.src.' . st:name, val: st:sourceFileBase);
+				local String is basesRef: 'null';
+				if({ st:baseNames:length() > 0 }, {
+					local String is bItems: '';
+					local Int is bi: 0;
+					while({ bi < st:baseNames:length() }, {
+						local String is bn: st:baseNames:get(index: bi, default: '');
+						local String is bSym: '@.bname.' . st:name . '.' . (bi as String);
+						out: out . :emitCStrGlobal(sym: bSym, val: bn);
+						if({ bi > 0 }, { bItems: bItems . ', '; });
+						bItems: bItems . 'ptr ' . bSym;
+						bi++;
+					});
+					out: out . '@.bases.' . st:name . ' = private constant [' . (st:baseNames:length() as String) . ' x ptr] [' . bItems . "]\n";
+					basesRef: '@.bases.' . st:name;
+				});
+
+				local String is methodsRef: 'null';
+				if({ st:metaMethodNames:length() > 0 }, {
+					local String is mItems: '';
+					local Int is mi: 0;
+					while({ mi < st:metaMethodNames:length() }, {
+						local String is mn: st:metaMethodNames:get(index: mi, default: '');
+						local String is mSym: '@.mname.' . st:name . '.' . (mi as String);
+						out: out . :emitCStrGlobal(sym: mSym, val: mn);
+						local String is mfn: st:metaMethodFns:get(index: mi, default: 'null');
+						local String is mfnRef: if({ mfn == 'null' }, { 'null' }, { '@' . mfn });
+						local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
+						local Int is mln: st:metaMethodLines:get(index: mi, default: 0);
+						if({ mi > 0 }, { mItems: mItems . ', '; });
+						mItems: mItems . methodMetaLayout:formatConst(values: [mSym, mfnRef, mfl as String, mln as String]);
+						mi++;
+					});
+					out: out . '@.methods.' . st:name . ' = private constant [' . (st:metaMethodNames:length() as String) . ' x ' . methodMetaType . '] [' . mItems . "]\n";
+					methodsRef: '@.methods.' . st:name;
+				});
+
+				local String is fieldsRef: 'null';
+				if({ st:metaFieldNames:length() > 0 }, {
+					local String is mfItems: '';
+					local Int is mfi: 0;
+					while({ mfi < st:metaFieldNames:length() }, {
+						local String is mfnm: st:metaFieldNames:get(index: mfi, default: '');
+						local String is mfty: st:metaFieldTypes:get(index: mfi, default: '');
+						local Int is mfidx: st:metaFieldIndices:get(index: mfi, default: 0);
+						local Int is mffl: st:metaFieldFlags:get(index: mfi, default: 0);
+						local String is fnSym: '@.fname.' . st:name . '.' . (mfi as String);
+						local String is ftSym: '@.ftype.' . st:name . '.' . (mfi as String);
+						out: out . :emitCStrGlobal(sym: fnSym, val: mfnm);
+						out: out . :emitCStrGlobal(sym: ftSym, val: mfty);
+						local String is offExpr: 'ptrtoint (ptr getelementptr (%struct.' . st:name . ', ptr null, i32 0, i32 ' . (mfidx as String) . ') to i32)';
+						if({ mfi > 0 }, { mfItems: mfItems . ', '; });
+						mfItems: mfItems . fieldMetaLayout:formatConst(values: [fnSym, ftSym, offExpr, mffl as String]);
+						mfi++;
+					});
+					out: out . '@.fields.' . st:name . ' = private constant [' . (st:metaFieldNames:length() as String) . ' x ' . fieldMetaType . '] [' . mfItems . "]\n";
+					fieldsRef: '@.fields.' . st:name;
+				});
+
+				local String is ctorPtr: if({ st:constructFn == 'null' }, { 'null' }, { '@' . st:constructFn });
+				out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: ['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String, fieldsRef, st:metaFieldNames:length() as String]) . "\n";
+				classMetaRefs:add(item: 'ptr @.meta.' . st:name);
+
+				if({ st:heldNames:length() > 0 }, {
+					local String is hnItems: '';
+					local String is hgItems: '';
+					local Int is hi: 0;
+					while({ hi < st:heldNames:length() }, {
+						local String is hn: st:heldNames:get(index: hi, default: '');
+						local String is hSym: '@.hname.' . st:name . '.' . (hi as String);
+						out: out . :emitCStrGlobal(sym: hSym, val: hn);
+						local String is hg: st:heldGetters:get(index: hi, default: 'null');
+						local String is hgPtr: if({ hg == 'null' }, { 'null' }, { '@' . hg });
+						if({ hi > 0 }, {
+							hnItems: hnItems . ', ';
+							hgItems: hgItems . ', ';
+						});
+						hnItems: hnItems . 'ptr ' . hSym;
+						hgItems: hgItems . 'ptr ' . hgPtr;
+						hi++;
+					});
+					out: out . '@.held_names.' . st:name . ' = private constant [' . (st:heldNames:length() as String) . ' x ptr] [' . hnItems . "]\n";
+					out: out . '@.held_getters.' . st:name . ' = private constant [' . (st:heldGetters:length() as String) . ' x ptr] [' . hgItems . "]\n";
+					heldEntryItems:add(item: heldEntryLayout:formatConst(values: ['@.typename.' . st:name, '@.held_names.' . st:name, st:heldNames:length() as String, '@.held_getters.' . st:name]));
+				});
+				si++;
+			});
+			if({ mod:structs:length() > 0 }, { out: out . "\n"; });
+
+			local Int is cmCount: classMetaRefs:length();
+			if({ cmCount > 0 }, {
+				local String is cmList: '';
+				local Int is ci: 0;
+				while({ ci < cmCount }, {
+					if({ ci > 0 }, { cmList: cmList . ', '; });
+					cmList: cmList . classMetaRefs:get(index: ci, default: 'ptr null');
+					ci++;
+				});
+				out: out . '@spec_class_registry = constant [' . (cmCount as String) . ' x ptr] [' . cmList . "]\n";
+			}, {
+				out: out . "@spec_class_registry = constant [1 x ptr] zeroinitializer\n";
+			});
+			out: out . 'define i32 @spec_class_registry_count() {' . "\n  ret i32 " . (cmCount as String) . "\n}\n";
+
+			heldEntryItems:add(item: heldEntryType . ' zeroinitializer');
+			local String is heList: '';
+			local Int is hei: 0;
+			while({ hei < heldEntryItems:length() }, {
+				if({ hei > 0 }, { heList: heList . ', '; });
+				heList: heList . heldEntryItems:get(index: hei, default: '');
+				hei++;
+			});
+			out: out . '@spec_held_registry = constant [' . (heldEntryItems:length() as String) . ' x ' . heldEntryType . '] [' . heList . "]\n\n";
+
+			local Int is li: 0;
+			while({ li < mod:stringLiterals:length() }, {
+				local String is raw: mod:stringLiterals:get(index: li, default: '');
+				local Int is byteLen: raw:length() + 1;
+				local String is esc: :escapeLlvmBytes(s: raw);
+				out: out . '@.str.' . (li as String) . ' = hidden unnamed_addr constant [' . (byteLen as String) . ' x i8] c"' . esc . "\\00\"\n";
+				out: out . '@.str.cache.' . (li as String) . " = hidden global ptr null, align 8\n";
+				li++;
+			});
+			if({ mod:stringLiterals:length() > 0 }, { out: out . "\n"; });
+			return out;
+		});
+
+		# Non-primary shard: external declarations for shared globals, struct types, and strings.
+		local Int is egi: 0;
+		while({ egi < mod:globalNames:length() }, {
+			local String is egn: mod:globalNames:get(index: egi, default: '');
+			local IrType is egt: mod:globalTypes:get(index: egi);
+			out: out . '@' . egn . ' = external hidden global ' . :llvmType(ty: egt) . "\n";
+			egi++;
+		});
+		local Int is esi: 0;
+		while({ esi < mod:structs:length() }, {
+			local IrStruct is est: mod:structs:get(index: esi);
+			local String is eFields: '';
+			local Int is efi: 0;
+			while({ efi < est:fieldTypes:length() }, {
+				if({ efi > 0 }, { eFields: eFields . ', '; });
+				eFields: eFields . :llvmType(ty: est:fieldTypes:get(index: efi));
+				efi++;
+			});
+			out: out . '%struct.' . est:name . ' = type { ' . eFields . " }\n";
+			out: out . '@.typename.' . est:name . " = external hidden unnamed_addr constant i8\n";
+			out: out . '@.vtable.' . est:name . " = external hidden constant i8\n";
+			esi++;
+		});
+		out: out . "@spec_class_registry = external constant i8\n";
+		out: out . "@spec_held_registry = external constant i8\n";
+		out: out . "declare i32 @spec_class_registry_count()\n";
+		local Int is eli: 0;
+		while({ eli < mod:stringLiterals:length() }, {
+			out: out . '@.str.' . (eli as String) . " = external hidden unnamed_addr constant i8\n";
+			out: out . '@.str.cache.' . (eli as String) . " = external hidden global ptr\n";
+			eli++;
+		});
+		out: out . "\n";
+		return out;
+	}
+
+	local Function of String is emitFunctionDecl(IrFunction is fn){
+		local String is retStr: :llvmType(ty: fn:retType);
+		local String is paramsStr: '';
+		local Int is pi: 0;
+		while({ pi < fn:params:length() }, {
+			if({ pi > 0 }, { paramsStr: paramsStr . ', '; });
+			local IrParam is p: fn:params:get(index: pi);
+			paramsStr: paramsStr . :llvmType(ty: p:ty) . ' ' . p:name;
+			pi++;
+		});
+		return 'declare ' . retStr . ' @' . fn:name . '(' . paramsStr . ")\n";
+	}
+
+	## Emits [mod] split across [shards] independent LLVM IR translation units
+	## for parallel clang -c compilation. Functions are LPT-balanced by
+	## instruction count across shards; shard 0 owns shared globals/metadata.
+	Function of Array of String is emitShardsScoped(IrModule is mod, ThreadScope is scope, Int is shards: 1){
+		local Int is nFn: mod:functions:length();
+		if({ shards <= 1 || nFn <= 1 }, {
+			return [:emitModule(mod: mod)];
+		});
+		local Int is nShards: if({ shards < nFn }, { shards }, { nFn });
+		Process:arrayFreeze(a: mod:functions);
+
+		# Compute instruction weight per function and build declare prototypes.
+		local Array of Int is weights: [];
+		local Array of String is fnDecls: [];
+		local Array of Int is sortedIdx: [];
+		local Int is i: 0;
+		while({ i < nFn }, {
+			local IrFunction is f0: mod:functions:get(index: i);
+			local Int is w0: 1;
+			local Int is bi0: 0;
+			while({ bi0 < f0:blocks:length() }, {
+				w0: w0 + f0:blocks:get(index: bi0):insts:length();
+				bi0++;
+			});
+			weights:add(item: w0);
+			fnDecls:add(item: :emitFunctionDecl(fn: f0));
+			sortedIdx:add(item: i);
+			i++;
+		});
+		Process:arrayFreeze(a: fnDecls);
+
+		# Insertion sort function indices by weight descending (LPT).
+		local Int is si: 1;
+		while({ si < nFn }, {
+			local Int is keyIdx: sortedIdx:get(index: si);
+			local Int is keyW: weights:get(index: keyIdx);
+			local Int is sj: si - 1;
+			while({ sj >= 0 && weights:get(index: sortedIdx:get(index: sj)) < keyW }, {
+				sortedIdx:set(index: sj + 1, item: sortedIdx:get(index: sj));
+				sj: sj - 1;
+			});
+			sortedIdx:set(index: sj + 1, item: keyIdx);
+			si++;
+		});
+
+		local Array of Array of Int is buckets: [];
+		local Array of Int is bucketWeights: [];
+		local Int is b0: 0;
+		while({ b0 < nShards }, {
+			buckets:add(item: []);
+			bucketWeights:add(item: 0);
+			b0++;
+		});
+		local Array of Int is ownerShard: [];
+		local Int is oi: 0;
+		while({ oi < nFn }, {
+			ownerShard:add(item: 0);
+			oi++;
+		});
+		local Int is pi: 0;
+		while({ pi < nFn }, {
+			local Int is fi: sortedIdx:get(index: pi);
+			local Int is fw: weights:get(index: fi);
+			local Int is bestB: 0;
+			local Int is bestL: bucketWeights:get(index: 0);
+			local Int is bi: 1;
+			while({ bi < nShards }, {
+				local Int is curL: bucketWeights:get(index: bi);
+				if({ curL < bestL }, {
+					bestL: curL;
+					bestB: bi;
+				});
+				bi++;
+			});
+			buckets:get(index: bestB):add(item: fi);
+			bucketWeights:set(index: bestB, item: bestL + fw);
+			ownerShard:set(index: fi, item: bestB);
+			pi++;
+		});
+		Process:arrayFreeze(a: ownerShard);
+
+		# Pre-compute the shared non-primary header once (identical for shards 1..N-1).
+		local String is primaryHdr: :emitShardHeader(mod: mod, isPrimary: true);
+		local String is secondaryHdr: :emitShardHeader(mod: mod, isPrimary: false);
+		local Boolean is dbgFlag: :debugMode;
+
+		local Array of Task of String is shardTasks: [];
+		local Int is s: 0;
+		while({ s < nShards }, {
+			local Int is myShard: s;
+			local Array of Int is myFns: buckets:get(index: s);
+			local String is myHdr: if({ myShard == 0 }, { primaryHdr }, { secondaryHdr });
+			local Task of String is stTask: scope:spawn(task: local Function of String(){
+				local LlvmEmitter is wEm: LlvmEmitter:init();
+				wEm:debugMode: dbgFlag;
+				if({ dbgFlag }, {
+					wEm:dbgNodes: [];
+					wEm:dbgFileIds: Map:init();
+					wEm:dbgLocIds: Map:init();
+					wEm:dbgNodes:add(item: '');
+					wEm:dbgNodes:add(item: '!1 = !{}');
+					wEm:dbgNodes:add(item: '!2 = !DISubroutineType(types: !1)');
+				});
+				local String is out: myHdr;
+				local Int is di: 0;
+				while({ di < nFn }, {
+					if({ ownerShard:get(index: di) != myShard }, {
+						out: out . fnDecls:get(index: di, default: '');
+					});
+					di++;
+				});
+				out: out . "\n";
+				local Int is k: 0;
+				while({ k < myFns:length() }, {
+					out: out . wEm:emitFunction(fn: mod:functions:get(index: myFns:get(index: k))) . "\n";
+					k++;
+				});
+				if({ dbgFlag }, {
+					out: out . wEm:emitDebugMetadata();
+				});
+				return out;
+			});
+			shardTasks:add(item: stTask);
+			s++;
+		});
+
+		local Array of String is results: [];
+		local Int is ri: 0;
+		while({ ri < shardTasks:length() }, {
+			results:add(item: shardTasks:get(index: ri):await());
+			ri++;
+		});
+		return results;
+	}
+
 	Function of String is emitModule(IrModule is mod){
 		local String is out: :emitModuleHeader(mod: mod);
 

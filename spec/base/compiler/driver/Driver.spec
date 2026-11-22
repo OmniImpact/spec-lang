@@ -38,6 +38,7 @@ Class is Driver{
 		['base', 'compiler', 'checker', TypeError],
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -283,15 +284,33 @@ Class is Driver{
 			});
 			local LlvmEmitter is emitter: LlvmEmitter:init();
 			emitter:debugMode: debugMode;
-			local String is llText: emitter:emitModuleScoped(mod: irMod, scope: scope, threads: threadCount);
-			genMs: Process:clockMs() - llvmGenT0;
-
-			local Int is llLines: llText:countByte(byteVal: 10);
+			local Boolean is useShards: emitLlvmPath == '' && outputPath != '' && outputPath != '/dev/null' && outputPath != 'nul' && outputPath != 'NUL' && threadCount > 1 && irMod:functions:length() >= 32;
+			local Int is llLines: 0;
 			local String is tempLlPath: emitLlvmPath;
-			if({ tempLlPath == '' }, {
-				tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
+			local Array of String is shardLlPaths: [];
+			if({ useShards }, {
+				local Int is nShards: if({ threadCount > 8 }, { 8 }, { threadCount });
+				local Array of String is shardTexts: emitter:emitShardsScoped(mod: irMod, scope: scope, shards: nShards);
+				genMs: Process:clockMs() - llvmGenT0;
+				local String is shardPrefix: Uri:systemTempDir() . '/_spec_shard_' . (Process:getPid() as String) . '_';
+				local Int is si: 0;
+				while({ si < shardTexts:length() }, {
+					local String is sText: shardTexts:get(index: si, default: '');
+					llLines: llLines + sText:countByte(byteVal: 10);
+					local String is sPath: shardPrefix . (si as String) . '.ll';
+					fileWrite(path: sPath, content: sText);
+					shardLlPaths:add(item: sPath);
+					si++;
+				});
+			}, {
+				local String is llText: emitter:emitModuleScoped(mod: irMod, scope: scope, threads: threadCount);
+				genMs: Process:clockMs() - llvmGenT0;
+				llLines: llText:countByte(byteVal: 10);
+				if({ tempLlPath == '' }, {
+					tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
+				});
+				fileWrite(path: tempLlPath, content: llText);
 			});
-			fileWrite(path: tempLlPath, content: llText);
 			report:stage(n: 3, total: 4, label: 'generating LLVM IR · ' . (llLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 
 			if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
@@ -336,18 +355,71 @@ Class is Driver{
 			});
 
 			local String is optFlag: if({ debugMode }, { '-O0' }, { '-O2' });
-			local Array of String is llArgs: [optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
 			local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
-			llOsFlags:each(action: local Function(String is fl){
-				llArgs:add(item: fl);
-			});
-			if({ debugMode }, {
-				llArgs:add(item: '-g');
-			});
 			local Int is llCcT0: Process:clockMs();
-			local Int is llStat: Process:execute(command: 'clang', args: llArgs);
+			local Int is llStat: 0;
+			if({ useShards }, {
+				local Array of String is shardObjPaths: [];
+				local Array of Task of Int is ccTasks: [];
+				local Int is ci: 0;
+				while({ ci < shardLlPaths:length() }, {
+					local String is sLl: shardLlPaths:get(index: ci, default: '');
+					local String is sObj: sLl . '.o';
+					shardObjPaths:add(item: sObj);
+					local Array of String is cArgs: [optFlag, '-Wno-override-module', '-c', sLl, '-o', sObj];
+					if({ debugMode }, {
+						cArgs:add(item: '-g');
+					});
+					local Task of Int is ct: scope:spawn(task: local Function of Int(){
+						return Process:execute(command: 'clang', args: cArgs);
+					});
+					ccTasks:add(item: ct);
+					ci++;
+				});
+				local Int is wi: 0;
+				while({ wi < ccTasks:length() }, {
+					local Int is stCode: ccTasks:get(index: wi):await();
+					if({ stCode != 0 && llStat == 0 }, {
+						llStat: stCode;
+					});
+					wi++;
+				});
+				shardLlPaths:each(action: local Function(String is sp){
+					fileRemove(path: sp, onError: local Function(SpecError of FileError is e){});
+				});
+				if({ llStat == 0 }, {
+					local Array of String is linkArgs: [];
+					shardObjPaths:each(action: local Function(String is op){
+						linkArgs:add(item: op);
+					});
+					linkArgs:add(item: runtimeO);
+					linkArgs:add(item: '-o');
+					linkArgs:add(item: outputPath);
+					linkArgs:add(item: '-pthread');
+					linkArgs:add(item: '-lm');
+					llOsFlags:each(action: local Function(String is fl){
+						linkArgs:add(item: fl);
+					});
+					if({ debugMode }, {
+						linkArgs:add(item: '-g');
+					});
+					llStat: Process:execute(command: 'clang', args: linkArgs);
+				});
+				shardObjPaths:each(action: local Function(String is op){
+					fileRemove(path: op, onError: local Function(SpecError of FileError is e){});
+				});
+			}, {
+				local Array of String is llArgs: [optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
+				llOsFlags:each(action: local Function(String is fl){
+					llArgs:add(item: fl);
+				});
+				if({ debugMode }, {
+					llArgs:add(item: '-g');
+				});
+				llStat: Process:execute(command: 'clang', args: llArgs);
+				if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath, onError: local Function(SpecError of FileError is e){}); });
+			});
 			ccMs: Process:clockMs() - llCcT0;
-			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath, onError: local Function(SpecError of FileError is e){}); });
 			if({ llStat != 0 }, {
 				fileRemove(path: runtimeO, onError: local Function(SpecError of FileError is e){});
 				fileRemove(path: runtimeC, onError: local Function(SpecError of FileError is e){});
