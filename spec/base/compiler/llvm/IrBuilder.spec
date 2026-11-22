@@ -237,33 +237,6 @@ Class is IrBuilder{
 		return :specBaseMap:get(key: specType, default: '') == 'Map';
 	}
 
-	## The HashTable variant suffix for a key read or written on
-	## [recvType]. A mangled instantiation resolves from its own key
-	## argument; parameterized spellings fall to the prefix machine and
-	## the key's static type.
-	Function of String is mapKeySuffixFor(String is recvType, String is keySpec){
-		if({ :specBaseMap:get(key: recvType, default: '') == 'Map' && :specClassArgsMap:has(key: recvType) }, {
-			local Array of Type is mArgs: :specClassArgsMap:get(key: recvType, default: []);
-			if({ mArgs:length() >= 1 }, {
-				local Int is kk: :mapKeyKindFor(specType: mArgs:get(index: 0, default: Type:init(name: '')):name);
-				if({ kk == 1 }, { return 'Int'; });
-				if({ kk == 2 }, { return 'Flt'; });
-				if({ kk == 3 }, { return 'Obj'; });
-			});
-			return '';
-		});
-		if({ keySpec == 'Int' || keySpec == 'Boolean' || recvType:startsWith(prefix: 'Map of Int to ') || recvType:startsWith(prefix: 'Map:Int:') || recvType:startsWith(prefix: 'Map of Boolean to ') || recvType:startsWith(prefix: 'Map:Boolean:') }, { return 'Int'; });
-		if({ keySpec == 'Float' || recvType:startsWith(prefix: 'Map of Float to ') || recvType:startsWith(prefix: 'Map:Float:') }, { return 'Flt'; });
-		if({ keySpec != 'String' && keySpec != 'Any' && recvType != 'Map' && !recvType:startsWith(prefix: 'Map of String to ') && !recvType:startsWith(prefix: 'Map:String:') && !recvType:startsWith(prefix: 'Map of Any to ') && !recvType:startsWith(prefix: 'Map:Any:') }, { return 'Obj'; });
-		return '';
-	}
-
-	Function of IrType is mapKeyIrTypeFor(String is kSuf){
-		if({ kSuf == 'Int' }, { return IrType:I64; });
-		if({ kSuf == 'Flt' }, { return IrType:F64; });
-		return IrType:Ptr;
-	}
-
 	Function of Boolean is hasMethodBodies(ClassInfo is cls){
 		local Int is i: 0;
 		while({ i < cls:members:length() }, {
@@ -1506,7 +1479,7 @@ Class is IrBuilder{
 				local String is valGlob: '.held_val.' . sname . '.' . m:name;
 				local String is initGlob: '.held_init.' . sname . '.' . m:name;
 				:mod:addGlobal(name: valGlob, ty: hty, initVal: 'zeroinitializer');
-				:mod:addGlobal(name: initGlob, ty: IrType:I1, initVal: 'false');
+				:mod:addGlobal(name: initGlob, ty: IrType:I64, initVal: '0');
 				:heldFields:set(key: sname . ':' . m:name, value: sname);
 				:heldFields:set(key: cls:name . ':' . m:name, value: sname);
 				:heldFieldTypes:set(key: sname . ':' . m:name, value: m:memberType:name);
@@ -1619,18 +1592,34 @@ Class is IrBuilder{
 
 		local String is valGlob: '@.held_val.' . sname . '.' . m:name;
 		local String is initGlob: '@.held_init.' . sname . '.' . m:name;
-		local String is isInit: :nextTmp();
-		:emit(inst: IrInst:Load(dst: isInit, slot: initGlob, ty: IrType:I1));
+		local String is stateAddr: :nextTmp();
+		:emit(inst: IrInst:IrCast(dst: stateAddr, val: initGlob, fromType: IrType:Ptr, toType: IrType:I64));
+		local String is zeroVal: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: zeroVal, value: 0));
+		local String is oneVal: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: oneVal, value: 1));
+		local String is twoVal: :nextTmp();
+		:emit(inst: IrInst:ConstInt(dst: twoVal, value: 2));
 
+		local String is fastState: :nextTmp();
+		:emit(inst: IrInst:IrCall(dst: fastState, hasDst: true, retType: IrType:I64, callee: '__spec_mem_atomic_load_i64', argTypes: [IrType:I64], args: [stateAddr]));
+		local String is isReady: :nextTmp();
+		:emit(inst: IrInst:Cmp(dst: isReady, op: '==', lhs: fastState, rhs: twoVal, ty: IrType:I64));
+
+		local String is casLbl: :nextLabel(prefix: 'held_cas');
 		local String is initLbl: :nextLabel(prefix: 'held_init');
+		local String is waitLbl: :nextLabel(prefix: 'held_wait');
 		local String is doneLbl: :nextLabel(prefix: 'held_done');
-		:terminate(inst: IrInst:CondBr(cond: isInit, thenLabel: doneLbl, elseLabel: initLbl));
+		:terminate(inst: IrInst:CondBr(cond: isReady, thenLabel: doneLbl, elseLabel: casLbl));
+
+		local IrBlock is casBlk: fn:addBlock(label: casLbl);
+		:switchBlock(blk: casBlk);
+		local String is wonCas: :nextTmp();
+		:emit(inst: IrInst:IrCall(dst: wonCas, hasDst: true, retType: IrType:I1, callee: '__spec_mem_atomic_cas_i64', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [stateAddr, zeroVal, oneVal]));
+		:terminate(inst: IrInst:CondBr(cond: wonCas, thenLabel: initLbl, elseLabel: waitLbl));
 
 		local IrBlock is initBlk: fn:addBlock(label: initLbl);
 		:switchBlock(blk: initBlk);
-		local String is trueTmp: :nextTmp();
-		:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
-		:emit(inst: IrInst:Store(slot: initGlob, val: trueTmp, ty: IrType:I1));
 		if({ m:hasInit }, {
 			local String is prevMapK: :expectedMapKeyType;
 			local String is prevMapV: :expectedMapValType;
@@ -1651,7 +1640,16 @@ Class is IrBuilder{
 			});
 			:emit(inst: IrInst:Store(slot: valGlob, val: iv, ty: hty));
 		});
+		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_atomic_store_i64', argTypes: [IrType:I64, IrType:I64], args: [stateAddr, twoVal]));
 		:terminate(inst: IrInst:Br(target: doneLbl));
+
+		local IrBlock is waitBlk: fn:addBlock(label: waitLbl);
+		:switchBlock(blk: waitBlk);
+		local String is waitState: :nextTmp();
+		:emit(inst: IrInst:IrCall(dst: waitState, hasDst: true, retType: IrType:I64, callee: '__spec_mem_atomic_load_i64', argTypes: [IrType:I64], args: [stateAddr]));
+		local String is waitDone: :nextTmp();
+		:emit(inst: IrInst:Cmp(dst: waitDone, op: '==', lhs: waitState, rhs: twoVal, ty: IrType:I64));
+		:terminate(inst: IrInst:CondBr(cond: waitDone, thenLabel: doneLbl, elseLabel: waitLbl));
 
 		local IrBlock is doneBlk: fn:addBlock(label: doneLbl);
 		:switchBlock(blk: doneBlk);
@@ -3797,10 +3795,12 @@ Class is IrBuilder{
 								local String is owner: :heldFields:get(key: hk, default: '');
 								local IrType is hty: :irTypeFor(specType: :heldFieldTypes:get(key: owner . ':' . name, default: ''));
 								if({ hty == IrType:Void }, { hty: IrType:Ptr; });
-								local String is trueTmp: :nextTmp();
-								:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
-								:emit(inst: IrInst:Store(slot: '@.held_init.' . owner . '.' . name, val: trueTmp, ty: IrType:I1));
 								:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . name, val: val, ty: hty));
+								local String is hStateAddr: :nextTmp();
+								:emit(inst: IrInst:IrCast(dst: hStateAddr, val: '@.held_init.' . owner . '.' . name, fromType: IrType:Ptr, toType: IrType:I64));
+								local String is hTwo: :nextTmp();
+								:emit(inst: IrInst:ConstInt(dst: hTwo, value: 2));
+								:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_atomic_store_i64', argTypes: [IrType:I64, IrType:I64], args: [hStateAddr, hTwo]));
 							}, {
 								if({ :localSlots:has(key: ':') }, {
 									local IrStruct is selfSt: :mod:findStruct(name: :currentClass);
@@ -3858,10 +3858,12 @@ Class is IrBuilder{
 								local String is owner: :heldFields:get(key: seg0 . ':' . seg1, default: '');
 								local IrType is hty: :irTypeFor(specType: :heldFieldTypes:get(key: owner . ':' . seg1, default: ''));
 								if({ hty == IrType:Void }, { hty: IrType:Ptr; });
-								local String is trueTmp: :nextTmp();
-								:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
-								:emit(inst: IrInst:Store(slot: '@.held_init.' . owner . '.' . seg1, val: trueTmp, ty: IrType:I1));
 								:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . seg1, val: val, ty: hty));
+								local String is hpStateAddr: :nextTmp();
+								:emit(inst: IrInst:IrCast(dst: hpStateAddr, val: '@.held_init.' . owner . '.' . seg1, fromType: IrType:Ptr, toType: IrType:I64));
+								local String is hpTwo: :nextTmp();
+								:emit(inst: IrInst:ConstInt(dst: hpTwo, value: 2));
+								:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_atomic_store_i64', argTypes: [IrType:I64, IrType:I64], args: [hpStateAddr, hpTwo]));
 							}, {
 								local Int is fidx: :resolvePathField(segments: segments);
 								if({ fidx >= 0 }, {
@@ -3924,6 +3926,7 @@ Class is IrBuilder{
 						val: :emitDefaultVal(ty: :curFn:retType);
 					});
 					if({ val == '0' && :curFn:retType == IrType:Ptr }, {
+						:addError(msg: 'Cannot return Void expression from pointer-returning method ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
 						val: 'null';
 					});
 					local Boolean is retExprIsArc: :isArcSpecType(specType: returnExpr:resolvedType);
@@ -4465,8 +4468,11 @@ Class is IrBuilder{
 						return dst;
 					});
 					if({ cmpTy == IrType:Ptr }, {
-						if({ l == '0' }, { l: 'null'; });
-						if({ r == '0' }, { r: 'null'; });
+						if({ l == '0' || r == '0' }, {
+							:addError(msg: 'Cannot compare Void expression against pointer in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
+							if({ l == '0' }, { l: 'null'; });
+							if({ r == '0' }, { r: 'null'; });
+						});
 					});
 					local String is cmpOp: op;
 					if({ cmpTy == IrType:I64 && (op == '<' || op == '<=' || op == '>' || op == '>=') && (:isUnsignedSpecType(specType: left:resolvedType) || :isUnsignedSpecType(specType: right:resolvedType)) }, {

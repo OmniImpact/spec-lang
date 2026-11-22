@@ -30,7 +30,7 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
 		local String is rt: call:target:resolvedType;
-		if({ call:name == 'typeName' && call:args:length() == 0 && rt != '' && rt != 'Class' && rt != 'String' && !rt:startsWith(prefix: 'Array') && !rt:startsWith(prefix: 'Map') && !rt:startsWith(prefix: 'List') }, {
+		if({ call:name == 'typeName' && call:args:length() == 0 && rt != '' && rt != 'Class' }, {
 			return true;
 		});
 		if({ :isFloorTarget(call: call, domain: 'Reflection') }, {

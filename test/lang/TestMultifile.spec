@@ -19,8 +19,8 @@ Class of SpecUnitTest is TestMultifile{
 		['base', 'sys', as Loops()]
 	];
 
-	# Declared variable initialized before use (the old suite's field)
-	local String is title;
+	# Declared variable initialized to empty, reassigned before use
+	local String is title: '';
 	local Int is counter: 0;
 
 	## 1. Pure Spec Math library methods. The clamp arguments reach the

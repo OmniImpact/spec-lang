@@ -284,3 +284,17 @@ Class is UninitLocalApp{
 		local String is s;
 	}
 }
+
+#! case: testUninitializedLocalFieldRejected
+#! expect: is not initialized by 'init' (Spec does not have null)
+Class is UninitFieldHolder{
+	local String is label;
+	replace Function is init(){
+		local Int is x: 1;
+	}
+}
+Class is UninitFieldApp{
+	replace Function is init(Map of String to String is args){
+		local UninitFieldHolder is h: UninitFieldHolder:init();
+	}
+}

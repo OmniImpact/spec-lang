@@ -306,40 +306,6 @@ Class is EnumDesugar{
 		return s;
 	}
 
-	## name(): the identity scan over the variants.
-	Function of Member is synthName(String is name, Array of Member is variants){
-		local Member is m: Member:init(kind: MemberKind:METHOD);
-		m:memberType: Type:init(name: 'String');
-		m:name: 'name';
-		local Array of Statement is body: [];
-		variants:each(action: local Function(Member is v){
-			local Expression is cond: :eq(left: :ident(name: ':'), right: :variantRef(enumName: name, variant: v:name));
-			body:add(item: :guardIf(cond: cond, val: :strLit(text: v:name)));
-		});
-		body:add(item: :tailReturn(expr: :strLit(text: '')));
-		m:body: body;
-		return m;
-	}
-
-	## ordinal(): the declaration-order index.
-	Function of Member is synthOrdinal(String is name, Array of Member is variants){
-		local Member is m: Member:init(kind: MemberKind:METHOD);
-		m:memberType: Type:init(name: 'Int');
-		m:name: 'ordinal';
-		local Array of Statement is body: [];
-		local Int is idx: 0;
-		variants:each(action: local Function(Member is v){
-			local Expression is cond: :eq(left: :ident(name: ':'), right: :variantRef(enumName: name, variant: v:name));
-			local Expression is num: Expression:NumberLit(value: idx, text: '' . idx);
-			body:add(item: :guardIf(cond: cond, val: num));
-			idx: idx + 1;
-		});
-		local Expression is none: Expression:NumberLit(value: -1, text: '-1');
-		body:add(item: :tailReturn(expr: none));
-		m:body: body;
-		return m;
-	}
-
 	## value(): the backing tag rides the instance.
 	Function of Member is synthValue(String is backingType){
 		local Member is m: Member:init(kind: MemberKind:METHOD);

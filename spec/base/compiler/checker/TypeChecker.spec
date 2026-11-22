@@ -3599,6 +3599,8 @@ Class is TypeChecker{
 		local Boolean is savedYieldFlag: :checkingValueYield;
 		:checkingValueYield: false;
 
+		local Boolean is savedInBranch: :inBranchClosure;
+		local Boolean is savedInValueBranch: :inValueBranch;
 		if({ !:inBranchClosure }, {
 			if({ TypeDomain:hasFunctionReturn(t: expected) && :isVoid(t: :resolveReturnType(t: returnType)) }, {
 				returnType:name: TypeDomain:functionReturn(t: expected);
@@ -3606,6 +3608,8 @@ Class is TypeChecker{
 			});
 			:currentMethodReturnType: :resolveReturnType(t: returnType);
 		});
+		:inBranchClosure: false;
+		:inValueBranch: false;
 		params:each(action: local Function(Parameter is p){
 			local String is pFmt: :formatVarTypeString(t: p:paramType);
 			:localVars:set(key: p:name, value: pFmt);
@@ -3617,7 +3621,7 @@ Class is TypeChecker{
 		local Int is bodyIdx: 0;
 		body:each(action: local Function(Statement is s){
 			:anonDepth: :anonDepth + 1;
-			if({ :inValueBranch && bodyIdx == bodyLen - 1 }, {
+			if({ savedInValueBranch && bodyIdx == bodyLen - 1 }, {
 				:checkingValueYield: true;
 			});
 			:checkStatement(stmt: s);
@@ -3625,6 +3629,8 @@ Class is TypeChecker{
 			:anonDepth: :anonDepth - 1;
 			bodyIdx: bodyIdx + 1;
 		});
+		:inBranchClosure: savedInBranch;
+		:inValueBranch: savedInValueBranch;
 
 		:localVars: savedVars;
 		if({ :inLazyBlock }, {
@@ -3947,15 +3953,28 @@ Class is TypeChecker{
 					# declared return type — flagging them here left their
 					# non-void closures validating against the enclosing
 					# method's return type.
-					if({ bareIsBranch && bareIdx >= 1 && bareIsValue }, {
+					local Boolean is isUntypedBlock: false;
+					match(on: arg:value, when: [
+						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is _bd){
+							if({ ps:length() == 0 && (rt:name == '' || rt:name == 'Void') }, {
+								isUntypedBlock: true;
+							});
+						}
+					], default: {});
+					local Boolean is prevInBranch: :inBranchClosure;
+					local Boolean is prevInValueBranch: :inValueBranch;
+					local String is prevYieldExpected: :currentYieldExpected;
+					if({ bareIsBranch && bareIdx >= 1 && (bareIsValue || isUntypedBlock) }, {
 						:inBranchClosure: true;
-						:inValueBranch: true;
-						:currentYieldExpected: expected;
+						if({ bareIsValue }, {
+							:inValueBranch: true;
+							:currentYieldExpected: expected;
+						});
 					});
 					:inferExpressionType(expr: arg:value);
-					:inBranchClosure: false;
-					:inValueBranch: false;
-					:currentYieldExpected: '';
+					:inBranchClosure: prevInBranch;
+					:inValueBranch: prevInValueBranch;
+					:currentYieldExpected: prevYieldExpected;
 					bareIdx: bareIdx + 1;
 				});
 			});
@@ -5108,6 +5127,15 @@ Class is TypeChecker{
 						if({ hSegs:length() == 2 && hSegs:get(index: 0) == :names:selfIdent() }, {
 							:unassignedFields:remove(key: hSegs:get(index: 1));
 						});
+					},
+					Expression:FieldAccess: local Function(Expression is faTarget, String is faField){
+						match(on: faTarget, when: [
+							Expression:Ident: local Function(String is tName){
+								if({ tName == :names:selfIdent() }, {
+									:unassignedFields:remove(key: faField);
+								});
+							}
+						], default: {});
 					},
 					Expression:Ident: local Function(String is name){
 						local Boolean is removed: :unassignedFields:remove(key: name);
@@ -6335,11 +6363,13 @@ Class is TypeChecker{
 
 		:checkSpecErrorHandlerGroup(classDef: classDef);
 
+		local Boolean is classHasInit: false;
 		classDef:members:each(action: local Function(Member is m){
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
 					:unassignedFields: Map:init();
 					if({ m:name == ContractMethod:INIT:value() }, {
+						classHasInit: true;
 						classDef:members:each(action: local Function(Member is fm){
 							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != ContractMethod:USING:value() && !fm:hasModifier(kw: Keyword:HELD) }, {
 								:unassignedFields:set(key: fm:name, value: 'true');
@@ -6356,6 +6386,19 @@ Class is TypeChecker{
 						:fieldTypes: Map:init();
 					});
 					:checkMethod(method: m);
+					if({ m:name == ContractMethod:INIT:value() && m:body:length() > 0 }, {
+						classDef:members:each(action: local Function(Member is fm){
+							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:hasModifier(kw: Keyword:LOCAL) && !fm:hasModifier(kw: Keyword:HELD) && :unassignedFields:has(key: fm:name) }, {
+								local String is fType: :formatVarTypeString(t: fm:memberType);
+								local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
+								local Boolean is isAutoList: fType == 'List' || fType:startsWith(prefix: 'List of ') || fType:startsWith(prefix: 'List:');
+								local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
+								if({ !isValPrim && !isAutoList && !isTypeParam }, {
+									:addError(line: m:line, msg: "Local field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' is not initialized by 'init' (Spec does not have null).");
+								});
+							});
+						});
+					});
 					:inHeldFunction: savedHeldFn;
 					:fieldTypes: savedFnFields;
 					:unassignedFields: Map:init();
@@ -6383,6 +6426,19 @@ Class is TypeChecker{
 				},
 				else: {}
 			]);
+		});
+		if({ !classHasInit && !:isBindingDeclaration(cls: classDef) && !:bindings:isSysinternal(cls: classDef) && classDef:baseClass != :names:enumHeader() }, {
+			classDef:members:each(action: local Function(Member is fm){
+				if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:hasModifier(kw: Keyword:LOCAL) && !fm:hasModifier(kw: Keyword:HELD) }, {
+					local String is fType: :formatVarTypeString(t: fm:memberType);
+					local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
+					local Boolean is isAutoList: fType == 'List' || fType:startsWith(prefix: 'List of ') || fType:startsWith(prefix: 'List:');
+					local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
+					if({ !isValPrim && !isAutoList && !isTypeParam }, {
+						:addError(line: fm:line, msg: "Local field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' must be initialized or assigned in 'init' (Spec does not have null).");
+					});
+				});
+			});
 		});
 	}
 
@@ -6583,7 +6639,7 @@ Class is TypeChecker{
 		# work with or without an import (the container branches
 		# were unconditional). When the declaration is loaded its real
 		# signatures apply; when not, calls resolve to the container type.
-		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'Loops', 'Loop', 'InputHandler'];
+		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function'];
 		builtinNames:each(action: local Function(String is bn){
 			:registeredClasses:set(key: bn, value: bn);
 		});

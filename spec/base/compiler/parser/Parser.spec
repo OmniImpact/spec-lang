@@ -51,7 +51,7 @@ Class is Parser{
 	local Array of Error is errors: [];
 	local ErrorText is errText: ErrorText:init();
 
-	local Lexer is lexer;
+	local Lexer is lexer: Lexer:init(source: '');
 	local Array of Token is lookahead: [];
 	local Boolean is streaming: false;
 
