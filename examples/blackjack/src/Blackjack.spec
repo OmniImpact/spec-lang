@@ -137,16 +137,19 @@ Class is Blackjack{
 	## Prompts the player for hit/stand input via [consIn].
 	Function is promptPlayerAction(){
 		line('Would you like to (h)it or (s)tand?');
-		local PlayerTurnHandler is handler: PlayerTurnHandler(game: :);
+		local Blackjack:PlayerTurnHandler is handler: Blackjack:PlayerTurnHandler(game: :);
 		consIn(handler: handler);
 	}
 
 	## Runs the dealer's automated draw loop until total >= 17.
 	Function is startDealerTurn(){
 		line("\n--- Starting Dealer's Turn ---");
-		local DealerTurnLoop is dealerLoop: DealerTurnLoop(game: :);
-		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback(game: :);
-		local LoopControl is control: LoopControl(onComplete: onComplete);
+		local Blackjack:DealerTurnLoop is dealerLoop: Blackjack:DealerTurnLoop(game: :);
+		local Blackjack:DealerTurnCompleteCallback is onComplete: Blackjack:DealerTurnCompleteCallback(game: :);
+		local LoopControl is control: LoopControl();
+		control:onComplete: local Function(){
+			onComplete:onComplete(control: control);
+		};
 		run(loop: dealerLoop, control: control);
 	}
 

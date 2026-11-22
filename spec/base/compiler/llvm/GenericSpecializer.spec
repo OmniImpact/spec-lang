@@ -621,7 +621,7 @@ Class is GenericSpecializer{
 	}
 
 	Function of Member is transformMember(Member is m, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
-		if({ m:name == 'using' || m:name == 'namespace' || m:name == 'binding' }, {
+		if({ m:name == 'using' || m:name == 'namespace' || m:name == 'binding' || m:name == 'castable' }, {
 			return m;
 		});
 		local Member is nm: Member:init(kind: m:kind);

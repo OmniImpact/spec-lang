@@ -1833,7 +1833,7 @@ declare void @spec_drain_async_tasks()
 @.mname.Enum.1 = private unnamed_addr constant [8 x i8] c"ordinal\00"
 @.methods.Enum = private constant [2 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Enum.0, ptr @Enum_name, i32 2, i32 32 }, { ptr, ptr, i32, i32 } { ptr @.mname.Enum.1, ptr @Enum_ordinal, i32 2, i32 44 }]
 @.meta.Enum = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.Enum, ptr @.src.Enum, ptr @.bases.Enum, i32 1, ptr @Enum__spec_construct, ptr @.methods.Enum, i32 2, ptr null, i32 0 }
-%struct.Str = type { ptr, ptr, ptr }
+%struct.Str = type { ptr, ptr }
 @.typename.Str = private unnamed_addr constant [4 x i8] c"Str\00"
 @.vtable.Str = constant [1 x ptr] zeroinitializer
 @.src.Str = private unnamed_addr constant [9 x i8] c"Str.spec\00"
@@ -1890,10 +1890,7 @@ declare void @spec_drain_async_tasks()
 @.mname.Str.48 = private unnamed_addr constant [10 x i8] c"sliceUtf8\00"
 @.mname.Str.49 = private unnamed_addr constant [7 x i8] c"concat\00"
 @.methods.Str = private constant [50 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Str.0, ptr @Str_length, i32 2, i32 34 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.1, ptr @Str_byteLength, i32 2, i32 43 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.2, ptr @Str_byteAt, i32 0, i32 54 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.3, ptr @Str_charCodeAt, i32 0, i32 68 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.4, ptr @Str_copy, i32 2, i32 75 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.5, ptr @Str_intern, i32 2, i32 88 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.6, ptr @Str_stringEquals, i32 0, i32 101 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.7, ptr @Str_stringCompare, i32 0, i32 120 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.8, ptr @Str_intToString, i32 0, i32 142 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.9, ptr @Str_intToBase, i32 0, i32 172 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.10, ptr @Str_charAt, i32 0, i32 217 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.11, ptr @Str_substring, i32 0, i32 229 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.12, ptr @Str_asciiLowerByte, i32 0, i32 240 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.13, ptr @Str_bytesEqualAt, i32 0, i32 247 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.14, ptr @Str_equals, i32 0, i32 264 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.15, ptr @Str_startsWith, i32 0, i32 292 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.16, ptr @Str_endsWith, i32 0, i32 311 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.17, ptr @Str_contains, i32 0, i32 331 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.18, ptr @Str_indexOfFrom, i32 0, i32 342 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.19, ptr @Str_indexOf, i32 0, i32 383 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.20, ptr @Str_find, i32 0, i32 388 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.21, ptr @Str_findAll, i32 0, i32 393 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.22, ptr @Str_count, i32 0, i32 410 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.23, ptr @Str_replaceFirst, i32 0, i32 427 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.24, ptr @Str_replaceWith, i32 0, i32 440 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.25, ptr @Str_replaceAll, i32 0, i32 460 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.26, ptr @Str_replaceAllWith, i32 0, i32 483 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.27, ptr @Str_split, i32 0, i32 513 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.28, ptr @Str_lines, i32 2, i32 554 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.29, ptr @Str_countByte, i32 0, i32 589 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.30, ptr @Str_lineCount, i32 2, i32 608 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.31, ptr @Str_trim, i32 2, i32 624 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.32, ptr @Str_padBuild, i32 0, i32 655 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.33, ptr @Str_padStart, i32 0, i32 673 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.34, ptr @Str_padEnd, i32 0, i32 682 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.35, ptr @Str_countLeading, i32 0, i32 694 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.36, ptr @Str_isDigit, i32 2, i32 717 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.37, ptr @Str_isAlpha, i32 2, i32 737 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.38, ptr @Str_isWhitespace, i32 2, i32 759 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.39, ptr @Str_fromCharCode, i32 0, i32 780 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.40, ptr @Str_newline, i32 2, i32 797 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.41, ptr @Str_parseInt, i32 0, i32 807 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.42, ptr @Str_toLower, i32 2, i32 880 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.43, ptr @Str_toUpper, i32 2, i32 904 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.44, ptr @Str_validUtf8SeqLen, i32 0, i32 929 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.45, ptr @Str_codePointByteLen, i32 0, i32 967 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.46, ptr @Str_isValidUtf8, i32 2, i32 981 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.47, ptr @Str_sanitizeUtf8, i32 2, i32 1005 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.48, ptr @Str_sliceUtf8, i32 0, i32 1051 }, { ptr, ptr, i32, i32 } { ptr @.mname.Str.49, ptr @Str_concat, i32 0, i32 1073 }]
-@.fname.Str.0 = private unnamed_addr constant [9 x i8] c"castable\00"
-@.ftype.Str.0 = private unnamed_addr constant [1 x i8] c"\00"
-@.fields.Str = private constant [1 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.fname.Str.0, ptr @.ftype.Str.0, i32 ptrtoint (ptr getelementptr (%struct.Str, ptr null, i32 0, i32 2) to i32), i32 16 }]
-@.meta.Str = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.Str, ptr @.src.Str, ptr @.bases.Str, i32 1, ptr null, ptr @.methods.Str, i32 50, ptr @.fields.Str, i32 1 }
+@.meta.Str = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.Str, ptr @.src.Str, ptr @.bases.Str, i32 1, ptr null, ptr @.methods.Str, i32 50, ptr null, i32 0 }
 %struct.Buf = type { ptr, ptr }
 @.typename.Buf = private unnamed_addr constant [4 x i8] c"Buf\00"
 @.vtable.Buf = constant [1225 x ptr] [ptr @Class_toString, ptr @Class_SpecErrorHandler, ptr @Class_raiseError, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr @Buf_length, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr @Buf_byteLength, ptr @Buf_byteAt, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr @Buf_countByte, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr @Buf_bufAppendBuf, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null]
@@ -1907,7 +1904,7 @@ declare void @spec_drain_async_tasks()
 @.mname.Buf.4 = private unnamed_addr constant [13 x i8] c"bufAppendBuf\00"
 @.methods.Buf = private constant [5 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Buf.0, ptr @Buf_length, i32 2, i32 17 }, { ptr, ptr, i32, i32 } { ptr @.mname.Buf.1, ptr @Buf_byteLength, i32 2, i32 26 }, { ptr, ptr, i32, i32 } { ptr @.mname.Buf.2, ptr @Buf_byteAt, i32 0, i32 37 }, { ptr, ptr, i32, i32 } { ptr @.mname.Buf.3, ptr @Buf_countByte, i32 0, i32 50 }, { ptr, ptr, i32, i32 } { ptr @.mname.Buf.4, ptr @Buf_bufAppendBuf, i32 4, i32 73 }]
 @.meta.Buf = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.Buf, ptr @.src.Buf, ptr @.bases.Buf, i32 1, ptr @Buf__spec_construct, ptr @.methods.Buf, i32 5, ptr null, i32 0 }
-%struct.String = type { ptr, ptr, ptr }
+%struct.String = type { ptr, ptr }
 @.typename.String = private unnamed_addr constant [7 x i8] c"String\00"
 @.vtable.String = constant [1 x ptr] zeroinitializer
 @.src.String = private unnamed_addr constant [12 x i8] c"String.spec\00"
@@ -1944,10 +1941,7 @@ declare void @spec_drain_async_tasks()
 @.mname.String.28 = private unnamed_addr constant [10 x i8] c"sPadStart\00"
 @.mname.String.29 = private unnamed_addr constant [8 x i8] c"sPadEnd\00"
 @.methods.String = private constant [30 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.String.0, ptr @String_fromCodePoint, i32 0, i32 39 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.1, ptr @String_codePointAt, i32 0, i32 82 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.2, ptr @String_ensureCheckpoints, i32 2, i32 113 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.3, ptr @String_runeCount, i32 2, i32 169 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.4, ptr @String_runeToByteOffset, i32 0, i32 200 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.5, ptr @String_codePointAtRune, i32 0, i32 240 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.6, ptr @String_runeAt, i32 0, i32 254 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.7, ptr @String_sliceRunes, i32 0, i32 269 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.8, ptr @String_codePoints, i32 2, i32 282 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.9, ptr @String_toLower, i32 2, i32 311 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.10, ptr @String_toUpper, i32 2, i32 381 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.11, ptr @String_concat, i32 0, i32 456 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.12, ptr @String_sRunesFor, i32 0, i32 482 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.13, ptr @String_sMatchRunesAt, i32 0, i32 490 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.14, ptr @String_sFindInRunes, i32 0, i32 505 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.15, ptr @String_sEquals, i32 0, i32 525 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.16, ptr @String_sStartsWith, i32 0, i32 538 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.17, ptr @String_sEndsWith, i32 0, i32 545 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.18, ptr @String_sFind, i32 0, i32 557 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.19, ptr @String_sContains, i32 0, i32 564 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.20, ptr @String_sFindAll, i32 0, i32 569 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.21, ptr @String_sCount, i32 0, i32 588 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.22, ptr @String_sSplit, i32 0, i32 607 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.23, ptr @String_sReplace, i32 0, i32 648 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.24, ptr @String_sReplaceWith, i32 0, i32 663 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.25, ptr @String_sReplaceAll, i32 0, i32 680 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.26, ptr @String_sReplaceAllWith, i32 0, i32 701 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.27, ptr @String_sPadBuild, i32 0, i32 723 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.28, ptr @String_sPadStart, i32 0, i32 741 }, { ptr, ptr, i32, i32 } { ptr @.mname.String.29, ptr @String_sPadEnd, i32 0, i32 751 }]
-@.fname.String.0 = private unnamed_addr constant [9 x i8] c"castable\00"
-@.ftype.String.0 = private unnamed_addr constant [1 x i8] c"\00"
-@.fields.String = private constant [1 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.fname.String.0, ptr @.ftype.String.0, i32 ptrtoint (ptr getelementptr (%struct.String, ptr null, i32 0, i32 2) to i32), i32 16 }]
-@.meta.String = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.String, ptr @.src.String, ptr @.bases.String, i32 1, ptr null, ptr @.methods.String, i32 30, ptr @.fields.String, i32 1 }
+@.meta.String = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.String, ptr @.src.String, ptr @.bases.String, i32 1, ptr null, ptr @.methods.String, i32 30, ptr null, i32 0 }
 %struct.Dir = type { ptr, ptr }
 @.typename.Dir = private unnamed_addr constant [4 x i8] c"Dir\00"
 @.vtable.Dir = constant [1225 x ptr] [ptr @Class_toString, ptr @Class_SpecErrorHandler, ptr @Class_raiseError, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr @Dir_cstrOf, ptr @Dir_dirList, ptr @Dir_exeDir, ptr @Dir_fileSize, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null]
@@ -239472,27 +239466,28 @@ if_end_6:
 
 define void @IrBuilder_addInheritedFields(ptr %self, ptr %p_st, ptr %p_cls, ptr %p_clsMap, ptr %p_seenFields) !dbg !16650 {
 entry:
-  %t351 = alloca ptr, !dbg !16651
-  store ptr null, ptr %t351, !dbg !16651
-  %t342 = alloca ptr, !dbg !16651
-  store ptr null, ptr %t342, !dbg !16651
-  %var_ownerSname_338 = alloca ptr, !dbg !16651
-  store ptr null, ptr %var_ownerSname_338, !dbg !16651
-  %t330 = alloca i64, !dbg !16652
-  %t313 = alloca i1, !dbg !16653
-  %t304 = alloca i1, !dbg !16653
-  %t269 = alloca i1, !dbg !16654
-  %var_fflags_236 = alloca i64, !dbg !16655
-  %t204 = alloca i64, !dbg !16656
-  %var_fIdx_196 = alloca i64, !dbg !16656
-  %var_bti_172 = alloca i64, !dbg !16657
-  %t164 = alloca i1, !dbg !16658
-  %var_fIsArc_156 = alloca i1, !dbg !16658
-  %t144 = alloca ptr, !dbg !16659
-  store ptr null, ptr %t144, !dbg !16659
-  %var_fty_136 = alloca ptr, !dbg !16659
-  store ptr null, ptr %var_fty_136, !dbg !16659
-  %t114 = alloca i1, !dbg !16660
+  %t359 = alloca ptr, !dbg !16651
+  store ptr null, ptr %t359, !dbg !16651
+  %t350 = alloca ptr, !dbg !16651
+  store ptr null, ptr %t350, !dbg !16651
+  %var_ownerSname_346 = alloca ptr, !dbg !16651
+  store ptr null, ptr %var_ownerSname_346, !dbg !16651
+  %t338 = alloca i64, !dbg !16652
+  %t321 = alloca i1, !dbg !16653
+  %t312 = alloca i1, !dbg !16653
+  %t277 = alloca i1, !dbg !16654
+  %var_fflags_244 = alloca i64, !dbg !16655
+  %t212 = alloca i64, !dbg !16656
+  %var_fIdx_204 = alloca i64, !dbg !16656
+  %var_bti_180 = alloca i64, !dbg !16657
+  %t172 = alloca i1, !dbg !16658
+  %var_fIsArc_164 = alloca i1, !dbg !16658
+  %t152 = alloca ptr, !dbg !16659
+  store ptr null, ptr %t152, !dbg !16659
+  %var_fty_144 = alloca ptr, !dbg !16659
+  store ptr null, ptr %var_fty_144, !dbg !16659
+  %t122 = alloca i1, !dbg !16660
+  %t85 = alloca i1, !dbg !16660
   %t84 = alloca i1, !dbg !16660
   %t83 = alloca i1, !dbg !16660
   %t82 = alloca i1, !dbg !16660
@@ -239651,488 +239646,501 @@ while_body_20:
   call ptr @spec_rt_retain(ptr %t79), !dbg !16661
   call ptr @spec_claim_pool(ptr %t79), !dbg !16661
   store ptr %t79, ptr %var_m_74, !dbg !16661
-  %t85 = load ptr, ptr %var_m_74, !dbg !16660
-  %t86 = getelementptr inbounds %struct.Member, ptr %t85, i32 0, i32 2, !dbg !16660
-  %t87 = load ptr, ptr %t86, !dbg !16660
-  %t88 = call ptr @MemberKind_FIELD__ensure(), !dbg !16660
-  call ptr @spec_claim_pool(ptr %t88), !dbg !16660
-  %t89 = icmp eq ptr %t87, %t88, !dbg !16660
-  store i1 %t89, ptr %t84, !dbg !16660
-  br i1 %t89, label %sc_rhs_22, label %sc_end_23, !dbg !16660
+  %t86 = load ptr, ptr %var_m_74, !dbg !16660
+  %t87 = getelementptr inbounds %struct.Member, ptr %t86, i32 0, i32 2, !dbg !16660
+  %t88 = load ptr, ptr %t87, !dbg !16660
+  %t89 = call ptr @MemberKind_FIELD__ensure(), !dbg !16660
+  call ptr @spec_claim_pool(ptr %t89), !dbg !16660
+  %t90 = icmp eq ptr %t88, %t89, !dbg !16660
+  store i1 %t90, ptr %t85, !dbg !16660
+  br i1 %t90, label %sc_rhs_22, label %sc_end_23, !dbg !16660
 sc_rhs_22:
-  %t90 = load ptr, ptr %var_m_74, !dbg !16660
-  %t91 = getelementptr inbounds %struct.Member, ptr %t90, i32 0, i32 7, !dbg !16660
-  %t92 = load ptr, ptr %t91, !dbg !16660
-  %t93 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !16660
-  %t95 = call i1 @Str_stringEquals(ptr null, ptr %t92, ptr %t93), !dbg !16660
-  %t94 = xor i1 %t95, 1, !dbg !16660
-  store i1 %t94, ptr %t84, !dbg !16660
+  %t91 = load ptr, ptr %var_m_74, !dbg !16660
+  %t92 = getelementptr inbounds %struct.Member, ptr %t91, i32 0, i32 7, !dbg !16660
+  %t93 = load ptr, ptr %t92, !dbg !16660
+  %t94 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !16660
+  %t96 = call i1 @Str_stringEquals(ptr null, ptr %t93, ptr %t94), !dbg !16660
+  %t95 = xor i1 %t96, 1, !dbg !16660
+  store i1 %t95, ptr %t85, !dbg !16660
   br label %sc_end_23, !dbg !16660
 sc_end_23:
-  %t96 = load i1, ptr %t84, !dbg !16660
-  store i1 %t96, ptr %t83, !dbg !16660
-  br i1 %t96, label %sc_rhs_24, label %sc_end_25, !dbg !16660
+  %t97 = load i1, ptr %t85, !dbg !16660
+  store i1 %t97, ptr %t84, !dbg !16660
+  br i1 %t97, label %sc_rhs_24, label %sc_end_25, !dbg !16660
 sc_rhs_24:
-  %t97 = load ptr, ptr %var_m_74, !dbg !16660
-  %t98 = getelementptr inbounds %struct.Member, ptr %t97, i32 0, i32 7, !dbg !16660
-  %t99 = load ptr, ptr %t98, !dbg !16660
-  %t100 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !16660
-  %t102 = call i1 @Str_stringEquals(ptr null, ptr %t99, ptr %t100), !dbg !16660
-  %t101 = xor i1 %t102, 1, !dbg !16660
-  store i1 %t101, ptr %t83, !dbg !16660
+  %t98 = load ptr, ptr %var_m_74, !dbg !16660
+  %t99 = getelementptr inbounds %struct.Member, ptr %t98, i32 0, i32 7, !dbg !16660
+  %t100 = load ptr, ptr %t99, !dbg !16660
+  %t101 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !16660
+  %t103 = call i1 @Str_stringEquals(ptr null, ptr %t100, ptr %t101), !dbg !16660
+  %t102 = xor i1 %t103, 1, !dbg !16660
+  store i1 %t102, ptr %t84, !dbg !16660
   br label %sc_end_25, !dbg !16660
 sc_end_25:
-  %t103 = load i1, ptr %t83, !dbg !16660
-  store i1 %t103, ptr %t82, !dbg !16660
-  br i1 %t103, label %sc_rhs_26, label %sc_end_27, !dbg !16660
+  %t104 = load i1, ptr %t84, !dbg !16660
+  store i1 %t104, ptr %t83, !dbg !16660
+  br i1 %t104, label %sc_rhs_26, label %sc_end_27, !dbg !16660
 sc_rhs_26:
-  %t104 = load ptr, ptr %var_m_74, !dbg !16660
-  %t105 = getelementptr inbounds %struct.Member, ptr %t104, i32 0, i32 7, !dbg !16660
-  %t106 = load ptr, ptr %t105, !dbg !16660
-  %t107 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !16660
-  %t109 = call i1 @Str_stringEquals(ptr null, ptr %t106, ptr %t107), !dbg !16660
-  %t108 = xor i1 %t109, 1, !dbg !16660
-  store i1 %t108, ptr %t82, !dbg !16660
+  %t105 = load ptr, ptr %var_m_74, !dbg !16660
+  %t106 = getelementptr inbounds %struct.Member, ptr %t105, i32 0, i32 7, !dbg !16660
+  %t107 = load ptr, ptr %t106, !dbg !16660
+  %t108 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !16660
+  %t110 = call i1 @Str_stringEquals(ptr null, ptr %t107, ptr %t108), !dbg !16660
+  %t109 = xor i1 %t110, 1, !dbg !16660
+  store i1 %t109, ptr %t83, !dbg !16660
   br label %sc_end_27, !dbg !16660
 sc_end_27:
-  %t110 = load i1, ptr %t82, !dbg !16660
-  store i1 %t110, ptr %t81, !dbg !16660
-  br i1 %t110, label %sc_rhs_28, label %sc_end_29, !dbg !16660
+  %t111 = load i1, ptr %t83, !dbg !16660
+  store i1 %t111, ptr %t82, !dbg !16660
+  br i1 %t111, label %sc_rhs_28, label %sc_end_29, !dbg !16660
 sc_rhs_28:
-  %t111 = load ptr, ptr %var_m_74, !dbg !16660
-  %t112 = call ptr @Keyword_HELD__ensure(), !dbg !16660
-  call ptr @spec_claim_pool(ptr %t112), !dbg !16660
-  %t115 = icmp ne ptr %t111, null, !dbg !16660
-  br i1 %t115, label %vt_call_30, label %dir_call_31, !dbg !16660
-vt_call_30:
-  %t116 = getelementptr inbounds %struct.Member, ptr %t111, i32 0, i32 1, !dbg !16660
-  %t117 = load ptr, ptr %t116, !dbg !16660
-  %t118 = getelementptr ptr, ptr %t117, i64 460, !dbg !16660
-  %t119 = load ptr, ptr %t118, !dbg !16660
-  %t120 = call i1 %t119(ptr %t111, ptr %t112), !dbg !16660
-  store i1 %t120, ptr %t114, !dbg !16660
-  br label %vt_end_32, !dbg !16660
-dir_call_31:
-  %t121 = call i1 @Member_hasModifier(ptr %t111, ptr %t112), !dbg !16660
-  store i1 %t121, ptr %t114, !dbg !16660
-  br label %vt_end_32, !dbg !16660
-vt_end_32:
-  %t113 = load i1, ptr %t114, !dbg !16660
-  %t122 = xor i1 %t113, 1, !dbg !16660
-  store i1 %t122, ptr %t81, !dbg !16660
+  %t112 = load ptr, ptr %var_m_74, !dbg !16660
+  %t113 = getelementptr inbounds %struct.Member, ptr %t112, i32 0, i32 7, !dbg !16660
+  %t114 = load ptr, ptr %t113, !dbg !16660
+  %t115 = call ptr @__spec_intern_cached(ptr @.str.358, ptr @.str.cache.358), !dbg !16660
+  %t117 = call i1 @Str_stringEquals(ptr null, ptr %t114, ptr %t115), !dbg !16660
+  %t116 = xor i1 %t117, 1, !dbg !16660
+  store i1 %t116, ptr %t82, !dbg !16660
   br label %sc_end_29, !dbg !16660
 sc_end_29:
-  %t123 = load i1, ptr %t81, !dbg !16660
-  store i1 %t123, ptr %t80, !dbg !16660
-  br i1 %t123, label %sc_rhs_33, label %sc_end_34, !dbg !16660
-sc_rhs_33:
-  %t124 = load ptr, ptr %slot_seenFields, !dbg !16660
-  %t125 = load ptr, ptr %var_m_74, !dbg !16660
-  %t126 = getelementptr inbounds %struct.Member, ptr %t125, i32 0, i32 7, !dbg !16660
+  %t118 = load i1, ptr %t82, !dbg !16660
+  store i1 %t118, ptr %t81, !dbg !16660
+  br i1 %t118, label %sc_rhs_30, label %sc_end_31, !dbg !16660
+sc_rhs_30:
+  %t119 = load ptr, ptr %var_m_74, !dbg !16660
+  %t120 = call ptr @Keyword_HELD__ensure(), !dbg !16660
+  call ptr @spec_claim_pool(ptr %t120), !dbg !16660
+  %t123 = icmp ne ptr %t119, null, !dbg !16660
+  br i1 %t123, label %vt_call_32, label %dir_call_33, !dbg !16660
+vt_call_32:
+  %t124 = getelementptr inbounds %struct.Member, ptr %t119, i32 0, i32 1, !dbg !16660
+  %t125 = load ptr, ptr %t124, !dbg !16660
+  %t126 = getelementptr ptr, ptr %t125, i64 460, !dbg !16660
   %t127 = load ptr, ptr %t126, !dbg !16660
-  %t128 = call i1 @HashTable_mapHasObj(ptr null, ptr %t124, ptr %t127), !dbg !16660
-  %t129 = xor i1 %t128, 1, !dbg !16660
-  store i1 %t129, ptr %t80, !dbg !16660
-  br label %sc_end_34, !dbg !16660
-sc_end_34:
-  %t130 = load i1, ptr %t80, !dbg !16660
-  br i1 %t130, label %if_then_35, label %if_end_37, !dbg !16660
-if_then_35:
-  %t131 = load ptr, ptr %slot_seenFields, !dbg !16672
-  %t132 = load ptr, ptr %var_m_74, !dbg !16672
-  %t133 = getelementptr inbounds %struct.Member, ptr %t132, i32 0, i32 7, !dbg !16672
-  %t134 = load ptr, ptr %t133, !dbg !16672
-  %t135 = add i1 0, 1, !dbg !16672
-  call void @Map__String__Boolean_set(ptr %t131, ptr %t134, i1 %t135), !dbg !16672
-  %t137 = load ptr, ptr %self_slot, !dbg !16659
-  %t138 = load ptr, ptr %var_m_74, !dbg !16659
-  %t139 = getelementptr inbounds %struct.Member, ptr %t138, i32 0, i32 6, !dbg !16659
-  %t140 = load ptr, ptr %t139, !dbg !16659
-  %t141 = getelementptr inbounds %struct.Type, ptr %t140, i32 0, i32 2, !dbg !16659
-  %t142 = load ptr, ptr %t141, !dbg !16659
-  %t145 = icmp ne ptr %t137, null, !dbg !16659
-  br i1 %t145, label %vt_call_38, label %dir_call_39, !dbg !16659
-vt_call_38:
-  %t146 = getelementptr inbounds %struct.IrBuilder, ptr %t137, i32 0, i32 1, !dbg !16659
-  %t147 = load ptr, ptr %t146, !dbg !16659
-  %t148 = getelementptr ptr, ptr %t147, i64 1014, !dbg !16659
-  %t149 = load ptr, ptr %t148, !dbg !16659
-  %t150 = call ptr %t149(ptr %t137, ptr %t142), !dbg !16659
-  store ptr %t150, ptr %t144, !dbg !16659
-  br label %vt_end_40, !dbg !16659
-dir_call_39:
-  %t151 = call ptr @IrBuilder_irTypeFor(ptr null, ptr %t142), !dbg !16659
-  store ptr %t151, ptr %t144, !dbg !16659
-  br label %vt_end_40, !dbg !16659
-vt_end_40:
-  %t143 = load ptr, ptr %t144, !dbg !16659
-  call ptr @spec_rt_retain(ptr %t143), !dbg !16659
-  call ptr @spec_claim_pool(ptr %t143), !dbg !16659
-  store ptr %t143, ptr %var_fty_136, !dbg !16659
-  %t152 = load ptr, ptr %var_fty_136, !dbg !16673
-  %t153 = call ptr @IrType_Void__ensure(), !dbg !16673
-  call ptr @spec_claim_pool(ptr %t153), !dbg !16673
-  %t154 = icmp eq ptr %t152, %t153, !dbg !16673
-  br i1 %t154, label %if_then_41, label %if_end_43, !dbg !16673
-if_then_41:
-  %t155 = call ptr @IrType_Ptr__ensure(), !dbg !16673
-  call ptr @spec_claim_pool(ptr %t155), !dbg !16673
-  call ptr @spec_rt_retain(ptr %t155), !dbg !16673
-  call ptr @spec_claim_pool(ptr %t155), !dbg !16673
-  store ptr %t155, ptr %var_fty_136, !dbg !16673
-  br label %if_end_43, !dbg !16673
-if_end_43:
-  %t157 = load ptr, ptr %self_slot, !dbg !16658
-  %t158 = load ptr, ptr %var_m_74, !dbg !16658
-  %t159 = getelementptr inbounds %struct.Member, ptr %t158, i32 0, i32 6, !dbg !16658
-  %t160 = load ptr, ptr %t159, !dbg !16658
-  %t161 = getelementptr inbounds %struct.Type, ptr %t160, i32 0, i32 2, !dbg !16658
-  %t162 = load ptr, ptr %t161, !dbg !16658
-  %t165 = icmp ne ptr %t157, null, !dbg !16658
-  br i1 %t165, label %vt_call_44, label %dir_call_45, !dbg !16658
-vt_call_44:
-  %t166 = getelementptr inbounds %struct.IrBuilder, ptr %t157, i32 0, i32 1, !dbg !16658
-  %t167 = load ptr, ptr %t166, !dbg !16658
-  %t168 = getelementptr ptr, ptr %t167, i64 1019, !dbg !16658
-  %t169 = load ptr, ptr %t168, !dbg !16658
-  %t170 = call i1 %t169(ptr %t157, ptr %t162), !dbg !16658
-  store i1 %t170, ptr %t164, !dbg !16658
-  br label %vt_end_46, !dbg !16658
-dir_call_45:
-  %t171 = call i1 @IrBuilder_isArcSpecType(ptr %t157, ptr %t162), !dbg !16658
-  store i1 %t171, ptr %t164, !dbg !16658
-  br label %vt_end_46, !dbg !16658
-vt_end_46:
-  %t163 = load i1, ptr %t164, !dbg !16658
-  store i1 %t163, ptr %var_fIsArc_156, !dbg !16658
-  %t173 = add i64 0, 0, !dbg !16657
-  store i64 %t173, ptr %var_bti_172, !dbg !16657
-  br label %while_hdr_47, !dbg !16674
-while_hdr_47:
-  %t174 = load i64, ptr %var_bti_172, !dbg !16674
-  %t175 = load ptr, ptr %slot_cls, !dbg !16674
-  %t176 = getelementptr inbounds %struct.ClassInfo, ptr %t175, i32 0, i32 8, !dbg !16674
-  %t177 = load ptr, ptr %t176, !dbg !16674
-  %t178 = call i64 @Array__String_length(ptr %t177), !dbg !16674
-  %t179 = icmp slt i64 %t174, %t178, !dbg !16674
-  br i1 %t179, label %while_body_48, label %while_end_49, !dbg !16674
-while_body_48:
-  %t180 = load ptr, ptr %slot_cls, !dbg !16675
-  %t181 = getelementptr inbounds %struct.ClassInfo, ptr %t180, i32 0, i32 8, !dbg !16675
-  %t182 = load ptr, ptr %t181, !dbg !16675
-  %t183 = load i64, ptr %var_bti_172, !dbg !16675
-  %t184 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !16675
-  %t185 = call ptr @Array__String_get_2(ptr %t182, i64 %t183, ptr %t184), !dbg !16675
-  %t186 = load ptr, ptr %var_m_74, !dbg !16675
-  %t187 = getelementptr inbounds %struct.Member, ptr %t186, i32 0, i32 6, !dbg !16675
-  %t188 = load ptr, ptr %t187, !dbg !16675
-  %t189 = getelementptr inbounds %struct.Type, ptr %t188, i32 0, i32 2, !dbg !16675
+  %t128 = call i1 %t127(ptr %t119, ptr %t120), !dbg !16660
+  store i1 %t128, ptr %t122, !dbg !16660
+  br label %vt_end_34, !dbg !16660
+dir_call_33:
+  %t129 = call i1 @Member_hasModifier(ptr %t119, ptr %t120), !dbg !16660
+  store i1 %t129, ptr %t122, !dbg !16660
+  br label %vt_end_34, !dbg !16660
+vt_end_34:
+  %t121 = load i1, ptr %t122, !dbg !16660
+  %t130 = xor i1 %t121, 1, !dbg !16660
+  store i1 %t130, ptr %t81, !dbg !16660
+  br label %sc_end_31, !dbg !16660
+sc_end_31:
+  %t131 = load i1, ptr %t81, !dbg !16660
+  store i1 %t131, ptr %t80, !dbg !16660
+  br i1 %t131, label %sc_rhs_35, label %sc_end_36, !dbg !16660
+sc_rhs_35:
+  %t132 = load ptr, ptr %slot_seenFields, !dbg !16660
+  %t133 = load ptr, ptr %var_m_74, !dbg !16660
+  %t134 = getelementptr inbounds %struct.Member, ptr %t133, i32 0, i32 7, !dbg !16660
+  %t135 = load ptr, ptr %t134, !dbg !16660
+  %t136 = call i1 @HashTable_mapHasObj(ptr null, ptr %t132, ptr %t135), !dbg !16660
+  %t137 = xor i1 %t136, 1, !dbg !16660
+  store i1 %t137, ptr %t80, !dbg !16660
+  br label %sc_end_36, !dbg !16660
+sc_end_36:
+  %t138 = load i1, ptr %t80, !dbg !16660
+  br i1 %t138, label %if_then_37, label %if_end_39, !dbg !16660
+if_then_37:
+  %t139 = load ptr, ptr %slot_seenFields, !dbg !16672
+  %t140 = load ptr, ptr %var_m_74, !dbg !16672
+  %t141 = getelementptr inbounds %struct.Member, ptr %t140, i32 0, i32 7, !dbg !16672
+  %t142 = load ptr, ptr %t141, !dbg !16672
+  %t143 = add i1 0, 1, !dbg !16672
+  call void @Map__String__Boolean_set(ptr %t139, ptr %t142, i1 %t143), !dbg !16672
+  %t145 = load ptr, ptr %self_slot, !dbg !16659
+  %t146 = load ptr, ptr %var_m_74, !dbg !16659
+  %t147 = getelementptr inbounds %struct.Member, ptr %t146, i32 0, i32 6, !dbg !16659
+  %t148 = load ptr, ptr %t147, !dbg !16659
+  %t149 = getelementptr inbounds %struct.Type, ptr %t148, i32 0, i32 2, !dbg !16659
+  %t150 = load ptr, ptr %t149, !dbg !16659
+  %t153 = icmp ne ptr %t145, null, !dbg !16659
+  br i1 %t153, label %vt_call_40, label %dir_call_41, !dbg !16659
+vt_call_40:
+  %t154 = getelementptr inbounds %struct.IrBuilder, ptr %t145, i32 0, i32 1, !dbg !16659
+  %t155 = load ptr, ptr %t154, !dbg !16659
+  %t156 = getelementptr ptr, ptr %t155, i64 1014, !dbg !16659
+  %t157 = load ptr, ptr %t156, !dbg !16659
+  %t158 = call ptr %t157(ptr %t145, ptr %t150), !dbg !16659
+  store ptr %t158, ptr %t152, !dbg !16659
+  br label %vt_end_42, !dbg !16659
+dir_call_41:
+  %t159 = call ptr @IrBuilder_irTypeFor(ptr null, ptr %t150), !dbg !16659
+  store ptr %t159, ptr %t152, !dbg !16659
+  br label %vt_end_42, !dbg !16659
+vt_end_42:
+  %t151 = load ptr, ptr %t152, !dbg !16659
+  call ptr @spec_rt_retain(ptr %t151), !dbg !16659
+  call ptr @spec_claim_pool(ptr %t151), !dbg !16659
+  store ptr %t151, ptr %var_fty_144, !dbg !16659
+  %t160 = load ptr, ptr %var_fty_144, !dbg !16673
+  %t161 = call ptr @IrType_Void__ensure(), !dbg !16673
+  call ptr @spec_claim_pool(ptr %t161), !dbg !16673
+  %t162 = icmp eq ptr %t160, %t161, !dbg !16673
+  br i1 %t162, label %if_then_43, label %if_end_45, !dbg !16673
+if_then_43:
+  %t163 = call ptr @IrType_Ptr__ensure(), !dbg !16673
+  call ptr @spec_claim_pool(ptr %t163), !dbg !16673
+  call ptr @spec_rt_retain(ptr %t163), !dbg !16673
+  call ptr @spec_claim_pool(ptr %t163), !dbg !16673
+  store ptr %t163, ptr %var_fty_144, !dbg !16673
+  br label %if_end_45, !dbg !16673
+if_end_45:
+  %t165 = load ptr, ptr %self_slot, !dbg !16658
+  %t166 = load ptr, ptr %var_m_74, !dbg !16658
+  %t167 = getelementptr inbounds %struct.Member, ptr %t166, i32 0, i32 6, !dbg !16658
+  %t168 = load ptr, ptr %t167, !dbg !16658
+  %t169 = getelementptr inbounds %struct.Type, ptr %t168, i32 0, i32 2, !dbg !16658
+  %t170 = load ptr, ptr %t169, !dbg !16658
+  %t173 = icmp ne ptr %t165, null, !dbg !16658
+  br i1 %t173, label %vt_call_46, label %dir_call_47, !dbg !16658
+vt_call_46:
+  %t174 = getelementptr inbounds %struct.IrBuilder, ptr %t165, i32 0, i32 1, !dbg !16658
+  %t175 = load ptr, ptr %t174, !dbg !16658
+  %t176 = getelementptr ptr, ptr %t175, i64 1019, !dbg !16658
+  %t177 = load ptr, ptr %t176, !dbg !16658
+  %t178 = call i1 %t177(ptr %t165, ptr %t170), !dbg !16658
+  store i1 %t178, ptr %t172, !dbg !16658
+  br label %vt_end_48, !dbg !16658
+dir_call_47:
+  %t179 = call i1 @IrBuilder_isArcSpecType(ptr %t165, ptr %t170), !dbg !16658
+  store i1 %t179, ptr %t172, !dbg !16658
+  br label %vt_end_48, !dbg !16658
+vt_end_48:
+  %t171 = load i1, ptr %t172, !dbg !16658
+  store i1 %t171, ptr %var_fIsArc_164, !dbg !16658
+  %t181 = add i64 0, 0, !dbg !16657
+  store i64 %t181, ptr %var_bti_180, !dbg !16657
+  br label %while_hdr_49, !dbg !16674
+while_hdr_49:
+  %t182 = load i64, ptr %var_bti_180, !dbg !16674
+  %t183 = load ptr, ptr %slot_cls, !dbg !16674
+  %t184 = getelementptr inbounds %struct.ClassInfo, ptr %t183, i32 0, i32 8, !dbg !16674
+  %t185 = load ptr, ptr %t184, !dbg !16674
+  %t186 = call i64 @Array__String_length(ptr %t185), !dbg !16674
+  %t187 = icmp slt i64 %t182, %t186, !dbg !16674
+  br i1 %t187, label %while_body_50, label %while_end_51, !dbg !16674
+while_body_50:
+  %t188 = load ptr, ptr %slot_cls, !dbg !16675
+  %t189 = getelementptr inbounds %struct.ClassInfo, ptr %t188, i32 0, i32 8, !dbg !16675
   %t190 = load ptr, ptr %t189, !dbg !16675
-  %t191 = call i1 @Str_stringEquals(ptr null, ptr %t185, ptr %t190), !dbg !16675
-  br i1 %t191, label %if_then_50, label %if_end_52, !dbg !16675
-if_then_50:
-  %t192 = add i1 0, 0, !dbg !16675
-  store i1 %t192, ptr %var_fIsArc_156, !dbg !16675
-  br label %if_end_52, !dbg !16675
-if_end_52:
-  %t193 = load i64, ptr %var_bti_172, !dbg !16676
-  %t194 = add i64 0, 1, !dbg !16676
-  %t195 = add i64 %t193, %t194, !dbg !16676
-  store i64 %t195, ptr %var_bti_172, !dbg !16676
-  br label %while_hdr_47, !dbg !16674
-while_end_49:
-  %t197 = load ptr, ptr %slot_st, !dbg !16656
-  %t198 = load ptr, ptr %var_m_74, !dbg !16656
-  %t199 = getelementptr inbounds %struct.Member, ptr %t198, i32 0, i32 7, !dbg !16656
-  %t200 = load ptr, ptr %t199, !dbg !16656
-  %t201 = load ptr, ptr %var_fty_136, !dbg !16656
-  %t202 = load i1, ptr %var_fIsArc_156, !dbg !16656
-  %t205 = icmp ne ptr %t197, null, !dbg !16656
-  br i1 %t205, label %vt_call_53, label %dir_call_54, !dbg !16656
-vt_call_53:
-  %t206 = getelementptr inbounds %struct.IrStruct, ptr %t197, i32 0, i32 1, !dbg !16656
-  %t207 = load ptr, ptr %t206, !dbg !16656
-  %t208 = getelementptr ptr, ptr %t207, i64 959, !dbg !16656
-  %t209 = load ptr, ptr %t208, !dbg !16656
-  %t210 = call i64 %t209(ptr %t197, ptr %t200, ptr %t201, i1 %t202), !dbg !16656
-  store i64 %t210, ptr %t204, !dbg !16656
-  br label %vt_end_55, !dbg !16656
-dir_call_54:
-  %t211 = call i64 @IrStruct_addFieldArc(ptr %t197, ptr %t200, ptr %t201, i1 %t202), !dbg !16656
-  store i64 %t211, ptr %t204, !dbg !16656
-  br label %vt_end_55, !dbg !16656
-vt_end_55:
-  %t203 = load i64, ptr %t204, !dbg !16656
-  store i64 %t203, ptr %var_fIdx_196, !dbg !16656
-  %t212 = load ptr, ptr %self_slot, !dbg !16677
-  %t213 = getelementptr inbounds %struct.IrBuilder, ptr %t212, i32 0, i32 70, !dbg !16677
-  %t214 = load ptr, ptr %t213, !dbg !16677
-  %t215 = load ptr, ptr %slot_st, !dbg !16677
-  %t216 = getelementptr inbounds %struct.IrStruct, ptr %t215, i32 0, i32 2, !dbg !16677
-  %t217 = load ptr, ptr %t216, !dbg !16677
-  %t218 = call ptr @__spec_intern_cached(ptr @.str.16, ptr @.str.cache.16), !dbg !16677
-  %t220 = load ptr, ptr %var_m_74, !dbg !16677
-  %t221 = getelementptr inbounds %struct.Member, ptr %t220, i32 0, i32 7, !dbg !16677
+  %t191 = load i64, ptr %var_bti_180, !dbg !16675
+  %t192 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !16675
+  %t193 = call ptr @Array__String_get_2(ptr %t190, i64 %t191, ptr %t192), !dbg !16675
+  %t194 = load ptr, ptr %var_m_74, !dbg !16675
+  %t195 = getelementptr inbounds %struct.Member, ptr %t194, i32 0, i32 6, !dbg !16675
+  %t196 = load ptr, ptr %t195, !dbg !16675
+  %t197 = getelementptr inbounds %struct.Type, ptr %t196, i32 0, i32 2, !dbg !16675
+  %t198 = load ptr, ptr %t197, !dbg !16675
+  %t199 = call i1 @Str_stringEquals(ptr null, ptr %t193, ptr %t198), !dbg !16675
+  br i1 %t199, label %if_then_52, label %if_end_54, !dbg !16675
+if_then_52:
+  %t200 = add i1 0, 0, !dbg !16675
+  store i1 %t200, ptr %var_fIsArc_164, !dbg !16675
+  br label %if_end_54, !dbg !16675
+if_end_54:
+  %t201 = load i64, ptr %var_bti_180, !dbg !16676
+  %t202 = add i64 0, 1, !dbg !16676
+  %t203 = add i64 %t201, %t202, !dbg !16676
+  store i64 %t203, ptr %var_bti_180, !dbg !16676
+  br label %while_hdr_49, !dbg !16674
+while_end_51:
+  %t205 = load ptr, ptr %slot_st, !dbg !16656
+  %t206 = load ptr, ptr %var_m_74, !dbg !16656
+  %t207 = getelementptr inbounds %struct.Member, ptr %t206, i32 0, i32 7, !dbg !16656
+  %t208 = load ptr, ptr %t207, !dbg !16656
+  %t209 = load ptr, ptr %var_fty_144, !dbg !16656
+  %t210 = load i1, ptr %var_fIsArc_164, !dbg !16656
+  %t213 = icmp ne ptr %t205, null, !dbg !16656
+  br i1 %t213, label %vt_call_55, label %dir_call_56, !dbg !16656
+vt_call_55:
+  %t214 = getelementptr inbounds %struct.IrStruct, ptr %t205, i32 0, i32 1, !dbg !16656
+  %t215 = load ptr, ptr %t214, !dbg !16656
+  %t216 = getelementptr ptr, ptr %t215, i64 959, !dbg !16656
+  %t217 = load ptr, ptr %t216, !dbg !16656
+  %t218 = call i64 %t217(ptr %t205, ptr %t208, ptr %t209, i1 %t210), !dbg !16656
+  store i64 %t218, ptr %t212, !dbg !16656
+  br label %vt_end_57, !dbg !16656
+dir_call_56:
+  %t219 = call i64 @IrStruct_addFieldArc(ptr %t205, ptr %t208, ptr %t209, i1 %t210), !dbg !16656
+  store i64 %t219, ptr %t212, !dbg !16656
+  br label %vt_end_57, !dbg !16656
+vt_end_57:
+  %t211 = load i64, ptr %t212, !dbg !16656
+  store i64 %t211, ptr %var_fIdx_204, !dbg !16656
+  %t220 = load ptr, ptr %self_slot, !dbg !16677
+  %t221 = getelementptr inbounds %struct.IrBuilder, ptr %t220, i32 0, i32 70, !dbg !16677
   %t222 = load ptr, ptr %t221, !dbg !16677
-  %t223 = call ptr @__spec_concat_3(ptr %t217, ptr %t218, ptr %t222), !dbg !16677
-  %t224 = load ptr, ptr %var_m_74, !dbg !16677
-  %t225 = getelementptr inbounds %struct.Member, ptr %t224, i32 0, i32 6, !dbg !16677
-  %t226 = load ptr, ptr %t225, !dbg !16677
-  %t227 = getelementptr inbounds %struct.Type, ptr %t226, i32 0, i32 2, !dbg !16677
-  %t228 = load ptr, ptr %t227, !dbg !16677
-  call void @HashTable_mapSetObjAny(ptr null, ptr %t214, ptr %t223, ptr %t228), !dbg !16677
-  %t229 = load ptr, ptr %var_m_74, !dbg !16677
-  %t230 = getelementptr inbounds %struct.Member, ptr %t229, i32 0, i32 7, !dbg !16678
-  %t231 = load ptr, ptr %t230, !dbg !16678
-  %t232 = call ptr @__spec_intern_cached(ptr @.str.729, ptr @.str.cache.729), !dbg !16678
-  %t233 = add i1 0, 1, !dbg !16678
-  %t234 = call i1 @Str_startsWith(ptr %t231, ptr %t232, i1 %t233), !dbg !16678
-  %t235 = xor i1 %t234, 1, !dbg !16678
-  br i1 %t235, label %if_then_56, label %if_end_58, !dbg !16678
-if_then_56:
-  %t237 = add i64 0, 0, !dbg !16655
-  store i64 %t237, ptr %var_fflags_236, !dbg !16655
-  %t238 = load i1, ptr %var_fIsArc_156, !dbg !16679
-  br i1 %t238, label %if_then_59, label %if_end_61, !dbg !16679
-if_then_59:
-  %t239 = load i64, ptr %var_fflags_236, !dbg !16679
-  %t240 = add i64 0, 1, !dbg !16679
-  %t241 = add i64 %t239, %t240, !dbg !16679
-  store i64 %t241, ptr %var_fflags_236, !dbg !16679
-  br label %if_end_61, !dbg !16679
-if_end_61:
-  %t242 = load ptr, ptr %var_fty_136, !dbg !16680
-  %t243 = call ptr @IrType_I1__ensure(), !dbg !16680
-  call ptr @spec_claim_pool(ptr %t243), !dbg !16680
-  %t244 = icmp eq ptr %t242, %t243, !dbg !16680
-  br i1 %t244, label %if_then_62, label %if_end_64, !dbg !16680
-if_then_62:
-  %t245 = load i64, ptr %var_fflags_236, !dbg !16680
-  %t246 = add i64 0, 2, !dbg !16680
-  %t247 = add i64 %t245, %t246, !dbg !16680
-  store i64 %t247, ptr %var_fflags_236, !dbg !16680
-  br label %if_end_64, !dbg !16680
-if_end_64:
-  %t248 = load ptr, ptr %var_fty_136, !dbg !16681
-  %t249 = call ptr @IrType_F64__ensure(), !dbg !16681
-  call ptr @spec_claim_pool(ptr %t249), !dbg !16681
-  %t250 = icmp eq ptr %t248, %t249, !dbg !16681
-  br i1 %t250, label %if_then_65, label %if_end_67, !dbg !16681
-if_then_65:
-  %t251 = load i64, ptr %var_fflags_236, !dbg !16681
-  %t252 = add i64 0, 4, !dbg !16681
-  %t253 = add i64 %t251, %t252, !dbg !16681
-  store i64 %t253, ptr %var_fflags_236, !dbg !16681
-  br label %if_end_67, !dbg !16681
-if_end_67:
-  %t254 = load ptr, ptr %var_fty_136, !dbg !16682
-  %t255 = call ptr @IrType_I64__ensure(), !dbg !16682
-  call ptr @spec_claim_pool(ptr %t255), !dbg !16682
-  %t256 = icmp eq ptr %t254, %t255, !dbg !16682
-  br i1 %t256, label %if_then_68, label %if_end_70, !dbg !16682
-if_then_68:
-  %t257 = load i64, ptr %var_fflags_236, !dbg !16682
-  %t258 = add i64 0, 8, !dbg !16682
-  %t259 = add i64 %t257, %t258, !dbg !16682
-  store i64 %t259, ptr %var_fflags_236, !dbg !16682
-  br label %if_end_70, !dbg !16682
-if_end_70:
-  %t260 = load ptr, ptr %var_fty_136, !dbg !16683
-  %t261 = call ptr @IrType_Ptr__ensure(), !dbg !16683
-  call ptr @spec_claim_pool(ptr %t261), !dbg !16683
-  %t262 = icmp eq ptr %t260, %t261, !dbg !16683
-  br i1 %t262, label %if_then_71, label %if_end_73, !dbg !16683
-if_then_71:
-  %t263 = load i64, ptr %var_fflags_236, !dbg !16683
-  %t264 = add i64 0, 16, !dbg !16683
-  %t265 = add i64 %t263, %t264, !dbg !16683
-  store i64 %t265, ptr %var_fflags_236, !dbg !16683
-  br label %if_end_73, !dbg !16683
-if_end_73:
-  %t266 = load ptr, ptr %var_m_74, !dbg !16654
-  %t267 = call ptr @Keyword_LOCAL__ensure(), !dbg !16654
-  call ptr @spec_claim_pool(ptr %t267), !dbg !16654
-  %t270 = icmp ne ptr %t266, null, !dbg !16654
-  br i1 %t270, label %vt_call_74, label %dir_call_75, !dbg !16654
-vt_call_74:
-  %t271 = getelementptr inbounds %struct.Member, ptr %t266, i32 0, i32 1, !dbg !16654
-  %t272 = load ptr, ptr %t271, !dbg !16654
-  %t273 = getelementptr ptr, ptr %t272, i64 460, !dbg !16654
-  %t274 = load ptr, ptr %t273, !dbg !16654
-  %t275 = call i1 %t274(ptr %t266, ptr %t267), !dbg !16654
-  store i1 %t275, ptr %t269, !dbg !16654
-  br label %vt_end_76, !dbg !16654
-dir_call_75:
-  %t276 = call i1 @Member_hasModifier(ptr %t266, ptr %t267), !dbg !16654
-  store i1 %t276, ptr %t269, !dbg !16654
-  br label %vt_end_76, !dbg !16654
-vt_end_76:
-  %t268 = load i1, ptr %t269, !dbg !16654
-  br i1 %t268, label %if_then_77, label %if_end_79, !dbg !16654
-if_then_77:
-  %t277 = load i64, ptr %var_fflags_236, !dbg !16654
-  %t278 = add i64 0, 128, !dbg !16654
-  %t279 = add i64 %t277, %t278, !dbg !16654
-  store i64 %t279, ptr %var_fflags_236, !dbg !16654
-  br label %if_end_79, !dbg !16654
-if_end_79:
-  %t280 = load ptr, ptr %slot_st, !dbg !16684
-  %t281 = getelementptr inbounds %struct.IrStruct, ptr %t280, i32 0, i32 17, !dbg !16684
-  %t282 = load ptr, ptr %t281, !dbg !16684
-  %t283 = load ptr, ptr %var_m_74, !dbg !16684
-  %t284 = getelementptr inbounds %struct.Member, ptr %t283, i32 0, i32 7, !dbg !16684
-  %t285 = load ptr, ptr %t284, !dbg !16684
-  call void @Array__String_add(ptr %t282, ptr %t285), !dbg !16684
-  %t286 = load ptr, ptr %slot_st, !dbg !16685
-  %t287 = getelementptr inbounds %struct.IrStruct, ptr %t286, i32 0, i32 18, !dbg !16685
-  %t288 = load ptr, ptr %t287, !dbg !16685
-  %t289 = load ptr, ptr %var_m_74, !dbg !16685
-  %t290 = getelementptr inbounds %struct.Member, ptr %t289, i32 0, i32 6, !dbg !16685
-  %t291 = load ptr, ptr %t290, !dbg !16685
-  %t292 = getelementptr inbounds %struct.Type, ptr %t291, i32 0, i32 2, !dbg !16685
-  %t293 = load ptr, ptr %t292, !dbg !16685
-  call void @Array__String_add(ptr %t288, ptr %t293), !dbg !16685
-  %t294 = load ptr, ptr %slot_st, !dbg !16686
-  %t295 = getelementptr inbounds %struct.IrStruct, ptr %t294, i32 0, i32 19, !dbg !16686
-  %t296 = load ptr, ptr %t295, !dbg !16686
-  %t297 = load i64, ptr %var_fIdx_196, !dbg !16686
-  %t298 = inttoptr i64 %t297 to ptr, !dbg !16686
-  call void @Array__Int_add(ptr %t296, ptr %t298), !dbg !16686
-  %t299 = load ptr, ptr %slot_st, !dbg !16687
-  %t300 = getelementptr inbounds %struct.IrStruct, ptr %t299, i32 0, i32 20, !dbg !16687
-  %t301 = load ptr, ptr %t300, !dbg !16687
-  %t302 = load i64, ptr %var_fflags_236, !dbg !16687
-  %t303 = inttoptr i64 %t302 to ptr, !dbg !16687
-  call void @Array__Int_add(ptr %t301, ptr %t303), !dbg !16687
-  br label %if_end_58, !dbg !16678
-if_end_58:
-  %t305 = load ptr, ptr %var_m_74, !dbg !16653
-  %t306 = getelementptr inbounds %struct.Member, ptr %t305, i32 0, i32 11, !dbg !16653
-  %t307 = load i1, ptr %t306, !dbg !16653
-  store i1 %t307, ptr %t304, !dbg !16653
-  br i1 %t307, label %sc_rhs_80, label %sc_end_81, !dbg !16653
-sc_rhs_80:
-  %t308 = load ptr, ptr %self_slot, !dbg !16653
-  %t309 = load ptr, ptr %var_m_74, !dbg !16653
-  %t310 = getelementptr inbounds %struct.Member, ptr %t309, i32 0, i32 10, !dbg !16653
-  %t311 = load ptr, ptr %t310, !dbg !16653
-  %t314 = icmp ne ptr %t308, null, !dbg !16653
-  br i1 %t314, label %vt_call_82, label %dir_call_83, !dbg !16653
-vt_call_82:
-  %t315 = getelementptr inbounds %struct.IrBuilder, ptr %t308, i32 0, i32 1, !dbg !16653
-  %t316 = load ptr, ptr %t315, !dbg !16653
-  %t317 = getelementptr ptr, ptr %t316, i64 1065, !dbg !16653
-  %t318 = load ptr, ptr %t317, !dbg !16653
-  %t319 = call i1 %t318(ptr %t308, ptr %t311), !dbg !16653
-  store i1 %t319, ptr %t313, !dbg !16653
-  br label %vt_end_84, !dbg !16653
-dir_call_83:
-  %t320 = call i1 @IrBuilder_isLazyCallExpr(ptr null, ptr %t311), !dbg !16653
-  store i1 %t320, ptr %t313, !dbg !16653
-  br label %vt_end_84, !dbg !16653
-vt_end_84:
-  %t312 = load i1, ptr %t313, !dbg !16653
-  store i1 %t312, ptr %t304, !dbg !16653
-  br label %sc_end_81, !dbg !16653
-sc_end_81:
-  %t321 = load i1, ptr %t304, !dbg !16653
-  br i1 %t321, label %if_then_85, label %if_end_87, !dbg !16653
-if_then_85:
-  %t322 = load ptr, ptr %slot_st, !dbg !16652
-  %t323 = call ptr @__spec_intern_cached(ptr @.str.1391, ptr @.str.cache.1391), !dbg !16652
-  %t324 = load ptr, ptr %var_m_74, !dbg !16652
-  %t325 = getelementptr inbounds %struct.Member, ptr %t324, i32 0, i32 7, !dbg !16652
-  %t326 = load ptr, ptr %t325, !dbg !16652
-  %t327 = call ptr @String_concat(ptr %t323, ptr %t326), !dbg !16652
-  %t328 = call ptr @IrType_I64__ensure(), !dbg !16652
-  call ptr @spec_claim_pool(ptr %t328), !dbg !16652
-  %t331 = icmp ne ptr %t322, null, !dbg !16652
-  br i1 %t331, label %vt_call_88, label %dir_call_89, !dbg !16652
-vt_call_88:
-  %t332 = getelementptr inbounds %struct.IrStruct, ptr %t322, i32 0, i32 1, !dbg !16652
-  %t333 = load ptr, ptr %t332, !dbg !16652
-  %t334 = getelementptr ptr, ptr %t333, i64 958, !dbg !16652
-  %t335 = load ptr, ptr %t334, !dbg !16652
-  %t336 = call i64 %t335(ptr %t322, ptr %t327, ptr %t328), !dbg !16652
-  store i64 %t336, ptr %t330, !dbg !16652
-  br label %vt_end_90, !dbg !16652
-dir_call_89:
-  %t337 = call i64 @IrStruct_addField(ptr %t322, ptr %t327, ptr %t328), !dbg !16652
-  store i64 %t337, ptr %t330, !dbg !16652
-  br label %vt_end_90, !dbg !16652
-vt_end_90:
-  %t329 = load i64, ptr %t330, !dbg !16652
-  %t339 = load ptr, ptr %self_slot, !dbg !16651
-  %t340 = load ptr, ptr %slot_cls, !dbg !16651
-  %t343 = icmp ne ptr %t340, null, !dbg !16651
-  br i1 %t343, label %vt_call_91, label %dir_call_92, !dbg !16651
-vt_call_91:
-  %t344 = getelementptr inbounds %struct.ClassInfo, ptr %t340, i32 0, i32 1, !dbg !16651
-  %t345 = load ptr, ptr %t344, !dbg !16651
-  %t346 = getelementptr ptr, ptr %t345, i64 453, !dbg !16651
-  %t347 = load ptr, ptr %t346, !dbg !16651
-  %t348 = call ptr %t347(ptr %t340), !dbg !16651
-  store ptr %t348, ptr %t342, !dbg !16651
-  br label %vt_end_93, !dbg !16651
-dir_call_92:
-  %t349 = call ptr @ClassInfo_qualifiedName(ptr %t340), !dbg !16651
-  store ptr %t349, ptr %t342, !dbg !16651
-  br label %vt_end_93, !dbg !16651
-vt_end_93:
-  %t341 = load ptr, ptr %t342, !dbg !16651
-  %t352 = icmp ne ptr %t339, null, !dbg !16651
-  br i1 %t352, label %vt_call_94, label %dir_call_95, !dbg !16651
-vt_call_94:
-  %t353 = getelementptr inbounds %struct.IrBuilder, ptr %t339, i32 0, i32 1, !dbg !16651
-  %t354 = load ptr, ptr %t353, !dbg !16651
-  %t355 = getelementptr ptr, ptr %t354, i64 1036, !dbg !16651
-  %t356 = load ptr, ptr %t355, !dbg !16651
-  %t357 = call ptr %t356(ptr %t339, ptr %t341), !dbg !16651
-  store ptr %t357, ptr %t351, !dbg !16651
-  br label %vt_end_96, !dbg !16651
-dir_call_95:
-  %t358 = call ptr @IrBuilder_cStructName(ptr null, ptr %t341), !dbg !16651
-  store ptr %t358, ptr %t351, !dbg !16651
-  br label %vt_end_96, !dbg !16651
-vt_end_96:
-  %t350 = load ptr, ptr %t351, !dbg !16651
-  call ptr @spec_rt_retain(ptr %t350), !dbg !16651
-  call ptr @spec_claim_pool(ptr %t350), !dbg !16651
-  store ptr %t350, ptr %var_ownerSname_338, !dbg !16651
-  %t359 = load ptr, ptr %self_slot, !dbg !16688
-  %t360 = getelementptr inbounds %struct.IrBuilder, ptr %t359, i32 0, i32 60, !dbg !16688
-  %t361 = load ptr, ptr %t360, !dbg !16688
-  %t362 = load ptr, ptr %slot_st, !dbg !16688
-  %t363 = getelementptr inbounds %struct.IrStruct, ptr %t362, i32 0, i32 2, !dbg !16688
-  %t364 = load ptr, ptr %t363, !dbg !16688
-  %t365 = call ptr @__spec_intern_cached(ptr @.str.16, ptr @.str.cache.16), !dbg !16688
-  %t367 = load ptr, ptr %var_m_74, !dbg !16688
-  %t368 = getelementptr inbounds %struct.Member, ptr %t367, i32 0, i32 7, !dbg !16688
+  %t223 = load ptr, ptr %slot_st, !dbg !16677
+  %t224 = getelementptr inbounds %struct.IrStruct, ptr %t223, i32 0, i32 2, !dbg !16677
+  %t225 = load ptr, ptr %t224, !dbg !16677
+  %t226 = call ptr @__spec_intern_cached(ptr @.str.16, ptr @.str.cache.16), !dbg !16677
+  %t228 = load ptr, ptr %var_m_74, !dbg !16677
+  %t229 = getelementptr inbounds %struct.Member, ptr %t228, i32 0, i32 7, !dbg !16677
+  %t230 = load ptr, ptr %t229, !dbg !16677
+  %t231 = call ptr @__spec_concat_3(ptr %t225, ptr %t226, ptr %t230), !dbg !16677
+  %t232 = load ptr, ptr %var_m_74, !dbg !16677
+  %t233 = getelementptr inbounds %struct.Member, ptr %t232, i32 0, i32 6, !dbg !16677
+  %t234 = load ptr, ptr %t233, !dbg !16677
+  %t235 = getelementptr inbounds %struct.Type, ptr %t234, i32 0, i32 2, !dbg !16677
+  %t236 = load ptr, ptr %t235, !dbg !16677
+  call void @HashTable_mapSetObjAny(ptr null, ptr %t222, ptr %t231, ptr %t236), !dbg !16677
+  %t237 = load ptr, ptr %var_m_74, !dbg !16677
+  %t238 = getelementptr inbounds %struct.Member, ptr %t237, i32 0, i32 7, !dbg !16678
+  %t239 = load ptr, ptr %t238, !dbg !16678
+  %t240 = call ptr @__spec_intern_cached(ptr @.str.729, ptr @.str.cache.729), !dbg !16678
+  %t241 = add i1 0, 1, !dbg !16678
+  %t242 = call i1 @Str_startsWith(ptr %t239, ptr %t240, i1 %t241), !dbg !16678
+  %t243 = xor i1 %t242, 1, !dbg !16678
+  br i1 %t243, label %if_then_58, label %if_end_60, !dbg !16678
+if_then_58:
+  %t245 = add i64 0, 0, !dbg !16655
+  store i64 %t245, ptr %var_fflags_244, !dbg !16655
+  %t246 = load i1, ptr %var_fIsArc_164, !dbg !16679
+  br i1 %t246, label %if_then_61, label %if_end_63, !dbg !16679
+if_then_61:
+  %t247 = load i64, ptr %var_fflags_244, !dbg !16679
+  %t248 = add i64 0, 1, !dbg !16679
+  %t249 = add i64 %t247, %t248, !dbg !16679
+  store i64 %t249, ptr %var_fflags_244, !dbg !16679
+  br label %if_end_63, !dbg !16679
+if_end_63:
+  %t250 = load ptr, ptr %var_fty_144, !dbg !16680
+  %t251 = call ptr @IrType_I1__ensure(), !dbg !16680
+  call ptr @spec_claim_pool(ptr %t251), !dbg !16680
+  %t252 = icmp eq ptr %t250, %t251, !dbg !16680
+  br i1 %t252, label %if_then_64, label %if_end_66, !dbg !16680
+if_then_64:
+  %t253 = load i64, ptr %var_fflags_244, !dbg !16680
+  %t254 = add i64 0, 2, !dbg !16680
+  %t255 = add i64 %t253, %t254, !dbg !16680
+  store i64 %t255, ptr %var_fflags_244, !dbg !16680
+  br label %if_end_66, !dbg !16680
+if_end_66:
+  %t256 = load ptr, ptr %var_fty_144, !dbg !16681
+  %t257 = call ptr @IrType_F64__ensure(), !dbg !16681
+  call ptr @spec_claim_pool(ptr %t257), !dbg !16681
+  %t258 = icmp eq ptr %t256, %t257, !dbg !16681
+  br i1 %t258, label %if_then_67, label %if_end_69, !dbg !16681
+if_then_67:
+  %t259 = load i64, ptr %var_fflags_244, !dbg !16681
+  %t260 = add i64 0, 4, !dbg !16681
+  %t261 = add i64 %t259, %t260, !dbg !16681
+  store i64 %t261, ptr %var_fflags_244, !dbg !16681
+  br label %if_end_69, !dbg !16681
+if_end_69:
+  %t262 = load ptr, ptr %var_fty_144, !dbg !16682
+  %t263 = call ptr @IrType_I64__ensure(), !dbg !16682
+  call ptr @spec_claim_pool(ptr %t263), !dbg !16682
+  %t264 = icmp eq ptr %t262, %t263, !dbg !16682
+  br i1 %t264, label %if_then_70, label %if_end_72, !dbg !16682
+if_then_70:
+  %t265 = load i64, ptr %var_fflags_244, !dbg !16682
+  %t266 = add i64 0, 8, !dbg !16682
+  %t267 = add i64 %t265, %t266, !dbg !16682
+  store i64 %t267, ptr %var_fflags_244, !dbg !16682
+  br label %if_end_72, !dbg !16682
+if_end_72:
+  %t268 = load ptr, ptr %var_fty_144, !dbg !16683
+  %t269 = call ptr @IrType_Ptr__ensure(), !dbg !16683
+  call ptr @spec_claim_pool(ptr %t269), !dbg !16683
+  %t270 = icmp eq ptr %t268, %t269, !dbg !16683
+  br i1 %t270, label %if_then_73, label %if_end_75, !dbg !16683
+if_then_73:
+  %t271 = load i64, ptr %var_fflags_244, !dbg !16683
+  %t272 = add i64 0, 16, !dbg !16683
+  %t273 = add i64 %t271, %t272, !dbg !16683
+  store i64 %t273, ptr %var_fflags_244, !dbg !16683
+  br label %if_end_75, !dbg !16683
+if_end_75:
+  %t274 = load ptr, ptr %var_m_74, !dbg !16654
+  %t275 = call ptr @Keyword_LOCAL__ensure(), !dbg !16654
+  call ptr @spec_claim_pool(ptr %t275), !dbg !16654
+  %t278 = icmp ne ptr %t274, null, !dbg !16654
+  br i1 %t278, label %vt_call_76, label %dir_call_77, !dbg !16654
+vt_call_76:
+  %t279 = getelementptr inbounds %struct.Member, ptr %t274, i32 0, i32 1, !dbg !16654
+  %t280 = load ptr, ptr %t279, !dbg !16654
+  %t281 = getelementptr ptr, ptr %t280, i64 460, !dbg !16654
+  %t282 = load ptr, ptr %t281, !dbg !16654
+  %t283 = call i1 %t282(ptr %t274, ptr %t275), !dbg !16654
+  store i1 %t283, ptr %t277, !dbg !16654
+  br label %vt_end_78, !dbg !16654
+dir_call_77:
+  %t284 = call i1 @Member_hasModifier(ptr %t274, ptr %t275), !dbg !16654
+  store i1 %t284, ptr %t277, !dbg !16654
+  br label %vt_end_78, !dbg !16654
+vt_end_78:
+  %t276 = load i1, ptr %t277, !dbg !16654
+  br i1 %t276, label %if_then_79, label %if_end_81, !dbg !16654
+if_then_79:
+  %t285 = load i64, ptr %var_fflags_244, !dbg !16654
+  %t286 = add i64 0, 128, !dbg !16654
+  %t287 = add i64 %t285, %t286, !dbg !16654
+  store i64 %t287, ptr %var_fflags_244, !dbg !16654
+  br label %if_end_81, !dbg !16654
+if_end_81:
+  %t288 = load ptr, ptr %slot_st, !dbg !16684
+  %t289 = getelementptr inbounds %struct.IrStruct, ptr %t288, i32 0, i32 17, !dbg !16684
+  %t290 = load ptr, ptr %t289, !dbg !16684
+  %t291 = load ptr, ptr %var_m_74, !dbg !16684
+  %t292 = getelementptr inbounds %struct.Member, ptr %t291, i32 0, i32 7, !dbg !16684
+  %t293 = load ptr, ptr %t292, !dbg !16684
+  call void @Array__String_add(ptr %t290, ptr %t293), !dbg !16684
+  %t294 = load ptr, ptr %slot_st, !dbg !16685
+  %t295 = getelementptr inbounds %struct.IrStruct, ptr %t294, i32 0, i32 18, !dbg !16685
+  %t296 = load ptr, ptr %t295, !dbg !16685
+  %t297 = load ptr, ptr %var_m_74, !dbg !16685
+  %t298 = getelementptr inbounds %struct.Member, ptr %t297, i32 0, i32 6, !dbg !16685
+  %t299 = load ptr, ptr %t298, !dbg !16685
+  %t300 = getelementptr inbounds %struct.Type, ptr %t299, i32 0, i32 2, !dbg !16685
+  %t301 = load ptr, ptr %t300, !dbg !16685
+  call void @Array__String_add(ptr %t296, ptr %t301), !dbg !16685
+  %t302 = load ptr, ptr %slot_st, !dbg !16686
+  %t303 = getelementptr inbounds %struct.IrStruct, ptr %t302, i32 0, i32 19, !dbg !16686
+  %t304 = load ptr, ptr %t303, !dbg !16686
+  %t305 = load i64, ptr %var_fIdx_204, !dbg !16686
+  %t306 = inttoptr i64 %t305 to ptr, !dbg !16686
+  call void @Array__Int_add(ptr %t304, ptr %t306), !dbg !16686
+  %t307 = load ptr, ptr %slot_st, !dbg !16687
+  %t308 = getelementptr inbounds %struct.IrStruct, ptr %t307, i32 0, i32 20, !dbg !16687
+  %t309 = load ptr, ptr %t308, !dbg !16687
+  %t310 = load i64, ptr %var_fflags_244, !dbg !16687
+  %t311 = inttoptr i64 %t310 to ptr, !dbg !16687
+  call void @Array__Int_add(ptr %t309, ptr %t311), !dbg !16687
+  br label %if_end_60, !dbg !16678
+if_end_60:
+  %t313 = load ptr, ptr %var_m_74, !dbg !16653
+  %t314 = getelementptr inbounds %struct.Member, ptr %t313, i32 0, i32 11, !dbg !16653
+  %t315 = load i1, ptr %t314, !dbg !16653
+  store i1 %t315, ptr %t312, !dbg !16653
+  br i1 %t315, label %sc_rhs_82, label %sc_end_83, !dbg !16653
+sc_rhs_82:
+  %t316 = load ptr, ptr %self_slot, !dbg !16653
+  %t317 = load ptr, ptr %var_m_74, !dbg !16653
+  %t318 = getelementptr inbounds %struct.Member, ptr %t317, i32 0, i32 10, !dbg !16653
+  %t319 = load ptr, ptr %t318, !dbg !16653
+  %t322 = icmp ne ptr %t316, null, !dbg !16653
+  br i1 %t322, label %vt_call_84, label %dir_call_85, !dbg !16653
+vt_call_84:
+  %t323 = getelementptr inbounds %struct.IrBuilder, ptr %t316, i32 0, i32 1, !dbg !16653
+  %t324 = load ptr, ptr %t323, !dbg !16653
+  %t325 = getelementptr ptr, ptr %t324, i64 1065, !dbg !16653
+  %t326 = load ptr, ptr %t325, !dbg !16653
+  %t327 = call i1 %t326(ptr %t316, ptr %t319), !dbg !16653
+  store i1 %t327, ptr %t321, !dbg !16653
+  br label %vt_end_86, !dbg !16653
+dir_call_85:
+  %t328 = call i1 @IrBuilder_isLazyCallExpr(ptr null, ptr %t319), !dbg !16653
+  store i1 %t328, ptr %t321, !dbg !16653
+  br label %vt_end_86, !dbg !16653
+vt_end_86:
+  %t320 = load i1, ptr %t321, !dbg !16653
+  store i1 %t320, ptr %t312, !dbg !16653
+  br label %sc_end_83, !dbg !16653
+sc_end_83:
+  %t329 = load i1, ptr %t312, !dbg !16653
+  br i1 %t329, label %if_then_87, label %if_end_89, !dbg !16653
+if_then_87:
+  %t330 = load ptr, ptr %slot_st, !dbg !16652
+  %t331 = call ptr @__spec_intern_cached(ptr @.str.1391, ptr @.str.cache.1391), !dbg !16652
+  %t332 = load ptr, ptr %var_m_74, !dbg !16652
+  %t333 = getelementptr inbounds %struct.Member, ptr %t332, i32 0, i32 7, !dbg !16652
+  %t334 = load ptr, ptr %t333, !dbg !16652
+  %t335 = call ptr @String_concat(ptr %t331, ptr %t334), !dbg !16652
+  %t336 = call ptr @IrType_I64__ensure(), !dbg !16652
+  call ptr @spec_claim_pool(ptr %t336), !dbg !16652
+  %t339 = icmp ne ptr %t330, null, !dbg !16652
+  br i1 %t339, label %vt_call_90, label %dir_call_91, !dbg !16652
+vt_call_90:
+  %t340 = getelementptr inbounds %struct.IrStruct, ptr %t330, i32 0, i32 1, !dbg !16652
+  %t341 = load ptr, ptr %t340, !dbg !16652
+  %t342 = getelementptr ptr, ptr %t341, i64 958, !dbg !16652
+  %t343 = load ptr, ptr %t342, !dbg !16652
+  %t344 = call i64 %t343(ptr %t330, ptr %t335, ptr %t336), !dbg !16652
+  store i64 %t344, ptr %t338, !dbg !16652
+  br label %vt_end_92, !dbg !16652
+dir_call_91:
+  %t345 = call i64 @IrStruct_addField(ptr %t330, ptr %t335, ptr %t336), !dbg !16652
+  store i64 %t345, ptr %t338, !dbg !16652
+  br label %vt_end_92, !dbg !16652
+vt_end_92:
+  %t337 = load i64, ptr %t338, !dbg !16652
+  %t347 = load ptr, ptr %self_slot, !dbg !16651
+  %t348 = load ptr, ptr %slot_cls, !dbg !16651
+  %t351 = icmp ne ptr %t348, null, !dbg !16651
+  br i1 %t351, label %vt_call_93, label %dir_call_94, !dbg !16651
+vt_call_93:
+  %t352 = getelementptr inbounds %struct.ClassInfo, ptr %t348, i32 0, i32 1, !dbg !16651
+  %t353 = load ptr, ptr %t352, !dbg !16651
+  %t354 = getelementptr ptr, ptr %t353, i64 453, !dbg !16651
+  %t355 = load ptr, ptr %t354, !dbg !16651
+  %t356 = call ptr %t355(ptr %t348), !dbg !16651
+  store ptr %t356, ptr %t350, !dbg !16651
+  br label %vt_end_95, !dbg !16651
+dir_call_94:
+  %t357 = call ptr @ClassInfo_qualifiedName(ptr %t348), !dbg !16651
+  store ptr %t357, ptr %t350, !dbg !16651
+  br label %vt_end_95, !dbg !16651
+vt_end_95:
+  %t349 = load ptr, ptr %t350, !dbg !16651
+  %t360 = icmp ne ptr %t347, null, !dbg !16651
+  br i1 %t360, label %vt_call_96, label %dir_call_97, !dbg !16651
+vt_call_96:
+  %t361 = getelementptr inbounds %struct.IrBuilder, ptr %t347, i32 0, i32 1, !dbg !16651
+  %t362 = load ptr, ptr %t361, !dbg !16651
+  %t363 = getelementptr ptr, ptr %t362, i64 1036, !dbg !16651
+  %t364 = load ptr, ptr %t363, !dbg !16651
+  %t365 = call ptr %t364(ptr %t347, ptr %t349), !dbg !16651
+  store ptr %t365, ptr %t359, !dbg !16651
+  br label %vt_end_98, !dbg !16651
+dir_call_97:
+  %t366 = call ptr @IrBuilder_cStructName(ptr null, ptr %t349), !dbg !16651
+  store ptr %t366, ptr %t359, !dbg !16651
+  br label %vt_end_98, !dbg !16651
+vt_end_98:
+  %t358 = load ptr, ptr %t359, !dbg !16651
+  call ptr @spec_rt_retain(ptr %t358), !dbg !16651
+  call ptr @spec_claim_pool(ptr %t358), !dbg !16651
+  store ptr %t358, ptr %var_ownerSname_346, !dbg !16651
+  %t367 = load ptr, ptr %self_slot, !dbg !16688
+  %t368 = getelementptr inbounds %struct.IrBuilder, ptr %t367, i32 0, i32 60, !dbg !16688
   %t369 = load ptr, ptr %t368, !dbg !16688
-  %t370 = call ptr @__spec_concat_3(ptr %t364, ptr %t365, ptr %t369), !dbg !16688
-  %t371 = load ptr, ptr %var_ownerSname_338, !dbg !16688
-  call void @HashTable_mapSetObjAny(ptr null, ptr %t361, ptr %t370, ptr %t371), !dbg !16688
-  %t372 = load ptr, ptr %self_slot, !dbg !16688
-  %t373 = getelementptr inbounds %struct.IrBuilder, ptr %t372, i32 0, i32 60, !dbg !16689
-  %t374 = load ptr, ptr %t373, !dbg !16689
-  %t375 = load ptr, ptr %slot_cls, !dbg !16689
-  %t376 = getelementptr inbounds %struct.ClassInfo, ptr %t375, i32 0, i32 2, !dbg !16689
-  %t377 = load ptr, ptr %t376, !dbg !16689
-  %t378 = call ptr @__spec_intern_cached(ptr @.str.16, ptr @.str.cache.16), !dbg !16689
-  %t380 = load ptr, ptr %var_m_74, !dbg !16689
-  %t381 = getelementptr inbounds %struct.Member, ptr %t380, i32 0, i32 7, !dbg !16689
+  %t370 = load ptr, ptr %slot_st, !dbg !16688
+  %t371 = getelementptr inbounds %struct.IrStruct, ptr %t370, i32 0, i32 2, !dbg !16688
+  %t372 = load ptr, ptr %t371, !dbg !16688
+  %t373 = call ptr @__spec_intern_cached(ptr @.str.16, ptr @.str.cache.16), !dbg !16688
+  %t375 = load ptr, ptr %var_m_74, !dbg !16688
+  %t376 = getelementptr inbounds %struct.Member, ptr %t375, i32 0, i32 7, !dbg !16688
+  %t377 = load ptr, ptr %t376, !dbg !16688
+  %t378 = call ptr @__spec_concat_3(ptr %t372, ptr %t373, ptr %t377), !dbg !16688
+  %t379 = load ptr, ptr %var_ownerSname_346, !dbg !16688
+  call void @HashTable_mapSetObjAny(ptr null, ptr %t369, ptr %t378, ptr %t379), !dbg !16688
+  %t380 = load ptr, ptr %self_slot, !dbg !16688
+  %t381 = getelementptr inbounds %struct.IrBuilder, ptr %t380, i32 0, i32 60, !dbg !16689
   %t382 = load ptr, ptr %t381, !dbg !16689
-  %t383 = call ptr @__spec_concat_3(ptr %t377, ptr %t378, ptr %t382), !dbg !16689
-  %t384 = load ptr, ptr %var_ownerSname_338, !dbg !16689
-  call void @HashTable_mapSetObjAny(ptr null, ptr %t374, ptr %t383, ptr %t384), !dbg !16689
-  br label %if_end_87, !dbg !16689
-if_end_87:
-  br label %if_end_37, !dbg !16660
-if_end_37:
-  %t385 = load i64, ptr %var_mi_66, !dbg !16690
-  %t386 = add i64 0, 1, !dbg !16690
-  %t387 = add i64 %t385, %t386, !dbg !16690
-  store i64 %t387, ptr %var_mi_66, !dbg !16690
+  %t383 = load ptr, ptr %slot_cls, !dbg !16689
+  %t384 = getelementptr inbounds %struct.ClassInfo, ptr %t383, i32 0, i32 2, !dbg !16689
+  %t385 = load ptr, ptr %t384, !dbg !16689
+  %t386 = call ptr @__spec_intern_cached(ptr @.str.16, ptr @.str.cache.16), !dbg !16689
+  %t388 = load ptr, ptr %var_m_74, !dbg !16689
+  %t389 = getelementptr inbounds %struct.Member, ptr %t388, i32 0, i32 7, !dbg !16689
+  %t390 = load ptr, ptr %t389, !dbg !16689
+  %t391 = call ptr @__spec_concat_3(ptr %t385, ptr %t386, ptr %t390), !dbg !16689
+  %t392 = load ptr, ptr %var_ownerSname_346, !dbg !16689
+  call void @HashTable_mapSetObjAny(ptr null, ptr %t382, ptr %t391, ptr %t392), !dbg !16689
+  br label %if_end_89, !dbg !16689
+if_end_89:
+  br label %if_end_39, !dbg !16660
+if_end_39:
+  %t393 = load i64, ptr %var_mi_66, !dbg !16690
+  %t394 = add i64 0, 1, !dbg !16690
+  %t395 = add i64 %t393, %t394, !dbg !16690
+  store i64 %t395, ptr %var_mi_66, !dbg !16690
   br label %while_hdr_19, !dbg !16671
 while_end_21:
   call void @spec_pool_release_to(i64 %t1), !dbg !16666
@@ -250483,59 +250491,61 @@ vt_end_12:
 
 define void @IrBuilder_emitFieldDefaults(ptr %self, ptr %p_cls, ptr %p_seen) !dbg !17361 {
 entry:
-  %t543 = alloca ptr, !dbg !17362
-  store ptr null, ptr %t543, !dbg !17362
-  %var_defVal0_539 = alloca ptr, !dbg !17362
-  store ptr null, ptr %var_defVal0_539, !dbg !17362
-  %t518 = alloca ptr, !dbg !17363
-  store ptr null, ptr %t518, !dbg !17363
-  %var_ptr0_515 = alloca ptr, !dbg !17363
-  store ptr null, ptr %var_ptr0_515, !dbg !17363
-  %var_fty0_509 = alloca ptr, !dbg !17364
-  store ptr null, ptr %var_fty0_509, !dbg !17364
-  %t498 = alloca i64, !dbg !17365
-  %var_fidx0_492 = alloca i64, !dbg !17365
-  %t470 = alloca i1, !dbg !17366
-  %t440 = alloca i1, !dbg !17366
-  %t439 = alloca i1, !dbg !17366
-  %t438 = alloca i1, !dbg !17366
-  %t437 = alloca i1, !dbg !17366
-  %t436 = alloca i1, !dbg !17366
-  %t435 = alloca i1, !dbg !17366
-  %t395 = alloca ptr, !dbg !17367
-  store ptr null, ptr %t395, !dbg !17367
-  %var_oldF_392 = alloca ptr, !dbg !17367
-  store ptr null, ptr %var_oldF_392, !dbg !17367
-  %t369 = alloca i1, !dbg !17368
-  %t355 = alloca ptr, !dbg !17369
-  store ptr null, ptr %t355, !dbg !17369
-  %t342 = alloca ptr, !dbg !17370
-  store ptr null, ptr %t342, !dbg !17370
-  %var_vty_334 = alloca ptr, !dbg !17370
-  store ptr null, ptr %var_vty_334, !dbg !17370
-  %t318 = alloca ptr, !dbg !17371
-  store ptr null, ptr %t318, !dbg !17371
-  %var_val_312 = alloca ptr, !dbg !17371
-  store ptr null, ptr %var_val_312, !dbg !17371
-  %var_mkp1_298 = alloca ptr, !dbg !17372
-  store ptr null, ptr %var_mkp1_298, !dbg !17372
-  %var_mkp0_276 = alloca ptr, !dbg !17373
-  store ptr null, ptr %var_mkp0_276, !dbg !17373
-  %t259 = alloca i1, !dbg !17374
-  %var_prevMapV_255 = alloca ptr, !dbg !17375
-  store ptr null, ptr %var_prevMapV_255, !dbg !17375
-  %var_prevMapK_251 = alloca ptr, !dbg !17376
-  store ptr null, ptr %var_prevMapK_251, !dbg !17376
-  %t230 = alloca ptr, !dbg !17377
-  store ptr null, ptr %t230, !dbg !17377
-  %var_ptr_227 = alloca ptr, !dbg !17377
-  store ptr null, ptr %var_ptr_227, !dbg !17377
-  %var_fty_221 = alloca ptr, !dbg !17378
-  store ptr null, ptr %var_fty_221, !dbg !17378
-  %t210 = alloca i64, !dbg !17379
-  %var_fidx_204 = alloca i64, !dbg !17379
-  %t194 = alloca i1, !dbg !17380
-  %t175 = alloca i1, !dbg !17380
+  %t559 = alloca ptr, !dbg !17362
+  store ptr null, ptr %t559, !dbg !17362
+  %var_defVal0_555 = alloca ptr, !dbg !17362
+  store ptr null, ptr %var_defVal0_555, !dbg !17362
+  %t534 = alloca ptr, !dbg !17363
+  store ptr null, ptr %t534, !dbg !17363
+  %var_ptr0_531 = alloca ptr, !dbg !17363
+  store ptr null, ptr %var_ptr0_531, !dbg !17363
+  %var_fty0_525 = alloca ptr, !dbg !17364
+  store ptr null, ptr %var_fty0_525, !dbg !17364
+  %t514 = alloca i64, !dbg !17365
+  %var_fidx0_508 = alloca i64, !dbg !17365
+  %t486 = alloca i1, !dbg !17366
+  %t449 = alloca i1, !dbg !17366
+  %t448 = alloca i1, !dbg !17366
+  %t447 = alloca i1, !dbg !17366
+  %t446 = alloca i1, !dbg !17366
+  %t445 = alloca i1, !dbg !17366
+  %t444 = alloca i1, !dbg !17366
+  %t443 = alloca i1, !dbg !17366
+  %t403 = alloca ptr, !dbg !17367
+  store ptr null, ptr %t403, !dbg !17367
+  %var_oldF_400 = alloca ptr, !dbg !17367
+  store ptr null, ptr %var_oldF_400, !dbg !17367
+  %t377 = alloca i1, !dbg !17368
+  %t363 = alloca ptr, !dbg !17369
+  store ptr null, ptr %t363, !dbg !17369
+  %t350 = alloca ptr, !dbg !17370
+  store ptr null, ptr %t350, !dbg !17370
+  %var_vty_342 = alloca ptr, !dbg !17370
+  store ptr null, ptr %var_vty_342, !dbg !17370
+  %t326 = alloca ptr, !dbg !17371
+  store ptr null, ptr %t326, !dbg !17371
+  %var_val_320 = alloca ptr, !dbg !17371
+  store ptr null, ptr %var_val_320, !dbg !17371
+  %var_mkp1_306 = alloca ptr, !dbg !17372
+  store ptr null, ptr %var_mkp1_306, !dbg !17372
+  %var_mkp0_284 = alloca ptr, !dbg !17373
+  store ptr null, ptr %var_mkp0_284, !dbg !17373
+  %t267 = alloca i1, !dbg !17374
+  %var_prevMapV_263 = alloca ptr, !dbg !17375
+  store ptr null, ptr %var_prevMapV_263, !dbg !17375
+  %var_prevMapK_259 = alloca ptr, !dbg !17376
+  store ptr null, ptr %var_prevMapK_259, !dbg !17376
+  %t238 = alloca ptr, !dbg !17377
+  store ptr null, ptr %t238, !dbg !17377
+  %var_ptr_235 = alloca ptr, !dbg !17377
+  store ptr null, ptr %var_ptr_235, !dbg !17377
+  %var_fty_229 = alloca ptr, !dbg !17378
+  store ptr null, ptr %var_fty_229, !dbg !17378
+  %t218 = alloca i64, !dbg !17379
+  %var_fidx_212 = alloca i64, !dbg !17379
+  %t202 = alloca i1, !dbg !17380
+  %t183 = alloca i1, !dbg !17380
+  %t146 = alloca i1, !dbg !17380
   %t145 = alloca i1, !dbg !17380
   %t144 = alloca i1, !dbg !17380
   %t143 = alloca i1, !dbg !17380
@@ -250791,778 +250801,804 @@ while_body_35:
   call ptr @spec_rt_retain(ptr %t139), !dbg !17381
   call ptr @spec_claim_pool(ptr %t139), !dbg !17381
   store ptr %t139, ptr %var_m_134, !dbg !17381
-  %t146 = load ptr, ptr %var_m_134, !dbg !17380
-  %t147 = getelementptr inbounds %struct.Member, ptr %t146, i32 0, i32 2, !dbg !17380
-  %t148 = load ptr, ptr %t147, !dbg !17380
-  %t149 = call ptr @MemberKind_FIELD__ensure(), !dbg !17380
-  call ptr @spec_claim_pool(ptr %t149), !dbg !17380
-  %t150 = icmp eq ptr %t148, %t149, !dbg !17380
-  store i1 %t150, ptr %t145, !dbg !17380
-  br i1 %t150, label %sc_rhs_37, label %sc_end_38, !dbg !17380
+  %t147 = load ptr, ptr %var_m_134, !dbg !17380
+  %t148 = getelementptr inbounds %struct.Member, ptr %t147, i32 0, i32 2, !dbg !17380
+  %t149 = load ptr, ptr %t148, !dbg !17380
+  %t150 = call ptr @MemberKind_FIELD__ensure(), !dbg !17380
+  call ptr @spec_claim_pool(ptr %t150), !dbg !17380
+  %t151 = icmp eq ptr %t149, %t150, !dbg !17380
+  store i1 %t151, ptr %t146, !dbg !17380
+  br i1 %t151, label %sc_rhs_37, label %sc_end_38, !dbg !17380
 sc_rhs_37:
-  %t151 = load ptr, ptr %var_m_134, !dbg !17380
-  %t152 = getelementptr inbounds %struct.Member, ptr %t151, i32 0, i32 7, !dbg !17380
-  %t153 = load ptr, ptr %t152, !dbg !17380
-  %t154 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !17380
-  %t156 = call i1 @Str_stringEquals(ptr null, ptr %t153, ptr %t154), !dbg !17380
-  %t155 = xor i1 %t156, 1, !dbg !17380
-  store i1 %t155, ptr %t145, !dbg !17380
+  %t152 = load ptr, ptr %var_m_134, !dbg !17380
+  %t153 = getelementptr inbounds %struct.Member, ptr %t152, i32 0, i32 7, !dbg !17380
+  %t154 = load ptr, ptr %t153, !dbg !17380
+  %t155 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !17380
+  %t157 = call i1 @Str_stringEquals(ptr null, ptr %t154, ptr %t155), !dbg !17380
+  %t156 = xor i1 %t157, 1, !dbg !17380
+  store i1 %t156, ptr %t146, !dbg !17380
   br label %sc_end_38, !dbg !17380
 sc_end_38:
-  %t157 = load i1, ptr %t145, !dbg !17380
-  store i1 %t157, ptr %t144, !dbg !17380
-  br i1 %t157, label %sc_rhs_39, label %sc_end_40, !dbg !17380
+  %t158 = load i1, ptr %t146, !dbg !17380
+  store i1 %t158, ptr %t145, !dbg !17380
+  br i1 %t158, label %sc_rhs_39, label %sc_end_40, !dbg !17380
 sc_rhs_39:
-  %t158 = load ptr, ptr %var_m_134, !dbg !17380
-  %t159 = getelementptr inbounds %struct.Member, ptr %t158, i32 0, i32 7, !dbg !17380
-  %t160 = load ptr, ptr %t159, !dbg !17380
-  %t161 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !17380
-  %t163 = call i1 @Str_stringEquals(ptr null, ptr %t160, ptr %t161), !dbg !17380
-  %t162 = xor i1 %t163, 1, !dbg !17380
-  store i1 %t162, ptr %t144, !dbg !17380
+  %t159 = load ptr, ptr %var_m_134, !dbg !17380
+  %t160 = getelementptr inbounds %struct.Member, ptr %t159, i32 0, i32 7, !dbg !17380
+  %t161 = load ptr, ptr %t160, !dbg !17380
+  %t162 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !17380
+  %t164 = call i1 @Str_stringEquals(ptr null, ptr %t161, ptr %t162), !dbg !17380
+  %t163 = xor i1 %t164, 1, !dbg !17380
+  store i1 %t163, ptr %t145, !dbg !17380
   br label %sc_end_40, !dbg !17380
 sc_end_40:
-  %t164 = load i1, ptr %t144, !dbg !17380
-  store i1 %t164, ptr %t143, !dbg !17380
-  br i1 %t164, label %sc_rhs_41, label %sc_end_42, !dbg !17380
+  %t165 = load i1, ptr %t145, !dbg !17380
+  store i1 %t165, ptr %t144, !dbg !17380
+  br i1 %t165, label %sc_rhs_41, label %sc_end_42, !dbg !17380
 sc_rhs_41:
-  %t165 = load ptr, ptr %var_m_134, !dbg !17380
-  %t166 = getelementptr inbounds %struct.Member, ptr %t165, i32 0, i32 7, !dbg !17380
-  %t167 = load ptr, ptr %t166, !dbg !17380
-  %t168 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !17380
-  %t170 = call i1 @Str_stringEquals(ptr null, ptr %t167, ptr %t168), !dbg !17380
-  %t169 = xor i1 %t170, 1, !dbg !17380
-  store i1 %t169, ptr %t143, !dbg !17380
+  %t166 = load ptr, ptr %var_m_134, !dbg !17380
+  %t167 = getelementptr inbounds %struct.Member, ptr %t166, i32 0, i32 7, !dbg !17380
+  %t168 = load ptr, ptr %t167, !dbg !17380
+  %t169 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !17380
+  %t171 = call i1 @Str_stringEquals(ptr null, ptr %t168, ptr %t169), !dbg !17380
+  %t170 = xor i1 %t171, 1, !dbg !17380
+  store i1 %t170, ptr %t144, !dbg !17380
   br label %sc_end_42, !dbg !17380
 sc_end_42:
-  %t171 = load i1, ptr %t143, !dbg !17380
-  store i1 %t171, ptr %t142, !dbg !17380
-  br i1 %t171, label %sc_rhs_43, label %sc_end_44, !dbg !17380
+  %t172 = load i1, ptr %t144, !dbg !17380
+  store i1 %t172, ptr %t143, !dbg !17380
+  br i1 %t172, label %sc_rhs_43, label %sc_end_44, !dbg !17380
 sc_rhs_43:
-  %t172 = load ptr, ptr %var_m_134, !dbg !17380
-  %t173 = call ptr @Keyword_HELD__ensure(), !dbg !17380
-  call ptr @spec_claim_pool(ptr %t173), !dbg !17380
-  %t176 = icmp ne ptr %t172, null, !dbg !17380
-  br i1 %t176, label %vt_call_45, label %dir_call_46, !dbg !17380
-vt_call_45:
-  %t177 = getelementptr inbounds %struct.Member, ptr %t172, i32 0, i32 1, !dbg !17380
-  %t178 = load ptr, ptr %t177, !dbg !17380
-  %t179 = getelementptr ptr, ptr %t178, i64 460, !dbg !17380
-  %t180 = load ptr, ptr %t179, !dbg !17380
-  %t181 = call i1 %t180(ptr %t172, ptr %t173), !dbg !17380
-  store i1 %t181, ptr %t175, !dbg !17380
-  br label %vt_end_47, !dbg !17380
-dir_call_46:
-  %t182 = call i1 @Member_hasModifier(ptr %t172, ptr %t173), !dbg !17380
-  store i1 %t182, ptr %t175, !dbg !17380
-  br label %vt_end_47, !dbg !17380
-vt_end_47:
-  %t174 = load i1, ptr %t175, !dbg !17380
-  %t183 = xor i1 %t174, 1, !dbg !17380
-  store i1 %t183, ptr %t142, !dbg !17380
+  %t173 = load ptr, ptr %var_m_134, !dbg !17380
+  %t174 = getelementptr inbounds %struct.Member, ptr %t173, i32 0, i32 7, !dbg !17380
+  %t175 = load ptr, ptr %t174, !dbg !17380
+  %t176 = call ptr @__spec_intern_cached(ptr @.str.358, ptr @.str.cache.358), !dbg !17380
+  %t178 = call i1 @Str_stringEquals(ptr null, ptr %t175, ptr %t176), !dbg !17380
+  %t177 = xor i1 %t178, 1, !dbg !17380
+  store i1 %t177, ptr %t143, !dbg !17380
   br label %sc_end_44, !dbg !17380
 sc_end_44:
-  %t184 = load i1, ptr %t142, !dbg !17380
-  store i1 %t184, ptr %t141, !dbg !17380
-  br i1 %t184, label %sc_rhs_48, label %sc_end_49, !dbg !17380
-sc_rhs_48:
-  %t185 = load ptr, ptr %var_m_134, !dbg !17380
-  %t186 = getelementptr inbounds %struct.Member, ptr %t185, i32 0, i32 11, !dbg !17380
-  %t187 = load i1, ptr %t186, !dbg !17380
-  store i1 %t187, ptr %t141, !dbg !17380
-  br label %sc_end_49, !dbg !17380
-sc_end_49:
-  %t188 = load i1, ptr %t141, !dbg !17380
-  store i1 %t188, ptr %t140, !dbg !17380
-  br i1 %t188, label %sc_rhs_50, label %sc_end_51, !dbg !17380
+  %t179 = load i1, ptr %t143, !dbg !17380
+  store i1 %t179, ptr %t142, !dbg !17380
+  br i1 %t179, label %sc_rhs_45, label %sc_end_46, !dbg !17380
+sc_rhs_45:
+  %t180 = load ptr, ptr %var_m_134, !dbg !17380
+  %t181 = call ptr @Keyword_HELD__ensure(), !dbg !17380
+  call ptr @spec_claim_pool(ptr %t181), !dbg !17380
+  %t184 = icmp ne ptr %t180, null, !dbg !17380
+  br i1 %t184, label %vt_call_47, label %dir_call_48, !dbg !17380
+vt_call_47:
+  %t185 = getelementptr inbounds %struct.Member, ptr %t180, i32 0, i32 1, !dbg !17380
+  %t186 = load ptr, ptr %t185, !dbg !17380
+  %t187 = getelementptr ptr, ptr %t186, i64 460, !dbg !17380
+  %t188 = load ptr, ptr %t187, !dbg !17380
+  %t189 = call i1 %t188(ptr %t180, ptr %t181), !dbg !17380
+  store i1 %t189, ptr %t183, !dbg !17380
+  br label %vt_end_49, !dbg !17380
+dir_call_48:
+  %t190 = call i1 @Member_hasModifier(ptr %t180, ptr %t181), !dbg !17380
+  store i1 %t190, ptr %t183, !dbg !17380
+  br label %vt_end_49, !dbg !17380
+vt_end_49:
+  %t182 = load i1, ptr %t183, !dbg !17380
+  %t191 = xor i1 %t182, 1, !dbg !17380
+  store i1 %t191, ptr %t142, !dbg !17380
+  br label %sc_end_46, !dbg !17380
+sc_end_46:
+  %t192 = load i1, ptr %t142, !dbg !17380
+  store i1 %t192, ptr %t141, !dbg !17380
+  br i1 %t192, label %sc_rhs_50, label %sc_end_51, !dbg !17380
 sc_rhs_50:
-  %t189 = load ptr, ptr %self_slot, !dbg !17380
-  %t190 = load ptr, ptr %var_m_134, !dbg !17380
-  %t191 = getelementptr inbounds %struct.Member, ptr %t190, i32 0, i32 10, !dbg !17380
-  %t192 = load ptr, ptr %t191, !dbg !17380
-  %t195 = icmp ne ptr %t189, null, !dbg !17380
-  br i1 %t195, label %vt_call_52, label %dir_call_53, !dbg !17380
-vt_call_52:
-  %t196 = getelementptr inbounds %struct.IrBuilder, ptr %t189, i32 0, i32 1, !dbg !17380
-  %t197 = load ptr, ptr %t196, !dbg !17380
-  %t198 = getelementptr ptr, ptr %t197, i64 1065, !dbg !17380
-  %t199 = load ptr, ptr %t198, !dbg !17380
-  %t200 = call i1 %t199(ptr %t189, ptr %t192), !dbg !17380
-  store i1 %t200, ptr %t194, !dbg !17380
-  br label %vt_end_54, !dbg !17380
-dir_call_53:
-  %t201 = call i1 @IrBuilder_isLazyCallExpr(ptr null, ptr %t192), !dbg !17380
-  store i1 %t201, ptr %t194, !dbg !17380
-  br label %vt_end_54, !dbg !17380
-vt_end_54:
-  %t193 = load i1, ptr %t194, !dbg !17380
-  %t202 = xor i1 %t193, 1, !dbg !17380
-  store i1 %t202, ptr %t140, !dbg !17380
+  %t193 = load ptr, ptr %var_m_134, !dbg !17380
+  %t194 = getelementptr inbounds %struct.Member, ptr %t193, i32 0, i32 11, !dbg !17380
+  %t195 = load i1, ptr %t194, !dbg !17380
+  store i1 %t195, ptr %t141, !dbg !17380
   br label %sc_end_51, !dbg !17380
 sc_end_51:
-  %t203 = load i1, ptr %t140, !dbg !17380
-  br i1 %t203, label %if_then_55, label %if_else_56, !dbg !17380
-if_then_55:
-  %t205 = load ptr, ptr %var_st_110, !dbg !17379
-  %t206 = load ptr, ptr %var_m_134, !dbg !17379
-  %t207 = getelementptr inbounds %struct.Member, ptr %t206, i32 0, i32 7, !dbg !17379
-  %t208 = load ptr, ptr %t207, !dbg !17379
-  %t211 = icmp ne ptr %t205, null, !dbg !17379
-  br i1 %t211, label %vt_call_58, label %dir_call_59, !dbg !17379
-vt_call_58:
-  %t212 = getelementptr inbounds %struct.IrStruct, ptr %t205, i32 0, i32 1, !dbg !17379
-  %t213 = load ptr, ptr %t212, !dbg !17379
-  %t214 = getelementptr ptr, ptr %t213, i64 960, !dbg !17379
-  %t215 = load ptr, ptr %t214, !dbg !17379
-  %t216 = call i64 %t215(ptr %t205, ptr %t208), !dbg !17379
-  store i64 %t216, ptr %t210, !dbg !17379
-  br label %vt_end_60, !dbg !17379
-dir_call_59:
-  %t217 = call i64 @IrStruct_fieldIndex(ptr %t205, ptr %t208), !dbg !17379
-  store i64 %t217, ptr %t210, !dbg !17379
-  br label %vt_end_60, !dbg !17379
-vt_end_60:
-  %t209 = load i64, ptr %t210, !dbg !17379
-  store i64 %t209, ptr %var_fidx_204, !dbg !17379
-  %t218 = load i64, ptr %var_fidx_204, !dbg !17403
-  %t219 = add i64 0, 0, !dbg !17403
-  %t220 = icmp sge i64 %t218, %t219, !dbg !17403
-  br i1 %t220, label %if_then_61, label %if_end_63, !dbg !17403
-if_then_61:
-  %t222 = load ptr, ptr %var_st_110, !dbg !17378
-  %t223 = getelementptr inbounds %struct.IrStruct, ptr %t222, i32 0, i32 6, !dbg !17378
-  %t224 = load ptr, ptr %t223, !dbg !17378
-  %t225 = load i64, ptr %var_fidx_204, !dbg !17378
-  %t226 = call ptr @Array__IrType_get(ptr %t224, i64 %t225), !dbg !17378
-  call ptr @spec_rt_retain(ptr %t226), !dbg !17378
-  call ptr @spec_claim_pool(ptr %t226), !dbg !17378
-  store ptr %t226, ptr %var_fty_221, !dbg !17378
-  %t228 = load ptr, ptr %self_slot, !dbg !17377
-  %t231 = icmp ne ptr %t228, null, !dbg !17377
-  br i1 %t231, label %vt_call_64, label %dir_call_65, !dbg !17377
-vt_call_64:
-  %t232 = getelementptr inbounds %struct.IrBuilder, ptr %t228, i32 0, i32 1, !dbg !17377
-  %t233 = load ptr, ptr %t232, !dbg !17377
-  %t234 = getelementptr ptr, ptr %t233, i64 1012, !dbg !17377
-  %t235 = load ptr, ptr %t234, !dbg !17377
-  %t236 = call ptr %t235(ptr %t228), !dbg !17377
-  store ptr %t236, ptr %t230, !dbg !17377
-  br label %vt_end_66, !dbg !17377
-dir_call_65:
-  %t237 = call ptr @IrBuilder_nextTmp(ptr %t228), !dbg !17377
-  store ptr %t237, ptr %t230, !dbg !17377
-  br label %vt_end_66, !dbg !17377
-vt_end_66:
-  %t229 = load ptr, ptr %t230, !dbg !17377
-  call ptr @spec_rt_retain(ptr %t229), !dbg !17377
-  call ptr @spec_claim_pool(ptr %t229), !dbg !17377
-  store ptr %t229, ptr %var_ptr_227, !dbg !17377
-  %t238 = load ptr, ptr %self_slot, !dbg !17404
-  %t239_szp = getelementptr %struct.IrInst_FieldPtr, ptr null, i32 1, !dbg !17404
-  %t239_sz = ptrtoint ptr %t239_szp to i64, !dbg !17404
-  %t239 = call ptr @spec_rt_alloc(i64 %t239_sz, ptr @IrInst_FieldPtr__destroy), !dbg !17404
-  %t239_tnp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t239, i32 0, i32 0, !dbg !17404
-  store ptr @.typename.IrInst_FieldPtr, ptr %t239_tnp, !dbg !17404
-  %t239_vtp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t239, i32 0, i32 1, !dbg !17404
-  store ptr @.vtable.IrInst_FieldPtr, ptr %t239_vtp, !dbg !17404
-  %t240 = load ptr, ptr %var_ptr_227, !dbg !17404
-  %t241 = call ptr @__spec_intern_cached(ptr @.str.1404, ptr @.str.cache.1404), !dbg !17404
-  %t242 = load ptr, ptr %self_slot, !dbg !17404
-  %t243 = getelementptr inbounds %struct.IrBuilder, ptr %t242, i32 0, i32 6, !dbg !17404
-  %t244 = load ptr, ptr %t243, !dbg !17404
-  %t245 = load i64, ptr %var_fidx_204, !dbg !17404
-  call void @IrInst_FieldPtr_init(ptr %t239, ptr %t240, ptr %t241, ptr %t244, i64 %t245), !dbg !17404
-  call ptr @spec_claim_pool(ptr %t239), !dbg !17404
-  %t246 = icmp ne ptr %t238, null, !dbg !17404
-  br i1 %t246, label %vt_call_67, label %dir_call_68, !dbg !17404
-vt_call_67:
-  %t247 = getelementptr inbounds %struct.IrBuilder, ptr %t238, i32 0, i32 1, !dbg !17404
-  %t248 = load ptr, ptr %t247, !dbg !17404
-  %t249 = getelementptr ptr, ptr %t248, i64 1027, !dbg !17404
-  %t250 = load ptr, ptr %t249, !dbg !17404
-  call void %t250(ptr %t238, ptr %t239), !dbg !17404
-  br label %vt_end_69, !dbg !17404
-dir_call_68:
-  call void @IrBuilder_emit(ptr %t238, ptr %t239), !dbg !17404
-  br label %vt_end_69, !dbg !17404
-vt_end_69:
-  %t252 = load ptr, ptr %self_slot, !dbg !17376
-  %t253 = getelementptr inbounds %struct.IrBuilder, ptr %t252, i32 0, i32 42, !dbg !17376
-  %t254 = load ptr, ptr %t253, !dbg !17376
-  call ptr @spec_rt_retain(ptr %t254), !dbg !17376
-  call ptr @spec_claim_pool(ptr %t254), !dbg !17376
-  store ptr %t254, ptr %var_prevMapK_251, !dbg !17376
-  %t256 = load ptr, ptr %self_slot, !dbg !17375
-  %t257 = getelementptr inbounds %struct.IrBuilder, ptr %t256, i32 0, i32 43, !dbg !17375
-  %t258 = load ptr, ptr %t257, !dbg !17375
-  call ptr @spec_rt_retain(ptr %t258), !dbg !17375
-  call ptr @spec_claim_pool(ptr %t258), !dbg !17375
-  store ptr %t258, ptr %var_prevMapV_255, !dbg !17375
-  %t260 = load ptr, ptr %var_m_134, !dbg !17374
-  %t261 = getelementptr inbounds %struct.Member, ptr %t260, i32 0, i32 6, !dbg !17374
-  %t262 = load ptr, ptr %t261, !dbg !17374
-  %t263 = getelementptr inbounds %struct.Type, ptr %t262, i32 0, i32 2, !dbg !17374
-  %t264 = load ptr, ptr %t263, !dbg !17374
-  %t265 = call ptr @__spec_intern_cached(ptr @.str.92, ptr @.str.cache.92), !dbg !17374
-  %t266 = call i1 @Str_stringEquals(ptr null, ptr %t264, ptr %t265), !dbg !17374
-  store i1 %t266, ptr %t259, !dbg !17374
-  br i1 %t266, label %sc_rhs_70, label %sc_end_71, !dbg !17374
-sc_rhs_70:
-  %t267 = load ptr, ptr %var_m_134, !dbg !17374
-  %t268 = getelementptr inbounds %struct.Member, ptr %t267, i32 0, i32 6, !dbg !17374
-  %t269 = load ptr, ptr %t268, !dbg !17374
-  %t270 = getelementptr inbounds %struct.Type, ptr %t269, i32 0, i32 3, !dbg !17374
-  %t271 = load ptr, ptr %t270, !dbg !17374
-  %t272 = call i64 @Array__Type_length(ptr %t271), !dbg !17374
-  %t273 = add i64 0, 1, !dbg !17374
-  %t274 = icmp sge i64 %t272, %t273, !dbg !17374
-  store i1 %t274, ptr %t259, !dbg !17374
-  br label %sc_end_71, !dbg !17374
-sc_end_71:
-  %t275 = load i1, ptr %t259, !dbg !17374
-  br i1 %t275, label %if_then_72, label %if_end_74, !dbg !17374
-if_then_72:
-  %t277 = load ptr, ptr %var_m_134, !dbg !17373
-  %t278 = getelementptr inbounds %struct.Member, ptr %t277, i32 0, i32 6, !dbg !17373
-  %t279 = load ptr, ptr %t278, !dbg !17373
-  %t280 = getelementptr inbounds %struct.Type, ptr %t279, i32 0, i32 3, !dbg !17373
-  %t281 = load ptr, ptr %t280, !dbg !17373
-  %t282 = add i64 0, 0, !dbg !17373
-  %t283 = call ptr @Array__Type_get(ptr %t281, i64 %t282), !dbg !17373
-  call ptr @spec_rt_retain(ptr %t283), !dbg !17373
-  call ptr @spec_claim_pool(ptr %t283), !dbg !17373
-  store ptr %t283, ptr %var_mkp0_276, !dbg !17373
-  %t284 = load ptr, ptr %var_mkp0_276, !dbg !17405
-  %t285 = getelementptr inbounds %struct.Type, ptr %t284, i32 0, i32 2, !dbg !17405
-  %t286 = load ptr, ptr %t285, !dbg !17405
-  %t287 = load ptr, ptr %self_slot, !dbg !17405
-  %t288 = getelementptr inbounds %struct.IrBuilder, ptr %t287, i32 0, i32 42, !dbg !17405
-  call ptr @spec_rt_retain(ptr %t286), !dbg !17405
-  %t289 = load ptr, ptr %t288, !dbg !17405
-  call ptr @spec_claim_pool(ptr %t289), !dbg !17405
-  store ptr %t286, ptr %t288, !dbg !17405
-  %t290 = load ptr, ptr %var_m_134, !dbg !17406
-  %t291 = getelementptr inbounds %struct.Member, ptr %t290, i32 0, i32 6, !dbg !17406
-  %t292 = load ptr, ptr %t291, !dbg !17406
-  %t293 = getelementptr inbounds %struct.Type, ptr %t292, i32 0, i32 3, !dbg !17406
-  %t294 = load ptr, ptr %t293, !dbg !17406
-  %t295 = call i64 @Array__Type_length(ptr %t294), !dbg !17406
-  %t296 = add i64 0, 2, !dbg !17406
-  %t297 = icmp sge i64 %t295, %t296, !dbg !17406
-  br i1 %t297, label %if_then_75, label %if_end_77, !dbg !17406
-if_then_75:
-  %t299 = load ptr, ptr %var_m_134, !dbg !17372
-  %t300 = getelementptr inbounds %struct.Member, ptr %t299, i32 0, i32 6, !dbg !17372
-  %t301 = load ptr, ptr %t300, !dbg !17372
-  %t302 = getelementptr inbounds %struct.Type, ptr %t301, i32 0, i32 3, !dbg !17372
-  %t303 = load ptr, ptr %t302, !dbg !17372
-  %t304 = add i64 0, 1, !dbg !17372
-  %t305 = call ptr @Array__Type_get(ptr %t303, i64 %t304), !dbg !17372
-  call ptr @spec_rt_retain(ptr %t305), !dbg !17372
-  call ptr @spec_claim_pool(ptr %t305), !dbg !17372
-  store ptr %t305, ptr %var_mkp1_298, !dbg !17372
-  %t306 = load ptr, ptr %var_mkp1_298, !dbg !17407
-  %t307 = getelementptr inbounds %struct.Type, ptr %t306, i32 0, i32 2, !dbg !17407
-  %t308 = load ptr, ptr %t307, !dbg !17407
-  %t309 = load ptr, ptr %self_slot, !dbg !17407
-  %t310 = getelementptr inbounds %struct.IrBuilder, ptr %t309, i32 0, i32 43, !dbg !17407
-  call ptr @spec_rt_retain(ptr %t308), !dbg !17407
-  %t311 = load ptr, ptr %t310, !dbg !17407
-  call ptr @spec_claim_pool(ptr %t311), !dbg !17407
-  store ptr %t308, ptr %t310, !dbg !17407
-  br label %if_end_77, !dbg !17406
-if_end_77:
-  br label %if_end_74, !dbg !17374
-if_end_74:
-  %t313 = load ptr, ptr %self_slot, !dbg !17371
-  %t314 = load ptr, ptr %var_m_134, !dbg !17371
-  %t315 = getelementptr inbounds %struct.Member, ptr %t314, i32 0, i32 10, !dbg !17371
-  %t316 = load ptr, ptr %t315, !dbg !17371
-  %t319 = icmp ne ptr %t313, null, !dbg !17371
-  br i1 %t319, label %vt_call_78, label %dir_call_79, !dbg !17371
-vt_call_78:
-  %t320 = getelementptr inbounds %struct.IrBuilder, ptr %t313, i32 0, i32 1, !dbg !17371
-  %t321 = load ptr, ptr %t320, !dbg !17371
-  %t322 = getelementptr ptr, ptr %t321, i64 1112, !dbg !17371
-  %t323 = load ptr, ptr %t322, !dbg !17371
-  %t324 = call ptr %t323(ptr %t313, ptr %t316), !dbg !17371
-  store ptr %t324, ptr %t318, !dbg !17371
-  br label %vt_end_80, !dbg !17371
-dir_call_79:
-  %t325 = call ptr @IrBuilder_lowerExpr(ptr %t313, ptr %t316), !dbg !17371
-  store ptr %t325, ptr %t318, !dbg !17371
-  br label %vt_end_80, !dbg !17371
-vt_end_80:
-  %t317 = load ptr, ptr %t318, !dbg !17371
-  call ptr @spec_rt_retain(ptr %t317), !dbg !17371
-  call ptr @spec_claim_pool(ptr %t317), !dbg !17371
-  store ptr %t317, ptr %var_val_312, !dbg !17371
-  %t326 = load ptr, ptr %var_prevMapK_251, !dbg !17408
-  %t327 = load ptr, ptr %self_slot, !dbg !17408
-  %t328 = getelementptr inbounds %struct.IrBuilder, ptr %t327, i32 0, i32 42, !dbg !17408
-  call ptr @spec_rt_retain(ptr %t326), !dbg !17408
-  %t329 = load ptr, ptr %t328, !dbg !17408
-  call ptr @spec_claim_pool(ptr %t329), !dbg !17408
-  store ptr %t326, ptr %t328, !dbg !17408
-  %t330 = load ptr, ptr %var_prevMapV_255, !dbg !17409
-  %t331 = load ptr, ptr %self_slot, !dbg !17409
-  %t332 = getelementptr inbounds %struct.IrBuilder, ptr %t331, i32 0, i32 43, !dbg !17409
-  call ptr @spec_rt_retain(ptr %t330), !dbg !17409
-  %t333 = load ptr, ptr %t332, !dbg !17409
-  call ptr @spec_claim_pool(ptr %t333), !dbg !17409
-  store ptr %t330, ptr %t332, !dbg !17409
-  %t335 = load ptr, ptr %self_slot, !dbg !17370
-  %t336 = load ptr, ptr %var_m_134, !dbg !17370
-  %t337 = getelementptr inbounds %struct.Member, ptr %t336, i32 0, i32 10, !dbg !17370
-  %t338 = load ptr, ptr %t337, !dbg !17370
-  %t339 = getelementptr inbounds %struct.Expression, ptr %t338, i32 0, i32 5, !dbg !17370
-  %t340 = load ptr, ptr %t339, !dbg !17370
-  %t343 = icmp ne ptr %t335, null, !dbg !17370
-  br i1 %t343, label %vt_call_81, label %dir_call_82, !dbg !17370
-vt_call_81:
-  %t344 = getelementptr inbounds %struct.IrBuilder, ptr %t335, i32 0, i32 1, !dbg !17370
-  %t345 = load ptr, ptr %t344, !dbg !17370
-  %t346 = getelementptr ptr, ptr %t345, i64 1014, !dbg !17370
-  %t347 = load ptr, ptr %t346, !dbg !17370
-  %t348 = call ptr %t347(ptr %t335, ptr %t340), !dbg !17370
-  store ptr %t348, ptr %t342, !dbg !17370
-  br label %vt_end_83, !dbg !17370
-dir_call_82:
-  %t349 = call ptr @IrBuilder_irTypeFor(ptr null, ptr %t340), !dbg !17370
-  store ptr %t349, ptr %t342, !dbg !17370
-  br label %vt_end_83, !dbg !17370
-vt_end_83:
-  %t341 = load ptr, ptr %t342, !dbg !17370
-  call ptr @spec_rt_retain(ptr %t341), !dbg !17370
-  call ptr @spec_claim_pool(ptr %t341), !dbg !17370
-  store ptr %t341, ptr %var_vty_334, !dbg !17370
-  %t350 = load ptr, ptr %self_slot, !dbg !17369
-  %t351 = load ptr, ptr %var_val_312, !dbg !17369
-  %t352 = load ptr, ptr %var_vty_334, !dbg !17369
-  %t353 = load ptr, ptr %var_fty_221, !dbg !17369
-  %t356 = icmp ne ptr %t350, null, !dbg !17369
-  br i1 %t356, label %vt_call_84, label %dir_call_85, !dbg !17369
-vt_call_84:
-  %t357 = getelementptr inbounds %struct.IrBuilder, ptr %t350, i32 0, i32 1, !dbg !17369
-  %t358 = load ptr, ptr %t357, !dbg !17369
-  %t359 = getelementptr ptr, ptr %t358, i64 1026, !dbg !17369
-  %t360 = load ptr, ptr %t359, !dbg !17369
-  %t361 = call ptr %t360(ptr %t350, ptr %t351, ptr %t352, ptr %t353), !dbg !17369
-  store ptr %t361, ptr %t355, !dbg !17369
-  br label %vt_end_86, !dbg !17369
-dir_call_85:
-  %t362 = call ptr @IrBuilder_castIfNeeded(ptr %t350, ptr %t351, ptr %t352, ptr %t353), !dbg !17369
-  store ptr %t362, ptr %t355, !dbg !17369
-  br label %vt_end_86, !dbg !17369
-vt_end_86:
-  %t354 = load ptr, ptr %t355, !dbg !17369
-  call ptr @spec_rt_retain(ptr %t354), !dbg !17369
-  call ptr @spec_claim_pool(ptr %t354), !dbg !17369
-  store ptr %t354, ptr %var_val_312, !dbg !17369
-  %t363 = load ptr, ptr %var_st_110, !dbg !17410
-  %t364 = getelementptr inbounds %struct.IrStruct, ptr %t363, i32 0, i32 7, !dbg !17410
-  %t365 = load ptr, ptr %t364, !dbg !17410
-  %t366 = load i64, ptr %var_fidx_204, !dbg !17410
-  %t367 = add i1 0, 0, !dbg !17410
-  %t368 = call i1 @Array__Boolean_get_2(ptr %t365, i64 %t366, i1 %t367), !dbg !17410
-  br i1 %t368, label %if_then_87, label %if_end_89, !dbg !17410
-if_then_87:
-  %t370 = load ptr, ptr %var_val_312, !dbg !17368
-  %t371 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !17368
-  %t373 = call i1 @Str_stringEquals(ptr null, ptr %t370, ptr %t371), !dbg !17368
-  %t372 = xor i1 %t373, 1, !dbg !17368
-  store i1 %t372, ptr %t369, !dbg !17368
-  br i1 %t372, label %sc_rhs_90, label %sc_end_91, !dbg !17368
-sc_rhs_90:
-  %t374 = load ptr, ptr %var_val_312, !dbg !17368
-  %t375 = call ptr @__spec_intern_cached(ptr @.str.1264, ptr @.str.cache.1264), !dbg !17368
-  %t377 = call i1 @Str_stringEquals(ptr null, ptr %t374, ptr %t375), !dbg !17368
-  %t376 = xor i1 %t377, 1, !dbg !17368
-  store i1 %t376, ptr %t369, !dbg !17368
-  br label %sc_end_91, !dbg !17368
-sc_end_91:
-  %t378 = load i1, ptr %t369, !dbg !17368
-  br i1 %t378, label %if_then_92, label %if_end_94, !dbg !17368
-if_then_92:
-  %t379 = load ptr, ptr %self_slot, !dbg !17411
-  %t380_szp = getelementptr %struct.IrInst_Retain, ptr null, i32 1, !dbg !17411
-  %t380_sz = ptrtoint ptr %t380_szp to i64, !dbg !17411
-  %t380 = call ptr @spec_rt_alloc(i64 %t380_sz, ptr @IrInst_Retain__destroy), !dbg !17411
-  %t380_tnp = getelementptr inbounds %struct.IrInst_Retain, ptr %t380, i32 0, i32 0, !dbg !17411
-  store ptr @.typename.IrInst_Retain, ptr %t380_tnp, !dbg !17411
-  %t380_vtp = getelementptr inbounds %struct.IrInst_Retain, ptr %t380, i32 0, i32 1, !dbg !17411
-  store ptr @.vtable.IrInst_Retain, ptr %t380_vtp, !dbg !17411
-  %t381 = load ptr, ptr %var_val_312, !dbg !17411
-  call void @IrInst_Retain_init(ptr %t380, ptr %t381), !dbg !17411
-  call ptr @spec_claim_pool(ptr %t380), !dbg !17411
-  %t382 = icmp ne ptr %t379, null, !dbg !17411
-  br i1 %t382, label %vt_call_95, label %dir_call_96, !dbg !17411
-vt_call_95:
-  %t383 = getelementptr inbounds %struct.IrBuilder, ptr %t379, i32 0, i32 1, !dbg !17411
-  %t384 = load ptr, ptr %t383, !dbg !17411
-  %t385 = getelementptr ptr, ptr %t384, i64 1027, !dbg !17411
-  %t386 = load ptr, ptr %t385, !dbg !17411
-  call void %t386(ptr %t379, ptr %t380), !dbg !17411
-  br label %vt_end_97, !dbg !17411
-dir_call_96:
-  call void @IrBuilder_emit(ptr %t379, ptr %t380), !dbg !17411
-  br label %vt_end_97, !dbg !17411
-vt_end_97:
-  br label %if_end_94, !dbg !17368
-if_end_94:
-  %t387 = load ptr, ptr %slot_seen, !dbg !17412
-  %t388 = load ptr, ptr %var_m_134, !dbg !17412
-  %t389 = getelementptr inbounds %struct.Member, ptr %t388, i32 0, i32 7, !dbg !17412
-  %t390 = load ptr, ptr %t389, !dbg !17412
-  %t391 = call i1 @HashTable_mapHasObj(ptr null, ptr %t387, ptr %t390), !dbg !17412
-  br i1 %t391, label %if_then_98, label %if_end_100, !dbg !17412
-if_then_98:
-  %t393 = load ptr, ptr %self_slot, !dbg !17367
-  %t396 = icmp ne ptr %t393, null, !dbg !17367
-  br i1 %t396, label %vt_call_101, label %dir_call_102, !dbg !17367
-vt_call_101:
-  %t397 = getelementptr inbounds %struct.IrBuilder, ptr %t393, i32 0, i32 1, !dbg !17367
-  %t398 = load ptr, ptr %t397, !dbg !17367
-  %t399 = getelementptr ptr, ptr %t398, i64 1012, !dbg !17367
-  %t400 = load ptr, ptr %t399, !dbg !17367
-  %t401 = call ptr %t400(ptr %t393), !dbg !17367
-  store ptr %t401, ptr %t395, !dbg !17367
-  br label %vt_end_103, !dbg !17367
-dir_call_102:
-  %t402 = call ptr @IrBuilder_nextTmp(ptr %t393), !dbg !17367
-  store ptr %t402, ptr %t395, !dbg !17367
-  br label %vt_end_103, !dbg !17367
-vt_end_103:
-  %t394 = load ptr, ptr %t395, !dbg !17367
-  call ptr @spec_rt_retain(ptr %t394), !dbg !17367
-  call ptr @spec_claim_pool(ptr %t394), !dbg !17367
-  store ptr %t394, ptr %var_oldF_392, !dbg !17367
-  %t403 = load ptr, ptr %self_slot, !dbg !17413
-  %t404_szp = getelementptr %struct.IrInst_Load, ptr null, i32 1, !dbg !17413
-  %t404_sz = ptrtoint ptr %t404_szp to i64, !dbg !17413
-  %t404 = call ptr @spec_rt_alloc(i64 %t404_sz, ptr @IrInst_Load__destroy), !dbg !17413
-  %t404_tnp = getelementptr inbounds %struct.IrInst_Load, ptr %t404, i32 0, i32 0, !dbg !17413
-  store ptr @.typename.IrInst_Load, ptr %t404_tnp, !dbg !17413
-  %t404_vtp = getelementptr inbounds %struct.IrInst_Load, ptr %t404, i32 0, i32 1, !dbg !17413
-  store ptr @.vtable.IrInst_Load, ptr %t404_vtp, !dbg !17413
-  %t405 = load ptr, ptr %var_oldF_392, !dbg !17413
-  %t406 = load ptr, ptr %var_ptr_227, !dbg !17413
-  %t407 = call ptr @IrType_Ptr__ensure(), !dbg !17413
-  call ptr @spec_claim_pool(ptr %t407), !dbg !17413
-  call void @IrInst_Load_init(ptr %t404, ptr %t405, ptr %t406, ptr %t407), !dbg !17413
-  call ptr @spec_claim_pool(ptr %t404), !dbg !17413
-  %t408 = icmp ne ptr %t403, null, !dbg !17413
-  br i1 %t408, label %vt_call_104, label %dir_call_105, !dbg !17413
-vt_call_104:
-  %t409 = getelementptr inbounds %struct.IrBuilder, ptr %t403, i32 0, i32 1, !dbg !17413
-  %t410 = load ptr, ptr %t409, !dbg !17413
-  %t411 = getelementptr ptr, ptr %t410, i64 1027, !dbg !17413
-  %t412 = load ptr, ptr %t411, !dbg !17413
-  call void %t412(ptr %t403, ptr %t404), !dbg !17413
-  br label %vt_end_106, !dbg !17413
-dir_call_105:
-  call void @IrBuilder_emit(ptr %t403, ptr %t404), !dbg !17413
-  br label %vt_end_106, !dbg !17413
-vt_end_106:
-  %t413 = load ptr, ptr %self_slot, !dbg !17414
-  %t414 = load ptr, ptr %var_oldF_392, !dbg !17414
-  %t415 = icmp ne ptr %t413, null, !dbg !17414
-  br i1 %t415, label %vt_call_107, label %dir_call_108, !dbg !17414
-vt_call_107:
-  %t416 = getelementptr inbounds %struct.IrBuilder, ptr %t413, i32 0, i32 1, !dbg !17414
-  %t417 = load ptr, ptr %t416, !dbg !17414
-  %t418 = getelementptr ptr, ptr %t417, i64 1045, !dbg !17414
-  %t419 = load ptr, ptr %t418, !dbg !17414
-  call void %t419(ptr %t413, ptr %t414), !dbg !17414
-  br label %vt_end_109, !dbg !17414
-dir_call_108:
-  call void @IrBuilder_emitClaimPool(ptr %t413, ptr %t414), !dbg !17414
-  br label %vt_end_109, !dbg !17414
-vt_end_109:
-  br label %if_end_100, !dbg !17412
-if_end_100:
-  br label %if_end_89, !dbg !17410
-if_end_89:
-  %t420 = load ptr, ptr %slot_seen, !dbg !17415
-  %t421 = load ptr, ptr %var_m_134, !dbg !17415
-  %t422 = getelementptr inbounds %struct.Member, ptr %t421, i32 0, i32 7, !dbg !17415
-  %t423 = load ptr, ptr %t422, !dbg !17415
-  %t424 = add i1 0, 1, !dbg !17415
-  call void @Map__String__Boolean_set(ptr %t420, ptr %t423, i1 %t424), !dbg !17415
-  %t425 = load ptr, ptr %self_slot, !dbg !17416
-  %t426_szp = getelementptr %struct.IrInst_Store, ptr null, i32 1, !dbg !17416
-  %t426_sz = ptrtoint ptr %t426_szp to i64, !dbg !17416
-  %t426 = call ptr @spec_rt_alloc(i64 %t426_sz, ptr @IrInst_Store__destroy), !dbg !17416
-  %t426_tnp = getelementptr inbounds %struct.IrInst_Store, ptr %t426, i32 0, i32 0, !dbg !17416
-  store ptr @.typename.IrInst_Store, ptr %t426_tnp, !dbg !17416
-  %t426_vtp = getelementptr inbounds %struct.IrInst_Store, ptr %t426, i32 0, i32 1, !dbg !17416
-  store ptr @.vtable.IrInst_Store, ptr %t426_vtp, !dbg !17416
-  %t427 = load ptr, ptr %var_ptr_227, !dbg !17416
-  %t428 = load ptr, ptr %var_val_312, !dbg !17416
-  %t429 = load ptr, ptr %var_fty_221, !dbg !17416
-  call void @IrInst_Store_init(ptr %t426, ptr %t427, ptr %t428, ptr %t429), !dbg !17416
-  call ptr @spec_claim_pool(ptr %t426), !dbg !17416
-  %t430 = icmp ne ptr %t425, null, !dbg !17416
-  br i1 %t430, label %vt_call_110, label %dir_call_111, !dbg !17416
-vt_call_110:
-  %t431 = getelementptr inbounds %struct.IrBuilder, ptr %t425, i32 0, i32 1, !dbg !17416
-  %t432 = load ptr, ptr %t431, !dbg !17416
-  %t433 = getelementptr ptr, ptr %t432, i64 1027, !dbg !17416
-  %t434 = load ptr, ptr %t433, !dbg !17416
-  call void %t434(ptr %t425, ptr %t426), !dbg !17416
-  br label %vt_end_112, !dbg !17416
-dir_call_111:
-  call void @IrBuilder_emit(ptr %t425, ptr %t426), !dbg !17416
-  br label %vt_end_112, !dbg !17416
-vt_end_112:
-  br label %if_end_63, !dbg !17403
-if_end_63:
-  br label %if_end_57, !dbg !17380
-if_else_56:
-  %t441 = load ptr, ptr %var_m_134, !dbg !17366
-  %t442 = getelementptr inbounds %struct.Member, ptr %t441, i32 0, i32 2, !dbg !17366
-  %t443 = load ptr, ptr %t442, !dbg !17366
-  %t444 = call ptr @MemberKind_FIELD__ensure(), !dbg !17366
-  call ptr @spec_claim_pool(ptr %t444), !dbg !17366
-  %t445 = icmp eq ptr %t443, %t444, !dbg !17366
-  store i1 %t445, ptr %t440, !dbg !17366
-  br i1 %t445, label %sc_rhs_113, label %sc_end_114, !dbg !17366
-sc_rhs_113:
-  %t446 = load ptr, ptr %var_m_134, !dbg !17366
-  %t447 = getelementptr inbounds %struct.Member, ptr %t446, i32 0, i32 7, !dbg !17366
-  %t448 = load ptr, ptr %t447, !dbg !17366
-  %t449 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !17366
-  %t451 = call i1 @Str_stringEquals(ptr null, ptr %t448, ptr %t449), !dbg !17366
-  %t450 = xor i1 %t451, 1, !dbg !17366
-  store i1 %t450, ptr %t440, !dbg !17366
-  br label %sc_end_114, !dbg !17366
-sc_end_114:
-  %t452 = load i1, ptr %t440, !dbg !17366
-  store i1 %t452, ptr %t439, !dbg !17366
-  br i1 %t452, label %sc_rhs_115, label %sc_end_116, !dbg !17366
+  %t196 = load i1, ptr %t141, !dbg !17380
+  store i1 %t196, ptr %t140, !dbg !17380
+  br i1 %t196, label %sc_rhs_52, label %sc_end_53, !dbg !17380
+sc_rhs_52:
+  %t197 = load ptr, ptr %self_slot, !dbg !17380
+  %t198 = load ptr, ptr %var_m_134, !dbg !17380
+  %t199 = getelementptr inbounds %struct.Member, ptr %t198, i32 0, i32 10, !dbg !17380
+  %t200 = load ptr, ptr %t199, !dbg !17380
+  %t203 = icmp ne ptr %t197, null, !dbg !17380
+  br i1 %t203, label %vt_call_54, label %dir_call_55, !dbg !17380
+vt_call_54:
+  %t204 = getelementptr inbounds %struct.IrBuilder, ptr %t197, i32 0, i32 1, !dbg !17380
+  %t205 = load ptr, ptr %t204, !dbg !17380
+  %t206 = getelementptr ptr, ptr %t205, i64 1065, !dbg !17380
+  %t207 = load ptr, ptr %t206, !dbg !17380
+  %t208 = call i1 %t207(ptr %t197, ptr %t200), !dbg !17380
+  store i1 %t208, ptr %t202, !dbg !17380
+  br label %vt_end_56, !dbg !17380
+dir_call_55:
+  %t209 = call i1 @IrBuilder_isLazyCallExpr(ptr null, ptr %t200), !dbg !17380
+  store i1 %t209, ptr %t202, !dbg !17380
+  br label %vt_end_56, !dbg !17380
+vt_end_56:
+  %t201 = load i1, ptr %t202, !dbg !17380
+  %t210 = xor i1 %t201, 1, !dbg !17380
+  store i1 %t210, ptr %t140, !dbg !17380
+  br label %sc_end_53, !dbg !17380
+sc_end_53:
+  %t211 = load i1, ptr %t140, !dbg !17380
+  br i1 %t211, label %if_then_57, label %if_else_58, !dbg !17380
+if_then_57:
+  %t213 = load ptr, ptr %var_st_110, !dbg !17379
+  %t214 = load ptr, ptr %var_m_134, !dbg !17379
+  %t215 = getelementptr inbounds %struct.Member, ptr %t214, i32 0, i32 7, !dbg !17379
+  %t216 = load ptr, ptr %t215, !dbg !17379
+  %t219 = icmp ne ptr %t213, null, !dbg !17379
+  br i1 %t219, label %vt_call_60, label %dir_call_61, !dbg !17379
+vt_call_60:
+  %t220 = getelementptr inbounds %struct.IrStruct, ptr %t213, i32 0, i32 1, !dbg !17379
+  %t221 = load ptr, ptr %t220, !dbg !17379
+  %t222 = getelementptr ptr, ptr %t221, i64 960, !dbg !17379
+  %t223 = load ptr, ptr %t222, !dbg !17379
+  %t224 = call i64 %t223(ptr %t213, ptr %t216), !dbg !17379
+  store i64 %t224, ptr %t218, !dbg !17379
+  br label %vt_end_62, !dbg !17379
+dir_call_61:
+  %t225 = call i64 @IrStruct_fieldIndex(ptr %t213, ptr %t216), !dbg !17379
+  store i64 %t225, ptr %t218, !dbg !17379
+  br label %vt_end_62, !dbg !17379
+vt_end_62:
+  %t217 = load i64, ptr %t218, !dbg !17379
+  store i64 %t217, ptr %var_fidx_212, !dbg !17379
+  %t226 = load i64, ptr %var_fidx_212, !dbg !17403
+  %t227 = add i64 0, 0, !dbg !17403
+  %t228 = icmp sge i64 %t226, %t227, !dbg !17403
+  br i1 %t228, label %if_then_63, label %if_end_65, !dbg !17403
+if_then_63:
+  %t230 = load ptr, ptr %var_st_110, !dbg !17378
+  %t231 = getelementptr inbounds %struct.IrStruct, ptr %t230, i32 0, i32 6, !dbg !17378
+  %t232 = load ptr, ptr %t231, !dbg !17378
+  %t233 = load i64, ptr %var_fidx_212, !dbg !17378
+  %t234 = call ptr @Array__IrType_get(ptr %t232, i64 %t233), !dbg !17378
+  call ptr @spec_rt_retain(ptr %t234), !dbg !17378
+  call ptr @spec_claim_pool(ptr %t234), !dbg !17378
+  store ptr %t234, ptr %var_fty_229, !dbg !17378
+  %t236 = load ptr, ptr %self_slot, !dbg !17377
+  %t239 = icmp ne ptr %t236, null, !dbg !17377
+  br i1 %t239, label %vt_call_66, label %dir_call_67, !dbg !17377
+vt_call_66:
+  %t240 = getelementptr inbounds %struct.IrBuilder, ptr %t236, i32 0, i32 1, !dbg !17377
+  %t241 = load ptr, ptr %t240, !dbg !17377
+  %t242 = getelementptr ptr, ptr %t241, i64 1012, !dbg !17377
+  %t243 = load ptr, ptr %t242, !dbg !17377
+  %t244 = call ptr %t243(ptr %t236), !dbg !17377
+  store ptr %t244, ptr %t238, !dbg !17377
+  br label %vt_end_68, !dbg !17377
+dir_call_67:
+  %t245 = call ptr @IrBuilder_nextTmp(ptr %t236), !dbg !17377
+  store ptr %t245, ptr %t238, !dbg !17377
+  br label %vt_end_68, !dbg !17377
+vt_end_68:
+  %t237 = load ptr, ptr %t238, !dbg !17377
+  call ptr @spec_rt_retain(ptr %t237), !dbg !17377
+  call ptr @spec_claim_pool(ptr %t237), !dbg !17377
+  store ptr %t237, ptr %var_ptr_235, !dbg !17377
+  %t246 = load ptr, ptr %self_slot, !dbg !17404
+  %t247_szp = getelementptr %struct.IrInst_FieldPtr, ptr null, i32 1, !dbg !17404
+  %t247_sz = ptrtoint ptr %t247_szp to i64, !dbg !17404
+  %t247 = call ptr @spec_rt_alloc(i64 %t247_sz, ptr @IrInst_FieldPtr__destroy), !dbg !17404
+  %t247_tnp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t247, i32 0, i32 0, !dbg !17404
+  store ptr @.typename.IrInst_FieldPtr, ptr %t247_tnp, !dbg !17404
+  %t247_vtp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t247, i32 0, i32 1, !dbg !17404
+  store ptr @.vtable.IrInst_FieldPtr, ptr %t247_vtp, !dbg !17404
+  %t248 = load ptr, ptr %var_ptr_235, !dbg !17404
+  %t249 = call ptr @__spec_intern_cached(ptr @.str.1404, ptr @.str.cache.1404), !dbg !17404
+  %t250 = load ptr, ptr %self_slot, !dbg !17404
+  %t251 = getelementptr inbounds %struct.IrBuilder, ptr %t250, i32 0, i32 6, !dbg !17404
+  %t252 = load ptr, ptr %t251, !dbg !17404
+  %t253 = load i64, ptr %var_fidx_212, !dbg !17404
+  call void @IrInst_FieldPtr_init(ptr %t247, ptr %t248, ptr %t249, ptr %t252, i64 %t253), !dbg !17404
+  call ptr @spec_claim_pool(ptr %t247), !dbg !17404
+  %t254 = icmp ne ptr %t246, null, !dbg !17404
+  br i1 %t254, label %vt_call_69, label %dir_call_70, !dbg !17404
+vt_call_69:
+  %t255 = getelementptr inbounds %struct.IrBuilder, ptr %t246, i32 0, i32 1, !dbg !17404
+  %t256 = load ptr, ptr %t255, !dbg !17404
+  %t257 = getelementptr ptr, ptr %t256, i64 1027, !dbg !17404
+  %t258 = load ptr, ptr %t257, !dbg !17404
+  call void %t258(ptr %t246, ptr %t247), !dbg !17404
+  br label %vt_end_71, !dbg !17404
+dir_call_70:
+  call void @IrBuilder_emit(ptr %t246, ptr %t247), !dbg !17404
+  br label %vt_end_71, !dbg !17404
+vt_end_71:
+  %t260 = load ptr, ptr %self_slot, !dbg !17376
+  %t261 = getelementptr inbounds %struct.IrBuilder, ptr %t260, i32 0, i32 42, !dbg !17376
+  %t262 = load ptr, ptr %t261, !dbg !17376
+  call ptr @spec_rt_retain(ptr %t262), !dbg !17376
+  call ptr @spec_claim_pool(ptr %t262), !dbg !17376
+  store ptr %t262, ptr %var_prevMapK_259, !dbg !17376
+  %t264 = load ptr, ptr %self_slot, !dbg !17375
+  %t265 = getelementptr inbounds %struct.IrBuilder, ptr %t264, i32 0, i32 43, !dbg !17375
+  %t266 = load ptr, ptr %t265, !dbg !17375
+  call ptr @spec_rt_retain(ptr %t266), !dbg !17375
+  call ptr @spec_claim_pool(ptr %t266), !dbg !17375
+  store ptr %t266, ptr %var_prevMapV_263, !dbg !17375
+  %t268 = load ptr, ptr %var_m_134, !dbg !17374
+  %t269 = getelementptr inbounds %struct.Member, ptr %t268, i32 0, i32 6, !dbg !17374
+  %t270 = load ptr, ptr %t269, !dbg !17374
+  %t271 = getelementptr inbounds %struct.Type, ptr %t270, i32 0, i32 2, !dbg !17374
+  %t272 = load ptr, ptr %t271, !dbg !17374
+  %t273 = call ptr @__spec_intern_cached(ptr @.str.92, ptr @.str.cache.92), !dbg !17374
+  %t274 = call i1 @Str_stringEquals(ptr null, ptr %t272, ptr %t273), !dbg !17374
+  store i1 %t274, ptr %t267, !dbg !17374
+  br i1 %t274, label %sc_rhs_72, label %sc_end_73, !dbg !17374
+sc_rhs_72:
+  %t275 = load ptr, ptr %var_m_134, !dbg !17374
+  %t276 = getelementptr inbounds %struct.Member, ptr %t275, i32 0, i32 6, !dbg !17374
+  %t277 = load ptr, ptr %t276, !dbg !17374
+  %t278 = getelementptr inbounds %struct.Type, ptr %t277, i32 0, i32 3, !dbg !17374
+  %t279 = load ptr, ptr %t278, !dbg !17374
+  %t280 = call i64 @Array__Type_length(ptr %t279), !dbg !17374
+  %t281 = add i64 0, 1, !dbg !17374
+  %t282 = icmp sge i64 %t280, %t281, !dbg !17374
+  store i1 %t282, ptr %t267, !dbg !17374
+  br label %sc_end_73, !dbg !17374
+sc_end_73:
+  %t283 = load i1, ptr %t267, !dbg !17374
+  br i1 %t283, label %if_then_74, label %if_end_76, !dbg !17374
+if_then_74:
+  %t285 = load ptr, ptr %var_m_134, !dbg !17373
+  %t286 = getelementptr inbounds %struct.Member, ptr %t285, i32 0, i32 6, !dbg !17373
+  %t287 = load ptr, ptr %t286, !dbg !17373
+  %t288 = getelementptr inbounds %struct.Type, ptr %t287, i32 0, i32 3, !dbg !17373
+  %t289 = load ptr, ptr %t288, !dbg !17373
+  %t290 = add i64 0, 0, !dbg !17373
+  %t291 = call ptr @Array__Type_get(ptr %t289, i64 %t290), !dbg !17373
+  call ptr @spec_rt_retain(ptr %t291), !dbg !17373
+  call ptr @spec_claim_pool(ptr %t291), !dbg !17373
+  store ptr %t291, ptr %var_mkp0_284, !dbg !17373
+  %t292 = load ptr, ptr %var_mkp0_284, !dbg !17405
+  %t293 = getelementptr inbounds %struct.Type, ptr %t292, i32 0, i32 2, !dbg !17405
+  %t294 = load ptr, ptr %t293, !dbg !17405
+  %t295 = load ptr, ptr %self_slot, !dbg !17405
+  %t296 = getelementptr inbounds %struct.IrBuilder, ptr %t295, i32 0, i32 42, !dbg !17405
+  call ptr @spec_rt_retain(ptr %t294), !dbg !17405
+  %t297 = load ptr, ptr %t296, !dbg !17405
+  call ptr @spec_claim_pool(ptr %t297), !dbg !17405
+  store ptr %t294, ptr %t296, !dbg !17405
+  %t298 = load ptr, ptr %var_m_134, !dbg !17406
+  %t299 = getelementptr inbounds %struct.Member, ptr %t298, i32 0, i32 6, !dbg !17406
+  %t300 = load ptr, ptr %t299, !dbg !17406
+  %t301 = getelementptr inbounds %struct.Type, ptr %t300, i32 0, i32 3, !dbg !17406
+  %t302 = load ptr, ptr %t301, !dbg !17406
+  %t303 = call i64 @Array__Type_length(ptr %t302), !dbg !17406
+  %t304 = add i64 0, 2, !dbg !17406
+  %t305 = icmp sge i64 %t303, %t304, !dbg !17406
+  br i1 %t305, label %if_then_77, label %if_end_79, !dbg !17406
+if_then_77:
+  %t307 = load ptr, ptr %var_m_134, !dbg !17372
+  %t308 = getelementptr inbounds %struct.Member, ptr %t307, i32 0, i32 6, !dbg !17372
+  %t309 = load ptr, ptr %t308, !dbg !17372
+  %t310 = getelementptr inbounds %struct.Type, ptr %t309, i32 0, i32 3, !dbg !17372
+  %t311 = load ptr, ptr %t310, !dbg !17372
+  %t312 = add i64 0, 1, !dbg !17372
+  %t313 = call ptr @Array__Type_get(ptr %t311, i64 %t312), !dbg !17372
+  call ptr @spec_rt_retain(ptr %t313), !dbg !17372
+  call ptr @spec_claim_pool(ptr %t313), !dbg !17372
+  store ptr %t313, ptr %var_mkp1_306, !dbg !17372
+  %t314 = load ptr, ptr %var_mkp1_306, !dbg !17407
+  %t315 = getelementptr inbounds %struct.Type, ptr %t314, i32 0, i32 2, !dbg !17407
+  %t316 = load ptr, ptr %t315, !dbg !17407
+  %t317 = load ptr, ptr %self_slot, !dbg !17407
+  %t318 = getelementptr inbounds %struct.IrBuilder, ptr %t317, i32 0, i32 43, !dbg !17407
+  call ptr @spec_rt_retain(ptr %t316), !dbg !17407
+  %t319 = load ptr, ptr %t318, !dbg !17407
+  call ptr @spec_claim_pool(ptr %t319), !dbg !17407
+  store ptr %t316, ptr %t318, !dbg !17407
+  br label %if_end_79, !dbg !17406
+if_end_79:
+  br label %if_end_76, !dbg !17374
+if_end_76:
+  %t321 = load ptr, ptr %self_slot, !dbg !17371
+  %t322 = load ptr, ptr %var_m_134, !dbg !17371
+  %t323 = getelementptr inbounds %struct.Member, ptr %t322, i32 0, i32 10, !dbg !17371
+  %t324 = load ptr, ptr %t323, !dbg !17371
+  %t327 = icmp ne ptr %t321, null, !dbg !17371
+  br i1 %t327, label %vt_call_80, label %dir_call_81, !dbg !17371
+vt_call_80:
+  %t328 = getelementptr inbounds %struct.IrBuilder, ptr %t321, i32 0, i32 1, !dbg !17371
+  %t329 = load ptr, ptr %t328, !dbg !17371
+  %t330 = getelementptr ptr, ptr %t329, i64 1112, !dbg !17371
+  %t331 = load ptr, ptr %t330, !dbg !17371
+  %t332 = call ptr %t331(ptr %t321, ptr %t324), !dbg !17371
+  store ptr %t332, ptr %t326, !dbg !17371
+  br label %vt_end_82, !dbg !17371
+dir_call_81:
+  %t333 = call ptr @IrBuilder_lowerExpr(ptr %t321, ptr %t324), !dbg !17371
+  store ptr %t333, ptr %t326, !dbg !17371
+  br label %vt_end_82, !dbg !17371
+vt_end_82:
+  %t325 = load ptr, ptr %t326, !dbg !17371
+  call ptr @spec_rt_retain(ptr %t325), !dbg !17371
+  call ptr @spec_claim_pool(ptr %t325), !dbg !17371
+  store ptr %t325, ptr %var_val_320, !dbg !17371
+  %t334 = load ptr, ptr %var_prevMapK_259, !dbg !17408
+  %t335 = load ptr, ptr %self_slot, !dbg !17408
+  %t336 = getelementptr inbounds %struct.IrBuilder, ptr %t335, i32 0, i32 42, !dbg !17408
+  call ptr @spec_rt_retain(ptr %t334), !dbg !17408
+  %t337 = load ptr, ptr %t336, !dbg !17408
+  call ptr @spec_claim_pool(ptr %t337), !dbg !17408
+  store ptr %t334, ptr %t336, !dbg !17408
+  %t338 = load ptr, ptr %var_prevMapV_263, !dbg !17409
+  %t339 = load ptr, ptr %self_slot, !dbg !17409
+  %t340 = getelementptr inbounds %struct.IrBuilder, ptr %t339, i32 0, i32 43, !dbg !17409
+  call ptr @spec_rt_retain(ptr %t338), !dbg !17409
+  %t341 = load ptr, ptr %t340, !dbg !17409
+  call ptr @spec_claim_pool(ptr %t341), !dbg !17409
+  store ptr %t338, ptr %t340, !dbg !17409
+  %t343 = load ptr, ptr %self_slot, !dbg !17370
+  %t344 = load ptr, ptr %var_m_134, !dbg !17370
+  %t345 = getelementptr inbounds %struct.Member, ptr %t344, i32 0, i32 10, !dbg !17370
+  %t346 = load ptr, ptr %t345, !dbg !17370
+  %t347 = getelementptr inbounds %struct.Expression, ptr %t346, i32 0, i32 5, !dbg !17370
+  %t348 = load ptr, ptr %t347, !dbg !17370
+  %t351 = icmp ne ptr %t343, null, !dbg !17370
+  br i1 %t351, label %vt_call_83, label %dir_call_84, !dbg !17370
+vt_call_83:
+  %t352 = getelementptr inbounds %struct.IrBuilder, ptr %t343, i32 0, i32 1, !dbg !17370
+  %t353 = load ptr, ptr %t352, !dbg !17370
+  %t354 = getelementptr ptr, ptr %t353, i64 1014, !dbg !17370
+  %t355 = load ptr, ptr %t354, !dbg !17370
+  %t356 = call ptr %t355(ptr %t343, ptr %t348), !dbg !17370
+  store ptr %t356, ptr %t350, !dbg !17370
+  br label %vt_end_85, !dbg !17370
+dir_call_84:
+  %t357 = call ptr @IrBuilder_irTypeFor(ptr null, ptr %t348), !dbg !17370
+  store ptr %t357, ptr %t350, !dbg !17370
+  br label %vt_end_85, !dbg !17370
+vt_end_85:
+  %t349 = load ptr, ptr %t350, !dbg !17370
+  call ptr @spec_rt_retain(ptr %t349), !dbg !17370
+  call ptr @spec_claim_pool(ptr %t349), !dbg !17370
+  store ptr %t349, ptr %var_vty_342, !dbg !17370
+  %t358 = load ptr, ptr %self_slot, !dbg !17369
+  %t359 = load ptr, ptr %var_val_320, !dbg !17369
+  %t360 = load ptr, ptr %var_vty_342, !dbg !17369
+  %t361 = load ptr, ptr %var_fty_229, !dbg !17369
+  %t364 = icmp ne ptr %t358, null, !dbg !17369
+  br i1 %t364, label %vt_call_86, label %dir_call_87, !dbg !17369
+vt_call_86:
+  %t365 = getelementptr inbounds %struct.IrBuilder, ptr %t358, i32 0, i32 1, !dbg !17369
+  %t366 = load ptr, ptr %t365, !dbg !17369
+  %t367 = getelementptr ptr, ptr %t366, i64 1026, !dbg !17369
+  %t368 = load ptr, ptr %t367, !dbg !17369
+  %t369 = call ptr %t368(ptr %t358, ptr %t359, ptr %t360, ptr %t361), !dbg !17369
+  store ptr %t369, ptr %t363, !dbg !17369
+  br label %vt_end_88, !dbg !17369
+dir_call_87:
+  %t370 = call ptr @IrBuilder_castIfNeeded(ptr %t358, ptr %t359, ptr %t360, ptr %t361), !dbg !17369
+  store ptr %t370, ptr %t363, !dbg !17369
+  br label %vt_end_88, !dbg !17369
+vt_end_88:
+  %t362 = load ptr, ptr %t363, !dbg !17369
+  call ptr @spec_rt_retain(ptr %t362), !dbg !17369
+  call ptr @spec_claim_pool(ptr %t362), !dbg !17369
+  store ptr %t362, ptr %var_val_320, !dbg !17369
+  %t371 = load ptr, ptr %var_st_110, !dbg !17410
+  %t372 = getelementptr inbounds %struct.IrStruct, ptr %t371, i32 0, i32 7, !dbg !17410
+  %t373 = load ptr, ptr %t372, !dbg !17410
+  %t374 = load i64, ptr %var_fidx_212, !dbg !17410
+  %t375 = add i1 0, 0, !dbg !17410
+  %t376 = call i1 @Array__Boolean_get_2(ptr %t373, i64 %t374, i1 %t375), !dbg !17410
+  br i1 %t376, label %if_then_89, label %if_end_91, !dbg !17410
+if_then_89:
+  %t378 = load ptr, ptr %var_val_320, !dbg !17368
+  %t379 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !17368
+  %t381 = call i1 @Str_stringEquals(ptr null, ptr %t378, ptr %t379), !dbg !17368
+  %t380 = xor i1 %t381, 1, !dbg !17368
+  store i1 %t380, ptr %t377, !dbg !17368
+  br i1 %t380, label %sc_rhs_92, label %sc_end_93, !dbg !17368
+sc_rhs_92:
+  %t382 = load ptr, ptr %var_val_320, !dbg !17368
+  %t383 = call ptr @__spec_intern_cached(ptr @.str.1264, ptr @.str.cache.1264), !dbg !17368
+  %t385 = call i1 @Str_stringEquals(ptr null, ptr %t382, ptr %t383), !dbg !17368
+  %t384 = xor i1 %t385, 1, !dbg !17368
+  store i1 %t384, ptr %t377, !dbg !17368
+  br label %sc_end_93, !dbg !17368
+sc_end_93:
+  %t386 = load i1, ptr %t377, !dbg !17368
+  br i1 %t386, label %if_then_94, label %if_end_96, !dbg !17368
+if_then_94:
+  %t387 = load ptr, ptr %self_slot, !dbg !17411
+  %t388_szp = getelementptr %struct.IrInst_Retain, ptr null, i32 1, !dbg !17411
+  %t388_sz = ptrtoint ptr %t388_szp to i64, !dbg !17411
+  %t388 = call ptr @spec_rt_alloc(i64 %t388_sz, ptr @IrInst_Retain__destroy), !dbg !17411
+  %t388_tnp = getelementptr inbounds %struct.IrInst_Retain, ptr %t388, i32 0, i32 0, !dbg !17411
+  store ptr @.typename.IrInst_Retain, ptr %t388_tnp, !dbg !17411
+  %t388_vtp = getelementptr inbounds %struct.IrInst_Retain, ptr %t388, i32 0, i32 1, !dbg !17411
+  store ptr @.vtable.IrInst_Retain, ptr %t388_vtp, !dbg !17411
+  %t389 = load ptr, ptr %var_val_320, !dbg !17411
+  call void @IrInst_Retain_init(ptr %t388, ptr %t389), !dbg !17411
+  call ptr @spec_claim_pool(ptr %t388), !dbg !17411
+  %t390 = icmp ne ptr %t387, null, !dbg !17411
+  br i1 %t390, label %vt_call_97, label %dir_call_98, !dbg !17411
+vt_call_97:
+  %t391 = getelementptr inbounds %struct.IrBuilder, ptr %t387, i32 0, i32 1, !dbg !17411
+  %t392 = load ptr, ptr %t391, !dbg !17411
+  %t393 = getelementptr ptr, ptr %t392, i64 1027, !dbg !17411
+  %t394 = load ptr, ptr %t393, !dbg !17411
+  call void %t394(ptr %t387, ptr %t388), !dbg !17411
+  br label %vt_end_99, !dbg !17411
+dir_call_98:
+  call void @IrBuilder_emit(ptr %t387, ptr %t388), !dbg !17411
+  br label %vt_end_99, !dbg !17411
+vt_end_99:
+  br label %if_end_96, !dbg !17368
+if_end_96:
+  %t395 = load ptr, ptr %slot_seen, !dbg !17412
+  %t396 = load ptr, ptr %var_m_134, !dbg !17412
+  %t397 = getelementptr inbounds %struct.Member, ptr %t396, i32 0, i32 7, !dbg !17412
+  %t398 = load ptr, ptr %t397, !dbg !17412
+  %t399 = call i1 @HashTable_mapHasObj(ptr null, ptr %t395, ptr %t398), !dbg !17412
+  br i1 %t399, label %if_then_100, label %if_end_102, !dbg !17412
+if_then_100:
+  %t401 = load ptr, ptr %self_slot, !dbg !17367
+  %t404 = icmp ne ptr %t401, null, !dbg !17367
+  br i1 %t404, label %vt_call_103, label %dir_call_104, !dbg !17367
+vt_call_103:
+  %t405 = getelementptr inbounds %struct.IrBuilder, ptr %t401, i32 0, i32 1, !dbg !17367
+  %t406 = load ptr, ptr %t405, !dbg !17367
+  %t407 = getelementptr ptr, ptr %t406, i64 1012, !dbg !17367
+  %t408 = load ptr, ptr %t407, !dbg !17367
+  %t409 = call ptr %t408(ptr %t401), !dbg !17367
+  store ptr %t409, ptr %t403, !dbg !17367
+  br label %vt_end_105, !dbg !17367
+dir_call_104:
+  %t410 = call ptr @IrBuilder_nextTmp(ptr %t401), !dbg !17367
+  store ptr %t410, ptr %t403, !dbg !17367
+  br label %vt_end_105, !dbg !17367
+vt_end_105:
+  %t402 = load ptr, ptr %t403, !dbg !17367
+  call ptr @spec_rt_retain(ptr %t402), !dbg !17367
+  call ptr @spec_claim_pool(ptr %t402), !dbg !17367
+  store ptr %t402, ptr %var_oldF_400, !dbg !17367
+  %t411 = load ptr, ptr %self_slot, !dbg !17413
+  %t412_szp = getelementptr %struct.IrInst_Load, ptr null, i32 1, !dbg !17413
+  %t412_sz = ptrtoint ptr %t412_szp to i64, !dbg !17413
+  %t412 = call ptr @spec_rt_alloc(i64 %t412_sz, ptr @IrInst_Load__destroy), !dbg !17413
+  %t412_tnp = getelementptr inbounds %struct.IrInst_Load, ptr %t412, i32 0, i32 0, !dbg !17413
+  store ptr @.typename.IrInst_Load, ptr %t412_tnp, !dbg !17413
+  %t412_vtp = getelementptr inbounds %struct.IrInst_Load, ptr %t412, i32 0, i32 1, !dbg !17413
+  store ptr @.vtable.IrInst_Load, ptr %t412_vtp, !dbg !17413
+  %t413 = load ptr, ptr %var_oldF_400, !dbg !17413
+  %t414 = load ptr, ptr %var_ptr_235, !dbg !17413
+  %t415 = call ptr @IrType_Ptr__ensure(), !dbg !17413
+  call ptr @spec_claim_pool(ptr %t415), !dbg !17413
+  call void @IrInst_Load_init(ptr %t412, ptr %t413, ptr %t414, ptr %t415), !dbg !17413
+  call ptr @spec_claim_pool(ptr %t412), !dbg !17413
+  %t416 = icmp ne ptr %t411, null, !dbg !17413
+  br i1 %t416, label %vt_call_106, label %dir_call_107, !dbg !17413
+vt_call_106:
+  %t417 = getelementptr inbounds %struct.IrBuilder, ptr %t411, i32 0, i32 1, !dbg !17413
+  %t418 = load ptr, ptr %t417, !dbg !17413
+  %t419 = getelementptr ptr, ptr %t418, i64 1027, !dbg !17413
+  %t420 = load ptr, ptr %t419, !dbg !17413
+  call void %t420(ptr %t411, ptr %t412), !dbg !17413
+  br label %vt_end_108, !dbg !17413
+dir_call_107:
+  call void @IrBuilder_emit(ptr %t411, ptr %t412), !dbg !17413
+  br label %vt_end_108, !dbg !17413
+vt_end_108:
+  %t421 = load ptr, ptr %self_slot, !dbg !17414
+  %t422 = load ptr, ptr %var_oldF_400, !dbg !17414
+  %t423 = icmp ne ptr %t421, null, !dbg !17414
+  br i1 %t423, label %vt_call_109, label %dir_call_110, !dbg !17414
+vt_call_109:
+  %t424 = getelementptr inbounds %struct.IrBuilder, ptr %t421, i32 0, i32 1, !dbg !17414
+  %t425 = load ptr, ptr %t424, !dbg !17414
+  %t426 = getelementptr ptr, ptr %t425, i64 1045, !dbg !17414
+  %t427 = load ptr, ptr %t426, !dbg !17414
+  call void %t427(ptr %t421, ptr %t422), !dbg !17414
+  br label %vt_end_111, !dbg !17414
+dir_call_110:
+  call void @IrBuilder_emitClaimPool(ptr %t421, ptr %t422), !dbg !17414
+  br label %vt_end_111, !dbg !17414
+vt_end_111:
+  br label %if_end_102, !dbg !17412
+if_end_102:
+  br label %if_end_91, !dbg !17410
+if_end_91:
+  %t428 = load ptr, ptr %slot_seen, !dbg !17415
+  %t429 = load ptr, ptr %var_m_134, !dbg !17415
+  %t430 = getelementptr inbounds %struct.Member, ptr %t429, i32 0, i32 7, !dbg !17415
+  %t431 = load ptr, ptr %t430, !dbg !17415
+  %t432 = add i1 0, 1, !dbg !17415
+  call void @Map__String__Boolean_set(ptr %t428, ptr %t431, i1 %t432), !dbg !17415
+  %t433 = load ptr, ptr %self_slot, !dbg !17416
+  %t434_szp = getelementptr %struct.IrInst_Store, ptr null, i32 1, !dbg !17416
+  %t434_sz = ptrtoint ptr %t434_szp to i64, !dbg !17416
+  %t434 = call ptr @spec_rt_alloc(i64 %t434_sz, ptr @IrInst_Store__destroy), !dbg !17416
+  %t434_tnp = getelementptr inbounds %struct.IrInst_Store, ptr %t434, i32 0, i32 0, !dbg !17416
+  store ptr @.typename.IrInst_Store, ptr %t434_tnp, !dbg !17416
+  %t434_vtp = getelementptr inbounds %struct.IrInst_Store, ptr %t434, i32 0, i32 1, !dbg !17416
+  store ptr @.vtable.IrInst_Store, ptr %t434_vtp, !dbg !17416
+  %t435 = load ptr, ptr %var_ptr_235, !dbg !17416
+  %t436 = load ptr, ptr %var_val_320, !dbg !17416
+  %t437 = load ptr, ptr %var_fty_229, !dbg !17416
+  call void @IrInst_Store_init(ptr %t434, ptr %t435, ptr %t436, ptr %t437), !dbg !17416
+  call ptr @spec_claim_pool(ptr %t434), !dbg !17416
+  %t438 = icmp ne ptr %t433, null, !dbg !17416
+  br i1 %t438, label %vt_call_112, label %dir_call_113, !dbg !17416
+vt_call_112:
+  %t439 = getelementptr inbounds %struct.IrBuilder, ptr %t433, i32 0, i32 1, !dbg !17416
+  %t440 = load ptr, ptr %t439, !dbg !17416
+  %t441 = getelementptr ptr, ptr %t440, i64 1027, !dbg !17416
+  %t442 = load ptr, ptr %t441, !dbg !17416
+  call void %t442(ptr %t433, ptr %t434), !dbg !17416
+  br label %vt_end_114, !dbg !17416
+dir_call_113:
+  call void @IrBuilder_emit(ptr %t433, ptr %t434), !dbg !17416
+  br label %vt_end_114, !dbg !17416
+vt_end_114:
+  br label %if_end_65, !dbg !17403
+if_end_65:
+  br label %if_end_59, !dbg !17380
+if_else_58:
+  %t450 = load ptr, ptr %var_m_134, !dbg !17366
+  %t451 = getelementptr inbounds %struct.Member, ptr %t450, i32 0, i32 2, !dbg !17366
+  %t452 = load ptr, ptr %t451, !dbg !17366
+  %t453 = call ptr @MemberKind_FIELD__ensure(), !dbg !17366
+  call ptr @spec_claim_pool(ptr %t453), !dbg !17366
+  %t454 = icmp eq ptr %t452, %t453, !dbg !17366
+  store i1 %t454, ptr %t449, !dbg !17366
+  br i1 %t454, label %sc_rhs_115, label %sc_end_116, !dbg !17366
 sc_rhs_115:
-  %t453 = load ptr, ptr %var_m_134, !dbg !17366
-  %t454 = getelementptr inbounds %struct.Member, ptr %t453, i32 0, i32 7, !dbg !17366
-  %t455 = load ptr, ptr %t454, !dbg !17366
-  %t456 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !17366
-  %t458 = call i1 @Str_stringEquals(ptr null, ptr %t455, ptr %t456), !dbg !17366
-  %t457 = xor i1 %t458, 1, !dbg !17366
-  store i1 %t457, ptr %t439, !dbg !17366
+  %t455 = load ptr, ptr %var_m_134, !dbg !17366
+  %t456 = getelementptr inbounds %struct.Member, ptr %t455, i32 0, i32 7, !dbg !17366
+  %t457 = load ptr, ptr %t456, !dbg !17366
+  %t458 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !17366
+  %t460 = call i1 @Str_stringEquals(ptr null, ptr %t457, ptr %t458), !dbg !17366
+  %t459 = xor i1 %t460, 1, !dbg !17366
+  store i1 %t459, ptr %t449, !dbg !17366
   br label %sc_end_116, !dbg !17366
 sc_end_116:
-  %t459 = load i1, ptr %t439, !dbg !17366
-  store i1 %t459, ptr %t438, !dbg !17366
-  br i1 %t459, label %sc_rhs_117, label %sc_end_118, !dbg !17366
+  %t461 = load i1, ptr %t449, !dbg !17366
+  store i1 %t461, ptr %t448, !dbg !17366
+  br i1 %t461, label %sc_rhs_117, label %sc_end_118, !dbg !17366
 sc_rhs_117:
-  %t460 = load ptr, ptr %var_m_134, !dbg !17366
-  %t461 = getelementptr inbounds %struct.Member, ptr %t460, i32 0, i32 7, !dbg !17366
-  %t462 = load ptr, ptr %t461, !dbg !17366
-  %t463 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !17366
-  %t465 = call i1 @Str_stringEquals(ptr null, ptr %t462, ptr %t463), !dbg !17366
-  %t464 = xor i1 %t465, 1, !dbg !17366
-  store i1 %t464, ptr %t438, !dbg !17366
+  %t462 = load ptr, ptr %var_m_134, !dbg !17366
+  %t463 = getelementptr inbounds %struct.Member, ptr %t462, i32 0, i32 7, !dbg !17366
+  %t464 = load ptr, ptr %t463, !dbg !17366
+  %t465 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !17366
+  %t467 = call i1 @Str_stringEquals(ptr null, ptr %t464, ptr %t465), !dbg !17366
+  %t466 = xor i1 %t467, 1, !dbg !17366
+  store i1 %t466, ptr %t448, !dbg !17366
   br label %sc_end_118, !dbg !17366
 sc_end_118:
-  %t466 = load i1, ptr %t438, !dbg !17366
-  store i1 %t466, ptr %t437, !dbg !17366
-  br i1 %t466, label %sc_rhs_119, label %sc_end_120, !dbg !17366
+  %t468 = load i1, ptr %t448, !dbg !17366
+  store i1 %t468, ptr %t447, !dbg !17366
+  br i1 %t468, label %sc_rhs_119, label %sc_end_120, !dbg !17366
 sc_rhs_119:
-  %t467 = load ptr, ptr %var_m_134, !dbg !17366
-  %t468 = call ptr @Keyword_HELD__ensure(), !dbg !17366
-  call ptr @spec_claim_pool(ptr %t468), !dbg !17366
-  %t471 = icmp ne ptr %t467, null, !dbg !17366
-  br i1 %t471, label %vt_call_121, label %dir_call_122, !dbg !17366
-vt_call_121:
-  %t472 = getelementptr inbounds %struct.Member, ptr %t467, i32 0, i32 1, !dbg !17366
-  %t473 = load ptr, ptr %t472, !dbg !17366
-  %t474 = getelementptr ptr, ptr %t473, i64 460, !dbg !17366
-  %t475 = load ptr, ptr %t474, !dbg !17366
-  %t476 = call i1 %t475(ptr %t467, ptr %t468), !dbg !17366
-  store i1 %t476, ptr %t470, !dbg !17366
-  br label %vt_end_123, !dbg !17366
-dir_call_122:
-  %t477 = call i1 @Member_hasModifier(ptr %t467, ptr %t468), !dbg !17366
-  store i1 %t477, ptr %t470, !dbg !17366
-  br label %vt_end_123, !dbg !17366
-vt_end_123:
-  %t469 = load i1, ptr %t470, !dbg !17366
-  %t478 = xor i1 %t469, 1, !dbg !17366
-  store i1 %t478, ptr %t437, !dbg !17366
+  %t469 = load ptr, ptr %var_m_134, !dbg !17366
+  %t470 = getelementptr inbounds %struct.Member, ptr %t469, i32 0, i32 7, !dbg !17366
+  %t471 = load ptr, ptr %t470, !dbg !17366
+  %t472 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !17366
+  %t474 = call i1 @Str_stringEquals(ptr null, ptr %t471, ptr %t472), !dbg !17366
+  %t473 = xor i1 %t474, 1, !dbg !17366
+  store i1 %t473, ptr %t447, !dbg !17366
   br label %sc_end_120, !dbg !17366
 sc_end_120:
-  %t479 = load i1, ptr %t437, !dbg !17366
-  store i1 %t479, ptr %t436, !dbg !17366
-  br i1 %t479, label %sc_rhs_124, label %sc_end_125, !dbg !17366
-sc_rhs_124:
-  %t480 = load ptr, ptr %var_m_134, !dbg !17366
-  %t481 = getelementptr inbounds %struct.Member, ptr %t480, i32 0, i32 11, !dbg !17366
-  %t482 = load i1, ptr %t481, !dbg !17366
-  %t483 = xor i1 %t482, 1, !dbg !17366
-  store i1 %t483, ptr %t436, !dbg !17366
-  br label %sc_end_125, !dbg !17366
-sc_end_125:
-  %t484 = load i1, ptr %t436, !dbg !17366
-  store i1 %t484, ptr %t435, !dbg !17366
-  br i1 %t484, label %sc_rhs_126, label %sc_end_127, !dbg !17366
-sc_rhs_126:
-  %t485 = load ptr, ptr %slot_seen, !dbg !17366
-  %t486 = load ptr, ptr %var_m_134, !dbg !17366
-  %t487 = getelementptr inbounds %struct.Member, ptr %t486, i32 0, i32 7, !dbg !17366
-  %t488 = load ptr, ptr %t487, !dbg !17366
-  %t489 = call i1 @HashTable_mapHasObj(ptr null, ptr %t485, ptr %t488), !dbg !17366
-  %t490 = xor i1 %t489, 1, !dbg !17366
-  store i1 %t490, ptr %t435, !dbg !17366
-  br label %sc_end_127, !dbg !17366
-sc_end_127:
-  %t491 = load i1, ptr %t435, !dbg !17366
-  br i1 %t491, label %if_then_128, label %if_end_130, !dbg !17366
-if_then_128:
-  %t493 = load ptr, ptr %var_st_110, !dbg !17365
-  %t494 = load ptr, ptr %var_m_134, !dbg !17365
-  %t495 = getelementptr inbounds %struct.Member, ptr %t494, i32 0, i32 7, !dbg !17365
-  %t496 = load ptr, ptr %t495, !dbg !17365
-  %t499 = icmp ne ptr %t493, null, !dbg !17365
-  br i1 %t499, label %vt_call_131, label %dir_call_132, !dbg !17365
-vt_call_131:
-  %t500 = getelementptr inbounds %struct.IrStruct, ptr %t493, i32 0, i32 1, !dbg !17365
-  %t501 = load ptr, ptr %t500, !dbg !17365
-  %t502 = getelementptr ptr, ptr %t501, i64 960, !dbg !17365
-  %t503 = load ptr, ptr %t502, !dbg !17365
-  %t504 = call i64 %t503(ptr %t493, ptr %t496), !dbg !17365
-  store i64 %t504, ptr %t498, !dbg !17365
-  br label %vt_end_133, !dbg !17365
-dir_call_132:
-  %t505 = call i64 @IrStruct_fieldIndex(ptr %t493, ptr %t496), !dbg !17365
-  store i64 %t505, ptr %t498, !dbg !17365
-  br label %vt_end_133, !dbg !17365
-vt_end_133:
-  %t497 = load i64, ptr %t498, !dbg !17365
-  store i64 %t497, ptr %var_fidx0_492, !dbg !17365
-  %t506 = load i64, ptr %var_fidx0_492, !dbg !17417
-  %t507 = add i64 0, 0, !dbg !17417
-  %t508 = icmp sge i64 %t506, %t507, !dbg !17417
-  br i1 %t508, label %if_then_134, label %if_end_136, !dbg !17417
-if_then_134:
-  %t510 = load ptr, ptr %var_st_110, !dbg !17364
-  %t511 = getelementptr inbounds %struct.IrStruct, ptr %t510, i32 0, i32 6, !dbg !17364
-  %t512 = load ptr, ptr %t511, !dbg !17364
-  %t513 = load i64, ptr %var_fidx0_492, !dbg !17364
-  %t514 = call ptr @Array__IrType_get(ptr %t512, i64 %t513), !dbg !17364
-  call ptr @spec_rt_retain(ptr %t514), !dbg !17364
-  call ptr @spec_claim_pool(ptr %t514), !dbg !17364
-  store ptr %t514, ptr %var_fty0_509, !dbg !17364
-  %t516 = load ptr, ptr %self_slot, !dbg !17363
-  %t519 = icmp ne ptr %t516, null, !dbg !17363
-  br i1 %t519, label %vt_call_137, label %dir_call_138, !dbg !17363
-vt_call_137:
-  %t520 = getelementptr inbounds %struct.IrBuilder, ptr %t516, i32 0, i32 1, !dbg !17363
-  %t521 = load ptr, ptr %t520, !dbg !17363
-  %t522 = getelementptr ptr, ptr %t521, i64 1012, !dbg !17363
-  %t523 = load ptr, ptr %t522, !dbg !17363
-  %t524 = call ptr %t523(ptr %t516), !dbg !17363
-  store ptr %t524, ptr %t518, !dbg !17363
-  br label %vt_end_139, !dbg !17363
-dir_call_138:
-  %t525 = call ptr @IrBuilder_nextTmp(ptr %t516), !dbg !17363
-  store ptr %t525, ptr %t518, !dbg !17363
-  br label %vt_end_139, !dbg !17363
-vt_end_139:
-  %t517 = load ptr, ptr %t518, !dbg !17363
-  call ptr @spec_rt_retain(ptr %t517), !dbg !17363
-  call ptr @spec_claim_pool(ptr %t517), !dbg !17363
-  store ptr %t517, ptr %var_ptr0_515, !dbg !17363
-  %t526 = load ptr, ptr %self_slot, !dbg !17418
-  %t527_szp = getelementptr %struct.IrInst_FieldPtr, ptr null, i32 1, !dbg !17418
-  %t527_sz = ptrtoint ptr %t527_szp to i64, !dbg !17418
-  %t527 = call ptr @spec_rt_alloc(i64 %t527_sz, ptr @IrInst_FieldPtr__destroy), !dbg !17418
-  %t527_tnp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t527, i32 0, i32 0, !dbg !17418
-  store ptr @.typename.IrInst_FieldPtr, ptr %t527_tnp, !dbg !17418
-  %t527_vtp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t527, i32 0, i32 1, !dbg !17418
-  store ptr @.vtable.IrInst_FieldPtr, ptr %t527_vtp, !dbg !17418
-  %t528 = load ptr, ptr %var_ptr0_515, !dbg !17418
-  %t529 = call ptr @__spec_intern_cached(ptr @.str.1404, ptr @.str.cache.1404), !dbg !17418
-  %t530 = load ptr, ptr %self_slot, !dbg !17418
-  %t531 = getelementptr inbounds %struct.IrBuilder, ptr %t530, i32 0, i32 6, !dbg !17418
-  %t532 = load ptr, ptr %t531, !dbg !17418
-  %t533 = load i64, ptr %var_fidx0_492, !dbg !17418
-  call void @IrInst_FieldPtr_init(ptr %t527, ptr %t528, ptr %t529, ptr %t532, i64 %t533), !dbg !17418
-  call ptr @spec_claim_pool(ptr %t527), !dbg !17418
-  %t534 = icmp ne ptr %t526, null, !dbg !17418
-  br i1 %t534, label %vt_call_140, label %dir_call_141, !dbg !17418
-vt_call_140:
-  %t535 = getelementptr inbounds %struct.IrBuilder, ptr %t526, i32 0, i32 1, !dbg !17418
-  %t536 = load ptr, ptr %t535, !dbg !17418
-  %t537 = getelementptr ptr, ptr %t536, i64 1027, !dbg !17418
-  %t538 = load ptr, ptr %t537, !dbg !17418
-  call void %t538(ptr %t526, ptr %t527), !dbg !17418
-  br label %vt_end_142, !dbg !17418
-dir_call_141:
-  call void @IrBuilder_emit(ptr %t526, ptr %t527), !dbg !17418
-  br label %vt_end_142, !dbg !17418
-vt_end_142:
-  %t540 = load ptr, ptr %self_slot, !dbg !17362
-  %t541 = load ptr, ptr %var_fty0_509, !dbg !17362
-  %t544 = icmp ne ptr %t540, null, !dbg !17362
-  br i1 %t544, label %vt_call_143, label %dir_call_144, !dbg !17362
-vt_call_143:
-  %t545 = getelementptr inbounds %struct.IrBuilder, ptr %t540, i32 0, i32 1, !dbg !17362
-  %t546 = load ptr, ptr %t545, !dbg !17362
-  %t547 = getelementptr ptr, ptr %t546, i64 1100, !dbg !17362
-  %t548 = load ptr, ptr %t547, !dbg !17362
-  %t549 = call ptr %t548(ptr %t540, ptr %t541), !dbg !17362
-  store ptr %t549, ptr %t543, !dbg !17362
-  br label %vt_end_145, !dbg !17362
-dir_call_144:
-  %t550 = call ptr @IrBuilder_emitDefaultVal(ptr %t540, ptr %t541), !dbg !17362
-  store ptr %t550, ptr %t543, !dbg !17362
-  br label %vt_end_145, !dbg !17362
-vt_end_145:
-  %t542 = load ptr, ptr %t543, !dbg !17362
-  call ptr @spec_rt_retain(ptr %t542), !dbg !17362
-  call ptr @spec_claim_pool(ptr %t542), !dbg !17362
-  store ptr %t542, ptr %var_defVal0_539, !dbg !17362
-  %t551 = load ptr, ptr %slot_seen, !dbg !17419
-  %t552 = load ptr, ptr %var_m_134, !dbg !17419
-  %t553 = getelementptr inbounds %struct.Member, ptr %t552, i32 0, i32 7, !dbg !17419
-  %t554 = load ptr, ptr %t553, !dbg !17419
-  %t555 = add i1 0, 1, !dbg !17419
-  call void @Map__String__Boolean_set(ptr %t551, ptr %t554, i1 %t555), !dbg !17419
-  %t556 = load ptr, ptr %self_slot, !dbg !17420
-  %t557_szp = getelementptr %struct.IrInst_Store, ptr null, i32 1, !dbg !17420
-  %t557_sz = ptrtoint ptr %t557_szp to i64, !dbg !17420
-  %t557 = call ptr @spec_rt_alloc(i64 %t557_sz, ptr @IrInst_Store__destroy), !dbg !17420
-  %t557_tnp = getelementptr inbounds %struct.IrInst_Store, ptr %t557, i32 0, i32 0, !dbg !17420
-  store ptr @.typename.IrInst_Store, ptr %t557_tnp, !dbg !17420
-  %t557_vtp = getelementptr inbounds %struct.IrInst_Store, ptr %t557, i32 0, i32 1, !dbg !17420
-  store ptr @.vtable.IrInst_Store, ptr %t557_vtp, !dbg !17420
-  %t558 = load ptr, ptr %var_ptr0_515, !dbg !17420
-  %t559 = load ptr, ptr %var_defVal0_539, !dbg !17420
-  %t560 = load ptr, ptr %var_fty0_509, !dbg !17420
-  call void @IrInst_Store_init(ptr %t557, ptr %t558, ptr %t559, ptr %t560), !dbg !17420
-  call ptr @spec_claim_pool(ptr %t557), !dbg !17420
-  %t561 = icmp ne ptr %t556, null, !dbg !17420
-  br i1 %t561, label %vt_call_146, label %dir_call_147, !dbg !17420
-vt_call_146:
-  %t562 = getelementptr inbounds %struct.IrBuilder, ptr %t556, i32 0, i32 1, !dbg !17420
-  %t563 = load ptr, ptr %t562, !dbg !17420
-  %t564 = getelementptr ptr, ptr %t563, i64 1027, !dbg !17420
-  %t565 = load ptr, ptr %t564, !dbg !17420
-  call void %t565(ptr %t556, ptr %t557), !dbg !17420
-  br label %vt_end_148, !dbg !17420
-dir_call_147:
-  call void @IrBuilder_emit(ptr %t556, ptr %t557), !dbg !17420
-  br label %vt_end_148, !dbg !17420
-vt_end_148:
-  br label %if_end_136, !dbg !17417
-if_end_136:
-  br label %if_end_130, !dbg !17366
-if_end_130:
-  br label %if_end_57, !dbg !17380
-if_end_57:
-  %t566 = load i64, ptr %var_mi_126, !dbg !17421
-  %t567 = add i64 0, 1, !dbg !17421
-  %t568 = add i64 %t566, %t567, !dbg !17421
-  store i64 %t568, ptr %var_mi_126, !dbg !17421
+  %t475 = load i1, ptr %t447, !dbg !17366
+  store i1 %t475, ptr %t446, !dbg !17366
+  br i1 %t475, label %sc_rhs_121, label %sc_end_122, !dbg !17366
+sc_rhs_121:
+  %t476 = load ptr, ptr %var_m_134, !dbg !17366
+  %t477 = getelementptr inbounds %struct.Member, ptr %t476, i32 0, i32 7, !dbg !17366
+  %t478 = load ptr, ptr %t477, !dbg !17366
+  %t479 = call ptr @__spec_intern_cached(ptr @.str.358, ptr @.str.cache.358), !dbg !17366
+  %t481 = call i1 @Str_stringEquals(ptr null, ptr %t478, ptr %t479), !dbg !17366
+  %t480 = xor i1 %t481, 1, !dbg !17366
+  store i1 %t480, ptr %t446, !dbg !17366
+  br label %sc_end_122, !dbg !17366
+sc_end_122:
+  %t482 = load i1, ptr %t446, !dbg !17366
+  store i1 %t482, ptr %t445, !dbg !17366
+  br i1 %t482, label %sc_rhs_123, label %sc_end_124, !dbg !17366
+sc_rhs_123:
+  %t483 = load ptr, ptr %var_m_134, !dbg !17366
+  %t484 = call ptr @Keyword_HELD__ensure(), !dbg !17366
+  call ptr @spec_claim_pool(ptr %t484), !dbg !17366
+  %t487 = icmp ne ptr %t483, null, !dbg !17366
+  br i1 %t487, label %vt_call_125, label %dir_call_126, !dbg !17366
+vt_call_125:
+  %t488 = getelementptr inbounds %struct.Member, ptr %t483, i32 0, i32 1, !dbg !17366
+  %t489 = load ptr, ptr %t488, !dbg !17366
+  %t490 = getelementptr ptr, ptr %t489, i64 460, !dbg !17366
+  %t491 = load ptr, ptr %t490, !dbg !17366
+  %t492 = call i1 %t491(ptr %t483, ptr %t484), !dbg !17366
+  store i1 %t492, ptr %t486, !dbg !17366
+  br label %vt_end_127, !dbg !17366
+dir_call_126:
+  %t493 = call i1 @Member_hasModifier(ptr %t483, ptr %t484), !dbg !17366
+  store i1 %t493, ptr %t486, !dbg !17366
+  br label %vt_end_127, !dbg !17366
+vt_end_127:
+  %t485 = load i1, ptr %t486, !dbg !17366
+  %t494 = xor i1 %t485, 1, !dbg !17366
+  store i1 %t494, ptr %t445, !dbg !17366
+  br label %sc_end_124, !dbg !17366
+sc_end_124:
+  %t495 = load i1, ptr %t445, !dbg !17366
+  store i1 %t495, ptr %t444, !dbg !17366
+  br i1 %t495, label %sc_rhs_128, label %sc_end_129, !dbg !17366
+sc_rhs_128:
+  %t496 = load ptr, ptr %var_m_134, !dbg !17366
+  %t497 = getelementptr inbounds %struct.Member, ptr %t496, i32 0, i32 11, !dbg !17366
+  %t498 = load i1, ptr %t497, !dbg !17366
+  %t499 = xor i1 %t498, 1, !dbg !17366
+  store i1 %t499, ptr %t444, !dbg !17366
+  br label %sc_end_129, !dbg !17366
+sc_end_129:
+  %t500 = load i1, ptr %t444, !dbg !17366
+  store i1 %t500, ptr %t443, !dbg !17366
+  br i1 %t500, label %sc_rhs_130, label %sc_end_131, !dbg !17366
+sc_rhs_130:
+  %t501 = load ptr, ptr %slot_seen, !dbg !17366
+  %t502 = load ptr, ptr %var_m_134, !dbg !17366
+  %t503 = getelementptr inbounds %struct.Member, ptr %t502, i32 0, i32 7, !dbg !17366
+  %t504 = load ptr, ptr %t503, !dbg !17366
+  %t505 = call i1 @HashTable_mapHasObj(ptr null, ptr %t501, ptr %t504), !dbg !17366
+  %t506 = xor i1 %t505, 1, !dbg !17366
+  store i1 %t506, ptr %t443, !dbg !17366
+  br label %sc_end_131, !dbg !17366
+sc_end_131:
+  %t507 = load i1, ptr %t443, !dbg !17366
+  br i1 %t507, label %if_then_132, label %if_end_134, !dbg !17366
+if_then_132:
+  %t509 = load ptr, ptr %var_st_110, !dbg !17365
+  %t510 = load ptr, ptr %var_m_134, !dbg !17365
+  %t511 = getelementptr inbounds %struct.Member, ptr %t510, i32 0, i32 7, !dbg !17365
+  %t512 = load ptr, ptr %t511, !dbg !17365
+  %t515 = icmp ne ptr %t509, null, !dbg !17365
+  br i1 %t515, label %vt_call_135, label %dir_call_136, !dbg !17365
+vt_call_135:
+  %t516 = getelementptr inbounds %struct.IrStruct, ptr %t509, i32 0, i32 1, !dbg !17365
+  %t517 = load ptr, ptr %t516, !dbg !17365
+  %t518 = getelementptr ptr, ptr %t517, i64 960, !dbg !17365
+  %t519 = load ptr, ptr %t518, !dbg !17365
+  %t520 = call i64 %t519(ptr %t509, ptr %t512), !dbg !17365
+  store i64 %t520, ptr %t514, !dbg !17365
+  br label %vt_end_137, !dbg !17365
+dir_call_136:
+  %t521 = call i64 @IrStruct_fieldIndex(ptr %t509, ptr %t512), !dbg !17365
+  store i64 %t521, ptr %t514, !dbg !17365
+  br label %vt_end_137, !dbg !17365
+vt_end_137:
+  %t513 = load i64, ptr %t514, !dbg !17365
+  store i64 %t513, ptr %var_fidx0_508, !dbg !17365
+  %t522 = load i64, ptr %var_fidx0_508, !dbg !17417
+  %t523 = add i64 0, 0, !dbg !17417
+  %t524 = icmp sge i64 %t522, %t523, !dbg !17417
+  br i1 %t524, label %if_then_138, label %if_end_140, !dbg !17417
+if_then_138:
+  %t526 = load ptr, ptr %var_st_110, !dbg !17364
+  %t527 = getelementptr inbounds %struct.IrStruct, ptr %t526, i32 0, i32 6, !dbg !17364
+  %t528 = load ptr, ptr %t527, !dbg !17364
+  %t529 = load i64, ptr %var_fidx0_508, !dbg !17364
+  %t530 = call ptr @Array__IrType_get(ptr %t528, i64 %t529), !dbg !17364
+  call ptr @spec_rt_retain(ptr %t530), !dbg !17364
+  call ptr @spec_claim_pool(ptr %t530), !dbg !17364
+  store ptr %t530, ptr %var_fty0_525, !dbg !17364
+  %t532 = load ptr, ptr %self_slot, !dbg !17363
+  %t535 = icmp ne ptr %t532, null, !dbg !17363
+  br i1 %t535, label %vt_call_141, label %dir_call_142, !dbg !17363
+vt_call_141:
+  %t536 = getelementptr inbounds %struct.IrBuilder, ptr %t532, i32 0, i32 1, !dbg !17363
+  %t537 = load ptr, ptr %t536, !dbg !17363
+  %t538 = getelementptr ptr, ptr %t537, i64 1012, !dbg !17363
+  %t539 = load ptr, ptr %t538, !dbg !17363
+  %t540 = call ptr %t539(ptr %t532), !dbg !17363
+  store ptr %t540, ptr %t534, !dbg !17363
+  br label %vt_end_143, !dbg !17363
+dir_call_142:
+  %t541 = call ptr @IrBuilder_nextTmp(ptr %t532), !dbg !17363
+  store ptr %t541, ptr %t534, !dbg !17363
+  br label %vt_end_143, !dbg !17363
+vt_end_143:
+  %t533 = load ptr, ptr %t534, !dbg !17363
+  call ptr @spec_rt_retain(ptr %t533), !dbg !17363
+  call ptr @spec_claim_pool(ptr %t533), !dbg !17363
+  store ptr %t533, ptr %var_ptr0_531, !dbg !17363
+  %t542 = load ptr, ptr %self_slot, !dbg !17418
+  %t543_szp = getelementptr %struct.IrInst_FieldPtr, ptr null, i32 1, !dbg !17418
+  %t543_sz = ptrtoint ptr %t543_szp to i64, !dbg !17418
+  %t543 = call ptr @spec_rt_alloc(i64 %t543_sz, ptr @IrInst_FieldPtr__destroy), !dbg !17418
+  %t543_tnp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t543, i32 0, i32 0, !dbg !17418
+  store ptr @.typename.IrInst_FieldPtr, ptr %t543_tnp, !dbg !17418
+  %t543_vtp = getelementptr inbounds %struct.IrInst_FieldPtr, ptr %t543, i32 0, i32 1, !dbg !17418
+  store ptr @.vtable.IrInst_FieldPtr, ptr %t543_vtp, !dbg !17418
+  %t544 = load ptr, ptr %var_ptr0_531, !dbg !17418
+  %t545 = call ptr @__spec_intern_cached(ptr @.str.1404, ptr @.str.cache.1404), !dbg !17418
+  %t546 = load ptr, ptr %self_slot, !dbg !17418
+  %t547 = getelementptr inbounds %struct.IrBuilder, ptr %t546, i32 0, i32 6, !dbg !17418
+  %t548 = load ptr, ptr %t547, !dbg !17418
+  %t549 = load i64, ptr %var_fidx0_508, !dbg !17418
+  call void @IrInst_FieldPtr_init(ptr %t543, ptr %t544, ptr %t545, ptr %t548, i64 %t549), !dbg !17418
+  call ptr @spec_claim_pool(ptr %t543), !dbg !17418
+  %t550 = icmp ne ptr %t542, null, !dbg !17418
+  br i1 %t550, label %vt_call_144, label %dir_call_145, !dbg !17418
+vt_call_144:
+  %t551 = getelementptr inbounds %struct.IrBuilder, ptr %t542, i32 0, i32 1, !dbg !17418
+  %t552 = load ptr, ptr %t551, !dbg !17418
+  %t553 = getelementptr ptr, ptr %t552, i64 1027, !dbg !17418
+  %t554 = load ptr, ptr %t553, !dbg !17418
+  call void %t554(ptr %t542, ptr %t543), !dbg !17418
+  br label %vt_end_146, !dbg !17418
+dir_call_145:
+  call void @IrBuilder_emit(ptr %t542, ptr %t543), !dbg !17418
+  br label %vt_end_146, !dbg !17418
+vt_end_146:
+  %t556 = load ptr, ptr %self_slot, !dbg !17362
+  %t557 = load ptr, ptr %var_fty0_525, !dbg !17362
+  %t560 = icmp ne ptr %t556, null, !dbg !17362
+  br i1 %t560, label %vt_call_147, label %dir_call_148, !dbg !17362
+vt_call_147:
+  %t561 = getelementptr inbounds %struct.IrBuilder, ptr %t556, i32 0, i32 1, !dbg !17362
+  %t562 = load ptr, ptr %t561, !dbg !17362
+  %t563 = getelementptr ptr, ptr %t562, i64 1100, !dbg !17362
+  %t564 = load ptr, ptr %t563, !dbg !17362
+  %t565 = call ptr %t564(ptr %t556, ptr %t557), !dbg !17362
+  store ptr %t565, ptr %t559, !dbg !17362
+  br label %vt_end_149, !dbg !17362
+dir_call_148:
+  %t566 = call ptr @IrBuilder_emitDefaultVal(ptr %t556, ptr %t557), !dbg !17362
+  store ptr %t566, ptr %t559, !dbg !17362
+  br label %vt_end_149, !dbg !17362
+vt_end_149:
+  %t558 = load ptr, ptr %t559, !dbg !17362
+  call ptr @spec_rt_retain(ptr %t558), !dbg !17362
+  call ptr @spec_claim_pool(ptr %t558), !dbg !17362
+  store ptr %t558, ptr %var_defVal0_555, !dbg !17362
+  %t567 = load ptr, ptr %slot_seen, !dbg !17419
+  %t568 = load ptr, ptr %var_m_134, !dbg !17419
+  %t569 = getelementptr inbounds %struct.Member, ptr %t568, i32 0, i32 7, !dbg !17419
+  %t570 = load ptr, ptr %t569, !dbg !17419
+  %t571 = add i1 0, 1, !dbg !17419
+  call void @Map__String__Boolean_set(ptr %t567, ptr %t570, i1 %t571), !dbg !17419
+  %t572 = load ptr, ptr %self_slot, !dbg !17420
+  %t573_szp = getelementptr %struct.IrInst_Store, ptr null, i32 1, !dbg !17420
+  %t573_sz = ptrtoint ptr %t573_szp to i64, !dbg !17420
+  %t573 = call ptr @spec_rt_alloc(i64 %t573_sz, ptr @IrInst_Store__destroy), !dbg !17420
+  %t573_tnp = getelementptr inbounds %struct.IrInst_Store, ptr %t573, i32 0, i32 0, !dbg !17420
+  store ptr @.typename.IrInst_Store, ptr %t573_tnp, !dbg !17420
+  %t573_vtp = getelementptr inbounds %struct.IrInst_Store, ptr %t573, i32 0, i32 1, !dbg !17420
+  store ptr @.vtable.IrInst_Store, ptr %t573_vtp, !dbg !17420
+  %t574 = load ptr, ptr %var_ptr0_531, !dbg !17420
+  %t575 = load ptr, ptr %var_defVal0_555, !dbg !17420
+  %t576 = load ptr, ptr %var_fty0_525, !dbg !17420
+  call void @IrInst_Store_init(ptr %t573, ptr %t574, ptr %t575, ptr %t576), !dbg !17420
+  call ptr @spec_claim_pool(ptr %t573), !dbg !17420
+  %t577 = icmp ne ptr %t572, null, !dbg !17420
+  br i1 %t577, label %vt_call_150, label %dir_call_151, !dbg !17420
+vt_call_150:
+  %t578 = getelementptr inbounds %struct.IrBuilder, ptr %t572, i32 0, i32 1, !dbg !17420
+  %t579 = load ptr, ptr %t578, !dbg !17420
+  %t580 = getelementptr ptr, ptr %t579, i64 1027, !dbg !17420
+  %t581 = load ptr, ptr %t580, !dbg !17420
+  call void %t581(ptr %t572, ptr %t573), !dbg !17420
+  br label %vt_end_152, !dbg !17420
+dir_call_151:
+  call void @IrBuilder_emit(ptr %t572, ptr %t573), !dbg !17420
+  br label %vt_end_152, !dbg !17420
+vt_end_152:
+  br label %if_end_140, !dbg !17417
+if_end_140:
+  br label %if_end_134, !dbg !17366
+if_end_134:
+  br label %if_end_59, !dbg !17380
+if_end_59:
+  %t582 = load i64, ptr %var_mi_126, !dbg !17421
+  %t583 = add i64 0, 1, !dbg !17421
+  %t584 = add i64 %t582, %t583, !dbg !17421
+  store i64 %t584, ptr %var_mi_126, !dbg !17421
   br label %while_hdr_34, !dbg !17402
 while_end_36:
   call void @spec_pool_release_to(i64 %t1), !dbg !17391
@@ -264565,10 +264601,11 @@ while_end_3:
 
 define void @IrBuilder_scanBareTemplateUse(ptr %self, ptr %p_classes) !dbg !18116 {
 entry:
-  %t119 = alloca i1, !dbg !18117
-  %t97 = alloca i1, !dbg !18118
-  %var_pi_69 = alloca i64, !dbg !18119
-  %t48 = alloca i1, !dbg !18120
+  %t127 = alloca i1, !dbg !18117
+  %t105 = alloca i1, !dbg !18118
+  %var_pi_77 = alloca i64, !dbg !18119
+  %t56 = alloca i1, !dbg !18120
+  %t28 = alloca i1, !dbg !18121
   %t27 = alloca i1, !dbg !18121
   %t26 = alloca i1, !dbg !18121
   %var_m_20 = alloca ptr, !dbg !18122
@@ -264618,228 +264655,241 @@ while_body_5:
   call ptr @spec_rt_retain(ptr %t25), !dbg !18122
   call ptr @spec_claim_pool(ptr %t25), !dbg !18122
   store ptr %t25, ptr %var_m_20, !dbg !18122
-  %t28 = load ptr, ptr %var_m_20, !dbg !18121
-  %t29 = getelementptr inbounds %struct.Member, ptr %t28, i32 0, i32 7, !dbg !18121
-  %t30 = load ptr, ptr %t29, !dbg !18121
-  %t31 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !18121
-  %t33 = call i1 @Str_stringEquals(ptr null, ptr %t30, ptr %t31), !dbg !18121
-  %t32 = xor i1 %t33, 1, !dbg !18121
-  store i1 %t32, ptr %t27, !dbg !18121
-  br i1 %t32, label %sc_rhs_7, label %sc_end_8, !dbg !18121
+  %t29 = load ptr, ptr %var_m_20, !dbg !18121
+  %t30 = getelementptr inbounds %struct.Member, ptr %t29, i32 0, i32 7, !dbg !18121
+  %t31 = load ptr, ptr %t30, !dbg !18121
+  %t32 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !18121
+  %t34 = call i1 @Str_stringEquals(ptr null, ptr %t31, ptr %t32), !dbg !18121
+  %t33 = xor i1 %t34, 1, !dbg !18121
+  store i1 %t33, ptr %t28, !dbg !18121
+  br i1 %t33, label %sc_rhs_7, label %sc_end_8, !dbg !18121
 sc_rhs_7:
-  %t34 = load ptr, ptr %var_m_20, !dbg !18121
-  %t35 = getelementptr inbounds %struct.Member, ptr %t34, i32 0, i32 7, !dbg !18121
-  %t36 = load ptr, ptr %t35, !dbg !18121
-  %t37 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !18121
-  %t39 = call i1 @Str_stringEquals(ptr null, ptr %t36, ptr %t37), !dbg !18121
-  %t38 = xor i1 %t39, 1, !dbg !18121
-  store i1 %t38, ptr %t27, !dbg !18121
+  %t35 = load ptr, ptr %var_m_20, !dbg !18121
+  %t36 = getelementptr inbounds %struct.Member, ptr %t35, i32 0, i32 7, !dbg !18121
+  %t37 = load ptr, ptr %t36, !dbg !18121
+  %t38 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !18121
+  %t40 = call i1 @Str_stringEquals(ptr null, ptr %t37, ptr %t38), !dbg !18121
+  %t39 = xor i1 %t40, 1, !dbg !18121
+  store i1 %t39, ptr %t28, !dbg !18121
   br label %sc_end_8, !dbg !18121
 sc_end_8:
-  %t40 = load i1, ptr %t27, !dbg !18121
-  store i1 %t40, ptr %t26, !dbg !18121
-  br i1 %t40, label %sc_rhs_9, label %sc_end_10, !dbg !18121
+  %t41 = load i1, ptr %t28, !dbg !18121
+  store i1 %t41, ptr %t27, !dbg !18121
+  br i1 %t41, label %sc_rhs_9, label %sc_end_10, !dbg !18121
 sc_rhs_9:
-  %t41 = load ptr, ptr %var_m_20, !dbg !18121
-  %t42 = getelementptr inbounds %struct.Member, ptr %t41, i32 0, i32 7, !dbg !18121
-  %t43 = load ptr, ptr %t42, !dbg !18121
-  %t44 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !18121
-  %t46 = call i1 @Str_stringEquals(ptr null, ptr %t43, ptr %t44), !dbg !18121
-  %t45 = xor i1 %t46, 1, !dbg !18121
-  store i1 %t45, ptr %t26, !dbg !18121
+  %t42 = load ptr, ptr %var_m_20, !dbg !18121
+  %t43 = getelementptr inbounds %struct.Member, ptr %t42, i32 0, i32 7, !dbg !18121
+  %t44 = load ptr, ptr %t43, !dbg !18121
+  %t45 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !18121
+  %t47 = call i1 @Str_stringEquals(ptr null, ptr %t44, ptr %t45), !dbg !18121
+  %t46 = xor i1 %t47, 1, !dbg !18121
+  store i1 %t46, ptr %t27, !dbg !18121
   br label %sc_end_10, !dbg !18121
 sc_end_10:
-  %t47 = load i1, ptr %t26, !dbg !18121
-  br i1 %t47, label %if_then_11, label %if_end_13, !dbg !18121
-if_then_11:
-  %t49 = load ptr, ptr %var_m_20, !dbg !18120
-  %t50 = getelementptr inbounds %struct.Member, ptr %t49, i32 0, i32 2, !dbg !18120
-  %t51 = load ptr, ptr %t50, !dbg !18120
-  %t52 = call ptr @MemberKind_FIELD__ensure(), !dbg !18120
-  call ptr @spec_claim_pool(ptr %t52), !dbg !18120
-  %t53 = icmp eq ptr %t51, %t52, !dbg !18120
-  store i1 %t53, ptr %t48, !dbg !18120
-  br i1 %t53, label %sc_end_15, label %sc_rhs_14, !dbg !18120
-sc_rhs_14:
-  %t54 = load ptr, ptr %var_m_20, !dbg !18120
-  %t55 = getelementptr inbounds %struct.Member, ptr %t54, i32 0, i32 2, !dbg !18120
-  %t56 = load ptr, ptr %t55, !dbg !18120
-  %t57 = call ptr @MemberKind_METHOD__ensure(), !dbg !18120
-  call ptr @spec_claim_pool(ptr %t57), !dbg !18120
-  %t58 = icmp eq ptr %t56, %t57, !dbg !18120
-  store i1 %t58, ptr %t48, !dbg !18120
-  br label %sc_end_15, !dbg !18120
-sc_end_15:
-  %t59 = load i1, ptr %t48, !dbg !18120
-  br i1 %t59, label %if_then_16, label %if_end_18, !dbg !18120
-if_then_16:
-  %t60 = load ptr, ptr %self_slot, !dbg !18129
-  %t61 = load ptr, ptr %var_m_20, !dbg !18129
-  %t62 = getelementptr inbounds %struct.Member, ptr %t61, i32 0, i32 6, !dbg !18129
-  %t63 = load ptr, ptr %t62, !dbg !18129
-  %t64 = icmp ne ptr %t60, null, !dbg !18129
-  br i1 %t64, label %vt_call_19, label %dir_call_20, !dbg !18129
-vt_call_19:
-  %t65 = getelementptr inbounds %struct.IrBuilder, ptr %t60, i32 0, i32 1, !dbg !18129
-  %t66 = load ptr, ptr %t65, !dbg !18129
-  %t67 = getelementptr ptr, ptr %t66, i64 1078, !dbg !18129
-  %t68 = load ptr, ptr %t67, !dbg !18129
-  call void %t68(ptr %t60, ptr %t63), !dbg !18129
-  br label %vt_end_21, !dbg !18129
-dir_call_20:
-  call void @IrBuilder_markBareTypeUse(ptr %t60, ptr %t63), !dbg !18129
-  br label %vt_end_21, !dbg !18129
-vt_end_21:
-  %t70 = add i64 0, 0, !dbg !18119
-  store i64 %t70, ptr %var_pi_69, !dbg !18119
-  br label %while_hdr_22, !dbg !18130
-while_hdr_22:
-  %t71 = load i64, ptr %var_pi_69, !dbg !18130
-  %t72 = load ptr, ptr %var_m_20, !dbg !18130
-  %t73 = getelementptr inbounds %struct.Member, ptr %t72, i32 0, i32 8, !dbg !18130
-  %t74 = load ptr, ptr %t73, !dbg !18130
-  %t75 = call i64 @Array__Parameter_length(ptr %t74), !dbg !18130
-  %t76 = icmp slt i64 %t71, %t75, !dbg !18130
-  br i1 %t76, label %while_body_23, label %while_end_24, !dbg !18130
-while_body_23:
-  %t77 = load ptr, ptr %self_slot, !dbg !18131
-  %t78 = load ptr, ptr %var_m_20, !dbg !18131
-  %t79 = getelementptr inbounds %struct.Member, ptr %t78, i32 0, i32 8, !dbg !18131
-  %t80 = load ptr, ptr %t79, !dbg !18131
-  %t81 = load i64, ptr %var_pi_69, !dbg !18131
-  %t82_szp = getelementptr %struct.Parameter, ptr null, i32 1, !dbg !18131
-  %t82_sz = ptrtoint ptr %t82_szp to i64, !dbg !18131
-  %t82 = call ptr @spec_rt_alloc(i64 %t82_sz, ptr @Parameter__destroy), !dbg !18131
-  %t82_tnp = getelementptr inbounds %struct.Parameter, ptr %t82, i32 0, i32 0, !dbg !18131
-  store ptr @.typename.Parameter, ptr %t82_tnp, !dbg !18131
-  %t82_vtp = getelementptr inbounds %struct.Parameter, ptr %t82, i32 0, i32 1, !dbg !18131
-  store ptr @.vtable.Parameter, ptr %t82_vtp, !dbg !18131
-  %t83 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !18131
-  %t84_szp = getelementptr %struct.Type, ptr null, i32 1, !dbg !18131
-  %t84_sz = ptrtoint ptr %t84_szp to i64, !dbg !18131
-  %t84 = call ptr @spec_rt_alloc(i64 %t84_sz, ptr @Type__destroy), !dbg !18131
-  %t84_tnp = getelementptr inbounds %struct.Type, ptr %t84, i32 0, i32 0, !dbg !18131
-  store ptr @.typename.Type, ptr %t84_tnp, !dbg !18131
-  %t84_vtp = getelementptr inbounds %struct.Type, ptr %t84, i32 0, i32 1, !dbg !18131
-  store ptr @.vtable.Type, ptr %t84_vtp, !dbg !18131
-  %t85 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !18131
-  call void @Type_init(ptr %t84, ptr %t85), !dbg !18131
-  call ptr @spec_claim_pool(ptr %t84), !dbg !18131
-  call void @Parameter_init(ptr %t82, ptr %t83, ptr %t84), !dbg !18131
-  call ptr @spec_claim_pool(ptr %t82), !dbg !18131
-  %t86 = call ptr @Array__Parameter_get_2(ptr %t80, i64 %t81, ptr %t82), !dbg !18131
-  %t87 = getelementptr inbounds %struct.Parameter, ptr %t86, i32 0, i32 3, !dbg !18131
+  %t48 = load i1, ptr %t27, !dbg !18121
+  store i1 %t48, ptr %t26, !dbg !18121
+  br i1 %t48, label %sc_rhs_11, label %sc_end_12, !dbg !18121
+sc_rhs_11:
+  %t49 = load ptr, ptr %var_m_20, !dbg !18121
+  %t50 = getelementptr inbounds %struct.Member, ptr %t49, i32 0, i32 7, !dbg !18121
+  %t51 = load ptr, ptr %t50, !dbg !18121
+  %t52 = call ptr @__spec_intern_cached(ptr @.str.358, ptr @.str.cache.358), !dbg !18121
+  %t54 = call i1 @Str_stringEquals(ptr null, ptr %t51, ptr %t52), !dbg !18121
+  %t53 = xor i1 %t54, 1, !dbg !18121
+  store i1 %t53, ptr %t26, !dbg !18121
+  br label %sc_end_12, !dbg !18121
+sc_end_12:
+  %t55 = load i1, ptr %t26, !dbg !18121
+  br i1 %t55, label %if_then_13, label %if_end_15, !dbg !18121
+if_then_13:
+  %t57 = load ptr, ptr %var_m_20, !dbg !18120
+  %t58 = getelementptr inbounds %struct.Member, ptr %t57, i32 0, i32 2, !dbg !18120
+  %t59 = load ptr, ptr %t58, !dbg !18120
+  %t60 = call ptr @MemberKind_FIELD__ensure(), !dbg !18120
+  call ptr @spec_claim_pool(ptr %t60), !dbg !18120
+  %t61 = icmp eq ptr %t59, %t60, !dbg !18120
+  store i1 %t61, ptr %t56, !dbg !18120
+  br i1 %t61, label %sc_end_17, label %sc_rhs_16, !dbg !18120
+sc_rhs_16:
+  %t62 = load ptr, ptr %var_m_20, !dbg !18120
+  %t63 = getelementptr inbounds %struct.Member, ptr %t62, i32 0, i32 2, !dbg !18120
+  %t64 = load ptr, ptr %t63, !dbg !18120
+  %t65 = call ptr @MemberKind_METHOD__ensure(), !dbg !18120
+  call ptr @spec_claim_pool(ptr %t65), !dbg !18120
+  %t66 = icmp eq ptr %t64, %t65, !dbg !18120
+  store i1 %t66, ptr %t56, !dbg !18120
+  br label %sc_end_17, !dbg !18120
+sc_end_17:
+  %t67 = load i1, ptr %t56, !dbg !18120
+  br i1 %t67, label %if_then_18, label %if_end_20, !dbg !18120
+if_then_18:
+  %t68 = load ptr, ptr %self_slot, !dbg !18129
+  %t69 = load ptr, ptr %var_m_20, !dbg !18129
+  %t70 = getelementptr inbounds %struct.Member, ptr %t69, i32 0, i32 6, !dbg !18129
+  %t71 = load ptr, ptr %t70, !dbg !18129
+  %t72 = icmp ne ptr %t68, null, !dbg !18129
+  br i1 %t72, label %vt_call_21, label %dir_call_22, !dbg !18129
+vt_call_21:
+  %t73 = getelementptr inbounds %struct.IrBuilder, ptr %t68, i32 0, i32 1, !dbg !18129
+  %t74 = load ptr, ptr %t73, !dbg !18129
+  %t75 = getelementptr ptr, ptr %t74, i64 1078, !dbg !18129
+  %t76 = load ptr, ptr %t75, !dbg !18129
+  call void %t76(ptr %t68, ptr %t71), !dbg !18129
+  br label %vt_end_23, !dbg !18129
+dir_call_22:
+  call void @IrBuilder_markBareTypeUse(ptr %t68, ptr %t71), !dbg !18129
+  br label %vt_end_23, !dbg !18129
+vt_end_23:
+  %t78 = add i64 0, 0, !dbg !18119
+  store i64 %t78, ptr %var_pi_77, !dbg !18119
+  br label %while_hdr_24, !dbg !18130
+while_hdr_24:
+  %t79 = load i64, ptr %var_pi_77, !dbg !18130
+  %t80 = load ptr, ptr %var_m_20, !dbg !18130
+  %t81 = getelementptr inbounds %struct.Member, ptr %t80, i32 0, i32 8, !dbg !18130
+  %t82 = load ptr, ptr %t81, !dbg !18130
+  %t83 = call i64 @Array__Parameter_length(ptr %t82), !dbg !18130
+  %t84 = icmp slt i64 %t79, %t83, !dbg !18130
+  br i1 %t84, label %while_body_25, label %while_end_26, !dbg !18130
+while_body_25:
+  %t85 = load ptr, ptr %self_slot, !dbg !18131
+  %t86 = load ptr, ptr %var_m_20, !dbg !18131
+  %t87 = getelementptr inbounds %struct.Member, ptr %t86, i32 0, i32 8, !dbg !18131
   %t88 = load ptr, ptr %t87, !dbg !18131
-  %t89 = icmp ne ptr %t77, null, !dbg !18131
-  br i1 %t89, label %vt_call_25, label %dir_call_26, !dbg !18131
-vt_call_25:
-  %t90 = getelementptr inbounds %struct.IrBuilder, ptr %t77, i32 0, i32 1, !dbg !18131
-  %t91 = load ptr, ptr %t90, !dbg !18131
-  %t92 = getelementptr ptr, ptr %t91, i64 1078, !dbg !18131
-  %t93 = load ptr, ptr %t92, !dbg !18131
-  call void %t93(ptr %t77, ptr %t88), !dbg !18131
-  br label %vt_end_27, !dbg !18131
-dir_call_26:
-  call void @IrBuilder_markBareTypeUse(ptr %t77, ptr %t88), !dbg !18131
-  br label %vt_end_27, !dbg !18131
-vt_end_27:
-  %t94 = load i64, ptr %var_pi_69, !dbg !18132
-  %t95 = add i64 0, 1, !dbg !18132
-  %t96 = add i64 %t94, %t95, !dbg !18132
-  store i64 %t96, ptr %var_pi_69, !dbg !18132
-  br label %while_hdr_22, !dbg !18130
-while_end_24:
-  br label %if_end_18, !dbg !18120
-if_end_18:
-  %t98 = load ptr, ptr %var_m_20, !dbg !18118
-  %t99 = getelementptr inbounds %struct.Member, ptr %t98, i32 0, i32 2, !dbg !18118
-  %t100 = load ptr, ptr %t99, !dbg !18118
-  %t101 = call ptr @MemberKind_METHOD__ensure(), !dbg !18118
-  call ptr @spec_claim_pool(ptr %t101), !dbg !18118
-  %t102 = icmp eq ptr %t100, %t101, !dbg !18118
-  store i1 %t102, ptr %t97, !dbg !18118
-  br i1 %t102, label %sc_rhs_28, label %sc_end_29, !dbg !18118
-sc_rhs_28:
-  %t103 = load ptr, ptr %var_m_20, !dbg !18118
-  %t104 = getelementptr inbounds %struct.Member, ptr %t103, i32 0, i32 9, !dbg !18118
-  %t105 = load ptr, ptr %t104, !dbg !18118
-  %t106 = call i64 @Array__Statement_length(ptr %t105), !dbg !18118
-  %t107 = add i64 0, 0, !dbg !18118
-  %t108 = icmp sgt i64 %t106, %t107, !dbg !18118
-  store i1 %t108, ptr %t97, !dbg !18118
-  br label %sc_end_29, !dbg !18118
-sc_end_29:
-  %t109 = load i1, ptr %t97, !dbg !18118
-  br i1 %t109, label %if_then_30, label %if_end_32, !dbg !18118
-if_then_30:
-  %t110 = load ptr, ptr %self_slot, !dbg !18133
-  %t111 = load ptr, ptr %var_m_20, !dbg !18133
-  %t112 = getelementptr inbounds %struct.Member, ptr %t111, i32 0, i32 9, !dbg !18133
-  %t113 = load ptr, ptr %t112, !dbg !18133
-  %t114 = icmp ne ptr %t110, null, !dbg !18133
-  br i1 %t114, label %vt_call_33, label %dir_call_34, !dbg !18133
-vt_call_33:
-  %t115 = getelementptr inbounds %struct.IrBuilder, ptr %t110, i32 0, i32 1, !dbg !18133
-  %t116 = load ptr, ptr %t115, !dbg !18133
-  %t117 = getelementptr ptr, ptr %t116, i64 1079, !dbg !18133
-  %t118 = load ptr, ptr %t117, !dbg !18133
-  call void %t118(ptr %t110, ptr %t113), !dbg !18133
-  br label %vt_end_35, !dbg !18133
-dir_call_34:
-  call void @IrBuilder_markBareStmtUse(ptr %t110, ptr %t113), !dbg !18133
-  br label %vt_end_35, !dbg !18133
-vt_end_35:
-  br label %if_end_32, !dbg !18118
-if_end_32:
-  %t120 = load ptr, ptr %var_m_20, !dbg !18117
-  %t121 = getelementptr inbounds %struct.Member, ptr %t120, i32 0, i32 2, !dbg !18117
-  %t122 = load ptr, ptr %t121, !dbg !18117
-  %t123 = call ptr @MemberKind_FIELD__ensure(), !dbg !18117
-  call ptr @spec_claim_pool(ptr %t123), !dbg !18117
-  %t124 = icmp eq ptr %t122, %t123, !dbg !18117
-  store i1 %t124, ptr %t119, !dbg !18117
-  br i1 %t124, label %sc_rhs_36, label %sc_end_37, !dbg !18117
-sc_rhs_36:
-  %t125 = load ptr, ptr %var_m_20, !dbg !18117
-  %t126 = getelementptr inbounds %struct.Member, ptr %t125, i32 0, i32 11, !dbg !18117
-  %t127 = load i1, ptr %t126, !dbg !18117
-  store i1 %t127, ptr %t119, !dbg !18117
-  br label %sc_end_37, !dbg !18117
-sc_end_37:
-  %t128 = load i1, ptr %t119, !dbg !18117
-  br i1 %t128, label %if_then_38, label %if_end_40, !dbg !18117
-if_then_38:
-  %t129 = load ptr, ptr %self_slot, !dbg !18134
-  %t130 = load ptr, ptr %var_m_20, !dbg !18134
-  %t131 = getelementptr inbounds %struct.Member, ptr %t130, i32 0, i32 10, !dbg !18134
-  %t132 = load ptr, ptr %t131, !dbg !18134
-  %t133 = icmp ne ptr %t129, null, !dbg !18134
-  br i1 %t133, label %vt_call_41, label %dir_call_42, !dbg !18134
-vt_call_41:
-  %t134 = getelementptr inbounds %struct.IrBuilder, ptr %t129, i32 0, i32 1, !dbg !18134
-  %t135 = load ptr, ptr %t134, !dbg !18134
-  %t136 = getelementptr ptr, ptr %t135, i64 1080, !dbg !18134
-  %t137 = load ptr, ptr %t136, !dbg !18134
-  call void %t137(ptr %t129, ptr %t132), !dbg !18134
-  br label %vt_end_43, !dbg !18134
-dir_call_42:
-  call void @IrBuilder_markBareExprUse(ptr %t129, ptr %t132), !dbg !18134
-  br label %vt_end_43, !dbg !18134
-vt_end_43:
-  br label %if_end_40, !dbg !18117
-if_end_40:
-  br label %if_end_13, !dbg !18121
-if_end_13:
-  %t138 = load i64, ptr %var_mi_12, !dbg !18135
-  %t139 = add i64 0, 1, !dbg !18135
-  %t140 = add i64 %t138, %t139, !dbg !18135
-  store i64 %t140, ptr %var_mi_12, !dbg !18135
+  %t89 = load i64, ptr %var_pi_77, !dbg !18131
+  %t90_szp = getelementptr %struct.Parameter, ptr null, i32 1, !dbg !18131
+  %t90_sz = ptrtoint ptr %t90_szp to i64, !dbg !18131
+  %t90 = call ptr @spec_rt_alloc(i64 %t90_sz, ptr @Parameter__destroy), !dbg !18131
+  %t90_tnp = getelementptr inbounds %struct.Parameter, ptr %t90, i32 0, i32 0, !dbg !18131
+  store ptr @.typename.Parameter, ptr %t90_tnp, !dbg !18131
+  %t90_vtp = getelementptr inbounds %struct.Parameter, ptr %t90, i32 0, i32 1, !dbg !18131
+  store ptr @.vtable.Parameter, ptr %t90_vtp, !dbg !18131
+  %t91 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !18131
+  %t92_szp = getelementptr %struct.Type, ptr null, i32 1, !dbg !18131
+  %t92_sz = ptrtoint ptr %t92_szp to i64, !dbg !18131
+  %t92 = call ptr @spec_rt_alloc(i64 %t92_sz, ptr @Type__destroy), !dbg !18131
+  %t92_tnp = getelementptr inbounds %struct.Type, ptr %t92, i32 0, i32 0, !dbg !18131
+  store ptr @.typename.Type, ptr %t92_tnp, !dbg !18131
+  %t92_vtp = getelementptr inbounds %struct.Type, ptr %t92, i32 0, i32 1, !dbg !18131
+  store ptr @.vtable.Type, ptr %t92_vtp, !dbg !18131
+  %t93 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !18131
+  call void @Type_init(ptr %t92, ptr %t93), !dbg !18131
+  call ptr @spec_claim_pool(ptr %t92), !dbg !18131
+  call void @Parameter_init(ptr %t90, ptr %t91, ptr %t92), !dbg !18131
+  call ptr @spec_claim_pool(ptr %t90), !dbg !18131
+  %t94 = call ptr @Array__Parameter_get_2(ptr %t88, i64 %t89, ptr %t90), !dbg !18131
+  %t95 = getelementptr inbounds %struct.Parameter, ptr %t94, i32 0, i32 3, !dbg !18131
+  %t96 = load ptr, ptr %t95, !dbg !18131
+  %t97 = icmp ne ptr %t85, null, !dbg !18131
+  br i1 %t97, label %vt_call_27, label %dir_call_28, !dbg !18131
+vt_call_27:
+  %t98 = getelementptr inbounds %struct.IrBuilder, ptr %t85, i32 0, i32 1, !dbg !18131
+  %t99 = load ptr, ptr %t98, !dbg !18131
+  %t100 = getelementptr ptr, ptr %t99, i64 1078, !dbg !18131
+  %t101 = load ptr, ptr %t100, !dbg !18131
+  call void %t101(ptr %t85, ptr %t96), !dbg !18131
+  br label %vt_end_29, !dbg !18131
+dir_call_28:
+  call void @IrBuilder_markBareTypeUse(ptr %t85, ptr %t96), !dbg !18131
+  br label %vt_end_29, !dbg !18131
+vt_end_29:
+  %t102 = load i64, ptr %var_pi_77, !dbg !18132
+  %t103 = add i64 0, 1, !dbg !18132
+  %t104 = add i64 %t102, %t103, !dbg !18132
+  store i64 %t104, ptr %var_pi_77, !dbg !18132
+  br label %while_hdr_24, !dbg !18130
+while_end_26:
+  br label %if_end_20, !dbg !18120
+if_end_20:
+  %t106 = load ptr, ptr %var_m_20, !dbg !18118
+  %t107 = getelementptr inbounds %struct.Member, ptr %t106, i32 0, i32 2, !dbg !18118
+  %t108 = load ptr, ptr %t107, !dbg !18118
+  %t109 = call ptr @MemberKind_METHOD__ensure(), !dbg !18118
+  call ptr @spec_claim_pool(ptr %t109), !dbg !18118
+  %t110 = icmp eq ptr %t108, %t109, !dbg !18118
+  store i1 %t110, ptr %t105, !dbg !18118
+  br i1 %t110, label %sc_rhs_30, label %sc_end_31, !dbg !18118
+sc_rhs_30:
+  %t111 = load ptr, ptr %var_m_20, !dbg !18118
+  %t112 = getelementptr inbounds %struct.Member, ptr %t111, i32 0, i32 9, !dbg !18118
+  %t113 = load ptr, ptr %t112, !dbg !18118
+  %t114 = call i64 @Array__Statement_length(ptr %t113), !dbg !18118
+  %t115 = add i64 0, 0, !dbg !18118
+  %t116 = icmp sgt i64 %t114, %t115, !dbg !18118
+  store i1 %t116, ptr %t105, !dbg !18118
+  br label %sc_end_31, !dbg !18118
+sc_end_31:
+  %t117 = load i1, ptr %t105, !dbg !18118
+  br i1 %t117, label %if_then_32, label %if_end_34, !dbg !18118
+if_then_32:
+  %t118 = load ptr, ptr %self_slot, !dbg !18133
+  %t119 = load ptr, ptr %var_m_20, !dbg !18133
+  %t120 = getelementptr inbounds %struct.Member, ptr %t119, i32 0, i32 9, !dbg !18133
+  %t121 = load ptr, ptr %t120, !dbg !18133
+  %t122 = icmp ne ptr %t118, null, !dbg !18133
+  br i1 %t122, label %vt_call_35, label %dir_call_36, !dbg !18133
+vt_call_35:
+  %t123 = getelementptr inbounds %struct.IrBuilder, ptr %t118, i32 0, i32 1, !dbg !18133
+  %t124 = load ptr, ptr %t123, !dbg !18133
+  %t125 = getelementptr ptr, ptr %t124, i64 1079, !dbg !18133
+  %t126 = load ptr, ptr %t125, !dbg !18133
+  call void %t126(ptr %t118, ptr %t121), !dbg !18133
+  br label %vt_end_37, !dbg !18133
+dir_call_36:
+  call void @IrBuilder_markBareStmtUse(ptr %t118, ptr %t121), !dbg !18133
+  br label %vt_end_37, !dbg !18133
+vt_end_37:
+  br label %if_end_34, !dbg !18118
+if_end_34:
+  %t128 = load ptr, ptr %var_m_20, !dbg !18117
+  %t129 = getelementptr inbounds %struct.Member, ptr %t128, i32 0, i32 2, !dbg !18117
+  %t130 = load ptr, ptr %t129, !dbg !18117
+  %t131 = call ptr @MemberKind_FIELD__ensure(), !dbg !18117
+  call ptr @spec_claim_pool(ptr %t131), !dbg !18117
+  %t132 = icmp eq ptr %t130, %t131, !dbg !18117
+  store i1 %t132, ptr %t127, !dbg !18117
+  br i1 %t132, label %sc_rhs_38, label %sc_end_39, !dbg !18117
+sc_rhs_38:
+  %t133 = load ptr, ptr %var_m_20, !dbg !18117
+  %t134 = getelementptr inbounds %struct.Member, ptr %t133, i32 0, i32 11, !dbg !18117
+  %t135 = load i1, ptr %t134, !dbg !18117
+  store i1 %t135, ptr %t127, !dbg !18117
+  br label %sc_end_39, !dbg !18117
+sc_end_39:
+  %t136 = load i1, ptr %t127, !dbg !18117
+  br i1 %t136, label %if_then_40, label %if_end_42, !dbg !18117
+if_then_40:
+  %t137 = load ptr, ptr %self_slot, !dbg !18134
+  %t138 = load ptr, ptr %var_m_20, !dbg !18134
+  %t139 = getelementptr inbounds %struct.Member, ptr %t138, i32 0, i32 10, !dbg !18134
+  %t140 = load ptr, ptr %t139, !dbg !18134
+  %t141 = icmp ne ptr %t137, null, !dbg !18134
+  br i1 %t141, label %vt_call_43, label %dir_call_44, !dbg !18134
+vt_call_43:
+  %t142 = getelementptr inbounds %struct.IrBuilder, ptr %t137, i32 0, i32 1, !dbg !18134
+  %t143 = load ptr, ptr %t142, !dbg !18134
+  %t144 = getelementptr ptr, ptr %t143, i64 1080, !dbg !18134
+  %t145 = load ptr, ptr %t144, !dbg !18134
+  call void %t145(ptr %t137, ptr %t140), !dbg !18134
+  br label %vt_end_45, !dbg !18134
+dir_call_44:
+  call void @IrBuilder_markBareExprUse(ptr %t137, ptr %t140), !dbg !18134
+  br label %vt_end_45, !dbg !18134
+vt_end_45:
+  br label %if_end_42, !dbg !18117
+if_end_42:
+  br label %if_end_15, !dbg !18121
+if_end_15:
+  %t146 = load i64, ptr %var_mi_12, !dbg !18135
+  %t147 = add i64 0, 1, !dbg !18135
+  %t148 = add i64 %t146, %t147, !dbg !18135
+  store i64 %t148, ptr %var_mi_12, !dbg !18135
   br label %while_hdr_4, !dbg !18128
 while_end_6:
-  %t141 = load i64, ptr %var_ci_2, !dbg !18136
-  %t142 = add i64 0, 1, !dbg !18136
-  %t143 = add i64 %t141, %t142, !dbg !18136
-  store i64 %t143, ptr %var_ci_2, !dbg !18136
+  %t149 = load i64, ptr %var_ci_2, !dbg !18136
+  %t150 = add i64 0, 1, !dbg !18136
+  %t151 = add i64 %t149, %t150, !dbg !18136
+  store i64 %t151, ptr %var_ci_2, !dbg !18136
   br label %while_hdr_1, !dbg !18127
 while_end_3:
   call void @spec_pool_release_to(i64 %t1), !dbg !18125
@@ -361017,32 +361067,32 @@ if_end_271:
 
 define ptr @GenericSpecializer_transformMember(ptr %self, ptr %p_m, ptr %p_subst, ptr %p_tplParams, ptr %p_selfTemplateName, ptr %p_selfSpecName) !dbg !23423 {
 entry:
-  %var_nest_309 = alloca ptr, !dbg !23424
-  store ptr null, ptr %var_nest_309, !dbg !23424
-  %var_nsub_242 = alloca ptr, !dbg !23425
-  store ptr null, ptr %var_nsub_242, !dbg !23425
-  %t231 = alloca ptr, !dbg !23426
-  store ptr null, ptr %t231, !dbg !23426
-  %var_smi_211 = alloca i64, !dbg !23427
-  %var_subMembers_209 = alloca ptr, !dbg !23428
-  store ptr null, ptr %var_subMembers_209, !dbg !23428
-  %var_sub_199 = alloca ptr, !dbg !23429
-  store ptr null, ptr %var_sub_199, !dbg !23429
-  %t182 = alloca ptr, !dbg !23430
-  store ptr null, ptr %t182, !dbg !23430
-  %t158 = alloca ptr, !dbg !23431
-  store ptr null, ptr %t158, !dbg !23431
-  %var_pi_138 = alloca i64, !dbg !23432
-  %var_nps_136 = alloca ptr, !dbg !23433
-  store ptr null, ptr %var_nps_136, !dbg !23433
-  %t125 = alloca ptr, !dbg !23434
-  store ptr null, ptr %t125, !dbg !23434
-  %t99 = alloca ptr, !dbg !23435
-  store ptr null, ptr %t99, !dbg !23435
-  %t71 = alloca ptr, !dbg !23436
-  store ptr null, ptr %t71, !dbg !23436
-  %var_nm_22 = alloca ptr, !dbg !23437
-  store ptr null, ptr %var_nm_22, !dbg !23437
+  %var_nest_316 = alloca ptr, !dbg !23424
+  store ptr null, ptr %var_nest_316, !dbg !23424
+  %var_nsub_249 = alloca ptr, !dbg !23425
+  store ptr null, ptr %var_nsub_249, !dbg !23425
+  %t238 = alloca ptr, !dbg !23426
+  store ptr null, ptr %t238, !dbg !23426
+  %var_smi_218 = alloca i64, !dbg !23427
+  %var_subMembers_216 = alloca ptr, !dbg !23428
+  store ptr null, ptr %var_subMembers_216, !dbg !23428
+  %var_sub_206 = alloca ptr, !dbg !23429
+  store ptr null, ptr %var_sub_206, !dbg !23429
+  %t189 = alloca ptr, !dbg !23430
+  store ptr null, ptr %t189, !dbg !23430
+  %t165 = alloca ptr, !dbg !23431
+  store ptr null, ptr %t165, !dbg !23431
+  %var_pi_145 = alloca i64, !dbg !23432
+  %var_nps_143 = alloca ptr, !dbg !23433
+  store ptr null, ptr %var_nps_143, !dbg !23433
+  %t132 = alloca ptr, !dbg !23434
+  store ptr null, ptr %t132, !dbg !23434
+  %t106 = alloca ptr, !dbg !23435
+  store ptr null, ptr %t106, !dbg !23435
+  %t78 = alloca ptr, !dbg !23436
+  store ptr null, ptr %t78, !dbg !23436
+  %var_nm_29 = alloca ptr, !dbg !23437
+  store ptr null, ptr %var_nm_29, !dbg !23437
   %t1 = call i64 @spec_pool_frame(), !dbg !23438
   %self_slot = alloca ptr, !dbg !23438
   store ptr %self, ptr %self_slot, !dbg !23438
@@ -361058,629 +361108,642 @@ entry:
   store ptr %p_selfSpecName, ptr %slot_selfSpecName, !dbg !23438
   %t2 = alloca i1, !dbg !23439
   %t3 = alloca i1, !dbg !23439
-  %t4 = load ptr, ptr %slot_m, !dbg !23439
-  %t5 = getelementptr inbounds %struct.Member, ptr %t4, i32 0, i32 7, !dbg !23439
-  %t6 = load ptr, ptr %t5, !dbg !23439
-  %t7 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !23439
-  %t8 = call i1 @Str_stringEquals(ptr null, ptr %t6, ptr %t7), !dbg !23439
-  store i1 %t8, ptr %t3, !dbg !23439
-  br i1 %t8, label %sc_end_2, label %sc_rhs_1, !dbg !23439
+  %t4 = alloca i1, !dbg !23439
+  %t5 = load ptr, ptr %slot_m, !dbg !23439
+  %t6 = getelementptr inbounds %struct.Member, ptr %t5, i32 0, i32 7, !dbg !23439
+  %t7 = load ptr, ptr %t6, !dbg !23439
+  %t8 = call ptr @__spec_intern_cached(ptr @.str.222, ptr @.str.cache.222), !dbg !23439
+  %t9 = call i1 @Str_stringEquals(ptr null, ptr %t7, ptr %t8), !dbg !23439
+  store i1 %t9, ptr %t4, !dbg !23439
+  br i1 %t9, label %sc_end_2, label %sc_rhs_1, !dbg !23439
 sc_rhs_1:
-  %t9 = load ptr, ptr %slot_m, !dbg !23439
-  %t10 = getelementptr inbounds %struct.Member, ptr %t9, i32 0, i32 7, !dbg !23439
-  %t11 = load ptr, ptr %t10, !dbg !23439
-  %t12 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !23439
-  %t13 = call i1 @Str_stringEquals(ptr null, ptr %t11, ptr %t12), !dbg !23439
-  store i1 %t13, ptr %t3, !dbg !23439
+  %t10 = load ptr, ptr %slot_m, !dbg !23439
+  %t11 = getelementptr inbounds %struct.Member, ptr %t10, i32 0, i32 7, !dbg !23439
+  %t12 = load ptr, ptr %t11, !dbg !23439
+  %t13 = call ptr @__spec_intern_cached(ptr @.str.226, ptr @.str.cache.226), !dbg !23439
+  %t14 = call i1 @Str_stringEquals(ptr null, ptr %t12, ptr %t13), !dbg !23439
+  store i1 %t14, ptr %t4, !dbg !23439
   br label %sc_end_2, !dbg !23439
 sc_end_2:
-  %t14 = load i1, ptr %t3, !dbg !23439
-  store i1 %t14, ptr %t2, !dbg !23439
-  br i1 %t14, label %sc_end_4, label %sc_rhs_3, !dbg !23439
+  %t15 = load i1, ptr %t4, !dbg !23439
+  store i1 %t15, ptr %t3, !dbg !23439
+  br i1 %t15, label %sc_end_4, label %sc_rhs_3, !dbg !23439
 sc_rhs_3:
-  %t15 = load ptr, ptr %slot_m, !dbg !23439
-  %t16 = getelementptr inbounds %struct.Member, ptr %t15, i32 0, i32 7, !dbg !23439
-  %t17 = load ptr, ptr %t16, !dbg !23439
-  %t18 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !23439
-  %t19 = call i1 @Str_stringEquals(ptr null, ptr %t17, ptr %t18), !dbg !23439
-  store i1 %t19, ptr %t2, !dbg !23439
+  %t16 = load ptr, ptr %slot_m, !dbg !23439
+  %t17 = getelementptr inbounds %struct.Member, ptr %t16, i32 0, i32 7, !dbg !23439
+  %t18 = load ptr, ptr %t17, !dbg !23439
+  %t19 = call ptr @__spec_intern_cached(ptr @.str.763, ptr @.str.cache.763), !dbg !23439
+  %t20 = call i1 @Str_stringEquals(ptr null, ptr %t18, ptr %t19), !dbg !23439
+  store i1 %t20, ptr %t3, !dbg !23439
   br label %sc_end_4, !dbg !23439
 sc_end_4:
-  %t20 = load i1, ptr %t2, !dbg !23439
-  br i1 %t20, label %if_then_5, label %if_end_7, !dbg !23439
-if_then_5:
-  %t21 = load ptr, ptr %slot_m, !dbg !23440
-  call ptr @spec_rt_retain(ptr %t21), !dbg !23440
+  %t21 = load i1, ptr %t3, !dbg !23439
+  store i1 %t21, ptr %t2, !dbg !23439
+  br i1 %t21, label %sc_end_6, label %sc_rhs_5, !dbg !23439
+sc_rhs_5:
+  %t22 = load ptr, ptr %slot_m, !dbg !23439
+  %t23 = getelementptr inbounds %struct.Member, ptr %t22, i32 0, i32 7, !dbg !23439
+  %t24 = load ptr, ptr %t23, !dbg !23439
+  %t25 = call ptr @__spec_intern_cached(ptr @.str.358, ptr @.str.cache.358), !dbg !23439
+  %t26 = call i1 @Str_stringEquals(ptr null, ptr %t24, ptr %t25), !dbg !23439
+  store i1 %t26, ptr %t2, !dbg !23439
+  br label %sc_end_6, !dbg !23439
+sc_end_6:
+  %t27 = load i1, ptr %t2, !dbg !23439
+  br i1 %t27, label %if_then_7, label %if_end_9, !dbg !23439
+if_then_7:
+  %t28 = load ptr, ptr %slot_m, !dbg !23440
+  call ptr @spec_rt_retain(ptr %t28), !dbg !23440
   call void @spec_pool_release_to(i64 %t1), !dbg !23440
-  call ptr @spec_claim_pool(ptr %t21), !dbg !23440
-  ret ptr %t21, !dbg !23440
-if_end_7:
-  %t23_szp = getelementptr %struct.Member, ptr null, i32 1, !dbg !23437
-  %t23_sz = ptrtoint ptr %t23_szp to i64, !dbg !23437
-  %t23 = call ptr @spec_rt_alloc(i64 %t23_sz, ptr @Member__destroy), !dbg !23437
-  %t23_tnp = getelementptr inbounds %struct.Member, ptr %t23, i32 0, i32 0, !dbg !23437
-  store ptr @.typename.Member, ptr %t23_tnp, !dbg !23437
-  %t23_vtp = getelementptr inbounds %struct.Member, ptr %t23, i32 0, i32 1, !dbg !23437
-  store ptr @.vtable.Member, ptr %t23_vtp, !dbg !23437
-  %t24 = load ptr, ptr %slot_m, !dbg !23437
-  %t25 = getelementptr inbounds %struct.Member, ptr %t24, i32 0, i32 2, !dbg !23437
-  %t26 = load ptr, ptr %t25, !dbg !23437
-  call void @Member_init(ptr %t23, ptr %t26), !dbg !23437
-  call ptr @spec_claim_pool(ptr %t23), !dbg !23437
-  call ptr @spec_rt_retain(ptr %t23), !dbg !23437
-  call ptr @spec_claim_pool(ptr %t23), !dbg !23437
-  store ptr %t23, ptr %var_nm_22, !dbg !23437
-  %t27 = load ptr, ptr %var_nm_22, !dbg !23441
-  %t28 = load ptr, ptr %slot_m, !dbg !23441
-  %t29 = getelementptr inbounds %struct.Member, ptr %t28, i32 0, i32 3, !dbg !23441
-  %t30 = load i64, ptr %t29, !dbg !23441
-  %t31 = icmp ne ptr %t27, null, !dbg !23441
-  br i1 %t31, label %vt_call_8, label %dir_call_9, !dbg !23441
-vt_call_8:
-  %t32 = getelementptr inbounds %struct.Member, ptr %t27, i32 0, i32 1, !dbg !23441
-  %t33 = load ptr, ptr %t32, !dbg !23441
-  %t34 = getelementptr ptr, ptr %t33, i64 457, !dbg !23441
-  %t35 = load ptr, ptr %t34, !dbg !23441
-  call void %t35(ptr %t27, i64 %t30), !dbg !23441
-  br label %vt_end_10, !dbg !23441
-dir_call_9:
-  call void @Member_setLine(ptr %t27, i64 %t30), !dbg !23441
-  br label %vt_end_10, !dbg !23441
-vt_end_10:
-  %t36 = load ptr, ptr %var_nm_22, !dbg !23442
-  %t37 = load ptr, ptr %slot_m, !dbg !23442
-  %t38 = getelementptr inbounds %struct.Member, ptr %t37, i32 0, i32 4, !dbg !23442
-  %t39 = load ptr, ptr %t38, !dbg !23442
-  %t40 = icmp ne ptr %t36, null, !dbg !23442
-  br i1 %t40, label %vt_call_11, label %dir_call_12, !dbg !23442
-vt_call_11:
-  %t41 = getelementptr inbounds %struct.Member, ptr %t36, i32 0, i32 1, !dbg !23442
-  %t42 = load ptr, ptr %t41, !dbg !23442
-  %t43 = getelementptr ptr, ptr %t42, i64 458, !dbg !23442
-  %t44 = load ptr, ptr %t43, !dbg !23442
-  call void %t44(ptr %t36, ptr %t39), !dbg !23442
-  br label %vt_end_13, !dbg !23442
-dir_call_12:
-  call void @Member_setSourceFile(ptr %t36, ptr %t39), !dbg !23442
-  br label %vt_end_13, !dbg !23442
-vt_end_13:
-  %t45 = load ptr, ptr %slot_m, !dbg !23443
-  %t46 = getelementptr inbounds %struct.Member, ptr %t45, i32 0, i32 7, !dbg !23443
-  %t47 = load ptr, ptr %t46, !dbg !23443
-  %t48 = load ptr, ptr %var_nm_22, !dbg !23443
-  %t49 = getelementptr inbounds %struct.Member, ptr %t48, i32 0, i32 7, !dbg !23443
-  call ptr @spec_rt_retain(ptr %t47), !dbg !23443
-  %t50 = load ptr, ptr %t49, !dbg !23443
-  call ptr @spec_claim_pool(ptr %t50), !dbg !23443
-  store ptr %t47, ptr %t49, !dbg !23443
-  %t51 = load ptr, ptr %slot_m, !dbg !23444
-  %t52 = getelementptr inbounds %struct.Member, ptr %t51, i32 0, i32 5, !dbg !23444
-  %t53 = load ptr, ptr %t52, !dbg !23444
-  %t54 = load ptr, ptr %var_nm_22, !dbg !23444
-  %t55 = getelementptr inbounds %struct.Member, ptr %t54, i32 0, i32 5, !dbg !23444
-  call ptr @spec_rt_retain(ptr %t53), !dbg !23444
-  %t56 = load ptr, ptr %t55, !dbg !23444
-  call ptr @spec_claim_pool(ptr %t56), !dbg !23444
-  store ptr %t53, ptr %t55, !dbg !23444
-  %t57 = load ptr, ptr %slot_m, !dbg !23445
-  %t58 = getelementptr inbounds %struct.Member, ptr %t57, i32 0, i32 2, !dbg !23445
-  %t59 = load ptr, ptr %t58, !dbg !23445
-  %t60 = call ptr @MemberKind_FIELD__ensure(), !dbg !23445
-  call ptr @spec_claim_pool(ptr %t60), !dbg !23445
-  %t61 = icmp eq ptr %t59, %t60, !dbg !23445
-  br i1 %t61, label %if_then_14, label %if_end_16, !dbg !23445
-if_then_14:
-  %t62 = load ptr, ptr %self_slot, !dbg !23436
-  %t63 = load ptr, ptr %slot_m, !dbg !23436
-  %t64 = getelementptr inbounds %struct.Member, ptr %t63, i32 0, i32 6, !dbg !23436
-  %t65 = load ptr, ptr %t64, !dbg !23436
-  %t66 = load ptr, ptr %slot_subst, !dbg !23436
-  %t67 = load ptr, ptr %slot_tplParams, !dbg !23436
-  %t68 = load ptr, ptr %slot_selfTemplateName, !dbg !23436
-  %t69 = load ptr, ptr %slot_selfSpecName, !dbg !23436
-  %t72 = icmp ne ptr %t62, null, !dbg !23436
-  br i1 %t72, label %vt_call_17, label %dir_call_18, !dbg !23436
-vt_call_17:
-  %t73 = getelementptr inbounds %struct.GenericSpecializer, ptr %t62, i32 0, i32 1, !dbg !23436
-  %t74 = load ptr, ptr %t73, !dbg !23436
-  %t75 = getelementptr ptr, ptr %t74, i64 1173, !dbg !23436
-  %t76 = load ptr, ptr %t75, !dbg !23436
-  %t77 = call ptr %t76(ptr %t62, ptr %t65, ptr %t66, ptr %t67, ptr %t68, ptr %t69), !dbg !23436
-  store ptr %t77, ptr %t71, !dbg !23436
-  br label %vt_end_19, !dbg !23436
-dir_call_18:
-  %t78 = call ptr @GenericSpecializer_transformType(ptr %t62, ptr %t65, ptr %t66, ptr %t67, ptr %t68, ptr %t69), !dbg !23436
-  store ptr %t78, ptr %t71, !dbg !23436
-  br label %vt_end_19, !dbg !23436
-vt_end_19:
-  %t70 = load ptr, ptr %t71, !dbg !23436
-  %t79 = load ptr, ptr %var_nm_22, !dbg !23436
-  %t80 = getelementptr inbounds %struct.Member, ptr %t79, i32 0, i32 6, !dbg !23436
-  call ptr @spec_rt_retain(ptr %t70), !dbg !23436
+  call ptr @spec_claim_pool(ptr %t28), !dbg !23440
+  ret ptr %t28, !dbg !23440
+if_end_9:
+  %t30_szp = getelementptr %struct.Member, ptr null, i32 1, !dbg !23437
+  %t30_sz = ptrtoint ptr %t30_szp to i64, !dbg !23437
+  %t30 = call ptr @spec_rt_alloc(i64 %t30_sz, ptr @Member__destroy), !dbg !23437
+  %t30_tnp = getelementptr inbounds %struct.Member, ptr %t30, i32 0, i32 0, !dbg !23437
+  store ptr @.typename.Member, ptr %t30_tnp, !dbg !23437
+  %t30_vtp = getelementptr inbounds %struct.Member, ptr %t30, i32 0, i32 1, !dbg !23437
+  store ptr @.vtable.Member, ptr %t30_vtp, !dbg !23437
+  %t31 = load ptr, ptr %slot_m, !dbg !23437
+  %t32 = getelementptr inbounds %struct.Member, ptr %t31, i32 0, i32 2, !dbg !23437
+  %t33 = load ptr, ptr %t32, !dbg !23437
+  call void @Member_init(ptr %t30, ptr %t33), !dbg !23437
+  call ptr @spec_claim_pool(ptr %t30), !dbg !23437
+  call ptr @spec_rt_retain(ptr %t30), !dbg !23437
+  call ptr @spec_claim_pool(ptr %t30), !dbg !23437
+  store ptr %t30, ptr %var_nm_29, !dbg !23437
+  %t34 = load ptr, ptr %var_nm_29, !dbg !23441
+  %t35 = load ptr, ptr %slot_m, !dbg !23441
+  %t36 = getelementptr inbounds %struct.Member, ptr %t35, i32 0, i32 3, !dbg !23441
+  %t37 = load i64, ptr %t36, !dbg !23441
+  %t38 = icmp ne ptr %t34, null, !dbg !23441
+  br i1 %t38, label %vt_call_10, label %dir_call_11, !dbg !23441
+vt_call_10:
+  %t39 = getelementptr inbounds %struct.Member, ptr %t34, i32 0, i32 1, !dbg !23441
+  %t40 = load ptr, ptr %t39, !dbg !23441
+  %t41 = getelementptr ptr, ptr %t40, i64 457, !dbg !23441
+  %t42 = load ptr, ptr %t41, !dbg !23441
+  call void %t42(ptr %t34, i64 %t37), !dbg !23441
+  br label %vt_end_12, !dbg !23441
+dir_call_11:
+  call void @Member_setLine(ptr %t34, i64 %t37), !dbg !23441
+  br label %vt_end_12, !dbg !23441
+vt_end_12:
+  %t43 = load ptr, ptr %var_nm_29, !dbg !23442
+  %t44 = load ptr, ptr %slot_m, !dbg !23442
+  %t45 = getelementptr inbounds %struct.Member, ptr %t44, i32 0, i32 4, !dbg !23442
+  %t46 = load ptr, ptr %t45, !dbg !23442
+  %t47 = icmp ne ptr %t43, null, !dbg !23442
+  br i1 %t47, label %vt_call_13, label %dir_call_14, !dbg !23442
+vt_call_13:
+  %t48 = getelementptr inbounds %struct.Member, ptr %t43, i32 0, i32 1, !dbg !23442
+  %t49 = load ptr, ptr %t48, !dbg !23442
+  %t50 = getelementptr ptr, ptr %t49, i64 458, !dbg !23442
+  %t51 = load ptr, ptr %t50, !dbg !23442
+  call void %t51(ptr %t43, ptr %t46), !dbg !23442
+  br label %vt_end_15, !dbg !23442
+dir_call_14:
+  call void @Member_setSourceFile(ptr %t43, ptr %t46), !dbg !23442
+  br label %vt_end_15, !dbg !23442
+vt_end_15:
+  %t52 = load ptr, ptr %slot_m, !dbg !23443
+  %t53 = getelementptr inbounds %struct.Member, ptr %t52, i32 0, i32 7, !dbg !23443
+  %t54 = load ptr, ptr %t53, !dbg !23443
+  %t55 = load ptr, ptr %var_nm_29, !dbg !23443
+  %t56 = getelementptr inbounds %struct.Member, ptr %t55, i32 0, i32 7, !dbg !23443
+  call ptr @spec_rt_retain(ptr %t54), !dbg !23443
+  %t57 = load ptr, ptr %t56, !dbg !23443
+  call ptr @spec_claim_pool(ptr %t57), !dbg !23443
+  store ptr %t54, ptr %t56, !dbg !23443
+  %t58 = load ptr, ptr %slot_m, !dbg !23444
+  %t59 = getelementptr inbounds %struct.Member, ptr %t58, i32 0, i32 5, !dbg !23444
+  %t60 = load ptr, ptr %t59, !dbg !23444
+  %t61 = load ptr, ptr %var_nm_29, !dbg !23444
+  %t62 = getelementptr inbounds %struct.Member, ptr %t61, i32 0, i32 5, !dbg !23444
+  call ptr @spec_rt_retain(ptr %t60), !dbg !23444
+  %t63 = load ptr, ptr %t62, !dbg !23444
+  call ptr @spec_claim_pool(ptr %t63), !dbg !23444
+  store ptr %t60, ptr %t62, !dbg !23444
+  %t64 = load ptr, ptr %slot_m, !dbg !23445
+  %t65 = getelementptr inbounds %struct.Member, ptr %t64, i32 0, i32 2, !dbg !23445
+  %t66 = load ptr, ptr %t65, !dbg !23445
+  %t67 = call ptr @MemberKind_FIELD__ensure(), !dbg !23445
+  call ptr @spec_claim_pool(ptr %t67), !dbg !23445
+  %t68 = icmp eq ptr %t66, %t67, !dbg !23445
+  br i1 %t68, label %if_then_16, label %if_end_18, !dbg !23445
+if_then_16:
+  %t69 = load ptr, ptr %self_slot, !dbg !23436
+  %t70 = load ptr, ptr %slot_m, !dbg !23436
+  %t71 = getelementptr inbounds %struct.Member, ptr %t70, i32 0, i32 6, !dbg !23436
+  %t72 = load ptr, ptr %t71, !dbg !23436
+  %t73 = load ptr, ptr %slot_subst, !dbg !23436
+  %t74 = load ptr, ptr %slot_tplParams, !dbg !23436
+  %t75 = load ptr, ptr %slot_selfTemplateName, !dbg !23436
+  %t76 = load ptr, ptr %slot_selfSpecName, !dbg !23436
+  %t79 = icmp ne ptr %t69, null, !dbg !23436
+  br i1 %t79, label %vt_call_19, label %dir_call_20, !dbg !23436
+vt_call_19:
+  %t80 = getelementptr inbounds %struct.GenericSpecializer, ptr %t69, i32 0, i32 1, !dbg !23436
   %t81 = load ptr, ptr %t80, !dbg !23436
-  call ptr @spec_claim_pool(ptr %t81), !dbg !23436
-  store ptr %t70, ptr %t80, !dbg !23436
-  %t82 = load ptr, ptr %slot_m, !dbg !23446
-  %t83 = getelementptr inbounds %struct.Member, ptr %t82, i32 0, i32 11, !dbg !23446
-  %t84 = load i1, ptr %t83, !dbg !23446
-  %t85 = load ptr, ptr %var_nm_22, !dbg !23446
-  %t86 = getelementptr inbounds %struct.Member, ptr %t85, i32 0, i32 11, !dbg !23446
-  store i1 %t84, ptr %t86, !dbg !23446
-  %t87 = load ptr, ptr %slot_m, !dbg !23447
-  %t88 = getelementptr inbounds %struct.Member, ptr %t87, i32 0, i32 11, !dbg !23447
-  %t89 = load i1, ptr %t88, !dbg !23447
-  br i1 %t89, label %if_then_20, label %if_end_22, !dbg !23447
-if_then_20:
-  %t90 = load ptr, ptr %self_slot, !dbg !23435
-  %t91 = load ptr, ptr %slot_m, !dbg !23435
-  %t92 = getelementptr inbounds %struct.Member, ptr %t91, i32 0, i32 10, !dbg !23435
-  %t93 = load ptr, ptr %t92, !dbg !23435
-  %t94 = load ptr, ptr %slot_subst, !dbg !23435
-  %t95 = load ptr, ptr %slot_tplParams, !dbg !23435
-  %t96 = load ptr, ptr %slot_selfTemplateName, !dbg !23435
-  %t97 = load ptr, ptr %slot_selfSpecName, !dbg !23435
-  %t100 = icmp ne ptr %t90, null, !dbg !23435
-  br i1 %t100, label %vt_call_23, label %dir_call_24, !dbg !23435
-vt_call_23:
-  %t101 = getelementptr inbounds %struct.GenericSpecializer, ptr %t90, i32 0, i32 1, !dbg !23435
-  %t102 = load ptr, ptr %t101, !dbg !23435
-  %t103 = getelementptr ptr, ptr %t102, i64 1182, !dbg !23435
-  %t104 = load ptr, ptr %t103, !dbg !23435
-  %t105 = call ptr %t104(ptr %t90, ptr %t93, ptr %t94, ptr %t95, ptr %t96, ptr %t97), !dbg !23435
-  store ptr %t105, ptr %t99, !dbg !23435
-  br label %vt_end_25, !dbg !23435
-dir_call_24:
-  %t106 = call ptr @GenericSpecializer_transformExpr(ptr %t90, ptr %t93, ptr %t94, ptr %t95, ptr %t96, ptr %t97), !dbg !23435
-  store ptr %t106, ptr %t99, !dbg !23435
-  br label %vt_end_25, !dbg !23435
-vt_end_25:
-  %t98 = load ptr, ptr %t99, !dbg !23435
-  %t107 = load ptr, ptr %var_nm_22, !dbg !23435
-  %t108 = getelementptr inbounds %struct.Member, ptr %t107, i32 0, i32 10, !dbg !23435
-  call ptr @spec_rt_retain(ptr %t98), !dbg !23435
+  %t82 = getelementptr ptr, ptr %t81, i64 1173, !dbg !23436
+  %t83 = load ptr, ptr %t82, !dbg !23436
+  %t84 = call ptr %t83(ptr %t69, ptr %t72, ptr %t73, ptr %t74, ptr %t75, ptr %t76), !dbg !23436
+  store ptr %t84, ptr %t78, !dbg !23436
+  br label %vt_end_21, !dbg !23436
+dir_call_20:
+  %t85 = call ptr @GenericSpecializer_transformType(ptr %t69, ptr %t72, ptr %t73, ptr %t74, ptr %t75, ptr %t76), !dbg !23436
+  store ptr %t85, ptr %t78, !dbg !23436
+  br label %vt_end_21, !dbg !23436
+vt_end_21:
+  %t77 = load ptr, ptr %t78, !dbg !23436
+  %t86 = load ptr, ptr %var_nm_29, !dbg !23436
+  %t87 = getelementptr inbounds %struct.Member, ptr %t86, i32 0, i32 6, !dbg !23436
+  call ptr @spec_rt_retain(ptr %t77), !dbg !23436
+  %t88 = load ptr, ptr %t87, !dbg !23436
+  call ptr @spec_claim_pool(ptr %t88), !dbg !23436
+  store ptr %t77, ptr %t87, !dbg !23436
+  %t89 = load ptr, ptr %slot_m, !dbg !23446
+  %t90 = getelementptr inbounds %struct.Member, ptr %t89, i32 0, i32 11, !dbg !23446
+  %t91 = load i1, ptr %t90, !dbg !23446
+  %t92 = load ptr, ptr %var_nm_29, !dbg !23446
+  %t93 = getelementptr inbounds %struct.Member, ptr %t92, i32 0, i32 11, !dbg !23446
+  store i1 %t91, ptr %t93, !dbg !23446
+  %t94 = load ptr, ptr %slot_m, !dbg !23447
+  %t95 = getelementptr inbounds %struct.Member, ptr %t94, i32 0, i32 11, !dbg !23447
+  %t96 = load i1, ptr %t95, !dbg !23447
+  br i1 %t96, label %if_then_22, label %if_end_24, !dbg !23447
+if_then_22:
+  %t97 = load ptr, ptr %self_slot, !dbg !23435
+  %t98 = load ptr, ptr %slot_m, !dbg !23435
+  %t99 = getelementptr inbounds %struct.Member, ptr %t98, i32 0, i32 10, !dbg !23435
+  %t100 = load ptr, ptr %t99, !dbg !23435
+  %t101 = load ptr, ptr %slot_subst, !dbg !23435
+  %t102 = load ptr, ptr %slot_tplParams, !dbg !23435
+  %t103 = load ptr, ptr %slot_selfTemplateName, !dbg !23435
+  %t104 = load ptr, ptr %slot_selfSpecName, !dbg !23435
+  %t107 = icmp ne ptr %t97, null, !dbg !23435
+  br i1 %t107, label %vt_call_25, label %dir_call_26, !dbg !23435
+vt_call_25:
+  %t108 = getelementptr inbounds %struct.GenericSpecializer, ptr %t97, i32 0, i32 1, !dbg !23435
   %t109 = load ptr, ptr %t108, !dbg !23435
-  call ptr @spec_claim_pool(ptr %t109), !dbg !23435
-  store ptr %t98, ptr %t108, !dbg !23435
-  br label %if_end_22, !dbg !23447
-if_end_22:
-  %t110 = load ptr, ptr %var_nm_22, !dbg !23448
-  call ptr @spec_rt_retain(ptr %t110), !dbg !23448
+  %t110 = getelementptr ptr, ptr %t109, i64 1182, !dbg !23435
+  %t111 = load ptr, ptr %t110, !dbg !23435
+  %t112 = call ptr %t111(ptr %t97, ptr %t100, ptr %t101, ptr %t102, ptr %t103, ptr %t104), !dbg !23435
+  store ptr %t112, ptr %t106, !dbg !23435
+  br label %vt_end_27, !dbg !23435
+dir_call_26:
+  %t113 = call ptr @GenericSpecializer_transformExpr(ptr %t97, ptr %t100, ptr %t101, ptr %t102, ptr %t103, ptr %t104), !dbg !23435
+  store ptr %t113, ptr %t106, !dbg !23435
+  br label %vt_end_27, !dbg !23435
+vt_end_27:
+  %t105 = load ptr, ptr %t106, !dbg !23435
+  %t114 = load ptr, ptr %var_nm_29, !dbg !23435
+  %t115 = getelementptr inbounds %struct.Member, ptr %t114, i32 0, i32 10, !dbg !23435
+  call ptr @spec_rt_retain(ptr %t105), !dbg !23435
+  %t116 = load ptr, ptr %t115, !dbg !23435
+  call ptr @spec_claim_pool(ptr %t116), !dbg !23435
+  store ptr %t105, ptr %t115, !dbg !23435
+  br label %if_end_24, !dbg !23447
+if_end_24:
+  %t117 = load ptr, ptr %var_nm_29, !dbg !23448
+  call ptr @spec_rt_retain(ptr %t117), !dbg !23448
   call void @spec_pool_release_to(i64 %t1), !dbg !23448
-  call ptr @spec_claim_pool(ptr %t110), !dbg !23448
-  ret ptr %t110, !dbg !23448
-if_end_16:
-  %t111 = load ptr, ptr %slot_m, !dbg !23449
-  %t112 = getelementptr inbounds %struct.Member, ptr %t111, i32 0, i32 2, !dbg !23449
-  %t113 = load ptr, ptr %t112, !dbg !23449
-  %t114 = call ptr @MemberKind_METHOD__ensure(), !dbg !23449
-  call ptr @spec_claim_pool(ptr %t114), !dbg !23449
-  %t115 = icmp eq ptr %t113, %t114, !dbg !23449
-  br i1 %t115, label %if_then_26, label %if_end_28, !dbg !23449
-if_then_26:
-  %t116 = load ptr, ptr %self_slot, !dbg !23434
-  %t117 = load ptr, ptr %slot_m, !dbg !23434
-  %t118 = getelementptr inbounds %struct.Member, ptr %t117, i32 0, i32 6, !dbg !23434
-  %t119 = load ptr, ptr %t118, !dbg !23434
-  %t120 = load ptr, ptr %slot_subst, !dbg !23434
-  %t121 = load ptr, ptr %slot_tplParams, !dbg !23434
-  %t122 = load ptr, ptr %slot_selfTemplateName, !dbg !23434
-  %t123 = load ptr, ptr %slot_selfSpecName, !dbg !23434
-  %t126 = icmp ne ptr %t116, null, !dbg !23434
-  br i1 %t126, label %vt_call_29, label %dir_call_30, !dbg !23434
-vt_call_29:
-  %t127 = getelementptr inbounds %struct.GenericSpecializer, ptr %t116, i32 0, i32 1, !dbg !23434
-  %t128 = load ptr, ptr %t127, !dbg !23434
-  %t129 = getelementptr ptr, ptr %t128, i64 1173, !dbg !23434
-  %t130 = load ptr, ptr %t129, !dbg !23434
-  %t131 = call ptr %t130(ptr %t116, ptr %t119, ptr %t120, ptr %t121, ptr %t122, ptr %t123), !dbg !23434
-  store ptr %t131, ptr %t125, !dbg !23434
-  br label %vt_end_31, !dbg !23434
-dir_call_30:
-  %t132 = call ptr @GenericSpecializer_transformType(ptr %t116, ptr %t119, ptr %t120, ptr %t121, ptr %t122, ptr %t123), !dbg !23434
-  store ptr %t132, ptr %t125, !dbg !23434
-  br label %vt_end_31, !dbg !23434
-vt_end_31:
-  %t124 = load ptr, ptr %t125, !dbg !23434
-  %t133 = load ptr, ptr %var_nm_22, !dbg !23434
-  %t134 = getelementptr inbounds %struct.Member, ptr %t133, i32 0, i32 6, !dbg !23434
-  call ptr @spec_rt_retain(ptr %t124), !dbg !23434
+  call ptr @spec_claim_pool(ptr %t117), !dbg !23448
+  ret ptr %t117, !dbg !23448
+if_end_18:
+  %t118 = load ptr, ptr %slot_m, !dbg !23449
+  %t119 = getelementptr inbounds %struct.Member, ptr %t118, i32 0, i32 2, !dbg !23449
+  %t120 = load ptr, ptr %t119, !dbg !23449
+  %t121 = call ptr @MemberKind_METHOD__ensure(), !dbg !23449
+  call ptr @spec_claim_pool(ptr %t121), !dbg !23449
+  %t122 = icmp eq ptr %t120, %t121, !dbg !23449
+  br i1 %t122, label %if_then_28, label %if_end_30, !dbg !23449
+if_then_28:
+  %t123 = load ptr, ptr %self_slot, !dbg !23434
+  %t124 = load ptr, ptr %slot_m, !dbg !23434
+  %t125 = getelementptr inbounds %struct.Member, ptr %t124, i32 0, i32 6, !dbg !23434
+  %t126 = load ptr, ptr %t125, !dbg !23434
+  %t127 = load ptr, ptr %slot_subst, !dbg !23434
+  %t128 = load ptr, ptr %slot_tplParams, !dbg !23434
+  %t129 = load ptr, ptr %slot_selfTemplateName, !dbg !23434
+  %t130 = load ptr, ptr %slot_selfSpecName, !dbg !23434
+  %t133 = icmp ne ptr %t123, null, !dbg !23434
+  br i1 %t133, label %vt_call_31, label %dir_call_32, !dbg !23434
+vt_call_31:
+  %t134 = getelementptr inbounds %struct.GenericSpecializer, ptr %t123, i32 0, i32 1, !dbg !23434
   %t135 = load ptr, ptr %t134, !dbg !23434
-  call ptr @spec_claim_pool(ptr %t135), !dbg !23434
-  store ptr %t124, ptr %t134, !dbg !23434
-  %t137 = call ptr @Vector_newVecObject(ptr null), !dbg !23433
-  call ptr @spec_claim_pool(ptr %t137), !dbg !23433
-  call ptr @spec_rt_retain(ptr %t137), !dbg !23433
-  call ptr @spec_claim_pool(ptr %t137), !dbg !23433
-  store ptr %t137, ptr %var_nps_136, !dbg !23433
-  %t139 = add i64 0, 0, !dbg !23432
-  store i64 %t139, ptr %var_pi_138, !dbg !23432
-  br label %while_hdr_32, !dbg !23450
-while_hdr_32:
-  %t140 = load i64, ptr %var_pi_138, !dbg !23450
-  %t141 = load ptr, ptr %slot_m, !dbg !23450
-  %t142 = getelementptr inbounds %struct.Member, ptr %t141, i32 0, i32 8, !dbg !23450
-  %t143 = load ptr, ptr %t142, !dbg !23450
-  %t144 = call i64 @Array__Parameter_length(ptr %t143), !dbg !23450
-  %t145 = icmp slt i64 %t140, %t144, !dbg !23450
-  br i1 %t145, label %while_body_33, label %while_end_34, !dbg !23450
-while_body_33:
-  %t146 = load ptr, ptr %var_nps_136, !dbg !23431
-  %t147 = load ptr, ptr %self_slot, !dbg !23431
-  %t148 = load ptr, ptr %slot_m, !dbg !23431
-  %t149 = getelementptr inbounds %struct.Member, ptr %t148, i32 0, i32 8, !dbg !23431
-  %t150 = load ptr, ptr %t149, !dbg !23431
-  %t151 = load i64, ptr %var_pi_138, !dbg !23431
-  %t152 = call ptr @Array__Parameter_get(ptr %t150, i64 %t151), !dbg !23431
-  %t153 = load ptr, ptr %slot_subst, !dbg !23431
-  %t154 = load ptr, ptr %slot_tplParams, !dbg !23431
-  %t155 = load ptr, ptr %slot_selfTemplateName, !dbg !23431
-  %t156 = load ptr, ptr %slot_selfSpecName, !dbg !23431
-  %t159 = icmp ne ptr %t147, null, !dbg !23431
-  br i1 %t159, label %vt_call_35, label %dir_call_36, !dbg !23431
-vt_call_35:
-  %t160 = getelementptr inbounds %struct.GenericSpecializer, ptr %t147, i32 0, i32 1, !dbg !23431
-  %t161 = load ptr, ptr %t160, !dbg !23431
-  %t162 = getelementptr ptr, ptr %t161, i64 1178, !dbg !23431
-  %t163 = load ptr, ptr %t162, !dbg !23431
-  %t164 = call ptr %t163(ptr %t147, ptr %t152, ptr %t153, ptr %t154, ptr %t155, ptr %t156), !dbg !23431
-  store ptr %t164, ptr %t158, !dbg !23431
-  br label %vt_end_37, !dbg !23431
-dir_call_36:
-  %t165 = call ptr @GenericSpecializer_transformParam(ptr %t147, ptr %t152, ptr %t153, ptr %t154, ptr %t155, ptr %t156), !dbg !23431
-  store ptr %t165, ptr %t158, !dbg !23431
-  br label %vt_end_37, !dbg !23431
-vt_end_37:
-  %t157 = load ptr, ptr %t158, !dbg !23431
-  call void @Array__Parameter_add(ptr %t146, ptr %t157), !dbg !23431
-  %t166 = load i64, ptr %var_pi_138, !dbg !23451
-  %t167 = add i64 0, 1, !dbg !23451
-  %t168 = add i64 %t166, %t167, !dbg !23451
-  store i64 %t168, ptr %var_pi_138, !dbg !23451
-  br label %while_hdr_32, !dbg !23450
-while_end_34:
-  %t169 = load ptr, ptr %var_nps_136, !dbg !23452
-  %t170 = load ptr, ptr %var_nm_22, !dbg !23452
-  %t171 = getelementptr inbounds %struct.Member, ptr %t170, i32 0, i32 8, !dbg !23452
-  call ptr @spec_rt_retain(ptr %t169), !dbg !23452
-  %t172 = load ptr, ptr %t171, !dbg !23452
-  call ptr @spec_claim_pool(ptr %t172), !dbg !23452
-  store ptr %t169, ptr %t171, !dbg !23452
-  %t173 = load ptr, ptr %self_slot, !dbg !23430
-  %t174 = load ptr, ptr %slot_m, !dbg !23430
-  %t175 = getelementptr inbounds %struct.Member, ptr %t174, i32 0, i32 9, !dbg !23430
-  %t176 = load ptr, ptr %t175, !dbg !23430
-  %t177 = load ptr, ptr %slot_subst, !dbg !23430
-  %t178 = load ptr, ptr %slot_tplParams, !dbg !23430
-  %t179 = load ptr, ptr %slot_selfTemplateName, !dbg !23430
-  %t180 = load ptr, ptr %slot_selfSpecName, !dbg !23430
-  %t183 = icmp ne ptr %t173, null, !dbg !23430
-  br i1 %t183, label %vt_call_38, label %dir_call_39, !dbg !23430
-vt_call_38:
-  %t184 = getelementptr inbounds %struct.GenericSpecializer, ptr %t173, i32 0, i32 1, !dbg !23430
-  %t185 = load ptr, ptr %t184, !dbg !23430
-  %t186 = getelementptr ptr, ptr %t185, i64 1179, !dbg !23430
-  %t187 = load ptr, ptr %t186, !dbg !23430
-  %t188 = call ptr %t187(ptr %t173, ptr %t176, ptr %t177, ptr %t178, ptr %t179, ptr %t180), !dbg !23430
-  store ptr %t188, ptr %t182, !dbg !23430
-  br label %vt_end_40, !dbg !23430
-dir_call_39:
-  %t189 = call ptr @GenericSpecializer_transformStmts(ptr %t173, ptr %t176, ptr %t177, ptr %t178, ptr %t179, ptr %t180), !dbg !23430
-  store ptr %t189, ptr %t182, !dbg !23430
-  br label %vt_end_40, !dbg !23430
-vt_end_40:
-  %t181 = load ptr, ptr %t182, !dbg !23430
-  %t190 = load ptr, ptr %var_nm_22, !dbg !23430
-  %t191 = getelementptr inbounds %struct.Member, ptr %t190, i32 0, i32 9, !dbg !23430
-  call ptr @spec_rt_retain(ptr %t181), !dbg !23430
+  %t136 = getelementptr ptr, ptr %t135, i64 1173, !dbg !23434
+  %t137 = load ptr, ptr %t136, !dbg !23434
+  %t138 = call ptr %t137(ptr %t123, ptr %t126, ptr %t127, ptr %t128, ptr %t129, ptr %t130), !dbg !23434
+  store ptr %t138, ptr %t132, !dbg !23434
+  br label %vt_end_33, !dbg !23434
+dir_call_32:
+  %t139 = call ptr @GenericSpecializer_transformType(ptr %t123, ptr %t126, ptr %t127, ptr %t128, ptr %t129, ptr %t130), !dbg !23434
+  store ptr %t139, ptr %t132, !dbg !23434
+  br label %vt_end_33, !dbg !23434
+vt_end_33:
+  %t131 = load ptr, ptr %t132, !dbg !23434
+  %t140 = load ptr, ptr %var_nm_29, !dbg !23434
+  %t141 = getelementptr inbounds %struct.Member, ptr %t140, i32 0, i32 6, !dbg !23434
+  call ptr @spec_rt_retain(ptr %t131), !dbg !23434
+  %t142 = load ptr, ptr %t141, !dbg !23434
+  call ptr @spec_claim_pool(ptr %t142), !dbg !23434
+  store ptr %t131, ptr %t141, !dbg !23434
+  %t144 = call ptr @Vector_newVecObject(ptr null), !dbg !23433
+  call ptr @spec_claim_pool(ptr %t144), !dbg !23433
+  call ptr @spec_rt_retain(ptr %t144), !dbg !23433
+  call ptr @spec_claim_pool(ptr %t144), !dbg !23433
+  store ptr %t144, ptr %var_nps_143, !dbg !23433
+  %t146 = add i64 0, 0, !dbg !23432
+  store i64 %t146, ptr %var_pi_145, !dbg !23432
+  br label %while_hdr_34, !dbg !23450
+while_hdr_34:
+  %t147 = load i64, ptr %var_pi_145, !dbg !23450
+  %t148 = load ptr, ptr %slot_m, !dbg !23450
+  %t149 = getelementptr inbounds %struct.Member, ptr %t148, i32 0, i32 8, !dbg !23450
+  %t150 = load ptr, ptr %t149, !dbg !23450
+  %t151 = call i64 @Array__Parameter_length(ptr %t150), !dbg !23450
+  %t152 = icmp slt i64 %t147, %t151, !dbg !23450
+  br i1 %t152, label %while_body_35, label %while_end_36, !dbg !23450
+while_body_35:
+  %t153 = load ptr, ptr %var_nps_143, !dbg !23431
+  %t154 = load ptr, ptr %self_slot, !dbg !23431
+  %t155 = load ptr, ptr %slot_m, !dbg !23431
+  %t156 = getelementptr inbounds %struct.Member, ptr %t155, i32 0, i32 8, !dbg !23431
+  %t157 = load ptr, ptr %t156, !dbg !23431
+  %t158 = load i64, ptr %var_pi_145, !dbg !23431
+  %t159 = call ptr @Array__Parameter_get(ptr %t157, i64 %t158), !dbg !23431
+  %t160 = load ptr, ptr %slot_subst, !dbg !23431
+  %t161 = load ptr, ptr %slot_tplParams, !dbg !23431
+  %t162 = load ptr, ptr %slot_selfTemplateName, !dbg !23431
+  %t163 = load ptr, ptr %slot_selfSpecName, !dbg !23431
+  %t166 = icmp ne ptr %t154, null, !dbg !23431
+  br i1 %t166, label %vt_call_37, label %dir_call_38, !dbg !23431
+vt_call_37:
+  %t167 = getelementptr inbounds %struct.GenericSpecializer, ptr %t154, i32 0, i32 1, !dbg !23431
+  %t168 = load ptr, ptr %t167, !dbg !23431
+  %t169 = getelementptr ptr, ptr %t168, i64 1178, !dbg !23431
+  %t170 = load ptr, ptr %t169, !dbg !23431
+  %t171 = call ptr %t170(ptr %t154, ptr %t159, ptr %t160, ptr %t161, ptr %t162, ptr %t163), !dbg !23431
+  store ptr %t171, ptr %t165, !dbg !23431
+  br label %vt_end_39, !dbg !23431
+dir_call_38:
+  %t172 = call ptr @GenericSpecializer_transformParam(ptr %t154, ptr %t159, ptr %t160, ptr %t161, ptr %t162, ptr %t163), !dbg !23431
+  store ptr %t172, ptr %t165, !dbg !23431
+  br label %vt_end_39, !dbg !23431
+vt_end_39:
+  %t164 = load ptr, ptr %t165, !dbg !23431
+  call void @Array__Parameter_add(ptr %t153, ptr %t164), !dbg !23431
+  %t173 = load i64, ptr %var_pi_145, !dbg !23451
+  %t174 = add i64 0, 1, !dbg !23451
+  %t175 = add i64 %t173, %t174, !dbg !23451
+  store i64 %t175, ptr %var_pi_145, !dbg !23451
+  br label %while_hdr_34, !dbg !23450
+while_end_36:
+  %t176 = load ptr, ptr %var_nps_143, !dbg !23452
+  %t177 = load ptr, ptr %var_nm_29, !dbg !23452
+  %t178 = getelementptr inbounds %struct.Member, ptr %t177, i32 0, i32 8, !dbg !23452
+  call ptr @spec_rt_retain(ptr %t176), !dbg !23452
+  %t179 = load ptr, ptr %t178, !dbg !23452
+  call ptr @spec_claim_pool(ptr %t179), !dbg !23452
+  store ptr %t176, ptr %t178, !dbg !23452
+  %t180 = load ptr, ptr %self_slot, !dbg !23430
+  %t181 = load ptr, ptr %slot_m, !dbg !23430
+  %t182 = getelementptr inbounds %struct.Member, ptr %t181, i32 0, i32 9, !dbg !23430
+  %t183 = load ptr, ptr %t182, !dbg !23430
+  %t184 = load ptr, ptr %slot_subst, !dbg !23430
+  %t185 = load ptr, ptr %slot_tplParams, !dbg !23430
+  %t186 = load ptr, ptr %slot_selfTemplateName, !dbg !23430
+  %t187 = load ptr, ptr %slot_selfSpecName, !dbg !23430
+  %t190 = icmp ne ptr %t180, null, !dbg !23430
+  br i1 %t190, label %vt_call_40, label %dir_call_41, !dbg !23430
+vt_call_40:
+  %t191 = getelementptr inbounds %struct.GenericSpecializer, ptr %t180, i32 0, i32 1, !dbg !23430
   %t192 = load ptr, ptr %t191, !dbg !23430
-  call ptr @spec_claim_pool(ptr %t192), !dbg !23430
-  store ptr %t181, ptr %t191, !dbg !23430
-  %t193 = load ptr, ptr %var_nm_22, !dbg !23453
-  call ptr @spec_rt_retain(ptr %t193), !dbg !23453
+  %t193 = getelementptr ptr, ptr %t192, i64 1179, !dbg !23430
+  %t194 = load ptr, ptr %t193, !dbg !23430
+  %t195 = call ptr %t194(ptr %t180, ptr %t183, ptr %t184, ptr %t185, ptr %t186, ptr %t187), !dbg !23430
+  store ptr %t195, ptr %t189, !dbg !23430
+  br label %vt_end_42, !dbg !23430
+dir_call_41:
+  %t196 = call ptr @GenericSpecializer_transformStmts(ptr %t180, ptr %t183, ptr %t184, ptr %t185, ptr %t186, ptr %t187), !dbg !23430
+  store ptr %t196, ptr %t189, !dbg !23430
+  br label %vt_end_42, !dbg !23430
+vt_end_42:
+  %t188 = load ptr, ptr %t189, !dbg !23430
+  %t197 = load ptr, ptr %var_nm_29, !dbg !23430
+  %t198 = getelementptr inbounds %struct.Member, ptr %t197, i32 0, i32 9, !dbg !23430
+  call ptr @spec_rt_retain(ptr %t188), !dbg !23430
+  %t199 = load ptr, ptr %t198, !dbg !23430
+  call ptr @spec_claim_pool(ptr %t199), !dbg !23430
+  store ptr %t188, ptr %t198, !dbg !23430
+  %t200 = load ptr, ptr %var_nm_29, !dbg !23453
+  call ptr @spec_rt_retain(ptr %t200), !dbg !23453
   call void @spec_pool_release_to(i64 %t1), !dbg !23453
-  call ptr @spec_claim_pool(ptr %t193), !dbg !23453
-  ret ptr %t193, !dbg !23453
-if_end_28:
-  %t194 = load ptr, ptr %slot_m, !dbg !23454
-  %t195 = getelementptr inbounds %struct.Member, ptr %t194, i32 0, i32 2, !dbg !23454
-  %t196 = load ptr, ptr %t195, !dbg !23454
-  %t197 = call ptr @MemberKind_CLASS__ensure(), !dbg !23454
-  call ptr @spec_claim_pool(ptr %t197), !dbg !23454
-  %t198 = icmp eq ptr %t196, %t197, !dbg !23454
-  br i1 %t198, label %if_then_41, label %if_end_43, !dbg !23454
-if_then_41:
-  %t200 = load ptr, ptr %slot_m, !dbg !23429
-  %t201 = getelementptr inbounds %struct.Member, ptr %t200, i32 0, i32 12, !dbg !23429
-  %t202 = load ptr, ptr %t201, !dbg !23429
-  call ptr @spec_rt_retain(ptr %t202), !dbg !23429
-  call ptr @spec_claim_pool(ptr %t202), !dbg !23429
-  store ptr %t202, ptr %var_sub_199, !dbg !23429
-  %t203 = load ptr, ptr %var_sub_199, !dbg !23455
-  %t204 = getelementptr inbounds %struct.ClassInfo, ptr %t203, i32 0, i32 2, !dbg !23455
-  %t205 = load ptr, ptr %t204, !dbg !23455
-  %t206 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23455
-  %t207 = call i1 @Str_stringEquals(ptr null, ptr %t205, ptr %t206), !dbg !23455
-  br i1 %t207, label %if_then_44, label %if_end_46, !dbg !23455
-if_then_44:
-  %t208 = load ptr, ptr %slot_m, !dbg !23456
-  call ptr @spec_rt_retain(ptr %t208), !dbg !23456
+  call ptr @spec_claim_pool(ptr %t200), !dbg !23453
+  ret ptr %t200, !dbg !23453
+if_end_30:
+  %t201 = load ptr, ptr %slot_m, !dbg !23454
+  %t202 = getelementptr inbounds %struct.Member, ptr %t201, i32 0, i32 2, !dbg !23454
+  %t203 = load ptr, ptr %t202, !dbg !23454
+  %t204 = call ptr @MemberKind_CLASS__ensure(), !dbg !23454
+  call ptr @spec_claim_pool(ptr %t204), !dbg !23454
+  %t205 = icmp eq ptr %t203, %t204, !dbg !23454
+  br i1 %t205, label %if_then_43, label %if_end_45, !dbg !23454
+if_then_43:
+  %t207 = load ptr, ptr %slot_m, !dbg !23429
+  %t208 = getelementptr inbounds %struct.Member, ptr %t207, i32 0, i32 12, !dbg !23429
+  %t209 = load ptr, ptr %t208, !dbg !23429
+  call ptr @spec_rt_retain(ptr %t209), !dbg !23429
+  call ptr @spec_claim_pool(ptr %t209), !dbg !23429
+  store ptr %t209, ptr %var_sub_206, !dbg !23429
+  %t210 = load ptr, ptr %var_sub_206, !dbg !23455
+  %t211 = getelementptr inbounds %struct.ClassInfo, ptr %t210, i32 0, i32 2, !dbg !23455
+  %t212 = load ptr, ptr %t211, !dbg !23455
+  %t213 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23455
+  %t214 = call i1 @Str_stringEquals(ptr null, ptr %t212, ptr %t213), !dbg !23455
+  br i1 %t214, label %if_then_46, label %if_end_48, !dbg !23455
+if_then_46:
+  %t215 = load ptr, ptr %slot_m, !dbg !23456
+  call ptr @spec_rt_retain(ptr %t215), !dbg !23456
   call void @spec_pool_release_to(i64 %t1), !dbg !23456
-  call ptr @spec_claim_pool(ptr %t208), !dbg !23456
-  ret ptr %t208, !dbg !23456
-if_end_46:
-  %t210 = call ptr @Vector_newVecObject(ptr null), !dbg !23428
-  call ptr @spec_claim_pool(ptr %t210), !dbg !23428
-  call ptr @spec_rt_retain(ptr %t210), !dbg !23428
-  call ptr @spec_claim_pool(ptr %t210), !dbg !23428
-  store ptr %t210, ptr %var_subMembers_209, !dbg !23428
-  %t212 = add i64 0, 0, !dbg !23427
-  store i64 %t212, ptr %var_smi_211, !dbg !23427
-  br label %while_hdr_47, !dbg !23457
-while_hdr_47:
-  %t213 = load i64, ptr %var_smi_211, !dbg !23457
-  %t214 = load ptr, ptr %var_sub_199, !dbg !23457
-  %t215 = getelementptr inbounds %struct.ClassInfo, ptr %t214, i32 0, i32 9, !dbg !23457
-  %t216 = load ptr, ptr %t215, !dbg !23457
-  %t217 = call i64 @Array__Member_length(ptr %t216), !dbg !23457
-  %t218 = icmp slt i64 %t213, %t217, !dbg !23457
-  br i1 %t218, label %while_body_48, label %while_end_49, !dbg !23457
-while_body_48:
-  %t219 = load ptr, ptr %var_subMembers_209, !dbg !23426
-  %t220 = load ptr, ptr %self_slot, !dbg !23426
-  %t221 = load ptr, ptr %var_sub_199, !dbg !23426
-  %t222 = getelementptr inbounds %struct.ClassInfo, ptr %t221, i32 0, i32 9, !dbg !23426
-  %t223 = load ptr, ptr %t222, !dbg !23426
-  %t224 = load i64, ptr %var_smi_211, !dbg !23426
-  %t225 = call ptr @Array__Member_get(ptr %t223, i64 %t224), !dbg !23426
-  %t226 = load ptr, ptr %slot_subst, !dbg !23426
-  %t227 = load ptr, ptr %slot_tplParams, !dbg !23426
-  %t228 = load ptr, ptr %slot_selfTemplateName, !dbg !23426
-  %t229 = load ptr, ptr %slot_selfSpecName, !dbg !23426
-  %t232 = icmp ne ptr %t220, null, !dbg !23426
-  br i1 %t232, label %vt_call_50, label %dir_call_51, !dbg !23426
-vt_call_50:
-  %t233 = getelementptr inbounds %struct.GenericSpecializer, ptr %t220, i32 0, i32 1, !dbg !23426
-  %t234 = load ptr, ptr %t233, !dbg !23426
-  %t235 = getelementptr ptr, ptr %t234, i64 1183, !dbg !23426
-  %t236 = load ptr, ptr %t235, !dbg !23426
-  %t237 = call ptr %t236(ptr %t220, ptr %t225, ptr %t226, ptr %t227, ptr %t228, ptr %t229), !dbg !23426
-  store ptr %t237, ptr %t231, !dbg !23426
-  br label %vt_end_52, !dbg !23426
-dir_call_51:
-  %t238 = call ptr @GenericSpecializer_transformMember(ptr %t220, ptr %t225, ptr %t226, ptr %t227, ptr %t228, ptr %t229), !dbg !23426
-  store ptr %t238, ptr %t231, !dbg !23426
-  br label %vt_end_52, !dbg !23426
-vt_end_52:
-  %t230 = load ptr, ptr %t231, !dbg !23426
-  call void @Array__Member_add(ptr %t219, ptr %t230), !dbg !23426
-  %t239 = load i64, ptr %var_smi_211, !dbg !23458
-  %t240 = add i64 0, 1, !dbg !23458
-  %t241 = add i64 %t239, %t240, !dbg !23458
-  store i64 %t241, ptr %var_smi_211, !dbg !23458
-  br label %while_hdr_47, !dbg !23457
-while_end_49:
-  %t243_szp = getelementptr %struct.ClassInfo, ptr null, i32 1, !dbg !23425
-  %t243_sz = ptrtoint ptr %t243_szp to i64, !dbg !23425
-  %t243 = call ptr @spec_rt_alloc(i64 %t243_sz, ptr @ClassInfo__destroy), !dbg !23425
-  %t243_tnp = getelementptr inbounds %struct.ClassInfo, ptr %t243, i32 0, i32 0, !dbg !23425
-  store ptr @.typename.ClassInfo, ptr %t243_tnp, !dbg !23425
-  %t243_vtp = getelementptr inbounds %struct.ClassInfo, ptr %t243, i32 0, i32 1, !dbg !23425
-  store ptr @.vtable.ClassInfo, ptr %t243_vtp, !dbg !23425
-  %t244 = load ptr, ptr %var_sub_199, !dbg !23425
-  %t245 = getelementptr inbounds %struct.ClassInfo, ptr %t244, i32 0, i32 2, !dbg !23425
-  %t246 = load ptr, ptr %t245, !dbg !23425
-  %t247 = load ptr, ptr %var_sub_199, !dbg !23425
-  %t248 = getelementptr inbounds %struct.ClassInfo, ptr %t247, i32 0, i32 6, !dbg !23425
-  %t249 = load ptr, ptr %t248, !dbg !23425
-  %t250 = load ptr, ptr %var_subMembers_209, !dbg !23425
-  call void @ClassInfo_init(ptr %t243, ptr %t246, ptr %t249, ptr %t250), !dbg !23425
-  call ptr @spec_claim_pool(ptr %t243), !dbg !23425
-  call ptr @spec_rt_retain(ptr %t243), !dbg !23425
-  call ptr @spec_claim_pool(ptr %t243), !dbg !23425
-  store ptr %t243, ptr %var_nsub_242, !dbg !23425
-  %t251 = load ptr, ptr %var_nsub_242, !dbg !23459
-  %t252 = load ptr, ptr %var_sub_199, !dbg !23459
-  %t253 = getelementptr inbounds %struct.ClassInfo, ptr %t252, i32 0, i32 2, !dbg !23459
-  %t254 = load ptr, ptr %t253, !dbg !23459
-  %t255 = load ptr, ptr %var_sub_199, !dbg !23459
-  %t256 = getelementptr inbounds %struct.ClassInfo, ptr %t255, i32 0, i32 7, !dbg !23459
-  %t257 = load ptr, ptr %t256, !dbg !23459
-  %t258 = load ptr, ptr %var_subMembers_209, !dbg !23459
-  %t259 = icmp ne ptr %t251, null, !dbg !23459
-  br i1 %t259, label %vt_call_53, label %dir_call_54, !dbg !23459
-vt_call_53:
-  %t260 = getelementptr inbounds %struct.ClassInfo, ptr %t251, i32 0, i32 1, !dbg !23459
+  call ptr @spec_claim_pool(ptr %t215), !dbg !23456
+  ret ptr %t215, !dbg !23456
+if_end_48:
+  %t217 = call ptr @Vector_newVecObject(ptr null), !dbg !23428
+  call ptr @spec_claim_pool(ptr %t217), !dbg !23428
+  call ptr @spec_rt_retain(ptr %t217), !dbg !23428
+  call ptr @spec_claim_pool(ptr %t217), !dbg !23428
+  store ptr %t217, ptr %var_subMembers_216, !dbg !23428
+  %t219 = add i64 0, 0, !dbg !23427
+  store i64 %t219, ptr %var_smi_218, !dbg !23427
+  br label %while_hdr_49, !dbg !23457
+while_hdr_49:
+  %t220 = load i64, ptr %var_smi_218, !dbg !23457
+  %t221 = load ptr, ptr %var_sub_206, !dbg !23457
+  %t222 = getelementptr inbounds %struct.ClassInfo, ptr %t221, i32 0, i32 9, !dbg !23457
+  %t223 = load ptr, ptr %t222, !dbg !23457
+  %t224 = call i64 @Array__Member_length(ptr %t223), !dbg !23457
+  %t225 = icmp slt i64 %t220, %t224, !dbg !23457
+  br i1 %t225, label %while_body_50, label %while_end_51, !dbg !23457
+while_body_50:
+  %t226 = load ptr, ptr %var_subMembers_216, !dbg !23426
+  %t227 = load ptr, ptr %self_slot, !dbg !23426
+  %t228 = load ptr, ptr %var_sub_206, !dbg !23426
+  %t229 = getelementptr inbounds %struct.ClassInfo, ptr %t228, i32 0, i32 9, !dbg !23426
+  %t230 = load ptr, ptr %t229, !dbg !23426
+  %t231 = load i64, ptr %var_smi_218, !dbg !23426
+  %t232 = call ptr @Array__Member_get(ptr %t230, i64 %t231), !dbg !23426
+  %t233 = load ptr, ptr %slot_subst, !dbg !23426
+  %t234 = load ptr, ptr %slot_tplParams, !dbg !23426
+  %t235 = load ptr, ptr %slot_selfTemplateName, !dbg !23426
+  %t236 = load ptr, ptr %slot_selfSpecName, !dbg !23426
+  %t239 = icmp ne ptr %t227, null, !dbg !23426
+  br i1 %t239, label %vt_call_52, label %dir_call_53, !dbg !23426
+vt_call_52:
+  %t240 = getelementptr inbounds %struct.GenericSpecializer, ptr %t227, i32 0, i32 1, !dbg !23426
+  %t241 = load ptr, ptr %t240, !dbg !23426
+  %t242 = getelementptr ptr, ptr %t241, i64 1183, !dbg !23426
+  %t243 = load ptr, ptr %t242, !dbg !23426
+  %t244 = call ptr %t243(ptr %t227, ptr %t232, ptr %t233, ptr %t234, ptr %t235, ptr %t236), !dbg !23426
+  store ptr %t244, ptr %t238, !dbg !23426
+  br label %vt_end_54, !dbg !23426
+dir_call_53:
+  %t245 = call ptr @GenericSpecializer_transformMember(ptr %t227, ptr %t232, ptr %t233, ptr %t234, ptr %t235, ptr %t236), !dbg !23426
+  store ptr %t245, ptr %t238, !dbg !23426
+  br label %vt_end_54, !dbg !23426
+vt_end_54:
+  %t237 = load ptr, ptr %t238, !dbg !23426
+  call void @Array__Member_add(ptr %t226, ptr %t237), !dbg !23426
+  %t246 = load i64, ptr %var_smi_218, !dbg !23458
+  %t247 = add i64 0, 1, !dbg !23458
+  %t248 = add i64 %t246, %t247, !dbg !23458
+  store i64 %t248, ptr %var_smi_218, !dbg !23458
+  br label %while_hdr_49, !dbg !23457
+while_end_51:
+  %t250_szp = getelementptr %struct.ClassInfo, ptr null, i32 1, !dbg !23425
+  %t250_sz = ptrtoint ptr %t250_szp to i64, !dbg !23425
+  %t250 = call ptr @spec_rt_alloc(i64 %t250_sz, ptr @ClassInfo__destroy), !dbg !23425
+  %t250_tnp = getelementptr inbounds %struct.ClassInfo, ptr %t250, i32 0, i32 0, !dbg !23425
+  store ptr @.typename.ClassInfo, ptr %t250_tnp, !dbg !23425
+  %t250_vtp = getelementptr inbounds %struct.ClassInfo, ptr %t250, i32 0, i32 1, !dbg !23425
+  store ptr @.vtable.ClassInfo, ptr %t250_vtp, !dbg !23425
+  %t251 = load ptr, ptr %var_sub_206, !dbg !23425
+  %t252 = getelementptr inbounds %struct.ClassInfo, ptr %t251, i32 0, i32 2, !dbg !23425
+  %t253 = load ptr, ptr %t252, !dbg !23425
+  %t254 = load ptr, ptr %var_sub_206, !dbg !23425
+  %t255 = getelementptr inbounds %struct.ClassInfo, ptr %t254, i32 0, i32 6, !dbg !23425
+  %t256 = load ptr, ptr %t255, !dbg !23425
+  %t257 = load ptr, ptr %var_subMembers_216, !dbg !23425
+  call void @ClassInfo_init(ptr %t250, ptr %t253, ptr %t256, ptr %t257), !dbg !23425
+  call ptr @spec_claim_pool(ptr %t250), !dbg !23425
+  call ptr @spec_rt_retain(ptr %t250), !dbg !23425
+  call ptr @spec_claim_pool(ptr %t250), !dbg !23425
+  store ptr %t250, ptr %var_nsub_249, !dbg !23425
+  %t258 = load ptr, ptr %var_nsub_249, !dbg !23459
+  %t259 = load ptr, ptr %var_sub_206, !dbg !23459
+  %t260 = getelementptr inbounds %struct.ClassInfo, ptr %t259, i32 0, i32 2, !dbg !23459
   %t261 = load ptr, ptr %t260, !dbg !23459
-  %t262 = getelementptr ptr, ptr %t261, i64 455, !dbg !23459
-  %t263 = load ptr, ptr %t262, !dbg !23459
-  call void %t263(ptr %t251, ptr %t254, ptr %t257, ptr %t258), !dbg !23459
-  br label %vt_end_55, !dbg !23459
-dir_call_54:
-  call void @ClassInfo_withBaseClasses(ptr %t251, ptr %t254, ptr %t257, ptr %t258), !dbg !23459
-  br label %vt_end_55, !dbg !23459
-vt_end_55:
-  %t264 = load ptr, ptr %var_nsub_242, !dbg !23460
-  %t265 = load ptr, ptr %var_sub_199, !dbg !23460
-  %t266 = getelementptr inbounds %struct.ClassInfo, ptr %t265, i32 0, i32 4, !dbg !23460
-  %t267 = load i64, ptr %t266, !dbg !23460
-  %t268 = icmp ne ptr %t264, null, !dbg !23460
-  br i1 %t268, label %vt_call_56, label %dir_call_57, !dbg !23460
-vt_call_56:
-  %t269 = getelementptr inbounds %struct.ClassInfo, ptr %t264, i32 0, i32 1, !dbg !23460
-  %t270 = load ptr, ptr %t269, !dbg !23460
-  %t271 = getelementptr ptr, ptr %t270, i64 457, !dbg !23460
-  %t272 = load ptr, ptr %t271, !dbg !23460
-  call void %t272(ptr %t264, i64 %t267), !dbg !23460
-  br label %vt_end_58, !dbg !23460
-dir_call_57:
-  call void @ClassInfo_setLine(ptr %t264, i64 %t267), !dbg !23460
-  br label %vt_end_58, !dbg !23460
-vt_end_58:
-  %t273 = load ptr, ptr %var_nsub_242, !dbg !23461
-  %t274 = load ptr, ptr %var_sub_199, !dbg !23461
-  %t275 = getelementptr inbounds %struct.ClassInfo, ptr %t274, i32 0, i32 5, !dbg !23461
-  %t276 = load ptr, ptr %t275, !dbg !23461
-  %t277 = icmp ne ptr %t273, null, !dbg !23461
-  br i1 %t277, label %vt_call_59, label %dir_call_60, !dbg !23461
-vt_call_59:
-  %t278 = getelementptr inbounds %struct.ClassInfo, ptr %t273, i32 0, i32 1, !dbg !23461
-  %t279 = load ptr, ptr %t278, !dbg !23461
-  %t280 = getelementptr ptr, ptr %t279, i64 458, !dbg !23461
-  %t281 = load ptr, ptr %t280, !dbg !23461
-  call void %t281(ptr %t273, ptr %t276), !dbg !23461
-  br label %vt_end_61, !dbg !23461
-dir_call_60:
-  call void @ClassInfo_setSourceFile(ptr %t273, ptr %t276), !dbg !23461
-  br label %vt_end_61, !dbg !23461
-vt_end_61:
-  %t282 = load ptr, ptr %var_nsub_242, !dbg !23462
-  %t283 = call ptr @Vector_newVec(ptr null), !dbg !23462
-  call ptr @spec_claim_pool(ptr %t283), !dbg !23462
-  %t284 = icmp ne ptr %t282, null, !dbg !23462
-  br i1 %t284, label %vt_call_62, label %dir_call_63, !dbg !23462
-vt_call_62:
-  %t285 = getelementptr inbounds %struct.ClassInfo, ptr %t282, i32 0, i32 1, !dbg !23462
-  %t286 = load ptr, ptr %t285, !dbg !23462
-  %t287 = getelementptr ptr, ptr %t286, i64 456, !dbg !23462
-  %t288 = load ptr, ptr %t287, !dbg !23462
-  call void %t288(ptr %t282, ptr %t283), !dbg !23462
-  br label %vt_end_64, !dbg !23462
-dir_call_63:
-  call void @ClassInfo_setTypeParams(ptr %t282, ptr %t283), !dbg !23462
-  br label %vt_end_64, !dbg !23462
-vt_end_64:
-  %t289 = load ptr, ptr %slot_selfSpecName, !dbg !23463
-  %t290 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23463
-  %t292 = call i1 @Str_stringEquals(ptr null, ptr %t289, ptr %t290), !dbg !23463
-  %t291 = xor i1 %t292, 1, !dbg !23463
-  br i1 %t291, label %if_then_65, label %if_else_66, !dbg !23463
-if_then_65:
-  %t293 = load ptr, ptr %var_nsub_242, !dbg !23464
-  %t294 = load ptr, ptr %slot_selfSpecName, !dbg !23464
-  %t295 = icmp ne ptr %t293, null, !dbg !23464
-  br i1 %t295, label %vt_call_68, label %dir_call_69, !dbg !23464
-vt_call_68:
-  %t296 = getelementptr inbounds %struct.ClassInfo, ptr %t293, i32 0, i32 1, !dbg !23464
-  %t297 = load ptr, ptr %t296, !dbg !23464
-  %t298 = getelementptr ptr, ptr %t297, i64 454, !dbg !23464
-  %t299 = load ptr, ptr %t298, !dbg !23464
-  call void %t299(ptr %t293, ptr %t294), !dbg !23464
-  br label %vt_end_70, !dbg !23464
-dir_call_69:
-  call void @ClassInfo_setOuter(ptr %t293, ptr %t294), !dbg !23464
-  br label %vt_end_70, !dbg !23464
-vt_end_70:
-  br label %if_end_67, !dbg !23463
-if_else_66:
-  %t300 = load ptr, ptr %var_nsub_242, !dbg !23465
-  %t301 = load ptr, ptr %var_sub_199, !dbg !23465
-  %t302 = getelementptr inbounds %struct.ClassInfo, ptr %t301, i32 0, i32 3, !dbg !23465
-  %t303 = load ptr, ptr %t302, !dbg !23465
-  %t304 = icmp ne ptr %t300, null, !dbg !23465
-  br i1 %t304, label %vt_call_71, label %dir_call_72, !dbg !23465
-vt_call_71:
-  %t305 = getelementptr inbounds %struct.ClassInfo, ptr %t300, i32 0, i32 1, !dbg !23465
-  %t306 = load ptr, ptr %t305, !dbg !23465
-  %t307 = getelementptr ptr, ptr %t306, i64 454, !dbg !23465
-  %t308 = load ptr, ptr %t307, !dbg !23465
-  call void %t308(ptr %t300, ptr %t303), !dbg !23465
-  br label %vt_end_73, !dbg !23465
-dir_call_72:
-  call void @ClassInfo_setOuter(ptr %t300, ptr %t303), !dbg !23465
-  br label %vt_end_73, !dbg !23465
-vt_end_73:
-  br label %if_end_67, !dbg !23463
-if_end_67:
-  %t310_szp = getelementptr %struct.Member, ptr null, i32 1, !dbg !23424
-  %t310_sz = ptrtoint ptr %t310_szp to i64, !dbg !23424
-  %t310 = call ptr @spec_rt_alloc(i64 %t310_sz, ptr @Member__destroy), !dbg !23424
-  %t310_tnp = getelementptr inbounds %struct.Member, ptr %t310, i32 0, i32 0, !dbg !23424
-  store ptr @.typename.Member, ptr %t310_tnp, !dbg !23424
-  %t310_vtp = getelementptr inbounds %struct.Member, ptr %t310, i32 0, i32 1, !dbg !23424
-  store ptr @.vtable.Member, ptr %t310_vtp, !dbg !23424
-  %t311 = call ptr @MemberKind_CLASS__ensure(), !dbg !23424
-  call ptr @spec_claim_pool(ptr %t311), !dbg !23424
-  call void @Member_init(ptr %t310, ptr %t311), !dbg !23424
-  call ptr @spec_claim_pool(ptr %t310), !dbg !23424
-  call ptr @spec_rt_retain(ptr %t310), !dbg !23424
-  call ptr @spec_claim_pool(ptr %t310), !dbg !23424
-  store ptr %t310, ptr %var_nest_309, !dbg !23424
-  %t312 = load ptr, ptr %var_nest_309, !dbg !23466
-  %t313 = load ptr, ptr %slot_m, !dbg !23466
-  %t314 = getelementptr inbounds %struct.Member, ptr %t313, i32 0, i32 3, !dbg !23466
-  %t315 = load i64, ptr %t314, !dbg !23466
-  %t316 = icmp ne ptr %t312, null, !dbg !23466
-  br i1 %t316, label %vt_call_74, label %dir_call_75, !dbg !23466
-vt_call_74:
-  %t317 = getelementptr inbounds %struct.Member, ptr %t312, i32 0, i32 1, !dbg !23466
-  %t318 = load ptr, ptr %t317, !dbg !23466
-  %t319 = getelementptr ptr, ptr %t318, i64 457, !dbg !23466
-  %t320 = load ptr, ptr %t319, !dbg !23466
-  call void %t320(ptr %t312, i64 %t315), !dbg !23466
-  br label %vt_end_76, !dbg !23466
-dir_call_75:
-  call void @Member_setLine(ptr %t312, i64 %t315), !dbg !23466
-  br label %vt_end_76, !dbg !23466
-vt_end_76:
-  %t321 = load ptr, ptr %var_nest_309, !dbg !23467
-  %t322 = load ptr, ptr %slot_m, !dbg !23467
-  %t323 = getelementptr inbounds %struct.Member, ptr %t322, i32 0, i32 4, !dbg !23467
-  %t324 = load ptr, ptr %t323, !dbg !23467
-  %t325 = icmp ne ptr %t321, null, !dbg !23467
-  br i1 %t325, label %vt_call_77, label %dir_call_78, !dbg !23467
-vt_call_77:
-  %t326 = getelementptr inbounds %struct.Member, ptr %t321, i32 0, i32 1, !dbg !23467
-  %t327 = load ptr, ptr %t326, !dbg !23467
-  %t328 = getelementptr ptr, ptr %t327, i64 458, !dbg !23467
-  %t329 = load ptr, ptr %t328, !dbg !23467
-  call void %t329(ptr %t321, ptr %t324), !dbg !23467
-  br label %vt_end_79, !dbg !23467
-dir_call_78:
-  call void @Member_setSourceFile(ptr %t321, ptr %t324), !dbg !23467
-  br label %vt_end_79, !dbg !23467
-vt_end_79:
-  %t330 = load ptr, ptr %slot_m, !dbg !23468
-  %t331 = getelementptr inbounds %struct.Member, ptr %t330, i32 0, i32 7, !dbg !23468
-  %t332 = load ptr, ptr %t331, !dbg !23468
-  %t333 = load ptr, ptr %var_nest_309, !dbg !23468
-  %t334 = getelementptr inbounds %struct.Member, ptr %t333, i32 0, i32 7, !dbg !23468
-  call ptr @spec_rt_retain(ptr %t332), !dbg !23468
-  %t335 = load ptr, ptr %t334, !dbg !23468
-  call ptr @spec_claim_pool(ptr %t335), !dbg !23468
-  store ptr %t332, ptr %t334, !dbg !23468
-  %t336 = load ptr, ptr %slot_m, !dbg !23469
-  %t337 = getelementptr inbounds %struct.Member, ptr %t336, i32 0, i32 5, !dbg !23469
-  %t338 = load ptr, ptr %t337, !dbg !23469
-  %t339 = load ptr, ptr %var_nest_309, !dbg !23469
-  %t340 = getelementptr inbounds %struct.Member, ptr %t339, i32 0, i32 5, !dbg !23469
-  call ptr @spec_rt_retain(ptr %t338), !dbg !23469
-  %t341 = load ptr, ptr %t340, !dbg !23469
-  call ptr @spec_claim_pool(ptr %t341), !dbg !23469
-  store ptr %t338, ptr %t340, !dbg !23469
-  %t342 = load ptr, ptr %var_nsub_242, !dbg !23470
-  %t343 = load ptr, ptr %var_nest_309, !dbg !23470
-  %t344 = getelementptr inbounds %struct.Member, ptr %t343, i32 0, i32 12, !dbg !23470
-  call ptr @spec_rt_retain(ptr %t342), !dbg !23470
-  %t345 = load ptr, ptr %t344, !dbg !23470
-  call ptr @spec_claim_pool(ptr %t345), !dbg !23470
-  store ptr %t342, ptr %t344, !dbg !23470
-  %t346 = load ptr, ptr %slot_m, !dbg !23471
-  %t347 = getelementptr inbounds %struct.Member, ptr %t346, i32 0, i32 3, !dbg !23471
-  %t348 = load i64, ptr %t347, !dbg !23471
-  %t349 = load ptr, ptr %var_nest_309, !dbg !23471
-  %t350 = getelementptr inbounds %struct.Member, ptr %t349, i32 0, i32 3, !dbg !23471
-  store i64 %t348, ptr %t350, !dbg !23471
-  %t351 = load ptr, ptr %var_nest_309, !dbg !23472
-  call ptr @spec_rt_retain(ptr %t351), !dbg !23472
+  %t262 = load ptr, ptr %var_sub_206, !dbg !23459
+  %t263 = getelementptr inbounds %struct.ClassInfo, ptr %t262, i32 0, i32 7, !dbg !23459
+  %t264 = load ptr, ptr %t263, !dbg !23459
+  %t265 = load ptr, ptr %var_subMembers_216, !dbg !23459
+  %t266 = icmp ne ptr %t258, null, !dbg !23459
+  br i1 %t266, label %vt_call_55, label %dir_call_56, !dbg !23459
+vt_call_55:
+  %t267 = getelementptr inbounds %struct.ClassInfo, ptr %t258, i32 0, i32 1, !dbg !23459
+  %t268 = load ptr, ptr %t267, !dbg !23459
+  %t269 = getelementptr ptr, ptr %t268, i64 455, !dbg !23459
+  %t270 = load ptr, ptr %t269, !dbg !23459
+  call void %t270(ptr %t258, ptr %t261, ptr %t264, ptr %t265), !dbg !23459
+  br label %vt_end_57, !dbg !23459
+dir_call_56:
+  call void @ClassInfo_withBaseClasses(ptr %t258, ptr %t261, ptr %t264, ptr %t265), !dbg !23459
+  br label %vt_end_57, !dbg !23459
+vt_end_57:
+  %t271 = load ptr, ptr %var_nsub_249, !dbg !23460
+  %t272 = load ptr, ptr %var_sub_206, !dbg !23460
+  %t273 = getelementptr inbounds %struct.ClassInfo, ptr %t272, i32 0, i32 4, !dbg !23460
+  %t274 = load i64, ptr %t273, !dbg !23460
+  %t275 = icmp ne ptr %t271, null, !dbg !23460
+  br i1 %t275, label %vt_call_58, label %dir_call_59, !dbg !23460
+vt_call_58:
+  %t276 = getelementptr inbounds %struct.ClassInfo, ptr %t271, i32 0, i32 1, !dbg !23460
+  %t277 = load ptr, ptr %t276, !dbg !23460
+  %t278 = getelementptr ptr, ptr %t277, i64 457, !dbg !23460
+  %t279 = load ptr, ptr %t278, !dbg !23460
+  call void %t279(ptr %t271, i64 %t274), !dbg !23460
+  br label %vt_end_60, !dbg !23460
+dir_call_59:
+  call void @ClassInfo_setLine(ptr %t271, i64 %t274), !dbg !23460
+  br label %vt_end_60, !dbg !23460
+vt_end_60:
+  %t280 = load ptr, ptr %var_nsub_249, !dbg !23461
+  %t281 = load ptr, ptr %var_sub_206, !dbg !23461
+  %t282 = getelementptr inbounds %struct.ClassInfo, ptr %t281, i32 0, i32 5, !dbg !23461
+  %t283 = load ptr, ptr %t282, !dbg !23461
+  %t284 = icmp ne ptr %t280, null, !dbg !23461
+  br i1 %t284, label %vt_call_61, label %dir_call_62, !dbg !23461
+vt_call_61:
+  %t285 = getelementptr inbounds %struct.ClassInfo, ptr %t280, i32 0, i32 1, !dbg !23461
+  %t286 = load ptr, ptr %t285, !dbg !23461
+  %t287 = getelementptr ptr, ptr %t286, i64 458, !dbg !23461
+  %t288 = load ptr, ptr %t287, !dbg !23461
+  call void %t288(ptr %t280, ptr %t283), !dbg !23461
+  br label %vt_end_63, !dbg !23461
+dir_call_62:
+  call void @ClassInfo_setSourceFile(ptr %t280, ptr %t283), !dbg !23461
+  br label %vt_end_63, !dbg !23461
+vt_end_63:
+  %t289 = load ptr, ptr %var_nsub_249, !dbg !23462
+  %t290 = call ptr @Vector_newVec(ptr null), !dbg !23462
+  call ptr @spec_claim_pool(ptr %t290), !dbg !23462
+  %t291 = icmp ne ptr %t289, null, !dbg !23462
+  br i1 %t291, label %vt_call_64, label %dir_call_65, !dbg !23462
+vt_call_64:
+  %t292 = getelementptr inbounds %struct.ClassInfo, ptr %t289, i32 0, i32 1, !dbg !23462
+  %t293 = load ptr, ptr %t292, !dbg !23462
+  %t294 = getelementptr ptr, ptr %t293, i64 456, !dbg !23462
+  %t295 = load ptr, ptr %t294, !dbg !23462
+  call void %t295(ptr %t289, ptr %t290), !dbg !23462
+  br label %vt_end_66, !dbg !23462
+dir_call_65:
+  call void @ClassInfo_setTypeParams(ptr %t289, ptr %t290), !dbg !23462
+  br label %vt_end_66, !dbg !23462
+vt_end_66:
+  %t296 = load ptr, ptr %slot_selfSpecName, !dbg !23463
+  %t297 = call ptr @__spec_intern_cached(ptr @.str.0, ptr @.str.cache.0), !dbg !23463
+  %t299 = call i1 @Str_stringEquals(ptr null, ptr %t296, ptr %t297), !dbg !23463
+  %t298 = xor i1 %t299, 1, !dbg !23463
+  br i1 %t298, label %if_then_67, label %if_else_68, !dbg !23463
+if_then_67:
+  %t300 = load ptr, ptr %var_nsub_249, !dbg !23464
+  %t301 = load ptr, ptr %slot_selfSpecName, !dbg !23464
+  %t302 = icmp ne ptr %t300, null, !dbg !23464
+  br i1 %t302, label %vt_call_70, label %dir_call_71, !dbg !23464
+vt_call_70:
+  %t303 = getelementptr inbounds %struct.ClassInfo, ptr %t300, i32 0, i32 1, !dbg !23464
+  %t304 = load ptr, ptr %t303, !dbg !23464
+  %t305 = getelementptr ptr, ptr %t304, i64 454, !dbg !23464
+  %t306 = load ptr, ptr %t305, !dbg !23464
+  call void %t306(ptr %t300, ptr %t301), !dbg !23464
+  br label %vt_end_72, !dbg !23464
+dir_call_71:
+  call void @ClassInfo_setOuter(ptr %t300, ptr %t301), !dbg !23464
+  br label %vt_end_72, !dbg !23464
+vt_end_72:
+  br label %if_end_69, !dbg !23463
+if_else_68:
+  %t307 = load ptr, ptr %var_nsub_249, !dbg !23465
+  %t308 = load ptr, ptr %var_sub_206, !dbg !23465
+  %t309 = getelementptr inbounds %struct.ClassInfo, ptr %t308, i32 0, i32 3, !dbg !23465
+  %t310 = load ptr, ptr %t309, !dbg !23465
+  %t311 = icmp ne ptr %t307, null, !dbg !23465
+  br i1 %t311, label %vt_call_73, label %dir_call_74, !dbg !23465
+vt_call_73:
+  %t312 = getelementptr inbounds %struct.ClassInfo, ptr %t307, i32 0, i32 1, !dbg !23465
+  %t313 = load ptr, ptr %t312, !dbg !23465
+  %t314 = getelementptr ptr, ptr %t313, i64 454, !dbg !23465
+  %t315 = load ptr, ptr %t314, !dbg !23465
+  call void %t315(ptr %t307, ptr %t310), !dbg !23465
+  br label %vt_end_75, !dbg !23465
+dir_call_74:
+  call void @ClassInfo_setOuter(ptr %t307, ptr %t310), !dbg !23465
+  br label %vt_end_75, !dbg !23465
+vt_end_75:
+  br label %if_end_69, !dbg !23463
+if_end_69:
+  %t317_szp = getelementptr %struct.Member, ptr null, i32 1, !dbg !23424
+  %t317_sz = ptrtoint ptr %t317_szp to i64, !dbg !23424
+  %t317 = call ptr @spec_rt_alloc(i64 %t317_sz, ptr @Member__destroy), !dbg !23424
+  %t317_tnp = getelementptr inbounds %struct.Member, ptr %t317, i32 0, i32 0, !dbg !23424
+  store ptr @.typename.Member, ptr %t317_tnp, !dbg !23424
+  %t317_vtp = getelementptr inbounds %struct.Member, ptr %t317, i32 0, i32 1, !dbg !23424
+  store ptr @.vtable.Member, ptr %t317_vtp, !dbg !23424
+  %t318 = call ptr @MemberKind_CLASS__ensure(), !dbg !23424
+  call ptr @spec_claim_pool(ptr %t318), !dbg !23424
+  call void @Member_init(ptr %t317, ptr %t318), !dbg !23424
+  call ptr @spec_claim_pool(ptr %t317), !dbg !23424
+  call ptr @spec_rt_retain(ptr %t317), !dbg !23424
+  call ptr @spec_claim_pool(ptr %t317), !dbg !23424
+  store ptr %t317, ptr %var_nest_316, !dbg !23424
+  %t319 = load ptr, ptr %var_nest_316, !dbg !23466
+  %t320 = load ptr, ptr %slot_m, !dbg !23466
+  %t321 = getelementptr inbounds %struct.Member, ptr %t320, i32 0, i32 3, !dbg !23466
+  %t322 = load i64, ptr %t321, !dbg !23466
+  %t323 = icmp ne ptr %t319, null, !dbg !23466
+  br i1 %t323, label %vt_call_76, label %dir_call_77, !dbg !23466
+vt_call_76:
+  %t324 = getelementptr inbounds %struct.Member, ptr %t319, i32 0, i32 1, !dbg !23466
+  %t325 = load ptr, ptr %t324, !dbg !23466
+  %t326 = getelementptr ptr, ptr %t325, i64 457, !dbg !23466
+  %t327 = load ptr, ptr %t326, !dbg !23466
+  call void %t327(ptr %t319, i64 %t322), !dbg !23466
+  br label %vt_end_78, !dbg !23466
+dir_call_77:
+  call void @Member_setLine(ptr %t319, i64 %t322), !dbg !23466
+  br label %vt_end_78, !dbg !23466
+vt_end_78:
+  %t328 = load ptr, ptr %var_nest_316, !dbg !23467
+  %t329 = load ptr, ptr %slot_m, !dbg !23467
+  %t330 = getelementptr inbounds %struct.Member, ptr %t329, i32 0, i32 4, !dbg !23467
+  %t331 = load ptr, ptr %t330, !dbg !23467
+  %t332 = icmp ne ptr %t328, null, !dbg !23467
+  br i1 %t332, label %vt_call_79, label %dir_call_80, !dbg !23467
+vt_call_79:
+  %t333 = getelementptr inbounds %struct.Member, ptr %t328, i32 0, i32 1, !dbg !23467
+  %t334 = load ptr, ptr %t333, !dbg !23467
+  %t335 = getelementptr ptr, ptr %t334, i64 458, !dbg !23467
+  %t336 = load ptr, ptr %t335, !dbg !23467
+  call void %t336(ptr %t328, ptr %t331), !dbg !23467
+  br label %vt_end_81, !dbg !23467
+dir_call_80:
+  call void @Member_setSourceFile(ptr %t328, ptr %t331), !dbg !23467
+  br label %vt_end_81, !dbg !23467
+vt_end_81:
+  %t337 = load ptr, ptr %slot_m, !dbg !23468
+  %t338 = getelementptr inbounds %struct.Member, ptr %t337, i32 0, i32 7, !dbg !23468
+  %t339 = load ptr, ptr %t338, !dbg !23468
+  %t340 = load ptr, ptr %var_nest_316, !dbg !23468
+  %t341 = getelementptr inbounds %struct.Member, ptr %t340, i32 0, i32 7, !dbg !23468
+  call ptr @spec_rt_retain(ptr %t339), !dbg !23468
+  %t342 = load ptr, ptr %t341, !dbg !23468
+  call ptr @spec_claim_pool(ptr %t342), !dbg !23468
+  store ptr %t339, ptr %t341, !dbg !23468
+  %t343 = load ptr, ptr %slot_m, !dbg !23469
+  %t344 = getelementptr inbounds %struct.Member, ptr %t343, i32 0, i32 5, !dbg !23469
+  %t345 = load ptr, ptr %t344, !dbg !23469
+  %t346 = load ptr, ptr %var_nest_316, !dbg !23469
+  %t347 = getelementptr inbounds %struct.Member, ptr %t346, i32 0, i32 5, !dbg !23469
+  call ptr @spec_rt_retain(ptr %t345), !dbg !23469
+  %t348 = load ptr, ptr %t347, !dbg !23469
+  call ptr @spec_claim_pool(ptr %t348), !dbg !23469
+  store ptr %t345, ptr %t347, !dbg !23469
+  %t349 = load ptr, ptr %var_nsub_249, !dbg !23470
+  %t350 = load ptr, ptr %var_nest_316, !dbg !23470
+  %t351 = getelementptr inbounds %struct.Member, ptr %t350, i32 0, i32 12, !dbg !23470
+  call ptr @spec_rt_retain(ptr %t349), !dbg !23470
+  %t352 = load ptr, ptr %t351, !dbg !23470
+  call ptr @spec_claim_pool(ptr %t352), !dbg !23470
+  store ptr %t349, ptr %t351, !dbg !23470
+  %t353 = load ptr, ptr %slot_m, !dbg !23471
+  %t354 = getelementptr inbounds %struct.Member, ptr %t353, i32 0, i32 3, !dbg !23471
+  %t355 = load i64, ptr %t354, !dbg !23471
+  %t356 = load ptr, ptr %var_nest_316, !dbg !23471
+  %t357 = getelementptr inbounds %struct.Member, ptr %t356, i32 0, i32 3, !dbg !23471
+  store i64 %t355, ptr %t357, !dbg !23471
+  %t358 = load ptr, ptr %var_nest_316, !dbg !23472
+  call ptr @spec_rt_retain(ptr %t358), !dbg !23472
   call void @spec_pool_release_to(i64 %t1), !dbg !23472
-  call ptr @spec_claim_pool(ptr %t351), !dbg !23472
-  ret ptr %t351, !dbg !23472
-if_end_43:
-  %t352 = load ptr, ptr %slot_m, !dbg !23473
-  call ptr @spec_rt_retain(ptr %t352), !dbg !23473
+  call ptr @spec_claim_pool(ptr %t358), !dbg !23472
+  ret ptr %t358, !dbg !23472
+if_end_45:
+  %t359 = load ptr, ptr %slot_m, !dbg !23473
+  call ptr @spec_rt_retain(ptr %t359), !dbg !23473
   call void @spec_pool_release_to(i64 %t1), !dbg !23473
-  call ptr @spec_claim_pool(ptr %t352), !dbg !23473
-  ret ptr %t352, !dbg !23473
+  call ptr @spec_claim_pool(ptr %t359), !dbg !23473
+  ret ptr %t359, !dbg !23473
 }
 
 define void @GenericSpecializer_collectUnboundTypeIdents(ptr %self, ptr %p_t, ptr %p_cls, ptr %p_out) !dbg !23474 {

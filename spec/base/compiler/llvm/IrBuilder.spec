@@ -482,7 +482,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && !m:hasModifier(kw: Keyword:HELD) && !seenFields:has(key: m:name) }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !seenFields:has(key: m:name) }, {
 				seenFields:set(key: m:name, value: true);
 				local IrType is fty: :irTypeFor(specType: m:memberType:name);
 				if({ fty == IrType:Void }, { fty: IrType:Ptr; });
@@ -1433,7 +1433,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && !:isLazyCallExpr(expr: m:initExpr) }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && !:isLazyCallExpr(expr: m:initExpr) }, {
 				local Int is fidx: st:fieldIndex(name: m:name);
 				if({ fidx >= 0 }, {
 					local IrType is fty: st:fieldTypes:get(index: fidx);
@@ -1468,7 +1468,7 @@ Class is IrBuilder{
 					:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
 				});
 			}, {
-				if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && !m:hasModifier(kw: Keyword:HELD) && !m:hasInit && !seen:has(key: m:name) }, {
+				if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !m:hasInit && !seen:has(key: m:name) }, {
 					local Int is fidx0: st:fieldIndex(name: m:name);
 					if({ fidx0 >= 0 }, {
 						local IrType is fty0: st:fieldTypes:get(index: fidx0);
@@ -2389,7 +2389,7 @@ Class is IrBuilder{
 			local Int is mi: 0;
 			while({ mi < cls:members:length() }, {
 				local Member is m: cls:members:get(index: mi);
-				if({ m:name != 'using' && m:name != 'namespace' && m:name != 'binding' }, {
+				if({ m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' }, {
 					if({ m:kind == MemberKind:FIELD || m:kind == MemberKind:METHOD }, {
 						:markBareTypeUse(t: m:memberType);
 						local Int is pi: 0;
