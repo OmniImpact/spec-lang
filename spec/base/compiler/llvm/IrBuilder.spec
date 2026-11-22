@@ -2351,7 +2351,7 @@ Class is IrBuilder{
 
 	local Function is markBareTypeUse(Type is t){
 		if({ t:name == '' }, { return; });
-		if({ :templateNames:has(key: t:name) }, {
+		if({ t:params:length() == 0 && :templateNames:has(key: t:name) }, {
 			:bareTemplateUsed:set(key: t:name, value: true);
 		});
 		local Int is i: 0;
@@ -2387,12 +2387,34 @@ Class is IrBuilder{
 
 	local Function is markBareExprUse(Expression is expr){
 		# A receiver or operand spelled in the bare template form names
-		# the template's own symbols at the lowering site.
+		# the template's own symbols at the lowering site — except a
+		# bare-name constructor: construction is served by the
+		# construction machinery, not the template copy.
 		local String is rt: expr:resolvedType;
-		if({ :templateNames:has(key: rt) }, {
-			:bareTemplateUsed:set(key: rt, value: true);
-		});
 		match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				local String is ctorName: '';
+				match(on: cd:target, when: [
+					Expression:Ident: local Function(String is tn){ ctorName: tn; }
+				], default: {});
+				if({ :templateNames:has(key: ctorName) }, {
+					local Int is ai: 0;
+					while({ ai < cd:args:length() }, {
+						:markBareExprUse(expr: cd:args:get(index: ai, default: NamedArg:init(name: '', value: Expression:Unknown)):value);
+						ai++;
+					});
+					return;
+				});
+				if({ :templateNames:has(key: rt) }, {
+					:bareTemplateUsed:set(key: rt, value: true);
+				});
+				:markBareExprUse(expr: cd:target);
+				local Int is aj: 0;
+				while({ aj < cd:args:length() }, {
+					:markBareExprUse(expr: cd:args:get(index: aj, default: NamedArg:init(name: '', value: Expression:Unknown)):value);
+					aj++;
+				});
+			},
 			Expression:Ident: local Function(String is name){
 				if({ :templateNames:has(key: name) }, {
 					:bareTemplateUsed:set(key: name, value: true);
@@ -2401,14 +2423,6 @@ Class is IrBuilder{
 			Expression:Path: local Function(Array of String is segs){
 				if({ segs:length() > 0 && :templateNames:has(key: segs:get(index: 0, default: '')) }, {
 					:bareTemplateUsed:set(key: segs:get(index: 0, default: ''), value: true);
-				});
-			},
-			Expression:Call: local Function(CallData is cd){
-				:markBareExprUse(expr: cd:target);
-				local Int is ai: 0;
-				while({ ai < cd:args:length() }, {
-					:markBareExprUse(expr: cd:args:get(index: ai, default: NamedArg:init(name: '', value: Expression:Unknown)):value);
-					ai++;
 				});
 			},
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){

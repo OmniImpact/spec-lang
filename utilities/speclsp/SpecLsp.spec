@@ -190,7 +190,7 @@ Class is SpecLsp{
 			if({ fileExists(path: manifestPath) }, {
 				local String is raw: fileRead(path: manifestPath, default: '');
 				if({ raw != '' }, {
-					local Result of Map to JsonError is manR: Json:parseMapResult(text: raw);
+					local Result of Map of String to Any to JsonError is manR: Json:parseMapResult(text: raw);
 					match(on: manR, when: [
 						Result:Ok: local Function of Void(Map is parsed){
 							local Array is srcDirs: Json:getArray(obj: parsed, key: 'source_dirs');

@@ -3433,8 +3433,13 @@ Class is TypeChecker{
 			});
 			return target;
 		});
-		if({ :registeredClasses:has(key: target) || :registeredClasses:has(key: target:split(delimiter: ':'):get(index: 0)) }, {
-			local Boolean is related: src == Primitive:ANY:value() || :isSubclassOf(subName: src, baseName: target) || :isSubclassOf(subName: target, baseName: src);
+		local String is castRoot: target;
+		local Int is castOf: castRoot:indexOf(search: ' of ', default: -1);
+		if({ castOf > 0 }, {
+			castRoot: castRoot:substring(start: 0, end: castOf);
+		});
+		if({ :registeredClasses:has(key: target) || :registeredClasses:has(key: target:split(delimiter: ':'):get(index: 0)) || :registeredClasses:has(key: castRoot) }, {
+			local Boolean is related: src == Primitive:ANY:value() || :isSubclassOf(subName: src, baseName: target) || :isSubclassOf(subName: target, baseName: src) || :isSubclassOf(subName: src, baseName: castRoot) || :isSubclassOf(subName: castRoot, baseName: src);
 			if({ !related }, {
 				:addError(line: :currentLine, msg: 'Cannot cast \'' . src . '\' to unrelated class \'' . target . '\'.');
 			});
@@ -4476,6 +4481,9 @@ Class is TypeChecker{
 					local String is mk: TypeDomain:mapKeyType(t: targetType);
 					res: if({ mk != '' }, { TypeDomain:makeArray(elem: mk) }, { 'Array of String' });
 				},
+				# The declared HashTable member supersedes this contract the
+				# moment the seed carries it; until then the vocabulary is
+				# the only typing the frozen checker has for bare calls.
 				'mapNewObject': { res: 'Map'; },
 				'add': { res: :names:voidName(); },
 				'set': { res: :names:voidName(); },

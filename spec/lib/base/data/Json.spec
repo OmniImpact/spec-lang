@@ -19,6 +19,12 @@ Class is Json{
 	local Int is parsePos: 0;
 	local Int is textLen: 0;
 
+	## The empty JSON object every fallback returns.
+	local Function of Map of String to Any is isEmptyMap(){
+		local Map of String to Any is out: [:];
+		return out;
+	}
+
 	## Returns a JSON null instance.
 	Function of JsonNull is nullValue(){
 		return JsonNull:init();
@@ -118,32 +124,32 @@ Class is Json{
 
 	## Parses a JSON document whose root must be an object, returning the
 	## Map or the parse failure as the full error currency.
-	Function of Result of Map to JsonError is parseMapResult(String is text){
+	Function of Result of Map of String to Any to JsonError is parseMapResult(String is text){
 		local SpecError of JsonError is failErr: SpecError:init(kind: JsonError:SYNTAX_ERROR, description: '');
-		local Map is m: try(
-			body: local Function of Map(){
+		local Map of String to Any is m: try(
+			body: local Function of Map of String to Any(){
 				local Any is v: :parseText(text: text);
 				local String is vt: Introspection:typeIdentity(obj: v);
 				if({ vt != 'Map' }, {
 					:raiseError(error: SpecError:init(kind: JsonError:TYPE_MISMATCH, description: 'document root is not an object'));
 				});
-				return v as Map;
+				return v;
 			},
-			guard: local Function of Map(SpecError of JsonError is e){
+			guard: local Function of Map of String to Any(SpecError of JsonError is e){
 				failErr: e;
-				return Map:init();
+				return :isEmptyMap();
 			}
 		);
 		if({ failErr:description == '' }, {
-			local Result of Map to JsonError is okR: Result:Ok(value: m);
+			local Result of Map of String to Any to JsonError is okR: Result:Ok(value: m);
 			return okR;
 		});
-		local Result of Map to JsonError is errR: Result:Err(error: failErr);
+		local Result of Map of String to Any to JsonError is errR: Result:Err(error: failErr);
 		return errR;
 	}
 
 	## Looks up an integer value from a parsed JSON map.
-	Function of Int is getInt(Map is obj, String is key, Int is default: 0){
+	Function of Int is getInt(Map of String to Any is obj, String is key, Int is default: 0){
 		if({ !obj:has(key: key) }, {
 			return default;
 		});
@@ -161,7 +167,7 @@ Class is Json{
 	}
 
 	## Looks up a floating point value from a parsed JSON map.
-	Function of Float is getFloat(Map is obj, String is key, Float is default: 0.0){
+	Function of Float is getFloat(Map of String to Any is obj, String is key, Float is default: 0.0){
 		if({ !obj:has(key: key) }, {
 			return default;
 		});
@@ -180,7 +186,7 @@ Class is Json{
 	}
 
 	## Looks up a string value from a parsed JSON map.
-	Function of String is getString(Map is obj, String is key, String is default: ''){
+	Function of String is getString(Map of String to Any is obj, String is key, String is default: ''){
 		if({ !obj:has(key: key) }, {
 			return default;
 		});
@@ -201,7 +207,7 @@ Class is Json{
 	}
 
 	## Looks up a boolean value from a parsed JSON map.
-	Function of Boolean is getBool(Map is obj, String is key, Boolean is default: false){
+	Function of Boolean is getBool(Map of String to Any is obj, String is key, Boolean is default: false){
 		if({ !obj:has(key: key) }, {
 			return default;
 		});
@@ -224,20 +230,20 @@ Class is Json{
 	}
 
 	## Looks up a nested Map from a parsed JSON map.
-	Function of Map is getObject(Map is obj, String is key){
+	Function of Map of String to Any is getObject(Map of String to Any is obj, String is key){
 		if({ !obj:has(key: key) }, {
-			return Map:init();
+			return :isEmptyMap();
 		});
-		local Any is val: obj:get(key: key, default: Map:init());
+		local Any is val: obj:get(key: key, default: :isEmptyMap());
 		local String is t: Introspection:typeIdentity(obj: val);
 		if({ t == 'Map' }, {
-			return val as Map;
+			return val;
 		});
-		return Map:init();
+		return :isEmptyMap();
 	}
 
 	## Looks up a nested Array from a parsed JSON map.
-	Function of Array is getArray(Map is obj, String is key){
+	Function of Array is getArray(Map of String to Any is obj, String is key){
 		if({ !obj:has(key: key) }, {
 			return [];
 		});
@@ -331,16 +337,16 @@ Class is Json{
 	}
 
 	## Looks up a nested Map from a parsed JSON array.
-	Function of Map is getObjectAt(Array is arr, Int is index){
+	Function of Map of String to Any is getObjectAt(Array is arr, Int is index){
 		if({ index < 0 || index >= arr:length() }, {
-			return Map:init();
+			return :isEmptyMap();
 		});
-		local Any is val: arr:get(index: index, default: Map:init());
+		local Any is val: arr:get(index: index, default: :isEmptyMap());
 		local String is t: Introspection:typeIdentity(obj: val);
 		if({ t == 'Map' }, {
-			return val as Map;
+			return val;
 		});
-		return Map:init();
+		return :isEmptyMap();
 	}
 
 	## Looks up a nested Array from a parsed JSON array.
@@ -561,8 +567,8 @@ Class is Json{
 	}
 
 	## Parses a JSON object at the current position.
-	Function of Map is parseObject(String is text){
-		local Map of String to Any is obj: Map:init();
+	Function of Map of String to Any is parseObject(String is text){
+		local Map of String to Any is obj: [:];
 		:parsePos: :parsePos + 1;
 		:skipWhitespace(text: text);
 
@@ -667,13 +673,13 @@ Class is Json{
 	}
 
 	## Parses JSON text directly into a Map.
-	Function of Map is parseObjectText(String is text){
-		local Any is res: :parse(text: text, default: Map:init());
+	Function of Map of String to Any is parseObjectText(String is text){
+		local Any is res: :parse(text: text, default: :isEmptyMap());
 		local String is t: Introspection:typeIdentity(obj: res);
 		if({ t == 'Map' }, {
-			return res as Map;
+			return res;
 		});
-		return Map:init();
+		return :isEmptyMap();
 	}
 
 	## Parses JSON text directly into an Array.
@@ -777,7 +783,7 @@ Class is Json{
 			return out . ']';
 		});
 		if({ t == 'Map' }, {
-			local Map is m: value as Map;
+			local Map of String to Any is m: value;
 			local Array of String is keys: m:keys();
 			local String is out: '{';
 			local Int is len: keys:length();
@@ -835,7 +841,7 @@ Class is Json{
 			return out;
 		});
 		if({ t == 'Map' }, {
-			local Map is m: value as Map;
+			local Map of String to Any is m: value;
 			local Array of String is keys: m:keys();
 			local Int is kLen: keys:length();
 			if({ kLen == 0 }, {

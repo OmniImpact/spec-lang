@@ -60,7 +60,7 @@ Class of SpecUnitTest is TestJson{
 	Function is testParseObject(){
 		local String is src: '{"name": "Spec", "version": "0.1.0", "cores": 16, "debug": true, "extra": null}';
 		local Any is objVal: Json:parse(text: src);
-		local Map is obj: objVal as Map;
+		local Map of String to Any is obj: objVal as Map;
 
 		Assert:areEqualString('Spec', Json:getString(obj: obj, key: 'name'));
 		Assert:areEqualString('0.1.0', Json:getString(obj: obj, key: 'version'));
@@ -71,9 +71,9 @@ Class of SpecUnitTest is TestJson{
 
 	Function is testParseNested(){
 		local String is src: '{"compiler": {"name": "spec", "optLevel": 2}, "targets": ["c11", "x86_64"]}';
-		local Map is root: Json:parseObjectText(text: src);
+		local Map of String to Any is root: Json:parseObjectText(text: src);
 
-		local Map is comp: Json:getObject(obj: root, key: 'compiler');
+		local Map of String to Any is comp: Json:getObject(obj: root, key: 'compiler');
 		Assert:areEqualString('spec', Json:getString(obj: comp, key: 'name'));
 		Assert:areEqualInt(2, Json:getInt(obj: comp, key: 'optLevel'));
 
@@ -84,7 +84,7 @@ Class of SpecUnitTest is TestJson{
 	}
 
 	Function is testStringify(){
-		local Map is m: Map:init();
+		local Map of String to Any is m: [:];
 		m:set(key: 'name', value: 'Spec');
 		m:set(key: 'cores', value: Json:number(n: 8));
 		m:set(key: 'active', value: Json:bool(b: true));
@@ -98,7 +98,7 @@ Class of SpecUnitTest is TestJson{
 	}
 
 	Function is testFormat(){
-		local Map is m: Map:init();
+		local Map of String to Any is m: [:];
 		m:set(key: 'name', value: 'my_app');
 		m:set(key: 'ver', value: '1.0');
 
@@ -112,12 +112,12 @@ Class of SpecUnitTest is TestJson{
 	Function is testMalformedJson(){
 		# The result-return core carries the failure as the full currency:
 		# kind, description, and a captured stack trace.
-		local Result of Map to JsonError is r1: Json:parseMapResult(text: '{ invalid json }');
+		local Result of Map of String to Any to JsonError is r1: Json:parseMapResult(text: '{ invalid json }');
 		local String is msg1: '';
 		local String is kind1: '';
 		local Int is frames1: 0;
 		match(on: r1, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){
 				msg1: e:description;
@@ -130,10 +130,10 @@ Class of SpecUnitTest is TestJson{
 		Assert:isTrue(frames1 > 0);
 
 		# A type-mismatched root is its own kind.
-		local Result of Map to JsonError is r2: Json:parseMapResult(text: '[1, 2]');
+		local Result of Map of String to Any to JsonError is r2: Json:parseMapResult(text: '[1, 2]');
 		local String is kind2: '';
 		match(on: r2, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){
 				kind2: e:kindName;
@@ -146,10 +146,10 @@ Class of SpecUnitTest is TestJson{
 		local Any is bad1: Json:parse(text: '{ invalid json }', default: 'fallback');
 		Assert:areEqualString('fallback', Json:asString(val: bad1));
 
-		local Result of Map to JsonError is okR: Json:parseMapResult(text: '{"k": 7}');
+		local Result of Map of String to Any to JsonError is okR: Json:parseMapResult(text: '{"k": 7}');
 		local Int is okVal: 0 - 1;
 		match(on: okR, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 				okVal: Json:getInt(obj: v, key: 'k', default: 0 - 1);
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){
@@ -232,7 +232,7 @@ Class is SilentCaller{
 		local Any is parsed: Json:parse(text: original);
 		local String is serialized: Json:stringify(value: parsed);
 		local Any is reParsed: Json:parse(text: serialized);
-		local Map is m: reParsed as Map;
+		local Map of String to Any is m: reParsed as Map;
 
 		Assert:areEqualString('speclsp', Json:getString(obj: m, key: 'app'));
 		Assert:areEqualInt(100, Json:getInt(obj: m, key: 'count'));

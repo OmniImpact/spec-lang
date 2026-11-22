@@ -114,8 +114,12 @@ Class is GenericSpecializer{
 		return cand;
 	}
 
+	## Any is concrete: it is the lowest-level bare Object, and every
+	## type — Function, Class, containers — is implemented on top of
+	## it. A bare object derived of Any is valid, so `Map of String
+	## to Any` instantiates exactly as any typed argument does.
 	local Function of Boolean is isConcreteType(Type is t, Map of String to Boolean is tplParams){
-		if({ t:name == '' || t:name == 'Any' || t:name == 'Void' || tplParams:has(key: t:name) }, {
+		if({ t:name == '' || t:name == 'Void' || tplParams:has(key: t:name) }, {
 			return false;
 		});
 		local Int is i: 0;
