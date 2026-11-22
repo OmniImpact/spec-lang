@@ -3704,16 +3704,16 @@ Class is IrBuilder{
 					local Boolean is isByteListVar: varType:name == 'List of Byte' || varType:name == 'List:Byte' || (varType:name == 'List' && listElem == 'Byte');
 					if({ isByteListVar }, {
 						defVal: :nextTmp();
-						:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_byteBufNew', argTypes: [], args: []));
+						:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newByteBuf', argTypes: [IrType:Ptr], args: ['null']));
 						:emitClaimPool(val: defVal);
 					}, {
 						if({ varType:name == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
-							local String is vecCtor: 'Vector_vecNewObject';
+							local String is vecCtor: 'Vector_newVecObject';
 							if({ listElem != '' && !:isArcSpecType(specType: listElem) }, {
-								vecCtor: 'Vector_vecNew';
+								vecCtor: 'Vector_newVec';
 							});
 							defVal: :nextTmp();
-							:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [], args: []));
+							:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [IrType:Ptr], args: ['null']));
 							:emitClaimPool(val: defVal);
 						});
 					});
@@ -4692,9 +4692,9 @@ Class is IrBuilder{
 					});
 				});
 				if({ isObjArr }, {
-					:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecNewObject', argTypes: emptyT, args: emptyV));
+					:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVecObject', argTypes: [IrType:Ptr], args: ['null']));
 				}, {
-					:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecNew', argTypes: emptyT, args: emptyV));
+					:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVec', argTypes: [IrType:Ptr], args: ['null']));
 				});
 				local Int is ii: 0;
 				while({ ii < items:length() }, {

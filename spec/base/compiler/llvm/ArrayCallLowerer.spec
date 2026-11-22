@@ -68,7 +68,7 @@ Class of CallLowerer is ArrayCallLowerer{
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, {
 			local String is dst: b:nextTmp();
-			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecNew', argTypes: [], args: []));
+			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVec', argTypes: [IrType:Ptr], args: ['null']));
 			b:emitClaimPool(val: dst);
 			return dst;
 		});
@@ -531,17 +531,17 @@ Class of CallLowerer is ArrayCallLowerer{
 					b:emit(inst: IrInst:Store(slot: accSlot, val: zV, ty: IrType:I64));
 				});
 				if({ call:name == 'filter' }, {
-					local String is newCallee: 'Vector_vecNew';
-					if({ elemTy == IrType:Ptr }, { newCallee: 'Vector_vecNewObject'; });
+					local String is newCallee: 'Vector_newVec';
+					if({ elemTy == IrType:Ptr }, { newCallee: 'Vector_newVecObject'; });
 					outArr: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: outArr, hasDst: true, retType: IrType:Ptr, callee: newCallee, argTypes: [], args: []));
+					b:emit(inst: IrInst:IrCall(dst: outArr, hasDst: true, retType: IrType:Ptr, callee: newCallee, argTypes: [IrType:Ptr], args: ['null']));
 					b:emitClaimPool(val: outArr);
 				});
 				if({ call:name == 'map' }, {
-					local String is newCallee: 'Vector_vecNew';
-					if({ outElemTy == IrType:Ptr }, { newCallee: 'Vector_vecNewObject'; });
+					local String is newCallee: 'Vector_newVec';
+					if({ outElemTy == IrType:Ptr }, { newCallee: 'Vector_newVecObject'; });
 					outArr: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: outArr, hasDst: true, retType: IrType:Ptr, callee: newCallee, argTypes: [], args: []));
+					b:emit(inst: IrInst:IrCall(dst: outArr, hasDst: true, retType: IrType:Ptr, callee: newCallee, argTypes: [IrType:Ptr], args: ['null']));
 					b:emitClaimPool(val: outArr);
 				});
 

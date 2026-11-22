@@ -773,20 +773,6 @@ copy_a:
   call ptr @spec_claim_pool(ptr %ac)
   ret ptr %ac
 }
-define internal noalias ptr @Vector_vecNew() alwaysinline {
-  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)
-  ret ptr %a
-}
-define internal noalias ptr @Vector_vecNewObject() alwaysinline {
-  %a = call noalias ptr @spec_rt_alloc(i64 40, ptr @Vector_vecDestroy)
-  %kp = getelementptr inbounds i8, ptr %a, i64 24
-  store i32 1, ptr %kp, align 8
-  ret ptr %a
-}
-define internal noalias ptr @Vector_byteBufNew() alwaysinline {
-  %b = call noalias ptr @spec_rt_alloc(i64 24, ptr @Vector_byteBufDestroy)
-  ret ptr %b
-}
 define internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {
   %r = call i32 @strcmp(ptr %a, ptr %b)
   %eq = icmp eq i32 %r, 0
