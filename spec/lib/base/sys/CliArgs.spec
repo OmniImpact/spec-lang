@@ -43,7 +43,7 @@ Class is CliArgs{
 	## `Map of String to String` (supporting `--key=val`, `--key val`, `-k=val`,
 	## `-k val`, indexed positionals `'0'`, `'1'`, ..., and newline-joined `''`).
 	Function of Any is parseMap(Int is argc, Int is argvAddr){
-		local Any is args: HashTable:newObject();
+		local Any is args: HashTable:mapNewObject();
 		local Int is posIdx: 0;
 		local Int is i: 1;
 		while({ i < argc }, {

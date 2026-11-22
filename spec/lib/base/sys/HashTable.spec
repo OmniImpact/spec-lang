@@ -37,7 +37,7 @@ Class is HashTable{
 	}
 
 	## Allocates a new SpecMap with explicit [keyKind] and [valKind] storage tags.
-	Function of Any is newTyped(Int is keyKind, Int is valKind){
+	Function of Any is mapNewTyped(Int is keyKind, Int is valKind){
 		local Int is mAddr: Mem:allocArcKind(bytes: 48, kind: 1);
 		local Int is bAddr: Mem:alloc(bytes: 64);
 		Mem:storeI64(ptr: mAddr, byteOffset: 0, val: bAddr);
@@ -48,8 +48,17 @@ Class is HashTable{
 	}
 
 	## Allocates a new SpecMap with String keys (kind 0) and ARC-retained values (kind 1).
+	Function of Any is mapNewObject(){
+		return :mapNewTyped(keyKind: 0, valKind: 1);
+	}
+
+	## Interim aliases for the seed ratchet (removed in the next landing).
+	Function of Any is newTyped(Int is keyKind, Int is valKind){
+		return :mapNewTyped(keyKind: keyKind, valKind: valKind);
+	}
+
 	Function of Any is newObject(){
-		return :newTyped(keyKind: 0, valKind: 1);
+		return :mapNewObject();
 	}
 
 	## Destroys this map, releasing any ARC keys/values and freeing its buckets and entries.
