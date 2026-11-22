@@ -265,6 +265,14 @@ Class is Driver{
 			irb:entryInitOverloadIndex: :entryInitOverloadIndex;
 			irb:entryInitTakesMap: :entryInitTakesMap;
 			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
+			if({ irb:errors:length() > 0 }, {
+				irb:errors:each(action: local Function(String is emsg){
+					Stderr:line('Error: ' . emsg);
+				});
+				Process:monitorStop();
+				exitCode: 1;
+				return;
+			});
 			if({ !args:has(key: 'no-opt') }, {
 				local OptimizerPipeline is optPipe: OptimizerPipeline:init();
 				optPipe:run(mod: irMod);

@@ -166,7 +166,7 @@ Class is Map of K to V{
 	## @param predicate: Function taking (key, value) and returning `Boolean`.
 	## @return: Filtered [Map].
 	Function of Map of K to V is filter(Function of Boolean is predicate){
-		local Map of K to V is out: [:];
+		local Map of K to V is out: HashTable:mapNewLike(m: :);
 		:each(action: local Function(K is k, V is v){
 			if({ predicate(k, v) }, {
 				out:set(key: k, value: v);

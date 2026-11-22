@@ -116,9 +116,41 @@ Class is IrBuilder{
 	String is pathObjPtr: '';
 	String is pathStructName: '';
 	Int is pathFieldIndex: -1;
+	Array of String is errors: [];
 
 	replace Function is init(){
 		:callLowerers: CallLowererRegistry:init():loadAll();
+	}
+
+	Function is addError(String is msg){
+		:errors:add(item: msg);
+	}
+
+	## Choke point: rejects an unbound enclosing type parameter in a map's
+	## key or value kind slot instead of silently guessing a storage kind.
+	Function is checkConcreteMapKindType(String is specType, String is role){
+		if({ specType != '' && :curClassTypeParams:has(key: specType) }, {
+			:addError(msg: 'Cannot resolve map ' . role . ' kind for unbound type parameter \'' . specType . '\' in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
+		});
+	}
+
+	## Extracts the key type spelling from a parameterized Map type string
+	## (`Map of K to V` or `Map:K:V`), returning '' if unparameterized.
+	Function of String is extractMapKeySpec(String is mapType){
+		if({ mapType:startsWith(prefix: 'Map of ') }, {
+			local Int is toIdx: mapType:indexOf(search: ' to ', default: -1);
+			if({ toIdx > 7 }, {
+				return mapType:substring(start: 7, end: toIdx);
+			});
+		});
+		if({ mapType:startsWith(prefix: 'Map:') }, {
+			local String is rest: mapType:substring(start: 4, end: mapType:length());
+			local Int is cIdx: rest:indexOf(search: ':', default: -1);
+			if({ cIdx > 0 }, {
+				return rest:substring(start: 0, end: cIdx);
+			});
+		});
+		return '';
 	}
 
 	Function of String is nextTmp(){
@@ -2347,19 +2379,21 @@ Class is IrBuilder{
 			local Int is mi: 0;
 			while({ mi < cls:members:length() }, {
 				local Member is m: cls:members:get(index: mi);
-				if({ m:kind == MemberKind:FIELD || m:kind == MemberKind:METHOD }, {
-					:markBareTypeUse(t: m:memberType);
-					local Int is pi: 0;
-					while({ pi < m:params:length() }, {
-						:markBareTypeUse(t: m:params:get(index: pi, default: Parameter:init(name: '', paramType: Type:init(name: ''))):paramType);
-						pi++;
+				if({ m:name != 'using' && m:name != 'namespace' && m:name != 'binding' }, {
+					if({ m:kind == MemberKind:FIELD || m:kind == MemberKind:METHOD }, {
+						:markBareTypeUse(t: m:memberType);
+						local Int is pi: 0;
+						while({ pi < m:params:length() }, {
+							:markBareTypeUse(t: m:params:get(index: pi, default: Parameter:init(name: '', paramType: Type:init(name: ''))):paramType);
+							pi++;
+						});
 					});
-				});
-				if({ m:kind == MemberKind:METHOD && m:body:length() > 0 }, {
-					:markBareStmtUse(stmts: m:body);
-				});
-				if({ m:kind == MemberKind:FIELD && m:hasInit }, {
-					:markBareExprUse(expr: m:initExpr);
+					if({ m:kind == MemberKind:METHOD && m:body:length() > 0 }, {
+						:markBareStmtUse(stmts: m:body);
+					});
+					if({ m:kind == MemberKind:FIELD && m:hasInit }, {
+						:markBareExprUse(expr: m:initExpr);
+					});
 				});
 				mi++;
 			});
@@ -4680,26 +4714,35 @@ Class is IrBuilder{
 				if({ keys:length() == 0 && :specBaseMap:get(key: resTy, default: '') == 'Map' && :specClassArgsMap:has(key: resTy) }, {
 					local Array of Type is mArgs: :specClassArgsMap:get(key: resTy, default: []);
 					if({ mArgs:length() >= 1 }, {
-						mapKk: :mapKeyKindFor(specType: mArgs:get(index: 0, default: Type:init(name: '')):name);
+						local String is kArg: mArgs:get(index: 0, default: Type:init(name: '')):name;
+						:checkConcreteMapKindType(specType: kArg, role: 'key');
+						mapKk: :mapKeyKindFor(specType: kArg);
 					});
 					if({ mArgs:length() >= 2 }, {
 						local String is vArg: mArgs:get(index: 1, default: Type:init(name: '')):name;
+						:checkConcreteMapKindType(specType: vArg, role: 'value');
 						if({ :isArcSpecType(specType: vArg) || vArg == 'Any' }, { mapVk: 1; });
 					});
 					argsResolved: true;
 				});
 				if({ keys:length() > 0 }, {
 					local Expression is k0: keys:get(index: 0);
+					:checkConcreteMapKindType(specType: k0:resolvedType, role: 'key');
 					if({ k0:resolvedType == 'Int' || k0:resolvedType == 'Boolean' }, { mapKk: 1; });
 					if({ k0:resolvedType == 'Float' }, { mapKk: 2; });
 					if({ mapKk == 0 && k0:resolvedType != 'String' && k0:resolvedType != 'Any' }, { mapKk: 3; });
 				}, {
 					if({ !argsResolved }, {
+						local String is kSpec: :extractMapKeySpec(mapType: resTy);
+						if({ kSpec != '' }, {
+							:checkConcreteMapKindType(specType: kSpec, role: 'key');
+						});
 						if({ resTy:startsWith(prefix: 'Map of Int to ') || resTy:startsWith(prefix: 'Map:Int:') || resTy:startsWith(prefix: 'Map of Boolean to ') || resTy:startsWith(prefix: 'Map:Boolean:') }, { mapKk: 1; });
 						if({ resTy:startsWith(prefix: 'Map of Float to ') || resTy:startsWith(prefix: 'Map:Float:') }, { mapKk: 2; });
 						if({ mapKk == 0 && resTy != 'Map' && resTy != '' && !resTy:startsWith(prefix: 'Map of String to ') && !resTy:startsWith(prefix: 'Map:String:') && !resTy:startsWith(prefix: 'Map of Any to ') && !resTy:startsWith(prefix: 'Map:Any:') }, { mapKk: 3; });
 						if({ mapKk == 0 && (resTy == 'Map' || resTy == '') && :expectedMapKeyType != '' }, {
 							local String is ek: :expectedMapKeyType;
+							:checkConcreteMapKindType(specType: ek, role: 'key');
 							if({ ek == 'Int' || ek == 'Boolean' }, { mapKk: 1; });
 							if({ ek == 'Float' }, { mapKk: 2; });
 							if({ mapKk == 0 && ek != 'String' && ek != 'Any' }, { mapKk: 3; });
@@ -4709,8 +4752,9 @@ Class is IrBuilder{
 				if({ values:length() > 0 }, {
 					local Boolean is allArc: true;
 					local Int is vi: 0;
-					while({ vi < values:length() && allArc }, {
+					while({ vi < values:length() }, {
 						local Expression is vItem: values:get(index: vi);
+						:checkConcreteMapKindType(specType: vItem:resolvedType, role: 'value');
 						if({ !:isArcSpecType(specType: vItem:resolvedType) }, {
 							allArc: false;
 						});
@@ -4722,6 +4766,7 @@ Class is IrBuilder{
 						local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
 						if({ toIdx >= 0 }, {
 							local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
+							:checkConcreteMapKindType(specType: vSpec, role: 'value');
 							if({ :isArcSpecType(specType: vSpec) || vSpec == 'Any' }, { mapVk: 1; });
 						}, {
 							if({ resTy:startsWith(prefix: 'Map:') }, {
@@ -4729,10 +4774,12 @@ Class is IrBuilder{
 								local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
 								if({ cIdx >= 0 }, {
 									local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
+									:checkConcreteMapKindType(specType: vSpec2, role: 'value');
 									if({ :isArcSpecType(specType: vSpec2) || vSpec2 == 'Any' }, { mapVk: 1; });
 								});
 							}, {
 								if({ (resTy == 'Map' || resTy == '') && :expectedMapValType != '' }, {
+									:checkConcreteMapKindType(specType: :expectedMapValType, role: 'value');
 									if({ :isArcSpecType(specType: :expectedMapValType) || :expectedMapValType == 'Any' }, { mapVk: 1; });
 								});
 							});
@@ -4839,7 +4886,7 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is collectFreeInStmts(Array of Statement is stmts, Map of String to Boolean is bound, Map is outerSlots, Map of String to Boolean is seen, Array of String is out){
+	local Function is collectFreeInStmts(Array of Statement is stmts, Map of String to Boolean is bound, Map of String to Boolean is outerSlots, Map of String to Boolean is seen, Array of String is out){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -4867,7 +4914,7 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is collectFreeInExpr(Expression is expr, Map of String to Boolean is bound, Map is outerSlots, Map of String to Boolean is seen, Array of String is out){
+	local Function is collectFreeInExpr(Expression is expr, Map of String to Boolean is bound, Map of String to Boolean is outerSlots, Map of String to Boolean is seen, Array of String is out){
 		match(on: expr, when: [
 			Expression:Ident: local Function(String is name){
 				if({ !bound:has(key: name) }, {
@@ -4996,9 +5043,16 @@ Class is IrBuilder{
 			bound:set(key: bp:name, value: true);
 			bpi++;
 		});
+		local Map of String to Boolean is outerKeys: Map:init();
+		local Array of String is lsKeys: :localSlots:keys();
+		local Int is lki: 0;
+		while({ lki < lsKeys:length() }, {
+			outerKeys:set(key: lsKeys:get(index: lki, default: ''), value: true);
+			lki++;
+		});
 		local Map of String to Boolean is seenCap: Map:init();
 		local Array of String is captures: [];
-		:collectFreeInStmts(stmts: body, bound: bound, outerSlots: :localSlots, seen: seenCap, out: captures);
+		:collectFreeInStmts(stmts: body, bound: bound, outerSlots: outerKeys, seen: seenCap, out: captures);
 
 		local String is envStructName: '__env_' . (anonId as String);
 		if({ captures:length() > 0 }, {

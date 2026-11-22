@@ -52,6 +52,13 @@ Class is HashTable{
 		return :mapNewTyped(keyKind: 0, valKind: 1);
 	}
 
+	## Allocates a new empty SpecMap with the same key/value storage kinds as [m].
+	Function of Any is mapNewLike(Any is m){
+		local Int is mAddr: Mem:objToAddr(obj: m);
+		if({ mAddr == 0 }, { return :mapNewTyped(keyKind: 0, valKind: 0); });
+		return :mapNewTyped(keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 24), valKind: Mem:loadI32(ptr: mAddr, byteOffset: 28));
+	}
+
 	## Destroys this map, releasing any ARC keys/values and freeing its buckets and entries.
 	Function is mapDestroy(){
 		local Int is mAddr: Mem:objToAddr(obj: :);
