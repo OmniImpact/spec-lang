@@ -31,8 +31,8 @@ Class is AudioDevice{
 
 	Function of Int is write(Int is handle, List of Byte is buffer, Function is onError: local Function(String is error){}){
 		local Int is bAddr: Mem:objToAddr(obj: buffer);
-		local Int is ptr: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 0) }, { 0 });
-		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 8) }, { 0 });
+		local Int is ptr: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 16) }, { 0 });
+		local Int is len: if({ bAddr != 0 }, { Mem:loadI64(ptr: bAddr, byteOffset: 24) }, { 0 });
 		local Int is n: base:sysinternal:Audio:pal_audio_write(handle: handle, data_addr: ptr, len: len);
 		if({ n < 0 }, {
 			:emitLastError(onError: onError);

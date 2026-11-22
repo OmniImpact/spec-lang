@@ -30,6 +30,11 @@ define internal i64 @_spec_rt_alloc_kinded(i64 %size, i64 %kind) alwaysinline {
   %dp = select i1 %is3, ptr @Vector_byteBufDestroy, ptr %d2
   %da = ptrtoint ptr %dp to i64
   %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)
+  %tn1 = select i1 %is1, ptr @.str.tn_map, ptr null
+  %tn2 = select i1 %is2, ptr @.str.tn_arr, ptr %tn1
+  %tnp = select i1 %is3, ptr @.str.tn_bb, ptr %tn2
+  %obj = inttoptr i64 %oa to ptr
+  store ptr %tnp, ptr %obj, align 8
   ret i64 %oa
 }
 @.str.uaf_retain = private unnamed_addr constant [36 x i8] c"arc: retain of already-freed object\00"
@@ -811,24 +816,6 @@ ok:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
   %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
   %d = load ptr, ptr %dp
-  %ismap = icmp eq ptr %d, @HashTable_mapDestroy
-  br i1 %ismap, label %ret_map, label %chk_arr
-ret_map:
-  %sm = call ptr @spec_string_intern(ptr @.str.tn_map)
-  ret ptr %sm
-chk_arr:
-  %isarr = icmp eq ptr %d, @Vector_vecDestroy
-  br i1 %isarr, label %ret_arr, label %chk_bb
-ret_arr:
-  %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)
-  ret ptr %sa
-chk_bb:
-  %isbb = icmp eq ptr %d, @Vector_byteBufDestroy
-  br i1 %isbb, label %ret_bb, label %chk_str
-ret_bb:
-  %sbb = call ptr @spec_string_intern(ptr @.str.tn_bb)
-  ret ptr %sbb
-chk_str:
   %isstr = icmp eq ptr %d, @spec_buf_destroy
   br i1 %isstr, label %ret_str, label %ret_cls
 ret_str:

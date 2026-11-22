@@ -5687,10 +5687,9 @@ Class is IrBuilder{
 					recvStruct: :cStructName(qname: :clsQNameMap:get(key: recvType, default: recvType));
 				});
 			});
-			# A Map/Array/List specialization's instances are floor-built
-			# runtime structs — their headers carry bucket/vector state, not
-			# a typename/vtable pair — so dispatch is static through the
-			# specialization's own method, never a vtable indirection.
+			# A Map/Array/List specialization's instances are floor-allocated
+			# and type-erased across specializations (and never subclassed),
+			# so dispatch is static through the specialization's own method.
 			local String is recvBase: :specBaseMap:get(key: recvStruct, default: '');
 			if({ recvBase == '' }, { recvBase: :specBaseMap:get(key: recvType, default: ''); });
 			local Boolean is floorRecv: recvBase == 'Map' || recvBase == 'Array' || recvBase == 'List';

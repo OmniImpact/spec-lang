@@ -18,6 +18,11 @@ define internal i64 @_spec_rt_alloc_kinded(i64 %size, i64 %kind) alwaysinline {
   %dp = select i1 %is3, ptr @Vector_byteBufDestroy, ptr %d2
   %da = ptrtoint ptr %dp to i64
   %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)
+  %tn1 = select i1 %is1, ptr @.str.tn_map, ptr null
+  %tn2 = select i1 %is2, ptr @.str.tn_arr, ptr %tn1
+  %tnp = select i1 %is3, ptr @.str.tn_bb, ptr %tn2
+  %obj = inttoptr i64 %oa to ptr
+  store ptr %tnp, ptr %obj, align 8
   ret i64 %oa
 }
 @.str.uaf_retain = private unnamed_addr constant [36 x i8] c"arc: retain of already-freed object\00"
@@ -787,24 +792,6 @@ ok:
   %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
   %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
   %d = load ptr, ptr %dp
-  %ismap = icmp eq ptr %d, @HashTable_mapDestroy
-  br i1 %ismap, label %ret_map, label %chk_arr
-ret_map:
-  %sm = call ptr @spec_string_intern(ptr @.str.tn_map)
-  ret ptr %sm
-chk_arr:
-  %isarr = icmp eq ptr %d, @Vector_vecDestroy
-  br i1 %isarr, label %ret_arr, label %chk_bb
-ret_arr:
-  %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)
-  ret ptr %sa
-chk_bb:
-  %isbb = icmp eq ptr %d, @Vector_byteBufDestroy
-  br i1 %isbb, label %ret_bb, label %chk_str
-ret_bb:
-  %sbb = call ptr @spec_string_intern(ptr @.str.tn_bb)
-  ret ptr %sbb
-chk_str:
   %isstr = icmp eq ptr %d, @spec_buf_destroy
   br i1 %isstr, label %ret_str, label %ret_cls
 ret_str:
@@ -1546,7 +1533,7 @@ declare void @spec_drain_async_tasks()
 @.mname.Vector.46 = private unnamed_addr constant [17 x i8] c"byteBufReadU16BE\00"
 @.mname.Vector.47 = private unnamed_addr constant [17 x i8] c"byteBufReadU32BE\00"
 @.mname.Vector.48 = private unnamed_addr constant [17 x i8] c"byteBufReadU32LE\00"
-@.methods.Vector = private constant [49 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Vector.0, ptr @Vector_lockVec, i32 4, i32 28 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.1, ptr @Vector_unlockVec, i32 4, i32 33 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.2, ptr @Vector_newVec, i32 2, i32 38 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.3, ptr @Vector_newVecObject, i32 2, i32 44 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.4, ptr @Vector_newVecLike, i32 0, i32 51 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.5, ptr @Vector_newByteBuf, i32 2, i32 60 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.6, ptr @Vector_isByteBuf, i32 0, i32 65 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.7, ptr @Vector_listLength, i32 0, i32 69 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.8, ptr @Vector_listClear, i32 4, i32 74 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.9, ptr @Vector_listPush, i32 4, i32 82 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.10, ptr @Vector_listGet, i32 0, i32 90 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.11, ptr @Vector_listSet, i32 4, i32 97 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.12, ptr @Vector_listPop, i32 0, i32 105 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.13, ptr @Vector_vecDestroy, i32 6, i32 113 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.14, ptr @Vector_byteBufDestroy, i32 6, i32 134 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.15, ptr @Vector_notifyError, i32 4, i32 144 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.16, ptr @Vector_vecLength, i32 0, i32 154 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.17, ptr @Vector_vecGetAt, i32 0, i32 167 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.18, ptr @Vector_vecGetChecked, i32 0, i32 189 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.19, ptr @Vector_vecSetAt, i32 4, i32 215 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.20, ptr @Vector_vecAdd, i32 4, i32 248 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.21, ptr @Vector_vecAddObject, i32 4, i32 276 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.22, ptr @Vector_vecAddArray, i32 4, i32 286 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.23, ptr @Vector_vecPopChecked, i32 0, i32 351 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.24, ptr @Vector_vecRemoveAtChecked, i32 0, i32 381 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.25, ptr @Vector_vecPopLast, i32 0, i32 414 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.26, ptr @Vector_vecRemoveAt, i32 0, i32 440 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.27, ptr @Vector_vecClear, i32 4, i32 469 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.28, ptr @Vector_vecFreeze, i32 4, i32 500 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.29, ptr @Vector_vecGet, i32 0, i32 509 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.30, ptr @Vector_vecSet, i32 4, i32 531 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.31, ptr @Vector_vecPop, i32 0, i32 554 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.32, ptr @Vector_byteBufLength, i32 0, i32 577 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.33, ptr @Vector_byteBufClear, i32 4, i32 584 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.34, ptr @Vector_byteBufPush, i32 4, i32 592 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.35, ptr @Vector_byteBufAppendString, i32 4, i32 609 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.36, ptr @Vector_byteBufToString, i32 0, i32 631 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.37, ptr @Vector_byteBufGet, i32 0, i32 641 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.38, ptr @Vector_byteBufSet, i32 4, i32 657 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.39, ptr @Vector_byteBufPop, i32 0, i32 673 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.40, ptr @Vector_byteBufAppendBytes, i32 4, i32 691 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.41, ptr @Vector_byteBufAppendRange, i32 4, i32 717 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.42, ptr @Vector_byteBufSlice, i32 0, i32 746 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.43, ptr @Vector_byteBufPushU16BE, i32 4, i32 760 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.44, ptr @Vector_byteBufPushU32BE, i32 4, i32 766 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.45, ptr @Vector_byteBufPushU32LE, i32 4, i32 774 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.46, ptr @Vector_byteBufReadU16BE, i32 0, i32 782 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.47, ptr @Vector_byteBufReadU32BE, i32 0, i32 794 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.48, ptr @Vector_byteBufReadU32LE, i32 0, i32 808 }]
+@.methods.Vector = private constant [49 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.Vector.0, ptr @Vector_lockVec, i32 4, i32 32 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.1, ptr @Vector_unlockVec, i32 4, i32 37 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.2, ptr @Vector_newVec, i32 2, i32 42 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.3, ptr @Vector_newVecObject, i32 2, i32 48 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.4, ptr @Vector_newVecLike, i32 0, i32 55 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.5, ptr @Vector_newByteBuf, i32 2, i32 64 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.6, ptr @Vector_isByteBuf, i32 0, i32 69 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.7, ptr @Vector_listLength, i32 0, i32 73 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.8, ptr @Vector_listClear, i32 4, i32 78 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.9, ptr @Vector_listPush, i32 4, i32 86 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.10, ptr @Vector_listGet, i32 0, i32 94 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.11, ptr @Vector_listSet, i32 4, i32 101 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.12, ptr @Vector_listPop, i32 0, i32 109 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.13, ptr @Vector_vecDestroy, i32 6, i32 117 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.14, ptr @Vector_byteBufDestroy, i32 6, i32 138 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.15, ptr @Vector_notifyError, i32 4, i32 148 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.16, ptr @Vector_vecLength, i32 0, i32 158 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.17, ptr @Vector_vecGetAt, i32 0, i32 171 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.18, ptr @Vector_vecGetChecked, i32 0, i32 193 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.19, ptr @Vector_vecSetAt, i32 4, i32 219 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.20, ptr @Vector_vecAdd, i32 4, i32 252 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.21, ptr @Vector_vecAddObject, i32 4, i32 280 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.22, ptr @Vector_vecAddArray, i32 4, i32 290 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.23, ptr @Vector_vecPopChecked, i32 0, i32 355 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.24, ptr @Vector_vecRemoveAtChecked, i32 0, i32 385 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.25, ptr @Vector_vecPopLast, i32 0, i32 418 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.26, ptr @Vector_vecRemoveAt, i32 0, i32 444 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.27, ptr @Vector_vecClear, i32 4, i32 473 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.28, ptr @Vector_vecFreeze, i32 4, i32 504 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.29, ptr @Vector_vecGet, i32 0, i32 513 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.30, ptr @Vector_vecSet, i32 4, i32 535 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.31, ptr @Vector_vecPop, i32 0, i32 558 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.32, ptr @Vector_byteBufLength, i32 0, i32 581 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.33, ptr @Vector_byteBufClear, i32 4, i32 588 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.34, ptr @Vector_byteBufPush, i32 4, i32 596 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.35, ptr @Vector_byteBufAppendString, i32 4, i32 613 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.36, ptr @Vector_byteBufToString, i32 0, i32 635 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.37, ptr @Vector_byteBufGet, i32 0, i32 645 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.38, ptr @Vector_byteBufSet, i32 4, i32 661 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.39, ptr @Vector_byteBufPop, i32 0, i32 677 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.40, ptr @Vector_byteBufAppendBytes, i32 4, i32 695 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.41, ptr @Vector_byteBufAppendRange, i32 4, i32 721 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.42, ptr @Vector_byteBufSlice, i32 0, i32 750 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.43, ptr @Vector_byteBufPushU16BE, i32 4, i32 764 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.44, ptr @Vector_byteBufPushU32BE, i32 4, i32 770 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.45, ptr @Vector_byteBufPushU32LE, i32 4, i32 778 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.46, ptr @Vector_byteBufReadU16BE, i32 0, i32 786 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.47, ptr @Vector_byteBufReadU32BE, i32 0, i32 798 }, { ptr, ptr, i32, i32 } { ptr @.mname.Vector.48, ptr @Vector_byteBufReadU32LE, i32 0, i32 812 }]
 @.meta.Vector = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.Vector, ptr @.src.Vector, ptr @.bases.Vector, i32 1, ptr @Vector__spec_construct, ptr @.methods.Vector, i32 49, ptr null, i32 0 }
 %struct.Mem = type { ptr, ptr }
 @.typename.Mem = private unnamed_addr constant [4 x i8] c"Mem\00"
@@ -1828,7 +1815,7 @@ declare void @spec_drain_async_tasks()
 @.mname.HashTable.40 = private unnamed_addr constant [10 x i8] c"mapLength\00"
 @.mname.HashTable.41 = private unnamed_addr constant [10 x i8] c"mapFreeze\00"
 @.mname.HashTable.42 = private unnamed_addr constant [8 x i8] c"mapKeys\00"
-@.methods.HashTable = private constant [43 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.HashTable.0, ptr @HashTable_mapLock, i32 4, i32 30 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.1, ptr @HashTable_mapUnlock, i32 4, i32 35 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.2, ptr @HashTable_mapNewTyped, i32 0, i32 40 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.3, ptr @HashTable_mapNewObject, i32 2, i32 51 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.4, ptr @HashTable_mapNewLike, i32 0, i32 56 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.5, ptr @HashTable_mapDestroy, i32 6, i32 63 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.6, ptr @HashTable_mapHashString, i32 0, i32 94 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.7, ptr @HashTable_mapHashBits, i32 0, i32 107 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.8, ptr @HashTable_mapStrKeyEquals, i32 0, i32 117 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.9, ptr @HashTable_mapFloatToBits, i32 0, i32 129 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.10, ptr @HashTable_mapGrow, i32 4, i32 134 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.11, ptr @HashTable_mapSetRaw, i32 4, i32 164 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.12, ptr @HashTable_mapGetRaw, i32 0, i32 234 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.13, ptr @HashTable_mapGetCheckedRaw, i32 0, i32 272 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.14, ptr @HashTable_mapGetChecked, i32 0, i32 317 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.15, ptr @HashTable_mapGetIntChecked, i32 0, i32 321 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.16, ptr @HashTable_mapGetFltChecked, i32 0, i32 325 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.17, ptr @HashTable_mapGetObjChecked, i32 0, i32 329 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.18, ptr @HashTable_mapHasRaw, i32 0, i32 333 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.19, ptr @HashTable_mapRemoveRaw, i32 0, i32 364 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.20, ptr @HashTable_mapSet, i32 4, i32 418 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.21, ptr @HashTable_mapSetAny, i32 4, i32 422 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.22, ptr @HashTable_mapGet, i32 0, i32 426 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.23, ptr @HashTable_mapHas, i32 0, i32 430 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.24, ptr @HashTable_mapRemove, i32 0, i32 434 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.25, ptr @HashTable_mapSetInt, i32 4, i32 438 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.26, ptr @HashTable_mapSetIntAny, i32 4, i32 442 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.27, ptr @HashTable_mapGetInt, i32 0, i32 446 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.28, ptr @HashTable_mapHasInt, i32 0, i32 450 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.29, ptr @HashTable_mapRemoveInt, i32 0, i32 454 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.30, ptr @HashTable_mapSetFlt, i32 4, i32 458 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.31, ptr @HashTable_mapSetFltAny, i32 4, i32 462 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.32, ptr @HashTable_mapGetFlt, i32 0, i32 466 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.33, ptr @HashTable_mapHasFlt, i32 0, i32 470 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.34, ptr @HashTable_mapRemoveFlt, i32 0, i32 474 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.35, ptr @HashTable_mapSetObj, i32 4, i32 478 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.36, ptr @HashTable_mapSetObjAny, i32 4, i32 482 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.37, ptr @HashTable_mapGetObj, i32 0, i32 486 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.38, ptr @HashTable_mapHasObj, i32 0, i32 490 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.39, ptr @HashTable_mapRemoveObj, i32 0, i32 494 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.40, ptr @HashTable_mapLength, i32 0, i32 498 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.41, ptr @HashTable_mapFreeze, i32 4, i32 510 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.42, ptr @HashTable_mapKeys, i32 0, i32 518 }]
+@.methods.HashTable = private constant [43 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.HashTable.0, ptr @HashTable_mapLock, i32 4, i32 32 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.1, ptr @HashTable_mapUnlock, i32 4, i32 37 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.2, ptr @HashTable_mapNewTyped, i32 0, i32 42 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.3, ptr @HashTable_mapNewObject, i32 2, i32 53 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.4, ptr @HashTable_mapNewLike, i32 0, i32 58 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.5, ptr @HashTable_mapDestroy, i32 6, i32 65 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.6, ptr @HashTable_mapHashString, i32 0, i32 96 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.7, ptr @HashTable_mapHashBits, i32 0, i32 109 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.8, ptr @HashTable_mapStrKeyEquals, i32 0, i32 119 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.9, ptr @HashTable_mapFloatToBits, i32 0, i32 131 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.10, ptr @HashTable_mapGrow, i32 4, i32 136 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.11, ptr @HashTable_mapSetRaw, i32 4, i32 166 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.12, ptr @HashTable_mapGetRaw, i32 0, i32 236 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.13, ptr @HashTable_mapGetCheckedRaw, i32 0, i32 274 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.14, ptr @HashTable_mapGetChecked, i32 0, i32 319 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.15, ptr @HashTable_mapGetIntChecked, i32 0, i32 323 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.16, ptr @HashTable_mapGetFltChecked, i32 0, i32 327 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.17, ptr @HashTable_mapGetObjChecked, i32 0, i32 331 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.18, ptr @HashTable_mapHasRaw, i32 0, i32 335 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.19, ptr @HashTable_mapRemoveRaw, i32 0, i32 366 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.20, ptr @HashTable_mapSet, i32 4, i32 420 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.21, ptr @HashTable_mapSetAny, i32 4, i32 424 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.22, ptr @HashTable_mapGet, i32 0, i32 428 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.23, ptr @HashTable_mapHas, i32 0, i32 432 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.24, ptr @HashTable_mapRemove, i32 0, i32 436 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.25, ptr @HashTable_mapSetInt, i32 4, i32 440 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.26, ptr @HashTable_mapSetIntAny, i32 4, i32 444 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.27, ptr @HashTable_mapGetInt, i32 0, i32 448 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.28, ptr @HashTable_mapHasInt, i32 0, i32 452 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.29, ptr @HashTable_mapRemoveInt, i32 0, i32 456 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.30, ptr @HashTable_mapSetFlt, i32 4, i32 460 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.31, ptr @HashTable_mapSetFltAny, i32 4, i32 464 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.32, ptr @HashTable_mapGetFlt, i32 0, i32 468 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.33, ptr @HashTable_mapHasFlt, i32 0, i32 472 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.34, ptr @HashTable_mapRemoveFlt, i32 0, i32 476 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.35, ptr @HashTable_mapSetObj, i32 4, i32 480 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.36, ptr @HashTable_mapSetObjAny, i32 4, i32 484 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.37, ptr @HashTable_mapGetObj, i32 0, i32 488 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.38, ptr @HashTable_mapHasObj, i32 0, i32 492 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.39, ptr @HashTable_mapRemoveObj, i32 0, i32 496 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.40, ptr @HashTable_mapLength, i32 0, i32 500 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.41, ptr @HashTable_mapFreeze, i32 4, i32 512 }, { ptr, ptr, i32, i32 } { ptr @.mname.HashTable.42, ptr @HashTable_mapKeys, i32 0, i32 520 }]
 @.meta.HashTable = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.HashTable, ptr @.src.HashTable, ptr @.bases.HashTable, i32 1, ptr @HashTable__spec_construct, ptr @.methods.HashTable, i32 43, ptr null, i32 0 }
 %struct.Enum = type { ptr, ptr }
 @.typename.Enum = private unnamed_addr constant [5 x i8] c"Enum\00"
@@ -5533,7 +5520,7 @@ declare void @spec_drain_async_tasks()
 @.mname.IrBuilder.112 = private unnamed_addr constant [16 x i8] c"exprCallsMethod\00"
 @.mname.IrBuilder.113 = private unnamed_addr constant [26 x i8] c"emitUnwrappedFieldAssigns\00"
 @.mname.IrBuilder.114 = private unnamed_addr constant [14 x i8] c"lowerCallArgs\00"
-@.methods.IrBuilder = private constant [115 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.0, ptr @IrBuilder_init, i32 6, i32 121 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.1, ptr @IrBuilder_addError, i32 4, i32 125 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.2, ptr @IrBuilder_checkConcreteMapKindType, i32 4, i32 131 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.3, ptr @IrBuilder_extractMapKeySpec, i32 0, i32 139 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.4, ptr @IrBuilder_nextTmp, i32 2, i32 156 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.5, ptr @IrBuilder_nextLabel, i32 0, i32 161 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.6, ptr @IrBuilder_irTypeFor, i32 0, i32 166 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.7, ptr @IrBuilder_irTypeForNode, i32 0, i32 175 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.8, ptr @IrBuilder_isArcTypeNode, i32 0, i32 180 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.9, ptr @IrBuilder_isUnsignedSpecType, i32 0, i32 184 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.10, ptr @IrBuilder_unsignedMaskFor, i32 0, i32 188 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.11, ptr @IrBuilder_isArcSpecType, i32 0, i32 195 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.12, ptr @IrBuilder_mapKeyKindFor, i32 0, i32 206 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.13, ptr @IrBuilder_typeSpelling, i32 0, i32 219 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.14, ptr @IrBuilder_isMapRecvType, i32 0, i32 233 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.15, ptr @IrBuilder_mapKeySuffixFor, i32 0, i32 244 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.16, ptr @IrBuilder_mapKeyIrTypeFor, i32 0, i32 261 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.17, ptr @IrBuilder_hasMethodBodies, i32 0, i32 267 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.18, ptr @IrBuilder_castIfNeeded, i32 0, i32 279 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.19, ptr @IrBuilder_emit, i32 4, i32 286 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.20, ptr @IrBuilder_terminate, i32 4, i32 309 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.21, ptr @IrBuilder_switchBlock, i32 4, i32 316 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.22, ptr @IrBuilder_resetScopes, i32 6, i32 321 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.23, ptr @IrBuilder_pushScope, i32 6, i32 335 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.24, ptr @IrBuilder_bindLocal, i32 4, i32 339 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.25, ptr @IrBuilder_popScope, i32 6, i32 377 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.26, ptr @IrBuilder_isStdlibClass, i32 0, i32 426 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.27, ptr @IrBuilder_baseTypeName, i32 0, i32 434 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.28, ptr @IrBuilder_cStructName, i32 0, i32 452 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.29, ptr @IrBuilder_resolveBaseClass, i32 0, i32 456 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.30, ptr @IrBuilder_addInheritedFields, i32 4, i32 472 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.31, ptr @IrBuilder_buildVtable, i32 4, i32 521 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.32, ptr @IrBuilder_collectAllClasses, i32 4, i32 558 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.33, ptr @IrBuilder_buildProgram, i32 0, i32 570 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.34, ptr @IrBuilder_inheritHeldFromAncestors, i32 4, i32 881 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.35, ptr @IrBuilder_emitPoolEnter, i32 6, i32 908 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.36, ptr @IrBuilder_emitPoolExit, i32 6, i32 918 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.37, ptr @IrBuilder_emitClaimPool, i32 4, i32 924 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.38, ptr @IrBuilder_emitDeferFrameEnter, i32 4, i32 933 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.39, ptr @IrBuilder_emitDeferFrameExit, i32 6, i32 945 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.40, ptr @IrBuilder_destroyFnFor, i32 0, i32 950 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.41, ptr @IrBuilder_buildDestroyHelper, i32 4, i32 958 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.42, ptr @IrBuilder_buildSpecErrorHandlerDispatcher, i32 4, i32 1001 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.43, ptr @IrBuilder_buildMainEntry, i32 4, i32 1164 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.44, ptr @IrBuilder_collectAncestors, i32 4, i32 1219 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.45, ptr @IrBuilder_buildRttiHelpers, i32 4, i32 1235 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.46, ptr @IrBuilder_methodReturnSpecType, i32 0, i32 1388 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.47, ptr @IrBuilder_methodReturnType, i32 0, i32 1399 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.48, ptr @IrBuilder_emitFieldDefaults, i32 4, i32 1410 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.49, ptr @IrBuilder_registerClassMetaAndHeld, i32 4, i32 1487 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.50, ptr @IrBuilder_buildConstructHelper, i32 4, i32 1542 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.51, ptr @IrBuilder_buildDefaultInit, i32 4, i32 1570 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.52, ptr @IrBuilder_buildHeldEnsure, i32 4, i32 1590 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.53, ptr @IrBuilder_buildLazyFieldEnsure, i32 4, i32 1659 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.54, ptr @IrBuilder_findParentMethodImpl, i32 0, i32 1772 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.55, ptr @IrBuilder_findHeldResolver, i32 0, i32 1809 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.56, ptr @IrBuilder_buildHeldResolvers, i32 6, i32 1833 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.57, ptr @IrBuilder_isLazyCallExpr, i32 0, i32 1949 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.58, ptr @IrBuilder_getLazyBodyExpr, i32 0, i32 1973 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.59, ptr @IrBuilder_lowerLazyBodyVal, i32 0, i32 1985 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.60, ptr @IrBuilder_emitLoadField, i32 0, i32 2067 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.61, ptr @IrBuilder_emitMarkLazyFieldDone, i32 4, i32 2120 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.62, ptr @IrBuilder_emitLoadLocal, i32 0, i32 2133 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.63, ptr @IrBuilder_emitStoreLocal, i32 4, i32 2184 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.64, ptr @IrBuilder_emitNewBox, i32 0, i32 2210 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.65, ptr @IrBuilder_callTargetsDefer, i32 0, i32 2236 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.66, ptr @IrBuilder_frameDeferExcluded, i32 2, i32 2246 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.67, ptr @IrBuilder_bodyUsesDeferInExpr, i32 0, i32 2256 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.68, ptr @IrBuilder_bodyUsesDeferInStmts, i32 0, i32 2354 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.69, ptr @IrBuilder_scanBareTemplateUse, i32 4, i32 2385 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.70, ptr @IrBuilder_markBareTypeUse, i32 4, i32 2414 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.71, ptr @IrBuilder_markBareStmtUse, i32 4, i32 2426 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.72, ptr @IrBuilder_markBareExprUse, i32 4, i32 2450 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.73, ptr @IrBuilder_collectDeclNamesInStmts, i32 4, i32 2528 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.74, ptr @IrBuilder_collectDeclNamesInExpr, i32 4, i32 2552 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.75, ptr @IrBuilder_collectAllAnonCapturesInStmts, i32 4, i32 2697 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.76, ptr @IrBuilder_collectAllAnonCapturesInExpr, i32 4, i32 2720 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.77, ptr @IrBuilder_structNameForLocal, i32 0, i32 2860 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.78, ptr @IrBuilder_resolvePathField, i32 0, i32 2872 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.79, ptr @IrBuilder_structNameForExpr, i32 0, i32 2964 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.80, ptr @IrBuilder_buildMethod, i32 4, i32 2975 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.81, ptr @IrBuilder_findCustomErrorHandlerCallee, i32 0, i32 3092 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.82, ptr @IrBuilder_findCustomErrorHandlerWalk, i32 0, i32 3096 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.83, ptr @IrBuilder_emitConstStrVal, i32 0, i32 3132 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.84, ptr @IrBuilder_collectCallsInStmts, i32 4, i32 3139 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.85, ptr @IrBuilder_collectCallsInExpr, i32 4, i32 3169 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.86, ptr @IrBuilder_markMethodCanUnwind, i32 4, i32 3289 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.87, ptr @IrBuilder_computeCanUnwind, i32 4, i32 3313 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.88, ptr @IrBuilder_shouldEmitUnwindCheck, i32 0, i32 3411 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.89, ptr @IrBuilder_emitUnwindCurrentFrame, i32 4, i32 3426 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.90, ptr @IrBuilder_emitCheckUnwindAfterCall, i32 4, i32 3520 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.91, ptr @IrBuilder_emitReleaseOwnedLocals, i32 6, i32 3549 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.92, ptr @IrBuilder_emitDefaultVal, i32 0, i32 3569 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.93, ptr @IrBuilder_lowerStmts, i32 4, i32 3586 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.94, ptr @IrBuilder_lowerFnBody, i32 4, i32 3594 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.95, ptr @IrBuilder_lowerStmt, i32 4, i32 3626 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.96, ptr @IrBuilder_setMapHintsFromTypeStr, i32 4, i32 3981 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.97, ptr @IrBuilder_setAssignTargetMapHints, i32 4, i32 3998 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.98, ptr @IrBuilder_collectAppendChainRhs, i32 0, i32 4030 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.99, ptr @IrBuilder_lowerConcatRight, i32 0, i32 4052 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.100, ptr @IrBuilder_lowerConcatChainNoClaim, i32 0, i32 4078 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.101, ptr @IrBuilder_tryLowerAppendChain, i32 0, i32 4122 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.102, ptr @IrBuilder_lowerIncDec, i32 0, i32 4152 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.103, ptr @IrBuilder_emitObjectToString, i32 0, i32 4255 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.104, ptr @IrBuilder_lowerExpr, i32 0, i32 4327 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.105, ptr @IrBuilder_collectFreeInStmts, i32 4, i32 4928 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.106, ptr @IrBuilder_collectFreeInExpr, i32 4, i32 4956 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.107, ptr @IrBuilder_lowerAnonFn, i32 0, i32 5060 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.108, ptr @IrBuilder_emitClosureCall, i32 0, i32 5356 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.109, ptr @IrBuilder_lowerCall, i32 0, i32 5396 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.110, ptr @IrBuilder_emitImportFieldOrAlloc, i32 0, i32 5793 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.111, ptr @IrBuilder_stmtsCallMethod, i32 0, i32 5822 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.112, ptr @IrBuilder_exprCallsMethod, i32 0, i32 5842 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.113, ptr @IrBuilder_emitUnwrappedFieldAssigns, i32 4, i32 5861 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.114, ptr @IrBuilder_lowerCallArgs, i32 4, i32 5903 }]
+@.methods.IrBuilder = private constant [115 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.0, ptr @IrBuilder_init, i32 6, i32 121 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.1, ptr @IrBuilder_addError, i32 4, i32 125 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.2, ptr @IrBuilder_checkConcreteMapKindType, i32 4, i32 131 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.3, ptr @IrBuilder_extractMapKeySpec, i32 0, i32 139 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.4, ptr @IrBuilder_nextTmp, i32 2, i32 156 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.5, ptr @IrBuilder_nextLabel, i32 0, i32 161 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.6, ptr @IrBuilder_irTypeFor, i32 0, i32 166 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.7, ptr @IrBuilder_irTypeForNode, i32 0, i32 175 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.8, ptr @IrBuilder_isArcTypeNode, i32 0, i32 180 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.9, ptr @IrBuilder_isUnsignedSpecType, i32 0, i32 184 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.10, ptr @IrBuilder_unsignedMaskFor, i32 0, i32 188 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.11, ptr @IrBuilder_isArcSpecType, i32 0, i32 195 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.12, ptr @IrBuilder_mapKeyKindFor, i32 0, i32 206 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.13, ptr @IrBuilder_typeSpelling, i32 0, i32 219 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.14, ptr @IrBuilder_isMapRecvType, i32 0, i32 233 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.15, ptr @IrBuilder_mapKeySuffixFor, i32 0, i32 244 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.16, ptr @IrBuilder_mapKeyIrTypeFor, i32 0, i32 261 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.17, ptr @IrBuilder_hasMethodBodies, i32 0, i32 267 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.18, ptr @IrBuilder_castIfNeeded, i32 0, i32 279 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.19, ptr @IrBuilder_emit, i32 4, i32 286 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.20, ptr @IrBuilder_terminate, i32 4, i32 309 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.21, ptr @IrBuilder_switchBlock, i32 4, i32 316 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.22, ptr @IrBuilder_resetScopes, i32 6, i32 321 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.23, ptr @IrBuilder_pushScope, i32 6, i32 335 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.24, ptr @IrBuilder_bindLocal, i32 4, i32 339 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.25, ptr @IrBuilder_popScope, i32 6, i32 377 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.26, ptr @IrBuilder_isStdlibClass, i32 0, i32 426 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.27, ptr @IrBuilder_baseTypeName, i32 0, i32 434 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.28, ptr @IrBuilder_cStructName, i32 0, i32 452 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.29, ptr @IrBuilder_resolveBaseClass, i32 0, i32 456 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.30, ptr @IrBuilder_addInheritedFields, i32 4, i32 472 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.31, ptr @IrBuilder_buildVtable, i32 4, i32 521 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.32, ptr @IrBuilder_collectAllClasses, i32 4, i32 558 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.33, ptr @IrBuilder_buildProgram, i32 0, i32 570 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.34, ptr @IrBuilder_inheritHeldFromAncestors, i32 4, i32 881 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.35, ptr @IrBuilder_emitPoolEnter, i32 6, i32 908 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.36, ptr @IrBuilder_emitPoolExit, i32 6, i32 918 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.37, ptr @IrBuilder_emitClaimPool, i32 4, i32 924 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.38, ptr @IrBuilder_emitDeferFrameEnter, i32 4, i32 933 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.39, ptr @IrBuilder_emitDeferFrameExit, i32 6, i32 945 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.40, ptr @IrBuilder_destroyFnFor, i32 0, i32 950 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.41, ptr @IrBuilder_buildDestroyHelper, i32 4, i32 958 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.42, ptr @IrBuilder_buildSpecErrorHandlerDispatcher, i32 4, i32 1001 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.43, ptr @IrBuilder_buildMainEntry, i32 4, i32 1164 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.44, ptr @IrBuilder_collectAncestors, i32 4, i32 1219 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.45, ptr @IrBuilder_buildRttiHelpers, i32 4, i32 1235 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.46, ptr @IrBuilder_methodReturnSpecType, i32 0, i32 1388 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.47, ptr @IrBuilder_methodReturnType, i32 0, i32 1399 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.48, ptr @IrBuilder_emitFieldDefaults, i32 4, i32 1410 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.49, ptr @IrBuilder_registerClassMetaAndHeld, i32 4, i32 1487 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.50, ptr @IrBuilder_buildConstructHelper, i32 4, i32 1542 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.51, ptr @IrBuilder_buildDefaultInit, i32 4, i32 1570 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.52, ptr @IrBuilder_buildHeldEnsure, i32 4, i32 1590 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.53, ptr @IrBuilder_buildLazyFieldEnsure, i32 4, i32 1659 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.54, ptr @IrBuilder_findParentMethodImpl, i32 0, i32 1772 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.55, ptr @IrBuilder_findHeldResolver, i32 0, i32 1809 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.56, ptr @IrBuilder_buildHeldResolvers, i32 6, i32 1833 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.57, ptr @IrBuilder_isLazyCallExpr, i32 0, i32 1949 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.58, ptr @IrBuilder_getLazyBodyExpr, i32 0, i32 1973 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.59, ptr @IrBuilder_lowerLazyBodyVal, i32 0, i32 1985 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.60, ptr @IrBuilder_emitLoadField, i32 0, i32 2067 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.61, ptr @IrBuilder_emitMarkLazyFieldDone, i32 4, i32 2120 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.62, ptr @IrBuilder_emitLoadLocal, i32 0, i32 2133 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.63, ptr @IrBuilder_emitStoreLocal, i32 4, i32 2184 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.64, ptr @IrBuilder_emitNewBox, i32 0, i32 2210 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.65, ptr @IrBuilder_callTargetsDefer, i32 0, i32 2236 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.66, ptr @IrBuilder_frameDeferExcluded, i32 2, i32 2246 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.67, ptr @IrBuilder_bodyUsesDeferInExpr, i32 0, i32 2256 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.68, ptr @IrBuilder_bodyUsesDeferInStmts, i32 0, i32 2354 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.69, ptr @IrBuilder_scanBareTemplateUse, i32 4, i32 2385 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.70, ptr @IrBuilder_markBareTypeUse, i32 4, i32 2414 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.71, ptr @IrBuilder_markBareStmtUse, i32 4, i32 2426 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.72, ptr @IrBuilder_markBareExprUse, i32 4, i32 2450 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.73, ptr @IrBuilder_collectDeclNamesInStmts, i32 4, i32 2528 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.74, ptr @IrBuilder_collectDeclNamesInExpr, i32 4, i32 2552 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.75, ptr @IrBuilder_collectAllAnonCapturesInStmts, i32 4, i32 2697 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.76, ptr @IrBuilder_collectAllAnonCapturesInExpr, i32 4, i32 2720 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.77, ptr @IrBuilder_structNameForLocal, i32 0, i32 2860 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.78, ptr @IrBuilder_resolvePathField, i32 0, i32 2872 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.79, ptr @IrBuilder_structNameForExpr, i32 0, i32 2964 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.80, ptr @IrBuilder_buildMethod, i32 4, i32 2975 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.81, ptr @IrBuilder_findCustomErrorHandlerCallee, i32 0, i32 3092 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.82, ptr @IrBuilder_findCustomErrorHandlerWalk, i32 0, i32 3096 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.83, ptr @IrBuilder_emitConstStrVal, i32 0, i32 3132 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.84, ptr @IrBuilder_collectCallsInStmts, i32 4, i32 3139 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.85, ptr @IrBuilder_collectCallsInExpr, i32 4, i32 3169 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.86, ptr @IrBuilder_markMethodCanUnwind, i32 4, i32 3289 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.87, ptr @IrBuilder_computeCanUnwind, i32 4, i32 3313 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.88, ptr @IrBuilder_shouldEmitUnwindCheck, i32 0, i32 3411 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.89, ptr @IrBuilder_emitUnwindCurrentFrame, i32 4, i32 3426 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.90, ptr @IrBuilder_emitCheckUnwindAfterCall, i32 4, i32 3520 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.91, ptr @IrBuilder_emitReleaseOwnedLocals, i32 6, i32 3549 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.92, ptr @IrBuilder_emitDefaultVal, i32 0, i32 3569 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.93, ptr @IrBuilder_lowerStmts, i32 4, i32 3586 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.94, ptr @IrBuilder_lowerFnBody, i32 4, i32 3594 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.95, ptr @IrBuilder_lowerStmt, i32 4, i32 3626 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.96, ptr @IrBuilder_setMapHintsFromTypeStr, i32 4, i32 3981 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.97, ptr @IrBuilder_setAssignTargetMapHints, i32 4, i32 3998 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.98, ptr @IrBuilder_collectAppendChainRhs, i32 0, i32 4030 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.99, ptr @IrBuilder_lowerConcatRight, i32 0, i32 4052 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.100, ptr @IrBuilder_lowerConcatChainNoClaim, i32 0, i32 4078 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.101, ptr @IrBuilder_tryLowerAppendChain, i32 0, i32 4122 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.102, ptr @IrBuilder_lowerIncDec, i32 0, i32 4152 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.103, ptr @IrBuilder_emitObjectToString, i32 0, i32 4255 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.104, ptr @IrBuilder_lowerExpr, i32 0, i32 4327 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.105, ptr @IrBuilder_collectFreeInStmts, i32 4, i32 4928 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.106, ptr @IrBuilder_collectFreeInExpr, i32 4, i32 4956 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.107, ptr @IrBuilder_lowerAnonFn, i32 0, i32 5060 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.108, ptr @IrBuilder_emitClosureCall, i32 0, i32 5356 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.109, ptr @IrBuilder_lowerCall, i32 0, i32 5396 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.110, ptr @IrBuilder_emitImportFieldOrAlloc, i32 0, i32 5792 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.111, ptr @IrBuilder_stmtsCallMethod, i32 0, i32 5821 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.112, ptr @IrBuilder_exprCallsMethod, i32 0, i32 5841 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.113, ptr @IrBuilder_emitUnwrappedFieldAssigns, i32 4, i32 5860 }, { ptr, ptr, i32, i32 } { ptr @.mname.IrBuilder.114, ptr @IrBuilder_lowerCallArgs, i32 4, i32 5902 }]
 @.fname.IrBuilder.0 = private unnamed_addr constant [4 x i8] c"mod\00"
 @.ftype.IrBuilder.0 = private unnamed_addr constant [9 x i8] c"IrModule\00"
 @.fname.IrBuilder.1 = private unnamed_addr constant [11 x i8] c"tmpCounter\00"
@@ -5976,7 +5963,7 @@ declare void @spec_drain_async_tasks()
 @.mname.LlvmRuntimePrelude.5 = private unnamed_addr constant [16 x i8] c"emitMathHelpers\00"
 @.mname.LlvmRuntimePrelude.6 = private unnamed_addr constant [18 x i8] c"emitCliAndAtomics\00"
 @.mname.LlvmRuntimePrelude.7 = private unnamed_addr constant [8 x i8] c"emitAll\00"
-@.methods.LlvmRuntimePrelude = private constant [8 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.0, ptr @LlvmRuntimePrelude_init, i32 6, i32 9 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.1, ptr @LlvmRuntimePrelude_emitArcAndPool, i32 2, i32 12 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.2, ptr @LlvmRuntimePrelude_emitClosuresAndBoxes, i32 2, i32 169 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.3, ptr @LlvmRuntimePrelude_emitMemIntrinsics, i32 2, i32 282 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.4, ptr @LlvmRuntimePrelude_emitTypeAndStringHelpers, i32 2, i32 615 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.5, ptr @LlvmRuntimePrelude_emitMathHelpers, i32 2, i32 844 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.6, ptr @LlvmRuntimePrelude_emitCliAndAtomics, i32 2, i32 946 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.7, ptr @LlvmRuntimePrelude_emitAll, i32 2, i32 1053 }]
+@.methods.LlvmRuntimePrelude = private constant [8 x { ptr, ptr, i32, i32 }] [{ ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.0, ptr @LlvmRuntimePrelude_init, i32 6, i32 9 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.1, ptr @LlvmRuntimePrelude_emitArcAndPool, i32 2, i32 12 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.2, ptr @LlvmRuntimePrelude_emitClosuresAndBoxes, i32 2, i32 174 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.3, ptr @LlvmRuntimePrelude_emitMemIntrinsics, i32 2, i32 287 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.4, ptr @LlvmRuntimePrelude_emitTypeAndStringHelpers, i32 2, i32 620 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.5, ptr @LlvmRuntimePrelude_emitMathHelpers, i32 2, i32 831 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.6, ptr @LlvmRuntimePrelude_emitCliAndAtomics, i32 2, i32 933 }, { ptr, ptr, i32, i32 } { ptr @.mname.LlvmRuntimePrelude.7, ptr @LlvmRuntimePrelude_emitAll, i32 2, i32 1040 }]
 @.meta.LlvmRuntimePrelude = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32, ptr, i32 } { ptr @.typename.LlvmRuntimePrelude, ptr @.src.LlvmRuntimePrelude, ptr @.bases.LlvmRuntimePrelude, i32 1, ptr @LlvmRuntimePrelude__spec_construct, ptr @.methods.LlvmRuntimePrelude, i32 8, ptr null, i32 0 }
 %struct.LlvmStructLayout = type { ptr, ptr, ptr, ptr, ptr }
 @.typename.LlvmStructLayout = private unnamed_addr constant [17 x i8] c"LlvmStructLayout\00"
@@ -15112,13 +15099,13 @@ define i32 @spec_class_registry_count() {
 @.str.cache.1997 = internal global ptr null, align 8
 @.str.1998 = private unnamed_addr constant [5 x i8] c"lshr\00"
 @.str.cache.1998 = internal global ptr null, align 8
-@.str.1999 = private unnamed_addr constant [5489 x i8] c"@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer\0A@g_spec_active_threads = external global i32\0A@.str.oom = private unnamed_addr constant [14 x i8] c\22Out of memory\5C00\22\0A%struct.SpecHeader = type { i32, i32, ptr }\0Adefine internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {\0A  %da = ptrtoint ptr %destroy to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  %obj = inttoptr i64 %oa to ptr\0A  ret ptr %obj\0A}\0Adefine internal i64 @_spec_rt_alloc_kinded(i64 %size, i64 %kind) alwaysinline {\0A  %is1 = icmp eq i64 %kind, 1\0A  %is2 = icmp eq i64 %kind, 2\0A  %is3 = icmp eq i64 %kind, 3\0A  %d1 = select i1 %is1, ptr @HashTable_mapDestroy, ptr null\0A  %d2 = select i1 %is2, ptr @Vector_vecDestroy, ptr %d1\0A  %dp = select i1 %is3, ptr @Vector_byteBufDestroy, ptr %d2\0A  %da = ptrtoint ptr %dp to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  ret i64 %oa\0A}\0A@.str.uaf_retain = private unnamed_addr constant [36 x i8] c\22arc: retain of already-freed object\5C00\22\0A@.str.uaf_release = private unnamed_addr constant [37 x i8] c\22arc: release of already-freed object\5C00\22\0Adefine internal ptr @spec_rt_retain(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_retain)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_inc\0Afast_inc:\0A  %rc = load i32, ptr %h, align 4\0A  %rc1 = add i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_inc\0Aatomic_inc:\0A  %unused = atomicrmw add ptr %h, i32 1 monotonic, align 4\0A  br label %done\0Adone:\0A  ret ptr %obj\0A}\0Adefine internal void @spec_rt_release(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_release)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_dec\0Afast_dec:\0A  %rc = load i32, ptr %h, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %fast_destroy, label %fast_chk0\0Afast_destroy:\0A  store i32 0, ptr %h, align 4\0A  %oa1 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa1)\0A  br label %done\0Afast_chk0:\0A  %is_zero = icmp eq i32 %rc, 0\0A  br i1 %is_zero, label %reentrant_slow, label %fast_store\0Afast_store:\0A  %rc1 = sub i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_chk0\0Aatomic_chk0:\0A  %rc0 = load atomic i32, ptr %h monotonic, align 4\0A  %is0 = icmp eq i32 %rc0, 0\0A  br i1 %is0, label %reentrant_slow, label %atomic_dec\0Aatomic_dec:\0A  %old = atomicrmw sub ptr %h, i32 1 acq_rel, align 4\0A  %is1 = icmp eq i32 %old, 1\0A  br i1 %is1, label %atomic_destroy, label %done\0Aatomic_destroy:\0A  %oa2 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa2)\0A  br label %done\0Areentrant_slow:\0A  %oa0 = ptrtoint ptr %obj to i64\0A  call void @Arc_release(ptr null, i64 %oa0)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @spec_pool_frame() alwaysinline {\0A  %t = call i64 @Pool_poolFrame(ptr null)\0A  ret i64 %t\0A}\0Adefine internal void @spec_pool_release_to(i64 %mark) alwaysinline {\0A  call void @Pool_poolReleaseTo(ptr null, i64 %mark)\0A  ret void\0A}\0Adefine internal void @spec_pool_release_to_transfer(i64 %mark, ptr %keep) alwaysinline {\0A  %ka = ptrtoint ptr %keep to i64\0A  call void @Pool_releaseToTransferring(ptr null, i64 %mark, i64 %ka)\0A  ret void\0A}\0Adefine internal void @spec_pool_unclaim_addr(i64 %addr) alwaysinline {\0A  call void @Pool_unclaimAddr(ptr null, i64 %addr)\0A  ret void\0A}\0Adefine internal ptr @spec_claim_pool(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Pool_claimPool(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine void @spec_pool_thread_cleanup() nounwind {\0A  call void @Cleanup_threadCleanup(ptr null)\0A  call void @Pool_threadCleanup(ptr null)\0A  ret void\0A}\00"
+@.str.1999 = private unnamed_addr constant [5713 x i8] c"@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer\0A@g_spec_active_threads = external global i32\0A@.str.oom = private unnamed_addr constant [14 x i8] c\22Out of memory\5C00\22\0A%struct.SpecHeader = type { i32, i32, ptr }\0Adefine internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline {\0A  %da = ptrtoint ptr %destroy to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  %obj = inttoptr i64 %oa to ptr\0A  ret ptr %obj\0A}\0Adefine internal i64 @_spec_rt_alloc_kinded(i64 %size, i64 %kind) alwaysinline {\0A  %is1 = icmp eq i64 %kind, 1\0A  %is2 = icmp eq i64 %kind, 2\0A  %is3 = icmp eq i64 %kind, 3\0A  %d1 = select i1 %is1, ptr @HashTable_mapDestroy, ptr null\0A  %d2 = select i1 %is2, ptr @Vector_vecDestroy, ptr %d1\0A  %dp = select i1 %is3, ptr @Vector_byteBufDestroy, ptr %d2\0A  %da = ptrtoint ptr %dp to i64\0A  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)\0A  %tn1 = select i1 %is1, ptr @.str.tn_map, ptr null\0A  %tn2 = select i1 %is2, ptr @.str.tn_arr, ptr %tn1\0A  %tnp = select i1 %is3, ptr @.str.tn_bb, ptr %tn2\0A  %obj = inttoptr i64 %oa to ptr\0A  store ptr %tnp, ptr %obj, align 8\0A  ret i64 %oa\0A}\0A@.str.uaf_retain = private unnamed_addr constant [36 x i8] c\22arc: retain of already-freed object\5C00\22\0A@.str.uaf_release = private unnamed_addr constant [37 x i8] c\22arc: release of already-freed object\5C00\22\0Adefine internal ptr @spec_rt_retain(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_retain)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_inc\0Afast_inc:\0A  %rc = load i32, ptr %h, align 4\0A  %rc1 = add i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_inc\0Aatomic_inc:\0A  %unused = atomicrmw add ptr %h, i32 1 monotonic, align 4\0A  br label %done\0Adone:\0A  ret ptr %obj\0A}\0Adefine internal void @spec_rt_release(ptr %obj) alwaysinline {\0A  %isnull = icmp eq ptr %obj, null\0A  br i1 %isnull, label %done, label %chk_mt\0Achk_mt:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dfp = getelementptr inbounds i8, ptr %h, i64 8\0A  %df = load i64, ptr %dfp, align 8\0A  %is_freed = icmp eq i64 %df, 73083690742142\0A  br i1 %is_freed, label %uaf, label %chk_mt_ok\0Auaf:\0A  call void @spec_panic(ptr @.str.uaf_release)\0A  unreachable\0Achk_mt_ok:\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  br i1 %is_mt, label %atomic_path, label %fast_path\0Afast_path:\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load i32, ptr %sfp, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %done, label %fast_dec\0Afast_dec:\0A  %rc = load i32, ptr %h, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %fast_destroy, label %fast_chk0\0Afast_destroy:\0A  store i32 0, ptr %h, align 4\0A  %oa1 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa1)\0A  br label %done\0Afast_chk0:\0A  %is_zero = icmp eq i32 %rc, 0\0A  br i1 %is_zero, label %reentrant_slow, label %fast_store\0Afast_store:\0A  %rc1 = sub i32 %rc, 1\0A  store i32 %rc1, ptr %h, align 4\0A  br label %done\0Aatomic_path:\0A  %sfp2 = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf2 = load atomic i32, ptr %sfp2 monotonic, align 4\0A  %imm2 = and i32 %sf2, 1\0A  %is_imm2 = icmp ne i32 %imm2, 0\0A  br i1 %is_imm2, label %done, label %atomic_chk0\0Aatomic_chk0:\0A  %rc0 = load atomic i32, ptr %h monotonic, align 4\0A  %is0 = icmp eq i32 %rc0, 0\0A  br i1 %is0, label %reentrant_slow, label %atomic_dec\0Aatomic_dec:\0A  %old = atomicrmw sub ptr %h, i32 1 acq_rel, align 4\0A  %is1 = icmp eq i32 %old, 1\0A  br i1 %is1, label %atomic_destroy, label %done\0Aatomic_destroy:\0A  %oa2 = ptrtoint ptr %obj to i64\0A  call void @Arc_destroyObj(ptr null, i64 %oa2)\0A  br label %done\0Areentrant_slow:\0A  %oa0 = ptrtoint ptr %obj to i64\0A  call void @Arc_release(ptr null, i64 %oa0)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @spec_pool_frame() alwaysinline {\0A  %t = call i64 @Pool_poolFrame(ptr null)\0A  ret i64 %t\0A}\0Adefine internal void @spec_pool_release_to(i64 %mark) alwaysinline {\0A  call void @Pool_poolReleaseTo(ptr null, i64 %mark)\0A  ret void\0A}\0Adefine internal void @spec_pool_release_to_transfer(i64 %mark, ptr %keep) alwaysinline {\0A  %ka = ptrtoint ptr %keep to i64\0A  call void @Pool_releaseToTransferring(ptr null, i64 %mark, i64 %ka)\0A  ret void\0A}\0Adefine internal void @spec_pool_unclaim_addr(i64 %addr) alwaysinline {\0A  call void @Pool_unclaimAddr(ptr null, i64 %addr)\0A  ret void\0A}\0Adefine internal ptr @spec_claim_pool(ptr %obj) alwaysinline {\0A  %oa = ptrtoint ptr %obj to i64\0A  %ra = call i64 @Pool_claimPool(ptr null, i64 %oa)\0A  %res = inttoptr i64 %ra to ptr\0A  ret ptr %res\0A}\0Adefine void @spec_pool_thread_cleanup() nounwind {\0A  call void @Cleanup_threadCleanup(ptr null)\0A  call void @Pool_threadCleanup(ptr null)\0A  ret void\0A}\00"
 @.str.cache.1999 = internal global ptr null, align 8
 @.str.2000 = private unnamed_addr constant [3496 x i8] c"%struct.SpecClosure = type { ptr, ptr, ptr }\0Adefine internal void @__spec_closure_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 1\0A  %env = load ptr, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %has_env = icmp ne ptr %env, null\0A  %has_d = icmp ne ptr %d, null\0A  %both = and i1 %has_env, %has_d\0A  br i1 %both, label %call_d, label %done\0Acall_d:\0A  call void %d(ptr %env)\0A  store ptr null, ptr %ep\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_closure_new(ptr %fn, ptr %env, ptr %destroy_env) {\0A  %c = call ptr @spec_rt_alloc(i64 24, ptr @__spec_closure_destroy)\0A  %fp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 0\0A  store ptr %fn, ptr %fp\0A  %ep = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 1\0A  store ptr %env, ptr %ep\0A  %dp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 2\0A  store ptr %destroy_env, ptr %dp\0A  ret ptr %c\0A}\0A%struct.SpecBox = type { i64, i1 }\0Adefine internal void @__spec_box_destroy(ptr %self) {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  br i1 %is_arc, label %rel, label %done\0Arel:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %nz = icmp ne i64 %vi, 0\0A  br i1 %nz, label %do_rel, label %done\0Ado_rel:\0A  %vptr = inttoptr i64 %vi to ptr\0A  call void @spec_rt_release(ptr %vptr)\0A  store i64 0, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_rt_box_new(i64 %val, i1 %is_arc) {\0A  %b = call ptr @spec_rt_alloc(i64 16, ptr @__spec_box_destroy)\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  store i64 %val, ptr %vp\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  store i1 %is_arc, ptr %ap\0A  ret ptr %b\0A}\0Adefine internal ptr @spec_rt_box_get(ptr %b) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %null_ret, label %ok\0Anull_ret:\0A  ret ptr null\0Aok:\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %vi = load i64, ptr %vp\0A  %vptr = inttoptr i64 %vi to ptr\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %nz = icmp ne i64 %vi, 0\0A  %do_arc = and i1 %is_arc, %nz\0A  br i1 %do_arc, label %arc, label %done\0Aarc:\0A  call ptr @spec_rt_retain(ptr %vptr)\0A  call ptr @spec_claim_pool(ptr %vptr)\0A  br label %done\0Adone:\0A  ret ptr %vptr\0A}\0Adefine internal void @spec_rt_box_set(ptr %b, ptr %new_val) {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %done, label %ok\0Aok:\0A  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1\0A  %is_arc = load i1, ptr %ap\0A  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0\0A  %new_i = ptrtoint ptr %new_val to i64\0A  br i1 %is_arc, label %arc, label %store_val\0Aarc:\0A  %nn = icmp ne ptr %new_val, null\0A  br i1 %nn, label %do_ret, label %chk_old\0Ado_ret:\0A  call ptr @spec_rt_retain(ptr %new_val)\0A  br label %chk_old\0Achk_old:\0A  %old_i = load i64, ptr %vp\0A  %onz = icmp ne i64 %old_i, 0\0A  br i1 %onz, label %do_rel, label %store_val\0Ado_rel:\0A  %old_p = inttoptr i64 %old_i to ptr\0A  call ptr @spec_claim_pool(ptr %old_p)\0A  br label %store_val\0Astore_val:\0A  store i64 %new_i, ptr %vp\0A  br label %done\0Adone:\0A  ret void\0A}\00"
 @.str.cache.2000 = internal global ptr null, align 8
 @.str.2001 = private unnamed_addr constant [10628 x i8] c"define internal i64 @__spec_mem_alloc(i64 %bytes) alwaysinline {\0A  %a = call i64 @Heap_allocMem(ptr null, i64 %bytes)\0A  ret i64 %a\0A}\0Adefine internal i64 @__spec_mem_realloc(i64 %ptr, i64 %bytes) alwaysinline {\0A  %a = call i64 @Heap_reallocMem(ptr null, i64 %ptr, i64 %bytes)\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_free(i64 %ptr) alwaysinline {\0A  call void @Heap_freeMem(ptr null, i64 %ptr)\0A  ret void\0A}\0Adefine internal void @__spec_mem_copy(i64 %dst, i64 %src, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_cp, label %done\0Ado_cp:\0A  %d = inttoptr i64 %dst to ptr\0A  %s = inttoptr i64 %src to ptr\0A  call ptr @memcpy(ptr %d, ptr %s, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal void @__spec_mem_move(i64 %dst, i64 %src, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_mv, label %done\0Ado_mv:\0A  %d = inttoptr i64 %dst to ptr\0A  %s = inttoptr i64 %src to ptr\0A  call ptr @memmove(ptr %d, ptr %s, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal void @__spec_mem_set(i64 %dst, i64 %val, i64 %bytes) alwaysinline {\0A  %gt = icmp sgt i64 %bytes, 0\0A  br i1 %gt, label %do_set, label %done\0Ado_set:\0A  %d = inttoptr i64 %dst to ptr\0A  %v32 = trunc i64 %val to i32\0A  call ptr @memset(ptr %d, i32 %v32, i64 %bytes)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_cmp(i64 %a, i64 %b, i64 %bytes) alwaysinline {\0A  %le = icmp sle i64 %bytes, 0\0A  br i1 %le, label %zero, label %do_cmp\0Azero:\0A  ret i64 0\0Ado_cmp:\0A  %pa = inttoptr i64 %a to ptr\0A  %pb = inttoptr i64 %b to ptr\0A  %r32 = call i32 @memcmp(ptr %pa, ptr %pb, i64 %bytes)\0A  %r64 = sext i32 %r32 to i64\0A  ret i64 %r64\0A}\0Adefine internal i64 @__spec_mem_cstr_len(i64 %addr) alwaysinline {\0A  %eq = icmp eq i64 %addr, 0\0A  br i1 %eq, label %zero, label %do_len\0Azero:\0A  ret i64 0\0Ado_len:\0A  %p = inttoptr i64 %addr to ptr\0A  %n = call i64 @strlen(ptr %p)\0A  ret i64 %n\0A}\0Adefine internal i64 @__spec_mem_load_i64(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i64, ptr %p\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_store_i64(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store i64 %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_tls_get_i64(i64 %slot) alwaysinline {\0A  %m = and i64 %slot, 15\0A  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m\0A  %v = load i64, ptr %p\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_tls_set_i64(i64 %slot, i64 %val) alwaysinline {\0A  %m = and i64 %slot, 15\0A  %p = getelementptr [16 x i64], ptr @_spec_tls_i64, i64 0, i64 %m\0A  store i64 %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_load_i32(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i32, ptr %p\0A  %ext = zext i32 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_store_i32(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %tr = trunc i64 %val to i32\0A  store i32 %tr, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_load_byte(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load i8, ptr %p\0A  %ext = zext i8 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_store_byte(i64 %base, i64 %off, i64 %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %tr = trunc i64 %val to i8\0A  store i8 %tr, ptr %p\0A  ret void\0A}\0Adefine internal ptr @__spec_mem_load_ptr(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load ptr, ptr %p\0A  ret ptr %v\0A}\0Adefine internal void @__spec_mem_store_ptr(i64 %base, i64 %off, ptr %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store ptr %val, ptr %p\0A  ret void\0A}\0Adefine internal double @__spec_mem_load_f64(i64 %base, i64 %off) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  %v = load double, ptr %p\0A  ret double %v\0A}\0Adefine internal void @__spec_mem_store_f64(i64 %base, i64 %off, double %val) alwaysinline {\0A  %p0 = inttoptr i64 %base to ptr\0A  %p = getelementptr i8, ptr %p0, i64 %off\0A  store double %val, ptr %p\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_obj_to_addr(ptr %obj) alwaysinline {\0A  %a = ptrtoint ptr %obj to i64\0A  ret i64 %a\0A}\0Adefine internal ptr @__spec_mem_addr_to_obj(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  ret ptr %p\0A}\0Adefine internal i64 @__spec_mem_retain_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_ret, label %done\0Ado_ret:\0A  %p = inttoptr i64 %addr to ptr\0A  call ptr @spec_rt_retain(ptr %p)\0A  br label %done\0Adone:\0A  ret i64 %addr\0A}\0Adefine internal void @__spec_mem_release_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_rel, label %done\0Ado_rel:\0A  %p = inttoptr i64 %addr to ptr\0A  call void @spec_rt_release(ptr %p)\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_claim_pool_addr(i64 %addr) alwaysinline {\0A  %nz = icmp ne i64 %addr, 0\0A  br i1 %nz, label %do_cl, label %done\0Ado_cl:\0A  %p = inttoptr i64 %addr to ptr\0A  call ptr @spec_claim_pool(ptr %p)\0A  br label %done\0Adone:\0A  ret i64 %addr\0A}\0Adefine internal ptr @__spec_mem_str_from_bytes(i64 %srcAddr, i64 %len) alwaysinline {\0A  %b = call noalias ptr @spec_rt_alloc(i64 64, ptr @spec_buf_destroy)\0A  %es_p = getelementptr inbounds i8, ptr %b, i64 24\0A  store i64 1, ptr %es_p, align 8\0A  %has_src = icmp ne i64 %srcAddr, 0\0A  %pos_len = icmp sgt i64 %len, 0\0A  %non_empty = and i1 %has_src, %pos_len\0A  br i1 %non_empty, label %chk_sbo, label %empty\0Aempty:\0A  %len_p0 = getelementptr inbounds i8, ptr %b, i64 8\0A  store i64 0, ptr %len_p0, align 8\0A  %ib0 = getelementptr inbounds i8, ptr %b, i64 36\0A  store ptr %ib0, ptr %b, align 8\0A  %cap_p0 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 24, ptr %cap_p0, align 8\0A  ret ptr %b\0Achk_sbo:\0A  %len_p = getelementptr inbounds i8, ptr %b, i64 8\0A  store i64 %len, ptr %len_p, align 8\0A  %src = inttoptr i64 %srcAddr to ptr\0A  %fits_sbo = icmp ule i64 %len, 23\0A  br i1 %fits_sbo, label %sbo, label %heap\0Asbo:\0A  %ib1 = getelementptr inbounds i8, ptr %b, i64 36\0A  store ptr %ib1, ptr %b, align 8\0A  %cap_p1 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 24, ptr %cap_p1, align 8\0A  call ptr @memcpy(ptr %ib1, ptr %src, i64 %len)\0A  ret ptr %b\0Aheap:\0A  %need = add i64 %len, 1\0A  %hda = call i64 @__spec_mem_alloc(i64 %need)\0A  %hd = inttoptr i64 %hda to ptr\0A  store ptr %hd, ptr %b, align 8\0A  %cap_p2 = getelementptr inbounds i8, ptr %b, i64 16\0A  store i64 %need, ptr %cap_p2, align 8\0A  %ck_p2 = getelementptr inbounds i8, ptr %b, i64 40\0A  store i64 0, ptr %ck_p2, align 8\0A  call ptr @memcpy(ptr %hd, ptr %src, i64 %len)\0A  %nul_p = getelementptr inbounds i8, ptr %hd, i64 %len\0A  store i8 0, ptr %nul_p, align 1\0A  ret ptr %b\0A}\0Adefine internal ptr @__spec_mem_intern_str(ptr %b) alwaysinline {\0A  %c = call ptr @spec_buf_to_cstring(ptr %b)\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @__spec_intern_cached(ptr %lit, ptr %slot) alwaysinline {\0A  %c = load atomic ptr, ptr %slot acquire, align 8\0A  %ok = icmp ne ptr %c, null\0A  br i1 %ok, label %hit, label %miss\0Ahit:\0A  ret ptr %c\0Amiss:\0A  %s = call ptr @spec_string_intern(ptr %lit)\0A  store atomic ptr %s, ptr %slot release, align 8\0A  ret ptr %s\0A}\0Adefine internal void @__spec_mem_panic(ptr %b) alwaysinline {\0A  %c = call ptr @spec_buf_to_cstring(ptr %b)\0A  call void @spec_panic(ptr %c)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_float_to_bits(double %v) alwaysinline {\0A  %b = bitcast double %v to i64\0A  ret i64 %b\0A}\0Adefine internal double @__spec_mem_bits_to_float(i64 %b) alwaysinline {\0A  %v = bitcast i64 %b to double\0A  ret double %v\0A}\0Adefine internal i64 @__spec_mem_atomic_load_i32(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %v = load atomic i32, ptr %p monotonic, align 4\0A  %ext = zext i32 %v to i64\0A  ret i64 %ext\0A}\0Adefine internal void @__spec_mem_atomic_store_i32(i64 %addr, i64 %val) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %val to i32\0A  store atomic i32 %tr, ptr %p release, align 4\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_atomic_add_i32(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %delta to i32\0A  %old = atomicrmw add ptr %p, i32 %tr monotonic, align 4\0A  %ext = zext i32 %old to i64\0A  ret i64 %ext\0A}\0Adefine internal i64 @__spec_mem_atomic_sub_i32(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %tr = trunc i64 %delta to i32\0A  %old = atomicrmw sub ptr %p, i32 %tr acq_rel, align 4\0A  %ext = zext i32 %old to i64\0A  ret i64 %ext\0A}\0Adefine internal i64 @__spec_mem_atomic_load_i64(i64 %addr) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %v = load atomic i64, ptr %p acquire, align 8\0A  ret i64 %v\0A}\0Adefine internal void @__spec_mem_atomic_store_i64(i64 %addr, i64 %val) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  store atomic i64 %val, ptr %p release, align 8\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_atomic_add_i64(i64 %addr, i64 %delta) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %old = atomicrmw add ptr %p, i64 %delta seq_cst, align 8\0A  ret i64 %old\0A}\0Adefine internal i1 @__spec_mem_atomic_cas_i64(i64 %addr, i64 %exp, i64 %des) alwaysinline {\0A  %p = inttoptr i64 %addr to ptr\0A  %res = cmpxchg ptr %p, i64 %exp, i64 %des acq_rel monotonic, align 8\0A  %ok = extractvalue { i64, i1 } %res, 1\0A  ret i1 %ok\0A}\0Adefine internal void @__spec_mem_call_destroy(i64 %fnAddr, i64 %objAddr) alwaysinline {\0A  %fn = inttoptr i64 %fnAddr to ptr\0A  %obj = inttoptr i64 %objAddr to ptr\0A  call void %fn(ptr %obj)\0A  ret void\0A}\0Adefine internal ptr @__spec_mem_call_construct(i64 %fnAddr) alwaysinline {\0A  %fn = inttoptr i64 %fnAddr to ptr\0A  %obj = call ptr %fn()\0A  ret ptr %obj\0A}\0Adefine internal i64 @__spec_mem_class_reg_addr() alwaysinline {\0A  %a = ptrtoint ptr @spec_class_registry to i64\0A  ret i64 %a\0A}\0Adefine internal i64 @__spec_mem_class_reg_count() alwaysinline {\0A  %c32 = call i32 @spec_class_registry_count()\0A  %c64 = zext i32 %c32 to i64\0A  ret i64 %c64\0A}\0Adefine internal i64 @__spec_mem_held_reg_addr() alwaysinline {\0A  %a = ptrtoint ptr @spec_held_registry to i64\0A  ret i64 %a\0A}\0Adefine internal ptr @__spec_mem_cstr_to_str(i64 %cstrAddr) alwaysinline {\0A  %p = inttoptr i64 %cstrAddr to ptr\0A  %s = call ptr @spec_string_intern(ptr %p)\0A  ret ptr %s\0A}\00"
 @.str.cache.2001 = internal global ptr null, align 8
-@.str.2002 = private unnamed_addr constant [8158 x i8] c"@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8\0Adefine internal ptr @spec_string_intern(ptr %c) nounwind {\0A  %ca = ptrtoint ptr %c to i64\0A  %sa = ptrtoint ptr @_spec_intern_state to i64\0A  %ra = call i64 @Intern_internCstr(ptr null, i64 %ca, i64 %sa)\0A  %s = inttoptr i64 %ra to ptr\0A  ret ptr %s\0A}\0Adeclare void @spec_pal_format_float(double, i64) nounwind\0Adeclare i64 @spec_pal_random_bytes(i64, i64) nounwind\0Adeclare i64 @spec_pal_slab_alloc() nounwind\0Adeclare void @spec_pal_slab_free(i64) nounwind\0Adeclare i64 @spec_pal_vm_alloc(i64) nounwind\0Adeclare void @spec_pal_vm_free(i64, i64) nounwind\0Adeclare i64 @spec_pal_vm_realloc(i64, i64, i64) nounwind\0Adefine internal i64 @__spec_mem_slab_alloc() alwaysinline {\0A  %a = call i64 @spec_pal_slab_alloc()\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_slab_free(i64 %addr) alwaysinline {\0A  call void @spec_pal_slab_free(i64 %addr)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_alloc(i64 %bytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_alloc(i64 %bytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_vm_free(i64 %addr, i64 %bytes) alwaysinline {\0A  call void @spec_pal_vm_free(i64 %addr, i64 %bytes)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal i1 @__spec_mem_is_multithreaded() alwaysinline {\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  ret i1 %is_mt\0A}\0Adefine internal ptr @spec_to_string_float(double %v) nounwind {\0A  %buf = alloca [64 x i8], align 8\0A  %ba = ptrtoint ptr %buf to i64\0A  call void @spec_pal_format_float(double %v, i64 %ba)\0A  %s = call ptr @spec_string_intern(ptr %buf)\0A  ret ptr %s\0A}\0Adeclare void @spec_panic(ptr) noreturn nounwind\0Adeclare void @spec_panic_byte_range(i64) noreturn nounwind\0Adeclare void @spec_panic_cast(ptr, ptr) noreturn nounwind\0Adeclare i32 @strcmp(ptr nocapture readonly, ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare i64 @strlen(ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare noalias ptr @malloc(i64) nounwind willreturn allockind(\22alloc,uninitialized\22) allocsize(0)\0Adeclare noalias ptr @calloc(i64, i64) nounwind willreturn allockind(\22alloc,zeroed\22) allocsize(0, 1)\0Adeclare ptr @realloc(ptr, i64) nounwind willreturn allockind(\22realloc\22) allocsize(1)\0Adeclare void @free(ptr) nounwind willreturn allockind(\22free\22)\0Adeclare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memset(ptr returned writeonly, i32, i64) nounwind willreturn\0Adeclare i32 @memcmp(ptr nocapture readonly, ptr nocapture readonly, i64) nounwind willreturn memory(read)\0A%struct.SpecBuf = type { ptr, i64, i64, i64, i32 }\0A@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer\0Adefine void @spec_buf_destroy(ptr %self) nounwind {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %d = load ptr, ptr %self, align 8\0A  %dnull = icmp eq ptr %d, null\0A  br i1 %dnull, label %done, label %chk_sbo\0Achk_sbo:\0A  %inl = getelementptr inbounds i8, ptr %self, i64 36\0A  %is_sbo = icmp eq ptr %d, %inl\0A  br i1 %is_sbo, label %done, label %do_free\0Ado_free:\0A  %da = ptrtoint ptr %d to i64\0A  call void @__spec_mem_free(i64 %da)\0A  store ptr null, ptr %self, align 8\0A  %ck_p = getelementptr inbounds i8, ptr %self, i64 40\0A  %ck = load i64, ptr %ck_p, align 8\0A  %has_ck = icmp sgt i64 %ck, 0\0A  br i1 %has_ck, label %free_ck, label %done\0Afree_ck:\0A  call void @__spec_mem_free(i64 %ck)\0A  store i64 0, ptr %ck_p, align 8\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds i8, ptr %b, i64 8\0A  %len = load i64, ptr %lp, align 8\0A  %is_zero = icmp eq i64 %len, 0\0A  br i1 %is_zero, label %empty, label %ok\0Aok:\0A  %d = load ptr, ptr %b, align 8\0A  ret ptr %d\0Aempty:\0A  ret ptr @.str.tn_empty\0A}\0Adefine internal ptr @spec_string_copy(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 1\0A  %len = load i64, ptr %lp\0A  %dp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 0\0A  %d = load ptr, ptr %dp\0A  %da = ptrtoint ptr %d to i64\0A  %s = call ptr @__spec_mem_str_from_bytes(i64 %da, i64 %len)\0A  ret ptr %s\0Aempty:\0A  %e = call ptr @__spec_mem_str_from_bytes(i64 0, i64 0)\0A  ret ptr %e\0A}\0Adefine internal ptr @spec_string_concat(ptr %a, ptr %b) {\0A  %a_null = icmp eq ptr %a, null\0A  br i1 %a_null, label %copy_a, label %chk_uniq\0Achk_uniq:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load atomic i32, ptr %sfp monotonic, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %copy_a, label %chk_rc\0Achk_rc:\0A  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0\0A  %rc = load atomic i32, ptr %rcp monotonic, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %inplace, label %copy_a\0Ainplace:\0A  call void @Buf_bufAppendBuf(ptr null, ptr %a, ptr %b)\0A  ret ptr %a\0Acopy_a:\0A  %ac = call ptr @spec_string_copy(ptr %a)\0A  call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)\0A  call ptr @spec_claim_pool(ptr %ac)\0A  ret ptr %ac\0A}\0Adefine internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {\0A  %r = call i32 @strcmp(ptr %a, ptr %b)\0A  %eq = icmp eq i32 %r, 0\0A  ret i1 %eq\0A}\0Adefine internal i64 @__spec_check_byte(i64 %v) {\0A  %lt = icmp slt i64 %v, 0\0A  %gt = icmp sgt i64 %v, 255\0A  %bad = or i1 %lt, %gt\0A  br i1 %bad, label %fail, label %ok\0Afail:\0A  call void @spec_panic_byte_range(i64 %v)\0A  br label %ok\0Aok:\0A  ret i64 %v\0A}\0A@.str.tn_map = private unnamed_addr constant [4 x i8] c\22Map\5C00\22\0A@.str.tn_arr = private unnamed_addr constant [6 x i8] c\22Array\5C00\22\0A@.str.tn_bb = private unnamed_addr constant [8 x i8] c\22ByteBuf\5C00\22\0A@.str.tn_str = private unnamed_addr constant [7 x i8] c\22String\5C00\22\0A@.str.bool_true = private unnamed_addr constant [5 x i8] c\22true\5C00\22\0A@.str.bool_false = private unnamed_addr constant [6 x i8] c\22false\5C00\22\0Adefine internal ptr @spec_to_string_bool(i1 %v) alwaysinline {\0A  %c = select i1 %v, ptr @.str.bool_true, ptr @.str.bool_false\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @spec_type_name(ptr %obj) {\0A  %addr = ptrtoint ptr %obj to i64\0A  %bad = icmp ult i64 %addr, 4096\0A  br i1 %bad, label %empty, label %ok\0Aempty:\0A  %e = call ptr @spec_string_intern(ptr @.str.tn_empty)\0A  ret ptr %e\0Aok:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %ismap = icmp eq ptr %d, @HashTable_mapDestroy\0A  br i1 %ismap, label %ret_map, label %chk_arr\0Aret_map:\0A  %sm = call ptr @spec_string_intern(ptr @.str.tn_map)\0A  ret ptr %sm\0Achk_arr:\0A  %isarr = icmp eq ptr %d, @Vector_vecDestroy\0A  br i1 %isarr, label %ret_arr, label %chk_bb\0Aret_arr:\0A  %sa = call ptr @spec_string_intern(ptr @.str.tn_arr)\0A  ret ptr %sa\0Achk_bb:\0A  %isbb = icmp eq ptr %d, @Vector_byteBufDestroy\0A  br i1 %isbb, label %ret_bb, label %chk_str\0Aret_bb:\0A  %sbb = call ptr @spec_string_intern(ptr @.str.tn_bb)\0A  ret ptr %sbb\0Achk_str:\0A  %isstr = icmp eq ptr %d, @spec_buf_destroy\0A  br i1 %isstr, label %ret_str, label %ret_cls\0Aret_str:\0A  %ss = call ptr @spec_string_intern(ptr @.str.tn_str)\0A  ret ptr %ss\0Aret_cls:\0A  %tn = load ptr, ptr %obj\0A  %sc = call ptr @spec_string_intern(ptr %tn)\0A  ret ptr %sc\0A}\00"
+@.str.2002 = private unnamed_addr constant [7616 x i8] c"@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8\0Adefine internal ptr @spec_string_intern(ptr %c) nounwind {\0A  %ca = ptrtoint ptr %c to i64\0A  %sa = ptrtoint ptr @_spec_intern_state to i64\0A  %ra = call i64 @Intern_internCstr(ptr null, i64 %ca, i64 %sa)\0A  %s = inttoptr i64 %ra to ptr\0A  ret ptr %s\0A}\0Adeclare void @spec_pal_format_float(double, i64) nounwind\0Adeclare i64 @spec_pal_random_bytes(i64, i64) nounwind\0Adeclare i64 @spec_pal_slab_alloc() nounwind\0Adeclare void @spec_pal_slab_free(i64) nounwind\0Adeclare i64 @spec_pal_vm_alloc(i64) nounwind\0Adeclare void @spec_pal_vm_free(i64, i64) nounwind\0Adeclare i64 @spec_pal_vm_realloc(i64, i64, i64) nounwind\0Adefine internal i64 @__spec_mem_slab_alloc() alwaysinline {\0A  %a = call i64 @spec_pal_slab_alloc()\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_slab_free(i64 %addr) alwaysinline {\0A  call void @spec_pal_slab_free(i64 %addr)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_alloc(i64 %bytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_alloc(i64 %bytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal void @__spec_mem_vm_free(i64 %addr, i64 %bytes) alwaysinline {\0A  call void @spec_pal_vm_free(i64 %addr, i64 %bytes)\0A  ret void\0A}\0Adefine internal i64 @__spec_mem_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes) alwaysinline {\0A  %a = call i64 @spec_pal_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes)\0A  %isnull = icmp eq i64 %a, 0\0A  br i1 %isnull, label %oom, label %ok\0Aoom:\0A  call void @spec_panic(ptr @.str.oom)\0A  br label %ok\0Aok:\0A  ret i64 %a\0A}\0Adefine internal i1 @__spec_mem_is_multithreaded() alwaysinline {\0A  %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4\0A  %is_mt = icmp sgt i32 %mt, 0\0A  ret i1 %is_mt\0A}\0Adefine internal ptr @spec_to_string_float(double %v) nounwind {\0A  %buf = alloca [64 x i8], align 8\0A  %ba = ptrtoint ptr %buf to i64\0A  call void @spec_pal_format_float(double %v, i64 %ba)\0A  %s = call ptr @spec_string_intern(ptr %buf)\0A  ret ptr %s\0A}\0Adeclare void @spec_panic(ptr) noreturn nounwind\0Adeclare void @spec_panic_byte_range(i64) noreturn nounwind\0Adeclare void @spec_panic_cast(ptr, ptr) noreturn nounwind\0Adeclare i32 @strcmp(ptr nocapture readonly, ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare i64 @strlen(ptr nocapture readonly) nounwind willreturn memory(read)\0Adeclare noalias ptr @malloc(i64) nounwind willreturn allockind(\22alloc,uninitialized\22) allocsize(0)\0Adeclare noalias ptr @calloc(i64, i64) nounwind willreturn allockind(\22alloc,zeroed\22) allocsize(0, 1)\0Adeclare ptr @realloc(ptr, i64) nounwind willreturn allockind(\22realloc\22) allocsize(1)\0Adeclare void @free(ptr) nounwind willreturn allockind(\22free\22)\0Adeclare ptr @memcpy(ptr noalias returned writeonly, ptr noalias nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nounwind willreturn\0Adeclare ptr @memset(ptr returned writeonly, i32, i64) nounwind willreturn\0Adeclare i32 @memcmp(ptr nocapture readonly, ptr nocapture readonly, i64) nounwind willreturn memory(read)\0A%struct.SpecBuf = type { ptr, i64, i64, i64, i32 }\0A@.str.tn_empty = private unnamed_addr constant [1 x i8] zeroinitializer\0Adefine void @spec_buf_destroy(ptr %self) nounwind {\0A  %isnull = icmp eq ptr %self, null\0A  br i1 %isnull, label %done, label %chk\0Achk:\0A  %d = load ptr, ptr %self, align 8\0A  %dnull = icmp eq ptr %d, null\0A  br i1 %dnull, label %done, label %chk_sbo\0Achk_sbo:\0A  %inl = getelementptr inbounds i8, ptr %self, i64 36\0A  %is_sbo = icmp eq ptr %d, %inl\0A  br i1 %is_sbo, label %done, label %do_free\0Ado_free:\0A  %da = ptrtoint ptr %d to i64\0A  call void @__spec_mem_free(i64 %da)\0A  store ptr null, ptr %self, align 8\0A  %ck_p = getelementptr inbounds i8, ptr %self, i64 40\0A  %ck = load i64, ptr %ck_p, align 8\0A  %has_ck = icmp sgt i64 %ck, 0\0A  br i1 %has_ck, label %free_ck, label %done\0Afree_ck:\0A  call void @__spec_mem_free(i64 %ck)\0A  store i64 0, ptr %ck_p, align 8\0A  br label %done\0Adone:\0A  ret void\0A}\0Adefine internal ptr @spec_buf_to_cstring(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds i8, ptr %b, i64 8\0A  %len = load i64, ptr %lp, align 8\0A  %is_zero = icmp eq i64 %len, 0\0A  br i1 %is_zero, label %empty, label %ok\0Aok:\0A  %d = load ptr, ptr %b, align 8\0A  ret ptr %d\0Aempty:\0A  ret ptr @.str.tn_empty\0A}\0Adefine internal ptr @spec_string_copy(ptr %b) alwaysinline {\0A  %isnull = icmp eq ptr %b, null\0A  br i1 %isnull, label %empty, label %chk\0Achk:\0A  %lp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 1\0A  %len = load i64, ptr %lp\0A  %dp = getelementptr inbounds %struct.SpecBuf, ptr %b, i32 0, i32 0\0A  %d = load ptr, ptr %dp\0A  %da = ptrtoint ptr %d to i64\0A  %s = call ptr @__spec_mem_str_from_bytes(i64 %da, i64 %len)\0A  ret ptr %s\0Aempty:\0A  %e = call ptr @__spec_mem_str_from_bytes(i64 0, i64 0)\0A  ret ptr %e\0A}\0Adefine internal ptr @spec_string_concat(ptr %a, ptr %b) {\0A  %a_null = icmp eq ptr %a, null\0A  br i1 %a_null, label %copy_a, label %chk_uniq\0Achk_uniq:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %a, i64 -1\0A  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1\0A  %sf = load atomic i32, ptr %sfp monotonic, align 4\0A  %imm = and i32 %sf, 1\0A  %is_imm = icmp ne i32 %imm, 0\0A  br i1 %is_imm, label %copy_a, label %chk_rc\0Achk_rc:\0A  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0\0A  %rc = load atomic i32, ptr %rcp monotonic, align 4\0A  %is_one = icmp eq i32 %rc, 1\0A  br i1 %is_one, label %inplace, label %copy_a\0Ainplace:\0A  call void @Buf_bufAppendBuf(ptr null, ptr %a, ptr %b)\0A  ret ptr %a\0Acopy_a:\0A  %ac = call ptr @spec_string_copy(ptr %a)\0A  call void @Buf_bufAppendBuf(ptr null, ptr %ac, ptr %b)\0A  call ptr @spec_claim_pool(ptr %ac)\0A  ret ptr %ac\0A}\0Adefine internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {\0A  %r = call i32 @strcmp(ptr %a, ptr %b)\0A  %eq = icmp eq i32 %r, 0\0A  ret i1 %eq\0A}\0Adefine internal i64 @__spec_check_byte(i64 %v) {\0A  %lt = icmp slt i64 %v, 0\0A  %gt = icmp sgt i64 %v, 255\0A  %bad = or i1 %lt, %gt\0A  br i1 %bad, label %fail, label %ok\0Afail:\0A  call void @spec_panic_byte_range(i64 %v)\0A  br label %ok\0Aok:\0A  ret i64 %v\0A}\0A@.str.tn_map = private unnamed_addr constant [4 x i8] c\22Map\5C00\22\0A@.str.tn_arr = private unnamed_addr constant [6 x i8] c\22Array\5C00\22\0A@.str.tn_bb = private unnamed_addr constant [8 x i8] c\22ByteBuf\5C00\22\0A@.str.tn_str = private unnamed_addr constant [7 x i8] c\22String\5C00\22\0A@.str.bool_true = private unnamed_addr constant [5 x i8] c\22true\5C00\22\0A@.str.bool_false = private unnamed_addr constant [6 x i8] c\22false\5C00\22\0Adefine internal ptr @spec_to_string_bool(i1 %v) alwaysinline {\0A  %c = select i1 %v, ptr @.str.bool_true, ptr @.str.bool_false\0A  %s = call ptr @spec_string_intern(ptr %c)\0A  ret ptr %s\0A}\0Adefine internal ptr @spec_type_name(ptr %obj) {\0A  %addr = ptrtoint ptr %obj to i64\0A  %bad = icmp ult i64 %addr, 4096\0A  br i1 %bad, label %empty, label %ok\0Aempty:\0A  %e = call ptr @spec_string_intern(ptr @.str.tn_empty)\0A  ret ptr %e\0Aok:\0A  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1\0A  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2\0A  %d = load ptr, ptr %dp\0A  %isstr = icmp eq ptr %d, @spec_buf_destroy\0A  br i1 %isstr, label %ret_str, label %ret_cls\0Aret_str:\0A  %ss = call ptr @spec_string_intern(ptr @.str.tn_str)\0A  ret ptr %ss\0Aret_cls:\0A  %tn = load ptr, ptr %obj\0A  %sc = call ptr @spec_string_intern(ptr %tn)\0A  ret ptr %sc\0A}\00"
 @.str.cache.2002 = internal global ptr null, align 8
 @.str.2003 = private unnamed_addr constant [3298 x i8] c"declare double @sqrt(double) nounwind willreturn\0Adeclare double @round(double) nounwind willreturn\0Adeclare double @ceil(double) nounwind willreturn\0Adeclare double @floor(double) nounwind willreturn\0Adeclare double @fabs(double) nounwind willreturn\0Adeclare double @fmin(double, double) nounwind willreturn\0Adeclare double @fmax(double, double) nounwind willreturn\0Adeclare double @fma(double, double, double) nounwind willreturn\0Adeclare double @sin(double) nounwind willreturn\0Adeclare double @cos(double) nounwind willreturn\0Adeclare double @tan(double) nounwind willreturn\0Adeclare double @atan2(double, double) nounwind willreturn\0Adeclare double @log(double) nounwind willreturn\0Adeclare double @log2(double) nounwind willreturn\0Adeclare double @pow(double, double) nounwind willreturn\0Adeclare double @exp(double) nounwind willreturn\0Adeclare double @log10(double) nounwind willreturn\0Adeclare double @cbrt(double) nounwind willreturn\0Adeclare double @asin(double) nounwind willreturn\0Adeclare double @acos(double) nounwind willreturn\0Adeclare double @atan(double) nounwind willreturn\0Adefine internal double @spec_math_log(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log2(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log2(double %v)\0A  ret double %r\0A}\0Adefine internal double @spec_math_log10(double %v) alwaysinline nounwind {\0A  %le = fcmp ole double %v, 0.0\0A  br i1 %le, label %z, label %ok\0Az:\0A  ret double 0.0\0Aok:\0A  %r = call double @log10(double %v)\0A  ret double %r\0A}\0Adefine internal i64 @__spec_rng_next() alwaysinline nounwind {\0A  %x0 = load i64, ptr @_spec_tls_i64, align 8\0A  %s1 = lshr i64 %x0, 12\0A  %x1 = xor i64 %x0, %s1\0A  %s2 = shl i64 %x1, 25\0A  %x2 = xor i64 %x1, %s2\0A  %s3 = lshr i64 %x2, 27\0A  %x3 = xor i64 %x2, %s3\0A  store i64 %x3, ptr @_spec_tls_i64, align 8\0A  %res = mul i64 %x3, 2685821657736338717\0A  ret i64 %res\0A}\0Adefine void @spec_fast_random_seed(i64 %idx) nounwind {\0A  %m = mul i64 %idx, -4658895280553007687\0A  %a = add i64 %m, -7723592293110705685\0A  %s0 = xor i64 %a, -7046029254386353131\0A  %isz = icmp eq i64 %s0, 0\0A  %s1 = select i1 %isz, i64 1, i64 %s0\0A  store i64 %s1, ptr @_spec_tls_i64, align 8\0A  %r1 = call i64 @__spec_rng_next()\0A  %r2 = call i64 @__spec_rng_next()\0A  %r3 = call i64 @__spec_rng_next()\0A  ret void\0A}\0Adeclare i64 @spec_time_monotonic_ns()\0Adefine internal double @spec_math_random(double %min, double %max) alwaysinline nounwind {\0A  %st = load i64, ptr @_spec_tls_i64, align 8\0A  %uninit = icmp eq i64 %st, 0\0A  br i1 %uninit, label %seed, label %gen\0Aseed:\0A  %addr = ptrtoint ptr @_spec_tls_i64 to i64\0A  %ns = call i64 @spec_time_monotonic_ns()\0A  %sd = xor i64 %addr, %ns\0A  call void @spec_fast_random_seed(i64 %sd)\0A  br label %gen\0Agen:\0A  %rnd = call i64 @__spec_rng_next()\0A  %top = lshr i64 %rnd, 11\0A  %flt = uitofp i64 %top to double\0A  %u = fmul double %flt, 0x3CA0000000000000\0A  %ge = fcmp oge double %min, %max\0A  br i1 %ge, label %ret_u, label %scale\0Aret_u:\0A  ret double %u\0Ascale:\0A  %diff = fsub double %max, %min\0A  %prod = fmul double %u, %diff\0A  %res = fadd double %min, %prod\0A  ret double %res\0A}\00"
 @.str.cache.2003 = internal global ptr null, align 8
@@ -18747,7 +18734,7 @@ entry:
   br label %while_hdr_1, !dbg !423
 while_hdr_1:
   %t1 = load i64, ptr %slot_addr, !dbg !423
-  %t2 = add i64 0, 32, !dbg !423
+  %t2 = add i64 0, 48, !dbg !423
   %t3 = add i64 %t1, %t2, !dbg !423
   %t4 = add i64 0, 0, !dbg !423
   %t5 = add i64 0, 1, !dbg !423
@@ -18767,7 +18754,7 @@ entry:
   %slot_addr = alloca i64, !dbg !425
   store i64 %p_addr, ptr %slot_addr, !dbg !425
   %t1 = load i64, ptr %slot_addr, !dbg !426
-  %t2 = add i64 0, 32, !dbg !426
+  %t2 = add i64 0, 48, !dbg !426
   %t3 = add i64 %t1, %t2, !dbg !426
   %t4 = add i64 0, 0, !dbg !426
   call void @__spec_mem_atomic_store_i64(i64 %t3, i64 %t4), !dbg !426
@@ -18779,7 +18766,7 @@ entry:
   %self_slot = alloca ptr, !dbg !428
   store ptr %self, ptr %self_slot, !dbg !428
   %var_aAddr_1 = alloca i64, !dbg !429
-  %t2 = add i64 0, 40, !dbg !429
+  %t2 = add i64 0, 56, !dbg !429
   %t3 = add i64 0, 2, !dbg !429
   %t4 = call i64 @_spec_rt_alloc_kinded(i64 %t2, i64 %t3), !dbg !429
   store i64 %t4, ptr %var_aAddr_1, !dbg !429
@@ -18793,12 +18780,12 @@ entry:
   %self_slot = alloca ptr, !dbg !432
   store ptr %self, ptr %self_slot, !dbg !432
   %var_aAddr_1 = alloca i64, !dbg !433
-  %t2 = add i64 0, 40, !dbg !433
+  %t2 = add i64 0, 56, !dbg !433
   %t3 = add i64 0, 2, !dbg !433
   %t4 = call i64 @_spec_rt_alloc_kinded(i64 %t2, i64 %t3), !dbg !433
   store i64 %t4, ptr %var_aAddr_1, !dbg !433
   %t5 = load i64, ptr %var_aAddr_1, !dbg !434
-  %t6 = add i64 0, 24, !dbg !434
+  %t6 = add i64 0, 40, !dbg !434
   %t7 = add i64 0, 1, !dbg !434
   call void @__spec_mem_store_i32(i64 %t5, i64 %t6, i64 %t7), !dbg !434
   %t8 = load i64, ptr %var_aAddr_1, !dbg !435
@@ -18828,7 +18815,7 @@ entry:
   br i1 %t7, label %sc_rhs_1, label %sc_end_2, !dbg !441
 sc_rhs_1:
   %t8 = load i64, ptr %var_vAddr_1, !dbg !441
-  %t9 = add i64 0, 24, !dbg !441
+  %t9 = add i64 0, 40, !dbg !441
   %t10 = call i64 @__spec_mem_load_i32(i64 %t8, i64 %t9), !dbg !441
   %t11 = add i64 0, 1, !dbg !441
   %t12 = icmp eq i64 %t10, %t11, !dbg !441
@@ -18882,7 +18869,7 @@ entry:
   %self_slot = alloca ptr, !dbg !443
   store ptr %self, ptr %self_slot, !dbg !443
   %var_bAddr_1 = alloca i64, !dbg !444
-  %t2 = add i64 0, 24, !dbg !444
+  %t2 = add i64 0, 40, !dbg !444
   %t3 = add i64 0, 3, !dbg !444
   %t4 = call i64 @_spec_rt_alloc_kinded(i64 %t2, i64 %t3), !dbg !444
   store i64 %t4, ptr %var_bAddr_1, !dbg !444
@@ -19174,7 +19161,7 @@ err_unwind_10:
   %t31 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !465
   %t32 = call ptr @__spec_intern_cached(ptr @.str.40, ptr @.str.cache.40), !dbg !465
   %t33 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !465
-  %t34 = add i64 0, 92, !dbg !465
+  %t34 = add i64 0, 96, !dbg !465
   call void @Pool_recordPendingFrame(ptr null, ptr %t31, ptr %t32, ptr %t33, i64 %t34), !dbg !465
   ret ptr null, !dbg !465
 err_cont_11:
@@ -19211,7 +19198,7 @@ err_unwind_15:
   %t55 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !464
   %t56 = call ptr @__spec_intern_cached(ptr @.str.40, ptr @.str.cache.40), !dbg !464
   %t57 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !464
-  %t58 = add i64 0, 94, !dbg !464
+  %t58 = add i64 0, 98, !dbg !464
   call void @Pool_recordPendingFrame(ptr null, ptr %t55, ptr %t56, ptr %t57, i64 %t58), !dbg !464
   ret ptr null, !dbg !464
 err_cont_16:
@@ -19279,7 +19266,7 @@ err_unwind_10:
   %t27 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !471
   %t28 = call ptr @__spec_intern_cached(ptr @.str.42, ptr @.str.cache.42), !dbg !471
   %t29 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !471
-  %t30 = add i64 0, 99, !dbg !471
+  %t30 = add i64 0, 103, !dbg !471
   call void @Pool_recordPendingFrame(ptr null, ptr %t27, ptr %t28, ptr %t29, i64 %t30), !dbg !471
   ret void, !dbg !471
 err_cont_11:
@@ -19312,7 +19299,7 @@ err_unwind_15:
   %t45 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !472
   %t46 = call ptr @__spec_intern_cached(ptr @.str.42, ptr @.str.cache.42), !dbg !472
   %t47 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !472
-  %t48 = add i64 0, 101, !dbg !472
+  %t48 = add i64 0, 105, !dbg !472
   call void @Pool_recordPendingFrame(ptr null, ptr %t45, ptr %t46, ptr %t47, i64 %t48), !dbg !472
   ret void, !dbg !472
 err_cont_16:
@@ -19385,7 +19372,7 @@ err_unwind_10:
   %t30 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !475
   %t31 = call ptr @__spec_intern_cached(ptr @.str.43, ptr @.str.cache.43), !dbg !475
   %t32 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !475
-  %t33 = add i64 0, 107, !dbg !475
+  %t33 = add i64 0, 111, !dbg !475
   call void @Pool_recordPendingFrame(ptr null, ptr %t30, ptr %t31, ptr %t32, i64 %t33), !dbg !475
   ret ptr null, !dbg !475
 err_cont_11:
@@ -19421,7 +19408,7 @@ err_unwind_15:
   %t53 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !474
   %t54 = call ptr @__spec_intern_cached(ptr @.str.43, ptr @.str.cache.43), !dbg !474
   %t55 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !474
-  %t56 = add i64 0, 109, !dbg !474
+  %t56 = add i64 0, 113, !dbg !474
   call void @Pool_recordPendingFrame(ptr null, ptr %t53, ptr %t54, ptr %t55, i64 %t56), !dbg !474
   ret ptr null, !dbg !474
 err_cont_16:
@@ -19449,7 +19436,7 @@ if_then_1:
   ret void, !dbg !486
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !483
-  %t9 = add i64 0, 0, !dbg !483
+  %t9 = add i64 0, 16, !dbg !483
   %t10 = call i64 @__spec_mem_load_i64(i64 %t8, i64 %t9), !dbg !483
   store i64 %t10, ptr %var_items_7, !dbg !483
   %t11 = load i64, ptr %var_items_7, !dbg !487
@@ -19458,7 +19445,7 @@ if_end_3:
   br i1 %t13, label %if_then_4, label %if_end_6, !dbg !487
 if_then_4:
   %t15 = load i64, ptr %var_addr_1, !dbg !482
-  %t16 = add i64 0, 24, !dbg !482
+  %t16 = add i64 0, 40, !dbg !482
   %t17 = call i64 @__spec_mem_load_i32(i64 %t15, i64 %t16), !dbg !482
   store i64 %t17, ptr %var_kind_14, !dbg !482
   %t18 = load i64, ptr %var_kind_14, !dbg !488
@@ -19467,7 +19454,7 @@ if_then_4:
   br i1 %t20, label %if_then_7, label %if_end_9, !dbg !488
 if_then_7:
   %t22 = load i64, ptr %var_addr_1, !dbg !481
-  %t23 = add i64 0, 8, !dbg !481
+  %t23 = add i64 0, 24, !dbg !481
   %t24 = call i64 @__spec_mem_load_i64(i64 %t22, i64 %t23), !dbg !481
   store i64 %t24, ptr %var_len_21, !dbg !481
   %t26 = add i64 0, 0, !dbg !480
@@ -19505,7 +19492,7 @@ if_end_9:
   %t43 = load i64, ptr %var_items_7, !dbg !492
   call void @__spec_mem_free(i64 %t43), !dbg !492
   %t44 = load i64, ptr %var_addr_1, !dbg !493
-  %t45 = add i64 0, 0, !dbg !493
+  %t45 = add i64 0, 16, !dbg !493
   %t46 = add i64 0, 0, !dbg !493
   call void @__spec_mem_store_i64(i64 %t44, i64 %t45, i64 %t46), !dbg !493
   br label %if_end_6, !dbg !487
@@ -19530,7 +19517,7 @@ if_then_1:
   ret void, !dbg !498
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !495
-  %t9 = add i64 0, 0, !dbg !495
+  %t9 = add i64 0, 16, !dbg !495
   %t10 = call i64 @__spec_mem_load_i64(i64 %t8, i64 %t9), !dbg !495
   store i64 %t10, ptr %var_data_7, !dbg !495
   %t11 = load i64, ptr %var_data_7, !dbg !499
@@ -19541,7 +19528,7 @@ if_then_4:
   %t14 = load i64, ptr %var_data_7, !dbg !500
   call void @__spec_mem_free(i64 %t14), !dbg !500
   %t15 = load i64, ptr %var_addr_1, !dbg !501
-  %t16 = add i64 0, 0, !dbg !501
+  %t16 = add i64 0, 16, !dbg !501
   %t17 = add i64 0, 0, !dbg !501
   call void @__spec_mem_store_i64(i64 %t15, i64 %t16, i64 %t17), !dbg !501
   br label %if_end_6, !dbg !499
@@ -19589,7 +19576,7 @@ err_unwind_7:
   %t23 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !507
   %t24 = call ptr @__spec_intern_cached(ptr @.str.44, ptr @.str.cache.44), !dbg !507
   %t25 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !507
-  %t26 = add i64 0, 148, !dbg !507
+  %t26 = add i64 0, 152, !dbg !507
   call void @Pool_recordPendingFrame(ptr null, ptr %t23, ptr %t24, ptr %t25, i64 %t26), !dbg !507
   ret void, !dbg !507
 err_cont_8:
@@ -19620,14 +19607,14 @@ if_then_1:
   ret i64 %t7, !dbg !512
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !513
-  %t9 = add i64 0, 28, !dbg !513
+  %t9 = add i64 0, 44, !dbg !513
   %t10 = call i64 @__spec_mem_load_byte(i64 %t8, i64 %t9), !dbg !513
   %t11 = add i64 0, 0, !dbg !513
   %t12 = icmp ne i64 %t10, %t11, !dbg !513
   br i1 %t12, label %if_then_4, label %if_end_6, !dbg !513
 if_then_4:
   %t13 = load i64, ptr %var_addr_1, !dbg !514
-  %t14 = add i64 0, 8, !dbg !514
+  %t14 = add i64 0, 24, !dbg !514
   %t15 = call i64 @__spec_mem_load_i64(i64 %t13, i64 %t14), !dbg !514
   ret i64 %t15, !dbg !514
 if_end_6:
@@ -19647,7 +19634,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !515
 vt_end_9:
   %t24 = load i64, ptr %var_addr_1, !dbg !509
-  %t25 = add i64 0, 8, !dbg !509
+  %t25 = add i64 0, 24, !dbg !509
   %t26 = call i64 @__spec_mem_load_i64(i64 %t24, i64 %t25), !dbg !509
   store i64 %t26, ptr %var_len_23, !dbg !509
   %t27 = load ptr, ptr %self_slot, !dbg !516
@@ -19699,7 +19686,7 @@ if_then_1:
   ret ptr %t7, !dbg !528
 if_end_3:
   %t9 = load i64, ptr %var_addr_1, !dbg !525
-  %t10 = add i64 0, 28, !dbg !525
+  %t10 = add i64 0, 44, !dbg !525
   %t11 = call i64 @__spec_mem_load_byte(i64 %t9, i64 %t10), !dbg !525
   %t12 = add i64 0, 0, !dbg !525
   %t13 = icmp ne i64 %t11, %t12, !dbg !525
@@ -19726,7 +19713,7 @@ vt_end_9:
   br label %if_end_6, !dbg !529
 if_end_6:
   %t24 = load i64, ptr %var_addr_1, !dbg !524
-  %t25 = add i64 0, 8, !dbg !524
+  %t25 = add i64 0, 24, !dbg !524
   %t26 = call i64 @__spec_mem_load_i64(i64 %t24, i64 %t25), !dbg !524
   store i64 %t26, ptr %var_len_23, !dbg !524
   %t28 = load i64, ptr %slot_idx, !dbg !523
@@ -19769,7 +19756,7 @@ if_end_17:
   ret ptr %t44, !dbg !531
 if_end_14:
   %t46 = load i64, ptr %var_addr_1, !dbg !522
-  %t47 = add i64 0, 0, !dbg !522
+  %t47 = add i64 0, 16, !dbg !522
   %t48 = call i64 @__spec_mem_load_i64(i64 %t46, i64 %t47), !dbg !522
   store i64 %t48, ptr %var_items_45, !dbg !522
   %t50 = load i64, ptr %var_items_45, !dbg !521
@@ -19779,7 +19766,7 @@ if_end_14:
   %t54 = call i64 @__spec_mem_load_i64(i64 %t50, i64 %t53), !dbg !521
   store i64 %t54, ptr %var_valAddr_49, !dbg !521
   %t56 = load i64, ptr %var_addr_1, !dbg !520
-  %t57 = add i64 0, 24, !dbg !520
+  %t57 = add i64 0, 40, !dbg !520
   %t58 = call i64 @__spec_mem_load_i32(i64 %t56, i64 %t57), !dbg !520
   store i64 %t58, ptr %var_kind_55, !dbg !520
   %t60 = load i64, ptr %var_kind_55, !dbg !519
@@ -19860,7 +19847,7 @@ if_then_1:
   ret ptr %t9, !dbg !548
 if_end_3:
   %t11 = load i64, ptr %var_addr_1, !dbg !543
-  %t12 = add i64 0, 28, !dbg !543
+  %t12 = add i64 0, 44, !dbg !543
   %t13 = call i64 @__spec_mem_load_byte(i64 %t11, i64 %t12), !dbg !543
   %t14 = add i64 0, 0, !dbg !543
   %t15 = icmp ne i64 %t13, %t14, !dbg !543
@@ -19887,7 +19874,7 @@ vt_end_9:
   br label %if_end_6, !dbg !549
 if_end_6:
   %t26 = load i64, ptr %var_addr_1, !dbg !542
-  %t27 = add i64 0, 8, !dbg !542
+  %t27 = add i64 0, 24, !dbg !542
   %t28 = call i64 @__spec_mem_load_i64(i64 %t26, i64 %t27), !dbg !542
   store i64 %t28, ptr %var_len_25, !dbg !542
   %t30 = load i64, ptr %slot_idx, !dbg !541
@@ -19939,7 +19926,7 @@ if_end_17:
   ret ptr %t56, !dbg !552
 if_end_14:
   %t58 = load i64, ptr %var_addr_1, !dbg !540
-  %t59 = add i64 0, 0, !dbg !540
+  %t59 = add i64 0, 16, !dbg !540
   %t60 = call i64 @__spec_mem_load_i64(i64 %t58, i64 %t59), !dbg !540
   store i64 %t60, ptr %var_items_57, !dbg !540
   %t62 = load i64, ptr %var_items_57, !dbg !539
@@ -19949,7 +19936,7 @@ if_end_14:
   %t66 = call i64 @__spec_mem_load_i64(i64 %t62, i64 %t65), !dbg !539
   store i64 %t66, ptr %var_valAddr_61, !dbg !539
   %t68 = load i64, ptr %var_addr_1, !dbg !538
-  %t69 = add i64 0, 24, !dbg !538
+  %t69 = add i64 0, 40, !dbg !538
   %t70 = call i64 @__spec_mem_load_i32(i64 %t68, i64 %t69), !dbg !538
   store i64 %t70, ptr %var_kind_67, !dbg !538
   %t72 = load i64, ptr %var_kind_67, !dbg !537
@@ -20030,7 +20017,7 @@ if_then_1:
   ret void, !dbg !569
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !570
-  %t9 = add i64 0, 28, !dbg !570
+  %t9 = add i64 0, 44, !dbg !570
   %t10 = call i64 @__spec_mem_load_byte(i64 %t8, i64 %t9), !dbg !570
   %t11 = add i64 0, 0, !dbg !570
   %t12 = icmp ne i64 %t10, %t11, !dbg !570
@@ -20056,7 +20043,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !573
 vt_end_9:
   %t22 = load i64, ptr %var_addr_1, !dbg !564
-  %t23 = add i64 0, 8, !dbg !564
+  %t23 = add i64 0, 24, !dbg !564
   %t24 = call i64 @__spec_mem_load_i64(i64 %t22, i64 %t23), !dbg !564
   store i64 %t24, ptr %var_len_21, !dbg !564
   %t26 = load i64, ptr %slot_idx, !dbg !563
@@ -20100,14 +20087,14 @@ vt_end_17:
   ret void, !dbg !575
 if_end_14:
   %t50 = load i64, ptr %var_addr_1, !dbg !562
-  %t51 = add i64 0, 0, !dbg !562
+  %t51 = add i64 0, 16, !dbg !562
   %t52 = call i64 @__spec_mem_load_i64(i64 %t50, i64 %t51), !dbg !562
   store i64 %t52, ptr %var_items_49, !dbg !562
   %t54 = load ptr, ptr %slot_item, !dbg !561
   %t55 = call i64 @__spec_mem_obj_to_addr(ptr %t54), !dbg !561
   store i64 %t55, ptr %var_itemAddr_53, !dbg !561
   %t57 = load i64, ptr %var_addr_1, !dbg !560
-  %t58 = add i64 0, 24, !dbg !560
+  %t58 = add i64 0, 40, !dbg !560
   %t59 = call i64 @__spec_mem_load_i32(i64 %t57, i64 %t58), !dbg !560
   store i64 %t59, ptr %var_kind_56, !dbg !560
   %t61 = add i64 0, 0, !dbg !559
@@ -20205,7 +20192,7 @@ if_then_1:
   ret void, !dbg !592
 if_end_3:
   %t7 = load i64, ptr %var_addr_1, !dbg !593
-  %t8 = add i64 0, 28, !dbg !593
+  %t8 = add i64 0, 44, !dbg !593
   %t9 = call i64 @__spec_mem_load_byte(i64 %t7, i64 %t8), !dbg !593
   %t10 = add i64 0, 0, !dbg !593
   %t11 = icmp ne i64 %t9, %t10, !dbg !593
@@ -20231,15 +20218,15 @@ dir_call_8:
   br label %vt_end_9, !dbg !596
 vt_end_9:
   %t21 = load i64, ptr %var_addr_1, !dbg !589
-  %t22 = add i64 0, 8, !dbg !589
+  %t22 = add i64 0, 24, !dbg !589
   %t23 = call i64 @__spec_mem_load_i64(i64 %t21, i64 %t22), !dbg !589
   store i64 %t23, ptr %var_len_20, !dbg !589
   %t25 = load i64, ptr %var_addr_1, !dbg !588
-  %t26 = add i64 0, 16, !dbg !588
+  %t26 = add i64 0, 32, !dbg !588
   %t27 = call i64 @__spec_mem_load_i64(i64 %t25, i64 %t26), !dbg !588
   store i64 %t27, ptr %var_cap_24, !dbg !588
   %t29 = load i64, ptr %var_addr_1, !dbg !587
-  %t30 = add i64 0, 0, !dbg !587
+  %t30 = add i64 0, 16, !dbg !587
   %t31 = call i64 @__spec_mem_load_i64(i64 %t29, i64 %t30), !dbg !587
   store i64 %t31, ptr %var_items_28, !dbg !587
   %t32 = load i64, ptr %var_len_20, !dbg !597
@@ -20271,11 +20258,11 @@ if_end_15:
   %t49 = call i64 @__spec_mem_realloc(i64 %t45, i64 %t48), !dbg !598
   store i64 %t49, ptr %var_items_28, !dbg !598
   %t50 = load i64, ptr %var_addr_1, !dbg !599
-  %t51 = add i64 0, 0, !dbg !599
+  %t51 = add i64 0, 16, !dbg !599
   %t52 = load i64, ptr %var_items_28, !dbg !599
   call void @__spec_mem_store_i64(i64 %t50, i64 %t51, i64 %t52), !dbg !599
   %t53 = load i64, ptr %var_addr_1, !dbg !600
-  %t54 = add i64 0, 16, !dbg !600
+  %t54 = add i64 0, 32, !dbg !600
   %t55 = load i64, ptr %var_ncap_35, !dbg !600
   call void @__spec_mem_store_i64(i64 %t53, i64 %t54, i64 %t55), !dbg !600
   br label %if_end_12, !dbg !597
@@ -20284,7 +20271,7 @@ if_end_12:
   %t58 = call i64 @__spec_mem_obj_to_addr(ptr %t57), !dbg !585
   store i64 %t58, ptr %var_itemAddr_56, !dbg !585
   %t60 = load i64, ptr %var_addr_1, !dbg !584
-  %t61 = add i64 0, 24, !dbg !584
+  %t61 = add i64 0, 40, !dbg !584
   %t62 = call i64 @__spec_mem_load_i32(i64 %t60, i64 %t61), !dbg !584
   store i64 %t62, ptr %var_kind_59, !dbg !584
   %t64 = load i64, ptr %var_kind_59, !dbg !583
@@ -20313,7 +20300,7 @@ if_end_20:
   %t77 = load i64, ptr %var_itemAddr_56, !dbg !602
   call void @__spec_mem_store_i64(i64 %t73, i64 %t76, i64 %t77), !dbg !602
   %t78 = load i64, ptr %var_addr_1, !dbg !603
-  %t79 = add i64 0, 8, !dbg !603
+  %t79 = add i64 0, 24, !dbg !603
   %t80 = load i64, ptr %var_len_20, !dbg !603
   %t81 = add i64 0, 1, !dbg !603
   %t82 = add i64 %t80, %t81, !dbg !603
@@ -20356,14 +20343,14 @@ if_then_1:
   ret void, !dbg !608
 if_end_3:
   %t7 = load i64, ptr %var_addr_1, !dbg !609
-  %t8 = add i64 0, 24, !dbg !609
+  %t8 = add i64 0, 40, !dbg !609
   %t9 = call i64 @__spec_mem_load_i32(i64 %t7, i64 %t8), !dbg !609
   %t10 = add i64 0, 0, !dbg !609
   %t11 = icmp eq i64 %t9, %t10, !dbg !609
   br i1 %t11, label %if_then_4, label %if_end_6, !dbg !609
 if_then_4:
   %t12 = load i64, ptr %var_addr_1, !dbg !610
-  %t13 = add i64 0, 24, !dbg !610
+  %t13 = add i64 0, 40, !dbg !610
   %t14 = add i64 0, 1, !dbg !610
   call void @__spec_mem_store_i32(i64 %t12, i64 %t13, i64 %t14), !dbg !610
   br label %if_end_6, !dbg !609
@@ -20442,7 +20429,7 @@ if_then_3:
   ret void, !dbg !634
 if_end_5:
   %t15 = load i64, ptr %var_aAddr_1, !dbg !635
-  %t16 = add i64 0, 28, !dbg !635
+  %t16 = add i64 0, 44, !dbg !635
   %t17 = call i64 @__spec_mem_load_byte(i64 %t15, i64 %t16), !dbg !635
   %t18 = add i64 0, 0, !dbg !635
   %t19 = icmp ne i64 %t17, %t18, !dbg !635
@@ -20473,15 +20460,15 @@ dir_call_13:
   br label %vt_end_14, !dbg !639
 vt_end_14:
   %t32 = load i64, ptr %var_aAddr_1, !dbg !630
-  %t33 = add i64 0, 8, !dbg !630
+  %t33 = add i64 0, 24, !dbg !630
   %t34 = call i64 @__spec_mem_load_i64(i64 %t32, i64 %t33), !dbg !630
   store i64 %t34, ptr %var_n_31, !dbg !630
   %t36 = load i64, ptr %var_aAddr_1, !dbg !629
-  %t37 = add i64 0, 16, !dbg !629
+  %t37 = add i64 0, 32, !dbg !629
   %t38 = call i64 @__spec_mem_load_i64(i64 %t36, i64 %t37), !dbg !629
   store i64 %t38, ptr %var_cap_35, !dbg !629
   %t40 = load i64, ptr %var_aAddr_1, !dbg !628
-  %t41 = add i64 0, 0, !dbg !628
+  %t41 = add i64 0, 16, !dbg !628
   %t42 = call i64 @__spec_mem_load_i64(i64 %t40, i64 %t41), !dbg !628
   store i64 %t42, ptr %var_items_39, !dbg !628
   %t43 = load i64, ptr %var_n_31, !dbg !640
@@ -20530,17 +20517,17 @@ while_end_23:
   %t70 = call i64 @__spec_mem_realloc(i64 %t66, i64 %t69), !dbg !642
   store i64 %t70, ptr %var_items_39, !dbg !642
   %t71 = load i64, ptr %var_aAddr_1, !dbg !643
-  %t72 = add i64 0, 0, !dbg !643
+  %t72 = add i64 0, 16, !dbg !643
   %t73 = load i64, ptr %var_items_39, !dbg !643
   call void @__spec_mem_store_i64(i64 %t71, i64 %t72, i64 %t73), !dbg !643
   %t74 = load i64, ptr %var_aAddr_1, !dbg !644
-  %t75 = add i64 0, 16, !dbg !644
+  %t75 = add i64 0, 32, !dbg !644
   %t76 = load i64, ptr %var_ncap_48, !dbg !644
   call void @__spec_mem_store_i64(i64 %t74, i64 %t75, i64 %t76), !dbg !644
   br label %if_end_17, !dbg !640
 if_end_17:
   %t78 = load i64, ptr %var_aAddr_1, !dbg !626
-  %t79 = add i64 0, 24, !dbg !626
+  %t79 = add i64 0, 40, !dbg !626
   %t80 = call i64 @__spec_mem_load_i32(i64 %t78, i64 %t79), !dbg !626
   store i64 %t80, ptr %var_kind_77, !dbg !626
   %t82 = add i64 0, 0, !dbg !625
@@ -20592,7 +20579,7 @@ if_end_31:
   br label %while_hdr_24, !dbg !645
 while_end_26:
   %t112 = load i64, ptr %var_aAddr_1, !dbg !648
-  %t113 = add i64 0, 8, !dbg !648
+  %t113 = add i64 0, 24, !dbg !648
   %t114 = load i64, ptr %var_n_31, !dbg !648
   %t115 = load i64, ptr %var_n_31, !dbg !648
   %t116 = add i64 %t114, %t115, !dbg !648
@@ -20684,23 +20671,23 @@ vt_end_49:
   br label %if_end_37, !dbg !651
 if_end_37:
   %t156 = load i64, ptr %var_aAddr_1, !dbg !622
-  %t157 = add i64 0, 8, !dbg !622
+  %t157 = add i64 0, 24, !dbg !622
   %t158 = call i64 @__spec_mem_load_i64(i64 %t156, i64 %t157), !dbg !622
   store i64 %t158, ptr %var_aLen_155, !dbg !622
   %t160 = load i64, ptr %var_oAddr_4, !dbg !621
-  %t161 = add i64 0, 8, !dbg !621
+  %t161 = add i64 0, 24, !dbg !621
   %t162 = call i64 @__spec_mem_load_i64(i64 %t160, i64 %t161), !dbg !621
   store i64 %t162, ptr %var_oLen_159, !dbg !621
   %t164 = load i64, ptr %var_aAddr_1, !dbg !620
-  %t165 = add i64 0, 16, !dbg !620
+  %t165 = add i64 0, 32, !dbg !620
   %t166 = call i64 @__spec_mem_load_i64(i64 %t164, i64 %t165), !dbg !620
   store i64 %t166, ptr %var_aCap_163, !dbg !620
   %t168 = load i64, ptr %var_aAddr_1, !dbg !619
-  %t169 = add i64 0, 0, !dbg !619
+  %t169 = add i64 0, 16, !dbg !619
   %t170 = call i64 @__spec_mem_load_i64(i64 %t168, i64 %t169), !dbg !619
   store i64 %t170, ptr %var_aItems_167, !dbg !619
   %t172 = load i64, ptr %var_oAddr_4, !dbg !618
-  %t173 = add i64 0, 0, !dbg !618
+  %t173 = add i64 0, 16, !dbg !618
   %t174 = call i64 @__spec_mem_load_i64(i64 %t172, i64 %t173), !dbg !618
   store i64 %t174, ptr %var_oItems_171, !dbg !618
   %t175 = load i64, ptr %var_aLen_155, !dbg !656
@@ -20749,17 +20736,17 @@ while_end_58:
   %t202 = call i64 @__spec_mem_realloc(i64 %t198, i64 %t201), !dbg !658
   store i64 %t202, ptr %var_aItems_167, !dbg !658
   %t203 = load i64, ptr %var_aAddr_1, !dbg !659
-  %t204 = add i64 0, 0, !dbg !659
+  %t204 = add i64 0, 16, !dbg !659
   %t205 = load i64, ptr %var_aItems_167, !dbg !659
   call void @__spec_mem_store_i64(i64 %t203, i64 %t204, i64 %t205), !dbg !659
   %t206 = load i64, ptr %var_aAddr_1, !dbg !660
-  %t207 = add i64 0, 16, !dbg !660
+  %t207 = add i64 0, 32, !dbg !660
   %t208 = load i64, ptr %var_ncap2_180, !dbg !660
   call void @__spec_mem_store_i64(i64 %t206, i64 %t207, i64 %t208), !dbg !660
   br label %if_end_52, !dbg !656
 if_end_52:
   %t210 = load i64, ptr %var_aAddr_1, !dbg !616
-  %t211 = add i64 0, 24, !dbg !616
+  %t211 = add i64 0, 40, !dbg !616
   %t212 = call i64 @__spec_mem_load_i32(i64 %t210, i64 %t211), !dbg !616
   store i64 %t212, ptr %var_aKind_209, !dbg !616
   %t214 = add i64 0, 0, !dbg !615
@@ -20811,7 +20798,7 @@ if_end_66:
   br label %while_hdr_59, !dbg !661
 while_end_61:
   %t244 = load i64, ptr %var_aAddr_1, !dbg !664
-  %t245 = add i64 0, 8, !dbg !664
+  %t245 = add i64 0, 24, !dbg !664
   %t246 = load i64, ptr %var_aLen_155, !dbg !664
   %t247 = load i64, ptr %var_oLen_159, !dbg !664
   %t248 = add i64 %t246, %t247, !dbg !664
@@ -20877,7 +20864,7 @@ if_then_1:
   ret ptr %t9, !dbg !678
 if_end_3:
   %t10 = load i64, ptr %var_addr_1, !dbg !679
-  %t11 = add i64 0, 28, !dbg !679
+  %t11 = add i64 0, 44, !dbg !679
   %t12 = call i64 @__spec_mem_load_byte(i64 %t10, i64 %t11), !dbg !679
   %t13 = add i64 0, 0, !dbg !679
   %t14 = icmp ne i64 %t12, %t13, !dbg !679
@@ -20905,7 +20892,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !682
 vt_end_9:
   %t26 = load i64, ptr %var_addr_1, !dbg !673
-  %t27 = add i64 0, 8, !dbg !673
+  %t27 = add i64 0, 24, !dbg !673
   %t28 = call i64 @__spec_mem_load_i64(i64 %t26, i64 %t27), !dbg !673
   store i64 %t28, ptr %var_len_25, !dbg !673
   %t29 = load i64, ptr %var_len_25, !dbg !683
@@ -20939,11 +20926,11 @@ if_end_12:
   %t45 = sub i64 %t43, %t44, !dbg !672
   store i64 %t45, ptr %var_newLen_42, !dbg !672
   %t46 = load i64, ptr %var_addr_1, !dbg !687
-  %t47 = add i64 0, 8, !dbg !687
+  %t47 = add i64 0, 24, !dbg !687
   %t48 = load i64, ptr %var_newLen_42, !dbg !687
   call void @__spec_mem_store_i64(i64 %t46, i64 %t47, i64 %t48), !dbg !687
   %t50 = load i64, ptr %var_addr_1, !dbg !671
-  %t51 = add i64 0, 0, !dbg !671
+  %t51 = add i64 0, 16, !dbg !671
   %t52 = call i64 @__spec_mem_load_i64(i64 %t50, i64 %t51), !dbg !671
   store i64 %t52, ptr %var_items_49, !dbg !671
   %t54 = load i64, ptr %var_items_49, !dbg !670
@@ -20953,7 +20940,7 @@ if_end_12:
   %t58 = call i64 @__spec_mem_load_i64(i64 %t54, i64 %t57), !dbg !670
   store i64 %t58, ptr %var_valAddr_53, !dbg !670
   %t60 = load i64, ptr %var_addr_1, !dbg !669
-  %t61 = add i64 0, 24, !dbg !669
+  %t61 = add i64 0, 40, !dbg !669
   %t62 = call i64 @__spec_mem_load_i32(i64 %t60, i64 %t61), !dbg !669
   store i64 %t62, ptr %var_kind_59, !dbg !669
   %t64 = load i64, ptr %var_kind_59, !dbg !668
@@ -21026,7 +21013,7 @@ if_then_1:
   ret ptr %t9, !dbg !703
 if_end_3:
   %t10 = load i64, ptr %var_addr_1, !dbg !704
-  %t11 = add i64 0, 28, !dbg !704
+  %t11 = add i64 0, 44, !dbg !704
   %t12 = call i64 @__spec_mem_load_byte(i64 %t10, i64 %t11), !dbg !704
   %t13 = add i64 0, 0, !dbg !704
   %t14 = icmp ne i64 %t12, %t13, !dbg !704
@@ -21054,7 +21041,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !707
 vt_end_9:
   %t26 = load i64, ptr %var_addr_1, !dbg !698
-  %t27 = add i64 0, 8, !dbg !698
+  %t27 = add i64 0, 24, !dbg !698
   %t28 = call i64 @__spec_mem_load_i64(i64 %t26, i64 %t27), !dbg !698
   store i64 %t28, ptr %var_len_25, !dbg !698
   %t30 = load i64, ptr %slot_idx, !dbg !697
@@ -21100,7 +21087,7 @@ vt_end_17:
   ret ptr %t54, !dbg !710
 if_end_14:
   %t56 = load i64, ptr %var_addr_1, !dbg !696
-  %t57 = add i64 0, 0, !dbg !696
+  %t57 = add i64 0, 16, !dbg !696
   %t58 = call i64 @__spec_mem_load_i64(i64 %t56, i64 %t57), !dbg !696
   store i64 %t58, ptr %var_items_55, !dbg !696
   %t60 = load i64, ptr %var_items_55, !dbg !695
@@ -21139,13 +21126,13 @@ if_then_18:
   br label %if_end_20, !dbg !711
 if_end_20:
   %t89 = load i64, ptr %var_addr_1, !dbg !713
-  %t90 = add i64 0, 8, !dbg !713
+  %t90 = add i64 0, 24, !dbg !713
   %t91 = load i64, ptr %var_len_25, !dbg !713
   %t92 = add i64 0, 1, !dbg !713
   %t93 = sub i64 %t91, %t92, !dbg !713
   call void @__spec_mem_store_i64(i64 %t89, i64 %t90, i64 %t93), !dbg !713
   %t95 = load i64, ptr %var_addr_1, !dbg !693
-  %t96 = add i64 0, 24, !dbg !693
+  %t96 = add i64 0, 40, !dbg !693
   %t97 = call i64 @__spec_mem_load_i32(i64 %t95, i64 %t96), !dbg !693
   store i64 %t97, ptr %var_kind_94, !dbg !693
   %t99 = load i64, ptr %var_kind_94, !dbg !692
@@ -21214,7 +21201,7 @@ if_then_1:
   ret ptr %t7, !dbg !726
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !727
-  %t9 = add i64 0, 28, !dbg !727
+  %t9 = add i64 0, 44, !dbg !727
   %t10 = call i64 @__spec_mem_load_byte(i64 %t8, i64 %t9), !dbg !727
   %t11 = add i64 0, 0, !dbg !727
   %t12 = icmp ne i64 %t10, %t11, !dbg !727
@@ -21241,7 +21228,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !730
 vt_end_9:
   %t23 = load i64, ptr %var_addr_1, !dbg !723
-  %t24 = add i64 0, 8, !dbg !723
+  %t24 = add i64 0, 24, !dbg !723
   %t25 = call i64 @__spec_mem_load_i64(i64 %t23, i64 %t24), !dbg !723
   store i64 %t25, ptr %var_len_22, !dbg !723
   %t26 = load i64, ptr %var_len_22, !dbg !731
@@ -21272,11 +21259,11 @@ if_end_12:
   %t40 = sub i64 %t38, %t39, !dbg !722
   store i64 %t40, ptr %var_newLen_37, !dbg !722
   %t41 = load i64, ptr %var_addr_1, !dbg !734
-  %t42 = add i64 0, 8, !dbg !734
+  %t42 = add i64 0, 24, !dbg !734
   %t43 = load i64, ptr %var_newLen_37, !dbg !734
   call void @__spec_mem_store_i64(i64 %t41, i64 %t42, i64 %t43), !dbg !734
   %t45 = load i64, ptr %var_addr_1, !dbg !721
-  %t46 = add i64 0, 0, !dbg !721
+  %t46 = add i64 0, 16, !dbg !721
   %t47 = call i64 @__spec_mem_load_i64(i64 %t45, i64 %t46), !dbg !721
   store i64 %t47, ptr %var_items_44, !dbg !721
   %t49 = load i64, ptr %var_items_44, !dbg !720
@@ -21286,7 +21273,7 @@ if_end_12:
   %t53 = call i64 @__spec_mem_load_i64(i64 %t49, i64 %t52), !dbg !720
   store i64 %t53, ptr %var_valAddr_48, !dbg !720
   %t55 = load i64, ptr %var_addr_1, !dbg !719
-  %t56 = add i64 0, 24, !dbg !719
+  %t56 = add i64 0, 40, !dbg !719
   %t57 = call i64 @__spec_mem_load_i32(i64 %t55, i64 %t56), !dbg !719
   store i64 %t57, ptr %var_kind_54, !dbg !719
   %t59 = load i64, ptr %var_kind_54, !dbg !718
@@ -21358,7 +21345,7 @@ if_then_1:
   ret ptr %t7, !dbg !748
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !749
-  %t9 = add i64 0, 28, !dbg !749
+  %t9 = add i64 0, 44, !dbg !749
   %t10 = call i64 @__spec_mem_load_byte(i64 %t8, i64 %t9), !dbg !749
   %t11 = add i64 0, 0, !dbg !749
   %t12 = icmp ne i64 %t10, %t11, !dbg !749
@@ -21385,7 +21372,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !752
 vt_end_9:
   %t23 = load i64, ptr %var_addr_1, !dbg !745
-  %t24 = add i64 0, 8, !dbg !745
+  %t24 = add i64 0, 24, !dbg !745
   %t25 = call i64 @__spec_mem_load_i64(i64 %t23, i64 %t24), !dbg !745
   store i64 %t25, ptr %var_len_22, !dbg !745
   %t27 = load i64, ptr %slot_idx, !dbg !744
@@ -21422,7 +21409,7 @@ vt_end_17:
   ret ptr %t41, !dbg !754
 if_end_14:
   %t43 = load i64, ptr %var_addr_1, !dbg !743
-  %t44 = add i64 0, 0, !dbg !743
+  %t44 = add i64 0, 16, !dbg !743
   %t45 = call i64 @__spec_mem_load_i64(i64 %t43, i64 %t44), !dbg !743
   store i64 %t45, ptr %var_items_42, !dbg !743
   %t47 = load i64, ptr %var_items_42, !dbg !742
@@ -21461,13 +21448,13 @@ if_then_18:
   br label %if_end_20, !dbg !755
 if_end_20:
   %t76 = load i64, ptr %var_addr_1, !dbg !757
-  %t77 = add i64 0, 8, !dbg !757
+  %t77 = add i64 0, 24, !dbg !757
   %t78 = load i64, ptr %var_len_22, !dbg !757
   %t79 = add i64 0, 1, !dbg !757
   %t80 = sub i64 %t78, %t79, !dbg !757
   call void @__spec_mem_store_i64(i64 %t76, i64 %t77, i64 %t80), !dbg !757
   %t82 = load i64, ptr %var_addr_1, !dbg !740
-  %t83 = add i64 0, 24, !dbg !740
+  %t83 = add i64 0, 40, !dbg !740
   %t84 = call i64 @__spec_mem_load_i32(i64 %t82, i64 %t83), !dbg !740
   store i64 %t84, ptr %var_kind_81, !dbg !740
   %t86 = load i64, ptr %var_kind_81, !dbg !739
@@ -21532,7 +21519,7 @@ if_then_1:
   ret void, !dbg !769
 if_end_3:
   %t7 = load i64, ptr %var_addr_1, !dbg !770
-  %t8 = add i64 0, 28, !dbg !770
+  %t8 = add i64 0, 44, !dbg !770
   %t9 = call i64 @__spec_mem_load_byte(i64 %t7, i64 %t8), !dbg !770
   %t10 = add i64 0, 0, !dbg !770
   %t11 = icmp ne i64 %t9, %t10, !dbg !770
@@ -21558,27 +21545,27 @@ dir_call_8:
   br label %vt_end_9, !dbg !773
 vt_end_9:
   %t21 = load i64, ptr %var_addr_1, !dbg !766
-  %t22 = add i64 0, 8, !dbg !766
+  %t22 = add i64 0, 24, !dbg !766
   %t23 = call i64 @__spec_mem_load_i64(i64 %t21, i64 %t22), !dbg !766
   store i64 %t23, ptr %var_len_20, !dbg !766
   %t25 = load i64, ptr %var_addr_1, !dbg !765
-  %t26 = add i64 0, 0, !dbg !765
+  %t26 = add i64 0, 16, !dbg !765
   %t27 = call i64 @__spec_mem_load_i64(i64 %t25, i64 %t26), !dbg !765
   store i64 %t27, ptr %var_items_24, !dbg !765
   %t29 = load i64, ptr %var_addr_1, !dbg !764
-  %t30 = add i64 0, 24, !dbg !764
+  %t30 = add i64 0, 40, !dbg !764
   %t31 = call i64 @__spec_mem_load_i32(i64 %t29, i64 %t30), !dbg !764
   store i64 %t31, ptr %var_kind_28, !dbg !764
   %t32 = load i64, ptr %var_addr_1, !dbg !774
-  %t33 = add i64 0, 0, !dbg !774
+  %t33 = add i64 0, 16, !dbg !774
   %t34 = add i64 0, 0, !dbg !774
   call void @__spec_mem_store_i64(i64 %t32, i64 %t33, i64 %t34), !dbg !774
   %t35 = load i64, ptr %var_addr_1, !dbg !775
-  %t36 = add i64 0, 8, !dbg !775
+  %t36 = add i64 0, 24, !dbg !775
   %t37 = add i64 0, 0, !dbg !775
   call void @__spec_mem_store_i64(i64 %t35, i64 %t36, i64 %t37), !dbg !775
   %t38 = load i64, ptr %var_addr_1, !dbg !776
-  %t39 = add i64 0, 16, !dbg !776
+  %t39 = add i64 0, 32, !dbg !776
   %t40 = add i64 0, 0, !dbg !776
   call void @__spec_mem_store_i64(i64 %t38, i64 %t39, i64 %t40), !dbg !776
   %t41 = load ptr, ptr %self_slot, !dbg !777
@@ -21678,7 +21665,7 @@ dir_call_5:
   br label %vt_end_6, !dbg !789
 vt_end_6:
   %t14 = load i64, ptr %var_addr_1, !dbg !790
-  %t15 = add i64 0, 28, !dbg !790
+  %t15 = add i64 0, 44, !dbg !790
   %t16 = add i64 0, 1, !dbg !790
   call void @__spec_mem_store_byte(i64 %t14, i64 %t15, i64 %t16), !dbg !790
   %t17 = load ptr, ptr %self_slot, !dbg !791
@@ -21751,7 +21738,7 @@ err_unwind_7:
   %t19 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !802
   %t20 = call ptr @__spec_intern_cached(ptr @.str.53, ptr @.str.cache.53), !dbg !802
   %t21 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !802
-  %t22 = add i64 0, 512, !dbg !802
+  %t22 = add i64 0, 516, !dbg !802
   call void @Pool_recordPendingFrame(ptr null, ptr %t19, ptr %t20, ptr %t21, i64 %t22), !dbg !802
   ret ptr null, !dbg !802
 err_cont_8:
@@ -21759,7 +21746,7 @@ err_cont_8:
   ret ptr %t24, !dbg !803
 if_end_3:
   %t26 = load i64, ptr %var_addr_1, !dbg !798
-  %t27 = add i64 0, 8, !dbg !798
+  %t27 = add i64 0, 24, !dbg !798
   %t28 = call i64 @__spec_mem_load_i64(i64 %t26, i64 %t27), !dbg !798
   store i64 %t28, ptr %var_len_25, !dbg !798
   %t30 = load i64, ptr %slot_idx, !dbg !797
@@ -21808,7 +21795,7 @@ err_unwind_17:
   %t57 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !804
   %t58 = call ptr @__spec_intern_cached(ptr @.str.53, ptr @.str.cache.53), !dbg !804
   %t59 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !804
-  %t60 = add i64 0, 517, !dbg !804
+  %t60 = add i64 0, 521, !dbg !804
   call void @Pool_recordPendingFrame(ptr null, ptr %t57, ptr %t58, ptr %t59, i64 %t60), !dbg !804
   ret ptr null, !dbg !804
 err_cont_18:
@@ -21816,7 +21803,7 @@ err_cont_18:
   ret ptr %t62, !dbg !805
 if_end_13:
   %t64 = load i64, ptr %var_addr_1, !dbg !796
-  %t65 = add i64 0, 0, !dbg !796
+  %t65 = add i64 0, 16, !dbg !796
   %t66 = call i64 @__spec_mem_load_i64(i64 %t64, i64 %t65), !dbg !796
   store i64 %t66, ptr %var_items_63, !dbg !796
   %t68 = load i64, ptr %var_items_63, !dbg !795
@@ -21826,7 +21813,7 @@ if_end_13:
   %t72 = call i64 @__spec_mem_load_i64(i64 %t68, i64 %t71), !dbg !795
   store i64 %t72, ptr %var_valAddr_67, !dbg !795
   %t74 = load i64, ptr %var_addr_1, !dbg !794
-  %t75 = add i64 0, 24, !dbg !794
+  %t75 = add i64 0, 40, !dbg !794
   %t76 = call i64 @__spec_mem_load_i32(i64 %t74, i64 %t75), !dbg !794
   store i64 %t76, ptr %var_kind_73, !dbg !794
   %t78 = load i64, ptr %var_kind_73, !dbg !793
@@ -21907,14 +21894,14 @@ err_unwind_7:
   %t19 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !819
   %t20 = call ptr @__spec_intern_cached(ptr @.str.55, ptr @.str.cache.55), !dbg !819
   %t21 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !819
-  %t22 = add i64 0, 534, !dbg !819
+  %t22 = add i64 0, 538, !dbg !819
   call void @Pool_recordPendingFrame(ptr null, ptr %t19, ptr %t20, ptr %t21, i64 %t22), !dbg !819
   ret void, !dbg !819
 err_cont_8:
   ret void, !dbg !820
 if_end_3:
   %t24 = load i64, ptr %var_addr_1, !dbg !815
-  %t25 = add i64 0, 8, !dbg !815
+  %t25 = add i64 0, 24, !dbg !815
   %t26 = call i64 @__spec_mem_load_i64(i64 %t24, i64 %t25), !dbg !815
   store i64 %t26, ptr %var_len_23, !dbg !815
   %t28 = load i64, ptr %slot_idx, !dbg !814
@@ -21963,21 +21950,21 @@ err_unwind_17:
   %t55 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !821
   %t56 = call ptr @__spec_intern_cached(ptr @.str.55, ptr @.str.cache.55), !dbg !821
   %t57 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !821
-  %t58 = add i64 0, 539, !dbg !821
+  %t58 = add i64 0, 543, !dbg !821
   call void @Pool_recordPendingFrame(ptr null, ptr %t55, ptr %t56, ptr %t57, i64 %t58), !dbg !821
   ret void, !dbg !821
 err_cont_18:
   ret void, !dbg !822
 if_end_13:
   %t60 = load i64, ptr %var_addr_1, !dbg !813
-  %t61 = add i64 0, 0, !dbg !813
+  %t61 = add i64 0, 16, !dbg !813
   %t62 = call i64 @__spec_mem_load_i64(i64 %t60, i64 %t61), !dbg !813
   store i64 %t62, ptr %var_items_59, !dbg !813
   %t64 = load ptr, ptr %slot_item, !dbg !812
   %t65 = call i64 @__spec_mem_obj_to_addr(ptr %t64), !dbg !812
   store i64 %t65, ptr %var_itemAddr_63, !dbg !812
   %t67 = load i64, ptr %var_addr_1, !dbg !811
-  %t68 = add i64 0, 24, !dbg !811
+  %t68 = add i64 0, 40, !dbg !811
   %t69 = call i64 @__spec_mem_load_i32(i64 %t67, i64 %t68), !dbg !811
   store i64 %t69, ptr %var_kind_66, !dbg !811
   %t70 = load i64, ptr %var_kind_66, !dbg !823
@@ -22070,7 +22057,7 @@ err_unwind_7:
   %t19 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !837
   %t20 = call ptr @__spec_intern_cached(ptr @.str.57, ptr @.str.cache.57), !dbg !837
   %t21 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !837
-  %t22 = add i64 0, 557, !dbg !837
+  %t22 = add i64 0, 561, !dbg !837
   call void @Pool_recordPendingFrame(ptr null, ptr %t19, ptr %t20, ptr %t21, i64 %t22), !dbg !837
   ret ptr null, !dbg !837
 err_cont_8:
@@ -22078,11 +22065,11 @@ err_cont_8:
   ret ptr %t24, !dbg !838
 if_end_3:
   %t26 = load i64, ptr %var_addr_1, !dbg !833
-  %t27 = add i64 0, 8, !dbg !833
+  %t27 = add i64 0, 24, !dbg !833
   %t28 = call i64 @__spec_mem_load_i64(i64 %t26, i64 %t27), !dbg !833
   store i64 %t28, ptr %var_len_25, !dbg !833
   %t30 = load i64, ptr %var_addr_1, !dbg !832
-  %t31 = add i64 0, 24, !dbg !832
+  %t31 = add i64 0, 40, !dbg !832
   %t32 = call i64 @__spec_mem_load_i32(i64 %t30, i64 %t31), !dbg !832
   store i64 %t32, ptr %var_kind_29, !dbg !832
   %t33 = load i64, ptr %var_len_25, !dbg !839
@@ -22115,7 +22102,7 @@ err_unwind_15:
   %t48 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !840
   %t49 = call ptr @__spec_intern_cached(ptr @.str.57, ptr @.str.cache.57), !dbg !840
   %t50 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !840
-  %t51 = add i64 0, 563, !dbg !840
+  %t51 = add i64 0, 567, !dbg !840
   call void @Pool_recordPendingFrame(ptr null, ptr %t48, ptr %t49, ptr %t50, i64 %t51), !dbg !840
   ret ptr null, !dbg !840
 err_cont_16:
@@ -22127,11 +22114,11 @@ if_end_11:
   %t57 = sub i64 %t55, %t56, !dbg !831
   store i64 %t57, ptr %var_newLen_54, !dbg !831
   %t58 = load i64, ptr %var_addr_1, !dbg !842
-  %t59 = add i64 0, 8, !dbg !842
+  %t59 = add i64 0, 24, !dbg !842
   %t60 = load i64, ptr %var_newLen_54, !dbg !842
   call void @__spec_mem_store_i64(i64 %t58, i64 %t59, i64 %t60), !dbg !842
   %t62 = load i64, ptr %var_addr_1, !dbg !830
-  %t63 = add i64 0, 0, !dbg !830
+  %t63 = add i64 0, 16, !dbg !830
   %t64 = call i64 @__spec_mem_load_i64(i64 %t62, i64 %t63), !dbg !830
   store i64 %t64, ptr %var_items_61, !dbg !830
   %t66 = load i64, ptr %var_items_61, !dbg !829
@@ -22183,7 +22170,7 @@ if_then_1:
   ret i64 %t7, !dbg !848
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !849
-  %t9 = add i64 0, 8, !dbg !849
+  %t9 = add i64 0, 24, !dbg !849
   %t10 = call i64 @__spec_mem_load_i64(i64 %t8, i64 %t9), !dbg !849
   ret i64 %t10, !dbg !849
 }
@@ -22204,7 +22191,7 @@ entry:
   br i1 %t6, label %if_then_1, label %if_end_3, !dbg !853
 if_then_1:
   %t7 = load i64, ptr %var_addr_1, !dbg !854
-  %t8 = add i64 0, 8, !dbg !854
+  %t8 = add i64 0, 24, !dbg !854
   %t9 = add i64 0, 0, !dbg !854
   call void @__spec_mem_store_i64(i64 %t7, i64 %t8, i64 %t9), !dbg !854
   br label %if_end_3, !dbg !853
@@ -22236,15 +22223,15 @@ if_then_1:
   ret void, !dbg !862
 if_end_3:
   %t8 = load i64, ptr %var_addr_1, !dbg !859
-  %t9 = add i64 0, 8, !dbg !859
+  %t9 = add i64 0, 24, !dbg !859
   %t10 = call i64 @__spec_mem_load_i64(i64 %t8, i64 %t9), !dbg !859
   store i64 %t10, ptr %var_len_7, !dbg !859
   %t12 = load i64, ptr %var_addr_1, !dbg !858
-  %t13 = add i64 0, 16, !dbg !858
+  %t13 = add i64 0, 32, !dbg !858
   %t14 = call i64 @__spec_mem_load_i64(i64 %t12, i64 %t13), !dbg !858
   store i64 %t14, ptr %var_cap_11, !dbg !858
   %t16 = load i64, ptr %var_addr_1, !dbg !857
-  %t17 = add i64 0, 0, !dbg !857
+  %t17 = add i64 0, 16, !dbg !857
   %t18 = call i64 @__spec_mem_load_i64(i64 %t16, i64 %t17), !dbg !857
   store i64 %t18, ptr %var_data_15, !dbg !857
   %t19 = load i64, ptr %var_len_7, !dbg !863
@@ -22274,11 +22261,11 @@ if_end_9:
   %t33 = call i64 @__spec_mem_realloc(i64 %t31, i64 %t32), !dbg !864
   store i64 %t33, ptr %var_data_15, !dbg !864
   %t34 = load i64, ptr %var_addr_1, !dbg !865
-  %t35 = add i64 0, 0, !dbg !865
+  %t35 = add i64 0, 16, !dbg !865
   %t36 = load i64, ptr %var_data_15, !dbg !865
   call void @__spec_mem_store_i64(i64 %t34, i64 %t35, i64 %t36), !dbg !865
   %t37 = load i64, ptr %var_addr_1, !dbg !866
-  %t38 = add i64 0, 16, !dbg !866
+  %t38 = add i64 0, 32, !dbg !866
   %t39 = load i64, ptr %var_cap_11, !dbg !866
   call void @__spec_mem_store_i64(i64 %t37, i64 %t38, i64 %t39), !dbg !866
   br label %if_end_6, !dbg !863
@@ -22288,7 +22275,7 @@ if_end_6:
   %t42 = load i64, ptr %slot_v, !dbg !867
   call void @__spec_mem_store_byte(i64 %t40, i64 %t41, i64 %t42), !dbg !867
   %t43 = load i64, ptr %var_addr_1, !dbg !868
-  %t44 = add i64 0, 8, !dbg !868
+  %t44 = add i64 0, 24, !dbg !868
   %t45 = load i64, ptr %var_len_7, !dbg !868
   %t46 = add i64 0, 1, !dbg !868
   %t47 = add i64 %t45, %t46, !dbg !868
@@ -22347,15 +22334,15 @@ if_then_6:
   ret void, !dbg !879
 if_end_8:
   %t23 = load i64, ptr %var_addr_1, !dbg !873
-  %t24 = add i64 0, 8, !dbg !873
+  %t24 = add i64 0, 24, !dbg !873
   %t25 = call i64 @__spec_mem_load_i64(i64 %t23, i64 %t24), !dbg !873
   store i64 %t25, ptr %var_len_22, !dbg !873
   %t27 = load i64, ptr %var_addr_1, !dbg !872
-  %t28 = add i64 0, 16, !dbg !872
+  %t28 = add i64 0, 32, !dbg !872
   %t29 = call i64 @__spec_mem_load_i64(i64 %t27, i64 %t28), !dbg !872
   store i64 %t29, ptr %var_cap_26, !dbg !872
   %t31 = load i64, ptr %var_addr_1, !dbg !871
-  %t32 = add i64 0, 0, !dbg !871
+  %t32 = add i64 0, 16, !dbg !871
   %t33 = call i64 @__spec_mem_load_i64(i64 %t31, i64 %t32), !dbg !871
   store i64 %t33, ptr %var_data_30, !dbg !871
   %t34 = load i64, ptr %var_len_22, !dbg !880
@@ -22394,11 +22381,11 @@ while_end_17:
   %t53 = call i64 @__spec_mem_realloc(i64 %t51, i64 %t52), !dbg !883
   store i64 %t53, ptr %var_data_30, !dbg !883
   %t54 = load i64, ptr %var_addr_1, !dbg !884
-  %t55 = add i64 0, 0, !dbg !884
+  %t55 = add i64 0, 16, !dbg !884
   %t56 = load i64, ptr %var_data_30, !dbg !884
   call void @__spec_mem_store_i64(i64 %t54, i64 %t55, i64 %t56), !dbg !884
   %t57 = load i64, ptr %var_addr_1, !dbg !885
-  %t58 = add i64 0, 16, !dbg !885
+  %t58 = add i64 0, 32, !dbg !885
   %t59 = load i64, ptr %var_cap_26, !dbg !885
   call void @__spec_mem_store_i64(i64 %t57, i64 %t58, i64 %t59), !dbg !885
   br label %if_end_11, !dbg !880
@@ -22414,7 +22401,7 @@ if_end_11:
   %t68 = load i64, ptr %var_n_15, !dbg !886
   call void @__spec_mem_copy(i64 %t66, i64 %t67, i64 %t68), !dbg !886
   %t69 = load i64, ptr %var_addr_1, !dbg !887
-  %t70 = add i64 0, 8, !dbg !887
+  %t70 = add i64 0, 24, !dbg !887
   %t71 = load i64, ptr %var_len_22, !dbg !887
   %t72 = load i64, ptr %var_n_15, !dbg !887
   %t73 = add i64 %t71, %t72, !dbg !887
@@ -22445,7 +22432,7 @@ if_then_1:
   ret ptr %t7, !dbg !893
 if_end_3:
   %t9 = load i64, ptr %var_addr_1, !dbg !890
-  %t10 = add i64 0, 8, !dbg !890
+  %t10 = add i64 0, 24, !dbg !890
   %t11 = call i64 @__spec_mem_load_i64(i64 %t9, i64 %t10), !dbg !890
   store i64 %t11, ptr %var_len_8, !dbg !890
   %t12 = load i64, ptr %var_len_8, !dbg !894
@@ -22459,7 +22446,7 @@ if_then_4:
   ret ptr %t15, !dbg !894
 if_end_6:
   %t17 = load i64, ptr %var_addr_1, !dbg !889
-  %t18 = add i64 0, 0, !dbg !889
+  %t18 = add i64 0, 16, !dbg !889
   %t19 = call i64 @__spec_mem_load_i64(i64 %t17, i64 %t18), !dbg !889
   store i64 %t19, ptr %var_data_16, !dbg !889
   %t20 = load i64, ptr %var_data_16, !dbg !895
@@ -22520,7 +22507,7 @@ err_unwind_7:
   %t19 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !903
   %t20 = call ptr @__spec_intern_cached(ptr @.str.60, ptr @.str.cache.60), !dbg !903
   %t21 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !903
-  %t22 = add i64 0, 644, !dbg !903
+  %t22 = add i64 0, 648, !dbg !903
   call void @Pool_recordPendingFrame(ptr null, ptr %t19, ptr %t20, ptr %t21, i64 %t22), !dbg !903
   %t23 = add i64 0, 0, !dbg !903
   ret i64 %t23, !dbg !903
@@ -22529,7 +22516,7 @@ err_cont_8:
   ret i64 %t24, !dbg !904
 if_end_3:
   %t26 = load i64, ptr %var_addr_1, !dbg !899
-  %t27 = add i64 0, 8, !dbg !899
+  %t27 = add i64 0, 24, !dbg !899
   %t28 = call i64 @__spec_mem_load_i64(i64 %t26, i64 %t27), !dbg !899
   store i64 %t28, ptr %var_len_25, !dbg !899
   %t30 = load i64, ptr %slot_idx, !dbg !898
@@ -22578,7 +22565,7 @@ err_unwind_17:
   %t57 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !905
   %t58 = call ptr @__spec_intern_cached(ptr @.str.60, ptr @.str.cache.60), !dbg !905
   %t59 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !905
-  %t60 = add i64 0, 649, !dbg !905
+  %t60 = add i64 0, 653, !dbg !905
   call void @Pool_recordPendingFrame(ptr null, ptr %t57, ptr %t58, ptr %t59, i64 %t60), !dbg !905
   %t61 = add i64 0, 0, !dbg !905
   ret i64 %t61, !dbg !905
@@ -22587,7 +22574,7 @@ err_cont_18:
   ret i64 %t62, !dbg !906
 if_end_13:
   %t64 = load i64, ptr %var_addr_1, !dbg !897
-  %t65 = add i64 0, 0, !dbg !897
+  %t65 = add i64 0, 16, !dbg !897
   %t66 = call i64 @__spec_mem_load_i64(i64 %t64, i64 %t65), !dbg !897
   store i64 %t66, ptr %var_data_63, !dbg !897
   %t67 = load i64, ptr %var_data_63, !dbg !907
@@ -22645,14 +22632,14 @@ err_unwind_7:
   %t19 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !915
   %t20 = call ptr @__spec_intern_cached(ptr @.str.62, ptr @.str.cache.62), !dbg !915
   %t21 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !915
-  %t22 = add i64 0, 660, !dbg !915
+  %t22 = add i64 0, 664, !dbg !915
   call void @Pool_recordPendingFrame(ptr null, ptr %t19, ptr %t20, ptr %t21, i64 %t22), !dbg !915
   ret void, !dbg !915
 err_cont_8:
   ret void, !dbg !916
 if_end_3:
   %t24 = load i64, ptr %var_addr_1, !dbg !911
-  %t25 = add i64 0, 8, !dbg !911
+  %t25 = add i64 0, 24, !dbg !911
   %t26 = call i64 @__spec_mem_load_i64(i64 %t24, i64 %t25), !dbg !911
   store i64 %t26, ptr %var_len_23, !dbg !911
   %t28 = load i64, ptr %slot_idx, !dbg !910
@@ -22701,14 +22688,14 @@ err_unwind_17:
   %t55 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !917
   %t56 = call ptr @__spec_intern_cached(ptr @.str.62, ptr @.str.cache.62), !dbg !917
   %t57 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !917
-  %t58 = add i64 0, 665, !dbg !917
+  %t58 = add i64 0, 669, !dbg !917
   call void @Pool_recordPendingFrame(ptr null, ptr %t55, ptr %t56, ptr %t57, i64 %t58), !dbg !917
   ret void, !dbg !917
 err_cont_18:
   ret void, !dbg !918
 if_end_13:
   %t60 = load i64, ptr %var_addr_1, !dbg !909
-  %t61 = add i64 0, 0, !dbg !909
+  %t61 = add i64 0, 16, !dbg !909
   %t62 = call i64 @__spec_mem_load_i64(i64 %t60, i64 %t61), !dbg !909
   store i64 %t62, ptr %var_data_59, !dbg !909
   %t63 = load i64, ptr %var_data_59, !dbg !919
@@ -22765,7 +22752,7 @@ err_unwind_7:
   %t19 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !927
   %t20 = call ptr @__spec_intern_cached(ptr @.str.64, ptr @.str.cache.64), !dbg !927
   %t21 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !927
-  %t22 = add i64 0, 676, !dbg !927
+  %t22 = add i64 0, 680, !dbg !927
   call void @Pool_recordPendingFrame(ptr null, ptr %t19, ptr %t20, ptr %t21, i64 %t22), !dbg !927
   %t23 = add i64 0, 0, !dbg !927
   ret i64 %t23, !dbg !927
@@ -22774,7 +22761,7 @@ err_cont_8:
   ret i64 %t24, !dbg !928
 if_end_3:
   %t26 = load i64, ptr %var_addr_1, !dbg !923
-  %t27 = add i64 0, 8, !dbg !923
+  %t27 = add i64 0, 24, !dbg !923
   %t28 = call i64 @__spec_mem_load_i64(i64 %t26, i64 %t27), !dbg !923
   store i64 %t28, ptr %var_len_25, !dbg !923
   %t29 = load i64, ptr %var_len_25, !dbg !929
@@ -22807,7 +22794,7 @@ err_unwind_15:
   %t44 = call ptr @__spec_intern_cached(ptr @.str.39, ptr @.str.cache.39), !dbg !930
   %t45 = call ptr @__spec_intern_cached(ptr @.str.64, ptr @.str.cache.64), !dbg !930
   %t46 = call ptr @__spec_intern_cached(ptr @.str.41, ptr @.str.cache.41), !dbg !930
-  %t47 = add i64 0, 681, !dbg !930
+  %t47 = add i64 0, 685, !dbg !930
   call void @Pool_recordPendingFrame(ptr null, ptr %t44, ptr %t45, ptr %t46, i64 %t47), !dbg !930
   %t48 = add i64 0, 0, !dbg !930
   ret i64 %t48, !dbg !930
@@ -22820,11 +22807,11 @@ if_end_11:
   %t53 = sub i64 %t51, %t52, !dbg !922
   store i64 %t53, ptr %var_newLen_50, !dbg !922
   %t54 = load i64, ptr %var_addr_1, !dbg !932
-  %t55 = add i64 0, 8, !dbg !932
+  %t55 = add i64 0, 24, !dbg !932
   %t56 = load i64, ptr %var_newLen_50, !dbg !932
   call void @__spec_mem_store_i64(i64 %t54, i64 %t55, i64 %t56), !dbg !932
   %t58 = load i64, ptr %var_addr_1, !dbg !921
-  %t59 = add i64 0, 0, !dbg !921
+  %t59 = add i64 0, 16, !dbg !921
   %t60 = call i64 @__spec_mem_load_i64(i64 %t58, i64 %t59), !dbg !921
   store i64 %t60, ptr %var_data_57, !dbg !921
   %t61 = load i64, ptr %var_data_57, !dbg !933
@@ -22873,7 +22860,7 @@ if_then_3:
   ret void, !dbg !943
 if_end_5:
   %t16 = load i64, ptr %var_oAddr_4, !dbg !939
-  %t17 = add i64 0, 8, !dbg !939
+  %t17 = add i64 0, 24, !dbg !939
   %t18 = call i64 @__spec_mem_load_i64(i64 %t16, i64 %t17), !dbg !939
   store i64 %t18, ptr %var_n_15, !dbg !939
   %t19 = load i64, ptr %var_n_15, !dbg !944
@@ -22884,19 +22871,19 @@ if_then_6:
   ret void, !dbg !944
 if_end_8:
   %t23 = load i64, ptr %var_oAddr_4, !dbg !938
-  %t24 = add i64 0, 0, !dbg !938
+  %t24 = add i64 0, 16, !dbg !938
   %t25 = call i64 @__spec_mem_load_i64(i64 %t23, i64 %t24), !dbg !938
   store i64 %t25, ptr %var_oData_22, !dbg !938
   %t27 = load i64, ptr %var_addr_1, !dbg !937
-  %t28 = add i64 0, 8, !dbg !937
+  %t28 = add i64 0, 24, !dbg !937
   %t29 = call i64 @__spec_mem_load_i64(i64 %t27, i64 %t28), !dbg !937
   store i64 %t29, ptr %var_len_26, !dbg !937
   %t31 = load i64, ptr %var_addr_1, !dbg !936
-  %t32 = add i64 0, 16, !dbg !936
+  %t32 = add i64 0, 32, !dbg !936
   %t33 = call i64 @__spec_mem_load_i64(i64 %t31, i64 %t32), !dbg !936
   store i64 %t33, ptr %var_cap_30, !dbg !936
   %t35 = load i64, ptr %var_addr_1, !dbg !935
-  %t36 = add i64 0, 0, !dbg !935
+  %t36 = add i64 0, 16, !dbg !935
   %t37 = call i64 @__spec_mem_load_i64(i64 %t35, i64 %t36), !dbg !935
   store i64 %t37, ptr %var_data_34, !dbg !935
   %t38 = load i64, ptr %var_len_26, !dbg !945
@@ -22935,11 +22922,11 @@ while_end_17:
   %t57 = call i64 @__spec_mem_realloc(i64 %t55, i64 %t56), !dbg !948
   store i64 %t57, ptr %var_data_34, !dbg !948
   %t58 = load i64, ptr %var_addr_1, !dbg !949
-  %t59 = add i64 0, 0, !dbg !949
+  %t59 = add i64 0, 16, !dbg !949
   %t60 = load i64, ptr %var_data_34, !dbg !949
   call void @__spec_mem_store_i64(i64 %t58, i64 %t59, i64 %t60), !dbg !949
   %t61 = load i64, ptr %var_addr_1, !dbg !950
-  %t62 = add i64 0, 16, !dbg !950
+  %t62 = add i64 0, 32, !dbg !950
   %t63 = load i64, ptr %var_cap_30, !dbg !950
   call void @__spec_mem_store_i64(i64 %t61, i64 %t62, i64 %t63), !dbg !950
   br label %if_end_11, !dbg !945
@@ -22966,7 +22953,7 @@ if_else_19:
   br label %if_end_20, !dbg !951
 if_end_20:
   %t77 = load i64, ptr %var_addr_1, !dbg !954
-  %t78 = add i64 0, 8, !dbg !954
+  %t78 = add i64 0, 24, !dbg !954
   %t79 = load i64, ptr %var_len_26, !dbg !954
   %t80 = load i64, ptr %var_n_15, !dbg !954
   %t81 = add i64 %t79, %t80, !dbg !954
@@ -23033,7 +23020,7 @@ if_then_5:
   ret void, !dbg !966
 if_end_7:
   %t21 = load i64, ptr %var_oAddr_4, !dbg !962
-  %t22 = add i64 0, 8, !dbg !962
+  %t22 = add i64 0, 24, !dbg !962
   %t23 = call i64 @__spec_mem_load_i64(i64 %t21, i64 %t22), !dbg !962
   store i64 %t23, ptr %var_oLen_20, !dbg !962
   %t26 = load i64, ptr %slot_start, !dbg !961
@@ -23085,19 +23072,19 @@ if_then_17:
   ret void, !dbg !968
 if_end_19:
   %t51 = load i64, ptr %var_oAddr_4, !dbg !959
-  %t52 = add i64 0, 0, !dbg !959
+  %t52 = add i64 0, 16, !dbg !959
   %t53 = call i64 @__spec_mem_load_i64(i64 %t51, i64 %t52), !dbg !959
   store i64 %t53, ptr %var_oData_50, !dbg !959
   %t55 = load i64, ptr %var_addr_1, !dbg !958
-  %t56 = add i64 0, 8, !dbg !958
+  %t56 = add i64 0, 24, !dbg !958
   %t57 = call i64 @__spec_mem_load_i64(i64 %t55, i64 %t56), !dbg !958
   store i64 %t57, ptr %var_len_54, !dbg !958
   %t59 = load i64, ptr %var_addr_1, !dbg !957
-  %t60 = add i64 0, 16, !dbg !957
+  %t60 = add i64 0, 32, !dbg !957
   %t61 = call i64 @__spec_mem_load_i64(i64 %t59, i64 %t60), !dbg !957
   store i64 %t61, ptr %var_cap_58, !dbg !957
   %t63 = load i64, ptr %var_addr_1, !dbg !956
-  %t64 = add i64 0, 0, !dbg !956
+  %t64 = add i64 0, 16, !dbg !956
   %t65 = call i64 @__spec_mem_load_i64(i64 %t63, i64 %t64), !dbg !956
   store i64 %t65, ptr %var_data_62, !dbg !956
   %t66 = load i64, ptr %var_len_54, !dbg !969
@@ -23136,11 +23123,11 @@ while_end_28:
   %t85 = call i64 @__spec_mem_realloc(i64 %t83, i64 %t84), !dbg !972
   store i64 %t85, ptr %var_data_62, !dbg !972
   %t86 = load i64, ptr %var_addr_1, !dbg !973
-  %t87 = add i64 0, 0, !dbg !973
+  %t87 = add i64 0, 16, !dbg !973
   %t88 = load i64, ptr %var_data_62, !dbg !973
   call void @__spec_mem_store_i64(i64 %t86, i64 %t87, i64 %t88), !dbg !973
   %t89 = load i64, ptr %var_addr_1, !dbg !974
-  %t90 = add i64 0, 16, !dbg !974
+  %t90 = add i64 0, 32, !dbg !974
   %t91 = load i64, ptr %var_cap_58, !dbg !974
   call void @__spec_mem_store_i64(i64 %t89, i64 %t90, i64 %t91), !dbg !974
   br label %if_end_22, !dbg !969
@@ -23171,7 +23158,7 @@ if_else_30:
   br label %if_end_31, !dbg !975
 if_end_31:
   %t109 = load i64, ptr %var_addr_1, !dbg !978
-  %t110 = add i64 0, 8, !dbg !978
+  %t110 = add i64 0, 24, !dbg !978
   %t111 = load i64, ptr %var_len_54, !dbg !978
   %t112 = load i64, ptr %var_n_35, !dbg !978
   %t113 = add i64 %t111, %t112, !dbg !978
@@ -23213,7 +23200,7 @@ if_then_1:
   ret ptr %t10, !dbg !986
 if_end_3:
   %t12 = load i64, ptr %var_addr_4, !dbg !982
-  %t13 = add i64 0, 8, !dbg !982
+  %t13 = add i64 0, 24, !dbg !982
   %t14 = call i64 @__spec_mem_load_i64(i64 %t12, i64 %t13), !dbg !982
   store i64 %t14, ptr %var_len_11, !dbg !982
   %t17 = load i64, ptr %slot_start, !dbg !981
@@ -23534,7 +23521,7 @@ if_then_1:
   ret i64 %t7, !dbg !1014
 if_end_3:
   %t9 = load i64, ptr %var_addr_1, !dbg !1011
-  %t10 = add i64 0, 8, !dbg !1011
+  %t10 = add i64 0, 24, !dbg !1011
   %t11 = call i64 @__spec_mem_load_i64(i64 %t9, i64 %t10), !dbg !1011
   store i64 %t11, ptr %var_len_8, !dbg !1011
   %t13 = load i64, ptr %slot_offset, !dbg !1010
@@ -23558,7 +23545,7 @@ if_then_6:
   ret i64 %t22, !dbg !1010
 if_end_8:
   %t24 = load i64, ptr %var_addr_1, !dbg !1009
-  %t25 = add i64 0, 0, !dbg !1009
+  %t25 = add i64 0, 16, !dbg !1009
   %t26 = call i64 @__spec_mem_load_i64(i64 %t24, i64 %t25), !dbg !1009
   store i64 %t26, ptr %var_data_23, !dbg !1009
   %t28 = load i64, ptr %var_data_23, !dbg !1008
@@ -23609,7 +23596,7 @@ if_then_1:
   ret i64 %t7, !dbg !1026
 if_end_3:
   %t9 = load i64, ptr %var_addr_1, !dbg !1023
-  %t10 = add i64 0, 8, !dbg !1023
+  %t10 = add i64 0, 24, !dbg !1023
   %t11 = call i64 @__spec_mem_load_i64(i64 %t9, i64 %t10), !dbg !1023
   store i64 %t11, ptr %var_len_8, !dbg !1023
   %t13 = load i64, ptr %slot_offset, !dbg !1022
@@ -23633,7 +23620,7 @@ if_then_6:
   ret i64 %t22, !dbg !1022
 if_end_8:
   %t24 = load i64, ptr %var_addr_1, !dbg !1021
-  %t25 = add i64 0, 0, !dbg !1021
+  %t25 = add i64 0, 16, !dbg !1021
   %t26 = call i64 @__spec_mem_load_i64(i64 %t24, i64 %t25), !dbg !1021
   store i64 %t26, ptr %var_data_23, !dbg !1021
   %t28 = load i64, ptr %var_data_23, !dbg !1020
@@ -23706,7 +23693,7 @@ if_then_1:
   ret i64 %t7, !dbg !1038
 if_end_3:
   %t9 = load i64, ptr %var_addr_1, !dbg !1035
-  %t10 = add i64 0, 8, !dbg !1035
+  %t10 = add i64 0, 24, !dbg !1035
   %t11 = call i64 @__spec_mem_load_i64(i64 %t9, i64 %t10), !dbg !1035
   store i64 %t11, ptr %var_len_8, !dbg !1035
   %t13 = load i64, ptr %slot_offset, !dbg !1034
@@ -23730,7 +23717,7 @@ if_then_6:
   ret i64 %t22, !dbg !1034
 if_end_8:
   %t24 = load i64, ptr %var_addr_1, !dbg !1033
-  %t25 = add i64 0, 0, !dbg !1033
+  %t25 = add i64 0, 16, !dbg !1033
   %t26 = call i64 @__spec_mem_load_i64(i64 %t24, i64 %t25), !dbg !1033
   store i64 %t26, ptr %var_data_23, !dbg !1033
   %t28 = load i64, ptr %var_data_23, !dbg !1032
@@ -31188,7 +31175,7 @@ entry:
   br label %while_hdr_1, !dbg !2181
 while_hdr_1:
   %t2 = load i64, ptr %slot_addr, !dbg !2181
-  %t3 = add i64 0, 40, !dbg !2181
+  %t3 = add i64 0, 56, !dbg !2181
   %t4 = add i64 %t2, %t3, !dbg !2181
   %t5 = add i64 0, 0, !dbg !2181
   %t6 = add i64 0, 1, !dbg !2181
@@ -31208,7 +31195,7 @@ entry:
   %slot_addr = alloca i64, !dbg !2183
   store i64 %p_addr, ptr %slot_addr, !dbg !2183
   %t2 = load i64, ptr %slot_addr, !dbg !2184
-  %t3 = add i64 0, 40, !dbg !2184
+  %t3 = add i64 0, 56, !dbg !2184
   %t4 = add i64 %t2, %t3, !dbg !2184
   %t5 = add i64 0, 0, !dbg !2184
   call void @__spec_mem_atomic_store_i64(i64 %t4, i64 %t5), !dbg !2184
@@ -31225,7 +31212,7 @@ entry:
   %slot_valKind = alloca i64, !dbg !2186
   store i64 %p_valKind, ptr %slot_valKind, !dbg !2186
   %var_mAddr_2 = alloca i64, !dbg !2187
-  %t3 = add i64 0, 48, !dbg !2187
+  %t3 = add i64 0, 64, !dbg !2187
   %t4 = add i64 0, 1, !dbg !2187
   %t5 = call i64 @_spec_rt_alloc_kinded(i64 %t3, i64 %t4), !dbg !2187
   store i64 %t5, ptr %var_mAddr_2, !dbg !2187
@@ -31234,19 +31221,19 @@ entry:
   %t8 = call i64 @__spec_mem_alloc(i64 %t7), !dbg !2188
   store i64 %t8, ptr %var_bAddr_6, !dbg !2188
   %t9 = load i64, ptr %var_mAddr_2, !dbg !2189
-  %t10 = add i64 0, 0, !dbg !2189
+  %t10 = add i64 0, 16, !dbg !2189
   %t11 = load i64, ptr %var_bAddr_6, !dbg !2189
   call void @__spec_mem_store_i64(i64 %t9, i64 %t10, i64 %t11), !dbg !2189
   %t12 = load i64, ptr %var_mAddr_2, !dbg !2190
-  %t13 = add i64 0, 8, !dbg !2190
+  %t13 = add i64 0, 24, !dbg !2190
   %t14 = add i64 0, 8, !dbg !2190
   call void @__spec_mem_store_i64(i64 %t12, i64 %t13, i64 %t14), !dbg !2190
   %t15 = load i64, ptr %var_mAddr_2, !dbg !2191
-  %t16 = add i64 0, 24, !dbg !2191
+  %t16 = add i64 0, 40, !dbg !2191
   %t17 = load i64, ptr %slot_keyKind, !dbg !2191
   call void @__spec_mem_store_i32(i64 %t15, i64 %t16, i64 %t17), !dbg !2191
   %t18 = load i64, ptr %var_mAddr_2, !dbg !2192
-  %t19 = add i64 0, 28, !dbg !2192
+  %t19 = add i64 0, 44, !dbg !2192
   %t20 = load i64, ptr %slot_valKind, !dbg !2192
   call void @__spec_mem_store_i32(i64 %t18, i64 %t19, i64 %t20), !dbg !2192
   %t21 = load i64, ptr %var_mAddr_2, !dbg !2193
@@ -31328,10 +31315,10 @@ vt_end_6:
 if_end_3:
   %t20 = load ptr, ptr %self_slot, !dbg !2198
   %t21 = load i64, ptr %var_mAddr_2, !dbg !2198
-  %t22 = add i64 0, 24, !dbg !2198
+  %t22 = add i64 0, 40, !dbg !2198
   %t23 = call i64 @__spec_mem_load_i32(i64 %t21, i64 %t22), !dbg !2198
   %t24 = load i64, ptr %var_mAddr_2, !dbg !2198
-  %t25 = add i64 0, 28, !dbg !2198
+  %t25 = add i64 0, 44, !dbg !2198
   %t26 = call i64 @__spec_mem_load_i32(i64 %t24, i64 %t25), !dbg !2198
   %t29 = icmp ne ptr %t20, null, !dbg !2198
   br i1 %t29, label %vt_call_7, label %dir_call_8, !dbg !2198
@@ -31382,7 +31369,7 @@ if_then_1:
   ret void, !dbg !2217
 if_end_3:
   %t9 = load i64, ptr %var_mAddr_2, !dbg !2214
-  %t10 = add i64 0, 0, !dbg !2214
+  %t10 = add i64 0, 16, !dbg !2214
   %t11 = call i64 @__spec_mem_load_i64(i64 %t9, i64 %t10), !dbg !2214
   store i64 %t11, ptr %var_buckets_8, !dbg !2214
   %t12 = load i64, ptr %var_buckets_8, !dbg !2218
@@ -31393,15 +31380,15 @@ if_then_4:
   ret void, !dbg !2218
 if_end_6:
   %t16 = load i64, ptr %var_mAddr_2, !dbg !2213
-  %t17 = add i64 0, 8, !dbg !2213
+  %t17 = add i64 0, 24, !dbg !2213
   %t18 = call i64 @__spec_mem_load_i64(i64 %t16, i64 %t17), !dbg !2213
   store i64 %t18, ptr %var_nb_15, !dbg !2213
   %t20 = load i64, ptr %var_mAddr_2, !dbg !2212
-  %t21 = add i64 0, 24, !dbg !2212
+  %t21 = add i64 0, 40, !dbg !2212
   %t22 = call i64 @__spec_mem_load_i32(i64 %t20, i64 %t21), !dbg !2212
   store i64 %t22, ptr %var_keyKind_19, !dbg !2212
   %t24 = load i64, ptr %var_mAddr_2, !dbg !2211
-  %t25 = add i64 0, 28, !dbg !2211
+  %t25 = add i64 0, 44, !dbg !2211
   %t26 = call i64 @__spec_mem_load_i32(i64 %t24, i64 %t25), !dbg !2211
   store i64 %t26, ptr %var_valKind_23, !dbg !2211
   %t28 = add i64 0, 0, !dbg !2210
@@ -31505,7 +31492,7 @@ while_end_9:
   %t85 = load i64, ptr %var_buckets_8, !dbg !2226
   call void @__spec_mem_free(i64 %t85), !dbg !2226
   %t86 = load i64, ptr %var_mAddr_2, !dbg !2227
-  %t87 = add i64 0, 0, !dbg !2227
+  %t87 = add i64 0, 16, !dbg !2227
   %t88 = add i64 0, 0, !dbg !2227
   call void @__spec_mem_store_i64(i64 %t86, i64 %t87, i64 %t88), !dbg !2227
   ret void, !dbg !2215
@@ -31746,12 +31733,12 @@ entry:
   store i64 %p_mAddr, ptr %slot_mAddr, !dbg !2273
   %var_len_2 = alloca i64, !dbg !2274
   %t3 = load i64, ptr %slot_mAddr, !dbg !2274
-  %t4 = add i64 0, 16, !dbg !2274
+  %t4 = add i64 0, 32, !dbg !2274
   %t5 = call i64 @__spec_mem_load_i64(i64 %t3, i64 %t4), !dbg !2274
   store i64 %t5, ptr %var_len_2, !dbg !2274
   %var_nb_6 = alloca i64, !dbg !2275
   %t7 = load i64, ptr %slot_mAddr, !dbg !2275
-  %t8 = add i64 0, 8, !dbg !2275
+  %t8 = add i64 0, 24, !dbg !2275
   %t9 = call i64 @__spec_mem_load_i64(i64 %t7, i64 %t8), !dbg !2275
   store i64 %t9, ptr %var_nb_6, !dbg !2275
   %t10 = load i64, ptr %var_len_2, !dbg !2276
@@ -31772,11 +31759,11 @@ if_end_3:
   %t21 = call i64 @__spec_mem_alloc(i64 %t20), !dbg !2271
   store i64 %t21, ptr %var_grown_17, !dbg !2271
   %t23 = load i64, ptr %slot_mAddr, !dbg !2270
-  %t24 = add i64 0, 0, !dbg !2270
+  %t24 = add i64 0, 16, !dbg !2270
   %t25 = call i64 @__spec_mem_load_i64(i64 %t23, i64 %t24), !dbg !2270
   store i64 %t25, ptr %var_buckets_22, !dbg !2270
   %t27 = load i64, ptr %slot_mAddr, !dbg !2269
-  %t28 = add i64 0, 24, !dbg !2269
+  %t28 = add i64 0, 40, !dbg !2269
   %t29 = call i64 @__spec_mem_load_i32(i64 %t27, i64 %t28), !dbg !2269
   store i64 %t29, ptr %var_keyKind_26, !dbg !2269
   %t31 = add i64 0, 0, !dbg !2268
@@ -31887,11 +31874,11 @@ while_end_6:
   %t98 = load i64, ptr %var_buckets_22, !dbg !2283
   call void @__spec_mem_free(i64 %t98), !dbg !2283
   %t99 = load i64, ptr %slot_mAddr, !dbg !2284
-  %t100 = add i64 0, 0, !dbg !2284
+  %t100 = add i64 0, 16, !dbg !2284
   %t101 = load i64, ptr %var_grown_17, !dbg !2284
   call void @__spec_mem_store_i64(i64 %t99, i64 %t100, i64 %t101), !dbg !2284
   %t102 = load i64, ptr %slot_mAddr, !dbg !2285
-  %t103 = add i64 0, 8, !dbg !2285
+  %t103 = add i64 0, 24, !dbg !2285
   %t104 = load i64, ptr %var_newNb_13, !dbg !2285
   call void @__spec_mem_store_i64(i64 %t102, i64 %t103, i64 %t104), !dbg !2285
   call void @spec_pool_release_to(i64 %t1), !dbg !2273
@@ -31950,7 +31937,7 @@ if_then_1:
   ret void, !dbg !2308
 if_end_3:
   %t5 = load i64, ptr %slot_mAddr, !dbg !2309
-  %t6 = add i64 0, 32, !dbg !2309
+  %t6 = add i64 0, 48, !dbg !2309
   %t7 = call i64 @__spec_mem_load_byte(i64 %t5, i64 %t6), !dbg !2309
   %t8 = add i64 0, 0, !dbg !2309
   %t9 = icmp ne i64 %t7, %t8, !dbg !2309
@@ -31962,7 +31949,7 @@ if_then_4:
   ret void, !dbg !2311
 if_end_6:
   %t12 = load i64, ptr %slot_mAddr, !dbg !2306
-  %t13 = add i64 0, 24, !dbg !2306
+  %t13 = add i64 0, 40, !dbg !2306
   %t14 = call i64 @__spec_mem_load_i32(i64 %t12, i64 %t13), !dbg !2306
   store i64 %t14, ptr %var_keyKind_11, !dbg !2306
   %t16 = load i64, ptr %var_keyKind_11, !dbg !2305
@@ -31999,7 +31986,7 @@ dir_call_13:
   br label %vt_end_14, !dbg !2312
 vt_end_14:
   %t31 = load i64, ptr %slot_mAddr, !dbg !2304
-  %t32 = add i64 0, 28, !dbg !2304
+  %t32 = add i64 0, 44, !dbg !2304
   %t33 = call i64 @__spec_mem_load_i32(i64 %t31, i64 %t32), !dbg !2304
   store i64 %t33, ptr %var_valKind_30, !dbg !2304
   %t36 = load i1, ptr %slot_valIsArc, !dbg !2303
@@ -32028,11 +32015,11 @@ if_end_19:
   %t46 = load i64, ptr %if_res_42, !dbg !2302
   store i64 %t46, ptr %var_arcByte_41, !dbg !2302
   %t48 = load i64, ptr %slot_mAddr, !dbg !2301
-  %t49 = add i64 0, 8, !dbg !2301
+  %t49 = add i64 0, 24, !dbg !2301
   %t50 = call i64 @__spec_mem_load_i64(i64 %t48, i64 %t49), !dbg !2301
   store i64 %t50, ptr %var_nb_47, !dbg !2301
   %t52 = load i64, ptr %slot_mAddr, !dbg !2300
-  %t53 = add i64 0, 0, !dbg !2300
+  %t53 = add i64 0, 16, !dbg !2300
   %t54 = call i64 @__spec_mem_load_i64(i64 %t52, i64 %t53), !dbg !2300
   store i64 %t54, ptr %var_buckets_51, !dbg !2300
   %t57 = load i64, ptr %var_keyKind_11, !dbg !2299
@@ -32264,7 +32251,7 @@ if_then_63:
   br label %if_end_65, !dbg !2290
 if_end_65:
   %t185 = load i64, ptr %slot_mAddr, !dbg !2289
-  %t186 = add i64 0, 16, !dbg !2289
+  %t186 = add i64 0, 32, !dbg !2289
   %t187 = call i64 @__spec_mem_load_i64(i64 %t185, i64 %t186), !dbg !2289
   store i64 %t187, ptr %var_len_184, !dbg !2289
   %t188 = load i64, ptr %var_len_184, !dbg !2324
@@ -32288,11 +32275,11 @@ dir_call_70:
   br label %vt_end_71, !dbg !2325
 vt_end_71:
   %t198 = load i64, ptr %slot_mAddr, !dbg !2326
-  %t199 = add i64 0, 8, !dbg !2326
+  %t199 = add i64 0, 24, !dbg !2326
   %t200 = call i64 @__spec_mem_load_i64(i64 %t198, i64 %t199), !dbg !2326
   store i64 %t200, ptr %var_nb_47, !dbg !2326
   %t201 = load i64, ptr %slot_mAddr, !dbg !2327
-  %t202 = add i64 0, 0, !dbg !2327
+  %t202 = add i64 0, 16, !dbg !2327
   %t203 = call i64 @__spec_mem_load_i64(i64 %t201, i64 %t202), !dbg !2327
   store i64 %t203, ptr %var_buckets_51, !dbg !2327
   %t205 = load i64, ptr %var_keyKind_11, !dbg !2288
@@ -32378,7 +32365,7 @@ if_end_68:
   %t256 = load i64, ptr %var_e_233, !dbg !2332
   call void @__spec_mem_store_i64(i64 %t252, i64 %t255, i64 %t256), !dbg !2332
   %t257 = load i64, ptr %slot_mAddr, !dbg !2333
-  %t258 = add i64 0, 16, !dbg !2333
+  %t258 = add i64 0, 32, !dbg !2333
   %t259 = load i64, ptr %var_len_184, !dbg !2333
   %t260 = add i64 0, 1, !dbg !2333
   %t261 = add i64 %t259, %t260, !dbg !2333
@@ -32442,7 +32429,7 @@ if_then_1:
   ret ptr %t5, !dbg !2350
 if_end_3:
   %t7 = load i64, ptr %slot_mAddr, !dbg !2348
-  %t8 = add i64 0, 24, !dbg !2348
+  %t8 = add i64 0, 40, !dbg !2348
   %t9 = call i64 @__spec_mem_load_i32(i64 %t7, i64 %t8), !dbg !2348
   store i64 %t9, ptr %var_keyKind_6, !dbg !2348
   %t11 = load i64, ptr %var_keyKind_6, !dbg !2347
@@ -32465,7 +32452,7 @@ if_then_6:
   ret ptr %t18, !dbg !2347
 if_end_8:
   %t20 = load i64, ptr %slot_mAddr, !dbg !2346
-  %t21 = add i64 0, 32, !dbg !2346
+  %t21 = add i64 0, 48, !dbg !2346
   %t22 = call i64 @__spec_mem_load_byte(i64 %t20, i64 %t21), !dbg !2346
   %t23 = add i64 0, 0, !dbg !2346
   %t24 = icmp ne i64 %t22, %t23, !dbg !2346
@@ -32492,11 +32479,11 @@ vt_end_14:
   br label %if_end_11, !dbg !2351
 if_end_11:
   %t35 = load i64, ptr %slot_mAddr, !dbg !2345
-  %t36 = add i64 0, 8, !dbg !2345
+  %t36 = add i64 0, 24, !dbg !2345
   %t37 = call i64 @__spec_mem_load_i64(i64 %t35, i64 %t36), !dbg !2345
   store i64 %t37, ptr %var_nb_34, !dbg !2345
   %t39 = load i64, ptr %slot_mAddr, !dbg !2344
-  %t40 = add i64 0, 0, !dbg !2344
+  %t40 = add i64 0, 16, !dbg !2344
   %t41 = call i64 @__spec_mem_load_i64(i64 %t39, i64 %t40), !dbg !2344
   store i64 %t41, ptr %var_buckets_38, !dbg !2344
   %t44 = load i64, ptr %var_keyKind_6, !dbg !2343
@@ -32614,7 +32601,7 @@ if_then_33:
   %t114 = call i64 @__spec_mem_load_byte(i64 %t112, i64 %t113), !dbg !2338
   store i64 %t114, ptr %var_isArc_111, !dbg !2338
   %t116 = load i64, ptr %slot_mAddr, !dbg !2337
-  %t117 = add i64 0, 28, !dbg !2337
+  %t117 = add i64 0, 44, !dbg !2337
   %t118 = call i64 @__spec_mem_load_i32(i64 %t116, i64 %t117), !dbg !2337
   store i64 %t118, ptr %var_valKind_115, !dbg !2337
   %t121 = load i64, ptr %var_isArc_111, !dbg !2336
@@ -32747,7 +32734,7 @@ if_then_1:
   ret ptr %t7, !dbg !2378
 if_end_3:
   %t9 = load i64, ptr %slot_mAddr, !dbg !2374
-  %t10 = add i64 0, 24, !dbg !2374
+  %t10 = add i64 0, 40, !dbg !2374
   %t11 = call i64 @__spec_mem_load_i32(i64 %t9, i64 %t10), !dbg !2374
   store i64 %t11, ptr %var_keyKind_8, !dbg !2374
   %t13 = load i64, ptr %var_keyKind_8, !dbg !2373
@@ -32773,7 +32760,7 @@ if_then_6:
   ret ptr %t22, !dbg !2380
 if_end_8:
   %t24 = load i64, ptr %slot_mAddr, !dbg !2372
-  %t25 = add i64 0, 32, !dbg !2372
+  %t25 = add i64 0, 48, !dbg !2372
   %t26 = call i64 @__spec_mem_load_byte(i64 %t24, i64 %t25), !dbg !2372
   %t27 = add i64 0, 0, !dbg !2372
   %t28 = icmp ne i64 %t26, %t27, !dbg !2372
@@ -32800,11 +32787,11 @@ vt_end_14:
   br label %if_end_11, !dbg !2381
 if_end_11:
   %t39 = load i64, ptr %slot_mAddr, !dbg !2371
-  %t40 = add i64 0, 8, !dbg !2371
+  %t40 = add i64 0, 24, !dbg !2371
   %t41 = call i64 @__spec_mem_load_i64(i64 %t39, i64 %t40), !dbg !2371
   store i64 %t41, ptr %var_nb_38, !dbg !2371
   %t43 = load i64, ptr %slot_mAddr, !dbg !2370
-  %t44 = add i64 0, 0, !dbg !2370
+  %t44 = add i64 0, 16, !dbg !2370
   %t45 = call i64 @__spec_mem_load_i64(i64 %t43, i64 %t44), !dbg !2370
   store i64 %t45, ptr %var_buckets_42, !dbg !2370
   %t48 = load i64, ptr %var_keyKind_8, !dbg !2369
@@ -32922,7 +32909,7 @@ if_then_33:
   %t118 = call i64 @__spec_mem_load_byte(i64 %t116, i64 %t117), !dbg !2364
   store i64 %t118, ptr %var_isArc_115, !dbg !2364
   %t120 = load i64, ptr %slot_mAddr, !dbg !2363
-  %t121 = add i64 0, 28, !dbg !2363
+  %t121 = add i64 0, 44, !dbg !2363
   %t122 = call i64 @__spec_mem_load_i32(i64 %t120, i64 %t121), !dbg !2363
   store i64 %t122, ptr %var_valKind_119, !dbg !2363
   %t125 = load i64, ptr %var_isArc_115, !dbg !2362
@@ -33207,7 +33194,7 @@ if_then_1:
   ret i1 %t5, !dbg !2415
 if_end_3:
   %t7 = load i64, ptr %slot_mAddr, !dbg !2413
-  %t8 = add i64 0, 24, !dbg !2413
+  %t8 = add i64 0, 40, !dbg !2413
   %t9 = call i64 @__spec_mem_load_i32(i64 %t7, i64 %t8), !dbg !2413
   store i64 %t9, ptr %var_keyKind_6, !dbg !2413
   %t11 = load i64, ptr %var_keyKind_6, !dbg !2412
@@ -33230,7 +33217,7 @@ if_then_6:
   ret i1 %t18, !dbg !2412
 if_end_8:
   %t20 = load i64, ptr %slot_mAddr, !dbg !2411
-  %t21 = add i64 0, 32, !dbg !2411
+  %t21 = add i64 0, 48, !dbg !2411
   %t22 = call i64 @__spec_mem_load_byte(i64 %t20, i64 %t21), !dbg !2411
   %t23 = add i64 0, 0, !dbg !2411
   %t24 = icmp ne i64 %t22, %t23, !dbg !2411
@@ -33257,11 +33244,11 @@ vt_end_14:
   br label %if_end_11, !dbg !2416
 if_end_11:
   %t35 = load i64, ptr %slot_mAddr, !dbg !2410
-  %t36 = add i64 0, 8, !dbg !2410
+  %t36 = add i64 0, 24, !dbg !2410
   %t37 = call i64 @__spec_mem_load_i64(i64 %t35, i64 %t36), !dbg !2410
   store i64 %t37, ptr %var_nb_34, !dbg !2410
   %t39 = load i64, ptr %slot_mAddr, !dbg !2409
-  %t40 = add i64 0, 0, !dbg !2409
+  %t40 = add i64 0, 16, !dbg !2409
   %t41 = call i64 @__spec_mem_load_i64(i64 %t39, i64 %t40), !dbg !2409
   store i64 %t41, ptr %var_buckets_38, !dbg !2409
   %t44 = load i64, ptr %var_keyKind_6, !dbg !2408
@@ -33468,7 +33455,7 @@ if_then_1:
   ret i1 %t5, !dbg !2442
 if_end_3:
   %t6 = load i64, ptr %slot_mAddr, !dbg !2443
-  %t7 = add i64 0, 32, !dbg !2443
+  %t7 = add i64 0, 48, !dbg !2443
   %t8 = call i64 @__spec_mem_load_byte(i64 %t6, i64 %t7), !dbg !2443
   %t9 = add i64 0, 0, !dbg !2443
   %t10 = icmp ne i64 %t8, %t9, !dbg !2443
@@ -33481,7 +33468,7 @@ if_then_4:
   ret i1 %t12, !dbg !2445
 if_end_6:
   %t14 = load i64, ptr %slot_mAddr, !dbg !2440
-  %t15 = add i64 0, 24, !dbg !2440
+  %t15 = add i64 0, 40, !dbg !2440
   %t16 = call i64 @__spec_mem_load_i32(i64 %t14, i64 %t15), !dbg !2440
   store i64 %t16, ptr %var_keyKind_13, !dbg !2440
   %t18 = load i64, ptr %var_keyKind_13, !dbg !2439
@@ -33519,11 +33506,11 @@ dir_call_13:
   br label %vt_end_14, !dbg !2446
 vt_end_14:
   %t34 = load i64, ptr %slot_mAddr, !dbg !2438
-  %t35 = add i64 0, 8, !dbg !2438
+  %t35 = add i64 0, 24, !dbg !2438
   %t36 = call i64 @__spec_mem_load_i64(i64 %t34, i64 %t35), !dbg !2438
   store i64 %t36, ptr %var_nb_33, !dbg !2438
   %t38 = load i64, ptr %slot_mAddr, !dbg !2437
-  %t39 = add i64 0, 0, !dbg !2437
+  %t39 = add i64 0, 16, !dbg !2437
   %t40 = call i64 @__spec_mem_load_i64(i64 %t38, i64 %t39), !dbg !2437
   store i64 %t40, ptr %var_buckets_37, !dbg !2437
   %t43 = load i64, ptr %var_keyKind_13, !dbg !2436
@@ -33685,7 +33672,7 @@ if_end_43:
   %t139 = call i64 @__spec_mem_load_byte(i64 %t137, i64 %t138), !dbg !2428
   store i64 %t139, ptr %var_isArc_136, !dbg !2428
   %t141 = load i64, ptr %slot_mAddr, !dbg !2427
-  %t142 = add i64 0, 28, !dbg !2427
+  %t142 = add i64 0, 44, !dbg !2427
   %t143 = call i64 @__spec_mem_load_i32(i64 %t141, i64 %t142), !dbg !2427
   store i64 %t143, ptr %var_valKind_140, !dbg !2427
   %t146 = load i64, ptr %var_isArc_136, !dbg !2426
@@ -33720,11 +33707,11 @@ if_end_50:
   %t158 = load i64, ptr %var_curr_71, !dbg !2454
   call void @__spec_mem_free(i64 %t158), !dbg !2454
   %t160 = load i64, ptr %slot_mAddr, !dbg !2425
-  %t161 = add i64 0, 16, !dbg !2425
+  %t161 = add i64 0, 32, !dbg !2425
   %t162 = call i64 @__spec_mem_load_i64(i64 %t160, i64 %t161), !dbg !2425
   store i64 %t162, ptr %var_len_159, !dbg !2425
   %t163 = load i64, ptr %slot_mAddr, !dbg !2455
-  %t164 = add i64 0, 16, !dbg !2455
+  %t164 = add i64 0, 32, !dbg !2455
   %t165 = load i64, ptr %var_len_159, !dbg !2455
   %t166 = add i64 0, 1, !dbg !2455
   %t167 = sub i64 %t165, %t166, !dbg !2455
@@ -34599,14 +34586,14 @@ if_then_1:
   ret i64 %t8, !dbg !2526
 if_end_3:
   %t9 = load i64, ptr %var_mAddr_2, !dbg !2527
-  %t10 = add i64 0, 32, !dbg !2527
+  %t10 = add i64 0, 48, !dbg !2527
   %t11 = call i64 @__spec_mem_load_byte(i64 %t9, i64 %t10), !dbg !2527
   %t12 = add i64 0, 0, !dbg !2527
   %t13 = icmp ne i64 %t11, %t12, !dbg !2527
   br i1 %t13, label %if_then_4, label %if_end_6, !dbg !2527
 if_then_4:
   %t14 = load i64, ptr %var_mAddr_2, !dbg !2528
-  %t15 = add i64 0, 16, !dbg !2528
+  %t15 = add i64 0, 32, !dbg !2528
   %t16 = call i64 @__spec_mem_load_i64(i64 %t14, i64 %t15), !dbg !2528
   call void @spec_pool_release_to(i64 %t1), !dbg !2528
   ret i64 %t16, !dbg !2528
@@ -34627,7 +34614,7 @@ dir_call_8:
   br label %vt_end_9, !dbg !2529
 vt_end_9:
   %t25 = load i64, ptr %var_mAddr_2, !dbg !2523
-  %t26 = add i64 0, 16, !dbg !2523
+  %t26 = add i64 0, 32, !dbg !2523
   %t27 = call i64 @__spec_mem_load_i64(i64 %t25, i64 %t26), !dbg !2523
   store i64 %t27, ptr %var_len_24, !dbg !2523
   %t28 = load ptr, ptr %self_slot, !dbg !2530
@@ -34685,7 +34672,7 @@ dir_call_5:
   br label %vt_end_6, !dbg !2536
 vt_end_6:
   %t15 = load i64, ptr %var_mAddr_2, !dbg !2537
-  %t16 = add i64 0, 32, !dbg !2537
+  %t16 = add i64 0, 48, !dbg !2537
   %t17 = add i64 0, 1, !dbg !2537
   call void @__spec_mem_store_byte(i64 %t15, i64 %t16, i64 %t17), !dbg !2537
   %t18 = load ptr, ptr %self_slot, !dbg !2538
@@ -34744,7 +34731,7 @@ if_then_1:
   ret ptr %t10, !dbg !2551
 if_end_3:
   %t12 = load i64, ptr %var_mAddr_4, !dbg !2547
-  %t13 = add i64 0, 24, !dbg !2547
+  %t13 = add i64 0, 40, !dbg !2547
   %t14 = call i64 @__spec_mem_load_i32(i64 %t12, i64 %t13), !dbg !2547
   store i64 %t14, ptr %var_keyKind_11, !dbg !2547
   %t16 = load i64, ptr %var_keyKind_11, !dbg !2546
@@ -34764,13 +34751,13 @@ sc_end_5:
 if_then_6:
   %t23 = load ptr, ptr %var_a_2, !dbg !2552
   %t24 = call i64 @__spec_mem_obj_to_addr(ptr %t23), !dbg !2552
-  %t25 = add i64 0, 24, !dbg !2552
+  %t25 = add i64 0, 40, !dbg !2552
   %t26 = add i64 0, 1, !dbg !2552
   call void @__spec_mem_store_i32(i64 %t24, i64 %t25, i64 %t26), !dbg !2552
   br label %if_end_8, !dbg !2546
 if_end_8:
   %t28 = load i64, ptr %var_mAddr_4, !dbg !2545
-  %t29 = add i64 0, 32, !dbg !2545
+  %t29 = add i64 0, 48, !dbg !2545
   %t30 = call i64 @__spec_mem_load_byte(i64 %t28, i64 %t29), !dbg !2545
   %t31 = add i64 0, 0, !dbg !2545
   %t32 = icmp ne i64 %t30, %t31, !dbg !2545
@@ -34797,11 +34784,11 @@ vt_end_14:
   br label %if_end_11, !dbg !2553
 if_end_11:
   %t43 = load i64, ptr %var_mAddr_4, !dbg !2544
-  %t44 = add i64 0, 8, !dbg !2544
+  %t44 = add i64 0, 24, !dbg !2544
   %t45 = call i64 @__spec_mem_load_i64(i64 %t43, i64 %t44), !dbg !2544
   store i64 %t45, ptr %var_nb_42, !dbg !2544
   %t47 = load i64, ptr %var_mAddr_4, !dbg !2543
-  %t48 = add i64 0, 0, !dbg !2543
+  %t48 = add i64 0, 16, !dbg !2543
   %t49 = call i64 @__spec_mem_load_i64(i64 %t47, i64 %t48), !dbg !2543
   store i64 %t49, ptr %var_buckets_46, !dbg !2543
   %t51 = add i64 0, 0, !dbg !2542
@@ -452340,625 +452327,625 @@ ret_blk:
 !418 = !DILocation(line: 383, column: 1, scope: !407)
 !419 = !DILocation(line: 385, column: 1, scope: !407)
 !420 = !DIFile(filename: "Vector.spec", directory: "./spec/lib/base/sys")
-!421 = distinct !DISubprogram(name: "Vector_lockVec", scope: !420, file: !420, line: 28, type: !2, scopeLine: 28, spFlags: DISPFlagDefinition, unit: !0)
-!422 = !DILocation(line: 28, column: 1, scope: !421)
-!423 = !DILocation(line: 29, column: 1, scope: !421)
-!424 = distinct !DISubprogram(name: "Vector_unlockVec", scope: !420, file: !420, line: 33, type: !2, scopeLine: 33, spFlags: DISPFlagDefinition, unit: !0)
-!425 = !DILocation(line: 33, column: 1, scope: !424)
-!426 = !DILocation(line: 34, column: 1, scope: !424)
-!427 = distinct !DISubprogram(name: "Vector_newVec", scope: !420, file: !420, line: 38, type: !2, scopeLine: 38, spFlags: DISPFlagDefinition, unit: !0)
-!428 = !DILocation(line: 38, column: 1, scope: !427)
-!429 = !DILocation(line: 39, column: 1, scope: !427)
-!430 = !DILocation(line: 40, column: 1, scope: !427)
-!431 = distinct !DISubprogram(name: "Vector_newVecObject", scope: !420, file: !420, line: 44, type: !2, scopeLine: 44, spFlags: DISPFlagDefinition, unit: !0)
-!432 = !DILocation(line: 44, column: 1, scope: !431)
-!433 = !DILocation(line: 45, column: 1, scope: !431)
-!434 = !DILocation(line: 46, column: 1, scope: !431)
-!435 = !DILocation(line: 47, column: 1, scope: !431)
-!436 = distinct !DISubprogram(name: "Vector_newVecLike", scope: !420, file: !420, line: 51, type: !2, scopeLine: 51, spFlags: DISPFlagDefinition, unit: !0)
-!437 = !DILocation(line: 56, column: 1, scope: !436)
-!438 = !DILocation(line: 54, column: 1, scope: !436)
-!439 = !DILocation(line: 51, column: 1, scope: !436)
-!440 = !DILocation(line: 52, column: 1, scope: !436)
-!441 = !DILocation(line: 53, column: 1, scope: !436)
-!442 = distinct !DISubprogram(name: "Vector_newByteBuf", scope: !420, file: !420, line: 60, type: !2, scopeLine: 60, spFlags: DISPFlagDefinition, unit: !0)
-!443 = !DILocation(line: 60, column: 1, scope: !442)
-!444 = !DILocation(line: 61, column: 1, scope: !442)
-!445 = !DILocation(line: 62, column: 1, scope: !442)
-!446 = distinct !DISubprogram(name: "Vector_isByteBuf", scope: !420, file: !420, line: 65, type: !2, scopeLine: 65, spFlags: DISPFlagDefinition, unit: !0)
-!447 = !DILocation(line: 65, column: 1, scope: !446)
-!448 = !DILocation(line: 66, column: 1, scope: !446)
-!449 = distinct !DISubprogram(name: "Vector_listLength", scope: !420, file: !420, line: 69, type: !2, scopeLine: 69, spFlags: DISPFlagDefinition, unit: !0)
-!450 = !DILocation(line: 71, column: 1, scope: !449)
-!451 = !DILocation(line: 70, column: 1, scope: !449)
-!452 = !DILocation(line: 69, column: 1, scope: !449)
-!453 = distinct !DISubprogram(name: "Vector_listClear", scope: !420, file: !420, line: 74, type: !2, scopeLine: 74, spFlags: DISPFlagDefinition, unit: !0)
-!454 = !DILocation(line: 74, column: 1, scope: !453)
-!455 = !DILocation(line: 75, column: 1, scope: !453)
-!456 = !DILocation(line: 76, column: 1, scope: !453)
-!457 = !DILocation(line: 78, column: 1, scope: !453)
-!458 = distinct !DISubprogram(name: "Vector_listPush", scope: !420, file: !420, line: 82, type: !2, scopeLine: 82, spFlags: DISPFlagDefinition, unit: !0)
-!459 = !DILocation(line: 82, column: 1, scope: !458)
-!460 = !DILocation(line: 83, column: 1, scope: !458)
-!461 = !DILocation(line: 84, column: 1, scope: !458)
-!462 = !DILocation(line: 86, column: 1, scope: !458)
-!463 = distinct !DISubprogram(name: "Vector_listGet", scope: !420, file: !420, line: 90, type: !2, scopeLine: 90, spFlags: DISPFlagDefinition, unit: !0)
-!464 = !DILocation(line: 94, column: 1, scope: !463)
-!465 = !DILocation(line: 92, column: 1, scope: !463)
-!466 = !DILocation(line: 90, column: 1, scope: !463)
-!467 = !DILocation(line: 91, column: 1, scope: !463)
-!468 = distinct !DISubprogram(name: "Vector_listSet", scope: !420, file: !420, line: 97, type: !2, scopeLine: 97, spFlags: DISPFlagDefinition, unit: !0)
-!469 = !DILocation(line: 97, column: 1, scope: !468)
-!470 = !DILocation(line: 98, column: 1, scope: !468)
-!471 = !DILocation(line: 99, column: 1, scope: !468)
-!472 = !DILocation(line: 101, column: 1, scope: !468)
-!473 = distinct !DISubprogram(name: "Vector_listPop", scope: !420, file: !420, line: 105, type: !2, scopeLine: 105, spFlags: DISPFlagDefinition, unit: !0)
-!474 = !DILocation(line: 109, column: 1, scope: !473)
-!475 = !DILocation(line: 107, column: 1, scope: !473)
-!476 = !DILocation(line: 105, column: 1, scope: !473)
-!477 = !DILocation(line: 106, column: 1, scope: !473)
-!478 = distinct !DISubprogram(name: "Vector_vecDestroy", scope: !420, file: !420, line: 113, type: !2, scopeLine: 113, spFlags: DISPFlagDefinition, unit: !0)
-!479 = !DILocation(line: 123, column: 1, scope: !478)
-!480 = !DILocation(line: 121, column: 1, scope: !478)
-!481 = !DILocation(line: 120, column: 1, scope: !478)
-!482 = !DILocation(line: 118, column: 1, scope: !478)
-!483 = !DILocation(line: 116, column: 1, scope: !478)
-!484 = !DILocation(line: 113, column: 1, scope: !478)
-!485 = !DILocation(line: 114, column: 1, scope: !478)
-!486 = !DILocation(line: 115, column: 1, scope: !478)
-!487 = !DILocation(line: 117, column: 1, scope: !478)
-!488 = !DILocation(line: 119, column: 1, scope: !478)
-!489 = !DILocation(line: 122, column: 1, scope: !478)
-!490 = !DILocation(line: 124, column: 1, scope: !478)
-!491 = !DILocation(line: 125, column: 1, scope: !478)
-!492 = !DILocation(line: 128, column: 1, scope: !478)
-!493 = !DILocation(line: 129, column: 1, scope: !478)
-!494 = distinct !DISubprogram(name: "Vector_byteBufDestroy", scope: !420, file: !420, line: 134, type: !2, scopeLine: 134, spFlags: DISPFlagDefinition, unit: !0)
-!495 = !DILocation(line: 137, column: 1, scope: !494)
-!496 = !DILocation(line: 134, column: 1, scope: !494)
-!497 = !DILocation(line: 135, column: 1, scope: !494)
-!498 = !DILocation(line: 136, column: 1, scope: !494)
-!499 = !DILocation(line: 138, column: 1, scope: !494)
-!500 = !DILocation(line: 139, column: 1, scope: !494)
-!501 = !DILocation(line: 140, column: 1, scope: !494)
-!502 = distinct !DISubprogram(name: "Vector_notifyError", scope: !420, file: !420, line: 144, type: !2, scopeLine: 144, spFlags: DISPFlagDefinition, unit: !0)
-!503 = !DILocation(line: 144, column: 1, scope: !502)
-!504 = !DILocation(line: 145, column: 1, scope: !502)
-!505 = !DILocation(line: 146, column: 1, scope: !502)
-!506 = !DILocation(line: 147, column: 1, scope: !502)
-!507 = !DILocation(line: 148, column: 1, scope: !502)
-!508 = distinct !DISubprogram(name: "Vector_vecLength", scope: !420, file: !420, line: 154, type: !2, scopeLine: 154, spFlags: DISPFlagDefinition, unit: !0)
-!509 = !DILocation(line: 161, column: 1, scope: !508)
-!510 = !DILocation(line: 154, column: 1, scope: !508)
-!511 = !DILocation(line: 155, column: 1, scope: !508)
-!512 = !DILocation(line: 156, column: 1, scope: !508)
-!513 = !DILocation(line: 157, column: 1, scope: !508)
-!514 = !DILocation(line: 158, column: 1, scope: !508)
-!515 = !DILocation(line: 160, column: 1, scope: !508)
-!516 = !DILocation(line: 162, column: 1, scope: !508)
-!517 = !DILocation(line: 163, column: 1, scope: !508)
-!518 = distinct !DISubprogram(name: "Vector_vecGetAt", scope: !420, file: !420, line: 167, type: !2, scopeLine: 167, spFlags: DISPFlagDefinition, unit: !0)
-!519 = !DILocation(line: 180, column: 1, scope: !518)
-!520 = !DILocation(line: 179, column: 1, scope: !518)
-!521 = !DILocation(line: 178, column: 1, scope: !518)
-!522 = !DILocation(line: 177, column: 1, scope: !518)
-!523 = !DILocation(line: 173, column: 1, scope: !518)
-!524 = !DILocation(line: 172, column: 1, scope: !518)
-!525 = !DILocation(line: 170, column: 1, scope: !518)
-!526 = !DILocation(line: 167, column: 1, scope: !518)
-!527 = !DILocation(line: 168, column: 1, scope: !518)
-!528 = !DILocation(line: 169, column: 1, scope: !518)
-!529 = !DILocation(line: 171, column: 1, scope: !518)
-!530 = !DILocation(line: 174, column: 1, scope: !518)
-!531 = !DILocation(line: 175, column: 1, scope: !518)
-!532 = !DILocation(line: 181, column: 1, scope: !518)
-!533 = !DILocation(line: 182, column: 1, scope: !518)
-!534 = !DILocation(line: 184, column: 1, scope: !518)
-!535 = !DILocation(line: 185, column: 1, scope: !518)
-!536 = distinct !DISubprogram(name: "Vector_vecGetChecked", scope: !420, file: !420, line: 189, type: !2, scopeLine: 189, spFlags: DISPFlagDefinition, unit: !0)
-!537 = !DILocation(line: 206, column: 1, scope: !536)
-!538 = !DILocation(line: 205, column: 1, scope: !536)
-!539 = !DILocation(line: 204, column: 1, scope: !536)
-!540 = !DILocation(line: 203, column: 1, scope: !536)
-!541 = !DILocation(line: 198, column: 1, scope: !536)
-!542 = !DILocation(line: 197, column: 1, scope: !536)
-!543 = !DILocation(line: 195, column: 1, scope: !536)
-!544 = !DILocation(line: 189, column: 1, scope: !536)
-!545 = !DILocation(line: 190, column: 1, scope: !536)
-!546 = !DILocation(line: 191, column: 1, scope: !536)
-!547 = !DILocation(line: 192, column: 1, scope: !536)
-!548 = !DILocation(line: 193, column: 1, scope: !536)
-!549 = !DILocation(line: 196, column: 1, scope: !536)
-!550 = !DILocation(line: 199, column: 1, scope: !536)
-!551 = !DILocation(line: 200, column: 1, scope: !536)
-!552 = !DILocation(line: 201, column: 1, scope: !536)
-!553 = !DILocation(line: 207, column: 1, scope: !536)
-!554 = !DILocation(line: 208, column: 1, scope: !536)
-!555 = !DILocation(line: 210, column: 1, scope: !536)
-!556 = !DILocation(line: 211, column: 1, scope: !536)
-!557 = distinct !DISubprogram(name: "Vector_vecSetAt", scope: !420, file: !420, line: 215, type: !2, scopeLine: 215, spFlags: DISPFlagDefinition, unit: !0)
-!558 = !DILocation(line: 242, column: 1, scope: !557)
-!559 = !DILocation(line: 235, column: 1, scope: !557)
-!560 = !DILocation(line: 234, column: 1, scope: !557)
-!561 = !DILocation(line: 233, column: 1, scope: !557)
-!562 = !DILocation(line: 232, column: 1, scope: !557)
-!563 = !DILocation(line: 227, column: 1, scope: !557)
-!564 = !DILocation(line: 226, column: 1, scope: !557)
-!565 = !DILocation(line: 215, column: 1, scope: !557)
-!566 = !DILocation(line: 216, column: 1, scope: !557)
-!567 = !DILocation(line: 217, column: 1, scope: !557)
-!568 = !DILocation(line: 218, column: 1, scope: !557)
-!569 = !DILocation(line: 219, column: 1, scope: !557)
-!570 = !DILocation(line: 221, column: 1, scope: !557)
-!571 = !DILocation(line: 222, column: 1, scope: !557)
-!572 = !DILocation(line: 223, column: 1, scope: !557)
-!573 = !DILocation(line: 225, column: 1, scope: !557)
-!574 = !DILocation(line: 228, column: 1, scope: !557)
-!575 = !DILocation(line: 229, column: 1, scope: !557)
-!576 = !DILocation(line: 236, column: 1, scope: !557)
-!577 = !DILocation(line: 237, column: 1, scope: !557)
-!578 = !DILocation(line: 238, column: 1, scope: !557)
-!579 = !DILocation(line: 240, column: 1, scope: !557)
-!580 = !DILocation(line: 241, column: 1, scope: !557)
-!581 = !DILocation(line: 243, column: 1, scope: !557)
-!582 = distinct !DISubprogram(name: "Vector_vecAdd", scope: !420, file: !420, line: 248, type: !2, scopeLine: 248, spFlags: DISPFlagDefinition, unit: !0)
-!583 = !DILocation(line: 267, column: 1, scope: !582)
-!584 = !DILocation(line: 266, column: 1, scope: !582)
-!585 = !DILocation(line: 265, column: 1, scope: !582)
-!586 = !DILocation(line: 260, column: 1, scope: !582)
-!587 = !DILocation(line: 258, column: 1, scope: !582)
-!588 = !DILocation(line: 257, column: 1, scope: !582)
-!589 = !DILocation(line: 256, column: 1, scope: !582)
-!590 = !DILocation(line: 248, column: 1, scope: !582)
-!591 = !DILocation(line: 249, column: 1, scope: !582)
-!592 = !DILocation(line: 250, column: 1, scope: !582)
-!593 = !DILocation(line: 251, column: 1, scope: !582)
-!594 = !DILocation(line: 252, column: 1, scope: !582)
-!595 = !DILocation(line: 253, column: 1, scope: !582)
-!596 = !DILocation(line: 255, column: 1, scope: !582)
-!597 = !DILocation(line: 259, column: 1, scope: !582)
-!598 = !DILocation(line: 261, column: 1, scope: !582)
-!599 = !DILocation(line: 262, column: 1, scope: !582)
-!600 = !DILocation(line: 263, column: 1, scope: !582)
-!601 = !DILocation(line: 268, column: 1, scope: !582)
-!602 = !DILocation(line: 270, column: 1, scope: !582)
-!603 = !DILocation(line: 271, column: 1, scope: !582)
-!604 = !DILocation(line: 272, column: 1, scope: !582)
-!605 = distinct !DISubprogram(name: "Vector_vecAddObject", scope: !420, file: !420, line: 276, type: !2, scopeLine: 276, spFlags: DISPFlagDefinition, unit: !0)
-!606 = !DILocation(line: 276, column: 1, scope: !605)
-!607 = !DILocation(line: 277, column: 1, scope: !605)
-!608 = !DILocation(line: 278, column: 1, scope: !605)
-!609 = !DILocation(line: 279, column: 1, scope: !605)
-!610 = !DILocation(line: 280, column: 1, scope: !605)
-!611 = !DILocation(line: 282, column: 1, scope: !605)
-!612 = distinct !DISubprogram(name: "Vector_vecAddArray", scope: !420, file: !420, line: 286, type: !2, scopeLine: 286, spFlags: DISPFlagDefinition, unit: !0)
-!613 = !DILocation(line: 341, column: 1, scope: !612)
-!614 = !DILocation(line: 340, column: 1, scope: !612)
-!615 = !DILocation(line: 338, column: 1, scope: !612)
-!616 = !DILocation(line: 337, column: 1, scope: !612)
-!617 = !DILocation(line: 331, column: 1, scope: !612)
-!618 = !DILocation(line: 329, column: 1, scope: !612)
-!619 = !DILocation(line: 328, column: 1, scope: !612)
-!620 = !DILocation(line: 327, column: 1, scope: !612)
-!621 = !DILocation(line: 326, column: 1, scope: !612)
-!622 = !DILocation(line: 325, column: 1, scope: !612)
-!623 = !DILocation(line: 310, column: 1, scope: !612)
-!624 = !DILocation(line: 309, column: 1, scope: !612)
-!625 = !DILocation(line: 307, column: 1, scope: !612)
-!626 = !DILocation(line: 306, column: 1, scope: !612)
-!627 = !DILocation(line: 300, column: 1, scope: !612)
-!628 = !DILocation(line: 298, column: 1, scope: !612)
-!629 = !DILocation(line: 297, column: 1, scope: !612)
-!630 = !DILocation(line: 296, column: 1, scope: !612)
-!631 = !DILocation(line: 286, column: 1, scope: !612)
-!632 = !DILocation(line: 287, column: 1, scope: !612)
-!633 = !DILocation(line: 288, column: 1, scope: !612)
-!634 = !DILocation(line: 289, column: 1, scope: !612)
-!635 = !DILocation(line: 290, column: 1, scope: !612)
-!636 = !DILocation(line: 291, column: 1, scope: !612)
-!637 = !DILocation(line: 292, column: 1, scope: !612)
-!638 = !DILocation(line: 294, column: 1, scope: !612)
-!639 = !DILocation(line: 295, column: 1, scope: !612)
-!640 = !DILocation(line: 299, column: 1, scope: !612)
-!641 = !DILocation(line: 301, column: 1, scope: !612)
-!642 = !DILocation(line: 302, column: 1, scope: !612)
-!643 = !DILocation(line: 303, column: 1, scope: !612)
-!644 = !DILocation(line: 304, column: 1, scope: !612)
-!645 = !DILocation(line: 308, column: 1, scope: !612)
-!646 = !DILocation(line: 311, column: 1, scope: !612)
-!647 = !DILocation(line: 312, column: 1, scope: !612)
-!648 = !DILocation(line: 314, column: 1, scope: !612)
-!649 = !DILocation(line: 315, column: 1, scope: !612)
-!650 = !DILocation(line: 316, column: 1, scope: !612)
-!651 = !DILocation(line: 318, column: 1, scope: !612)
-!652 = !DILocation(line: 319, column: 1, scope: !612)
-!653 = !DILocation(line: 320, column: 1, scope: !612)
-!654 = !DILocation(line: 322, column: 1, scope: !612)
-!655 = !DILocation(line: 323, column: 1, scope: !612)
-!656 = !DILocation(line: 330, column: 1, scope: !612)
-!657 = !DILocation(line: 332, column: 1, scope: !612)
-!658 = !DILocation(line: 333, column: 1, scope: !612)
-!659 = !DILocation(line: 334, column: 1, scope: !612)
-!660 = !DILocation(line: 335, column: 1, scope: !612)
-!661 = !DILocation(line: 339, column: 1, scope: !612)
-!662 = !DILocation(line: 342, column: 1, scope: !612)
-!663 = !DILocation(line: 343, column: 1, scope: !612)
-!664 = !DILocation(line: 345, column: 1, scope: !612)
-!665 = !DILocation(line: 346, column: 1, scope: !612)
-!666 = !DILocation(line: 347, column: 1, scope: !612)
-!667 = distinct !DISubprogram(name: "Vector_vecPopChecked", scope: !420, file: !420, line: 351, type: !2, scopeLine: 351, spFlags: DISPFlagDefinition, unit: !0)
-!668 = !DILocation(line: 373, column: 1, scope: !667)
-!669 = !DILocation(line: 372, column: 1, scope: !667)
-!670 = !DILocation(line: 371, column: 1, scope: !667)
-!671 = !DILocation(line: 370, column: 1, scope: !667)
-!672 = !DILocation(line: 368, column: 1, scope: !667)
-!673 = !DILocation(line: 362, column: 1, scope: !667)
-!674 = !DILocation(line: 351, column: 1, scope: !667)
-!675 = !DILocation(line: 352, column: 1, scope: !667)
-!676 = !DILocation(line: 353, column: 1, scope: !667)
-!677 = !DILocation(line: 354, column: 1, scope: !667)
-!678 = !DILocation(line: 355, column: 1, scope: !667)
-!679 = !DILocation(line: 357, column: 1, scope: !667)
-!680 = !DILocation(line: 358, column: 1, scope: !667)
-!681 = !DILocation(line: 359, column: 1, scope: !667)
-!682 = !DILocation(line: 361, column: 1, scope: !667)
-!683 = !DILocation(line: 363, column: 1, scope: !667)
-!684 = !DILocation(line: 364, column: 1, scope: !667)
-!685 = !DILocation(line: 365, column: 1, scope: !667)
-!686 = !DILocation(line: 366, column: 1, scope: !667)
-!687 = !DILocation(line: 369, column: 1, scope: !667)
-!688 = !DILocation(line: 374, column: 1, scope: !667)
-!689 = !DILocation(line: 376, column: 1, scope: !667)
-!690 = !DILocation(line: 377, column: 1, scope: !667)
-!691 = distinct !DISubprogram(name: "Vector_vecRemoveAtChecked", scope: !420, file: !420, line: 381, type: !2, scopeLine: 381, spFlags: DISPFlagDefinition, unit: !0)
-!692 = !DILocation(line: 406, column: 1, scope: !691)
-!693 = !DILocation(line: 405, column: 1, scope: !691)
-!694 = !DILocation(line: 400, column: 1, scope: !691)
-!695 = !DILocation(line: 399, column: 1, scope: !691)
-!696 = !DILocation(line: 398, column: 1, scope: !691)
-!697 = !DILocation(line: 393, column: 1, scope: !691)
-!698 = !DILocation(line: 392, column: 1, scope: !691)
-!699 = !DILocation(line: 381, column: 1, scope: !691)
-!700 = !DILocation(line: 382, column: 1, scope: !691)
-!701 = !DILocation(line: 383, column: 1, scope: !691)
-!702 = !DILocation(line: 384, column: 1, scope: !691)
-!703 = !DILocation(line: 385, column: 1, scope: !691)
-!704 = !DILocation(line: 387, column: 1, scope: !691)
-!705 = !DILocation(line: 388, column: 1, scope: !691)
-!706 = !DILocation(line: 389, column: 1, scope: !691)
-!707 = !DILocation(line: 391, column: 1, scope: !691)
-!708 = !DILocation(line: 394, column: 1, scope: !691)
-!709 = !DILocation(line: 395, column: 1, scope: !691)
-!710 = !DILocation(line: 396, column: 1, scope: !691)
-!711 = !DILocation(line: 401, column: 1, scope: !691)
-!712 = !DILocation(line: 402, column: 1, scope: !691)
-!713 = !DILocation(line: 404, column: 1, scope: !691)
-!714 = !DILocation(line: 407, column: 1, scope: !691)
-!715 = !DILocation(line: 409, column: 1, scope: !691)
-!716 = !DILocation(line: 410, column: 1, scope: !691)
-!717 = distinct !DISubprogram(name: "Vector_vecPopLast", scope: !420, file: !420, line: 414, type: !2, scopeLine: 414, spFlags: DISPFlagDefinition, unit: !0)
-!718 = !DILocation(line: 432, column: 1, scope: !717)
-!719 = !DILocation(line: 431, column: 1, scope: !717)
-!720 = !DILocation(line: 430, column: 1, scope: !717)
-!721 = !DILocation(line: 429, column: 1, scope: !717)
-!722 = !DILocation(line: 427, column: 1, scope: !717)
-!723 = !DILocation(line: 422, column: 1, scope: !717)
-!724 = !DILocation(line: 414, column: 1, scope: !717)
-!725 = !DILocation(line: 415, column: 1, scope: !717)
-!726 = !DILocation(line: 416, column: 1, scope: !717)
-!727 = !DILocation(line: 417, column: 1, scope: !717)
-!728 = !DILocation(line: 418, column: 1, scope: !717)
-!729 = !DILocation(line: 419, column: 1, scope: !717)
-!730 = !DILocation(line: 421, column: 1, scope: !717)
-!731 = !DILocation(line: 423, column: 1, scope: !717)
-!732 = !DILocation(line: 424, column: 1, scope: !717)
-!733 = !DILocation(line: 425, column: 1, scope: !717)
-!734 = !DILocation(line: 428, column: 1, scope: !717)
-!735 = !DILocation(line: 433, column: 1, scope: !717)
-!736 = !DILocation(line: 435, column: 1, scope: !717)
-!737 = !DILocation(line: 436, column: 1, scope: !717)
-!738 = distinct !DISubprogram(name: "Vector_vecRemoveAt", scope: !420, file: !420, line: 440, type: !2, scopeLine: 440, spFlags: DISPFlagDefinition, unit: !0)
-!739 = !DILocation(line: 461, column: 1, scope: !738)
-!740 = !DILocation(line: 460, column: 1, scope: !738)
-!741 = !DILocation(line: 455, column: 1, scope: !738)
-!742 = !DILocation(line: 454, column: 1, scope: !738)
-!743 = !DILocation(line: 453, column: 1, scope: !738)
-!744 = !DILocation(line: 449, column: 1, scope: !738)
-!745 = !DILocation(line: 448, column: 1, scope: !738)
-!746 = !DILocation(line: 440, column: 1, scope: !738)
-!747 = !DILocation(line: 441, column: 1, scope: !738)
-!748 = !DILocation(line: 442, column: 1, scope: !738)
-!749 = !DILocation(line: 443, column: 1, scope: !738)
-!750 = !DILocation(line: 444, column: 1, scope: !738)
-!751 = !DILocation(line: 445, column: 1, scope: !738)
-!752 = !DILocation(line: 447, column: 1, scope: !738)
-!753 = !DILocation(line: 450, column: 1, scope: !738)
-!754 = !DILocation(line: 451, column: 1, scope: !738)
-!755 = !DILocation(line: 456, column: 1, scope: !738)
-!756 = !DILocation(line: 457, column: 1, scope: !738)
-!757 = !DILocation(line: 459, column: 1, scope: !738)
-!758 = !DILocation(line: 462, column: 1, scope: !738)
-!759 = !DILocation(line: 464, column: 1, scope: !738)
-!760 = !DILocation(line: 465, column: 1, scope: !738)
-!761 = distinct !DISubprogram(name: "Vector_vecClear", scope: !420, file: !420, line: 469, type: !2, scopeLine: 469, spFlags: DISPFlagDefinition, unit: !0)
-!762 = !DILocation(line: 488, column: 1, scope: !761)
-!763 = !DILocation(line: 486, column: 1, scope: !761)
-!764 = !DILocation(line: 479, column: 1, scope: !761)
-!765 = !DILocation(line: 478, column: 1, scope: !761)
-!766 = !DILocation(line: 477, column: 1, scope: !761)
-!767 = !DILocation(line: 469, column: 1, scope: !761)
-!768 = !DILocation(line: 470, column: 1, scope: !761)
-!769 = !DILocation(line: 471, column: 1, scope: !761)
-!770 = !DILocation(line: 472, column: 1, scope: !761)
-!771 = !DILocation(line: 473, column: 1, scope: !761)
-!772 = !DILocation(line: 474, column: 1, scope: !761)
-!773 = !DILocation(line: 476, column: 1, scope: !761)
-!774 = !DILocation(line: 480, column: 1, scope: !761)
-!775 = !DILocation(line: 481, column: 1, scope: !761)
-!776 = !DILocation(line: 482, column: 1, scope: !761)
-!777 = !DILocation(line: 483, column: 1, scope: !761)
-!778 = !DILocation(line: 484, column: 1, scope: !761)
-!779 = !DILocation(line: 485, column: 1, scope: !761)
-!780 = !DILocation(line: 487, column: 1, scope: !761)
-!781 = !DILocation(line: 489, column: 1, scope: !761)
-!782 = !DILocation(line: 490, column: 1, scope: !761)
-!783 = !DILocation(line: 492, column: 1, scope: !761)
-!784 = !DILocation(line: 495, column: 1, scope: !761)
-!785 = distinct !DISubprogram(name: "Vector_vecFreeze", scope: !420, file: !420, line: 500, type: !2, scopeLine: 500, spFlags: DISPFlagDefinition, unit: !0)
-!786 = !DILocation(line: 500, column: 1, scope: !785)
-!787 = !DILocation(line: 501, column: 1, scope: !785)
-!788 = !DILocation(line: 502, column: 1, scope: !785)
-!789 = !DILocation(line: 503, column: 1, scope: !785)
-!790 = !DILocation(line: 504, column: 1, scope: !785)
-!791 = !DILocation(line: 505, column: 1, scope: !785)
-!792 = distinct !DISubprogram(name: "Vector_vecGet", scope: !420, file: !420, line: 509, type: !2, scopeLine: 509, spFlags: DISPFlagDefinition, unit: !0)
-!793 = !DILocation(line: 523, column: 1, scope: !792)
-!794 = !DILocation(line: 522, column: 1, scope: !792)
-!795 = !DILocation(line: 521, column: 1, scope: !792)
-!796 = !DILocation(line: 520, column: 1, scope: !792)
-!797 = !DILocation(line: 516, column: 1, scope: !792)
-!798 = !DILocation(line: 515, column: 1, scope: !792)
-!799 = !DILocation(line: 509, column: 1, scope: !792)
-!800 = !DILocation(line: 510, column: 1, scope: !792)
-!801 = !DILocation(line: 511, column: 1, scope: !792)
-!802 = !DILocation(line: 512, column: 1, scope: !792)
-!803 = !DILocation(line: 513, column: 1, scope: !792)
-!804 = !DILocation(line: 517, column: 1, scope: !792)
-!805 = !DILocation(line: 518, column: 1, scope: !792)
-!806 = !DILocation(line: 524, column: 1, scope: !792)
-!807 = !DILocation(line: 525, column: 1, scope: !792)
-!808 = !DILocation(line: 527, column: 1, scope: !792)
-!809 = distinct !DISubprogram(name: "Vector_vecSet", scope: !420, file: !420, line: 531, type: !2, scopeLine: 531, spFlags: DISPFlagDefinition, unit: !0)
-!810 = !DILocation(line: 547, column: 1, scope: !809)
-!811 = !DILocation(line: 544, column: 1, scope: !809)
-!812 = !DILocation(line: 543, column: 1, scope: !809)
-!813 = !DILocation(line: 542, column: 1, scope: !809)
-!814 = !DILocation(line: 538, column: 1, scope: !809)
-!815 = !DILocation(line: 537, column: 1, scope: !809)
-!816 = !DILocation(line: 531, column: 1, scope: !809)
-!817 = !DILocation(line: 532, column: 1, scope: !809)
-!818 = !DILocation(line: 533, column: 1, scope: !809)
-!819 = !DILocation(line: 534, column: 1, scope: !809)
-!820 = !DILocation(line: 535, column: 1, scope: !809)
-!821 = !DILocation(line: 539, column: 1, scope: !809)
-!822 = !DILocation(line: 540, column: 1, scope: !809)
-!823 = !DILocation(line: 545, column: 1, scope: !809)
-!824 = !DILocation(line: 546, column: 1, scope: !809)
-!825 = !DILocation(line: 548, column: 1, scope: !809)
-!826 = !DILocation(line: 550, column: 1, scope: !809)
-!827 = distinct !DISubprogram(name: "Vector_vecPop", scope: !420, file: !420, line: 554, type: !2, scopeLine: 554, spFlags: DISPFlagDefinition, unit: !0)
-!828 = !DILocation(line: 570, column: 1, scope: !827)
-!829 = !DILocation(line: 569, column: 1, scope: !827)
-!830 = !DILocation(line: 568, column: 1, scope: !827)
-!831 = !DILocation(line: 566, column: 1, scope: !827)
-!832 = !DILocation(line: 561, column: 1, scope: !827)
-!833 = !DILocation(line: 560, column: 1, scope: !827)
-!834 = !DILocation(line: 554, column: 1, scope: !827)
-!835 = !DILocation(line: 555, column: 1, scope: !827)
-!836 = !DILocation(line: 556, column: 1, scope: !827)
-!837 = !DILocation(line: 557, column: 1, scope: !827)
-!838 = !DILocation(line: 558, column: 1, scope: !827)
-!839 = !DILocation(line: 562, column: 1, scope: !827)
-!840 = !DILocation(line: 563, column: 1, scope: !827)
-!841 = !DILocation(line: 564, column: 1, scope: !827)
-!842 = !DILocation(line: 567, column: 1, scope: !827)
-!843 = !DILocation(line: 571, column: 1, scope: !827)
-!844 = !DILocation(line: 573, column: 1, scope: !827)
-!845 = distinct !DISubprogram(name: "Vector_byteBufLength", scope: !420, file: !420, line: 577, type: !2, scopeLine: 577, spFlags: DISPFlagDefinition, unit: !0)
-!846 = !DILocation(line: 577, column: 1, scope: !845)
-!847 = !DILocation(line: 578, column: 1, scope: !845)
-!848 = !DILocation(line: 579, column: 1, scope: !845)
-!849 = !DILocation(line: 580, column: 1, scope: !845)
-!850 = distinct !DISubprogram(name: "Vector_byteBufClear", scope: !420, file: !420, line: 584, type: !2, scopeLine: 584, spFlags: DISPFlagDefinition, unit: !0)
-!851 = !DILocation(line: 584, column: 1, scope: !850)
-!852 = !DILocation(line: 585, column: 1, scope: !850)
-!853 = !DILocation(line: 586, column: 1, scope: !850)
-!854 = !DILocation(line: 587, column: 1, scope: !850)
-!855 = distinct !DISubprogram(name: "Vector_byteBufPush", scope: !420, file: !420, line: 592, type: !2, scopeLine: 592, spFlags: DISPFlagDefinition, unit: !0)
-!856 = !DILocation(line: 599, column: 1, scope: !855)
-!857 = !DILocation(line: 597, column: 1, scope: !855)
-!858 = !DILocation(line: 596, column: 1, scope: !855)
-!859 = !DILocation(line: 595, column: 1, scope: !855)
-!860 = !DILocation(line: 592, column: 1, scope: !855)
-!861 = !DILocation(line: 593, column: 1, scope: !855)
-!862 = !DILocation(line: 594, column: 1, scope: !855)
-!863 = !DILocation(line: 598, column: 1, scope: !855)
-!864 = !DILocation(line: 600, column: 1, scope: !855)
-!865 = !DILocation(line: 601, column: 1, scope: !855)
-!866 = !DILocation(line: 602, column: 1, scope: !855)
-!867 = !DILocation(line: 604, column: 1, scope: !855)
-!868 = !DILocation(line: 605, column: 1, scope: !855)
-!869 = distinct !DISubprogram(name: "Vector_byteBufAppendString", scope: !420, file: !420, line: 609, type: !2, scopeLine: 609, spFlags: DISPFlagDefinition, unit: !0)
-!870 = !DILocation(line: 625, column: 1, scope: !869)
-!871 = !DILocation(line: 617, column: 1, scope: !869)
-!872 = !DILocation(line: 616, column: 1, scope: !869)
-!873 = !DILocation(line: 615, column: 1, scope: !869)
-!874 = !DILocation(line: 613, column: 1, scope: !869)
-!875 = !DILocation(line: 609, column: 1, scope: !869)
-!876 = !DILocation(line: 610, column: 1, scope: !869)
-!877 = !DILocation(line: 611, column: 1, scope: !869)
-!878 = !DILocation(line: 612, column: 1, scope: !869)
-!879 = !DILocation(line: 614, column: 1, scope: !869)
-!880 = !DILocation(line: 618, column: 1, scope: !869)
-!881 = !DILocation(line: 619, column: 1, scope: !869)
-!882 = !DILocation(line: 620, column: 1, scope: !869)
-!883 = !DILocation(line: 621, column: 1, scope: !869)
-!884 = !DILocation(line: 622, column: 1, scope: !869)
-!885 = !DILocation(line: 623, column: 1, scope: !869)
-!886 = !DILocation(line: 626, column: 1, scope: !869)
-!887 = !DILocation(line: 627, column: 1, scope: !869)
-!888 = distinct !DISubprogram(name: "Vector_byteBufToString", scope: !420, file: !420, line: 631, type: !2, scopeLine: 631, spFlags: DISPFlagDefinition, unit: !0)
-!889 = !DILocation(line: 636, column: 1, scope: !888)
-!890 = !DILocation(line: 634, column: 1, scope: !888)
-!891 = !DILocation(line: 631, column: 1, scope: !888)
-!892 = !DILocation(line: 632, column: 1, scope: !888)
-!893 = !DILocation(line: 633, column: 1, scope: !888)
-!894 = !DILocation(line: 635, column: 1, scope: !888)
-!895 = !DILocation(line: 637, column: 1, scope: !888)
-!896 = distinct !DISubprogram(name: "Vector_byteBufGet", scope: !420, file: !420, line: 641, type: !2, scopeLine: 641, spFlags: DISPFlagDefinition, unit: !0)
-!897 = !DILocation(line: 652, column: 1, scope: !896)
-!898 = !DILocation(line: 648, column: 1, scope: !896)
-!899 = !DILocation(line: 647, column: 1, scope: !896)
-!900 = !DILocation(line: 641, column: 1, scope: !896)
-!901 = !DILocation(line: 642, column: 1, scope: !896)
-!902 = !DILocation(line: 643, column: 1, scope: !896)
-!903 = !DILocation(line: 644, column: 1, scope: !896)
-!904 = !DILocation(line: 645, column: 1, scope: !896)
-!905 = !DILocation(line: 649, column: 1, scope: !896)
-!906 = !DILocation(line: 650, column: 1, scope: !896)
-!907 = !DILocation(line: 653, column: 1, scope: !896)
-!908 = distinct !DISubprogram(name: "Vector_byteBufSet", scope: !420, file: !420, line: 657, type: !2, scopeLine: 657, spFlags: DISPFlagDefinition, unit: !0)
-!909 = !DILocation(line: 668, column: 1, scope: !908)
-!910 = !DILocation(line: 664, column: 1, scope: !908)
-!911 = !DILocation(line: 663, column: 1, scope: !908)
-!912 = !DILocation(line: 657, column: 1, scope: !908)
-!913 = !DILocation(line: 658, column: 1, scope: !908)
-!914 = !DILocation(line: 659, column: 1, scope: !908)
-!915 = !DILocation(line: 660, column: 1, scope: !908)
-!916 = !DILocation(line: 661, column: 1, scope: !908)
-!917 = !DILocation(line: 665, column: 1, scope: !908)
-!918 = !DILocation(line: 666, column: 1, scope: !908)
-!919 = !DILocation(line: 669, column: 1, scope: !908)
-!920 = distinct !DISubprogram(name: "Vector_byteBufPop", scope: !420, file: !420, line: 673, type: !2, scopeLine: 673, spFlags: DISPFlagDefinition, unit: !0)
-!921 = !DILocation(line: 686, column: 1, scope: !920)
-!922 = !DILocation(line: 684, column: 1, scope: !920)
-!923 = !DILocation(line: 679, column: 1, scope: !920)
-!924 = !DILocation(line: 673, column: 1, scope: !920)
-!925 = !DILocation(line: 674, column: 1, scope: !920)
-!926 = !DILocation(line: 675, column: 1, scope: !920)
-!927 = !DILocation(line: 676, column: 1, scope: !920)
-!928 = !DILocation(line: 677, column: 1, scope: !920)
-!929 = !DILocation(line: 680, column: 1, scope: !920)
-!930 = !DILocation(line: 681, column: 1, scope: !920)
-!931 = !DILocation(line: 682, column: 1, scope: !920)
-!932 = !DILocation(line: 685, column: 1, scope: !920)
-!933 = !DILocation(line: 687, column: 1, scope: !920)
-!934 = distinct !DISubprogram(name: "Vector_byteBufAppendBytes", scope: !420, file: !420, line: 691, type: !2, scopeLine: 691, spFlags: DISPFlagDefinition, unit: !0)
-!935 = !DILocation(line: 700, column: 1, scope: !934)
-!936 = !DILocation(line: 699, column: 1, scope: !934)
-!937 = !DILocation(line: 698, column: 1, scope: !934)
-!938 = !DILocation(line: 697, column: 1, scope: !934)
-!939 = !DILocation(line: 695, column: 1, scope: !934)
-!940 = !DILocation(line: 691, column: 1, scope: !934)
-!941 = !DILocation(line: 692, column: 1, scope: !934)
-!942 = !DILocation(line: 693, column: 1, scope: !934)
-!943 = !DILocation(line: 694, column: 1, scope: !934)
-!944 = !DILocation(line: 696, column: 1, scope: !934)
-!945 = !DILocation(line: 701, column: 1, scope: !934)
-!946 = !DILocation(line: 702, column: 1, scope: !934)
-!947 = !DILocation(line: 703, column: 1, scope: !934)
-!948 = !DILocation(line: 704, column: 1, scope: !934)
-!949 = !DILocation(line: 705, column: 1, scope: !934)
-!950 = !DILocation(line: 706, column: 1, scope: !934)
-!951 = !DILocation(line: 708, column: 1, scope: !934)
-!952 = !DILocation(line: 709, column: 1, scope: !934)
-!953 = !DILocation(line: 711, column: 1, scope: !934)
-!954 = !DILocation(line: 713, column: 1, scope: !934)
-!955 = distinct !DISubprogram(name: "Vector_byteBufAppendRange", scope: !420, file: !420, line: 717, type: !2, scopeLine: 717, spFlags: DISPFlagDefinition, unit: !0)
-!956 = !DILocation(line: 729, column: 1, scope: !955)
-!957 = !DILocation(line: 728, column: 1, scope: !955)
-!958 = !DILocation(line: 727, column: 1, scope: !955)
-!959 = !DILocation(line: 726, column: 1, scope: !955)
-!960 = !DILocation(line: 724, column: 1, scope: !955)
-!961 = !DILocation(line: 722, column: 1, scope: !955)
-!962 = !DILocation(line: 721, column: 1, scope: !955)
-!963 = !DILocation(line: 717, column: 1, scope: !955)
-!964 = !DILocation(line: 718, column: 1, scope: !955)
-!965 = !DILocation(line: 719, column: 1, scope: !955)
-!966 = !DILocation(line: 720, column: 1, scope: !955)
-!967 = !DILocation(line: 723, column: 1, scope: !955)
-!968 = !DILocation(line: 725, column: 1, scope: !955)
-!969 = !DILocation(line: 730, column: 1, scope: !955)
-!970 = !DILocation(line: 731, column: 1, scope: !955)
-!971 = !DILocation(line: 732, column: 1, scope: !955)
-!972 = !DILocation(line: 733, column: 1, scope: !955)
-!973 = !DILocation(line: 734, column: 1, scope: !955)
-!974 = !DILocation(line: 735, column: 1, scope: !955)
-!975 = !DILocation(line: 737, column: 1, scope: !955)
-!976 = !DILocation(line: 738, column: 1, scope: !955)
-!977 = !DILocation(line: 740, column: 1, scope: !955)
-!978 = !DILocation(line: 742, column: 1, scope: !955)
-!979 = distinct !DISubprogram(name: "Vector_byteBufSlice", scope: !420, file: !420, line: 746, type: !2, scopeLine: 746, spFlags: DISPFlagDefinition, unit: !0)
-!980 = !DILocation(line: 752, column: 1, scope: !979)
-!981 = !DILocation(line: 751, column: 1, scope: !979)
-!982 = !DILocation(line: 750, column: 1, scope: !979)
-!983 = !DILocation(line: 746, column: 1, scope: !979)
-!984 = !DILocation(line: 747, column: 1, scope: !979)
-!985 = !DILocation(line: 748, column: 1, scope: !979)
-!986 = !DILocation(line: 749, column: 1, scope: !979)
-!987 = !DILocation(line: 753, column: 1, scope: !979)
-!988 = !DILocation(line: 754, column: 1, scope: !979)
-!989 = !DILocation(line: 756, column: 1, scope: !979)
-!990 = distinct !DISubprogram(name: "Vector_byteBufPushU16BE", scope: !420, file: !420, line: 760, type: !2, scopeLine: 760, spFlags: DISPFlagDefinition, unit: !0)
-!991 = !DILocation(line: 760, column: 1, scope: !990)
-!992 = !DILocation(line: 761, column: 1, scope: !990)
-!993 = !DILocation(line: 762, column: 1, scope: !990)
-!994 = distinct !DISubprogram(name: "Vector_byteBufPushU32BE", scope: !420, file: !420, line: 766, type: !2, scopeLine: 766, spFlags: DISPFlagDefinition, unit: !0)
-!995 = !DILocation(line: 766, column: 1, scope: !994)
-!996 = !DILocation(line: 767, column: 1, scope: !994)
-!997 = !DILocation(line: 768, column: 1, scope: !994)
-!998 = !DILocation(line: 769, column: 1, scope: !994)
-!999 = !DILocation(line: 770, column: 1, scope: !994)
-!1000 = distinct !DISubprogram(name: "Vector_byteBufPushU32LE", scope: !420, file: !420, line: 774, type: !2, scopeLine: 774, spFlags: DISPFlagDefinition, unit: !0)
-!1001 = !DILocation(line: 774, column: 1, scope: !1000)
-!1002 = !DILocation(line: 775, column: 1, scope: !1000)
-!1003 = !DILocation(line: 776, column: 1, scope: !1000)
-!1004 = !DILocation(line: 777, column: 1, scope: !1000)
-!1005 = !DILocation(line: 778, column: 1, scope: !1000)
-!1006 = distinct !DISubprogram(name: "Vector_byteBufReadU16BE", scope: !420, file: !420, line: 782, type: !2, scopeLine: 782, spFlags: DISPFlagDefinition, unit: !0)
-!1007 = !DILocation(line: 789, column: 1, scope: !1006)
-!1008 = !DILocation(line: 788, column: 1, scope: !1006)
-!1009 = !DILocation(line: 787, column: 1, scope: !1006)
-!1010 = !DILocation(line: 786, column: 1, scope: !1006)
-!1011 = !DILocation(line: 785, column: 1, scope: !1006)
-!1012 = !DILocation(line: 782, column: 1, scope: !1006)
-!1013 = !DILocation(line: 783, column: 1, scope: !1006)
-!1014 = !DILocation(line: 784, column: 1, scope: !1006)
-!1015 = !DILocation(line: 790, column: 1, scope: !1006)
-!1016 = distinct !DISubprogram(name: "Vector_byteBufReadU32BE", scope: !420, file: !420, line: 794, type: !2, scopeLine: 794, spFlags: DISPFlagDefinition, unit: !0)
-!1017 = !DILocation(line: 803, column: 1, scope: !1016)
-!1018 = !DILocation(line: 802, column: 1, scope: !1016)
-!1019 = !DILocation(line: 801, column: 1, scope: !1016)
-!1020 = !DILocation(line: 800, column: 1, scope: !1016)
-!1021 = !DILocation(line: 799, column: 1, scope: !1016)
-!1022 = !DILocation(line: 798, column: 1, scope: !1016)
-!1023 = !DILocation(line: 797, column: 1, scope: !1016)
-!1024 = !DILocation(line: 794, column: 1, scope: !1016)
-!1025 = !DILocation(line: 795, column: 1, scope: !1016)
-!1026 = !DILocation(line: 796, column: 1, scope: !1016)
-!1027 = !DILocation(line: 804, column: 1, scope: !1016)
-!1028 = distinct !DISubprogram(name: "Vector_byteBufReadU32LE", scope: !420, file: !420, line: 808, type: !2, scopeLine: 808, spFlags: DISPFlagDefinition, unit: !0)
-!1029 = !DILocation(line: 817, column: 1, scope: !1028)
-!1030 = !DILocation(line: 816, column: 1, scope: !1028)
-!1031 = !DILocation(line: 815, column: 1, scope: !1028)
-!1032 = !DILocation(line: 814, column: 1, scope: !1028)
-!1033 = !DILocation(line: 813, column: 1, scope: !1028)
-!1034 = !DILocation(line: 812, column: 1, scope: !1028)
-!1035 = !DILocation(line: 811, column: 1, scope: !1028)
-!1036 = !DILocation(line: 808, column: 1, scope: !1028)
-!1037 = !DILocation(line: 809, column: 1, scope: !1028)
-!1038 = !DILocation(line: 810, column: 1, scope: !1028)
-!1039 = !DILocation(line: 818, column: 1, scope: !1028)
+!421 = distinct !DISubprogram(name: "Vector_lockVec", scope: !420, file: !420, line: 32, type: !2, scopeLine: 32, spFlags: DISPFlagDefinition, unit: !0)
+!422 = !DILocation(line: 32, column: 1, scope: !421)
+!423 = !DILocation(line: 33, column: 1, scope: !421)
+!424 = distinct !DISubprogram(name: "Vector_unlockVec", scope: !420, file: !420, line: 37, type: !2, scopeLine: 37, spFlags: DISPFlagDefinition, unit: !0)
+!425 = !DILocation(line: 37, column: 1, scope: !424)
+!426 = !DILocation(line: 38, column: 1, scope: !424)
+!427 = distinct !DISubprogram(name: "Vector_newVec", scope: !420, file: !420, line: 42, type: !2, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !0)
+!428 = !DILocation(line: 42, column: 1, scope: !427)
+!429 = !DILocation(line: 43, column: 1, scope: !427)
+!430 = !DILocation(line: 44, column: 1, scope: !427)
+!431 = distinct !DISubprogram(name: "Vector_newVecObject", scope: !420, file: !420, line: 48, type: !2, scopeLine: 48, spFlags: DISPFlagDefinition, unit: !0)
+!432 = !DILocation(line: 48, column: 1, scope: !431)
+!433 = !DILocation(line: 49, column: 1, scope: !431)
+!434 = !DILocation(line: 50, column: 1, scope: !431)
+!435 = !DILocation(line: 51, column: 1, scope: !431)
+!436 = distinct !DISubprogram(name: "Vector_newVecLike", scope: !420, file: !420, line: 55, type: !2, scopeLine: 55, spFlags: DISPFlagDefinition, unit: !0)
+!437 = !DILocation(line: 60, column: 1, scope: !436)
+!438 = !DILocation(line: 58, column: 1, scope: !436)
+!439 = !DILocation(line: 55, column: 1, scope: !436)
+!440 = !DILocation(line: 56, column: 1, scope: !436)
+!441 = !DILocation(line: 57, column: 1, scope: !436)
+!442 = distinct !DISubprogram(name: "Vector_newByteBuf", scope: !420, file: !420, line: 64, type: !2, scopeLine: 64, spFlags: DISPFlagDefinition, unit: !0)
+!443 = !DILocation(line: 64, column: 1, scope: !442)
+!444 = !DILocation(line: 65, column: 1, scope: !442)
+!445 = !DILocation(line: 66, column: 1, scope: !442)
+!446 = distinct !DISubprogram(name: "Vector_isByteBuf", scope: !420, file: !420, line: 69, type: !2, scopeLine: 69, spFlags: DISPFlagDefinition, unit: !0)
+!447 = !DILocation(line: 69, column: 1, scope: !446)
+!448 = !DILocation(line: 70, column: 1, scope: !446)
+!449 = distinct !DISubprogram(name: "Vector_listLength", scope: !420, file: !420, line: 73, type: !2, scopeLine: 73, spFlags: DISPFlagDefinition, unit: !0)
+!450 = !DILocation(line: 75, column: 1, scope: !449)
+!451 = !DILocation(line: 74, column: 1, scope: !449)
+!452 = !DILocation(line: 73, column: 1, scope: !449)
+!453 = distinct !DISubprogram(name: "Vector_listClear", scope: !420, file: !420, line: 78, type: !2, scopeLine: 78, spFlags: DISPFlagDefinition, unit: !0)
+!454 = !DILocation(line: 78, column: 1, scope: !453)
+!455 = !DILocation(line: 79, column: 1, scope: !453)
+!456 = !DILocation(line: 80, column: 1, scope: !453)
+!457 = !DILocation(line: 82, column: 1, scope: !453)
+!458 = distinct !DISubprogram(name: "Vector_listPush", scope: !420, file: !420, line: 86, type: !2, scopeLine: 86, spFlags: DISPFlagDefinition, unit: !0)
+!459 = !DILocation(line: 86, column: 1, scope: !458)
+!460 = !DILocation(line: 87, column: 1, scope: !458)
+!461 = !DILocation(line: 88, column: 1, scope: !458)
+!462 = !DILocation(line: 90, column: 1, scope: !458)
+!463 = distinct !DISubprogram(name: "Vector_listGet", scope: !420, file: !420, line: 94, type: !2, scopeLine: 94, spFlags: DISPFlagDefinition, unit: !0)
+!464 = !DILocation(line: 98, column: 1, scope: !463)
+!465 = !DILocation(line: 96, column: 1, scope: !463)
+!466 = !DILocation(line: 94, column: 1, scope: !463)
+!467 = !DILocation(line: 95, column: 1, scope: !463)
+!468 = distinct !DISubprogram(name: "Vector_listSet", scope: !420, file: !420, line: 101, type: !2, scopeLine: 101, spFlags: DISPFlagDefinition, unit: !0)
+!469 = !DILocation(line: 101, column: 1, scope: !468)
+!470 = !DILocation(line: 102, column: 1, scope: !468)
+!471 = !DILocation(line: 103, column: 1, scope: !468)
+!472 = !DILocation(line: 105, column: 1, scope: !468)
+!473 = distinct !DISubprogram(name: "Vector_listPop", scope: !420, file: !420, line: 109, type: !2, scopeLine: 109, spFlags: DISPFlagDefinition, unit: !0)
+!474 = !DILocation(line: 113, column: 1, scope: !473)
+!475 = !DILocation(line: 111, column: 1, scope: !473)
+!476 = !DILocation(line: 109, column: 1, scope: !473)
+!477 = !DILocation(line: 110, column: 1, scope: !473)
+!478 = distinct !DISubprogram(name: "Vector_vecDestroy", scope: !420, file: !420, line: 117, type: !2, scopeLine: 117, spFlags: DISPFlagDefinition, unit: !0)
+!479 = !DILocation(line: 127, column: 1, scope: !478)
+!480 = !DILocation(line: 125, column: 1, scope: !478)
+!481 = !DILocation(line: 124, column: 1, scope: !478)
+!482 = !DILocation(line: 122, column: 1, scope: !478)
+!483 = !DILocation(line: 120, column: 1, scope: !478)
+!484 = !DILocation(line: 117, column: 1, scope: !478)
+!485 = !DILocation(line: 118, column: 1, scope: !478)
+!486 = !DILocation(line: 119, column: 1, scope: !478)
+!487 = !DILocation(line: 121, column: 1, scope: !478)
+!488 = !DILocation(line: 123, column: 1, scope: !478)
+!489 = !DILocation(line: 126, column: 1, scope: !478)
+!490 = !DILocation(line: 128, column: 1, scope: !478)
+!491 = !DILocation(line: 129, column: 1, scope: !478)
+!492 = !DILocation(line: 132, column: 1, scope: !478)
+!493 = !DILocation(line: 133, column: 1, scope: !478)
+!494 = distinct !DISubprogram(name: "Vector_byteBufDestroy", scope: !420, file: !420, line: 138, type: !2, scopeLine: 138, spFlags: DISPFlagDefinition, unit: !0)
+!495 = !DILocation(line: 141, column: 1, scope: !494)
+!496 = !DILocation(line: 138, column: 1, scope: !494)
+!497 = !DILocation(line: 139, column: 1, scope: !494)
+!498 = !DILocation(line: 140, column: 1, scope: !494)
+!499 = !DILocation(line: 142, column: 1, scope: !494)
+!500 = !DILocation(line: 143, column: 1, scope: !494)
+!501 = !DILocation(line: 144, column: 1, scope: !494)
+!502 = distinct !DISubprogram(name: "Vector_notifyError", scope: !420, file: !420, line: 148, type: !2, scopeLine: 148, spFlags: DISPFlagDefinition, unit: !0)
+!503 = !DILocation(line: 148, column: 1, scope: !502)
+!504 = !DILocation(line: 149, column: 1, scope: !502)
+!505 = !DILocation(line: 150, column: 1, scope: !502)
+!506 = !DILocation(line: 151, column: 1, scope: !502)
+!507 = !DILocation(line: 152, column: 1, scope: !502)
+!508 = distinct !DISubprogram(name: "Vector_vecLength", scope: !420, file: !420, line: 158, type: !2, scopeLine: 158, spFlags: DISPFlagDefinition, unit: !0)
+!509 = !DILocation(line: 165, column: 1, scope: !508)
+!510 = !DILocation(line: 158, column: 1, scope: !508)
+!511 = !DILocation(line: 159, column: 1, scope: !508)
+!512 = !DILocation(line: 160, column: 1, scope: !508)
+!513 = !DILocation(line: 161, column: 1, scope: !508)
+!514 = !DILocation(line: 162, column: 1, scope: !508)
+!515 = !DILocation(line: 164, column: 1, scope: !508)
+!516 = !DILocation(line: 166, column: 1, scope: !508)
+!517 = !DILocation(line: 167, column: 1, scope: !508)
+!518 = distinct !DISubprogram(name: "Vector_vecGetAt", scope: !420, file: !420, line: 171, type: !2, scopeLine: 171, spFlags: DISPFlagDefinition, unit: !0)
+!519 = !DILocation(line: 184, column: 1, scope: !518)
+!520 = !DILocation(line: 183, column: 1, scope: !518)
+!521 = !DILocation(line: 182, column: 1, scope: !518)
+!522 = !DILocation(line: 181, column: 1, scope: !518)
+!523 = !DILocation(line: 177, column: 1, scope: !518)
+!524 = !DILocation(line: 176, column: 1, scope: !518)
+!525 = !DILocation(line: 174, column: 1, scope: !518)
+!526 = !DILocation(line: 171, column: 1, scope: !518)
+!527 = !DILocation(line: 172, column: 1, scope: !518)
+!528 = !DILocation(line: 173, column: 1, scope: !518)
+!529 = !DILocation(line: 175, column: 1, scope: !518)
+!530 = !DILocation(line: 178, column: 1, scope: !518)
+!531 = !DILocation(line: 179, column: 1, scope: !518)
+!532 = !DILocation(line: 185, column: 1, scope: !518)
+!533 = !DILocation(line: 186, column: 1, scope: !518)
+!534 = !DILocation(line: 188, column: 1, scope: !518)
+!535 = !DILocation(line: 189, column: 1, scope: !518)
+!536 = distinct !DISubprogram(name: "Vector_vecGetChecked", scope: !420, file: !420, line: 193, type: !2, scopeLine: 193, spFlags: DISPFlagDefinition, unit: !0)
+!537 = !DILocation(line: 210, column: 1, scope: !536)
+!538 = !DILocation(line: 209, column: 1, scope: !536)
+!539 = !DILocation(line: 208, column: 1, scope: !536)
+!540 = !DILocation(line: 207, column: 1, scope: !536)
+!541 = !DILocation(line: 202, column: 1, scope: !536)
+!542 = !DILocation(line: 201, column: 1, scope: !536)
+!543 = !DILocation(line: 199, column: 1, scope: !536)
+!544 = !DILocation(line: 193, column: 1, scope: !536)
+!545 = !DILocation(line: 194, column: 1, scope: !536)
+!546 = !DILocation(line: 195, column: 1, scope: !536)
+!547 = !DILocation(line: 196, column: 1, scope: !536)
+!548 = !DILocation(line: 197, column: 1, scope: !536)
+!549 = !DILocation(line: 200, column: 1, scope: !536)
+!550 = !DILocation(line: 203, column: 1, scope: !536)
+!551 = !DILocation(line: 204, column: 1, scope: !536)
+!552 = !DILocation(line: 205, column: 1, scope: !536)
+!553 = !DILocation(line: 211, column: 1, scope: !536)
+!554 = !DILocation(line: 212, column: 1, scope: !536)
+!555 = !DILocation(line: 214, column: 1, scope: !536)
+!556 = !DILocation(line: 215, column: 1, scope: !536)
+!557 = distinct !DISubprogram(name: "Vector_vecSetAt", scope: !420, file: !420, line: 219, type: !2, scopeLine: 219, spFlags: DISPFlagDefinition, unit: !0)
+!558 = !DILocation(line: 246, column: 1, scope: !557)
+!559 = !DILocation(line: 239, column: 1, scope: !557)
+!560 = !DILocation(line: 238, column: 1, scope: !557)
+!561 = !DILocation(line: 237, column: 1, scope: !557)
+!562 = !DILocation(line: 236, column: 1, scope: !557)
+!563 = !DILocation(line: 231, column: 1, scope: !557)
+!564 = !DILocation(line: 230, column: 1, scope: !557)
+!565 = !DILocation(line: 219, column: 1, scope: !557)
+!566 = !DILocation(line: 220, column: 1, scope: !557)
+!567 = !DILocation(line: 221, column: 1, scope: !557)
+!568 = !DILocation(line: 222, column: 1, scope: !557)
+!569 = !DILocation(line: 223, column: 1, scope: !557)
+!570 = !DILocation(line: 225, column: 1, scope: !557)
+!571 = !DILocation(line: 226, column: 1, scope: !557)
+!572 = !DILocation(line: 227, column: 1, scope: !557)
+!573 = !DILocation(line: 229, column: 1, scope: !557)
+!574 = !DILocation(line: 232, column: 1, scope: !557)
+!575 = !DILocation(line: 233, column: 1, scope: !557)
+!576 = !DILocation(line: 240, column: 1, scope: !557)
+!577 = !DILocation(line: 241, column: 1, scope: !557)
+!578 = !DILocation(line: 242, column: 1, scope: !557)
+!579 = !DILocation(line: 244, column: 1, scope: !557)
+!580 = !DILocation(line: 245, column: 1, scope: !557)
+!581 = !DILocation(line: 247, column: 1, scope: !557)
+!582 = distinct !DISubprogram(name: "Vector_vecAdd", scope: !420, file: !420, line: 252, type: !2, scopeLine: 252, spFlags: DISPFlagDefinition, unit: !0)
+!583 = !DILocation(line: 271, column: 1, scope: !582)
+!584 = !DILocation(line: 270, column: 1, scope: !582)
+!585 = !DILocation(line: 269, column: 1, scope: !582)
+!586 = !DILocation(line: 264, column: 1, scope: !582)
+!587 = !DILocation(line: 262, column: 1, scope: !582)
+!588 = !DILocation(line: 261, column: 1, scope: !582)
+!589 = !DILocation(line: 260, column: 1, scope: !582)
+!590 = !DILocation(line: 252, column: 1, scope: !582)
+!591 = !DILocation(line: 253, column: 1, scope: !582)
+!592 = !DILocation(line: 254, column: 1, scope: !582)
+!593 = !DILocation(line: 255, column: 1, scope: !582)
+!594 = !DILocation(line: 256, column: 1, scope: !582)
+!595 = !DILocation(line: 257, column: 1, scope: !582)
+!596 = !DILocation(line: 259, column: 1, scope: !582)
+!597 = !DILocation(line: 263, column: 1, scope: !582)
+!598 = !DILocation(line: 265, column: 1, scope: !582)
+!599 = !DILocation(line: 266, column: 1, scope: !582)
+!600 = !DILocation(line: 267, column: 1, scope: !582)
+!601 = !DILocation(line: 272, column: 1, scope: !582)
+!602 = !DILocation(line: 274, column: 1, scope: !582)
+!603 = !DILocation(line: 275, column: 1, scope: !582)
+!604 = !DILocation(line: 276, column: 1, scope: !582)
+!605 = distinct !DISubprogram(name: "Vector_vecAddObject", scope: !420, file: !420, line: 280, type: !2, scopeLine: 280, spFlags: DISPFlagDefinition, unit: !0)
+!606 = !DILocation(line: 280, column: 1, scope: !605)
+!607 = !DILocation(line: 281, column: 1, scope: !605)
+!608 = !DILocation(line: 282, column: 1, scope: !605)
+!609 = !DILocation(line: 283, column: 1, scope: !605)
+!610 = !DILocation(line: 284, column: 1, scope: !605)
+!611 = !DILocation(line: 286, column: 1, scope: !605)
+!612 = distinct !DISubprogram(name: "Vector_vecAddArray", scope: !420, file: !420, line: 290, type: !2, scopeLine: 290, spFlags: DISPFlagDefinition, unit: !0)
+!613 = !DILocation(line: 345, column: 1, scope: !612)
+!614 = !DILocation(line: 344, column: 1, scope: !612)
+!615 = !DILocation(line: 342, column: 1, scope: !612)
+!616 = !DILocation(line: 341, column: 1, scope: !612)
+!617 = !DILocation(line: 335, column: 1, scope: !612)
+!618 = !DILocation(line: 333, column: 1, scope: !612)
+!619 = !DILocation(line: 332, column: 1, scope: !612)
+!620 = !DILocation(line: 331, column: 1, scope: !612)
+!621 = !DILocation(line: 330, column: 1, scope: !612)
+!622 = !DILocation(line: 329, column: 1, scope: !612)
+!623 = !DILocation(line: 314, column: 1, scope: !612)
+!624 = !DILocation(line: 313, column: 1, scope: !612)
+!625 = !DILocation(line: 311, column: 1, scope: !612)
+!626 = !DILocation(line: 310, column: 1, scope: !612)
+!627 = !DILocation(line: 304, column: 1, scope: !612)
+!628 = !DILocation(line: 302, column: 1, scope: !612)
+!629 = !DILocation(line: 301, column: 1, scope: !612)
+!630 = !DILocation(line: 300, column: 1, scope: !612)
+!631 = !DILocation(line: 290, column: 1, scope: !612)
+!632 = !DILocation(line: 291, column: 1, scope: !612)
+!633 = !DILocation(line: 292, column: 1, scope: !612)
+!634 = !DILocation(line: 293, column: 1, scope: !612)
+!635 = !DILocation(line: 294, column: 1, scope: !612)
+!636 = !DILocation(line: 295, column: 1, scope: !612)
+!637 = !DILocation(line: 296, column: 1, scope: !612)
+!638 = !DILocation(line: 298, column: 1, scope: !612)
+!639 = !DILocation(line: 299, column: 1, scope: !612)
+!640 = !DILocation(line: 303, column: 1, scope: !612)
+!641 = !DILocation(line: 305, column: 1, scope: !612)
+!642 = !DILocation(line: 306, column: 1, scope: !612)
+!643 = !DILocation(line: 307, column: 1, scope: !612)
+!644 = !DILocation(line: 308, column: 1, scope: !612)
+!645 = !DILocation(line: 312, column: 1, scope: !612)
+!646 = !DILocation(line: 315, column: 1, scope: !612)
+!647 = !DILocation(line: 316, column: 1, scope: !612)
+!648 = !DILocation(line: 318, column: 1, scope: !612)
+!649 = !DILocation(line: 319, column: 1, scope: !612)
+!650 = !DILocation(line: 320, column: 1, scope: !612)
+!651 = !DILocation(line: 322, column: 1, scope: !612)
+!652 = !DILocation(line: 323, column: 1, scope: !612)
+!653 = !DILocation(line: 324, column: 1, scope: !612)
+!654 = !DILocation(line: 326, column: 1, scope: !612)
+!655 = !DILocation(line: 327, column: 1, scope: !612)
+!656 = !DILocation(line: 334, column: 1, scope: !612)
+!657 = !DILocation(line: 336, column: 1, scope: !612)
+!658 = !DILocation(line: 337, column: 1, scope: !612)
+!659 = !DILocation(line: 338, column: 1, scope: !612)
+!660 = !DILocation(line: 339, column: 1, scope: !612)
+!661 = !DILocation(line: 343, column: 1, scope: !612)
+!662 = !DILocation(line: 346, column: 1, scope: !612)
+!663 = !DILocation(line: 347, column: 1, scope: !612)
+!664 = !DILocation(line: 349, column: 1, scope: !612)
+!665 = !DILocation(line: 350, column: 1, scope: !612)
+!666 = !DILocation(line: 351, column: 1, scope: !612)
+!667 = distinct !DISubprogram(name: "Vector_vecPopChecked", scope: !420, file: !420, line: 355, type: !2, scopeLine: 355, spFlags: DISPFlagDefinition, unit: !0)
+!668 = !DILocation(line: 377, column: 1, scope: !667)
+!669 = !DILocation(line: 376, column: 1, scope: !667)
+!670 = !DILocation(line: 375, column: 1, scope: !667)
+!671 = !DILocation(line: 374, column: 1, scope: !667)
+!672 = !DILocation(line: 372, column: 1, scope: !667)
+!673 = !DILocation(line: 366, column: 1, scope: !667)
+!674 = !DILocation(line: 355, column: 1, scope: !667)
+!675 = !DILocation(line: 356, column: 1, scope: !667)
+!676 = !DILocation(line: 357, column: 1, scope: !667)
+!677 = !DILocation(line: 358, column: 1, scope: !667)
+!678 = !DILocation(line: 359, column: 1, scope: !667)
+!679 = !DILocation(line: 361, column: 1, scope: !667)
+!680 = !DILocation(line: 362, column: 1, scope: !667)
+!681 = !DILocation(line: 363, column: 1, scope: !667)
+!682 = !DILocation(line: 365, column: 1, scope: !667)
+!683 = !DILocation(line: 367, column: 1, scope: !667)
+!684 = !DILocation(line: 368, column: 1, scope: !667)
+!685 = !DILocation(line: 369, column: 1, scope: !667)
+!686 = !DILocation(line: 370, column: 1, scope: !667)
+!687 = !DILocation(line: 373, column: 1, scope: !667)
+!688 = !DILocation(line: 378, column: 1, scope: !667)
+!689 = !DILocation(line: 380, column: 1, scope: !667)
+!690 = !DILocation(line: 381, column: 1, scope: !667)
+!691 = distinct !DISubprogram(name: "Vector_vecRemoveAtChecked", scope: !420, file: !420, line: 385, type: !2, scopeLine: 385, spFlags: DISPFlagDefinition, unit: !0)
+!692 = !DILocation(line: 410, column: 1, scope: !691)
+!693 = !DILocation(line: 409, column: 1, scope: !691)
+!694 = !DILocation(line: 404, column: 1, scope: !691)
+!695 = !DILocation(line: 403, column: 1, scope: !691)
+!696 = !DILocation(line: 402, column: 1, scope: !691)
+!697 = !DILocation(line: 397, column: 1, scope: !691)
+!698 = !DILocation(line: 396, column: 1, scope: !691)
+!699 = !DILocation(line: 385, column: 1, scope: !691)
+!700 = !DILocation(line: 386, column: 1, scope: !691)
+!701 = !DILocation(line: 387, column: 1, scope: !691)
+!702 = !DILocation(line: 388, column: 1, scope: !691)
+!703 = !DILocation(line: 389, column: 1, scope: !691)
+!704 = !DILocation(line: 391, column: 1, scope: !691)
+!705 = !DILocation(line: 392, column: 1, scope: !691)
+!706 = !DILocation(line: 393, column: 1, scope: !691)
+!707 = !DILocation(line: 395, column: 1, scope: !691)
+!708 = !DILocation(line: 398, column: 1, scope: !691)
+!709 = !DILocation(line: 399, column: 1, scope: !691)
+!710 = !DILocation(line: 400, column: 1, scope: !691)
+!711 = !DILocation(line: 405, column: 1, scope: !691)
+!712 = !DILocation(line: 406, column: 1, scope: !691)
+!713 = !DILocation(line: 408, column: 1, scope: !691)
+!714 = !DILocation(line: 411, column: 1, scope: !691)
+!715 = !DILocation(line: 413, column: 1, scope: !691)
+!716 = !DILocation(line: 414, column: 1, scope: !691)
+!717 = distinct !DISubprogram(name: "Vector_vecPopLast", scope: !420, file: !420, line: 418, type: !2, scopeLine: 418, spFlags: DISPFlagDefinition, unit: !0)
+!718 = !DILocation(line: 436, column: 1, scope: !717)
+!719 = !DILocation(line: 435, column: 1, scope: !717)
+!720 = !DILocation(line: 434, column: 1, scope: !717)
+!721 = !DILocation(line: 433, column: 1, scope: !717)
+!722 = !DILocation(line: 431, column: 1, scope: !717)
+!723 = !DILocation(line: 426, column: 1, scope: !717)
+!724 = !DILocation(line: 418, column: 1, scope: !717)
+!725 = !DILocation(line: 419, column: 1, scope: !717)
+!726 = !DILocation(line: 420, column: 1, scope: !717)
+!727 = !DILocation(line: 421, column: 1, scope: !717)
+!728 = !DILocation(line: 422, column: 1, scope: !717)
+!729 = !DILocation(line: 423, column: 1, scope: !717)
+!730 = !DILocation(line: 425, column: 1, scope: !717)
+!731 = !DILocation(line: 427, column: 1, scope: !717)
+!732 = !DILocation(line: 428, column: 1, scope: !717)
+!733 = !DILocation(line: 429, column: 1, scope: !717)
+!734 = !DILocation(line: 432, column: 1, scope: !717)
+!735 = !DILocation(line: 437, column: 1, scope: !717)
+!736 = !DILocation(line: 439, column: 1, scope: !717)
+!737 = !DILocation(line: 440, column: 1, scope: !717)
+!738 = distinct !DISubprogram(name: "Vector_vecRemoveAt", scope: !420, file: !420, line: 444, type: !2, scopeLine: 444, spFlags: DISPFlagDefinition, unit: !0)
+!739 = !DILocation(line: 465, column: 1, scope: !738)
+!740 = !DILocation(line: 464, column: 1, scope: !738)
+!741 = !DILocation(line: 459, column: 1, scope: !738)
+!742 = !DILocation(line: 458, column: 1, scope: !738)
+!743 = !DILocation(line: 457, column: 1, scope: !738)
+!744 = !DILocation(line: 453, column: 1, scope: !738)
+!745 = !DILocation(line: 452, column: 1, scope: !738)
+!746 = !DILocation(line: 444, column: 1, scope: !738)
+!747 = !DILocation(line: 445, column: 1, scope: !738)
+!748 = !DILocation(line: 446, column: 1, scope: !738)
+!749 = !DILocation(line: 447, column: 1, scope: !738)
+!750 = !DILocation(line: 448, column: 1, scope: !738)
+!751 = !DILocation(line: 449, column: 1, scope: !738)
+!752 = !DILocation(line: 451, column: 1, scope: !738)
+!753 = !DILocation(line: 454, column: 1, scope: !738)
+!754 = !DILocation(line: 455, column: 1, scope: !738)
+!755 = !DILocation(line: 460, column: 1, scope: !738)
+!756 = !DILocation(line: 461, column: 1, scope: !738)
+!757 = !DILocation(line: 463, column: 1, scope: !738)
+!758 = !DILocation(line: 466, column: 1, scope: !738)
+!759 = !DILocation(line: 468, column: 1, scope: !738)
+!760 = !DILocation(line: 469, column: 1, scope: !738)
+!761 = distinct !DISubprogram(name: "Vector_vecClear", scope: !420, file: !420, line: 473, type: !2, scopeLine: 473, spFlags: DISPFlagDefinition, unit: !0)
+!762 = !DILocation(line: 492, column: 1, scope: !761)
+!763 = !DILocation(line: 490, column: 1, scope: !761)
+!764 = !DILocation(line: 483, column: 1, scope: !761)
+!765 = !DILocation(line: 482, column: 1, scope: !761)
+!766 = !DILocation(line: 481, column: 1, scope: !761)
+!767 = !DILocation(line: 473, column: 1, scope: !761)
+!768 = !DILocation(line: 474, column: 1, scope: !761)
+!769 = !DILocation(line: 475, column: 1, scope: !761)
+!770 = !DILocation(line: 476, column: 1, scope: !761)
+!771 = !DILocation(line: 477, column: 1, scope: !761)
+!772 = !DILocation(line: 478, column: 1, scope: !761)
+!773 = !DILocation(line: 480, column: 1, scope: !761)
+!774 = !DILocation(line: 484, column: 1, scope: !761)
+!775 = !DILocation(line: 485, column: 1, scope: !761)
+!776 = !DILocation(line: 486, column: 1, scope: !761)
+!777 = !DILocation(line: 487, column: 1, scope: !761)
+!778 = !DILocation(line: 488, column: 1, scope: !761)
+!779 = !DILocation(line: 489, column: 1, scope: !761)
+!780 = !DILocation(line: 491, column: 1, scope: !761)
+!781 = !DILocation(line: 493, column: 1, scope: !761)
+!782 = !DILocation(line: 494, column: 1, scope: !761)
+!783 = !DILocation(line: 496, column: 1, scope: !761)
+!784 = !DILocation(line: 499, column: 1, scope: !761)
+!785 = distinct !DISubprogram(name: "Vector_vecFreeze", scope: !420, file: !420, line: 504, type: !2, scopeLine: 504, spFlags: DISPFlagDefinition, unit: !0)
+!786 = !DILocation(line: 504, column: 1, scope: !785)
+!787 = !DILocation(line: 505, column: 1, scope: !785)
+!788 = !DILocation(line: 506, column: 1, scope: !785)
+!789 = !DILocation(line: 507, column: 1, scope: !785)
+!790 = !DILocation(line: 508, column: 1, scope: !785)
+!791 = !DILocation(line: 509, column: 1, scope: !785)
+!792 = distinct !DISubprogram(name: "Vector_vecGet", scope: !420, file: !420, line: 513, type: !2, scopeLine: 513, spFlags: DISPFlagDefinition, unit: !0)
+!793 = !DILocation(line: 527, column: 1, scope: !792)
+!794 = !DILocation(line: 526, column: 1, scope: !792)
+!795 = !DILocation(line: 525, column: 1, scope: !792)
+!796 = !DILocation(line: 524, column: 1, scope: !792)
+!797 = !DILocation(line: 520, column: 1, scope: !792)
+!798 = !DILocation(line: 519, column: 1, scope: !792)
+!799 = !DILocation(line: 513, column: 1, scope: !792)
+!800 = !DILocation(line: 514, column: 1, scope: !792)
+!801 = !DILocation(line: 515, column: 1, scope: !792)
+!802 = !DILocation(line: 516, column: 1, scope: !792)
+!803 = !DILocation(line: 517, column: 1, scope: !792)
+!804 = !DILocation(line: 521, column: 1, scope: !792)
+!805 = !DILocation(line: 522, column: 1, scope: !792)
+!806 = !DILocation(line: 528, column: 1, scope: !792)
+!807 = !DILocation(line: 529, column: 1, scope: !792)
+!808 = !DILocation(line: 531, column: 1, scope: !792)
+!809 = distinct !DISubprogram(name: "Vector_vecSet", scope: !420, file: !420, line: 535, type: !2, scopeLine: 535, spFlags: DISPFlagDefinition, unit: !0)
+!810 = !DILocation(line: 551, column: 1, scope: !809)
+!811 = !DILocation(line: 548, column: 1, scope: !809)
+!812 = !DILocation(line: 547, column: 1, scope: !809)
+!813 = !DILocation(line: 546, column: 1, scope: !809)
+!814 = !DILocation(line: 542, column: 1, scope: !809)
+!815 = !DILocation(line: 541, column: 1, scope: !809)
+!816 = !DILocation(line: 535, column: 1, scope: !809)
+!817 = !DILocation(line: 536, column: 1, scope: !809)
+!818 = !DILocation(line: 537, column: 1, scope: !809)
+!819 = !DILocation(line: 538, column: 1, scope: !809)
+!820 = !DILocation(line: 539, column: 1, scope: !809)
+!821 = !DILocation(line: 543, column: 1, scope: !809)
+!822 = !DILocation(line: 544, column: 1, scope: !809)
+!823 = !DILocation(line: 549, column: 1, scope: !809)
+!824 = !DILocation(line: 550, column: 1, scope: !809)
+!825 = !DILocation(line: 552, column: 1, scope: !809)
+!826 = !DILocation(line: 554, column: 1, scope: !809)
+!827 = distinct !DISubprogram(name: "Vector_vecPop", scope: !420, file: !420, line: 558, type: !2, scopeLine: 558, spFlags: DISPFlagDefinition, unit: !0)
+!828 = !DILocation(line: 574, column: 1, scope: !827)
+!829 = !DILocation(line: 573, column: 1, scope: !827)
+!830 = !DILocation(line: 572, column: 1, scope: !827)
+!831 = !DILocation(line: 570, column: 1, scope: !827)
+!832 = !DILocation(line: 565, column: 1, scope: !827)
+!833 = !DILocation(line: 564, column: 1, scope: !827)
+!834 = !DILocation(line: 558, column: 1, scope: !827)
+!835 = !DILocation(line: 559, column: 1, scope: !827)
+!836 = !DILocation(line: 560, column: 1, scope: !827)
+!837 = !DILocation(line: 561, column: 1, scope: !827)
+!838 = !DILocation(line: 562, column: 1, scope: !827)
+!839 = !DILocation(line: 566, column: 1, scope: !827)
+!840 = !DILocation(line: 567, column: 1, scope: !827)
+!841 = !DILocation(line: 568, column: 1, scope: !827)
+!842 = !DILocation(line: 571, column: 1, scope: !827)
+!843 = !DILocation(line: 575, column: 1, scope: !827)
+!844 = !DILocation(line: 577, column: 1, scope: !827)
+!845 = distinct !DISubprogram(name: "Vector_byteBufLength", scope: !420, file: !420, line: 581, type: !2, scopeLine: 581, spFlags: DISPFlagDefinition, unit: !0)
+!846 = !DILocation(line: 581, column: 1, scope: !845)
+!847 = !DILocation(line: 582, column: 1, scope: !845)
+!848 = !DILocation(line: 583, column: 1, scope: !845)
+!849 = !DILocation(line: 584, column: 1, scope: !845)
+!850 = distinct !DISubprogram(name: "Vector_byteBufClear", scope: !420, file: !420, line: 588, type: !2, scopeLine: 588, spFlags: DISPFlagDefinition, unit: !0)
+!851 = !DILocation(line: 588, column: 1, scope: !850)
+!852 = !DILocation(line: 589, column: 1, scope: !850)
+!853 = !DILocation(line: 590, column: 1, scope: !850)
+!854 = !DILocation(line: 591, column: 1, scope: !850)
+!855 = distinct !DISubprogram(name: "Vector_byteBufPush", scope: !420, file: !420, line: 596, type: !2, scopeLine: 596, spFlags: DISPFlagDefinition, unit: !0)
+!856 = !DILocation(line: 603, column: 1, scope: !855)
+!857 = !DILocation(line: 601, column: 1, scope: !855)
+!858 = !DILocation(line: 600, column: 1, scope: !855)
+!859 = !DILocation(line: 599, column: 1, scope: !855)
+!860 = !DILocation(line: 596, column: 1, scope: !855)
+!861 = !DILocation(line: 597, column: 1, scope: !855)
+!862 = !DILocation(line: 598, column: 1, scope: !855)
+!863 = !DILocation(line: 602, column: 1, scope: !855)
+!864 = !DILocation(line: 604, column: 1, scope: !855)
+!865 = !DILocation(line: 605, column: 1, scope: !855)
+!866 = !DILocation(line: 606, column: 1, scope: !855)
+!867 = !DILocation(line: 608, column: 1, scope: !855)
+!868 = !DILocation(line: 609, column: 1, scope: !855)
+!869 = distinct !DISubprogram(name: "Vector_byteBufAppendString", scope: !420, file: !420, line: 613, type: !2, scopeLine: 613, spFlags: DISPFlagDefinition, unit: !0)
+!870 = !DILocation(line: 629, column: 1, scope: !869)
+!871 = !DILocation(line: 621, column: 1, scope: !869)
+!872 = !DILocation(line: 620, column: 1, scope: !869)
+!873 = !DILocation(line: 619, column: 1, scope: !869)
+!874 = !DILocation(line: 617, column: 1, scope: !869)
+!875 = !DILocation(line: 613, column: 1, scope: !869)
+!876 = !DILocation(line: 614, column: 1, scope: !869)
+!877 = !DILocation(line: 615, column: 1, scope: !869)
+!878 = !DILocation(line: 616, column: 1, scope: !869)
+!879 = !DILocation(line: 618, column: 1, scope: !869)
+!880 = !DILocation(line: 622, column: 1, scope: !869)
+!881 = !DILocation(line: 623, column: 1, scope: !869)
+!882 = !DILocation(line: 624, column: 1, scope: !869)
+!883 = !DILocation(line: 625, column: 1, scope: !869)
+!884 = !DILocation(line: 626, column: 1, scope: !869)
+!885 = !DILocation(line: 627, column: 1, scope: !869)
+!886 = !DILocation(line: 630, column: 1, scope: !869)
+!887 = !DILocation(line: 631, column: 1, scope: !869)
+!888 = distinct !DISubprogram(name: "Vector_byteBufToString", scope: !420, file: !420, line: 635, type: !2, scopeLine: 635, spFlags: DISPFlagDefinition, unit: !0)
+!889 = !DILocation(line: 640, column: 1, scope: !888)
+!890 = !DILocation(line: 638, column: 1, scope: !888)
+!891 = !DILocation(line: 635, column: 1, scope: !888)
+!892 = !DILocation(line: 636, column: 1, scope: !888)
+!893 = !DILocation(line: 637, column: 1, scope: !888)
+!894 = !DILocation(line: 639, column: 1, scope: !888)
+!895 = !DILocation(line: 641, column: 1, scope: !888)
+!896 = distinct !DISubprogram(name: "Vector_byteBufGet", scope: !420, file: !420, line: 645, type: !2, scopeLine: 645, spFlags: DISPFlagDefinition, unit: !0)
+!897 = !DILocation(line: 656, column: 1, scope: !896)
+!898 = !DILocation(line: 652, column: 1, scope: !896)
+!899 = !DILocation(line: 651, column: 1, scope: !896)
+!900 = !DILocation(line: 645, column: 1, scope: !896)
+!901 = !DILocation(line: 646, column: 1, scope: !896)
+!902 = !DILocation(line: 647, column: 1, scope: !896)
+!903 = !DILocation(line: 648, column: 1, scope: !896)
+!904 = !DILocation(line: 649, column: 1, scope: !896)
+!905 = !DILocation(line: 653, column: 1, scope: !896)
+!906 = !DILocation(line: 654, column: 1, scope: !896)
+!907 = !DILocation(line: 657, column: 1, scope: !896)
+!908 = distinct !DISubprogram(name: "Vector_byteBufSet", scope: !420, file: !420, line: 661, type: !2, scopeLine: 661, spFlags: DISPFlagDefinition, unit: !0)
+!909 = !DILocation(line: 672, column: 1, scope: !908)
+!910 = !DILocation(line: 668, column: 1, scope: !908)
+!911 = !DILocation(line: 667, column: 1, scope: !908)
+!912 = !DILocation(line: 661, column: 1, scope: !908)
+!913 = !DILocation(line: 662, column: 1, scope: !908)
+!914 = !DILocation(line: 663, column: 1, scope: !908)
+!915 = !DILocation(line: 664, column: 1, scope: !908)
+!916 = !DILocation(line: 665, column: 1, scope: !908)
+!917 = !DILocation(line: 669, column: 1, scope: !908)
+!918 = !DILocation(line: 670, column: 1, scope: !908)
+!919 = !DILocation(line: 673, column: 1, scope: !908)
+!920 = distinct !DISubprogram(name: "Vector_byteBufPop", scope: !420, file: !420, line: 677, type: !2, scopeLine: 677, spFlags: DISPFlagDefinition, unit: !0)
+!921 = !DILocation(line: 690, column: 1, scope: !920)
+!922 = !DILocation(line: 688, column: 1, scope: !920)
+!923 = !DILocation(line: 683, column: 1, scope: !920)
+!924 = !DILocation(line: 677, column: 1, scope: !920)
+!925 = !DILocation(line: 678, column: 1, scope: !920)
+!926 = !DILocation(line: 679, column: 1, scope: !920)
+!927 = !DILocation(line: 680, column: 1, scope: !920)
+!928 = !DILocation(line: 681, column: 1, scope: !920)
+!929 = !DILocation(line: 684, column: 1, scope: !920)
+!930 = !DILocation(line: 685, column: 1, scope: !920)
+!931 = !DILocation(line: 686, column: 1, scope: !920)
+!932 = !DILocation(line: 689, column: 1, scope: !920)
+!933 = !DILocation(line: 691, column: 1, scope: !920)
+!934 = distinct !DISubprogram(name: "Vector_byteBufAppendBytes", scope: !420, file: !420, line: 695, type: !2, scopeLine: 695, spFlags: DISPFlagDefinition, unit: !0)
+!935 = !DILocation(line: 704, column: 1, scope: !934)
+!936 = !DILocation(line: 703, column: 1, scope: !934)
+!937 = !DILocation(line: 702, column: 1, scope: !934)
+!938 = !DILocation(line: 701, column: 1, scope: !934)
+!939 = !DILocation(line: 699, column: 1, scope: !934)
+!940 = !DILocation(line: 695, column: 1, scope: !934)
+!941 = !DILocation(line: 696, column: 1, scope: !934)
+!942 = !DILocation(line: 697, column: 1, scope: !934)
+!943 = !DILocation(line: 698, column: 1, scope: !934)
+!944 = !DILocation(line: 700, column: 1, scope: !934)
+!945 = !DILocation(line: 705, column: 1, scope: !934)
+!946 = !DILocation(line: 706, column: 1, scope: !934)
+!947 = !DILocation(line: 707, column: 1, scope: !934)
+!948 = !DILocation(line: 708, column: 1, scope: !934)
+!949 = !DILocation(line: 709, column: 1, scope: !934)
+!950 = !DILocation(line: 710, column: 1, scope: !934)
+!951 = !DILocation(line: 712, column: 1, scope: !934)
+!952 = !DILocation(line: 713, column: 1, scope: !934)
+!953 = !DILocation(line: 715, column: 1, scope: !934)
+!954 = !DILocation(line: 717, column: 1, scope: !934)
+!955 = distinct !DISubprogram(name: "Vector_byteBufAppendRange", scope: !420, file: !420, line: 721, type: !2, scopeLine: 721, spFlags: DISPFlagDefinition, unit: !0)
+!956 = !DILocation(line: 733, column: 1, scope: !955)
+!957 = !DILocation(line: 732, column: 1, scope: !955)
+!958 = !DILocation(line: 731, column: 1, scope: !955)
+!959 = !DILocation(line: 730, column: 1, scope: !955)
+!960 = !DILocation(line: 728, column: 1, scope: !955)
+!961 = !DILocation(line: 726, column: 1, scope: !955)
+!962 = !DILocation(line: 725, column: 1, scope: !955)
+!963 = !DILocation(line: 721, column: 1, scope: !955)
+!964 = !DILocation(line: 722, column: 1, scope: !955)
+!965 = !DILocation(line: 723, column: 1, scope: !955)
+!966 = !DILocation(line: 724, column: 1, scope: !955)
+!967 = !DILocation(line: 727, column: 1, scope: !955)
+!968 = !DILocation(line: 729, column: 1, scope: !955)
+!969 = !DILocation(line: 734, column: 1, scope: !955)
+!970 = !DILocation(line: 735, column: 1, scope: !955)
+!971 = !DILocation(line: 736, column: 1, scope: !955)
+!972 = !DILocation(line: 737, column: 1, scope: !955)
+!973 = !DILocation(line: 738, column: 1, scope: !955)
+!974 = !DILocation(line: 739, column: 1, scope: !955)
+!975 = !DILocation(line: 741, column: 1, scope: !955)
+!976 = !DILocation(line: 742, column: 1, scope: !955)
+!977 = !DILocation(line: 744, column: 1, scope: !955)
+!978 = !DILocation(line: 746, column: 1, scope: !955)
+!979 = distinct !DISubprogram(name: "Vector_byteBufSlice", scope: !420, file: !420, line: 750, type: !2, scopeLine: 750, spFlags: DISPFlagDefinition, unit: !0)
+!980 = !DILocation(line: 756, column: 1, scope: !979)
+!981 = !DILocation(line: 755, column: 1, scope: !979)
+!982 = !DILocation(line: 754, column: 1, scope: !979)
+!983 = !DILocation(line: 750, column: 1, scope: !979)
+!984 = !DILocation(line: 751, column: 1, scope: !979)
+!985 = !DILocation(line: 752, column: 1, scope: !979)
+!986 = !DILocation(line: 753, column: 1, scope: !979)
+!987 = !DILocation(line: 757, column: 1, scope: !979)
+!988 = !DILocation(line: 758, column: 1, scope: !979)
+!989 = !DILocation(line: 760, column: 1, scope: !979)
+!990 = distinct !DISubprogram(name: "Vector_byteBufPushU16BE", scope: !420, file: !420, line: 764, type: !2, scopeLine: 764, spFlags: DISPFlagDefinition, unit: !0)
+!991 = !DILocation(line: 764, column: 1, scope: !990)
+!992 = !DILocation(line: 765, column: 1, scope: !990)
+!993 = !DILocation(line: 766, column: 1, scope: !990)
+!994 = distinct !DISubprogram(name: "Vector_byteBufPushU32BE", scope: !420, file: !420, line: 770, type: !2, scopeLine: 770, spFlags: DISPFlagDefinition, unit: !0)
+!995 = !DILocation(line: 770, column: 1, scope: !994)
+!996 = !DILocation(line: 771, column: 1, scope: !994)
+!997 = !DILocation(line: 772, column: 1, scope: !994)
+!998 = !DILocation(line: 773, column: 1, scope: !994)
+!999 = !DILocation(line: 774, column: 1, scope: !994)
+!1000 = distinct !DISubprogram(name: "Vector_byteBufPushU32LE", scope: !420, file: !420, line: 778, type: !2, scopeLine: 778, spFlags: DISPFlagDefinition, unit: !0)
+!1001 = !DILocation(line: 778, column: 1, scope: !1000)
+!1002 = !DILocation(line: 779, column: 1, scope: !1000)
+!1003 = !DILocation(line: 780, column: 1, scope: !1000)
+!1004 = !DILocation(line: 781, column: 1, scope: !1000)
+!1005 = !DILocation(line: 782, column: 1, scope: !1000)
+!1006 = distinct !DISubprogram(name: "Vector_byteBufReadU16BE", scope: !420, file: !420, line: 786, type: !2, scopeLine: 786, spFlags: DISPFlagDefinition, unit: !0)
+!1007 = !DILocation(line: 793, column: 1, scope: !1006)
+!1008 = !DILocation(line: 792, column: 1, scope: !1006)
+!1009 = !DILocation(line: 791, column: 1, scope: !1006)
+!1010 = !DILocation(line: 790, column: 1, scope: !1006)
+!1011 = !DILocation(line: 789, column: 1, scope: !1006)
+!1012 = !DILocation(line: 786, column: 1, scope: !1006)
+!1013 = !DILocation(line: 787, column: 1, scope: !1006)
+!1014 = !DILocation(line: 788, column: 1, scope: !1006)
+!1015 = !DILocation(line: 794, column: 1, scope: !1006)
+!1016 = distinct !DISubprogram(name: "Vector_byteBufReadU32BE", scope: !420, file: !420, line: 798, type: !2, scopeLine: 798, spFlags: DISPFlagDefinition, unit: !0)
+!1017 = !DILocation(line: 807, column: 1, scope: !1016)
+!1018 = !DILocation(line: 806, column: 1, scope: !1016)
+!1019 = !DILocation(line: 805, column: 1, scope: !1016)
+!1020 = !DILocation(line: 804, column: 1, scope: !1016)
+!1021 = !DILocation(line: 803, column: 1, scope: !1016)
+!1022 = !DILocation(line: 802, column: 1, scope: !1016)
+!1023 = !DILocation(line: 801, column: 1, scope: !1016)
+!1024 = !DILocation(line: 798, column: 1, scope: !1016)
+!1025 = !DILocation(line: 799, column: 1, scope: !1016)
+!1026 = !DILocation(line: 800, column: 1, scope: !1016)
+!1027 = !DILocation(line: 808, column: 1, scope: !1016)
+!1028 = distinct !DISubprogram(name: "Vector_byteBufReadU32LE", scope: !420, file: !420, line: 812, type: !2, scopeLine: 812, spFlags: DISPFlagDefinition, unit: !0)
+!1029 = !DILocation(line: 821, column: 1, scope: !1028)
+!1030 = !DILocation(line: 820, column: 1, scope: !1028)
+!1031 = !DILocation(line: 819, column: 1, scope: !1028)
+!1032 = !DILocation(line: 818, column: 1, scope: !1028)
+!1033 = !DILocation(line: 817, column: 1, scope: !1028)
+!1034 = !DILocation(line: 816, column: 1, scope: !1028)
+!1035 = !DILocation(line: 815, column: 1, scope: !1028)
+!1036 = !DILocation(line: 812, column: 1, scope: !1028)
+!1037 = !DILocation(line: 813, column: 1, scope: !1028)
+!1038 = !DILocation(line: 814, column: 1, scope: !1028)
+!1039 = !DILocation(line: 822, column: 1, scope: !1028)
 !1040 = !DIFile(filename: "Mem.spec", directory: "./spec/lib/base/sys")
 !1041 = distinct !DISubprogram(name: "Mem_alloc", scope: !1040, file: !1040, line: 17, type: !2, scopeLine: 17, spFlags: DISPFlagDefinition, unit: !0)
 !1042 = !DILocation(line: 17, column: 1, scope: !1041)
@@ -454098,388 +454085,388 @@ ret_blk:
 !2176 = !DILocation(line: 198, column: 1, scope: !2173)
 !2177 = !DILocation(line: 203, column: 1, scope: !2173)
 !2178 = !DIFile(filename: "HashTable.spec", directory: "./spec/lib/base/sys")
-!2179 = distinct !DISubprogram(name: "HashTable_mapLock", scope: !2178, file: !2178, line: 30, type: !2, scopeLine: 30, spFlags: DISPFlagDefinition, unit: !0)
-!2180 = !DILocation(line: 30, column: 1, scope: !2179)
-!2181 = !DILocation(line: 31, column: 1, scope: !2179)
-!2182 = distinct !DISubprogram(name: "HashTable_mapUnlock", scope: !2178, file: !2178, line: 35, type: !2, scopeLine: 35, spFlags: DISPFlagDefinition, unit: !0)
-!2183 = !DILocation(line: 35, column: 1, scope: !2182)
-!2184 = !DILocation(line: 36, column: 1, scope: !2182)
-!2185 = distinct !DISubprogram(name: "HashTable_mapNewTyped", scope: !2178, file: !2178, line: 40, type: !2, scopeLine: 40, spFlags: DISPFlagDefinition, unit: !0)
-!2186 = !DILocation(line: 40, column: 1, scope: !2185)
-!2187 = !DILocation(line: 41, column: 1, scope: !2185)
-!2188 = !DILocation(line: 42, column: 1, scope: !2185)
-!2189 = !DILocation(line: 43, column: 1, scope: !2185)
-!2190 = !DILocation(line: 44, column: 1, scope: !2185)
-!2191 = !DILocation(line: 45, column: 1, scope: !2185)
-!2192 = !DILocation(line: 46, column: 1, scope: !2185)
-!2193 = !DILocation(line: 47, column: 1, scope: !2185)
-!2194 = distinct !DISubprogram(name: "HashTable_mapNewObject", scope: !2178, file: !2178, line: 51, type: !2, scopeLine: 51, spFlags: DISPFlagDefinition, unit: !0)
-!2195 = !DILocation(line: 51, column: 1, scope: !2194)
-!2196 = !DILocation(line: 52, column: 1, scope: !2194)
-!2197 = distinct !DISubprogram(name: "HashTable_mapNewLike", scope: !2178, file: !2178, line: 56, type: !2, scopeLine: 56, spFlags: DISPFlagDefinition, unit: !0)
-!2198 = !DILocation(line: 59, column: 1, scope: !2197)
-!2199 = !DILocation(line: 58, column: 1, scope: !2197)
-!2200 = !DILocation(line: 56, column: 1, scope: !2197)
-!2201 = !DILocation(line: 57, column: 1, scope: !2197)
-!2202 = distinct !DISubprogram(name: "HashTable_mapDestroy", scope: !2178, file: !2178, line: 63, type: !2, scopeLine: 63, spFlags: DISPFlagDefinition, unit: !0)
-!2203 = !DILocation(line: 82, column: 1, scope: !2202)
-!2204 = !DILocation(line: 81, column: 1, scope: !2202)
-!2205 = !DILocation(line: 80, column: 1, scope: !2202)
-!2206 = !DILocation(line: 77, column: 1, scope: !2202)
-!2207 = !DILocation(line: 76, column: 1, scope: !2202)
-!2208 = !DILocation(line: 75, column: 1, scope: !2202)
-!2209 = !DILocation(line: 73, column: 1, scope: !2202)
-!2210 = !DILocation(line: 71, column: 1, scope: !2202)
-!2211 = !DILocation(line: 70, column: 1, scope: !2202)
-!2212 = !DILocation(line: 69, column: 1, scope: !2202)
-!2213 = !DILocation(line: 68, column: 1, scope: !2202)
-!2214 = !DILocation(line: 66, column: 1, scope: !2202)
-!2215 = !DILocation(line: 63, column: 1, scope: !2202)
-!2216 = !DILocation(line: 64, column: 1, scope: !2202)
-!2217 = !DILocation(line: 65, column: 1, scope: !2202)
-!2218 = !DILocation(line: 67, column: 1, scope: !2202)
-!2219 = !DILocation(line: 72, column: 1, scope: !2202)
-!2220 = !DILocation(line: 74, column: 1, scope: !2202)
-!2221 = !DILocation(line: 78, column: 1, scope: !2202)
-!2222 = !DILocation(line: 83, column: 1, scope: !2202)
-!2223 = !DILocation(line: 85, column: 1, scope: !2202)
-!2224 = !DILocation(line: 86, column: 1, scope: !2202)
-!2225 = !DILocation(line: 88, column: 1, scope: !2202)
-!2226 = !DILocation(line: 90, column: 1, scope: !2202)
-!2227 = !DILocation(line: 91, column: 1, scope: !2202)
-!2228 = distinct !DISubprogram(name: "HashTable_mapHashString", scope: !2178, file: !2178, line: 94, type: !2, scopeLine: 94, spFlags: DISPFlagDefinition, unit: !0)
-!2229 = !DILocation(line: 99, column: 1, scope: !2228)
-!2230 = !DILocation(line: 98, column: 1, scope: !2228)
-!2231 = !DILocation(line: 97, column: 1, scope: !2228)
-!2232 = !DILocation(line: 96, column: 1, scope: !2228)
-!2233 = !DILocation(line: 94, column: 1, scope: !2228)
-!2234 = !DILocation(line: 95, column: 1, scope: !2228)
-!2235 = !DILocation(line: 100, column: 1, scope: !2228)
-!2236 = !DILocation(line: 101, column: 1, scope: !2228)
-!2237 = !DILocation(line: 102, column: 1, scope: !2228)
-!2238 = !DILocation(line: 104, column: 1, scope: !2228)
-!2239 = distinct !DISubprogram(name: "HashTable_mapHashBits", scope: !2178, file: !2178, line: 107, type: !2, scopeLine: 107, spFlags: DISPFlagDefinition, unit: !0)
-!2240 = !DILocation(line: 107, column: 1, scope: !2239)
-!2241 = !DILocation(line: 108, column: 1, scope: !2239)
-!2242 = !DILocation(line: 109, column: 1, scope: !2239)
-!2243 = !DILocation(line: 110, column: 1, scope: !2239)
-!2244 = !DILocation(line: 111, column: 1, scope: !2239)
-!2245 = !DILocation(line: 112, column: 1, scope: !2239)
-!2246 = !DILocation(line: 113, column: 1, scope: !2239)
-!2247 = !DILocation(line: 114, column: 1, scope: !2239)
-!2248 = distinct !DISubprogram(name: "HashTable_mapStrKeyEquals", scope: !2178, file: !2178, line: 117, type: !2, scopeLine: 117, spFlags: DISPFlagDefinition, unit: !0)
-!2249 = !DILocation(line: 125, column: 1, scope: !2248)
-!2250 = !DILocation(line: 124, column: 1, scope: !2248)
-!2251 = !DILocation(line: 121, column: 1, scope: !2248)
-!2252 = !DILocation(line: 120, column: 1, scope: !2248)
-!2253 = !DILocation(line: 119, column: 1, scope: !2248)
-!2254 = !DILocation(line: 117, column: 1, scope: !2248)
-!2255 = !DILocation(line: 118, column: 1, scope: !2248)
-!2256 = !DILocation(line: 122, column: 1, scope: !2248)
-!2257 = !DILocation(line: 123, column: 1, scope: !2248)
-!2258 = !DILocation(line: 126, column: 1, scope: !2248)
-!2259 = distinct !DISubprogram(name: "HashTable_mapFloatToBits", scope: !2178, file: !2178, line: 129, type: !2, scopeLine: 129, spFlags: DISPFlagDefinition, unit: !0)
-!2260 = !DILocation(line: 129, column: 1, scope: !2259)
-!2261 = !DILocation(line: 130, column: 1, scope: !2259)
-!2262 = !DILocation(line: 131, column: 1, scope: !2259)
-!2263 = distinct !DISubprogram(name: "HashTable_mapGrow", scope: !2178, file: !2178, line: 134, type: !2, scopeLine: 134, spFlags: DISPFlagDefinition, unit: !0)
-!2264 = !DILocation(line: 148, column: 1, scope: !2263)
-!2265 = !DILocation(line: 147, column: 1, scope: !2263)
-!2266 = !DILocation(line: 146, column: 1, scope: !2263)
-!2267 = !DILocation(line: 144, column: 1, scope: !2263)
-!2268 = !DILocation(line: 142, column: 1, scope: !2263)
-!2269 = !DILocation(line: 141, column: 1, scope: !2263)
-!2270 = !DILocation(line: 140, column: 1, scope: !2263)
-!2271 = !DILocation(line: 139, column: 1, scope: !2263)
-!2272 = !DILocation(line: 138, column: 1, scope: !2263)
-!2273 = !DILocation(line: 134, column: 1, scope: !2263)
-!2274 = !DILocation(line: 135, column: 1, scope: !2263)
-!2275 = !DILocation(line: 136, column: 1, scope: !2263)
-!2276 = !DILocation(line: 137, column: 1, scope: !2263)
-!2277 = !DILocation(line: 143, column: 1, scope: !2263)
-!2278 = !DILocation(line: 145, column: 1, scope: !2263)
-!2279 = !DILocation(line: 153, column: 1, scope: !2263)
-!2280 = !DILocation(line: 154, column: 1, scope: !2263)
-!2281 = !DILocation(line: 155, column: 1, scope: !2263)
-!2282 = !DILocation(line: 157, column: 1, scope: !2263)
-!2283 = !DILocation(line: 159, column: 1, scope: !2263)
-!2284 = !DILocation(line: 160, column: 1, scope: !2263)
-!2285 = !DILocation(line: 161, column: 1, scope: !2263)
-!2286 = distinct !DISubprogram(name: "HashTable_mapSetRaw", scope: !2178, file: !2178, line: 164, type: !2, scopeLine: 164, spFlags: DISPFlagDefinition, unit: !0)
-!2287 = !DILocation(line: 224, column: 1, scope: !2286)
-!2288 = !DILocation(line: 218, column: 1, scope: !2286)
-!2289 = !DILocation(line: 213, column: 1, scope: !2286)
-!2290 = !DILocation(line: 210, column: 1, scope: !2286)
-!2291 = !DILocation(line: 207, column: 1, scope: !2286)
-!2292 = !DILocation(line: 197, column: 1, scope: !2286)
-!2293 = !DILocation(line: 196, column: 1, scope: !2286)
-!2294 = !DILocation(line: 195, column: 1, scope: !2286)
-!2295 = !DILocation(line: 192, column: 1, scope: !2286)
-!2296 = !DILocation(line: 186, column: 1, scope: !2286)
-!2297 = !DILocation(line: 185, column: 1, scope: !2286)
-!2298 = !DILocation(line: 183, column: 1, scope: !2286)
-!2299 = !DILocation(line: 178, column: 1, scope: !2286)
-!2300 = !DILocation(line: 177, column: 1, scope: !2286)
-!2301 = !DILocation(line: 176, column: 1, scope: !2286)
-!2302 = !DILocation(line: 175, column: 1, scope: !2286)
-!2303 = !DILocation(line: 174, column: 1, scope: !2286)
-!2304 = !DILocation(line: 173, column: 1, scope: !2286)
-!2305 = !DILocation(line: 171, column: 1, scope: !2286)
-!2306 = !DILocation(line: 170, column: 1, scope: !2286)
-!2307 = !DILocation(line: 164, column: 1, scope: !2286)
-!2308 = !DILocation(line: 165, column: 1, scope: !2286)
-!2309 = !DILocation(line: 166, column: 1, scope: !2286)
-!2310 = !DILocation(line: 167, column: 1, scope: !2286)
-!2311 = !DILocation(line: 168, column: 1, scope: !2286)
-!2312 = !DILocation(line: 172, column: 1, scope: !2286)
-!2313 = !DILocation(line: 184, column: 1, scope: !2286)
-!2314 = !DILocation(line: 191, column: 1, scope: !2286)
-!2315 = !DILocation(line: 193, column: 1, scope: !2286)
-!2316 = !DILocation(line: 198, column: 1, scope: !2286)
-!2317 = !DILocation(line: 200, column: 1, scope: !2286)
-!2318 = !DILocation(line: 201, column: 1, scope: !2286)
-!2319 = !DILocation(line: 202, column: 1, scope: !2286)
-!2320 = !DILocation(line: 203, column: 1, scope: !2286)
-!2321 = !DILocation(line: 205, column: 1, scope: !2286)
-!2322 = !DILocation(line: 208, column: 1, scope: !2286)
-!2323 = !DILocation(line: 211, column: 1, scope: !2286)
-!2324 = !DILocation(line: 214, column: 1, scope: !2286)
-!2325 = !DILocation(line: 215, column: 1, scope: !2286)
-!2326 = !DILocation(line: 216, column: 1, scope: !2286)
-!2327 = !DILocation(line: 217, column: 1, scope: !2286)
-!2328 = !DILocation(line: 225, column: 1, scope: !2286)
-!2329 = !DILocation(line: 226, column: 1, scope: !2286)
-!2330 = !DILocation(line: 227, column: 1, scope: !2286)
-!2331 = !DILocation(line: 228, column: 1, scope: !2286)
-!2332 = !DILocation(line: 229, column: 1, scope: !2286)
-!2333 = !DILocation(line: 230, column: 1, scope: !2286)
-!2334 = !DILocation(line: 231, column: 1, scope: !2286)
-!2335 = distinct !DISubprogram(name: "HashTable_mapGetRaw", scope: !2178, file: !2178, line: 234, type: !2, scopeLine: 234, spFlags: DISPFlagDefinition, unit: !0)
-!2336 = !DILocation(line: 259, column: 1, scope: !2335)
-!2337 = !DILocation(line: 258, column: 1, scope: !2335)
-!2338 = !DILocation(line: 257, column: 1, scope: !2335)
-!2339 = !DILocation(line: 256, column: 1, scope: !2335)
-!2340 = !DILocation(line: 250, column: 1, scope: !2335)
-!2341 = !DILocation(line: 249, column: 1, scope: !2335)
-!2342 = !DILocation(line: 247, column: 1, scope: !2335)
-!2343 = !DILocation(line: 242, column: 1, scope: !2335)
-!2344 = !DILocation(line: 241, column: 1, scope: !2335)
-!2345 = !DILocation(line: 240, column: 1, scope: !2335)
-!2346 = !DILocation(line: 238, column: 1, scope: !2335)
-!2347 = !DILocation(line: 237, column: 1, scope: !2335)
-!2348 = !DILocation(line: 236, column: 1, scope: !2335)
-!2349 = !DILocation(line: 234, column: 1, scope: !2335)
-!2350 = !DILocation(line: 235, column: 1, scope: !2335)
-!2351 = !DILocation(line: 239, column: 1, scope: !2335)
-!2352 = !DILocation(line: 248, column: 1, scope: !2335)
-!2353 = !DILocation(line: 255, column: 1, scope: !2335)
-!2354 = !DILocation(line: 260, column: 1, scope: !2335)
-!2355 = !DILocation(line: 261, column: 1, scope: !2335)
-!2356 = !DILocation(line: 263, column: 1, scope: !2335)
-!2357 = !DILocation(line: 264, column: 1, scope: !2335)
-!2358 = !DILocation(line: 266, column: 1, scope: !2335)
-!2359 = !DILocation(line: 268, column: 1, scope: !2335)
-!2360 = !DILocation(line: 269, column: 1, scope: !2335)
-!2361 = distinct !DISubprogram(name: "HashTable_mapGetCheckedRaw", scope: !2178, file: !2178, line: 272, type: !2, scopeLine: 272, spFlags: DISPFlagDefinition, unit: !0)
-!2362 = !DILocation(line: 303, column: 1, scope: !2361)
-!2363 = !DILocation(line: 302, column: 1, scope: !2361)
-!2364 = !DILocation(line: 301, column: 1, scope: !2361)
-!2365 = !DILocation(line: 300, column: 1, scope: !2361)
-!2366 = !DILocation(line: 294, column: 1, scope: !2361)
-!2367 = !DILocation(line: 293, column: 1, scope: !2361)
-!2368 = !DILocation(line: 291, column: 1, scope: !2361)
-!2369 = !DILocation(line: 286, column: 1, scope: !2361)
-!2370 = !DILocation(line: 285, column: 1, scope: !2361)
-!2371 = !DILocation(line: 284, column: 1, scope: !2361)
-!2372 = !DILocation(line: 282, column: 1, scope: !2361)
-!2373 = !DILocation(line: 278, column: 1, scope: !2361)
-!2374 = !DILocation(line: 277, column: 1, scope: !2361)
-!2375 = !DILocation(line: 272, column: 1, scope: !2361)
-!2376 = !DILocation(line: 273, column: 1, scope: !2361)
-!2377 = !DILocation(line: 274, column: 1, scope: !2361)
-!2378 = !DILocation(line: 275, column: 1, scope: !2361)
-!2379 = !DILocation(line: 279, column: 1, scope: !2361)
-!2380 = !DILocation(line: 280, column: 1, scope: !2361)
-!2381 = !DILocation(line: 283, column: 1, scope: !2361)
-!2382 = !DILocation(line: 292, column: 1, scope: !2361)
-!2383 = !DILocation(line: 299, column: 1, scope: !2361)
-!2384 = !DILocation(line: 304, column: 1, scope: !2361)
-!2385 = !DILocation(line: 305, column: 1, scope: !2361)
-!2386 = !DILocation(line: 307, column: 1, scope: !2361)
-!2387 = !DILocation(line: 308, column: 1, scope: !2361)
-!2388 = !DILocation(line: 310, column: 1, scope: !2361)
-!2389 = !DILocation(line: 312, column: 1, scope: !2361)
-!2390 = !DILocation(line: 313, column: 1, scope: !2361)
-!2391 = !DILocation(line: 314, column: 1, scope: !2361)
-!2392 = distinct !DISubprogram(name: "HashTable_mapGetChecked", scope: !2178, file: !2178, line: 317, type: !2, scopeLine: 317, spFlags: DISPFlagDefinition, unit: !0)
-!2393 = !DILocation(line: 317, column: 1, scope: !2392)
-!2394 = !DILocation(line: 318, column: 1, scope: !2392)
-!2395 = distinct !DISubprogram(name: "HashTable_mapGetIntChecked", scope: !2178, file: !2178, line: 321, type: !2, scopeLine: 321, spFlags: DISPFlagDefinition, unit: !0)
-!2396 = !DILocation(line: 321, column: 1, scope: !2395)
-!2397 = !DILocation(line: 322, column: 1, scope: !2395)
-!2398 = distinct !DISubprogram(name: "HashTable_mapGetFltChecked", scope: !2178, file: !2178, line: 325, type: !2, scopeLine: 325, spFlags: DISPFlagDefinition, unit: !0)
-!2399 = !DILocation(line: 326, column: 1, scope: !2398)
-!2400 = !DILocation(line: 325, column: 1, scope: !2398)
-!2401 = distinct !DISubprogram(name: "HashTable_mapGetObjChecked", scope: !2178, file: !2178, line: 329, type: !2, scopeLine: 329, spFlags: DISPFlagDefinition, unit: !0)
-!2402 = !DILocation(line: 329, column: 1, scope: !2401)
-!2403 = !DILocation(line: 330, column: 1, scope: !2401)
-!2404 = distinct !DISubprogram(name: "HashTable_mapHasRaw", scope: !2178, file: !2178, line: 333, type: !2, scopeLine: 333, spFlags: DISPFlagDefinition, unit: !0)
-!2405 = !DILocation(line: 349, column: 1, scope: !2404)
-!2406 = !DILocation(line: 348, column: 1, scope: !2404)
-!2407 = !DILocation(line: 346, column: 1, scope: !2404)
-!2408 = !DILocation(line: 341, column: 1, scope: !2404)
-!2409 = !DILocation(line: 340, column: 1, scope: !2404)
-!2410 = !DILocation(line: 339, column: 1, scope: !2404)
-!2411 = !DILocation(line: 337, column: 1, scope: !2404)
-!2412 = !DILocation(line: 336, column: 1, scope: !2404)
-!2413 = !DILocation(line: 335, column: 1, scope: !2404)
-!2414 = !DILocation(line: 333, column: 1, scope: !2404)
-!2415 = !DILocation(line: 334, column: 1, scope: !2404)
-!2416 = !DILocation(line: 338, column: 1, scope: !2404)
-!2417 = !DILocation(line: 347, column: 1, scope: !2404)
-!2418 = !DILocation(line: 354, column: 1, scope: !2404)
-!2419 = !DILocation(line: 355, column: 1, scope: !2404)
-!2420 = !DILocation(line: 356, column: 1, scope: !2404)
-!2421 = !DILocation(line: 358, column: 1, scope: !2404)
-!2422 = !DILocation(line: 360, column: 1, scope: !2404)
-!2423 = !DILocation(line: 361, column: 1, scope: !2404)
-!2424 = distinct !DISubprogram(name: "HashTable_mapRemoveRaw", scope: !2178, file: !2178, line: 364, type: !2, scopeLine: 364, spFlags: DISPFlagDefinition, unit: !0)
-!2425 = !DILocation(line: 406, column: 1, scope: !2424)
-!2426 = !DILocation(line: 402, column: 1, scope: !2424)
-!2427 = !DILocation(line: 401, column: 1, scope: !2424)
-!2428 = !DILocation(line: 400, column: 1, scope: !2424)
-!2429 = !DILocation(line: 399, column: 1, scope: !2424)
-!2430 = !DILocation(line: 396, column: 1, scope: !2424)
-!2431 = !DILocation(line: 390, column: 1, scope: !2424)
-!2432 = !DILocation(line: 384, column: 1, scope: !2424)
-!2433 = !DILocation(line: 383, column: 1, scope: !2424)
-!2434 = !DILocation(line: 381, column: 1, scope: !2424)
-!2435 = !DILocation(line: 380, column: 1, scope: !2424)
-!2436 = !DILocation(line: 375, column: 1, scope: !2424)
-!2437 = !DILocation(line: 374, column: 1, scope: !2424)
-!2438 = !DILocation(line: 373, column: 1, scope: !2424)
-!2439 = !DILocation(line: 371, column: 1, scope: !2424)
-!2440 = !DILocation(line: 370, column: 1, scope: !2424)
-!2441 = !DILocation(line: 364, column: 1, scope: !2424)
-!2442 = !DILocation(line: 365, column: 1, scope: !2424)
-!2443 = !DILocation(line: 366, column: 1, scope: !2424)
-!2444 = !DILocation(line: 367, column: 1, scope: !2424)
-!2445 = !DILocation(line: 368, column: 1, scope: !2424)
-!2446 = !DILocation(line: 372, column: 1, scope: !2424)
-!2447 = !DILocation(line: 382, column: 1, scope: !2424)
-!2448 = !DILocation(line: 389, column: 1, scope: !2424)
-!2449 = !DILocation(line: 391, column: 1, scope: !2424)
-!2450 = !DILocation(line: 392, column: 1, scope: !2424)
-!2451 = !DILocation(line: 394, column: 1, scope: !2424)
-!2452 = !DILocation(line: 397, column: 1, scope: !2424)
-!2453 = !DILocation(line: 403, column: 1, scope: !2424)
-!2454 = !DILocation(line: 405, column: 1, scope: !2424)
-!2455 = !DILocation(line: 407, column: 1, scope: !2424)
-!2456 = !DILocation(line: 408, column: 1, scope: !2424)
-!2457 = !DILocation(line: 409, column: 1, scope: !2424)
-!2458 = !DILocation(line: 411, column: 1, scope: !2424)
-!2459 = !DILocation(line: 412, column: 1, scope: !2424)
-!2460 = !DILocation(line: 414, column: 1, scope: !2424)
-!2461 = !DILocation(line: 415, column: 1, scope: !2424)
-!2462 = distinct !DISubprogram(name: "HashTable_mapSet", scope: !2178, file: !2178, line: 418, type: !2, scopeLine: 418, spFlags: DISPFlagDefinition, unit: !0)
-!2463 = !DILocation(line: 418, column: 1, scope: !2462)
-!2464 = !DILocation(line: 419, column: 1, scope: !2462)
-!2465 = distinct !DISubprogram(name: "HashTable_mapSetAny", scope: !2178, file: !2178, line: 422, type: !2, scopeLine: 422, spFlags: DISPFlagDefinition, unit: !0)
-!2466 = !DILocation(line: 422, column: 1, scope: !2465)
-!2467 = !DILocation(line: 423, column: 1, scope: !2465)
-!2468 = distinct !DISubprogram(name: "HashTable_mapGet", scope: !2178, file: !2178, line: 426, type: !2, scopeLine: 426, spFlags: DISPFlagDefinition, unit: !0)
-!2469 = !DILocation(line: 426, column: 1, scope: !2468)
-!2470 = !DILocation(line: 427, column: 1, scope: !2468)
-!2471 = distinct !DISubprogram(name: "HashTable_mapHas", scope: !2178, file: !2178, line: 430, type: !2, scopeLine: 430, spFlags: DISPFlagDefinition, unit: !0)
-!2472 = !DILocation(line: 430, column: 1, scope: !2471)
-!2473 = !DILocation(line: 431, column: 1, scope: !2471)
-!2474 = distinct !DISubprogram(name: "HashTable_mapRemove", scope: !2178, file: !2178, line: 434, type: !2, scopeLine: 434, spFlags: DISPFlagDefinition, unit: !0)
-!2475 = !DILocation(line: 434, column: 1, scope: !2474)
-!2476 = !DILocation(line: 435, column: 1, scope: !2474)
-!2477 = distinct !DISubprogram(name: "HashTable_mapSetInt", scope: !2178, file: !2178, line: 438, type: !2, scopeLine: 438, spFlags: DISPFlagDefinition, unit: !0)
-!2478 = !DILocation(line: 438, column: 1, scope: !2477)
-!2479 = !DILocation(line: 439, column: 1, scope: !2477)
-!2480 = distinct !DISubprogram(name: "HashTable_mapSetIntAny", scope: !2178, file: !2178, line: 442, type: !2, scopeLine: 442, spFlags: DISPFlagDefinition, unit: !0)
-!2481 = !DILocation(line: 442, column: 1, scope: !2480)
-!2482 = !DILocation(line: 443, column: 1, scope: !2480)
-!2483 = distinct !DISubprogram(name: "HashTable_mapGetInt", scope: !2178, file: !2178, line: 446, type: !2, scopeLine: 446, spFlags: DISPFlagDefinition, unit: !0)
-!2484 = !DILocation(line: 446, column: 1, scope: !2483)
-!2485 = !DILocation(line: 447, column: 1, scope: !2483)
-!2486 = distinct !DISubprogram(name: "HashTable_mapHasInt", scope: !2178, file: !2178, line: 450, type: !2, scopeLine: 450, spFlags: DISPFlagDefinition, unit: !0)
-!2487 = !DILocation(line: 450, column: 1, scope: !2486)
-!2488 = !DILocation(line: 451, column: 1, scope: !2486)
-!2489 = distinct !DISubprogram(name: "HashTable_mapRemoveInt", scope: !2178, file: !2178, line: 454, type: !2, scopeLine: 454, spFlags: DISPFlagDefinition, unit: !0)
-!2490 = !DILocation(line: 454, column: 1, scope: !2489)
-!2491 = !DILocation(line: 455, column: 1, scope: !2489)
-!2492 = distinct !DISubprogram(name: "HashTable_mapSetFlt", scope: !2178, file: !2178, line: 458, type: !2, scopeLine: 458, spFlags: DISPFlagDefinition, unit: !0)
-!2493 = !DILocation(line: 458, column: 1, scope: !2492)
-!2494 = !DILocation(line: 459, column: 1, scope: !2492)
-!2495 = distinct !DISubprogram(name: "HashTable_mapSetFltAny", scope: !2178, file: !2178, line: 462, type: !2, scopeLine: 462, spFlags: DISPFlagDefinition, unit: !0)
-!2496 = !DILocation(line: 462, column: 1, scope: !2495)
-!2497 = !DILocation(line: 463, column: 1, scope: !2495)
-!2498 = distinct !DISubprogram(name: "HashTable_mapGetFlt", scope: !2178, file: !2178, line: 466, type: !2, scopeLine: 466, spFlags: DISPFlagDefinition, unit: !0)
-!2499 = !DILocation(line: 467, column: 1, scope: !2498)
-!2500 = !DILocation(line: 466, column: 1, scope: !2498)
-!2501 = distinct !DISubprogram(name: "HashTable_mapHasFlt", scope: !2178, file: !2178, line: 470, type: !2, scopeLine: 470, spFlags: DISPFlagDefinition, unit: !0)
-!2502 = !DILocation(line: 471, column: 1, scope: !2501)
-!2503 = !DILocation(line: 470, column: 1, scope: !2501)
-!2504 = distinct !DISubprogram(name: "HashTable_mapRemoveFlt", scope: !2178, file: !2178, line: 474, type: !2, scopeLine: 474, spFlags: DISPFlagDefinition, unit: !0)
-!2505 = !DILocation(line: 475, column: 1, scope: !2504)
-!2506 = !DILocation(line: 474, column: 1, scope: !2504)
-!2507 = distinct !DISubprogram(name: "HashTable_mapSetObj", scope: !2178, file: !2178, line: 478, type: !2, scopeLine: 478, spFlags: DISPFlagDefinition, unit: !0)
-!2508 = !DILocation(line: 478, column: 1, scope: !2507)
-!2509 = !DILocation(line: 479, column: 1, scope: !2507)
-!2510 = distinct !DISubprogram(name: "HashTable_mapSetObjAny", scope: !2178, file: !2178, line: 482, type: !2, scopeLine: 482, spFlags: DISPFlagDefinition, unit: !0)
-!2511 = !DILocation(line: 482, column: 1, scope: !2510)
-!2512 = !DILocation(line: 483, column: 1, scope: !2510)
-!2513 = distinct !DISubprogram(name: "HashTable_mapGetObj", scope: !2178, file: !2178, line: 486, type: !2, scopeLine: 486, spFlags: DISPFlagDefinition, unit: !0)
-!2514 = !DILocation(line: 486, column: 1, scope: !2513)
-!2515 = !DILocation(line: 487, column: 1, scope: !2513)
-!2516 = distinct !DISubprogram(name: "HashTable_mapHasObj", scope: !2178, file: !2178, line: 490, type: !2, scopeLine: 490, spFlags: DISPFlagDefinition, unit: !0)
-!2517 = !DILocation(line: 490, column: 1, scope: !2516)
-!2518 = !DILocation(line: 491, column: 1, scope: !2516)
-!2519 = distinct !DISubprogram(name: "HashTable_mapRemoveObj", scope: !2178, file: !2178, line: 494, type: !2, scopeLine: 494, spFlags: DISPFlagDefinition, unit: !0)
-!2520 = !DILocation(line: 494, column: 1, scope: !2519)
-!2521 = !DILocation(line: 495, column: 1, scope: !2519)
-!2522 = distinct !DISubprogram(name: "HashTable_mapLength", scope: !2178, file: !2178, line: 498, type: !2, scopeLine: 498, spFlags: DISPFlagDefinition, unit: !0)
-!2523 = !DILocation(line: 505, column: 1, scope: !2522)
-!2524 = !DILocation(line: 498, column: 1, scope: !2522)
-!2525 = !DILocation(line: 499, column: 1, scope: !2522)
-!2526 = !DILocation(line: 500, column: 1, scope: !2522)
-!2527 = !DILocation(line: 501, column: 1, scope: !2522)
-!2528 = !DILocation(line: 502, column: 1, scope: !2522)
-!2529 = !DILocation(line: 504, column: 1, scope: !2522)
-!2530 = !DILocation(line: 506, column: 1, scope: !2522)
-!2531 = !DILocation(line: 507, column: 1, scope: !2522)
-!2532 = distinct !DISubprogram(name: "HashTable_mapFreeze", scope: !2178, file: !2178, line: 510, type: !2, scopeLine: 510, spFlags: DISPFlagDefinition, unit: !0)
-!2533 = !DILocation(line: 510, column: 1, scope: !2532)
-!2534 = !DILocation(line: 511, column: 1, scope: !2532)
-!2535 = !DILocation(line: 512, column: 1, scope: !2532)
-!2536 = !DILocation(line: 513, column: 1, scope: !2532)
-!2537 = !DILocation(line: 514, column: 1, scope: !2532)
-!2538 = !DILocation(line: 515, column: 1, scope: !2532)
-!2539 = distinct !DISubprogram(name: "HashTable_mapKeys", scope: !2178, file: !2178, line: 518, type: !2, scopeLine: 518, spFlags: DISPFlagDefinition, unit: !0)
-!2540 = !DILocation(line: 534, column: 1, scope: !2539)
-!2541 = !DILocation(line: 532, column: 1, scope: !2539)
-!2542 = !DILocation(line: 530, column: 1, scope: !2539)
-!2543 = !DILocation(line: 529, column: 1, scope: !2539)
-!2544 = !DILocation(line: 528, column: 1, scope: !2539)
-!2545 = !DILocation(line: 526, column: 1, scope: !2539)
-!2546 = !DILocation(line: 523, column: 1, scope: !2539)
-!2547 = !DILocation(line: 522, column: 1, scope: !2539)
-!2548 = !DILocation(line: 518, column: 1, scope: !2539)
-!2549 = !DILocation(line: 519, column: 1, scope: !2539)
-!2550 = !DILocation(line: 520, column: 1, scope: !2539)
-!2551 = !DILocation(line: 521, column: 1, scope: !2539)
-!2552 = !DILocation(line: 524, column: 1, scope: !2539)
-!2553 = !DILocation(line: 527, column: 1, scope: !2539)
-!2554 = !DILocation(line: 531, column: 1, scope: !2539)
-!2555 = !DILocation(line: 533, column: 1, scope: !2539)
-!2556 = !DILocation(line: 535, column: 1, scope: !2539)
-!2557 = !DILocation(line: 536, column: 1, scope: !2539)
-!2558 = !DILocation(line: 538, column: 1, scope: !2539)
-!2559 = !DILocation(line: 540, column: 1, scope: !2539)
-!2560 = !DILocation(line: 541, column: 1, scope: !2539)
+!2179 = distinct !DISubprogram(name: "HashTable_mapLock", scope: !2178, file: !2178, line: 32, type: !2, scopeLine: 32, spFlags: DISPFlagDefinition, unit: !0)
+!2180 = !DILocation(line: 32, column: 1, scope: !2179)
+!2181 = !DILocation(line: 33, column: 1, scope: !2179)
+!2182 = distinct !DISubprogram(name: "HashTable_mapUnlock", scope: !2178, file: !2178, line: 37, type: !2, scopeLine: 37, spFlags: DISPFlagDefinition, unit: !0)
+!2183 = !DILocation(line: 37, column: 1, scope: !2182)
+!2184 = !DILocation(line: 38, column: 1, scope: !2182)
+!2185 = distinct !DISubprogram(name: "HashTable_mapNewTyped", scope: !2178, file: !2178, line: 42, type: !2, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !0)
+!2186 = !DILocation(line: 42, column: 1, scope: !2185)
+!2187 = !DILocation(line: 43, column: 1, scope: !2185)
+!2188 = !DILocation(line: 44, column: 1, scope: !2185)
+!2189 = !DILocation(line: 45, column: 1, scope: !2185)
+!2190 = !DILocation(line: 46, column: 1, scope: !2185)
+!2191 = !DILocation(line: 47, column: 1, scope: !2185)
+!2192 = !DILocation(line: 48, column: 1, scope: !2185)
+!2193 = !DILocation(line: 49, column: 1, scope: !2185)
+!2194 = distinct !DISubprogram(name: "HashTable_mapNewObject", scope: !2178, file: !2178, line: 53, type: !2, scopeLine: 53, spFlags: DISPFlagDefinition, unit: !0)
+!2195 = !DILocation(line: 53, column: 1, scope: !2194)
+!2196 = !DILocation(line: 54, column: 1, scope: !2194)
+!2197 = distinct !DISubprogram(name: "HashTable_mapNewLike", scope: !2178, file: !2178, line: 58, type: !2, scopeLine: 58, spFlags: DISPFlagDefinition, unit: !0)
+!2198 = !DILocation(line: 61, column: 1, scope: !2197)
+!2199 = !DILocation(line: 60, column: 1, scope: !2197)
+!2200 = !DILocation(line: 58, column: 1, scope: !2197)
+!2201 = !DILocation(line: 59, column: 1, scope: !2197)
+!2202 = distinct !DISubprogram(name: "HashTable_mapDestroy", scope: !2178, file: !2178, line: 65, type: !2, scopeLine: 65, spFlags: DISPFlagDefinition, unit: !0)
+!2203 = !DILocation(line: 84, column: 1, scope: !2202)
+!2204 = !DILocation(line: 83, column: 1, scope: !2202)
+!2205 = !DILocation(line: 82, column: 1, scope: !2202)
+!2206 = !DILocation(line: 79, column: 1, scope: !2202)
+!2207 = !DILocation(line: 78, column: 1, scope: !2202)
+!2208 = !DILocation(line: 77, column: 1, scope: !2202)
+!2209 = !DILocation(line: 75, column: 1, scope: !2202)
+!2210 = !DILocation(line: 73, column: 1, scope: !2202)
+!2211 = !DILocation(line: 72, column: 1, scope: !2202)
+!2212 = !DILocation(line: 71, column: 1, scope: !2202)
+!2213 = !DILocation(line: 70, column: 1, scope: !2202)
+!2214 = !DILocation(line: 68, column: 1, scope: !2202)
+!2215 = !DILocation(line: 65, column: 1, scope: !2202)
+!2216 = !DILocation(line: 66, column: 1, scope: !2202)
+!2217 = !DILocation(line: 67, column: 1, scope: !2202)
+!2218 = !DILocation(line: 69, column: 1, scope: !2202)
+!2219 = !DILocation(line: 74, column: 1, scope: !2202)
+!2220 = !DILocation(line: 76, column: 1, scope: !2202)
+!2221 = !DILocation(line: 80, column: 1, scope: !2202)
+!2222 = !DILocation(line: 85, column: 1, scope: !2202)
+!2223 = !DILocation(line: 87, column: 1, scope: !2202)
+!2224 = !DILocation(line: 88, column: 1, scope: !2202)
+!2225 = !DILocation(line: 90, column: 1, scope: !2202)
+!2226 = !DILocation(line: 92, column: 1, scope: !2202)
+!2227 = !DILocation(line: 93, column: 1, scope: !2202)
+!2228 = distinct !DISubprogram(name: "HashTable_mapHashString", scope: !2178, file: !2178, line: 96, type: !2, scopeLine: 96, spFlags: DISPFlagDefinition, unit: !0)
+!2229 = !DILocation(line: 101, column: 1, scope: !2228)
+!2230 = !DILocation(line: 100, column: 1, scope: !2228)
+!2231 = !DILocation(line: 99, column: 1, scope: !2228)
+!2232 = !DILocation(line: 98, column: 1, scope: !2228)
+!2233 = !DILocation(line: 96, column: 1, scope: !2228)
+!2234 = !DILocation(line: 97, column: 1, scope: !2228)
+!2235 = !DILocation(line: 102, column: 1, scope: !2228)
+!2236 = !DILocation(line: 103, column: 1, scope: !2228)
+!2237 = !DILocation(line: 104, column: 1, scope: !2228)
+!2238 = !DILocation(line: 106, column: 1, scope: !2228)
+!2239 = distinct !DISubprogram(name: "HashTable_mapHashBits", scope: !2178, file: !2178, line: 109, type: !2, scopeLine: 109, spFlags: DISPFlagDefinition, unit: !0)
+!2240 = !DILocation(line: 109, column: 1, scope: !2239)
+!2241 = !DILocation(line: 110, column: 1, scope: !2239)
+!2242 = !DILocation(line: 111, column: 1, scope: !2239)
+!2243 = !DILocation(line: 112, column: 1, scope: !2239)
+!2244 = !DILocation(line: 113, column: 1, scope: !2239)
+!2245 = !DILocation(line: 114, column: 1, scope: !2239)
+!2246 = !DILocation(line: 115, column: 1, scope: !2239)
+!2247 = !DILocation(line: 116, column: 1, scope: !2239)
+!2248 = distinct !DISubprogram(name: "HashTable_mapStrKeyEquals", scope: !2178, file: !2178, line: 119, type: !2, scopeLine: 119, spFlags: DISPFlagDefinition, unit: !0)
+!2249 = !DILocation(line: 127, column: 1, scope: !2248)
+!2250 = !DILocation(line: 126, column: 1, scope: !2248)
+!2251 = !DILocation(line: 123, column: 1, scope: !2248)
+!2252 = !DILocation(line: 122, column: 1, scope: !2248)
+!2253 = !DILocation(line: 121, column: 1, scope: !2248)
+!2254 = !DILocation(line: 119, column: 1, scope: !2248)
+!2255 = !DILocation(line: 120, column: 1, scope: !2248)
+!2256 = !DILocation(line: 124, column: 1, scope: !2248)
+!2257 = !DILocation(line: 125, column: 1, scope: !2248)
+!2258 = !DILocation(line: 128, column: 1, scope: !2248)
+!2259 = distinct !DISubprogram(name: "HashTable_mapFloatToBits", scope: !2178, file: !2178, line: 131, type: !2, scopeLine: 131, spFlags: DISPFlagDefinition, unit: !0)
+!2260 = !DILocation(line: 131, column: 1, scope: !2259)
+!2261 = !DILocation(line: 132, column: 1, scope: !2259)
+!2262 = !DILocation(line: 133, column: 1, scope: !2259)
+!2263 = distinct !DISubprogram(name: "HashTable_mapGrow", scope: !2178, file: !2178, line: 136, type: !2, scopeLine: 136, spFlags: DISPFlagDefinition, unit: !0)
+!2264 = !DILocation(line: 150, column: 1, scope: !2263)
+!2265 = !DILocation(line: 149, column: 1, scope: !2263)
+!2266 = !DILocation(line: 148, column: 1, scope: !2263)
+!2267 = !DILocation(line: 146, column: 1, scope: !2263)
+!2268 = !DILocation(line: 144, column: 1, scope: !2263)
+!2269 = !DILocation(line: 143, column: 1, scope: !2263)
+!2270 = !DILocation(line: 142, column: 1, scope: !2263)
+!2271 = !DILocation(line: 141, column: 1, scope: !2263)
+!2272 = !DILocation(line: 140, column: 1, scope: !2263)
+!2273 = !DILocation(line: 136, column: 1, scope: !2263)
+!2274 = !DILocation(line: 137, column: 1, scope: !2263)
+!2275 = !DILocation(line: 138, column: 1, scope: !2263)
+!2276 = !DILocation(line: 139, column: 1, scope: !2263)
+!2277 = !DILocation(line: 145, column: 1, scope: !2263)
+!2278 = !DILocation(line: 147, column: 1, scope: !2263)
+!2279 = !DILocation(line: 155, column: 1, scope: !2263)
+!2280 = !DILocation(line: 156, column: 1, scope: !2263)
+!2281 = !DILocation(line: 157, column: 1, scope: !2263)
+!2282 = !DILocation(line: 159, column: 1, scope: !2263)
+!2283 = !DILocation(line: 161, column: 1, scope: !2263)
+!2284 = !DILocation(line: 162, column: 1, scope: !2263)
+!2285 = !DILocation(line: 163, column: 1, scope: !2263)
+!2286 = distinct !DISubprogram(name: "HashTable_mapSetRaw", scope: !2178, file: !2178, line: 166, type: !2, scopeLine: 166, spFlags: DISPFlagDefinition, unit: !0)
+!2287 = !DILocation(line: 226, column: 1, scope: !2286)
+!2288 = !DILocation(line: 220, column: 1, scope: !2286)
+!2289 = !DILocation(line: 215, column: 1, scope: !2286)
+!2290 = !DILocation(line: 212, column: 1, scope: !2286)
+!2291 = !DILocation(line: 209, column: 1, scope: !2286)
+!2292 = !DILocation(line: 199, column: 1, scope: !2286)
+!2293 = !DILocation(line: 198, column: 1, scope: !2286)
+!2294 = !DILocation(line: 197, column: 1, scope: !2286)
+!2295 = !DILocation(line: 194, column: 1, scope: !2286)
+!2296 = !DILocation(line: 188, column: 1, scope: !2286)
+!2297 = !DILocation(line: 187, column: 1, scope: !2286)
+!2298 = !DILocation(line: 185, column: 1, scope: !2286)
+!2299 = !DILocation(line: 180, column: 1, scope: !2286)
+!2300 = !DILocation(line: 179, column: 1, scope: !2286)
+!2301 = !DILocation(line: 178, column: 1, scope: !2286)
+!2302 = !DILocation(line: 177, column: 1, scope: !2286)
+!2303 = !DILocation(line: 176, column: 1, scope: !2286)
+!2304 = !DILocation(line: 175, column: 1, scope: !2286)
+!2305 = !DILocation(line: 173, column: 1, scope: !2286)
+!2306 = !DILocation(line: 172, column: 1, scope: !2286)
+!2307 = !DILocation(line: 166, column: 1, scope: !2286)
+!2308 = !DILocation(line: 167, column: 1, scope: !2286)
+!2309 = !DILocation(line: 168, column: 1, scope: !2286)
+!2310 = !DILocation(line: 169, column: 1, scope: !2286)
+!2311 = !DILocation(line: 170, column: 1, scope: !2286)
+!2312 = !DILocation(line: 174, column: 1, scope: !2286)
+!2313 = !DILocation(line: 186, column: 1, scope: !2286)
+!2314 = !DILocation(line: 193, column: 1, scope: !2286)
+!2315 = !DILocation(line: 195, column: 1, scope: !2286)
+!2316 = !DILocation(line: 200, column: 1, scope: !2286)
+!2317 = !DILocation(line: 202, column: 1, scope: !2286)
+!2318 = !DILocation(line: 203, column: 1, scope: !2286)
+!2319 = !DILocation(line: 204, column: 1, scope: !2286)
+!2320 = !DILocation(line: 205, column: 1, scope: !2286)
+!2321 = !DILocation(line: 207, column: 1, scope: !2286)
+!2322 = !DILocation(line: 210, column: 1, scope: !2286)
+!2323 = !DILocation(line: 213, column: 1, scope: !2286)
+!2324 = !DILocation(line: 216, column: 1, scope: !2286)
+!2325 = !DILocation(line: 217, column: 1, scope: !2286)
+!2326 = !DILocation(line: 218, column: 1, scope: !2286)
+!2327 = !DILocation(line: 219, column: 1, scope: !2286)
+!2328 = !DILocation(line: 227, column: 1, scope: !2286)
+!2329 = !DILocation(line: 228, column: 1, scope: !2286)
+!2330 = !DILocation(line: 229, column: 1, scope: !2286)
+!2331 = !DILocation(line: 230, column: 1, scope: !2286)
+!2332 = !DILocation(line: 231, column: 1, scope: !2286)
+!2333 = !DILocation(line: 232, column: 1, scope: !2286)
+!2334 = !DILocation(line: 233, column: 1, scope: !2286)
+!2335 = distinct !DISubprogram(name: "HashTable_mapGetRaw", scope: !2178, file: !2178, line: 236, type: !2, scopeLine: 236, spFlags: DISPFlagDefinition, unit: !0)
+!2336 = !DILocation(line: 261, column: 1, scope: !2335)
+!2337 = !DILocation(line: 260, column: 1, scope: !2335)
+!2338 = !DILocation(line: 259, column: 1, scope: !2335)
+!2339 = !DILocation(line: 258, column: 1, scope: !2335)
+!2340 = !DILocation(line: 252, column: 1, scope: !2335)
+!2341 = !DILocation(line: 251, column: 1, scope: !2335)
+!2342 = !DILocation(line: 249, column: 1, scope: !2335)
+!2343 = !DILocation(line: 244, column: 1, scope: !2335)
+!2344 = !DILocation(line: 243, column: 1, scope: !2335)
+!2345 = !DILocation(line: 242, column: 1, scope: !2335)
+!2346 = !DILocation(line: 240, column: 1, scope: !2335)
+!2347 = !DILocation(line: 239, column: 1, scope: !2335)
+!2348 = !DILocation(line: 238, column: 1, scope: !2335)
+!2349 = !DILocation(line: 236, column: 1, scope: !2335)
+!2350 = !DILocation(line: 237, column: 1, scope: !2335)
+!2351 = !DILocation(line: 241, column: 1, scope: !2335)
+!2352 = !DILocation(line: 250, column: 1, scope: !2335)
+!2353 = !DILocation(line: 257, column: 1, scope: !2335)
+!2354 = !DILocation(line: 262, column: 1, scope: !2335)
+!2355 = !DILocation(line: 263, column: 1, scope: !2335)
+!2356 = !DILocation(line: 265, column: 1, scope: !2335)
+!2357 = !DILocation(line: 266, column: 1, scope: !2335)
+!2358 = !DILocation(line: 268, column: 1, scope: !2335)
+!2359 = !DILocation(line: 270, column: 1, scope: !2335)
+!2360 = !DILocation(line: 271, column: 1, scope: !2335)
+!2361 = distinct !DISubprogram(name: "HashTable_mapGetCheckedRaw", scope: !2178, file: !2178, line: 274, type: !2, scopeLine: 274, spFlags: DISPFlagDefinition, unit: !0)
+!2362 = !DILocation(line: 305, column: 1, scope: !2361)
+!2363 = !DILocation(line: 304, column: 1, scope: !2361)
+!2364 = !DILocation(line: 303, column: 1, scope: !2361)
+!2365 = !DILocation(line: 302, column: 1, scope: !2361)
+!2366 = !DILocation(line: 296, column: 1, scope: !2361)
+!2367 = !DILocation(line: 295, column: 1, scope: !2361)
+!2368 = !DILocation(line: 293, column: 1, scope: !2361)
+!2369 = !DILocation(line: 288, column: 1, scope: !2361)
+!2370 = !DILocation(line: 287, column: 1, scope: !2361)
+!2371 = !DILocation(line: 286, column: 1, scope: !2361)
+!2372 = !DILocation(line: 284, column: 1, scope: !2361)
+!2373 = !DILocation(line: 280, column: 1, scope: !2361)
+!2374 = !DILocation(line: 279, column: 1, scope: !2361)
+!2375 = !DILocation(line: 274, column: 1, scope: !2361)
+!2376 = !DILocation(line: 275, column: 1, scope: !2361)
+!2377 = !DILocation(line: 276, column: 1, scope: !2361)
+!2378 = !DILocation(line: 277, column: 1, scope: !2361)
+!2379 = !DILocation(line: 281, column: 1, scope: !2361)
+!2380 = !DILocation(line: 282, column: 1, scope: !2361)
+!2381 = !DILocation(line: 285, column: 1, scope: !2361)
+!2382 = !DILocation(line: 294, column: 1, scope: !2361)
+!2383 = !DILocation(line: 301, column: 1, scope: !2361)
+!2384 = !DILocation(line: 306, column: 1, scope: !2361)
+!2385 = !DILocation(line: 307, column: 1, scope: !2361)
+!2386 = !DILocation(line: 309, column: 1, scope: !2361)
+!2387 = !DILocation(line: 310, column: 1, scope: !2361)
+!2388 = !DILocation(line: 312, column: 1, scope: !2361)
+!2389 = !DILocation(line: 314, column: 1, scope: !2361)
+!2390 = !DILocation(line: 315, column: 1, scope: !2361)
+!2391 = !DILocation(line: 316, column: 1, scope: !2361)
+!2392 = distinct !DISubprogram(name: "HashTable_mapGetChecked", scope: !2178, file: !2178, line: 319, type: !2, scopeLine: 319, spFlags: DISPFlagDefinition, unit: !0)
+!2393 = !DILocation(line: 319, column: 1, scope: !2392)
+!2394 = !DILocation(line: 320, column: 1, scope: !2392)
+!2395 = distinct !DISubprogram(name: "HashTable_mapGetIntChecked", scope: !2178, file: !2178, line: 323, type: !2, scopeLine: 323, spFlags: DISPFlagDefinition, unit: !0)
+!2396 = !DILocation(line: 323, column: 1, scope: !2395)
+!2397 = !DILocation(line: 324, column: 1, scope: !2395)
+!2398 = distinct !DISubprogram(name: "HashTable_mapGetFltChecked", scope: !2178, file: !2178, line: 327, type: !2, scopeLine: 327, spFlags: DISPFlagDefinition, unit: !0)
+!2399 = !DILocation(line: 328, column: 1, scope: !2398)
+!2400 = !DILocation(line: 327, column: 1, scope: !2398)
+!2401 = distinct !DISubprogram(name: "HashTable_mapGetObjChecked", scope: !2178, file: !2178, line: 331, type: !2, scopeLine: 331, spFlags: DISPFlagDefinition, unit: !0)
+!2402 = !DILocation(line: 331, column: 1, scope: !2401)
+!2403 = !DILocation(line: 332, column: 1, scope: !2401)
+!2404 = distinct !DISubprogram(name: "HashTable_mapHasRaw", scope: !2178, file: !2178, line: 335, type: !2, scopeLine: 335, spFlags: DISPFlagDefinition, unit: !0)
+!2405 = !DILocation(line: 351, column: 1, scope: !2404)
+!2406 = !DILocation(line: 350, column: 1, scope: !2404)
+!2407 = !DILocation(line: 348, column: 1, scope: !2404)
+!2408 = !DILocation(line: 343, column: 1, scope: !2404)
+!2409 = !DILocation(line: 342, column: 1, scope: !2404)
+!2410 = !DILocation(line: 341, column: 1, scope: !2404)
+!2411 = !DILocation(line: 339, column: 1, scope: !2404)
+!2412 = !DILocation(line: 338, column: 1, scope: !2404)
+!2413 = !DILocation(line: 337, column: 1, scope: !2404)
+!2414 = !DILocation(line: 335, column: 1, scope: !2404)
+!2415 = !DILocation(line: 336, column: 1, scope: !2404)
+!2416 = !DILocation(line: 340, column: 1, scope: !2404)
+!2417 = !DILocation(line: 349, column: 1, scope: !2404)
+!2418 = !DILocation(line: 356, column: 1, scope: !2404)
+!2419 = !DILocation(line: 357, column: 1, scope: !2404)
+!2420 = !DILocation(line: 358, column: 1, scope: !2404)
+!2421 = !DILocation(line: 360, column: 1, scope: !2404)
+!2422 = !DILocation(line: 362, column: 1, scope: !2404)
+!2423 = !DILocation(line: 363, column: 1, scope: !2404)
+!2424 = distinct !DISubprogram(name: "HashTable_mapRemoveRaw", scope: !2178, file: !2178, line: 366, type: !2, scopeLine: 366, spFlags: DISPFlagDefinition, unit: !0)
+!2425 = !DILocation(line: 408, column: 1, scope: !2424)
+!2426 = !DILocation(line: 404, column: 1, scope: !2424)
+!2427 = !DILocation(line: 403, column: 1, scope: !2424)
+!2428 = !DILocation(line: 402, column: 1, scope: !2424)
+!2429 = !DILocation(line: 401, column: 1, scope: !2424)
+!2430 = !DILocation(line: 398, column: 1, scope: !2424)
+!2431 = !DILocation(line: 392, column: 1, scope: !2424)
+!2432 = !DILocation(line: 386, column: 1, scope: !2424)
+!2433 = !DILocation(line: 385, column: 1, scope: !2424)
+!2434 = !DILocation(line: 383, column: 1, scope: !2424)
+!2435 = !DILocation(line: 382, column: 1, scope: !2424)
+!2436 = !DILocation(line: 377, column: 1, scope: !2424)
+!2437 = !DILocation(line: 376, column: 1, scope: !2424)
+!2438 = !DILocation(line: 375, column: 1, scope: !2424)
+!2439 = !DILocation(line: 373, column: 1, scope: !2424)
+!2440 = !DILocation(line: 372, column: 1, scope: !2424)
+!2441 = !DILocation(line: 366, column: 1, scope: !2424)
+!2442 = !DILocation(line: 367, column: 1, scope: !2424)
+!2443 = !DILocation(line: 368, column: 1, scope: !2424)
+!2444 = !DILocation(line: 369, column: 1, scope: !2424)
+!2445 = !DILocation(line: 370, column: 1, scope: !2424)
+!2446 = !DILocation(line: 374, column: 1, scope: !2424)
+!2447 = !DILocation(line: 384, column: 1, scope: !2424)
+!2448 = !DILocation(line: 391, column: 1, scope: !2424)
+!2449 = !DILocation(line: 393, column: 1, scope: !2424)
+!2450 = !DILocation(line: 394, column: 1, scope: !2424)
+!2451 = !DILocation(line: 396, column: 1, scope: !2424)
+!2452 = !DILocation(line: 399, column: 1, scope: !2424)
+!2453 = !DILocation(line: 405, column: 1, scope: !2424)
+!2454 = !DILocation(line: 407, column: 1, scope: !2424)
+!2455 = !DILocation(line: 409, column: 1, scope: !2424)
+!2456 = !DILocation(line: 410, column: 1, scope: !2424)
+!2457 = !DILocation(line: 411, column: 1, scope: !2424)
+!2458 = !DILocation(line: 413, column: 1, scope: !2424)
+!2459 = !DILocation(line: 414, column: 1, scope: !2424)
+!2460 = !DILocation(line: 416, column: 1, scope: !2424)
+!2461 = !DILocation(line: 417, column: 1, scope: !2424)
+!2462 = distinct !DISubprogram(name: "HashTable_mapSet", scope: !2178, file: !2178, line: 420, type: !2, scopeLine: 420, spFlags: DISPFlagDefinition, unit: !0)
+!2463 = !DILocation(line: 420, column: 1, scope: !2462)
+!2464 = !DILocation(line: 421, column: 1, scope: !2462)
+!2465 = distinct !DISubprogram(name: "HashTable_mapSetAny", scope: !2178, file: !2178, line: 424, type: !2, scopeLine: 424, spFlags: DISPFlagDefinition, unit: !0)
+!2466 = !DILocation(line: 424, column: 1, scope: !2465)
+!2467 = !DILocation(line: 425, column: 1, scope: !2465)
+!2468 = distinct !DISubprogram(name: "HashTable_mapGet", scope: !2178, file: !2178, line: 428, type: !2, scopeLine: 428, spFlags: DISPFlagDefinition, unit: !0)
+!2469 = !DILocation(line: 428, column: 1, scope: !2468)
+!2470 = !DILocation(line: 429, column: 1, scope: !2468)
+!2471 = distinct !DISubprogram(name: "HashTable_mapHas", scope: !2178, file: !2178, line: 432, type: !2, scopeLine: 432, spFlags: DISPFlagDefinition, unit: !0)
+!2472 = !DILocation(line: 432, column: 1, scope: !2471)
+!2473 = !DILocation(line: 433, column: 1, scope: !2471)
+!2474 = distinct !DISubprogram(name: "HashTable_mapRemove", scope: !2178, file: !2178, line: 436, type: !2, scopeLine: 436, spFlags: DISPFlagDefinition, unit: !0)
+!2475 = !DILocation(line: 436, column: 1, scope: !2474)
+!2476 = !DILocation(line: 437, column: 1, scope: !2474)
+!2477 = distinct !DISubprogram(name: "HashTable_mapSetInt", scope: !2178, file: !2178, line: 440, type: !2, scopeLine: 440, spFlags: DISPFlagDefinition, unit: !0)
+!2478 = !DILocation(line: 440, column: 1, scope: !2477)
+!2479 = !DILocation(line: 441, column: 1, scope: !2477)
+!2480 = distinct !DISubprogram(name: "HashTable_mapSetIntAny", scope: !2178, file: !2178, line: 444, type: !2, scopeLine: 444, spFlags: DISPFlagDefinition, unit: !0)
+!2481 = !DILocation(line: 444, column: 1, scope: !2480)
+!2482 = !DILocation(line: 445, column: 1, scope: !2480)
+!2483 = distinct !DISubprogram(name: "HashTable_mapGetInt", scope: !2178, file: !2178, line: 448, type: !2, scopeLine: 448, spFlags: DISPFlagDefinition, unit: !0)
+!2484 = !DILocation(line: 448, column: 1, scope: !2483)
+!2485 = !DILocation(line: 449, column: 1, scope: !2483)
+!2486 = distinct !DISubprogram(name: "HashTable_mapHasInt", scope: !2178, file: !2178, line: 452, type: !2, scopeLine: 452, spFlags: DISPFlagDefinition, unit: !0)
+!2487 = !DILocation(line: 452, column: 1, scope: !2486)
+!2488 = !DILocation(line: 453, column: 1, scope: !2486)
+!2489 = distinct !DISubprogram(name: "HashTable_mapRemoveInt", scope: !2178, file: !2178, line: 456, type: !2, scopeLine: 456, spFlags: DISPFlagDefinition, unit: !0)
+!2490 = !DILocation(line: 456, column: 1, scope: !2489)
+!2491 = !DILocation(line: 457, column: 1, scope: !2489)
+!2492 = distinct !DISubprogram(name: "HashTable_mapSetFlt", scope: !2178, file: !2178, line: 460, type: !2, scopeLine: 460, spFlags: DISPFlagDefinition, unit: !0)
+!2493 = !DILocation(line: 460, column: 1, scope: !2492)
+!2494 = !DILocation(line: 461, column: 1, scope: !2492)
+!2495 = distinct !DISubprogram(name: "HashTable_mapSetFltAny", scope: !2178, file: !2178, line: 464, type: !2, scopeLine: 464, spFlags: DISPFlagDefinition, unit: !0)
+!2496 = !DILocation(line: 464, column: 1, scope: !2495)
+!2497 = !DILocation(line: 465, column: 1, scope: !2495)
+!2498 = distinct !DISubprogram(name: "HashTable_mapGetFlt", scope: !2178, file: !2178, line: 468, type: !2, scopeLine: 468, spFlags: DISPFlagDefinition, unit: !0)
+!2499 = !DILocation(line: 469, column: 1, scope: !2498)
+!2500 = !DILocation(line: 468, column: 1, scope: !2498)
+!2501 = distinct !DISubprogram(name: "HashTable_mapHasFlt", scope: !2178, file: !2178, line: 472, type: !2, scopeLine: 472, spFlags: DISPFlagDefinition, unit: !0)
+!2502 = !DILocation(line: 473, column: 1, scope: !2501)
+!2503 = !DILocation(line: 472, column: 1, scope: !2501)
+!2504 = distinct !DISubprogram(name: "HashTable_mapRemoveFlt", scope: !2178, file: !2178, line: 476, type: !2, scopeLine: 476, spFlags: DISPFlagDefinition, unit: !0)
+!2505 = !DILocation(line: 477, column: 1, scope: !2504)
+!2506 = !DILocation(line: 476, column: 1, scope: !2504)
+!2507 = distinct !DISubprogram(name: "HashTable_mapSetObj", scope: !2178, file: !2178, line: 480, type: !2, scopeLine: 480, spFlags: DISPFlagDefinition, unit: !0)
+!2508 = !DILocation(line: 480, column: 1, scope: !2507)
+!2509 = !DILocation(line: 481, column: 1, scope: !2507)
+!2510 = distinct !DISubprogram(name: "HashTable_mapSetObjAny", scope: !2178, file: !2178, line: 484, type: !2, scopeLine: 484, spFlags: DISPFlagDefinition, unit: !0)
+!2511 = !DILocation(line: 484, column: 1, scope: !2510)
+!2512 = !DILocation(line: 485, column: 1, scope: !2510)
+!2513 = distinct !DISubprogram(name: "HashTable_mapGetObj", scope: !2178, file: !2178, line: 488, type: !2, scopeLine: 488, spFlags: DISPFlagDefinition, unit: !0)
+!2514 = !DILocation(line: 488, column: 1, scope: !2513)
+!2515 = !DILocation(line: 489, column: 1, scope: !2513)
+!2516 = distinct !DISubprogram(name: "HashTable_mapHasObj", scope: !2178, file: !2178, line: 492, type: !2, scopeLine: 492, spFlags: DISPFlagDefinition, unit: !0)
+!2517 = !DILocation(line: 492, column: 1, scope: !2516)
+!2518 = !DILocation(line: 493, column: 1, scope: !2516)
+!2519 = distinct !DISubprogram(name: "HashTable_mapRemoveObj", scope: !2178, file: !2178, line: 496, type: !2, scopeLine: 496, spFlags: DISPFlagDefinition, unit: !0)
+!2520 = !DILocation(line: 496, column: 1, scope: !2519)
+!2521 = !DILocation(line: 497, column: 1, scope: !2519)
+!2522 = distinct !DISubprogram(name: "HashTable_mapLength", scope: !2178, file: !2178, line: 500, type: !2, scopeLine: 500, spFlags: DISPFlagDefinition, unit: !0)
+!2523 = !DILocation(line: 507, column: 1, scope: !2522)
+!2524 = !DILocation(line: 500, column: 1, scope: !2522)
+!2525 = !DILocation(line: 501, column: 1, scope: !2522)
+!2526 = !DILocation(line: 502, column: 1, scope: !2522)
+!2527 = !DILocation(line: 503, column: 1, scope: !2522)
+!2528 = !DILocation(line: 504, column: 1, scope: !2522)
+!2529 = !DILocation(line: 506, column: 1, scope: !2522)
+!2530 = !DILocation(line: 508, column: 1, scope: !2522)
+!2531 = !DILocation(line: 509, column: 1, scope: !2522)
+!2532 = distinct !DISubprogram(name: "HashTable_mapFreeze", scope: !2178, file: !2178, line: 512, type: !2, scopeLine: 512, spFlags: DISPFlagDefinition, unit: !0)
+!2533 = !DILocation(line: 512, column: 1, scope: !2532)
+!2534 = !DILocation(line: 513, column: 1, scope: !2532)
+!2535 = !DILocation(line: 514, column: 1, scope: !2532)
+!2536 = !DILocation(line: 515, column: 1, scope: !2532)
+!2537 = !DILocation(line: 516, column: 1, scope: !2532)
+!2538 = !DILocation(line: 517, column: 1, scope: !2532)
+!2539 = distinct !DISubprogram(name: "HashTable_mapKeys", scope: !2178, file: !2178, line: 520, type: !2, scopeLine: 520, spFlags: DISPFlagDefinition, unit: !0)
+!2540 = !DILocation(line: 536, column: 1, scope: !2539)
+!2541 = !DILocation(line: 534, column: 1, scope: !2539)
+!2542 = !DILocation(line: 532, column: 1, scope: !2539)
+!2543 = !DILocation(line: 531, column: 1, scope: !2539)
+!2544 = !DILocation(line: 530, column: 1, scope: !2539)
+!2545 = !DILocation(line: 528, column: 1, scope: !2539)
+!2546 = !DILocation(line: 525, column: 1, scope: !2539)
+!2547 = !DILocation(line: 524, column: 1, scope: !2539)
+!2548 = !DILocation(line: 520, column: 1, scope: !2539)
+!2549 = !DILocation(line: 521, column: 1, scope: !2539)
+!2550 = !DILocation(line: 522, column: 1, scope: !2539)
+!2551 = !DILocation(line: 523, column: 1, scope: !2539)
+!2552 = !DILocation(line: 526, column: 1, scope: !2539)
+!2553 = !DILocation(line: 529, column: 1, scope: !2539)
+!2554 = !DILocation(line: 533, column: 1, scope: !2539)
+!2555 = !DILocation(line: 535, column: 1, scope: !2539)
+!2556 = !DILocation(line: 537, column: 1, scope: !2539)
+!2557 = !DILocation(line: 538, column: 1, scope: !2539)
+!2558 = !DILocation(line: 540, column: 1, scope: !2539)
+!2559 = !DILocation(line: 542, column: 1, scope: !2539)
+!2560 = !DILocation(line: 543, column: 1, scope: !2539)
 !2561 = !DIFile(filename: "Enum.spec", directory: "./spec/lib/base/core")
 !2562 = distinct !DISubprogram(name: "Enum_name", scope: !2561, file: !2561, line: 32, type: !2, scopeLine: 32, spFlags: DISPFlagDefinition, unit: !0)
 !2563 = !DILocation(line: 32, column: 1, scope: !2562)
@@ -472282,41 +472269,41 @@ ret_blk:
 !20360 = !DILocation(line: 5392, column: 1, scope: !20333)
 !20361 = !DILocation(line: 5393, column: 1, scope: !20333)
 !20362 = distinct !DISubprogram(name: "IrBuilder_lowerCall", scope: !16487, file: !16487, line: 5396, type: !2, scopeLine: 5396, spFlags: DISPFlagDefinition, unit: !0)
-!20363 = !DILocation(line: 5788, column: 1, scope: !20362)
-!20364 = !DILocation(line: 5787, column: 1, scope: !20362)
-!20365 = !DILocation(line: 5776, column: 1, scope: !20362)
-!20366 = !DILocation(line: 5769, column: 1, scope: !20362)
-!20367 = !DILocation(line: 5768, column: 1, scope: !20362)
-!20368 = !DILocation(line: 5766, column: 1, scope: !20362)
-!20369 = !DILocation(line: 5759, column: 1, scope: !20362)
-!20370 = !DILocation(line: 5758, column: 1, scope: !20362)
-!20371 = !DILocation(line: 5756, column: 1, scope: !20362)
-!20372 = !DILocation(line: 5754, column: 1, scope: !20362)
-!20373 = !DILocation(line: 5752, column: 1, scope: !20362)
-!20374 = !DILocation(line: 5750, column: 1, scope: !20362)
-!20375 = !DILocation(line: 5748, column: 1, scope: !20362)
-!20376 = !DILocation(line: 5745, column: 1, scope: !20362)
-!20377 = !DILocation(line: 5744, column: 1, scope: !20362)
-!20378 = !DILocation(line: 5743, column: 1, scope: !20362)
-!20379 = !DILocation(line: 5741, column: 1, scope: !20362)
-!20380 = !DILocation(line: 5738, column: 1, scope: !20362)
-!20381 = !DILocation(line: 5736, column: 1, scope: !20362)
-!20382 = !DILocation(line: 5731, column: 1, scope: !20362)
-!20383 = !DILocation(line: 5728, column: 1, scope: !20362)
-!20384 = !DILocation(line: 5727, column: 1, scope: !20362)
-!20385 = !DILocation(line: 5726, column: 1, scope: !20362)
-!20386 = !DILocation(line: 5722, column: 1, scope: !20362)
-!20387 = !DILocation(line: 5717, column: 1, scope: !20362)
-!20388 = !DILocation(line: 5710, column: 1, scope: !20362)
-!20389 = !DILocation(line: 5709, column: 1, scope: !20362)
-!20390 = !DILocation(line: 5703, column: 1, scope: !20362)
-!20391 = !DILocation(line: 5702, column: 1, scope: !20362)
-!20392 = !DILocation(line: 5700, column: 1, scope: !20362)
-!20393 = !DILocation(line: 5699, column: 1, scope: !20362)
-!20394 = !DILocation(line: 5698, column: 1, scope: !20362)
-!20395 = !DILocation(line: 5697, column: 1, scope: !20362)
-!20396 = !DILocation(line: 5696, column: 1, scope: !20362)
-!20397 = !DILocation(line: 5694, column: 1, scope: !20362)
+!20363 = !DILocation(line: 5787, column: 1, scope: !20362)
+!20364 = !DILocation(line: 5786, column: 1, scope: !20362)
+!20365 = !DILocation(line: 5775, column: 1, scope: !20362)
+!20366 = !DILocation(line: 5768, column: 1, scope: !20362)
+!20367 = !DILocation(line: 5767, column: 1, scope: !20362)
+!20368 = !DILocation(line: 5765, column: 1, scope: !20362)
+!20369 = !DILocation(line: 5758, column: 1, scope: !20362)
+!20370 = !DILocation(line: 5757, column: 1, scope: !20362)
+!20371 = !DILocation(line: 5755, column: 1, scope: !20362)
+!20372 = !DILocation(line: 5753, column: 1, scope: !20362)
+!20373 = !DILocation(line: 5751, column: 1, scope: !20362)
+!20374 = !DILocation(line: 5749, column: 1, scope: !20362)
+!20375 = !DILocation(line: 5747, column: 1, scope: !20362)
+!20376 = !DILocation(line: 5744, column: 1, scope: !20362)
+!20377 = !DILocation(line: 5743, column: 1, scope: !20362)
+!20378 = !DILocation(line: 5742, column: 1, scope: !20362)
+!20379 = !DILocation(line: 5740, column: 1, scope: !20362)
+!20380 = !DILocation(line: 5737, column: 1, scope: !20362)
+!20381 = !DILocation(line: 5735, column: 1, scope: !20362)
+!20382 = !DILocation(line: 5730, column: 1, scope: !20362)
+!20383 = !DILocation(line: 5727, column: 1, scope: !20362)
+!20384 = !DILocation(line: 5726, column: 1, scope: !20362)
+!20385 = !DILocation(line: 5725, column: 1, scope: !20362)
+!20386 = !DILocation(line: 5721, column: 1, scope: !20362)
+!20387 = !DILocation(line: 5716, column: 1, scope: !20362)
+!20388 = !DILocation(line: 5709, column: 1, scope: !20362)
+!20389 = !DILocation(line: 5708, column: 1, scope: !20362)
+!20390 = !DILocation(line: 5702, column: 1, scope: !20362)
+!20391 = !DILocation(line: 5701, column: 1, scope: !20362)
+!20392 = !DILocation(line: 5699, column: 1, scope: !20362)
+!20393 = !DILocation(line: 5698, column: 1, scope: !20362)
+!20394 = !DILocation(line: 5697, column: 1, scope: !20362)
+!20395 = !DILocation(line: 5696, column: 1, scope: !20362)
+!20396 = !DILocation(line: 5695, column: 1, scope: !20362)
+!20397 = !DILocation(line: 5693, column: 1, scope: !20362)
 !20398 = !DILocation(line: 5687, column: 1, scope: !20362)
 !20399 = !DILocation(line: 5686, column: 1, scope: !20362)
 !20400 = !DILocation(line: 5685, column: 1, scope: !20362)
@@ -472509,219 +472496,219 @@ ret_blk:
 !20587 = !DILocation(line: 5661, column: 1, scope: !20362)
 !20588 = !DILocation(line: 5674, column: 1, scope: !20362)
 !20589 = !DILocation(line: 5681, column: 1, scope: !20362)
-!20590 = !DILocation(line: 5695, column: 1, scope: !20362)
-!20591 = !DILocation(line: 5701, column: 1, scope: !20362)
-!20592 = !DILocation(line: 5704, column: 1, scope: !20362)
-!20593 = !DILocation(line: 5708, column: 1, scope: !20362)
-!20594 = !DILocation(line: 5711, column: 1, scope: !20362)
-!20595 = !DILocation(line: 5718, column: 1, scope: !20362)
-!20596 = !DILocation(line: 5719, column: 1, scope: !20362)
-!20597 = !DILocation(line: 5720, column: 1, scope: !20362)
-!20598 = !DILocation(line: 5723, column: 1, scope: !20362)
-!20599 = !DILocation(line: 5724, column: 1, scope: !20362)
-!20600 = !DILocation(line: 5730, column: 1, scope: !20362)
-!20601 = !DILocation(line: 5732, column: 1, scope: !20362)
-!20602 = !DILocation(line: 5733, column: 1, scope: !20362)
-!20603 = !DILocation(line: 5734, column: 1, scope: !20362)
-!20604 = !DILocation(line: 5737, column: 1, scope: !20362)
-!20605 = !DILocation(line: 5739, column: 1, scope: !20362)
-!20606 = !DILocation(line: 5742, column: 1, scope: !20362)
-!20607 = !DILocation(line: 5746, column: 1, scope: !20362)
-!20608 = !DILocation(line: 5749, column: 1, scope: !20362)
-!20609 = !DILocation(line: 5751, column: 1, scope: !20362)
-!20610 = !DILocation(line: 5753, column: 1, scope: !20362)
-!20611 = !DILocation(line: 5755, column: 1, scope: !20362)
-!20612 = !DILocation(line: 5757, column: 1, scope: !20362)
-!20613 = !DILocation(line: 5760, column: 1, scope: !20362)
-!20614 = !DILocation(line: 5761, column: 1, scope: !20362)
-!20615 = !DILocation(line: 5762, column: 1, scope: !20362)
-!20616 = !DILocation(line: 5764, column: 1, scope: !20362)
-!20617 = !DILocation(line: 5767, column: 1, scope: !20362)
-!20618 = !DILocation(line: 5770, column: 1, scope: !20362)
-!20619 = !DILocation(line: 5771, column: 1, scope: !20362)
-!20620 = !DILocation(line: 5772, column: 1, scope: !20362)
-!20621 = !DILocation(line: 5774, column: 1, scope: !20362)
-!20622 = !DILocation(line: 5777, column: 1, scope: !20362)
-!20623 = !DILocation(line: 5778, column: 1, scope: !20362)
-!20624 = !DILocation(line: 5779, column: 1, scope: !20362)
-!20625 = !DILocation(line: 5781, column: 1, scope: !20362)
-!20626 = !DILocation(line: 5784, column: 1, scope: !20362)
-!20627 = !DILocation(line: 5785, column: 1, scope: !20362)
-!20628 = !DILocation(line: 5790, column: 1, scope: !20362)
-!20629 = distinct !DISubprogram(name: "IrBuilder_emitImportFieldOrAlloc", scope: !16487, file: !16487, line: 5793, type: !2, scopeLine: 5793, spFlags: DISPFlagDefinition, unit: !0)
-!20630 = !DILocation(line: 5816, column: 1, scope: !20629)
-!20631 = !DILocation(line: 5815, column: 1, scope: !20629)
-!20632 = !DILocation(line: 5810, column: 1, scope: !20629)
-!20633 = !DILocation(line: 5808, column: 1, scope: !20629)
-!20634 = !DILocation(line: 5807, column: 1, scope: !20629)
-!20635 = !DILocation(line: 5804, column: 1, scope: !20629)
-!20636 = !DILocation(line: 5803, column: 1, scope: !20629)
-!20637 = !DILocation(line: 5802, column: 1, scope: !20629)
-!20638 = !DILocation(line: 5801, column: 1, scope: !20629)
-!20639 = !DILocation(line: 5800, column: 1, scope: !20629)
-!20640 = !DILocation(line: 5797, column: 1, scope: !20629)
-!20641 = !DILocation(line: 5793, column: 1, scope: !20629)
-!20642 = !DILocation(line: 5794, column: 1, scope: !20629)
-!20643 = !DILocation(line: 5795, column: 1, scope: !20629)
-!20644 = !DILocation(line: 5798, column: 1, scope: !20629)
-!20645 = !DILocation(line: 5806, column: 1, scope: !20629)
-!20646 = !DILocation(line: 5809, column: 1, scope: !20629)
-!20647 = !DILocation(line: 5811, column: 1, scope: !20629)
-!20648 = !DILocation(line: 5812, column: 1, scope: !20629)
-!20649 = !DILocation(line: 5817, column: 1, scope: !20629)
-!20650 = !DILocation(line: 5818, column: 1, scope: !20629)
-!20651 = !DILocation(line: 5819, column: 1, scope: !20629)
-!20652 = distinct !DISubprogram(name: "IrBuilder_stmtsCallMethod", scope: !16487, file: !16487, line: 5822, type: !2, scopeLine: 5822, spFlags: DISPFlagDefinition, unit: !0)
-!20653 = !DILocation(line: 5825, column: 1, scope: !20652)
-!20654 = !DILocation(line: 5822, column: 1, scope: !20652)
-!20655 = !DILocation(line: 5823, column: 1, scope: !20652)
-!20656 = !DILocation(line: 5824, column: 1, scope: !20652)
-!20657 = !DILocation(line: 5836, column: 1, scope: !20652)
-!20658 = !DILocation(line: 5837, column: 1, scope: !20652)
-!20659 = !DILocation(line: 5839, column: 1, scope: !20652)
-!20660 = distinct !DISubprogram(name: "IrBuilder_exprCallsMethod", scope: !16487, file: !16487, line: 5842, type: !2, scopeLine: 5842, spFlags: DISPFlagDefinition, unit: !0)
-!20661 = !DILocation(line: 5843, column: 1, scope: !20660)
-!20662 = !DILocation(line: 5849, column: 1, scope: !20660)
-!20663 = !DILocation(line: 5847, column: 1, scope: !20660)
-!20664 = !DILocation(line: 5846, column: 1, scope: !20660)
-!20665 = !DILocation(line: 5842, column: 1, scope: !20660)
-!20666 = !DILocation(line: 5845, column: 1, scope: !20660)
-!20667 = !DILocation(line: 5848, column: 1, scope: !20660)
-!20668 = !DILocation(line: 5850, column: 1, scope: !20660)
-!20669 = distinct !DISubprogram(name: "IrBuilder_emitUnwrappedFieldAssigns", scope: !16487, file: !16487, line: 5861, type: !2, scopeLine: 5861, spFlags: DISPFlagDefinition, unit: !0)
-!20670 = !DILocation(line: 5891, column: 1, scope: !20669)
-!20671 = !DILocation(line: 5887, column: 1, scope: !20669)
-!20672 = !DILocation(line: 5885, column: 1, scope: !20669)
-!20673 = !DILocation(line: 5883, column: 1, scope: !20669)
-!20674 = !DILocation(line: 5881, column: 1, scope: !20669)
-!20675 = !DILocation(line: 5880, column: 1, scope: !20669)
-!20676 = !DILocation(line: 5879, column: 1, scope: !20669)
-!20677 = !DILocation(line: 5875, column: 1, scope: !20669)
-!20678 = !DILocation(line: 5874, column: 1, scope: !20669)
-!20679 = !DILocation(line: 5873, column: 1, scope: !20669)
-!20680 = !DILocation(line: 5872, column: 1, scope: !20669)
-!20681 = !DILocation(line: 5871, column: 1, scope: !20669)
-!20682 = !DILocation(line: 5869, column: 1, scope: !20669)
-!20683 = !DILocation(line: 5867, column: 1, scope: !20669)
-!20684 = !DILocation(line: 5865, column: 1, scope: !20669)
-!20685 = !DILocation(line: 5863, column: 1, scope: !20669)
-!20686 = !DILocation(line: 5861, column: 1, scope: !20669)
-!20687 = !DILocation(line: 5862, column: 1, scope: !20669)
-!20688 = !DILocation(line: 5864, column: 1, scope: !20669)
-!20689 = !DILocation(line: 5866, column: 1, scope: !20669)
-!20690 = !DILocation(line: 5868, column: 1, scope: !20669)
-!20691 = !DILocation(line: 5870, column: 1, scope: !20669)
-!20692 = !DILocation(line: 5882, column: 1, scope: !20669)
-!20693 = !DILocation(line: 5884, column: 1, scope: !20669)
-!20694 = !DILocation(line: 5888, column: 1, scope: !20669)
-!20695 = !DILocation(line: 5889, column: 1, scope: !20669)
-!20696 = !DILocation(line: 5890, column: 1, scope: !20669)
-!20697 = !DILocation(line: 5892, column: 1, scope: !20669)
-!20698 = !DILocation(line: 5893, column: 1, scope: !20669)
-!20699 = !DILocation(line: 5895, column: 1, scope: !20669)
-!20700 = !DILocation(line: 5899, column: 1, scope: !20669)
-!20701 = distinct !DISubprogram(name: "IrBuilder_lowerCallArgs", scope: !16487, file: !16487, line: 5903, type: !2, scopeLine: 5903, spFlags: DISPFlagDefinition, unit: !0)
-!20702 = !DILocation(line: 6046, column: 1, scope: !20701)
-!20703 = !DILocation(line: 6041, column: 1, scope: !20701)
-!20704 = !DILocation(line: 6039, column: 1, scope: !20701)
-!20705 = !DILocation(line: 6028, column: 1, scope: !20701)
-!20706 = !DILocation(line: 6026, column: 1, scope: !20701)
-!20707 = !DILocation(line: 6022, column: 1, scope: !20701)
-!20708 = !DILocation(line: 6011, column: 1, scope: !20701)
-!20709 = !DILocation(line: 6009, column: 1, scope: !20701)
-!20710 = !DILocation(line: 6008, column: 1, scope: !20701)
-!20711 = !DILocation(line: 6006, column: 1, scope: !20701)
-!20712 = !DILocation(line: 6005, column: 1, scope: !20701)
-!20713 = !DILocation(line: 5995, column: 1, scope: !20701)
-!20714 = !DILocation(line: 5994, column: 1, scope: !20701)
-!20715 = !DILocation(line: 5993, column: 1, scope: !20701)
-!20716 = !DILocation(line: 5991, column: 1, scope: !20701)
-!20717 = !DILocation(line: 5990, column: 1, scope: !20701)
-!20718 = !DILocation(line: 5989, column: 1, scope: !20701)
-!20719 = !DILocation(line: 5983, column: 1, scope: !20701)
-!20720 = !DILocation(line: 5982, column: 1, scope: !20701)
-!20721 = !DILocation(line: 5981, column: 1, scope: !20701)
-!20722 = !DILocation(line: 5980, column: 1, scope: !20701)
-!20723 = !DILocation(line: 5979, column: 1, scope: !20701)
-!20724 = !DILocation(line: 5978, column: 1, scope: !20701)
-!20725 = !DILocation(line: 5976, column: 1, scope: !20701)
-!20726 = !DILocation(line: 5972, column: 1, scope: !20701)
-!20727 = !DILocation(line: 5970, column: 1, scope: !20701)
-!20728 = !DILocation(line: 5965, column: 1, scope: !20701)
-!20729 = !DILocation(line: 5958, column: 1, scope: !20701)
-!20730 = !DILocation(line: 5957, column: 1, scope: !20701)
-!20731 = !DILocation(line: 5956, column: 1, scope: !20701)
-!20732 = !DILocation(line: 5954, column: 1, scope: !20701)
-!20733 = !DILocation(line: 5953, column: 1, scope: !20701)
-!20734 = !DILocation(line: 5952, column: 1, scope: !20701)
-!20735 = !DILocation(line: 5947, column: 1, scope: !20701)
-!20736 = !DILocation(line: 5946, column: 1, scope: !20701)
-!20737 = !DILocation(line: 5944, column: 1, scope: !20701)
-!20738 = !DILocation(line: 5941, column: 1, scope: !20701)
-!20739 = !DILocation(line: 5935, column: 1, scope: !20701)
-!20740 = !DILocation(line: 5933, column: 1, scope: !20701)
-!20741 = !DILocation(line: 5932, column: 1, scope: !20701)
-!20742 = !DILocation(line: 5931, column: 1, scope: !20701)
-!20743 = !DILocation(line: 5929, column: 1, scope: !20701)
-!20744 = !DILocation(line: 5927, column: 1, scope: !20701)
-!20745 = !DILocation(line: 5926, column: 1, scope: !20701)
-!20746 = !DILocation(line: 5916, column: 1, scope: !20701)
-!20747 = !DILocation(line: 5914, column: 1, scope: !20701)
-!20748 = !DILocation(line: 5913, column: 1, scope: !20701)
-!20749 = !DILocation(line: 5911, column: 1, scope: !20701)
-!20750 = !DILocation(line: 5910, column: 1, scope: !20701)
-!20751 = !DILocation(line: 5909, column: 1, scope: !20701)
-!20752 = !DILocation(line: 5907, column: 1, scope: !20701)
-!20753 = !DILocation(line: 5906, column: 1, scope: !20701)
-!20754 = !DILocation(line: 5903, column: 1, scope: !20701)
-!20755 = !DILocation(line: 5904, column: 1, scope: !20701)
-!20756 = !DILocation(line: 5905, column: 1, scope: !20701)
-!20757 = !DILocation(line: 5908, column: 1, scope: !20701)
-!20758 = !DILocation(line: 5912, column: 1, scope: !20701)
-!20759 = !DILocation(line: 5915, column: 1, scope: !20701)
-!20760 = !DILocation(line: 5917, column: 1, scope: !20701)
-!20761 = !DILocation(line: 5920, column: 1, scope: !20701)
-!20762 = !DILocation(line: 5921, column: 1, scope: !20701)
-!20763 = !DILocation(line: 5922, column: 1, scope: !20701)
-!20764 = !DILocation(line: 5924, column: 1, scope: !20701)
-!20765 = !DILocation(line: 5928, column: 1, scope: !20701)
-!20766 = !DILocation(line: 5930, column: 1, scope: !20701)
-!20767 = !DILocation(line: 5934, column: 1, scope: !20701)
-!20768 = !DILocation(line: 5936, column: 1, scope: !20701)
-!20769 = !DILocation(line: 5937, column: 1, scope: !20701)
-!20770 = !DILocation(line: 5939, column: 1, scope: !20701)
-!20771 = !DILocation(line: 5942, column: 1, scope: !20701)
-!20772 = !DILocation(line: 5943, column: 1, scope: !20701)
-!20773 = !DILocation(line: 5948, column: 1, scope: !20701)
-!20774 = !DILocation(line: 5949, column: 1, scope: !20701)
-!20775 = !DILocation(line: 5950, column: 1, scope: !20701)
-!20776 = !DILocation(line: 5955, column: 1, scope: !20701)
-!20777 = !DILocation(line: 5959, column: 1, scope: !20701)
-!20778 = !DILocation(line: 5960, column: 1, scope: !20701)
-!20779 = !DILocation(line: 5961, column: 1, scope: !20701)
-!20780 = !DILocation(line: 5963, column: 1, scope: !20701)
-!20781 = !DILocation(line: 5971, column: 1, scope: !20701)
-!20782 = !DILocation(line: 5974, column: 1, scope: !20701)
-!20783 = !DILocation(line: 5977, column: 1, scope: !20701)
-!20784 = !DILocation(line: 5984, column: 1, scope: !20701)
-!20785 = !DILocation(line: 5985, column: 1, scope: !20701)
-!20786 = !DILocation(line: 5987, column: 1, scope: !20701)
-!20787 = !DILocation(line: 5992, column: 1, scope: !20701)
-!20788 = !DILocation(line: 5996, column: 1, scope: !20701)
-!20789 = !DILocation(line: 5997, column: 1, scope: !20701)
-!20790 = !DILocation(line: 6000, column: 1, scope: !20701)
-!20791 = !DILocation(line: 6001, column: 1, scope: !20701)
-!20792 = !DILocation(line: 6002, column: 1, scope: !20701)
-!20793 = !DILocation(line: 6007, column: 1, scope: !20701)
-!20794 = !DILocation(line: 6010, column: 1, scope: !20701)
-!20795 = !DILocation(line: 6024, column: 1, scope: !20701)
-!20796 = !DILocation(line: 6025, column: 1, scope: !20701)
-!20797 = !DILocation(line: 6027, column: 1, scope: !20701)
-!20798 = !DILocation(line: 6042, column: 1, scope: !20701)
-!20799 = !DILocation(line: 6045, column: 1, scope: !20701)
-!20800 = !DILocation(line: 6048, column: 1, scope: !20701)
-!20801 = !DILocation(line: 6049, column: 1, scope: !20701)
-!20802 = !DILocation(line: 6050, column: 1, scope: !20701)
+!20590 = !DILocation(line: 5694, column: 1, scope: !20362)
+!20591 = !DILocation(line: 5700, column: 1, scope: !20362)
+!20592 = !DILocation(line: 5703, column: 1, scope: !20362)
+!20593 = !DILocation(line: 5707, column: 1, scope: !20362)
+!20594 = !DILocation(line: 5710, column: 1, scope: !20362)
+!20595 = !DILocation(line: 5717, column: 1, scope: !20362)
+!20596 = !DILocation(line: 5718, column: 1, scope: !20362)
+!20597 = !DILocation(line: 5719, column: 1, scope: !20362)
+!20598 = !DILocation(line: 5722, column: 1, scope: !20362)
+!20599 = !DILocation(line: 5723, column: 1, scope: !20362)
+!20600 = !DILocation(line: 5729, column: 1, scope: !20362)
+!20601 = !DILocation(line: 5731, column: 1, scope: !20362)
+!20602 = !DILocation(line: 5732, column: 1, scope: !20362)
+!20603 = !DILocation(line: 5733, column: 1, scope: !20362)
+!20604 = !DILocation(line: 5736, column: 1, scope: !20362)
+!20605 = !DILocation(line: 5738, column: 1, scope: !20362)
+!20606 = !DILocation(line: 5741, column: 1, scope: !20362)
+!20607 = !DILocation(line: 5745, column: 1, scope: !20362)
+!20608 = !DILocation(line: 5748, column: 1, scope: !20362)
+!20609 = !DILocation(line: 5750, column: 1, scope: !20362)
+!20610 = !DILocation(line: 5752, column: 1, scope: !20362)
+!20611 = !DILocation(line: 5754, column: 1, scope: !20362)
+!20612 = !DILocation(line: 5756, column: 1, scope: !20362)
+!20613 = !DILocation(line: 5759, column: 1, scope: !20362)
+!20614 = !DILocation(line: 5760, column: 1, scope: !20362)
+!20615 = !DILocation(line: 5761, column: 1, scope: !20362)
+!20616 = !DILocation(line: 5763, column: 1, scope: !20362)
+!20617 = !DILocation(line: 5766, column: 1, scope: !20362)
+!20618 = !DILocation(line: 5769, column: 1, scope: !20362)
+!20619 = !DILocation(line: 5770, column: 1, scope: !20362)
+!20620 = !DILocation(line: 5771, column: 1, scope: !20362)
+!20621 = !DILocation(line: 5773, column: 1, scope: !20362)
+!20622 = !DILocation(line: 5776, column: 1, scope: !20362)
+!20623 = !DILocation(line: 5777, column: 1, scope: !20362)
+!20624 = !DILocation(line: 5778, column: 1, scope: !20362)
+!20625 = !DILocation(line: 5780, column: 1, scope: !20362)
+!20626 = !DILocation(line: 5783, column: 1, scope: !20362)
+!20627 = !DILocation(line: 5784, column: 1, scope: !20362)
+!20628 = !DILocation(line: 5789, column: 1, scope: !20362)
+!20629 = distinct !DISubprogram(name: "IrBuilder_emitImportFieldOrAlloc", scope: !16487, file: !16487, line: 5792, type: !2, scopeLine: 5792, spFlags: DISPFlagDefinition, unit: !0)
+!20630 = !DILocation(line: 5815, column: 1, scope: !20629)
+!20631 = !DILocation(line: 5814, column: 1, scope: !20629)
+!20632 = !DILocation(line: 5809, column: 1, scope: !20629)
+!20633 = !DILocation(line: 5807, column: 1, scope: !20629)
+!20634 = !DILocation(line: 5806, column: 1, scope: !20629)
+!20635 = !DILocation(line: 5803, column: 1, scope: !20629)
+!20636 = !DILocation(line: 5802, column: 1, scope: !20629)
+!20637 = !DILocation(line: 5801, column: 1, scope: !20629)
+!20638 = !DILocation(line: 5800, column: 1, scope: !20629)
+!20639 = !DILocation(line: 5799, column: 1, scope: !20629)
+!20640 = !DILocation(line: 5796, column: 1, scope: !20629)
+!20641 = !DILocation(line: 5792, column: 1, scope: !20629)
+!20642 = !DILocation(line: 5793, column: 1, scope: !20629)
+!20643 = !DILocation(line: 5794, column: 1, scope: !20629)
+!20644 = !DILocation(line: 5797, column: 1, scope: !20629)
+!20645 = !DILocation(line: 5805, column: 1, scope: !20629)
+!20646 = !DILocation(line: 5808, column: 1, scope: !20629)
+!20647 = !DILocation(line: 5810, column: 1, scope: !20629)
+!20648 = !DILocation(line: 5811, column: 1, scope: !20629)
+!20649 = !DILocation(line: 5816, column: 1, scope: !20629)
+!20650 = !DILocation(line: 5817, column: 1, scope: !20629)
+!20651 = !DILocation(line: 5818, column: 1, scope: !20629)
+!20652 = distinct !DISubprogram(name: "IrBuilder_stmtsCallMethod", scope: !16487, file: !16487, line: 5821, type: !2, scopeLine: 5821, spFlags: DISPFlagDefinition, unit: !0)
+!20653 = !DILocation(line: 5824, column: 1, scope: !20652)
+!20654 = !DILocation(line: 5821, column: 1, scope: !20652)
+!20655 = !DILocation(line: 5822, column: 1, scope: !20652)
+!20656 = !DILocation(line: 5823, column: 1, scope: !20652)
+!20657 = !DILocation(line: 5835, column: 1, scope: !20652)
+!20658 = !DILocation(line: 5836, column: 1, scope: !20652)
+!20659 = !DILocation(line: 5838, column: 1, scope: !20652)
+!20660 = distinct !DISubprogram(name: "IrBuilder_exprCallsMethod", scope: !16487, file: !16487, line: 5841, type: !2, scopeLine: 5841, spFlags: DISPFlagDefinition, unit: !0)
+!20661 = !DILocation(line: 5842, column: 1, scope: !20660)
+!20662 = !DILocation(line: 5848, column: 1, scope: !20660)
+!20663 = !DILocation(line: 5846, column: 1, scope: !20660)
+!20664 = !DILocation(line: 5845, column: 1, scope: !20660)
+!20665 = !DILocation(line: 5841, column: 1, scope: !20660)
+!20666 = !DILocation(line: 5844, column: 1, scope: !20660)
+!20667 = !DILocation(line: 5847, column: 1, scope: !20660)
+!20668 = !DILocation(line: 5849, column: 1, scope: !20660)
+!20669 = distinct !DISubprogram(name: "IrBuilder_emitUnwrappedFieldAssigns", scope: !16487, file: !16487, line: 5860, type: !2, scopeLine: 5860, spFlags: DISPFlagDefinition, unit: !0)
+!20670 = !DILocation(line: 5890, column: 1, scope: !20669)
+!20671 = !DILocation(line: 5886, column: 1, scope: !20669)
+!20672 = !DILocation(line: 5884, column: 1, scope: !20669)
+!20673 = !DILocation(line: 5882, column: 1, scope: !20669)
+!20674 = !DILocation(line: 5880, column: 1, scope: !20669)
+!20675 = !DILocation(line: 5879, column: 1, scope: !20669)
+!20676 = !DILocation(line: 5878, column: 1, scope: !20669)
+!20677 = !DILocation(line: 5874, column: 1, scope: !20669)
+!20678 = !DILocation(line: 5873, column: 1, scope: !20669)
+!20679 = !DILocation(line: 5872, column: 1, scope: !20669)
+!20680 = !DILocation(line: 5871, column: 1, scope: !20669)
+!20681 = !DILocation(line: 5870, column: 1, scope: !20669)
+!20682 = !DILocation(line: 5868, column: 1, scope: !20669)
+!20683 = !DILocation(line: 5866, column: 1, scope: !20669)
+!20684 = !DILocation(line: 5864, column: 1, scope: !20669)
+!20685 = !DILocation(line: 5862, column: 1, scope: !20669)
+!20686 = !DILocation(line: 5860, column: 1, scope: !20669)
+!20687 = !DILocation(line: 5861, column: 1, scope: !20669)
+!20688 = !DILocation(line: 5863, column: 1, scope: !20669)
+!20689 = !DILocation(line: 5865, column: 1, scope: !20669)
+!20690 = !DILocation(line: 5867, column: 1, scope: !20669)
+!20691 = !DILocation(line: 5869, column: 1, scope: !20669)
+!20692 = !DILocation(line: 5881, column: 1, scope: !20669)
+!20693 = !DILocation(line: 5883, column: 1, scope: !20669)
+!20694 = !DILocation(line: 5887, column: 1, scope: !20669)
+!20695 = !DILocation(line: 5888, column: 1, scope: !20669)
+!20696 = !DILocation(line: 5889, column: 1, scope: !20669)
+!20697 = !DILocation(line: 5891, column: 1, scope: !20669)
+!20698 = !DILocation(line: 5892, column: 1, scope: !20669)
+!20699 = !DILocation(line: 5894, column: 1, scope: !20669)
+!20700 = !DILocation(line: 5898, column: 1, scope: !20669)
+!20701 = distinct !DISubprogram(name: "IrBuilder_lowerCallArgs", scope: !16487, file: !16487, line: 5902, type: !2, scopeLine: 5902, spFlags: DISPFlagDefinition, unit: !0)
+!20702 = !DILocation(line: 6045, column: 1, scope: !20701)
+!20703 = !DILocation(line: 6040, column: 1, scope: !20701)
+!20704 = !DILocation(line: 6038, column: 1, scope: !20701)
+!20705 = !DILocation(line: 6027, column: 1, scope: !20701)
+!20706 = !DILocation(line: 6025, column: 1, scope: !20701)
+!20707 = !DILocation(line: 6021, column: 1, scope: !20701)
+!20708 = !DILocation(line: 6010, column: 1, scope: !20701)
+!20709 = !DILocation(line: 6008, column: 1, scope: !20701)
+!20710 = !DILocation(line: 6007, column: 1, scope: !20701)
+!20711 = !DILocation(line: 6005, column: 1, scope: !20701)
+!20712 = !DILocation(line: 6004, column: 1, scope: !20701)
+!20713 = !DILocation(line: 5994, column: 1, scope: !20701)
+!20714 = !DILocation(line: 5993, column: 1, scope: !20701)
+!20715 = !DILocation(line: 5992, column: 1, scope: !20701)
+!20716 = !DILocation(line: 5990, column: 1, scope: !20701)
+!20717 = !DILocation(line: 5989, column: 1, scope: !20701)
+!20718 = !DILocation(line: 5988, column: 1, scope: !20701)
+!20719 = !DILocation(line: 5982, column: 1, scope: !20701)
+!20720 = !DILocation(line: 5981, column: 1, scope: !20701)
+!20721 = !DILocation(line: 5980, column: 1, scope: !20701)
+!20722 = !DILocation(line: 5979, column: 1, scope: !20701)
+!20723 = !DILocation(line: 5978, column: 1, scope: !20701)
+!20724 = !DILocation(line: 5977, column: 1, scope: !20701)
+!20725 = !DILocation(line: 5975, column: 1, scope: !20701)
+!20726 = !DILocation(line: 5971, column: 1, scope: !20701)
+!20727 = !DILocation(line: 5969, column: 1, scope: !20701)
+!20728 = !DILocation(line: 5964, column: 1, scope: !20701)
+!20729 = !DILocation(line: 5957, column: 1, scope: !20701)
+!20730 = !DILocation(line: 5956, column: 1, scope: !20701)
+!20731 = !DILocation(line: 5955, column: 1, scope: !20701)
+!20732 = !DILocation(line: 5953, column: 1, scope: !20701)
+!20733 = !DILocation(line: 5952, column: 1, scope: !20701)
+!20734 = !DILocation(line: 5951, column: 1, scope: !20701)
+!20735 = !DILocation(line: 5946, column: 1, scope: !20701)
+!20736 = !DILocation(line: 5945, column: 1, scope: !20701)
+!20737 = !DILocation(line: 5943, column: 1, scope: !20701)
+!20738 = !DILocation(line: 5940, column: 1, scope: !20701)
+!20739 = !DILocation(line: 5934, column: 1, scope: !20701)
+!20740 = !DILocation(line: 5932, column: 1, scope: !20701)
+!20741 = !DILocation(line: 5931, column: 1, scope: !20701)
+!20742 = !DILocation(line: 5930, column: 1, scope: !20701)
+!20743 = !DILocation(line: 5928, column: 1, scope: !20701)
+!20744 = !DILocation(line: 5926, column: 1, scope: !20701)
+!20745 = !DILocation(line: 5925, column: 1, scope: !20701)
+!20746 = !DILocation(line: 5915, column: 1, scope: !20701)
+!20747 = !DILocation(line: 5913, column: 1, scope: !20701)
+!20748 = !DILocation(line: 5912, column: 1, scope: !20701)
+!20749 = !DILocation(line: 5910, column: 1, scope: !20701)
+!20750 = !DILocation(line: 5909, column: 1, scope: !20701)
+!20751 = !DILocation(line: 5908, column: 1, scope: !20701)
+!20752 = !DILocation(line: 5906, column: 1, scope: !20701)
+!20753 = !DILocation(line: 5905, column: 1, scope: !20701)
+!20754 = !DILocation(line: 5902, column: 1, scope: !20701)
+!20755 = !DILocation(line: 5903, column: 1, scope: !20701)
+!20756 = !DILocation(line: 5904, column: 1, scope: !20701)
+!20757 = !DILocation(line: 5907, column: 1, scope: !20701)
+!20758 = !DILocation(line: 5911, column: 1, scope: !20701)
+!20759 = !DILocation(line: 5914, column: 1, scope: !20701)
+!20760 = !DILocation(line: 5916, column: 1, scope: !20701)
+!20761 = !DILocation(line: 5919, column: 1, scope: !20701)
+!20762 = !DILocation(line: 5920, column: 1, scope: !20701)
+!20763 = !DILocation(line: 5921, column: 1, scope: !20701)
+!20764 = !DILocation(line: 5923, column: 1, scope: !20701)
+!20765 = !DILocation(line: 5927, column: 1, scope: !20701)
+!20766 = !DILocation(line: 5929, column: 1, scope: !20701)
+!20767 = !DILocation(line: 5933, column: 1, scope: !20701)
+!20768 = !DILocation(line: 5935, column: 1, scope: !20701)
+!20769 = !DILocation(line: 5936, column: 1, scope: !20701)
+!20770 = !DILocation(line: 5938, column: 1, scope: !20701)
+!20771 = !DILocation(line: 5941, column: 1, scope: !20701)
+!20772 = !DILocation(line: 5942, column: 1, scope: !20701)
+!20773 = !DILocation(line: 5947, column: 1, scope: !20701)
+!20774 = !DILocation(line: 5948, column: 1, scope: !20701)
+!20775 = !DILocation(line: 5949, column: 1, scope: !20701)
+!20776 = !DILocation(line: 5954, column: 1, scope: !20701)
+!20777 = !DILocation(line: 5958, column: 1, scope: !20701)
+!20778 = !DILocation(line: 5959, column: 1, scope: !20701)
+!20779 = !DILocation(line: 5960, column: 1, scope: !20701)
+!20780 = !DILocation(line: 5962, column: 1, scope: !20701)
+!20781 = !DILocation(line: 5970, column: 1, scope: !20701)
+!20782 = !DILocation(line: 5973, column: 1, scope: !20701)
+!20783 = !DILocation(line: 5976, column: 1, scope: !20701)
+!20784 = !DILocation(line: 5983, column: 1, scope: !20701)
+!20785 = !DILocation(line: 5984, column: 1, scope: !20701)
+!20786 = !DILocation(line: 5986, column: 1, scope: !20701)
+!20787 = !DILocation(line: 5991, column: 1, scope: !20701)
+!20788 = !DILocation(line: 5995, column: 1, scope: !20701)
+!20789 = !DILocation(line: 5996, column: 1, scope: !20701)
+!20790 = !DILocation(line: 5999, column: 1, scope: !20701)
+!20791 = !DILocation(line: 6000, column: 1, scope: !20701)
+!20792 = !DILocation(line: 6001, column: 1, scope: !20701)
+!20793 = !DILocation(line: 6006, column: 1, scope: !20701)
+!20794 = !DILocation(line: 6009, column: 1, scope: !20701)
+!20795 = !DILocation(line: 6023, column: 1, scope: !20701)
+!20796 = !DILocation(line: 6024, column: 1, scope: !20701)
+!20797 = !DILocation(line: 6026, column: 1, scope: !20701)
+!20798 = !DILocation(line: 6041, column: 1, scope: !20701)
+!20799 = !DILocation(line: 6044, column: 1, scope: !20701)
+!20800 = !DILocation(line: 6047, column: 1, scope: !20701)
+!20801 = !DILocation(line: 6048, column: 1, scope: !20701)
+!20802 = !DILocation(line: 6049, column: 1, scope: !20701)
 !20803 = !DIFile(filename: "CallLowerer.spec", directory: "./spec/base/compiler/llvm")
 !20804 = distinct !DISubprogram(name: "CallLowerer_init", scope: !20803, file: !20803, line: 17, type: !2, scopeLine: 17, spFlags: DISPFlagDefinition, unit: !0)
 !20805 = !DILocation(line: 17, column: 1, scope: !20804)
@@ -475410,24 +475397,24 @@ ret_blk:
 !23488 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitArcAndPool", scope: !23485, file: !23485, line: 12, type: !2, scopeLine: 12, spFlags: DISPFlagDefinition, unit: !0)
 !23489 = !DILocation(line: 12, column: 1, scope: !23488)
 !23490 = !DILocation(line: 13, column: 1, scope: !23488)
-!23491 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitClosuresAndBoxes", scope: !23485, file: !23485, line: 169, type: !2, scopeLine: 169, spFlags: DISPFlagDefinition, unit: !0)
-!23492 = !DILocation(line: 169, column: 1, scope: !23491)
-!23493 = !DILocation(line: 170, column: 1, scope: !23491)
-!23494 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitMemIntrinsics", scope: !23485, file: !23485, line: 282, type: !2, scopeLine: 282, spFlags: DISPFlagDefinition, unit: !0)
-!23495 = !DILocation(line: 282, column: 1, scope: !23494)
-!23496 = !DILocation(line: 283, column: 1, scope: !23494)
-!23497 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitTypeAndStringHelpers", scope: !23485, file: !23485, line: 615, type: !2, scopeLine: 615, spFlags: DISPFlagDefinition, unit: !0)
-!23498 = !DILocation(line: 615, column: 1, scope: !23497)
-!23499 = !DILocation(line: 616, column: 1, scope: !23497)
-!23500 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitMathHelpers", scope: !23485, file: !23485, line: 844, type: !2, scopeLine: 844, spFlags: DISPFlagDefinition, unit: !0)
-!23501 = !DILocation(line: 844, column: 1, scope: !23500)
-!23502 = !DILocation(line: 845, column: 1, scope: !23500)
-!23503 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitCliAndAtomics", scope: !23485, file: !23485, line: 946, type: !2, scopeLine: 946, spFlags: DISPFlagDefinition, unit: !0)
-!23504 = !DILocation(line: 946, column: 1, scope: !23503)
-!23505 = !DILocation(line: 947, column: 1, scope: !23503)
-!23506 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitAll", scope: !23485, file: !23485, line: 1053, type: !2, scopeLine: 1053, spFlags: DISPFlagDefinition, unit: !0)
-!23507 = !DILocation(line: 1054, column: 1, scope: !23506)
-!23508 = !DILocation(line: 1053, column: 1, scope: !23506)
+!23491 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitClosuresAndBoxes", scope: !23485, file: !23485, line: 174, type: !2, scopeLine: 174, spFlags: DISPFlagDefinition, unit: !0)
+!23492 = !DILocation(line: 174, column: 1, scope: !23491)
+!23493 = !DILocation(line: 175, column: 1, scope: !23491)
+!23494 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitMemIntrinsics", scope: !23485, file: !23485, line: 287, type: !2, scopeLine: 287, spFlags: DISPFlagDefinition, unit: !0)
+!23495 = !DILocation(line: 287, column: 1, scope: !23494)
+!23496 = !DILocation(line: 288, column: 1, scope: !23494)
+!23497 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitTypeAndStringHelpers", scope: !23485, file: !23485, line: 620, type: !2, scopeLine: 620, spFlags: DISPFlagDefinition, unit: !0)
+!23498 = !DILocation(line: 620, column: 1, scope: !23497)
+!23499 = !DILocation(line: 621, column: 1, scope: !23497)
+!23500 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitMathHelpers", scope: !23485, file: !23485, line: 831, type: !2, scopeLine: 831, spFlags: DISPFlagDefinition, unit: !0)
+!23501 = !DILocation(line: 831, column: 1, scope: !23500)
+!23502 = !DILocation(line: 832, column: 1, scope: !23500)
+!23503 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitCliAndAtomics", scope: !23485, file: !23485, line: 933, type: !2, scopeLine: 933, spFlags: DISPFlagDefinition, unit: !0)
+!23504 = !DILocation(line: 933, column: 1, scope: !23503)
+!23505 = !DILocation(line: 934, column: 1, scope: !23503)
+!23506 = distinct !DISubprogram(name: "LlvmRuntimePrelude_emitAll", scope: !23485, file: !23485, line: 1040, type: !2, scopeLine: 1040, spFlags: DISPFlagDefinition, unit: !0)
+!23507 = !DILocation(line: 1041, column: 1, scope: !23506)
+!23508 = !DILocation(line: 1040, column: 1, scope: !23506)
 !23509 = !DIFile(filename: "LlvmStructLayout.spec", directory: "./spec/base/compiler/llvm")
 !23510 = distinct !DISubprogram(name: "LlvmStructLayout_init", scope: !23509, file: !23509, line: 21, type: !2, scopeLine: 21, spFlags: DISPFlagDefinition, unit: !0)
 !23511 = !DILocation(line: 21, column: 1, scope: !23510)
