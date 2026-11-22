@@ -4469,31 +4469,20 @@ Class is TypeChecker{
 		});
 		if({ res == '' }, {
 			res: targetType;
-			match(on: method, when: [
-				'toString': { res: Primitive:STRING:value(); },
-				'length': { res: Primitive:INT:value(); },
-				'isEmpty': { res: Primitive:BOOLEAN:value(); },
-				'indexOf': { res: Primitive:INT:value(); },
-				else: {}
-			]);
 			# Member existence: a real (non-binding) class whose call
-			# resolves to NOTHING (no method, held member, or vocabulary
-			# entry) is a compile error, not a silently receiver-typed
-			# call — the fallback once let removed members keep compiling.
-			# Runs AFTER the vocabulary table and container branches: any
-			# of them claiming the call is authoritative.
-			if({ res == targetType }, {
-				local String is existBase: TypeDomain:baseName(t: targetType);
-				local Boolean is memberExists: :lookupAnyMember(className: existBase, methodName: method):name != '';
-				if({ !memberExists }, {
-					memberExists: :findHeldMethod(className: existBase, methodName: method):name != '';
-				});
-				local ClassInfo is existCls: :findClass(name: existBase);
-				if({ !memberExists && existCls:name != '' && !:isBindingDeclaration(cls: existCls) }, {
-					:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
-					expr:setResolvedType(t: '');
-					return '';
-				});
+			# resolves to NOTHING (no method or held member) is a compile
+			# error, not a silently receiver-typed call — the fallback once
+			# let removed members keep compiling.
+			local String is existBase: TypeDomain:baseName(t: targetType);
+			local Boolean is memberExists: :lookupAnyMember(className: existBase, methodName: method):name != '';
+			if({ !memberExists }, {
+				memberExists: :findHeldMethod(className: existBase, methodName: method):name != '';
+			});
+			local ClassInfo is existCls: :findClass(name: existBase);
+			if({ !memberExists && existCls:name != '' && !:isBindingDeclaration(cls: existCls) }, {
+				:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
+				expr:setResolvedType(t: '');
+				return '';
 			});
 		});
 		if({ TypeDomain:isOfBase(t: targetType, base: 'Map') && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {

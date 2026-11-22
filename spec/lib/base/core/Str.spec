@@ -37,6 +37,13 @@ Class of Buf is Str{
 		return Mem:loadI64(ptr: addr, byteOffset: 8);
 	}
 
+	## Returns whether this string has zero bytes.
+	##
+	## @return: `true` if empty, `false` otherwise.
+	Function of Boolean is isEmpty(){
+		return :length() == 0;
+	}
+
 	## Number of bytes in this string (explicit byte-length alias for [length]).
 	##
 	## @return: Byte count.
