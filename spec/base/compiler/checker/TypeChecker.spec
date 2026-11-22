@@ -4470,17 +4470,8 @@ Class is TypeChecker{
 				'isEmpty': { res: Primitive:BOOLEAN:value(); },
 				'count': { res: Primitive:INT:value(); },
 				'any': { res: Primitive:BOOLEAN:value(); },
-				'has': { res: Primitive:BOOLEAN:value(); },
-				'getString': { res: Primitive:STRING:value(); },
-				'getInt': { res: Primitive:INT:value(); },
-				'getFloat': { res: Primitive:FLOAT:value(); },
-				'getBool': { res: Primitive:BOOLEAN:value(); },
 				'indexOf': { res: Primitive:INT:value(); },
 				'join': { res: Primitive:STRING:value(); },
-				'keys': {
-					local String is mk: TypeDomain:mapKeyType(t: targetType);
-					res: if({ mk != '' }, { TypeDomain:makeArray(elem: mk) }, { 'Array of String' });
-				},
 				'add': { res: :names:voidName(); },
 				'set': { res: :names:voidName(); },
 				'clear': { res: :names:voidName(); },
@@ -4492,10 +4483,6 @@ Class is TypeChecker{
 			if({ res == targetType }, {
 				if({ (TypeDomain:isParameterized(t: targetType, base: 'Array') || TypeDomain:isParameterized(t: targetType, base: 'List')) && (method == 'get' || method == 'pop' || method == 'removeAt') }, {
 					res: TypeDomain:elemType(t: targetType);
-				});
-				if({ TypeDomain:isParameterized(t: targetType, base: 'Map') && (method == 'get' || method == 'getString') }, {
-					local String is mv: TypeDomain:mapValType(t: targetType);
-					if({ mv != '' }, { res: mv; });
 				});
 			});
 			# Member existence: a real (non-binding) class whose call

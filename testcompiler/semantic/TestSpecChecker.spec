@@ -27,7 +27,7 @@ Class of SpecUnitTest is TestSpecChecker{
 	## @return: Rendered type errors (empty when clean).
 	Function of Array of String is checkOf(String is src){
 		local Array of ClassInfo is all: [];
-		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec', 'spec/lib/base/sys/Conditional.spec'];
+		local Array of String is preloads: ['spec/lib/base/sys/Conditional.spec', 'spec/lib/base/iterator/Loop.spec', 'spec/lib/base/iterator/LoopControl.spec', 'spec/lib/base/sys/Loops.spec', 'spec/lib/base/sys/Mem.spec', 'spec/lib/base/sys/HashTable.spec', 'spec/lib/base/struct/Map.spec'];
 		preloads:each(action: local Function(String is path){
 			local Lexer is plex: Lexer:init(source: fileRead(path: path, default: ''));
 			local Parser is ppar: Parser:init(tokens: plex:tokenize());
