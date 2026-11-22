@@ -370,7 +370,6 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		File:fileRemove(path: specPath);
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
-		File:fileRemove(path: dataPath);
 	}
 
 	Function is testVtableDispatchAndUsingAsLlvm(){
