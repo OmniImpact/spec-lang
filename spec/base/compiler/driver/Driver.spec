@@ -178,7 +178,7 @@ Class is Driver{
 			# 2. Semantic static type checking.
 			local Int is checkT0: Process:clockMs();
 			local TypeChecker is tc: TypeChecker:init();
-			local Array of TypeError is typeErrors: tc:checkProgram(program: program);
+			local Array of TypeError is typeErrors: tc:checkProgramScoped(program: program, scope: scope, threads: threadCount);
 			checkMs: Process:clockMs() - checkT0;
 			local Int is errCount: typeErrors:length();
 			tc:cleanup();

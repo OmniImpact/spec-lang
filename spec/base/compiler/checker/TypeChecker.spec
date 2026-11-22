@@ -40,7 +40,10 @@ Class is TypeChecker{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Reflection()],
 		['base', 'sys', as Output()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', 'thread', Task],
+		['base', 'sys', as Process()]
 ];
 
 	## Registered classes: name -> "true".
@@ -151,14 +154,17 @@ Class is TypeChecker{
 
 	## Method-level generic templates discovered during type checking (`Owner:method -> tpName`),
 	## their grounding status (`Owner:method -> true`), and their declaring source locations.
-	local Map of String to String is genericMethodTemplates: Map:init();
-	local Map of String to Boolean is groundedGenericMethods: Map:init();
-	local Map of String to Int is genericMethodLines: Map:init();
-	local Map of String to String is genericMethodFiles: Map:init();
+	Map of String to String is genericMethodTemplates: Map:init();
+	Map of String to Boolean is groundedGenericMethods: Map:init();
+	Map of String to Int is genericMethodLines: Map:init();
+	Map of String to String is genericMethodFiles: Map:init();
 	local Map of String to Boolean is currentMethodTypeParams: Map:init();
 
 	## Accumulated type errors.
-	local Array of TypeError is errors: [];
+	Array of TypeError is errors: [];
+
+	## Per-class error slices populated by parallel workers for deterministic merge.
+	Map of Int to Array of TypeError is workerClassErrors: Map:init();
 
 	## All class definitions in the program (nested included).
 	local Array of ClassInfo is programClasses: [];
@@ -6760,7 +6766,60 @@ Class is TypeChecker{
 		color:set(key: c:name, value: 'b');
 	}
 
-	Function of Array of TypeError is checkProgram(ProgramNode is program){
+	## Shares frozen read-only Phase 1 tables from the coordinating TypeChecker
+	## into a parallel Pass 2 worker instance.
+	Function is shareFrozenTables(Array of ClassInfo is progClasses, Map of String to String is regClasses, Map of String to String is enumNames, Map of String to String is enumVariants, Map of String to String is strEnums){
+		:programClasses: progClasses;
+		:registeredClasses: regClasses;
+		:allEnumNames: enumNames;
+		:allEnumVariants: enumVariants;
+		:allStringBackedEnums: strEnums;
+	}
+
+	## Pre-resolves cross-class-visible method signature annotations
+	## (self-field `:field` parameter types and `evaluate`/`iteration` Boolean
+	## return types) so all method signatures are immutable before parallel Pass 2.
+	local Function is resolveMethodSignaturePrepass(Array of ClassInfo is classes){
+		classes:each(action: local Function(ClassInfo is c){
+			local Map of String to String is cFields: Map:init();
+			local Map of String to String is fVis: Map:init();
+			:collectFieldsForPrepass(cls: c, out: cFields, visited: fVis);
+			c:members:each(action: local Function(Member is m){
+				if({ m:kind == MemberKind:METHOD }, {
+					m:params:each(action: local Function(Parameter is p){
+						if({ p:paramType:name == :names:selfFieldMarker() }, {
+							local String is ft: cFields:getString(key: p:name, default: Primitive:ANY:value());
+							p:paramType: :parseTypeNode(s: ft);
+						});
+					});
+					local String is rType: :resolveReturnType(t: m:memberType);
+					if({ rType == '' || :isVoid(t: rType) }, {
+						if({ m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() }, {
+							m:memberType: Type:init(name: 'Boolean');
+						});
+					});
+				});
+			});
+		});
+	}
+
+	local Function is collectFieldsForPrepass(ClassInfo is cls, Map of String to String is out, Map of String to String is visited){
+		if({ cls:name == '' || visited:has(key: cls:qualifiedName()) }, { return; });
+		visited:set(key: cls:qualifiedName(), value: 'true');
+		cls:baseClasses:each(action: local Function(String is bn){
+			local ClassInfo is p: :findClass(name: bn);
+			if({ p:name != '' }, {
+				:collectFieldsForPrepass(cls: p, out: out, visited: visited);
+			});
+		});
+		cls:members:each(action: local Function(Member is m){
+			if({ m:kind == MemberKind:FIELD && m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() }, {
+				out:set(key: m:name, value: :formatVarTypeString(t: m:memberType));
+			});
+		});
+	}
+
+	local Function is runPhase1(ProgramNode is program){
 		:errors: [];
 		local Array of ClassInfo is flattened: [];
 		program:classes:each(action: local Function(ClassInfo is c){
@@ -6846,12 +6905,9 @@ Class is TypeChecker{
 		flattened:each(action: local Function(ClassInfo is c){
 			:checkInheritance(classDef: c);
 		});
+	}
 
-		# Pass 2: Full expression type inference & AST annotation
-		program:classes:each(action: local Function(ClassInfo is c){
-			:checkClass(classDef: c);
-		});
-
+	local Function is checkUngroundedGenericMethods(){
 		local Array of String is gmKeys: :genericMethodTemplates:keys();
 		gmKeys:each(action: local Function(String is gmKey){
 			if({ !:groundedGenericMethods:has(key: gmKey) }, {
@@ -6871,7 +6927,167 @@ Class is TypeChecker{
 				});
 			});
 		});
+	}
 
+	Function of Array of TypeError is checkProgram(ProgramNode is program){
+		:runPhase1(program: program);
+
+		# Pass 2: Full expression type inference & AST annotation
+		program:classes:each(action: local Function(ClassInfo is c){
+			:checkClass(classDef: c);
+		});
+
+		:checkUngroundedGenericMethods();
+		return :errors;
+	}
+
+	## Type-checks [program] with Pass 2 (per-class body inference & annotation)
+	## parallelized across [threads] workers inside [scope]. Errors and generic
+	## method grounding are merged in deterministic class order.
+	Function of Array of TypeError is checkProgramScoped(ProgramNode is program, ThreadScope is scope, Int is threads: 1){
+		local Int is nCls: program:classes:length();
+		if({ threads <= 1 || nCls <= 1 }, {
+			return :checkProgram(program: program);
+		});
+
+		:runPhase1(program: program);
+		:resolveMethodSignaturePrepass(classes: :programClasses);
+
+		# Freeze shared Phase 1 tables for lock-free concurrent reads across workers.
+		# Keep program:classes unfrozen — GenericSpecializer appends to it later.
+		local Array of ClassInfo is topClasses: [];
+		local Int is tci: 0;
+		while({ tci < nCls }, {
+			topClasses:add(item: program:classes:get(index: tci));
+			tci++;
+		});
+		Process:arrayFreeze(a: topClasses);
+		Process:arrayFreeze(a: :programClasses);
+		Process:mapFreeze(m: :registeredClasses);
+		Process:mapFreeze(m: :allEnumNames);
+		Process:mapFreeze(m: :allEnumVariants);
+		Process:mapFreeze(m: :allStringBackedEnums);
+
+		local Int is nWorkers: if({ threads < nCls }, { threads }, { nCls });
+		# LPT weight-balanced partitioning by member count so large classes
+		# (e.g. TypeChecker, IrBuilder) land on distinct workers.
+		local Array of Int is sortedIdx: [];
+		local Int is idx0: 0;
+		while({ idx0 < nCls }, {
+			sortedIdx:add(item: idx0);
+			idx0++;
+		});
+		local Int is si: 1;
+		while({ si < nCls }, {
+			local Int is keyIdx: sortedIdx:get(index: si);
+			local Int is keyW: program:classes:get(index: keyIdx):members:length();
+			local Int is sj: si - 1;
+			while({ sj >= 0 && program:classes:get(index: sortedIdx:get(index: sj)):members:length() < keyW }, {
+				sortedIdx:set(index: sj + 1, item: sortedIdx:get(index: sj));
+				sj: sj - 1;
+			});
+			sortedIdx:set(index: sj + 1, item: keyIdx);
+			si++;
+		});
+
+		local Array of Array of Int is buckets: [];
+		local Array of Int is bucketWeights: [];
+		local Int is bw: 0;
+		while({ bw < nWorkers }, {
+			buckets:add(item: []);
+			bucketWeights:add(item: 0);
+			bw++;
+		});
+		local Int is pi: 0;
+		while({ pi < nCls }, {
+			local Int is ci: sortedIdx:get(index: pi);
+			local Int is wVal: program:classes:get(index: ci):members:length() + 1;
+			local Int is bestW: 0;
+			local Int is bestLoad: bucketWeights:get(index: 0);
+			local Int is bi: 1;
+			while({ bi < nWorkers }, {
+				local Int is curLoad: bucketWeights:get(index: bi);
+				if({ curLoad < bestLoad }, {
+					bestLoad: curLoad;
+					bestW: bi;
+				});
+				bi++;
+			});
+			buckets:get(index: bestW):add(item: ci);
+			bucketWeights:set(index: bestW, item: bestLoad + wVal);
+			pi++;
+		});
+
+		local Array of ClassInfo is sharedProgClasses: :programClasses;
+		local Map of String to String is sharedRegClasses: :registeredClasses;
+		local Map of String to String is sharedEnumNames: :allEnumNames;
+		local Map of String to String is sharedEnumVariants: :allEnumVariants;
+		local Map of String to String is sharedStrEnums: :allStringBackedEnums;
+
+		local Array of Task of TypeChecker is workerTasks: [];
+		local Int is w: 0;
+		while({ w < nWorkers }, {
+			local Array of Int is myIndices: buckets:get(index: w);
+			local Task of TypeChecker is wt: scope:spawn(task: local Function of TypeChecker(){
+				local TypeChecker is wTc: TypeChecker:init();
+				wTc:shareFrozenTables(progClasses: sharedProgClasses, regClasses: sharedRegClasses, enumNames: sharedEnumNames, enumVariants: sharedEnumVariants, strEnums: sharedStrEnums);
+				local Int is k: 0;
+				while({ k < myIndices:length() }, {
+					local Int is clsIdx: myIndices:get(index: k);
+					local Int is errStart: wTc:errors:length();
+					wTc:checkClass(classDef: topClasses:get(index: clsIdx));
+					local Int is errEnd: wTc:errors:length();
+					if({ errEnd > errStart }, {
+						local Array of TypeError is slice: [];
+						local Int is ei: errStart;
+						while({ ei < errEnd }, {
+							slice:add(item: wTc:errors:get(index: ei));
+							ei++;
+						});
+						wTc:workerClassErrors:set(key: clsIdx, value: slice);
+					});
+					k++;
+				});
+				return wTc;
+			});
+			workerTasks:add(item: wt);
+			w++;
+		});
+
+		local Map of Int to Array of TypeError is allClassErrs: Map:init();
+		local Int is wi: 0;
+		while({ wi < workerTasks:length() }, {
+			local TypeChecker is doneTc: workerTasks:get(index: wi):await();
+			local Array of Int is errKeys: doneTc:workerClassErrors:keys();
+			errKeys:each(action: local Function(Int is ck){
+				allClassErrs:set(key: ck, value: doneTc:workerClassErrors:get(key: ck, default: []));
+			});
+			local Array of String is tKeys: doneTc:genericMethodTemplates:keys();
+			tKeys:each(action: local Function(String is tk){
+				:genericMethodTemplates:set(key: tk, value: doneTc:genericMethodTemplates:getString(key: tk, default: ''));
+				:genericMethodLines:set(key: tk, value: doneTc:genericMethodLines:get(key: tk, default: 0));
+				:genericMethodFiles:set(key: tk, value: doneTc:genericMethodFiles:getString(key: tk, default: ''));
+			});
+			local Array of String is gKeys: doneTc:groundedGenericMethods:keys();
+			gKeys:each(action: local Function(String is gk){
+				:groundedGenericMethods:set(key: gk, value: true);
+			});
+			wi++;
+		});
+
+		# Merge errors in deterministic class declaration order (0..nCls-1).
+		local Int is mi: 0;
+		while({ mi < nCls }, {
+			if({ allClassErrs:has(key: mi) }, {
+				local Array of TypeError is clsErrs: allClassErrs:get(key: mi, default: []);
+				clsErrs:each(action: local Function(TypeError is te){
+					:errors:add(item: te);
+				});
+			});
+			mi++;
+		});
+
+		:checkUngroundedGenericMethods();
 		return :errors;
 	}
 
