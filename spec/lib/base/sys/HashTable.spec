@@ -36,6 +36,22 @@ Class is HashTable{
 		Mem:atomicStoreI64(addr: addr + 40, val: 0);
 	}
 
+	## Allocates a new SpecMap with explicit [keyKind] and [valKind] storage tags.
+	Function of Any is newTyped(Int is keyKind, Int is valKind){
+		local Int is mAddr: Mem:allocArcKind(bytes: 48, kind: 1);
+		local Int is bAddr: Mem:alloc(bytes: 64);
+		Mem:storeI64(ptr: mAddr, byteOffset: 0, val: bAddr);
+		Mem:storeI64(ptr: mAddr, byteOffset: 8, val: 8);
+		Mem:storeI32(ptr: mAddr, byteOffset: 24, val: keyKind);
+		Mem:storeI32(ptr: mAddr, byteOffset: 28, val: valKind);
+		return Mem:addrToObj(addr: mAddr);
+	}
+
+	## Allocates a new SpecMap with String keys (kind 0) and ARC-retained values (kind 1).
+	Function of Any is newObject(){
+		return :newTyped(keyKind: 0, valKind: 1);
+	}
+
 	## Destroys this map, releasing any ARC keys/values and freeing its buckets and entries.
 	Function is mapDestroy(){
 		local Int is mAddr: Mem:objToAddr(obj: :);

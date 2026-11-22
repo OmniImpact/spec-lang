@@ -243,7 +243,7 @@ Class of SpecOptimizer is DevirtPass{
 							local String is target: fnPtrTarget:get(key: fnPtr, default: '');
 							anyDevirt: true;
 							local Array of String is newArgs: args;
-							if({ unusedSelf:has(key: target) && newArgs:length() > 0 }, {
+							if({ unusedSelf:has(key: target) && newArgs:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) }, {
 								local Array of String is nulled: ['null'];
 								local Int is ai: 1;
 								while({ ai < newArgs:length() }, {
@@ -264,7 +264,7 @@ Class of SpecOptimizer is DevirtPass{
 						return inst;
 					},
 					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
-						if({ unusedSelf:has(key: callee) && args:length() > 0 && args:get(index: 0, default: '') != 'null' }, {
+						if({ unusedSelf:has(key: callee) && args:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) && args:get(index: 0, default: '') != 'null' }, {
 							local Array of String is nulled: ['null'];
 							local Int is ai: 1;
 							while({ ai < args:length() }, {
