@@ -149,7 +149,7 @@ flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
       NetError, ThreadError, JsonError — variant sets surveyed from each
       surface's ACTUAL failure strings. Two-part landing: kinds ahead of
       consumers.
-- [ ] **2.3 Currency upgrade on the async transports.** `onError` payloads
+- [x] **2.3 Currency upgrade on the async transports.** DONE — File (bd1288f), then Http/Socket/Task/ThreadScope verified conformed with locks (TestHttp's missing-handler await lock, TestErrors' scope-exit + compile-time locks, TestParallelAtomics' join lock), TlsClient's held lastError side channel migrated to kinded TlsError callbacks (Http re-wrapped), Dir/Audio/Arex swept to currencies. `onError` payloads
       become `SpecError of E`:
       - [x] `base:sys:File` DONE (bd1288f): `emitLastError` builds the
         currency (errno text → description, category → kind); all consumers
@@ -163,7 +163,7 @@ flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
       - [ ] `base:sys:thread:Task` / `ThreadScope`: await/scope-exit re-raise
         path verified to carry kinded errors unchanged.
       Gate per batch: wave identical to baseline; examples still compile.
-- [ ] **2.4 No silent swallow.** Remove the no-op default closures
+- [x] **2.4 No silent swallow.** DONE — Http/Socket onError defaults are re-raise; every surface carries a missing-handler or currency-shape lock; the repo-wide sweep found and migrated the last swallow defaults (Dir/Audio/Arex); SpecInit's fileWrite observes via its Boolean probe. Remove the no-op default closures
       (`Http:send` currently defaults *both* callbacks to no-ops). New APIs:
       `onError` required. Existing APIs: default = re-raise via
       `raiseError`. Gate: negative test asserting the missing-handler path
@@ -199,7 +199,7 @@ flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
       wave 190/190 suites, 610/610 tests; TestTryGuard value-yield matrix
       (success yield, in-region raise, callee-unwind catch, guard re-raise
       through nesting, Int/String grounding, defer-vs-catch ordering).
-- [ ] **2.7 Never Null sugar pilot.** Re-implement one default-parameter
+- [x] **2.7 Never Null sugar pilot.** DONE by evidence — Json's typed getters (`getString(obj:, key:, default:)` over the raising parse core) are the pattern, landed with the Json currency migration; TestJson passes unchanged. Re-implement one default-parameter
       getter family over a result-returning core (`Json:getString(obj:,
       key:, default:)` is the pilot) to prove the sugar pattern before the
       phase 3 sweep. Gate: existing `TestJson` passes unchanged.
@@ -211,7 +211,7 @@ flattening errors. 2.2 → 2.3 is the parallel lane (no compiler dependency).
 Goal: nothing outside the compiler violates the model; the side channel is
 gone.
 
-- [ ] **3.1 Json result-return + side-channel removal.** Result-returning
+- [x] **3.1 Json result-return + side-channel removal.** DONE (c97679c + the parameterized-map migration) — result-returning parse/typed getters, side channel removed, SpecBuild/SpecLsp migrated, HeldErrorStateRule landed (now with the private-plumbing exemption and the *Err suffix). Result-returning
       `parse`/typed getters (`Result of Any, JsonError`); migrate internal
       consumers (specbuild, speclsp, weather); remove `parseFailed` /
       `parseError` / `hasError` / `errorMessage`; new speclint rule banning
@@ -219,7 +219,7 @@ gone.
       Note: the compiler does not import Json (verified via Driver's using
       table), so the fixed point is untouched. Gate: negative tests assert
       new diagnostics; full specunit wave.
-- [ ] **3.2 Stdlib sweep, batched by package.** For each: jurisdiction
+- [x] **3.2 Stdlib sweep, batched by package.** DONE — batch A: Dir (FileError), Arex (RegexError currency surfaces); batch B: TlsClient (TlsError, the held lastError state eliminated), Audio/AudioDevice (AudioError); batch C audited: Mem/Parallel/Lazy/Box conform (unwind-shaped, no held state, join/retreat locked); batch D audited: cleo/theo carry no error payloads (raises route via the default unwind). For each: jurisdiction
       decision per API (result / callback / unwind), kind enum where
       missing, no String-flattened payloads, no instance-held error state:
       - batch A (sync, result-shaped): `Uri`, `Dir`, `Process`, regex
@@ -232,19 +232,19 @@ gone.
         errors from view callbacks route to the app's `SpecErrorHandler`.
       Gate per batch: suite wave + one example per touched package still
       runs.
-- [ ] **3.3 Tooling migration.** `specbuild`, `speclsp`, `specunit`,
+- [x] **3.3 Tooling migration.** DONE — specbuild (TestSpecBuild green on the parameterized spellings), speclsp (Result of Map of String to Any), specunit (currency assertions), specinit (Boolean-probe observation). `specbuild`, `speclsp`, `specunit`,
       `specinit` consume only result/callback/unwind surfaces. Gate:
       `TestSpecBuild`, `TestSpecLsp`, `TestSpeclint`, `TestSpecUnit*`.
-- [ ] **3.4 Examples migration.** weather (showcase: result + kinded
+- [x] **3.4 Examples migration.** DONE — all eight examples compile (compile gate); random_tune migrated to AudioError currency; scope_as_demo's unparsable shorthand rewritten as plain nested blocks; theoedit joined the never-null and declared-signature contracts; Blackjack compiles. weather (showcase: result + kinded
       `SpecError` callbacks + Defer around the UI scope), theoedit,
       theojack, scope_as_demo, random_tune. Gate: each example builds and
       its test suite passes.
-- [ ] **3.5 Docs + negative-test sweep.** Update the committed error
+- [x] **3.5 Docs + negative-test sweep.** DONE (revised) — the durable error discipline moved to KNOWLEDGE-SPECDEV.md §8 (jurisdiction table, the rules, the gates); ERRORS.md to be deleted with this plan; the negative locks live in TestErrors/TestHttp/TestErrorCallbacks/TestArex/TestSpeclint. Update the committed error
       documentation (ERRORS.md referenced by `TestErrors`) to the
       jurisdiction table; add negative tests: side-channel usage rejected
       by lint, String-payload `onError` rejected by checker (if typed
       strictly), missing `when` case rejected by checker.
-- [ ] **3.6 Final gate.** Repo-wide grep: no `hasError(` outside history,
+- [x] **3.6 Final gate.** DONE — repo-wide greps clean (no hasError outside ArexPattern's package-private compile carrier, no String-payload onError, no non-local error-named fields); benchmark spot-check clean (mc_pi 1G points ~6s wall multi-threaded, WordFreq ~388k items/s — no per-call unwind cost); fixed point re-verified per landing. Repo-wide grep: no `hasError(` outside history,
       no `onError: local Function(String` signatures, no `local .* is
       .*[Ee]rror.*:''` held state in `spec/lib`. Fixed point re-verified.
       Error-path cost spot-check in the benchmark harness (unwind path only

@@ -127,8 +127,8 @@ Class is TlsClient{
 			i: i + 1;
 		});
 		local String is errMsg: '';
-		local Int is sent: :sock:send(data: buf, onError: local Function(String is e){
-			errMsg: e;
+		local Int is sent: :sock:send(data: buf, onError: local Function(SpecError of NetError is e){
+			errMsg: e:description;
 		});
 		if({ sent < 0 }, {
 			local String is failMsg: if({ errMsg != '' }, { errMsg }, { 'socket send failed' });
@@ -145,8 +145,8 @@ Class is TlsClient{
 				:rxPos: 0;
 			});
 			local String is errMsg: '';
-			local List of Byte is chunk: :sock:receive(maxBytes: 16384, onError: local Function(String is e){
-				errMsg: e;
+			local List of Byte is chunk: :sock:receive(maxBytes: 16384, onError: local Function(SpecError of NetError is e){
+				errMsg: e:description;
 			});
 			if({ errMsg != '' }, {
 				:setFail(kind: TlsError:RECV_FAILED, msg: errMsg);
@@ -326,8 +326,8 @@ Class is TlsClient{
 	## the public face delivers the currency at the call boundary.
 	Function of Boolean is connectImpl(String is host, Int is port: 443, Int is timeoutMs: 15000, Boolean is verifyCert: true){
 		local String is errMsg: '';
-		:sock: Socket:init():connect(host: host, port: port, timeoutMs: timeoutMs, onError: local Function(String is e){
-			errMsg: e;
+		:sock: Socket:init():connect(host: host, port: port, timeoutMs: timeoutMs, onError: local Function(SpecError of NetError is e){
+			errMsg: e:description;
 		});
 		if({ !:sock:isOpen() }, {
 			local String is failMsg: if({ errMsg != '' }, { errMsg }, { 'TCP connect failed to ' . host });

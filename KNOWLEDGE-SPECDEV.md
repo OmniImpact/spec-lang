@@ -534,3 +534,48 @@ not reintroduce them.
 - Every debugging session ends with the instrumentation reverted and
   the gates green. The commit message records what was learned, not
   just what changed.
+
+## 8. Error discipline
+
+The error model is one currency (`SpecError of E` — kind enum,
+description, captured stack trace) over three transports with fixed
+jurisdictions, chosen by **failure expectation**, never by API accident:
+
+| Transport | Jurisdiction |
+|-----------|--------------|
+| Result-return | Sync, *expected* failure with no sensible default (parse, compile, TLS handshake) |
+| Callback | Async/scope operations; the caller must observe failure at the call site |
+| Unwind | Fallback: exceptional paths, deep propagation, cross-thread transport, and the default when a caller supplies no handler |
+
+**The rules every surface conforms to** (each has locks in the wave):
+
+- **Never flatten.** A failure payload is the full currency, never a
+  `String`. Callbacks take `Function(SpecError of <KindError>)`; the
+  kind enums are plain variant enums per package (FileError, NetError,
+  TlsError, AudioError, RegexError, HttpError, ThreadError, JsonError),
+  their variant sets mirroring the surface's actual failure modes with
+  the OS/protocol text riding the description.
+- **No silent swallow.** Absent an async handler the default is
+  **re-raise**, never a no-op. Sync Boolean/empty-returning APIs observe
+  failure through their return; optional currency callbacks make the
+  failure *observable* without changing the Never Null default.
+- **No side channel.** No `hasError()`/`errorMessage()` getters, no
+  instance-held error fields on the public surface. Private plumbing is
+  allowed when it never outlives the call: the boundary delivers the
+  currency and the state dies with it (TlsClient's `setFail` + exit
+  delivery is the pattern; the `local`-marked field keeps it private).
+- **Never Null defaults are sugar.** A `default:`-parameter getter
+  unwraps the raising core and returns the default on failure — the
+  raising core stays reachable for callers that need the currency.
+- **Mixed-value collections are per-entry.** A map literal whose values
+  are not uniformly ARC-marked tracks ownership per entry (val_kind=0,
+  per-entry is_arc); val_kind=1 (retain everything) only when every
+  literal value is ARC-marked. Raw primitive bits must never be
+  "retained".
+
+**The gates**: the repo-wide greps (`no hasError(`, `no
+onError: local Function(String`, no non-local `*Error`/`*Err`/`*Failed`
+fields) plus the `held-error-state` lint rule (private `local` plumbing
+exempt) plus each surface's currency tests. Package-private compile
+carriers (ArexPattern's internal compile state) are plumbing, not side
+channels — their user-facing observation is a currency callback.

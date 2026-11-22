@@ -15,6 +15,7 @@ Class of LintRule is HeldErrorStateRule{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'lexer', Keyword],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
 	];
@@ -35,7 +36,11 @@ Class of LintRule is HeldErrorStateRule{
 		classDef:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:FIELD }, {
 				local String is n: m:name;
-				if({ n:endsWith(suffix: 'Error') || n:endsWith(suffix: 'Failed') }, {
+				# Private plumbing is exempt: a `local`-marked field consumed
+				# at the same call's boundary (the TlsClient setFail shape)
+				# never crosses calls, so nothing external can poll it.
+				local Boolean is privatePipe: m:hasModifier(kw: Keyword:LOCAL);
+				if({ !privatePipe && (n:endsWith(suffix: 'Error') || n:endsWith(suffix: 'Failed') || n:endsWith(suffix: 'Err')) }, {
 					issues:add(item: LintIssue:init(line: m:line, isWarning: false, message: 'Field \'' . classDef:name . ':' . n . '\' looks like facility-held error state; carry the failure as a SpecError over result/callback/unwind instead of a pollable field.'));
 				});
 			});
