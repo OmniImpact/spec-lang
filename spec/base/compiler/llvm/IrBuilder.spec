@@ -5912,7 +5912,7 @@ Class is IrBuilder{
 		while({ pi < params:length() }, {
 			local Parameter is p: params:get(index: pi);
 			if({ p:isVariadic }, {
-				if({ p:paramType:name == 'Array' }, {
+				if({ p:paramType:name == 'Array' || :specBaseMap:get(key: p:paramType:name, default: '') == 'Array' }, {
 					local Array of Expression is vItems: [];
 					local Int is vi: pi;
 					while({ vi < callArgs:length() }, {
@@ -5923,7 +5923,7 @@ Class is IrBuilder{
 						vi++;
 					});
 					local Expression is arrExpr: Expression:ArrayLit(items: vItems);
-					arrExpr:setResolvedType(t: 'Array');
+					arrExpr:setResolvedType(t: p:paramType:name);
 					argTypes:add(item: IrType:Ptr);
 					argVals:add(item: :lowerExpr(expr: arrExpr));
 				}, {

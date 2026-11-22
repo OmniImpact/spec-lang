@@ -2298,7 +2298,7 @@ Class is TypeChecker{
 		local Type is recvNode: :parseTypeNode(s: className);
 		local Type is rawNode: :parseTypeNode(s: rawT);
 		local Type is subNode: :substituteTypeNode(t: rawNode, cls: ownerCls, typeArgs: recvNode:params);
-		return :formatTypeString(t: subNode);
+		return :formatVarTypeString(t: subNode);
 	}
 	## The stamped member for a call: the idx-th same-name METHOD member at
 	## the nearest declaring ancestor (idx below zero resolves as the

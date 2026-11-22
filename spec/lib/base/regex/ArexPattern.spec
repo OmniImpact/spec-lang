@@ -311,15 +311,15 @@ Class is ArexPattern{
 	}
 
 	local Function of Array of Int is concatFrag(Array of Int is a, Array of Int is b){
-		:out1s:set(index: a:get(index: 1), value: b:get(index: 0));
+		:out1s:set(index: a:get(index: 1), item: b:get(index: 0));
 		return :makeFrag(start: a:get(index: 0), exit: b:get(index: 1));
 	}
 
 	local Function of Array of Int is altFrag(Array of Int is a, Array of Int is b){
 		local Int is start: :addNode(op: 0, arg1: 0, arg2: 0, out1: a:get(index: 0), out2: b:get(index: 0));
 		local Int is exit: :addNode(op: 0, arg1: 0, arg2: 0, out1: -1, out2: -1);
-		:out1s:set(index: a:get(index: 1), value: exit);
-		:out1s:set(index: b:get(index: 1), value: exit);
+		:out1s:set(index: a:get(index: 1), item: exit);
+		:out1s:set(index: b:get(index: 1), item: exit);
 		return :makeFrag(start: start, exit: exit);
 	}
 
@@ -331,7 +331,7 @@ Class is ArexPattern{
 		}, {
 			start: :addNode(op: 0, arg1: 0, arg2: 0, out1: a:get(index: 0), out2: exit);
 		});
-		:out1s:set(index: a:get(index: 1), value: start);
+		:out1s:set(index: a:get(index: 1), item: start);
 		return :makeFrag(start: start, exit: exit);
 	}
 
@@ -343,7 +343,7 @@ Class is ArexPattern{
 		}, {
 			loop: :addNode(op: 0, arg1: 0, arg2: 0, out1: a:get(index: 0), out2: exit);
 		});
-		:out1s:set(index: a:get(index: 1), value: loop);
+		:out1s:set(index: a:get(index: 1), item: loop);
 		return :makeFrag(start: a:get(index: 0), exit: exit);
 	}
 
@@ -355,7 +355,7 @@ Class is ArexPattern{
 		}, {
 			start: :addNode(op: 0, arg1: 0, arg2: 0, out1: a:get(index: 0), out2: exit);
 		});
-		:out1s:set(index: a:get(index: 1), value: exit);
+		:out1s:set(index: a:get(index: 1), item: exit);
 		return :makeFrag(start: start, exit: exit);
 	}
 
@@ -363,7 +363,7 @@ Class is ArexPattern{
 		local Int is saveStart: :addNode(op: 7, arg1: groupIdx * 2, arg2: 0, out1: inner:get(index: 0), out2: -1);
 		local Int is exit: :addNode(op: 0, arg1: 0, arg2: 0, out1: -1, out2: -1);
 		local Int is saveEnd: :addNode(op: 7, arg1: groupIdx * 2 + 1, arg2: 0, out1: exit, out2: -1);
-		:out1s:set(index: inner:get(index: 1), value: saveEnd);
+		:out1s:set(index: inner:get(index: 1), item: saveEnd);
 		return :makeFrag(start: saveStart, exit: exit);
 	}
 
@@ -513,7 +513,7 @@ Class is ArexPattern{
 				local Array of Int is sub: :parseAlt();
 				if({ :peekUnit() == 41 }, { :readUnit(); }, { :setError(msg: 'Unclosed lookahead group in regex pattern.'); });
 				local Int is subMatch: :addNode(op: 6, arg1: 0, arg2: 0, out1: -1, out2: -1);
-				:out1s:set(index: sub:get(index: 1), value: subMatch);
+				:out1s:set(index: sub:get(index: 1), item: subMatch);
 				return :singleNodeFrag(op: laOp, arg1: sub:get(index: 0), arg2: 0);
 			});
 			if({ next == 60 }, { # '(?<' -> lookbehind '(?<=' / '(?<!' OR named capture '(?<name>...)'
@@ -533,7 +533,7 @@ Class is ArexPattern{
 					local Array of Int is sub: :parseAlt();
 					if({ :peekUnit() == 41 }, { :readUnit(); }, { :setError(msg: 'Unclosed lookbehind group in regex pattern.'); });
 					local Int is subMatch: :addNode(op: 6, arg1: 0, arg2: 0, out1: -1, out2: -1);
-					:out1s:set(index: sub:get(index: 1), value: subMatch);
+					:out1s:set(index: sub:get(index: 1), item: subMatch);
 					return :singleNodeFrag(op: lbOp, arg1: sub:get(index: 0), arg2: 0);
 				});
 				# Named capturing group (?<name>...)
@@ -799,7 +799,7 @@ Class is ArexPattern{
 		});
 		local Array of Int is wrapped: :wrapCaptureFrag(inner: root, groupIdx: 0);
 		local Int is matchNode: :addNode(op: 6, arg1: 0, arg2: 0, out1: -1, out2: -1);
-		:out1s:set(index: wrapped:get(index: 1), value: matchNode);
+		:out1s:set(index: wrapped:get(index: 1), item: matchNode);
 		:startState: wrapped:get(index: 0);
 	}
 
@@ -924,7 +924,7 @@ Class is ArexPattern{
 			});
 
 			if({ s >= 0 && stamps:get(index: s) != stamp }, {
-				stamps:set(index: s, value: stamp);
+				stamps:set(index: s, item: stamp);
 				local Int is op: :ops:get(index: s);
 				if({ op == 0 }, {
 					local Int is o2: :out2s:get(index: s);
@@ -950,7 +950,7 @@ Class is ArexPattern{
 						local Int is slot: :arg1s:get(index: s);
 						local Int is o1: :out1s:get(index: s);
 						if({ o1 >= 0 }, {
-							curC:set(index: slot, value: pos);
+							curC:set(index: slot, item: pos);
 							stackStates:add(item: o1);
 							ci: 0;
 							while({ ci < capStride }, {
@@ -1036,7 +1036,7 @@ Class is ArexPattern{
 				# (leftmost threads stay ahead of new threads!).
 				local Int is ti: 0;
 				while({ ti < currStates:length() }, {
-					stamps:set(index: currStates:get(index: ti), value: stamp);
+					stamps:set(index: currStates:get(index: ti), item: stamp);
 					ti: ti + 1;
 				});
 				:pikeAddThread(
@@ -1065,7 +1065,7 @@ Class is ArexPattern{
 					local Int is cBase: k * capStride;
 					ci: 0;
 					while({ ci < capStride }, {
-						bestCaps:set(index: ci, value: currCaps:get(index: cBase + ci));
+						bestCaps:set(index: ci, item: currCaps:get(index: cBase + ci));
 						ci: ci + 1;
 					});
 					limitThreads: k;
@@ -1173,11 +1173,11 @@ Class is ArexPattern{
 		if({ op == 7 }, { # SAVE
 			local Int is slot: :arg1s:get(index: s);
 			local Int is oldVal: caps:get(index: slot);
-			caps:set(index: slot, value: pos);
+			caps:set(index: slot, item: pos);
 			if({ :btExec(s: :out1s:get(index: s), pos: pos, units: units, uLen: uLen, caps: caps, exactEndPos: exactEndPos) }, {
 				return true;
 			});
-			caps:set(index: slot, value: oldVal);
+			caps:set(index: slot, item: oldVal);
 			return false;
 		});
 		if({ op == 4 }, {
@@ -1264,7 +1264,7 @@ Class is ArexPattern{
 		while({ sPos <= maxStart }, {
 			ci: 0;
 			while({ ci < capStride }, {
-				caps:set(index: ci, value: -1);
+				caps:set(index: ci, item: -1);
 				ci: ci + 1;
 			});
 			if({ :btExec(s: :startState, pos: sPos, units: units, uLen: uLen, caps: caps, exactEndPos: exactEnd) }, {

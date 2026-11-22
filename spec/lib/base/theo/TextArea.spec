@@ -77,7 +77,7 @@ Class of Widget is TextArea{
 	}
 
 	Function of String is getText(){
-		return lines:join(sep: "\n");
+		return lines:join(separator: "\n");
 	}
 
 	local Function is notifyChanged(){
@@ -291,7 +291,7 @@ Class of Widget is TextArea{
 			local String is cur: lines:get(index: cursorRow);
 			local String is left: cur:substring(start: 0, end: cursorCol);
 			local String is right: cur:substring(start: cursorCol, end: cur:length());
-			lines:set(index: cursorRow, value: left);
+			lines:set(index: cursorRow, item: left);
 			local Array of String is nextLines: [];
 			local Int is i: 0;
 			while({ i < lines:length() }, {
@@ -312,7 +312,7 @@ Class of Widget is TextArea{
 				local String is cur: lines:get(index: cursorRow);
 				local String is left: cur:substring(start: 0, end: cursorCol - 1);
 				local String is right: cur:substring(start: cursorCol, end: cur:length());
-				lines:set(index: cursorRow, value: "{{left}}{{right}}");
+				lines:set(index: cursorRow, item: "{{left}}{{right}}");
 				:cursorCol: cursorCol - 1;
 				notifyChanged();
 			}, {
@@ -320,7 +320,7 @@ Class of Widget is TextArea{
 					local String is prev: lines:get(index: cursorRow - 1);
 					local String is cur: lines:get(index: cursorRow);
 					local Int is joinCol: prev:length();
-					lines:set(index: cursorRow - 1, value: "{{prev}}{{cur}}");
+					lines:set(index: cursorRow - 1, item: "{{prev}}{{cur}}");
 					lines:removeAt(index: cursorRow);
 					:cursorRow: cursorRow - 1;
 					:cursorCol: joinCol;
@@ -334,12 +334,12 @@ Class of Widget is TextArea{
 			if({ cursorCol < cur:length() }, {
 				local String is left: cur:substring(start: 0, end: cursorCol);
 				local String is right: cur:substring(start: cursorCol + 1, end: cur:length());
-				lines:set(index: cursorRow, value: "{{left}}{{right}}");
+				lines:set(index: cursorRow, item: "{{left}}{{right}}");
 				notifyChanged();
 			}, {
 				if({ cursorRow + 1 < lines:length() }, {
 					local String is nextLn: lines:get(index: cursorRow + 1);
-					lines:set(index: cursorRow, value: "{{cur}}{{nextLn}}");
+					lines:set(index: cursorRow, item: "{{cur}}{{nextLn}}");
 					lines:removeAt(index: cursorRow + 1);
 					notifyChanged();
 				});
@@ -350,7 +350,7 @@ Class of Widget is TextArea{
 			local String is cur: lines:get(index: cursorRow);
 			local String is left: cur:substring(start: 0, end: cursorCol);
 			local String is right: cur:substring(start: cursorCol, end: cur:length());
-			lines:set(index: cursorRow, value: "{{left}}\t{{right}}");
+			lines:set(index: cursorRow, item: "{{left}}\t{{right}}");
 			:cursorCol: cursorCol + 1;
 			notifyChanged();
 			return true;
@@ -359,7 +359,7 @@ Class of Widget is TextArea{
 			local String is cur: lines:get(index: cursorRow);
 			local String is left: cur:substring(start: 0, end: cursorCol);
 			local String is right: cur:substring(start: cursorCol, end: cur:length());
-			lines:set(index: cursorRow, value: "{{left}}{{event:key}}{{right}}");
+			lines:set(index: cursorRow, item: "{{left}}{{event:key}}{{right}}");
 			:cursorCol: cursorCol + event:key:length();
 			notifyChanged();
 			return true;

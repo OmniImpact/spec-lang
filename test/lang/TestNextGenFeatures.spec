@@ -53,12 +53,12 @@ Class of SpecUnitTest is TestNextGenFeatures{
 		Assert:areEqualInt(2, doubled[0]);
 		Assert:areEqualInt(10, doubled[4]);
 		# 2. Array:fold accumulating sum
-		local Int is sum: nums:fold(initial: 0, reducer: local Function of Int(Int is acc, Int is x){
+		local Int is sum: nums:fold(initial: 0, accumulate: local Function of Int(Int is acc, Int is x){
 			return acc + x;
 		});
 		Assert:areEqualInt(15, sum);
 		# 3. Array:fold accumulating product
-		local Int is product: nums:fold(initial: 1, reducer: local Function of Int(Int is acc, Int is x){
+		local Int is product: nums:fold(initial: 1, accumulate: local Function of Int(Int is acc, Int is x){
 			return acc * x;
 		});
 		Assert:areEqualInt(120, product);

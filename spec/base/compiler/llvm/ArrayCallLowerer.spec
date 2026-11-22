@@ -42,6 +42,18 @@ Class of CallLowerer is ArrayCallLowerer{
 		], default: {});
 		if({ isArrInit }, { return true; });
 		local String is recvType: call:target:resolvedType;
+		if({ call:name == 'add' && call:args:length() == 1 && b:specBaseMap:get(key: recvType, default: '') == 'Array' }, {
+			local Array of Type is rArgs: b:specClassArgsMap:get(key: recvType, default: []);
+			local String is elemName: if({ rArgs:length() >= 1 }, { rArgs:get(index: 0, default: Type:init(name: '')):name }, { '' });
+			local Expression is a0Val: call:args:get(index: 0):value;
+			local Boolean is isLitArg: match(on: a0Val, when: [
+				Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+				else: { false }
+			]);
+			if({ isLitArg && elemName != 'Array' && b:specBaseMap:get(key: elemName, default: '') != 'Array' }, {
+				return true;
+			});
+		});
 		if({ recvType != 'Array' && !recvType:startsWith(prefix: 'Array of ') && !recvType:startsWith(prefix: 'Array:') && recvType != 'List' && !recvType:startsWith(prefix: 'List of ') && !recvType:startsWith(prefix: 'List:') }, {
 			return false;
 		});
@@ -316,7 +328,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
 					else: { false }
 				]);
-				local Boolean is isArrArg: isArrLit && (ivTyName == 'Array' || ivTyName:startsWith(prefix: 'Array of ') || ivTyName:startsWith(prefix: 'Array:'));
+				local Boolean is isArrArg: isArrLit && (ivTyName == 'Array' || ivTyName:startsWith(prefix: 'Array of ') || ivTyName:startsWith(prefix: 'Array:') || b:specBaseMap:get(key: ivTyName, default: '') == 'Array');
 				if({ isArrArg }, {
 					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecAddArray', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, iv]));
 				}, {

@@ -11,11 +11,6 @@
 Class is Array of T{
 	namespace: ['base', 'struct'];
 
-	## Runtime binding: the implementations for this class's
-	## declaration-only methods live in the runtime floor; the backend
-	## emits no struct, vtable, or constructor for it.
-	binding: true;
-
 	replace Array of Array of String is using: [
 		['base', 'sys', as Vector()],
 		['base', 'sys', as Loops()],
@@ -27,6 +22,14 @@ Class is Array of T{
 	## @return: Element count.
 	Function of Int is length(){
 		return Vector:vecLength(v: :);
+	}
+
+	## Retrieves an element at the specified zero-based index (panics if out of bounds).
+	##
+	## @param index: Zero-based position.
+	## @return: The element at [index].
+	Function of T is get(Int is index){
+		return Vector:vecGetChecked(v: :, idx: index);
 	}
 
 	## Retrieves an element at the specified zero-based index.
@@ -55,12 +58,22 @@ Class is Array of T{
 	}
 
 	## Removes and returns the last element in the array.
+	Function of T is pop(){
+		return Vector:vecPopLast(v: :, def: 0);
+	}
+
+	## Removes and returns the last element in the array.
 	##
 	## @param default: Fallback value returned if the array is empty.
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
 	Function of T is pop(T is default){
 		return Vector:vecPopLast(v: :, def: default);
+	}
+
+	## Removes and returns the element at [index], shifting trailing elements.
+	Function of T is removeAt(Int is index){
+		return Vector:vecRemoveAt(v: :, idx: index, def: 0);
 	}
 
 	## Removes and returns the element at [index], shifting trailing elements.
