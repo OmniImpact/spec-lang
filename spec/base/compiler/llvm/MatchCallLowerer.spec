@@ -219,7 +219,7 @@ Class of CallLowerer is MatchCallLowerer{
 			kVal: b:lowerExpr(expr: k);
 		});
 		local String is condVal: b:nextTmp();
-		if({ subjTy == IrType:Ptr && (onExpr:resolvedType == 'String' || k:resolvedType == 'String' || onExpr:resolvedType == 'Str' || k:resolvedType == 'Str') }, {
+		if({ subjTy == IrType:Ptr && (onExpr:getResolvedTypeNode():isStringLike() || k:getResolvedTypeNode():isStringLike()) }, {
 			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', subjVal, kVal]));
 		}, {
 			if({ subjTy == IrType:Ptr && kVal == '0' }, {
@@ -248,7 +248,7 @@ Class of CallLowerer is MatchCallLowerer{
 			ai++;
 		});
 
-		local IrType is resTy: b:irTypeFor(specType: expr:resolvedType);
+		local IrType is resTy: b:irTypeForNode(t: expr:getResolvedTypeNode());
 		local Boolean is hasResult: resTy != IrType:Void;
 		local String is resSlot: '';
 		if({ hasResult }, {
@@ -263,7 +263,7 @@ Class of CallLowerer is MatchCallLowerer{
 		local IrType is subjTy: IrType:I64;
 		if({ hasOn }, {
 			subjVal: b:lowerExpr(expr: onExpr);
-			subjTy: b:irTypeFor(specType: onExpr:resolvedType);
+			subjTy: b:irTypeForNode(t: onExpr:getResolvedTypeNode());
 			if({ subjTy == IrType:Void }, { subjTy: IrType:I64; });
 		});
 

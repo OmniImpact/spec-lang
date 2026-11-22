@@ -327,7 +327,7 @@ Class is GenericSpecializer{
 									psi++;
 								});
 								nie: Expression:Path(segments: nsegs);
-								nie:setResolvedType(t: nvt:name);
+								nie:setResolvedTypeNode(tn: nvt, t: nvt:name);
 							});
 						}
 					], default: {});
@@ -385,16 +385,10 @@ Class is GenericSpecializer{
 							}
 						], default: {});
 						local Type is naNode: na:value:getResolvedTypeNode();
-						if({ boundType:name == '' && naNode:name == 'Function' && naNode:params:length() > 0 }, {
-							local Type is rNode: naNode:params:get(index: 0);
-							if({ rNode:name != '' && rNode:name != 'Void' }, {
+						if({ boundType:name == '' && naNode:isFunction() }, {
+							local Type is rNode: naNode:functionReturn();
+							if({ !rNode:isEmpty() && !rNode:isVoid() }, {
 								boundType: :cloneType(t: rNode);
-							});
-						});
-						if({ boundType:name == '' && na:value:resolvedType:startsWith(prefix: 'Function:') }, {
-							local String is rSub: na:value:resolvedType:substring(start: 9, end: na:value:resolvedType:length());
-							if({ rSub != '' && rSub != 'Void' }, {
-								boundType: :resolvedStrToType(s: rSub, subst: subst);
 							});
 						});
 					});
@@ -508,12 +502,12 @@ Class is GenericSpecializer{
 							if({ newResT:startsWith(prefix: tname . '__') }, {
 								ntarget: Expression:Ident(name: newResT);
 								ntarget:setLine(line: ln);
-								ntarget:setResolvedType(t: newResT);
+								ntarget:setResolvedTypeNode(tn: Type:init(name: newResT), t: newResT);
 							}, {
 								if({ tname == selfTemplateName && selfSpecName != '' }, {
 									ntarget: Expression:Ident(name: selfSpecName);
 									ntarget:setLine(line: ln);
-									ntarget:setResolvedType(t: selfSpecName);
+									ntarget:setResolvedTypeNode(tn: Type:init(name: selfSpecName), t: selfSpecName);
 									if({ call:name == 'init' }, {
 										newResT: selfSpecName;
 										newResNode: Type:init(name: selfSpecName);
@@ -549,7 +543,7 @@ Class is GenericSpecializer{
 									});
 									ntarget: Expression:Path(segments: nsegs);
 									ntarget:setLine(line: ln);
-									ntarget:setResolvedType(t: newResT);
+									ntarget:setResolvedTypeNode(tn: newResNode, t: newResT);
 								});
 							});
 						});

@@ -226,11 +226,13 @@ Class is TypeChecker{
 	}
 
 	Function of Boolean is isUnsignedInt(String is t){
-		return t == 'UInt8' || t == 'UInt16' || t == 'UInt32' || t == 'UInt64';
+		local Primitive is p: Primitive:of(t);
+		return p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64;
 	}
 
 	Function of Boolean is isIntLike(String is t){
-		return t == Primitive:INT:value() || t == 'Byte' || :isUnsignedInt(t: t);
+		local Primitive is p: Primitive:of(t);
+		return p == Primitive:INT || p == Primitive:BYTE || p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64;
 	}
 
 	## Formats a [Type] descriptor for a variable or field (preserving
@@ -307,6 +309,10 @@ Class is TypeChecker{
 	}
 
 	## Converts a canonical type name string into a structured [Type] tree (`name` + `Array of Type`).
+	local Function is stampExprType(Expression is expr, String is t){
+		expr:setResolvedTypeNode(tn: :parseTypeNode(s: t), t: t);
+	}
+
 	Function of Type is parseTypeNode(String is s){
 		if({ s == '' }, { return Type:init(name: ''); });
 		if({ :typeNodeCache:has(key: s) }, {
@@ -989,8 +995,8 @@ Class is TypeChecker{
 		:inValueBranch: savedArmValue;
 		:currentYieldExpected: savedArmExpected;
 		local String is valT: val:resolvedType;
-		if({ valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, {
-			local String is yieldT: valT:substring(start: 9, end: valT:length());
+		if({ TypeDomain:hasFunctionReturn(t: valT) }, {
+			local String is yieldT: TypeDomain:functionReturn(t: valT);
 			if({ !:isVoid(t: yieldT) }, {
 				return yieldT;
 			});
@@ -1005,12 +1011,7 @@ Class is TypeChecker{
 		# binding grounds its type args from the full spelling.
 		local String is subjFull: subjT;
 		# Strip container/generic spellings to the base class name.
-		if({ subjT:contains(needle: ' of ') }, {
-			subjT: subjT:substring(start: 0, end: subjT:indexOf(search: ' of ', default: 0));
-		});
-		if({ subjT:contains(needle: ':') }, {
-			subjT: subjT:split(delimiter: ':'):get(index: 0);
-		});
+		subjT: TypeDomain:baseName(t: subjT);
 		if({ subjT == '' || subjT == Primitive:ANY:value() || !:registeredClasses:has(key: subjT) }, {
 			:addError(line: :currentLine, msg: 'Conditional:match subjects must be class-typed values; \'' . subjT . '\' cannot be matched.');
 			return 'Any';
@@ -1257,8 +1258,8 @@ Class is TypeChecker{
 					:inValueBranch: savedArmValue;
 					:currentYieldExpected: savedArmExpected;
 					local String is valT: val:resolvedType;
-					if({ valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, {
-						local String is yieldT: valT:substring(start: 9, end: valT:length());
+					if({ TypeDomain:hasFunctionReturn(t: valT) }, {
+						local String is yieldT: TypeDomain:functionReturn(t: valT);
 						if({ :isVoid(t: yieldT) }, {
 							anyVoid: true;
 						}, {
@@ -1457,8 +1458,8 @@ Class is TypeChecker{
 					:inValueBranch: savedArmValue;
 					:currentYieldExpected: savedArmExpected;
 					local String is valT: val:resolvedType;
-					if({ valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, {
-						local String is yieldT: valT:substring(start: 9, end: valT:length());
+					if({ TypeDomain:hasFunctionReturn(t: valT) }, {
+						local String is yieldT: TypeDomain:functionReturn(t: valT);
 						if({ :isVoid(t: yieldT) }, {
 							anyVoid: true;
 						}, {
@@ -2177,7 +2178,7 @@ Class is TypeChecker{
 			# colon form ('Function of Boolean' -> 'Function:Boolean') — the
 			# raw name erases the return type and matches every closure.
 			local String is pT: p:paramType:name;
-			if({ pT:startsWith(prefix: 'Function') }, {
+			if({ p:paramType:isFunction() }, {
 				pT: :formatVarTypeString(t: p:paramType);
 			});
 			if({ !found }, {
@@ -2190,9 +2191,9 @@ Class is TypeChecker{
 				}, {
 					if({ bound:resolvedType != pT }, {
 						local Boolean is genericMatch: false;
-						if({ pT:startsWith(prefix: 'Function:') && bound:resolvedType:startsWith(prefix: 'Function:') }, {
-							local String is pRet: pT:substring(start: 9, end: pT:length());
-							local String is bRet: bound:resolvedType:substring(start: 9, end: bound:resolvedType:length());
+						if({ TypeDomain:hasFunctionReturn(t: pT) && TypeDomain:hasFunctionReturn(t: bound:resolvedType) }, {
+							local String is pRet: TypeDomain:functionReturn(t: pT);
+							local String is bRet: TypeDomain:functionReturn(t: bound:resolvedType);
 							if({ :isMethodTypeParam(tp: pRet, m: m) && bRet != '' && !:isVoid(t: bRet) }, {
 								genericMatch: true;
 							});
@@ -2270,9 +2271,9 @@ Class is TypeChecker{
 				});
 				if({ found && bound:resolvedType != '' }, {
 					local String is pTF: :formatVarTypeString(t: p:paramType);
-					if({ pTF:startsWith(prefix: 'Function:') && bound:resolvedType:startsWith(prefix: 'Function:') }, {
-						local String is pRet: pTF:substring(start: 9, end: pTF:length());
-						local String is bRet: bound:resolvedType:substring(start: 9, end: bound:resolvedType:length());
+					if({ TypeDomain:hasFunctionReturn(t: pTF) && TypeDomain:hasFunctionReturn(t: bound:resolvedType) }, {
+						local String is pRet: TypeDomain:functionReturn(t: pTF);
+						local String is bRet: TypeDomain:functionReturn(t: bound:resolvedType);
 						if({ pRet == mTp && bRet != '' }, {
 							:groundedGenericMethods:set(key: ownerName . ':' . selected:name, value: true);
 							if({ rawT == pRet }, { rawT: bRet; });
@@ -3591,12 +3592,13 @@ Class is TypeChecker{
 	local Function of String is inferIndexExpr(Expression is target, Expression is index){
 		local String is leftT: :inferExpressionType(expr: target);
 		:inferExpressionType(expr: index);
-		if({ TypeDomain:isParameterized(t: leftT, base: 'Array') }, {
-			return TypeDomain:elemType(t: leftT);
+		local Type is leftNode: target:getResolvedTypeNode();
+		if({ leftNode:isArray() && leftNode:isGeneric() }, {
+			return :formatVarTypeString(t: leftNode:elemType());
 		});
-		if({ TypeDomain:isOfBase(t: leftT, base: 'Map') }, {
-			local String is mv: TypeDomain:mapValType(t: leftT);
-			return if({ mv != '' }, { mv }, { Primitive:STRING:value() });
+		if({ leftNode:isMap() }, {
+			local Type is mvNode: leftNode:mapValType();
+			return if({ !mvNode:isEmpty() }, { :formatVarTypeString(t: mvNode) }, { Primitive:STRING:value() });
 		});
 		return 'Any';
 	}
@@ -3700,7 +3702,7 @@ Class is TypeChecker{
 		match(on: expr, when: [
 			Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 				:addError(line: :currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (E1).');
-				expr:setResolvedType(t: '');
+				:stampExprType(expr: expr, t: '');
 				isUsingAs: true;
 			}
 		], default: {});
@@ -3823,16 +3825,16 @@ Class is TypeChecker{
 			local Boolean is defaultActive: hasMatchDefault && :isNonEmptyMatchDefault(expr: matchDefault);
 			if({ hasMatchSubj }, {
 				local String is matchRes: :checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive, hasExplicitDefault: hasMatchDefault);
-				expr:setResolvedType(t: matchRes);
+				:stampExprType(expr: expr, t: matchRes);
 				return matchRes;
 			});
 			local String is predRes: :checkPredicateArms(arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive);
-			expr:setResolvedType(t: predRes);
+			:stampExprType(expr: expr, t: predRes);
 			return predRes;
 		});
 		if({ !hasMatchSubj && hasMatchArms }, {
 			:addError(line: :currentLine, msg: 'A predicate match table is compile-time: the keys are closures and the scan order matters — write the arm table as a literal.');
-			expr:setResolvedType(t: Primitive:ANY:value());
+			:stampExprType(expr: expr, t: Primitive:ANY:value());
 			return Primitive:ANY:value();
 		});
 		return '';
@@ -4011,12 +4013,12 @@ Class is TypeChecker{
 				:lazyLocalVars: savedLoopLazyVars;
 			});
 			call:bareProvider: provider;
-			expr:setResolvedType(t: 'Void');
+			:stampExprType(expr: expr, t: 'Void');
 			return 'Void';
 		});
 		if({ bareIsLazy }, {
 			call:bareProvider: provider;
-			expr:setResolvedType(t: bareLazyRet);
+			:stampExprType(expr: expr, t: bareLazyRet);
 			return bareLazyRet;
 		});
 		call:bareProvider: provider;
@@ -4035,17 +4037,17 @@ Class is TypeChecker{
 			local ClassInfo is provCls: :findClass(name: provider);
 			if({ provCls:name != '' && !:isBindingDeclaration(cls: provCls) }, {
 				:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: call:name, targetType: provider));
-				expr:setResolvedType(t: '');
+				:stampExprType(expr: expr, t: '');
 				return '';
 			});
 			providerRet: 'Any';
 		});
 		if({ bareIsValue }, {
 			local String is valRes: :unifyValueBranchTypes(expr: expr);
-			expr:setResolvedType(t: valRes);
+			:stampExprType(expr: expr, t: valRes);
 			return valRes;
 		});
-		expr:setResolvedType(t: providerRet);
+		:stampExprType(expr: expr, t: providerRet);
 		return providerRet;
 	}
 
@@ -4090,12 +4092,12 @@ Class is TypeChecker{
 		], default: {});
 		if({ !bodyAnon || !guardAnon }, {
 			:addError(line: :currentLine, msg: 'try requires literal body and guard regions — a plain call cannot catch and resume.');
-			expr:setResolvedType(t: '');
+			:stampExprType(expr: expr, t: '');
 			return '';
 		});
 		if({ bodyParams:length() != 0 }, {
 			:addError(line: :currentLine, msg: 'try body region takes no parameters.');
-			expr:setResolvedType(t: '');
+			:stampExprType(expr: expr, t: '');
 			return '';
 		});
 		local String is gTy: '';
@@ -4116,7 +4118,7 @@ Class is TypeChecker{
 		});
 		if({ !guardOk }, {
 			:addError(line: :currentLine, msg: 'try guard region takes exactly one SpecError or SpecError of <kind enum> parameter.');
-			expr:setResolvedType(t: '');
+			:stampExprType(expr: expr, t: '');
 			return '';
 		});
 		local String is resTy: expected;
@@ -4131,7 +4133,7 @@ Class is TypeChecker{
 		# is needed, and nested calls inside the regions cannot disturb it.
 		:inferExpressionType(expr: bodyNa:value, expected: resTy);
 		:inferExpressionType(expr: guardNa:value, expected: resTy);
-		expr:setResolvedType(t: resTy);
+		:stampExprType(expr: expr, t: resTy);
 		return resTy;
 	}
 
@@ -4260,7 +4262,7 @@ Class is TypeChecker{
 		if({ :inLazyBlock }, {
 			:lazyLocalVars: savedWhileLazyVars;
 		});
-		expr:setResolvedType(t: 'Void');
+		:stampExprType(expr: expr, t: 'Void');
 		return 'Void';
 	}
 
@@ -4392,7 +4394,7 @@ Class is TypeChecker{
 				});
 			});
 		});
-		expr:setResolvedType(t: heldRet);
+		:stampExprType(expr: expr, t: heldRet);
 		return heldRet;
 	}
 
@@ -4432,11 +4434,11 @@ Class is TypeChecker{
 				}, {
 					if({ aName == 'action' }, {
 						hasAction: true;
-						if({ !aType:startsWith(prefix: 'Function') && aType != 'Any' }, {
+						if({ !TypeDomain:isFunction(t: aType) && aType != 'Any' }, {
 							:addError(line: :currentLine, msg: "Parallel:" . method . " 'action' argument must be a Function, found '" . aType . "'.");
 						}, {
-							if({ aType:startsWith(prefix: 'Function:') && aType:length() > 9 }, {
-								actRetT: aType:substring(start: 9, end: aType:length());
+							if({ TypeDomain:hasFunctionReturn(t: aType) }, {
+								actRetT: TypeDomain:functionReturn(t: aType);
 							});
 						});
 					});
@@ -4465,7 +4467,7 @@ Class is TypeChecker{
 				}, {
 					if({ aName == 'worker' }, {
 						hasWorker: true;
-						if({ !aType:startsWith(prefix: 'Function') && aType != 'Any' }, {
+						if({ !TypeDomain:isFunction(t: aType) && aType != 'Any' }, {
 							:addError(line: :currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
 						});
 					});
@@ -4521,12 +4523,14 @@ Class is TypeChecker{
 			local ClassInfo is existCls: :findClass(name: existBase);
 			if({ !memberExists && existCls:name != '' && !:isBindingDeclaration(cls: existCls) }, {
 				:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
-				expr:setResolvedType(t: '');
+				:stampExprType(expr: expr, t: '');
 				return '';
 			});
 		});
 		if({ TypeDomain:isOfBase(t: targetType, base: 'Map') && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
-			local String is kRaw: TypeDomain:mapKeyType(t: targetType);
+			local Type is mapNode: :parseTypeNode(s: targetType);
+			local Type is kNode: mapNode:mapKeyType();
+			local String is kRaw: if({ !kNode:isEmpty() }, { :formatVarTypeString(t: kNode) }, { '' });
 			local String is kType: if({ kRaw != '' && kRaw != 'Any' }, { kRaw }, { Primitive:STRING:value() });
 			res: TypeDomain:makeArray(elem: kType);
 		});
@@ -4653,12 +4657,12 @@ Class is TypeChecker{
 					listed: if({ listed == '' }, { prov }, { listed . ' and ' . prov });
 				});
 				:addError(line: :currentLine, msg: 'Function \'' . call:name . '\' is provided by ' . listed . '; qualify the call (:' . call:name . ' or the class name) (§2.3).');
-				expr:setResolvedType(t: '');
+				:stampExprType(expr: expr, t: '');
 				return '';
 			});
 			if({ providerTotal == 0 }, {
 				:addError(line: :currentLine, msg: 'Undefined function \'' . call:name . '\' on class \'' . :currentClassName . '\' (E9).');
-				expr:setResolvedType(t: '');
+				:stampExprType(expr: expr, t: '');
 				return '';
 			});
 			if({ ownOwner == '' }, {
@@ -4721,7 +4725,7 @@ Class is TypeChecker{
 					:addError(line: :currentLine, msg: :errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
 				});
 				res: if({ isLazyCall }, { qualLazyRet }, { :lookupMethodReturnType(className: qJoined, methodName: method) });
-				expr:setResolvedType(t: res);
+				:stampExprType(expr: expr, t: res);
 				return res;
 			});
 		});
@@ -4890,10 +4894,10 @@ Class is TypeChecker{
 		if({ call:args:length() > 0 }, {
 			local NamedArg is a0: call:args:get(index: 0);
 			local String is fnT: a0:value:resolvedType;
-			if({ fnT:startsWith(prefix: 'Function:') && fnT:length() > 9 }, {
-				lazyRet: fnT:substring(start: 9, end: fnT:length());
+			if({ TypeDomain:hasFunctionReturn(t: fnT) }, {
+				lazyRet: TypeDomain:functionReturn(t: fnT);
 			}, {
-				if({ fnT == 'Function' }, {
+				if({ TypeDomain:isFunction(t: fnT) }, {
 					lazyRet: :names:voidName();
 				});
 			});
@@ -5116,7 +5120,7 @@ Class is TypeChecker{
 					});
 				}, {
 					local Boolean is isValuePrim: :isIntLike(t: fullType) || fullType == Primitive:FLOAT:value() || fullType == Primitive:BOOLEAN:value();
-					local Boolean is isAutoInitList: fullType == 'List' || fullType:startsWith(prefix: 'List of ') || fullType:startsWith(prefix: 'List:');
+					local Boolean is isAutoInitList: varType:isList() || TypeDomain:isOfBase(t: fullType, base: 'List');
 					if({ !isValuePrim && !isAutoInitList }, {
 						:addError(line: stmt:line, msg: "Local variable '" . varName . "' of type '" . :displayType(t: fullType) . "' must be initialized (Spec does not have null).");
 					});
@@ -6567,7 +6571,7 @@ Class is TypeChecker{
 							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') && :unassignedFields:has(key: fm:name) }, {
 								local String is fType: :formatVarTypeString(t: fm:memberType);
 								local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
-								local Boolean is isAutoList: fType == 'List' || fType:startsWith(prefix: 'List of ') || fType:startsWith(prefix: 'List:');
+								local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
 								local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
 								if({ !isValPrim && !isAutoList && !isTypeParam }, {
 									:addError(line: m:line, msg: "Field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' is not initialized by 'init' (Spec does not have null).");
@@ -6608,7 +6612,7 @@ Class is TypeChecker{
 				if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') }, {
 					local String is fType: :formatVarTypeString(t: fm:memberType);
 					local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
-					local Boolean is isAutoList: fType == 'List' || fType:startsWith(prefix: 'List of ') || fType:startsWith(prefix: 'List:');
+					local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
 					local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
 					if({ !isValPrim && !isAutoList && !isTypeParam }, {
 						if({ fm:hasModifier(kw: Keyword:HELD) }, {
