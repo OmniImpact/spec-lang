@@ -37,7 +37,10 @@ Class of CallLowerer is MapCallLowerer{
 			local Boolean is isMapCtor: false;
 			match(on: call:target, when: [
 				Expression:Ident: local Function(String is tn){
-					if({ tn == 'Map' }, { isMapCtor: true; });
+					# The bare template spelling (binding-era sources) and
+					# the specialized instantiation's mangled spelling both
+					# name a Map construction.
+					if({ tn == 'Map' || b:specBaseMap:get(key: tn, default: '') == 'Map' }, { isMapCtor: true; });
 				}
 			], default: {});
 			if({ isMapCtor }, { return true; });
@@ -74,31 +77,46 @@ Class of CallLowerer is MapCallLowerer{
 			local String is dst: b:nextTmp();
 			local String is resTy: expr:resolvedType;
 			local Int is kk: 0;
-			if({ resTy:startsWith(prefix: 'Map of Int to ') || resTy:startsWith(prefix: 'Map:Int:') || resTy:startsWith(prefix: 'Map of Boolean to ') || resTy:startsWith(prefix: 'Map:Boolean:') }, { kk: 1; });
-			if({ resTy:startsWith(prefix: 'Map of Float to ') || resTy:startsWith(prefix: 'Map:Float:') }, { kk: 2; });
-			if({ kk == 0 && resTy != 'Map' && resTy != '' && !resTy:startsWith(prefix: 'Map of String to ') && !resTy:startsWith(prefix: 'Map:String:') && !resTy:startsWith(prefix: 'Map of Any to ') && !resTy:startsWith(prefix: 'Map:Any:') }, { kk: 3; });
-			if({ kk == 0 && (resTy == 'Map' || resTy == '') && b:expectedMapKeyType != '' }, {
-				local String is ek: b:expectedMapKeyType;
-				if({ ek == 'Int' || ek == 'Boolean' }, { kk: 1; });
-				if({ ek == 'Float' }, { kk: 2; });
-				if({ kk == 0 && ek != 'String' && ek != 'Any' }, { kk: 3; });
-			});
 			local Int is vk: 0;
-			local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
-			if({ toIdx >= 0 }, {
-				local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
-				if({ b:isArcSpecType(specType: vSpec) || vSpec == 'Any' }, { vk: 1; });
-			}, {
-				if({ resTy:startsWith(prefix: 'Map:') }, {
-					local String is afterMap: resTy:substring(start: 4, end: resTy:length());
-					local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
-					if({ cIdx >= 0 }, {
-						local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
-						if({ b:isArcSpecType(specType: vSpec2) || vSpec2 == 'Any' }, { vk: 1; });
-					});
+			# A mangled instantiation's kinds are its own type arguments.
+			local Boolean is argsDone: false;
+			if({ b:specBaseMap:get(key: resTy, default: '') == 'Map' && b:specClassArgsMap:has(key: resTy) }, {
+				local Array of Type is mArgs: b:specClassArgsMap:get(key: resTy, default: []);
+				if({ mArgs:length() >= 1 }, { kk: b:mapKeyKindFor(specType: mArgs:get(index: 0, default: Type:init(name: '')):name); });
+				if({ mArgs:length() >= 2 }, {
+					local String is vArg: mArgs:get(index: 1, default: Type:init(name: '')):name;
+					if({ b:isArcSpecType(specType: vArg) || vArg == 'Any' }, { vk: 1; });
+				});
+				argsDone: true;
+			});
+			if({ !argsDone }, {
+				if({ resTy:startsWith(prefix: 'Map of Int to ') || resTy:startsWith(prefix: 'Map:Int:') || resTy:startsWith(prefix: 'Map of Boolean to ') || resTy:startsWith(prefix: 'Map:Boolean:') }, { kk: 1; });
+				if({ resTy:startsWith(prefix: 'Map of Float to ') || resTy:startsWith(prefix: 'Map:Float:') }, { kk: 2; });
+				if({ kk == 0 && resTy != 'Map' && resTy != '' && !resTy:startsWith(prefix: 'Map of String to ') && !resTy:startsWith(prefix: 'Map:String:') && !resTy:startsWith(prefix: 'Map of Any to ') && !resTy:startsWith(prefix: 'Map:Any:') }, { kk: 3; });
+				if({ kk == 0 && (resTy == 'Map' || resTy == '') && b:expectedMapKeyType != '' }, {
+					local String is ek: b:expectedMapKeyType;
+					if({ ek == 'Int' || ek == 'Boolean' }, { kk: 1; });
+					if({ ek == 'Float' }, { kk: 2; });
+					if({ kk == 0 && ek != 'String' && ek != 'Any' }, { kk: 3; });
+				});
+			});
+			if({ !argsDone }, {
+				local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
+				if({ toIdx >= 0 }, {
+					local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
+					if({ b:isArcSpecType(specType: vSpec) || vSpec == 'Any' }, { vk: 1; });
 				}, {
-					if({ (resTy == 'Map' || resTy == '') && b:expectedMapValType != '' }, {
-						if({ b:isArcSpecType(specType: b:expectedMapValType) || b:expectedMapValType == 'Any' }, { vk: 1; });
+					if({ resTy:startsWith(prefix: 'Map:') }, {
+						local String is afterMap: resTy:substring(start: 4, end: resTy:length());
+						local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
+						if({ cIdx >= 0 }, {
+							local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
+							if({ b:isArcSpecType(specType: vSpec2) || vSpec2 == 'Any' }, { vk: 1; });
+						});
+					}, {
+						if({ (resTy == 'Map' || resTy == '') && b:expectedMapValType != '' }, {
+							if({ b:isArcSpecType(specType: b:expectedMapValType) || b:expectedMapValType == 'Any' }, { vk: 1; });
+						});
 					});
 				});
 			});

@@ -88,6 +88,7 @@ Class is IrBuilder{
 	Map of String to ClassInfo is clsMap: Map:init();
 	Map of String to ClassInfo is sysinternalClasses: Map:init();
 	Map of String to String is specBaseMap: Map:init();
+	Map of String to Array of Type is specClassArgsMap: Map:init();
 	Map of String to String is clsQNameMap: Map:init();
 	Map of String to String is methodParamPtrMask: Map:init();
 	Map of String to Boolean is methodRetIsPtr: Map:init();
@@ -152,6 +153,17 @@ Class is IrBuilder{
 			return false;
 		});
 		return true;
+	}
+
+	## The storage key kind a map instantiation needs for [specType]:
+	## 0 String/Any (value-hashed), 1 Int/Boolean (raw bits), 2 Float,
+	## 3 object identity. Mirrors the prefix machine's mapping so both
+	## spellings — parameterized and mangled — resolve identically.
+	Function of Int is mapKeyKindFor(String is specType){
+		if({ specType == 'Int' || specType == 'Boolean' }, { return 1; });
+		if({ specType == 'Float' }, { return 2; });
+		if({ specType == 'String' || specType == 'Any' }, { return 0; });
+		return 3;
 	}
 
 	Function of Boolean is hasMethodBodies(ClassInfo is cls){
@@ -477,6 +489,7 @@ Class is IrBuilder{
 		local GenericSpecializer is specializer: GenericSpecializer:init();
 		specializer:specialize(program: program, allClasses: allClasses);
 		:specBaseMap: specializer:specBaseMap;
+		:specClassArgsMap: specializer:specClassArgsMap;
 
 		local Map of String to ClassInfo is clsMap: Map:init();
 		local Map of String to String is clsQNameMap: Map:init();
@@ -4435,41 +4448,60 @@ Class is IrBuilder{
 				local Int is mapKk: 0;
 				local Int is mapVk: 0;
 				local String is resTy: expr:resolvedType;
+				# A specialized instantiation spells its result type in
+				# mangled form (Map__K__V); its key/value kinds are the
+				# instantiation's own type arguments.
+				local Boolean is argsResolved: false;
+				if({ keys:length() == 0 && :specBaseMap:get(key: resTy, default: '') == 'Map' && :specClassArgsMap:has(key: resTy) }, {
+					local Array of Type is mArgs: :specClassArgsMap:get(key: resTy, default: []);
+					if({ mArgs:length() >= 1 }, {
+						mapKk: :mapKeyKindFor(specType: mArgs:get(index: 0, default: Type:init(name: '')):name);
+					});
+					if({ mArgs:length() >= 2 }, {
+						local String is vArg: mArgs:get(index: 1, default: Type:init(name: '')):name;
+						if({ :isArcSpecType(specType: vArg) || vArg == 'Any' }, { mapVk: 1; });
+					});
+					argsResolved: true;
+				});
 				if({ keys:length() > 0 }, {
 					local Expression is k0: keys:get(index: 0);
 					if({ k0:resolvedType == 'Int' || k0:resolvedType == 'Boolean' }, { mapKk: 1; });
 					if({ k0:resolvedType == 'Float' }, { mapKk: 2; });
 					if({ mapKk == 0 && k0:resolvedType != 'String' && k0:resolvedType != 'Any' }, { mapKk: 3; });
 				}, {
-					if({ resTy:startsWith(prefix: 'Map of Int to ') || resTy:startsWith(prefix: 'Map:Int:') || resTy:startsWith(prefix: 'Map of Boolean to ') || resTy:startsWith(prefix: 'Map:Boolean:') }, { mapKk: 1; });
-					if({ resTy:startsWith(prefix: 'Map of Float to ') || resTy:startsWith(prefix: 'Map:Float:') }, { mapKk: 2; });
-					if({ mapKk == 0 && resTy != 'Map' && resTy != '' && !resTy:startsWith(prefix: 'Map of String to ') && !resTy:startsWith(prefix: 'Map:String:') && !resTy:startsWith(prefix: 'Map of Any to ') && !resTy:startsWith(prefix: 'Map:Any:') }, { mapKk: 3; });
-					if({ mapKk == 0 && (resTy == 'Map' || resTy == '') && :expectedMapKeyType != '' }, {
-						local String is ek: :expectedMapKeyType;
-						if({ ek == 'Int' || ek == 'Boolean' }, { mapKk: 1; });
-						if({ ek == 'Float' }, { mapKk: 2; });
-						if({ mapKk == 0 && ek != 'String' && ek != 'Any' }, { mapKk: 3; });
+					if({ !argsResolved }, {
+						if({ resTy:startsWith(prefix: 'Map of Int to ') || resTy:startsWith(prefix: 'Map:Int:') || resTy:startsWith(prefix: 'Map of Boolean to ') || resTy:startsWith(prefix: 'Map:Boolean:') }, { mapKk: 1; });
+						if({ resTy:startsWith(prefix: 'Map of Float to ') || resTy:startsWith(prefix: 'Map:Float:') }, { mapKk: 2; });
+						if({ mapKk == 0 && resTy != 'Map' && resTy != '' && !resTy:startsWith(prefix: 'Map of String to ') && !resTy:startsWith(prefix: 'Map:String:') && !resTy:startsWith(prefix: 'Map of Any to ') && !resTy:startsWith(prefix: 'Map:Any:') }, { mapKk: 3; });
+						if({ mapKk == 0 && (resTy == 'Map' || resTy == '') && :expectedMapKeyType != '' }, {
+							local String is ek: :expectedMapKeyType;
+							if({ ek == 'Int' || ek == 'Boolean' }, { mapKk: 1; });
+							if({ ek == 'Float' }, { mapKk: 2; });
+							if({ mapKk == 0 && ek != 'String' && ek != 'Any' }, { mapKk: 3; });
+						});
 					});
 				});
 				if({ values:length() > 0 }, {
 					local Expression is v0: values:get(index: 0);
 					if({ :isArcSpecType(specType: v0:resolvedType) }, { mapVk: 1; });
 				}, {
-					local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
-					if({ toIdx >= 0 }, {
-						local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
-						if({ :isArcSpecType(specType: vSpec) || vSpec == 'Any' }, { mapVk: 1; });
-					}, {
-						if({ resTy:startsWith(prefix: 'Map:') }, {
-							local String is afterMap: resTy:substring(start: 4, end: resTy:length());
-							local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
-							if({ cIdx >= 0 }, {
-								local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
-								if({ :isArcSpecType(specType: vSpec2) || vSpec2 == 'Any' }, { mapVk: 1; });
-							});
+					if({ !argsResolved }, {
+						local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
+						if({ toIdx >= 0 }, {
+							local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
+							if({ :isArcSpecType(specType: vSpec) || vSpec == 'Any' }, { mapVk: 1; });
 						}, {
-							if({ (resTy == 'Map' || resTy == '') && :expectedMapValType != '' }, {
-								if({ :isArcSpecType(specType: :expectedMapValType) || :expectedMapValType == 'Any' }, { mapVk: 1; });
+							if({ resTy:startsWith(prefix: 'Map:') }, {
+								local String is afterMap: resTy:substring(start: 4, end: resTy:length());
+								local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
+								if({ cIdx >= 0 }, {
+									local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
+									if({ :isArcSpecType(specType: vSpec2) || vSpec2 == 'Any' }, { mapVk: 1; });
+								});
+							}, {
+								if({ (resTy == 'Map' || resTy == '') && :expectedMapValType != '' }, {
+									if({ :isArcSpecType(specType: :expectedMapValType) || :expectedMapValType == 'Any' }, { mapVk: 1; });
+								});
 							});
 						});
 					});
