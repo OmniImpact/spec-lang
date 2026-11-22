@@ -12,16 +12,60 @@ Class is Array of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', as Vector()],
+		['base', 'sys', as Mem()],
+		['base', 'sys', SpinLock],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
+
+	local Int is items: 0;
+	local Int is len: 0;
+	local Int is cap: 0;
+	local Int is elemKind: 0;
+	local Boolean is frozen: false;
+	local SpinLock is lock: SpinLock:init();
+
+	replace Function is init(Int is elemKind: 0){
+		:elemKind: elemKind;
+	}
+
+	Function is destroy(){
+		if({ :items != 0 }, {
+			if({ :elemKind == 1 }, {
+				local Int is i: 0;
+				while({ i < :len }, {
+					local Int is it: Mem:loadI64(ptr: :items, byteOffset: i * 8);
+					if({ it != 0 }, { Mem:releaseAddr(objAddr: it); });
+					i: i + 1;
+				});
+			});
+			Mem:free(ptr: :items);
+			:items: 0;
+		});
+	}
+
+	local Function of Array of T is newLike(){
+		local Array of T is out: [];
+		out:elemKind: :elemKind;
+		return out;
+	}
+
+	## Marks this array as frozen (immutable).
+	Function is freeze(){
+		:lock:lock();
+		:frozen: true;
+		:lock:unlock();
+	}
 
 	## Returns the number of elements contained in the array.
 	##
 	## @return: Element count.
 	Function of Int is length(){
-		return Vector:vecLength(v: :);
+		if({ :frozen }, { return :len; });
+		:lock:lock();
+		local Int is n: :len;
+		:lock:unlock();
+		return n;
 	}
 
 	## Retrieves an element at the specified zero-based index (panics if out of bounds).
@@ -29,7 +73,21 @@ Class is Array of T{
 	## @param index: Zero-based position.
 	## @return: The element at [index].
 	Function of T is get(Int is index){
-		return Vector:vecGetChecked(v: :, idx: index);
+		local Boolean is isFrozen: :frozen;
+		if({ !isFrozen }, { :lock:lock(); });
+		if({ index < 0 || index >= :len }, {
+			local Int is curLen: :len;
+			if({ !isFrozen }, { :lock:unlock(); });
+			Mem:panic(msg: 'Array index out of bounds: index ' . (index as String) . ' for length ' . (curLen as String));
+			return Mem:addrToObj(addr: 0);
+		});
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: index * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:retainAddr(objAddr: valAddr);
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		if({ !isFrozen }, { :lock:unlock(); });
+		return Mem:addrToObj(addr: valAddr);
 	}
 
 	## Retrieves an element at the specified zero-based index.
@@ -39,14 +97,42 @@ Class is Array of T{
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
 	Function of T is get(Int is index, T is default){
-		return Vector:vecGetAt(v: :, idx: index, def: default);
+		local Boolean is isFrozen: :frozen;
+		if({ !isFrozen }, { :lock:lock(); });
+		if({ index < 0 || index >= :len }, {
+			if({ !isFrozen }, { :lock:unlock(); });
+			return default;
+		});
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: index * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:retainAddr(objAddr: valAddr);
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		if({ !isFrozen }, { :lock:unlock(); });
+		return Mem:addrToObj(addr: valAddr);
 	}
 
 	## Appends an element to this array.
 	##
 	## @param item: Value to append.
 	Function is add(Any is item){
-		Vector:vecAdd(v: :, item: item);
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return;
+		});
+		:lock:lock();
+		if({ :len >= :cap }, {
+			local Int is ncap: if({ :cap == 0 }, { 8 }, { :cap * 2 });
+			:items: Mem:realloc(ptr: :items, bytes: ncap * 8);
+			:cap: ncap;
+		});
+		local Int is itemAddr: Mem:objToAddr(obj: item);
+		if({ :elemKind == 1 && itemAddr != 0 }, {
+			Mem:retainAddr(objAddr: itemAddr);
+		});
+		Mem:storeI64(ptr: :items, byteOffset: :len * 8, val: itemAddr);
+		:len: :len + 1;
+		:lock:unlock();
 	}
 
 	## Replaces the element at the specified zero-based [index] with [item].
@@ -54,12 +140,49 @@ Class is Array of T{
 	## @param index: Zero-based position.
 	## @param item: Replacement element value.
 	Function is set(Int is index, T is item){
-		Vector:vecSetAt(v: :, idx: index, item: item);
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return;
+		});
+		:lock:lock();
+		if({ index < 0 || index >= :len }, {
+			local Int is curLen: :len;
+			:lock:unlock();
+			Mem:panic(msg: 'Array assignment index out of bounds: index ' . (index as String) . ' for length ' . (curLen as String));
+			return;
+		});
+		local Int is itemAddr: Mem:objToAddr(obj: item);
+		local Int is oldAddr: 0;
+		if({ :elemKind == 1 }, {
+			if({ itemAddr != 0 }, { Mem:retainAddr(objAddr: itemAddr); });
+			oldAddr: Mem:loadI64(ptr: :items, byteOffset: index * 8);
+		});
+		Mem:storeI64(ptr: :items, byteOffset: index * 8, val: itemAddr);
+		:lock:unlock();
+		if({ :elemKind == 1 && oldAddr != 0 }, {
+			Mem:releaseAddr(objAddr: oldAddr);
+		});
 	}
 
 	## Removes and returns the last element in the array (panics if empty).
 	Function of T is pop(){
-		return Vector:vecPopChecked(v: :);
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return Mem:addrToObj(addr: 0);
+		});
+		:lock:lock();
+		if({ :len == 0 }, {
+			:lock:unlock();
+			Mem:panic(msg: 'Array pop on empty array');
+			return Mem:addrToObj(addr: 0);
+		});
+		:len: :len - 1;
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: :len * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		:lock:unlock();
+		return Mem:addrToObj(addr: valAddr);
 	}
 
 	## Removes and returns the last element in the array.
@@ -68,12 +191,48 @@ Class is Array of T{
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
 	Function of T is pop(T is default){
-		return Vector:vecPopLast(v: :, def: default);
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return default;
+		});
+		:lock:lock();
+		if({ :len == 0 }, {
+			:lock:unlock();
+			return default;
+		});
+		:len: :len - 1;
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: :len * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		:lock:unlock();
+		return Mem:addrToObj(addr: valAddr);
 	}
 
 	## Removes and returns the element at [index], panicking if out of bounds.
 	Function of T is removeAt(Int is index){
-		return Vector:vecRemoveAtChecked(v: :, idx: index);
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return Mem:addrToObj(addr: 0);
+		});
+		:lock:lock();
+		if({ index < 0 || index >= :len }, {
+			local Int is curLen: :len;
+			:lock:unlock();
+			Mem:panic(msg: 'Array index out of bounds: index ' . (index as String) . ' for length ' . (curLen as String));
+			return Mem:addrToObj(addr: 0);
+		});
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: index * 8);
+		local Int is tailCount: :len - index - 1;
+		if({ tailCount > 0 }, {
+			Mem:move(dst: :items + (index * 8), src: :items + ((index + 1) * 8), bytes: tailCount * 8);
+		});
+		:len: :len - 1;
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		:lock:unlock();
+		return Mem:addrToObj(addr: valAddr);
 	}
 
 	## Removes and returns the element at [index], shifting trailing elements.
@@ -83,7 +242,26 @@ Class is Array of T{
 	## @return: The removed element, or [default].
 	## @fallback: Returns [default] when index is out of bounds.
 	Function of T is removeAt(Int is index, T is default){
-		return Vector:vecRemoveAt(v: :, idx: index, def: default);
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return default;
+		});
+		:lock:lock();
+		if({ index < 0 || index >= :len }, {
+			:lock:unlock();
+			return default;
+		});
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: index * 8);
+		local Int is tailCount: :len - index - 1;
+		if({ tailCount > 0 }, {
+			Mem:move(dst: :items + (index * 8), src: :items + ((index + 1) * 8), bytes: tailCount * 8);
+		});
+		:len: :len - 1;
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		:lock:unlock();
+		return Mem:addrToObj(addr: valAddr);
 	}
 
 	## Returns a shallow sub-array slice from [start] (inclusive) to [end] (exclusive).
@@ -92,7 +270,7 @@ Class is Array of T{
 	## @param end: Exclusive end index.
 	## @return: New sliced [Array].
 	Function of Array of T is slice(Int is start, Int is end){
-		local Array of T is res: Vector:newVecLike(v: :);
+		local Array of T is res: :newLike();
 		local Int is len: :length();
 		local Int is s: match(when: [
 			{ start < 0 }: { 0 },
@@ -112,7 +290,31 @@ Class is Array of T{
 
 	## Empties the array, resetting its length to zero.
 	Function is clear(){
-		Vector:vecClear(v: :);
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return;
+		});
+		:lock:lock();
+		local Int is oldLen: :len;
+		local Int is oldItems: :items;
+		local Int is kind: :elemKind;
+		:items: 0;
+		:len: 0;
+		:cap: 0;
+		:lock:unlock();
+		if({ oldItems != 0 }, {
+			if({ kind == 1 }, {
+				local Int is i: 0;
+				while({ i < oldLen }, {
+					local Int is elem: Mem:loadI64(ptr: oldItems, byteOffset: i * 8);
+					if({ elem != 0 }, {
+						Mem:releaseAddr(objAddr: elem);
+					});
+					i: i + 1;
+				});
+			});
+			Mem:free(ptr: oldItems);
+		});
 	}
 
 	## Searches for the first occurrence of [search], returning its index.
@@ -185,7 +387,7 @@ Class is Array of T{
 	## @param predicate: Function returning `true` for elements to retain.
 	## @return: Filtered [Array].
 	Function of Array of T is filter(Function of Boolean is predicate){
-		local Array of T is out: Vector:newVecLike(v: :);
+		local Array of T is out: :newLike();
 		local Int is len: :length();
 		local Int is i: 0;
 		while({ i < len }, {
@@ -203,7 +405,7 @@ Class is Array of T{
 	## @param transform: Function mapping each item to a transformed value.
 	## @return: Mapped [Array].
 	Function of Array of T is map(Function is transform){
-		local Array of T is out: Vector:newVecLike(v: :);
+		local Array of T is out: :newLike();
 		local Int is len: :length();
 		local Int is i: 0;
 		while({ i < len }, {
@@ -299,7 +501,7 @@ Class is Array of T{
 	##
 	## @return: Reversed [Array].
 	Function of Array of T is reverse(){
-		local Array of T is out: Vector:newVecLike(v: :);
+		local Array of T is out: :newLike();
 		local Int is i: :length() - 1;
 		while({ i >= 0 }, {
 			out:add(item: :get(index: i));
@@ -314,7 +516,7 @@ Class is Array of T{
 	## @return: Prefix [Array].
 	Function of Array of T is take(Int is n){
 		if({ n <= 0 }, {
-			return Vector:newVecLike(v: :);
+			return :newLike();
 		});
 		return :slice(start: 0, end: n);
 	}

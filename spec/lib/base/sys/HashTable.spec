@@ -523,7 +523,7 @@ Class is HashTable{
 		if({ mAddr == 0 }, { return a; });
 		local Int is keyKind: Mem:loadI32(ptr: mAddr, byteOffset: 40);
 		if({ keyKind == 0 || keyKind == 3 }, {
-			Mem:storeI32(ptr: Mem:objToAddr(obj: a), byteOffset: 40, val: 1);
+			Mem:storeI64(ptr: Mem:objToAddr(obj: a), byteOffset: 40, val: 1);
 		});
 		local Boolean is isFrozen: Mem:loadByte(ptr: mAddr, byteOffset: 48) != 0;
 		if({ !isFrozen }, { :mapLock(addr: mAddr); });

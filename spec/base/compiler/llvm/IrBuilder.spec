@@ -685,6 +685,7 @@ Class is IrBuilder{
 				local IrStruct is st: IrStruct:init(name: sname);
 				local String is qnName: cls:qualifiedName();
 				if({ sname == 'List__Byte' }, { qnName: 'ByteBuf'; });
+				if({ sname == 'Array' || :specBaseMap:get(key: sname, default: '') == 'Array' }, { qnName: 'Array'; });
 				st:qualifiedName: qnName;
 				if({ cls:sourceFile != '' }, {
 					local Array of String is srcSegs: cls:sourceFile:split(delimiter: '/');
@@ -949,7 +950,7 @@ Class is IrBuilder{
 		:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Cleanup_frameExit', argTypes: [IrType:Ptr], args: ['null']));
 	}
 
-	local Function of String is destroyFnFor(String is structName){
+	Function of String is destroyFnFor(String is structName){
 		local IrStruct is st: :mod:findStruct(name: structName);
 		if({ st:name != '' && st:destroyFn != 'null' }, {
 			return '@' . st:destroyFn;
@@ -4759,10 +4760,19 @@ Class is IrBuilder{
 						isObjArr: true;
 					});
 				});
-				if({ isObjArr }, {
-					:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVecObject', argTypes: [IrType:Ptr], args: ['null']));
+				local String is arrStruct: :cStructName(qname: rtStr);
+				if({ (rtBase == 'Array' || rtStr == 'Array') && :mod:findStruct(name: arrStruct):name != '' }, {
+					:emit(inst: IrInst:AllocObj(dst: arr, structName: arrStruct, destroyFn: :destroyFnFor(structName: arrStruct)));
+					local Int is ekInt: if({ isObjArr }, { 1 }, { 0 });
+					local String is ekV: :nextTmp();
+					:emit(inst: IrInst:ConstInt(dst: ekV, value: ekInt));
+					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_init', argTypes: [IrType:Ptr, IrType:I64], args: [arr, ekV]));
 				}, {
-					:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVec', argTypes: [IrType:Ptr], args: ['null']));
+					if({ isObjArr }, {
+						:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVecObject', argTypes: [IrType:Ptr], args: ['null']));
+					}, {
+						:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVec', argTypes: [IrType:Ptr], args: ['null']));
+					});
 				});
 				local Int is ii: 0;
 				while({ ii < items:length() }, {

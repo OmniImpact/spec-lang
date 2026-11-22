@@ -2,22 +2,15 @@
 #! Pure-Spec implementation of dynamic pointer vectors (Array / List of T)
 #! and byte buffers (List of Byte) over base:sys:Mem.
 ##
-## SpecArray layout (56 bytes):
-##   offset  0: _type_name (ptr C-string "Array", set by _spec_rt_alloc_kinded)
-##   offset  8: _vtable    (ptr reserved class header slot)
+## SpecArray layout (64 bytes — matches %struct.Array__T):
+##   offset  0: _type_name (ptr C-string "Array")
+##   offset  8: _vtable    (ptr vtable)
 ##   offset 16: items      (i64 address of 8-byte slot buffer)
-##   offset 24: length     (i64 element count)
-##   offset 32: capacity   (i64 allocated slot count)
-##   offset 40: elem_kind  (i32: 0 = primitive, 1 = ARC object)
-##   offset 44: frozen     (i8:  0 = mutable, 1 = frozen)
-##   offset 48: lock       (i64 atomic spinlock: 0 = unlocked, 1 = locked)
-##
-## SpecByteBuffer layout (40 bytes):
-##   offset  0: _type_name (ptr C-string "ByteBuf", set by _spec_rt_alloc_kinded)
-##   offset  8: _vtable    (ptr reserved class header slot)
-##   offset 16: data       (i64 address of byte buffer)
-##   offset 24: length     (i64 byte count)
-##   offset 32: capacity   (i64 allocated byte capacity)
+##   offset 24: len        (i64 element count)
+##   offset 32: cap        (i64 allocated slot count)
+##   offset 40: elemKind   (i64: 0 = primitive, 1 = ARC object)
+##   offset 48: frozen     (i1/i8: 0 = mutable, 1 = frozen)
+##   offset 56: lock       (ptr SpinLock)
 
 Class is Vector{
 	namespace: ['base', 'sys'];
@@ -25,43 +18,54 @@ Class is Vector{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Mem()],
+		['base', 'sys', SpinLock],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
 	local Function is lockVec(Int is addr){
-		while({ !Mem:atomicCasI64(addr: addr + 48, expected: 0, desired: 1) }, {
+		local Int is lkPtr: Mem:loadI64(ptr: addr, byteOffset: 56);
+		if({ lkPtr != 0 }, {
+			while({ !Mem:atomicCasI64(addr: lkPtr + 16, expected: 0, desired: 1) }, {
+			});
 		});
 	}
 
 	local Function is unlockVec(Int is addr){
-		Mem:atomicStoreI64(addr: addr + 48, val: 0);
+		local Int is lkPtr: Mem:loadI64(ptr: addr, byteOffset: 56);
+		if({ lkPtr != 0 }, {
+			Mem:atomicStoreI64(addr: lkPtr + 16, val: 0);
+		});
 	}
 
-	## Allocates a new primitive-element SpecArray (elem_kind = 0).
+	## Allocates a new primitive-element SpecArray (elemKind = 0).
 	Function of Any is newVec(){
-		local Int is aAddr: Mem:allocArcKind(bytes: 56, kind: 2);
+		local Int is aAddr: Mem:allocArcKind(bytes: 64, kind: 2);
+		local SpinLock is lk: SpinLock:init();
+		local Int is lkAddr: Mem:objToAddr(obj: lk);
+		Mem:retainAddr(objAddr: lkAddr);
+		Mem:storeI64(ptr: aAddr, byteOffset: 56, val: lkAddr);
 		return Mem:addrToObj(addr: aAddr);
 	}
 
-	## Allocates a new ARC-element SpecArray (elem_kind = 1).
+	## Allocates a new ARC-element SpecArray (elemKind = 1).
 	Function of Any is newVecObject(){
-		local Int is aAddr: Mem:allocArcKind(bytes: 56, kind: 2);
-		Mem:storeI32(ptr: aAddr, byteOffset: 40, val: 1);
+		local Int is aAddr: Mem:allocArcKind(bytes: 64, kind: 2);
+		Mem:storeI64(ptr: aAddr, byteOffset: 40, val: 1);
+		local SpinLock is lk: SpinLock:init();
+		local Int is lkAddr: Mem:objToAddr(obj: lk);
+		Mem:retainAddr(objAddr: lkAddr);
+		Mem:storeI64(ptr: aAddr, byteOffset: 56, val: lkAddr);
 		return Mem:addrToObj(addr: aAddr);
 	}
 
-	## Allocates a new empty SpecArray with the same elem_kind as [v].
+	## Allocates a new empty SpecArray with the same elemKind as [v].
 	Function of Any is newVecLike(Any is v){
 		local Int is vAddr: Mem:objToAddr(obj: v);
-		if({ vAddr != 0 && Mem:loadI32(ptr: vAddr, byteOffset: 40) == 1 }, {
+		if({ vAddr != 0 && Mem:loadI64(ptr: vAddr, byteOffset: 40) == 1 }, {
 			return :newVecObject();
 		});
 		return :newVec();
-	}
-
-	## Bootstrap-ratchet stub until _spec_rt_alloc_kinded no longer references it.
-	Function is byteBufDestroy(){
 	}
 
 	## Destroys this vector, releasing any ARC elements and freeing its backing array.
@@ -70,7 +74,7 @@ Class is Vector{
 		if({ addr == 0 }, { return; });
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 16);
 		if({ items != 0 }, {
-			local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+			local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 			if({ kind == 1 }, {
 				local Int is len: Mem:loadI64(ptr: addr, byteOffset: 24);
 				local Int is i: 0;
@@ -83,13 +87,18 @@ Class is Vector{
 			Mem:free(ptr: items);
 			Mem:storeI64(ptr: addr, byteOffset: 16, val: 0);
 		});
+		local Int is lk: Mem:loadI64(ptr: addr, byteOffset: 56);
+		if({ lk != 0 }, {
+			Mem:releaseAddr(objAddr: lk);
+			Mem:storeI64(ptr: addr, byteOffset: 56, val: 0);
+		});
 	}
 
 	## Number of elements held by the vector [v].
 	Function of Int is vecLength(Any is v){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return 0; });
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			return Mem:loadI64(ptr: addr, byteOffset: 24);
 		});
 		:lockVec(addr: addr);
@@ -102,7 +111,7 @@ Class is Vector{
 	Function of Any is vecGetAt(Any is v, Int is idx, Any is def){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return def; });
-		local Boolean is isFrozen: Mem:loadByte(ptr: addr, byteOffset: 44) != 0;
+		local Boolean is isFrozen: Mem:loadByte(ptr: addr, byteOffset: 48) != 0;
 		if({ !isFrozen }, { :lockVec(addr: addr); });
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 24);
 		if({ idx < 0 || idx >= len }, {
@@ -111,7 +120,7 @@ Class is Vector{
 		});
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 16);
 		local Int is valAddr: Mem:loadI64(ptr: items, byteOffset: idx * 8);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:retainAddr(objAddr: valAddr);
 			Mem:claimPoolAddr(objAddr: valAddr);
@@ -127,7 +136,7 @@ Class is Vector{
 			Mem:panic(msg: 'Null pointer access on uninitialized Array');
 			return Mem:addrToObj(addr: 0);
 		});
-		local Boolean is isFrozen: Mem:loadByte(ptr: addr, byteOffset: 44) != 0;
+		local Boolean is isFrozen: Mem:loadByte(ptr: addr, byteOffset: 48) != 0;
 		if({ !isFrozen }, { :lockVec(addr: addr); });
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 24);
 		if({ idx < 0 || idx >= len }, {
@@ -137,7 +146,7 @@ Class is Vector{
 		});
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 16);
 		local Int is valAddr: Mem:loadI64(ptr: items, byteOffset: idx * 8);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:retainAddr(objAddr: valAddr);
 			Mem:claimPoolAddr(objAddr: valAddr);
@@ -153,7 +162,7 @@ Class is Vector{
 			Mem:panic(msg: 'Null pointer access on uninitialized Array');
 			return;
 		});
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return;
 		});
@@ -166,7 +175,7 @@ Class is Vector{
 		});
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 16);
 		local Int is itemAddr: Mem:objToAddr(obj: item);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		local Int is oldAddr: 0;
 		if({ kind == 1 }, {
 			if({ itemAddr != 0 }, { Mem:retainAddr(objAddr: itemAddr); });
@@ -183,7 +192,7 @@ Class is Vector{
 	Function is vecAdd(Any is v, Any is item){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return; });
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return;
 		});
@@ -198,7 +207,7 @@ Class is Vector{
 			Mem:storeI64(ptr: addr, byteOffset: 32, val: ncap);
 		});
 		local Int is itemAddr: Mem:objToAddr(obj: item);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		if({ kind == 1 && itemAddr != 0 }, {
 			Mem:retainAddr(objAddr: itemAddr);
 		});
@@ -211,8 +220,8 @@ Class is Vector{
 	Function is vecAddObject(Any is v, Any is item){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return; });
-		if({ Mem:loadI32(ptr: addr, byteOffset: 40) == 0 }, {
-			Mem:storeI32(ptr: addr, byteOffset: 40, val: 1);
+		if({ Mem:loadI64(ptr: addr, byteOffset: 40) == 0 }, {
+			Mem:storeI64(ptr: addr, byteOffset: 40, val: 1);
 		});
 		:vecAdd(v: v, item: item);
 	}
@@ -222,7 +231,7 @@ Class is Vector{
 		local Int is aAddr: Mem:objToAddr(obj: v);
 		local Int is oAddr: Mem:objToAddr(obj: other);
 		if({ aAddr == 0 || oAddr == 0 }, { return; });
-		if({ Mem:loadByte(ptr: aAddr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: aAddr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return;
 		});
@@ -238,7 +247,7 @@ Class is Vector{
 				Mem:storeI64(ptr: aAddr, byteOffset: 16, val: items);
 				Mem:storeI64(ptr: aAddr, byteOffset: 32, val: ncap);
 			});
-			local Int is kind: Mem:loadI32(ptr: aAddr, byteOffset: 40);
+			local Int is kind: Mem:loadI64(ptr: aAddr, byteOffset: 40);
 			local Int is i: 0;
 			while({ i < n }, {
 				local Int is it: Mem:loadI64(ptr: items, byteOffset: i * 8);
@@ -269,7 +278,7 @@ Class is Vector{
 			Mem:storeI64(ptr: aAddr, byteOffset: 16, val: aItems);
 			Mem:storeI64(ptr: aAddr, byteOffset: 32, val: ncap2);
 		});
-		local Int is aKind: Mem:loadI32(ptr: aAddr, byteOffset: 40);
+		local Int is aKind: Mem:loadI64(ptr: aAddr, byteOffset: 40);
 		local Int is j: 0;
 		while({ j < oLen }, {
 			local Int is oit: Mem:loadI64(ptr: oItems, byteOffset: j * 8);
@@ -289,7 +298,7 @@ Class is Vector{
 			Mem:panic(msg: 'Array pop on empty array');
 			return Mem:addrToObj(addr: 0);
 		});
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return Mem:addrToObj(addr: 0);
 		});
@@ -304,7 +313,7 @@ Class is Vector{
 		Mem:storeI64(ptr: addr, byteOffset: 24, val: newLen);
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 16);
 		local Int is valAddr: Mem:loadI64(ptr: items, byteOffset: newLen * 8);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
@@ -319,7 +328,7 @@ Class is Vector{
 			Mem:panic(msg: 'Array index out of bounds');
 			return Mem:addrToObj(addr: 0);
 		});
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return Mem:addrToObj(addr: 0);
 		});
@@ -337,7 +346,7 @@ Class is Vector{
 			Mem:move(dst: items + (idx * 8), src: items + ((idx + 1) * 8), bytes: tailCount * 8);
 		});
 		Mem:storeI64(ptr: addr, byteOffset: 24, val: len - 1);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
@@ -349,7 +358,7 @@ Class is Vector{
 	Function of Any is vecPopLast(Any is v, Any is def){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return def; });
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return def;
 		});
@@ -363,7 +372,7 @@ Class is Vector{
 		Mem:storeI64(ptr: addr, byteOffset: 24, val: newLen);
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 16);
 		local Int is valAddr: Mem:loadI64(ptr: items, byteOffset: newLen * 8);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
@@ -375,7 +384,7 @@ Class is Vector{
 	Function of Any is vecRemoveAt(Any is v, Int is idx, Any is def){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return def; });
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return def;
 		});
@@ -392,7 +401,7 @@ Class is Vector{
 			Mem:move(dst: items + (idx * 8), src: items + ((idx + 1) * 8), bytes: tailCount * 8);
 		});
 		Mem:storeI64(ptr: addr, byteOffset: 24, val: len - 1);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		if({ kind == 1 && valAddr != 0 }, {
 			Mem:claimPoolAddr(objAddr: valAddr);
 		});
@@ -404,14 +413,14 @@ Class is Vector{
 	Function is vecClear(Any is v){
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return; });
-		if({ Mem:loadByte(ptr: addr, byteOffset: 44) != 0 }, {
+		if({ Mem:loadByte(ptr: addr, byteOffset: 48) != 0 }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return;
 		});
 		:lockVec(addr: addr);
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 24);
 		local Int is items: Mem:loadI64(ptr: addr, byteOffset: 16);
-		local Int is kind: Mem:loadI32(ptr: addr, byteOffset: 40);
+		local Int is kind: Mem:loadI64(ptr: addr, byteOffset: 40);
 		Mem:storeI64(ptr: addr, byteOffset: 16, val: 0);
 		Mem:storeI64(ptr: addr, byteOffset: 24, val: 0);
 		Mem:storeI64(ptr: addr, byteOffset: 32, val: 0);
@@ -436,7 +445,7 @@ Class is Vector{
 		local Int is addr: Mem:objToAddr(obj: v);
 		if({ addr == 0 }, { return; });
 		:lockVec(addr: addr);
-		Mem:storeByte(ptr: addr, byteOffset: 44, val: 1);
+		Mem:storeByte(ptr: addr, byteOffset: 48, val: 1);
 		:unlockVec(addr: addr);
 	}
 }

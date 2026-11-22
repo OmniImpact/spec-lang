@@ -59,7 +59,14 @@ Class of CallLowerer is ArrayCallLowerer{
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, {
 			local String is dst: b:nextTmp();
-			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVec', argTypes: [IrType:Ptr], args: ['null']));
+			if({ b:mod:findStruct(name: 'Array'):name != '' }, {
+				b:emit(inst: IrInst:AllocObj(dst: dst, structName: 'Array', destroyFn: b:destroyFnFor(structName: 'Array')));
+				local String is ekV: b:nextTmp();
+				b:emit(inst: IrInst:ConstInt(dst: ekV, value: 0));
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Array_init', argTypes: [IrType:Ptr, IrType:I64], args: [dst, ekV]));
+			}, {
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVec', argTypes: [IrType:Ptr], args: ['null']));
+			});
 			b:emitClaimPool(val: dst);
 			return dst;
 		});
