@@ -13,6 +13,7 @@ Class is Http{
 		['base', 'net', HttpResponse],
 		['base', 'net', Socket],
 		['base', 'net', 'tls', TlsClient],
+		['base', 'net', 'tls', TlsError],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Conditional()],
@@ -151,12 +152,17 @@ Class is Http{
 	local Function of String is exchangeOnce(Url is u, String is rawReq, Int is timeoutMs, Array of SpecError of HttpError is errOut){
 		if({ u:isHttps() }, {
 			local TlsClient is tls: TlsClient:init();
-			if({ !tls:connect(host: u:host, port: u:port, timeoutMs: timeoutMs) }, {
-				errOut:add(item: SpecError:init(kind: HttpError:CONNECTION_FAILED, description: 'TLS connect failed: ' . tls:lastError()));
+			local String is tlsErr: '';
+			if({ !tls:connect(host: u:host, port: u:port, timeoutMs: timeoutMs, onError: local Function(SpecError of TlsError is e){
+				tlsErr: e:description;
+			}) }, {
+				errOut:add(item: SpecError:init(kind: HttpError:CONNECTION_FAILED, description: 'TLS connect failed: ' . tlsErr));
 				return '';
 			});
-			if({ !tls:sendString(text: rawReq) }, {
-				errOut:add(item: SpecError:init(kind: HttpError:SEND_FAILED, description: 'TLS send failed: ' . tls:lastError()));
+			if({ !tls:sendString(text: rawReq, onError: local Function(SpecError of TlsError is e){
+				tlsErr: e:description;
+			}) }, {
+				errOut:add(item: SpecError:init(kind: HttpError:SEND_FAILED, description: 'TLS send failed: ' . tlsErr));
 				tls:close();
 				return '';
 			});

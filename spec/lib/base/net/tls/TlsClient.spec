@@ -7,7 +7,9 @@ Class is TlsClient{
 	namespace: ['base', 'net', 'tls'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', SpecError],
 		['base', 'net', Socket],
+		['base', 'net', 'tls', TlsError],
 		['base', 'net', 'tls', as TlsVerifier()],
 		['base', 'math', 'crypto', as Sha256()],
 		['base', 'math', 'crypto', as X25519()],
@@ -23,6 +25,21 @@ Class is TlsClient{
 	local Socket is sock: Socket:init();
 	local Boolean is connected: false;
 	local String is lastErr: '';
+	local TlsError is lastKind: TlsError:CONNECT_FAILED;
+
+	local Function of Boolean is hasClosure(Function is cb){
+		local Int is addr: Mem:objToAddr(obj: cb);
+		if({ addr == 0 }, { return false; });
+		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
+	}
+
+	## Private plumbing: the failure sites deep in the handshake set
+	## the message and its phase kind; the public face delivers the
+	## currency at the call boundary. The state never outlives the call.
+	local Function is setFail(TlsError is kind, String is msg){
+		:lastErr: msg;
+		:lastKind: kind;
+	}
 	local Int is cipherSuite: 0;
 
 	local List of Byte is rxBuf;
@@ -40,10 +57,6 @@ Class is TlsClient{
 	local Array of Int is sAppKey: [];
 	local Array of Int is sAppIv: [];
 	local Int is sAppSeq: 0;
-
-	Function of String is lastError(){
-		return :lastErr;
-	}
 
 	Function of Boolean is isConnected(){
 		return :connected;
@@ -118,7 +131,8 @@ Class is TlsClient{
 			errMsg: e;
 		});
 		if({ sent < 0 }, {
-			:lastErr: if({ errMsg != '' }, { errMsg }, { 'socket send failed' });
+			local String is failMsg: if({ errMsg != '' }, { errMsg }, { 'socket send failed' });
+			:setFail(kind: TlsError:SEND_FAILED, msg: failMsg);
 			return false;
 		});
 		return true;
@@ -135,7 +149,7 @@ Class is TlsClient{
 				errMsg: e;
 			});
 			if({ errMsg != '' }, {
-				:lastErr: errMsg;
+				:setFail(kind: TlsError:RECV_FAILED, msg: errMsg);
 				return false;
 			});
 			if({ chunk:length() == 0 }, {
@@ -308,13 +322,16 @@ Class is TlsClient{
 	}
 
 	## Connects to [host]:[port] over TCP and performs the TLS 1.3 handshake.
-	Function of Boolean is connect(String is host, Int is port: 443, Int is timeoutMs: 15000, Boolean is verifyCert: true){
+	## Internal handshake implementation: sets the failure plumbing;
+	## the public face delivers the currency at the call boundary.
+	Function of Boolean is connectImpl(String is host, Int is port: 443, Int is timeoutMs: 15000, Boolean is verifyCert: true){
 		local String is errMsg: '';
 		:sock: Socket:init():connect(host: host, port: port, timeoutMs: timeoutMs, onError: local Function(String is e){
 			errMsg: e;
 		});
 		if({ !:sock:isOpen() }, {
-			:lastErr: if({ errMsg != '' }, { errMsg }, { 'TCP connect failed to ' . host });
+			local String is failMsg: if({ errMsg != '' }, { errMsg }, { 'TCP connect failed to ' . host });
+			:setFail(kind: TlsError:CONNECT_FAILED, msg: failMsg);
 			return false;
 		});
 		:sock:setTimeout(timeoutMs: timeoutMs);
@@ -341,14 +358,15 @@ Class is TlsClient{
 			local Array of Int is hdr: [];
 			local Array of Int is payload: :readRecord(headerOut: hdr);
 			if({ hdr:length() < 5 }, {
-				:lastErr: if({ :lastErr != '' }, { :lastErr }, { 'EOF waiting for ServerHello' });
+				local String is failMsg: if({ :lastErr != '' }, { :lastErr }, { 'EOF waiting for ServerHello' });
+				:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: failMsg);
 				:close();
 				return false;
 			});
 			local Int is rType: hdr:get(index: 0, default: 0);
 			if({ rType == 21 }, {
 				local Int is alertDesc: payload:get(index: 1, default: 0);
-				:lastErr: 'TLS alert during handshake (desc=' . (alertDesc as String) . ')';
+				:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'TLS alert during handshake (desc=' . (alertDesc as String) . ')');
 				:close();
 				return false;
 			});
@@ -368,7 +386,7 @@ Class is TlsClient{
 		local Int is csHi: shMsg:get(index: pos, default: 0);
 		local Int is csLo: shMsg:get(index: pos + 1, default: 0);
 		if({ csHi != 19 || (csLo != 1 && csLo != 3) }, {
-			:lastErr: 'Server selected unsupported cipher suite (' . (csHi as String) . ',' . (csLo as String) . ')';
+			:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'Server selected unsupported cipher suite (' . (csHi as String) . ',' . (csLo as String) . ')');
 			:close();
 			return false;
 		});
@@ -393,7 +411,7 @@ Class is TlsClient{
 			pos: pos + eLen;
 		});
 		if({ serverPub:length() != 32 }, {
-			:lastErr: 'ServerHello missing X25519 key_share';
+			:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'ServerHello missing X25519 key_share');
 			:close();
 			return false;
 		});
@@ -428,13 +446,13 @@ Class is TlsClient{
 			local Array of Int is hdr: [];
 			local Array of Int is payload: :readRecord(headerOut: hdr);
 			if({ hdr:length() < 5 }, {
-				:lastErr: 'EOF during encrypted server handshake';
+				:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'EOF during encrypted server handshake');
 				:close();
 				return false;
 			});
 			local Int is rType: hdr:get(index: 0, default: 0);
 			if({ rType == 21 }, {
-				:lastErr: 'Plaintext TLS alert during handshake (desc=' . (payload:get(index: 1, default: 0) as String) . ')';
+				:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'Plaintext TLS alert during handshake (desc=' . (payload:get(index: 1, default: 0) as String) . ')');
 				:close();
 				return false;
 			});
@@ -444,7 +462,7 @@ Class is TlsClient{
 				local Array of Boolean is okOut: [];
 				local Array of Int is inner: :aeadOpen(key: sHsKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
 				if({ !okOut:get(index: 0, default: false) }, {
-					:lastErr: 'AEAD authentication failed on server handshake record';
+					:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'AEAD authentication failed on server handshake record');
 					:close();
 					return false;
 				});
@@ -453,13 +471,13 @@ Class is TlsClient{
 					endIdx: endIdx - 1;
 				});
 				if({ endIdx < 0 }, {
-					:lastErr: 'Malformed empty TLS inner plaintext';
+					:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'Malformed empty TLS inner plaintext');
 					:close();
 					return false;
 				});
 				local Int is innerType: inner:get(index: endIdx, default: 0);
 				if({ innerType == 21 }, {
-					:lastErr: 'Encrypted TLS alert during handshake (desc=' . (inner:get(index: 1, default: 0) as String) . ')';
+					:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'Encrypted TLS alert during handshake (desc=' . (inner:get(index: 1, default: 0) as String) . ')');
 					:close();
 					return false;
 				});
@@ -488,7 +506,7 @@ Class is TlsClient{
 								fi: fi + 1;
 							});
 							if({ mLen != 32 || diff != 0 }, {
-								:lastErr: 'Server Finished MAC verification failed';
+								:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'Server Finished MAC verification failed');
 								:close();
 								return false;
 							});
@@ -512,7 +530,8 @@ Class is TlsClient{
 		if({ verifyCert }, {
 			local Array of String is certErr: [];
 			if({ !TlsVerifier:verifyServerChain(certChain: serverCertChain, host: host, errOut: certErr) }, {
-				:lastErr: if({ certErr:length() > 0 }, { certErr:get(index: 0, default: 'X.509 verification failed') }, { 'X.509 verification failed' });
+				local String is failMsg: if({ certErr:length() > 0 }, { certErr:get(index: 0, default: 'X.509 verification failed') }, { 'X.509 verification failed' });
+				:setFail(kind: TlsError:CERT_VERIFY_FAILED, msg: failMsg);
 				:close();
 				return false;
 			});
@@ -548,9 +567,31 @@ Class is TlsClient{
 	}
 
 	## Sends [text] as encrypted TLS 1.3 application data.
-	Function of Boolean is sendString(String is text){
+	## Establishes the TLS session to [host], reporting failure through
+	## [onError] as the full error currency (`SpecError of TlsError` —
+	## the variant names the failing phase, the description carries the
+	## detail). The Boolean return observes the outcome regardless.
+	Function of Boolean is connect(String is host, Int is port: 443, Int is timeoutMs: 15000, Boolean is verifyCert: true, Function is onError: local Function(SpecError of TlsError is error){}){
+		local Boolean is ok: :connectImpl(host: host, port: port, timeoutMs: timeoutMs, verifyCert: verifyCert);
+		if({ !ok && :lastErr != '' && :hasClosure(cb: onError) }, {
+			onError(SpecError:init(kind: :lastKind, description: :lastErr));
+		});
+		return ok;
+	}
+
+	## Sends [text] over the established TLS session, reporting failure
+	## through [onError] as the full error currency.
+	Function of Boolean is sendString(String is text, Function is onError: local Function(SpecError of TlsError is error){}){
+		local Boolean is ok: :sendStringImpl(text: text);
+		if({ !ok && :lastErr != '' && :hasClosure(cb: onError) }, {
+			onError(SpecError:init(kind: :lastKind, description: :lastErr));
+		});
+		return ok;
+	}
+
+	Function of Boolean is sendStringImpl(String is text){
 		if({ !:connected }, {
-			:lastErr: 'TLS client not connected';
+			:setFail(kind: TlsError:NOT_CONNECTED, msg: 'TLS client not connected');
 			return false;
 		});
 		local Int is totalLen: text:byteLength();
@@ -597,7 +638,7 @@ Class is TlsClient{
 			local Array of Boolean is okOut: [];
 			local Array of Int is inner: :aeadOpen(key: :sAppKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
 			if({ !okOut:get(index: 0, default: false) }, {
-				:lastErr: 'AEAD authentication failed on application data';
+				:setFail(kind: TlsError:SEND_FAILED, msg: 'AEAD authentication failed on application data');
 				return false;
 			});
 			local Int is endIdx: inner:length() - 1;
