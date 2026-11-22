@@ -6597,7 +6597,7 @@ Class is TypeChecker{
 		# work with or without an import (the container branches
 		# were unconditional). When the declaration is loaded its real
 		# signatures apply; when not, calls resolve to the container type.
-		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'Loops', 'Loop', 'LoopCallback', 'InputHandler'];
+		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'Loops', 'Loop', 'InputHandler'];
 		builtinNames:each(action: local Function(String is bn){
 			:registeredClasses:set(key: bn, value: bn);
 		});

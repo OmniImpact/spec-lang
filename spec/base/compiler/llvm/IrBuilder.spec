@@ -417,7 +417,7 @@ Class is IrBuilder{
 		if({ :bindings:isSysinternal(cls: cls) }, {
 			return !:hasMethodBodies(cls: cls);
 		});
-		if({ cls:name == 'List' || cls:name == 'LoopCallback' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
+		if({ cls:name == 'List' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
 		return false;
 	}
 

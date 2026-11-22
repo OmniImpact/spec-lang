@@ -8,6 +8,7 @@ Class of SpecUnitTest is TestLoops{
 
 	replace Array of Array of String is using: [
 		['base', 'iterator', LoopControl],
+		['base', 'iterator', LoopCallback],
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -116,5 +117,29 @@ Class of SpecUnitTest is TestLoops{
 		local LoopControl is fresh: LoopControl();
 		fresh:complete();
 		Assert:isFalse(fresh:isStopped());
+	}
+
+	## LoopCallback is a real Spec class: subclassable with virtual
+	## dispatch through onComplete(control:).
+	Function is testLoopCallbackLifecycle(){
+		local LoopControl is ctrl: LoopControl();
+		local LoopCallback is baseCb: LoopCallback();
+		baseCb:onComplete(control: ctrl);
+		Assert:isFalse(ctrl:isStopped());
+
+		local TestCallbackSub is sub: TestCallbackSub();
+		local LoopCallback is asBase: sub;
+		asBase:onComplete(control: ctrl);
+		Assert:areEqualInt(1, sub:calls);
+		Assert:isTrue(ctrl:isStopped());
+	}
+}
+
+Class of LoopCallback is TestCallbackSub{
+	Int is calls: 0;
+
+	replace Function is onComplete(LoopControl is control){
+		:calls: :calls + 1;
+		control:stop();
 	}
 }
