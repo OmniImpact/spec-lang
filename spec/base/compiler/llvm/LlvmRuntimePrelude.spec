@@ -21,19 +21,6 @@ define internal noalias ptr @spec_rt_alloc(i64 %size, ptr %destroy) alwaysinline
   %obj = inttoptr i64 %oa to ptr
   ret ptr %obj
 }
-define internal i64 @_spec_rt_alloc_kinded(i64 %size, i64 %kind) alwaysinline {
-  %is1 = icmp eq i64 %kind, 1
-  %is2 = icmp eq i64 %kind, 2
-  %d1 = select i1 %is1, ptr @HashTable_mapDestroy, ptr null
-  %dp = select i1 %is2, ptr @Vector_vecDestroy, ptr %d1
-  %da = ptrtoint ptr %dp to i64
-  %oa = call i64 @Arc_allocObj(ptr null, i64 %size, i64 %da)
-  %tn1 = select i1 %is1, ptr @.str.tn_map, ptr null
-  %tnp = select i1 %is2, ptr @.str.tn_arr, ptr %tn1
-  %obj = inttoptr i64 %oa to ptr
-  store ptr %tnp, ptr %obj, align 8
-  ret i64 %oa
-}
 @.str.uaf_retain = private unnamed_addr constant [36 x i8] c"arc: retain of already-freed object\00"
 @.str.uaf_release = private unnamed_addr constant [37 x i8] c"arc: release of already-freed object\00"
 define internal ptr @spec_rt_retain(ptr %obj) alwaysinline {
@@ -791,9 +778,6 @@ fail:
 ok:
   ret i64 %v
 }
-@.str.tn_map = private unnamed_addr constant [4 x i8] c"Map\00"
-@.str.tn_arr = private unnamed_addr constant [6 x i8] c"Array\00"
-@.str.tn_bb = private unnamed_addr constant [8 x i8] c"ByteBuf\00"
 @.str.tn_str = private unnamed_addr constant [7 x i8] c"String\00"
 @.str.bool_true = private unnamed_addr constant [5 x i8] c"true\00"
 @.str.bool_false = private unnamed_addr constant [6 x i8] c"false\00"

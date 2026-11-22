@@ -118,7 +118,13 @@ Class is Map of K to V{
 		:nbuckets: newNb;
 	}
 
+	local Function of Int is normKeyBits(Int is keyBits){
+		if({ :keyKind == 2 && (keyBits << 1) == 0 }, { return 0; });
+		return keyBits;
+	}
+
 	local Function of Any is getRaw(Int is keyBits, Any is def){
+		keyBits: :normKeyBits(keyBits: keyBits);
 		if({ :keyKind == 0 && keyBits == 0 }, { return def; });
 		local Boolean is isFrozen: :frozen;
 		if({ !isFrozen }, { :lock:lock(); });
@@ -149,6 +155,45 @@ Class is Map of K to V{
 		});
 		if({ !isFrozen }, { :lock:unlock(); });
 		return def;
+	}
+
+	## Looks up the value mapped to [key], panicking if not found.
+	Function of V is getChecked(K is key){
+		local Int is keyBits: :normKeyBits(keyBits: Mem:objToAddr(obj: key));
+		if({ :keyKind == 0 && keyBits == 0 }, {
+			Mem:panic(msg: 'Map key not found');
+			return Mem:addrToObj(addr: 0);
+		});
+		local Boolean is isFrozen: :frozen;
+		if({ !isFrozen }, { :lock:lock(); });
+		local Int is idx: if({ :keyKind == 0 }, {
+			:hashString(strAddr: keyBits, nb: :nbuckets)
+		}, {
+			:hashBits(k: keyBits, nb: :nbuckets)
+		});
+		local Int is curr: Mem:loadI64(ptr: :buckets, byteOffset: idx * 8);
+		while({ curr != 0 }, {
+			local Int is cKey: Mem:loadI64(ptr: curr, byteOffset: 0);
+			local Boolean is matched: if({ :keyKind == 0 }, {
+				:strKeyEquals(aAddr: cKey, bAddr: keyBits)
+			}, {
+				cKey == keyBits
+			});
+			if({ matched }, {
+				local Int is valBits: Mem:loadI64(ptr: curr, byteOffset: 8);
+				local Int is isArc: Mem:loadByte(ptr: curr, byteOffset: 16);
+				if({ (isArc != 0 || :valKind == 1) && valBits != 0 }, {
+					Mem:retainAddr(objAddr: valBits);
+					Mem:claimPoolAddr(objAddr: valBits);
+				});
+				if({ !isFrozen }, { :lock:unlock(); });
+				return Mem:addrToObj(addr: valBits);
+			});
+			curr: Mem:loadI64(ptr: curr, byteOffset: 24);
+		});
+		if({ !isFrozen }, { :lock:unlock(); });
+		Mem:panic(msg: 'Map key not found');
+		return Mem:addrToObj(addr: 0);
 	}
 
 	## Marks this map as frozen (immutable).
@@ -214,20 +259,18 @@ Class is Map of K to V{
 		]);
 	}
 
-	## Inserts or updates an entry in the map.
-	##
-	## @param key: Entry key.
-	## @param value: Entry value.
-	Function is set(K is key, V is value){
+	## Inserts or updates an entry in the map, with an explicit per-entry ARC flag
+	## (used by heterogeneous map literals and index assignment).
+	Function is setEntry(K is key, V is value, Boolean is valIsArc){
 		if({ :frozen }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Map');
 			return;
 		});
-		local Int is keyBits: Mem:objToAddr(obj: key);
+		local Int is keyBits: :normKeyBits(keyBits: Mem:objToAddr(obj: key));
 		if({ :keyKind == 0 && keyBits == 0 }, { return; });
 		local Int is valBits: Mem:objToAddr(obj: value);
 		:lock:lock();
-		local Boolean is retainVal: :valKind == 1;
+		local Boolean is retainVal: valIsArc || (:valKind == 1);
 		local Int is arcByte: if({ retainVal }, { 1 }, { 0 });
 		local Int is idx: if({ :keyKind == 0 }, {
 			:hashString(strAddr: keyBits, nb: :nbuckets)
@@ -282,12 +325,20 @@ Class is Map of K to V{
 		:lock:unlock();
 	}
 
+	## Inserts or updates an entry in the map.
+	##
+	## @param key: Entry key.
+	## @param value: Entry value.
+	Function is set(K is key, V is value){
+		:setEntry(key: key, value: value, valIsArc: false);
+	}
+
 	## Determines whether an entry exists for the specified key.
 	##
 	## @param key: Key to test.
 	## @return: `true` if key is present, `false` otherwise.
 	Function of Boolean is has(K is key){
-		local Int is keyBits: Mem:objToAddr(obj: key);
+		local Int is keyBits: :normKeyBits(keyBits: Mem:objToAddr(obj: key));
 		if({ :keyKind == 0 && keyBits == 0 }, { return false; });
 		local Boolean is isFrozen: :frozen;
 		if({ !isFrozen }, { :lock:lock(); });
@@ -323,7 +374,7 @@ Class is Map of K to V{
 			Mem:panic(msg: 'Mutation attempted on frozen Map');
 			return false;
 		});
-		local Int is keyBits: Mem:objToAddr(obj: key);
+		local Int is keyBits: :normKeyBits(keyBits: Mem:objToAddr(obj: key));
 		if({ :keyKind == 0 && keyBits == 0 }, { return false; });
 		:lock:lock();
 		local Int is idx: if({ :keyKind == 0 }, {

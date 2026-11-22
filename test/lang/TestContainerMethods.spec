@@ -10,7 +10,6 @@ Class of SpecUnitTest is TestContainerMethods{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'sys', as Loops()],
-		['base', 'sys', as Vector()],
 		['base', 'struct', Array],
 		['base', 'struct', Map]
 	];
@@ -93,16 +92,15 @@ Class of SpecUnitTest is TestContainerMethods{
 		Assert:isTrue(k:indexOf(search: 'version', default: -1) >= 0);
 	}
 
-	## Case 6: Vector sys floor direct operations and Array delegation.
-	Function is testVectorFloor(){
+	## Case 6: Array direct mutations, indexing, pop, removeAt, and clear.
+	Function is testArrayDirectOps(){
 		local Array of String is arr: ['a', 'b', 'c'];
-		Assert:areEqualInt(3, Vector:vecLength(v: arr));
 		Assert:areEqualInt(3, arr:length());
 
-		Vector:vecSetAt(v: arr, idx: 1, item: 'beta');
-		Assert:areEqualString('beta', arr:get(index: 1, default: ''));
+		arr[1]: 'beta';
+		Assert:areEqualString('beta', arr[1]);
 
-		Vector:vecAdd(v: arr, item: 'd');
+		arr:add(item: 'd');
 		Assert:areEqualInt(4, arr:length());
 		Assert:areEqualString('d', arr:get(index: 3, default: ''));
 
@@ -115,7 +113,7 @@ Class of SpecUnitTest is TestContainerMethods{
 		Assert:areEqualInt(2, arr:length());
 		Assert:areEqualString('beta', arr:get(index: 0, default: ''));
 
-		Vector:vecClear(v: arr);
+		arr:clear();
 		Assert:areEqualInt(0, arr:length());
 		Assert:isTrue(arr:isEmpty());
 	}

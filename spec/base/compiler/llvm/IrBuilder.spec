@@ -616,7 +616,7 @@ Class is IrBuilder{
 		local Int is eci: 0;
 		while({ eci < allClasses:length() }, {
 			local ClassInfo is ec: allClasses:get(index: eci);
-			if({ ec:typeParams:length() > 0 && instantiatedBases:has(key: ec:name) && !:bareTemplateUsed:has(key: ec:name) }, {
+			if({ ec:typeParams:length() > 0 && ec:name != 'Array' && ec:name != 'Map' && instantiatedBases:has(key: ec:name) && !:bareTemplateUsed:has(key: ec:name) }, {
 				eci++;
 			}, {
 				emittableClasses:add(item: ec);
@@ -1907,7 +1907,8 @@ Class is IrBuilder{
 			if({ resArc }, { vkVal: 1; });
 			:emit(inst: IrInst:ConstInt(dst: vk, value: vkVal));
 			local String is newMap: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: newMap, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', kk, vk]));
+			:emit(inst: IrInst:AllocObj(dst: newMap, structName: 'Map', destroyFn: :destroyFnFor(structName: 'Map')));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Map_init', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [newMap, kk, vk]));
 			:emit(inst: IrInst:Store(slot: '@' . cacheGlob, val: newMap, ty: IrType:Ptr));
 			:terminate(inst: IrInst:Br(target: chkLbl));
 
@@ -1916,7 +1917,7 @@ Class is IrBuilder{
 			local String is cache1: :nextTmp();
 			:emit(inst: IrInst:Load(dst: cache1, slot: '@' . cacheGlob, ty: IrType:Ptr));
 			local String is hasKey: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: hasKey, hasDst: true, retType: IrType:I1, callee: 'HashTable_mapHas', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name']));
+			:emit(inst: IrInst:IrCall(dst: hasKey, hasDst: true, retType: IrType:I1, callee: 'Map_has', argTypes: [IrType:Ptr, IrType:Ptr], args: [cache1, '%p_name']));
 			local String is hitLbl: :nextLabel(prefix: 'hcache_hit');
 			local String is missLbl: :nextLabel(prefix: 'hcache_miss');
 			:terminate(inst: IrInst:CondBr(cond: hasKey, thenLabel: hitLbl, elseLabel: missLbl));
@@ -1924,7 +1925,7 @@ Class is IrBuilder{
 			local IrBlock is hitBlk: fn:addBlock(label: hitLbl);
 			:switchBlock(blk: hitBlk);
 			local String is hitRaw: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: hitRaw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', 'null']));
+			:emit(inst: IrInst:IrCall(dst: hitRaw, hasDst: true, retType: IrType:Ptr, callee: 'Map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [cache1, '%p_name', 'null']));
 			local String is hitVal: :castIfNeeded(val: hitRaw, fromTy: IrType:Ptr, toTy: resTy);
 			if({ resArc && hitVal != 'null' }, { :emit(inst: IrInst:Retain(val: hitVal)); });
 			:emitPoolExit();
@@ -1940,7 +1941,7 @@ Class is IrBuilder{
 			local String is resolved: :nextTmp();
 			:emit(inst: IrInst:IrCall(dst: resolved, hasDst: true, retType: resTy, callee: rSym . '_resolveHeld', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%p_name', clos]));
 			local String is setRaw: :castIfNeeded(val: resolved, fromTy: resTy, toTy: IrType:Ptr);
-			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'HashTable_mapSetAny', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', setRaw]));
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Map_set', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [cache1, '%p_name', setRaw]));
 			if({ resArc && resolved != 'null' }, { :emit(inst: IrInst:Retain(val: resolved)); });
 			:emitPoolExit();
 			:curPoolMark: '';
@@ -3736,19 +3737,7 @@ Class is IrBuilder{
 							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: listStruct . '_init', argTypes: [IrType:Ptr, IrType:I1, IrType:I64], args: [defVal, bmV, ekV]));
 							:emitClaimPool(val: defVal);
 						}, {
-							if({ isByteListVar }, {
-								defVal: :nextTmp();
-								:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newByteBuf', argTypes: [IrType:Ptr], args: ['null']));
-								:emitClaimPool(val: defVal);
-							}, {
-								local String is vecCtor: 'Vector_newVecObject';
-								if({ listElem != '' && !:isArcSpecType(specType: listElem) }, {
-									vecCtor: 'Vector_newVec';
-								});
-								defVal: :nextTmp();
-								:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [IrType:Ptr], args: ['null']));
-								:emitClaimPool(val: defVal);
-							});
+							:addError(msg: 'Cannot allocate List struct \'' . listStruct . '\' in ' . :currentClass . ':' . :currentMethod . ' (line ' . (:currentLine as String) . ').');
 						});
 					});
 					if({ isBoxed }, {
@@ -3897,19 +3886,15 @@ Class is IrBuilder{
 						local String is iv: :lowerExpr(expr: index);
 						local String is tType: target:resolvedType;
 						if({ :isMapRecvType(specType: tType) }, {
-							local String is kSuf: :mapKeySuffixFor(recvType: tType, keySpec: index:resolvedType);
-							local IrType is kArgTy: :mapKeyIrTypeFor(kSuf: kSuf);
-							local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: kArgTy);
+							local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: IrType:Ptr);
 							local String is vp: :castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
-							local String is setCallee: 'HashTable_mapSet' . kSuf . 'Any';
-							if({ assignValue:resolvedType == 'String' }, {
-								setCallee: 'HashTable_mapSet' . kSuf;
-							});
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, vp]));
+							local String is isArcV: :nextTmp();
+							:emit(inst: IrInst:ConstBool(dst: isArcV, value: :isArcSpecType(specType: assignValue:resolvedType)));
+							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Map_setEntry', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I1], args: [tv, kp, vp, isArcV]));
 						}, {
 							local String is idxV: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: IrType:I64);
 							local String is vp: :castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecSetAt', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr], args: ['null', tv, idxV, vp]));
+							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Array_set', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [tv, idxV, vp]));
 						});
 					}
 				], default: {});
@@ -4762,19 +4747,14 @@ Class is IrBuilder{
 					});
 				});
 				local String is arrStruct: :cStructName(qname: rtStr);
-				if({ (rtBase == 'Array' || rtStr == 'Array') && :mod:findStruct(name: arrStruct):name != '' }, {
-					:emit(inst: IrInst:AllocObj(dst: arr, structName: arrStruct, destroyFn: :destroyFnFor(structName: arrStruct)));
-					local Int is ekInt: if({ isObjArr }, { 1 }, { 0 });
-					local String is ekV: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: ekV, value: ekInt));
-					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_init', argTypes: [IrType:Ptr, IrType:I64], args: [arr, ekV]));
-				}, {
-					if({ isObjArr }, {
-						:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVecObject', argTypes: [IrType:Ptr], args: ['null']));
-					}, {
-						:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_newVec', argTypes: [IrType:Ptr], args: ['null']));
-					});
+				if({ !((rtBase == 'Array' || rtStr == 'Array') && :mod:findStruct(name: arrStruct):name != '') }, {
+					arrStruct: 'Array';
 				});
+				:emit(inst: IrInst:AllocObj(dst: arr, structName: arrStruct, destroyFn: :destroyFnFor(structName: arrStruct)));
+				local Int is ekInt: if({ isObjArr }, { 1 }, { 0 });
+				local String is ekV: :nextTmp();
+				:emit(inst: IrInst:ConstInt(dst: ekV, value: ekInt));
+				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_init', argTypes: [IrType:Ptr, IrType:I64], args: [arr, ekV]));
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
 					local Expression is it: items:get(index: ii);
@@ -4790,9 +4770,7 @@ Class is IrBuilder{
 							:emit(inst: IrInst:IrCast(dst: ip, val: iv, fromType: ity, toType: IrType:Ptr));
 						});
 					});
-					local Array of IrType is addT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
-					local Array of String is addV: ['null', arr, ip];
-					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecAdd', argTypes: addT, args: addV));
+					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Array_add', argTypes: [IrType:Ptr, IrType:Ptr], args: [arr, ip]));
 					ii++;
 				});
 				:emitClaimPool(val: arr);
@@ -4883,68 +4861,28 @@ Class is IrBuilder{
 					});
 				});
 				local String is mapStruct: :cStructName(qname: resTy);
-				if({ (:specBaseMap:get(key: resTy, default: '') == 'Map' || resTy == 'Map') && :mod:findStruct(name: mapStruct):name != '' }, {
-					:emit(inst: IrInst:AllocObj(dst: mp, structName: mapStruct, destroyFn: :destroyFnFor(structName: mapStruct)));
-					local String is mkkV: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
-					local String is mvkV: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
-					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: mapStruct . '_init', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [mp, mkkV, mvkV]));
-				}, {
-					if({ mapKk != 0 || mapVk != 0 }, {
-						if({ mapKk == 0 && mapVk == 1 }, {
-							:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewObject', argTypes: [IrType:Ptr], args: ['null']));
-						}, {
-							local String is mkkV: :nextTmp();
-							:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
-							local String is mvkV: :nextTmp();
-							:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
-							:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV, mvkV]));
-						});
-					}, {
-						local String is mkkV0: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: mkkV0, value: 0));
-						local String is mvkV0: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: mvkV0, value: 0));
-						:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapNewTyped', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: ['null', mkkV0, mvkV0]));
-					});
+				if({ !((:specBaseMap:get(key: resTy, default: '') == 'Map' || resTy == 'Map') && :mod:findStruct(name: mapStruct):name != '') }, {
+					mapStruct: 'Map';
 				});
+				:emit(inst: IrInst:AllocObj(dst: mp, structName: mapStruct, destroyFn: :destroyFnFor(structName: mapStruct)));
+				local String is mkkV: :nextTmp();
+				:emit(inst: IrInst:ConstInt(dst: mkkV, value: mapKk));
+				local String is mvkV: :nextTmp();
+				:emit(inst: IrInst:ConstInt(dst: mvkV, value: mapVk));
+				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: mapStruct . '_init', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [mp, mkkV, mvkV]));
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {
 					local Expression is ke: keys:get(index: mi);
 					local Expression is ve: values:get(index: mi);
 					local String is kv: :lowerExpr(expr: ke);
 					local IrType is kty: :irTypeFor(specType: ke:resolvedType);
-					local String is kSuf: '';
-					local IrType is kArgTy: IrType:Ptr;
-					if({ ke:resolvedType == 'Int' || ke:resolvedType == 'Boolean' }, {
-						kSuf: 'Int';
-						kArgTy: IrType:I64;
-					}, {
-						if({ ke:resolvedType == 'Float' }, {
-							kSuf: 'Flt';
-							kArgTy: IrType:F64;
-						}, {
-							if({ ke:resolvedType != 'String' && ke:resolvedType != 'Any' }, {
-								kSuf: 'Obj';
-							});
-						});
-					});
-					kv: :castIfNeeded(val: kv, fromTy: kty, toTy: kArgTy);
+					kv: :castIfNeeded(val: kv, fromTy: kty, toTy: IrType:Ptr);
 					local String is vv: :lowerExpr(expr: ve);
 					local IrType is vty: :irTypeFor(specType: ve:resolvedType);
-					local String is vp: vv;
-					if({ vty != IrType:Ptr }, {
-						vp: :nextTmp();
-						:emit(inst: IrInst:IrCast(dst: vp, val: vv, fromType: vty, toType: IrType:Ptr));
-					});
-					local Array of IrType is setT: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr];
-					local Array of String is setV: ['null', mp, kv, vp];
-					local String is setCallee: 'HashTable_mapSet' . kSuf . 'Any';
-					if({ :isArcSpecType(specType: ve:resolvedType) }, {
-						setCallee: 'HashTable_mapSet' . kSuf;
-					});
-					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: setT, args: setV));
+					local String is vp: :castIfNeeded(val: vv, fromTy: vty, toTy: IrType:Ptr);
+					local String is isArcV: :nextTmp();
+					:emit(inst: IrInst:ConstBool(dst: isArcV, value: :isArcSpecType(specType: ve:resolvedType)));
+					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Map_setEntry', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I1], args: [mp, kv, vp, isArcV]));
 					mi++;
 				});
 				:emitClaimPool(val: mp);
@@ -4955,11 +4893,9 @@ Class is IrBuilder{
 				local String is iv: :lowerExpr(expr: index);
 				local String is raw: :nextTmp();
 				if({ :isMapRecvType(specType: target:resolvedType) }, {
-					local String is kSuf: :mapKeySuffixFor(recvType: target:resolvedType, keySpec: index:resolvedType);
-					local IrType is kArgTy: :mapKeyIrTypeFor(kSuf: kSuf);
-					local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: kArgTy);
+					local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: IrType:Ptr);
 					if({ expr:resolvedType != 'String' && expr:resolvedType != '' && :isArcSpecType(specType: expr:resolvedType) }, {
-						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet' . kSuf . 'Checked', argTypes: [IrType:Ptr, IrType:Ptr, kArgTy], args: ['null', tv, kp]));
+						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Map_getChecked', argTypes: [IrType:Ptr, IrType:Ptr], args: [tv, kp]));
 					}, {
 						local String is mDef: 'null';
 						if({ expr:resolvedType == 'String' || expr:resolvedType == '' }, {
@@ -4967,12 +4903,10 @@ Class is IrBuilder{
 							local Int is esid: :mod:internStringLiteral(value: '');
 							:emit(inst: IrInst:ConstString(dst: mDef, strId: esid));
 						});
-						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, mDef]));
+						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [tv, kp, mDef]));
 					});
 				}, {
-					local Array of IrType is gT: [IrType:Ptr, IrType:Ptr, IrType:I64];
-					local Array of String is gV: ['null', tv, iv];
-					:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: gT, args: gV));
+					:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Array_get', argTypes: [IrType:Ptr, IrType:I64], args: [tv, iv]));
 				});
 				local IrType is rty: :irTypeFor(specType: expr:resolvedType);
 				if({ rty != IrType:Ptr && rty != IrType:Void }, {

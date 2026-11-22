@@ -14,10 +14,8 @@ Class is Process{
 		['base', 'struct', Map],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()],
-		['base', 'sys', as HashTable()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Mem()],
-		['base', 'sys', as Vector()],
 		['base', 'sysinternal', Process]
 	];
 
@@ -193,11 +191,13 @@ Class is Process{
 
 	## Freezes a map for lock-free concurrent reads across worker threads.
 	Function is mapFreeze(Any is m){
-		HashTable:mapFreeze(m: m);
+		local Map is mp: m as Map;
+		mp:freeze();
 	}
 
 	## Freezes an array for lock-free concurrent reads across worker threads.
 	Function is arrayFreeze(Any is a){
-		Vector:vecFreeze(v: a);
+		local Array is ar: a as Array;
+		ar:freeze();
 	}
 }

@@ -50,6 +50,62 @@ Class is Array of T{
 		return out;
 	}
 
+	## Appends all elements of [other] into this array.
+	Function is addArray(Array of T is other){
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return;
+		});
+		local Int is aAddr: Mem:objToAddr(obj: :);
+		local Int is oAddr: Mem:objToAddr(obj: other);
+		if({ oAddr == 0 }, { return; });
+		if({ aAddr == oAddr }, {
+			:lock:lock();
+			local Int is n: :len;
+			if({ n + n > :cap }, {
+				local Int is ncap: if({ :cap == 0 }, { 8 }, { :cap * 2 });
+				while({ ncap < n + n }, { ncap: ncap * 2; });
+				:items: Mem:realloc(ptr: :items, bytes: ncap * 8);
+				:cap: ncap;
+			});
+			local Int is i: 0;
+			while({ i < n }, {
+				local Int is it: Mem:loadI64(ptr: :items, byteOffset: i * 8);
+				if({ :elemKind == 1 && it != 0 }, { Mem:retainAddr(objAddr: it); });
+				Mem:storeI64(ptr: :items, byteOffset: (n + i) * 8, val: it);
+				i: i + 1;
+			});
+			:len: n + n;
+			:lock:unlock();
+			return;
+		});
+		if({ aAddr < oAddr }, {
+			:lock:lock();
+			other:lock:lock();
+		}, {
+			other:lock:lock();
+			:lock:lock();
+		});
+		local Int is oLen: other:len;
+		local Int is oItems: other:items;
+		if({ :len + oLen > :cap }, {
+			local Int is ncap2: if({ :cap == 0 }, { 8 }, { :cap * 2 });
+			while({ ncap2 < :len + oLen }, { ncap2: ncap2 * 2; });
+			:items: Mem:realloc(ptr: :items, bytes: ncap2 * 8);
+			:cap: ncap2;
+		});
+		local Int is j: 0;
+		while({ j < oLen }, {
+			local Int is oit: Mem:loadI64(ptr: oItems, byteOffset: j * 8);
+			if({ :elemKind == 1 && oit != 0 }, { Mem:retainAddr(objAddr: oit); });
+			Mem:storeI64(ptr: :items, byteOffset: (:len + j) * 8, val: oit);
+			j: j + 1;
+		});
+		:len: :len + oLen;
+		:lock:unlock();
+		other:lock:unlock();
+	}
+
 	## Marks this array as frozen (immutable).
 	Function is freeze(){
 		:lock:lock();

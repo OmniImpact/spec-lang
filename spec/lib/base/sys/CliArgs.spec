@@ -6,7 +6,7 @@ Class is CliArgs{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
-		['base', 'sys', as HashTable()],
+		['base', 'struct', Map],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
@@ -30,12 +30,12 @@ Class is CliArgs{
 		return Mem:strFromBytes(srcAddr: cstr, len: Mem:cstrLen(cstrAddr: cstr));
 	}
 
-	local Function is setArg(Any is args, String is key, String is val){
-		if({ HashTable:mapHas(m: args, key: key) }, {
-			local String is prev: HashTable:mapGet(m: args, key: key, def: '') as String;
-			HashTable:mapSet(m: args, key: key, val: prev . "\n" . val);
+	local Function is setArg(Map of String to String is args, String is key, String is val){
+		if({ args:has(key: key) }, {
+			local String is prev: args:get(key: key, default: '');
+			args:set(key: key, value: prev . "\n" . val);
 		}, {
-			HashTable:mapSet(m: args, key: key, val: val);
+			args:set(key: key, value: val);
 		});
 	}
 
@@ -43,7 +43,7 @@ Class is CliArgs{
 	## `Map of String to String` (supporting `--key=val`, `--key val`, `-k=val`,
 	## `-k val`, indexed positionals `'0'`, `'1'`, ..., and newline-joined `''`).
 	Function of Any is parseMap(Int is argc, Int is argvAddr){
-		local Any is args: HashTable:mapNewObject();
+		local Map of String to String is args: Map:init();
 		local Int is posIdx: 0;
 		local Int is i: 1;
 		while({ i < argc }, {
