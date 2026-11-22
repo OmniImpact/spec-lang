@@ -170,6 +170,24 @@ Class is IrBuilder{
 
 	## Whether [specType] names a Map — the parameterized spelling or a
 	## specialized instantiation of the Map floor.
+	## The source spelling of a declared type node — parameterized
+	## containers spell out ('Map of String to Int'), bare names pass
+	## through — so synthesized call artifacts carry the parameter's
+	## own types instead of a hardcoded erased shape.
+	Function of String is typeSpelling(Type is t){
+		if({ t:params:length() == 0 }, { return t:name; });
+		if({ t:name == 'Map' && t:params:length() == 2 }, {
+			return t:name . ' of ' . :typeSpelling(t: t:params:get(index: 0, default: Type:init(name: ''))) . ' to ' . :typeSpelling(t: t:params:get(index: 1, default: Type:init(name: '')));
+		});
+		local String is out: t:name;
+		local Int is i: 0;
+		while({ i < t:params:length() }, {
+			out: out . ' of ' . :typeSpelling(t: t:params:get(index: i, default: Type:init(name: '')));
+			i++;
+		});
+		return out;
+	}
+
 	Function of Boolean is isMapRecvType(String is specType){
 		if({ specType == 'Map' || specType:startsWith(prefix: 'Map:') || specType:startsWith(prefix: 'Map of ') }, {
 			return true;
@@ -4689,8 +4707,16 @@ Class is IrBuilder{
 					});
 				});
 				if({ values:length() > 0 }, {
-					local Expression is v0: values:get(index: 0);
-					if({ :isArcSpecType(specType: v0:resolvedType) }, { mapVk: 1; });
+					local Boolean is allArc: true;
+					local Int is vi: 0;
+					while({ vi < values:length() && allArc }, {
+						local Expression is vItem: values:get(index: vi);
+						if({ !:isArcSpecType(specType: vItem:resolvedType) }, {
+							allArc: false;
+						});
+						vi++;
+					});
+					if({ allArc }, { mapVk: 1; });
 				}, {
 					if({ !argsResolved }, {
 						local Int is toIdx: resTy:indexOf(search: ' to ', default: -1);
@@ -4762,7 +4788,7 @@ Class is IrBuilder{
 					local Array of IrType is setT: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr];
 					local Array of String is setV: ['null', mp, kv, vp];
 					local String is setCallee: 'HashTable_mapSet' . kSuf . 'Any';
-					if({ ve:resolvedType == 'String' }, {
+					if({ :isArcSpecType(specType: ve:resolvedType) }, {
 						setCallee: 'HashTable_mapSet' . kSuf;
 					});
 					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: setT, args: setV));
@@ -5842,7 +5868,11 @@ Class is IrBuilder{
 						vi++;
 					});
 					local Expression is mapExpr: Expression:MapLit(keys: vKeys, values: vVals);
-					mapExpr:setResolvedType(t: 'Map:String:Any');
+					# The collection is typed by the variadic parameter's own
+					# declaration: a `Map of String to Int` collector stores
+					# plain values (no retention of raw bits), and an Any-valued
+					# one retains — the kinds follow the declaration.
+					mapExpr:setResolvedType(t: :typeSpelling(t: p:paramType));
 					argTypes:add(item: IrType:Ptr);
 					argVals:add(item: :lowerExpr(expr: mapExpr));
 				});
