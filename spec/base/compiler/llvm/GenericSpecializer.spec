@@ -28,6 +28,10 @@ Class is GenericSpecializer{
 	Map of String to Boolean is seenClassNames: Map:init();
 	Map of String to String is specKeyToMangled: Map:init();
 	Map of String to String is specBaseMap: Map:init();
+	## Templates whose BARE name appears in any emitted type spelling —
+	## a receiver, a parameter, a field, a local. Their template copy is
+	## still live code (no instantiation exists to serve those sites).
+	Map of String to Boolean is bareTemplateUsed: Map:init();
 	Map of String to ClassInfo is specClassMap: Map:init();
 	Map of String to Array of Type is specClassArgsMap: Map:init();
 	Array of String is pendingBaseNames: [];
@@ -191,6 +195,9 @@ Class is GenericSpecializer{
 			});
 			if({ bName == selfTemplateName && selfSpecName != '' && newParams:length() == 0 }, {
 				return Type:init(name: selfSpecName);
+			});
+			if({ newParams:length() == 0 }, {
+				:bareTemplateUsed:set(key: bName, value: true);
 			});
 		});
 		return :makeType(name: bName, params: newParams);

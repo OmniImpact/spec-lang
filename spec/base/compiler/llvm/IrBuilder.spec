@@ -89,6 +89,8 @@ Class is IrBuilder{
 	Map of String to ClassInfo is sysinternalClasses: Map:init();
 	Map of String to String is specBaseMap: Map:init();
 	Map of String to Array of Type is specClassArgsMap: Map:init();
+	Map of String to Boolean is bareTemplateUsed: Map:init();
+	Map of String to Boolean is templateNames: Map:init();
 	Map of String to String is clsQNameMap: Map:init();
 	Map of String to String is methodParamPtrMask: Map:init();
 	Map of String to Boolean is methodRetIsPtr: Map:init();
@@ -526,6 +528,42 @@ Class is IrBuilder{
 		specializer:specialize(program: program, allClasses: allClasses);
 		:specBaseMap: specializer:specBaseMap;
 		:specClassArgsMap: specializer:specClassArgsMap;
+		:bareTemplateUsed: specializer:bareTemplateUsed;
+
+		# A monomorphized template is a pattern, not code: once any
+		# instantiation exists and no site uses the bare spelling, every
+		# live reference resolves to a specialization's symbol, so the
+		# template's own copy is dead weight and drops out of emission.
+		# A template used bare (ThreadScope's Task bookkeeping, the bare
+		# SpecError currency) keeps its copy — it is the only one.
+		local Int is tni: 0;
+		while({ tni < allClasses:length() }, {
+			local ClassInfo is tnCls: allClasses:get(index: tni);
+			if({ tnCls:typeParams:length() > 0 }, {
+				:templateNames:set(key: tnCls:name, value: true);
+			});
+			tni++;
+		});
+		:scanBareTemplateUse(classes: allClasses);
+		local Map of String to Boolean is instantiatedBases: Map:init();
+		local Array of String is sbKeys: :specBaseMap:keys();
+		local Int is sbi: 0;
+		while({ sbi < sbKeys:length() }, {
+			instantiatedBases:set(key: :specBaseMap:get(key: sbKeys:get(index: sbi, default: ''), default: ''), value: true);
+			sbi++;
+		});
+		local Array of ClassInfo is emittableClasses: [];
+		local Int is eci: 0;
+		while({ eci < allClasses:length() }, {
+			local ClassInfo is ec: allClasses:get(index: eci);
+			if({ ec:typeParams:length() > 0 && instantiatedBases:has(key: ec:name) && !:bareTemplateUsed:has(key: ec:name) }, {
+				eci++;
+			}, {
+				emittableClasses:add(item: ec);
+				eci++;
+			});
+		});
+		allClasses: emittableClasses;
 
 		local Map of String to ClassInfo is clsMap: Map:init();
 		local Map of String to String is clsQNameMap: Map:init();
@@ -2276,6 +2314,139 @@ Class is IrBuilder{
 			i++;
 		});
 		return false;
+	}
+
+	## Marks every template whose bare spelling survives anywhere in
+	## loaded members — signature types (fields, returns, parameters),
+	## local declarations, and expression result types (receiver
+	## spellings, bare constructor targets). Such a template's copy
+	## stays in emission: with the bare spelling live, the copy is the
+	## only code that can serve those sites.
+	local Function is scanBareTemplateUse(Array of ClassInfo is classes){
+		local Int is ci: 0;
+		while({ ci < classes:length() }, {
+			local ClassInfo is cls: classes:get(index: ci);
+			local Int is mi: 0;
+			while({ mi < cls:members:length() }, {
+				local Member is m: cls:members:get(index: mi);
+				if({ m:kind == MemberKind:FIELD || m:kind == MemberKind:METHOD }, {
+					:markBareTypeUse(t: m:memberType);
+					local Int is pi: 0;
+					while({ pi < m:params:length() }, {
+						:markBareTypeUse(t: m:params:get(index: pi, default: Parameter:init(name: '', paramType: Type:init(name: ''))):paramType);
+						pi++;
+					});
+				});
+				if({ m:kind == MemberKind:METHOD && m:body:length() > 0 }, {
+					:markBareStmtUse(stmts: m:body);
+				});
+				if({ m:kind == MemberKind:FIELD && m:hasInit }, {
+					:markBareExprUse(expr: m:initExpr);
+				});
+				mi++;
+			});
+			ci++;
+		});
+	}
+
+	local Function is markBareTypeUse(Type is t){
+		if({ t:name == '' }, { return; });
+		if({ :templateNames:has(key: t:name) }, {
+			:bareTemplateUsed:set(key: t:name, value: true);
+		});
+		local Int is i: 0;
+		while({ i < t:params:length() }, {
+			:markBareTypeUse(t: t:params:get(index: i, default: Type:init(name: '')));
+			i++;
+		});
+	}
+
+	local Function is markBareStmtUse(Array of Statement is stmts){
+		local Int is si: 0;
+		while({ si < stmts:length() }, {
+			local Statement is st: stmts:get(index: si);
+			match(on: st, when: [
+				Statement:VarDecl: local Function(Array of String is _mods, Type is t, String is _name, Expression is initExpr, Boolean is hasInit){
+					:markBareTypeUse(t: t);
+					if({ hasInit }, { :markBareExprUse(expr: initExpr); });
+				},
+				Statement:Assign: local Function(Expression is t, Expression is v){
+					:markBareExprUse(expr: t);
+					:markBareExprUse(expr: v);
+				},
+				Statement:Expr: local Function(Expression is e){
+					:markBareExprUse(expr: e);
+				},
+				Statement:Return: local Function(Expression is e, Boolean is hasE){
+					if({ hasE }, { :markBareExprUse(expr: e); });
+				}
+			], default: {});
+			si++;
+		});
+	}
+
+	local Function is markBareExprUse(Expression is expr){
+		# A receiver or operand spelled in the bare template form names
+		# the template's own symbols at the lowering site.
+		local String is rt: expr:resolvedType;
+		if({ :templateNames:has(key: rt) }, {
+			:bareTemplateUsed:set(key: rt, value: true);
+		});
+		match(on: expr, when: [
+			Expression:Ident: local Function(String is name){
+				if({ :templateNames:has(key: name) }, {
+					:bareTemplateUsed:set(key: name, value: true);
+				});
+			},
+			Expression:Path: local Function(Array of String is segs){
+				if({ segs:length() > 0 && :templateNames:has(key: segs:get(index: 0, default: '')) }, {
+					:bareTemplateUsed:set(key: segs:get(index: 0, default: ''), value: true);
+				});
+			},
+			Expression:Call: local Function(CallData is cd){
+				:markBareExprUse(expr: cd:target);
+				local Int is ai: 0;
+				while({ ai < cd:args:length() }, {
+					:markBareExprUse(expr: cd:args:get(index: ai, default: NamedArg:init(name: '', value: Expression:Unknown)):value);
+					ai++;
+				});
+			},
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				:markBareTypeUse(t: rt);
+				local Int is pi: 0;
+				while({ pi < ps:length() }, {
+					:markBareTypeUse(t: ps:get(index: pi, default: Parameter:init(name: '', paramType: Type:init(name: ''))):paramType);
+					pi++;
+				});
+				:markBareStmtUse(stmts: bd);
+			},
+			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
+				if({ :templateNames:has(key: target) }, {
+					:bareTemplateUsed:set(key: target, value: true);
+				});
+				:markBareExprUse(expr: inner);
+				local Int is ai: 0;
+				while({ ai < args:length() }, {
+					:markBareExprUse(expr: args:get(index: ai, default: Expression:Unknown));
+					ai++;
+				});
+			},
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				local Int is ii: 0;
+				while({ ii < items:length() }, {
+					:markBareExprUse(expr: items:get(index: ii, default: Expression:Unknown));
+					ii++;
+				});
+			},
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is vals){
+				local Int is ii: 0;
+				while({ ii < keys:length() }, {
+					:markBareExprUse(expr: keys:get(index: ii, default: Expression:Unknown));
+					:markBareExprUse(expr: vals:get(index: ii, default: Expression:Unknown));
+					ii++;
+				});
+			}
+		], default: {});
 	}
 
 	local Function is collectDeclNamesInStmts(Array of Statement is stmts, Map of String to Boolean is decls){
