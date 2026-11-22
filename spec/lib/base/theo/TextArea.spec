@@ -65,7 +65,7 @@ Class of Widget is TextArea{
 	}
 
 	Function is paintLine(TheoBuffer is buf, Int is y, Int is lineIndex, String is rawLine, Int is scrollX){
-		local String is ln: rawLine:replaceAll(target: "\t", replacement: '    ');
+		local String is ln: rawLine:replaceAll(search: "\t", replacement: '    ');
 		if({ scrollX > 0 }, {
 			if({ scrollX < ln:length() }, {
 				ln: ln:substring(start: scrollX, end: ln:length());

@@ -34,7 +34,7 @@ Class is Http{
 		local Int is pos: 0;
 		local Int is n: raw:byteLength();
 		while({ pos < n }, local Function of Boolean(){
-			local Int is crlf: raw:indexOfFrom(search: "\r\n", start: pos, default: -1);
+			local Int is crlf: raw:indexOfFrom(search: "\r\n", from: pos, default: -1);
 			if({ crlf < 0 }, {
 				return false;
 			});

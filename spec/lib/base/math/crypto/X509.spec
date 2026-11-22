@@ -285,10 +285,10 @@ Class is X509{
 				local String is endMark: '-----END CERTIFICATE-----';
 				local Int is pos: 0;
 				while({ pos < pemText:length() }, local Function of Boolean(){
-					local Int is bIdx: pemText:indexOfFrom(search: beginMark, start: pos, default: -1);
+					local Int is bIdx: pemText:indexOfFrom(search: beginMark, from: pos, default: -1);
 					if({ bIdx < 0 }, { return false; });
 					local Int is bodyStart: bIdx + beginMark:length();
-					local Int is eIdx: pemText:indexOfFrom(search: endMark, start: bodyStart, default: -1);
+					local Int is eIdx: pemText:indexOfFrom(search: endMark, from: bodyStart, default: -1);
 					if({ eIdx < 0 }, { return false; });
 					local String is b64Body: pemText:substring(start: bodyStart, end: eIdx);
 					local Array of Int is der: :decodeBase64(text: b64Body);

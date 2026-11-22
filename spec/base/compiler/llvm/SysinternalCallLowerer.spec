@@ -79,7 +79,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		if({ call:bareProvider != '' }, {
 			local String is bp: call:bareProvider;
 			if({ bp:contains(needle: ':') }, {
-				local Array of String is parts: bp:split(separator: ':');
+				local Array of String is parts: bp:split(delimiter: ':');
 				if({ parts:length() > 0 }, { return parts:get(index: parts:length() - 1); });
 			});
 			return bp;
@@ -87,7 +87,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		local String is rt: call:target:resolvedType;
 		if({ rt != '' && rt != 'Class' && rt != 'Any' && rt != 'Unknown' && rt != 'Void' }, {
 			if({ rt:contains(needle: ':') }, {
-				local Array of String is parts: rt:split(separator: ':');
+				local Array of String is parts: rt:split(delimiter: ':');
 				if({ parts:length() > 0 }, { return parts:get(index: parts:length() - 1); });
 			});
 			return rt;
@@ -169,7 +169,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 	local Function of String is floorDomain(IrBuilder is b, CallData is call){
 		local String is cand: '';
 		if({ call:bareProvider:contains(needle: ':sysinternal:') }, {
-			local Array of String is parts: call:bareProvider:split(separator: ':');
+			local Array of String is parts: call:bareProvider:split(delimiter: ':');
 			if({ parts:length() > 0 }, {
 				cand: parts:get(index: parts:length() - 1, default: '');
 			});

@@ -423,7 +423,7 @@ Class is IrBuilder{
 	}
 
 	Function of String is cStructName(String is qname){
-		return qname:replaceAll(target: ':', replacement: '_');
+		return qname:replaceAll(search: ':', replacement: '_');
 	}
 
 	local Function of ClassInfo is resolveBaseClass(ClassInfo is cls, String is bname, Map of String to ClassInfo is clsMap){
@@ -455,7 +455,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !seenFields:has(key: m:name) }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !seenFields:has(key: m:name) }, {
 				seenFields:set(key: m:name, value: true);
 				local IrType is fty: :irTypeFor(specType: m:memberType:name);
 				if({ fty == IrType:Void }, { fty: IrType:Ptr; });
@@ -492,7 +492,7 @@ Class is IrBuilder{
 	}
 
 	local Function is buildVtable(IrStruct is st, ClassInfo is cls, Map of String to ClassInfo is clsMap){
-		if({ :bindings:isTransparent(c: cls) || :bindings:isSysinternal(cls: cls) }, { return; });
+		if({ :bindings:isSysinternal(cls: cls) }, { return; });
 		if({ st:vtableMethodNames:length() == 0 && :globalVtableNames:length() > 0 }, {
 			local Int is gi: 0;
 			while({ gi < :globalVtableNames:length() }, {
@@ -753,7 +753,6 @@ Class is IrBuilder{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			local Boolean is isTransCls: :bindings:isTransparent(c: cls);
 			local Boolean is isSysCls: :bindings:isSysinternal(cls: cls);
 			:isUnmanagedClass: isSysCls;
 			local String is sname: :cStructName(qname: cls:qualifiedName());
@@ -813,7 +812,7 @@ Class is IrBuilder{
 					if({ m:name == 'SpecErrorHandler' && ehDispatch }, {
 						fnName: sname . '_' . m:name . '_' . ((ovIdx + 1) as String);
 					});
-					if({ (!isTransCls || m:body:length() > 0) && !seenFns:has(key: fnName) }, {
+					if({ (!isSysCls || m:body:length() > 0) && !seenFns:has(key: fnName) }, {
 						seenFns:set(key: fnName, value: true);
 						:buildMethod(cls: cls, m: m, fnName: fnName);
 					});
@@ -823,7 +822,7 @@ Class is IrBuilder{
 			if({ ehDispatch }, {
 				:buildSpecErrorHandlerDispatcher(cls: cls, sname: sname);
 			});
-			if({ !isTransCls && !isSysCls }, {
+			if({ !isSysCls }, {
 				local String is initFnName: sname . '_init';
 				if({ !seenFns:has(key: initFnName) }, {
 					seenFns:set(key: initFnName, value: true);
@@ -1410,7 +1409,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && !:isLazyCallExpr(expr: m:initExpr) }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && !:isLazyCallExpr(expr: m:initExpr) }, {
 				local Int is fidx: st:fieldIndex(name: m:name);
 				if({ fidx >= 0 }, {
 					local IrType is fty: st:fieldTypes:get(index: fidx);
@@ -1445,7 +1444,7 @@ Class is IrBuilder{
 					:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
 				});
 			}, {
-				if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !m:hasInit && !seen:has(key: m:name) }, {
+				if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !m:hasInit && !seen:has(key: m:name) }, {
 					local Int is fidx0: st:fieldIndex(name: m:name);
 					if({ fidx0 >= 0 }, {
 						local IrType is fty0: st:fieldTypes:get(index: fidx0);
@@ -1506,7 +1505,7 @@ Class is IrBuilder{
 					if({ m:params:length() == 0 }, { flags: flags + 2; });
 					if({ m:memberType:name == 'Function' && m:memberType:params:length() == 0 }, { flags: flags + 4; });
 					st:metaMethodNames:add(item: m:name);
-					if({ :bindings:isTransparent(c: cls) && m:body:length() == 0 }, {
+					if({ :bindings:isSysinternal(cls: cls) && m:body:length() == 0 }, {
 						st:metaMethodFns:add(item: 'null');
 					}, {
 						st:metaMethodFns:add(item: sname . '_' . m:name);
@@ -1517,7 +1516,7 @@ Class is IrBuilder{
 			});
 			mi++;
 		});
-		if({ (!hasInitMember || hasZeroArgInit) && !:bindings:isTransparent(c: cls) && !:bindings:isSysinternal(cls: cls) && cls:baseClass != 'Enum' }, {
+		if({ (!hasInitMember || hasZeroArgInit) && !:bindings:isSysinternal(cls: cls) && cls:baseClass != 'Enum' }, {
 			st:constructFn: sname . '__spec_construct';
 		});
 	}
@@ -2398,7 +2397,7 @@ Class is IrBuilder{
 			local Int is mi: 0;
 			while({ mi < cls:members:length() }, {
 				local Member is m: cls:members:get(index: mi);
-				if({ m:name != 'using' && m:name != 'namespace' && m:name != 'binding' && m:name != 'castable' }, {
+				if({ m:name != 'using' && m:name != 'namespace' && m:name != 'castable' }, {
 					if({ m:kind == MemberKind:FIELD || m:kind == MemberKind:METHOD }, {
 						:markBareTypeUse(t: m:memberType);
 						local Int is pi: 0;
@@ -5810,7 +5809,7 @@ Class is IrBuilder{
 		if({ :mod:findStruct(name: provStruct):fieldNames:length() <= 2 }, {
 			return 'null';
 		});
-		if({ :clsMap:has(key: provStruct) && :bindings:isTransparent(c: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {
+		if({ :clsMap:has(key: provStruct) && :bindings:isSysinternal(cls: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {
 			return 'null';
 		});
 		if({ :currentClass != '' && :localSlots:has(key: ':') }, {

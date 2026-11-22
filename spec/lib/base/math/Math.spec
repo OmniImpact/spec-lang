@@ -10,11 +10,6 @@
 Class is Math{
 	namespace: ['base', 'math'];
 
-	## Runtime binding: the implementations for this class's
-	## declaration-only methods live in the runtime floor; the backend
-	## emits no struct, vtable, or constructor for it.
-	binding: true;
-
 	replace Array of Array of String is using: [
 		['base', 'sysinternal', Math],
 		['base', 'sys', as Mem()],
@@ -243,7 +238,7 @@ Class is Math{
 	## @param min: Lower bound (inclusive).
 	## @param max: Upper bound (exclusive).
 	## @return: Random float within range.
-	Function of Float is random(Float is min, Float is max){
+	Function of Float is random(Float is min: 0.0, Float is max: 1.0){
 		return min + ((max - min) * :fastRandom());
 	}
 

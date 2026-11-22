@@ -37,6 +37,6 @@ Class of OsDispatch is OsLinkFlags{
 	}
 
 	Function of Array of String is flags(){
-		return :value():split(delim: ' ');
+		return :value():split(delimiter: ' ');
 	}
 }

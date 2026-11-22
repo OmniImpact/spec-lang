@@ -214,7 +214,7 @@ Class is GenericSpecializer{
 		if({ subst:has(key: s) }, {
 			return :cloneType(t: subst:get(key: s, default: Type:init(name: s)));
 		});
-		local String is norm: s:replaceAll(target: ' of ', replacement: ':'):replaceAll(target: ' to ', replacement: ':');
+		local String is norm: s:replaceAll(search: ' of ', replacement: ':'):replaceAll(search: ' to ', replacement: ':');
 		local Array of String is rawParts: norm:split(delimiter: ':');
 		# Greedy pass first; on an ill-formed outer type (an arity-1
 		# container absorbing a sibling argument of the outer generic),
@@ -621,7 +621,7 @@ Class is GenericSpecializer{
 	}
 
 	Function of Member is transformMember(Member is m, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
-		if({ m:name == 'using' || m:name == 'namespace' || m:name == 'binding' || m:name == 'castable' }, {
+		if({ m:name == 'using' || m:name == 'namespace' || m:name == 'castable' }, {
 			return m;
 		});
 		local Member is nm: Member:init(kind: m:kind);
@@ -772,7 +772,7 @@ Class is GenericSpecializer{
 			local ClassInfo is cls: allClasses:get(index: ci);
 			:seenClassNames:set(key: cls:name, value: true);
 			:seenClassNames:set(key: cls:qualifiedName(), value: true);
-			if({ cls:typeParams:length() > 0 && !:bindings:isTransparent(c: cls) && !:bindings:isSysinternal(cls: cls) }, {
+			if({ cls:typeParams:length() > 0 && !:bindings:isSysinternal(cls: cls) }, {
 				:templates:set(key: cls:name, value: cls);
 			});
 			ci++;
@@ -782,7 +782,7 @@ Class is GenericSpecializer{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			if({ !:bindings:isTransparent(c: cls) && !:bindings:isSysinternal(cls: cls) }, {
+			if({ !:bindings:isSysinternal(cls: cls) }, {
 				local Array of Member is kept: [];
 				local Int is mi: 0;
 				while({ mi < cls:members:length() }, {

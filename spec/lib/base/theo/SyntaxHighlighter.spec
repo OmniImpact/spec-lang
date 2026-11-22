@@ -406,7 +406,7 @@ Class is SyntaxHighlighter{
 
 	Function is paintLine(TheoBuffer is buf, Int is x, Int is y, Int is maxW, Int is scrollX, String is rawLine, Int is lineIndex, SyntaxTheme is theme){
 		:drawCol: 0;
-		local String is ln: rawLine:replaceAll(target: "\t", replacement: '    ');
+		local String is ln: rawLine:replaceAll(search: "\t", replacement: '    ');
 		if({ language == 'plain' }, {
 			drawSpan(buf: buf, x: x, y: y, maxW: maxW, scrollX: scrollX, pos: 0, text: ln, fg: theme:plain);
 			return;
