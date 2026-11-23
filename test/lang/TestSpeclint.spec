@@ -20,12 +20,12 @@ Class of SpecUnitTest is TestSpeclint{
 	## @param src: The fixture source.
 	## @return: The issues the standards walk found.
 	Function of Array of LintIssue is lintSource(String is src){
-		local Lexer is lexer: Lexer:init(source: src);
-		local Parser is parser: Parser:init(tokens: Array());
+		local Lexer is lexer: Lexer(source: src);
+		local Parser is parser: Parser(tokens: []);
 		parser:setLexer(lexer: lexer);
 		parser:setSourceFile(file: 'fixture.spec');
 		local ProgramNode is program: parser:parseProgram();
-		local Linter is linter: Linter:init();
+		local Linter is linter: Linter();
 		return linter:lint(source: src, program: program);
 	}
 
