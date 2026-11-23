@@ -379,3 +379,21 @@ Class is MixedSignedUnsignedBitwise{
 		local UInt32 is b: a & 15;
 	}
 }
+
+#! case: testMergeNonMergeableField
+#! expect: does not extend Mergeable
+Class is MergeNonMergeableBase{
+	Int is count: 1;
+}
+Class of MergeNonMergeableBase is MergeNonMergeableChild{
+	merge Int is count: 2;
+}
+
+#! case: testMergeTypeMismatch
+#! expect: does not match ancestor type
+Class is MergeTypeMismatchBase{
+	Map of String to Int is scores: ['a': 1];
+}
+Class of MergeTypeMismatchBase is MergeTypeMismatchChild{
+	merge Map of String to String is scores: ['a': 'one'];
+}

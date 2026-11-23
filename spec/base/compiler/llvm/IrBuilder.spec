@@ -1481,18 +1481,52 @@ Class is IrBuilder{
 					:expectedMapValType: prevMapV;
 					local IrType is vty: :irTypeFor(specType: m:initExpr:resolvedType);
 					val: :castIfNeeded(val: val, fromTy: vty, toTy: fty);
-					if({ st:fieldIsArc:get(index: fidx, default: false) }, {
-						if({ val != '' && val != 'null' }, {
+					if({ m:hasModifier(kw: Keyword:MERGE) && seen:has(key: m:name) }, {
+						local String is oldF: :nextTmp();
+						:emit(inst: IrInst:Load(dst: oldF, slot: ptr, ty: IrType:Ptr));
+						local String is fTypeName: m:memberType:name;
+						local String is fQName: :clsQNameMap:get(key: fTypeName, default: fTypeName);
+						local String is fStruct: :cStructName(qname: fQName);
+						local String is mergeCallee: fStruct . '_merge';
+						if({ !:methodParams:has(key: mergeCallee) }, {
+							local String is inheritedMerge: :findParentMethodImpl(clsName: fQName, methodName: 'merge', suffix: '');
+							if({ inheritedMerge != '' }, {
+								mergeCallee: inheritedMerge;
+							});
+						});
+						local String is isNull: :nextTmp();
+						:emit(inst: IrInst:Cmp(dst: isNull, op: '==', ty: IrType:Ptr, lhs: oldF, rhs: 'null'));
+						local String is doMergeLbl: :nextLabel(prefix: 'fmerge_call');
+						local String is doStoreLbl: :nextLabel(prefix: 'fmerge_store');
+						local String is doneLbl: :nextLabel(prefix: 'fmerge_done');
+						:terminate(inst: IrInst:CondBr(cond: isNull, thenLabel: doStoreLbl, elseLabel: doMergeLbl));
+						local IrBlock is doMergeBlk: :curFn:addBlock(label: doMergeLbl);
+						:switchBlock(blk: doMergeBlk);
+						:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: mergeCallee, argTypes: Array([IrType:Ptr, IrType:Ptr]), args: Array([oldF, val])));
+						:terminate(inst: IrInst:Br(target: doneLbl));
+						local IrBlock is doStoreBlk: :curFn:addBlock(label: doStoreLbl);
+						:switchBlock(blk: doStoreBlk);
+						if({ st:fieldIsArc:get(index: fidx, default: false) && val != '' && val != 'null' }, {
 							:emit(inst: IrInst:Retain(val: val));
 						});
-						if({ seen:has(key: m:name) }, {
-							local String is oldF: :nextTmp();
-							:emit(inst: IrInst:Load(dst: oldF, slot: ptr, ty: IrType:Ptr));
-							:emitClaimPool(val: oldF);
+						:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
+						:terminate(inst: IrInst:Br(target: doneLbl));
+						local IrBlock is doneBlk: :curFn:addBlock(label: doneLbl);
+						:switchBlock(blk: doneBlk);
+					}, {
+						if({ st:fieldIsArc:get(index: fidx, default: false) }, {
+							if({ val != '' && val != 'null' }, {
+								:emit(inst: IrInst:Retain(val: val));
+							});
+							if({ seen:has(key: m:name) }, {
+								local String is oldF: :nextTmp();
+								:emit(inst: IrInst:Load(dst: oldF, slot: ptr, ty: IrType:Ptr));
+								:emitClaimPool(val: oldF);
+							});
 						});
+						seen:set(key: m:name, value: true);
+						:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
 					});
-					seen:set(key: m:name, value: true);
-					:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
 				});
 			}, {
 				if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !m:hasInit && !seen:has(key: m:name) }, {

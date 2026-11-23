@@ -8,10 +8,11 @@
 ## with the "Never Null" standard, out-of-bounds queries, popping empty
 ## arrays, and failed searches return a caller-supplied default.
 
-Class is Array of T{
+Class of Mergeable is Array of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', Mergeable],
 		['base', 'struct', List],
 		['base', 'sys', as Mem()],
 		['base', 'sys', SpinLock],
@@ -146,6 +147,13 @@ Class is Array of T{
 		});
 		:len: :len + oLen;
 		:lock:unlock();
+	}
+
+	## Merges all elements of [other] into this array (appending in order).
+	##
+	## @param other: Source array to append.
+	replace Function is merge(Array of T is other){
+		:addArray(other: other);
 	}
 
 	## Marks this array as frozen (immutable).

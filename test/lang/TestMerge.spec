@@ -41,6 +41,60 @@ Class of SpecUnitTest is TestMerge{
 		local MergeControlFlow is cf: MergeControlFlow();
 		Assert:areEqualInt(6, cf:sumTo(n: 3));
 	}
+
+	Function is testMergeArrayField(){
+		local MergeChild is child: MergeChild:init();
+		Assert:areEqualInt(3, child:items:length());
+		Assert:areEqualString('a', child:items[0]);
+		Assert:areEqualString('b', child:items[1]);
+		Assert:areEqualString('c', child:items[2]);
+	}
+
+	Function is testMergeMapField(){
+		local MergeChild is child: MergeChild:init();
+		Assert:areEqualInt(3, child:scores:length());
+		Assert:areEqualInt(1, child:scores:get(key: 'a', default: 0));
+		Assert:areEqualInt(20, child:scores:get(key: 'b', default: 0));
+		Assert:areEqualInt(3, child:scores:get(key: 'c', default: 0));
+	}
+
+	Function is testMergeCustomMergeable(){
+		local MergeChild is child: MergeChild:init();
+		Assert:areEqualString('prod.example.com', child:cfg:host);
+		Assert:areEqualInt(60, child:cfg:timeout);
+	}
+
+	Function is testMergeMultiLevel(){
+		local MergeGrandChild is gc: MergeGrandChild:init();
+		Assert:areEqualInt(3, gc:tags:length());
+		Assert:areEqualString('core', gc:tags:get(index: 0, default: ''));
+		Assert:areEqualString('extended', gc:tags:get(index: 1, default: ''));
+		Assert:areEqualString('leaf', gc:tags:get(index: 2, default: ''));
+		Assert:areEqualInt(4, gc:items:length());
+		Assert:areEqualString('d', gc:items[3]);
+		Assert:areEqualInt(99, gc:scores:get(key: 'b', default: 0));
+		Assert:areEqualString('leaf.example.com', gc:cfg:host);
+		Assert:areEqualInt(60, gc:cfg:timeout);
+	}
+}
+
+Class of Mergeable is MergeableConfig{
+	String is host: '';
+	Int is timeout: 0;
+
+	replace Function is init(String is host: '', Int is timeout: 0){
+		:host: host;
+		:timeout: timeout;
+	}
+
+	replace Function is merge(MergeableConfig is other){
+		if({ other:host != '' }, {
+			:host: other:host;
+		});
+		if({ other:timeout > 0 }, {
+			:timeout: other:timeout;
+		});
+	}
 }
 
 Class is MergeBase{
@@ -49,6 +103,9 @@ Class is MergeBase{
 	merge Array of Array of String is using: [['base', 'sys', as Output()], ['base', 'sys', as Conditional()]] ;
 
 	List of String is tags: ['core'];
+	Array of String is items: Array(['a', 'b']);
+	Map of String to Int is scores: ['a': 1, 'b': 2];
+	MergeableConfig is cfg: MergeableConfig(host: 'prod.example.com', timeout: 30);
 
 	Function of Int is baseValue(){
 		return 10;
@@ -60,12 +117,22 @@ Class of MergeBase is MergeChild{
 	## Folds onto MergeBase's using: Output + Array both load.
 	merge Array of Array of String is using: [['base', 'struct', Array], ['base', 'sys', as Output()] ];
 
-	## Folds onto ["core"]: result is ["core", "extended"].
+	## Merges onto ["core"]: result is ["core", "extended"].
 	merge List of String is tags: ['extended'];
+	merge Array of String is items: Array(['c']);
+	merge Map of String to Int is scores: ['b': 20, 'c': 3];
+	merge MergeableConfig is cfg: MergeableConfig(timeout: 60);
 
 	replace Function of Int is baseValue(){
 		return 20;
 	}
+}
+
+Class of MergeChild is MergeGrandChild{
+	merge List of String is tags: ['leaf'];
+	merge Array of String is items: Array(['d']);
+	merge Map of String to Int is scores: ['b': 99];
+	merge MergeableConfig is cfg: MergeableConfig(host: 'leaf.example.com');
 }
 
 Class is MergeControlFlow{

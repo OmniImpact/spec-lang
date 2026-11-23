@@ -552,6 +552,7 @@ Class is Loader{
 			'Any',
 			'Loadable',
 			'Stringable',
+			'Mergeable',
 			'Class',
 			'Enum',
 			'SpecError',

@@ -7,10 +7,11 @@
 ## Fallible reads take a mandatory default: value used whenever there is no
 ## successful answer, plus an optional error: callback invoked in addition when
 ## a problem occurs. Bracket indexing is not provided on List; use get.
-Class is List of T{
+Class of Mergeable is List of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', Mergeable],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
@@ -328,6 +329,36 @@ Class is List of T{
 		local Int is b2: Mem:loadByte(ptr: :data, byteOffset: offset + 2);
 		local Int is b3: Mem:loadByte(ptr: :data, byteOffset: offset + 3);
 		return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) & 4294967295;
+	}
+
+	## Merges all elements of [other] into this list (appending in order).
+	##
+	## @param other: Source list to append.
+	replace Function is merge(List of T is other){
+		local Int is n: other:length();
+		if({ n <= 0 }, { return; });
+		if({ :byteMode }, {
+			local Int is oAddr: Mem:objToAddr(obj: other);
+			if({ Mem:objToAddr(obj: :) == oAddr }, {
+				if({ :len + n > :cap }, {
+					local Int is ncap: if({ :cap == 0 }, { 16 }, { :cap });
+					while({ ncap < :len + n }, { ncap: ncap * 2; });
+					:data: Mem:realloc(ptr: :data, bytes: ncap);
+					:cap: ncap;
+				});
+				Mem:move(dst: :data + :len, src: :data, bytes: n);
+				:len: :len + n;
+				return;
+			});
+			:appendRawBytes(srcAddr: other:rawDataAddr(), count: n);
+			return;
+		});
+		local Int is i: 0;
+		while({ i < n }, {
+			local Int is bits: Mem:loadI64(ptr: other:rawDataAddr(), byteOffset: i * 8);
+			:push(item: Mem:addrToObj(addr: bits));
+			i: i + 1;
+		});
 	}
 
 }

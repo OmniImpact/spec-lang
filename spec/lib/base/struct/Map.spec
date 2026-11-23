@@ -6,10 +6,11 @@
 ## Monomorphized per instantiation (Map__String__Int and friends) with real
 ## Spec fields and SpinLock concurrency control over base:sys:Mem.
 
-Class is Map of K to V{
+Class of Mergeable is Map of K to V{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
+		['base', 'core', Mergeable],
 		['base', 'struct', Array],
 		['base', 'sys', as Mem()],
 		['base', 'sys', SpinLock],
@@ -492,7 +493,7 @@ Class is Map of K to V{
 	## Copies all entries from [other] into this map, overwriting matching keys.
 	##
 	## @param other: Source map to merge in.
-	Function is merge(Map of K to V is other){
+	replace Function is merge(Map of K to V is other){
 		other:each(action: local Function(K is k, V is v){
 			:set(key: k, value: v);
 		});

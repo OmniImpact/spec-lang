@@ -2844,7 +2844,7 @@ Class is TypeChecker{
 	## @param targetName: The referenced class name.
 	## @return: true when access is granted.
 	Function of Boolean is classHasAccess(String is className, String is targetName){
-		if({ targetName == '' || :isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'Str' || targetName == 'String' || targetName == 'SpecError' || targetName == 'Function' || targetName == 'LoopControl' }, {
+		if({ targetName == '' || :isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'Str' || targetName == 'String' || targetName == 'SpecError' || targetName == 'Mergeable' || targetName == 'Function' || targetName == 'LoopControl' }, {
 			return true;
 		});
 		return :accessInClass(className: className, targetName: targetName);
@@ -6395,8 +6395,17 @@ Class is TypeChecker{
 		});
 		local String is typeName: subM:memberType:name;
 		local Boolean is isMetaField: subM:name == 'using' || subM:name == 'namespace' || subM:name == 'castable';
-		if({ !typeName:startsWith(prefix: 'List') && !(isMetaField && typeName:startsWith(prefix: 'Array')) }, {
-			:addError(line: subM:line, msg: '\'merge\' requires a List field; \'' . typeName . '\' is not mergeable.');
+		if({ !isMetaField }, {
+			if({ !:isAssignable(target: 'Mergeable', source: typeName) }, {
+				:addError(line: subM:line, msg: '\'merge\' requires a Mergeable field; \'' . typeName . '\' does not extend Mergeable.');
+				return;
+			});
+			local String is parentTypeStr: :formatVarTypeString(t: parentM:memberType);
+			local String is subTypeStr: :formatVarTypeString(t: subM:memberType);
+			if({ parentTypeStr != '' && subTypeStr != '' && !:isAssignable(target: parentTypeStr, source: subTypeStr) }, {
+				:addError(line: subM:line, msg: '\'merge\' field \'' . subM:name . '\' type \'' . subTypeStr . '\' does not match ancestor type \'' . parentTypeStr . '\' in \'' . baseName . '\'.');
+				return;
+			});
 			return;
 		});
 		if({ !parentM:hasInit }, {
