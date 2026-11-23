@@ -256,12 +256,13 @@ Class of SpecUnitTest is TestTheoEditor{
 		fileWrite(path: "{{rootDir}}/beta.txt", content: 'b');
 		fileWrite(path: "{{rootDir}}/Alpha.txt", content: 'a');
 
-		local FileManagerFrame is fm: FileManagerFrame(
+		local FileManagerViewModel is fmVm: FileManagerViewModel(
 			mode: 'open',
 			initialDir: rootDir,
 			onConfirm: local Function(String is _p){},
 			onCancel: {}
 		);
+		local FileManagerFrame is fm: FileManagerFrame(vm: fmVm);
 		Assert:areEqualInt(6, fm:vm:entries:length());
 		Assert:areEqualString('..', fm:vm:entries:get(index: 0));
 		Assert:areEqualString('AlphaDir/', fm:vm:entries:get(index: 1));

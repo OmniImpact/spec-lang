@@ -9,7 +9,8 @@ Class is EditorViewModel{
 	merge Array of Array of String is using: [
 		['base', 'signal', TextEmitter],
 		['theoedit', 'model', EditorDocument],
-		['theoedit', 'util', [FileStorage, PathTransformer]]
+		['theoedit', 'util', [FileStorage, PathTransformer]],
+		['theoedit', 'vm', FileManagerViewModel]
 	];
 
 	EditorDocument is doc: EditorDocument();
@@ -19,6 +20,14 @@ Class is EditorViewModel{
 	Boolean is dirty: false;
 	String is messageMode: 'none';
 	Boolean is quitAfterSave: false;
+
+	Function is onQuit: local Function(){};
+	Function is onPushFileManager: local Function(FileManagerViewModel is _fmVm){};
+	Function is onPopFileManager: local Function(){};
+	Function is onRebuild: local Function(){};
+	Function is onFocusEditor: local Function(){};
+	Function is onFocusPrompt: local Function(){};
+	Function is onFocusMenu: local Function(){};
 
 	TextEmitter is title: TextEmitter(initial: '[untitled]');
 	TextEmitter is currentPath: TextEmitter(initial: '');
@@ -89,6 +98,107 @@ Class is EditorViewModel{
 			status:emit(value: "Save failed: {{errMsg}}");
 		});
 		return ok;
+	}
+
+	Function is openFileDialog(String is mode){
+		local String is initName: if({ mode == 'saveAs' }, { doc:filePath }, { '' });
+		local FileManagerViewModel is fmVm: FileManagerViewModel(
+			mode: mode,
+			initialDir: '.',
+			initialName: initName,
+			onConfirm: local Function(String is chosenPath){
+				local Boolean is finished: false;
+				completeFileDialog(
+					mode: mode,
+					path: chosenPath,
+					onReadyToQuit: {
+						finished: true;
+						onPopFileManager();
+						onQuit();
+					}
+				);
+				if({ !finished }, {
+					onPopFileManager();
+					onFocusEditor();
+				});
+			},
+			onCancel: {
+				clearMessage();
+				onPopFileManager();
+				onFocusEditor();
+			}
+		);
+		onPushFileManager(fmVm);
+	}
+
+	Function is triggerSave(){
+		local Boolean is openedDialog: false;
+		requestSave(onNeedSaveAs: {
+			openedDialog: true;
+			openFileDialog(mode: 'saveAs');
+		});
+		if({ !openedDialog }, {
+			onFocusEditor();
+		});
+	}
+
+	Function is triggerSaveAs(){
+		openFileDialog(mode: 'saveAs');
+	}
+
+	Function is triggerOpen(){
+		openFileDialog(mode: 'open');
+	}
+
+	Function is triggerQuit(){
+		requestQuit(
+			onNeedPrompt: {
+				onRebuild();
+				onFocusPrompt();
+			},
+			onReadyToQuit: onQuit
+		);
+	}
+
+	Function is triggerPromptSave(){
+		local Boolean is handled: false;
+		confirmPromptSave(
+			onNeedSaveAs: {
+				handled: true;
+				onRebuild();
+				openFileDialog(mode: 'saveAs');
+			},
+			onReadyToQuit: {
+				handled: true;
+				onRebuild();
+				onQuit();
+			}
+		);
+		if({ !handled }, {
+			onRebuild();
+		});
+	}
+
+	Function is triggerPromptDiscard(){
+		onQuit();
+	}
+
+	Function is triggerPromptCancel(){
+		clearMessage();
+		onRebuild();
+		onFocusEditor();
+	}
+
+	Function is toggleMenuOrCancelPrompt(Boolean is editorIsFocused){
+		if({ hasMessage() }, {
+			triggerPromptCancel();
+			return;
+		});
+		if({ editorIsFocused }, {
+			onFocusMenu();
+		}, {
+			onFocusEditor();
+		});
 	}
 
 	Function is requestSave(Function is onNeedSaveAs){

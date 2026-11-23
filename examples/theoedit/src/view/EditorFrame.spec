@@ -6,13 +6,12 @@ Class of Frame is EditorFrame{
 
 	merge Array of Array of String is using: [
 		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, FocusTarget, KeyEvent]],
-		['theoedit', 'vm', EditorViewModel],
+		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [TopBar, EditorBody, MessagePanel, BottomActionBar, FileManagerFrame]]
 	];
 
 	EditorViewModel is vm: EditorViewModel(filePath: '');
 	Function is onQuit: local Function(){};
-	Array of TheoScreen is screenRefs: Array();
 
 	FocusTarget is editorFocus: FocusTarget(initial: true);
 	FocusTarget is saveFocus: FocusTarget();
@@ -24,88 +23,37 @@ Class of Frame is EditorFrame{
 	FocusTarget is msgDiscardFocus: FocusTarget();
 	FocusTarget is msgCancelFocus: FocusTarget();
 
+	replace Function is init(EditorViewModel is vm: EditorViewModel(filePath: ''), Function is onQuit: local Function(){}){
+		:vm: vm;
+		:onQuit: onQuit;
+		vm:onQuit: onQuit;
+		vm:onRebuild: { rebuild(); };
+		vm:onFocusEditor: { editorFocus:requestFocus(); };
+		vm:onFocusMenu: { saveFocus:requestFocus(); };
+		vm:onFocusPrompt: {
+			editorFocus:focused: false;
+			saveFocus:focused: false;
+			saveAsFocus:focused: false;
+			openFocus:focused: false;
+			exitFocus:focused: false;
+			msgDiscardFocus:focused: false;
+			msgCancelFocus:focused: false;
+			msgSaveFocus:requestFocus();
+		};
+	}
+
 	Function is bindScreen(TheoScreen is screen){
-		screenRefs: Array([screen]);
-	}
-
-	local Function is openFileManager(String is mode){
-		if({ screenRefs:length() == 0 }, { return; });
-		local TheoScreen is scr: screenRefs:get(index: 0);
-		local String is initName: if({ mode == 'saveAs' }, { vm:filePath }, { '' });
-		local FileManagerFrame is fm: FileManagerFrame(
-			mode: mode,
-			initialDir: '.',
-			initialName: initName,
-			onConfirm: local Function(String is chosenPath){
-				local Boolean is finished: false;
-				vm:completeFileDialog(
-					mode: mode,
-					path: chosenPath,
-					onReadyToQuit: {
-						finished: true;
-						scr:pop();
-						onQuit();
-					}
-				);
-				if({ !finished }, {
-					scr:pop();
-					editorFocus:requestFocus();
-				});
-			},
-			onCancel: {
-				vm:clearMessage();
-				scr:pop();
-				editorFocus:requestFocus();
-			}
-		);
-		scr:push(frame: fm);
-	}
-
-	local Function is clearAllFocus(){
-		editorFocus:focused: false;
-		saveFocus:focused: false;
-		saveAsFocus:focused: false;
-		openFocus:focused: false;
-		exitFocus:focused: false;
-		msgDiscardFocus:focused: false;
-		msgCancelFocus:focused: false;
-	}
-
-	local Function is triggerSave(){
-		local Boolean is openedDialog: false;
-		vm:requestSave(onNeedSaveAs: {
-			openedDialog: true;
-			openFileManager(mode: 'saveAs');
-		});
-		if({ !openedDialog }, {
-			editorFocus:requestFocus();
-		});
-	}
-
-	local Function is triggerQuit(){
-		vm:requestQuit(
-			onNeedPrompt: {
-				clearAllFocus();
-				rebuild();
-				msgSaveFocus:requestFocus();
-			},
-			onReadyToQuit: onQuit
-		);
+		vm:onPushFileManager: local Function(FileManagerViewModel is fmVm){
+			screen:push(frame: FileManagerFrame(vm: fmVm));
+		};
+		vm:onPopFileManager: {
+			screen:pop();
+		};
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ ((event:ctrl || event:alt) && event:key == 'm') || event:isEsc() }, {
-			if({ vm:hasMessage() }, {
-				vm:clearMessage();
-				rebuild();
-				editorFocus:requestFocus();
-				return true;
-			});
-			if({ editorFocus:focused }, {
-				saveFocus:requestFocus();
-			}, {
-				editorFocus:requestFocus();
-			});
+			vm:toggleMenuOrCancelPrompt(editorIsFocused: editorFocus:focused);
 			return true;
 		});
 		false;
@@ -136,30 +84,9 @@ Class of Frame is EditorFrame{
 					saveFocus: msgSaveFocus,
 					discardFocus: msgDiscardFocus,
 					cancelFocus: msgCancelFocus,
-					onSave: {
-						local Boolean is handled: false;
-						vm:confirmPromptSave(
-							onNeedSaveAs: {
-								handled: true;
-								rebuild();
-								openFileManager(mode: 'saveAs');
-							},
-							onReadyToQuit: {
-								handled: true;
-								rebuild();
-								onQuit();
-							}
-						);
-						if({ !handled }, {
-							rebuild();
-						});
-					},
-					onDiscard: onQuit,
-					onCancel: {
-						vm:clearMessage();
-						rebuild();
-						editorFocus:requestFocus();
-					}
+					onSave: { vm:triggerPromptSave(); },
+					onDiscard: { vm:triggerPromptDiscard(); },
+					onCancel: { vm:triggerPromptCancel(); }
 				)
 			));
 		});
@@ -170,10 +97,10 @@ Class of Frame is EditorFrame{
 				saveAsFocus: saveAsFocus,
 				openFocus: openFocus,
 				exitFocus: exitFocus,
-				onSave: { triggerSave(); },
-				onSaveAs: { openFileManager(mode: 'saveAs'); },
-				onOpen: { openFileManager(mode: 'open'); },
-				onQuit: { triggerQuit(); },
+				onSave: { vm:triggerSave(); },
+				onSaveAs: { vm:triggerSaveAs(); },
+				onOpen: { vm:triggerOpen(); },
+				onQuit: { vm:triggerQuit(); },
 				onReturnToEditor: { editorFocus:requestFocus(); }
 			)
 		));

@@ -20,14 +20,20 @@ Class is FileManagerViewModel{
 	String is initialName: '';
 	Array of String is entries: Array();
 	TextEmitter is headerTitle: TextEmitter(initial: 'File Manager');
+	Function is onConfirm: local Function(String is _path){};
+	Function is onCancel: local Function(){};
 
 	replace Function is init(
 		String is mode: 'open',
 		String is initialDir: '.',
-		String is initialName: ''
+		String is initialName: '',
+		Function is onConfirm: local Function(String is _path){},
+		Function is onCancel: local Function(){}
 	){
 		:mode: mode;
 		:initialName: initialName;
+		:onConfirm: onConfirm;
+		:onCancel: onCancel;
 		navigateTo(nextDir: initialDir);
 	}
 
@@ -62,12 +68,23 @@ Class is FileManagerViewModel{
 			return;
 		});
 		onFileChosen(entry);
+		confirm(typedName: entry);
 	}
 
 	Function is selectEntry(String is entry, Function is onFileSelected){
 		if({ !paths:isDirectoryEntry(entry: entry) }, {
 			onFileSelected(entry);
 		});
+	}
+
+	Function is confirm(String is typedName){
+		local String is full: paths:resolveTargetPath(dir: curDir, typedName: typedName);
+		if({ full == '' }, { return; });
+		onConfirm(full);
+	}
+
+	Function is cancel(){
+		onCancel();
 	}
 
 	Function is submit(String is typedName, Function is onConfirmed){

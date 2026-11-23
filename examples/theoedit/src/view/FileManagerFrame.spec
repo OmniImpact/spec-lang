@@ -12,8 +12,6 @@ Class of Frame is FileManagerFrame{
 	];
 
 	FileManagerViewModel is vm: FileManagerViewModel();
-	Function is onConfirm;
-	Function is onCancel;
 
 	FocusTarget is listFocus: FocusTarget(initial: true);
 	FocusTarget is inputFocus: FocusTarget();
@@ -23,16 +21,8 @@ Class of Frame is FileManagerFrame{
 	Array of ListView is listViews: Array();
 	Array of TextInput is nameInputs: Array();
 
-	replace Function is init(
-		String is mode: 'open',
-		String is initialDir: '.',
-		String is initialName: '',
-		Function is onConfirm,
-		Function is onCancel
-	){
-		:onConfirm: onConfirm;
-		:onCancel: onCancel;
-		vm: FileManagerViewModel(mode: mode, initialDir: initialDir, initialName: initialName);
+	replace Function is init(FileManagerViewModel is vm: FileManagerViewModel()){
+		:vm: vm;
 		if({ vm:isSaveAs() }, {
 			listFocus: FocusTarget(initial: false);
 			inputFocus: FocusTarget(initial: true);
@@ -53,7 +43,6 @@ Class of Frame is FileManagerFrame{
 						if({ nameInputs:length() > 0 }, {
 							nameInputs:get(index: 0):setText(value: fileName);
 						});
-						submitCurrent();
 					}
 				);
 			},
@@ -71,21 +60,16 @@ Class of Frame is FileManagerFrame{
 			value: vm:initialName,
 			placeholder: 'filename',
 			focusTarget: inputFocus,
-			onSubmit: local Function(String is _typed){
-				submitCurrent();
+			onSubmit: local Function(String is typed){
+				vm:confirm(typedName: typed);
 			}
 		);
 		nameInputs: Array([ti]);
 	}
 
-	local Function is submitCurrent(){
-		if({ nameInputs:length() == 0 }, { return; });
-		vm:submit(typedName: nameInputs:get(index: 0):text, onConfirmed: onConfirm);
-	}
-
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() }, {
-			onCancel();
+			vm:cancel();
 			return true;
 		});
 		if({ (event:ctrl || event:alt) && event:key == 'm' }, {
@@ -183,14 +167,18 @@ Class of Frame is FileManagerFrame{
 									label: ' Cancel ',
 									shortcutKey: 'c',
 									focusTarget: cancelFocus,
-									onClick: onCancel
+									onClick: { vm:cancel(); }
 								),
 								Spacer(weight: 1.0),
 								Button(
 									label: vm:actionLabel(),
 									shortcutKey: vm:actionKey(),
 									focusTarget: okFocus,
-									onClick: { submitCurrent(); }
+									onClick: {
+										if({ nameInputs:length() > 0 }, {
+											vm:confirm(typedName: nameInputs:get(index: 0):text);
+										});
+									}
 								)
 							])
 						)
