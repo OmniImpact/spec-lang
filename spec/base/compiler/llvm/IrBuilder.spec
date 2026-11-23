@@ -54,14 +54,14 @@ Class is IrBuilder{
 	Map of String to Boolean is capturedNames: Map:init();
 	Map of String to String is lazyLocalStateSlots: Map:init();
 	Map of String to Expression is lazyLocalExprs: Map:init();
-	Array of String is ownedSlots: Array();
-	Array of String is scopeVarStack: Array();
-	Array of String is scopeOldSlotStack: Array();
+	[String] is ownedSlots: [];
+	[String] is scopeVarStack: [];
+	[String] is scopeOldSlotStack: [];
 	[IrType] is scopeOldTypeStack: [];
 	[Boolean] is scopeOldArcStack: [];
-	Array of String is scopeOldSpecTypeStack: Array();
+	[String] is scopeOldSpecTypeStack: [];
 	[Boolean] is scopeOldBoxedStack: [];
-	Array of String is scopeOldLazyStateStack: Array();
+	[String] is scopeOldLazyStateStack: [];
 	[Expression] is scopeOldLazyExprStack: [];
 	[Int] is scopeMarkStack: [];
 	String is curPoolMark: '';
@@ -98,13 +98,13 @@ Class is IrBuilder{
 	Map of String to Boolean is inlineCallerCaptured: Map();
 	Map of String to String is inlineCallerLazyStateSlots: Map();
 	Map of String to Expression is inlineCallerLazyExprs: Map();
-	Array of String is inlineCallerScopeVars: Array();
-	Array of String is inlineCallerScopeOldSlots: Array();
+	[String] is inlineCallerScopeVars: [];
+	[String] is inlineCallerScopeOldSlots: [];
 	[IrType] is inlineCallerScopeOldTypes: [];
 	[Boolean] is inlineCallerScopeOldArcs: [];
-	Array of String is inlineCallerScopeOldSpecs: Array();
+	[String] is inlineCallerScopeOldSpecs: [];
 	[Boolean] is inlineCallerScopeOldBoxed: [];
-	Array of String is inlineCallerScopeOldLazyStates: Array();
+	[String] is inlineCallerScopeOldLazyStates: [];
 	[Expression] is inlineCallerScopeOldLazyExprs: [];
 	[Int] is inlineCallerScopeMarks: [];
 	String is expectedMapKeyType: '';
@@ -379,17 +379,17 @@ Class is IrBuilder{
 	}
 
 	Function is resetScopes(){
-		:scopeVarStack: Array();
-		:scopeOldSlotStack: Array();
+		:scopeVarStack: [];
+		:scopeOldSlotStack: [];
 		:scopeOldTypeStack: [];
 		:scopeOldArcStack: [];
-		:scopeOldSpecTypeStack: Array();
+		:scopeOldSpecTypeStack: [];
 		:scopeOldBoxedStack: [];
-		:scopeOldLazyStateStack: Array();
+		:scopeOldLazyStateStack: [];
 		:scopeOldLazyExprStack: [];
 		:scopeMarkStack: [];
-		:lazyLocalStateSlots: Map:init();
-		:lazyLocalExprs: Map:init();
+		:lazyLocalStateSlots: Map();
+		:lazyLocalExprs: Map();
 	}
 
 	Function is pushScope(){
@@ -398,22 +398,22 @@ Class is IrBuilder{
 
 	Function is bindLocal(String is name, String is slot, IrType is ty, Boolean is isArc, String is specType, Boolean is isBoxed){
 		if({ :scopeMarkStack:length() > 0 }, {
-			:scopeVarStack:add(item: name);
+			:scopeVarStack:push(item: name);
 			if({ :localSlots:has(key: name) }, {
-				:scopeOldSlotStack:add(item: :localSlots:get(key: name, default: ''));
+				:scopeOldSlotStack:push(item: :localSlots:get(key: name, default: ''));
 				:scopeOldTypeStack:push(item: :localTypes:get(key: name, default: IrType:I64));
 				:scopeOldArcStack:push(item: :localIsArc:get(key: name, default: false));
-				:scopeOldSpecTypeStack:add(item: :localSpecTypes:get(key: name, default: ''));
+				:scopeOldSpecTypeStack:push(item: :localSpecTypes:get(key: name, default: ''));
 				:scopeOldBoxedStack:push(item: :boxedLocals:has(key: name));
-				:scopeOldLazyStateStack:add(item: :lazyLocalStateSlots:get(key: name, default: ''));
+				:scopeOldLazyStateStack:push(item: :lazyLocalStateSlots:get(key: name, default: ''));
 				:scopeOldLazyExprStack:push(item: :lazyLocalExprs:get(key: name, default: Expression:Unknown));
 			}, {
-				:scopeOldSlotStack:add(item: '');
+				:scopeOldSlotStack:push(item: '');
 				:scopeOldTypeStack:push(item: IrType:I64);
 				:scopeOldArcStack:push(item: false);
-				:scopeOldSpecTypeStack:add(item: '');
+				:scopeOldSpecTypeStack:push(item: '');
 				:scopeOldBoxedStack:push(item: false);
-				:scopeOldLazyStateStack:add(item: '');
+				:scopeOldLazyStateStack:push(item: '');
 				:scopeOldLazyExprStack:push(item: Expression:Unknown);
 			});
 		});
@@ -438,13 +438,13 @@ Class is IrBuilder{
 		if({ :scopeMarkStack:length() == 0 }, { return; });
 		local Int is mark: :scopeMarkStack:pop();
 		while({ :scopeVarStack:length() > mark }, {
-			local String is name: :scopeVarStack:pop(default: '');
-			local String is oldSlot: :scopeOldSlotStack:pop(default: '');
+			local String is name: :scopeVarStack:pop();
+			local String is oldSlot: :scopeOldSlotStack:pop();
 			local IrType is oldTy: :scopeOldTypeStack:pop();
 			local Boolean is oldArc: :scopeOldArcStack:pop();
-			local String is oldSpec: :scopeOldSpecTypeStack:pop(default: '');
+			local String is oldSpec: :scopeOldSpecTypeStack:pop();
 			local Boolean is oldBoxed: :scopeOldBoxedStack:pop();
-			local String is oldLazyState: :scopeOldLazyStateStack:pop(default: '');
+			local String is oldLazyState: :scopeOldLazyStateStack:pop();
 			local Expression is oldLazyExpr: :scopeOldLazyExprStack:pop();
 			if({ oldSlot == '' }, {
 				:localSlots:remove(key: name);
@@ -1688,7 +1688,7 @@ Class is IrBuilder{
 		:localSpecTypes: Map:init();
 		:boxedLocals: Map:init();
 		:capturedNames: Map:init();
-		:ownedSlots: Array();
+		:ownedSlots: [];
 		:curPoolMark: '';
 		:emitFieldDefaults(cls: cls, seen: Map:init());
 		:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
@@ -1715,7 +1715,7 @@ Class is IrBuilder{
 		:localSpecTypes: Map:init();
 		:boxedLocals: Map:init();
 		:capturedNames: Map:init();
-		:ownedSlots: Array();
+		:ownedSlots: [];
 		:curFnRetIsArc: :isArcTypeNode(t: :methodReturnTypeNode(mt: m:memberType));
 		:emitPoolEnter();
 
@@ -1824,7 +1824,7 @@ Class is IrBuilder{
 		:localSpecTypes: Map:init();
 		:boxedLocals: Map:init();
 		:capturedNames: Map:init();
-		:ownedSlots: Array();
+		:ownedSlots: [];
 		:resetScopes();
 
 		local Map of String to Boolean is decls: Map:init();
@@ -2029,7 +2029,7 @@ Class is IrBuilder{
 			:localSpecTypes: Map:init();
 			:boxedLocals: Map:init();
 			:capturedNames: Map:init();
-			:ownedSlots: Array();
+			:ownedSlots: [];
 			:curFnRetIsArc: resArc;
 			:emitPoolEnter();
 
@@ -3252,7 +3252,7 @@ Class is IrBuilder{
 		:localSpecTypes: Map:init();
 		:boxedLocals: Map:init();
 		:capturedNames: Map:init();
-		:ownedSlots: Array();
+		:ownedSlots: [];
 		:resetScopes();
 
 		local Map of String to Boolean is decls: Map:init();
@@ -5355,14 +5355,14 @@ Class is IrBuilder{
 		local Map of String to Boolean is savedCaptured: :capturedNames;
 		local Map of String to String is savedLazyStateSlots: :lazyLocalStateSlots;
 		local Map of String to Expression is savedLazyExprs: :lazyLocalExprs;
-		local Array of String is savedOwned: :ownedSlots;
-		local Array of String is savedScopeVars: :scopeVarStack;
-		local Array of String is savedScopeOldSlots: :scopeOldSlotStack;
+		local [String] is savedOwned: :ownedSlots;
+		local [String] is savedScopeVars: :scopeVarStack;
+		local [String] is savedScopeOldSlots: :scopeOldSlotStack;
 		local [IrType] is savedScopeOldTypes: :scopeOldTypeStack;
 		local [Boolean] is savedScopeOldArcs: :scopeOldArcStack;
-		local Array of String is savedScopeOldSpecs: :scopeOldSpecTypeStack;
+		local [String] is savedScopeOldSpecs: :scopeOldSpecTypeStack;
 		local [Boolean] is savedScopeOldBoxed: :scopeOldBoxedStack;
-		local Array of String is savedScopeOldLazyStates: :scopeOldLazyStateStack;
+		local [String] is savedScopeOldLazyStates: :scopeOldLazyStateStack;
 		local [Expression] is savedScopeOldLazyExprs: :scopeOldLazyExprStack;
 		local [Int] is savedScopeMarks: :scopeMarkStack;
 		local String is savedPoolMark: :curPoolMark;
@@ -5398,7 +5398,7 @@ Class is IrBuilder{
 		:localSpecTypes: Map:init();
 		:boxedLocals: Map:init();
 		:capturedNames: Map:init();
-		:ownedSlots: Array();
+		:ownedSlots: [];
 		:resetScopes();
 
 		local Map of String to Boolean is decls: Map:init();

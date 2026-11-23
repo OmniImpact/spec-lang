@@ -977,13 +977,13 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Map of String to Boolean is prevCallerCaptured: b:inlineCallerCaptured;
 		local Map of String to String is prevCallerLazyState: b:inlineCallerLazyStateSlots;
 		local Map of String to Expression is prevCallerLazyExprs: b:inlineCallerLazyExprs;
-		local Array of String is prevCallerScopeVars: b:inlineCallerScopeVars;
-		local Array of String is prevCallerScopeOldSlots: b:inlineCallerScopeOldSlots;
+		local [String] is prevCallerScopeVars: b:inlineCallerScopeVars;
+		local [String] is prevCallerScopeOldSlots: b:inlineCallerScopeOldSlots;
 		local [IrType] is prevCallerScopeOldTypes: b:inlineCallerScopeOldTypes;
 		local [Boolean] is prevCallerScopeOldArcs: b:inlineCallerScopeOldArcs;
-		local Array of String is prevCallerScopeOldSpecs: b:inlineCallerScopeOldSpecs;
+		local [String] is prevCallerScopeOldSpecs: b:inlineCallerScopeOldSpecs;
 		local [Boolean] is prevCallerScopeOldBoxed: b:inlineCallerScopeOldBoxed;
-		local Array of String is prevCallerScopeOldLazyStates: b:inlineCallerScopeOldLazyStates;
+		local [String] is prevCallerScopeOldLazyStates: b:inlineCallerScopeOldLazyStates;
 		local [Expression] is prevCallerScopeOldLazyExprs: b:inlineCallerScopeOldLazyExprs;
 		local [Int] is prevCallerScopeMarks: b:inlineCallerScopeMarks;
 
@@ -995,13 +995,13 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Map of String to Boolean is callerCaptured: b:capturedNames;
 		local Map of String to String is callerLazyState: b:lazyLocalStateSlots;
 		local Map of String to Expression is callerLazyExprs: b:lazyLocalExprs;
-		local Array of String is callerScopeVars: b:scopeVarStack;
-		local Array of String is callerScopeOldSlots: b:scopeOldSlotStack;
+		local [String] is callerScopeVars: b:scopeVarStack;
+		local [String] is callerScopeOldSlots: b:scopeOldSlotStack;
 		local [IrType] is callerScopeOldTypes: b:scopeOldTypeStack;
 		local [Boolean] is callerScopeOldArcs: b:scopeOldArcStack;
-		local Array of String is callerScopeOldSpecs: b:scopeOldSpecTypeStack;
+		local [String] is callerScopeOldSpecs: b:scopeOldSpecTypeStack;
 		local [Boolean] is callerScopeOldBoxed: b:scopeOldBoxedStack;
-		local Array of String is callerScopeOldLazyStates: b:scopeOldLazyStateStack;
+		local [String] is callerScopeOldLazyStates: b:scopeOldLazyStateStack;
 		local [Expression] is callerScopeOldLazyExprs: b:scopeOldLazyExprStack;
 		local [Int] is callerScopeMarks: b:scopeMarkStack;
 
@@ -1034,13 +1034,13 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:capturedNames: Map();
 		b:lazyLocalStateSlots: Map();
 		b:lazyLocalExprs: Map();
-		b:scopeVarStack: Array();
-		b:scopeOldSlotStack: Array();
+		b:scopeVarStack: [];
+		b:scopeOldSlotStack: [];
 		b:scopeOldTypeStack: [];
 		b:scopeOldArcStack: [];
-		b:scopeOldSpecTypeStack: Array();
+		b:scopeOldSpecTypeStack: [];
 		b:scopeOldBoxedStack: [];
-		b:scopeOldLazyStateStack: Array();
+		b:scopeOldLazyStateStack: [];
 		b:scopeOldLazyExprStack: [];
 		b:scopeMarkStack: [];
 		b:inlineFnParams: fnParams;
@@ -1178,13 +1178,13 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Map of String to Boolean is calleeCaptured: b:capturedNames;
 		local Map of String to String is calleeLazyState: b:lazyLocalStateSlots;
 		local Map of String to Expression is calleeLazyExprs: b:lazyLocalExprs;
-		local Array of String is calleeScopeVars: b:scopeVarStack;
-		local Array of String is calleeScopeOldSlots: b:scopeOldSlotStack;
+		local [String] is calleeScopeVars: b:scopeVarStack;
+		local [String] is calleeScopeOldSlots: b:scopeOldSlotStack;
 		local [IrType] is calleeScopeOldTypes: b:scopeOldTypeStack;
 		local [Boolean] is calleeScopeOldArcs: b:scopeOldArcStack;
-		local Array of String is calleeScopeOldSpecs: b:scopeOldSpecTypeStack;
+		local [String] is calleeScopeOldSpecs: b:scopeOldSpecTypeStack;
 		local [Boolean] is calleeScopeOldBoxed: b:scopeOldBoxedStack;
-		local Array of String is calleeScopeOldLazyStates: b:scopeOldLazyStateStack;
+		local [String] is calleeScopeOldLazyStates: b:scopeOldLazyStateStack;
 		local [Expression] is calleeScopeOldLazyExprs: b:scopeOldLazyExprStack;
 		local [Int] is calleeScopeMarks: b:scopeMarkStack;
 
