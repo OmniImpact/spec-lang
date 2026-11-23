@@ -15,16 +15,16 @@ Class is LlvmStructLayout{
 	];
 
 	String is structName: '';
-	Array of String is fieldNames: Array();
-	Array of String is fieldTypes: Array();
+	[String] is fieldNames: [];
+	[String] is fieldTypes: [];
 
 	replace Function is init(String is structName: ''){
 		:structName: structName;
 	}
 
 	Function of LlvmStructLayout is addField(String is name, String is llvmType){
-		:fieldNames:add(item: name);
-		:fieldTypes:add(item: llvmType);
+		:fieldNames:push(item: name);
+		:fieldTypes:push(item: llvmType);
 		return :;
 	}
 
@@ -34,9 +34,8 @@ Class is LlvmStructLayout{
 
 	Function of Int is fieldIndex(String is name){
 		local Int is found: -1;
-		local Int is i: 0;
-		while({ i < :fieldNames:length() }, {
-			if({ found < 0 && :fieldNames:get(index: i, default: '') == name }, {
+		while([Int is i: 0], { found < 0 && i < :fieldNames:length() }, {
+			if({ :fieldNames:get(index: i) == name }, {
 				found: i;
 			});
 			i++;
@@ -46,24 +45,20 @@ Class is LlvmStructLayout{
 
 	Function of String is llvmType(){
 		local String is body: '';
-		local Int is i: 0;
-		while({ i < :fieldTypes:length() }, {
+		range(start: 0, end: :fieldTypes:length(), worker: local Function(Int is i){
 			if({ i > 0 }, { body: body . ', '; });
-			body: body . :fieldTypes:get(index: i, default: 'ptr');
-			i++;
+			body: body . :fieldTypes:get(index: i);
 		});
 		return '{ ' . body . ' }';
 	}
 
-	Function of String is formatConst(Array of String is values){
+	Function of String is formatConst([String] is values){
 		local String is body: '';
-		local Int is i: 0;
-		while({ i < :fieldTypes:length() }, {
+		range(start: 0, end: :fieldTypes:length(), worker: local Function(Int is i){
 			if({ i > 0 }, { body: body . ', '; });
-			local String is ty: :fieldTypes:get(index: i, default: 'ptr');
-			local String is val: values:get(index: i, default: 'null');
+			local String is ty: :fieldTypes:get(index: i);
+			local String is val: if({ i < values:length() }, { values:get(index: i) }, { 'null' });
 			body: body . ty . ' ' . val;
-			i++;
 		});
 		return :llvmType() . ' { ' . body . ' }';
 	}

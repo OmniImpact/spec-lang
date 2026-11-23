@@ -969,6 +969,8 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Map of String to Expression is prevFnParams: b:inlineFnParams;
 		local Boolean is prevCallerInInline: b:inlineCallerInInline;
 		local Map of String to Expression is prevCallerFnParams: b:inlineCallerFnParams;
+		local Map of String to Boolean is prevCallerActiveMethods: b:inlineCallerActiveMethods;
+		local Map of String to Boolean is callerActiveMethods: b:inlineActiveMethods;
 		local Map of String to String is prevCallerSlots: b:inlineCallerSlots;
 		local Map of String to IrType is prevCallerTypes: b:inlineCallerTypes;
 		local Map of String to Boolean is prevCallerIsArc: b:inlineCallerIsArc;
@@ -1008,6 +1010,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		# 3. Install caller snapshot and a clean lexical scope for the callee body.
 		b:inlineCallerInInline: prevInInline;
 		b:inlineCallerFnParams: prevFnParams;
+		b:inlineCallerActiveMethods: callerActiveMethods;
 		b:inlineCallerSlots: callerSlots;
 		b:inlineCallerTypes: callerTypes;
 		b:inlineCallerIsArc: callerIsArc;
@@ -1045,7 +1048,14 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:scopeMarkStack: [];
 		b:inlineFnParams: fnParams;
 		b:inInlineLoopCallee: true;
-		b:inlineActiveMethods:set(key: mKey, value: true);
+		local Map of String to Boolean is calleeActive: Map();
+		local Array of String is caKeys: callerActiveMethods:keys();
+		while([Int is ki: 0], { ki < caKeys:length() }, {
+			calleeActive:set(key: caKeys:get(index: ki, default: ''), value: true);
+			ki++;
+		});
+		calleeActive:set(key: mKey, value: true);
+		b:inlineActiveMethods: calleeActive;
 
 		# 4. Bind non-Function parameters into the callee's clean scope.
 		b:pushScope();
@@ -1101,7 +1111,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:popScope();
 
 		# 6. Restore caller's lexical scope and outer inline-loop state.
-		b:inlineActiveMethods:remove(key: mKey);
+		b:inlineActiveMethods: callerActiveMethods;
 		b:localSlots: callerSlots;
 		b:localTypes: callerTypes;
 		b:localIsArc: callerIsArc;
@@ -1124,6 +1134,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:inlineFnParams: prevFnParams;
 		b:inlineCallerInInline: prevCallerInInline;
 		b:inlineCallerFnParams: prevCallerFnParams;
+		b:inlineCallerActiveMethods: prevCallerActiveMethods;
 		b:inlineCallerSlots: prevCallerSlots;
 		b:inlineCallerTypes: prevCallerTypes;
 		b:inlineCallerIsArc: prevCallerIsArc;
@@ -1170,6 +1181,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		# 2. Save callee scope and switch to caller's lexical scope.
 		local Boolean is calleeInInline: b:inInlineLoopCallee;
 		local Map of String to Expression is calleeFnParams: b:inlineFnParams;
+		local Map of String to Boolean is calleeActiveMethods: b:inlineActiveMethods;
 		local Map of String to String is calleeSlots: b:localSlots;
 		local Map of String to IrType is calleeTypes: b:localTypes;
 		local Map of String to Boolean is calleeIsArc: b:localIsArc;
@@ -1190,6 +1202,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		b:inInlineLoopCallee: b:inlineCallerInInline;
 		b:inlineFnParams: b:inlineCallerFnParams;
+		b:inlineActiveMethods: b:inlineCallerActiveMethods;
 		b:localSlots: b:inlineCallerSlots;
 		b:localTypes: b:inlineCallerTypes;
 		b:localIsArc: b:inlineCallerIsArc;
@@ -1299,6 +1312,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		# 4. Restore callee scope.
 		b:inInlineLoopCallee: calleeInInline;
 		b:inlineFnParams: calleeFnParams;
+		b:inlineActiveMethods: calleeActiveMethods;
 		b:localSlots: calleeSlots;
 		b:localTypes: calleeTypes;
 		b:localIsArc: calleeIsArc;

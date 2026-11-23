@@ -166,6 +166,19 @@ Class of SpecUnitTest is TestLoops{
 		local Int is emptyRuns: 0;
 		range(start: 5, end: 5, worker: local Function(Int is _i){ emptyRuns++; });
 		Assert:areEqualInt(0, emptyRuns);
+
+		# Nested range mutating a local declared inside the outer range's worker.
+		local String is rows: '';
+		range(start: 1, end: 4, worker: local Function(Int is r){
+			local String is row: '';
+			range(start: 0, end: r, worker: local Function(Int is c){
+				if({ c > 0 }, { row: row . ','; });
+				row: row . (c as String);
+			});
+			if({ r > 1 }, { rows: rows . ';'; });
+			rows: rows . row;
+		});
+		Assert:areEqualString('0;0,1;0,1,2', rows);
 	}
 
 	## Structurally inlined Loops:rangeStep with positive, negative, and zero step.

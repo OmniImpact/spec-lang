@@ -307,17 +307,15 @@ Class is Driver{
 			local Array of String is shardLlPaths: Array();
 			if({ useShards }, {
 				local Int is nShards: if({ threadCount > 8 }, { 8 }, { threadCount });
-				local Array of String is shardTexts: emitter:emitShardsScoped(mod: irMod, scope: scope, shards: nShards);
+				local [String] is shardTexts: emitter:emitShardsScoped(mod: irMod, scope: scope, shards: nShards);
 				genMs: Process:clockMs() - llvmGenT0;
 				local String is shardPrefix: Uri:systemTempDir() . '/_spec_shard_' . (Process:getPid() as String) . '_';
-				local Int is si: 0;
-				while({ si < shardTexts:length() }, {
-					local String is sText: shardTexts:get(index: si, default: '');
+				range(start: 0, end: shardTexts:length(), worker: local Function(Int is si){
+					local String is sText: shardTexts:get(index: si);
 					llLines: llLines + sText:countByte(byteVal: 10);
 					local String is sPath: shardPrefix . (si as String) . '.ll';
 					fileWrite(path: sPath, content: sText);
 					shardLlPaths:add(item: sPath);
-					si++;
 				});
 			}, {
 				local String is llText: emitter:emitModuleScoped(mod: irMod, scope: scope, threads: threadCount);

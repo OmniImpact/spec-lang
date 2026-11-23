@@ -90,6 +90,7 @@ Class is IrBuilder{
 	Map of String to Boolean is inlineActiveMethods: Map();
 	Boolean is inlineCallerInInline: false;
 	Map of String to Expression is inlineCallerFnParams: Map();
+	Map of String to Boolean is inlineCallerActiveMethods: Map();
 	Map of String to String is inlineCallerSlots: Map();
 	Map of String to IrType is inlineCallerTypes: Map();
 	Map of String to Boolean is inlineCallerIsArc: Map();
@@ -563,8 +564,8 @@ Class is IrBuilder{
 					if({ fty == IrType:I64 }, { fflags: fflags + 8; });
 					if({ fty == IrType:Ptr }, { fflags: fflags + 16; });
 					if({ m:hasModifier(kw: Keyword:LOCAL) }, { fflags: fflags + 128; });
-					st:metaFieldNames:add(item: m:name);
-					st:metaFieldTypes:add(item: m:memberType:name);
+					st:metaFieldNames:push(item: m:name);
+					st:metaFieldTypes:push(item: m:memberType:name);
 					st:metaFieldIndices:push(item: fIdx);
 					st:metaFieldFlags:push(item: fflags);
 				});
@@ -582,11 +583,9 @@ Class is IrBuilder{
 	local Function is buildVtable(IrStruct is st, ClassInfo is cls, Map of String to ClassInfo is clsMap){
 		if({ :bindings:isSysinternal(cls: cls) }, { return; });
 		if({ st:vtableMethodNames:length() == 0 && :globalVtableNames:length() > 0 }, {
-			local Int is gi: 0;
-			while({ gi < :globalVtableNames:length() }, {
-				st:vtableMethodNames:add(item: :globalVtableNames:get(index: gi, default: ''));
-				st:vtableFns:add(item: 'null');
-				gi++;
+			range(start: 0, end: :globalVtableNames:length(), worker: local Function(Int is gi){
+				st:vtableMethodNames:push(item: :globalVtableNames:get(index: gi, default: ''));
+				st:vtableFns:push(item: 'null');
 			});
 		});
 		local Int is bi: 0;
@@ -755,10 +754,8 @@ Class is IrBuilder{
 						st:sourceFileBase: srcSegs:get(index: srcSegs:length() - 1, default: '');
 					});
 				});
-				local Int is bni: 0;
-				while({ bni < cls:baseClasses:length() }, {
-					st:baseNames:add(item: cls:baseClasses:get(index: bni, default: ''));
-					bni++;
+				range(start: 0, end: cls:baseClasses:length(), worker: local Function(Int is bni){
+					st:baseNames:push(item: cls:baseClasses:get(index: bni, default: ''));
 				});
 				# Header layout: _type_name (Ptr), _vtable (Ptr)
 				st:addField(name: '_type_name', ty: IrType:Ptr);
@@ -1608,8 +1605,8 @@ Class is IrBuilder{
 				:heldFields:set(key: sname . ':' . m:name, value: sname);
 				:heldFields:set(key: cls:name . ':' . m:name, value: sname);
 				:heldFieldTypes:set(key: sname . ':' . m:name, value: m:memberType);
-				st:heldNames:add(item: m:name);
-				st:heldGetters:add(item: sname . '_' . m:name . '__ensure');
+				st:heldNames:push(item: m:name);
+				st:heldGetters:push(item: sname . '_' . m:name . '__ensure');
 			});
 			if({ m:kind == MemberKind:METHOD }, {
 				if({ m:hasModifier(kw: Keyword:HELD) }, {
@@ -1619,8 +1616,8 @@ Class is IrBuilder{
 						:heldResolvers:set(key: cls:name, value: sname);
 						:heldResolverRetTypes:set(key: sname, value: :methodReturnTypeNode(mt: m:memberType));
 					});
-					st:heldNames:add(item: m:name);
-					st:heldGetters:add(item: 'null');
+					st:heldNames:push(item: m:name);
+					st:heldGetters:push(item: 'null');
 				}, {
 					if({ m:name == 'init' }, {
 						hasInitMember: true;
@@ -1630,11 +1627,11 @@ Class is IrBuilder{
 					if({ m:memberType:name == 'Void' }, { flags: flags + 1; });
 					if({ m:params:length() == 0 }, { flags: flags + 2; });
 					if({ m:memberType:name == 'Function' && m:memberType:params:length() == 0 }, { flags: flags + 4; });
-					st:metaMethodNames:add(item: m:name);
+					st:metaMethodNames:push(item: m:name);
 					if({ :bindings:isSysinternal(cls: cls) && m:body:length() == 0 }, {
-						st:metaMethodFns:add(item: 'null');
+						st:metaMethodFns:push(item: 'null');
 					}, {
-						st:metaMethodFns:add(item: sname . '_' . m:name);
+						st:metaMethodFns:push(item: sname . '_' . m:name);
 					});
 					st:metaMethodFlags:push(item: flags);
 					st:metaMethodLines:push(item: m:line);
@@ -5930,8 +5927,8 @@ Class is IrBuilder{
 				local IrStruct is rst: :mod:findStruct(name: recvStruct);
 				local String is vkey: if({ call:overloadIndex > 0 }, { nm . '_' . ((call:overloadIndex + 1) as String) }, { nm });
 				vslot: rst:vtableSlot(mname: vkey);
-				if({ vslot >= 0 }, {
-					local String is vtFn: rst:vtableFns:get(index: vslot, default: calleeName);
+				if({ vslot >= 0 && vslot < rst:vtableFns:length() }, {
+					local String is vtFn: rst:vtableFns:get(index: vslot);
 					if({ vtFn != '' && vtFn != 'null' }, {
 						dirCallee: vtFn;
 					});

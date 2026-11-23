@@ -14,24 +14,24 @@ Class is IrStruct{
 	String is name: '';
 	String is qualifiedName: '';
 	String is sourceFileBase: '';
-	Array of String is fieldNames: Array();
+	[String] is fieldNames: [];
 	[IrType] is fieldTypes: [];
 	[Boolean] is fieldIsArc: [];
-	Array of String is vtableMethodNames: Array();
-	Array of String is vtableFns: Array();
-	Array of String is baseNames: Array();
+	[String] is vtableMethodNames: [];
+	[String] is vtableFns: [];
+	[String] is baseNames: [];
 	String is constructFn: 'null';
 	String is destroyFn: 'null';
-	Array of String is metaMethodNames: Array();
-	Array of String is metaMethodFns: Array();
+	[String] is metaMethodNames: [];
+	[String] is metaMethodFns: [];
 	[Int] is metaMethodFlags: [];
 	[Int] is metaMethodLines: [];
-	Array of String is metaFieldNames: Array();
-	Array of String is metaFieldTypes: Array();
+	[String] is metaFieldNames: [];
+	[String] is metaFieldTypes: [];
 	[Int] is metaFieldIndices: [];
 	[Int] is metaFieldFlags: [];
-	Array of String is heldNames: Array();
-	Array of String is heldGetters: Array();
+	[String] is heldNames: [];
+	[String] is heldGetters: [];
 
 	replace Function is init(){
 	}
@@ -42,7 +42,7 @@ Class is IrStruct{
 
 	Function of Int is addField(String is name, IrType is ty){
 		local Int is idx: :fieldNames:length();
-		:fieldNames:add(item: name);
+		:fieldNames:push(item: name);
 		:fieldTypes:push(item: ty);
 		local Boolean is isPtr: ty == IrType:Ptr;
 		:fieldIsArc:push(item: isPtr);
@@ -51,20 +51,17 @@ Class is IrStruct{
 
 	Function of Int is addFieldArc(String is name, IrType is ty, Boolean is isArc){
 		local Int is idx: :fieldNames:length();
-		:fieldNames:add(item: name);
+		:fieldNames:push(item: name);
 		:fieldTypes:push(item: ty);
 		:fieldIsArc:push(item: isArc);
 		return idx;
 	}
 
 	Function of Int is fieldIndex(String is name){
-		local Int is i: 0;
 		local Int is res: -1;
-		local Boolean is found: false;
-		while({ i < :fieldNames:length() && !found }, {
-			if({ :fieldNames:get(index: i, default: '') == name }, {
+		while([Int is i: 0], { i < :fieldNames:length() && res < 0 }, {
+			if({ :fieldNames:get(index: i) == name }, {
 				res: i;
-				found: true;
 			});
 			i++;
 		});
@@ -72,13 +69,10 @@ Class is IrStruct{
 	}
 
 	Function of Int is vtableSlot(String is mname){
-		local Int is i: 0;
 		local Int is res: -1;
-		local Boolean is found: false;
-		while({ i < :vtableMethodNames:length() && !found }, {
-			if({ :vtableMethodNames:get(index: i, default: '') == mname }, {
+		while([Int is i: 0], { i < :vtableMethodNames:length() && res < 0 }, {
+			if({ :vtableMethodNames:get(index: i) == mname }, {
 				res: i;
-				found: true;
 			});
 			i++;
 		});
@@ -92,8 +86,8 @@ Class is IrStruct{
 				:vtableFns:set(index: idx, item: fnName);
 			});
 		}, {
-			:vtableMethodNames:add(item: mname);
-			:vtableFns:add(item: fnName);
+			:vtableMethodNames:push(item: mname);
+			:vtableFns:push(item: fnName);
 		});
 	}
 }

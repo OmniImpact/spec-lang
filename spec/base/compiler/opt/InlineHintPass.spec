@@ -114,26 +114,17 @@ Class of SpecOptimizer is InlineHintPass{
 			local Int is userFields: st:fieldNames:length() - 2;
 			if({ userFields < 0 }, { userFields: 0; });
 			local Int is userMethods: 0;
-			local Int is umi: 0;
-			while({ umi < st:metaMethodNames:length() }, {
-				local String is umName: st:metaMethodNames:get(index: umi, default: '');
+			each(list: st:metaMethodNames, action: local Function(String is umName){
 				if({ umName != 'init' && umName != 'toString' && umName != 'className' && umName != 'equals' && umName != 'hashCode' }, {
 					userMethods++;
 				});
-				umi++;
 			});
 			if({ userFields > 0 && userFields >= userMethods }, {
-				local Int is mfi: 0;
-				while({ mfi < st:metaMethodFns:length() }, {
-					local String is mf: st:metaMethodFns:get(index: mfi, default: '');
+				each(list: st:metaMethodFns, action: local Function(String is mf){
 					if({ mf != '' && mf != 'null' }, { modelFnSet:set(key: mf, value: true); });
-					mfi++;
 				});
-				local Int is vfi: 0;
-				while({ vfi < st:vtableFns:length() }, {
-					local String is vf: st:vtableFns:get(index: vfi, default: '');
+				each(list: st:vtableFns, action: local Function(String is vf){
 					if({ vf != '' && vf != 'null' }, { modelFnSet:set(key: vf, value: true); });
-					vfi++;
 				});
 			});
 			si++;

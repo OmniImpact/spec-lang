@@ -16,20 +16,20 @@ Class is IrModule{
 
 	[IrStruct] is structs: [];
 	[IrFunction] is functions: [];
-	Array of String is stringLiterals: Array();
-	Map of String to Int is stringIds: Map:init();
-	Array of String is globalNames: Array();
+	[String] is stringLiterals: [];
+	Map of String to Int is stringIds: Map();
+	[String] is globalNames: [];
 	[IrType] is globalTypes: [];
-	Array of String is globalInits: Array();
+	[String] is globalInits: [];
 	String is entryFunction: '';
 
 	replace Function is init(){
 	}
 
 	Function is addGlobal(String is name, IrType is ty, String is initVal){
-		:globalNames:add(item: name);
+		:globalNames:push(item: name);
 		:globalTypes:push(item: ty);
-		:globalInits:add(item: initVal);
+		:globalInits:push(item: initVal);
 	}
 
 	Function of Int is internStringLiteral(String is value){
@@ -37,7 +37,7 @@ Class is IrModule{
 			return :stringIds:get(key: value, default: 0);
 		});
 		local Int is id: :stringLiterals:length();
-		:stringLiterals:add(item: value);
+		:stringLiterals:push(item: value);
 		:stringIds:set(key: value, value: id);
 		return id;
 	}
