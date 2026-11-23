@@ -7,9 +7,10 @@ Class is FileManagerViewModel{
 	namespace: ['theoedit', 'vm'];
 
 	merge Array of Array of String is using: [
-		['base', 'signal', [BoolEmitter, TextEmitter]],
+		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', DirectoryListing],
-		['theoedit', 'util', [DirectoryScanner, PathTransformer]]
+		['theoedit', 'util', [DirectoryScanner, PathTransformer]],
+		['theoedit', 'vm', FileManagerFocus]
 	];
 
 	DirectoryScanner is scanner: DirectoryScanner();
@@ -20,9 +21,8 @@ Class is FileManagerViewModel{
 	String is initialName: '';
 	Array of String is entries: Array();
 	TextEmitter is headerTitle: TextEmitter(initial: 'File Manager');
-	BoolEmitter is listFocused: BoolEmitter(initial: true);
-	BoolEmitter is inputFocused: BoolEmitter(initial: false);
-	BoolEmitter is okFocused: BoolEmitter(initial: false);
+	EnumEmitter of FileManagerFocus is focus: EnumEmitter(initial: FileManagerFocus:LIST);
+	EnumEmitter of FileManagerFocus is hover: EnumEmitter(initial: FileManagerFocus:NONE);
 	Function is onConfirm: local Function(String is _path){};
 	Function is onCancel: local Function(){};
 	Function is onListUpdated: local Function(Array of String is _nextItems){};
@@ -40,8 +40,7 @@ Class is FileManagerViewModel{
 		:onConfirm: onConfirm;
 		:onCancel: onCancel;
 		if({ isSaveAs() }, {
-			listFocused:emit(value: false);
-			inputFocused:emit(value: true);
+			focus:emit(value: FileManagerFocus:INPUT);
 		});
 		navigateTo(nextDir: initialDir);
 	}
@@ -96,51 +95,53 @@ Class is FileManagerViewModel{
 		onCancel();
 	}
 
-	local Function is focusList(){
-		inputFocused:emit(value: false);
-		okFocused:emit(value: false);
-		listFocused:emit(value: true);
+	Function is setFocus(FileManagerFocus is target){
+		if({ focus:current() != target }, {
+			focus:emit(value: target);
+		});
 	}
 
-	local Function is focusInput(){
-		listFocused:emit(value: false);
-		okFocused:emit(value: false);
-		inputFocused:emit(value: true);
-	}
-
-	local Function is focusOk(){
-		listFocused:emit(value: false);
-		inputFocused:emit(value: false);
-		okFocused:emit(value: true);
+	Function is setHover(FileManagerFocus is target, Boolean is isHovered){
+		if({ isHovered }, {
+			if({ hover:current() != target }, {
+				hover:emit(value: target);
+			});
+			return;
+		});
+		if({ hover:current() == target }, {
+			hover:emit(value: FileManagerFocus:NONE);
+		});
 	}
 
 	Function is handleEscKey(){
 		cancel();
 	}
 
-	Function is handleMenuKey(Boolean is actionsFocused){
-		if({ actionsFocused }, {
+	Function is handleMenuKey(){
+		local FileManagerFocus is cur: focus:current();
+		if({ cur == FileManagerFocus:OK || cur == FileManagerFocus:CANCEL }, {
 			if({ isSaveAs() }, {
-				focusInput();
+				focus:emit(value: FileManagerFocus:INPUT);
 			}, {
-				focusList();
+				focus:emit(value: FileManagerFocus:LIST);
 			});
 			return;
 		});
-		focusOk();
+		focus:emit(value: FileManagerFocus:OK);
 	}
 
-	Function is handleFocusToggleKey(Boolean is listIsFocused){
-		if({ listIsFocused }, {
-			focusInput();
+	Function is handleFocusToggleKey(){
+		if({ focus:current() == FileManagerFocus:LIST }, {
+			focus:emit(value: FileManagerFocus:INPUT);
 		}, {
-			focusList();
+			focus:emit(value: FileManagerFocus:LIST);
 		});
 	}
 
-	Function of Boolean is handleUpFromActions(Boolean is actionsFocused){
-		if({ actionsFocused }, {
-			focusInput();
+	Function of Boolean is handleUpFromActions(){
+		local FileManagerFocus is cur: focus:current();
+		if({ cur == FileManagerFocus:OK || cur == FileManagerFocus:CANCEL }, {
+			focus:emit(value: FileManagerFocus:INPUT);
 			return true;
 		});
 		return false;

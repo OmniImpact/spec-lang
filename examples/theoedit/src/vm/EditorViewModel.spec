@@ -7,10 +7,10 @@ Class is EditorViewModel{
 	namespace: ['theoedit', 'vm'];
 
 	merge Array of Array of String is using: [
-		['base', 'signal', [BoolEmitter, TextEmitter]],
+		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', EditorDocument],
 		['theoedit', 'util', [FileStorage, PathTransformer]],
-		['theoedit', 'vm', FileManagerViewModel]
+		['theoedit', 'vm', [EditorFocus, FileManagerViewModel]]
 	];
 
 	EditorDocument is doc: EditorDocument();
@@ -26,9 +26,8 @@ Class is EditorViewModel{
 	Function is onPopFileManager: local Function(){};
 	Function is onRebuild: local Function(){};
 
-	BoolEmitter is editorFocused: BoolEmitter(initial: true);
-	BoolEmitter is menuFocused: BoolEmitter(initial: false);
-	BoolEmitter is promptSaveFocused: BoolEmitter(initial: false);
+	EnumEmitter of EditorFocus is focus: EnumEmitter(initial: EditorFocus:EDITOR);
+	EnumEmitter of EditorFocus is hover: EnumEmitter(initial: EditorFocus:NONE);
 
 	TextEmitter is title: TextEmitter(initial: '[untitled]');
 	TextEmitter is currentPath: TextEmitter(initial: '');
@@ -101,22 +100,34 @@ Class is EditorViewModel{
 		return ok;
 	}
 
+	Function is setFocus(EditorFocus is target){
+		if({ focus:current() != target }, {
+			focus:emit(value: target);
+		});
+	}
+
+	Function is setHover(EditorFocus is target, Boolean is isHovered){
+		if({ isHovered }, {
+			if({ hover:current() != target }, {
+				hover:emit(value: target);
+			});
+			return;
+		});
+		if({ hover:current() == target }, {
+			hover:emit(value: EditorFocus:NONE);
+		});
+	}
+
 	local Function is focusEditor(){
-		menuFocused:emit(value: false);
-		promptSaveFocused:emit(value: false);
-		editorFocused:emit(value: true);
+		focus:emit(value: EditorFocus:EDITOR);
 	}
 
 	local Function is focusMenu(){
-		editorFocused:emit(value: false);
-		promptSaveFocused:emit(value: false);
-		menuFocused:emit(value: true);
+		focus:emit(value: EditorFocus:SAVE);
 	}
 
 	local Function is focusPromptSave(){
-		editorFocused:emit(value: false);
-		menuFocused:emit(value: false);
-		promptSaveFocused:emit(value: true);
+		focus:emit(value: EditorFocus:PROMPT_SAVE);
 	}
 
 	Function is openFileDialog(String is mode){
@@ -200,12 +211,12 @@ Class is EditorViewModel{
 		focusEditor();
 	}
 
-	Function is toggleMenuOrCancelPrompt(Boolean is editorIsFocused){
+	Function is toggleMenuOrCancelPrompt(){
 		if({ hasMessage() }, {
 			triggerPromptCancel();
 			return;
 		});
-		if({ editorIsFocused }, {
+		if({ focus:current() == EditorFocus:EDITOR }, {
 			focusMenu();
 		}, {
 			focusEditor();

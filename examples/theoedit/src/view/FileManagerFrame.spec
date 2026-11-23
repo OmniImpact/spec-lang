@@ -8,7 +8,8 @@ Class of Frame is FileManagerFrame{
 
 	merge Array of Array of String is using: [
 		['base', 'theo', '*'],
-		['theoedit', 'vm', FileManagerViewModel]
+		['base', 'sys', as Loops()],
+		['theoedit', 'vm', [FileManagerFocus, FileManagerViewModel]]
 	];
 
 	FileManagerViewModel is vm;
@@ -50,14 +51,33 @@ Class of Frame is FileManagerFrame{
 		vm:onNameUpdated: local Function(String is fileName){
 			ti:setText(value: fileName);
 		};
-		vm:listFocused:collect(onEmit: {
-			if({ vm:listFocused:current() }, { listFocus:requestFocus(); });
+
+		local [FocusTarget] is targets: [listFocus, inputFocus, okFocus, cancelFocus];
+		local [FileManagerFocus] is focusIds: [FileManagerFocus:LIST, FileManagerFocus:INPUT, FileManagerFocus:OK, FileManagerFocus:CANCEL];
+
+		times(count: targets:length(), worker: local Function(Int is i){
+			local FocusTarget is ft: targets:get(index: i);
+			local FileManagerFocus is fid: focusIds:get(index: i);
+			ft:onFocus(handler: {
+				vm:setFocus(target: fid);
+			});
+			ft:onHover(handler: {
+				vm:setHover(target: fid, isHovered: ft:hovered);
+			});
 		});
-		vm:inputFocused:collect(onEmit: {
-			if({ vm:inputFocused:current() }, { inputFocus:requestFocus(); });
-		});
-		vm:okFocused:collect(onEmit: {
-			if({ vm:okFocused:current() }, { okFocus:requestFocus(); });
+
+		vm:focus:collect(onEmit: {
+			local FileManagerFocus is cur: vm:focus:current();
+			times(count: targets:length(), worker: local Function(Int is i){
+				local FocusTarget is ft: targets:get(index: i);
+				if({ focusIds:get(index: i) == cur }, {
+					if({ !ft:focused }, {
+						ft:requestFocus();
+					});
+				}, {
+					ft:focused: false;
+				});
+			});
 		});
 	}
 
@@ -67,15 +87,15 @@ Class of Frame is FileManagerFrame{
 			return true;
 		});
 		if({ (event:ctrl || event:alt) && event:key == 'm' }, {
-			vm:handleMenuKey(actionsFocused: okFocus:focused || cancelFocus:focused);
+			vm:handleMenuKey();
 			return true;
 		});
 		if({ (event:ctrl || event:alt) && event:key == 'f' }, {
-			vm:handleFocusToggleKey(listIsFocused: listFocus:focused);
+			vm:handleFocusToggleKey();
 			return true;
 		});
 		if({ event:isUp() }, {
-			return vm:handleUpFromActions(actionsFocused: okFocus:focused || cancelFocus:focused);
+			return vm:handleUpFromActions();
 		});
 		false;
 	}

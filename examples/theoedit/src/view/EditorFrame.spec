@@ -6,7 +6,8 @@ Class of Frame is EditorFrame{
 
 	merge Array of Array of String is using: [
 		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, FocusTarget, KeyEvent]],
-		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
+		['base', 'sys', as Loops()],
+		['theoedit', 'vm', [EditorFocus, EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [TopBar, EditorBody, MessagePanel, BottomActionBar, FileManagerFrame]]
 	];
 
@@ -26,26 +27,32 @@ Class of Frame is EditorFrame{
 		:vm: vm;
 		vm:onQuit: onQuit;
 		vm:onRebuild: { rebuild(); };
-		vm:editorFocused:collect(onEmit: {
-			if({ vm:editorFocused:current() }, {
-				editorFocus:requestFocus();
+
+		local [FocusTarget] is targets: [editorFocus, saveFocus, saveAsFocus, openFocus, exitFocus, msgSaveFocus, msgDiscardFocus, msgCancelFocus];
+		local [EditorFocus] is focusIds: [EditorFocus:EDITOR, EditorFocus:SAVE, EditorFocus:SAVE_AS, EditorFocus:OPEN, EditorFocus:QUIT, EditorFocus:PROMPT_SAVE, EditorFocus:PROMPT_DISCARD, EditorFocus:PROMPT_CANCEL];
+
+		times(count: targets:length(), worker: local Function(Int is i){
+			local FocusTarget is ft: targets:get(index: i);
+			local EditorFocus is fid: focusIds:get(index: i);
+			ft:onFocus(handler: {
+				vm:setFocus(target: fid);
+			});
+			ft:onHover(handler: {
+				vm:setHover(target: fid, isHovered: ft:hovered);
 			});
 		});
-		vm:menuFocused:collect(onEmit: {
-			if({ vm:menuFocused:current() }, {
-				saveFocus:requestFocus();
-			});
-		});
-		vm:promptSaveFocused:collect(onEmit: {
-			if({ vm:promptSaveFocused:current() }, {
-				editorFocus:focused: false;
-				saveFocus:focused: false;
-				saveAsFocus:focused: false;
-				openFocus:focused: false;
-				exitFocus:focused: false;
-				msgDiscardFocus:focused: false;
-				msgCancelFocus:focused: false;
-				msgSaveFocus:requestFocus();
+
+		vm:focus:collect(onEmit: {
+			local EditorFocus is cur: vm:focus:current();
+			times(count: targets:length(), worker: local Function(Int is i){
+				local FocusTarget is ft: targets:get(index: i);
+				if({ focusIds:get(index: i) == cur }, {
+					if({ !ft:focused }, {
+						ft:requestFocus();
+					});
+				}, {
+					ft:focused: false;
+				});
 			});
 		});
 	}
@@ -61,7 +68,7 @@ Class of Frame is EditorFrame{
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ ((event:ctrl || event:alt) && event:key == 'm') || event:isEsc() }, {
-			vm:toggleMenuOrCancelPrompt(editorIsFocused: editorFocus:focused);
+			vm:toggleMenuOrCancelPrompt();
 			return true;
 		});
 		false;

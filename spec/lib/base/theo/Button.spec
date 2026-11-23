@@ -85,6 +85,7 @@ Class of Widget is Button{
 		if({ event:isMove() }, {
 			if({ hovered != inside }, {
 				:hovered: inside;
+				focusTarget:setHovered(next: inside);
 				return true;
 			});
 			return false;

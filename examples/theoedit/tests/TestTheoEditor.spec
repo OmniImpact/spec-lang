@@ -8,7 +8,7 @@ Class of SpecUnitTest is TestTheoEditor{
 		['base', 'sys', as Process()],
 		['theoedit', 'model', [EditorDocument, DirectoryListing]],
 		['theoedit', 'util', [FileStorage, DirectoryScanner, PathTransformer]],
-		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
+		['theoedit', 'vm', [EditorFocus, FileManagerFocus, EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [EditorFrame, FileManagerFrame]]
 	];
 
@@ -305,6 +305,26 @@ Class of SpecUnitTest is TestTheoEditor{
 		Assert:isTrue(fmVm:isSaveAs());
 		Assert:areEqualString(' Save ', fmVm:actionLabel());
 		Assert:areEqualString('s', fmVm:actionKey());
+		Assert:isTrue(fmVm:focus:current() == FileManagerFocus:INPUT);
 		Process:execute(command: 'rm', args: Array(['-rf', fmDir]));
+
+		# Two-way EnumEmitter focus + hover sync on EditorFrame / EditorViewModel
+		local EditorViewModel is eVm: EditorViewModel(filePath: '');
+		local EditorFrame is eFrame: EditorFrame(vm: eVm);
+		wireEditorFocus(frame: eFrame);
+		Assert:isTrue(eVm:focus:current() == EditorFocus:EDITOR);
+		Assert:isTrue(eVm:hover:current() == EditorFocus:NONE);
+		# View -> VM focus sync
+		eFrame:openFocus:requestFocus();
+		Assert:isTrue(eVm:focus:current() == EditorFocus:OPEN);
+		# VM -> View focus sync
+		eVm:setFocus(target: EditorFocus:SAVE_AS);
+		Assert:isTrue(eFrame:saveAsFocus:focused);
+		Assert:isFalse(eFrame:openFocus:focused);
+		# Hover sync via FocusTarget
+		eFrame:saveFocus:setHovered(next: true);
+		Assert:isTrue(eVm:hover:current() == EditorFocus:SAVE);
+		eFrame:saveFocus:setHovered(next: false);
+		Assert:isTrue(eVm:hover:current() == EditorFocus:NONE);
 	}
 }
