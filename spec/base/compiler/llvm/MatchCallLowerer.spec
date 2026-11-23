@@ -223,7 +223,7 @@ Class of CallLowerer is MatchCallLowerer{
 			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: Array([IrType:Ptr, IrType:Ptr, IrType:Ptr]), args: Array(['null', subjVal, kVal])));
 		}, {
 			if({ subjTy == IrType:Ptr && kVal == '0' }, {
-				b:addError(msg: 'Invalid zero/void match key compared against pointer subject in ' . b:currentClass . ':' . b:currentMethod . ' (line ' . (b:currentLine as String) . ').');
+				b:addError(msg: 'Invalid zero/void match key compared against pointer subject.');
 				kVal: 'null';
 			});
 			b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: subjVal, rhs: kVal, ty: subjTy));
@@ -362,7 +362,7 @@ Class of CallLowerer is MatchCallLowerer{
 								b:emit(inst: IrInst:Load(dst: pVal, slot: fPtr, ty: pty));
 								local String is pSlot: '%arm_' . p:name . '_' . (b:nextTmp());
 								pSlot: '%arm_' . p:name . '_' . (b:tmpCounter as String);
-								local Boolean is pIsArc: b:isArcSpecType(specType: p:paramType:name);
+								local Boolean is pIsArc: b:isArcTypeNode(t: p:paramType);
 								local Boolean is pBoxed: b:capturedNames:has(key: p:name);
 								b:bindLocal(name: p:name, slot: pSlot, ty: pty, isArc: pIsArc, specType: p:paramType:name, isBoxed: pBoxed);
 								if({ pBoxed }, {

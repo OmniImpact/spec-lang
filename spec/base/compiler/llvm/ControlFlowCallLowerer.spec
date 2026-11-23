@@ -619,7 +619,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 					while({ pi < ps:length() }, {
 						local Parameter is p: ps:get(index: pi);
 						local IrType is pty: b:irTypeFor(specType: p:paramType:name);
-						local Boolean is pArc: b:isArcSpecType(specType: p:paramType:name);
+						local Boolean is pArc: b:isArcTypeNode(t: p:paramType);
 						local String is _wtmp: b:nextTmp();
 						local String is slot: '%wvar_' . p:name . '_' . (b:tmpCounter as String);
 						local Boolean is pBoxed: b:capturedNames:has(key: p:name);
@@ -814,7 +814,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						local IrType is vty: b:irTypeFor(specType: p:paramType:name);
 						local String is _vtmp: b:nextTmp();
 						local String is slot: '%lvar_' . p:name . '_' . (b:tmpCounter as String);
-						local Boolean is vArc: b:isArcSpecType(specType: p:paramType:name);
+						local Boolean is vArc: b:isArcTypeNode(t: p:paramType);
 						local Boolean is vBoxed: b:capturedNames:has(key: p:name);
 						local Boolean is vInEntry: b:curBlk:label == 'entry';
 						b:bindLocal(name: p:name, slot: slot, ty: vty, isArc: vArc, specType: p:paramType:name, isBoxed: vBoxed);

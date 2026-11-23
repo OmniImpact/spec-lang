@@ -36,6 +36,7 @@ Class is Driver{
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'checker', TypeError],
+		['base', 'compiler', Error],
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
@@ -271,9 +272,11 @@ Class is Driver{
 			irb:entryInitTakesMap: :entryInitTakesMap;
 			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
 			if({ irb:errors:length() > 0 }, {
-				irb:errors:each(action: local Function(String is emsg){
-					Stderr:line('Error: ' . emsg);
+				Stderr:line('Code generation errors encountered during compilation:');
+				irb:errors:each(action: local Function(Error is err){
+					Stderr:line(err:toString());
 				});
+				Stderr:line('Compilation aborted due to code generation errors.');
 				Process:monitorStop();
 				exitCode: 1;
 				return;

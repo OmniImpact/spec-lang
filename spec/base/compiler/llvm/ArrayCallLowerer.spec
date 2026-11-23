@@ -64,31 +64,31 @@ Class of CallLowerer is ArrayCallLowerer{
 			if({ !((b:specBaseMap:get(key: resName, default: '') == 'Array' || resNode:isArray()) && b:mod:findStruct(name: arrStruct):name != '') }, {
 				arrStruct: 'Array';
 			});
-			local String is elemSpec: '';
+			local Type is elemNode: Type:init(name: '');
 			if({ b:specBaseMap:get(key: resName, default: '') == 'Array' && b:specClassArgsMap:has(key: resName) }, {
 				local Array of Type is mArgs: b:specClassArgsMap:get(key: resName, default: Array());
 				if({ mArgs:length() >= 1 }, {
-					elemSpec: mArgs:get(index: 0, default: Type:init(name: '')):name;
+					elemNode: mArgs:get(index: 0, default: Type:init(name: ''));
 				});
 			});
-			if({ elemSpec == '' && resNode:isArray() && resNode:isGeneric() }, {
-				elemSpec: resNode:elemType():name;
+			if({ elemNode:name == '' && resNode:isArray() && resNode:isGeneric() }, {
+				elemNode: resNode:elemType();
 			});
-			if({ elemSpec == '' && call:args:length() == 1 }, {
+			if({ elemNode:name == '' && call:args:length() == 1 }, {
 				local Type is a0Node: call:args:get(index: 0):value:getResolvedTypeNode();
 				if({ a0Node:isGeneric() }, {
-					elemSpec: a0Node:elemType():name;
+					elemNode: a0Node:elemType();
 				}, {
 					if({ b:specClassArgsMap:has(key: a0Node:name) }, {
 						local Array of Type is a0Args: b:specClassArgsMap:get(key: a0Node:name, default: Array());
 						if({ a0Args:length() >= 1 }, {
-							elemSpec: a0Args:get(index: 0, default: Type:init(name: '')):name;
+							elemNode: a0Args:get(index: 0, default: Type:init(name: ''));
 						});
 					});
 				});
 			});
-			local Int is ekInt: if({ elemSpec != '' && (b:isArcSpecType(specType: elemSpec) || elemSpec == 'Any') }, { 1 }, { 0 });
-			if({ elemSpec == '' && call:args:length() == 1 }, {
+			local Int is ekInt: if({ elemNode:name != '' && (b:isArcTypeNode(t: elemNode) || elemNode:isAny()) }, { 1 }, { 0 });
+			if({ elemNode:name == '' && call:args:length() == 1 }, {
 				match(on: call:args:get(index: 0):value, when: [
 					Expression:ArrayLit: local Function(Array of Expression is litItems){
 						if({ litItems:length() > 0 }, {

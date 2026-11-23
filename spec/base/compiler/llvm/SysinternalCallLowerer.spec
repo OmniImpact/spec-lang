@@ -239,11 +239,10 @@ Class of CallLowerer is SysinternalCallLowerer{
 					args:add(item: av);
 					pi++;
 				});
-				local String is retSpec: b:methodReturnSpecType(mt: m:memberType);
 				local IrType is retTy: b:methodReturnType(mt: m:memberType);
 				local String is callee: 'spec_' . :toSnakeCase(s: m:name);
 				local String is res: :emitSysCall(b: b, retType: retTy, callee: callee, argTypes: argTypes, args: args);
-				if({ b:isArcSpecType(specType: retSpec) }, {
+				if({ b:isArcTypeNode(t: b:methodReturnTypeNode(mt: m:memberType)) }, {
 					b:emitClaimPool(val: res);
 				});
 				return res;

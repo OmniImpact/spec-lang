@@ -257,10 +257,10 @@ Class is SpecBuild{
 		});
 
 		local String is rawText: fileRead(path: configPath, default: '');
-		local Result of Map to JsonError is cfgR: Json:parseMapResult(text: rawText);
+		local Result of Map of String to Any to JsonError is cfgR: Json:parseMapResult(text: rawText);
 		local String is parseMsg: '';
 		match(on: cfgR, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){
 				parseMsg: e:description;
@@ -270,9 +270,9 @@ Class is SpecBuild{
 			Stderr:line('[specbuild] Error: Failed to parse ' . configPath . ': ' . parseMsg);
 			Process:exit(status: 1);
 		});
-		local Map is cfg: Map:init();
+		local Map of String to Any is cfg: Map:init();
 		match(on: cfgR, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 				cfg: v;
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){
