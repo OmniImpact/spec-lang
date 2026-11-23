@@ -31,28 +31,8 @@ Class of Frame is FileManagerFrame{
 		local ListView is lv: ListView(
 			items: vm:entries,
 			focusTarget: listFocus,
-			onActivate: local Function(String is entry){
-				vm:activateEntry(
-					entry: entry,
-					onListUpdated: local Function(Array of String is nextItems){
-						if({ listViews:length() > 0 }, {
-							listViews:get(index: 0):setItems(nextItems: nextItems);
-						});
-					},
-					onFileChosen: local Function(String is fileName){
-						if({ nameInputs:length() > 0 }, {
-							nameInputs:get(index: 0):setText(value: fileName);
-						});
-					}
-				);
-			},
-			onSelectChange: local Function(String is entry){
-				vm:selectEntry(entry: entry, onFileSelected: local Function(String is fileName){
-					if({ nameInputs:length() > 0 }, {
-						nameInputs:get(index: 0):setText(value: fileName);
-					});
-				});
-			}
+			onActivate: local Function(String is entry){ vm:activateEntry(entry: entry); },
+			onSelectChange: local Function(String is entry){ vm:selectEntry(entry: entry); }
 		);
 		listViews: Array([lv]);
 
@@ -60,11 +40,16 @@ Class of Frame is FileManagerFrame{
 			value: vm:initialName,
 			placeholder: 'filename',
 			focusTarget: inputFocus,
-			onSubmit: local Function(String is typed){
-				vm:confirm(typedName: typed);
-			}
+			onSubmit: local Function(String is typed){ vm:confirm(typedName: typed); }
 		);
 		nameInputs: Array([ti]);
+
+		vm:onListUpdated: local Function(Array of String is nextItems){
+			lv:setItems(nextItems: nextItems);
+		};
+		vm:onNameUpdated: local Function(String is fileName){
+			ti:setText(value: fileName);
+		};
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){

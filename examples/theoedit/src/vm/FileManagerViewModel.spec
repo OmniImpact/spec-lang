@@ -22,6 +22,8 @@ Class is FileManagerViewModel{
 	TextEmitter is headerTitle: TextEmitter(initial: 'File Manager');
 	Function is onConfirm: local Function(String is _path){};
 	Function is onCancel: local Function(){};
+	Function is onListUpdated: local Function(Array of String is _nextItems){};
+	Function is onNameUpdated: local Function(String is _fileName){};
 
 	replace Function is init(
 		String is mode: 'open',
@@ -56,7 +58,7 @@ Class is FileManagerViewModel{
 		headerTitle:emit(value: "File Manager — {{curDir}}");
 	}
 
-	Function is activateEntry(String is entry, Function is onListUpdated, Function is onFileChosen){
+	Function is activateEntry(String is entry){
 		if({ entry == '..' }, {
 			navigateTo(nextDir: paths:parentDir(dir: curDir));
 			onListUpdated(entries);
@@ -67,13 +69,13 @@ Class is FileManagerViewModel{
 			onListUpdated(entries);
 			return;
 		});
-		onFileChosen(entry);
+		onNameUpdated(entry);
 		confirm(typedName: entry);
 	}
 
-	Function is selectEntry(String is entry, Function is onFileSelected){
+	Function is selectEntry(String is entry){
 		if({ !paths:isDirectoryEntry(entry: entry) }, {
-			onFileSelected(entry);
+			onNameUpdated(entry);
 		});
 	}
 
