@@ -11,6 +11,9 @@ Class is ClassInfo{
 		['base', 'sys', as Conditional()]
 	];
 
+	## Shared empty sentinel for read-only default/fallback returns.
+	held ClassInfo is EMPTY: ClassInfo:init(name: '', baseClass: '', members: Array());
+
 	## Class identifier.
 	String is name: '';
 

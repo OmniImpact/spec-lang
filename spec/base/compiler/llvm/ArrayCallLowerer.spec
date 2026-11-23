@@ -43,7 +43,7 @@ Class of CallLowerer is ArrayCallLowerer{
 		local Boolean is isArrRecv: recvType == 'Array' || b:specBaseMap:get(key: recvType, default: '') == 'Array';
 		if({ call:name == 'add' && call:args:length() == 1 && isArrRecv }, {
 			local Array of Type is rArgs: b:specClassArgsMap:get(key: recvType, default: Array());
-			local String is elemName: if({ rArgs:length() >= 1 }, { rArgs:get(index: 0, default: Type:init(name: '')):name }, { '' });
+			local String is elemName: if({ rArgs:length() >= 1 }, { rArgs:get(index: 0, default: Type:EMPTY):name }, { '' });
 			local Expression is a0Val: call:args:get(index: 0):value;
 			local Boolean is isLitArg: match(on: a0Val, when: [
 				Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
@@ -68,7 +68,7 @@ Class of CallLowerer is ArrayCallLowerer{
 			if({ b:specBaseMap:get(key: resName, default: '') == 'Array' && b:specClassArgsMap:has(key: resName) }, {
 				local Array of Type is mArgs: b:specClassArgsMap:get(key: resName, default: Array());
 				if({ mArgs:length() >= 1 }, {
-					elemNode: mArgs:get(index: 0, default: Type:init(name: ''));
+					elemNode: mArgs:get(index: 0, default: Type:EMPTY);
 				});
 			});
 			if({ elemNode:name == '' && resNode:isArray() && resNode:isGeneric() }, {
@@ -82,7 +82,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					if({ b:specClassArgsMap:has(key: a0Node:name) }, {
 						local Array of Type is a0Args: b:specClassArgsMap:get(key: a0Node:name, default: Array());
 						if({ a0Args:length() >= 1 }, {
-							elemNode: a0Args:get(index: 0, default: Type:init(name: ''));
+							elemNode: a0Args:get(index: 0, default: Type:EMPTY);
 						});
 					});
 				});

@@ -74,7 +74,7 @@ Enum is Expression {
 	## Returns the structured checker-resolved [Type] node, or an empty [Type] if unset.
 	Function of Type is getResolvedTypeNode(){
 		if({ !:hasResolvedTypeNode }, {
-			return Type:init(name: '');
+			return Type:EMPTY;
 		});
 		return :resolvedTypeNode;
 	}

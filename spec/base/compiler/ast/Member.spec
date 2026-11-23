@@ -28,7 +28,7 @@ Class is Member{
 	Array of String is modifiers: Array();
 
 	## Return type for methods; value type for fields.
-	Type is memberType: Type:init(name: '');
+	Type is memberType: Type:EMPTY;
 
 	## Member identifier.
 	String is name: '';
@@ -44,7 +44,7 @@ Class is Member{
 	Boolean is hasInit: false;
 
 	## CLASS: the nested class descriptor.
-	ClassInfo is nestedClass: ClassInfo:init(name: '', baseClass: '', members: Array());
+	ClassInfo is nestedClass: ClassInfo:EMPTY;
 
 	## Initializes a member descriptor.
 	##

@@ -15,6 +15,9 @@ Class is Type{
 		['base', 'sys', as Loops()]
 	];
 
+	## Shared empty sentinel for read-only default/fallback returns.
+	held Type is EMPTY: Type:init(name: '');
+
 	## Base type identifier (e.g. Int, String, Array).
 	String is name: '';
 
@@ -26,7 +29,6 @@ Class is Type{
 	## @param name: Base type name.
 	replace Function is init(String is name){
 		:name: name;
-		:params: Array();
 	}
 
 	## Produces a parameterized generic type descriptor. Self-free
@@ -174,7 +176,7 @@ Class is Type{
 		if({ :params:length() >= 1 }, {
 			return :params:get(index: 0);
 		});
-		return Type:init(name: '');
+		return Type:EMPTY;
 	}
 
 	## Returns the key type of a parameterized Map, or an empty [Type].
@@ -182,7 +184,7 @@ Class is Type{
 		if({ :name == 'Map' && :params:length() >= 1 }, {
 			return :params:get(index: 0);
 		});
-		return Type:init(name: '');
+		return Type:EMPTY;
 	}
 
 	## Returns the value type of a parameterized Map, or an empty [Type].
@@ -190,7 +192,7 @@ Class is Type{
 		if({ :name == 'Map' && :params:length() >= 2 }, {
 			return :params:get(index: 1);
 		});
-		return Type:init(name: '');
+		return Type:EMPTY;
 	}
 
 	## Returns the return type of a Function type, or an empty [Type].
@@ -198,7 +200,7 @@ Class is Type{
 		if({ Primitive:of(:name) == Primitive:FUNCTION && :params:length() >= 1 }, {
 			return :params:get(index: 0);
 		});
-		return Type:init(name: '');
+		return Type:EMPTY;
 	}
 
 	## Formats the type into canonical Spec syntax

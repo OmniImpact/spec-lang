@@ -341,7 +341,7 @@ Class is TypeChecker{
 	Function of Type is parseTypeNode(String is s){
 		if({ s == '' }, { return Type:init(name: ''); });
 		if({ :typeNodeCache:has(key: s) }, {
-			return :typeNodeCache:get(key: s, default: Type:init(name: ''));
+			return :typeNodeCache:get(key: s, default: Type:EMPTY);
 		});
 		if({ !s:contains(needle: ':') && !s:contains(needle: ' of ') }, {
 			local Type is simpleT: Type:init(name: s);
@@ -399,7 +399,7 @@ Class is TypeChecker{
 				local Array of Type is tArgs: Array();
 				local Int is ki: 0;
 				while({ ki < arity }, {
-					tArgs:add(item: stack:pop(default: Type:init(name: '')));
+					tArgs:add(item: stack:pop(default: Type:EMPTY));
 					ki++;
 				});
 				stack:add(item: Type:withParams(name: seg, params: tArgs));

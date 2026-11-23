@@ -261,7 +261,7 @@ Class is GenericSpecializer{
 					local Array of Type is tArgs: Array();
 					local Int is ki: 0;
 					while({ ki < arity }, {
-						tArgs:add(item: stack:pop(default: Type:init(name: '')));
+						tArgs:add(item: stack:pop(default: Type:EMPTY));
 						ki++;
 					});
 					stack:add(item: :makeType(name: seg, params: tArgs));

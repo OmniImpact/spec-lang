@@ -152,7 +152,7 @@ Class is IrBuilder{
 		if({ :specBaseMap:get(key: resName, default: '') == 'Map' && :specClassArgsMap:has(key: resName) }, {
 			local Array of Type is mArgs: :specClassArgsMap:get(key: resName, default: Array());
 			if({ mArgs:length() >= 1 }, {
-				kNode: mArgs:get(index: 0, default: Type:init(name: ''));
+				kNode: mArgs:get(index: 0, default: Type:EMPTY);
 			});
 		}, {
 			if({ resNode:isMap() && resNode:params:length() >= 1 }, {
@@ -177,7 +177,7 @@ Class is IrBuilder{
 		if({ :specBaseMap:get(key: resName, default: '') == 'Map' && :specClassArgsMap:has(key: resName) }, {
 			local Array of Type is mArgs: :specClassArgsMap:get(key: resName, default: Array());
 			if({ mArgs:length() >= 2 }, {
-				vNode: mArgs:get(index: 1, default: Type:init(name: ''));
+				vNode: mArgs:get(index: 1, default: Type:EMPTY);
 			});
 		}, {
 			if({ resNode:isMap() && resNode:params:length() >= 2 }, {
@@ -275,12 +275,12 @@ Class is IrBuilder{
 	Function of String is typeSpelling(Type is t){
 		if({ t:params:length() == 0 }, { return t:name; });
 		if({ t:name == 'Map' && t:params:length() == 2 }, {
-			return t:name . ' of ' . :typeSpelling(t: t:params:get(index: 0, default: Type:init(name: ''))) . ' to ' . :typeSpelling(t: t:params:get(index: 1, default: Type:init(name: '')));
+			return t:name . ' of ' . :typeSpelling(t: t:params:get(index: 0, default: Type:EMPTY)) . ' to ' . :typeSpelling(t: t:params:get(index: 1, default: Type:EMPTY));
 		});
 		local String is out: t:name;
 		local Int is i: 0;
 		while({ i < t:params:length() }, {
-			out: out . ' of ' . :typeSpelling(t: t:params:get(index: i, default: Type:init(name: '')));
+			out: out . ' of ' . :typeSpelling(t: t:params:get(index: i, default: Type:EMPTY));
 			i++;
 		});
 		return out;
@@ -1960,7 +1960,7 @@ Class is IrBuilder{
 		local Int is ri: 0;
 		while({ ri < rKeys:length() }, {
 			local String is rSym: rKeys:get(index: ri, default: '');
-			local Type is retTypeNode: :heldResolverRetTypes:get(key: rSym, default: Type:init(name: ''));
+			local Type is retTypeNode: :heldResolverRetTypes:get(key: rSym, default: Type:EMPTY);
 			local IrType is resTy: :irTypeForNode(t: retTypeNode);
 			if({ resTy == IrType:Void }, { resTy: IrType:Ptr; });
 			local Boolean is resArc: :isArcTypeNode(t: retTypeNode);
@@ -2549,7 +2549,7 @@ Class is IrBuilder{
 		});
 		local Int is i: 0;
 		while({ i < t:params:length() }, {
-			:markBareTypeUse(t: t:params:get(index: i, default: Type:init(name: '')));
+			:markBareTypeUse(t: t:params:get(index: i, default: Type:EMPTY));
 			i++;
 		});
 	}
@@ -3017,7 +3017,7 @@ Class is IrBuilder{
 			local String is selfHk: :currentClass . ':' . seg0;
 			if({ :heldFields:has(key: selfHk) }, {
 				local String is owner0: :heldFields:get(key: selfHk, default: '');
-				local Type is hType0: :heldFieldTypes:get(key: owner0 . ':' . seg0, default: Type:init(name: ''));
+				local Type is hType0: :heldFieldTypes:get(key: owner0 . ':' . seg0, default: Type:EMPTY);
 				local String is hSpec0: hType0:name;
 				local IrType is hty0: :irTypeForNode(t: hType0);
 				if({ hty0 == IrType:Void }, { hty0: IrType:Ptr; });
@@ -3035,7 +3035,7 @@ Class is IrBuilder{
 					local String is hk: seg0 . ':' . seg1;
 					if({ :heldFields:has(key: hk) }, {
 						local String is owner1: :heldFields:get(key: hk, default: '');
-						local Type is hType1: :heldFieldTypes:get(key: owner1 . ':' . seg1, default: Type:init(name: ''));
+						local Type is hType1: :heldFieldTypes:get(key: owner1 . ':' . seg1, default: Type:EMPTY);
 						local String is hSpec1: hType1:name;
 						local IrType is hty1: :irTypeForNode(t: hType1);
 						if({ hty1 == IrType:Void }, { hty1: IrType:Ptr; });
@@ -3849,7 +3849,7 @@ Class is IrBuilder{
 					if({ listElemNode:name == '' && varBase == 'List' && :specClassArgsMap:has(key: varType:name) }, {
 						local Array of Type is lArgs: :specClassArgsMap:get(key: varType:name, default: Array());
 						if({ lArgs:length() >= 1 }, {
-							listElemNode: lArgs:get(index: 0, default: Type:init(name: ''));
+							listElemNode: lArgs:get(index: 0, default: Type:EMPTY);
 						});
 					});
 					local Boolean is isByteListVar: (varType:isList() || varBase == 'List') && Primitive:of(listElemNode:name) == Primitive:BYTE;
@@ -3918,7 +3918,7 @@ Class is IrBuilder{
 							local String is hk: :currentClass . ':' . name;
 							if({ :heldFields:has(key: hk) }, {
 								local String is owner: :heldFields:get(key: hk, default: '');
-								local Type is hTypeNode: :heldFieldTypes:get(key: owner . ':' . name, default: Type:init(name: ''));
+								local Type is hTypeNode: :heldFieldTypes:get(key: owner . ':' . name, default: Type:EMPTY);
 								local IrType is hty: :irTypeForNode(t: hTypeNode);
 								if({ hty == IrType:Void }, { hty: IrType:Ptr; });
 								local String is hcval: :castIfNeeded(val: val, fromTy: valTy, toTy: hty);
@@ -3991,7 +3991,7 @@ Class is IrBuilder{
 							local String is seg1: segments:get(index: 1, default: '');
 							if({ segments:length() == 2 && !:localSlots:has(key: seg0) && :heldFields:has(key: seg0 . ':' . seg1) }, {
 								local String is owner: :heldFields:get(key: seg0 . ':' . seg1, default: '');
-								local Type is hpTypeNode: :heldFieldTypes:get(key: owner . ':' . seg1, default: Type:init(name: ''));
+								local Type is hpTypeNode: :heldFieldTypes:get(key: owner . ':' . seg1, default: Type:EMPTY);
 								local IrType is hty: :irTypeForNode(t: hpTypeNode);
 								if({ hty == IrType:Void }, { hty: IrType:Ptr; });
 								local String is hpcval: :castIfNeeded(val: val, fromTy: valTy, toTy: hty);
@@ -4540,7 +4540,7 @@ Class is IrBuilder{
 				local String is hk: :currentClass . ':' . name;
 				if({ :heldFields:has(key: hk) }, {
 					local String is owner: :heldFields:get(key: hk, default: '');
-					local IrType is hty: :irTypeForNode(t: :heldFieldTypes:get(key: owner . ':' . name, default: Type:init(name: '')));
+					local IrType is hty: :irTypeForNode(t: :heldFieldTypes:get(key: owner . ':' . name, default: Type:EMPTY));
 					if({ hty == IrType:Void }, { hty: IrType:Ptr; });
 					local String is dst: :nextTmp();
 					:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: hty, callee: owner . '_' . name . '__ensure', argTypes: [], args: []));
@@ -4684,7 +4684,7 @@ Class is IrBuilder{
 					local String is hk: seg0 . ':' . seg1;
 					if({ segments:length() == 2 && !:localSlots:has(key: seg0) && :heldFields:has(key: hk) }, {
 						local String is owner: :heldFields:get(key: hk, default: '');
-						local IrType is hty: :irTypeForNode(t: :heldFieldTypes:get(key: owner . ':' . seg1, default: Type:init(name: '')));
+						local IrType is hty: :irTypeForNode(t: :heldFieldTypes:get(key: owner . ':' . seg1, default: Type:EMPTY));
 						if({ hty == IrType:Void }, { hty: IrType:Ptr; });
 						local String is dst: :nextTmp();
 						:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: hty, callee: owner . '_' . seg1 . '__ensure', argTypes: [], args: []));
@@ -4705,7 +4705,7 @@ Class is IrBuilder{
 							local Int is rSid: :mod:internStringLiteral(value: seg1);
 							local String is rNameStr: :nextTmp();
 							:emit(inst: IrInst:ConstString(dst: rNameStr, strId: rSid));
-							local IrType is rTy: :irTypeForNode(t: :heldResolverRetTypes:get(key: rSym, default: Type:init(name: '')));
+							local IrType is rTy: :irTypeForNode(t: :heldResolverRetTypes:get(key: rSym, default: Type:EMPTY));
 							if({ rTy == IrType:Void }, { rTy: IrType:Ptr; });
 							local String is rDst: :nextTmp();
 							:emit(inst: IrInst:IrCall(dst: rDst, hasDst: true, retType: rTy, callee: rSym . '_held_resolve', argTypes: [IrType:Ptr], args: [rNameStr]));
@@ -4830,7 +4830,7 @@ Class is IrBuilder{
 					if({ lElemNode:name == '' && :specClassArgsMap:has(key: rtNode:name) }, {
 						local Array of Type is lArgs: :specClassArgsMap:get(key: rtNode:name, default: Array());
 						if({ lArgs:length() >= 1 }, {
-							lElemNode: lArgs:get(index: 0, default: Type:init(name: ''));
+							lElemNode: lArgs:get(index: 0, default: Type:EMPTY);
 						});
 					});
 					local Boolean is isByteLit: Primitive:of(lElemNode:name) == Primitive:BYTE;
@@ -4897,7 +4897,7 @@ Class is IrBuilder{
 					if({ (rtBase == 'Array' || rtBase == 'List') && :specClassArgsMap:has(key: rtNode:name) }, {
 						local Array of Type is aArgs: :specClassArgsMap:get(key: rtNode:name, default: Array());
 						if({ aArgs:length() >= 1 }, {
-							elemNode: aArgs:get(index: 0, default: Type:init(name: ''));
+							elemNode: aArgs:get(index: 0, default: Type:EMPTY);
 						});
 					});
 					if({ elemNode:name == '' }, {
