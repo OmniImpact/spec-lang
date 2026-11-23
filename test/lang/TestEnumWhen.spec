@@ -43,7 +43,7 @@ Class of SpecUnitTest is TestEnumWhen{
 		Assert:areEqualString('WRN', level:value());
 		Assert:areEqualInt(3, level:ordinal());
 
-		local Array is allTokens: TokenKind2:values();
+		local [TokenKind2] is allTokens: TokenKind2:values();
 		Assert:areEqualInt(5, allTokens:length());
 	}
 

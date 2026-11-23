@@ -359,19 +359,19 @@ Class is EnumDesugar{
 	Function of Member is synthValues(String is name, Array of Member is variants){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
 		m:modifiers: Array(['held']);
-		local Type is arrT: Type:init(name: 'Array');
-		arrT:params: Array([Type:init(name: name)]);
-		m:memberType: arrT;
+		local Type is listT: Type:init(name: 'List');
+		listT:params: Array([Type:init(name: name)]);
+		m:memberType: listT;
 		m:name: 'values';
 		local Array of Statement is body: Array();
-		local Type is declT: Type:init(name: 'Array');
+		local Type is declT: Type:init(name: 'List');
 		declT:params: Array([Type:init(name: name)]);
-		local Statement is decl: Statement:VarDecl(modifiers: Array(['local']), varType: declT, varName: 'all', initExpr: Expression:Call(call: CallData:init(target: :ident(name: 'Array'), name: 'init', args: Array())), hasInit: true);
+		local Statement is decl: Statement:VarDecl(modifiers: Array(['local']), varType: declT, varName: 'all', initExpr: Expression:ArrayLit(items: Array()), hasInit: true);
 		body:add(item: decl);
 		variants:each(action: local Function(Member is v){
 			local Array of NamedArg is args: Array();
 			args:add(item: NamedArg:init(name: 'item', value: :variantRef(enumName: name, variant: v:name)));
-			local Expression is call: Expression:Call(call: CallData:init(target: :ident(name: 'all'), name: 'add', args: args));
+			local Expression is call: Expression:Call(call: CallData:init(target: :ident(name: 'all'), name: 'push', args: args));
 			local Statement is s: Statement:Expr(exprStmt: call);
 			body:add(item: s);
 		});
