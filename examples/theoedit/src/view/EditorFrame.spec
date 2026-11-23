@@ -10,7 +10,7 @@ Class of Frame is EditorFrame{
 		['theoedit', 'view', [TopBar, EditorBody, MessagePanel, BottomActionBar, FileManagerFrame]]
 	];
 
-	EditorViewModel is vm: EditorViewModel(filePath: '');
+	EditorViewModel is vm;
 
 	FocusTarget is editorFocus: FocusTarget(initial: true);
 	FocusTarget is saveFocus: FocusTarget();
@@ -22,22 +22,32 @@ Class of Frame is EditorFrame{
 	FocusTarget is msgDiscardFocus: FocusTarget();
 	FocusTarget is msgCancelFocus: FocusTarget();
 
-	replace Function is init(EditorViewModel is vm: EditorViewModel(filePath: ''), Function is onQuit: local Function(){}){
+	replace Function is init(EditorViewModel is vm, Function is onQuit: local Function(){}){
 		:vm: vm;
 		vm:onQuit: onQuit;
 		vm:onRebuild: { rebuild(); };
-		vm:onFocusEditor: { editorFocus:requestFocus(); };
-		vm:onFocusMenu: { saveFocus:requestFocus(); };
-		vm:onFocusPrompt: {
-			editorFocus:focused: false;
-			saveFocus:focused: false;
-			saveAsFocus:focused: false;
-			openFocus:focused: false;
-			exitFocus:focused: false;
-			msgDiscardFocus:focused: false;
-			msgCancelFocus:focused: false;
-			msgSaveFocus:requestFocus();
-		};
+		vm:editorFocused:collect(onEmit: {
+			if({ vm:editorFocused:current() }, {
+				editorFocus:requestFocus();
+			});
+		});
+		vm:menuFocused:collect(onEmit: {
+			if({ vm:menuFocused:current() }, {
+				saveFocus:requestFocus();
+			});
+		});
+		vm:promptSaveFocused:collect(onEmit: {
+			if({ vm:promptSaveFocused:current() }, {
+				editorFocus:focused: false;
+				saveFocus:focused: false;
+				saveAsFocus:focused: false;
+				openFocus:focused: false;
+				exitFocus:focused: false;
+				msgDiscardFocus:focused: false;
+				msgCancelFocus:focused: false;
+				msgSaveFocus:requestFocus();
+			});
+		});
 	}
 
 	Function is bindScreen(TheoScreen is screen){

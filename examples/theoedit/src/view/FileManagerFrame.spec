@@ -11,7 +11,7 @@ Class of Frame is FileManagerFrame{
 		['theoedit', 'vm', FileManagerViewModel]
 	];
 
-	FileManagerViewModel is vm: FileManagerViewModel();
+	FileManagerViewModel is vm;
 
 	FocusTarget is listFocus: FocusTarget(initial: true);
 	FocusTarget is inputFocus: FocusTarget();
@@ -21,7 +21,7 @@ Class of Frame is FileManagerFrame{
 	Array of ListView is listViews: Array();
 	Array of TextInput is nameInputs: Array();
 
-	replace Function is init(FileManagerViewModel is vm: FileManagerViewModel()){
+	replace Function is init(FileManagerViewModel is vm){
 		:vm: vm;
 		if({ vm:isSaveAs() }, {
 			listFocus: FocusTarget(initial: false);
@@ -50,36 +50,32 @@ Class of Frame is FileManagerFrame{
 		vm:onNameUpdated: local Function(String is fileName){
 			ti:setText(value: fileName);
 		};
+		vm:listFocused:collect(onEmit: {
+			if({ vm:listFocused:current() }, { listFocus:requestFocus(); });
+		});
+		vm:inputFocused:collect(onEmit: {
+			if({ vm:inputFocused:current() }, { inputFocus:requestFocus(); });
+		});
+		vm:okFocused:collect(onEmit: {
+			if({ vm:okFocused:current() }, { okFocus:requestFocus(); });
+		});
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() }, {
-			vm:cancel();
+			vm:handleEscKey();
 			return true;
 		});
 		if({ (event:ctrl || event:alt) && event:key == 'm' }, {
-			if({ okFocus:focused || cancelFocus:focused }, {
-				if({ vm:isSaveAs() }, {
-					inputFocus:requestFocus();
-				}, {
-					listFocus:requestFocus();
-				});
-			}, {
-				okFocus:requestFocus();
-			});
+			vm:handleMenuKey(actionsFocused: okFocus:focused || cancelFocus:focused);
 			return true;
 		});
 		if({ (event:ctrl || event:alt) && event:key == 'f' }, {
-			if({ listFocus:focused }, {
-				inputFocus:requestFocus();
-			}, {
-				listFocus:requestFocus();
-			});
+			vm:handleFocusToggleKey(listIsFocused: listFocus:focused);
 			return true;
 		});
-		if({ (okFocus:focused || cancelFocus:focused) && event:isUp() }, {
-			inputFocus:requestFocus();
-			return true;
+		if({ event:isUp() }, {
+			return vm:handleUpFromActions(actionsFocused: okFocus:focused || cancelFocus:focused);
 		});
 		false;
 	}

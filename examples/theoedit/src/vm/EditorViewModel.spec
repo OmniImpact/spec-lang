@@ -7,7 +7,7 @@ Class is EditorViewModel{
 	namespace: ['theoedit', 'vm'];
 
 	merge Array of Array of String is using: [
-		['base', 'signal', TextEmitter],
+		['base', 'signal', [BoolEmitter, TextEmitter]],
 		['theoedit', 'model', EditorDocument],
 		['theoedit', 'util', [FileStorage, PathTransformer]],
 		['theoedit', 'vm', FileManagerViewModel]
@@ -25,9 +25,10 @@ Class is EditorViewModel{
 	Function is onPushFileManager: local Function(FileManagerViewModel is _fmVm){};
 	Function is onPopFileManager: local Function(){};
 	Function is onRebuild: local Function(){};
-	Function is onFocusEditor: local Function(){};
-	Function is onFocusPrompt: local Function(){};
-	Function is onFocusMenu: local Function(){};
+
+	BoolEmitter is editorFocused: BoolEmitter(initial: true);
+	BoolEmitter is menuFocused: BoolEmitter(initial: false);
+	BoolEmitter is promptSaveFocused: BoolEmitter(initial: false);
 
 	TextEmitter is title: TextEmitter(initial: '[untitled]');
 	TextEmitter is currentPath: TextEmitter(initial: '');
@@ -100,6 +101,24 @@ Class is EditorViewModel{
 		return ok;
 	}
 
+	local Function is focusEditor(){
+		menuFocused:emit(value: false);
+		promptSaveFocused:emit(value: false);
+		editorFocused:emit(value: true);
+	}
+
+	local Function is focusMenu(){
+		editorFocused:emit(value: false);
+		promptSaveFocused:emit(value: false);
+		menuFocused:emit(value: true);
+	}
+
+	local Function is focusPromptSave(){
+		editorFocused:emit(value: false);
+		menuFocused:emit(value: false);
+		promptSaveFocused:emit(value: true);
+	}
+
 	Function is openFileDialog(String is mode){
 		local String is initName: if({ mode == 'saveAs' }, { doc:filePath }, { '' });
 		local FileManagerViewModel is fmVm: FileManagerViewModel(
@@ -119,13 +138,13 @@ Class is EditorViewModel{
 				);
 				if({ !finished }, {
 					onPopFileManager();
-					onFocusEditor();
+					focusEditor();
 				});
 			},
 			onCancel: {
 				clearMessage();
 				onPopFileManager();
-				onFocusEditor();
+				focusEditor();
 			}
 		);
 		onPushFileManager(fmVm);
@@ -137,7 +156,7 @@ Class is EditorViewModel{
 			return;
 		});
 		save();
-		onFocusEditor();
+		focusEditor();
 	}
 
 	Function is triggerSaveAs(){
@@ -152,7 +171,7 @@ Class is EditorViewModel{
 		if({ doc:dirty }, {
 			showUnsavedPrompt();
 			onRebuild();
-			onFocusPrompt();
+			focusPromptSave();
 			return;
 		});
 		onQuit();
@@ -178,7 +197,7 @@ Class is EditorViewModel{
 	Function is triggerPromptCancel(){
 		clearMessage();
 		onRebuild();
-		onFocusEditor();
+		focusEditor();
 	}
 
 	Function is toggleMenuOrCancelPrompt(Boolean is editorIsFocused){
@@ -187,9 +206,9 @@ Class is EditorViewModel{
 			return;
 		});
 		if({ editorIsFocused }, {
-			onFocusMenu();
+			focusMenu();
 		}, {
-			onFocusEditor();
+			focusEditor();
 		});
 	}
 
