@@ -299,6 +299,156 @@ Class of SpecOptimizer is ConcatFusionPass{
 		return fn;
 	}
 
+	local Function of Boolean is blkHasConcatPair(IrBlock is blk, Map of String to Boolean is concatFns){
+		local Int is hits: 0;
+		local Int is ii: 0;
+		while({ ii < blk:insts:length() }, {
+			match(on: blk:insts:get(index: ii), when: [
+				IrInst:IrCall: local Function(String is _dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is _argTypes, [String] is args){
+					if({ hasDst && retType == IrType:Ptr && concatFns:has(key: callee) && args:length() == 2 }, {
+						hits++;
+					});
+				}
+			], default: {});
+			if({ hits >= 2 }, { return true; });
+			ii++;
+		});
+		return false;
+	}
+
+	local Function of Boolean is fnHasConcatPair(IrFunction is fn, Map of String to Boolean is concatFns){
+		local Int is bi: 0;
+		while({ bi < fn:blocks:length() }, {
+			if({ :blkHasConcatPair(blk: fn:blocks:get(index: bi), concatFns: concatFns) }, {
+				return true;
+			});
+			bi++;
+		});
+		return false;
+	}
+
+	local Function is fuseBlock(IrBlock is blk, Map of String to Int is uses, Map of String to Boolean is concatFns, Map of Int to Boolean is createdArities, [Int] is neededArities){
+		local Map of String to [String] is partsMap: Map();
+		local Map of String to [Int] is callsMap: Map();
+		local Map of String to String is calleeMap: Map();
+		local Map of String to Boolean is isRoot: Map();
+		local [String] is rootOrder: [];
+
+		local Int is ii: 0;
+		while({ ii < blk:insts:length() }, {
+			local Int is curIdx: ii;
+			match(on: blk:insts:get(index: ii), when: [
+				IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
+					if({ hasDst && retType == IrType:Ptr && concatFns:has(key: callee) && args:length() == 2 }, {
+						local String is a0: args:get(index: 0, default: '');
+						local String is a1: args:get(index: 1, default: '');
+						local [String] is parts: [];
+						local [Int] is cIdxs: [];
+
+						local Boolean is fuseLeft: isRoot:get(key: a0, default: false) && uses:get(key: a0, default: 0) == 1 && calleeMap:get(key: a0, default: '') == callee;
+						local Boolean is fuseRight: a1 != a0 && isRoot:get(key: a1, default: false) && uses:get(key: a1, default: 0) == 1 && calleeMap:get(key: a1, default: '') == callee;
+
+						if({ fuseLeft }, {
+							local [String] is lp: partsMap:get(key: a0, default: []);
+							local [Int] is lc: callsMap:get(key: a0, default: []);
+							each(list: lp, action: local Function(String is p){ parts:push(item: p); });
+							range(start: 0, end: lc:length(), worker: local Function(Int is li){ cIdxs:push(item: lc:get(index: li)); });
+							isRoot:set(key: a0, value: false);
+						}, {
+							parts:push(item: a0);
+						});
+
+						if({ fuseRight }, {
+							local [String] is rp: partsMap:get(key: a1, default: []);
+							local [Int] is rc: callsMap:get(key: a1, default: []);
+							each(list: rp, action: local Function(String is p){ parts:push(item: p); });
+							range(start: 0, end: rc:length(), worker: local Function(Int is ri){ cIdxs:push(item: rc:get(index: ri)); });
+							isRoot:set(key: a1, value: false);
+						}, {
+							parts:push(item: a1);
+						});
+
+						cIdxs:push(item: curIdx);
+						partsMap:set(key: dst, value: parts);
+						callsMap:set(key: dst, value: cIdxs);
+						calleeMap:set(key: dst, value: callee);
+						isRoot:set(key: dst, value: true);
+						rootOrder:push(item: dst);
+					});
+				},
+				else: {}
+			]);
+			ii++;
+		});
+
+		local Map of Int to Boolean is deleteSet: Map();
+		local Map of Int to [String] is replaceMap: Map();
+		local Map of Int to String is replaceDstMap: Map();
+		each(list: rootOrder, action: local Function(String is rDst){
+			if({ isRoot:get(key: rDst, default: false) }, {
+				local [Int] is cIdxs: callsMap:get(key: rDst, default: []);
+				if({ cIdxs:length() >= 2 }, {
+					range(start: 0, end: cIdxs:length() - 1, worker: local Function(Int is ci){
+						deleteSet:set(key: cIdxs:get(index: ci), value: true);
+					});
+					local Int is lastIdx: cIdxs:get(index: cIdxs:length() - 1);
+					local [String] is rParts: partsMap:get(key: rDst, default: []);
+					replaceMap:set(key: lastIdx, value: rParts);
+					replaceDstMap:set(key: lastIdx, value: rDst);
+					local Int is k: rParts:length();
+					if({ !createdArities:has(key: k) }, {
+						createdArities:set(key: k, value: true);
+						neededArities:push(item: k);
+					});
+				});
+			});
+		});
+
+		if({ deleteSet:length() > 0 || replaceMap:length() > 0 }, {
+			local [IrInst] is newInsts: [];
+			range(start: 0, end: blk:insts:length(), worker: local Function(Int is i2){
+				if({ !deleteSet:get(key: i2, default: false) }, {
+					if({ replaceMap:has(key: i2) }, {
+						local [String] is rParts: replaceMap:get(key: i2, default: []);
+						local String is rDst: replaceDstMap:get(key: i2, default: '');
+						local [IrType] is rTys: [];
+						local [String] is rArgs: [];
+						each(list: rParts, action: local Function(String is rp){
+							rTys:push(item: IrType:Ptr);
+							rArgs:push(item: rp);
+						});
+						newInsts:push(item: IrInst:IrCall(
+							dst: rDst,
+							hasDst: true,
+							retType: IrType:Ptr,
+							callee: '__spec_concat_' . (rParts:length() as String),
+							argTypes: rTys,
+							args: rArgs
+						));
+					}, {
+						newInsts:push(item: blk:insts:get(index: i2));
+					});
+				});
+			});
+			blk:insts: newInsts;
+		});
+	}
+
+	local Function is fuseFunction(IrFunction is fn, Map of String to Boolean is concatFns, Map of Int to Boolean is createdArities, [Int] is neededArities){
+		if({ !:fnHasConcatPair(fn: fn, concatFns: concatFns) }, {
+			return;
+		});
+		local Map of String to Int is uses: :countUses(fn: fn);
+		local Int is bi: 0;
+		while({ bi < fn:blocks:length() }, {
+			local IrBlock is blk: fn:blocks:get(index: bi);
+			if({ :blkHasConcatPair(blk: blk, concatFns: concatFns) }, {
+				:fuseBlock(blk: blk, uses: uses, concatFns: concatFns, createdArities: createdArities, neededArities: neededArities);
+			});
+			bi++;
+		});
+	}
+
 	replace Function is runOnModule(IrModule is mod){
 		local Map of String to Boolean is concatFns: Map:init();
 		local Int is fi: 0;
@@ -318,117 +468,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal && !fn:name:startsWith(prefix: '__spec_concat_') }, {
-				local Map of String to Int is uses: :countUses(fn: fn);
-				local Int is bi: 0;
-				while({ bi < fn:blocks:length() }, {
-					local IrBlock is blk: fn:blocks:get(index: bi);
-					local Map of String to [String] is partsMap: Map();
-					local Map of String to [Int] is callsMap: Map();
-					local Map of String to String is calleeMap: Map();
-					local Map of String to Boolean is isRoot: Map();
-					local [String] is rootOrder: [];
-
-					local Int is ii: 0;
-					while({ ii < blk:insts:length() }, {
-						local Int is curIdx: ii;
-						match(on: blk:insts:get(index: ii), when: [
-							IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
-								if({ hasDst && retType == IrType:Ptr && concatFns:has(key: callee) && args:length() == 2 }, {
-									local String is a0: args:get(index: 0, default: '');
-									local String is a1: args:get(index: 1, default: '');
-									local [String] is parts: [];
-									local [Int] is cIdxs: [];
-
-									local Boolean is fuseLeft: isRoot:get(key: a0, default: false) && uses:get(key: a0, default: 0) == 1 && calleeMap:get(key: a0, default: '') == callee;
-									local Boolean is fuseRight: a1 != a0 && isRoot:get(key: a1, default: false) && uses:get(key: a1, default: 0) == 1 && calleeMap:get(key: a1, default: '') == callee;
-
-									if({ fuseLeft }, {
-										local [String] is lp: partsMap:get(key: a0, default: []);
-										local [Int] is lc: callsMap:get(key: a0, default: []);
-										each(list: lp, action: local Function(String is p){ parts:push(item: p); });
-										range(start: 0, end: lc:length(), worker: local Function(Int is li){ cIdxs:push(item: lc:get(index: li)); });
-										isRoot:set(key: a0, value: false);
-									}, {
-										parts:push(item: a0);
-									});
-
-									if({ fuseRight }, {
-										local [String] is rp: partsMap:get(key: a1, default: []);
-										local [Int] is rc: callsMap:get(key: a1, default: []);
-										each(list: rp, action: local Function(String is p){ parts:push(item: p); });
-										range(start: 0, end: rc:length(), worker: local Function(Int is ri){ cIdxs:push(item: rc:get(index: ri)); });
-										isRoot:set(key: a1, value: false);
-									}, {
-										parts:push(item: a1);
-									});
-
-									cIdxs:push(item: curIdx);
-									partsMap:set(key: dst, value: parts);
-									callsMap:set(key: dst, value: cIdxs);
-									calleeMap:set(key: dst, value: callee);
-									isRoot:set(key: dst, value: true);
-									rootOrder:push(item: dst);
-								});
-							},
-							else: {}
-						]);
-						ii++;
-					});
-
-					local Map of Int to Boolean is deleteSet: Map();
-					local Map of Int to [String] is replaceMap: Map();
-					local Map of Int to String is replaceDstMap: Map();
-					each(list: rootOrder, action: local Function(String is rDst){
-						if({ isRoot:get(key: rDst, default: false) }, {
-							local [Int] is cIdxs: callsMap:get(key: rDst, default: []);
-							if({ cIdxs:length() >= 2 }, {
-								range(start: 0, end: cIdxs:length() - 1, worker: local Function(Int is ci){
-									deleteSet:set(key: cIdxs:get(index: ci), value: true);
-								});
-								local Int is lastIdx: cIdxs:get(index: cIdxs:length() - 1);
-								local [String] is rParts: partsMap:get(key: rDst, default: []);
-								replaceMap:set(key: lastIdx, value: rParts);
-								replaceDstMap:set(key: lastIdx, value: rDst);
-								local Int is k: rParts:length();
-								if({ !createdArities:has(key: k) }, {
-									createdArities:set(key: k, value: true);
-									neededArities:push(item: k);
-								});
-							});
-						});
-					});
-
-					if({ deleteSet:length() > 0 || replaceMap:length() > 0 }, {
-						local [IrInst] is newInsts: [];
-						range(start: 0, end: blk:insts:length(), worker: local Function(Int is i2){
-							if({ !deleteSet:get(key: i2, default: false) }, {
-								if({ replaceMap:has(key: i2) }, {
-									local [String] is rParts: replaceMap:get(key: i2, default: []);
-									local String is rDst: replaceDstMap:get(key: i2, default: '');
-									local [IrType] is rTys: [];
-									local [String] is rArgs: [];
-									each(list: rParts, action: local Function(String is rp){
-										rTys:push(item: IrType:Ptr);
-										rArgs:push(item: rp);
-									});
-									newInsts:push(item: IrInst:IrCall(
-										dst: rDst,
-										hasDst: true,
-										retType: IrType:Ptr,
-										callee: '__spec_concat_' . (rParts:length() as String),
-										argTypes: rTys,
-										args: rArgs
-									));
-								}, {
-									newInsts:push(item: blk:insts:get(index: i2));
-								});
-							});
-						});
-						blk:insts: newInsts;
-					});
-
-					bi++;
-				});
+				:fuseFunction(fn: fn, concatFns: concatFns, createdArities: createdArities, neededArities: neededArities);
 			});
 			fi++;
 		});

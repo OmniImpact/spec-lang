@@ -66,6 +66,173 @@ Class is Driver{
 	local Boolean is entryInitTakesMap: false;
 	local Boolean is entryInitSawAny: false;
 
+	local Int is builtClassCount: 0;
+	local Int is builtMethodCount: 0;
+	local Int is builtLoadMs: 0;
+	local Int is builtCheckMs: 0;
+	local Int is builtIrGenT0: 0;
+	local Boolean is builtUsesAudio: false;
+	local Boolean is builtFailed: false;
+
+	## Runs Stages 1–3a (load, typecheck, entry resolution, IR construction) in
+	## its own frame so the AST (`program`) and `IrBuilder` (and their claim-pool
+	## entries) are reclaimed before optimization and LLVM IR emission begin.
+	local Function of IrModule is loadCheckAndBuildIr(String is inputPath, Array of String is sourceDirs, ThreadScope is scope, Int is threadCount, CompilationReport is report){
+		:builtClassCount: 0;
+		:builtMethodCount: 0;
+		:builtLoadMs: 0;
+		:builtCheckMs: 0;
+		:builtIrGenT0: 0;
+		:builtUsesAudio: false;
+		:builtFailed: false;
+
+		# 1. Multi-file module loading and dependency resolution.
+		local Int is loadT0: Process:clockMs();
+		local Loader is loader: Loader:init();
+		sourceDirs:each(action: local Function(String is d){
+			loader:addSourceDir(dir: d);
+		});
+		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
+		:builtLoadMs: Process:clockMs() - loadT0;
+
+		local Int is classCount: program:classes:length();
+		local Int is methodCount: 0;
+		while([Int is ci: 0], { ci < classCount }, {
+			local ClassInfo is c: program:classes:get(index: ci);
+			if({ c:name == 'Audio' }, {
+				:builtUsesAudio: true;
+			});
+			while([Int is mi: 0], { mi < c:members:length() }, {
+				if({ c:members:get(index: mi):kind == MemberKind:METHOD }, {
+					methodCount: methodCount + 1;
+				});
+				mi++;
+			});
+			ci++;
+		});
+		:builtClassCount: classCount;
+		:builtMethodCount: methodCount;
+		report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
+		if({ loader:getParseErrors():length() > 0 }, {
+			Stderr:line('Compilation errors encountered during loading:');
+			local [String] is loadErrors: loader:getParseErrors();
+			each(list: loadErrors, action: local Function(String is err){
+				Stderr:line(err);
+			});
+			Stderr:line('Compilation aborted due to syntax or load errors.');
+			loader:cleanup();
+			:builtFailed: true;
+			return IrModule:init();
+		});
+		loader:cleanup();
+
+		# 2. Semantic static type checking.
+		local Int is checkT0: Process:clockMs();
+		local TypeChecker is tc: TypeChecker:init();
+		local [TypeError] is typeErrors: tc:checkProgramScoped(program: program, scope: scope, threads: threadCount);
+		:builtCheckMs: Process:clockMs() - checkT0;
+		local Int is errCount: typeErrors:length();
+		tc:cleanup();
+		report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
+		if({ errCount > 0 }, {
+			Stderr:line('Type errors encountered during compilation:');
+			local Int is tei: 0;
+			while({ tei < errCount }, {
+				Stderr:line(typeErrors:get(index: tei):toString());
+				tei++;
+			});
+			Stderr:line('Compilation aborted due to type errors.');
+			:builtFailed: true;
+			return IrModule:init();
+		});
+
+		# 3. Entry class — scoped to the ROOT FILE's classes.
+		if({ classCount == 0 }, {
+			Stderr:line('Error: No class definitions found in source file.');
+			:builtFailed: true;
+			return IrModule:init();
+		});
+		local [ClassInfo] is rootClasses: [];
+		local Int is rci: 0;
+		while({ rci < program:classes:length() }, {
+			local ClassInfo is c: program:classes:get(index: rci);
+			if({ c:sourceFile == inputPath }, {
+				rootClasses:push(item: c);
+			});
+			rci++;
+		});
+		if({ rootClasses:length() == 0 }, {
+			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
+			:builtFailed: true;
+			return IrModule:init();
+		});
+		local String is entryName: '';
+		local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
+		while([Int is eci: 0], { entryName == '' && eci < rootClasses:length() }, {
+			local ClassInfo is c: rootClasses:get(index: eci);
+			while([Int is mi: 0], { entryName == '' && mi < c:members:length() }, {
+				local Member is m: c:members:get(index: mi);
+				if({ m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
+					local Parameter is p: m:params:get(index: 0);
+					if({ p:paramType:name == 'Map' }, {
+						entryName: c:name;
+						entryClassInfo: c;
+					});
+				});
+				mi++;
+			});
+			eci++;
+		});
+		if({ entryName == '' }, {
+			while([Int is eci: 0], { entryName == '' && eci < rootClasses:length() }, {
+				local ClassInfo is c: rootClasses:get(index: eci);
+				if({ c:baseClass != 'Enum' }, {
+					entryName: c:name;
+					entryClassInfo: c;
+				});
+				eci++;
+			});
+		});
+		if({ entryName == '' }, {
+			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
+			:builtFailed: true;
+			return IrModule:init();
+		});
+
+		:entryInitOwner: '';
+		:entryInitParams: 0;
+		:entryInitFirstParam: '';
+		:entryInitOverloadIndex: 0;
+		:entryInitTakesMap: false;
+		:entryInitSawAny: false;
+		local Array of String is latticeVisited: Array();
+		:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
+		if({ :entryInitOwner == '' && :entryInitSawAny }, {
+			Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
+			:builtFailed: true;
+			return IrModule:init();
+		});
+
+		# 4a. LLVM IR construction over the FULL loaded class set.
+		:builtIrGenT0: Process:clockMs();
+		local IrBuilder is irb: IrBuilder:init();
+		irb:entryInitOwner: :entryInitOwner;
+		irb:entryInitOverloadIndex: :entryInitOverloadIndex;
+		irb:entryInitTakesMap: :entryInitTakesMap;
+		local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
+		if({ irb:errors:length() > 0 }, {
+			Stderr:line('Code generation errors encountered during compilation:');
+			while([Int is iei: 0], { iei < irb:errors:length() }, {
+				Stderr:line(irb:errors:get(index: iei):toString());
+				iei++;
+			});
+			Stderr:line('Compilation aborted due to code generation errors.');
+			:builtFailed: true;
+			return IrModule:init();
+		});
+		return irMod;
+	}
+
 	replace Function is init(Map of String to String is args){
 		local String is inputPath: args:getString(key: 'i', default: '');
 		if({ inputPath == '' }, {
@@ -149,152 +316,19 @@ Class is Driver{
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			Process:monitorStart(scope: scope);
 
-			# 1. Multi-file module loading and dependency resolution.
-			local Int is loadT0: Process:clockMs();
-			local Loader is loader: Loader:init();
-			sourceDirs:each(action: local Function(String is d){
-				loader:addSourceDir(dir: d);
+			local IrModule is irMod: :loadCheckAndBuildIr(inputPath: inputPath, sourceDirs: sourceDirs, scope: scope, threadCount: threadCount, report: report);
+			if({ :builtFailed }, {
+				Process:monitorStop();
+				exitCode: 1;
+				return;
 			});
-			local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
-			loadMs: Process:clockMs() - loadT0;
+			loadMs: :builtLoadMs;
+			checkMs: :builtCheckMs;
+			local Int is classCount: :builtClassCount;
+			local Int is methodCount: :builtMethodCount;
+			local Int is llvmGenT0: :builtIrGenT0;
+			local Boolean is usesAudio: :builtUsesAudio;
 
-			local Int is classCount: program:classes:length();
-			local Int is methodCount: 0;
-			while([Int is ci: 0], { ci < classCount }, {
-				local ClassInfo is c: program:classes:get(index: ci);
-				while([Int is mi: 0], { mi < c:members:length() }, {
-					if({ c:members:get(index: mi):kind == MemberKind:METHOD }, {
-						methodCount: methodCount + 1;
-					});
-					mi++;
-				});
-				ci++;
-			});
-			report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
-			if({ loader:getParseErrors():length() > 0 }, {
-				Stderr:line('Compilation errors encountered during loading:');
-				local [String] is loadErrors: loader:getParseErrors();
-				each(list: loadErrors, action: local Function(String is err){
-					Stderr:line(err);
-				});
-				Stderr:line('Compilation aborted due to syntax or load errors.');
-				loader:cleanup();
-				Process:monitorStop();
-				exitCode: 1;
-				return;
-			});
-			loader:cleanup();
-
-			# 2. Semantic static type checking.
-			local Int is checkT0: Process:clockMs();
-			local TypeChecker is tc: TypeChecker:init();
-			local [TypeError] is typeErrors: tc:checkProgramScoped(program: program, scope: scope, threads: threadCount);
-			checkMs: Process:clockMs() - checkT0;
-			local Int is errCount: typeErrors:length();
-			tc:cleanup();
-			report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
-			if({ errCount > 0 }, {
-				Stderr:line('Type errors encountered during compilation:');
-				local Int is tei: 0;
-				while({ tei < errCount }, {
-					Stderr:line(typeErrors:get(index: tei):toString());
-					tei++;
-				});
-				Stderr:line('Compilation aborted due to type errors.');
-				Process:monitorStop();
-				exitCode: 1;
-				return;
-			});
-
-			# 3. Entry class — scoped to the ROOT FILE's classes.
-			if({ classCount == 0 }, {
-				Stderr:line('Error: No class definitions found in source file.');
-				Process:monitorStop();
-				exitCode: 1;
-				return;
-			});
-			local [ClassInfo] is rootClasses: [];
-			local Int is rci: 0;
-			while({ rci < program:classes:length() }, {
-				local ClassInfo is c: program:classes:get(index: rci);
-				if({ c:sourceFile == inputPath }, {
-					rootClasses:push(item: c);
-				});
-				rci++;
-			});
-			if({ rootClasses:length() == 0 }, {
-				Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
-				Process:monitorStop();
-				exitCode: 1;
-				return;
-			});
-			local String is entryName: '';
-			local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
-			while([Int is eci: 0], { entryName == '' && eci < rootClasses:length() }, {
-				local ClassInfo is c: rootClasses:get(index: eci);
-				while([Int is mi: 0], { entryName == '' && mi < c:members:length() }, {
-					local Member is m: c:members:get(index: mi);
-					if({ m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
-						local Parameter is p: m:params:get(index: 0);
-						if({ p:paramType:name == 'Map' }, {
-							entryName: c:name;
-							entryClassInfo: c;
-						});
-					});
-					mi++;
-				});
-				eci++;
-			});
-			if({ entryName == '' }, {
-				while([Int is eci: 0], { entryName == '' && eci < rootClasses:length() }, {
-					local ClassInfo is c: rootClasses:get(index: eci);
-					if({ c:baseClass != 'Enum' }, {
-						entryName: c:name;
-						entryClassInfo: c;
-					});
-					eci++;
-				});
-			});
-			if({ entryName == '' }, {
-				Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
-				Process:monitorStop();
-				exitCode: 1;
-				return;
-			});
-
-			:entryInitOwner: '';
-			:entryInitParams: 0;
-			:entryInitFirstParam: '';
-			:entryInitOverloadIndex: 0;
-			:entryInitTakesMap: false;
-			:entryInitSawAny: false;
-			local Array of String is latticeVisited: Array();
-			:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
-			if({ :entryInitOwner == '' && :entryInitSawAny }, {
-				Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
-				Process:monitorStop();
-				exitCode: 1;
-				return;
-			});
-
-			# 4. LLVM IR code generation over the FULL loaded class set.
-			local Int is llvmGenT0: Process:clockMs();
-			local IrBuilder is irb: IrBuilder:init();
-			irb:entryInitOwner: :entryInitOwner;
-			irb:entryInitOverloadIndex: :entryInitOverloadIndex;
-			irb:entryInitTakesMap: :entryInitTakesMap;
-			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
-			if({ irb:errors:length() > 0 }, {
-				Stderr:line('Code generation errors encountered during compilation:');
-				while([Int is iei: 0], { iei < irb:errors:length() }, {
-					Stderr:line(irb:errors:get(index: iei):toString());
-					iei++;
-				});
-				Stderr:line('Compilation aborted due to code generation errors.');
-				Process:monitorStop();
-				exitCode: 1;
-				return;
-			});
 			if({ !args:has(key: 'no-opt') }, {
 				local OptimizerPipeline is optPipe: OptimizerPipeline:init();
 				optPipe:run(mod: irMod);
@@ -358,14 +392,6 @@ Class is Driver{
 			});
 
 			if({ Process:osName() == 'linux' }, {
-				local Boolean is usesAudio: false;
-				local Int is aci: 0;
-				while({ !usesAudio && aci < program:classes:length() }, {
-					if({ program:classes:get(index: aci):name == 'Audio' }, {
-						usesAudio: true;
-					});
-					aci++;
-				});
 				if({ usesAudio && !fileExists(path: '/usr/include/alsa/asoundlib.h') }, {
 					Stderr:line('Notice: Program uses base:audio. If ALSA development headers are missing, please install:\n  Debian/Ubuntu: sudo apt-get install libasound2-dev\n  Fedora/RHEL:   sudo dnf install alsa-lib-devel');
 				});
