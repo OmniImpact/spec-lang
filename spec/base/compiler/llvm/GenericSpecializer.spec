@@ -119,7 +119,7 @@ Class is GenericSpecializer{
 	## it. A bare object derived of Any is valid, so `Map of String
 	## to Any` instantiates exactly as any typed argument does.
 	local Function of Boolean is isConcreteType(Type is t, Map of String to Boolean is tplParams){
-		if({ t:name == '' || t:name == 'Void' || tplParams:has(key: t:name) }, {
+		if({ t:name == '' || t:name == 'Void' || tplParams:has(key: t:name) || (!:seenClassNames:has(key: t:name) && !:templates:has(key: t:name)) }, {
 			return false;
 		});
 		local Int is i: 0;
@@ -192,6 +192,10 @@ Class is GenericSpecializer{
 		if({ :templates:has(key: bName) }, {
 			local ClassInfo is tpl: :templates:get(key: bName, default: ClassInfo:init(name: '', baseClass: '', members: Array()));
 			if({ newParams:length() == tpl:typeParams:length() && newParams:length() > 0 }, {
+				if({ bName == 'List' && selfTemplateName == 'Array' }, {
+					:bareTemplateUsed:set(key: 'List', value: true);
+					return Type:init(name: 'List');
+				});
 				if({ :areAllConcreteTypes(types: newParams, tplParams: tplParams) }, {
 					local String is mangled: :ensureSpecialized(baseName: bName, typeArgs: newParams);
 					return Type:init(name: mangled);
