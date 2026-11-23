@@ -28,7 +28,7 @@ Class of Frame is EditorFrame{
 		screenRefs: Array([screen]);
 	}
 
-	local Function is openFileManager(String is mode, Boolean is quitAfterSave){
+	local Function is openFileManager(String is mode){
 		if({ screenRefs:length() == 0 }, { return; });
 		local TheoScreen is scr: screenRefs:get(index: 0);
 		local String is initName: if({ mode == 'saveAs' }, { vm:filePath }, { '' });
@@ -37,21 +37,23 @@ Class of Frame is EditorFrame{
 			initialDir: '.',
 			initialName: initName,
 			onConfirm: local Function(String is chosenPath){
-				if({ mode == 'saveAs' }, {
-					local Boolean is saved: vm:saveTo(path: chosenPath);
-					scr:pop();
-					if({ saved && quitAfterSave }, {
+				local Boolean is finished: false;
+				vm:completeFileDialog(
+					mode: mode,
+					path: chosenPath,
+					onReadyToQuit: {
+						finished: true;
+						scr:pop();
 						onQuit();
-					}, {
-						editorFocus:requestFocus();
-					});
-				}, {
-					vm:openFile(path: chosenPath);
+					}
+				);
+				if({ !finished }, {
 					scr:pop();
 					editorFocus:requestFocus();
 				});
 			},
 			onCancel: {
+				vm:clearMessage();
 				scr:pop();
 				editorFocus:requestFocus();
 			}
@@ -59,35 +61,41 @@ Class of Frame is EditorFrame{
 		scr:push(frame: fm);
 	}
 
+	local Function is clearAllFocus(){
+		editorFocus:focused: false;
+		saveFocus:focused: false;
+		saveAsFocus:focused: false;
+		openFocus:focused: false;
+		exitFocus:focused: false;
+		msgDiscardFocus:focused: false;
+		msgCancelFocus:focused: false;
+	}
+
 	local Function is triggerSave(){
-		if({ vm:filePath == '' }, {
-			openFileManager(mode: 'saveAs', quitAfterSave: false);
-			return;
+		local Boolean is openedDialog: false;
+		vm:requestSave(onNeedSaveAs: {
+			openedDialog: true;
+			openFileManager(mode: 'saveAs');
 		});
-		vm:save();
-		editorFocus:requestFocus();
+		if({ !openedDialog }, {
+			editorFocus:requestFocus();
+		});
 	}
 
 	local Function is triggerQuit(){
-		if({ vm:dirty }, {
-			editorFocus:focused: false;
-			saveFocus:focused: false;
-			saveAsFocus:focused: false;
-			openFocus:focused: false;
-			exitFocus:focused: false;
-			msgDiscardFocus:focused: false;
-			msgCancelFocus:focused: false;
-			vm:showUnsavedPrompt();
-			rebuild();
-			msgSaveFocus:requestFocus();
-			return;
-		});
-		onQuit();
+		vm:requestQuit(
+			onNeedPrompt: {
+				clearAllFocus();
+				rebuild();
+				msgSaveFocus:requestFocus();
+			},
+			onReadyToQuit: onQuit
+		);
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ ((event:ctrl || event:alt) && event:key == 'm') || event:isEsc() }, {
-			if({ vm:messageMode != 'none' }, {
+			if({ vm:hasMessage() }, {
 				vm:clearMessage();
 				rebuild();
 				editorFocus:requestFocus();
@@ -120,7 +128,7 @@ Class of Frame is EditorFrame{
 				)
 			)
 		]);
-		if({ vm:messageMode != 'none' }, {
+		if({ vm:hasMessage() }, {
 			panes:add(item: Grid:fixed(
 				size: 3,
 				child: MessagePanel(
@@ -129,19 +137,24 @@ Class of Frame is EditorFrame{
 					discardFocus: msgDiscardFocus,
 					cancelFocus: msgCancelFocus,
 					onSave: {
-						vm:clearMessage();
-						rebuild();
-						if({ vm:filePath == '' }, {
-							openFileManager(mode: 'saveAs', quitAfterSave: true);
-						}, {
-							if({ vm:save() }, {
+						local Boolean is handled: false;
+						vm:confirmPromptSave(
+							onNeedSaveAs: {
+								handled: true;
+								rebuild();
+								openFileManager(mode: 'saveAs');
+							},
+							onReadyToQuit: {
+								handled: true;
+								rebuild();
 								onQuit();
-							});
+							}
+						);
+						if({ !handled }, {
+							rebuild();
 						});
 					},
-					onDiscard: {
-						onQuit();
-					},
+					onDiscard: onQuit,
 					onCancel: {
 						vm:clearMessage();
 						rebuild();
@@ -158,8 +171,8 @@ Class of Frame is EditorFrame{
 				openFocus: openFocus,
 				exitFocus: exitFocus,
 				onSave: { triggerSave(); },
-				onSaveAs: { openFileManager(mode: 'saveAs', quitAfterSave: false); },
-				onOpen: { openFileManager(mode: 'open', quitAfterSave: false); },
+				onSaveAs: { openFileManager(mode: 'saveAs'); },
+				onOpen: { openFileManager(mode: 'open'); },
 				onQuit: { triggerQuit(); },
 				onReturnToEditor: { editorFocus:requestFocus(); }
 			)

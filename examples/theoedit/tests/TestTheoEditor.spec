@@ -6,7 +6,8 @@ Class of SpecUnitTest is TestTheoEditor{
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, Frame, FocusTarget]],
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
-		['theoedit', 'vm', EditorViewModel],
+		['theoedit', 'model', [EditorDocument, DirectoryBrowser]],
+		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [EditorFrame, FileManagerFrame]]
 	];
 
@@ -260,14 +261,48 @@ Class of SpecUnitTest is TestTheoEditor{
 			onConfirm: local Function(String is _p){},
 			onCancel: {}
 		);
-		Assert:areEqualInt(6, fm:dirEntries:length());
-		Assert:areEqualString('..', fm:dirEntries:get(index: 0));
-		Assert:areEqualString('AlphaDir/', fm:dirEntries:get(index: 1));
-		Assert:areEqualString('zebraDir/', fm:dirEntries:get(index: 2));
-		Assert:areEqualString('Alpha.txt', fm:dirEntries:get(index: 3));
-		Assert:areEqualString('beta.txt', fm:dirEntries:get(index: 4));
-		Assert:areEqualString('zeta.txt', fm:dirEntries:get(index: 5));
+		Assert:areEqualInt(6, fm:vm:entries:length());
+		Assert:areEqualString('..', fm:vm:entries:get(index: 0));
+		Assert:areEqualString('AlphaDir/', fm:vm:entries:get(index: 1));
+		Assert:areEqualString('zebraDir/', fm:vm:entries:get(index: 2));
+		Assert:areEqualString('Alpha.txt', fm:vm:entries:get(index: 3));
+		Assert:areEqualString('beta.txt', fm:vm:entries:get(index: 4));
+		Assert:areEqualString('zeta.txt', fm:vm:entries:get(index: 5));
 
 		Process:execute(command: 'rm', args: Array(['-rf', rootDir]));
+	}
+
+	Function is testPureModelsAndViewModels(){
+		local String is tmpPath: "/tmp/theo_doc_model_{{Process:getPid()}}.txt";
+		fileWrite(path: tmpPath, content: 'initial');
+
+		# Pure EditorDocument model
+		local EditorDocument is doc: EditorDocument(filePath: tmpPath);
+		Assert:areEqualString('initial', doc:text);
+		Assert:isFalse(doc:dirty);
+		Assert:areEqualString(tmpPath, doc:displayTitle());
+		doc:updateText(nextText: 'updated');
+		Assert:isTrue(doc:dirty);
+		Assert:areEqualString("{{tmpPath}} *", doc:displayTitle());
+		Assert:isTrue(doc:save());
+		Assert:isFalse(doc:dirty);
+		Assert:areEqualString('updated', fileRead(path: tmpPath, default: ''));
+		fileRemove(path: tmpPath);
+
+		# Pure DirectoryBrowser model + FileManagerViewModel
+		local DirectoryBrowser is browser: DirectoryBrowser();
+		Assert:areEqualString('/a/b', browser:parentDir(dir: '/a/b/c'));
+		Assert:areEqualString('/', browser:parentDir(dir: '/a'));
+		Assert:areEqualString('/a/b/sub', browser:childDir(dir: '/a/b', entry: 'sub/'));
+		Assert:areEqualString('/a/b/file.spec', browser:resolveTargetPath(dir: '/a/b', typedName: ' file.spec '));
+		Assert:areEqualString('/abs/file.spec', browser:resolveTargetPath(dir: '/a/b', typedName: '/abs/file.spec'));
+		Assert:isTrue(browser:isDirectoryEntry(entry: '..'));
+		Assert:isTrue(browser:isDirectoryEntry(entry: 'src/'));
+		Assert:isFalse(browser:isDirectoryEntry(entry: 'Main.spec'));
+
+		local FileManagerViewModel is fmVm: FileManagerViewModel(mode: 'saveAs', initialDir: '/tmp', initialName: 'out.txt');
+		Assert:isTrue(fmVm:isSaveAs());
+		Assert:areEqualString(' Save ', fmVm:actionLabel());
+		Assert:areEqualString('s', fmVm:actionKey());
 	}
 }
