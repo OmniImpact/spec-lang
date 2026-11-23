@@ -300,9 +300,12 @@ Class of SpecUnitTest is TestTheoEditor{
 		Assert:isTrue(browser:isDirectoryEntry(entry: 'src/'));
 		Assert:isFalse(browser:isDirectoryEntry(entry: 'Main.spec'));
 
-		local FileManagerViewModel is fmVm: FileManagerViewModel(mode: 'saveAs', initialDir: '/tmp', initialName: 'out.txt');
+		local String is fmDir: "/tmp/theo_fm_vm_{{Process:getPid()}}";
+		Process:execute(command: 'mkdir', args: Array(['-p', fmDir]));
+		local FileManagerViewModel is fmVm: FileManagerViewModel(mode: 'saveAs', initialDir: fmDir, initialName: 'out.txt');
 		Assert:isTrue(fmVm:isSaveAs());
 		Assert:areEqualString(' Save ', fmVm:actionLabel());
 		Assert:areEqualString('s', fmVm:actionKey());
+		Process:execute(command: 'rm', args: Array(['-rf', fmDir]));
 	}
 }

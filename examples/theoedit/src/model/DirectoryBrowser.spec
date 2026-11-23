@@ -21,28 +21,74 @@ Class is DirectoryBrowser{
 		return entry == '..' || entry:endsWith(suffix: '/');
 	}
 
+	local Function of Boolean is entryLess(String is a, String is aLow, String is b, String is bLow){
+		if({ aLow != bLow }, { return aLow < bLow; });
+		return a < b;
+	}
+
+	local Function is mergeRange(Array of String is items, Array of String is lows, Array of String is tmpItems, Array of String is tmpLows, Int is left, Int is mid, Int is right){
+		local Int is i: left;
+		local Int is j: mid;
+		local Int is k: left;
+		while({ i < mid && j < right }, {
+			local String is ai: items:get(index: i);
+			local String is ali: lows:get(index: i);
+			local String is bj: items:get(index: j);
+			local String is blj: lows:get(index: j);
+			if({ entryLess(a: ai, aLow: ali, b: bj, bLow: blj) }, {
+				tmpItems:set(index: k, item: ai);
+				tmpLows:set(index: k, item: ali);
+				i: i + 1;
+			}, {
+				tmpItems:set(index: k, item: bj);
+				tmpLows:set(index: k, item: blj);
+				j: j + 1;
+			});
+			k: k + 1;
+		});
+		while({ i < mid }, {
+			tmpItems:set(index: k, item: items:get(index: i));
+			tmpLows:set(index: k, item: lows:get(index: i));
+			i: i + 1;
+			k: k + 1;
+		});
+		while({ j < right }, {
+			tmpItems:set(index: k, item: items:get(index: j));
+			tmpLows:set(index: k, item: lows:get(index: j));
+			j: j + 1;
+			k: k + 1;
+		});
+		local Int is p: left;
+		while({ p < right }, {
+			items:set(index: p, item: tmpItems:get(index: p));
+			lows:set(index: p, item: tmpLows:get(index: p));
+			p: p + 1;
+		});
+	}
+
+	local Function is mergeSortRange(Array of String is items, Array of String is lows, Array of String is tmpItems, Array of String is tmpLows, Int is left, Int is right){
+		if({ right - left <= 1 }, { return; });
+		local Int is mid: left + (right - left) / 2;
+		mergeSortRange(items: items, lows: lows, tmpItems: tmpItems, tmpLows: tmpLows, left: left, right: mid);
+		mergeSortRange(items: items, lows: lows, tmpItems: tmpItems, tmpLows: tmpLows, left: mid, right: right);
+		mergeRange(items: items, lows: lows, tmpItems: tmpItems, tmpLows: tmpLows, left: left, mid: mid, right: right);
+	}
+
 	Function is sortAlpha(Array of String is items){
 		local Int is n: items:length();
-		local Int is i: 1;
+		if({ n <= 1 }, { return; });
+		local Array of String is lows: Array();
+		local Array of String is tmpItems: Array();
+		local Array of String is tmpLows: Array();
+		local Int is i: 0;
 		while({ i < n }, {
-			local String is key: items:get(index: i);
-			local String is keyLow: key:toLower();
-			local Int is j: i - 1;
-			local Boolean is done: false;
-			while({ !done && j >= 0 }, {
-				local String is cur: items:get(index: j);
-				local String is curLow: cur:toLower();
-				local Boolean is gt: curLow > keyLow || (curLow == keyLow && cur > key);
-				if({ gt }, {
-					items:set(index: j + 1, item: cur);
-					j: j - 1;
-				}, {
-					done: true;
-				});
-			});
-			items:set(index: j + 1, item: key);
+			local String is s: items:get(index: i);
+			lows:add(item: s:toLower());
+			tmpItems:add(item: s);
+			tmpLows:add(item: '');
 			i: i + 1;
 		});
+		mergeSortRange(items: items, lows: lows, tmpItems: tmpItems, tmpLows: tmpLows, left: 0, right: n);
 	}
 
 	Function of Array of String is listEntries(String is dir){
