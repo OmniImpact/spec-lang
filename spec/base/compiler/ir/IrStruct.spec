@@ -16,7 +16,7 @@ Class is IrStruct{
 	String is sourceFileBase: '';
 	Array of String is fieldNames: Array();
 	[IrType] is fieldTypes: [];
-	Array of Boolean is fieldIsArc: Array();
+	[Boolean] is fieldIsArc: [];
 	Array of String is vtableMethodNames: Array();
 	Array of String is vtableFns: Array();
 	Array of String is baseNames: Array();
@@ -24,12 +24,12 @@ Class is IrStruct{
 	String is destroyFn: 'null';
 	Array of String is metaMethodNames: Array();
 	Array of String is metaMethodFns: Array();
-	Array of Int is metaMethodFlags: Array();
-	Array of Int is metaMethodLines: Array();
+	[Int] is metaMethodFlags: [];
+	[Int] is metaMethodLines: [];
 	Array of String is metaFieldNames: Array();
 	Array of String is metaFieldTypes: Array();
-	Array of Int is metaFieldIndices: Array();
-	Array of Int is metaFieldFlags: Array();
+	[Int] is metaFieldIndices: [];
+	[Int] is metaFieldFlags: [];
 	Array of String is heldNames: Array();
 	Array of String is heldGetters: Array();
 
@@ -45,7 +45,7 @@ Class is IrStruct{
 		:fieldNames:add(item: name);
 		:fieldTypes:push(item: ty);
 		local Boolean is isPtr: ty == IrType:Ptr;
-		:fieldIsArc:add(item: isPtr);
+		:fieldIsArc:push(item: isPtr);
 		return idx;
 	}
 
@@ -53,7 +53,7 @@ Class is IrStruct{
 		local Int is idx: :fieldNames:length();
 		:fieldNames:add(item: name);
 		:fieldTypes:push(item: ty);
-		:fieldIsArc:add(item: isArc);
+		:fieldIsArc:push(item: isArc);
 		return idx;
 	}
 

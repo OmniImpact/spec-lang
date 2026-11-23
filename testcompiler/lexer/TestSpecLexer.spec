@@ -27,21 +27,21 @@ local String is r: "raw \\n stays \{\{x\}\}";
 local String is h: ' . "'''\nheredoc\n'''" . ';';
 	}
 
-	Function of Array of Token is scanFixture(){
+	Function of [Token] is scanFixture(){
 		local Lexer is lx: Lexer:init(source: :fixtureSource());
 		return lx:tokenize();
 	}
 
 	Function is testCleanScanAndCount(){
 		local Lexer is lx: Lexer:init(source: :fixtureSource());
-		local Array of Token is toks: lx:tokenize();
+		local [Token] is toks: lx:tokenize();
 		Assert:isTrue(!lx:hasErrors());
 		Assert:areEqualInt(31, toks:length());
 	}
 
 	# Base-prefixed numbers normalize to decimal; separators strip.
 	Function is testNumberNormalization(){
-		local Array of Token is toks: :scanFixture();
+		local [Token] is toks: :scanFixture();
 		local Token is hex: toks:get(index: 5);
 		local Token is sep: toks:get(index: 7);
 		Assert:areEqualString('255', hex:getValue());
@@ -51,7 +51,7 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 
 	# Families: single-quote minimal escape, fancy raw content, raw heredoc.
 	Function is testStringFamilies(){
-		local Array of Token is toks: :scanFixture();
+		local [Token] is toks: :scanFixture();
 		local Token is sq: toks:get(index: 14);
 		local Token is fq: toks:get(index: 21);
 		local Token is hd: toks:get(index: 28);
@@ -65,14 +65,14 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 
 	# Reserved words carry their Keyword classification for enum dispatch.
 	Function is testKeywordClassification(){
-		local Array of Token is toks: :scanFixture();
+		local [Token] is toks: :scanFixture();
 		local Token is kwTok: toks:get(index: 0);
 		Assert:isTrue(kwTok:getKeyword() == Keyword:LOCAL);
 	}
 
 	# Line/col tracking across the comment line and the multi-line heredoc.
 	Function is testLineTracking(){
-		local Array of Token is toks: :scanFixture();
+		local [Token] is toks: :scanFixture();
 		local Token is afterComment: toks:get(index: 9);
 		local Token is end: toks:get(index: 30);
 		Assert:areEqualInt(3, afterComment:getLine());
@@ -86,7 +86,7 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 	# so they always match the real enclosing class/method.
 	Function is testErrorProvenance(){
 		local Lexer is bad: Lexer:init(source: "``` unterminated");
-		local Array of Token is dead: bad:tokenize();
+		local [Token] is dead: bad:tokenize();
 		local Error is first: bad:getErrors():get(index: 0);
 		local String is rendered: first:toString();
 		Assert:isTrue(bad:hasErrors());

@@ -44,7 +44,7 @@ Class is RuntimePrelude{
 	Function of String is emitBody(){
 		local Str is dir: :resolveRuntimeDir();
 		if({ dir == '' }, { return ''; });
-		local Array of Str is parts: Array([
+		local [Str] is parts: [
 			'pal_core.c',
 			'pal_dir.c',
 			'pal_file.c',
@@ -53,7 +53,7 @@ Class is RuntimePrelude{
 			'pal_console.c',
 			'pal_socket.c',
 			'pal_audio.c'
-		]);
+		];
 		local Array of String is chunks: Array();
 		local Int is i: 0;
 		while({ i < parts:length() }, {

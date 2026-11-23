@@ -57,13 +57,13 @@ Class of SpecUnitTest is TestLlvmSmoke{
 	Function is testFrontendParsesAndTypeChecks(){
 		local String is src: "Class is Sample{\n\tFunction of Int is add(Int is a, Int is b){\n\t\treturn a + b;\n\t}\n}\n";
 		local Lexer is lex: Lexer:init(source: src);
-		local Array of Token is tokens: lex:tokenize();
+		local [Token] is tokens: lex:tokenize();
 		local Parser is parser: Parser:init(tokens: tokens);
 		local ProgramNode is prog: parser:parseProgram();
 		Assert:areEqualInt(0, parser:errors:length());
 
 		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is errs: tc:checkProgram(program: prog);
+		local [TypeError] is errs: tc:checkProgram(program: prog);
 		Assert:areEqualInt(0, errs:length());
 	}
 }

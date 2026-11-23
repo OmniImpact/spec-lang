@@ -103,8 +103,8 @@ Class is Lexer{
 	## cursor position.
 	##
 	## @return: The token stream.
-	Function of Array of Token is tokenize(){
-		local Array of Token is tokens: Array();
+	Function of [Token] is tokenize(){
+		local [Token] is tokens: [];
 		while({ :pos < :length }, {
 			:skipWhitespaceAndComments();
 			if({ :pos < :length }, {
@@ -112,33 +112,33 @@ Class is Lexer{
 				if({ ch == '"' || ch == '\'' }, {
 					local String is triple: :source:substring(start: :pos, end: :pos + 3);
 					if({ triple == "'''" }, {
-						tokens:add(item: :readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
+						tokens:push(item: :readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
 					}, {
-						tokens:add(item: :readString(quote: ch));
+						tokens:push(item: :readString(quote: ch));
 					});
 				}, {
 					if({ ch == '`' }, {
 						local String is triple: :source:substring(start: :pos, end: :pos + 3);
 						if({ triple == "```" }, {
-							tokens:add(item: :readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
+							tokens:push(item: :readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
 						}, {
-							tokens:add(item: :readSymbol());
+							tokens:push(item: :readSymbol());
 						});
 					}, {
 						if({ ch:isDigit() }, {
-							tokens:add(item: :readNumber());
+							tokens:push(item: :readNumber());
 						}, {
 							if({ :isIdentifierStart(ch: ch) }, {
-								tokens:add(item: :readIdentifierOrKeyword());
+								tokens:push(item: :readIdentifierOrKeyword());
 							}, {
-								tokens:add(item: :readSymbol());
+								tokens:push(item: :readSymbol());
 							});
 						});
 					});
 				});
 			});
 		});
-		tokens:add(item: Token:init(kind: TokenKind:EOF, value: '', line: :line, col: :col));
+		tokens:push(item: Token:init(kind: TokenKind:EOF, value: '', line: :line, col: :col));
 		return tokens;
 	}
 

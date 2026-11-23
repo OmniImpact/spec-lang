@@ -44,7 +44,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:areEqualInt(0, parser:errors:length());
 
 		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is errs: tc:checkProgram(program: prog);
+		local [TypeError] is errs: tc:checkProgram(program: prog);
 		Assert:areEqualInt(0, errs:length());
 
 		local IrBuilder is builder: IrBuilder:init();

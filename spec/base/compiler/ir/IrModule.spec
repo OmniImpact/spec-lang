@@ -15,7 +15,7 @@ Class is IrModule{
 	];
 
 	[IrStruct] is structs: [];
-	Array of IrFunction is functions: Array();
+	[IrFunction] is functions: [];
 	Array of String is stringLiterals: Array();
 	Map of String to Int is stringIds: Map:init();
 	Array of String is globalNames: Array();
@@ -47,7 +47,7 @@ Class is IrModule{
 	}
 
 	Function is addFunction(IrFunction is fn){
-		:functions:add(item: fn);
+		:functions:push(item: fn);
 	}
 
 	Function of IrStruct is findStruct(String is name){

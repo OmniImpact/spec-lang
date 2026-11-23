@@ -29,7 +29,7 @@ Class of SpecUnitTest is TestSpecParser{
 	## @return: The parse errors rendered, empty when clean.
 	Function of Array of String is parseOf(String is src){
 		local Lexer is lx: Lexer:init(source: src);
-		local Array of Token is toks: lx:tokenize();
+		local [Token] is toks: lx:tokenize();
 		local Parser is p: Parser:init(tokens: toks);
 		local ProgramNode is prog: p:parseProgram();
 		local Array of String is msgs: Array();

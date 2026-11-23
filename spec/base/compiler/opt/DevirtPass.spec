@@ -359,7 +359,7 @@ Class of SpecOptimizer is DevirtPass{
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
 			local [IrInst] is newInsts: [];
-			local Array of Int is newLines: Array();
+			local [Int] is newLines: [];
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
@@ -382,7 +382,7 @@ Class of SpecOptimizer is DevirtPass{
 				]);
 				if({ !drop }, {
 					newInsts:push(item: inst);
-					newLines:add(item: blk:instLines:get(index: ii));
+					newLines:push(item: blk:instLines:get(index: ii));
 				});
 				ii++;
 			});
@@ -419,7 +419,7 @@ Class of SpecOptimizer is DevirtPass{
 			while({ bi < fn:blocks:length() }, {
 				local IrBlock is blk: fn:blocks:get(index: bi);
 				local [IrInst] is newInsts: [];
-				local Array of Int is newLines: Array();
+				local [Int] is newLines: [];
 				local Int is ii: 0;
 				while({ ii < blk:insts:length() }, {
 					local IrInst is inst: blk:insts:get(index: ii);
@@ -439,7 +439,7 @@ Class of SpecOptimizer is DevirtPass{
 						changed: true;
 					}, {
 						newInsts:push(item: inst);
-						newLines:add(item: blk:instLines:get(index: ii));
+						newLines:push(item: blk:instLines:get(index: ii));
 					});
 					ii++;
 				});

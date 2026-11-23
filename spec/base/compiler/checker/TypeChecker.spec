@@ -161,10 +161,10 @@ Class is TypeChecker{
 	local Map of String to Boolean is currentMethodTypeParams: Map:init();
 
 	## Accumulated type errors.
-	Array of TypeError is errors: Array();
+	[TypeError] is errors: [];
 
 	## Per-class error slices populated by parallel workers for deterministic merge.
-	Map of Int to Array of TypeError is workerClassErrors: Map:init();
+	Map of Int to [TypeError] is workerClassErrors: Map:init();
 
 	## All class definitions in the program (nested included).
 	local Array of ClassInfo is programClasses: Array();
@@ -203,7 +203,7 @@ Class is TypeChecker{
 		local String is fullMsg: if({ :currentSourceFile != '' }, { '[' . :currentSourceFile . '] ' . msg }, { msg });
 		local Error is e: Error:init(message: fullMsg, location: SourceLocation:init(file: :currentSourceFile, line: line, col: col, length: length));
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: line, col: col);
-		:errors:add(item: TypeError:init(line: line, message: fullMsg, col: col, length: length, file: :currentSourceFile));
+		:errors:push(item: TypeError:init(line: line, message: fullMsg, col: col, length: length, file: :currentSourceFile));
 	}
 
 	## True when the name is one of the two void spellings.
@@ -6904,7 +6904,7 @@ Class is TypeChecker{
 	}
 
 	local Function is runPhase1(ProgramNode is program){
-		:errors: Array();
+		:errors: [];
 		local Array of ClassInfo is flattened: Array();
 		program:classes:each(action: local Function(ClassInfo is c){
 			:collectClasses(c: c, acc: flattened);
@@ -7013,7 +7013,7 @@ Class is TypeChecker{
 		});
 	}
 
-	Function of Array of TypeError is checkProgram(ProgramNode is program){
+	Function of [TypeError] is checkProgram(ProgramNode is program){
 		:runPhase1(program: program);
 
 		# Pass 2: Full expression type inference & AST annotation
@@ -7028,7 +7028,7 @@ Class is TypeChecker{
 	## Type-checks [program] with Pass 2 (per-class body inference & annotation)
 	## parallelized across [threads] workers inside [scope]. Errors and generic
 	## method grounding are merged in deterministic class order.
-	Function of Array of TypeError is checkProgramScoped(ProgramNode is program, ThreadScope is scope, Int is threads: 1){
+	Function of [TypeError] is checkProgramScoped(ProgramNode is program, ThreadScope is scope, Int is threads: 1){
 		local Int is nCls: program:classes:length();
 		if({ threads <= 1 || nCls <= 1 }, {
 			return :checkProgram(program: program);
@@ -7055,10 +7055,10 @@ Class is TypeChecker{
 		local Int is nWorkers: if({ threads < nCls }, { threads }, { nCls });
 		# LPT weight-balanced partitioning by member count so large classes
 		# (e.g. TypeChecker, IrBuilder) land on distinct workers.
-		local Array of Int is sortedIdx: Array();
+		local [Int] is sortedIdx: [];
 		local Int is idx0: 0;
 		while({ idx0 < nCls }, {
-			sortedIdx:add(item: idx0);
+			sortedIdx:push(item: idx0);
 			idx0++;
 		});
 		local Int is si: 1;
@@ -7074,12 +7074,13 @@ Class is TypeChecker{
 			si++;
 		});
 
-		local Array of Array of Int is buckets: Array();
-		local Array of Int is bucketWeights: Array();
+		local [[Int]] is buckets: [];
+		local [Int] is bucketWeights: [];
 		local Int is bw: 0;
 		while({ bw < nWorkers }, {
-			buckets:add(item: Array());
-			bucketWeights:add(item: 0);
+			local [Int] is emptyBucket: [];
+			buckets:push(item: emptyBucket);
+			bucketWeights:push(item: 0);
 			bw++;
 		});
 		local Int is pi: 0;
@@ -7097,7 +7098,7 @@ Class is TypeChecker{
 				});
 				bi++;
 			});
-			buckets:get(index: bestW):add(item: ci);
+			buckets:get(index: bestW):push(item: ci);
 			bucketWeights:set(index: bestW, item: bestLoad + wVal);
 			pi++;
 		});
@@ -7111,7 +7112,7 @@ Class is TypeChecker{
 		local [Task of TypeChecker] is workerTasks: [];
 		local Int is w: 0;
 		while({ w < nWorkers }, {
-			local Array of Int is myIndices: buckets:get(index: w);
+			local [Int] is myIndices: buckets:get(index: w);
 			local Task of TypeChecker is wt: scope:spawn(task: local Function of TypeChecker(){
 				local TypeChecker is wTc: TypeChecker:init();
 				wTc:shareFrozenTables(progClasses: sharedProgClasses, regClasses: sharedRegClasses, enumNames: sharedEnumNames, enumVariants: sharedEnumVariants, strEnums: sharedStrEnums);
@@ -7122,10 +7123,10 @@ Class is TypeChecker{
 					wTc:checkClass(classDef: topClasses:get(index: clsIdx));
 					local Int is errEnd: wTc:errors:length();
 					if({ errEnd > errStart }, {
-						local Array of TypeError is slice: Array();
+						local [TypeError] is slice: [];
 						local Int is ei: errStart;
 						while({ ei < errEnd }, {
-							slice:add(item: wTc:errors:get(index: ei));
+							slice:push(item: wTc:errors:get(index: ei));
 							ei++;
 						});
 						wTc:workerClassErrors:set(key: clsIdx, value: slice);
@@ -7138,13 +7139,14 @@ Class is TypeChecker{
 			w++;
 		});
 
-		local Map of Int to Array of TypeError is allClassErrs: Map:init();
+		local Map of Int to [TypeError] is allClassErrs: Map:init();
+		local [TypeError] is emptyErrs: [];
 		local Int is wi: 0;
 		while({ wi < workerTasks:length() }, {
 			local TypeChecker is doneTc: workerTasks:get(index: wi):await();
 			local Array of Int is errKeys: doneTc:workerClassErrors:keys();
 			errKeys:each(action: local Function(Int is ck){
-				allClassErrs:set(key: ck, value: doneTc:workerClassErrors:get(key: ck, default: Array()));
+				allClassErrs:set(key: ck, value: doneTc:workerClassErrors:get(key: ck, default: emptyErrs));
 			});
 			local Array of String is tKeys: doneTc:genericMethodTemplates:keys();
 			tKeys:each(action: local Function(String is tk){
@@ -7163,9 +7165,11 @@ Class is TypeChecker{
 		local Int is mi: 0;
 		while({ mi < nCls }, {
 			if({ allClassErrs:has(key: mi) }, {
-				local Array of TypeError is clsErrs: allClassErrs:get(key: mi, default: Array());
-				clsErrs:each(action: local Function(TypeError is te){
-					:errors:add(item: te);
+				local [TypeError] is clsErrs: allClassErrs:get(key: mi, default: emptyErrs);
+				local Int is cei: 0;
+				while({ cei < clsErrs:length() }, {
+					:errors:push(item: clsErrs:get(index: cei));
+					cei++;
 				});
 			});
 			mi++;
@@ -7192,6 +7196,6 @@ Class is TypeChecker{
 		:genericMethodLines: Map:init();
 		:genericMethodFiles: Map:init();
 		:currentMethodTypeParams: Map:init();
-		:errors: Array();
+		:errors: [];
 	}
 }

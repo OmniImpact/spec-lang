@@ -101,7 +101,7 @@ Class is Loader{
 
 		local String is src: fileRead(path: filePath, default: '');
 		local Lexer is lexer: Lexer:init(source: src);
-		local Parser is parser: Parser:init(tokens: Array());
+		local Parser is parser: Parser:init(tokens: []);
 		parser:setLexer(lexer: lexer);
 		parser:setSourceFile(file: filePath);
 		local ProgramNode is prog: parser:parseProgram();

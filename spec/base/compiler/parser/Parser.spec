@@ -44,7 +44,7 @@ Class is Parser{
 		['base', 'sys', as Conditional()]
 	];
 
-	local Array of Token is tokens: Array();
+	local [Token] is tokens: [];
 	local Int is pos: 0;
 	local Int is length: 0;
 	local String is sourceFile: '';
@@ -52,7 +52,8 @@ Class is Parser{
 	local ErrorText is errText: ErrorText:init();
 
 	local Lexer is lexer: Lexer:init(source: '');
-	local Array of Token is lookahead: Array();
+	local [Token] is lookahead: [];
+	local Int is lookaheadHead: 0;
 	local Boolean is streaming: false;
 
 	# Nesting depth of template desugaring: 0 at statement level, >= 1
@@ -69,7 +70,7 @@ Class is Parser{
 	## Initializes a parser over a token stream.
 	##
 	## @param tokens: Tokens from [Lexer].
-	replace Function is init(Array of Token is tokens){
+	replace Function is init([Token] is tokens){
 		:tokens: tokens;
 		:length: tokens:length();
 		:pos: 0;
@@ -77,7 +78,8 @@ Class is Parser{
 		:errors: Array();
 		:templateDepth: 0;
 		:streaming: false;
-		:lookahead: Array();
+		:lookahead: [];
+		:lookaheadHead: 0;
 	}
 
 	## Configures the parser to stream tokens on-demand from a lexer.
@@ -86,7 +88,8 @@ Class is Parser{
 	Function is setLexer(Lexer is lexer){
 		:lexer: lexer;
 		:streaming: true;
-		:lookahead: Array();
+		:lookahead: [];
+		:lookaheadHead: 0;
 	}
 
 	## Attaches the declaring file for provenance.
@@ -149,15 +152,15 @@ Class is Parser{
 	Function of Token is peekAhead(Int is offset){
 		if({ :streaming }, {
 			local Boolean is pulling: true;
-			while({ pulling && :lookahead:length() <= offset }, {
+			while({ pulling && (:lookahead:length() - :lookaheadHead) <= offset }, {
 				local Token is tok: :lexer:nextToken();
-				:lookahead:add(item: tok);
+				:lookahead:push(item: tok);
 				if({ tok:getTokenKind() == TokenKind:EOF }, {
 					pulling: false;
 				});
 			});
-			if({ offset < :lookahead:length() }, {
-				return :lookahead:get(index: offset);
+			if({ (:lookaheadHead + offset) < :lookahead:length() }, {
+				return :lookahead:get(index: :lookaheadHead + offset);
 			});
 			return Token:init(kind: TokenKind:EOF, value: '', line: 0, col: 0);
 		});
@@ -174,7 +177,13 @@ Class is Parser{
 	Function of Token is advance(){
 		if({ :streaming }, {
 			local Token is tok: :peekAhead(offset: 0);
-			:lookahead:removeAt(index: 0, default: tok);
+			if({ :lookaheadHead < :lookahead:length() }, {
+				:lookaheadHead: :lookaheadHead + 1;
+				if({ :lookaheadHead >= :lookahead:length() }, {
+					:lookahead: [];
+					:lookaheadHead: 0;
+				});
+			});
 			return tok;
 		});
 		local Token is tok: :peek();
@@ -1918,7 +1927,7 @@ Class is Parser{
 			return emptyE;
 		});
 		local Lexer is subLexer: Lexer:init(source: text);
-		local Array of Token is subTokens: subLexer:tokenize();
+		local [Token] is subTokens: subLexer:tokenize();
 		if({ subLexer:hasErrors() }, {
 			:addError(tok: :peek(), message: :errText:errInvalidTemplateExpression());
 			return emptyE;

@@ -18,7 +18,8 @@ Class of SpecUnitTest is TestSpecChecker{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'sys', as File()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	## Parses and checks a source, returning the error messages.
@@ -56,9 +57,11 @@ Class of SpecUnitTest is TestSpecChecker{
 			return msgs;
 		});
 		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is errs: tc:checkProgram(program: prog);
-		errs:each(action: local Function(TypeError is e){
-			msgs:add(item: e:toString());
+		local [TypeError] is errs: tc:checkProgram(program: prog);
+		local Int is ei: 0;
+		while({ ei < errs:length() }, {
+			msgs:add(item: errs:get(index: ei):toString());
+			ei++;
 		});
 		return msgs;
 	}

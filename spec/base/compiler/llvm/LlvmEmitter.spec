@@ -288,8 +288,8 @@ Class is LlvmEmitter{
 					out: out . :emitCStrGlobal(sym: mSym, val: mn);
 					local String is mfn: st:metaMethodFns:get(index: mi, default: 'null');
 					local String is mfnRef: if({ mfn == 'null' }, { 'null' }, { '@' . mfn });
-					local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
-					local Int is mln: st:metaMethodLines:get(index: mi, default: 0);
+					local Int is mfl: st:metaMethodFlags:get(index: mi);
+					local Int is mln: st:metaMethodLines:get(index: mi);
 					if({ mi > 0 }, { mItems: mItems . ', '; });
 					mItems: mItems . methodMetaLayout:formatConst(values: Array([mSym, mfnRef, mfl as String, mln as String]));
 					mi++;
@@ -305,8 +305,8 @@ Class is LlvmEmitter{
 				while({ mfi < st:metaFieldNames:length() }, {
 					local String is mfnm: st:metaFieldNames:get(index: mfi, default: '');
 					local String is mfty: st:metaFieldTypes:get(index: mfi, default: '');
-					local Int is mfidx: st:metaFieldIndices:get(index: mfi, default: 0);
-					local Int is mffl: st:metaFieldFlags:get(index: mfi, default: 0);
+					local Int is mfidx: st:metaFieldIndices:get(index: mfi);
+					local Int is mffl: st:metaFieldFlags:get(index: mfi);
 					local String is fnSym: '@.fname.' . st:name . '.' . (mfi as String);
 					local String is ftSym: '@.ftype.' . st:name . '.' . (mfi as String);
 					out: out . :emitCStrGlobal(sym: fnSym, val: mfnm);
@@ -477,8 +477,8 @@ Class is LlvmEmitter{
 						out: out . :emitCStrGlobal(sym: mSym, val: mn);
 						local String is mfn: st:metaMethodFns:get(index: mi, default: 'null');
 						local String is mfnRef: if({ mfn == 'null' }, { 'null' }, { '@' . mfn });
-						local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
-						local Int is mln: st:metaMethodLines:get(index: mi, default: 0);
+						local Int is mfl: st:metaMethodFlags:get(index: mi);
+						local Int is mln: st:metaMethodLines:get(index: mi);
 						if({ mi > 0 }, { mItems: mItems . ', '; });
 						mItems: mItems . methodMetaLayout:formatConst(values: Array([mSym, mfnRef, mfl as String, mln as String]));
 						mi++;
@@ -494,8 +494,8 @@ Class is LlvmEmitter{
 					while({ mfi < st:metaFieldNames:length() }, {
 						local String is mfnm: st:metaFieldNames:get(index: mfi, default: '');
 						local String is mfty: st:metaFieldTypes:get(index: mfi, default: '');
-						local Int is mfidx: st:metaFieldIndices:get(index: mfi, default: 0);
-						local Int is mffl: st:metaFieldFlags:get(index: mfi, default: 0);
+						local Int is mfidx: st:metaFieldIndices:get(index: mfi);
+						local Int is mffl: st:metaFieldFlags:get(index: mfi);
 						local String is fnSym: '@.fname.' . st:name . '.' . (mfi as String);
 						local String is ftSym: '@.ftype.' . st:name . '.' . (mfi as String);
 						out: out . :emitCStrGlobal(sym: fnSym, val: mfnm);
@@ -635,12 +635,11 @@ Class is LlvmEmitter{
 			return Array([:emitModule(mod: mod)]);
 		});
 		local Int is nShards: if({ shards < nFn }, { shards }, { nFn });
-		Process:arrayFreeze(a: mod:functions);
 
 		# Compute instruction weight per function and build declare prototypes.
-		local Array of Int is weights: Array();
+		local [Int] is weights: [];
 		local Array of String is fnDecls: Array();
-		local Array of Int is sortedIdx: Array();
+		local [Int] is sortedIdx: [];
 		local Int is i: 0;
 		while({ i < nFn }, {
 			local IrFunction is f0: mod:functions:get(index: i);
@@ -650,9 +649,9 @@ Class is LlvmEmitter{
 				w0: w0 + f0:blocks:get(index: bi0):insts:length();
 				bi0++;
 			});
-			weights:add(item: w0);
+			weights:push(item: w0);
 			fnDecls:add(item: :emitFunctionDecl(fn: f0));
-			sortedIdx:add(item: i);
+			sortedIdx:push(item: i);
 			i++;
 		});
 		Process:arrayFreeze(a: fnDecls);
@@ -671,18 +670,19 @@ Class is LlvmEmitter{
 			si++;
 		});
 
-		local Array of Array of Int is buckets: Array();
-		local Array of Int is bucketWeights: Array();
+		local [[Int]] is buckets: [];
+		local [Int] is bucketWeights: [];
 		local Int is b0: 0;
 		while({ b0 < nShards }, {
-			buckets:add(item: Array());
-			bucketWeights:add(item: 0);
+			local [Int] is emptyBucket: [];
+			buckets:push(item: emptyBucket);
+			bucketWeights:push(item: 0);
 			b0++;
 		});
-		local Array of Int is ownerShard: Array();
+		local [Int] is ownerShard: [];
 		local Int is oi: 0;
 		while({ oi < nFn }, {
-			ownerShard:add(item: 0);
+			ownerShard:push(item: 0);
 			oi++;
 		});
 		local Int is pi: 0;
@@ -700,12 +700,11 @@ Class is LlvmEmitter{
 				});
 				bi++;
 			});
-			buckets:get(index: bestB):add(item: fi);
+			buckets:get(index: bestB):push(item: fi);
 			bucketWeights:set(index: bestB, item: bestL + fw);
 			ownerShard:set(index: fi, item: bestB);
 			pi++;
 		});
-		Process:arrayFreeze(a: ownerShard);
 
 		# Pre-compute the shared non-primary header once (identical for shards 1..N-1).
 		local String is primaryHdr: :emitShardHeader(mod: mod, isPrimary: true);
@@ -716,7 +715,7 @@ Class is LlvmEmitter{
 		local Int is s: 0;
 		while({ s < nShards }, {
 			local Int is myShard: s;
-			local Array of Int is myFns: buckets:get(index: s);
+			local [Int] is myFns: buckets:get(index: s);
 			local String is myHdr: if({ myShard == 0 }, { primaryHdr }, { secondaryHdr });
 			local Task of String is stTask: scope:spawn(task: local Function of String(){
 				local LlvmEmitter is wEm: LlvmEmitter:init();
@@ -791,7 +790,6 @@ Class is LlvmEmitter{
 		if({ :debugMode || threads <= 1 || mod:functions:length() <= 1 }, {
 			return :emitModule(mod: mod);
 		});
-		Process:arrayFreeze(a: mod:functions);
 		local Int is nFn: mod:functions:length();
 		local Int is nWorkers: if({ threads < nFn }, { threads }, { nFn });
 		local Int is baseCount: nFn / nWorkers;
@@ -990,7 +988,7 @@ Class is LlvmEmitter{
 			while({ ii < blk:insts:length() }, {
 				local String is instStr: :emitInst(inst: blk:insts:get(index: ii));
 				if({ spId >= 0 }, {
-					local Int is ln: blk:instLines:get(index: ii, default: 0);
+					local Int is ln: blk:instLines:get(index: ii);
 					if({ ln <= 0 }, { ln: fn:line; });
 					local Int is locId: :internDebugLoc(spId: spId, line: ln);
 					instStr: :appendDbgToInst(ir: instStr, locId: locId);

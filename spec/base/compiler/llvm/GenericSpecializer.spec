@@ -35,7 +35,7 @@ Class is GenericSpecializer{
 	Map of String to ClassInfo is specClassMap: Map:init();
 	Map of String to Array of Type is specClassArgsMap: Map:init();
 	Array of String is pendingBaseNames: Array();
-	Array of Array of Type is pendingTypeArgs: Array();
+	[Array of Type] is pendingTypeArgs: [];
 	Array of String is pendingMangledNames: Array();
 
 	Map of String to Member is genericMethods: Map:init();
@@ -153,7 +153,7 @@ Class is GenericSpecializer{
 		:specBaseMap:set(key: mangled, value: baseName);
 		:specClassArgsMap:set(key: mangled, value: typeArgs);
 		:pendingBaseNames:add(item: baseName);
-		:pendingTypeArgs:add(item: typeArgs);
+		:pendingTypeArgs:push(item: typeArgs);
 		:pendingMangledNames:add(item: mangled);
 		return mangled;
 	}
@@ -730,7 +730,7 @@ Class is GenericSpecializer{
 		:seenClassNames: Map:init();
 		:specKeyToMangled: Map:init();
 		:pendingBaseNames: Array();
-		:pendingTypeArgs: Array();
+		:pendingTypeArgs: [];
 		:pendingMangledNames: Array();
 		:genericMethods: Map:init();
 		:genericMethodTypeParam: Map:init();

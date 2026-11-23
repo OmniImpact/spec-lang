@@ -184,15 +184,17 @@ Class is Driver{
 			# 2. Semantic static type checking.
 			local Int is checkT0: Process:clockMs();
 			local TypeChecker is tc: TypeChecker:init();
-			local Array of TypeError is typeErrors: tc:checkProgramScoped(program: program, scope: scope, threads: threadCount);
+			local [TypeError] is typeErrors: tc:checkProgramScoped(program: program, scope: scope, threads: threadCount);
 			checkMs: Process:clockMs() - checkT0;
 			local Int is errCount: typeErrors:length();
 			tc:cleanup();
 			report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 			if({ errCount > 0 }, {
 				Stderr:line('Type errors encountered during compilation:');
-				typeErrors:each(action: local Function(TypeError is err){
-					Stderr:line(err:toString());
+				local Int is tei: 0;
+				while({ tei < errCount }, {
+					Stderr:line(typeErrors:get(index: tei):toString());
+					tei++;
 				});
 				Stderr:line('Compilation aborted due to type errors.');
 				Process:monitorStop();
@@ -363,7 +365,7 @@ Class is Driver{
 			local Int is llStat: 0;
 			if({ useShards }, {
 				local Array of String is shardObjPaths: Array();
-				local Array of Task of Int is ccTasks: Array();
+				local [Task of Int] is ccTasks: [];
 				local Int is ci: 0;
 				while({ ci < shardLlPaths:length() }, {
 					local String is sLl: shardLlPaths:get(index: ci, default: '');
@@ -376,7 +378,7 @@ Class is Driver{
 					local Task of Int is ct: scope:spawn(task: local Function of Int(){
 						return Process:execute(command: 'clang', args: cArgs);
 					});
-					ccTasks:add(item: ct);
+					ccTasks:push(item: ct);
 					ci++;
 				});
 				local Int is wi: 0;

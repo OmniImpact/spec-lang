@@ -186,7 +186,7 @@ Class is SpecLint{
 	Function is lintOne(String is path, Boolean is strict, LintTally is tally, Cleo is ui){
 		local String is source: fileRead(path: path, default: '');
 		local Lexer is lexer: Lexer:init(source: source);
-		local Parser is parser: Parser:init(tokens: Array());
+		local Parser is parser: Parser:init(tokens: []);
 		parser:setLexer(lexer: lexer);
 		parser:setSourceFile(file: path);
 		local ProgramNode is program: parser:parseProgram();

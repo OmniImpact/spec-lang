@@ -186,12 +186,12 @@ Class of SpecOptimizer is ArcPeepholePass{
 		});
 
 		local [IrInst] is newInsts: [];
-		local Array of Int is newLines: Array();
+		local [Int] is newLines: [];
 		i: 0;
 		while({ i < n }, {
 			if({ !drop:get(index: i) }, {
 				newInsts:push(item: blk:insts:get(index: i));
-				newLines:add(item: blk:instLines:get(index: i));
+				newLines:push(item: blk:instLines:get(index: i));
 			});
 			i++;
 		});

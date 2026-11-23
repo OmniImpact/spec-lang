@@ -455,7 +455,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 		local Int is ai: 0;
 		while({ ai < neededArities:length() }, {
 			local Int is k: neededArities:get(index: ai);
-			mod:functions:add(item: :buildConcatHelper(k: k));
+			mod:functions:push(item: :buildConcatHelper(k: k));
 			ai++;
 		});
 	}

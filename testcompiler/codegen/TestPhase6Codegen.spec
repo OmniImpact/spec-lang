@@ -40,7 +40,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 	# Step 1: lexing & parsing the target program.
 	Function is testParseFixtureProgram(){
 		local Lexer is lexer: Lexer:init(source: :fixtureSource());
-		local Array of Token is tokens: lexer:tokenize();
+		local [Token] is tokens: lexer:tokenize();
 		local Parser is parser: Parser:init(tokens: tokens);
 		local ProgramNode is prog: parser:parseProgram();
 		Assert:areEqualInt(1, prog:classes:length());
@@ -53,7 +53,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 		local ProgramNode is prog: loader:loadProgram(rootPath: '/tmp/pure_spec_fixture.spec');
 		Assert:isTrue(prog:classes:length() >= 1);
 		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is errors: tc:checkProgram(program: prog);
+		local [TypeError] is errors: tc:checkProgram(program: prog);
 		Assert:areEqualInt(0, errors:length());
 	}
 
@@ -63,7 +63,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 		local Loader is loader: Loader:init();
 		local ProgramNode is prog: loader:loadProgram(rootPath: '/tmp/pure_spec_fixture.spec');
 		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is errors: tc:checkProgram(program: prog);
+		local [TypeError] is errors: tc:checkProgram(program: prog);
 		Assert:areEqualInt(0, errors:length());
 		local IrBuilder is irb: IrBuilder:init();
 		irb:entryInitOwner: 'HelloCodegen';

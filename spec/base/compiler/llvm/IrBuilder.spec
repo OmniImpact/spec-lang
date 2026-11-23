@@ -58,12 +58,12 @@ Class is IrBuilder{
 	Array of String is scopeVarStack: Array();
 	Array of String is scopeOldSlotStack: Array();
 	[IrType] is scopeOldTypeStack: [];
-	Array of Boolean is scopeOldArcStack: Array();
+	[Boolean] is scopeOldArcStack: [];
 	Array of String is scopeOldSpecTypeStack: Array();
-	Array of Boolean is scopeOldBoxedStack: Array();
+	[Boolean] is scopeOldBoxedStack: [];
 	Array of String is scopeOldLazyStateStack: Array();
 	Array of Expression is scopeOldLazyExprStack: Array();
-	Array of Int is scopeMarkStack: Array();
+	[Int] is scopeMarkStack: [];
 	String is curPoolMark: '';
 	Boolean is curFnRetIsArc: false;
 	String is curFnErrHandlerCallee: '';
@@ -358,18 +358,18 @@ Class is IrBuilder{
 		:scopeVarStack: Array();
 		:scopeOldSlotStack: Array();
 		:scopeOldTypeStack: [];
-		:scopeOldArcStack: Array();
+		:scopeOldArcStack: [];
 		:scopeOldSpecTypeStack: Array();
-		:scopeOldBoxedStack: Array();
+		:scopeOldBoxedStack: [];
 		:scopeOldLazyStateStack: Array();
 		:scopeOldLazyExprStack: Array();
-		:scopeMarkStack: Array();
+		:scopeMarkStack: [];
 		:lazyLocalStateSlots: Map:init();
 		:lazyLocalExprs: Map:init();
 	}
 
 	Function is pushScope(){
-		:scopeMarkStack:add(item: :scopeVarStack:length());
+		:scopeMarkStack:push(item: :scopeVarStack:length());
 	}
 
 	Function is bindLocal(String is name, String is slot, IrType is ty, Boolean is isArc, String is specType, Boolean is isBoxed){
@@ -378,17 +378,17 @@ Class is IrBuilder{
 			if({ :localSlots:has(key: name) }, {
 				:scopeOldSlotStack:add(item: :localSlots:get(key: name, default: ''));
 				:scopeOldTypeStack:push(item: :localTypes:get(key: name, default: IrType:I64));
-				:scopeOldArcStack:add(item: :localIsArc:get(key: name, default: false));
+				:scopeOldArcStack:push(item: :localIsArc:get(key: name, default: false));
 				:scopeOldSpecTypeStack:add(item: :localSpecTypes:get(key: name, default: ''));
-				:scopeOldBoxedStack:add(item: :boxedLocals:has(key: name));
+				:scopeOldBoxedStack:push(item: :boxedLocals:has(key: name));
 				:scopeOldLazyStateStack:add(item: :lazyLocalStateSlots:get(key: name, default: ''));
 				:scopeOldLazyExprStack:add(item: :lazyLocalExprs:get(key: name, default: Expression:Unknown));
 			}, {
 				:scopeOldSlotStack:add(item: '');
 				:scopeOldTypeStack:push(item: IrType:I64);
-				:scopeOldArcStack:add(item: false);
+				:scopeOldArcStack:push(item: false);
 				:scopeOldSpecTypeStack:add(item: '');
-				:scopeOldBoxedStack:add(item: false);
+				:scopeOldBoxedStack:push(item: false);
 				:scopeOldLazyStateStack:add(item: '');
 				:scopeOldLazyExprStack:add(item: Expression:Unknown);
 			});
@@ -412,14 +412,14 @@ Class is IrBuilder{
 
 	Function is popScope(){
 		if({ :scopeMarkStack:length() == 0 }, { return; });
-		local Int is mark: :scopeMarkStack:pop(default: 0);
+		local Int is mark: :scopeMarkStack:pop();
 		while({ :scopeVarStack:length() > mark }, {
 			local String is name: :scopeVarStack:pop(default: '');
 			local String is oldSlot: :scopeOldSlotStack:pop(default: '');
 			local IrType is oldTy: :scopeOldTypeStack:pop();
-			local Boolean is oldArc: :scopeOldArcStack:pop(default: false);
+			local Boolean is oldArc: :scopeOldArcStack:pop();
 			local String is oldSpec: :scopeOldSpecTypeStack:pop(default: '');
-			local Boolean is oldBoxed: :scopeOldBoxedStack:pop(default: false);
+			local Boolean is oldBoxed: :scopeOldBoxedStack:pop();
 			local String is oldLazyState: :scopeOldLazyStateStack:pop(default: '');
 			local Expression is oldLazyExpr: :scopeOldLazyExprStack:pop(default: Expression:Unknown);
 			if({ oldSlot == '' }, {
@@ -541,8 +541,8 @@ Class is IrBuilder{
 					if({ m:hasModifier(kw: Keyword:LOCAL) }, { fflags: fflags + 128; });
 					st:metaFieldNames:add(item: m:name);
 					st:metaFieldTypes:add(item: m:memberType:name);
-					st:metaFieldIndices:add(item: fIdx);
-					st:metaFieldFlags:add(item: fflags);
+					st:metaFieldIndices:push(item: fIdx);
+					st:metaFieldFlags:push(item: fflags);
 				});
 				if({ m:hasInit && :isLazyCallExpr(expr: m:initExpr) }, {
 					st:addField(name: '_lazy_state_' . m:name, ty: IrType:I64);
@@ -744,7 +744,7 @@ Class is IrBuilder{
 				local Boolean is hasArcField: false;
 				local Int is dfi: 2;
 				while({ dfi < st:fieldTypes:length() }, {
-					if({ st:fieldIsArc:get(index: dfi, default: false) }, {
+					if({ st:fieldIsArc:get(index: dfi) }, {
 						hasArcField: true;
 					});
 					dfi++;
@@ -1016,7 +1016,7 @@ Class is IrBuilder{
 		});
 		local Int is fi: 2;
 		while({ fi < st:fieldTypes:length() }, {
-			if({ st:fieldIsArc:get(index: fi, default: false) }, {
+			if({ st:fieldIsArc:get(index: fi) }, {
 				local String is fptr: :nextTmp();
 				:emit(inst: IrInst:FieldPtr(dst: fptr, objPtr: '%self', structName: st:name, fieldIndex: fi));
 				local String is fval: :nextTmp();
@@ -1525,7 +1525,7 @@ Class is IrBuilder{
 						:terminate(inst: IrInst:Br(target: doneLbl));
 						local IrBlock is doStoreBlk: :curFn:addBlock(label: doStoreLbl);
 						:switchBlock(blk: doStoreBlk);
-						if({ st:fieldIsArc:get(index: fidx, default: false) && val != '' && val != 'null' }, {
+						if({ st:fieldIsArc:get(index: fidx) && val != '' && val != 'null' }, {
 							:emit(inst: IrInst:Retain(val: val));
 						});
 						:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
@@ -1533,7 +1533,7 @@ Class is IrBuilder{
 						local IrBlock is doneBlk: :curFn:addBlock(label: doneLbl);
 						:switchBlock(blk: doneBlk);
 					}, {
-						if({ st:fieldIsArc:get(index: fidx, default: false) }, {
+						if({ st:fieldIsArc:get(index: fidx) }, {
 							if({ val != '' && val != 'null' }, {
 								:emit(inst: IrInst:Retain(val: val));
 							});
@@ -1614,8 +1614,8 @@ Class is IrBuilder{
 					}, {
 						st:metaMethodFns:add(item: sname . '_' . m:name);
 					});
-					st:metaMethodFlags:add(item: flags);
-					st:metaMethodLines:add(item: m:line);
+					st:metaMethodFlags:push(item: flags);
+					st:metaMethodLines:push(item: m:line);
 				});
 			});
 			mi++;
@@ -1782,7 +1782,7 @@ Class is IrBuilder{
 		local Int is stateIdx: st:fieldIndex(name: '_lazy_state_' . m:name);
 		if({ valIdx < 0 || stateIdx < 0 }, { return; });
 		local IrType is fty: st:fieldTypes:get(index: valIdx);
-		local Boolean is fIsArc: st:fieldIsArc:get(index: valIdx, default: false);
+		local Boolean is fIsArc: st:fieldIsArc:get(index: valIdx);
 		local String is fnName: sname . '_' . m:name . '__lazy_init';
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: fty);
 		fn:sourceFile: cls:sourceFile;
@@ -3450,8 +3450,8 @@ Class is IrBuilder{
 		local Array of String is methodBareNames: Array();
 		local Array of String is methodSnames: Array();
 		local Array of ClassInfo is methodClasses: Array();
-		local Array of Int is methodCallStarts: Array();
-		local Array of Int is methodCallEnds: Array();
+		local [Int] is methodCallStarts: [];
+		local [Int] is methodCallEnds: [];
 		local Array of String is flatCalls: Array();
 
 		local Int is ci: 0;
@@ -3494,8 +3494,8 @@ Class is IrBuilder{
 							methodBareNames:add(item: m:name);
 							methodSnames:add(item: sname);
 							methodClasses:add(item: cls);
-							methodCallStarts:add(item: startIdx);
-							methodCallEnds:add(item: endIdx);
+							methodCallStarts:push(item: startIdx);
+							methodCallEnds:push(item: endIdx);
 						});
 					});
 					mi++;
@@ -3511,8 +3511,8 @@ Class is IrBuilder{
 			while({ idx < methodSyms:length() }, {
 				local String is sym: methodSyms:get(index: idx, default: '');
 				if({ !:canUnwindCallees:has(key: sym) }, {
-					local Int is sIdx: methodCallStarts:get(index: idx, default: 0);
-					local Int is eIdx: methodCallEnds:get(index: idx, default: 0);
+					local Int is sIdx: methodCallStarts:get(index: idx);
+					local Int is eIdx: methodCallEnds:get(index: idx);
 					local Boolean is hits: false;
 					local Int is ki: sIdx;
 					while({ ki < eIdx && !hits }, {
@@ -3943,7 +3943,7 @@ Class is IrBuilder{
 									if({ sfidx >= 0 }, {
 										local String is selfObj: :emitLoadLocal(name: ':', ty: IrType:Ptr);
 										local IrType is sfty: selfSt:fieldTypes:get(index: sfidx);
-										local Boolean is sfIsArc: selfSt:fieldIsArc:get(index: sfidx, default: false);
+										local Boolean is sfIsArc: selfSt:fieldIsArc:get(index: sfidx);
 										local String is scval: :castIfNeeded(val: val, fromTy: valTy, toTy: sfty);
 										local String is sptr: :nextTmp();
 										:emit(inst: IrInst:FieldPtr(dst: sptr, objPtr: selfObj, structName: :currentClass, fieldIndex: sfidx));
@@ -3969,7 +3969,7 @@ Class is IrBuilder{
 						local Int is fidx: st:fieldIndex(name: fieldName);
 						if({ fidx >= 0 }, {
 							local IrType is fty: st:fieldTypes:get(index: fidx);
-							local Boolean is fIsArc: st:fieldIsArc:get(index: fidx, default: false);
+							local Boolean is fIsArc: st:fieldIsArc:get(index: fidx);
 							local String is cval: :castIfNeeded(val: val, fromTy: valTy, toTy: fty);
 							local String is ptr: :nextTmp();
 							:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
@@ -4016,7 +4016,7 @@ Class is IrBuilder{
 									local String is sname: :pathStructName;
 									local IrStruct is st: :mod:findStruct(name: sname);
 									local IrType is fty: st:fieldTypes:get(index: fidx);
-									local Boolean is fIsArc: st:fieldIsArc:get(index: fidx, default: false);
+									local Boolean is fIsArc: st:fieldIsArc:get(index: fidx);
 									local String is cval: :castIfNeeded(val: val, fromTy: valTy, toTy: fty);
 									local String is ptr: :nextTmp();
 									:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
@@ -5238,12 +5238,12 @@ Class is IrBuilder{
 		local Array of String is savedScopeVars: :scopeVarStack;
 		local Array of String is savedScopeOldSlots: :scopeOldSlotStack;
 		local [IrType] is savedScopeOldTypes: :scopeOldTypeStack;
-		local Array of Boolean is savedScopeOldArcs: :scopeOldArcStack;
+		local [Boolean] is savedScopeOldArcs: :scopeOldArcStack;
 		local Array of String is savedScopeOldSpecs: :scopeOldSpecTypeStack;
-		local Array of Boolean is savedScopeOldBoxed: :scopeOldBoxedStack;
+		local [Boolean] is savedScopeOldBoxed: :scopeOldBoxedStack;
 		local Array of String is savedScopeOldLazyStates: :scopeOldLazyStateStack;
 		local Array of Expression is savedScopeOldLazyExprs: :scopeOldLazyExprStack;
-		local Array of Int is savedScopeMarks: :scopeMarkStack;
+		local [Int] is savedScopeMarks: :scopeMarkStack;
 		local String is savedPoolMark: :curPoolMark;
 		local Boolean is savedRetIsArc: :curFnRetIsArc;
 		local String is savedErrCallee: :curFnErrHandlerCallee;

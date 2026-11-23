@@ -267,13 +267,16 @@ Class is SpecLsp{
 		loader:cleanup();
 
 		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is typeErrors: tc:checkProgram(program: prog);
+		local [TypeError] is typeErrors: tc:checkProgram(program: prog);
 		tc:cleanup();
 
-		typeErrors:each(action: local Function(TypeError is te){
+		local Int is tei: 0;
+		while({ tei < typeErrors:length() }, {
+			local TypeError is te: typeErrors:get(index: tei);
 			if({ te:file == '' || te:file == filePath }, {
 				diags:add(item: makeDiagnosticJson(line: te:line, col: te:col, length: te:length, message: te:message, severity: 1));
 			});
+			tei++;
 		});
 
 		:docPrograms[uri]: prog;
