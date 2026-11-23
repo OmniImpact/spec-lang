@@ -85,6 +85,28 @@ Class is IrBuilder{
 	String is inlineReturnSlot: '';
 	String is inlineReturnEndLbl: '';
 	IrType is inlineReturnTy: IrType:Void;
+	Boolean is inInlineLoopCallee: false;
+	Map of String to Expression is inlineFnParams: Map();
+	Map of String to Boolean is inlineActiveMethods: Map();
+	Boolean is inlineCallerInInline: false;
+	Map of String to Expression is inlineCallerFnParams: Map();
+	Map of String to String is inlineCallerSlots: Map();
+	Map of String to IrType is inlineCallerTypes: Map();
+	Map of String to Boolean is inlineCallerIsArc: Map();
+	Map of String to String is inlineCallerSpecTypes: Map();
+	Map of String to Boolean is inlineCallerBoxed: Map();
+	Map of String to Boolean is inlineCallerCaptured: Map();
+	Map of String to String is inlineCallerLazyStateSlots: Map();
+	Map of String to Expression is inlineCallerLazyExprs: Map();
+	Array of String is inlineCallerScopeVars: Array();
+	Array of String is inlineCallerScopeOldSlots: Array();
+	[IrType] is inlineCallerScopeOldTypes: [];
+	[Boolean] is inlineCallerScopeOldArcs: [];
+	Array of String is inlineCallerScopeOldSpecs: Array();
+	[Boolean] is inlineCallerScopeOldBoxed: [];
+	Array of String is inlineCallerScopeOldLazyStates: Array();
+	[Expression] is inlineCallerScopeOldLazyExprs: [];
+	[Int] is inlineCallerScopeMarks: [];
 	String is expectedMapKeyType: '';
 	String is expectedMapValType: '';
 	Expression is currentCallExpr: Expression:Unknown;
@@ -2680,6 +2702,102 @@ Class is IrBuilder{
 		});
 	}
 
+	## Resolves a call targeting [Loops] to its concrete [Member] when it can
+	## be structurally inlined at the call site: every `Function`-typed parameter
+	## receives an inline closure literal, at least one such parameter exists,
+	## and the method is not already being inlined (cycle guard).
+	Function of Member is resolveInlineLoopMember(CallData is call){
+		local Member is empty: Member(kind: MemberKind:METHOD);
+		local String is nm: call:name;
+		if({ nm == '' || nm == 'init' || nm == 'while' || nm == 'loop' || nm == 'repeat' || nm == 'until' }, {
+			return empty;
+		});
+		if({ call:bareProvider:endsWith(suffix: ':sysinternal:Loops') }, { return empty; });
+		local Boolean is isLoopsTarget: call:bareProvider == 'Loops' || call:bareProvider:endsWith(suffix: ':Loops') || call:target:resolvedType == 'Loops';
+		if({ !isLoopsTarget }, {
+			match(on: call:target, when: [
+				Expression:Ident: local Function(String is tn){
+					if({ tn == 'Loops' }, { isLoopsTarget: true; });
+				},
+				Expression:Path: local Function(Array of String is segs){
+					local Int is n: segs:length();
+					if({ n >= 1 && segs:get(index: n - 1, default: '') == 'Loops' && !(n >= 2 && segs:get(index: n - 2, default: '') == 'sysinternal') }, {
+						isLoopsTarget: true;
+					});
+				},
+				Expression:FieldAccess: local Function(Expression is _obj, String is mem){
+					if({ mem == 'Loops' || mem == '_import_Loops' }, { isLoopsTarget: true; });
+				}
+			], default: {});
+		});
+		if({ !isLoopsTarget }, { return empty; });
+		local ClassInfo is loopsCls: :clsMap:get(key: 'Loops', default: ClassInfo:EMPTY);
+		if({ loopsCls:name == '' }, { return empty; });
+		local Int is wantIdx: if({ call:overloadIndex >= 0 }, { call:overloadIndex }, { 0 });
+		local Int is seenIdx: 0;
+		local Member is found: empty;
+		while([Int is mi: 0], { found:name == '' && mi < loopsCls:members:length() }, {
+			local Member is cand: loopsCls:members:get(index: mi);
+			if({ cand:kind == MemberKind:METHOD && cand:name == nm && !cand:hasModifier(kw: Keyword:HELD) }, {
+				if({ seenIdx == wantIdx }, {
+					found: cand;
+				});
+				seenIdx++;
+			});
+			mi++;
+		});
+		if({ found:name == '' || found:body:length() == 0 || found:params:length() == 0 }, {
+			return empty;
+		});
+		local String is mKey: 'Loops:' . found:name . '#' . (wantIdx as String);
+		if({ :inlineActiveMethods:has(key: mKey) }, { return empty; });
+		local Boolean is allPos: true;
+		while([Int is ai: 0], { allPos && ai < call:args:length() }, {
+			if({ call:args:get(index: ai):name != '' }, { allPos: false; });
+			ai++;
+		});
+		local Int is fnCount: 0;
+		local Boolean is ok: true;
+		while([Int is pi: 0], { ok && pi < found:params:length() }, {
+			local Parameter is p: found:params:get(index: pi);
+			local Boolean is hasArg: false;
+			local Expression is argVal: Expression:Unknown;
+			if({ allPos }, {
+				if({ pi < call:args:length() }, {
+					hasArg: true;
+					argVal: call:args:get(index: pi):value;
+				});
+			}, {
+				while([Int is ai: 0], { !hasArg && ai < call:args:length() }, {
+					local NamedArg is na: call:args:get(index: ai);
+					if({ na:name == p:name }, {
+						hasArg: true;
+						argVal: na:value;
+					});
+					ai++;
+				});
+			});
+			if({ p:paramType:name == 'Function' }, {
+				local Boolean is isAnon: hasArg && match(on: argVal, when: [
+					Expression:AnonFn: local Function of Boolean(Type is _rt, [Parameter] is _ps, [Statement] is _bd){ return true; },
+					else: { false }
+				]);
+				if({ isAnon }, {
+					fnCount++;
+				}, {
+					ok: false;
+				});
+			}, {
+				if({ !hasArg && !p:hasDefault }, {
+					ok: false;
+				});
+			});
+			pi++;
+		});
+		if({ ok && fnCount > 0 }, { return found; });
+		return empty;
+	}
+
 	local Function is collectDeclNamesInExpr(Expression is expr, Map of String to Boolean is decls){
 		match(on: expr, when: [
 			Expression:Unary: local Function(String is _op, Expression is operand){
@@ -2722,7 +2840,7 @@ Class is IrBuilder{
 			Expression:Call: local Function(CallData is call){
 				:collectDeclNamesInExpr(expr: call:target, decls: decls);
 				local String is cnm: call:name;
-				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval' || cnm == 'try';
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval' || cnm == 'try' || :resolveInlineLoopMember(call: call):name != '';
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ci);
@@ -2890,7 +3008,7 @@ Class is IrBuilder{
 			Expression:Call: local Function(CallData is call){
 				:collectAllAnonCapturesInExpr(expr: call:target, decls: decls, out: out);
 				local String is cnm: call:name;
-				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval' || cnm == 'try';
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match' || cnm == 'lazy' || cnm == 'eval' || cnm == 'try' || :resolveInlineLoopMember(call: call):name != '';
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ci);
