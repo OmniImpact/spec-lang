@@ -168,7 +168,7 @@ Class of LintRule is NarrowingCastRule{
 
 	replace Function is checkStatement(Statement is stmt, Array of LintIssue is issues){
 		match(on: stmt, when: [
-			Statement:VarDecl: local Function(Array of String is _mods, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is _mods, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				:localTypes:set(key: varName, value: varType:name);
 				if({ hasInit }, {
 					:checkExpression(expr: initExpr, issues: issues);

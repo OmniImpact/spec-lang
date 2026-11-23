@@ -41,9 +41,9 @@ Class of CallLowerer is SysinternalCallLowerer{
 		local Boolean is isPathMatch: false;
 		local Boolean is isIdentMatch: false;
 		match(on: call:target, when: [
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				local Int is n: segs:length();
-				if({ n >= 2 && segs:get(index: n - 1, default: '') == domain && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+				if({ n >= 2 && segs:get(index: n - 1) == domain && segs:get(index: n - 2) == 'sysinternal' }, {
 					isPathMatch: true;
 				});
 			},
@@ -66,8 +66,8 @@ Class of CallLowerer is SysinternalCallLowerer{
 			Expression:Ident: local Function(String is tn){
 				if({ tn == clsName }, { ok: true; });
 			},
-			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() > 0 && segs:get(index: segs:length() - 1, default: '') == clsName }, {
+			Expression:Path: local Function([String] is segs){
+				if({ segs:length() > 0 && segs:get(index: segs:length() - 1) == clsName }, {
 					ok: true;
 				});
 			}
@@ -95,7 +95,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		local String is res: '';
 		match(on: call:target, when: [
 			Expression:Ident: local Function(String is n){ res: n; },
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				if({ segs:length() > 0 }, {
 					res: segs:get(index: segs:length() - 1);
 				});
@@ -176,10 +176,10 @@ Class of CallLowerer is SysinternalCallLowerer{
 		});
 		if({ cand == '' }, {
 			match(on: call:target, when: [
-				Expression:Path: local Function(Array of String is segs){
+				Expression:Path: local Function([String] is segs){
 					local Int is n: segs:length();
-					if({ n >= 2 && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
-						cand: segs:get(index: n - 1, default: '');
+					if({ n >= 2 && segs:get(index: n - 2) == 'sysinternal' }, {
+						cand: segs:get(index: n - 1);
 					});
 				},
 				Expression:Ident: local Function(String is tn){

@@ -312,7 +312,7 @@ Class is GenericSpecializer{
 	Function of Statement is transformStmt(Statement is stmt, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
 		local Int is ln: stmt:line;
 		local Statement is res: match(on: stmt, when: [
-			Statement:VarDecl: local Function of Statement(Array of String is mods, Type is vt, String is vn, Expression is ie, Boolean is hi){
+			Statement:VarDecl: local Function of Statement([String] is mods, Type is vt, String is vn, Expression is ie, Boolean is hi){
 				local Type is nvt: :transformType(t: vt, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				local Expression is nie: if({ hi }, { :transformExpr(expr: ie, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName) }, { Expression:Unknown });
 				# Bare nested-variant construction (`local Maybe2 of String is
@@ -322,13 +322,11 @@ Class is GenericSpecializer{
 				# variant (concrete layout, matching typename).
 				if({ hi && nvt:name != '' && vt:name != nvt:name }, {
 					match(on: nie, when: [
-						Expression:Path: local Function(Array of String is psegs){
+						Expression:Path: local Function([String] is psegs){
 							if({ psegs:length() >= 2 && vt:name != '' && psegs:get(index: 0) == vt:name }, {
-								local Array of String is nsegs: Array([nvt:name]);
-								local Int is psi: 1;
-								while({ psi < psegs:length() }, {
-									nsegs:add(item: psegs:get(index: psi));
-									psi++;
+								local [String] is nsegs: [nvt:name];
+								range(start: 1, end: psegs:length(), action: local Function(Int is psi){
+									nsegs:push(item: psegs:get(index: psi));
 								});
 								nie: Expression:Path(segments: nsegs);
 								nie:setResolvedTypeNode(tn: nvt, t: nvt:name);
@@ -423,7 +421,7 @@ Class is GenericSpecializer{
 			Expression:FloatLit: local Function of Expression(String is t){ return Expression:FloatLit(text: t); },
 			Expression:BoolLit: local Function of Expression(Boolean is v){ return Expression:BoolLit(value: v); },
 			Expression:Ident: local Function of Expression(String is name){ return Expression:Ident(name: name); },
-			Expression:Path: local Function of Expression(Array of String is segs){ return Expression:Path(segments: segs); },
+			Expression:Path: local Function of Expression([String] is segs){ return Expression:Path(segments: segs); },
 			Expression:ArrayLit: local Function of Expression([Expression] is items){
 				local [Expression] is nitems: [];
 				while([Int is i: 0], { i < items:length() }, {
@@ -517,7 +515,7 @@ Class is GenericSpecializer{
 							});
 						});
 					},
-					Expression:Path: local Function(Array of String is psegs){
+					Expression:Path: local Function([String] is psegs){
 						# Nested-shorthand construction (`Box2:Full(...)`) and
 						# other Path-target calls: rewrite the head segment to
 						# the mangled instantiation the same way the Ident case
@@ -536,11 +534,9 @@ Class is GenericSpecializer{
 									});
 								});
 								if({ specHead != '' }, {
-									local Array of String is nsegs: Array([specHead]);
-									local Int is si: 1;
-									while({ si < psegs:length() }, {
-										nsegs:add(item: psegs:get(index: si));
-										si++;
+									local [String] is nsegs: [specHead];
+									range(start: 1, end: psegs:length(), action: local Function(Int is si){
+										nsegs:push(item: psegs:get(index: si));
 									});
 									ntarget: Expression:Path(segments: nsegs);
 									ntarget:setLine(line: ln);
@@ -662,7 +658,7 @@ Class is GenericSpecializer{
 			nsub:withBaseClasses(name: sub:name, baseClasses: sub:baseClasses, members: subMembers);
 			nsub:setLine(line: sub:line);
 			nsub:setSourceFile(file: sub:sourceFile);
-			nsub:setTypeParams(params: Array());
+			nsub:setTypeParams(params: []);
 			if({ selfSpecName != '' }, {
 				nsub:setOuter(name: selfSpecName);
 			}, {
@@ -680,8 +676,17 @@ Class is GenericSpecializer{
 		return m;
 	}
 
+	local Function of Boolean is strListHas([String] is xs, String is target){
+		local Int is idx: 0;
+		while({ idx < xs:length() }, {
+			if({ xs:get(index: idx) == target }, { return true; });
+			idx++;
+		});
+		return false;
+	}
+
 	local Function is collectUnboundTypeIdents(Type is t, ClassInfo is cls, Array of String is out){
-		if({ t:name != '' && t:name != ':field' && !:seenClassNames:has(key: t:name) && cls:typeParams:indexOf(search: t:name, default: -1) < 0 && out:indexOf(search: t:name, default: -1) < 0 }, {
+		if({ t:name != '' && t:name != ':field' && !:seenClassNames:has(key: t:name) && !:strListHas(xs: cls:typeParams, target: t:name) && out:indexOf(search: t:name, default: -1) < 0 }, {
 			out:add(item: t:name);
 		});
 		local Int is i: 0;
@@ -850,7 +855,7 @@ Class is GenericSpecializer{
 					local Map of String to Type is subst: Map:init();
 					local Int is ti: 0;
 					while({ ti < tpl:typeParams:length() && ti < tArgs:length() }, {
-						subst:set(key: tpl:typeParams:get(index: ti, default: ''), value: tArgs:get(index: ti));
+						subst:set(key: tpl:typeParams:get(index: ti), value: tArgs:get(index: ti));
 						ti++;
 					});
 					local [Member] is specMembers: [];
@@ -863,7 +868,7 @@ Class is GenericSpecializer{
 					specCls:setOuter(name: tpl:outerName);
 					specCls:setLine(line: tpl:line);
 					specCls:setSourceFile(file: tpl:sourceFile);
-					specCls:setTypeParams(params: Array());
+					specCls:setTypeParams(params: []);
 					:specBaseMap:set(key: mangledName, value: baseName);
 					:specClassMap:set(key: mangledName, value: specCls);
 					:specClassArgsMap:set(key: mangledName, value: tArgs);

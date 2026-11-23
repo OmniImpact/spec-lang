@@ -148,12 +148,12 @@ Class of CallLowerer is MatchCallLowerer{
 
 		local String is variantStruct: '';
 		match(on: k, when: [
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				local String is joined: '';
 				local Int is si: 0;
 				while({ si < segs:length() }, {
 					if({ si > 0 }, { joined: joined . '_'; });
-					joined: joined . segs:get(index: si, default: '');
+					joined: joined . segs:get(index: si);
 					si++;
 				});
 				if({ joined != '' && b:mod:findStruct(name: joined):name != '' }, {
@@ -165,7 +165,7 @@ Class of CallLowerer is MatchCallLowerer{
 				# subject's spec class so dispatch and payload binding hit
 				# the concrete layout.
 				if({ segs:length() >= 2 && b:specBaseMap:has(key: onExpr:resolvedType) }, {
-					local String is alt: onExpr:resolvedType . '_' . segs:get(index: segs:length() - 1, default: '');
+					local String is alt: onExpr:resolvedType . '_' . segs:get(index: segs:length() - 1);
 					if({ b:mod:findStruct(name: alt):name != '' }, {
 						variantStruct: alt;
 					});
@@ -291,12 +291,12 @@ Class of CallLowerer is MatchCallLowerer{
 				local String is variantStruct: '';
 				if({ hasOn }, {
 					match(on: k, when: [
-						Expression:Path: local Function(Array of String is segs){
+						Expression:Path: local Function([String] is segs){
 							local String is joined: '';
 							local Int is si: 0;
 							while({ si < segs:length() }, {
 								if({ si > 0 }, { joined: joined . '_'; });
-								joined: joined . segs:get(index: si, default: '');
+								joined: joined . segs:get(index: si);
 								si++;
 							});
 							if({ joined != '' && b:mod:findStruct(name: joined):name != '' }, {

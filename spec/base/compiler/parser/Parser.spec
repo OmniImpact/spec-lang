@@ -421,7 +421,7 @@ Class is Parser{
 				local Member is m: c:members:get(index: mi);
 				if({ m:kind == MemberKind:CLASS }, {
 					m:nestedClass:setOuter(name: qualifiedOuter);
-					m:nestedClass:baseClasses:add(item: c:name);
+					m:nestedClass:baseClasses:push(item: c:name);
 					:linkNestedClasses(classes: [m:nestedClass]);
 				});
 				mi++;
@@ -459,7 +459,7 @@ Class is Parser{
 		:advance();
 
 		# Pre-binder `of`: parent classes.
-		local Array of String is baseClasses: Array();
+		local [String] is baseClasses: [];
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
 			local Boolean is keepGoing: true;
@@ -470,7 +470,7 @@ Class is Parser{
 					:advance();
 					base: base . ':' . :advance():getValue();
 				});
-				baseClasses:add(item: base);
+				baseClasses:push(item: base);
 				if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 					:advance();
 				}, {
@@ -484,15 +484,15 @@ Class is Parser{
 		local String is name: nameTok:getValue();
 
 		# Post-name `of`: generic type parameters.
-		local Array of String is typeParams: Array();
+		local [String] is typeParams: [];
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
 			local Token is tp1: :advance();
-			typeParams:add(item: tp1:getValue());
+			typeParams:push(item: tp1:getValue());
 			if({ :checkKeyword(kw: Keyword:TO) }, {
 				:advance();
 				local Token is tp2: :advance();
-				typeParams:add(item: tp2:getValue());
+				typeParams:push(item: tp2:getValue());
 			});
 		});
 
@@ -635,15 +635,15 @@ Class is Parser{
 		# Post-name `of`: generic type parameters over the tagged shape —
 		# the same grammar as `Class is Box of T`. The pre-name `of` keeps
 		# its meaning: the value-enum backing type.
-		local Array of String is enumTypeParams: Array();
+		local [String] is enumTypeParams: [];
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
 			local Token is ep1: :advance();
-			enumTypeParams:add(item: ep1:getValue());
+			enumTypeParams:push(item: ep1:getValue());
 			if({ :checkKeyword(kw: Keyword:TO) }, {
 				:advance();
 				local Token is ep2: :advance();
-				enumTypeParams:add(item: ep2:getValue());
+				enumTypeParams:push(item: ep2:getValue());
 			});
 		});
 
@@ -684,7 +684,7 @@ Class is Parser{
 
 				local Member is m: Member(kind: MemberKind:FIELD);
 				m:setLine(line: vTok:getLine());
-				m:modifiers: Array(['static', 'local']);
+				m:modifiers: ['static', 'local'];
 				m:memberType: Type(name: backingType);
 				m:name: vName;
 				m:params: vParams;
@@ -716,7 +716,7 @@ Class is Parser{
 		c:setLine(line: nameTok:getLine());
 		c:setSourceFile(file: :sourceFile);
 		c:setTypeParams(params: enumTypeParams);
-		c:withBaseClasses(name: name, baseClasses: Array([:names:enumHeader()]), members: members);
+		c:withBaseClasses(name: name, baseClasses: [:names:enumHeader()], members: members);
 		return c;
 	}
 
@@ -726,10 +726,10 @@ Class is Parser{
 	## @return: The member descriptor.
 	Function of Member is parseMember(){
 		local Int is startLine: :peek():getLine();
-		local Array of String is modifiers: Array();
+		local [String] is modifiers: [];
 		while({ :checkKeyword(kw: Keyword:LOCAL) || :checkKeyword(kw: Keyword:CONTAINED) || :checkKeyword(kw: Keyword:REPLACE) || :checkKeyword(kw: Keyword:MERGE) || :checkKeyword(kw: Keyword:HELD) }, {
 			local Token is tok: :advance();
-			modifiers:add(item: tok:getValue());
+			modifiers:push(item: tok:getValue());
 		});
 
 	if({ :atClassHeader() }, {
@@ -859,7 +859,7 @@ Class is Parser{
 		while({ pi < params:length() }, {
 			local Parameter is p: params:get(index: pi);
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
-				local Expression is lhs: Expression:Path(segments: Array([:names:selfIdent(), p:name]));
+				local Expression is lhs: Expression:Path(segments: [:names:selfIdent(), p:name]);
 				local Expression is rhs: Expression:Ident(name: p:name);
 				local Statement is assignS: Statement:Assign(assignTarget: lhs, assignValue: rhs);
 				body:push(item: assignS);
@@ -990,7 +990,7 @@ Class is Parser{
 			});
 			:matchPunct(p: Punctuation:TERMINATOR);
 
-			local Statement is s: Statement:VarDecl(modifiers: Array(['local']), varType: vType, varName: name, initExpr: initExpr, hasInit: hasInit);
+			local Statement is s: Statement:VarDecl(modifiers: ['local'], varType: vType, varName: name, initExpr: initExpr, hasInit: hasInit);
 			s:setLine(line: startLine);
 			return s;
 		});
@@ -1355,26 +1355,26 @@ Class is Parser{
 									currentExpr: Expression:Call(call: CallData:init(target: currentExpr, name: method, args: args));
 								}, {
 									local Boolean is isPathOrIdent: match(on: currentExpr, when: [
-										Expression:Path: local Function of Boolean(Array of String is segments){ return true; },
+										Expression:Path: local Function of Boolean([String] is segments){ return true; },
 										Expression:Ident: local Function of Boolean(String is name){ return true; },
 										else: { false }
 									]);
 									if({ !isPathOrIdent }, {
 										currentExpr: Expression:FieldAccess(target: currentExpr, fieldName: method);
 									}, {
-										local Array of String is segs: Array();
+										local [String] is segs: [];
 										match(on: currentExpr, when: [
-											Expression:Path: local Function(Array of String is segments){
-												segments:each(action: local Function(String is s){
-													segs:add(item: s);
+											Expression:Path: local Function([String] is segments){
+												each(list: segments, action: local Function(String is s){
+													segs:push(item: s);
 												});
 											},
 											Expression:Ident: local Function(String is name){
-												segs:add(item: name);
+												segs:push(item: name);
 											},
 											else: {}
 										]);
-										segs:add(item: method);
+										segs:push(item: method);
 										currentExpr: Expression:Path(segments: segs);
 									});
 								});

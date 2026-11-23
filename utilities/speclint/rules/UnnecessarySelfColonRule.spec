@@ -37,7 +37,7 @@ Class of LintRule is UnnecessarySelfColonRule{
 
 	local Function is collectStmtLocals(Statement is stmt){
 		match(on: stmt, when: [
-			Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
 				:localNames:set(key: varName, value: '1');
 				if({ hasInit }, { :collectExprLocals(expr: initExpr); });
 			},
@@ -159,9 +159,9 @@ Class of LintRule is UnnecessarySelfColonRule{
 					));
 				});
 			},
-			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() >= 2 && segs:get(index: 0, default: '') == ':' }, {
-					local String is first: segs:get(index: 1, default: '');
+			Expression:Path: local Function([String] is segs){
+				if({ segs:length() >= 2 && segs:get(index: 0) == ':' }, {
+					local String is first: segs:get(index: 1);
 					if({ first != '' && !:localNames:has(key: first) }, {
 						issues:add(item: LintIssue:init(
 							ruleId: :id(),

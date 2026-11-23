@@ -265,7 +265,7 @@ Class is Linter{
 	## Walks one statement, auditing every expression it contains.
 	Function is auditStatement(Statement is stmt, String is file){
 		match(on: stmt, when: [
-			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				if({ hasInit }, {
 					:auditExpression(expr: initExpr, file: file);
 				});
@@ -364,10 +364,10 @@ Class is Linter{
 				name: targetName;
 				recognizedTarget: true;
 			},
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				if({ segs:length() > 0 }, {
 					name: segs:get(index: segs:length() - 1);
-					segs:each(action: local Function(String is seg){
+					each(list: segs, action: local Function(String is seg){
 						if({ seg == 'sysinternal' }, {
 							isFloorChain: true;
 						});
@@ -438,7 +438,7 @@ Class is Linter{
 			return true;
 		});
 		local Boolean is viaParent: false;
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !viaParent && :auditImportsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, {
 				viaParent: true;
 			});
@@ -465,7 +465,7 @@ Class is Linter{
 					mi++;
 				});
 				if({ !found }, {
-					cls:baseClasses:each(action: local Function(String is baseName){
+					each(list: cls:baseClasses, action: local Function(String is baseName){
 						if({ !found && :isHeldMember(clsName: baseName, memberName: memberName, visited: visited) }, {
 							found: true;
 						});

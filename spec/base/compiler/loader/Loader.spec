@@ -701,7 +701,7 @@ Class is Loader{
 			return;
 		});
 		visited:set(key: cls:name, value: 'true');
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			local ClassInfo is base: :findLoadedClass(name: baseName);
 			if({ base:name != '' }, {
 				while([Int is mi: 0], { mi < base:members:length() }, {
@@ -890,7 +890,7 @@ Class is Loader{
 		Loops:range(start: 0, end: :loadedClasses:length(), worker: local Function(Int is ci){
 			local ClassInfo is c: :loadedClasses:get(index: ci);
 			if({ c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' }, {
-				c:withBaseClasses(name: c:name, baseClasses: Array(['Class']), members: c:members);
+				c:withBaseClasses(name: c:name, baseClasses: ['Class'], members: c:members);
 			});
 		});
 	}

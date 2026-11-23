@@ -11,7 +11,9 @@ Class is Member{
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ClassInfo]
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	## Member category for enum dispatch.
@@ -25,7 +27,7 @@ Class is Member{
 	String is sourceFile: '';
 
 	## Declared modifiers (e.g. replace, local, contained).
-	Array of String is modifiers: Array();
+	[String] is modifiers: [];
 
 	## Return type for methods; value type for fields.
 	Type is memberType: Type:EMPTY;
@@ -79,6 +81,12 @@ Class is Member{
 	## @param kw: The modifier keyword.
 	## @return: true when present in [modifiers].
 	Function of Boolean is hasModifier(Keyword is kw){
-		return :modifiers:indexOf(search: kw:value(), default: -1) >= 0;
+		local String is target: kw:value();
+		local Boolean is found: false;
+		while([Int is i: 0], { !found && i < :modifiers:length() }, {
+			if({ :modifiers:get(index: i) == target }, { found: true; });
+			i++;
+		});
+		return found;
 	}
 }

@@ -49,7 +49,7 @@ Class of SpecUnitTest is TestSpecChecker{
 		while([Int is ci: 0], { ci < all:length() }, {
 			local ClassInfo is c: all:get(index: ci);
 			Conditional:if(check: { c:baseClasses:length() == 0 && c:baseClass == '' && c:name != 'Any' && c:name != 'Stringable' && c:baseClass != 'Enum' }, then: {
-				c:withBaseClasses(name: c:name, baseClasses: Array(['Any']), members: c:members);
+				c:withBaseClasses(name: c:name, baseClasses: ['Any'], members: c:members);
 			});
 			ci++;
 		});

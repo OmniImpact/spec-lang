@@ -460,7 +460,13 @@ Class is SpecLsp{
 			if({ cls:name != '' }, {
 				local String is parents: '';
 				if({ cls:baseClasses:length() > 0 }, {
-					parents: ' of ' . cls:baseClasses:join(separator: ', ');
+					local String is joinedBases: '';
+					while([Int is bi: 0], { bi < cls:baseClasses:length() }, {
+						if({ bi > 0 }, { joinedBases: joinedBases . ', '; });
+						joinedBases: joinedBases . cls:baseClasses:get(index: bi);
+						bi++;
+					});
+					parents: ' of ' . joinedBases;
 				});
 				hoverMd: "```spec\nClass" . parents . " is " . cls:name . "\n```";
 			});

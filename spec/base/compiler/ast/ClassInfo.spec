@@ -35,10 +35,10 @@ Class is ClassInfo{
 	String is baseClass: '';
 
 	## All parent class names (multiple inheritance).
-	Array of String is baseClasses: Array();
+	[String] is baseClasses: [];
 
 	## Generic type parameter names declared on the class (e.g. T).
-	Array of String is typeParams: Array();
+	[String] is typeParams: [];
 
 	## Class members (methods, fields, nested classes).
 	[Member] is members: [];
@@ -51,7 +51,7 @@ Class is ClassInfo{
 	replace Function is init(String is name, String is baseClass, [Member] is members){
 		:name: name;
 		:baseClass: baseClass;
-		:baseClasses: if({ baseClass != '' }, { Array([baseClass]) }, { Array() });
+		:baseClasses: if({ baseClass != '' }, { [baseClass] }, { [] });
 		:members: members;
 	}
 
@@ -217,7 +217,7 @@ Class is ClassInfo{
 		:outerName: name;
 	}
 
-	Function is withBaseClasses(String is name, Array of String is baseClasses, [Member] is members){
+	Function is withBaseClasses(String is name, [String] is baseClasses, [Member] is members){
 		:name: name;
 		:baseClasses: baseClasses;
 		:baseClass: if({ baseClasses:length() > 0 }, { baseClasses:get(index: 0) }, { '' });
@@ -227,7 +227,7 @@ Class is ClassInfo{
 	## Sets the generic type parameter names.
 	##
 	## @param params: Generic parameter identifiers.
-	Function is setTypeParams(Array of String is params){
+	Function is setTypeParams([String] is params){
 		:typeParams: params;
 	}
 

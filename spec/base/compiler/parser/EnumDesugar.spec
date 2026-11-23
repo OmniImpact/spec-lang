@@ -43,11 +43,20 @@ Class is EnumDesugar{
 		]);
 	}
 
+	local Function of Boolean is hasStaticMod(Member is m){
+		local Boolean is found: false;
+		while([Int is i: 0], { !found && i < m:modifiers:length() }, {
+			if({ m:modifiers:get(index: i) == 'static' }, { found: true; });
+			i++;
+		});
+		return found;
+	}
+
 	Function of ClassInfo is desugar(ClassInfo is c, String is backingType){
 		local Boolean is isTagged: false;
 		while([Int is mi: 0], { !isTagged && mi < c:members:length() }, {
 			local Member is m: c:members:get(index: mi);
-			local Boolean is isVariant: m:modifiers:indexOf(search: 'static', default: -1) >= 0;
+			local Boolean is isVariant: :hasStaticMod(m: m);
 			if({ isVariant && m:params:length() > 0 }, {
 				isTagged: true;
 			});
@@ -77,7 +86,7 @@ Class is EnumDesugar{
 			if({ m:hasInit && :isArrayExpr(expr: m:initExpr) && m:params:length() == 0 }, {
 				out:push(item: m);
 			}, {
-				if({ m:modifiers:indexOf(search: 'static', default: -1) >= 0 }, {
+				if({ :hasStaticMod(m: m) }, {
 					variants:push(item: m);
 				}, {
 					common:push(item: m);
@@ -96,7 +105,7 @@ Class is EnumDesugar{
 		vnameField:name: '_variant_name';
 		out:push(item: vnameField);
 		local Member is nameFn: Member(kind: MemberKind:METHOD);
-		nameFn:modifiers: Array(['replace']);
+		nameFn:modifiers: ['replace'];
 		nameFn:memberType: Type(name: 'String');
 		nameFn:name: 'name';
 		local [Statement] is nameBody: [];
@@ -104,7 +113,7 @@ Class is EnumDesugar{
 		nameFn:body: nameBody;
 		out:push(item: nameFn);
 		local Member is ordFn: Member(kind: MemberKind:METHOD);
-		ordFn:modifiers: Array(['replace']);
+		ordFn:modifiers: ['replace'];
 		ordFn:memberType: Type(name: 'Int');
 		ordFn:name: 'ordinal';
 		local [Statement] is ordBody: [];
@@ -186,7 +195,7 @@ Class is EnumDesugar{
 			if({ m:hasInit && :isArrayExpr(expr: m:initExpr) && m:params:length() == 0 }, {
 				out:push(item: m);
 			}, {
-				if({ m:modifiers:indexOf(search: 'static', default: -1) >= 0 }, {
+				if({ :hasStaticMod(m: m) }, {
 					variants:push(item: m);
 				}, {
 					common:push(item: m);
@@ -238,7 +247,7 @@ Class is EnumDesugar{
 		while([Int is vi: 0], { vi < variants:length() }, {
 			local Member is m: variants:get(index: vi);
 			local Member is hv: Member(kind: MemberKind:FIELD);
-			hv:modifiers: Array(['held']);
+			hv:modifiers: ['held'];
 			hv:memberType: Type(name: name);
 			hv:name: m:name;
 			hv:initExpr: :ctorCall(enumName: name, tagExpr: m:initExpr);
@@ -289,12 +298,12 @@ Class is EnumDesugar{
 	}
 
 	Function of Expression is selfPath(String is member){
-		return Expression:Path(segments: Array([':', member]));
+		return Expression:Path(segments: [':', member]);
 	}
 
 	## Builds `Name:Variant` — the qualified held reference.
 	Function of Expression is variantRef(String is enumName, String is variant){
-		return Expression:Path(segments: Array([enumName, variant]));
+		return Expression:Path(segments: [enumName, variant]);
 	}
 
 	## Builds the equality `left == right`.
@@ -340,7 +349,7 @@ Class is EnumDesugar{
 	## HELD: the class-name dispatch is receiver-free.
 	Function of Member is synthOf(String is name, String is backingType, [Member] is variants){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
-		m:modifiers: Array(['held']);
+		m:modifiers: ['held'];
 		m:memberType: Type:init(name: name);
 		m:name: 'of';
 		local [Parameter] is params: [];
@@ -368,7 +377,7 @@ Class is EnumDesugar{
 	## name() dispatch needs the variants, so the caller wires the body.
 	Function of Member is synthToString([Statement] is body){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
-		m:modifiers: Array(['replace']);
+		m:modifiers: ['replace'];
 		m:memberType: Type:init(name: 'String');
 		m:name: 'toString';
 		m:body: body;
@@ -378,7 +387,7 @@ Class is EnumDesugar{
 	## values(): the instances in declaration order. HELD: receiver-free.
 	Function of Member is synthValues(String is name, [Member] is variants){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
-		m:modifiers: Array(['held']);
+		m:modifiers: ['held'];
 		local Type is listT: Type(name: 'List');
 		listT:params: [Type(name: name)];
 		m:memberType: listT;
@@ -387,7 +396,7 @@ Class is EnumDesugar{
 		local Type is declT: Type(name: 'List');
 		declT:params: [Type(name: name)];
 		local [Expression] is emptyItems: [];
-		local Statement is decl: Statement:VarDecl(modifiers: Array(['local']), varType: declT, varName: 'all', initExpr: Expression:ArrayLit(items: emptyItems), hasInit: true);
+		local Statement is decl: Statement:VarDecl(modifiers: ['local'], varType: declT, varName: 'all', initExpr: Expression:ArrayLit(items: emptyItems), hasInit: true);
 		body:push(item: decl);
 		while([Int is vi: 0], { vi < variants:length() }, {
 			local Member is v: variants:get(index: vi);

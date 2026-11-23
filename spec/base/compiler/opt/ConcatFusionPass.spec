@@ -154,27 +154,24 @@ Class of SpecOptimizer is ConcatFusionPass{
 		});
 
 		local IrBlock is entry: fn:addBlock(label: 'entry');
-		local Array of String is lenSlots: Array();
-		local Array of String is dataSlots: Array();
-		i: 0;
-		while({ i < k }, {
-			local String is iStr: i as String;
+		local [String] is lenSlots: [];
+		local [String] is dataSlots: [];
+		times(count: k, worker: local Function(Int is ti){
+			local String is iStr: ti as String;
 			local String is ls: '%len_slot_' . iStr;
 			local String is ds: '%data_slot_' . iStr;
 			entry:append(inst: IrInst:Alloca(slot: ls, ty: IrType:I64));
 			entry:append(inst: IrInst:Alloca(slot: ds, ty: IrType:Ptr));
-			lenSlots:add(item: ls);
-			dataSlots:add(item: ds);
-			i++;
+			lenSlots:push(item: ls);
+			dataSlots:push(item: ds);
 		});
 		local String is zeroI64: '%zero_i64';
 		entry:append(inst: IrInst:ConstInt(dst: zeroI64, value: 0));
 		entry:append(inst: IrInst:Br(target: 'chk_0'));
 
-		i: 0;
-		while({ i < k }, {
-			local String is iStr: i as String;
-			local String is nextLbl: if({ i + 1 < k }, { 'chk_' . ((i + 1) as String) }, { 'alloc_buf' });
+		times(count: k, worker: local Function(Int is ti){
+			local String is iStr: ti as String;
+			local String is nextLbl: if({ ti + 1 < k }, { 'chk_' . ((ti + 1) as String) }, { 'alloc_buf' });
 			local IrBlock is chkBlk: fn:addBlock(label: 'chk_' . iStr);
 			local String is p: '%p' . iStr;
 			local String is pAddr: '%p_addr_' . iStr;
@@ -184,8 +181,8 @@ Class of SpecOptimizer is ConcatFusionPass{
 			chkBlk:append(inst: IrInst:CondBr(cond: isNull, thenLabel: 'null_' . iStr, elseLabel: 'ok_' . iStr));
 
 			local IrBlock is nullBlk: fn:addBlock(label: 'null_' . iStr);
-			nullBlk:append(inst: IrInst:Store(slot: lenSlots:get(index: i), val: zeroI64, ty: IrType:I64));
-			nullBlk:append(inst: IrInst:Store(slot: dataSlots:get(index: i), val: 'null', ty: IrType:Ptr));
+			nullBlk:append(inst: IrInst:Store(slot: lenSlots:get(index: ti), val: zeroI64, ty: IrType:I64));
+			nullBlk:append(inst: IrInst:Store(slot: dataSlots:get(index: ti), val: 'null', ty: IrType:Ptr));
 			nullBlk:append(inst: IrInst:Br(target: nextLbl));
 
 			local IrBlock is okBlk: fn:addBlock(label: 'ok_' . iStr);
@@ -195,35 +192,32 @@ Class of SpecOptimizer is ConcatFusionPass{
 			local String is dv: '%dv_' . iStr;
 			okBlk:append(inst: IrInst:PtrElem(dst: lp, basePtr: p, index: 1));
 			okBlk:append(inst: IrInst:Load(dst: lv, slot: lp, ty: IrType:I64));
-			okBlk:append(inst: IrInst:Store(slot: lenSlots:get(index: i), val: lv, ty: IrType:I64));
+			okBlk:append(inst: IrInst:Store(slot: lenSlots:get(index: ti), val: lv, ty: IrType:I64));
 			okBlk:append(inst: IrInst:PtrElem(dst: dp, basePtr: p, index: 0));
 			okBlk:append(inst: IrInst:Load(dst: dv, slot: dp, ty: IrType:Ptr));
-			okBlk:append(inst: IrInst:Store(slot: dataSlots:get(index: i), val: dv, ty: IrType:Ptr));
+			okBlk:append(inst: IrInst:Store(slot: dataSlots:get(index: ti), val: dv, ty: IrType:Ptr));
 			okBlk:append(inst: IrInst:Br(target: nextLbl));
-			i++;
 		});
 
 		local IrBlock is allocBlk: fn:addBlock(label: 'alloc_buf');
-		local Array of String is lens: Array();
-		local Array of String is datas: Array();
+		local [String] is lens: [];
+		local [String] is datas: [];
 		local String is totalVal: '';
-		i: 0;
-		while({ i < k }, {
-			local String is iStr: i as String;
+		times(count: k, worker: local Function(Int is ti){
+			local String is iStr: ti as String;
 			local String is lv: '%l_' . iStr;
 			local String is dv: '%d_' . iStr;
-			allocBlk:append(inst: IrInst:Load(dst: lv, slot: lenSlots:get(index: i), ty: IrType:I64));
-			allocBlk:append(inst: IrInst:Load(dst: dv, slot: dataSlots:get(index: i), ty: IrType:Ptr));
-			lens:add(item: lv);
-			datas:add(item: dv);
-			if({ i == 0 }, {
+			allocBlk:append(inst: IrInst:Load(dst: lv, slot: lenSlots:get(index: ti), ty: IrType:I64));
+			allocBlk:append(inst: IrInst:Load(dst: dv, slot: dataSlots:get(index: ti), ty: IrType:Ptr));
+			lens:push(item: lv);
+			datas:push(item: dv);
+			if({ ti == 0 }, {
 				totalVal: lv;
 			}, {
 				local String is sumTmp: '%sum_' . iStr;
 				allocBlk:append(inst: IrInst:BinOp(dst: sumTmp, op: '+', lhs: totalVal, rhs: lv, ty: IrType:I64));
 				totalVal: sumTmp;
 			});
-			i++;
 		});
 
 		local String is c256: '%c256';
@@ -328,11 +322,11 @@ Class of SpecOptimizer is ConcatFusionPass{
 				local Int is bi: 0;
 				while({ bi < fn:blocks:length() }, {
 					local IrBlock is blk: fn:blocks:get(index: bi);
-					local Map of String to Array of String is partsMap: Map();
+					local Map of String to [String] is partsMap: Map();
 					local Map of String to [Int] is callsMap: Map();
 					local Map of String to String is calleeMap: Map();
 					local Map of String to Boolean is isRoot: Map();
-					local Array of String is rootOrder: Array();
+					local [String] is rootOrder: [];
 
 					local Int is ii: 0;
 					while({ ii < blk:insts:length() }, {
@@ -342,30 +336,30 @@ Class of SpecOptimizer is ConcatFusionPass{
 								if({ hasDst && retType == IrType:Ptr && concatFns:has(key: callee) && args:length() == 2 }, {
 									local String is a0: args:get(index: 0, default: '');
 									local String is a1: args:get(index: 1, default: '');
-									local Array of String is parts: Array();
+									local [String] is parts: [];
 									local [Int] is cIdxs: [];
 
 									local Boolean is fuseLeft: isRoot:get(key: a0, default: false) && uses:get(key: a0, default: 0) == 1 && calleeMap:get(key: a0, default: '') == callee;
 									local Boolean is fuseRight: a1 != a0 && isRoot:get(key: a1, default: false) && uses:get(key: a1, default: 0) == 1 && calleeMap:get(key: a1, default: '') == callee;
 
 									if({ fuseLeft }, {
-										local Array of String is lp: partsMap:get(key: a0, default: Array());
+										local [String] is lp: partsMap:get(key: a0, default: []);
 										local [Int] is lc: callsMap:get(key: a0, default: []);
-										while([Int is li: 0], { li < lp:length() }, { parts:add(item: lp:get(index: li)); li++; });
-										while([Int is li: 0], { li < lc:length() }, { cIdxs:push(item: lc:get(index: li)); li++; });
+										each(list: lp, action: local Function(String is p){ parts:push(item: p); });
+										range(start: 0, end: lc:length(), worker: local Function(Int is li){ cIdxs:push(item: lc:get(index: li)); });
 										isRoot:set(key: a0, value: false);
 									}, {
-										parts:add(item: a0);
+										parts:push(item: a0);
 									});
 
 									if({ fuseRight }, {
-										local Array of String is rp: partsMap:get(key: a1, default: Array());
+										local [String] is rp: partsMap:get(key: a1, default: []);
 										local [Int] is rc: callsMap:get(key: a1, default: []);
-										while([Int is ri: 0], { ri < rp:length() }, { parts:add(item: rp:get(index: ri)); ri++; });
-										while([Int is ri: 0], { ri < rc:length() }, { cIdxs:push(item: rc:get(index: ri)); ri++; });
+										each(list: rp, action: local Function(String is p){ parts:push(item: p); });
+										range(start: 0, end: rc:length(), worker: local Function(Int is ri){ cIdxs:push(item: rc:get(index: ri)); });
 										isRoot:set(key: a1, value: false);
 									}, {
-										parts:add(item: a1);
+										parts:push(item: a1);
 									});
 
 									cIdxs:push(item: curIdx);
@@ -373,7 +367,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 									callsMap:set(key: dst, value: cIdxs);
 									calleeMap:set(key: dst, value: callee);
 									isRoot:set(key: dst, value: true);
-									rootOrder:add(item: dst);
+									rootOrder:push(item: dst);
 								});
 							},
 							else: {}
@@ -382,19 +376,17 @@ Class of SpecOptimizer is ConcatFusionPass{
 					});
 
 					local Map of Int to Boolean is deleteSet: Map();
-					local Map of Int to Array of String is replaceMap: Map();
+					local Map of Int to [String] is replaceMap: Map();
 					local Map of Int to String is replaceDstMap: Map();
-					while([Int is ri: 0], { ri < rootOrder:length() }, {
-						local String is rDst: rootOrder:get(index: ri);
+					each(list: rootOrder, action: local Function(String is rDst){
 						if({ isRoot:get(key: rDst, default: false) }, {
 							local [Int] is cIdxs: callsMap:get(key: rDst, default: []);
 							if({ cIdxs:length() >= 2 }, {
-								while([Int is ci: 0], { ci < cIdxs:length() - 1 }, {
+								range(start: 0, end: cIdxs:length() - 1, worker: local Function(Int is ci){
 									deleteSet:set(key: cIdxs:get(index: ci), value: true);
-									ci++;
 								});
 								local Int is lastIdx: cIdxs:get(index: cIdxs:length() - 1);
-								local Array of String is rParts: partsMap:get(key: rDst, default: Array());
+								local [String] is rParts: partsMap:get(key: rDst, default: []);
 								replaceMap:set(key: lastIdx, value: rParts);
 								replaceDstMap:set(key: lastIdx, value: rDst);
 								local Int is k: rParts:length();
@@ -404,24 +396,20 @@ Class of SpecOptimizer is ConcatFusionPass{
 								});
 							});
 						});
-						ri++;
 					});
 
 					if({ deleteSet:length() > 0 || replaceMap:length() > 0 }, {
 						local [IrInst] is newInsts: [];
-						ii: 0;
-						while({ ii < blk:insts:length() }, {
-							if({ !deleteSet:get(key: ii, default: false) }, {
-								if({ replaceMap:has(key: ii) }, {
-									local Array of String is rParts: replaceMap:get(key: ii, default: Array());
-									local String is rDst: replaceDstMap:get(key: ii, default: '');
+						range(start: 0, end: blk:insts:length(), worker: local Function(Int is i2){
+							if({ !deleteSet:get(key: i2, default: false) }, {
+								if({ replaceMap:has(key: i2) }, {
+									local [String] is rParts: replaceMap:get(key: i2, default: []);
+									local String is rDst: replaceDstMap:get(key: i2, default: '');
 									local [IrType] is rTys: [];
 									local [String] is rArgs: [];
-									local Int is ti: 0;
-									while({ ti < rParts:length() }, {
+									each(list: rParts, action: local Function(String is rp){
 										rTys:push(item: IrType:Ptr);
-										rArgs:push(item: rParts:get(index: ti, default: ''));
-										ti++;
+										rArgs:push(item: rp);
 									});
 									newInsts:push(item: IrInst:IrCall(
 										dst: rDst,
@@ -432,10 +420,9 @@ Class of SpecOptimizer is ConcatFusionPass{
 										args: rArgs
 									));
 								}, {
-									newInsts:push(item: blk:insts:get(index: ii));
+									newInsts:push(item: blk:insts:get(index: i2));
 								});
 							});
-							ii++;
 						});
 						blk:insts: newInsts;
 					});

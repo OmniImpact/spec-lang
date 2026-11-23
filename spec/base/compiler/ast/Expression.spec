@@ -23,7 +23,7 @@ Enum is Expression {
 	FloatLit(String is text),
 	BoolLit(Boolean is value),
 	Ident(String is name),
-	Path(Array of String is segments),
+	Path([String] is segments),
 	ArrayLit([Expression] is items),
 	MapLit([Expression] is keys, [Expression] is values),
 	Cast(Expression is inner, String is target, [Expression] is args),

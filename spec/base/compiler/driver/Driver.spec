@@ -516,9 +516,8 @@ Class is Driver{
 			mi++;
 		});
 		if({ !:entryInitTakesMap }, {
-			c:baseClasses:each(action: local Function(String is baseName){
-				local Int is ai: 0;
-				while({ !:entryInitTakesMap && ai < all:length() }, {
+			each(list: c:baseClasses, action: local Function(String is baseName){
+				while([Int is ai: 0], { !:entryInitTakesMap && ai < all:length() }, {
 					local ClassInfo is cand: all:get(index: ai);
 					if({ cand:name == baseName }, {
 						:resolveEntryInit(c: cand, all: all, visited: visited);

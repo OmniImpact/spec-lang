@@ -89,7 +89,7 @@ Class is LintRule{
 	## Default statement traversal.
 	Function is traverseStatement(Statement is stmt, Array of LintIssue is issues){
 		match(on: stmt, when: [
-			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				if({ hasInit }, {
 					:checkExpression(expr: initExpr, issues: issues);
 				});
@@ -201,7 +201,7 @@ Class is LintRule{
 			Expression:Ident: local Function of String(String is name){
 				return name;
 			},
-			Expression:Path: local Function of String(Array of String is segs){
+			Expression:Path: local Function of String([String] is segs){
 				if({ segs:length() > 0 }, {
 					return segs:get(index: segs:length() - 1);
 				});

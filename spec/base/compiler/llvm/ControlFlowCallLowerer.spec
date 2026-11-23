@@ -50,9 +50,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ call:bareProvider:endsWith(suffix: ':sysinternal:Conditional') }, { return true; });
 		local Boolean is ok: false;
 		match(on: call:target, when: [
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				local Int is n: segs:length();
-				if({ n >= 2 && segs:get(index: n - 1, default: '') == 'Conditional' && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+				if({ n >= 2 && segs:get(index: n - 1) == 'Conditional' && segs:get(index: n - 2) == 'sysinternal' }, {
 					ok: true;
 				});
 			}
@@ -64,9 +64,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ call:bareProvider:endsWith(suffix: ':sysinternal:Loops') }, { return true; });
 		local Boolean is ok: false;
 		match(on: call:target, when: [
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				local Int is n: segs:length();
-				if({ n >= 2 && segs:get(index: n - 1, default: '') == 'Loops' && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+				if({ n >= 2 && segs:get(index: n - 1) == 'Loops' && segs:get(index: n - 2) == 'sysinternal' }, {
 					ok: true;
 				});
 			}
@@ -83,8 +83,8 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			Expression:Ident: local Function(String is tn){
 				if({ tn == 'Conditional' || tn == '' || (tn == ':' && call:bareProvider == '') }, { ok: true; });
 			},
-			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() > 0 && segs:get(index: segs:length() - 1, default: '') == 'Conditional' }, { ok: true; });
+			Expression:Path: local Function([String] is segs){
+				if({ segs:length() > 0 && segs:get(index: segs:length() - 1) == 'Conditional' }, { ok: true; });
 			}
 		], default: {});
 		return ok;
@@ -101,8 +101,8 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			Expression:Ident: local Function(String is tn){
 				if({ tn == 'Loops' || tn == '' || (tn == ':' && call:bareProvider == '') }, { ok: true; });
 			},
-			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() > 0 && segs:get(index: segs:length() - 1, default: '') == 'Loops' }, { ok: true; });
+			Expression:Path: local Function([String] is segs){
+				if({ segs:length() > 0 && segs:get(index: segs:length() - 1) == 'Loops' }, { ok: true; });
 			},
 			Expression:FieldAccess: local Function(Expression is obj, String is mem){
 				if({ mem == 'Loops' }, { ok: true; });
@@ -119,9 +119,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ nm == 'init' }, {
 			local Boolean is isCf: false;
 			match(on: call:target, when: [
-				Expression:Path: local Function(Array of String is segs){
+				Expression:Path: local Function([String] is segs){
 					local Int is n: segs:length();
-					if({ n >= 2 && segs:get(index: n - 2, default: '') == 'sysinternal' && (segs:get(index: n - 1, default: '') == 'Conditional' || segs:get(index: n - 1, default: '') == 'Loops') }, {
+					if({ n >= 2 && segs:get(index: n - 2) == 'sysinternal' && (segs:get(index: n - 1) == 'Conditional' || segs:get(index: n - 1) == 'Loops') }, {
 						isCf: true;
 					});
 				}

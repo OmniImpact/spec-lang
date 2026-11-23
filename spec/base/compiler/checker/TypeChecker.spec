@@ -307,13 +307,26 @@ Class is TypeChecker{
 		return baseName;
 	}
 
+	local Function of Int is strListIndexOf([String] is xs, String is target){
+		local Int is i: 0;
+		while({ i < xs:length() }, {
+			if({ xs:get(index: i) == target }, { return i; });
+			i++;
+		});
+		return -1;
+	}
+
+	local Function of Boolean is strListHas([String] is xs, String is target){
+		return :strListIndexOf(xs: xs, target: target) >= 0;
+	}
+
 	## Substitutes a class's generic type parameters in a structured [Type] node.
 	Function of Type is substituteTypeNode(Type is t, ClassInfo is cls, [Type] is typeArgs){
-		local Array of String is tps: cls:typeParams;
+		local [String] is tps: cls:typeParams;
 		if({ tps:length() == 0 || typeArgs:length() == 0 || t:name == '' }, {
 			return t;
 		});
-		local Int is idx: tps:indexOf(search: t:name, default: -1);
+		local Int is idx: :strListIndexOf(xs: tps, target: t:name);
 		if({ idx >= 0 && t:params:length() == 0 }, {
 			if({ idx < typeArgs:length() }, {
 				return typeArgs:get(index: idx):clone();
@@ -438,7 +451,7 @@ Class is TypeChecker{
 	## @param typeArgs: The concrete type arguments.
 	## @return: The substituted type name.
 	Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
-		local Array of String is tps: cls:typeParams;
+		local [String] is tps: cls:typeParams;
 		if({ tps:length() == 0 || typeArgs:length() == 0 }, {
 			return rawType;
 		});
@@ -606,7 +619,7 @@ Class is TypeChecker{
 			return true;
 		});
 		local Boolean is matched: false;
-		subCls:baseClasses:each(action: local Function(String is pName){
+		each(list: subCls:baseClasses, action: local Function(String is pName){
 			if({ pName == baseName || :isSubclassOf(subName: pName, baseName: baseName) }, {
 				matched: true;
 			});
@@ -640,7 +653,7 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !:isImplicitRootClass(name: baseName) && !visited:has(key: baseName) }, {
 				local Boolean is present: false;
 				acc:each(action: local Function(String is existing){
@@ -653,7 +666,7 @@ Class is TypeChecker{
 				});
 			});
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			:collectUserAncestors(className: baseName, visited: visited, acc: acc);
 		});
 	}
@@ -914,7 +927,7 @@ Class is TypeChecker{
 			return res;
 		});
 		local Member is inherited: Member:init(kind: MemberKind:FIELD);
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ inherited:name == '' }, {
 				inherited: :lookupAnyMember(className: baseName, methodName: methodName);
 			});
@@ -968,7 +981,7 @@ Class is TypeChecker{
 			return :formatVarTypeString(t: subNode);
 		});
 		local String is inherited: '';
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ inherited == '' }, {
 				inherited: :lookupFieldType(className: baseName, fieldName: fieldName);
 			});
@@ -1007,7 +1020,7 @@ Class is TypeChecker{
 			return :formatTypeString(t: subNode);
 		});
 		local String is inherited: '';
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ inherited == '' }, {
 				inherited: :lookupMethodReturnType(className: baseName, methodName: methodName);
 			});
@@ -1141,7 +1154,7 @@ Class is TypeChecker{
 						if({ !handledStr }, {
 							local String is keyName: match(on: one, when: [
 								Expression:Ident: local Function of String(String is name){ return name; },
-								Expression:Path: local Function of String(Array of String is segments){
+								Expression:Path: local Function of String([String] is segments){
 									return if({ segments:length() > 0 }, {
 										segments:get(index: segments:length() - 1)
 									}, {
@@ -1624,7 +1637,7 @@ Class is TypeChecker{
 			local String is sigRoot: '';
 			match(on: cd:target, when: [
 				Expression:Ident: local Function(String is name){ sigRoot: name; },
-				Expression:Path: local Function(Array of String is segments){
+				Expression:Path: local Function([String] is segments){
 					if({ segments:length() > 0 }, {
 						sigRoot: segments:get(index: 0);
 					});
@@ -1714,7 +1727,7 @@ Class is TypeChecker{
 			});
 			return;
 		});
-		local Array of String is recvTypeParams: recvCls:typeParams;
+		local [String] is recvTypeParams: recvCls:typeParams;
 		local Int is pIdx: 0;
 		while({ pIdx < params:length() }, {
 			local Parameter is p: params:get(index: pIdx);
@@ -1783,7 +1796,7 @@ Class is TypeChecker{
 				pTF: :substituteTypeParam(rawType: pTF, cls: recvCls, typeArgs: recvTypeArgs);
 			});
 			local Boolean is isMethodGenericParam: methodTypeParam != '' && (pTF == methodTypeParam || pTF == 'Function:' . methodTypeParam);
-			local Boolean is isUngroundedExternalGeneric: isMethodGenericParam || (recvTypeArgs:length() == 0 && recvCls:name != :currentClassName && recvTypeParams:indexOf(search: pTF, default: -1) >= 0);
+			local Boolean is isUngroundedExternalGeneric: isMethodGenericParam || (recvTypeArgs:length() == 0 && recvCls:name != :currentClassName && :strListHas(xs: recvTypeParams, target: pTF));
 			if({ pT != :names:selfFieldMarker() && pTF != Primitive:ANY:value() && pTF != '' && !isUngroundedExternalGeneric }, {
 				local Expression is matchedValue: Expression:Unknown;
 				local Boolean is found: false;
@@ -2160,7 +2173,7 @@ Class is TypeChecker{
 			ownerAcc:add(item: cls:qualifiedName());
 			return;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			:collectOverloadGroup(className: baseName, methodName: methodName, visited: visited, acc: acc, ownerAcc: ownerAcc);
 		});
 	}
@@ -2184,7 +2197,7 @@ Class is TypeChecker{
 		if({ tp == '' || tp == :names:selfFieldMarker() || :isPrimitive(t: tp) || :registeredClasses:has(key: tp) || :allEnumNames:has(key: tp) }, {
 			return false;
 		});
-		if({ cls:typeParams:indexOf(search: tp, default: -1) >= 0 }, {
+		if({ :strListHas(xs: cls:typeParams, target: tp) }, {
 			return false;
 		});
 		return true;
@@ -2499,7 +2512,7 @@ Class is TypeChecker{
 			return true;
 		});
 		local Boolean is viaParent: false;
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !viaParent && :importsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, {
 				viaParent: true;
 			});
@@ -2599,7 +2612,7 @@ Class is TypeChecker{
 			});
 			mi++;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			:collectBareProviders(clsName: baseName, methodName: methodName, visited: visited, acc: acc);
 		});
 	}
@@ -2683,7 +2696,7 @@ Class is TypeChecker{
 			});
 			mi++;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			:collectNestedScopeEntries(clsName: baseName, visited: visited);
 		});
 	}
@@ -2732,7 +2745,7 @@ Class is TypeChecker{
 			return false;
 		});
 		local Boolean is viaParent: false;
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !viaParent && :declaresOrInherits(className: baseName, methodName: methodName, visited: visited) }, {
 				viaParent: true;
 			});
@@ -2770,7 +2783,7 @@ Class is TypeChecker{
 			return true;
 		});
 		local Boolean is viaParent: false;
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !viaParent && :declaresOrInherits(className: baseName, methodName: methodName, visited: visited) }, {
 				viaParent: true;
 			});
@@ -2799,7 +2812,7 @@ Class is TypeChecker{
 			return false;
 		});
 		local Boolean is viaParent: false;
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !viaParent && :nearestGroupOverloaded(className: baseName, methodName: methodName, visited: visited) }, {
 				viaParent: true;
 			});
@@ -2840,7 +2853,7 @@ Class is TypeChecker{
 			return false;
 		});
 		local Boolean is viaParent: false;
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !viaParent && :nearestGroupOverloaded(className: baseName, methodName: methodName, visited: visited) }, {
 				viaParent: true;
 			});
@@ -2910,7 +2923,7 @@ Class is TypeChecker{
 									while([Int is gpi: 0], { gpi < g:params:length() && !nonConcrete }, {
 										local Parameter is pp: g:params:get(index: gpi);
 										local String is pt: pp:paramType:name;
-										if({ pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() || (sharesArity && c:typeParams:indexOf(search: pt, default: -1) >= 0) }, {
+										if({ pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() || (sharesArity && :strListHas(xs: c:typeParams, target: pt)) }, {
 											nonConcrete: true;
 										});
 										gpi++;
@@ -3190,7 +3203,7 @@ Class is TypeChecker{
 			return true;
 		});
 		local Boolean is viaParent: false;
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !viaParent && :accessInClass(className: baseName, targetName: targetName, visited: visited) }, {
 				viaParent: true;
 			});
@@ -3240,7 +3253,7 @@ Class is TypeChecker{
 		if({ :registeredClasses:has(key: t:name) && !:classHasAccess(className: :currentClassName, targetName: t:name) }, {
 			:addError(line: line, msg: '\'' . t:name . '\' is not imported by \'' . :currentClassName . '\'; add it to the using declaration (§I.6).');
 		}, {
-			if({ t:name != :names:selfFieldMarker() && !:isPrimitive(t: t:name) && !:registeredClasses:has(key: t:name) && !:allEnumNames:has(key: t:name) && :currentClassDef:typeParams:indexOf(search: t:name, default: -1) < 0 && !:currentMethodTypeParams:has(key: t:name) }, {
+			if({ t:name != :names:selfFieldMarker() && !:isPrimitive(t: t:name) && !:registeredClasses:has(key: t:name) && !:allEnumNames:has(key: t:name) && !:strListHas(xs: :currentClassDef:typeParams, target: t:name) && !:currentMethodTypeParams:has(key: t:name) }, {
 				:addError(line: line, msg: 'Unknown or unimported type \'' . t:name . '\' in \'' . :currentClassName . '\'.');
 			});
 		});
@@ -3403,7 +3416,7 @@ Class is TypeChecker{
 		return 'Any';
 	}
 
-	local Function of String is inferPathExpr(Array of String is segs){
+	local Function of String is inferPathExpr([String] is segs){
 		local String is res: 'Any';
 		if({ segs:length() == 0 }, {
 			return res;
@@ -3649,7 +3662,7 @@ Class is TypeChecker{
 			});
 			return target;
 		});
-		if({ :currentClassDef:typeParams:indexOf(search: target, default: -1) >= 0 || :currentMethodTypeParams:has(key: target) }, {
+		if({ :strListHas(xs: :currentClassDef:typeParams, target: target) || :currentMethodTypeParams:has(key: target) }, {
 			return target;
 		});
 		:addError(line: :currentLine, msg: 'Unknown cast target \'' . target . '\'.');
@@ -3916,7 +3929,7 @@ Class is TypeChecker{
 			Expression:Ident: local Function(String is name){
 				res: :inferIdentExpr(name: name);
 			},
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				res: :inferPathExpr(segs: segs);
 			},
 			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
@@ -3957,9 +3970,9 @@ Class is TypeChecker{
 		return res;
 	}
 
-	local Function is validateCallReceiverModel(String is recvName, CallData is call, Boolean is targetIsPath, Array of String is targetPathSegs){
+	local Function is validateCallReceiverModel(String is recvName, CallData is call, Boolean is targetIsPath, [String] is targetPathSegs){
 		if({ recvName != '' && call:name != 'init' }, {
-			local Boolean is isSysinternalPath: targetIsPath && targetPathSegs:indexOf(search: 'sysinternal', default: -1) >= 0;
+			local Boolean is isSysinternalPath: targetIsPath && :strListHas(xs: targetPathSegs, target: 'sysinternal');
 			local Boolean is isTypeLevel: isSysinternalPath || :allEnumNames:has(key: recvName) || :isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'Str' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || :bindings:isClassModelEnum(c: :findClass(name: recvName));
 			if({ :findHeldMethod(className: recvName, methodName: call:name):name != '' }, {
 				isTypeLevel: true;
@@ -4775,14 +4788,14 @@ Class is TypeChecker{
 		local Boolean is targetIsIdent: false;
 		local Boolean is targetIsPath: false;
 		local String is targetStr: '';
-		local Array of String is targetPathSegs: Array();
+		local [String] is targetPathSegs: [];
 		match(on: call:target, when: [
 			Expression:Ident: local Function(String is name){
 				targetIsIdent: true;
 				targetStr: name;
 				targetIsSelf: name == :names:selfIdent();
 			},
-			Expression:Path: local Function(Array of String is segs){
+			Expression:Path: local Function([String] is segs){
 				targetIsPath: true;
 				targetPathSegs: segs;
 			}
@@ -4823,7 +4836,7 @@ Class is TypeChecker{
 				});
 			});
 			if({ hasNested }, {
-				local Array of String is segs: Array([targetName, method]);
+				local [String] is segs: [targetName, method];
 				call:target: Expression:Path(segments: segs);
 				call:name: 'init';
 				targetIsIdent: false;
@@ -4937,7 +4950,11 @@ Class is TypeChecker{
 		});
 
 		if({ targetIsPath }, {
-			local String is qJoined: targetPathSegs:join(separator: ':');
+			local String is qJoined: '';
+			range(start: 0, end: targetPathSegs:length(), worker: local Function(Int is qi){
+				if({ qi > 0 }, { qJoined: qJoined . ':'; });
+				qJoined: qJoined . targetPathSegs:get(index: qi);
+			});
 			if({ qJoined:contains(needle: ':sysinternal:') }, {
 				local ClassInfo is callerCls: :currentClassDef;
 				local Array of String is callerSegs: callerCls:namespaceSegments();
@@ -4963,7 +4980,7 @@ Class is TypeChecker{
 				match(on: call:target, when: [
 					Expression:Call: local Function(CallData is qInnerCall){
 						match(on: qInnerCall:target, when: [
-							Expression:Path: local Function(Array of String is qSegs){
+							Expression:Path: local Function([String] is qSegs){
 								local String is qCand: qInnerCall:name;
 								local ClassInfo is qCls: :findClass(name: qCand);
 								if({ qCand != '' && qCls:name == qCand }, {
@@ -5168,7 +5185,7 @@ Class is TypeChecker{
 		if({ found }, {
 			return true;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ !found && :classHasCustomErrorHandlerWalk(className: baseName, visited: visited) }, {
 				found: true;
 			});
@@ -5192,7 +5209,7 @@ Class is TypeChecker{
 			Expression:Ident: local Function of Boolean(String is name){
 				return name != :names:selfIdent() && :lazyLocalVars:has(key: name);
 			},
-			Expression:Path: local Function of Boolean(Array of String is segs){
+			Expression:Path: local Function of Boolean([String] is segs){
 				if({ segs:length() == 0 }, { return false; });
 				local String is root: segs:get(index: 0);
 				return root != :names:selfIdent() && :lazyLocalVars:has(key: root);
@@ -5319,7 +5336,7 @@ Class is TypeChecker{
 			:currentLine: stmt:line;
 		});
 		match(on: stmt, when: [
-			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				# the access gate resolves the bare nested
 				# reference BEFORE the scope map stamps it — the checker and
 				# the gen agree on the qualified identity.
@@ -5372,7 +5389,7 @@ Class is TypeChecker{
 				# slot, and assignment through it is rejected.
 				# a resolution-hook name is a cached single copy too.
 				match(on: assignTarget, when: [
-					Expression:Path: local Function(Array of String is hSegs){
+					Expression:Path: local Function([String] is hSegs){
 						if({ hSegs:length() >= 2 }, {
 							local String is hRoot: hSegs:get(index: 0);
 							local String is hName: hSegs:get(index: 1);
@@ -5991,7 +6008,7 @@ Class is TypeChecker{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local Member is res: Member:init(kind: MemberKind:FIELD);
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ res:name == '' }, {
 				local Member is m: :lookupAnyMember(className: baseName, methodName: methodName);
 				if({ m:kind == MemberKind:METHOD }, {
@@ -6033,7 +6050,7 @@ Class is TypeChecker{
 			});
 			mi++;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			:collectConcreteDeclarers(className: baseName, methodName: methodName, seen: seen, acc: acc);
 		});
 	}
@@ -6049,7 +6066,7 @@ Class is TypeChecker{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local Member is res: Member:init(kind: MemberKind:FIELD);
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ res:name == '' }, {
 				local ClassInfo is anc: :findClass(name: baseName);
 				if({ anc:name != '' }, {
@@ -6064,7 +6081,7 @@ Class is TypeChecker{
 			});
 		});
 		if({ res:name == '' }, {
-			cls:baseClasses:each(action: local Function(String is baseName){
+			each(list: cls:baseClasses, action: local Function(String is baseName){
 				if({ res:name == '' }, {
 					res: :findAncestorMember(className: baseName, memberName: memberName);
 				});
@@ -6094,7 +6111,7 @@ Class is TypeChecker{
 		if({ owner != '' }, {
 			return owner;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ owner == '' }, {
 				owner: :findMemberOwnerClass(className: baseName, memberName: memberName);
 			});
@@ -6128,7 +6145,7 @@ Class is TypeChecker{
 		if({ owner != '' }, {
 			return owner;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ owner == '' }, {
 				owner: :findHeldOwnerClass(className: baseName, memberName: memberName);
 			});
@@ -6182,7 +6199,7 @@ Class is TypeChecker{
 		if({ res:name != '' }, {
 			return res;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ res:name == '' }, {
 				res: :findHeldMethod(className: baseName, methodName: methodName);
 			});
@@ -6215,7 +6232,7 @@ Class is TypeChecker{
 		if({ owner != '' }, {
 			return owner;
 		});
-		cls:baseClasses:each(action: local Function(String is baseName){
+		each(list: cls:baseClasses, action: local Function(String is baseName){
 			if({ owner == '' }, {
 				owner: :findHeldMethodOwner(className: baseName, methodName: methodName);
 			});
@@ -6404,7 +6421,7 @@ Class is TypeChecker{
 	## @param classDef: Class to validate.
 	Function is checkMethodConflicts(ClassInfo is classDef){
 		local Map of String to String is seenMethods: Map:init();
-		classDef:baseClasses:each(action: local Function(String is baseName){
+		each(list: classDef:baseClasses, action: local Function(String is baseName){
 			local ClassInfo is anc: :findClass(name: baseName);
 			if({ anc:name != '' }, {
 				while([Int is mi: 0], { mi < anc:members:length() }, {
@@ -6429,7 +6446,7 @@ Class is TypeChecker{
 			if({ !declaredLocally }, {
 				local Map of String to String is seen: Map:init();
 				local Array of String is declarers: Array();
-				classDef:baseClasses:each(action: local Function(String is baseName){
+				each(list: classDef:baseClasses, action: local Function(String is baseName){
 					:collectConcreteDeclarers(className: baseName, methodName: mName, seen: seen, acc: declarers);
 				});
 				local Array of String is maximal: Array();
@@ -6465,7 +6482,7 @@ Class is TypeChecker{
 			mi++;
 		});
 
-		classDef:baseClasses:each(action: local Function(String is baseName){
+		each(list: classDef:baseClasses, action: local Function(String is baseName){
 			local ClassInfo is parent: :findClass(name: baseName);
 			# The outer-link relation is an ACCESS scope, not an is-a
 			# contract: the enclosing class's members surface to the inner
@@ -6670,7 +6687,7 @@ Class is TypeChecker{
 	##
 	## @param classDef: Class to collect from.
 	Function is collectClassFieldTypes(ClassInfo is classDef){
-		classDef:baseClasses:each(action: local Function(String is baseName){
+		each(list: classDef:baseClasses, action: local Function(String is baseName){
 			local ClassInfo is parent: :findClass(name: baseName);
 			if({ parent:name != '' }, {
 				:collectClassFieldTypes(classDef: parent);
@@ -6869,7 +6886,7 @@ Class is TypeChecker{
 								local String is fType: :formatVarTypeString(t: fm:memberType);
 								local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
 								local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
-								local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
+								local Boolean is isTypeParam: :strListHas(xs: classDef:typeParams, target: fType);
 								if({ !isValPrim && !isAutoList && !isTypeParam }, {
 									:addError(line: m:line, msg: "Field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' is not initialized by 'init' (Spec does not have null).");
 								});
@@ -6913,7 +6930,7 @@ Class is TypeChecker{
 					local String is fType: :formatVarTypeString(t: fm:memberType);
 					local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
 					local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
-					local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
+					local Boolean is isTypeParam: :strListHas(xs: classDef:typeParams, target: fType);
 					if({ !isValPrim && !isAutoList && !isTypeParam }, {
 						if({ fm:hasModifier(kw: Keyword:HELD) }, {
 							:addError(line: fm:line, msg: "Held field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' must be initialized (Spec does not have null).");
@@ -7149,7 +7166,7 @@ Class is TypeChecker{
 	local Function is collectFieldsForPrepass(ClassInfo is cls, Map of String to String is out, Map of String to String is visited){
 		if({ cls:name == '' || visited:has(key: cls:qualifiedName()) }, { return; });
 		visited:set(key: cls:qualifiedName(), value: 'true');
-		cls:baseClasses:each(action: local Function(String is bn){
+		each(list: cls:baseClasses, action: local Function(String is bn){
 			local ClassInfo is p: :findClass(name: bn);
 			if({ p:name != '' }, {
 				:collectFieldsForPrepass(cls: p, out: out, visited: visited);

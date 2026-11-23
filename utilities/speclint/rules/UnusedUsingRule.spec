@@ -49,7 +49,7 @@ Class of LintRule is UnusedUsingRule{
 
 	local Function is markStmt(Statement is stmt){
 		match(on: stmt, when: [
-			Statement:VarDecl: local Function(Array of String is _m, Type is t, String is _vn, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is _m, Type is t, String is _vn, Expression is initExpr, Boolean is hasInit){
 				:markType(t: t);
 				if({ hasInit }, { :markExpr(expr: initExpr); });
 			},
@@ -76,8 +76,8 @@ Class of LintRule is UnusedUsingRule{
 					:refs:set(key: name, value: '1');
 				});
 			},
-			Expression:Path: local Function(Array of String is segs){
-				segs:each(action: local Function(String is s){
+			Expression:Path: local Function([String] is segs){
+				each(list: segs, action: local Function(String is s){
 					if({ s != '' && s != ':' }, {
 						:refs:set(key: s, value: '1');
 					});
@@ -151,7 +151,7 @@ Class of LintRule is UnusedUsingRule{
 	}
 
 	local Function is collectClassRefs(ClassInfo is cls){
-		cls:baseClasses:each(action: local Function(String is bc){
+		each(list: cls:baseClasses, action: local Function(String is bc){
 			:refs:set(key: bc, value: '1');
 		});
 		while([Int is mi: 0], { mi < cls:members:length() }, {

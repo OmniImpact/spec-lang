@@ -15,7 +15,7 @@ Enum is Statement {
 		['base', 'compiler', 'ast', ClassInfo]
 	],
 
-	VarDecl(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit),
+	VarDecl([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit),
 	Assign(Expression is assignTarget, Expression is assignValue),
 	Return(Expression is returnExpr, Boolean is hasReturnExpr),
 	ClassDecl(ClassInfo is nestedClass),

@@ -69,7 +69,7 @@ Class of SpecUnitTest is TestStdlibReflection{
 
 		local [Statement] is body: [];
 		local Member is methodMem: Member(kind: MemberKind:METHOD);
-		methodMem:modifiers: Array(['replace', 'local']);
+		methodMem:modifiers: ['replace', 'local'];
 		methodMem:memberType: intType;
 		methodMem:name: 'heal';
 		methodMem:params: params;

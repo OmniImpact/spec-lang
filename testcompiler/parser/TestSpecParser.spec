@@ -51,7 +51,7 @@ Class of SpecUnitTest is TestSpecParser{
 		local Statement is vd: go:body:get(index: 0);
 		local Expression is init: Expression:Unknown;
 		match(on: vd, when: [
-			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				init: initExpr;
 			},
 			else: {}
@@ -82,7 +82,7 @@ Class of SpecUnitTest is TestSpecParser{
 		local Statement is vd2: m2:body:get(index: 0);
 		local Expression is s2: Expression:Unknown;
 		match(on: vd2, when: [
-			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				s2: initExpr;
 			},
 			else: {}

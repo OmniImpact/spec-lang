@@ -534,7 +534,7 @@ Class is IrBuilder{
 	local Function is addInheritedFields(IrStruct is st, ClassInfo is cls, Map of String to ClassInfo is clsMap, Map of String to Boolean is seenFields){
 		local Int is bi: 0;
 		while({ bi < cls:baseClasses:length() }, {
-			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			local String is bname: cls:baseClasses:get(index: bi);
 			local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: bname, clsMap: clsMap);
 			if({ bcls:qualifiedName() != cls:qualifiedName() }, {
 				:addInheritedFields(st: st, cls: bcls, clsMap: clsMap, seenFields: seenFields);
@@ -551,7 +551,7 @@ Class is IrBuilder{
 				local Boolean is fIsArc: :isArcTypeNode(t: m:memberType);
 				local Int is bti: 0;
 				while({ bti < cls:typeParams:length() }, {
-					if({ cls:typeParams:get(index: bti, default: '') == m:memberType:name }, { fIsArc: false; });
+					if({ cls:typeParams:get(index: bti) == m:memberType:name }, { fIsArc: false; });
 					bti++;
 				});
 				local Int is fIdx: st:addFieldArc(name: m:name, ty: fty, isArc: fIsArc);
@@ -590,7 +590,7 @@ Class is IrBuilder{
 		});
 		local Int is bi: 0;
 		while({ bi < cls:baseClasses:length() }, {
-			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			local String is bname: cls:baseClasses:get(index: bi);
 			local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: bname, clsMap: clsMap);
 			if({ bcls:qualifiedName() != cls:qualifiedName() }, {
 				:buildVtable(st: st, cls: bcls, clsMap: clsMap);
@@ -755,7 +755,7 @@ Class is IrBuilder{
 					});
 				});
 				range(start: 0, end: cls:baseClasses:length(), worker: local Function(Int is bni){
-					st:baseNames:push(item: cls:baseClasses:get(index: bni, default: ''));
+					st:baseNames:push(item: cls:baseClasses:get(index: bni));
 				});
 				# Header layout: _type_name (Ptr), _vtable (Ptr)
 				st:addField(name: '_type_name', ty: IrType:Ptr);
@@ -846,7 +846,7 @@ Class is IrBuilder{
 			:curClassTypeParams: Map:init();
 			local Int is tpi: 0;
 			while({ tpi < cls:typeParams:length() }, {
-				:curClassTypeParams:set(key: cls:typeParams:get(index: tpi, default: ''), value: true);
+				:curClassTypeParams:set(key: cls:typeParams:get(index: tpi), value: true);
 				tpi++;
 			});
 			local Map of String to Int is mCounts2: Map:init();
@@ -945,7 +945,7 @@ Class is IrBuilder{
 	local Function is inheritHeldFromAncestors(ClassInfo is cls, ClassInfo is cur, String is sname, Map of String to ClassInfo is clsMap, Map of String to Boolean is hvis){
 		local Int is bi: 0;
 		while({ bi < cur:baseClasses:length() }, {
-			local String is bname: cur:baseClasses:get(index: bi, default: '');
+			local String is bname: cur:baseClasses:get(index: bi);
 			local ClassInfo is bcls: :resolveBaseClass(cls: cur, bname: bname, clsMap: clsMap);
 			if({ bcls:name != '' && !hvis:has(key: bcls:qualifiedName()) }, {
 				hvis:set(key: bcls:qualifiedName(), value: true);
@@ -1281,7 +1281,7 @@ Class is IrBuilder{
 	local Function is collectAncestors(ClassInfo is cls, Map of String to Boolean is seen, Array of String is out){
 		local Int is bi: 0;
 		while({ bi < cls:baseClasses:length() }, {
-			local String is bn: cls:baseClasses:get(index: bi, default: '');
+			local String is bn: cls:baseClasses:get(index: bi);
 			if({ bn != '' && !seen:has(key: bn) }, {
 				seen:set(key: bn, value: true);
 				out:add(item: bn);
@@ -1478,14 +1478,14 @@ Class is IrBuilder{
 		seen:set(key: clsKey, value: true);
 		local Int is bi: 0;
 		while({ bi < cls:baseClasses:length() }, {
-			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			local String is bname: cls:baseClasses:get(index: bi);
 			local Boolean is isEnclosing: cls:outerName != '' && (cls:outerName == bname || cls:outerName:endsWith(suffix: ':' . bname));
 			if({ :clsMap:has(key: bname) }, {
 				local ClassInfo is bcls: :clsMap:get(key: bname, default: cls);
 				local Boolean is bIsEnum: false;
 				local Int is ebi: 0;
 				while({ ebi < bcls:baseClasses:length() }, {
-					if({ bcls:baseClasses:get(index: ebi, default: '') == 'Enum' }, { bIsEnum: true; });
+					if({ bcls:baseClasses:get(index: ebi) == 'Enum' }, { bIsEnum: true; });
 					ebi++;
 				});
 				if({ !isEnclosing || bIsEnum }, {
@@ -1919,7 +1919,7 @@ Class is IrBuilder{
 		local String is found: '';
 		local Int is bi: 0;
 		while({ found == '' && bi < cls:baseClasses:length() }, {
-			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			local String is bname: cls:baseClasses:get(index: bi);
 			local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: bname, clsMap: :clsMap);
 			if({ bcls:qualifiedName() != cls:qualifiedName() }, {
 				local Int is mi: 0;
@@ -1964,7 +1964,7 @@ Class is IrBuilder{
 		local String is found: '';
 		local Int is bi: 0;
 		while({ found == '' && bi < cls:baseClasses:length() }, {
-			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			local String is bname: cls:baseClasses:get(index: bi);
 			local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: bname, clsMap: :clsMap);
 			if({ bcls:qualifiedName() != cls:qualifiedName() }, {
 				found: :findHeldResolver(clsName: bcls:qualifiedName());
@@ -2101,9 +2101,9 @@ Class is IrBuilder{
 					});
 					if({ call:name == 'eval' }, {
 						match(on: call:target, when: [
-							Expression:Path: local Function(Array of String is segs){
+							Expression:Path: local Function([String] is segs){
 								local Int is n: segs:length();
-								if({ n >= 2 && segs:get(index: n - 1, default: '') == 'Lazy' && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+								if({ n >= 2 && segs:get(index: n - 1) == 'Lazy' && segs:get(index: n - 2) == 'sysinternal' }, {
 									res: true;
 								});
 							}
@@ -2507,7 +2507,7 @@ Class is IrBuilder{
 			local Statement is st: stmts:get(index: i);
 			local Boolean is hit: false;
 			match(on: st, when: [
-				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is _n, Expression is initExpr, Boolean is hasInit){
+				Statement:VarDecl: local Function([String] is _m, Type is _t, String is _n, Expression is initExpr, Boolean is hasInit){
 					if({ hasInit && :bodyUsesDeferInExpr(expr: initExpr) }, { hit: true; });
 				},
 				Statement:Assign: local Function(Expression is t, Expression is v){
@@ -2578,7 +2578,7 @@ Class is IrBuilder{
 		while({ si < stmts:length() }, {
 			local Statement is st: stmts:get(index: si);
 			match(on: st, when: [
-				Statement:VarDecl: local Function(Array of String is _mods, Type is t, String is _name, Expression is initExpr, Boolean is hasInit){
+				Statement:VarDecl: local Function([String] is _mods, Type is t, String is _name, Expression is initExpr, Boolean is hasInit){
 					:markBareTypeUse(t: t);
 					if({ hasInit }, { :markBareExprUse(expr: initExpr); });
 				},
@@ -2632,9 +2632,9 @@ Class is IrBuilder{
 					:bareTemplateUsed:set(key: name, value: true);
 				});
 			},
-			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() > 0 && :templateNames:has(key: segs:get(index: 0, default: '')) }, {
-					:bareTemplateUsed:set(key: segs:get(index: 0, default: ''), value: true);
+			Expression:Path: local Function([String] is segs){
+				if({ segs:length() > 0 && :templateNames:has(key: segs:get(index: 0)) }, {
+					:bareTemplateUsed:set(key: segs:get(index: 0), value: true);
 				});
 			},
 			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
@@ -2680,7 +2680,7 @@ Class is IrBuilder{
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
 			match(on: st, when: [
-				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
+				Statement:VarDecl: local Function([String] is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
 					decls:set(key: varName, value: true);
 					if({ hasInit }, { :collectDeclNamesInExpr(expr: initExpr, decls: decls); });
 				},
@@ -2716,9 +2716,9 @@ Class is IrBuilder{
 				Expression:Ident: local Function(String is tn){
 					if({ tn == 'Loops' }, { isLoopsTarget: true; });
 				},
-				Expression:Path: local Function(Array of String is segs){
+				Expression:Path: local Function([String] is segs){
 					local Int is n: segs:length();
-					if({ n >= 1 && segs:get(index: n - 1, default: '') == 'Loops' && !(n >= 2 && segs:get(index: n - 2, default: '') == 'sysinternal') }, {
+					if({ n >= 1 && segs:get(index: n - 1) == 'Loops' && !(n >= 2 && segs:get(index: n - 2) == 'sysinternal') }, {
 						isLoopsTarget: true;
 					});
 				},
@@ -2945,7 +2945,7 @@ Class is IrBuilder{
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
 			match(on: st, when: [
-				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is _vn, Expression is initExpr, Boolean is hasInit){
+				Statement:VarDecl: local Function([String] is _m, Type is _t, String is _vn, Expression is initExpr, Boolean is hasInit){
 					if({ hasInit }, { :collectAllAnonCapturesInExpr(expr: initExpr, decls: decls, out: out); });
 				},
 				Statement:Assign: local Function(Expression is t, Expression is v){
@@ -3115,12 +3115,12 @@ Class is IrBuilder{
 		return :currentClass;
 	}
 
-	local Function of Int is resolvePathField(Array of String is segments){
+	local Function of Int is resolvePathField([String] is segments){
 		:pathObjPtr: '';
 		:pathStructName: '';
 		:pathFieldIndex: -1;
 		if({ segments:length() < 2 }, { return -1; });
-		local String is seg0: segments:get(index: 0, default: '');
+		local String is seg0: segments:get(index: 0);
 		local String is obj: '';
 		local String is sname: '';
 		local Int is segIdx: 1;
@@ -3146,7 +3146,7 @@ Class is IrBuilder{
 				sname: :cStructName(qname: hqn0);
 			}, {
 				if({ segments:length() >= 3 }, {
-					local String is seg1: segments:get(index: 1, default: '');
+					local String is seg1: segments:get(index: 1);
 					local String is hk: seg0 . ':' . seg1;
 					if({ :heldFields:has(key: hk) }, {
 						local String is owner1: :heldFields:get(key: hk, default: '');
@@ -3178,7 +3178,7 @@ Class is IrBuilder{
 		if({ obj == '' || sname == '' }, { return -1; });
 		local Boolean is ok: true;
 		while({ ok && segIdx < segments:length() - 1 }, {
-			local String is seg: segments:get(index: segIdx, default: '');
+			local String is seg: segments:get(index: segIdx);
 			local IrStruct is curSt: :mod:findStruct(name: sname);
 			local Int is fidx: curSt:fieldIndex(name: seg);
 			if({ fidx < 0 }, {
@@ -3199,7 +3199,7 @@ Class is IrBuilder{
 			segIdx++;
 		});
 		if({ !ok }, { return -1; });
-		local String is fname: segments:get(index: segments:length() - 1, default: '');
+		local String is fname: segments:get(index: segments:length() - 1);
 		local IrStruct is finalSt: :mod:findStruct(name: sname);
 		local Int is finalIdx: finalSt:fieldIndex(name: fname);
 		if({ finalIdx < 0 }, { return -1; });
@@ -3364,7 +3364,7 @@ Class is IrBuilder{
 		});
 		local Int is bi: 0;
 		while({ bi < cls:baseClasses:length() }, {
-			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			local String is bname: cls:baseClasses:get(index: bi);
 			local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: bname, clsMap: :clsMap);
 			if({ bcls:qualifiedName() != cls:qualifiedName() }, {
 				local String is found: :findCustomErrorHandlerWalk(clsName: bcls:qualifiedName(), visited: visited);
@@ -3389,7 +3389,7 @@ Class is IrBuilder{
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
 			match(on: st, when: [
-				Statement:VarDecl: local Function(Array of String is _m, Type is vt, String is vn, Expression is ie, Boolean is hi){
+				Statement:VarDecl: local Function([String] is _m, Type is vt, String is vn, Expression is ie, Boolean is hi){
 					if({ vt:isFunction() }, {
 						fnVars:set(key: vn, value: true);
 					});
@@ -3883,7 +3883,7 @@ Class is IrBuilder{
 		local Int is prevLine: :currentLine;
 		if({ stmt:line > 0 }, { :currentLine: stmt:line; });
 		match(on: stmt, when: [
-			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+			Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				local IrType is vty: :irTypeFor(specType: varType:name);
 				local Boolean is vIsArc: :isArcTypeNode(t: varType);
 				local String is slot: '%var_' . varName . '_' . (:nextTmp());
@@ -4101,10 +4101,10 @@ Class is IrBuilder{
 							:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: fieldName);
 						});
 					},
-					Expression:Path: local Function(Array of String is segments){
+					Expression:Path: local Function([String] is segments){
 						if({ segments:length() >= 2 }, {
-							local String is seg0: segments:get(index: 0, default: '');
-							local String is seg1: segments:get(index: 1, default: '');
+							local String is seg0: segments:get(index: 0);
+							local String is seg1: segments:get(index: 1);
 							if({ segments:length() == 2 && !:localSlots:has(key: seg0) && :heldFields:has(key: seg0 . ':' . seg1) }, {
 								local String is owner: :heldFields:get(key: seg0 . ':' . seg1, default: '');
 								local Type is hpTypeNode: :heldFieldTypes:get(key: owner . ':' . seg1, default: Type:EMPTY);
@@ -4145,7 +4145,7 @@ Class is IrBuilder{
 										:emitClaimPool(val: oldPVal);
 									});
 									:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
-									:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: segments:get(index: segments:length() - 1, default: ''));
+									:emitMarkLazyFieldDone(objPtr: obj, sname: sname, st: st, fieldName: segments:get(index: segments:length() - 1));
 								});
 							});
 						});
@@ -4304,9 +4304,9 @@ Class is IrBuilder{
 					:setMapHintsFromTypeStr(t: :fieldSpecTypes:get(key: sname . ':' . fieldName, default: ''));
 				});
 			},
-			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() == 2 && segs:get(index: 0, default: '') == ':' }, {
-					local String is fn: segs:get(index: 1, default: '');
+			Expression:Path: local Function([String] is segs){
+				if({ segs:length() == 2 && segs:get(index: 0) == ':' }, {
+					local String is fn: segs:get(index: 1);
 					if({ :fieldSpecTypes:has(key: :currentClass . ':' . fn) }, {
 						:setMapHintsFromTypeStr(t: :fieldSpecTypes:get(key: :currentClass . ':' . fn, default: ''));
 					});
@@ -4489,7 +4489,7 @@ Class is IrBuilder{
 					fldName: fieldName;
 				});
 			},
-			Expression:Path: local Function(Array of String is segments){
+			Expression:Path: local Function([String] is segments){
 				local Int is fidx: :resolvePathField(segments: segments);
 				if({ fidx >= 0 }, {
 					local String is obj: :pathObjPtr;
@@ -4502,7 +4502,7 @@ Class is IrBuilder{
 					fldSname: sname;
 					fldSt: st;
 					fldIdx: fidx;
-					fldName: segments:get(index: segments:length() - 1, default: '');
+					fldName: segments:get(index: segments:length() - 1);
 				});
 			}
 		], default: {});
@@ -4794,10 +4794,10 @@ Class is IrBuilder{
 				});
 				return '0';
 			},
-			Expression:Path: local Function(Array of String is segments){
+			Expression:Path: local Function([String] is segments){
 				if({ segments:length() >= 2 }, {
-					local String is seg0: segments:get(index: 0, default: '');
-					local String is seg1: segments:get(index: 1, default: '');
+					local String is seg0: segments:get(index: 0);
+					local String is seg1: segments:get(index: 1);
 					local String is hk: seg0 . ':' . seg1;
 					if({ segments:length() == 2 && !:localSlots:has(key: seg0) && :heldFields:has(key: hk) }, {
 						local String is owner: :heldFields:get(key: hk, default: '');
@@ -4835,7 +4835,7 @@ Class is IrBuilder{
 						local String is obj: :pathObjPtr;
 						local String is sname: :pathStructName;
 						local IrStruct is st: :mod:findStruct(name: sname);
-						return :emitLoadField(objPtr: obj, sname: sname, st: st, fidx: fidx, fieldName: segments:get(index: segments:length() - 1, default: ''));
+						return :emitLoadField(objPtr: obj, sname: sname, st: st, fidx: fidx, fieldName: segments:get(index: segments:length() - 1));
 					});
 				});
 				if({ :irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
@@ -5161,7 +5161,7 @@ Class is IrBuilder{
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
 			match(on: st, when: [
-				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
+				Statement:VarDecl: local Function([String] is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
 					if({ hasInit }, {
 						:collectFreeInExpr(expr: initExpr, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 					});
@@ -5219,9 +5219,9 @@ Class is IrBuilder{
 			Expression:FieldAccess: local Function(Expression is target, String is _f){
 				:collectFreeInExpr(expr: target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 			},
-			Expression:Path: local Function(Array of String is segments){
+			Expression:Path: local Function([String] is segments){
 				if({ segments:length() > 0 }, {
-					local String is seg0: segments:get(index: 0, default: '');
+					local String is seg0: segments:get(index: 0);
 					if({ !bound:has(key: seg0) }, {
 						if({ outerSlots:has(key: seg0) }, {
 							if({ !seen:has(key: seg0) }, {
@@ -5738,12 +5738,12 @@ Class is IrBuilder{
 				});
 				return :currentClass . '_' . nm;
 			},
-			Expression:Path: local Function of String(Array of String is segs){
-				if({ segs:length() >= 2 && (segs:get(index: 0, default: '') == ':' || :localSlots:has(key: segs:get(index: 0, default: '')) || :heldFields:has(key: :currentClass . ':' . segs:get(index: 0, default: '')) || :heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: '')) || (:localSlots:has(key: ':') && :mod:findStruct(name: :currentClass):fieldIndex(name: segs:get(index: 0, default: '')) >= 0)) }, {
+			Expression:Path: local Function of String([String] is segs){
+				if({ segs:length() >= 2 && (segs:get(index: 0) == ':' || :localSlots:has(key: segs:get(index: 0)) || :heldFields:has(key: :currentClass . ':' . segs:get(index: 0)) || :heldFields:has(key: segs:get(index: 0) . ':' . segs:get(index: 1)) || (:localSlots:has(key: ':') && :mod:findStruct(name: :currentClass):fieldIndex(name: segs:get(index: 0)) >= 0)) }, {
 					if({ recvType != '' }, { return :cStructName(qname: recvType) . '_' . nm; });
 				});
 				if({ segs:length() > 0 }, {
-					return segs:get(index: segs:length() - 1, default: '') . '_' . nm;
+					return segs:get(index: segs:length() - 1) . '_' . nm;
 				});
 				return :currentClass . '_' . nm;
 			}
@@ -5761,8 +5761,8 @@ Class is IrBuilder{
 				});
 				return false;
 			},
-			Expression:Path: local Function of Boolean(Array of String is segs){
-				if({ segs:length() >= 2 && (segs:get(index: 0, default: '') == ':' || :localSlots:has(key: segs:get(index: 0, default: '')) || :heldFields:has(key: :currentClass . ':' . segs:get(index: 0, default: '')) || :heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: '')) || (:localSlots:has(key: ':') && :mod:findStruct(name: :currentClass):fieldIndex(name: segs:get(index: 0, default: '')) >= 0)) }, {
+			Expression:Path: local Function of Boolean([String] is segs){
+				if({ segs:length() >= 2 && (segs:get(index: 0) == ':' || :localSlots:has(key: segs:get(index: 0)) || :heldFields:has(key: :currentClass . ':' . segs:get(index: 0)) || :heldFields:has(key: segs:get(index: 0) . ':' . segs:get(index: 1)) || (:localSlots:has(key: ':') && :mod:findStruct(name: :currentClass):fieldIndex(name: segs:get(index: 0)) >= 0)) }, {
 					argTypes:push(item: IrType:Ptr);
 					argVals:push(item: :lowerExpr(expr: call:target));
 					return true;
@@ -5786,11 +5786,11 @@ Class is IrBuilder{
 						pathWithNm: tname . '_' . nm;
 					});
 				},
-				Expression:Path: local Function(Array of String is segs){
+				Expression:Path: local Function([String] is segs){
 					local Int is si: 0;
 					while({ si < segs:length() }, {
 						if({ si > 0 }, { pathCName: pathCName . '_'; });
-						pathCName: pathCName . segs:get(index: si, default: '');
+						pathCName: pathCName . segs:get(index: si);
 						si++;
 					});
 					if({ pathCName != '' }, { pathWithNm: pathCName . '_' . nm; });
@@ -6053,7 +6053,7 @@ Class is IrBuilder{
 		while({ si < stmts:length() }, {
 			local Boolean is hit: match(on: stmts:get(index: si), when: [
 				Statement:Expr: local Function of Boolean(Expression is e){ return :exprCallsMethod(expr: e, methodName: methodName); },
-				Statement:VarDecl: local Function of Boolean(Array of String is _m, Type is _t, String is _n, Expression is initE, Boolean is hasI){
+				Statement:VarDecl: local Function of Boolean([String] is _m, Type is _t, String is _n, Expression is initE, Boolean is hasI){
 					return if({ hasI }, { :exprCallsMethod(expr: initE, methodName: methodName) }, { false });
 				},
 				Statement:Assign: local Function of Boolean(Expression is _t, Expression is v){ return :exprCallsMethod(expr: v, methodName: methodName); },
