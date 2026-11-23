@@ -321,8 +321,7 @@ Class is Loader{
 	##
 	## @param index: The loadedClasses length to restore.
 	Function is unloadClassesFrom(Int is index){
-		local Int is dropCount: :loadedClasses:length() - index;
-		Loops:repeat(count: dropCount, worker: local Function(){
+		while({ :loadedClasses:length() > index }, {
 			local ClassInfo is c: :loadedClasses:pop();
 			:seenClassNames:remove(key: c:namespaceJoined() . ':' . c:name);
 		});
