@@ -282,8 +282,8 @@ Class of SpecOptimizer is PoolElisionPass{
 	}
 
 	local Function of Boolean is regionIsPoolFree(IrFunction is fn, Int is startBlk, Int is startInst, String is mark, Map of String to Int is labelToIdx, Map of String to IrFunction is fnMap, Map of String to Boolean is mayClaimToCaller){
-		local Array of Int is workBlk: Array([startBlk]);
-		local Array of Int is workIdx: Array([startInst]);
+		local [Int] is workBlk: [startBlk];
+		local [Int] is workIdx: [startInst];
 		local Map of String to Boolean is visited: Map:init();
 		local Int is wi: 0;
 
@@ -318,20 +318,20 @@ Class of SpecOptimizer is PoolElisionPass{
 					IrInst:Br: local Function(String is target){
 						if({ labelToIdx:has(key: target) && !visited:has(key: target) }, {
 							visited:set(key: target, value: true);
-							workBlk:add(item: labelToIdx:get(key: target, default: 0));
-							workIdx:add(item: 0);
+							workBlk:push(item: labelToIdx:get(key: target, default: 0));
+							workIdx:push(item: 0);
 						});
 					},
 					IrInst:CondBr: local Function(String is cond, String is thenLabel, String is elseLabel){
 						if({ labelToIdx:has(key: thenLabel) && !visited:has(key: thenLabel) }, {
 							visited:set(key: thenLabel, value: true);
-							workBlk:add(item: labelToIdx:get(key: thenLabel, default: 0));
-							workIdx:add(item: 0);
+							workBlk:push(item: labelToIdx:get(key: thenLabel, default: 0));
+							workIdx:push(item: 0);
 						});
 						if({ labelToIdx:has(key: elseLabel) && !visited:has(key: elseLabel) }, {
 							visited:set(key: elseLabel, value: true);
-							workBlk:add(item: labelToIdx:get(key: elseLabel, default: 0));
-							workIdx:add(item: 0);
+							workBlk:push(item: labelToIdx:get(key: elseLabel, default: 0));
+							workIdx:push(item: 0);
 						});
 					},
 					else: { }

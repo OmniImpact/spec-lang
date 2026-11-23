@@ -50,7 +50,7 @@ Class is Lexer{
 	Int is col: 1;
 
 	## Lexical errors, in scan order.
-	local Array of Error is errors: Array();
+	local [Error] is errors: [];
 
 	## Well-known names.
 	local WellKnown is names: WellKnown:init();
@@ -71,7 +71,7 @@ Class is Lexer{
 		:pos: 0;
 		:line: 1;
 		:col: 1;
-		:errors: Array();
+		:errors: [];
 	}
 
 	## Records a lexical error at the current scan position: the message
@@ -80,9 +80,9 @@ Class is Lexer{
 	##
 	## @param msg: Error description.
 	Function is addError(String is msg){
-		local Error is e: Error:init(message: "Line {{:line}}: {{msg}}");
+		local Error is e: Error(message: "Line {{:line}}: {{msg}}");
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: :line, col: :col);
-		:errors:add(item: e);
+		:errors:push(item: e);
 	}
 
 	## Returns whether any lexical errors were recorded.
@@ -95,7 +95,7 @@ Class is Lexer{
 	## Returns all recorded lexical errors.
 	##
 	## @return: [Error] values, in scan order.
-	Function of Array of Error is getErrors(){
+	Function of [Error] is getErrors(){
 		return :errors;
 	}
 

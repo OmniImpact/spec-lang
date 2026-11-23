@@ -120,19 +120,19 @@ Class is IrBuilder{
 	String is pathObjPtr: '';
 	String is pathStructName: '';
 	Int is pathFieldIndex: -1;
-	Array of Error is errors: Array();
+	[Error] is errors: [];
 
 	replace Function is init(){
-		:callLowerers: CallLowererRegistry:init():loadAll();
+		:callLowerers: CallLowererRegistry():loadAll();
 	}
 
 	Function is addError(String is msg){
-		local Error is err: Error:init(
+		local Error is err: Error(
 			message: msg,
-			location: SourceLocation:init(file: :currentSourceFile, line: :currentLine, col: 0, length: 0)
+			location: SourceLocation(file: :currentSourceFile, line: :currentLine, col: 0, length: 0)
 		);
 		err:addTraceAt(className: :currentClass, methodName: :currentMethod, line: :currentLine, col: 0);
-		:errors:add(item: err);
+		:errors:push(item: err);
 	}
 
 	## Choke point: rejects an unbound enclosing type parameter in a map's

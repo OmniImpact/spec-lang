@@ -20,7 +20,8 @@ Class of SpecUnitTest is TestSpecParser{
 		['base', 'compiler', Error],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'lexer', Punctuation],
-		['base', 'compiler', 'ast', Type]
+		['base', 'compiler', 'ast', Type],
+		['base', 'sys', as Loops()]
 	];
 
 	## Tokenizes and parses a source string.
@@ -33,8 +34,10 @@ Class of SpecUnitTest is TestSpecParser{
 		local Parser is p: Parser:init(tokens: toks);
 		local ProgramNode is prog: p:parseProgram();
 		local Array of String is msgs: Array();
-		p:getErrors():each(action: local Function(Error is e){
-			msgs:add(item: e:getMessage());
+		local [Error] is pErrs: p:getErrors();
+		while([Int is pei: 0], { pei < pErrs:length() }, {
+			msgs:add(item: pErrs:get(index: pei):getMessage());
+			pei++;
 		});
 		return msgs;
 	}

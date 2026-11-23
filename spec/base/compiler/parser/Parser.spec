@@ -48,7 +48,7 @@ Class is Parser{
 	local Int is pos: 0;
 	local Int is length: 0;
 	local String is sourceFile: '';
-	local Array of Error is errors: Array();
+	local [Error] is errors: [];
 	local ErrorText is errText: ErrorText:init();
 
 	local Lexer is lexer: Lexer:init(source: '');
@@ -75,7 +75,7 @@ Class is Parser{
 		:length: tokens:length();
 		:pos: 0;
 		:sourceFile: '';
-		:errors: Array();
+		:errors: [];
 		:templateDepth: 0;
 		:streaming: false;
 		:lookahead: [];
@@ -116,7 +116,7 @@ Class is Parser{
 	## Returns all recorded parse errors.
 	##
 	## @return: [Error] values, in discovery order.
-	Function of Array of Error is getErrors(){
+	Function of [Error] is getErrors(){
 		return :errors;
 	}
 
@@ -126,10 +126,10 @@ Class is Parser{
 	## @param message: What went wrong.
 	Function is addError(Token is tok, String is message){
 		local String is prefix: if({ :sourceFile != '' }, { :sourceFile . ':' }, { 'Line ' });
-		local SourceLocation is loc: SourceLocation:init(file: :sourceFile, line: tok:getLine(), col: tok:getCol(), length: tok:getValue():length());
-		local Error is e: Error:init(message: "  [SyntaxError] [{{prefix}}{{tok:getLine()}}:{{tok:getCol()}}] {{message}}", location: loc);
+		local SourceLocation is loc: SourceLocation(file: :sourceFile, line: tok:getLine(), col: tok:getCol(), length: tok:getValue():length());
+		local Error is e: Error(message: "  [SyntaxError] [{{prefix}}{{tok:getLine()}}:{{tok:getCol()}}] {{message}}", location: loc);
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: tok:getLine(), col: tok:getCol());
-		:errors:add(item: e);
+		:errors:push(item: e);
 	}
 
 	## Returns the current token without consuming it.

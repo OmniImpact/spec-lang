@@ -69,12 +69,12 @@ Class of SpecOptimizer is ArcPeepholePass{
 		local Map of String to Boolean is nullSlots: Map:init();
 		nullRegs:set(key: 'null', value: true);
 
-		local Array of Boolean is drop: Array();
-		local Int is i: 0;
-		while({ i < n }, {
-			drop:add(item: false);
-			i++;
+		local [Boolean] is drop: [];
+		while([Int is di: 0], { di < n }, {
+			drop:push(item: false);
+			di++;
 		});
+		local Int is i: 0;
 
 		# Pass 1: Eliminate Retain/Release on known-null registers.
 		i: 0;

@@ -11,6 +11,7 @@ Class of SpecUnitTest is TestSpecChecker{
 		['specunit', as Assert()],
 		['base', 'compiler', 'checker', TypeChecker],
 		['base', 'compiler', 'checker', TypeError],
+		['base', 'compiler', Error],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'ast', ClassInfo],
@@ -55,8 +56,10 @@ Class of SpecUnitTest is TestSpecChecker{
 		prog: ProgramNode(classes: all);
 		local Array of String is msgs: Array();
 		Conditional:if(check: { p:hasErrors() }, then: {
-			p:getErrors():each(action: local Function(Error is e){
-				msgs:add(item: e:getMessage());
+			local [Error] is pErrs: p:getErrors();
+			while([Int is pei: 0], { pei < pErrs:length() }, {
+				msgs:add(item: pErrs:get(index: pei):getMessage());
+				pei++;
 			});
 			return msgs;
 		});

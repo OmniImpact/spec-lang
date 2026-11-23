@@ -106,15 +106,17 @@ Class is Loader{
 		parser:setSourceFile(file: filePath);
 		local ProgramNode is prog: parser:parseProgram();
 		if({ lexer:hasErrors() }, {
-			local Array of Error is lexErrors: lexer:getErrors();
-			lexErrors:each(action: local Function(Error is err){
-				:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . err:toString());
+			local [Error] is lexErrors: lexer:getErrors();
+			while([Int is lei: 0], { lei < lexErrors:length() }, {
+				:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . lexErrors:get(index: lei):toString());
+				lei++;
 			});
 		});
 		if({ parser:hasErrors() }, {
-			local Array of Error is parseErrs: parser:getErrors();
-			parseErrs:each(action: local Function(Error is err){
-				:parseErrors:add(item: err:toString());
+			local [Error] is parseErrs: parser:getErrors();
+			while([Int is pei: 0], { pei < parseErrs:length() }, {
+				:parseErrors:add(item: parseErrs:get(index: pei):toString());
+				pei++;
 			});
 		});
 

@@ -317,8 +317,8 @@ Class of SpecOptimizer is ConcatFusionPass{
 		});
 		if({ concatFns:length() == 0 }, { return; });
 
-		local Array of Int is neededArities: Array();
-		local Map of Int to Boolean is createdArities: Map:init();
+		local [Int] is neededArities: [];
+		local Map of Int to Boolean is createdArities: Map();
 
 		fi: 0;
 		while({ fi < mod:functions:length() }, {
@@ -328,10 +328,10 @@ Class of SpecOptimizer is ConcatFusionPass{
 				local Int is bi: 0;
 				while({ bi < fn:blocks:length() }, {
 					local IrBlock is blk: fn:blocks:get(index: bi);
-					local Map of String to Array of String is partsMap: Map:init();
-					local Map of String to Array of Int is callsMap: Map:init();
-					local Map of String to String is calleeMap: Map:init();
-					local Map of String to Boolean is isRoot: Map:init();
+					local Map of String to Array of String is partsMap: Map();
+					local Map of String to [Int] is callsMap: Map();
+					local Map of String to String is calleeMap: Map();
+					local Map of String to Boolean is isRoot: Map();
 					local Array of String is rootOrder: Array();
 
 					local Int is ii: 0;
@@ -343,18 +343,16 @@ Class of SpecOptimizer is ConcatFusionPass{
 									local String is a0: args:get(index: 0, default: '');
 									local String is a1: args:get(index: 1, default: '');
 									local Array of String is parts: Array();
-									local Array of Int is cIdxs: Array();
+									local [Int] is cIdxs: [];
 
 									local Boolean is fuseLeft: isRoot:get(key: a0, default: false) && uses:get(key: a0, default: 0) == 1 && calleeMap:get(key: a0, default: '') == callee;
 									local Boolean is fuseRight: a1 != a0 && isRoot:get(key: a1, default: false) && uses:get(key: a1, default: 0) == 1 && calleeMap:get(key: a1, default: '') == callee;
 
 									if({ fuseLeft }, {
 										local Array of String is lp: partsMap:get(key: a0, default: Array());
-										local Array of Int is lc: callsMap:get(key: a0, default: Array());
-										local Int is li: 0;
-										while({ li < lp:length() }, { parts:add(item: lp:get(index: li)); li++; });
-										li: 0;
-										while({ li < lc:length() }, { cIdxs:add(item: lc:get(index: li)); li++; });
+										local [Int] is lc: callsMap:get(key: a0, default: []);
+										while([Int is li: 0], { li < lp:length() }, { parts:add(item: lp:get(index: li)); li++; });
+										while([Int is li: 0], { li < lc:length() }, { cIdxs:push(item: lc:get(index: li)); li++; });
 										isRoot:set(key: a0, value: false);
 									}, {
 										parts:add(item: a0);
@@ -362,17 +360,15 @@ Class of SpecOptimizer is ConcatFusionPass{
 
 									if({ fuseRight }, {
 										local Array of String is rp: partsMap:get(key: a1, default: Array());
-										local Array of Int is rc: callsMap:get(key: a1, default: Array());
-										local Int is ri: 0;
-										while({ ri < rp:length() }, { parts:add(item: rp:get(index: ri)); ri++; });
-										ri: 0;
-										while({ ri < rc:length() }, { cIdxs:add(item: rc:get(index: ri)); ri++; });
+										local [Int] is rc: callsMap:get(key: a1, default: []);
+										while([Int is ri: 0], { ri < rp:length() }, { parts:add(item: rp:get(index: ri)); ri++; });
+										while([Int is ri: 0], { ri < rc:length() }, { cIdxs:push(item: rc:get(index: ri)); ri++; });
 										isRoot:set(key: a1, value: false);
 									}, {
 										parts:add(item: a1);
 									});
 
-									cIdxs:add(item: curIdx);
+									cIdxs:push(item: curIdx);
 									partsMap:set(key: dst, value: parts);
 									callsMap:set(key: dst, value: cIdxs);
 									calleeMap:set(key: dst, value: callee);
@@ -385,17 +381,15 @@ Class of SpecOptimizer is ConcatFusionPass{
 						ii++;
 					});
 
-					local Map of Int to Boolean is deleteSet: Map:init();
-					local Map of Int to Array of String is replaceMap: Map:init();
-					local Map of Int to String is replaceDstMap: Map:init();
-					local Int is ri: 0;
-					while({ ri < rootOrder:length() }, {
+					local Map of Int to Boolean is deleteSet: Map();
+					local Map of Int to Array of String is replaceMap: Map();
+					local Map of Int to String is replaceDstMap: Map();
+					while([Int is ri: 0], { ri < rootOrder:length() }, {
 						local String is rDst: rootOrder:get(index: ri);
 						if({ isRoot:get(key: rDst, default: false) }, {
-							local Array of Int is cIdxs: callsMap:get(key: rDst, default: Array());
+							local [Int] is cIdxs: callsMap:get(key: rDst, default: []);
 							if({ cIdxs:length() >= 2 }, {
-								local Int is ci: 0;
-								while({ ci < cIdxs:length() - 1 }, {
+								while([Int is ci: 0], { ci < cIdxs:length() - 1 }, {
 									deleteSet:set(key: cIdxs:get(index: ci), value: true);
 									ci++;
 								});
@@ -406,7 +400,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 								local Int is k: rParts:length();
 								if({ !createdArities:has(key: k) }, {
 									createdArities:set(key: k, value: true);
-									neededArities:add(item: k);
+									neededArities:push(item: k);
 								});
 							});
 						});

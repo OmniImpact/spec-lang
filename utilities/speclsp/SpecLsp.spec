@@ -289,9 +289,12 @@ Class is SpecLsp{
 		local Parser is p: Parser:init(tokens: lx:tokenize());
 		p:parseProgram();
 		if({ p:hasErrors() }, {
-			p:getErrors():each(action: local Function(Error is err){
+			local [Error] is pErrs: p:getErrors();
+			while([Int is pei: 0], { pei < pErrs:length() }, {
+				local Error is err: pErrs:get(index: pei);
 				local SourceLocation is loc: err:getLocation();
 				diags:add(item: makeDiagnosticJson(line: loc:getLine(), col: loc:getCol(), length: loc:getLength(), message: err:getMessage(), severity: 1));
+				pei++;
 			});
 		});
 		publishDiagnostics(uri: uri, diags: diags);

@@ -43,7 +43,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		local Map of String to IrType is wrapRetType: Map:init();
 		local Map of String to Boolean is wrapHasDst: Map:init();
 		local Map of String to [IrType] is wrapArgTypes: Map:init();
-		local Map of String to Array of Int is wrapParamIdx: Map:init();
+		local Map of String to [Int] is wrapParamIdx: Map();
 		local Map of String to Array of String is wrapConstArg: Map:init();
 
 		local Int is fi: 0;
@@ -102,7 +102,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		Map of String to IrType is wrapRetType,
 		Map of String to Boolean is wrapHasDst,
 		Map of String to [IrType] is wrapArgTypes,
-		Map of String to Array of Int is wrapParamIdx,
+		Map of String to [Int] is wrapParamIdx,
 		Map of String to Array of String is wrapConstArg
 	){
 		if({ fn:blocks:length() != 1 }, { return; });
@@ -215,21 +215,20 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		if({ !ok || !sawCall || !sawRet }, { return; });
 
 		# Map each argument of the inner IrCall to a caller param index or constant literal.
-		local Array of Int is paramIndices: Array();
+		local [Int] is paramIndices: [];
 		local Array of String is constArgs: Array();
-		local Int is ai: 0;
-		while({ ai < callArgs:length() }, {
+		while([Int is ai: 0], { ai < callArgs:length() }, {
 			local String is arg: callArgs:get(index: ai, default: '');
 			if({ regParam:has(key: arg) }, {
-				paramIndices:add(item: regParam:get(key: arg, default: 0));
+				paramIndices:push(item: regParam:get(key: arg, default: 0));
 				constArgs:add(item: '');
 			}, {
 				if({ regConst:has(key: arg) }, {
-					paramIndices:add(item: -1);
+					paramIndices:push(item: -1);
 					constArgs:add(item: regConst:get(key: arg, default: ''));
 				}, {
 					if({ !arg:startsWith(prefix: '%') && !arg:startsWith(prefix: '@') }, {
-						paramIndices:add(item: -1);
+						paramIndices:push(item: -1);
 						constArgs:add(item: arg);
 					}, {
 						return;
@@ -253,7 +252,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		Map of String to IrType is wrapRetType,
 		Map of String to Boolean is wrapHasDst,
 		Map of String to [IrType] is wrapArgTypes,
-		Map of String to Array of Int is wrapParamIdx,
+		Map of String to [Int] is wrapParamIdx,
 		Map of String to Array of String is wrapConstArg
 	){
 		local Boolean is anyChanged: false;
@@ -268,7 +267,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 						if({ !wrapCallee:has(key: callee) }, { return inst; });
 						local String is target: wrapCallee:get(key: callee, default: '');
 						if({ target == fn:name }, { return inst; });
-						local Array of Int is pIdx: wrapParamIdx:get(key: callee, default: Array());
+						local [Int] is pIdx: wrapParamIdx:get(key: callee, default: []);
 						local Array of String is cArg: wrapConstArg:get(key: callee, default: Array());
 						local [IrType] is tTypes: wrapArgTypes:get(key: callee, default: []);
 						local [String] is newArgs: [];

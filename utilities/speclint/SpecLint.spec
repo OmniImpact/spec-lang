@@ -192,9 +192,10 @@ Class is SpecLint{
 		local ProgramNode is program: parser:parseProgram();
 		if({ lexer:hasErrors() }, {
 			Stderr:line('Lexical errors encountered during linting:');
-			local Array of Error is lexErrors: lexer:getErrors();
-			lexErrors:each(action: local Function(Error is err){
-				Stderr:line('  [' . path . '] ' . err:toString());
+			local [Error] is lexErrors: lexer:getErrors();
+			while([Int is lei: 0], { lei < lexErrors:length() }, {
+				Stderr:line('  [' . path . '] ' . lexErrors:get(index: lei):toString());
+				lei++;
 			});
 			if({ strict }, {
 				Process:exit(status: 1);
@@ -204,9 +205,10 @@ Class is SpecLint{
 		});
 		if({ parser:hasErrors() }, {
 			Stderr:line('Syntax errors encountered during linting:');
-			local Array of Error is parseErrs: parser:getErrors();
-			parseErrs:each(action: local Function(Error is err){
-				Stderr:line(err:toString());
+			local [Error] is parseErrs: parser:getErrors();
+			while([Int is pei: 0], { pei < parseErrs:length() }, {
+				Stderr:line(parseErrs:get(index: pei):toString());
+				pei++;
 			});
 			if({ strict }, {
 				Process:exit(status: 1);

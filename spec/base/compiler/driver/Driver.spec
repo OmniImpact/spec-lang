@@ -285,8 +285,9 @@ Class is Driver{
 			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
 			if({ irb:errors:length() > 0 }, {
 				Stderr:line('Code generation errors encountered during compilation:');
-				irb:errors:each(action: local Function(Error is err){
-					Stderr:line(err:toString());
+				while([Int is iei: 0], { iei < irb:errors:length() }, {
+					Stderr:line(irb:errors:get(index: iei):toString());
+					iei++;
 				});
 				Stderr:line('Compilation aborted due to code generation errors.');
 				Process:monitorStop();
