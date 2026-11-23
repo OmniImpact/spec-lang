@@ -14,10 +14,10 @@ Class of SpecUnitTest is TestWeather{
 
 	Function is testParseAndFormatNwsForecast(){
 		local String is sample: '{"properties":{"updateTime":"2026-11-19T06:30:00Z","periods":[{"name":"Today","temperature":68,"temperatureUnit":"F","windSpeed":"5 mph","windDirection":"NE","shortForecast":"Sunny"}]}}';
-		local Result of Map to JsonError is rootR: Json:parseMapResult(text: sample);
-		local Map is root: Map:init();
+		local Result of Map of String to Any to JsonError is rootR: Json:parseMapResult(text: sample);
+		local Map of String to Any is root: Map:init();
 		match(on: rootR, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 				root: v;
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){

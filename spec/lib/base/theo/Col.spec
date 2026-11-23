@@ -28,7 +28,7 @@ Class of Widget is Col{
 	}
 
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [cb];
+		:dirtyListeners: Array([cb]);
 		children:each(action: local Function(Widget is ch){
 			ch:bindDirty(cb: cb);
 		});

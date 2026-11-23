@@ -34,7 +34,7 @@ Class of Frame is BottomActionBar{
 			child: Row(
 				gap: 2,
 				arrowFocus: true,
-				children: [
+				children: Array([
 					Button(
 						label: ' Quit ',
 						shortcutKey: 'q',
@@ -60,7 +60,7 @@ Class of Frame is BottomActionBar{
 						focusTarget: openFocus,
 						onClick: onOpen
 					)
-				]
+				])
 			)
 		);
 	}

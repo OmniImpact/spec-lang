@@ -58,7 +58,7 @@ Class of Widget is Frame{
 	}
 
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [cb];
+		:dirtyListeners: Array([cb]);
 		if({ built }, {
 			rootWidget:bindDirty(cb: cb);
 		});

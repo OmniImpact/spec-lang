@@ -34,7 +34,7 @@ Class of Widget is Grid{
 	}
 
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [cb];
+		:dirtyListeners: Array([cb]);
 		panes:each(action: local Function(GridPane is gp){
 			gp:child:bindDirty(cb: cb);
 		});

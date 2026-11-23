@@ -89,32 +89,22 @@ Class is BinaryTrees{
 
 	Function of TreeNode is makeTree(Int is depth){
 		if({ depth <= 0 }, {
-			return TreeNode:init();
+			return TreeNode:Leaf;
 		});
-		return TreeNode:init(left: :makeTree(depth: depth - 1), right: :makeTree(depth: depth - 1));
+		return TreeNode:Branch(left: :makeTree(depth: depth - 1), right: :makeTree(depth: depth - 1));
 	}
 
 	Function of Int is checkTree(TreeNode is node){
-		if({ node:hasChildren }, {
-			return 1 + :checkTree(node: node:left) + :checkTree(node: node:right);
-		});
-		return 1;
+		return match(on: node, when: [
+			TreeNode:Leaf: { 1 },
+			TreeNode:Branch: local Function of Int(TreeNode is left, TreeNode is right){
+				return 1 + :checkTree(node: left) + :checkTree(node: right);
+			}
+		]);
 	}
 }
 
-Class is TreeNode{
-
-	Boolean is hasChildren: false;
-	TreeNode is left;
-	TreeNode is right;
-
-	replace Function is init(){
-		:hasChildren: false;
-	}
-
-	replace Function is init(TreeNode is left, TreeNode is right){
-		:hasChildren: true;
-		:left: left;
-		:right: right;
-	}
+Enum is TreeNode{
+	Leaf,
+	Branch(TreeNode is left, TreeNode is right)
 }

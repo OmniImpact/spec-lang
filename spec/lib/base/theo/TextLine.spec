@@ -28,12 +28,12 @@ Class of Widget is TextLine{
 		:color: color;
 		:bold: bold;
 		:textValue: value:current();
-		:boundEmitters: [value];
+		:boundEmitters: Array([value]);
 		local TextCollector is col: value:collect(onEmit: local Function(String is next){
 			:textValue: next;
 			invalidate();
 		});
-		:boundCollectors: [col];
+		:boundCollectors: Array([col]);
 	}
 
 	replace Function of Int is measureWidth(Int is maxW){

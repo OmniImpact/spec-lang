@@ -247,7 +247,7 @@ Class of SpecUnitTest is TestTheoEditor{
 		local String is rootDir: "/tmp/theo_fm_sort_{{Process:getPid()}}";
 		local String is subZ: "{{rootDir}}/zebraDir";
 		local String is subA: "{{rootDir}}/AlphaDir";
-		Process:execute(command: 'mkdir', args: ['-p', subZ, subA]);
+		Process:execute(command: 'mkdir', args: Array(['-p', subZ, subA]));
 		fileWrite(path: "{{subZ}}/keep", content: '1');
 		fileWrite(path: "{{subA}}/keep", content: '1');
 		fileWrite(path: "{{rootDir}}/zeta.txt", content: 'z');
@@ -268,6 +268,6 @@ Class of SpecUnitTest is TestTheoEditor{
 		Assert:areEqualString('beta.txt', fm:dirEntries:get(index: 4));
 		Assert:areEqualString('zeta.txt', fm:dirEntries:get(index: 5));
 
-		Process:execute(command: 'rm', args: ['-rf', rootDir]);
+		Process:execute(command: 'rm', args: Array(['-rf', rootDir]));
 	}
 }

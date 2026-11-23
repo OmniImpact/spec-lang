@@ -105,7 +105,7 @@ Class is SpecInit{
 		if({ dirPath == '' || dirPath == '.' }, {
 			return true;
 		});
-		local Int is code: Process:execute(command: 'mkdir', args: ['-p', dirPath]);
+		local Int is code: Process:execute(command: 'mkdir', args: Array(['-p', dirPath]));
 		return code == 0;
 	}
 
@@ -208,7 +208,7 @@ Class is SpecInit{
 		return s;
 	}
 
-	Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		if({ args:has(key: 'h') || args:has(key: 'help') }, {
 			printUsage();
 			return;

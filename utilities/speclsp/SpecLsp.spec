@@ -91,7 +91,7 @@ Class is SpecLsp{
 				if({ trimmed == '' }, {
 					readingHeaders: false;
 				}, {
-					local Int is colonIdx: trimmed:indexOf(needle: ':', default: -1);
+					local Int is colonIdx: trimmed:indexOf(search: ':', default: -1);
 					if({ colonIdx > 0 }, {
 						local String is hName: trimmed:substring(start: 0, end: colonIdx);
 						local String is hVal: trimStr(s: trimmed:substring(start: colonIdx + 1, end: trimmed:length()));
@@ -329,7 +329,7 @@ Class is SpecLsp{
 		local String is lineStr: getLineAt(text: text, targetLine0: line0);
 		local Int is len: lineStr:length();
 		if({ len == 0 }, {
-			return ['', ''];
+			return Array(['', '']);
 		});
 		local Int is pos: if({ char0 >= len }, { len - 1 }, { char0 });
 		if({ pos < 0 }, { pos: 0; });
@@ -353,7 +353,7 @@ Class is SpecLsp{
 			});
 			qualifier: lineStr:substring(start: qStart, end: qEnd);
 		});
-		return [qualifier, word];
+		return Array([qualifier, word]);
 	}
 
 	local Function of String is formatType(Type is t){
@@ -396,7 +396,7 @@ Class is SpecLsp{
 	}
 
 	local Function of ClassInfo is findClass(ProgramNode is prog, String is name){
-		local ClassInfo is found: ClassInfo:init(name: '', baseClass: '', members: []);
+		local ClassInfo is found: ClassInfo:init(name: '', baseClass: '', members: Array());
 		local Boolean is matched: false;
 		prog:classes:each(action: local Function(ClassInfo is c){
 			if({ !matched && c:name == name }, {
@@ -420,7 +420,7 @@ Class is SpecLsp{
 		});
 
 		local String is text: :docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: Array()));
 		local Array of String is sym: extractSymbolAt(text: text, line0: line0, char0: char0);
 		local String is qual: sym:get(index: 0, default: '');
 		local String is word: sym:get(index: 1, default: '');
@@ -492,7 +492,7 @@ Class is SpecLsp{
 		});
 
 		local String is text: :docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: Array()));
 		local Array of String is sym: extractSymbolAt(text: text, line0: line0, char0: char0);
 		local String is qual: sym:get(index: 0, default: '');
 		local String is word: sym:get(index: 1, default: '');
@@ -564,7 +564,7 @@ Class is SpecLsp{
 
 		local Array of String is items: Array();
 		local String is text: :docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: Array()));
 
 		local String is lineStr: getLineAt(text: text, targetLine0: line0);
 		local Int is cPos: if({ char0 > lineStr:length() }, { lineStr:length() }, { char0 });
@@ -712,7 +712,7 @@ Class is SpecLsp{
 		]);
 	}
 
-	Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		:docPrograms: [:];
 		Input:setBinaryMode();
 		local Boolean is running: true;

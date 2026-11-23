@@ -33,7 +33,7 @@ Class of Frame is MessagePanel{
 			child: Row(
 				gap: 1,
 				arrowFocus: true,
-				children: [
+				children: Array([
 					TextLine(
 						value: vm:messageText,
 						color: activeTheme:titleColor,
@@ -58,7 +58,7 @@ Class of Frame is MessagePanel{
 						focusTarget: cancelFocus,
 						onClick: onCancel
 					)
-				]
+				])
 			)
 		);
 	}

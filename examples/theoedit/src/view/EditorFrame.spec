@@ -25,7 +25,7 @@ Class of Frame is EditorFrame{
 	FocusTarget is msgCancelFocus: FocusTarget();
 
 	Function is bindScreen(TheoScreen is screen){
-		screenRefs: [screen];
+		screenRefs: Array([screen]);
 	}
 
 	local Function is openFileManager(String is mode, Boolean is quitAfterSave){

@@ -19,7 +19,7 @@ Class is TheoScreen{
 	}
 
 	Function is bindDirty(Function is cb){
-		:dirtyHooks: [cb];
+		:dirtyHooks: Array([cb]);
 		stack:each(action: local Function(Frame is f){
 			f:bindDirty(cb: cb);
 		});

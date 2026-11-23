@@ -18,7 +18,7 @@ Class of Frame is TopBar{
 			padX: 1,
 			padY: 0,
 			child: Row(
-				children: [
+				children: Array([
 					TextLine(
 						value: title,
 						color: activeTheme:titleColor,
@@ -29,7 +29,7 @@ Class of Frame is TopBar{
 						value: status,
 						color: activeTheme:mutedColor
 					)
-				]
+				])
 			)
 		);
 	}

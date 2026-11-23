@@ -29,9 +29,13 @@ Class of Stringable is Class{
 			local Any is val: args:getChecked(key: name);
 			if({ Introspection:hasField(obj: :, name: name) }, {
 				local String is expected: Introspection:fieldType(obj: :, name: name);
-				local String is actual: val:typeName();
-				if({ actual == expected || actual == '' }, {
+				if({ expected == 'Function' }, {
 					Introspection:setField(obj: :, name: name, value: val);
+				}, {
+					local String is actual: val:typeName();
+					if({ actual == expected || actual == '' }, {
+						Introspection:setField(obj: :, name: name, value: val);
+					});
 				});
 			});
 		});

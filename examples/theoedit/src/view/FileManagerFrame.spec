@@ -58,7 +58,7 @@ Class of Frame is FileManagerFrame{
 				});
 			}
 		);
-		listViews: [lv];
+		listViews: Array([lv]);
 
 		local TextInput is ti: TextInput(
 			value: initialName,
@@ -68,7 +68,7 @@ Class of Frame is FileManagerFrame{
 				submitCurrent();
 			}
 		);
-		nameInputs: [ti];
+		nameInputs: Array([ti]);
 	}
 
 	local Function is sortAlpha(Array of String is items){
@@ -195,7 +195,7 @@ Class of Frame is FileManagerFrame{
 
 		Grid(
 			orientation: 'vertical',
-			panes: [
+			panes: Array([
 				Grid:fixed(
 					size: 3,
 					child: Panel(
@@ -203,7 +203,7 @@ Class of Frame is FileManagerFrame{
 						padX: 1,
 						padY: 0,
 						child: Row(
-							children: [
+							children: Array([
 								TextLine(
 									value: headerTitle,
 									color: activeTheme:titleColor,
@@ -214,7 +214,7 @@ Class of Frame is FileManagerFrame{
 									value: 'Ctrl+M: menu · Ctrl+F: files/name',
 									color: activeTheme:mutedColor
 								)
-							]
+							])
 						)
 					)
 				),
@@ -236,13 +236,13 @@ Class of Frame is FileManagerFrame{
 						padY: 0,
 						child: Row(
 							gap: 1,
-							children: [
+							children: Array([
 								TextLine(
 									value: 'Name: ',
 									color: activeTheme:mutedColor
 								),
 								nameInputs:get(index: 0)
-							]
+							])
 						)
 					)
 				),
@@ -255,7 +255,7 @@ Class of Frame is FileManagerFrame{
 						child: Row(
 							gap: 2,
 							arrowFocus: true,
-							children: [
+							children: Array([
 								Button(
 									label: ' Cancel ',
 									shortcutKey: 'c',
@@ -269,11 +269,11 @@ Class of Frame is FileManagerFrame{
 									focusTarget: okFocus,
 									onClick: { submitCurrent(); }
 								)
-							]
+							])
 						)
 					)
 				)
-			]
+			])
 		);
 	}
 }

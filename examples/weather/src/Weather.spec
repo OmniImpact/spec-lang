@@ -99,11 +99,11 @@ Class is Weather{
 	}
 
 	Function is populateForecast(String is rawJson, CleoSection is fcSec){
-		local Result of Map to JsonError is rootR: Json:parseMapResult(text: rawJson);
-		local Map is root: Map:init();
+		local Result of Map of String to Any to JsonError is rootR: Json:parseMapResult(text: rawJson);
+		local Map of String to Any is root: Map:init();
 		local String is parseMsg: '';
 		match(on: rootR, when: [
-			Result:Ok: local Function of Void(Map is v){
+			Result:Ok: local Function of Void(Map of String to Any is v){
 				root: v;
 			},
 			Result:Err: local Function of Void(SpecError of JsonError is e){
