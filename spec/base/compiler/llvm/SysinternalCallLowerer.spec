@@ -136,7 +136,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		return res;
 	}
 
-	Function of String is emitSysCall(IrBuilder is b, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+	Function of String is emitSysCall(IrBuilder is b, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 		if({ retType == IrType:Void }, {
 			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: callee, argTypes: argTypes, args: args));
 			return '0';
@@ -225,8 +225,8 @@ Class of CallLowerer is SysinternalCallLowerer{
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD && (m:name == call:name || :toSnakeCase(s: m:name) == call:name) }, {
-				local Array of IrType is argTypes: Array();
-				local Array of String is args: Array();
+				local [IrType] is argTypes: [];
+				local [String] is args: [];
 				local Int is pi: 0;
 				while({ pi < m:params:length() }, {
 					local Parameter is p: m:params:get(index: pi);
@@ -235,8 +235,8 @@ Class of CallLowerer is SysinternalCallLowerer{
 					if({ pty == IrType:I64 || pty == IrType:I1 }, { defVal: '0'; });
 					if({ pty == IrType:F64 }, { defVal: '0.0'; });
 					local String is av: :lowerNamedArg(b: b, call: call, argName: p:name, posIdx: pi, defVal: defVal);
-					argTypes:add(item: pty);
-					args:add(item: av);
+					argTypes:push(item: pty);
+					args:push(item: av);
 					pi++;
 				});
 				local IrType is retTy: b:methodReturnType(mt: m:memberType);

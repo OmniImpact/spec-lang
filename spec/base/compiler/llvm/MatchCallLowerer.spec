@@ -209,7 +209,7 @@ Class of CallLowerer is MatchCallLowerer{
 			Expression:Ident: local Function(String is kn){
 				if({ !b:localSlots:has(key: kn) && subjStruct != '' && b:heldFields:has(key: subjStruct . ':' . kn) }, {
 					kVal: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: kVal, hasDst: true, retType: IrType:Ptr, callee: subjStruct . '_' . kn . '__ensure', argTypes: Array(), args: Array()));
+					b:emit(inst: IrInst:IrCall(dst: kVal, hasDst: true, retType: IrType:Ptr, callee: subjStruct . '_' . kn . '__ensure', argTypes: [], args: []));
 					b:emitClaimPool(val: kVal);
 					resolvedEnumIdent: true;
 				});
@@ -220,7 +220,7 @@ Class of CallLowerer is MatchCallLowerer{
 		});
 		local String is condVal: b:nextTmp();
 		if({ subjTy == IrType:Ptr && (onExpr:getResolvedTypeNode():isStringLike() || k:getResolvedTypeNode():isStringLike()) }, {
-			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: Array([IrType:Ptr, IrType:Ptr, IrType:Ptr]), args: Array(['null', subjVal, kVal])));
+			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', subjVal, kVal]));
 		}, {
 			if({ subjTy == IrType:Ptr && kVal == '0' }, {
 				b:addError(msg: 'Invalid zero/void match key compared against pointer subject.');

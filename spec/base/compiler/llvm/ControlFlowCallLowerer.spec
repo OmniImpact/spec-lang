@@ -231,7 +231,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				local String is envVal: b:nextTmp();
 				b:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
 				condVal: b:nextTmp();
-				b:emit(inst: IrInst:IndirectCall(dst: condVal, hasDst: true, retType: IrType:I1, fnPtr: fnPtrVal, argTypes: Array([IrType:Ptr]), args: Array([envVal])));
+				b:emit(inst: IrInst:IndirectCall(dst: condVal, hasDst: true, retType: IrType:I1, fnPtr: fnPtrVal, argTypes: [IrType:Ptr], args: [envVal]));
 			}, {
 				condVal: b:lowerExpr(expr: condExpr);
 			});
@@ -258,7 +258,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				b:emit(inst: IrInst:FieldPtr(dst: envPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 1));
 				local String is envVal: b:nextTmp();
 				b:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
-				b:emit(inst: IrInst:IndirectCall(dst: '', hasDst: false, retType: IrType:Void, fnPtr: fnPtrVal, argTypes: Array([IrType:Ptr]), args: Array([envVal])));
+				b:emit(inst: IrInst:IndirectCall(dst: '', hasDst: false, retType: IrType:Void, fnPtr: fnPtrVal, argTypes: [IrType:Ptr], args: [envVal]));
 			}, {
 				local String is _unused: b:lowerExpr(expr: blkExpr);
 			});
@@ -483,7 +483,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			local String is fifteenVal: b:nextTmp();
 			b:emit(inst: IrInst:ConstInt(dst: fifteenVal, value: 15));
 			local String is pendAddr: b:nextTmp();
-			b:emit(inst: IrInst:IrCall(dst: pendAddr, hasDst: true, retType: IrType:I64, callee: '__spec_mem_tls_get_i64', argTypes: Array([IrType:I64]), args: Array([fifteenVal])));
+			b:emit(inst: IrInst:IrCall(dst: pendAddr, hasDst: true, retType: IrType:I64, callee: '__spec_mem_tls_get_i64', argTypes: [IrType:I64], args: [fifteenVal]));
 			local String is zeroAddr: b:nextTmp();
 			b:emit(inst: IrInst:ConstInt(dst: zeroAddr, value: 0));
 			local String is noPend: b:nextTmp();
@@ -494,10 +494,10 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local IrBlock is catchBlk: b:curFn:addBlock(label: catchLbl);
 		b:switchBlock(blk: catchBlk);
 		local String is errAddr: b:nextTmp();
-		b:emit(inst: IrInst:IrCall(dst: errAddr, hasDst: true, retType: IrType:I64, callee: 'Pool_takePendingError', argTypes: Array([IrType:Ptr]), args: Array(['null'])));
+		b:emit(inst: IrInst:IrCall(dst: errAddr, hasDst: true, retType: IrType:I64, callee: 'Pool_takePendingError', argTypes: [IrType:Ptr], args: ['null']));
 		local String is errPtr: b:nextTmp();
 		b:emit(inst: IrInst:IrCast(dst: errPtr, val: errAddr, fromType: IrType:I64, toType: IrType:Ptr));
-		b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Ptr, callee: 'spec_claim_pool', argTypes: Array([IrType:Ptr]), args: Array([errPtr])));
+		b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Ptr, callee: 'spec_claim_pool', argTypes: [IrType:Ptr], args: [errPtr]));
 		match(on: guardNa:value, when: [
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
 				if({ ps:length() > 0 }, {

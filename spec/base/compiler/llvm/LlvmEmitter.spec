@@ -176,14 +176,14 @@ Class is LlvmEmitter{
 				local Int is ii: 0;
 				while({ ii < blk:insts:length() }, {
 					match(on: blk:insts:get(index: ii), when: [
-						IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+						IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 							if({ callee:startsWith(prefix: 'spec_') && !known:has(key: callee) }, {
 								known:set(key: callee, value: true);
 								local String is sig: '';
 								local Int is ai: 0;
 								while({ ai < argTypes:length() }, {
 									if({ ai > 0 }, { sig: sig . ', '; });
-									sig: sig . :llvmType(ty: argTypes:get(index: ai));
+									sig: sig . :llvmType(ty: argTypes:get(index: ai, default: IrType:Void));
 									ai++;
 								});
 								out: out . 'declare ' . :llvmType(ty: retType) . ' @' . callee . '(' . sig . ")\n";
@@ -211,7 +211,7 @@ Class is LlvmEmitter{
 		local Int is gi: 0;
 		while({ gi < mod:globalNames:length() }, {
 			local String is gn: mod:globalNames:get(index: gi, default: '');
-			local IrType is gt: mod:globalTypes:get(index: gi);
+			local IrType is gt: mod:globalTypes:get(index: gi, default: IrType:Void);
 			local String is giv: mod:globalInits:get(index: gi, default: 'zeroinitializer');
 			out: out . '@' . gn . ' = internal global ' . :llvmType(ty: gt) . ' ' . giv . "\n";
 			gi++;
@@ -235,7 +235,7 @@ Class is LlvmEmitter{
 			local Int is fi: 0;
 			while({ fi < st:fieldTypes:length() }, {
 				if({ fi > 0 }, { fieldsStr: fieldsStr . ', '; });
-				fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi));
+				fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi, default: IrType:Void));
 				fi++;
 			});
 			out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
@@ -401,7 +401,7 @@ Class is LlvmEmitter{
 			local Int is gi: 0;
 			while({ gi < mod:globalNames:length() }, {
 				local String is gn: mod:globalNames:get(index: gi, default: '');
-				local IrType is gt: mod:globalTypes:get(index: gi);
+				local IrType is gt: mod:globalTypes:get(index: gi, default: IrType:Void);
 				local String is giv: mod:globalInits:get(index: gi, default: 'zeroinitializer');
 				out: out . '@' . gn . ' = hidden global ' . :llvmType(ty: gt) . ' ' . giv . "\n";
 				gi++;
@@ -424,7 +424,7 @@ Class is LlvmEmitter{
 				local Int is fi: 0;
 				while({ fi < st:fieldTypes:length() }, {
 					if({ fi > 0 }, { fieldsStr: fieldsStr . ', '; });
-					fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi));
+					fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi, default: IrType:Void));
 					fi++;
 				});
 				out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
@@ -581,7 +581,7 @@ Class is LlvmEmitter{
 		local Int is egi: 0;
 		while({ egi < mod:globalNames:length() }, {
 			local String is egn: mod:globalNames:get(index: egi, default: '');
-			local IrType is egt: mod:globalTypes:get(index: egi);
+			local IrType is egt: mod:globalTypes:get(index: egi, default: IrType:Void);
 			out: out . '@' . egn . ' = external hidden global ' . :llvmType(ty: egt) . "\n";
 			egi++;
 		});
@@ -592,7 +592,7 @@ Class is LlvmEmitter{
 			local Int is efi: 0;
 			while({ efi < est:fieldTypes:length() }, {
 				if({ efi > 0 }, { eFields: eFields . ', '; });
-				eFields: eFields . :llvmType(ty: est:fieldTypes:get(index: efi));
+				eFields: eFields . :llvmType(ty: est:fieldTypes:get(index: efi, default: IrType:Void));
 				efi++;
 			});
 			out: out . '%struct.' . est:name . ' = type { ' . eFields . " }\n";
@@ -1081,12 +1081,12 @@ Class is LlvmEmitter{
 				if({ op == 'u>=' }, { ipred: 'uge'; });
 				return dst . ' = icmp ' . ipred . ' ' . t . ' ' . lhs . ', ' . rhs;
 			},
-			IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+			IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 				local String is argsStr: '';
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
-					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
+					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai, default: IrType:Void)) . ' ' . args:get(index: ai, default: '');
 					ai++;
 				});
 				local String is rt: :llvmType(ty: retType);
@@ -1095,12 +1095,12 @@ Class is LlvmEmitter{
 				});
 				return 'call ' . rt . ' @' . callee . '(' . argsStr . ')';
 			},
-			IrInst:IndirectCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+			IrInst:IndirectCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 				local String is argsStr: '';
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
-					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
+					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai, default: IrType:Void)) . ' ' . args:get(index: ai, default: '');
 					ai++;
 				});
 				local String is rt: :llvmType(ty: retType);

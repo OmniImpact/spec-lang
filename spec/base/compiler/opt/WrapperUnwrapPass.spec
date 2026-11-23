@@ -42,7 +42,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		local Map of String to String is wrapCallee: Map:init();
 		local Map of String to IrType is wrapRetType: Map:init();
 		local Map of String to Boolean is wrapHasDst: Map:init();
-		local Map of String to Array of IrType is wrapArgTypes: Map:init();
+		local Map of String to [IrType] is wrapArgTypes: Map:init();
 		local Map of String to Array of Int is wrapParamIdx: Map:init();
 		local Map of String to Array of String is wrapConstArg: Map:init();
 
@@ -101,7 +101,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		Map of String to String is wrapCallee,
 		Map of String to IrType is wrapRetType,
 		Map of String to Boolean is wrapHasDst,
-		Map of String to Array of IrType is wrapArgTypes,
+		Map of String to [IrType] is wrapArgTypes,
 		Map of String to Array of Int is wrapParamIdx,
 		Map of String to Array of String is wrapConstArg
 	){
@@ -129,8 +129,8 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		local Boolean is callHasDst: false;
 		local IrType is callRetType: IrType:Void;
 		local String is callCallee: '';
-		local Array of IrType is callArgTypes: Array();
-		local Array of String is callArgs: Array();
+		local [IrType] is callArgTypes: [];
+		local [String] is callArgs: [];
 
 		local Int is ii: 0;
 		while({ ii < blk:insts:length() && ok }, {
@@ -177,7 +177,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 							});
 						});
 					},
-					IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ sawCall || callee == fn:name || callee == 'spec_pool_frame' || callee == 'spec_pool_release_to' }, {
 							ok: false;
 						}, {
@@ -219,7 +219,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		local Array of String is constArgs: Array();
 		local Int is ai: 0;
 		while({ ai < callArgs:length() }, {
-			local String is arg: callArgs:get(index: ai);
+			local String is arg: callArgs:get(index: ai, default: '');
 			if({ regParam:has(key: arg) }, {
 				paramIndices:add(item: regParam:get(key: arg, default: 0));
 				constArgs:add(item: '');
@@ -252,7 +252,7 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		Map of String to String is wrapCallee,
 		Map of String to IrType is wrapRetType,
 		Map of String to Boolean is wrapHasDst,
-		Map of String to Array of IrType is wrapArgTypes,
+		Map of String to [IrType] is wrapArgTypes,
 		Map of String to Array of Int is wrapParamIdx,
 		Map of String to Array of String is wrapConstArg
 	){
@@ -264,22 +264,22 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
 				local IrInst is nextInst: match(on: inst, when: [
-					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ !wrapCallee:has(key: callee) }, { return inst; });
 						local String is target: wrapCallee:get(key: callee, default: '');
 						if({ target == fn:name }, { return inst; });
 						local Array of Int is pIdx: wrapParamIdx:get(key: callee, default: Array());
 						local Array of String is cArg: wrapConstArg:get(key: callee, default: Array());
-						local Array of IrType is tTypes: wrapArgTypes:get(key: callee, default: Array());
-						local Array of String is newArgs: Array();
+						local [IrType] is tTypes: wrapArgTypes:get(key: callee, default: []);
+						local [String] is newArgs: [];
 						local Int is ai: 0;
 						while({ ai < pIdx:length() }, {
 							local Int is idx: pIdx:get(index: ai);
 							if({ idx >= 0 }, {
 								if({ idx >= args:length() }, { return inst; });
-								newArgs:add(item: args:get(index: idx));
+								newArgs:push(item: args:get(index: idx, default: ''));
 							}, {
-								newArgs:add(item: cArg:get(index: ai));
+								newArgs:push(item: cArg:get(index: ai, default: ''));
 							});
 							ai++;
 						});

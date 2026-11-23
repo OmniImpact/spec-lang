@@ -19,7 +19,7 @@ Class is IrModule{
 	Array of String is stringLiterals: Array();
 	Map of String to Int is stringIds: Map:init();
 	Array of String is globalNames: Array();
-	Array of IrType is globalTypes: Array();
+	[IrType] is globalTypes: [];
 	Array of String is globalInits: Array();
 	String is entryFunction: '';
 
@@ -28,7 +28,7 @@ Class is IrModule{
 
 	Function is addGlobal(String is name, IrType is ty, String is initVal){
 		:globalNames:add(item: name);
-		:globalTypes:add(item: ty);
+		:globalTypes:push(item: ty);
 		:globalInits:add(item: initVal);
 	}
 

@@ -94,7 +94,7 @@ Class of SpecOptimizer is DevirtPass{
 				IrInst:Store: local Function of Boolean(String is slot, String is val, IrType is ty){
 					return allocas:has(key: slot);
 				},
-				IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+				IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 					return callee == 'spec_pool_frame' || callee == 'spec_pool_release_to';
 				},
 				IrInst:Ret: local Function of Boolean(Boolean is hasVal, String is val, IrType is ty){
@@ -150,19 +150,19 @@ Class of SpecOptimizer is DevirtPass{
 					IrInst:PtrElem: local Function of Boolean(String is dst, String is basePtr, Int is index){
 						return basePtr == selfName;
 					},
-					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						local Int is ai: 0;
 						while({ ai < args:length() }, {
-							if({ args:get(index: ai) == selfName }, { return true; });
+							if({ args:get(index: ai, default: '') == selfName }, { return true; });
 							ai++;
 						});
 						return false;
 					},
-					IrInst:IndirectCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+					IrInst:IndirectCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 						if({ fnPtr == selfName }, { return true; });
 						local Int is ai: 0;
 						while({ ai < args:length() }, {
-							if({ args:get(index: ai) == selfName }, { return true; });
+							if({ args:get(index: ai, default: '') == selfName }, { return true; });
 							ai++;
 						});
 						return false;
@@ -238,16 +238,16 @@ Class of SpecOptimizer is DevirtPass{
 						});
 						return inst;
 					},
-					IrInst:IndirectCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+					IrInst:IndirectCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 						if({ fnPtrTarget:has(key: fnPtr) }, {
 							local String is target: fnPtrTarget:get(key: fnPtr, default: '');
 							anyDevirt: true;
-							local Array of String is newArgs: args;
-							if({ unusedSelf:has(key: target) && newArgs:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) }, {
-								local Array of String is nulled: Array(['null']);
+							local [String] is newArgs: args;
+							if({ unusedSelf:has(key: target) && newArgs:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0, default: IrType:Void) as String) == (IrType:Ptr as String) }, {
+								local [String] is nulled: ['null'];
 								local Int is ai: 1;
 								while({ ai < newArgs:length() }, {
-									nulled:add(item: newArgs:get(index: ai));
+									nulled:push(item: newArgs:get(index: ai, default: ''));
 									ai++;
 								});
 								newArgs: nulled;
@@ -263,12 +263,12 @@ Class of SpecOptimizer is DevirtPass{
 						});
 						return inst;
 					},
-					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
-						if({ unusedSelf:has(key: callee) && args:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) && args:get(index: 0, default: '') != 'null' }, {
-							local Array of String is nulled: Array(['null']);
+					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
+						if({ unusedSelf:has(key: callee) && args:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0, default: IrType:Void) as String) == (IrType:Ptr as String) && args:get(index: 0, default: '') != 'null' }, {
+							local [String] is nulled: ['null'];
 							local Int is ai: 1;
 							while({ ai < args:length() }, {
-								nulled:add(item: args:get(index: ai));
+								nulled:push(item: args:get(index: ai, default: ''));
 								ai++;
 							});
 							return IrInst:IrCall(
@@ -367,7 +367,7 @@ Class of SpecOptimizer is DevirtPass{
 					IrInst:AllocObj: local Function of Boolean(String is dst, String is structName, String is destroyFn){
 						return deadAllocs:has(key: dst);
 					},
-					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ args:length() == 1 }, {
 							local String is a0: args:get(index: 0, default: '');
 							if({ deadAllocs:has(key: a0) }, {
@@ -457,14 +457,14 @@ Class of SpecOptimizer is DevirtPass{
 			IrInst:BinOp: local Function(String is dst, String is op, String is lhs, String is rhs, IrType is ty){ usedRegs:set(key: lhs, value: true); usedRegs:set(key: rhs, value: true); },
 			IrInst:UnaryOp: local Function(String is dst, String is op, String is operand, IrType is ty){ usedRegs:set(key: operand, value: true); },
 			IrInst:Cmp: local Function(String is dst, String is op, String is lhs, String is rhs, IrType is ty){ usedRegs:set(key: lhs, value: true); usedRegs:set(key: rhs, value: true); },
-			IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+			IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 				local Int is i: 0;
-				while({ i < args:length() }, { usedRegs:set(key: args:get(index: i), value: true); i++; });
+				while({ i < args:length() }, { usedRegs:set(key: args:get(index: i, default: ''), value: true); i++; });
 			},
-			IrInst:IndirectCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+			IrInst:IndirectCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 				usedRegs:set(key: fnPtr, value: true);
 				local Int is i: 0;
-				while({ i < args:length() }, { usedRegs:set(key: args:get(index: i), value: true); i++; });
+				while({ i < args:length() }, { usedRegs:set(key: args:get(index: i, default: ''), value: true); i++; });
 			},
 			IrInst:FieldPtr: local Function(String is dst, String is objPtr, String is structName, Int is fieldIndex){ usedRegs:set(key: objPtr, value: true); },
 			IrInst:PtrElem: local Function(String is dst, String is basePtr, Int is index){ usedRegs:set(key: basePtr, value: true); },
@@ -484,22 +484,22 @@ Class of SpecOptimizer is DevirtPass{
 		Map of String to Boolean is badAllocs
 	){
 		match(on: inst, when: [
-			IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+			IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 				local Boolean is safeCall: args:length() == 1 && (callee == 'spec_claim_pool' || noOpInit:has(key: callee));
 				local Int is i: 0;
 				while({ i < args:length() }, {
-					local String is a: args:get(index: i);
+					local String is a: args:get(index: i, default: '');
 					if({ knownType:has(key: a) && !(safeCall && i == 0) }, {
 						badAllocs:set(key: a, value: true);
 					});
 					i++;
 				});
 			},
-			IrInst:IndirectCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+			IrInst:IndirectCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 				if({ knownType:has(key: fnPtr) }, { badAllocs:set(key: fnPtr, value: true); });
 				local Int is i: 0;
 				while({ i < args:length() }, {
-					local String is a: args:get(index: i);
+					local String is a: args:get(index: i, default: '');
 					if({ knownType:has(key: a) }, { badAllocs:set(key: a, value: true); });
 					i++;
 				});

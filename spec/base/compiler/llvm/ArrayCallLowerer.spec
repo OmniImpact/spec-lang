@@ -110,16 +110,16 @@ Class of CallLowerer is ArrayCallLowerer{
 			b:emit(inst: IrInst:AllocObj(dst: dst, structName: arrStruct, destroyFn: b:destroyFnFor(structName: arrStruct)));
 			local String is ekV: b:nextTmp();
 			b:emit(inst: IrInst:ConstInt(dst: ekV, value: ekInt));
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_init', argTypes: Array([IrType:Ptr, IrType:I64]), args: Array([dst, ekV])));
+			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_init', argTypes: [IrType:Ptr, IrType:I64], args: [dst, ekV]));
 			if({ call:args:length() == 1 }, {
 				local Expression is srcExpr: call:args:get(index: 0):value;
 				local String is srcVal: b:lowerExpr(expr: srcExpr);
 				local Type is srcNode: srcExpr:getResolvedTypeNode();
 				local Boolean is srcIsList: srcNode:isList() || b:specBaseMap:get(key: srcNode:name, default: '') == 'List';
 				if({ srcIsList }, {
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_addList', argTypes: Array([IrType:Ptr, IrType:Ptr]), args: Array([dst, srcVal])));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_addList', argTypes: [IrType:Ptr, IrType:Ptr], args: [dst, srcVal]));
 				}, {
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_addArray', argTypes: Array([IrType:Ptr, IrType:Ptr]), args: Array([dst, srcVal])));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_addArray', argTypes: [IrType:Ptr, IrType:Ptr], args: [dst, srcVal]));
 				});
 			});
 			b:emitClaimPool(val: dst);
@@ -136,9 +136,9 @@ Class of CallLowerer is ArrayCallLowerer{
 		local Type is vNode: na0:value:getResolvedTypeNode();
 		local Boolean is vIsList: vNode:isList() || b:specBaseMap:get(key: vNode:name, default: '') == 'List';
 		if({ vIsList }, {
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: recvStruct . '_addList', argTypes: Array([IrType:Ptr, IrType:Ptr]), args: Array([aRecv, iv])));
+			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: recvStruct . '_addList', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, iv]));
 		}, {
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: recvStruct . '_addArray', argTypes: Array([IrType:Ptr, IrType:Ptr]), args: Array([aRecv, iv])));
+			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: recvStruct . '_addArray', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, iv]));
 		});
 		return '0';
 	}

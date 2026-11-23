@@ -205,14 +205,36 @@ Class of Mergeable is Array of T{
 		return Mem:addrToObj(addr: valAddr);
 	}
 
+	## Retrieves an element at the specified zero-based index, or [default] if out of bounds.
+	##
+	## @param index: Zero-based position.
+	## @param default: Fallback value returned if [index] is out of bounds.
+	## @return: The element, or [default].
+	## @fallback: Returns [default] when index < 0 or index >= length().
+	Function of T is get(Int is index, T is default){
+		local Boolean is isFrozen: :frozen;
+		if({ !isFrozen }, { :lock:lock(); });
+		if({ index < 0 || index >= :len }, {
+			if({ !isFrozen }, { :lock:unlock(); });
+			return default;
+		});
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: index * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:retainAddr(objAddr: valAddr);
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		if({ !isFrozen }, { :lock:unlock(); });
+		return Mem:addrToObj(addr: valAddr);
+	}
+
 	## Retrieves an element at the specified zero-based index, or [default] if out of bounds ([error] notified).
 	##
 	## @param index: Zero-based position.
 	## @param default: Fallback value returned if [index] is out of bounds.
-	## @param error: Optional callback receiving a diagnostic message.
+	## @param error: Callback receiving a diagnostic message on out-of-bounds access.
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
-	Function of T is get(Int is index, T is default, Function is error: local Function(String is m){}){
+	Function of T is get(Int is index, T is default, Function is error){
 		local Boolean is isFrozen: :frozen;
 		if({ !isFrozen }, { :lock:lock(); });
 		if({ index < 0 || index >= :len }, {
@@ -303,13 +325,37 @@ Class of Mergeable is Array of T{
 		return Mem:addrToObj(addr: valAddr);
 	}
 
+	## Removes and returns the last element in the array, or [default] if empty.
+	##
+	## @param default: Fallback value returned if the array is empty.
+	## @return: The removed last element, or [default].
+	## @fallback: Returns [default] when the array has zero elements.
+	Function of T is pop(T is default){
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return default;
+		});
+		:lock:lock();
+		if({ :len == 0 }, {
+			:lock:unlock();
+			return default;
+		});
+		:len: :len - 1;
+		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: :len * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		:lock:unlock();
+		return Mem:addrToObj(addr: valAddr);
+	}
+
 	## Removes and returns the last element in the array, or [default] if empty ([error] notified).
 	##
 	## @param default: Fallback value returned if the array is empty.
-	## @param error: Optional callback receiving a diagnostic message.
+	## @param error: Callback receiving a diagnostic message when the array is empty.
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
-	Function of T is pop(T is default, Function is error: local Function(String is m){}){
+	Function of T is pop(T is default, Function is error){
 		if({ :frozen }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return default;

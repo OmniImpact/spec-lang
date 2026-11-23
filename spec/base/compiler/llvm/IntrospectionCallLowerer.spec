@@ -68,6 +68,6 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 			});
 		});
 		local String is o: b:lowerExpr(expr: call:target);
-		return :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: Array([IrType:Ptr]), args: Array([o]));
+		return :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [o]);
 	}
 }

@@ -39,7 +39,7 @@ Class of SpecOptimizer is InlineHintPass{
 		local Int is ii: 0;
 		while({ ii < blk:insts:length() }, {
 			local Boolean is hit: match(on: blk:insts:get(index: ii), when: [
-				IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+				IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 					return callee == fnName;
 				},
 				else: { return false; }
@@ -90,10 +90,10 @@ Class of SpecOptimizer is InlineHintPass{
 					IrInst:AllocObj: local Function of Boolean(String is dst, String is structName, String is destroyFn){
 						return false;
 					},
-					IrInst:IndirectCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+					IrInst:IndirectCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 						return false;
 					},
-					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						return callee:startsWith(prefix: '__spec_') || callee:startsWith(prefix: 'spec_');
 					},
 					else: { return true; }

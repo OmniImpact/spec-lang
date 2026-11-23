@@ -48,11 +48,11 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 		match(on: nm, when: [
 			'init': { res: 'null'; },
 			'fast_random': {
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'spec_math_random', argTypes: Array([IrType:F64, IrType:F64]), args: Array(['0.0', '1.0']));
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'spec_math_random', argTypes: [IrType:F64, IrType:F64], args: ['0.0', '1.0']);
 			},
 			'fast_random_seed': {
 				local String is s: :lowerNamedArg(b: b, call: call, argName: 'seed', posIdx: 0, defVal: '0');
-				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_fast_random_seed', argTypes: Array([IrType:I64]), args: Array([s]));
+				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_fast_random_seed', argTypes: [IrType:I64], args: [s]);
 			},
 			'math_to_int': {
 				local String is v: :lowerNamedArg(b: b, call: call, argName: 'v', posIdx: 0, defVal: '0.0');
@@ -68,31 +68,31 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 			},
 			'math_sqrt': {
 				local String is v: :lowerNamedArg(b: b, call: call, argName: 'v', posIdx: 0, defVal: '0.0');
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'sqrt', argTypes: Array([IrType:F64]), args: Array([v]));
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'sqrt', argTypes: [IrType:F64], args: [v]);
 			},
 			'math_fma': {
 				local String is a: :lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 0, defVal: '0.0');
 				local String is bArg: :lowerNamedArg(b: b, call: call, argName: 'b', posIdx: 1, defVal: '0.0');
 				local String is c: :lowerNamedArg(b: b, call: call, argName: 'c', posIdx: 2, defVal: '0.0');
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'fma', argTypes: Array([IrType:F64, IrType:F64, IrType:F64]), args: Array([a, bArg, c]));
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'fma', argTypes: [IrType:F64, IrType:F64, IrType:F64], args: [a, bArg, c]);
 			},
 			'math_atan2': {
 				local String is y: :lowerNamedArg(b: b, call: call, argName: 'y', posIdx: 0, defVal: '0.0');
 				local String is x: :lowerNamedArg(b: b, call: call, argName: 'x', posIdx: 1, defVal: '0.0');
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'atan2', argTypes: Array([IrType:F64, IrType:F64]), args: Array([y, x]));
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'atan2', argTypes: [IrType:F64, IrType:F64], args: [y, x]);
 			},
 			'math_pow': {
 				local String is x: :lowerNamedArg(b: b, call: call, argName: 'base', posIdx: 0, defVal: '0.0');
 				local String is y: :lowerNamedArg(b: b, call: call, argName: 'exp', posIdx: 1, defVal: '0.0');
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'pow', argTypes: Array([IrType:F64, IrType:F64]), args: Array([x, y]));
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'pow', argTypes: [IrType:F64, IrType:F64], args: [x, y]);
 			},
 			['math_log', 'math_log2', 'math_log10']: {
 				local String is v: :lowerNamedArg(b: b, call: call, argName: 'v', posIdx: 0, defVal: '0.0');
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'spec_' . nm, argTypes: Array([IrType:F64]), args: Array([v]));
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'spec_' . nm, argTypes: [IrType:F64], args: [v]);
 			},
 			else: {
 				local String is v: :lowerNamedArg(b: b, call: call, argName: 'v', posIdx: 0, defVal: '0.0');
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: nm:substring(start: 5, end: nm:length()), argTypes: Array([IrType:F64]), args: Array([v]));
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: nm:substring(start: 5, end: nm:length()), argTypes: [IrType:F64], args: [v]);
 			}
 		]);
 		return res;

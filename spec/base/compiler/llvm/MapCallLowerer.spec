@@ -55,7 +55,7 @@ Class of CallLowerer is MapCallLowerer{
 		b:emit(inst: IrInst:ConstInt(dst: kkV, value: kk));
 		local String is vkV: b:nextTmp();
 		b:emit(inst: IrInst:ConstInt(dst: vkV, value: vk));
-		b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: mapStruct . '_init', argTypes: Array([IrType:Ptr, IrType:I64, IrType:I64]), args: Array([dst, kkV, vkV])));
+		b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: mapStruct . '_init', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [dst, kkV, vkV]));
 		b:emitClaimPool(val: dst);
 		return dst;
 	}

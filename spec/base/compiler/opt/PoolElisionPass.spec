@@ -90,7 +90,7 @@ Class of SpecOptimizer is PoolElisionPass{
 		while({ ii < entry:insts:length() && entryMark == '' }, {
 			local IrInst is inst: entry:insts:get(index: ii);
 			local String is found: match(on: inst, when: [
-				IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+				IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 					if({ hasDst && callee == 'spec_pool_frame' }, { return dst; });
 					return '';
 				},
@@ -114,7 +114,7 @@ Class of SpecOptimizer is PoolElisionPass{
 				if({ isRet }, {
 					if({ n < 2 }, { return false; });
 					local Boolean is hasRel: match(on: blk:insts:get(index: n - 2), when: [
-						IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+						IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 							return callee == 'spec_pool_release_to' && args:length() == 1 && args:get(index: 0, default: '') == entryMark;
 						},
 						else: { return false; }
@@ -147,7 +147,7 @@ Class of SpecOptimizer is PoolElisionPass{
 		return match(on: inst, when: [
 			IrInst:AllocObj: { return true; },
 			IrInst:IndirectCall: { return true; },
-			IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+			IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 				if({ callee == 'spec_claim_pool' || callee == '__spec_mem_claim_pool_addr' }, { return true; });
 				if({ callee == 'spec_pool_frame' || callee == 'spec_pool_release_to' }, { return false; });
 				if({ fnMap:has(key: callee) }, {
@@ -166,7 +166,7 @@ Class of SpecOptimizer is PoolElisionPass{
 			IrInst:BinOp: local Function of Boolean(String is dst, String is op, String is lhs, String is rhs, IrType is ty){ return lhs == reg || rhs == reg; },
 			IrInst:UnaryOp: local Function of Boolean(String is dst, String is op, String is operand, IrType is ty){ return operand == reg; },
 			IrInst:Cmp: local Function of Boolean(String is dst, String is op, String is lhs, String is rhs, IrType is ty){ return lhs == reg || rhs == reg; },
-			IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+			IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 				local Int is i: 0;
 				while({ i < args:length() }, {
 					if({ args:get(index: i, default: '') == reg }, { return true; });
@@ -174,7 +174,7 @@ Class of SpecOptimizer is PoolElisionPass{
 				});
 				return false;
 			},
-			IrInst:IndirectCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+			IrInst:IndirectCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 				if({ fnPtr == reg }, { return true; });
 				local Int is i: 0;
 				while({ i < args:length() }, {
@@ -203,7 +203,7 @@ Class of SpecOptimizer is PoolElisionPass{
 				local IrInst is inst: blk:insts:get(index: ii);
 				if({ :instUsesReg(inst: inst, reg: mark) }, {
 					local Boolean is isRel: match(on: inst, when: [
-						IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+						IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 							return callee == 'spec_pool_release_to' && args:length() == 1 && args:get(index: 0, default: '') == mark;
 						},
 						else: { return false; }
@@ -233,7 +233,7 @@ Class of SpecOptimizer is PoolElisionPass{
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
 				local String is mark: match(on: inst, when: [
-					IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ hasDst && callee == 'spec_pool_frame' }, { return dst; });
 						return '';
 					},
@@ -262,7 +262,7 @@ Class of SpecOptimizer is PoolElisionPass{
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
 				local Boolean is drop: match(on: inst, when: [
-					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ hasDst && callee == 'spec_pool_frame' && elideMarks:has(key: dst) }, { return true; });
 						if({ callee == 'spec_pool_release_to' && args:length() == 1 && elideMarks:has(key: args:get(index: 0, default: '')) }, { return true; });
 						return false;
@@ -297,7 +297,7 @@ Class of SpecOptimizer is PoolElisionPass{
 			while({ ii < blk:insts:length() && !closed }, {
 				local IrInst is inst: blk:insts:get(index: ii);
 				local Boolean is isRel: match(on: inst, when: [
-					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
+					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						return callee == 'spec_pool_release_to' && args:length() == 1 && args:get(index: 0, default: '') == mark;
 					},
 					else: { return false; }

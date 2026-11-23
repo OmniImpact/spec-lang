@@ -119,12 +119,31 @@ Class of Mergeable is List of T{
 		:appendRawBytes(srcAddr: sData, count: n);
 	}
 
+	## Returns the element at [index], or [default] if out of bounds.
+	##
+	## @param index: Zero-based position.
+	## @param default: Fallback value used when there is no successful answer.
+	Function of T is get(Int is index, T is default){
+		if({ index < 0 || index >= :len }, {
+			return default;
+		});
+		if({ :byteMode }, {
+			return Mem:addrToObj(addr: Mem:loadByte(ptr: :data, byteOffset: index));
+		});
+		local Int is valAddr: Mem:loadI64(ptr: :data, byteOffset: index * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:retainAddr(objAddr: valAddr);
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		return Mem:addrToObj(addr: valAddr);
+	}
+
 	## Returns the element at [index], or [default] if out of bounds ([error] notified).
 	##
 	## @param index: Zero-based position.
 	## @param default: Fallback value used when there is no successful answer.
-	## @param error: Optional callback receiving a diagnostic message.
-	Function of T is get(Int is index, T is default, Function is error: local Function(String is m){}){
+	## @param error: Callback receiving a diagnostic message.
+	Function of T is get(Int is index, T is default, Function is error){
 		if({ index < 0 || index >= :len }, {
 			if({ :byteMode }, {
 				:notifyError(error: error, msg: 'byte buffer index out of bounds: index ' . (index as String) . ' for length ' . (:len as String));
@@ -144,8 +163,26 @@ Class of Mergeable is List of T{
 		return Mem:addrToObj(addr: valAddr);
 	}
 
+	## Overwrites the element at [index]; no-op if out of bounds.
+	Function is set(Int is index, T is item){
+		if({ index < 0 || index >= :len }, {
+			return;
+		});
+		local Int is itemBits: Mem:objToAddr(obj: item);
+		if({ :byteMode }, {
+			Mem:storeByte(ptr: :data, byteOffset: index, val: itemBits);
+			return;
+		});
+		if({ :elemKind == 1 }, {
+			if({ itemBits != 0 }, { Mem:retainAddr(objAddr: itemBits); });
+			local Int is oldAddr: Mem:loadI64(ptr: :data, byteOffset: index * 8);
+			if({ oldAddr != 0 }, { Mem:releaseAddr(objAddr: oldAddr); });
+		});
+		Mem:storeI64(ptr: :data, byteOffset: index * 8, val: itemBits);
+	}
+
 	## Overwrites the element at [index]; [error] notified if out of bounds.
-	Function is set(Int is index, T is item, Function is error: local Function(String is m){}){
+	Function is set(Int is index, T is item, Function is error){
 		if({ index < 0 || index >= :len }, {
 			if({ :byteMode }, {
 				:notifyError(error: error, msg: 'byte buffer assignment out of bounds: index ' . (index as String) . ' for length ' . (:len as String));
@@ -167,8 +204,24 @@ Class of Mergeable is List of T{
 		Mem:storeI64(ptr: :data, byteOffset: index * 8, val: itemBits);
 	}
 
+	## Removes and returns the last element, or [default] if empty.
+	Function of T is pop(T is default){
+		if({ :len == 0 }, {
+			return default;
+		});
+		:len: :len - 1;
+		if({ :byteMode }, {
+			return Mem:addrToObj(addr: Mem:loadByte(ptr: :data, byteOffset: :len));
+		});
+		local Int is valAddr: Mem:loadI64(ptr: :data, byteOffset: :len * 8);
+		if({ :elemKind == 1 && valAddr != 0 }, {
+			Mem:claimPoolAddr(objAddr: valAddr);
+		});
+		return Mem:addrToObj(addr: valAddr);
+	}
+
 	## Removes and returns the last element, or [default] if empty ([error] notified).
-	Function of T is pop(T is default, Function is error: local Function(String is m){}){
+	Function of T is pop(T is default, Function is error){
 		if({ :len == 0 }, {
 			if({ :byteMode }, {
 				:notifyError(error: error, msg: 'byte buffer pop on empty buffer');
