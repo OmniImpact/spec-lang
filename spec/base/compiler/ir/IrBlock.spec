@@ -11,7 +11,7 @@ Class is IrBlock{
 	];
 
 	String is label: 'entry';
-	Array of IrInst is insts: Array();
+	[IrInst] is insts: [];
 	Array of Int is instLines: Array();
 
 	replace Function is init(){
@@ -26,13 +26,13 @@ Class is IrBlock{
 	}
 
 	Function is appendAt(IrInst is inst, Int is line){
-		:insts:add(item: inst);
+		:insts:push(item: inst);
 		:instLines:add(item: line);
 	}
 
 	Function is prependAt(IrInst is inst, Int is line){
 		local Int is n: :insts:length();
-		:insts:add(item: inst);
+		:insts:push(item: inst);
 		:instLines:add(item: line);
 		local Int is i: n;
 		while({ i > 0 }, {

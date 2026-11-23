@@ -21,74 +21,38 @@ Class of SpecUnitTest is TestListByte{
 		Assert:areEqualInt(3, buf:length());
 	}
 
-	## Case 2: get reads back; the error callback stays untouched on success.
-	Function is testGetReadsBackWithoutError(){
+	## Case 2: get and [] read back bytes in bounds.
+	Function is testGetReadsBack(){
 		local [Byte] is buf;
 		buf:push(item: 72 as Byte);
 		buf:push(item: 105 as Byte);
 		buf:appendString(value: '!');
-		local [Byte] is errFlag;
-		local Int is first: buf:get(index: 0, default: 0 as Byte, error: local Function(String is m){
-			errFlag:push(item: 1 as Byte);
-		}) as Int;
+		local Int is first: buf:get(index: 0) as Int;
+		local Int is second: buf[1] as Int;
 		Assert:areEqualInt(72, first);
-		Assert:areEqualInt(0, errFlag:length());
+		Assert:areEqualInt(105, second);
 	}
 
-	## Case 3: OOB get yields the default AND notifies the error callback.
-	Function is testOobGetDefaultAndNotify(){
-		local [Byte] is buf;
-		buf:push(item: 72 as Byte);
-		local [Byte] is errFlag;
-		local Byte is oob: buf:get(index: 9, default: 7 as Byte, error: local Function(String is m){
-			errFlag:push(item: 1 as Byte);
-		});
-		Assert:areEqualInt(7, oob as Int);
-		Assert:areEqualInt(1, errFlag:length());
-	}
-
-	## Case 4: omitted error callback is legal (no-op default).
-	Function is testOmittedErrorCallback(){
-		local [Byte] is buf;
-		buf:push(item: 72 as Byte);
-		local Byte is silent: buf:get(index: 42, default: 3 as Byte);
-		Assert:areEqualInt(3, silent as Int);
-	}
-
-	## Case 5: set overwrites in place; OOB set notifies the provided callback.
-	Function is testSetOverwriteAndOobNotify(){
+	## Case 3: set overwrites in place.
+	Function is testSetOverwrite(){
 		local [Byte] is buf;
 		buf:push(item: 72 as Byte);
 		buf:push(item: 105 as Byte);
 		buf:appendString(value: '!');
-		local [Byte] is errFlag;
-		buf:set(index: 0, item: 74 as Byte, error: local Function(String is m){
-			errFlag:push(item: 1 as Byte);
-		});
-		local Int is rewritten: buf:get(index: 0, default: 0 as Byte) as Int;
-		buf:set(index: 99, item: 1 as Byte, error: local Function(String is m){
-			errFlag:push(item: 1 as Byte);
-		});
+		buf:set(index: 0, item: 74 as Byte);
+		local Int is rewritten: buf:get(index: 0) as Int;
 		Assert:areEqualInt(74, rewritten);
-		Assert:areEqualInt(1, errFlag:length());
 	}
 
-	## Case 6: pop returns the last byte; pop on empty yields the default
-	## and notifies the error callback.
-	Function is testPopLastAndEmptyNotify(){
+	## Case 4: pop returns the last byte and shrinks length.
+	Function is testPopLast(){
 		local [Byte] is buf;
 		buf:push(item: 72 as Byte);
 		buf:push(item: 105 as Byte);
 		buf:appendString(value: '!');
-		local Byte is last: buf:pop(default: 0 as Byte);
-		local [Byte] is empty;
-		local [Byte] is errFlag;
-		local Byte is nothing: empty:pop(default: 9 as Byte, error: local Function(String is m){
-			errFlag:push(item: 1 as Byte);
-		});
+		local Byte is last: buf:pop();
 		Assert:areEqualInt(33, last as Int);
-		Assert:areEqualInt(9, nothing as Int);
-		Assert:areEqualInt(1, errFlag:length());
+		Assert:areEqualInt(2, buf:length());
 	}
 
 	## Case 7: toString freezes the buffer contents.

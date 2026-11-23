@@ -256,7 +256,7 @@ Class of SpecOptimizer is PoolElisionPass{
 		bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Array of IrInst is newInsts: Array();
+			local [IrInst] is newInsts: [];
 			local Array of Int is newLines: Array();
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
@@ -264,13 +264,13 @@ Class of SpecOptimizer is PoolElisionPass{
 				local Boolean is drop: match(on: inst, when: [
 					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ hasDst && callee == 'spec_pool_frame' && elideMarks:has(key: dst) }, { return true; });
-						if({ callee == 'spec_pool_release_to' && args:length() == 1 && elideMarks:has(key: args:get(index: 0, default: '')) }, { return true; });
+						if({ callee == 'spec_pool_release_to' && args:length() == 1 && elideMarks:has(key: args:get(index: 0)) }, { return true; });
 						return false;
 					},
 					else: { return false; }
 				]);
 				if({ !drop }, {
-					newInsts:add(item: inst);
+					newInsts:push(item: inst);
 					newLines:add(item: blk:instLines:get(index: ii));
 				});
 				ii++;

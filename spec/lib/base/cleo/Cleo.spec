@@ -47,7 +47,7 @@ Class is Cleo{
 	Boolean is altScreen: false;
 	Boolean is directOutput: false;
 
-	Array of CleoSection is sections: Array();
+	[CleoSection] is sections: [];
 	CleoSection is defaultSection: CleoSection:init();
 	Map of Int to CleoSlot is slotMap: Map:init();
 	Array of Int is idCounter: Array([0]);
@@ -102,7 +102,7 @@ Class is Cleo{
 		:directOutput: directOutput;
 		:directRef: Array([directOutput]);
 		:directStartedRef: Array([false]);
-		:sections: Array();
+		:sections: [];
 		:slotMap: Map:init();
 		:idCounter: Array([0]);
 		:prevLines: Array();
@@ -117,7 +117,7 @@ Class is Cleo{
 			bgColor: :bgColor
 		);
 		:defaultSection: defSec;
-		:sections:add(item: defSec);
+		:sections:push(item: defSec);
 	}
 
 	## Creates a standard grayscale rounded Cleo surface for Spec CLI tools.
@@ -208,7 +208,7 @@ Class is Cleo{
 				:sections:set(index: 0, item: sec);
 				:defaultSection: sec;
 			}, else: {
-				:sections:add(item: sec);
+				:sections:push(item: sec);
 			});
 			:dirtyRef:set(index: 0, item: true);
 		});

@@ -414,7 +414,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 					});
 
 					if({ deleteSet:length() > 0 || replaceMap:length() > 0 }, {
-						local Array of IrInst is newInsts: Array();
+						local [IrInst] is newInsts: [];
 						ii: 0;
 						while({ ii < blk:insts:length() }, {
 							if({ !deleteSet:get(key: ii, default: false) }, {
@@ -429,7 +429,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 										rArgs:push(item: rParts:get(index: ti, default: ''));
 										ti++;
 									});
-									newInsts:add(item: IrInst:IrCall(
+									newInsts:push(item: IrInst:IrCall(
 										dst: rDst,
 										hasDst: true,
 										retType: IrType:Ptr,
@@ -438,7 +438,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 										args: rArgs
 									));
 								}, {
-									newInsts:add(item: blk:insts:get(index: ii));
+									newInsts:push(item: blk:insts:get(index: ii));
 								});
 							});
 							ii++;

@@ -4526,17 +4526,6 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferRegisteredClassCall(Expression is expr, CallData is call, String is targetType, String is method, Boolean is targetIsSelf){
-		if({ TypeDomain:isOfBase(t: targetType, base: 'List') && (method == 'get' || method == 'pop') }, {
-			local Boolean is hasDefault: false;
-			call:args:each(action: local Function(NamedArg is arg){
-				if({ arg:name == 'default' }, {
-					hasDefault: true;
-				});
-			});
-			if({ !hasDefault }, {
-				:addError(line: :currentLine, msg: 'List \'' . method . '\' requires a \'default:\' argument.');
-			});
-		});
 		local Member is selected: :selectOverload(className: targetType, methodName: method, expr: expr);
 		if({ selected:name != '' && call:args:length() > 0 }, {
 			local Member is typedVariant: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
@@ -7119,7 +7108,7 @@ Class is TypeChecker{
 		local Map of String to String is sharedEnumVariants: :allEnumVariants;
 		local Map of String to String is sharedStrEnums: :allStringBackedEnums;
 
-		local Array of Task of TypeChecker is workerTasks: Array();
+		local [Task of TypeChecker] is workerTasks: [];
 		local Int is w: 0;
 		while({ w < nWorkers }, {
 			local Array of Int is myIndices: buckets:get(index: w);
@@ -7145,7 +7134,7 @@ Class is TypeChecker{
 				});
 				return wTc;
 			});
-			workerTasks:add(item: wt);
+			workerTasks:push(item: wt);
 			w++;
 		});
 

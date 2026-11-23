@@ -243,7 +243,7 @@ Class of SpecOptimizer is DevirtPass{
 							local String is target: fnPtrTarget:get(key: fnPtr, default: '');
 							anyDevirt: true;
 							local [String] is newArgs: args;
-							if({ unusedSelf:has(key: target) && newArgs:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0, default: IrType:Void) as String) == (IrType:Ptr as String) }, {
+							if({ unusedSelf:has(key: target) && newArgs:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) }, {
 								local [String] is nulled: ['null'];
 								local Int is ai: 1;
 								while({ ai < newArgs:length() }, {
@@ -264,7 +264,7 @@ Class of SpecOptimizer is DevirtPass{
 						return inst;
 					},
 					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
-						if({ unusedSelf:has(key: callee) && args:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0, default: IrType:Void) as String) == (IrType:Ptr as String) && args:get(index: 0, default: '') != 'null' }, {
+						if({ unusedSelf:has(key: callee) && args:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) && args:get(index: 0, default: '') != 'null' }, {
 							local [String] is nulled: ['null'];
 							local Int is ai: 1;
 							while({ ai < args:length() }, {
@@ -358,7 +358,7 @@ Class of SpecOptimizer is DevirtPass{
 		bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Array of IrInst is newInsts: Array();
+			local [IrInst] is newInsts: [];
 			local Array of Int is newLines: Array();
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
@@ -369,7 +369,7 @@ Class of SpecOptimizer is DevirtPass{
 					},
 					IrInst:IrCall: local Function of Boolean(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ args:length() == 1 }, {
-							local String is a0: args:get(index: 0, default: '');
+							local String is a0: args:get(index: 0);
 							if({ deadAllocs:has(key: a0) }, {
 								if({ callee == 'spec_claim_pool' || noOpInit:has(key: callee) }, {
 									return true;
@@ -381,7 +381,7 @@ Class of SpecOptimizer is DevirtPass{
 					else: { return false; }
 				]);
 				if({ !drop }, {
-					newInsts:add(item: inst);
+					newInsts:push(item: inst);
 					newLines:add(item: blk:instLines:get(index: ii));
 				});
 				ii++;
@@ -418,7 +418,7 @@ Class of SpecOptimizer is DevirtPass{
 			bi: 0;
 			while({ bi < fn:blocks:length() }, {
 				local IrBlock is blk: fn:blocks:get(index: bi);
-				local Array of IrInst is newInsts: Array();
+				local [IrInst] is newInsts: [];
 				local Array of Int is newLines: Array();
 				local Int is ii: 0;
 				while({ ii < blk:insts:length() }, {
@@ -438,7 +438,7 @@ Class of SpecOptimizer is DevirtPass{
 					if({ drop }, {
 						changed: true;
 					}, {
-						newInsts:add(item: inst);
+						newInsts:push(item: inst);
 						newLines:add(item: blk:instLines:get(index: ii));
 					});
 					ii++;

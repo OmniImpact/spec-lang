@@ -183,7 +183,7 @@ Class is LlvmEmitter{
 								local Int is ai: 0;
 								while({ ai < argTypes:length() }, {
 									if({ ai > 0 }, { sig: sig . ', '; });
-									sig: sig . :llvmType(ty: argTypes:get(index: ai, default: IrType:Void));
+									sig: sig . :llvmType(ty: argTypes:get(index: ai));
 									ai++;
 								});
 								out: out . 'declare ' . :llvmType(ty: retType) . ' @' . callee . '(' . sig . ")\n";
@@ -211,7 +211,7 @@ Class is LlvmEmitter{
 		local Int is gi: 0;
 		while({ gi < mod:globalNames:length() }, {
 			local String is gn: mod:globalNames:get(index: gi, default: '');
-			local IrType is gt: mod:globalTypes:get(index: gi, default: IrType:Void);
+			local IrType is gt: mod:globalTypes:get(index: gi);
 			local String is giv: mod:globalInits:get(index: gi, default: 'zeroinitializer');
 			out: out . '@' . gn . ' = internal global ' . :llvmType(ty: gt) . ' ' . giv . "\n";
 			gi++;
@@ -235,7 +235,7 @@ Class is LlvmEmitter{
 			local Int is fi: 0;
 			while({ fi < st:fieldTypes:length() }, {
 				if({ fi > 0 }, { fieldsStr: fieldsStr . ', '; });
-				fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi, default: IrType:Void));
+				fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi));
 				fi++;
 			});
 			out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
@@ -401,7 +401,7 @@ Class is LlvmEmitter{
 			local Int is gi: 0;
 			while({ gi < mod:globalNames:length() }, {
 				local String is gn: mod:globalNames:get(index: gi, default: '');
-				local IrType is gt: mod:globalTypes:get(index: gi, default: IrType:Void);
+				local IrType is gt: mod:globalTypes:get(index: gi);
 				local String is giv: mod:globalInits:get(index: gi, default: 'zeroinitializer');
 				out: out . '@' . gn . ' = hidden global ' . :llvmType(ty: gt) . ' ' . giv . "\n";
 				gi++;
@@ -424,7 +424,7 @@ Class is LlvmEmitter{
 				local Int is fi: 0;
 				while({ fi < st:fieldTypes:length() }, {
 					if({ fi > 0 }, { fieldsStr: fieldsStr . ', '; });
-					fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi, default: IrType:Void));
+					fieldsStr: fieldsStr . :llvmType(ty: st:fieldTypes:get(index: fi));
 					fi++;
 				});
 				out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
@@ -581,7 +581,7 @@ Class is LlvmEmitter{
 		local Int is egi: 0;
 		while({ egi < mod:globalNames:length() }, {
 			local String is egn: mod:globalNames:get(index: egi, default: '');
-			local IrType is egt: mod:globalTypes:get(index: egi, default: IrType:Void);
+			local IrType is egt: mod:globalTypes:get(index: egi);
 			out: out . '@' . egn . ' = external hidden global ' . :llvmType(ty: egt) . "\n";
 			egi++;
 		});
@@ -592,7 +592,7 @@ Class is LlvmEmitter{
 			local Int is efi: 0;
 			while({ efi < est:fieldTypes:length() }, {
 				if({ efi > 0 }, { eFields: eFields . ', '; });
-				eFields: eFields . :llvmType(ty: est:fieldTypes:get(index: efi, default: IrType:Void));
+				eFields: eFields . :llvmType(ty: est:fieldTypes:get(index: efi));
 				efi++;
 			});
 			out: out . '%struct.' . est:name . ' = type { ' . eFields . " }\n";
@@ -712,7 +712,7 @@ Class is LlvmEmitter{
 		local String is secondaryHdr: :emitShardHeader(mod: mod, isPrimary: false);
 		local Boolean is dbgFlag: :debugMode;
 
-		local Array of Task of String is shardTasks: Array();
+		local [Task of String] is shardTasks: [];
 		local Int is s: 0;
 		while({ s < nShards }, {
 			local Int is myShard: s;
@@ -748,7 +748,7 @@ Class is LlvmEmitter{
 				});
 				return out;
 			});
-			shardTasks:add(item: stTask);
+			shardTasks:push(item: stTask);
 			s++;
 		});
 
@@ -796,7 +796,7 @@ Class is LlvmEmitter{
 		local Int is nWorkers: if({ threads < nFn }, { threads }, { nFn });
 		local Int is baseCount: nFn / nWorkers;
 		local Int is rem: nFn % nWorkers;
-		local Array of Task of String is workerTasks: Array();
+		local [Task of String] is workerTasks: [];
 		local Int is curStart: 0;
 		local Int is w: 0;
 		while({ w < nWorkers }, {
@@ -813,7 +813,7 @@ Class is LlvmEmitter{
 				});
 				return chunk;
 			});
-			workerTasks:add(item: wt);
+			workerTasks:push(item: wt);
 			w++;
 		});
 
@@ -1086,7 +1086,7 @@ Class is LlvmEmitter{
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
-					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai, default: IrType:Void)) . ' ' . args:get(index: ai, default: '');
+					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
 					ai++;
 				});
 				local String is rt: :llvmType(ty: retType);
@@ -1100,7 +1100,7 @@ Class is LlvmEmitter{
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
-					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai, default: IrType:Void)) . ' ' . args:get(index: ai, default: '');
+					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
 					ai++;
 				});
 				local String is rt: :llvmType(ty: retType);

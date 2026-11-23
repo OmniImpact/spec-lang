@@ -88,7 +88,7 @@ Class is IrBuilder{
 	String is expectedMapKeyType: '';
 	String is expectedMapValType: '';
 	Expression is currentCallExpr: Expression:Unknown;
-	Array of CallLowerer is callLowerers: Array();
+	[CallLowerer] is callLowerers: [];
 	Map of String to ClassInfo is clsMap: Map:init();
 	Map of String to ClassInfo is sysinternalClasses: Map:init();
 	Map of String to String is specBaseMap: Map:init();
@@ -416,7 +416,7 @@ Class is IrBuilder{
 		while({ :scopeVarStack:length() > mark }, {
 			local String is name: :scopeVarStack:pop(default: '');
 			local String is oldSlot: :scopeOldSlotStack:pop(default: '');
-			local IrType is oldTy: :scopeOldTypeStack:pop(default: IrType:I64);
+			local IrType is oldTy: :scopeOldTypeStack:pop();
 			local Boolean is oldArc: :scopeOldArcStack:pop(default: false);
 			local String is oldSpec: :scopeOldSpecTypeStack:pop(default: '');
 			local Boolean is oldBoxed: :scopeOldBoxedStack:pop(default: false);
@@ -1482,7 +1482,7 @@ Class is IrBuilder{
 			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && !:isLazyCallExpr(expr: m:initExpr) }, {
 				local Int is fidx: st:fieldIndex(name: m:name);
 				if({ fidx >= 0 }, {
-					local IrType is fty: st:fieldTypes:get(index: fidx, default: IrType:Void);
+					local IrType is fty: st:fieldTypes:get(index: fidx);
 					local String is ptr: :nextTmp();
 					:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: '%self', structName: :currentClass, fieldIndex: fidx));
 					local String is prevMapK: :expectedMapKeyType;
@@ -1551,7 +1551,7 @@ Class is IrBuilder{
 				if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' && !m:hasModifier(kw: Keyword:HELD) && !m:hasInit && !seen:has(key: m:name) }, {
 					local Int is fidx0: st:fieldIndex(name: m:name);
 					if({ fidx0 >= 0 }, {
-						local IrType is fty0: st:fieldTypes:get(index: fidx0, default: IrType:Void);
+						local IrType is fty0: st:fieldTypes:get(index: fidx0);
 						local String is ptr0: :nextTmp();
 						:emit(inst: IrInst:FieldPtr(dst: ptr0, objPtr: '%self', structName: :currentClass, fieldIndex: fidx0));
 						local String is defVal0: :emitDefaultVal(ty: fty0);
@@ -1781,7 +1781,7 @@ Class is IrBuilder{
 		local Int is valIdx: st:fieldIndex(name: m:name);
 		local Int is stateIdx: st:fieldIndex(name: '_lazy_state_' . m:name);
 		if({ valIdx < 0 || stateIdx < 0 }, { return; });
-		local IrType is fty: st:fieldTypes:get(index: valIdx, default: IrType:Void);
+		local IrType is fty: st:fieldTypes:get(index: valIdx);
 		local Boolean is fIsArc: st:fieldIsArc:get(index: valIdx, default: false);
 		local String is fnName: sname . '_' . m:name . '__lazy_init';
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: fty);
@@ -2191,7 +2191,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitLoadField(String is objPtr, String is sname, IrStruct is st, Int is fidx, String is fieldName){
-		local IrType is fty: st:fieldTypes:get(index: fidx, default: IrType:Void);
+		local IrType is fty: st:fieldTypes:get(index: fidx);
 		local Int is stateIdx: st:fieldIndex(name: '_lazy_state_' . fieldName);
 		if({ stateIdx >= 0 && :lazyFields:has(key: sname . ':' . fieldName) }, {
 			local String is ownerSname: :lazyFields:get(key: sname . ':' . fieldName, default: sname);
@@ -3942,7 +3942,7 @@ Class is IrBuilder{
 									local Int is sfidx: selfSt:fieldIndex(name: name);
 									if({ sfidx >= 0 }, {
 										local String is selfObj: :emitLoadLocal(name: ':', ty: IrType:Ptr);
-										local IrType is sfty: selfSt:fieldTypes:get(index: sfidx, default: IrType:Void);
+										local IrType is sfty: selfSt:fieldTypes:get(index: sfidx);
 										local Boolean is sfIsArc: selfSt:fieldIsArc:get(index: sfidx, default: false);
 										local String is scval: :castIfNeeded(val: val, fromTy: valTy, toTy: sfty);
 										local String is sptr: :nextTmp();
@@ -3968,7 +3968,7 @@ Class is IrBuilder{
 						local IrStruct is st: :mod:findStruct(name: sname);
 						local Int is fidx: st:fieldIndex(name: fieldName);
 						if({ fidx >= 0 }, {
-							local IrType is fty: st:fieldTypes:get(index: fidx, default: IrType:Void);
+							local IrType is fty: st:fieldTypes:get(index: fidx);
 							local Boolean is fIsArc: st:fieldIsArc:get(index: fidx, default: false);
 							local String is cval: :castIfNeeded(val: val, fromTy: valTy, toTy: fty);
 							local String is ptr: :nextTmp();
@@ -4015,7 +4015,7 @@ Class is IrBuilder{
 									local String is obj: :pathObjPtr;
 									local String is sname: :pathStructName;
 									local IrStruct is st: :mod:findStruct(name: sname);
-									local IrType is fty: st:fieldTypes:get(index: fidx, default: IrType:Void);
+									local IrType is fty: st:fieldTypes:get(index: fidx);
 									local Boolean is fIsArc: st:fieldIsArc:get(index: fidx, default: false);
 									local String is cval: :castIfNeeded(val: val, fromTy: valTy, toTy: fty);
 									local String is ptr: :nextTmp();
@@ -4047,7 +4047,8 @@ Class is IrBuilder{
 						}, {
 							local String is idxV: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: IrType:I64);
 							local String is vp: :castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
-							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Array_set', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [tv, idxV, vp]));
+							local String is setCallee: if({ tType == 'List' || tType:startsWith(prefix: 'List:') || tType:startsWith(prefix: 'List__') || :specBaseMap:get(key: tType, default: '') == 'List' }, { 'List_set' }, { 'Array_set' });
+							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [tv, idxV, vp]));
 						});
 					}
 				], default: {});
@@ -4344,7 +4345,7 @@ Class is IrBuilder{
 						local Int is sfidx: selfSt:fieldIndex(name: name);
 						if({ sfidx >= 0 }, {
 							local String is selfObj: :emitLoadLocal(name: ':', ty: IrType:Ptr);
-							slotTy: selfSt:fieldTypes:get(index: sfidx, default: IrType:Void);
+							slotTy: selfSt:fieldTypes:get(index: sfidx);
 							slot: :nextTmp();
 							:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: selfObj, structName: :currentClass, fieldIndex: sfidx));
 							fldObj: selfObj;
@@ -4362,7 +4363,7 @@ Class is IrBuilder{
 				local IrStruct is st: :mod:findStruct(name: sname);
 				local Int is fidx: st:fieldIndex(name: fieldName);
 				if({ fidx >= 0 }, {
-					slotTy: st:fieldTypes:get(index: fidx, default: IrType:Void);
+					slotTy: st:fieldTypes:get(index: fidx);
 					slot: :nextTmp();
 					:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: sname, fieldIndex: fidx));
 					fldObj: obj;
@@ -4378,7 +4379,7 @@ Class is IrBuilder{
 					local String is obj: :pathObjPtr;
 					local String is sname: :pathStructName;
 					local IrStruct is st: :mod:findStruct(name: sname);
-					slotTy: st:fieldTypes:get(index: fidx, default: IrType:Void);
+					slotTy: st:fieldTypes:get(index: fidx);
 					slot: :nextTmp();
 					:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: sname, fieldIndex: fidx));
 					fldObj: obj;
@@ -5010,7 +5011,9 @@ Class is IrBuilder{
 						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [tv, kp, mDef]));
 					});
 				}, {
-					:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Array_get', argTypes: [IrType:Ptr, IrType:I64], args: [tv, iv]));
+					local String is tType: target:resolvedType;
+					local String is getCallee: if({ tType == 'List' || tType:startsWith(prefix: 'List:') || tType:startsWith(prefix: 'List__') || :specBaseMap:get(key: tType, default: '') == 'List' }, { 'List_get' }, { 'Array_get' });
+					:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: getCallee, argTypes: [IrType:Ptr, IrType:I64], args: [tv, iv]));
 				});
 				local IrType is rty: :irTypeFor(specType: expr:resolvedType);
 				if({ rty != IrType:Ptr && rty != IrType:Void }, {
@@ -5836,7 +5839,7 @@ Class is IrBuilder{
 		if({ hasDst }, { dst: :nextTmp(); });
 
 		if({ vslot >= 0 }, {
-			local String is recvPtr: argVals:get(index: 0, default: 'null');
+			local String is recvPtr: if({ argVals:length() > 0 }, { argVals:get(index: 0) }, { 'null' });
 			if({ recvPtr == 'null' }, {
 				:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: callRetTy, callee: dirCallee, argTypes: argTypes, args: argVals));
 				:emitCheckUnwindAfterCall(callee: dirCallee);
@@ -5985,7 +5988,7 @@ Class is IrBuilder{
 						else: { false }
 					]);
 					if({ fSpec == argSpec || (fBase != '' && fBase == aBase) || (fBase == 'Function' && (isAnonVal || argSpec:startsWith(prefix: 'Function'))) }, {
-						local IrType is fty: st:fieldTypes:get(index: fidx, default: IrType:Void);
+						local IrType is fty: st:fieldTypes:get(index: fidx);
 						local IrType is aty: :irTypeFor(specType: argSpec);
 						if({ aty == IrType:Void }, { aty: fty; });
 						local String is val: :lowerExpr(expr: na:value);

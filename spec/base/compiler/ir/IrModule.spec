@@ -14,7 +14,7 @@ Class is IrModule{
 		['base', 'sys', as Loops()]
 	];
 
-	Array of IrStruct is structs: Array();
+	[IrStruct] is structs: [];
 	Array of IrFunction is functions: Array();
 	Array of String is stringLiterals: Array();
 	Map of String to Int is stringIds: Map:init();
@@ -43,7 +43,7 @@ Class is IrModule{
 	}
 
 	Function is addStruct(IrStruct is s){
-		:structs:add(item: s);
+		:structs:push(item: s);
 	}
 
 	Function is addFunction(IrFunction is fn){

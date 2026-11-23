@@ -13,8 +13,8 @@ Class is IrFunction{
 
 	String is name: '';
 	IrType is retType: IrType:Void;
-	Array of IrParam is params: Array();
-	Array of IrBlock is blocks: Array();
+	[IrParam] is params: [];
+	[IrBlock] is blocks: [];
 	Boolean is isExternal: false;
 	Boolean is alwaysInline: false;
 	String is sourceFile: '';
@@ -29,12 +29,12 @@ Class is IrFunction{
 	}
 
 	Function is addParam(String is name, IrType is ty){
-		:params:add(item: IrParam:init(name: name, ty: ty));
+		:params:push(item: IrParam:init(name: name, ty: ty));
 	}
 
 	Function of IrBlock is addBlock(String is label){
 		local IrBlock is blk: IrBlock:init(label: label);
-		:blocks:add(item: blk);
+		:blocks:push(item: blk);
 		return blk;
 	}
 }

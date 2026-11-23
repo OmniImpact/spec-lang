@@ -28,7 +28,7 @@ Class is CleoSection{
 	CleoColor is fgColor: CleoColor:default();
 	CleoColor is bgColor: CleoColor:default();
 
-	Array of CleoSlot is slots: Array();
+	[CleoSlot] is slots: [];
 	Map of Int to CleoSlot is slotMap: Map:init();
 	Array of Int is idCounter: Array([0]);
 	Array of Boolean is dirtyRef: Array([false]);
@@ -50,7 +50,7 @@ Class is CleoSection{
 		local Int is sid: :idCounter:get(index: 0, default: 0);
 		:idCounter:set(index: 0, item: sid + 1);
 		slot:id: sid;
-		:slots:add(item: slot);
+		:slots:push(item: slot);
 		:slotMap:set(key: sid, value: slot);
 		:markDirty();
 		return sid;
@@ -216,12 +216,12 @@ Class is CleoSection{
 	Function is removeSlot(Int is index){
 		if({ !:slotMap:has(key: index) }, { return; });
 		:slotMap:remove(key: index);
-		local Array of CleoSlot is kept: Array();
+		local [CleoSlot] is kept: [];
 		local Int is k: 0;
 		while({ k < :slots:length() }, {
 			local CleoSlot is cur: :slots:get(index: k);
 			if({ cur:id != index }, {
-				kept:add(item: cur);
+				kept:push(item: cur);
 			});
 			k: k + 1;
 		});

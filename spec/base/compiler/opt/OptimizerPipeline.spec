@@ -22,7 +22,7 @@ Class is OptimizerPipeline{
 		['base', 'sys', as Loops()]
 	];
 
-	Array of SpecOptimizer is passes: Array();
+	[SpecOptimizer] is passes: [];
 
 	replace Function is init(){
 		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'SpecOptimizer');
@@ -36,7 +36,7 @@ Class is OptimizerPipeline{
 		});
 		local Int is i: 0;
 		while({ i < found:length() }, {
-			:passes:add(item: found:get(index: i) as SpecOptimizer);
+			:passes:push(item: found:get(index: i) as SpecOptimizer);
 			i++;
 		});
 	}

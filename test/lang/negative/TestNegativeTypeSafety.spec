@@ -145,15 +145,6 @@ Class is BareListGuard{
 	}
 }
 
-#! case: testListGuard_2
-#! expect: requires a 'default:' argument
-Class is ListGetGuard{
-	replace Function is init(Map of String to String is args){
-		local [Byte] is buf;
-		local Byte is b: buf:get(index: 0);
-	}
-}
-
 #! case: testAnyContractRootOnly
 #! expect: Member 'fetch' is not part of the root contract
 Class is StrictAnimal{

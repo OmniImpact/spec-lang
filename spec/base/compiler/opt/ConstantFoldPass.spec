@@ -40,7 +40,7 @@ Class of SpecOptimizer is ConstantFoldPass{
 	local Function is foldBlock(IrBlock is blk){
 		local Map of String to Int is intConsts: Map:init();
 		local Map of String to Boolean is hasIntConst: Map:init();
-		local Array of IrInst is out: Array();
+		local [IrInst] is out: [];
 
 		local Int is ii: 0;
 		while({ ii < blk:insts:length() }, {
@@ -110,7 +110,7 @@ Class of SpecOptimizer is ConstantFoldPass{
 			], default: {
 				return inst;
 			});
-			out:add(item: nextInst);
+			out:push(item: nextInst);
 			ii++;
 		});
 		blk:insts: out;

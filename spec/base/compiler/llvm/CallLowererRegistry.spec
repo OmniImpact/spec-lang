@@ -29,7 +29,7 @@ Class is CallLowererRegistry{
 	replace Function is init(){
 	}
 
-	Function of Array of CallLowerer is loadAll(){
+	Function of [CallLowerer] is loadAll(){
 		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'CallLowerer');
 		Sort:sortBy(values: found, compare: local Function of Int(Any is a, Any is b){
 			local CallLowerer is ca: a as CallLowerer;
@@ -39,10 +39,10 @@ Class is CallLowererRegistry{
 			if({ ca:name() > cb:name() }, { return 1; });
 			return 0;
 		});
-		local Array of CallLowerer is out: Array();
+		local [CallLowerer] is out: [];
 		local Int is i: 0;
 		while({ i < found:length() }, {
-			out:add(item: found:get(index: i) as CallLowerer);
+			out:push(item: found:get(index: i) as CallLowerer);
 			i++;
 		});
 		return out;

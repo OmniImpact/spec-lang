@@ -564,7 +564,7 @@ Class is LlvmP8{
 	}
 
 	Function is testCallLowererPluginsRegistered(){
-		local Array of CallLowerer is loaded: CallLowererRegistry:init():loadAll();
+		local [CallLowerer] is loaded: CallLowererRegistry:init():loadAll();
 		local Array of String is loadedTypes: Array();
 		local Int is li: 0;
 		while({ li < loaded:length() }, {
