@@ -19,14 +19,14 @@ Class is Type{
 	String is name: '';
 
 	## Generic type arguments (e.g. String in Array of String).
-	Array of Type is params: [];
+	Array of Type is params: Array();
 
 	## Initializes a simple type descriptor.
 	##
 	## @param name: Base type name.
 	replace Function is init(String is name){
 		:name: name;
-		:params: [];
+		:params: Array();
 	}
 
 	## Produces a parameterized generic type descriptor. Self-free
@@ -64,7 +64,7 @@ Class is Type{
 		if({ :params:length() == 0 }, {
 			return Type:init(name: :name);
 		});
-		local Array of Type is cp: [];
+		local Array of Type is cp: Array();
 		local Int is i: 0;
 		while({ i < :params:length() }, {
 			local Type is p: :params:get(index: i);

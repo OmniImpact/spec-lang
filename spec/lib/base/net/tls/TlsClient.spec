@@ -50,12 +50,12 @@ Class is TlsClient{
 		:rxBuf: emptyRx;
 	}
 
-	local Array of Int is cAppKey: [];
-	local Array of Int is cAppIv: [];
+	local Array of Int is cAppKey: Array();
+	local Array of Int is cAppIv: Array();
 	local Int is cAppSeq: 0;
 
-	local Array of Int is sAppKey: [];
-	local Array of Int is sAppIv: [];
+	local Array of Int is sAppKey: Array();
+	local Array of Int is sAppIv: Array();
 	local Int is sAppSeq: 0;
 
 	Function of Boolean is isConnected(){
@@ -79,7 +79,7 @@ Class is TlsClient{
 	}
 
 	local Function of Array of Int is sliceBytes(Array of Int is src, Int is start, Int is count){
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is i: 0;
 		while({ i < count && (start + i) < src:length() }, {
 			out:add(item: src:get(index: start + i, default: 0) & 255);
@@ -91,7 +91,7 @@ Class is TlsClient{
 	local Function of Array of Int is makeRandom32(){
 		local Int is buf: Mem:alloc(bytes: 32);
 		local Int is rc: Mem:randomBytes(dstAddr: buf, len: 32);
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is i: 0;
 		while({ i < 32 }, {
 			local Int is bVal: if({ rc == 0 }, { Mem:loadByte(ptr: buf, byteOffset: i) }, { 0 });
@@ -103,7 +103,7 @@ Class is TlsClient{
 	}
 
 	local Function of Array of Int is makeNonce(Array of Int is iv, Int is seq){
-		local Array of Int is nonce: [];
+		local Array of Int is nonce: Array();
 		local Int is i: 0;
 		while({ i < 12 }, {
 			nonce:add(item: iv:get(index: i, default: 0) & 255);
@@ -163,7 +163,7 @@ Class is TlsClient{
 
 	local Function of Array of Int is readRecord(Array of Int is headerOut){
 		if({ !:ensureRxBytes(needed: 5) }, {
-			return [];
+			return Array();
 		});
 		local Int is h0: (:rxBuf:get(index: :rxPos, default: 0 as Byte) as Int) & 255;
 		local Int is h1: (:rxBuf:get(index: :rxPos + 1, default: 0 as Byte) as Int) & 255;
@@ -174,7 +174,7 @@ Class is TlsClient{
 		:rxPos: :rxPos + 5;
 
 		if({ !:ensureRxBytes(needed: recLen) }, {
-			return [];
+			return Array();
 		});
 		headerOut:add(item: h0);
 		headerOut:add(item: h1);
@@ -182,7 +182,7 @@ Class is TlsClient{
 		headerOut:add(item: h3);
 		headerOut:add(item: h4);
 
-		local Array of Int is payload: [];
+		local Array of Int is payload: Array();
 		local Int is pi: 0;
 		while({ pi < recLen }, {
 			payload:add(item: (:rxBuf:get(index: :rxPos + pi, default: 0 as Byte) as Int) & 255);
@@ -207,23 +207,23 @@ Class is TlsClient{
 	}
 
 	local Function of Boolean is sendEncryptedRecord(Array of Int is key, Array of Int is iv, Int is seq, Int is innerType, Array of Int is plaintext){
-		local Array of Int is inner: [];
+		local Array of Int is inner: Array();
 		:appendBytes(dst: inner, src: plaintext);
 		inner:add(item: innerType & 255);
 
 		local Int is encLen: inner:length() + 16;
-		local Array of Int is aad: [23, 3, 3, (encLen >> 8) & 255, encLen & 255];
+		local Array of Int is aad: Array([23, 3, 3, (encLen >> 8) & 255, encLen & 255]);
 		local Array of Int is nonce: :makeNonce(iv: iv, seq: seq);
 		local Array of Int is ctTag: :aeadSeal(key: key, nonce: nonce, aad: aad, plaintext: inner);
 
-		local Array of Int is rec: [];
+		local Array of Int is rec: Array();
 		:appendBytes(dst: rec, src: aad);
 		:appendBytes(dst: rec, src: ctTag);
 		return :sendRawBytes(data: rec);
 	}
 
 	local Function of Array of Int is buildClientHello(String is host, Array of Int is clientPub){
-		local Array of Int is body: [];
+		local Array of Int is body: Array();
 		# legacy_version = TLS 1.2 (0x0303)
 		body:add(item: 3);
 		body:add(item: 3);
@@ -244,7 +244,7 @@ Class is TlsClient{
 		body:add(item: 0);
 
 		# Extensions
-		local Array of Int is exts: [];
+		local Array of Int is exts: Array();
 
 		# 1. server_name (SNI, 0x0000)
 		local Int is hostLen: host:byteLength();
@@ -294,7 +294,7 @@ Class is TlsClient{
 		:appendBytes(dst: body, src: exts);
 
 		# Handshake message header: type=1 (ClientHello), 24-bit length
-		local Array of Int is hsMsg: [1, (body:length() >> 16) & 255, (body:length() >> 8) & 255, body:length() & 255];
+		local Array of Int is hsMsg: Array([1, (body:length() >> 16) & 255, (body:length() >> 8) & 255, body:length() & 255]);
 		:appendBytes(dst: hsMsg, src: body);
 		return hsMsg;
 	}
@@ -341,21 +341,21 @@ Class is TlsClient{
 		local Array of Int is chMsg: :buildClientHello(host: host, clientPub: clientPub);
 
 		# Send ClientHello record (type 22, legacy version 0x0301)
-		local Array of Int is chRec: [22, 3, 1, (chMsg:length() >> 8) & 255, chMsg:length() & 255];
+		local Array of Int is chRec: Array([22, 3, 1, (chMsg:length() >> 8) & 255, chMsg:length() & 255]);
 		:appendBytes(dst: chRec, src: chMsg);
 		if({ !:sendRawBytes(data: chRec) }, {
 			:close();
 			return false;
 		});
 
-		local Array of Int is transcript: [];
+		local Array of Int is transcript: Array();
 		:appendBytes(dst: transcript, src: chMsg);
 
 		# Read ServerHello
-		local Array of Int is shMsg: [];
+		local Array of Int is shMsg: Array();
 		local Boolean is gotSh: false;
 		while({ !gotSh }, {
-			local Array of Int is hdr: [];
+			local Array of Int is hdr: Array();
 			local Array of Int is payload: :readRecord(headerOut: hdr);
 			if({ hdr:length() < 5 }, {
 				local String is failMsg: if({ :lastErr != '' }, { :lastErr }, { 'EOF waiting for ServerHello' });
@@ -396,7 +396,7 @@ Class is TlsClient{
 		local Int is extsLen: (shMsg:get(index: pos, default: 0) << 8) | shMsg:get(index: pos + 1, default: 0);
 		pos: pos + 2;
 		local Int is extsEnd: pos + extsLen;
-		local Array of Int is serverPub: [];
+		local Array of Int is serverPub: Array();
 		while({ pos + 4 <= extsEnd }, {
 			local Int is eType: (shMsg:get(index: pos, default: 0) << 8) | shMsg:get(index: pos + 1, default: 0);
 			local Int is eLen: (shMsg:get(index: pos + 2, default: 0) << 8) | shMsg:get(index: pos + 3, default: 0);
@@ -417,10 +417,10 @@ Class is TlsClient{
 		});
 
 		# TLS 1.3 Handshake Key Schedule (RFC 8446 §7.1)
-		local Array of Int is zeros32: [];
+		local Array of Int is zeros32: Array();
 		local Int is zi: 0;
 		while({ zi < 32 }, { zeros32:add(item: 0); zi: zi + 1; });
-		local Array of Int is emptyHash: Sha256:digest(data: []);
+		local Array of Int is emptyHash: Sha256:digest(data: Array());
 		local Array of Int is earlySecret: Sha256:hkdfExtract(salt: zeros32, ikm: zeros32);
 		local Array of Int is derived1: Sha256:deriveSecret(secret: earlySecret, label: 'derived', transcriptHash: emptyHash);
 		local Array of Int is sharedSecret: X25519:scalarMult(scalar: clientPriv, uCoord: serverPub);
@@ -430,20 +430,20 @@ Class is TlsClient{
 		local Array of Int is cHsTraffic: Sha256:deriveSecret(secret: hsSecret, label: 'c hs traffic', transcriptHash: chShHash);
 		local Array of Int is sHsTraffic: Sha256:deriveSecret(secret: hsSecret, label: 's hs traffic', transcriptHash: chShHash);
 
-		local Array of Int is sHsKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'key', context: [], length: keyLen);
-		local Array of Int is sHsIv: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'iv', context: [], length: 12);
-		local Array of Int is cHsKey: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'key', context: [], length: keyLen);
-		local Array of Int is cHsIv: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'iv', context: [], length: 12);
+		local Array of Int is sHsKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'key', context: Array(), length: keyLen);
+		local Array of Int is sHsIv: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'iv', context: Array(), length: 12);
+		local Array of Int is cHsKey: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'key', context: Array(), length: keyLen);
+		local Array of Int is cHsIv: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'iv', context: Array(), length: 12);
 
 		# Decrypt server encrypted handshake flight until server Finished (type 20)
 		local Int is sHsSeq: 0;
-		local Array of Int is hsStream: [];
+		local Array of Int is hsStream: Array();
 		local Int is hsPos: 0;
 		local Boolean is gotFinished: false;
-		local Array of Array of Int is serverCertChain: [];
+		local Array of Array of Int is serverCertChain: Array();
 
 		while({ !gotFinished }, {
-			local Array of Int is hdr: [];
+			local Array of Int is hdr: Array();
 			local Array of Int is payload: :readRecord(headerOut: hdr);
 			if({ hdr:length() < 5 }, {
 				:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'EOF during encrypted server handshake');
@@ -459,7 +459,7 @@ Class is TlsClient{
 			if({ rType == 23 }, {
 				local Array of Int is nonce: :makeNonce(iv: sHsIv, seq: sHsSeq);
 				sHsSeq: sHsSeq + 1;
-				local Array of Boolean is okOut: [];
+				local Array of Boolean is okOut: Array();
 				local Array of Int is inner: :aeadOpen(key: sHsKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
 				if({ !okOut:get(index: 0, default: false) }, {
 					:setFail(kind: TlsError:HANDSHAKE_FAILED, msg: 'AEAD authentication failed on server handshake record');
@@ -497,7 +497,7 @@ Class is TlsClient{
 						hsPos: hsPos + 4 + mLen;
 						if({ mType == 20 }, {
 							# Verify server Finished MAC
-							local Array of Int is sFinKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'finished', context: [], length: 32);
+							local Array of Int is sFinKey: Sha256:hkdfExpandLabel(secret: sHsTraffic, label: 'finished', context: Array(), length: 32);
 							local Array of Int is expMac: Sha256:hmac(key: sFinKey, msg: Sha256:digest(data: transcript));
 							local Int is diff: 0;
 							local Int is fi: 0;
@@ -528,7 +528,7 @@ Class is TlsClient{
 		});
 
 		if({ verifyCert }, {
-			local Array of String is certErr: [];
+			local Array of String is certErr: Array();
 			if({ !TlsVerifier:verifyServerChain(certChain: serverCertChain, host: host, errOut: certErr) }, {
 				local String is failMsg: if({ certErr:length() > 0 }, { certErr:get(index: 0, default: 'X.509 verification failed') }, { 'X.509 verification failed' });
 				:setFail(kind: TlsError:CERT_VERIFY_FAILED, msg: failMsg);
@@ -544,18 +544,18 @@ Class is TlsClient{
 		local Array of Int is cAppTraffic: Sha256:deriveSecret(secret: masterSecret, label: 'c ap traffic', transcriptHash: sFinHash);
 		local Array of Int is sAppTraffic: Sha256:deriveSecret(secret: masterSecret, label: 's ap traffic', transcriptHash: sFinHash);
 
-		:cAppKey: Sha256:hkdfExpandLabel(secret: cAppTraffic, label: 'key', context: [], length: keyLen);
-		:cAppIv: Sha256:hkdfExpandLabel(secret: cAppTraffic, label: 'iv', context: [], length: 12);
+		:cAppKey: Sha256:hkdfExpandLabel(secret: cAppTraffic, label: 'key', context: Array(), length: keyLen);
+		:cAppIv: Sha256:hkdfExpandLabel(secret: cAppTraffic, label: 'iv', context: Array(), length: 12);
 		:cAppSeq: 0;
 
-		:sAppKey: Sha256:hkdfExpandLabel(secret: sAppTraffic, label: 'key', context: [], length: keyLen);
-		:sAppIv: Sha256:hkdfExpandLabel(secret: sAppTraffic, label: 'iv', context: [], length: 12);
+		:sAppKey: Sha256:hkdfExpandLabel(secret: sAppTraffic, label: 'key', context: Array(), length: keyLen);
+		:sAppIv: Sha256:hkdfExpandLabel(secret: sAppTraffic, label: 'iv', context: Array(), length: 12);
 		:sAppSeq: 0;
 
 		# Send Client Finished (encrypted with client handshake key, seq = 0)
-		local Array of Int is cFinKey: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'finished', context: [], length: 32);
+		local Array of Int is cFinKey: Sha256:hkdfExpandLabel(secret: cHsTraffic, label: 'finished', context: Array(), length: 32);
 		local Array of Int is cVerify: Sha256:hmac(key: cFinKey, msg: sFinHash);
-		local Array of Int is cFinMsg: [20, 0, 0, 32];
+		local Array of Int is cFinMsg: Array([20, 0, 0, 32]);
 		:appendBytes(dst: cFinMsg, src: cVerify);
 		if({ !:sendEncryptedRecord(key: cHsKey, iv: cHsIv, seq: 0, innerType: 22, plaintext: cFinMsg) }, {
 			:close();
@@ -598,7 +598,7 @@ Class is TlsClient{
 		local Int is off: 0;
 		while({ off < totalLen }, {
 			local Int is chunkLen: if({ (totalLen - off) > 16000 }, { 16000 }, { totalLen - off });
-			local Array of Int is chunk: [];
+			local Array of Int is chunk: Array();
 			local Int is i: 0;
 			while({ i < chunkLen }, {
 				chunk:add(item: text:byteAt(index: off + i, default: 0));
@@ -621,7 +621,7 @@ Class is TlsClient{
 			return '';
 		});
 		while({ true }, local Function of Boolean(){
-			local Array of Int is hdr: [];
+			local Array of Int is hdr: Array();
 			local Array of Int is payload: :readRecord(headerOut: hdr);
 			if({ hdr:length() < 5 }, {
 				return false;
@@ -635,7 +635,7 @@ Class is TlsClient{
 			});
 			local Array of Int is nonce: :makeNonce(iv: :sAppIv, seq: :sAppSeq);
 			:sAppSeq: :sAppSeq + 1;
-			local Array of Boolean is okOut: [];
+			local Array of Boolean is okOut: Array();
 			local Array of Int is inner: :aeadOpen(key: :sAppKey, nonce: nonce, aad: hdr, ctWithTag: payload, okOut: okOut);
 			if({ !okOut:get(index: 0, default: false) }, {
 				:setFail(kind: TlsError:SEND_FAILED, msg: 'AEAD authentication failed on application data');

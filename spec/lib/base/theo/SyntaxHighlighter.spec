@@ -10,12 +10,12 @@ Class is SyntaxHighlighter{
 	];
 
 	String is language: 'plain';
-	Array of Int is lineStates: [];
+	Array of Int is lineStates: Array();
 	Int is drawCol: 0;
 
 	replace Function is init(String is language: 'plain'){
 		:language: language;
-		:lineStates: [];
+		:lineStates: Array();
 		:drawCol: 0;
 	}
 
@@ -160,7 +160,7 @@ Class is SyntaxHighlighter{
 	}
 
 	Function is computeStates(Array of String is lines){
-		:lineStates: [];
+		:lineStates: Array();
 		local Int is st: 0;
 		local Int is i: 0;
 		while({ i < lines:length() }, {

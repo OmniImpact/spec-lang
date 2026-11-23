@@ -125,11 +125,11 @@ Class is SpecInit{
 		manifest['source_dirs']: sourceDirs;
 		manifest['output']: outputBin;
 
-		local Array of String is flags: ['--quiet'];
+		local Array of String is flags: Array(['--quiet']);
 		manifest['flags']: flags;
 
 		local Map of String to Any is tests: [:];
-		local Array of String is testDirs: ['tests'];
+		local Array of String is testDirs: Array(['tests']);
 		tests['dirs']: testDirs;
 		tests['runner']: 'specunit';
 		manifest['tests']: tests;
@@ -261,7 +261,7 @@ Class is SpecInit{
 			local String is testFile: testClass . '.spec';
 			local String is entryRel: 'tests/' . testFile;
 			local String is outRel: 'bin/' . pkgName . '_tests';
-			local Array of String is srcDirs: ['src', 'tests'];
+			local Array of String is srcDirs: Array(['src', 'tests']);
 
 			if({ !writeFileChecked(path: manifestPath, content: buildManifest(projectName: projectName, entrySource: entryRel, outputBin: outRel, sourceDirs: srcDirs)) }, {
 				Process:exit(status: 1);
@@ -275,7 +275,7 @@ Class is SpecInit{
 		}, {
 			local String is entryRel: 'src/Main.spec';
 			local String is outRel: 'bin/' . pkgName;
-			local Array of String is srcDirs: ['src'];
+			local Array of String is srcDirs: Array(['src']);
 
 			if({ !writeFileChecked(path: manifestPath, content: buildManifest(projectName: projectName, entrySource: entryRel, outputBin: outRel, sourceDirs: srcDirs)) }, {
 				Process:exit(status: 1);

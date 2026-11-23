@@ -28,10 +28,10 @@ Class is CleoSlot{
 	Boolean is wrap: false;
 
 	# Throbber state
-	Array of String is frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+	Array of String is frames: Array(['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']);
 	ThrobberShape is shape: ThrobberShape:DOT;
 	ThrobberEffect is effect: ThrobberEffect:BLINK;
-	Array of CleoColor is palette: [];
+	Array of CleoColor is palette: Array();
 	Boolean is queued: false;
 	Boolean is resolved: false;
 	String is badge: '';
@@ -47,7 +47,7 @@ Class is CleoSlot{
 	# Image / multi-line block state
 	Boolean is hasImage: false;
 	CleoImage is image: CleoImage:init(pixelWidth: 0, pixelHeight: 0);
-	Array of String is asciiLines: [];
+	Array of String is asciiLines: Array();
 
 	replace Function is init(Int is id, Int is kind){
 		:id: id;
@@ -143,7 +143,7 @@ Class is CleoSlot{
 	}
 
 	Function of Array of String is renderInnerLines(Int is innerW, CleoColor is secFg, CleoColor is secBg, Int is tick){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		if({ :kind == 0 || :kind == 1 || :kind == 2 }, {
 			local String is pfx: :effectivePrefix(tick: tick, fallbackFg: secFg);
 			if(check: { :wrap && :rightText == '' && pfx == '' }, then: {

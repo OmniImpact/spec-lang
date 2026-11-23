@@ -77,7 +77,7 @@ Class is PiBenchmark{
 			titlePlacement: TitlePlacement:INLINE_BORDER,
 			fgColor: CleoColor:ansi(code: 195)
 		);
-		local Array of Int is domainSlots: [];
+		local Array of Int is domainSlots: Array();
 		while([Int is r: 0], { r < gridH }, {
 			domainSlots:add(item: domainSec:addLine(text: domainRow(row: r, threads: threads), color: CleoColor:ansi(code: 195)));
 			r++;

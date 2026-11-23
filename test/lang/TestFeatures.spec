@@ -62,7 +62,7 @@ Class of SpecUnitTest is TestFeatures{
 	## 4. base:struct:Array: bracket and method indexing, single add and
 	## batch add.
 	Function is testArrayAccessAndAdds(){
-		local Array of String is fruits: ['Apple', 'Banana', 'Cherry'];
+		local Array of String is fruits: Array(['Apple', 'Banana', 'Cherry']);
 		Assert:areEqualInt(3, fruits:length());
 		Assert:areEqualString('Apple', fruits[0]);
 		Assert:areEqualString('Banana', fruits:get(index: 1));

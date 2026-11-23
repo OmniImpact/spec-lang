@@ -41,22 +41,22 @@ Class is Loader{
 
 	local Map of String to String is loadedFiles: Map:init();
 	local String is rootInputPath: '';
-	local Array of ClassInfo is loadedClasses: [];
+	local Array of ClassInfo is loadedClasses: Array();
 	local Map of String to String is seenClassNames: Map:init();
 	local Map of String to String is seenBareNames: Map:init();
-	local Array of String is parseErrors: [];
+	local Array of String is parseErrors: Array();
 	local ErrorText is errText: ErrorText:init();
-	local Array of String is extraSourceDirs: [];
+	local Array of String is extraSourceDirs: Array();
 
 
 
 	replace Function is init(){
 		:loadedFiles: Map:init();
-		:loadedClasses: [];
+		:loadedClasses: Array();
 		:seenClassNames: Map:init();
 		:seenBareNames: Map:init();
-		:parseErrors: [];
-		:extraSourceDirs: [];
+		:parseErrors: Array();
+		:extraSourceDirs: Array();
 	}
 
 	Function of Array of String is getParseErrors(){
@@ -66,11 +66,11 @@ Class is Loader{
 	## Releases loaded class lists and tracking maps after program assembly.
 	Function is cleanup(){
 		:loadedFiles: Map:init();
-		:loadedClasses: [];
+		:loadedClasses: Array();
 		:seenClassNames: Map:init();
 		:seenBareNames: Map:init();
-		:parseErrors: [];
-		:extraSourceDirs: [];
+		:parseErrors: Array();
+		:extraSourceDirs: Array();
 	}
 
 	## Adds an explicit source directory to scan for packages and modules.
@@ -101,7 +101,7 @@ Class is Loader{
 
 		local String is src: fileRead(path: filePath, default: '');
 		local Lexer is lexer: Lexer:init(source: src);
-		local Parser is parser: Parser:init(tokens: []);
+		local Parser is parser: Parser:init(tokens: Array());
 		parser:setLexer(lexer: lexer);
 		parser:setSourceFile(file: filePath);
 		local ProgramNode is prog: parser:parseProgram();
@@ -314,7 +314,7 @@ Class is Loader{
 	## @param index: The loadedClasses length to restore.
 	Function is unloadClassesFrom(Int is index){
 		while({ :loadedClasses:length() > index }, {
-			local ClassInfo is c: :loadedClasses:pop(default: ClassInfo:init(name: '', baseClass: '', members: []));
+			local ClassInfo is c: :loadedClasses:pop(default: ClassInfo:init(name: '', baseClass: '', members: Array()));
 			:seenClassNames:remove(key: c:namespaceJoined() . ':' . c:name);
 		});
 	}
@@ -423,9 +423,9 @@ Class is Loader{
 		if({ items:length() == 0 }, {
 			return;
 		});
-		local Array of String is parts: [];
+		local Array of String is parts: Array();
 		local String is termClass: '';
-		local Array of String is groupedClasses: [];
+		local Array of String is groupedClasses: Array();
 		items:each(action: local Function(Expression is seg){
 			match(on: seg, when: [
 				Expression:Ident: local Function(String is name){
@@ -535,10 +535,10 @@ Class is Loader{
 
 	Function of ProgramNode is loadProgram(String is rootPath){
 		:loadedFiles: Map:init();
-		:loadedClasses: [];
+		:loadedClasses: Array();
 		:seenClassNames: Map:init();
 		:seenBareNames: Map:init();
-		:parseErrors: [];
+		:parseErrors: Array();
 
 		# The input path anchors the scan roots before any resolution.
 		:rootInputPath: rootPath;
@@ -548,7 +548,7 @@ Class is Loader{
 		# Root lattice preloads load the base:sys WRAPPERS; the wrappers'
 		# using-imports pull the sysinternal floor in transitively, so the
 		# floor is never loaded except behind its wrapper.
-		local Array of String is preloads: [
+		local Array of String is preloads: Array([
 			'Any',
 			'Loadable',
 			'Stringable',
@@ -569,7 +569,7 @@ Class is Loader{
 			'Arena',
 			'Intern',
 			'Cleanup'
-		];
+		]);
 		preloads:each(action: local Function(String is cls){
 			if({ !:indexBuilt }, {
 				:buildScanIndex();
@@ -651,7 +651,7 @@ Class is Loader{
 			});
 			c:members:each(action: local Function(Member is m){
 				if({ m:kind == MemberKind:CLASS }, {
-					local Array of ClassInfo is one: [m:nestedClass];
+					local Array of ClassInfo is one: Array([m:nestedClass]);
 					:synthesizeInto(classes: one);
 				});
 			});
@@ -723,7 +723,7 @@ Class is Loader{
 	## @param asExpr: The USING_AS expression node.
 	Function is synthesizeFor(ClassInfo is c, Expression is asExpr, String is pkgPrefix: ''){
 		local String is targetName: '';
-		local Array of NamedArg is asArgs: [];
+		local Array of NamedArg is asArgs: Array();
 		match(on: asExpr, when: [
 			Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 				targetName: className;
@@ -804,7 +804,7 @@ Class is Loader{
 	## @param name: Class name.
 	## @return: The [ClassInfo], or an empty-named node when absent.
 	Function of ClassInfo is findLoadedClass(String is name){
-		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
+		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: Array());
 		local Boolean is found: false;
 		local Int is count: :loadedClasses:length();
 		while(
@@ -824,7 +824,7 @@ Class is Loader{
 
 	## Looks up a loaded class by exact class [name] and colon-joined namespace [nsJoined].
 	Function of ClassInfo is findLoadedClassInNamespace(String is name, String is nsJoined){
-		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
+		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: Array());
 		local Boolean is found: false;
 		local Int is count: :loadedClasses:length();
 		while(
@@ -853,7 +853,7 @@ Class is Loader{
 	Function is appendImplicitClass(){
 		:loadedClasses:each(action: local Function(ClassInfo is c){
 			if({ c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' }, {
-				c:withBaseClasses(name: c:name, baseClasses: ['Class'], members: c:members);
+				c:withBaseClasses(name: c:name, baseClasses: Array(['Class']), members: c:members);
 			});
 		});
 	}

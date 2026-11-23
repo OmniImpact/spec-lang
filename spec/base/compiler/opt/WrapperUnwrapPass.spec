@@ -129,8 +129,8 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		local Boolean is callHasDst: false;
 		local IrType is callRetType: IrType:Void;
 		local String is callCallee: '';
-		local Array of IrType is callArgTypes: [];
-		local Array of String is callArgs: [];
+		local Array of IrType is callArgTypes: Array();
+		local Array of String is callArgs: Array();
 
 		local Int is ii: 0;
 		while({ ii < blk:insts:length() && ok }, {
@@ -215,8 +215,8 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		if({ !ok || !sawCall || !sawRet }, { return; });
 
 		# Map each argument of the inner IrCall to a caller param index or constant literal.
-		local Array of Int is paramIndices: [];
-		local Array of String is constArgs: [];
+		local Array of Int is paramIndices: Array();
+		local Array of String is constArgs: Array();
 		local Int is ai: 0;
 		while({ ai < callArgs:length() }, {
 			local String is arg: callArgs:get(index: ai);
@@ -268,10 +268,10 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 						if({ !wrapCallee:has(key: callee) }, { return inst; });
 						local String is target: wrapCallee:get(key: callee, default: '');
 						if({ target == fn:name }, { return inst; });
-						local Array of Int is pIdx: wrapParamIdx:get(key: callee, default: []);
-						local Array of String is cArg: wrapConstArg:get(key: callee, default: []);
-						local Array of IrType is tTypes: wrapArgTypes:get(key: callee, default: []);
-						local Array of String is newArgs: [];
+						local Array of Int is pIdx: wrapParamIdx:get(key: callee, default: Array());
+						local Array of String is cArg: wrapConstArg:get(key: callee, default: Array());
+						local Array of IrType is tTypes: wrapArgTypes:get(key: callee, default: Array());
+						local Array of String is newArgs: Array();
 						local Int is ai: 0;
 						while({ ai < pIdx:length() }, {
 							local Int is idx: pIdx:get(index: ai);

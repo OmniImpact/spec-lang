@@ -50,7 +50,7 @@ Class is Lexer{
 	Int is col: 1;
 
 	## Lexical errors, in scan order.
-	local Array of Error is errors: [];
+	local Array of Error is errors: Array();
 
 	## Well-known names.
 	local WellKnown is names: WellKnown:init();
@@ -71,7 +71,7 @@ Class is Lexer{
 		:pos: 0;
 		:line: 1;
 		:col: 1;
-		:errors: [];
+		:errors: Array();
 	}
 
 	## Records a lexical error at the current scan position: the message
@@ -104,7 +104,7 @@ Class is Lexer{
 	##
 	## @return: The token stream.
 	Function of Array of Token is tokenize(){
-		local Array of Token is tokens: [];
+		local Array of Token is tokens: Array();
 		while({ :pos < :length }, {
 			:skipWhitespaceAndComments();
 			if({ :pos < :length }, {

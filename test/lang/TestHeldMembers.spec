@@ -84,7 +84,7 @@ Class is HeldConfig{
 	# once-guards are independent, so the chain resolves (same-class
 	# references are rejected: the guards would deadlock).
 	held String is banner: HeldShared:root . ' :: HeldApp';
-	held Array of String is tags: ['alpha', 'beta'];
+	held Array of String is tags: Array(['alpha', 'beta']);
 	held local Int is secret: 42;
 
 	## held local is declaring-class-visible; the suite reads it through

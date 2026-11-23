@@ -15,7 +15,7 @@ Class is Time{
 		['base', 'sys', as Loops()]
 	];
 
-	held Array of Int is activeTimers: [];
+	held Array of Int is activeTimers: Array();
 
 	## Returns a monotonic high-resolution timestamp in nanoseconds.
 	Function of Int is monotonicNs(){

@@ -9,7 +9,7 @@ Class of Widget is ListView{
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
-	Array of String is items: [];
+	Array of String is items: Array();
 	Int is selectedIdx: 0;
 	Int is scrollY: 0;
 	FocusTarget is focusTarget: FocusTarget();
@@ -20,7 +20,7 @@ Class of Widget is ListView{
 	Function is onSelectChange: local Function(String is _item){};
 
 	replace Function is init(
-		Array of String is items: [],
+		Array of String is items: Array(),
 		FocusTarget is focusTarget: FocusTarget(),
 		Function is onActivate: local Function(String is _item){},
 		Function is onSelectChange: local Function(String is _item){},

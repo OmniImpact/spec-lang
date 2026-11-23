@@ -73,7 +73,7 @@ Class of SpecUnitTest is TestThreads{
 				return 20;
 			});
 
-			local Array of Task is group: [t1, t2];
+			local Array of Task is group: Array([t1, t2]);
 			scope:awaitAll(group: group, then: local Function(){
 				# Both t1 and t2 have finished when `then` runs
 				Process:atomicPut(slot: 202, value: t1:await() + t2:await());
@@ -95,7 +95,7 @@ Class of SpecUnitTest is TestThreads{
 
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			# 4 producers each sending 25 integers (total 100 items -> grows ring buffer past 16)
-			local Array of Task is producers: [];
+			local Array of Task is producers: Array();
 			local Int is p: 0;
 			while({ p < 4 }, {
 				local Int is pIdx: p;
@@ -132,7 +132,7 @@ Class of SpecUnitTest is TestThreads{
 	## 4. Bounded Channel of String with backpressure (capacity = 2).
 	Function is testBoundedChannelBackpressure(){
 		local Channel of String is strChan: Channel:bounded(capacity: 2);
-		local Array of String is received: [];
+		local Array of String is received: Array();
 
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			scope:spawn(task: local Function(){
@@ -247,10 +247,10 @@ Class is BadUnscopedParallelRun{
 
 	## 6. Cold Flow of T operators: fromArray, filter, map, take, onEach, onCompletion, and buffer.
 	Function is testColdFlowAndBufferOperators(){
-		local Array of Int is nums: [1, 2, 3, 4, 5, 6, 7, 8];
+		local Array of Int is nums: Array([1, 2, 3, 4, 5, 6, 7, 8]);
 		local Int is eachSum: 0;
 		local Boolean is completed: false;
-		local Array of String is out: [];
+		local Array of String is out: Array();
 
 		local Flow of Int is baseFlow: Flow:fromArray(items: nums);
 		local Flow of Int is evens: baseFlow:filter(predicate: local Function of Boolean(Int is n){
@@ -302,9 +302,9 @@ Class is BadUnscopedParallelRun{
 		Assert:areEqualInt(4, cfCount);
 		Assert:areEqualInt(100, cfSum);
 
-		local Flow of Int is f1: Flow:fromArray(items: [1, 2, 3]);
-		local Flow of Int is f2: Flow:fromArray(items: [10, 20, 30]);
-		local Array of Flow is both: [f1, f2];
+		local Flow of Int is f1: Flow:fromArray(items: Array([1, 2, 3]));
+		local Flow of Int is f2: Flow:fromArray(items: Array([10, 20, 30]));
+		local Array of Flow is both: Array([f1, f2]);
 		local Flow of Int is merged: Flow:merge(flows: both);
 
 		local Int is mSum: 0;

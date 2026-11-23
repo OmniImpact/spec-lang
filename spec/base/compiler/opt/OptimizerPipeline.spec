@@ -22,7 +22,7 @@ Class is OptimizerPipeline{
 		['base', 'sys', as Loops()]
 	];
 
-	Array of SpecOptimizer is passes: [];
+	Array of SpecOptimizer is passes: Array();
 
 	replace Function is init(){
 		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'SpecOptimizer');

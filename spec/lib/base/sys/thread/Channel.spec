@@ -15,7 +15,7 @@ Class is Channel of T{
 		['base', 'sys', as Loops()]
 	];
 
-	local Array of T is buf: [];
+	local Array of T is buf: Array();
 	local T is zeroDefault;
 	local Int is maxCapacity: 0;
 	local Int is head: 0;
@@ -26,7 +26,7 @@ Class is Channel of T{
 	local Int is notFull: 0;
 
 	replace Function is init(Int is maxCap: 0){
-		:buf: [];
+		:buf: Array();
 		:maxCapacity: if({ maxCap > 0 }, { maxCap }, { 0 });
 		:head: 0;
 		:count: 0;
@@ -61,7 +61,7 @@ Class is Channel of T{
 			return;
 		});
 		if({ :head >= 64 && :head * 2 >= :buf:length() }, {
-			local Array of T is compact: [];
+			local Array of T is compact: Array();
 			local Int is ci: :head;
 			while({ ci < :buf:length() }, {
 				compact:add(item: :buf:get(index: ci, default: :zeroDefault));

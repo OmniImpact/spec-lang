@@ -109,7 +109,7 @@ Class of SpecUnitTest is TestLazy{
 	## 7. Concurrent reads of a lazy instance field across threads initialize once and return consistent values.
 	Function is testConcurrentLazyFieldInit(){
 		local LazySample is shared: LazySample:init(seed: 50);
-		local Array of Int is results: [0, 0, 0, 0];
+		local Array of Int is results: Array([0, 0, 0, 0]);
 		local Int is sum: 0;
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			sum: Parallel:run(
@@ -227,7 +227,7 @@ Class is LazySample{
 
 	Array of Int is computedArray: lazy({
 		local Int is b: :counter:bump(delta: 100);
-		return [b, b + 1, b + 2];
+		return Array([b, b + 1, b + 2]);
 	});
 
 	replace Function is init(:seed){

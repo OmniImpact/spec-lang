@@ -22,15 +22,15 @@ Class is SpecUnitState{
 	];
 
 	## Every executed test, in execution order.
-	held Array of TestResult is results: [];
+	held Array of TestResult is results: Array();
 
 	## Every assertion recorded, in execution order (the branch-free
 	## assertion pattern: Assert appends records unconditionally; the
 	## runner interprets the span since each test's checksBefore).
-	held Array of CheckRecord is checks: [];
+	held Array of CheckRecord is checks: Array();
 
 	## The running test's cell: zero entries between tests, exactly one
 	## while a method executes.
-	held Array of TestResult is currentCell: [];
+	held Array of TestResult is currentCell: Array();
 
 }

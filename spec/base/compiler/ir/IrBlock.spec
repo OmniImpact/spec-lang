@@ -11,8 +11,8 @@ Class is IrBlock{
 	];
 
 	String is label: 'entry';
-	Array of IrInst is insts: [];
-	Array of Int is instLines: [];
+	Array of IrInst is insts: Array();
+	Array of Int is instLines: Array();
 
 	replace Function is init(){
 	}

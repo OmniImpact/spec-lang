@@ -23,7 +23,7 @@ Class is Measure{
 		});
 
 		local String is cmd: argv:get(index: 0, default: '');
-		local Array of String is cmdArgs: [];
+		local Array of String is cmdArgs: Array();
 		while([Int is i: 1], { i < argv:length() }, {
 			cmdArgs:add(item: argv:get(index: i, default: ''));
 			i++;

@@ -13,8 +13,8 @@ Class is IrFunction{
 
 	String is name: '';
 	IrType is retType: IrType:Void;
-	Array of IrParam is params: [];
-	Array of IrBlock is blocks: [];
+	Array of IrParam is params: Array();
+	Array of IrBlock is blocks: Array();
 	Boolean is isExternal: false;
 	Boolean is alwaysInline: false;
 	String is sourceFile: '';

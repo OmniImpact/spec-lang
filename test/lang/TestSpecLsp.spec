@@ -63,7 +63,7 @@ Class of SpecUnitTest is TestSpecLsp{
 		local String is specBin: :resolveCompiler(root: root);
 		local String is tmpDir: :dirOf(path: Uri:tempFile());
 		local String is built: tmpDir . '/speclsp_test_bin' . exeSuf;
-		Process:execute(command: specBin, args: ['--quiet', '-i', root . '/utilities/speclsp/SpecLsp.spec', '-o', built]);
+		Process:execute(command: specBin, args: Array(['--quiet', '-i', root . '/utilities/speclsp/SpecLsp.spec', '-o', built]));
 		return built;
 	}
 
@@ -107,9 +107,9 @@ Class of SpecUnitTest is TestSpecLsp{
 			local String is lspWin: lsp:replaceAll(search: '/', replacement: '\\');
 			local String is inWin: inPath:replaceAll(search: '/', replacement: '\\');
 			local String is outWin: outPath:replaceAll(search: '/', replacement: '\\');
-			code: Process:execute(command: 'cmd.exe', args: ['/c', lspWin . ' < ' . inWin . ' > ' . outWin]);
+			code: Process:execute(command: 'cmd.exe', args: Array(['/c', lspWin . ' < ' . inWin . ' > ' . outWin]));
 		}, {
-			code: Process:execute(command: '/bin/sh', args: ['-c', lsp . ' < ' . inPath . ' > ' . outPath]);
+			code: Process:execute(command: '/bin/sh', args: Array(['-c', lsp . ' < ' . inPath . ' > ' . outPath]));
 		});
 		Assert:areEqualInt(0, code);
 

@@ -13,15 +13,15 @@ Class is X25519{
 	];
 
 	local Function of Array of Int is gfZero(){
-		return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		return Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 	}
 
 	local Function of Array of Int is gfOne(){
-		return [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		return Array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 	}
 
 	local Function of Array of Int is gf121665(){
-		return [56129, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		return Array([56129, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 	}
 
 	local Function of Array of Int is gfAdd(Array of Int is a, Array of Int is b){
@@ -58,7 +58,7 @@ Class is X25519{
 	}
 
 	local Function of Array of Int is gfMul(Array of Int is a, Array of Int is b){
-		local Array of Int is t: [];
+		local Array of Int is t: Array();
 		local Int is i: 0;
 		while({ i < 31 }, {
 			t:add(item: 0);
@@ -167,7 +167,7 @@ Class is X25519{
 			:sel25519(p: t, q: m, b: 1 - b);
 			j: j + 1;
 		});
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		i: 0;
 		while({ i < 16 }, {
 			local Int is ti: t:get(index: i, default: 0);
@@ -180,7 +180,7 @@ Class is X25519{
 
 	## Computes X25519(scalar, uCoord) -> 32-byte shared secret / public key.
 	Function of Array of Int is scalarMult(Array of Int is scalar, Array of Int is uCoord){
-		local Array of Int is z: [];
+		local Array of Int is z: Array();
 		local Int is i: 0;
 		while({ i < 32 }, {
 			z:add(item: scalar:get(index: i, default: 0) & 255);
@@ -231,10 +231,10 @@ Class is X25519{
 
 	## Computes X25519 public key for 32-byte [privateKey] (basepoint u = 9).
 	Function of Array of Int is publicKey(Array of Int is privateKey){
-		local Array of Int is basepoint: [
+		local Array of Int is basepoint: Array([
 			9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		];
+		]);
 		return :scalarMult(scalar: privateKey, uCoord: basepoint);
 	}
 }

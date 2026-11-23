@@ -20,7 +20,7 @@ Class is ThreadScope{
 		['base', 'struct', Array]
 	];
 
-	local Array of Task is tasks: [];
+	local Array of Task is tasks: Array();
 	local Int is mutex: 0;
 	local Int is cancelledAddr: 0;
 	local Int is errorHandlerAddr: 0;
@@ -108,7 +108,7 @@ Class is ThreadScope{
 		if({ secs:length() == 0 }, {
 			return :handleSingleErrorAddr(errAddr: errAddr);
 		});
-		local Array of SpecError is savedSecs: [];
+		local Array of SpecError is savedSecs: Array();
 		local Int is i: 0;
 		while({ i < secs:length() }, {
 			savedSecs:add(item: secs:get(index: i));
@@ -127,7 +127,7 @@ Class is ThreadScope{
 	}
 
 	replace Function is init(Function is onError: local Function of Boolean(SpecError is _err){ return false; }){
-		:tasks: [];
+		:tasks: Array();
 		:mutex: Thread:mutexCreate();
 		:cancelledAddr: Mem:alloc(bytes: 8);
 		Mem:storeI64(ptr: :cancelledAddr, byteOffset: 0, val: 0);

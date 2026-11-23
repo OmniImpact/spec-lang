@@ -443,12 +443,12 @@ Class is InnerWorker{
 	Int is caughtFrames: 0;
 	Boolean is shouldReraise: false;
 	Boolean is shouldWrap: false;
-	Array of String is steps: [];
+	Array of String is steps: Array();
 
 	replace Function is init(Boolean is reraise: false, Boolean is wrap: false){
 		:shouldReraise: reraise;
 		:shouldWrap: wrap;
-		:steps: [];
+		:steps: Array();
 	}
 
 	replace Function of Boolean is SpecErrorHandler(SpecError is error){
@@ -479,7 +479,7 @@ Class is InnerWorker{
 	}
 
 	Function is middleFrame(){
-		local Array of String is midArc: ['a', 'b', 'c'];
+		local Array of String is midArc: Array(['a', 'b', 'c']);
 		:steps:add(item: 'middle-enter:' . (midArc:length() as String));
 		:leafRaise();
 		:steps:add(item: 'middle-after-unreachable');
@@ -504,10 +504,10 @@ Class is OuterService{
 	Int is outerCaughtFrames: 0;
 	Int is outerSecondaryCount: 0;
 	String is outerFirstSecondaryKind: '';
-	Array of String is traceLog: [];
+	Array of String is traceLog: Array();
 
 	replace Function is init(){
-		:traceLog: [];
+		:traceLog: Array();
 	}
 
 	replace Function of Boolean is SpecErrorHandler(SpecError is error){
@@ -594,7 +594,7 @@ Class is ScopedErrorWorker{
 				:raiseError(error: SpecError:init(kind: FileOpError:CORRUPT_DATA, description: 'corrupt shard 2'));
 			});
 			scope:awaitAll(
-				group: [t1, t2],
+				group: Array([t1, t2]),
 				then: local Function(){
 					:thenExecuted: true;
 				}
@@ -611,7 +611,7 @@ Class is ScopedErrorWorker{
 				local Task is t2: scope:spawn(task: local Function(){
 					:raiseError(error: SpecError:init(kind: FileOpError:CORRUPT_DATA, description: 'unrecoverable corruption'));
 				});
-				scope:awaitAll(group: [t1, t2]);
+				scope:awaitAll(group: Array([t1, t2]));
 			},
 			onError: local Function of Boolean(SpecError is err){
 				if({ err:kindName == 'NOT_FOUND' }, {

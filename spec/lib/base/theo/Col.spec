@@ -12,9 +12,9 @@ Class of Widget is Col{
 
 	Int is gap: 0;
 	Boolean is arrowFocus: false;
-	Array of Widget is children: [];
+	Array of Widget is children: Array();
 
-	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Array of Widget is children: []){
+	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Array of Widget is children: Array()){
 		:gap: gap;
 		:arrowFocus: arrowFocus;
 		:children: children;
@@ -89,8 +89,8 @@ Class of Widget is Col{
 			i: i + 1;
 		});
 		if({ arrowFocus && (event:isUp() || event:isDown()) }, {
-			local Array of FocusTarget is fts: [];
-			local Array of Widget is fws: [];
+			local Array of FocusTarget is fts: Array();
+			local Array of Widget is fws: Array();
 			collectFocus(targets: fts, owners: fws);
 			local Int is n: fts:length();
 			if({ n > 1 }, {

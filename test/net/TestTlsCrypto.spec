@@ -20,7 +20,7 @@ Class of SpecUnitTest is TestTlsCrypto{
 	];
 
 	local Function of Array of Int is strBytes(String is s){
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is i: 0;
 		while({ i < s:byteLength() }, {
 			out:add(item: s:byteAt(index: i, default: 0));
@@ -30,7 +30,7 @@ Class of SpecUnitTest is TestTlsCrypto{
 	}
 
 	local Function of Array of Int is hexBytes(String is hex){
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is i: 0;
 		while({ i + 1 < hex:length() }, {
 			local String is pair: hex:substring(start: i, end: i + 2);
@@ -44,7 +44,7 @@ Class of SpecUnitTest is TestTlsCrypto{
 		local Array of Int is d: Sha256:digest(data: :strBytes(s: 'abc'));
 		Assert:areEqualString('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad', Sha256:toHex(bytes: d));
 
-		local Array of Int is dEmpty: Sha256:digest(data: []);
+		local Array of Int is dEmpty: Sha256:digest(data: Array());
 		Assert:areEqualString('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', Sha256:toHex(bytes: dEmpty));
 	}
 
@@ -78,7 +78,7 @@ Class of SpecUnitTest is TestTlsCrypto{
 		local String is expectedHex: 'd31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca9671282fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fab324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b61161ae10b594f09e26a7e902ecbd0600691';
 		Assert:areEqualString(expectedHex, Sha256:toHex(bytes: ctTag));
 
-		local Array of Boolean is okOut: [];
+		local Array of Boolean is okOut: Array();
 		local Array of Int is dec: ChaCha20Poly1305:open(key: key, nonce: nonce, aad: aad, ctWithTag: ctTag, okOut: okOut);
 		Assert:isTrue(okOut:get(index: 0, default: false));
 		Assert:areEqualString(Sha256:toHex(bytes: pt), Sha256:toHex(bytes: dec));
@@ -95,7 +95,7 @@ Class of SpecUnitTest is TestTlsCrypto{
 		local String is expectedHex: '42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e0915bc94fbc3221a5db94fae95ae7121a47';
 		Assert:areEqualString(expectedHex, Sha256:toHex(bytes: ctTag));
 
-		local Array of Boolean is okOut: [];
+		local Array of Boolean is okOut: Array();
 		local Array of Int is dec: Aes128Gcm:open(key: key, nonce: iv, aad: aad, ctWithTag: ctTag, okOut: okOut);
 		Assert:isTrue(okOut:get(index: 0, default: false));
 		Assert:areEqualString(Sha256:toHex(bytes: pt), Sha256:toHex(bytes: dec));
@@ -105,9 +105,9 @@ Class of SpecUnitTest is TestTlsCrypto{
 		local Array of Int is decoded: X509:decodeBase64(text: 'SGVsbG8sIFNwZWMh');
 		Assert:areEqualString(Sha256:toHex(bytes: :strBytes(s: 'Hello, Spec!')), Sha256:toHex(bytes: decoded));
 
-		local Array of X509Cert is parsed: [];
-		local Array of String is errs: [];
-		Assert:isFalse(X509:verifyTrustChain(certChain: [], parsedOut: parsed, errOut: errs));
+		local Array of X509Cert is parsed: Array();
+		local Array of String is errs: Array();
+		Assert:isFalse(X509:verifyTrustChain(certChain: Array(), parsedOut: parsed, errOut: errs));
 		Assert:isTrue(errs:length() > 0);
 	}
 

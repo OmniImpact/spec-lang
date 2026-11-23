@@ -34,7 +34,7 @@ Class of SpecUnitTest is TestArcLeakRegression{
 	}
 
 	local Function of Int is churnContainersAndClosures(Int is seed){
-		local Array of String is arr: [];
+		local Array of String is arr: Array();
 		arr:add(item: 'k_' . (seed as String));
 		arr:add(item: 'v_' . ((seed + 1) as String));
 		local Map of String to String is mp: Map:init();

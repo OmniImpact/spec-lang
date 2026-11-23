@@ -330,7 +330,7 @@ Class is SpecBuild{
 
 		if({ command == 'lint' }, {
 			local String is linter: :resolveLinter(custom: customLinter);
-			local Array of String is lintArgs: [];
+			local Array of String is lintArgs: Array();
 			local Int is dirCount: sourceDirs:length();
 			if({ dirCount == 0 }, {
 				lintArgs:add(item: '-t');
@@ -363,7 +363,7 @@ Class is SpecBuild{
 			local String is runner: :resolveRunner(custom: resolvedRunner);
 			local String is testCompiler: :resolveCompiler(custom: customCompiler);
 			local Array is testDirs: Json:getArray(obj: testsCfg, key: 'dirs');
-			local Array of String is testArgs: ['-s', testCompiler];
+			local Array of String is testArgs: Array(['-s', testCompiler]);
 			local Int is sdCount: sourceDirs:length();
 			while([Int is si: 0], { si < sdCount }, {
 				local String is sd: Json:getStringAt(arr: sourceDirs, index: si, default: '');
@@ -409,11 +409,11 @@ Class is SpecBuild{
 
 		local String is outParent: :dirOf(path: output);
 		if({ outParent != '' && !fileExists(path: outParent) }, {
-			Process:execute(command: 'mkdir', args: ['-p', outParent]);
+			Process:execute(command: 'mkdir', args: Array(['-p', outParent]));
 		});
 
 		local String is compiler: :resolveCompiler(custom: customCompiler);
-		local Array of String is specArgs: ['-i', resolvedSource, '-o', output];
+		local Array of String is specArgs: Array(['-i', resolvedSource, '-o', output]);
 		if({ (args:has(key: 'release') || args:has(key: 'prod')) && !args:has(key: 'debug') }, {
 			specArgs:add(item: '--release');
 		});
@@ -469,7 +469,7 @@ Class is SpecBuild{
 		ui:render();
 
 		if({ command == 'run' }, {
-			local Int is runCode: Process:execute(command: output, args: []);
+			local Int is runCode: Process:execute(command: output, args: Array());
 			Process:exit(status: runCode);
 		});
 	}

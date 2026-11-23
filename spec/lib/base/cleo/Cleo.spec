@@ -47,20 +47,20 @@ Class is Cleo{
 	Boolean is altScreen: false;
 	Boolean is directOutput: false;
 
-	Array of CleoSection is sections: [];
+	Array of CleoSection is sections: Array();
 	CleoSection is defaultSection: CleoSection:init();
 	Map of Int to CleoSlot is slotMap: Map:init();
-	Array of Int is idCounter: [0];
+	Array of Int is idCounter: Array([0]);
 
 	Boolean is running: false;
 	Boolean is ttyMode: false;
 	Int is timerId: -1;
 	Int is tickCount: 0;
-	Array of String is prevLines: [];
-	Array of String is pendingCommits: [];
-	Array of Boolean is dirtyRef: [false];
-	Array of Boolean is directRef: [false];
-	Array of Boolean is directStartedRef: [false];
+	Array of String is prevLines: Array();
+	Array of String is pendingCommits: Array();
+	Array of Boolean is dirtyRef: Array([false]);
+	Array of Boolean is directRef: Array([false]);
+	Array of Boolean is directStartedRef: Array([false]);
 	Boolean is directTopPrinted: false;
 	Int is directSectionsEmitted: 0;
 	Boolean is hasCommittedHeader: false;
@@ -100,13 +100,13 @@ Class is Cleo{
 		:tickIntervalMs: tickIntervalMs;
 		:altScreen: altScreen;
 		:directOutput: directOutput;
-		:directRef: [directOutput];
-		:directStartedRef: [false];
-		:sections: [];
+		:directRef: Array([directOutput]);
+		:directStartedRef: Array([false]);
+		:sections: Array();
 		:slotMap: Map:init();
-		:idCounter: [0];
-		:prevLines: [];
-		:pendingCommits: [];
+		:idCounter: Array([0]);
+		:prevLines: Array();
+		:pendingCommits: Array();
 
 		local CleoSection is defSec: :createSection(
 			title: '',
@@ -235,7 +235,7 @@ Class is Cleo{
 		return sid;
 	}
 
-	Function of Int is addShapeThrobber(ThrobberShape is shape: ThrobberShape:DOT, ThrobberEffect is effect: ThrobberEffect:BLINK, String is text: '', CleoColor is color: CleoColor:default(), Array of CleoColor is palette: [], String is rightText: ''){
+	Function of Int is addShapeThrobber(ThrobberShape is shape: ThrobberShape:DOT, ThrobberEffect is effect: ThrobberEffect:BLINK, String is text: '', CleoColor is color: CleoColor:default(), Array of CleoColor is palette: Array(), String is rightText: ''){
 		local Int is sid: 0;
 		Parallel:syncWith(lock: 77, action: {
 			sid: :defaultSection:addShapeThrobber(shape: shape, effect: effect, text: text, color: color, palette: palette, rightText: rightText);
@@ -526,7 +526,7 @@ Class is Cleo{
 		});
 		if({ :ttyMode && :altScreen }, {
 			Parallel:syncWith(lock: 77, action: {
-				:prevLines: [];
+				:prevLines: Array();
 				:prevTermW: 0;
 				:prevTermH: 0;
 				:lastFrameW: 0;
@@ -582,7 +582,7 @@ Class is Cleo{
 		local Int is innerW: if({ hasOuter }, { totalW - 4 }, { totalW });
 		if({ innerW < 8 }, { innerW: 8; });
 
-		local Array of String is lines: [];
+		local Array of String is lines: Array();
 		if(check: { !:hasCommittedHeader }, then: {
 			if(check: { hasOuter }, then: {
 				lines:add(item: :buildRuleLine(
@@ -684,7 +684,7 @@ Class is Cleo{
 				Output:line(text: :pendingCommits:get(index: ci, default: ''));
 				ci: ci + 1;
 			});
-			:pendingCommits: [];
+			:pendingCommits: Array();
 			return;
 		});
 
@@ -738,7 +738,7 @@ Class is Cleo{
 			out: out . Ansi:eraseLine() . :pendingCommits:get(index: ci, default: '') . "\n";
 			ci: ci + 1;
 		});
-		:pendingCommits: [];
+		:pendingCommits: Array();
 
 		# Emit live frame lines (visible window when frame exceeds terminal height)
 		local Int is li: startLineIdx;
@@ -771,7 +771,7 @@ Class is Cleo{
 					Output:line(text: :pendingCommits:get(index: ci, default: ''));
 					ci: ci + 1;
 				});
-				:pendingCommits: [];
+				:pendingCommits: Array();
 				if({ :directOutput }, {
 					if({ :directTopPrinted && :outerBorder != BorderStyle:NONE }, {
 						local Int is termW: Ansi:terminalWidth();
@@ -827,7 +827,7 @@ Class is Cleo{
 				out: out . Ansi:eraseLine() . :pendingCommits:get(index: ci, default: '') . "\n";
 				ci: ci + 1;
 			});
-			:pendingCommits: [];
+			:pendingCommits: Array();
 			local Int is li: 0;
 			while({ li < nextCount }, {
 				out: out . Ansi:eraseLine() . nextLines:get(index: li, default: '') . "\n";

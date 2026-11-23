@@ -256,8 +256,8 @@ Class of SpecOptimizer is PoolElisionPass{
 		bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Array of IrInst is newInsts: [];
-			local Array of Int is newLines: [];
+			local Array of IrInst is newInsts: Array();
+			local Array of Int is newLines: Array();
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
@@ -282,8 +282,8 @@ Class of SpecOptimizer is PoolElisionPass{
 	}
 
 	local Function of Boolean is regionIsPoolFree(IrFunction is fn, Int is startBlk, Int is startInst, String is mark, Map of String to Int is labelToIdx, Map of String to IrFunction is fnMap, Map of String to Boolean is mayClaimToCaller){
-		local Array of Int is workBlk: [startBlk];
-		local Array of Int is workIdx: [startInst];
+		local Array of Int is workBlk: Array([startBlk]);
+		local Array of Int is workIdx: Array([startInst]);
 		local Map of String to Boolean is visited: Map:init();
 		local Int is wi: 0;
 

@@ -17,7 +17,7 @@ Class of SpecUnitTest is TestSignalEmitters{
 		e:emit(value: 'one');
 		e:emit(value: 'two');
 
-		local Array of String is seen: [];
+		local Array of String is seen: Array();
 		local TextCollector is c: e:collect(onEmit: local Function(String is v){
 			seen:add(item: v);
 		});

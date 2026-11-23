@@ -275,7 +275,7 @@ Class of Str is String{
 	##
 	## @return: Array of Unicode scalar values.
 	Function of Array of Int is codePoints(){
-		local Array of Int is res: [];
+		local Array of Int is res: Array();
 		local Int is addr: Mem:objToAddr(obj: :);
 		if({ addr == 0 }, { return res; });
 		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
@@ -562,7 +562,7 @@ Class of Str is String{
 
 	## All non-overlapping occurrences of [needle] in this Unicode string.
 	Function of Array of String is sFindAll(Str is needle, Boolean is caseSensitive: true){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
 		local Array of Int is nd: :sRunesFor(s: needle, caseSensitive: caseSensitive);
 		local Int is nlen: nd:length();
@@ -600,7 +600,7 @@ Class of Str is String{
 
 	## Splits on [delimiter] at Unicode rune boundaries (empty delimiter splits into runes).
 	Function of Array of String is sSplit(Str is delimiter, Int is limit: -1, Boolean is caseSensitive: true){
-		local Array of String is res: [];
+		local Array of String is res: Array();
 		local Array of Int is hay: :sRunesFor(s: :, caseSensitive: caseSensitive);
 		local Int is hlen: hay:length();
 		if({ hlen == 0 }, {

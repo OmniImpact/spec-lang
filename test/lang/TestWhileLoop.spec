@@ -48,7 +48,7 @@ Class of SpecUnitTest is TestWhileLoop{
 
 	# Case 3: Mixed scope - reading and mutating outer collections and variables
 	Function is testMixedScopeCollection(){
-		local Array of Int is collected: [];
+		local Array of Int is collected: Array();
 		local Int is outerMultiplier: 3;
 		Loops(
 			[Int is idx: 1, Int is total: 5],

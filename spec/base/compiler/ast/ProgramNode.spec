@@ -10,7 +10,7 @@ Class is ProgramNode{
 	];
 
 	## Top-level classes, in load order.
-	Array of ClassInfo is classes: [];
+	Array of ClassInfo is classes: Array();
 
 	## Initializes the program node.
 	##

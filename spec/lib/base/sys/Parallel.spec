@@ -64,7 +64,7 @@ Class is Parallel{
 		local Int is nThreads: if({ threads < 1 }, { 1 }, { threads });
 		local Int is baseCount: iterations / nThreads;
 		local Int is rem: iterations % nThreads;
-		local Array of Task of Int is tasks: [];
+		local Array of Task of Int is tasks: Array();
 		local Int is i: 0;
 		while({ i < nThreads }, {
 			local Int is tid: i;

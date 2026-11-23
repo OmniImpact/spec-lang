@@ -56,7 +56,7 @@ Class is WorkItem{
 
 	String is path;
 	String is kind;
-	Array of String is expect: [];
+	Array of String is expect: Array();
 	String is inlineSource: '';
 	Int is expectedTests: 1;
 	Int is priorityPosition: 0;
@@ -113,7 +113,7 @@ Class is SpecTestUi{
 	Int is total: 0;
 	Int is testsTotal: 0;
 
-	Array of Int is workerActive: [];
+	Array of Int is workerActive: Array();
 	Map of String to Int is suiteNameToSlotId: Map:init();
 	Int is startedCount: 0;
 	Int is completedCount: 0;
@@ -138,7 +138,7 @@ Class is SpecTestUi{
 		:total: total;
 		:testsTotal: testsTotal;
 		:suiteNameToSlotId: nameToSlot;
-		:workerActive: [];
+		:workerActive: Array();
 		local Int is i: 0;
 		while({ i < threads }, {
 			:workerActive:add(item: 0);
@@ -333,13 +333,13 @@ Class is SpecTestRegistry{
 		['base', 'sys', as Parallel()]
 	];
 
-	held Array of WorkItem is queue: [];
-	held Array of ReadyRunItem is readyRuns: [];
-	held Array of SuiteResult is results: [];
+	held Array of WorkItem is queue: Array();
+	held Array of ReadyRunItem is readyRuns: Array();
+	held Array of SuiteResult is results: Array();
 	held Map of String to SuiteResult is byName: Map:init();
-	held Array of Int is nextIdxRef: [0];
-	held Array of Int is inFlightCompilesRef: [0];
-	held Array of SpecTestUi is uiHolder: [];
+	held Array of Int is nextIdxRef: Array([0]);
+	held Array of Int is inFlightCompilesRef: Array([0]);
+	held Array of SpecTestUi is uiHolder: Array();
 
 	held Function is setupUi(Cleo is ui, CleoSection is wSec, Int is wBarSlot, CleoSection is sSec, CleoSection is rSec, CleoSection is pSec, Int is pSlot, Int is total, Int is testsTotal, Int is threads, Map of String to Int is nameToSlot){
 		local SpecTestUi is helper: SpecTestUi:init(ui: ui, wSec: wSec, wBarSlot: wBarSlot, sSec: sSec, rSec: rSec, pSec: pSec, pSlot: pSlot, total: total, testsTotal: testsTotal, threads: threads, nameToSlot: nameToSlot);
@@ -367,7 +367,7 @@ Class is SpecTestRegistry{
 	}
 
 	held Function of ReadyRunItem is nextReadyRun(){
-		local ReadyRunItem is res: ReadyRunItem:init(item: WorkItem:init(itemPath: '', itemKind: '', itemExpect: []), idx: -1, binPath: '', compileCpuUs: 0, compileRssKb: 0);
+		local ReadyRunItem is res: ReadyRunItem:init(item: WorkItem:init(itemPath: '', itemKind: '', itemExpect: Array()), idx: -1, binPath: '', compileCpuUs: 0, compileRssKb: 0);
 		Parallel:syncWith(lock: 17, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:readyRuns:length() > 0; }, then: {
@@ -525,10 +525,10 @@ Class is SpecUnit{
 		if(check: { Process:osName() == 'windows' }, then: {
 			return '';
 		});
-		if(check: { Process:execute(command: 'sh', args: ['-c', 'command -v timeout >/dev/null 2>&1']) == 0 }, then: {
+		if(check: { Process:execute(command: 'sh', args: Array(['-c', 'command -v timeout >/dev/null 2>&1'])) == 0 }, then: {
 			return 'timeout';
 		});
-		if(check: { Process:execute(command: 'sh', args: ['-c', 'command -v gtimeout >/dev/null 2>&1']) == 0 }, then: {
+		if(check: { Process:execute(command: 'sh', args: Array(['-c', 'command -v gtimeout >/dev/null 2>&1'])) == 0 }, then: {
 			return 'gtimeout';
 		});
 		return '';
@@ -654,7 +654,7 @@ Class is SpecUnit{
 		ThreadScope:open(body: local Function(ThreadScope is scope){
 			ui:start(scope: scope);
 
-			local Array of Task is workers: [];
+			local Array of Task is workers: Array();
 			local Int is wIdx: 0;
 			while({ wIdx < threads }, {
 				local Int is ti: wIdx;
@@ -807,7 +807,7 @@ Class is SpecUnit{
 		local String is content: fileRead(path: relPath, default: '');
 		local String is kind: '';
 		local Int is prio: 0;
-		local Array of String is expect: [];
+		local Array of String is expect: Array();
 		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
 			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
 			if(check: { seg:startsWith(prefix: '#! specunit: ') }, then: {
@@ -844,7 +844,7 @@ Class is SpecUnit{
 	## into independent parallel `negative-case` work items.
 	Function is enqueueNegativeSuite(String is relPath, String is content, Int is prio: 0){
 		local String is curCase: '';
-		local Array of String is curExpect: [];
+		local Array of String is curExpect: Array();
 		local String is curSrc: '';
 		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
 			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
@@ -853,7 +853,7 @@ Class is SpecUnit{
 					SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath . '#' . curCase, itemKind: 'negative-case', itemExpect: curExpect, source: curSrc, expectedTests: 1, priorityPosition: prio));
 				});
 				curCase: seg:substring(start: 9, end: seg:length()):trim();
-				curExpect: [];
+				curExpect: Array();
 				curSrc: '';
 			}, else: {
 				if(check: { curCase != '' }, then: {
@@ -893,7 +893,7 @@ Class is SpecUnit{
 				});
 			});
 		});
-		return [p, f];
+		return Array([p, f]);
 	}
 
 	## Compiles one work item. Negative items finish right here; runnable
@@ -910,7 +910,7 @@ Class is SpecUnit{
 		local String is bin: :workPath(suffix: exeSuffix, idx: idx, stem: :fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
 		local String is compileCmd: :withTimeout(cmd: '"' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '"', timeoutSec: timeoutSec);
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && ' . compileCmd . ' > "' . compileOut . '" 2>&1'];
+		local Array of String is cArgs: Array(['-c', 'cd "' . root . '" && ' . compileCmd . ' > "' . compileOut . '" 2>&1']);
 		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
 		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
 		local Int is cCpu: cRes:getInt(key: 'cpu_us', default: 0);
@@ -938,7 +938,7 @@ Class is SpecUnit{
 		local String is bin: rItem:binPath;
 		local String is runOut: bin . '.out';
 		local String is runCmd: :withTimeout(cmd: '"' . bin . '"', timeoutSec: timeoutSec);
-		local Array of String is rArgs: ['-c', 'cd "' . root . '" && export SPEC_BIN="' . specBin . '" && ' . runCmd . ' < /dev/null > "' . runOut . '" 2>&1'];
+		local Array of String is rArgs: Array(['-c', 'cd "' . root . '" && export SPEC_BIN="' . specBin . '" && ' . runCmd . ' < /dev/null > "' . runOut . '" 2>&1']);
 		local Map of String to String is rRes: Process:measure(command: 'sh', args: rArgs);
 		local Int is rStatus: rRes:getInt(key: 'exit', default: -1);
 		local Int is totalCpu: rItem:compileCpuUs + rRes:getInt(key: 'cpu_us', default: 0);
@@ -1005,7 +1005,7 @@ Class is SpecUnit{
 		});
 		local String is compileOut: :workPath(suffix: '.compile', idx: idx, stem: :fileStem(path: item:path));
 		local String is compileCmd: :withTimeout(cmd: '"' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "/dev/null"', timeoutSec: timeoutSec);
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && ' . compileCmd . ' > "' . compileOut . '" 2>&1'];
+		local Array of String is cArgs: Array(['-c', 'cd "' . root . '" && ' . compileCmd . ' > "' . compileOut . '" 2>&1']);
 		local Map of String to String is cRes: Process:measure(command: 'sh', args: cArgs);
 		local Int is cStatus: cRes:getInt(key: 'exit', default: -1);
 		SpecTestRegistry:recordMetrics(cpuUs: cRes:getInt(key: 'cpu_us', default: 0), rssKb: cRes:getInt(key: 'rss_kb', default: 0));

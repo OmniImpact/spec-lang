@@ -14,13 +14,13 @@ Class is IrModule{
 		['base', 'sys', as Loops()]
 	];
 
-	Array of IrStruct is structs: [];
-	Array of IrFunction is functions: [];
-	Array of String is stringLiterals: [];
+	Array of IrStruct is structs: Array();
+	Array of IrFunction is functions: Array();
+	Array of String is stringLiterals: Array();
 	Map of String to Int is stringIds: Map:init();
-	Array of String is globalNames: [];
-	Array of IrType is globalTypes: [];
-	Array of String is globalInits: [];
+	Array of String is globalNames: Array();
+	Array of IrType is globalTypes: Array();
+	Array of String is globalInits: Array();
 	String is entryFunction: '';
 
 	replace Function is init(){

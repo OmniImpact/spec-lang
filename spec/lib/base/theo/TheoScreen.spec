@@ -9,12 +9,12 @@ Class is TheoScreen{
 		['base', 'sys', as Conditional()]
 	];
 
-	Array of Frame is stack: [];
-	Array of Function is dirtyHooks: [];
+	Array of Frame is stack: Array();
+	Array of Function is dirtyHooks: Array();
 
 	replace Function is init(Frame is root){
-		:stack: [];
-		:dirtyHooks: [];
+		:stack: Array();
+		:dirtyHooks: Array();
 		push(frame: root);
 	}
 

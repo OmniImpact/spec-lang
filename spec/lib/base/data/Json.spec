@@ -111,7 +111,7 @@ Class is Json{
 			},
 			guard: local Function of Array(SpecError of JsonError is e){
 				failErr: e;
-				return [];
+				return Array();
 			}
 		);
 		if({ failErr:description == '' }, {
@@ -245,14 +245,14 @@ Class is Json{
 	## Looks up a nested Array from a parsed JSON map.
 	Function of Array is getArray(Map of String to Any is obj, String is key){
 		if({ !obj:has(key: key) }, {
-			return [];
+			return Array();
 		});
-		local Any is val: obj:get(key: key, default: []);
+		local Any is val: obj:get(key: key, default: Array());
 		local String is t: Introspection:typeIdentity(obj: val);
 		if({ t == 'Array' }, {
 			return val as Array;
 		});
-		return [];
+		return Array();
 	}
 
 	## Looks up an integer value from a parsed JSON array.
@@ -352,14 +352,14 @@ Class is Json{
 	## Looks up a nested Array from a parsed JSON array.
 	Function of Array is getArrayAt(Array is arr, Int is index){
 		if({ index < 0 || index >= arr:length() }, {
-			return [];
+			return Array();
 		});
-		local Any is val: arr:get(index: index, default: []);
+		local Any is val: arr:get(index: index, default: Array());
 		local String is t: Introspection:typeIdentity(obj: val);
 		if({ t == 'Array' }, {
 			return val as Array;
 		});
-		return [];
+		return Array();
 	}
 
 	## Advances parse position past ASCII whitespace.
@@ -532,7 +532,7 @@ Class is Json{
 
 	## Parses a JSON array at the current position.
 	Function of Array is parseArray(String is text){
-		local Array of Any is arr: [];
+		local Array of Any is arr: Array();
 		:parsePos: :parsePos + 1;
 		:skipWhitespace(text: text);
 
@@ -684,12 +684,12 @@ Class is Json{
 
 	## Parses JSON text directly into an Array.
 	Function of Array is parseArrayText(String is text){
-		local Any is res: :parse(text: text, default: []);
+		local Any is res: :parse(text: text, default: Array());
 		local String is t: Introspection:typeIdentity(obj: res);
 		if({ t == 'Array' }, {
 			return res as Array;
 		});
-		return [];
+		return Array();
 	}
 
 	## Converts a single hex digit (0-15) to a lowercase character.

@@ -34,7 +34,7 @@ Class of SpecUnitTest is TestStdlibReflection{
 	## types.
 	Function is testTypeReflection(){
 		local Type is intType: Type:init(name: 'Int');
-		local Array of Type is arrParams: [];
+		local Array of Type is arrParams: Array();
 		arrParams:add(item: Type:init(name: 'String'));
 		local Type is arrType: Type:init(name: 'Array');
 		arrType:params: arrParams;
@@ -45,11 +45,11 @@ Class of SpecUnitTest is TestStdlibReflection{
 	## 2b. The parameterized type renderings the old run printed.
 	Function is testTypeRendering(){
 		local Type is intType: Type:init(name: 'Int');
-		local Array of Type is arrParams: [];
+		local Array of Type is arrParams: Array();
 		arrParams:add(item: Type:init(name: 'String'));
 		local Type is arrType: Type:init(name: 'Array');
 		arrType:params: arrParams;
-		local Array of Type is mapParams: [];
+		local Array of Type is mapParams: Array();
 		mapParams:add(item: Type:init(name: 'String'));
 		mapParams:add(item: Type:init(name: 'Int'));
 		local Type is mapType: Type:init(name: 'Map');
@@ -64,18 +64,18 @@ Class of SpecUnitTest is TestStdlibReflection{
 	Function is testClassInfoAndMember(){
 		local Type is intType: Type:init(name: 'Int');
 		local Parameter is param1: Parameter:init(name: 'amount', paramType: intType);
-		local Array of Parameter is params: [];
+		local Array of Parameter is params: Array();
 		params:add(item: param1);
 
-		local Array of Statement is body: [];
+		local Array of Statement is body: Array();
 		local Member is methodMem: Member:init(kind: MemberKind:METHOD);
-		methodMem:modifiers: ['replace', 'local'];
+		methodMem:modifiers: Array(['replace', 'local']);
 		methodMem:memberType: intType;
 		methodMem:name: 'heal';
 		methodMem:params: params;
 		methodMem:body: body;
 
-		local Array of Member is members: [];
+		local Array of Member is members: Array();
 		members:add(item: methodMem);
 
 		local ClassInfo is cls: ClassInfo:init(name: 'Healer', baseClass: 'Entity', members: members);

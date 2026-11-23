@@ -12,13 +12,13 @@ Class is ThreadScopeRegistry{
 	];
 
 	local Int is mutex: 0;
-	local Array of Int is threadIds: [];
-	local Array of Int is scopeAddrs: [];
+	local Array of Int is threadIds: Array();
+	local Array of Int is scopeAddrs: Array();
 
 	replace Function is init(){
 		:mutex: Thread:mutexCreate();
-		:threadIds: [];
-		:scopeAddrs: [];
+		:threadIds: Array();
+		:scopeAddrs: Array();
 	}
 
 	Function is push(Int is tid, Int is scopeAddr){

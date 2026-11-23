@@ -53,14 +53,14 @@ Class is ChaCha20Poly1305{
 	## Computes one 64-byte ChaCha20 keystream block for 32-byte [key],
 	## 32-bit [counter], and 12-byte [nonce].
 	Function of Array of Int is chacha20Block(Array of Int is key, Int is counter, Array of Int is nonce){
-		local Array of UInt32 is initSt: [
+		local Array of UInt32 is initSt: Array([
 			1634760805 as UInt32, 857760878 as UInt32, 2036477234 as UInt32, 1797285236 as UInt32,
 			:loadLe32(b: key, off: 0),  :loadLe32(b: key, off: 4),  :loadLe32(b: key, off: 8),  :loadLe32(b: key, off: 12),
 			:loadLe32(b: key, off: 16), :loadLe32(b: key, off: 20), :loadLe32(b: key, off: 24), :loadLe32(b: key, off: 28),
 			counter as UInt32,
 			:loadLe32(b: nonce, off: 0), :loadLe32(b: nonce, off: 4), :loadLe32(b: nonce, off: 8)
-		];
-		local Array of UInt32 is st: [];
+		]);
+		local Array of UInt32 is st: Array();
 		local Int is i: 0;
 		while({ i < 16 }, {
 			st:add(item: initSt:get(index: i, default: 0 as UInt32));
@@ -78,7 +78,7 @@ Class is ChaCha20Poly1305{
 			:quarterRound(st: st, a: 3, b: 4, c: 9,  d: 14);
 			r: r + 1;
 		});
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		i: 0;
 		while({ i < 16 }, {
 			local UInt32 is w: st:get(index: i, default: 0 as UInt32) + initSt:get(index: i, default: 0 as UInt32);
@@ -90,7 +90,7 @@ Class is ChaCha20Poly1305{
 
 	## Encrypts/decrypts [data] with ChaCha20 starting at [counter].
 	Function of Array of Int is chacha20Xor(Array of Int is key, Int is counter, Array of Int is nonce, Array of Int is data){
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is n: data:length();
 		local Int is pos: 0;
 		local Int is blkCnt: counter;
@@ -137,7 +137,7 @@ Class is ChaCha20Poly1305{
 		while({ off < n }, {
 			local Int is rem: n - off;
 			local Int is blkLen: if({ rem >= 16 }, { 16 }, { rem });
-			local Array of Int is blk: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+			local Array of Int is blk: Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 			local Int is bi: 0;
 			while({ bi < blkLen }, {
 				blk:set(index: bi, item: msg:get(index: off + bi, default: 0) & 255);
@@ -208,7 +208,7 @@ Class is ChaCha20Poly1305{
 		local Int is p2: f2 + (:loadLe32(b: otk, off: 24) as Int) + (p1 >> 32);
 		local Int is p3: f3 + (:loadLe32(b: otk, off: 28) as Int) + (p2 >> 32);
 
-		local Array of Int is tag: [];
+		local Array of Int is tag: Array();
 		:storeLe32(out: tag, v: p0 & 4294967295);
 		:storeLe32(out: tag, v: p1 & 4294967295);
 		:storeLe32(out: tag, v: p2 & 4294967295);
@@ -217,7 +217,7 @@ Class is ChaCha20Poly1305{
 	}
 
 	local Function of Array of Int is buildPolyData(Array of Int is aad, Array of Int is ct){
-		local Array of Int is macData: [];
+		local Array of Int is macData: Array();
 		local Int is i: 0;
 		while({ i < aad:length() }, {
 			macData:add(item: aad:get(index: i, default: 0) & 255);
@@ -246,7 +246,7 @@ Class is ChaCha20Poly1305{
 	## AEAD encrypt: returns ciphertext || 16-byte Poly1305 tag.
 	Function of Array of Int is seal(Array of Int is key, Array of Int is nonce, Array of Int is aad, Array of Int is plaintext){
 		local Array of Int is blk0: :chacha20Block(key: key, counter: 0, nonce: nonce);
-		local Array of Int is otk: [];
+		local Array of Int is otk: Array();
 		local Int is i: 0;
 		while({ i < 32 }, {
 			otk:add(item: blk0:get(index: i, default: 0));
@@ -268,17 +268,17 @@ Class is ChaCha20Poly1305{
 	Function of Array of Int is open(Array of Int is key, Array of Int is nonce, Array of Int is aad, Array of Int is ctWithTag, Array of Boolean is okOut){
 		if({ ctWithTag:length() < 16 }, {
 			okOut:add(item: false);
-			return [];
+			return Array();
 		});
 		local Int is ctLen: ctWithTag:length() - 16;
-		local Array of Int is ct: [];
+		local Array of Int is ct: Array();
 		local Int is i: 0;
 		while({ i < ctLen }, {
 			ct:add(item: ctWithTag:get(index: i, default: 0));
 			i: i + 1;
 		});
 		local Array of Int is blk0: :chacha20Block(key: key, counter: 0, nonce: nonce);
-		local Array of Int is otk: [];
+		local Array of Int is otk: Array();
 		i: 0;
 		while({ i < 32 }, {
 			otk:add(item: blk0:get(index: i, default: 0));
@@ -294,7 +294,7 @@ Class is ChaCha20Poly1305{
 		});
 		if({ diff != 0 }, {
 			okOut:add(item: false);
-			return [];
+			return Array();
 		});
 		okOut:add(item: true);
 		return :chacha20Xor(key: key, counter: 1, nonce: nonce, data: ct);

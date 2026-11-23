@@ -13,10 +13,10 @@ Class of LintRule is TemplateStringRule{
 		['base', 'sys', as Conditional()]
 	];
 
-	local Array of String is maskedLines: [];
+	local Array of String is maskedLines: Array();
 
 	replace Function is checkSource(String is source, Array of LintIssue is issues){
-		:maskedLines: [];
+		:maskedLines: Array();
 		local SourceMasker is masker: SourceMasker:init();
 		source:lines():each(action: local Function(String is line){
 			:maskedLines:add(item: masker:maskLine(line: line));

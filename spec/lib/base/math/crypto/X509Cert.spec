@@ -11,10 +11,10 @@ Class is X509Cert{
 	String is subjectHash: '';
 	String is issuerHash: '';
 	String is commonName: '';
-	Array of String is sanDnsNames: [];
+	Array of String is sanDnsNames: Array();
 	Boolean is valid: false;
 
 	replace Function is init(){
-		:sanDnsNames: [];
+		:sanDnsNames: Array();
 	}
 }

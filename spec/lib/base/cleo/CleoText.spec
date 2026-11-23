@@ -176,7 +176,7 @@ Class is CleoText{
 	## width and attach to the word that follows them, so a color
 	## never strands alone at a line end.
 	Function of Array of String is atomsOf(String is text){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		local Int is len: text:length();
 		local Int is i: 0;
 		local String is atom: '';
@@ -220,7 +220,7 @@ Class is CleoText{
 	## output where every character matters. Words wider than the
 	## column hard-break at the column boundary.
 	Function of Array of String is wrap(String is text, Int is maxCols){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		if(check: { maxCols <= 0 }, then: {
 			out:add(item: text);
 			return out;

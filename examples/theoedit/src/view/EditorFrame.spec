@@ -12,7 +12,7 @@ Class of Frame is EditorFrame{
 
 	EditorViewModel is vm: EditorViewModel(filePath: '');
 	Function is onQuit: local Function(){};
-	Array of TheoScreen is screenRefs: [];
+	Array of TheoScreen is screenRefs: Array();
 
 	FocusTarget is editorFocus: FocusTarget(initial: true);
 	FocusTarget is saveFocus: FocusTarget();
@@ -104,7 +104,7 @@ Class of Frame is EditorFrame{
 	}
 
 	replace Function of Widget is ui(){
-		local Array of GridPane is panes: [
+		local Array of GridPane is panes: Array([
 			Grid:fixed(
 				size: 3,
 				child: TopBar(
@@ -119,7 +119,7 @@ Class of Frame is EditorFrame{
 					focusTarget: editorFocus
 				)
 			)
-		];
+		]);
 		if({ vm:messageMode != 'none' }, {
 			panes:add(item: Grid:fixed(
 				size: 3,

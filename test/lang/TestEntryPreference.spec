@@ -21,7 +21,7 @@ Class of SpecUnitTest is TestEntryPreference{
 
 	## Stamped by onEntry — the argv-Map form, proving main fed the
 	## command-line Map to the argv-capable init and not the empty one.
-	held Array of Boolean is argvEntrySeen: [];
+	held Array of Boolean is argvEntrySeen: Array();
 
 	replace Function is onEntry(Map of String to String is args){
 		TestEntryPreference:argvEntrySeen:add(item: true);

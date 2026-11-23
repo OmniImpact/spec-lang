@@ -59,7 +59,7 @@ Class of SpecUnitTest is TestSpecAst{
 	Function is testCanonicalTypeFormatting(){
 		local Type is elem: Type:init(name: 'String');
 		local Type is arr: Type:init(name: 'Array');
-		arr:params: [elem];
+		arr:params: Array([elem]);
 		Assert:areEqualString('Array of String', arr:toString());
 		Assert:isTrue(arr:isGeneric());
 		Assert:isFalse(elem:isGeneric());
@@ -71,8 +71,8 @@ Class of SpecUnitTest is TestSpecAst{
 	Function is testClassMemberGraph(){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
 		m:name: 'speak';
-		local ClassInfo is cls: ClassInfo:init(name: 'Widget', baseClass: '', members: [m]);
-		local ProgramNode is prog: ProgramNode:init(classes: [cls]);
+		local ClassInfo is cls: ClassInfo:init(name: 'Widget', baseClass: '', members: Array([m]));
+		local ProgramNode is prog: ProgramNode:init(classes: Array([cls]));
 		local String is found: '';
 		prog:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is mem){

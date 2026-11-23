@@ -11,11 +11,11 @@ Class is Emitter{
 	];
 
 	Int is replayCount: 1;
-	Array of Collector is collectors: [];
+	Array of Collector is collectors: Array();
 
 	Function is initEmitter(Int is replay: 1){
 		:replayCount: replay;
-		:collectors: [];
+		:collectors: Array();
 	}
 
 	replace Function is init(Int is replay: 1){

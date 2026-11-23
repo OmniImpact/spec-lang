@@ -26,13 +26,13 @@ Class is WordFreq{
 		});
 		if({ count < 1 }, { count: 1; });
 
-		local Array of Str is services: [
+		local Array of Str is services: Array([
 			'auth', 'api', 'billing', 'cache',
 			'db', 'edge', 'feed', 'gateway',
 			'ingest', 'jobs', 'kv', 'logs',
 			'metrics', 'notify', 'proxy', 'search'
-		];
-		local Array of Str is levels: ['INFO', 'WARN', 'ERR'];
+		]);
+		local Array of Str is levels: Array(['INFO', 'WARN', 'ERR']);
 
 		# Deterministic xorshift64 (unsigned 64-bit) seeded identically across languages
 		local UInt64 is st: 11400714819323198485 as UInt64; # 0x9E3779B97F4A7C15

@@ -116,7 +116,7 @@ Class of SpecUnitTest is TestTryGuard{
 	}
 
 	Function is testDeferInBodyRunsAtFrameExit(){
-		local Array of String is log: [];
+		local Array of String is log: Array();
 		local String is v: :deferProbe(lg: log);
 		Assert:areEqualString('g', v);
 		Assert:areEqualString('guard', log:get(index: 0, default: ''));

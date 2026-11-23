@@ -95,7 +95,7 @@ Class is CliArgs{
 
 	## Returns `argv[1..argc-1]` as an `Array of String` in CLI order.
 	Function of Array of String is rawArgs(Int is argc, Int is argvAddr){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		local Int is i: 1;
 		while({ i < argc }, {
 			out:add(item: :argvAt(argvAddr: argvAddr, idx: i));

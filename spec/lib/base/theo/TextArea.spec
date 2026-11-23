@@ -10,7 +10,7 @@ Class of Widget is TextArea{
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
-	Array of String is lines: [''];
+	Array of String is lines: Array(['']);
 	Int is cursorRow: 0;
 	Int is cursorCol: 0;
 	Int is scrollX: 0;
@@ -18,15 +18,15 @@ Class of Widget is TextArea{
 	Boolean is followCursor: true;
 	FocusTarget is focusTarget: FocusTarget();
 	Function is onChange: local Function(String is _s){};
-	Array of TextEmitter is boundEmitters: [];
-	Array of TextCollector is boundCollectors: [];
+	Array of TextEmitter is boundEmitters: Array();
+	Array of TextCollector is boundCollectors: Array();
 	Boolean is suppressSync: false;
 
 	replace Function is init(String is value: '', FocusTarget is focusTarget: FocusTarget(), Function is onChange: local Function(String is _s){}){
 		:focusTarget: focusTarget;
 		:onChange: onChange;
-		:boundEmitters: [];
-		:boundCollectors: [];
+		:boundEmitters: Array();
+		:boundCollectors: Array();
 		setText(text: value);
 	}
 
@@ -34,7 +34,7 @@ Class of Widget is TextArea{
 		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
 			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
 		});
-		:boundEmitters: [value];
+		:boundEmitters: Array([value]);
 		setText(text: value:current());
 		local TextCollector is col: value:collect(onEmit: local Function(String is next){
 			if({ !suppressSync }, {
@@ -42,16 +42,16 @@ Class of Widget is TextArea{
 				invalidate();
 			});
 		});
-		:boundCollectors: [col];
+		:boundCollectors: Array([col]);
 	}
 
 	Function is setText(String is text){
 		if({ text == '' }, {
-			:lines: [''];
+			:lines: Array(['']);
 		}, {
 			:lines: text:split(delimiter: "\n");
 			if({ :lines:length() == 0 }, {
-				:lines: [''];
+				:lines: Array(['']);
 			});
 		});
 		if({ cursorRow >= :lines:length() }, { :cursorRow: :lines:length() - 1; });
@@ -292,7 +292,7 @@ Class of Widget is TextArea{
 			local String is left: cur:substring(start: 0, end: cursorCol);
 			local String is right: cur:substring(start: cursorCol, end: cur:length());
 			lines:set(index: cursorRow, item: left);
-			local Array of String is nextLines: [];
+			local Array of String is nextLines: Array();
 			local Int is i: 0;
 			while({ i < lines:length() }, {
 				nextLines:add(item: lines:get(index: i));
@@ -375,8 +375,8 @@ Class of Widget is TextArea{
 	replace Function is dispose(){
 		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
 			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
-			:boundEmitters: [];
-			:boundCollectors: [];
+			:boundEmitters: Array();
+			:boundCollectors: Array();
 		});
 	}
 }

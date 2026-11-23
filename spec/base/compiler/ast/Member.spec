@@ -25,7 +25,7 @@ Class is Member{
 	String is sourceFile: '';
 
 	## Declared modifiers (e.g. replace, local, contained).
-	Array of String is modifiers: [];
+	Array of String is modifiers: Array();
 
 	## Return type for methods; value type for fields.
 	Type is memberType: Type:init(name: '');
@@ -34,17 +34,17 @@ Class is Member{
 	String is name: '';
 
 	## METHOD: formal parameter list.
-	Array of Parameter is params: [];
+	Array of Parameter is params: Array();
 
 	## METHOD: implementation statements.
-	Array of Statement is body: [];
+	Array of Statement is body: Array();
 
 	## FIELD: initializer expression and its presence flag.
 	Expression is initExpr: Expression:Unknown;
 	Boolean is hasInit: false;
 
 	## CLASS: the nested class descriptor.
-	ClassInfo is nestedClass: ClassInfo:init(name: '', baseClass: '', members: []);
+	ClassInfo is nestedClass: ClassInfo:init(name: '', baseClass: '', members: Array());
 
 	## Initializes a member descriptor.
 	##
@@ -69,7 +69,7 @@ Class is Member{
 
 	## Releases statement and expression nodes once method emission finishes.
 	Function is clearBody(){
-		:body: [];
+		:body: Array();
 	}
 
 	## True when the member carries the given modifier. Modifiers are

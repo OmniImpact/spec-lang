@@ -24,7 +24,7 @@ Class of SpecUnitTest is TestDeferCleanup{
 		['base', 'struct', Array]
 	];
 
-	Array of String is log: [];
+	Array of String is log: Array();
 
 	## Consumes only the unwind-probe error; assert failures and any other
 	## error pass through untouched.
@@ -37,7 +37,7 @@ Class of SpecUnitTest is TestDeferCleanup{
 	}
 
 	Function is testNormalExitRunsNewestFirst(){
-		:log: [];
+		:log: Array();
 		:inlinePushHelper(lg: :log);
 		Assert:areEqualInt(2, :log:length());
 		Assert:areEqualString('b', :log:get(index: 0, default: ''));
@@ -54,7 +54,7 @@ Class of SpecUnitTest is TestDeferCleanup{
 	}
 
 	Function is testScopingAcrossNestedFrames(){
-		:log: [];
+		:log: Array();
 		:nestedScopeHelper(lg: :log);
 		Assert:areEqualInt(3, :log:length());
 		Assert:areEqualString('inner', :log:get(index: 0, default: ''));
@@ -79,7 +79,7 @@ Class of SpecUnitTest is TestDeferCleanup{
 	}
 
 	Function is testUnwindRunsCleanupBeforeHandler(){
-		:log: [];
+		:log: Array();
 		:unwindHelper(lg: :log);
 		Assert:areEqualInt(2, :log:length());
 		Assert:areEqualString('cleanup', :log:get(index: 0, default: ''));
@@ -95,7 +95,7 @@ Class of SpecUnitTest is TestDeferCleanup{
 	}
 
 	Function is testHelperFrameOwnsItsPushes(){
-		:log: [];
+		:log: Array();
 		:pushLog(lg: :log, tag: 'a');
 		:pushLog(lg: :log, tag: 'b');
 		Assert:areEqualInt(2, :log:length());

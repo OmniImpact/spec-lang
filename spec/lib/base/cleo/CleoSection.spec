@@ -28,12 +28,12 @@ Class is CleoSection{
 	CleoColor is fgColor: CleoColor:default();
 	CleoColor is bgColor: CleoColor:default();
 
-	Array of CleoSlot is slots: [];
+	Array of CleoSlot is slots: Array();
 	Map of Int to CleoSlot is slotMap: Map:init();
-	Array of Int is idCounter: [0];
-	Array of Boolean is dirtyRef: [false];
-	Array of Boolean is directRef: [false];
-	Array of Boolean is directStartedRef: [false];
+	Array of Int is idCounter: Array([0]);
+	Array of Boolean is dirtyRef: Array([false]);
+	Array of Boolean is directRef: Array([false]);
+	Array of Boolean is directStartedRef: Array([false]);
 	Boolean is directHeaderPrinted: false;
 	Boolean is hasDirectEmitCb: false;
 	Function is directEmitCb: local Function(CleoSection is _sec, CleoSlot is _s){};
@@ -81,7 +81,7 @@ Class is CleoSection{
 		return :allocSlot(slot: s);
 	}
 
-	Function of Int is addShapeThrobber(ThrobberShape is shape: ThrobberShape:DOT, ThrobberEffect is effect: ThrobberEffect:BLINK, String is text: '', CleoColor is color: CleoColor:default(), Array of CleoColor is palette: [], String is rightText: '', Boolean is queued: false){
+	Function of Int is addShapeThrobber(ThrobberShape is shape: ThrobberShape:DOT, ThrobberEffect is effect: ThrobberEffect:BLINK, String is text: '', CleoColor is color: CleoColor:default(), Array of CleoColor is palette: Array(), String is rightText: '', Boolean is queued: false){
 		local CleoSlot is s: CleoSlot:init(id: 0, kind: 2);
 		s:shape: shape;
 		s:effect: effect;
@@ -216,7 +216,7 @@ Class is CleoSection{
 	Function is removeSlot(Int is index){
 		if({ !:slotMap:has(key: index) }, { return; });
 		:slotMap:remove(key: index);
-		local Array of CleoSlot is kept: [];
+		local Array of CleoSlot is kept: Array();
 		local Int is k: 0;
 		while({ k < :slots:length() }, {
 			local CleoSlot is cur: :slots:get(index: k);

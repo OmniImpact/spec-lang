@@ -11,9 +11,9 @@ Class of Widget is Grid{
 	];
 
 	String is orientation: 'vertical';
-	Array of GridPane is panes: [];
+	Array of GridPane is panes: Array();
 
-	replace Function is init(String is orientation: 'vertical', Array of GridPane is panes: []){
+	replace Function is init(String is orientation: 'vertical', Array of GridPane is panes: Array()){
 		:orientation: orientation;
 		:panes: panes;
 	}

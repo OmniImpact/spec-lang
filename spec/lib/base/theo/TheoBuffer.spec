@@ -13,7 +13,7 @@ Class is TheoBuffer{
 
 	Int is width: 80;
 	Int is height: 24;
-	Array of TheoCell is cells: [];
+	Array of TheoCell is cells: Array();
 
 	Int is clipX: 0;
 	Int is clipY: 0;
@@ -33,7 +33,7 @@ Class is TheoBuffer{
 		:clipY: 0;
 		:clipW: w;
 		:clipH: h;
-		:cells: [];
+		:cells: Array();
 		local Int is total: w * h;
 		local Int is i: 0;
 		while({ i < total }, {

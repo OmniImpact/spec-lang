@@ -13,12 +13,12 @@ Class is CleoImage{
 
 	Int is pixelWidth: 0;
 	Int is pixelHeight: 0;
-	Array of Int is pixels: [];
+	Array of Int is pixels: Array();
 
 	replace Function is init(Int is pixelWidth, Int is pixelHeight){
 		:pixelWidth: pixelWidth;
 		:pixelHeight: pixelHeight;
-		:pixels: [];
+		:pixels: Array();
 		local Int is total: pixelWidth * pixelHeight * 3;
 		local Int is i: 0;
 		while({ i < total }, {
@@ -38,7 +38,7 @@ Class is CleoImage{
 	}
 
 	Function of Array of String is renderLines(){
-		local Array of String is rows: [];
+		local Array of String is rows: Array();
 		local Int is y: 0;
 		while({ y < :pixelHeight }, {
 			local String is row: '';

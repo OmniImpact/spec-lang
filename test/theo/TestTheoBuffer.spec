@@ -122,7 +122,7 @@ Class of SpecUnitTest is TestTheoBuffer{
 		);
 		local Row is root: Row(
 			gap: 1,
-			children: [btn]
+			children: Array([btn])
 		);
 		local TheoBuffer is buf: TheoBuffer(width: 20, height: 6);
 		local TheoRenderer is renderer: TheoRenderer();

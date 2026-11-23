@@ -24,8 +24,8 @@ Class is TheoApp{
 	}
 
 	local Function is syncFocus(Frame is frame){
-		local Array of FocusTarget is targets: [];
-		local Array of Widget is owners: [];
+		local Array of FocusTarget is targets: Array();
+		local Array of Widget is owners: Array();
 		frame:collectFocus(targets: targets, owners: owners);
 		if({ targets:length() == 0 }, { return; });
 
@@ -57,8 +57,8 @@ Class is TheoApp{
 	}
 
 	local Function is cycleFocus(Frame is frame, Boolean is reverse){
-		local Array of FocusTarget is targets: [];
-		local Array of Widget is owners: [];
+		local Array of FocusTarget is targets: Array();
+		local Array of Widget is owners: Array();
 		frame:collectFocus(targets: targets, owners: owners);
 		local Int is n: targets:length();
 		if({ n <= 1 }, { return; });

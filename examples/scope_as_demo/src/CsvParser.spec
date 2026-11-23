@@ -11,7 +11,7 @@ Class is CsvParser{
 
 	## Parses non-empty lines from [raw] into comma-delimited fields, optionally skipping the header row when [skipHeader] is true.
 	Function of Array of Array of String is parseRows(String is raw, Boolean is skipHeader){
-		local Array of Array of String is rows: [];
+		local Array of Array of String is rows: Array();
 		local Array of String is allLines: raw:lines();
 		local Int is startIdx: if({ skipHeader }, { 1 }, { 0 });
 		while([Int is row: startIdx, Int is total: allLines:length()], { row < total }, {

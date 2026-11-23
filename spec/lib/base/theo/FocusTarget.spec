@@ -10,16 +10,16 @@ Class is FocusTarget{
 
 	Boolean is focused: false;
 	Boolean is initial: false;
-	Array of Function is ownerHooks: [];
+	Array of Function is ownerHooks: Array();
 
 	replace Function is init(Boolean is initial: false){
 		:initial: initial;
 		:focused: initial;
-		:ownerHooks: [];
+		:ownerHooks: Array();
 	}
 
 	Function is bindOwner(Function is handler){
-		:ownerHooks: [handler];
+		:ownerHooks: Array([handler]);
 	}
 
 	Function is requestFocus(){

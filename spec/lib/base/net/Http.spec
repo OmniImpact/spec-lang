@@ -203,7 +203,7 @@ Class is Http{
 
 		while({ hops <= req:maxRedirects }, local Function of Boolean(){
 			local String is rawReq: :buildRawRequest(u: curUrl, req: curReq);
-			local Array of SpecError of HttpError is errOut: [];
+			local Array of SpecError of HttpError is errOut: Array();
 			local String is rawResp: :exchangeOnce(u: curUrl, rawReq: rawReq, timeoutMs: curReq:timeoutMs, errOut: errOut);
 			if({ errOut:length() > 0 }, {
 				if({ :hasClosure(cb: onError) }, { onError(errOut:get(index: 0)); });

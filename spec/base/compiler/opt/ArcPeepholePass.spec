@@ -69,7 +69,7 @@ Class of SpecOptimizer is ArcPeepholePass{
 		local Map of String to Boolean is nullSlots: Map:init();
 		nullRegs:set(key: 'null', value: true);
 
-		local Array of Boolean is drop: [];
+		local Array of Boolean is drop: Array();
 		local Int is i: 0;
 		while({ i < n }, {
 			drop:add(item: false);
@@ -185,8 +185,8 @@ Class of SpecOptimizer is ArcPeepholePass{
 			i++;
 		});
 
-		local Array of IrInst is newInsts: [];
-		local Array of Int is newLines: [];
+		local Array of IrInst is newInsts: Array();
+		local Array of Int is newLines: Array();
 		i: 0;
 		while({ i < n }, {
 			if({ !drop:get(index: i) }, {

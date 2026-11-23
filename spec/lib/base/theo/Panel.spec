@@ -77,7 +77,7 @@ Class of Widget is Panel{
 	}
 
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: [cb];
+		:dirtyListeners: Array([cb]);
 		child:bindDirty(cb: cb);
 	}
 
@@ -176,8 +176,8 @@ Class of Widget is Panel{
 			buf:fillRect(x: boxX, y: boxY, w: boxW, h: boxH, fg: foreground, bg: background);
 		});
 		if({ border }, {
-			local Array of FocusTarget is fts: [];
-			local Array of Widget is fws: [];
+			local Array of FocusTarget is fts: Array();
+			local Array of Widget is fws: Array();
 			child:collectFocus(targets: fts, owners: fws);
 			local Boolean is hasFocused: false;
 			fts:each(action: local Function(FocusTarget is ft){

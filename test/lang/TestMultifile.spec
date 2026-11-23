@@ -40,7 +40,7 @@ Class of SpecUnitTest is TestMultifile{
 
 	## 2. Pure Spec Array methods: isEmpty, add.
 	Function is testPureSpecArrayMethods(){
-		local Array of String is emptyList: [];
+		local Array of String is emptyList: Array();
 		Assert:isTrue(emptyList:isEmpty());
 		emptyList:add(item: 'First Item');
 		Assert:isFalse(emptyList:isEmpty());

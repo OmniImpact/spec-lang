@@ -14,12 +14,12 @@ Class of Emitter is IntEmitter{
 	];
 
 	Int is intValue: 0;
-	Array of Int is replayBuffer: [];
+	Array of Int is replayBuffer: Array();
 
 	replace Function is init(Int is initial: 0, Int is replay: 1){
 		initEmitter(replay: replay);
 		:intValue: initial;
-		:replayBuffer: [];
+		:replayBuffer: Array();
 		if({ replay != 0 }, {
 			:replayBuffer:add(item: initial);
 		});

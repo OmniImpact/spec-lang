@@ -45,7 +45,7 @@ Class of SpecUnitTest is TestNextGenFeatures{
 	## Verifies Feature 2: Functional Collection Combinators (Array:map, Array:fold, Map:each).
 	Function is testCombinators(){
 		# 1. Array:map transforming integers
-		local Array of Int is nums: [1, 2, 3, 4, 5];
+		local Array of Int is nums: Array([1, 2, 3, 4, 5]);
 		local Array of Int is doubled: nums:map(transform: local Function of Int(Int is x){
 			return x * 2;
 		});
@@ -65,7 +65,7 @@ Class of SpecUnitTest is TestNextGenFeatures{
 		# 4. Map:each iterating key-value entries
 		local Map of String to Int is inventory: ['apples': 50, 'bananas': 120, 'oranges': 75];
 		Assert:areEqualInt(3, inventory:length());
-		local Array of String is visited: [];
+		local Array of String is visited: Array();
 		inventory:each(action: local Function(String is item, Int is qty){
 			visited:add(item: item . '=' . qty);
 		});
@@ -111,7 +111,7 @@ Class of SpecUnitTest is TestNextGenFeatures{
 		Assert:areEqualInt(1, emptyMap:length());
 		Assert:areEqualString('Spec Standard Library', emptyMap['framework']);
 		# Array bracket index read and write
-		local Array of String is languages: ['C', 'Rust', 'Spec'];
+		local Array of String is languages: Array(['C', 'Rust', 'Spec']);
 		Assert:areEqualString('C', languages[0]);
 		Assert:areEqualString('Rust', languages[1]);
 		Assert:areEqualString('Spec', languages[2]);
@@ -166,7 +166,7 @@ Class of SpecUnitTest is TestNextGenFeatures{
 		local Result is resErr: Result:Err(code: 404, msg: 'Endpoint missing');
 		local Result is resPending: Result:Pending;
 		# When statement destructuring, accumulated into a log
-		local Array of String is log: [];
+		local Array of String is log: Array();
 		:inspectResult(res: resOk, log: log);
 		:inspectResult(res: resErr, log: log);
 		:inspectResult(res: resPending, log: log);

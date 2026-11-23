@@ -244,7 +244,7 @@ Class of SpecOptimizer is DevirtPass{
 							anyDevirt: true;
 							local Array of String is newArgs: args;
 							if({ unusedSelf:has(key: target) && newArgs:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) }, {
-								local Array of String is nulled: ['null'];
+								local Array of String is nulled: Array(['null']);
 								local Int is ai: 1;
 								while({ ai < newArgs:length() }, {
 									nulled:add(item: newArgs:get(index: ai));
@@ -265,7 +265,7 @@ Class of SpecOptimizer is DevirtPass{
 					},
 					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args){
 						if({ unusedSelf:has(key: callee) && args:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) && args:get(index: 0, default: '') != 'null' }, {
-							local Array of String is nulled: ['null'];
+							local Array of String is nulled: Array(['null']);
 							local Int is ai: 1;
 							while({ ai < args:length() }, {
 								nulled:add(item: args:get(index: ai));
@@ -358,8 +358,8 @@ Class of SpecOptimizer is DevirtPass{
 		bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Array of IrInst is newInsts: [];
-			local Array of Int is newLines: [];
+			local Array of IrInst is newInsts: Array();
+			local Array of Int is newLines: Array();
 			local Int is ii: 0;
 			while({ ii < blk:insts:length() }, {
 				local IrInst is inst: blk:insts:get(index: ii);
@@ -418,8 +418,8 @@ Class of SpecOptimizer is DevirtPass{
 			bi: 0;
 			while({ bi < fn:blocks:length() }, {
 				local IrBlock is blk: fn:blocks:get(index: bi);
-				local Array of IrInst is newInsts: [];
-				local Array of Int is newLines: [];
+				local Array of IrInst is newInsts: Array();
+				local Array of Int is newLines: Array();
 				local Int is ii: 0;
 				while({ ii < blk:insts:length() }, {
 					local IrInst is inst: blk:insts:get(index: ii);

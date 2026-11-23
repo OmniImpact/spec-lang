@@ -36,7 +36,7 @@ Class is SpecUnitTest{
 	## immutable, the contents are not): proof the entry constructed
 	## through the INHERITED base init at the owner's symbol (the
 	## entry-init emission contract, locked by TestEntryInheritedInit).
-	held Array of Boolean is entryStamped: [];
+	held Array of Boolean is entryStamped: Array();
 
 	## The entry hook: the argv-Map entry init calls it before the
 	## runner starts. Suites replace it (single signature — the

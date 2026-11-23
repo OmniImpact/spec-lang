@@ -53,7 +53,7 @@ Class of SpecUnitTest is TestRegressionOverrideDispatch{
 	## every resident must dispatch to Dog's override via Animal's
 	## trampoline.
 	Function is testHeterogeneousCollectionDispatch(){
-		local Array of Animal is kennel: [Dog:init(), Puppy:init(), Lab:init()];
+		local Array of Animal is kennel: Array([Dog:init(), Puppy:init(), Lab:init()]);
 		local Int is woofCount: kennel:count(predicate: local Function of Boolean(Animal is resident){
 			return resident:speak() == 'woof';
 		});

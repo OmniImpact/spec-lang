@@ -24,7 +24,7 @@ Class is LlvmEmitter{
 	];
 
 	Boolean is debugMode: false;
-	Array of String is dbgNodes: [];
+	Array of String is dbgNodes: Array();
 	Map of String to Int is dbgFileIds: Map:init();
 	Map of String to Int is dbgLocIds: Map:init();
 	Int is dbgUnitId: 0;
@@ -144,7 +144,7 @@ Class is LlvmEmitter{
 
 	local Function of String is emitExternalSpecDecls(IrModule is mod){
 		local Map of String to Boolean is known: Map:init();
-		local Array of String is preludeSyms: [
+		local Array of String is preludeSyms: Array([
 			'spec_rt_alloc', 'spec_rt_retain', 'spec_rt_release',
 			'spec_pool_frame', 'spec_pool_release_to', 'spec_pool_release_to_transfer', 'spec_claim_pool',
 			'spec_rt_closure_new', 'spec_rt_box_new', 'spec_rt_box_get', 'spec_rt_box_set',
@@ -154,7 +154,7 @@ Class is LlvmEmitter{
 			'spec_math_log', 'spec_math_log2', 'spec_math_log10', 'spec_fast_random_seed', 'spec_math_random',
 			'spec_time_monotonic_ns', 'spec_atomic_add', 'spec_atomic_put', 'spec_atomic_get',
 			'spec_process_raw_args', 'spec_pal_random_bytes'
-		];
+		]);
 		local Int is pi: 0;
 		while({ pi < preludeSyms:length() }, {
 			known:set(key: preludeSyms:get(index: pi, default: ''), value: true);
@@ -226,8 +226,8 @@ Class is LlvmEmitter{
 		local String is methodMetaType: methodMetaLayout:llvmType();
 		local String is fieldMetaType: fieldMetaLayout:llvmType();
 		local String is heldEntryType: heldEntryLayout:llvmType();
-		local Array of String is classMetaRefs: [];
-		local Array of String is heldEntryItems: [];
+		local Array of String is classMetaRefs: Array();
+		local Array of String is heldEntryItems: Array();
 		local Int is si: 0;
 		while({ si < mod:structs:length() }, {
 			local IrStruct is st: mod:structs:get(index: si);
@@ -291,7 +291,7 @@ Class is LlvmEmitter{
 					local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
 					local Int is mln: st:metaMethodLines:get(index: mi, default: 0);
 					if({ mi > 0 }, { mItems: mItems . ', '; });
-					mItems: mItems . methodMetaLayout:formatConst(values: [mSym, mfnRef, mfl as String, mln as String]);
+					mItems: mItems . methodMetaLayout:formatConst(values: Array([mSym, mfnRef, mfl as String, mln as String]));
 					mi++;
 				});
 				out: out . '@.methods.' . st:name . ' = private constant [' . (st:metaMethodNames:length() as String) . ' x ' . methodMetaType . '] [' . mItems . "]\n";
@@ -313,7 +313,7 @@ Class is LlvmEmitter{
 					out: out . :emitCStrGlobal(sym: ftSym, val: mfty);
 					local String is offExpr: 'ptrtoint (ptr getelementptr (%struct.' . st:name . ', ptr null, i32 0, i32 ' . (mfidx as String) . ') to i32)';
 					if({ mfi > 0 }, { mfItems: mfItems . ', '; });
-					mfItems: mfItems . fieldMetaLayout:formatConst(values: [fnSym, ftSym, offExpr, mffl as String]);
+					mfItems: mfItems . fieldMetaLayout:formatConst(values: Array([fnSym, ftSym, offExpr, mffl as String]));
 					mfi++;
 				});
 				out: out . '@.fields.' . st:name . ' = private constant [' . (st:metaFieldNames:length() as String) . ' x ' . fieldMetaType . '] [' . mfItems . "]\n";
@@ -321,7 +321,7 @@ Class is LlvmEmitter{
 			});
 
 			local String is ctorPtr: if({ st:constructFn == 'null' }, { 'null' }, { '@' . st:constructFn });
-			out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: ['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String, fieldsRef, st:metaFieldNames:length() as String]) . "\n";
+			out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: Array(['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String, fieldsRef, st:metaFieldNames:length() as String])) . "\n";
 			classMetaRefs:add(item: 'ptr @.meta.' . st:name);
 
 			if({ st:heldNames:length() > 0 }, {
@@ -344,7 +344,7 @@ Class is LlvmEmitter{
 				});
 				out: out . '@.held_names.' . st:name . ' = private constant [' . (st:heldNames:length() as String) . ' x ptr] [' . hnItems . "]\n";
 				out: out . '@.held_getters.' . st:name . ' = private constant [' . (st:heldGetters:length() as String) . ' x ptr] [' . hgItems . "]\n";
-				heldEntryItems:add(item: heldEntryLayout:formatConst(values: ['@.typename.' . st:name, '@.held_names.' . st:name, st:heldNames:length() as String, '@.held_getters.' . st:name]));
+				heldEntryItems:add(item: heldEntryLayout:formatConst(values: Array(['@.typename.' . st:name, '@.held_names.' . st:name, st:heldNames:length() as String, '@.held_getters.' . st:name])));
 			});
 			si++;
 		});
@@ -415,8 +415,8 @@ Class is LlvmEmitter{
 			local String is methodMetaType: methodMetaLayout:llvmType();
 			local String is fieldMetaType: fieldMetaLayout:llvmType();
 			local String is heldEntryType: heldEntryLayout:llvmType();
-			local Array of String is classMetaRefs: [];
-			local Array of String is heldEntryItems: [];
+			local Array of String is classMetaRefs: Array();
+			local Array of String is heldEntryItems: Array();
 			local Int is si: 0;
 			while({ si < mod:structs:length() }, {
 				local IrStruct is st: mod:structs:get(index: si);
@@ -480,7 +480,7 @@ Class is LlvmEmitter{
 						local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
 						local Int is mln: st:metaMethodLines:get(index: mi, default: 0);
 						if({ mi > 0 }, { mItems: mItems . ', '; });
-						mItems: mItems . methodMetaLayout:formatConst(values: [mSym, mfnRef, mfl as String, mln as String]);
+						mItems: mItems . methodMetaLayout:formatConst(values: Array([mSym, mfnRef, mfl as String, mln as String]));
 						mi++;
 					});
 					out: out . '@.methods.' . st:name . ' = private constant [' . (st:metaMethodNames:length() as String) . ' x ' . methodMetaType . '] [' . mItems . "]\n";
@@ -502,7 +502,7 @@ Class is LlvmEmitter{
 						out: out . :emitCStrGlobal(sym: ftSym, val: mfty);
 						local String is offExpr: 'ptrtoint (ptr getelementptr (%struct.' . st:name . ', ptr null, i32 0, i32 ' . (mfidx as String) . ') to i32)';
 						if({ mfi > 0 }, { mfItems: mfItems . ', '; });
-						mfItems: mfItems . fieldMetaLayout:formatConst(values: [fnSym, ftSym, offExpr, mffl as String]);
+						mfItems: mfItems . fieldMetaLayout:formatConst(values: Array([fnSym, ftSym, offExpr, mffl as String]));
 						mfi++;
 					});
 					out: out . '@.fields.' . st:name . ' = private constant [' . (st:metaFieldNames:length() as String) . ' x ' . fieldMetaType . '] [' . mfItems . "]\n";
@@ -510,7 +510,7 @@ Class is LlvmEmitter{
 				});
 
 				local String is ctorPtr: if({ st:constructFn == 'null' }, { 'null' }, { '@' . st:constructFn });
-				out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: ['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String, fieldsRef, st:metaFieldNames:length() as String]) . "\n";
+				out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: Array(['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String, fieldsRef, st:metaFieldNames:length() as String])) . "\n";
 				classMetaRefs:add(item: 'ptr @.meta.' . st:name);
 
 				if({ st:heldNames:length() > 0 }, {
@@ -533,7 +533,7 @@ Class is LlvmEmitter{
 					});
 					out: out . '@.held_names.' . st:name . ' = private constant [' . (st:heldNames:length() as String) . ' x ptr] [' . hnItems . "]\n";
 					out: out . '@.held_getters.' . st:name . ' = private constant [' . (st:heldGetters:length() as String) . ' x ptr] [' . hgItems . "]\n";
-					heldEntryItems:add(item: heldEntryLayout:formatConst(values: ['@.typename.' . st:name, '@.held_names.' . st:name, st:heldNames:length() as String, '@.held_getters.' . st:name]));
+					heldEntryItems:add(item: heldEntryLayout:formatConst(values: Array(['@.typename.' . st:name, '@.held_names.' . st:name, st:heldNames:length() as String, '@.held_getters.' . st:name])));
 				});
 				si++;
 			});
@@ -632,15 +632,15 @@ Class is LlvmEmitter{
 	Function of Array of String is emitShardsScoped(IrModule is mod, ThreadScope is scope, Int is shards: 1){
 		local Int is nFn: mod:functions:length();
 		if({ shards <= 1 || nFn <= 1 }, {
-			return [:emitModule(mod: mod)];
+			return Array([:emitModule(mod: mod)]);
 		});
 		local Int is nShards: if({ shards < nFn }, { shards }, { nFn });
 		Process:arrayFreeze(a: mod:functions);
 
 		# Compute instruction weight per function and build declare prototypes.
-		local Array of Int is weights: [];
-		local Array of String is fnDecls: [];
-		local Array of Int is sortedIdx: [];
+		local Array of Int is weights: Array();
+		local Array of String is fnDecls: Array();
+		local Array of Int is sortedIdx: Array();
 		local Int is i: 0;
 		while({ i < nFn }, {
 			local IrFunction is f0: mod:functions:get(index: i);
@@ -671,15 +671,15 @@ Class is LlvmEmitter{
 			si++;
 		});
 
-		local Array of Array of Int is buckets: [];
-		local Array of Int is bucketWeights: [];
+		local Array of Array of Int is buckets: Array();
+		local Array of Int is bucketWeights: Array();
 		local Int is b0: 0;
 		while({ b0 < nShards }, {
-			buckets:add(item: []);
+			buckets:add(item: Array());
 			bucketWeights:add(item: 0);
 			b0++;
 		});
-		local Array of Int is ownerShard: [];
+		local Array of Int is ownerShard: Array();
 		local Int is oi: 0;
 		while({ oi < nFn }, {
 			ownerShard:add(item: 0);
@@ -712,7 +712,7 @@ Class is LlvmEmitter{
 		local String is secondaryHdr: :emitShardHeader(mod: mod, isPrimary: false);
 		local Boolean is dbgFlag: :debugMode;
 
-		local Array of Task of String is shardTasks: [];
+		local Array of Task of String is shardTasks: Array();
 		local Int is s: 0;
 		while({ s < nShards }, {
 			local Int is myShard: s;
@@ -722,7 +722,7 @@ Class is LlvmEmitter{
 				local LlvmEmitter is wEm: LlvmEmitter:init();
 				wEm:debugMode: dbgFlag;
 				if({ dbgFlag }, {
-					wEm:dbgNodes: [];
+					wEm:dbgNodes: Array();
 					wEm:dbgFileIds: Map:init();
 					wEm:dbgLocIds: Map:init();
 					wEm:dbgNodes:add(item: '');
@@ -752,7 +752,7 @@ Class is LlvmEmitter{
 			s++;
 		});
 
-		local Array of String is results: [];
+		local Array of String is results: Array();
 		local Int is ri: 0;
 		while({ ri < shardTasks:length() }, {
 			results:add(item: shardTasks:get(index: ri):await());
@@ -766,7 +766,7 @@ Class is LlvmEmitter{
 
 		# Functions
 		if({ :debugMode }, {
-			:dbgNodes: [];
+			:dbgNodes: Array();
 			:dbgFileIds: Map:init();
 			:dbgLocIds: Map:init();
 			# !0 = DICompileUnit, !1 = !{}, !2 = DISubroutineType
@@ -796,7 +796,7 @@ Class is LlvmEmitter{
 		local Int is nWorkers: if({ threads < nFn }, { threads }, { nFn });
 		local Int is baseCount: nFn / nWorkers;
 		local Int is rem: nFn % nWorkers;
-		local Array of Task of String is workerTasks: [];
+		local Array of Task of String is workerTasks: Array();
 		local Int is curStart: 0;
 		local Int is w: 0;
 		while({ w < nWorkers }, {

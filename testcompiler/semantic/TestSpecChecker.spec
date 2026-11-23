@@ -26,8 +26,8 @@ Class of SpecUnitTest is TestSpecChecker{
 	## @param src: Spec source text.
 	## @return: Rendered type errors (empty when clean).
 	Function of Array of String is checkOf(String is src){
-		local Array of ClassInfo is all: [];
-		local Array of String is preloads: ['spec/lib/base/sys/Conditional.spec', 'spec/lib/base/iterator/Loop.spec', 'spec/lib/base/iterator/LoopControl.spec', 'spec/lib/base/sys/Loops.spec', 'spec/lib/base/sys/Mem.spec', 'spec/lib/base/sys/SpinLock.spec', 'spec/lib/base/sys/Buf.spec', 'spec/lib/base/core/Str.spec', 'spec/lib/base/core/String.spec', 'spec/lib/base/struct/Array.spec', 'spec/lib/base/struct/Map.spec'];
+		local Array of ClassInfo is all: Array();
+		local Array of String is preloads: Array(['spec/lib/base/sys/Conditional.spec', 'spec/lib/base/iterator/Loop.spec', 'spec/lib/base/iterator/LoopControl.spec', 'spec/lib/base/sys/Loops.spec', 'spec/lib/base/sys/Mem.spec', 'spec/lib/base/sys/SpinLock.spec', 'spec/lib/base/sys/Buf.spec', 'spec/lib/base/core/Str.spec', 'spec/lib/base/core/String.spec', 'spec/lib/base/struct/List.spec', 'spec/lib/base/struct/Array.spec', 'spec/lib/base/struct/Map.spec']);
 		preloads:each(action: local Function(String is path){
 			local Lexer is plex: Lexer:init(source: fileRead(path: path, default: ''));
 			local Parser is ppar: Parser:init(tokens: plex:tokenize());
@@ -44,11 +44,11 @@ Class of SpecUnitTest is TestSpecChecker{
 		});
 		all:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { c:baseClasses:length() == 0 && c:baseClass == '' && c:name != 'Any' && c:name != 'Stringable' && c:baseClass != 'Enum' }, then: {
-				c:withBaseClasses(name: c:name, baseClasses: ['Any'], members: c:members);
+				c:withBaseClasses(name: c:name, baseClasses: Array(['Any']), members: c:members);
 			});
 		});
 		prog: ProgramNode:init(classes: all);
-		local Array of String is msgs: [];
+		local Array of String is msgs: Array();
 		Conditional:if(check: { p:hasErrors() }, then: {
 			p:getErrors():each(action: local Function(Error is e){
 				msgs:add(item: e:getMessage());
@@ -69,12 +69,12 @@ Class of SpecUnitTest is TestSpecChecker{
 	}
 
 	Function is testBidirectionalEmptyContainers(){
-		local Array of String is e2: :checkOf(src: "Class is B{ replace Function is init(Map of String to String is args){ local Array of String is xs: []; local Map of String to Int is m: [:]; } }");
+		local Array of String is e2: :checkOf(src: "Class is B{ replace Function is init(Map of String to String is args){ local Array of String is xs: Array(); local Map of String to Int is m: [:]; } }");
 		Assert:areEqualInt(0, e2:length());
 	}
 
 	Function is testArrayOfXChainedResolution(){
-		local Array of String is e3: :checkOf(src: "Class is C{ replace Function is init(Map of String to String is args){ local Array of String is xs: ['a', 'b']; local Int is firstLen: xs:get(index: 0):length(); } }");
+		local Array of String is e3: :checkOf(src: "Class is C{ replace Function is init(Map of String to String is args){ local Array of String is xs: Array(['a', 'b']); local Int is firstLen: xs:get(index: 0):length(); } }");
 		Assert:areEqualInt(0, e3:length());
 	}
 
@@ -108,7 +108,7 @@ Class is F{ replace Array of Array of String is using: [['base', 'sys', as Condi
 	}
 
 	Function is testCallResultFieldAccess(){
-		local Array of String is e8: :checkOf(src: "Class is Box{ Array of String is items: []; Function of Box is make(){ return Box:init(); } }
+		local Array of String is e8: :checkOf(src: "Class is Box{ Array of String is items: Array(); Function of Box is make(){ return Box:init(); } }
 Class is H{ replace Function is init(Map of String to String is args){
 	local Box is made: Box:init();
 	local Array of String is xs: made:make():items;
@@ -167,7 +167,7 @@ Class is Swimmable{ Function of String is swim(){ return 'ok'; } }
 Class of Flyable, Swimmable is Duck{ }
 Class of Swimmable is Fish{ }
 Class is Q{ replace Function is init(Map of String to String is args){
-	local Array of Swimmable is swimmers: [Duck:init(), Fish:init()];
+	local Array of Swimmable is swimmers: Array([Duck:init(), Fish:init()]);
 	local String is s: [Duck:init(), Fish:init()]:get(index: 0, default: Fish:init()):swim();
 } }");
 		Assert:areEqualInt(0, e16:length());

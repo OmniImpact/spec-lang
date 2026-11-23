@@ -483,7 +483,7 @@ Class is Unicode{
 	## Preserves `CR+LF`, base + combining marks, Hangul Jamo syllables,
 	## Regional Indicator flag pairs, and emoji ZWJ sequences as single clusters.
 	Function of Array of String is graphemes(String is s){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		local Int is len: s:byteLength();
 		if({ len <= 0 }, { return out; });
 
@@ -560,7 +560,7 @@ Class is Unicode{
 
 	## Returns the NFD (Canonical Decomposition, UAX #15) form of [s].
 	Function of String is normalizeNfd(String is s){
-		local Array of Int is cps: [];
+		local Array of Int is cps: Array();
 		local Int is len: s:byteLength();
 		local Int is i: 0;
 		while({ i < len }, {
@@ -630,7 +630,7 @@ Class is Unicode{
 		local Int is n: cps:length();
 		if({ n == 0 }, { return ''; });
 
-		local Array of Int is outCps: [];
+		local Array of Int is outCps: Array();
 		local Int is i: 0;
 		while({ i < n }, {
 			local Int is starter: cps:get(index: i, default: 0);

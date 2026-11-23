@@ -29,7 +29,7 @@ Class of SpecUnitTest is TestCompilerErgonomics{
 
 	Function is testArrayOfFunction(){
 		local Int is sum: 0;
-		local Array of Function is callbacks: [];
+		local Array of Function is callbacks: Array();
 		callbacks:add(item: { sum: sum + 1; });
 		callbacks:add(item: { sum: sum + 10; });
 		callbacks:add(item: { sum: sum + 100; });

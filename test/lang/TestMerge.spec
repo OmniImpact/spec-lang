@@ -13,15 +13,15 @@ Class of SpecUnitTest is TestMerge{
 	];
 
 	Function is testMergeFoldOrder(){
-		# Merged array contains the parent item first.
+		# Merged list contains the parent item first.
 		local MergeChild is child: MergeChild:init();
-		Assert:areEqualString('core', child:tags:get(index: 0));
+		Assert:areEqualString('core', child:tags:get(index: 0, default: ''));
 	}
 
 	Function is testMergeFoldAppend(){
-		# Merged array appends the child item.
+		# Merged list appends the child item.
 		local MergeChild is child: MergeChild:init();
-		Assert:areEqualString('extended', child:tags:get(index: 1));
+		Assert:areEqualString('extended', child:tags:get(index: 1, default: ''));
 	}
 
 	Function is testMergeFoldLength(){
@@ -48,7 +48,7 @@ Class is MergeBase{
 	## No ancestor declares `using`, so this merge stands alone as a fresh array.
 	merge Array of Array of String is using: [['base', 'sys', as Output()], ['base', 'sys', as Conditional()]] ;
 
-	Array of String is tags: ['core'];
+	List of String is tags: ['core'];
 
 	Function of Int is baseValue(){
 		return 10;
@@ -61,7 +61,7 @@ Class of MergeBase is MergeChild{
 	merge Array of Array of String is using: [['base', 'struct', Array], ['base', 'sys', as Output()] ];
 
 	## Folds onto ["core"]: result is ["core", "extended"].
-	merge Array of String is tags: ['extended'];
+	merge List of String is tags: ['extended'];
 
 	replace Function of Int is baseValue(){
 		return 20;

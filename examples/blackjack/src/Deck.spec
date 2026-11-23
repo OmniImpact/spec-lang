@@ -12,7 +12,7 @@ Class is Deck{
 
 	## Creates a 40-card deck containing values 1..10 repeated four times each.
 	Function of Array of Int is createDeck(){
-		local Array of Int is cards: [];
+		local Array of Int is cards: Array();
 		local Int is value: 1;
 		while({ value <= 10 }, {
 			repeat(count: 4, worker: {

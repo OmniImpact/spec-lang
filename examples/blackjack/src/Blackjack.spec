@@ -18,9 +18,9 @@ Class is Blackjack{
 	];
 
 	local Deck is deckUtil: Deck();
-	local Array of Int is deck: [];
-	local Array of Int is playerHand: [];
-	local Array of Int is dealerHand: [];
+	local Array of Int is deck: Array();
+	local Array of Int is playerHand: Array();
+	local Array of Int is dealerHand: Array();
 	local Boolean is roundActive: true;
 
 	## Loop driving the dealer's hit-until-17 turn.

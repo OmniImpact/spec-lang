@@ -11,7 +11,7 @@ Class is Sha256{
 		['base', 'sys', as Loops()]
 	];
 
-	local Array of Int is kTable: [
+	local Array of Int is kTable: Array([
 		1116352408, 1899447441, 3049323471, 3921009573,  961987163, 1508970993, 2453635748, 2870763221,
 		3624381080,  310598401,  607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580,
 		3835390401, 4022224774,  264347078,  604807628,  770255983, 1249150122, 1555081692, 1996064986,
@@ -20,7 +20,7 @@ Class is Sha256{
 		2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909,  275423344,
 		 430227734,  506948616,  659060556,  883997877,  958139571, 1322822218, 1537002063, 1747873779,
 		1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298
-	];
+	]);
 
 	local Function of UInt32 is rotr32(UInt32 is x, Int is n){
 		return (x >> n) | (x << (32 - n));
@@ -30,7 +30,7 @@ Class is Sha256{
 	## Returns a 32-element Array of Int (0..255).
 	Function of Array of Int is digest(Array of Int is data){
 		local Int is origLen: data:length();
-		local Array of Int is msg: [];
+		local Array of Int is msg: Array();
 		local Int is i: 0;
 		while({ i < origLen }, {
 			msg:add(item: data:get(index: i, default: 0) & 255);
@@ -56,7 +56,7 @@ Class is Sha256{
 		local UInt32 is h6: 528734635 as UInt32;
 		local UInt32 is h7: 1541459225 as UInt32;
 
-		local Array of UInt32 is w: [];
+		local Array of UInt32 is w: Array();
 		i: 0;
 		while({ i < 64 }, {
 			w:add(item: 0 as UInt32);
@@ -124,8 +124,8 @@ Class is Sha256{
 			off: off + 64;
 		});
 
-		local Array of UInt32 is hs: [h0, h1, h2, h3, h4, h5, h6, h7];
-		local Array of Int is out: [];
+		local Array of UInt32 is hs: Array([h0, h1, h2, h3, h4, h5, h6, h7]);
+		local Array of Int is out: Array();
 		i: 0;
 		while({ i < 8 }, {
 			local UInt32 is hv: hs:get(index: i, default: 0 as UInt32);
@@ -144,8 +144,8 @@ Class is Sha256{
 		if({ k:length() > 64 }, {
 			k: :digest(data: k);
 		});
-		local Array of Int is ipad: [];
-		local Array of Int is opad: [];
+		local Array of Int is ipad: Array();
+		local Array of Int is opad: Array();
 		local Int is i: 0;
 		while({ i < 64 }, {
 			local Int is kb: if({ i < k:length() }, { k:get(index: i, default: 0) & 255 }, { 0 });
@@ -171,7 +171,7 @@ Class is Sha256{
 	Function of Array of Int is hkdfExtract(Array of Int is salt, Array of Int is ikm){
 		local Array of Int is s: salt;
 		if({ s:length() == 0 }, {
-			local Array of Int is zeros: [];
+			local Array of Int is zeros: Array();
 			local Int is i: 0;
 			while({ i < 32 }, {
 				zeros:add(item: 0);
@@ -184,11 +184,11 @@ Class is Sha256{
 
 	## HKDF-Expand(prk, info, length).
 	Function of Array of Int is hkdfExpand(Array of Int is prk, Array of Int is info, Int is length){
-		local Array of Int is out: [];
-		local Array of Int is prev: [];
+		local Array of Int is out: Array();
+		local Array of Int is prev: Array();
 		local Int is counter: 1;
 		while({ out:length() < length }, {
-			local Array of Int is input: [];
+			local Array of Int is input: Array();
 			local Int is i: 0;
 			while({ i < prev:length() }, {
 				input:add(item: prev:get(index: i, default: 0));
@@ -215,7 +215,7 @@ Class is Sha256{
 	Function of Array of Int is hkdfExpandLabel(Array of Int is secret, String is label, Array of Int is context, Int is length){
 		local String is fullLabel: 'tls13 ' . label;
 		local Int is lblLen: fullLabel:byteLength();
-		local Array of Int is hkdfLabel: [];
+		local Array of Int is hkdfLabel: Array();
 		hkdfLabel:add(item: (length >> 8) & 255);
 		hkdfLabel:add(item: length & 255);
 		hkdfLabel:add(item: lblLen & 255);

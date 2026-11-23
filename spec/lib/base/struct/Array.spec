@@ -52,7 +52,7 @@ Class is Array of T{
 	}
 
 	local Function of Array of T is newLike(){
-		local Array of T is out: [];
+		local Array of T is out: Array();
 		out:elemKind: :elemKind;
 		return out;
 	}

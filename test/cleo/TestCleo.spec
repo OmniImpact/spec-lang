@@ -216,7 +216,7 @@ Class of SpecUnitTest is TestCleo{
 		local Cleo is out: Cleo:init(width: CleoWidth:cols(count: 40));
 		local CleoSection is sec: out:addSection(title: ' Art ');
 		sec:addImage(image: img);
-		sec:addAsciiImage(lines: [' /\\ ', '/__\\']);
+		sec:addAsciiImage(lines: Array([' /\\ ', '/__\\']));
 		local Array of String is fl: out:buildFrameLines();
 		Assert:isTrue(fl:length() >= 6);
 	}

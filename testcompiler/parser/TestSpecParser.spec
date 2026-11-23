@@ -32,7 +32,7 @@ Class of SpecUnitTest is TestSpecParser{
 		local Array of Token is toks: lx:tokenize();
 		local Parser is p: Parser:init(tokens: toks);
 		local ProgramNode is prog: p:parseProgram();
-		local Array of String is msgs: [];
+		local Array of String is msgs: Array();
 		p:getErrors():each(action: local Function(Error is e){
 			msgs:add(item: e:getMessage());
 		});

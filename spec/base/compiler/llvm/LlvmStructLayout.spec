@@ -15,8 +15,8 @@ Class is LlvmStructLayout{
 	];
 
 	String is structName: '';
-	Array of String is fieldNames: [];
-	Array of String is fieldTypes: [];
+	Array of String is fieldNames: Array();
+	Array of String is fieldTypes: Array();
 
 	replace Function is init(String is structName: ''){
 		:structName: structName;

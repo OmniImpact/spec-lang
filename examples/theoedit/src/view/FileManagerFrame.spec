@@ -24,9 +24,9 @@ Class of Frame is FileManagerFrame{
 	FocusTarget is okFocus: FocusTarget();
 	FocusTarget is cancelFocus: FocusTarget();
 
-	Array of String is dirEntries: [];
-	Array of ListView is listViews: [];
-	Array of TextInput is nameInputs: [];
+	Array of String is dirEntries: Array();
+	Array of ListView is listViews: Array();
+	Array of TextInput is nameInputs: Array();
 
 	replace Function is init(
 		String is mode: 'open',
@@ -96,8 +96,8 @@ Class of Frame is FileManagerFrame{
 	}
 
 	local Function of Array of String is buildEntries(String is dir){
-		local Array of String is dirs: [];
-		local Array of String is files: [];
+		local Array of String is dirs: Array();
+		local Array of String is files: Array();
 		Dir:dirList(path: dir):each(action: local Function(String is name){
 			if({ name:startsWith(prefix: '.') }, { return; });
 			local String is full: "{{dir}}/{{name}}";
@@ -109,7 +109,7 @@ Class of Frame is FileManagerFrame{
 		});
 		sortAlpha(items: dirs);
 		sortAlpha(items: files);
-		local Array of String is out: ['..'];
+		local Array of String is out: Array(['..']);
 		dirs:each(action: local Function(String is d){ out:add(item: d); });
 		files:each(action: local Function(String is f){ out:add(item: f); });
 		out;

@@ -422,7 +422,7 @@ Class is Map of K to V{
 	##
 	## @return: [Array] of keys.
 	Function of Array of K is keys(){
-		local Array of K is a: [];
+		local Array of K is a: Array();
 		local Boolean is isFrozen: :frozen;
 		if({ !isFrozen }, { :lock:lock(); });
 		local Int is i: 0;
@@ -474,7 +474,7 @@ Class is Map of K to V{
 	##
 	## @return: [Array] of values.
 	Function of Array is values(){
-		local Array is out: [];
+		local Array is out: Array();
 		:each(action: local Function(K is k, Any is v){
 			out:add(item: v);
 		});

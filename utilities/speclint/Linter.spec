@@ -47,7 +47,7 @@ Class is Linter{
 	];
 
 	## Registered lint rules discovered via reflection or fallback.
-	Array of LintRule is rules: [];
+	Array of LintRule is rules: Array();
 
 	## Audit name sets (Phase 0.5): every enum and class name in
 	## the loaded program, nested classes included.
@@ -55,39 +55,39 @@ Class is Linter{
 	local Map of String to String is auditClasses: Map:init();
 
 	## Worklist notices gathered by the audit pass.
-	local Array of LintIssue is auditIssues: [];
+	local Array of LintIssue is auditIssues: Array();
 
 	## The class whose members are currently being audited (with save and
 	## restore around nested-class recursion).
-	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: []);
+	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: Array());
 
 	## Loaded class nodes by name, for the inherited-import walk.
 	local Map of String to ClassInfo is auditClassNodes: Map:init();
-	local Array of ClassInfo is auditClassList: [];
+	local Array of ClassInfo is auditClassList: Array();
 
 	## Lowercase floor singletons routed by name.
-	local Array of String is floorAliases: [];
+	local Array of String is floorAliases: Array();
 
 	## Type-level exempt receivers (X3): primitives, base
 	## conversion targets, containers.
-	local Array of String is exemptClasses: [];
+	local Array of String is exemptClasses: Array();
 
 	replace Function is init(){
-		:rules: [];
+		:rules: Array();
 		:auditEnums: Map:init();
 		:auditClasses: Map:init();
 		:auditClassNodes: Map:init();
-		:auditClassList: [];
-		:auditIssues: [];
-		:floorAliases: [];
-		:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
+		:auditClassList: Array();
+		:auditIssues: Array();
+		:floorAliases: Array();
+		:exemptClasses: Array(['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List']);
 		:discoverRules();
 	}
 
 	## Discovers rules via reflection over the class registry, falling
 	## back to explicit registration if reflection finds none.
 	Function is discoverRules(){
-		:rules: [];
+		:rules: Array();
 		classNames():each(action: local Function(String is cn){
 			if({ extendsClass(className: cn, baseName: 'LintRule') && cn != 'LintRule' }, {
 				local LintRule is rule: instantiate(className: cn) as LintRule;
@@ -132,7 +132,7 @@ Class is Linter{
 	## @param program: Parsed [ProgramNode] AST.
 	## @return: [Array] of [LintIssue] items.
 	Function of Array of LintIssue is lint(String is source, ProgramNode is program){
-		local Array of LintIssue is issues: [];
+		local Array of LintIssue is issues: Array();
 
 		# 1. Source-level checks across registered rules
 		:rules:each(action: local Function(LintRule is r){
@@ -203,7 +203,7 @@ Class is Linter{
 	## @param program: Loaded [ProgramNode].
 	## @return: [Array] of [LintIssue] worklist notices.
 	Function of Array of LintIssue is auditProgram(ProgramNode is program){
-		:auditIssues: [];
+		:auditIssues: Array();
 		:buildAuditNameSets(classes: program:classes);
 		program:classes:each(action: local Function(ClassInfo is c){
 			:auditClass(classDef: c);

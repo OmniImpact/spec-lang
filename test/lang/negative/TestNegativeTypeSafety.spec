@@ -7,9 +7,15 @@ Class is NarrowFloatField{
 }
 
 #! case: testArrayElementMismatch
-#! expect: Cannot assign 'Array:String' to 'Array:Int'
+#! expect: Cannot assign 'List:String' to 'List:Int'
 Class is ArrayElementMismatch{
-	local Array of Int is flags: ['on', 'off'];
+	local Array of Int is flags: Array(['on', 'off']);
+}
+
+#! case: testStrictListNotArray
+#! expect: cannot assign 'List:Int' to 'Array:Int'
+Class is StrictListNotArray{
+	local Array of Int is nums: [1, 2, 3];
 }
 
 #! case: testMapValueMismatch
@@ -238,7 +244,7 @@ Class is ArrayDefaultMismatch{
 		['base', 'struct', Array]
 	];
 	replace Function is init(){
-		local Array of Int is nums: [1, 2, 3];
+		local Array of Int is nums: Array([1, 2, 3]);
 		local Int is v: nums:get(index: 0, default: 'bad');
 	}
 }

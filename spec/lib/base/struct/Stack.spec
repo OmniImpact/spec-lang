@@ -15,7 +15,7 @@ Class is Stack of T{
 		['base', 'sys', as Conditional()]
 	];
 
-	local Array of T is storage: [];
+	local Array of T is storage: Array();
 	local T is zeroDefault;
 
 	## Pushes an element onto the top of the stack.
@@ -68,7 +68,7 @@ Class is Stack of T{
 	##
 	## @return: Snapshot array.
 	Function of Array of T is toArray(){
-		local Array of T is out: [];
+		local Array of T is out: Array();
 		local Int is len: :storage:length();
 		local Int is i: 0;
 		while({ i < len }, {

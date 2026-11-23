@@ -37,7 +37,7 @@ Class is Dir{
 	##   callback, failures return the empty listing (Never Null).
 	## @return: Entry names.
 	Function of Array of String is dirList(String is path, Function is onError: local Function(SpecError of FileError is error){}){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
 			if({ :hasClosure(cb: onError) }, {

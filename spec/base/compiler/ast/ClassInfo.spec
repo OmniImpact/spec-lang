@@ -32,13 +32,13 @@ Class is ClassInfo{
 	String is baseClass: '';
 
 	## All parent class names (multiple inheritance).
-	Array of String is baseClasses: [];
+	Array of String is baseClasses: Array();
 
 	## Generic type parameter names declared on the class (e.g. T).
-	Array of String is typeParams: [];
+	Array of String is typeParams: Array();
 
 	## Class members (methods, fields, nested classes).
-	Array of Member is members: [];
+	Array of Member is members: Array();
 
 	## Initializes a class definition with single inheritance.
 	##
@@ -48,7 +48,7 @@ Class is ClassInfo{
 	replace Function is init(String is name, String is baseClass, Array of Member is members){
 		:name: name;
 		:baseClass: baseClass;
-		:baseClasses: if({ baseClass != '' }, { [baseClass] }, { [] });
+		:baseClasses: if({ baseClass != '' }, { Array([baseClass]) }, { Array() });
 		:members: members;
 	}
 
@@ -139,7 +139,7 @@ Class is ClassInfo{
 	##
 	## @return: The namespace segments, e.g. ['base', 'sysinternal'].
 	Function of Array of String is namespaceSegments(){
-		local Array of String is segs: [];
+		local Array of String is segs: Array();
 		local Int is count: :members:length();
 		while(
 			[Int is idx: 0],

@@ -20,8 +20,8 @@ Class is SpecError of T{
 	Any is panicRunner: '';
 	String is description: '';
 	String is kindName: '';
-	Array of StackFrame is stackTrace: [];
-	Array of SpecError is secondaryErrors: [];
+	Array of StackFrame is stackTrace: Array();
+	Array of SpecError is secondaryErrors: Array();
 	T is kind;
 
 	local Function of String is resolveKindName(T is k){
@@ -58,8 +58,8 @@ Class is SpecError of T{
 		}, {
 			:kindName: :resolveKindName(k: kind);
 		});
-		:stackTrace: [];
-		:secondaryErrors: [];
+		:stackTrace: Array();
+		:secondaryErrors: Array();
 		:addFrameAt(className: callerClass, methodName: callerMethod, file: callerFile, line: callerLine, col: 1);
 	}
 

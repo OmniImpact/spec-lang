@@ -27,7 +27,7 @@ Class of SpecUnitTest is TestLlvmSmoke{
 	];
 
 	Function is testClangToolchainAvailable(){
-		local Int is rc: Process:execute(command: 'clang', args: ['--version']);
+		local Int is rc: Process:execute(command: 'clang', args: Array(['--version']));
 		Assert:areEqualInt(0, rc);
 	}
 
@@ -44,10 +44,10 @@ Class of SpecUnitTest is TestLlvmSmoke{
 		local Boolean is wrote: File:fileWrite(path: llPath, content: ir, onSuccess: local Function(){}, onError: local Function(String is e){});
 		Assert:isTrue(wrote);
 
-		local Int is ccRc: Process:execute(command: 'clang', args: [llPath, '-o', binPath]);
+		local Int is ccRc: Process:execute(command: 'clang', args: Array([llPath, '-o', binPath]));
 		Assert:areEqualInt(0, ccRc);
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(42, runRc);
 
 		File:fileRemove(path: llPath);

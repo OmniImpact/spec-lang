@@ -98,7 +98,7 @@ Class is ContradictoryModifiers{
 #! case: testGroupRetired
 #! expect: Undefined identifier 'N21GroupTarget'
 Class is N21GroupFragment{
-	Array of String is group: [N21GroupTarget];
+	Array of String is group: Array([N21GroupTarget]);
 }
 
 Class is N21GroupCaller{

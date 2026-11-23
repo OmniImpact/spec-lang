@@ -44,15 +44,15 @@ Class is Parser{
 		['base', 'sys', as Conditional()]
 	];
 
-	local Array of Token is tokens: [];
+	local Array of Token is tokens: Array();
 	local Int is pos: 0;
 	local Int is length: 0;
 	local String is sourceFile: '';
-	local Array of Error is errors: [];
+	local Array of Error is errors: Array();
 	local ErrorText is errText: ErrorText:init();
 
 	local Lexer is lexer: Lexer:init(source: '');
-	local Array of Token is lookahead: [];
+	local Array of Token is lookahead: Array();
 	local Boolean is streaming: false;
 
 	# Nesting depth of template desugaring: 0 at statement level, >= 1
@@ -74,10 +74,10 @@ Class is Parser{
 		:length: tokens:length();
 		:pos: 0;
 		:sourceFile: '';
-		:errors: [];
+		:errors: Array();
 		:templateDepth: 0;
 		:streaming: false;
-		:lookahead: [];
+		:lookahead: Array();
 	}
 
 	## Configures the parser to stream tokens on-demand from a lexer.
@@ -86,7 +86,7 @@ Class is Parser{
 	Function is setLexer(Lexer is lexer){
 		:lexer: lexer;
 		:streaming: true;
-		:lookahead: [];
+		:lookahead: Array();
 	}
 
 	## Attaches the declaring file for provenance.
@@ -286,7 +286,7 @@ Class is Parser{
 
 	## Consumes call arguments: positional or `name: value` pairs.
 	Function of Array of NamedArg is parseArgs(){
-		local Array of NamedArg is args: [];
+		local Array of NamedArg is args: Array();
 		local Boolean is keepGoing: true;
 		while({ keepGoing && !:checkPunct(p: Punctuation:GROUP_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			local String is argName: '';
@@ -323,7 +323,7 @@ Class is Parser{
 	## Consumes formal parameter lists: `Type is name`, shorthand `name`
 	## (Any-typed), and `self: field` receiver fields.
 	Function of Array of Parameter is parseParams(){
-		local Array of Parameter is params: [];
+		local Array of Parameter is params: Array();
 		local Boolean is keepGoing: true;
 		while({ keepGoing && !:checkPunct(p: Punctuation:GROUP_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			# `:field` / `: field` declares a receiver field parameter.
@@ -382,7 +382,7 @@ Class is Parser{
 	##
 	## @return: All top-level class definitions.
 	Function of ProgramNode is parseProgram(){
-		local Array of ClassInfo is classes: [];
+		local Array of ClassInfo is classes: Array();
 		while({ !:check(kind: TokenKind:EOF, value: '') }, {
 			if({ :atEnumHeader() }, {
 				classes:add(item: :parseEnum());
@@ -410,7 +410,7 @@ Class is Parser{
 				if({ m:kind == MemberKind:CLASS }, {
 					m:nestedClass:setOuter(name: qualifiedOuter);
 					m:nestedClass:baseClasses:add(item: c:name);
-					:linkNestedClasses(classes: [m:nestedClass]);
+					:linkNestedClasses(classes: Array([m:nestedClass]));
 				});
 			});
 		});
@@ -445,7 +445,7 @@ Class is Parser{
 		:advance();
 
 		# Pre-binder `of`: parent classes.
-		local Array of String is baseClasses: [];
+		local Array of String is baseClasses: Array();
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
 			local Boolean is keepGoing: true;
@@ -470,7 +470,7 @@ Class is Parser{
 		local String is name: nameTok:getValue();
 
 		# Post-name `of`: generic type parameters.
-		local Array of String is typeParams: [];
+		local Array of String is typeParams: Array();
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
 			local Token is tp1: :advance();
@@ -483,7 +483,7 @@ Class is Parser{
 		});
 
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
-		local Array of Member is members: [];
+		local Array of Member is members: Array();
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			members:add(item: :parseMember());
 		});
@@ -621,7 +621,7 @@ Class is Parser{
 		# Post-name `of`: generic type parameters over the tagged shape —
 		# the same grammar as `Class is Box of T`. The pre-name `of` keeps
 		# its meaning: the value-enum backing type.
-		local Array of String is enumTypeParams: [];
+		local Array of String is enumTypeParams: Array();
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
 			local Token is ep1: :advance();
@@ -635,7 +635,7 @@ Class is Parser{
 
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
 
-		local Array of Member is members: [];
+		local Array of Member is members: Array();
 		local Int is count: 0;
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			# Stray terminator between body members: shorthand metadata
@@ -650,7 +650,7 @@ Class is Parser{
 			}, {
 				local Token is vTok: :advance();
 				local String is vName: vTok:getValue();
-				local Array of Parameter is vParams: [];
+				local Array of Parameter is vParams: Array();
 				if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 					:advance();
 					vParams: :parseParams();
@@ -670,7 +670,7 @@ Class is Parser{
 
 				local Member is m: Member:init(kind: MemberKind:FIELD);
 				m:setLine(line: vTok:getLine());
-				m:modifiers: ['static', 'local'];
+				m:modifiers: Array(['static', 'local']);
 				m:memberType: Type:init(name: backingType);
 				m:name: vName;
 				m:params: vParams;
@@ -702,7 +702,7 @@ Class is Parser{
 		c:setLine(line: nameTok:getLine());
 		c:setSourceFile(file: :sourceFile);
 		c:setTypeParams(params: enumTypeParams);
-		c:withBaseClasses(name: name, baseClasses: [:names:enumHeader()], members: members);
+		c:withBaseClasses(name: name, baseClasses: Array([:names:enumHeader()]), members: members);
 		return c;
 	}
 
@@ -712,7 +712,7 @@ Class is Parser{
 	## @return: The member descriptor.
 	Function of Member is parseMember(){
 		local Int is startLine: :peek():getLine();
-		local Array of String is modifiers: [];
+		local Array of String is modifiers: Array();
 		while({ :checkKeyword(kw: Keyword:LOCAL) || :checkKeyword(kw: Keyword:CONTAINED) || :checkKeyword(kw: Keyword:REPLACE) || :checkKeyword(kw: Keyword:MERGE) || :checkKeyword(kw: Keyword:HELD) }, {
 			local Token is tok: :advance();
 			modifiers:add(item: tok:getValue());
@@ -840,10 +840,10 @@ Class is Parser{
 	## @return: The body statements.
 	local Function of Array of Statement is parseMethodBody(Array of Parameter is params){
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
-		local Array of Statement is body: [];
+		local Array of Statement is body: Array();
 		params:each(action: local Function(Parameter is p){
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
-				local Expression is lhs: Expression:Path(segments: [:names:selfIdent(), p:name]);
+				local Expression is lhs: Expression:Path(segments: Array([:names:selfIdent(), p:name]));
 				local Expression is rhs: Expression:Ident(name: p:name);
 				local Statement is assignS: Statement:Assign(assignTarget: lhs, assignValue: rhs);
 				body:add(item: assignS);
@@ -866,7 +866,7 @@ Class is Parser{
 			local Type is elem: :parseType();
 			:matchPunct(p: Punctuation:BRACKET_CLOSE);
 			local Type is lnode: Type:init(name: :names:listName());
-			lnode:params: [elem];
+			lnode:params: Array([elem]);
 			return lnode;
 		});
 		local Token is baseTok: :advance();
@@ -883,7 +883,7 @@ Class is Parser{
 
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
-			local Array of Type is params: [];
+			local Array of Type is params: Array();
 			params:add(item: :parseType());
 
 			if({ :checkKeyword(kw: Keyword:TO) }, {
@@ -973,7 +973,7 @@ Class is Parser{
 			});
 			:matchPunct(p: Punctuation:TERMINATOR);
 
-			local Statement is s: Statement:VarDecl(modifiers: ['local'], varType: vType, varName: name, initExpr: initExpr, hasInit: hasInit);
+			local Statement is s: Statement:VarDecl(modifiers: Array(['local']), varType: vType, varName: name, initExpr: initExpr, hasInit: hasInit);
 			s:setLine(line: startLine);
 			return s;
 		});
@@ -1028,7 +1028,7 @@ Class is Parser{
 	## @return: The desugared EXPR statement holding the call.
 	local Function of Statement is parseAsStatement(Int is startLine){
 		:advance();
-		local Array of Parameter is params: [];
+		local Array of Parameter is params: Array();
 		local Boolean is hasParams: false;
 		if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 			:advance();
@@ -1051,7 +1051,7 @@ Class is Parser{
 		local Expression is callExpr: :parseExpression();
 		:matchPunct(p: Punctuation:TERMINATOR);
 
-		local Array of Statement is closureBody: [];
+		local Array of Statement is closureBody: Array();
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			closureBody:add(item: :parseStatement());
 		});
@@ -1063,15 +1063,15 @@ Class is Parser{
 			else: {
 				local CallData is created: match(on: callExpr, when: [
 					Expression:FieldAccess: local Function of CallData(Expression is target, String is fieldName){
-						return CallData:init(target: target, name: fieldName, args: []);
+						return CallData:init(target: target, name: fieldName, args: Array());
 					},
 					Expression:Ident: local Function of CallData(String is name){
-						local CallData is bareCd: CallData:init(target: Expression:Ident(name: :names:selfIdent()), name: name, args: []);
+						local CallData is bareCd: CallData:init(target: Expression:Ident(name: :names:selfIdent()), name: name, args: Array());
 						bareCd:isBareCall: true;
 						return bareCd;
 					},
 					else: {
-						CallData:init(target: callExpr, name: '', args: [])
+						CallData:init(target: callExpr, name: '', args: Array())
 					}
 				]);
 				callExpr: Expression:Call(call: created);
@@ -1103,17 +1103,17 @@ Class is Parser{
 	## @return: The folded expression.
 	Function of Expression is parseLevel(PrecedenceLevel is level){
 		return match(on: level, when: [
-			PrecedenceLevel:MULTIPLICATIVE: { :foldBinary(ops: ['*', '/', '%'], next: PrecedenceLevel:NONE) },
-			PrecedenceLevel:ADDITIVE: { :foldBinary(ops: ['+', '-'], next: PrecedenceLevel:MULTIPLICATIVE) },
-			PrecedenceLevel:SHIFT: { :foldBinary(ops: ['<<', '>>'], next: PrecedenceLevel:ADDITIVE) },
-			PrecedenceLevel:CONCAT: { :foldBinary(ops: ['.'], next: PrecedenceLevel:SHIFT) },
-			PrecedenceLevel:RELATIONAL: { :foldBinary(ops: ['<', '<=', '>', '>='], next: PrecedenceLevel:CONCAT) },
-			PrecedenceLevel:EQUALITY: { :foldBinary(ops: ['==', '!=', 'is'], next: PrecedenceLevel:RELATIONAL) },
-			PrecedenceLevel:BIT_AND: { :foldBinary(ops: ['&'], next: PrecedenceLevel:EQUALITY) },
-			PrecedenceLevel:BIT_XOR: { :foldBinary(ops: ['^'], next: PrecedenceLevel:BIT_AND) },
-			PrecedenceLevel:BIT_OR: { :foldBinary(ops: ['|'], next: PrecedenceLevel:BIT_XOR) },
-			PrecedenceLevel:LOGICAL_AND: { :foldBinary(ops: ['&&'], next: PrecedenceLevel:BIT_OR) },
-			PrecedenceLevel:LOGICAL_OR: { :foldBinary(ops: ['||'], next: PrecedenceLevel:LOGICAL_AND) },
+			PrecedenceLevel:MULTIPLICATIVE: { :foldBinary(ops: Array(['*', '/', '%']), next: PrecedenceLevel:NONE) },
+			PrecedenceLevel:ADDITIVE: { :foldBinary(ops: Array(['+', '-']), next: PrecedenceLevel:MULTIPLICATIVE) },
+			PrecedenceLevel:SHIFT: { :foldBinary(ops: Array(['<<', '>>']), next: PrecedenceLevel:ADDITIVE) },
+			PrecedenceLevel:CONCAT: { :foldBinary(ops: Array(['.']), next: PrecedenceLevel:SHIFT) },
+			PrecedenceLevel:RELATIONAL: { :foldBinary(ops: Array(['<', '<=', '>', '>=']), next: PrecedenceLevel:CONCAT) },
+			PrecedenceLevel:EQUALITY: { :foldBinary(ops: Array(['==', '!=', 'is']), next: PrecedenceLevel:RELATIONAL) },
+			PrecedenceLevel:BIT_AND: { :foldBinary(ops: Array(['&']), next: PrecedenceLevel:EQUALITY) },
+			PrecedenceLevel:BIT_XOR: { :foldBinary(ops: Array(['^']), next: PrecedenceLevel:BIT_AND) },
+			PrecedenceLevel:BIT_OR: { :foldBinary(ops: Array(['|']), next: PrecedenceLevel:BIT_XOR) },
+			PrecedenceLevel:LOGICAL_AND: { :foldBinary(ops: Array(['&&']), next: PrecedenceLevel:BIT_OR) },
+			PrecedenceLevel:LOGICAL_OR: { :foldBinary(ops: Array(['||']), next: PrecedenceLevel:LOGICAL_AND) },
 			PrecedenceLevel:NONE: { :parseUnary() }
 		]);
 	}
@@ -1199,7 +1199,7 @@ Class is Parser{
 		});
 		:advance();
 		local String is clsName: clsTok:getValue();
-		local Array of NamedArg is args: [];
+		local Array of NamedArg is args: Array();
 		if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 			:advance();
 			if({ !:checkPunct(p: Punctuation:GROUP_CLOSE) }, {
@@ -1247,7 +1247,7 @@ Class is Parser{
 		if({ :checkKeyword(kw: Keyword:AS) }, {
 			:advance();
 			local Token is targetTok: :advance();
-			local Array of Expression is args: [];
+			local Array of Expression is args: Array();
 			if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 				:advance();
 				if({ !:checkPunct(p: Punctuation:GROUP_CLOSE) }, {
@@ -1341,7 +1341,7 @@ Class is Parser{
 									if({ !isPathOrIdent }, {
 										currentExpr: Expression:FieldAccess(target: currentExpr, fieldName: method);
 									}, {
-										local Array of String is segs: [];
+										local Array of String is segs: Array();
 										match(on: currentExpr, when: [
 											Expression:Path: local Function(Array of String is segments){
 												segments:each(action: local Function(String is s){
@@ -1532,7 +1532,7 @@ Class is Parser{
 	## @return: ARRAY expression carrying parsed parameters in anonParams.
 	Function of Expression is parseDeclList(){
 		:matchPunct(p: Punctuation:BRACKET_OPEN);
-		local Array of Parameter is params: [];
+		local Array of Parameter is params: Array();
 		local Boolean is keepGoing: true;
 		while({ keepGoing && !:checkPunct(p: Punctuation:BRACKET_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			local Type is pType: :parseType();
@@ -1551,7 +1551,7 @@ Class is Parser{
 			});
 		});
 		:matchPunct(p: Punctuation:BRACKET_CLOSE);
-		return Expression:AnonFn(returnType: Type:init(name: ''), params: params, body: []);
+		return Expression:AnonFn(returnType: Type:init(name: ''), params: params, body: Array());
 	}
 
 	## Parses a function block shorthand `{ ... }` as an anonymous function.
@@ -1563,8 +1563,8 @@ Class is Parser{
 	## @return: The ANON_FN expression.
 	Function of Expression is parseFunctionBlock(){
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
-		local Array of Statement is body: [];
-		local Array of Parameter is params: [];
+		local Array of Statement is body: Array();
+		local Array of Parameter is params: Array();
 		local Type is returnType: Type:init(name: :names:voidName());
 
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
@@ -1610,19 +1610,19 @@ Class is Parser{
 		:advance();
 		if({ :checkPunct(p: Punctuation:BRACKET_CLOSE) }, {
 			:advance();
-			return Expression:ArrayLit(items: []);
+			return Expression:ArrayLit(items: Array());
 		});
 		if({ :checkPunct(p: Punctuation:PAIR) && :peekAhead(offset: 1):getValue() == Punctuation:BRACKET_CLOSE:value() }, {
 			:advance();
 			:matchPunct(p: Punctuation:BRACKET_CLOSE);
-			return Expression:MapLit(keys: [], values: []);
+			return Expression:MapLit(keys: Array(), values: Array());
 		});
 		local Expression is firstItem: :parseExpression();
 		if({ :checkPunct(p: Punctuation:PAIR) }, {
 			:advance();
 			local Expression is firstVal: :parseExpression();
-			local Array of Expression is mKeys: [firstItem];
-			local Array of Expression is mVals: [firstVal];
+			local Array of Expression is mKeys: Array([firstItem]);
+			local Array of Expression is mVals: Array([firstVal]);
 			if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 				:advance();
 				local Boolean is keepGoing: true;
@@ -1642,7 +1642,7 @@ Class is Parser{
 			:matchPunct(p: Punctuation:BRACKET_CLOSE);
 			return Expression:MapLit(keys: mKeys, values: mVals);
 		});
-		local Array of Expression is items: [firstItem];
+		local Array of Expression is items: Array([firstItem]);
 		if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 			:advance();
 			local Boolean is keepGoing: true;
@@ -1793,9 +1793,9 @@ Class is Parser{
 		local Int is sPos: 0;
 		local Boolean is inHole: false;
 		local String is lit: '';
-		local Array of String is lits: [];
+		local Array of String is lits: Array();
 		local String is hole: '';
-		local Array of String is holes: [];
+		local Array of String is holes: Array();
 		local String is quoteCh: '';
 		local Int is braceDepth: 0;
 		local TemplateEscapes is esc: TemplateEscapes:init();

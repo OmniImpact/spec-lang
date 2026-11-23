@@ -16,7 +16,7 @@ Class of SpecUnitTest is TestContainerMethods{
 
 	## Case 1: Array:slice extracts subarrays and clamps bounds.
 	Function is testSlice(){
-		local Array of String is words: ['zero', 'one', 'two', 'three', 'four'];
+		local Array of String is words: Array(['zero', 'one', 'two', 'three', 'four']);
 		local Array of String is mid: words:slice(start: 1, end: 4);
 		local Array of String is emptySlice: words:slice(start: 3, end: 2);
 		Assert:areEqualInt(3, mid:length());
@@ -28,7 +28,7 @@ Class of SpecUnitTest is TestContainerMethods{
 
 	## Case 2: Array:indexOf locates elements and returns the fallback.
 	Function is testIndexOf(){
-		local Array of String is words: ['zero', 'one', 'two', 'three', 'four'];
+		local Array of String is words: Array(['zero', 'one', 'two', 'three', 'four']);
 		Assert:areEqualInt(1, words:indexOf(search: 'one', default: -1));
 		Assert:areEqualInt(4, words:indexOf(search: 'four', default: -1));
 		Assert:areEqualInt(-99, words:indexOf(search: 'five', default: -99));
@@ -36,8 +36,8 @@ Class of SpecUnitTest is TestContainerMethods{
 
 	## Case 3: Array:join concatenates elements with the separator.
 	Function is testJoin(){
-		local Array of String is words: ['zero', 'one', 'two', 'three', 'four'];
-		local Array of String is singleArr: ['only'];
+		local Array of String is words: Array(['zero', 'one', 'two', 'three', 'four']);
+		local Array of String is singleArr: Array(['only']);
 		Assert:areEqualString('zero, one, two, three, four', words:join(separator: ', '));
 		Assert:areEqualString('zeroonetwothreefour', words:join(separator: ''));
 		Assert:areEqualString('only', singleArr:join(separator: '-'));
@@ -45,7 +45,7 @@ Class of SpecUnitTest is TestContainerMethods{
 
 	## Case 4: Array combinators: count, any, filter.
 	Function is testArrayCombinators(){
-		local Array of String is items: ['apple', 'avocado', 'banana', 'apricot', 'cherry'];
+		local Array of String is items: Array(['apple', 'avocado', 'banana', 'apricot', 'cherry']);
 		local Int is aCount: items:count(predicate: local Function of Boolean(String is s){
 			return s:startsWith(prefix: 'a');
 		});
@@ -94,7 +94,7 @@ Class of SpecUnitTest is TestContainerMethods{
 
 	## Case 6: Array direct mutations, indexing, pop, removeAt, and clear.
 	Function is testArrayDirectOps(){
-		local Array of String is arr: ['a', 'b', 'c'];
+		local Array of String is arr: Array(['a', 'b', 'c']);
 		Assert:areEqualInt(3, arr:length());
 
 		arr[1]: 'beta';
@@ -120,7 +120,7 @@ Class of SpecUnitTest is TestContainerMethods{
 
 	## Case 7: Array mutations and FIFO/LIFO behaviors.
 	Function is testArrayMutationsAndDefaults(){
-		local Array of String is arr: [];
+		local Array of String is arr: Array();
 		Assert:areEqualInt(0, arr:length());
 		Assert:isTrue(arr:isEmpty());
 

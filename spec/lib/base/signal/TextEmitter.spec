@@ -13,12 +13,12 @@ Class of Emitter is TextEmitter{
 	];
 
 	String is textValue: '';
-	Array of String is replayBuffer: [];
+	Array of String is replayBuffer: Array();
 
 	replace Function is init(String is initial: '', Int is replay: 1){
 		initEmitter(replay: replay);
 		:textValue: initial;
-		:replayBuffer: [];
+		:replayBuffer: Array();
 		if({ replay != 0 }, {
 			:replayBuffer:add(item: initial);
 		});
@@ -105,8 +105,8 @@ Class of Emitter is TextEmitter{
 	Function of TextEmitter is zipText(TextEmitter is other, Function of String is combine){
 		local Function of String is fn: combine;
 		local TextEmitter is out: TextEmitter(initial: '', replay: replayCount);
-		local Array of String is qA: [];
-		local Array of String is qB: [];
+		local Array of String is qA: Array();
+		local Array of String is qB: Array();
 		local Boolean is firstA: true;
 		local Boolean is firstB: true;
 		attach(collector: TextCollector(onEmit: local Function(String is a){

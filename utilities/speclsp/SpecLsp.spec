@@ -235,7 +235,7 @@ Class is SpecLsp{
 	}
 
 	local Function is analyzeFullFile(String is uri, String is filePath){
-		local Array of String is diags: [];
+		local Array of String is diags: Array();
 		if({ filePath == '' || !fileExists(path: filePath) }, {
 			publishDiagnostics(uri: uri, diags: diags);
 			return;
@@ -281,7 +281,7 @@ Class is SpecLsp{
 	}
 
 	local Function is analyzeSyntaxOnly(String is uri, String is text){
-		local Array of String is diags: [];
+		local Array of String is diags: Array();
 		local Lexer is lx: Lexer:init(source: text);
 		local Parser is p: Parser:init(tokens: lx:tokenize());
 		p:parseProgram();
@@ -562,7 +562,7 @@ Class is SpecLsp{
 		local Int is line0: Json:getInt(obj: pos, key: 'line', default: 0);
 		local Int is char0: Json:getInt(obj: pos, key: 'character', default: 0);
 
-		local Array of String is items: [];
+		local Array of String is items: Array();
 		local String is text: :docTexts:getString(key: uri, default: '');
 		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: []));
 
@@ -593,12 +593,12 @@ Class is SpecLsp{
 			return;
 		});
 
-		local Array of String is keywords: ['local', 'contained', 'replace', 'merge', 'held', 'is', 'as', 'of', 'to', 'return', 'Class', 'Enum'];
+		local Array of String is keywords: Array(['local', 'contained', 'replace', 'merge', 'held', 'is', 'as', 'of', 'to', 'return', 'Class', 'Enum']);
 		keywords:each(action: local Function(String is kw){
 			items:add(item: makeCompletionItemJson(label: kw, kind: 14, detail: 'keyword'));
 		});
 
-		local Array of String is prims: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Function', 'Any'];
+		local Array of String is prims: Array(['Int', 'Byte', 'Float', 'Boolean', 'String', 'Function', 'Any']);
 		prims:each(action: local Function(String is pt){
 			items:add(item: makeCompletionItemJson(label: pt, kind: 7, detail: 'primitive type'));
 		});
@@ -634,7 +634,7 @@ Class is SpecLsp{
 				caps['definitionProvider']: jBool(b: true);
 
 				local Map of String to Any is compOpts: [:];
-				local Array of String is triggers: [':'];
+				local Array of String is triggers: Array([':']);
 				compOpts['triggerCharacters']: triggers;
 				caps['completionProvider']: compOpts;
 
@@ -692,7 +692,7 @@ Class is SpecLsp{
 				:docTexts:remove(key: uri);
 				:docPaths:remove(key: uri);
 				:docPrograms:remove(key: uri);
-				local Array of String is emptyDiags: [];
+				local Array of String is emptyDiags: Array();
 				publishDiagnostics(uri: uri, diags: emptyDiags);
 			},
 			'textDocument/hover': {

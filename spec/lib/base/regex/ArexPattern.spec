@@ -34,16 +34,16 @@ Class is ArexPattern{
 	# 12 = LOOKBEHIND_POS (arg1 = subStart, to out1)
 	# 13 = LOOKBEHIND_NEG (arg1 = subStart, to out1)
 	# 14 = BACKREF (arg1 = groupIndex, arg2 = caseFold, to out1)
-	local Array of Int is ops: [];
-	local Array of Int is arg1s: [];
-	local Array of Int is arg2s: [];
-	local Array of Int is out1s: [];
-	local Array of Int is out2s: [];
+	local Array of Int is ops: Array();
+	local Array of Int is arg1s: Array();
+	local Array of Int is arg2s: Array();
+	local Array of Int is out1s: Array();
+	local Array of Int is out2s: Array();
 
-	local Array of Int is classNegated: [];
-	local Array of Int is classRangeCid: [];
-	local Array of Int is classRangeLo: [];
-	local Array of Int is classRangeHi: [];
+	local Array of Int is classNegated: Array();
+	local Array of Int is classRangeCid: Array();
+	local Array of Int is classRangeLo: Array();
+	local Array of Int is classRangeHi: Array();
 
 	local Str is pat: '';
 	local String is patStr: '';
@@ -51,7 +51,7 @@ Class is ArexPattern{
 	local Int is pos: 0;
 	local Int is startState: 0;
 	local Int is numGroups: 0;
-	local Array of String is groupNames: [];
+	local Array of String is groupNames: Array();
 
 	local Boolean is flagI: false;
 	local Boolean is flagM: false;
@@ -65,21 +65,21 @@ Class is ArexPattern{
 	local Str is compileError: '';
 
 	replace Function is init(){
-		:ops: [];
-		:arg1s: [];
-		:arg2s: [];
-		:out1s: [];
-		:out2s: [];
-		:classNegated: [];
-		:classRangeCid: [];
-		:classRangeLo: [];
-		:classRangeHi: [];
+		:ops: Array();
+		:arg1s: Array();
+		:arg2s: Array();
+		:out1s: Array();
+		:out2s: Array();
+		:classNegated: Array();
+		:classRangeCid: Array();
+		:classRangeLo: Array();
+		:classRangeHi: Array();
 		:pat: '';
 		:pLen: 0;
 		:pos: 0;
 		:startState: 0;
 		:numGroups: 0;
-		:groupNames: [''];
+		:groupNames: Array(['']);
 		:flagI: false;
 		:flagM: false;
 		:flagS: false;
@@ -293,7 +293,7 @@ Class is ArexPattern{
 	}
 
 	local Function of Array of Int is makeFrag(Int is start, Int is exit){
-		local Array of Int is f: [];
+		local Array of Int is f: Array();
 		f:add(item: start);
 		f:add(item: exit);
 		return f;
@@ -910,7 +910,7 @@ Class is ArexPattern{
 			local Int is s: stackStates:get(index: top);
 			stackStates:removeAt(index: top);
 
-			local Array of Int is curC: [];
+			local Array of Int is curC: Array();
 			local Int is cBase: stackCaps:length() - capStride;
 			ci: 0;
 			while({ ci < capStride }, {
@@ -998,20 +998,20 @@ Class is ArexPattern{
 		local Int is numStates: :ops:length();
 		local Int is capStride: (:numGroups + 1) * 2;
 
-		local Array of Int is emptyCaps: [];
+		local Array of Int is emptyCaps: Array();
 		local Int is ci: 0;
 		while({ ci < capStride }, {
 			emptyCaps:add(item: -1);
 			ci: ci + 1;
 		});
 
-		local Array of Int is currStates: [];
-		local Array of Int is currCaps: [];
-		local Array of Int is nextStates: [];
-		local Array of Int is nextCaps: [];
-		local Array of Int is stamps: [];
-		local Array of Int is stackStates: [];
-		local Array of Int is stackCaps: [];
+		local Array of Int is currStates: Array();
+		local Array of Int is currCaps: Array();
+		local Array of Int is nextStates: Array();
+		local Array of Int is nextCaps: Array();
+		local Array of Int is stamps: Array();
+		local Array of Int is stackStates: Array();
+		local Array of Int is stackCaps: Array();
 
 		local Int is i: 0;
 		while({ i < numStates }, {
@@ -1021,7 +1021,7 @@ Class is ArexPattern{
 
 		local Int is stamp: 1;
 		local Boolean is found: false;
-		local Array of Int is bestCaps: [];
+		local Array of Int is bestCaps: Array();
 		ci: 0;
 		while({ ci < capStride }, {
 			bestCaps:add(item: -1);
@@ -1097,7 +1097,7 @@ Class is ArexPattern{
 					while({ k < currStates:length() }, {
 						local Int is s: currStates:get(index: k);
 						if({ :unitMatchesNode(s: s, u: u) }, {
-							local Array of Int is tCaps: [];
+							local Array of Int is tCaps: Array();
 							local Int is cBase: k * capStride;
 							ci: 0;
 							while({ ci < capStride }, {
@@ -1138,7 +1138,7 @@ Class is ArexPattern{
 			});
 		});
 
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		if({ found }, { out:add(item: 1); }, { out:add(item: 0); });
 		ci: 0;
 		while({ ci < capStride }, {
@@ -1250,7 +1250,7 @@ Class is ArexPattern{
 	){
 		local Int is uLen: units:length();
 		local Int is capStride: (:numGroups + 1) * 2;
-		local Array of Int is caps: [];
+		local Array of Int is caps: Array();
 		local Int is ci: 0;
 		while({ ci < capStride }, {
 			caps:add(item: -1);
@@ -1268,7 +1268,7 @@ Class is ArexPattern{
 				ci: ci + 1;
 			});
 			if({ :btExec(s: :startState, pos: sPos, units: units, uLen: uLen, caps: caps, exactEndPos: exactEnd) }, {
-				local Array of Int is out: [1];
+				local Array of Int is out: Array([1]);
 				ci: 0;
 				while({ ci < capStride }, {
 					out:add(item: caps:get(index: ci));
@@ -1278,7 +1278,7 @@ Class is ArexPattern{
 			});
 			sPos: sPos + 1;
 		});
-		local Array of Int is miss: [0];
+		local Array of Int is miss: Array([0]);
 		ci: 0;
 		while({ ci < capStride }, {
 			miss:add(item: -1);
@@ -1339,8 +1339,8 @@ Class is ArexPattern{
 	# --- Synchronous execution entry points ---
 
 	Function is rContainsSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Array of Int is matchRes: :runUnitMatch(units: units, startOffset: 0, anchorStart: false, anchorEnd: false);
 		local Boolean is matched: matchRes:get(index: 0) == 1;
@@ -1348,8 +1348,8 @@ Class is ArexPattern{
 	}
 
 	Function is rEqualsSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Array of Int is matchRes: :runUnitMatch(units: units, startOffset: 0, anchorStart: true, anchorEnd: true);
 		local Boolean is matched: matchRes:get(index: 0) == 1;
@@ -1357,8 +1357,8 @@ Class is ArexPattern{
 	}
 
 	Function is rStartsWithSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Array of Int is matchRes: :runUnitMatch(units: units, startOffset: 0, anchorStart: true, anchorEnd: false);
 		local Boolean is matched: matchRes:get(index: 0) == 1;
@@ -1366,8 +1366,8 @@ Class is ArexPattern{
 	}
 
 	Function is rEndsWithSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Array of Int is matchRes: :runUnitMatch(units: units, startOffset: 0, anchorStart: false, anchorEnd: true);
 		local Boolean is matched: matchRes:get(index: 0) == 1;
@@ -1375,8 +1375,8 @@ Class is ArexPattern{
 	}
 
 	Function is rFindSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Array of Int is matchRes: :runUnitMatch(units: units, startOffset: 0, anchorStart: false, anchorEnd: false);
 		local Boolean is found: matchRes:get(index: 0) == 1;
@@ -1392,12 +1392,12 @@ Class is ArexPattern{
 	}
 
 	Function is rCapturesSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Array of Int is matchRes: :runUnitMatch(units: units, startOffset: 0, anchorStart: false, anchorEnd: false);
 		local Boolean is found: matchRes:get(index: 0) == 1;
-		local Array of Str is groups: [];
+		local Array of Str is groups: Array();
 		if({ found }, {
 			local Int is g: 0;
 			while({ g <= :numGroups }, {
@@ -1415,8 +1415,8 @@ Class is ArexPattern{
 	}
 
 	Function is rCountSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Int is uLen: units:length();
 		local Int is cursor: 0;
@@ -1442,11 +1442,11 @@ Class is ArexPattern{
 	}
 
 	Function is rFindAllSync(Str is input, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Int is uLen: units:length();
-		local Array of Str is matches: [];
+		local Array of Str is matches: Array();
 		local Int is cursor: 0;
 		local Boolean is running: true;
 		while({ running && cursor <= uLen }, {
@@ -1469,12 +1469,12 @@ Class is ArexPattern{
 	}
 
 	Function is rSplitSync(Str is input, Function is result, Int is limit: -1){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Int is uLen: units:length();
 		local Int is inLen: input:length();
-		local Array of Str is parts: [];
+		local Array of Str is parts: Array();
 		if({ limit == 1 }, {
 			parts:add(item: input);
 			result(parts);
@@ -1513,12 +1513,12 @@ Class is ArexPattern{
 	}
 
 	Function is rReplaceStrSync(Str is input, Str is replacement, Boolean is all, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Int is uLen: units:length();
 		local Int is inLen: input:length();
-		local Array of String is chunks: [];
+		local Array of String is chunks: Array();
 		local Int is cursor: 0;
 		local Boolean is running: true;
 		while({ running && cursor <= uLen }, {
@@ -1552,12 +1552,12 @@ Class is ArexPattern{
 	}
 
 	Function is rReplaceFnSync(Str is input, Function is replacer, Boolean is all, Function is result){
-		local Array of Int is units: [];
-		local Array of Int is byteOffsets: [];
+		local Array of Int is units: Array();
+		local Array of Int is byteOffsets: Array();
 		:prepareUnits(input: input, units: units, byteOffsets: byteOffsets);
 		local Int is uLen: units:length();
 		local Int is inLen: input:length();
-		local Array of String is chunks: [];
+		local Array of String is chunks: Array();
 		local Int is cursor: 0;
 		local Boolean is running: true;
 		while({ running && cursor <= uLen }, {

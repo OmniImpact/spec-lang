@@ -104,7 +104,7 @@ Class of CallLowerer is ByteCallLowerer{
 			local String is digits2: b:nextTmp();
 			b:emit(inst: IrInst:ConstInt(dst: digits2, value: 2));
 			local String is dstH: b:nextTmp();
-			b:emit(inst: IrInst:IrCall(dst: dstH, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', i64v, base16, digits2]));
+			b:emit(inst: IrInst:IrCall(dst: dstH, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToBase', argTypes: Array([IrType:Ptr, IrType:I64, IrType:I64, IrType:I64]), args: Array(['null', i64v, base16, digits2])));
 			return dstH;
 		});
 		if({ m == 'highNibble' }, {

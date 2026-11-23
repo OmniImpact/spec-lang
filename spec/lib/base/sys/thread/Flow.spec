@@ -236,7 +236,7 @@ Class is Flow of T{
 			});
 			ThreadScope:open(
 				body: local Function(ThreadScope is scope){
-					local Array of Task is producers: [];
+					local Array of Task is producers: Array();
 					local Int is i: 0;
 					while({ i < flows:length() }, {
 						local Flow of T is f: flows:get(index: i);

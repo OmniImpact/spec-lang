@@ -11,7 +11,7 @@ Class is X509TrustStore{
 	];
 
 	held Map of String to Boolean is rootSubjectHashes: Map:init();
-	held Array of Boolean is loadedFlag: [];
+	held Array of Boolean is loadedFlag: Array();
 }
 
 Class is X509{
@@ -34,7 +34,7 @@ Class is X509{
 	## Reads one ASN.1 DER TLV header at [pos] in [der].
 	## Returns [tag, contentStart, contentLen, nextPos], or [-1, 0, 0, 0] on error.
 	local Function of Array of Int is readTlv(Array of Int is der, Int is pos, Int is limit){
-		if({ pos + 2 > limit }, { return [-1, 0, 0, 0]; });
+		if({ pos + 2 > limit }, { return Array([-1, 0, 0, 0]); });
 		local Int is tag: der:get(index: pos, default: 0) & 255;
 		local Int is l0: der:get(index: pos + 1, default: 0) & 255;
 		local Int is contentStart: pos + 2;
@@ -44,7 +44,7 @@ Class is X509{
 		}, {
 			local Int is numOctets: l0 & 127;
 			if({ numOctets == 0 || numOctets > 4 || (contentStart + numOctets) > limit }, {
-				return [-1, 0, 0, 0];
+				return Array([-1, 0, 0, 0]);
 			});
 			local Int is i: 0;
 			while({ i < numOctets }, {
@@ -53,12 +53,12 @@ Class is X509{
 			});
 			contentStart: contentStart + numOctets;
 		});
-		if({ contentStart + len > limit }, { return [-1, 0, 0, 0]; });
-		return [tag, contentStart, len, contentStart + len];
+		if({ contentStart + len > limit }, { return Array([-1, 0, 0, 0]); });
+		return Array([tag, contentStart, len, contentStart + len]);
 	}
 
 	local Function of Array of Int is sliceRange(Array of Int is src, Int is start, Int is len){
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is i: 0;
 		while({ i < len && (start + i) < src:length() }, {
 			out:add(item: src:get(index: start + i, default: 0) & 255);
@@ -91,7 +91,7 @@ Class is X509{
 
 	## Extracts Common Name (OID 2.5.4.3 = 0x55 0x04 0x03) from a DER Name sequence.
 	local Function of String is extractCommonName(Array of Int is der, Int is start, Int is end){
-		local Array of Int is oidCn: [85, 4, 3];
+		local Array of Int is oidCn: Array([85, 4, 3]);
 		local String is foundCn: '';
 		local Int is pos: start;
 		while({ pos < end && foundCn == '' }, local Function of Boolean(){
@@ -123,7 +123,7 @@ Class is X509{
 
 	## Extracts SAN dNSName entries (tag 0x82) from Extensions sequence (OID 2.5.29.17).
 	local Function is extractSanDnsNames(Array of Int is der, Int is extSeqStart, Int is extSeqEnd, Array of String is outNames){
-		local Array of Int is oidSan: [85, 29, 17];
+		local Array of Int is oidSan: Array([85, 29, 17]);
 		local Int is pos: extSeqStart;
 		while({ pos < extSeqEnd }, local Function of Boolean(){
 			local Array of Int is ext: :readTlv(der: der, pos: pos, limit: extSeqEnd);
@@ -238,7 +238,7 @@ Class is X509{
 
 	## Decodes a Base64 string (ignoring whitespace and padding) to DER bytes.
 	Function of Array of Int is decodeBase64(String is text){
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is buf: 0;
 		local Int is bits: 0;
 		local Int is i: 0;
@@ -265,12 +265,12 @@ Class is X509{
 			if({ X509TrustStore:loadedFlag:length() > 0 }, {
 				return;
 			});
-			local Array of String is paths: [
+			local Array of String is paths: Array([
 				'/etc/ssl/certs/ca-certificates.crt',
 				'/etc/pki/tls/certs/ca-bundle.crt',
 				'/etc/ssl/cert.pem',
 				'/etc/ssl/ca-bundle.pem'
-			];
+			]);
 			local String is pemText: '';
 			local Int is pi: 0;
 			while({ pi < paths:length() && pemText == '' }, {

@@ -15,7 +15,7 @@ Class of SpecUnitTest is TestPhase2{
 
 	# 1. Extended Array Operations
 	Function is testExtendedArrayOperations(){
-		local Array of String is tokens: ['class', 'MyClass', '{', 'local', '}'];
+		local Array of String is tokens: Array(['class', 'MyClass', '{', 'local', '}']);
 		Assert:areEqualInt(5, tokens:length());
 		Assert:areEqualInt(1, tokens:indexOf(search: 'MyClass', default: -1));
 		Assert:areEqualInt(-1, tokens:indexOf(search: 'missing', default: -1));

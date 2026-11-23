@@ -62,8 +62,8 @@ Class is RandomTune{
 			fgColor: CleoColor:ansi(code: 250)
 		);
 
-		local Array of Int is scaleMidi: [60, 62, 64, 67, 69, 72, 74, 76];
-		local Array of Str is scaleNames: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5'];
+		local Array of Int is scaleMidi: Array([60, 62, 64, 67, 69, 72, 74, 76]);
+		local Array of Str is scaleNames: Array(['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5']);
 		local Int is sampleRate: 44100;
 		local Int is noteCount: 12;
 		local Int is stepMs: 180;

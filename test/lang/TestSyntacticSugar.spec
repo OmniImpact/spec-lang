@@ -71,9 +71,9 @@ Class of SpecUnitTest is TestSyntacticSugar{
 	## 4. Array higher-order methods with anonymous functions: each, any,
 	## count, filter.
 	Function is testArrayHigherOrder(){
-		local Array of String is words: ['apple', 'banana', 'cherry', 'avocado'];
+		local Array of String is words: Array(['apple', 'banana', 'cherry', 'avocado']);
 
-		local Array of String is log: [];
+		local Array of String is log: Array();
 		words:each(action: local Function(word){
 			log:add(item: word);
 		});

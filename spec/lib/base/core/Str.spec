@@ -393,7 +393,7 @@ Class of Buf is Str{
 
 	## All non-overlapping occurrences of [needle] in this string.
 	Function of Array of String is findAll(Str is needle, Boolean is caseSensitive: true){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		local Int is nlen: needle:length();
 		if({ nlen == 0 }, {
 			return out;
@@ -513,7 +513,7 @@ Class of Buf is Str{
 	## @param caseSensitive: Whether ASCII case must match.
 	## @return: The parts.
 	Function of Array of String is split(Str is delimiter, Int is limit: -1, Boolean is caseSensitive: true){
-		local Array of String is res: [];
+		local Array of String is res: Array();
 		local Int is slen: :length();
 		if({ slen == 0 }, {
 			return res;
@@ -554,7 +554,7 @@ Class of Buf is Str{
 	##
 	## @return: The lines.
 	Function of Array of String is lines(){
-		local Array of String is res: [];
+		local Array of String is res: Array();
 		local Int is len: :length();
 		if({ len == 0 }, {
 			return res;

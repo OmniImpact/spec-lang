@@ -59,7 +59,7 @@ Class of SpecUnitTest is TestSpecInit{
 		local String is specBin: :resolveCompiler(root: root);
 		local String is tmpDir: :dirOf(path: Uri:tempFile());
 		local String is built: tmpDir . '/specinit_test_bin' . exeSuf;
-		Process:execute(command: specBin, args: ['--quiet', '-i', root . '/utilities/specinit/SpecInit.spec', '-o', built]);
+		Process:execute(command: specBin, args: Array(['--quiet', '-i', root . '/utilities/specinit/SpecInit.spec', '-o', built]));
 		return built;
 	}
 
@@ -71,7 +71,7 @@ Class of SpecUnitTest is TestSpecInit{
 			return;
 		});
 
-		local Int is helpCode: Process:execute(command: si, args: ['--help']);
+		local Int is helpCode: Process:execute(command: si, args: Array(['--help']));
 		Assert:areEqualInt(0, helpCode);
 
 		local String is pid: Process:getPid() as String;
@@ -79,7 +79,7 @@ Class of SpecUnitTest is TestSpecInit{
 		local String is appDir: tmpDir . '/specinit_app_' . pid;
 		local String is libDir: tmpDir . '/specinit_lib_' . pid;
 
-		local Int is appCode: Process:execute(command: si, args: [appDir, '--app', '--force']);
+		local Int is appCode: Process:execute(command: si, args: Array([appDir, '--app', '--force']));
 		Assert:areEqualInt(0, appCode);
 		Assert:isTrue(fileExists(path: "{{appDir}}/specinit_app_{{pid}}.json"));
 		Assert:isTrue(fileExists(path: appDir . '/.gitignore'));
@@ -91,10 +91,10 @@ Class of SpecUnitTest is TestSpecInit{
 		Assert:areEqualString('src/Main.spec', Json:getString(obj: parsedApp, key: 'source', default: ''));
 
 		# Without --force, re-running on existing project must fail cleanly (exit 1)
-		local Int is dupCode: Process:execute(command: si, args: [appDir]);
+		local Int is dupCode: Process:execute(command: si, args: Array([appDir]));
 		Assert:areEqualInt(1, dupCode);
 
-		local Int is libCode: Process:execute(command: si, args: [libDir, '--lib', '--force']);
+		local Int is libCode: Process:execute(command: si, args: Array([libDir, '--lib', '--force']));
 		Assert:areEqualInt(0, libCode);
 		Assert:isTrue(fileExists(path: "{{libDir}}/specinit_lib_{{pid}}.json"));
 		Assert:isTrue(fileExists(path: libDir . '/.gitignore'));

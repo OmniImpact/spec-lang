@@ -99,14 +99,14 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
 		Assert:isTrue(ll:contains(needle: 'define i64 @main('));
 		Assert:isTrue(ll:contains(needle: 'add i64 0, 14'));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -133,7 +133,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 			. "\t\t['base', 'sys', as Process()]\n"
 			. "\t];\n"
 			. "\treplace Function is init(Map of String to String is args){\n"
-			. "\t\tlocal Array of Int is nums: [10, 20];\n"
+			. "\t\tlocal Array of Int is nums: Array([10, 20]);\n"
 			. "\t\tnums:add(item: 30);\n"
 			. "\t\tlocal Int is total: nums[0] + nums:get(index: 1) + nums[2];\n"
 			. "\t\tlocal Map of String to String is mp: ['lang': 'spec'];\n"
@@ -155,7 +155,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
@@ -163,7 +163,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:isTrue(ll:contains(needle: 'call void @spec_rt_release('));
 		Assert:isTrue(ll:contains(needle: 'call ptr @spec_rt_closure_new('));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -220,14 +220,14 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
 		Assert:isTrue(ll:contains(needle: '%struct.__env_'));
 		Assert:isTrue(ll:contains(needle: '_destroy('));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -285,8 +285,8 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 			. "\t\t]);\n"
 			. "\t\tlocal SubBox is sb: SubBox:init();\n"
 			. "\t\tlocal Int is st: sb:total();\n"
-			. "\t\tlocal Array of Int is xs: [1, 2, 3];\n"
-			. "\t\tlocal Array of Int is acc: [];\n"
+			. "\t\tlocal Array of Int is xs: Array([1, 2, 3]);\n"
+			. "\t\tlocal Array of Int is acc: Array();\n"
 			. "\t\txs:each(action: local Function(Int is item){\n"
 			. "\t\t\tacc:add(item: item * 2);\n"
 			. "\t\t});\n"
@@ -302,14 +302,14 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
 		Assert:isTrue(ll:contains(needle: '%struct.Expr_Num = type'));
 		Assert:isTrue(ll:contains(needle: '%struct.SubBox = type'));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -357,14 +357,14 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
 		Assert:isTrue(ll:contains(needle: 'call i64 @spec_pal_os_name()'));
 		Assert:isTrue(ll:contains(needle: 'call i1 @spec_pal_file_exists('));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -412,14 +412,14 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
 		Assert:isTrue(ll:contains(needle: '@.vtable.Dog = constant'));
 		Assert:isTrue(ll:contains(needle: 'getelementptr ptr, ptr'));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -439,7 +439,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 			binPath: binPath . '.exe';
 		});
 
-		Process:execute(command: 'mkdir', args: ['-p', srcDir]);
+		Process:execute(command: 'mkdir', args: Array(['-p', srcDir]));
 
 		local String is helperSrc: '''
 Class is MathHelper {
@@ -483,7 +483,7 @@ Class is LlvmP7{
 		Assert:isTrue(wroteHelper && wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-s', srcDir, '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-s', srcDir, '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
@@ -491,12 +491,12 @@ Class is LlvmP7{
 		Assert:isTrue(ll:contains(needle: 'call i64 @spec_time_monotonic_ns()'));
 		Assert:isTrue(ll:contains(needle: 'call i64 @spec_pal_exe_dir('));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: helperPath);
 		File:fileRemove(path: specPath);
-		Process:execute(command: 'rmdir', args: [srcDir]);
+		Process:execute(command: 'rmdir', args: Array([srcDir]));
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
@@ -517,7 +517,7 @@ Class is Counter {
 		['base', 'struct', Array]
 	];
 	held Int is count: 10;
-	held Array of String is tags: [];
+	held Array of String is tags: Array();
 	held Function of Int is bump(Int is delta){
 		return Counter:count + delta;
 	}
@@ -546,7 +546,7 @@ Class is LlvmP8{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
@@ -555,7 +555,7 @@ Class is LlvmP8{
 		Assert:isTrue(ll:contains(needle: '@spec_held_registry = constant ['));
 		Assert:isTrue(ll:contains(needle: '@Counter_count__ensure('));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -565,7 +565,7 @@ Class is LlvmP8{
 
 	Function is testCallLowererPluginsRegistered(){
 		local Array of CallLowerer is loaded: CallLowererRegistry:init():loadAll();
-		local Array of String is loadedTypes: [];
+		local Array of String is loadedTypes: Array();
 		local Int is li: 0;
 		while({ li < loaded:length() }, {
 			loadedTypes:add(item: Introspection:typeIdentity(obj: loaded:get(index: li)));
@@ -606,7 +606,7 @@ Class is LlvmP8{
 		local LlvmStructLayout is mm: LlvmStructLayout:methodMeta();
 		Assert:areEqualInt(4, mm:fieldCount());
 		Assert:areEqualString('{ ptr, ptr, i32, i32 }', mm:llvmType());
-		Assert:areEqualString('{ ptr, ptr, i32, i32 } { ptr @n, ptr @f, i32 1, i32 42 }', mm:formatConst(values: ['@n', '@f', '1', '42']));
+		Assert:areEqualString('{ ptr, ptr, i32, i32 } { ptr @n, ptr @f, i32 1, i32 42 }', mm:formatConst(values: Array(['@n', '@f', '1', '42'])));
 
 		local LlvmStructLayout is cm: LlvmStructLayout:classMeta();
 		Assert:areEqualInt(9, cm:fieldCount());
@@ -687,7 +687,7 @@ Class is LlvmP9{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
@@ -697,7 +697,7 @@ Class is LlvmP9{
 		Assert:isTrue(ll:contains(needle: '@spec_pool_release_to('));
 		Assert:isTrue(ll:contains(needle: '@spec_claim_pool('));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);
@@ -816,7 +816,7 @@ Class is LlvmP10{
 		Assert:isTrue(wrote);
 
 		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
-		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
 		Assert:areEqualInt(0, compRc);
 
 		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
@@ -825,7 +825,7 @@ Class is LlvmP10{
 		Assert:isTrue(ll:contains(needle: '@spec_to_string_float('));
 		Assert:isTrue(ll:contains(needle: '@spec_type_name('));
 
-		local Int is runRc: Process:execute(command: binPath, args: []);
+		local Int is runRc: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runRc);
 
 		File:fileRemove(path: specPath);

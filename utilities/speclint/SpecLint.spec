@@ -106,7 +106,7 @@ Class is SpecLint{
 
 		# Tree walk: every .spec under the -t roots (repeatable,
 		# comma/newline separated — the argv parser accumulates repeats).
-		local Array of String is files: [];
+		local Array of String is files: Array();
 		local Int is roots: 0;
 		dirsRaw:split(delimiter: "\n"):each(action: local Function(String is seg){
 			seg:split(delimiter: ','):each(action: local Function(String is dir){
@@ -186,7 +186,7 @@ Class is SpecLint{
 	Function is lintOne(String is path, Boolean is strict, LintTally is tally, Cleo is ui){
 		local String is source: fileRead(path: path, default: '');
 		local Lexer is lexer: Lexer:init(source: source);
-		local Parser is parser: Parser:init(tokens: []);
+		local Parser is parser: Parser:init(tokens: Array());
 		parser:setLexer(lexer: lexer);
 		parser:setSourceFile(file: path);
 		local ProgramNode is program: parser:parseProgram();

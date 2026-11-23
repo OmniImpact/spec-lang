@@ -91,7 +91,7 @@ Class is Driver{
 				threadCount: 1;
 			});
 		});
-		local Array of String is sourceDirs: [];
+		local Array of String is sourceDirs: Array();
 		local Function is addSourceDirString: local Function(String is raw){
 			if({ raw != '' }, {
 				raw:split(delimiter: "\n"):each(action: local Function(String is line){
@@ -206,7 +206,7 @@ Class is Driver{
 				exitCode: 1;
 				return;
 			});
-			local Array of ClassInfo is rootClasses: [];
+			local Array of ClassInfo is rootClasses: Array();
 			program:classes:each(action: local Function(ClassInfo is c){
 				if({ c:sourceFile == inputPath }, {
 					rootClasses:add(item: c);
@@ -254,7 +254,7 @@ Class is Driver{
 			:entryInitOverloadIndex: 0;
 			:entryInitTakesMap: false;
 			:entryInitSawAny: false;
-			local Array of String is latticeVisited: [];
+			local Array of String is latticeVisited: Array();
 			:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
 			if({ :entryInitOwner == '' && :entryInitSawAny }, {
 				Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
@@ -287,7 +287,7 @@ Class is Driver{
 			local Boolean is useShards: emitLlvmPath == '' && outputPath != '' && outputPath != '/dev/null' && outputPath != 'nul' && outputPath != 'NUL' && threadCount > 1 && irMod:functions:length() >= 32;
 			local Int is llLines: 0;
 			local String is tempLlPath: emitLlvmPath;
-			local Array of String is shardLlPaths: [];
+			local Array of String is shardLlPaths: Array();
 			if({ useShards }, {
 				local Int is nShards: if({ threadCount > 8 }, { 8 }, { threadCount });
 				local Array of String is shardTexts: emitter:emitShardsScoped(mod: irMod, scope: scope, shards: nShards);
@@ -331,15 +331,15 @@ Class is Driver{
 			local RuntimePrelude is rp: RuntimePrelude:init();
 			local String is rtText: rp:emitRuntime();
 			if({ !fileExists(path: runtimeO) || Dir:fileSize(path: runtimeC) != rtText:length() || args:has(key: 'clean-cache') }, {
-				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
+				Process:execute(command: 'mkdir', args: Array(['-p', cacheDir]));
 				if({ !fileWrite(path: runtimeC, content: rtText) }, {
 					cacheDir: Uri:systemTempDir() . '/spec_cache/runtime';
 					runtimeC: cacheDir . '/spec_runtime.c';
 					runtimeO: cacheDir . '/spec_runtime.o';
-					Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
+					Process:execute(command: 'mkdir', args: Array(['-p', cacheDir]));
 					fileWrite(path: runtimeC, content: rtText);
 				});
-				Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
+				Process:execute(command: 'clang', args: Array(['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']));
 			});
 
 			if({ Process:osName() == 'linux' }, {
@@ -359,14 +359,14 @@ Class is Driver{
 			local Int is llCcT0: Process:clockMs();
 			local Int is llStat: 0;
 			if({ useShards }, {
-				local Array of String is shardObjPaths: [];
-				local Array of Task of Int is ccTasks: [];
+				local Array of String is shardObjPaths: Array();
+				local Array of Task of Int is ccTasks: Array();
 				local Int is ci: 0;
 				while({ ci < shardLlPaths:length() }, {
 					local String is sLl: shardLlPaths:get(index: ci, default: '');
 					local String is sObj: sLl . '.o';
 					shardObjPaths:add(item: sObj);
-					local Array of String is cArgs: [optFlag, '-Wno-override-module', '-c', sLl, '-o', sObj];
+					local Array of String is cArgs: Array([optFlag, '-Wno-override-module', '-c', sLl, '-o', sObj]);
 					if({ debugMode }, {
 						cArgs:add(item: '-g');
 					});
@@ -388,7 +388,7 @@ Class is Driver{
 					fileRemove(path: sp, onError: local Function(SpecError of FileError is e){});
 				});
 				if({ llStat == 0 }, {
-					local Array of String is linkArgs: [];
+					local Array of String is linkArgs: Array();
 					shardObjPaths:each(action: local Function(String is op){
 						linkArgs:add(item: op);
 					});
@@ -409,7 +409,7 @@ Class is Driver{
 					fileRemove(path: op, onError: local Function(SpecError of FileError is e){});
 				});
 			}, {
-				local Array of String is llArgs: [optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
+				local Array of String is llArgs: Array([optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm']);
 				llOsFlags:each(action: local Function(String is fl){
 					llArgs:add(item: fl);
 				});

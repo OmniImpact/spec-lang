@@ -74,7 +74,7 @@ Class of SpecUnitTest is TestSpecBuild{
 
 		local String is srcPath: root . '/utilities/specbuild/SpecBuild.spec';
 		if({ fileExists(path: srcPath) }, {
-			Process:execute(command: compiler, args: ['-i', srcPath, '-s', root . '/spec', '-o', cand, '--quiet']);
+			Process:execute(command: compiler, args: Array(['-i', srcPath, '-s', root . '/spec', '-o', cand, '--quiet']));
 			if({ fileExists(path: cand) }, {
 				return cand;
 			});
@@ -128,14 +128,14 @@ Class of SpecUnitTest is TestSpecBuild{
 		});
 
 		local String is sbBin: :resolveSpecBuild(root: root);
-		local Int is buildCode: Process:execute(command: sbBin, args: [manifestFile]);
+		local Int is buildCode: Process:execute(command: sbBin, args: Array([manifestFile]));
 		Assert:areEqualInt(0, buildCode);
 		Assert:isTrue(fileExists(path: outBin));
 
-		local Int is runCode: Process:execute(command: outBin, args: []);
+		local Int is runCode: Process:execute(command: outBin, args: Array());
 		Assert:areEqualInt(0, runCode);
 
-		local Int is cleanCode: Process:execute(command: sbBin, args: [manifestFile, 'clean']);
+		local Int is cleanCode: Process:execute(command: sbBin, args: Array([manifestFile, 'clean']));
 		Assert:areEqualInt(0, cleanCode);
 		Assert:isFalse(fileExists(path: outBin));
 

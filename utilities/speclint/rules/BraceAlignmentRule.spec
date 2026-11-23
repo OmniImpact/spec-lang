@@ -29,7 +29,7 @@ Class of LintRule is BraceAlignmentRule{
 		local Int is lineNum: 0;
 		local Int is stmtTabs: 0;
 		local Boolean is prevOpen: false;
-		local Array of Int is openTabs: [];
+		local Array of Int is openTabs: Array();
 		local SourceMasker is masker: SourceMasker:init();
 		local Array of String is srcLines: source:lines();
 		srcLines:each(action: local Function(String is line){

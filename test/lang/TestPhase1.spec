@@ -57,7 +57,7 @@ Class of SpecUnitTest is TestPhase1{
 
 	# 3. Process execution
 	Function is testProcessExecute(){
-		local Int is exitCode: Process:execute(command: 'echo', args: ['Process:execute', 'successfully', 'invoked']);
+		local Int is exitCode: Process:execute(command: 'echo', args: Array(['Process:execute', 'successfully', 'invoked']));
 		Assert:areEqualInt(0, exitCode);
 	}
 }

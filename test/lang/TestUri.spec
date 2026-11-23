@@ -125,7 +125,7 @@ Class of SpecUnitTest is TestUri{
 		local String is rcd: Uri:runtimeCacheDir();
 		Assert:areEqualString(cd . '/runtime', rcd);
 
-		local String is j: Uri:join(parts: ['a', 'b/c', '../d', 'e']);
+		local String is j: Uri:join(parts: Array(['a', 'b/c', '../d', 'e']));
 		Assert:areEqualString('a/b/d/e', j);
 
 		local String is tf: Uri:tempFile(prefix: 'test_', suffix: '.tmp');

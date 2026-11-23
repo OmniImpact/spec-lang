@@ -27,9 +27,9 @@ Class of LintRule is BracketIndentationRule{
 
 	replace Function is checkSource(String is source, Array of LintIssue is issues){
 		local Int is lineNum: 0;
-		local Array of Int is openTabs: [];
-		local Array of Int is openLines: [];
-		local Array of String is openChars: [];
+		local Array of Int is openTabs: Array();
+		local Array of Int is openLines: Array();
+		local Array of String is openChars: Array();
 		local SourceMasker is masker: SourceMasker:init();
 		local Array of String is srcLines: source:lines();
 

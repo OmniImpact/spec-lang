@@ -193,7 +193,7 @@ Class of Any is Introspection{
 
 	## Every registered class name, in class order.
 	Function of Array of String is classNames(){
-		local Array of String is out: [];
+		local Array of String is out: Array();
 		local Int is reg: Mem:classRegistryAddr();
 		local Int is cnt: Mem:classRegistryCount();
 		local Int is i: 0;
@@ -212,11 +212,11 @@ Class of Any is Introspection{
 
 	## The functions of a class --- own plus inherited through the base lattice.
 	Function of Array of Array of String is functions(String is className){
-		local Array of Array of String is out: [];
-		local Array of String is names: [];
+		local Array of Array of String is out: Array();
+		local Array of String is names: Array();
 		:collectMethodNames(out: names, clsMeta: :findClassMeta(className: className));
 		names:each(action: local Function(String is m){
-			local Array of String is path: [];
+			local Array of String is path: Array();
 			path:add(item: className);
 			path:add(item: m);
 			out:add(item: path);
@@ -293,7 +293,7 @@ Class of Any is Introspection{
 	## Discovers every registered strict subclass of [baseName] and instantiates each.
 	Function of Array of Any is instantiateSubclasses(String is baseName){
 		local Array of String is names: :classNames();
-		local Array of Any is found: [];
+		local Array of Any is found: Array();
 		local Int is i: 0;
 		while({ i < names:length() }, {
 			local String is cname: names:get(index: i, default: '');

@@ -14,24 +14,24 @@ Class is IrStruct{
 	String is name: '';
 	String is qualifiedName: '';
 	String is sourceFileBase: '';
-	Array of String is fieldNames: [];
-	Array of IrType is fieldTypes: [];
-	Array of Boolean is fieldIsArc: [];
-	Array of String is vtableMethodNames: [];
-	Array of String is vtableFns: [];
-	Array of String is baseNames: [];
+	Array of String is fieldNames: Array();
+	Array of IrType is fieldTypes: Array();
+	Array of Boolean is fieldIsArc: Array();
+	Array of String is vtableMethodNames: Array();
+	Array of String is vtableFns: Array();
+	Array of String is baseNames: Array();
 	String is constructFn: 'null';
 	String is destroyFn: 'null';
-	Array of String is metaMethodNames: [];
-	Array of String is metaMethodFns: [];
-	Array of Int is metaMethodFlags: [];
-	Array of Int is metaMethodLines: [];
-	Array of String is metaFieldNames: [];
-	Array of String is metaFieldTypes: [];
-	Array of Int is metaFieldIndices: [];
-	Array of Int is metaFieldFlags: [];
-	Array of String is heldNames: [];
-	Array of String is heldGetters: [];
+	Array of String is metaMethodNames: Array();
+	Array of String is metaMethodFns: Array();
+	Array of Int is metaMethodFlags: Array();
+	Array of Int is metaMethodLines: Array();
+	Array of String is metaFieldNames: Array();
+	Array of String is metaFieldTypes: Array();
+	Array of Int is metaFieldIndices: Array();
+	Array of Int is metaFieldFlags: Array();
+	Array of String is heldNames: Array();
+	Array of String is heldGetters: Array();
 
 	replace Function is init(){
 	}

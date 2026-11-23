@@ -51,7 +51,7 @@ Class is TlsVerifier{
 
 	## Verifies a TLS server certificate chain against [host] and the OS CA store.
 	Function of Boolean is verifyServerChain(Array of Array of Int is certChain, String is host, Array of String is errOut){
-		local Array of X509Cert is parsed: [];
+		local Array of X509Cert is parsed: Array();
 		if({ !X509:verifyTrustChain(certChain: certChain, parsedOut: parsed, errOut: errOut) }, {
 			return false;
 		});

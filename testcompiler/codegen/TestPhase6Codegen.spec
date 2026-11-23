@@ -84,7 +84,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 		cli:set(key: 'o', value: '/tmp/pure_spec_hello');
 		cli:set(key: 'quiet', value: 'true');
 		local Driver is d: Driver:init(args: cli);
-		local Int is runCode: Process:execute(command: '/tmp/pure_spec_hello', args: []);
+		local Int is runCode: Process:execute(command: '/tmp/pure_spec_hello', args: Array());
 		Assert:areEqualInt(0, runCode);
 		fileRemove(path: '/tmp/pure_spec_hello');
 		fileRemove(path: '/tmp/pure_spec_hello.ll');

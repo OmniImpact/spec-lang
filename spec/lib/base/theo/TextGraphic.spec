@@ -12,7 +12,7 @@ Class of Widget is TextGraphic{
 		['base', 'sys', as Loops()]
 	];
 
-	Array of String is rows: [];
+	Array of String is rows: Array();
 	TheoColor is color: TheoColor:none();
 
 	replace Function is init(String is graphic: '', TheoColor is color: TheoColor:none()){

@@ -18,13 +18,13 @@ Class of SpecUnitTest is TestStdlibParity{
 	];
 
 	Function is testArrayParity(){
-		local Array of String is items: ['a', 'b', 'c'];
+		local Array of String is items: Array(['a', 'b', 'c']);
 		Assert:isTrue(items:contains(search: 'b'));
 		Assert:isFalse(items:contains(search: 'z'));
 		Assert:areEqualString('a', items:first(default: ''));
 		Assert:areEqualString('c', items:last(default: ''));
 
-		local Array of String is empty: [];
+		local Array of String is empty: Array();
 		Assert:areEqualString('x', empty:first(default: 'x'));
 		Assert:areEqualString('y', empty:last(default: 'y'));
 
@@ -43,7 +43,7 @@ Class of SpecUnitTest is TestStdlibParity{
 		Assert:areEqualInt(3, items:length());
 		Assert:areEqualInt(4, copied:length());
 
-		local Array of Int is nums: [2, 4, 6];
+		local Array of Int is nums: Array([2, 4, 6]);
 		Assert:isTrue(nums:all(predicate: local Function of Boolean(Int is n){ return (n % 2) == 0; }));
 		Assert:isTrue(nums:none(predicate: local Function of Boolean(Int is n){ return n > 10; }));
 
@@ -121,7 +121,7 @@ Class of SpecUnitTest is TestStdlibParity{
 	}
 
 	Function is testStats(){
-		local Array of Int is nums: [10, 2, 8, 4, 6];
+		local Array of Int is nums: Array([10, 2, 8, 4, 6]);
 		Assert:areEqualInt(30, sum(values: nums));
 		Assert:areEqualInt(2, Stats:min(values: nums));
 		Assert:areEqualInt(10, Stats:max(values: nums));
@@ -130,10 +130,10 @@ Class of SpecUnitTest is TestStdlibParity{
 		Assert:isTrue(abs(value: variance(values: nums) - 8.0) < 0.0001);
 		Assert:isTrue(abs(value: stdDev(values: nums) - sqrt(value: 8.0)) < 0.0001);
 
-		local Array of Int is evenNums: [4, 1, 9, 2];
+		local Array of Int is evenNums: Array([4, 1, 9, 2]);
 		Assert:isTrue(abs(value: median(values: evenNums) - 3.0) < 0.0001);
 
-		local Array of Int is empty: [];
+		local Array of Int is empty: Array();
 		Assert:areEqualInt(0, sum(values: empty));
 		Assert:areEqualInt(-1, Stats:min(values: empty, default: -1));
 		Assert:areEqualInt(-1, Stats:max(values: empty, default: -1));
@@ -153,8 +153,8 @@ Class of SpecUnitTest is TestStdlibParity{
 		Assert:isTrue(abs(value: degToRad(deg: 180.0) - pi()) < 0.0001);
 		Assert:isTrue(abs(value: radToDeg(rad: pi()) - 180.0) < 0.0001);
 		Assert:areEqualInt(7, abs(value: -7));
-		Assert:areEqualInt(2, Math:min(values: [10, 2, 8, 4]));
-		Assert:areEqualInt(10, Math:max(values: [10, 2, 8, 4]));
+		Assert:areEqualInt(2, Math:min(values: Array([10, 2, 8, 4])));
+		Assert:areEqualInt(10, Math:max(values: Array([10, 2, 8, 4])));
 		Assert:isTrue(abs(value: floor(value: 2.7) - 2.0) < 0.0001);
 		Assert:isTrue(abs(value: floor(value: -2.3) + 3.0) < 0.0001);
 		Assert:isTrue(abs(value: ceil(value: 2.3) - 3.0) < 0.0001);
@@ -178,7 +178,7 @@ Class of SpecUnitTest is TestStdlibParity{
 	}
 
 	Function is testSort(){
-		local Array of Int is nums: [5, 1, 4, 2, 3];
+		local Array of Int is nums: Array([5, 1, 4, 2, 3]);
 		local Array of Int is asc: ints(values: nums);
 		Assert:areEqualInt(1, asc:get(index: 0, default: 0));
 		Assert:areEqualInt(3, asc:get(index: 2, default: 0));
@@ -189,7 +189,7 @@ Class of SpecUnitTest is TestStdlibParity{
 		Assert:areEqualInt(5, desc:get(index: 0, default: 0));
 		Assert:areEqualInt(1, desc:get(index: 4, default: 0));
 
-		local Array of String is words: ['pear', 'apple', 'banana'];
+		local Array of String is words: Array(['pear', 'apple', 'banana']);
 		local Array of String is sortedWords: strings(values: words);
 		Assert:areEqualString('apple,banana,pear', sortedWords:join(separator: ','));
 		local Array of String is descWords: stringsDesc(values: words);

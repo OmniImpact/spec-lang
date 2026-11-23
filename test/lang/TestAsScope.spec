@@ -41,7 +41,7 @@ Class of SpecUnitTest is TestAsScope{
 	}
 
 	Function is testParameterless(){
-		local Array of String is log1: [];
+		local Array of String is log1: Array();
 		:runResource(log: log1);
 		Assert:isTrue(log1:length() == 4 && log1:get(index: 0) == 'open:file.txt' && log1:get(index: 1) == 'read:1' && log1:get(index: 2) == 'read:2' && log1:get(index: 3) == 'close:file.txt');
 	}
@@ -81,7 +81,7 @@ Class of SpecUnitTest is TestAsScope{
 	}
 
 	Function is testNestedResources(){
-		local Array of String is resLog: [];
+		local Array of String is resLog: Array();
 		:runNestedResources(log: resLog);
 		Assert:isTrue(resLog:length() == 5 && resLog:get(index: 0) == 'open:A' && resLog:get(index: 1) == 'open:B' && resLog:get(index: 2) == 'work' && resLog:get(index: 3) == 'close:B' && resLog:get(index: 4) == 'close:A');
 	}
@@ -92,8 +92,8 @@ Class of SpecUnitTest is TestAsScope{
 	}
 
 	Function is testContainerEach(){
-		local Array of Int is nums: [1, 2, 3, 4];
-		local Array of Int is collected: [];
+		local Array of Int is nums: Array([1, 2, 3, 4]);
+		local Array of Int is collected: Array();
 		:runContainerEach(nums: nums, collected: collected);
 		Assert:isTrue(collected:length() == 4 && collected:get(index: 0) == 10 && collected:get(index: 3) == 40);
 	}

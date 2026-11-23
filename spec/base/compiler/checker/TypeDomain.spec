@@ -201,21 +201,21 @@ Class is TypeDomain{
 
 	Function of Type is makeArrayNode(Type is elem){
 		if({ elem:name == '' }, { return Type:init(name: 'Array'); });
-		return Type:init(name: 'Array', params: [elem]);
+		return Type:init(name: 'Array', params: Array([elem]));
 	}
 
 	Function of Type is makeMapNode(Type is key, Type is val){
 		if({ key:name == '' || val:name == '' }, { return Type:init(name: 'Map'); });
-		return Type:init(name: 'Map', params: [key, val]);
+		return Type:init(name: 'Map', params: Array([key, val]));
 	}
 
 	Function of Type is makeFunctionNode(Type is ret){
 		if({ ret:name == '' || ret:name == 'Void' }, { return Type:init(name: 'Function'); });
-		return Type:init(name: 'Function', params: [ret]);
+		return Type:init(name: 'Function', params: Array([ret]));
 	}
 
 	Function of Type is makeFlowNode(Type is elem){
 		if({ elem:name == '' }, { return Type:init(name: 'Flow'); });
-		return Type:init(name: 'Flow', params: [elem]);
+		return Type:init(name: 'Flow', params: Array([elem]));
 	}
 }

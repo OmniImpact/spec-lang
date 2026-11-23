@@ -49,7 +49,7 @@ Class of SpecUnitTest is TestEnumWhen{
 
 	Function is testMatchStatement(){
 		local HttpStatus is status: HttpStatus:OK;
-		local Array of String is log: [];
+		local Array of String is log: Array();
 		Conditional:match(on: status, when: [
 			[HttpStatus:OK, HttpStatus:CREATED]: {
 				log:add(item: 'Success');
@@ -64,7 +64,7 @@ Class of SpecUnitTest is TestEnumWhen{
 		Assert:areEqualString('Success', log:get(index: 0));
 
 		local String is method: 'POST';
-		local Array of String is methodLog: [];
+		local Array of String is methodLog: Array();
 		Conditional:match(on: method, when: [
 			'GET': {
 				methodLog:add(item: 'Read');
@@ -126,8 +126,8 @@ Class of SpecUnitTest is TestEnumWhen{
 		], default: { 'other' });
 		Assert:areEqualString('other', fallbackLabel);
 
-		local Array of HttpStatus is items: [HttpStatus:OK, HttpStatus:NOT_FOUND, HttpStatus:SERVER_ERROR];
-		local Array of String is labels: [];
+		local Array of HttpStatus is items: Array([HttpStatus:OK, HttpStatus:NOT_FOUND, HttpStatus:SERVER_ERROR]);
+		local Array of String is labels: Array();
 		items:each(action: local Function(HttpStatus is s){
 			local String is lbl: Conditional:match(on: s, when: [
 				HttpStatus:OK: { 'ok' },

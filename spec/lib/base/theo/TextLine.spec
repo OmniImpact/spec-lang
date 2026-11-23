@@ -13,14 +13,14 @@ Class of Widget is TextLine{
 	String is textValue: '';
 	TheoColor is color: TheoColor:none();
 	Boolean is bold: false;
-	Array of TextEmitter is boundEmitters: [];
-	Array of TextCollector is boundCollectors: [];
+	Array of TextEmitter is boundEmitters: Array();
+	Array of TextCollector is boundCollectors: Array();
 
 	replace Function is init(String is value: '', TheoColor is color: TheoColor:none(), Boolean is bold: false){
 		:color: color;
 		:bold: bold;
-		:boundEmitters: [];
-		:boundCollectors: [];
+		:boundEmitters: Array();
+		:boundCollectors: Array();
 		:textValue: value;
 	}
 
@@ -55,8 +55,8 @@ Class of Widget is TextLine{
 	replace Function is dispose(){
 		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
 			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
-			:boundEmitters: [];
-			:boundCollectors: [];
+			:boundEmitters: Array();
+			:boundCollectors: Array();
 		});
 	}
 }

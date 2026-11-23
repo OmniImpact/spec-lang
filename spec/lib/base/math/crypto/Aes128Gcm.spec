@@ -10,7 +10,7 @@ Class is Aes128Gcm{
 		['base', 'sys', as Loops()]
 	];
 
-	local Array of Int is sbox: [
+	local Array of Int is sbox: Array([
 		 99, 124, 119, 123, 242, 107, 111, 197,  48,   1, 103,  43, 254, 215, 171, 118,
 		202, 130, 201, 125, 250,  89,  71, 240, 173, 212, 162, 175, 156, 164, 114, 192,
 		183, 253, 147,  38,  54,  63, 247, 204,  52, 165, 229, 241, 113, 216,  49,  21,
@@ -27,9 +27,9 @@ Class is Aes128Gcm{
 		112,  62, 181, 102,  72,   3, 246,  14,  97,  53,  87, 185, 134, 193,  29, 158,
 		225, 248, 152,  17, 105, 217, 142, 148, 155,  30, 135, 233, 206,  85,  40, 223,
 		140, 161, 137,  13, 191, 230,  66, 104,  65, 153,  45,  15, 176,  84, 187,  22
-	];
+	]);
 
-	local Array of Int is rcon: [1, 2, 4, 8, 16, 32, 64, 128, 27, 54];
+	local Array of Int is rcon: Array([1, 2, 4, 8, 16, 32, 64, 128, 27, 54]);
 
 	local Function of Int is xtime(Int is a){
 		local Int is x: (a << 1) & 255;
@@ -40,7 +40,7 @@ Class is Aes128Gcm{
 	}
 
 	local Function of Array of Int is expandKey128(Array of Int is key){
-		local Array of Int is rk: [];
+		local Array of Int is rk: Array();
 		local Int is i: 0;
 		while({ i < 16 }, {
 			rk:add(item: key:get(index: i, default: 0) & 255);
@@ -77,7 +77,7 @@ Class is Aes128Gcm{
 
 	## Encrypts one 16-byte block with expanded AES-128 round keys [rk] (176 bytes).
 	Function of Array of Int is aesEncryptBlock(Array of Int is rk, Array of Int is block){
-		local Array of Int is st: [];
+		local Array of Int is st: Array();
 		local Int is i: 0;
 		while({ i < 16 }, {
 			st:add(item: (block:get(index: i, default: 0) ^ rk:get(index: i, default: 0)) & 255);
@@ -173,7 +173,7 @@ Class is Aes128Gcm{
 			});
 			i: i + 1;
 		});
-		return [zHi, zLo];
+		return Array([zHi, zLo]);
 	}
 
 	local Function of UInt64 is loadBe64(Array of Int is b, Int is off){
@@ -195,7 +195,7 @@ Class is Aes128Gcm{
 		# Process AAD in 16-byte zero-padded blocks
 		local Int is off: 0;
 		while({ off < aad:length() }, {
-			local Array of Int is blk: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+			local Array of Int is blk: Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 			local Int is j: 0;
 			while({ j < 16 && (off + j) < aad:length() }, {
 				blk:set(index: j, item: aad:get(index: off + j, default: 0) & 255);
@@ -210,7 +210,7 @@ Class is Aes128Gcm{
 		# Process ciphertext in 16-byte zero-padded blocks
 		off: 0;
 		while({ off < ct:length() }, {
-			local Array of Int is blk: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+			local Array of Int is blk: Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 			local Int is j: 0;
 			while({ j < 16 && (off + j) < ct:length() }, {
 				blk:set(index: j, item: ct:get(index: off + j, default: 0) & 255);
@@ -229,7 +229,7 @@ Class is Aes128Gcm{
 		yHi: fin:get(index: 0, default: 0 as UInt64);
 		yLo: fin:get(index: 1, default: 0 as UInt64);
 
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is s: 56;
 		while({ s >= 0 }, {
 			out:add(item: ((yHi >> s) as Int) & 255);
@@ -244,12 +244,12 @@ Class is Aes128Gcm{
 	}
 
 	local Function of Array of Int is gctr(Array of Int is rk, Array of Int is iv12, Int is startCounter, Array of Int is data){
-		local Array of Int is out: [];
+		local Array of Int is out: Array();
 		local Int is n: data:length();
 		local Int is pos: 0;
 		local UInt32 is ctr: startCounter as UInt32;
 		while({ pos < n }, {
-			local Array of Int is cb: [];
+			local Array of Int is cb: Array();
 			local Int is i: 0;
 			while({ i < 12 }, {
 				cb:add(item: iv12:get(index: i, default: 0) & 255);
@@ -274,9 +274,9 @@ Class is Aes128Gcm{
 	## AEAD encrypt (AES-128-GCM): returns ciphertext || 16-byte GMAC tag.
 	Function of Array of Int is seal(Array of Int is key, Array of Int is nonce, Array of Int is aad, Array of Int is plaintext){
 		local Array of Int is rk: :expandKey128(key: key);
-		local Array of Int is zeroBlk: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		local Array of Int is zeroBlk: Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 		local Array of Int is hBytes: :aesEncryptBlock(rk: rk, block: zeroBlk);
-		local Array of Int is j0: [];
+		local Array of Int is j0: Array();
 		local Int is i: 0;
 		while({ i < 12 }, { j0:add(item: nonce:get(index: i, default: 0) & 255); i: i + 1; });
 		j0:add(item: 0); j0:add(item: 0); j0:add(item: 0); j0:add(item: 1);
@@ -296,10 +296,10 @@ Class is Aes128Gcm{
 	Function of Array of Int is open(Array of Int is key, Array of Int is nonce, Array of Int is aad, Array of Int is ctWithTag, Array of Boolean is okOut){
 		if({ ctWithTag:length() < 16 }, {
 			okOut:add(item: false);
-			return [];
+			return Array();
 		});
 		local Int is ctLen: ctWithTag:length() - 16;
-		local Array of Int is ct: [];
+		local Array of Int is ct: Array();
 		local Int is i: 0;
 		while({ i < ctLen }, {
 			ct:add(item: ctWithTag:get(index: i, default: 0));
@@ -307,9 +307,9 @@ Class is Aes128Gcm{
 		});
 
 		local Array of Int is rk: :expandKey128(key: key);
-		local Array of Int is zeroBlk: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		local Array of Int is zeroBlk: Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 		local Array of Int is hBytes: :aesEncryptBlock(rk: rk, block: zeroBlk);
-		local Array of Int is j0: [];
+		local Array of Int is j0: Array();
 		i: 0;
 		while({ i < 12 }, { j0:add(item: nonce:get(index: i, default: 0) & 255); i: i + 1; });
 		j0:add(item: 0); j0:add(item: 0); j0:add(item: 0); j0:add(item: 1);
@@ -325,7 +325,7 @@ Class is Aes128Gcm{
 		});
 		if({ diff != 0 }, {
 			okOut:add(item: false);
-			return [];
+			return Array();
 		});
 		okOut:add(item: true);
 		return :gctr(rk: rk, iv12: nonce, startCounter: 2, data: ct);

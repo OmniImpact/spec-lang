@@ -13,12 +13,12 @@ Class of Emitter is BoolEmitter{
 	];
 
 	Boolean is boolValue: false;
-	Array of Boolean is replayBuffer: [];
+	Array of Boolean is replayBuffer: Array();
 
 	replace Function is init(Boolean is initial: false, Int is replay: 1){
 		initEmitter(replay: replay);
 		:boolValue: initial;
-		:replayBuffer: [];
+		:replayBuffer: Array();
 		if({ replay != 0 }, {
 			:replayBuffer:add(item: initial);
 		});

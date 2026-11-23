@@ -14,14 +14,14 @@ Class is Widget{
 	Int is boxW: 0;
 	Int is boxH: 0;
 	TheoTheme is activeTheme: TheoTheme();
-	Array of Function is dirtyListeners: [];
+	Array of Function is dirtyListeners: Array();
 
 	Function is applyTheme(TheoTheme is theme){
 		:activeTheme: theme;
 	}
 
 	Function is bindDirty(Function is cb){
-		:dirtyListeners: [cb];
+		:dirtyListeners: Array([cb]);
 	}
 
 	Function is invalidate(){

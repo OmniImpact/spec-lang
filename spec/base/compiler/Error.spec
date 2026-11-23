@@ -22,7 +22,7 @@ Class is Error{
 	local SourceLocation is location;
 
 	## Propagation provenance, innermost first.
-	local Array of StackFrame is trace: [];
+	local Array of StackFrame is trace: Array();
 
 	## Initializes an error with its message and optional source location.
 	##
@@ -31,7 +31,7 @@ Class is Error{
 	replace Function is init(String is message, SourceLocation is location: SourceLocation:init(file: '', line: 0, col: 0, length: 0)){
 		:message: message;
 		:location: location;
-		:trace: [];
+		:trace: Array();
 	}
 
 	## Appends a provenance frame carrying source coordinates.

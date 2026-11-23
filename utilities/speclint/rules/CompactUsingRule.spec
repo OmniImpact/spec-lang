@@ -29,14 +29,14 @@ Class of LintRule is CompactUsingRule{
 				local Map of String to Int is pkgCounts: Map:init();
 				local Map of String to Int is pkgFirstLine: Map:init();
 				local Map of String to String is pkgDisplay: Map:init();
-				local Array of String is pkgOrder: [];
+				local Array of String is pkgOrder: Array();
 
 				match(on: m:initExpr, when: [
 					Expression:ArrayLit: local Function(Array of Expression is items){
 						items:each(action: local Function(Expression is item){
 							match(on: item, when: [
 								Expression:ArrayLit: local Function(Array of Expression is segs){
-									local Array of String is nsSegs: [];
+									local Array of String is nsSegs: Array();
 									local Boolean is hasTarget: false;
 									local Boolean is isWildcard: false;
 									segs:each(action: local Function(Expression is seg){
@@ -65,7 +65,7 @@ Class of LintRule is CompactUsingRule{
 											pkgOrder:add(item: key);
 											pkgCounts:set(key: key, value: 1);
 											pkgFirstLine:set(key: key, value: item:line);
-											local Array of String is quoted: [];
+											local Array of String is quoted: Array();
 											nsSegs:each(action: local Function(String is ns){
 												quoted:add(item: "'" . ns . "'");
 											});

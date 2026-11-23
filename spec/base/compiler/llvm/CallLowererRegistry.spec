@@ -39,7 +39,7 @@ Class is CallLowererRegistry{
 			if({ ca:name() > cb:name() }, { return 1; });
 			return 0;
 		});
-		local Array of CallLowerer is out: [];
+		local Array of CallLowerer is out: Array();
 		local Int is i: 0;
 		while({ i < found:length() }, {
 			out:add(item: found:get(index: i) as CallLowerer);

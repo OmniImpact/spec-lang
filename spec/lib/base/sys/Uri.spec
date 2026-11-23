@@ -104,7 +104,7 @@ Class is Uri{
 		});
 
 		local Array of String is rawSegs: p:split(delimiter: '/');
-		local Array of String is segs: [];
+		local Array of String is segs: Array();
 		local Int is rawLen: rawSegs:length();
 		while([Int is i: 0], { i < rawLen }, {
 			local String is seg: rawSegs:get(index: i, default: '');
@@ -434,7 +434,7 @@ Class is Uri{
 
 	## Joins path components with '/' and resolves '.' and '..' segments.
 	Function of String is join(Array of String is parts){
-		local Array of String is nonEmpties: [];
+		local Array of String is nonEmpties: Array();
 		local Int is len: parts:length();
 		while([Int is i: 0], { i < len }, {
 			local String is p: parts:get(index: i, default: '');
