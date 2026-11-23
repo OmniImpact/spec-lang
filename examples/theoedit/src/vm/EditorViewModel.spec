@@ -9,8 +9,8 @@ Class is EditorViewModel{
 	merge Array of Array of String is using: [
 		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', EditorDocument],
-		['theoedit', 'util', [FileStorage, PathTransformer]],
-		['theoedit', 'vm', [EditorFocus, FileManagerViewModel]]
+		['theoedit', 'util', [EditorFocus, FileStorage, PathTransformer]],
+		['theoedit', 'vm', FileManagerViewModel]
 	];
 
 	EditorDocument is doc: EditorDocument();

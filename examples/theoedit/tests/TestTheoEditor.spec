@@ -7,8 +7,8 @@ Class of SpecUnitTest is TestTheoEditor{
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['theoedit', 'model', [EditorDocument, DirectoryListing]],
-		['theoedit', 'util', [FileStorage, DirectoryScanner, PathTransformer]],
-		['theoedit', 'vm', [EditorFocus, FileManagerFocus, EditorViewModel, FileManagerViewModel]],
+		['theoedit', 'util', [EditorFocus, FileManagerFocus, FileStorage, DirectoryScanner, PathTransformer]],
+		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [EditorFrame, FileManagerFrame]]
 	];
 

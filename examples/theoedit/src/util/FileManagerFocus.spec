@@ -2,7 +2,7 @@
 #! Focus and hover targets for the file manager dialog.
 
 Enum is FileManagerFocus{
-	namespace: ['theoedit', 'vm'],
+	namespace: ['theoedit', 'util'],
 	NONE,
 	LIST,
 	INPUT,

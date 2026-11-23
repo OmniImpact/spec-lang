@@ -9,7 +9,8 @@ Class of Frame is FileManagerFrame{
 	merge Array of Array of String is using: [
 		['base', 'theo', '*'],
 		['base', 'sys', as Loops()],
-		['theoedit', 'vm', [FileManagerFocus, FileManagerViewModel]]
+		['theoedit', 'util', FileManagerFocus],
+		['theoedit', 'vm', FileManagerViewModel]
 	];
 
 	FileManagerViewModel is vm;

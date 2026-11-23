@@ -7,7 +7,8 @@ Class of Frame is EditorFrame{
 	merge Array of Array of String is using: [
 		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, FocusTarget, KeyEvent]],
 		['base', 'sys', as Loops()],
-		['theoedit', 'vm', [EditorFocus, EditorViewModel, FileManagerViewModel]],
+		['theoedit', 'util', EditorFocus],
+		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [TopBar, EditorBody, MessagePanel, BottomActionBar, FileManagerFrame]]
 	];
 

@@ -9,8 +9,7 @@ Class is FileManagerViewModel{
 	merge Array of Array of String is using: [
 		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', DirectoryListing],
-		['theoedit', 'util', [DirectoryScanner, PathTransformer]],
-		['theoedit', 'vm', FileManagerFocus]
+		['theoedit', 'util', [DirectoryScanner, FileManagerFocus, PathTransformer]]
 	];
 
 	DirectoryScanner is scanner: DirectoryScanner();
