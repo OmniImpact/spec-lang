@@ -212,4 +212,31 @@ Class of SpecUnitTest is TestContainerMethods{
 		Assert:isFalse(bigMap:has(key: 'k_0'));
 		Assert:isTrue(bigMap:has(key: 'k_25'));
 	}
+
+	## Case 10: Array(List) conversion shorthand and Array:addList.
+	Function is testArrayFromListAndAddList(){
+		local Array of Int is nums: Array([10, 20, 30]);
+		Assert:areEqualInt(3, nums:length());
+		Assert:areEqualInt(10, nums[0]);
+		Assert:areEqualInt(30, nums[2]);
+
+		local [Int] is more: [40, 50];
+		nums:addList(other: more);
+		Assert:areEqualInt(5, nums:length());
+		Assert:areEqualInt(40, nums[3]);
+		Assert:areEqualInt(50, nums[4]);
+
+		local Array of String is strs: Array(['alpha', 'beta']);
+		Assert:areEqualInt(2, strs:length());
+		Assert:areEqualString('alpha', strs[0]);
+		Assert:areEqualString('beta', strs[1]);
+
+		local [Byte] is rawBytes;
+		rawBytes:push(item: 65 as Byte);
+		rawBytes:push(item: 66 as Byte);
+		local Array of Byte is byteArr: Array(rawBytes);
+		Assert:areEqualInt(2, byteArr:length());
+		Assert:areEqualInt(65, byteArr:get(index: 0, default: 0 as Byte) as Int);
+		Assert:areEqualInt(66, byteArr:get(index: 1, default: 0 as Byte) as Int);
+	}
 }

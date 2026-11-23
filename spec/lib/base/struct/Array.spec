@@ -12,6 +12,7 @@ Class is Array of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
+		['base', 'struct', List],
 		['base', 'sys', as Mem()],
 		['base', 'sys', SpinLock],
 		['base', 'sys', as Loops()],
@@ -27,6 +28,12 @@ Class is Array of T{
 
 	replace Function is init(Int is elemKind: 0){
 		:elemKind: elemKind;
+	}
+
+	## Initializes an Array by copying all elements from a [List].
+	replace Function is init(List of T is items){
+		:elemKind: 0;
+		:addList(other: items);
 	}
 
 	Function is destroy(){
@@ -104,6 +111,41 @@ Class is Array of T{
 		:len: :len + oLen;
 		:lock:unlock();
 		other:lock:unlock();
+	}
+
+	## Appends all elements of [other] (a List) into this array.
+	Function is addList(List of T is other){
+		if({ :frozen }, {
+			Mem:panic(msg: 'Mutation attempted on frozen Array');
+			return;
+		});
+		local Int is oAddr: Mem:objToAddr(obj: other);
+		if({ oAddr == 0 }, { return; });
+		local Int is oLen: other:length();
+		if({ oLen <= 0 }, { return; });
+		local Int is oData: other:rawDataAddr();
+		if({ oData == 0 }, { return; });
+		local Boolean is oByteMode: other:isByteMode();
+		:lock:lock();
+		if({ :len + oLen > :cap }, {
+			local Int is ncap: if({ :cap == 0 }, { 8 }, { :cap * 2 });
+			while({ ncap < :len + oLen }, { ncap: ncap * 2; });
+			:items: Mem:realloc(ptr: :items, bytes: ncap * 8);
+			:cap: ncap;
+		});
+		local Int is j: 0;
+		while({ j < oLen }, {
+			local Int is oit: if({ oByteMode }, {
+				Mem:loadByte(ptr: oData, byteOffset: j)
+			}, {
+				Mem:loadI64(ptr: oData, byteOffset: j * 8)
+			});
+			if({ !oByteMode && :elemKind == 1 && oit != 0 }, { Mem:retainAddr(objAddr: oit); });
+			Mem:storeI64(ptr: :items, byteOffset: (:len + j) * 8, val: oit);
+			j: j + 1;
+		});
+		:len: :len + oLen;
+		:lock:unlock();
 	}
 
 	## Marks this array as frozen (immutable).

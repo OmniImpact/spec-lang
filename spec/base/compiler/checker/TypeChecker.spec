@@ -2216,6 +2216,9 @@ Class is TypeChecker{
 				}, {
 					if({ bound:resolvedType != pT }, {
 						local Boolean is genericMatch: false;
+						if({ p:paramType:isGeneric() && bound:getResolvedTypeNode():name == p:paramType:name }, {
+							genericMatch: true;
+						});
 						if({ TypeDomain:hasFunctionReturn(t: pT) && TypeDomain:hasFunctionReturn(t: bound:resolvedType) }, {
 							local String is pRet: TypeDomain:functionReturn(t: pT);
 							local String is bRet: TypeDomain:functionReturn(t: bound:resolvedType);
@@ -4306,6 +4309,9 @@ Class is TypeChecker{
 				], default: {});
 			});
 			local String is callArgExp: '';
+			if({ targetType == 'Array' && method == 'init' && argIdx == 0 && TypeDomain:isOfBase(t: expected, base: 'List') }, {
+				callArgExp: expected;
+			});
 			if({ isBranchCall && argIdx >= 1 }, {
 				:inBranchClosure: true;
 				:inValueBranch: isValueBranch;
@@ -4706,7 +4712,15 @@ Class is TypeChecker{
 		if({ isLazyCall }, {
 			qualLazyRet: :inferLazyCall(call: call, expected: expected);
 		}, {
-			:inferCallArgs(call: call, targetType: targetType, method: method, expected: expected, isBranchCall: isBranchCall, isValueBranch: isValueBranch);
+			local String is argExpected: expected;
+			if({ targetType == 'Array' && method == 'init' && call:args:length() == 1 }, {
+				if({ TypeDomain:isParameterized(t: expected, base: 'Array') }, {
+					argExpected: ('List:' . TypeDomain:elemType(t: expected)):intern();
+				}, {
+					argExpected: 'List';
+				});
+			});
+			:inferCallArgs(call: call, targetType: targetType, method: method, expected: argExpected, isBranchCall: isBranchCall, isValueBranch: isValueBranch);
 		});
 
 		if({ targetType == :names:selfIdent() || targetType == '' }, {

@@ -640,7 +640,7 @@ Class is IrBuilder{
 		local Int is eci: 0;
 		while({ eci < allClasses:length() }, {
 			local ClassInfo is ec: allClasses:get(index: eci);
-			if({ ec:typeParams:length() > 0 && ec:name != 'Array' && ec:name != 'Map' && instantiatedBases:has(key: ec:name) && !:bareTemplateUsed:has(key: ec:name) }, {
+			if({ ec:typeParams:length() > 0 && ec:name != 'Array' && ec:name != 'Map' && ec:name != 'List' && instantiatedBases:has(key: ec:name) && !:bareTemplateUsed:has(key: ec:name) }, {
 				eci++;
 			}, {
 				emittableClasses:add(item: ec);

@@ -56,6 +56,11 @@ Class is List of T{
 		return :data;
 	}
 
+	## Returns whether this list stores packed 1-byte elements ([Byte]).
+	Function of Boolean is isByteMode(){
+		return :byteMode;
+	}
+
 	## Adopts a newly allocated raw byte buffer into this [List of Byte].
 	Function is adoptRawBuffer(Int is dataPtr, Int is length, Int is capacity){
 		if({ :data != 0 }, {
