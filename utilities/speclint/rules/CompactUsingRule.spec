@@ -51,7 +51,7 @@ Class of LintRule is CompactUsingRule{
 											Expression:Ident: local Function(String is _name){
 												hasTarget: true;
 											},
-											Expression:UsingAs: local Function(String is _cn, Array of NamedArg is _args){
+											Expression:UsingAs: local Function(String is _cn, [NamedArg] is _args){
 												hasTarget: true;
 											},
 											Expression:ArrayLit: local Function(Array of Expression is _grp){

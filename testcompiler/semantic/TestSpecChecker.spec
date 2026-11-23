@@ -27,28 +27,32 @@ Class of SpecUnitTest is TestSpecChecker{
 	## @param src: Spec source text.
 	## @return: Rendered type errors (empty when clean).
 	Function of Array of String is checkOf(String is src){
-		local Array of ClassInfo is all: Array();
+		local [ClassInfo] is all: [];
 		local Array of String is preloads: Array(['spec/lib/base/core/Mergeable.spec', 'spec/lib/base/sys/Conditional.spec', 'spec/lib/base/iterator/Loop.spec', 'spec/lib/base/iterator/LoopControl.spec', 'spec/lib/base/sys/Loops.spec', 'spec/lib/base/sys/Mem.spec', 'spec/lib/base/sys/SpinLock.spec', 'spec/lib/base/sys/Buf.spec', 'spec/lib/base/core/Str.spec', 'spec/lib/base/core/String.spec', 'spec/lib/base/struct/List.spec', 'spec/lib/base/struct/Array.spec', 'spec/lib/base/struct/Map.spec']);
 		preloads:each(action: local Function(String is path){
-			local Lexer is plex: Lexer:init(source: fileRead(path: path, default: ''));
-			local Parser is ppar: Parser:init(tokens: plex:tokenize());
+			local Lexer is plex: Lexer(source: fileRead(path: path, default: ''));
+			local Parser is ppar: Parser(tokens: plex:tokenize());
 			local ProgramNode is pprog: ppar:parseProgram();
-			pprog:classes:each(action: local Function(ClassInfo is c){
-				all:add(item: c);
+			while([Int is ci: 0], { ci < pprog:classes:length() }, {
+				all:push(item: pprog:classes:get(index: ci));
+				ci++;
 			});
 		});
-		local Lexer is lx: Lexer:init(source: src);
-		local Parser is p: Parser:init(tokens: lx:tokenize());
+		local Lexer is lx: Lexer(source: src);
+		local Parser is p: Parser(tokens: lx:tokenize());
 		local ProgramNode is prog: p:parseProgram();
-		prog:classes:each(action: local Function(ClassInfo is c){
-			all:add(item: c);
+		while([Int is ci: 0], { ci < prog:classes:length() }, {
+			all:push(item: prog:classes:get(index: ci));
+			ci++;
 		});
-		all:each(action: local Function(ClassInfo is c){
+		while([Int is ci: 0], { ci < all:length() }, {
+			local ClassInfo is c: all:get(index: ci);
 			Conditional:if(check: { c:baseClasses:length() == 0 && c:baseClass == '' && c:name != 'Any' && c:name != 'Stringable' && c:baseClass != 'Enum' }, then: {
 				c:withBaseClasses(name: c:name, baseClasses: Array(['Any']), members: c:members);
 			});
+			ci++;
 		});
-		prog: ProgramNode:init(classes: all);
+		prog: ProgramNode(classes: all);
 		local Array of String is msgs: Array();
 		Conditional:if(check: { p:hasErrors() }, then: {
 			p:getErrors():each(action: local Function(Error is e){

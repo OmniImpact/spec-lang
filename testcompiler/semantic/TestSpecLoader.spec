@@ -105,6 +105,7 @@ Class is LoaderE2EHelper{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'iterator'],
@@ -114,30 +115,35 @@ Class is LoaderE2EHelper{
 
 	Function of Boolean is hasClass(ProgramNode is classes, String is name){
 		local Boolean is res: false;
-		classes:classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { c:name == name }, then: {
+		while([Int is ci: 0], { !res && ci < classes:classes:length() }, {
+			Conditional:if(check: { classes:classes:get(index: ci):name == name }, then: {
 				res: true;
 			});
+			ci++;
 		});
 		return res;
 	}
 
 	Function of String is baseOf(ProgramNode is classes, String is name){
 		local String is res: '';
-		classes:classes:each(action: local Function(ClassInfo is c){
+		while([Int is ci: 0], { ci < classes:classes:length() }, {
+			local ClassInfo is c: classes:classes:get(index: ci);
 			Conditional:if(check: { c:name == name }, then: {
 				res: c:baseClass;
 			});
+			ci++;
 		});
 		return res;
 	}
 
 	Function of Int is memberCount(ProgramNode is classes, String is name){
 		local Int is res: 0;
-		classes:classes:each(action: local Function(ClassInfo is c){
+		while([Int is ci: 0], { ci < classes:classes:length() }, {
+			local ClassInfo is c: classes:classes:get(index: ci);
 			Conditional:if(check: { c:name == name }, then: {
 				res: c:members:length();
 			});
+			ci++;
 		});
 		return res;
 	}

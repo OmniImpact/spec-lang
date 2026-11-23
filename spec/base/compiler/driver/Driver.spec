@@ -159,12 +159,15 @@ Class is Driver{
 
 			local Int is classCount: program:classes:length();
 			local Int is methodCount: 0;
-			program:classes:each(action: local Function(ClassInfo is c){
+			local Int is ci: 0;
+			while({ ci < classCount }, {
+				local ClassInfo is c: program:classes:get(index: ci);
 				c:members:each(action: local Function(Member is m){
 					if({ m:kind == MemberKind:METHOD }, {
 						methodCount: methodCount + 1;
 					});
 				});
+				ci++;
 			});
 			report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 			if({ loader:getParseErrors():length() > 0 }, {
@@ -209,11 +212,14 @@ Class is Driver{
 				exitCode: 1;
 				return;
 			});
-			local Array of ClassInfo is rootClasses: Array();
-			program:classes:each(action: local Function(ClassInfo is c){
+			local [ClassInfo] is rootClasses: [];
+			local Int is rci: 0;
+			while({ rci < program:classes:length() }, {
+				local ClassInfo is c: program:classes:get(index: rci);
 				if({ c:sourceFile == inputPath }, {
-					rootClasses:add(item: c);
+					rootClasses:push(item: c);
 				});
+				rci++;
 			});
 			if({ rootClasses:length() == 0 }, {
 				Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
@@ -223,25 +229,29 @@ Class is Driver{
 			});
 			local String is entryName: '';
 			local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
-			rootClasses:each(action: local Function(ClassInfo is c){
-				if({ entryName == '' }, {
-					c:members:each(action: local Function(Member is m){
-						if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
-							local Parameter is p: m:params:get(index: 0);
-							if({ p:paramType:name == 'Map' }, {
-								entryName: c:name;
-								entryClassInfo: c;
-							});
+			local Int is eci: 0;
+			while({ entryName == '' && eci < rootClasses:length() }, {
+				local ClassInfo is c: rootClasses:get(index: eci);
+				c:members:each(action: local Function(Member is m){
+					if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
+						local Parameter is p: m:params:get(index: 0);
+						if({ p:paramType:name == 'Map' }, {
+							entryName: c:name;
+							entryClassInfo: c;
 						});
 					});
 				});
+				eci++;
 			});
 			if({ entryName == '' }, {
-				rootClasses:each(action: local Function(ClassInfo is c){
-					if({ entryName == '' && c:baseClass != 'Enum' }, {
+				eci: 0;
+				while({ entryName == '' && eci < rootClasses:length() }, {
+					local ClassInfo is c: rootClasses:get(index: eci);
+					if({ c:baseClass != 'Enum' }, {
 						entryName: c:name;
 						entryClassInfo: c;
 					});
+					eci++;
 				});
 			});
 			if({ entryName == '' }, {
@@ -349,10 +359,12 @@ Class is Driver{
 
 			if({ Process:osName() == 'linux' }, {
 				local Boolean is usesAudio: false;
-				program:classes:each(action: local Function(ClassInfo is cls){
-					if({ cls:name == 'Audio' }, {
+				local Int is aci: 0;
+				while({ !usesAudio && aci < program:classes:length() }, {
+					if({ program:classes:get(index: aci):name == 'Audio' }, {
 						usesAudio: true;
 					});
+					aci++;
 				});
 				if({ usesAudio && !fileExists(path: '/usr/include/alsa/asoundlib.h') }, {
 					Stderr:line('Notice: Program uses base:audio. If ALSA development headers are missing, please install:\n  Debian/Ubuntu: sudo apt-get install libasound2-dev\n  Fedora/RHEL:   sudo dnf install alsa-lib-devel');
@@ -458,7 +470,7 @@ Class is Driver{
 	## @param c: The class to probe (the entry class).
 	## @param all: The full loaded class set (lattice preloads included).
 	## @param visited: Names already probed on this walk.
-	Function is resolveEntryInit(ClassInfo is c, Array of ClassInfo is all, Array of String is visited){
+	Function is resolveEntryInit(ClassInfo is c, [ClassInfo] is all, Array of String is visited){
 		if({ visited:indexOf(search: c:name, default: -1) >= 0 || :entryInitTakesMap }, {
 			return;
 		});
@@ -503,10 +515,13 @@ Class is Driver{
 		});
 		if({ !:entryInitTakesMap }, {
 			c:baseClasses:each(action: local Function(String is baseName){
-				all:each(action: local Function(ClassInfo is cand){
-					if({ !:entryInitTakesMap && cand:name == baseName }, {
+				local Int is ai: 0;
+				while({ !:entryInitTakesMap && ai < all:length() }, {
+					local ClassInfo is cand: all:get(index: ai);
+					if({ cand:name == baseName }, {
 						:resolveEntryInit(c: cand, all: all, visited: visited);
 					});
+					ai++;
 				});
 			});
 		});

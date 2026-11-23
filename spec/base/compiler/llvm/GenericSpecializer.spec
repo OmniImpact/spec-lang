@@ -351,12 +351,12 @@ Class is GenericSpecializer{
 			Statement:Expr: local Function of Statement(Expression is es){
 				return Statement:Expr(exprStmt: :transformExpr(expr: es, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
 			},
-			Statement:Forward: local Function of Statement(Array of NamedArg is fargs){
-				local Array of NamedArg is nf: Array();
+			Statement:Forward: local Function of Statement([NamedArg] is fargs){
+				local [NamedArg] is nf: [];
 				local Int is fi: 0;
 				while({ fi < fargs:length() }, {
 					local NamedArg is na: fargs:get(index: fi);
-					nf:add(item: NamedArg:init(name: na:name, value: :transformExpr(expr: na:value, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName)));
+					nf:push(item: NamedArg(name: na:name, value: :transformExpr(expr: na:value, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName)));
 					fi++;
 				});
 				return Statement:Forward(forwardArgs: nf);
@@ -367,7 +367,7 @@ Class is GenericSpecializer{
 		return res;
 	}
 
-	local Function of Type is inferGenericMethodArgType(Member is gm, String is tpName, Array of NamedArg is nargs, Map of String to Type is subst){
+	local Function of Type is inferGenericMethodArgType(Member is gm, String is tpName, [NamedArg] is nargs, Map of String to Type is subst){
 		local Type is boundType: Type:init(name: '');
 		local Int is pi: 0;
 		while({ pi < gm:params:length() && boundType:name == '' }, {
@@ -493,11 +493,11 @@ Class is GenericSpecializer{
 			},
 			Expression:Call: local Function of Expression(CallData is call){
 				local Expression is ntarget: :transformExpr(expr: call:target, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
-				local Array of NamedArg is nargs: Array();
+				local [NamedArg] is nargs: [];
 				local Int is ai: 0;
 				while({ ai < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ai);
-					nargs:add(item: NamedArg:init(name: na:name, value: :transformExpr(expr: na:value, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName)));
+					nargs:push(item: NamedArg(name: na:name, value: :transformExpr(expr: na:value, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName)));
 					ai++;
 				});
 				match(on: ntarget, when: [
@@ -725,7 +725,7 @@ Class is GenericSpecializer{
 		return '';
 	}
 
-	Function is specialize(ProgramNode is program, Array of ClassInfo is allClasses){
+	Function is specialize(ProgramNode is program, [ClassInfo] is allClasses){
 		:templates: Map:init();
 		:seenClassNames: Map:init();
 		:specKeyToMangled: Map:init();
@@ -874,29 +874,29 @@ Class is GenericSpecializer{
 					:specBaseMap:set(key: mangledName, value: baseName);
 					:specClassMap:set(key: mangledName, value: specCls);
 					:specClassArgsMap:set(key: mangledName, value: tArgs);
-					allClasses:add(item: specCls);
-					program:classes:add(item: specCls);
+					allClasses:push(item: specCls);
+					program:classes:push(item: specCls);
 					# Nested members of the spec class (enum variants, inner
 					# classes) must be visible to emission: the IrBuilder
 					# collected the program's own nested classes BEFORE the
 					# specializer ran, so flatten the spec clones here —
 					# mirroring the Loader's flattening of declared nesting.
-					local Array of ClassInfo is nestedQueue: Array();
+					local [ClassInfo] is nestedQueue: [];
 					local Int is nqi: 0;
 					while({ nqi < specCls:members:length() }, {
 						local Member is qm: specCls:members:get(index: nqi);
 						if({ qm:kind == MemberKind:CLASS }, {
-							nestedQueue:add(item: qm:nestedClass);
+							nestedQueue:push(item: qm:nestedClass);
 						});
 						nqi++;
 					});
 					while({ nestedQueue:length() > 0 }, {
-						local ClassInfo is nq: nestedQueue:pop(default: ClassInfo:init(name: '', baseClass: '', members: Array()));
-						allClasses:add(item: nq);
-						program:classes:add(item: nq);
+						local ClassInfo is nq: nestedQueue:pop();
+						allClasses:push(item: nq);
+						program:classes:push(item: nq);
 						nq:members:each(action: local Function(Member is dm){
 							if({ dm:kind == MemberKind:CLASS }, {
-								nestedQueue:add(item: dm:nestedClass);
+								nestedQueue:push(item: dm:nestedClass);
 							});
 						});
 					});

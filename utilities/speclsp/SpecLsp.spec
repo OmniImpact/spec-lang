@@ -400,13 +400,16 @@ Class is SpecLsp{
 	}
 
 	local Function of ClassInfo is findClass(ProgramNode is prog, String is name){
-		local ClassInfo is found: ClassInfo:init(name: '', baseClass: '', members: Array());
+		local ClassInfo is found: ClassInfo(name: '', baseClass: '', members: Array());
 		local Boolean is matched: false;
-		prog:classes:each(action: local Function(ClassInfo is c){
-			if({ !matched && c:name == name }, {
+		local Int is ci: 0;
+		while({ !matched && ci < prog:classes:length() }, {
+			local ClassInfo is c: prog:classes:get(index: ci);
+			if({ c:name == name }, {
 				found: c;
 				matched: true;
 			});
+			ci++;
 		});
 		return found;
 	}
@@ -419,12 +422,13 @@ Class is SpecLsp{
 		local Int is char0: Json:getInt(obj: pos, key: 'character', default: 0);
 
 		if({ !:docTexts:has(key: uri) || !:docPrograms:has(key: uri) }, {
-			sendResponse(reqId: reqId, result: JsonNull:init());
+			sendResponse(reqId: reqId, result: JsonNull());
 			return;
 		});
 
 		local String is text: :docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: Array()));
+		local [ClassInfo] is emptyClasses: [];
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode(classes: emptyClasses));
 		local Array of String is sym: extractSymbolAt(text: text, line0: line0, char0: char0);
 		local String is qual: sym:get(index: 0, default: '');
 		local String is word: sym:get(index: 1, default: '');
@@ -459,14 +463,17 @@ Class is SpecLsp{
 
 		if({ hoverMd == '' }, {
 			local String is filePath: :docPaths:getString(key: uri, default: '');
-			prog:classes:each(action: local Function(ClassInfo is c){
-				if({ hoverMd == '' && c:sourceFile == filePath }, {
+			local Int is ci: 0;
+			while({ hoverMd == '' && ci < prog:classes:length() }, {
+				local ClassInfo is c: prog:classes:get(index: ci);
+				if({ c:sourceFile == filePath }, {
 					c:members:each(action: local Function(Member is m){
 						if({ hoverMd == '' && m:name == word }, {
 							hoverMd: "```spec\n" . formatMemberSig(cls: c, m: m) . "\n```";
 						});
 					});
 				});
+				ci++;
 			});
 		});
 
@@ -496,7 +503,8 @@ Class is SpecLsp{
 		});
 
 		local String is text: :docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: Array()));
+		local [ClassInfo] is emptyClasses: [];
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode(classes: emptyClasses));
 		local Array of String is sym: extractSymbolAt(text: text, line0: line0, char0: char0);
 		local String is qual: sym:get(index: 0, default: '');
 		local String is word: sym:get(index: 1, default: '');
@@ -531,8 +539,10 @@ Class is SpecLsp{
 
 		if({ targetFile == '' }, {
 			local String is filePath: :docPaths:getString(key: uri, default: '');
-			prog:classes:each(action: local Function(ClassInfo is c){
-				if({ targetFile == '' && c:sourceFile == filePath }, {
+			local Int is ci: 0;
+			while({ targetFile == '' && ci < prog:classes:length() }, {
+				local ClassInfo is c: prog:classes:get(index: ci);
+				if({ c:sourceFile == filePath }, {
 					c:members:each(action: local Function(Member is m){
 						if({ targetFile == '' && m:name == word && m:line > 0 }, {
 							targetFile: if({ m:sourceFile != '' }, { m:sourceFile }, { c:sourceFile });
@@ -540,6 +550,7 @@ Class is SpecLsp{
 						});
 					});
 				});
+				ci++;
 			});
 		});
 
@@ -568,7 +579,8 @@ Class is SpecLsp{
 
 		local Array of String is items: Array();
 		local String is text: :docTexts:getString(key: uri, default: '');
-		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode:init(classes: Array()));
+		local [ClassInfo] is emptyClasses: [];
+		local ProgramNode is prog: :docPrograms:get(key: uri, default: ProgramNode(classes: emptyClasses));
 
 		local String is lineStr: getLineAt(text: text, targetLine0: line0);
 		local Int is cPos: if({ char0 > lineStr:length() }, { lineStr:length() }, { char0 });
@@ -607,8 +619,10 @@ Class is SpecLsp{
 			items:add(item: makeCompletionItemJson(label: pt, kind: 7, detail: 'primitive type'));
 		});
 
-		prog:classes:each(action: local Function(ClassInfo is c){
-			items:add(item: makeCompletionItemJson(label: c:name, kind: 7, detail: 'Class'));
+		local Int is ci: 0;
+		while({ ci < prog:classes:length() }, {
+			items:add(item: makeCompletionItemJson(label: prog:classes:get(index: ci):name, kind: 7, detail: 'Class'));
+			ci++;
 		});
 
 		sendRawMessage(body: '{"jsonrpc":"2.0","id":' . Json:stringify(value: reqId) . ',"result":[' . items:join(separator: ',') . ']}');

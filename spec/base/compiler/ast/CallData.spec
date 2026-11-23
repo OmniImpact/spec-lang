@@ -16,7 +16,7 @@ Class is CallData{
 	String is name: '';
 
 	## Call arguments.
-	Array of NamedArg is args;
+	[NamedArg] is args;
 
 	## For a bare (self-receiver) call resolved against the bare scope,
 	## the as-imported class providing the member; '' for ordinary dispatch.
@@ -39,7 +39,7 @@ Class is CallData{
 	## @param target: Receiver expression.
 	## @param name: Method name.
 	## @param args: Call arguments.
-	replace Function is init(Expression is target, String is name, Array of NamedArg is args){
+	replace Function is init(Expression is target, String is name, [NamedArg] is args){
 		:target: target;
 		:name: name;
 		:args: args;

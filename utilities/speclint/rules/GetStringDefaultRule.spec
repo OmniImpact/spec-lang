@@ -11,7 +11,8 @@ Class of LintRule is GetStringDefaultRule{
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'struct', Array],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	replace Function of String is id(){
@@ -31,13 +32,15 @@ Class of LintRule is GetStringDefaultRule{
 			Expression:Call: local Function(CallData is cd){
 				if({ cd:name == 'getString' }, {
 					local Boolean is hasDefault: false;
-					cd:args:each(action: local Function(NamedArg is arg){
-						if({ arg:name == 'default' }, {
+					local Int is ai: 0;
+					while({ !hasDefault && ai < cd:args:length() }, {
+						if({ cd:args:get(index: ai):name == 'default' }, {
 							hasDefault: true;
 						});
+						ai++;
 					});
 					if({ hasDefault }, {
-						issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
+						issues:add(item: LintIssue(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
 					});
 				});
 			}

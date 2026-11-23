@@ -198,7 +198,8 @@ Class is EnumDesugar{
 		local Array of Expression is entryItems: Array();
 		entryItems:add(item: :strLit(text: 'base'));
 		entryItems:add(item: :strLit(text: 'sys'));
-		local Expression is asFn: Expression:UsingAs(className: 'Conditional', args: Array());
+		local [NamedArg] is emptyAsArgs: [];
+		local Expression is asFn: Expression:UsingAs(className: 'Conditional', args: emptyAsArgs);
 		entryItems:add(item: asFn);
 		local Expression is entry: Expression:ArrayLit(items: entryItems);
 		local Array of Expression is usingItems: Array([entry]);
@@ -268,9 +269,9 @@ Class is EnumDesugar{
 
 	## Builds `Name:init(tag)` — the variant's holding initializer.
 	Function of Expression is ctorCall(String is enumName, Expression is tagExpr){
-		local Array of NamedArg is args: Array();
-		args:add(item: NamedArg:init(name: '', value: tagExpr));
-		return Expression:Call(call: CallData:init(target: :ident(name: enumName), name: 'init', args: args));
+		local [NamedArg] is args: [];
+		args:push(item: NamedArg(name: '', value: tagExpr));
+		return Expression:Call(call: CallData(target: :ident(name: enumName), name: 'init', args: args));
 	}
 
 	Function of Expression is ident(String is name){
@@ -302,13 +303,13 @@ Class is EnumDesugar{
 	## Builds `if({ <cond> }, { return <val>; });`
 	## as an expression statement.
 	Function of Statement is guardIf(Expression is cond, Expression is val){
-		local Array of NamedArg is args: Array();
+		local [NamedArg] is args: [];
 		local [Parameter] is emptyParams: [];
 		local Expression is checkFn: Expression:AnonFn(returnType: Type(name: ''), params: emptyParams, body: :returnBody(expr: cond));
-		args:add(item: NamedArg(name: 'check', value: checkFn));
+		args:push(item: NamedArg(name: 'check', value: checkFn));
 		local Expression is thenFn: Expression:AnonFn(returnType: Type(name: ''), params: emptyParams, body: :returnBody(expr: val));
-		args:add(item: NamedArg(name: 'then', value: thenFn));
-		local Expression is call: Expression:Call(call: CallData:init(target: :ident(name: 'Conditional'), name: 'if', args: args));
+		args:push(item: NamedArg(name: 'then', value: thenFn));
+		local Expression is call: Expression:Call(call: CallData(target: :ident(name: 'Conditional'), name: 'if', args: args));
 		local Statement is s: Statement:Expr(exprStmt: call);
 		return s;
 	}
@@ -376,8 +377,8 @@ Class is EnumDesugar{
 		local Statement is decl: Statement:VarDecl(modifiers: Array(['local']), varType: declT, varName: 'all', initExpr: Expression:ArrayLit(items: Array()), hasInit: true);
 		body:push(item: decl);
 		variants:each(action: local Function(Member is v){
-			local Array of NamedArg is args: Array();
-			args:add(item: NamedArg(name: 'item', value: :variantRef(enumName: name, variant: v:name)));
+			local [NamedArg] is args: [];
+			args:push(item: NamedArg(name: 'item', value: :variantRef(enumName: name, variant: v:name)));
 			local Expression is call: Expression:Call(call: CallData(target: :ident(name: 'all'), name: 'push', args: args));
 			local Statement is s: Statement:Expr(exprStmt: call);
 			body:push(item: s);

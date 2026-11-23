@@ -11,7 +11,8 @@ Class of LintRule is LoopConstructionRule{
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'struct', Array],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	local Int is loopDepth: 0;
@@ -45,7 +46,9 @@ Class of LintRule is LoopConstructionRule{
 
 				:checkExpression(expr: cd:target, issues: issues);
 				local Boolean is isLoop: :isLoopCall(call: cd);
-				cd:args:each(action: local Function(NamedArg is arg){
+				local Int is ai: 0;
+				while({ ai < cd:args:length() }, {
+					local NamedArg is arg: cd:args:get(index: ai);
 					local Boolean is isAnon: match(on: arg:value, when: [
 						Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){ true; },
 						else: { false; }
@@ -58,6 +61,7 @@ Class of LintRule is LoopConstructionRule{
 					}, {
 						:checkExpression(expr: arg:value, issues: issues);
 					});
+					ai++;
 				});
 			}
 		], default: {});

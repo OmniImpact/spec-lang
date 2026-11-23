@@ -41,20 +41,20 @@ Class is Loader{
 
 	local Map of String to String is loadedFiles: Map:init();
 	local String is rootInputPath: '';
-	local Array of ClassInfo is loadedClasses: Array();
-	local Map of String to String is seenClassNames: Map:init();
-	local Map of String to String is seenBareNames: Map:init();
+	local [ClassInfo] is loadedClasses: [];
+	local Map of String to String is seenClassNames: Map();
+	local Map of String to String is seenBareNames: Map();
 	local Array of String is parseErrors: Array();
-	local ErrorText is errText: ErrorText:init();
+	local ErrorText is errText: ErrorText();
 	local Array of String is extraSourceDirs: Array();
 
 
 
 	replace Function is init(){
-		:loadedFiles: Map:init();
-		:loadedClasses: Array();
-		:seenClassNames: Map:init();
-		:seenBareNames: Map:init();
+		:loadedFiles: Map();
+		:loadedClasses: [];
+		:seenClassNames: Map();
+		:seenBareNames: Map();
 		:parseErrors: Array();
 		:extraSourceDirs: Array();
 	}
@@ -65,8 +65,8 @@ Class is Loader{
 
 	## Releases loaded class lists and tracking maps after program assembly.
 	Function is cleanup(){
-		:loadedFiles: Map:init();
-		:loadedClasses: Array();
+		:loadedFiles: Map();
+		:loadedClasses: [];
 		:seenClassNames: Map:init();
 		:seenBareNames: Map:init();
 		:parseErrors: Array();
@@ -118,7 +118,9 @@ Class is Loader{
 			});
 		});
 
-		prog:classes:each(action: local Function(ClassInfo is c){
+		local Int is pci: 0;
+		while({ pci < prog:classes:length() }, {
+			local ClassInfo is c: prog:classes:get(index: pci);
 			c:members:each(action: local Function(Member is m){
 				m:setSourceFile(file: filePath);
 				if({ m:kind == MemberKind:CLASS }, {
@@ -138,9 +140,10 @@ Class is Loader{
 			local Boolean is dup: :seenClassNames:has(key: qName);
 			if({ !dup }, {
 				:seenClassNames:set(key: qName, value: 'true');
-				:loadedClasses:add(item: c);
+				:loadedClasses:push(item: c);
 			});
 			:collectImportsFromClass(c: c);
+			pci++;
 		});
 	}
 
@@ -314,7 +317,7 @@ Class is Loader{
 	## @param index: The loadedClasses length to restore.
 	Function is unloadClassesFrom(Int is index){
 		while({ :loadedClasses:length() > index }, {
-			local ClassInfo is c: :loadedClasses:pop(default: ClassInfo:init(name: '', baseClass: '', members: Array()));
+			local ClassInfo is c: :loadedClasses:pop();
 			:seenClassNames:remove(key: c:namespaceJoined() . ':' . c:name);
 		});
 	}
@@ -328,20 +331,21 @@ Class is Loader{
 	## @return: true when provided.
 	Function of Boolean is provides(String is nsJoined, String is className){
 		local Boolean is ok: false;
-		:loadedClasses:each(action: local Function(ClassInfo is c){
-			if({ !ok }, {
-				# A package-form request (no class name) accepts any class
-				# declaring the namespace; a class form requires the class.
-				if({ className == '' }, {
-					if({ c:namespaceJoined() == nsJoined }, {
-						ok: true;
-					});
-				}, {
-					if({ c:name == className && c:namespaceJoined() == nsJoined }, {
-						ok: true;
-					});
+		local Int is ci: 0;
+		while({ !ok && ci < :loadedClasses:length() }, {
+			local ClassInfo is c: :loadedClasses:get(index: ci);
+			# A package-form request (no class name) accepts any class
+			# declaring the namespace; a class form requires the class.
+			if({ className == '' }, {
+				if({ c:namespaceJoined() == nsJoined }, {
+					ok: true;
+				});
+			}, {
+				if({ c:name == className && c:namespaceJoined() == nsJoined }, {
+					ok: true;
 				});
 			});
+			ci++;
 		});
 		return ok;
 	}
@@ -431,7 +435,7 @@ Class is Loader{
 				Expression:Ident: local Function(String is name){
 					termClass: name;
 				},
-				Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+				Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 					# Instance-import form (§2.1): resolves exactly
 					# like the class form; the as-ness stays on the using member
 					# for the checker, generator, and audit.
@@ -443,7 +447,7 @@ Class is Loader{
 							Expression:Ident: local Function(String is gname){
 								groupedClasses:add(item: gname);
 							},
-							Expression:UsingAs: local Function(String is gclassName, Array of NamedArg is gargs){
+							Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
 								groupedClasses:add(item: gclassName);
 							},
 							else: {}
@@ -525,7 +529,12 @@ Class is Loader{
 		while([Int is idx: 0], { !found && idx < :loadedClasses:length() }, {
 			local ClassInfo is cur: :loadedClasses:get(index: idx);
 			if({ cur == c }, {
-				:loadedClasses:removeAt(index: idx, default: c);
+				local Int is sh: idx;
+				while({ sh + 1 < :loadedClasses:length() }, {
+					:loadedClasses:set(index: sh, item: :loadedClasses:get(index: sh + 1));
+					sh++;
+				});
+				:loadedClasses:pop();
 				found: true;
 			}, {
 				idx++;
@@ -534,8 +543,8 @@ Class is Loader{
 	}
 
 	Function of ProgramNode is loadProgram(String is rootPath){
-		:loadedFiles: Map:init();
-		:loadedClasses: Array();
+		:loadedFiles: Map();
+		:loadedClasses: [];
 		:seenClassNames: Map:init();
 		:seenBareNames: Map:init();
 		:parseErrors: Array();
@@ -604,8 +613,10 @@ Class is Loader{
 	## Recursive synthesis walk over a class list (nested classes included).
 	##
 	## @param classes: Candidate [ClassInfo] definitions.
-	Function is synthesizeInto(Array of ClassInfo is classes){
-		classes:each(action: local Function(ClassInfo is c){
+	Function is synthesizeInto([ClassInfo] is classes){
+		local Int is sci: 0;
+		while({ sci < classes:length() }, {
+			local ClassInfo is c: classes:get(index: sci);
 			c:members:each(action: local Function(Member is m){
 				if({ m:name == 'using' && m:hasInit }, {
 					match(on: m:initExpr, when: [
@@ -625,13 +636,13 @@ Class is Loader{
 														});
 													});
 												},
-												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+												Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 													:synthesizeFor(c: c, asExpr: seg, pkgPrefix: pkgPrefix);
 												},
 												Expression:ArrayLit: local Function(Array of Expression is grpItems){
 													grpItems:each(action: local Function(Expression is g){
 														match(on: g, when: [
-															Expression:UsingAs: local Function(String is gclassName, Array of NamedArg is gargs){
+															Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
 																:synthesizeFor(c: c, asExpr: g, pkgPrefix: pkgPrefix);
 															},
 															else: {}
@@ -652,7 +663,7 @@ Class is Loader{
 			});
 			c:members:each(action: local Function(Member is m){
 				if({ m:kind == MemberKind:CLASS }, {
-					local Array of ClassInfo is one: Array([m:nestedClass]);
+					local [ClassInfo] is one: [m:nestedClass];
 					:synthesizeInto(classes: one);
 				});
 			});
@@ -660,6 +671,7 @@ Class is Loader{
 			# chain's as-imports — its instances carry their own synthesized
 			# fields, so the inherited functions dispatch on the inner.
 			:synthesizeInheritedImports(cls: c);
+			sci++;
 		});
 	}
 
@@ -695,7 +707,7 @@ Class is Loader{
 															pkgPrefix: pkgPrefix . ':' . value;
 														});
 													},
-													Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+													Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 														:synthesizeFor(c: cls, asExpr: seg, pkgPrefix: pkgPrefix);
 													},
 													else: {}
@@ -724,9 +736,9 @@ Class is Loader{
 	## @param asExpr: The USING_AS expression node.
 	Function is synthesizeFor(ClassInfo is c, Expression is asExpr, String is pkgPrefix: ''){
 		local String is targetName: '';
-		local Array of NamedArg is asArgs: Array();
+		local [NamedArg] is asArgs: [];
 		match(on: asExpr, when: [
-			Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+			Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 				targetName: className;
 				asArgs: args;
 			},
@@ -852,10 +864,13 @@ Class is Loader{
 	## implicit Class would cycle). Enum keeps its own root per the
 	## enumHeader contract.
 	Function is appendImplicitClass(){
-		:loadedClasses:each(action: local Function(ClassInfo is c){
+		local Int is ci: 0;
+		while({ ci < :loadedClasses:length() }, {
+			local ClassInfo is c: :loadedClasses:get(index: ci);
 			if({ c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' }, {
 				c:withBaseClasses(name: c:name, baseClasses: Array(['Class']), members: c:members);
 			});
+			ci++;
 		});
 	}
 

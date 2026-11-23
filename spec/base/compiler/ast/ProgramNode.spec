@@ -10,12 +10,12 @@ Class is ProgramNode{
 	];
 
 	## Top-level classes, in load order.
-	Array of ClassInfo is classes: Array();
+	[ClassInfo] is classes: [];
 
 	## Initializes the program node.
 	##
 	## @param classes: Top-level classes.
-	replace Function is init(Array of ClassInfo is classes){
+	replace Function is init([ClassInfo] is classes){
 		:classes: classes;
 	}
 }

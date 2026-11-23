@@ -16,7 +16,8 @@ Class of SpecUnitTest is TestSpecAst{
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'sys', as Output()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	# Records build and cross-reference: a binary expression over idents.
@@ -69,18 +70,20 @@ Class of SpecUnitTest is TestSpecAst{
 	# (Implicit-Any parenting is the loader's appendImplicitAny job, not
 	# the record's — a bare init carries no bases.)
 	Function is testClassMemberGraph(){
-		local Member is m: Member:init(kind: MemberKind:METHOD);
+		local Member is m: Member(kind: MemberKind:METHOD);
 		m:name: 'speak';
-		local ClassInfo is cls: ClassInfo:init(name: 'Widget', baseClass: '', members: Array([m]));
-		local ProgramNode is prog: ProgramNode:init(classes: Array([cls]));
+		local ClassInfo is cls: ClassInfo(name: 'Widget', baseClass: '', members: Array([m]));
+		local ProgramNode is prog: ProgramNode(classes: [cls]);
 		local String is found: '';
-		prog:classes:each(action: local Function(ClassInfo is c){
+		while([Int is ci: 0], { ci < prog:classes:length() }, {
+			local ClassInfo is c: prog:classes:get(index: ci);
 			c:members:each(action: local Function(Member is mem){
 				Conditional:match(on: mem:kind, when: [
 					MemberKind:METHOD: { found: mem:name; },
 					else: {}
 				]);
 			});
+			ci++;
 		});
 		Assert:areEqualString('speak', found);
 		Assert:areEqualInt(0, cls:baseClasses:length());

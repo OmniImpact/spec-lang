@@ -100,8 +100,10 @@ Class of LintRule is UnusedUsingRule{
 				if({ cd:name != '' }, {
 					:refs:set(key: cd:name, value: '1');
 				});
-				cd:args:each(action: local Function(NamedArg is a){
-					:markExpr(expr: a:value);
+				local Int is ai: 0;
+				while({ ai < cd:args:length() }, {
+					:markExpr(expr: cd:args:get(index: ai):value);
+					ai++;
 				});
 			},
 			Expression:Binary: local Function(String is _op, Expression is l, Expression is r){
@@ -189,7 +191,7 @@ Class of LintRule is UnusedUsingRule{
 													));
 												});
 											},
-											Expression:UsingAs: local Function(String is className, Array of NamedArg is _args){
+											Expression:UsingAs: local Function(String is className, [NamedArg] is _args){
 												local String is alias: seg:usingAsAlias;
 												if({ alias != '' && !:refs:has(key: alias) }, {
 													issues:add(item: LintIssue:init(

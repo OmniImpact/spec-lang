@@ -594,8 +594,8 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is collectAllClasses(ClassInfo is cls, Array of ClassInfo is out){
-		out:add(item: cls);
+	local Function is collectAllClasses(ClassInfo is cls, [ClassInfo] is out){
+		out:push(item: cls);
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
@@ -607,11 +607,11 @@ Class is IrBuilder{
 	}
 
 	Function of IrModule is buildProgram(ProgramNode is program, String is entryClass){
-		:mod: IrModule:init();
+		:mod: IrModule();
 		:mod:entryFunction: entryClass;
 
-		:sysinternalClasses: Map:init();
-		local Array of ClassInfo is allClasses: Array();
+		:sysinternalClasses: Map();
+		local [ClassInfo] is allClasses: [];
 		local Int is pci: 0;
 		while({ pci < program:classes:length() }, {
 			local ClassInfo is pc0: program:classes:get(index: pci);
@@ -651,14 +651,14 @@ Class is IrBuilder{
 			instantiatedBases:set(key: :specBaseMap:get(key: sbKeys:get(index: sbi, default: ''), default: ''), value: true);
 			sbi++;
 		});
-		local Array of ClassInfo is emittableClasses: Array();
+		local [ClassInfo] is emittableClasses: [];
 		local Int is eci: 0;
 		while({ eci < allClasses:length() }, {
 			local ClassInfo is ec: allClasses:get(index: eci);
 			if({ ec:typeParams:length() > 0 && ec:name != 'Array' && ec:name != 'Map' && ec:name != 'List' && instantiatedBases:has(key: ec:name) && !:bareTemplateUsed:has(key: ec:name) }, {
 				eci++;
 			}, {
-				emittableClasses:add(item: ec);
+				emittableClasses:push(item: ec);
 				eci++;
 			});
 		});
@@ -1277,7 +1277,7 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is buildRttiHelpers(Array of ClassInfo is allClasses){
+	local Function is buildRttiHelpers([ClassInfo] is allClasses){
 		# spec_is_subclass_of(ptr %actual, ptr %target) -> i1
 		local IrFunction is subFn: IrFunction:init(name: 'spec_is_subclass_of', retType: IrType:I1);
 		subFn:addParam(name: '%actual', ty: IrType:Ptr);
@@ -2515,7 +2515,7 @@ Class is IrBuilder{
 	## spellings, bare constructor targets). Such a template's copy
 	## stays in emission: with the bare spelling live, the copy is the
 	## only code that can serve those sites.
-	local Function is scanBareTemplateUse(Array of ClassInfo is classes){
+	local Function is scanBareTemplateUse([ClassInfo] is classes){
 		local Int is ci: 0;
 		while({ ci < classes:length() }, {
 			local ClassInfo is cls: classes:get(index: ci);
@@ -3445,13 +3445,13 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is computeCanUnwind(Array of ClassInfo is allClasses){
+	local Function is computeCanUnwind([ClassInfo] is allClasses){
 		:canUnwindCallees: Map:init();
 		:canUnwindMethodNames: Map:init();
 		local Array of String is methodSyms: Array();
 		local Array of String is methodBareNames: Array();
 		local Array of String is methodSnames: Array();
-		local Array of ClassInfo is methodClasses: Array();
+		local [ClassInfo] is methodClasses: [];
 		local [Int] is methodCallStarts: [];
 		local [Int] is methodCallEnds: [];
 		local Array of String is flatCalls: Array();
@@ -3495,7 +3495,7 @@ Class is IrBuilder{
 							methodSyms:add(item: fnSym);
 							methodBareNames:add(item: m:name);
 							methodSnames:add(item: sname);
-							methodClasses:add(item: cls);
+							methodClasses:push(item: cls);
 							methodCallStarts:push(item: startIdx);
 							methodCallEnds:push(item: endIdx);
 						});
@@ -4106,7 +4106,7 @@ Class is IrBuilder{
 					:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 				});
 			},
-			Statement:Forward: local Function(Array of NamedArg is args){
+			Statement:Forward: local Function([NamedArg] is args){
 				local String is parentFn: :findParentMethodImpl(clsName: :currentClass, methodName: :currentMethod, suffix: '');
 				if({ parentFn != '' }, {
 					local [IrType] is fArgT: [IrType:Ptr];
@@ -5974,7 +5974,7 @@ Class is IrBuilder{
 		]);
 	}
 
-	local Function is emitUnwrappedFieldAssigns(String is obj, String is structName, Array of NamedArg is callArgs){
+	local Function is emitUnwrappedFieldAssigns(String is obj, String is structName, [NamedArg] is callArgs){
 		if({ callArgs:length() == 0 }, { return; });
 		local IrStruct is st: :mod:findStruct(name: structName);
 		if({ st:name == '' }, { return; });
@@ -6016,7 +6016,7 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is lowerCallArgs(String is fnKey, Array of NamedArg is callArgs, [IrType] is argTypes, [String] is argVals){
+	local Function is lowerCallArgs(String is fnKey, [NamedArg] is callArgs, [IrType] is argTypes, [String] is argVals){
 		local Expression is callExprForDefaults: :currentCallExpr;
 		if({ !:methodParams:has(key: fnKey) }, {
 			local Int is ai: 0;

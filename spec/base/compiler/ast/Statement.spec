@@ -20,7 +20,7 @@ Enum is Statement {
 	Return(Expression is returnExpr, Boolean is hasReturnExpr),
 	ClassDecl(ClassInfo is nestedClass),
 	Expr(Expression is exprStmt),
-	Forward(Array of NamedArg is forwardArgs),
+	Forward([NamedArg] is forwardArgs),
 
 	## One-based source line where the statement starts.
 	Int is line: 0;

@@ -62,8 +62,8 @@ Class is Linter{
 	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: Array());
 
 	## Loaded class nodes by name, for the inherited-import walk.
-	local Map of String to ClassInfo is auditClassNodes: Map:init();
-	local Array of ClassInfo is auditClassList: Array();
+	local Map of String to ClassInfo is auditClassNodes: Map();
+	local [ClassInfo] is auditClassList: [];
 
 	## Lowercase floor singletons routed by name.
 	local Array of String is floorAliases: Array();
@@ -74,10 +74,10 @@ Class is Linter{
 
 	replace Function is init(){
 		:rules: Array();
-		:auditEnums: Map:init();
-		:auditClasses: Map:init();
-		:auditClassNodes: Map:init();
-		:auditClassList: Array();
+		:auditEnums: Map();
+		:auditClasses: Map();
+		:auditClassNodes: Map();
+		:auditClassList: [];
 		:auditIssues: Array();
 		:floorAliases: Array();
 		:exemptClasses: Array(['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List']);
@@ -205,8 +205,10 @@ Class is Linter{
 	Function of Array of LintIssue is auditProgram(ProgramNode is program){
 		:auditIssues: Array();
 		:buildAuditNameSets(classes: program:classes);
-		program:classes:each(action: local Function(ClassInfo is c){
-			:auditClass(classDef: c);
+		local Int is ci: 0;
+		while({ ci < program:classes:length() }, {
+			:auditClass(classDef: program:classes:get(index: ci));
+			ci++;
 		});
 		return :auditIssues;
 	}
@@ -219,7 +221,7 @@ Class is Linter{
 			:auditClasses:set(key: c:name, value: 'true');
 		});
 		:auditClassNodes:set(key: c:name, value: c);
-		:auditClassList:add(item: c);
+		:auditClassList:push(item: c);
 		c:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:CLASS }, {
 				:registerAuditName(c: m:nestedClass);
@@ -228,9 +230,11 @@ Class is Linter{
 	}
 
 	## Collects class and enum names into the audit sets.
-	Function is buildAuditNameSets(Array of ClassInfo is classes){
-		classes:each(action: local Function(ClassInfo is c){
-			:registerAuditName(c: c);
+	Function is buildAuditNameSets([ClassInfo] is classes){
+		local Int is ci: 0;
+		while({ ci < classes:length() }, {
+			:registerAuditName(c: classes:get(index: ci));
+			ci++;
 		});
 	}
 
@@ -279,9 +283,11 @@ Class is Linter{
 			Statement:Expr: local Function(Expression is exprStmt){
 				:auditExpression(expr: exprStmt, file: file);
 			},
-			Statement:Forward: local Function(Array of NamedArg is forwardArgs){
-				forwardArgs:each(action: local Function(NamedArg is arg){
-					:auditExpression(expr: arg:value, file: file);
+			Statement:Forward: local Function([NamedArg] is forwardArgs){
+				local Int is fi: 0;
+				while({ fi < forwardArgs:length() }, {
+					:auditExpression(expr: forwardArgs:get(index: fi):value, file: file);
+					fi++;
 				});
 			}
 		]);
@@ -293,8 +299,10 @@ Class is Linter{
 			Expression:Call: local Function(CallData is cd){
 				:auditReceiver(call: cd, file: file);
 				:auditExpression(expr: cd:target, file: file);
-				cd:args:each(action: local Function(NamedArg is arg){
-					:auditExpression(expr: arg:value, file: file);
+				local Int is ai: 0;
+				while({ ai < cd:args:length() }, {
+					:auditExpression(expr: cd:args:get(index: ai):value, file: file);
+					ai++;
 				});
 			},
 			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
@@ -439,8 +447,10 @@ Class is Linter{
 		});
 		visited:set(key: clsName, value: 'true');
 		local Boolean is found: false;
-		:auditClassList:each(action: local Function(ClassInfo is cls){
-			if({ !found && cls:name == clsName }, {
+		local Int is ci: 0;
+		while({ !found && ci < :auditClassList:length() }, {
+			local ClassInfo is cls: :auditClassList:get(index: ci);
+			if({ cls:name == clsName }, {
 				cls:members:each(action: local Function(Member is m){
 					if({ !found && m:name == memberName && m:hasModifier(kw: Keyword:HELD) }, {
 						found: true;
@@ -454,6 +464,7 @@ Class is Linter{
 					});
 				});
 			});
+			ci++;
 		});
 		return found;
 	}

@@ -33,7 +33,7 @@ Class of LintRule is MergeUsingRule{
 						Expression:ArrayLit: local Function(Array of Expression is segs){
 							segs:each(action: local Function(Expression is seg){
 								match(on: seg, when: [
-									Expression:UsingAs: local Function(String is className, Array of NamedArg is _args){
+									Expression:UsingAs: local Function(String is className, [NamedArg] is _args){
 										if({ seg:usingAsAlias == '' && (className == 'Conditional' || className == 'Loops') }, {
 											found: true;
 										});
@@ -41,7 +41,7 @@ Class of LintRule is MergeUsingRule{
 									Expression:ArrayLit: local Function(Array of Expression is grpItems){
 										grpItems:each(action: local Function(Expression is g){
 											match(on: g, when: [
-												Expression:UsingAs: local Function(String is gclassName, Array of NamedArg is _gargs){
+												Expression:UsingAs: local Function(String is gclassName, [NamedArg] is _gargs){
 													if({ g:usingAsAlias == '' && (gclassName == 'Conditional' || gclassName == 'Loops') }, {
 														found: true;
 													});

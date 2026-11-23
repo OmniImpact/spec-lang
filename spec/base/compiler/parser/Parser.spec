@@ -294,8 +294,8 @@ Class is Parser{
 	}
 
 	## Consumes call arguments: positional or `name: value` pairs.
-	Function of Array of NamedArg is parseArgs(){
-		local Array of NamedArg is args: Array();
+	Function of [NamedArg] is parseArgs(){
+		local [NamedArg] is args: [];
 		local Boolean is keepGoing: true;
 		while({ keepGoing && !:checkPunct(p: Punctuation:GROUP_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			local String is argName: '';
@@ -319,7 +319,7 @@ Class is Parser{
 				});
 			});
 			local Expression is val: :parseExpression();
-			args:add(item: NamedArg:init(name: argName, value: val));
+			args:push(item: NamedArg(name: argName, value: val));
 			if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 				:advance();
 			}, {
@@ -391,16 +391,16 @@ Class is Parser{
 	##
 	## @return: All top-level class definitions.
 	Function of ProgramNode is parseProgram(){
-		local Array of ClassInfo is classes: Array();
+		local [ClassInfo] is classes: [];
 		while({ !:check(kind: TokenKind:EOF, value: '') }, {
 			if({ :atEnumHeader() }, {
-				classes:add(item: :parseEnum());
+				classes:push(item: :parseEnum());
 			}, {
-				classes:add(item: :parseClass());
+				classes:push(item: :parseClass());
 			});
 		});
 		:linkNestedClasses(classes: classes);
-		return ProgramNode:init(classes: classes);
+		return ProgramNode(classes: classes);
 	}
 
 	## links nested classes to their enclosing
@@ -409,8 +409,10 @@ Class is Parser{
 	## serve inner classes. Recurses through the nesting.
 	##
 	## @param classes: The classes at this nesting level.
-	Function is linkNestedClasses(Array of ClassInfo is classes){
-		classes:each(action: local Function(ClassInfo is c){
+	Function is linkNestedClasses([ClassInfo] is classes){
+		local Int is ci: 0;
+		while({ ci < classes:length() }, {
+			local ClassInfo is c: classes:get(index: ci);
 			local String is qualifiedOuter: c:name;
 			if({ c:outerName != '' }, {
 				qualifiedOuter: c:outerName . ':' . c:name;
@@ -419,9 +421,10 @@ Class is Parser{
 				if({ m:kind == MemberKind:CLASS }, {
 					m:nestedClass:setOuter(name: qualifiedOuter);
 					m:nestedClass:baseClasses:add(item: c:name);
-					:linkNestedClasses(classes: Array([m:nestedClass]));
+					:linkNestedClasses(classes: [m:nestedClass]);
 				});
 			});
+			ci++;
 		});
 	}
 
@@ -1018,7 +1021,7 @@ Class is Parser{
 	## @return: The FORWARD statement.
 	local Function of Statement is parseForwardStatement(Int is startLine){
 		:advance();
-		local Array of NamedArg is args: :parseArgs();
+		local [NamedArg] is args: :parseArgs();
 		:matchPunct(p: Punctuation:GROUP_CLOSE);
 		if({ :checkPunct(p: Punctuation:TERMINATOR) }, {
 			:advance();
@@ -1073,17 +1076,18 @@ Class is Parser{
 		local CallData is cd: match(on: callExpr, when: [
 			Expression:Call: local Function of CallData(CallData is call){ return call; },
 			else: {
+				local [NamedArg] is emptyArgs: [];
 				local CallData is created: match(on: callExpr, when: [
 					Expression:FieldAccess: local Function of CallData(Expression is target, String is fieldName){
-						return CallData:init(target: target, name: fieldName, args: Array());
+						return CallData(target: target, name: fieldName, args: emptyArgs);
 					},
 					Expression:Ident: local Function of CallData(String is name){
-						local CallData is bareCd: CallData:init(target: Expression:Ident(name: :names:selfIdent()), name: name, args: Array());
+						local CallData is bareCd: CallData(target: Expression:Ident(name: :names:selfIdent()), name: name, args: emptyArgs);
 						bareCd:isBareCall: true;
 						return bareCd;
 					},
 					else: {
-						CallData:init(target: callExpr, name: '', args: Array())
+						CallData(target: callExpr, name: '', args: emptyArgs)
 					}
 				]);
 				callExpr: Expression:Call(call: created);
@@ -1091,7 +1095,7 @@ Class is Parser{
 			}
 		]);
 
-		cd:args:add(item: NamedArg:init(name: '', value: anonFn));
+		cd:args:push(item: NamedArg(name: '', value: anonFn));
 		# §as: the remainder is not an argument — it fills the
 		# callable's declared-but-unbound last Function parameter. The
 		# marker keeps it out of overload selection.
@@ -1211,12 +1215,14 @@ Class is Parser{
 		});
 		:advance();
 		local String is clsName: clsTok:getValue();
-		local Array of NamedArg is args: Array();
+		local [NamedArg] is args: [];
 		if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 			:advance();
 			if({ !:checkPunct(p: Punctuation:GROUP_CLOSE) }, {
 				args: :parseArgs();
-				args:each(action: local Function(NamedArg is arg){
+				local Int is ai: 0;
+				while({ ai < args:length() }, {
+					local NamedArg is arg: args:get(index: ai);
 					local Boolean is isLiteral: match(on: arg:value, when: [
 						Expression:StringLit: local Function of Boolean(String is value){ return true; },
 						Expression:NumberLit: local Function of Boolean(Int is value, String is text){ return true; },
@@ -1227,6 +1233,7 @@ Class is Parser{
 					if({ !isLiteral }, {
 						:addError(tok: clsTok, message: :errText:errInstanceImportLiteralArgs());
 					});
+					ai++;
 				});
 			});
 			:matchPunct(p: Punctuation:GROUP_CLOSE);
@@ -1300,7 +1307,7 @@ Class is Parser{
 		while({ :atPostfix() }, {
 			if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 				:advance();
-				local Array of NamedArg is args: :parseArgs();
+				local [NamedArg] is args: :parseArgs();
 				:matchPunct(p: Punctuation:GROUP_CLOSE);
 
 				local CallData is cd: match(on: currentExpr, when: [
@@ -1340,7 +1347,7 @@ Class is Parser{
 
 								if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 									:advance();
-									local Array of NamedArg is args: :parseArgs();
+									local [NamedArg] is args: :parseArgs();
 									:matchPunct(p: Punctuation:GROUP_CLOSE);
 
 									currentExpr: Expression:Call(call: CallData:init(target: currentExpr, name: method, args: args));

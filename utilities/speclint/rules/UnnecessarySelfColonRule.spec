@@ -70,8 +70,10 @@ Class of LintRule is UnnecessarySelfColonRule{
 			},
 			Expression:Call: local Function(CallData is cd){
 				:collectExprLocals(expr: cd:target);
-				cd:args:each(action: local Function(NamedArg is a){
-					:collectExprLocals(expr: a:value);
+				local Int is ai: 0;
+				while({ ai < cd:args:length() }, {
+					:collectExprLocals(expr: cd:args:get(index: ai):value);
+					ai++;
 				});
 			},
 			Expression:ArrayLit: local Function(Array of Expression is items){

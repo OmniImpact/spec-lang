@@ -33,7 +33,7 @@ Enum is Expression {
 	Binary(String is op, Expression is left, Expression is right),
 	Unary(String is op, Expression is operand),
 	AnonFn(Type is returnType, [Parameter] is params, [Statement] is body),
-	UsingAs(String is className, Array of NamedArg is args),
+	UsingAs(String is className, [NamedArg] is args),
 	Unknown,
 
 	## One-based source line where the expression starts.

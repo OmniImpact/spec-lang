@@ -49,8 +49,10 @@ Class is LintRule{
 
 	## Default AST program traversal.
 	Function is traverseProgram(ProgramNode is program, Array of LintIssue is issues){
-		program:classes:each(action: local Function(ClassInfo is c){
-			:checkClass(classDef: c, issues: issues);
+		local Int is ci: 0;
+		while({ ci < program:classes:length() }, {
+			:checkClass(classDef: program:classes:get(index: ci), issues: issues);
+			ci++;
 		});
 	}
 
@@ -106,9 +108,11 @@ Class is LintRule{
 			Statement:Expr: local Function(Expression is exprStmt){
 				:checkExpression(expr: exprStmt, issues: issues);
 			},
-			Statement:Forward: local Function(Array of NamedArg is forwardArgs){
-				forwardArgs:each(action: local Function(NamedArg is arg){
-					:checkExpression(expr: arg:value, issues: issues);
+			Statement:Forward: local Function([NamedArg] is forwardArgs){
+				local Int is fi: 0;
+				while({ fi < forwardArgs:length() }, {
+					:checkExpression(expr: forwardArgs:get(index: fi):value, issues: issues);
+					fi++;
 				});
 			}
 		]);
@@ -124,8 +128,10 @@ Class is LintRule{
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				:checkExpression(expr: cd:target, issues: issues);
-				cd:args:each(action: local Function(NamedArg is arg){
-					:checkExpression(expr: arg:value, issues: issues);
+				local Int is ai: 0;
+				while({ ai < cd:args:length() }, {
+					:checkExpression(expr: cd:args:get(index: ai):value, issues: issues);
+					ai++;
 				});
 			},
 			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
