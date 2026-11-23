@@ -11,7 +11,6 @@ Class of Frame is EditorFrame{
 	];
 
 	EditorViewModel is vm: EditorViewModel(filePath: '');
-	Function is onQuit: local Function(){};
 
 	FocusTarget is editorFocus: FocusTarget(initial: true);
 	FocusTarget is saveFocus: FocusTarget();
@@ -25,7 +24,6 @@ Class of Frame is EditorFrame{
 
 	replace Function is init(EditorViewModel is vm: EditorViewModel(filePath: ''), Function is onQuit: local Function(){}){
 		:vm: vm;
-		:onQuit: onQuit;
 		vm:onQuit: onQuit;
 		vm:onRebuild: { rebuild(); };
 		vm:onFocusEditor: { editorFocus:requestFocus(); };

@@ -132,14 +132,12 @@ Class is EditorViewModel{
 	}
 
 	Function is triggerSave(){
-		local Boolean is openedDialog: false;
-		requestSave(onNeedSaveAs: {
-			openedDialog: true;
+		if({ doc:filePath == '' }, {
 			openFileDialog(mode: 'saveAs');
+			return;
 		});
-		if({ !openedDialog }, {
-			onFocusEditor();
-		});
+		save();
+		onFocusEditor();
 	}
 
 	Function is triggerSaveAs(){
@@ -151,31 +149,25 @@ Class is EditorViewModel{
 	}
 
 	Function is triggerQuit(){
-		requestQuit(
-			onNeedPrompt: {
-				onRebuild();
-				onFocusPrompt();
-			},
-			onReadyToQuit: onQuit
-		);
+		if({ doc:dirty }, {
+			showUnsavedPrompt();
+			onRebuild();
+			onFocusPrompt();
+			return;
+		});
+		onQuit();
 	}
 
 	Function is triggerPromptSave(){
-		local Boolean is handled: false;
-		confirmPromptSave(
-			onNeedSaveAs: {
-				handled: true;
-				onRebuild();
-				openFileDialog(mode: 'saveAs');
-			},
-			onReadyToQuit: {
-				handled: true;
-				onRebuild();
-				onQuit();
-			}
-		);
-		if({ !handled }, {
-			onRebuild();
+		clearMessage();
+		onRebuild();
+		if({ doc:filePath == '' }, {
+			quitAfterSave: true;
+			openFileDialog(mode: 'saveAs');
+			return;
+		});
+		if({ save() }, {
+			onQuit();
 		});
 	}
 
@@ -198,35 +190,6 @@ Class is EditorViewModel{
 			onFocusMenu();
 		}, {
 			onFocusEditor();
-		});
-	}
-
-	Function is requestSave(Function is onNeedSaveAs){
-		if({ doc:filePath == '' }, {
-			onNeedSaveAs();
-			return;
-		});
-		save();
-	}
-
-	Function is requestQuit(Function is onNeedPrompt, Function is onReadyToQuit){
-		if({ doc:dirty }, {
-			showUnsavedPrompt();
-			onNeedPrompt();
-			return;
-		});
-		onReadyToQuit();
-	}
-
-	Function is confirmPromptSave(Function is onNeedSaveAs, Function is onReadyToQuit){
-		clearMessage();
-		if({ doc:filePath == '' }, {
-			quitAfterSave: true;
-			onNeedSaveAs();
-			return;
-		});
-		if({ save() }, {
-			onReadyToQuit();
 		});
 	}
 

@@ -88,10 +88,4 @@ Class is FileManagerViewModel{
 	Function is cancel(){
 		onCancel();
 	}
-
-	Function is submit(String is typedName, Function is onConfirmed){
-		local String is full: paths:resolveTargetPath(dir: curDir, typedName: typedName);
-		if({ full == '' }, { return; });
-		onConfirmed(full);
-	}
 }
