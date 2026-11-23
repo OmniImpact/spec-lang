@@ -175,8 +175,9 @@ Class is Slab{
 			Mem:storeI64(ptr: base, byteOffset: 16, val: nextSp);
 			Mem:storeI64(ptr: sp, byteOffset: 32, val: 96 + slotSize);
 			Mem:storeI64(ptr: sp, byteOffset: 40, val: 0);
+			Mem:atomicStoreI64(addr: sp + 48, val: 0);
 			Mem:storeI64(ptr: sp, byteOffset: 80, val: 0);
-			Mem:storeI64(ptr: sp, byteOffset: 24, val: 2);
+			Mem:atomicStoreI64(addr: sp + 24, val: 2);
 			Mem:storeI64(ptr: base, byteOffset: 0, val: sp);
 			local Int is spSlot: sp + 96;
 			Mem:set(dst: spSlot, byteVal: 0, bytes: slotSize);
@@ -288,6 +289,7 @@ Class is Slab{
 				if({ s == Mem:loadI64(ptr: base, byteOffset: 0) }, {
 					Mem:storeI64(ptr: s, byteOffset: 32, val: 96);
 					Mem:storeI64(ptr: s, byteOffset: 40, val: 0);
+					Mem:atomicStoreI64(addr: s + 48, val: 0);
 					Mem:storeI64(ptr: s, byteOffset: 80, val: 0);
 					return;
 				});
