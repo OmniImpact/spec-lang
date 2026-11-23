@@ -41,6 +41,7 @@ Class is Linter{
 		['speclint', 'rules', TemplateStringRule],
 		['speclint', 'rules', MergeUsingRule],
 		['speclint', 'rules', CompactUsingRule],
+		['speclint', 'rules', NarrowingCastRule],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()]
 	];

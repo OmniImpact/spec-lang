@@ -225,6 +225,18 @@ Class is TypeChecker{
 		return Primitive:of(t) != Primitive:NONE;
 	}
 
+	## Return type for data-optimal methods on the Byte primitive, or '' if unknown.
+	local Function of String is lookupByteMethodReturnType(String is methodName){
+		return match(on: methodName, when: [
+			'toUInt8': { Primitive:UINT8:value() },
+			['toInt', 'base64Value']: { Primitive:INT:value() },
+			'toHex': { Primitive:STRING:value() },
+			['highNibble', 'lowNibble', 'setBit', 'clearBit', 'toggleBit', 'rotateLeft', 'rotateRight', 'toUpper', 'toLower', 'toBase64Char']: { Primitive:BYTE:value() },
+			['bit', 'isAscii', 'isDigit', 'isAlpha', 'isAlphaNum', 'isHexDigit', 'isWhitespace', 'isPrintable', 'isBase64']: { Primitive:BOOLEAN:value() },
+			else: { '' }
+		]);
+	}
+
 	Function of Boolean is isSignedInt(String is t){
 		local Primitive is p: Primitive:of(t);
 		return p == Primitive:INT || p == Primitive:INT8 || p == Primitive:INT16 || p == Primitive:INT32 || p == Primitive:INT128 || p == Primitive:ISIZE;
@@ -4840,11 +4852,21 @@ Class is TypeChecker{
 											if({ targetType == Primitive:INT:value() && method == 'toBase' }, {
 												res: Primitive:STRING:value();
 											}, {
-												local String is uBase: TypeDomain:baseName(t: targetType);
-												if({ :registeredClasses:has(key: uBase) && :findClass(name: uBase):name != '' }, {
-													:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
+												if({ targetType == Primitive:BYTE:value() }, {
+													local String is bRet: :lookupByteMethodReturnType(methodName: method);
+													if({ bRet != '' }, {
+														res: bRet;
+													}, {
+														:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
+														res: 'Any';
+													});
+												}, {
+													local String is uBase: TypeDomain:baseName(t: targetType);
+													if({ :registeredClasses:has(key: uBase) && :findClass(name: uBase):name != '' }, {
+														:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
+													});
+													res: 'Any';
 												});
-												res: 'Any';
 											});
 										});
 									});

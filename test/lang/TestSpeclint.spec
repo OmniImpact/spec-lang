@@ -188,4 +188,15 @@ Class of SpecUnitTest is TestSpeclint{
 		local Array of LintIssue is good: :lintSource(src: "Class is F{\n\tmerge Array of Array of String is using: [\n\t\t['base', 'theo', [Panel, Row, Button]]\n\t];\n\tFunction is go(Panel is p, Row is r, Button is b){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
 		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: false));
 	}
+
+	Function is testNarrowingCastWarnsAndWideningStaysSilent(){
+		# Narrowing casts (Int -> Byte, Float -> Float32, Float -> Int) warn
+		local Array of LintIssue is bad: :lintSource(src: "Class is F{\n\tFunction is go(Int is x, Float is f){\n\t\tlocal Byte is b: x as Byte;\n\t\tlocal Float32 is f32: f as Float32;\n\t\tlocal Int is i: f as Int;\n\t}\n}\n");
+		Assert:areEqualInt(3, :countKind(issues: bad, wantWarnings: true));
+
+		# Lossless widening casts (Byte -> Int, UInt8 -> UInt32, Float32 -> Float) and in-range literals stay silent
+		local Array of LintIssue is good: :lintSource(src: "Class is F{\n\tFunction is go(Byte is b, UInt8 is u, Float32 is f32){\n\t\tlocal Int is i: b as Int;\n\t\tlocal UInt32 is u32: u as UInt32;\n\t\tlocal Float is f64: f32 as Float;\n\t\tlocal UInt8 is lit: 255 as UInt8;\n\t}\n}\n");
+		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: true));
+		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: false));
+	}
 }

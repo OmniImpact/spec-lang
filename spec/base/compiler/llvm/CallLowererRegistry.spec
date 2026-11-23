@@ -17,6 +17,7 @@ Class is CallLowererRegistry{
 		['base', 'compiler', 'llvm', MathCallLowerer],
 		['base', 'compiler', 'llvm', MatchCallLowerer],
 		['base', 'compiler', 'llvm', ArrayCallLowerer],
+		['base', 'compiler', 'llvm', ByteCallLowerer],
 		['base', 'compiler', 'llvm', MapCallLowerer],
 		['base', 'struct', Array],
 		['base', 'struct', as Sort()],
