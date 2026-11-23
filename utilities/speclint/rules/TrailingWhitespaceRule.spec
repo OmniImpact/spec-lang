@@ -24,7 +24,7 @@ Class of LintRule is TrailingWhitespaceRule{
 		return true;
 	}
 
-	replace Function is checkSource(String is source, Array of LintIssue is issues){
+	replace Function is checkSource(String is source, [LintIssue] is issues){
 		local SourceMasker is masker: SourceMasker:init();
 		local Int is lineNum: 0;
 		local Array of String is srcLines: source:lines();
@@ -37,7 +37,7 @@ Class of LintRule is TrailingWhitespaceRule{
 			masker:maskLine(line: line);
 			if({ !masker:isInsideString() }, {
 				if({ line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t") }, {
-					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
+					issues:push(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
 				});
 			});
 		});

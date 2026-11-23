@@ -27,7 +27,7 @@ Class of LintRule is GetStringDefaultRule{
 		return false;
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				if({ cd:name == 'getString' }, {
@@ -40,7 +40,7 @@ Class of LintRule is GetStringDefaultRule{
 						ai++;
 					});
 					if({ hasDefault }, {
-						issues:add(item: LintIssue(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
+						issues:push(item: LintIssue(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
 					});
 				});
 			}

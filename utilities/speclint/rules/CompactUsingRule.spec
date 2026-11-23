@@ -24,31 +24,31 @@ Class of LintRule is CompactUsingRule{
 		false;
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
-		while([Int is mi: 0], { mi < classDef:members:length() }, {
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
+		times(count: classDef:members:length(), worker: local Function(Int is mi){
 			local Member is m: classDef:members:get(index: mi);
 			if({ m:name == 'using' && m:hasInit }, {
 				local Map of String to Int is pkgCounts: Map:init();
 				local Map of String to Int is pkgFirstLine: Map:init();
 				local Map of String to String is pkgDisplay: Map:init();
-				local Array of String is pkgOrder: Array();
+				local [String] is pkgOrder: [];
 
 				match(on: m:initExpr, when: [
 					Expression:ArrayLit: local Function([Expression] is items){
-						while([Int is ii: 0], { ii < items:length() }, {
+						times(count: items:length(), worker: local Function(Int is ii){
 							local Expression is item: items:get(index: ii);
 							match(on: item, when: [
 								Expression:ArrayLit: local Function([Expression] is segs){
-									local Array of String is nsSegs: Array();
+									local [String] is nsSegs: [];
 									local Boolean is hasTarget: false;
 									local Boolean is isWildcard: false;
-									while([Int is si: 0], { si < segs:length() }, {
+									times(count: segs:length(), worker: local Function(Int is si){
 										match(on: segs:get(index: si), when: [
 											Expression:StringLit: local Function(String is s){
 												if({ s == '*' }, {
 													isWildcard: true;
 												}, {
-													nsSegs:add(item: s);
+													nsSegs:push(item: s);
 												});
 											},
 											Expression:Ident: local Function(String is _name){
@@ -61,36 +61,39 @@ Class of LintRule is CompactUsingRule{
 												hasTarget: true;
 											}
 										], default: {});
-										si++;
 									});
 									if({ nsSegs:length() > 0 && hasTarget && !isWildcard }, {
-										local String is key: nsSegs:join(separator: ':');
+										local String is key: '';
+										times(count: nsSegs:length(), worker: local Function(Int is ni){
+											if({ ni > 0 }, { key: key . ':'; });
+											key: key . nsSegs:get(index: ni);
+										});
 										if({ !pkgCounts:has(key: key) }, {
-											pkgOrder:add(item: key);
+											pkgOrder:push(item: key);
 											pkgCounts:set(key: key, value: 1);
 											pkgFirstLine:set(key: key, value: item:line);
-											local Array of String is quoted: Array();
-											nsSegs:each(action: local Function(String is ns){
-												quoted:add(item: "'" . ns . "'");
+											local String is dispStr: '';
+											times(count: nsSegs:length(), worker: local Function(Int is ni){
+												if({ ni > 0 }, { dispStr: dispStr . ', '; });
+												dispStr: dispStr . "'" . nsSegs:get(index: ni) . "'";
 											});
-											pkgDisplay:set(key: key, value: quoted:join(separator: ', '));
+											pkgDisplay:set(key: key, value: dispStr);
 										}, {
 											pkgCounts:set(key: key, value: pkgCounts:get(key: key, default: 0) + 1);
 										});
 									});
 								}
 							], default: {});
-							ii++;
 						});
 					}
 				], default: {});
 
-				pkgOrder:each(action: local Function(String is key){
+				each(list: pkgOrder, action: local Function(String is key){
 					local Int is count: pkgCounts:get(key: key, default: 0);
 					if({ count >= 3 }, {
 						local Int is line: pkgFirstLine:get(key: key, default: m:line);
 						local String is disp: pkgDisplay:getString(key: key, default: key);
-						issues:add(item: LintIssue:init(
+						issues:push(item: LintIssue:init(
 							ruleId: :id(),
 							line: line,
 							isWarning: :isWarning(),
@@ -102,7 +105,6 @@ Class of LintRule is CompactUsingRule{
 			if({ m:kind == MemberKind:CLASS }, {
 				:checkClass(classDef: m:nestedClass, issues: issues);
 			});
-			mi++;
 		});
 	}
 }

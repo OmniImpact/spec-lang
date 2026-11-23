@@ -32,7 +32,7 @@ Class of LintRule is EncourageAsLoopsRule{
 		return false;
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		:currentClass: classDef:name;
 		# Exclude Loops definition itself and compiler-synthesized Enums
 		if({ :currentClass != 'Loops' && classDef:baseClass != 'Enum' }, {
@@ -40,13 +40,13 @@ Class of LintRule is EncourageAsLoopsRule{
 		});
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				local String is targetName: :extractTargetName(target: cd:target);
 				if({ targetName == 'Loops' }, {
 					local String is msg: 'Direct call to \'Loops:' . cd:name . '\': import \'as Loops()\' in using and use bare \'' . cd:name . '(...)\'.';
-					issues:add(item: LintIssue:init(line: expr:line, isWarning: false, message: msg));
+					issues:push(item: LintIssue:init(line: expr:line, isWarning: false, message: msg));
 				});
 			}
 		], default: {});

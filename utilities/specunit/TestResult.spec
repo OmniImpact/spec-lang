@@ -16,7 +16,7 @@ Class is TestResult{
 	Boolean is passed: true;
 
 	## The failure messages, in assertion order.
-	Array of String is failures: Array();
+	[String] is failures: [];
 
 	## Wall-clock stamp when the method began (Process:clockMs).
 	Int is startedAtMs: 0;

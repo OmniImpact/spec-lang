@@ -56,12 +56,12 @@ Class is WorkItem{
 
 	String is path;
 	String is kind;
-	Array of String is expect: Array();
+	[String] is expect: [];
 	String is inlineSource: '';
 	Int is expectedTests: 1;
 	Int is priorityPosition: 0;
 
-	replace Function is init(String is itemPath, String is itemKind, Array of String is itemExpect, String is source: '', Int is expectedTests: 1, Int is priorityPosition: 0){
+	replace Function is init(String is itemPath, String is itemKind, [String] is itemExpect, String is source: '', Int is expectedTests: 1, Int is priorityPosition: 0){
 		:path: itemPath;
 		:kind: itemKind;
 		:expect: itemExpect;
@@ -113,7 +113,7 @@ Class is SpecTestUi{
 	Int is total: 0;
 	Int is testsTotal: 0;
 
-	Array of Int is workerActive: Array();
+	[Int] is workerActive: [];
 	Map of String to Int is suiteNameToSlotId: Map:init();
 	Int is startedCount: 0;
 	Int is completedCount: 0;
@@ -138,11 +138,9 @@ Class is SpecTestUi{
 		:total: total;
 		:testsTotal: testsTotal;
 		:suiteNameToSlotId: nameToSlot;
-		:workerActive: Array();
-		local Int is i: 0;
-		while({ i < threads }, {
-			:workerActive:add(item: 0);
-			i: i + 1;
+		:workerActive: [];
+		times(count: threads, worker: local Function(Int is _i){
+			:workerActive:push(item: 0);
 		});
 		:renderWorkersBar();
 	}
@@ -151,9 +149,8 @@ Class is SpecTestUi{
 		local Int is n: :workerActive:length();
 		local Int is activeCount: 0;
 		local String is boxes: '';
-		local Int is i: 0;
-		while({ i < n }, {
-			local Int is st: :workerActive:get(index: i, default: 0);
+		times(count: n, worker: local Function(Int is i){
+			local Int is st: :workerActive:get(index: i);
 			if({ i > 0 }, { boxes: boxes . ' '; });
 			if(check: { st != 0 }, then: {
 				boxes: boxes . '■';
@@ -161,7 +158,6 @@ Class is SpecTestUi{
 			}, else: {
 				boxes: boxes . '□';
 			});
-			i: i + 1;
 		});
 		local String is rt: (activeCount as String) . '/' . (n as String) . ' active';
 		:wSec:updateText(index: :wBarSlot, text: boxes, rightText: rt);
@@ -367,7 +363,7 @@ Class is SpecTestRegistry{
 	}
 
 	held Function of ReadyRunItem is nextReadyRun(){
-		local ReadyRunItem is res: ReadyRunItem:init(item: WorkItem:init(itemPath: '', itemKind: '', itemExpect: Array()), idx: -1, binPath: '', compileCpuUs: 0, compileRssKb: 0);
+		local ReadyRunItem is res: ReadyRunItem:init(item: WorkItem:init(itemPath: '', itemKind: '', itemExpect: []), idx: -1, binPath: '', compileCpuUs: 0, compileRssKb: 0);
 		Parallel:syncWith(lock: 17, action: {
 			local Conditional is cond: Conditional:init();
 			cond:if(check: { return SpecTestRegistry:readyRuns:length() > 0; }, then: {
@@ -655,9 +651,7 @@ Class is SpecUnit{
 			ui:start(scope: scope);
 
 			local Array of Task is workers: Array();
-			local Int is wIdx: 0;
-			while({ wIdx < threads }, {
-				local Int is ti: wIdx;
+			times(count: threads, worker: local Function(Int is ti){
 				local Task is wt: scope:spawn(task: local Function(){
 					local Boolean is keepGoing: true;
 					while({ keepGoing }, {
@@ -685,7 +679,6 @@ Class is SpecUnit{
 					});
 				});
 				workers:add(item: wt);
-				wIdx: wIdx + 1;
 			});
 			scope:awaitAll(group: workers);
 
@@ -785,8 +778,7 @@ Class is SpecUnit{
 	## ascending (lower numbers such as -100 are queued first).
 	Function is sortQueueByPriority(){
 		local Int is n: SpecTestRegistry:queue:length();
-		local Int is i: 1;
-		while({ i < n }, {
+		range(start: 1, end: n, worker: local Function(Int is i){
 			local WorkItem is keyItem: SpecTestRegistry:queue:get(index: i);
 			local Int is keyPrio: keyItem:priorityPosition;
 			local Int is j: i - 1;
@@ -795,7 +787,6 @@ Class is SpecUnit{
 				j: j - 1;
 			});
 			SpecTestRegistry:queue:set(index: j + 1, item: keyItem);
-			i: i + 1;
 		});
 	}
 
@@ -807,7 +798,7 @@ Class is SpecUnit{
 		local String is content: fileRead(path: relPath, default: '');
 		local String is kind: '';
 		local Int is prio: 0;
-		local Array of String is expect: Array();
+		local [String] is expect: [];
 		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
 			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
 			if(check: { seg:startsWith(prefix: '#! specunit: ') }, then: {
@@ -817,7 +808,7 @@ Class is SpecUnit{
 					prio: seg:substring(start: 21, end: seg:length()):trim():parseInt(default: 0);
 				}, else: {
 					if(check: { seg:startsWith(prefix: '#! expect: ') }, then: {
-						expect:add(item: seg:substring(start: 11, end: seg:length()));
+						expect:push(item: seg:substring(start: 11, end: seg:length()));
 					});
 				});
 			});
@@ -844,7 +835,7 @@ Class is SpecUnit{
 	## into independent parallel `negative-case` work items.
 	Function is enqueueNegativeSuite(String is relPath, String is content, Int is prio: 0){
 		local String is curCase: '';
-		local Array of String is curExpect: Array();
+		local [String] is curExpect: [];
 		local String is curSrc: '';
 		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
 			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
@@ -853,12 +844,12 @@ Class is SpecUnit{
 					SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath . '#' . curCase, itemKind: 'negative-case', itemExpect: curExpect, source: curSrc, expectedTests: 1, priorityPosition: prio));
 				});
 				curCase: seg:substring(start: 9, end: seg:length()):trim();
-				curExpect: Array();
+				curExpect: [];
 				curSrc: '';
 			}, else: {
 				if(check: { curCase != '' }, then: {
 					if(check: { seg:startsWith(prefix: '#! expect: ') }, then: {
-						curExpect:add(item: seg:substring(start: 11, end: seg:length()));
+						curExpect:push(item: seg:substring(start: 11, end: seg:length()));
 					}, else: {
 						curSrc: curSrc . seg . "\n";
 					});
@@ -881,7 +872,7 @@ Class is SpecUnit{
 	}
 
 	## Parses `[PASS]` and `[FAIL]` counts from SpecUnit suite output.
-	Function of Array of Int is countReportTests(String is out){
+	Function of [Int] is countReportTests(String is out){
 		local Int is p: 0;
 		local Int is f: 0;
 		out:split(delimiter: "\n"):each(action: local Function(String is ln){
@@ -893,7 +884,7 @@ Class is SpecUnit{
 				});
 			});
 		});
-		return Array([p, f]);
+		return [p, f];
 	}
 
 	## Compiles one work item. Negative items finish right here; runnable
@@ -970,9 +961,9 @@ Class is SpecUnit{
 			tFailed: if(check: { passed }, then: { 0; }, else: { 1; });
 		}, else: {
 			passed: rStatus == 0;
-			local Array of Int is counts: :countReportTests(out: out);
-			tPassed: counts:get(index: 0, default: 0);
-			tFailed: counts:get(index: 1, default: 0);
+			local [Int] is counts: :countReportTests(out: out);
+			tPassed: counts:get(index: 0);
+			tFailed: counts:get(index: 1);
 			if(check: { timedOut }, then: {
 				passed: false;
 				note: 'timed out after ' . (timeoutSec as String) . 's (killed)';
@@ -1069,9 +1060,9 @@ Class is SpecUnit{
 	}
 
 	## Whether [text] contains every expected message.
-	Function of Boolean is allPresent(String is text, Array of String is expect){
+	Function of Boolean is allPresent(String is text, [String] is expect){
 		local Boolean is all: true;
-		expect:each(action: local Function(String is msg){
+		each(list: expect, action: local Function(String is msg){
 			if(check: { !text:contains(needle: msg) }, then: {
 				all: false;
 			});

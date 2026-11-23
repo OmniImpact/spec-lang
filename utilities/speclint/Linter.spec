@@ -47,7 +47,7 @@ Class is Linter{
 	];
 
 	## Registered lint rules discovered via reflection or fallback.
-	Array of LintRule is rules: Array();
+	[LintRule] is rules: [];
 
 	## Audit name sets (Phase 0.5): every enum and class name in
 	## the loaded program, nested classes included.
@@ -55,7 +55,7 @@ Class is Linter{
 	local Map of String to String is auditClasses: Map:init();
 
 	## Worklist notices gathered by the audit pass.
-	local Array of LintIssue is auditIssues: Array();
+	local [LintIssue] is auditIssues: [];
 
 	## The class whose members are currently being audited (with save and
 	## restore around nested-class recursion).
@@ -66,32 +66,32 @@ Class is Linter{
 	local [ClassInfo] is auditClassList: [];
 
 	## Lowercase floor singletons routed by name.
-	local Array of String is floorAliases: Array();
+	local [String] is floorAliases: [];
 
 	## Type-level exempt receivers (X3): primitives, base
 	## conversion targets, containers.
-	local Array of String is exemptClasses: Array();
+	local [String] is exemptClasses: [];
 
 	replace Function is init(){
-		:rules: Array();
+		:rules: [];
 		:auditEnums: Map();
 		:auditClasses: Map();
 		:auditClassNodes: Map();
 		:auditClassList: [];
-		:auditIssues: Array();
-		:floorAliases: Array();
-		:exemptClasses: Array(['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List']);
+		:auditIssues: [];
+		:floorAliases: [];
+		:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
 		:discoverRules();
 	}
 
 	## Discovers rules via reflection over the class registry, falling
 	## back to explicit registration if reflection finds none.
 	Function is discoverRules(){
-		:rules: Array();
+		:rules: [];
 		classNames():each(action: local Function(String is cn){
 			if({ extendsClass(className: cn, baseName: 'LintRule') && cn != 'LintRule' }, {
 				local LintRule is rule: instantiate(className: cn) as LintRule;
-				:rules:add(item: rule);
+				:rules:push(item: rule);
 			});
 		});
 		if({ :rules:length() == 0 }, {
@@ -101,47 +101,47 @@ Class is Linter{
 
 	## Explicit fallback registration of default rules.
 	Function is registerDefaultRules(){
-		:rules:add(item: TabIndentationRule:init());
-		:rules:add(item: TrailingWhitespaceRule:init());
-		:rules:add(item: BraceAlignmentRule:init());
-		:rules:add(item: LoopConstructionRule:init());
-		:rules:add(item: GetStringDefaultRule:init());
-		:rules:add(item: MathRandomRule:init());
-		:rules:add(item: EncourageAsConditionalRule:init());
-		:rules:add(item: EncourageAsLoopsRule:init());
-		:rules:add(item: BracketIndentationRule:init());
-		:rules:add(item: BlankLinesRule:init());
-		:rules:add(item: UnnecessarySelfColonRule:init());
-		:rules:add(item: InitShorthandRule:init());
-		:rules:add(item: UnusedUsingRule:init());
-		:rules:add(item: TemplateStringRule:init());
-		:rules:add(item: MergeUsingRule:init());
-		:rules:add(item: CompactUsingRule:init());
+		:rules:push(item: TabIndentationRule:init());
+		:rules:push(item: TrailingWhitespaceRule:init());
+		:rules:push(item: BraceAlignmentRule:init());
+		:rules:push(item: LoopConstructionRule:init());
+		:rules:push(item: GetStringDefaultRule:init());
+		:rules:push(item: MathRandomRule:init());
+		:rules:push(item: EncourageAsConditionalRule:init());
+		:rules:push(item: EncourageAsLoopsRule:init());
+		:rules:push(item: BracketIndentationRule:init());
+		:rules:push(item: BlankLinesRule:init());
+		:rules:push(item: UnnecessarySelfColonRule:init());
+		:rules:push(item: InitShorthandRule:init());
+		:rules:push(item: UnusedUsingRule:init());
+		:rules:push(item: TemplateStringRule:init());
+		:rules:push(item: MergeUsingRule:init());
+		:rules:push(item: CompactUsingRule:init());
 	}
 
 	## Adds a custom rule to the linter.
 	##
 	## @param rule: [LintRule] instance to add.
 	Function is addRule(LintRule is rule){
-		:rules:add(item: rule);
+		:rules:push(item: rule);
 	}
 
 	## Analyzes source code text and optional AST, returning all detected lint issues.
 	##
 	## @param source: Raw source code string.
 	## @param program: Parsed [ProgramNode] AST.
-	## @return: [Array] of [LintIssue] items.
-	Function of Array of LintIssue is lint(String is source, ProgramNode is program){
-		local Array of LintIssue is issues: Array();
+	## @return: List of [LintIssue] items.
+	Function of [LintIssue] is lint(String is source, ProgramNode is program){
+		local [LintIssue] is issues: [];
 
 		# 1. Source-level checks across registered rules
-		:rules:each(action: local Function(LintRule is r){
-			r:checkSource(source: source, issues: issues);
+		times(count: :rules:length(), worker: local Function(Int is ri){
+			:rules:get(index: ri):checkSource(source: source, issues: issues);
 		});
 
 		# 2. AST-level checks across registered rules
-		:rules:each(action: local Function(LintRule is r){
-			r:checkProgram(program: program, issues: issues);
+		times(count: :rules:length(), worker: local Function(Int is ri){
+			:rules:get(index: ri):checkProgram(program: program, issues: issues);
 		});
 
 		return issues;
@@ -149,12 +149,12 @@ Class is Linter{
 
 	## Counts the total number of warnings in an issues list.
 	##
-	## @param issues: Issues array.
+	## @param issues: Issues list.
 	## @return: Count of warnings.
-	Function of Int is countWarnings(Array of LintIssue is issues){
+	Function of Int is countWarnings([LintIssue] is issues){
 		local Int is res: 0;
-		issues:each(action: local Function(LintIssue is issue){
-			if({ issue:isWarning }, {
+		times(count: issues:length(), worker: local Function(Int is ii){
+			if({ issues:get(index: ii):isWarning }, {
 				res: res + 1;
 			});
 		});
@@ -163,12 +163,12 @@ Class is Linter{
 
 	## Counts the total number of notices in an issues list.
 	##
-	## @param issues: Issues array.
+	## @param issues: Issues list.
 	## @return: Count of notices.
-	Function of Int is countNotices(Array of LintIssue is issues){
+	Function of Int is countNotices([LintIssue] is issues){
 		local Int is res: 0;
-		issues:each(action: local Function(LintIssue is issue){
-			if({ !issue:isWarning }, {
+		times(count: issues:length(), worker: local Function(Int is ii){
+			if({ !issues:get(index: ii):isWarning }, {
 				res: res + 1;
 			});
 		});
@@ -178,11 +178,11 @@ Class is Linter{
 	## Prints formatted lint diagnostics to standard output.
 	##
 	## @param filePath: Source file path.
-	## @param issues: Array of detected [LintIssue] items.
-	Function is report(String is filePath, Array of LintIssue is issues){
+	## @param issues: List of detected [LintIssue] items.
+	Function is report(String is filePath, [LintIssue] is issues){
 		Output:line('Checking \'' . filePath . '\' for Spec code standards...');
-		issues:each(action: local Function(LintIssue is issue){
-			Output:line(issue:toString());
+		times(count: issues:length(), worker: local Function(Int is ii){
+			Output:line(issues:get(index: ii):toString());
 		});
 
 		local Int is warnings: :countWarnings(issues: issues);
@@ -201,14 +201,12 @@ Class is Linter{
 	## (or floor alias) with a non-init method, excluding the exempt strata.
 	##
 	## @param program: Loaded [ProgramNode].
-	## @return: [Array] of [LintIssue] worklist notices.
-	Function of Array of LintIssue is auditProgram(ProgramNode is program){
-		:auditIssues: Array();
+	## @return: List of [LintIssue] worklist notices.
+	Function of [LintIssue] is auditProgram(ProgramNode is program){
+		:auditIssues: [];
 		:buildAuditNameSets(classes: program:classes);
-		local Int is ci: 0;
-		while({ ci < program:classes:length() }, {
+		times(count: program:classes:length(), worker: local Function(Int is ci){
 			:auditClass(classDef: program:classes:get(index: ci));
-			ci++;
 		});
 		return :auditIssues;
 	}
@@ -222,20 +220,18 @@ Class is Linter{
 		});
 		:auditClassNodes:set(key: c:name, value: c);
 		:auditClassList:push(item: c);
-		while([Int is mi: 0], { mi < c:members:length() }, {
+		times(count: c:members:length(), worker: local Function(Int is mi){
 			local Member is m: c:members:get(index: mi);
 			if({ m:kind == MemberKind:CLASS }, {
 				:registerAuditName(c: m:nestedClass);
 			});
-			mi++;
 		});
 	}
 
 	## Collects class and enum names into the audit sets.
 	Function is buildAuditNameSets([ClassInfo] is classes){
-		while([Int is ci: 0], { ci < classes:length() }, {
+		times(count: classes:length(), worker: local Function(Int is ci){
 			:registerAuditName(c: classes:get(index: ci));
-			ci++;
 		});
 	}
 
@@ -243,13 +239,12 @@ Class is Linter{
 	Function is auditClass(ClassInfo is classDef){
 		local ClassInfo is savedOwner: :auditOwner;
 		:auditOwner: classDef;
-		while([Int is mi: 0], { mi < classDef:members:length() }, {
+		times(count: classDef:members:length(), worker: local Function(Int is mi){
 			local Member is m: classDef:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
-					while([Int is si: 0], { si < m:body:length() }, {
+					times(count: m:body:length(), worker: local Function(Int is si){
 						:auditStatement(stmt: m:body:get(index: si), file: m:sourceFile);
-						si++;
 					});
 				},
 				MemberKind:CLASS: {
@@ -257,7 +252,6 @@ Class is Linter{
 				},
 				else: {}
 			]);
-			mi++;
 		});
 		:auditOwner: savedOwner;
 	}
@@ -387,7 +381,7 @@ Class is Linter{
 				return;
 			});
 			local Boolean is isExempt: false;
-			:exemptClasses:each(action: local Function(String is e){
+			each(list: :exemptClasses, action: local Function(String is e){
 				if({ e == name }, {
 					isExempt: true;
 				});
@@ -406,7 +400,7 @@ Class is Linter{
 			});
 		}, {
 			local Boolean is isAlias: false;
-			:floorAliases:each(action: local Function(String is a){
+			each(list: :floorAliases, action: local Function(String is a){
 				if({ a == name }, {
 					isAlias: true;
 				});
@@ -416,7 +410,7 @@ Class is Linter{
 			});
 		});
 		local String is msg: 'Instance-model worklist: \'' . name . ':' . call:name . '\' calls a member through a class name (' . file . ').';
-		:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
+		:auditIssues:push(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 	}
 
 	## True when the class under audit, or any ancestor, instance-imports [name].
@@ -491,10 +485,10 @@ Class is Linter{
 	}
 
 	## Prints the audit worklist: per-site lines, then the total count.
-	Function is auditReport(String is filePath, Array of LintIssue is issues){
+	Function is auditReport(String is filePath, [LintIssue] is issues){
 		Output:line('Instance-model audit of \'' . filePath . '\':');
-		issues:each(action: local Function(LintIssue is issue){
-			Output:line(issue:toString());
+		times(count: issues:length(), worker: local Function(Int is ii){
+			Output:line(issues:get(index: ii):toString());
 		});
 		Output:line('Instance-model worklist: ' . (issues:length() as String) . ' call site(s) must migrate (Phase 0.5).');
 	}

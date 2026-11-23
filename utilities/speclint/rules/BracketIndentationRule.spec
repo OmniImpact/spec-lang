@@ -25,11 +25,11 @@ Class of LintRule is BracketIndentationRule{
 		return true;
 	}
 
-	replace Function is checkSource(String is source, Array of LintIssue is issues){
+	replace Function is checkSource(String is source, [LintIssue] is issues){
 		local Int is lineNum: 0;
-		local Array of Int is openTabs: Array();
-		local Array of Int is openLines: Array();
-		local Array of String is openChars: Array();
+		local [Int] is openTabs: [];
+		local [Int] is openLines: [];
+		local [String] is openChars: [];
 		local SourceMasker is masker: SourceMasker:init();
 		local Array of String is srcLines: source:lines();
 
@@ -54,7 +54,7 @@ Class of LintRule is BracketIndentationRule{
 				if({ lineNum > openedAt }, {
 					if({ firstCh == closeCh }, {
 						if({ tabs != expBase }, {
-							issues:add(item: LintIssue:init(
+							issues:push(item: LintIssue:init(
 								ruleId: :id(),
 								line: lineNum,
 								isWarning: :isWarning(),
@@ -63,7 +63,7 @@ Class of LintRule is BracketIndentationRule{
 						});
 					}, {
 						if({ firstCh != '}' && tabs < expBase + 1 }, {
-							issues:add(item: LintIssue:init(
+							issues:push(item: LintIssue:init(
 								ruleId: :id(),
 								line: lineNum,
 								isWarning: :isWarning(),
@@ -74,25 +74,21 @@ Class of LintRule is BracketIndentationRule{
 				});
 			});
 
-			local Int is i: 0;
-			local Int is mlen: masked:length();
-			while({ i < mlen }, {
+			times(count: masked:length(), worker: local Function(Int is i){
 				local String is ch: masked:charAt(index: i, default: '');
 				if({ ch == '[' || ch == '(' }, {
-					openTabs:add(item: tabs);
-					openLines:add(item: lineNum);
-					openChars:add(item: ch);
+					openTabs:push(item: tabs);
+					openLines:push(item: lineNum);
+					openChars:push(item: ch);
 				}, {
 					if({ ch == ']' || ch == ')' }, {
 						if({ openTabs:length() > 0 }, {
-							local Int is last: openTabs:length() - 1;
-							openTabs:removeAt(index: last);
-							openLines:removeAt(index: last);
-							openChars:removeAt(index: last);
+							openTabs:pop();
+							openLines:pop();
+							openChars:pop();
 						});
 					});
 				});
-				i: i + 1;
 			});
 		});
 	}

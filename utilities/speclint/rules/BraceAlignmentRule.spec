@@ -25,11 +25,11 @@ Class of LintRule is BraceAlignmentRule{
 		return true;
 	}
 
-	replace Function is checkSource(String is source, Array of LintIssue is issues){
+	replace Function is checkSource(String is source, [LintIssue] is issues){
 		local Int is lineNum: 0;
 		local Int is stmtTabs: 0;
 		local Boolean is prevOpen: false;
-		local Array of Int is openTabs: Array();
+		local [Int] is openTabs: [];
 		local SourceMasker is masker: SourceMasker:init();
 		local Array of String is srcLines: source:lines();
 		srcLines:each(action: local Function(String is line){
@@ -70,23 +70,21 @@ Class of LintRule is BraceAlignmentRule{
 					local Int is expectedTabs: (openTabs:get(index: openCount - 1)) as Int;
 					if({ tabs != expectedTabs }, {
 						local String is msg: 'Closing brace indented at ' . (tabs as String) . ' tab(s); the block opened at ' . (expectedTabs as String) . ' tab(s).';
-						issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
+						issues:push(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 					});
 				});
 			});
 
-			local Int is ci: 0;
-			while({ ci < masked:length() }, {
+			times(count: masked:length(), worker: local Function(Int is ci){
 				local String is ch: masked:charAt(index: ci, default: '');
 				match(on: ch, when: [
-					'{': { openTabs:add(item: pushTabs); },
+					'{': { openTabs:push(item: pushTabs); },
 					'}': {
 						if({ openTabs:length() > 0 }, {
-							openTabs:removeAt(index: openTabs:length() - 1, default: 0);
+							openTabs:pop();
 						});
 					}
 				]);
-				ci: ci + 1;
 			});
 
 			local String is tail: masked;

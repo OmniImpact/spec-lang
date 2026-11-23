@@ -122,7 +122,7 @@ Class of LintRule is UnnecessarySelfColonRule{
 		return res;
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		while([Int is mi: 0], { mi < classDef:members:length() }, {
 			local Member is m: classDef:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD }, {
@@ -147,11 +147,11 @@ Class of LintRule is UnnecessarySelfColonRule{
 		});
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
 				if({ :isSelfIdent(expr: target) && !:localNames:has(key: fieldName) }, {
-					issues:add(item: LintIssue:init(
+					issues:push(item: LintIssue:init(
 						ruleId: :id(),
 						line: expr:line,
 						isWarning: :isWarning(),
@@ -163,7 +163,7 @@ Class of LintRule is UnnecessarySelfColonRule{
 				if({ segs:length() >= 2 && segs:get(index: 0) == ':' }, {
 					local String is first: segs:get(index: 1);
 					if({ first != '' && !:localNames:has(key: first) }, {
-						issues:add(item: LintIssue:init(
+						issues:push(item: LintIssue:init(
 							ruleId: :id(),
 							line: expr:line,
 							isWarning: :isWarning(),
@@ -174,7 +174,7 @@ Class of LintRule is UnnecessarySelfColonRule{
 			},
 			Expression:Call: local Function(CallData is cd){
 				if({ !cd:isBareCall && :isSelfIdent(expr: cd:target) && cd:name != '' && !:localNames:has(key: cd:name) }, {
-					issues:add(item: LintIssue:init(
+					issues:push(item: LintIssue:init(
 						ruleId: :id(),
 						line: expr:line,
 						isWarning: :isWarning(),

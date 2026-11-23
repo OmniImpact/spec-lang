@@ -31,7 +31,7 @@ Class of LintRule is InitShorthandRule{
 		return false;
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		local String is saved: :curClassName;
 		:curClassName: classDef:name;
 		while([Int is mi: 0], { mi < classDef:members:length() }, {
@@ -52,14 +52,14 @@ Class of LintRule is InitShorthandRule{
 		:curClassName: saved;
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				if({ cd:name == 'init' }, {
 					match(on: cd:target, when: [
 						Expression:Ident: local Function(String is tname){
 							if({ tname != ':' && tname != :curClassName }, {
-								issues:add(item: LintIssue:init(
+								issues:push(item: LintIssue:init(
 									ruleId: :id(),
 									line: expr:line,
 									isWarning: :isWarning(),

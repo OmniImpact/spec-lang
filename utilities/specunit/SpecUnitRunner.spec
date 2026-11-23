@@ -86,7 +86,7 @@ Class is SpecUnitRunner{
 		if(check: { cell:length() > 0 }, then: {
 			local TestResult is r: cell:get(index: 0);
 			r:passed: false;
-			r:failures:add(item: 'Unhandled SpecError in ' . phase . ': ' . err:toString());
+			r:failures:push(item: 'Unhandled SpecError in ' . phase . ': ' . err:toString());
 		});
 		Mem:releaseAddr(objAddr: errAddr);
 	}
@@ -160,15 +160,13 @@ Class is SpecUnitRunner{
 			r:durationMs: clockMs() - r:startedAtMs;
 			if(check: { timeoutMs > 0 && r:durationMs > timeoutMs }, then: {
 				r:passed: false;
-				r:failures:add(item: 'test exceeded timeout of ' . (timeoutMs as String) . 'ms (' . (r:durationMs as String) . 'ms)');
+				r:failures:push(item: 'test exceeded timeout of ' . (timeoutMs as String) . 'ms (' . (r:durationMs as String) . 'ms)');
 			});
-			local Int is idx: r:checksBefore;
-			while({ idx < SpecUnitState:checks:length() }, {
+			range(start: r:checksBefore, end: SpecUnitState:checks:length(), worker: local Function(Int is idx){
 				local CheckRecord is rec: SpecUnitState:checks:get(index: idx);
-				idx++;
 				if(check: { !rec:ok }, then: {
 					r:passed: false;
-					r:failures:add(item: rec:msg);
+					r:failures:push(item: rec:msg);
 				});
 			});
 		});
@@ -199,7 +197,7 @@ Class is SpecUnitRunner{
 			local CleoColor is c: if(check: { r:passed }, then: { CleoColor:ansi(code: 114) }, else: { CleoColor:ansi(code: 203) });
 			rSec:addLine(text: status . ' ' . r:name, color: c, rightText: (r:durationMs as String) . 'ms');
 			if(check: { !r:passed }, then: {
-				r:failures:each(action: local Function(String is f){
+				each(list: r:failures, action: local Function(String is f){
 					rSec:addLine(text: '       - ' . f, color: CleoColor:ansi(code: 203), wrap: true);
 				});
 			});

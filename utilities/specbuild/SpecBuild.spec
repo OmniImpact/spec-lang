@@ -25,17 +25,10 @@ Class is SpecBuild{
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
 		['base', 'cleo', as CleoColor()],
-		['base', 'cleo', CleoWidth],
-		['base', 'cleo', as CleoWidth()],
-		['base', 'cleo', BorderStyle],
-		['base', 'cleo', TitlePlacement],
 		['base', 'core', Result],
 		['base', 'core', SpecError],
 		['base', 'data', JsonError],
 		['base', 'data', as Json()],
-		['base', 'data', JsonNumber],
-		['base', 'data', JsonBool],
-		['base', 'data', JsonNull],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'sys', as Output()],
@@ -230,6 +223,9 @@ Class is SpecBuild{
 					if({ configPath == '' }, {
 						configPath: pos0;
 					});
+					if({ pos1 != '' }, {
+						command: pos1;
+					});
 				});
 			});
 		});
@@ -340,13 +336,12 @@ Class is SpecBuild{
 					lintArgs:add(item: '.');
 				});
 			}, {
-				while([Int is di: 0], { di < dirCount }, {
+				times(count: dirCount, worker: local Function(Int is di){
 					local String is sd: Json:getStringAt(arr: sourceDirs, index: di, default: '');
 					if({ sd != '' }, {
 						lintArgs:add(item: '-t');
 						lintArgs:add(item: :resolvePath(baseDir: configDir, relPath: sd));
 					});
-					di++;
 				});
 			});
 			Output:line('[specbuild] Linting ' . name . ' via ' . linter);
@@ -365,26 +360,24 @@ Class is SpecBuild{
 			local Array is testDirs: Json:getArray(obj: testsCfg, key: 'dirs');
 			local Array of String is testArgs: Array(['-s', testCompiler]);
 			local Int is sdCount: sourceDirs:length();
-			while([Int is si: 0], { si < sdCount }, {
+			times(count: sdCount, worker: local Function(Int is si){
 				local String is sd: Json:getStringAt(arr: sourceDirs, index: si, default: '');
 				if({ sd != '' }, {
 					testArgs:add(item: '-S');
 					testArgs:add(item: :resolvePath(baseDir: configDir, relPath: sd));
 				});
-				si++;
 			});
 			local Int is tdCount: testDirs:length();
 			if({ tdCount == 0 }, {
 				testArgs:add(item: '-t');
 				testArgs:add(item: :resolvePath(baseDir: configDir, relPath: 'tests'));
 			}, {
-				while([Int is ti: 0], { ti < tdCount }, {
+				times(count: tdCount, worker: local Function(Int is ti){
 					local String is td: Json:getStringAt(arr: testDirs, index: ti, default: '');
 					if({ td != '' }, {
 						testArgs:add(item: '-t');
 						testArgs:add(item: :resolvePath(baseDir: configDir, relPath: td));
 					});
-					ti++;
 				});
 			});
 			Output:line('[specbuild] Running tests for ' . name . ' via ' . runner);
@@ -422,22 +415,20 @@ Class is SpecBuild{
 		});
 
 		local Int is sLen: sourceDirs:length();
-		while([Int is si: 0], { si < sLen }, {
+		times(count: sLen, worker: local Function(Int is si){
 			local String is sd: Json:getStringAt(arr: sourceDirs, index: si, default: '');
 			if({ sd != '' }, {
 				specArgs:add(item: '-s');
 				specArgs:add(item: :resolvePath(baseDir: configDir, relPath: sd));
 			});
-			si++;
 		});
 
 		local Int is fLen: flags:length();
-		while([Int is fi: 0], { fi < fLen }, {
+		times(count: fLen, worker: local Function(Int is fi){
 			local String is flg: Json:getStringAt(arr: flags, index: fi, default: '');
 			if({ flg != '' }, {
 				specArgs:add(item: flg);
 			});
-			fi++;
 		});
 
 		local Cleo is prepUi: Cleo:toolUi(title: ' specbuild ', directOutput: true);
@@ -446,9 +437,8 @@ Class is SpecBuild{
 		if({ verbose }, {
 			local String is cmdLine: compiler;
 			local Int is aiLen: specArgs:length();
-			while([Int is ai: 0], { ai < aiLen }, {
+			times(count: aiLen, worker: local Function(Int is ai){
 				cmdLine: cmdLine . ' ' . specArgs:get(index: ai, default: '');
-				ai++;
 			});
 			prepSec:addLine(text: 'Command: ' . cmdLine, color: CleoColor:ansi(code: 245));
 		});

@@ -33,7 +33,7 @@ Class of LintRule is LoopConstructionRule{
 		return true;
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		local Boolean is handledCall: false;
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
@@ -41,7 +41,7 @@ Class of LintRule is LoopConstructionRule{
 				local String is method: cd:name;
 
 				if({ method == 'init' && :loopDepth > 0 && :isClassTarget(target: cd:target) }, {
-					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
+					issues:push(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
 				});
 
 				:checkExpression(expr: cd:target, issues: issues);

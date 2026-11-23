@@ -182,7 +182,7 @@ Class of LintRule is UnusedUsingRule{
 		});
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		:refs: Map();
 		:collectClassRefs(cls: classDef);
 		while([Int is mi: 0], { mi < classDef:members:length() }, {
@@ -198,7 +198,7 @@ Class of LintRule is UnusedUsingRule{
 										match(on: seg, when: [
 											Expression:Ident: local Function(String is name){
 												if({ name != '' && !:refs:has(key: name) }, {
-													issues:add(item: LintIssue(
+													issues:push(item: LintIssue(
 														ruleId: :id(),
 														line: seg:line,
 														isWarning: :isWarning(),
@@ -209,7 +209,7 @@ Class of LintRule is UnusedUsingRule{
 											Expression:UsingAs: local Function(String is className, [NamedArg] is _args){
 												local String is alias: seg:usingAsAlias;
 												if({ alias != '' && !:refs:has(key: alias) }, {
-													issues:add(item: LintIssue(
+													issues:push(item: LintIssue(
 														ruleId: :id(),
 														line: seg:line,
 														isWarning: :isWarning(),

@@ -124,7 +124,7 @@ Class of LintRule is NarrowingCastRule{
 		]);
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		local Map of String to String is savedFields: :fieldTypes;
 		:fieldTypes: Map();
 		while([Int is mi: 0], { mi < classDef:members:length() }, {
@@ -166,7 +166,7 @@ Class of LintRule is NarrowingCastRule{
 		:fieldTypes: savedFields;
 	}
 
-	replace Function is checkStatement(Statement is stmt, Array of LintIssue is issues){
+	replace Function is checkStatement(Statement is stmt, [LintIssue] is issues){
 		match(on: stmt, when: [
 			Statement:VarDecl: local Function([String] is _mods, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				:localTypes:set(key: varName, value: varType:name);
@@ -179,7 +179,7 @@ Class of LintRule is NarrowingCastRule{
 		});
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is _args){
 				local Primitive is dstPrim: Primitive:of(target);
@@ -190,13 +190,13 @@ Class of LintRule is NarrowingCastRule{
 						Expression:NumberLit: local Function(Int is val, String is _t){
 							handledLit: true;
 							if({ !:literalFitsIn(val: val, dst: dstPrim) }, {
-								issues:add(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast: literal ' . (val as String) . ' loses precision or sign when cast to ' . target . '.'));
+								issues:push(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast: literal ' . (val as String) . ' loses precision or sign when cast to ' . target . '.'));
 							});
 						},
 						Expression:FloatLit: local Function(String is _t){
 							handledLit: true;
 							if({ !:isFloatPrim(p: dstPrim) }, {
-								issues:add(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast: Float literal loses fractional precision when cast to ' . target . '.'));
+								issues:push(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast: Float literal loses fractional precision when cast to ' . target . '.'));
 							});
 						},
 						Expression:Unary: local Function(String is op, Expression is sub){
@@ -205,7 +205,7 @@ Class of LintRule is NarrowingCastRule{
 									Expression:NumberLit: local Function(Int is val, String is _t){
 										handledLit: true;
 										if({ !:literalFitsIn(val: 0 - val, dst: dstPrim) }, {
-											issues:add(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast: literal -' . (val as String) . ' loses precision or sign when cast to ' . target . '.'));
+											issues:push(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast: literal -' . (val as String) . ' loses precision or sign when cast to ' . target . '.'));
 										});
 									}
 								], default: {});
@@ -217,7 +217,7 @@ Class of LintRule is NarrowingCastRule{
 						local Primitive is srcPrim: Primitive:of(srcName);
 						local Boolean is srcNumeric: :isSignedIntPrim(p: srcPrim) || :isUnsignedIntPrim(p: srcPrim) || :isFloatPrim(p: srcPrim);
 						if({ srcNumeric && !:isLosslessWidening(src: srcPrim, dst: dstPrim) }, {
-							issues:add(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast from ' . srcName . ' to ' . target . ' may lose precision or sign.'));
+							issues:push(item: LintIssue:init(line: expr:line, isWarning: true, message: 'Narrowing cast from ' . srcName . ' to ' . target . ' may lose precision or sign.'));
 						});
 					});
 				});

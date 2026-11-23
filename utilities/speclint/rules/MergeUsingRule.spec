@@ -65,13 +65,13 @@ Class of LintRule is MergeUsingRule{
 		found;
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		if({ classDef:name != 'Class' && classDef:name != 'Conditional' && classDef:name != 'Loops' && classDef:baseClass != 'Enum' }, {
 			while([Int is mi: 0], { mi < classDef:members:length() }, {
 				local Member is m: classDef:members:get(index: mi);
 				if({ m:name == 'using' && m:hasInit && m:hasModifier(kw: Keyword:REPLACE) && !m:hasModifier(kw: Keyword:MERGE) }, {
 					if({ :hasDefaultControlFlowImport(initExpr: m:initExpr) }, {
-						issues:add(item: LintIssue(
+						issues:push(item: LintIssue(
 							ruleId: :id(),
 							line: m:line,
 							isWarning: :isWarning(),

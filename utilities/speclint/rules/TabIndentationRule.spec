@@ -24,7 +24,7 @@ Class of LintRule is TabIndentationRule{
 		return true;
 	}
 
-	replace Function is checkSource(String is source, Array of LintIssue is issues){
+	replace Function is checkSource(String is source, [LintIssue] is issues){
 		local SourceMasker is masker: SourceMasker:init();
 		local Int is lineNum: 0;
 		local Array of String is srcLines: source:lines();
@@ -40,7 +40,7 @@ Class of LintRule is TabIndentationRule{
 			local Int is spaces: rest:countLeading(search: ' ');
 			if({ spaces > 0 }, {
 				local String is msg: 'Space-based indentation detected (' . (spaces as String) . ' space(s)). Spec standard requires tabs.';
-				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
+				issues:push(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 			});
 		});
 	}

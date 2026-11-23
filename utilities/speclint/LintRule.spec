@@ -38,38 +38,35 @@ Class is LintRule{
 	}
 
 	## Inspects raw source code text. Override to enforce formatting/indentation.
-	Function is checkSource(String is source, Array of LintIssue is issues){
+	Function is checkSource(String is source, [LintIssue] is issues){
 		return;
 	}
 
 	## Inspects the parsed AST program. Default implementation traverses all classes.
-	Function is checkProgram(ProgramNode is program, Array of LintIssue is issues){
+	Function is checkProgram(ProgramNode is program, [LintIssue] is issues){
 		:traverseProgram(program: program, issues: issues);
 	}
 
 	## Default AST program traversal.
-	Function is traverseProgram(ProgramNode is program, Array of LintIssue is issues){
-		local Int is ci: 0;
-		while({ ci < program:classes:length() }, {
+	Function is traverseProgram(ProgramNode is program, [LintIssue] is issues){
+		times(count: program:classes:length(), worker: local Function(Int is ci){
 			:checkClass(classDef: program:classes:get(index: ci), issues: issues);
-			ci++;
 		});
 	}
 
 	## Inspects a class definition. Default implementation traverses all members.
-	Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		:traverseClass(classDef: classDef, issues: issues);
 	}
 
 	## Default class member traversal.
-	Function is traverseClass(ClassInfo is classDef, Array of LintIssue is issues){
-		while([Int is mi: 0], { mi < classDef:members:length() }, {
+	Function is traverseClass(ClassInfo is classDef, [LintIssue] is issues){
+		times(count: classDef:members:length(), worker: local Function(Int is mi){
 			local Member is m: classDef:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
-					while([Int is si: 0], { si < m:body:length() }, {
+					times(count: m:body:length(), worker: local Function(Int is si){
 						:checkStatement(stmt: m:body:get(index: si), issues: issues);
-						si++;
 					});
 				},
 				MemberKind:CLASS: {
@@ -77,17 +74,16 @@ Class is LintRule{
 				},
 				else: {}
 			]);
-			mi++;
 		});
 	}
 
 	## Inspects a statement node. Default implementation traverses expressions.
-	Function is checkStatement(Statement is stmt, Array of LintIssue is issues){
+	Function is checkStatement(Statement is stmt, [LintIssue] is issues){
 		:traverseStatement(stmt: stmt, issues: issues);
 	}
 
 	## Default statement traversal.
-	Function is traverseStatement(Statement is stmt, Array of LintIssue is issues){
+	Function is traverseStatement(Statement is stmt, [LintIssue] is issues){
 		match(on: stmt, when: [
 			Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				if({ hasInit }, {
@@ -110,29 +106,25 @@ Class is LintRule{
 				:checkExpression(expr: exprStmt, issues: issues);
 			},
 			Statement:Forward: local Function([NamedArg] is forwardArgs){
-				local Int is fi: 0;
-				while({ fi < forwardArgs:length() }, {
+				times(count: forwardArgs:length(), worker: local Function(Int is fi){
 					:checkExpression(expr: forwardArgs:get(index: fi):value, issues: issues);
-					fi++;
 				});
 			}
 		]);
 	}
 
 	## Inspects an expression node. Default implementation traverses child expressions.
-	Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		:traverseExpression(expr: expr, issues: issues);
 	}
 
 	## Default expression traversal.
-	Function is traverseExpression(Expression is expr, Array of LintIssue is issues){
+	Function is traverseExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				:checkExpression(expr: cd:target, issues: issues);
-				local Int is ai: 0;
-				while({ ai < cd:args:length() }, {
+				times(count: cd:args:length(), worker: local Function(Int is ai){
 					:checkExpression(expr: cd:args:get(index: ai):value, issues: issues);
-					ai++;
 				});
 			},
 			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
@@ -143,26 +135,22 @@ Class is LintRule{
 				:checkExpression(expr: operand, issues: issues);
 			},
 			Expression:ArrayLit: local Function([Expression] is items){
-				while([Int is ii: 0], { ii < items:length() }, {
+				times(count: items:length(), worker: local Function(Int is ii){
 					:checkExpression(expr: items:get(index: ii), issues: issues);
-					ii++;
 				});
 			},
 			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
-				while([Int is ki: 0], { ki < keys:length() }, {
+				times(count: keys:length(), worker: local Function(Int is ki){
 					:checkExpression(expr: keys:get(index: ki), issues: issues);
-					ki++;
 				});
-				while([Int is vi: 0], { vi < values:length() }, {
+				times(count: values:length(), worker: local Function(Int is vi){
 					:checkExpression(expr: values:get(index: vi), issues: issues);
-					vi++;
 				});
 			},
 			Expression:Cast: local Function(Expression is target, String is targetType, [Expression] is args){
 				:checkExpression(expr: target, issues: issues);
-				while([Int is ai: 0], { ai < args:length() }, {
+				times(count: args:length(), worker: local Function(Int is ai){
 					:checkExpression(expr: args:get(index: ai), issues: issues);
-					ai++;
 				});
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is field){
@@ -173,10 +161,8 @@ Class is LintRule{
 				:checkExpression(expr: index, issues: issues);
 			},
 			Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
-				local Int is si: 0;
-				while({ si < body:length() }, {
+				times(count: body:length(), worker: local Function(Int is si){
 					:checkStatement(stmt: body:get(index: si), issues: issues);
-					si++;
 				});
 			}
 		], default: {});

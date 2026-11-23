@@ -26,7 +26,7 @@ Class of LintRule is MathRandomRule{
 		return false;
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				if({ cd:name == 'random' }, {
@@ -34,7 +34,7 @@ Class of LintRule is MathRandomRule{
 					if({ cd:args:length() == 0 }, {
 						msg: 'Method call \'math:random\' omits optional min/max parameters (using default [0.0, 1.0)).';
 					});
-					issues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
+					issues:push(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 				});
 			}
 		], default: {});

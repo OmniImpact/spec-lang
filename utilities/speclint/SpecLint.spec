@@ -107,7 +107,7 @@ Class is SpecLint{
 
 		# Tree walk: every .spec under the -t roots (repeatable,
 		# comma/newline separated — the argv parser accumulates repeats).
-		local Array of String is files: Array();
+		local [String] is files: [];
 		local Int is roots: 0;
 		dirsRaw:split(delimiter: "\n"):each(action: local Function(String is seg){
 			seg:split(delimiter: ','):each(action: local Function(String is dir){
@@ -125,13 +125,12 @@ Class is SpecLint{
 		local Cleo is ui: Cleo:toolUi(title: ' speclint ');
 		local LintTally is tally: LintTally:init();
 		local Int is total: files:length();
-		local Int is idx: 0;
-		files:each(action: local Function(String is fpath){
+		times(count: total, worker: local Function(Int is idx){
+			local String is fpath: files:get(index: idx);
 			if({ total > 1 }, {
 				Output:consOut(text: "\r\u001b[2K  " . (idx as String) . '/' . (total as String) . ' files · ' . fpath);
 			});
 			:lintOne(path: fpath, strict: false, tally: tally, ui: ui);
-			idx: idx + 1;
 		});
 		if({ total > 1 }, {
 			Output:consOut(text: "\r\u001b[2K");
@@ -194,9 +193,8 @@ Class is SpecLint{
 		if({ lexer:hasErrors() }, {
 			Stderr:line('Lexical errors encountered during linting:');
 			local [Error] is lexErrors: lexer:getErrors();
-			while([Int is lei: 0], { lei < lexErrors:length() }, {
+			times(count: lexErrors:length(), worker: local Function(Int is lei){
 				Stderr:line('  [' . path . '] ' . lexErrors:get(index: lei):toString());
-				lei++;
 			});
 			if({ strict }, {
 				Process:exit(status: 1);
@@ -207,9 +205,8 @@ Class is SpecLint{
 		if({ parser:hasErrors() }, {
 			Stderr:line('Syntax errors encountered during linting:');
 			local [Error] is parseErrs: parser:getErrors();
-			while([Int is pei: 0], { pei < parseErrs:length() }, {
+			times(count: parseErrs:length(), worker: local Function(Int is pei){
 				Stderr:line(parseErrs:get(index: pei):toString());
-				pei++;
 			});
 			if({ strict }, {
 				Process:exit(status: 1);
@@ -218,7 +215,7 @@ Class is SpecLint{
 			return;
 		});
 		local Linter is linter: Linter:init();
-		local Array of LintIssue is issues: linter:lint(source: source, program: program);
+		local [LintIssue] is issues: linter:lint(source: source, program: program);
 		if({ strict || issues:length() > 0 }, {
 			local CleoSection is fSec: ui:addSection(
 				title: ' ' . path . ' ',
@@ -230,7 +227,8 @@ Class is SpecLint{
 			if({ issues:length() == 0 }, {
 				fSec:addLine(text: Ansi:color256(code: 114, text: '●') . ' All standard checks passed.', color: CleoColor:ansi(code: 255), rightText: '✔ CLEAN');
 			}, {
-				issues:each(action: local Function(LintIssue is issue){
+				times(count: issues:length(), worker: local Function(Int is ii){
+					local LintIssue is issue: issues:get(index: ii);
 					local String is dot: if({ issue:isWarning }, { Ansi:color256(code: 203, text: '●') }, { Ansi:color256(code: 220, text: '●') });
 					local String is loc: if({ issue:line > 0 }, { 'line ' . (issue:line as String) }, { '' });
 					fSec:addLine(text: dot . ' ' . issue:message, color: CleoColor:ansi(code: 255), rightText: loc);
@@ -243,7 +241,7 @@ Class is SpecLint{
 	}
 
 	## Collects all non-empty non-negative `.spec` file paths under [absDir] recursively.
-	Function is collectTreeFiles(String is absDir, Array of String is files){
+	Function is collectTreeFiles(String is absDir, [String] is files){
 		Dir:dirList(path: absDir):each(action: local Function(String is name){
 			if({ name:startsWith(prefix: '.') }, {
 				return;
@@ -256,7 +254,7 @@ Class is SpecLint{
 				if({ name:endsWith(suffix: '.spec') }, {
 					local String is content: fileRead(path: childAbs, default: '');
 					if({ content != '' && :bannerKind(content: content) != 'negative' }, {
-						files:add(item: childAbs);
+						files:push(item: childAbs);
 					});
 				});
 			});
@@ -302,7 +300,7 @@ Class is SpecLint{
 		});
 		loader:cleanup();
 		local Linter is auditor: Linter:init();
-		local Array of LintIssue is auditIssues: auditor:auditProgram(program: program);
+		local [LintIssue] is auditIssues: auditor:auditProgram(program: program);
 		auditor:auditReport(filePath: path, issues: auditIssues);
 	}
 }

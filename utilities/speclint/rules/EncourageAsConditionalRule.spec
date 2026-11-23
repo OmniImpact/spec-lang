@@ -32,7 +32,7 @@ Class of LintRule is EncourageAsConditionalRule{
 		return false;
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		:currentClass: classDef:name;
 		# Exclude Conditional definition itself and compiler-synthesized Enums
 		if({ :currentClass != 'Conditional' && classDef:baseClass != 'Enum' }, {
@@ -40,13 +40,13 @@ Class of LintRule is EncourageAsConditionalRule{
 		});
 	}
 
-	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
+	replace Function is checkExpression(Expression is expr, [LintIssue] is issues){
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				local String is targetName: :extractTargetName(target: cd:target);
 				if({ targetName == 'Conditional' }, {
 					local String is msg: 'Direct call to \'Conditional:' . cd:name . '\': import \'as Conditional()\' in using and use bare \'' . cd:name . '(...)\'.';
-					issues:add(item: LintIssue:init(line: expr:line, isWarning: false, message: msg));
+					issues:push(item: LintIssue:init(line: expr:line, isWarning: false, message: msg));
 				});
 			}
 		], default: {});

@@ -53,12 +53,11 @@ Class is SpecInit{
 			len: norm:length();
 		});
 		local Int is lastSlash: -1;
-		while([Int is i: 0], { i < len }, {
+		times(count: len, worker: local Function(Int is i){
 			local String is ch: norm:substring(start: i, end: i + 1);
 			if({ ch == '/' || ch == '\\' }, {
 				lastSlash: i;
 			});
-			i: i + 1;
 		});
 		if({ lastSlash >= 0 && lastSlash + 1 < len }, {
 			return norm:substring(start: lastSlash + 1, end: len);
@@ -70,7 +69,7 @@ Class is SpecInit{
 		local String is out: '';
 		local Boolean is capNext: isPascal;
 		local Int is len: raw:length();
-		while([Int is i: 0], { i < len }, {
+		times(count: len, worker: local Function(Int is i){
 			local String is ch: raw:substring(start: i, end: i + 1);
 			local Int is code: raw:byteAt(index: i, default: 0);
 			local Boolean is isLower: code >= 97 && code <= 122;
@@ -93,7 +92,6 @@ Class is SpecInit{
 			}, {
 				capNext: true;
 			});
-			i: i + 1;
 		});
 		if({ out == '' }, {
 			return if({ isPascal }, { 'App' }, { 'app' });
@@ -149,7 +147,7 @@ Class is SpecInit{
 		s: s . "\t\t['base', 'sys', as Output()],\n";
 		s: s . "\t\t['base', 'struct', Map]\n";
 		s: s . "\t];\n\n";
-		s: s . "\tFunction is init(Map of String to String is args){\n";
+		s: s . "\treplace Function is init(Map of String to String is args){\n";
 		s: s . "\t\tOutput:line(text: \"Hello from " . projectName . "!\");\n";
 		s: s . "\t}\n";
 		s: s . "}\n";

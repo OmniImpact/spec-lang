@@ -33,7 +33,7 @@ Class of LintRule is HeldErrorStateRule{
 		return false;
 	}
 
-	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
+	replace Function is checkClass(ClassInfo is classDef, [LintIssue] is issues){
 		while([Int is mi: 0], { mi < classDef:members:length() }, {
 			local Member is m: classDef:members:get(index: mi);
 			if({ m:kind == MemberKind:FIELD }, {
@@ -43,7 +43,7 @@ Class of LintRule is HeldErrorStateRule{
 				# never crosses calls, so nothing external can poll it.
 				local Boolean is privatePipe: m:hasModifier(kw: Keyword:LOCAL);
 				if({ !privatePipe && (n:endsWith(suffix: 'Error') || n:endsWith(suffix: 'Failed') || n:endsWith(suffix: 'Err')) }, {
-					issues:add(item: LintIssue(line: m:line, isWarning: false, message: 'Field \'' . classDef:name . ':' . n . '\' looks like facility-held error state; carry the failure as a SpecError over result/callback/unwind instead of a pollable field.'));
+					issues:push(item: LintIssue(line: m:line, isWarning: false, message: 'Field \'' . classDef:name . ':' . n . '\' looks like facility-held error state; carry the failure as a SpecError over result/callback/unwind instead of a pollable field.'));
 				});
 			});
 			if({ m:kind == MemberKind:CLASS }, {

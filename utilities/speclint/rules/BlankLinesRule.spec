@@ -24,7 +24,7 @@ Class of LintRule is BlankLinesRule{
 		return false;
 	}
 
-	replace Function is checkSource(String is source, Array of LintIssue is issues){
+	replace Function is checkSource(String is source, [LintIssue] is issues){
 		if({ source:length() == 0 }, { return; });
 		local Int is lineNum: 0;
 		local Int is blankRun: 0;
@@ -45,7 +45,7 @@ Class of LintRule is BlankLinesRule{
 				blankRun: blankRun + 1;
 				if({ blankRun >= 3 && !reportedRun }, {
 					reportedRun: true;
-					issues:add(item: LintIssue:init(
+					issues:push(item: LintIssue:init(
 						ruleId: :id(),
 						line: lineNum,
 						isWarning: :isWarning(),
@@ -60,7 +60,7 @@ Class of LintRule is BlankLinesRule{
 
 		local Int is lastByte: source:byteAt(index: source:length() - 1, default: -1);
 		if({ lastByte != 10 }, {
-			issues:add(item: LintIssue:init(
+			issues:push(item: LintIssue:init(
 				ruleId: :id(),
 				line: lineNum,
 				isWarning: :isWarning(),
