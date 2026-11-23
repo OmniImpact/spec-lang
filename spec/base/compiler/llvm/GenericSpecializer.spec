@@ -738,11 +738,25 @@ Class is GenericSpecializer{
 		:pendingMethodMangled: [];
 
 		:seenClassNames:set(key: 'Int', value: true);
+		:seenClassNames:set(key: 'Int8', value: true);
+		:seenClassNames:set(key: 'Int16', value: true);
+		:seenClassNames:set(key: 'Int32', value: true);
+		:seenClassNames:set(key: 'Int128', value: true);
+		:seenClassNames:set(key: 'ISize', value: true);
 		:seenClassNames:set(key: 'Float', value: true);
+		:seenClassNames:set(key: 'Float32', value: true);
 		:seenClassNames:set(key: 'Boolean', value: true);
 		:seenClassNames:set(key: 'String', value: true);
 		:seenClassNames:set(key: 'Str', value: true);
 		:seenClassNames:set(key: 'Byte', value: true);
+		:seenClassNames:set(key: 'UInt8', value: true);
+		:seenClassNames:set(key: 'UInt16', value: true);
+		:seenClassNames:set(key: 'UInt32', value: true);
+		:seenClassNames:set(key: 'UInt64', value: true);
+		:seenClassNames:set(key: 'UInt128', value: true);
+		:seenClassNames:set(key: 'USize', value: true);
+		:seenClassNames:set(key: 'Rune', value: true);
+		:seenClassNames:set(key: 'RawPtr', value: true);
 		:seenClassNames:set(key: 'Void', value: true);
 		:seenClassNames:set(key: 'Any', value: true);
 		:seenClassNames:set(key: 'Function', value: true);

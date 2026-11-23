@@ -38,10 +38,108 @@ Class is LlvmEmitter{
 		return match(on: ty, when: [
 			IrType:Void: { 'void' },
 			IrType:I1: { 'i1' },
+			IrType:I8: { 'i8' },
+			IrType:I16: { 'i16' },
+			IrType:I32: { 'i32' },
 			IrType:I64: { 'i64' },
+			IrType:I128: { 'i128' },
+			IrType:F32: { 'float' },
 			IrType:F64: { 'double' },
 			IrType:Ptr: { 'ptr' }
 		]);
+	}
+
+	local Function of Int is irIntBits(IrType is ty){
+		return match(on: ty, when: [
+			IrType:I1: { 1 },
+			IrType:I8: { 8 },
+			IrType:I16: { 16 },
+			IrType:I32: { 32 },
+			IrType:I64: { 64 },
+			IrType:I128: { 128 },
+			else: { 0 }
+		]);
+	}
+
+	local Function of Boolean is isFloatIr(IrType is ty){
+		return ty == IrType:F32 || ty == IrType:F64;
+	}
+
+	local Function of String is emitCast(String is dst, String is val, IrType is fromType, IrType is toType, Boolean is isUnsigned){
+		local String is ft: :llvmType(ty: fromType);
+		local String is tt: :llvmType(ty: toType);
+		local Int is fBits: :irIntBits(ty: fromType);
+		local Int is tBits: :irIntBits(ty: toType);
+		local Boolean is fFloat: :isFloatIr(ty: fromType);
+		local Boolean is tFloat: :isFloatIr(ty: toType);
+		if({ fromType == toType }, {
+			if({ fFloat }, { return dst . ' = fadd ' . tt . ' 0.0, ' . val; });
+			if({ fBits > 0 }, { return dst . ' = add ' . tt . ' 0, ' . val; });
+			return dst . ' = bitcast ' . ft . ' ' . val . ' to ' . tt;
+		});
+		if({ fBits > 0 && tBits > 0 }, {
+			if({ toType == IrType:I1 }, {
+				return dst . ' = icmp ne ' . ft . ' ' . val . ', 0';
+			});
+			if({ fromType == IrType:I1 }, {
+				return dst . ' = zext i1 ' . val . ' to ' . tt;
+			});
+			if({ fBits > tBits }, {
+				return dst . ' = trunc ' . ft . ' ' . val . ' to ' . tt;
+			});
+			if({ isUnsigned }, {
+				return dst . ' = zext ' . ft . ' ' . val . ' to ' . tt;
+			});
+			return dst . ' = sext ' . ft . ' ' . val . ' to ' . tt;
+		});
+		if({ fFloat && tFloat }, {
+			if({ fromType == IrType:F32 }, {
+				return dst . ' = fpext float ' . val . ' to double';
+			});
+			return dst . ' = fptrunc double ' . val . ' to float';
+		});
+		if({ fBits > 0 && tFloat }, {
+			if({ isUnsigned || fromType == IrType:I1 }, {
+				return dst . ' = uitofp ' . ft . ' ' . val . ' to ' . tt;
+			});
+			return dst . ' = sitofp ' . ft . ' ' . val . ' to ' . tt;
+		});
+		if({ fFloat && tBits > 0 }, {
+			if({ toType == IrType:I1 }, {
+				return dst . ' = fcmp one ' . ft . ' ' . val . ', 0.0';
+			});
+			if({ isUnsigned }, {
+				return dst . ' = fptoui ' . ft . ' ' . val . ' to ' . tt;
+			});
+			return dst . ' = fptosi ' . ft . ' ' . val . ' to ' . tt;
+		});
+		if({ fBits > 0 && toType == IrType:Ptr }, {
+			return dst . ' = inttoptr ' . ft . ' ' . val . ' to ptr';
+		});
+		if({ fromType == IrType:Ptr && tBits > 0 }, {
+			return dst . ' = ptrtoint ptr ' . val . ' to ' . tt;
+		});
+		if({ fromType == IrType:F64 && toType == IrType:Ptr }, {
+			local String is bits64: dst . '_bits';
+			return bits64 . " = bitcast double " . val . " to i64\n  "
+				. dst . ' = inttoptr i64 ' . bits64 . ' to ptr';
+		});
+		if({ fromType == IrType:Ptr && toType == IrType:F64 }, {
+			local String is bits64: dst . '_bits';
+			return bits64 . " = ptrtoint ptr " . val . " to i64\n  "
+				. dst . ' = bitcast i64 ' . bits64 . ' to double';
+		});
+		if({ fromType == IrType:F32 && toType == IrType:Ptr }, {
+			local String is bits32: dst . '_bits';
+			return bits32 . " = bitcast float " . val . " to i32\n  "
+				. dst . ' = inttoptr i32 ' . bits32 . ' to ptr';
+		});
+		if({ fromType == IrType:Ptr && toType == IrType:F32 }, {
+			local String is bits32: dst . '_bits';
+			return bits32 . " = ptrtoint ptr " . val . " to i32\n  "
+				. dst . ' = bitcast i32 ' . bits32 . ' to float';
+		});
+		return dst . ' = bitcast ' . ft . ' ' . val . ' to ' . tt;
 	}
 
 	local Function of String is emitExternalSpecDecls(IrModule is mod){
@@ -911,8 +1009,16 @@ Class is LlvmEmitter{
 			IrInst:ConstInt: local Function of String(String is dst, Int is value){
 				return dst . ' = add i64 0, ' . (value as String);
 			},
+			IrInst:ConstIntTy: local Function of String(String is dst, Int is value, IrType is ty){
+				return dst . ' = add ' . :llvmType(ty: ty) . ' 0, ' . (value as String);
+			},
 			IrInst:ConstFloat: local Function of String(String is dst, String is text){
 				return dst . ' = fadd double 0.0, ' . text;
+			},
+			IrInst:ConstFloat32: local Function of String(String is dst, String is text){
+				local String is f64Tmp: dst . '_f64';
+				return f64Tmp . ' = fadd double 0.0, ' . text . "\n  "
+					. dst . ' = fptrunc double ' . f64Tmp . ' to float';
 			},
 			IrInst:ConstBool: local Function of String(String is dst, Boolean is value){
 				if({ value }, { return dst . ' = add i1 0, 1'; });
@@ -939,28 +1045,29 @@ Class is LlvmEmitter{
 				return dst . ' = ' . llvmOp . ' ' . t . ' ' . lhs . ', ' . rhs;
 			},
 			IrInst:UnaryOp: local Function of String(String is dst, String is op, String is operand, IrType is ty){
+				local String is t: :llvmType(ty: ty);
 				if({ op == '-' }, {
-					if({ ty == IrType:F64 }, { return dst . ' = fneg double ' . operand; });
-					return dst . ' = sub i64 0, ' . operand;
+					if({ :isFloatIr(ty: ty) }, { return dst . ' = fneg ' . t . ' ' . operand; });
+					return dst . ' = sub ' . t . ' 0, ' . operand;
 				});
 				if({ op == '!' }, {
 					return dst . ' = xor i1 ' . operand . ', 1';
 				});
 				if({ op == '~' }, {
-					return dst . ' = xor i64 ' . operand . ', -1';
+					return dst . ' = xor ' . t . ' ' . operand . ', -1';
 				});
-				return dst . ' = add i64 0, ' . operand;
+				return dst . ' = add ' . t . ' 0, ' . operand;
 			},
 			IrInst:Cmp: local Function of String(String is dst, String is op, String is lhs, String is rhs, IrType is ty){
 				local String is t: :llvmType(ty: ty);
-				if({ ty == IrType:F64 }, {
+				if({ :isFloatIr(ty: ty) }, {
 					local String is fpred: 'oeq';
 					if({ op == '!=' }, { fpred: 'one'; });
 					if({ op == '<' }, { fpred: 'olt'; });
 					if({ op == '<=' }, { fpred: 'ole'; });
 					if({ op == '>' }, { fpred: 'ogt'; });
 					if({ op == '>=' }, { fpred: 'oge'; });
-					return dst . ' = fcmp ' . fpred . ' double ' . lhs . ', ' . rhs;
+					return dst . ' = fcmp ' . fpred . ' ' . t . ' ' . lhs . ', ' . rhs;
 				});
 				local String is ipred: 'eq';
 				if({ op == '!=' }, { ipred: 'ne'; });
@@ -1028,27 +1135,10 @@ Class is LlvmEmitter{
 				return dst . ' = getelementptr ptr, ptr ' . basePtr . ', i64 ' . (index as String);
 			},
 			IrInst:IrCast: local Function of String(String is dst, String is val, IrType is fromType, IrType is toType){
-				if({ fromType == IrType:I64 && toType == IrType:F64 }, { return dst . ' = sitofp i64 ' . val . ' to double'; });
-				if({ fromType == IrType:F64 && toType == IrType:I64 }, { return dst . ' = fptosi double ' . val . ' to i64'; });
-				if({ (fromType == IrType:I64 || fromType == IrType:I1) && toType == IrType:Ptr }, {
-					return dst . ' = inttoptr ' . :llvmType(ty: fromType) . ' ' . val . ' to ptr';
-				});
-				if({ fromType == IrType:Ptr && (toType == IrType:I64 || toType == IrType:I1) }, {
-					return dst . ' = ptrtoint ptr ' . val . ' to ' . :llvmType(ty: toType);
-				});
-				if({ fromType == IrType:F64 && toType == IrType:Ptr }, {
-					local String is bits: dst . '_bits';
-					return bits . " = bitcast double " . val . " to i64\n  "
-						. dst . ' = inttoptr i64 ' . bits . ' to ptr';
-				});
-				if({ fromType == IrType:Ptr && toType == IrType:F64 }, {
-					local String is bits: dst . '_bits';
-					return bits . " = ptrtoint ptr " . val . " to i64\n  "
-						. dst . ' = bitcast i64 ' . bits . ' to double';
-				});
-				if({ fromType == IrType:I1 && toType == IrType:I64 }, { return dst . ' = zext i1 ' . val . ' to i64'; });
-				if({ fromType == IrType:I64 && toType == IrType:I1 }, { return dst . ' = icmp ne i64 ' . val . ', 0'; });
-				return dst . ' = bitcast ' . :llvmType(ty: fromType) . ' ' . val . ' to ' . :llvmType(ty: toType);
+				return :emitCast(dst: dst, val: val, fromType: fromType, toType: toType, isUnsigned: false);
+			},
+			IrInst:IrCastU: local Function of String(String is dst, String is val, IrType is fromType, IrType is toType){
+				return :emitCast(dst: dst, val: val, fromType: fromType, toType: toType, isUnsigned: true);
 			},
 			IrInst:Retain: local Function of String(String is val){
 				return 'call ptr @spec_rt_retain(ptr ' . val . ')';
@@ -1072,11 +1162,12 @@ Class is LlvmEmitter{
 	}
 
 	local Function of String is llvmBinOp(String is op, IrType is ty){
-		if({ ty == IrType:F64 }, {
+		if({ :isFloatIr(ty: ty) }, {
 			if({ op == '+' }, { return 'fadd'; });
 			if({ op == '-' }, { return 'fsub'; });
 			if({ op == '*' }, { return 'fmul'; });
 			if({ op == '/' }, { return 'fdiv'; });
+			if({ op == '%' }, { return 'frem'; });
 			return 'fadd';
 		});
 		if({ op == '+' }, { return 'add'; });

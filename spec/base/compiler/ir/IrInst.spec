@@ -9,7 +9,9 @@ Enum is IrInst {
 	],
 
 	ConstInt(String is dst, Int is value),
+	ConstIntTy(String is dst, Int is value, IrType is ty),
 	ConstFloat(String is dst, String is text),
+	ConstFloat32(String is dst, String is text),
 	ConstBool(String is dst, Boolean is value),
 	ConstString(String is dst, Int is strId),
 	Alloca(String is slot, IrType is ty),
@@ -25,6 +27,7 @@ Enum is IrInst {
 	FieldPtr(String is dst, String is objPtr, String is structName, Int is fieldIndex),
 	PtrElem(String is dst, String is basePtr, Int is index),
 	IrCast(String is dst, String is val, IrType is fromType, IrType is toType),
+	IrCastU(String is dst, String is val, IrType is fromType, IrType is toType),
 	Retain(String is val),
 	Release(String is val),
 	Ret(Boolean is hasVal, String is val, IrType is ty),

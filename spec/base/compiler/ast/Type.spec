@@ -106,16 +106,37 @@ Class is Type{
 		return Primitive:of(:name) == Primitive:ANY;
 	}
 
-	## True when this type is an unsigned integer primitive (UInt8/16/32/64).
-	Function of Boolean is isUnsigned(){
+	## True when this type is a signed integer primitive (Int8/16/32/Int/Int128/ISize).
+	Function of Boolean is isSignedInt(){
 		local Primitive is p: Primitive:of(:name);
-		return p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64;
+		return p == Primitive:INT || p == Primitive:INT8 || p == Primitive:INT16 || p == Primitive:INT32 || p == Primitive:INT128 || p == Primitive:ISIZE;
 	}
 
-	## True when this type is any integer primitive (Int, Byte, UInt8/16/32/64).
-	Function of Boolean is isIntLike(){
+	## True when this type is an unsigned integer primitive (Byte/UInt8/16/32/64/128/USize/Rune).
+	Function of Boolean is isUnsigned(){
 		local Primitive is p: Primitive:of(:name);
-		return p == Primitive:INT || p == Primitive:BYTE || p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64;
+		return p == Primitive:BYTE || p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64 || p == Primitive:UINT128 || p == Primitive:USIZE || p == Primitive:RUNE;
+	}
+
+	## True when this type is a floating-point primitive (Float32/Float).
+	Function of Boolean is isFloat(){
+		local Primitive is p: Primitive:of(:name);
+		return p == Primitive:FLOAT || p == Primitive:FLOAT32;
+	}
+
+	## True when this type is any integer primitive (signed or unsigned).
+	Function of Boolean is isIntLike(){
+		return :isSignedInt() || :isUnsigned();
+	}
+
+	## True when this type is any numeric primitive (integer or floating-point).
+	Function of Boolean is isNumeric(){
+		return :isIntLike() || :isFloat();
+	}
+
+	## True when this type is RawPtr.
+	Function of Boolean is isRawPtr(){
+		return Primitive:of(:name) == Primitive:RAWPTR;
 	}
 
 	## True when this type is String or Str.

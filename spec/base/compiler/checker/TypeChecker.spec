@@ -225,14 +225,27 @@ Class is TypeChecker{
 		return Primitive:of(t) != Primitive:NONE;
 	}
 
+	Function of Boolean is isSignedInt(String is t){
+		local Primitive is p: Primitive:of(t);
+		return p == Primitive:INT || p == Primitive:INT8 || p == Primitive:INT16 || p == Primitive:INT32 || p == Primitive:INT128 || p == Primitive:ISIZE;
+	}
+
 	Function of Boolean is isUnsignedInt(String is t){
 		local Primitive is p: Primitive:of(t);
-		return p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64;
+		return p == Primitive:BYTE || p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64 || p == Primitive:UINT128 || p == Primitive:USIZE || p == Primitive:RUNE;
+	}
+
+	Function of Boolean is isFloatType(String is t){
+		local Primitive is p: Primitive:of(t);
+		return p == Primitive:FLOAT || p == Primitive:FLOAT32;
 	}
 
 	Function of Boolean is isIntLike(String is t){
-		local Primitive is p: Primitive:of(t);
-		return p == Primitive:INT || p == Primitive:BYTE || p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64;
+		return :isSignedInt(t: t) || :isUnsignedInt(t: t);
+	}
+
+	Function of Boolean is isNumericType(String is t){
+		return :isIntLike(t: t) || :isFloatType(t: t);
 	}
 
 	## Formats a [Type] descriptor for a variable or field (preserving
@@ -3378,45 +3391,41 @@ Class is TypeChecker{
 				if({ isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, {
 					:addError(line: :currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
 				});
-				if({ op != 'is' && (:isUnsignedInt(t: leftT) || :isUnsignedInt(t: rightT)) && leftT != '' && rightT != '' && leftT != 'Any' && rightT != 'Any' && leftT != rightT }, {
-					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same integer type.');
+				if({ op != 'is' && (:isNumericType(t: leftT) && :isNumericType(t: rightT)) && leftT != rightT }, {
+					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same numeric type.');
 				});
 			},
 			['&&', '||']: {
 				res: Primitive:BOOLEAN:value();
 			},
 			['+', '-', '*', '/', '%']: {
-				if({ leftT == 'Float' || rightT == 'Float' }, {
-					res: 'Float';
+				if({ :isNumericType(t: leftT) && :isNumericType(t: rightT) && leftT != rightT }, {
+					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same numeric type.');
+				});
+				if({ :isNumericType(t: leftT) }, {
+					res: leftT;
 				}, {
-					if({ (:isUnsignedInt(t: leftT) || :isUnsignedInt(t: rightT)) && leftT != '' && rightT != '' && leftT != 'Any' && rightT != 'Any' && leftT != rightT }, {
-						:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same integer type.');
-					});
-					if({ :isUnsignedInt(t: leftT) }, {
-						res: leftT;
+					if({ :isNumericType(t: rightT) }, {
+						res: rightT;
 					}, {
-						if({ :isUnsignedInt(t: rightT) }, {
-							res: rightT;
-						}, {
-							res: Primitive:INT:value();
-						});
+						res: Primitive:INT:value();
 					});
 				});
 			},
 			['&', '|', '^']: {
-				res: if({ :isUnsignedInt(t: leftT) }, { leftT }, { if({ :isUnsignedInt(t: rightT) }, { rightT }, { Primitive:INT:value() }) });
+				res: if({ :isIntLike(t: leftT) }, { leftT }, { if({ :isIntLike(t: rightT) }, { rightT }, { Primitive:INT:value() }) });
 				if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
 					(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
 					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
 					:addError(line: :currentLine, msg: msg);
 				}, {
-					if({ (:isUnsignedInt(t: leftT) || :isUnsignedInt(t: rightT)) && leftT != '' && rightT != '' && leftT != 'Any' && rightT != 'Any' && leftT != rightT }, {
+					if({ :isIntLike(t: leftT) && :isIntLike(t: rightT) && leftT != rightT }, {
 						:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same integer type.');
 					});
 				});
 			},
 			['<<', '>>']: {
-				res: if({ :isUnsignedInt(t: leftT) }, { leftT }, { Primitive:INT:value() });
+				res: if({ :isIntLike(t: leftT) }, { leftT }, { Primitive:INT:value() });
 				if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
 					(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
 					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
@@ -4981,17 +4990,20 @@ Class is TypeChecker{
 		if({ src == target || src == Primitive:ANY:value() }, {
 			return true;
 		});
-		if({ target == Primitive:INT:value() }, {
-			return src == 'Float' || src == 'String' || src == 'Str' || src == 'Byte' || :isUnsignedInt(t: src);
-		});
-		if({ target == 'Float' }, {
+		if({ target == Primitive:RAWPTR:value() }, {
 			return :isIntLike(t: src);
 		});
-		if({ target == 'Byte' }, {
+		if({ src == Primitive:RAWPTR:value() }, {
+			return :isIntLike(t: target) || target == 'String' || target == 'Str';
+		});
+		if({ target == Primitive:BYTE:value() }, {
 			return :isIntLike(t: src);
 		});
-		if({ :isUnsignedInt(t: target) }, {
-			return :isIntLike(t: src) || src == 'Float' || src == 'String' || src == 'Str';
+		if({ :isFloatType(t: target) }, {
+			return :isNumericType(t: src);
+		});
+		if({ :isIntLike(t: target) }, {
+			return :isNumericType(t: src) || src == 'String' || src == 'Str';
 		});
 		if({ target == 'String' || target == 'Str' }, {
 			return true;
@@ -5119,7 +5131,7 @@ Class is TypeChecker{
 						:addError(line: stmt:line, msg: msg);
 					});
 				}, {
-					local Boolean is isValuePrim: :isIntLike(t: fullType) || fullType == Primitive:FLOAT:value() || fullType == Primitive:BOOLEAN:value();
+					local Boolean is isValuePrim: :isNumericType(t: fullType) || fullType == Primitive:BOOLEAN:value();
 					local Boolean is isAutoInitList: varType:isList() || TypeDomain:isOfBase(t: fullType, base: 'List');
 					if({ !isValuePrim && !isAutoInitList }, {
 						:addError(line: stmt:line, msg: "Local variable '" . varName . "' of type '" . :displayType(t: fullType) . "' must be initialized (Spec does not have null).");
@@ -6570,7 +6582,7 @@ Class is TypeChecker{
 						classDef:members:each(action: local Function(Member is fm){
 							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') && :unassignedFields:has(key: fm:name) }, {
 								local String is fType: :formatVarTypeString(t: fm:memberType);
-								local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
+								local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
 								local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
 								local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
 								if({ !isValPrim && !isAutoList && !isTypeParam }, {
@@ -6611,7 +6623,7 @@ Class is TypeChecker{
 			classDef:members:each(action: local Function(Member is fm){
 				if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') }, {
 					local String is fType: :formatVarTypeString(t: fm:memberType);
-					local Boolean is isValPrim: :isIntLike(t: fType) || fType == Primitive:FLOAT:value() || fType == Primitive:BOOLEAN:value();
+					local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
 					local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
 					local Boolean is isTypeParam: classDef:typeParams:contains(search: fType);
 					if({ !isValPrim && !isAutoList && !isTypeParam }, {

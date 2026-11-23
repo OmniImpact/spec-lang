@@ -199,12 +199,21 @@ Class is IrBuilder{
 	Function of IrType is irTypeFor(String is specType){
 		if({ specType == '' }, { return IrType:Void; });
 		return match(on: Primitive:of(specType), when: [
-			[Primitive:INT, Primitive:BYTE, Primitive:UINT8, Primitive:UINT16, Primitive:UINT32, Primitive:UINT64]: { IrType:I64 },
+			[Primitive:INT8, Primitive:BYTE, Primitive:UINT8]: { IrType:I8 },
+			[Primitive:INT16, Primitive:UINT16]: { IrType:I16 },
+			[Primitive:INT32, Primitive:UINT32, Primitive:RUNE]: { IrType:I32 },
+			[Primitive:INT, Primitive:UINT64, Primitive:ISIZE, Primitive:USIZE]: { IrType:I64 },
+			[Primitive:INT128, Primitive:UINT128]: { IrType:I128 },
+			Primitive:FLOAT32: { IrType:F32 },
 			Primitive:FLOAT: { IrType:F64 },
 			Primitive:BOOLEAN: { IrType:I1 },
 			Primitive:VOID: { IrType:Void },
 			else: { IrType:Ptr }
 		]);
+	}
+
+	Function of Boolean is isIntIrType(IrType is ty){
+		return ty == IrType:I8 || ty == IrType:I16 || ty == IrType:I32 || ty == IrType:I64 || ty == IrType:I128;
 	}
 
 	## Structured Type-node twin of irTypeFor: inspects t:name directly.
@@ -219,16 +228,7 @@ Class is IrBuilder{
 
 	Function of Boolean is isUnsignedSpecType(String is specType){
 		local Primitive is p: Primitive:of(specType);
-		return p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64;
-	}
-
-	Function of Int is unsignedMaskFor(String is specType){
-		return match(on: Primitive:of(specType), when: [
-			Primitive:UINT8: { 255 },
-			Primitive:UINT16: { 65535 },
-			Primitive:UINT32: { 4294967295 },
-			else: { 0 }
-		]);
+		return p == Primitive:BYTE || p == Primitive:UINT8 || p == Primitive:UINT16 || p == Primitive:UINT32 || p == Primitive:UINT64 || p == Primitive:UINT128 || p == Primitive:USIZE || p == Primitive:RUNE;
 	}
 
 	Function of Boolean is isArcSpecType(String is specType){
@@ -236,18 +236,18 @@ Class is IrBuilder{
 			return false;
 		});
 		return match(on: Primitive:of(specType), when: [
-			[Primitive:VOID, Primitive:ANY, Primitive:INT, Primitive:FLOAT, Primitive:BOOLEAN, Primitive:BYTE, Primitive:UINT8, Primitive:UINT16, Primitive:UINT32, Primitive:UINT64]: { false },
+			[Primitive:VOID, Primitive:ANY, Primitive:INT, Primitive:INT8, Primitive:INT16, Primitive:INT32, Primitive:INT128, Primitive:ISIZE, Primitive:FLOAT, Primitive:FLOAT32, Primitive:BOOLEAN, Primitive:BYTE, Primitive:UINT8, Primitive:UINT16, Primitive:UINT32, Primitive:UINT64, Primitive:UINT128, Primitive:USIZE, Primitive:RUNE, Primitive:RAWPTR]: { false },
 			else: { true }
 		]);
 	}
 
 	## The storage key kind a map instantiation needs for [specType]:
-	## 0 String/Any (value-hashed), 1 Int/Boolean (raw bits), 2 Float,
+	## 0 String/Any (value-hashed), 1 integer/Boolean (raw bits), 2 Float/Float32,
 	## 3 object identity.
 	Function of Int is mapKeyKindFor(String is specType){
 		return match(on: Primitive:of(specType), when: [
-			[Primitive:INT, Primitive:BOOLEAN]: { 1 },
-			Primitive:FLOAT: { 2 },
+			[Primitive:INT, Primitive:INT8, Primitive:INT16, Primitive:INT32, Primitive:ISIZE, Primitive:BYTE, Primitive:UINT8, Primitive:UINT16, Primitive:UINT32, Primitive:UINT64, Primitive:USIZE, Primitive:RUNE, Primitive:BOOLEAN]: { 1 },
+			[Primitive:FLOAT, Primitive:FLOAT32]: { 2 },
 			[Primitive:STRING, Primitive:ANY]: { 0 },
 			else: { 3 }
 		]);
@@ -296,6 +296,13 @@ Class is IrBuilder{
 		if({ fromTy == toTy || fromTy == IrType:Void || toTy == IrType:Void || val == '' }, { return val; });
 		local String is dst: :nextTmp();
 		:emit(inst: IrInst:IrCast(dst: dst, val: val, fromType: fromTy, toType: toTy));
+		return dst;
+	}
+
+	Function of String is castIfNeededUnsigned(String is val, IrType is fromTy, IrType is toTy){
+		if({ fromTy == toTy || fromTy == IrType:Void || toTy == IrType:Void || val == '' }, { return val; });
+		local String is dst: :nextTmp();
+		:emit(inst: IrInst:IrCastU(dst: dst, val: val, fromType: fromTy, toType: toTy));
 		return dst;
 	}
 
@@ -443,7 +450,8 @@ Class is IrBuilder{
 		if({ :bindings:isSysinternal(cls: cls) }, {
 			return !:hasMethodBodies(cls: cls);
 		});
-		if({ cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'UInt8' || cls:name == 'UInt16' || cls:name == 'UInt32' || cls:name == 'UInt64' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
+		local Primitive is cp: Primitive:of(cls:name);
+		if({ (cp != Primitive:NONE && cp != Primitive:STRING) || cls:name == 'Object' }, { return true; });
 		return false;
 	}
 
@@ -3638,8 +3646,16 @@ Class is IrBuilder{
 			:emit(inst: IrInst:ConstInt(dst: tmp, value: 0));
 			return tmp;
 		});
+		if({ ty == IrType:I8 || ty == IrType:I16 || ty == IrType:I32 || ty == IrType:I128 }, {
+			:emit(inst: IrInst:ConstIntTy(dst: tmp, value: 0, ty: ty));
+			return tmp;
+		});
 		if({ ty == IrType:F64 }, {
 			:emit(inst: IrInst:ConstFloat(dst: tmp, text: '0.0'));
+			return tmp;
+		});
+		if({ ty == IrType:F32 }, {
+			:emit(inst: IrInst:ConstFloat32(dst: tmp, text: '0.0'));
 			return tmp;
 		});
 		if({ ty == IrType:I1 }, {
@@ -4145,25 +4161,41 @@ Class is IrBuilder{
 		]);
 	}
 
+	local Function of String is emitScalarToString(String is val, IrType is fromTy, String is fromSpec, Boolean is claimPool){
+		if({ fromTy == IrType:F32 }, {
+			local String is f64v: :castIfNeeded(val: val, fromTy: IrType:F32, toTy: IrType:F64);
+			local String is dstF32: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: dstF32, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [f64v]));
+			if({ claimPool }, { :emitClaimPool(val: dstF32); });
+			return dstF32;
+		});
+		if({ fromTy == IrType:F64 }, {
+			local String is dstF64: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: dstF64, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [val]));
+			if({ claimPool }, { :emitClaimPool(val: dstF64); });
+			return dstF64;
+		});
+		if({ fromTy == IrType:I1 }, {
+			local String is dstB: :nextTmp();
+			:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [val]));
+			if({ claimPool }, { :emitClaimPool(val: dstB); });
+			return dstB;
+		});
+		local String is i64v: if({ :isUnsignedSpecType(specType: fromSpec) || fromSpec == Primitive:RAWPTR:value() }, {
+			:castIfNeededUnsigned(val: val, fromTy: fromTy, toTy: IrType:I64)
+		}, {
+			:castIfNeeded(val: val, fromTy: fromTy, toTy: IrType:I64)
+		});
+		local String is dstI: :nextTmp();
+		:emit(inst: IrInst:IrCall(dst: dstI, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', i64v]));
+		return dstI;
+	}
+
 	local Function of String is lowerConcatRight(Expression is right){
 		local String is r: :lowerExpr(expr: right);
 		local IrType is rTy: :irTypeFor(specType: right:resolvedType);
-		if({ rTy == IrType:I64 }, {
-			local String is rsI: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: rsI, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', r]));
-			return rsI;
-		});
-		if({ rTy == IrType:F64 }, {
-			local String is rsF: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: rsF, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [r]));
-			:emitClaimPool(val: rsF);
-			return rsF;
-		});
-		if({ rTy == IrType:I1 }, {
-			local String is rsB: :nextTmp();
-			:emit(inst: IrInst:IrCall(dst: rsB, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [r]));
-			:emitClaimPool(val: rsB);
-			return rsB;
+		if({ :isIntIrType(ty: rTy) || rTy == IrType:F32 || rTy == IrType:F64 || rTy == IrType:I1 || right:resolvedType == Primitive:RAWPTR:value() }, {
+			return :emitScalarToString(val: r, fromTy: rTy, fromSpec: right:resolvedType, claimPool: true);
 		});
 		if({ rTy == IrType:Ptr && right:resolvedType != 'String' && right:resolvedType != 'Str' && (:clsMap:has(key: right:resolvedType) || right:resolvedType == 'Any') }, {
 			return :emitObjectToString(objVal: r, specType: right:resolvedType);
@@ -4185,23 +4217,10 @@ Class is IrBuilder{
 					}, {
 						local String is l: :lowerExpr(expr: left);
 						local IrType is lTy: :irTypeFor(specType: left:resolvedType);
-						if({ lTy == IrType:I64 }, {
-							ls: :nextTmp();
-							:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', l]));
+						if({ :isIntIrType(ty: lTy) || lTy == IrType:F32 || lTy == IrType:F64 || lTy == IrType:I1 || left:resolvedType == Primitive:RAWPTR:value() }, {
+							ls: :emitScalarToString(val: l, fromTy: lTy, fromSpec: left:resolvedType, claimPool: true);
 						}, {
-							if({ lTy == IrType:F64 }, {
-								ls: :nextTmp();
-								:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [l]));
-								:emitClaimPool(val: ls);
-							}, {
-								if({ lTy == IrType:I1 }, {
-									ls: :nextTmp();
-									:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [l]));
-									:emitClaimPool(val: ls);
-								}, {
-									ls: l;
-								});
-							});
+							ls: l;
 						});
 					});
 					local String is rs: :lowerConcatRight(right: right);
@@ -4330,19 +4349,19 @@ Class is IrBuilder{
 		if({ slotTy == IrType:F64 }, {
 			:emit(inst: IrInst:ConstFloat(dst: one, text: '1.0'));
 		}, {
-			:emit(inst: IrInst:ConstInt(dst: one, value: 1));
+			if({ slotTy == IrType:F32 }, {
+				:emit(inst: IrInst:ConstFloat32(dst: one, text: '1.0'));
+			}, {
+				if({ slotTy == IrType:I64 }, {
+					:emit(inst: IrInst:ConstInt(dst: one, value: 1));
+				}, {
+					:emit(inst: IrInst:ConstIntTy(dst: one, value: 1, ty: slotTy));
+				});
+			});
 		});
 		local String is binOp: if({ op == 'post++' || op == '++' }, { '+' }, { '-' });
 		local String is newVal: :nextTmp();
 		:emit(inst: IrInst:BinOp(dst: newVal, op: binOp, lhs: oldVal, rhs: one, ty: slotTy));
-		local Int is uMaskVal: :unsignedMaskFor(specType: operand:resolvedType);
-		if({ uMaskVal != 0 }, {
-			local String is uMaskC: :nextTmp();
-			:emit(inst: IrInst:ConstInt(dst: uMaskC, value: uMaskVal));
-			local String is maskedVal: :nextTmp();
-			:emit(inst: IrInst:BinOp(dst: maskedVal, op: '&', lhs: newVal, rhs: uMaskC, ty: IrType:I64));
-			newVal: maskedVal;
-		});
 		if({ localName != '' }, {
 			:emitStoreLocal(name: localName, val: newVal, ty: slotTy, isArc: false);
 		}, {
@@ -4488,13 +4507,6 @@ Class is IrBuilder{
 				local String is v: :lowerExpr(expr: operand);
 				local String is dst: :nextTmp();
 				:emit(inst: IrInst:UnaryOp(dst: dst, op: op, operand: v, ty: ty));
-				if({ (op == '~' || op == '-') && :unsignedMaskFor(specType: expr:resolvedType) != 0 }, {
-					local String is maskC: :nextTmp();
-					:emit(inst: IrInst:ConstInt(dst: maskC, value: :unsignedMaskFor(specType: expr:resolvedType)));
-					local String is mDst: :nextTmp();
-					:emit(inst: IrInst:BinOp(dst: mDst, op: '&', lhs: dst, rhs: maskC, ty: IrType:I64));
-					return mDst;
-				});
 				return dst;
 			},
 			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
@@ -4569,8 +4581,12 @@ Class is IrBuilder{
 						});
 					});
 					local String is cmpOp: op;
-					if({ cmpTy == IrType:I64 && (op == '<' || op == '<=' || op == '>' || op == '>=') && (:isUnsignedSpecType(specType: left:resolvedType) || :isUnsignedSpecType(specType: right:resolvedType)) }, {
+					if({ :isIntIrType(ty: cmpTy) && (op == '<' || op == '<=' || op == '>' || op == '>=') && (:isUnsignedSpecType(specType: left:resolvedType) || :isUnsignedSpecType(specType: right:resolvedType)) }, {
 						cmpOp: 'u' . op;
+					});
+					local IrType is rCmpTy: :irTypeFor(specType: right:resolvedType);
+					if({ rCmpTy != cmpTy && rCmpTy != IrType:Void }, {
+						r: if({ :isUnsignedSpecType(specType: right:resolvedType) }, { :castIfNeededUnsigned(val: r, fromTy: rCmpTy, toTy: cmpTy) }, { :castIfNeeded(val: r, fromTy: rCmpTy, toTy: cmpTy) });
 					});
 					:emit(inst: IrInst:Cmp(dst: dst, op: cmpOp, lhs: l, rhs: r, ty: cmpTy));
 					return dst;
@@ -4578,21 +4594,18 @@ Class is IrBuilder{
 				local IrType is ty: :irTypeFor(specType: expr:resolvedType);
 				if({ ty == IrType:Void }, { ty: IrType:I64; });
 				local String is binOp: op;
-				if({ ty == IrType:I64 && (:isUnsignedSpecType(specType: expr:resolvedType) || :isUnsignedSpecType(specType: left:resolvedType)) }, {
+				if({ :isIntIrType(ty: ty) && (:isUnsignedSpecType(specType: expr:resolvedType) || :isUnsignedSpecType(specType: left:resolvedType)) }, {
 					if({ op == '>>' }, { binOp: '>>>'; });
 					if({ op == '/' }, { binOp: 'u/'; });
 					if({ op == '%' }, { binOp: 'u%'; });
 				});
-				:emit(inst: IrInst:BinOp(dst: dst, op: binOp, lhs: l, rhs: r, ty: ty));
-				if({ :unsignedMaskFor(specType: expr:resolvedType) != 0 }, {
-					if({ op == '+' || op == '-' || op == '*' || op == '<<' || op == '|' || op == '^' }, {
-						local String is maskC: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: maskC, value: :unsignedMaskFor(specType: expr:resolvedType)));
-						local String is mDst: :nextTmp();
-						:emit(inst: IrInst:BinOp(dst: mDst, op: '&', lhs: dst, rhs: maskC, ty: IrType:I64));
-						return mDst;
+				if({ op == '<<' || op == '>>' }, {
+					local IrType is rShiftTy: :irTypeFor(specType: right:resolvedType);
+					if({ rShiftTy != ty && rShiftTy != IrType:Void }, {
+						r: :castIfNeededUnsigned(val: r, fromTy: rShiftTy, toTy: ty);
 					});
 				});
+				:emit(inst: IrInst:BinOp(dst: dst, op: binOp, lhs: l, rhs: r, ty: ty));
 				return dst;
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
@@ -4678,61 +4691,40 @@ Class is IrBuilder{
 						digitsVal: :nextTmp();
 						:emit(inst: IrInst:ConstInt(dst: digitsVal, value: 0));
 					});
+					local String is baseV: if({ :isUnsignedSpecType(specType: inner:resolvedType) }, {
+						:castIfNeededUnsigned(val: v, fromTy: fromTy, toTy: IrType:I64)
+					}, {
+						:castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64)
+					});
 					local String is dstB: :nextTmp();
-					:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', v, baseVal, digitsVal]));
+					:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', baseV, baseVal, digitsVal]));
 					return dstB;
 				});
 				local IrType is toTy: :irTypeFor(specType: target);
 				if({ target == 'Byte' && inner:resolvedType != 'Byte' }, {
-					local String is bv: :castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64);
-					local String is dstByte: :nextTmp();
-					:emit(inst: IrInst:IrCall(dst: dstByte, hasDst: true, retType: IrType:I64, callee: '__spec_check_byte', argTypes: [IrType:I64], args: [bv]));
-					return dstByte;
-				});
-				if({ :isUnsignedSpecType(specType: target) }, {
-					local String is uv: v;
-					if({ inner:resolvedType == 'String' || inner:resolvedType == 'Str' }, {
-						local String is base10u: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: base10u, value: 10));
-						local String is def0u: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: def0u, value: 0));
-						local String is parsedU: :nextTmp();
-						:emit(inst: IrInst:IrCall(dst: parsedU, hasDst: true, retType: IrType:I64, callee: 'Str_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [v, base10u, def0u]));
-						uv: parsedU;
+					local String is bv: if({ :isUnsignedSpecType(specType: inner:resolvedType) }, {
+						:castIfNeededUnsigned(val: v, fromTy: fromTy, toTy: IrType:I64)
 					}, {
-						uv: :castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64);
+						:castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64)
 					});
-					local Int is uMaskVal: :unsignedMaskFor(specType: target);
-					if({ uMaskVal != 0 }, {
-						local String is uMask: :nextTmp();
-						:emit(inst: IrInst:ConstInt(dst: uMask, value: uMaskVal));
-						local String is dstU: :nextTmp();
-						:emit(inst: IrInst:BinOp(dst: dstU, op: '&', lhs: uv, rhs: uMask, ty: IrType:I64));
-						return dstU;
-					});
-					return uv;
+					local String is dstByte64: :nextTmp();
+					:emit(inst: IrInst:IrCall(dst: dstByte64, hasDst: true, retType: IrType:I64, callee: '__spec_check_byte', argTypes: [IrType:I64], args: [bv]));
+					return :castIfNeededUnsigned(val: dstByte64, fromTy: IrType:I64, toTy: IrType:I8);
 				});
-				if({ (inner:resolvedType == 'String' || inner:resolvedType == 'Str') && target == 'Int' }, {
+				if({ (inner:resolvedType == 'String' || inner:resolvedType == 'Str') && :isIntIrType(ty: toTy) }, {
 					local String is base10: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: base10, value: 10));
 					local String is def0: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: def0, value: 0));
 					local String is dstI: :nextTmp();
 					:emit(inst: IrInst:IrCall(dst: dstI, hasDst: true, retType: IrType:I64, callee: 'Str_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [v, base10, def0]));
-					return dstI;
+					if({ :isUnsignedSpecType(specType: target) }, {
+						return :castIfNeededUnsigned(val: dstI, fromTy: IrType:I64, toTy: toTy);
+					});
+					return :castIfNeeded(val: dstI, fromTy: IrType:I64, toTy: toTy);
 				});
-				if({ (target == 'String' || target == 'Str') && fromTy != IrType:Ptr }, {
-					local String is dstS: :nextTmp();
-					if({ fromTy == IrType:F64 }, {
-						:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [v]));
-						return dstS;
-					});
-					if({ fromTy == IrType:I1 }, {
-						:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [v]));
-						return dstS;
-					});
-					:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'Str_intToString', argTypes: [IrType:Ptr, IrType:I64], args: ['null', v]));
-					return dstS;
+				if({ (target == 'String' || target == 'Str') && (fromTy != IrType:Ptr || inner:resolvedType == Primitive:RAWPTR:value()) }, {
+					return :emitScalarToString(val: v, fromTy: fromTy, fromSpec: inner:resolvedType, claimPool: false);
 				});
 				if({ fromTy == toTy }, {
 					if({ fromTy == IrType:Ptr && (target == 'String' || target == 'Str') && inner:resolvedType != 'String' && inner:resolvedType != 'Str' && (:clsMap:has(key: inner:resolvedType) || inner:resolvedType == 'Any') }, {
@@ -4761,7 +4753,11 @@ Class is IrBuilder{
 					return v;
 				});
 				local String is dst: :nextTmp();
-				:emit(inst: IrInst:IrCast(dst: dst, val: v, fromType: fromTy, toType: toTy));
+				if({ :isUnsignedSpecType(specType: inner:resolvedType) || :isUnsignedSpecType(specType: target) }, {
+					:emit(inst: IrInst:IrCastU(dst: dst, val: v, fromType: fromTy, toType: toTy));
+				}, {
+					:emit(inst: IrInst:IrCast(dst: dst, val: v, fromType: fromTy, toType: toTy));
+				});
 				return dst;
 			},
 			Expression:ArrayLit: local Function(Array of Expression is items){

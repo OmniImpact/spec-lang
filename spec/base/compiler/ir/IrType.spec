@@ -6,7 +6,12 @@ Enum is IrType {
 
 	Void,
 	I1,
+	I8,
+	I16,
+	I32,
 	I64,
+	I128,
+	F32,
 	F64,
 	Ptr
 }
