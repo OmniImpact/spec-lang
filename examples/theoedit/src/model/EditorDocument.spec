@@ -1,39 +1,24 @@
 #! Package theoedit:model
-#! Pure document model for theoedit: holds file path, text content, dirty state,
-#! and performs file load/save without any UI or signal dependencies.
+#! Pure document state model: holds file path, text content, and dirty flag
+#! with zero I/O, UI, or formatting dependencies.
 
 Class is EditorDocument{
 	namespace: ['theoedit', 'model'];
 
-	merge Array of Array of String is using: [
-		['base', 'core', SpecError],
-		['base', 'sys', FileError],
-		['base', 'sys', as File()]
-	];
-
 	String is filePath: '';
 	String is text: '';
 	Boolean is dirty: false;
-	String is lastError: '';
 
-	replace Function is init(String is filePath: ''){
+	replace Function is init(String is filePath: '', String is text: '', Boolean is dirty: false){
 		:filePath: filePath;
-		load();
+		:text: text;
+		:dirty: dirty;
 	}
 
-	Function is load(){
-		local String is loadedText: '';
-		if({ filePath != '' && fileExists(path: filePath) }, {
-			loadedText: fileRead(path: filePath, default: '');
-		});
-		text: loadedText;
-		dirty: false;
-		lastError: '';
-	}
-
-	Function is open(String is path){
+	Function is replaceWith(String is path, String is nextText){
 		filePath: path;
-		load();
+		text: nextText;
+		dirty: false;
 	}
 
 	Function is updateText(String is nextText){
@@ -41,37 +26,8 @@ Class is EditorDocument{
 		dirty: true;
 	}
 
-	Function of Boolean is save(){
-		if({ filePath == '' }, {
-			return false;
-		});
-		return saveTo(path: filePath);
-	}
-
-	Function of Boolean is saveTo(String is path){
-		local Boolean is ok: false;
-		lastError: '';
-		fileWrite(
-			path: path,
-			content: text,
-			onSuccess: local Function(Int is _bytes){
-				filePath: path;
-				dirty: false;
-				ok: true;
-			},
-			onError: local Function(SpecError of FileError is err){
-				lastError: err:description;
-			}
-		);
-		return ok;
-	}
-
-	Function of String is baseTitle(){
-		return if({ filePath != '' }, { filePath }, { '[untitled]' });
-	}
-
-	Function of String is displayTitle(){
-		local String is base: baseTitle();
-		return if({ dirty }, { "{{base}} *" }, { base });
+	Function is markSaved(String is path){
+		filePath: path;
+		dirty: false;
 	}
 }

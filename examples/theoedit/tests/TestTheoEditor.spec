@@ -6,7 +6,8 @@ Class of SpecUnitTest is TestTheoEditor{
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, Frame, FocusTarget]],
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
-		['theoedit', 'model', [EditorDocument, DirectoryBrowser]],
+		['theoedit', 'model', [EditorDocument, DirectoryListing]],
+		['theoedit', 'util', [FileStorage, DirectoryScanner, PathTransformer]],
 		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [EditorFrame, FileManagerFrame]]
 	];
@@ -273,32 +274,29 @@ Class of SpecUnitTest is TestTheoEditor{
 	}
 
 	Function is testPureModelsAndViewModels(){
-		local String is tmpPath: "/tmp/theo_doc_model_{{Process:getPid()}}.txt";
-		fileWrite(path: tmpPath, content: 'initial');
-
-		# Pure EditorDocument model
-		local EditorDocument is doc: EditorDocument(filePath: tmpPath);
+		# Pure EditorDocument model (zero I/O, zero formatting)
+		local EditorDocument is doc: EditorDocument(filePath: 'notes.txt', text: 'initial', dirty: false);
 		Assert:areEqualString('initial', doc:text);
 		Assert:isFalse(doc:dirty);
-		Assert:areEqualString(tmpPath, doc:displayTitle());
 		doc:updateText(nextText: 'updated');
+		Assert:areEqualString('updated', doc:text);
 		Assert:isTrue(doc:dirty);
-		Assert:areEqualString("{{tmpPath}} *", doc:displayTitle());
-		Assert:isTrue(doc:save());
+		doc:markSaved(path: 'saved.txt');
+		Assert:areEqualString('saved.txt', doc:filePath);
 		Assert:isFalse(doc:dirty);
-		Assert:areEqualString('updated', fileRead(path: tmpPath, default: ''));
-		fileRemove(path: tmpPath);
 
-		# Pure DirectoryBrowser model + FileManagerViewModel
-		local DirectoryBrowser is browser: DirectoryBrowser();
-		Assert:areEqualString('/a/b', browser:parentDir(dir: '/a/b/c'));
-		Assert:areEqualString('/', browser:parentDir(dir: '/a'));
-		Assert:areEqualString('/a/b/sub', browser:childDir(dir: '/a/b', entry: 'sub/'));
-		Assert:areEqualString('/a/b/file.spec', browser:resolveTargetPath(dir: '/a/b', typedName: ' file.spec '));
-		Assert:areEqualString('/abs/file.spec', browser:resolveTargetPath(dir: '/a/b', typedName: '/abs/file.spec'));
-		Assert:isTrue(browser:isDirectoryEntry(entry: '..'));
-		Assert:isTrue(browser:isDirectoryEntry(entry: 'src/'));
-		Assert:isFalse(browser:isDirectoryEntry(entry: 'Main.spec'));
+		# PathTransformer + FileStorage utilities + EditorViewModel
+		local PathTransformer is paths: PathTransformer();
+		Assert:areEqualString('[untitled]', paths:formatDocumentTitle(filePath: '', dirty: false));
+		Assert:areEqualString('notes.txt *', paths:formatDocumentTitle(filePath: 'notes.txt', dirty: true));
+		Assert:areEqualString('/a/b', paths:parentDir(dir: '/a/b/c'));
+		Assert:areEqualString('/', paths:parentDir(dir: '/a'));
+		Assert:areEqualString('/a/b/sub', paths:childDir(dir: '/a/b', entry: 'sub/'));
+		Assert:areEqualString('/a/b/file.spec', paths:resolveTargetPath(dir: '/a/b', typedName: ' file.spec '));
+		Assert:areEqualString('/abs/file.spec', paths:resolveTargetPath(dir: '/a/b', typedName: '/abs/file.spec'));
+		Assert:isTrue(paths:isDirectoryEntry(entry: '..'));
+		Assert:isTrue(paths:isDirectoryEntry(entry: 'src/'));
+		Assert:isFalse(paths:isDirectoryEntry(entry: 'Main.spec'));
 
 		local String is fmDir: "/tmp/theo_fm_vm_{{Process:getPid()}}";
 		Process:execute(command: 'mkdir', args: Array(['-p', fmDir]));

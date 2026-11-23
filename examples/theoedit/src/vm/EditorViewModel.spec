@@ -1,17 +1,20 @@
 #! Package theoedit:vm
 #! ViewModel for the Theo simple text editor.
-#! Owns reactive UI emitters and editor workflow decisions, delegating
-#! document persistence to [EditorDocument].
+#! Owns reactive UI emitters and editor workflow decisions, using
+#! [FileStorage] and [PathTransformer] to transform the pure [EditorDocument] model.
 
 Class is EditorViewModel{
 	namespace: ['theoedit', 'vm'];
 
 	merge Array of Array of String is using: [
 		['base', 'signal', TextEmitter],
-		['theoedit', 'model', EditorDocument]
+		['theoedit', 'model', EditorDocument],
+		['theoedit', 'util', [FileStorage, PathTransformer]]
 	];
 
-	EditorDocument is doc: EditorDocument(filePath: '');
+	EditorDocument is doc: EditorDocument();
+	FileStorage is storage: FileStorage();
+	PathTransformer is paths: PathTransformer();
 	String is filePath: '';
 	Boolean is dirty: false;
 	String is messageMode: 'none';
@@ -24,29 +27,30 @@ Class is EditorViewModel{
 	TextEmitter is messageText: TextEmitter(initial: '');
 
 	replace Function is init(String is filePath: ''){
-		doc: EditorDocument(filePath: filePath);
-		syncFromDoc(emitContent: true);
+		:filePath: filePath;
+		load();
 	}
 
 	local Function is syncFromDoc(Boolean is emitContent){
 		filePath: doc:filePath;
 		dirty: doc:dirty;
 		currentPath:emit(value: doc:filePath);
-		title:emit(value: doc:displayTitle());
+		title:emit(value: paths:formatDocumentTitle(filePath: doc:filePath, dirty: doc:dirty));
 		if({ emitContent }, {
 			content:emit(value: doc:text);
 		});
 	}
 
 	Function is load(){
-		doc:load();
+		local String is loadedText: storage:readText(path: filePath);
+		doc:replaceWith(path: filePath, nextText: loadedText);
 		syncFromDoc(emitContent: true);
 	}
 
 	Function is openFile(String is path){
-		doc:open(path: path);
+		filePath: path;
 		clearMessage();
-		syncFromDoc(emitContent: true);
+		load();
 		status:emit(value: 'Opened');
 	}
 
@@ -56,7 +60,7 @@ Class is EditorViewModel{
 		dirty: doc:dirty;
 		content:emit(value: nextText);
 		if({ !wasDirty }, {
-			title:emit(value: doc:displayTitle());
+			title:emit(value: paths:formatDocumentTitle(filePath: doc:filePath, dirty: doc:dirty));
 		});
 	}
 
@@ -68,13 +72,21 @@ Class is EditorViewModel{
 	}
 
 	Function of Boolean is saveTo(String is path){
-		local Boolean is ok: doc:saveTo(path: path);
+		local String is errMsg: '';
+		local Boolean is ok: storage:writeText(
+			path: path,
+			content: doc:text,
+			onError: local Function(String is msg){
+				errMsg: msg;
+			}
+		);
 		if({ ok }, {
+			doc:markSaved(path: path);
 			messageMode: 'none';
 			syncFromDoc(emitContent: false);
 			status:emit(value: 'Saved');
 		}, {
-			status:emit(value: "Save failed: {{doc:lastError}}");
+			status:emit(value: "Save failed: {{errMsg}}");
 		});
 		return ok;
 	}

@@ -1,24 +1,18 @@
-#! Package theoedit:model
-#! Pure filesystem directory browser model: lists entries (directories first,
-#! case-insensitive alphabetical), resolves parent/child navigation, and
-#! resolves typed file paths without any UI or signal dependencies.
+#! Package theoedit:util
+#! Directory scanning and sorting utility used by ViewModels to build
+#! [DirectoryListing] models.
 
-Class is DirectoryBrowser{
-	namespace: ['theoedit', 'model'];
+Class is DirectoryScanner{
+	namespace: ['theoedit', 'util'];
 
 	merge Array of Array of String is using: [
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', as Conditional()],
-		['base', 'sys', as Loops()]
+		['theoedit', 'model', DirectoryListing]
 	];
 
 	Function of String is normalizeDir(String is path){
 		return Uri:fromFilePath(filePath: path):toFilePath();
-	}
-
-	Function of Boolean is isDirectoryEntry(String is entry){
-		return entry == '..' || entry:endsWith(suffix: '/');
 	}
 
 	local Function of Boolean is entryLess(String is a, String is aLow, String is b, String is bLow){
@@ -91,12 +85,13 @@ Class is DirectoryBrowser{
 		mergeSortRange(items: items, lows: lows, tmpItems: tmpItems, tmpLows: tmpLows, left: 0, right: n);
 	}
 
-	Function of Array of String is listEntries(String is dir){
+	Function of DirectoryListing is scan(String is dir){
+		local String is normDir: normalizeDir(path: dir);
 		local Array of String is dirs: Array();
 		local Array of String is files: Array();
-		Dir:dirList(path: dir):each(action: local Function(String is name){
+		Dir:dirList(path: normDir):each(action: local Function(String is name){
 			if({ name:startsWith(prefix: '.') }, { return; });
-			local String is full: "{{dir}}/{{name}}";
+			local String is full: "{{normDir}}/{{name}}";
 			if({ Dir:dirList(path: full):length() > 0 }, {
 				dirs:add(item: "{{name}}/");
 			}, {
@@ -105,34 +100,9 @@ Class is DirectoryBrowser{
 		});
 		sortAlpha(items: dirs);
 		sortAlpha(items: files);
-		local Array of String is out: Array(['..']);
-		dirs:each(action: local Function(String is d){ out:add(item: d); });
-		files:each(action: local Function(String is f){ out:add(item: f); });
-		return out;
-	}
-
-	Function of String is parentDir(String is dir){
-		local Array of String is parts: dir:split(delimiter: '/');
-		if({ parts:length() > 2 }, {
-			parts:removeAt(index: parts:length() - 1);
-			return parts:join(separator: '/');
-		});
-		return '/';
-	}
-
-	Function of String is childDir(String is dir, String is entry){
-		local String is sub: if({ entry:endsWith(suffix: '/') }, {
-			entry:substring(start: 0, end: entry:length() - 1)
-		}, {
-			entry
-		});
-		return if({ dir == '/' }, { "/{{sub}}" }, { "{{dir}}/{{sub}}" });
-	}
-
-	Function of String is resolveTargetPath(String is dir, String is typedName){
-		local String is typed: typedName:trim();
-		if({ typed == '' }, { return ''; });
-		if({ typed:startsWith(prefix: '/') }, { return typed; });
-		return if({ dir == '/' }, { "/{{typed}}" }, { "{{dir}}/{{typed}}" });
+		local Array of String is entries: Array(['..']);
+		dirs:each(action: local Function(String is d){ entries:add(item: d); });
+		files:each(action: local Function(String is f){ entries:add(item: f); });
+		return DirectoryListing(dir: normDir, dirs: dirs, files: files, entries: entries);
 	}
 }

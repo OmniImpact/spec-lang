@@ -1,17 +1,20 @@
 #! Package theoedit:vm
 #! ViewModel for the theoedit file manager dialog (Open / Save As).
-#! Owns directory navigation state, entry list, and submission path resolution,
-#! delegating filesystem listing/sorting to [DirectoryBrowser].
+#! Uses [DirectoryScanner] and [PathTransformer] to transform the pure
+#! [DirectoryListing] model for the view.
 
 Class is FileManagerViewModel{
 	namespace: ['theoedit', 'vm'];
 
 	merge Array of Array of String is using: [
 		['base', 'signal', TextEmitter],
-		['theoedit', 'model', DirectoryBrowser]
+		['theoedit', 'model', DirectoryListing],
+		['theoedit', 'util', [DirectoryScanner, PathTransformer]]
 	];
 
-	DirectoryBrowser is browser: DirectoryBrowser();
+	DirectoryScanner is scanner: DirectoryScanner();
+	PathTransformer is paths: PathTransformer();
+	DirectoryListing is listing: DirectoryListing();
 	String is mode: 'open';
 	String is curDir: '.';
 	String is initialName: '';
@@ -25,9 +28,7 @@ Class is FileManagerViewModel{
 	){
 		:mode: mode;
 		:initialName: initialName;
-		curDir: browser:normalizeDir(path: initialDir);
-		entries: browser:listEntries(dir: curDir);
-		headerTitle:emit(value: "File Manager — {{curDir}}");
+		navigateTo(nextDir: initialDir);
 	}
 
 	Function of Boolean is isSaveAs(){
@@ -43,19 +44,20 @@ Class is FileManagerViewModel{
 	}
 
 	Function is navigateTo(String is nextDir){
-		curDir: nextDir;
-		entries: browser:listEntries(dir: curDir);
+		listing: scanner:scan(dir: nextDir);
+		curDir: listing:dir;
+		entries: listing:entries;
 		headerTitle:emit(value: "File Manager — {{curDir}}");
 	}
 
 	Function is activateEntry(String is entry, Function is onListUpdated, Function is onFileChosen){
 		if({ entry == '..' }, {
-			navigateTo(nextDir: browser:parentDir(dir: curDir));
+			navigateTo(nextDir: paths:parentDir(dir: curDir));
 			onListUpdated(entries);
 			return;
 		});
 		if({ entry:endsWith(suffix: '/') }, {
-			navigateTo(nextDir: browser:childDir(dir: curDir, entry: entry));
+			navigateTo(nextDir: paths:childDir(dir: curDir, entry: entry));
 			onListUpdated(entries);
 			return;
 		});
@@ -63,13 +65,13 @@ Class is FileManagerViewModel{
 	}
 
 	Function is selectEntry(String is entry, Function is onFileSelected){
-		if({ !browser:isDirectoryEntry(entry: entry) }, {
+		if({ !paths:isDirectoryEntry(entry: entry) }, {
 			onFileSelected(entry);
 		});
 	}
 
 	Function is submit(String is typedName, Function is onConfirmed){
-		local String is full: browser:resolveTargetPath(dir: curDir, typedName: typedName);
+		local String is full: paths:resolveTargetPath(dir: curDir, typedName: typedName);
 		if({ full == '' }, { return; });
 		onConfirmed(full);
 	}
