@@ -383,12 +383,13 @@ Class is SpecLsp{
 			});
 			sig: sig . ' is ' . cls:name . ':' . m:name . '(';
 			local Int is pi: 0;
-			m:params:each(action: local Function(Parameter is p){
+			while({ pi < m:params:length() }, {
+				local Parameter is p: m:params:get(index: pi);
 				if({ pi > 0 }, {
 					sig: sig . ', ';
 				});
 				sig: sig . formatType(t: p:paramType) . ' is ' . p:name;
-				pi: pi + 1;
+				pi++;
 			});
 			return sig . ')';
 		});

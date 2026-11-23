@@ -37,7 +37,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ idx >= call:args:length() }, { return false; });
 		local NamedArg is na: call:args:get(index: idx);
 		return match(on: na:value, when: [
-			Expression:AnonFn: local Function of Boolean(Type is _rt, Array of Parameter is _ps, Array of Statement is _bd){ return true; },
+			Expression:AnonFn: local Function of Boolean(Type is _rt, [Parameter] is _ps, [Statement] is _bd){ return true; },
 			else: { false }
 		]);
 	}
@@ -196,7 +196,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	local Function of String is lowerCondExpr(IrBuilder is b, Expression is condExpr){
 		local String is condVal: '0';
 		match(on: condExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				b:pushScope();
 				if({ bd:length() > 0 }, {
 					local Int is ci: 0;
@@ -241,7 +241,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 	local Function is lowerBlockExpr(IrBuilder is b, Expression is blkExpr){
 		match(on: blkExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				b:pushScope();
 				b:lowerStmts(stmts: bd);
 				b:popScope();
@@ -268,7 +268,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	local Function of String is lowerBlockExprVal(IrBuilder is b, Expression is blkExpr, IrType is expectedTy){
 		local String is resVal: '';
 		match(on: blkExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				b:pushScope();
 				if({ expectedTy != IrType:Void && bd:length() > 0 }, {
 					local Int is lastIdx: bd:length() - 1;
@@ -499,7 +499,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:emit(inst: IrInst:IrCast(dst: errPtr, val: errAddr, fromType: IrType:I64, toType: IrType:Ptr));
 		b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Ptr, callee: 'spec_claim_pool', argTypes: [IrType:Ptr], args: [errPtr]));
 		match(on: guardNa:value, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				if({ ps:length() > 0 }, {
 					local Parameter is p: ps:get(index: 0);
 					local String is slot: b:nextTmp();
@@ -540,7 +540,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	local Function is lowerLoopBody(IrBuilder is b, Expression is bodyExpr, String is contLbl, String is breakLbl){
 		local Boolean is returnsBool: false;
 		match(on: bodyExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				if({ rt:name == 'Boolean' }, {
 					returnsBool: true;
 				});
@@ -614,7 +614,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:pushScope();
 		if({ hasVars }, {
 			match(on: varsExpr, when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 					local Int is pi: 0;
 					while({ pi < ps:length() }, {
 						local Parameter is p: ps:get(index: pi);
@@ -807,7 +807,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:pushScope();
 		if({ hasVars }, {
 			match(on: varsExpr, when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is params, Array of Statement is bd){
+				Expression:AnonFn: local Function(Type is rt, [Parameter] is params, [Statement] is bd){
 					local Int is pi: 0;
 					while({ pi < params:length() }, {
 						local Parameter is p: params:get(index: pi);
@@ -863,7 +863,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 	local Function is bindWorkerParam(IrBuilder is b, Expression is workerExpr, String is val){
 		match(on: workerExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				if({ ps:length() > 0 }, {
 					local Parameter is p: ps:get(index: 0);
 					local String is _ptmp: b:nextTmp();

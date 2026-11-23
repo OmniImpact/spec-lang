@@ -141,11 +141,16 @@ Class of LintRule is NarrowingCastRule{
 				MemberKind:METHOD: {
 					local Map of String to String is savedLocals: :localTypes;
 					:localTypes: Map:init();
-					m:params:each(action: local Function(Parameter is p){
+					local Int is pi: 0;
+					while({ pi < m:params:length() }, {
+						local Parameter is p: m:params:get(index: pi);
 						:localTypes:set(key: p:name, value: p:paramType:name);
+						pi++;
 					});
-					m:body:each(action: local Function(Statement is s){
-						:checkStatement(stmt: s, issues: issues);
+					local Int is si: 0;
+					while({ si < m:body:length() }, {
+						:checkStatement(stmt: m:body:get(index: si), issues: issues);
+						si++;
 					});
 					:localTypes: savedLocals;
 				},

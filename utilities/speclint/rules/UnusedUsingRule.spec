@@ -40,8 +40,10 @@ Class of LintRule is UnusedUsingRule{
 		if({ t:name != '' }, {
 			:refs:set(key: t:name, value: '1');
 		});
-		t:params:each(action: local Function(Type is sub){
-			:markType(t: sub);
+		local Int is pi: 0;
+		while({ pi < t:params:length() }, {
+			:markType(t: t:params:get(index: pi));
+			pi++;
 		});
 	}
 
@@ -116,13 +118,20 @@ Class of LintRule is UnusedUsingRule{
 				ks:each(action: local Function(Expression is k){ :markExpr(expr: k); });
 				vs:each(action: local Function(Expression is v){ :markExpr(expr: v); });
 			},
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is params, Array of Statement is body){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is params, [Statement] is body){
 				:markType(t: rt);
-				params:each(action: local Function(Parameter is p){
+				local Int is pi: 0;
+				while({ pi < params:length() }, {
+					local Parameter is p: params:get(index: pi);
 					:markType(t: p:paramType);
 					if({ p:hasDefault }, { :markExpr(expr: p:defaultExpr); });
+					pi++;
 				});
-				body:each(action: local Function(Statement is s){ :markStmt(stmt: s); });
+				local Int is si: 0;
+				while({ si < body:length() }, {
+					:markStmt(stmt: body:get(index: si));
+					si++;
+				});
 			}
 		], default: {});
 	}
@@ -139,11 +148,18 @@ Class of LintRule is UnusedUsingRule{
 			});
 			if({ m:kind == MemberKind:METHOD }, {
 				:markType(t: m:memberType);
-				m:params:each(action: local Function(Parameter is p){
+				local Int is pi: 0;
+				while({ pi < m:params:length() }, {
+					local Parameter is p: m:params:get(index: pi);
 					:markType(t: p:paramType);
 					if({ p:hasDefault }, { :markExpr(expr: p:defaultExpr); });
+					pi++;
 				});
-				m:body:each(action: local Function(Statement is s){ :markStmt(stmt: s); });
+				local Int is si: 0;
+				while({ si < m:body:length() }, {
+					:markStmt(stmt: m:body:get(index: si));
+					si++;
+				});
 			});
 			if({ m:kind == MemberKind:CLASS }, {
 				:collectClassRefs(cls: m:nestedClass);

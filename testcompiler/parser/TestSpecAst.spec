@@ -57,9 +57,9 @@ Class of SpecUnitTest is TestSpecAst{
 
 	# Types format canonically.
 	Function is testCanonicalTypeFormatting(){
-		local Type is elem: Type:init(name: 'String');
-		local Type is arr: Type:init(name: 'Array');
-		arr:params: Array([elem]);
+		local Type is elem: Type(name: 'String');
+		local Type is arr: Type(name: 'Array');
+		arr:params: [elem];
 		Assert:areEqualString('Array of String', arr:toString());
 		Assert:isTrue(arr:isGeneric());
 		Assert:isFalse(elem:isGeneric());

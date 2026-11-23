@@ -33,10 +33,10 @@ Class of SpecUnitTest is TestStdlibReflection{
 	## 2. Type reflection: genericity flags on simple and parameterized
 	## types.
 	Function is testTypeReflection(){
-		local Type is intType: Type:init(name: 'Int');
-		local Array of Type is arrParams: Array();
-		arrParams:add(item: Type:init(name: 'String'));
-		local Type is arrType: Type:init(name: 'Array');
+		local Type is intType: Type(name: 'Int');
+		local [Type] is arrParams: [];
+		arrParams:push(item: Type(name: 'String'));
+		local Type is arrType: Type(name: 'Array');
 		arrType:params: arrParams;
 		Assert:isTrue(arrType:isGeneric());
 		Assert:isFalse(intType:isGeneric());
@@ -44,15 +44,15 @@ Class of SpecUnitTest is TestStdlibReflection{
 
 	## 2b. The parameterized type renderings the old run printed.
 	Function is testTypeRendering(){
-		local Type is intType: Type:init(name: 'Int');
-		local Array of Type is arrParams: Array();
-		arrParams:add(item: Type:init(name: 'String'));
-		local Type is arrType: Type:init(name: 'Array');
+		local Type is intType: Type(name: 'Int');
+		local [Type] is arrParams: [];
+		arrParams:push(item: Type(name: 'String'));
+		local Type is arrType: Type(name: 'Array');
 		arrType:params: arrParams;
-		local Array of Type is mapParams: Array();
-		mapParams:add(item: Type:init(name: 'String'));
-		mapParams:add(item: Type:init(name: 'Int'));
-		local Type is mapType: Type:init(name: 'Map');
+		local [Type] is mapParams: [];
+		mapParams:push(item: Type(name: 'String'));
+		mapParams:push(item: Type(name: 'Int'));
+		local Type is mapType: Type(name: 'Map');
 		mapType:params: mapParams;
 		Assert:areEqualString('Int', intType:toString());
 		Assert:areEqualString('Array of String', arrType:toString());
@@ -62,13 +62,13 @@ Class of SpecUnitTest is TestStdlibReflection{
 	## 3. ClassInfo & Member reflection: the record fields hold what was
 	## constructed into them.
 	Function is testClassInfoAndMember(){
-		local Type is intType: Type:init(name: 'Int');
-		local Parameter is param1: Parameter:init(name: 'amount', paramType: intType);
-		local Array of Parameter is params: Array();
-		params:add(item: param1);
+		local Type is intType: Type(name: 'Int');
+		local Parameter is param1: Parameter(name: 'amount', paramType: intType);
+		local [Parameter] is params: [];
+		params:push(item: param1);
 
-		local Array of Statement is body: Array();
-		local Member is methodMem: Member:init(kind: MemberKind:METHOD);
+		local [Statement] is body: [];
+		local Member is methodMem: Member(kind: MemberKind:METHOD);
 		methodMem:modifiers: Array(['replace', 'local']);
 		methodMem:memberType: intType;
 		methodMem:name: 'heal';

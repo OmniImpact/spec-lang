@@ -47,7 +47,7 @@ Class of LintRule is LoopConstructionRule{
 				local Boolean is isLoop: :isLoopCall(call: cd);
 				cd:args:each(action: local Function(NamedArg is arg){
 					local Boolean is isAnon: match(on: arg:value, when: [
-						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){ true; },
+						Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){ true; },
 						else: { false; }
 					], default: {});
 					if({ isLoop && isAnon }, {

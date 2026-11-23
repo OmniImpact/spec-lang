@@ -331,20 +331,20 @@ Class is Parser{
 
 	## Consumes formal parameter lists: `Type is name`, shorthand `name`
 	## (Any-typed), and `self: field` receiver fields.
-	Function of Array of Parameter is parseParams(){
-		local Array of Parameter is params: Array();
+	Function of [Parameter] is parseParams(){
+		local [Parameter] is params: [];
 		local Boolean is keepGoing: true;
 		while({ keepGoing && !:checkPunct(p: Punctuation:GROUP_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			# `:field` / `: field` declares a receiver field parameter.
 			if({ :peek():getValue() == ':' && :peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER }, {
 				:advance();
 				local Token is fTok: :advance();
-				local Parameter is param: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: :names:selfFieldMarker()));
+				local Parameter is param: Parameter(name: fTok:getValue(), paramType: Type(name: :names:selfFieldMarker()));
 				if({ :checkPunct(p: Punctuation:DEFAULT) }, {
 					:advance();
 					param:setDefault(expr: :parseExpression());
 				});
-				params:add(item: param);
+				params:push(item: param);
 				if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 					:advance();
 				}, {
@@ -354,7 +354,7 @@ Class is Parser{
 				# Shorthand: a bare identifier is an Any-typed parameter.
 				if({ :peekAhead(offset: 1):getValue() == Punctuation:SEPARATOR:value() || :peekAhead(offset: 1):getValue() == Punctuation:GROUP_CLOSE:value() }, {
 					local Token is pTok: :advance();
-					params:add(item: Parameter:init(name: pTok:getValue(), paramType: Type:init(name: :names:anyName())));
+					params:push(item: Parameter(name: pTok:getValue(), paramType: Type(name: :names:anyName())));
 					if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 						:advance();
 					}, {
@@ -369,13 +369,13 @@ Class is Parser{
 						isVar: true;
 					});
 					local Token is pTok: :advance();
-					local Parameter is param: Parameter:init(name: pTok:getValue(), paramType: pType);
+					local Parameter is param: Parameter(name: pTok:getValue(), paramType: pType);
 					param:isVariadic: isVar;
 					if({ :checkPunct(p: Punctuation:DEFAULT) }, {
 						:advance();
 						param:setDefault(expr: :parseExpression());
 					});
-					params:add(item: param);
+					params:push(item: param);
 					if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 						:advance();
 					}, {
@@ -659,7 +659,7 @@ Class is Parser{
 			}, {
 				local Token is vTok: :advance();
 				local String is vName: vTok:getValue();
-				local Array of Parameter is vParams: Array();
+				local [Parameter] is vParams: [];
 				if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 					:advance();
 					vParams: :parseParams();
@@ -775,9 +775,9 @@ Class is Parser{
 			local String is name: nameTok:getValue();
 			:advance();
 
-			local Array of Parameter is params: :parseParams();
+			local [Parameter] is params: :parseParams();
 			:matchPunct(p: Punctuation:GROUP_CLOSE);
-			local Array of Statement is body: :parseMethodBody(params: params);
+			local [Statement] is body: :parseMethodBody(params: params);
 
 			local Member is m: Member:init(kind: MemberKind:METHOD);
 			m:setLine(line: nameTok:getLine());
@@ -796,7 +796,7 @@ Class is Parser{
 
 		if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 			:advance();
-			local Array of Parameter is params: :parseParams();
+			local [Parameter] is params: :parseParams();
 			:matchPunct(p: Punctuation:GROUP_CLOSE);
 			# Interface-style declaration: a `;`-terminated signature with no
 			# body — the sysinternal floor-binding form.
@@ -810,7 +810,7 @@ Class is Parser{
 				m:params: params;
 				return m;
 			});
-			local Array of Statement is body: :parseMethodBody(params: params);
+			local [Statement] is body: :parseMethodBody(params: params);
 
 			local Member is m: Member:init(kind: MemberKind:METHOD);
 			m:setLine(line: nameTok:getLine());
@@ -847,19 +847,22 @@ Class is Parser{
 	##
 	## @param params: The method's parameters.
 	## @return: The body statements.
-	local Function of Array of Statement is parseMethodBody(Array of Parameter is params){
+	local Function of [Statement] is parseMethodBody([Parameter] is params){
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
-		local Array of Statement is body: Array();
-		params:each(action: local Function(Parameter is p){
+		local [Statement] is body: [];
+		local Int is pi: 0;
+		while({ pi < params:length() }, {
+			local Parameter is p: params:get(index: pi);
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
 				local Expression is lhs: Expression:Path(segments: Array([:names:selfIdent(), p:name]));
 				local Expression is rhs: Expression:Ident(name: p:name);
 				local Statement is assignS: Statement:Assign(assignTarget: lhs, assignValue: rhs);
-				body:add(item: assignS);
+				body:push(item: assignS);
 			});
+			pi++;
 		});
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
-			body:add(item: :parseStatement());
+			body:push(item: :parseStatement());
 		});
 		:matchPunct(p: Punctuation:BLOCK_CLOSE);
 		return body;
@@ -874,8 +877,8 @@ Class is Parser{
 			:advance();
 			local Type is elem: :parseType();
 			:matchPunct(p: Punctuation:BRACKET_CLOSE);
-			local Type is lnode: Type:init(name: :names:listName());
-			lnode:params: Array([elem]);
+			local Type is lnode: Type(name: :names:listName());
+			lnode:params: [elem];
 			return lnode;
 		});
 		local Token is baseTok: :advance();
@@ -892,15 +895,15 @@ Class is Parser{
 
 		if({ :checkKeyword(kw: Keyword:OF) }, {
 			:advance();
-			local Array of Type is params: Array();
-			params:add(item: :parseType());
+			local [Type] is params: [];
+			params:push(item: :parseType());
 
 			if({ :checkKeyword(kw: Keyword:TO) }, {
 				:advance();
-				params:add(item: :parseType());
+				params:push(item: :parseType());
 			});
 
-			local Type is node: Type:init(name: typeName);
+			local Type is node: Type(name: typeName);
 			node:params: params;
 			return node;
 		});
@@ -1037,7 +1040,7 @@ Class is Parser{
 	## @return: The desugared EXPR statement holding the call.
 	local Function of Statement is parseAsStatement(Int is startLine){
 		:advance();
-		local Array of Parameter is params: Array();
+		local [Parameter] is params: [];
 		local Boolean is hasParams: false;
 		if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 			:advance();
@@ -1060,9 +1063,9 @@ Class is Parser{
 		local Expression is callExpr: :parseExpression();
 		:matchPunct(p: Punctuation:TERMINATOR);
 
-		local Array of Statement is closureBody: Array();
+		local [Statement] is closureBody: [];
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
-			closureBody:add(item: :parseStatement());
+			closureBody:push(item: :parseStatement());
 		});
 
 		local Expression is anonFn: Expression:AnonFn(returnType: returnType, params: params, body: closureBody);
@@ -1402,9 +1405,9 @@ Class is Parser{
 				returnType: :parseType();
 			});
 			:matchPunct(p: Punctuation:GROUP_OPEN);
-			local Array of Parameter is params: :parseParams();
+			local [Parameter] is params: :parseParams();
 			:matchPunct(p: Punctuation:GROUP_CLOSE);
-			local Array of Statement is body: :parseMethodBody(params: params);
+			local [Statement] is body: :parseMethodBody(params: params);
 
 			return Expression:AnonFn(returnType: returnType, params: params, body: body);
 		});
@@ -1541,18 +1544,18 @@ Class is Parser{
 	## @return: ARRAY expression carrying parsed parameters in anonParams.
 	Function of Expression is parseDeclList(){
 		:matchPunct(p: Punctuation:BRACKET_OPEN);
-		local Array of Parameter is params: Array();
+		local [Parameter] is params: [];
 		local Boolean is keepGoing: true;
 		while({ keepGoing && !:checkPunct(p: Punctuation:BRACKET_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			local Type is pType: :parseType();
 			:matchKeyword(kw: Keyword:IS);
 			local Token is nameTok: :advance();
-			local Parameter is p: Parameter:init(name: nameTok:getValue(), paramType: pType);
+			local Parameter is p: Parameter(name: nameTok:getValue(), paramType: pType);
 			if({ :checkPunct(p: Punctuation:ASSIGN) }, {
 				:advance();
 				p:setDefault(expr: :parseExpression());
 			});
-			params:add(item: p);
+			params:push(item: p);
 			if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 				:advance();
 			}, {
@@ -1560,7 +1563,8 @@ Class is Parser{
 			});
 		});
 		:matchPunct(p: Punctuation:BRACKET_CLOSE);
-		return Expression:AnonFn(returnType: Type:init(name: ''), params: params, body: Array());
+		local [Statement] is emptyBody: [];
+		return Expression:AnonFn(returnType: Type(name: ''), params: params, body: emptyBody);
 	}
 
 	## Parses a function block shorthand `{ ... }` as an anonymous function.
@@ -1572,9 +1576,9 @@ Class is Parser{
 	## @return: The ANON_FN expression.
 	Function of Expression is parseFunctionBlock(){
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
-		local Array of Statement is body: Array();
-		local Array of Parameter is params: Array();
-		local Type is returnType: Type:init(name: :names:voidName());
+		local [Statement] is body: [];
+		local [Parameter] is params: [];
+		local Type is returnType: Type(name: :names:voidName());
 
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			local Int is stmtLine: :peek():getLine();
@@ -1586,21 +1590,21 @@ Class is Parser{
 					:matchPunct(p: Punctuation:TERMINATOR);
 					local Statement is s: Statement:Assign(assignTarget: expr, assignValue: val);
 					s:setLine(line: stmtLine);
-					body:add(item: s);
+					body:push(item: s);
 				}, {
 					if({ :checkPunct(p: Punctuation:BLOCK_CLOSE) }, {
 						local Statement is retS: Statement:Return(returnExpr: expr, hasReturnExpr: true);
 						retS:setLine(line: stmtLine);
-						body:add(item: retS);
+						body:push(item: retS);
 					}, {
 						:matchPunct(p: Punctuation:TERMINATOR);
 						local Statement is exprS: Statement:Expr(exprStmt: expr);
 						exprS:setLine(line: stmtLine);
-						body:add(item: exprS);
+						body:push(item: exprS);
 					});
 				});
 			}, {
-				body:add(item: :parseStatement());
+				body:push(item: :parseStatement());
 			});
 		});
 		:matchPunct(p: Punctuation:BLOCK_CLOSE);

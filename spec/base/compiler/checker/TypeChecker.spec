@@ -308,7 +308,7 @@ Class is TypeChecker{
 	}
 
 	## Substitutes a class's generic type parameters in a structured [Type] node.
-	Function of Type is substituteTypeNode(Type is t, ClassInfo is cls, Array of Type is typeArgs){
+	Function of Type is substituteTypeNode(Type is t, ClassInfo is cls, [Type] is typeArgs){
 		local Array of String is tps: cls:typeParams;
 		if({ tps:length() == 0 || typeArgs:length() == 0 || t:name == '' }, {
 			return t;
@@ -318,12 +318,12 @@ Class is TypeChecker{
 			if({ idx < typeArgs:length() }, {
 				return typeArgs:get(index: idx):clone();
 			});
-			return Type:init(name: Primitive:ANY:value());
+			return Type(name: Primitive:ANY:value());
 		});
-		local Array of Type is newParams: Array();
+		local [Type] is newParams: [];
 		local Int is pi: 0;
 		while({ pi < t:params:length() }, {
-			newParams:add(item: :substituteTypeNode(t: t:params:get(index: pi), cls: cls, typeArgs: typeArgs));
+			newParams:push(item: :substituteTypeNode(t: t:params:get(index: pi), cls: cls, typeArgs: typeArgs));
 			pi++;
 		});
 		local String is bName: t:name;
@@ -378,7 +378,7 @@ Class is TypeChecker{
 	## Function) never absorb arguments — the retry pass for the
 	## bare-non-last-argument spelling.
 	Function of Type is rebuildTypeNode(Array of String is rawParts, Boolean is bareContainers){
-		local Array of Type is stack: Array();
+		local [Type] is stack: [];
 		local Int is idx: rawParts:length() - 1;
 		while({ idx >= 0 }, {
 			local String is seg: rawParts:get(index: idx, default: '');
@@ -396,15 +396,15 @@ Class is TypeChecker{
 				});
 			});
 			if({ arity > 0 && stack:length() >= arity }, {
-				local Array of Type is tArgs: Array();
+				local [Type] is tArgs: [];
 				local Int is ki: 0;
 				while({ ki < arity }, {
-					tArgs:add(item: stack:pop(default: Type:EMPTY));
+					tArgs:push(item: stack:pop());
 					ki++;
 				});
-				stack:add(item: Type:withParams(name: seg, params: tArgs));
+				stack:push(item: Type:withParams(name: seg, params: tArgs));
 			}, {
-				stack:add(item: Type:init(name: seg));
+				stack:push(item: Type(name: seg));
 			});
 			idx: idx - 1;
 		});
@@ -442,9 +442,9 @@ Class is TypeChecker{
 		if({ tps:length() == 0 || typeArgs:length() == 0 }, {
 			return rawType;
 		});
-		local Array of Type is argNodes: Array();
+		local [Type] is argNodes: [];
 		typeArgs:each(action: local Function(String is ta){
-			argNodes:add(item: :parseTypeNode(s: ta));
+			argNodes:push(item: :parseTypeNode(s: ta));
 		});
 		local Type is rawNode: :parseTypeNode(s: rawType);
 		local Type is subNode: :substituteTypeNode(t: rawNode, cls: cls, typeArgs: argNodes);
@@ -453,15 +453,16 @@ Class is TypeChecker{
 
 	## Infers the grounded generic type ('Box:String', 'Pair:String:Int', 'SpecError:FileOpError')
 	## for a constructor call `C:init(...)` from contextual expectation and/or argument types,
-	## operating over structured [Type] trees (`Array of Type`).
+	## operating over structured [Type] trees (`[Type]`).
 	Function of String is inferGenericInitType(String is baseClassName, String is targetType, Member is initMem, CallData is call, String is expected){
 		local ClassInfo is cls: :findClass(name: baseClassName);
 		if({ cls:name == '' || cls:typeParams:length() == 0 }, {
 			return targetType;
 		});
 		local Type is expNode: :parseTypeNode(s: expected);
-		local Array of Type is expParams: if({ expNode:name == cls:name }, { expNode:params }, { Array() });
-		local Array of Type is resolvedArgs: Array();
+		local [Type] is emptyExp: [];
+		local [Type] is expParams: if({ expNode:name == cls:name }, { expNode:params }, { emptyExp });
+		local [Type] is resolvedArgs: [];
 		local Boolean is allResolved: true;
 		local Int is tpIdx: 0;
 		while({ tpIdx < cls:typeParams:length() }, {
@@ -472,7 +473,8 @@ Class is TypeChecker{
 			});
 			if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
 				local Int is pIdx: 0;
-				initMem:params:each(action: local Function(Parameter is p){
+				while({ pIdx < initMem:params:length() }, {
+					local Parameter is p: initMem:params:get(index: pIdx);
 					local Boolean is directMatch: p:paramType:name == tpName;
 					local Boolean is wrappedMatch: !directMatch && p:paramType:isGeneric() && p:paramType:elemType():name == tpName;
 					if({ (argNode:name == '' || argNode:name == Primitive:ANY:value()) && (directMatch || wrappedMatch) }, {
@@ -505,7 +507,7 @@ Class is TypeChecker{
 			if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
 				allResolved: false;
 			}, {
-				resolvedArgs:add(item: argNode);
+				resolvedArgs:push(item: argNode);
 			});
 			tpIdx: tpIdx + 1;
 		});
@@ -1014,7 +1016,7 @@ Class is TypeChecker{
 	## @return: The unified yield type, or Void.
 	Function of Boolean is isNonEmptyMatchDefault(Expression is expr){
 		return match(on: expr, when: [
-			Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){
+			Expression:AnonFn: local Function of Boolean(Type is returnType, [Parameter] is params, [Statement] is body){
 				return body:length() > 0;
 			},
 			else: { true }
@@ -1193,7 +1195,7 @@ Class is TypeChecker{
 										# variant's constructor payloads — type them
 										# from the variant's declared parameters.
 										match(on: val, when: [
-											Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+											Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 												if({ params:length() > 0 }, {
 												# The variant's parameter surface: the legacy
 														# member (today's enums) or the desugared
@@ -1231,13 +1233,16 @@ Class is TypeChecker{
 														if({ subCls:typeParams:length() > 0 }, {
 															local Type is subjNode: :parseTypeNode(s: subjFull);
 															if({ subjNode:name == subCls:name || subjNode:name == owner }, {
-																subjNode:params:each(action: local Function(Type is pa){
-																	groundedArgs:add(item: :formatVarTypeString(t: pa));
+																local Int is pai: 0;
+																while({ pai < subjNode:params:length() }, {
+																	groundedArgs:add(item: :formatVarTypeString(t: subjNode:params:get(index: pai)));
+																	pai++;
 																});
 															});
 														});
 														local Int is pbi: 0;
-														params:each(action: local Function(Parameter is bp){
+														while({ pbi < params:length() }, {
+															local Parameter is bp: params:get(index: pbi);
 															if({ pbi < pvMem:params:length() }, {
 																local Parameter is vp: pvMem:params:get(index: pbi);
 																if({ bp:paramType:name == '' || bp:paramType:name == Primitive:ANY:value() }, {
@@ -1273,7 +1278,7 @@ Class is TypeChecker{
 					});
 				});
 				local Boolean is valIsAnon: match(on: val, when: [
-					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+					Expression:AnonFn: local Function of Boolean(Type is returnType, [Parameter] is params, [Statement] is body){ return true; },
 					else: { false }
 				]);
 				if({ !valIsAnon }, {
@@ -1323,7 +1328,7 @@ Class is TypeChecker{
 				hasElse: true;
 				local Boolean is defIsAnon: false;
 				match(on: defaultArm, when: [
-					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+					Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 						if({ params:length() > 0 }, {
 							:addError(line: :currentLine, msg: 'Match default arm takes no parameters.');
 							bad: true;
@@ -1450,7 +1455,7 @@ Class is TypeChecker{
 				}, {
 					local Boolean is keyOk: false;
 					match(on: key, when: [
-						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+						Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 							if({ params:length() > 0 }, {
 								:addError(line: :currentLine, msg: 'Predicate match keys take no parameters.');
 								bad: true;
@@ -1469,7 +1474,7 @@ Class is TypeChecker{
 					});
 				});
 				local Boolean is valIsAnon: match(on: val, when: [
-					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){
+					Expression:AnonFn: local Function of Boolean(Type is returnType, [Parameter] is params, [Statement] is body){
 						if({ params:length() > 0 }, {
 							:addError(line: :currentLine, msg: 'Predicate match arms take no parameters (there is no subject to bind).');
 							bad: true;
@@ -1523,7 +1528,7 @@ Class is TypeChecker{
 				hasElse: true;
 				local Boolean is defIsAnon: false;
 				match(on: defaultArm, when: [
-					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+					Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 						if({ params:length() > 0 }, {
 							:addError(line: :currentLine, msg: 'Match default arm takes no parameters.');
 							bad: true;
@@ -1619,8 +1624,10 @@ Class is TypeChecker{
 		});
 		local Type is gNode: :parseTypeNode(s: groundedTarget);
 		local Array of String is recvTypeArgs: Array();
-		gNode:params:each(action: local Function(Type is pt){
-			recvTypeArgs:add(item: :formatVarTypeString(t: pt));
+		local Int is pti: 0;
+		while({ pti < gNode:params:length() }, {
+			recvTypeArgs:add(item: :formatVarTypeString(t: gNode:params:get(index: pti)));
+			pti++;
 		});
 		local ClassInfo is recvClsInfo: :findClass(name: baseClassName);
 		local String is mTp: :detectMethodTypeParamForMember(m: m, cls: recvClsInfo);
@@ -1669,7 +1676,7 @@ Class is TypeChecker{
 	## @param displayTarget: The display spelling for diagnostics.
 	## @param recvTypeArgs: Concrete generic type arguments of the receiver.
 	## @param methodTypeParam: Method-level type parameter name ('' when none).
-	Function is validateArgsAgainstSignature(Expression is callExpr, Array of Parameter is params, ClassInfo is recvCls, String is displayTarget, Array of String is recvTypeArgs: Array(), String is methodTypeParam: ''){
+	Function is validateArgsAgainstSignature(Expression is callExpr, [Parameter] is params, ClassInfo is recvCls, String is displayTarget, Array of String is recvTypeArgs: Array(), String is methodTypeParam: ''){
 		local CallData is cd: match(on: callExpr, when: [
 			Expression:Call: local Function of CallData(CallData is call){ return call; },
 			else: { CallData:init(target: Expression:Unknown, name: '', args: Array()) }
@@ -1682,7 +1689,8 @@ Class is TypeChecker{
 		});
 		local Array of String is recvTypeParams: recvCls:typeParams;
 		local Int is pIdx: 0;
-		params:each(action: local Function(Parameter is p){
+		while({ pIdx < params:length() }, {
+			local Parameter is p: params:get(index: pIdx);
 			local String is pName: p:name;
 			local String is pT: p:paramType:name;
 			if({ p:isVariadic }, {
@@ -1927,10 +1935,12 @@ Class is TypeChecker{
 			args:each(action: local Function(NamedArg is a){
 				if({ namesMatch }, {
 					local Boolean is known: false;
-					m:params:each(action: local Function(Parameter is p){
-						if({ p:name == a:name }, {
+					local Int is mpi: 0;
+					while({ mpi < m:params:length() }, {
+						if({ m:params:get(index: mpi):name == a:name }, {
 							known: true;
 						});
+						mpi++;
 					});
 					if({ !known }, {
 						namesMatch: false;
@@ -1938,7 +1948,8 @@ Class is TypeChecker{
 				});
 			});
 			local Int is npIdx: 0;
-			m:params:each(action: local Function(Parameter is p){
+			while({ npIdx < m:params:length() }, {
+				local Parameter is p: m:params:get(index: npIdx);
 				# The scope slot (the last parameter) is bound by the
 				# remainder, not by a named argument.
 				if({ namesMatch && !(isScoped && npIdx == m:params:length() - 1) }, {
@@ -2129,8 +2140,10 @@ Class is TypeChecker{
 		if({ :isUnboundTypeIdent(tp: t:name, cls: cls) && out:indexOf(search: t:name, default: -1) < 0 }, {
 			out:add(item: t:name);
 		});
-		t:params:each(action: local Function(Type is p){
-			:collectUnboundTypeIdents(t: p, cls: cls, out: out);
+		local Int is pi: 0;
+		while({ pi < t:params:length() }, {
+			:collectUnboundTypeIdents(t: t:params:get(index: pi), cls: cls, out: out);
+			pi++;
 		});
 	}
 
@@ -2143,12 +2156,15 @@ Class is TypeChecker{
 			return '';
 		});
 		local Map of String to Int is paramCounts: Map:init();
-		m:params:each(action: local Function(Parameter is p){
+		local Int is mpi: 0;
+		while({ mpi < m:params:length() }, {
+			local Parameter is p: m:params:get(index: mpi);
 			local Array of String is idents: Array();
 			:collectUnboundTypeIdents(t: p:paramType, cls: cls, out: idents);
 			idents:each(action: local Function(String is id){
 				paramCounts:set(key: id, value: paramCounts:get(key: id, default: 0) + 1);
 			});
+			mpi++;
 		});
 		local Array of String is retIdents: Array();
 		:collectUnboundTypeIdents(t: m:memberType, cls: cls, out: retIdents);
@@ -2189,11 +2205,9 @@ Class is TypeChecker{
 		]);
 		local Boolean is allMatch: true;
 		local Int is posIdx: 0;
-		m:params:each(action: local Function(Parameter is p){
-			if({ p:isVariadic }, {
-				posIdx: posIdx + 1;
-				return;
-			});
+		while({ posIdx < m:params:length() }, {
+			local Parameter is p: m:params:get(index: posIdx);
+			if({ !p:isVariadic }, {
 			local Expression is bound: Expression:Unknown;
 			local Boolean is found: false;
 			if({ p:name != '' }, {
@@ -2247,6 +2261,7 @@ Class is TypeChecker{
 					});
 				});
 			});
+			});
 			posIdx: posIdx + 1;
 		});
 		return allMatch;
@@ -2291,7 +2306,8 @@ Class is TypeChecker{
 		]);
 		if({ cd:args:length() > 0 && rawT != '' && mTp != '' }, {
 			local Int is posIdx: 0;
-			selected:params:each(action: local Function(Parameter is p){
+			while({ posIdx < selected:params:length() }, {
+				local Parameter is p: selected:params:get(index: posIdx);
 				local Expression is bound: Expression:Unknown;
 				local Boolean is found: false;
 				if({ p:name != '' }, {
@@ -2791,11 +2807,17 @@ Class is TypeChecker{
 								local Boolean is sharesArity: members:any(predicate: local Function of Boolean(Member is other){
 									return other != g && other:kind == MemberKind:METHOD && other:name == m:name && other:params:length() == g:params:length();
 								});
-								return g:params:any(predicate: local Function of Boolean(Parameter is pp){
+								local Boolean is hasNonConcrete: false;
+								local Int is gpi: 0;
+								while({ gpi < g:params:length() && !hasNonConcrete }, {
+									local Parameter is pp: g:params:get(index: gpi);
 									local String is pt: pp:paramType:name;
-									if({ pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() }, { return true; });
-									return sharesArity && c:typeParams:indexOf(search: pt, default: -1) >= 0;
+									if({ pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() || (sharesArity && c:typeParams:indexOf(search: pt, default: -1) >= 0) }, {
+										hasNonConcrete: true;
+									});
+									gpi++;
 								});
+								return hasNonConcrete;
 							});
 							if({ nonConcrete }, {
 								:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (§I.3).');
@@ -3114,8 +3136,10 @@ Class is TypeChecker{
 				:addError(line: line, msg: 'Unknown or unimported type \'' . t:name . '\' in \'' . :currentClassName . '\'.');
 			});
 		});
-		t:params:each(action: local Function(Type is p){
-			:validateTypeAccess(t: p, line: line);
+		local Int is pi: 0;
+		while({ pi < t:params:length() }, {
+			:validateTypeAccess(t: t:params:get(index: pi), line: line);
+			pi++;
 		});
 	}
 
@@ -3144,7 +3168,7 @@ Class is TypeChecker{
 				local NamedArg is a1: cd:args:get(index: 1);
 				local Expression is av: a1:value;
 				match(on: av, when: [
-					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+					Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 						if({ params:length() >= 1 }, {
 							local Parameter is p0: params:get(index: 0);
 							if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
@@ -3164,11 +3188,14 @@ Class is TypeChecker{
 				cd:args:each(action: local Function(NamedArg is arg){
 					local Expression is av: arg:value;
 					match(on: av, when: [
-						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
-							params:each(action: local Function(Parameter is p){
+						Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
+							local Int is pi: 0;
+							while({ pi < params:length() }, {
+								local Parameter is p: params:get(index: pi);
 								if({ p:paramType:name == Primitive:ANY:value() || p:paramType:name == '' }, {
 									p:paramType: cbElemNode:clone();
 								});
+								pi++;
 							});
 						},
 						else: {}
@@ -3182,7 +3209,7 @@ Class is TypeChecker{
 				cd:args:each(action: local Function(NamedArg is arg){
 					local Expression is av: arg:value;
 					match(on: av, when: [
-						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+						Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 							if({ params:length() >= 1 }, {
 								local Parameter is p0: params:get(index: 0);
 								if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
@@ -3642,7 +3669,7 @@ Class is TypeChecker{
 		return 'Any';
 	}
 
-	local Function of String is inferAnonFnExpr(Expression is expr, Type is returnType, Array of Parameter is params, Array of Statement is body, String is expected){
+	local Function of String is inferAnonFnExpr(Expression is expr, Type is returnType, [Parameter] is params, [Statement] is body, String is expected){
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is existingKeys: :localVars:keys();
 		existingKeys:each(action: local Function(String is k){
@@ -3666,22 +3693,26 @@ Class is TypeChecker{
 		if({ !:inBranchClosure }, {
 			if({ TypeDomain:hasFunctionReturn(t: expected) && :isVoid(t: :resolveReturnType(t: returnType)) }, {
 				returnType:name: TypeDomain:functionReturn(t: expected);
-				returnType:params: Array();
+				returnType:params: [];
 			});
 			:currentMethodReturnType: :resolveReturnType(t: returnType);
 		});
 		:inBranchClosure: false;
 		:inValueBranch: false;
-		params:each(action: local Function(Parameter is p){
+		local Int is pi: 0;
+		while({ pi < params:length() }, {
+			local Parameter is p: params:get(index: pi);
 			local String is pFmt: :formatVarTypeString(t: p:paramType);
 			:localVars:set(key: p:name, value: pFmt);
 			if({ :inLazyBlock }, {
 				:lazyLocalVars:set(key: p:name, value: pFmt);
 			});
+			pi++;
 		});
 		local Int is bodyLen: body:length();
 		local Int is bodyIdx: 0;
-		body:each(action: local Function(Statement is s){
+		while({ bodyIdx < bodyLen }, {
+			local Statement is s: body:get(index: bodyIdx);
 			:anonDepth: :anonDepth + 1;
 			if({ savedInValueBranch && bodyIdx == bodyLen - 1 }, {
 				:checkingValueYield: true;
@@ -3709,7 +3740,7 @@ Class is TypeChecker{
 					if({ :isVoid(t: curRetT) }, {
 						if({ lastT != '' && !:isVoid(t: lastT) }, {
 							returnType:name: lastT;
-							returnType:params: Array();
+							returnType:params: [];
 						});
 					}, {
 						if({ lastT != '' && !:isAssignable(target: curRetT, source: lastT) }, {
@@ -3789,7 +3820,7 @@ Class is TypeChecker{
 			Expression:Index: local Function(Expression is target, Expression is index){
 				res: :inferIndexExpr(target: target, index: index);
 			},
-			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+			Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 				res: :inferAnonFnExpr(expr: expr, returnType: returnType, params: params, body: body, expected: expected);
 			},
 			Expression:Call: local Function(CallData is call){
@@ -3883,12 +3914,12 @@ Class is TypeChecker{
 		local String is thenT: '';
 		local String is elseT: '';
 		match(on: expr:argValue(index: 1), when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				thenT: :resolveReturnType(t: rt);
 			}
 		], default: {});
 		match(on: expr:argValue(index: 2), when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				elseT: :resolveReturnType(t: rt);
 			}
 		], default: {});
@@ -3914,12 +3945,12 @@ Class is TypeChecker{
 		local Boolean is bareArg2Anon: false;
 		if({ bareIsBranch && expr:argCount() == 3 }, {
 			match(on: expr:argValue(index: 1), when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 					bareArg1Anon: true;
 				}
 			], default: {});
 			match(on: expr:argValue(index: 2), when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 					bareArg2Anon: true;
 				}
 			], default: {});
@@ -3943,10 +3974,12 @@ Class is TypeChecker{
 			local Boolean is bareHasLoopVars: false;
 			call:args:each(action: local Function(NamedArg is arg){
 				match(on: arg:value, when: [
-					Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+					Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 						if({ ps:length() > 0 && bd:length() == 0 }, {
 							bareHasLoopVars: true;
-							ps:each(action: local Function(Parameter is p){
+							local Int is psi: 0;
+							while({ psi < ps:length() }, {
+								local Parameter is p: ps:get(index: psi);
 								if({ p:hasDefault }, {
 									:inferExpressionType(expr: p:defaultExpr);
 								});
@@ -3955,6 +3988,7 @@ Class is TypeChecker{
 								if({ :inLazyBlock }, {
 									:lazyLocalVars:set(key: p:name, value: pFmt);
 								});
+								psi++;
 							});
 						});
 					}
@@ -3966,7 +4000,7 @@ Class is TypeChecker{
 				if({ bareHasLoopVars && bareClosureSlot }, {
 					local Boolean is valIsAnon: false;
 					match(on: arg:value, when: [
-						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+						Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 							valIsAnon: true;
 						}
 					], default: {});
@@ -3988,7 +4022,7 @@ Class is TypeChecker{
 				call:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'evaluate' }, {
 						match(on: arg:value, when: [
-							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+							Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
 									returnType:name: Primitive:BOOLEAN:value();
 								});
@@ -4002,7 +4036,7 @@ Class is TypeChecker{
 				call:args:each(action: local Function(NamedArg is arg){
 					if({ bareIsBranch && bareIdx == 0 }, {
 						match(on: arg:value, when: [
-							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+							Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
 									returnType:name: Primitive:BOOLEAN:value();
 								});
@@ -4017,7 +4051,7 @@ Class is TypeChecker{
 					# method's return type.
 					local Boolean is isUntypedBlock: false;
 					match(on: arg:value, when: [
-						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is _bd){
+						Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is _bd){
 							if({ ps:length() == 0 && (rt:name == '' || rt:name == 'Void') }, {
 								isUntypedBlock: true;
 							});
@@ -4114,17 +4148,17 @@ Class is TypeChecker{
 		local Boolean is bodyAnon: false;
 		local Boolean is guardAnon: false;
 		local Type is bodyRet: Type:init(name: '');
-		local Array of Parameter is bodyParams: Array();
-		local Array of Parameter is guardParams: Array();
+		local [Parameter] is bodyParams: [];
+		local [Parameter] is guardParams: [];
 		match(on: bodyNa:value, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				bodyAnon: true;
 				bodyRet: rt;
 				bodyParams: ps;
 			}
 		], default: {});
 		match(on: guardNa:value, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				guardAnon: true;
 				guardParams: ps;
 			}
@@ -4182,16 +4216,16 @@ Class is TypeChecker{
 		});
 		local Boolean is arg1IsAnon: false;
 		local Boolean is arg2IsAnon: false;
-		local Array of Statement is tAnonBody: Array();
-		local Array of Statement is eAnonBody: Array();
+		local [Statement] is tAnonBody: [];
+		local [Statement] is eAnonBody: [];
 		match(on: expr:argValue(index: 1), when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				arg1IsAnon: true;
 				tAnonBody: bd;
 			}
 		], default: {});
 		match(on: expr:argValue(index: 2), when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				arg2IsAnon: true;
 				eAnonBody: bd;
 			}
@@ -4238,10 +4272,12 @@ Class is TypeChecker{
 		local Int is posIdx: 0;
 		call:args:each(action: local Function(NamedArg is arg){
 			match(on: arg:value, when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 					if({ ps:length() > 0 && bd:length() == 0 }, {
 						hasLoopVars: true;
-						ps:each(action: local Function(Parameter is p){
+						local Int is psi: 0;
+						while({ psi < ps:length() }, {
+							local Parameter is p: ps:get(index: psi);
 							if({ p:hasDefault }, {
 								:inferExpressionType(expr: p:defaultExpr);
 							});
@@ -4250,6 +4286,7 @@ Class is TypeChecker{
 							if({ :inLazyBlock }, {
 								:lazyLocalVars:set(key: p:name, value: pFmt);
 							});
+							psi++;
 						});
 					});
 				}
@@ -4257,7 +4294,7 @@ Class is TypeChecker{
 			local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((hasLoopVars && (posIdx == 1 || posIdx == 2)) || (!hasLoopVars && (posIdx == 0 || posIdx == 1))));
 			local Boolean is argIsAnon: false;
 			match(on: arg:value, when: [
-				Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+				Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 					argIsAnon: true;
 					if({ arg:name == 'evaluate' }, {
 						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
@@ -4286,7 +4323,7 @@ Class is TypeChecker{
 		call:args:each(action: local Function(NamedArg is arg){
 			if({ arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0))) }, {
 				match(on: arg:value, when: [
-					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+					Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
 							returnType:name: Primitive:BOOLEAN:value();
 						});
@@ -4316,7 +4353,7 @@ Class is TypeChecker{
 		call:args:each(action: local Function(NamedArg is arg){
 			if({ isBranchCall && argIdx == 0 }, {
 				match(on: arg:value, when: [
-					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+					Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
 							returnType:name: Primitive:BOOLEAN:value();
 						});
@@ -4350,7 +4387,8 @@ Class is TypeChecker{
 						expCandidates:each(action: local Function(Member is cm){
 							if({ !paramExpectsTypedFn && cm:name != '' }, {
 								local Int is pi: 0;
-								cm:params:each(action: local Function(Parameter is cp){
+								while({ pi < cm:params:length() }, {
+									local Parameter is cp: cm:params:get(index: pi);
 									local Boolean is pMatch: if({ arg:name != '' }, { cp:name == arg:name }, { pi == argIdx });
 									if({ pMatch && cp:paramType:name == 'Function' && cp:paramType:params:length() > 0 }, {
 										paramExpectsTypedFn: true;
@@ -4361,7 +4399,7 @@ Class is TypeChecker{
 						});
 						if({ paramExpectsTypedFn }, {
 							match(on: arg:value, when: [
-								Expression:AnonFn: local Function(Type is _fnRt, Array of Parameter is _fnPs, Array of Statement is _fnBd){
+								Expression:AnonFn: local Function(Type is _fnRt, [Parameter] is _fnPs, [Statement] is _fnBd){
 									callArgExp: 'Function:' . :formatTypeString(t: expArg0);
 								}
 							], default: {});
@@ -4389,7 +4427,7 @@ Class is TypeChecker{
 			if({ arg:name == 'onError' }, {
 				hasOnErrorArg: true;
 				match(on: arg:value, when: [
-					Expression:AnonFn: local Function(Type is fnRetT, Array of Parameter is _p, Array of Statement is _b){
+					Expression:AnonFn: local Function(Type is fnRetT, [Parameter] is _p, [Statement] is _b){
 						local String is rt: :resolveReturnType(t: fnRetT);
 						if({ rt != Primitive:BOOLEAN:value() }, {
 							:addError(line: :currentLine, msg: "ThreadScope:open 'onError' handler must return Boolean (true if handled, false to keep bubbling), found '" . rt . "'.");
@@ -4844,7 +4882,7 @@ Class is TypeChecker{
 									if({ call:args:length() > 0 }, {
 										local NamedArg is a0: call:args:get(index: 0);
 										match(on: a0:value, when: [
-											Expression:AnonFn: local Function(Type is fnRetType, Array of Parameter is ps, Array of Statement is bd){
+											Expression:AnonFn: local Function(Type is fnRetType, [Parameter] is ps, [Statement] is bd){
 												local String is fnRet: fnRetType:name;
 												if({ fnRet != '' && !:isVoid(t: fnRet) && fnRet != Primitive:ANY:value() }, {
 													mappedElem: :formatTypeString(t: fnRetType);
@@ -5254,11 +5292,11 @@ Class is TypeChecker{
 					# apply to it).
 					if({ :checkingValueYield }, {
 						match(on: :currentAnonNode, when: [
-							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+							Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 								local String is curRetT: :resolveReturnType(t: returnType);
 								if({ :isVoid(t: curRetT) }, {
 									returnType:name: retType;
-									returnType:params: Array();
+									returnType:params: [];
 									:currentMethodReturnType: retType;
 								}, {
 									if({ !:isAssignable(target: curRetT, source: retType) }, {
@@ -5279,10 +5317,10 @@ Class is TypeChecker{
 						local Boolean is inferredClosureRet: false;
 						if({ :anonDepth > 0 && !:checkingValueYield && :isVoid(t: :currentMethodReturnType) }, {
 							match(on: :currentAnonNode, when: [
-								Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+								Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 									if({ :isVoid(t: :resolveReturnType(t: returnType)) }, {
 										returnType:name: retType;
-										returnType:params: Array();
+										returnType:params: [];
 										:currentMethodReturnType: retType;
 										inferredClosureRet: true;
 									});
@@ -5401,13 +5439,16 @@ Class is TypeChecker{
 								local String is names: '';
 								group:each(action: local Function(Member is g){
 									if({ g:params:length() == maxParams }, {
-										g:params:each(action: local Function(Parameter is p){
+										local Int is gpi: 0;
+										while({ gpi < g:params:length() }, {
+											local Parameter is p: g:params:get(index: gpi);
 											if({ names:endsWith(suffix: p:name) == false }, {
 												if({ names != '' }, {
 													names: names . ', ';
 												});
 												names: names . p:name;
 											});
+											gpi++;
 										});
 									});
 								});
@@ -5446,7 +5487,7 @@ Class is TypeChecker{
 			:addError(line: line, msg: :errText:errForwardNoParentMethod(method: :currentMethodName));
 			return;
 		});
-		local Array of Parameter is params: superM:params;
+		local [Parameter] is params: superM:params;
 
 		if({ args:length() > params:length() }, {
 			:addError(line: line, msg: :errText:errForwardArgCountMismatch(method: :currentMethodName, parentMethod: superM:name, passed: args:length(), accepted: params:length()));
@@ -5463,7 +5504,8 @@ Class is TypeChecker{
 		});
 
 		local Int is pIdx: 0;
-		params:each(action: local Function(Parameter is p){
+		while({ pIdx < params:length() }, {
+			local Parameter is p: params:get(index: pIdx);
 			local Expression is matchedValue: Expression:Unknown;
 			local Boolean is found: false;
 			args:each(action: local Function(NamedArg is a){
@@ -5529,7 +5571,8 @@ Class is TypeChecker{
 			:genericMethodFiles:set(key: gmKey, value: :currentSourceFile);
 		});
 		local Int is declPIdx: 0;
-		method:params:each(action: local Function(Parameter is p){
+		while({ declPIdx < method:params:length() }, {
+			local Parameter is p: method:params:get(index: declPIdx);
 			if({ p:isVariadic }, {
 				if({ declPIdx != method:params:length() - 1 }, {
 					:addError(line: method:line, msg: "Variadic parameter '*" . p:name . "' in '" . :currentClassName . ":" . method:name . "' must be the last parameter.");
@@ -5556,7 +5599,9 @@ Class is TypeChecker{
 		if({ :currentMethodIsMerge && mergeTarget:name == '' }, {
 			:addError(line: method:line, msg: :errText:errMergeNoParent(method: method:name, className: :currentClassName));
 		});
-		method:params:each(action: local Function(Parameter is p){
+		local Int is mpi: 0;
+		while({ mpi < method:params:length() }, {
+			local Parameter is p: method:params:get(index: mpi);
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
 				local String is ft: :fieldTypes:getString(key: p:name, default: Primitive:ANY:value());
 				p:paramType: :parseTypeNode(s: ft);
@@ -5572,6 +5617,7 @@ Class is TypeChecker{
 					:addError(line: method:line, msg: "Default value for parameter '" . p:name . "' in '" . :currentClassName . ":" . method:name . "' has type '" . :displayType(t: defType) . "', expected '" . :displayType(t: pTypeStr) . "'.");
 				});
 			});
+			mpi++;
 		});
 		:currentMethodReturnType: :resolveReturnType(t: method:memberType);
 		if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: Array(['base', 'sys', 'thread'])) && :containsThreadScopeType(t: :currentMethodReturnType) }, {
@@ -5580,17 +5626,22 @@ Class is TypeChecker{
 		if({ :currentMethodReturnType == '' || :isVoid(t: :currentMethodReturnType) }, {
 			if({ method:name == ContractMethod:EVALUATE:value() || method:name == ContractMethod:ITERATION:value() }, {
 				:currentMethodReturnType: 'Boolean';
-				method:memberType: Type:init(name: 'Boolean');
+				method:memberType: Type(name: 'Boolean');
 			});
 		});
-		:localVars: Map:init();
+		:localVars: Map();
 
-		method:params:each(action: local Function(Parameter is p){
+		mpi: 0;
+		while({ mpi < method:params:length() }, {
+			local Parameter is p: method:params:get(index: mpi);
 			:localVars:set(key: p:name, value: :formatVarTypeString(t: p:paramType));
+			mpi++;
 		});
 
-		method:body:each(action: local Function(Statement is stmt){
-			:checkStatement(stmt: stmt);
+		local Int is sbi: 0;
+		while({ sbi < method:body:length() }, {
+			:checkStatement(stmt: method:body:get(index: sbi));
+			sbi++;
 		});
 
 		if({ !:isVoid(t: :currentMethodReturnType) && method:body:length() > 0 }, {
@@ -5617,7 +5668,7 @@ Class is TypeChecker{
 		:currentMethodName: '';
 	}
 
-	local Function of Boolean is stmtsAlwaysReturn(Array of Statement is stmts){
+	local Function of Boolean is stmtsAlwaysReturn([Statement] is stmts){
 		local Int is n: stmts:length();
 		local Int is i: 0;
 		while({ i < n }, {
@@ -5653,7 +5704,7 @@ Class is TypeChecker{
 	local Function of Boolean is anonAlwaysTerminates(Expression is expr){
 		local Boolean is res: false;
 		match(on: expr, when: [
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is _ps, [Statement] is bd){
 				res: :stmtsAlwaysReturn(stmts: bd);
 			},
 			else: {}
@@ -6340,7 +6391,8 @@ Class is TypeChecker{
 									:addError(line: subM:line, msg: msg);
 								}, {
 									local Int is pIdx: 0;
-									subM:params:each(action: local Function(Parameter is subP){
+									while({ pIdx < subM:params:length() }, {
+										local Parameter is subP: subM:params:get(index: pIdx);
 										local Parameter is parentP: parentM:params:get(index: pIdx);
 										if({ subP:paramType:name == 'Any' || subP:paramType:name == '' }, {
 											subP:paramType: parentP:paramType;
@@ -6716,8 +6768,10 @@ Class is TypeChecker{
 					:collectClasses(c: m:nestedClass, acc: acc);
 				},
 				MemberKind:METHOD: {
-					m:body:each(action: local Function(Statement is s){
-						:collectClassesFromStatement(stmt: s, acc: acc);
+					local Int is sbi: 0;
+					while({ sbi < m:body:length() }, {
+						:collectClassesFromStatement(stmt: m:body:get(index: sbi), acc: acc);
+						sbi++;
 					});
 				},
 				else: {}
@@ -6870,11 +6924,14 @@ Class is TypeChecker{
 			:collectFieldsForPrepass(cls: c, out: cFields, visited: fVis);
 			c:members:each(action: local Function(Member is m){
 				if({ m:kind == MemberKind:METHOD }, {
-					m:params:each(action: local Function(Parameter is p){
+					local Int is mpi: 0;
+					while({ mpi < m:params:length() }, {
+						local Parameter is p: m:params:get(index: mpi);
 						if({ p:paramType:name == :names:selfFieldMarker() }, {
 							local String is ft: cFields:getString(key: p:name, default: Primitive:ANY:value());
 							p:paramType: :parseTypeNode(s: ft);
 						});
+						mpi++;
 					});
 					local String is rType: :resolveReturnType(t: m:memberType);
 					if({ rType == '' || :isVoid(t: rType) }, {

@@ -88,7 +88,7 @@ Class of CallLowerer is MatchCallLowerer{
 		});
 		local Boolean is handledAnon: false;
 		match(on: armExpr, when: [
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is _ps, [Statement] is bd){
 				handledAnon: true;
 				local Int is i: 0;
 				while({ i < bd:length() && !b:blkTerminated }, {
@@ -96,10 +96,10 @@ Class of CallLowerer is MatchCallLowerer{
 					local Boolean is isLast: i == (bd:length() - 1);
 					if({ hasResult && isLast }, {
 						if({ !:storeLastStmt(b: b, st: st, resSlot: resSlot, resTy: resTy) }, {
-							b:lowerStmts(stmts: Array([st]));
+							b:lowerStmts(stmts: [st]);
 						});
 					}, {
-						b:lowerStmts(stmts: Array([st]));
+						b:lowerStmts(stmts: [st]);
 					});
 					i++;
 				});
@@ -308,7 +308,7 @@ Class of CallLowerer is MatchCallLowerer{
 				}, {
 					local Boolean is unwrapped: false;
 					match(on: k, when: [
-						Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is kbd){
+						Expression:AnonFn: local Function(Type is _rt, [Parameter] is _ps, [Statement] is kbd){
 							unwrapped: true;
 							b:pushScope();
 							if({ kbd:length() > 0 }, {
@@ -346,7 +346,7 @@ Class of CallLowerer is MatchCallLowerer{
 				if({ variantStruct != '' }, {
 					local IrStruct is vst: b:mod:findStruct(name: variantStruct);
 					match(on: v, when: [
-						Expression:AnonFn: local Function(Type is _rt, Array of Parameter is ps, Array of Statement is _bd){
+						Expression:AnonFn: local Function(Type is _rt, [Parameter] is ps, [Statement] is _bd){
 							local Int is pi: 0;
 							while({ pi < ps:length() }, {
 								local Parameter is p: ps:get(index: pi);

@@ -56,12 +56,16 @@ Class of LintRule is UnnecessarySelfColonRule{
 
 	local Function is collectExprLocals(Expression is expr){
 		match(on: expr, when: [
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is params, Array of Statement is body){
-				params:each(action: local Function(Parameter is p){
-					:localNames:set(key: p:name, value: '1');
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is params, [Statement] is body){
+				local Int is pi: 0;
+				while({ pi < params:length() }, {
+					:localNames:set(key: params:get(index: pi):name, value: '1');
+					pi++;
 				});
-				body:each(action: local Function(Statement is s){
-					:collectStmtLocals(stmt: s);
+				local Int is si: 0;
+				while({ si < body:length() }, {
+					:collectStmtLocals(stmt: body:get(index: si));
+					si++;
 				});
 			},
 			Expression:Call: local Function(CallData is cd){
@@ -108,14 +112,20 @@ Class of LintRule is UnnecessarySelfColonRule{
 		classDef:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:METHOD }, {
 				:localNames: Map:init();
-				m:params:each(action: local Function(Parameter is p){
-					:localNames:set(key: p:name, value: '1');
+				local Int is pi: 0;
+				while({ pi < m:params:length() }, {
+					:localNames:set(key: m:params:get(index: pi):name, value: '1');
+					pi++;
 				});
-				m:body:each(action: local Function(Statement is s){
-					:collectStmtLocals(stmt: s);
+				local Int is si: 0;
+				while({ si < m:body:length() }, {
+					:collectStmtLocals(stmt: m:body:get(index: si));
+					si++;
 				});
-				m:body:each(action: local Function(Statement is s){
-					:checkStatement(stmt: s, issues: issues);
+				si: 0;
+				while({ si < m:body:length() }, {
+					:checkStatement(stmt: m:body:get(index: si), issues: issues);
+					si++;
 				});
 			});
 			if({ m:kind == MemberKind:CLASS }, {

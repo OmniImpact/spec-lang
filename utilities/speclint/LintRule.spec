@@ -64,8 +64,10 @@ Class is LintRule{
 		classDef:members:each(action: local Function(Member is m){
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
-					m:body:each(action: local Function(Statement is s){
-						:checkStatement(stmt: s, issues: issues);
+					local Int is si: 0;
+					while({ si < m:body:length() }, {
+						:checkStatement(stmt: m:body:get(index: si), issues: issues);
+						si++;
 					});
 				},
 				MemberKind:CLASS: {
@@ -159,9 +161,11 @@ Class is LintRule{
 				:checkExpression(expr: target, issues: issues);
 				:checkExpression(expr: index, issues: issues);
 			},
-			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
-				body:each(action: local Function(Statement is st){
-					:checkStatement(stmt: st, issues: issues);
+			Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
+				local Int is si: 0;
+				while({ si < body:length() }, {
+					:checkStatement(stmt: body:get(index: si), issues: issues);
+					si++;
 				});
 			}
 		], default: {});

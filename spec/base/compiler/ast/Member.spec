@@ -34,10 +34,10 @@ Class is Member{
 	String is name: '';
 
 	## METHOD: formal parameter list.
-	Array of Parameter is params: Array();
+	[Parameter] is params: [];
 
 	## METHOD: implementation statements.
-	Array of Statement is body: Array();
+	[Statement] is body: [];
 
 	## FIELD: initializer expression and its presence flag.
 	Expression is initExpr: Expression:Unknown;
@@ -69,7 +69,7 @@ Class is Member{
 
 	## Releases statement and expression nodes once method emission finishes.
 	Function is clearBody(){
-		:body: Array();
+		:body: [];
 	}
 
 	## True when the member carries the given modifier. Modifiers are

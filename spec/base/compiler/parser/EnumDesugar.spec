@@ -95,16 +95,16 @@ Class is EnumDesugar{
 		nameFn:modifiers: Array(['replace']);
 		nameFn:memberType: Type:init(name: 'String');
 		nameFn:name: 'name';
-		local Array of Statement is nameBody: Array();
-		nameBody:add(item: :tailReturn(expr: :selfPath(member: '_variant_name')));
+		local [Statement] is nameBody: [];
+		nameBody:push(item: :tailReturn(expr: :selfPath(member: '_variant_name')));
 		nameFn:body: nameBody;
 		out:add(item: nameFn);
-		local Member is ordFn: Member:init(kind: MemberKind:METHOD);
+		local Member is ordFn: Member(kind: MemberKind:METHOD);
 		ordFn:modifiers: Array(['replace']);
-		ordFn:memberType: Type:init(name: 'Int');
+		ordFn:memberType: Type(name: 'Int');
 		ordFn:name: 'ordinal';
-		local Array of Statement is ordBody: Array();
-		ordBody:add(item: :tailReturn(expr: :selfPath(member: '_tag')));
+		local [Statement] is ordBody: [];
+		ordBody:push(item: :tailReturn(expr: :selfPath(member: '_tag')));
 		ordFn:body: ordBody;
 		out:add(item: ordFn);
 
@@ -121,30 +121,36 @@ Class is EnumDesugar{
 			sub:setLine(line: m:line);
 			sub:setSourceFile(file: c:sourceFile);
 			local Array of Member is subMembers: Array();
-			m:params:each(action: local Function(Parameter is p){
-				local Member is pf: Member:init(kind: MemberKind:FIELD);
+			local Int is pi: 0;
+			while({ pi < m:params:length() }, {
+				local Parameter is p: m:params:get(index: pi);
+				local Member is pf: Member(kind: MemberKind:FIELD);
 				pf:memberType: p:paramType;
 				pf:name: p:name;
 				subMembers:add(item: pf);
+				pi++;
 			});
-			local Member is subInit: Member:init(kind: MemberKind:METHOD);
-			subInit:memberType: Type:init(name: '');
+			local Member is subInit: Member(kind: MemberKind:METHOD);
+			subInit:memberType: Type(name: '');
 			subInit:name: 'init';
 			subInit:params: m:params;
 			# Generic enums: the nested variant checks as its own class, so it
 			# carries the root's type parameters — payload field types bound
 			# to them pass validation and substitute at instantiation.
 			sub:setTypeParams(params: c:typeParams);
-			local Array of Statement is initBody: Array();
-			m:params:each(action: local Function(Parameter is p){
+			local [Statement] is initBody: [];
+			pi: 0;
+			while({ pi < m:params:length() }, {
+				local Parameter is p: m:params:get(index: pi);
 				local Statement is a: Statement:Assign(assignTarget: :selfPath(member: p:name), assignValue: :ident(name: p:name));
-				initBody:add(item: a);
+				initBody:push(item: a);
+				pi++;
 			});
 			local Expression is tagNum: Expression:NumberLit(value: idx, text: '' . idx);
 			local Statement is tagAssign: Statement:Assign(assignTarget: :selfPath(member: '_tag'), assignValue: tagNum);
-			initBody:add(item: tagAssign);
+			initBody:push(item: tagAssign);
 			local Statement is vnameAssign: Statement:Assign(assignTarget: :selfPath(member: '_variant_name'), assignValue: :strLit(text: m:name));
-			initBody:add(item: vnameAssign);
+			initBody:push(item: vnameAssign);
 			subInit:body: initBody;
 			subMembers:add(item: subInit);
 			sub:members: subMembers;
@@ -211,13 +217,13 @@ Class is EnumDesugar{
 		local Member is ctor: Member:init(kind: MemberKind:METHOD);
 		ctor:memberType: Type:init(name: '');
 		ctor:name: 'init';
-		local Array of Parameter is ctorParams: Array();
-		local Parameter is cp: Parameter:init(name: 'v', paramType: Type:init(name: backingType));
-		ctorParams:add(item: cp);
+		local [Parameter] is ctorParams: [];
+		local Parameter is cp: Parameter(name: 'v', paramType: Type(name: backingType));
+		ctorParams:push(item: cp);
 		ctor:params: ctorParams;
-		local Array of Statement is ctorBody: Array();
+		local [Statement] is ctorBody: [];
 		local Statement is assign: Statement:Assign(assignTarget: :selfPath(member: '_backing'), assignValue: :ident(name: 'v'));
-		ctorBody:add(item: assign);
+		ctorBody:push(item: assign);
 		ctor:body: ctorBody;
 		out:add(item: ctor);
 
@@ -244,12 +250,12 @@ Class is EnumDesugar{
 		out:add(item: :synthValues(name: name, variants: variants));
 		# The sugar's render contract: variants render their NAME (the
 		# legacy emission's behavior), not the default TypeName@hash.
-		local Array of Statement is tsBody: Array();
+		local [Statement] is tsBody: [];
 		variants:each(action: local Function(Member is v){
 			local Expression is cond: :eq(left: :ident(name: ':'), right: :variantRef(enumName: name, variant: v:name));
-			tsBody:add(item: :guardIf(cond: cond, val: :strLit(text: v:name)));
+			tsBody:push(item: :guardIf(cond: cond, val: :strLit(text: v:name)));
 		});
-		tsBody:add(item: :tailReturn(expr: :strLit(text: name)));
+		tsBody:push(item: :tailReturn(expr: :strLit(text: name)));
 		out:add(item: :synthToString(body: tsBody));
 
 		common:each(action: local Function(Member is cm){
@@ -286,10 +292,10 @@ Class is EnumDesugar{
 	}
 
 	## Builds `{ return <expr>; }` — the single-statement closure body.
-	Function of Array of Statement is returnBody(Expression is expr){
-		local Array of Statement is body: Array();
+	Function of [Statement] is returnBody(Expression is expr){
+		local [Statement] is body: [];
 		local Statement is r: Statement:Return(returnExpr: expr, hasReturnExpr: true);
-		body:add(item: r);
+		body:push(item: r);
 		return body;
 	}
 
@@ -297,10 +303,11 @@ Class is EnumDesugar{
 	## as an expression statement.
 	Function of Statement is guardIf(Expression is cond, Expression is val){
 		local Array of NamedArg is args: Array();
-		local Expression is checkFn: Expression:AnonFn(returnType: Type:init(name: ''), params: Array(), body: :returnBody(expr: cond));
-		args:add(item: NamedArg:init(name: 'check', value: checkFn));
-		local Expression is thenFn: Expression:AnonFn(returnType: Type:init(name: ''), params: Array(), body: :returnBody(expr: val));
-		args:add(item: NamedArg:init(name: 'then', value: thenFn));
+		local [Parameter] is emptyParams: [];
+		local Expression is checkFn: Expression:AnonFn(returnType: Type(name: ''), params: emptyParams, body: :returnBody(expr: cond));
+		args:add(item: NamedArg(name: 'check', value: checkFn));
+		local Expression is thenFn: Expression:AnonFn(returnType: Type(name: ''), params: emptyParams, body: :returnBody(expr: val));
+		args:add(item: NamedArg(name: 'then', value: thenFn));
 		local Expression is call: Expression:Call(call: CallData:init(target: :ident(name: 'Conditional'), name: 'if', args: args));
 		local Statement is s: Statement:Expr(exprStmt: call);
 		return s;
@@ -311,8 +318,8 @@ Class is EnumDesugar{
 		local Member is m: Member:init(kind: MemberKind:METHOD);
 		m:memberType: Type:init(name: backingType);
 		m:name: 'value';
-		local Array of Statement is body: Array();
-		body:add(item: :tailReturn(expr: :selfPath(member: '_backing')));
+		local [Statement] is body: [];
+		body:push(item: :tailReturn(expr: :selfPath(member: '_backing')));
 		m:body: body;
 		return m;
 	}
@@ -325,28 +332,28 @@ Class is EnumDesugar{
 		m:modifiers: Array(['held']);
 		m:memberType: Type:init(name: name);
 		m:name: 'of';
-		local Array of Parameter is params: Array();
+		local [Parameter] is params: [];
 		# The parameter is 'value' — the sugar's call convention
 		# (Color:of(value: ...)). The call-argument formatter matches
 		# call-site names against parameter names, so any other spelling
 		# drops the argument and every lookup degenerates to the
 		# no-match default.
-		params:add(item: Parameter:init(name: 'value', paramType: Type:init(name: backingType)));
+		params:push(item: Parameter(name: 'value', paramType: Type(name: backingType)));
 		m:params: params;
-		local Array of Statement is body: Array();
+		local [Statement] is body: [];
 		local Member is first: variants:get(index: 0);
 		variants:each(action: local Function(Member is v){
 			local Expression is cond: :eq(left: :ident(name: 'value'), right: v:initExpr);
-			body:add(item: :guardIf(cond: cond, val: :variantRef(enumName: name, variant: v:name)));
+			body:push(item: :guardIf(cond: cond, val: :variantRef(enumName: name, variant: v:name)));
 		});
-		body:add(item: :tailReturn(expr: :variantRef(enumName: name, variant: first:name)));
+		body:push(item: :tailReturn(expr: :variantRef(enumName: name, variant: first:name)));
 		m:body: body;
 		return m;
 	}
 
 	## toString(): the variant name — the sugar's render contract. The
 	## name() dispatch needs the variants, so the caller wires the body.
-	Function of Member is synthToString(Array of Statement is body){
+	Function of Member is synthToString([Statement] is body){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
 		m:modifiers: Array(['replace']);
 		m:memberType: Type:init(name: 'String');
@@ -359,23 +366,23 @@ Class is EnumDesugar{
 	Function of Member is synthValues(String is name, Array of Member is variants){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
 		m:modifiers: Array(['held']);
-		local Type is listT: Type:init(name: 'List');
-		listT:params: Array([Type:init(name: name)]);
+		local Type is listT: Type(name: 'List');
+		listT:params: [Type(name: name)];
 		m:memberType: listT;
 		m:name: 'values';
-		local Array of Statement is body: Array();
-		local Type is declT: Type:init(name: 'List');
-		declT:params: Array([Type:init(name: name)]);
+		local [Statement] is body: [];
+		local Type is declT: Type(name: 'List');
+		declT:params: [Type(name: name)];
 		local Statement is decl: Statement:VarDecl(modifiers: Array(['local']), varType: declT, varName: 'all', initExpr: Expression:ArrayLit(items: Array()), hasInit: true);
-		body:add(item: decl);
+		body:push(item: decl);
 		variants:each(action: local Function(Member is v){
 			local Array of NamedArg is args: Array();
-			args:add(item: NamedArg:init(name: 'item', value: :variantRef(enumName: name, variant: v:name)));
-			local Expression is call: Expression:Call(call: CallData:init(target: :ident(name: 'all'), name: 'push', args: args));
+			args:add(item: NamedArg(name: 'item', value: :variantRef(enumName: name, variant: v:name)));
+			local Expression is call: Expression:Call(call: CallData(target: :ident(name: 'all'), name: 'push', args: args));
 			local Statement is s: Statement:Expr(exprStmt: call);
-			body:add(item: s);
+			body:push(item: s);
 		});
-		body:add(item: :tailReturn(expr: :ident(name: 'all')));
+		body:push(item: :tailReturn(expr: :ident(name: 'all')));
 		m:body: body;
 		return m;
 	}

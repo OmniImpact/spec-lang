@@ -22,7 +22,7 @@ Class is Type{
 	String is name: '';
 
 	## Generic type arguments (e.g. String in Array of String).
-	Array of Type is params: Array();
+	[Type] is params: [];
 
 	## Initializes a simple type descriptor.
 	##
@@ -38,8 +38,8 @@ Class is Type{
 	## @param name: Base type name.
 	## @param params: Generic type arguments.
 	## @return: The new [Type].
-	held Function of Type is withParams(String is name, Array of Type is params){
-		local Type is t: Type:init(name: name);
+	held Function of Type is withParams(String is name, [Type] is params){
+		local Type is t: Type(name: name);
 		t:params: params;
 		return t;
 	}
@@ -66,11 +66,11 @@ Class is Type{
 		if({ :params:length() == 0 }, {
 			return Type:init(name: :name);
 		});
-		local Array of Type is cp: Array();
+		local [Type] is cp: [];
 		local Int is i: 0;
 		while({ i < :params:length() }, {
 			local Type is p: :params:get(index: i);
-			cp:add(item: p:clone());
+			cp:push(item: p:clone());
 			i++;
 		});
 		return Type:withParams(name: :name, params: cp);

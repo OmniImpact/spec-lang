@@ -36,8 +36,10 @@ Class of LintRule is InitShorthandRule{
 		classDef:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:METHOD }, {
 				if({ m:name != 'init' }, {
-					m:body:each(action: local Function(Statement is s){
-						:checkStatement(stmt: s, issues: issues);
+					local Int is si: 0;
+					while({ si < m:body:length() }, {
+						:checkStatement(stmt: m:body:get(index: si), issues: issues);
+						si++;
 					});
 				});
 			});

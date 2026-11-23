@@ -33,9 +33,9 @@ Class is GenericSpecializer{
 	## still live code (no instantiation exists to serve those sites).
 	Map of String to Boolean is bareTemplateUsed: Map:init();
 	Map of String to ClassInfo is specClassMap: Map:init();
-	Map of String to Array of Type is specClassArgsMap: Map:init();
+	Map of String to [Type] is specClassArgsMap: Map();
 	Array of String is pendingBaseNames: Array();
-	[Array of Type] is pendingTypeArgs: [];
+	[[Type]] is pendingTypeArgs: [];
 	Array of String is pendingMangledNames: Array();
 
 	Map of String to Member is genericMethods: Map:init();
@@ -44,21 +44,21 @@ Class is GenericSpecializer{
 	Map of String to String is specMethodKeyToName: Map:init();
 	Array of String is pendingMethodOwners: Array();
 	Array of String is pendingMethodNames: Array();
-	Array of Type is pendingMethodArgTypes: Array();
+	[Type] is pendingMethodArgTypes: [];
 	Array of String is pendingMethodMangled: Array();
 	String is curOwnerClassName: '';
 
-	local Function of Type is makeType(String is name, Array of Type is params){
-		local Type is t: Type:init(name: name);
+	local Function of Type is makeType(String is name, [Type] is params){
+		local Type is t: Type(name: name);
 		t:params: params;
 		return t;
 	}
 
 	local Function of Type is cloneType(Type is t){
-		local Array of Type is cps: Array();
+		local [Type] is cps: [];
 		local Int is i: 0;
 		while({ i < t:params:length() }, {
-			cps:add(item: :cloneType(t: t:params:get(index: i)));
+			cps:push(item: :cloneType(t: t:params:get(index: i)));
 			i++;
 		});
 		return :makeType(name: t:name, params: cps);
@@ -87,7 +87,7 @@ Class is GenericSpecializer{
 		return out;
 	}
 
-	local Function of String is specKeyFor(String is baseName, Array of Type is typeArgs){
+	local Function of String is specKeyFor(String is baseName, [Type] is typeArgs){
 		local String is key: baseName;
 		local Int is i: 0;
 		while({ i < typeArgs:length() }, {
@@ -97,7 +97,7 @@ Class is GenericSpecializer{
 		return key;
 	}
 
-	local Function of String is allocateMangledClassName(String is baseName, Array of Type is typeArgs){
+	local Function of String is allocateMangledClassName(String is baseName, [Type] is typeArgs){
 		local String is stem: baseName;
 		local Int is i: 0;
 		while({ i < typeArgs:length() }, {
@@ -132,7 +132,7 @@ Class is GenericSpecializer{
 		return true;
 	}
 
-	local Function of Boolean is areAllConcreteTypes(Array of Type is types, Map of String to Boolean is tplParams){
+	local Function of Boolean is areAllConcreteTypes([Type] is types, Map of String to Boolean is tplParams){
 		local Int is i: 0;
 		while({ i < types:length() }, {
 			if({ !:isConcreteType(t: types:get(index: i), tplParams: tplParams) }, {
@@ -143,7 +143,7 @@ Class is GenericSpecializer{
 		return true;
 	}
 
-	local Function of String is ensureSpecialized(String is baseName, Array of Type is typeArgs){
+	local Function of String is ensureSpecialized(String is baseName, [Type] is typeArgs){
 		local String is key: :specKeyFor(baseName: baseName, typeArgs: typeArgs);
 		if({ :specKeyToMangled:has(key: key) }, {
 			return :specKeyToMangled:get(key: key, default: baseName);
@@ -167,7 +167,7 @@ Class is GenericSpecializer{
 		:specMethodKeyToName:set(key: key, value: mangled);
 		:pendingMethodOwners:add(item: ownerClassName);
 		:pendingMethodNames:add(item: methodName);
-		:pendingMethodArgTypes:add(item: :cloneType(t: argType));
+		:pendingMethodArgTypes:push(item: :cloneType(t: argType));
 		:pendingMethodMangled:add(item: mangled);
 		return mangled;
 	}
@@ -179,10 +179,10 @@ Class is GenericSpecializer{
 			local Type is mapped: :cloneType(t: subst:get(key: t:name, default: t));
 			return :transformType(t: mapped, subst: Map:init(), tplParams: tplParams, selfTemplateName: '', selfSpecName: '');
 		});
-		local Array of Type is newParams: Array();
+		local [Type] is newParams: [];
 		local Int is i: 0;
 		while({ i < t:params:length() }, {
-			newParams:add(item: :transformType(t: t:params:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
+			newParams:push(item: :transformType(t: t:params:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
 			i++;
 		});
 		local String is bName: t:name;
@@ -249,24 +249,24 @@ Class is GenericSpecializer{
 	}
 
 	local Function of Type is rebuildResolvedType(Array of String is rawParts, Map of String to Type is subst, Boolean is bareContainers){
-		local Array of Type is stack: Array();
+		local [Type] is stack: [];
 		local Int is idx: rawParts:length() - 1;
 		while({ idx >= 0 }, {
 			local String is seg: rawParts:get(index: idx, default: '');
 			if({ subst:has(key: seg) }, {
-				stack:add(item: :cloneType(t: subst:get(key: seg, default: Type:init(name: seg))));
+				stack:push(item: :cloneType(t: subst:get(key: seg, default: Type(name: seg))));
 			}, {
 				local Int is arity: :segArity(seg: seg, bareContainers: bareContainers);
 				if({ arity > 0 && stack:length() >= arity }, {
-					local Array of Type is tArgs: Array();
+					local [Type] is tArgs: [];
 					local Int is ki: 0;
 					while({ ki < arity }, {
-						tArgs:add(item: stack:pop(default: Type:EMPTY));
+						tArgs:push(item: stack:pop());
 						ki++;
 					});
-					stack:add(item: :makeType(name: seg, params: tArgs));
+					stack:push(item: :makeType(name: seg, params: tArgs));
 				}, {
-					stack:add(item: Type:init(name: seg));
+					stack:push(item: Type(name: seg));
 				});
 			});
 			idx: idx - 1;
@@ -299,11 +299,11 @@ Class is GenericSpecializer{
 		return np;
 	}
 
-	Function of Array of Statement is transformStmts(Array of Statement is stmts, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
-		local Array of Statement is out: Array();
+	Function of [Statement] is transformStmts([Statement] is stmts, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
+		local [Statement] is out: [];
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
-			out:add(item: :transformStmt(stmt: stmts:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
+			out:push(item: :transformStmt(stmt: stmts:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
 			i++;
 		});
 		return out;
@@ -378,7 +378,7 @@ Class is GenericSpecializer{
 					local Type is pRet: p:paramType:params:get(index: 0);
 					if({ pRet:name == tpName }, {
 						match(on: na:value, when: [
-							Expression:AnonFn: local Function(Type is fnRet, Array of Parameter is _ps, Array of Statement is _bd){
+							Expression:AnonFn: local Function(Type is fnRet, [Parameter] is _ps, [Statement] is _bd){
 								if({ fnRet:name == 'Function' && fnRet:params:length() > 0 }, {
 									boundType: fnRet:params:get(index: 0);
 								}, {
@@ -480,15 +480,15 @@ Class is GenericSpecializer{
 					operand: :transformExpr(expr: opnd, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName)
 				);
 			},
-			Expression:AnonFn: local Function of Expression(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function of Expression(Type is rt, [Parameter] is ps, [Statement] is bd){
 				local Type is nrt: :transformType(t: rt, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
-				local Array of Parameter is nps: Array();
+				local [Parameter] is nps: [];
 				local Int is pi: 0;
 				while({ pi < ps:length() }, {
-					nps:add(item: :transformParam(p: ps:get(index: pi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
+					nps:push(item: :transformParam(p: ps:get(index: pi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
 					pi++;
 				});
-				local Array of Statement is nbd: :transformStmts(stmts: bd, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
+				local [Statement] is nbd: :transformStmts(stmts: bd, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				return Expression:AnonFn(returnType: nrt, params: nps, body: nbd);
 			},
 			Expression:Call: local Function of Expression(CallData is call){
@@ -637,10 +637,10 @@ Class is GenericSpecializer{
 		});
 		if({ m:kind == MemberKind:METHOD }, {
 			nm:memberType: :transformType(t: m:memberType, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
-			local Array of Parameter is nps: Array();
+			local [Parameter] is nps: [];
 			local Int is pi: 0;
 			while({ pi < m:params:length() }, {
-				nps:add(item: :transformParam(p: m:params:get(index: pi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
+				nps:push(item: :transformParam(p: m:params:get(index: pi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
 				pi++;
 			});
 			nm:params: nps;
@@ -738,7 +738,7 @@ Class is GenericSpecializer{
 		:specMethodKeyToName: Map:init();
 		:pendingMethodOwners: Array();
 		:pendingMethodNames: Array();
-		:pendingMethodArgTypes: Array();
+		:pendingMethodArgTypes: [];
 		:pendingMethodMangled: Array();
 
 		:seenClassNames:set(key: 'Int', value: true);
@@ -848,7 +848,7 @@ Class is GenericSpecializer{
 		while({ wi < :pendingMangledNames:length() || mwi < :pendingMethodMangled:length() }, {
 			while({ wi < :pendingMangledNames:length() }, {
 				local String is baseName: :pendingBaseNames:get(index: wi, default: '');
-				local Array of Type is tArgs: :pendingTypeArgs:get(index: wi);
+				local [Type] is tArgs: :pendingTypeArgs:get(index: wi);
 				local String is mangledName: :pendingMangledNames:get(index: wi, default: '');
 				local ClassInfo is tpl: :templates:get(key: baseName, default: ClassInfo:init(name: '', baseClass: '', members: Array()));
 				if({ tpl:name != '' }, {
@@ -923,7 +923,8 @@ Class is GenericSpecializer{
 						selfTplName: bOwner;
 						selfSpName: mOwner;
 						local ClassInfo is bTpl: :templates:get(key: bOwner, default: ClassInfo:init(name: '', baseClass: '', members: Array()));
-						local Array of Type is bArgs: :specClassArgsMap:get(key: mOwner, default: Array());
+						local [Type] is emptyTypes: [];
+						local [Type] is bArgs: :specClassArgsMap:get(key: mOwner, default: emptyTypes);
 						local Int is bti: 0;
 						while({ bti < bTpl:typeParams:length() && bti < bArgs:length() }, {
 							mSubst:set(key: bTpl:typeParams:get(index: bti, default: ''), value: bArgs:get(index: bti));

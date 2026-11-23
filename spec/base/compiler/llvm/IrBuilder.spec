@@ -92,14 +92,14 @@ Class is IrBuilder{
 	Map of String to ClassInfo is clsMap: Map:init();
 	Map of String to ClassInfo is sysinternalClasses: Map:init();
 	Map of String to String is specBaseMap: Map:init();
-	Map of String to Array of Type is specClassArgsMap: Map:init();
+	Map of String to [Type] is specClassArgsMap: Map();
 	Map of String to Boolean is bareTemplateUsed: Map:init();
 	Map of String to Boolean is templateNames: Map:init();
 	Map of String to String is clsQNameMap: Map:init();
 	Map of String to String is methodParamPtrMask: Map:init();
 	Map of String to Boolean is methodRetIsPtr: Map:init();
 	Map of String to IrType is methodRetTypes: Map:init();
-	Map of String to Array of Parameter is methodParams: Map:init();
+	Map of String to [Parameter] is methodParams: Map:init();
 	Map of String to Boolean is curClassTypeParams: Map:init();
 	Map of String to String is heldFields: Map:init();
 	Map of String to Type is heldFieldTypes: Map:init();
@@ -150,9 +150,10 @@ Class is IrBuilder{
 		local String is resName: resNode:name;
 		local Type is kNode: Type:init(name: '');
 		if({ :specBaseMap:get(key: resName, default: '') == 'Map' && :specClassArgsMap:has(key: resName) }, {
-			local Array of Type is mArgs: :specClassArgsMap:get(key: resName, default: Array());
+			local [Type] is emptyTypes: [];
+			local [Type] is mArgs: :specClassArgsMap:get(key: resName, default: emptyTypes);
 			if({ mArgs:length() >= 1 }, {
-				kNode: mArgs:get(index: 0, default: Type:EMPTY);
+				kNode: mArgs:get(index: 0);
 			});
 		}, {
 			if({ resNode:isMap() && resNode:params:length() >= 1 }, {
@@ -175,9 +176,10 @@ Class is IrBuilder{
 		local String is resName: resNode:name;
 		local Type is vNode: Type:init(name: '');
 		if({ :specBaseMap:get(key: resName, default: '') == 'Map' && :specClassArgsMap:has(key: resName) }, {
-			local Array of Type is mArgs: :specClassArgsMap:get(key: resName, default: Array());
+			local [Type] is emptyTypes: [];
+			local [Type] is mArgs: :specClassArgsMap:get(key: resName, default: emptyTypes);
 			if({ mArgs:length() >= 2 }, {
-				vNode: mArgs:get(index: 1, default: Type:EMPTY);
+				vNode: mArgs:get(index: 1);
 			});
 		}, {
 			if({ resNode:isMap() && resNode:params:length() >= 2 }, {
@@ -275,12 +277,12 @@ Class is IrBuilder{
 	Function of String is typeSpelling(Type is t){
 		if({ t:params:length() == 0 }, { return t:name; });
 		if({ t:name == 'Map' && t:params:length() == 2 }, {
-			return t:name . ' of ' . :typeSpelling(t: t:params:get(index: 0, default: Type:EMPTY)) . ' to ' . :typeSpelling(t: t:params:get(index: 1, default: Type:EMPTY));
+			return t:name . ' of ' . :typeSpelling(t: t:params:get(index: 0)) . ' to ' . :typeSpelling(t: t:params:get(index: 1));
 		});
 		local String is out: t:name;
 		local Int is i: 0;
 		while({ i < t:params:length() }, {
-			out: out . ' of ' . :typeSpelling(t: t:params:get(index: i, default: Type:EMPTY));
+			out: out . ' of ' . :typeSpelling(t: t:params:get(index: i));
 			i++;
 		});
 		return out;
@@ -973,7 +975,7 @@ Class is IrBuilder{
 	## Frame prologue for defer-ful frames: scan the body for Defer facility
 	## usage and, if found, open this frame's cleanup barrier. Defer-less
 	## frames (and the Defer classes' own frames) emit nothing.
-	Function is emitDeferFrameEnter(Array of Statement is bodyStmts){
+	Function is emitDeferFrameEnter([Statement] is bodyStmts){
 		:curFnUsesDefer: false;
 		:curFnDeferExitRan: false;
 		if({ :frameDeferExcluded() }, { return; });
@@ -2126,7 +2128,7 @@ Class is IrBuilder{
 		:inlineReturnTy: resTy;
 
 		match(on: blkExpr, when: [
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is _ps, [Statement] is bd){
 				:pushScope();
 				local Int is lastIdx: bd:length() - 1;
 				local Int is i: 0;
@@ -2433,21 +2435,21 @@ Class is IrBuilder{
 					local NamedArg is na: call:args:get(index: ci);
 					if({ isInlineCf }, {
 						match(on: na:value, when: [
-							Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _sp, Array of Statement is subBody){
+							Expression:AnonFn: local Function(Type is _rt, [Parameter] is _sp, [Statement] is subBody){
 								if({ :bodyUsesDeferInStmts(stmts: subBody) }, { found: true; });
 							},
 							Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
 								local Int is mi: 0;
 								while({ mi < keys:length() && !found }, {
 									match(on: keys:get(index: mi), when: [
-										Expression:AnonFn: local Function(Type is _krt, Array of Parameter is _kp, Array of Statement is kBody){
+										Expression:AnonFn: local Function(Type is _krt, [Parameter] is _kp, [Statement] is kBody){
 											if({ :bodyUsesDeferInStmts(stmts: kBody) }, { found: true; });
 										}
 									], default: {
 										if({ :bodyUsesDeferInExpr(expr: keys:get(index: mi)) }, { found: true; });
 									});
 									match(on: values:get(index: mi), when: [
-										Expression:AnonFn: local Function(Type is _vrt, Array of Parameter is _vp, Array of Statement is vBody){
+										Expression:AnonFn: local Function(Type is _vrt, [Parameter] is _vp, [Statement] is vBody){
 											if({ :bodyUsesDeferInStmts(stmts: vBody) }, { found: true; });
 										}
 									], default: {
@@ -2460,7 +2462,7 @@ Class is IrBuilder{
 								local Int is bi: 0;
 								while({ bi < items:length() && !found }, {
 									match(on: items:get(index: bi), when: [
-										Expression:AnonFn: local Function(Type is _prt, Array of Parameter is _pp, Array of Statement is pBody){
+										Expression:AnonFn: local Function(Type is _prt, [Parameter] is _pp, [Statement] is pBody){
 											if({ :bodyUsesDeferInStmts(stmts: pBody) }, { found: true; });
 										}
 									], default: {
@@ -2482,7 +2484,7 @@ Class is IrBuilder{
 		return found;
 	}
 
-	local Function of Boolean is bodyUsesDeferInStmts(Array of Statement is stmts){
+	local Function of Boolean is bodyUsesDeferInStmts([Statement] is stmts){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -2525,7 +2527,7 @@ Class is IrBuilder{
 						:markBareTypeUse(t: m:memberType);
 						local Int is pi: 0;
 						while({ pi < m:params:length() }, {
-							:markBareTypeUse(t: m:params:get(index: pi, default: Parameter:init(name: '', paramType: Type:init(name: ''))):paramType);
+							:markBareTypeUse(t: m:params:get(index: pi):paramType);
 							pi++;
 						});
 					});
@@ -2549,12 +2551,12 @@ Class is IrBuilder{
 		});
 		local Int is i: 0;
 		while({ i < t:params:length() }, {
-			:markBareTypeUse(t: t:params:get(index: i, default: Type:EMPTY));
+			:markBareTypeUse(t: t:params:get(index: i));
 			i++;
 		});
 	}
 
-	local Function is markBareStmtUse(Array of Statement is stmts){
+	local Function is markBareStmtUse([Statement] is stmts){
 		local Int is si: 0;
 		while({ si < stmts:length() }, {
 			local Statement is st: stmts:get(index: si);
@@ -2618,7 +2620,7 @@ Class is IrBuilder{
 					:bareTemplateUsed:set(key: segs:get(index: 0, default: ''), value: true);
 				});
 			},
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				:markBareTypeUse(t: rt);
 				local Int is pi: 0;
 				while({ pi < ps:length() }, {
@@ -2656,7 +2658,7 @@ Class is IrBuilder{
 		], default: {});
 	}
 
-	local Function is collectDeclNamesInStmts(Array of Statement is stmts, Map of String to Boolean is decls){
+	local Function is collectDeclNamesInStmts([Statement] is stmts, Map of String to Boolean is decls){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -2729,7 +2731,7 @@ Class is IrBuilder{
 					if({ isInlineCf }, {
 						local Boolean is handledInl: false;
 						match(on: na:value, when: [
-							Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+							Expression:AnonFn: local Function(Type is _rt, [Parameter] is subParams, [Statement] is subBody){
 								handledInl: true;
 								local Int is pi: 0;
 								while({ pi < subParams:length() }, {
@@ -2747,7 +2749,7 @@ Class is IrBuilder{
 										local Expression is mk: keys:get(index: mi);
 										local Expression is mv: values:get(index: mi);
 										match(on: mk, when: [
-											Expression:AnonFn: local Function(Type is _krt, Array of Parameter is kParams, Array of Statement is kBody){
+											Expression:AnonFn: local Function(Type is _krt, [Parameter] is kParams, [Statement] is kBody){
 												local Int is kpi: 0;
 												while({ kpi < kParams:length() }, {
 													local Parameter is kp: kParams:get(index: kpi);
@@ -2760,7 +2762,7 @@ Class is IrBuilder{
 											:collectDeclNamesInExpr(expr: mk, decls: decls);
 										});
 										match(on: mv, when: [
-											Expression:AnonFn: local Function(Type is _vrt, Array of Parameter is vParams, Array of Statement is vBody){
+											Expression:AnonFn: local Function(Type is _vrt, [Parameter] is vParams, [Statement] is vBody){
 												local Int is vpi: 0;
 												while({ vpi < vParams:length() }, {
 													local Parameter is vp: vParams:get(index: vpi);
@@ -2788,7 +2790,7 @@ Class is IrBuilder{
 												while({ pi < pair:length() }, {
 													local Expression is pItem: pair:get(index: pi);
 													match(on: pItem, when: [
-														Expression:AnonFn: local Function(Type is _prt, Array of Parameter is pParams, Array of Statement is pBody){
+														Expression:AnonFn: local Function(Type is _prt, [Parameter] is pParams, [Statement] is pBody){
 															local Int is ppi: 0;
 															while({ ppi < pParams:length() }, {
 																local Parameter is pp: pParams:get(index: ppi);
@@ -2820,12 +2822,12 @@ Class is IrBuilder{
 					ci++;
 				});
 			},
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _subParams, Array of Statement is _subBody){
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is _subParams, [Statement] is _subBody){
 			}
 		], default: {});
 	}
 
-	local Function is collectAllAnonCapturesInStmts(Array of Statement is stmts, Map of String to Boolean is decls, Map of String to Boolean is out){
+	local Function is collectAllAnonCapturesInStmts([Statement] is stmts, Map of String to Boolean is decls, Map of String to Boolean is out){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -2897,7 +2899,7 @@ Class is IrBuilder{
 					if({ isInlineCf }, {
 						local Boolean is handledInl: false;
 						match(on: na:value, when: [
-							Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _sp, Array of Statement is subBody){
+							Expression:AnonFn: local Function(Type is _rt, [Parameter] is _sp, [Statement] is subBody){
 								handledInl: true;
 								:collectAllAnonCapturesInStmts(stmts: subBody, decls: decls, out: out);
 							},
@@ -2909,14 +2911,14 @@ Class is IrBuilder{
 										local Expression is mk: keys:get(index: mi);
 										local Expression is mv: values:get(index: mi);
 										match(on: mk, when: [
-											Expression:AnonFn: local Function(Type is _krt, Array of Parameter is _ksp, Array of Statement is kBody){
+											Expression:AnonFn: local Function(Type is _krt, [Parameter] is _ksp, [Statement] is kBody){
 												:collectAllAnonCapturesInStmts(stmts: kBody, decls: decls, out: out);
 											}
 										], default: {
 											:collectAllAnonCapturesInExpr(expr: mk, decls: decls, out: out);
 										});
 										match(on: mv, when: [
-											Expression:AnonFn: local Function(Type is _vrt, Array of Parameter is _vsp, Array of Statement is vBody){
+											Expression:AnonFn: local Function(Type is _vrt, [Parameter] is _vsp, [Statement] is vBody){
 												:collectAllAnonCapturesInStmts(stmts: vBody, decls: decls, out: out);
 											}
 										], default: {
@@ -2938,7 +2940,7 @@ Class is IrBuilder{
 												while({ pi < pair:length() }, {
 													local Expression is pItem: pair:get(index: pi);
 													match(on: pItem, when: [
-														Expression:AnonFn: local Function(Type is _prt, Array of Parameter is _psp, Array of Statement is pBody){
+														Expression:AnonFn: local Function(Type is _prt, [Parameter] is _psp, [Statement] is pBody){
 															:collectAllAnonCapturesInStmts(stmts: pBody, decls: decls, out: out);
 														}
 													], default: {
@@ -2964,7 +2966,7 @@ Class is IrBuilder{
 					ci++;
 				});
 			},
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is subParams, [Statement] is subBody){
 				local Map of String to Boolean is subBound: Map:init();
 				local Int is pi: 0;
 				while({ pi < subParams:length() }, {
@@ -3269,7 +3271,7 @@ Class is IrBuilder{
 		return dst;
 	}
 
-	local Function is collectCallsInStmts(Array of Statement is stmts, Map of String to Boolean is fnVars, Array of String is outCalls, String is curClsName: ''){
+	local Function is collectCallsInStmts([Statement] is stmts, Map of String to Boolean is fnVars, Array of String is outCalls, String is curClsName: ''){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -3338,7 +3340,7 @@ Class is IrBuilder{
 					mi++;
 				});
 			},
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is subParams, [Statement] is subBody){
 				local Int is pi: 0;
 				while({ pi < subParams:length() }, {
 					local Parameter is sp: subParams:get(index: pi);
@@ -3724,7 +3726,7 @@ Class is IrBuilder{
 		return 'null';
 	}
 
-	Function is lowerStmts(Array of Statement is stmts){
+	Function is lowerStmts([Statement] is stmts){
 		local Int is i: 0;
 		while({ i < stmts:length() && !:blkTerminated }, {
 			:lowerStmt(stmt: stmts:get(index: i));
@@ -3732,7 +3734,7 @@ Class is IrBuilder{
 		});
 	}
 
-	Function is lowerFnBody(Array of Statement is stmts, IrType is retTy){
+	Function is lowerFnBody([Statement] is stmts, IrType is retTy){
 		local Int is n: stmts:length();
 		if({ retTy == IrType:Void || n == 0 }, {
 			:lowerStmts(stmts: stmts);
@@ -3847,9 +3849,10 @@ Class is IrBuilder{
 					local String is varBase: :specBaseMap:get(key: varType:name, default: '');
 					local Type is listElemNode: varType:elemType();
 					if({ listElemNode:name == '' && varBase == 'List' && :specClassArgsMap:has(key: varType:name) }, {
-						local Array of Type is lArgs: :specClassArgsMap:get(key: varType:name, default: Array());
+						local [Type] is emptyTypes: [];
+						local [Type] is lArgs: :specClassArgsMap:get(key: varType:name, default: emptyTypes);
 						if({ lArgs:length() >= 1 }, {
-							listElemNode: lArgs:get(index: 0, default: Type:EMPTY);
+							listElemNode: lArgs:get(index: 0);
 						});
 					});
 					local Boolean is isByteListVar: (varType:isList() || varBase == 'List') && Primitive:of(listElemNode:name) == Primitive:BYTE;
@@ -4829,9 +4832,10 @@ Class is IrBuilder{
 					local String is listStruct: :cStructName(qname: rtNode:name);
 					local Type is lElemNode: rtNode:elemType();
 					if({ lElemNode:name == '' && :specClassArgsMap:has(key: rtNode:name) }, {
-						local Array of Type is lArgs: :specClassArgsMap:get(key: rtNode:name, default: Array());
+						local [Type] is emptyTypes: [];
+						local [Type] is lArgs: :specClassArgsMap:get(key: rtNode:name, default: emptyTypes);
 						if({ lArgs:length() >= 1 }, {
-							lElemNode: lArgs:get(index: 0, default: Type:EMPTY);
+							lElemNode: lArgs:get(index: 0);
 						});
 					});
 					local Boolean is isByteLit: Primitive:of(lElemNode:name) == Primitive:BYTE;
@@ -4896,9 +4900,10 @@ Class is IrBuilder{
 				}, {
 					local Type is elemNode: Type:init(name: '');
 					if({ (rtBase == 'Array' || rtBase == 'List') && :specClassArgsMap:has(key: rtNode:name) }, {
-						local Array of Type is aArgs: :specClassArgsMap:get(key: rtNode:name, default: Array());
+						local [Type] is emptyTypes: [];
+						local [Type] is aArgs: :specClassArgsMap:get(key: rtNode:name, default: emptyTypes);
 						if({ aArgs:length() >= 1 }, {
-							elemNode: aArgs:get(index: 0, default: Type:EMPTY);
+							elemNode: aArgs:get(index: 0);
 						});
 					});
 					if({ elemNode:name == '' }, {
@@ -5023,7 +5028,7 @@ Class is IrBuilder{
 				});
 				return raw;
 			},
-			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+			Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
 				return :lowerAnonFn(returnType: returnType, params: params, body: body);
 			},
 			Expression:Call: local Function(CallData is call){
@@ -5038,7 +5043,7 @@ Class is IrBuilder{
 		});
 	}
 
-	local Function is collectFreeInStmts(Array of Statement is stmts, Map of String to Boolean is bound, Map of String to Boolean is outerSlots, Map of String to Boolean is seen, Array of String is out){
+	local Function is collectFreeInStmts([Statement] is stmts, Map of String to Boolean is bound, Map of String to Boolean is outerSlots, Map of String to Boolean is seen, Array of String is out){
 		local Int is i: 0;
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
@@ -5151,7 +5156,7 @@ Class is IrBuilder{
 					ci++;
 				});
 			},
-			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+			Expression:AnonFn: local Function(Type is _rt, [Parameter] is subParams, [Statement] is subBody){
 				local Map of String to Boolean is subBound: Map:init();
 				local Array of String is bKeys: bound:keys();
 				local Int is bi: 0;
@@ -5170,7 +5175,7 @@ Class is IrBuilder{
 		], default: {});
 	}
 
-	local Function of String is lowerAnonFn(Type is returnType, Array of Parameter is params, Array of Statement is body){
+	local Function of String is lowerAnonFn(Type is returnType, [Parameter] is params, [Statement] is body){
 		:anonCounter: :anonCounter + 1;
 		local Int is anonId: :anonCounter;
 		local String is fnName: '__anon_' . (anonId as String);
@@ -5488,7 +5493,7 @@ Class is IrBuilder{
 					Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
 					Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
 					Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
-					Expression:AnonFn: local Function of IrType(Type is retT, Array of Parameter is ps, Array of Statement is bs){ return IrType:Ptr; },
+					Expression:AnonFn: local Function of IrType(Type is retT, [Parameter] is ps, [Statement] is bs){ return IrType:Ptr; },
 					Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
 					Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },
 					else: { IrType:I64 }
@@ -5930,7 +5935,7 @@ Class is IrBuilder{
 		return provObj;
 	}
 
-	local Function of Boolean is stmtsCallMethod(Array of Statement is stmts, String is methodName){
+	local Function of Boolean is stmtsCallMethod([Statement] is stmts, String is methodName){
 		local Int is si: 0;
 		while({ si < stmts:length() }, {
 			local Boolean is hit: match(on: stmts:get(index: si), when: [
@@ -5962,7 +5967,7 @@ Class is IrBuilder{
 				});
 				return false;
 			},
-			Expression:AnonFn: local Function of Boolean(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
+			Expression:AnonFn: local Function of Boolean(Type is _rt, [Parameter] is _ps, [Statement] is bd){
 				return :stmtsCallMethod(stmts: bd, methodName: methodName);
 			},
 			else: { false }
@@ -5984,7 +5989,7 @@ Class is IrBuilder{
 					local String is fBase: :baseTypeName(t: fSpec);
 					local String is aBase: :baseTypeName(t: argSpec);
 					local Boolean is isAnonVal: match(on: na:value, when: [
-						Expression:AnonFn: local Function of Boolean(Type is _rt, Array of Parameter is _ps, Array of Statement is _bd){ return true; },
+						Expression:AnonFn: local Function of Boolean(Type is _rt, [Parameter] is _ps, [Statement] is _bd){ return true; },
 						else: { false }
 					]);
 					if({ fSpec == argSpec || (fBase != '' && fBase == aBase) || (fBase == 'Function' && (isAnonVal || argSpec:startsWith(prefix: 'Function'))) }, {
@@ -6034,7 +6039,8 @@ Class is IrBuilder{
 			});
 			return;
 		});
-		local Array of Parameter is params: :methodParams:get(key: fnKey, default: Array());
+		local [Parameter] is emptyParams: [];
+		local [Parameter] is params: :methodParams:get(key: fnKey, default: emptyParams);
 		local Int is pi: 0;
 		while({ pi < params:length() }, {
 			local Parameter is p: params:get(index: pi);
@@ -6123,7 +6129,7 @@ Class is IrBuilder{
 						Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
 						Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
 						Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
-						Expression:AnonFn: local Function of IrType(Type is retT, Array of Parameter is ps, Array of Statement is bs){ return IrType:Ptr; },
+						Expression:AnonFn: local Function of IrType(Type is retT, [Parameter] is ps, [Statement] is bs){ return IrType:Ptr; },
 						Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
 						Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },
 						Expression:NumberLit: local Function of IrType(Int is i, String is t){ return IrType:I64; },
@@ -6140,7 +6146,7 @@ Class is IrBuilder{
 							Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
 							Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
 							Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
-							Expression:AnonFn: local Function of IrType(Type is retT, Array of Parameter is ps, Array of Statement is bs){ return IrType:Ptr; },
+							Expression:AnonFn: local Function of IrType(Type is retT, [Parameter] is ps, [Statement] is bs){ return IrType:Ptr; },
 							Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
 							Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },
 							Expression:NumberLit: local Function of IrType(Int is i, String is t){ return IrType:I64; },

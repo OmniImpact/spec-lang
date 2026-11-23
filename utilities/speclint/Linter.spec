@@ -241,8 +241,10 @@ Class is Linter{
 		classDef:members:each(action: local Function(Member is m){
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
-					m:body:each(action: local Function(Statement is s){
-						:auditStatement(stmt: s, file: m:sourceFile);
+					local Int is si: 0;
+					while({ si < m:body:length() }, {
+						:auditStatement(stmt: m:body:get(index: si), file: m:sourceFile);
+						si++;
 					});
 				},
 				MemberKind:CLASS: {
@@ -328,9 +330,11 @@ Class is Linter{
 				:auditExpression(expr: target, file: file);
 				:auditExpression(expr: index, file: file);
 			},
-			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
-				body:each(action: local Function(Statement is s){
-					:auditStatement(stmt: s, file: file);
+			Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
+				local Int is si: 0;
+				while({ si < body:length() }, {
+					:auditStatement(stmt: body:get(index: si), file: file);
+					si++;
 				});
 			}
 		], default: {});

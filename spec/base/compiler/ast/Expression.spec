@@ -32,7 +32,7 @@ Enum is Expression {
 	Call(CallData is call),
 	Binary(String is op, Expression is left, Expression is right),
 	Unary(String is op, Expression is operand),
-	AnonFn(Type is returnType, Array of Parameter is params, Array of Statement is body),
+	AnonFn(Type is returnType, [Parameter] is params, [Statement] is body),
 	UsingAs(String is className, Array of NamedArg is args),
 	Unknown,
 
