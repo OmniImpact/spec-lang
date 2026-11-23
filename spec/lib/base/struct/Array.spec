@@ -52,6 +52,15 @@ Class of Mergeable is Array of T{
 		});
 	}
 
+	local Function is notifyError(Function is error, String is msg){
+		local Int is errAddr: Mem:objToAddr(obj: error);
+		if({ errAddr != 0 }, {
+			if({ Mem:loadI64(ptr: errAddr, byteOffset: 0) != 0 }, {
+				error(msg);
+			});
+		});
+	}
+
 	local Function of Array of T is newLike(){
 		local Array of T is out: Array();
 		out:elemKind: :elemKind;
@@ -196,17 +205,20 @@ Class of Mergeable is Array of T{
 		return Mem:addrToObj(addr: valAddr);
 	}
 
-	## Retrieves an element at the specified zero-based index.
+	## Retrieves an element at the specified zero-based index, or [default] if out of bounds ([error] notified).
 	##
 	## @param index: Zero-based position.
 	## @param default: Fallback value returned if [index] is out of bounds.
+	## @param error: Optional callback receiving a diagnostic message.
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
-	Function of T is get(Int is index, T is default){
+	Function of T is get(Int is index, T is default, Function is error: local Function(String is m){}){
 		local Boolean is isFrozen: :frozen;
 		if({ !isFrozen }, { :lock:lock(); });
 		if({ index < 0 || index >= :len }, {
+			local Int is curLen: :len;
 			if({ !isFrozen }, { :lock:unlock(); });
+			:notifyError(error: error, msg: 'Array index out of bounds: index ' . (index as String) . ' for length ' . (curLen as String));
 			return default;
 		});
 		local Int is valAddr: Mem:loadI64(ptr: :items, byteOffset: index * 8);
@@ -291,12 +303,13 @@ Class of Mergeable is Array of T{
 		return Mem:addrToObj(addr: valAddr);
 	}
 
-	## Removes and returns the last element in the array.
+	## Removes and returns the last element in the array, or [default] if empty ([error] notified).
 	##
 	## @param default: Fallback value returned if the array is empty.
+	## @param error: Optional callback receiving a diagnostic message.
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
-	Function of T is pop(T is default){
+	Function of T is pop(T is default, Function is error: local Function(String is m){}){
 		if({ :frozen }, {
 			Mem:panic(msg: 'Mutation attempted on frozen Array');
 			return default;
@@ -304,6 +317,7 @@ Class of Mergeable is Array of T{
 		:lock:lock();
 		if({ :len == 0 }, {
 			:lock:unlock();
+			:notifyError(error: error, msg: 'Array pop on empty array');
 			return default;
 		});
 		:len: :len - 1;

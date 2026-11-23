@@ -239,4 +239,31 @@ Class of SpecUnitTest is TestContainerMethods{
 		Assert:areEqualInt(65, byteArr:get(index: 0, default: 0 as Byte) as Int);
 		Assert:areEqualInt(66, byteArr:get(index: 1, default: 0 as Byte) as Int);
 	}
+
+	## Case 11: Unified get/pop (index, default, error callback) contract on Array and List.
+	Function is testUnifiedGetPopErrorCallback(){
+		local Array of Int is a: Array([10, 20]);
+		local [Int] is l: [10, 20];
+		local String is aErr: '';
+		local String is lErr: '';
+
+		Assert:areEqualInt(20, a:get(index: 1, default: -1, error: local Function(String is m){ aErr: m; }));
+		Assert:areEqualString('', aErr);
+		Assert:areEqualInt(-1, a:get(index: 5, default: -1, error: local Function(String is m){ aErr: m; }));
+		Assert:isTrue(aErr:length() > 0);
+
+		Assert:areEqualInt(20, l:get(index: 1, default: -1, error: local Function(String is m){ lErr: m; }));
+		Assert:areEqualString('', lErr);
+		Assert:areEqualInt(-1, l:get(index: 5, default: -1, error: local Function(String is m){ lErr: m; }));
+		Assert:isTrue(lErr:length() > 0);
+
+		local Array of Int is emptyA: Array();
+		local [Int] is emptyL: [];
+		local String is popAErr: '';
+		local String is popLErr: '';
+		Assert:areEqualInt(-9, emptyA:pop(default: -9, error: local Function(String is m){ popAErr: m; }));
+		Assert:isTrue(popAErr:length() > 0);
+		Assert:areEqualInt(-9, emptyL:pop(default: -9, error: local Function(String is m){ popLErr: m; }));
+		Assert:isTrue(popLErr:length() > 0);
+	}
 }
