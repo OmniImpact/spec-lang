@@ -88,6 +88,24 @@ Class of CallLowerer is ArrayCallLowerer{
 				});
 			});
 			local Int is ekInt: if({ elemSpec != '' && (b:isArcSpecType(specType: elemSpec) || elemSpec == 'Any') }, { 1 }, { 0 });
+			if({ elemSpec == '' && call:args:length() == 1 }, {
+				match(on: call:args:get(index: 0):value, when: [
+					Expression:ArrayLit: local Function(Array of Expression is litItems){
+						if({ litItems:length() > 0 }, {
+							local Boolean is allPtr: true;
+							local Int is oi: 0;
+							while({ oi < litItems:length() && allPtr }, {
+								local Type is itNode: litItems:get(index: oi):getResolvedTypeNode();
+								if({ b:irTypeForNode(t: itNode) != IrType:Ptr || itNode:isRawPtr() }, {
+									allPtr: false;
+								});
+								oi++;
+							});
+							if({ allPtr }, { ekInt: 1; });
+						});
+					}
+				], default: {});
+			});
 			local String is dst: b:nextTmp();
 			b:emit(inst: IrInst:AllocObj(dst: dst, structName: arrStruct, destroyFn: b:destroyFnFor(structName: arrStruct)));
 			local String is ekV: b:nextTmp();

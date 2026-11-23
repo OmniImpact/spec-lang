@@ -473,14 +473,26 @@ Class is TypeChecker{
 			if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
 				local Int is pIdx: 0;
 				initMem:params:each(action: local Function(Parameter is p){
-					if({ (argNode:name == '' || argNode:name == Primitive:ANY:value()) && p:paramType:name == tpName }, {
+					local Boolean is directMatch: p:paramType:name == tpName;
+					local Boolean is wrappedMatch: !directMatch && p:paramType:isGeneric() && p:paramType:elemType():name == tpName;
+					if({ (argNode:name == '' || argNode:name == Primitive:ANY:value()) && (directMatch || wrappedMatch) }, {
 						local Int is posIdx: 0;
 						call:args:each(action: local Function(NamedArg is a){
 							if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
 								if({ (p:name != '' && a:name == p:name) || (a:name == '' && posIdx == pIdx) }, {
-									local String is candT: a:value:resolvedType;
-									if({ candT != '' && candT != Primitive:ANY:value() }, {
-										argNode: :parseTypeNode(s: candT);
+									if({ directMatch }, {
+										local String is candT: a:value:resolvedType;
+										if({ candT != '' && candT != Primitive:ANY:value() }, {
+											argNode: :parseTypeNode(s: candT);
+										});
+									}, {
+										local Type is aNode: a:value:getResolvedTypeNode();
+										if({ aNode:name == p:paramType:name && aNode:isGeneric() }, {
+											local Type is elemN: aNode:elemType();
+											if({ !elemN:isEmpty() && !elemN:isAny() }, {
+												argNode: elemN;
+											});
+										});
 									});
 								});
 							});

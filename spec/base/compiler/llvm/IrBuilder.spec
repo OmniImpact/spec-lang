@@ -4776,7 +4776,27 @@ Class is IrBuilder{
 						});
 					});
 					local Boolean is isByteLit: Primitive:of(lElemSpec) == Primitive:BYTE;
-					local Int is lEk: if({ !isByteLit && (lElemSpec == '' || :isArcSpecType(specType: lElemSpec) || Primitive:of(lElemSpec) == Primitive:ANY) }, { 1 }, { 0 });
+					local Int is lEk: 0;
+					if({ !isByteLit }, {
+						if({ lElemSpec != '' }, {
+							if({ :isArcSpecType(specType: lElemSpec) || Primitive:of(lElemSpec) == Primitive:ANY }, { lEk: 1; });
+						}, {
+							if({ items:length() > 0 }, {
+								local Boolean is allListPtr: true;
+								local Int is loi: 0;
+								while({ loi < items:length() && allListPtr }, {
+									local Type is lItNode: items:get(index: loi):getResolvedTypeNode();
+									if({ :irTypeForNode(t: lItNode) != IrType:Ptr || lItNode:isRawPtr() }, {
+										allListPtr: false;
+									});
+									loi++;
+								});
+								if({ allListPtr }, { lEk: 1; });
+							}, {
+								lEk: 1;
+							});
+						});
+					});
 					local IrType is lElemIrTy: if({ lElemSpec != '' }, { :irTypeFor(specType: lElemSpec) }, { IrType:Ptr });
 					if({ lElemIrTy == IrType:Void }, { lElemIrTy: IrType:Ptr; });
 					:emit(inst: IrInst:AllocObj(dst: arr, structName: listStruct, destroyFn: :destroyFnFor(structName: listStruct)));
