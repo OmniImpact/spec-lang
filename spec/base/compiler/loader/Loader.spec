@@ -44,9 +44,9 @@ Class is Loader{
 	local [ClassInfo] is loadedClasses: [];
 	local Map of String to String is seenClassNames: Map();
 	local Map of String to String is seenBareNames: Map();
-	local Array of String is parseErrors: Array();
+	local [String] is parseErrors: [];
 	local ErrorText is errText: ErrorText();
-	local Array of String is extraSourceDirs: Array();
+	local [String] is extraSourceDirs: [];
 
 
 
@@ -55,11 +55,11 @@ Class is Loader{
 		:loadedClasses: [];
 		:seenClassNames: Map();
 		:seenBareNames: Map();
-		:parseErrors: Array();
-		:extraSourceDirs: Array();
+		:parseErrors: [];
+		:extraSourceDirs: [];
 	}
 
-	Function of Array of String is getParseErrors(){
+	Function of [String] is getParseErrors(){
 		return :parseErrors;
 	}
 
@@ -69,19 +69,19 @@ Class is Loader{
 		:loadedClasses: [];
 		:seenClassNames: Map:init();
 		:seenBareNames: Map:init();
-		:parseErrors: Array();
-		:extraSourceDirs: Array();
+		:parseErrors: [];
+		:extraSourceDirs: [];
 	}
 
 	## Adds an explicit source directory to scan for packages and modules.
 	Function is addSourceDir(String is dir){
 		if({ dir != '' }, {
-			:extraSourceDirs:add(item: dir);
+			:extraSourceDirs:push(item: dir);
 		});
 	}
 
 	## Sets explicit source directories to scan for packages and modules.
-	Function is setSourceDirs(Array of String is dirs){
+	Function is setSourceDirs([String] is dirs){
 		:extraSourceDirs: dirs;
 	}
 
@@ -95,7 +95,7 @@ Class is Loader{
 		:loadedFiles:set(key: filePath, value: 'true');
 
 		if({ !fileExists(path: filePath) }, {
-			:parseErrors:add(item: :errText:errModuleFileNotFound(path: filePath));
+			:parseErrors:push(item: :errText:errModuleFileNotFound(path: filePath));
 			return;
 		});
 
@@ -108,20 +108,19 @@ Class is Loader{
 		if({ lexer:hasErrors() }, {
 			local [Error] is lexErrors: lexer:getErrors();
 			while([Int is lei: 0], { lei < lexErrors:length() }, {
-				:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . lexErrors:get(index: lei):toString());
+				:parseErrors:push(item: '  [LexError] [' . filePath . '] ' . lexErrors:get(index: lei):toString());
 				lei++;
 			});
 		});
 		if({ parser:hasErrors() }, {
 			local [Error] is parseErrs: parser:getErrors();
 			while([Int is pei: 0], { pei < parseErrs:length() }, {
-				:parseErrors:add(item: parseErrs:get(index: pei):toString());
+				:parseErrors:push(item: parseErrs:get(index: pei):toString());
 				pei++;
 			});
 		});
 
-		local Int is pci: 0;
-		while({ pci < prog:classes:length() }, {
+		Loops:range(start: 0, end: prog:classes:length(), worker: local Function(Int is pci){
 			local ClassInfo is c: prog:classes:get(index: pci);
 			while([Int is mi: 0], { mi < c:members:length() }, {
 				local Member is m: c:members:get(index: mi);
@@ -147,7 +146,6 @@ Class is Loader{
 				:loadedClasses:push(item: c);
 			});
 			:collectImportsFromClass(c: c);
-			pci++;
 		});
 	}
 
@@ -172,7 +170,7 @@ Class is Loader{
 								else: { false }
 							]);
 							if({ !handled }, {
-								:parseErrors:add(item: :errText:errMalformedImport(className: c:name));
+								:parseErrors:push(item: :errText:errMalformedImport(className: c:name));
 							});
 							ii++;
 						});
@@ -218,7 +216,7 @@ Class is Loader{
 		:classPaths: Map:init();
 		:packageDirs: Map:init();
 		# 0. User-configured source directories (highest priority project roots).
-		:extraSourceDirs:each(action: local Function(String is d){
+		each(list: :extraSourceDirs, action: local Function(String is d){
 			if({ d != '' }, {
 				:scanTree(dir: d, depth: 0);
 			});
@@ -323,7 +321,8 @@ Class is Loader{
 	##
 	## @param index: The loadedClasses length to restore.
 	Function is unloadClassesFrom(Int is index){
-		while({ :loadedClasses:length() > index }, {
+		local Int is dropCount: :loadedClasses:length() - index;
+		Loops:repeat(count: dropCount, worker: local Function(){
 			local ClassInfo is c: :loadedClasses:pop();
 			:seenClassNames:remove(key: c:namespaceJoined() . ':' . c:name);
 		});
@@ -422,7 +421,7 @@ Class is Loader{
 			});
 		});
 		if({ !resolved }, {
-			:parseErrors:add(item: :errText:errCannotResolveImport(wanted: wanted, className: c:name));
+			:parseErrors:push(item: :errText:errCannotResolveImport(wanted: wanted, className: c:name));
 		});
 	}
 
@@ -556,7 +555,7 @@ Class is Loader{
 		:loadedClasses: [];
 		:seenClassNames: Map:init();
 		:seenBareNames: Map:init();
-		:parseErrors: Array();
+		:parseErrors: [];
 
 		# The input path anchors the scan roots before any resolution.
 		:rootInputPath: rootPath;
@@ -623,8 +622,7 @@ Class is Loader{
 	##
 	## @param classes: Candidate [ClassInfo] definitions.
 	Function is synthesizeInto([ClassInfo] is classes){
-		local Int is sci: 0;
-		while({ sci < classes:length() }, {
+		Loops:range(start: 0, end: classes:length(), worker: local Function(Int is sci){
 			local ClassInfo is c: classes:get(index: sci);
 			while([Int is mi: 0], { mi < c:members:length() }, {
 				local Member is m: c:members:get(index: mi);
@@ -689,7 +687,6 @@ Class is Loader{
 			# chain's as-imports — its instances carry their own synthesized
 			# fields, so the inherited functions dispatch on the inner.
 			:synthesizeInheritedImports(cls: c);
-			sci++;
 		});
 	}
 
@@ -801,7 +798,7 @@ Class is Loader{
 				if({ isCallInit }, {
 					already: true;
 				}, {
-					:parseErrors:add(item: :errText:errSyntheticImportCollision(fieldName: fieldName, className: c:name));
+					:parseErrors:push(item: :errText:errSyntheticImportCollision(fieldName: fieldName, className: c:name));
 				});
 			});
 			mi++;
@@ -891,13 +888,11 @@ Class is Loader{
 	## implicit Class would cycle). Enum keeps its own root per the
 	## enumHeader contract.
 	Function is appendImplicitClass(){
-		local Int is ci: 0;
-		while({ ci < :loadedClasses:length() }, {
+		Loops:range(start: 0, end: :loadedClasses:length(), worker: local Function(Int is ci){
 			local ClassInfo is c: :loadedClasses:get(index: ci);
 			if({ c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' }, {
 				c:withBaseClasses(name: c:name, baseClasses: Array(['Class']), members: c:members);
 			});
-			ci++;
 		});
 	}
 

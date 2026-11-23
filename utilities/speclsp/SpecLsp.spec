@@ -254,9 +254,9 @@ Class is SpecLsp{
 		});
 
 		local ProgramNode is prog: loader:loadProgram(rootPath: filePath);
-		local Array of String is parseErrors: loader:getParseErrors();
+		local [String] is parseErrors: loader:getParseErrors();
 		if({ parseErrors:length() > 0 }, {
-			parseErrors:each(action: local Function(String is errStr){
+			each(list: parseErrors, action: local Function(String is errStr){
 				diags:add(item: makeDiagnosticJson(line: 1, col: 1, length: 1, message: errStr, severity: 1));
 			});
 			loader:cleanup();

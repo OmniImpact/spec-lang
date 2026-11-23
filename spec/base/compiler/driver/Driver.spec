@@ -40,7 +40,8 @@ Class is Driver{
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	replace Function of Boolean is SpecErrorHandler(SpecError is error){
@@ -172,8 +173,8 @@ Class is Driver{
 			report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 			if({ loader:getParseErrors():length() > 0 }, {
 				Stderr:line('Compilation errors encountered during loading:');
-				local Array of String is loadErrors: loader:getParseErrors();
-				loadErrors:each(action: local Function(String is err){
+				local [String] is loadErrors: loader:getParseErrors();
+				each(list: loadErrors, action: local Function(String is err){
 					Stderr:line(err);
 				});
 				Stderr:line('Compilation aborted due to syntax or load errors.');

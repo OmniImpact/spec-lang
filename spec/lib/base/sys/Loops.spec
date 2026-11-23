@@ -25,6 +25,7 @@ Class is Loops{
 	replace Array of Array of String is using: [
 		['base', 'iterator', Loop],
 		['base', 'iterator', LoopControl],
+		['base', 'struct', List],
 		['base', 'sysinternal', Loops],
 		['base', 'sys', as Conditional()]
 	];
@@ -170,6 +171,25 @@ Class is Loops{
 				}
 			);
 		});
+	}
+
+	## Invokes [action](element) for each element of [list], in list order.
+	##
+	## The list-iterating counterpart of [range]: the worker binds the
+	## element directly, no index bookkeeping at the call site. Overloads
+	## per element type land as surfaces need them.
+	##
+	## @param list: The list whose elements are visited.
+	## @param action: Closure receiving each element.
+	Function is each([String] is list, Function is action){
+		local Int is idx: 0;
+		base:sysinternal:Loops:while(
+			evaluate: { return idx < list:length(); },
+			iterate: {
+				action(list:get(index: idx));
+				idx: idx + 1;
+			}
+		);
 	}
 
 	## Repeatedly invokes [worker]() until it returns `false`.

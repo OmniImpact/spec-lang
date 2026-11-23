@@ -45,7 +45,8 @@ Class is SpecLint{
 		['base', 'sys', as File()],
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Time()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -292,8 +293,8 @@ Class is SpecLint{
 		Output:line('loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (program:classes:length() as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 		if({ loader:getParseErrors():length() > 0 }, {
 			Stderr:line('Compilation errors encountered during loading:');
-			local Array of String is loadErrors: loader:getParseErrors();
-			loadErrors:each(action: local Function(String is err){
+			local [String] is loadErrors: loader:getParseErrors();
+			each(list: loadErrors, action: local Function(String is err){
 				Stderr:line(err);
 			});
 			Stderr:line('Compilation aborted due to syntax or load errors.');
