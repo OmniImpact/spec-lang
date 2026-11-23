@@ -59,7 +59,7 @@ Class is Linter{
 
 	## The class whose members are currently being audited (with save and
 	## restore around nested-class recursion).
-	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: Array());
+	local ClassInfo is auditOwner: ClassInfo(name: '', baseClass: '', members: []);
 
 	## Loaded class nodes by name, for the inherited-import walk.
 	local Map of String to ClassInfo is auditClassNodes: Map();
@@ -222,17 +222,18 @@ Class is Linter{
 		});
 		:auditClassNodes:set(key: c:name, value: c);
 		:auditClassList:push(item: c);
-		c:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < c:members:length() }, {
+			local Member is m: c:members:get(index: mi);
 			if({ m:kind == MemberKind:CLASS }, {
 				:registerAuditName(c: m:nestedClass);
 			});
+			mi++;
 		});
 	}
 
 	## Collects class and enum names into the audit sets.
 	Function is buildAuditNameSets([ClassInfo] is classes){
-		local Int is ci: 0;
-		while({ ci < classes:length() }, {
+		while([Int is ci: 0], { ci < classes:length() }, {
 			:registerAuditName(c: classes:get(index: ci));
 			ci++;
 		});
@@ -242,11 +243,11 @@ Class is Linter{
 	Function is auditClass(ClassInfo is classDef){
 		local ClassInfo is savedOwner: :auditOwner;
 		:auditOwner: classDef;
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
-					local Int is si: 0;
-					while({ si < m:body:length() }, {
+					while([Int is si: 0], { si < m:body:length() }, {
 						:auditStatement(stmt: m:body:get(index: si), file: m:sourceFile);
 						si++;
 					});
@@ -256,6 +257,7 @@ Class is Linter{
 				},
 				else: {}
 			]);
+			mi++;
 		});
 		:auditOwner: savedOwner;
 	}
@@ -312,23 +314,27 @@ Class is Linter{
 			Expression:Unary: local Function(String is op, Expression is operand){
 				:auditExpression(expr: operand, file: file);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
-				items:each(action: local Function(Expression is item){
-					:auditExpression(expr: item, file: file);
+			Expression:ArrayLit: local Function([Expression] is items){
+				while([Int is ii: 0], { ii < items:length() }, {
+					:auditExpression(expr: items:get(index: ii), file: file);
+					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
-				keys:each(action: local Function(Expression is k){
-					:auditExpression(expr: k, file: file);
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
+				while([Int is ki: 0], { ki < keys:length() }, {
+					:auditExpression(expr: keys:get(index: ki), file: file);
+					ki++;
 				});
-				values:each(action: local Function(Expression is v){
-					:auditExpression(expr: v, file: file);
+				while([Int is vi: 0], { vi < values:length() }, {
+					:auditExpression(expr: values:get(index: vi), file: file);
+					vi++;
 				});
 			},
-			Expression:Cast: local Function(Expression is target, String is targetType, Array of Expression is args){
+			Expression:Cast: local Function(Expression is target, String is targetType, [Expression] is args){
 				:auditExpression(expr: target, file: file);
-				args:each(action: local Function(Expression is a){
-					:auditExpression(expr: a, file: file);
+				while([Int is ai: 0], { ai < args:length() }, {
+					:auditExpression(expr: args:get(index: ai), file: file);
+					ai++;
 				});
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is field){
@@ -451,10 +457,12 @@ Class is Linter{
 		while({ !found && ci < :auditClassList:length() }, {
 			local ClassInfo is cls: :auditClassList:get(index: ci);
 			if({ cls:name == clsName }, {
-				cls:members:each(action: local Function(Member is m){
-					if({ !found && m:name == memberName && m:hasModifier(kw: Keyword:HELD) }, {
+				while([Int is mi: 0], { !found && mi < cls:members:length() }, {
+					local Member is m: cls:members:get(index: mi);
+					if({ m:name == memberName && m:hasModifier(kw: Keyword:HELD) }, {
 						found: true;
 					});
+					mi++;
 				});
 				if({ !found }, {
 					cls:baseClasses:each(action: local Function(String is baseName){

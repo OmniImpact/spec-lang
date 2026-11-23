@@ -63,11 +63,11 @@ Class is LintRule{
 
 	## Default class member traversal.
 	Function is traverseClass(ClassInfo is classDef, Array of LintIssue is issues){
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
-					local Int is si: 0;
-					while({ si < m:body:length() }, {
+					while([Int is si: 0], { si < m:body:length() }, {
 						:checkStatement(stmt: m:body:get(index: si), issues: issues);
 						si++;
 					});
@@ -77,6 +77,7 @@ Class is LintRule{
 				},
 				else: {}
 			]);
+			mi++;
 		});
 	}
 
@@ -141,23 +142,27 @@ Class is LintRule{
 			Expression:Unary: local Function(String is op, Expression is operand){
 				:checkExpression(expr: operand, issues: issues);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
-				items:each(action: local Function(Expression is item){
-					:checkExpression(expr: item, issues: issues);
+			Expression:ArrayLit: local Function([Expression] is items){
+				while([Int is ii: 0], { ii < items:length() }, {
+					:checkExpression(expr: items:get(index: ii), issues: issues);
+					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
-				keys:each(action: local Function(Expression is k){
-					:checkExpression(expr: k, issues: issues);
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
+				while([Int is ki: 0], { ki < keys:length() }, {
+					:checkExpression(expr: keys:get(index: ki), issues: issues);
+					ki++;
 				});
-				values:each(action: local Function(Expression is v){
-					:checkExpression(expr: v, issues: issues);
+				while([Int is vi: 0], { vi < values:length() }, {
+					:checkExpression(expr: values:get(index: vi), issues: issues);
+					vi++;
 				});
 			},
-			Expression:Cast: local Function(Expression is target, String is targetType, Array of Expression is args){
+			Expression:Cast: local Function(Expression is target, String is targetType, [Expression] is args){
 				:checkExpression(expr: target, issues: issues);
-				args:each(action: local Function(Expression is a){
-					:checkExpression(expr: a, issues: issues);
+				while([Int is ai: 0], { ai < args:length() }, {
+					:checkExpression(expr: args:get(index: ai), issues: issues);
+					ai++;
 				});
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is field){

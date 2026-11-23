@@ -30,7 +30,7 @@ Class is ClassBindings{
 	## @return: true when the class is a floor binding.
 	Function of Boolean is isSysinternal(ClassInfo is cls){
 		local Boolean is isFloor: false;
-		local Array of Member is members: cls:members;
+		local [Member] is members: cls:members;
 		local Int is count: members:length();
 		while(
 			[Int is idx: 0],
@@ -40,7 +40,7 @@ Class is ClassBindings{
 				idx++;
 				if({ m:name == 'namespace' && m:hasInit }, {
 					match(on: m:initExpr, when: [
-						Expression:ArrayLit: local Function(Array of Expression is segs){
+						Expression:ArrayLit: local Function([Expression] is segs){
 							if({ segs:length() > 0 }, {
 								local Expression is last: segs:get(index: segs:length() - 1);
 								local String is lastText: match(on: last, when: [
@@ -90,8 +90,9 @@ Class is ClassBindings{
 			return false;
 		});
 		local Boolean is found: false;
-		c:members:each(action: local Function(Member is m){
-			if({ !found && m:hasModifier(kw: Keyword:HELD) }, {
+		while([Int is mi: 0], { !found && mi < c:members:length() }, {
+			local Member is m: c:members:get(index: mi);
+			if({ m:hasModifier(kw: Keyword:HELD) }, {
 				found: true;
 			});
 			# The tagged desugaring: the variants are
@@ -99,6 +100,7 @@ Class is ClassBindings{
 			if({ !found && m:kind == MemberKind:CLASS && m:nestedClass:name != '' }, {
 				found: true;
 			});
+			mi++;
 		});
 		return found;
 	}

@@ -12,7 +12,7 @@ Class is ClassInfo{
 	];
 
 	## Shared empty sentinel for read-only default/fallback returns.
-	held ClassInfo is EMPTY: ClassInfo:init(name: '', baseClass: '', members: Array());
+	held ClassInfo is EMPTY: ClassInfo(name: '', baseClass: '', members: []);
 
 	## Class identifier.
 	String is name: '';
@@ -41,14 +41,14 @@ Class is ClassInfo{
 	Array of String is typeParams: Array();
 
 	## Class members (methods, fields, nested classes).
-	Array of Member is members: Array();
+	[Member] is members: [];
 
 	## Initializes a class definition with single inheritance.
 	##
 	## @param name: Class identifier.
 	## @param baseClass: Parent class name (empty when none).
 	## @param members: The class members.
-	replace Function is init(String is name, String is baseClass, Array of Member is members){
+	replace Function is init(String is name, String is baseClass, [Member] is members){
 		:name: name;
 		:baseClass: baseClass;
 		:baseClasses: if({ baseClass != '' }, { Array([baseClass]) }, { Array() });
@@ -69,14 +69,16 @@ Class is ClassInfo{
 	## @return: true when an as-form entry names [name].
 	Function of Boolean is instanceImportsAs(String is name){
 		local Boolean is found: false;
-		:members:each(action: local Function(Member is m){
-			if({ !found && m:name == 'using' && m:hasInit }, {
+		while([Int is mi: 0], { !found && mi < :members:length() }, {
+			local Member is m: :members:get(index: mi);
+			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
-							match(on: item, when: [
-								Expression:ArrayLit: local Function(Array of Expression is subItems){
-									subItems:each(action: local Function(Expression is seg){
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { !found && ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is subItems){
+									while([Int is si: 0], { !found && si < subItems:length() }, {
+										local Expression is seg: subItems:get(index: si);
 										match(on: seg, when: [
 											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 												if({ className == name && seg:usingAsAlias == '' }, {
@@ -85,15 +87,18 @@ Class is ClassInfo{
 											},
 											else: {}
 										]);
+										si++;
 									});
 								},
 								else: {}
 							]);
+							ii++;
 						});
 					},
 					else: {}
 				]);
 			});
+			mi++;
 		});
 		return found;
 	}
@@ -112,8 +117,9 @@ Class is ClassInfo{
 				idx++;
 				if({ m:name == 'namespace' && m:hasInit }, {
 					match(on: m:initExpr, when: [
-						Expression:ArrayLit: local Function(Array of Expression is items){
-							items:each(action: local Function(Expression is seg){
+						Expression:ArrayLit: local Function([Expression] is items){
+							while([Int is ii: 0], { ii < items:length() }, {
+								local Expression is seg: items:get(index: ii);
 								local String is segText: match(on: seg, when: [
 									Expression:StringLit: local Function of String(String is value){ return value; },
 									Expression:Ident: local Function of String(String is name){ return name; },
@@ -124,6 +130,7 @@ Class is ClassInfo{
 								}, {
 									joined: joined . ':' . segText;
 								});
+								ii++;
 							});
 						},
 						else: {}
@@ -152,14 +159,16 @@ Class is ClassInfo{
 				idx++;
 				if({ m:name == 'namespace' && m:hasInit }, {
 					match(on: m:initExpr, when: [
-						Expression:ArrayLit: local Function(Array of Expression is items){
-							items:each(action: local Function(Expression is seg){
+						Expression:ArrayLit: local Function([Expression] is items){
+							while([Int is ii: 0], { ii < items:length() }, {
+								local Expression is seg: items:get(index: ii);
 								local String is segText: match(on: seg, when: [
 									Expression:StringLit: local Function of String(String is value){ return value; },
 									Expression:Ident: local Function of String(String is name){ return name; },
 									else: { '' }
 								]);
 								segs:add(item: segText);
+								ii++;
 							});
 						},
 						else: {}
@@ -183,10 +192,11 @@ Class is ClassInfo{
 	## @return: true when declared by this class.
 	Function of Boolean is declaresMember(Member is member){
 		local Boolean is found: false;
-		:members:each(action: local Function(Member is m){
-			if({ !found && m == member }, {
+		while([Int is mi: 0], { !found && mi < :members:length() }, {
+			if({ :members:get(index: mi) == member }, {
 				found: true;
 			});
+			mi++;
 		});
 		return found;
 	}
@@ -207,7 +217,7 @@ Class is ClassInfo{
 		:outerName: name;
 	}
 
-	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
+	Function is withBaseClasses(String is name, Array of String is baseClasses, [Member] is members){
 		:name: name;
 		:baseClasses: baseClasses;
 		:baseClass: if({ baseClasses:length() > 0 }, { baseClasses:get(index: 0) }, { '' });

@@ -159,13 +159,13 @@ Class is Driver{
 
 			local Int is classCount: program:classes:length();
 			local Int is methodCount: 0;
-			local Int is ci: 0;
-			while({ ci < classCount }, {
+			while([Int is ci: 0], { ci < classCount }, {
 				local ClassInfo is c: program:classes:get(index: ci);
-				c:members:each(action: local Function(Member is m){
-					if({ m:kind == MemberKind:METHOD }, {
+				while([Int is mi: 0], { mi < c:members:length() }, {
+					if({ c:members:get(index: mi):kind == MemberKind:METHOD }, {
 						methodCount: methodCount + 1;
 					});
+					mi++;
 				});
 				ci++;
 			});
@@ -229,23 +229,23 @@ Class is Driver{
 			});
 			local String is entryName: '';
 			local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
-			local Int is eci: 0;
-			while({ entryName == '' && eci < rootClasses:length() }, {
+			while([Int is eci: 0], { entryName == '' && eci < rootClasses:length() }, {
 				local ClassInfo is c: rootClasses:get(index: eci);
-				c:members:each(action: local Function(Member is m){
-					if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
+				while([Int is mi: 0], { entryName == '' && mi < c:members:length() }, {
+					local Member is m: c:members:get(index: mi);
+					if({ m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
 						local Parameter is p: m:params:get(index: 0);
 						if({ p:paramType:name == 'Map' }, {
 							entryName: c:name;
 							entryClassInfo: c;
 						});
 					});
+					mi++;
 				});
 				eci++;
 			});
 			if({ entryName == '' }, {
-				eci: 0;
-				while({ entryName == '' && eci < rootClasses:length() }, {
+				while([Int is eci: 0], { entryName == '' && eci < rootClasses:length() }, {
 					local ClassInfo is c: rootClasses:get(index: eci);
 					if({ c:baseClass != 'Enum' }, {
 						entryName: c:name;
@@ -479,7 +479,8 @@ Class is Driver{
 		});
 		visited:add(item: c:name);
 		local Int is initSeen: 0;
-		c:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < c:members:length() }, {
+			local Member is m: c:members:get(index: mi);
 			if({ m:name == 'init' && m:kind == MemberKind:METHOD }, {
 				:entryInitSawAny: true;
 				local Int is arity: m:params:length();
@@ -512,6 +513,7 @@ Class is Driver{
 				# overloadIndexOf counts exactly this order.
 				initSeen: initSeen + 1;
 			});
+			mi++;
 		});
 		if({ !:entryInitTakesMap }, {
 			c:baseClasses:each(action: local Function(String is baseName){

@@ -8,7 +8,8 @@ Class of LintRule is CompactUsingRule{
 		['speclint', [LintRule, LintIssue]],
 		['base', 'compiler', 'ast', [ClassInfo, Member, MemberKind, Expression, NamedArg]],
 		['base', 'struct', [Array, Map]],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	replace Function of String is id(){
@@ -24,7 +25,8 @@ Class of LintRule is CompactUsingRule{
 	}
 
 	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			if({ m:name == 'using' && m:hasInit }, {
 				local Map of String to Int is pkgCounts: Map:init();
 				local Map of String to Int is pkgFirstLine: Map:init();
@@ -32,15 +34,16 @@ Class of LintRule is CompactUsingRule{
 				local Array of String is pkgOrder: Array();
 
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { ii < items:length() }, {
+							local Expression is item: items:get(index: ii);
 							match(on: item, when: [
-								Expression:ArrayLit: local Function(Array of Expression is segs){
+								Expression:ArrayLit: local Function([Expression] is segs){
 									local Array of String is nsSegs: Array();
 									local Boolean is hasTarget: false;
 									local Boolean is isWildcard: false;
-									segs:each(action: local Function(Expression is seg){
-										match(on: seg, when: [
+									while([Int is si: 0], { si < segs:length() }, {
+										match(on: segs:get(index: si), when: [
 											Expression:StringLit: local Function(String is s){
 												if({ s == '*' }, {
 													isWildcard: true;
@@ -54,10 +57,11 @@ Class of LintRule is CompactUsingRule{
 											Expression:UsingAs: local Function(String is _cn, [NamedArg] is _args){
 												hasTarget: true;
 											},
-											Expression:ArrayLit: local Function(Array of Expression is _grp){
+											Expression:ArrayLit: local Function([Expression] is _grp){
 												hasTarget: true;
 											}
 										], default: {});
+										si++;
 									});
 									if({ nsSegs:length() > 0 && hasTarget && !isWildcard }, {
 										local String is key: nsSegs:join(separator: ':');
@@ -76,6 +80,7 @@ Class of LintRule is CompactUsingRule{
 									});
 								}
 							], default: {});
+							ii++;
 						});
 					}
 				], default: {});
@@ -97,6 +102,7 @@ Class of LintRule is CompactUsingRule{
 			if({ m:kind == MemberKind:CLASS }, {
 				:checkClass(classDef: m:nestedClass, issues: issues);
 			});
+			mi++;
 		});
 	}
 }

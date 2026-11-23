@@ -83,10 +83,13 @@ Class of LintRule is UnusedUsingRule{
 					});
 				});
 			},
-			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is args){
 				:refs:set(key: target, value: '1');
 				:markExpr(expr: inner);
-				args:each(action: local Function(Expression is a){ :markExpr(expr: a); });
+				while([Int is ai: 0], { ai < args:length() }, {
+					:markExpr(expr: args:get(index: ai));
+					ai++;
+				});
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is _f){
 				:markExpr(expr: target);
@@ -113,12 +116,21 @@ Class of LintRule is UnusedUsingRule{
 			Expression:Unary: local Function(String is _op, Expression is e){
 				:markExpr(expr: e);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
-				items:each(action: local Function(Expression is it){ :markExpr(expr: it); });
+			Expression:ArrayLit: local Function([Expression] is items){
+				while([Int is ii: 0], { ii < items:length() }, {
+					:markExpr(expr: items:get(index: ii));
+					ii++;
+				});
 			},
-			Expression:MapLit: local Function(Array of Expression is ks, Array of Expression is vs){
-				ks:each(action: local Function(Expression is k){ :markExpr(expr: k); });
-				vs:each(action: local Function(Expression is v){ :markExpr(expr: v); });
+			Expression:MapLit: local Function([Expression] is ks, [Expression] is vs){
+				while([Int is ki: 0], { ki < ks:length() }, {
+					:markExpr(expr: ks:get(index: ki));
+					ki++;
+				});
+				while([Int is vi: 0], { vi < vs:length() }, {
+					:markExpr(expr: vs:get(index: vi));
+					vi++;
+				});
 			},
 			Expression:AnonFn: local Function(Type is rt, [Parameter] is params, [Statement] is body){
 				:markType(t: rt);
@@ -142,48 +154,51 @@ Class of LintRule is UnusedUsingRule{
 		cls:baseClasses:each(action: local Function(String is bc){
 			:refs:set(key: bc, value: '1');
 		});
-		cls:members:each(action: local Function(Member is m){
-			if({ m:name == 'using' || m:name == 'namespace' }, { return; });
-			if({ m:kind == MemberKind:FIELD }, {
-				:markType(t: m:memberType);
-				if({ m:hasInit }, { :markExpr(expr: m:initExpr); });
-			});
-			if({ m:kind == MemberKind:METHOD }, {
-				:markType(t: m:memberType);
-				local Int is pi: 0;
-				while({ pi < m:params:length() }, {
-					local Parameter is p: m:params:get(index: pi);
-					:markType(t: p:paramType);
-					if({ p:hasDefault }, { :markExpr(expr: p:defaultExpr); });
-					pi++;
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name != 'using' && m:name != 'namespace' }, {
+				if({ m:kind == MemberKind:FIELD }, {
+					:markType(t: m:memberType);
+					if({ m:hasInit }, { :markExpr(expr: m:initExpr); });
 				});
-				local Int is si: 0;
-				while({ si < m:body:length() }, {
-					:markStmt(stmt: m:body:get(index: si));
-					si++;
+				if({ m:kind == MemberKind:METHOD }, {
+					:markType(t: m:memberType);
+					while([Int is pi: 0], { pi < m:params:length() }, {
+						local Parameter is p: m:params:get(index: pi);
+						:markType(t: p:paramType);
+						if({ p:hasDefault }, { :markExpr(expr: p:defaultExpr); });
+						pi++;
+					});
+					while([Int is si: 0], { si < m:body:length() }, {
+						:markStmt(stmt: m:body:get(index: si));
+						si++;
+					});
+				});
+				if({ m:kind == MemberKind:CLASS }, {
+					:collectClassRefs(cls: m:nestedClass);
 				});
 			});
-			if({ m:kind == MemberKind:CLASS }, {
-				:collectClassRefs(cls: m:nestedClass);
-			});
+			mi++;
 		});
 	}
 
 	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
-		:refs: Map:init();
+		:refs: Map();
 		:collectClassRefs(cls: classDef);
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
-							match(on: item, when: [
-								Expression:ArrayLit: local Function(Array of Expression is segs){
-									segs:each(action: local Function(Expression is seg){
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is segs){
+									while([Int is si: 0], { si < segs:length() }, {
+										local Expression is seg: segs:get(index: si);
 										match(on: seg, when: [
 											Expression:Ident: local Function(String is name){
 												if({ name != '' && !:refs:has(key: name) }, {
-													issues:add(item: LintIssue:init(
+													issues:add(item: LintIssue(
 														ruleId: :id(),
 														line: seg:line,
 														isWarning: :isWarning(),
@@ -194,7 +209,7 @@ Class of LintRule is UnusedUsingRule{
 											Expression:UsingAs: local Function(String is className, [NamedArg] is _args){
 												local String is alias: seg:usingAsAlias;
 												if({ alias != '' && !:refs:has(key: alias) }, {
-													issues:add(item: LintIssue:init(
+													issues:add(item: LintIssue(
 														ruleId: :id(),
 														line: seg:line,
 														isWarning: :isWarning(),
@@ -203,9 +218,11 @@ Class of LintRule is UnusedUsingRule{
 												});
 											}
 										], default: {});
+										si++;
 									});
 								}
 							], default: {});
+							ii++;
 						});
 					}
 				], default: {});
@@ -213,6 +230,7 @@ Class of LintRule is UnusedUsingRule{
 			if({ m:kind == MemberKind:CLASS }, {
 				:checkClass(classDef: m:nestedClass, issues: issues);
 			});
+			mi++;
 		});
 	}
 }

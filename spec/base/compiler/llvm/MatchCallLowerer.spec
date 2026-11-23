@@ -42,7 +42,7 @@ Class of CallLowerer is MatchCallLowerer{
 			local NamedArg is na: call:args:get(index: i);
 			if({ na:name == 'when' || (na:name == '' && i == 1) }, {
 				match(on: na:value, when: [
-					Expression:MapLit: local Function(Array of Expression is _ks, Array of Expression is _vs){
+					Expression:MapLit: local Function([Expression] is _ks, [Expression] is _vs){
 						isMapLit: true;
 					}
 				], default: {});
@@ -121,9 +121,9 @@ Class of CallLowerer is MatchCallLowerer{
 
 	local Function of String is emitKeyMatchCond(IrBuilder is b, Expression is onExpr, String is subjVal, IrType is subjTy, Expression is k){
 		local Boolean is isArrKey: false;
-		local Array of Expression is arrItems: Array();
+		local [Expression] is arrItems: [];
 		match(on: k, when: [
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				isArrKey: true;
 				arrItems: items;
 			}
@@ -268,11 +268,11 @@ Class of CallLowerer is MatchCallLowerer{
 		});
 
 		local String is endLbl: b:nextLabel(prefix: 'match_end');
-		local Array of Expression is keys: Array();
-		local Array of Expression is vals: Array();
+		local [Expression] is keys: [];
+		local [Expression] is vals: [];
 		if({ hasWhen }, {
 			match(on: whenExpr, when: [
-				Expression:MapLit: local Function(Array of Expression is ks, Array of Expression is vs){
+				Expression:MapLit: local Function([Expression] is ks, [Expression] is vs){
 					keys: ks;
 					vals: vs;
 				}

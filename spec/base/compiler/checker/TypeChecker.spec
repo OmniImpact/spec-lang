@@ -119,7 +119,7 @@ Class is TypeChecker{
 
 	## Class currently being analyzed.
 	local String is currentClassName: '';
-	local ClassInfo is currentClassDef: ClassInfo:init(name: '', baseClass: '', members: Array());
+	local ClassInfo is currentClassDef: ClassInfo(name: '', baseClass: '', members: []);
 
 	## Source file of the class currently being analyzed.
 	local String is currentSourceFile: '';
@@ -526,11 +526,11 @@ Class is TypeChecker{
 	## @param name: Target class name.
 	## @return: The descriptor, or an unnamed one when absent.
 	Function of ClassInfo is findClass(String is name){
-		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: Array());
+		local ClassInfo is res: ClassInfo(name: '', baseClass: '', members: []);
 		local Boolean is found: false;
 		local Int is count: :programClasses:length();
 		local Boolean is hasColon: name:contains(needle: ':');
-		local ClassInfo is floorCand: ClassInfo:init(name: '', baseClass: '', members: Array());
+		local ClassInfo is floorCand: ClassInfo(name: '', baseClass: '', members: []);
 		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
@@ -566,7 +566,7 @@ Class is TypeChecker{
 			return floorCand;
 		});
 		if({ hasColon }, {
-			local ClassInfo is qMatch: ClassInfo(name: '', baseClass: '', members: Array());
+			local ClassInfo is qMatch: ClassInfo(name: '', baseClass: '', members: []);
 			local Int is pci: 0;
 			while({ qMatch:name == '' && pci < :programClasses:length() }, {
 				local ClassInfo is c: :programClasses:get(index: pci);
@@ -902,11 +902,13 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return Member:init(kind: MemberKind:FIELD);
 		});
-		local Member is res: Member:init(kind: MemberKind:FIELD);
-		cls:members:each(action: local Function(Member is m){
-			if({ res:name == '' && !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
+		local Member is res: Member(kind: MemberKind:FIELD);
+		while([Int is mi: 0], { res:name == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
 				res: m;
 			});
+			mi++;
 		});
 		if({ res:name != '' }, {
 			return res;
@@ -927,11 +929,13 @@ Class is TypeChecker{
 	## @return: The variant member, or an empty-named one.
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: :findClass(name: enumName);
-		local Member is res: Member:init(kind: MemberKind:FIELD);
-		cls:members:each(action: local Function(Member is m){
-			if({ res:name == '' && m:kind == MemberKind:FIELD && m:name == variantName }, {
+		local Member is res: Member(kind: MemberKind:FIELD);
+		while([Int is mi: 0], { res:name == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:FIELD && m:name == variantName }, {
 				res: m;
 			});
+			mi++;
 		});
 		return res;
 	}
@@ -951,11 +955,13 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return '';
 		});
-		local Member is foundM: Member:init(kind: MemberKind:FIELD);
-		cls:members:each(action: local Function(Member is m){
-			if({ foundM:name == '' && !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:FIELD && m:name == fieldName }, {
+		local Member is foundM: Member(kind: MemberKind:FIELD);
+		while([Int is mi: 0], { foundM:name == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:FIELD && m:name == fieldName }, {
 				foundM: m;
 			});
+			mi++;
 		});
 		if({ foundM:name != '' }, {
 			local Type is subNode: :substituteTypeNode(t: foundM:memberType, cls: cls, typeArgs: recvNode:params);
@@ -988,11 +994,13 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return '';
 		});
-		local Member is foundM: Member:init(kind: MemberKind:FIELD);
-		cls:members:each(action: local Function(Member is m){
-			if({ foundM:name == '' && !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
+		local Member is foundM: Member(kind: MemberKind:FIELD);
+		while([Int is mi: 0], { foundM:name == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
 				foundM: m;
 			});
+			mi++;
 		});
 		if({ foundM:name != '' }, {
 			local Type is subNode: :substituteTypeNode(t: foundM:memberType, cls: cls, typeArgs: recvNode:params);
@@ -1075,10 +1083,10 @@ Class is TypeChecker{
 		local Boolean is anyVoid: false;
 		local String is resT: '';
 		local Boolean is bad: false;
-		local Array of Expression is armKeys: Array();
-		local Array of Expression is armVals: Array();
+		local [Expression] is armKeys: [];
+		local [Expression] is armVals: [];
 		match(on: arms, when: [
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				armKeys: keys;
 				armVals: values;
 			},
@@ -1105,11 +1113,12 @@ Class is TypeChecker{
 					});
 					hasElse: true;
 				}, {
-					local Array of Expression is keyTargets: match(on: key, when: [
-						Expression:ArrayLit: local Function of Array of Expression(Array of Expression is items){ return items; },
-						else: { Array([key]) }
+					local [Expression] is keyTargets: match(on: key, when: [
+						Expression:ArrayLit: local Function of [Expression]([Expression] is items){ return items; },
+						else: { [key] }
 					]);
-					keyTargets:each(action: local Function(Expression is one){
+					while([Int is kti: 0], { kti < keyTargets:length() }, {
+						local Expression is one: keyTargets:get(index: kti);
 						# String-literal keys match String subjects by value.
 						local Boolean is handledStr: match(on: one, when: [
 							Expression:StringLit: local Function of Boolean(String is value){
@@ -1129,156 +1138,162 @@ Class is TypeChecker{
 							},
 							else: { false }
 						]);
-						if({ handledStr }, {
-							return;
-						});
-						local String is keyName: match(on: one, when: [
-							Expression:Ident: local Function of String(String is name){ return name; },
-							Expression:Path: local Function of String(Array of String is segments){
-								return if({ segments:length() > 0 }, {
-									segments:get(index: segments:length() - 1)
+						if({ !handledStr }, {
+							local String is keyName: match(on: one, when: [
+								Expression:Ident: local Function of String(String is name){ return name; },
+								Expression:Path: local Function of String(Array of String is segments){
+									return if({ segments:length() > 0 }, {
+										segments:get(index: segments:length() - 1)
+									}, {
+										''
+									});
+								},
+								else: { '' }
+							]);
+							if({ keyName == '' }, {
+								:addError(line: :currentLine, msg: 'Match keys must be held-member references.');
+								bad: true;
+							}, {
+								# Held members first; the variant registry is the
+								# interim bridge — today's enum
+								# variants match until the sugar migrates.
+								local String is owner: :findHeldOwnerClass(className: subjT, memberName: keyName);
+								if({ owner == '' && :allEnumNames:has(key: subjT) }, {
+									# The interim bridge: today's
+									# enum variants ARE the subject enum's own member
+									# list — resolved directly, no global registry
+									# (variant names collide across enums).
+									local ClassInfo is enumCls: :findClass(name: subjT);
+									local Boolean is variantFound: false;
+									while([Int is mi: 0], { !variantFound && mi < enumCls:members:length() }, {
+										local Member is m: enumCls:members:get(index: mi);
+										local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
+											Expression:ArrayLit: local Function of Boolean([Expression] is items){ return true; },
+											else: { false }
+										]);
+										if({ m:name == keyName && !initIsArr }, {
+											variantFound: true;
+										});
+										mi++;
+									});
+									if({ variantFound }, {
+										owner: subjT;
+									});
 								}, {
-									''
-								});
-							},
-							else: { '' }
-						]);
-						if({ keyName == '' }, {
-							:addError(line: :currentLine, msg: 'Match keys must be held-member references.');
-							bad: true;
-						}, {
-							# Held members first; the variant registry is the
-							# interim bridge — today's enum
-							# variants match until the sugar migrates.
-							local String is owner: :findHeldOwnerClass(className: subjT, memberName: keyName);
-							if({ owner == '' && :allEnumNames:has(key: subjT) }, {
-								# The interim bridge: today's
-								# enum variants ARE the subject enum's own member
-								# list — resolved directly, no global registry
-								# (variant names collide across enums).
-								local ClassInfo is enumCls: :findClass(name: subjT);
-								local Boolean is variantFound: false;
-								enumCls:members:each(action: local Function(Member is m){
-									local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
-										Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
-										else: { false }
-									]);
-									if({ !variantFound && m:name == keyName && !initIsArr }, {
-										variantFound: true;
+									# The class-model bridge: a
+									# desugared TAGGED enum's variants are its nested
+									# subclasses — the key admits when one matches.
+									if({ :bindings:isClassModelEnum(c: :findClass(name: subjT)) }, {
+										local ClassInfo is cmCls: :findClass(name: subjT);
+										while([Int is mi: 0], { owner == '' && mi < cmCls:members:length() }, {
+											local Member is m: cmCls:members:get(index: mi);
+											if({ m:kind == MemberKind:CLASS && m:nestedClass:name == keyName }, {
+												owner: subjT;
+											});
+											mi++;
+										});
 									});
 								});
-								if({ variantFound }, {
-									owner: subjT;
-								});
-							}, {
-								# The class-model bridge: a
-								# desugared TAGGED enum's variants are its nested
-								# subclasses — the key admits when one matches.
-								if({ :bindings:isClassModelEnum(c: :findClass(name: subjT)) }, {
-									local ClassInfo is cmCls: :findClass(name: subjT);
-									cmCls:members:each(action: local Function(Member is m){
-										if({ owner == '' && m:kind == MemberKind:CLASS && m:nestedClass:name == keyName }, {
-											owner: subjT;
+								if({ owner == '' }, {
+									:addError(line: :currentLine, msg: 'Match key \'' . keyName . '\' is not a held member of \'' . subjT . '\'.');
+									bad: true;
+								}, {
+									local String is target: owner . ':' . keyName;
+									if({ covered:indexOf(search: target, default: -1) >= 0 }, {
+										:addError(line: :currentLine, msg: 'Duplicate match key \'' . keyName . '\'.');
+										bad: true;
+									}, {
+										covered:add(item: target);
+										if({ :allEnumNames:has(key: owner) || :bindings:isClassModelEnum(c: :findClass(name: owner)) }, {
+											# Payload arms (the Stage-5 form pulled forward):
+											# an arm closure's parameters bind the tagged
+											# variant's constructor payloads — type them
+											# from the variant's declared parameters.
+											match(on: val, when: [
+												Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
+													if({ params:length() > 0 }, {
+													# The variant's parameter surface: the legacy
+															# member (today's enums) or the desugared
+															# nested subclass's init.
+															local Member is pvMem: Member(kind: MemberKind:FIELD);
+															local ClassInfo is subCls: :findClass(name: owner . ':' . keyName);
+															if({ :allEnumNames:has(key: owner) }, {
+																local ClassInfo is pvCls: :findClass(name: owner);
+																while([Int is mi: 0], { pvMem:name == '' && mi < pvCls:members:length() }, {
+																	local Member is m: pvCls:members:get(index: mi);
+																	local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
+																		Expression:ArrayLit: local Function of Boolean([Expression] is items){ return true; },
+																		else: { false }
+																	]);
+																	if({ m:name == keyName && !initIsArr }, {
+																		pvMem: m;
+																	});
+																	mi++;
+																});
+															}, {
+																if({ subCls:name != '' }, {
+																	while([Int is mi: 0], { pvMem:name == '' && mi < subCls:members:length() }, {
+																		local Member is m: subCls:members:get(index: mi);
+																		if({ m:kind == MemberKind:METHOD && m:name == 'init' }, {
+																			pvMem: m;
+																		});
+																		mi++;
+																	});
+																});
+															});
+															if({ params:length() > pvMem:params:length() }, {
+																:addError(line: :currentLine, msg: 'Match arm for \'' . owner . ':' . keyName . '\' binds ' . (params:length() as String) . ' parameter(s), but the variant declares ' . (pvMem:params:length() as String) . '.');
+																bad: true;
+															});
+															# Generic variants: the grounded subject type
+															# ('Maybe:Int') supplies the type args the
+															# variant's parameters are read against.
+															local Array of String is groundedArgs: Array();
+															if({ subCls:typeParams:length() > 0 }, {
+																local Type is subjNode: :parseTypeNode(s: subjFull);
+																if({ subjNode:name == subCls:name || subjNode:name == owner }, {
+																	while([Int is pai: 0], { pai < subjNode:params:length() }, {
+																		groundedArgs:add(item: :formatVarTypeString(t: subjNode:params:get(index: pai)));
+																		pai++;
+																	});
+																});
+															});
+															while([Int is pbi: 0], { pbi < params:length() }, {
+																local Parameter is bp: params:get(index: pbi);
+																if({ pbi < pvMem:params:length() }, {
+																	local Parameter is vp: pvMem:params:get(index: pbi);
+																	if({ bp:paramType:name == '' || bp:paramType:name == Primitive:ANY:value() }, {
+																		if({ groundedArgs:length() > pbi }, {
+																			bp:paramType: :parseTypeNode(s: groundedArgs:get(index: pbi)):clone();
+																		}, {
+																			bp:paramType: vp:paramType;
+																		});
+																	}, {
+																		local String is bpT: :formatVarTypeString(t: bp:paramType);
+																		local String is vpT: :formatVarTypeString(t: vp:paramType);
+																		if({ groundedArgs:length() > 0 }, {
+																			vpT: :substituteTypeParam(rawType: vpT, cls: subCls, typeArgs: groundedArgs);
+																		});
+																		if({ !:isAssignable(target: bpT, source: vpT) }, {
+																			:addError(line: :currentLine, msg: 'Match arm parameter \'' . bp:name . '\' for \'' . owner . ':' . keyName . '\' has type \'' . bpT . '\', expected \'' . vpT . '\'.');
+																			bad: true;
+																		});
+																	});
+																});
+																pbi++;
+															});
+													});
+												},
+												else: {}
+											]);
+										}, {
+											:checkMemberVisibility(ownerClass: owner, member: :findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
 										});
 									});
 								});
 							});
-							if({ owner == '' }, {
-								:addError(line: :currentLine, msg: 'Match key \'' . keyName . '\' is not a held member of \'' . subjT . '\'.');
-								bad: true;
-							}, {
-								local String is target: owner . ':' . keyName;
-								if({ covered:indexOf(search: target, default: -1) >= 0 }, {
-									:addError(line: :currentLine, msg: 'Duplicate match key \'' . keyName . '\'.');
-									bad: true;
-								}, {
-									covered:add(item: target);
-									if({ :allEnumNames:has(key: owner) || :bindings:isClassModelEnum(c: :findClass(name: owner)) }, {
-										# Payload arms (the Stage-5 form pulled forward):
-										# an arm closure's parameters bind the tagged
-										# variant's constructor payloads — type them
-										# from the variant's declared parameters.
-										match(on: val, when: [
-											Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
-												if({ params:length() > 0 }, {
-												# The variant's parameter surface: the legacy
-														# member (today's enums) or the desugared
-														# nested subclass's init.
-														local Member is pvMem: Member:init(kind: MemberKind:FIELD);
-														local ClassInfo is subCls: :findClass(name: owner . ':' . keyName);
-														if({ :allEnumNames:has(key: owner) }, {
-															local ClassInfo is pvCls: :findClass(name: owner);
-															pvCls:members:each(action: local Function(Member is m){
-																local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
-																	Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
-																	else: { false }
-																]);
-																if({ pvMem:name == '' && m:name == keyName && !initIsArr }, {
-																	pvMem: m;
-																});
-															});
-														}, {
-															if({ subCls:name != '' }, {
-																subCls:members:each(action: local Function(Member is m){
-																	if({ pvMem:name == '' && m:kind == MemberKind:METHOD && m:name == 'init' }, {
-																		pvMem: m;
-																	});
-																});
-															});
-														});
-														if({ params:length() > pvMem:params:length() }, {
-															:addError(line: :currentLine, msg: 'Match arm for \'' . owner . ':' . keyName . '\' binds ' . (params:length() as String) . ' parameter(s), but the variant declares ' . (pvMem:params:length() as String) . '.');
-															bad: true;
-														});
-														# Generic variants: the grounded subject type
-														# ('Maybe:Int') supplies the type args the
-														# variant's parameters are read against.
-														local Array of String is groundedArgs: Array();
-														if({ subCls:typeParams:length() > 0 }, {
-															local Type is subjNode: :parseTypeNode(s: subjFull);
-															if({ subjNode:name == subCls:name || subjNode:name == owner }, {
-																local Int is pai: 0;
-																while({ pai < subjNode:params:length() }, {
-																	groundedArgs:add(item: :formatVarTypeString(t: subjNode:params:get(index: pai)));
-																	pai++;
-																});
-															});
-														});
-														local Int is pbi: 0;
-														while({ pbi < params:length() }, {
-															local Parameter is bp: params:get(index: pbi);
-															if({ pbi < pvMem:params:length() }, {
-																local Parameter is vp: pvMem:params:get(index: pbi);
-																if({ bp:paramType:name == '' || bp:paramType:name == Primitive:ANY:value() }, {
-																	if({ groundedArgs:length() > pbi }, {
-																		bp:paramType: :parseTypeNode(s: groundedArgs:get(index: pbi)):clone();
-																	}, {
-																		bp:paramType: vp:paramType;
-																	});
-																}, {
-																	local String is bpT: :formatVarTypeString(t: bp:paramType);
-																	local String is vpT: :formatVarTypeString(t: vp:paramType);
-																	if({ groundedArgs:length() > 0 }, {
-																		vpT: :substituteTypeParam(rawType: vpT, cls: subCls, typeArgs: groundedArgs);
-																	});
-																	if({ !:isAssignable(target: bpT, source: vpT) }, {
-																		:addError(line: :currentLine, msg: 'Match arm parameter \'' . bp:name . '\' for \'' . owner . ':' . keyName . '\' has type \'' . bpT . '\', expected \'' . vpT . '\'.');
-																		bad: true;
-																	});
-																});
-															});
-															pbi: pbi + 1;
-														});
-												});
-											},
-											else: {}
-										]);
-									}, {
-										:checkMemberVisibility(ownerClass: owner, member: :findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
-									});
-								});
-							});
 						});
+						kti++;
 					});
 				});
 				local Boolean is valIsAnon: match(on: val, when: [
@@ -1371,12 +1386,13 @@ Class is TypeChecker{
 			local ClassInfo is subjCls: :findClass(name: subjT);
 			local Boolean is todayEnum: :allEnumNames:has(key: subjT);
 			local String is missing: '';
-			subjCls:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { mi < subjCls:members:length() }, {
+				local Member is m: subjCls:members:get(index: mi);
 				# Class-model enum: nested subclasses (tagged enum) OR held
 				# fields (value/plain enum) are the closed variant set.
 				# Legacy/plain enum: non-array members in allEnumNames.
 				local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+					Expression:ArrayLit: local Function of Boolean([Expression] is items){ return true; },
 					else: { false }
 				]);
 				local Boolean is variantMember: false;
@@ -1394,6 +1410,7 @@ Class is TypeChecker{
 						missing: missing . subjT . ':' . vName;
 					});
 				});
+				mi++;
 			});
 			if({ missing != '' && !hasElse && !hasExplicitDefault }, {
 				:addError(line: :currentLine, msg: 'Non-exhaustive match: missing arm(s) ' . missing . ' of \'' . subjT . '\'; add arms or an else.');
@@ -1427,10 +1444,10 @@ Class is TypeChecker{
 		local Boolean is anyVoid: false;
 		local String is resT: '';
 		local Boolean is bad: false;
-		local Array of Expression is armKeys: Array();
-		local Array of Expression is armVals: Array();
+		local [Expression] is armKeys: [];
+		local [Expression] is armVals: [];
 		match(on: arms, when: [
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				armKeys: keys;
 				armVals: values;
 			},
@@ -1647,7 +1664,8 @@ Class is TypeChecker{
 
 	local Function is checkVariadicInitRequiredFields(ClassInfo is recvCls, CallData is cd){
 		if({ recvCls:name == '' || :isBindingDeclaration(cls: recvCls) }, { return; });
-		recvCls:members:each(action: local Function(Member is fm){
+		while([Int is mi: 0], { mi < recvCls:members:length() }, {
+			local Member is fm: recvCls:members:get(index: mi);
 			# Required-field validation covers PUBLIC fields only: `local`/
 			# `contained` fields are invisible outside the declaring class,
 			# so no caller can ever supply them (e.g. Stack's private
@@ -1655,8 +1673,7 @@ Class is TypeChecker{
 			if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && !fm:hasModifier(kw: Keyword:LOCAL) && !fm:hasModifier(kw: Keyword:CONTAINED) && fm:name != 'using' && fm:name != 'namespace' && fm:name != 'castable' && fm:name != 'group' }, {
 				local String is fTypeStr: :formatVarTypeString(t: fm:memberType);
 				local Boolean is supplied: false;
-				local Int is ai: 0;
-				while({ !supplied && ai < cd:args:length() }, {
+				while([Int is ai: 0], { !supplied && ai < cd:args:length() }, {
 					local NamedArg is a: cd:args:get(index: ai);
 					if({ a:name == fm:name }, {
 						local String is argT: a:value:resolvedType;
@@ -1670,6 +1687,7 @@ Class is TypeChecker{
 					:addError(line: :currentLine, msg: "Field '" . fm:name . "' of '" . recvCls:name . "' has no default value and is not assigned with matching type '" . :displayType(t: fTypeStr) . "' in constructor call.");
 				});
 			});
+			mi++;
 		});
 	}
 
@@ -1827,7 +1845,7 @@ Class is TypeChecker{
 	Function of Member is selectOverload(String is className, String is methodName, Expression is expr){
 		local Member is none: Member:init(kind: MemberKind:METHOD);
 		local String is baseName: :memberLookupRoot(className: className);
-		local Array of Member is group: Array();
+		local [Member] is group: [];
 		local Array of String is ownerAcc: Array();
 		:collectOverloadGroup(className: baseName, methodName: methodName, acc: group, ownerAcc: ownerAcc);
 		if({ group:length() == 0 }, {
@@ -1898,117 +1916,112 @@ Class is TypeChecker{
 				return none;
 			});
 		});
-		local Array of Member is survivors: Array();
+		local [Member] is survivors: [];
 		# §as: a scoped remainder binds to an unbound last
 		# Function parameter — it never widens the arity. Pass 1: exact
 		# arity on the explicit arguments. Pass 2 (only when pass 1 is
 		# empty and the call is scoped): params == explicit + 1 with the
 		# last parameter Function-typed — the open scope slot.
 		local Int is wantCount: args:length();
-		group:each(action: local Function(Member is m){
+		while([Int is gi: 0], { gi < group:length() }, {
+			local Member is m: group:get(index: gi);
 			local Boolean is hasVar: m:params:length() > 0 && m:params:get(index: m:params:length() - 1):isVariadic;
+			local Boolean is handled: false;
 			if({ hasVar && !isScoped }, {
+				handled: true;
 				local Parameter is vp: m:params:get(index: m:params:length() - 1);
 				local Int is fixedCount: m:params:length() - 1;
 				if({ allPos }, {
 					if({ vp:paramType:name == 'Array' || wantCount == 0 }, {
 						local Boolean is fixedOk: true;
-						local Int is pi: wantCount;
-						while({ fixedOk && pi < fixedCount }, {
+						while([Int is pi: wantCount], { fixedOk && pi < fixedCount }, {
 							if({ !m:params:get(index: pi):hasDefault }, { fixedOk: false; });
 							pi++;
 						});
-						if({ fixedOk }, { survivors:add(item: m); });
+						if({ fixedOk }, { survivors:push(item: m); });
 					});
-					return;
-				});
-				if({ vp:paramType:name == 'Map' }, {
-					local Boolean is fixedMatch: true;
-					local Int is fi: 0;
-					while({ fixedMatch && fi < fixedCount }, {
-						local Parameter is fp: m:params:get(index: fi);
-						local Boolean is present: false;
-						local Int is pai: 0;
-						while({ !present && pai < args:length() }, {
-							if({ args:get(index: pai):name == fp:name }, { present: true; });
-							pai++;
+				}, {
+					if({ vp:paramType:name == 'Map' }, {
+						local Boolean is fixedMatch: true;
+						while([Int is fi: 0], { fixedMatch && fi < fixedCount }, {
+							local Parameter is fp: m:params:get(index: fi);
+							local Boolean is present: false;
+							while([Int is pai: 0], { !present && pai < args:length() }, {
+								if({ args:get(index: pai):name == fp:name }, { present: true; });
+								pai++;
+							});
+							if({ !present && !fp:hasDefault }, { fixedMatch: false; });
+							fi++;
 						});
-						if({ !present && !fp:hasDefault }, { fixedMatch: false; });
-						fi++;
+						if({ fixedMatch }, { survivors:push(item: m); });
 					});
-					if({ fixedMatch }, { survivors:add(item: m); });
 				});
-				return;
 			});
-			if({ m:params:length() < wantCount || (isScoped && m:params:length() != wantCount) }, {
-				return;
-			});
-			if({ allPos }, {
-				local Boolean is tailDefaulted: true;
-				local Int is pi: wantCount;
-				while({ tailDefaulted && pi < m:params:length() }, {
-					local Parameter is tp: m:params:get(index: pi);
-					if({ !tp:hasDefault }, {
-						tailDefaulted: false;
-					});
-					pi++;
-				});
-				if({ tailDefaulted }, {
-					survivors:add(item: m);
-				});
-				return;
-			});
-			local Boolean is namesMatch: true;
-			# Every supplied named argument must correspond to a parameter of m.
-			local Int is nai: 0;
-			while({ namesMatch && nai < args:length() }, {
-				local NamedArg is a: args:get(index: nai);
-				local Boolean is known: false;
-				local Int is mpi: 0;
-				while({ mpi < m:params:length() }, {
-					if({ m:params:get(index: mpi):name == a:name }, {
-						known: true;
-					});
-					mpi++;
-				});
-				if({ !known }, {
-					namesMatch: false;
-				});
-				nai++;
-			});
-			local Int is npIdx: 0;
-			while({ npIdx < m:params:length() }, {
-				local Parameter is p: m:params:get(index: npIdx);
-				# The scope slot (the last parameter) is bound by the
-				# remainder, not by a named argument.
-				if({ namesMatch && !(isScoped && npIdx == m:params:length() - 1) }, {
-					local Boolean is present: false;
-					local Int is pai: 0;
-					while({ !present && pai < args:length() }, {
-						if({ args:get(index: pai):name == p:name }, {
-							present: true;
+			if({ !handled && !(m:params:length() < wantCount || (isScoped && m:params:length() != wantCount)) }, {
+				if({ allPos }, {
+					local Boolean is tailDefaulted: true;
+					while([Int is pi: wantCount], { tailDefaulted && pi < m:params:length() }, {
+						local Parameter is tp: m:params:get(index: pi);
+						if({ !tp:hasDefault }, {
+							tailDefaulted: false;
 						});
-						pai++;
+						pi++;
 					});
-					if({ !present && !p:hasDefault }, {
-						namesMatch: false;
+					if({ tailDefaulted }, {
+						survivors:push(item: m);
+					});
+				}, {
+					local Boolean is namesMatch: true;
+					# Every supplied named argument must correspond to a parameter of m.
+					while([Int is nai: 0], { namesMatch && nai < args:length() }, {
+						local NamedArg is a: args:get(index: nai);
+						local Boolean is known: false;
+						while([Int is mpi: 0], { mpi < m:params:length() }, {
+							if({ m:params:get(index: mpi):name == a:name }, {
+								known: true;
+							});
+							mpi++;
+						});
+						if({ !known }, {
+							namesMatch: false;
+						});
+						nai++;
+					});
+					while([Int is npIdx: 0], { npIdx < m:params:length() }, {
+						local Parameter is p: m:params:get(index: npIdx);
+						# The scope slot (the last parameter) is bound by the
+						# remainder, not by a named argument.
+						if({ namesMatch && !(isScoped && npIdx == m:params:length() - 1) }, {
+							local Boolean is present: false;
+							while([Int is pai: 0], { !present && pai < args:length() }, {
+								if({ args:get(index: pai):name == p:name }, {
+									present: true;
+								});
+								pai++;
+							});
+							if({ !present && !p:hasDefault }, {
+								namesMatch: false;
+							});
+						});
+						npIdx++;
+					});
+					if({ namesMatch }, {
+						survivors:push(item: m);
 					});
 				});
-				npIdx: npIdx + 1;
 			});
-			if({ namesMatch }, {
-				survivors:add(item: m);
-				return;
-			});
+			gi++;
 		});
 		if({ survivors:length() == 0 && isScoped }, {
 			# Pass 2: the open scope slot — params == explicit + 1, last
 			# parameter Function-typed.
-			local Array of Member is slots: Array();
-			group:each(action: local Function(Member is m){
+			local [Member] is slots: [];
+			while([Int is gi: 0], { gi < group:length() }, {
+				local Member is m: group:get(index: gi);
 				if({ :scopeSlotOk(m: m, explicitCount: args:length()) }, {
-					slots:add(item: m);
+					slots:push(item: m);
 				});
+				gi++;
 			});
 			if({ slots:length() == 1 }, {
 				local Member is sel: slots:get(index: 0);
@@ -2033,11 +2046,13 @@ Class is TypeChecker{
 			cd:overloadIndex: :indexOfMember(group: group, m: sel);
 			return sel;
 		});
-		local Array of Member is exact: Array();
-		survivors:each(action: local Function(Member is m){
+		local [Member] is exact: [];
+		while([Int is si: 0], { si < survivors:length() }, {
+			local Member is m: survivors:get(index: si);
 			if({ :exactTypeMatch(m: m, expr: expr) }, {
-				exact:add(item: m);
+				exact:push(item: m);
 			});
+			si++;
 		});
 		if({ exact:length() == 1 }, {
 			local Member is sel: exact:get(index: 0);
@@ -2051,11 +2066,13 @@ Class is TypeChecker{
 		if({ isScoped && exact:length() == 0 }, {
 			# Pass 2: the open scope slot — params == explicit + 1, last
 			# parameter Function-typed.
-			local Array of Member is slots: Array();
-			group:each(action: local Function(Member is m){
+			local [Member] is slots: [];
+			while([Int is gi: 0], { gi < group:length() }, {
+				local Member is m: group:get(index: gi);
 				if({ :scopeSlotOk(m: m, explicitCount: args:length()) }, {
-					slots:add(item: m);
+					slots:push(item: m);
 				});
+				gi++;
 			});
 			if({ slots:length() == 1 }, {
 				local Member is sel: slots:get(index: 0);
@@ -2065,11 +2082,13 @@ Class is TypeChecker{
 		});
 		if({ exact:length() > 1 }, {
 			# Prefer an exact-arity match over one that relies on default parameters.
-			local Array of Member is exactArity: Array();
-			exact:each(action: local Function(Member is m){
+			local [Member] is exactArity: [];
+			while([Int is ei: 0], { ei < exact:length() }, {
+				local Member is m: exact:get(index: ei);
 				if({ m:params:length() == wantCount }, {
-					exactArity:add(item: m);
+					exactArity:push(item: m);
 				});
+				ei++;
 			});
 			if({ exactArity:length() == 1 }, {
 				local Member is sel: exactArity:get(index: 0);
@@ -2111,7 +2130,7 @@ Class is TypeChecker{
 ## and terminates on revisit (any depth, cycles included).
 	## @param acc: The collected group (nearest-declaration semantics).
 	## @param ownerAcc: The declaring class name accumulator (reference).
-	Function is collectOverloadGroup(String is className, String is methodName, Map of String to String is visited: Map:init(), Array of Member is acc, Array of String is ownerAcc){
+	Function is collectOverloadGroup(String is className, String is methodName, Map of String to String is visited: Map:init(), [Member] is acc, Array of String is ownerAcc){
 		if({ ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || visited:has(key: className) }, {
 			return;
 		});
@@ -2126,12 +2145,14 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return;
 		});
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			# Instance overloads are held-blind: the
 			# class-name prefix reaches exactly the held members.
 			if({ m:kind == MemberKind:METHOD && m:name == methodName && !m:hasModifier(kw: Keyword:HELD) }, {
-				acc:add(item: m);
+				acc:push(item: m);
 			});
+			mi++;
 		});
 		if({ acc:length() > 0 }, {
 			# the owner's qualified identity — the bare name of a
@@ -2214,7 +2235,7 @@ Class is TypeChecker{
 		return foundTp;
 	}
 
-	Function of Boolean is isMethodTypeParam(String is tp, Member is m: Member:init(kind: MemberKind:METHOD), ClassInfo is cls: ClassInfo:init(name: '', baseClass: '', members: Array())){
+	Function of Boolean is isMethodTypeParam(String is tp, Member is m: Member:init(kind: MemberKind:METHOD), ClassInfo is cls: ClassInfo(name: '', baseClass: '', members: [])){
 		local ClassInfo is effCls: if({ cls:name != '' }, { cls }, { :currentClassDef });
 		if({ !:isUnboundTypeIdent(tp: tp, cls: effCls) }, {
 			return false;
@@ -2308,14 +2329,13 @@ Class is TypeChecker{
 	## @param group: The same-name member group.
 	## @param m: The selected member.
 	## @return: The overload index.
-	Function of Int is indexOfMember(Array of Member is group, Member is m){
-		local Int is idx: 0;
+	Function of Int is indexOfMember([Member] is group, Member is m){
 		local Int is hit: 0;
-		group:each(action: local Function(Member is g){
-			if({ g == m }, {
+		while([Int is idx: 0], { idx < group:length() }, {
+			if({ group:get(index: idx) == m }, {
 				hit: idx;
 			});
-			idx: idx + 1;
+			idx++;
 		});
 		return hit;
 	}
@@ -2330,7 +2350,7 @@ Class is TypeChecker{
 	## @return: The resolved return type.
 	Function of String is selectedReturnType(String is className, Member is selected, Expression is expr: Expression:Unknown){
 		local String is baseName: :memberLookupRoot(className: className);
-		local Array of Member is group: Array();
+		local [Member] is group: [];
 		local Array of String is ownerAcc: Array();
 		:collectOverloadGroup(className: baseName, methodName: selected:name, acc: group, ownerAcc: ownerAcc);
 		local String is ownerName: if({ ownerAcc:length() > 0 }, { ownerAcc:get(index: 0) }, { baseName });
@@ -2414,7 +2434,7 @@ Class is TypeChecker{
 	## @return: The member, or an empty node when absent.
 	Function of Member is lookupOverloadedMember(String is className, String is methodName, Int is idx){
 		local Member is none: Member:init(kind: MemberKind:METHOD);
-		local Array of Member is group: Array();
+		local [Member] is group: [];
 		local Array of String is ownerAcc: Array();
 		:collectOverloadGroup(className: :memberLookupRoot(className: className), methodName: methodName, acc: group, ownerAcc: ownerAcc);
 		if({ group:length() == 0 }, {
@@ -2516,14 +2536,16 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return;
 		});
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
-							match(on: item, when: [
-								Expression:ArrayLit: local Function(Array of Expression is subItems){
-									subItems:each(action: local Function(Expression is seg){
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is subItems){
+									while([Int is si: 0], { si < subItems:length() }, {
+										local Expression is seg: subItems:get(index: si);
 										match(on: seg, when: [
 											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 												if({ seg:usingAsAlias == '' }, {
@@ -2539,8 +2561,9 @@ Class is TypeChecker{
 													});
 												});
 											},
-											Expression:ArrayLit: local Function(Array of Expression is grpItems){
-												grpItems:each(action: local Function(Expression is gseg){
+											Expression:ArrayLit: local Function([Expression] is grpItems){
+												while([Int is gi: 0], { gi < grpItems:length() }, {
+													local Expression is gseg: grpItems:get(index: gi);
 													match(on: gseg, when: [
 														Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 															if({ gseg:usingAsAlias == '' }, {
@@ -2558,19 +2581,23 @@ Class is TypeChecker{
 														},
 														else: {}
 													]);
+													gi++;
 												});
 											},
 											else: {}
 										]);
+										si++;
 									});
 								},
 								else: {}
 							]);
+							ii++;
 						});
 					},
 					else: {}
 				]);
 			});
+			mi++;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
 			:collectBareProviders(clsName: baseName, methodName: methodName, visited: visited, acc: acc);
@@ -2614,39 +2641,47 @@ Class is TypeChecker{
 			return;
 		});
 		# Own nested classes.
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			if({ m:kind == MemberKind:CLASS }, {
 				:appendNestedScopeEntry(bare: m:nestedClass:name, q: m:nestedClass:qualifiedName());
 			});
+			mi++;
 		});
 		# The as-imported classes' nested classes.
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
-							match(on: item, when: [
-								Expression:ArrayLit: local Function(Array of Expression is segs){
-									segs:each(action: local Function(Expression is seg){
-										match(on: seg, when: [
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is segs){
+									while([Int is si: 0], { si < segs:length() }, {
+										match(on: segs:get(index: si), when: [
 											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 												local ClassInfo is provCls: :findClass(name: className);
 												if({ provCls:name != '' }, {
-													provCls:members:each(action: local Function(Member is nm){
+													while([Int is nmi: 0], { nmi < provCls:members:length() }, {
+														local Member is nm: provCls:members:get(index: nmi);
 														if({ nm:kind == MemberKind:CLASS }, {
 															:appendNestedScopeEntry(bare: nm:nestedClass:name, q: nm:nestedClass:qualifiedName());
 														});
+														nmi++;
 													});
 												});
 											}
 										], default: {});
+										si++;
 									});
 								}
 							], default: {});
+							ii++;
 						});
 					}
 				], default: {});
 			});
+			mi++;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
 			:collectNestedScopeEntries(clsName: baseName, visited: visited);
@@ -2724,10 +2759,12 @@ Class is TypeChecker{
 			return false;
 		});
 		local Boolean is found: false;
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { !found && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD && m:name == methodName }, {
 				found: true;
 			});
+			mi++;
 		});
 		if({ found }, {
 			return true;
@@ -2788,8 +2825,13 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return false;
 		});
-		local Int is groupSize: cls:members:count(predicate: local Function of Boolean(Member is m){
-			return m:kind == MemberKind:METHOD && m:name == methodName;
+		local Int is groupSize: 0;
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:METHOD && m:name == methodName }, {
+				groupSize++;
+			});
+			mi++;
 		});
 		if({ groupSize >= 2 }, {
 			return true;
@@ -2816,18 +2858,28 @@ Class is TypeChecker{
 		local Int is pci: 0;
 		while({ pci < :programClasses:length() }, {
 			local ClassInfo is c: :programClasses:get(index: pci);
-			local Array of Member is members: c:members;
+			local [Member] is members: c:members;
 			while([Int is i: 0], { i < members:length() }, {
 				local Member is m: members:get(index: i);
 				if({ m:kind == MemberKind:METHOD }, {
 					# a same-name METHOD before i: the group's legality checks
 					# run once per name, on the first declaration.
-					local Boolean is earlier: members:slice(start: 0, end: i):any(predicate: local Function of Boolean(Member is g){
-						return g:kind == MemberKind:METHOD && g:name == m:name;
+					local Boolean is earlier: false;
+					while([Int is ei: 0], { !earlier && ei < i }, {
+						local Member is g: members:get(index: ei);
+						if({ g:kind == MemberKind:METHOD && g:name == m:name }, {
+							earlier: true;
+						});
+						ei++;
 					});
 					if({ !earlier }, {
-						local Int is groupSize: members:count(predicate: local Function of Boolean(Member is g){
-							return g:kind == MemberKind:METHOD && g:name == m:name;
+						local Int is groupSize: 0;
+						while([Int is gi: 0], { gi < members:length() }, {
+							local Member is g: members:get(index: gi);
+							if({ g:kind == MemberKind:METHOD && g:name == m:name }, {
+								groupSize++;
+							});
+							gi++;
 						});
 						if({ groupSize >= 2 }, {
 							while([Int is a: 0], { a < members:length() }, {
@@ -2843,24 +2895,28 @@ Class is TypeChecker{
 								});
 								a++;
 							});
-							local Boolean is nonConcrete: members:any(predicate: local Function of Boolean(Member is g){
-								if({ g:kind != MemberKind:METHOD || g:name != m:name }, {
-									return false;
-								});
-								local Boolean is sharesArity: members:any(predicate: local Function of Boolean(Member is other){
-									return other != g && other:kind == MemberKind:METHOD && other:name == m:name && other:params:length() == g:params:length();
-								});
-								local Boolean is hasNonConcrete: false;
-								local Int is gpi: 0;
-								while({ gpi < g:params:length() && !hasNonConcrete }, {
-									local Parameter is pp: g:params:get(index: gpi);
-									local String is pt: pp:paramType:name;
-									if({ pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() || (sharesArity && c:typeParams:indexOf(search: pt, default: -1) >= 0) }, {
-										hasNonConcrete: true;
+							local Boolean is nonConcrete: false;
+							while([Int is gi: 0], { !nonConcrete && gi < members:length() }, {
+								local Member is g: members:get(index: gi);
+								if({ g:kind == MemberKind:METHOD && g:name == m:name }, {
+									local Boolean is sharesArity: false;
+									while([Int is oi: 0], { !sharesArity && oi < members:length() }, {
+										local Member is other: members:get(index: oi);
+										if({ other != g && other:kind == MemberKind:METHOD && other:name == m:name && other:params:length() == g:params:length() }, {
+											sharesArity: true;
+										});
+										oi++;
 									});
-									gpi++;
+									while([Int is gpi: 0], { gpi < g:params:length() && !nonConcrete }, {
+										local Parameter is pp: g:params:get(index: gpi);
+										local String is pt: pp:paramType:name;
+										if({ pt == '' || pt == Primitive:ANY:value() || pt == :names:selfFieldMarker() || (sharesArity && c:typeParams:indexOf(search: pt, default: -1) >= 0) }, {
+											nonConcrete: true;
+										});
+										gpi++;
+									});
 								});
-								return hasNonConcrete;
+								gi++;
 							});
 							if({ nonConcrete }, {
 								:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (§I.3).');
@@ -2961,69 +3017,72 @@ Class is TypeChecker{
 				if({ c:name == targetName || c:qualifiedName() == targetName }, {
 					return true;
 				});
-				c:members:each(action: local Function(Member is m){
-					if({ !granted && m:name == 'using' && m:hasInit }, {
+				while([Int is mi: 0], { !granted && mi < c:members:length() }, {
+					local Member is m: c:members:get(index: mi);
+					if({ m:name == 'using' && m:hasInit }, {
 						match(on: m:initExpr, when: [
-							Expression:ArrayLit: local Function(Array of Expression is items){
-								items:each(action: local Function(Expression is item){
-									if({ !granted }, {
-										match(on: item, when: [
-											Expression:ArrayLit: local Function(Array of Expression is segs){
-												local String is terminal: '';
-												local Array of String is terminals: Array();
-												local Array of String is nsSegs: Array();
-												segs:each(action: local Function(Expression is seg){
-													match(on: seg, when: [
-														Expression:Ident: local Function(String is s){
-															terminal: s;
-														},
-														Expression:UsingAs: local Function(String is className, [NamedArg] is args){
-															terminal: className;
-														},
-														Expression:ArrayLit: local Function(Array of Expression is grpItems){
-															grpItems:each(action: local Function(Expression is g){
-																match(on: g, when: [
-																	Expression:Ident: local Function(String is gs){
-																		terminals:add(item: gs);
-																	},
-																	Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
-																		terminals:add(item: gclassName);
-																	}
-																], default: {});
-															});
-														},
-														Expression:StringLit: local Function(String is s){
-															if({ s != '*' }, {
-																nsSegs:add(item: s);
-															});
-														}
-													], default: {
-													});
+							Expression:ArrayLit: local Function([Expression] is items){
+								while([Int is ii: 0], { !granted && ii < items:length() }, {
+									match(on: items:get(index: ii), when: [
+										Expression:ArrayLit: local Function([Expression] is segs){
+											local String is terminal: '';
+											local Array of String is terminals: Array();
+											local Array of String is nsSegs: Array();
+											while([Int is si: 0], { si < segs:length() }, {
+												match(on: segs:get(index: si), when: [
+													Expression:Ident: local Function(String is s){
+														terminal: s;
+													},
+													Expression:UsingAs: local Function(String is className, [NamedArg] is args){
+														terminal: className;
+													},
+													Expression:ArrayLit: local Function([Expression] is grpItems){
+														while([Int is gi: 0], { gi < grpItems:length() }, {
+															match(on: grpItems:get(index: gi), when: [
+																Expression:Ident: local Function(String is gs){
+																	terminals:add(item: gs);
+																},
+																Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
+																	terminals:add(item: gclassName);
+																}
+															], default: {});
+															gi++;
+														});
+													},
+													Expression:StringLit: local Function(String is s){
+														if({ s != '*' }, {
+															nsSegs:add(item: s);
+														});
+													}
+												], default: {
 												});
-												# The as-form and plain type import both grant the class
-												# itself (type annotations, construction, static/instance
-												# calls) as well as qualified nested references ('Outer:Inner').
-												local String is targetRoot: targetName:split(delimiter: ':'):get(index: 0);
-												if({ terminal == targetName || terminal == targetRoot }, {
+												si++;
+											});
+											# The as-form and plain type import both grant the class
+											# itself (type annotations, construction, static/instance
+											# calls) as well as qualified nested references ('Outer:Inner').
+											local String is targetRoot: targetName:split(delimiter: ':'):get(index: 0);
+											if({ terminal == targetName || terminal == targetRoot }, {
+												granted: true;
+											});
+											terminals:each(action: local Function(String is tm){
+												if({ tm == targetName || tm == targetRoot }, {
 													granted: true;
 												});
-												terminals:each(action: local Function(String is tm){
-													if({ tm == targetName || tm == targetRoot }, {
-														granted: true;
-													});
-												});
-												if({ terminal == '' && terminals:length() == 0 && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
-													granted: true;
-												});
-											}
-										], default: {
-										});
+											});
+											if({ terminal == '' && terminals:length() == 0 && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
+												granted: true;
+											});
+										}
+									], default: {
 									});
+									ii++;
 								});
 							}
 						], default: {
 						});
 					});
+					mi++;
 				});
 			});
 			pci++;
@@ -3063,66 +3122,69 @@ Class is TypeChecker{
 			return true;
 		});
 		local Boolean is granted: false;
-		cls:members:each(action: local Function(Member is m){
-			if({ !granted && m:name == 'using' && m:hasInit }, {
+		while([Int is mi: 0], { !granted && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
-							if({ !granted }, {
-								match(on: item, when: [
-									Expression:ArrayLit: local Function(Array of Expression is segs){
-										local String is terminal: '';
-										local Array of String is terminals: Array();
-										local Array of String is nsSegs: Array();
-										segs:each(action: local Function(Expression is seg){
-											match(on: seg, when: [
-												Expression:Ident: local Function(String is s){
-													terminal: s;
-												},
-												Expression:UsingAs: local Function(String is className, [NamedArg] is args){
-													terminal: className;
-												},
-												Expression:ArrayLit: local Function(Array of Expression is grpItems){
-													grpItems:each(action: local Function(Expression is g){
-														match(on: g, when: [
-															Expression:Ident: local Function(String is gs){
-																terminals:add(item: gs);
-															},
-															Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
-																terminals:add(item: gclassName);
-															}
-														], default: {});
-													});
-												},
-												Expression:StringLit: local Function(String is s){
-													if({ s != '*' }, {
-														nsSegs:add(item: s);
-													});
-												}
-											], default: {});
-										});
-										# The as-form and plain type import both grant the class
-										# itself (type annotations, construction, static/instance
-										# calls) as well as qualified nested references ('Outer:Inner').
-										local String is targetRoot2: targetName:split(delimiter: ':'):get(index: 0);
-										if({ terminal == targetName || terminal == targetRoot2 }, {
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { !granted && ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is segs){
+									local String is terminal: '';
+									local Array of String is terminals: Array();
+									local Array of String is nsSegs: Array();
+									while([Int is si: 0], { si < segs:length() }, {
+										match(on: segs:get(index: si), when: [
+											Expression:Ident: local Function(String is s){
+												terminal: s;
+											},
+											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
+												terminal: className;
+											},
+											Expression:ArrayLit: local Function([Expression] is grpItems){
+												while([Int is gi: 0], { gi < grpItems:length() }, {
+													match(on: grpItems:get(index: gi), when: [
+														Expression:Ident: local Function(String is gs){
+															terminals:add(item: gs);
+														},
+														Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
+															terminals:add(item: gclassName);
+														}
+													], default: {});
+													gi++;
+												});
+											},
+											Expression:StringLit: local Function(String is s){
+												if({ s != '*' }, {
+													nsSegs:add(item: s);
+												});
+											}
+										], default: {});
+										si++;
+									});
+									# The as-form and plain type import both grant the class
+									# itself (type annotations, construction, static/instance
+									# calls) as well as qualified nested references ('Outer:Inner').
+									local String is targetRoot2: targetName:split(delimiter: ':'):get(index: 0);
+									if({ terminal == targetName || terminal == targetRoot2 }, {
+										granted: true;
+									});
+									terminals:each(action: local Function(String is tm){
+										if({ tm == targetName || tm == targetRoot2 }, {
 											granted: true;
 										});
-										terminals:each(action: local Function(String is tm){
-											if({ tm == targetName || tm == targetRoot2 }, {
-												granted: true;
-											});
-										});
-										if({ terminal == '' && terminals:length() == 0 && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
-											granted: true;
-										});
-									}
-								], default: {});
-							});
+									});
+									if({ terminal == '' && terminals:length() == 0 && targetNsSegs:length() > 0 && :namespaceHasPrefix(fullSegs: targetNsSegs, prefixSegs: nsSegs) }, {
+										granted: true;
+									});
+								}
+							], default: {});
+							ii++;
 						});
 					}
 				], default: {});
 			});
+			mi++;
 		});
 		if({ granted }, {
 			return true;
@@ -3394,10 +3456,12 @@ Class is TypeChecker{
 								local Int is chainIdx: 1;
 								while({ chainOk && chainIdx < segs:length() }, {
 									local String is nextType: '';
-									chainCls:members:each(action: local Function(Member is m){
+									while([Int is mi: 0], { mi < chainCls:members:length() }, {
+										local Member is m: chainCls:members:get(index: mi);
 										if({ m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, {
 											nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
 										});
+										mi++;
 									});
 									if({ nextType != '' }, {
 										chainCls: :findClass(name: nextType);
@@ -3544,7 +3608,7 @@ Class is TypeChecker{
 		return res;
 	}
 
-	local Function of String is inferCastExpr(Expression is inner, String is target, Array of Expression is args){
+	local Function of String is inferCastExpr(Expression is inner, String is target, [Expression] is args){
 		local String is innerT: :inferExpressionType(expr: inner);
 		local String is src: if({ innerT != '' }, { innerT }, { Primitive:ANY:value() });
 		local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
@@ -3613,12 +3677,12 @@ Class is TypeChecker{
 		return innerT;
 	}
 
-	local Function of String is inferArrayLitExpr(Array of Expression is items, String is expected){
+	local Function of String is inferArrayLitExpr([Expression] is items, String is expected){
 		local Boolean is hasExpectedList: TypeDomain:isOfBase(t: expected, base: 'List');
 		local String is elemT: if({ hasExpectedList }, { TypeDomain:elemType(t: expected) }, { '' });
 		local Array of String is itemTypes: Array();
-		items:each(action: local Function(Expression is item){
-			local String is itemT: :inferExpressionType(expr: item, expected: elemT);
+		while([Int is ii: 0], { ii < items:length() }, {
+			local String is itemT: :inferExpressionType(expr: items:get(index: ii), expected: elemT);
 			if({ :isVoid(t: itemT) }, {
 				:addError(line: :currentLine, msg: 'List elements cannot be void.');
 			}, {
@@ -3626,6 +3690,7 @@ Class is TypeChecker{
 					itemTypes:add(item: itemT);
 				});
 			});
+			ii++;
 		});
 		local String is unifiedElemType: :unifyArrayElementTypes(elemTypes: itemTypes);
 		if({ hasExpectedList }, {
@@ -3651,40 +3716,44 @@ Class is TypeChecker{
 		return 'List';
 	}
 
-	local Function of String is inferMapLitExpr(Array of Expression is keys, Array of Expression is values, String is expected){
+	local Function of String is inferMapLitExpr([Expression] is keys, [Expression] is values, String is expected){
 		local Type is expNode: :parseTypeNode(s: expected);
 		if({ TypeDomain:isOfBaseNode(t: expNode, base: 'Map') }, {
 			local String is keyT: :formatVarTypeString(t: TypeDomain:mapKeyTypeNode(t: expNode));
 			local String is valT: :formatVarTypeString(t: TypeDomain:mapValTypeNode(t: expNode));
-			keys:each(action: local Function(Expression is k){
-				local String is kT: :inferExpressionType(expr: k);
+			while([Int is ki: 0], { ki < keys:length() }, {
+				local String is kT: :inferExpressionType(expr: keys:get(index: ki));
 				if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !:isAssignable(target: keyT, source: kT) }, {
 					local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
 					:addError(line: :currentLine, msg: "Cannot assign '" . kT . "' key to 'Map:" . kDisplay . ":" . valT . "'.");
 				});
+				ki++;
 			});
-			values:each(action: local Function(Expression is v){
-				local String is vT: :inferExpressionType(expr: v);
+			while([Int is vi: 0], { vi < values:length() }, {
+				local String is vT: :inferExpressionType(expr: values:get(index: vi));
 				if({ valT != '' && vT != '' && vT != Primitive:ANY:value() && !:isAssignable(target: valT, source: vT) }, {
 					local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
 					:addError(line: :currentLine, msg: "Cannot assign 'Map:" . kDisplay . ":" . vT . "' to 'Map:" . kDisplay . ":" . valT . "'.");
 				});
+				vi++;
 			});
 			return expected;
 		});
 		local String is firstKeyType: '';
 		local String is firstValType: '';
-		keys:each(action: local Function(Expression is k){
-			local String is kt: :inferExpressionType(expr: k);
+		while([Int is ki: 0], { ki < keys:length() }, {
+			local String is kt: :inferExpressionType(expr: keys:get(index: ki));
 			if({ firstKeyType == '' && kt != '' && kt != Primitive:ANY:value() }, {
 				firstKeyType: kt;
 			});
+			ki++;
 		});
-		values:each(action: local Function(Expression is v){
-			local String is vt: :inferExpressionType(expr: v);
+		while([Int is vi: 0], { vi < values:length() }, {
+			local String is vt: :inferExpressionType(expr: values:get(index: vi));
 			if({ firstValType == '' && vt != '' && vt != Primitive:ANY:value() }, {
 				firstValType: vt;
 			});
+			vi++;
 		});
 		return TypeDomain:makeMap(key: firstKeyType, val: firstValType);
 	}
@@ -3853,16 +3922,16 @@ Class is TypeChecker{
 			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
 				res: :inferBinaryExpr(op: op, left: left, right: right, expected: expected);
 			},
-			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is args){
 				res: :inferCastExpr(inner: inner, target: target, args: args);
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
 				res: :inferUnaryExpr(op: op, operand: operand);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				res: :inferArrayLitExpr(items: items, expected: expected);
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				res: :inferMapLitExpr(keys: keys, values: values, expected: expected);
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is fName){
@@ -3940,7 +4009,7 @@ Class is TypeChecker{
 		});
 		if({ hasMatchArms }, {
 			match(on: matchArms, when: [
-				Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 					matchArmsIsMap: true;
 				}
 			], default: {});
@@ -4448,11 +4517,11 @@ Class is TypeChecker{
 							expCallee: :findHeldMethod(className: targetType, methodName: method);
 						});
 						local Member is expTypedCallee: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
-						local Array of Member is expCandidates: Array([expCallee, expTypedCallee]);
-						expCandidates:each(action: local Function(Member is cm){
-							if({ !paramExpectsTypedFn && cm:name != '' }, {
-								local Int is pi: 0;
-								while({ pi < cm:params:length() }, {
+						local [Member] is expCandidates: [expCallee, expTypedCallee];
+						while([Int is eci: 0], { !paramExpectsTypedFn && eci < expCandidates:length() }, {
+							local Member is cm: expCandidates:get(index: eci);
+							if({ cm:name != '' }, {
+								while([Int is pi: 0], { pi < cm:params:length() }, {
 									local Parameter is cp: cm:params:get(index: pi);
 									local Boolean is pMatch: if({ arg:name != '' }, { cp:name == arg:name }, { pi == argIdx });
 									if({ pMatch && cp:paramType:name == 'Function' && cp:paramType:params:length() > 0 }, {
@@ -4461,6 +4530,7 @@ Class is TypeChecker{
 									pi++;
 								});
 							});
+							eci++;
 						});
 						if({ paramExpectsTypedFn }, {
 							match(on: arg:value, when: [
@@ -4744,10 +4814,12 @@ Class is TypeChecker{
 			local ClassInfo is ncCls: :findClass(name: targetName);
 			local Boolean is hasNested: false;
 			if({ ncCls:name != '' }, {
-				ncCls:members:each(action: local Function(Member is m){
-					if({ !hasNested && m:kind == MemberKind:CLASS && m:nestedClass:name == method }, {
+				while([Int is mi: 0], { !hasNested && mi < ncCls:members:length() }, {
+					local Member is m: ncCls:members:get(index: mi);
+					if({ m:kind == MemberKind:CLASS && m:nestedClass:name == method }, {
 						hasNested: true;
 					});
+					mi++;
 				});
 			});
 			if({ hasNested }, {
@@ -5086,10 +5158,12 @@ Class is TypeChecker{
 			return false;
 		});
 		local Boolean is found: false;
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { !found && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' }, {
 				found: true;
 			});
+			mi++;
 		});
 		if({ found }, {
 			return true;
@@ -5203,37 +5277,34 @@ Class is TypeChecker{
 		});
 		local String is found: '';
 		match(on: castM:initExpr, when: [
-			Expression:ArrayLit: local Function(Array of Expression is items){
-				items:each(action: local Function(Expression is entry){
-					if({ found == '' }, {
-						match(on: entry, when: [
-							Expression:ArrayLit: local Function(Array of Expression is pair){
-								if({ pair:length() == 2 }, {
-									local String is entryTarget: '';
-									local String is entryFn: '';
-									local Expression is p0: pair:get(index: 0);
-									local Expression is p1: pair:get(index: 1);
-									match(on: p0, when: [
-										Expression:Ident: local Function(String is s){ entryTarget: s; },
-										Expression:StringLit: local Function(String is s){ entryTarget: s; }
-									], default: {});
-									match(on: p1, when: [
-										Expression:Ident: local Function(String is s){ entryFn: s; },
-										Expression:StringLit: local Function(String is s){ entryFn: s; }
-									], default: {});
-									if({ entryTarget == target }, {
-										local String is fnRet: :lookupMethodReturnType(className: srcType, methodName: entryFn);
-										if({ fnRet != target }, {
-											:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' maps to \'' . entryFn . '\', which returns \'' . fnRet . '\', not \'' . target . '\'.');
-											found: entryFn;
-											return;
-										});
-										found: entryFn;
+			Expression:ArrayLit: local Function([Expression] is items){
+				while([Int is ii: 0], { found == '' && ii < items:length() }, {
+					match(on: items:get(index: ii), when: [
+						Expression:ArrayLit: local Function([Expression] is pair){
+							if({ pair:length() == 2 }, {
+								local String is entryTarget: '';
+								local String is entryFn: '';
+								local Expression is p0: pair:get(index: 0);
+								local Expression is p1: pair:get(index: 1);
+								match(on: p0, when: [
+									Expression:Ident: local Function(String is s){ entryTarget: s; },
+									Expression:StringLit: local Function(String is s){ entryTarget: s; }
+								], default: {});
+								match(on: p1, when: [
+									Expression:Ident: local Function(String is s){ entryFn: s; },
+									Expression:StringLit: local Function(String is s){ entryFn: s; }
+								], default: {});
+								if({ entryTarget == target }, {
+									local String is fnRet: :lookupMethodReturnType(className: srcType, methodName: entryFn);
+									if({ fnRet != target }, {
+										:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' maps to \'' . entryFn . '\', which returns \'' . fnRet . '\', not \'' . target . '\'.');
 									});
+									found: entryFn;
 								});
-							}
-						], default: {});
-					});
+							});
+						}
+					], default: {});
+					ii++;
 				});
 			}
 		], default: {});
@@ -5502,21 +5573,23 @@ Class is TypeChecker{
 							if({ call:args:length() < m:params:length() }, {
 								note: note . ' (' . (call:args:length() as String) . ' of ' . (m:params:length() as String) . ' declared parameters bound)';
 							});
-							local Array of Member is group: Array();
+							local [Member] is group: [];
 							local Array of String is groupOwners: Array();
 							:collectOverloadGroup(className: targetT, methodName: call:name, acc: group, ownerAcc: groupOwners);
 							local Int is maxParams: m:params:length();
-							group:each(action: local Function(Member is g){
+							while([Int is gi: 0], { gi < group:length() }, {
+								local Member is g: group:get(index: gi);
 								if({ g:params:length() > maxParams }, {
 									maxParams: g:params:length();
 								});
+								gi++;
 							});
 							if({ maxParams > m:params:length() }, {
 								local String is names: '';
-								group:each(action: local Function(Member is g){
+								while([Int is gi: 0], { gi < group:length() }, {
+									local Member is g: group:get(index: gi);
 									if({ g:params:length() == maxParams }, {
-										local Int is gpi: 0;
-										while({ gpi < g:params:length() }, {
+										while([Int is gpi: 0], { gpi < g:params:length() }, {
 											local Parameter is p: g:params:get(index: gpi);
 											if({ names:endsWith(suffix: p:name) == false }, {
 												if({ names != '' }, {
@@ -5527,6 +5600,7 @@ Class is TypeChecker{
 											gpi++;
 										});
 									});
+									gi++;
 								});
 								note: note . ' (' . (maxParams as String) . ' parameters are available: ' . names . ')';
 							});
@@ -5842,7 +5916,7 @@ Class is TypeChecker{
 						});
 						if({ a:name == 'when' }, {
 							match(on: a:value, when: [
-								Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+								Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 									local Int is ki: 0;
 									while({ ki < keys:length() && ki < values:length() }, {
 										armCount: armCount + 1;
@@ -5860,12 +5934,11 @@ Class is TypeChecker{
 										ki: ki + 1;
 									});
 								},
-								Expression:ArrayLit: local Function(Array of Expression is items){
-									items:each(action: local Function(Expression is it){
-										match(on: it, when: [
-											Expression:MapLit: local Function(Array of Expression is mKeys, Array of Expression is mVals){
-												local Int is mki: 0;
-												while({ mki < mKeys:length() && mki < mVals:length() }, {
+								Expression:ArrayLit: local Function([Expression] is items){
+									while([Int is ii: 0], { ii < items:length() }, {
+										match(on: items:get(index: ii), when: [
+											Expression:MapLit: local Function([Expression] is mKeys, [Expression] is mVals){
+												while([Int is mki: 0], { mki < mKeys:length() && mki < mVals:length() }, {
 													armCount: armCount + 1;
 													match(on: mKeys:get(index: mki), when: [
 														Expression:Ident: local Function(String is kn){
@@ -5878,13 +5951,14 @@ Class is TypeChecker{
 													if({ !:anonAlwaysTerminates(expr: mVals:get(index: mki)) }, {
 														allArmsTerm: false;
 													});
-													mki: mki + 1;
+													mki++;
 												});
 											},
 											else: {
 												allArmsTerm: false;
 											}
 										]);
+										ii++;
 									});
 								},
 								else: {}
@@ -5944,7 +6018,8 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return;
 		});
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD && m:name == methodName && m:body:length() > 0 }, {
 				local Boolean is present: false;
 				acc:each(action: local Function(String is n){
@@ -5956,6 +6031,7 @@ Class is TypeChecker{
 					acc:add(item: className);
 				});
 			});
+			mi++;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
 			:collectConcreteDeclarers(className: baseName, methodName: methodName, seen: seen, acc: acc);
@@ -5977,10 +6053,12 @@ Class is TypeChecker{
 			if({ res:name == '' }, {
 				local ClassInfo is anc: :findClass(name: baseName);
 				if({ anc:name != '' }, {
-					anc:members:each(action: local Function(Member is m){
-						if({ res:name == '' && m:name == memberName }, {
+					while([Int is mi: 0], { res:name == '' && mi < anc:members:length() }, {
+						local Member is m: anc:members:get(index: mi);
+						if({ m:name == memberName }, {
 							res: m;
 						});
+						mi++;
 					});
 				});
 			});
@@ -6006,10 +6084,12 @@ Class is TypeChecker{
 			return '';
 		});
 		local String is owner: '';
-		cls:members:each(action: local Function(Member is m){
-			if({ owner == '' && m:name == memberName }, {
+		while([Int is mi: 0], { owner == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == memberName }, {
 				owner: cls:name;
 			});
+			mi++;
 		});
 		if({ owner != '' }, {
 			return owner;
@@ -6038,10 +6118,12 @@ Class is TypeChecker{
 			return '';
 		});
 		local String is owner: '';
-		cls:members:each(action: local Function(Member is m){
-			if({ owner == '' && m:name == memberName && m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, {
+		while([Int is mi: 0], { owner == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == memberName && m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, {
 				owner: cls:name;
 			});
+			mi++;
 		});
 		if({ owner != '' }, {
 			return owner;
@@ -6065,11 +6147,13 @@ Class is TypeChecker{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local ClassInfo is cls: :findClass(name: owner);
-		local Member is res: Member:init(kind: MemberKind:FIELD);
-		cls:members:each(action: local Function(Member is m){
-			if({ res:name == '' && m:name == memberName && m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, {
+		local Member is res: Member(kind: MemberKind:FIELD);
+		while([Int is mi: 0], { res:name == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == memberName && m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, {
 				res: m;
 			});
+			mi++;
 		});
 		return res;
 	}
@@ -6087,11 +6171,13 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return Member:init(kind: MemberKind:METHOD);
 		});
-		local Member is res: Member:init(kind: MemberKind:METHOD);
-		cls:members:each(action: local Function(Member is m){
-			if({ res:name == '' && m:name == methodName && m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, {
+		local Member is res: Member(kind: MemberKind:METHOD);
+		while([Int is mi: 0], { res:name == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == methodName && m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, {
 				res: m;
 			});
+			mi++;
 		});
 		if({ res:name != '' }, {
 			return res;
@@ -6119,10 +6205,12 @@ Class is TypeChecker{
 			return '';
 		});
 		local String is owner: '';
-		cls:members:each(action: local Function(Member is m){
-			if({ owner == '' && m:name == methodName && m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, {
+		while([Int is mi: 0], { owner == '' && mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == methodName && m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, {
 				owner: cls:name;
 			});
+			mi++;
 		});
 		if({ owner != '' }, {
 			return owner;
@@ -6179,45 +6267,38 @@ Class is TypeChecker{
 	##
 	## @param classDef: Class to validate.
 	Function is checkShadowTargets(ClassInfo is classDef){
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			local Boolean is hasReplace: m:hasModifier(kw: Keyword:REPLACE);
 			local Boolean is hasMerge: m:hasModifier(kw: Keyword:MERGE);
 			if({ hasReplace || hasMerge }, {
 				if({ m:hasModifier(kw: Keyword:LOCAL) || m:hasModifier(kw: Keyword:CONTAINED) }, {
 					local String is msg: 'Member \'' . m:name . '\' in class \'' . classDef:name . '\' combines \'replace\'/\'merge\' with a visibility modifier; replace and merge members are public by definition.';
 					:addError(line: m:line, msg: msg);
-					return;
-				});
-			});
-			if({ !hasReplace && !hasMerge }, {
-				return;
-			});
-			local String is name: m:name;
-			if({ name == ContractMethod:INIT:value() || name == ContractMethod:USING:value() || name == ContractMethod:TO_STRING:value() }, {
-				return;
-			});
-			if({ :findMemberOwnerClass(className: classDef:name, memberName: name) == Primitive:ANY:value() }, {
-				# Root-contract member: Any declares it public, so overriding
-				# is always legitimate.
-				return;
-			});
-			local Member is anc: :findAncestorMember(className: classDef:name, memberName: name);
-			if({ anc:name == '' }, {
-				local String is what: if({ hasMerge }, { 'merge' }, { 'replace' });
-				local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' declares \'' . what . '\' but no ancestor declares a member with that name.';
-				:addError(line: m:line, msg: msg);
-			}, {
-				if({ anc:hasModifier(kw: Keyword:LOCAL) || anc:hasModifier(kw: Keyword:CONTAINED) }, {
-					local String is vis: if({ anc:hasModifier(kw: Keyword:LOCAL) }, { 'local' }, { 'contained' });
-					local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' targets a ' . vis . ' ancestor member; ' . vis . ' members cannot be replaced or merged.';
-					:addError(line: m:line, msg: msg);
 				}, {
-					if({ anc:kind != m:kind }, {
-						local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' is a ' . m:kind:value() . ' but the ancestor member it targets is a ' . anc:kind:value() . '.';
-						:addError(line: m:line, msg: msg);
+					local String is name: m:name;
+					if({ name != ContractMethod:INIT:value() && name != ContractMethod:USING:value() && name != ContractMethod:TO_STRING:value() && :findMemberOwnerClass(className: classDef:name, memberName: name) != Primitive:ANY:value() }, {
+						local Member is anc: :findAncestorMember(className: classDef:name, memberName: name);
+						if({ anc:name == '' }, {
+							local String is what: if({ hasMerge }, { 'merge' }, { 'replace' });
+							local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' declares \'' . what . '\' but no ancestor declares a member with that name.';
+							:addError(line: m:line, msg: msg);
+						}, {
+							if({ anc:hasModifier(kw: Keyword:LOCAL) || anc:hasModifier(kw: Keyword:CONTAINED) }, {
+								local String is vis: if({ anc:hasModifier(kw: Keyword:LOCAL) }, { 'local' }, { 'contained' });
+								local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' targets a ' . vis . ' ancestor member; ' . vis . ' members cannot be replaced or merged.';
+								:addError(line: m:line, msg: msg);
+							}, {
+								if({ anc:kind != m:kind }, {
+									local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' is a ' . m:kind:value() . ' but the ancestor member it targets is a ' . anc:kind:value() . '.';
+									:addError(line: m:line, msg: msg);
+								});
+							});
+						});
 					});
 				});
 			});
+			mi++;
 		});
 	}
 
@@ -6229,7 +6310,9 @@ Class is TypeChecker{
 	##
 	## @param classDef: Class to validate.
 	Function is checkHeldMembers(ClassInfo is classDef){
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
+			local Boolean is handled: false;
 			if({ !m:hasModifier(kw: Keyword:HELD) }, {
 				# The resolution hook spelling is reserved: a plain method
 				# named 'resolveHeld' would silently never hook
@@ -6237,77 +6320,79 @@ Class is TypeChecker{
 				if({ m:kind == MemberKind:METHOD && m:name == ContractMethod:RESOLVE_HELD:value() }, {
 					:addError(line: m:line, msg: 'The resolution hook \'' . m:name . '\' in class \'' . classDef:name . '\' must be held: declare it \'held Function of Any is resolveHeld(String is name)\'.');
 				});
-				return;
+				handled: true;
 			});
-			if({ m:hasModifier(kw: Keyword:REPLACE) || m:hasModifier(kw: Keyword:MERGE) }, {
+			if({ !handled && (m:hasModifier(kw: Keyword:REPLACE) || m:hasModifier(kw: Keyword:MERGE)) }, {
 				:addError(line: m:line, msg: :errText:errHeldCombinesReplaceMerge(member: m:name, className: classDef:name));
-				return;
+				handled: true;
 			});
-			if({ m:name == MetadataField:USING:value() || m:name == MetadataField:NAMESPACE:value() || m:name == MetadataField:CASTABLE:value() }, {
+			if({ !handled && (m:name == MetadataField:USING:value() || m:name == MetadataField:NAMESPACE:value() || m:name == MetadataField:CASTABLE:value()) }, {
 				:addError(line: m:line, msg: 'Loader directive \'' . m:name . '\' in class \'' . classDef:name . '\' cannot be \'held\'.');
-				return;
+				handled: true;
 			});
-			if({ m:kind == MemberKind:CLASS }, {
+			if({ !handled && m:kind == MemberKind:CLASS }, {
 				:addError(line: m:line, msg: 'Nested class \'' . m:name . '\' in class \'' . classDef:name . '\' cannot be \'held\'.');
-				return;
+				handled: true;
 			});
-			if({ m:kind == MemberKind:METHOD }, {
+			if({ !handled && m:kind == MemberKind:METHOD }, {
+				handled: true;
 				# Held functions: class-scoped, receiver-free. They are not
 				# root-contract members (no vtable involvement) and do not
 				# overload — one name, one signature, one symbol.
 				if({ m:name == ContractMethod:INIT:value() || m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() || m:name == ContractMethod:TO_STRING:value() }, {
 					:addError(line: m:line, msg: 'Held function \'' . m:name . '\' in class \'' . classDef:name . '\' cannot be a root-contract member; held functions take no receiver and never dispatch dynamically.');
-					return;
-				});
-				# The resolution hook: exactly
-				# 'held Function of <T> is resolveHeld(String is name,
-				# Function of <T> is missing)' — the SECOND argument is the
-				# runtime-provided safe failure branch, and it must return
-				# the SAME type the resolver searches for. Never Null: the
-				# default branch panics with context; the resolver invokes
-				# it when the name cannot be resolved. A hook-resolved name
-				# compiles for any spelling, so the failure path is part of
-				# the contract, not an afterthought. The non-held spelling
-				# is a pointed error too (a plain method by that name would
-				# silently never hook).
-				if({ m:name == ContractMethod:RESOLVE_HELD:value() }, {
-					# The resolver's return: a method's memberType is the full
-					# Function type with the return in params[0] (the direct
-					# spelling 'HE is resolveHeld(...)' is also accepted).
-					local String is resRetName: m:memberType:name;
-					if({ m:memberType:name == 'Function' && m:memberType:params:length() > 0 }, {
-						local Type is resRetT: m:memberType:params:get(index: 0);
-						resRetName: resRetT:name;
-					});
-					local Boolean is sigOk: false;
-					if({ m:params:length() == 2 }, {
-						local Parameter is nameP: m:params:get(index: 0);
-						local Parameter is missP: m:params:get(index: 1);
-						local Type is missT: missP:paramType;
-						local Type is missRet: missT:params:get(index: 0);
-						if({ nameP:paramType:name == Primitive:STRING:value() && missT:name == 'Function' && missT:params:length() > 0 }, {
-							sigOk: missRet:name == resRetName && resRetName != '' && !:isVoid(t: resRetName);
+				}, {
+					# The resolution hook: exactly
+					# 'held Function of <T> is resolveHeld(String is name,
+					# Function of <T> is missing)' — the SECOND argument is the
+					# runtime-provided safe failure branch, and it must return
+					# the SAME type the resolver searches for. Never Null: the
+					# default branch panics with context; the resolver invokes
+					# it when the name cannot be resolved. A hook-resolved name
+					# compiles for any spelling, so the failure path is part of
+					# the contract, not an afterthought. The non-held spelling
+					# is a pointed error too (a plain method by that name would
+					# silently never hook).
+					if({ m:name == ContractMethod:RESOLVE_HELD:value() }, {
+						# The resolver's return: a method's memberType is the full
+						# Function type with the return in params[0] (the direct
+						# spelling 'HE is resolveHeld(...)' is also accepted).
+						local String is resRetName: m:memberType:name;
+						if({ m:memberType:name == 'Function' && m:memberType:params:length() > 0 }, {
+							local Type is resRetT: m:memberType:params:get(index: 0);
+							resRetName: resRetT:name;
+						});
+						local Boolean is sigOk: false;
+						if({ m:params:length() == 2 }, {
+							local Parameter is nameP: m:params:get(index: 0);
+							local Parameter is missP: m:params:get(index: 1);
+							local Type is missT: missP:paramType;
+							local Type is missRet: missT:params:get(index: 0);
+							if({ nameP:paramType:name == Primitive:STRING:value() && missT:name == 'Function' && missT:params:length() > 0 }, {
+								sigOk: missRet:name == resRetName && resRetName != '' && !:isVoid(t: resRetName);
+							});
+						});
+						if({ !sigOk }, {
+							:addError(line: m:line, msg: 'The resolution hook \'' . m:name . '\' in class \'' . classDef:name . '\' must be declared exactly \'held Function of <T> is resolveHeld(String is name, Function of <T> is missing)\'; the missing branch is provided by the runtime and must return the same type the resolver searches for.');
 						});
 					});
-					if({ !sigOk }, {
-						:addError(line: m:line, msg: 'The resolution hook \'' . m:name . '\' in class \'' . classDef:name . '\' must be declared exactly \'held Function of <T> is resolveHeld(String is name, Function of <T> is missing)\'; the missing branch is provided by the runtime and must return the same type the resolver searches for.');
+					local Boolean is dupHeld: false;
+					while([Int is gi: 0], { !dupHeld && gi < classDef:members:length() }, {
+						local Member is g: classDef:members:get(index: gi);
+						if({ g != m && g:kind == MemberKind:METHOD && g:name == m:name && g:hasModifier(kw: Keyword:HELD) }, {
+							dupHeld: true;
+						});
+						gi++;
+					});
+					if({ dupHeld }, {
+						:addError(line: m:line, msg: :errText:errHeldDuplicate(member: m:name));
 					});
 				});
-				local Boolean is dupHeld: false;
-				classDef:members:each(action: local Function(Member is g){
-					if({ g != m && g:kind == MemberKind:METHOD && g:name == m:name && g:hasModifier(kw: Keyword:HELD) }, {
-						dupHeld: true;
-					});
-				});
-				if({ dupHeld }, {
-					:addError(line: m:line, msg: :errText:errHeldDuplicate(member: m:name));
-				});
-				return;
 			});
-			if({ !m:hasInit }, {
+			if({ !handled && !m:hasInit }, {
 				:addError(line: m:line, msg: :errText:errHeldFieldRequiresInitializer(field: m:name, className: classDef:name));
-				return;
 			});
+			mi++;
 		});
 	}
 
@@ -6322,20 +6407,24 @@ Class is TypeChecker{
 		classDef:baseClasses:each(action: local Function(String is baseName){
 			local ClassInfo is anc: :findClass(name: baseName);
 			if({ anc:name != '' }, {
-				anc:members:each(action: local Function(Member is m){
+				while([Int is mi: 0], { mi < anc:members:length() }, {
+					local Member is m: anc:members:get(index: mi);
 					if({ m:kind == MemberKind:METHOD }, {
 						seenMethods:set(key: m:name, value: 'true');
 					});
+					mi++;
 				});
 			});
 		});
 		local Array of String is names: seenMethods:keys();
 		names:each(action: local Function(String is mName){
 			local Boolean is declaredLocally: false;
-			classDef:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { !declaredLocally && mi < classDef:members:length() }, {
+				local Member is m: classDef:members:get(index: mi);
 				if({ m:kind == MemberKind:METHOD && m:name == mName }, {
 					declaredLocally: true;
 				});
+				mi++;
 			});
 			if({ !declaredLocally }, {
 				local Map of String to String is seen: Map:init();
@@ -6369,10 +6458,11 @@ Class is TypeChecker{
 	Function is checkInheritance(ClassInfo is classDef){
 		:currentSourceFile: classDef:sourceFile;
 		local Boolean is hasInit: false;
-		classDef:members:each(action: local Function(Member is m){
-			if({ m:name == ContractMethod:INIT:value() }, {
+		while([Int is mi: 0], { !hasInit && mi < classDef:members:length() }, {
+			if({ classDef:members:get(index: mi):name == ContractMethod:INIT:value() }, {
 				hasInit: true;
 			});
+			mi++;
 		});
 
 		classDef:baseClasses:each(action: local Function(String is baseName){
@@ -6388,116 +6478,112 @@ Class is TypeChecker{
 				# concrete defaults. (The outer-link relation is exempt by the
 				# gate above — the inner-class link is an access scope.)
 				if({ hasInit && baseName != Primitive:ANY:value() }, {
-					parent:members:each(action: local Function(Member is parentM){
+					while([Int is pmi: 0], { pmi < parent:members:length() }, {
+						local Member is parentM: parent:members:get(index: pmi);
 						local Boolean is isAbstract: (parentM:kind == MemberKind:FIELD && !parentM:hasInit) ||
 							(parentM:kind == MemberKind:METHOD && parentM:body:length() == 0);
 						if({ isAbstract }, {
 							local Boolean is isImplemented: false;
-							local Int is mIdx: 0;
-							while({ !isImplemented && mIdx < classDef:members:length() }, {
+							while([Int is mIdx: 0], { !isImplemented && mIdx < classDef:members:length() }, {
 								local Member is subM: classDef:members:get(index: mIdx);
-								mIdx: mIdx + 1;
 								if({ subM:name == parentM:name }, {
 									if({ (subM:kind == MemberKind:METHOD && subM:body:length() > 0) || (subM:kind == MemberKind:FIELD && subM:hasInit) }, {
 										isImplemented: true;
 									});
 								});
+								mIdx++;
 							});
 							if({ !isImplemented }, {
 								local String is msg: :errText:errUnimplementedAbstract(className: classDef:name, member: parentM:name, parentClass: baseName);
 								:addError(line: classDef:line, msg: msg);
 							});
 						});
+						pmi++;
 					});
 				});
 
 				# 2. Strict replace check & method signature matching on overrides
-				classDef:members:each(action: local Function(Member is subM){
+				while([Int is smi: 0], { smi < classDef:members:length() }, {
+					local Member is subM: classDef:members:get(index: smi);
 					# the nested-class members are declarations of
 					# types, not overrides of the ancestor's surface.
-					if({ subM:kind == MemberKind:CLASS }, {
-						return;
-					});
 					# Declarative metadata (namespace/using/group) is per-class
 					# by design and never participates in override matching.
-					if({ subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:CASTABLE:value() }, {
-						return;
-					});
-					parent:members:each(action: local Function(Member is parentM){
-						if({ parentM:kind == MemberKind:CLASS }, {
-							return;
-						});
-						if({ subM:name == parentM:name }, {
-							if({ parentM:hasModifier(kw: Keyword:LOCAL) || parentM:hasModifier(kw: Keyword:CONTAINED) }, {
-								local String is vis: if({ parentM:hasModifier(kw: Keyword:LOCAL) }, { 'local' }, { 'contained' });
-								local String is msg: 'Member \'' . subM:name . '\' is ' . vis . ' in ancestor \'' . baseName . '\' and cannot be replaced or merged.';
-								:addError(line: subM:line, msg: msg);
-							});
-							local Boolean is hasReplace: subM:hasModifier(kw: Keyword:REPLACE);
-							local Boolean is hasMerge: subM:hasModifier(kw: Keyword:MERGE);
-							if({ hasMerge }, {
-								if({ subM:kind == MemberKind:METHOD }, {
-									if({ parentM:kind == MemberKind:METHOD && parentM:body:length() == 0 }, {
-										local String is msg: 'Cannot merge method \'' . subM:name . '\' in class \'' . classDef:name . '\' with abstract method from \'' . baseName . '\'.';
-										:addError(line: subM:line, msg: msg);
-									});
-								}, {
-									:applyMerge(classDef: classDef, subM: subM, parentM: parentM, baseName: baseName);
-								});
-							}, {
-								if({ !hasReplace }, {
-									local String is msg: 'Member \'' . subM:name . '\' in class \'' . classDef:name . '\' overrides ancestor member from \'' . baseName . '\', but is missing \'replace\' modifier.';
+					if({ subM:kind != MemberKind:CLASS && subM:name != MetadataField:NAMESPACE:value() && subM:name != MetadataField:USING:value() && subM:name != MetadataField:CASTABLE:value() }, {
+						while([Int is pmi: 0], { pmi < parent:members:length() }, {
+							local Member is parentM: parent:members:get(index: pmi);
+							if({ parentM:kind != MemberKind:CLASS && subM:name == parentM:name }, {
+								if({ parentM:hasModifier(kw: Keyword:LOCAL) || parentM:hasModifier(kw: Keyword:CONTAINED) }, {
+									local String is vis: if({ parentM:hasModifier(kw: Keyword:LOCAL) }, { 'local' }, { 'contained' });
+									local String is msg: 'Member \'' . subM:name . '\' is ' . vis . ' in ancestor \'' . baseName . '\' and cannot be replaced or merged.';
 									:addError(line: subM:line, msg: msg);
 								});
-							});
-
-							if({ subM:kind == MemberKind:METHOD && parentM:kind == MemberKind:METHOD }, {
-								# Root-contract carve-out: init/using/toString declared
-								# in Any are name reservations; per-class signatures
-								# are legitimate. Override must still carry replace.
-								if({ baseName == Primitive:ANY:value() }, {
-									if({ !subM:hasModifier(kw: Keyword:REPLACE) && !subM:hasModifier(kw: Keyword:MERGE) }, {
-										local String is msg: 'Member \'' . subM:name . '\' in class \'' . classDef:name . '\' overrides root-contract member from \'Any\', but is missing \'replace\' modifier.';
-										:addError(line: subM:line, msg: msg);
-									});
-									return;
-								});
-								# constructors are per-class —
-								# they are not polymorphic. An init never enters the
-								# ancestor signature/return compatibility checks at all
-								# (inner classes inherit their enclosing class, whose
-								# init differs by design — and whose parameter list may
-								# be empty, so the param-merge below cannot run on it).
-								if({ subM:name == 'init' }, {
-									return;
-								});
-								if({ subM:params:length() != parentM:params:length() }, {
-									local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' parameter count mismatch with ancestor in \'' . baseName . '\'.';
-									:addError(line: subM:line, msg: msg);
-								}, {
-									local Int is pIdx: 0;
-									while({ pIdx < subM:params:length() }, {
-										local Parameter is subP: subM:params:get(index: pIdx);
-										local Parameter is parentP: parentM:params:get(index: pIdx);
-										if({ subP:paramType:name == 'Any' || subP:paramType:name == '' }, {
-											subP:paramType: parentP:paramType;
+								local Boolean is hasReplace: subM:hasModifier(kw: Keyword:REPLACE);
+								local Boolean is hasMerge: subM:hasModifier(kw: Keyword:MERGE);
+								if({ hasMerge }, {
+									if({ subM:kind == MemberKind:METHOD }, {
+										if({ parentM:kind == MemberKind:METHOD && parentM:body:length() == 0 }, {
+											local String is msg: 'Cannot merge method \'' . subM:name . '\' in class \'' . classDef:name . '\' with abstract method from \'' . baseName . '\'.';
+											:addError(line: subM:line, msg: msg);
 										});
-										pIdx: pIdx + 1;
+									}, {
+										:applyMerge(classDef: classDef, subM: subM, parentM: parentM, baseName: baseName);
 									});
-								});
-								local String is subRet: :resolveReturnType(t: subM:memberType);
-								local String is parentRet: :resolveReturnType(t: parentM:memberType);
-								if({ subM:memberType:name == '' || :isVoid(t: subM:memberType:name) }, {
-									subM:memberType: parentM:memberType;
 								}, {
-									if({ !:isAssignable(target: subRet, source: parentRet) }, {
-										local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' return type \'' . subRet . '\' does not match ancestor return type \'' . parentRet . '\'.';
+									if({ !hasReplace }, {
+										local String is msg: 'Member \'' . subM:name . '\' in class \'' . classDef:name . '\' overrides ancestor member from \'' . baseName . '\', but is missing \'replace\' modifier.';
 										:addError(line: subM:line, msg: msg);
 									});
 								});
+
+								if({ subM:kind == MemberKind:METHOD && parentM:kind == MemberKind:METHOD }, {
+									# Root-contract carve-out: init/using/toString declared
+									# in Any are name reservations; per-class signatures
+									# are legitimate. Override must still carry replace.
+									if({ baseName == Primitive:ANY:value() }, {
+										if({ !subM:hasModifier(kw: Keyword:REPLACE) && !subM:hasModifier(kw: Keyword:MERGE) }, {
+											local String is msg: 'Member \'' . subM:name . '\' in class \'' . classDef:name . '\' overrides root-contract member from \'Any\', but is missing \'replace\' modifier.';
+											:addError(line: subM:line, msg: msg);
+										});
+									}, {
+										# constructors are per-class —
+										# they are not polymorphic. An init never enters the
+										# ancestor signature/return compatibility checks at all
+										# (inner classes inherit their enclosing class, whose
+										# init differs by design — and whose parameter list may
+										# be empty, so the param-merge below cannot run on it).
+										if({ subM:name != 'init' }, {
+											if({ subM:params:length() != parentM:params:length() }, {
+												local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' parameter count mismatch with ancestor in \'' . baseName . '\'.';
+												:addError(line: subM:line, msg: msg);
+											}, {
+												while([Int is pIdx: 0], { pIdx < subM:params:length() }, {
+													local Parameter is subP: subM:params:get(index: pIdx);
+													local Parameter is parentP: parentM:params:get(index: pIdx);
+													if({ subP:paramType:name == 'Any' || subP:paramType:name == '' }, {
+														subP:paramType: parentP:paramType;
+													});
+													pIdx++;
+												});
+											});
+											local String is subRet: :resolveReturnType(t: subM:memberType);
+											local String is parentRet: :resolveReturnType(t: parentM:memberType);
+											if({ subM:memberType:name == '' || :isVoid(t: subM:memberType:name) }, {
+												subM:memberType: parentM:memberType;
+											}, {
+												if({ !:isAssignable(target: subRet, source: parentRet) }, {
+													local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' return type \'' . subRet . '\' does not match ancestor return type \'' . parentRet . '\'.';
+													:addError(line: subM:line, msg: msg);
+												});
+											});
+										});
+									});
+								});
 							});
+							pmi++;
 						});
 					});
+					smi++;
 				});
 			});
 		});
@@ -6538,10 +6624,10 @@ Class is TypeChecker{
 			return;
 		});
 		local Expression is parentInit: parentM:initExpr;
-		local Array of Expression is parentItems: Array();
+		local [Expression] is parentItems: [];
 		local Boolean is parentIsList: false;
 		match(on: parentInit, when: [
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				parentIsList: true;
 				parentItems: items;
 			}
@@ -6554,10 +6640,10 @@ Class is TypeChecker{
 			return;
 		});
 		local Expression is childInit: subM:initExpr;
-		local Array of Expression is childItems: Array();
+		local [Expression] is childItems: [];
 		local Boolean is childIsList: false;
 		match(on: childInit, when: [
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				childIsList: true;
 				childItems: items;
 			}
@@ -6566,12 +6652,14 @@ Class is TypeChecker{
 			:addError(line: subM:line, msg: '\'merge\' requires a constant list literal initializer on \'' . classDef:name . '.' . subM:name . '.');
 			return;
 		});
-		local Array of Expression is combined: Array();
-		parentItems:each(action: local Function(Expression is item){
-			combined:add(item: item);
+		local [Expression] is combined: [];
+		while([Int is pi: 0], { pi < parentItems:length() }, {
+			combined:push(item: parentItems:get(index: pi));
+			pi++;
 		});
-		childItems:each(action: local Function(Expression is item){
-			combined:add(item: item);
+		while([Int is ci: 0], { ci < childItems:length() }, {
+			combined:push(item: childItems:get(index: ci));
+			ci++;
 		});
 		local Expression is folded: Expression:ArrayLit(items: combined);
 		folded:setLine(line: childInit:line);
@@ -6588,7 +6676,8 @@ Class is TypeChecker{
 				:collectClassFieldTypes(classDef: parent);
 			});
 		});
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			# Metadata members carry no type and are not fields of the
 			# generated struct; HELD members are class-scoped
 			#  — an instance reference reaches exactly the
@@ -6596,6 +6685,7 @@ Class is TypeChecker{
 			if({ m:kind == MemberKind:FIELD && m:memberType:name != '' && !m:hasModifier(kw: Keyword:HELD) }, {
 				:fieldTypes:set(key: m:name, value: :formatVarTypeString(t: m:memberType));
 			});
+			mi++;
 		});
 	}
 
@@ -6614,11 +6704,13 @@ Class is TypeChecker{
 	Function is checkSpecErrorHandlerGroup(ClassInfo is classDef){
 		local Int is probe: 0;
 		probe: probe;
-		local Array of Member is handlers: Array();
-		classDef:members:each(action: local Function(Member is m){
+		local [Member] is handlers: [];
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' && !m:hasModifier(kw: Keyword:HELD) }, {
-				handlers:add(item: m);
+				handlers:push(item: m);
 			});
+			mi++;
 		});
 		if({ handlers:length() == 0 }, { return; });
 		local Int is catchAllCount: 0;
@@ -6696,7 +6788,8 @@ Class is TypeChecker{
 		:fieldTypes: Map:init();
 		:collectClassFieldTypes(classDef: classDef);
 
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:FIELD: {
 					:currentLine: m:line;
@@ -6738,21 +6831,25 @@ Class is TypeChecker{
 				},
 				else: {}
 			]);
+			mi++;
 		});
 
 		:checkSpecErrorHandlerGroup(classDef: classDef);
 
 		local Boolean is classHasInit: false;
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:METHOD: {
-					:unassignedFields: Map:init();
+					:unassignedFields: Map();
 					if({ m:name == ContractMethod:INIT:value() }, {
 						classHasInit: true;
-						classDef:members:each(action: local Function(Member is fm){
+						while([Int is fmi: 0], { fmi < classDef:members:length() }, {
+							local Member is fm: classDef:members:get(index: fmi);
 							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != ContractMethod:USING:value() && !fm:hasModifier(kw: Keyword:HELD) }, {
 								:unassignedFields:set(key: fm:name, value: 'true');
 							});
+							fmi++;
 						});
 					});
 					# Held functions: no instance context
@@ -6762,11 +6859,12 @@ Class is TypeChecker{
 					local Map of String to String is savedFnFields: :fieldTypes;
 					if({ m:hasModifier(kw: Keyword:HELD) }, {
 						:inHeldFunction: true;
-						:fieldTypes: Map:init();
+						:fieldTypes: Map();
 					});
 					:checkMethod(method: m);
 					if({ m:name == ContractMethod:INIT:value() && m:body:length() > 0 }, {
-						classDef:members:each(action: local Function(Member is fm){
+						while([Int is fmi: 0], { fmi < classDef:members:length() }, {
+							local Member is fm: classDef:members:get(index: fmi);
 							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') && :unassignedFields:has(key: fm:name) }, {
 								local String is fType: :formatVarTypeString(t: fm:memberType);
 								local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
@@ -6776,21 +6874,22 @@ Class is TypeChecker{
 									:addError(line: m:line, msg: "Field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' is not initialized by 'init' (Spec does not have null).");
 								});
 							});
+							fmi++;
 						});
 					});
 					:inHeldFunction: savedHeldFn;
 					:fieldTypes: savedFnFields;
-					:unassignedFields: Map:init();
+					:unassignedFields: Map();
 				},
 				MemberKind:CLASS: {
 					local String is savedClass: :currentClassName;
 					local ClassInfo is savedClassDef: :currentClassDef;
-					local Map of String to String is savedFields: Map:init();
+					local Map of String to String is savedFields: Map();
 					local Array of String is fKeys: :fieldTypes:keys();
 					fKeys:each(action: local Function(String is k){
 						savedFields:set(key: k, value: :fieldTypes:getString(key: k, default: ''));
 					});
-					local Map of String to String is savedUnassigned: Map:init();
+					local Map of String to String is savedUnassigned: Map();
 					local Array of String is uKeys: :unassignedFields:keys();
 					uKeys:each(action: local Function(String is k){
 						savedUnassigned:set(key: k, value: :unassignedFields:getString(key: k, default: ''));
@@ -6805,9 +6904,11 @@ Class is TypeChecker{
 				},
 				else: {}
 			]);
+			mi++;
 		});
 		if({ !:bindings:isSysinternal(cls: classDef) && classDef:baseClass != :names:enumHeader() }, {
-			classDef:members:each(action: local Function(Member is fm){
+			while([Int is fmi: 0], { fmi < classDef:members:length() }, {
+				local Member is fm: classDef:members:get(index: fmi);
 				if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') }, {
 					local String is fType: :formatVarTypeString(t: fm:memberType);
 					local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
@@ -6824,6 +6925,7 @@ Class is TypeChecker{
 						});
 					});
 				});
+				fmi++;
 			});
 		});
 	}
@@ -6847,20 +6949,21 @@ Class is TypeChecker{
 	## @param acc: Output array.
 	Function is collectClasses(ClassInfo is c, [ClassInfo] is acc){
 		acc:push(item: c);
-		c:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < c:members:length() }, {
+			local Member is m: c:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:CLASS: {
 					:collectClasses(c: m:nestedClass, acc: acc);
 				},
 				MemberKind:METHOD: {
-					local Int is sbi: 0;
-					while({ sbi < m:body:length() }, {
+					while([Int is sbi: 0], { sbi < m:body:length() }, {
 						:collectClassesFromStatement(stmt: m:body:get(index: sbi), acc: acc);
 						sbi++;
 					});
 				},
 				else: {}
 			]);
+			mi++;
 		});
 	}
 
@@ -6876,51 +6979,55 @@ Class is TypeChecker{
 	## @param classDef: Class definition.
 	Function is checkInstanceImports(ClassInfo is classDef){
 		local Map of String to String is seen: Map:init();
-		classDef:members:each(action: local Function(Member is m){
-			if({ m:name != 'using' || !m:hasInit }, {
-				return;
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
+			if({ m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is segs){
+									local String is asName: '';
+									local String is asAlias: '';
+									while([Int is si: 0], { si < segs:length() }, {
+										local Expression is seg: segs:get(index: si);
+										match(on: seg, when: [
+											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
+												asName: className;
+												asAlias: seg:usingAsAlias;
+											}
+										], default: {});
+										si++;
+									});
+									if({ asName == '' }, {
+										return;
+									});
+									local String is seenKey: if({ asAlias != '' }, { asAlias }, { asName });
+									if({ seen:has(key: seenKey) }, {
+										:addError(line: m:line, msg: :errText:errDuplicateInstanceImport(className: classDef:name, asName: seenKey));
+										return;
+									});
+									seen:set(key: seenKey, value: 'true');
+									local ClassInfo is target: :findClass(name: asName);
+									if({ target:name == '' }, {
+										return;
+									});
+									if({ target:baseClass == :names:enumHeader() }, {
+										:addError(line: m:line, msg: :errText:errCannotInstanceImportEnum(asName: asName));
+										return;
+									});
+									if({ target:typeParams:length() > 0 }, {
+										:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (§10).');
+										return;
+									});
+								}
+							], default: {});
+							ii++;
+						});
+					}
+				], default: {});
 			});
-			match(on: m:initExpr, when: [
-				Expression:ArrayLit: local Function(Array of Expression is items){
-					items:each(action: local Function(Expression is item){
-						match(on: item, when: [
-							Expression:ArrayLit: local Function(Array of Expression is segs){
-								local String is asName: '';
-								local String is asAlias: '';
-								segs:each(action: local Function(Expression is seg){
-									match(on: seg, when: [
-										Expression:UsingAs: local Function(String is className, [NamedArg] is args){
-											asName: className;
-											asAlias: seg:usingAsAlias;
-										}
-									], default: {});
-								});
-								if({ asName == '' }, {
-									return;
-								});
-								local String is seenKey: if({ asAlias != '' }, { asAlias }, { asName });
-								if({ seen:has(key: seenKey) }, {
-									:addError(line: m:line, msg: :errText:errDuplicateInstanceImport(className: classDef:name, asName: seenKey));
-									return;
-								});
-								seen:set(key: seenKey, value: 'true');
-								local ClassInfo is target: :findClass(name: asName);
-								if({ target:name == '' }, {
-									return;
-								});
-								if({ target:baseClass == :names:enumHeader() }, {
-									:addError(line: m:line, msg: :errText:errCannotInstanceImportEnum(asName: asName));
-									return;
-								});
-								if({ target:typeParams:length() > 0 }, {
-									:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (§10).');
-									return;
-								});
-							}
-						], default: {});
-					});
-				}
-			], default: {});
+			mi++;
 		});
 	}
 
@@ -6930,26 +7037,30 @@ Class is TypeChecker{
 	## @return: The as-form target class names, declaration order.
 	Function of Array of String is instanceImportTargets(ClassInfo is classDef){
 		local Array of String is out: Array();
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
-							match(on: item, when: [
-								Expression:ArrayLit: local Function(Array of Expression is segs){
-									segs:each(action: local Function(Expression is seg){
-										match(on: seg, when: [
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is segs){
+									while([Int is si: 0], { si < segs:length() }, {
+										match(on: segs:get(index: si), when: [
 											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 												out:add(item: className);
 											}
 										], default: {});
+										si++;
 									});
 								}
 							], default: {});
+							ii++;
 						});
 					}
 				], default: {});
 			});
+			mi++;
 		});
 		return out;
 	}
@@ -7011,10 +7122,10 @@ Class is TypeChecker{
 			local Map of String to String is cFields: Map();
 			local Map of String to String is fVis: Map();
 			:collectFieldsForPrepass(cls: c, out: cFields, visited: fVis);
-			c:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { mi < c:members:length() }, {
+				local Member is m: c:members:get(index: mi);
 				if({ m:kind == MemberKind:METHOD }, {
-					local Int is mpi: 0;
-					while({ mpi < m:params:length() }, {
+					while([Int is mpi: 0], { mpi < m:params:length() }, {
 						local Parameter is p: m:params:get(index: mpi);
 						if({ p:paramType:name == :names:selfFieldMarker() }, {
 							local String is ft: cFields:getString(key: p:name, default: Primitive:ANY:value());
@@ -7029,6 +7140,7 @@ Class is TypeChecker{
 						});
 					});
 				});
+				mi++;
 			});
 			ci++;
 		});
@@ -7043,10 +7155,12 @@ Class is TypeChecker{
 				:collectFieldsForPrepass(cls: p, out: out, visited: visited);
 			});
 		});
-		cls:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
 			if({ m:kind == MemberKind:FIELD && m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() }, {
 				out:set(key: m:name, value: :formatVarTypeString(t: m:memberType));
 			});
+			mi++;
 		});
 	}
 
@@ -7109,23 +7223,24 @@ Class is TypeChecker{
 			});
 			if({ c:baseClass == :names:enumHeader() && !:bindings:isClassModelEnum(c: c) }, {
 				:allEnumNames:set(key: c:name, value: 'true');
-				c:members:each(action: local Function(Member is m){
+				while([Int is mi: 0], { mi < c:members:length() }, {
+					local Member is m: c:members:get(index: mi);
 					# The namespace declaration is metadata, not a variant.
 					local Boolean is isArrayInit: false;
 					if({ m:hasInit }, {
 						match(on: m:initExpr, when: [
-							Expression:ArrayLit: local Function(Array of Expression is items){
+							Expression:ArrayLit: local Function([Expression] is items){
 								isArrayInit: true;
 							}
 						], default: {});
 					});
-					if({ isArrayInit }, {
-						return;
+					if({ !isArrayInit }, {
+						:allEnumVariants:set(key: m:name, value: c:name);
+						if({ m:memberType:name == Primitive:STRING:value() }, {
+							:allStringBackedEnums:set(key: c:name, value: 'true');
+						});
 					});
-					:allEnumVariants:set(key: m:name, value: c:name);
-					if({ m:memberType:name == Primitive:STRING:value() }, {
-						:allStringBackedEnums:set(key: c:name, value: 'true');
-					});
+					mi++;
 				});
 			});
 			fi++;
@@ -7349,7 +7464,7 @@ Class is TypeChecker{
 		:localVars: Map:init();
 		:fieldTypes: Map:init();
 		:unassignedFields: Map:init();
-		:currentClassDef: ClassInfo:init(name: '', baseClass: '', members: Array());
+		:currentClassDef: ClassInfo(name: '', baseClass: '', members: []);
 		:genericMethodTemplates: Map:init();
 		:groundedGenericMethods: Map:init();
 		:genericMethodLines: Map:init();

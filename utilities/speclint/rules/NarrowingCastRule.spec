@@ -20,6 +20,7 @@ Class of LintRule is NarrowingCastRule{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -112,7 +113,7 @@ Class of LintRule is NarrowingCastRule{
 				if({ :fieldTypes:has(key: name) }, { return :fieldTypes:get(key: name, default: ''); });
 				return '';
 			},
-			Expression:Cast: local Function of String(Expression is _inner, String is target, Array of Expression is _args){
+			Expression:Cast: local Function of String(Expression is _inner, String is target, [Expression] is _args){
 				return target;
 			},
 			Expression:Unary: local Function of String(String is op, Expression is operand){
@@ -125,13 +126,16 @@ Class of LintRule is NarrowingCastRule{
 
 	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
 		local Map of String to String is savedFields: :fieldTypes;
-		:fieldTypes: Map:init();
-		classDef:members:each(action: local Function(Member is m){
+		:fieldTypes: Map();
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			if({ m:kind == MemberKind:FIELD }, {
 				:fieldTypes:set(key: m:name, value: m:memberType:name);
 			});
+			mi++;
 		});
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			match(on: m:kind, when: [
 				MemberKind:FIELD: {
 					if({ m:hasInit }, {
@@ -140,15 +144,13 @@ Class of LintRule is NarrowingCastRule{
 				},
 				MemberKind:METHOD: {
 					local Map of String to String is savedLocals: :localTypes;
-					:localTypes: Map:init();
-					local Int is pi: 0;
-					while({ pi < m:params:length() }, {
+					:localTypes: Map();
+					while([Int is pi: 0], { pi < m:params:length() }, {
 						local Parameter is p: m:params:get(index: pi);
 						:localTypes:set(key: p:name, value: p:paramType:name);
 						pi++;
 					});
-					local Int is si: 0;
-					while({ si < m:body:length() }, {
+					while([Int is si: 0], { si < m:body:length() }, {
 						:checkStatement(stmt: m:body:get(index: si), issues: issues);
 						si++;
 					});
@@ -159,6 +161,7 @@ Class of LintRule is NarrowingCastRule{
 				},
 				else: {}
 			]);
+			mi++;
 		});
 		:fieldTypes: savedFields;
 	}
@@ -178,7 +181,7 @@ Class of LintRule is NarrowingCastRule{
 
 	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
 		match(on: expr, when: [
-			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is _args){
+			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is _args){
 				local Primitive is dstPrim: Primitive:of(target);
 				local Boolean is dstNumeric: :isSignedIntPrim(p: dstPrim) || :isUnsignedIntPrim(p: dstPrim) || :isFloatPrim(p: dstPrim);
 				if({ dstNumeric }, {

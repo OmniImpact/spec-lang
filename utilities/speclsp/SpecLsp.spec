@@ -400,7 +400,7 @@ Class is SpecLsp{
 	}
 
 	local Function of ClassInfo is findClass(ProgramNode is prog, String is name){
-		local ClassInfo is found: ClassInfo(name: '', baseClass: '', members: Array());
+		local ClassInfo is found: ClassInfo(name: '', baseClass: '', members: []);
 		local Boolean is matched: false;
 		local Int is ci: 0;
 		while({ !matched && ci < prog:classes:length() }, {
@@ -442,10 +442,12 @@ Class is SpecLsp{
 		if({ qual != '' }, {
 			local ClassInfo is qc: findClass(prog: prog, name: qual);
 			if({ qc:name != '' }, {
-				qc:members:each(action: local Function(Member is m){
-					if({ hoverMd == '' && m:name == word }, {
+				while([Int is mi: 0], { hoverMd == '' && mi < qc:members:length() }, {
+					local Member is m: qc:members:get(index: mi);
+					if({ m:name == word }, {
 						hoverMd: "```spec\n" . formatMemberSig(cls: qc, m: m) . "\n```";
 					});
+					mi++;
 				});
 			});
 		});
@@ -463,14 +465,15 @@ Class is SpecLsp{
 
 		if({ hoverMd == '' }, {
 			local String is filePath: :docPaths:getString(key: uri, default: '');
-			local Int is ci: 0;
-			while({ hoverMd == '' && ci < prog:classes:length() }, {
+			while([Int is ci: 0], { hoverMd == '' && ci < prog:classes:length() }, {
 				local ClassInfo is c: prog:classes:get(index: ci);
 				if({ c:sourceFile == filePath }, {
-					c:members:each(action: local Function(Member is m){
-						if({ hoverMd == '' && m:name == word }, {
+					while([Int is mi: 0], { hoverMd == '' && mi < c:members:length() }, {
+						local Member is m: c:members:get(index: mi);
+						if({ m:name == word }, {
 							hoverMd: "```spec\n" . formatMemberSig(cls: c, m: m) . "\n```";
 						});
+						mi++;
 					});
 				});
 				ci++;
@@ -520,11 +523,13 @@ Class is SpecLsp{
 		if({ qual != '' }, {
 			local ClassInfo is qc: findClass(prog: prog, name: qual);
 			if({ qc:name != '' }, {
-				qc:members:each(action: local Function(Member is m){
-					if({ targetFile == '' && m:name == word && m:line > 0 }, {
+				while([Int is mi: 0], { targetFile == '' && mi < qc:members:length() }, {
+					local Member is m: qc:members:get(index: mi);
+					if({ m:name == word && m:line > 0 }, {
 						targetFile: if({ m:sourceFile != '' }, { m:sourceFile }, { qc:sourceFile });
 						targetLine: m:line;
 					});
+					mi++;
 				});
 			});
 		});
@@ -539,15 +544,16 @@ Class is SpecLsp{
 
 		if({ targetFile == '' }, {
 			local String is filePath: :docPaths:getString(key: uri, default: '');
-			local Int is ci: 0;
-			while({ targetFile == '' && ci < prog:classes:length() }, {
+			while([Int is ci: 0], { targetFile == '' && ci < prog:classes:length() }, {
 				local ClassInfo is c: prog:classes:get(index: ci);
 				if({ c:sourceFile == filePath }, {
-					c:members:each(action: local Function(Member is m){
-						if({ targetFile == '' && m:name == word && m:line > 0 }, {
+					while([Int is mi: 0], { targetFile == '' && mi < c:members:length() }, {
+						local Member is m: c:members:get(index: mi);
+						if({ m:name == word && m:line > 0 }, {
 							targetFile: if({ m:sourceFile != '' }, { m:sourceFile }, { c:sourceFile });
 							targetLine: m:line;
 						});
+						mi++;
 					});
 				});
 				ci++;
@@ -600,9 +606,11 @@ Class is SpecLsp{
 		if({ hasColonPrefix && receiverName != '' }, {
 			local ClassInfo is rc: findClass(prog: prog, name: receiverName);
 			if({ rc:name != '' }, {
-				rc:members:each(action: local Function(Member is m){
+				while([Int is mi: 0], { mi < rc:members:length() }, {
+					local Member is m: rc:members:get(index: mi);
 					local Int is kind: if({ m:kind == MemberKind:METHOD }, { 2 }, { 5 });
 					items:add(item: makeCompletionItemJson(label: m:name, kind: kind, detail: formatMemberSig(cls: rc, m: m)));
+					mi++;
 				});
 			});
 			sendRawMessage(body: '{"jsonrpc":"2.0","id":' . Json:stringify(value: reqId) . ',"result":[' . items:join(separator: ',') . ']}');

@@ -72,16 +72,18 @@ Class of SpecUnitTest is TestSpecAst{
 	Function is testClassMemberGraph(){
 		local Member is m: Member(kind: MemberKind:METHOD);
 		m:name: 'speak';
-		local ClassInfo is cls: ClassInfo(name: 'Widget', baseClass: '', members: Array([m]));
+		local ClassInfo is cls: ClassInfo(name: 'Widget', baseClass: '', members: [m]);
 		local ProgramNode is prog: ProgramNode(classes: [cls]);
 		local String is found: '';
 		while([Int is ci: 0], { ci < prog:classes:length() }, {
 			local ClassInfo is c: prog:classes:get(index: ci);
-			c:members:each(action: local Function(Member is mem){
+			while([Int is mi: 0], { mi < c:members:length() }, {
+				local Member is mem: c:members:get(index: mi);
 				Conditional:match(on: mem:kind, when: [
 					MemberKind:METHOD: { found: mem:name; },
 					else: {}
 				]);
+				mi++;
 			});
 			ci++;
 		});

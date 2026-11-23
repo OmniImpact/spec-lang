@@ -76,12 +76,21 @@ Class of LintRule is UnnecessarySelfColonRule{
 					ai++;
 				});
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
-				items:each(action: local Function(Expression is it){ :collectExprLocals(expr: it); });
+			Expression:ArrayLit: local Function([Expression] is items){
+				while([Int is ii: 0], { ii < items:length() }, {
+					:collectExprLocals(expr: items:get(index: ii));
+					ii++;
+				});
 			},
-			Expression:MapLit: local Function(Array of Expression is ks, Array of Expression is vs){
-				ks:each(action: local Function(Expression is k){ :collectExprLocals(expr: k); });
-				vs:each(action: local Function(Expression is v){ :collectExprLocals(expr: v); });
+			Expression:MapLit: local Function([Expression] is ks, [Expression] is vs){
+				while([Int is ki: 0], { ki < ks:length() }, {
+					:collectExprLocals(expr: ks:get(index: ki));
+					ki++;
+				});
+				while([Int is vi: 0], { vi < vs:length() }, {
+					:collectExprLocals(expr: vs:get(index: vi));
+					vi++;
+				});
 			},
 			Expression:Binary: local Function(String is _op, Expression is l, Expression is r){
 				:collectExprLocals(expr: l);
@@ -93,9 +102,12 @@ Class of LintRule is UnnecessarySelfColonRule{
 			Expression:FieldAccess: local Function(Expression is t, String is _f){
 				:collectExprLocals(expr: t);
 			},
-			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is _t, [Expression] is args){
 				:collectExprLocals(expr: inner);
-				args:each(action: local Function(Expression is a){ :collectExprLocals(expr: a); });
+				while([Int is ai: 0], { ai < args:length() }, {
+					:collectExprLocals(expr: args:get(index: ai));
+					ai++;
+				});
 			}
 		], default: {});
 	}
@@ -111,21 +123,19 @@ Class of LintRule is UnnecessarySelfColonRule{
 	}
 
 	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD }, {
-				:localNames: Map:init();
-				local Int is pi: 0;
-				while({ pi < m:params:length() }, {
+				:localNames: Map();
+				while([Int is pi: 0], { pi < m:params:length() }, {
 					:localNames:set(key: m:params:get(index: pi):name, value: '1');
 					pi++;
 				});
-				local Int is si: 0;
-				while({ si < m:body:length() }, {
+				while([Int is si: 0], { si < m:body:length() }, {
 					:collectStmtLocals(stmt: m:body:get(index: si));
 					si++;
 				});
-				si: 0;
-				while({ si < m:body:length() }, {
+				while([Int is si: 0], { si < m:body:length() }, {
 					:checkStatement(stmt: m:body:get(index: si), issues: issues);
 					si++;
 				});
@@ -133,9 +143,7 @@ Class of LintRule is UnnecessarySelfColonRule{
 			if({ m:kind == MemberKind:CLASS }, {
 				:checkClass(classDef: m:nestedClass, issues: issues);
 			});
-			if({ m:kind == MemberKind:CLASS }, {
-				:checkClass(classDef: m:nestedClass, issues: issues);
-			});
+			mi++;
 		});
 	}
 

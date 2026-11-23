@@ -9,7 +9,8 @@ Class of LintRule is MergeUsingRule{
 		['base', 'compiler', 'ast', [ClassInfo, Member, MemberKind, Expression, NamedArg]],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'struct', Array],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	replace Function of String is id(){
@@ -27,19 +28,21 @@ Class of LintRule is MergeUsingRule{
 	local Function of Boolean is hasDefaultControlFlowImport(Expression is initExpr){
 		local Boolean is found: false;
 		match(on: initExpr, when: [
-			Expression:ArrayLit: local Function(Array of Expression is items){
-				items:each(action: local Function(Expression is item){
-					match(on: item, when: [
-						Expression:ArrayLit: local Function(Array of Expression is segs){
-							segs:each(action: local Function(Expression is seg){
+			Expression:ArrayLit: local Function([Expression] is items){
+				while([Int is ii: 0], { !found && ii < items:length() }, {
+					match(on: items:get(index: ii), when: [
+						Expression:ArrayLit: local Function([Expression] is segs){
+							while([Int is si: 0], { !found && si < segs:length() }, {
+								local Expression is seg: segs:get(index: si);
 								match(on: seg, when: [
 									Expression:UsingAs: local Function(String is className, [NamedArg] is _args){
 										if({ seg:usingAsAlias == '' && (className == 'Conditional' || className == 'Loops') }, {
 											found: true;
 										});
 									},
-									Expression:ArrayLit: local Function(Array of Expression is grpItems){
-										grpItems:each(action: local Function(Expression is g){
+									Expression:ArrayLit: local Function([Expression] is grpItems){
+										while([Int is gi: 0], { !found && gi < grpItems:length() }, {
+											local Expression is g: grpItems:get(index: gi);
 											match(on: g, when: [
 												Expression:UsingAs: local Function(String is gclassName, [NamedArg] is _gargs){
 													if({ g:usingAsAlias == '' && (gclassName == 'Conditional' || gclassName == 'Loops') }, {
@@ -47,12 +50,15 @@ Class of LintRule is MergeUsingRule{
 													});
 												}
 											], default: {});
+											gi++;
 										});
 									}
 								], default: {});
+								si++;
 							});
 						}
 					], default: {});
+					ii++;
 				});
 			}
 		], default: {});
@@ -61,10 +67,11 @@ Class of LintRule is MergeUsingRule{
 
 	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
 		if({ classDef:name != 'Class' && classDef:name != 'Conditional' && classDef:name != 'Loops' && classDef:baseClass != 'Enum' }, {
-			classDef:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { mi < classDef:members:length() }, {
+				local Member is m: classDef:members:get(index: mi);
 				if({ m:name == 'using' && m:hasInit && m:hasModifier(kw: Keyword:REPLACE) && !m:hasModifier(kw: Keyword:MERGE) }, {
 					if({ :hasDefaultControlFlowImport(initExpr: m:initExpr) }, {
-						issues:add(item: LintIssue:init(
+						issues:add(item: LintIssue(
 							ruleId: :id(),
 							line: m:line,
 							isWarning: :isWarning(),
@@ -75,6 +82,7 @@ Class of LintRule is MergeUsingRule{
 				if({ m:kind == MemberKind:CLASS }, {
 					:checkClass(classDef: m:nestedClass, issues: issues);
 				});
+				mi++;
 			});
 		});
 	}

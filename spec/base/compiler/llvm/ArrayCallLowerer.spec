@@ -47,7 +47,7 @@ Class of CallLowerer is ArrayCallLowerer{
 			local String is elemName: if({ rArgs:length() >= 1 }, { rArgs:get(index: 0):name }, { '' });
 			local Expression is a0Val: call:args:get(index: 0):value;
 			local Boolean is isLitArg: match(on: a0Val, when: [
-				Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+				Expression:ArrayLit: local Function of Boolean([Expression] is items){ return true; },
 				else: { false }
 			]);
 			if({ isLitArg && elemName != 'Array' && elemName != 'List' && b:specBaseMap:get(key: elemName, default: '') != 'Array' && b:specBaseMap:get(key: elemName, default: '') != 'List' }, {
@@ -92,7 +92,7 @@ Class of CallLowerer is ArrayCallLowerer{
 			local Int is ekInt: if({ elemNode:name != '' && (b:isArcTypeNode(t: elemNode) || elemNode:isAny()) }, { 1 }, { 0 });
 			if({ elemNode:name == '' && call:args:length() == 1 }, {
 				match(on: call:args:get(index: 0):value, when: [
-					Expression:ArrayLit: local Function(Array of Expression is litItems){
+					Expression:ArrayLit: local Function([Expression] is litItems){
 						if({ litItems:length() > 0 }, {
 							local Boolean is allPtr: true;
 							local Int is oi: 0;

@@ -62,7 +62,7 @@ Class is IrBuilder{
 	Array of String is scopeOldSpecTypeStack: Array();
 	[Boolean] is scopeOldBoxedStack: [];
 	Array of String is scopeOldLazyStateStack: Array();
-	Array of Expression is scopeOldLazyExprStack: Array();
+	[Expression] is scopeOldLazyExprStack: [];
 	[Int] is scopeMarkStack: [];
 	String is curPoolMark: '';
 	Boolean is curFnRetIsArc: false;
@@ -364,7 +364,7 @@ Class is IrBuilder{
 		:scopeOldSpecTypeStack: Array();
 		:scopeOldBoxedStack: [];
 		:scopeOldLazyStateStack: Array();
-		:scopeOldLazyExprStack: Array();
+		:scopeOldLazyExprStack: [];
 		:scopeMarkStack: [];
 		:lazyLocalStateSlots: Map:init();
 		:lazyLocalExprs: Map:init();
@@ -384,7 +384,7 @@ Class is IrBuilder{
 				:scopeOldSpecTypeStack:add(item: :localSpecTypes:get(key: name, default: ''));
 				:scopeOldBoxedStack:push(item: :boxedLocals:has(key: name));
 				:scopeOldLazyStateStack:add(item: :lazyLocalStateSlots:get(key: name, default: ''));
-				:scopeOldLazyExprStack:add(item: :lazyLocalExprs:get(key: name, default: Expression:Unknown));
+				:scopeOldLazyExprStack:push(item: :lazyLocalExprs:get(key: name, default: Expression:Unknown));
 			}, {
 				:scopeOldSlotStack:add(item: '');
 				:scopeOldTypeStack:push(item: IrType:I64);
@@ -392,7 +392,7 @@ Class is IrBuilder{
 				:scopeOldSpecTypeStack:add(item: '');
 				:scopeOldBoxedStack:push(item: false);
 				:scopeOldLazyStateStack:add(item: '');
-				:scopeOldLazyExprStack:add(item: Expression:Unknown);
+				:scopeOldLazyExprStack:push(item: Expression:Unknown);
 			});
 		});
 		:localSlots:set(key: name, value: slot);
@@ -423,7 +423,7 @@ Class is IrBuilder{
 			local String is oldSpec: :scopeOldSpecTypeStack:pop(default: '');
 			local Boolean is oldBoxed: :scopeOldBoxedStack:pop();
 			local String is oldLazyState: :scopeOldLazyStateStack:pop(default: '');
-			local Expression is oldLazyExpr: :scopeOldLazyExprStack:pop(default: Expression:Unknown);
+			local Expression is oldLazyExpr: :scopeOldLazyExprStack:pop();
 			if({ oldSlot == '' }, {
 				:localSlots:remove(key: name);
 				:localTypes:remove(key: name);
@@ -1044,12 +1044,11 @@ Class is IrBuilder{
 	## suffix scheme and the vtable's per-overload keys — so the unwind
 	## walk and the vtable bind the canonical slot unchanged.
 	Function is buildSpecErrorHandlerDispatcher(ClassInfo is cls, String is sname){
-		local Array of Member is handlers: Array();
-		local Int is hmi: 0;
-		while({ hmi < cls:members:length() }, {
+		local [Member] is handlers: [];
+		while([Int is hmi: 0], { hmi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: hmi);
 			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' && !m:hasModifier(kw: Keyword:HELD) }, {
-				handlers:add(item: m);
+				handlers:push(item: m);
 			});
 			hmi++;
 		});
@@ -1090,11 +1089,10 @@ Class is IrBuilder{
 			kindVal: kv;
 		});
 
-		local Array of Member is kinded: Array();
+		local [Member] is kinded: [];
 		local Array of String is kindedTypes: Array();
 		local Int is catchAllIdx: -1;
-		local Int is hi: 0;
-		while({ hi < handlers:length() }, {
+		while([Int is hi: 0], { hi < handlers:length() }, {
 			local Member is m: handlers:get(index: hi);
 			if({ m:params:length() == 1 }, {
 				local Type is pt: m:params:get(index: 0):paramType;
@@ -1118,7 +1116,7 @@ Class is IrBuilder{
 						});
 					});
 					if({ k != '' }, {
-						kinded:add(item: m);
+						kinded:push(item: m);
 						kindedTypes:add(item: k);
 					});
 				});
@@ -1140,7 +1138,7 @@ Class is IrBuilder{
 				# The kind enum's variants: the desugared class model holds
 				# them as HELD fields; their singleton getters are
 				# '<Enum>_<Variant>__ensure' (the match-lowering primitive).
-				local ClassInfo is kcls: :clsMap:get(key: k, default: ClassInfo:init(name: '', baseClass: '', members: Array()));
+				local ClassInfo is kcls: :clsMap:get(key: k, default: ClassInfo(name: '', baseClass: '', members: []));
 				local Array of String is variants: Array();
 				local Int is vmi: 0;
 				while({ vmi < kcls:members:length() }, {
@@ -1898,7 +1896,7 @@ Class is IrBuilder{
 
 	local Function of String is findParentMethodImpl(String is clsName, String is methodName, String is suffix){
 		if({ !:clsMap:has(key: clsName) }, { return ''; });
-		local ClassInfo is cls: :clsMap:get(key: clsName, default: ClassInfo:init(name: '', baseClass: '', members: Array()));
+		local ClassInfo is cls: :clsMap:get(key: clsName, default: ClassInfo(name: '', baseClass: '', members: []));
 		local String is found: '';
 		local Int is bi: 0;
 		while({ found == '' && bi < cls:baseClasses:length() }, {
@@ -1920,7 +1918,7 @@ Class is IrBuilder{
 			bi++;
 		});
 		if({ found == '' && cls:baseClasses:length() == 0 && cls:name != 'Class' && cls:name != 'Any' && :clsMap:has(key: 'Class') }, {
-			local ClassInfo is rootCls: :clsMap:get(key: 'Class', default: ClassInfo:init(name: '', baseClass: '', members: Array()));
+			local ClassInfo is rootCls: :clsMap:get(key: 'Class', default: ClassInfo(name: '', baseClass: '', members: []));
 			local Int is rmi: 0;
 			while({ found == '' && rmi < rootCls:members:length() }, {
 				local Member is rm: rootCls:members:get(index: rmi);
@@ -1943,7 +1941,7 @@ Class is IrBuilder{
 			return :heldResolvers:get(key: sn, default: '');
 		});
 		if({ !:clsMap:has(key: qn) }, { return ''; });
-		local ClassInfo is cls: :clsMap:get(key: qn, default: ClassInfo:init(name: '', baseClass: '', members: Array()));
+		local ClassInfo is cls: :clsMap:get(key: qn, default: ClassInfo(name: '', baseClass: '', members: []));
 		local String is found: '';
 		local Int is bi: 0;
 		while({ found == '' && bi < cls:baseClasses:length() }, {
@@ -2396,7 +2394,7 @@ Class is IrBuilder{
 				if({ :bodyUsesDeferInExpr(expr: left) }, { found: true; });
 				if({ !found && :bodyUsesDeferInExpr(expr: right) }, { found: true; });
 			},
-			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is _t, [Expression] is args){
 				if({ :bodyUsesDeferInExpr(expr: inner) }, { found: true; });
 				local Int is ai: 0;
 				while({ ai < args:length() && !found }, {
@@ -2411,14 +2409,14 @@ Class is IrBuilder{
 				if({ :bodyUsesDeferInExpr(expr: target) }, { found: true; });
 				if({ !found && :bodyUsesDeferInExpr(expr: index) }, { found: true; });
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				local Int is ii: 0;
 				while({ ii < items:length() && !found }, {
 					if({ :bodyUsesDeferInExpr(expr: items:get(index: ii)) }, { found: true; });
 					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				local Int is mi: 0;
 				while({ mi < keys:length() && !found }, {
 					if({ :bodyUsesDeferInExpr(expr: keys:get(index: mi)) }, { found: true; });
@@ -2438,7 +2436,7 @@ Class is IrBuilder{
 							Expression:AnonFn: local Function(Type is _rt, [Parameter] is _sp, [Statement] is subBody){
 								if({ :bodyUsesDeferInStmts(stmts: subBody) }, { found: true; });
 							},
-							Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+							Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 								local Int is mi: 0;
 								while({ mi < keys:length() && !found }, {
 									match(on: keys:get(index: mi), when: [
@@ -2458,7 +2456,7 @@ Class is IrBuilder{
 									mi++;
 								});
 							},
-							Expression:ArrayLit: local Function(Array of Expression is items){
+							Expression:ArrayLit: local Function([Expression] is items){
 								local Int is bi: 0;
 								while({ bi < items:length() && !found }, {
 									match(on: items:get(index: bi), when: [
@@ -2629,7 +2627,7 @@ Class is IrBuilder{
 				});
 				:markBareStmtUse(stmts: bd);
 			},
-			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is args){
 				if({ :templateNames:has(key: target) }, {
 					:bareTemplateUsed:set(key: target, value: true);
 				});
@@ -2640,14 +2638,14 @@ Class is IrBuilder{
 					ai++;
 				});
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
 					:markBareExprUse(expr: items:get(index: ii, default: Expression:Unknown));
 					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is vals){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is vals){
 				local Int is ii: 0;
 				while({ ii < keys:length() }, {
 					:markBareExprUse(expr: keys:get(index: ii, default: Expression:Unknown));
@@ -2691,7 +2689,7 @@ Class is IrBuilder{
 				:collectDeclNamesInExpr(expr: left, decls: decls);
 				:collectDeclNamesInExpr(expr: right, decls: decls);
 			},
-			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is _t, [Expression] is args){
 				:collectDeclNamesInExpr(expr: inner, decls: decls);
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
@@ -2706,14 +2704,14 @@ Class is IrBuilder{
 				:collectDeclNamesInExpr(expr: target, decls: decls);
 				:collectDeclNamesInExpr(expr: index, decls: decls);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
 					:collectDeclNamesInExpr(expr: items:get(index: ii), decls: decls);
 					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {
 					:collectDeclNamesInExpr(expr: keys:get(index: mi), decls: decls);
@@ -2741,7 +2739,7 @@ Class is IrBuilder{
 								});
 								:collectDeclNamesInStmts(stmts: subBody, decls: decls);
 							},
-							Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+							Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 								if({ cnm == 'match' }, {
 									handledInl: true;
 									local Int is mi: 0;
@@ -2778,14 +2776,14 @@ Class is IrBuilder{
 									});
 								});
 							},
-							Expression:ArrayLit: local Function(Array of Expression is items){
+							Expression:ArrayLit: local Function([Expression] is items){
 								if({ cnm == 'branch' }, {
 									handledInl: true;
 									local Int is bi: 0;
 									while({ bi < items:length() }, {
 										local Expression is bItem: items:get(index: bi);
 										match(on: bItem, when: [
-											Expression:ArrayLit: local Function(Array of Expression is pair){
+											Expression:ArrayLit: local Function([Expression] is pair){
 												local Int is pi: 0;
 												while({ pi < pair:length() }, {
 													local Expression is pItem: pair:get(index: pi);
@@ -2859,7 +2857,7 @@ Class is IrBuilder{
 				:collectAllAnonCapturesInExpr(expr: left, decls: decls, out: out);
 				:collectAllAnonCapturesInExpr(expr: right, decls: decls, out: out);
 			},
-			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is _t, [Expression] is args){
 				:collectAllAnonCapturesInExpr(expr: inner, decls: decls, out: out);
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
@@ -2874,14 +2872,14 @@ Class is IrBuilder{
 				:collectAllAnonCapturesInExpr(expr: target, decls: decls, out: out);
 				:collectAllAnonCapturesInExpr(expr: index, decls: decls, out: out);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
 					:collectAllAnonCapturesInExpr(expr: items:get(index: ii), decls: decls, out: out);
 					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {
 					:collectAllAnonCapturesInExpr(expr: keys:get(index: mi), decls: decls, out: out);
@@ -2903,7 +2901,7 @@ Class is IrBuilder{
 								handledInl: true;
 								:collectAllAnonCapturesInStmts(stmts: subBody, decls: decls, out: out);
 							},
-							Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+							Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 								if({ cnm == 'match' }, {
 									handledInl: true;
 									local Int is mi: 0;
@@ -2928,14 +2926,14 @@ Class is IrBuilder{
 									});
 								});
 							},
-							Expression:ArrayLit: local Function(Array of Expression is items){
+							Expression:ArrayLit: local Function([Expression] is items){
 								if({ cnm == 'branch' }, {
 									handledInl: true;
 									local Int is bi: 0;
 									while({ bi < items:length() }, {
 										local Expression is bItem: items:get(index: bi);
 										match(on: bItem, when: [
-											Expression:ArrayLit: local Function(Array of Expression is pair){
+											Expression:ArrayLit: local Function([Expression] is pair){
 												local Int is pi: 0;
 												while({ pi < pair:length() }, {
 													local Expression is pItem: pair:get(index: pi);
@@ -3240,7 +3238,7 @@ Class is IrBuilder{
 			return '';
 		});
 		visited:set(key: qn, value: true);
-		local ClassInfo is cls: :clsMap:get(key: qn, default: ClassInfo:init(name: '', baseClass: '', members: Array()));
+		local ClassInfo is cls: :clsMap:get(key: qn, default: ClassInfo(name: '', baseClass: '', members: []));
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
@@ -3310,7 +3308,7 @@ Class is IrBuilder{
 				:collectCallsInExpr(expr: l, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 				:collectCallsInExpr(expr: r, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 			},
-			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is _t, [Expression] is args){
 				:collectCallsInExpr(expr: inner, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
@@ -3325,14 +3323,14 @@ Class is IrBuilder{
 				:collectCallsInExpr(expr: t, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 				:collectCallsInExpr(expr: idx, fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
 					:collectCallsInExpr(expr: items:get(index: ii), fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
 					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is vals){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is vals){
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {
 					:collectCallsInExpr(expr: keys:get(index: mi), fnVars: fnVars, outCalls: outCalls, curClsName: curClsName);
@@ -4202,7 +4200,7 @@ Class is IrBuilder{
 		], default: {});
 	}
 
-	local Function of Boolean is collectAppendChainRhs(Expression is expr, String is targetName, Array of Expression is rhsOut){
+	local Function of Boolean is collectAppendChainRhs(Expression is expr, String is targetName, [Expression] is rhsOut){
 		return match(on: expr, when: [
 			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){
 				if({ op != '.' }, { return false; });
@@ -4211,11 +4209,11 @@ Class is IrBuilder{
 					else: { false }
 				]);
 				if({ leftIsTarget }, {
-					rhsOut:add(item: right);
+					rhsOut:push(item: right);
 					return true;
 				});
 				if({ :collectAppendChainRhs(expr: left, targetName: targetName, rhsOut: rhsOut) }, {
-					rhsOut:add(item: right);
+					rhsOut:push(item: right);
 					return true;
 				});
 				return false;
@@ -4308,7 +4306,7 @@ Class is IrBuilder{
 		if({ :localSpecTypes:get(key: targetName, default: '') != 'String' && :localSpecTypes:get(key: targetName, default: '') != 'Str' }, {
 			return false;
 		});
-		local Array of Expression is rhsList: Array();
+		local [Expression] is rhsList: [];
 		if({ !:collectAppendChainRhs(expr: assignValue, targetName: targetName, rhsOut: rhsList) || rhsList:length() == 0 }, {
 			return false;
 		});
@@ -4730,7 +4728,7 @@ Class is IrBuilder{
 				});
 				return '0';
 			},
-			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is args){
 				local String is v: :lowerExpr(expr: inner);
 				local IrType is fromTy: :irTypeFor(specType: inner:resolvedType);
 				if({ target == 'Hex' || target == 'Bin' || target == 'Oct' }, {
@@ -4822,7 +4820,7 @@ Class is IrBuilder{
 				});
 				return dst;
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				local String is arr: :nextTmp();
 				local Type is rtNode: expr:getResolvedTypeNode();
 				local String is rtStr: expr:resolvedType;
@@ -4943,7 +4941,7 @@ Class is IrBuilder{
 				:emitClaimPool(val: arr);
 				return arr;
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				local String is mp: :nextTmp();
 				local Int is mapKk: 0;
 				local Int is mapVk: 0;
@@ -5095,7 +5093,7 @@ Class is IrBuilder{
 				:collectFreeInExpr(expr: left, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 				:collectFreeInExpr(expr: right, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 			},
-			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+			Expression:Cast: local Function(Expression is inner, String is _t, [Expression] is args){
 				:collectFreeInExpr(expr: inner, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 				local Int is ai: 0;
 				while({ ai < args:length() }, {
@@ -5128,14 +5126,14 @@ Class is IrBuilder{
 				:collectFreeInExpr(expr: target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 				:collectFreeInExpr(expr: index, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 			},
-			Expression:ArrayLit: local Function(Array of Expression is items){
+			Expression:ArrayLit: local Function([Expression] is items){
 				local Int is ii: 0;
 				while({ ii < items:length() }, {
 					:collectFreeInExpr(expr: items:get(index: ii), bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 					ii++;
 				});
 			},
-			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
 				local Int is mi: 0;
 				while({ mi < keys:length() }, {
 					:collectFreeInExpr(expr: keys:get(index: mi), bound: bound, outerSlots: outerSlots, seen: seen, out: out);
@@ -5247,7 +5245,7 @@ Class is IrBuilder{
 		local Array of String is savedScopeOldSpecs: :scopeOldSpecTypeStack;
 		local [Boolean] is savedScopeOldBoxed: :scopeOldBoxedStack;
 		local Array of String is savedScopeOldLazyStates: :scopeOldLazyStateStack;
-		local Array of Expression is savedScopeOldLazyExprs: :scopeOldLazyExprStack;
+		local [Expression] is savedScopeOldLazyExprs: :scopeOldLazyExprStack;
 		local [Int] is savedScopeMarks: :scopeMarkStack;
 		local String is savedPoolMark: :curPoolMark;
 		local Boolean is savedRetIsArc: :curFnRetIsArc;
@@ -5491,8 +5489,8 @@ Class is IrBuilder{
 			if({ caty == IrType:Void }, {
 				caty: match(on: cav, when: [
 					Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
-					Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
-					Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
+					Expression:ArrayLit: local Function of IrType([Expression] is items){ return IrType:Ptr; },
+					Expression:MapLit: local Function of IrType([Expression] is keys, [Expression] is vals){ return IrType:Ptr; },
 					Expression:AnonFn: local Function of IrType(Type is retT, [Parameter] is ps, [Statement] is bs){ return IrType:Ptr; },
 					Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
 					Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },
@@ -5910,7 +5908,7 @@ Class is IrBuilder{
 		if({ :mod:findStruct(name: provStruct):fieldNames:length() <= 2 }, {
 			return 'null';
 		});
-		if({ :clsMap:has(key: provStruct) && :bindings:isSysinternal(cls: :clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: Array()))) }, {
+		if({ :clsMap:has(key: provStruct) && :bindings:isSysinternal(cls: :clsMap:get(key: provStruct, default: ClassInfo(name: '', baseClass: '', members: []))) }, {
 			return 'null';
 		});
 		if({ :currentClass != '' && :localSlots:has(key: ':') }, {
@@ -6046,12 +6044,11 @@ Class is IrBuilder{
 			local Parameter is p: params:get(index: pi);
 			if({ p:isVariadic }, {
 				if({ p:paramType:name == 'Array' || :specBaseMap:get(key: p:paramType:name, default: '') == 'Array' }, {
-					local Array of Expression is vItems: Array();
-					local Int is vi: pi;
-					while({ vi < callArgs:length() }, {
+					local [Expression] is vItems: [];
+					while([Int is vi: pi], { vi < callArgs:length() }, {
 						local NamedArg is vna: callArgs:get(index: vi);
 						if({ vna:name == '' }, {
-							vItems:add(item: vna:value);
+							vItems:push(item: vna:value);
 						});
 						vi++;
 					});
@@ -6060,22 +6057,20 @@ Class is IrBuilder{
 					argTypes:push(item: IrType:Ptr);
 					argVals:push(item: :lowerExpr(expr: arrExpr));
 				}, {
-					local Map of String to Boolean is fixedNames: Map:init();
-					local Int is fni: 0;
-					while({ fni < pi }, {
+					local Map of String to Boolean is fixedNames: Map();
+					while([Int is fni: 0], { fni < pi }, {
 						fixedNames:set(key: params:get(index: fni):name, value: true);
 						fni++;
 					});
-					local Array of Expression is vKeys: Array();
-					local Array of Expression is vVals: Array();
-					local Int is vi: 0;
-					while({ vi < callArgs:length() }, {
+					local [Expression] is vKeys: [];
+					local [Expression] is vVals: [];
+					while([Int is vi: 0], { vi < callArgs:length() }, {
 						local NamedArg is vna: callArgs:get(index: vi);
 						if({ vna:name != '' && !fixedNames:has(key: vna:name) }, {
 							local Expression is kExpr: Expression:StringLit(value: vna:name);
-							kExpr:setResolvedTypeNode(tn: Type:init(name: 'String'), t: 'String');
-							vKeys:add(item: kExpr);
-							vVals:add(item: vna:value);
+							kExpr:setResolvedTypeNode(tn: Type(name: 'String'), t: 'String');
+							vKeys:push(item: kExpr);
+							vVals:push(item: vna:value);
 						});
 						vi++;
 					});
@@ -6127,8 +6122,8 @@ Class is IrBuilder{
 				if({ aty == IrType:Void }, {
 					aty: match(on: av, when: [
 						Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
-						Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
-						Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
+						Expression:ArrayLit: local Function of IrType([Expression] is items){ return IrType:Ptr; },
+						Expression:MapLit: local Function of IrType([Expression] is keys, [Expression] is vals){ return IrType:Ptr; },
 						Expression:AnonFn: local Function of IrType(Type is retT, [Parameter] is ps, [Statement] is bs){ return IrType:Ptr; },
 						Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
 						Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },
@@ -6144,8 +6139,8 @@ Class is IrBuilder{
 					if({ aty == IrType:Void }, {
 						aty: match(on: p:defaultExpr, when: [
 							Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
-							Expression:ArrayLit: local Function of IrType(Array of Expression is items){ return IrType:Ptr; },
-							Expression:MapLit: local Function of IrType(Array of Expression is keys, Array of Expression is vals){ return IrType:Ptr; },
+							Expression:ArrayLit: local Function of IrType([Expression] is items){ return IrType:Ptr; },
+							Expression:MapLit: local Function of IrType([Expression] is keys, [Expression] is vals){ return IrType:Ptr; },
 							Expression:AnonFn: local Function of IrType(Type is retT, [Parameter] is ps, [Statement] is bs){ return IrType:Ptr; },
 							Expression:FloatLit: local Function of IrType(String is t){ return IrType:F64; },
 							Expression:BoolLit: local Function of IrType(Boolean is b){ return IrType:I1; },

@@ -417,12 +417,14 @@ Class is Parser{
 			if({ c:outerName != '' }, {
 				qualifiedOuter: c:outerName . ':' . c:name;
 			});
-			c:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { mi < c:members:length() }, {
+				local Member is m: c:members:get(index: mi);
 				if({ m:kind == MemberKind:CLASS }, {
 					m:nestedClass:setOuter(name: qualifiedOuter);
 					m:nestedClass:baseClasses:add(item: c:name);
 					:linkNestedClasses(classes: [m:nestedClass]);
 				});
+				mi++;
 			});
 			ci++;
 		});
@@ -495,9 +497,9 @@ Class is Parser{
 		});
 
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
-		local Array of Member is members: Array();
+		local [Member] is members: [];
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
-			members:add(item: :parseMember());
+			members:push(item: :parseMember());
 		});
 		:matchPunct(p: Punctuation:BLOCK_CLOSE);
 
@@ -647,7 +649,7 @@ Class is Parser{
 
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
 
-		local Array of Member is members: Array();
+		local [Member] is members: [];
 		local Int is count: 0;
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			# Stray terminator between body members: shorthand metadata
@@ -658,7 +660,7 @@ Class is Parser{
 				:advance();
 			});
 			if({ :atEnumMember() }, {
-				members:add(item: :parseMember());
+				members:push(item: :parseMember());
 			}, {
 				local Token is vTok: :advance();
 				local String is vName: vTok:getValue();
@@ -680,15 +682,15 @@ Class is Parser{
 				});
 				count: count + 1;
 
-				local Member is m: Member:init(kind: MemberKind:FIELD);
+				local Member is m: Member(kind: MemberKind:FIELD);
 				m:setLine(line: vTok:getLine());
 				m:modifiers: Array(['static', 'local']);
-				m:memberType: Type:init(name: backingType);
+				m:memberType: Type(name: backingType);
 				m:name: vName;
 				m:params: vParams;
 				m:initExpr: valExpr;
 				m:hasInit: hasInit;
-				members:add(item: m);
+				members:push(item: m);
 
 				if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 					:advance();
@@ -1266,11 +1268,11 @@ Class is Parser{
 		if({ :checkKeyword(kw: Keyword:AS) }, {
 			:advance();
 			local Token is targetTok: :advance();
-			local Array of Expression is args: Array();
+			local [Expression] is args: [];
 			if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 				:advance();
 				if({ !:checkPunct(p: Punctuation:GROUP_CLOSE) }, {
-					args:add(item: :parseExpression());
+					args:push(item: :parseExpression());
 				});
 				:matchPunct(p: Punctuation:GROUP_CLOSE);
 			});
@@ -1630,19 +1632,22 @@ Class is Parser{
 		:advance();
 		if({ :checkPunct(p: Punctuation:BRACKET_CLOSE) }, {
 			:advance();
-			return Expression:ArrayLit(items: Array());
+			local [Expression] is emptyItems: [];
+			return Expression:ArrayLit(items: emptyItems);
 		});
 		if({ :checkPunct(p: Punctuation:PAIR) && :peekAhead(offset: 1):getValue() == Punctuation:BRACKET_CLOSE:value() }, {
 			:advance();
 			:matchPunct(p: Punctuation:BRACKET_CLOSE);
-			return Expression:MapLit(keys: Array(), values: Array());
+			local [Expression] is emptyKeys: [];
+			local [Expression] is emptyVals: [];
+			return Expression:MapLit(keys: emptyKeys, values: emptyVals);
 		});
 		local Expression is firstItem: :parseExpression();
 		if({ :checkPunct(p: Punctuation:PAIR) }, {
 			:advance();
 			local Expression is firstVal: :parseExpression();
-			local Array of Expression is mKeys: Array([firstItem]);
-			local Array of Expression is mVals: Array([firstVal]);
+			local [Expression] is mKeys: [firstItem];
+			local [Expression] is mVals: [firstVal];
 			if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 				:advance();
 				local Boolean is keepGoing: true;
@@ -1650,8 +1655,8 @@ Class is Parser{
 					local Expression is k: :parseExpression();
 					:matchPunct(p: Punctuation:PAIR);
 					local Expression is v: :parseExpression();
-					mKeys:add(item: k);
-					mVals:add(item: v);
+					mKeys:push(item: k);
+					mVals:push(item: v);
 					if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 						:advance();
 					}, {
@@ -1662,12 +1667,12 @@ Class is Parser{
 			:matchPunct(p: Punctuation:BRACKET_CLOSE);
 			return Expression:MapLit(keys: mKeys, values: mVals);
 		});
-		local Array of Expression is items: Array([firstItem]);
+		local [Expression] is items: [firstItem];
 		if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 			:advance();
 			local Boolean is keepGoing: true;
 			while({ keepGoing && !:checkPunct(p: Punctuation:BRACKET_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
-				items:add(item: :parseExpression());
+				items:push(item: :parseExpression());
 				if({ :checkPunct(p: Punctuation:SEPARATOR) }, {
 					:advance();
 				}, {

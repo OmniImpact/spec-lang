@@ -13,6 +13,7 @@ Class of LintRule is InitShorthandRule{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'struct', Array],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -33,11 +34,11 @@ Class of LintRule is InitShorthandRule{
 	replace Function is checkClass(ClassInfo is classDef, Array of LintIssue is issues){
 		local String is saved: :curClassName;
 		:curClassName: classDef:name;
-		classDef:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD }, {
 				if({ m:name != 'init' }, {
-					local Int is si: 0;
-					while({ si < m:body:length() }, {
+					while([Int is si: 0], { si < m:body:length() }, {
 						:checkStatement(stmt: m:body:get(index: si), issues: issues);
 						si++;
 					});
@@ -46,6 +47,7 @@ Class of LintRule is InitShorthandRule{
 			if({ m:kind == MemberKind:CLASS }, {
 				:checkClass(classDef: m:nestedClass, issues: issues);
 			});
+			mi++;
 		});
 		:curClassName: saved;
 	}

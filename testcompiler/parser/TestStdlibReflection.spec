@@ -75,10 +75,10 @@ Class of SpecUnitTest is TestStdlibReflection{
 		methodMem:params: params;
 		methodMem:body: body;
 
-		local Array of Member is members: Array();
-		members:add(item: methodMem);
+		local [Member] is members: [];
+		members:push(item: methodMem);
 
-		local ClassInfo is cls: ClassInfo:init(name: 'Healer', baseClass: 'Entity', members: members);
+		local ClassInfo is cls: ClassInfo(name: 'Healer', baseClass: 'Entity', members: members);
 		Assert:areEqualString('Healer', cls:name);
 		Assert:areEqualString('Entity', cls:baseClass);
 		Assert:areEqualInt(1, cls:members:length());

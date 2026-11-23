@@ -121,11 +121,13 @@ Class is Loader{
 		local Int is pci: 0;
 		while({ pci < prog:classes:length() }, {
 			local ClassInfo is c: prog:classes:get(index: pci);
-			c:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { mi < c:members:length() }, {
+				local Member is m: c:members:get(index: mi);
 				m:setSourceFile(file: filePath);
 				if({ m:kind == MemberKind:CLASS }, {
 					m:nestedClass:setSourceFile(file: filePath);
 				});
+				mi++;
 			});
 			# Class identity is namespace-qualified: a base:sys wrapper and
 			# its same-name sysinternal floor coexist in one program, and
@@ -151,16 +153,17 @@ Class is Loader{
 	##
 	## @param c: Target [ClassInfo] definition.
 	Function is collectImportsFromClass(ClassInfo is c){
-		c:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { mi < c:members:length() }, {
+			local Member is m: c:members:get(index: mi);
 			if({ m:kind == MemberKind:CLASS }, {
 				:collectImportsFromClass(c: m:nestedClass);
 			});
 			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
-					Expression:ArrayLit: local Function(Array of Expression is items){
-						items:each(action: local Function(Expression is item){
-							local Boolean is handled: match(on: item, when: [
-								Expression:ArrayLit: local Function(Array of Expression is subItems){
+					Expression:ArrayLit: local Function([Expression] is items){
+						while([Int is ii: 0], { ii < items:length() }, {
+							local Boolean is handled: match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is subItems){
 									:loadArrayFormUsing(items: subItems, c: c);
 									return true;
 								},
@@ -169,11 +172,13 @@ Class is Loader{
 							if({ !handled }, {
 								:parseErrors:add(item: :errText:errMalformedImport(className: c:name));
 							});
+							ii++;
 						});
 					},
 					else: {}
 				]);
 			});
+			mi++;
 		});
 	}
 
@@ -423,15 +428,15 @@ Class is Loader{
 	##
 	## @param item: The ARRAY expression naming the package segments.
 	## @param c: The importing class.
-	Function is loadArrayFormUsing(Array of Expression is items, ClassInfo is c){
+	Function is loadArrayFormUsing([Expression] is items, ClassInfo is c){
 		if({ items:length() == 0 }, {
 			return;
 		});
 		local Array of String is parts: Array();
 		local String is termClass: '';
 		local Array of String is groupedClasses: Array();
-		items:each(action: local Function(Expression is seg){
-			match(on: seg, when: [
+		while([Int is si: 0], { si < items:length() }, {
+			match(on: items:get(index: si), when: [
 				Expression:Ident: local Function(String is name){
 					termClass: name;
 				},
@@ -441,9 +446,9 @@ Class is Loader{
 					# for the checker, generator, and audit.
 					termClass: className;
 				},
-				Expression:ArrayLit: local Function(Array of Expression is grpItems){
-					grpItems:each(action: local Function(Expression is g){
-						match(on: g, when: [
+				Expression:ArrayLit: local Function([Expression] is grpItems){
+					while([Int is gi: 0], { gi < grpItems:length() }, {
+						match(on: grpItems:get(index: gi), when: [
 							Expression:Ident: local Function(String is gname){
 								groupedClasses:add(item: gname);
 							},
@@ -452,6 +457,7 @@ Class is Loader{
 							},
 							else: {}
 						]);
+						gi++;
 					});
 				},
 				Expression:StringLit: local Function(String is value){
@@ -461,6 +467,7 @@ Class is Loader{
 				},
 				else: {}
 			]);
+			si++;
 		});
 		if({ groupedClasses:length() > 0 }, {
 			groupedClasses:each(action: local Function(String is gc){
@@ -617,15 +624,17 @@ Class is Loader{
 		local Int is sci: 0;
 		while({ sci < classes:length() }, {
 			local ClassInfo is c: classes:get(index: sci);
-			c:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { mi < c:members:length() }, {
+				local Member is m: c:members:get(index: mi);
 				if({ m:name == 'using' && m:hasInit }, {
 					match(on: m:initExpr, when: [
-						Expression:ArrayLit: local Function(Array of Expression is items){
-							items:each(action: local Function(Expression is item){
-								match(on: item, when: [
-									Expression:ArrayLit: local Function(Array of Expression is subItems){
+						Expression:ArrayLit: local Function([Expression] is items){
+							while([Int is ii: 0], { ii < items:length() }, {
+								match(on: items:get(index: ii), when: [
+									Expression:ArrayLit: local Function([Expression] is subItems){
 										local String is pkgPrefix: '';
-										subItems:each(action: local Function(Expression is seg){
+										while([Int is si: 0], { si < subItems:length() }, {
+											local Expression is seg: subItems:get(index: si);
 											match(on: seg, when: [
 												Expression:StringLit: local Function(String is value){
 													if({ value != '*' }, {
@@ -639,33 +648,40 @@ Class is Loader{
 												Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 													:synthesizeFor(c: c, asExpr: seg, pkgPrefix: pkgPrefix);
 												},
-												Expression:ArrayLit: local Function(Array of Expression is grpItems){
-													grpItems:each(action: local Function(Expression is g){
+												Expression:ArrayLit: local Function([Expression] is grpItems){
+													while([Int is gi: 0], { gi < grpItems:length() }, {
+														local Expression is g: grpItems:get(index: gi);
 														match(on: g, when: [
 															Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
 																:synthesizeFor(c: c, asExpr: g, pkgPrefix: pkgPrefix);
 															},
 															else: {}
 														]);
+														gi++;
 													});
 												},
 												else: {}
 											]);
+											si++;
 										});
 									},
 									else: {}
 								]);
+								ii++;
 							});
 						},
 						else: {}
 					]);
 				});
+				mi++;
 			});
-			c:members:each(action: local Function(Member is m){
+			while([Int is mi: 0], { mi < c:members:length() }, {
+				local Member is m: c:members:get(index: mi);
 				if({ m:kind == MemberKind:CLASS }, {
 					local [ClassInfo] is one: [m:nestedClass];
 					:synthesizeInto(classes: one);
 				});
+				mi++;
 			});
 			# an inner class inherits the enclosing
 			# chain's as-imports — its instances carry their own synthesized
@@ -690,15 +706,17 @@ Class is Loader{
 		cls:baseClasses:each(action: local Function(String is baseName){
 			local ClassInfo is base: :findLoadedClass(name: baseName);
 			if({ base:name != '' }, {
-				base:members:each(action: local Function(Member is m){
+				while([Int is mi: 0], { mi < base:members:length() }, {
+					local Member is m: base:members:get(index: mi);
 					if({ m:name == 'using' && m:hasInit }, {
 						match(on: m:initExpr, when: [
-							Expression:ArrayLit: local Function(Array of Expression is items){
-								items:each(action: local Function(Expression is item){
-									match(on: item, when: [
-										Expression:ArrayLit: local Function(Array of Expression is subItems){
+							Expression:ArrayLit: local Function([Expression] is items){
+								while([Int is ii: 0], { ii < items:length() }, {
+									match(on: items:get(index: ii), when: [
+										Expression:ArrayLit: local Function([Expression] is subItems){
 											local String is pkgPrefix: '';
-											subItems:each(action: local Function(Expression is seg){
+											while([Int is si: 0], { si < subItems:length() }, {
+												local Expression is seg: subItems:get(index: si);
 												match(on: seg, when: [
 													Expression:StringLit: local Function(String is value){
 														if({ pkgPrefix == '' }, {
@@ -712,15 +730,18 @@ Class is Loader{
 													},
 													else: {}
 												]);
+												si++;
 											});
 										},
 										else: {}
 									]);
+									ii++;
 								});
 							},
 							else: {}
 						]);
 					});
+					mi++;
 				});
 				:synthesizeInheritedImports(cls: base, visited: visited);
 			});
@@ -758,9 +779,10 @@ Class is Loader{
 		});
 		local String is fieldName: if({ alias != '' }, { alias }, { '_import_' . targetName });
 		local Boolean is already: false;
-		local Array of Member is members: c:members;
-		members:each(action: local Function(Member is m){
-			if({ !already && m:name == fieldName }, {
+		local [Member] is members: c:members;
+		while([Int is mi: 0], { !already && mi < members:length() }, {
+			local Member is m: members:get(index: mi);
+			if({ m:name == fieldName }, {
 				# an inherited-import synthesis
 				# finds the field already synthesized from the class's own
 				# using (or a prior ancestor hop) — deduplicate silently. A
@@ -780,21 +802,22 @@ Class is Loader{
 					:parseErrors:add(item: :errText:errSyntheticImportCollision(fieldName: fieldName, className: c:name));
 				});
 			});
+			mi++;
 		});
 		if({ already }, {
 			return;
 		});
-		local Member is field: Member:init(kind: MemberKind:FIELD);
+		local Member is field: Member(kind: MemberKind:FIELD);
 		field:name: fieldName;
-		field:memberType: Type:init(name: targetName);
+		field:memberType: Type(name: targetName);
 		local Expression is recv: Expression:Ident(name: targetName);
-		local CallData is callData: CallData:init(target: recv, name: 'init', args: asArgs);
+		local CallData is callData: CallData(target: recv, name: 'init', args: asArgs);
 		local Expression is ctor: Expression:Call(call: callData);
 		field:hasInit: true;
 		field:initExpr: ctor;
 		field:setSourceFile(file: c:sourceFile);
 		field:setLine(line: asExpr:line);
-		members:add(item: field);
+		members:push(item: field);
 	}
 
 	## True when [c] declares real fields (metadata pseudo-members excluded).
@@ -803,10 +826,12 @@ Class is Loader{
 	## @return: true when field-ful.
 	Function of Boolean is isFieldFul(ClassInfo is c){
 		local Boolean is found: false;
-		c:members:each(action: local Function(Member is m){
+		while([Int is mi: 0], { !found && mi < c:members:length() }, {
+			local Member is m: c:members:get(index: mi);
 			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' }, {
 				found: true;
 			});
+			mi++;
 		});
 		return found;
 	}
@@ -817,7 +842,7 @@ Class is Loader{
 	## @param name: Class name.
 	## @return: The [ClassInfo], or an empty-named node when absent.
 	Function of ClassInfo is findLoadedClass(String is name){
-		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: Array());
+		local ClassInfo is res: ClassInfo(name: '', baseClass: '', members: []);
 		local Boolean is found: false;
 		local Int is count: :loadedClasses:length();
 		while(
@@ -837,7 +862,7 @@ Class is Loader{
 
 	## Looks up a loaded class by exact class [name] and colon-joined namespace [nsJoined].
 	Function of ClassInfo is findLoadedClassInNamespace(String is name, String is nsJoined){
-		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: Array());
+		local ClassInfo is res: ClassInfo(name: '', baseClass: '', members: []);
 		local Boolean is found: false;
 		local Int is count: :loadedClasses:length();
 		while(
