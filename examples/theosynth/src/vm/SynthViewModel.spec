@@ -21,7 +21,7 @@ Class is SynthViewModel{
 	Waveform is selectedWaveform: Waveform:SINE;
 	Int is lastPlayedIdx: -1;
 	Boolean is playMode: true;
-	Boolean is seenKittyEvents: false;
+	Boolean is seenKittyRelease: false;
 	Boolean is aboutOpen: false;
 	Boolean is audioEnabled: true;
 
@@ -121,14 +121,13 @@ Class is SynthViewModel{
 	## Triggers a note on key press (or mouse click with short auto-release).
 	Function is triggerKeyIndex(Int is idx, Boolean is autoRelease: true){
 		if({ idx < 0 || idx >= keys:length() }, { return; });
-		if({ heldFlags:get(index: idx) == 1 && !autoRelease }, { return; });
 		lastPlayedIdx: idx;
 		heldFlags:set(index: idx, item: 1);
 		activeTicks:set(index: idx, item: 1);
 		if({ autoRelease }, {
 			fallbackTicks:set(index: idx, item: 12);
 		}, {
-			fallbackTicks:set(index: idx, item: if({ seenKittyEvents }, { 0 }, { 12 }));
+			fallbackTicks:set(index: idx, item: if({ seenKittyRelease }, { 0 }, { 14 }));
 		});
 		onStateChanged();
 		if({ audioEnabled }, {
@@ -222,28 +221,22 @@ Class is SynthViewModel{
 		if({ !keyIndexByChar:has(key: key) }, { return false; });
 		local Int is idx: keyIndexByChar:get(key: key, default: -1);
 		if({ isRelease }, {
-			seenKittyEvents: true;
+			seenKittyRelease: true;
 			releaseKeyIndex(idx: idx);
 			return true;
 		});
 		if({ isRepeat }, {
-			seenKittyEvents: true;
-			# Reject key-repeat if already in key-down state.
+			# Reject key-repeat while already in key-down state.
 			if({ heldFlags:get(index: idx) == 1 }, {
-				fallbackTicks:set(index: idx, item: 0);
+				if({ !seenKittyRelease }, {
+					fallbackTicks:set(index: idx, item: 14);
+				});
 				return true;
 			});
 			return true;
 		});
 		if({ isPress }, {
-			if({ seenKittyEvents && heldFlags:get(index: idx) == 1 }, {
-				# Reject duplicate press while already held down under Kitty key-up tracking.
-				return true;
-			});
-			if({ !seenKittyEvents && heldFlags:get(index: idx) == 1 }, {
-				# Without Kitty key-up events, allow re-tapping after brief debounce, or retrigger cleanly.
-				releaseKeyIndex(idx: idx);
-			});
+			# Always honor explicit key-down PRESS events so keys can never get stuck rejected.
 			triggerKeyIndex(idx: idx, autoRelease: false);
 			return true;
 		});
