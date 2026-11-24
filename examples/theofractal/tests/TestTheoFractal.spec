@@ -67,6 +67,14 @@ Class of SpecUnitTest is TestTheoFractal{
 
 		local TheoColor is rain: colorForValue(t: 0.0, theme: ColorTheme:RAINBOW);
 		Assert:isTrue(rain:c1 == 255);
+
+		local TheoColor is forest: colorForValue(t: 0.5, theme: ColorTheme:FOREST);
+		Assert:isTrue(forest:c2 > forest:c1 && forest:c2 > forest:c3);
+
+		local TheoColor is sunsetPurple: colorForValue(t: 0.25, theme: ColorTheme:SUNSET);
+		Assert:isTrue(sunsetPurple:c3 > sunsetPurple:c1 && sunsetPurple:c1 > sunsetPurple:c2);
+		local TheoColor is sunsetOrange: colorForValue(t: 0.72, theme: ColorTheme:SUNSET);
+		Assert:isTrue(sunsetOrange:c1 > sunsetOrange:c2 && sunsetOrange:c2 > sunsetOrange:c3);
 	}
 
 	Function is testViewportPanAndZoom(){

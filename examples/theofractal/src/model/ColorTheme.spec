@@ -7,5 +7,7 @@ Enum is ColorTheme{
 	GRAYSCALE,
 	COOL,
 	WARM,
-	RAINBOW
+	RAINBOW,
+	FOREST,
+	SUNSET
 }

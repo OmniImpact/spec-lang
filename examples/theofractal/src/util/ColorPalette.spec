@@ -23,6 +23,8 @@ Class is ColorPalette{
 			{ name == FractalStrings:THEME_COOL }: { ColorTheme:COOL },
 			{ name == FractalStrings:THEME_WARM }: { ColorTheme:WARM },
 			{ name == FractalStrings:THEME_RAINBOW }: { ColorTheme:RAINBOW },
+			{ name == FractalStrings:THEME_FOREST }: { ColorTheme:FOREST },
+			{ name == FractalStrings:THEME_SUNSET }: { ColorTheme:SUNSET },
 			else: { ColorTheme:GRAYSCALE }
 		]);
 	}
@@ -55,6 +57,25 @@ Class is ColorPalette{
 				local Int is r: toByte(v: 0.35 + 0.65 * sqrt(value: u));
 				local Int is g: toByte(v: 0.06 + 0.82 * (u * u));
 				local Int is b: toByte(v: 0.04 + 0.46 * (u * u * u));
+				Color32:pack(r: r, g: g, b: b);
+			},
+			{ theme == ColorTheme:FOREST }: {
+				local Int is r: toByte(v: 0.02 + 0.50 * (u * u));
+				local Int is g: toByte(v: 0.16 + 0.80 * sqrt(value: u));
+				local Int is b: toByte(v: 0.05 + 0.38 * (u * u * u));
+				Color32:pack(r: r, g: g, b: b);
+			},
+			{ theme == ColorTheme:SUNSET }: {
+				local Float is pr: 0.20 + 0.50 * u;
+				local Float is pg: 0.04 + 0.14 * (u * u);
+				local Float is pb: 0.36 + 0.58 * sqrt(value: u);
+				local Float is dist: abs(value: phase - 0.72);
+				if({ dist > 0.5 }, { dist: 1.0 - dist; });
+				local Float is normD: dist / 0.045;
+				local Float is band: exp(value: -(normD * normD));
+				local Int is r: toByte(v: pr + (1.0 - pr) * band);
+				local Int is g: toByte(v: pg + (0.48 - pg) * band);
+				local Int is b: toByte(v: pb + (0.06 - pb) * band);
 				Color32:pack(r: r, g: g, b: b);
 			},
 			else: {

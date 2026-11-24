@@ -24,6 +24,8 @@ Class is FractalStrings{
 	held String is THEME_COOL: 'Cool';
 	held String is THEME_WARM: 'Warm';
 	held String is THEME_RAINBOW: 'Rainbow';
+	held String is THEME_FOREST: 'Forest';
+	held String is THEME_SUNSET: 'Sunset';
 
 	held String is NAV_UP: ' ▲ ';
 	held String is NAV_DOWN: ' ▼ ';
@@ -37,7 +39,7 @@ Class is FractalStrings{
 	held String is HELP_ABOUT_1: 'Interactive terminal fractal explorer built with Spec & Theo.';
 	held String is HELP_ABOUT_2: 'Fractals: Sierpinski, Snowflake, Mandelbrot, Barnsley Fern,';
 	held String is HELP_ABOUT_3: '          Julia Set, Burning Ship, and Dragon Curve.';
-	held String is HELP_ABOUT_4: 'Themes:   Grayscale, Cool, Warm, Rainbow.';
+	held String is HELP_ABOUT_4: 'Themes:   Grayscale, Cool, Warm, Rainbow, Forest, Sunset.';
 	held String is HELP_KEYS_HDR: 'Keyboard Shortcuts';
 	held String is HELP_KEY_PAN: 'W / A / S / D   Pan Up / Left / Down / Right';
 	held String is HELP_KEY_ZOOM: 'E / Q           Zoom In / Zoom Out';
@@ -64,7 +66,9 @@ Class is FractalStrings{
 			FractalStrings:THEME_GRAYSCALE,
 			FractalStrings:THEME_COOL,
 			FractalStrings:THEME_WARM,
-			FractalStrings:THEME_RAINBOW
+			FractalStrings:THEME_RAINBOW,
+			FractalStrings:THEME_FOREST,
+			FractalStrings:THEME_SUNSET
 		]
 	}
 }
