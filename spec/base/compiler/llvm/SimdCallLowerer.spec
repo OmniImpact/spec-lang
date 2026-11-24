@@ -31,8 +31,8 @@ Class of SysinternalCallLowerer is SimdCallLowerer{
 		local Boolean is ok: false;
 		match(on: call:name, when: [
 			'init': { ok: true; },
-			['loadF64', 'fill4', 'dot4']: { ok: argc >= 2; },
-			['storeF64', 'add4', 'sub4', 'mul4', 'scale4']: { ok: argc >= 3; },
+			['fill4', 'dot4']: { ok: argc >= 2; },
+			['add4', 'sub4', 'mul4', 'scale4']: { ok: argc >= 3; },
 			['fma4', 'clamp4']: { ok: argc >= 4; }
 		]);
 		return ok;
@@ -43,17 +43,6 @@ Class of SysinternalCallLowerer is SimdCallLowerer{
 		local String is res: '0';
 		match(on: nm, when: [
 			'init': { res: 'null'; },
-			'loadF64': {
-				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
-				local String is off: :lowerNamedArg(b: b, call: call, argName: 'byteOffset', posIdx: 1, defVal: '0');
-				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'spec_simd_load_f64', argTypes: [IrType:I64, IrType:I64], args: [p, off]);
-			},
-			'storeF64': {
-				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
-				local String is off: :lowerNamedArg(b: b, call: call, argName: 'byteOffset', posIdx: 1, defVal: '0');
-				local String is v: :lowerNamedArg(b: b, call: call, argName: 'val', posIdx: 2, defVal: '0.0');
-				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_simd_store_f64', argTypes: [IrType:I64, IrType:I64, IrType:F64], args: [p, off, v]);
-			},
 			'fill4': {
 				local String is d: :lowerNamedArg(b: b, call: call, argName: 'dst', posIdx: 0, defVal: '0');
 				local String is v: :lowerNamedArg(b: b, call: call, argName: 'val', posIdx: 1, defVal: '0.0');

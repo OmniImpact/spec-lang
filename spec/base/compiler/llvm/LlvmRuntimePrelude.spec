@@ -1017,18 +1017,6 @@ ok:
 
 	Function of Str is emitSimdHelpers(){
 		return '''
-define internal double @spec_simd_load_f64(i64 %ptr, i64 %off) alwaysinline {
-  %addr = add i64 %ptr, %off
-  %p = inttoptr i64 %addr to ptr
-  %v = load double, ptr %p, align 8
-  ret double %v
-}
-define internal void @spec_simd_store_f64(i64 %ptr, i64 %off, double %v) alwaysinline {
-  %addr = add i64 %ptr, %off
-  %p = inttoptr i64 %addr to ptr
-  store double %v, ptr %p, align 8
-  ret void
-}
 define internal void @spec_simd_fill4(i64 %dst, double %val) alwaysinline {
   %v0 = insertelement <4 x double> poison, double %val, i32 0
   %vs = shufflevector <4 x double> %v0, <4 x double> poison, <4 x i32> zeroinitializer

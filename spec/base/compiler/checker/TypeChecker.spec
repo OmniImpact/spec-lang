@@ -3557,9 +3557,26 @@ Class is TypeChecker{
 		return res;
 	}
 
+	local Function of Boolean is isIfCallExpr(Expression is e){
+		return match(on: e, when: [
+			Expression:Call: local Function of Boolean(CallData is cd){
+				return cd:name == 'if' && cd:args:length() == 3;
+			},
+			else: { false }
+		]);
+	}
+
 	local Function of String is inferBinaryExpr(String is op, Expression is left, Expression is right, String is expected){
-		local String is leftT: :inferExpressionType(expr: left, expected: expected);
-		local String is rightT: :inferExpressionType(expr: right, expected: expected);
+		local String is leftExp: expected;
+		if({ leftExp == '' && :isIfCallExpr(e: left) }, {
+			leftExp: Primitive:ANY:value();
+		});
+		local String is leftT: :inferExpressionType(expr: left, expected: leftExp);
+		local String is rightExp: expected;
+		if({ rightExp == '' && :isIfCallExpr(e: right) }, {
+			rightExp: if({ leftT != '' && !:isVoid(t: leftT) }, { leftT }, { Primitive:ANY:value() });
+		});
+		local String is rightT: :inferExpressionType(expr: right, expected: rightExp);
 		local String is res: Primitive:INT:value();
 		match(on: op, when: [
 			'.': {
@@ -4171,7 +4188,25 @@ Class is TypeChecker{
 							}
 						], default: {});
 					});
-					:inferExpressionType(expr: arg:value);
+					local String is bareArgExp: '';
+					if({ !bareIsBranch && :isIfCallExpr(e: arg:value) }, {
+						local Member is bpCallee: :lookupAnyMember(className: provider, methodName: call:name);
+						if({ bpCallee:name != '' }, {
+							local Int is bpIdx: 0;
+							while({ bpIdx < bpCallee:params:length() && bareArgExp == '' }, {
+								local Parameter is bcp: bpCallee:params:get(index: bpIdx);
+								local Boolean is bpHit: if({ arg:name != '' }, { bcp:name == arg:name }, { bpIdx == bareIdx });
+								if({ bpHit && bcp:paramType:name != '' && !:isVoid(t: bcp:paramType:name) }, {
+									bareArgExp: :formatTypeString(t: bcp:paramType);
+								});
+								bpIdx++;
+							});
+						});
+						if({ bareArgExp == '' }, {
+							bareArgExp: Primitive:ANY:value();
+						});
+					});
+					:inferExpressionType(expr: arg:value, expected: bareArgExp);
 					lai++;
 				});
 				:inBranchClosure: savedLoopBranch;
@@ -4211,7 +4246,25 @@ Class is TypeChecker{
 							:currentYieldExpected: expected;
 						});
 					});
-					:inferExpressionType(expr: arg:value);
+					local String is bareArgExp: '';
+					if({ !bareIsBranch && :isIfCallExpr(e: arg:value) }, {
+						local Member is bpCallee: :lookupAnyMember(className: provider, methodName: call:name);
+						if({ bpCallee:name != '' }, {
+							local Int is bpIdx: 0;
+							while({ bpIdx < bpCallee:params:length() && bareArgExp == '' }, {
+								local Parameter is bcp: bpCallee:params:get(index: bpIdx);
+								local Boolean is bpHit: if({ arg:name != '' }, { bcp:name == arg:name }, { bpIdx == bareIdx });
+								if({ bpHit && bcp:paramType:name != '' && !:isVoid(t: bcp:paramType:name) }, {
+									bareArgExp: :formatTypeString(t: bcp:paramType);
+								});
+								bpIdx++;
+							});
+						});
+						if({ bareArgExp == '' }, {
+							bareArgExp: Primitive:ANY:value();
+						});
+					});
+					:inferExpressionType(expr: arg:value, expected: bareArgExp);
 					:inBranchClosure: prevInBranch;
 					:inValueBranch: prevInValueBranch;
 					:currentYieldExpected: prevYieldExpected;
@@ -4553,6 +4606,30 @@ Class is TypeChecker{
 							], default: {});
 						});
 					});
+				});
+			});
+			if({ !isBranchCall && callArgExp == '' && :isIfCallExpr(e: arg:value) }, {
+				local String is paramOwner: targetType;
+				if({ paramOwner == '' || paramOwner == :names:selfIdent() }, {
+					paramOwner: if({ call:isBareCall && call:bareProvider != '' }, { call:bareProvider }, { :currentClassName });
+				});
+				local Member is pCallee: :lookupAnyMember(className: paramOwner, methodName: method);
+				if({ pCallee:name == '' }, {
+					pCallee: :findHeldMethod(className: paramOwner, methodName: method);
+				});
+				if({ pCallee:name != '' }, {
+					local Int is pIdx: 0;
+					while({ pIdx < pCallee:params:length() && callArgExp == '' }, {
+						local Parameter is cp2: pCallee:params:get(index: pIdx);
+						local Boolean is pHit: if({ arg:name != '' }, { cp2:name == arg:name }, { pIdx == argIdx });
+						if({ pHit && cp2:paramType:name != '' && !:isVoid(t: cp2:paramType:name) }, {
+							callArgExp: :formatTypeString(t: cp2:paramType);
+						});
+						pIdx++;
+					});
+				});
+				if({ callArgExp == '' }, {
+					callArgExp: Primitive:ANY:value();
 				});
 			});
 			:inferExpressionType(expr: arg:value, expected: callArgExp);

@@ -4,6 +4,10 @@
 Class is Simd{
 	replace [String] is namespace: ['base', 'sys'];
 
+	replace [[String]] is using: [
+		['base', 'sysinternal', Simd]
+	];
+
 	## Stores 4 copies of [val] at [dst].
 	Function is fill4(Int is dst, Float is val){
 		base:sysinternal:Simd:fill4(dst: dst, val: val);

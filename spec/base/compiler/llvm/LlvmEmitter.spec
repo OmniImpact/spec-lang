@@ -154,7 +154,7 @@ Class is LlvmEmitter{
 			'spec_math_log', 'spec_math_log2', 'spec_math_log10', 'spec_fast_random_seed', 'spec_math_random',
 			'spec_time_monotonic_ns', 'spec_atomic_add', 'spec_atomic_put', 'spec_atomic_get',
 			'spec_process_raw_args', 'spec_pal_random_bytes',
-			'spec_simd_load_f64', 'spec_simd_store_f64', 'spec_simd_fill4',
+			'spec_simd_fill4',
 			'spec_simd_add4', 'spec_simd_sub4', 'spec_simd_mul4', 'spec_simd_scale4',
 			'spec_simd_fma4', 'spec_simd_dot4', 'spec_simd_clamp4'
 		]);

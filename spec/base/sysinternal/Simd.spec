@@ -6,8 +6,6 @@
 Class is Simd{
 	replace [String] is namespace: ['base', 'sysinternal'];
 
-	Function of Float is loadF64(Int is ptr, Int is byteOffset);
-	Function is storeF64(Int is ptr, Int is byteOffset, Float is val);
 	Function is fill4(Int is dst, Float is val);
 	Function is add4(Int is dst, Int is a, Int is b);
 	Function is sub4(Int is dst, Int is a, Int is b);

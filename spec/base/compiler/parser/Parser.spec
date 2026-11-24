@@ -892,12 +892,41 @@ Class is Parser{
 
 	## Parses one statement.
 	##
+	local Function of Boolean is isForwardStatementStart(){
+		if({ !:checkPunct(p: Punctuation:GROUP_OPEN) }, {
+			return false;
+		});
+		local Int is depth: 0;
+		local Int is off: 0;
+		while({ true }, {
+			local Token is tok: :peekAhead(offset: off);
+			local String is val: tok:getValue();
+			if({ tok:getTokenKind() == TokenKind:EOF }, {
+				return false;
+			});
+			if({ val == Punctuation:GROUP_OPEN:value() }, {
+				depth++;
+			}, {
+				if({ val == Punctuation:GROUP_CLOSE:value() }, {
+					depth--;
+					if({ depth == 0 }, {
+						local Token is afterTok: :peekAhead(offset: off + 1);
+						local String is afterVal: afterTok:getValue();
+						return afterVal == Punctuation:TERMINATOR:value() || afterVal == Punctuation:BLOCK_CLOSE:value();
+					});
+				});
+			});
+			off++;
+		});
+		return false;
+	}
+
 	## @return: The statement node.
 	Function of Statement is parseStatement(){
 		local Int is startLine: :peek():getLine();
 
 		# Merge-forward statement: `(arg, name: arg, ...)`.
-		if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
+		if({ :isForwardStatementStart() }, {
 			return :parseForwardStatement(startLine: startLine);
 		});
 
