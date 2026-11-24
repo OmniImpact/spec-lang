@@ -42,12 +42,12 @@ Class is ExplorerViewModel{
 	}
 
 	local Function is markRenderDirty(){
-		:renderDirty: true;
+		renderDirty: true;
 		onRenderChanged();
 	}
 
 	Function is selectFractal(String is name){
-		:activeFractal: registry:findByName(name: name);
+		activeFractal: registry:findByName(name: name);
 		if({ activeFractal:length() > 0 }, {
 			viewport:copyFrom(other: activeFractal:get(index: 0):defaultViewport());
 		});
@@ -55,13 +55,13 @@ Class is ExplorerViewModel{
 	}
 
 	Function is selectTheme(String is name){
-		:selectedTheme: themeFromName(name: name);
+		selectedTheme: themeFromName(name: name);
 		markRenderDirty();
 	}
 
 	Function is setAntialiasing(Boolean is enabled){
 		if({ antialiasing == enabled }, { return; });
-		:antialiasing: enabled;
+		antialiasing: enabled;
 		markRenderDirty();
 	}
 
@@ -111,13 +111,13 @@ Class is ExplorerViewModel{
 
 	Function is openHelp(){
 		if({ helpOpen }, { return; });
-		:helpOpen: true;
+		helpOpen: true;
 		onHelpChanged();
 	}
 
 	Function is closeHelp(){
 		if({ !helpOpen }, { return; });
-		:helpOpen: false;
+		helpOpen: false;
 		onHelpChanged();
 	}
 
@@ -143,14 +143,14 @@ Class is ExplorerViewModel{
 
 	Function of Array of TheoColor is ensurePixels(Int is w, Int is h){
 		if({ !hasFractal() || w <= 0 || h <= 0 }, {
-			:cachedPixels: Array();
-			:cachedW: 0;
-			:cachedH: 0;
-			:renderDirty: false;
+			cachedPixels: Array();
+			cachedW: 0;
+			cachedH: 0;
+			renderDirty: false;
 			return cachedPixels;
 		});
 		if({ renderDirty || cachedW != w || cachedH != h }, {
-			:cachedPixels: renderer:renderPixels(
+			cachedPixels: renderer:renderPixels(
 				fractal: activeFractal:get(index: 0),
 				theme: selectedTheme,
 				viewport: viewport,
@@ -158,9 +158,9 @@ Class is ExplorerViewModel{
 				h: h,
 				antialiasing: antialiasing
 			);
-			:cachedW: w;
-			:cachedH: h;
-			:renderDirty: false;
+			cachedW: w;
+			cachedH: h;
+			renderDirty: false;
 		});
 		return cachedPixels;
 	}

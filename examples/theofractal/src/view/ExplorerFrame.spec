@@ -27,13 +27,13 @@ Class of Frame is ExplorerFrame{
 
 	replace Function is init(ExplorerViewModel is vm: ExplorerViewModel()){
 		:vm: vm;
-		:vm:onRenderChanged: {
+		vm:onRenderChanged: {
 			invalidate();
 		};
-		:vm:onHelpChanged: {
+		vm:onHelpChanged: {
 			syncHelpOverlay();
 		};
-		:fractalPickers: Array([
+		fractalPickers: Array([
 			Dropdown(
 				host: :,
 				options: vm:fractalOptions(),
@@ -44,7 +44,7 @@ Class of Frame is ExplorerFrame{
 				}
 			)
 		]);
-		:themePickers: Array([
+		themePickers: Array([
 			Dropdown(
 				host: :,
 				options: FractalStrings:themeOptions(),
@@ -55,7 +55,7 @@ Class of Frame is ExplorerFrame{
 				}
 			)
 		]);
-		:aaSwitches: Array([
+		aaSwitches: Array([
 			Switch(
 				label: FractalStrings:LABEL_ANTIALIASING,
 				checked: vm:antialiasing,
@@ -65,7 +65,7 @@ Class of Frame is ExplorerFrame{
 				}
 			)
 		]);
-		:helpButtons: Array([
+		helpButtons: Array([
 			Button(
 				label: FractalStrings:ACTION_HELP,
 				focusTarget: helpFocus,
@@ -78,7 +78,7 @@ Class of Frame is ExplorerFrame{
 			onClose: { :vm:closeHelp(); },
 			content: HelpDialog:build(closeFocus: helpCloseFocus, onClose: { :vm:closeHelp(); })
 		);
-		:helpOverlays: Array([hOv]);
+		helpOverlays: Array([hOv]);
 		addOverlay(overlay: hOv);
 	}
 

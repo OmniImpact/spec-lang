@@ -13,7 +13,7 @@ Class of Widget is NavOverlay{
 	Array of Button is buttons: Array();
 
 	replace Function is init(ExplorerViewModel is vm: ExplorerViewModel()){
-		:buttons: Array([
+		buttons: Array([
 			Button(label: FractalStrings:NAV_ZOOM_OUT, width: 3, onClick: { vm:zoomOut(); }),
 			Button(label: FractalStrings:NAV_UP, width: 3, onClick: { vm:panUp(); }),
 			Button(label: FractalStrings:NAV_ZOOM_IN, width: 3, onClick: { vm:zoomIn(); }),
@@ -26,7 +26,7 @@ Class of Widget is NavOverlay{
 	Function of Boolean is fitsIn(Int is w, Int is h){ w >= 13 && h >= 3 }
 
 	replace Function is applyTheme(TheoTheme is theme){
-		:activeTheme: theme;
+		activeTheme: theme;
 		local Int is i: 0;
 		while({ i < buttons:length() }, {
 			buttons:get(index: i):applyTheme(theme: theme);
@@ -35,7 +35,7 @@ Class of Widget is NavOverlay{
 	}
 
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: Array([cb]);
+		dirtyListeners: Array([cb]);
 		local Int is i: 0;
 		while({ i < buttons:length() }, {
 			buttons:get(index: i):bindDirty(cb: cb);
@@ -44,10 +44,10 @@ Class of Widget is NavOverlay{
 	}
 
 	replace Function is layout(Int is x, Int is y, Int is w, Int is h){
-		:boxX: x;
-		:boxY: y;
-		:boxW: w;
-		:boxH: h;
+		boxX: x;
+		boxY: y;
+		boxW: w;
+		boxH: h;
 		if({ !fitsIn(w: w, h: h) || buttons:length() < 6 }, { return; });
 		local Int is rx: x + w - 12;
 		local Int is topY: y + h - 3;

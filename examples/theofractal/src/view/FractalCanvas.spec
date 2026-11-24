@@ -15,7 +15,7 @@ Class of Widget is FractalCanvas{
 
 	replace Function is init(ExplorerViewModel is vm){
 		:vm: vm;
-		:navOverlay: NavOverlay(vm: vm);
+		navOverlay: NavOverlay(vm: vm);
 	}
 
 	replace Function of Float is flexWeight(){ 1.0 }
@@ -25,20 +25,20 @@ Class of Widget is FractalCanvas{
 	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ maxH }
 
 	replace Function is applyTheme(TheoTheme is theme){
-		:activeTheme: theme;
+		activeTheme: theme;
 		navOverlay:applyTheme(theme: theme);
 	}
 
 	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: Array([cb]);
+		dirtyListeners: Array([cb]);
 		navOverlay:bindDirty(cb: cb);
 	}
 
 	replace Function is layout(Int is x, Int is y, Int is w, Int is h){
-		:boxX: x;
-		:boxY: y;
-		:boxW: w;
-		:boxH: h;
+		boxX: x;
+		boxY: y;
+		boxW: w;
+		boxH: h;
 		navOverlay:layout(x: x, y: y, w: w, h: h);
 	}
 
