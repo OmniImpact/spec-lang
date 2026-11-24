@@ -13,6 +13,7 @@ Class is IrBuilder{
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', SemType],
+		['base', 'compiler', 'checker', as SemTypes()],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
@@ -306,12 +307,9 @@ Class is IrBuilder{
 		]);
 	}
 
-	## Returns the structured [Type] node for [expr], falling back to its resolvedType name.
+	## Returns the structured [Type] node for [expr] from its [SemType].
 	Function of Type is exprTypeNode(Expression is expr){
-		if({ expr:hasResolvedTypeNode }, {
-			return expr:resolvedTypeNode;
-		});
-		return Type:init(name: expr:resolvedType);
+		return expr:getSemType():toAstType();
 	}
 
 	Function of Boolean is isUnsignedSpecType(String is specType){
@@ -1557,7 +1555,7 @@ Class is IrBuilder{
 					local String is val: :lowerExpr(expr: m:initExpr);
 					:expectedMapKeyType: prevMapK;
 					:expectedMapValType: prevMapV;
-					local IrType is vty: :irTypeFor(specType: m:initExpr:resolvedType);
+					local IrType is vty: :irTypeForSem(st: m:initExpr:getSemType());
 					val: :castIfNeeded(val: val, fromTy: vty, toTy: fty);
 					if({ m:hasModifier(kw: Keyword:MERGE) && seen:has(key: m:name) }, {
 						local String is oldF: :nextTmp();
@@ -2136,7 +2134,7 @@ Class is IrBuilder{
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is call){
 				if({ call:args:length() >= 1 }, {
-					if({ call:name == 'lazy' && (call:bareProvider == 'Lazy' || call:bareProvider:endsWith(suffix: ':Lazy') || call:target:resolvedType == 'Lazy' || call:isBareCall) }, {
+					if({ call:name == 'lazy' && (call:bareProvider == 'Lazy' || call:bareProvider:endsWith(suffix: ':Lazy') || call:target:getSemType():baseName() == 'Lazy' || call:isBareCall) }, {
 						res: true;
 					});
 					if({ call:name == 'eval' }, {
@@ -2197,7 +2195,7 @@ Class is IrBuilder{
 					local Statement is lastStmt: bd:get(index: lastIdx);
 					match(on: lastStmt, when: [
 						Statement:Expr: local Function(Expression is es){
-							local IrType is ety: :irTypeFor(specType: es:resolvedType);
+							local IrType is ety: :irTypeForSem(st: es:getSemType());
 							local String is ev: :lowerExpr(expr: es);
 							ev: :castIfNeeded(val: ev, fromTy: ety, toTy: resTy);
 							if({ ev != '' }, {
@@ -2206,7 +2204,7 @@ Class is IrBuilder{
 						},
 						Statement:Return: local Function(Expression is re, Boolean is hr){
 							if({ hr }, {
-								local IrType is rty: :irTypeFor(specType: re:resolvedType);
+								local IrType is rty: :irTypeForSem(st: re:getSemType());
 								local String is rv: :lowerExpr(expr: re);
 								rv: :castIfNeeded(val: rv, fromTy: rty, toTy: resTy);
 								if({ rv != '' }, {
@@ -2426,7 +2424,7 @@ Class is IrBuilder{
 	local Function of Boolean is callTargetsDefer(CallData is call){
 		if({ call:bareProvider == 'Defer' }, { return true; });
 		if({ call:bareProvider:endsWith(suffix: ':Defer') }, { return true; });
-		if({ call:target:resolvedType == 'Defer' }, { return true; });
+		if({ call:target:getSemType():baseName() == 'Defer' }, { return true; });
 		return false;
 	}
 
@@ -2642,7 +2640,7 @@ Class is IrBuilder{
 		# the template's own symbols at the lowering site — except a
 		# bare-name constructor: construction is served by the
 		# construction machinery, not the template copy.
-		local String is rt: expr:resolvedType;
+		local String is rt: expr:getSemType():toKey();
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
 				local String is ctorName: '';
@@ -2750,7 +2748,7 @@ Class is IrBuilder{
 			return empty;
 		});
 		if({ call:bareProvider:endsWith(suffix: ':sysinternal:Loops') }, { return empty; });
-		local Boolean is isLoopsTarget: call:bareProvider == 'Loops' || call:bareProvider:endsWith(suffix: ':Loops') || call:target:resolvedType == 'Loops';
+		local Boolean is isLoopsTarget: call:bareProvider == 'Loops' || call:bareProvider:endsWith(suffix: ':Loops') || call:target:getSemType():baseName() == 'Loops';
 		if({ !isLoopsTarget }, {
 			match(on: call:target, when: [
 				Expression:Ident: local Function(String is tn){
@@ -3250,7 +3248,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is structNameForExpr(Expression is expr){
-		local String is rt: :baseTypeName(t: expr:resolvedType);
+		local String is rt: expr:getSemType():baseName();
 		if({ rt != '' }, {
 			local String is qn: rt;
 			if({ :clsQNameMap:has(key: rt) }, { qn: '' . :clsQNameMap:get(key: rt, default: ''); });
@@ -3896,8 +3894,8 @@ Class is IrBuilder{
 			local Boolean is promoted: false;
 			match(on: lastStmt, when: [
 				Statement:Expr: local Function(Expression is exprStmt){
-					local String is rt: exprStmt:resolvedType;
-					if({ rt != '' && rt != 'Void' }, {
+					local SemType is rtSem: exprStmt:getSemType();
+					if({ !rtSem:isEmpty() && !rtSem:isVoid() }, {
 						promoted: true;
 						local Statement is retStmt: Statement:Return(returnExpr: exprStmt, hasReturnExpr: true);
 						retStmt:line: lastStmt:line;
@@ -3961,7 +3959,7 @@ Class is IrBuilder{
 						local String is val: :lowerExpr(expr: initExpr);
 						:expectedMapKeyType: prevMapK;
 						:expectedMapValType: prevMapV;
-						local IrType is initTy: :irTypeFor(specType: initExpr:resolvedType);
+						local IrType is initTy: :irTypeForSem(st: initExpr:getSemType());
 						val: :castIfNeeded(val: val, fromTy: initTy, toTy: vty);
 						if({ val == '' }, {
 							if({ vty == IrType:Ptr }, {
@@ -4037,7 +4035,7 @@ Class is IrBuilder{
 				local String is val: :lowerExpr(expr: assignValue);
 				:expectedMapKeyType: prevMapK;
 				:expectedMapValType: prevMapV;
-				local IrType is valTy: :irTypeFor(specType: assignValue:resolvedType);
+				local IrType is valTy: :irTypeForSem(st: assignValue:getSemType());
 				match(on: assignTarget, when: [
 					Expression:Ident: local Function(String is name){
 						if({ :localSlots:has(key: name) }, {
@@ -4186,17 +4184,18 @@ Class is IrBuilder{
 					Expression:Index: local Function(Expression is target, Expression is index){
 						local String is tv: :lowerExpr(expr: target);
 						local String is iv: :lowerExpr(expr: index);
-						local String is tType: target:resolvedType;
-						if({ :isMapRecvType(specType: tType) }, {
-							local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: IrType:Ptr);
+						local SemType is tSem: target:getSemType();
+						local String is tType: tSem:baseName();
+						if({ tSem:isMap() || :isMapRecvType(specType: tType) }, {
+							local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeForSem(st: index:getSemType()), toTy: IrType:Ptr);
 							local String is vp: :castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
 							local String is isArcV: :nextTmp();
-							:emit(inst: IrInst:ConstBool(dst: isArcV, value: :isArcTypeNode(t: :exprTypeNode(expr: assignValue))));
+							:emit(inst: IrInst:ConstBool(dst: isArcV, value: :isArcTypeSem(st: assignValue:getSemType())));
 							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Map_setEntry', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I1], args: [tv, kp, vp, isArcV]));
 						}, {
-							local String is idxV: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: IrType:I64);
+							local String is idxV: :castIfNeeded(val: iv, fromTy: :irTypeForSem(st: index:getSemType()), toTy: IrType:I64);
 							local String is vp: :castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
-							local String is setCallee: if({ tType == 'List' || tType:startsWith(prefix: 'List:') || tType:startsWith(prefix: 'List__') || :specBaseMap:get(key: tType, default: '') == 'List' }, { 'List_set' }, { 'Array_set' });
+							local String is setCallee: if({ tSem:isList() || tType:startsWith(prefix: 'List__') || :specBaseMap:get(key: tType, default: '') == 'List' }, { 'List_set' }, { 'Array_set' });
 							:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [tv, idxV, vp]));
 						});
 					}
@@ -4206,7 +4205,7 @@ Class is IrBuilder{
 				if({ :inlineReturnEndLbl != '' }, {
 					if({ hasReturnExpr && :inlineReturnSlot != '' }, {
 						local String is ival: :lowerExpr(expr: returnExpr);
-						local IrType is ivalTy: :irTypeFor(specType: returnExpr:resolvedType);
+						local IrType is ivalTy: :irTypeForSem(st: returnExpr:getSemType());
 						ival: :castIfNeeded(val: ival, fromTy: ivalTy, toTy: :inlineReturnTy);
 						:emit(inst: IrInst:Store(slot: :inlineReturnSlot, val: ival, ty: :inlineReturnTy));
 					});
@@ -4215,7 +4214,7 @@ Class is IrBuilder{
 				});
 				if({ hasReturnExpr && :curFn:retType != IrType:Void }, {
 					local String is val: :lowerExpr(expr: returnExpr);
-					local IrType is valTy: :irTypeFor(specType: returnExpr:resolvedType);
+					local IrType is valTy: :irTypeForSem(st: returnExpr:getSemType());
 					val: :castIfNeeded(val: val, fromTy: valTy, toTy: :curFn:retType);
 					if({ val == '' }, {
 						if({ :curFn:retType == IrType:Ptr }, {
@@ -4312,13 +4311,10 @@ Class is IrBuilder{
 	}
 
 	local Function is setAssignTargetMapHints(Expression is assignTarget){
-		local Type is atNode: assignTarget:getResolvedTypeNode();
-		if({ atNode:isMap() && atNode:params:length() >= 2 }, {
-			:setMapHintsFromTypeNode(t: atNode);
-			if({ :expectedMapKeyType != '' }, { return; });
-		});
-		if({ assignTarget:resolvedType != '' && assignTarget:resolvedType != 'Map' }, {
-			:setMapHintsFromTypeStr(t: assignTarget:resolvedType);
+		local SemType is atSem: assignTarget:getSemType();
+		if({ atSem:isMap() && atSem:isGeneric() }, {
+			:expectedMapKeyType: atSem:mapKeyType():baseName();
+			:expectedMapValType: atSem:mapValType():baseName();
 			if({ :expectedMapKeyType != '' }, { return; });
 		});
 		match(on: assignTarget, when: [
@@ -4402,12 +4398,14 @@ Class is IrBuilder{
 
 	local Function of String is lowerConcatRight(Expression is right){
 		local String is r: :lowerExpr(expr: right);
-		local IrType is rTy: :irTypeFor(specType: right:resolvedType);
-		if({ :isIntIrType(ty: rTy) || rTy == IrType:F32 || rTy == IrType:F64 || rTy == IrType:I1 || right:resolvedType == Primitive:RAWPTR:value() }, {
-			return :emitScalarToString(val: r, fromTy: rTy, fromSpec: right:resolvedType, claimPool: true);
+		local SemType is rSem: right:getSemType();
+		local IrType is rTy: :irTypeForSem(st: rSem);
+		if({ :isIntIrType(ty: rTy) || rTy == IrType:F32 || rTy == IrType:F64 || rTy == IrType:I1 || rSem:isRawPtr() }, {
+			return :emitScalarToString(val: r, fromTy: rTy, fromSpec: rSem:baseName(), claimPool: true);
 		});
-		if({ rTy == IrType:Ptr && right:resolvedType != 'String' && right:resolvedType != 'Str' && (:clsMap:has(key: right:resolvedType) || right:resolvedType == 'Any') }, {
-			return :emitObjectToString(objVal: r, specType: right:resolvedType);
+		local String is rKey: rSem:toKey();
+		if({ rTy == IrType:Ptr && !rSem:isStringLike() && (:clsMap:has(key: rKey) || rSem:isAny()) }, {
+			return :emitObjectToString(objVal: r, specType: rKey);
 		});
 		return r;
 	}
@@ -4425,9 +4423,10 @@ Class is IrBuilder{
 						ls: :lowerConcatChainNoClaim(expr: left);
 					}, {
 						local String is l: :lowerExpr(expr: left);
-						local IrType is lTy: :irTypeFor(specType: left:resolvedType);
-						if({ :isIntIrType(ty: lTy) || lTy == IrType:F32 || lTy == IrType:F64 || lTy == IrType:I1 || left:resolvedType == Primitive:RAWPTR:value() }, {
-							ls: :emitScalarToString(val: l, fromTy: lTy, fromSpec: left:resolvedType, claimPool: true);
+						local SemType is lSem: left:getSemType();
+						local IrType is lTy: :irTypeForSem(st: lSem);
+						if({ :isIntIrType(ty: lTy) || lTy == IrType:F32 || lTy == IrType:F64 || lTy == IrType:I1 || lSem:isRawPtr() }, {
+							ls: :emitScalarToString(val: l, fromTy: lTy, fromSpec: lSem:baseName(), claimPool: true);
 						}, {
 							ls: l;
 						});
@@ -4708,7 +4707,7 @@ Class is IrBuilder{
 				return '0';
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
-				local IrType is ty: :irTypeFor(specType: expr:resolvedType);
+				local IrType is ty: :irTypeForSem(st: expr:getSemType());
 				if({ ty == IrType:Void }, { ty: IrType:I64; });
 				if({ op == 'post++' || op == 'post--' || op == '++' || op == '--' }, {
 					return :lowerIncDec(op: op, operand: operand, ty: ty);
@@ -4723,7 +4722,7 @@ Class is IrBuilder{
 					local String is resSlot: :nextTmp();
 					:emit(inst: IrInst:Alloca(slot: resSlot, ty: IrType:I1));
 					local String is lVal: :lowerExpr(expr: left);
-					local IrType is lTy: :irTypeFor(specType: left:resolvedType);
+					local IrType is lTy: :irTypeForSem(st: left:getSemType());
 					if({ lTy != IrType:I1 && lTy != IrType:Void }, {
 						lVal: :castIfNeeded(val: lVal, fromTy: lTy, toTy: IrType:I1);
 					});
@@ -4738,7 +4737,7 @@ Class is IrBuilder{
 					local IrBlock is rhsBlk: :curFn:addBlock(label: rhsLbl);
 					:switchBlock(blk: rhsBlk);
 					local String is rVal: :lowerExpr(expr: right);
-					local IrType is rTy: :irTypeFor(specType: right:resolvedType);
+					local IrType is rTy: :irTypeForSem(st: right:getSemType());
 					if({ rTy != IrType:I1 && rTy != IrType:Void }, {
 						rVal: :castIfNeeded(val: rVal, fromTy: rTy, toTy: IrType:I1);
 					});
@@ -4757,10 +4756,12 @@ Class is IrBuilder{
 				local String is l: :lowerExpr(expr: left);
 				local String is r: :lowerExpr(expr: right);
 				local String is dst: :nextTmp();
+				local SemType is lSem: left:getSemType();
+				local SemType is rSem: right:getSemType();
 				if({ op == '==' || op == '!=' || op == '<' || op == '<=' || op == '>' || op == '>=' }, {
-					local IrType is cmpTy: :irTypeFor(specType: left:resolvedType);
+					local IrType is cmpTy: :irTypeForSem(st: lSem);
 					if({ cmpTy == IrType:Void }, { cmpTy: IrType:I64; });
-					local Boolean is isStrCmp: cmpTy == IrType:Ptr && (left:resolvedType == 'String' || right:resolvedType == 'String' || left:resolvedType == 'Str' || right:resolvedType == 'Str');
+					local Boolean is isStrCmp: cmpTy == IrType:Ptr && (lSem:isStringLike() || rSem:isStringLike());
 					if({ isStrCmp && (op == '==' || op == '!=') }, {
 						local [IrType] is sT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
 						local [String] is sV: ['null', l, r];
@@ -4790,26 +4791,27 @@ Class is IrBuilder{
 						});
 					});
 					local String is cmpOp: op;
-					if({ :isIntIrType(ty: cmpTy) && (op == '<' || op == '<=' || op == '>' || op == '>=') && (:isUnsignedSpecType(specType: left:resolvedType) || :isUnsignedSpecType(specType: right:resolvedType)) }, {
+					if({ :isIntIrType(ty: cmpTy) && (op == '<' || op == '<=' || op == '>' || op == '>=') && (lSem:isUnsigned() || rSem:isUnsigned()) }, {
 						cmpOp: 'u' . op;
 					});
-					local IrType is rCmpTy: :irTypeFor(specType: right:resolvedType);
+					local IrType is rCmpTy: :irTypeForSem(st: rSem);
 					if({ rCmpTy != cmpTy && rCmpTy != IrType:Void }, {
-						r: if({ :isUnsignedSpecType(specType: right:resolvedType) }, { :castIfNeededUnsigned(val: r, fromTy: rCmpTy, toTy: cmpTy) }, { :castIfNeeded(val: r, fromTy: rCmpTy, toTy: cmpTy) });
+						r: if({ rSem:isUnsigned() }, { :castIfNeededUnsigned(val: r, fromTy: rCmpTy, toTy: cmpTy) }, { :castIfNeeded(val: r, fromTy: rCmpTy, toTy: cmpTy) });
 					});
 					:emit(inst: IrInst:Cmp(dst: dst, op: cmpOp, lhs: l, rhs: r, ty: cmpTy));
 					return dst;
 				});
-				local IrType is ty: :irTypeFor(specType: expr:resolvedType);
+				local SemType is eSem: expr:getSemType();
+				local IrType is ty: :irTypeForSem(st: eSem);
 				if({ ty == IrType:Void }, { ty: IrType:I64; });
 				local String is binOp: op;
-				if({ :isIntIrType(ty: ty) && (:isUnsignedSpecType(specType: expr:resolvedType) || :isUnsignedSpecType(specType: left:resolvedType)) }, {
+				if({ :isIntIrType(ty: ty) && (eSem:isUnsigned() || lSem:isUnsigned()) }, {
 					if({ op == '>>' }, { binOp: '>>>'; });
 					if({ op == '/' }, { binOp: 'u/'; });
 					if({ op == '%' }, { binOp: 'u%'; });
 				});
 				if({ op == '<<' || op == '>>' }, {
-					local IrType is rShiftTy: :irTypeFor(specType: right:resolvedType);
+					local IrType is rShiftTy: :irTypeForSem(st: rSem);
 					if({ rShiftTy != ty && rShiftTy != IrType:Void }, {
 						r: :castIfNeededUnsigned(val: r, fromTy: rShiftTy, toTy: ty);
 					});
@@ -4871,14 +4873,15 @@ Class is IrBuilder{
 						return :emitLoadField(objPtr: obj, sname: sname, st: st, fidx: fidx, fieldName: segments:get(index: segments:length() - 1));
 					});
 				});
-				if({ :irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
+				if({ :irTypeForSem(st: expr:getSemType()) == IrType:Ptr }, {
 					return 'null';
 				});
 				return '0';
 			},
 			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is args){
 				local String is v: :lowerExpr(expr: inner);
-				local IrType is fromTy: :irTypeFor(specType: inner:resolvedType);
+				local SemType is inSem: inner:getSemType();
+				local IrType is fromTy: :irTypeForSem(st: inSem);
 				if({ target == 'Hex' || target == 'Bin' || target == 'Oct' }, {
 					local Int is base: 16;
 					if({ target == 'Bin' }, { base: 2; });
@@ -4899,7 +4902,7 @@ Class is IrBuilder{
 						digitsVal: :nextTmp();
 						:emit(inst: IrInst:ConstInt(dst: digitsVal, value: 0));
 					});
-					local String is baseV: if({ :isUnsignedSpecType(specType: inner:resolvedType) }, {
+					local String is baseV: if({ inSem:isUnsigned() }, {
 						:castIfNeededUnsigned(val: v, fromTy: fromTy, toTy: IrType:I64)
 					}, {
 						:castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64)
@@ -4909,8 +4912,8 @@ Class is IrBuilder{
 					return dstB;
 				});
 				local IrType is toTy: :irTypeFor(specType: target);
-				if({ target == 'Byte' && inner:resolvedType != 'Byte' }, {
-					local String is bv: if({ :isUnsignedSpecType(specType: inner:resolvedType) }, {
+				if({ target == 'Byte' && inSem:primitive() != Primitive:BYTE }, {
+					local String is bv: if({ inSem:isUnsigned() }, {
 						:castIfNeededUnsigned(val: v, fromTy: fromTy, toTy: IrType:I64)
 					}, {
 						:castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64)
@@ -4919,7 +4922,7 @@ Class is IrBuilder{
 					:emit(inst: IrInst:IrCall(dst: dstByte64, hasDst: true, retType: IrType:I64, callee: '__spec_check_byte', argTypes: [IrType:I64], args: [bv]));
 					return :castIfNeededUnsigned(val: dstByte64, fromTy: IrType:I64, toTy: IrType:I8);
 				});
-				if({ (inner:resolvedType == 'String' || inner:resolvedType == 'Str') && :isIntIrType(ty: toTy) }, {
+				if({ inSem:isStringLike() && :isIntIrType(ty: toTy) }, {
 					local String is base10: :nextTmp();
 					:emit(inst: IrInst:ConstInt(dst: base10, value: 10));
 					local String is def0: :nextTmp();
@@ -4931,18 +4934,19 @@ Class is IrBuilder{
 					});
 					return :castIfNeeded(val: dstI, fromTy: IrType:I64, toTy: toTy);
 				});
-				if({ (target == 'String' || target == 'Str') && (fromTy != IrType:Ptr || inner:resolvedType == Primitive:RAWPTR:value()) }, {
-					return :emitScalarToString(val: v, fromTy: fromTy, fromSpec: inner:resolvedType, claimPool: false);
+				if({ (target == 'String' || target == 'Str') && (fromTy != IrType:Ptr || inSem:isRawPtr()) }, {
+					return :emitScalarToString(val: v, fromTy: fromTy, fromSpec: inSem:baseName(), claimPool: false);
 				});
 				if({ fromTy == toTy }, {
-					if({ fromTy == IrType:Ptr && (target == 'String' || target == 'Str') && inner:resolvedType != 'String' && inner:resolvedType != 'Str' && (:clsMap:has(key: inner:resolvedType) || inner:resolvedType == 'Any') }, {
+					local String is inKey: inSem:toKey();
+					if({ fromTy == IrType:Ptr && (target == 'String' || target == 'Str') && !inSem:isStringLike() && (:clsMap:has(key: inKey) || inSem:isAny()) }, {
 						# Cast-to-String is the TYPE-IDENTITY conversion, uniformly
 						# for concrete classes and Any holdings — the same value
 						# renders the same regardless of the reference's static
 						# type. The RENDERING contract (toString, TypeName@hash
 						# by default) belongs to concat/templates. An Any holding
 						# a String yields the string itself.
-						if({ inner:resolvedType == 'Any' }, {
+						if({ inSem:isAny() }, {
 							return :emitObjectToString(objVal: v, specType: 'Any');
 						});
 						local String is tnCast: :nextTmp();
@@ -4961,7 +4965,7 @@ Class is IrBuilder{
 					return v;
 				});
 				local String is dst: :nextTmp();
-				if({ :isUnsignedSpecType(specType: inner:resolvedType) || :isUnsignedSpecType(specType: target) }, {
+				if({ inSem:isUnsigned() || :isUnsignedSpecType(specType: target) }, {
 					:emit(inst: IrInst:IrCastU(dst: dst, val: v, fromType: fromTy, toType: toTy));
 				}, {
 					:emit(inst: IrInst:IrCast(dst: dst, val: v, fromType: fromTy, toType: toTy));
@@ -4970,8 +4974,8 @@ Class is IrBuilder{
 			},
 			Expression:ArrayLit: local Function([Expression] is items){
 				local String is arr: :nextTmp();
-				local Type is rtNode: expr:getResolvedTypeNode();
-				local String is rtStr: expr:resolvedType;
+				local Type is rtNode: expr:getSemType():toAstType();
+				local String is rtStr: expr:getSemType():toKey();
 				local String is rtBase: :specBaseMap:get(key: rtNode:name, default: '');
 				local Boolean is isListLit: rtBase == 'List' || rtNode:isList();
 				if({ isListLit }, {
@@ -5072,7 +5076,7 @@ Class is IrBuilder{
 				while({ ii < items:length() }, {
 					local Expression is it: items:get(index: ii);
 					local String is iv: :lowerExpr(expr: it);
-					local IrType is ity: :irTypeFor(specType: it:resolvedType);
+					local IrType is ity: :irTypeForSem(st: it:getSemType());
 					local String is ip: iv;
 					if({ ity == IrType:Void }, {
 						:addError(msg: 'Cannot store Void expression in Array literal.');
@@ -5131,13 +5135,13 @@ Class is IrBuilder{
 					local Expression is ke: keys:get(index: mi);
 					local Expression is ve: values:get(index: mi);
 					local String is kv: :lowerExpr(expr: ke);
-					local IrType is kty: :irTypeFor(specType: ke:resolvedType);
+					local IrType is kty: :irTypeForSem(st: ke:getSemType());
 					kv: :castIfNeeded(val: kv, fromTy: kty, toTy: IrType:Ptr);
 					local String is vv: :lowerExpr(expr: ve);
-					local IrType is vty: :irTypeFor(specType: ve:resolvedType);
+					local IrType is vty: :irTypeForSem(st: ve:getSemType());
 					local String is vp: :castIfNeeded(val: vv, fromTy: vty, toTy: IrType:Ptr);
 					local String is isArcV: :nextTmp();
-					:emit(inst: IrInst:ConstBool(dst: isArcV, value: :isArcTypeNode(t: :exprTypeNode(expr: ve))));
+					:emit(inst: IrInst:ConstBool(dst: isArcV, value: :isArcTypeSem(st: ve:getSemType())));
 					:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Map_setEntry', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:I1], args: [mp, kv, vp, isArcV]));
 					mi++;
 				});
@@ -5148,13 +5152,16 @@ Class is IrBuilder{
 				local String is tv: :lowerExpr(expr: target);
 				local String is iv: :lowerExpr(expr: index);
 				local String is raw: :nextTmp();
-				if({ :isMapRecvType(specType: target:resolvedType) }, {
-					local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeFor(specType: index:resolvedType), toTy: IrType:Ptr);
-					if({ expr:resolvedType != 'String' && expr:resolvedType != '' && :isArcTypeNode(t: :exprTypeNode(expr: expr)) }, {
+				local SemType is tSem: target:getSemType();
+				local String is tType: tSem:baseName();
+				local SemType is eSem: expr:getSemType();
+				if({ tSem:isMap() || :isMapRecvType(specType: tType) }, {
+					local String is kp: :castIfNeeded(val: iv, fromTy: :irTypeForSem(st: index:getSemType()), toTy: IrType:Ptr);
+					if({ !eSem:isEmpty() && eSem:primitive() != Primitive:STRING && :isArcTypeSem(st: eSem) }, {
 						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Map_getChecked', argTypes: [IrType:Ptr, IrType:Ptr], args: [tv, kp]));
 					}, {
 						local String is mDef: 'null';
-						if({ expr:resolvedType == 'String' || expr:resolvedType == '' }, {
+						if({ eSem:isEmpty() || eSem:primitive() == Primitive:STRING }, {
 							mDef: :nextTmp();
 							local Int is esid: :mod:internStringLiteral(value: '');
 							:emit(inst: IrInst:ConstString(dst: mDef, strId: esid));
@@ -5162,11 +5169,10 @@ Class is IrBuilder{
 						:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [tv, kp, mDef]));
 					});
 				}, {
-					local String is tType: target:resolvedType;
-					local String is getCallee: if({ tType == 'List' || tType:startsWith(prefix: 'List:') || tType:startsWith(prefix: 'List__') || :specBaseMap:get(key: tType, default: '') == 'List' }, { 'List_get' }, { 'Array_get' });
+					local String is getCallee: if({ tSem:isList() || tType:startsWith(prefix: 'List__') || :specBaseMap:get(key: tType, default: '') == 'List' }, { 'List_get' }, { 'Array_get' });
 					:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: getCallee, argTypes: [IrType:Ptr, IrType:I64], args: [tv, iv]));
 				});
-				local IrType is rty: :irTypeFor(specType: expr:resolvedType);
+				local IrType is rty: :irTypeForSem(st: eSem);
 				if({ rty != IrType:Ptr && rty != IrType:Void }, {
 					local String is casted: :nextTmp();
 					:emit(inst: IrInst:IrCast(dst: casted, val: raw, fromType: IrType:Ptr, toType: rty));
@@ -5182,7 +5188,7 @@ Class is IrBuilder{
 			}
 		], default: {
 			:addError(msg: 'Unhandled expression node.');
-			if({ :irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
+			if({ :irTypeForSem(st: expr:getSemType()) == IrType:Ptr }, {
 				return 'null';
 			});
 			return '0';
@@ -5626,14 +5632,14 @@ Class is IrBuilder{
 		:emit(inst: IrInst:FieldPtr(dst: envPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 1));
 		local String is envVal: :nextTmp();
 		:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
-		local IrType is cRetTy: :irTypeFor(specType: expr:resolvedType);
+		local IrType is cRetTy: :irTypeForSem(st: expr:getSemType());
 		local [IrType] is cArgT: [IrType:Ptr];
 		local [String] is cArgV: [envVal];
 		local Int is cai: 0;
 		while({ cai < call:args:length() }, {
 			local NamedArg is cna: call:args:get(index: cai);
 			local Expression is cav: cna:value;
-			local IrType is caty: :irTypeFor(specType: cav:resolvedType);
+			local IrType is caty: :irTypeForSem(st: cav:getSemType());
 			if({ caty == IrType:Void }, {
 				caty: match(on: cav, when: [
 					Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
@@ -5660,7 +5666,7 @@ Class is IrBuilder{
 	local Function of String is lowerCall(Expression is expr, CallData is call){
 		local String is nm: call:name;
 
-		if({ nm == 'toBase' && call:target:resolvedType == 'Int' }, {
+		if({ nm == 'toBase' && call:target:getSemType():primitive() == Primitive:INT }, {
 			local String is iv: :lowerExpr(expr: call:target);
 			local String is baseV: '10';
 			local String is digV: '0';
@@ -5678,7 +5684,7 @@ Class is IrBuilder{
 		});
 
 		if({ :isLazyCallExpr(expr: expr) }, {
-			local IrType is lTy: :irTypeFor(specType: expr:resolvedType);
+			local IrType is lTy: :irTypeForSem(st: expr:getSemType());
 			return :lowerLazyBodyVal(blkExpr: :getLazyBodyExpr(expr: expr), expectedTy: lTy);
 		});
 
@@ -5718,7 +5724,7 @@ Class is IrBuilder{
 			return :emitClosureCall(cObj: cObj, expr: expr, call: call);
 		});
 
-		local String is recvType: :baseTypeName(t: call:target:resolvedType);
+		local String is recvType: call:target:getSemType():baseName();
 
 		# Closure field call: onQuit(...), :onQuit(...), or obj:onQuit(...)
 		local Boolean is targetIsSelfCall: call:isBareCall || match(on: call:target, when: [
@@ -5754,7 +5760,7 @@ Class is IrBuilder{
 		});
 
 		# Method / constructor call
-		local IrType is retTy: :irTypeFor(specType: expr:resolvedType);
+		local IrType is retTy: :irTypeForSem(st: expr:getSemType());
 		local [IrType] is argTypes: [];
 		local [String] is argVals: [];
 
@@ -5840,7 +5846,7 @@ Class is IrBuilder{
 					if({ pathCName != '' }, { clsName: pathCName; });
 				});
 				if({ :mod:findStruct(name: clsName):name == '' }, {
-					local String is resCName: :cStructName(qname: expr:resolvedType);
+					local String is resCName: :cStructName(qname: expr:getSemType():baseName());
 					if({ resCName != '' && :mod:findStruct(name: resCName):name != '' }, {
 						clsName: resCName;
 					}, {
@@ -5860,8 +5866,9 @@ Class is IrBuilder{
 				local String is ctorKey: clsName . '_init' . ctorSuf;
 				if({ !:methodParams:has(key: ctorKey) }, {
 					local String is qLookup: clsName;
-					if({ expr:resolvedType != '' && :clsMap:has(key: expr:resolvedType) }, {
-						qLookup: expr:resolvedType;
+					local String is exprBase: expr:getSemType():baseName();
+					if({ exprBase != '' && :clsMap:has(key: exprBase) }, {
+						qLookup: exprBase;
 					});
 					local String is parentInit: :findParentMethodImpl(clsName: qLookup, methodName: 'init', suffix: ctorSuf);
 					if({ parentInit != '' }, {
@@ -6131,16 +6138,17 @@ Class is IrBuilder{
 				local Int is fidx: st:fieldIndex(name: na:name);
 				if({ fidx >= 2 }, {
 					local String is fSpec: :fieldSpecTypes:get(key: structName . ':' . na:name, default: '');
-					local String is argSpec: na:value:resolvedType;
+					local SemType is argSem: na:value:getSemType();
+					local String is argSpec: argSem:toKey();
 					local String is fBase: :baseTypeName(t: fSpec);
-					local String is aBase: :baseTypeName(t: argSpec);
+					local String is aBase: argSem:baseName();
 					local Boolean is isAnonVal: match(on: na:value, when: [
 						Expression:AnonFn: local Function of Boolean(Type is _rt, [Parameter] is _ps, [Statement] is _bd){ return true; },
 						else: { false }
 					]);
-					if({ fSpec == argSpec || (fBase != '' && fBase == aBase) || (fBase == 'Function' && (isAnonVal || argSpec:startsWith(prefix: 'Function'))) }, {
+					if({ fSpec == argSpec || (fBase != '' && fBase == aBase) || (fBase == 'Function' && (isAnonVal || argSem:isFunction())) }, {
 						local IrType is fty: st:fieldTypes:get(index: fidx);
-						local IrType is aty: :irTypeFor(specType: argSpec);
+						local IrType is aty: :irTypeForSem(st: argSem);
 						if({ aty == IrType:Void }, { aty: fty; });
 						local String is val: :lowerExpr(expr: na:value);
 						if({ aty != fty }, {
@@ -6170,7 +6178,7 @@ Class is IrBuilder{
 			while({ ai < callArgs:length() }, {
 				local NamedArg is na2: callArgs:get(index: ai);
 				local Expression is av: na2:value;
-				local IrType is aty: :irTypeFor(specType: av:resolvedType);
+				local IrType is aty: :irTypeForSem(st: av:getSemType());
 				if({ aty == IrType:Void }, { aty: IrType:I64; });
 				local String is aval: :lowerExpr(expr: av);
 				if({ ai < calleeMask:length() && calleeMask:charAt(index: ai, default: '0') == '1' }, {
@@ -6202,6 +6210,7 @@ Class is IrBuilder{
 					});
 					local Expression is arrExpr: Expression:ArrayLit(items: vItems);
 					arrExpr:setResolvedTypeNode(tn: p:paramType, t: p:paramType:name);
+					arrExpr:setSemType(st: SemTypes:fromAstType(t: p:paramType));
 					argTypes:push(item: IrType:Ptr);
 					argVals:push(item: :lowerExpr(expr: arrExpr));
 				}, {
@@ -6217,6 +6226,7 @@ Class is IrBuilder{
 						if({ vna:name != '' && !fixedNames:has(key: vna:name) }, {
 							local Expression is kExpr: Expression:StringLit(value: vna:name);
 							kExpr:setResolvedTypeNode(tn: Type(name: 'String'), t: 'String');
+							kExpr:setSemType(st: SemTypes:STRING);
 							vKeys:push(item: kExpr);
 							vVals:push(item: vna:value);
 						});
@@ -6228,6 +6238,7 @@ Class is IrBuilder{
 					# plain values (no retention of raw bits), and an Any-valued
 					# one retains — the kinds follow the declaration.
 					mapExpr:setResolvedTypeNode(tn: p:paramType, t: :typeSpelling(t: p:paramType));
+					mapExpr:setSemType(st: SemTypes:fromAstType(t: p:paramType));
 					argTypes:push(item: IrType:Ptr);
 					argVals:push(item: :lowerExpr(expr: mapExpr));
 				});
@@ -6266,7 +6277,7 @@ Class is IrBuilder{
 			local IrType is aty: pty;
 			if({ found }, {
 				local Expression is av: matched:value;
-				aty: :irTypeFor(specType: av:resolvedType);
+				aty: :irTypeForSem(st: av:getSemType());
 				if({ aty == IrType:Void }, {
 					aty: match(on: av, when: [
 						Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },
@@ -6283,7 +6294,7 @@ Class is IrBuilder{
 			}, {
 				if({ p:hasDefault }, {
 					:currentCallExpr: callExprForDefaults;
-					aty: :irTypeFor(specType: p:defaultExpr:resolvedType);
+					aty: :irTypeForSem(st: p:defaultExpr:getSemType());
 					if({ aty == IrType:Void }, {
 						aty: match(on: p:defaultExpr, when: [
 							Expression:StringLit: local Function of IrType(String is s){ return IrType:Ptr; },

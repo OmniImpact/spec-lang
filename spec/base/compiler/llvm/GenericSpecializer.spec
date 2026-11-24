@@ -49,6 +49,20 @@ Class is GenericSpecializer{
 	[Type] is pendingMethodArgTypes: [];
 	Array of String is pendingMethodMangled: Array();
 	String is curOwnerClassName: '';
+	local Map of String to SemType is semTypeCache: Map:init();
+
+	local Function of SemType is cachedSemType(Type is t){
+		if({ t:name == '' }, { return SemTypes:EMPTY; });
+		if({ t:params:length() == 0 }, {
+			if({ :semTypeCache:has(key: t:name) }, {
+				return :semTypeCache:get(key: t:name, default: SemTypes:EMPTY);
+			});
+			local SemType is st: SemTypes:fromAstType(t: t);
+			:semTypeCache:set(key: t:name, value: st);
+			return st;
+		});
+		return SemTypes:fromAstType(t: t);
+	}
 
 	local Function of Type is makeType(String is name, [Type] is params){
 		local Type is t: Type(name: name);
@@ -388,22 +402,15 @@ Class is GenericSpecializer{
 								});
 							}
 						], default: {});
-						local Type is naNode: na:value:getResolvedTypeNode();
-						if({ boundType:name == '' && naNode:isFunction() }, {
-							local Type is rNode: naNode:functionReturn();
-							if({ !rNode:isEmpty() && !rNode:isVoid() }, {
-								boundType: :cloneType(t: rNode);
-							});
+						local SemType is naSem: na:value:getSemType();
+						if({ boundType:name == '' && naSem:hasFunctionReturn() }, {
+							boundType: naSem:functionReturn():toAstType();
 						});
 					});
 				});
-				if({ p:paramType:name == tpName && na:value:resolvedType != '' && na:value:resolvedType != 'Void' }, {
-					local Type is naNode2: na:value:getResolvedTypeNode();
-					if({ naNode2:name != '' }, {
-						boundType: :cloneType(t: naNode2);
-					}, {
-						boundType: :resolvedStrToType(s: na:value:resolvedType, subst: subst);
-					});
+				local SemType is naSem2: na:value:getSemType();
+				if({ p:paramType:name == tpName && !naSem2:isEmpty() && !naSem2:isVoid() }, {
+					boundType: naSem2:toAstType();
 				});
 			});
 			pi++;
@@ -413,8 +420,7 @@ Class is GenericSpecializer{
 
 	Function of Expression is transformExpr(Expression is expr, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
 		local Int is ln: expr:line;
-		local Type is exprNode: expr:getResolvedTypeNode();
-		local Type is baseResNode: if({ exprNode:name != '' }, { exprNode }, { :resolvedStrToType(s: expr:resolvedType, subst: subst) });
+		local Type is baseResNode: expr:getSemType():toAstType();
 		local Type is newResNode: :transformType(t: baseResNode, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 		local String is newResT: :typeToResolvedStr(t: newResNode);
 		local Expression is res: match(on: expr, when: [
@@ -543,6 +549,7 @@ Class is GenericSpecializer{
 									ntarget: Expression:Path(segments: nsegs);
 									ntarget:setLine(line: ln);
 									ntarget:setResolvedTypeNode(tn: newResNode, t: newResT);
+									ntarget:setSemType(st: :cachedSemType(t: newResNode));
 								});
 							});
 						});
@@ -550,7 +557,7 @@ Class is GenericSpecializer{
 				], default: {});
 				local String is callName: call:name;
 				local Int is ovIdx: call:overloadIndex;
-				local String is recvCls: ntarget:resolvedType;
+				local String is recvCls: ntarget:getSemType():toKey();
 				if({ recvCls == '' || recvCls == ':' }, {
 					recvCls: :curOwnerClassName;
 				});
@@ -607,7 +614,7 @@ Class is GenericSpecializer{
 		# re-parse only runs for paths that never had a node.
 		local Type is finalNode: if({ newResNode:name != '' }, { newResNode }, { :resolvedStrToType(s: newResT, subst: Map:init()) });
 		res:setResolvedTypeNode(tn: finalNode, t: newResT);
-		res:setSemType(st: SemTypes:fromAstType(t: finalNode));
+		res:setSemType(st: :cachedSemType(t: finalNode));
 		return res;
 	}
 
