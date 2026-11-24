@@ -43,7 +43,7 @@ Class of Fractal is DragonFractal{
 		local Float is dx: sx2 - sx1;
 		local Float is dy: sy2 - sy1;
 		local Float is len: sqrt(value: dx * dx + dy * dy);
-		local Float is pad: len * 0.6 + 2.0;
+		local Float is pad: len * 1.1 + 2.0;
 		local Float is minX: if({ sx1 < sx2 }, { sx1 }, { sx2 }) - pad;
 		local Float is maxX: if({ sx1 > sx2 }, { sx1 }, { sx2 }) + pad;
 		local Float is minY: if({ sy1 < sy2 }, { sy1 }, { sy2 }) - pad;
@@ -53,7 +53,7 @@ Class of Fractal is DragonFractal{
 			return;
 		});
 
-		if({ len < 2.2 || depth >= 14 }, {
+		if({ len < 1.8 || depth >= 26 }, {
 			drawLine(
 				grid: grid,
 				w: w,
