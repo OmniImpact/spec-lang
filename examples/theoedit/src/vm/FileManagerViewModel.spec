@@ -7,7 +7,7 @@ Class is FileManagerViewModel{
 	replace [String] is namespace: ['theoedit', 'vm'];
 
 	merge [[String]] is using: [
-		['base', 'signal', [EnumEmitter, TextEmitter]],
+		['base', 'signal', [EnumEmitter, ListEmitter, TextEmitter]],
 		['theoedit', 'model', DirectoryListing],
 		['theoedit', 'util', [DirectoryScanner, EditorStrings, FileDialogMode, FileManagerFocus, PathTransformer]]
 	];
@@ -17,15 +17,13 @@ Class is FileManagerViewModel{
 	DirectoryListing is listing: DirectoryListing();
 	FileDialogMode is mode: FileDialogMode:OPEN;
 	String is curDir: '.';
-	String is initialName: '';
-	Array of String is entries: Array();
+	TextEmitter is fileName: TextEmitter(initial: '');
+	ListEmitter of String is entries: ListEmitter();
 	TextEmitter is headerTitle: TextEmitter(initial: EditorStrings:FILE_MANAGER_TITLE);
 	EnumEmitter of FileManagerFocus is focus: EnumEmitter(initial: FileManagerFocus:LIST);
 	EnumEmitter of FileManagerFocus is hover: EnumEmitter(initial: FileManagerFocus:NONE);
 	Function is onConfirm: local Function(String is _path){};
 	Function is onCancel: local Function(){};
-	Function is onListUpdated: local Function(Array of String is _nextItems){};
-	Function is onNameUpdated: local Function(String is _fileName){};
 
 	replace Function is init(
 		FileDialogMode is mode: FileDialogMode:OPEN,
@@ -35,7 +33,7 @@ Class is FileManagerViewModel{
 		Function is onCancel: local Function(){}
 	){
 		:mode: mode;
-		:initialName: initialName;
+		fileName:emit(value: initialName);
 		:onConfirm: onConfirm;
 		:onCancel: onCancel;
 		if({ isSaveAs() }, {
@@ -59,29 +57,39 @@ Class is FileManagerViewModel{
 	Function is navigateTo(String is nextDir){
 		listing: scanner:scan(dir: nextDir);
 		curDir: listing:dir;
-		entries: listing:entries;
+		local [String] is nextEntries: [];
+		listing:entries:each(action: local Function(String is item){
+			nextEntries:push(item: item);
+		});
+		entries:emit(value: nextEntries);
 		headerTitle:emit(value: EditorStrings:fileManagerTitle(dir: curDir));
 	}
 
 	Function is activateEntry(String is entry){
 		if({ entry == '..' }, {
 			navigateTo(nextDir: paths:parentDir(dir: curDir));
-			onListUpdated(entries);
 			return;
 		});
 		if({ entry:endsWith(suffix: '/') }, {
 			navigateTo(nextDir: paths:childDir(dir: curDir, entry: entry));
-			onListUpdated(entries);
 			return;
 		});
-		onNameUpdated(entry);
+		fileName:emit(value: entry);
 		confirm(typedName: entry);
 	}
 
 	Function is selectEntry(String is entry){
 		if({ !paths:isDirectoryEntry(entry: entry) }, {
-			onNameUpdated(entry);
+			fileName:emit(value: entry);
 		});
+	}
+
+	Function is onNameChanged(String is typedName){
+		fileName:emit(value: typedName);
+	}
+
+	Function is confirmCurrent(){
+		confirm(typedName: fileName:current());
 	}
 
 	Function is confirm(String is typedName){

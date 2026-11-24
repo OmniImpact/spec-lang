@@ -263,13 +263,14 @@ Class of SpecUnitTest is TestTheoEditor{
 			onCancel: {}
 		);
 		local FileManagerFrame is fm: FileManagerFrame(vm: fmVm);
-		Assert:areEqualInt(6, fm:vm:entries:length());
-		Assert:areEqualString('..', fm:vm:entries:get(index: 0));
-		Assert:areEqualString('AlphaDir/', fm:vm:entries:get(index: 1));
-		Assert:areEqualString('zebraDir/', fm:vm:entries:get(index: 2));
-		Assert:areEqualString('Alpha.txt', fm:vm:entries:get(index: 3));
-		Assert:areEqualString('beta.txt', fm:vm:entries:get(index: 4));
-		Assert:areEqualString('zeta.txt', fm:vm:entries:get(index: 5));
+		local [String] is sortedEntries: fm:vm:entries:current();
+		Assert:areEqualInt(6, sortedEntries:length());
+		Assert:areEqualString('..', sortedEntries:get(index: 0));
+		Assert:areEqualString('AlphaDir/', sortedEntries:get(index: 1));
+		Assert:areEqualString('zebraDir/', sortedEntries:get(index: 2));
+		Assert:areEqualString('Alpha.txt', sortedEntries:get(index: 3));
+		Assert:areEqualString('beta.txt', sortedEntries:get(index: 4));
+		Assert:areEqualString('zeta.txt', sortedEntries:get(index: 5));
 
 		Process:execute(command: 'rm', args: Array(['-rf', rootDir]));
 	}

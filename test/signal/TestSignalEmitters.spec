@@ -9,7 +9,8 @@ Class of SpecUnitTest is TestSignalEmitters{
 		['base', 'signal', IntEmitter],
 		['base', 'signal', IntCollector],
 		['base', 'signal', BoolEmitter],
-		['base', 'signal', BoolCollector]
+		['base', 'signal', BoolCollector],
+		['base', 'signal', ListEmitter]
 	];
 
 	Function is testTextEmitterReplayAndEmit(){
@@ -74,5 +75,18 @@ Class of SpecUnitTest is TestSignalEmitters{
 		flag:emit(value: true);
 		Assert:isTrue(latest);
 		flag:detach(collector: c);
+	}
+
+	Function is testListEmitter(){
+		local ListEmitter of String is items: ListEmitter(initial: ['a', 'b']);
+		local Int is count: 0;
+		local BoolCollector is c: items:collect(onEmit: {
+			count: items:current():length();
+		});
+		Assert:areEqualInt(2, count);
+		items:emit(value: ['x', 'y', 'z']);
+		Assert:areEqualInt(3, count);
+		Assert:areEqualString('y', items:current():get(index: 1));
+		items:detach(collector: c);
 	}
 }

@@ -20,38 +20,12 @@ Class of Frame is FileManagerFrame{
 	FocusTarget is okFocus: FocusTarget();
 	FocusTarget is cancelFocus: FocusTarget();
 
-	Array of ListView is listViews: Array();
-	Array of TextInput is nameInputs: Array();
-
 	replace Function is init(FileManagerViewModel is vm){
 		:vm: vm;
 		if({ vm:isSaveAs() }, {
 			listFocus: FocusTarget(initial: false);
 			inputFocus: FocusTarget(initial: true);
 		});
-
-		local ListView is lv: ListView(
-			items: vm:entries,
-			focusTarget: listFocus,
-			onActivate: local Function(String is entry){ vm:activateEntry(entry: entry); },
-			onSelectChange: local Function(String is entry){ vm:selectEntry(entry: entry); }
-		);
-		listViews: Array([lv]);
-
-		local TextInput is ti: TextInput(
-			value: vm:initialName,
-			placeholder: EditorStrings:FILE_MANAGER_PLACEHOLDER,
-			focusTarget: inputFocus,
-			onSubmit: local Function(String is typed){ vm:confirm(typedName: typed); }
-		);
-		nameInputs: Array([ti]);
-
-		vm:onListUpdated: local Function(Array of String is nextItems){
-			lv:setItems(nextItems: nextItems);
-		};
-		vm:onNameUpdated: local Function(String is fileName){
-			ti:setText(value: fileName);
-		};
 
 		local [FocusTarget] is targets: [listFocus, inputFocus, okFocus, cancelFocus];
 		local [FileManagerFocus] is focusIds: [FileManagerFocus:LIST, FileManagerFocus:INPUT, FileManagerFocus:OK, FileManagerFocus:CANCEL];
@@ -134,7 +108,12 @@ Class of Frame is FileManagerFrame{
 						padX: 1,
 						padY: 0,
 						scrollable: true,
-						child: listViews:get(index: 0)
+						child: ListView(
+							items: vm:entries,
+							focusTarget: listFocus,
+							onActivate: local Function(String is entry){ vm:activateEntry(entry: entry); },
+							onSelectChange: local Function(String is entry){ vm:selectEntry(entry: entry); }
+						)
 					)
 				),
 				Grid:fixed(
@@ -150,7 +129,13 @@ Class of Frame is FileManagerFrame{
 									value: EditorStrings:FILE_MANAGER_NAME_LABEL,
 									color: activeTheme:mutedColor
 								),
-								nameInputs:get(index: 0)
+								TextInput(
+									value: vm:fileName,
+									placeholder: EditorStrings:FILE_MANAGER_PLACEHOLDER,
+									focusTarget: inputFocus,
+									onChange: local Function(String is typed){ vm:onNameChanged(typedName: typed); },
+									onSubmit: local Function(String is typed){ vm:confirm(typedName: typed); }
+								)
 							])
 						)
 					)
@@ -176,11 +161,7 @@ Class of Frame is FileManagerFrame{
 									label: vm:actionLabel(),
 									shortcutKey: vm:actionKey(),
 									focusTarget: okFocus,
-									onClick: {
-										if({ nameInputs:length() > 0 }, {
-											vm:confirm(typedName: nameInputs:get(index: 0):text);
-										});
-									}
+									onClick: { vm:confirmCurrent(); }
 								)
 							])
 						)

@@ -6,10 +6,11 @@ Class of Widget is ListView{
 
 	replace [[String]] is using: [
 		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'signal', [ListEmitter, BoolCollector]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
-	Array of String is items: Array();
+	[String] is items: [];
 	Int is selectedIdx: 0;
 	Int is scrollY: 0;
 	FocusTarget is focusTarget: FocusTarget();
@@ -18,9 +19,41 @@ Class of Widget is ListView{
 	TheoColor is selectedBg: TheoColor:none();
 	Function is onActivate: local Function(String is _item){};
 	Function is onSelectChange: local Function(String is _item){};
+	[ListEmitter of String] is boundEmitters: [];
+	[BoolCollector] is boundCollectors: [];
+
+	local Function of [String] is arrayToList(Array of String is arr){
+		local [String] is out: [];
+		arr:each(action: local Function(String is item){
+			out:push(item: item);
+		});
+		return out;
+	}
 
 	replace Function is init(
 		Array of String is items: Array(),
+		FocusTarget is focusTarget: FocusTarget(),
+		Function is onActivate: local Function(String is _item){},
+		Function is onSelectChange: local Function(String is _item){},
+		TheoColor is fg: TheoColor:none(),
+		TheoColor is selectedFg: TheoColor:none(),
+		TheoColor is selectedBg: TheoColor:none()
+	){
+		:items: :arrayToList(arr: items);
+		:selectedIdx: 0;
+		:scrollY: 0;
+		:focusTarget: focusTarget;
+		:onActivate: onActivate;
+		:onSelectChange: onSelectChange;
+		:fg: fg;
+		:selectedFg: selectedFg;
+		:selectedBg: selectedBg;
+		:boundEmitters: [];
+		:boundCollectors: [];
+	}
+
+	replace Function is init(
+		[String] is items,
 		FocusTarget is focusTarget: FocusTarget(),
 		Function is onActivate: local Function(String is _item){},
 		Function is onSelectChange: local Function(String is _item){},
@@ -37,6 +70,43 @@ Class of Widget is ListView{
 		:fg: fg;
 		:selectedFg: selectedFg;
 		:selectedBg: selectedBg;
+		:boundEmitters: [];
+		:boundCollectors: [];
+	}
+
+	replace Function is init(
+		ListEmitter of String is items,
+		FocusTarget is focusTarget: FocusTarget(),
+		Function is onActivate: local Function(String is _item){},
+		Function is onSelectChange: local Function(String is _item){},
+		TheoColor is fg: TheoColor:none(),
+		TheoColor is selectedFg: TheoColor:none(),
+		TheoColor is selectedBg: TheoColor:none()
+	){
+		:items: items:current();
+		:selectedIdx: 0;
+		:scrollY: 0;
+		:focusTarget: focusTarget;
+		:onActivate: onActivate;
+		:onSelectChange: onSelectChange;
+		:fg: fg;
+		:selectedFg: selectedFg;
+		:selectedBg: selectedBg;
+		:boundEmitters: [];
+		:boundCollectors: [];
+		bindItems(items: items);
+	}
+
+	Function is bindItems(ListEmitter of String is items){
+		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
+			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
+		});
+		:boundEmitters: [items];
+		setItems(nextItems: items:current());
+		local BoolCollector is col: items:collect(onEmit: {
+			setItems(nextItems: items:current());
+		});
+		:boundCollectors: [col];
 	}
 
 	Function is bindOnActivate(Function is cb){
@@ -48,6 +118,13 @@ Class of Widget is ListView{
 	}
 
 	Function is setItems(Array of String is nextItems){
+		:items: :arrayToList(arr: nextItems);
+		:selectedIdx: 0;
+		:scrollY: 0;
+		invalidate();
+	}
+
+	Function is setItems([String] is nextItems){
 		:items: nextItems;
 		:selectedIdx: 0;
 		:scrollY: 0;
@@ -171,5 +248,13 @@ Class of Widget is ListView{
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
 		targets:add(item: focusTarget);
 		owners:add(item: :);
+	}
+
+	replace Function is dispose(){
+		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
+			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
+			:boundEmitters: [];
+			:boundCollectors: [];
+		});
 	}
 }

@@ -6,6 +6,7 @@ Class of Widget is TextInput{
 
 	replace [[String]] is using: [
 		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'signal', [TextEmitter, TextCollector]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -17,6 +18,9 @@ Class of Widget is TextInput{
 	TheoColor is placeholderFg: TheoColor:none();
 	Function is onChange: local Function(String is _s){};
 	Function is onSubmit: local Function(String is _s){};
+	[TextEmitter] is boundEmitters: [];
+	[TextCollector] is boundCollectors: [];
+	Boolean is suppressSync: false;
 
 	replace Function is init(
 		String is value: '',
@@ -35,6 +39,51 @@ Class of Widget is TextInput{
 		:onSubmit: onSubmit;
 		:fg: fg;
 		:placeholderFg: placeholderFg;
+		:boundEmitters: [];
+		:boundCollectors: [];
+	}
+
+	replace Function is init(
+		TextEmitter is value,
+		String is placeholder: '',
+		FocusTarget is focusTarget: FocusTarget(),
+		Function is onChange: local Function(String is _s){},
+		Function is onSubmit: local Function(String is _s){},
+		TheoColor is fg: TheoColor:none(),
+		TheoColor is placeholderFg: TheoColor:none()
+	){
+		:text: value:current();
+		:placeholder: placeholder;
+		:cursor: value:current():length();
+		:focusTarget: focusTarget;
+		:onChange: onChange;
+		:onSubmit: onSubmit;
+		:fg: fg;
+		:placeholderFg: placeholderFg;
+		:boundEmitters: [];
+		:boundCollectors: [];
+		bindValue(value: value);
+	}
+
+	Function is bindValue(TextEmitter is value){
+		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
+			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
+		});
+		:boundEmitters: [value];
+		setText(value: value:current());
+		local TextCollector is col: value:collect(onEmit: local Function(String is next){
+			if({ !suppressSync }, {
+				setText(value: next);
+			});
+		});
+		:boundCollectors: [col];
+	}
+
+	local Function is notifyChanged(){
+		:suppressSync: true;
+		onChange(text);
+		:suppressSync: false;
+		invalidate();
 	}
 
 	Function is bindOnChange(Function is cb){
@@ -114,8 +163,7 @@ Class of Widget is TextInput{
 				local String is right: text:substring(start: cursor, end: text:length());
 				:text: "{{left}}{{right}}";
 				:cursor: cursor - 1;
-				onChange(text);
-				invalidate();
+				notifyChanged();
 			});
 			return true;
 		});
@@ -124,8 +172,7 @@ Class of Widget is TextInput{
 				local String is left: text:substring(start: 0, end: cursor);
 				local String is right: text:substring(start: cursor + 1, end: text:length());
 				:text: "{{left}}{{right}}";
-				onChange(text);
-				invalidate();
+				notifyChanged();
 			});
 			return true;
 		});
@@ -134,8 +181,7 @@ Class of Widget is TextInput{
 			local String is right: text:substring(start: cursor, end: text:length());
 			:text: "{{left}}{{event:key}}{{right}}";
 			:cursor: cursor + event:key:length();
-			onChange(text);
-			invalidate();
+			notifyChanged();
 			return true;
 		});
 		return false;
@@ -144,5 +190,13 @@ Class of Widget is TextInput{
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
 		targets:add(item: focusTarget);
 		owners:add(item: :);
+	}
+
+	replace Function is dispose(){
+		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
+			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
+			:boundEmitters: [];
+			:boundCollectors: [];
+		});
 	}
 }
