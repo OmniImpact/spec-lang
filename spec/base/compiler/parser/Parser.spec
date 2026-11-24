@@ -983,7 +983,9 @@ Class is Parser{
 			return s;
 		});
 
-		:matchPunct(p: Punctuation:TERMINATOR);
+		if({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) }, {
+			:matchPunct(p: Punctuation:TERMINATOR);
+		});
 		local Statement is s: Statement:Expr(exprStmt: expr);
 		s:setLine(line: startLine);
 		return s;

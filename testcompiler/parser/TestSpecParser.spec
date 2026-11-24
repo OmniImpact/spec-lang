@@ -132,4 +132,9 @@ Class is Box of T{
 		Assert:isTrue(p3:hasErrors());
 		Assert:areEqualInt(1, p3:getErrors():get(index: 0):getTrace():length());
 	}
+
+	Function is testSingleLineMethodWithoutSemicolonParses(){
+		local Array of String is errs: :parseOf(src: "Class is T{ Function of Int is zero(){ 0 } }");
+		Assert:areEqualInt(0, errs:length());
+	}
 }
