@@ -603,8 +603,7 @@ Class is LlvmEmitter{
 		});
 
 		# Insertion sort function indices by weight descending (LPT).
-		local Int is si: 1;
-		while({ si < nFn }, {
+		range(start: 1, end: nFn, worker: local Function(Int is si){
 			local Int is keyIdx: sortedIdx:get(index: si);
 			local Int is keyW: weights:get(index: keyIdx);
 			local Int is sj: si - 1;
@@ -613,23 +612,18 @@ Class is LlvmEmitter{
 				sj: sj - 1;
 			});
 			sortedIdx:set(index: sj + 1, item: keyIdx);
-			si++;
 		});
 
 		local [[Int]] is buckets: [];
 		local [Int] is bucketWeights: [];
-		local Int is b0: 0;
-		while({ b0 < nShards }, {
+		repeat(count: nShards, worker: {
 			local [Int] is emptyBucket: [];
 			buckets:push(item: emptyBucket);
 			bucketWeights:push(item: 0);
-			b0++;
 		});
 		local [Int] is ownerShard: [];
-		local Int is oi: 0;
-		while({ oi < nFn }, {
+		repeat(count: nFn, worker: {
 			ownerShard:push(item: 0);
-			oi++;
 		});
 		local Int is pi: 0;
 		while({ pi < nFn }, {
@@ -637,14 +631,12 @@ Class is LlvmEmitter{
 			local Int is fw: weights:get(index: fi);
 			local Int is bestB: 0;
 			local Int is bestL: bucketWeights:get(index: 0);
-			local Int is bi: 1;
-			while({ bi < nShards }, {
+			range(start: 1, end: nShards, worker: local Function(Int is bi){
 				local Int is curL: bucketWeights:get(index: bi);
 				if({ curL < bestL }, {
 					bestL: curL;
 					bestB: bi;
 				});
-				bi++;
 			});
 			buckets:get(index: bestB):push(item: fi);
 			bucketWeights:set(index: bestB, item: bestL + fw);
@@ -742,10 +734,8 @@ Class is LlvmEmitter{
 			curStart: eIdx;
 			local Task of String is wt: scope:spawn(task: local Function of String(){
 				local String is chunk: '';
-				local Int is k: sIdx;
-				while({ k < eIdx }, {
+				range(start: sIdx, end: eIdx, worker: local Function(Int is k){
 					chunk: chunk . :emitFunction(fn: mod:functions:get(index: k)) . "\n";
-					k++;
 				});
 				return chunk;
 			});

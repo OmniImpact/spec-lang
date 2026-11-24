@@ -188,10 +188,8 @@ Enum is SemType {
 				if({ path:length() == 0 }, { return ''; });
 				if({ path:length() == 1 }, { return path:get(index: 0); });
 				local String is out: path:get(index: 0);
-				local Int is i: 1;
-				while({ i < path:length() }, {
+				range(start: 1, end: path:length(), worker: local Function(Int is i){
 					out: out . ':' . path:get(index: i);
-					i++;
 				});
 				return out;
 			}
@@ -565,10 +563,8 @@ Enum is SemType {
 				local String is base: :baseName();
 				if({ params:length() == 0 }, { return base; });
 				local String is out: base . ' ' . Keyword:OF:value() . ' ' . params:get(index: 0):toDisplayString();
-				local Int is i: 1;
-				while({ i < params:length() }, {
+				range(start: 1, end: params:length(), worker: local Function(Int is i){
 					out: out . ' ' . Keyword:TO:value() . ' ' . params:get(index: i):toDisplayString();
-					i++;
 				});
 				return out;
 			}

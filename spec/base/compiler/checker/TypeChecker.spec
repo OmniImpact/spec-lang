@@ -374,8 +374,7 @@ Class is TypeChecker{
 	## Right-to-left arity reconstruction of a flat type string directly into [SemType].
 	Function of SemType is rebuildSemType(Array of String is rawParts, Boolean is bareContainers){
 		local [SemType] is stack: [];
-		local Int is idx: rawParts:length() - 1;
-		while({ idx >= 0 }, {
+		rangeStep(start: rawParts:length() - 1, end: -1, step: -1, worker: local Function(Int is idx){
 			local String is seg: rawParts:get(index: idx, default: '');
 			local Int is arity: 0;
 			if({ seg == 'Array' || seg == 'List' || seg == 'Function' }, {
@@ -392,16 +391,13 @@ Class is TypeChecker{
 			});
 			if({ arity > 0 && stack:length() >= arity }, {
 				local [SemType] is tArgs: [];
-				local Int is ki: 0;
-				while({ ki < arity }, {
+				repeat(count: arity, worker: {
 					tArgs:push(item: stack:pop());
-					ki++;
 				});
 				stack:push(item: SemTypes:namedWithParams(name: seg, params: tArgs));
 			}, {
 				stack:push(item: SemTypes:named(name: seg));
 			});
-			idx: idx - 1;
 		});
 		if({ stack:length() == 0 }, {
 			return SemTypes:EMPTY;
@@ -7484,8 +7480,7 @@ Class is TypeChecker{
 			sortedIdx:push(item: idx0);
 			idx0++;
 		});
-		local Int is si: 1;
-		while({ si < nCls }, {
+		range(start: 1, end: nCls, worker: local Function(Int is si){
 			local Int is keyIdx: sortedIdx:get(index: si);
 			local Int is keyW: program:classes:get(index: keyIdx):members:length();
 			local Int is sj: si - 1;
@@ -7494,17 +7489,14 @@ Class is TypeChecker{
 				sj: sj - 1;
 			});
 			sortedIdx:set(index: sj + 1, item: keyIdx);
-			si++;
 		});
 
 		local [[Int]] is buckets: [];
 		local [Int] is bucketWeights: [];
-		local Int is bw: 0;
-		while({ bw < nWorkers }, {
+		repeat(count: nWorkers, worker: {
 			local [Int] is emptyBucket: [];
 			buckets:push(item: emptyBucket);
 			bucketWeights:push(item: 0);
-			bw++;
 		});
 		local Int is pi: 0;
 		while({ pi < nCls }, {
@@ -7512,14 +7504,12 @@ Class is TypeChecker{
 			local Int is wVal: program:classes:get(index: ci):members:length() + 1;
 			local Int is bestW: 0;
 			local Int is bestLoad: bucketWeights:get(index: 0);
-			local Int is bi: 1;
-			while({ bi < nWorkers }, {
+			range(start: 1, end: nWorkers, worker: local Function(Int is bi){
 				local Int is curLoad: bucketWeights:get(index: bi);
 				if({ curLoad < bestLoad }, {
 					bestLoad: curLoad;
 					bestW: bi;
 				});
-				bi++;
 			});
 			buckets:get(index: bestW):push(item: ci);
 			bucketWeights:set(index: bestW, item: bestLoad + wVal);
@@ -7547,10 +7537,8 @@ Class is TypeChecker{
 					local Int is errEnd: wTc:errors:length();
 					if({ errEnd > errStart }, {
 						local [TypeError] is slice: [];
-						local Int is ei: errStart;
-						while({ ei < errEnd }, {
+						range(start: errStart, end: errEnd, worker: local Function(Int is ei){
 							slice:push(item: wTc:errors:get(index: ei));
-							ei++;
 						});
 						wTc:workerClassErrors:set(key: clsIdx, value: slice);
 					});

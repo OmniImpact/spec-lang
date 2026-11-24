@@ -800,12 +800,10 @@ Class is IrBuilder{
 				local Map of String to Boolean is seenFields: Map:init();
 				:addInheritedFields(st: st, cls: cls, clsMap: clsMap, seenFields: seenFields);
 				local Boolean is hasArcField: false;
-				local Int is dfi: 2;
-				while({ dfi < st:fieldTypes:length() }, {
+				range(start: 2, end: st:fieldTypes:length(), worker: local Function(Int is dfi){
 					if({ st:fieldIsArc:get(index: dfi) }, {
 						hasArcField: true;
 					});
-					dfi++;
 				});
 				local Boolean is hasUserDestroy: false;
 				local Int is dmi: 0;
@@ -1072,8 +1070,7 @@ Class is IrBuilder{
 			});
 			dmi++;
 		});
-		local Int is fi: 2;
-		while({ fi < st:fieldTypes:length() }, {
+		range(start: 2, end: st:fieldTypes:length(), worker: local Function(Int is fi){
 			if({ st:fieldIsArc:get(index: fi) }, {
 				local String is fptr: :nextTmp();
 				:emit(inst: IrInst:FieldPtr(dst: fptr, objPtr: '%self', structName: st:name, fieldIndex: fi));
@@ -1082,7 +1079,6 @@ Class is IrBuilder{
 				:emit(inst: IrInst:Release(val: fval));
 				:emit(inst: IrInst:Store(slot: fptr, val: 'null', ty: IrType:Ptr));
 			});
-			fi++;
 		});
 		:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 		:mod:addFunction(fn: fn);
@@ -3625,12 +3621,10 @@ Class is IrBuilder{
 						:collectCallsInStmts(stmts: m:body, fnVars: fnVars, outCalls: flatCalls, curClsName: sname);
 						local Int is endIdx: flatCalls:length();
 						local Boolean is hasSeed: false;
-						local Int is ki: startIdx;
-						while({ ki < endIdx }, {
+						range(start: startIdx, end: endIdx, worker: local Function(Int is ki){
 							if({ flatCalls:get(index: ki, default: '') == '__UNWIND_SEED__' }, {
 								hasSeed: true;
 							});
-							ki++;
 						});
 						if({ hasSeed }, {
 							:markMethodCanUnwind(cls: cls, sname: sname, bareName: m:name, fnSym: fnSym);

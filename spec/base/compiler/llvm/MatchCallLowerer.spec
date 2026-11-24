@@ -135,13 +135,11 @@ Class of CallLowerer is MatchCallLowerer{
 				return fTmp;
 			});
 			local String is accCond: :emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: 0));
-			local Int is ai: 1;
-			while({ ai < arrItems:length() }, {
+			range(start: 1, end: arrItems:length(), worker: local Function(Int is ai){
 				local String is nxtCond: :emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: ai));
 				local String is orTmp: b:nextTmp();
 				b:emit(inst: IrInst:BinOp(dst: orTmp, op: '||', lhs: accCond, rhs: nxtCond, ty: IrType:I1));
 				accCond: orTmp;
-				ai++;
 			});
 			return accCond;
 		});

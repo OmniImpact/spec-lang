@@ -245,10 +245,8 @@ Class of SpecOptimizer is DevirtPass{
 							local [String] is newArgs: args;
 							if({ unusedSelf:has(key: target) && newArgs:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) }, {
 								local [String] is nulled: ['null'];
-								local Int is ai: 1;
-								while({ ai < newArgs:length() }, {
+								range(start: 1, end: newArgs:length(), worker: local Function(Int is ai){
 									nulled:push(item: newArgs:get(index: ai, default: ''));
-									ai++;
 								});
 								newArgs: nulled;
 							});
@@ -266,10 +264,8 @@ Class of SpecOptimizer is DevirtPass{
 					IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 						if({ unusedSelf:has(key: callee) && args:length() > 0 && argTypes:length() > 0 && (argTypes:get(index: 0) as String) == (IrType:Ptr as String) && args:get(index: 0, default: '') != 'null' }, {
 							local [String] is nulled: ['null'];
-							local Int is ai: 1;
-							while({ ai < args:length() }, {
+							range(start: 1, end: args:length(), worker: local Function(Int is ai){
 								nulled:push(item: args:get(index: ai, default: ''));
-								ai++;
 							});
 							return IrInst:IrCall(
 								dst: dst,

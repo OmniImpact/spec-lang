@@ -445,8 +445,7 @@ Class is GenericSpecializer{
 
 	local Function of Type is rebuildResolvedType(Array of String is rawParts, Map of String to Type is subst, Boolean is bareContainers){
 		local [Type] is stack: [];
-		local Int is idx: rawParts:length() - 1;
-		while({ idx >= 0 }, {
+		rangeStep(start: rawParts:length() - 1, end: -1, step: -1, worker: local Function(Int is idx){
 			local String is seg: rawParts:get(index: idx, default: '');
 			if({ subst:has(key: seg) }, {
 				stack:push(item: :cloneType(t: subst:get(key: seg, default: Type(name: seg))));
@@ -454,17 +453,14 @@ Class is GenericSpecializer{
 				local Int is arity: :segArity(seg: seg, bareContainers: bareContainers);
 				if({ arity > 0 && stack:length() >= arity }, {
 					local [Type] is tArgs: [];
-					local Int is ki: 0;
-					while({ ki < arity }, {
+					repeat(count: arity, worker: {
 						tArgs:push(item: stack:pop());
-						ki++;
 					});
 					stack:push(item: :makeType(name: seg, params: tArgs));
 				}, {
 					stack:push(item: Type(name: seg));
 				});
 			});
-			idx: idx - 1;
 		});
 		if({ stack:length() == 0 }, {
 			return Type:init(name: '');
