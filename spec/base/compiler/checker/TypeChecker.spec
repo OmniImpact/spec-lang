@@ -954,21 +954,16 @@ Class is TypeChecker{
 		return res;
 	}
 
-	## Looks up a field's static type on a class and its ancestors.
-	##
-	## @param className: Starting class name.
-	## @param fieldName: Field name.
-	## @return: The field type name, or '' when absent.
-	Function of String is lookupFieldType(String is className, String is fieldName){
-		if({ className == '' || className == Primitive:ANY:value() }, {
-			return '';
+	## Looks up a field's static [SemType] on a receiver [SemType] and its ancestors.
+	Function of SemType is lookupFieldSemType(SemType is recvSem, String is fieldName){
+		if({ recvSem:isEmpty() || recvSem:isAny() }, {
+			return SemTypes:EMPTY;
 		});
-		local SemType is recvSem: :parseSemType(s: className);
 		local [SemType] is recvArgs: recvSem:allArgs();
-		local String is baseClassName: if({ recvArgs:length() > 0 }, { recvSem:baseName() }, { :memberLookupRoot(className: className) });
+		local String is baseClassName: recvSem:baseName();
 		local ClassInfo is cls: :findClass(name: baseClassName);
 		if({ cls:name == '' }, {
-			return '';
+			return SemTypes:EMPTY;
 		});
 		local Member is foundM: Member(kind: MemberKind:FIELD);
 		while([Int is mi: 0], { foundM:name == '' && mi < cls:members:length() }, {
@@ -979,16 +974,27 @@ Class is TypeChecker{
 			mi++;
 		});
 		if({ foundM:name != '' }, {
-			local SemType is subSem: :substituteSemType(rawSem: :semTypeFromAst(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
-			return subSem:toKey();
+			return :substituteSemType(rawSem: :semTypeFromAst(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
 		});
-		local String is inherited: '';
+		local SemType is inherited: SemTypes:EMPTY;
 		each(list: cls:baseClasses, action: local Function(String is baseName){
-			if({ inherited == '' }, {
-				inherited: :lookupFieldType(className: baseName, fieldName: fieldName);
+			if({ inherited:isEmpty() }, {
+				inherited: :lookupFieldSemType(recvSem: :parseSemType(s: baseName), fieldName: fieldName);
 			});
 		});
 		return inherited;
+	}
+
+	## Looks up a field's static type on a class and its ancestors.
+	##
+	## @param className: Starting class name.
+	## @param fieldName: Field name.
+	## @return: The field type name, or '' when absent.
+	Function of String is lookupFieldType(String is className, String is fieldName){
+		if({ className == '' || className == Primitive:ANY:value() }, {
+			return '';
+		});
+		return :lookupFieldSemType(recvSem: :parseSemType(s: className), fieldName: fieldName):toKey();
 	}
 
 	## Looks up a method's return type on a class and its ancestors.
@@ -1078,13 +1084,13 @@ Class is TypeChecker{
 	}
 
 	Function of String is checkMatchArms(Expression is subj, Expression is arms, String is expected, Expression is defaultArm, Boolean is hasDefault, Boolean is hasExplicitDefault: false){
-		local String is subjT: :inferExpressionType(expr: subj);
+		local SemType is subjSem: :inferExpressionType(expr: subj);
 		# The full subject type, generic spellings included. The stripping
 		# below feeds held-member resolution; generic variant payload
 		# binding grounds its type args from the full spelling.
-		local String is subjFull: subjT;
+		local String is subjFull: subjSem:toKey();
 		# Strip container/generic spellings to the base class name.
-		subjT: subj:getSemType():baseName();
+		local String is subjT: subjSem:baseName();
 		if({ subjT == '' || subjT == Primitive:ANY:value() || !:registeredClasses:has(key: subjT) }, {
 			:addError(line: :currentLine, msg: 'Conditional:match subjects must be class-typed values; \'' . subjT . '\' cannot be matched.');
 			return 'Any';
@@ -3295,7 +3301,7 @@ Class is TypeChecker{
 		if({ !cbElemSem:isAny() && !cbElemSem:isEmpty() }, {
 			if({ method == 'fold' && cd:args:length() >= 2 }, {
 				local NamedArg is a0: cd:args:get(index: 0);
-				local String is initType: :inferExpressionType(expr: a0:value);
+				local SemType is initSem: :inferExpressionType(expr: a0:value);
 				local NamedArg is a1: cd:args:get(index: 1);
 				local Expression is av: a1:value;
 				match(on: av, when: [
@@ -3303,7 +3309,7 @@ Class is TypeChecker{
 						if({ params:length() >= 1 }, {
 							local Parameter is p0: params:get(index: 0);
 							if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
-								p0:paramType: :parseSemType(s: initType):toAstType();
+								p0:paramType: initSem:toAstType();
 							});
 						});
 						if({ params:length() >= 2 }, {
@@ -3577,81 +3583,81 @@ Class is TypeChecker{
 		]);
 	}
 
-	local Function of String is inferBinaryExpr(String is op, Expression is left, Expression is right, String is expected){
-		local String is leftExp: expected;
-		if({ leftExp == '' && :isIfCallExpr(e: left) }, {
-			leftExp: Primitive:ANY:value();
+	local Function of SemType is inferBinaryExpr(String is op, Expression is left, Expression is right, SemType is expected){
+		local SemType is leftExp: expected;
+		if({ leftExp:isEmpty() && :isIfCallExpr(e: left) }, {
+			leftExp: SemTypes:ANY;
 		});
-		local String is leftT: :inferExpressionType(expr: left, expected: leftExp);
-		local String is rightExp: expected;
-		if({ rightExp == '' && :isIfCallExpr(e: right) }, {
-			rightExp: if({ leftT != '' && !:isVoid(t: leftT) }, { leftT }, { Primitive:ANY:value() });
+		local SemType is leftSem: :inferExpressionType(expr: left, expected: leftExp);
+		local SemType is rightExp: expected;
+		if({ rightExp:isEmpty() && :isIfCallExpr(e: right) }, {
+			rightExp: if({ !leftSem:isEmpty() && !leftSem:isVoid() }, { leftSem }, { SemTypes:ANY });
 		});
-		local String is rightT: :inferExpressionType(expr: right, expected: rightExp);
-		local String is res: Primitive:INT:value();
+		local SemType is rightSem: :inferExpressionType(expr: right, expected: rightExp);
+		local SemType is res: SemTypes:INT;
 		match(on: op, when: [
 			'.': {
-				res: Primitive:STRING:value();
+				res: SemTypes:STRING;
 			},
 			['==', '!=', 'is', '<', '<=', '>', '>=']: {
-				res: Primitive:BOOLEAN:value();
+				res: SemTypes:BOOLEAN;
 				local Boolean is isRel: op == '<' || op == '<=' || op == '>' || op == '>=';
-				local Boolean is leftStr: leftT == 'String' || leftT == 'Str';
-				local Boolean is rightStr: rightT == 'String' || rightT == 'Str';
+				local Boolean is leftStr: leftSem:isStringLike();
+				local Boolean is rightStr: rightSem:isStringLike();
 				if({ isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, {
-					:addError(line: :currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
+					:addError(line: :currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftSem:toKey() . '\' and \'' . rightSem:toKey() . '\').');
 				});
-				if({ op != 'is' && (:isNumericType(t: leftT) && :isNumericType(t: rightT)) && leftT != rightT }, {
-					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same numeric type.');
+				if({ op != 'is' && leftSem:isNumeric() && rightSem:isNumeric() && !leftSem:equals(other: rightSem) }, {
+					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftSem:toKey() . '\' and \'' . rightSem:toKey() . '\'; cast both operands to the same numeric type.');
 				});
 			},
 			['&&', '||']: {
-				res: Primitive:BOOLEAN:value();
+				res: SemTypes:BOOLEAN;
 			},
 			['+', '-', '*', '/', '%']: {
-				if({ :isNumericType(t: leftT) && :isNumericType(t: rightT) && leftT != rightT }, {
-					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same numeric type.');
+				if({ leftSem:isNumeric() && rightSem:isNumeric() && !leftSem:equals(other: rightSem) }, {
+					:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftSem:toKey() . '\' and \'' . rightSem:toKey() . '\'; cast both operands to the same numeric type.');
 				});
-				if({ :isNumericType(t: leftT) }, {
-					res: leftT;
+				if({ leftSem:isNumeric() }, {
+					res: leftSem;
 				}, {
-					if({ :isNumericType(t: rightT) }, {
-						res: rightT;
+					if({ rightSem:isNumeric() }, {
+						res: rightSem;
 					}, {
-						res: Primitive:INT:value();
+						res: SemTypes:INT;
 					});
 				});
 			},
 			['&', '|', '^']: {
-				res: if({ :isIntLike(t: leftT) }, { leftT }, { if({ :isIntLike(t: rightT) }, { rightT }, { Primitive:INT:value() }) });
-				if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
-					(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
-					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
+				res: if({ leftSem:isIntLike() }, { leftSem }, { if({ rightSem:isIntLike() }, { rightSem }, { SemTypes:INT }) });
+				if({ (!leftSem:isEmpty() && !leftSem:isAny() && !leftSem:isIntLike()) ||
+					(!rightSem:isEmpty() && !rightSem:isAny() && !rightSem:isIntLike()) }, {
+					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftSem:toKey(), rightT: rightSem:toKey());
 					:addError(line: :currentLine, msg: msg);
 				}, {
-					if({ :isIntLike(t: leftT) && :isIntLike(t: rightT) && leftT != rightT }, {
-						:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftT . '\' and \'' . rightT . '\'; cast both operands to the same integer type.');
+					if({ leftSem:isIntLike() && rightSem:isIntLike() && !leftSem:equals(other: rightSem) }, {
+						:addError(line: :currentLine, msg: 'Operator \'' . op . '\' cannot mix \'' . leftSem:toKey() . '\' and \'' . rightSem:toKey() . '\'; cast both operands to the same integer type.');
 					});
 				});
 			},
 			['<<', '>>']: {
-				res: if({ :isIntLike(t: leftT) }, { leftT }, { Primitive:INT:value() });
-				if({ (leftT != '' && leftT != 'Any' && !:isIntLike(t: leftT)) ||
-					(rightT != '' && rightT != 'Any' && !:isIntLike(t: rightT)) }, {
-					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
+				res: if({ leftSem:isIntLike() }, { leftSem }, { SemTypes:INT });
+				if({ (!leftSem:isEmpty() && !leftSem:isAny() && !leftSem:isIntLike()) ||
+					(!rightSem:isEmpty() && !rightSem:isAny() && !rightSem:isIntLike()) }, {
+					local String is msg: :errText:errBitwiseOperandsInt(op: op, leftT: leftSem:toKey(), rightT: rightSem:toKey());
 					:addError(line: :currentLine, msg: msg);
 				});
 			},
 			else: {
-				res: Primitive:INT:value();
+				res: SemTypes:INT;
 			}
 		]);
 		return res;
 	}
 
 	local Function of String is inferCastExpr(Expression is inner, String is target, [Expression] is args){
-		local String is innerT: :inferExpressionType(expr: inner);
-		local String is src: if({ innerT != '' }, { innerT }, { Primitive:ANY:value() });
+		local SemType is innerSem: :inferExpressionType(expr: inner);
+		local String is src: if({ !innerSem:isEmpty() }, { innerSem:toKey() }, { Primitive:ANY:value() });
 		local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
 		if({ args:length() > 0 && !isFormat }, {
 			:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' takes no arguments.');
@@ -3697,15 +3703,15 @@ Class is TypeChecker{
 		return 'Any';
 	}
 
-	local Function of String is inferUnaryExpr(String is op, Expression is operand){
-		local String is innerT: :inferExpressionType(expr: operand);
-		if({ op == '~' && innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
-			local String is msg: :errText:errBitwiseComplementInt(innerT: innerT);
+	local Function of SemType is inferUnaryExpr(String is op, Expression is operand){
+		local SemType is innerSem: :inferExpressionType(expr: operand);
+		if({ op == '~' && !innerSem:isEmpty() && !innerSem:isAny() && !innerSem:isIntLike() }, {
+			local String is msg: :errText:errBitwiseComplementInt(innerT: innerSem:toKey());
 			:addError(line: :currentLine, msg: msg);
 		});
 		if({ op == '++' || op == '--' || op == 'post++' || op == 'post--' }, {
-			if({ innerT != '' && innerT != 'Any' && !:isIntLike(t: innerT) }, {
-				local String is msg: :errText:errOperatorRequiresInt(op: op, innerT: innerT);
+			if({ !innerSem:isEmpty() && !innerSem:isAny() && !innerSem:isIntLike() }, {
+				local String is msg: :errText:errOperatorRequiresInt(op: op, innerT: innerSem:toKey());
 				:addError(line: :currentLine, msg: msg);
 			});
 			if({ :inLazyBlock && !:isLazyLocalTarget(expr: operand) }, {
@@ -3713,24 +3719,23 @@ Class is TypeChecker{
 			});
 		});
 		if({ op == '!' }, {
-			return Primitive:BOOLEAN:value();
+			return SemTypes:BOOLEAN;
 		});
-		return innerT;
+		return innerSem;
 	}
 
-	local Function of String is inferArrayLitExpr([Expression] is items, String is expected){
-		local SemType is expSem: :parseSemType(s: expected);
+	local Function of String is inferArrayLitExpr([Expression] is items, SemType is expSem){
 		local Boolean is hasExpectedList: expSem:isList();
 		local SemType is elemSem: if({ hasExpectedList }, { expSem:elemType() }, { SemTypes:EMPTY });
 		local String is elemT: elemSem:toKey();
 		local Array of String is itemTypes: Array();
 		while([Int is ii: 0], { ii < items:length() }, {
-			local String is itemT: :inferExpressionType(expr: items:get(index: ii), expected: elemT);
-			if({ :isVoid(t: itemT) }, {
+			local SemType is itemSem: :inferExpressionType(expr: items:get(index: ii), expected: elemSem);
+			if({ itemSem:isVoid() }, {
 				:addError(line: :currentLine, msg: 'List elements cannot be void.');
 			}, {
-				if({ itemT != '' && itemT != Primitive:ANY:value() }, {
-					itemTypes:add(item: itemT);
+				if({ !itemSem:isEmpty() && !itemSem:isAny() }, {
+					itemTypes:add(item: itemSem:toKey());
 				});
 			});
 			ii++;
@@ -3748,10 +3753,10 @@ Class is TypeChecker{
 					});
 				});
 			});
-			if({ elemT == '' && expected == 'List' && unifiedElemType != '' }, {
+			if({ elemSem:isEmpty() && unifiedElemType != '' }, {
 				return ('List:' . unifiedElemType):intern();
 			});
-			return expected;
+			return expSem:toKey();
 		});
 		if({ unifiedElemType != '' }, {
 			return ('List:' . unifiedElemType):intern();
@@ -3759,78 +3764,75 @@ Class is TypeChecker{
 		return 'List';
 	}
 
-	local Function of String is inferMapLitExpr([Expression] is keys, [Expression] is values, String is expected){
-		local SemType is expSem: :parseSemType(s: expected);
+	local Function of SemType is inferMapLitExpr([Expression] is keys, [Expression] is values, SemType is expSem){
 		if({ expSem:isMap() }, {
-			local String is keyT: expSem:mapKeyType():toKey();
-			local String is valT: expSem:mapValType():toKey();
+			local SemType is keySem: expSem:mapKeyType();
+			local SemType is valSem: expSem:mapValType();
 			while([Int is ki: 0], { ki < keys:length() }, {
-				local String is kT: :inferExpressionType(expr: keys:get(index: ki));
-				if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !:isAssignable(target: keyT, source: kT) }, {
-					local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
-					:addError(line: :currentLine, msg: "Cannot assign '" . kT . "' key to 'Map:" . kDisplay . ":" . valT . "'.");
+				local SemType is kSem: :inferExpressionType(expr: keys:get(index: ki));
+				if({ !keySem:isEmpty() && !kSem:isEmpty() && !kSem:isAny() && !:isAssignableSem(targetSem: keySem, sourceSem: kSem) }, {
+					local String is kDisplay: if({ !keySem:isEmpty() }, { keySem:toKey() }, { 'String' });
+					:addError(line: :currentLine, msg: "Cannot assign '" . kSem:toKey() . "' key to 'Map:" . kDisplay . ":" . valSem:toKey() . "'.");
 				});
 				ki++;
 			});
 			while([Int is vi: 0], { vi < values:length() }, {
-				local String is vT: :inferExpressionType(expr: values:get(index: vi));
-				if({ valT != '' && vT != '' && vT != Primitive:ANY:value() && !:isAssignable(target: valT, source: vT) }, {
-					local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
-					:addError(line: :currentLine, msg: "Cannot assign 'Map:" . kDisplay . ":" . vT . "' to 'Map:" . kDisplay . ":" . valT . "'.");
+				local SemType is vSem: :inferExpressionType(expr: values:get(index: vi));
+				if({ !valSem:isEmpty() && !vSem:isEmpty() && !vSem:isAny() && !:isAssignableSem(targetSem: valSem, sourceSem: vSem) }, {
+					local String is kDisplay: if({ !keySem:isEmpty() }, { keySem:toKey() }, { 'String' });
+					:addError(line: :currentLine, msg: "Cannot assign 'Map:" . kDisplay . ":" . vSem:toKey() . "' to 'Map:" . kDisplay . ":" . valSem:toKey() . "'.");
 				});
 				vi++;
 			});
-			return expected;
+			return expSem;
 		});
-		local String is firstKeyType: '';
-		local String is firstValType: '';
+		local SemType is firstKeySem: SemTypes:EMPTY;
+		local SemType is firstValSem: SemTypes:EMPTY;
 		while([Int is ki: 0], { ki < keys:length() }, {
-			local String is kt: :inferExpressionType(expr: keys:get(index: ki));
-			if({ firstKeyType == '' && kt != '' && kt != Primitive:ANY:value() }, {
-				firstKeyType: kt;
+			local SemType is kSem: :inferExpressionType(expr: keys:get(index: ki));
+			if({ firstKeySem:isEmpty() && !kSem:isEmpty() && !kSem:isAny() }, {
+				firstKeySem: kSem;
 			});
 			ki++;
 		});
 		while([Int is vi: 0], { vi < values:length() }, {
-			local String is vt: :inferExpressionType(expr: values:get(index: vi));
-			if({ firstValType == '' && vt != '' && vt != Primitive:ANY:value() }, {
-				firstValType: vt;
+			local SemType is vSem: :inferExpressionType(expr: values:get(index: vi));
+			if({ firstValSem:isEmpty() && !vSem:isEmpty() && !vSem:isAny() }, {
+				firstValSem: vSem;
 			});
 			vi++;
 		});
-		return if({ firstKeyType != '' && firstValType != '' }, { ('Map:' . firstKeyType . ':' . firstValType):intern() }, { 'Map' });
+		return SemTypes:mapOf(key: firstKeySem, val: firstValSem);
 	}
 
-	local Function of String is inferFieldAccessExpr(Expression is target, String is fName){
-		local String is leftT: :inferExpressionType(expr: target);
-		local SemType is leftSem: target:getSemType();
+	local Function of SemType is inferFieldAccessExpr(Expression is target, String is fName){
+		local SemType is leftSem: :inferExpressionType(expr: target);
 		if({ leftSem:isEmpty() || leftSem:isAny() || leftSem:isPrimitive() }, {
-			return 'Any';
+			return SemTypes:ANY;
 		});
 		local String is faBase: leftSem:baseName();
 		local String is fOwner: :findMemberOwnerClass(className: faBase, memberName: fName);
 		if({ fOwner != '' }, {
 			:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: faBase, memberName: fName), memberName: fName);
 		});
-		local String is fT: :lookupFieldType(className: leftT, fieldName: fName);
-		if({ fT == '' && :registeredClasses:has(key: faBase) && :findHeldMember(className: faBase, memberName: fName):name != '' }, {
+		local SemType is fSem: :lookupFieldSemType(recvSem: leftSem, fieldName: fName);
+		if({ fSem:isEmpty() && :registeredClasses:has(key: faBase) && :findHeldMember(className: faBase, memberName: fName):name != '' }, {
 			:addError(line: :currentLine, msg: 'Held member \'' . faBase . ':' . fName . '\' is class-scoped: reach it through the class name, not an instance.');
 		});
-		return if({ fT != '' }, { fT }, { 'Any' });
+		return if({ !fSem:isEmpty() }, { fSem }, { SemTypes:ANY });
 	}
 
-	local Function of String is inferIndexExpr(Expression is target, Expression is index){
-		local String is leftT: :inferExpressionType(expr: target);
+	local Function of SemType is inferIndexExpr(Expression is target, Expression is index){
+		local SemType is leftSem: :inferExpressionType(expr: target);
 		:inferExpressionType(expr: index);
-		local SemType is leftSem: target:getSemType();
 		if({ leftSem:isArray() && leftSem:isGeneric() }, {
-			return leftSem:elemType():toKey();
+			return leftSem:elemType();
 		});
 		if({ leftSem:isMap() }, {
 			local SemType is mvSem: leftSem:mapValType();
-			return if({ !mvSem:isEmpty() }, { mvSem:toKey() }, { Primitive:STRING:value() });
+			return if({ !mvSem:isEmpty() }, { mvSem }, { SemTypes:STRING });
 		});
-		return 'Any';
+		return SemTypes:ANY;
 	}
 
 	local Function of String is inferAnonFnExpr(Expression is expr, Type is returnType, [Parameter] is params, [Statement] is body, String is expected){
@@ -3928,95 +3930,83 @@ Class is TypeChecker{
 
 	##
 	## @param expr: AST expression node.
-	## @param expected: Contextual type ('' when none).
-	## @return: Resolved type name string.
-	Function of String is inferExpressionType(Expression is expr, String is expected: ''){
-		local String is res: 'Any';
+	## @param expected: Contextual [SemType] ([SemTypes:EMPTY] when none).
+	## @return: Resolved [SemType].
+	Function of SemType is inferExpressionType(Expression is expr, SemType is expected: SemTypes:EMPTY){
+		local SemType is resSem: SemTypes:ANY;
 
 		local Boolean is isUsingAs: false;
 		match(on: expr, when: [
 			Expression:UsingAs: local Function(String is className, [NamedArg] is args){
 				:addError(line: :currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (E1).');
-				:stampExprType(expr: expr, t: '');
+				expr:setSemType(st: SemTypes:EMPTY);
 				isUsingAs: true;
 			}
 		], default: {});
 		if({ isUsingAs }, {
-			return '';
+			return SemTypes:EMPTY;
 		});
 
 		local Boolean is stampedDirect: false;
 		match(on: expr, when: [
 			Expression:StringLit: local Function(String is value){
-				expr:setSemType(st: SemTypes:STRING);
-				res: Primitive:STRING:value();
-				stampedDirect: true;
+				resSem: SemTypes:STRING;
 			},
 			Expression:NumberLit: local Function(Int is value, String is text){
-				expr:setSemType(st: SemTypes:INT);
-				res: Primitive:INT:value();
-				stampedDirect: true;
+				resSem: SemTypes:INT;
 			},
 			Expression:FloatLit: local Function(String is text){
-				expr:setSemType(st: SemTypes:FLOAT);
-				res: Primitive:FLOAT:value();
-				stampedDirect: true;
+				resSem: SemTypes:FLOAT;
 			},
 			Expression:BoolLit: local Function(Boolean is value){
-				expr:setSemType(st: SemTypes:BOOLEAN);
-				res: Primitive:BOOLEAN:value();
-				stampedDirect: true;
+				resSem: SemTypes:BOOLEAN;
 			},
 			Expression:Ident: local Function(String is name){
-				local SemType is idSem: :inferIdentExpr(name: name);
-				expr:setSemType(st: idSem);
-				res: idSem:toKey();
-				stampedDirect: true;
+				resSem: :inferIdentExpr(name: name);
 			},
 			Expression:Path: local Function([String] is segs){
-				res: :inferPathExpr(segs: segs);
+				resSem: :parseSemType(s: :inferPathExpr(segs: segs));
 			},
 			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
-				res: :inferBinaryExpr(op: op, left: left, right: right, expected: expected);
+				resSem: :inferBinaryExpr(op: op, left: left, right: right, expected: expected);
 			},
 			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is args){
-				res: :inferCastExpr(inner: inner, target: target, args: args);
+				resSem: :parseSemType(s: :inferCastExpr(inner: inner, target: target, args: args));
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
-				res: :inferUnaryExpr(op: op, operand: operand);
+				resSem: :inferUnaryExpr(op: op, operand: operand);
 			},
 			Expression:ArrayLit: local Function([Expression] is items){
-				res: :inferArrayLitExpr(items: items, expected: expected);
+				resSem: :parseSemType(s: :inferArrayLitExpr(items: items, expSem: expected));
 			},
 			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
-				res: :inferMapLitExpr(keys: keys, values: values, expected: expected);
+				resSem: :inferMapLitExpr(keys: keys, values: values, expSem: expected);
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is fName){
-				res: :inferFieldAccessExpr(target: target, fName: fName);
+				resSem: :inferFieldAccessExpr(target: target, fName: fName);
 			},
 			Expression:Index: local Function(Expression is target, Expression is index){
-				res: :inferIndexExpr(target: target, index: index);
+				resSem: :inferIndexExpr(target: target, index: index);
 			},
 			Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
-				res: :inferAnonFnExpr(expr: expr, returnType: returnType, params: params, body: body, expected: expected);
+				resSem: :parseSemType(s: :inferAnonFnExpr(expr: expr, returnType: returnType, params: params, body: body, expected: expected:toKey()));
 			},
 			Expression:Call: local Function(CallData is call){
-				res: :inferCall(expr: expr, call: call, expected: expected);
-				:stampExprType(expr: expr, t: res);
+				local String is callRes: :inferCall(expr: expr, call: call, expected: expected:toKey());
+				resSem: :parseSemType(s: callRes);
+				expr:setSemType(st: resSem);
 				:checkCallArguments(callExpr: expr);
 				stampedDirect: true;
 			},
 			else: {
-				expr:setSemType(st: SemTypes:ANY);
-				res: 'Any';
-				stampedDirect: true;
+				resSem: SemTypes:ANY;
 			}
 		], default: {});
 
 		if({ !stampedDirect }, {
-			:stampExprType(expr: expr, t: res);
+			expr:setSemType(st: resSem);
 		});
-		return res;
+		return resSem;
 	}
 
 	local Function is validateCallReceiverModel(String is recvName, CallData is call, Boolean is targetIsPath, [String] is targetPathSegs){
@@ -4238,7 +4228,7 @@ Class is TypeChecker{
 							bareArgExp: Primitive:ANY:value();
 						});
 					});
-					:inferExpressionType(expr: arg:value, expected: bareArgExp);
+					:inferExpressionType(expr: arg:value, expected: :parseSemType(s: bareArgExp));
 					lai++;
 				});
 				:inBranchClosure: savedLoopBranch;
@@ -4296,7 +4286,7 @@ Class is TypeChecker{
 							bareArgExp: Primitive:ANY:value();
 						});
 					});
-					:inferExpressionType(expr: arg:value, expected: bareArgExp);
+					:inferExpressionType(expr: arg:value, expected: :parseSemType(s: bareArgExp));
 					:inBranchClosure: prevInBranch;
 					:inValueBranch: prevInValueBranch;
 					:currentYieldExpected: prevYieldExpected;
@@ -4429,9 +4419,10 @@ Class is TypeChecker{
 		# Both regions declare their own return type (`of T`), so their
 		# returns type against that declaration — no ambient yield context
 		# is needed, and nested calls inside the regions cannot disturb it.
-		:inferExpressionType(expr: bodyNa:value, expected: resTy);
-		:inferExpressionType(expr: guardNa:value, expected: resTy);
-		:stampExprType(expr: expr, t: resTy);
+		local SemType is resSem: :parseSemType(s: resTy);
+		:inferExpressionType(expr: bodyNa:value, expected: resSem);
+		:inferExpressionType(expr: guardNa:value, expected: resSem);
+		expr:setSemType(st: resSem);
 		return resTy;
 	}
 
@@ -4666,7 +4657,7 @@ Class is TypeChecker{
 					callArgExp: Primitive:ANY:value();
 				});
 			});
-			:inferExpressionType(expr: arg:value, expected: callArgExp);
+			:inferExpressionType(expr: arg:value, expected: :parseSemType(s: callArgExp));
 			:inBranchClosure: savedBranch;
 			:inValueBranch: savedValue;
 			:currentYieldExpected: savedYieldExp;
@@ -4769,7 +4760,8 @@ Class is TypeChecker{
 			while({ ai < call:args:length() }, {
 				local NamedArg is arg: call:args:get(index: ai);
 				local String is aName: arg:name;
-				local String is aType: :inferExpressionType(expr: arg:value);
+				local SemType is aSem: :inferExpressionType(expr: arg:value);
+				local String is aType: aSem:toKey();
 				if({ aName == 'lock' }, {
 					if({ aType != Primitive:INT:value() && aType != 'Any' }, {
 						:addError(line: :currentLine, msg: "Parallel:syncWith 'lock' argument must be Int, found '" . aType . "'.");
@@ -4777,7 +4769,6 @@ Class is TypeChecker{
 				}, {
 					if({ aName == 'action' }, {
 						hasAction: true;
-						local SemType is aSem: arg:value:getSemType();
 						if({ !aSem:isFunction() && !aSem:isAny() }, {
 							:addError(line: :currentLine, msg: "Parallel:" . method . " 'action' argument must be a Function, found '" . aType . "'.");
 						}, {
@@ -4800,7 +4791,8 @@ Class is TypeChecker{
 		while({ rai < call:args:length() }, {
 			local NamedArg is arg: call:args:get(index: rai);
 			local String is aName: arg:name;
-			local String is aType: :inferExpressionType(expr: arg:value);
+			local SemType is aSem: :inferExpressionType(expr: arg:value);
+			local String is aType: aSem:toKey();
 			if({ aName == 'scope' }, {
 				hasScope: true;
 				if({ aType != 'ThreadScope' && aType != 'Any' }, {
@@ -4814,8 +4806,7 @@ Class is TypeChecker{
 				}, {
 					if({ aName == 'worker' }, {
 						hasWorker: true;
-						local SemType is wSem: arg:value:getSemType();
-						if({ !wSem:isFunction() && !wSem:isAny() }, {
+						if({ !aSem:isFunction() && !aSem:isAny() }, {
 							:addError(line: :currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
 						});
 					});
@@ -4923,7 +4914,7 @@ Class is TypeChecker{
 		if({ targetIsSelf && call:isBareCall && :localVars:get(key: call:name, default: SemTypes:EMPTY):isFunction() }, {
 			:inHeldFnVarTarget: true;
 		});
-		local String is targetType: :inferExpressionType(expr: call:target);
+		local String is targetType: :inferExpressionType(expr: call:target):toKey();
 		:inHeldFnVarTarget: savedFnVarTarget;
 		local String is method: call:name;
 		local String is res: 'Any';
@@ -4956,7 +4947,7 @@ Class is TypeChecker{
 				targetPathSegs: segs;
 				targetName: method;
 				method: 'init';
-				targetType: :inferExpressionType(expr: call:target);
+				targetType: :inferExpressionType(expr: call:target):toKey();
 			});
 		});
 
@@ -5470,13 +5461,14 @@ Class is TypeChecker{
 				if({ hasInit }, {
 					# Bidirectional: the declared type flows into the
 					# initializer, typing container literals directly.
-					local String is initType: :inferExpressionType(expr: initExpr, expected: fullType);
-					if({ !:isAssignableSem(targetSem: varSem, sourceSem: initExpr:getSemType()) }, {
+					local SemType is initSem: :inferExpressionType(expr: initExpr, expected: varSem);
+					if({ !:isAssignableSem(targetSem: varSem, sourceSem: initSem) }, {
+						local String is initType: initSem:toKey();
 						local String is msg: :errText:errTypeMismatchDecl(varName: varName, initType: initType, fullType: fullType);
 						# a void expression consumed as a
 						# value explains itself instead of cascading into the
 						# generic mismatch.
-						if({ :isVoid(t: initType) }, {
+						if({ initSem:isVoid() }, {
 							local String is note: :voidUseNote(expr: initExpr);
 							if({ note != '' }, {
 								msg: 'cannot initialize \'' . fullType . '\': ' . note;
@@ -5532,15 +5524,17 @@ Class is TypeChecker{
 						local Boolean is removed: :unassignedFields:remove(key: name);
 					}
 				], default: {});
-				local String is targetType: :inferExpressionType(expr: assignTarget);
-				local String is valType: :inferExpressionType(expr: assignValue, expected: targetType);
+				local SemType is targetSem: :inferExpressionType(expr: assignTarget);
+				local SemType is valSem: :inferExpressionType(expr: assignValue, expected: targetSem);
+				local String is targetType: targetSem:toKey();
+				local String is valType: valSem:toKey();
 				if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: Array(['base', 'sys', 'thread'])) && (:containsThreadScopeType(t: targetType) || :containsThreadScopeType(t: valType)) }, {
 					:addError(line: stmt:line, msg: "Cannot assign 'ThreadScope'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot be reassigned or stored.");
 				});
-				if({ !:isAssignable(target: targetType, source: valType) }, {
+				if({ !:isAssignableSem(targetSem: targetSem, sourceSem: valSem) }, {
 						local String is msg: :errText:errTypeMismatchAssign(valType: valType, targetType: targetType);
 						# the same for assignments.
-						if({ :isVoid(t: valType) }, {
+						if({ valSem:isVoid() }, {
 							local String is note: :voidUseNote(expr: assignValue);
 							if({ note != '' }, {
 								msg: 'cannot assign a void expression to \'' . targetType . '\': ' . note;
@@ -5561,7 +5555,8 @@ Class is TypeChecker{
 					if({ :checkingValueYield && :currentYieldExpected != '' }, {
 						yieldExpected: :currentYieldExpected;
 					});
-					local String is retType: :inferExpressionType(expr: returnExpr, expected: yieldExpected);
+					local SemType is retSem: :inferExpressionType(expr: returnExpr, expected: :parseSemType(s: yieldExpected));
+					local String is retType: retSem:toKey();
 					# the last statement of a
 					# value-yielding branch closure establishes the branch's
 					# yield type (the inBranchClosure method-routing does not
@@ -5621,7 +5616,7 @@ Class is TypeChecker{
 				# Bound so the arm stays void: a trailing value-yielding
 				# expression statement IS the arm's yield (the Kotlin
 				# last-expression rule), and this arm is statement-form.
-				local String is exprT: :inferExpressionType(expr: exprStmt);
+				local SemType is _t: :inferExpressionType(expr: exprStmt);
 			},
 			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
 				local String is savedClass: :currentClassName;
@@ -5804,11 +5799,11 @@ Class is TypeChecker{
 				});
 			});
 			if({ found }, {
-				local String is argT: :inferExpressionType(expr: matchedValue);
-				local String is pT: p:paramType:name;
-				if({ pT != Primitive:ANY:value() && pT != '' && argT != '' && argT != Primitive:ANY:value() && !:isAssignable(target: pT, source: argT) }, {
+				local SemType is argSem: :inferExpressionType(expr: matchedValue);
+				local SemType is pSem: :semTypeFromAst(t: p:paramType);
+				if({ !pSem:isAny() && !pSem:isEmpty() && !argSem:isEmpty() && !argSem:isAny() && !:isAssignableSem(targetSem: pSem, sourceSem: argSem) }, {
 					local String is label: if({ p:name != '' }, { p:name }, { 'position ' . (pIdx + 1) });
-					local String is msg: 'Forward argument \'' . label . '\' of \'' . :currentMethodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
+					local String is msg: 'Forward argument \'' . label . '\' of \'' . :currentMethodName . '\': cannot assign \'' . argSem:toKey() . '\' to \'' . p:paramType:name . '\'.';
 					:addError(line: line, msg: msg);
 				});
 			}, {
@@ -5889,13 +5884,13 @@ Class is TypeChecker{
 				:unassignedFields:remove(key: p:name);
 			});
 			if({ p:hasDefault }, {
-				local String is pTypeStr: :formatVarTypeString(t: p:paramType);
-				local String is defType: p:defaultExpr:getSemType():toKey();
-				if({ defType == '' }, {
-					defType: :inferExpressionType(expr: p:defaultExpr, expected: pTypeStr);
+				local SemType is pSem: :semTypeFromAst(t: p:paramType);
+				local SemType is defSem: p:defaultExpr:getSemType();
+				if({ defSem:isEmpty() }, {
+					defSem: :inferExpressionType(expr: p:defaultExpr, expected: pSem);
 				});
-				if({ pTypeStr != '' && defType != '' && !:isAssignable(target: pTypeStr, source: defType) }, {
-					:addError(line: method:line, msg: "Default value for parameter '" . p:name . "' in '" . :currentClassName . ":" . method:name . "' has type '" . :displayType(t: defType) . "', expected '" . :displayType(t: pTypeStr) . "'.");
+				if({ !pSem:isEmpty() && !defSem:isEmpty() && !:isAssignableSem(targetSem: pSem, sourceSem: defSem) }, {
+					:addError(line: method:line, msg: "Default value for parameter '" . p:name . "' in '" . :currentClassName . ":" . method:name . "' has type '" . :displayType(t: defSem:toKey()) . "', expected '" . :displayType(t: pSem:toKey()) . "'.");
 				});
 			});
 			mpi++;
@@ -6961,7 +6956,8 @@ Class is TypeChecker{
 						:validateTypeAccess(t: m:memberType, line: m:line);
 					});
 					if({ m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() && !m:name:startsWith(prefix: '_import_') }, {
-						local String is declaredType: :formatVarTypeString(t: m:memberType);
+						local SemType is declaredSem: :semTypeFromAst(t: m:memberType);
+						local String is declaredType: declaredSem:toKey();
 						if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: Array(['base', 'sys', 'thread'])) && :containsThreadScopeType(t: declaredType) }, {
 							:addError(line: m:line, msg: "Cannot store 'ThreadScope' in field '" . classDef:name . ":" . m:name . "'; 'ThreadScope' is lexically scoped to 'ThreadScope:open' and cannot escape.");
 						});
@@ -6974,10 +6970,10 @@ Class is TypeChecker{
 							if({ m:hasModifier(kw: Keyword:HELD) }, {
 								:inHeldInit: true;
 							});
-							local String is initType: :inferExpressionType(expr: m:initExpr, expected: declaredType);
+							local SemType is initSem: :inferExpressionType(expr: m:initExpr, expected: declaredSem);
 							:inHeldInit: savedHeldInit;
-							if({ !:isAssignable(target: declaredType, source: initType) }, {
-								local String is msg: 'Type mismatch in field \'' . classDef:name . ':' . m:name . '\': cannot assign \'' . initType . '\' to \'' . declaredType . '\'.';
+							if({ !:isAssignableSem(targetSem: declaredSem, sourceSem: initSem) }, {
+								local String is msg: 'Type mismatch in field \'' . classDef:name . ':' . m:name . '\': cannot assign \'' . initSem:toKey() . '\' to \'' . declaredType . '\'.';
 								:addError(line: m:line, msg: msg);
 							});
 						});
