@@ -207,7 +207,11 @@ Class is EnumDesugar{
 		# The synthesized contract methods call `Conditional:if` — the
 		# class gains the as-import (the standard Conditional grant).
 		local Member is using: Member(kind: MemberKind:FIELD);
-		using:memberType: Type(name: '');
+		local Type is usingInner: Type(name: 'List');
+		usingInner:params: [Type(name: 'String')];
+		local Type is usingType: Type(name: 'List');
+		usingType:params: [usingInner];
+		using:memberType: usingType;
 		using:name: 'using';
 		local [Expression] is entryItems: [];
 		entryItems:push(item: :strLit(text: 'base'));

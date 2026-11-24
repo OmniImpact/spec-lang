@@ -5294,6 +5294,28 @@ Class is TypeChecker{
 		});
 		local String is found: '';
 		match(on: castM:initExpr, when: [
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is vals){
+				while([Int is ki: 0], { found == '' && ki < keys:length() && ki < vals:length() }, {
+					local String is entryTarget: '';
+					local String is entryFn: '';
+					match(on: keys:get(index: ki), when: [
+						Expression:Ident: local Function(String is s){ entryTarget: s; },
+						Expression:StringLit: local Function(String is s){ entryTarget: s; }
+					], default: {});
+					match(on: vals:get(index: ki), when: [
+						Expression:Ident: local Function(String is s){ entryFn: s; },
+						Expression:StringLit: local Function(String is s){ entryFn: s; }
+					], default: {});
+					if({ entryTarget == target }, {
+						local String is fnRet: :lookupMethodReturnType(className: srcType, methodName: entryFn);
+						if({ fnRet != target }, {
+							:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' maps to \'' . entryFn . '\', which returns \'' . fnRet . '\', not \'' . target . '\'.');
+						});
+						found: entryFn;
+					});
+					ki++;
+				});
+			},
 			Expression:ArrayLit: local Function([Expression] is items){
 				while([Int is ii: 0], { found == '' && ii < items:length() }, {
 					match(on: items:get(index: ii), when: [
