@@ -135,9 +135,9 @@ Class is SynthViewModel{
 		heldFlags:set(index: idx, item: 1);
 		activeTicks:set(index: idx, item: 1);
 		if({ autoRelease }, {
-			fallbackTicks:set(index: idx, item: 12);
+			fallbackTicks:set(index: idx, item: 10);
 		}, {
-			fallbackTicks:set(index: idx, item: if({ seenKittyRelease }, { 0 }, { 14 }));
+			fallbackTicks:set(index: idx, item: if({ seenKittyRelease }, { 0 }, { 10 }));
 		});
 		onStateChanged();
 		if({ audioEnabled }, {
@@ -246,7 +246,11 @@ Class is SynthViewModel{
 			return true;
 		});
 		if({ isPress }, {
-			# Always honor explicit key-down PRESS events so keys can never get stuck rejected.
+			if({ !seenKittyRelease && heldFlags:get(index: idx) == 1 }, {
+				# Non-Kitty OS key-repeat arrives as PRESS every ~30ms; sustain without re-plucking.
+				fallbackTicks:set(index: idx, item: 10);
+				return true;
+			});
 			triggerKeyIndex(idx: idx, autoRelease: false);
 			return true;
 		});
