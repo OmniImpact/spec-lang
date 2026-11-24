@@ -95,6 +95,7 @@ Class of SpecUnitTest is TestTheoJack{
 		opts:styleFocus:focused: true;
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'enter')));
 		Assert:isTrue(opts:hasOpenOverlay());
+		Assert:isTrue(opts:overlays:get(index: 0):content:boxW >= 15);
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));

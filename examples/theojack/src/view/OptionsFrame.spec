@@ -85,7 +85,6 @@ Class of Frame is OptionsFrame{
 												CardStyle:METALLIC:value()
 											],
 											selected: selectedStyle:value(),
-											width: 14,
 											focusTarget: styleFocus,
 											onSelect: local Function(String is chosen){
 												selectStyle(next: storage:styleFromName(name: chosen));

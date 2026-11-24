@@ -19,16 +19,24 @@ Class of Widget is Dropdown{
 	[Overlay] is menuOverlays: [];
 	[ListView] is menuLists: [];
 
+	local Function of Int is computeMenuWidth(Int is maxW){
+		local Int is best: 10;
+		local Int is i: 0;
+		while({ i < options:length() }, {
+			# Panel border (2) + padX*2 (2) + ListView "  " prefix (2) = 6
+			local Int is w: options:get(index: i):runeCount() + 6;
+			if({ w > best }, { best: w; });
+			i: i + 1;
+		});
+		if({ width > best }, { best: width; });
+		if({ best > maxW }, { return maxW; });
+		return best;
+	}
+
 	local Function of Int is computeWidth(Int is maxW){
 		local Int is best: width;
 		if({ best <= 0 }, {
-			local Int is i: 0;
-			while({ i < options:length() }, {
-				local Int is w: options:get(index: i):runeCount() + 4;
-				if({ w > best }, { best: w; });
-				i: i + 1;
-			});
-			if({ best < 10 }, { best: 10; });
+			best: computeMenuWidth(maxW: maxW);
 		});
 		if({ best > maxW }, { return maxW; });
 		return best;
@@ -148,7 +156,8 @@ Class of Widget is Dropdown{
 		:boxH: h;
 		if({ menuOverlays:length() > 0 }, {
 			local Overlay is ov: menuOverlays:get(index: 0);
-			local Int is menuW: computeWidth(maxW: 80);
+			local Int is menuW: computeMenuWidth(maxW: 80);
+			if({ w > menuW }, { menuW: w; });
 			local Int is menuH: options:length() + 2;
 			if({ menuH < 3 }, { menuH: 3; });
 			local Int is mx: x;
