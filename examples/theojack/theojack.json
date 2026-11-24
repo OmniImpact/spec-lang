@@ -6,5 +6,8 @@
     "src",
     "../../spec"
   ],
-  "output": "../../bin/theojack"
+  "output": "../../bin/theojack",
+  "bundled": [
+    { "src": "rules.json", "dest": "rules.json" }
+  ]
 }

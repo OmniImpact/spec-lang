@@ -7,7 +7,7 @@ Class is RulesLoader{
 	merge [[String]] is using: [
 		['base', 'data', as Json()],
 		['base', 'struct', Map],
-		['base', 'sys', as File()],
+		['base', 'sys', [Bundle, as File()]],
 		['theojack', 'model', [Card, RuleItem, RuleKind]]
 	];
 
@@ -25,7 +25,14 @@ Class is RulesLoader{
 
 	Function of [RuleItem] is loadItems(){
 		local [RuleItem] is out: [];
-		local String is raw: fileRead(path: resolvePath(), default: '');
+		local String is raw: '';
+		local String is diskPath: resolvePath();
+		if({ fileExists(path: diskPath) }, {
+			raw: fileRead(path: diskPath, default: '');
+		});
+		if({ raw == '' }, {
+			raw: Bundle():readText(path: filePath, default: '');
+		});
 		if({ raw == '' }, { return out; });
 		local Array of Any is items: parseArrayText(text: raw);
 		local Card is parser: Card();
