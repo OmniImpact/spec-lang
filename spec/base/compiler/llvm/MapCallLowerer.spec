@@ -11,7 +11,7 @@ Class of CallLowerer is MapCallLowerer{
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
-		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', SemType],
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrInst],
 		['base', 'struct', Array],
@@ -43,11 +43,12 @@ Class of CallLowerer is MapCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		local String is dst: b:nextTmp();
-		local Type is resNode: expr:getSemType():toAstType();
-		local Int is kk: b:resolveMapKeyKind(resNode: resNode);
-		local Int is vk: b:resolveMapValKind(resNode: resNode);
-		local String is mapStruct: b:cStructName(qname: resNode:name);
-		if({ !((b:specBaseMap:get(key: resNode:name, default: '') == 'Map' || resNode:isMap()) && b:mod:findStruct(name: mapStruct):name != '') }, {
+		local SemType is resSem: expr:getSemType();
+		local String is resName: resSem:baseName();
+		local Int is kk: b:resolveMapKeyKind(resSem: resSem);
+		local Int is vk: b:resolveMapValKind(resSem: resSem);
+		local String is mapStruct: b:cStructName(qname: resName);
+		if({ !((b:specBaseMap:get(key: resName, default: '') == 'Map' || resSem:isMap()) && b:mod:findStruct(name: mapStruct):name != '') }, {
 			mapStruct: 'Map';
 		});
 		b:emit(inst: IrInst:AllocObj(dst: dst, structName: mapStruct, destroyFn: b:destroyFnFor(structName: mapStruct)));
