@@ -1,7 +1,10 @@
+#! Package cleopi:model
 #! Atomic shared-slot telemetry for parallel Monte Carlo Pi workers.
 
 ## Encapsulates atomic slot offsets for sample/hit totals, worker coordinates, and active flags.
 Class is PiTelemetry{
+	replace [String] is namespace: ['cleopi', 'model'];
+
 	merge [[String]] is using: [
 		['base', 'sys', as Process()]
 	];

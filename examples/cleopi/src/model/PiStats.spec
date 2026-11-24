@@ -1,7 +1,10 @@
+#! Package cleopi:model
 #! Pure math and formatting helpers for CleoPi.
 
-## Provides Monte Carlo Pi estimation, fixed-precision formatting, and worker palette/bar helpers.
+## Provides Monte Carlo Pi estimation, fixed-precision formatting, and worker palette helpers.
 Class is PiStats{
+	replace [String] is namespace: ['cleopi', 'model'];
+
 	merge [[String]] is using: [
 		['base', 'sys', as Ansi()],
 		['base', 'math', as Math()]

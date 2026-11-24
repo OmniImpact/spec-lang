@@ -1,12 +1,14 @@
+#! Package cleopi:view
 #! Unit-circle ASCII visualization with live colored worker position markers.
 
 ## Renders rows of the `[-1, 1] x [-1, 1]` unit-circle domain and overlays active worker markers.
 Class is DomainGrid{
+	replace [String] is namespace: ['cleopi', 'view'];
+
 	merge [[String]] is using: [
 		['base', 'sys', as Ansi()],
 		['base', 'math', as Math()],
-		[PiStats],
-		[PiTelemetry]
+		['cleopi', 'model', [PiStats, PiTelemetry]]
 	];
 
 	Int is width: 44;
