@@ -1,5 +1,5 @@
 #! Package theofractal:model:fractals
-#! Koch Snowflake fractal implementation with viewport-culled recursive edge subdivision.
+#! Koch Snowflake fractal implementation using exact KIFS signed-distance interior & edge shading.
 
 Class of Fractal is SnowflakeFractal{
 	replace [String] is namespace: ['theofractal', 'model', 'fractals'];
@@ -8,7 +8,7 @@ Class of Fractal is SnowflakeFractal{
 		['theofractal', 'model', [Fractal, FractalViewport]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
 		['base', 'math', as Math()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
 	replace Function of String is name(){ FractalStrings:OPT_SNOWFLAKE }
@@ -19,88 +19,76 @@ Class of Fractal is SnowflakeFractal{
 		FractalViewport(centerX: 0.0, centerY: 0.0, baseSpan: 2.4, zoom: 1.0)
 	}
 
-	local Function is drawEdge(
-		Array of Float is grid,
-		Int is w,
-		Int is h,
-		Float is xMin,
-		Float is yMax,
-		Float is invSpanX,
-		Float is invSpanY,
-		Float is x1,
-		Float is y1,
-		Float is x2,
-		Float is y2,
-		Int is depth,
-		Float is colorT
-	){
-		local Float is sx1: worldToScreenX(wx: x1, xMin: xMin, invSpanX: invSpanX, w: w);
-		local Float is sy1: worldToScreenYUp(wy: y1, yMax: yMax, invSpanY: invSpanY, h: h);
-		local Float is sx2: worldToScreenX(wx: x2, xMin: xMin, invSpanX: invSpanX, w: w);
-		local Float is sy2: worldToScreenYUp(wy: y2, yMax: yMax, invSpanY: invSpanY, h: h);
+	local Function of Float is evaluateSnowflake(Float is wx, Float is wy){
+		local Float is halfSqrt3: 0.86602540378;
+		local Float is sqrt3: 1.73205080757;
 
-		local Float is dx: sx2 - sx1;
-		local Float is dy: sy2 - sy1;
-		local Float is len: sqrt(value: dx * dx + dy * dy);
-		local Float is pad: len * 0.4 + 2.0;
-		local Float is minX: if({ sx1 < sx2 }, { sx1 }, { sx2 }) - pad;
-		local Float is maxX: if({ sx1 > sx2 }, { sx1 }, { sx2 }) + pad;
-		local Float is minY: if({ sy1 < sy2 }, { sy1 }, { sy2 }) - pad;
-		local Float is maxY: if({ sy1 > sy2 }, { sy1 }, { sy2 }) + pad;
+		local Float is x: if({ wx < 0.0 }, { -wx }, { wx });
+		local Float is y: wy;
 
-		if({ maxX < 0.0 || minX >= toFloat(value: w) || maxY < 0.0 || minY >= toFloat(value: h) }, {
-			return;
+		# Fold into the bottom-edge 60-degree sector (outward normal = -Y)
+		local Float is fold: 0.5 * x + halfSqrt3 * y;
+		if({ fold > 0.0 }, {
+			x: x - fold;
+			y: y - sqrt3 * fold;
+			if({ x < 0.0 }, { x: -x; });
 		});
 
-		if({ len < 2.2 || depth >= 7 }, {
-			drawLine(
-				grid: grid,
-				w: w,
-				h: h,
-				x0: toInt(value: round(value: sx1)),
-				y0: toInt(value: round(value: sy1)),
-				x1: toInt(value: round(value: sx2)),
-				y1: toInt(value: round(value: sy2)),
-				val: clamp01(v: colorT)
-			);
-			return;
+		# Map bottom edge [-halfSqrt3, +halfSqrt3] at y = -0.5 to [-1, 1] at py = 0 (py > 0 is outside)
+		local Float is px: x / halfSqrt3;
+		local Float is py: (-0.5 - y) / halfSqrt3;
+
+		local Float is scale: 1.0;
+		local Int is k: 0;
+		while({ k < 7 }, {
+			if({ px < 0.0 }, { px: -px; });
+			local Float is dx: px - 0.33333333333;
+			local Float is dot: -halfSqrt3 * dx + 0.5 * py;
+			if({ dot > 0.0 }, {
+				px: px - 2.0 * dot * (-halfSqrt3);
+				py: py - 2.0 * dot * 0.5;
+			});
+			px: 3.0 * (px - 0.66666666667);
+			py: 3.0 * py;
+			scale: scale * 3.0;
+			k: k + 1;
 		});
 
-		local Float is vx: (x2 - x1) / 3.0;
-		local Float is vy: (y2 - y1) / 3.0;
-		local Float is ax: x1 + vx;
-		local Float is ay: y1 + vy;
-		local Float is bx: x1 + vx * 2.0;
-		local Float is by: y1 + vy * 2.0;
-		local Float is cos60: 0.5;
-		local Float is sin60: 0.8660254;
-		local Float is px: ax + (vx * cos60 - vy * sin60);
-		local Float is py: ay + (vx * sin60 + vy * cos60);
+		local Float is cx: px;
+		if({ cx < -1.0 }, { cx: -1.0; });
+		if({ cx > 1.0 }, { cx: 1.0; });
+		local Float is ex: px - cx;
+		local Float is dist: sqrt(value: ex * ex + py * py) / scale;
 
-		local Int is nd: depth + 1;
-		drawEdge(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, x1: x1, y1: y1, x2: ax, y2: ay, depth: nd, colorT: colorT);
-		drawEdge(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, x1: ax, y1: ay, x2: px, y2: py, depth: nd, colorT: colorT + 0.08);
-		drawEdge(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, x1: px, y1: py, x2: bx, y2: by, depth: nd, colorT: colorT + 0.08);
-		drawEdge(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, x1: bx, y1: by, x2: x2, y2: y2, depth: nd, colorT: colorT);
+		if({ py > 0.0 }, {
+			return -1.0;
+		});
+
+		# Interior shading: glowing crystalline rim along the Koch boundary, softening toward the core
+		local Float is glow: exp(value: -dist * 3.4);
+		return clamp01(v: 0.18 + 0.82 * glow);
 	}
 
 	replace Function of Array of Float is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
-		local Array of Float is grid: newGrid(w: w, h: h);
+		local Array of Float is grid: Array();
+		if({ w <= 0 || h <= 0 }, { return grid; });
+
 		local Float is spanY: viewport:spanY();
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));
 		local Float is xMin: viewport:centerX - spanX * 0.5;
 		local Float is yMax: viewport:centerY + spanY * 0.5;
-		local Float is invSpanX: 1.0 / spanX;
-		local Float is invSpanY: 1.0 / spanY;
-		local Float is ax: 0.0;
-		local Float is ay: 1.0;
-		local Float is bx: 0.8660254;
-		local Float is by: -0.5;
-		local Float is cx: -0.8660254;
-		local Float is cy: -0.5;
-		drawEdge(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, x1: ax, y1: ay, x2: bx, y2: by, depth: 0, colorT: 0.35);
-		drawEdge(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, x1: bx, y1: by, x2: cx, y2: cy, depth: 0, colorT: 0.55);
-		drawEdge(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, x1: cx, y1: cy, x2: ax, y2: ay, depth: 0, colorT: 0.75);
+
+		local Int is py: 0;
+		while({ py < h }, {
+			local Float is wy: yMax - ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
+			local Int is px: 0;
+			while({ px < w }, {
+				local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
+				grid:add(item: evaluateSnowflake(wx: wx, wy: wy));
+				px: px + 1;
+			});
+			py: py + 1;
+		});
 		return grid;
 	}
 }
