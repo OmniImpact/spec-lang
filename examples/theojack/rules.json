@@ -1,0 +1,42 @@
+[
+  {
+    "type": "header",
+    "content": "Objective"
+  },
+  {
+    "type": "text",
+    "content": "Beat the dealer by getting a hand total as close to 21 as possible without going over (busting)."
+  },
+  {
+    "type": "header",
+    "content": "Card Values & Blackjack"
+  },
+  {
+    "type": "text",
+    "content": "Number cards (2-10) count as face value. Face cards (J, Q, K) count as 10. Aces count as 11 or 1.\nAn Ace plus any 10-value card on the initial deal is Blackjack:"
+  },
+  {
+    "type": "cards",
+    "content": ["AS", "KH"]
+  },
+  {
+    "type": "header",
+    "content": "Player Actions"
+  },
+  {
+    "type": "text",
+    "content": "- Hit: Draw another card.\n- Stand: End your turn and let the dealer play.\n- Double: Double your bet, draw one final card, and stand."
+  },
+  {
+    "type": "header",
+    "content": "Dealer Rules"
+  },
+  {
+    "type": "text",
+    "content": "The dealer must hit until reaching 17 or higher, and stand on all 17s. Example 21 draw:"
+  },
+  {
+    "type": "cards",
+    "content": ["10D", "6C", "5H"]
+  }
+]

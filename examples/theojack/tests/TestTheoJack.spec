@@ -8,14 +8,16 @@ Class of SpecUnitTest is TestTheoJack{
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, FocusTarget]],
 		['base', 'sys', [as File(), as Loops(), as Process()]],
 		['theojack', 'model', [Card, CardStyle, Rank, Suit]],
-		['theojack', 'util', [HomeStrings, OptionsStorage]],
-		['theojack', 'view', [CardView, HomeFrame, OptionsFrame]]
+		['theojack', 'util', [HomeStrings, OptionsStorage, RulesLoader]],
+		['theojack', 'view', [CardView, HomeFrame, OptionsFrame, RulesFrame]]
 	];
 
 	Function is testHomeScreenCenteredAndEqualWidth(){
 		local Boolean is quitCalled: false;
+		local Boolean is rulesOpened: false;
 		local Boolean is optionsOpened: false;
 		local HomeFrame is home: HomeFrame(
+			onOpenRules: { rulesOpened: true; },
 			onOpenOptions: { optionsOpened: true; },
 			onQuit: { quitCalled: true; }
 		);
@@ -35,15 +37,17 @@ Class of SpecUnitTest is TestTheoJack{
 		home:paint(buf: buf, renderer: ren);
 
 		Assert:areEqualInt(11, home:heroCard:measureWidth(maxW: 80));
-		Assert:areEqualInt(11, home:measureWidth(maxW: 80) - 11 - 3);
-		Assert:areEqualInt(9, home:measureHeight(maxW: 80, maxH: 24));
-		# Card (height 7) is vertically centered against the 9-row menu (offset +1)
-		Assert:areEqualInt(((24 - 9) / 2) + 1, home:heroCard:boxY);
+		# Card (height 7) and 4-button menu (4 + 3 gaps = 7) have equal height and align at same boxY
+		Assert:areEqualInt(7, home:heroCard:boxH);
+		Assert:areEqualString('H', buf:cellAt(x: 38, y: 0):ch);
 
-		# Play -> Rules -> Options -> About -> Quit
+		# Play -> Rules -> Options -> About
 		Assert:isTrue(home:playFocus:focused);
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(home:rulesFocus:focused);
+		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'enter')));
+		Assert:isTrue(rulesOpened);
+
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(home:optionsFocus:focused);
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'enter')));
@@ -65,10 +69,8 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:isFalse(home:isAboutOpen());
 		Assert:isTrue(home:aboutFocus:focused);
 
-		# Down focuses Quit, Enter activates Quit
-		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'down')));
-		Assert:isTrue(home:quitFocus:focused);
-		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'enter')));
+		# 'q' triggers Quit from HomeFrame
+		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'char', key: 'q')));
 		Assert:isTrue(quitCalled);
 	}
 
@@ -127,5 +129,26 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:areEqualString('╮', buf:cellAt(x: 10, y: 0):ch);
 
 		fileRemove(path: tmpPath);
+	}
+
+	Function is testRulesScreenLoadsJsonAndScrolls(){
+		local HomeFrame is home: HomeFrame();
+		local TheoScreen is scr: TheoScreen(root: home);
+		local RulesFrame is rules: RulesFrame(
+			cardStyle: CardStyle:METALLIC,
+			onDone: { scr:pop(); }
+		);
+		scr:push(frame: rules);
+		Assert:areEqualInt(2, scr:stack:length());
+
+		local TheoBuffer is buf: TheoBuffer(width: 80, height: 20);
+		local TheoRenderer is ren: TheoRenderer();
+		rules:layout(x: 0, y: 0, w: 80, h: 20);
+		rules:paint(buf: buf, renderer: ren);
+
+		# Scroll down inside RulesFrame, then press 'd' (Done) to pop back
+		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: 'down')));
+		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: 'char', key: 'd')));
+		Assert:areEqualInt(1, scr:stack:length());
 	}
 }

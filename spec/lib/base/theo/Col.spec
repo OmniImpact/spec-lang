@@ -12,12 +12,30 @@ Class of Widget is Col{
 
 	Int is gap: 0;
 	Boolean is arrowFocus: false;
+	Boolean is scrollable: false;
+	Int is scrollY: 0;
+	Int is contentH: 0;
 	Array of Widget is children: Array();
 
-	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Array of Widget is children: Array()){
+	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Boolean is scrollable: false, Array of Widget is children: Array()){
 		:gap: gap;
 		:arrowFocus: arrowFocus;
+		:scrollable: scrollable;
+		:scrollY: 0;
+		:contentH: 0;
 		:children: children;
+	}
+
+	replace Function of Int is scrollOffsetY(){
+		return scrollY;
+	}
+
+	replace Function of Int is scrollContentH(){
+		return contentH;
+	}
+
+	replace Function of Int is scrollViewportH(){
+		return boxH;
 	}
 
 	replace Function is applyTheme(TheoTheme is theme){
@@ -86,7 +104,16 @@ Class of Widget is Col{
 			i: i + 1;
 		});
 		local Int is rem: if({ h > fixedTotal }, { h - fixedTotal }, { 0 });
-		local Int is curY: y;
+		:contentH: fixedTotal;
+		if({ scrollable }, {
+			local Int is maxScroll: contentH - h;
+			if({ maxScroll < 0 }, { maxScroll: 0; });
+			if({ scrollY > maxScroll }, { :scrollY: maxScroll; });
+			if({ scrollY < 0 }, { :scrollY: 0; });
+		}, {
+			:scrollY: 0;
+		});
+		local Int is curY: if({ scrollable }, { y - scrollY }, { y });
 		i: 0;
 		while({ i < count }, {
 			local Widget is ch: children:get(index: i);
@@ -138,10 +165,52 @@ Class of Widget is Col{
 				});
 			});
 		});
+		if({ scrollable }, {
+			local Int is maxScroll: contentH - boxH;
+			if({ maxScroll < 0 }, { maxScroll: 0; });
+			if({ event:isUp() && scrollY > 0 }, {
+				:scrollY: scrollY - 1;
+				invalidate();
+				return true;
+			});
+			if({ event:isDown() && scrollY < maxScroll }, {
+				:scrollY: scrollY + 1;
+				invalidate();
+				return true;
+			});
+			if({ event:isPageUp() && scrollY > 0 }, {
+				local Int is nextY: scrollY - boxH;
+				if({ nextY < 0 }, { nextY: 0; });
+				:scrollY: nextY;
+				invalidate();
+				return true;
+			});
+			if({ event:isPageDown() && scrollY < maxScroll }, {
+				local Int is nextY: scrollY + boxH;
+				if({ nextY > maxScroll }, { nextY: maxScroll; });
+				:scrollY: nextY;
+				invalidate();
+				return true;
+			});
+		});
 		return false;
 	}
 
 	replace Function of Boolean is handleMouse(MouseEvent is event){
+		if({ scrollable && containsPoint(x: event:x, y: event:y) }, {
+			local Int is maxScroll: contentH - boxH;
+			if({ maxScroll < 0 }, { maxScroll: 0; });
+			if({ event:isWheelUp() && scrollY > 0 }, {
+				:scrollY: scrollY - 1;
+				invalidate();
+				return true;
+			});
+			if({ event:isWheelDown() && scrollY < maxScroll }, {
+				:scrollY: scrollY + 1;
+				invalidate();
+				return true;
+			});
+		});
 		local Boolean is isMove: event:isMove();
 		local Boolean is anyChanged: false;
 		local Int is i: 0;

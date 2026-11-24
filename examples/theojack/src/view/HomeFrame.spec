@@ -20,6 +20,7 @@ Class of Frame is HomeFrame{
 	FocusTarget is aboutCloseFocus: FocusTarget();
 	CardView is heroCard: CardView();
 	Int is lastCardMs: 0;
+	Function is onOpenRules: {};
 	Function is onOpenOptions: {};
 	Function is onQuit: {};
 	Array of Overlay is aboutOverlays: Array();
@@ -27,9 +28,11 @@ Class of Frame is HomeFrame{
 
 	replace Function is init(
 		CardStyle is initialStyle: CardStyle:WIREFRAME,
+		Function is onOpenRules: {},
 		Function is onOpenOptions: {},
 		Function is onQuit: {}
 	){
+		:onOpenRules: onOpenRules;
 		:onOpenOptions: onOpenOptions;
 		:onQuit: onQuit;
 		:heroCard: CardView(card: Card():randomCard(), style: initialStyle);
@@ -131,49 +134,78 @@ Class of Frame is HomeFrame{
 			onClick: { openAbout(); }
 		);
 		aboutButtons: Array([aboutBtn]);
-		Center(
-			child: Row(
-				gap: 3,
-				align: 'center',
-				children: Array([
-					heroCard,
-					Col(
-						gap: 1,
-						arrowFocus: true,
-						children: Array([
-							Button(
-								label: HomeStrings:MENU_PLAY,
-								shortcutKey: 'p',
-								width: w,
-								focusTarget: playFocus,
-								onClick: {}
-							),
-							Button(
-								label: HomeStrings:MENU_RULES,
-								shortcutKey: 'r',
-								width: w,
-								focusTarget: rulesFocus,
-								onClick: {}
-							),
-							Button(
-								label: HomeStrings:MENU_OPTIONS,
-								shortcutKey: 'o',
-								width: w,
-								focusTarget: optionsFocus,
-								onClick: { onOpenOptions(); }
-							),
-							aboutBtn,
-							Button(
-								label: HomeStrings:MENU_QUIT,
-								shortcutKey: 'q',
-								width: w,
-								focusTarget: quitFocus,
-								onClick: { onQuit(); }
+		Grid(
+			orientation: 'vertical',
+			panes: Array([
+				Grid:weight(
+					weight: 1.0,
+					child: Panel(
+						border: true,
+						padX: 2,
+						padY: 1,
+						topTitle: HomeStrings:HOME_TITLE,
+						topTitleAlign: 'center',
+						titleFg: TheoColor:ansi(code: 16),
+						titleBg: TheoColor:ansi(code: 252),
+						child: Center(
+							child: Row(
+								gap: 3,
+								align: 'center',
+								children: Array([
+									heroCard,
+									Col(
+										gap: 1,
+										arrowFocus: true,
+										children: Array([
+											Button(
+												label: HomeStrings:MENU_PLAY,
+												shortcutKey: 'p',
+												width: w,
+												focusTarget: playFocus,
+												onClick: {}
+											),
+											Button(
+												label: HomeStrings:MENU_RULES,
+												shortcutKey: 'r',
+												width: w,
+												focusTarget: rulesFocus,
+												onClick: { onOpenRules(); }
+											),
+											Button(
+												label: HomeStrings:MENU_OPTIONS,
+												shortcutKey: 'o',
+												width: w,
+												focusTarget: optionsFocus,
+												onClick: { onOpenOptions(); }
+											),
+											aboutBtn
+										])
+									)
+								])
 							)
-						])
+						)
 					)
-				])
-			)
+				),
+				Grid:fixed(
+					size: 3,
+					child: Panel(
+						border: true,
+						padX: 1,
+						padY: 0,
+						child: Row(
+							children: Array([
+								Button(
+									label: HomeStrings:MENU_QUIT,
+									shortcutKey: 'q',
+									focusTarget: quitFocus,
+									onClick: { onQuit(); }
+								),
+								Spacer(weight: 1.0)
+							])
+						)
+					)
+				)
+			])
 		);
 	}
 }

@@ -9,7 +9,7 @@ Class is TheoJack{
 		['base', 'struct', Map],
 		['theojack', 'model', CardStyle],
 		['theojack', 'util', OptionsStorage],
-		['theojack', 'view', [HomeFrame, OptionsFrame]]
+		['theojack', 'view', [HomeFrame, OptionsFrame, RulesFrame]]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -20,6 +20,17 @@ Class is TheoJack{
 		local [TheoScreen] is screens: [];
 		local HomeFrame is home: HomeFrame(
 			initialStyle: initialStyle,
+			onOpenRules: {
+				if({ screens:length() > 0 && homes:length() > 0 }, {
+					local TheoScreen is scr: screens:get(index: 0);
+					local HomeFrame is h: homes:get(index: 0);
+					local RulesFrame is rules: RulesFrame(
+						cardStyle: h:heroCard:style,
+						onDone: { scr:pop(); }
+					);
+					scr:push(frame: rules);
+				});
+			},
 			onOpenOptions: {
 				if({ screens:length() > 0 && homes:length() > 0 }, {
 					local TheoScreen is scr: screens:get(index: 0);

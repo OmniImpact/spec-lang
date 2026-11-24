@@ -39,4 +39,29 @@ Class is Card{
 		local [Suit] is suits: [Suit:SPADES, Suit:HEARTS, Suit:DIAMONDS, Suit:CLUBS];
 		return Card(rank: ranks:get(index: rIdx), suit: suits:get(index: sIdx));
 	}
+
+	Function of Card is fromNotation(String is code){
+		local String is up: code:trim():toUpper();
+		if({ up:length() < 2 }, { return Card(); });
+		local String is sCh: up:substring(start: up:length() - 1, end: up:length());
+		local String is rStr: up:substring(start: 0, end: up:length() - 1);
+		local Suit is s: Suit:SPADES;
+		if({ sCh == 'H' || sCh == '♥' }, { s: Suit:HEARTS; });
+		if({ sCh == 'D' || sCh == '♦' }, { s: Suit:DIAMONDS; });
+		if({ sCh == 'C' || sCh == '♣' }, { s: Suit:CLUBS; });
+		local Rank is r: Rank:ACE;
+		if({ rStr == '2' }, { r: Rank:TWO; });
+		if({ rStr == '3' }, { r: Rank:THREE; });
+		if({ rStr == '4' }, { r: Rank:FOUR; });
+		if({ rStr == '5' }, { r: Rank:FIVE; });
+		if({ rStr == '6' }, { r: Rank:SIX; });
+		if({ rStr == '7' }, { r: Rank:SEVEN; });
+		if({ rStr == '8' }, { r: Rank:EIGHT; });
+		if({ rStr == '9' }, { r: Rank:NINE; });
+		if({ rStr == '10' || rStr == 'T' }, { r: Rank:TEN; });
+		if({ rStr == 'J' }, { r: Rank:JACK; });
+		if({ rStr == 'Q' }, { r: Rank:QUEEN; });
+		if({ rStr == 'K' }, { r: Rank:KING; });
+		return Card(rank: r, suit: s);
+	}
 }
