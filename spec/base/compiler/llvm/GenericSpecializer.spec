@@ -11,6 +11,7 @@ Class is GenericSpecializer{
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', SemType],
 		['base', 'compiler', 'checker', as SemTypes()],
@@ -51,15 +52,19 @@ Class is GenericSpecializer{
 	String is curOwnerClassName: '';
 	local Map of String to SemType is semTypeCache: Map:init();
 
+	local Function of SemType is cachedNamedSemType(String is name){
+		if({ name == '' }, { return SemTypes:EMPTY; });
+		local SemType is hit: :semTypeCache:get(key: name, default: SemTypes:EMPTY);
+		if({ !hit:isEmpty() }, { return hit; });
+		local SemType is st: SemTypes:named(name: name);
+		:semTypeCache:set(key: name, value: st);
+		return st;
+	}
+
 	local Function of SemType is cachedSemType(Type is t){
 		if({ t:name == '' }, { return SemTypes:EMPTY; });
 		if({ t:params:length() == 0 }, {
-			if({ :semTypeCache:has(key: t:name) }, {
-				return :semTypeCache:get(key: t:name, default: SemTypes:EMPTY);
-			});
-			local SemType is st: SemTypes:fromAstType(t: t);
-			:semTypeCache:set(key: t:name, value: st);
-			return st;
+			return :cachedNamedSemType(name: t:name);
 		});
 		return SemTypes:fromAstType(t: t);
 	}
@@ -225,6 +230,180 @@ Class is GenericSpecializer{
 			});
 		});
 		return :makeType(name: bName, params: newParams);
+	}
+
+	local Function of Boolean is isConcreteSemType(SemType is st, Map of String to Boolean is tplParams){
+		return match(on: st, when: [
+			SemType:Empty: { false },
+			SemType:Prim: local Function of Boolean(Primitive is kind){ return kind != Primitive:VOID; },
+			SemType:StrView: { true },
+			SemType:ArrayOf: local Function of Boolean(SemType is elem){
+				if({ elem:isEmpty() }, { return true; });
+				return :isConcreteSemType(st: elem, tplParams: tplParams);
+			},
+			SemType:ListOf: local Function of Boolean(SemType is elem){
+				if({ elem:isEmpty() }, { return true; });
+				return :isConcreteSemType(st: elem, tplParams: tplParams);
+			},
+			SemType:MapOf: local Function of Boolean(SemType is key, SemType is val){
+				if({ key:isEmpty() || val:isEmpty() }, { return true; });
+				return :isConcreteSemType(st: key, tplParams: tplParams) && :isConcreteSemType(st: val, tplParams: tplParams);
+			},
+			SemType:FnOf: local Function of Boolean(SemType is ret){
+				if({ ret:isEmpty() || ret:isVoid() }, { return true; });
+				return :isConcreteSemType(st: ret, tplParams: tplParams);
+			},
+			SemType:Named: local Function of Boolean([String] is path, [SemType] is params){
+				local String is nm: if({ path:length() == 1 }, { path:get(index: 0) }, { st:baseName() });
+				if({ nm == '' || nm == 'Void' || tplParams:has(key: nm) || (!:seenClassNames:has(key: nm) && !:templates:has(key: nm)) }, {
+					return false;
+				});
+				local Int is i: 0;
+				while({ i < params:length() }, {
+					if({ !:isConcreteSemType(st: params:get(index: i), tplParams: tplParams) }, {
+						return false;
+					});
+					i++;
+				});
+				return true;
+			}
+		]);
+	}
+
+	## Transforms a [SemType] directly without round-tripping through AST [Type] nodes.
+	## Non-template, non-substituted primitives and named classes return [st] unchanged
+	## with zero allocations.
+	Function of SemType is transformSemType(SemType is st, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
+		return match(on: st, when: [
+			SemType:Empty: { st },
+			SemType:Prim: local Function of SemType(Primitive is kind){ return st; },
+			SemType:StrView: { st },
+			SemType:ArrayOf: local Function of SemType(SemType is elem){
+				if({ elem:isEmpty() }, {
+					if({ selfTemplateName == 'Array' && selfSpecName != '' }, {
+						return :cachedNamedSemType(name: selfSpecName);
+					});
+					if({ :templates:has(key: 'Array') }, {
+						:bareTemplateUsed:set(key: 'Array', value: true);
+					});
+					return st;
+				});
+				local SemType is ne: :transformSemType(st: elem, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
+				if({ :templates:has(key: 'Array') }, {
+					local ClassInfo is tpl: :templates:get(key: 'Array', default: ClassInfo(name: '', baseClass: '', members: []));
+					if({ tpl:typeParams:length() == 1 && :isConcreteSemType(st: ne, tplParams: tplParams) }, {
+						local String is mangled: :ensureSpecialized(baseName: 'Array', typeArgs: [ne:toAstType()]);
+						return :cachedNamedSemType(name: mangled);
+					});
+				});
+				return SemType:ArrayOf(elem: ne);
+			},
+			SemType:ListOf: local Function of SemType(SemType is elem){
+				if({ elem:isEmpty() }, {
+					if({ selfTemplateName == 'List' && selfSpecName != '' }, {
+						return :cachedNamedSemType(name: selfSpecName);
+					});
+					if({ :templates:has(key: 'List') }, {
+						:bareTemplateUsed:set(key: 'List', value: true);
+					});
+					return st;
+				});
+				local SemType is ne: :transformSemType(st: elem, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
+				if({ :templates:has(key: 'List') }, {
+					local ClassInfo is tpl: :templates:get(key: 'List', default: ClassInfo(name: '', baseClass: '', members: []));
+					if({ tpl:typeParams:length() == 1 }, {
+						if({ selfTemplateName == 'Array' }, {
+							:bareTemplateUsed:set(key: 'List', value: true);
+							return SemTypes:BARE_LIST;
+						});
+						if({ :isConcreteSemType(st: ne, tplParams: tplParams) }, {
+							local String is mangled: :ensureSpecialized(baseName: 'List', typeArgs: [ne:toAstType()]);
+							return :cachedNamedSemType(name: mangled);
+						});
+					});
+				});
+				return SemType:ListOf(elem: ne);
+			},
+			SemType:MapOf: local Function of SemType(SemType is key, SemType is val){
+				if({ key:isEmpty() || val:isEmpty() }, {
+					if({ selfTemplateName == 'Map' && selfSpecName != '' }, {
+						return :cachedNamedSemType(name: selfSpecName);
+					});
+					if({ :templates:has(key: 'Map') }, {
+						:bareTemplateUsed:set(key: 'Map', value: true);
+					});
+					return st;
+				});
+				local SemType is nk: :transformSemType(st: key, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
+				local SemType is nv: :transformSemType(st: val, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
+				if({ :templates:has(key: 'Map') }, {
+					local ClassInfo is tpl: :templates:get(key: 'Map', default: ClassInfo(name: '', baseClass: '', members: []));
+					if({ tpl:typeParams:length() == 2 && :isConcreteSemType(st: nk, tplParams: tplParams) && :isConcreteSemType(st: nv, tplParams: tplParams) }, {
+						local String is mangled: :ensureSpecialized(baseName: 'Map', typeArgs: [nk:toAstType(), nv:toAstType()]);
+						return :cachedNamedSemType(name: mangled);
+					});
+				});
+				return SemType:MapOf(key: nk, val: nv);
+			},
+			SemType:FnOf: local Function of SemType(SemType is ret){
+				if({ ret:isEmpty() || ret:isVoid() }, { return st; });
+				local SemType is nr: :transformSemType(st: ret, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
+				return SemType:FnOf(ret: nr);
+			},
+			SemType:Named: local Function of SemType([String] is path, [SemType] is params){
+				local String is bName: if({ path:length() == 1 }, { path:get(index: 0) }, { st:baseName() });
+				if({ params:length() == 0 }, {
+					if({ !subst:has(key: bName) && !:templates:has(key: bName) }, {
+						return st;
+					});
+					if({ subst:has(key: bName) }, {
+						local Type is mapped: :cloneType(t: subst:get(key: bName, default: Type:init(name: bName)));
+						local Type is tr: :transformType(t: mapped, subst: Map:init(), tplParams: tplParams, selfTemplateName: '', selfSpecName: '');
+						return :cachedSemType(t: tr);
+					});
+					if({ bName == selfTemplateName && selfSpecName != '' }, {
+						return :cachedNamedSemType(name: selfSpecName);
+					});
+					:bareTemplateUsed:set(key: bName, value: true);
+					return st;
+				});
+				local [SemType] is newParams: [];
+				local Int is i: 0;
+				while({ i < params:length() }, {
+					newParams:push(item: :transformSemType(st: params:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
+					i++;
+				});
+				local [String] is newPath: path;
+				if({ subst:has(key: bName) }, {
+					bName: subst:get(key: bName, default: Type:init(name: bName)):name;
+					newPath: [bName];
+				});
+				if({ :templates:has(key: bName) }, {
+					local ClassInfo is tpl: :templates:get(key: bName, default: ClassInfo(name: '', baseClass: '', members: []));
+					if({ newParams:length() == tpl:typeParams:length() }, {
+						local Boolean is allC: true;
+						local Int is ci: 0;
+						while({ ci < newParams:length() && allC }, {
+							if({ !:isConcreteSemType(st: newParams:get(index: ci), tplParams: tplParams) }, {
+								allC: false;
+							});
+							ci++;
+						});
+						if({ allC }, {
+							local [Type] is astArgs: [];
+							local Int is ai: 0;
+							while({ ai < newParams:length() }, {
+								astArgs:push(item: newParams:get(index: ai):toAstType());
+								ai++;
+							});
+							local String is mangled: :ensureSpecialized(baseName: bName, typeArgs: astArgs);
+							return :cachedNamedSemType(name: mangled);
+						});
+					});
+				});
+				return SemType:Named(path: newPath, params: newParams);
+			}
+		]);
 	}
 
 	## Converts a checker resolvedType tag into a structured [Type] tree, transforms it,
@@ -420,9 +599,7 @@ Class is GenericSpecializer{
 
 	Function of Expression is transformExpr(Expression is expr, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
 		local Int is ln: expr:line;
-		local Type is baseResNode: expr:getSemType():toAstType();
-		local Type is newResNode: :transformType(t: baseResNode, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
-		local String is newResT: :typeToResolvedStr(t: newResNode);
+		local SemType is newResSem: :transformSemType(st: expr:getSemType(), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 		local Expression is res: match(on: expr, when: [
 			Expression:StringLit: local Function of Expression(String is v){ return Expression:StringLit(value: v); },
 			Expression:NumberLit: local Function of Expression(Int is v, String is t){ return Expression:NumberLit(value: v, text: t); },
@@ -506,18 +683,19 @@ Class is GenericSpecializer{
 				match(on: ntarget, when: [
 					Expression:Ident: local Function(String is tname){
 						if({ :templates:has(key: tname) }, {
-							if({ newResT:startsWith(prefix: tname . '__') }, {
-								ntarget: Expression:Ident(name: newResT);
+							local String is newResBase: newResSem:baseName();
+							if({ newResBase:startsWith(prefix: tname . '__') }, {
+								ntarget: Expression:Ident(name: newResBase);
 								ntarget:setLine(line: ln);
-								ntarget:setSemType(st: :cachedSemType(t: Type:init(name: newResT)));
+								ntarget:setSemType(st: newResSem);
 							}, {
 								if({ tname == selfTemplateName && selfSpecName != '' }, {
+									local SemType is selfSem: :cachedNamedSemType(name: selfSpecName);
 									ntarget: Expression:Ident(name: selfSpecName);
 									ntarget:setLine(line: ln);
-									ntarget:setSemType(st: :cachedSemType(t: Type:init(name: selfSpecName)));
+									ntarget:setSemType(st: selfSem);
 									if({ call:name == 'init' }, {
-										newResT: selfSpecName;
-										newResNode: Type:init(name: selfSpecName);
+										newResSem: selfSem;
 									});
 								});
 							});
@@ -533,9 +711,10 @@ Class is GenericSpecializer{
 						if({ psegs:length() > 0 }, {
 							local String is phead: psegs:get(index: 0);
 							if({ :templates:has(key: phead) || (phead == selfTemplateName && selfSpecName != '') }, {
+								local String is newResBase: newResSem:baseName();
 								local String is specHead: '';
-								if({ newResT:startsWith(prefix: phead . '__') }, {
-									specHead: newResT;
+								if({ newResBase:startsWith(prefix: phead . '__') }, {
+									specHead: newResBase;
 								}, {
 									if({ phead == selfTemplateName && selfSpecName != '' }, {
 										specHead: selfSpecName;
@@ -548,7 +727,7 @@ Class is GenericSpecializer{
 									});
 									ntarget: Expression:Path(segments: nsegs);
 									ntarget:setLine(line: ln);
-									ntarget:setSemType(st: :cachedSemType(t: newResNode));
+									ntarget:setSemType(st: newResSem);
 								});
 							});
 						});
@@ -585,12 +764,10 @@ Class is GenericSpecializer{
 						retSubst:set(key: tpName, value: specBound);
 						local Type is specRet: :transformType(t: gm:memberType, subst: retSubst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 						if({ specRet:name == 'Function' && specRet:params:length() > 0 }, {
-							newResNode: specRet:params:get(index: 0);
-							newResT: :typeToResolvedStr(t: newResNode);
+							newResSem: :cachedSemType(t: specRet:params:get(index: 0));
 						}, {
 							if({ specRet:name != '' }, {
-								newResNode: specRet;
-								newResT: :typeToResolvedStr(t: specRet);
+								newResSem: :cachedSemType(t: specRet);
 							});
 						});
 						ovIdx: 0;
@@ -608,11 +785,7 @@ Class is GenericSpecializer{
 			else: { expr }
 		]);
 		res:setLine(line: ln);
-		# The transformed node rides alongside its string: an override arm
-		# (method return, self-init rename) sets it directly, so the tail
-		# re-parse only runs for paths that never had a node.
-		local Type is finalNode: if({ newResNode:name != '' }, { newResNode }, { :resolvedStrToType(s: newResT, subst: Map:init()) });
-		res:setSemType(st: :cachedSemType(t: finalNode));
+		res:setSemType(st: newResSem);
 		return res;
 	}
 
