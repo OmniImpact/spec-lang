@@ -23,7 +23,7 @@ Class of EscapeFractal is BurningShipFractal{
 		local Float is zr2: 0.0;
 		local Float is zi2: 0.0;
 		local Int is iter: 0;
-		while({ (iter < maxIter) && ((zr2 + zi2) <= 16.0) }, {
+		while({ (iter < maxIter) && ((zr2 + zi2) <= 256.0) }, {
 			local Float is azr: if({ zr < 0.0 }, { -zr }, { zr });
 			local Float is azi: if({ zi < 0.0 }, { -zi }, { zi });
 			zi: (2.0 * azr * azi) + ci;
@@ -36,9 +36,9 @@ Class of EscapeFractal is BurningShipFractal{
 		return smoothEscapeValue(iter: iter, mag2: zr2 + zi2);
 	}
 
-	local Function of Float is shadeLane(Int is escIter, Int is maxIter, Float is mag2){
+	local Function of Float is rawLane(Int is escIter, Int is maxIter, Float is mag2){
 		if({ escIter < 0 || escIter >= maxIter }, { return -1.0; });
-		return 0.5 - 0.5 * cos(value: smoothEscapeValue(iter: escIter, mag2: mag2) * 0.25);
+		return smoothEscapeValue(iter: escIter, mag2: mag2);
 	}
 
 	local Function is abs4(Int is dstPtr, Int is srcPtr){
@@ -49,7 +49,7 @@ Class of EscapeFractal is BurningShipFractal{
 	}
 
 	## Evaluates 4 pixels per step using portable `<4 x double>` LLVM SIMD when available.
-	replace Function is evaluateRow(Vector is crVec, Float is ci, Int is w, Int is maxIter, Vector is outBuf, Int is rowOff){
+	replace Function is evaluateRow(Vector is crVec, Float is ci, Int is w, Int is maxIter, Float is pixelSpan, Vector is outBuf, Vector is deBuf, Int is rowOff){
 		local Int is px: 0;
 		if({ hasSimd() && w >= 4 }, {
 			local Vector is zr: Vector(length: 4);
@@ -104,26 +104,26 @@ Class of EscapeFractal is BurningShipFractal{
 					iter: iter + 1;
 					if({ i0 < 0 }, {
 						local Float is v0: loadF64(ptr: tmpPtr, byteOffset: 0);
-						if({ v0 > 16.0 }, { i0: iter; m0: v0; active: active - 1; });
+						if({ v0 > 256.0 }, { i0: iter; m0: v0; active: active - 1; });
 					});
 					if({ i1 < 0 }, {
 						local Float is v1: loadF64(ptr: tmpPtr, byteOffset: 8);
-						if({ v1 > 16.0 }, { i1: iter; m1: v1; active: active - 1; });
+						if({ v1 > 256.0 }, { i1: iter; m1: v1; active: active - 1; });
 					});
 					if({ i2 < 0 }, {
 						local Float is v2: loadF64(ptr: tmpPtr, byteOffset: 16);
-						if({ v2 > 16.0 }, { i2: iter; m2: v2; active: active - 1; });
+						if({ v2 > 256.0 }, { i2: iter; m2: v2; active: active - 1; });
 					});
 					if({ i3 < 0 }, {
 						local Float is v3: loadF64(ptr: tmpPtr, byteOffset: 24);
-						if({ v3 > 16.0 }, { i3: iter; m3: v3; active: active - 1; });
+						if({ v3 > 256.0 }, { i3: iter; m3: v3; active: active - 1; });
 					});
 				});
 
-				outBuf:set(index: rowOff + px, value: shadeLane(escIter: i0, maxIter: maxIter, mag2: m0));
-				outBuf:set(index: rowOff + px + 1, value: shadeLane(escIter: i1, maxIter: maxIter, mag2: m1));
-				outBuf:set(index: rowOff + px + 2, value: shadeLane(escIter: i2, maxIter: maxIter, mag2: m2));
-				outBuf:set(index: rowOff + px + 3, value: shadeLane(escIter: i3, maxIter: maxIter, mag2: m3));
+				outBuf:set(index: rowOff + px, value: rawLane(escIter: i0, maxIter: maxIter, mag2: m0));
+				outBuf:set(index: rowOff + px + 1, value: rawLane(escIter: i1, maxIter: maxIter, mag2: m1));
+				outBuf:set(index: rowOff + px + 2, value: rawLane(escIter: i2, maxIter: maxIter, mag2: m2));
+				outBuf:set(index: rowOff + px + 3, value: rawLane(escIter: i3, maxIter: maxIter, mag2: m3));
 				px: px + 4;
 			});
 
@@ -142,7 +142,7 @@ Class of EscapeFractal is BurningShipFractal{
 			if({ mu < 0.0 }, {
 				outBuf:set(index: rowOff + px, value: -1.0);
 			}, {
-				outBuf:set(index: rowOff + px, value: 0.5 - 0.5 * cos(value: mu * 0.25));
+				outBuf:set(index: rowOff + px, value: mu);
 			});
 			px: px + 1;
 		});

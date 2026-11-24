@@ -26,7 +26,7 @@ Class of EscapeFractal is MandelbrotFractal{
 		local Float is zr2: 0.0;
 		local Float is zi2: 0.0;
 		local Int is iter: 0;
-		while({ (iter < maxIter) && ((zr2 + zi2) <= 16.0) }, {
+		while({ (iter < maxIter) && ((zr2 + zi2) <= 256.0) }, {
 			zi: (2.0 * zr * zi) + ci;
 			zr: (zr2 - zi2) + cr;
 			zr2: zr * zr;
@@ -46,25 +46,29 @@ Class of EscapeFractal is MandelbrotFractal{
 		return ((bx * bx) + ci2) <= 0.0625;
 	}
 
-	local Function of Float is shadeLane(Int is escIter, Int is maxIter, Float is mag2){
+	local Function of Float is rawLane(Int is escIter, Int is maxIter, Float is mag2){
 		if({ escIter < 0 || escIter >= maxIter }, { return -1.0; });
-		return 0.5 - 0.5 * cos(value: smoothEscapeValue(iter: escIter, mag2: mag2) * 0.25);
+		return smoothEscapeValue(iter: escIter, mag2: mag2);
 	}
 
-	## Evaluates 4 pixels per step using portable `<4 x double>` LLVM SIMD when available.
-	replace Function is evaluateRow(Vector is crVec, Float is ci, Int is w, Int is maxIter, Vector is outBuf, Int is rowOff){
+	## Evaluates 4 pixels per step using portable `<4 x double>` LLVM SIMD when available, with DE derivative tracking.
+	replace Function is evaluateRow(Vector is crVec, Float is ci, Int is w, Int is maxIter, Float is pixelSpan, Vector is outBuf, Vector is deBuf, Int is rowOff){
 		local Int is px: 0;
 		if({ hasSimd() && w >= 4 }, {
 			local Vector is zr: Vector(length: 4);
 			local Vector is zi: Vector(length: 4);
 			local Vector is zr2: Vector(length: 4);
 			local Vector is zi2: Vector(length: 4);
+			local Vector is dzr: Vector(length: 4);
+			local Vector is dzi: Vector(length: 4);
 			local Vector is tmp: Vector(length: 4);
 			local Vector is ciVec: Vector(length: 4, initial: ci);
 			local Int is zrPtr: zr:dataAddr();
 			local Int is ziPtr: zi:dataAddr();
 			local Int is zr2Ptr: zr2:dataAddr();
 			local Int is zi2Ptr: zi2:dataAddr();
+			local Int is dzrPtr: dzr:dataAddr();
+			local Int is dziPtr: dzi:dataAddr();
 			local Int is tmpPtr: tmp:dataAddr();
 			local Int is ciPtr: ciVec:dataAddr();
 			local Int is crBase: crVec:dataAddr();
@@ -86,6 +90,8 @@ Class of EscapeFractal is MandelbrotFractal{
 					fill4(dst: ziPtr, val: 0.0);
 					fill4(dst: zr2Ptr, val: 0.0);
 					fill4(dst: zi2Ptr, val: 0.0);
+					fill4(dst: dzrPtr, val: 0.0);
+					fill4(dst: dziPtr, val: 0.0);
 
 					local Int is i0: if({ b0 }, { maxIter }, { -1 });
 					local Int is i1: if({ b1 }, { maxIter }, { -1 });
@@ -95,6 +101,10 @@ Class of EscapeFractal is MandelbrotFractal{
 					local Float is m1: 0.0;
 					local Float is m2: 0.0;
 					local Float is m3: 0.0;
+					local Float is d0: 0.0;
+					local Float is d1: 0.0;
+					local Float is d2: 0.0;
+					local Float is d3: 0.0;
 					local Int is active: 0;
 					if({ i0 < 0 }, { active: active + 1; });
 					if({ i1 < 0 }, { active: active + 1; });
@@ -103,6 +113,19 @@ Class of EscapeFractal is MandelbrotFractal{
 
 					local Int is iter: 0;
 					while({ iter < maxIter && active > 0 }, {
+						# Update derivative dz = 2*z*dz + 1 per active lane
+						local Int is lane: 0;
+						while({ lane < 4 }, {
+							local Int is off: lane * 8;
+							local Float is lzr: loadF64(ptr: zrPtr, byteOffset: off);
+							local Float is lzi: loadF64(ptr: ziPtr, byteOffset: off);
+							local Float is ldzr: loadF64(ptr: dzrPtr, byteOffset: off);
+							local Float is ldzi: loadF64(ptr: dziPtr, byteOffset: off);
+							storeF64(ptr: dzrPtr, byteOffset: off, val: 2.0 * (lzr * ldzr - lzi * ldzi) + 1.0);
+							storeF64(ptr: dziPtr, byteOffset: off, val: 2.0 * (lzr * ldzi + lzi * ldzr));
+							lane: lane + 1;
+						});
+
 						mul4(dst: tmpPtr, a: zrPtr, b: ziPtr);
 						scale4(dst: tmpPtr, a: tmpPtr, scalar: 2.0);
 						add4(dst: ziPtr, a: tmpPtr, b: ciPtr);
@@ -117,26 +140,46 @@ Class of EscapeFractal is MandelbrotFractal{
 						iter: iter + 1;
 						if({ i0 < 0 }, {
 							local Float is v0: loadF64(ptr: tmpPtr, byteOffset: 0);
-							if({ v0 > 16.0 }, { i0: iter; m0: v0; active: active - 1; });
+							if({ v0 > 256.0 }, {
+								local Float is r0: loadF64(ptr: dzrPtr, byteOffset: 0);
+								local Float is j0: loadF64(ptr: dziPtr, byteOffset: 0);
+								i0: iter; m0: v0; d0: r0 * r0 + j0 * j0; active: active - 1;
+							});
 						});
 						if({ i1 < 0 }, {
 							local Float is v1: loadF64(ptr: tmpPtr, byteOffset: 8);
-							if({ v1 > 16.0 }, { i1: iter; m1: v1; active: active - 1; });
+							if({ v1 > 256.0 }, {
+								local Float is r1: loadF64(ptr: dzrPtr, byteOffset: 8);
+								local Float is j1: loadF64(ptr: dziPtr, byteOffset: 8);
+								i1: iter; m1: v1; d1: r1 * r1 + j1 * j1; active: active - 1;
+							});
 						});
 						if({ i2 < 0 }, {
 							local Float is v2: loadF64(ptr: tmpPtr, byteOffset: 16);
-							if({ v2 > 16.0 }, { i2: iter; m2: v2; active: active - 1; });
+							if({ v2 > 256.0 }, {
+								local Float is r2: loadF64(ptr: dzrPtr, byteOffset: 16);
+								local Float is j2: loadF64(ptr: dziPtr, byteOffset: 16);
+								i2: iter; m2: v2; d2: r2 * r2 + j2 * j2; active: active - 1;
+							});
 						});
 						if({ i3 < 0 }, {
 							local Float is v3: loadF64(ptr: tmpPtr, byteOffset: 24);
-							if({ v3 > 16.0 }, { i3: iter; m3: v3; active: active - 1; });
+							if({ v3 > 256.0 }, {
+								local Float is r3: loadF64(ptr: dzrPtr, byteOffset: 24);
+								local Float is j3: loadF64(ptr: dziPtr, byteOffset: 24);
+								i3: iter; m3: v3; d3: r3 * r3 + j3 * j3; active: active - 1;
+							});
 						});
 					});
 
-					outBuf:set(index: rowOff + px, value: shadeLane(escIter: i0, maxIter: maxIter, mag2: m0));
-					outBuf:set(index: rowOff + px + 1, value: shadeLane(escIter: i1, maxIter: maxIter, mag2: m1));
-					outBuf:set(index: rowOff + px + 2, value: shadeLane(escIter: i2, maxIter: maxIter, mag2: m2));
-					outBuf:set(index: rowOff + px + 3, value: shadeLane(escIter: i3, maxIter: maxIter, mag2: m3));
+					outBuf:set(index: rowOff + px, value: rawLane(escIter: i0, maxIter: maxIter, mag2: m0));
+					outBuf:set(index: rowOff + px + 1, value: rawLane(escIter: i1, maxIter: maxIter, mag2: m1));
+					outBuf:set(index: rowOff + px + 2, value: rawLane(escIter: i2, maxIter: maxIter, mag2: m2));
+					outBuf:set(index: rowOff + px + 3, value: rawLane(escIter: i3, maxIter: maxIter, mag2: m3));
+					if({ i0 >= 0 && i0 < maxIter }, { deBuf:set(index: rowOff + px, value: deEdgeGlow(mag2: m0, dz2: d0, pixelSpan: pixelSpan)); });
+					if({ i1 >= 0 && i1 < maxIter }, { deBuf:set(index: rowOff + px + 1, value: deEdgeGlow(mag2: m1, dz2: d1, pixelSpan: pixelSpan)); });
+					if({ i2 >= 0 && i2 < maxIter }, { deBuf:set(index: rowOff + px + 2, value: deEdgeGlow(mag2: m2, dz2: d2, pixelSpan: pixelSpan)); });
+					if({ i3 >= 0 && i3 < maxIter }, { deBuf:set(index: rowOff + px + 3, value: deEdgeGlow(mag2: m3, dz2: d3, pixelSpan: pixelSpan)); });
 				});
 				px: px + 4;
 			});
@@ -145,6 +188,8 @@ Class of EscapeFractal is MandelbrotFractal{
 			zi:destroy();
 			zr2:destroy();
 			zi2:destroy();
+			dzr:destroy();
+			dzi:destroy();
 			tmp:destroy();
 			ciVec:destroy();
 		});
@@ -154,7 +199,7 @@ Class of EscapeFractal is MandelbrotFractal{
 			if({ mu < 0.0 }, {
 				outBuf:set(index: rowOff + px, value: -1.0);
 			}, {
-				outBuf:set(index: rowOff + px, value: 0.5 - 0.5 * cos(value: mu * 0.25));
+				outBuf:set(index: rowOff + px, value: mu);
 			});
 			px: px + 1;
 		});
