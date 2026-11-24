@@ -90,18 +90,31 @@ Class is SynthEngine{
 		return dl;
 	}
 
-	## Builds a felt-hammer-filtered Karplus-Strong delay line for Piano voices.
+	## Builds a warm felt-hammer + harmonic-rich delay line for Piano voices.
 	local Function of Vector is makePianoDelayLine(Float is freqHz, Int is rate){
 		local Vector is dl: makePluckDelayLine(freqHz: freqHz, rate: rate);
 		local Int is dLen: dl:length();
-		# Single gentle moving average softens the initial strike without killing upper harmonics.
-		local Float is prev: dl:get(index: dLen - 1);
-		local Int is i: 0;
-		while({ i < dLen }, {
-			local Float is cur: dl:get(index: i);
-			dl:set(index: i, value: 0.55 * cur + 0.45 * prev);
-			prev: cur;
-			i: i + 1;
+		# 4-pass low-pass models a soft felt hammer (removes harsh pluck buzz).
+		local Int is pass: 0;
+		while({ pass < 4 }, {
+			local Float is prev: dl:get(index: dLen - 1);
+			local Int is i: 0;
+			while({ i < dLen }, {
+				local Float is cur: dl:get(index: i);
+				dl:set(index: i, value: 0.5 * (cur + prev));
+				prev: cur;
+				i: i + 1;
+			});
+			pass: pass + 1;
+		});
+		# Blend warm piano harmonic series (1st..4th partials) with subtle hammer transient.
+		local Float is twoPi: 6.283185307179586;
+		local Int is j: 0;
+		while({ j < dLen }, {
+			local Float is ph: twoPi * toFloat(value: j) / toFloat(value: dLen);
+			local Float is harm: 0.55 * sin(value: ph) + 0.27 * sin(value: 2.0 * ph) + 0.13 * sin(value: 3.0 * ph) + 0.05 * sin(value: 4.0 * ph);
+			dl:set(index: j, value: 0.78 * harm + 0.22 * dl:get(index: j));
+			j: j + 1;
 		});
 		return dl;
 	}
@@ -119,7 +132,7 @@ Class is SynthEngine{
 			local Int is dLen: dl:length();
 			local Int is pos: 0;
 			local Float is prev: dl:get(index: dLen - 1);
-			local Float is damp: if({ isPiano }, { 0.9993 }, { 0.996 });
+			local Float is damp: if({ isPiano }, { 0.9995 }, { 0.994 });
 			local Int is ki: 0;
 			while({ ki < totalSamples }, {
 				local Float is cur: dl:get(index: pos);
@@ -325,7 +338,7 @@ Class is SynthEngine{
 							local Int is pos: ksPos:get(index: vi);
 							local Float is cur: dl:get(index: pos);
 							local Float is prev: ksPrev:get(index: vi);
-							local Float is next1: if({ wid == 4 }, { 0.5 * (cur + prev) * 0.9993 }, { 0.5 * (cur + prev) * 0.996 });
+							local Float is next1: if({ wid == 4 }, { 0.5 * (cur + prev) * 0.9995 }, { 0.5 * (cur + prev) * 0.994 });
 							dl:set(index: pos, value: next1);
 							ksPrev:set(index: vi, item: cur);
 							pos: pos + 1;
@@ -339,7 +352,7 @@ Class is SynthEngine{
 									local Int is pos2: ksPos2:get(index: vi);
 									local Float is cur2: dl2:get(index: pos2);
 									local Float is prev2: ksPrev2:get(index: vi);
-									dl2:set(index: pos2, value: 0.5 * (cur2 + prev2) * 0.9993);
+									dl2:set(index: pos2, value: 0.5 * (cur2 + prev2) * 0.9995);
 									ksPrev2:set(index: vi, item: cur2);
 									pos2: pos2 + 1;
 									if({ pos2 >= dLen2 }, { pos2: 0; });

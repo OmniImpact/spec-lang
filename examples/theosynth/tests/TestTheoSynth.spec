@@ -101,7 +101,7 @@ Class of SpecUnitTest is TestTheoSynth{
 		Assert:isTrue(botRow:contains(needle: 'Instrument:'));
 		Assert:isTrue(botRow:contains(needle: 'About'));
 
-		# Verify Dropdown stays open on Enter press + Enter release (normal toggle behavior)
+		# Verify Dropdown opens, navigates with Down, and selects Square via Enter
 		local SynthViewModel is vm2: SynthViewModel(audioEnabled: false);
 		local SynthFrame is frame2: SynthFrame(vm: vm2);
 		local TheoScreen is screen2: TheoScreen(root: frame2);
@@ -113,5 +113,13 @@ Class of SpecUnitTest is TestTheoSynth{
 		];
 		app2:runHeadless(screen: screen2, keys: ddKeys, width: 90, height: 24);
 		Assert:isTrue(frame2:instrumentPickers:get(index: 0):isOpen());
+
+		local [KeyEvent] is pickKeys: [
+			KeyEvent(kind: KeyKind:DOWN, action: KeyAction:PRESS),
+			KeyEvent(kind: KeyKind:ENTER, action: KeyAction:PRESS)
+		];
+		app2:runHeadless(screen: screen2, keys: pickKeys, width: 90, height: 24);
+		Assert:isFalse(frame2:instrumentPickers:get(index: 0):isOpen());
+		Assert:isTrue(vm2:selectedWaveform == Waveform:SQUARE);
 	}
 }
