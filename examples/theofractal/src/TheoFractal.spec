@@ -13,8 +13,8 @@ Class is TheoFractal{
 
 	replace Function is init(Map of String to String is args){
 		local TheoApp is app: TheoApp(theme: TheoTheme());
-		local ExplorerViewModel is vm: ExplorerViewModel();
-		local ExplorerFrame is mainFrame: ExplorerFrame(app: app, vm: vm);
+		local ExplorerViewModel is vm: ExplorerViewModel(onQuit: { app:quit(); });
+		local ExplorerFrame is mainFrame: ExplorerFrame(vm: vm);
 		local TheoScreen is screen: TheoScreen(root: mainFrame);
 		app:run(screen: screen);
 	}

@@ -1,5 +1,5 @@
 #! Package theofractal:view
-#! Main TheoFractal explorer frame: empty main canvas, bottom control bar, Help dialog, and ASDW/QE shortcuts.
+#! Pure view frame bound to [ExplorerViewModel]: empty main canvas, bottom control bar, and Help overlay sync.
 
 Class of Frame is ExplorerFrame{
 	replace [String] is namespace: ['theofractal', 'view'];
@@ -8,10 +8,9 @@ Class of Frame is ExplorerFrame{
 		['base', 'theo', '*'],
 		['theofractal', 'util', FractalStrings],
 		['theofractal', 'vm', ExplorerViewModel],
-		['theofractal', 'view', FractalCanvas]
+		['theofractal', 'view', [FractalCanvas, HelpDialog]]
 	];
 
-	TheoApp is app;
 	ExplorerViewModel is vm: ExplorerViewModel();
 	FocusTarget is quitFocus: FocusTarget();
 	FocusTarget is fractalFocus: FocusTarget(initial: true);
@@ -24,16 +23,18 @@ Class of Frame is ExplorerFrame{
 	Array of Button is helpButtons: Array();
 	Array of Overlay is helpOverlays: Array();
 
-	replace Function is init(TheoApp is app: TheoApp(), ExplorerViewModel is vm: ExplorerViewModel()){
-		:app: app;
+	replace Function is init(ExplorerViewModel is vm: ExplorerViewModel()){
 		:vm: vm;
 		:vm:onRenderChanged: {
 			invalidate();
 		};
+		:vm:onHelpChanged: {
+			syncHelpOverlay();
+		};
 		:fractalPickers: Array([
 			Dropdown(
 				host: :,
-				options: FractalStrings:fractalOptions(),
+				options: vm:fractalOptions(),
 				selected: FractalStrings:OPT_SELECT_FRACTAL,
 				focusTarget: fractalFocus,
 				onSelect: local Function(String is chosen){
@@ -56,69 +57,31 @@ Class of Frame is ExplorerFrame{
 			Button(
 				label: FractalStrings:ACTION_HELP,
 				focusTarget: helpFocus,
-				onClick: { :openHelp(); }
+				onClick: { :vm:openHelp(); }
 			)
 		]);
 		local Overlay is hOv: Overlay(
 			closeOnEsc: true,
 			closeOnBackdrop: true,
-			content: buildHelpDialog()
+			onClose: { :vm:closeHelp(); },
+			content: HelpDialog:build(closeFocus: helpCloseFocus, onClose: { :vm:closeHelp(); })
 		);
 		:helpOverlays: Array([hOv]);
 		addOverlay(overlay: hOv);
 	}
 
-	local Function of Widget is buildHelpDialog(){
-		return Center(
-			child: Surface(
-				child: Panel(
-					border: true,
-					padX: 2,
-					padY: 1,
-					topTitle: FractalStrings:HELP_TITLE,
-					topTitleAlign: TitleAlign:CENTER,
-					child: Col(
-						gap: 0,
-						children: Array([
-							TextLine(value: FractalStrings:HELP_ABOUT_HDR, bold: true),
-							TextLine(value: FractalStrings:HELP_ABOUT_1),
-							TextLine(value: FractalStrings:HELP_ABOUT_2),
-							TextLine(value: FractalStrings:HELP_ABOUT_3),
-							TextLine(value: FractalStrings:HELP_ABOUT_4),
-							TextLine(value: ''),
-							TextLine(value: FractalStrings:HELP_KEYS_HDR, bold: true),
-							TextLine(value: FractalStrings:HELP_KEY_PAN),
-							TextLine(value: FractalStrings:HELP_KEY_ZOOM),
-							TextLine(value: FractalStrings:HELP_KEY_RESET),
-							TextLine(value: FractalStrings:HELP_KEY_HELP),
-							TextLine(value: FractalStrings:HELP_KEY_NAV),
-							TextLine(value: ''),
-							Row(
-								children: Array([
-									Spacer(weight: 1.0),
-									Button(
-										label: FractalStrings:ACTION_CLOSE,
-										focusTarget: helpCloseFocus,
-										onClick: { :closeHelp(); }
-									),
-									Spacer(weight: 1.0)
-								])
-							)
-						])
-					)
-				)
-			)
-		);
-	}
-
-	Function is openHelp(){
+	local Function is syncHelpOverlay(){
 		if({ helpOverlays:length() == 0 || helpButtons:length() == 0 }, { return; });
-		showOverlay(overlay: helpOverlays:get(index: 0), anchor: helpButtons:get(index: 0));
-	}
-
-	Function is closeHelp(){
-		if({ helpOverlays:length() == 0 }, { return; });
-		closeOverlay(overlay: helpOverlays:get(index: 0));
+		local Overlay is hOv: helpOverlays:get(index: 0);
+		if({ vm:helpOpen }, {
+			if({ !hOv:open }, {
+				showOverlay(overlay: hOv, anchor: helpButtons:get(index: 0));
+			});
+		}, {
+			if({ hOv:open }, {
+				closeOverlay(overlay: hOv);
+			});
+		});
 	}
 
 	replace Function of Widget is ui(){
@@ -133,7 +96,7 @@ Class of Frame is ExplorerFrame{
 					Button(
 						label: FractalStrings:ACTION_QUIT,
 						focusTarget: quitFocus,
-						onClick: { :app:quit(); }
+						onClick: { :vm:quit(); }
 					),
 					Spacer(weight: 1.0),
 					fractalPickers:get(index: 0),
@@ -154,19 +117,6 @@ Class of Frame is ExplorerFrame{
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
-		if({ event:ctrl && (event:key == 'q' || event:key == 'Q') }, {
-			app:quit();
-			return true;
-		});
-		local String is k: event:key;
-		if({ k == 'a' || k == 'A' }, { vm:panLeft(); return true; });
-		if({ k == 'd' || k == 'D' }, { vm:panRight(); return true; });
-		if({ k == 'w' || k == 'W' }, { vm:panUp(); return true; });
-		if({ k == 's' || k == 'S' }, { vm:panDown(); return true; });
-		if({ k == 'q' || k == 'Q' }, { vm:zoomOut(); return true; });
-		if({ k == 'e' || k == 'E' }, { vm:zoomIn(); return true; });
-		if({ k == 'r' || k == 'R' }, { vm:resetView(); return true; });
-		if({ k == 'h' || k == 'H' || k == '?' }, { openHelp(); return true; });
-		return false;
+		return vm:handleShortcut(key: event:key, ctrl: event:ctrl);
 	}
 }

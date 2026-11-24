@@ -1,20 +1,23 @@
 #! Package theofractal:vm
-#! ViewModel managing selected fractal, color theme, camera viewport, and cached pixel rendering.
+#! ViewModel managing active [Fractal], [ColorTheme], [FractalViewport], Help dialog state, shortcuts, and pixel cache.
 
 Class is ExplorerViewModel{
 	replace [String] is namespace: ['theofractal', 'vm'];
 
 	replace [[String]] is using: [
-		['theofractal', 'model', [FractalType, ColorTheme, FractalViewport, FractalRenderer]],
-		['theofractal', 'util', FractalStrings],
+		['theofractal', 'model', [Fractal, FractalRegistry, ColorTheme, FractalViewport, FractalRenderer]],
+		['theofractal', 'util', as ColorPalette()],
 		['base', 'theo', TheoColor],
 		['base', 'sys', as Conditional()]
 	];
 
-	FractalType is selectedFractal: FractalType:NONE;
+	FractalRegistry is registry: FractalRegistry();
+	Array of Fractal is activeFractal: Array();
 	ColorTheme is selectedTheme: ColorTheme:GRAYSCALE;
 	FractalViewport is viewport: FractalViewport();
 	FractalRenderer is renderer: FractalRenderer();
+
+	Boolean is helpOpen: false;
 
 	Array of TheoColor is cachedPixels: Array();
 	Int is cachedW: 0;
@@ -22,14 +25,20 @@ Class is ExplorerViewModel{
 	Boolean is renderDirty: true;
 
 	Function is onRenderChanged: {};
+	Function is onHelpChanged: {};
+	Function is onQuit: {};
 
-	Function of Boolean is hasFractal(){ selectedFractal != FractalType:NONE }
+	replace Function is init(Function is onQuit: {}){
+		:onQuit: onQuit;
+	}
 
-	local Function of Boolean is isYUpFractal(){
-		return selectedFractal == FractalType:SIERPINSKI
-			|| selectedFractal == FractalType:SNOWFLAKE
-			|| selectedFractal == FractalType:BARNSLEY_FERN
-			|| selectedFractal == FractalType:DRAGON;
+	Function of [String] is fractalOptions(){ registry:optionNames() }
+
+	Function of Boolean is hasFractal(){ activeFractal:length() > 0 }
+
+	Function of String is activeFractalName(){
+		if({ activeFractal:length() == 0 }, { return ''; });
+		return activeFractal:get(index: 0):name();
 	}
 
 	local Function is markRenderDirty(){
@@ -38,28 +47,15 @@ Class is ExplorerViewModel{
 	}
 
 	Function is selectFractal(String is name){
-		local FractalType is next: match(when: [
-			{ name == FractalStrings:OPT_SIERPINSKI }: { FractalType:SIERPINSKI },
-			{ name == FractalStrings:OPT_SNOWFLAKE }: { FractalType:SNOWFLAKE },
-			{ name == FractalStrings:OPT_MANDELBROT }: { FractalType:MANDELBROT },
-			{ name == FractalStrings:OPT_BARNSLEY_FERN }: { FractalType:BARNSLEY_FERN },
-			{ name == FractalStrings:OPT_JULIA }: { FractalType:JULIA },
-			{ name == FractalStrings:OPT_BURNING_SHIP }: { FractalType:BURNING_SHIP },
-			{ name == FractalStrings:OPT_DRAGON }: { FractalType:DRAGON },
-			else: { FractalType:NONE }
-		]);
-		:selectedFractal: next;
-		viewport:resetFor(kind: next);
+		:activeFractal: registry:findByName(name: name);
+		if({ activeFractal:length() > 0 }, {
+			viewport:copyFrom(other: activeFractal:get(index: 0):defaultViewport());
+		});
 		markRenderDirty();
 	}
 
 	Function is selectTheme(String is name){
-		:selectedTheme: match(when: [
-			{ name == FractalStrings:THEME_COOL }: { ColorTheme:COOL },
-			{ name == FractalStrings:THEME_WARM }: { ColorTheme:WARM },
-			{ name == FractalStrings:THEME_RAINBOW }: { ColorTheme:RAINBOW },
-			else: { ColorTheme:GRAYSCALE }
-		]);
+		:selectedTheme: themeFromName(name: name);
 		markRenderDirty();
 	}
 
@@ -77,14 +73,14 @@ Class is ExplorerViewModel{
 
 	Function is panUp(){
 		if({ !hasFractal() }, { return; });
-		local Float is dir: if({ isYUpFractal() }, { 0.15 }, { -0.15 });
+		local Float is dir: if({ activeFractal:get(index: 0):isYUp() }, { 0.15 }, { -0.15 });
 		viewport:pan(dxFraction: 0.0, dyFraction: dir);
 		markRenderDirty();
 	}
 
 	Function is panDown(){
 		if({ !hasFractal() }, { return; });
-		local Float is dir: if({ isYUpFractal() }, { -0.15 }, { 0.15 });
+		local Float is dir: if({ activeFractal:get(index: 0):isYUp() }, { -0.15 }, { 0.15 });
 		viewport:pan(dxFraction: 0.0, dyFraction: dir);
 		markRenderDirty();
 	}
@@ -103,8 +99,40 @@ Class is ExplorerViewModel{
 
 	Function is resetView(){
 		if({ !hasFractal() }, { return; });
-		viewport:resetFor(kind: selectedFractal);
+		viewport:copyFrom(other: activeFractal:get(index: 0):defaultViewport());
 		markRenderDirty();
+	}
+
+	Function is openHelp(){
+		if({ helpOpen }, { return; });
+		:helpOpen: true;
+		onHelpChanged();
+	}
+
+	Function is closeHelp(){
+		if({ !helpOpen }, { return; });
+		:helpOpen: false;
+		onHelpChanged();
+	}
+
+	Function is quit(){
+		onQuit();
+	}
+
+	Function of Boolean is handleShortcut(String is key, Boolean is ctrl){
+		if({ ctrl && (key == 'q' || key == 'Q') }, {
+			quit();
+			return true;
+		});
+		if({ key == 'a' || key == 'A' }, { panLeft(); return true; });
+		if({ key == 'd' || key == 'D' }, { panRight(); return true; });
+		if({ key == 'w' || key == 'W' }, { panUp(); return true; });
+		if({ key == 's' || key == 'S' }, { panDown(); return true; });
+		if({ key == 'q' || key == 'Q' }, { zoomOut(); return true; });
+		if({ key == 'e' || key == 'E' }, { zoomIn(); return true; });
+		if({ key == 'r' || key == 'R' }, { resetView(); return true; });
+		if({ key == 'h' || key == 'H' || key == '?' }, { openHelp(); return true; });
+		return false;
 	}
 
 	Function of Array of TheoColor is ensurePixels(Int is w, Int is h){
@@ -117,7 +145,7 @@ Class is ExplorerViewModel{
 		});
 		if({ renderDirty || cachedW != w || cachedH != h }, {
 			:cachedPixels: renderer:renderPixels(
-				kind: selectedFractal,
+				fractal: activeFractal:get(index: 0),
 				theme: selectedTheme,
 				viewport: viewport,
 				w: w,

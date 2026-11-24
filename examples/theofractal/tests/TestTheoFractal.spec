@@ -7,8 +7,8 @@ Class of SpecUnitTest is TestTheoFractal{
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'theo', '*'],
 		['base', 'sys', as Loops()],
-		['theofractal', 'model', [FractalType, ColorTheme, FractalViewport, FractalRenderer]],
-		['theofractal', 'util', FractalStrings],
+		['theofractal', 'model', [Fractal, FractalRegistry, ColorTheme, FractalViewport]],
+		['theofractal', 'util', [as ColorPalette(), FractalStrings]],
 		['theofractal', 'vm', ExplorerViewModel],
 		['theofractal', 'view', [FractalCanvas, ExplorerFrame]]
 	];
@@ -16,8 +16,9 @@ Class of SpecUnitTest is TestTheoFractal{
 	Function is testInitialEmptyState(){
 		local ExplorerViewModel is vm: ExplorerViewModel();
 		Assert:isFalse(vm:hasFractal());
-		Assert:isTrue(vm:selectedFractal == FractalType:NONE);
+		Assert:isTrue(vm:activeFractalName() == '');
 		Assert:isTrue(vm:selectedTheme == ColorTheme:GRAYSCALE);
+		Assert:isFalse(vm:helpOpen);
 		local Array of TheoColor is pixels: vm:ensurePixels(w: 40, h: 40);
 		Assert:isTrue(pixels:length() == 0);
 	}
@@ -54,18 +55,17 @@ Class of SpecUnitTest is TestTheoFractal{
 	}
 
 	Function is testThemesAndColorMapping(){
-		local FractalRenderer is r: FractalRenderer();
-		local TheoColor is gray: r:colorForValue(t: 0.5, theme: ColorTheme:GRAYSCALE);
+		local TheoColor is gray: colorForValue(t: 0.5, theme: ColorTheme:GRAYSCALE);
 		Assert:isTrue(gray:c1 == gray:c2);
 		Assert:isTrue(gray:c2 == gray:c3);
 
-		local TheoColor is cool: r:colorForValue(t: 0.5, theme: ColorTheme:COOL);
+		local TheoColor is cool: colorForValue(t: 0.5, theme: ColorTheme:COOL);
 		Assert:isTrue(cool:c3 > cool:c1);
 
-		local TheoColor is warm: r:colorForValue(t: 0.5, theme: ColorTheme:WARM);
+		local TheoColor is warm: colorForValue(t: 0.5, theme: ColorTheme:WARM);
 		Assert:isTrue(warm:c1 > warm:c3);
 
-		local TheoColor is rain: r:colorForValue(t: 0.0, theme: ColorTheme:RAINBOW);
+		local TheoColor is rain: colorForValue(t: 0.0, theme: ColorTheme:RAINBOW);
 		Assert:isTrue(rain:c1 == 255);
 	}
 
@@ -99,9 +99,9 @@ Class of SpecUnitTest is TestTheoFractal{
 	}
 
 	Function is testBottomDropdownOpensUpAndShortcutsWork(){
-		local TheoApp is app: TheoApp(theme: TheoTheme());
-		local ExplorerViewModel is vm: ExplorerViewModel();
-		local ExplorerFrame is frame: ExplorerFrame(app: app, vm: vm);
+		local Boolean is quitCalled: false;
+		local ExplorerViewModel is vm: ExplorerViewModel(onQuit: { quitCalled: true; });
+		local ExplorerFrame is frame: ExplorerFrame(vm: vm);
 		frame:layout(x: 0, y: 0, w: 80, h: 24);
 
 		local Dropdown is picker: frame:fractalPickers:get(index: 0);
@@ -125,9 +125,14 @@ Class of SpecUnitTest is TestTheoFractal{
 		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'q')));
 
 		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'h')));
+		Assert:isTrue(vm:helpOpen);
 		Assert:isTrue(frame:hasBlockingOverlay());
 		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:ESC)));
+		Assert:isFalse(vm:helpOpen);
 		Assert:isFalse(frame:hasBlockingOverlay());
+
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'q', ctrl: true)));
+		Assert:isTrue(quitCalled);
 
 		frame:paint(buf: buf, renderer: renderer);
 		Assert:isTrue(buf:cellAt(x: 73, y: 18):ch == '▲');

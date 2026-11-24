@@ -1,28 +1,21 @@
 #! Package theofractal:view
-#! Half-block fractal canvas widget with overlayed L/R/U/D and zoom +/- navigation buttons.
+#! Half-block fractal canvas widget delegating overlayed navigation controls to [NavOverlay].
 
 Class of Widget is FractalCanvas{
 	replace [String] is namespace: ['theofractal', 'view'];
 
 	merge [[String]] is using: [
 		['base', 'theo', '*'],
-		['theofractal', 'util', FractalStrings],
-		['theofractal', 'vm', ExplorerViewModel]
+		['theofractal', 'vm', ExplorerViewModel],
+		['theofractal', 'view', NavOverlay]
 	];
 
 	ExplorerViewModel is vm: ExplorerViewModel();
-	Array of Button is navButtons: Array();
+	NavOverlay is navOverlay: NavOverlay();
 
 	replace Function is init(ExplorerViewModel is vm){
 		:vm: vm;
-		:navButtons: Array([
-			Button(label: FractalStrings:NAV_ZOOM_OUT, width: 3, onClick: { :vm:zoomOut(); }),
-			Button(label: FractalStrings:NAV_UP, width: 3, onClick: { :vm:panUp(); }),
-			Button(label: FractalStrings:NAV_ZOOM_IN, width: 3, onClick: { :vm:zoomIn(); }),
-			Button(label: FractalStrings:NAV_LEFT, width: 3, onClick: { :vm:panLeft(); }),
-			Button(label: FractalStrings:NAV_DOWN, width: 3, onClick: { :vm:panDown(); }),
-			Button(label: FractalStrings:NAV_RIGHT, width: 3, onClick: { :vm:panRight(); })
-		]);
+		:navOverlay: NavOverlay(vm: vm);
 	}
 
 	replace Function of Float is flexWeight(){ 1.0 }
@@ -33,20 +26,12 @@ Class of Widget is FractalCanvas{
 
 	replace Function is applyTheme(TheoTheme is theme){
 		:activeTheme: theme;
-		local Int is i: 0;
-		while({ i < navButtons:length() }, {
-			navButtons:get(index: i):applyTheme(theme: theme);
-			i: i + 1;
-		});
+		navOverlay:applyTheme(theme: theme);
 	}
 
 	replace Function is bindDirty(Function is cb){
 		:dirtyListeners: Array([cb]);
-		local Int is i: 0;
-		while({ i < navButtons:length() }, {
-			navButtons:get(index: i):bindDirty(cb: cb);
-			i: i + 1;
-		});
+		navOverlay:bindDirty(cb: cb);
 	}
 
 	replace Function is layout(Int is x, Int is y, Int is w, Int is h){
@@ -54,17 +39,7 @@ Class of Widget is FractalCanvas{
 		:boxY: y;
 		:boxW: w;
 		:boxH: h;
-		if({ w >= 13 && h >= 3 && navButtons:length() >= 6 }, {
-			local Int is rx: x + w - 12;
-			local Int is topY: y + h - 3;
-			local Int is botY: y + h - 2;
-			navButtons:get(index: 0):layout(x: rx, y: topY, w: 3, h: 1);
-			navButtons:get(index: 1):layout(x: rx + 4, y: topY, w: 3, h: 1);
-			navButtons:get(index: 2):layout(x: rx + 8, y: topY, w: 3, h: 1);
-			navButtons:get(index: 3):layout(x: rx, y: botY, w: 3, h: 1);
-			navButtons:get(index: 4):layout(x: rx + 4, y: botY, w: 3, h: 1);
-			navButtons:get(index: 5):layout(x: rx + 8, y: botY, w: 3, h: 1);
-		});
+		navOverlay:layout(x: x, y: y, w: w, h: h);
 	}
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
@@ -96,45 +71,21 @@ Class of Widget is FractalCanvas{
 			});
 		});
 
-		if({ boxW >= 13 && boxH >= 3 }, {
-			local Int is i: 0;
-			while({ i < navButtons:length() }, {
-				navButtons:get(index: i):paint(buf: buf, renderer: renderer);
-				i: i + 1;
-			});
-		});
+		navOverlay:paint(buf: buf, renderer: renderer);
 	}
 
 	replace Function of Boolean is handleMouse(MouseEvent is event){
-		if({ !vm:hasFractal() || boxW < 13 || boxH < 3 }, { return false; });
-		local Int is i: 0;
-		while({ i < navButtons:length() }, {
-			if({ navButtons:get(index: i):handleMouse(event: event) }, {
-				return true;
-			});
-			i: i + 1;
-		});
-		return false;
+		if({ !vm:hasFractal() }, { return false; });
+		return navOverlay:handleMouse(event: event);
 	}
 
 	replace Function of Boolean is handleKey(KeyEvent is event){
-		if({ !vm:hasFractal() || boxW < 13 || boxH < 3 }, { return false; });
-		local Int is i: 0;
-		while({ i < navButtons:length() }, {
-			if({ navButtons:get(index: i):handleKey(event: event) }, {
-				return true;
-			});
-			i: i + 1;
-		});
-		return false;
+		if({ !vm:hasFractal() }, { return false; });
+		return navOverlay:handleKey(event: event);
 	}
 
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
-		if({ !vm:hasFractal() || boxW < 13 || boxH < 3 }, { return; });
-		local Int is i: 0;
-		while({ i < navButtons:length() }, {
-			navButtons:get(index: i):collectFocus(targets: targets, owners: owners);
-			i: i + 1;
-		});
+		if({ !vm:hasFractal() }, { return; });
+		navOverlay:collectFocus(targets: targets, owners: owners);
 	}
 }
