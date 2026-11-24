@@ -159,39 +159,40 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ b:inInlineLoopCallee && call:isBareCall && b:inlineFnParams:has(key: nm) }, {
 			return :lowerInlineFnParamCall(b: b, expr: expr, call: call);
 		});
-		if({ nm == 'init' }, {
-			# The Conditional/Loops floor init binds the runtime branch
-			# primitive; LoopControl constructions flow through the normal
-			# generic-init path (the class is a real ARC class).
-			return 'null';
-		});
-		if({ nm == 'if' || nm == 'branch' }, {
-			return :lowerIfCall(b: b, expr: expr, call: call);
-		});
-		if({ nm == 'while' }, {
-			:lowerWhileCall(b: b, call: call);
-			return '0';
-		});
-		if({ nm == 'repeat' }, {
-			:lowerRepeatCall(b: b, call: call);
-			return '0';
-		});
-		if({ nm == 'until' }, {
-			:lowerUntilCall(b: b, call: call);
-			return '0';
-		});
-		if({ nm == 'loop' }, {
-			:lowerLoopCall(b: b, call: call);
-			return '0';
-		});
-		if({ nm == 'try' }, {
-			return :lowerTryCall(b: b, expr: expr, call: call);
-		});
-		local Member is inlM: b:resolveInlineLoopMember(call: call);
-		if({ inlM:name != '' }, {
-			return :lowerStructuralLoopCall(b: b, expr: expr, call: call, m: inlM);
-		});
-		return '0';
+		return match(on: nm, when: [
+			'init': {
+				# The Conditional/Loops floor init binds the runtime branch
+				# primitive; LoopControl constructions flow through the normal
+				# generic-init path (the class is a real ARC class).
+				'null'
+			},
+			['if', 'branch']: { :lowerIfCall(b: b, expr: expr, call: call) },
+			'while': {
+				:lowerWhileCall(b: b, call: call);
+				'0'
+			},
+			'repeat': {
+				:lowerRepeatCall(b: b, call: call);
+				'0'
+			},
+			'until': {
+				:lowerUntilCall(b: b, call: call);
+				'0'
+			},
+			'loop': {
+				:lowerLoopCall(b: b, call: call);
+				'0'
+			},
+			'try': { :lowerTryCall(b: b, expr: expr, call: call) },
+			else: {
+				local Member is inlM: b:resolveInlineLoopMember(call: call);
+				if({ inlM:name != '' }, {
+					:lowerStructuralLoopCall(b: b, expr: expr, call: call, m: inlM)
+				}, {
+					'0'
+				})
+			}
+		]);
 	}
 
 	local Function of String is lowerCondExpr(IrBuilder is b, Expression is condExpr){
@@ -322,23 +323,20 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Int is ai: 0;
 		while({ ai < call:args:length() }, {
 			local NamedArg is na: call:args:get(index: ai);
-			if({ na:name == 'check' }, {
-				condNa: na;
-			}, {
-				if({ na:name == 'then' }, {
-					thenNa: na;
-				}, {
-					if({ na:name == 'finally' }, {
-						hasFinally: true;
-						finallyNa: na;
-					}, {
-						if({ na:name == 'else' || ai >= 2 }, {
-							hasElse: true;
-							elseNa: na;
-						});
+			match(on: na:name, when: [
+				'check': { condNa: na; },
+				'then': { thenNa: na; },
+				'finally': {
+					hasFinally: true;
+					finallyNa: na;
+				},
+				else: {
+					if({ na:name == 'else' || ai >= 2 }, {
+						hasElse: true;
+						elseNa: na;
 					});
-				});
-			});
+				}
+			]);
 			ai++;
 		});
 		local IrType is resTy: b:irTypeForSem(st: expr:getSemType());

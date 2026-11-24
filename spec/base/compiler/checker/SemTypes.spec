@@ -129,19 +129,22 @@ Class is SemTypes{
 	Function of SemType is namedWithParams(String is name, [SemType] is params){
 		if({ name == '' }, { return SemTypes:EMPTY; });
 		if({ params:length() == 0 }, { return :named(name: name); });
-		if({ name == 'Array' }, { return :arrayOf(elem: params:get(index: 0)); });
-		if({ name == 'List' }, { return :listOf(elem: params:get(index: 0)); });
-		if({ name == 'Map' }, {
-			if({ params:length() >= 2 }, {
-				return :mapOf(key: params:get(index: 0), val: params:get(index: 1));
-			});
-			return SemTypes:BARE_MAP;
-		});
-		if({ name == 'Function' }, {
-			local SemType is ret: if({ params:length() >= 2 }, { params:get(index: 1) }, { params:get(index: 0) });
-			return :fnOf(ret: ret);
-		});
-		return SemType:Named(path: :splitPath(name: name), params: params);
+		return match(on: name, when: [
+			'Array': { :arrayOf(elem: params:get(index: 0)) },
+			'List': { :listOf(elem: params:get(index: 0)) },
+			'Map': {
+				if({ params:length() >= 2 }, {
+					:mapOf(key: params:get(index: 0), val: params:get(index: 1))
+				}, {
+					SemTypes:BARE_MAP
+				})
+			},
+			'Function': {
+				local SemType is ret: if({ params:length() >= 2 }, { params:get(index: 1) }, { params:get(index: 0) });
+				:fnOf(ret: ret)
+			},
+			else: { SemType:Named(path: :splitPath(name: name), params: params) }
+		]);
 	}
 
 	## Constructs a [SemType:Named] directly from explicit path segments and params.

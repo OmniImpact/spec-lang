@@ -3444,110 +3444,110 @@ Class is TypeChecker{
 		# the path resolution loop below then consumes it via lookupHeldFieldType.
 		local Boolean is heldAdmitted: false;
 		local Boolean is chainResolved: false;
-		if({ root == :names:selfIdent() }, {
-			if({ :inHeldInit || :inHeldFunction }, {
-				:addError(line: :currentLine, msg: 'A held member body has no instance: \':\' is not available.');
-			});
-			rootType: :currentClassName;
-			if({ segs:length() >= 2 && :unassignedFields:has(key: segs:get(index: 1)) }, {
-				:addError(line: :currentLine, msg: 'Field \'' . segs:get(index: 1) . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
-			});
-			if({ segs:length() >= 2 }, {
-				local String is fName: segs:get(index: 1);
-				if({ :lookupFieldType(className: :currentClassName, fieldName: fName) != '' }, {
-					local String is fOwner: :findMemberOwnerClass(className: :currentClassName, memberName: fName);
-					if({ fOwner != '' }, {
-						:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: :currentClassName, memberName: fName), memberName: fName);
-					});
-				}, {
-					if({ :findHeldMember(className: :currentClassName, memberName: fName):name != '' }, {
-						:addError(line: :currentLine, msg: 'Held member \'' . :currentClassName . ':' . fName . '\' is class-scoped: reach it through the class name, not an instance.');
-					});
+		match(when: [
+			{ root == :names:selfIdent() }: {
+				if({ :inHeldInit || :inHeldFunction }, {
+					:addError(line: :currentLine, msg: 'A held member body has no instance: \':\' is not available.');
 				});
-			});
-		}, {
-			if({ :localVars:has(key: root) }, {
-				rootType: :localVars:get(key: root, default: SemTypes:EMPTY):toKey();
-			}, {
-				if({ :fieldTypes:has(key: root) }, {
-					if({ :unassignedFields:has(key: root) }, {
-						:addError(line: :currentLine, msg: 'Field \'' . root . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
-					});
-					rootType: :fieldTypes:get(key: root, default: SemTypes:EMPTY):toKey();
-				}, {
-					if({ :allEnumNames:has(key: root) }, {
-						rootType: root;
+				rootType: :currentClassName;
+				if({ segs:length() >= 2 && :unassignedFields:has(key: segs:get(index: 1)) }, {
+					:addError(line: :currentLine, msg: 'Field \'' . segs:get(index: 1) . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
+				});
+				if({ segs:length() >= 2 }, {
+					local String is fName: segs:get(index: 1);
+					if({ :lookupFieldType(className: :currentClassName, fieldName: fName) != '' }, {
+						local String is fOwner: :findMemberOwnerClass(className: :currentClassName, memberName: fName);
+						if({ fOwner != '' }, {
+							:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: :currentClassName, memberName: fName), memberName: fName);
+						});
 					}, {
-						if({ :registeredClasses:has(key: root) }, {
-							rootType: root;
-							if({ segs:length() >= 2 }, {
-								local ClassInfo is chainCls: :findClass(name: root);
-								local Boolean is chainOk: chainCls:name != '';
-								local Int is chainIdx: 1;
-								while({ chainOk && chainIdx < segs:length() }, {
-									local String is nextType: '';
-									while([Int is mi: 0], { mi < chainCls:members:length() }, {
-										local Member is m: chainCls:members:get(index: mi);
-										if({ m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, {
-											nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
-										});
-										mi++;
-									});
-									if({ nextType != '' }, {
-										chainCls: :findClass(name: nextType);
-										if({ chainCls:name == '' }, {
-											chainOk: false;
-										});
-										chainIdx: chainIdx + 1;
-									}, {
-										chainOk: false;
-									});
-								});
-								if({ chainOk && chainIdx == segs:length() }, {
-									rootType: chainCls:qualifiedName();
-									chainResolved: true;
-								});
-							});
-							local Member is heldM: Member:init(kind: MemberKind:FIELD);
-							if({ segs:length() >= 2 && !chainResolved }, {
-								heldM: :findHeldMember(className: root, memberName: segs:get(index: 1));
-							});
-							if({ heldM:name != '' && heldM:kind == MemberKind:FIELD }, {
-								local String is heldOwner: :findHeldOwnerClass(className: root, memberName: heldM:name);
-								if({ :inHeldInit && heldOwner == :currentClassName }, {
-									:addError(line: :currentLine, msg: 'Held initializer of \'' . :currentClassName . '\' cannot reference held member \'' . root . ':' . heldM:name . '\' of the same class; the once-guards would deadlock.');
-								});
-								:checkMemberVisibility(ownerClass: heldOwner, member: heldM, memberName: heldM:name);
-								heldAdmitted: true;
-							}, {
-								if({ segs:length() >= 2 && :findHeldMethod(className: root, methodName: segs:get(index: 1)):name != '' }, {
-									:addError(line: :currentLine, msg: 'Held function \'' . root . ':' . segs:get(index: 1) . '\' must be called; bare references to held functions are not supported (the call form is ' . root . ':' . segs:get(index: 1) . '(...)).');
-									rootType: '';
-								}, {
-									if({ segs:length() >= 2 }, {
-										local Member is resolver: :findHeldMethod(className: root, methodName: ContractMethod:RESOLVE_HELD:value());
-										local Boolean is declaredInstance: :lookupFieldType(className: root, fieldName: segs:get(index: 1)) != '' || :lookupAnyMember(className: root, methodName: segs:get(index: 1)):kind == MemberKind:METHOD;
-										if({ !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'Str' && root != 'String' && root != 'SpecError' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
-											:addError(line: :currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
-											rootType: '';
-										}, {
-											if({ resolver:name != '' && !declaredInstance }, {
-												if({ :inHeldFunction && :currentMethodName == ContractMethod:RESOLVE_HELD:value() && root == :currentClassName }, {
-													:addError(line: :currentLine, msg: 'The resolution hook cannot resolve through its own class prefix (\'' . root . ':' . segs:get(index: 1) . '\'); declare the member, or return it from the resolver directly.');
-												});
-												:checkMemberVisibility(ownerClass: :findHeldMethodOwner(className: root, methodName: ContractMethod:RESOLVE_HELD:value()), member: resolver, memberName: ContractMethod:RESOLVE_HELD:value());
-												res: :formatTypeString(t: resolver:memberType);
-												heldAdmitted: true;
-											});
-										});
-									});
-								});
-							});
+						if({ :findHeldMember(className: :currentClassName, memberName: fName):name != '' }, {
+							:addError(line: :currentLine, msg: 'Held member \'' . :currentClassName . ':' . fName . '\' is class-scoped: reach it through the class name, not an instance.');
 						});
 					});
 				});
-			});
-		});
+			},
+			{ :localVars:has(key: root) }: {
+				rootType: :localVars:get(key: root, default: SemTypes:EMPTY):toKey();
+			},
+			{ :fieldTypes:has(key: root) }: {
+				if({ :unassignedFields:has(key: root) }, {
+					:addError(line: :currentLine, msg: 'Field \'' . root . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
+				});
+				rootType: :fieldTypes:get(key: root, default: SemTypes:EMPTY):toKey();
+			},
+			{ :allEnumNames:has(key: root) }: {
+				rootType: root;
+			},
+			{ :registeredClasses:has(key: root) }: {
+				rootType: root;
+				if({ segs:length() >= 2 }, {
+					local ClassInfo is chainCls: :findClass(name: root);
+					local Boolean is chainOk: chainCls:name != '';
+					local Int is chainIdx: 1;
+					while({ chainOk && chainIdx < segs:length() }, {
+						local String is nextType: '';
+						while([Int is mi: 0], { mi < chainCls:members:length() }, {
+							local Member is m: chainCls:members:get(index: mi);
+							if({ m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, {
+								nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
+							});
+							mi++;
+						});
+						if({ nextType != '' }, {
+							chainCls: :findClass(name: nextType);
+							if({ chainCls:name == '' }, {
+								chainOk: false;
+							});
+							chainIdx: chainIdx + 1;
+						}, {
+							chainOk: false;
+						});
+					});
+					if({ chainOk && chainIdx == segs:length() }, {
+						rootType: chainCls:qualifiedName();
+						chainResolved: true;
+					});
+				});
+				local Member is heldM: Member:init(kind: MemberKind:FIELD);
+				if({ segs:length() >= 2 && !chainResolved }, {
+					heldM: :findHeldMember(className: root, memberName: segs:get(index: 1));
+				});
+				match(when: [
+					{ heldM:name != '' && heldM:kind == MemberKind:FIELD }: {
+						local String is heldOwner: :findHeldOwnerClass(className: root, memberName: heldM:name);
+						if({ :inHeldInit && heldOwner == :currentClassName }, {
+							:addError(line: :currentLine, msg: 'Held initializer of \'' . :currentClassName . '\' cannot reference held member \'' . root . ':' . heldM:name . '\' of the same class; the once-guards would deadlock.');
+						});
+						:checkMemberVisibility(ownerClass: heldOwner, member: heldM, memberName: heldM:name);
+						heldAdmitted: true;
+					},
+					{ segs:length() >= 2 && :findHeldMethod(className: root, methodName: segs:get(index: 1)):name != '' }: {
+						:addError(line: :currentLine, msg: 'Held function \'' . root . ':' . segs:get(index: 1) . '\' must be called; bare references to held functions are not supported (the call form is ' . root . ':' . segs:get(index: 1) . '(...)).');
+						rootType: '';
+					},
+					{ segs:length() >= 2 }: {
+						local Member is resolver: :findHeldMethod(className: root, methodName: ContractMethod:RESOLVE_HELD:value());
+						local Boolean is declaredInstance: :lookupFieldType(className: root, fieldName: segs:get(index: 1)) != '' || :lookupAnyMember(className: root, methodName: segs:get(index: 1)):kind == MemberKind:METHOD;
+						if({ !chainResolved && !:allEnumNames:has(key: root) && !:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'Str' && root != 'String' && root != 'SpecError' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
+							:addError(line: :currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
+							rootType: '';
+						}, {
+							if({ resolver:name != '' && !declaredInstance }, {
+								if({ :inHeldFunction && :currentMethodName == ContractMethod:RESOLVE_HELD:value() && root == :currentClassName }, {
+									:addError(line: :currentLine, msg: 'The resolution hook cannot resolve through its own class prefix (\'' . root . ':' . segs:get(index: 1) . '\'); declare the member, or return it from the resolver directly.');
+								});
+								:checkMemberVisibility(ownerClass: :findHeldMethodOwner(className: root, methodName: ContractMethod:RESOLVE_HELD:value()), member: resolver, memberName: ContractMethod:RESOLVE_HELD:value());
+								res: :formatTypeString(t: resolver:memberType);
+								heldAdmitted: true;
+							});
+						});
+					},
+					else: {}
+				]);
+			},
+			else: {}
+		]);
 		local String is currType: rootType;
 		local Int is pIdx: 1;
 		while({ !chainResolved && currType != '' && pIdx < segs:length() }, {
@@ -5126,86 +5126,83 @@ Class is TypeChecker{
 		});
 		:checkThreadingCallRules(targetType: targetType, recvName: recvName, call: call, method: method);
 
-		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith' || method == 'run') }, {
-			res: :inferParallelCall(call: call, method: method);
-		}, {
-			if({ fnVarSem:isFunction() }, {
+		match(when: [
+			{ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith' || method == 'run') }: {
+				res: :inferParallelCall(call: call, method: method);
+			},
+			{ fnVarSem:isFunction() }: {
 				res: if({ fnVarSem:hasFunctionReturn() }, { fnVarSem:functionReturn():toKey() }, { 'Any' });
-			}, {
-				if({ :allEnumVariants:has(key: method) && (:allEnumNames:has(key: targetType) || targetType == :currentClassName) }, {
-					res: :allEnumVariants:getString(key: method, default: Primitive:ANY:value());
-				}, {
-					if({ method == 'typeName' && :registeredClasses:has(key: targetType) }, {
-						res: Primitive:STRING:value();
-					}, {
-						if({ method == 'init' && :registeredClasses:has(key: targetType) && !:allEnumNames:has(key: targetType) }, {
-							local Member is selInit: :selectOverload(className: targetType, methodName: 'init', expr: expr);
-							local String is initBaseName: :parseSemType(s: targetType):rootName();
-							if({ !:classHasAccess(className: :currentClassName, targetName: initBaseName) }, {
-								:addError(line: :currentLine, msg: :errText:errTypeNotImported(targetType: targetType, currentClass: :currentClassName));
-							});
-							res: :inferGenericInitType(baseClassName: initBaseName, targetType: targetType, initMem: selInit, call: call, expected: expected);
-						}, {
-							local SemType is tCallSem: :parseSemType(s: targetType);
-							local String is tCallBase: tCallSem:baseName();
-							if({ :registeredClasses:has(key: tCallBase) && !:allEnumNames:has(key: targetType) }, {
-								res: :inferRegisteredClassCall(expr: expr, call: call, targetType: targetType, method: method, targetIsSelf: targetIsSelf);
-							}, {
-								if({ tCallSem:isArray() && method == 'map' }, {
-									local String is mappedElem: Primitive:ANY:value();
-									if({ call:args:length() > 0 }, {
-										local NamedArg is a0: call:args:get(index: 0);
-										match(on: a0:value, when: [
-											Expression:AnonFn: local Function(Type is fnRetType, [Parameter] is ps, [Statement] is bd){
-												local String is fnRet: fnRetType:name;
-												if({ fnRet != '' && !:isVoid(t: fnRet) && fnRet != Primitive:ANY:value() }, {
-													mappedElem: :formatTypeString(t: fnRetType);
-												});
-											}
-										], default: {});
-									});
-									res: if({ mappedElem != Primitive:ANY:value() }, { ('Array:' . mappedElem):intern() }, { 'Array' });
-								}, {
-									if({ tCallSem:isArray() && method == 'fold' }, {
-										res: if({ call:args:length() > 0 }, { call:args:get(index: 0):value:getSemType():toKey() }, { 'Any' });
-									}, {
-										if({ :allEnumNames:has(key: targetType) }, {
-											match(on: method, when: [
-												'name': { res: Primitive:STRING:value(); },
-												'ordinal': { res: Primitive:INT:value(); },
-												'values': { res: ('Array:' . targetType):intern(); },
-												'of': { res: targetType; },
-												'value': { res: if({ :allStringBackedEnums:has(key: targetType) }, { 'String' }, { Primitive:INT:value() }); },
-												else: { res: 'Any'; }
-											]);
-										}, {
-											if({ targetType == Primitive:INT:value() && method == 'toBase' }, {
-												res: Primitive:STRING:value();
-											}, {
-												if({ targetType == Primitive:BYTE:value() }, {
-													local String is bRet: :lookupByteMethodReturnType(methodName: method);
-													if({ bRet != '' }, {
-														res: bRet;
-													}, {
-														:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
-														res: 'Any';
-													});
-												}, {
-													if({ :registeredClasses:has(key: tCallBase) && :findClass(name: tCallBase):name != '' }, {
-														:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
-													});
-													res: 'Any';
-												});
-											});
-										});
-									});
-								});
-							});
-						});
-					});
+			},
+			{ :allEnumVariants:has(key: method) && (:allEnumNames:has(key: targetType) || targetType == :currentClassName) }: {
+				res: :allEnumVariants:getString(key: method, default: Primitive:ANY:value());
+			},
+			{ method == 'typeName' && :registeredClasses:has(key: targetType) }: {
+				res: Primitive:STRING:value();
+			},
+			{ method == 'init' && :registeredClasses:has(key: targetType) && !:allEnumNames:has(key: targetType) }: {
+				local Member is selInit: :selectOverload(className: targetType, methodName: 'init', expr: expr);
+				local String is initBaseName: :parseSemType(s: targetType):rootName();
+				if({ !:classHasAccess(className: :currentClassName, targetName: initBaseName) }, {
+					:addError(line: :currentLine, msg: :errText:errTypeNotImported(targetType: targetType, currentClass: :currentClassName));
 				});
-			});
-		});
+				res: :inferGenericInitType(baseClassName: initBaseName, targetType: targetType, initMem: selInit, call: call, expected: expected);
+			},
+			else: {
+				local SemType is tCallSem: :parseSemType(s: targetType);
+				local String is tCallBase: tCallSem:baseName();
+				match(when: [
+					{ :registeredClasses:has(key: tCallBase) && !:allEnumNames:has(key: targetType) }: {
+						res: :inferRegisteredClassCall(expr: expr, call: call, targetType: targetType, method: method, targetIsSelf: targetIsSelf);
+					},
+					{ tCallSem:isArray() && method == 'map' }: {
+						local String is mappedElem: Primitive:ANY:value();
+						if({ call:args:length() > 0 }, {
+							local NamedArg is a0: call:args:get(index: 0);
+							match(on: a0:value, when: [
+								Expression:AnonFn: local Function(Type is fnRetType, [Parameter] is ps, [Statement] is bd){
+									local String is fnRet: fnRetType:name;
+									if({ fnRet != '' && !:isVoid(t: fnRet) && fnRet != Primitive:ANY:value() }, {
+										mappedElem: :formatTypeString(t: fnRetType);
+									});
+								}
+							], default: {});
+						});
+						res: if({ mappedElem != Primitive:ANY:value() }, { ('Array:' . mappedElem):intern() }, { 'Array' });
+					},
+					{ tCallSem:isArray() && method == 'fold' }: {
+						res: if({ call:args:length() > 0 }, { call:args:get(index: 0):value:getSemType():toKey() }, { 'Any' });
+					},
+					{ :allEnumNames:has(key: targetType) }: {
+						match(on: method, when: [
+							'name': { res: Primitive:STRING:value(); },
+							'ordinal': { res: Primitive:INT:value(); },
+							'values': { res: ('Array:' . targetType):intern(); },
+							'of': { res: targetType; },
+							'value': { res: if({ :allStringBackedEnums:has(key: targetType) }, { 'String' }, { Primitive:INT:value() }); },
+							else: { res: 'Any'; }
+						]);
+					},
+					{ targetType == Primitive:INT:value() && method == 'toBase' }: {
+						res: Primitive:STRING:value();
+					},
+					{ targetType == Primitive:BYTE:value() }: {
+						local String is bRet: :lookupByteMethodReturnType(methodName: method);
+						if({ bRet != '' }, {
+							res: bRet;
+						}, {
+							:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
+							res: 'Any';
+						});
+					},
+					else: {
+						if({ :registeredClasses:has(key: tCallBase) && :findClass(name: tCallBase):name != '' }, {
+							:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
+						});
+						res: 'Any';
+					}
+				]);
+			}
+		]);
 
 		if({ isValueBranch }, {
 			res: :unifyValueBranchTypes(expr: expr);
@@ -5992,110 +5989,112 @@ Class is TypeChecker{
 		local Boolean is res: false;
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is cd){
-				if({ cd:name == 'raiseError' || cd:name == 'exit' }, {
-					res: true;
-				}, {
-				if({ cd:name == 'if' && cd:args:length() >= 3 }, {
-					local Expression is thenArg: cd:args:get(index: 1):value;
-					local Expression is elseArg: cd:args:get(index: 2):value;
-					if({ :anonAlwaysTerminates(expr: thenArg) && :anonAlwaysTerminates(expr: elseArg) }, {
+				match(on: cd:name, when: [
+					['raiseError', 'exit']: {
 						res: true;
-					});
-				}, {
-				if({ cd:name == 'try' }, {
-					local Boolean is hasBody: false;
-					local Boolean is bodyTerm: false;
-					local Boolean is hasGuard: false;
-					local Boolean is guardTerm: false;
-					local Int is tai: 0;
-					while({ tai < cd:args:length() }, {
-						local NamedArg is a: cd:args:get(index: tai);
-						if({ a:name == 'body' }, {
-							hasBody: true;
-							bodyTerm: :anonAlwaysTerminates(expr: a:value);
-						});
-						if({ a:name == 'guard' || a:name == 'catch' }, {
-							hasGuard: true;
-							guardTerm: :anonAlwaysTerminates(expr: a:value);
-						});
-						tai++;
-					});
-					if({ hasBody && bodyTerm && hasGuard && guardTerm }, {
-						res: true;
-					});
-				}, {
-				if({ cd:name == 'match' }, {
-					local Boolean is hasDefault: false;
-					local Boolean is allArmsTerm: true;
-					local Int is armCount: 0;
-					local Int is mai: 0;
-					while({ mai < cd:args:length() }, {
-						local NamedArg is a: cd:args:get(index: mai);
-						if({ a:name == 'default' || a:name == 'else' }, {
-							hasDefault: true;
-							if({ !:anonAlwaysTerminates(expr: a:value) }, {
-								allArmsTerm: false;
+					},
+					'if': {
+						if({ cd:args:length() >= 3 }, {
+							local Expression is thenArg: cd:args:get(index: 1):value;
+							local Expression is elseArg: cd:args:get(index: 2):value;
+							if({ :anonAlwaysTerminates(expr: thenArg) && :anonAlwaysTerminates(expr: elseArg) }, {
+								res: true;
 							});
 						});
-						if({ a:name == 'when' }, {
-							match(on: a:value, when: [
-								Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
-									local Int is ki: 0;
-									while({ ki < keys:length() && ki < values:length() }, {
-										armCount: armCount + 1;
-										match(on: keys:get(index: ki), when: [
-											Expression:Ident: local Function(String is kn){
-												if({ kn == 'else' || kn == 'default' }, {
-													hasDefault: true;
-												});
-											},
-											else: {}
-										]);
-										if({ !:anonAlwaysTerminates(expr: values:get(index: ki)) }, {
-											allArmsTerm: false;
-										});
-										ki: ki + 1;
-									});
-								},
-								Expression:ArrayLit: local Function([Expression] is items){
-									while([Int is ii: 0], { ii < items:length() }, {
-										match(on: items:get(index: ii), when: [
-											Expression:MapLit: local Function([Expression] is mKeys, [Expression] is mVals){
-												while([Int is mki: 0], { mki < mKeys:length() && mki < mVals:length() }, {
-													armCount: armCount + 1;
-													match(on: mKeys:get(index: mki), when: [
-														Expression:Ident: local Function(String is kn){
-															if({ kn == 'else' || kn == 'default' }, {
-																hasDefault: true;
-															});
-														},
-														else: {}
-													]);
-													if({ !:anonAlwaysTerminates(expr: mVals:get(index: mki)) }, {
-														allArmsTerm: false;
-													});
-													mki++;
-												});
-											},
-											else: {
-												allArmsTerm: false;
-											}
-										]);
-										ii++;
-									});
-								},
-								else: {}
-							]);
+					},
+					'try': {
+						local Boolean is hasBody: false;
+						local Boolean is bodyTerm: false;
+						local Boolean is hasGuard: false;
+						local Boolean is guardTerm: false;
+						local Int is tai: 0;
+						while({ tai < cd:args:length() }, {
+							local NamedArg is a: cd:args:get(index: tai);
+							if({ a:name == 'body' }, {
+								hasBody: true;
+								bodyTerm: :anonAlwaysTerminates(expr: a:value);
+							});
+							if({ a:name == 'guard' || a:name == 'catch' }, {
+								hasGuard: true;
+								guardTerm: :anonAlwaysTerminates(expr: a:value);
+							});
+							tai++;
 						});
-						mai++;
-					});
-					if({ hasDefault && armCount > 0 && allArmsTerm }, {
-						res: true;
-					});
-				});
-				});
-				});
-				});
+						if({ hasBody && bodyTerm && hasGuard && guardTerm }, {
+							res: true;
+						});
+					},
+					'match': {
+						local Boolean is hasDefault: false;
+						local Boolean is allArmsTerm: true;
+						local Int is armCount: 0;
+						local Int is mai: 0;
+						while({ mai < cd:args:length() }, {
+							local NamedArg is a: cd:args:get(index: mai);
+							if({ a:name == 'default' || a:name == 'else' }, {
+								hasDefault: true;
+								if({ !:anonAlwaysTerminates(expr: a:value) }, {
+									allArmsTerm: false;
+								});
+							});
+							if({ a:name == 'when' }, {
+								match(on: a:value, when: [
+									Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
+										local Int is ki: 0;
+										while({ ki < keys:length() && ki < values:length() }, {
+											armCount: armCount + 1;
+											match(on: keys:get(index: ki), when: [
+												Expression:Ident: local Function(String is kn){
+													if({ kn == 'else' || kn == 'default' }, {
+														hasDefault: true;
+													});
+												},
+												else: {}
+											]);
+											if({ !:anonAlwaysTerminates(expr: values:get(index: ki)) }, {
+												allArmsTerm: false;
+											});
+											ki: ki + 1;
+										});
+									},
+									Expression:ArrayLit: local Function([Expression] is items){
+										while([Int is ii: 0], { ii < items:length() }, {
+											match(on: items:get(index: ii), when: [
+												Expression:MapLit: local Function([Expression] is mKeys, [Expression] is mVals){
+													while([Int is mki: 0], { mki < mKeys:length() && mki < mVals:length() }, {
+														armCount: armCount + 1;
+														match(on: mKeys:get(index: mki), when: [
+															Expression:Ident: local Function(String is kn){
+																if({ kn == 'else' || kn == 'default' }, {
+																	hasDefault: true;
+																});
+															},
+															else: {}
+														]);
+														if({ !:anonAlwaysTerminates(expr: mVals:get(index: mki)) }, {
+															allArmsTerm: false;
+														});
+														mki++;
+													});
+												},
+												else: {
+													allArmsTerm: false;
+												}
+											]);
+											ii++;
+										});
+									},
+									else: {}
+								]);
+							});
+							mai++;
+						});
+						if({ hasDefault && armCount > 0 && allArmsTerm }, {
+							res: true;
+						});
+					},
+					else: {}
+				]);
 			},
 			else: {}
 		]);

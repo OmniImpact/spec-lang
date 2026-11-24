@@ -109,33 +109,33 @@ Class is Lexer{
 			:skipWhitespaceAndComments();
 			if({ :pos < :length }, {
 				local String is ch: :source:charAt(index: :pos, default: '');
-				if({ ch == '"' || ch == '\'' }, {
-					local String is triple: :source:substring(start: :pos, end: :pos + 3);
-					if({ triple == "'''" }, {
-						tokens:push(item: :readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
-					}, {
-						tokens:push(item: :readString(quote: ch));
-					});
-				}, {
-					if({ ch == '`' }, {
+				match(when: [
+					{ ch == '"' || ch == '\'' }: {
+						local String is triple: :source:substring(start: :pos, end: :pos + 3);
+						if({ triple == "'''" }, {
+							tokens:push(item: :readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
+						}, {
+							tokens:push(item: :readString(quote: ch));
+						});
+					},
+					{ ch == '`' }: {
 						local String is triple: :source:substring(start: :pos, end: :pos + 3);
 						if({ triple == "```" }, {
 							tokens:push(item: :readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
 						}, {
 							tokens:push(item: :readSymbol());
 						});
-					}, {
-						if({ ch:isDigit() }, {
-							tokens:push(item: :readNumber());
-						}, {
-							if({ :isIdentifierStart(ch: ch) }, {
-								tokens:push(item: :readIdentifierOrKeyword());
-							}, {
-								tokens:push(item: :readSymbol());
-							});
-						});
-					});
-				});
+					},
+					{ ch:isDigit() }: {
+						tokens:push(item: :readNumber());
+					},
+					{ :isIdentifierStart(ch: ch) }: {
+						tokens:push(item: :readIdentifierOrKeyword());
+					},
+					else: {
+						tokens:push(item: :readSymbol());
+					}
+				]);
 			});
 		});
 		tokens:push(item: Token:init(kind: TokenKind:EOF, value: '', line: :line, col: :col));

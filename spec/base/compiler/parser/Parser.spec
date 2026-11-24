@@ -1180,27 +1180,16 @@ Class is Parser{
 	##
 	## @return: The expression node.
 	Function of Expression is parseUnary(){
-		local String is op: '';
-		if({ :checkSymbol(value: '++') }, {
-			op: '++';
-		}, {
-			if({ :checkSymbol(value: '--') }, {
-				op: '--';
-			}, {
-				if({ :checkSymbol(value: '~') }, {
-					op: '~';
-				}, {
-					if({ :checkSymbol(value: '-') }, {
-						op: '-';
-					}, {
-						if({ :checkSymbol(value: '!') }, {
-							op: '!';
-						}, {
-							return :parseAs();
-						});
-					});
-				});
-			});
+		local String is op: match(when: [
+			{ :checkSymbol(value: '++') }: { '++' },
+			{ :checkSymbol(value: '--') }: { '--' },
+			{ :checkSymbol(value: '~') }: { '~' },
+			{ :checkSymbol(value: '-') }: { '-' },
+			{ :checkSymbol(value: '!') }: { '!' },
+			else: { '' }
+		]);
+		if({ op == '' }, {
+			return :parseAs();
 		});
 		:advance();
 		local Expression is expr: :parseUnary();
@@ -1312,82 +1301,81 @@ Class is Parser{
 	Function of Expression is parsePostfix(){
 		local Expression is currentExpr: :parsePrimary();
 		while({ :atPostfix() }, {
-			if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
-				:advance();
-				local [NamedArg] is args: :parseArgs();
-				:matchPunct(p: Punctuation:GROUP_CLOSE);
+			match(when: [
+				{ :checkPunct(p: Punctuation:GROUP_OPEN) }: {
+					:advance();
+					local [NamedArg] is args: :parseArgs();
+					:matchPunct(p: Punctuation:GROUP_CLOSE);
 
-				local CallData is cd: match(on: currentExpr, when: [
-					Expression:Ident: local Function of CallData(String is name){
-						if({ name == 'Loops' }, {
-							return CallData:init(target: currentExpr, name: 'loop', args: args);
-						});
-						local CallData is bareCd: CallData:init(target: Expression:Ident(name: :names:selfIdent()), name: name, args: args);
-						bareCd:isBareCall: true;
-						return bareCd;
-					},
-					else: {
-						CallData:init(target: currentExpr, name: '', args: args)
-					}
-				]);
-				currentExpr: Expression:Call(call: cd);
-			}, {
-				if({ :checkPunct(p: Punctuation:BRACKET_OPEN) }, {
+					local CallData is cd: match(on: currentExpr, when: [
+						Expression:Ident: local Function of CallData(String is name){
+							if({ name == 'Loops' }, {
+								return CallData:init(target: currentExpr, name: 'loop', args: args);
+							});
+							local CallData is bareCd: CallData:init(target: Expression:Ident(name: :names:selfIdent()), name: name, args: args);
+							bareCd:isBareCall: true;
+							return bareCd;
+						},
+						else: {
+							CallData:init(target: currentExpr, name: '', args: args)
+						}
+					]);
+					currentExpr: Expression:Call(call: cd);
+				},
+				{ :checkPunct(p: Punctuation:BRACKET_OPEN) }: {
 					:advance();
 					local Expression is idxExpr: :parseExpression();
 					:matchPunct(p: Punctuation:BRACKET_CLOSE);
 
 					currentExpr: Expression:Index(target: currentExpr, index: idxExpr);
-				}, {
-					if({ :checkSymbol(value: '++') }, {
+				},
+				{ :checkSymbol(value: '++') }: {
+					:advance();
+					currentExpr: Expression:Unary(op: 'post++', operand: currentExpr);
+				},
+				{ :checkSymbol(value: '--') }: {
+					:advance();
+					currentExpr: Expression:Unary(op: 'post--', operand: currentExpr);
+				},
+				{ :checkPunct(p: Punctuation:ACCESSOR) }: {
+					:advance();
+					local Token is mTok: :advance();
+					local String is method: mTok:getValue();
+
+					if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
 						:advance();
-						currentExpr: Expression:Unary(op: 'post++', operand: currentExpr);
+						local [NamedArg] is args: :parseArgs();
+						:matchPunct(p: Punctuation:GROUP_CLOSE);
+
+						currentExpr: Expression:Call(call: CallData:init(target: currentExpr, name: method, args: args));
 					}, {
-						if({ :checkSymbol(value: '--') }, {
-							:advance();
-							currentExpr: Expression:Unary(op: 'post--', operand: currentExpr);
+						local Boolean is isPathOrIdent: match(on: currentExpr, when: [
+							Expression:Path: local Function of Boolean([String] is segments){ return true; },
+							Expression:Ident: local Function of Boolean(String is name){ return true; },
+							else: { false }
+						]);
+						if({ !isPathOrIdent }, {
+							currentExpr: Expression:FieldAccess(target: currentExpr, fieldName: method);
 						}, {
-							if({ :checkPunct(p: Punctuation:ACCESSOR) }, {
-								:advance();
-								local Token is mTok: :advance();
-								local String is method: mTok:getValue();
-
-								if({ :checkPunct(p: Punctuation:GROUP_OPEN) }, {
-									:advance();
-									local [NamedArg] is args: :parseArgs();
-									:matchPunct(p: Punctuation:GROUP_CLOSE);
-
-									currentExpr: Expression:Call(call: CallData:init(target: currentExpr, name: method, args: args));
-								}, {
-									local Boolean is isPathOrIdent: match(on: currentExpr, when: [
-										Expression:Path: local Function of Boolean([String] is segments){ return true; },
-										Expression:Ident: local Function of Boolean(String is name){ return true; },
-										else: { false }
-									]);
-									if({ !isPathOrIdent }, {
-										currentExpr: Expression:FieldAccess(target: currentExpr, fieldName: method);
-									}, {
-										local [String] is segs: [];
-										match(on: currentExpr, when: [
-											Expression:Path: local Function([String] is segments){
-												each(list: segments, action: local Function(String is s){
-													segs:push(item: s);
-												});
-											},
-											Expression:Ident: local Function(String is name){
-												segs:push(item: name);
-											},
-											else: {}
-										]);
-										segs:push(item: method);
-										currentExpr: Expression:Path(segments: segs);
+							local [String] is segs: [];
+							match(on: currentExpr, when: [
+								Expression:Path: local Function([String] is segments){
+									each(list: segments, action: local Function(String is s){
+										segs:push(item: s);
 									});
-								});
-							});
+								},
+								Expression:Ident: local Function(String is name){
+									segs:push(item: name);
+								},
+								else: {}
+							]);
+							segs:push(item: method);
+							currentExpr: Expression:Path(segments: segs);
 						});
 					});
-				});
-			});
+				},
+				else: {}
+			]);
 		});
 		return currentExpr;
 	}

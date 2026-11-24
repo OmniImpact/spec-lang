@@ -43,30 +43,36 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ :isFloorTarget(call: call, domain: 'Reflection') }, {
-			if({ call:name == 'init' }, { return 'null'; });
-			if({ call:name == 'class' }, {
-				local String is dst: b:nextTmp();
-				local Int is sid: b:mod:internStringLiteral(value: b:currentClass);
-				b:emit(inst: IrInst:ConstString(dst: dst, strId: sid));
-				return dst;
-			});
-			if({ call:name == 'method' }, {
-				local String is dst: b:nextTmp();
-				local Int is sid: b:mod:internStringLiteral(value: b:currentMethod);
-				b:emit(inst: IrInst:ConstString(dst: dst, strId: sid));
-				return dst;
-			});
-			if({ call:name == 'file' }, {
-				local String is dst: b:nextTmp();
-				local Int is sid: b:mod:internStringLiteral(value: b:curFn:sourceFile);
-				b:emit(inst: IrInst:ConstString(dst: dst, strId: sid));
-				return dst;
-			});
-			if({ call:name == 'line' }, {
-				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: dst, value: b:currentLine));
-				return dst;
-			});
+			return match(on: call:name, when: [
+				'init': { 'null' },
+				'class': {
+					local String is dst: b:nextTmp();
+					local Int is sid: b:mod:internStringLiteral(value: b:currentClass);
+					b:emit(inst: IrInst:ConstString(dst: dst, strId: sid));
+					dst
+				},
+				'method': {
+					local String is dst: b:nextTmp();
+					local Int is sid: b:mod:internStringLiteral(value: b:currentMethod);
+					b:emit(inst: IrInst:ConstString(dst: dst, strId: sid));
+					dst
+				},
+				'file': {
+					local String is dst: b:nextTmp();
+					local Int is sid: b:mod:internStringLiteral(value: b:curFn:sourceFile);
+					b:emit(inst: IrInst:ConstString(dst: dst, strId: sid));
+					dst
+				},
+				'line': {
+					local String is dst: b:nextTmp();
+					b:emit(inst: IrInst:ConstInt(dst: dst, value: b:currentLine));
+					dst
+				},
+				else: {
+					local String is o: b:lowerExpr(expr: call:target);
+					:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [o])
+				}
+			]);
 		});
 		local String is o: b:lowerExpr(expr: call:target);
 		return :emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [o]);

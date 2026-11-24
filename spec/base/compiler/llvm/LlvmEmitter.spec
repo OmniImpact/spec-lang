@@ -995,24 +995,28 @@ Class is LlvmEmitter{
 			IrInst:Cmp: local Function of String(String is dst, String is op, String is lhs, String is rhs, IrType is ty){
 				local String is t: :llvmType(ty: ty);
 				if({ :isFloatIr(ty: ty) }, {
-					local String is fpred: 'oeq';
-					if({ op == '!=' }, { fpred: 'one'; });
-					if({ op == '<' }, { fpred: 'olt'; });
-					if({ op == '<=' }, { fpred: 'ole'; });
-					if({ op == '>' }, { fpred: 'ogt'; });
-					if({ op == '>=' }, { fpred: 'oge'; });
+					local String is fpred: match(on: op, when: [
+						'!=': { 'one' },
+						'<': { 'olt' },
+						'<=': { 'ole' },
+						'>': { 'ogt' },
+						'>=': { 'oge' },
+						else: { 'oeq' }
+					]);
 					return dst . ' = fcmp ' . fpred . ' ' . t . ' ' . lhs . ', ' . rhs;
 				});
-				local String is ipred: 'eq';
-				if({ op == '!=' }, { ipred: 'ne'; });
-				if({ op == '<' }, { ipred: 'slt'; });
-				if({ op == '<=' }, { ipred: 'sle'; });
-				if({ op == '>' }, { ipred: 'sgt'; });
-				if({ op == '>=' }, { ipred: 'sge'; });
-				if({ op == 'u<' }, { ipred: 'ult'; });
-				if({ op == 'u<=' }, { ipred: 'ule'; });
-				if({ op == 'u>' }, { ipred: 'ugt'; });
-				if({ op == 'u>=' }, { ipred: 'uge'; });
+				local String is ipred: match(on: op, when: [
+					'!=': { 'ne' },
+					'<': { 'slt' },
+					'<=': { 'sle' },
+					'>': { 'sgt' },
+					'>=': { 'sge' },
+					'u<': { 'ult' },
+					'u<=': { 'ule' },
+					'u>': { 'ugt' },
+					'u>=': { 'uge' },
+					else: { 'eq' }
+				]);
 				return dst . ' = icmp ' . ipred . ' ' . t . ' ' . lhs . ', ' . rhs;
 			},
 			IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
@@ -1097,26 +1101,30 @@ Class is LlvmEmitter{
 
 	local Function of String is llvmBinOp(String is op, IrType is ty){
 		if({ :isFloatIr(ty: ty) }, {
-			if({ op == '+' }, { return 'fadd'; });
-			if({ op == '-' }, { return 'fsub'; });
-			if({ op == '*' }, { return 'fmul'; });
-			if({ op == '/' }, { return 'fdiv'; });
-			if({ op == '%' }, { return 'frem'; });
-			return 'fadd';
+			return match(on: op, when: [
+				'+': { 'fadd' },
+				'-': { 'fsub' },
+				'*': { 'fmul' },
+				'/': { 'fdiv' },
+				'%': { 'frem' },
+				else: { 'fadd' }
+			]);
 		});
-		if({ op == '+' }, { return 'add'; });
-		if({ op == '-' }, { return 'sub'; });
-		if({ op == '*' }, { return 'mul'; });
-		if({ op == '/' }, { return 'sdiv'; });
-		if({ op == '%' }, { return 'srem'; });
-		if({ op == 'u/' }, { return 'udiv'; });
-		if({ op == 'u%' }, { return 'urem'; });
-		if({ op == '&' || op == '&&' }, { return 'and'; });
-		if({ op == '|' || op == '||' }, { return 'or'; });
-		if({ op == '^' }, { return 'xor'; });
-		if({ op == '<<' }, { return 'shl'; });
-		if({ op == '>>' }, { return 'ashr'; });
-		if({ op == '>>>' }, { return 'lshr'; });
-		return 'add';
+		return match(on: op, when: [
+			'+': { 'add' },
+			'-': { 'sub' },
+			'*': { 'mul' },
+			'/': { 'sdiv' },
+			'%': { 'srem' },
+			'u/': { 'udiv' },
+			'u%': { 'urem' },
+			['&', '&&']: { 'and' },
+			['|', '||']: { 'or' },
+			'^': { 'xor' },
+			'<<': { 'shl' },
+			'>>': { 'ashr' },
+			'>>>': { 'lshr' },
+			else: { 'add' }
+		]);
 	}
 }
