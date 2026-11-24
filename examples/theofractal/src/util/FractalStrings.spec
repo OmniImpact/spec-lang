@@ -8,7 +8,8 @@ Class is FractalStrings{
 	held String is ACTION_HELP: ' Help ';
 	held String is ACTION_CLOSE: ' Close ';
 	held String is LABEL_THEME: 'Theme:';
-	held String is LABEL_ANTIALIASING: 'Antialiasing';
+	held String is LABEL_ANTIALIASING: 'AA';
+	held String is LABEL_ROTATE: 'Rotate';
 
 	held String is OPT_SELECT_FRACTAL: 'Select Fractal';
 	held String is OPT_SIERPINSKI: 'Sierpinski';
@@ -41,6 +42,7 @@ Class is FractalStrings{
 	held String is HELP_KEY_PAN: 'W / A / S / D   Pan Up / Left / Down / Right';
 	held String is HELP_KEY_ZOOM: 'E / Q           Zoom In / Zoom Out';
 	held String is HELP_KEY_RESET: 'R               Reset Camera View';
+	held String is HELP_KEY_ROTATE: 'P               Toggle 6s Palette Rotation';
 	held String is HELP_KEY_HELP: 'H or ?          Open This Help Dialog';
 	held String is HELP_KEY_NAV: 'Tab / Esc       Cycle Focus / Close Dialog or Menu';
 

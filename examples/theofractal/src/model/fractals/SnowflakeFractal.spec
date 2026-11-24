@@ -82,12 +82,14 @@ Class of Fractal is SnowflakeFractal{
 			folds: 7 + toInt(value: ceil(value: log(value: viewport:zoom) / 1.09861228867));
 		});
 		if({ folds > 28 }, { folds: 28; });
+		lastIterations: folds;
 
 		local Int is total: w * h;
 		local Vector is outBuf: Vector(length: total, initial: -1.0);
 		local Int is nThreads: Process():threadCount();
 		if({ nThreads > h }, { nThreads: h; });
 		if({ nThreads < 1 }, { nThreads: 1; });
+		lastThreadCount: if({ nThreads == 1 || total < 1024 }, { 1 }, { nThreads });
 
 		if({ nThreads == 1 || total < 1024 }, {
 			local Int is py: 0;

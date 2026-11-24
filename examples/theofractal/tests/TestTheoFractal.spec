@@ -224,4 +224,41 @@ Class of SpecUnitTest is TestTheoFractal{
 		});
 		Assert:isTrue(fernLit > 10);
 	}
+
+	Function is testMetricsAndPaletteRotation(){
+		local ExplorerViewModel is vm: ExplorerViewModel();
+		local ExplorerFrame is frame: ExplorerFrame(vm: vm);
+		frame:layout(x: 0, y: 0, w: 90, h: 24);
+		Assert:isTrue(vm:metricsTitle() == ' Metrics: idle ');
+
+		vm:selectFractal(name: FractalStrings:OPT_MANDELBROT);
+		local TheoBuffer is buf: TheoBuffer(width: 90, height: 24);
+		local TheoRenderer is renderer: TheoRenderer();
+		frame:paint(buf: buf, renderer: renderer);
+
+		Assert:isTrue(vm:lastIterations >= 100);
+		Assert:isTrue(vm:lastThreadCount >= 1);
+		Assert:isTrue(vm:lastRenderMs >= 0.0);
+		local String is title: vm:metricsTitle();
+		Assert:isTrue(title:contains(needle: 'Iter: '));
+		Assert:isTrue(title:contains(needle: 'Thr: '));
+		Assert:isTrue(title:contains(needle: 'ms | '));
+		Assert:isTrue(title:contains(needle: ' fps'));
+
+		local Switch is rot: frame:rotateSwitches:get(index: 0);
+		Assert:isFalse(rot:checked);
+		Assert:isFalse(vm:paletteRotate);
+		Assert:isFalse(frame:onTick());
+
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'p')));
+		Assert:isTrue(vm:paletteRotate);
+		Assert:isTrue(rot:checked);
+		Assert:isTrue(frame:onTick());
+
+		local Int is c0: color32ForValue(t: 0.25, theme: ColorTheme:RAINBOW, offset: 0.0);
+		local Int is cMid: color32ForValue(t: 0.25, theme: ColorTheme:RAINBOW, offset: 0.5);
+		local Int is cFull: color32ForValue(t: 0.25, theme: ColorTheme:RAINBOW, offset: 1.0);
+		Assert:isTrue(c0 != cMid);
+		Assert:isTrue(c0 == cFull);
+	}
 }

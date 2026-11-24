@@ -27,12 +27,19 @@ Class is ColorPalette{
 		]);
 	}
 
-	## Maps a normalized value [t] in `[0.0, 1.0]` (or `< 0.0` for background) to a packed [Color32] under [theme].
-	Function of Int is color32ForValue(Float is t, ColorTheme is theme){
+	## Maps a normalized value [t] in `[0.0, 1.0]` (or `< 0.0` for background) to a packed [Color32] under [theme] with optional cyclic palette [offset] in `[0.0, 1.0)`.
+	Function of Int is color32ForValue(Float is t, ColorTheme is theme, Float is offset: 0.0){
 		if({ t < 0.0 }, {
 			return Color32:pack(r: 10, g: 12, b: 18);
 		});
-		local Float is u: clamp01(v: t);
+		local Float is rawU: clamp01(v: t);
+		local Float is phase: rawU;
+		local Float is u: rawU;
+		if({ offset != 0.0 }, {
+			phase: rawU + offset;
+			phase: phase - floor(value: phase);
+			u: 1.0 - abs(value: 2.0 * phase - 1.0);
+		});
 		return match(when: [
 			{ theme == ColorTheme:GRAYSCALE }: {
 				local Int is v: toByte(v: 0.12 + 0.88 * u);
@@ -51,7 +58,7 @@ Class is ColorPalette{
 				Color32:pack(r: r, g: g, b: b);
 			},
 			else: {
-				local Float is angle: u * 6.2831853;
+				local Float is angle: phase * 6.2831853;
 				local Int is r: toByte(v: 0.5 + 0.5 * cos(value: angle));
 				local Int is g: toByte(v: 0.5 + 0.5 * cos(value: angle + 2.0943951));
 				local Int is b: toByte(v: 0.5 + 0.5 * cos(value: angle + 4.1887902));
@@ -61,7 +68,7 @@ Class is ColorPalette{
 	}
 
 	## Maps a normalized value [t] in `[0.0, 1.0]` (or `< 0.0` for background) to a [TheoColor] under [theme].
-	Function of TheoColor is colorForValue(Float is t, ColorTheme is theme){
-		return Color32:toTheoColor(color: color32ForValue(t: t, theme: theme));
+	Function of TheoColor is colorForValue(Float is t, ColorTheme is theme, Float is offset: 0.0){
+		return Color32:toTheoColor(color: color32ForValue(t: t, theme: theme, offset: offset));
 	}
 }

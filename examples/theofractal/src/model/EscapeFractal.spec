@@ -140,6 +140,7 @@ Class of Fractal is EscapeFractal{
 		local Float is zoomBoost: if({ viewport:zoom > 1.0 }, { log2(value: viewport:zoom) * 40.0 }, { 0.0 });
 		local Int is maxIter: 100 + toInt(value: zoomBoost);
 		if({ maxIter > 2400 }, { maxIter: 2400; });
+		lastIterations: maxIter;
 
 		# Precompute row x-coordinates using SIMD-accelerated Vector operations
 		local Vector is idxVec: Vector(length: w);
@@ -163,6 +164,7 @@ Class of Fractal is EscapeFractal{
 		local Int is nThreads: Process():threadCount();
 		if({ nThreads > h }, { nThreads: h; });
 		if({ nThreads < 1 }, { nThreads: 1; });
+		lastThreadCount: if({ nThreads == 1 || total < 1024 }, { 1 }, { nThreads });
 
 		if({ nThreads == 1 || total < 1024 }, {
 			local Int is py: 0;

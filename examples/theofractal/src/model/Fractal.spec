@@ -8,6 +8,9 @@ Class is Fractal{
 		['theofractal', 'model', FractalViewport]
 	];
 
+	Int is lastIterations: 0;
+	Int is lastThreadCount: 1;
+
 	## Display name shown in the fractal selector dropdown.
 	Function of String is name(){ '' }
 

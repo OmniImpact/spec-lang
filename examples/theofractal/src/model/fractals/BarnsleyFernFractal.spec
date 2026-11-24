@@ -251,6 +251,7 @@ Class of Fractal is BarnsleyFernFractal{
 		local Float is zoomFactor: if({ scaleX > 10.0 }, { log(value: scaleX) }, { 1.0 });
 		local Int is totalSamples: 35000 + toInt(value: zoomFactor * 4000.0);
 		if({ totalSamples > 90000 }, { totalSamples: 90000; });
+		lastIterations: totalSamples;
 
 		local Int is totalPixels: w * h;
 		local Int is chunks: 4;
@@ -262,6 +263,7 @@ Class of Fractal is BarnsleyFernFractal{
 		local Int is nThreads: Process():threadCount();
 		if({ nThreads > chunks }, { nThreads: chunks; });
 		if({ nThreads < 1 }, { nThreads: 1; });
+		lastThreadCount: nThreads;
 
 		if({ nThreads == 1 }, {
 			local Int is c0: 0;

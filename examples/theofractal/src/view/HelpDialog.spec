@@ -31,6 +31,7 @@ Class is HelpDialog{
 							TextLine(value: FractalStrings:HELP_KEY_PAN),
 							TextLine(value: FractalStrings:HELP_KEY_ZOOM),
 							TextLine(value: FractalStrings:HELP_KEY_RESET),
+							TextLine(value: FractalStrings:HELP_KEY_ROTATE),
 							TextLine(value: FractalStrings:HELP_KEY_HELP),
 							TextLine(value: FractalStrings:HELP_KEY_NAV),
 							TextLine(value: ''),

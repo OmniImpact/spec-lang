@@ -61,6 +61,7 @@ Class of Fractal is SierpinskiFractal{
 		local Float is bw: maxX - minX;
 		local Float is bh: maxY - minY;
 		if({ (bw <= 1.5 && bh <= 1.5) || depth >= 48 }, {
+			if({ depth > lastIterations }, { lastIterations: depth; });
 			local Float is t: clamp01(v: 0.25 + 0.75 * ((ay + 0.5) / 1.5));
 			local Int is ix0: toInt(value: round(value: sax));
 			local Int is iy0: toInt(value: round(value: say));
@@ -87,6 +88,8 @@ Class of Fractal is SierpinskiFractal{
 	}
 
 	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		lastIterations: 0;
+		lastThreadCount: 1;
 		local [Float] is grid: newGrid(w: w, h: h);
 		local Float is spanY: viewport:spanY();
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));

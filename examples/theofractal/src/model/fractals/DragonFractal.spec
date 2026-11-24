@@ -54,6 +54,7 @@ Class of Fractal is DragonFractal{
 		});
 
 		if({ len < 0.75 || depth >= 84 }, {
+			if({ depth > lastIterations }, { lastIterations: depth; });
 			if({ len < 0.75 }, {
 				local Int is mxp: toInt(value: round(value: (sx1 + sx2) * 0.5));
 				local Int is myp: toInt(value: round(value: (sy1 + sy2) * 0.5));
@@ -82,6 +83,8 @@ Class of Fractal is DragonFractal{
 	}
 
 	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		lastIterations: 0;
+		lastThreadCount: 1;
 		local [Float] is grid: newGrid(w: w, h: h);
 		local Float is spanY: viewport:spanY();
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));

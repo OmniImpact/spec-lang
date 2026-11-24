@@ -16,22 +16,29 @@ Class of Frame is ExplorerFrame{
 	FocusTarget is fractalFocus: FocusTarget(initial: true);
 	FocusTarget is themeFocus: FocusTarget();
 	FocusTarget is aaFocus: FocusTarget();
+	FocusTarget is rotateFocus: FocusTarget();
 	FocusTarget is helpFocus: FocusTarget();
 	FocusTarget is helpCloseFocus: FocusTarget(initial: true);
 
 	Array of Dropdown is fractalPickers: Array();
 	Array of Dropdown is themePickers: Array();
 	Array of Switch is aaSwitches: Array();
+	Array of Switch is rotateSwitches: Array();
 	Array of Button is helpButtons: Array();
+	Array of Panel is bottomPanels: Array();
 	Array of Overlay is helpOverlays: Array();
 
 	replace Function is init(ExplorerViewModel is vm: ExplorerViewModel()){
 		:vm: vm;
 		vm:onRenderChanged: {
+			syncRotateSwitch();
 			invalidate();
 		};
 		vm:onHelpChanged: {
 			syncHelpOverlay();
+		};
+		vm:onMetricsChanged: {
+			syncMetricsTitle();
 		};
 		fractalPickers: Array([
 			Dropdown(
@@ -62,6 +69,16 @@ Class of Frame is ExplorerFrame{
 				focusTarget: aaFocus,
 				onChange: local Function(Boolean is enabled){
 					:vm:setAntialiasing(enabled: enabled);
+				}
+			)
+		]);
+		rotateSwitches: Array([
+			Switch(
+				label: FractalStrings:LABEL_ROTATE,
+				checked: vm:paletteRotate,
+				focusTarget: rotateFocus,
+				onChange: local Function(Boolean is enabled){
+					:vm:setPaletteRotate(enabled: enabled);
 				}
 			)
 		]);
@@ -96,11 +113,27 @@ Class of Frame is ExplorerFrame{
 		});
 	}
 
+	local Function is syncRotateSwitch(){
+		if({ rotateSwitches:length() == 0 }, { return; });
+		rotateSwitches:get(index: 0):checked: vm:paletteRotate;
+	}
+
+	local Function is syncMetricsTitle(){
+		if({ bottomPanels:length() == 0 }, { return; });
+		bottomPanels:get(index: 0):topTitle: vm:metricsTitle();
+	}
+
+	replace Function of Boolean is onTick(){
+		return vm:tickPalette();
+	}
+
 	replace Function of Widget is ui(){
-		local Widget is bottomBar: Panel(
+		local Panel is bottomPanel: Panel(
 			border: true,
 			padX: 1,
 			padY: 0,
+			topTitle: vm:metricsTitle(),
+			topTitleAlign: TitleAlign:RIGHT,
 			child: Row(
 				gap: 1,
 				arrowFocus: true,
@@ -115,16 +148,18 @@ Class of Frame is ExplorerFrame{
 					TextLine(value: FractalStrings:LABEL_THEME),
 					themePickers:get(index: 0),
 					aaSwitches:get(index: 0),
+					rotateSwitches:get(index: 0),
 					Spacer(weight: 1.0),
 					helpButtons:get(index: 0)
 				])
 			)
 		);
+		bottomPanels: Array([bottomPanel]);
 		return Col(
 			gap: 0,
 			children: Array([
 				FractalCanvas(vm: vm),
-				bottomBar
+				bottomPanel
 			])
 		);
 	}
