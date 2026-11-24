@@ -94,25 +94,14 @@ Class is SynthEngine{
 	local Function of Vector is makePianoDelayLine(Float is freqHz, Int is rate){
 		local Vector is dl: makePluckDelayLine(freqHz: freqHz, rate: rate);
 		local Int is dLen: dl:length();
-		# Two-pass moving average models a soft felt hammer strike, blended with warm fundamental.
-		local Int is pass: 0;
-		while({ pass < 2 }, {
-			local Float is prev: dl:get(index: dLen - 1);
-			local Int is i: 0;
-			while({ i < dLen }, {
-				local Float is cur: dl:get(index: i);
-				dl:set(index: i, value: 0.5 * (cur + prev));
-				prev: cur;
-				i: i + 1;
-			});
-			pass: pass + 1;
-		});
-		local Int is j: 0;
-		local Float is twoPi: 6.283185307179586;
-		while({ j < dLen }, {
-			local Float is fund: sin(value: twoPi * toFloat(value: j) / toFloat(value: dLen));
-			dl:set(index: j, value: 0.65 * dl:get(index: j) + 0.35 * fund);
-			j: j + 1;
+		# Single gentle moving average softens the initial strike without killing upper harmonics.
+		local Float is prev: dl:get(index: dLen - 1);
+		local Int is i: 0;
+		while({ i < dLen }, {
+			local Float is cur: dl:get(index: i);
+			dl:set(index: i, value: 0.55 * cur + 0.45 * prev);
+			prev: cur;
+			i: i + 1;
 		});
 		return dl;
 	}
@@ -130,11 +119,11 @@ Class is SynthEngine{
 			local Int is dLen: dl:length();
 			local Int is pos: 0;
 			local Float is prev: dl:get(index: dLen - 1);
-			local Float is damp: if({ isPiano }, { 0.9985 }, { 0.996 });
+			local Float is damp: if({ isPiano }, { 0.9993 }, { 0.996 });
 			local Int is ki: 0;
 			while({ ki < totalSamples }, {
 				local Float is cur: dl:get(index: pos);
-				local Float is nextVal: if({ isPiano }, { (0.65 * cur + 0.35 * prev) * damp }, { 0.5 * (cur + prev) * damp });
+				local Float is nextVal: 0.5 * (cur + prev) * damp;
 				dl:set(index: pos, value: nextVal);
 				prev: cur;
 				pos: pos + 1;
@@ -191,7 +180,7 @@ Class is SynthEngine{
 		}, {
 			if({ wid == 3 }, { makePluckDelayLine(freqHz: freq, rate: sampleRate) }, { Vector(length: 0) })
 		});
-		local Vector is newDl2: if({ wid == 4 }, { makePianoDelayLine(freqHz: freq * 1.0015, rate: sampleRate) }, { Vector(length: 0) });
+		local Vector is newDl2: if({ wid == 4 }, { makePianoDelayLine(freqHz: freq * 1.0022, rate: sampleRate) }, { Vector(length: 0) });
 		local Float is initPrev: if({ isWg && newDl:length() > 0 }, { newDl:get(index: newDl:length() - 1) }, { 0.0 });
 		local Float is initPrev2: if({ wid == 4 && newDl2:length() > 0 }, { newDl2:get(index: newDl2:length() - 1) }, { 0.0 });
 		local Float is initEnv: if({ isWg }, { 1.0 }, { 0.0 });
@@ -336,7 +325,7 @@ Class is SynthEngine{
 							local Int is pos: ksPos:get(index: vi);
 							local Float is cur: dl:get(index: pos);
 							local Float is prev: ksPrev:get(index: vi);
-							local Float is next1: if({ wid == 4 }, { (0.65 * cur + 0.35 * prev) * 0.9985 }, { 0.5 * (cur + prev) * 0.996 });
+							local Float is next1: if({ wid == 4 }, { 0.5 * (cur + prev) * 0.9993 }, { 0.5 * (cur + prev) * 0.996 });
 							dl:set(index: pos, value: next1);
 							ksPrev:set(index: vi, item: cur);
 							pos: pos + 1;
@@ -350,7 +339,7 @@ Class is SynthEngine{
 									local Int is pos2: ksPos2:get(index: vi);
 									local Float is cur2: dl2:get(index: pos2);
 									local Float is prev2: ksPrev2:get(index: vi);
-									dl2:set(index: pos2, value: (0.65 * cur2 + 0.35 * prev2) * 0.9985);
+									dl2:set(index: pos2, value: 0.5 * (cur2 + prev2) * 0.9993);
 									ksPrev2:set(index: vi, item: cur2);
 									pos2: pos2 + 1;
 									if({ pos2 >= dLen2 }, { pos2: 0; });
