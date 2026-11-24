@@ -30,44 +30,36 @@ Class of Frame is GameFrame{
 
 	local Function is syncResultOverlay(){
 		if({ vm:isResultShown() }, {
+			local Widget is nextBtn: Button(
+				label: vm:resultButtonLabel(),
+				focusTarget: dialogActionFocus,
+				onClick: { vm:advanceFromResult(); }
+			);
+			local Widget is homeBtn: Button(
+				label: HomeStrings:ACTION_HOME,
+				focusTarget: dialogHomeFocus,
+				onClick: { vm:goHome(); }
+			);
+			local Widget is btnRow: Row(
+				gap: 2,
+				arrowFocus: true,
+				children: Array([Spacer(weight: 1.0), nextBtn, homeBtn, Spacer(weight: 1.0)])
+			);
+			local Widget is dialogPanel: Panel(
+				border: true,
+				padX: 2,
+				padY: 1,
+				topTitle: vm:resultTitle(),
+				topTitleAlign: 'center',
+				child: Col(
+					gap: 1,
+					children: Array([TextLine(value: vm:resultMessage()), btnRow])
+				)
+			);
 			local Overlay is ov: Overlay(
 				closeOnEsc: false,
 				closeOnBackdrop: false,
-				content: Center(
-					child: Surface(
-						child: Panel(
-							border: true,
-							padX: 2,
-							padY: 1,
-							topTitle: vm:resultTitle(),
-							topTitleAlign: 'center',
-							child: Col(
-								gap: 1,
-								children: Array([
-									TextLine(value: vm:resultMessage()),
-									Row(
-										gap: 2,
-										arrowFocus: true,
-										children: Array([
-											Spacer(weight: 1.0),
-											Button(
-												label: vm:resultButtonLabel(),
-												focusTarget: dialogActionFocus,
-												onClick: { vm:advanceFromResult(); }
-											),
-											Button(
-												label: HomeStrings:ACTION_HOME,
-												focusTarget: dialogHomeFocus,
-												onClick: { vm:goHome(); }
-											),
-											Spacer(weight: 1.0)
-										])
-									)
-								])
-							)
-						)
-					)
-				)
+				content: Center(child: Surface(child: dialogPanel))
 			);
 			:resultOverlays: Array([ov]);
 			:overlays: Array();
@@ -195,75 +187,65 @@ Class of Frame is GameFrame{
 	}
 
 	replace Function of Widget is ui(){
+		local Widget is statusRow: Row(
+			children: Array([
+				TextLine(value: vm:roundText(), bold: true),
+				Spacer(weight: 1.0),
+				TextLine(value: vm:bankrollText(), color: activeTheme:accentColor, bold: true),
+				Spacer(weight: 1.0),
+				TextLine(value: vm:betText(), bold: true)
+			])
+		);
+		local Widget is statusBar: Panel(border: true, padX: 1, padY: 0, child: statusRow);
+
+		local Widget is dealerRow: Row(
+			align: 'center',
+			children: Array([
+				Row(gap: 2, children: buildDealerCards()),
+				Spacer(weight: 1.0),
+				TextLine(value: vm:dealerScoreText(), color: activeTheme:mutedColor)
+			])
+		);
+		local Widget is dealerPanel: Panel(
+			border: true,
+			padX: 2,
+			padY: 1,
+			rightTitle: HomeStrings:DEALER_TITLE,
+			rightTitleAlign: 'center',
+			child: dealerRow
+		);
+
+		local Widget is playerRow: Row(
+			align: 'center',
+			children: Array([
+				Row(gap: 2, children: buildPlayerCards()),
+				Spacer(weight: 1.0),
+				TextLine(value: vm:playerScoreText(), color: activeTheme:mutedColor)
+			])
+		);
+		local Widget is playerPanel: Panel(
+			border: true,
+			padX: 2,
+			padY: 1,
+			leftTitle: HomeStrings:PLAYER_TITLE,
+			leftTitleAlign: 'center',
+			child: playerRow
+		);
+
+		local Widget is actionsBar: Panel(
+			border: true,
+			padX: 1,
+			padY: 0,
+			child: Row(gap: 2, arrowFocus: true, children: buildActionButtons())
+		);
+
 		Grid(
 			orientation: 'vertical',
 			panes: Array([
-				Grid:fixed(
-					size: 3,
-					child: Panel(
-						border: true,
-						padX: 1,
-						padY: 0,
-						child: Row(
-							children: Array([
-								TextLine(value: vm:roundText(), bold: true),
-								Spacer(weight: 1.0),
-								TextLine(value: vm:bankrollText(), color: activeTheme:accentColor, bold: true),
-								Spacer(weight: 1.0),
-								TextLine(value: vm:betText(), bold: true)
-							])
-						)
-					)
-				),
-				Grid:weight(
-					weight: 1.0,
-					child: Panel(
-						border: true,
-						padX: 2,
-						padY: 1,
-						rightTitle: HomeStrings:DEALER_TITLE,
-						rightTitleAlign: 'center',
-						child: Row(
-							align: 'center',
-							children: Array([
-								Row(gap: 2, children: buildDealerCards()),
-								Spacer(weight: 1.0),
-								TextLine(value: vm:dealerScoreText(), color: activeTheme:mutedColor)
-							])
-						)
-					)
-				),
-				Grid:weight(
-					weight: 1.0,
-					child: Panel(
-						border: true,
-						padX: 2,
-						padY: 1,
-						leftTitle: HomeStrings:PLAYER_TITLE,
-						leftTitleAlign: 'center',
-						child: Row(
-							align: 'center',
-							children: Array([
-								Row(gap: 2, children: buildPlayerCards()),
-								Spacer(weight: 1.0),
-								TextLine(value: vm:playerScoreText(), color: activeTheme:mutedColor)
-							])
-						)
-					)
-				),
-				Grid:fixed(
-					size: 5,
-					child: Panel(
-						border: true,
-						padX: 1,
-						padY: 0,
-						child: Row(
-							gap: 2,
-							arrowFocus: true,
-							children: buildActionButtons()
-						)
-					)
-				)
+				Grid:fixed(size: 3, child: statusBar),
+				Grid:weight(weight: 1.0, child: dealerPanel),
+				Grid:weight(weight: 1.0, child: playerPanel),
+				Grid:fixed(size: 5, child: actionsBar)
 			])
 		);
 	}
