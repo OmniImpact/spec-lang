@@ -36,7 +36,6 @@ Class is TypeChecker{
 		['base', 'compiler', ErrorText],
 		['base', 'sys', SourceLocation],
 		['base', 'compiler', 'checker', TypeError],
-		['base', 'compiler', 'checker', as TypeDomain()],
 		['base', 'compiler', 'checker', as SemTypes()],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
@@ -271,7 +270,8 @@ Class is TypeChecker{
 		if({ Primitive:of(t:name) == Primitive:FUNCTION }, {
 			if({ t:params:length() > 0 }, {
 				local Type is ret: if({ t:params:length() >= 2 }, { t:params:get(index: 1) }, { t:params:get(index: 0) });
-				return TypeDomain:makeFunction(ret: :formatTypeString(t: ret));
+				local String is retStr: :formatTypeString(t: ret);
+				return if({ retStr != '' && retStr != :names:voidName() }, { ('Function:' . retStr):intern() }, { 'Function' });
 			});
 			return 'Function';
 		});
@@ -719,11 +719,12 @@ Class is TypeChecker{
 		if({ allSame }, {
 			return firstT;
 		});
+		local SemType is firstSem: :parseSemType(s: firstT);
 		# Function references / closures.
-		if({ TypeDomain:isFunction(t: firstT) }, {
+		if({ firstSem:isFunction() }, {
 			local String is badFn: '';
 			concrete:each(action: local Function(String is ct){
-				if({ badFn == '' && !TypeDomain:isFunction(t: ct) }, {
+				if({ badFn == '' && !:parseSemType(s: ct):isFunction() }, {
 					badFn: ct;
 				});
 			});
@@ -734,7 +735,7 @@ Class is TypeChecker{
 			return 'Function';
 		});
 		# Primitive types must all be the exact same primitive type.
-		if({ :isPrimitive(t: firstT) }, {
+		if({ firstSem:isPrimitive() }, {
 			local String is badPrim: '';
 			concrete:each(action: local Function(String is ct){
 				if({ badPrim == '' && ct != firstT }, {
@@ -745,11 +746,11 @@ Class is TypeChecker{
 			return '';
 		});
 		# Nested container types (Array, List, Map).
-		if({ TypeDomain:isContainer(t: firstT) }, {
-			local String is firstBase: TypeDomain:baseName(t: firstT);
+		if({ firstSem:isContainer() }, {
+			local String is firstBase: firstSem:baseName();
 			local String is badCont: '';
 			concrete:each(action: local Function(String is ct){
-				if({ badCont == '' && TypeDomain:baseName(t: ct) != firstBase }, {
+				if({ badCont == '' && :parseSemType(s: ct):baseName() != firstBase }, {
 					badCont: ct;
 				});
 			});
@@ -760,7 +761,7 @@ Class is TypeChecker{
 			if({ firstBase == 'Array' || firstBase == 'List' }, {
 				local Array of String is innerTypes: Array();
 				concrete:each(action: local Function(String is ct){
-					local String is et: TypeDomain:elemType(t: ct);
+					local String is et: :parseSemType(s: ct):elemType():toKey();
 					if({ et != '' }, {
 						innerTypes:add(item: et);
 					});
@@ -781,7 +782,8 @@ Class is TypeChecker{
 		local String is mismatchT: '';
 		concrete:each(action: local Function(String is ct){
 			if({ mismatchT == '' && ct != firstT }, {
-				if({ :isPrimitive(t: ct) || TypeDomain:isFunction(t: ct) || TypeDomain:isContainer(t: ct) || :allEnumNames:has(key: firstT) || :allEnumNames:has(key: ct) }, {
+				local SemType is ctSem: :parseSemType(s: ct);
+				if({ ctSem:isPrimitive() || ctSem:isFunction() || ctSem:isContainer() || :allEnumNames:has(key: firstT) || :allEnumNames:has(key: ct) }, {
 					mismatchT: ct;
 				});
 			});
@@ -1065,9 +1067,9 @@ Class is TypeChecker{
 		:inferExpressionType(expr: val);
 		:inValueBranch: savedArmValue;
 		:currentYieldExpected: savedArmExpected;
-		local String is valT: val:getSemType():toKey();
-		if({ TypeDomain:hasFunctionReturn(t: valT) }, {
-			local String is yieldT: TypeDomain:functionReturn(t: valT);
+		local SemType is valSem: val:getSemType();
+		if({ valSem:hasFunctionReturn() }, {
+			local String is yieldT: valSem:functionReturn():toKey();
 			if({ !:isVoid(t: yieldT) }, {
 				return yieldT;
 			});
@@ -1082,7 +1084,7 @@ Class is TypeChecker{
 		# binding grounds its type args from the full spelling.
 		local String is subjFull: subjT;
 		# Strip container/generic spellings to the base class name.
-		subjT: TypeDomain:baseName(t: subjT);
+		subjT: subj:getSemType():baseName();
 		if({ subjT == '' || subjT == Primitive:ANY:value() || !:registeredClasses:has(key: subjT) }, {
 			:addError(line: :currentLine, msg: 'Conditional:match subjects must be class-typed values; \'' . subjT . '\' cannot be matched.');
 			return 'Any';
@@ -1339,9 +1341,9 @@ Class is TypeChecker{
 					:inferExpressionType(expr: val);
 					:inValueBranch: savedArmValue;
 					:currentYieldExpected: savedArmExpected;
-					local String is valT: val:getSemType():toKey();
-					if({ TypeDomain:hasFunctionReturn(t: valT) }, {
-						local String is yieldT: TypeDomain:functionReturn(t: valT);
+					local SemType is valSem: val:getSemType();
+					if({ valSem:hasFunctionReturn() }, {
+						local String is yieldT: valSem:functionReturn():toKey();
 						if({ :isVoid(t: yieldT) }, {
 							anyVoid: true;
 						}, {
@@ -1541,9 +1543,9 @@ Class is TypeChecker{
 					:inferExpressionType(expr: val);
 					:inValueBranch: savedArmValue;
 					:currentYieldExpected: savedArmExpected;
-					local String is valT: val:getSemType():toKey();
-					if({ TypeDomain:hasFunctionReturn(t: valT) }, {
-						local String is yieldT: TypeDomain:functionReturn(t: valT);
+					local SemType is valSem: val:getSemType();
+					if({ valSem:hasFunctionReturn() }, {
+						local String is yieldT: valSem:functionReturn():toKey();
 						if({ :isVoid(t: yieldT) }, {
 							anyVoid: true;
 						}, {
@@ -2327,8 +2329,9 @@ Class is TypeChecker{
 						if({ p:paramType:isGeneric() && boundSem:baseName() == p:paramType:name }, {
 							genericMatch: true;
 						});
-						if({ TypeDomain:hasFunctionReturn(t: pT) && boundSem:hasFunctionReturn() }, {
-							local String is pRet: TypeDomain:functionReturn(t: pT);
+						local SemType is pSem: :semTypeFromAst(t: p:paramType);
+						if({ pSem:hasFunctionReturn() && boundSem:hasFunctionReturn() }, {
+							local String is pRet: pSem:functionReturn():toKey();
 							local SemType is bRetSem: boundSem:functionReturn();
 							if({ :isMethodTypeParam(tp: pRet, m: m) && !bRetSem:isEmpty() && !bRetSem:isVoid() }, {
 								genericMatch: true;
@@ -3716,8 +3719,10 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferArrayLitExpr([Expression] is items, String is expected){
-		local Boolean is hasExpectedList: TypeDomain:isOfBase(t: expected, base: 'List');
-		local String is elemT: if({ hasExpectedList }, { TypeDomain:elemType(t: expected) }, { '' });
+		local SemType is expSem: :parseSemType(s: expected);
+		local Boolean is hasExpectedList: expSem:isList();
+		local SemType is elemSem: if({ hasExpectedList }, { expSem:elemType() }, { SemTypes:EMPTY });
+		local String is elemT: elemSem:toKey();
 		local Array of String is itemTypes: Array();
 		while([Int is ii: 0], { ii < items:length() }, {
 			local String is itemT: :inferExpressionType(expr: items:get(index: ii), expected: elemT);
@@ -3735,7 +3740,7 @@ Class is TypeChecker{
 			if({ elemT != '' && elemT != Primitive:ANY:value() }, {
 				itemTypes:each(action: local Function(String is itemT){
 					local Boolean is elemOk: :isAssignable(target: elemT, source: itemT);
-					if({ :isPrimitive(t: elemT) && !TypeDomain:isFunction(t: elemT) && itemT != elemT }, {
+					if({ elemSem:isPrimitive() && !elemSem:isFunction() && itemT != elemT }, {
 						elemOk: false;
 					});
 					if({ !elemOk }, {
@@ -3793,15 +3798,16 @@ Class is TypeChecker{
 			});
 			vi++;
 		});
-		return TypeDomain:makeMap(key: firstKeyType, val: firstValType);
+		return if({ firstKeyType != '' && firstValType != '' }, { ('Map:' . firstKeyType . ':' . firstValType):intern() }, { 'Map' });
 	}
 
 	local Function of String is inferFieldAccessExpr(Expression is target, String is fName){
 		local String is leftT: :inferExpressionType(expr: target);
-		if({ leftT == '' || leftT == 'Any' || :isPrimitive(t: leftT) }, {
+		local SemType is leftSem: target:getSemType();
+		if({ leftSem:isEmpty() || leftSem:isAny() || leftSem:isPrimitive() }, {
 			return 'Any';
 		});
-		local String is faBase: TypeDomain:baseName(t: leftT);
+		local String is faBase: leftSem:baseName();
 		local String is fOwner: :findMemberOwnerClass(className: faBase, memberName: fName);
 		if({ fOwner != '' }, {
 			:checkMemberVisibility(ownerClass: fOwner, member: :findAncestorMember(className: faBase, memberName: fName), memberName: fName);
@@ -3849,8 +3855,9 @@ Class is TypeChecker{
 		local Boolean is savedInBranch: :inBranchClosure;
 		local Boolean is savedInValueBranch: :inValueBranch;
 		if({ !:inBranchClosure }, {
-			if({ TypeDomain:hasFunctionReturn(t: expected) && :isVoid(t: :resolveReturnType(t: returnType)) }, {
-				returnType:name: TypeDomain:functionReturn(t: expected);
+			local SemType is expSem: :parseSemType(s: expected);
+			if({ expSem:hasFunctionReturn() && :isVoid(t: :resolveReturnType(t: returnType)) }, {
+				returnType:name: expSem:functionReturn():toKey();
 				returnType:params: [];
 			});
 			:currentMethodReturnType: :resolveReturnType(t: returnType);
@@ -4582,7 +4589,7 @@ Class is TypeChecker{
 				], default: {});
 			});
 			local String is callArgExp: '';
-			if({ targetType == 'Array' && method == 'init' && argIdx == 0 && TypeDomain:isOfBase(t: expected, base: 'List') }, {
+			if({ targetType == 'Array' && method == 'init' && argIdx == 0 && :parseSemType(s: expected):isList() }, {
 				callArgExp: expected;
 			});
 			if({ isBranchCall && argIdx >= 1 }, {
@@ -4742,7 +4749,7 @@ Class is TypeChecker{
 		if({ (targetType == 'ThreadScope' || recvName == 'ThreadScope') && (method == 'joinAll' || method == 'destroy' || method == 'registerTask') && !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: Array(['base', 'sys', 'thread'])) }, {
 			:addError(line: :currentLine, msg: "Method 'ThreadScope:" . method . "' is internal to 'base:sys:thread'; 'ThreadScope:open' joins all tasks automatically.");
 		});
-		if({ (TypeDomain:isOfBase(t: targetType, base: 'Task') || recvName == 'Task') && (method == 'init' || method == 'start' || method == 'markRunning' || method == 'complete' || method == 'completeVoid' || method == 'spawnInScope' || method == 'fail' || method == 'failAddr' || method == 'joinOnly' || method == 'destroy') }, {
+		if({ (:parseSemType(s: targetType):baseName() == 'Task' || recvName == 'Task') && (method == 'init' || method == 'start' || method == 'markRunning' || method == 'complete' || method == 'completeVoid' || method == 'spawnInScope' || method == 'fail' || method == 'failAddr' || method == 'joinOnly' || method == 'destroy') }, {
 			if({ !:namespaceEquals(segs: :currentClassDef:namespaceSegments(), want: Array(['base', 'sys', 'thread'])) }, {
 				:addError(line: :currentLine, msg: "Method 'Task:" . method . "' is internal to 'base:sys:thread'; tasks must be spawned via 'scope:spawn(task: ...)' inside a 'ThreadScope:open' block.");
 			});
@@ -4770,11 +4777,12 @@ Class is TypeChecker{
 				}, {
 					if({ aName == 'action' }, {
 						hasAction: true;
-						if({ !TypeDomain:isFunction(t: aType) && aType != 'Any' }, {
+						local SemType is aSem: arg:value:getSemType();
+						if({ !aSem:isFunction() && !aSem:isAny() }, {
 							:addError(line: :currentLine, msg: "Parallel:" . method . " 'action' argument must be a Function, found '" . aType . "'.");
 						}, {
-							if({ TypeDomain:hasFunctionReturn(t: aType) }, {
-								actRetT: TypeDomain:functionReturn(t: aType);
+							if({ aSem:hasFunctionReturn() }, {
+								actRetT: aSem:functionReturn():toKey();
 							});
 						});
 					});
@@ -4806,7 +4814,8 @@ Class is TypeChecker{
 				}, {
 					if({ aName == 'worker' }, {
 						hasWorker: true;
-						if({ !TypeDomain:isFunction(t: aType) && aType != 'Any' }, {
+						local SemType is wSem: arg:value:getSemType();
+						if({ !wSem:isFunction() && !wSem:isAny() }, {
 							:addError(line: :currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
 						});
 					});
@@ -4838,13 +4847,14 @@ Class is TypeChecker{
 		if({ selected:name != '' }, {
 			res: :selectedReturnType(className: targetType, selected: selected, expr: expr);
 		});
+		local SemType is targetSem: :parseSemType(s: targetType);
 		if({ res == '' }, {
 			res: targetType;
 			# Member existence: a real (non-binding) class whose call
 			# resolves to NOTHING (no method or held member) is a compile
 			# error, not a silently receiver-typed call — the fallback once
 			# let removed members keep compiling.
-			local String is existBase: TypeDomain:baseName(t: targetType);
+			local String is existBase: targetSem:baseName();
 			local Boolean is memberExists: :lookupAnyMember(className: existBase, methodName: method):name != '';
 			if({ !memberExists }, {
 				memberExists: :findHeldMethod(className: existBase, methodName: method):name != '';
@@ -4856,20 +4866,19 @@ Class is TypeChecker{
 				return '';
 			});
 		});
-		if({ TypeDomain:isOfBase(t: targetType, base: 'Map') && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
-			local SemType is mapSem: :parseSemType(s: targetType);
-			local String is kRaw: mapSem:mapKeyType():toKey();
+		if({ targetSem:isMap() && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
+			local String is kRaw: targetSem:mapKeyType():toKey();
 			local String is kType: if({ kRaw != '' && kRaw != 'Any' }, { kRaw }, { Primitive:STRING:value() });
-			res: TypeDomain:makeArray(elem: kType);
+			res: ('Array:' . kType):intern();
 		});
-		if({ TypeDomain:isOfBase(t: targetType, base: 'Flow') }, {
+		if({ targetSem:baseName() == 'Flow' }, {
 			if({ method == 'map' && call:args:length() > 0 }, {
 				local String is mFnRet: call:args:get(index: 0):value:getSemType():functionReturn():toKey();
 				if({ mFnRet != '' }, {
-					res: TypeDomain:makeFlow(elem: mFnRet);
+					res: ('Flow:' . mFnRet):intern();
 				});
 			});
-			if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && TypeDomain:isParameterized(t: targetType, base: 'Flow') }, {
+			if({ (method == 'filter' || method == 'take' || method == 'onEach' || method == 'onCompletion' || method == 'buffer') && targetSem:isGeneric() }, {
 				res: targetType;
 			});
 		});
@@ -5017,8 +5026,9 @@ Class is TypeChecker{
 		}, {
 			local String is argExpected: expected;
 			if({ targetType == 'Array' && method == 'init' && call:args:length() == 1 }, {
-				if({ TypeDomain:isParameterized(t: expected, base: 'Array') }, {
-					argExpected: ('List:' . TypeDomain:elemType(t: expected)):intern();
+				local SemType is expArrSem: :parseSemType(s: expected);
+				if({ expArrSem:isArray() && expArrSem:isGeneric() }, {
+					argExpected: ('List:' . expArrSem:elemType():toKey()):intern();
 				}, {
 					argExpected: 'List';
 				});
@@ -5044,10 +5054,11 @@ Class is TypeChecker{
 		if({ heldCallFn:name != '' }, {
 			return :inferHeldCall(expr: expr, call: call, heldRoot: heldRoot, method: method, heldCallFn: heldCallFn, expected: expected);
 		});
+		local SemType is targetSem: :parseSemType(s: targetType);
+		local String is targetBase: targetSem:baseName();
 		if({ targetType != '' && targetType != Primitive:ANY:value() && !:allEnumNames:has(key: targetType) }, {
-			local String is iBase: TypeDomain:baseName(t: targetType);
-			if({ :registeredClasses:has(key: iBase) && :lookupMethodReturnType(className: iBase, methodName: method) == '' && :findHeldMethod(className: iBase, methodName: method):name != '' }, {
-				:addError(line: :currentLine, msg: :errText:errHeldClassScoped(className: iBase, method: method));
+			if({ :registeredClasses:has(key: targetBase) && :lookupMethodReturnType(className: targetBase, methodName: method) == '' && :findHeldMethod(className: targetBase, methodName: method):name != '' }, {
+				:addError(line: :currentLine, msg: :errText:errHeldClassScoped(className: targetBase, method: method));
 			});
 		});
 
@@ -5096,7 +5107,7 @@ Class is TypeChecker{
 		});
 
 		if({ !:allEnumNames:has(key: targetType) && targetType != '' && targetType != 'Any' }, {
-			local String is cBase: TypeDomain:baseName(t: targetType);
+			local String is cBase: :parseSemType(s: targetType):baseName();
 			local String is mOwner: :findMemberOwnerClass(className: cBase, memberName: method);
 			if({ mOwner != '' }, {
 				:checkMemberVisibility(ownerClass: mOwner, member: :lookupAnyMember(className: cBase, methodName: method), memberName: method);
@@ -5138,16 +5149,18 @@ Class is TypeChecker{
 					}, {
 						if({ method == 'init' && :registeredClasses:has(key: targetType) && !:allEnumNames:has(key: targetType) }, {
 							local Member is selInit: :selectOverload(className: targetType, methodName: 'init', expr: expr);
-							local String is initBaseName: TypeDomain:baseName(t: targetType);
+							local String is initBaseName: :parseSemType(s: targetType):rootName();
 							if({ !:classHasAccess(className: :currentClassName, targetName: initBaseName) }, {
 								:addError(line: :currentLine, msg: :errText:errTypeNotImported(targetType: targetType, currentClass: :currentClassName));
 							});
 							res: :inferGenericInitType(baseClassName: initBaseName, targetType: targetType, initMem: selInit, call: call, expected: expected);
 						}, {
-							if({ :registeredClasses:has(key: TypeDomain:baseName(t: targetType)) && !:allEnumNames:has(key: targetType) }, {
+							local SemType is tCallSem: :parseSemType(s: targetType);
+							local String is tCallBase: tCallSem:baseName();
+							if({ :registeredClasses:has(key: tCallBase) && !:allEnumNames:has(key: targetType) }, {
 								res: :inferRegisteredClassCall(expr: expr, call: call, targetType: targetType, method: method, targetIsSelf: targetIsSelf);
 							}, {
-								if({ TypeDomain:isOfBase(t: targetType, base: 'Array') && method == 'map' }, {
+								if({ tCallSem:isArray() && method == 'map' }, {
 									local String is mappedElem: Primitive:ANY:value();
 									if({ call:args:length() > 0 }, {
 										local NamedArg is a0: call:args:get(index: 0);
@@ -5160,16 +5173,16 @@ Class is TypeChecker{
 											}
 										], default: {});
 									});
-									res: if({ mappedElem != Primitive:ANY:value() }, { TypeDomain:makeArray(elem: mappedElem) }, { 'Array' });
+									res: if({ mappedElem != Primitive:ANY:value() }, { ('Array:' . mappedElem):intern() }, { 'Array' });
 								}, {
-									if({ TypeDomain:isOfBase(t: targetType, base: 'Array') && method == 'fold' }, {
+									if({ tCallSem:isArray() && method == 'fold' }, {
 										res: if({ call:args:length() > 0 }, { call:args:get(index: 0):value:getSemType():toKey() }, { 'Any' });
 									}, {
 										if({ :allEnumNames:has(key: targetType) }, {
 											match(on: method, when: [
 												'name': { res: Primitive:STRING:value(); },
 												'ordinal': { res: Primitive:INT:value(); },
-												'values': { res: TypeDomain:makeArray(elem: targetType); },
+												'values': { res: ('Array:' . targetType):intern(); },
 												'of': { res: targetType; },
 												'value': { res: if({ :allStringBackedEnums:has(key: targetType) }, { 'String' }, { Primitive:INT:value() }); },
 												else: { res: 'Any'; }
@@ -5187,8 +5200,7 @@ Class is TypeChecker{
 														res: 'Any';
 													});
 												}, {
-													local String is uBase: TypeDomain:baseName(t: targetType);
-													if({ :registeredClasses:has(key: uBase) && :findClass(name: uBase):name != '' }, {
+													if({ :registeredClasses:has(key: tCallBase) && :findClass(name: tCallBase):name != '' }, {
 														:addError(line: :currentLine, msg: :errText:errMemberNotDeclared(member: method, targetType: targetType));
 													});
 													res: 'Any';
@@ -5252,11 +5264,11 @@ Class is TypeChecker{
 		local String is lazyRet: 'Any';
 		if({ call:args:length() > 0 }, {
 			local NamedArg is a0: call:args:get(index: 0);
-			local String is fnT: a0:value:getSemType():toKey();
-			if({ TypeDomain:hasFunctionReturn(t: fnT) }, {
-				lazyRet: TypeDomain:functionReturn(t: fnT);
+			local SemType is fnSem: a0:value:getSemType();
+			if({ fnSem:hasFunctionReturn() }, {
+				lazyRet: fnSem:functionReturn():toKey();
 			}, {
-				if({ TypeDomain:isFunction(t: fnT) }, {
+				if({ fnSem:isFunction() }, {
 					lazyRet: :names:voidName();
 				});
 			});
@@ -5474,7 +5486,7 @@ Class is TypeChecker{
 					});
 				}, {
 					local Boolean is isValuePrim: :isNumericType(t: fullType) || fullType == Primitive:BOOLEAN:value();
-					local Boolean is isAutoInitList: varType:isList() || TypeDomain:isOfBase(t: fullType, base: 'List');
+					local Boolean is isAutoInitList: varType:isList() || varSem:isList();
 					if({ !isValuePrim && !isAutoInitList }, {
 						:addError(line: stmt:line, msg: "Local variable '" . varName . "' of type '" . :displayType(t: fullType) . "' must be initialized (Spec does not have null).");
 					});
@@ -7010,7 +7022,7 @@ Class is TypeChecker{
 							if({ fm:kind == MemberKind:FIELD && !fm:hasInit && !fm:hasModifier(kw: Keyword:HELD) && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') && :unassignedFields:has(key: fm:name) }, {
 								local String is fType: :formatVarTypeString(t: fm:memberType);
 								local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
-								local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
+								local Boolean is isAutoList: fm:memberType:isList() || :semTypeFromAst(t: fm:memberType):isList();
 								local Boolean is isTypeParam: :strListHas(xs: classDef:typeParams, target: fType);
 								if({ !isValPrim && !isAutoList && !isTypeParam }, {
 									:addError(line: m:line, msg: "Field '" . fm:name . "' of type '" . :displayType(t: fType) . "' in class '" . classDef:name . "' is not initialized by 'init' (Spec does not have null).");
@@ -7054,7 +7066,7 @@ Class is TypeChecker{
 				if({ fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != MetadataField:USING:value() && fm:name != MetadataField:NAMESPACE:value() && fm:name != MetadataField:CASTABLE:value() && !fm:name:startsWith(prefix: '_import_') }, {
 					local String is fType: :formatVarTypeString(t: fm:memberType);
 					local Boolean is isValPrim: :isNumericType(t: fType) || fType == Primitive:BOOLEAN:value();
-					local Boolean is isAutoList: fm:memberType:isList() || TypeDomain:isOfBase(t: fType, base: 'List');
+					local Boolean is isAutoList: fm:memberType:isList() || :semTypeFromAst(t: fm:memberType):isList();
 					local Boolean is isTypeParam: :strListHas(xs: classDef:typeParams, target: fType);
 					if({ !isValPrim && !isAutoList && !isTypeParam }, {
 						if({ fm:hasModifier(kw: Keyword:HELD) }, {
