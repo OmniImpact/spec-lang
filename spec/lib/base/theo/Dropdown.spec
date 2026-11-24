@@ -90,7 +90,6 @@ Class of Widget is Dropdown{
 			child: lv
 		);
 		local Surface is surf: Surface(
-			background: TheoColor:ansi(code: 236),
 			child: box
 		);
 		local Overlay is ov: Overlay(

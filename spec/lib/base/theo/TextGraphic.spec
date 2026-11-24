@@ -37,9 +37,10 @@ Class of Widget is TextGraphic{
 	}
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
+		local TheoColor is effColor: if({ color:isSet() }, { color }, { activeTheme:foreground });
 		local Int is i: 0;
 		while({ i < rows:length() && i < boxH }, {
-			buf:drawText(x: boxX, y: boxY + i, text: rows:get(index: i), fg: color);
+			buf:drawText(x: boxX, y: boxY + i, text: rows:get(index: i), fg: effColor);
 			i: i + 1;
 		});
 	}

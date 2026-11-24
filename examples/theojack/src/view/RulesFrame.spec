@@ -27,7 +27,7 @@ Class of Frame is RulesFrame{
 			if({ item:kind == 'header' }, {
 				out:add(item: TextLine(
 					value: item:text,
-					color: TheoColor:ansi(code: 220),
+					color: activeTheme:accentColor,
 					bold: true
 				));
 			});
@@ -41,7 +41,7 @@ Class of Frame is RulesFrame{
 					bulletRows:add(item: Row(
 						gap: 1,
 						children: Array([
-							TextLine(value: '•', color: TheoColor:ansi(code: 220), bold: true),
+							TextLine(value: '•', color: activeTheme:accentColor, bold: true),
 							TextGraphic(graphic: item:bullets:get(index: bi))
 						])
 					));
@@ -85,8 +85,6 @@ Class of Frame is RulesFrame{
 						verticalScrollbar: 'auto',
 						topTitle: HomeStrings:RULES_TITLE,
 						topTitleAlign: 'center',
-						titleFg: TheoColor:ansi(code: 16),
-						titleBg: TheoColor:ansi(code: 252),
 						child: Col(
 							gap: 1,
 							scrollable: true,

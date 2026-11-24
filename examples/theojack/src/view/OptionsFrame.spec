@@ -52,8 +52,6 @@ Class of Frame is OptionsFrame{
 						padY: 1,
 						topTitle: HomeStrings:OPTIONS_TITLE,
 						topTitleAlign: 'center',
-						titleFg: TheoColor:ansi(code: 16),
-						titleBg: TheoColor:ansi(code: 252),
 						child: Col(
 							gap: 1,
 							children: Array([

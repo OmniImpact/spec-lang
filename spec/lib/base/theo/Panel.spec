@@ -292,8 +292,8 @@ Class of Widget is Panel{
 			local TheoColor is useBorder: if({ hasFocused && effFocusBorder:isSet() }, { effFocusBorder }, { effBorder });
 			buf:drawBox(x: boxX, y: boxY, w: boxW, h: boxH, borderColor: useBorder, bg: background, rounded: rounded);
 		});
-		local TheoColor is effTitleFg: if({ titleFg:isSet() }, { titleFg }, { activeTheme:titleColor });
-		local TheoColor is effTitleBg: if({ titleBg:isSet() }, { titleBg }, { background });
+		local TheoColor is effTitleFg: if({ titleFg:isSet() }, { titleFg }, { activeTheme:titleBarFg });
+		local TheoColor is effTitleBg: if({ titleBg:isSet() }, { titleBg }, { if({ background:isSet() }, { background }, { activeTheme:titleBarBg }) });
 		paintTitleHorizontal(buf: buf, y: boxY, title: topTitle, align: topTitleAlign, fg: effTitleFg, bg: effTitleBg);
 		paintTitleHorizontal(buf: buf, y: boxY + boxH - 1, title: bottomTitle, align: bottomTitleAlign, fg: effTitleFg, bg: effTitleBg);
 		paintTitleVertical(buf: buf, x: boxX, title: leftTitle, align: leftTitleAlign, fg: effTitleFg, bg: effTitleBg);

@@ -14,6 +14,10 @@ Class is TheoTheme{
 	TheoColor is focusBorderColor: TheoColor:ansi(code: 255);
 	Boolean is roundedBorders: true;
 	TheoColor is titleColor: TheoColor:ansi(code: 255);
+	TheoColor is titleBarFg: TheoColor:ansi(code: 16);
+	TheoColor is titleBarBg: TheoColor:ansi(code: 252);
+	TheoColor is surfaceBg: TheoColor:ansi(code: 235);
+	TheoColor is accentColor: TheoColor:ansi(code: 220);
 	TheoColor is mutedColor: TheoColor:ansi(code: 245);
 	TheoColor is buttonFg: TheoColor:ansi(code: 252);
 	TheoColor is buttonBg: TheoColor:ansi(code: 237);
@@ -32,6 +36,10 @@ Class is TheoTheme{
 		TheoColor is focusBorderColor: TheoColor:ansi(code: 255),
 		Boolean is roundedBorders: true,
 		TheoColor is titleColor: TheoColor:ansi(code: 255),
+		TheoColor is titleBarFg: TheoColor:ansi(code: 16),
+		TheoColor is titleBarBg: TheoColor:ansi(code: 252),
+		TheoColor is surfaceBg: TheoColor:ansi(code: 235),
+		TheoColor is accentColor: TheoColor:ansi(code: 220),
 		TheoColor is mutedColor: TheoColor:ansi(code: 245),
 		TheoColor is buttonFg: TheoColor:ansi(code: 252),
 		TheoColor is buttonBg: TheoColor:ansi(code: 237),
@@ -49,6 +57,10 @@ Class is TheoTheme{
 		:focusBorderColor: focusBorderColor;
 		:roundedBorders: roundedBorders;
 		:titleColor: titleColor;
+		:titleBarFg: titleBarFg;
+		:titleBarBg: titleBarBg;
+		:surfaceBg: surfaceBg;
+		:accentColor: accentColor;
 		:mutedColor: mutedColor;
 		:buttonFg: buttonFg;
 		:buttonBg: buttonBg;

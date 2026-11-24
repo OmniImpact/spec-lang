@@ -35,15 +35,12 @@ Class of Frame is GameFrame{
 				closeOnBackdrop: false,
 				content: Center(
 					child: Surface(
-						background: TheoColor:ansi(code: 235),
 						child: Panel(
 							border: true,
 							padX: 2,
 							padY: 1,
 							topTitle: vm:resultTitle(),
 							topTitleAlign: 'center',
-							titleFg: TheoColor:ansi(code: 16),
-							titleBg: TheoColor:ansi(code: 252),
 							child: Col(
 								gap: 1,
 								children: Array([
@@ -211,7 +208,7 @@ Class of Frame is GameFrame{
 							children: Array([
 								TextLine(value: vm:roundText(), bold: true),
 								Spacer(weight: 1.0),
-								TextLine(value: vm:bankrollText(), color: TheoColor:ansi(code: 220), bold: true),
+								TextLine(value: vm:bankrollText(), color: activeTheme:accentColor, bold: true),
 								Spacer(weight: 1.0),
 								TextLine(value: vm:betText(), bold: true)
 							])
@@ -226,8 +223,6 @@ Class of Frame is GameFrame{
 						padY: 1,
 						rightTitle: HomeStrings:DEALER_TITLE,
 						rightTitleAlign: 'center',
-						titleFg: TheoColor:ansi(code: 16),
-						titleBg: TheoColor:ansi(code: 252),
 						child: Row(
 							align: 'center',
 							children: Array([
@@ -246,8 +241,6 @@ Class of Frame is GameFrame{
 						padY: 1,
 						leftTitle: HomeStrings:PLAYER_TITLE,
 						leftTitleAlign: 'center',
-						titleFg: TheoColor:ansi(code: 16),
-						titleBg: TheoColor:ansi(code: 252),
 						child: Row(
 							align: 'center',
 							children: Array([

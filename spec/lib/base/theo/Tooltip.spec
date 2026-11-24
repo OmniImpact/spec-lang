@@ -27,7 +27,6 @@ Class of Widget is Tooltip{
 		:hostFrames: [host];
 
 		local Widget is box: Surface(
-			background: TheoColor:ansi(code: 235),
 			child: Panel(
 				border: true,
 				padX: 1,

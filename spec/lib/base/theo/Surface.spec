@@ -81,7 +81,7 @@ Class of Widget is Surface{
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });
-		local TheoColor is effBg: if({ background:isSet() }, { background }, { activeTheme:buttonBg });
+		local TheoColor is effBg: if({ background:isSet() }, { background }, { activeTheme:surfaceBg });
 		local TheoColor is effFg: if({ foreground:isSet() }, { foreground }, { activeTheme:foreground });
 		buf:fillRect(x: boxX, y: boxY, w: boxW, h: boxH, fg: effFg, bg: effBg);
 		child:paint(buf: buf, renderer: renderer);

@@ -39,15 +39,12 @@ Class of Frame is HomeFrame{
 			onClose: { vm:closeAbout(); },
 			content: Center(
 				child: Surface(
-					background: TheoColor:ansi(code: 235),
 					child: Panel(
 						border: true,
 						padX: 2,
 						padY: 1,
 						topTitle: HomeStrings:ABOUT_TITLE,
 						topTitleAlign: 'center',
-						titleFg: TheoColor:ansi(code: 16),
-						titleBg: TheoColor:ansi(code: 252),
 						child: Col(
 							gap: 1,
 							children: Array([
@@ -127,8 +124,6 @@ Class of Frame is HomeFrame{
 						padY: 1,
 						topTitle: HomeStrings:HOME_TITLE,
 						topTitleAlign: 'center',
-						titleFg: TheoColor:ansi(code: 16),
-						titleBg: TheoColor:ansi(code: 252),
 						child: Center(
 							child: Row(
 								gap: 3,
