@@ -4998,8 +4998,8 @@ Class is IrBuilder{
 								local Boolean is allListPtr: true;
 								local Int is loi: 0;
 								while({ loi < items:length() && allListPtr }, {
-									local Type is lItNode: items:get(index: loi):getResolvedTypeNode();
-									if({ :irTypeForNode(t: lItNode) != IrType:Ptr || lItNode:isRawPtr() }, {
+									local SemType is lItSem: items:get(index: loi):getSemType();
+									if({ :irTypeForSem(st: lItSem) != IrType:Ptr || lItSem:isRawPtr() }, {
 										allListPtr: false;
 									});
 									loi++;
@@ -5022,7 +5022,7 @@ Class is IrBuilder{
 					while({ li < items:length() }, {
 						local Expression is lit: items:get(index: li);
 						local String is liv: :lowerExpr(expr: lit);
-						local IrType is lity: :irTypeForNode(t: lit:getResolvedTypeNode());
+						local IrType is lity: :irTypeForSem(st: lit:getSemType());
 						if({ lity == IrType:Void }, {
 							:addError(msg: 'Cannot store Void expression in List literal.');
 						}, {
@@ -5041,7 +5041,7 @@ Class is IrBuilder{
 					local Boolean is allObj: true;
 					local Int is oi: 0;
 					while({ oi < items:length() && allObj }, {
-						if({ :irTypeForNode(t: items:get(index: oi):getResolvedTypeNode()) != IrType:Ptr }, {
+						if({ :irTypeForSem(st: items:get(index: oi):getSemType()) != IrType:Ptr }, {
 							allObj: false;
 						});
 						oi++;
@@ -5097,11 +5097,11 @@ Class is IrBuilder{
 				local String is mp: :nextTmp();
 				local Int is mapKk: 0;
 				local Int is mapVk: 0;
-				local Type is resNode: expr:getResolvedTypeNode();
+				local Type is resNode: expr:getSemType():toAstType();
 				if({ keys:length() > 0 }, {
-					local Type is k0Node: keys:get(index: 0):getResolvedTypeNode();
-					:checkConcreteMapKindType(specType: k0Node:name, role: 'key');
-					mapKk: :mapKeyKindFor(specType: k0Node:name);
+					local String is k0Name: keys:get(index: 0):getSemType():baseName();
+					:checkConcreteMapKindType(specType: k0Name, role: 'key');
+					mapKk: :mapKeyKindFor(specType: k0Name);
 				}, {
 					mapKk: :resolveMapKeyKind(resNode: resNode);
 				});
@@ -5109,9 +5109,9 @@ Class is IrBuilder{
 					local Boolean is allArc: true;
 					local Int is vi: 0;
 					while({ vi < values:length() }, {
-						local Type is vItemNode: values:get(index: vi):getResolvedTypeNode();
-						:checkConcreteMapKindType(specType: vItemNode:name, role: 'value');
-						if({ !:isArcTypeNode(t: vItemNode) }, {
+						local SemType is vItemSem: values:get(index: vi):getSemType();
+						:checkConcreteMapKindType(specType: vItemSem:baseName(), role: 'value');
+						if({ !:isArcTypeSem(st: vItemSem) }, {
 							allArc: false;
 						});
 						vi++;
@@ -6209,7 +6209,6 @@ Class is IrBuilder{
 						vi++;
 					});
 					local Expression is arrExpr: Expression:ArrayLit(items: vItems);
-					arrExpr:setResolvedTypeNode(tn: p:paramType, t: p:paramType:name);
 					arrExpr:setSemType(st: SemTypes:fromAstType(t: p:paramType));
 					argTypes:push(item: IrType:Ptr);
 					argVals:push(item: :lowerExpr(expr: arrExpr));
@@ -6225,7 +6224,6 @@ Class is IrBuilder{
 						local NamedArg is vna: callArgs:get(index: vi);
 						if({ vna:name != '' && !fixedNames:has(key: vna:name) }, {
 							local Expression is kExpr: Expression:StringLit(value: vna:name);
-							kExpr:setResolvedTypeNode(tn: Type(name: 'String'), t: 'String');
 							kExpr:setSemType(st: SemTypes:STRING);
 							vKeys:push(item: kExpr);
 							vVals:push(item: vna:value);
@@ -6237,7 +6235,6 @@ Class is IrBuilder{
 					# declaration: a `Map of String to Int` collector stores
 					# plain values (no retention of raw bits), and an Any-valued
 					# one retains — the kinds follow the declaration.
-					mapExpr:setResolvedTypeNode(tn: p:paramType, t: :typeSpelling(t: p:paramType));
 					mapExpr:setSemType(st: SemTypes:fromAstType(t: p:paramType));
 					argTypes:push(item: IrType:Ptr);
 					argVals:push(item: :lowerExpr(expr: mapExpr));

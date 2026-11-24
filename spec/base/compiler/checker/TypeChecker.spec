@@ -360,10 +360,8 @@ Class is TypeChecker{
 		return st;
 	}
 
-	## Stamps both the legacy [Type]/string bridge and the canonical [SemType] on [expr].
+	## Stamps the canonical [SemType] on [expr].
 	local Function is stampExprType(Expression is expr, String is t){
-		local Type is tn: :parseTypeNode(s: t);
-		expr:setResolvedTypeNode(tn: tn, t: t);
 		expr:setSemType(st: :parseSemType(s: t));
 	}
 
@@ -513,16 +511,16 @@ Class is TypeChecker{
 							if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
 								if({ (p:name != '' && a:name == p:name) || (a:name == '' && posIdx == pIdx) }, {
 									if({ directMatch }, {
-										local String is candT: a:value:resolvedType;
-										if({ candT != '' && candT != Primitive:ANY:value() }, {
-											argNode: :parseTypeNode(s: candT);
+										local SemType is candSem: a:value:getSemType();
+										if({ !candSem:isEmpty() && !candSem:isAny() }, {
+											argNode: candSem:toAstType();
 										});
 									}, {
-										local Type is aNode: a:value:getResolvedTypeNode();
-										if({ aNode:name == p:paramType:name && aNode:isGeneric() }, {
-											local Type is elemN: aNode:elemType();
-											if({ !elemN:isEmpty() && !elemN:isAny() }, {
-												argNode: elemN;
+										local SemType is aSem: a:value:getSemType();
+										if({ aSem:baseName() == p:paramType:name && aSem:isGeneric() }, {
+											local SemType is elemS: aSem:elemType();
+											if({ !elemS:isEmpty() && !elemS:isAny() }, {
+												argNode: elemS:toAstType();
 											});
 										});
 									});
@@ -1074,7 +1072,7 @@ Class is TypeChecker{
 		:inferExpressionType(expr: val);
 		:inValueBranch: savedArmValue;
 		:currentYieldExpected: savedArmExpected;
-		local String is valT: val:resolvedType;
+		local String is valT: val:getSemType():toKey();
 		if({ TypeDomain:hasFunctionReturn(t: valT) }, {
 			local String is yieldT: TypeDomain:functionReturn(t: valT);
 			if({ !:isVoid(t: yieldT) }, {
@@ -1347,7 +1345,7 @@ Class is TypeChecker{
 					:inferExpressionType(expr: val);
 					:inValueBranch: savedArmValue;
 					:currentYieldExpected: savedArmExpected;
-					local String is valT: val:resolvedType;
+					local String is valT: val:getSemType():toKey();
 					if({ TypeDomain:hasFunctionReturn(t: valT) }, {
 						local String is yieldT: TypeDomain:functionReturn(t: valT);
 						if({ :isVoid(t: yieldT) }, {
@@ -1549,7 +1547,7 @@ Class is TypeChecker{
 					:inferExpressionType(expr: val);
 					:inValueBranch: savedArmValue;
 					:currentYieldExpected: savedArmExpected;
-					local String is valT: val:resolvedType;
+					local String is valT: val:getSemType():toKey();
 					if({ TypeDomain:hasFunctionReturn(t: valT) }, {
 						local String is yieldT: TypeDomain:functionReturn(t: valT);
 						if({ :isVoid(t: yieldT) }, {
@@ -1632,7 +1630,7 @@ Class is TypeChecker{
 			Expression:Call: local Function of CallData(CallData is call){ return call; },
 			else: { CallData(target: Expression:Unknown, name: '', args: emptyArgs) }
 		]);
-		local String is targetType: cd:target:resolvedType;
+		local String is targetType: cd:target:getSemType():toKey();
 		if({ targetType == :names:selfIdent() || targetType == '' }, {
 			targetType: :currentClassName;
 		});
@@ -1670,8 +1668,8 @@ Class is TypeChecker{
 			return;
 		});
 		local String is groundedTarget: targetType;
-		if({ (cd:name == 'init' || m:hasModifier(kw: Keyword:HELD)) && callExpr:resolvedType != '' }, {
-			groundedTarget: callExpr:resolvedType;
+		if({ (cd:name == 'init' || m:hasModifier(kw: Keyword:HELD)) && !callExpr:getSemType():isEmpty() }, {
+			groundedTarget: callExpr:getSemType():toKey();
 		});
 		local Type is gNode: :parseTypeNode(s: groundedTarget);
 		local Array of String is recvTypeArgs: Array();
@@ -1705,7 +1703,7 @@ Class is TypeChecker{
 				while([Int is ai: 0], { !supplied && ai < cd:args:length() }, {
 					local NamedArg is a: cd:args:get(index: ai);
 					if({ a:name == fm:name }, {
-						local String is argT: a:value:resolvedType;
+						local String is argT: a:value:getSemType():toKey();
 						if({ argT != '' && (argT == fTypeStr || :isAssignable(target: fTypeStr, source: argT)) }, {
 							supplied: true;
 						});
@@ -1762,7 +1760,7 @@ Class is TypeChecker{
 					while({ ai < cd:args:length() }, {
 						local NamedArg is a: cd:args:get(index: ai);
 						if({ ai >= pIdx && a:name == '' }, {
-							local String is argT: a:value:resolvedType;
+							local String is argT: a:value:getSemType():toKey();
 							if({ elemT != Primitive:ANY:value() && argT != '' && argT != Primitive:ANY:value() && !:isAssignable(target: elemT, source: argT) }, {
 								local String is msg: :errText:errCannotAssignArg(label: 'position ' . (ai + 1), target: displayTarget, method: cd:name, fromType: argT, toType: :displayType(t: elemT));
 								:addError(line: :currentLine, msg: msg);
@@ -1788,7 +1786,7 @@ Class is TypeChecker{
 					while({ ai < cd:args:length() }, {
 						local NamedArg is a: cd:args:get(index: ai);
 						if({ a:name != '' && !fixedNames:has(key: a:name) }, {
-							local String is argT: a:value:resolvedType;
+							local String is argT: a:value:getSemType():toKey();
 							if({ valT != Primitive:ANY:value() && argT != '' && argT != Primitive:ANY:value() && !:isAssignable(target: valT, source: argT) }, {
 								local String is msg: :errText:errCannotAssignArg(label: a:name, target: displayTarget, method: cd:name, fromType: argT, toType: :displayType(t: valT));
 								:addError(line: :currentLine, msg: msg);
@@ -1837,7 +1835,7 @@ Class is TypeChecker{
 					});
 				});
 				if({ found }, {
-					local String is argT: matchedValue:resolvedType;
+					local String is argT: matchedValue:getSemType():toKey();
 					if({ argT != '' && argT != Primitive:ANY:value() && !:isAssignable(target: pTF, source: argT) }, {
 						local String is label: if({ pName != '' }, { pName }, { 'position ' . (pIdx + 1) });
 						local String is msg: :errText:errCannotAssignArg(label: label, target: displayTarget, method: cd:name, fromType: argT, toType: :displayType(t: pTF));
@@ -2134,7 +2132,7 @@ Class is TypeChecker{
 		local String is argTypes: '';
 		local Int is ati: 0;
 		while({ ati < args:length() }, {
-			local String is at: args:get(index: ati):value:resolvedType;
+			local String is at: args:get(index: ati):value:getSemType():toKey();
 			if({ at == '' }, {
 				at: 'Any';
 			});
@@ -2324,22 +2322,24 @@ Class is TypeChecker{
 					allMatch: false;
 				});
 			}, {
-				if({ bound:resolvedType == '' }, {
+				local SemType is boundSem: bound:getSemType();
+				local String is boundKey: boundSem:toKey();
+				if({ boundSem:isEmpty() }, {
 					allMatch: false;
 				}, {
-					if({ bound:resolvedType != pT }, {
+					if({ boundKey != pT }, {
 						local Boolean is genericMatch: false;
-						if({ p:paramType:isGeneric() && bound:getResolvedTypeNode():name == p:paramType:name }, {
+						if({ p:paramType:isGeneric() && boundSem:baseName() == p:paramType:name }, {
 							genericMatch: true;
 						});
-						if({ TypeDomain:hasFunctionReturn(t: pT) && TypeDomain:hasFunctionReturn(t: bound:resolvedType) }, {
+						if({ TypeDomain:hasFunctionReturn(t: pT) && boundSem:hasFunctionReturn() }, {
 							local String is pRet: TypeDomain:functionReturn(t: pT);
-							local String is bRet: TypeDomain:functionReturn(t: bound:resolvedType);
-							if({ :isMethodTypeParam(tp: pRet, m: m) && bRet != '' && !:isVoid(t: bRet) }, {
+							local SemType is bRetSem: boundSem:functionReturn();
+							if({ :isMethodTypeParam(tp: pRet, m: m) && !bRetSem:isEmpty() && !bRetSem:isVoid() }, {
 								genericMatch: true;
 							});
 						});
-						if({ :isMethodTypeParam(tp: pT, m: m) && !:isVoid(t: bound:resolvedType) }, {
+						if({ :isMethodTypeParam(tp: pT, m: m) && !boundSem:isVoid() }, {
 							genericMatch: true;
 						});
 						if({ !genericMatch }, {
@@ -3814,13 +3814,13 @@ Class is TypeChecker{
 	local Function of String is inferIndexExpr(Expression is target, Expression is index){
 		local String is leftT: :inferExpressionType(expr: target);
 		:inferExpressionType(expr: index);
-		local Type is leftNode: target:getResolvedTypeNode();
-		if({ leftNode:isArray() && leftNode:isGeneric() }, {
-			return :formatVarTypeString(t: leftNode:elemType());
+		local SemType is leftSem: target:getSemType();
+		if({ leftSem:isArray() && leftSem:isGeneric() }, {
+			return leftSem:elemType():toKey();
 		});
-		if({ leftNode:isMap() }, {
-			local Type is mvNode: leftNode:mapValType();
-			return if({ !mvNode:isEmpty() }, { :formatVarTypeString(t: mvNode) }, { Primitive:STRING:value() });
+		if({ leftSem:isMap() }, {
+			local SemType is mvSem: leftSem:mapValType();
+			return if({ !mvSem:isEmpty() }, { mvSem:toKey() }, { Primitive:STRING:value() });
 		});
 		return 'Any';
 	}
@@ -3891,7 +3891,7 @@ Class is TypeChecker{
 			local Statement is lastStmt: body:get(index: lastIdx);
 			match(on: lastStmt, when: [
 				Statement:Expr: local Function(Expression is exprStmt){
-					local String is lastT: exprStmt:resolvedType;
+					local String is lastT: exprStmt:getSemType():toKey();
 					local String is curRetT: :resolveReturnType(t: returnType);
 					if({ :isVoid(t: curRetT) }, {
 						if({ lastT != '' && !:isVoid(t: lastT) }, {
@@ -4804,7 +4804,7 @@ Class is TypeChecker{
 			local Member is typedVariant: :lookupAnyMember(className: targetType, methodName: method . 'Typed');
 			if({ typedVariant:name != '' }, {
 				local NamedArg is tvArg0: call:args:get(index: 0);
-				if({ TypeDomain:hasFunctionReturn(t: tvArg0:value:resolvedType) }, {
+				if({ tvArg0:value:getSemType():hasFunctionReturn() }, {
 					selected: typedVariant;
 				});
 			});
@@ -4840,7 +4840,7 @@ Class is TypeChecker{
 		});
 		if({ TypeDomain:isOfBase(t: targetType, base: 'Flow') }, {
 			if({ method == 'map' && call:args:length() > 0 }, {
-				local String is mFnRet: TypeDomain:functionReturn(t: call:args:get(index: 0):value:resolvedType);
+				local String is mFnRet: call:args:get(index: 0):value:getSemType():functionReturn():toKey();
 				if({ mFnRet != '' }, {
 					res: TypeDomain:makeFlow(elem: mFnRet);
 				});
@@ -5134,7 +5134,7 @@ Class is TypeChecker{
 									res: if({ mappedElem != Primitive:ANY:value() }, { TypeDomain:makeArray(elem: mappedElem) }, { 'Array' });
 								}, {
 									if({ TypeDomain:isOfBase(t: targetType, base: 'Array') && method == 'fold' }, {
-										res: if({ call:args:length() > 0 }, { call:args:get(index: 0):value:resolvedType }, { 'Any' });
+										res: if({ call:args:length() > 0 }, { call:args:get(index: 0):value:getSemType():toKey() }, { 'Any' });
 									}, {
 										if({ :allEnumNames:has(key: targetType) }, {
 											match(on: method, when: [
@@ -5223,7 +5223,7 @@ Class is TypeChecker{
 		local String is lazyRet: 'Any';
 		if({ call:args:length() > 0 }, {
 			local NamedArg is a0: call:args:get(index: 0);
-			local String is fnT: a0:value:resolvedType;
+			local String is fnT: a0:value:getSemType():toKey();
 			if({ TypeDomain:hasFunctionReturn(t: fnT) }, {
 				lazyRet: TypeDomain:functionReturn(t: fnT);
 			}, {
@@ -5646,7 +5646,7 @@ Class is TypeChecker{
 		local String is note: '';
 		match(on: expr, when: [
 			Expression:Call: local Function(CallData is call){
-				local String is targetT: call:target:resolvedType;
+				local String is targetT: call:target:getSemType():toKey();
 				if({ targetT == :names:selfIdent() || targetT == '' }, {
 					targetT: :currentClassName;
 				});
@@ -5849,7 +5849,7 @@ Class is TypeChecker{
 			});
 			if({ p:hasDefault }, {
 				local String is pTypeStr: :formatVarTypeString(t: p:paramType);
-				local String is defType: p:defaultExpr:resolvedType;
+				local String is defType: p:defaultExpr:getSemType():toKey();
 				if({ defType == '' }, {
 					defType: :inferExpressionType(expr: p:defaultExpr, expected: pTypeStr);
 				});
@@ -5888,7 +5888,7 @@ Class is TypeChecker{
 			local Statement is lastStmt: method:body:get(index: method:body:length() - 1);
 			match(on: lastStmt, when: [
 				Statement:Expr: local Function(Expression is exprStmt){
-					local String is lastT: exprStmt:resolvedType;
+					local String is lastT: exprStmt:getSemType():toKey();
 					if({ lastT != '' && !:isVoid(t: lastT) && !:isAssignable(target: :currentMethodReturnType, source: lastT) }, {
 						:addError(line: lastStmt:line, msg: "Implicit return value in '" . :currentClassName . ":" . method:name . "' has type '" . :displayType(t: lastT) . "', expected '" . :displayType(t: :currentMethodReturnType) . "'.");
 					});
@@ -5926,7 +5926,7 @@ Class is TypeChecker{
 						terminates: true;
 					}, {
 						if({ i == n - 1 }, {
-							local String is rt: exprStmt:resolvedType;
+							local String is rt: exprStmt:getSemType():toKey();
 							if({ rt != '' && !:isVoid(t: rt) }, {
 								terminates: true;
 							});

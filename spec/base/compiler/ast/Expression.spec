@@ -40,13 +40,6 @@ Enum is Expression {
 	## One-based source line where the expression starts.
 	Int is line: 0;
 
-	## Type resolved by the checker (its canonical name).
-	String is resolvedType: '';
-
-	## Structured [Type] node resolved by the checker (base name + generic `Array of Type` params).
-	Type is resolvedTypeNode;
-	Boolean is hasResolvedTypeNode: false;
-
 	## Semantic [SemType] sum-type node resolved by the checker.
 	SemType is semType: SemType:Empty;
 
@@ -59,28 +52,6 @@ Enum is Expression {
 	Function of Expression is setLine(Int is line){
 		:line: line;
 		return :;
-	}
-
-	## Sets the checker-resolved type name.
-	##
-	## @param t: Resolved type name.
-	Function is setResolvedType(String is t){
-		:resolvedType: t;
-	}
-
-	## Sets the structured checker-resolved [Type] node together with its canonical string name.
-	Function is setResolvedTypeNode(Type is tn, String is t){
-		:resolvedTypeNode: tn;
-		:hasResolvedTypeNode: true;
-		:resolvedType: t;
-	}
-
-	## Returns the structured checker-resolved [Type] node, or an empty [Type] if unset.
-	Function of Type is getResolvedTypeNode(){
-		if({ !:hasResolvedTypeNode }, {
-			return Type:EMPTY;
-		});
-		return :resolvedTypeNode;
 	}
 
 	## Sets the semantic [SemType] sum-type resolved by the checker.

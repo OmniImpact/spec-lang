@@ -345,7 +345,7 @@ Class is GenericSpecializer{
 									nsegs:push(item: psegs:get(index: psi));
 								});
 								nie: Expression:Path(segments: nsegs);
-								nie:setResolvedTypeNode(tn: nvt, t: nvt:name);
+								nie:setSemType(st: :cachedSemType(t: nvt));
 							});
 						}
 					], default: {});
@@ -509,12 +509,12 @@ Class is GenericSpecializer{
 							if({ newResT:startsWith(prefix: tname . '__') }, {
 								ntarget: Expression:Ident(name: newResT);
 								ntarget:setLine(line: ln);
-								ntarget:setResolvedTypeNode(tn: Type:init(name: newResT), t: newResT);
+								ntarget:setSemType(st: :cachedSemType(t: Type:init(name: newResT)));
 							}, {
 								if({ tname == selfTemplateName && selfSpecName != '' }, {
 									ntarget: Expression:Ident(name: selfSpecName);
 									ntarget:setLine(line: ln);
-									ntarget:setResolvedTypeNode(tn: Type:init(name: selfSpecName), t: selfSpecName);
+									ntarget:setSemType(st: :cachedSemType(t: Type:init(name: selfSpecName)));
 									if({ call:name == 'init' }, {
 										newResT: selfSpecName;
 										newResNode: Type:init(name: selfSpecName);
@@ -548,7 +548,6 @@ Class is GenericSpecializer{
 									});
 									ntarget: Expression:Path(segments: nsegs);
 									ntarget:setLine(line: ln);
-									ntarget:setResolvedTypeNode(tn: newResNode, t: newResT);
 									ntarget:setSemType(st: :cachedSemType(t: newResNode));
 								});
 							});
@@ -613,7 +612,6 @@ Class is GenericSpecializer{
 		# (method return, self-init rename) sets it directly, so the tail
 		# re-parse only runs for paths that never had a node.
 		local Type is finalNode: if({ newResNode:name != '' }, { newResNode }, { :resolvedStrToType(s: newResT, subst: Map:init()) });
-		res:setResolvedTypeNode(tn: finalNode, t: newResT);
 		res:setSemType(st: :cachedSemType(t: finalNode));
 		return res;
 	}

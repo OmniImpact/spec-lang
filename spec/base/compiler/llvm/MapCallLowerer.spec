@@ -43,7 +43,7 @@ Class of CallLowerer is MapCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		local String is dst: b:nextTmp();
-		local Type is resNode: expr:getResolvedTypeNode();
+		local Type is resNode: expr:getSemType():toAstType();
 		local Int is kk: b:resolveMapKeyKind(resNode: resNode);
 		local Int is vk: b:resolveMapValKind(resNode: resNode);
 		local String is mapStruct: b:cStructName(qname: resNode:name);
