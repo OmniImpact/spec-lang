@@ -12,6 +12,7 @@ Class is IrBuilder{
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', SemType],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
@@ -252,6 +253,45 @@ Class is IrBuilder{
 	## Structured Type-node twin of irTypeFor: inspects t:name directly.
 	Function of IrType is irTypeForNode(Type is t){
 		return :irTypeFor(specType: t:name);
+	}
+
+	## Semantic-type twin of irTypeFor: dispatches directly on the [SemType] sum type.
+	Function of IrType is irTypeForSem(SemType is st){
+		return match(on: st, when: [
+			SemType:Empty: { IrType:Void },
+			SemType:Prim: local Function of IrType(Primitive is kind){
+				return match(on: kind, when: [
+					[Primitive:INT8, Primitive:BYTE, Primitive:UINT8]: { IrType:I8 },
+					[Primitive:INT16, Primitive:UINT16]: { IrType:I16 },
+					[Primitive:INT32, Primitive:UINT32, Primitive:RUNE]: { IrType:I32 },
+					[Primitive:INT, Primitive:UINT64, Primitive:ISIZE, Primitive:USIZE]: { IrType:I64 },
+					[Primitive:INT128, Primitive:UINT128]: { IrType:I128 },
+					Primitive:FLOAT32: { IrType:F32 },
+					Primitive:FLOAT: { IrType:F64 },
+					Primitive:BOOLEAN: { IrType:I1 },
+					Primitive:VOID: { IrType:Void },
+					else: { IrType:Ptr }
+				]);
+			},
+			else: { IrType:Ptr }
+		]);
+	}
+
+	## Semantic-type check: whether [st] is an ARC-managed heap object pointer.
+	Function of Boolean is isArcTypeSem(SemType is st){
+		if({ :isUnmanagedClass || st:isEmpty() }, { return false; });
+		return match(on: st, when: [
+			SemType:Prim: local Function of Boolean(Primitive is kind){
+				return kind == Primitive:STRING || kind == Primitive:FUNCTION;
+			},
+			SemType:Named: local Function of Boolean([String] is path, [SemType] is params){
+				if({ path:length() == 1 && params:length() == 0 && :curClassTypeParams:has(key: path:get(index: 0)) }, {
+					return false;
+				});
+				return true;
+			},
+			else: { true }
+		]);
 	}
 
 	## Structured Type-node check: whether [t] is an ARC-managed heap object pointer.
@@ -3485,19 +3525,12 @@ Class is IrBuilder{
 					], default: {});
 				}, {
 					if({ cnm != 'if' && cnm != 'while' && cnm != 'until' && cnm != 'repeat' && cnm != 'match' && cnm != 'branch' && cnm != 'lazy' && cnm != 'eval' && cnm != 'get' && cnm != 'set' && cnm != 'add' && cnm != 'length' && cnm != 'has' && cnm != 'toString' && cnm != 'destroy' }, {
-						local String is rt: call:target:resolvedType;
+						local SemType is rtSem: call:target:getSemType();
 						local String is recvStruct: '';
-						if({ rt != '' && rt != ':' && rt != 'Any' }, {
-							local String is rBase: rt;
-							local Int is ofIdx: rBase:indexOf(search: ' of ', default: -1);
-							if({ ofIdx > 0 }, {
-								rBase: rBase:substring(start: 0, end: ofIdx);
-							});
+						if({ !rtSem:isEmpty() && !rtSem:isAny() }, {
+							local String is rBase: rtSem:baseName();
 							if({ !:clsMap:has(key: rBase) }, {
-								local Int is colIdx: rBase:indexOf(search: ':', default: -1);
-								if({ colIdx > 0 }, {
-									rBase: rBase:substring(start: 0, end: colIdx);
-								});
+								rBase: rtSem:rootName();
 							});
 							if({ :clsMap:has(key: rBase) }, {
 								recvStruct: :cStructName(qname: rBase);

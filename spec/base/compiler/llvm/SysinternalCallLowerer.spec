@@ -15,6 +15,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', SemType],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ir', IrType],
@@ -60,7 +61,8 @@ Class of CallLowerer is SysinternalCallLowerer{
 
 	Function of Boolean is isTargetClass(CallData is call, String is clsName){
 		if({ call:bareProvider == clsName || call:bareProvider:endsWith(suffix: ':' . clsName) }, { return true; });
-		if({ call:target:resolvedType == clsName || call:target:resolvedType:endsWith(suffix: ':' . clsName) }, { return true; });
+		local SemType is rtSem: call:target:getSemType();
+		if({ rtSem:baseName() == clsName || rtSem:leafName() == clsName }, { return true; });
 		local Boolean is ok: false;
 		match(on: call:target, when: [
 			Expression:Ident: local Function(String is tn){
@@ -84,13 +86,10 @@ Class of CallLowerer is SysinternalCallLowerer{
 			});
 			return bp;
 		});
-		local String is rt: call:target:resolvedType;
-		if({ rt != '' && rt != 'Class' && rt != 'Any' && rt != 'Unknown' && rt != 'Void' }, {
-			if({ rt:contains(needle: ':') }, {
-				local Array of String is parts: rt:split(delimiter: ':');
-				if({ parts:length() > 0 }, { return parts:get(index: parts:length() - 1); });
-			});
-			return rt;
+		local SemType is rtSem: call:target:getSemType();
+		local String is rtBase: rtSem:baseName();
+		if({ !rtSem:isEmpty() && !rtSem:isAny() && !rtSem:isVoid() && rtBase != 'Class' && rtBase != 'Unknown' }, {
+			return rtSem:leafName();
 		});
 		local String is res: '';
 		match(on: call:target, when: [

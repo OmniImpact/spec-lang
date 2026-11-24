@@ -31,7 +31,7 @@ Class of CallLowerer is ByteCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		return call:target:getResolvedTypeNode():primitive() == Primitive:BYTE;
+		return call:target:getSemType():primitive() == Primitive:BYTE;
 	}
 
 	local Function of String is constI8(IrBuilder is b, Int is v){
@@ -83,7 +83,7 @@ Class of CallLowerer is ByteCallLowerer{
 		});
 		local NamedArg is na0: call:args:get(index: 0);
 		local String is raw: b:lowerExpr(expr: na0:value);
-		local IrType is aTy: b:irTypeForNode(t: na0:value:getResolvedTypeNode());
+		local IrType is aTy: b:irTypeForSem(st: na0:value:getSemType());
 		return b:castIfNeededUnsigned(val: raw, fromTy: aTy, toTy: IrType:I8);
 	}
 

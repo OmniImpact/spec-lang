@@ -220,7 +220,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				b:popScope();
 			}
 		], default: {
-			local IrType is cty: b:irTypeFor(specType: condExpr:resolvedType);
+			local IrType is cty: b:irTypeForSem(st: condExpr:getSemType());
 			if({ cty == IrType:Ptr }, {
 				local String is cObj: b:lowerExpr(expr: condExpr);
 				local String is fnPtrAddr: b:nextTmp();
@@ -248,7 +248,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				b:popScope();
 			}
 		], default: {
-			local IrType is bty: b:irTypeFor(specType: blkExpr:resolvedType);
+			local IrType is bty: b:irTypeForSem(st: blkExpr:getSemType());
 			if({ bty == IrType:Ptr }, {
 				local String is cObj: b:lowerExpr(expr: blkExpr);
 				local String is fnPtrAddr: b:nextTmp();
@@ -281,13 +281,13 @@ Class of CallLowerer is ControlFlowCallLowerer{
 					local Statement is lastStmt: bd:get(index: lastIdx);
 					match(on: lastStmt, when: [
 						Statement:Expr: local Function(Expression is es){
-							local IrType is ety: b:irTypeFor(specType: es:resolvedType);
+							local IrType is ety: b:irTypeForSem(st: es:getSemType());
 							local String is ev: b:lowerExpr(expr: es);
 							resVal: b:castIfNeeded(val: ev, fromTy: ety, toTy: expectedTy);
 						},
 						Statement:Return: local Function(Expression is re, Boolean is hr){
 							if({ hr }, {
-								local IrType is rty: b:irTypeFor(specType: re:resolvedType);
+								local IrType is rty: b:irTypeForSem(st: re:getSemType());
 								local String is rv: b:lowerExpr(expr: re);
 								resVal: b:castIfNeeded(val: rv, fromTy: rty, toTy: expectedTy);
 							}, {
@@ -303,7 +303,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				b:popScope();
 			}
 		], default: {
-			local IrType is bty: b:irTypeFor(specType: blkExpr:resolvedType);
+			local IrType is bty: b:irTypeForSem(st: blkExpr:getSemType());
 			local String is bv: b:lowerExpr(expr: blkExpr);
 			if({ expectedTy != IrType:Void }, {
 				resVal: b:castIfNeeded(val: bv, fromTy: bty, toTy: expectedTy);
@@ -341,7 +341,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			});
 			ai++;
 		});
-		local IrType is resTy: b:irTypeFor(specType: expr:resolvedType);
+		local IrType is resTy: b:irTypeForSem(st: expr:getSemType());
 		local Boolean is yieldVal: resTy != IrType:Void && hasElse;
 		local String is resSlot: '';
 		if({ yieldVal }, {
@@ -446,7 +446,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			});
 			nai++;
 		});
-		local IrType is resTy: b:irTypeFor(specType: expr:resolvedType);
+		local IrType is resTy: b:irTypeForSem(st: expr:getSemType());
 		local Boolean is yieldVal: resTy != IrType:Void;
 		local String is resSlot: '';
 		if({ yieldVal }, {
@@ -634,7 +634,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						local String is val: b:emitDefaultVal(ty: pty);
 						if({ p:hasDefault }, {
 							val: b:lowerExpr(expr: p:defaultExpr);
-							local IrType is vty: b:irTypeFor(specType: p:defaultExpr:resolvedType);
+							local IrType is vty: b:irTypeForSem(st: p:defaultExpr:getSemType());
 							val: b:castIfNeeded(val: val, fromTy: vty, toTy: pty);
 							if({ val == '' }, { val: b:emitDefaultVal(ty: pty); });
 						});
@@ -826,7 +826,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						});
 						local String is ival: b:emitDefaultVal(ty: vty);
 						if({ p:hasDefault }, {
-							local IrType is ity: b:irTypeFor(specType: p:defaultExpr:resolvedType);
+							local IrType is ity: b:irTypeForSem(st: p:defaultExpr:getSemType());
 							ival: b:lowerExpr(expr: p:defaultExpr);
 							ival: b:castIfNeeded(val: ival, fromTy: ity, toTy: vty);
 						});
@@ -876,7 +876,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				local Statement is lastStmt: bd:get(index: lastIdx);
 				match(on: lastStmt, when: [
 					Statement:Expr: local Function(Expression is es){
-						local IrType is ety: b:irTypeFor(specType: es:resolvedType);
+						local IrType is ety: b:irTypeForSem(st: es:getSemType());
 						if({ ety == IrType:Void }, {
 							b:lowerStmt(stmt: lastStmt);
 						}, {
@@ -886,7 +886,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 					},
 					Statement:Return: local Function(Expression is re, Boolean is hr){
 						if({ hr }, {
-							local IrType is rty: b:irTypeFor(specType: re:resolvedType);
+							local IrType is rty: b:irTypeForSem(st: re:getSemType());
 							local String is rv: b:lowerExpr(expr: re);
 							resVal: b:castIfNeeded(val: rv, fromTy: rty, toTy: expectedTy);
 						}, {
@@ -952,9 +952,9 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				local Expression is srcExpr: if({ hasArg }, { argExpr }, { p:defaultExpr });
 				local String is val: b:lowerExpr(expr: srcExpr);
 				local IrType is pty: b:irTypeForNode(t: p:paramType);
-				local IrType is valTy: b:irTypeFor(specType: srcExpr:resolvedType);
+				local IrType is valTy: b:irTypeForSem(st: srcExpr:getSemType());
 				val: b:castIfNeeded(val: val, fromTy: valTy, toTy: pty);
-				local String is pSpec: if({ p:paramType:name != '' && p:paramType:name != 'Any' }, { p:paramType:name }, { srcExpr:resolvedType });
+				local String is pSpec: if({ p:paramType:name != '' && p:paramType:name != 'Any' }, { p:paramType:name }, { srcExpr:getSemType():toKey() });
 				bindNames:push(item: p:name);
 				bindVals:push(item: val);
 				bindTys:push(item: pty);
@@ -1075,7 +1075,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		# 5. Lower the callee's body with an inline return target so any `return`
 		#    in the loop method exits the inlined loop rather than the caller.
-		local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
+		local IrType is retTy: b:irTypeForSem(st: expr:getSemType());
 		local String is endLbl: b:nextLabel(prefix: 'iloop_end');
 		local String is resSlot: '';
 		if({ retTy != IrType:Void }, {
@@ -1173,8 +1173,8 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			local String is av: b:lowerExpr(expr: na:value);
 			argNames:push(item: na:name);
 			argVals:push(item: av);
-			argTys:push(item: b:irTypeFor(specType: na:value:resolvedType));
-			argSpecs:push(item: na:value:resolvedType);
+			argTys:push(item: b:irTypeForSem(st: na:value:getSemType()));
+			argSpecs:push(item: na:value:getSemType():toKey());
 			ai++;
 		});
 
@@ -1222,7 +1222,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:scopeMarkStack: b:inlineCallerScopeMarks;
 
 		# 3. Bind the closure's parameters and lower its body in the caller's scope.
-		local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
+		local IrType is retTy: b:irTypeForSem(st: expr:getSemType());
 		local String is resVal: '0';
 		match(on: fnExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
@@ -1261,7 +1261,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				});
 
 				local IrType is effRetTy: retTy;
-				if({ expr:resolvedType == 'Any' && (rt:name == '' || rt:name == 'Void') }, {
+				if({ expr:getSemType():isAny() && (rt:name == '' || rt:name == 'Void') }, {
 					effRetTy: IrType:Void;
 				});
 				local String is fnEndLbl: b:nextLabel(prefix: 'inlfn_end');

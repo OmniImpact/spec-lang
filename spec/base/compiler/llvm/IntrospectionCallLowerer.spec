@@ -8,6 +8,7 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 		['base', 'compiler', 'llvm', SysinternalCallLowerer],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', SemType],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ir', IrType],
@@ -29,8 +30,8 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		local String is rt: call:target:resolvedType;
-		if({ call:name == 'typeName' && call:args:length() == 0 && rt != '' && rt != 'Class' }, {
+		local SemType is rtSem: call:target:getSemType();
+		if({ call:name == 'typeName' && call:args:length() == 0 && !rtSem:isEmpty() && rtSem:baseName() != 'Class' }, {
 			return true;
 		});
 		if({ :isFloorTarget(call: call, domain: 'Reflection') }, {

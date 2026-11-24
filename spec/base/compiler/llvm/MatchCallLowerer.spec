@@ -164,8 +164,9 @@ Class of CallLowerer is MatchCallLowerer{
 				# ('Box2__Float'). Resolve the variant struct through the
 				# subject's spec class so dispatch and payload binding hit
 				# the concrete layout.
-				if({ segs:length() >= 2 && b:specBaseMap:has(key: onExpr:resolvedType) }, {
-					local String is alt: onExpr:resolvedType . '_' . segs:get(index: segs:length() - 1);
+				local String is onKey: onExpr:getSemType():toKey();
+				if({ segs:length() >= 2 && b:specBaseMap:has(key: onKey) }, {
+					local String is alt: onKey . '_' . segs:get(index: segs:length() - 1);
 					if({ b:mod:findStruct(name: alt):name != '' }, {
 						variantStruct: alt;
 					});
@@ -204,7 +205,7 @@ Class of CallLowerer is MatchCallLowerer{
 
 		local String is kVal: '';
 		local Boolean is resolvedEnumIdent: false;
-		local String is subjStruct: b:cStructName(qname: onExpr:resolvedType);
+		local String is subjStruct: b:cStructName(qname: onExpr:getSemType():baseName());
 		match(on: k, when: [
 			Expression:Ident: local Function(String is kn){
 				if({ !b:localSlots:has(key: kn) && subjStruct != '' && b:heldFields:has(key: subjStruct . ':' . kn) }, {
@@ -219,7 +220,7 @@ Class of CallLowerer is MatchCallLowerer{
 			kVal: b:lowerExpr(expr: k);
 		});
 		local String is condVal: b:nextTmp();
-		if({ subjTy == IrType:Ptr && (onExpr:getResolvedTypeNode():isStringLike() || k:getResolvedTypeNode():isStringLike()) }, {
+		if({ subjTy == IrType:Ptr && (onExpr:getSemType():isStringLike() || k:getSemType():isStringLike()) }, {
 			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'Str_stringEquals', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', subjVal, kVal]));
 		}, {
 			if({ subjTy == IrType:Ptr && kVal == '0' }, {
@@ -248,7 +249,7 @@ Class of CallLowerer is MatchCallLowerer{
 			ai++;
 		});
 
-		local IrType is resTy: b:irTypeForNode(t: expr:getResolvedTypeNode());
+		local IrType is resTy: b:irTypeForSem(st: expr:getSemType());
 		local Boolean is hasResult: resTy != IrType:Void;
 		local String is resSlot: '';
 		if({ hasResult }, {
@@ -263,7 +264,7 @@ Class of CallLowerer is MatchCallLowerer{
 		local IrType is subjTy: IrType:I64;
 		if({ hasOn }, {
 			subjVal: b:lowerExpr(expr: onExpr);
-			subjTy: b:irTypeForNode(t: onExpr:getResolvedTypeNode());
+			subjTy: b:irTypeForSem(st: onExpr:getSemType());
 			if({ subjTy == IrType:Void }, { subjTy: IrType:I64; });
 		});
 

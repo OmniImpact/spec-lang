@@ -12,6 +12,8 @@ Class is GenericSpecializer{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', SemType],
+		['base', 'compiler', 'checker', as SemTypes()],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
@@ -603,11 +605,9 @@ Class is GenericSpecializer{
 		# The transformed node rides alongside its string: an override arm
 		# (method return, self-init rename) sets it directly, so the tail
 		# re-parse only runs for paths that never had a node.
-		if({ newResNode:name != '' }, {
-			res:setResolvedTypeNode(tn: newResNode, t: newResT);
-		}, {
-			res:setResolvedTypeNode(tn: :resolvedStrToType(s: newResT, subst: Map:init()), t: newResT);
-		});
+		local Type is finalNode: if({ newResNode:name != '' }, { newResNode }, { :resolvedStrToType(s: newResT, subst: Map:init()) });
+		res:setResolvedTypeNode(tn: finalNode, t: newResT);
+		res:setSemType(st: SemTypes:fromAstType(t: finalNode));
 		return res;
 	}
 

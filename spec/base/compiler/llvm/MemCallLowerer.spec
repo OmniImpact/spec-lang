@@ -59,7 +59,7 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 		});
 		if({ !found }, { return 'null'; });
 		local String is raw: b:lowerExpr(expr: valExpr);
-		local IrType is fromTy: b:irTypeFor(specType: valExpr:resolvedType);
+		local IrType is fromTy: b:irTypeForSem(st: valExpr:getSemType());
 		return b:castIfNeeded(val: raw, fromTy: fromTy, toTy: IrType:Ptr);
 	}
 
@@ -175,7 +175,7 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
 				local String is off: :lowerNamedArg(b: b, call: call, argName: 'byteOffset', posIdx: 1, defVal: '0');
 				local String is rawPtr: :emitSysCall(b: b, retType: IrType:Ptr, callee: '__spec_mem_load_ptr', argTypes: [IrType:I64, IrType:I64], args: [p, off]);
-				res: b:castIfNeeded(val: rawPtr, fromTy: IrType:Ptr, toTy: b:irTypeFor(specType: expr:resolvedType));
+				res: b:castIfNeeded(val: rawPtr, fromTy: IrType:Ptr, toTy: b:irTypeForSem(st: expr:getSemType()));
 			},
 			'storePtr': {
 				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
@@ -201,7 +201,7 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 			'addrToObj': {
 				local String is a: :lowerNamedArg(b: b, call: call, argName: 'addr', posIdx: 0, defVal: '0');
 				local String is rawPtr: :emitSysCall(b: b, retType: IrType:Ptr, callee: '__spec_mem_addr_to_obj', argTypes: [IrType:I64], args: [a]);
-				res: b:castIfNeeded(val: rawPtr, fromTy: IrType:Ptr, toTy: b:irTypeFor(specType: expr:resolvedType));
+				res: b:castIfNeeded(val: rawPtr, fromTy: IrType:Ptr, toTy: b:irTypeForSem(st: expr:getSemType()));
 			},
 			'retainAddr': {
 				local String is a: :lowerNamedArg(b: b, call: call, argName: 'objAddr', posIdx: 0, defVal: '0');

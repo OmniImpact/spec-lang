@@ -13,6 +13,8 @@ Class of CallLowerer is ArrayCallLowerer{
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', SemType],
+		['base', 'compiler', 'checker', as SemTypes()],
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrInst],
 		['base', 'struct', Array],
@@ -39,8 +41,9 @@ Class of CallLowerer is ArrayCallLowerer{
 			}
 		], default: {});
 		if({ isArrInit }, { return true; });
-		local String is recvType: call:target:resolvedType;
-		local Boolean is isArrRecv: recvType == 'Array' || b:specBaseMap:get(key: recvType, default: '') == 'Array';
+		local SemType is recvSem: call:target:getSemType();
+		local String is recvType: recvSem:toKey();
+		local Boolean is isArrRecv: recvSem:isArray() || b:specBaseMap:get(key: recvType, default: '') == 'Array';
 		if({ call:name == 'add' && call:args:length() == 1 && isArrRecv }, {
 			local [Type] is emptyTypes: [];
 			local [Type] is rArgs: b:specClassArgsMap:get(key: recvType, default: emptyTypes);
@@ -59,46 +62,47 @@ Class of CallLowerer is ArrayCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name == 'init' }, {
-			local Type is resNode: expr:getResolvedTypeNode();
-			local String is resName: resNode:name;
+			local SemType is resSem: expr:getSemType();
+			local String is resName: resSem:baseName();
 			local String is arrStruct: b:cStructName(qname: resName);
-			if({ !((b:specBaseMap:get(key: resName, default: '') == 'Array' || resNode:isArray()) && b:mod:findStruct(name: arrStruct):name != '') }, {
+			if({ !((b:specBaseMap:get(key: resName, default: '') == 'Array' || resSem:isArray()) && b:mod:findStruct(name: arrStruct):name != '') }, {
 				arrStruct: 'Array';
 			});
-			local Type is elemNode: Type(name: '');
+			local SemType is elemSem: SemTypes:EMPTY;
 			local [Type] is emptyTypes: [];
 			if({ b:specBaseMap:get(key: resName, default: '') == 'Array' && b:specClassArgsMap:has(key: resName) }, {
 				local [Type] is mArgs: b:specClassArgsMap:get(key: resName, default: emptyTypes);
 				if({ mArgs:length() >= 1 }, {
-					elemNode: mArgs:get(index: 0);
+					elemSem: SemTypes:fromAstType(t: mArgs:get(index: 0));
 				});
 			});
-			if({ elemNode:name == '' && resNode:isArray() && resNode:isGeneric() }, {
-				elemNode: resNode:elemType();
+			if({ elemSem:isEmpty() && resSem:isArray() && resSem:isGeneric() }, {
+				elemSem: resSem:elemType();
 			});
-			if({ elemNode:name == '' && call:args:length() == 1 }, {
-				local Type is a0Node: call:args:get(index: 0):value:getResolvedTypeNode();
-				if({ a0Node:isGeneric() }, {
-					elemNode: a0Node:elemType();
+			if({ elemSem:isEmpty() && call:args:length() == 1 }, {
+				local SemType is a0Sem: call:args:get(index: 0):value:getSemType();
+				if({ a0Sem:isGeneric() }, {
+					elemSem: a0Sem:elemType();
 				}, {
-					if({ b:specClassArgsMap:has(key: a0Node:name) }, {
-						local [Type] is a0Args: b:specClassArgsMap:get(key: a0Node:name, default: emptyTypes);
+					local String is a0Name: a0Sem:baseName();
+					if({ b:specClassArgsMap:has(key: a0Name) }, {
+						local [Type] is a0Args: b:specClassArgsMap:get(key: a0Name, default: emptyTypes);
 						if({ a0Args:length() >= 1 }, {
-							elemNode: a0Args:get(index: 0);
+							elemSem: SemTypes:fromAstType(t: a0Args:get(index: 0));
 						});
 					});
 				});
 			});
-			local Int is ekInt: if({ elemNode:name != '' && (b:isArcTypeNode(t: elemNode) || elemNode:isAny()) }, { 1 }, { 0 });
-			if({ elemNode:name == '' && call:args:length() == 1 }, {
+			local Int is ekInt: if({ !elemSem:isEmpty() && (b:isArcTypeSem(st: elemSem) || elemSem:isAny()) }, { 1 }, { 0 });
+			if({ elemSem:isEmpty() && call:args:length() == 1 }, {
 				match(on: call:args:get(index: 0):value, when: [
 					Expression:ArrayLit: local Function([Expression] is litItems){
 						if({ litItems:length() > 0 }, {
 							local Boolean is allPtr: true;
 							local Int is oi: 0;
 							while({ oi < litItems:length() && allPtr }, {
-								local Type is itNode: litItems:get(index: oi):getResolvedTypeNode();
-								if({ b:irTypeForNode(t: itNode) != IrType:Ptr || itNode:isRawPtr() }, {
+								local SemType is itSem: litItems:get(index: oi):getSemType();
+								if({ b:irTypeForSem(st: itSem) != IrType:Ptr || itSem:isRawPtr() }, {
 									allPtr: false;
 								});
 								oi++;
@@ -116,8 +120,8 @@ Class of CallLowerer is ArrayCallLowerer{
 			if({ call:args:length() == 1 }, {
 				local Expression is srcExpr: call:args:get(index: 0):value;
 				local String is srcVal: b:lowerExpr(expr: srcExpr);
-				local Type is srcNode: srcExpr:getResolvedTypeNode();
-				local Boolean is srcIsList: srcNode:isList() || b:specBaseMap:get(key: srcNode:name, default: '') == 'List';
+				local SemType is srcSem: srcExpr:getSemType();
+				local Boolean is srcIsList: srcSem:isList() || b:specBaseMap:get(key: srcSem:baseName(), default: '') == 'List';
 				if({ srcIsList }, {
 					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: arrStruct . '_addList', argTypes: [IrType:Ptr, IrType:Ptr], args: [dst, srcVal]));
 				}, {
@@ -130,13 +134,14 @@ Class of CallLowerer is ArrayCallLowerer{
 		local String is aRecv: b:lowerExpr(expr: call:target);
 		local NamedArg is na0: call:args:get(index: 0);
 		local String is iv: b:lowerExpr(expr: na0:value);
-		local Type is rNode: call:target:getResolvedTypeNode();
-		local String is recvStruct: b:cStructName(qname: rNode:name);
-		if({ !((b:specBaseMap:get(key: rNode:name, default: '') == 'Array' || rNode:isArray()) && b:mod:findStruct(name: recvStruct):name != '') }, {
+		local SemType is rSem: call:target:getSemType();
+		local String is rName: rSem:baseName();
+		local String is recvStruct: b:cStructName(qname: rName);
+		if({ !((b:specBaseMap:get(key: rName, default: '') == 'Array' || rSem:isArray()) && b:mod:findStruct(name: recvStruct):name != '') }, {
 			recvStruct: 'Array';
 		});
-		local Type is vNode: na0:value:getResolvedTypeNode();
-		local Boolean is vIsList: vNode:isList() || b:specBaseMap:get(key: vNode:name, default: '') == 'List';
+		local SemType is vSem: na0:value:getSemType();
+		local Boolean is vIsList: vSem:isList() || b:specBaseMap:get(key: vSem:baseName(), default: '') == 'List';
 		if({ vIsList }, {
 			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: recvStruct . '_addList', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, iv]));
 		}, {
