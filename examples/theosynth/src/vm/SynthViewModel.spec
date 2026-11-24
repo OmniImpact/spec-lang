@@ -5,8 +5,7 @@ Class is SynthViewModel{
 	replace [String] is namespace: ['theosynth', 'vm'];
 
 	merge [[String]] is using: [
-		['theosynth', 'model', [Waveform, PianoKey, SynthEngine]],
-		['theosynth', 'util', SynthStrings],
+		['theosynth', 'model', [Waveform, PianoKey, Instrument, InstrumentRegistry, SynthEngine]],
 		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'struct', Map]
@@ -18,6 +17,7 @@ Class is SynthViewModel{
 	[Int] is heldFlags: [];
 	[Int] is fallbackTicks: [];
 
+	InstrumentRegistry is registry: InstrumentRegistry();
 	Waveform is selectedWaveform: Waveform:SINE;
 	Int is lastPlayedIdx: -1;
 	Boolean is playMode: true;
@@ -93,33 +93,16 @@ Class is SynthViewModel{
 		setPlayMode(enabled: !playMode);
 	}
 
+	Function of [String] is instrumentOptions(){ registry:optionNames() }
+
 	Function is selectInstrument(String is name){
-		if({ name == SynthStrings:WAVE_SQUARE }, {
-			selectedWaveform: Waveform:SQUARE;
-		}, {
-			if({ name == SynthStrings:WAVE_SAWTOOTH }, {
-				selectedWaveform: Waveform:SAWTOOTH;
-			}, {
-				if({ name == SynthStrings:WAVE_PLUCK }, {
-					selectedWaveform: Waveform:PLUCK;
-				}, {
-					if({ name == SynthStrings:WAVE_PIANO }, {
-						selectedWaveform: Waveform:PIANO;
-					}, {
-						selectedWaveform: Waveform:SINE;
-					});
-				});
-			});
-		});
+		local Instrument is inst: registry:findByName(name: name);
+		selectedWaveform: inst:waveform();
 		onStateChanged();
 	}
 
 	Function of String is selectedInstrumentName(){
-		if({ selectedWaveform == Waveform:SQUARE }, { return SynthStrings:WAVE_SQUARE; });
-		if({ selectedWaveform == Waveform:SAWTOOTH }, { return SynthStrings:WAVE_SAWTOOTH; });
-		if({ selectedWaveform == Waveform:PLUCK }, { return SynthStrings:WAVE_PLUCK; });
-		if({ selectedWaveform == Waveform:PIANO }, { return SynthStrings:WAVE_PIANO; });
-		return SynthStrings:WAVE_SINE;
+		return registry:findByWaveform(wave: selectedWaveform):name();
 	}
 
 	Function of String is lastNoteLabel(){

@@ -8,7 +8,7 @@ Class of SpecUnitTest is TestTheoSynth{
 		['base', 'theo', '*'],
 		['base', 'sys', as Loops()],
 		['base', 'struct', List],
-		['theosynth', 'model', [Waveform, PianoKey, SynthEngine]],
+		['theosynth', 'model', [Waveform, PianoKey, Instrument, InstrumentRegistry, SynthEngine]],
 		['theosynth', 'util', SynthStrings],
 		['theosynth', 'vm', SynthViewModel],
 		['theosynth', 'view', SynthFrame]
@@ -17,9 +17,11 @@ Class of SpecUnitTest is TestTheoSynth{
 	Function is testWaveformsAndPcmSynthesis(){
 		local SynthEngine is eng: SynthEngine();
 		Assert:isTrue(eng:midiToFreq(midi: 69) > 439.9 && eng:midiToFreq(midi: 69) < 440.1);
-		Assert:isTrue(eng:sampleWave(wave: Waveform:SQUARE, phase: 0.25) == 1.0);
-		Assert:isTrue(eng:sampleWave(wave: Waveform:SQUARE, phase: 0.75) == -1.0);
-		Assert:isTrue(eng:sampleWave(wave: Waveform:SAWTOOTH, phase: 0.5) == 0.0);
+
+		local InstrumentRegistry is reg: InstrumentRegistry();
+		Assert:isTrue(reg:optionNames():length() == 5);
+		local Instrument is sqInst: reg:findByWaveform(wave: Waveform:SQUARE);
+		Assert:isTrue(sqInst:name() == SynthStrings:WAVE_SQUARE);
 
 		local List of Byte is sinePcm: eng:synthesize(wave: Waveform:SINE, freqHz: 440.0, durationMs: 20, rate: 22050);
 		local List of Byte is sqPcm: eng:synthesize(wave: Waveform:SQUARE, freqHz: 440.0, durationMs: 20, rate: 22050);

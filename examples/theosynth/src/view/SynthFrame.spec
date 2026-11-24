@@ -41,7 +41,7 @@ Class of Frame is SynthFrame{
 		instrumentPickers: Array([
 			Dropdown(
 				host: :,
-				options: SynthStrings:instrumentOptions(),
+				options: vm:instrumentOptions(),
 				selected: SynthStrings:WAVE_SINE,
 				focusTarget: instrumentFocus,
 				onSelect: local Function(String is chosen){
