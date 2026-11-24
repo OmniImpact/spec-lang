@@ -107,6 +107,7 @@ Class of Widget is Frame{
 	}
 
 	replace Function is dispose(){
+		disposeBindings();
 		if({ built }, {
 			rootWidget:dispose();
 			:built: false;

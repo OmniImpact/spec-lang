@@ -258,6 +258,7 @@ Class of Widget is Panel{
 	}
 
 	replace Function is dispose(){
+		disposeBindings();
 		child:dispose();
 	}
 }

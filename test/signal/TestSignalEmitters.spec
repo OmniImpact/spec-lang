@@ -10,7 +10,8 @@ Class of SpecUnitTest is TestSignalEmitters{
 		['base', 'signal', IntCollector],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', BoolCollector],
-		['base', 'signal', ListEmitter]
+		['base', 'signal', ListEmitter],
+		['base', 'signal', SignalBag]
 	];
 
 	Function is testTextEmitterReplayAndEmit(){
@@ -88,5 +89,29 @@ Class of SpecUnitTest is TestSignalEmitters{
 		Assert:areEqualInt(3, count);
 		Assert:areEqualString('y', items:current():get(index: 1));
 		items:detach(collector: c);
+	}
+
+	Function is testSignalBagRebindAndClear(){
+		local TextEmitter is e1: TextEmitter(initial: 'a');
+		local TextEmitter is e2: TextEmitter(initial: 'b');
+		local SignalBag is bag: SignalBag();
+		local Int is hits1: 0;
+		local Int is hits2: 0;
+		bag:track(slot: 'v', emitter: e1, collector: e1:collect(onEmit: local Function(String is _s){ hits1: hits1 + 1; }));
+		Assert:areEqualInt(1, bag:count());
+		Assert:areEqualInt(1, hits1);
+
+		# Rebinding the same slot detaches e1's collector automatically
+		bag:track(slot: 'v', emitter: e2, collector: e2:collect(onEmit: local Function(String is _s){ hits2: hits2 + 1; }));
+		Assert:areEqualInt(1, bag:count());
+		e1:emit(value: 'a2');
+		Assert:areEqualInt(1, hits1);
+		e2:emit(value: 'b2');
+		Assert:areEqualInt(2, hits2);
+
+		bag:clear();
+		Assert:areEqualInt(0, bag:count());
+		e2:emit(value: 'b3');
+		Assert:areEqualInt(2, hits2);
 	}
 }

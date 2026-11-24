@@ -6,6 +6,7 @@ Class is Widget{
 
 	replace [[String]] is using: [
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, MouseEvent, FocusTarget]],
+		['base', 'signal', [Emitter, Collector, SignalBag]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -15,6 +16,8 @@ Class is Widget{
 	Int is boxH: 0;
 	TheoTheme is activeTheme: TheoTheme();
 	Array of Function is dirtyListeners: Array();
+	SignalBag is signalBag: SignalBag();
+	Boolean is suppressSync: false;
 
 	Function is applyTheme(TheoTheme is theme){
 		:activeTheme: theme;
@@ -94,7 +97,25 @@ Class is Widget{
 		return;
 	}
 
+	Function is trackBinding(String is slot, Emitter is emitter, Collector is collector){
+		signalBag:track(slot: slot, emitter: emitter, collector: collector);
+	}
+
+	Function is disposeBindings(){
+		signalBag:clear();
+	}
+
+	Function is runMuted(Function is action){
+		:suppressSync: true;
+		action();
+		:suppressSync: false;
+	}
+
+	Function of Boolean is isMuted(){
+		return suppressSync;
+	}
+
 	Function is dispose(){
-		return;
+		disposeBindings();
 	}
 }

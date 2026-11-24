@@ -14,8 +14,6 @@ Class of TextArea is CodeTextArea{
 	SyntaxTheme is syntaxTheme: SyntaxTheme();
 	Boolean is hasCustomSyntaxTheme: false;
 	String is language: 'auto';
-	Array of TextEmitter is pathEmitters: Array();
-	Array of TextCollector is pathCollectors: Array();
 
 	local Function is syncLanguage(String is filePath){
 		if({ language == 'auto' }, {
@@ -37,10 +35,6 @@ Class of TextArea is CodeTextArea{
 	){
 		:focusTarget: focusTarget;
 		:onChange: onChange;
-		:boundEmitters: Array();
-		:boundCollectors: Array();
-		:pathEmitters: Array();
-		:pathCollectors: Array();
 		:highlighter: SyntaxHighlighter();
 		:syntaxTheme: syntaxTheme;
 		:hasCustomSyntaxTheme: !useThemeSyntax;
@@ -50,16 +44,11 @@ Class of TextArea is CodeTextArea{
 	}
 
 	Function is bindFilePath(TextEmitter is filePath){
-		if({ pathEmitters:length() > 0 && pathCollectors:length() > 0 }, {
-			pathEmitters:get(index: 0):detach(collector: pathCollectors:get(index: 0));
-		});
-		:pathEmitters: Array([filePath]);
 		syncLanguage(filePath: filePath:current());
-		local TextCollector is pCol: filePath:collect(onEmit: local Function(String is nextPath){
+		trackBinding(slot: 'filePath', emitter: filePath, collector: filePath:collect(onEmit: local Function(String is nextPath){
 			syncLanguage(filePath: nextPath);
 			invalidate();
-		});
-		:pathCollectors: Array([pCol]);
+		}));
 	}
 
 	held Function of CodeTextArea is fromEmitters(
@@ -113,18 +102,5 @@ Class of TextArea is CodeTextArea{
 			lineIndex: lineIndex,
 			theme: effTheme
 		);
-	}
-
-	replace Function is dispose(){
-		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
-			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
-			:boundEmitters: Array();
-			:boundCollectors: Array();
-		});
-		if({ pathEmitters:length() > 0 && pathCollectors:length() > 0 }, {
-			pathEmitters:get(index: 0):detach(collector: pathCollectors:get(index: 0));
-			:pathEmitters: Array();
-			:pathCollectors: Array();
-		});
 	}
 }

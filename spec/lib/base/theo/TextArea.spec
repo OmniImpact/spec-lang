@@ -18,31 +18,21 @@ Class of Widget is TextArea{
 	Boolean is followCursor: true;
 	FocusTarget is focusTarget: FocusTarget();
 	Function is onChange: local Function(String is _s){};
-	Array of TextEmitter is boundEmitters: Array();
-	Array of TextCollector is boundCollectors: Array();
-	Boolean is suppressSync: false;
 
 	replace Function is init(String is value: '', FocusTarget is focusTarget: FocusTarget(), Function is onChange: local Function(String is _s){}){
 		:focusTarget: focusTarget;
 		:onChange: onChange;
-		:boundEmitters: Array();
-		:boundCollectors: Array();
 		setText(text: value);
 	}
 
 	Function is bindValue(TextEmitter is value){
-		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
-			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
-		});
-		:boundEmitters: Array([value]);
 		setText(text: value:current());
-		local TextCollector is col: value:collect(onEmit: local Function(String is next){
-			if({ !suppressSync }, {
+		trackBinding(slot: 'value', emitter: value, collector: value:collect(onEmit: local Function(String is next){
+			if({ !isMuted() }, {
 				setText(text: next);
 				invalidate();
 			});
-		});
-		:boundCollectors: Array([col]);
+		}));
 	}
 
 	Function is setText(String is text){
@@ -82,9 +72,9 @@ Class of Widget is TextArea{
 
 	local Function is notifyChanged(){
 		onLinesChanged();
-		:suppressSync: true;
-		onChange(getText());
-		:suppressSync: false;
+		runMuted(action: {
+			onChange(getText());
+		});
 		invalidate();
 	}
 
@@ -370,13 +360,5 @@ Class of Widget is TextArea{
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
 		targets:add(item: focusTarget);
 		owners:add(item: :);
-	}
-
-	replace Function is dispose(){
-		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
-			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
-			:boundEmitters: Array();
-			:boundCollectors: Array();
-		});
 	}
 }

@@ -19,8 +19,6 @@ Class of Widget is ListView{
 	TheoColor is selectedBg: TheoColor:none();
 	Function is onActivate: local Function(String is _item){};
 	Function is onSelectChange: local Function(String is _item){};
-	[ListEmitter of String] is boundEmitters: [];
-	[BoolCollector] is boundCollectors: [];
 
 	local Function of [String] is arrayToList(Array of String is arr){
 		local [String] is out: [];
@@ -48,8 +46,6 @@ Class of Widget is ListView{
 		:fg: fg;
 		:selectedFg: selectedFg;
 		:selectedBg: selectedBg;
-		:boundEmitters: [];
-		:boundCollectors: [];
 	}
 
 	replace Function is init(
@@ -70,8 +66,6 @@ Class of Widget is ListView{
 		:fg: fg;
 		:selectedFg: selectedFg;
 		:selectedBg: selectedBg;
-		:boundEmitters: [];
-		:boundCollectors: [];
 	}
 
 	replace Function is init(
@@ -92,21 +86,14 @@ Class of Widget is ListView{
 		:fg: fg;
 		:selectedFg: selectedFg;
 		:selectedBg: selectedBg;
-		:boundEmitters: [];
-		:boundCollectors: [];
 		bindItems(items: items);
 	}
 
 	Function is bindItems(ListEmitter of String is items){
-		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
-			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
-		});
-		:boundEmitters: [items];
 		setItems(nextItems: items:current());
-		local BoolCollector is col: items:collect(onEmit: {
+		trackBinding(slot: 'items', emitter: items, collector: items:collect(onEmit: {
 			setItems(nextItems: items:current());
-		});
-		:boundCollectors: [col];
+		}));
 	}
 
 	Function is bindOnActivate(Function is cb){
@@ -248,13 +235,5 @@ Class of Widget is ListView{
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
 		targets:add(item: focusTarget);
 		owners:add(item: :);
-	}
-
-	replace Function is dispose(){
-		if({ boundEmitters:length() > 0 && boundCollectors:length() > 0 }, {
-			boundEmitters:get(index: 0):detach(collector: boundCollectors:get(index: 0));
-			:boundEmitters: [];
-			:boundCollectors: [];
-		});
 	}
 }
