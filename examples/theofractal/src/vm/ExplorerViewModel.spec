@@ -14,6 +14,7 @@ Class is ExplorerViewModel{
 	FractalRegistry is registry: FractalRegistry();
 	Array of Fractal is activeFractal: Array();
 	ColorTheme is selectedTheme: ColorTheme:GRAYSCALE;
+	Boolean is antialiasing: false;
 	FractalViewport is viewport: FractalViewport();
 	FractalRenderer is renderer: FractalRenderer();
 
@@ -56,6 +57,12 @@ Class is ExplorerViewModel{
 
 	Function is selectTheme(String is name){
 		:selectedTheme: themeFromName(name: name);
+		markRenderDirty();
+	}
+
+	Function is setAntialiasing(Boolean is enabled){
+		if({ antialiasing == enabled }, { return; });
+		:antialiasing: enabled;
 		markRenderDirty();
 	}
 
@@ -149,7 +156,8 @@ Class is ExplorerViewModel{
 				theme: selectedTheme,
 				viewport: viewport,
 				w: w,
-				h: h
+				h: h,
+				antialiasing: antialiasing
 			);
 			:cachedW: w;
 			:cachedH: h;

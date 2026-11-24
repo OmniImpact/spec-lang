@@ -8,6 +8,7 @@ Class is FractalStrings{
 	held String is ACTION_HELP: ' Help ';
 	held String is ACTION_CLOSE: ' Close ';
 	held String is LABEL_THEME: 'Theme:';
+	held String is LABEL_ANTIALIASING: 'Antialiasing';
 
 	held String is OPT_SELECT_FRACTAL: 'Select Fractal';
 	held String is OPT_SIERPINSKI: 'Sierpinski';

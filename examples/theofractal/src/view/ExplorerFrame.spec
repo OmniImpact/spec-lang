@@ -15,11 +15,13 @@ Class of Frame is ExplorerFrame{
 	FocusTarget is quitFocus: FocusTarget();
 	FocusTarget is fractalFocus: FocusTarget(initial: true);
 	FocusTarget is themeFocus: FocusTarget();
+	FocusTarget is aaFocus: FocusTarget();
 	FocusTarget is helpFocus: FocusTarget();
 	FocusTarget is helpCloseFocus: FocusTarget(initial: true);
 
 	Array of Dropdown is fractalPickers: Array();
 	Array of Dropdown is themePickers: Array();
+	Array of Switch is aaSwitches: Array();
 	Array of Button is helpButtons: Array();
 	Array of Overlay is helpOverlays: Array();
 
@@ -50,6 +52,16 @@ Class of Frame is ExplorerFrame{
 				focusTarget: themeFocus,
 				onSelect: local Function(String is chosen){
 					:vm:selectTheme(name: chosen);
+				}
+			)
+		]);
+		:aaSwitches: Array([
+			Switch(
+				label: FractalStrings:LABEL_ANTIALIASING,
+				checked: vm:antialiasing,
+				focusTarget: aaFocus,
+				onChange: local Function(Boolean is enabled){
+					:vm:setAntialiasing(enabled: enabled);
 				}
 			)
 		]);
@@ -102,6 +114,7 @@ Class of Frame is ExplorerFrame{
 					fractalPickers:get(index: 0),
 					TextLine(value: FractalStrings:LABEL_THEME),
 					themePickers:get(index: 0),
+					aaSwitches:get(index: 0),
 					Spacer(weight: 1.0),
 					helpButtons:get(index: 0)
 				])

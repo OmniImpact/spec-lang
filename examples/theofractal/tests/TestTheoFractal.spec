@@ -137,4 +137,27 @@ Class of SpecUnitTest is TestTheoFractal{
 		frame:paint(buf: buf, renderer: renderer);
 		Assert:isTrue(buf:cellAt(x: 73, y: 18):ch == '▲');
 	}
+
+	Function is testSwitchAndAntialiasing(){
+		local ExplorerViewModel is vm: ExplorerViewModel();
+		Assert:isFalse(vm:antialiasing);
+
+		local ExplorerFrame is frame: ExplorerFrame(vm: vm);
+		frame:layout(x: 0, y: 0, w: 90, h: 24);
+		local Switch is aa: frame:aaSwitches:get(index: 0);
+		Assert:isFalse(aa:checked);
+
+		aa:focusTarget:requestFocus();
+		Assert:isTrue(aa:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: ' ')));
+		Assert:isTrue(aa:checked);
+		Assert:isTrue(vm:antialiasing);
+
+		vm:selectFractal(name: FractalStrings:OPT_MANDELBROT);
+		local Array of TheoColor is aaPixels: vm:ensurePixels(w: 32, h: 32);
+		Assert:isTrue(aaPixels:length() == 32 * 32);
+
+		aa:toggle();
+		Assert:isFalse(aa:checked);
+		Assert:isFalse(vm:antialiasing);
+	}
 }
