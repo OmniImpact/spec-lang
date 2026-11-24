@@ -146,6 +146,10 @@ Class of SpecUnitTest is TestTheoJack{
 		rules:layout(x: 0, y: 0, w: 80, h: 20);
 		rules:paint(buf: buf, renderer: ren);
 
+		# Scrollbar sits flush against top (y=1) and right (x=78) inner border
+		Assert:areEqualString('▐', buf:cellAt(x: 78, y: 1):ch);
+		Assert:areEqualString('▐', buf:cellAt(x: 78, y: 15):ch);
+
 		# Scroll down inside RulesFrame, then press 'd' (Done) to pop back
 		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: 'char', key: 'd')));

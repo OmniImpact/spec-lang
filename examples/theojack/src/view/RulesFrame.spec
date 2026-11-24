@@ -42,8 +42,8 @@ Class of Frame is RulesFrame{
 					weight: 1.0,
 					child: Panel(
 						border: true,
-						padX: 2,
-						padY: 1,
+						padX: 0,
+						padY: 0,
 						scrollable: true,
 						verticalScrollbar: 'auto',
 						topTitle: HomeStrings:RULES_TITLE,
@@ -53,6 +53,8 @@ Class of Frame is RulesFrame{
 						child: Col(
 							gap: 1,
 							scrollable: true,
+							padX: 2,
+							padY: 1,
 							children: contentWidgets
 						)
 					)

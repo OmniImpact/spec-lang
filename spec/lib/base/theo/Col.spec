@@ -13,14 +13,18 @@ Class of Widget is Col{
 	Int is gap: 0;
 	Boolean is arrowFocus: false;
 	Boolean is scrollable: false;
+	Int is padX: 0;
+	Int is padY: 0;
 	Int is scrollY: 0;
 	Int is contentH: 0;
 	Array of Widget is children: Array();
 
-	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Boolean is scrollable: false, Array of Widget is children: Array()){
+	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Boolean is scrollable: false, Int is padX: 0, Int is padY: 0, Array of Widget is children: Array()){
 		:gap: gap;
 		:arrowFocus: arrowFocus;
 		:scrollable: scrollable;
+		:padX: padX;
+		:padY: padY;
 		:scrollY: 0;
 		:contentH: 0;
 		:children: children;
@@ -54,28 +58,33 @@ Class of Widget is Col{
 
 	replace Function of Int is measureWidth(Int is maxW){
 		local Int is best: 0;
+		local Int is avail: maxW - (padX * 2);
+		if({ avail < 0 }, { avail: 0; });
 		local Int is i: 0;
 		while({ i < children:length() }, {
 			local Widget is ch: children:get(index: i);
 			if({ ch:flexWeight() <= 0.0 }, {
-				local Int is cw: ch:measureWidth(maxW: maxW);
+				local Int is cw: ch:measureWidth(maxW: avail);
 				if({ cw > best }, { best: cw; });
 			});
 			i: i + 1;
 		});
-		if({ best > maxW }, { return maxW; });
-		return best;
+		local Int is total: best + (padX * 2);
+		if({ total > maxW }, { return maxW; });
+		return total;
 	}
 
 	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
 		local Int is count: children:length();
-		if({ count == 0 }, { return 0; });
-		local Int is total: (count - 1) * gap;
+		if({ count == 0 }, { return padY * 2; });
+		local Int is availW: maxW - (padX * 2);
+		if({ availW < 0 }, { availW: 0; });
+		local Int is total: (count - 1) * gap + (padY * 2);
 		local Int is i: 0;
 		while({ i < count }, {
 			local Widget is ch: children:get(index: i);
 			if({ ch:flexWeight() <= 0.0 }, {
-				total: total + ch:measureHeight(maxW: maxW, maxH: maxH);
+				total: total + ch:measureHeight(maxW: availW, maxH: maxH);
 			});
 			i: i + 1;
 		});
@@ -90,7 +99,9 @@ Class of Widget is Col{
 		:boxH: h;
 		local Int is count: children:length();
 		if({ count == 0 }, { return; });
-		local Int is fixedTotal: (count - 1) * gap;
+		local Int is innerW: w - (padX * 2);
+		if({ innerW < 0 }, { innerW: 0; });
+		local Int is fixedTotal: (count - 1) * gap + (padY * 2);
 		local Float is weightTotal: 0.0;
 		local Int is i: 0;
 		while({ i < count }, {
@@ -99,7 +110,7 @@ Class of Widget is Col{
 			if({ fw > 0.0 }, {
 				weightTotal: weightTotal + fw;
 			}, {
-				fixedTotal: fixedTotal + ch:measureHeight(maxW: w, maxH: h);
+				fixedTotal: fixedTotal + ch:measureHeight(maxW: innerW, maxH: h);
 			});
 			i: i + 1;
 		});
@@ -113,7 +124,7 @@ Class of Widget is Col{
 		}, {
 			:scrollY: 0;
 		});
-		local Int is curY: if({ scrollable }, { y - scrollY }, { y });
+		local Int is curY: if({ scrollable }, { y + padY - scrollY }, { y + padY });
 		i: 0;
 		while({ i < count }, {
 			local Widget is ch: children:get(index: i);
@@ -124,9 +135,9 @@ Class of Widget is Col{
 					chH: toInt(value: (toFloat(value: rem) * fw) / weightTotal);
 				});
 			}, {
-				chH: ch:measureHeight(maxW: w, maxH: h);
+				chH: ch:measureHeight(maxW: innerW, maxH: h);
 			});
-			ch:layout(x: x, y: curY, w: w, h: chH);
+			ch:layout(x: x + padX, y: curY, w: innerW, h: chH);
 			curY: curY + chH + gap;
 			i: i + 1;
 		});
