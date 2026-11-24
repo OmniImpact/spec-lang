@@ -137,7 +137,10 @@ Class is SemTypes{
 			});
 			return SemTypes:BARE_MAP;
 		});
-		if({ name == 'Function' }, { return :fnOf(ret: params:get(index: 0)); });
+		if({ name == 'Function' }, {
+			local SemType is ret: if({ params:length() >= 2 }, { params:get(index: 1) }, { params:get(index: 0) });
+			return :fnOf(ret: ret);
+		});
 		return SemType:Named(path: :splitPath(name: name), params: params);
 	}
 

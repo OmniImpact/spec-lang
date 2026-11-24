@@ -522,6 +522,7 @@ Enum is SemType {
 				return ('Function:' . ret:toKey()):intern();
 			},
 			SemType:Named: local Function of String([String] is path, [SemType] is params){
+				if({ path:length() == 1 && params:length() == 0 }, { return path:get(index: 0); });
 				local String is base: :baseName();
 				if({ params:length() == 0 }, { return base; });
 				local String is out: base;
@@ -560,6 +561,7 @@ Enum is SemType {
 				return 'Function ' . Keyword:OF:value() . ' ' . ret:toDisplayString();
 			},
 			SemType:Named: local Function of String([String] is path, [SemType] is params){
+				if({ path:length() == 1 && params:length() == 0 }, { return path:get(index: 0); });
 				local String is base: :baseName();
 				if({ params:length() == 0 }, { return base; });
 				local String is out: base . ' ' . Keyword:OF:value() . ' ' . params:get(index: 0):toDisplayString();

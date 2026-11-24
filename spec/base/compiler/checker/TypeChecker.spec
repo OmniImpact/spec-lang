@@ -73,11 +73,11 @@ Class is TypeChecker{
 	## String-backed enum names.
 	local Map of String to String is allStringBackedEnums: Map:init();
 
-	## Local variables in the current scope: name -> type name.
-	local Map of String to String is localVars: Map:init();
+	## Local variables in the current scope: name -> semantic type.
+	local Map of String to SemType is localVars: Map:init();
 
-	## Field types of the current class: name -> type name.
-	local Map of String to String is fieldTypes: Map:init();
+	## Field types of the current class: name -> semantic type.
+	local Map of String to SemType is fieldTypes: Map:init();
 
 	## Fields of the current class not yet definitely assigned in init.
 	local Map of String to String is unassignedFields: Map:init();
@@ -326,8 +326,9 @@ Class is TypeChecker{
 	## directly (no intermediate AST [Type] tree allocation).
 	Function of SemType is parseSemType(String is s){
 		if({ s == '' }, { return SemTypes:EMPTY; });
-		if({ :semTypeCache:has(key: s) }, {
-			return :semTypeCache:get(key: s, default: SemTypes:EMPTY);
+		local SemType is cached: :semTypeCache:get(key: s, default: SemTypes:EMPTY);
+		if({ !cached:isEmpty() }, {
+			return cached;
 		});
 		if({ !s:contains(needle: ':') && !s:contains(needle: ' of ') }, {
 			local SemType is simpleS: SemTypes:named(name: s);
@@ -347,6 +348,22 @@ Class is TypeChecker{
 		});
 		:semTypeCache:set(key: s, value: parsedS);
 		return parsedS;
+	}
+
+	## Converts an AST [Type] into a cached [SemType], reusing [semTypeCache]
+	## for 0-param types so repeated class names share one arena node.
+	Function of SemType is semTypeFromAst(Type is t){
+		if({ t:name == '' }, { return SemTypes:EMPTY; });
+		if({ t:params:length() == 0 }, {
+			return :parseSemType(s: t:name);
+		});
+		local [SemType] is ps: [];
+		local Int is i: 0;
+		while({ i < t:params:length() }, {
+			ps:push(item: :semTypeFromAst(t: t:params:get(index: i)));
+			i++;
+		});
+		return SemTypes:namedWithParams(name: t:name, params: ps);
 	}
 
 	## Stamps the canonical [SemType] on [expr].
@@ -960,7 +977,7 @@ Class is TypeChecker{
 			mi++;
 		});
 		if({ foundM:name != '' }, {
-			local SemType is subSem: :substituteSemType(rawSem: SemTypes:fromAstType(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
+			local SemType is subSem: :substituteSemType(rawSem: :semTypeFromAst(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
 			return subSem:toKey();
 		});
 		local String is inherited: '';
@@ -1000,7 +1017,7 @@ Class is TypeChecker{
 			mi++;
 		});
 		if({ foundM:name != '' }, {
-			local SemType is subSem: :substituteSemType(rawSem: SemTypes:fromAstType(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
+			local SemType is subSem: :substituteSemType(rawSem: :semTypeFromAst(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
 			if({ subSem:isFunction() }, {
 				if({ subSem:hasFunctionReturn() }, {
 					return subSem:functionReturn():toKey();
@@ -2394,7 +2411,7 @@ Class is TypeChecker{
 					});
 				});
 				if({ found && !bound:getSemType():isEmpty() }, {
-					local SemType is pSem: SemTypes:fromAstType(t: p:paramType);
+					local SemType is pSem: :semTypeFromAst(t: p:paramType);
 					local Map of String to Boolean is mTpSet: Map:init();
 					mTpSet:set(key: mTp, value: true);
 					local Map of String to SemType is mBindings: Map:init();
@@ -2470,10 +2487,12 @@ Class is TypeChecker{
 	## @return: true when a Function-typed local or field holds the name.
 	Function of Boolean is shadowsAsFunction(String is name, Boolean is isBareCall: true){
 		if({ !isBareCall }, {
-			return :fieldTypes:getString(key: name, default: ''):startsWith(prefix: 'Function');
+			return :fieldTypes:get(key: name, default: SemTypes:EMPTY):isFunction();
 		});
-		local String is t: :localVars:getString(key: name, default: :fieldTypes:getString(key: name, default: ''));
-		return t:startsWith(prefix: 'Function');
+		if({ :localVars:has(key: name) }, {
+			return :localVars:get(key: name, default: SemTypes:EMPTY):isFunction();
+		});
+		return :fieldTypes:get(key: name, default: SemTypes:EMPTY):isFunction();
 	}
 
 	## Recursive import search over the ancestor lattice.
@@ -3362,7 +3381,7 @@ Class is TypeChecker{
 	}
 
 	## directly, replacing the previous compiler's mutable container hint.
-	local Function of String is inferIdentExpr(String is name){
+	local Function of SemType is inferIdentExpr(String is name){
 		if({ name == :names:selfIdent() }, {
 			# A held member body has no instance
 			# — except a function-variable call target: the closure
@@ -3370,10 +3389,10 @@ Class is TypeChecker{
 			if({ (:inHeldInit || :inHeldFunction) && !:inHeldFnVarTarget }, {
 				:addError(line: :currentLine, msg: 'A held member body has no instance: \':\' is not available.');
 			});
-			return :currentClassName;
+			return :parseSemType(s: :currentClassName);
 		});
 		if({ :localVars:has(key: name) }, {
-			return :localVars:getString(key: name, default: Primitive:ANY:value());
+			return :localVars:get(key: name, default: SemTypes:ANY);
 		});
 		if({ :fieldTypes:has(key: name) }, {
 			# A held initializer has no instance: instance fields
@@ -3388,21 +3407,21 @@ Class is TypeChecker{
 			if({ owner != '' }, {
 				:checkMemberVisibility(ownerClass: owner, member: :findAncestorMember(className: :currentClassName, memberName: name), memberName: name);
 			});
-			return :fieldTypes:getString(key: name, default: Primitive:ANY:value());
+			return :fieldTypes:get(key: name, default: SemTypes:ANY);
 		});
 		if({ :allEnumVariants:has(key: name) }, {
-			return :allEnumVariants:getString(key: name, default: Primitive:ANY:value());
+			return :parseSemType(s: :allEnumVariants:getString(key: name, default: Primitive:ANY:value()));
 		});
 		if({ :registeredClasses:has(key: name) }, {
-			return name;
+			return :parseSemType(s: name);
 		});
 		if({ :isPrimitive(t: name) }, {
-			return name;
+			return SemTypes:named(name: name);
 		});
 		if({ name != '' }, {
 			:addError(line: :currentLine, msg: 'Undefined identifier \'' . name . '\'.');
 		});
-		return 'Any';
+		return SemTypes:ANY;
 	}
 
 	local Function of String is inferPathExpr([String] is segs){
@@ -3439,13 +3458,13 @@ Class is TypeChecker{
 			});
 		}, {
 			if({ :localVars:has(key: root) }, {
-				rootType: :localVars:getString(key: root, default: '');
+				rootType: :localVars:get(key: root, default: SemTypes:EMPTY):toKey();
 			}, {
 				if({ :fieldTypes:has(key: root) }, {
 					if({ :unassignedFields:has(key: root) }, {
 						:addError(line: :currentLine, msg: 'Field \'' . root . '\' in class \'' . :currentClassName . '\' is read before being initialized.');
 					});
-					rootType: :fieldTypes:getString(key: root, default: '');
+					rootType: :fieldTypes:get(key: root, default: SemTypes:EMPTY):toKey();
 				}, {
 					if({ :allEnumNames:has(key: root) }, {
 						rootType: root;
@@ -3809,10 +3828,10 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferAnonFnExpr(Expression is expr, Type is returnType, [Parameter] is params, [Statement] is body, String is expected){
-		local Map of String to String is savedVars: Map:init();
+		local Map of String to SemType is savedVars: Map:init();
 		local Array of String is existingKeys: :localVars:keys();
 		existingKeys:each(action: local Function(String is k){
-			savedVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+			savedVars:set(key: k, value: :localVars:get(key: k, default: SemTypes:EMPTY));
 		});
 		local Map of String to String is savedLazyVars: Map:init();
 		if({ :inLazyBlock }, {
@@ -3841,10 +3860,10 @@ Class is TypeChecker{
 		local Int is pi: 0;
 		while({ pi < params:length() }, {
 			local Parameter is p: params:get(index: pi);
-			local String is pFmt: :formatVarTypeString(t: p:paramType);
-			:localVars:set(key: p:name, value: pFmt);
+			local SemType is pSem: :semTypeFromAst(t: p:paramType);
+			:localVars:set(key: p:name, value: pSem);
 			if({ :inLazyBlock }, {
-				:lazyLocalVars:set(key: p:name, value: pFmt);
+				:lazyLocalVars:set(key: p:name, value: pSem:toKey());
 			});
 			pi++;
 		});
@@ -3919,21 +3938,33 @@ Class is TypeChecker{
 			return '';
 		});
 
+		local Boolean is stampedDirect: false;
 		match(on: expr, when: [
 			Expression:StringLit: local Function(String is value){
+				expr:setSemType(st: SemTypes:STRING);
 				res: Primitive:STRING:value();
+				stampedDirect: true;
 			},
 			Expression:NumberLit: local Function(Int is value, String is text){
+				expr:setSemType(st: SemTypes:INT);
 				res: Primitive:INT:value();
+				stampedDirect: true;
 			},
 			Expression:FloatLit: local Function(String is text){
+				expr:setSemType(st: SemTypes:FLOAT);
 				res: Primitive:FLOAT:value();
+				stampedDirect: true;
 			},
 			Expression:BoolLit: local Function(Boolean is value){
+				expr:setSemType(st: SemTypes:BOOLEAN);
 				res: Primitive:BOOLEAN:value();
+				stampedDirect: true;
 			},
 			Expression:Ident: local Function(String is name){
-				res: :inferIdentExpr(name: name);
+				local SemType is idSem: :inferIdentExpr(name: name);
+				expr:setSemType(st: idSem);
+				res: idSem:toKey();
+				stampedDirect: true;
 			},
 			Expression:Path: local Function([String] is segs){
 				res: :inferPathExpr(segs: segs);
@@ -3966,13 +3997,18 @@ Class is TypeChecker{
 				res: :inferCall(expr: expr, call: call, expected: expected);
 				:stampExprType(expr: expr, t: res);
 				:checkCallArguments(callExpr: expr);
+				stampedDirect: true;
 			},
 			else: {
+				expr:setSemType(st: SemTypes:ANY);
 				res: 'Any';
+				stampedDirect: true;
 			}
 		], default: {});
 
-		:stampExprType(expr: expr, t: res);
+		if({ !stampedDirect }, {
+			:stampExprType(expr: expr, t: res);
+		});
 		return res;
 	}
 
@@ -4098,13 +4134,13 @@ Class is TypeChecker{
 			], default: {});
 		});
 		local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !:isVoid(t: expected) && bareArg1Anon && bareArg2Anon;
-		local Map of String to String is savedLoopVars: Map:init();
+		local Map of String to SemType is savedLoopVars: Map:init();
 		local Map of String to String is savedLoopLazyVars: Map:init();
 		if({ provider == 'Loops' }, {
 			savedLoopVars: Map:init();
 			local Array of String is lvKeys: :localVars:keys();
 			lvKeys:each(action: local Function(String is k){
-				savedLoopVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+				savedLoopVars:set(key: k, value: :localVars:get(key: k, default: SemTypes:EMPTY));
 			});
 			if({ :inLazyBlock }, {
 				savedLoopLazyVars: Map:init();
@@ -4127,10 +4163,10 @@ Class is TypeChecker{
 								if({ p:hasDefault }, {
 									:inferExpressionType(expr: p:defaultExpr);
 								});
-								local String is pFmt: :formatVarTypeString(t: p:paramType);
-								:localVars:set(key: p:name, value: pFmt);
+								local SemType is pSem: :semTypeFromAst(t: p:paramType);
+								:localVars:set(key: p:name, value: pSem);
 								if({ :inLazyBlock }, {
-									:lazyLocalVars:set(key: p:name, value: pFmt);
+									:lazyLocalVars:set(key: p:name, value: pSem:toKey());
 								});
 								psi++;
 							});
@@ -4362,7 +4398,7 @@ Class is TypeChecker{
 		local String is gTy: '';
 		local Boolean is guardOk: guardParams:length() == 1;
 		if({ guardOk }, {
-			local SemType is gSem: SemTypes:fromAstType(t: guardParams:get(index: 0):paramType);
+			local SemType is gSem: :semTypeFromAst(t: guardParams:get(index: 0):paramType);
 			gTy: gSem:toKey();
 			guardOk: gSem:baseName() == 'SpecError' && !gSem:isGeneric();
 			if({ !guardOk && gSem:baseName() == 'SpecError' && gSem:isGeneric() }, {
@@ -4438,10 +4474,10 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferWhileLoopCall(Expression is expr, CallData is call, String is targetType, String is method){
-		local Map of String to String is savedWhileVars: Map:init();
+		local Map of String to SemType is savedWhileVars: Map:init();
 		local Array of String is existingKeys: :localVars:keys();
 		existingKeys:each(action: local Function(String is k){
-			savedWhileVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+			savedWhileVars:set(key: k, value: :localVars:get(key: k, default: SemTypes:EMPTY));
 		});
 		local Map of String to String is savedWhileLazyVars: Map:init();
 		if({ :inLazyBlock }, {
@@ -4464,10 +4500,10 @@ Class is TypeChecker{
 							if({ p:hasDefault }, {
 								:inferExpressionType(expr: p:defaultExpr);
 							});
-							local String is pFmt: :formatVarTypeString(t: p:paramType);
-							:localVars:set(key: p:name, value: pFmt);
+							local SemType is pSem: :semTypeFromAst(t: p:paramType);
+							:localVars:set(key: p:name, value: pSem);
 							if({ :inLazyBlock }, {
-								:lazyLocalVars:set(key: p:name, value: pFmt);
+								:lazyLocalVars:set(key: p:name, value: pSem:toKey());
 							});
 							psi++;
 						});
@@ -4674,7 +4710,7 @@ Class is TypeChecker{
 				local String is inferredArgT: '';
 				if({ heldCallFn:params:length() > 0 && call:args:length() > 0 }, {
 					local Parameter is hp0: heldCallFn:params:get(index: 0);
-					local SemType is hp0Sem: SemTypes:fromAstType(t: hp0:paramType);
+					local SemType is hp0Sem: :semTypeFromAst(t: hp0:paramType);
 					local NamedArg is ca0: call:args:get(index: 0);
 					local Map of String to Boolean is hTpSet: Map:init();
 					hTpSet:set(key: tp0, value: true);
@@ -4875,7 +4911,7 @@ Class is TypeChecker{
 			targetIsSelf: false;
 			targetStr: ctorCls;
 		});
-		if({ targetIsSelf && call:isBareCall && :localVars:getString(key: call:name, default: ''):startsWith(prefix: 'Function') }, {
+		if({ targetIsSelf && call:isBareCall && :localVars:get(key: call:name, default: SemTypes:EMPTY):isFunction() }, {
 			:inHeldFnVarTarget: true;
 		});
 		local String is targetType: :inferExpressionType(expr: call:target);
@@ -5070,14 +5106,19 @@ Class is TypeChecker{
 			:addError(line: :currentLine, msg: :errText:errMemberNotRootContract(member: method));
 		});
 
-		local String is fnVarT: '';
+		local SemType is fnVarSem: SemTypes:EMPTY;
 		if({ targetIsSelf }, {
-			fnVarT: if({ call:isBareCall }, { :localVars:getString(key: method, default: :fieldTypes:getString(key: method, default: '')) }, { :fieldTypes:getString(key: method, default: '') });
+			if({ call:isBareCall && :localVars:has(key: method) }, {
+				fnVarSem: :localVars:get(key: method, default: SemTypes:EMPTY);
+			}, {
+				fnVarSem: :fieldTypes:get(key: method, default: SemTypes:EMPTY);
+			});
 		}, {
 			if({ targetType != '' && targetType != Primitive:ANY:value() && !:allEnumNames:has(key: targetType) }, {
-				local String is ft: :lookupFieldType(className: TypeDomain:baseName(t: targetType), fieldName: method);
-				if({ TypeDomain:isFunction(t: ft) }, {
-					fnVarT: ft;
+				local String is ft: :lookupFieldType(className: :parseSemType(s: targetType):baseName(), fieldName: method);
+				local SemType is ftSem: :parseSemType(s: ft);
+				if({ ftSem:isFunction() }, {
+					fnVarSem: ftSem;
 				});
 			});
 		});
@@ -5086,8 +5127,8 @@ Class is TypeChecker{
 		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith' || method == 'run') }, {
 			res: :inferParallelCall(call: call, method: method);
 		}, {
-			if({ TypeDomain:isFunction(t: fnVarT) }, {
-				res: TypeDomain:functionReturn(t: fnVarT, default: 'Any');
+			if({ fnVarSem:isFunction() }, {
+				res: if({ fnVarSem:hasFunctionReturn() }, { fnVarSem:functionReturn():toKey() }, { 'Any' });
 			}, {
 				if({ :allEnumVariants:has(key: method) && (:allEnumNames:has(key: targetType) || targetType == :currentClassName) }, {
 					res: :allEnumVariants:getString(key: method, default: Primitive:ANY:value());
@@ -5399,8 +5440,9 @@ Class is TypeChecker{
 				# reference BEFORE the scope map stamps it — the checker and
 				# the gen agree on the qualified identity.
 				:validateTypeAccess(t: varType, line: stmt:line);
-				local String is fullType: :formatVarTypeString(t: varType);
-				:localVars:set(key: varName, value: fullType);
+				local SemType is varSem: :semTypeFromAst(t: varType);
+				local String is fullType: varSem:toKey();
+				:localVars:set(key: varName, value: varSem);
 				if({ :inLazyBlock }, {
 					:lazyLocalVars:set(key: varName, value: fullType);
 				});
@@ -5417,7 +5459,7 @@ Class is TypeChecker{
 					# Bidirectional: the declared type flows into the
 					# initializer, typing container literals directly.
 					local String is initType: :inferExpressionType(expr: initExpr, expected: fullType);
-					if({ !:isAssignable(target: fullType, source: initType) }, {
+					if({ !:isAssignableSem(targetSem: varSem, sourceSem: initExpr:getSemType()) }, {
 						local String is msg: :errText:errTypeMismatchDecl(varName: varName, initType: initType, fullType: fullType);
 						# a void expression consumed as a
 						# value explains itself instead of cascading into the
@@ -5573,15 +5615,15 @@ Class is TypeChecker{
 				local String is savedClass: :currentClassName;
 				local ClassInfo is savedClassDef: :currentClassDef;
 				local String is savedRet: :currentMethodReturnType;
-				local Map of String to String is savedVars: Map:init();
+				local Map of String to SemType is savedVars: Map:init();
 				local Array of String is vKeys: :localVars:keys();
 				vKeys:each(action: local Function(String is k){
-					savedVars:set(key: k, value: :localVars:getString(key: k, default: ''));
+					savedVars:set(key: k, value: :localVars:get(key: k, default: SemTypes:EMPTY));
 				});
-				local Map of String to String is savedFields: Map:init();
+				local Map of String to SemType is savedFields: Map:init();
 				local Array of String is fKeys: :fieldTypes:keys();
 				fKeys:each(action: local Function(String is k){
-					savedFields:set(key: k, value: :fieldTypes:getString(key: k, default: ''));
+					savedFields:set(key: k, value: :fieldTypes:get(key: k, default: SemTypes:EMPTY));
 				});
 				local Map of String to String is savedUnassigned: Map:init();
 				local Array of String is uKeys: :unassignedFields:keys();
@@ -5831,8 +5873,7 @@ Class is TypeChecker{
 		while({ mpi < method:params:length() }, {
 			local Parameter is p: method:params:get(index: mpi);
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
-				local String is ft: :fieldTypes:getString(key: p:name, default: Primitive:ANY:value());
-				p:paramType: :parseSemType(s: ft):toAstType();
+				p:paramType: :fieldTypes:get(key: p:name, default: SemTypes:ANY):toAstType();
 				:unassignedFields:remove(key: p:name);
 			});
 			if({ p:hasDefault }, {
@@ -5862,7 +5903,7 @@ Class is TypeChecker{
 		mpi: 0;
 		while({ mpi < method:params:length() }, {
 			local Parameter is p: method:params:get(index: mpi);
-			:localVars:set(key: p:name, value: :formatVarTypeString(t: p:paramType));
+			:localVars:set(key: p:name, value: :semTypeFromAst(t: p:paramType));
 			mpi++;
 		});
 
@@ -6792,7 +6833,7 @@ Class is TypeChecker{
 			#  — an instance reference reaches exactly the
 			# instance members, so held names stay out of fieldTypes.
 			if({ m:kind == MemberKind:FIELD && m:memberType:name != '' && !m:hasModifier(kw: Keyword:HELD) }, {
-				:fieldTypes:set(key: m:name, value: :formatVarTypeString(t: m:memberType));
+				:fieldTypes:set(key: m:name, value: :semTypeFromAst(t: m:memberType));
 			});
 			mi++;
 		});
@@ -6835,7 +6876,7 @@ Class is TypeChecker{
 				:addError(line: m:line, msg: 'SpecErrorHandler must take exactly one parameter; found ' . (m:params:length() as String) . '.');
 			}, {
 				local Parameter is p: m:params:get(index: 0);
-				local SemType is pSem: SemTypes:fromAstType(t: p:paramType);
+				local SemType is pSem: :semTypeFromAst(t: p:paramType);
 				local String is pTy: pSem:toKey();
 				local Boolean is paramOk: false;
 				local String is kindTy: '';
@@ -6957,7 +6998,7 @@ Class is TypeChecker{
 					# — fieldTypes cleared, so bare instance-field names do
 					# not resolve; the no-instance checks reject self.
 					local Boolean is savedHeldFn: :inHeldFunction;
-					local Map of String to String is savedFnFields: :fieldTypes;
+					local Map of String to SemType is savedFnFields: :fieldTypes;
 					if({ m:hasModifier(kw: Keyword:HELD) }, {
 						:inHeldFunction: true;
 						:fieldTypes: Map();
@@ -6985,10 +7026,10 @@ Class is TypeChecker{
 				MemberKind:CLASS: {
 					local String is savedClass: :currentClassName;
 					local ClassInfo is savedClassDef: :currentClassDef;
-					local Map of String to String is savedFields: Map();
+					local Map of String to SemType is savedFields: Map();
 					local Array of String is fKeys: :fieldTypes:keys();
 					fKeys:each(action: local Function(String is k){
-						savedFields:set(key: k, value: :fieldTypes:getString(key: k, default: ''));
+						savedFields:set(key: k, value: :fieldTypes:get(key: k, default: SemTypes:EMPTY));
 					});
 					local Map of String to String is savedUnassigned: Map();
 					local Array of String is uKeys: :unassignedFields:keys();
