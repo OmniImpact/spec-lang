@@ -16,6 +16,7 @@ Class is TypeChecker{
 
 	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', SemType],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', Statement],
@@ -36,6 +37,7 @@ Class is TypeChecker{
 		['base', 'sys', SourceLocation],
 		['base', 'compiler', 'checker', TypeError],
 		['base', 'compiler', 'checker', as TypeDomain()],
+		['base', 'compiler', 'checker', as SemTypes()],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Reflection()],
@@ -50,6 +52,7 @@ Class is TypeChecker{
 	local Map of String to String is registeredClasses: Map:init();
 	local ErrorText is errText: ErrorText:init();
 	local Map of String to Type is typeNodeCache: Map:init();
+	local Map of String to SemType is semTypeCache: Map:init();
 
 	## the per-scope nested-type map — bare
 	## nested-class name -> ';'-joined qualified identities visible in
@@ -346,9 +349,22 @@ Class is TypeChecker{
 		return Type:withParams(name: bName, params: newParams);
 	}
 
-	## Converts a canonical type name string into a structured [Type] tree (`name` + `Array of Type`).
+	## Converts a canonical type name string into a cached [SemType] sum-type tree.
+	Function of SemType is parseSemType(String is s){
+		if({ s == '' }, { return SemTypes:EMPTY; });
+		if({ :semTypeCache:has(key: s) }, {
+			return :semTypeCache:get(key: s, default: SemTypes:EMPTY);
+		});
+		local SemType is st: SemTypes:fromAstType(t: :parseTypeNode(s: s));
+		:semTypeCache:set(key: s, value: st);
+		return st;
+	}
+
+	## Stamps both the legacy [Type]/string bridge and the canonical [SemType] on [expr].
 	local Function is stampExprType(Expression is expr, String is t){
-		expr:setResolvedTypeNode(tn: :parseTypeNode(s: t), t: t);
+		local Type is tn: :parseTypeNode(s: t);
+		expr:setResolvedTypeNode(tn: tn, t: t);
+		expr:setSemType(st: :parseSemType(s: t));
 	}
 
 	Function of Type is parseTypeNode(String is s){
@@ -2399,25 +2415,15 @@ Class is TypeChecker{
 						found: true;
 					});
 				});
-				if({ found && bound:resolvedType != '' }, {
-					local String is pTF: :formatVarTypeString(t: p:paramType);
-					if({ TypeDomain:hasFunctionReturn(t: pTF) && TypeDomain:hasFunctionReturn(t: bound:resolvedType) }, {
-						local String is pRet: TypeDomain:functionReturn(t: pTF);
-						local String is bRet: TypeDomain:functionReturn(t: bound:resolvedType);
-						if({ pRet == mTp && bRet != '' }, {
-							:groundedGenericMethods:set(key: ownerName . ':' . selected:name, value: true);
-							if({ rawT == pRet }, { rawT: bRet; });
-							if({ rawT:endsWith(suffix: ':' . pRet) }, {
-								rawT: rawT:substring(start: 0, end: rawT:length() - pRet:length()) . bRet;
-							});
-						});
-					});
-					if({ pTF == mTp }, {
+				if({ found && !bound:getSemType():isEmpty() }, {
+					local SemType is pSem: SemTypes:fromAstType(t: p:paramType);
+					local Map of String to Boolean is mTpSet: Map:init();
+					mTpSet:set(key: mTp, value: true);
+					local Map of String to SemType is mBindings: Map:init();
+					if({ pSem:unify(concrete: bound:getSemType(), typeParams: mTpSet, bindings: mBindings) && mBindings:has(key: mTp) }, {
 						:groundedGenericMethods:set(key: ownerName . ':' . selected:name, value: true);
-						if({ rawT == pTF }, { rawT: bound:resolvedType; });
-						if({ rawT:endsWith(suffix: ':' . pTF) }, {
-							rawT: rawT:substring(start: 0, end: rawT:length() - pTF:length()) . bound:resolvedType;
-						});
+						local SemType is rawSem: :parseSemType(s: rawT);
+						rawT: rawSem:substitute(subst: mBindings):toKey();
 					});
 				});
 				posIdx: posIdx + 1;
@@ -3974,8 +3980,8 @@ Class is TypeChecker{
 				res: :inferAnonFnExpr(expr: expr, returnType: returnType, params: params, body: body, expected: expected);
 			},
 			Expression:Call: local Function(CallData is call){
-					res: :inferCall(expr: expr, call: call, expected: expected);
-				expr:setResolvedTypeNode(tn: :parseTypeNode(s: res), t: res);
+				res: :inferCall(expr: expr, call: call, expected: expected);
+				:stampExprType(expr: expr, t: res);
 				:checkCallArguments(callExpr: expr);
 			},
 			else: {
@@ -3983,7 +3989,7 @@ Class is TypeChecker{
 			}
 		], default: {});
 
-		expr:setResolvedTypeNode(tn: :parseTypeNode(s: res), t: res);
+		:stampExprType(expr: expr, t: res);
 		return res;
 	}
 
@@ -4373,15 +4379,11 @@ Class is TypeChecker{
 		local String is gTy: '';
 		local Boolean is guardOk: guardParams:length() == 1;
 		if({ guardOk }, {
-			gTy: :formatVarTypeString(t: guardParams:get(index: 0):paramType);
-			guardOk: gTy == 'SpecError';
-			if({ !guardOk && (gTy:startsWith(prefix: 'SpecError of ') || gTy:startsWith(prefix: 'SpecError:')) }, {
-				local String is kindTy: '';
-				if({ gTy:startsWith(prefix: 'SpecError of ') }, {
-					kindTy: gTy:substring(start: 12, end: gTy:length());
-				}, {
-					kindTy: gTy:substring(start: 10, end: gTy:length());
-				});
+			local SemType is gSem: SemTypes:fromAstType(t: guardParams:get(index: 0):paramType);
+			gTy: gSem:toKey();
+			guardOk: gSem:baseName() == 'SpecError' && !gSem:isGeneric();
+			if({ !guardOk && gSem:baseName() == 'SpecError' && gSem:isGeneric() }, {
+				local String is kindTy: gSem:elemType():baseName();
 				local ClassInfo is kindCls: :findClass(name: kindTy);
 				guardOk: kindCls:name != '' && kindCls:baseClass == :names:enumHeader();
 			});
@@ -4683,14 +4685,13 @@ Class is TypeChecker{
 				local String is inferredArgT: '';
 				if({ heldCallFn:params:length() > 0 && call:args:length() > 0 }, {
 					local Parameter is hp0: heldCallFn:params:get(index: 0);
-					local String is hp0Str: :formatVarTypeString(t: hp0:paramType);
-					if({ hp0Str:endsWith(suffix: ':' . tp0) }, {
-						local String is hpPrefix: hp0Str:substring(start: 0, end: hp0Str:length() - tp0:length());
-						local NamedArg is ca0: call:args:get(index: 0);
-						local String is ca0T: ca0:value:resolvedType;
-						if({ ca0T:startsWith(prefix: hpPrefix) && ca0T:length() > hpPrefix:length() }, {
-							inferredArgT: ca0T:substring(start: hpPrefix:length(), end: ca0T:length());
-						});
+					local SemType is hp0Sem: SemTypes:fromAstType(t: hp0:paramType);
+					local NamedArg is ca0: call:args:get(index: 0);
+					local Map of String to Boolean is hTpSet: Map:init();
+					hTpSet:set(key: tp0, value: true);
+					local Map of String to SemType is hBindings: Map:init();
+					if({ hp0Sem:unify(concrete: ca0:value:getSemType(), typeParams: hTpSet, bindings: hBindings) && hBindings:has(key: tp0) }, {
+						inferredArgT: hBindings:get(key: tp0, default: SemTypes:EMPTY):toKey();
 					});
 				});
 				if({ inferredArgT != '' && inferredArgT != tp0 }, {
@@ -6846,24 +6847,16 @@ Class is TypeChecker{
 				:addError(line: m:line, msg: 'SpecErrorHandler must take exactly one parameter; found ' . (m:params:length() as String) . '.');
 			}, {
 				local Parameter is p: m:params:get(index: 0);
-				local String is pTy: :formatVarTypeString(t: p:paramType);
-				# The currency parameter normalizes to 'SpecError' (bare, the
-				# catch-all), 'SpecError:Any' (same), or 'SpecError:<KindEnum>'
-				# ('SpecError of K' source spelling); accept all renderings. Enum
-				# recognition goes through the class model (every enum desugars to
-				# an Enum-rooted class) — allEnumNames is vestigial and stays empty.
+				local SemType is pSem: SemTypes:fromAstType(t: p:paramType);
+				local String is pTy: pSem:toKey();
 				local Boolean is paramOk: false;
 				local String is kindTy: '';
-				if({ pTy == 'SpecError' || pTy == 'SpecError:Any' }, {
+				if({ pSem:baseName() == 'SpecError' && (!pSem:isGeneric() || pSem:elemType():isAny()) }, {
 					paramOk: true;
 					catchAllCount: catchAllCount + 1;
 				}, {
-					if({ pTy:startsWith(prefix: 'SpecError:') }, {
-						kindTy: pTy:substring(start: 10, end: pTy:length());
-					}, {
-						if({ pTy:startsWith(prefix: 'SpecError of ') }, {
-							kindTy: pTy:substring(start: 12, end: pTy:length());
-						});
+					if({ pSem:baseName() == 'SpecError' && pSem:isGeneric() }, {
+						kindTy: pSem:elemType():baseName();
 					});
 					local ClassInfo is kindCls: :findClass(name: kindTy);
 					paramOk: kindCls:name != '' && kindCls:baseClass == :names:enumHeader();
