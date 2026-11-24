@@ -1,5 +1,5 @@
 #! Package theofractal:model:fractals
-#! Barnsley Fern IFS attractor with adaptive zoom sampling and logarithmic density shading.
+#! Barnsley Fern IFS attractor with lock-free List buffers, adaptive zoom sampling, and log-density shading.
 
 Class of Fractal is BarnsleyFernFractal{
 	replace [String] is namespace: ['theofractal', 'model', 'fractals'];
@@ -18,33 +18,38 @@ Class of Fractal is BarnsleyFernFractal{
 		FractalViewport(centerX: 0.0, centerY: 5.0, baseSpan: 10.8, zoom: 1.0)
 	}
 
-	replace Function of Array of Float is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
-		local Array of Float is grid: newGrid(w: w, h: h);
+	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		local [Float] is grid: newGrid(w: w, h: h);
 		local Int is totalPixels: w * h;
-		local Array of Int is counts: Array();
+		if({ totalPixels <= 0 }, { return grid; });
+
+		local [Int] is counts: [];
 		local Int is ci: 0;
 		while({ ci < totalPixels }, {
-			counts:add(item: 0);
+			counts:push(item: 0);
 			ci: ci + 1;
 		});
 
 		local Float is spanY: viewport:spanY();
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));
 		local Float is xMin: viewport:centerX - spanX * 0.5;
+		local Float is xMax: viewport:centerX + spanX * 0.5;
+		local Float is yMin: viewport:centerY - spanY * 0.5;
 		local Float is yMax: viewport:centerY + spanY * 0.5;
-		local Float is invSpanX: 1.0 / spanX;
-		local Float is invSpanY: 1.0 / spanY;
+		local Float is scaleX: toFloat(value: w) / spanX;
+		local Float is scaleY: toFloat(value: h) / spanY;
 
 		local Float is x: 0.0;
 		local Float is y: 0.0;
 		local Int is seed: 1337;
 		local Int is i: 0;
-		local Int is minTotal: 65000;
-		local Int is maxTotal: 1500000;
-		local Int is targetInView: totalPixels * 8;
+		local Int is minTotal: 25000;
+		local Int is maxTotal: 180000;
+		local Int is targetInView: totalPixels * 2;
+		if({ targetInView > 45000 }, { targetInView: 45000; });
 		local Int is inViewHits: 0;
 		local Int is maxCount: 1;
-		while({ i < maxTotal && (i < minTotal || inViewHits < targetInView) }, {
+		while({ i < maxTotal && (i < minTotal || (inViewHits < targetInView && (i < 40000 || inViewHits > 0))) }, {
 			seed: (seed * 1103515245 + 12345) % 2147483647;
 			if({ seed < 0 }, { seed: -seed; });
 			local Int is r: seed % 100;
@@ -69,9 +74,9 @@ Class of Fractal is BarnsleyFernFractal{
 			});
 			x: nx;
 			y: ny;
-			if({ i >= 20 }, {
-				local Int is sx: toInt(value: round(value: worldToScreenX(wx: x, xMin: xMin, invSpanX: invSpanX, w: w)));
-				local Int is sy: toInt(value: round(value: worldToScreenYUp(wy: y, yMax: yMax, invSpanY: invSpanY, h: h)));
+			if({ i >= 20 && x >= xMin && x < xMax && y > yMin && y <= yMax }, {
+				local Int is sx: toInt(value: (x - xMin) * scaleX);
+				local Int is sy: toInt(value: (yMax - y) * scaleY);
 				if({ sx >= 0 && sx < w && sy >= 0 && sy < h }, {
 					local Int is idx: sy * w + sx;
 					local Int is nextCount: counts:get(index: idx) + 1;

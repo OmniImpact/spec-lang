@@ -19,7 +19,7 @@ Class of Fractal is SierpinskiFractal{
 	}
 
 	local Function is subdivide(
-		Array of Float is grid,
+		[Float] is grid,
 		Int is w,
 		Int is h,
 		Float is xMin,
@@ -86,8 +86,8 @@ Class of Fractal is SierpinskiFractal{
 		subdivide(grid: grid, w: w, h: h, xMin: xMin, yMax: yMax, invSpanX: invSpanX, invSpanY: invSpanY, ax: cax, ay: cay, bx: bcx, by: bcy, cx: cx, cy: cy, depth: depth + 1);
 	}
 
-	replace Function of Array of Float is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
-		local Array of Float is grid: newGrid(w: w, h: h);
+	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		local [Float] is grid: newGrid(w: w, h: h);
 		local Float is spanY: viewport:spanY();
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));
 		local Float is xMin: viewport:centerX - spanX * 0.5;

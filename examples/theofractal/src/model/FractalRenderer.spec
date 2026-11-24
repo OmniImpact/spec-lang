@@ -23,7 +23,7 @@ Class is FractalRenderer{
 		if({ w <= 0 || h <= 0 }, { return pixels; });
 
 		if({ !antialiasing }, {
-			local Array of Float is values: fractal:sampleGrid(viewport: viewport, w: w, h: h);
+			local [Float] is values: fractal:sampleGrid(viewport: viewport, w: w, h: h);
 			local Int is n: values:length();
 			local Int is i: 0;
 			while({ i < n }, {
@@ -35,7 +35,7 @@ Class is FractalRenderer{
 
 		local Int is sw: w * 2;
 		local Int is sh: h * 2;
-		local Array of Float is sub: fractal:sampleGrid(viewport: viewport, w: sw, h: sh);
+		local [Float] is sub: fractal:sampleGrid(viewport: viewport, w: sw, h: sh);
 		local Int is py: 0;
 		while({ py < h }, {
 			local Int is row0: (py * 2) * sw;

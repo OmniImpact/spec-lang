@@ -18,5 +18,5 @@ Class is Fractal{
 	Function of FractalViewport is defaultViewport(){ FractalViewport() }
 
 	## Samples normalized intensity values in `[0.0, 1.0]` (or `< 0.0` for background) into a `w * h` grid.
-	Function of Array of Float is sampleGrid(FractalViewport is viewport, Int is w, Int is h){ Array() }
+	Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){ [] }
 }

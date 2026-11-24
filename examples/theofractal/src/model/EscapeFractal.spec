@@ -21,8 +21,8 @@ Class of Fractal is EscapeFractal{
 		return (toFloat(value: iter) + 1.0) - nu;
 	}
 
-	replace Function of Array of Float is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
-		local Array of Float is grid: Array();
+	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		local [Float] is grid: [];
 		if({ w <= 0 || h <= 0 }, { return grid; });
 
 		local Float is spanY: viewport:spanY();
@@ -41,9 +41,9 @@ Class of Fractal is EscapeFractal{
 				local Float is cr: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
 				local Float is mu: evaluatePoint(cr: cr, ci: ci, maxIter: maxIter);
 				if({ mu < 0.0 }, {
-					grid:add(item: -1.0);
+					grid:push(item: -1.0);
 				}, {
-					grid:add(item: 0.5 - 0.5 * cos(value: mu * 0.25));
+					grid:push(item: 0.5 - 0.5 * cos(value: mu * 0.25));
 				});
 				px: px + 1;
 			});

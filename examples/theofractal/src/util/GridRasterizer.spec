@@ -14,18 +14,18 @@ Class is GridRasterizer{
 		return v;
 	}
 
-	Function of Array of Float is newGrid(Int is w, Int is h){
+	Function of [Float] is newGrid(Int is w, Int is h){
 		local Int is total: w * h;
-		local Array of Float is grid: Array();
+		local [Float] is grid: [];
 		local Int is i: 0;
 		while({ i < total }, {
-			grid:add(item: -1.0);
+			grid:push(item: -1.0);
 			i: i + 1;
 		});
 		return grid;
 	}
 
-	Function is plotPoint(Array of Float is grid, Int is w, Int is h, Int is x, Int is y, Float is val){
+	Function is plotPoint([Float] is grid, Int is w, Int is h, Int is x, Int is y, Float is val){
 		if({ x < 0 || x >= w || y < 0 || y >= h }, { return; });
 		local Int is idx: y * w + x;
 		if({ val > grid:get(index: idx) }, {
@@ -33,7 +33,7 @@ Class is GridRasterizer{
 		});
 	}
 
-	Function is drawLine(Array of Float is grid, Int is w, Int is h, Int is x0, Int is y0, Int is x1, Int is y1, Float is val){
+	Function is drawLine([Float] is grid, Int is w, Int is h, Int is x0, Int is y0, Int is x1, Int is y1, Float is val){
 		local Int is dx: x1 - x0;
 		local Int is dy: y1 - y0;
 		local Int is adx: if({ dx < 0 }, { -dx }, { dx });

@@ -68,8 +68,8 @@ Class of Fractal is SnowflakeFractal{
 		return clamp01(v: 0.18 + 0.82 * glow);
 	}
 
-	replace Function of Array of Float is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
-		local Array of Float is grid: Array();
+	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		local [Float] is grid: [];
 		if({ w <= 0 || h <= 0 }, { return grid; });
 
 		local Float is spanY: viewport:spanY();
@@ -83,7 +83,7 @@ Class of Fractal is SnowflakeFractal{
 			local Int is px: 0;
 			while({ px < w }, {
 				local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
-				grid:add(item: evaluateSnowflake(wx: wx, wy: wy));
+				grid:push(item: evaluateSnowflake(wx: wx, wy: wy));
 				px: px + 1;
 			});
 			py: py + 1;
