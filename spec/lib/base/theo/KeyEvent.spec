@@ -5,20 +5,32 @@ Class is KeyEvent{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', KeyKind]
+		['base', 'theo', [KeyKind, KeyAction]]
 	];
 
 	KeyKind is kind: KeyKind:NONE;
+	KeyAction is action: KeyAction:PRESS;
 	String is key: '';
 	Boolean is ctrl: false;
 	Boolean is alt: false;
 
-	replace Function is init(KeyKind is kind: KeyKind:NONE, String is key: '', Boolean is ctrl: false, Boolean is alt: false){
+	replace Function is init(
+		KeyKind is kind: KeyKind:NONE,
+		String is key: '',
+		Boolean is ctrl: false,
+		Boolean is alt: false,
+		KeyAction is action: KeyAction:PRESS
+	){
 		:kind: kind;
+		:action: action;
 		:key: key;
 		:ctrl: ctrl;
 		:alt: alt;
 	}
+
+	Function of Boolean is isPress(){ action == KeyAction:PRESS }
+	Function of Boolean is isRepeat(){ action == KeyAction:REPEAT }
+	Function of Boolean is isRelease(){ action == KeyAction:RELEASE }
 
 	Function of Boolean is isNone(){ kind == KeyKind:NONE }
 	Function of Boolean is isChar(){ kind == KeyKind:CHAR }

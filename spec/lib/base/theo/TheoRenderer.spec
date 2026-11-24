@@ -24,7 +24,7 @@ Class is TheoRenderer{
 	}
 
 	Function is enterAltScreenMode(){
-		Output:consOut(text: enterAltScreen() . clearScreen() . hideCursor() . esc() . '[>1u' . esc() . '[?1003h' . esc() . '[?1006h');
+		Output:consOut(text: enterAltScreen() . clearScreen() . hideCursor() . esc() . '[>3u' . esc() . '[?1003h' . esc() . '[?1006h');
 	}
 
 	Function is exitAltScreenMode(){

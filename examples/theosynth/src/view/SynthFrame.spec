@@ -102,11 +102,19 @@ Class of Frame is SynthFrame{
 		);
 	}
 
+	replace Function of Boolean is wantsKeyRelease(){ true }
+
 	replace Function of Boolean is onTick(){
 		return vm:tickDecay();
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
-		return vm:handleShortcut(key: event:key, ctrl: event:ctrl);
+		return vm:handleKeyAction(
+			key: event:key,
+			ctrl: event:ctrl,
+			isPress: event:isPress(),
+			isRepeat: event:isRepeat(),
+			isRelease: event:isRelease()
+		);
 	}
 }

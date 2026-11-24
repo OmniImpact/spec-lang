@@ -6,6 +6,8 @@ Class is TheoSynth{
 
 	merge [[String]] is using: [
 		['base', 'theo', [TheoApp, TheoScreen]],
+		['base', 'core', SpecError],
+		['base', 'sys', 'thread', ThreadScope],
 		['theosynth', 'vm', SynthViewModel],
 		['theosynth', 'view', SynthFrame]
 	];
@@ -17,6 +19,13 @@ Class is TheoSynth{
 		});
 		local SynthFrame is frame: SynthFrame(vm: vm);
 		local TheoScreen is screen: TheoScreen(root: frame);
-		app:run(screen: screen);
+		ThreadScope:open(
+			body: local Function(ThreadScope is scope){
+				vm:startAudio(scope: scope);
+				app:run(screen: screen);
+				vm:engine:close();
+			},
+			onError: local Function of Boolean(SpecError is _err){ false }
+		);
 	}
 }

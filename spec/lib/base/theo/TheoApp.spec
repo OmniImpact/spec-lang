@@ -99,6 +99,9 @@ Class is TheoApp{
 			});
 			return;
 		});
+		if({ ev:isRelease() && !activeFrame:wantsKeyRelease() }, {
+			return;
+		});
 		local Boolean is handled: activeFrame:handleKey(event: ev);
 		if({ !handled }, {
 			if({ ev:isTab() }, {

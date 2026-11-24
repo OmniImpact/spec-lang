@@ -58,14 +58,18 @@ Class of SpecUnitTest is TestTheoSynth{
 		local TheoApp is app: TheoApp();
 
 		local [KeyEvent] is keys: [
-			KeyEvent(kind: KeyKind:CHAR, key: 'q'),
+			KeyEvent(kind: KeyKind:CHAR, key: 'q', action: KeyAction:PRESS),
+			KeyEvent(kind: KeyKind:CHAR, key: 'q', action: KeyAction:RELEASE),
+			KeyEvent(kind: KeyKind:CHAR, key: 'w', action: KeyAction:PRESS),
 			KeyEvent(kind: KeyKind:CHAR, key: '?'),
 			KeyEvent(kind: KeyKind:ESC),
 			KeyEvent(kind: KeyKind:CHAR, key: 'q', ctrl: true)
 		];
 		local TheoBuffer is buf: app:runHeadless(screen: screen, keys: keys, width: 90, height: 24);
 		Assert:isTrue(quitCalled);
-		Assert:isTrue(vm:keys:get(index: vm:lastPlayedIdx):noteName == 'C4');
+		Assert:isTrue(vm:keys:get(index: vm:lastPlayedIdx):noteName == 'C#4');
+		Assert:isTrue(vm:heldFlags:get(index: 12) == 0);
+		Assert:isTrue(vm:heldFlags:get(index: 13) == 1);
 		Assert:isFalse(vm:aboutOpen);
 
 		local String is row0: buf:rowText(y: 0);

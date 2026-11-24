@@ -1,5 +1,5 @@
 #! Package theosynth:vm
-#! ViewModel managing the 3-octave keyboard map, active waveform, key highlights, About modal, and audio playback.
+#! ViewModel managing the 3-octave keyboard map, active waveform, key press/release state, About modal, and audio.
 
 Class is SynthViewModel{
 	replace [String] is namespace: ['theosynth', 'vm'];
@@ -8,12 +8,15 @@ Class is SynthViewModel{
 		['theosynth', 'model', [Waveform, PianoKey, SynthEngine]],
 		['theosynth', 'util', SynthStrings],
 		['base', 'sys', [as Conditional(), as Loops()]],
+		['base', 'sys', 'thread', ThreadScope],
 		['base', 'struct', Map]
 	];
 
 	Array of PianoKey is keys: Array();
 	Map of String to Int is keyIndexByChar: Map();
 	[Int] is activeTicks: [];
+	[Int] is heldFlags: [];
+	[Int] is fallbackTicks: [];
 
 	Waveform is selectedWaveform: Waveform:SINE;
 	Int is lastPlayedIdx: -1;
@@ -30,6 +33,12 @@ Class is SynthViewModel{
 		:onQuit: onQuit;
 		:audioEnabled: audioEnabled;
 		buildKeyboard();
+	}
+
+	Function is startAudio(ThreadScope is scope){
+		if({ audioEnabled }, {
+			engine:startAudio(scope: scope);
+		});
 	}
 
 	local Function is buildOctave(Int is row, Int is baseMidi, String is octStr, [String] is chars){
@@ -50,6 +59,8 @@ Class is SynthViewModel{
 			));
 			keyIndexByChar:set(key: ch, value: idx);
 			activeTicks:push(item: 0);
+			heldFlags:push(item: 0);
+			fallbackTicks:push(item: 0);
 			col: col + 1;
 		});
 	}
@@ -58,11 +69,10 @@ Class is SynthViewModel{
 		keys: Array();
 		keyIndexByChar: Map();
 		activeTicks: [];
-		# Row 0: Octave 5 (MIDI 72..83) -> 1 2 3 4 5 6 7 8 9 0 - =
+		heldFlags: [];
+		fallbackTicks: [];
 		buildOctave(row: 0, baseMidi: 72, octStr: '5', chars: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=']);
-		# Row 1: Octave 4 (MIDI 60..71) -> q w e r t y u i o p [ ]
 		buildOctave(row: 1, baseMidi: 60, octStr: '4', chars: ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']']);
-		# Row 2: Octave 3 (MIDI 48..59) -> a s d f g h j k l ; ' backslash
 		buildOctave(row: 2, baseMidi: 48, octStr: '3', chars: ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '\\']);
 	}
 
@@ -91,30 +101,55 @@ Class is SynthViewModel{
 		return "{{k:noteName}} ({{k:keyChar}}) · {{selectedInstrumentName()}}";
 	}
 
-	Function is triggerKeyIndex(Int is idx){
+	## Triggers a note on key press (or mouse click with short auto-release).
+	Function is triggerKeyIndex(Int is idx, Boolean is autoRelease: true){
 		if({ idx < 0 || idx >= keys:length() }, { return; });
 		lastPlayedIdx: idx;
-		activeTicks:set(index: idx, item: 8);
+		heldFlags:set(index: idx, item: 1);
+		activeTicks:set(index: idx, item: 1);
+		fallbackTicks:set(index: idx, item: if({ autoRelease }, { 12 }, { 24 }));
 		onStateChanged();
 		if({ audioEnabled }, {
-			engine:playMidi(midi: keys:get(index: idx):midi, wave: selectedWaveform);
+			engine:noteOn(midi: keys:get(index: idx):midi, wave: selectedWaveform);
+		});
+	}
+
+	## Releases a note immediately on key-up.
+	Function is releaseKeyIndex(Int is idx){
+		if({ idx < 0 || idx >= keys:length() }, { return; });
+		if({ heldFlags:get(index: idx) == 0 && activeTicks:get(index: idx) == 0 }, { return; });
+		heldFlags:set(index: idx, item: 0);
+		activeTicks:set(index: idx, item: 0);
+		fallbackTicks:set(index: idx, item: 0);
+		onStateChanged();
+		if({ audioEnabled }, {
+			engine:noteOff(midi: keys:get(index: idx):midi);
 		});
 	}
 
 	Function of Boolean is triggerChar(String is ch){
 		if({ !keyIndexByChar:has(key: ch) }, { return false; });
-		triggerKeyIndex(idx: keyIndexByChar:get(key: ch, default: -1));
+		local Int is idx: keyIndexByChar:get(key: ch, default: -1);
+		triggerKeyIndex(idx: idx, autoRelease: true);
 		return true;
 	}
 
 	Function of Boolean is tickDecay(){
 		local Boolean is changed: false;
 		local Int is i: 0;
-		while({ i < activeTicks:length() }, {
-			local Int is t: activeTicks:get(index: i);
-			if({ t > 0 }, {
-				activeTicks:set(index: i, item: t - 1);
-				changed: true;
+		while({ i < fallbackTicks:length() }, {
+			local Int is ft: fallbackTicks:get(index: i);
+			if({ ft > 0 }, {
+				local Int is next: ft - 1;
+				fallbackTicks:set(index: i, item: next);
+				if({ next == 0 }, {
+					heldFlags:set(index: i, item: 0);
+					activeTicks:set(index: i, item: 0);
+					if({ audioEnabled }, {
+						engine:noteOff(midi: keys:get(index: i):midi);
+					});
+					changed: true;
+				});
 			});
 			i: i + 1;
 		});
@@ -138,15 +173,31 @@ Class is SynthViewModel{
 		onQuit();
 	}
 
-	Function of Boolean is handleShortcut(String is key, Boolean is ctrl){
+	Function of Boolean is handleKeyAction(String is key, Boolean is ctrl, Boolean is isPress, Boolean is isRepeat, Boolean is isRelease){
 		if({ ctrl && (key == 'q' || key == 'Q') }, {
-			quit();
+			if({ isPress }, { quit(); });
 			return true;
 		});
 		if({ key == '?' }, {
-			openAbout();
+			if({ isPress }, { openAbout(); });
 			return true;
 		});
-		return triggerChar(ch: key);
+		if({ !keyIndexByChar:has(key: key) }, { return false; });
+		local Int is idx: keyIndexByChar:get(key: key, default: -1);
+		if({ isRelease }, {
+			releaseKeyIndex(idx: idx);
+			return true;
+		});
+		if({ isRepeat }, {
+			fallbackTicks:set(index: idx, item: 24);
+			return true;
+		});
+		if({ isPress }, {
+			if({ heldFlags:get(index: idx) == 0 }, {
+				triggerKeyIndex(idx: idx, autoRelease: false);
+			});
+			return true;
+		});
+		return false;
 	}
 }

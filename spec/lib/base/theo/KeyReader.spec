@@ -5,7 +5,7 @@ Class is KeyReader{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [KeyEvent, KeyKind, MouseEvent, MouseKind]],
+		['base', 'theo', [KeyEvent, KeyKind, KeyAction, MouseEvent, MouseKind]],
 		['base', 'sys', as Input()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
@@ -108,20 +108,39 @@ Class is KeyReader{
 					});
 				});
 				if({ b2 >= 48 && b2 <= 57 }, {
-					# Parse CSI numeric params: `<code>~` or `<code>;<mod>u` (Kitty keyboard protocol)
+					# Parse CSI numeric params: `<code>~` or `<code>;<mod>[:<event>]u` (Kitty keyboard protocol)
 					local Int is p1: b2 - 48;
 					local Int is p2: 0;
+					local Int is p3: 1;
 					local Boolean is hasSemi: false;
+					local Boolean is inEventSub: false;
+					local Boolean is skipSub: false;
 					local Int is term: 0;
 					local Int is cur: pollByte(timeoutMs: 15);
-					while({ cur >= 0 && ((cur >= 48 && cur <= 57) || cur == 59) }, {
+					while({ cur >= 0 && ((cur >= 48 && cur <= 57) || cur == 59 || cur == 58) }, {
 						if({ cur == 59 }, {
 							hasSemi: true;
+							inEventSub: false;
+							skipSub: false;
 						}, {
-							if({ hasSemi }, {
-								p2: (p2 * 10) + (cur - 48);
+							if({ cur == 58 }, {
+								if({ hasSemi }, {
+									inEventSub: true;
+									p3: 0;
+								}, {
+									skipSub: true;
+								});
 							}, {
-								p1: (p1 * 10) + (cur - 48);
+								local Int is dig: cur - 48;
+								if({ inEventSub }, {
+									p3: (p3 * 10) + dig;
+								}, {
+									if({ hasSemi }, {
+										p2: (p2 * 10) + dig;
+									}, {
+										if({ !skipSub }, { p1: (p1 * 10) + dig; });
+									});
+								});
 							});
 						});
 						cur: pollByte(timeoutMs: 15);
@@ -138,12 +157,15 @@ Class is KeyReader{
 						local Int is modBits: if({ hasSemi && p2 > 0 }, { p2 - 1 }, { 0 });
 						local Boolean is isCtrl: (modBits % 8) >= 4;
 						local Boolean is isAlt: (modBits % 4) >= 2;
-						if({ p1 == 13 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:ENTER); });
-						if({ p1 == 9 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:TAB); });
-						if({ p1 == 27 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:ESC); });
-						if({ p1 == 127 || p1 == 8 }, { return KeyEvent(kind: KeyKind:BACKSPACE, ctrl: isCtrl, alt: isAlt); });
+						local KeyAction is act: KeyAction:PRESS;
+						if({ p3 == 2 }, { act: KeyAction:REPEAT; });
+						if({ p3 == 3 }, { act: KeyAction:RELEASE; });
+						if({ p1 == 13 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:ENTER, action: act); });
+						if({ p1 == 9 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:TAB, action: act); });
+						if({ p1 == 27 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:ESC, action: act); });
+						if({ p1 == 127 || p1 == 8 }, { return KeyEvent(kind: KeyKind:BACKSPACE, ctrl: isCtrl, alt: isAlt, action: act); });
 						if({ p1 >= 32 && p1 < 127 }, {
-							return KeyEvent(kind: KeyKind:CHAR, key: byteToStr(b: p1), ctrl: isCtrl, alt: isAlt);
+							return KeyEvent(kind: KeyKind:CHAR, key: byteToStr(b: p1), ctrl: isCtrl, alt: isAlt, action: act);
 						});
 					});
 				});

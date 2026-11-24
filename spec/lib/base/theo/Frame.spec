@@ -169,6 +169,9 @@ Class of Widget is Frame{
 		});
 	}
 
+	## Override to receive [KeyAction:RELEASE] events in [onKey] (default false).
+	Function of Boolean is wantsKeyRelease(){ false }
+
 	replace Function of Boolean is handleKey(KeyEvent is event){
 		local Int is i: overlays:length() - 1;
 		while({ i >= 0 }, {
