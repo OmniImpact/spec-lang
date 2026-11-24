@@ -208,5 +208,20 @@ Class of SpecUnitTest is TestTheoFractal{
 		vm:viewport:zoomBy(factor: 100000000.0);
 		local [Int] is deepDragon: vm:ensurePixels(w: 32, h: 32);
 		Assert:isTrue(deepDragon:length() == 32 * 32);
+
+		vm:selectFractal(name: FractalStrings:OPT_BARNSLEY_FERN);
+		vm:viewport:centerX: 0.0;
+		vm:viewport:centerY: 1.6;
+		vm:viewport:zoomBy(factor: 1000000.0);
+		local [Int] is deepFern: vm:ensurePixels(w: 32, h: 32);
+		Assert:isTrue(deepFern:length() == 32 * 32);
+		local Int is fernBg: Color32:pack(r: 10, g: 12, b: 18);
+		local Int is fernLit: 0;
+		local Int is fi: 0;
+		while({ fi < deepFern:length() }, {
+			if({ deepFern:get(index: fi) != fernBg }, { fernLit: fernLit + 1; });
+			fi: fi + 1;
+		});
+		Assert:isTrue(fernLit > 10);
 	}
 }

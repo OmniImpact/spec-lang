@@ -62,7 +62,7 @@ Class of Fractal is BarnsleyFernFractal{
 		local Boolean is fullyInside: cx - halfW >= xMin && cx + halfW <= xMax && cy - halfH >= yMin && cy + halfH <= yMax;
 		local Float is pxW: halfW * 2.0 * scaleX;
 		local Float is pxH: halfH * 2.0 * scaleY;
-		if({ fullyInside || (pxW <= 16.0 && pxH <= 16.0) || weight < 0.000001 || depth >= 32 }, {
+		if({ fullyInside || (pxW <= 16.0 && pxH <= 16.0) || depth >= 120 }, {
 			branches:push(item: a);
 			branches:push(item: b);
 			branches:push(item: e);
