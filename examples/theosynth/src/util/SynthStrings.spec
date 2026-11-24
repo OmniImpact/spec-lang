@@ -14,6 +14,7 @@ Class is SynthStrings{
 	held String is WAVE_SQUARE: 'Square';
 	held String is WAVE_SAWTOOTH: 'Sawtooth';
 	held String is WAVE_PLUCK: 'Pluck';
+	held String is WAVE_PIANO: 'Piano';
 
 	held String is ABOUT_TITLE: ' About TheoSynth ';
 	held String is ABOUT_BODY_1: 'Interactive 3-octave white-key synthesizer built in Spec + Theo.';
@@ -23,6 +24,6 @@ Class is SynthStrings{
 	held String is ABOUT_KEYS: 'Ctrl+P toggles Play Mode / Controls. Ctrl+A or ? About. Ctrl+Q quits.';
 
 	held Function of [String] is instrumentOptions(){
-		[SynthStrings:WAVE_SINE, SynthStrings:WAVE_SQUARE, SynthStrings:WAVE_SAWTOOTH, SynthStrings:WAVE_PLUCK]
+		[SynthStrings:WAVE_SINE, SynthStrings:WAVE_SQUARE, SynthStrings:WAVE_SAWTOOTH, SynthStrings:WAVE_PLUCK, SynthStrings:WAVE_PIANO]
 	}
 }

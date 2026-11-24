@@ -103,7 +103,11 @@ Class is SynthViewModel{
 				if({ name == SynthStrings:WAVE_PLUCK }, {
 					selectedWaveform: Waveform:PLUCK;
 				}, {
-					selectedWaveform: Waveform:SINE;
+					if({ name == SynthStrings:WAVE_PIANO }, {
+						selectedWaveform: Waveform:PIANO;
+					}, {
+						selectedWaveform: Waveform:SINE;
+					});
 				});
 			});
 		});
@@ -114,6 +118,7 @@ Class is SynthViewModel{
 		if({ selectedWaveform == Waveform:SQUARE }, { return SynthStrings:WAVE_SQUARE; });
 		if({ selectedWaveform == Waveform:SAWTOOTH }, { return SynthStrings:WAVE_SAWTOOTH; });
 		if({ selectedWaveform == Waveform:PLUCK }, { return SynthStrings:WAVE_PLUCK; });
+		if({ selectedWaveform == Waveform:PIANO }, { return SynthStrings:WAVE_PIANO; });
 		return SynthStrings:WAVE_SINE;
 	}
 

@@ -25,12 +25,14 @@ Class of SpecUnitTest is TestTheoSynth{
 		local List of Byte is sqPcm: eng:synthesize(wave: Waveform:SQUARE, freqHz: 440.0, durationMs: 20, rate: 22050);
 		local List of Byte is sawPcm: eng:synthesize(wave: Waveform:SAWTOOTH, freqHz: 440.0, durationMs: 20, rate: 22050);
 		local List of Byte is pluckPcm: eng:synthesize(wave: Waveform:PLUCK, freqHz: 440.0, durationMs: 20, rate: 22050);
+		local List of Byte is pianoPcm: eng:synthesize(wave: Waveform:PIANO, freqHz: 440.0, durationMs: 20, rate: 22050);
 		Assert:isTrue(sinePcm:length() == 441 * 4);
 		Assert:isTrue(sqPcm:length() == 441 * 4);
 		Assert:isTrue(sawPcm:length() == 441 * 4);
 		Assert:isTrue(pluckPcm:length() == 441 * 4);
+		Assert:isTrue(pianoPcm:length() == 441 * 4);
 
-		eng:noteOn(midi: 60, wave: Waveform:SINE);
+		eng:noteOn(midi: 60, wave: Waveform:PIANO);
 		eng:noteOn(midi: 64, wave: Waveform:PLUCK);
 		local List of Byte is polyPcm;
 		eng:mixChunk(outBuf: polyPcm, frames: 220);
@@ -64,6 +66,8 @@ Class of SpecUnitTest is TestTheoSynth{
 		Assert:isTrue(vm:selectedWaveform == Waveform:SAWTOOTH);
 		vm:selectInstrument(name: SynthStrings:WAVE_PLUCK);
 		Assert:isTrue(vm:selectedWaveform == Waveform:PLUCK);
+		vm:selectInstrument(name: SynthStrings:WAVE_PIANO);
+		Assert:isTrue(vm:selectedWaveform == Waveform:PIANO);
 	}
 
 	Function is testFrameBottomBarAndHeadlessApp(){
