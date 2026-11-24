@@ -7,7 +7,9 @@ Class of Fractal is BarnsleyFernFractal{
 	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, FractalViewport]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
-		['base', 'math', as Math()]
+		['base', 'math', [as Math(), Vector]],
+		['base', 'sys', [as Mem(), Parallel, Process]],
+		['base', 'sys', 'thread', ThreadScope]
 	];
 
 	replace Function of String is name(){ FractalStrings:OPT_BARNSLEY_FERN }
@@ -60,7 +62,7 @@ Class of Fractal is BarnsleyFernFractal{
 		local Boolean is fullyInside: cx - halfW >= xMin && cx + halfW <= xMax && cy - halfH >= yMin && cy + halfH <= yMax;
 		local Float is pxW: halfW * 2.0 * scaleX;
 		local Float is pxH: halfH * 2.0 * scaleY;
-		if({ fullyInside || (pxW <= 8.0 && pxH <= 8.0) || depth >= 32 }, {
+		if({ fullyInside || (pxW <= 16.0 && pxH <= 16.0) || weight < 0.000001 || depth >= 32 }, {
 			branches:push(item: a);
 			branches:push(item: b);
 			branches:push(item: e);
@@ -127,9 +129,12 @@ Class of Fractal is BarnsleyFernFractal{
 		);
 	}
 
-	local Function is sampleChaos(
-		[Float] is branches,
-		[Int] is counts,
+	local Function is sampleChaosChunk(
+		Int is branchPtr,
+		Int is cumPtr,
+		Int is branchCount,
+		Float is totalW,
+		Int is countPtr,
 		Int is w,
 		Int is h,
 		Float is xMin,
@@ -137,27 +142,15 @@ Class of Fractal is BarnsleyFernFractal{
 		Float is yMin,
 		Float is yMax,
 		Float is scaleX,
-		Float is scaleY
+		Float is scaleY,
+		Int is samples,
+		Int is initSeed1,
+		Int is initSeed2
 	){
-		local Int is branchCount: branches:length() / 7;
-		if({ branchCount <= 0 }, { return; });
-
-		local [Float] is cumWeights: [];
-		local Float is totalW: 0.0;
-		local Int is bi: 0;
-		while({ bi < branchCount }, {
-			totalW: totalW + branches:get(index: bi * 7 + 6);
-			cumWeights:push(item: totalW);
-			bi: bi + 1;
-		});
-
 		local Float is x: 0.0;
 		local Float is y: 0.0;
-		local Int is seed: 1337;
-		local Int is seed2: 7919;
-		local Float is zoomFactor: if({ scaleX > 10.0 }, { log(value: scaleX) }, { 1.0 });
-		local Int is samples: 35000 + toInt(value: zoomFactor * 4000.0);
-		if({ samples > 90000 }, { samples: 90000; });
+		local Int is seed: initSeed1;
+		local Int is seed2: initSeed2;
 		local Int is i: 0;
 		while({ i < samples }, {
 			seed: (seed * 1103515245 + 12345) % 2147483647;
@@ -191,19 +184,138 @@ Class of Fractal is BarnsleyFernFractal{
 					seed2: (seed2 * 1103515245 + 12345) % 2147483647;
 					if({ seed2 < 0 }, { seed2: -seed2; });
 					local Float is target: (toFloat(value: seed2 % 100000) / 100000.0) * totalW;
-					while({ pickIdx < branchCount - 1 && cumWeights:get(index: pickIdx) < target }, {
-						pickIdx: pickIdx + 1;
+					local Int is lo: 0;
+					local Int is hi: branchCount - 1;
+					while({ lo < hi }, {
+						local Int is mid: (lo + hi) / 2;
+						if({ loadF64(ptr: cumPtr, byteOffset: mid * 8) < target }, {
+							lo: mid + 1;
+						}, {
+							hi: mid;
+						});
 					});
+					pickIdx: lo;
 				});
-				local Int is off: pickIdx * 7;
-				local Float is wx: branches:get(index: off) * x + branches:get(index: off + 1) * y + branches:get(index: off + 2);
-				local Float is wy: branches:get(index: off + 3) * x + branches:get(index: off + 4) * y + branches:get(index: off + 5);
+				local Int is off: pickIdx * 56;
+				local Float is wx: loadF64(ptr: branchPtr, byteOffset: off) * x + loadF64(ptr: branchPtr, byteOffset: off + 8) * y + loadF64(ptr: branchPtr, byteOffset: off + 16);
+				local Float is wy: loadF64(ptr: branchPtr, byteOffset: off + 24) * x + loadF64(ptr: branchPtr, byteOffset: off + 32) * y + loadF64(ptr: branchPtr, byteOffset: off + 40);
 				if({ wx >= xMin && wx < xMax && wy > yMin && wy <= yMax }, {
-					incrementPoint(counts: counts, w: w, h: h, x: toInt(value: (wx - xMin) * scaleX), y: toInt(value: (yMax - wy) * scaleY));
+					local Int is ix: toInt(value: (wx - xMin) * scaleX);
+					local Int is iy: toInt(value: (yMax - wy) * scaleY);
+					if({ ix >= 0 && ix < w && iy >= 0 && iy < h }, {
+						local Int is byteOff: (iy * w + ix) * 4;
+						storeI32(ptr: countPtr, byteOffset: byteOff, val: loadI32(ptr: countPtr, byteOffset: byteOff) + 1);
+					});
 				});
 			});
 			i: i + 1;
 		});
+	}
+
+	local Function is sampleChaos(
+		[Float] is branches,
+		[Int] is counts,
+		Int is w,
+		Int is h,
+		Float is xMin,
+		Float is xMax,
+		Float is yMin,
+		Float is yMax,
+		Float is scaleX,
+		Float is scaleY
+	){
+		local Int is branchCount: branches:length() / 7;
+		if({ branchCount <= 0 }, { return; });
+
+		local Vector is branchVec: Vector(length: branchCount * 7);
+		local Vector is cumVec: Vector(length: branchCount);
+		local Int is branchPtr: branchVec:dataAddr();
+		local Int is cumPtr: cumVec:dataAddr();
+		local Float is totalW: 0.0;
+		local Int is bi: 0;
+		while({ bi < branchCount }, {
+			local Int is srcOff: bi * 7;
+			local Int is dstOff: bi * 7;
+			branchVec:set(index: dstOff, value: branches:get(index: srcOff));
+			branchVec:set(index: dstOff + 1, value: branches:get(index: srcOff + 1));
+			branchVec:set(index: dstOff + 2, value: branches:get(index: srcOff + 2));
+			branchVec:set(index: dstOff + 3, value: branches:get(index: srcOff + 3));
+			branchVec:set(index: dstOff + 4, value: branches:get(index: srcOff + 4));
+			branchVec:set(index: dstOff + 5, value: branches:get(index: srcOff + 5));
+			local Float is bw: branches:get(index: srcOff + 6);
+			branchVec:set(index: dstOff + 6, value: bw);
+			totalW: totalW + bw;
+			cumVec:set(index: bi, value: totalW);
+			bi: bi + 1;
+		});
+
+		local Float is zoomFactor: if({ scaleX > 10.0 }, { log(value: scaleX) }, { 1.0 });
+		local Int is totalSamples: 35000 + toInt(value: zoomFactor * 4000.0);
+		if({ totalSamples > 90000 }, { totalSamples: 90000; });
+
+		local Int is totalPixels: w * h;
+		local Int is chunks: 4;
+		local Int is chunkBytes: totalPixels * 4;
+		local Int is chunkBufs: alloc(bytes: chunks * chunkBytes);
+		set(dst: chunkBufs, byteVal: 0, bytes: chunks * chunkBytes);
+		local Int is perChunk: totalSamples / chunks;
+
+		local Int is nThreads: Process():threadCount();
+		if({ nThreads > chunks }, { nThreads: chunks; });
+		if({ nThreads < 1 }, { nThreads: 1; });
+
+		if({ nThreads == 1 }, {
+			local Int is c0: 0;
+			while({ c0 < chunks }, {
+				sampleChaosChunk(
+					branchPtr: branchPtr, cumPtr: cumPtr, branchCount: branchCount, totalW: totalW,
+					countPtr: chunkBufs + c0 * chunkBytes,
+					w: w, h: h, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax, scaleX: scaleX, scaleY: scaleY,
+					samples: perChunk, initSeed1: 1337 + c0 * 97, initSeed2: 7919 + c0 * 131
+				);
+				c0: c0 + 1;
+			});
+		}, {
+			ThreadScope:open(
+				body: local Function(ThreadScope is scope){
+					Parallel():run(
+						scope: scope,
+						threads: nThreads,
+						iterations: chunks,
+						worker: local Function of Int(Int is tid, Int is cnt){
+							local Int is c1: tid;
+							while({ c1 < chunks }, {
+								sampleChaosChunk(
+									branchPtr: branchPtr, cumPtr: cumPtr, branchCount: branchCount, totalW: totalW,
+									countPtr: chunkBufs + c1 * chunkBytes,
+									w: w, h: h, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax, scaleX: scaleX, scaleY: scaleY,
+									samples: perChunk, initSeed1: 1337 + c1 * 97, initSeed2: 7919 + c1 * 131
+								);
+								c1: c1 + nThreads;
+							});
+							return 0;
+						}
+					);
+				},
+				onError: local Function of Boolean(SpecError is _err){ false }
+			);
+		});
+
+		local Int is pi: 0;
+		while({ pi < totalPixels }, {
+			local Int is sumHits: counts:get(index: pi);
+			local Int is ck: 0;
+			while({ ck < chunks }, {
+				sumHits: sumHits + loadI32(ptr: chunkBufs + ck * chunkBytes, byteOffset: pi * 4);
+				ck: ck + 1;
+			});
+			counts:set(index: pi, item: sumHits);
+			pi: pi + 1;
+		});
+
+		free(ptr: chunkBufs);
+		branchVec:destroy();
+		cumVec:destroy();
 	}
 
 	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
