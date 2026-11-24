@@ -66,7 +66,7 @@ Class of Widget is TextArea{
 		buf:drawText(x: boxX, y: y, text: ln);
 	}
 
-	Function of String is getText(){ lines:join(separator: "\n"); }
+	Function of String is getText(){ lines:join(separator: "\n") }
 
 	local Function is notifyChanged(){
 		onLinesChanged();
@@ -84,7 +84,7 @@ Class of Widget is TextArea{
 		if({ cursorCol > len }, { :cursorCol: len; });
 	}
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ maxH; }
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ maxH }
 
 	local Function of Int is visualCol(String is ln, Int is col){
 		local Int is vis: 0;
@@ -109,13 +109,13 @@ Class of Widget is TextArea{
 		return vis;
 	}
 
-	replace Function of Int is scrollOffsetY(){ scrollY; }
+	replace Function of Int is scrollOffsetY(){ scrollY }
 
-	replace Function of Int is scrollContentH(){ lines:length(); }
+	replace Function of Int is scrollContentH(){ lines:length() }
 
-	replace Function of Int is scrollViewportH(){ boxH; }
+	replace Function of Int is scrollViewportH(){ boxH }
 
-	replace Function of Int is scrollOffsetX(){ scrollX; }
+	replace Function of Int is scrollOffsetX(){ scrollX }
 
 	replace Function of Int is scrollContentW(){
 		local Int is maxW: 0;
@@ -129,7 +129,7 @@ Class of Widget is TextArea{
 		return maxW;
 	}
 
-	replace Function of Int is scrollViewportW(){ boxW; }
+	replace Function of Int is scrollViewportW(){ boxW }
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });

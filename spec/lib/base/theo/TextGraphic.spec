@@ -32,7 +32,7 @@ Class of Widget is TextGraphic{
 		return best;
 	}
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ rows:length(); }
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ rows:length() }
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		local TheoColor is effColor: if({ color:isSet() }, { color }, { activeTheme:foreground });

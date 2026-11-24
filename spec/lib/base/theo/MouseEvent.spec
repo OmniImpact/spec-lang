@@ -30,11 +30,11 @@ Class is MouseEvent{
 		:shift: shift;
 	}
 
-	Function of Boolean is isNone(){ return kind == 'none'; }
-	Function of Boolean is isPress(){ return kind == 'press'; }
-	Function of Boolean is isRelease(){ return kind == 'release'; }
-	Function of Boolean is isMove(){ return kind == 'move'; }
-	Function of Boolean is isWheelUp(){ return kind == 'wheelUp'; }
-	Function of Boolean is isWheelDown(){ return kind == 'wheelDown'; }
-	Function of Boolean is isLeftPress(){ return kind == 'press' && button == 0; }
+	Function of Boolean is isNone(){ kind == 'none' }
+	Function of Boolean is isPress(){ kind == 'press' }
+	Function of Boolean is isRelease(){ kind == 'release' }
+	Function of Boolean is isMove(){ kind == 'move' }
+	Function of Boolean is isWheelUp(){ kind == 'wheelUp' }
+	Function of Boolean is isWheelDown(){ kind == 'wheelDown' }
+	Function of Boolean is isLeftPress(){ kind == 'press' && button == 0 }
 }

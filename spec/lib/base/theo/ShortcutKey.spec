@@ -19,15 +19,15 @@ Class is ShortcutKey{
 		:alt: alt;
 	}
 
-	held Function of ShortcutKey is none(){ ShortcutKey(key: '', ctrl: false, alt: false); }
+	held Function of ShortcutKey is none(){ ShortcutKey(key: '', ctrl: false, alt: false) }
 
-	held Function of ShortcutKey is ctrl(String is key){ ShortcutKey(key: key, ctrl: true, alt: false); }
+	held Function of ShortcutKey is ctrl(String is key){ ShortcutKey(key: key, ctrl: true, alt: false) }
 
-	held Function of ShortcutKey is alt(String is key){ ShortcutKey(key: key, ctrl: false, alt: true); }
+	held Function of ShortcutKey is alt(String is key){ ShortcutKey(key: key, ctrl: false, alt: true) }
 
-	held Function of ShortcutKey is plain(String is key){ ShortcutKey(key: key, ctrl: false, alt: false); }
+	held Function of ShortcutKey is plain(String is key){ ShortcutKey(key: key, ctrl: false, alt: false) }
 
-	Function of Boolean is isSet(){ key != ''; }
+	Function of Boolean is isSet(){ key != '' }
 
 	Function of Boolean is matches(KeyEvent is event){
 		if({ !isSet() }, { return false; });

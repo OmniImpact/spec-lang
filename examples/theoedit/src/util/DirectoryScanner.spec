@@ -11,7 +11,7 @@ Class is DirectoryScanner{
 		['theoedit', 'model', DirectoryListing]
 	];
 
-	Function of String is normalizeDir(String is path){ Uri:fromFilePath(filePath: path):toFilePath(); }
+	Function of String is normalizeDir(String is path){ Uri:fromFilePath(filePath: path):toFilePath() }
 
 	local Function of Boolean is entryLess(String is a, String is aLow, String is b, String is bLow){
 		if({ aLow != bLow }, { return aLow < bLow; });
@@ -99,8 +99,8 @@ Class is DirectoryScanner{
 		sortAlpha(items: dirs);
 		sortAlpha(items: files);
 		local Array of String is entries: Array(['..']);
-		dirs:each(action: local Function(String is d){ entries:add(item: d); });
-		files:each(action: local Function(String is f){ entries:add(item: f); });
+		dirs:each(action: local Function(String is d){ entries:add(item: d) });
+		files:each(action: local Function(String is f){ entries:add(item: f) });
 		return DirectoryListing(dir: normDir, dirs: dirs, files: files, entries: entries);
 	}
 }

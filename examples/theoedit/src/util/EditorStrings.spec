@@ -29,9 +29,9 @@ Class is EditorStrings{
 	held String is KEY_DISCARD: 'd';
 	held String is KEY_CANCEL: 'c';
 
-	held Function of String is dirtyTitle(String is base){ "{{base}} *"; }
+	held Function of String is dirtyTitle(String is base){ "{{base}} *" }
 
-	held Function of String is fileManagerTitle(String is dir){ "File Manager — {{dir}}"; }
+	held Function of String is fileManagerTitle(String is dir){ "File Manager — {{dir}}" }
 
-	held Function of String is saveFailed(String is err){ "Save failed: {{err}}"; }
+	held Function of String is saveFailed(String is err){ "Save failed: {{err}}" }
 }

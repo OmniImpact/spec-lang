@@ -357,9 +357,9 @@ Class of Widget is Panel{
 		});
 	}
 
-	replace Function of Boolean is handleKey(KeyEvent is event){ child:handleKey(event: event); }
+	replace Function of Boolean is handleKey(KeyEvent is event){ child:handleKey(event: event) }
 
-	replace Function of Boolean is handleMouse(MouseEvent is event){ child:handleMouse(event: event); }
+	replace Function of Boolean is handleMouse(MouseEvent is event){ child:handleMouse(event: event) }
 
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
 		child:collectFocus(targets: targets, owners: owners);

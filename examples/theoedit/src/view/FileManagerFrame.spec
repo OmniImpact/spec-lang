@@ -111,8 +111,8 @@ Class of Frame is FileManagerFrame{
 						child: ListView(
 							items: vm:entries,
 							focusTarget: listFocus,
-							onActivate: local Function(String is entry){ vm:activateEntry(entry: entry); },
-							onSelectChange: local Function(String is entry){ vm:selectEntry(entry: entry); }
+							onActivate: local Function(String is entry){ vm:activateEntry(entry: entry) },
+							onSelectChange: local Function(String is entry){ vm:selectEntry(entry: entry) }
 						)
 					)
 				),
@@ -133,8 +133,8 @@ Class of Frame is FileManagerFrame{
 									value: vm:fileName,
 									placeholder: EditorStrings:FILE_MANAGER_PLACEHOLDER,
 									focusTarget: inputFocus,
-									onChange: local Function(String is typed){ vm:onNameChanged(typedName: typed); },
-									onSubmit: local Function(String is typed){ vm:confirm(typedName: typed); }
+									onChange: local Function(String is typed){ vm:onNameChanged(typedName: typed) },
+									onSubmit: local Function(String is typed){ vm:confirm(typedName: typed) }
 								)
 							])
 						)

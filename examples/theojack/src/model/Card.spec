@@ -17,9 +17,9 @@ Class is Card{
 		:suit: suit;
 	}
 
-	Function of String is label(){ rank:value() . suit:value(); }
+	Function of String is label(){ rank:value() . suit:value() }
 
-	Function of Boolean is isRed(){ suit == Suit:HEARTS || suit == Suit:DIAMONDS; }
+	Function of Boolean is isRed(){ suit == Suit:HEARTS || suit == Suit:DIAMONDS }
 
 	Function of Card is randomCard(){
 		local Int is rIdx: toInt(value: random(min: 0.0, max: 13.0));

@@ -125,13 +125,13 @@ Class of Widget is ListView{
 		return '';
 	}
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ maxH; }
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ maxH }
 
-	replace Function of Int is scrollOffsetY(){ scrollY; }
+	replace Function of Int is scrollOffsetY(){ scrollY }
 
-	replace Function of Int is scrollContentH(){ items:length(); }
+	replace Function of Int is scrollContentH(){ items:length() }
 
-	replace Function of Int is scrollViewportH(){ boxH; }
+	replace Function of Int is scrollViewportH(){ boxH }
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });

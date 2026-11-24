@@ -32,19 +32,19 @@ Class is SyntaxHighlighter{
 		:language: 'plain';
 	}
 
-	local Function of Boolean is isDigit(String is ch){ ch >= '0' && ch <= '9'; }
+	local Function of Boolean is isDigit(String is ch){ ch >= '0' && ch <= '9' }
 
 	local Function of Boolean is isAlpha(String is ch){
 		return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_';
 	}
 
-	local Function of Boolean is isUpper(String is ch){ ch >= 'A' && ch <= 'Z'; }
+	local Function of Boolean is isUpper(String is ch){ ch >= 'A' && ch <= 'Z' }
 
-	local Function of Boolean is isIdentChar(String is ch){ isAlpha(ch: ch) || isDigit(ch: ch); }
+	local Function of Boolean is isIdentChar(String is ch){ isAlpha(ch: ch) || isDigit(ch: ch) }
 
-	local Function of Boolean is isSpace(String is ch){ ch == ' ' || ch == "\t"; }
+	local Function of Boolean is isSpace(String is ch){ ch == ' ' || ch == "\t" }
 
-	local Function of Boolean is isWordInList(String is word, String is spaceWrappedList){ spaceWrappedList:contains(needle: " {{word}} "); }
+	local Function of Boolean is isWordInList(String is word, String is spaceWrappedList){ spaceWrappedList:contains(needle: " {{word}} ") }
 
 	local Function of String is keywordsForLanguage(){
 		if({ language == 'spec' }, {
@@ -68,7 +68,7 @@ Class is SyntaxHighlighter{
 		return '';
 	}
 
-	local Function of Boolean is isBlockCommentLang(){ language == 'c' || language == 'java' || language == 'rust'; }
+	local Function of Boolean is isBlockCommentLang(){ language == 'c' || language == 'java' || language == 'rust' }
 
 	local Function of String is lineCommentPrefix(){
 		if({ language == 'spec' || language == 'python' || language == 'ruby' }, { return '#'; });

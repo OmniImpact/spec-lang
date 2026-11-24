@@ -72,17 +72,17 @@ Class of Widget is Frame{
 	}
 
 	## Override to declare this frame's widget tree.
-	Function of Widget is ui(){ Widget(); }
+	Function of Widget is ui(){ Widget() }
 
 	## Override to handle keys at the frame level before child dispatch.
-	Function of Boolean is onKey(KeyEvent is event){ false; }
+	Function of Boolean is onKey(KeyEvent is event){ false }
 
 	Function is onEnter(){ return; }
 	Function is onPause(){ return; }
 	Function is onResume(){ return; }
 
 	## Override to run periodic updates on the UI loop; return true to redraw.
-	Function of Boolean is onTick(){ false; }
+	Function of Boolean is onTick(){ false }
 
 	Function is onExit(){
 		dispose();

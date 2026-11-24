@@ -30,11 +30,11 @@ Class of Widget is Col{
 		:children: children;
 	}
 
-	replace Function of Int is scrollOffsetY(){ scrollY; }
+	replace Function of Int is scrollOffsetY(){ scrollY }
 
-	replace Function of Int is scrollContentH(){ contentH; }
+	replace Function of Int is scrollContentH(){ contentH }
 
-	replace Function of Int is scrollViewportH(){ boxH; }
+	replace Function of Int is scrollViewportH(){ boxH }
 
 	replace Function is applyTheme(TheoTheme is theme){
 		:activeTheme: theme;

@@ -63,19 +63,19 @@ Class is GameViewModel{
 		onHome();
 	}
 
-	Function of Boolean is isBetting(){ game:phase == GamePhase:BETTING; }
+	Function of Boolean is isBetting(){ game:phase == GamePhase:BETTING }
 
-	Function of Boolean is isResultShown(){ game:phase == GamePhase:ROUND_OVER || game:phase == GamePhase:MATCH_OVER; }
+	Function of Boolean is isResultShown(){ game:phase == GamePhase:ROUND_OVER || game:phase == GamePhase:MATCH_OVER }
 
-	Function of Boolean is shouldHideDealerHole(){ game:phase == GamePhase:PLAYER_TURN; }
+	Function of Boolean is shouldHideDealerHole(){ game:phase == GamePhase:PLAYER_TURN }
 
-	Function of Boolean is canDouble(){ game:canDouble(); }
+	Function of Boolean is canDouble(){ game:canDouble() }
 
-	Function of String is roundText(){ "Round {{game:currentRound}} / {{game:maxRounds}}"; }
+	Function of String is roundText(){ "Round {{game:currentRound}} / {{game:maxRounds}}" }
 
-	Function of String is bankrollText(){ "Bankroll: \${{game:bankroll}}"; }
+	Function of String is bankrollText(){ "Bankroll: \${{game:bankroll}}" }
 
-	Function of String is betText(){ "Bet: \${{game:currentBet}}"; }
+	Function of String is betText(){ "Bet: \${{game:currentBet}}" }
 
 	Function of String is dealerScoreText(){
 		if({ game:dealerHand:count() == 0 }, { return 'Waiting for deal...'; });

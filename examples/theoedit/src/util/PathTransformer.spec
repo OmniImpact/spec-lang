@@ -8,7 +8,7 @@ Class is PathTransformer{
 		['theoedit', 'util', EditorStrings]
 	];
 
-	Function of Boolean is isDirectoryEntry(String is entry){ entry == '..' || entry:endsWith(suffix: '/'); }
+	Function of Boolean is isDirectoryEntry(String is entry){ entry == '..' || entry:endsWith(suffix: '/') }
 
 	Function of String is parentDir(String is dir){
 		local Array of String is parts: dir:split(delimiter: '/');

@@ -47,7 +47,7 @@ Class is BlackjackGame{
 		:currentBet: next;
 	}
 
-	Function of Boolean is canDouble(){ phase == GamePhase:PLAYER_TURN && playerHand:count() == 2 && bankroll >= currentBet; }
+	Function of Boolean is canDouble(){ phase == GamePhase:PLAYER_TURN && playerHand:count() == 2 && bankroll >= currentBet }
 
 	Function is deal(){
 		if({ phase != GamePhase:BETTING || bankroll <= 0 }, { return; });
@@ -143,7 +143,7 @@ Class is BlackjackGame{
 		stand();
 	}
 
-	Function of Boolean is isMatchFinished(){ currentRound >= maxRounds || bankroll <= 0; }
+	Function of Boolean is isMatchFinished(){ currentRound >= maxRounds || bankroll <= 0 }
 
 	Function is nextRound(){
 		if({ isMatchFinished() }, {

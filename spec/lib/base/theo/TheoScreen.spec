@@ -32,7 +32,7 @@ Class is TheoScreen{
 		});
 	}
 
-	Function of Frame is current(){ stack:get(index: stack:length() - 1); }
+	Function of Frame is current(){ stack:get(index: stack:length() - 1) }
 
 	Function is push(Frame is frame){
 		if({ stack:length() > 0 }, {
