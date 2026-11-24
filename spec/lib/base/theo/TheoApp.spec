@@ -142,6 +142,9 @@ Class is TheoApp{
 					});
 				});
 			});
+			if({ screen:current():onTick() }, {
+				:dirty: true;
+			});
 		});
 
 		screen:current():onExit();

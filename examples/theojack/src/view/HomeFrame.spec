@@ -6,20 +6,34 @@ Class of Frame is HomeFrame{
 
 	merge [[String]] is using: [
 		['base', 'theo', '*'],
-		['theojack', 'util', HomeStrings]
+		['base', 'sys', as Time()],
+		['theojack', 'model', [Card, CardStyle]],
+		['theojack', 'util', HomeStrings],
+		['theojack', 'view', CardView]
 	];
 
 	FocusTarget is playFocus: FocusTarget(initial: true);
 	FocusTarget is rulesFocus: FocusTarget();
+	FocusTarget is optionsFocus: FocusTarget();
 	FocusTarget is aboutFocus: FocusTarget();
 	FocusTarget is quitFocus: FocusTarget();
 	FocusTarget is aboutCloseFocus: FocusTarget();
+	CardView is heroCard: CardView();
+	Int is lastCardMs: 0;
+	Function is onOpenOptions: {};
 	Function is onQuit: {};
 	Array of Overlay is aboutOverlays: Array();
 	Array of Button is aboutButtons: Array();
 
-	replace Function is init(Function is onQuit: {}){
+	replace Function is init(
+		CardStyle is initialStyle: CardStyle:WIREFRAME,
+		Function is onOpenOptions: {},
+		Function is onQuit: {}
+	){
+		:onOpenOptions: onOpenOptions;
 		:onQuit: onQuit;
+		:heroCard: CardView(card: Card():randomCard(), style: initialStyle);
+		:lastCardMs: monotonicMs();
 		local Overlay is aboutOv: Overlay(
 			closeOnEsc: true,
 			closeOnBackdrop: false,
@@ -80,6 +94,25 @@ Class of Frame is HomeFrame{
 		return false;
 	}
 
+	Function is setCardStyle(CardStyle is next){
+		heroCard:setStyle(next: next);
+	}
+
+	Function is randomizeCard(){
+		heroCard:setCard(next: Card():randomCard());
+		:lastCardMs: monotonicMs();
+	}
+
+	replace Function of Boolean is onTick(){
+		if({ hasOpenOverlay() }, { return false; });
+		local Int is now: monotonicMs();
+		if({ now - lastCardMs >= 1000 }, {
+			randomizeCard();
+			return true;
+		});
+		return false;
+	}
+
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() || (event:isChar() && event:key:toLower() == 'q') }, {
 			onQuit();
@@ -102,11 +135,9 @@ Class of Frame is HomeFrame{
 			child: Row(
 				gap: 3,
 				children: Array([
-					TextGraphic(
-						graphic: HomeStrings:HERO_CARD
-					),
+					heroCard,
 					Col(
-						gap: 1,
+						gap: 0,
 						arrowFocus: true,
 						children: Array([
 							Button(
@@ -122,6 +153,13 @@ Class of Frame is HomeFrame{
 								width: w,
 								focusTarget: rulesFocus,
 								onClick: {}
+							),
+							Button(
+								label: HomeStrings:MENU_OPTIONS,
+								shortcutKey: 'o',
+								width: w,
+								focusTarget: optionsFocus,
+								onClick: { onOpenOptions(); }
 							),
 							aboutBtn,
 							Button(

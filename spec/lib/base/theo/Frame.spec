@@ -62,6 +62,11 @@ Class of Widget is Frame{
 	Function is onPause(){ return; }
 	Function is onResume(){ return; }
 
+	## Override to run periodic updates on the UI loop; return true to redraw.
+	Function of Boolean is onTick(){
+		return false;
+	}
+
 	Function is onExit(){
 		dispose();
 	}
