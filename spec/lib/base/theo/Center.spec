@@ -25,13 +25,9 @@ Class of Widget is Center{
 		child:bindDirty(cb: cb);
 	}
 
-	replace Function of Int is measureWidth(Int is maxW){
-		return child:measureWidth(maxW: maxW);
-	}
+	replace Function of Int is measureWidth(Int is maxW){ child:measureWidth(maxW: maxW); }
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
-		return child:measureHeight(maxW: maxW, maxH: maxH);
-	}
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ child:measureHeight(maxW: maxW, maxH: maxH); }
 
 	replace Function is layout(Int is x, Int is y, Int is w, Int is h){
 		:boxX: x;
@@ -53,13 +49,9 @@ Class of Widget is Center{
 		child:paint(buf: buf, renderer: renderer);
 	}
 
-	replace Function of Boolean is handleKey(KeyEvent is event){
-		return child:handleKey(event: event);
-	}
+	replace Function of Boolean is handleKey(KeyEvent is event){ child:handleKey(event: event); }
 
-	replace Function of Boolean is handleMouse(MouseEvent is event){
-		return child:handleMouse(event: event);
-	}
+	replace Function of Boolean is handleMouse(MouseEvent is event){ child:handleMouse(event: event); }
 
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
 		child:collectFocus(targets: targets, owners: owners);

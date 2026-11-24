@@ -101,9 +101,7 @@ Class of Widget is TextInput{
 		return maxW;
 	}
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
-		return 1;
-	}
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ 1; }
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
 		if({ boxW <= 0 || boxH <= 0 }, { return; });

@@ -18,13 +18,9 @@ Class of Widget is Grid{
 		:panes: panes;
 	}
 
-	held Function of GridPane is fixed(Int is size, Widget is child){
-		return GridPane(isFixed: true, fixedSize: size, weightVal: 0.0, child: child);
-	}
+	held Function of GridPane is fixed(Int is size, Widget is child){ GridPane(isFixed: true, fixedSize: size, weightVal: 0.0, child: child); }
 
-	held Function of GridPane is weight(Float is weight, Widget is child){
-		return GridPane(isFixed: false, fixedSize: 0, weightVal: weight, child: child);
-	}
+	held Function of GridPane is weight(Float is weight, Widget is child){ GridPane(isFixed: false, fixedSize: 0, weightVal: weight, child: child); }
 
 	replace Function is applyTheme(TheoTheme is theme){
 		:activeTheme: theme;

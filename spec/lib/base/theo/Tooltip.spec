@@ -75,13 +75,9 @@ Class of Widget is Tooltip{
 		child:bindDirty(cb: cb);
 	}
 
-	replace Function of Int is measureWidth(Int is maxW){
-		return child:measureWidth(maxW: maxW);
-	}
+	replace Function of Int is measureWidth(Int is maxW){ child:measureWidth(maxW: maxW); }
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
-		return child:measureHeight(maxW: maxW, maxH: maxH);
-	}
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ child:measureHeight(maxW: maxW, maxH: maxH); }
 
 	replace Function is layout(Int is x, Int is y, Int is w, Int is h){
 		:boxX: x;
@@ -121,9 +117,7 @@ Class of Widget is Tooltip{
 		child:paint(buf: buf, renderer: renderer);
 	}
 
-	replace Function of Boolean is handleKey(KeyEvent is event){
-		return child:handleKey(event: event);
-	}
+	replace Function of Boolean is handleKey(KeyEvent is event){ child:handleKey(event: event); }
 
 	replace Function of Boolean is handleMouse(MouseEvent is event){
 		if({ event:isMove() }, {

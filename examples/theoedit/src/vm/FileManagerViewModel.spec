@@ -42,17 +42,11 @@ Class is FileManagerViewModel{
 		navigateTo(nextDir: initialDir);
 	}
 
-	Function of Boolean is isSaveAs(){
-		return mode == FileDialogMode:SAVE_AS;
-	}
+	Function of Boolean is isSaveAs(){ mode == FileDialogMode:SAVE_AS; }
 
-	Function of String is actionLabel(){
-		return if({ isSaveAs() }, { EditorStrings:LABEL_SAVE }, { EditorStrings:LABEL_OPEN });
-	}
+	Function of String is actionLabel(){ if({ isSaveAs() }, { EditorStrings:LABEL_SAVE }, { EditorStrings:LABEL_OPEN }); }
 
-	Function of String is actionKey(){
-		return if({ isSaveAs() }, { EditorStrings:KEY_SAVE }, { EditorStrings:KEY_OPEN });
-	}
+	Function of String is actionKey(){ if({ isSaveAs() }, { EditorStrings:KEY_SAVE }, { EditorStrings:KEY_OPEN }); }
 
 	Function is navigateTo(String is nextDir){
 		listing: scanner:scan(dir: nextDir);

@@ -247,7 +247,5 @@ Class is EditorViewModel{
 		messageText:emit(value: '');
 	}
 
-	Function of Boolean is hasMessage(){
-		return messageMode != EditorMessageMode:NONE;
-	}
+	Function of Boolean is hasMessage(){ messageMode != EditorMessageMode:NONE; }
 }

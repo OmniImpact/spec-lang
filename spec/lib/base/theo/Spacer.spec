@@ -16,15 +16,9 @@ Class of Widget is Spacer{
 		:size: size;
 	}
 
-	replace Function of Float is flexWeight(){
-		return weight;
-	}
+	replace Function of Float is flexWeight(){ weight; }
 
-	replace Function of Int is measureWidth(Int is maxW){
-		return size;
-	}
+	replace Function of Int is measureWidth(Int is maxW){ size; }
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
-		return size;
-	}
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ size; }
 }

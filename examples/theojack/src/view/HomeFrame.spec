@@ -87,13 +87,9 @@ Class of Frame is HomeFrame{
 		});
 	}
 
-	Function of Boolean is isAboutOpen(){
-		return vm:aboutOpen:current();
-	}
+	Function of Boolean is isAboutOpen(){ vm:aboutOpen:current(); }
 
-	replace Function of Boolean is onTick(){
-		return vm:onTick();
-	}
+	replace Function of Boolean is onTick(){ vm:onTick(); }
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() || (event:isChar() && event:key:toLower() == 'q') }, {

@@ -22,9 +22,7 @@ Class is Hand{
 		cards:push(item: card);
 	}
 
-	Function of Int is count(){
-		return cards:length();
-	}
+	Function of Int is count(){ cards:length(); }
 
 	Function of Int is score(){
 		local Int is total: 0;
@@ -51,11 +49,7 @@ Class is Hand{
 		return total;
 	}
 
-	Function of Boolean is isBlackjack(){
-		return cards:length() == 2 && score() == 21;
-	}
+	Function of Boolean is isBlackjack(){ cards:length() == 2 && score() == 21; }
 
-	Function of Boolean is isBust(){
-		return score() > 21;
-	}
+	Function of Boolean is isBust(){ score() > 21; }
 }

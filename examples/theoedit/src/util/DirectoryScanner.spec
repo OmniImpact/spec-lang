@@ -11,9 +11,7 @@ Class is DirectoryScanner{
 		['theoedit', 'model', DirectoryListing]
 	];
 
-	Function of String is normalizeDir(String is path){
-		return Uri:fromFilePath(filePath: path):toFilePath();
-	}
+	Function of String is normalizeDir(String is path){ Uri:fromFilePath(filePath: path):toFilePath(); }
 
 	local Function of Boolean is entryLess(String is a, String is aLow, String is b, String is bLow){
 		if({ aLow != bLow }, { return aLow < bLow; });

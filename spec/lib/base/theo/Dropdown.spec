@@ -140,13 +140,9 @@ Class of Widget is Dropdown{
 		return menuOverlays:get(index: 0):open;
 	}
 
-	replace Function of Int is measureWidth(Int is maxW){
-		return computeWidth(maxW: maxW);
-	}
+	replace Function of Int is measureWidth(Int is maxW){ computeWidth(maxW: maxW); }
 
-	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
-		return 1;
-	}
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){ 1; }
 
 	replace Function is layout(Int is x, Int is y, Int is w, Int is h){
 		:boxX: x;

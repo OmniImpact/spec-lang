@@ -78,9 +78,7 @@ Class is TheoBuffer{
 		});
 	}
 
-	Function of TheoCell is cellAt(Int is x, Int is y){
-		return cells:get(index: y * width + x);
-	}
+	Function of TheoCell is cellAt(Int is x, Int is y){ cells:get(index: y * width + x); }
 
 	Function is setCell(Int is x, Int is y, String is ch, TheoColor is fg: TheoColor:none(), TheoColor is bg: TheoColor:none(), Boolean is bold: false, Boolean is underline: false, Boolean is reverse: false){
 		if({ x < clipX || x >= clipX + clipW || y < clipY || y >= clipY + clipH }, {

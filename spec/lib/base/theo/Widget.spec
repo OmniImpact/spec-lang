@@ -34,41 +34,23 @@ Class is Widget{
 		});
 	}
 
-	Function of Int is measureWidth(Int is maxW){
-		return maxW;
-	}
+	Function of Int is measureWidth(Int is maxW){ maxW; }
 
-	Function of Int is measureHeight(Int is maxW, Int is maxH){
-		return 1;
-	}
+	Function of Int is measureHeight(Int is maxW, Int is maxH){ 1; }
 
-	Function of Int is scrollOffsetY(){
-		return 0;
-	}
+	Function of Int is scrollOffsetY(){ 0; }
 
-	Function of Int is scrollContentH(){
-		return 0;
-	}
+	Function of Int is scrollContentH(){ 0; }
 
-	Function of Int is scrollViewportH(){
-		return boxH;
-	}
+	Function of Int is scrollViewportH(){ boxH; }
 
-	Function of Int is scrollOffsetX(){
-		return 0;
-	}
+	Function of Int is scrollOffsetX(){ 0; }
 
-	Function of Int is scrollContentW(){
-		return 0;
-	}
+	Function of Int is scrollContentW(){ 0; }
 
-	Function of Int is scrollViewportW(){
-		return boxW;
-	}
+	Function of Int is scrollViewportW(){ boxW; }
 
-	Function of Float is flexWeight(){
-		return 0.0;
-	}
+	Function of Float is flexWeight(){ 0.0; }
 
 	Function is layout(Int is x, Int is y, Int is w, Int is h){
 		:boxX: x;
@@ -81,17 +63,11 @@ Class is Widget{
 		return;
 	}
 
-	Function of Boolean is containsPoint(Int is x, Int is y){
-		return x >= boxX && x < boxX + boxW && y >= boxY && y < boxY + boxH;
-	}
+	Function of Boolean is containsPoint(Int is x, Int is y){ x >= boxX && x < boxX + boxW && y >= boxY && y < boxY + boxH; }
 
-	Function of Boolean is handleMouse(MouseEvent is event){
-		return false;
-	}
+	Function of Boolean is handleMouse(MouseEvent is event){ false; }
 
-	Function of Boolean is handleKey(KeyEvent is event){
-		return false;
-	}
+	Function of Boolean is handleKey(KeyEvent is event){ false; }
 
 	Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
 		return;
@@ -111,9 +87,7 @@ Class is Widget{
 		:suppressSync: false;
 	}
 
-	Function of Boolean is isMuted(){
-		return suppressSync;
-	}
+	Function of Boolean is isMuted(){ suppressSync; }
 
 	Function is dispose(){
 		disposeBindings();

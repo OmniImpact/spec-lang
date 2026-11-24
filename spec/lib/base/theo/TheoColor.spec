@@ -18,9 +18,7 @@ Class is TheoColor{
 		:kind: 0;
 	}
 
-	held Function of TheoColor is none(){
-		return TheoColor();
-	}
+	held Function of TheoColor is none(){ TheoColor(); }
 
 	held Function of TheoColor is ansi(Int is code){
 		local TheoColor is c: TheoColor();
@@ -38,13 +36,9 @@ Class is TheoColor{
 		return c;
 	}
 
-	Function of Boolean is isSet(){
-		return kind != 0;
-	}
+	Function of Boolean is isSet(){ kind != 0; }
 
-	Function of Boolean is equals(TheoColor is other){
-		return kind == other:kind && c1 == other:c1 && c2 == other:c2 && c3 == other:c3;
-	}
+	Function of Boolean is equals(TheoColor is other){ kind == other:kind && c1 == other:c1 && c2 == other:c2 && c3 == other:c3; }
 
 	Function of String is fgSeq(){
 		if({ kind == 1 }, { return fg256(code: c1); });
