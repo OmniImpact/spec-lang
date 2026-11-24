@@ -24,6 +24,7 @@ Class is SynthEngine{
 	[Float] is voiceStep: [];
 	[Float] is voiceEnv: [];
 	[Int] is voiceGate: [];
+	Float is normGain: 1.0;
 
 	replace Function is init(){
 		mutex: mutexCreate();
@@ -202,11 +203,10 @@ Class is SynthEngine{
 				vi: vi + 1;
 			});
 
-			local Float is norm: if({ activeCount > 1 }, { 1.0 / sqrt(value: toFloat(value: activeCount)) }, { 1.0 });
-			local Float is chL: sumL * norm;
-			local Float is chR: sumR * norm;
-			chL: chL / (1.0 + abs(value: chL) * 0.25);
-			chR: chR / (1.0 + abs(value: chR) * 0.25);
+			local Float is targetGain: if({ activeCount > 1 }, { 1.0 / toFloat(value: activeCount) }, { 1.0 });
+			normGain: normGain + (targetGain - normGain) * 0.04;
+			local Float is chL: sumL * normGain;
+			local Float is chR: sumR * normGain;
 			pushSample16(outBuf: outBuf, sample: chL * amp);
 			pushSample16(outBuf: outBuf, sample: chR * amp);
 			fi: fi + 1;

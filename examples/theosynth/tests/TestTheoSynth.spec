@@ -39,17 +39,21 @@ Class of SpecUnitTest is TestTheoSynth{
 
 	Function is testThreeOctaveKeyboardLayoutAndTriggering(){
 		local SynthViewModel is vm: SynthViewModel(audioEnabled: false);
-		Assert:isTrue(vm:keys:length() == 36);
+		Assert:isTrue(vm:keys:length() == 21);
 		Assert:isTrue(vm:selectedWaveform == Waveform:SINE);
+		Assert:isTrue(vm:playMode);
 
-		# Row 0 = Oct 5 ('1' -> C5 = MIDI 72)
-		# Row 1 = Oct 4 ('q' -> C4 = MIDI 60)
-		# Row 2 = Oct 3 ('a' -> C3 = MIDI 48)
-		Assert:isTrue(vm:triggerChar(ch: '1'));
+		# Row 0 = Oct 5 ('q' -> C5 = MIDI 72)
+		# Row 1 = Oct 4 ('a' -> C4 = MIDI 60)
+		# Row 2 = Oct 3 ('z' -> C3 = MIDI 48)
+		Assert:isTrue(vm:handleKeyAction(key: 'q', ctrl: false, isPress: true, isRepeat: false, isRelease: false));
 		Assert:isTrue(vm:keys:get(index: vm:lastPlayedIdx):midi == 72);
-		Assert:isTrue(vm:triggerChar(ch: 'q'));
+		# Repeat while held is rejected without retriggering
+		Assert:isTrue(vm:handleKeyAction(key: 'q', ctrl: false, isPress: false, isRepeat: true, isRelease: false));
+		Assert:isTrue(vm:heldFlags:get(index: 0) == 1);
+		Assert:isTrue(vm:handleKeyAction(key: 'a', ctrl: false, isPress: true, isRepeat: false, isRelease: false));
 		Assert:isTrue(vm:keys:get(index: vm:lastPlayedIdx):midi == 60);
-		Assert:isTrue(vm:triggerChar(ch: 'a'));
+		Assert:isTrue(vm:handleKeyAction(key: 'z', ctrl: false, isPress: true, isRepeat: false, isRelease: false));
 		Assert:isTrue(vm:keys:get(index: vm:lastPlayedIdx):midi == 48);
 
 		vm:selectInstrument(name: SynthStrings:WAVE_SQUARE);
@@ -66,18 +70,20 @@ Class of SpecUnitTest is TestTheoSynth{
 		local TheoApp is app: TheoApp();
 
 		local [KeyEvent] is keys: [
-			KeyEvent(kind: KeyKind:CHAR, key: 'q', action: KeyAction:PRESS),
-			KeyEvent(kind: KeyKind:CHAR, key: 'q', action: KeyAction:RELEASE),
-			KeyEvent(kind: KeyKind:CHAR, key: 'w', action: KeyAction:PRESS),
-			KeyEvent(kind: KeyKind:CHAR, key: '?'),
+			KeyEvent(kind: KeyKind:CHAR, key: 'a', action: KeyAction:PRESS),
+			KeyEvent(kind: KeyKind:CHAR, key: 'a', action: KeyAction:RELEASE),
+			KeyEvent(kind: KeyKind:CHAR, key: 's', action: KeyAction:PRESS),
+			KeyEvent(kind: KeyKind:CHAR, key: 'p', ctrl: true, action: KeyAction:PRESS),
+			KeyEvent(kind: KeyKind:CHAR, key: '?', action: KeyAction:PRESS),
 			KeyEvent(kind: KeyKind:ESC),
 			KeyEvent(kind: KeyKind:CHAR, key: 'q', ctrl: true)
 		];
 		local TheoBuffer is buf: app:runHeadless(screen: screen, keys: keys, width: 90, height: 24);
 		Assert:isTrue(quitCalled);
-		Assert:isTrue(vm:keys:get(index: vm:lastPlayedIdx):noteName == 'C#4');
-		Assert:isTrue(vm:heldFlags:get(index: 12) == 0);
-		Assert:isTrue(vm:heldFlags:get(index: 13) == 1);
+		Assert:isTrue(vm:keys:get(index: vm:lastPlayedIdx):noteName == 'D4');
+		Assert:isTrue(vm:heldFlags:get(index: 7) == 0);
+		Assert:isTrue(vm:heldFlags:get(index: 8) == 0);
+		Assert:isFalse(vm:playMode);
 		Assert:isFalse(vm:aboutOpen);
 
 		local String is row0: buf:rowText(y: 0);

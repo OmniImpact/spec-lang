@@ -12,8 +12,9 @@ Class of Frame is SynthFrame{
 	];
 
 	SynthViewModel is vm: SynthViewModel();
+	FocusTarget is pianoFocus: FocusTarget(initial: true);
 	FocusTarget is quitFocus: FocusTarget();
-	FocusTarget is instrumentFocus: FocusTarget(initial: true);
+	FocusTarget is instrumentFocus: FocusTarget();
 	FocusTarget is aboutFocus: FocusTarget();
 	FocusTarget is aboutCloseFocus: FocusTarget(initial: true);
 
@@ -24,6 +25,14 @@ Class of Frame is SynthFrame{
 	replace Function is init(SynthViewModel is vm: SynthViewModel()){
 		:vm: vm;
 		vm:onStateChanged: {
+			invalidate();
+		};
+		vm:onPlayModeChanged: {
+			if({ :vm:playMode }, {
+				pianoFocus:requestFocus();
+			}, {
+				instrumentFocus:requestFocus();
+			});
 			invalidate();
 		};
 		vm:onAboutChanged: {
@@ -96,7 +105,7 @@ Class of Frame is SynthFrame{
 		return Col(
 			gap: 0,
 			children: Array([
-				PianoBoard(vm: vm),
+				PianoBoard(vm: vm, focusTarget: pianoFocus),
 				bottomBar
 			])
 		);

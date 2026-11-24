@@ -1,5 +1,5 @@
 #! Package theosynth:vm
-#! ViewModel managing the 3-octave keyboard map, active waveform, key press/release state, About modal, and audio.
+#! ViewModel managing the 3-octave white-key letter-row map, Play Mode, key-down/up state, and polyphonic audio.
 
 Class is SynthViewModel{
 	replace [String] is namespace: ['theosynth', 'vm'];
@@ -20,10 +20,13 @@ Class is SynthViewModel{
 
 	Waveform is selectedWaveform: Waveform:SINE;
 	Int is lastPlayedIdx: -1;
+	Boolean is playMode: true;
+	Boolean is seenKittyEvents: false;
 	Boolean is aboutOpen: false;
 	Boolean is audioEnabled: true;
 
 	Function is onStateChanged: {};
+	Function is onPlayModeChanged: {};
 	Function is onAboutChanged: {};
 	Function is onQuit: {};
 
@@ -42,18 +45,18 @@ Class is SynthViewModel{
 	}
 
 	local Function is buildOctave(Int is row, Int is baseMidi, String is octStr, [String] is chars){
-		local [String] is noteNames: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-		local [Boolean] is sharps: [false, true, false, true, false, false, true, false, true, false, true, false];
+		local [String] is noteNames: ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+		local [Int] is offsets: [0, 2, 4, 5, 7, 9, 11];
 		local Int is col: 0;
-		while({ col < 12 }, {
+		while({ col < 7 }, {
 			local String is ch: chars:get(index: col);
 			local String is name: "{{noteNames:get(index: col)}}{{octStr}}";
 			local Int is idx: keys:length();
 			keys:add(item: PianoKey(
-				midi: baseMidi + col,
+				midi: baseMidi + offsets:get(index: col),
 				noteName: name,
 				keyChar: ch,
-				isSharp: sharps:get(index: col),
+				isSharp: false,
 				octaveRow: row,
 				semitoneCol: col
 			));
@@ -71,9 +74,23 @@ Class is SynthViewModel{
 		activeTicks: [];
 		heldFlags: [];
 		fallbackTicks: [];
-		buildOctave(row: 0, baseMidi: 72, octStr: '5', chars: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=']);
-		buildOctave(row: 1, baseMidi: 60, octStr: '4', chars: ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']']);
-		buildOctave(row: 2, baseMidi: 48, octStr: '3', chars: ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '\\']);
+		buildOctave(row: 0, baseMidi: 72, octStr: '5', chars: ['q', 'w', 'e', 'r', 't', 'y', 'u']);
+		buildOctave(row: 1, baseMidi: 60, octStr: '4', chars: ['a', 's', 'd', 'f', 'g', 'h', 'j']);
+		buildOctave(row: 2, baseMidi: 48, octStr: '3', chars: ['z', 'x', 'c', 'v', 'b', 'n', 'm']);
+	}
+
+	Function is setPlayMode(Boolean is enabled){
+		if({ playMode == enabled }, { return; });
+		:playMode: enabled;
+		if({ !enabled }, {
+			releaseAllKeys();
+		});
+		onPlayModeChanged();
+		onStateChanged();
+	}
+
+	Function is togglePlayMode(){
+		setPlayMode(enabled: !playMode);
 	}
 
 	Function is selectInstrument(String is name){
@@ -104,10 +121,15 @@ Class is SynthViewModel{
 	## Triggers a note on key press (or mouse click with short auto-release).
 	Function is triggerKeyIndex(Int is idx, Boolean is autoRelease: true){
 		if({ idx < 0 || idx >= keys:length() }, { return; });
+		if({ heldFlags:get(index: idx) == 1 && !autoRelease }, { return; });
 		lastPlayedIdx: idx;
 		heldFlags:set(index: idx, item: 1);
 		activeTicks:set(index: idx, item: 1);
-		fallbackTicks:set(index: idx, item: if({ autoRelease }, { 12 }, { 24 }));
+		if({ autoRelease }, {
+			fallbackTicks:set(index: idx, item: 12);
+		}, {
+			fallbackTicks:set(index: idx, item: if({ seenKittyEvents }, { 0 }, { 28 }));
+		});
 		onStateChanged();
 		if({ audioEnabled }, {
 			engine:noteOn(midi: keys:get(index: idx):midi, wave: selectedWaveform);
@@ -124,6 +146,16 @@ Class is SynthViewModel{
 		onStateChanged();
 		if({ audioEnabled }, {
 			engine:noteOff(midi: keys:get(index: idx):midi);
+		});
+	}
+
+	Function is releaseAllKeys(){
+		local Int is i: 0;
+		while({ i < keys:length() }, {
+			if({ heldFlags:get(index: i) == 1 }, {
+				releaseKeyIndex(idx: i);
+			});
+			i: i + 1;
 		});
 	}
 
@@ -178,24 +210,40 @@ Class is SynthViewModel{
 			if({ isPress }, { quit(); });
 			return true;
 		});
+		if({ ctrl && (key == 'p' || key == 'P') }, {
+			if({ isPress }, { togglePlayMode(); });
+			return true;
+		});
 		if({ key == '?' }, {
 			if({ isPress }, { openAbout(); });
 			return true;
 		});
+		if({ !playMode }, { return false; });
 		if({ !keyIndexByChar:has(key: key) }, { return false; });
 		local Int is idx: keyIndexByChar:get(key: key, default: -1);
 		if({ isRelease }, {
+			seenKittyEvents: true;
 			releaseKeyIndex(idx: idx);
 			return true;
 		});
 		if({ isRepeat }, {
-			fallbackTicks:set(index: idx, item: 24);
+			seenKittyEvents: true;
+			# Reject key-repeat if already in key-down state.
+			if({ heldFlags:get(index: idx) == 1 }, {
+				fallbackTicks:set(index: idx, item: 0);
+				return true;
+			});
 			return true;
 		});
 		if({ isPress }, {
-			if({ heldFlags:get(index: idx) == 0 }, {
-				triggerKeyIndex(idx: idx, autoRelease: false);
+			if({ heldFlags:get(index: idx) == 1 }, {
+				# Reject duplicate OS key-repeat press while already held down.
+				if({ !seenKittyEvents }, {
+					fallbackTicks:set(index: idx, item: 28);
+				});
+				return true;
 			});
+			triggerKeyIndex(idx: idx, autoRelease: false);
 			return true;
 		});
 		return false;
