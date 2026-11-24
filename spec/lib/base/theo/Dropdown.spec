@@ -23,8 +23,8 @@ Class of Widget is Dropdown{
 		local Int is best: 10;
 		local Int is i: 0;
 		while({ i < options:length() }, {
-			# Panel border (2) + padX*2 (2) + ListView "  " prefix (2) = 6
-			local Int is w: options:get(index: i):runeCount() + 6;
+			# Panel border (2) + ListView "  " prefix (2) + trailing space (1) = 5
+			local Int is w: options:get(index: i):runeCount() + 5;
 			if({ w > best }, { best: w; });
 			i: i + 1;
 		});
@@ -85,7 +85,7 @@ Class of Widget is Dropdown{
 
 		local Widget is box: Panel(
 			border: true,
-			padX: 1,
+			padX: 0,
 			padY: 0,
 			child: lv
 		);

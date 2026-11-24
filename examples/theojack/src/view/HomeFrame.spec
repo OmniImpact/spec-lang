@@ -134,6 +134,7 @@ Class of Frame is HomeFrame{
 		Center(
 			child: Row(
 				gap: 3,
+				align: 'center',
 				children: Array([
 					heroCard,
 					Col(

@@ -12,11 +12,13 @@ Class of Widget is Row{
 
 	Int is gap: 0;
 	Boolean is arrowFocus: false;
+	String is align: 'top';
 	Array of Widget is children: Array();
 
-	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, Array of Widget is children: Array()){
+	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, String is align: 'top', Array of Widget is children: Array()){
 		:gap: gap;
 		:arrowFocus: arrowFocus;
+		:align: align;
 		:children: children;
 	}
 
@@ -102,7 +104,10 @@ Class of Widget is Row{
 			});
 			local Int is chH: ch:measureHeight(maxW: cw, maxH: h);
 			if({ chH > h }, { chH: h; });
-			ch:layout(x: curX, y: y, w: cw, h: chH);
+			local Int is chY: y;
+			if({ align == 'center' && chH < h }, { chY: y + (h - chH) / 2; });
+			if({ align == 'bottom' && chH < h }, { chY: y + h - chH; });
+			ch:layout(x: curX, y: chY, w: cw, h: chH);
 			curX: curX + cw + gap;
 			i: i + 1;
 		});

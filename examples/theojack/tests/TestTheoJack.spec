@@ -37,6 +37,8 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:areEqualInt(11, home:heroCard:measureWidth(maxW: 80));
 		Assert:areEqualInt(11, home:measureWidth(maxW: 80) - 11 - 3);
 		Assert:areEqualInt(9, home:measureHeight(maxW: 80, maxH: 24));
+		# Card (height 7) is vertically centered against the 9-row menu (offset +1)
+		Assert:areEqualInt(((24 - 9) / 2) + 1, home:heroCard:boxY);
 
 		# Play -> Rules -> Options -> About -> Quit
 		Assert:isTrue(home:playFocus:focused);
@@ -95,7 +97,7 @@ Class of SpecUnitTest is TestTheoJack{
 		opts:styleFocus:focused: true;
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'enter')));
 		Assert:isTrue(opts:hasOpenOverlay());
-		Assert:isTrue(opts:overlays:get(index: 0):content:boxW >= 15);
+		Assert:isTrue(opts:overlays:get(index: 0):content:boxW >= 14);
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
