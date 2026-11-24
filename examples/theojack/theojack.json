@@ -1,0 +1,10 @@
+{
+  "name": "theojack",
+  "version": "0.1.0",
+  "source": "src/TheoJack.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/theojack"
+}

@@ -11,6 +11,7 @@ Class of Widget is Button{
 
 	String is label: '';
 	String is shortcutKey: '';
+	Int is width: 0;
 	FocusTarget is focusTarget: FocusTarget();
 	TheoColor is fg: TheoColor:none();
 	TheoColor is bg: TheoColor:none();
@@ -26,6 +27,7 @@ Class of Widget is Button{
 		Function is onClick: {},
 		FocusTarget is focusTarget: FocusTarget(),
 		String is shortcutKey: '',
+		Int is width: 0,
 		TheoColor is fg: TheoColor:none(),
 		TheoColor is bg: TheoColor:none(),
 		TheoColor is focusFg: TheoColor:none(),
@@ -35,6 +37,7 @@ Class of Widget is Button{
 	){
 		:label: label;
 		:shortcutKey: shortcutKey:toLower();
+		:width: width;
 		:onClick: onClick;
 		:focusTarget: focusTarget;
 		:fg: fg;
@@ -47,6 +50,10 @@ Class of Widget is Button{
 	}
 
 	replace Function of Int is measureWidth(Int is maxW){
+		if({ width > 0 }, {
+			if({ width > maxW }, { return maxW; });
+			return width;
+		});
 		return label:length();
 	}
 
@@ -67,16 +74,24 @@ Class of Widget is Button{
 		local TheoColor is useBg: if({ foc }, { effFocusBg }, { if({ hovered }, { effHoverBg }, { effBg }) });
 		local Boolean is underlinedShortcut: false;
 		local Int is n: label:length();
-		local Int is i: 0;
-		while({ i < n }, {
-			local String is ch: label:charAt(index: i, default: ' ');
+		local Int is padLeft: 0;
+		if({ boxW > n }, {
+			padLeft: (boxW - n) / 2;
+		});
+		local Int is col: 0;
+		while({ col < boxW }, {
+			local String is ch: ' ';
 			local Boolean is under: false;
-			if({ shortcutKey != '' && !underlinedShortcut && ch:toLower() == shortcutKey }, {
-				under: true;
-				underlinedShortcut: true;
+			local Int is li: col - padLeft;
+			if({ li >= 0 && li < n }, {
+				ch: label:charAt(index: li, default: ' ');
+				if({ shortcutKey != '' && !underlinedShortcut && ch:toLower() == shortcutKey }, {
+					under: true;
+					underlinedShortcut: true;
+				});
 			});
-			buf:setCell(x: boxX + i, y: boxY, ch: ch, fg: useFg, bg: useBg, bold: foc || hovered, underline: under);
-			i: i + 1;
+			buf:setCell(x: boxX + col, y: boxY, ch: ch, fg: useFg, bg: useBg, bold: foc || hovered, underline: under);
+			col: col + 1;
 		});
 	}
 

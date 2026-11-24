@@ -34,6 +34,38 @@ Class of Widget is Row{
 		});
 	}
 
+	replace Function of Int is measureWidth(Int is maxW){
+		local Int is count: children:length();
+		if({ count == 0 }, { return 0; });
+		local Int is total: (count - 1) * gap;
+		local Int is i: 0;
+		while({ i < count }, {
+			local Widget is ch: children:get(index: i);
+			if({ ch:flexWeight() <= 0.0 }, {
+				total: total + ch:measureWidth(maxW: maxW);
+			});
+			i: i + 1;
+		});
+		if({ total > maxW }, { return maxW; });
+		return total;
+	}
+
+	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
+		local Int is best: 0;
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			local Widget is ch: children:get(index: i);
+			if({ ch:flexWeight() <= 0.0 }, {
+				local Int is cw: ch:measureWidth(maxW: maxW);
+				local Int is chH: ch:measureHeight(maxW: cw, maxH: maxH);
+				if({ chH > best }, { best: chH; });
+			});
+			i: i + 1;
+		});
+		if({ best > maxH }, { return maxH; });
+		return best;
+	}
+
 	replace Function is layout(Int is x, Int is y, Int is w, Int is h){
 		:boxX: x;
 		:boxY: y;
