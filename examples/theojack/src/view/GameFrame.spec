@@ -165,6 +165,8 @@ Class of Frame is GameFrame{
 		if({ game:phase == GamePhase:BETTING }, {
 			btns:add(item: Button(
 				label: HomeStrings:ACTION_BET_DOWN,
+				padX: 2,
+				padY: 1,
 				focusTarget: secondaryFocus,
 				onClick: {
 					game:adjustBet(delta: -10);
@@ -173,6 +175,8 @@ Class of Frame is GameFrame{
 			));
 			btns:add(item: Button(
 				label: HomeStrings:ACTION_BET_UP,
+				padX: 2,
+				padY: 1,
 				focusTarget: doubleFocus,
 				onClick: {
 					game:adjustBet(delta: 10);
@@ -182,6 +186,8 @@ Class of Frame is GameFrame{
 			btns:add(item: Button(
 				label: HomeStrings:ACTION_DEAL,
 				shortcutKey: 'd',
+				padX: 2,
+				padY: 1,
 				focusTarget: primaryFocus,
 				onClick: { doDeal(); }
 			));
@@ -189,12 +195,16 @@ Class of Frame is GameFrame{
 			btns:add(item: Button(
 				label: HomeStrings:ACTION_HIT,
 				shortcutKey: 'h',
+				padX: 2,
+				padY: 1,
 				focusTarget: primaryFocus,
 				onClick: { doHit(); }
 			));
 			btns:add(item: Button(
 				label: HomeStrings:ACTION_STAND,
 				shortcutKey: 's',
+				padX: 2,
+				padY: 1,
 				focusTarget: secondaryFocus,
 				onClick: { doStand(); }
 			));
@@ -202,6 +212,8 @@ Class of Frame is GameFrame{
 				btns:add(item: Button(
 					label: HomeStrings:ACTION_DOUBLE,
 					shortcutKey: 'b',
+					padX: 2,
+					padY: 1,
 					focusTarget: doubleFocus,
 					onClick: { doDouble(); }
 				));
@@ -211,6 +223,8 @@ Class of Frame is GameFrame{
 		btns:add(item: Button(
 			label: HomeStrings:ACTION_HOME,
 			shortcutKey: 'q',
+			padX: 2,
+			padY: 1,
 			focusTarget: homeFocus,
 			onClick: { onHome(); }
 		));
@@ -271,15 +285,16 @@ Class of Frame is GameFrame{
 						border: true,
 						padX: 2,
 						padY: 1,
-						topTitle: HomeStrings:DEALER_TITLE,
-						topTitleAlign: 'left',
+						rightTitle: HomeStrings:DEALER_TITLE,
+						rightTitleAlign: 'center',
 						titleFg: TheoColor:ansi(code: 16),
 						titleBg: TheoColor:ansi(code: 252),
-						child: Col(
-							gap: 1,
+						child: Row(
+							align: 'center',
 							children: Array([
-								TextLine(value: dealerScoreStr, color: activeTheme:mutedColor),
-								Row(gap: 2, children: buildDealerCards())
+								Row(gap: 2, children: buildDealerCards()),
+								Spacer(weight: 1.0),
+								TextLine(value: dealerScoreStr, color: activeTheme:mutedColor)
 							])
 						)
 					)
@@ -290,15 +305,16 @@ Class of Frame is GameFrame{
 						border: true,
 						padX: 2,
 						padY: 1,
-						topTitle: HomeStrings:PLAYER_TITLE,
-						topTitleAlign: 'left',
+						leftTitle: HomeStrings:PLAYER_TITLE,
+						leftTitleAlign: 'center',
 						titleFg: TheoColor:ansi(code: 16),
 						titleBg: TheoColor:ansi(code: 252),
-						child: Col(
-							gap: 1,
+						child: Row(
+							align: 'center',
 							children: Array([
-								TextLine(value: playerScoreStr, color: activeTheme:mutedColor),
-								Row(gap: 2, children: buildPlayerCards())
+								Row(gap: 2, children: buildPlayerCards()),
+								Spacer(weight: 1.0),
+								TextLine(value: playerScoreStr, color: activeTheme:mutedColor)
 							])
 						)
 					)
@@ -307,8 +323,8 @@ Class of Frame is GameFrame{
 					size: 5,
 					child: Panel(
 						border: true,
-						padX: 2,
-						padY: 1,
+						padX: 1,
+						padY: 0,
 						child: Row(
 							gap: 2,
 							arrowFocus: true,

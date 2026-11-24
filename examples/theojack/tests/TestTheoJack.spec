@@ -180,6 +180,23 @@ Class of SpecUnitTest is TestTheoJack{
 		gf:layout(x: 0, y: 0, w: 80, h: 24);
 		gf:paint(buf: buf, renderer: ren);
 
+		# Verify Dealer title on right edge (x=79) and Player title on left edge (x=0)
+		local Boolean is foundDealerR: false;
+		local Int is ry: 3;
+		while({ ry < 11 }, {
+			if({ buf:cellAt(x: 79, y: ry):ch == 'D' }, { foundDealerR: true; });
+			ry: ry + 1;
+		});
+		Assert:isTrue(foundDealerR);
+
+		local Boolean is foundPlayerL: false;
+		ry: 11;
+		while({ ry < 19 }, {
+			if({ buf:cellAt(x: 0, y: ry):ch == 'P' }, { foundPlayerL: true; });
+			ry: ry + 1;
+		});
+		Assert:isTrue(foundPlayerL);
+
 		# Bet +10 -> 20, Deal -> either PLAYER_TURN or immediate ROUND_OVER (Blackjack)
 		gf:game:adjustBet(delta: 10);
 		Assert:areEqualInt(20, gf:game:currentBet);

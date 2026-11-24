@@ -12,6 +12,8 @@ Class of Widget is Button{
 	String is label: '';
 	String is shortcutKey: '';
 	Int is width: 0;
+	Int is padX: 0;
+	Int is padY: 0;
 	FocusTarget is focusTarget: FocusTarget();
 	TheoColor is fg: TheoColor:none();
 	TheoColor is bg: TheoColor:none();
@@ -28,6 +30,8 @@ Class of Widget is Button{
 		FocusTarget is focusTarget: FocusTarget(),
 		String is shortcutKey: '',
 		Int is width: 0,
+		Int is padX: 0,
+		Int is padY: 0,
 		TheoColor is fg: TheoColor:none(),
 		TheoColor is bg: TheoColor:none(),
 		TheoColor is focusFg: TheoColor:none(),
@@ -38,6 +42,8 @@ Class of Widget is Button{
 		:label: label;
 		:shortcutKey: shortcutKey:toLower();
 		:width: width;
+		:padX: padX;
+		:padY: padY;
 		:onClick: onClick;
 		:focusTarget: focusTarget;
 		:fg: fg;
@@ -54,11 +60,15 @@ Class of Widget is Button{
 			if({ width > maxW }, { return maxW; });
 			return width;
 		});
-		return label:length();
+		local Int is w: label:length() + (padX * 2);
+		if({ w > maxW }, { return maxW; });
+		return w;
 	}
 
 	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
-		return 1;
+		local Int is h: 1 + (padY * 2);
+		if({ h > maxH }, { return maxH; });
+		return h;
 	}
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){
@@ -78,20 +88,28 @@ Class of Widget is Button{
 		if({ boxW > n }, {
 			padLeft: (boxW - n) / 2;
 		});
-		local Int is col: 0;
-		while({ col < boxW }, {
-			local String is ch: ' ';
-			local Boolean is under: false;
-			local Int is li: col - padLeft;
-			if({ li >= 0 && li < n }, {
-				ch: label:charAt(index: li, default: ' ');
-				if({ shortcutKey != '' && !underlinedShortcut && ch:toLower() == shortcutKey }, {
-					under: true;
-					underlinedShortcut: true;
+		local Int is textRow: boxY + (boxH - 1) / 2;
+		local Int is row: 0;
+		while({ row < boxH }, {
+			local Int is py: boxY + row;
+			local Int is col: 0;
+			while({ col < boxW }, {
+				local String is ch: ' ';
+				local Boolean is under: false;
+				if({ py == textRow }, {
+					local Int is li: col - padLeft;
+					if({ li >= 0 && li < n }, {
+						ch: label:charAt(index: li, default: ' ');
+						if({ shortcutKey != '' && !underlinedShortcut && ch:toLower() == shortcutKey }, {
+							under: true;
+							underlinedShortcut: true;
+						});
+					});
 				});
+				buf:setCell(x: boxX + col, y: py, ch: ch, fg: useFg, bg: useBg, bold: foc || hovered, underline: under);
+				col: col + 1;
 			});
-			buf:setCell(x: boxX + col, y: boxY, ch: ch, fg: useFg, bg: useBg, bold: foc || hovered, underline: under);
-			col: col + 1;
+			row: row + 1;
 		});
 	}
 
