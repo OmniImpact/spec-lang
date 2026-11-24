@@ -1,5 +1,5 @@
 #! Package theofractal:model:fractals
-#! Julia set fractal implementation (`c = -0.12256 + 0.74486i`, Douady's Rabbit).
+#! Julia set fractal implementation (`c = -0.7 + 0.27015i`).
 
 Class of EscapeFractal is JuliaFractal{
 	replace [String] is namespace: ['theofractal', 'model', 'fractals'];
@@ -14,12 +14,12 @@ Class of EscapeFractal is JuliaFractal{
 	replace Function of String is name(){ FractalStrings:OPT_JULIA }
 
 	replace Function of FractalViewport is defaultViewport(){
-		FractalViewport(centerX: 0.0, centerY: 0.0, baseSpan: 2.5, zoom: 1.0)
+		FractalViewport(centerX: 0.0, centerY: 0.0, baseSpan: 2.6, zoom: 1.0)
 	}
 
 	replace Function of Float is evaluatePoint(Float is cr, Float is ci, Int is maxIter){
-		local Float is jc: -0.12256;
-		local Float is ji: 0.74486;
+		local Float is jc: -0.7;
+		local Float is ji: 0.27015;
 		local Float is zr: cr;
 		local Float is zi: ci;
 		local Float is zr2: zr * zr;
@@ -52,8 +52,8 @@ Class of EscapeFractal is JuliaFractal{
 			local Vector is dzr: Vector(length: 4);
 			local Vector is dzi: Vector(length: 4);
 			local Vector is tmp: Vector(length: 4);
-			local Vector is jcVec: Vector(length: 4, initial: -0.12256);
-			local Vector is jiVec: Vector(length: 4, initial: 0.74486);
+			local Vector is jcVec: Vector(length: 4, initial: -0.7);
+			local Vector is jiVec: Vector(length: 4, initial: 0.27015);
 			local Int is zrPtr: zr:dataAddr();
 			local Int is ziPtr: zi:dataAddr();
 			local Int is zr2Ptr: zr2:dataAddr();
