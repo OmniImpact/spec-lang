@@ -54,7 +54,7 @@ Class of Frame is HomeFrame{
 										Spacer(weight: 1.0),
 										Button(
 											label: HomeStrings:ABOUT_CLOSE,
-											shortcutKey: 'c',
+											shortcut: ShortcutKey:ctrl(key: 'c'),
 											width: 9,
 											focusTarget: aboutCloseFocus,
 											onClick: { vm:closeAbout(); }
@@ -107,7 +107,7 @@ Class of Frame is HomeFrame{
 		local Int is w: HomeStrings:CARD_WIDTH;
 		local Button is aboutBtn: Button(
 			label: HomeStrings:MENU_ABOUT,
-			shortcutKey: 'a',
+			shortcut: ShortcutKey:ctrl(key: 'a'),
 			width: w,
 			focusTarget: aboutFocus,
 			onClick: { vm:openAbout(); }
@@ -136,21 +136,21 @@ Class of Frame is HomeFrame{
 										children: Array([
 											Button(
 												label: HomeStrings:MENU_PLAY,
-												shortcutKey: 'p',
+												shortcut: ShortcutKey:ctrl(key: 'p'),
 												width: w,
 												focusTarget: playFocus,
 												onClick: { vm:play(); }
 											),
 											Button(
 												label: HomeStrings:MENU_RULES,
-												shortcutKey: 'r',
+												shortcut: ShortcutKey:ctrl(key: 'r'),
 												width: w,
 												focusTarget: rulesFocus,
 												onClick: { vm:openRules(); }
 											),
 											Button(
 												label: HomeStrings:MENU_OPTIONS,
-												shortcutKey: 'o',
+												shortcut: ShortcutKey:ctrl(key: 'o'),
 												width: w,
 												focusTarget: optionsFocus,
 												onClick: { vm:openOptions(); }
@@ -173,7 +173,7 @@ Class of Frame is HomeFrame{
 							children: Array([
 								Button(
 									label: HomeStrings:MENU_QUIT,
-									shortcutKey: 'q',
+									shortcut: ShortcutKey:ctrl(key: 'q'),
 									focusTarget: quitFocus,
 									onClick: { vm:quit(); }
 								),

@@ -139,7 +139,7 @@ Class of Frame is GameFrame{
 				side: 'top',
 				child: Button(
 					label: HomeStrings:ACTION_DEAL,
-					shortcutKey: 'd',
+					shortcut: ShortcutKey:ctrl(key: 'd'),
 					padX: 2,
 					padY: 1,
 					focusTarget: primaryFocus,
@@ -149,7 +149,7 @@ Class of Frame is GameFrame{
 		}, {
 			btns:add(item: Button(
 				label: HomeStrings:ACTION_HIT,
-				shortcutKey: 'h',
+				shortcut: ShortcutKey:ctrl(key: 'h'),
 				padX: 2,
 				padY: 1,
 				focusTarget: primaryFocus,
@@ -157,7 +157,7 @@ Class of Frame is GameFrame{
 			));
 			btns:add(item: Button(
 				label: HomeStrings:ACTION_STAND,
-				shortcutKey: 's',
+				shortcut: ShortcutKey:ctrl(key: 's'),
 				padX: 2,
 				padY: 1,
 				focusTarget: secondaryFocus,
@@ -166,7 +166,7 @@ Class of Frame is GameFrame{
 			if({ vm:canDouble() }, {
 				btns:add(item: Button(
 					label: HomeStrings:ACTION_DOUBLE,
-					shortcutKey: 'b',
+					shortcut: ShortcutKey:ctrl(key: 'b'),
 					padX: 2,
 					padY: 1,
 					focusTarget: doubleFocus,
@@ -177,7 +177,7 @@ Class of Frame is GameFrame{
 		btns:add(item: Spacer(weight: 1.0));
 		btns:add(item: Button(
 			label: HomeStrings:ACTION_HOME,
-			shortcutKey: 'q',
+			shortcut: ShortcutKey:ctrl(key: 'q'),
 			padX: 2,
 			padY: 1,
 			focusTarget: homeFocus,

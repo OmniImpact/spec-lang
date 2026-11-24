@@ -144,14 +144,14 @@ Class of Frame is OptionsFrame{
 							children: Array([
 								Button(
 									label: HomeStrings:LABEL_CANCEL,
-									shortcutKey: 'c',
+									shortcut: ShortcutKey:ctrl(key: 'c'),
 									focusTarget: cancelFocus,
 									onClick: { vm:cancel(); }
 								),
 								Spacer(weight: 1.0),
 								Button(
 									label: HomeStrings:LABEL_SAVE,
-									shortcutKey: 's',
+									shortcut: ShortcutKey:ctrl(key: 's'),
 									focusTarget: saveFocus,
 									onClick: { vm:save(); }
 								)

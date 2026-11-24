@@ -5,12 +5,12 @@ Class of Widget is Button{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, ShortcutKey, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
 	String is label: '';
-	String is shortcutKey: '';
+	ShortcutKey is shortcut: ShortcutKey:none();
 	Int is width: 0;
 	Int is padX: 0;
 	Int is padY: 0;
@@ -28,6 +28,7 @@ Class of Widget is Button{
 		String is label,
 		Function is onClick: {},
 		FocusTarget is focusTarget: FocusTarget(),
+		ShortcutKey is shortcut: ShortcutKey:none(),
 		String is shortcutKey: '',
 		Int is width: 0,
 		Int is padX: 0,
@@ -40,7 +41,7 @@ Class of Widget is Button{
 		TheoColor is hoverBg: TheoColor:none()
 	){
 		:label: label;
-		:shortcutKey: shortcutKey:toLower();
+		:shortcut: if({ shortcut:isSet() }, { shortcut }, { if({ shortcutKey != '' }, { ShortcutKey:ctrl(key: shortcutKey) }, { ShortcutKey:none() }) });
 		:width: width;
 		:padX: padX;
 		:padY: padY;
@@ -100,7 +101,7 @@ Class of Widget is Button{
 					local Int is li: col - padLeft;
 					if({ li >= 0 && li < n }, {
 						ch: label:charAt(index: li, default: ' ');
-						if({ shortcutKey != '' && !underlinedShortcut && ch:toLower() == shortcutKey }, {
+						if({ !underlinedShortcut && shortcut:matchesChar(ch: ch) }, {
 							under: true;
 							underlinedShortcut: true;
 						});
@@ -132,7 +133,7 @@ Class of Widget is Button{
 	}
 
 	replace Function of Boolean is handleKey(KeyEvent is event){
-		if({ shortcutKey != '' && event:ctrl && event:key:toLower() == shortcutKey }, {
+		if({ shortcut:matches(event: event) }, {
 			onClick();
 			return true;
 		});

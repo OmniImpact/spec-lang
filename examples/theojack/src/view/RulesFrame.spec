@@ -105,7 +105,7 @@ Class of Frame is RulesFrame{
 								Spacer(weight: 1.0),
 								Button(
 									label: HomeStrings:LABEL_DONE,
-									shortcutKey: 'd',
+									shortcut: ShortcutKey:ctrl(key: 'd'),
 									focusTarget: doneFocus,
 									onClick: { vm:done(); }
 								)

@@ -5,7 +5,7 @@ Class of SpecUnitTest is TestTheoJack{
 
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
-		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, MouseEvent, FocusTarget]],
+		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, MouseEvent, FocusTarget, ShortcutKey]],
 		['base', 'sys', [as File(), as Loops(), as Process()]],
 		['theojack', 'model', [Card, CardStyle, GamePhase, Hand, Rank, Suit]],
 		['theojack', 'util', [HomeStrings, OptionsStorage, RulesLoader]],
@@ -73,6 +73,12 @@ Class of SpecUnitTest is TestTheoJack{
 		# 'q' triggers Quit from HomeFrame
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'char', key: 'q')));
 		Assert:isTrue(quitCalled);
+
+		# ShortcutKey wrapper matches modifier + key cleanly
+		local ShortcutKey is sk: ShortcutKey:ctrl(key: 's');
+		Assert:isTrue(sk:matches(event: KeyEvent(kind: 'char', key: 's', ctrl: true)));
+		Assert:isFalse(sk:matches(event: KeyEvent(kind: 'char', key: 's', ctrl: false)));
+		Assert:areEqualString('Ctrl+S', sk:displayText());
 	}
 
 	Function is testCardRenderingAndOptionsPersistence(){
