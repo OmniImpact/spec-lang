@@ -241,7 +241,7 @@ bin/specunit -s bin/spec -t test -t testcompiler
 ### Running the Linter
 ```bash
 # Lint a single file or entire directory trees
-bin/speclint -i examples/blackjack/src/Blackjack.spec
+bin/speclint -i examples/theojack/src/TheoJack.spec
 bin/speclint -t examples -t test
 
 # Run the instance-model audit

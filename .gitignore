@@ -9,8 +9,6 @@
 /helloworld
 /helloworldspec
 /featurestest
-/blackjack
-/blackjack_shorthand
 /features_test
 # Build intermediates
 *.spec.c
