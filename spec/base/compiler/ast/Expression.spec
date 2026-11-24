@@ -11,6 +11,7 @@ Enum is Expression {
 
 	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', SemType],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Parameter],
@@ -46,6 +47,9 @@ Enum is Expression {
 	Type is resolvedTypeNode;
 	Boolean is hasResolvedTypeNode: false;
 
+	## Semantic [SemType] sum-type node resolved by the checker.
+	SemType is semType: SemType:Empty;
+
 	## Optional alias for `UsingAs` (`as ClassName(args) is alias`).
 	String is usingAsAlias: '';
 
@@ -77,6 +81,16 @@ Enum is Expression {
 			return Type:EMPTY;
 		});
 		return :resolvedTypeNode;
+	}
+
+	## Sets the semantic [SemType] sum-type resolved by the checker.
+	Function is setSemType(SemType is st){
+		:semType: st;
+	}
+
+	## Returns the semantic [SemType] resolved by the checker ([SemType:Empty] if unset).
+	Function of SemType is getSemType(){
+		return :semType;
 	}
 
 	## Returns the value expression of the call argument at [index].
