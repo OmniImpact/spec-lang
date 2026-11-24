@@ -4,7 +4,7 @@
 Class is TheoFractal{
 	replace [String] is namespace: ['theofractal'];
 
-	replace [[String]] is using: [
+	merge [[String]] is using: [
 		['base', 'theo', [TheoApp, TheoScreen, TheoTheme]],
 		['base', 'struct', Map],
 		['theofractal', 'vm', ExplorerViewModel],

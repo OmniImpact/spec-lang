@@ -4,7 +4,7 @@
 Class is Fractal{
 	replace [String] is namespace: ['theofractal', 'model'];
 
-	replace [[String]] is using: [
+	merge [[String]] is using: [
 		['theofractal', 'model', FractalViewport]
 	];
 

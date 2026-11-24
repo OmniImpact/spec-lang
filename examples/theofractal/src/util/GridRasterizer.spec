@@ -4,9 +4,8 @@
 Class is GridRasterizer{
 	replace [String] is namespace: ['theofractal', 'util'];
 
-	replace [[String]] is using: [
-		['base', 'math', as Math()],
-		['base', 'sys', [as Conditional(), as Loops()]]
+	merge [[String]] is using: [
+		['base', 'math', as Math()]
 	];
 
 	Function of Float is clamp01(Float is v){

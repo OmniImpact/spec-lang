@@ -4,11 +4,10 @@
 Class is ExplorerViewModel{
 	replace [String] is namespace: ['theofractal', 'vm'];
 
-	replace [[String]] is using: [
+	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, FractalRegistry, ColorTheme, FractalViewport, FractalRenderer]],
 		['theofractal', 'util', as ColorPalette()],
-		['base', 'theo', TheoColor],
-		['base', 'sys', as Conditional()]
+		['base', 'theo', TheoColor]
 	];
 
 	FractalRegistry is registry: FractalRegistry();

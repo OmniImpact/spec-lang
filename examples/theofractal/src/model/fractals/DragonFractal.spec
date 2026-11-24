@@ -4,11 +4,10 @@
 Class of Fractal is DragonFractal{
 	replace [String] is namespace: ['theofractal', 'model', 'fractals'];
 
-	replace [[String]] is using: [
+	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, FractalViewport]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
-		['base', 'math', as Math()],
-		['base', 'sys', as Conditional()]
+		['base', 'math', as Math()]
 	];
 
 	replace Function of String is name(){ FractalStrings:OPT_DRAGON }

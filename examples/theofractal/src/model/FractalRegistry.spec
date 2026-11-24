@@ -4,11 +4,10 @@
 Class is FractalRegistry{
 	replace [String] is namespace: ['theofractal', 'model'];
 
-	replace [[String]] is using: [
+	merge [[String]] is using: [
 		['theofractal', 'model', Fractal],
 		['theofractal', 'model', 'fractals', [SierpinskiFractal, SnowflakeFractal, MandelbrotFractal, BarnsleyFernFractal, JuliaFractal, BurningShipFractal, DragonFractal]],
-		['theofractal', 'util', FractalStrings],
-		['base', 'sys', [as Conditional(), as Loops()]]
+		['theofractal', 'util', FractalStrings]
 	];
 
 	Array of Fractal is fractals: Array([

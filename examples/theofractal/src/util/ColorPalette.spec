@@ -4,12 +4,11 @@
 Class is ColorPalette{
 	replace [String] is namespace: ['theofractal', 'util'];
 
-	replace [[String]] is using: [
+	merge [[String]] is using: [
 		['theofractal', 'model', ColorTheme],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
 		['base', 'theo', TheoColor],
-		['base', 'math', as Math()],
-		['base', 'sys', as Conditional()]
+		['base', 'math', as Math()]
 	];
 
 	Function of Int is toByte(Float is v){

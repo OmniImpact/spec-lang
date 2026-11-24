@@ -4,9 +4,8 @@
 Class of Widget is Switch{
 	replace [String] is namespace: ['base', 'theo'];
 
-	replace [[String]] is using: [
-		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
-		['base', 'sys', as Conditional()]
+	merge [[String]] is using: [
+		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]]
 	];
 
 	String is label: '';

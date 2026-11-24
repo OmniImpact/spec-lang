@@ -4,11 +4,10 @@
 Class is FractalRenderer{
 	replace [String] is namespace: ['theofractal', 'model'];
 
-	replace [[String]] is using: [
+	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, ColorTheme, FractalViewport]],
 		['theofractal', 'util', as ColorPalette()],
-		['base', 'theo', TheoColor],
-		['base', 'sys', [as Conditional(), as Loops()]]
+		['base', 'theo', TheoColor]
 	];
 
 	## Renders [fractal] into a flat [TheoColor] pixel array of size `w * h` for [viewport] and [theme], with optional 2x2 SSAA.

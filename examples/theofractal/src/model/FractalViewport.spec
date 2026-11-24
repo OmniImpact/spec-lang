@@ -4,10 +4,6 @@
 Class is FractalViewport{
 	replace [String] is namespace: ['theofractal', 'model'];
 
-	replace [[String]] is using: [
-		['base', 'sys', as Conditional()]
-	];
-
 	Float is centerX: 0.0;
 	Float is centerY: 0.0;
 	Float is baseSpan: 2.5;
