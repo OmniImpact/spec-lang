@@ -1,0 +1,103 @@
+{
+  "states": [
+    {
+      "code": "CA",
+      "name": "California",
+      "cities": [
+        { "name": "Los Angeles", "office": "LOX", "gridX": 154, "gridY": 44 },
+        { "name": "San Francisco", "office": "MTR", "gridX": 85, "gridY": 105 },
+        { "name": "San Diego", "office": "SGX", "gridX": 57, "gridY": 14 }
+      ]
+    },
+    {
+      "code": "CO",
+      "name": "Colorado",
+      "cities": [
+        { "name": "Denver", "office": "BOU", "gridX": 62, "gridY": 61 },
+        { "name": "Colorado Springs", "office": "PUB", "gridX": 89, "gridY": 89 },
+        { "name": "Boulder", "office": "BOU", "gridX": 54, "gridY": 75 }
+      ]
+    },
+    {
+      "code": "FL",
+      "name": "Florida",
+      "cities": [
+        { "name": "Miami", "office": "MFL", "gridX": 109, "gridY": 50 },
+        { "name": "Orlando", "office": "MLB", "gridX": 26, "gridY": 68 },
+        { "name": "Tampa", "office": "TBW", "gridX": 71, "gridY": 98 }
+      ]
+    },
+    {
+      "code": "GA",
+      "name": "Georgia",
+      "cities": [
+        { "name": "Atlanta", "office": "FFC", "gridX": 51, "gridY": 87 },
+        { "name": "Savannah", "office": "CHS", "gridX": 33, "gridY": 42 },
+        { "name": "Augusta", "office": "CAE", "gridX": 35, "gridY": 48 }
+      ]
+    },
+    {
+      "code": "IL",
+      "name": "Illinois",
+      "cities": [
+        { "name": "Chicago", "office": "LOT", "gridX": 76, "gridY": 73 },
+        { "name": "Springfield", "office": "ILX", "gridX": 57, "gridY": 55 },
+        { "name": "Peoria", "office": "ILX", "gridX": 43, "gridY": 93 }
+      ]
+    },
+    {
+      "code": "MA",
+      "name": "Massachusetts",
+      "cities": [
+        { "name": "Boston", "office": "BOX", "gridX": 71, "gridY": 90 },
+        { "name": "Worcester", "office": "BOX", "gridX": 50, "gridY": 85 },
+        { "name": "Springfield", "office": "BOX", "gridX": 29, "gridY": 80 }
+      ]
+    },
+    {
+      "code": "NC",
+      "name": "North Carolina",
+      "cities": [
+        { "name": "Raleigh", "office": "RAH", "gridX": 74, "gridY": 58 },
+        { "name": "Charlotte", "office": "GSP", "gridX": 115, "gridY": 67 },
+        { "name": "Asheville", "office": "GSP", "gridX": 52, "gridY": 62 }
+      ]
+    },
+    {
+      "code": "NY",
+      "name": "New York",
+      "cities": [
+        { "name": "New York City", "office": "OKX", "gridX": 33, "gridY": 37 },
+        { "name": "Buffalo", "office": "BUF", "gridX": 38, "gridY": 47 },
+        { "name": "Albany", "office": "ALY", "gridX": 60, "gridY": 57 }
+      ]
+    },
+    {
+      "code": "OH",
+      "name": "Ohio",
+      "cities": [
+        { "name": "Columbus", "office": "ILN", "gridX": 79, "gridY": 80 },
+        { "name": "Cleveland", "office": "CLE", "gridX": 82, "gridY": 63 },
+        { "name": "Cincinnati", "office": "ILN", "gridX": 35, "gridY": 38 }
+      ]
+    },
+    {
+      "code": "TX",
+      "name": "Texas",
+      "cities": [
+        { "name": "Austin", "office": "EWX", "gridX": 156, "gridY": 91 },
+        { "name": "Dallas", "office": "FWD", "gridX": 89, "gridY": 104 },
+        { "name": "Houston", "office": "HGX", "gridX": 65, "gridY": 97 }
+      ]
+    },
+    {
+      "code": "WA",
+      "name": "Washington",
+      "cities": [
+        { "name": "Seattle", "office": "SEW", "gridX": 124, "gridY": 67 },
+        { "name": "Spokane", "office": "OTX", "gridX": 141, "gridY": 90 },
+        { "name": "Tacoma", "office": "SEW", "gridX": 119, "gridY": 54 }
+      ]
+    }
+  ]
+}

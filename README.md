@@ -219,9 +219,9 @@ repeat(count: 3, worker: {
 bin/spec -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src -o helloworld
 ./helloworld --name Daniel
 
-# Run the pure-Spec HTTPS + TLS 1.3 weather forecast example
-bin/spec -i examples/weather/src/Weather.spec -s examples/weather/src -o weather
-./weather
+# Run the pure-Spec HTTPS + TLS 1.3 weather forecast example (Cleo + MVVM)
+bin/specbuild examples/cleoweather build
+./bin/cleoweather
 
 # Emit generated LLVM IR (optional)
 bin/spec -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src --emit-llvm helloworld.ll
