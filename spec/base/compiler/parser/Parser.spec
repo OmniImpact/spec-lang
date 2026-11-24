@@ -517,10 +517,6 @@ Class is Parser{
 	##
 	## @return: true when the next tokens begin an enum member declaration.
 	Function of Boolean is atEnumMember(){
-		local String is firstVal: :peek():getValue();
-		if({ firstVal == 'namespace' || firstVal == 'using' || firstVal == 'castable' }, {
-			return false;
-		});
 		if({ :checkKeyword(kw: Keyword:LOCAL) || :checkKeyword(kw: Keyword:CONTAINED) || :checkKeyword(kw: Keyword:REPLACE) || :checkKeyword(kw: Keyword:MERGE) || :checkKeyword(kw: Keyword:HELD) }, {
 			return true;
 		});
@@ -751,28 +747,6 @@ Class is Parser{
 		m:nestedClass: edef;
 		return m;
 	});
-
-		# Shorthand metadata property: `name: <expr>;` — the namespace/using
-		# declaration form (an untyped field with an initializer).
-		# The name may lex as a KEYWORD during transition generations (a
-		# metadata name that shares an enum variant's tag); the ':' is what
-		# actually discriminates the metadata form.
-		if({ (:peek():getTokenKind() == TokenKind:IDENTIFIER || :peek():getTokenKind() == TokenKind:KEYWORD) && :peekAhead(offset: 1):getTokenKind() == TokenKind:SYMBOL && :peekAhead(offset: 1):getValue() == ':' }, {
-			local Token is nameTok: :advance();
-			:advance();
-			local Expression is initExpr: :parseExpression();
-			if({ :checkPunct(p: Punctuation:TERMINATOR) }, {
-				:advance();
-			});
-			local Member is m: Member:init(kind: MemberKind:FIELD);
-			m:setLine(line: nameTok:getLine());
-			m:modifiers: modifiers;
-			m:memberType: Type:init(name: '');
-			m:name: nameTok:getValue();
-			m:initExpr: initExpr;
-			m:hasInit: true;
-			return m;
-		});
 
 		# Untyped (void) method: `name(params) { ... }`.
 		if({ :peek():getTokenKind() == TokenKind:IDENTIFIER && :peekAhead(offset: 1):getValue() == Punctuation:GROUP_OPEN:value() }, {

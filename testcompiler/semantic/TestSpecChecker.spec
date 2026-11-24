@@ -182,4 +182,21 @@ Class is Q{ replace Function is init(Map of String to String is args){
 } }");
 		Assert:areEqualInt(0, e16:length());
 	}
+
+	Function is testRetiredMetadataTypesRejected(){
+		local Array of String is eUsing: :checkOf(src: "Class is BadUsing{ replace Array of Array of String is using: []; }");
+		Assert:isTrue(eUsing:length() >= 1);
+		Assert:isTrue(eUsing:get(index: 0):contains(needle: "must have type '[[String]]'"));
+
+		local Array of String is eNs: :checkOf(src: "Class is BadNs{ replace Array of String is namespace: ['a']; }");
+		Assert:isTrue(eNs:length() >= 1);
+		Assert:isTrue(eNs:get(index: 0):contains(needle: "must have type '[String]'"));
+
+		local Array of String is eCast: :checkOf(src: "Class is BadCast{ replace [[Any]] is castable: []; }");
+		Assert:isTrue(eCast:length() >= 1);
+		Assert:isTrue(eCast:get(index: 0):contains(needle: "must have type 'Map of Any to Function'"));
+
+		local Array of String is eShort: :checkOf(src: "Class is ShortNs{ namespace: ['a']; }");
+		Assert:isTrue(eShort:length() >= 1);
+	}
 }

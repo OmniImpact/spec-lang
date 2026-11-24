@@ -5315,36 +5315,6 @@ Class is TypeChecker{
 					});
 					ki++;
 				});
-			},
-			Expression:ArrayLit: local Function([Expression] is items){
-				while([Int is ii: 0], { found == '' && ii < items:length() }, {
-					match(on: items:get(index: ii), when: [
-						Expression:ArrayLit: local Function([Expression] is pair){
-							if({ pair:length() == 2 }, {
-								local String is entryTarget: '';
-								local String is entryFn: '';
-								local Expression is p0: pair:get(index: 0);
-								local Expression is p1: pair:get(index: 1);
-								match(on: p0, when: [
-									Expression:Ident: local Function(String is s){ entryTarget: s; },
-									Expression:StringLit: local Function(String is s){ entryTarget: s; }
-								], default: {});
-								match(on: p1, when: [
-									Expression:Ident: local Function(String is s){ entryFn: s; },
-									Expression:StringLit: local Function(String is s){ entryFn: s; }
-								], default: {});
-								if({ entryTarget == target }, {
-									local String is fnRet: :lookupMethodReturnType(className: srcType, methodName: entryFn);
-									if({ fnRet != target }, {
-										:addError(line: :currentLine, msg: 'Cast \'as ' . target . '\' maps to \'' . entryFn . '\', which returns \'' . fnRet . '\', not \'' . target . '\'.');
-									});
-									found: entryFn;
-								});
-							});
-						}
-					], default: {});
-					ii++;
-				});
 			}
 		], default: {});
 		return found;
@@ -6629,6 +6599,40 @@ Class is TypeChecker{
 		:checkMethodConflicts(classDef: classDef);
 		:checkShadowTargets(classDef: classDef);
 		:checkHeldMembers(classDef: classDef);
+		:checkMetadataFieldTypes(classDef: classDef);
+	}
+
+	## Enforces canonical declared types on loader metadata fields:
+	## `using` -> `[[String]]`, `namespace` -> `[String]`,
+	## `castable` -> `Map of Any to Function`.
+	##
+	## @param classDef: Class to validate.
+	Function is checkMetadataFieldTypes(ClassInfo is classDef){
+		while([Int is mi: 0], { mi < classDef:members:length() }, {
+			local Member is m: classDef:members:get(index: mi);
+			if({ m:kind == MemberKind:FIELD }, {
+				local Type is mt: m:memberType;
+				if({ m:name == MetadataField:USING:value() }, {
+					local Boolean is okUsing: mt:name == 'List' && mt:params:length() == 1 && mt:params:get(index: 0):name == 'List' && mt:params:get(index: 0):params:length() == 1 && mt:params:get(index: 0):params:get(index: 0):name == Primitive:STRING:value();
+					if({ !okUsing }, {
+						:addError(line: m:line, msg: 'Metadata field \'using\' in class \'' . classDef:name . '\' must have type \'[[String]]\'.');
+					});
+				});
+				if({ m:name == MetadataField:NAMESPACE:value() }, {
+					local Boolean is okNs: mt:name == 'List' && mt:params:length() == 1 && mt:params:get(index: 0):name == Primitive:STRING:value();
+					if({ !okNs }, {
+						:addError(line: m:line, msg: 'Metadata field \'namespace\' in class \'' . classDef:name . '\' must have type \'[String]\'.');
+					});
+				});
+				if({ m:name == MetadataField:CASTABLE:value() }, {
+					local Boolean is okCast: mt:name == 'Map' && mt:params:length() == 2 && mt:params:get(index: 0):name == Primitive:ANY:value() && mt:params:get(index: 1):name == 'Function';
+					if({ !okCast }, {
+						:addError(line: m:line, msg: 'Metadata field \'castable\' in class \'' . classDef:name . '\' must have type \'Map of Any to Function\'.');
+					});
+				});
+			});
+			mi++;
+		});
 	}
 
 	## Folds a `merge` field override into its parent array literal: the
