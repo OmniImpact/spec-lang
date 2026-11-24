@@ -20,6 +20,7 @@ Class of Frame is HomeFrame{
 	FocusTarget is aboutCloseFocus: FocusTarget();
 	CardView is heroCard: CardView();
 	Int is lastCardMs: 0;
+	Function is onOpenPlay: {};
 	Function is onOpenRules: {};
 	Function is onOpenOptions: {};
 	Function is onQuit: {};
@@ -28,10 +29,12 @@ Class of Frame is HomeFrame{
 
 	replace Function is init(
 		CardStyle is initialStyle: CardStyle:WIREFRAME,
+		Function is onOpenPlay: {},
 		Function is onOpenRules: {},
 		Function is onOpenOptions: {},
 		Function is onQuit: {}
 	){
+		:onOpenPlay: onOpenPlay;
 		:onOpenRules: onOpenRules;
 		:onOpenOptions: onOpenOptions;
 		:onQuit: onQuit;
@@ -162,7 +165,7 @@ Class of Frame is HomeFrame{
 												shortcutKey: 'p',
 												width: w,
 												focusTarget: playFocus,
-												onClick: {}
+												onClick: { onOpenPlay(); }
 											),
 											Button(
 												label: HomeStrings:MENU_RULES,

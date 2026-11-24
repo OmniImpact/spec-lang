@@ -1,5 +1,5 @@
 #! Package theojack:view
-#! Options screen for TheoJack with Card Style selection, live centered card preview, and Cancel/Save actions.
+#! Options screen for TheoJack with Card Style, Starting Amount, and Rounds selectors, live centered card preview, and Cancel/Save actions.
 
 Class of Frame is OptionsFrame{
 	replace [String] is namespace: ['theojack', 'view'];
@@ -13,8 +13,12 @@ Class of Frame is OptionsFrame{
 
 	OptionsStorage is storage: OptionsStorage();
 	CardStyle is selectedStyle: CardStyle:WIREFRAME;
+	Int is selectedAmount: 500;
+	Int is selectedRounds: 10;
 	CardView is previewCard: CardView(card: Card(rank: Rank:ACE, suit: Suit:HEARTS));
 	FocusTarget is styleFocus: FocusTarget(initial: true);
+	FocusTarget is amountFocus: FocusTarget();
+	FocusTarget is roundsFocus: FocusTarget();
 	FocusTarget is cancelFocus: FocusTarget();
 	FocusTarget is saveFocus: FocusTarget();
 	Function is onCancel: {};
@@ -23,11 +27,15 @@ Class of Frame is OptionsFrame{
 	replace Function is init(
 		OptionsStorage is storage: OptionsStorage(),
 		CardStyle is initialStyle: CardStyle:WIREFRAME,
+		Int is initialAmount: 500,
+		Int is initialRounds: 10,
 		Function is onCancel: {},
 		Function is onSave: local Function(CardStyle is _s){}
 	){
 		:storage: storage;
 		:selectedStyle: initialStyle;
+		:selectedAmount: initialAmount;
+		:selectedRounds: initialRounds;
 		:onCancel: onCancel;
 		:onSave: onSave;
 		:previewCard: CardView(
@@ -42,8 +50,18 @@ Class of Frame is OptionsFrame{
 		invalidate();
 	}
 
+	Function is selectAmount(Int is next){
+		:selectedAmount: next;
+		invalidate();
+	}
+
+	Function is selectRounds(Int is next){
+		:selectedRounds: next;
+		invalidate();
+	}
+
 	Function is saveAndClose(){
-		storage:saveCardStyle(style: selectedStyle);
+		storage:save(style: selectedStyle, startingAmount: selectedAmount, numRounds: selectedRounds);
 		onSave(selectedStyle);
 	}
 
@@ -88,6 +106,36 @@ Class of Frame is OptionsFrame{
 											focusTarget: styleFocus,
 											onSelect: local Function(String is chosen){
 												selectStyle(next: storage:styleFromName(name: chosen));
+											}
+										)
+									])
+								),
+								Row(
+									gap: 2,
+									children: Array([
+										TextLine(value: HomeStrings:OPTION_STARTING_AMOUNT, bold: true),
+										Dropdown(
+											host: :,
+											options: ['100', '500', '1000', '2500'],
+											selected: selectedAmount as String,
+											focusTarget: amountFocus,
+											onSelect: local Function(String is chosen){
+												selectAmount(next: chosen as Int);
+											}
+										)
+									])
+								),
+								Row(
+									gap: 2,
+									children: Array([
+										TextLine(value: HomeStrings:OPTION_NUM_ROUNDS, bold: true),
+										Dropdown(
+											host: :,
+											options: ['5', '10', '20', '50'],
+											selected: selectedRounds as String,
+											focusTarget: roundsFocus,
+											onSelect: local Function(String is chosen){
+												selectRounds(next: chosen as Int);
 											}
 										)
 									])

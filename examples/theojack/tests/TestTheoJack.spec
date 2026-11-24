@@ -7,9 +7,9 @@ Class of SpecUnitTest is TestTheoJack{
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, FocusTarget]],
 		['base', 'sys', [as File(), as Loops(), as Process()]],
-		['theojack', 'model', [Card, CardStyle, Rank, Suit]],
+		['theojack', 'model', [Card, CardStyle, GamePhase, Hand, Rank, Suit]],
 		['theojack', 'util', [HomeStrings, OptionsStorage, RulesLoader]],
-		['theojack', 'view', [CardView, HomeFrame, OptionsFrame, RulesFrame]]
+		['theojack', 'view', [CardView, HomeFrame, OptionsFrame, RulesFrame, GameFrame]]
 	];
 
 	Function is testHomeScreenCenteredAndEqualWidth(){
@@ -154,5 +154,43 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: 'char', key: 'd')));
 		Assert:areEqualInt(1, scr:stack:length());
+	}
+
+	Function is testGamePlayDealStandAndWinLoseOverlay(){
+		# Verify Ace-aware Hand scoring
+		local Hand is h: Hand();
+		h:add(card: Card(rank: Rank:ACE, suit: Suit:SPADES));
+		h:add(card: Card(rank: Rank:KING, suit: Suit:HEARTS));
+		Assert:areEqualInt(21, h:score());
+		Assert:isTrue(h:isBlackjack());
+		h:add(card: Card(rank: Rank:FIVE, suit: Suit:CLUBS));
+		Assert:areEqualInt(16, h:score());
+
+		local HomeFrame is home: HomeFrame();
+		local TheoScreen is scr: TheoScreen(root: home);
+		local GameFrame is gf: GameFrame(
+			startingAmount: 500,
+			maxRounds: 5,
+			cardStyle: CardStyle:BLACK,
+			onHome: { scr:pop(); }
+		);
+		scr:push(frame: gf);
+		local TheoBuffer is buf: TheoBuffer(width: 80, height: 24);
+		local TheoRenderer is ren: TheoRenderer();
+		gf:layout(x: 0, y: 0, w: 80, h: 24);
+		gf:paint(buf: buf, renderer: ren);
+
+		# Bet +10 -> 20, Deal -> either PLAYER_TURN or immediate ROUND_OVER (Blackjack)
+		gf:game:adjustBet(delta: 10);
+		Assert:areEqualInt(20, gf:game:currentBet);
+		gf:doDeal();
+		if({ gf:game:phase == GamePhase:PLAYER_TURN }, {
+			gf:doStand();
+		});
+		Assert:isTrue(gf:game:phase == GamePhase:ROUND_OVER);
+		Assert:isTrue(gf:hasOpenOverlay());
+
+		gf:layout(x: 0, y: 0, w: 80, h: 24);
+		gf:paint(buf: buf, renderer: ren);
 	}
 }

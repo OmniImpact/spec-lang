@@ -21,6 +21,14 @@
   },
   {
     "type": "header",
+    "content": "Betting & Payouts"
+  },
+  {
+    "type": "text",
+    "content": "You begin with your configured Starting Amount and play up to the configured Number of Rounds (see Options).\nBefore each hand, adjust your wager with -$10 / +$10 and choose Deal.\n- Standard Win: pays 1:1 (you win your bet back plus an equal profit).\n- Blackjack: pays 3:2 on your bet.\n- Push (Tie): your bet is returned.\n- Bust or Dealer Win: you lose your bet. The match ends after the final round or if your bankroll reaches $0."
+  },
+  {
+    "type": "header",
     "content": "Player Actions"
   },
   {

@@ -11,10 +11,12 @@ Class of Widget is CardView{
 
 	Card is card: Card();
 	CardStyle is style: CardStyle:WIREFRAME;
+	Boolean is faceDown: false;
 
-	replace Function is init(Card is card: Card(), CardStyle is style: CardStyle:WIREFRAME){
+	replace Function is init(Card is card: Card(), CardStyle is style: CardStyle:WIREFRAME, Boolean is faceDown: false){
 		:card: card;
 		:style: style;
+		:faceDown: faceDown;
 	}
 
 	Function is setCard(Card is next){
@@ -24,6 +26,11 @@ Class of Widget is CardView{
 
 	Function is setStyle(CardStyle is next){
 		:style: next;
+		invalidate();
+	}
+
+	Function is setFaceDown(Boolean is hidden){
+		:faceDown: hidden;
 		invalidate();
 	}
 
@@ -75,6 +82,15 @@ Class of Widget is CardView{
 			buf:fillRect(x: boxX, y: boxY, w: 11, h: 7, fg: fg, bg: bg);
 		});
 		buf:drawBox(x: boxX, y: boxY, w: 11, h: 7, borderColor: fg, bg: bg, rounded: true);
+
+		if({ faceDown }, {
+			local Int is ry: 1;
+			while({ ry <= 5 }, {
+				buf:drawText(x: boxX + 2, y: boxY + ry, text: '░░░░░░░', fg: fg, bg: bg);
+				ry: ry + 1;
+			});
+			return;
+		});
 
 		local String is r: card:rank:value();
 		local String is s: card:suit:value();
