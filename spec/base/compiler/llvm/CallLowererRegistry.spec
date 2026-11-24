@@ -15,6 +15,7 @@ Class is CallLowererRegistry{
 		['base', 'compiler', 'llvm', MemCallLowerer],
 		['base', 'compiler', 'llvm', IntrospectionCallLowerer],
 		['base', 'compiler', 'llvm', MathCallLowerer],
+		['base', 'compiler', 'llvm', SimdCallLowerer],
 		['base', 'compiler', 'llvm', MatchCallLowerer],
 		['base', 'compiler', 'llvm', ArrayCallLowerer],
 		['base', 'compiler', 'llvm', ByteCallLowerer],

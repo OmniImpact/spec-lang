@@ -24,6 +24,7 @@ Class is Driver{
 		['base', 'compiler', 'driver', OsLinkFlags],
 		['base', 'compiler', 'pal', RuntimePrelude],
 		['base', 'compiler', 'ir', IrModule],
+		['base', 'compiler', 'opt', ConstantFoldPass],
 		['base', 'compiler', 'opt', OptimizerPipeline],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'llvm', LlvmEmitter],
@@ -244,6 +245,7 @@ Class is Driver{
 		});
 		local Boolean is releaseMode: (args:has(key: 'release') || args:has(key: 'prod')) && !args:has(key: 'debug');
 		local Boolean is debugMode: !releaseMode;
+		local Boolean is nativeCpu: args:getString(key: 'cpu', default: '') == 'native';
 		local Boolean is quiet: args:has(key: 'quiet');
 		local String is threadsStr: args:getString(key: 'threads', default: '');
 		if({ threadsStr == '' }, {
@@ -330,7 +332,7 @@ Class is Driver{
 			local Boolean is usesAudio: :builtUsesAudio;
 
 			if({ !args:has(key: 'no-opt') }, {
-				local OptimizerPipeline is optPipe: OptimizerPipeline:init();
+				local OptimizerPipeline is optPipe: OptimizerPipeline:init(assumeSimd: nativeCpu);
 				optPipe:run(mod: irMod);
 			});
 			local LlvmEmitter is emitter: LlvmEmitter:init();
@@ -410,6 +412,9 @@ Class is Driver{
 					local String is sObj: sLl . '.o';
 					shardObjPaths:add(item: sObj);
 					local Array of String is cArgs: Array([optFlag, '-Wno-override-module', '-c', sLl, '-o', sObj]);
+					if({ nativeCpu }, {
+						cArgs:add(item: '-march=native');
+					});
 					if({ debugMode }, {
 						cArgs:add(item: '-g');
 					});
@@ -453,6 +458,9 @@ Class is Driver{
 				});
 			}, {
 				local Array of String is llArgs: Array([optFlag, '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm']);
+				if({ nativeCpu }, {
+					llArgs:add(item: '-march=native');
+				});
 				llOsFlags:each(action: local Function(String is fl){
 					llArgs:add(item: fl);
 				});

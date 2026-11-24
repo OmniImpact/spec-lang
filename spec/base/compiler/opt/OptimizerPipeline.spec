@@ -24,7 +24,7 @@ Class is OptimizerPipeline{
 
 	[SpecOptimizer] is passes: [];
 
-	replace Function is init(){
+	replace Function is init(Boolean is assumeSimd: false){
 		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'SpecOptimizer');
 		Sort:sortBy(values: found, compare: local Function of Int(Any is a, Any is b){
 			local SpecOptimizer is pa: a as SpecOptimizer;
@@ -36,7 +36,12 @@ Class is OptimizerPipeline{
 		});
 		local Int is i: 0;
 		while({ i < found:length() }, {
-			:passes:push(item: found:get(index: i) as SpecOptimizer);
+			local SpecOptimizer is p: found:get(index: i) as SpecOptimizer;
+			if({ assumeSimd && p:name() == 'constant-fold' }, {
+				local ConstantFoldPass is cfp: p as ConstantFoldPass;
+				cfp:foldSimdTrue: true;
+			});
+			:passes:push(item: p);
 			i++;
 		});
 	}

@@ -82,4 +82,12 @@ Class is Process{
 
 	## Atomically reads the slot at [slot]. Bound to `spec_atomic_get`.
 	Function of Int is atomic_get(Int is slot);
+
+	## Returns 1 when hardware SIMD vectors (SSE2/AVX2/NEON) are available, else 0.
+	## Bound to `spec_pal_cpu_has_simd`.
+	Function of Int is pal_cpu_has_simd();
+
+	## Returns 1 when x86 AVX2 is supported at runtime, else 0.
+	## Bound to `spec_pal_cpu_has_avx2`.
+	Function of Int is pal_cpu_has_avx2();
 }

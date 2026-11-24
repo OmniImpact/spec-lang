@@ -16,6 +16,8 @@ Class of SpecOptimizer is ConstantFoldPass{
 		['base', 'sys', as Loops()]
 	];
 
+	Boolean is foldSimdTrue: false;
+
 	replace Function is init(){
 		return;
 	}
@@ -49,6 +51,14 @@ Class of SpecOptimizer is ConstantFoldPass{
 				IrInst:ConstInt: local Function of IrInst(String is dst, Int is value){
 					intConsts:set(key: dst, value: value);
 					hasIntConst:set(key: dst, value: true);
+					return inst;
+				},
+				IrInst:IrCall: local Function of IrInst(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
+					if({ :foldSimdTrue && hasDst && callee == 'spec_pal_cpu_has_simd' }, {
+						intConsts:set(key: dst, value: 1);
+						hasIntConst:set(key: dst, value: true);
+						return IrInst:ConstInt(dst: dst, value: 1);
+					});
 					return inst;
 				},
 				IrInst:BinOp: local Function of IrInst(String is dst, String is op, String is lhs, String is rhs, IrType is ty){

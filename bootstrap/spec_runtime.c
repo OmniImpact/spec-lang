@@ -1512,6 +1512,22 @@ void spec_cond_broadcast(long long cond) {
     if (cond) pthread_cond_broadcast((pthread_cond_t*)(intptr_t)cond);
 }
 #endif
+
+long long spec_pal_cpu_has_simd(void) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64)
+    return 1;
+#else
+    return 0;
+#endif
+}
+
+long long spec_pal_cpu_has_avx2(void) {
+#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+    return __builtin_cpu_supports("avx2") ? 1 : 0;
+#else
+    return 0;
+#endif
+}
 #if defined(_WIN32)
 long long spec_time_monotonic_ns(void) {
     LARGE_INTEGER freq, count;

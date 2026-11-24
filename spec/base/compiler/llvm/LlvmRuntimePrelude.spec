@@ -1015,6 +1015,112 @@ ok:
 }''';
 	}
 
+	Function of Str is emitSimdHelpers(){
+		return '''
+define internal double @spec_simd_load_f64(i64 %ptr, i64 %off) alwaysinline {
+  %addr = add i64 %ptr, %off
+  %p = inttoptr i64 %addr to ptr
+  %v = load double, ptr %p, align 8
+  ret double %v
+}
+define internal void @spec_simd_store_f64(i64 %ptr, i64 %off, double %v) alwaysinline {
+  %addr = add i64 %ptr, %off
+  %p = inttoptr i64 %addr to ptr
+  store double %v, ptr %p, align 8
+  ret void
+}
+define internal void @spec_simd_fill4(i64 %dst, double %val) alwaysinline {
+  %v0 = insertelement <4 x double> poison, double %val, i32 0
+  %vs = shufflevector <4 x double> %v0, <4 x double> poison, <4 x i32> zeroinitializer
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vs, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_add4(i64 %dst, i64 %a, i64 %b) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %pb = inttoptr i64 %b to ptr
+  %vb = load <4 x double>, ptr %pb, align 8
+  %vr = fadd <4 x double> %va, %vb
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_sub4(i64 %dst, i64 %a, i64 %b) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %pb = inttoptr i64 %b to ptr
+  %vb = load <4 x double>, ptr %pb, align 8
+  %vr = fsub <4 x double> %va, %vb
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_mul4(i64 %dst, i64 %a, i64 %b) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %pb = inttoptr i64 %b to ptr
+  %vb = load <4 x double>, ptr %pb, align 8
+  %vr = fmul <4 x double> %va, %vb
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_scale4(i64 %dst, i64 %a, double %s) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %v0 = insertelement <4 x double> poison, double %s, i32 0
+  %vs = shufflevector <4 x double> %v0, <4 x double> poison, <4 x i32> zeroinitializer
+  %vr = fmul <4 x double> %va, %vs
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_fma4(i64 %dst, i64 %a, i64 %b, i64 %c) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %pb = inttoptr i64 %b to ptr
+  %vb = load <4 x double>, ptr %pb, align 8
+  %pc = inttoptr i64 %c to ptr
+  %vc = load <4 x double>, ptr %pc, align 8
+  %vm = fmul <4 x double> %va, %vb
+  %vr = fadd <4 x double> %vm, %vc
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal double @spec_simd_dot4(i64 %a, i64 %b) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %pb = inttoptr i64 %b to ptr
+  %vb = load <4 x double>, ptr %pb, align 8
+  %vm = fmul <4 x double> %va, %vb
+  %e0 = extractelement <4 x double> %vm, i32 0
+  %e1 = extractelement <4 x double> %vm, i32 1
+  %e2 = extractelement <4 x double> %vm, i32 2
+  %e3 = extractelement <4 x double> %vm, i32 3
+  %s01 = fadd double %e0, %e1
+  %s23 = fadd double %e2, %e3
+  %sum = fadd double %s01, %s23
+  ret double %sum
+}
+define internal void @spec_simd_clamp4(i64 %dst, i64 %a, double %lo, double %hi) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %l0 = insertelement <4 x double> poison, double %lo, i32 0
+  %vlo = shufflevector <4 x double> %l0, <4 x double> poison, <4 x i32> zeroinitializer
+  %h0 = insertelement <4 x double> poison, double %hi, i32 0
+  %vhi = shufflevector <4 x double> %h0, <4 x double> poison, <4 x i32> zeroinitializer
+  %c1 = fcmp olt <4 x double> %va, %vlo
+  %r1 = select <4 x i1> %c1, <4 x double> %vlo, <4 x double> %va
+  %c2 = fcmp ogt <4 x double> %r1, %vhi
+  %r2 = select <4 x i1> %c2, <4 x double> %vhi, <4 x double> %r1
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %r2, ptr %pd, align 8
+  ret void
+}''';
+	}
+
 	Function of Str is emitAll(){
 		return ```
 {{:emitArcAndPool()}}
@@ -1022,6 +1128,7 @@ ok:
 {{:emitMemIntrinsics()}}
 {{:emitTypeAndStringHelpers()}}
 {{:emitMathHelpers()}}
+{{:emitSimdHelpers()}}
 {{:emitCliAndAtomics()}}```;
 	}
 
