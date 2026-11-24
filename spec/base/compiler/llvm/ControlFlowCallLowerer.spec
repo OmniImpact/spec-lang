@@ -274,10 +274,8 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				b:pushScope();
 				if({ expectedTy != IrType:Void && bd:length() > 0 }, {
 					local Int is lastIdx: bd:length() - 1;
-					local Int is i: 0;
-					while({ i < lastIdx }, {
+					times(count: lastIdx, worker: local Function(Int is i){
 						b:lowerStmt(stmt: bd:get(index: i));
-						i++;
 					});
 					local Statement is lastStmt: bd:get(index: lastIdx);
 					match(on: lastStmt, when: [
@@ -320,8 +318,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local NamedArg is elseNa: thenNa;
 		local Boolean is hasFinally: false;
 		local NamedArg is finallyNa: thenNa;
-		local Int is ai: 0;
-		while({ ai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is ai){
 			local NamedArg is na: call:args:get(index: ai);
 			match(on: na:name, when: [
 				'check': { condNa: na; },
@@ -337,7 +334,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 					});
 				}
 			]);
-			ai++;
 		});
 		local IrType is resTy: b:irTypeForSem(st: expr:getSemType());
 		local Boolean is yieldVal: resTy != IrType:Void && hasElse;
@@ -432,8 +428,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	local Function of String is lowerTryCall(IrBuilder is b, Expression is expr, CallData is call){
 		local NamedArg is bodyNa: call:args:get(index: 0);
 		local NamedArg is guardNa: call:args:get(index: 1);
-		local Int is nai: 0;
-		while({ nai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is nai){
 			local NamedArg is na: call:args:get(index: nai);
 			if({ na:name == 'body' }, {
 				bodyNa: na;
@@ -442,7 +437,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 					guardNa: na;
 				});
 			});
-			nai++;
 		});
 		local IrType is resTy: b:irTypeForSem(st: expr:getSemType());
 		local Boolean is yieldVal: resTy != IrType:Void;
@@ -589,13 +583,11 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Expression is varsExpr: arg0:value;
 		local Expression is evalExpr: arg0:value;
 		local Expression is iterExpr: arg1:value;
-		local Int is ai: 0;
-		while({ ai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is ai){
 			local NamedArg is na: call:args:get(index: ai);
 			if({ na:name == 'evaluate' }, { evalExpr: na:value; hasEval: true; });
 			if({ na:name == 'iterate' || na:name == 'iteration' }, { iterExpr: na:value; hasIter: true; });
 			if({ na:name == 'vars' || na:name == 'state' }, { varsExpr: na:value; hasVars: true; });
-			ai++;
 		});
 		if({ !hasEval && call:args:length() >= 3 }, {
 			evalExpr: arg1:value;
@@ -614,8 +606,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ hasVars }, {
 			match(on: varsExpr, when: [
 				Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
-					local Int is pi: 0;
-					while({ pi < ps:length() }, {
+					times(count: ps:length(), worker: local Function(Int is pi){
 						local Parameter is p: ps:get(index: pi);
 						local IrType is pty: b:irTypeFor(specType: p:paramType:name);
 						local Boolean is pArc: b:isArcTypeNode(t: p:paramType);
@@ -642,7 +633,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						}, {
 							b:emit(inst: IrInst:Store(slot: slot, val: val, ty: pty));
 						});
-						pi++;
 					});
 					if({ bd:length() > 0 }, {
 						b:lowerStmts(stmts: bd);
@@ -676,12 +666,10 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local NamedArg is na1: call:args:get(index: 1);
 		local Expression is countExpr: na0:value;
 		local Expression is workerExpr: na1:value;
-		local Int is ai: 0;
-		while({ ai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is ai){
 			local NamedArg is na: call:args:get(index: ai);
 			if({ na:name == 'count' }, { countExpr: na:value; });
 			if({ na:name == 'worker' }, { workerExpr: na:value; });
-			ai++;
 		});
 
 		local String is countVal: b:lowerExpr(expr: countExpr);
@@ -727,12 +715,10 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local NamedArg is na1: call:args:get(index: 1);
 		local Expression is evalExpr: na0:value;
 		local Expression is iterExpr: na1:value;
-		local Int is ai: 0;
-		while({ ai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is ai){
 			local NamedArg is na: call:args:get(index: ai);
 			if({ na:name == 'evaluate' }, { evalExpr: na:value; });
 			if({ na:name == 'iteration' || na:name == 'iterate' }, { iterExpr: na:value; });
-			ai++;
 		});
 
 		local String is bodyLbl: b:nextLabel(prefix: 'until_body');
@@ -762,8 +748,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local Boolean is hasVars: false;
 		local Boolean is hasEval: false;
 		local Boolean is hasIter: false;
-		local Int is ai: 0;
-		while({ ai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is ai){
 			local NamedArg is na: call:args:get(index: ai);
 			if({ na:name == 'vars' || na:name == 'state' }, {
 				varsExpr: na:value;
@@ -777,7 +762,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				iterExpr: na:value;
 				hasIter: true;
 			});
-			ai++;
 		});
 		if({ !hasVars && call:args:length() >= 3 }, {
 			local NamedArg is na0: call:args:get(index: 0);
@@ -807,8 +791,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ hasVars }, {
 			match(on: varsExpr, when: [
 				Expression:AnonFn: local Function(Type is rt, [Parameter] is params, [Statement] is bd){
-					local Int is pi: 0;
-					while({ pi < params:length() }, {
+					times(count: params:length(), worker: local Function(Int is pi){
 						local Parameter is p: params:get(index: pi);
 						local IrType is vty: b:irTypeFor(specType: p:paramType:name);
 						local String is _vtmp: b:nextTmp();
@@ -834,7 +817,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						}, {
 							b:emit(inst: IrInst:Store(slot: slot, val: ival, ty: vty));
 						});
-						pi++;
 					});
 				}
 			], default: {});
@@ -925,7 +907,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local [Boolean] is bindArcs: [];
 		local [String] is bindSpecs: [];
 
-		while([Int is pi: 0], { pi < m:params:length() }, {
+		times(count: m:params:length(), worker: local Function(Int is pi){
 			local Parameter is p: m:params:get(index: pi);
 			local Boolean is hasArg: false;
 			local Expression is argExpr: Expression:Unknown;
@@ -959,7 +941,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				bindArcs:push(item: b:isArcTypeNode(t: p:paramType));
 				bindSpecs:push(item: pSpec);
 			});
-			pi++;
 		});
 
 		# 2. Snapshot caller's lexical scope and any outer inline-loop state.
@@ -1048,16 +1029,15 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		b:inInlineLoopCallee: true;
 		local Map of String to Boolean is calleeActive: Map();
 		local Array of String is caKeys: callerActiveMethods:keys();
-		while([Int is ki: 0], { ki < caKeys:length() }, {
+		times(count: caKeys:length(), worker: local Function(Int is ki){
 			calleeActive:set(key: caKeys:get(index: ki, default: ''), value: true);
-			ki++;
 		});
 		calleeActive:set(key: mKey, value: true);
 		b:inlineActiveMethods: calleeActive;
 
 		# 4. Bind non-Function parameters into the callee's clean scope.
 		b:pushScope();
-		while([Int is bi: 0], { bi < bindNames:length() }, {
+		times(count: bindNames:length(), worker: local Function(Int is bi){
 			local String is bn: bindNames:get(index: bi);
 			local String is bv: bindVals:get(index: bi);
 			local IrType is bty: bindTys:get(index: bi);
@@ -1068,7 +1048,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			b:bindLocal(name: bn, slot: slot, ty: bty, isArc: barc, specType: bspec, isBoxed: false);
 			b:emit(inst: IrInst:Alloca(slot: slot, ty: bty));
 			b:emit(inst: IrInst:Store(slot: slot, val: bv, ty: bty));
-			bi++;
 		});
 
 		# 5. Lower the callee's body with an inline return target so any `return`
@@ -1166,14 +1145,13 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local [String] is argVals: [];
 		local [IrType] is argTys: [];
 		local [String] is argSpecs: [];
-		while([Int is ai: 0], { ai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is ai){
 			local NamedArg is na: call:args:get(index: ai);
 			local String is av: b:lowerExpr(expr: na:value);
 			argNames:push(item: na:name);
 			argVals:push(item: av);
 			argTys:push(item: b:irTypeForSem(st: na:value:getSemType()));
 			argSpecs:push(item: na:value:getSemType():toKey());
-			ai++;
 		});
 
 		# 2. Save callee scope and switch to caller's lexical scope.
@@ -1225,7 +1203,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		match(on: fnExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, [Parameter] is ps, [Statement] is bd){
 				b:pushScope();
-				while([Int is pi: 0], { pi < ps:length() }, {
+				times(count: ps:length(), worker: local Function(Int is pi){
 					local Parameter is p: ps:get(index: pi);
 					local Int is matchIdx: -1;
 					while([Int is aj: 0], { matchIdx < 0 && aj < argNames:length() }, {
@@ -1255,7 +1233,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 							b:emit(inst: IrInst:Store(slot: slot, val: boundVal, ty: pty));
 						});
 					});
-					pi++;
 				});
 
 				local IrType is effRetTy: retTy;

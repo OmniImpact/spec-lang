@@ -226,8 +226,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 			if({ m:kind == MemberKind:METHOD && (m:name == call:name || :toSnakeCase(s: m:name) == call:name) }, {
 				local [IrType] is argTypes: [];
 				local [String] is args: [];
-				local Int is pi: 0;
-				while({ pi < m:params:length() }, {
+				times(count: m:params:length(), worker: local Function(Int is pi){
 					local Parameter is p: m:params:get(index: pi);
 					local IrType is pty: b:irTypeFor(specType: p:paramType:name);
 					local String is defVal: 'null';
@@ -236,7 +235,6 @@ Class of CallLowerer is SysinternalCallLowerer{
 					local String is av: :lowerNamedArg(b: b, call: call, argName: p:name, posIdx: pi, defVal: defVal);
 					argTypes:push(item: pty);
 					args:push(item: av);
-					pi++;
 				});
 				local IrType is retTy: b:methodReturnType(mt: m:memberType);
 				local String is callee: 'spec_' . :toSnakeCase(s: m:name);

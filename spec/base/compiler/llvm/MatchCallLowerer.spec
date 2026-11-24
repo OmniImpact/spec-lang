@@ -37,8 +37,7 @@ Class of CallLowerer is MatchCallLowerer{
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
 		if({ call:name != 'match' }, { return false; });
 		local Boolean is isMapLit: false;
-		local Int is i: 0;
-		while({ i < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is i){
 			local NamedArg is na: call:args:get(index: i);
 			if({ na:name == 'when' || (na:name == '' && i == 1) }, {
 				match(on: na:value, when: [
@@ -47,7 +46,6 @@ Class of CallLowerer is MatchCallLowerer{
 					}
 				], default: {});
 			});
-			i++;
 		});
 		return isMapLit;
 	}
@@ -148,11 +146,9 @@ Class of CallLowerer is MatchCallLowerer{
 		match(on: k, when: [
 			Expression:Path: local Function([String] is segs){
 				local String is joined: '';
-				local Int is si: 0;
-				while({ si < segs:length() }, {
+				times(count: segs:length(), worker: local Function(Int is si){
 					if({ si > 0 }, { joined: joined . '_'; });
 					joined: joined . segs:get(index: si);
-					si++;
 				});
 				if({ joined != '' && b:mod:findStruct(name: joined):name != '' }, {
 					variantStruct: joined;
@@ -238,13 +234,11 @@ Class of CallLowerer is MatchCallLowerer{
 		local Boolean is hasElse: false;
 		local Expression is elseExpr: Expression:Unknown;
 
-		local Int is ai: 0;
-		while({ ai < call:args:length() }, {
+		times(count: call:args:length(), worker: local Function(Int is ai){
 			local NamedArg is na: call:args:get(index: ai);
 			if({ na:name == 'on' }, { hasOn: true; onExpr: na:value; });
 			if({ na:name == 'when' }, { hasWhen: true; whenExpr: na:value; });
 			if({ na:name == 'default' }, { hasElse: true; elseExpr: na:value; });
-			ai++;
 		});
 
 		local IrType is resTy: b:irTypeForSem(st: expr:getSemType());
@@ -278,8 +272,7 @@ Class of CallLowerer is MatchCallLowerer{
 			], default: {});
 		});
 
-		local Int is ki: 0;
-		while({ ki < keys:length() }, {
+		times(count: keys:length(), worker: local Function(Int is ki){
 			local Expression is k: keys:get(index: ki);
 			local Expression is v: vals:get(index: ki);
 			if({ :isElseKey(key: k) }, {
@@ -292,11 +285,9 @@ Class of CallLowerer is MatchCallLowerer{
 					match(on: k, when: [
 						Expression:Path: local Function([String] is segs){
 							local String is joined: '';
-							local Int is si: 0;
-							while({ si < segs:length() }, {
+							times(count: segs:length(), worker: local Function(Int is si){
 								if({ si > 0 }, { joined: joined . '_'; });
 								joined: joined . segs:get(index: si);
-								si++;
 							});
 							if({ joined != '' && b:mod:findStruct(name: joined):name != '' }, {
 								variantStruct: joined;
@@ -346,8 +337,7 @@ Class of CallLowerer is MatchCallLowerer{
 					local IrStruct is vst: b:mod:findStruct(name: variantStruct);
 					match(on: v, when: [
 						Expression:AnonFn: local Function(Type is _rt, [Parameter] is ps, [Statement] is _bd){
-							local Int is pi: 0;
-							while({ pi < ps:length() }, {
+							times(count: ps:length(), worker: local Function(Int is pi){
 								local Parameter is p: ps:get(index: pi);
 								local IrType is pty: b:irTypeFor(specType: p:paramType:name);
 								if({ pty == IrType:Void }, { pty: IrType:Ptr; });
@@ -372,7 +362,6 @@ Class of CallLowerer is MatchCallLowerer{
 									b:emit(inst: IrInst:Alloca(slot: pSlot, ty: pty));
 									b:emit(inst: IrInst:Store(slot: pSlot, val: pVal, ty: pty));
 								});
-								pi++;
 							});
 						}
 					], default: {});
@@ -383,7 +372,6 @@ Class of CallLowerer is MatchCallLowerer{
 				local IrBlock is nextBlk: b:curFn:addBlock(label: nextLbl);
 				b:switchBlock(blk: nextBlk);
 			});
-			ki++;
 		});
 
 		if({ hasElse }, {
