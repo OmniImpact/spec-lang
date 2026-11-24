@@ -96,6 +96,41 @@ Class is TheoBuffer{
 		c:reverse: reverse;
 	}
 
+	## Sets a cell using unboxed packed 32-bit RGB colors (`Color32`), mutating RGB [TheoColor]s in place when possible.
+	Function is setCellRgb(Int is x, Int is y, String is ch, Int is fgRgb, Int is bgRgb, Boolean is bold: false){
+		if({ x < clipX || x >= clipX + clipW || y < clipY || y >= clipY + clipH }, {
+			return;
+		});
+		if({ x < 0 || x >= width || y < 0 || y >= height }, {
+			return;
+		});
+		local TheoCell is c: cells:get(index: y * width + x);
+		c:ch: ch;
+		local Int is fr: (fgRgb >> 16) & 255;
+		local Int is fg: (fgRgb >> 8) & 255;
+		local Int is fb: fgRgb & 255;
+		if({ c:fg:kind == 2 }, {
+			c:fg:c1: fr;
+			c:fg:c2: fg;
+			c:fg:c3: fb;
+		}, {
+			c:fg: TheoColor:rgb(r: fr, g: fg, b: fb);
+		});
+		local Int is br: (bgRgb >> 16) & 255;
+		local Int is bg: (bgRgb >> 8) & 255;
+		local Int is bb: bgRgb & 255;
+		if({ c:bg:kind == 2 }, {
+			c:bg:c1: br;
+			c:bg:c2: bg;
+			c:bg:c3: bb;
+		}, {
+			c:bg: TheoColor:rgb(r: br, g: bg, b: bb);
+		});
+		c:bold: bold;
+		c:underline: false;
+		c:reverse: false;
+	}
+
 	Function is fillRect(Int is x, Int is y, Int is w, Int is h, TheoColor is fg: TheoColor:none(), TheoColor is bg: TheoColor:none()){
 		local Int is ry: 0;
 		while({ ry < h }, {

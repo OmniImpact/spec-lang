@@ -308,6 +308,22 @@ Class of Mergeable is List of T{
 		return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) & 4294967295;
 	}
 
+	## Overwrites a 32-bit little-endian unsigned integer at [offset] if in bounds.
+	Function is setU32LE(Int is offset, Int is v){
+		if({ offset < 0 || offset + 4 > :len || :data == 0 }, { return; });
+		Mem:storeByte(ptr: :data, byteOffset: offset, val: v & 255);
+		Mem:storeByte(ptr: :data, byteOffset: offset + 1, val: (v >> 8) & 255);
+		Mem:storeByte(ptr: :data, byteOffset: offset + 2, val: (v >> 16) & 255);
+		Mem:storeByte(ptr: :data, byteOffset: offset + 3, val: (v >> 24) & 255);
+	}
+
+	## Appends three 8-bit RGB channel bytes ([r], [g], [b]) to a [Byte] list.
+	Function is pushRgb(Int is r, Int is g, Int is b){
+		:push(item: Mem:addrToObj(addr: r & 255));
+		:push(item: Mem:addrToObj(addr: g & 255));
+		:push(item: Mem:addrToObj(addr: b & 255));
+	}
+
 	## Merges all elements of [other] into this list (appending in order).
 	##
 	## @param other: Source list to append.

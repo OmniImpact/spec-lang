@@ -200,4 +200,14 @@ Class is Process{
 		local Array is ar: a as Array;
 		ar:freeze();
 	}
+
+	## Returns true when hardware SIMD vectors (SSE2/AVX2/NEON) are available.
+	Function of Boolean is cpuHasSimd(){
+		return base:sysinternal:Process:pal_cpu_has_simd() != 0;
+	}
+
+	## Returns true when x86 AVX2 is supported at runtime.
+	Function of Boolean is cpuHasAvx2(){
+		return base:sysinternal:Process:pal_cpu_has_avx2() != 0;
+	}
 }
