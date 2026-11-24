@@ -12,7 +12,7 @@ Class of SpecUnitTest is TestCleoWeather{
 	Function is testLoadLocationsJson(){
 		local LocationLoader is loader: LocationLoader();
 		local [StateGroup] is states: loader:loadStates();
-		Assert:isTrue(states:length() >= 10);
+		Assert:areEqualInt(50, states:length());
 
 		local StateGroup is first: states:get(index: 0);
 		Assert:isTrue(first:code != '');

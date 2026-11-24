@@ -35,14 +35,21 @@ Class is CleoSelectorView{
 			fgColor: ansi(code: 252)
 		);
 		local Int is i: 0;
-		while({ i < vm:states:length() }, {
-			local StateGroup is st: vm:states:get(index: i);
-			sec:addLine(
-				text: "  {{i + 1}}. {{st:displayLabel()}}",
-				color: ansi(code: 195),
-				rightText: "{{st:cities:length()}} cities"
-			);
-			i: i + 1;
+		local Int is total: vm:states:length();
+		while({ i < total }, {
+			local String is row: '';
+			local Int is col: 0;
+			while({ col < 5 && i + col < total }, {
+				local Int is idx: i + col;
+				local StateGroup is st: vm:states:get(index: idx);
+				local Int is num: idx + 1;
+				local String is numPad: if({ num < 10 }, { " {{num}}" }, { "{{num}}" });
+				local String is cell: "{{numPad}}. {{st:code}}";
+				if({ col > 0 }, { row: "{{row}}    {{cell}}"; }, { row: "  {{cell}}"; });
+				col: col + 1;
+			});
+			sec:addLine(text: row, color: ansi(code: 195));
+			i: i + 5;
 		});
 		ui:flushFinal();
 
