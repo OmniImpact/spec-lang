@@ -18,13 +18,13 @@ Class of Fractal is BarnsleyFernFractal{
 		FractalViewport(centerX: 0.0, centerY: 5.0, baseSpan: 10.8, zoom: 1.0)
 	}
 
-	local Function is plotHit([Int] is counts, Int is w, Int is h, Int is sx, Int is sy, Int is weight){
+	local Function is plotHit([Int] is counts, Int is w, Int is h, Int is sx, Int is sy){
 		if({ sx < 0 || sx >= w || sy < 0 || sy >= h }, { return; });
 		local Int is idx: sy * w + sx;
-		counts:set(index: idx, item: counts:get(index: idx) + weight);
+		counts:set(index: idx, item: counts:get(index: idx) + 1);
 	}
 
-	local Function is drawStemSegment(
+	local Function is drawStemLine(
 		[Int] is counts,
 		Int is w,
 		Int is h,
@@ -32,23 +32,37 @@ Class of Fractal is BarnsleyFernFractal{
 		Float is yMax,
 		Float is scaleX,
 		Float is scaleY,
-		Float is y0,
-		Float is y1
+		Float is wx0,
+		Float is wy0,
+		Float is wx1,
+		Float is wy1
 	){
-		local Int is sx: toInt(value: (0.0 - xMin) * scaleX);
-		if({ sx < 0 || sx >= w }, { return; });
-		local Int is sy0: toInt(value: (yMax - y0) * scaleY);
-		local Int is sy1: toInt(value: (yMax - y1) * scaleY);
-		local Int is lo: if({ sy0 < sy1 }, { sy0 }, { sy1 });
-		local Int is hi: if({ sy0 > sy1 }, { sy0 }, { sy1 });
-		if({ hi < 0 || lo >= h }, { return; });
-		if({ lo < 0 }, { lo: 0; });
-		if({ hi >= h }, { hi: h - 1; });
-		local Int is y: lo;
-		while({ y <= hi }, {
-			local Int is idx: y * w + sx;
-			counts:set(index: idx, item: counts:get(index: idx) + 1);
-			y: y + 1;
+		local Int is x0: toInt(value: (wx0 - xMin) * scaleX);
+		local Int is y0: toInt(value: (yMax - wy0) * scaleY);
+		local Int is x1: toInt(value: (wx1 - xMin) * scaleX);
+		local Int is y1: toInt(value: (yMax - wy1) * scaleY);
+		if({ (x0 < 0 && x1 < 0) || (x0 >= w && x1 >= w) || (y0 < 0 && y1 < 0) || (y0 >= h && y1 >= h) }, {
+			return;
+		});
+		local Int is dx: x1 - x0;
+		local Int is dy: y1 - y0;
+		local Int is adx: if({ dx < 0 }, { -dx }, { dx });
+		local Int is ady: if({ dy < 0 }, { -dy }, { dy });
+		local Int is steps: if({ adx > ady }, { adx }, { ady });
+		if({ steps <= 0 }, {
+			plotHit(counts: counts, w: w, h: h, sx: x0, sy: y0);
+			return;
+		});
+		local Float is fx: toFloat(value: x0);
+		local Float is fy: toFloat(value: y0);
+		local Float is sx: toFloat(value: dx) / toFloat(value: steps);
+		local Float is sy: toFloat(value: dy) / toFloat(value: steps);
+		local Int is i: 0;
+		while({ i <= steps }, {
+			plotHit(counts: counts, w: w, h: h, sx: toInt(value: round(value: fx)), sy: toInt(value: round(value: fy)));
+			fx: fx + sx;
+			fy: fy + sy;
+			i: i + 1;
 		});
 	}
 
@@ -83,15 +97,17 @@ Class of Fractal is BarnsleyFernFractal{
 
 		local Float is pxW: halfW * 2.0 * scaleX;
 		local Float is pxH: halfH * 2.0 * scaleY;
-		if({ (pxW <= 1.2 && pxH <= 1.2) || depth >= 34 }, {
+		if({ (pxW <= 0.9 && pxH <= 0.9) || depth >= 64 }, {
 			local Int is sx: toInt(value: (cx - xMin) * scaleX);
 			local Int is sy: toInt(value: (yMax - cy) * scaleY);
-			plotHit(counts: counts, w: w, h: h, sx: sx, sy: sy, weight: 1);
+			plotHit(counts: counts, w: w, h: h, sx: sx, sy: sy);
 			return;
 		});
 
-		# T1 (stem): x' = 0, y' = 0.16 * y
-		drawStemSegment(
+		# Transformed stem T1(root) = segment from (0, 0) to (0, 1.6) in the current parallelogram frame
+		local Float is baseX: cx - 0.1020408 * ux;
+		local Float is baseY: cy - 0.1020408 * uy;
+		drawStemLine(
 			counts: counts,
 			w: w,
 			h: h,
@@ -99,8 +115,10 @@ Class of Fractal is BarnsleyFernFractal{
 			yMax: yMax,
 			scaleX: scaleX,
 			scaleY: scaleY,
-			y0: 0.16 * (cy - halfH),
-			y1: 0.16 * (cy + halfH)
+			wx0: baseX - vx,
+			wy0: baseY - vy,
+			wx1: baseX - 0.68 * vx,
+			wy1: baseY - 0.68 * vy
 		);
 
 		local Int is nd: depth + 1;

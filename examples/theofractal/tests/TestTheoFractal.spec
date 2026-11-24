@@ -159,5 +159,22 @@ Class of SpecUnitTest is TestTheoFractal{
 		aa:toggle();
 		Assert:isFalse(aa:checked);
 		Assert:isFalse(vm:antialiasing);
+
+		vm:selectFractal(name: FractalStrings:OPT_BARNSLEY_FERN);
+		vm:zoomIn();
+		vm:zoomIn();
+		vm:zoomIn();
+		vm:zoomIn();
+		local Array of TheoColor is zoomedFern: vm:ensurePixels(w: 48, h: 48);
+		local TheoColor is bg: TheoColor:rgb(r: 10, g: 12, b: 18);
+		local Int is lit: 0;
+		local Int is zi: 0;
+		while({ zi < zoomedFern:length() }, {
+			if({ !zoomedFern:get(index: zi):equals(other: bg) }, {
+				lit: lit + 1;
+			});
+			zi: zi + 1;
+		});
+		Assert:isTrue(lit > 50);
 	}
 }
