@@ -7,7 +7,7 @@ Class is SynthViewModel{
 	merge [[String]] is using: [
 		['theosynth', 'model', [Waveform, PianoKey, SynthEngine]],
 		['theosynth', 'util', SynthStrings],
-		['base', 'sys', [Process, as Conditional(), as Loops()]],
+		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'struct', Map]
 	];
@@ -17,8 +17,6 @@ Class is SynthViewModel{
 	[Int] is activeTicks: [];
 	[Int] is heldFlags: [];
 	[Int] is fallbackTicks: [];
-	[Int] is pendingReleaseTicks: [];
-	[Int] is lastReleaseMs: [];
 
 	Waveform is selectedWaveform: Waveform:SINE;
 	Int is lastPlayedIdx: -1;
@@ -66,8 +64,6 @@ Class is SynthViewModel{
 			activeTicks:push(item: 0);
 			heldFlags:push(item: 0);
 			fallbackTicks:push(item: 0);
-			pendingReleaseTicks:push(item: 0);
-			lastReleaseMs:push(item: 0);
 			col: col + 1;
 		});
 	}
@@ -78,8 +74,6 @@ Class is SynthViewModel{
 		activeTicks: [];
 		heldFlags: [];
 		fallbackTicks: [];
-		pendingReleaseTicks: [];
-		lastReleaseMs: [];
 		buildOctave(row: 0, baseMidi: 72, octStr: '5', chars: ['q', 'w', 'e', 'r', 't', 'y', 'u']);
 		buildOctave(row: 1, baseMidi: 60, octStr: '4', chars: ['a', 's', 'd', 'f', 'g', 'h', 'j']);
 		buildOctave(row: 2, baseMidi: 48, octStr: '3', chars: ['z', 'x', 'c', 'v', 'b', 'n', 'm']);
@@ -140,7 +134,6 @@ Class is SynthViewModel{
 		lastPlayedIdx: idx;
 		heldFlags:set(index: idx, item: 1);
 		activeTicks:set(index: idx, item: 1);
-		pendingReleaseTicks:set(index: idx, item: 0);
 		if({ autoRelease }, {
 			fallbackTicks:set(index: idx, item: 10);
 		}, {
@@ -159,7 +152,6 @@ Class is SynthViewModel{
 		heldFlags:set(index: idx, item: 0);
 		activeTicks:set(index: idx, item: 0);
 		fallbackTicks:set(index: idx, item: 0);
-		pendingReleaseTicks:set(index: idx, item: 0);
 		onStateChanged();
 		if({ audioEnabled }, {
 			engine:noteOff(midi: keys:get(index: idx):midi);
@@ -187,15 +179,6 @@ Class is SynthViewModel{
 		local Boolean is changed: false;
 		local Int is i: 0;
 		while({ i < fallbackTicks:length() }, {
-			local Int is pr: pendingReleaseTicks:get(index: i);
-			if({ pr > 0 }, {
-				local Int is nextPr: pr - 1;
-				pendingReleaseTicks:set(index: i, item: nextPr);
-				if({ nextPr == 0 }, {
-					releaseKeyIndex(idx: i);
-					changed: true;
-				});
-			});
 			local Int is ft: fallbackTicks:get(index: i);
 			if({ ft > 0 }, {
 				local Int is next: ft - 1;
@@ -249,13 +232,11 @@ Class is SynthViewModel{
 		local Int is idx: keyIndexByChar:get(key: key, default: -1);
 		if({ isRelease }, {
 			seenKittyRelease: true;
-			lastReleaseMs:set(index: idx, item: Process():clockMs());
-			pendingReleaseTicks:set(index: idx, item: 2);
+			releaseKeyIndex(idx: idx);
 			return true;
 		});
 		if({ isRepeat }, {
 			# Reject key-repeat while already in key-down state.
-			pendingReleaseTicks:set(index: idx, item: 0);
 			if({ heldFlags:get(index: idx) == 1 }, {
 				if({ !seenKittyRelease }, {
 					fallbackTicks:set(index: idx, item: 10);
@@ -265,15 +246,6 @@ Class is SynthViewModel{
 			return true;
 		});
 		if({ isPress }, {
-			local Int is relMs: lastReleaseMs:get(index: idx);
-			local Int is nowMs: Process():clockMs();
-			if({ pendingReleaseTicks:get(index: idx) > 0 || (relMs > 0 && (nowMs - relMs) < 15) }, {
-				# X11/terminal synthetic RELEASE+PRESS auto-repeat pair: sustain without re-plucking.
-				pendingReleaseTicks:set(index: idx, item: 0);
-				heldFlags:set(index: idx, item: 1);
-				activeTicks:set(index: idx, item: 1);
-				return true;
-			});
 			if({ !seenKittyRelease && heldFlags:get(index: idx) == 1 }, {
 				# Non-Kitty OS key-repeat arrives as PRESS every ~30ms; sustain without re-plucking.
 				fallbackTicks:set(index: idx, item: 10);
