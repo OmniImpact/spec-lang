@@ -61,7 +61,7 @@ Class of Widget is Button{
 			if({ width > maxW }, { return maxW; });
 			return width;
 		});
-		local Int is w: label:length() + (padX * 2);
+		local Int is w: label:runeCount() + (padX * 2);
 		if({ w > maxW }, { return maxW; });
 		return w;
 	}
@@ -84,7 +84,7 @@ Class of Widget is Button{
 		local TheoColor is useFg: if({ foc }, { effFocusFg }, { if({ hovered }, { effHoverFg }, { effFg }) });
 		local TheoColor is useBg: if({ foc }, { effFocusBg }, { if({ hovered }, { effHoverBg }, { effBg }) });
 		local Boolean is underlinedShortcut: false;
-		local Int is n: label:length();
+		local Int is n: label:runeCount();
 		local Int is padLeft: 0;
 		if({ boxW > n }, {
 			padLeft: (boxW - n) / 2;
@@ -100,7 +100,7 @@ Class of Widget is Button{
 				if({ py == textRow }, {
 					local Int is li: col - padLeft;
 					if({ li >= 0 && li < n }, {
-						ch: label:charAt(index: li, default: ' ');
+						ch: label:runeAt(runeIndex: li, default: ' ');
 						if({ !underlinedShortcut && shortcut:matchesChar(ch: ch) }, {
 							under: true;
 							underlinedShortcut: true;

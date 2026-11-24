@@ -130,5 +130,6 @@ Class of SpecUnitTest is TestTheoFractal{
 		Assert:isFalse(frame:hasBlockingOverlay());
 
 		frame:paint(buf: buf, renderer: renderer);
+		Assert:isTrue(buf:cellAt(x: 73, y: 18):ch == '▲');
 	}
 }

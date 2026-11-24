@@ -23,10 +23,10 @@ Class is FractalStrings{
 	held String is THEME_WARM: 'Warm';
 	held String is THEME_RAINBOW: 'Rainbow';
 
-	held String is NAV_UP: ' ^ ';
-	held String is NAV_DOWN: ' v ';
-	held String is NAV_LEFT: ' < ';
-	held String is NAV_RIGHT: ' > ';
+	held String is NAV_UP: ' ▲ ';
+	held String is NAV_DOWN: ' ▼ ';
+	held String is NAV_LEFT: ' ◀ ';
+	held String is NAV_RIGHT: ' ▶ ';
 	held String is NAV_ZOOM_IN: ' + ';
 	held String is NAV_ZOOM_OUT: ' - ';
 

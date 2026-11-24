@@ -351,9 +351,12 @@ Class is FractalRenderer{
 		local Float is y: 0.0;
 		local Int is seed: 1337;
 		local Int is i: 0;
-		local Int is total: 65000;
+		local Int is minTotal: 65000;
+		local Int is maxTotal: 1500000;
+		local Int is targetInView: totalPixels * 8;
+		local Int is inViewHits: 0;
 		local Int is maxCount: 1;
-		while({ i < total }, {
+		while({ i < maxTotal && (i < minTotal || inViewHits < targetInView) }, {
 			seed: (seed * 1103515245 + 12345) % 2147483647;
 			if({ seed < 0 }, { seed: -seed; });
 			local Int is r: seed % 100;
@@ -386,6 +389,7 @@ Class is FractalRenderer{
 					local Int is nextCount: counts:get(index: idx) + 1;
 					counts:set(index: idx, item: nextCount);
 					if({ nextCount > maxCount }, { maxCount: nextCount; });
+					inViewHits: inViewHits + 1;
 				});
 			});
 			i: i + 1;
