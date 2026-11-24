@@ -14,7 +14,7 @@ Class of SpecUnitTest is EntryBaseChain{
 
 Class of EntryBaseChain is TestEntryInheritedInit{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()]

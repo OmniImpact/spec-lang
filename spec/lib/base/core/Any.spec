@@ -8,5 +8,5 @@
 ## `namespace`, `init`) likewise.
 
 Class is Any{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 }

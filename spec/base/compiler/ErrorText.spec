@@ -6,7 +6,7 @@
 ## exactly one place.
 
 Class is ErrorText{
-	replace Array of String is namespace: ['base', 'compiler'];
+	replace [String] is namespace: ['base', 'compiler'];
 
 	# --- Lexer Diagnostics ---
 

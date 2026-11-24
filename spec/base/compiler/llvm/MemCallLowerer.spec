@@ -2,9 +2,9 @@
 #! Lowers base:sysinternal:Mem and base:sys:Mem calls directly to LLVM IR intrinsics.
 
 Class of SysinternalCallLowerer is MemCallLowerer{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'llvm', SysinternalCallLowerer],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', Expression],

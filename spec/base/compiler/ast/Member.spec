@@ -2,9 +2,9 @@
 #! One class member: a method, field, or nested class definition.
 
 Class is Member{
-	namespace: ['base', 'compiler', 'ast'];
+	replace [String] is namespace: ['base', 'compiler', 'ast'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', MemberKind],

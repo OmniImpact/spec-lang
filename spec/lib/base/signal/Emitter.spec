@@ -2,9 +2,9 @@
 #! Base reactive signal source managing [Collector] subscriptions.
 
 Class is Emitter{
-	namespace: ['base', 'signal'];
+	replace [String] is namespace: ['base', 'signal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'signal', Collector],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

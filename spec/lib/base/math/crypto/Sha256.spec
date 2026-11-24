@@ -3,9 +3,9 @@
 #! HKDF-SHA256 / HKDF-Expand-Label (RFC 5869, RFC 8446 §7.1).
 
 Class is Sha256{
-	namespace: ['base', 'math', 'crypto'];
+	replace [String] is namespace: ['base', 'math', 'crypto'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

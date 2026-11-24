@@ -3,7 +3,7 @@
 #! grants FUNCTIONS (and nested-class types), never fields.
 
 Class is FieldDep{
-	namespace: ['wallprobe', 'fielddep'];
+	replace [String] is namespace: ['wallprobe', 'fielddep'];
 	String is secretField: 'leaked';
 
 	Function of Int is ok(){

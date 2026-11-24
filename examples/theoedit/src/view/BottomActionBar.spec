@@ -2,9 +2,9 @@
 #! Bottom action bar with Quit (left) and Save, Save As, Open (right) buttons.
 
 Class of Frame is BottomActionBar{
-	namespace: ['theoedit', 'view'];
+	replace [String] is namespace: ['theoedit', 'view'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, Button]],
 		['theoedit', 'util', EditorStrings]
 	];

@@ -14,11 +14,11 @@
 ## `raiseError(try(r))`.
 
 Enum is Result of T to E {
-	Array of Array of String is using: [
+	[[String]] is using: [
 		['base', 'core', SpecError]
 	];
 
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
 	Ok(T is value),
 	Err(SpecError of E is error)

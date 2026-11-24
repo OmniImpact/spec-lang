@@ -19,7 +19,7 @@
 
 Class of SpecUnitTest is TestRegressionMethodResolution{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -55,7 +55,7 @@ Class of SpecUnitTest is TestRegressionMethodResolution{
 ## User class intentionally declaring a method named like an Array builtin.
 Class is UserRecord{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()]
 	];
@@ -75,7 +75,7 @@ Class is UserRecord{
 ## User class intentionally declaring a method named like an Array builtin.
 Class is LogStore{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()]
 	];

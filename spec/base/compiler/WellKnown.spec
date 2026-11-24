@@ -7,9 +7,9 @@
 ## place. Stateless utility: construct-and-call is the whole protocol.
 
 Class is WellKnown{
-	namespace: ['base', 'compiler'];
+	replace [String] is namespace: ['base', 'compiler'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Primitive]
 	];
 

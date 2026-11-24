@@ -3,9 +3,9 @@
 #! deterministic (order, name) order over an IrModule.
 
 Class is OptimizerPipeline{
-	namespace: ['base', 'compiler', 'opt'];
+	replace [String] is namespace: ['base', 'compiler', 'opt'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'opt', SpecOptimizer],
 		['base', 'compiler', 'opt', ConstantFoldPass],
 		['base', 'compiler', 'opt', DevirtPass],

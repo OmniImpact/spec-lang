@@ -7,9 +7,9 @@
 ## `ThreadScope` is rejected at compile time.
 
 Class is ThreadScope{
-	namespace: ['base', 'sys', 'thread'];
+	replace [String] is namespace: ['base', 'sys', 'thread'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', 'thread', ThreadScopeRegistry],

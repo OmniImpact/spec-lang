@@ -2,9 +2,9 @@
 #! Main scrollable text-editing pane for the Theo simple text editor.
 
 Class of Frame is EditorBody{
-	namespace: ['theoedit', 'view'];
+	replace [String] is namespace: ['theoedit', 'view'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'theo', [Frame, Widget, FocusTarget, Panel, CodeTextArea]],
 		['theoedit', 'vm', EditorViewModel]
 	];

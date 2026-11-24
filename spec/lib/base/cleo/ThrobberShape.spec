@@ -2,7 +2,7 @@
 #! Standard shape presets for Cleo shape throbbers.
 
 Enum of String is ThrobberShape {
-	namespace: ['base', 'cleo'],
+	replace [String] is namespace: ['base', 'cleo'];
 	DOT: 'DOT',
 	CIRCLE: 'CIRCLE',
 	CIRCLE_DOT: 'CIRCLE_DOT',

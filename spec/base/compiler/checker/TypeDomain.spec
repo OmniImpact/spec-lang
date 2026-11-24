@@ -5,9 +5,9 @@
 #! never scatters ad-hoc colon-splitting or prefix slicing across passes.
 
 Class is TypeDomain{
-	namespace: ['base', 'compiler', 'checker'];
+	replace [String] is namespace: ['base', 'compiler', 'checker'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Type],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],

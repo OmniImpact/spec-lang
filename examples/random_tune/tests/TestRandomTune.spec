@@ -2,7 +2,7 @@
 
 Class of SpecUnitTest is TestRandomTune{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', as Assert()],
 		['base', 'math', as Math()],

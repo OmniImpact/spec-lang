@@ -8,9 +8,9 @@
 ## are implemented in pure Spec.
 
 Class is Math{
-	namespace: ['base', 'math'];
+	replace [String] is namespace: ['base', 'math'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', Math],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],

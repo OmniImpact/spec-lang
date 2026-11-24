@@ -4,9 +4,9 @@
 #! in-process for diagnostics, hover, go-to-definition, and completion.
 
 Class is SpecLsp{
-	namespace: ['speclsp'];
+	replace [String] is namespace: ['speclsp'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'loader', Loader],

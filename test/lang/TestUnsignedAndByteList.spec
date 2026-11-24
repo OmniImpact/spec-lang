@@ -2,7 +2,7 @@
 #! helpers, while early break/continue via Function of Boolean, and OS CSPRNG.
 
 Class of SpecUnitTest is TestUnsignedAndByteList{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

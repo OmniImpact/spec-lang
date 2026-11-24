@@ -3,9 +3,9 @@
 #! and clean programs.
 
 Class of SpecUnitTest is TestSpecChecker{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -102,7 +102,7 @@ Class of SpecUnitTest is TestSpecChecker{
 
 	Function is testNonExhaustiveMatchDiagnostic(){
 		local Array of String is e6: :checkOf(src: "Enum of String is Level { NONE: '', ERR: 'E' }
-Class is F{ replace Array of Array of String is using: [['base', 'sys', as Conditional()]]; replace Function is init(Map of String to String is args){
+Class is F{ replace [[String]] is using: [['base', 'sys', as Conditional()]]; replace Function is init(Map of String to String is args){
 	local Level is lv: Level:ERR;
 	local String is tag: Conditional:match(on: lv, when: [
 		Level:ERR: { 'e' }
@@ -113,7 +113,7 @@ Class is F{ replace Array of Array of String is using: [['base', 'sys', as Condi
 	}
 
 	Function is testBooleanConditionTyping(){
-		local Array of String is e7: :checkOf(src: "Class is G{ replace Array of Array of String is using: [['base', 'sys', as Loops()]]; replace Function is init(Map of String to String is args){ local Int is n: 0; while(evaluate: local Function of Boolean(){ return 1; }, iteration: local Function(){ n: n + 1; }); } }");
+		local Array of String is e7: :checkOf(src: "Class is G{ replace [[String]] is using: [['base', 'sys', as Loops()]]; replace Function is init(Map of String to String is args){ local Int is n: 0; while(evaluate: local Function of Boolean(){ return 1; }, iteration: local Function(){ n: n + 1; }); } }");
 		Assert:isTrue(e7:length() > 0);
 	}
 
@@ -151,7 +151,7 @@ Class is K{ replace Function is init(Map of String to String is args){ local Cat
 	}
 
 	Function is testCastableReturnTypeMismatch(){
-		local Array of String is e13: :checkOf(src: "Class is M{ castable: [[Int, broken]]; Function of String is broken(){ return 'x'; } }
+		local Array of String is e13: :checkOf(src: "Class is M{ replace Map of Any to Function is castable: [Int: broken]; Function of String is broken(){ return 'x'; } }
 Class is N{ replace Function is init(Map of String to String is args){ local M is m: M:init(); local Int is n: m as Int; } }");
 		Assert:isTrue(e13:length() >= 1);
 		Assert:isTrue(e13:get(index: 0):contains(needle: "returns 'String', not 'Int'"));

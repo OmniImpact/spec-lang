@@ -7,5 +7,5 @@
 ## same-name wrapper (the sysinternal discipline).
 
 Class of base:sysinternal:Loadable is Loadable{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 }

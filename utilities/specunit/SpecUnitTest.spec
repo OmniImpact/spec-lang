@@ -21,9 +21,9 @@
 #! Subclasses override with the standard `replace` discipline.
 
 Class is SpecUnitTest{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitRunner],
 		['specunit', Assert],
 		['base', 'core', SpecError],

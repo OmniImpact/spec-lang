@@ -2,7 +2,7 @@
 #! Backend-agnostic scalar/pointer IR types.
 
 Enum is IrType {
-	namespace: ['base', 'compiler', 'ir'],
+	replace [String] is namespace: ['base', 'compiler', 'ir'];
 
 	Void,
 	I1,

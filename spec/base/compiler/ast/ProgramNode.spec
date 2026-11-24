@@ -3,9 +3,9 @@
 ## order.
 
 Class is ProgramNode{
-	namespace: ['base', 'compiler', 'ast'];
+	replace [String] is namespace: ['base', 'compiler', 'ast'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', ClassInfo]
 	];
 

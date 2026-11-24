@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestPhase6Codegen{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -34,7 +34,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 	## spelled in the current language (as-Output import, replace
 	## Function init, class-prefixed Output:line call).
 	Function of String is fixtureSource(){
-		return "Class is HelloCodegen{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(Map of String to String is args){\n\t\tlocal String is msg: \"Hello from Pure Spec Code Generator!\";\n\t\tOutput:line(msg);\n\t}\n}";
+		return "Class is HelloCodegen{\n\treplace [[String]] is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(Map of String to String is args){\n\t\tlocal String is msg: \"Hello from Pure Spec Code Generator!\";\n\t\tOutput:line(msg);\n\t}\n}";
 	}
 
 	# Step 1: lexing & parsing the target program.

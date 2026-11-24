@@ -2,9 +2,9 @@
 #! Focusable, scrollable list widget with Up/Down selection and Enter activation.
 
 Class of Widget is ListView{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];

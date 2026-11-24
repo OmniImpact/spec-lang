@@ -3,9 +3,9 @@
 #! Every request executes on a ThreadScope worker thread with onSuccess / onError callbacks.
 
 Class is Http{
-	namespace: ['base', 'net'];
+	replace [String] is namespace: ['base', 'net'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'net', HttpError],
 		['base', 'net', Url],

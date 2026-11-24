@@ -2,7 +2,7 @@
 #! Centralized UI strings, labels, shortcut keys, and message formatters for theoedit.
 
 Class is EditorStrings{
-	namespace: ['theoedit', 'util'];
+	replace [String] is namespace: ['theoedit', 'util'];
 
 	held String is UNTITLED: '[untitled]';
 	held String is STATUS_DEFAULT: 'Ctrl+M: menu';

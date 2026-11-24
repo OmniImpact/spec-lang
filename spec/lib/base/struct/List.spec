@@ -8,9 +8,9 @@
 ## successful answer, plus an optional error: callback invoked in addition when
 ## a problem occurs. Bracket indexing is not provided on List; use get.
 Class of Mergeable is List of T{
-	namespace: ['base', 'struct'];
+	replace [String] is namespace: ['base', 'struct'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', Mergeable],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],

@@ -13,7 +13,7 @@
 
 Class of SpecUnitTest is TestInnerClass{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -53,7 +53,7 @@ Class of SpecUnitTest is TestInnerClass{
 	## A second inner declaring its OWN additional import: scopes to it
 	## and its contents only.
 	Class is MathUser{
-		replace Array of Array of String is using: [
+		replace [[String]] is using: [
 			['base', 'math', as Math()]
 		];
 

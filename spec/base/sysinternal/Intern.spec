@@ -17,9 +17,9 @@
 ##   offset  8: spinlock  (atomic i64: 0 = unlocked, 1 = locked)
 
 Class is Intern{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', as Mem()],
 		['base', 'sysinternal', as Conditional()],
 		['base', 'sysinternal', as Loops()]

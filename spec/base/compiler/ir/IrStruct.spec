@@ -2,9 +2,9 @@
 #! Struct layout descriptor in an IR module.
 
 Class is IrStruct{
-	namespace: ['base', 'compiler', 'ir'];
+	replace [String] is namespace: ['base', 'compiler', 'ir'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ir', IrType],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],

@@ -2,9 +2,9 @@
 #! Enforces tab indentation inside multi-line `[...]` arrays/maps and `(...)` call/group blocks.
 
 Class of LintRule is BracketIndentationRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['speclint', SourceMasker],

@@ -2,9 +2,9 @@
 #! Dynamic message/prompt panel shown between the editor and bottom action bar.
 
 Class of Frame is MessagePanel{
-	namespace: ['theoedit', 'view'];
+	replace [String] is namespace: ['theoedit', 'view'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, TextLine, Button]],
 		['theoedit', 'util', EditorStrings],
 		['theoedit', 'vm', EditorViewModel]

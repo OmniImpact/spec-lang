@@ -4,7 +4,7 @@
 ## Callback interface for handling interactive user console input from [Input:prompt].
 
 Class is InputHandler{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
 	## Invoked when a line of user input is received.
 	##

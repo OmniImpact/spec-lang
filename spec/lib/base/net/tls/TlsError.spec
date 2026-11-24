@@ -9,7 +9,7 @@
 ## established session — the specific text rides the SpecError description.
 
 Enum is TlsError {
-	namespace: ['base', 'net', 'tls'];
+	replace [String] is namespace: ['base', 'net', 'tls'];
 	CONNECT_FAILED,
 	HANDSHAKE_FAILED,
 	CERT_VERIFY_FAILED,

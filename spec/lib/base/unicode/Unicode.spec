@@ -3,9 +3,9 @@
 #! extended grapheme cluster segmentation (UAX #29), and canonical normalization (UAX #15).
 
 Class is Unicode{
-	namespace: ['base', 'unicode'];
+	replace [String] is namespace: ['base', 'unicode'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Lazy()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],

@@ -6,9 +6,9 @@
 ## Used across compiler diagnostics, tokens, and runtime stack frames.
 
 Class is SourceLocation{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 

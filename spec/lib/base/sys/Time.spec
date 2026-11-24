@@ -3,9 +3,9 @@
 #! synchronous deadline-scheduled timers, and asynchronous callback timers.
 
 Class is Time{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', Time],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],

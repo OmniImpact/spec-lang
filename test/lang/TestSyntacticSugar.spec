@@ -7,7 +7,7 @@
 
 Class of SpecUnitTest is TestSyntacticSugar{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -144,7 +144,7 @@ Class of SpecUnitTest is TestSyntacticSugar{
 
 Class is Issue{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()]

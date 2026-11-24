@@ -4,9 +4,9 @@
 #! keeping all intermediate products safely within signed 64-bit Int.
 
 Class is X25519{
-	namespace: ['base', 'math', 'crypto'];
+	replace [String] is namespace: ['base', 'math', 'crypto'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

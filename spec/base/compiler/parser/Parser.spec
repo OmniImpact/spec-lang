@@ -12,9 +12,9 @@
 ## report more than one problem per run.
 
 Class is Parser{
-	namespace: ['base', 'compiler', 'parser'];
+	replace [String] is namespace: ['base', 'compiler', 'parser'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', TokenKind],
 		['base', 'compiler', 'lexer', Keyword],

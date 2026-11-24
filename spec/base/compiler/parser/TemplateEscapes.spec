@@ -5,9 +5,9 @@
 #! expansion. Unknown escapes pass the escaped character through.
 
 Class is TemplateEscapes{
-	namespace: ['base', 'compiler', 'parser'];
+	replace [String] is namespace: ['base', 'compiler', 'parser'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 

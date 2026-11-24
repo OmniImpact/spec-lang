@@ -3,7 +3,7 @@
 ## Splits comma-separated text lines into row arrays.
 Class is CsvParser{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]

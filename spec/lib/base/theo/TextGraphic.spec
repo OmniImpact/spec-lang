@@ -2,9 +2,9 @@
 #! Multi-line preformatted Unicode/ASCII graphic display widget.
 
 Class of Widget is TextGraphic{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', Widget],
 		['base', 'theo', TheoColor],
 		['base', 'theo', TheoBuffer],

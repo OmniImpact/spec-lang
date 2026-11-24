@@ -5,7 +5,7 @@
 ## Demonstrates scoped region desugaring (`as`) for resource management and timing.
 Class is ScopeAsDemo{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],

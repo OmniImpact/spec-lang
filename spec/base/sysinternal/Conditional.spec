@@ -4,7 +4,7 @@
 #! this one item binds to C.
 
 Class is Conditional{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Runs [then] exactly when [check] holds.
 	##

@@ -2,9 +2,9 @@
 #! Flags unnecessary leading `:` (`self:`) on fields and method calls when not shadowed by a local or parameter.
 
 Class of LintRule is UnnecessarySelfColonRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', ClassInfo],

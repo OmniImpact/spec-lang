@@ -7,7 +7,7 @@
 ## (errno text rides the description), and malformed URLs.
 
 Enum is NetError {
-	namespace: ['base', 'net'];
+	replace [String] is namespace: ['base', 'net'];
 	CONNECT_FAILED,
 	LISTEN_FAILED,
 	IO_ERROR,

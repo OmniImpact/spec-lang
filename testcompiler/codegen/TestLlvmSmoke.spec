@@ -8,9 +8,9 @@
 #!      type-checks a sample program cleanly.
 
 Class of SpecUnitTest is TestLlvmSmoke{
-	namespace: ['testllvm'];
+	replace [String] is namespace: ['testllvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

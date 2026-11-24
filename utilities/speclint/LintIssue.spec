@@ -3,9 +3,9 @@
 
 ## Represents an issue or diagnostic notice detected by the Spec linter.
 Class is LintIssue{
-	namespace: ['speclint'];
+	replace [String] is namespace: ['speclint'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 

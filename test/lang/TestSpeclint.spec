@@ -3,7 +3,7 @@
 
 Class of SpecUnitTest is TestSpeclint{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -158,7 +158,7 @@ Class of SpecUnitTest is TestSpeclint{
 	}
 
 	Function is testUnusedUsingWarns(){
-		local [LintIssue] is issues: :lintSource(src: "Class is F{\n\treplace Array of Array of String is using: [\n\t\t['base', 'struct', Map]\n\t];\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		local [LintIssue] is issues: :lintSource(src: "Class is F{\n\treplace [[String]] is using: [\n\t\t['base', 'struct', Map]\n\t];\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
 		Assert:areEqualInt(1, :countKind(issues: issues, wantWarnings: true));
 	}
 
@@ -175,18 +175,18 @@ Class of SpecUnitTest is TestSpeclint{
 	}
 
 	Function is testMergeUsingNotice(){
-		local [LintIssue] is bad: :lintSource(src: "Class is F{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Conditional()],\n\t\t['base', 'sys', as Loops()]\n\t];\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		local [LintIssue] is bad: :lintSource(src: "Class is F{\n\treplace [[String]] is using: [\n\t\t['base', 'sys', as Conditional()],\n\t\t['base', 'sys', as Loops()]\n\t];\n\tFunction is go(){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
 		Assert:areEqualInt(0, :countKind(issues: bad, wantWarnings: true));
 		Assert:areEqualInt(1, :countKind(issues: bad, wantWarnings: false));
-		local [LintIssue] is good: :lintSource(src: "Class is F{\n\tmerge Array of Array of String is using: [\n\t\t['base', 'struct', Map]\n\t];\n\tFunction is go(Map of String to Int is m){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		local [LintIssue] is good: :lintSource(src: "Class is F{\n\tmerge [[String]] is using: [\n\t\t['base', 'struct', Map]\n\t];\n\tFunction is go(Map of String to Int is m){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
 		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: false));
 	}
 
 	Function is testCompactUsingNotice(){
-		local [LintIssue] is bad: :lintSource(src: "Class is F{\n\tmerge Array of Array of String is using: [\n\t\t['base', 'theo', Panel],\n\t\t['base', 'theo', Row],\n\t\t['base', 'theo', Button]\n\t];\n\tFunction is go(Panel is p, Row is r, Button is b){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		local [LintIssue] is bad: :lintSource(src: "Class is F{\n\tmerge [[String]] is using: [\n\t\t['base', 'theo', Panel],\n\t\t['base', 'theo', Row],\n\t\t['base', 'theo', Button]\n\t];\n\tFunction is go(Panel is p, Row is r, Button is b){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
 		Assert:areEqualInt(0, :countKind(issues: bad, wantWarnings: true));
 		Assert:areEqualInt(1, :countKind(issues: bad, wantWarnings: false));
-		local [LintIssue] is good: :lintSource(src: "Class is F{\n\tmerge Array of Array of String is using: [\n\t\t['base', 'theo', [Panel, Row, Button]]\n\t];\n\tFunction is go(Panel is p, Row is r, Button is b){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
+		local [LintIssue] is good: :lintSource(src: "Class is F{\n\tmerge [[String]] is using: [\n\t\t['base', 'theo', [Panel, Row, Button]]\n\t];\n\tFunction is go(Panel is p, Row is r, Button is b){\n\t\tlocal Int is x: 1;\n\t}\n}\n");
 		Assert:areEqualInt(0, :countKind(issues: good, wantWarnings: false));
 	}
 

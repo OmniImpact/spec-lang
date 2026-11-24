@@ -8,9 +8,9 @@
 #! See KNOWLEDGE-SPECDEV.md §4a.
 
 Class is Assert{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitState],
 		['specunit', CheckRecord],
 		['specunit', AssertHelper],

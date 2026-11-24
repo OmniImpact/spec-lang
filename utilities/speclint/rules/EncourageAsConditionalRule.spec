@@ -2,9 +2,9 @@
 #! Flags explicit calls to Conditional methods, encouraging the 'as Conditional()' import.
 
 Class of LintRule is EncourageAsConditionalRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', Expression],

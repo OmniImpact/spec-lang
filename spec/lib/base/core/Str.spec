@@ -7,9 +7,9 @@
 ## without any Unicode table or checkpoint overhead.
 
 Class of Buf is Str{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', Buf],
 		['base', 'sys', as Buf()],
 		['base', 'sys', as Mem()],
@@ -19,8 +19,8 @@ Class of Buf is Str{
 	];
 
 	## Declared casts: a Str produces an Int through its parser.
-	castable: [
-		[Int, parseInt]
+	replace Map of Any to Function is castable: [
+		Int: parseInt
 	];
 
 	## Number of bytes in this string.

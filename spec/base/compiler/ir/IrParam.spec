@@ -2,9 +2,9 @@
 #! One parameter in an IR function signature.
 
 Class is IrParam{
-	namespace: ['base', 'compiler', 'ir'];
+	replace [String] is namespace: ['base', 'compiler', 'ir'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ir', IrType]
 	];
 

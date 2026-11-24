@@ -2,9 +2,9 @@
 #! Stateful source masking for indentation, brace, and whitespace lint rules.
 
 Class is SourceMasker{
-	namespace: ['speclint'];
+	replace [String] is namespace: ['speclint'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];

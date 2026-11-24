@@ -2,9 +2,9 @@
 #! Top bar frame displaying the active file name and status hint.
 
 Class of Frame is TopBar{
-	namespace: ['theoedit', 'view'];
+	replace [String] is namespace: ['theoedit', 'view'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'theo', [Frame, Widget, Panel, Row, Spacer, TextLine]],
 		['base', 'signal', TextEmitter]
 	];

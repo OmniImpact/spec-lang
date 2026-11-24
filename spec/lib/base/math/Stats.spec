@@ -3,9 +3,9 @@
 
 ## Aggregate and statistical operations over numeric arrays (`min`, `max`, `sum`, `average`, `median`, `variance`, `stdDev`).
 Class is Stats{
-	namespace: ['base', 'math'];
+	replace [String] is namespace: ['base', 'math'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'math', as Math()],
 		['base', 'sys', as Loops()],

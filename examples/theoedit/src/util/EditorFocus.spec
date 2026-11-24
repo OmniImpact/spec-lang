@@ -2,7 +2,7 @@
 #! Focus and hover targets for the main editor screen.
 
 Enum is EditorFocus{
-	namespace: ['theoedit', 'util'],
+	replace [String] is namespace: ['theoedit', 'util'];
 	NONE,
 	EDITOR,
 	SAVE,

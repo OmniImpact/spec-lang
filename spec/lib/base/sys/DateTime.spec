@@ -3,9 +3,9 @@
 #! duration arithmetic, and ISO-8601 formatting.
 
 Class is DateTime{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Time()],
 		['base', 'sys', as Conditional()]
 	];

@@ -7,9 +7,9 @@
 ##   slot 5: pool_cap   (i64 allocated slot capacity)
 
 Class is Pool{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', as Mem()],
 		['base', 'sysinternal', as Conditional()],
 		['base', 'sysinternal', as Loops()],

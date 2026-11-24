@@ -2,9 +2,9 @@
 #! Styled container with foreground/background colors, border, padding, and optional scrolling.
 
 Class of Widget is Panel{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, TheoColor, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];

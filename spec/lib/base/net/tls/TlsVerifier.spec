@@ -3,9 +3,9 @@
 #! layered over base:math:crypto:X509 certificate chain verification.
 
 Class is TlsVerifier{
-	namespace: ['base', 'net', 'tls'];
+	replace [String] is namespace: ['base', 'net', 'tls'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', 'crypto', X509Cert],
 		['base', 'math', 'crypto', as X509()],
 		['base', 'struct', Array],

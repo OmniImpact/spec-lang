@@ -2,9 +2,9 @@
 #! Network socket interface for TCP client and server communication.
 
 Class is Socket{
-	namespace: ['base', 'net'];
+	replace [String] is namespace: ['base', 'net'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'net', NetError],
 		['base', 'struct', List],

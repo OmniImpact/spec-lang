@@ -2,9 +2,9 @@
 #! One fixed-size or weight-based pane inside a [Grid].
 
 Class is GridPane{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', Widget]
 	];
 

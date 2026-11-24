@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestHeldMetadata{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -48,7 +48,7 @@ Class of SpecUnitTest is TestHeldMetadata{
 }
 
 Class is HeldMetaMixed{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	held String is tag: 'meta';
 	local Int is instanceField: 9;
@@ -58,7 +58,7 @@ Class is HeldMetaMixed{
 }
 
 Class is HeldMetaPlain{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	local String is nothing: 'held';
 }

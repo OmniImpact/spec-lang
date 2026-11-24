@@ -2,9 +2,9 @@
 #! The console output wrapper: the Spec-side names over the console floor.
 
 Class is Output{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Console]

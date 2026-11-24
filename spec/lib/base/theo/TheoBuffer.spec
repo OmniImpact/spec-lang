@@ -2,9 +2,9 @@
 #! 2D virtual terminal cell buffer with clipping and drawing primitives.
 
 Class is TheoBuffer{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', TheoCell],
 		['base', 'theo', TheoColor],
 		['base', 'sys', as Conditional()],

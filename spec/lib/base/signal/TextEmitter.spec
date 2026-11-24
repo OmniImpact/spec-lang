@@ -2,9 +2,9 @@
 #! String-specialized [Emitter] convenience subclass with text combinators.
 
 Class of Emitter is TextEmitter{
-	namespace: ['base', 'signal'];
+	replace [String] is namespace: ['base', 'signal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'signal', Emitter],
 		['base', 'signal', Collector],
 		['base', 'signal', TextCollector],

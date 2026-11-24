@@ -7,9 +7,9 @@
 ## relative resolution, temp directories, home directories, and cache locations.
 
 Class is Uri{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],

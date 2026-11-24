@@ -6,7 +6,7 @@
 #! class-name prefix. The field wall (§2.3).
 
 Class is N26FieldWall{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['wallprobe', 'fielddep', as FieldDep()]
 	];
 

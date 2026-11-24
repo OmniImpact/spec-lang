@@ -7,16 +7,16 @@
 ## base enum.
 
 Enum is Expression {
-	namespace: ['base', 'compiler', 'ast'],
+	replace [String] is namespace: ['base', 'compiler', 'ast'];
 
-	using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'sys', as Conditional()]
-	],
+	];
 
 	StringLit(String is value),
 	NumberLit(Int is value, String is text),

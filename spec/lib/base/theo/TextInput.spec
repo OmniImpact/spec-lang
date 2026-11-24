@@ -2,9 +2,9 @@
 #! Single-line focusable text input widget.
 
 Class of Widget is TextInput{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'sys', as Conditional()]
 	];

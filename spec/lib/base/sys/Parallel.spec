@@ -8,9 +8,9 @@
 ## distinct, deterministic RNG seed.
 
 Class is Parallel{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Defer()],

@@ -16,9 +16,9 @@
 ## name/ordinal with their field readers, also synthesized.
 
 Class of Loadable is Enum{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()]
 	];

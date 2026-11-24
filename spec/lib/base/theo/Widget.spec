@@ -2,9 +2,9 @@
 #! Base layout and painting node for all Theo UI widgets and containers.
 
 Class is Widget{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoTheme, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', as Conditional()]
 	];

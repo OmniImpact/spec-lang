@@ -5,9 +5,9 @@
 ## reflection over the module-level @spec_class_registry and @spec_held_registry tables.
 
 Class of Any is Introspection{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],

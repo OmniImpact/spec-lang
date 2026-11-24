@@ -9,9 +9,9 @@
 ## `sliceRunes`, `codePoints`).
 
 Class of Str is String{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', Str],
 		['base', 'sys', as Buf()],
 		['base', 'sys', as Mem()],
@@ -21,8 +21,8 @@ Class of Str is String{
 	];
 
 	## Declared casts: a String produces an Int through its parser.
-	castable: [
-		[Int, parseInt]
+	replace Map of Any to Function is castable: [
+		Int: parseInt
 	];
 
 	## Encodes Unicode scalar value [code] (`U+0000..U+10FFFF`, excluding

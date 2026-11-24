@@ -5,7 +5,7 @@
 #! and construction require the import (§I.6, Option A).
 
 Class is N18UnimportedType {
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['n18', 'mid', GMid],
 		['base', 'sys', as Output()]
 	];

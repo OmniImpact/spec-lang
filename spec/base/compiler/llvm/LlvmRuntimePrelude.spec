@@ -4,9 +4,9 @@
 #! math intrinsics, CLI arguments, and atomic slots).
 
 Class is LlvmRuntimePrelude{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 

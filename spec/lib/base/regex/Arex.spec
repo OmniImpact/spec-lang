@@ -10,9 +10,9 @@
 ## temporary scope and wait for completion before returning.
 
 Class is Arex{
-	namespace: ['base', 'regex'];
+	replace [String] is namespace: ['base', 'regex'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', Str],
 		['base', 'core', String],
 		['base', 'core', SpecError],

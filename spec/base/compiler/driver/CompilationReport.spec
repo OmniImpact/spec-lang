@@ -6,9 +6,9 @@
 ## place (including the Phase-G7 json emitter later).
 
 Class is CompilationReport{
-	namespace: ['base', 'compiler', 'driver'];
+	replace [String] is namespace: ['base', 'compiler', 'driver'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],

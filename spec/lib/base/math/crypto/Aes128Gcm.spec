@@ -2,9 +2,9 @@
 #! Pure-Spec AES-128-GCM AEAD (FIPS 197 + NIST SP 800-38D).
 
 Class is Aes128Gcm{
-	namespace: ['base', 'math', 'crypto'];
+	replace [String] is namespace: ['base', 'math', 'crypto'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

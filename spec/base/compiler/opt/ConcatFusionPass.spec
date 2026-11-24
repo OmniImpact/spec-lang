@@ -5,9 +5,9 @@
 #! and fuses chains of >= 2 calls into a single pre-sized buffer write.
 
 Class of SpecOptimizer is ConcatFusionPass{
-	namespace: ['base', 'compiler', 'opt'];
+	replace [String] is namespace: ['base', 'compiler', 'opt'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'opt', SpecOptimizer],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'ir', IrFunction],

@@ -10,9 +10,9 @@
 #! field-reader name/ordinal replace the root's reflective scan.
 
 Class is EnumDesugar{
-	namespace: ['base', 'compiler', 'parser'];
+	replace [String] is namespace: ['base', 'compiler', 'parser'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],

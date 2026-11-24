@@ -3,7 +3,7 @@
 
 Class of SpecUnitTest is TestJson{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -162,7 +162,7 @@ Class of SpecUnitTest is TestJson{
 		Assert:compilerRejects(
 			source: '''
 Class is SideChannelCaller{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'data', as Json()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -178,7 +178,7 @@ Class is SideChannelCaller{
 		Assert:compilerRejects(
 			source: '''
 Class is SilentCaller{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'data', as Json()]
 	];
 	replace Function is init(Map of String to String is args){

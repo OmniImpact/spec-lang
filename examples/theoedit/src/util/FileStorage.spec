@@ -2,9 +2,9 @@
 #! File persistence utility used by ViewModels to read and write document text.
 
 Class is FileStorage{
-	namespace: ['theoedit', 'util'];
+	replace [String] is namespace: ['theoedit', 'util'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', FileError],
 		['base', 'sys', as File()]

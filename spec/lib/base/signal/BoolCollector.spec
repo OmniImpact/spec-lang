@@ -2,9 +2,9 @@
 #! Boolean-specialized [Collector] convenience subclass.
 
 Class of Collector is BoolCollector{
-	namespace: ['base', 'signal'];
+	replace [String] is namespace: ['base', 'signal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'signal', Collector],
 		['base', 'sys', as Conditional()]
 	];

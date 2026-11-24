@@ -2,7 +2,7 @@
 #! Base reactive signal subscriber receiving values emitted by an [Emitter].
 
 Class is Collector{
-	namespace: ['base', 'signal'];
+	replace [String] is namespace: ['base', 'signal'];
 
 	Boolean is active: true;
 

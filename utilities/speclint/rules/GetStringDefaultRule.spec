@@ -2,9 +2,9 @@
 #! Advises on getString method calls with explicit default parameter.
 
 Class of LintRule is GetStringDefaultRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', Expression],

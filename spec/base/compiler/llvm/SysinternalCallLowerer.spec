@@ -5,9 +5,9 @@
 ## Each subclass owns one sysinternal domain (Console, Process, File, etc.).
 
 Class of CallLowerer is SysinternalCallLowerer{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', ClassInfo],

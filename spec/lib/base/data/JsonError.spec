@@ -7,7 +7,7 @@
 ## structure/type mismatches on typed getters, and absent keys.
 
 Enum is JsonError {
-	namespace: ['base', 'data'];
+	replace [String] is namespace: ['base', 'data'];
 	SYNTAX_ERROR,
 	TYPE_MISMATCH,
 	MISSING_KEY

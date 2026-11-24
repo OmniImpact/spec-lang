@@ -2,9 +2,9 @@
 #! Thread-safe per-thread stack of active `ThreadScope` addresses.
 
 Class is ThreadScopeRegistry{
-	namespace: ['base', 'sys', 'thread'];
+	replace [String] is namespace: ['base', 'sys', 'thread'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Conditional()],

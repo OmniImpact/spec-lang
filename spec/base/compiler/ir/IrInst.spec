@@ -2,11 +2,11 @@
 #! Typed IR instructions for a basic block.
 
 Enum is IrInst {
-	namespace: ['base', 'compiler', 'ir'],
+	replace [String] is namespace: ['base', 'compiler', 'ir'];
 
-	using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ir', IrType]
-	],
+	];
 
 	ConstInt(String is dst, Int is value),
 	ConstIntTy(String is dst, Int is value, IrType is ty),

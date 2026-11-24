@@ -3,7 +3,7 @@
 ## Interactive Blackjack game coordinating player input, dealer loop, and outcome scoring.
 Class is Blackjack{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator', Loop],
@@ -26,7 +26,7 @@ Class is Blackjack{
 	## Loop driving the dealer's hit-until-17 turn.
 	Class of Loop is DealerTurnLoop{
 
-		replace Array of Array of String is using: [
+		replace [[String]] is using: [
 			['base', 'sys', as Output()]
 		];
 		local Blackjack is game;
@@ -53,7 +53,7 @@ Class is Blackjack{
 	## Callback invoked when the dealer loop finishes to score the round.
 	Class of LoopCallback is DealerTurnCompleteCallback{
 
-		replace Array of Array of String is using: [
+		replace [[String]] is using: [
 			['base', 'sys', as Output()]
 		];
 		local Blackjack is game;
@@ -72,7 +72,7 @@ Class is Blackjack{
 	## Console input handler for player `(h)it` / `(s)tand` commands.
 	Class of InputHandler is PlayerTurnHandler{
 
-		replace Array of Array of String is using: [
+		replace [[String]] is using: [
 			['base', 'sys', as Output()],
 			['base', 'sys', as Conditional()]
 		];

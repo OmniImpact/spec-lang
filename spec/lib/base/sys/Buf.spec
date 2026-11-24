@@ -2,9 +2,9 @@
 #! Generic byte-buffer operations implemented in pure Spec over Mem.
 
 Class is Buf{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],

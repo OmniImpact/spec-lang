@@ -8,7 +8,7 @@
 ## operator".
 
 Enum of String is Operator {
-	namespace: ['base', 'compiler', 'lexer'],
+	replace [String] is namespace: ['base', 'compiler', 'lexer'];
 	NONE: '',
 	EQ: '==',
 	NE: '!=',

@@ -2,9 +2,9 @@
 #! A stacked content section within a Cleo surface, with its own title and colors.
 
 Class is CleoSection{
-	namespace: ['base', 'cleo'];
+	replace [String] is namespace: ['base', 'cleo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', CleoColor],
 		['base', 'cleo', as CleoColor()],
 		['base', 'cleo', CleoSlot],

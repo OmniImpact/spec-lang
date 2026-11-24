@@ -3,9 +3,9 @@
 
 ## In-place and copying sorting utilities for arrays of integers, strings, and custom-compared items.
 Class is Sort{
-	namespace: ['base', 'struct'];
+	replace [String] is namespace: ['base', 'struct'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]

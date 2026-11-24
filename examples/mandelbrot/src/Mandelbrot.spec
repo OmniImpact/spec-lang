@@ -4,7 +4,7 @@
 ## Terminal 256-color Mandelbrot renderer supporting shaded ASCII and half-block modes.
 Class is Mandelbrot{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],

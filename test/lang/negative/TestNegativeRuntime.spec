@@ -1,5 +1,5 @@
 Class of SpecUnitTest is TestNegativeRuntime{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', Assert],
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner]
@@ -30,7 +30,7 @@ Class is HeldEntry2{
 }
 
 Class is HeldPanicRegistry{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 
@@ -56,7 +56,7 @@ Class is HeldResolverPanicTest{
 		Assert:runFails(
 			source: '''
 Class of SpecUnitTest is TestBadSignature{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner]
 	];
@@ -73,7 +73,7 @@ Class of SpecUnitTest is TestBadSignature{
 		Assert:runFails(
 			source: '''
 Class of SpecUnitTest is TestEmptySuite{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner]
 	];

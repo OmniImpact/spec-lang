@@ -1,7 +1,7 @@
 #! Tests for base:sys:OsDispatch abstract OS dispatch.
 
 Class of SpecUnitTest is TestOsDispatch{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -33,7 +33,7 @@ Class of SpecUnitTest is TestOsDispatch{
 }
 
 Class of OsDispatch is SampleOsGreeting{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', OsDispatch]
 	];
 

@@ -5,7 +5,7 @@
 
 Class of SpecUnitTest is TestHeldMethods{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()]
@@ -48,7 +48,7 @@ Class of SpecUnitTest is TestHeldMethods{
 }
 
 Class is HeldMath{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	held Int is scale: 3;
 
@@ -73,7 +73,7 @@ Class is HeldMath{
 }
 
 Class is HeldCounter{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	local Int is value: 0;
 
@@ -87,7 +87,7 @@ Class is HeldCounter{
 }
 
 Class is HeldMathUser{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	Function of Boolean is crossClassCall(){
 		# A public held function called through the class-name prefix

@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestLoops{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'iterator', LoopControl],
 		['base', 'iterator', LoopCallback],
 		['specunit', SpecUnitTest],

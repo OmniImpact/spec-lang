@@ -110,7 +110,7 @@ Class is N21GroupCaller{
 #! case: testUnconstructibleSpecUnit
 #! expect: does not implement abstract member 'init' required by parent 'SpecUnitTest'
 Class of SpecUnitTest is TestUnconstructible{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner]
 	];

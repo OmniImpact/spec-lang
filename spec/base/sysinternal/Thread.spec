@@ -2,7 +2,7 @@
 #! OS thread, mutex, and condition-variable floor declarations.
 
 Class is Thread{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Spawns an OS thread executing [task] and returns its thread handle (`0` if run inline).
 	## Bound to `spec_thread_spawn`.

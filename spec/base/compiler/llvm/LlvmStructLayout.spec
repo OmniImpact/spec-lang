@@ -6,9 +6,9 @@
 ## '{ ptr, ptr, i32 }' literals or magic GEP offsets.
 
 Class is LlvmStructLayout{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

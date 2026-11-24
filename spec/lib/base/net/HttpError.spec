@@ -7,7 +7,7 @@
 ## and non-success status lines (the detail rides the description).
 
 Enum is HttpError {
-	namespace: ['base', 'net'];
+	replace [String] is namespace: ['base', 'net'];
 	CONNECTION_FAILED,
 	SEND_FAILED,
 	INVALID_RESPONSE,

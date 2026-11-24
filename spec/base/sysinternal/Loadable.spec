@@ -19,11 +19,11 @@
 ## absent.
 
 Class of Any is Loadable{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
-	replace Array of Array of String is using: [];
+	replace [[String]] is using: [];
 
-	replace Array of String is namespace: [];
+	replace Map of Any to Function is castable: [:];
 
 	replace Function is init(){
 		return;

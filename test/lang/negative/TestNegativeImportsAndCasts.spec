@@ -3,7 +3,7 @@
 #! case: testTypeImportNonInitMember
 #! expect: Members of 'Math' are callable only through an instance
 Class is N4{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', Math]
 	];
 	replace Function is init(Map of String to String is args){
@@ -14,7 +14,7 @@ Class is N4{
 #! case: testDuplicateAsImport
 #! expect: instance-imports 'Math' more than once
 Class is N5{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', as Math()],
 		['base', 'math', as Math()]
 	];
@@ -25,7 +25,7 @@ Class is N5{
 #! expect: must be direct literal values
 Class is N7{
 	local Int is seed: 3;
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', as Math(seed)]
 	];
 	replace Function is init(Map of String to String is args){}
@@ -34,7 +34,7 @@ Class is N7{
 #! case: testCannotAsImportEnum
 #! expect: Cannot instance-import enum 'MemberKind'
 Class is N8{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', as MemberKind()]
 	];
 	replace Function is init(Map of String to String is args){}
@@ -44,7 +44,7 @@ Class is N8{
 #! expect: Undefined function 'floor' on class 'N27'
 Class is N27{
 	Class is Inner{
-		replace Array of Array of String is using: [
+		replace [[String]] is using: [
 			['base', 'math', as Math()]
 		];
 		replace Function is init(){}

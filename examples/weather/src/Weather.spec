@@ -3,7 +3,7 @@
 #! thread with callbacks and renders the forecast in a SpecUnit-style Cleo UI.
 
 Class is Weather{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],

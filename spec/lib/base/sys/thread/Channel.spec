@@ -5,9 +5,9 @@
 ## monomorphized `Array of T` storage (no fixed caps on unbounded channels).
 
 Class is Channel of T{
-	namespace: ['base', 'sys', 'thread'];
+	replace [String] is namespace: ['base', 'sys', 'thread'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],

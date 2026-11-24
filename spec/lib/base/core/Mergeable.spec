@@ -8,7 +8,7 @@
 ## subclasses: the parent field initializer runs first, and the child's
 ## initializer is merged onto it via [merge].
 Class is Mergeable{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
 	## Merges [other] into this instance.
 	##

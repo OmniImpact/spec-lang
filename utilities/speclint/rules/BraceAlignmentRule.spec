@@ -2,9 +2,9 @@
 #! Validates closing-brace alignment against block opening indents.
 
 Class of LintRule is BraceAlignmentRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['speclint', SourceMasker],

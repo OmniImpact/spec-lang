@@ -1,9 +1,9 @@
 #! Package transitive:dep
 
 Class is TransitiveLib{
-	namespace: ['transitive', 'dep'];
+	replace [String] is namespace: ['transitive', 'dep'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Output()]
 	];
 

@@ -2,7 +2,7 @@
 #! The socket floor: low-level networking primitives bound to C.
 
 Class is Socket{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Returns the C-string address of the last socket error on this thread.
 	## Bound to `spec_pal_socket_last_error`.

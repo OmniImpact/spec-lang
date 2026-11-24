@@ -2,9 +2,9 @@
 #! Top-level IR module containing structs, string literals, and functions.
 
 Class is IrModule{
-	namespace: ['base', 'compiler', 'ir'];
+	replace [String] is namespace: ['base', 'compiler', 'ir'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrStruct],
 		['base', 'compiler', 'ir', IrFunction],

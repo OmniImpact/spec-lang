@@ -2,9 +2,9 @@
 #! Top-level Theo application host managing alternate-screen lifecycle, raw input, and rendering.
 
 Class is TheoApp{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [TheoScreen, Frame, Widget, FocusTarget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, KeyReader]],
 		['base', 'sys', [as Ansi(), as Input(), as Conditional(), as Loops()]]
 	];

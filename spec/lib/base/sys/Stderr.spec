@@ -2,9 +2,9 @@
 #! The diagnostics wrapper over the console floor's error-line primitive.
 
 Class is Stderr{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],
 		['base', 'sysinternal', Console]

@@ -1,7 +1,7 @@
 #! specunit: suite
 
 Class of SpecUnitTest is TestTheoEditor{
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, Frame, FocusTarget]],
 		['base', 'sys', as File()],

@@ -4,7 +4,7 @@
 
 Class of SpecUnitTest is TestCasesMatch{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()]
@@ -89,7 +89,7 @@ Class of SpecUnitTest is TestCasesMatch{
 	}
 }
 Class of Enum is MachineState{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	held MachineState is idle: MachineState:init();
 	held MachineState is running: MachineState:init();
@@ -101,7 +101,7 @@ Class of Enum is MachineState{
 }
 
 Class is JobKind{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	held JobKind is sync: JobKind:init();
 	held JobKind is async: JobKind:init();
@@ -109,7 +109,7 @@ Class is JobKind{
 }
 
 Enum of String is Legacy{
-	namespace: ['test'],
+	replace [String] is namespace: ['test'];
 	A: 'a',
 	B: 'b'
 }

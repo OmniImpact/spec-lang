@@ -4,9 +4,9 @@
 #! convenience methods for binary data, bit manipulation, and ASCII classification.
 
 Class of CallLowerer is ByteCallLowerer{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', Expression],

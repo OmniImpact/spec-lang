@@ -4,9 +4,9 @@
 ## Represents an execution frame within a runtime call stack or error trace.
 
 Class is StackFrame{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', SourceLocation],
 		['base', 'sys', as Conditional()]
 	];

@@ -2,9 +2,9 @@
 #! Half-block 24-bit TrueColor pixel canvas (2 vertical pixels per terminal row).
 
 Class is CleoImage{
-	namespace: ['base', 'cleo'];
+	replace [String] is namespace: ['base', 'cleo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Conditional()],

@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestStatefulImport{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

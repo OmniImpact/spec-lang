@@ -17,7 +17,7 @@ Enum is Result of T to E {
 
 Class of SpecUnitTest is TestGenericEnum{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

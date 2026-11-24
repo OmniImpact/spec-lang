@@ -1,7 +1,7 @@
 #! Package wallprobe:libb
 
 Class is LibB{
-	namespace: ['wallprobe', 'libb'];
+	replace [String] is namespace: ['wallprobe', 'libb'];
 
 	## The function the as-import grants bare.
 	Function of Int is quad(Int is n){

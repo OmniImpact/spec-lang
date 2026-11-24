@@ -2,9 +2,9 @@
 #! Lowers match(on: ..., when: [...], default: ...) expressions to Spec IR.
 
 Class of CallLowerer is MatchCallLowerer{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', Expression],

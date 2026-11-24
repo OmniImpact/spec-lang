@@ -2,9 +2,9 @@
 #! Focus handle for interactive Theo widgets.
 
 Class is FocusTarget{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];

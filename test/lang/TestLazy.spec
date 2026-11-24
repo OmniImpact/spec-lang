@@ -4,7 +4,7 @@
 
 Class of SpecUnitTest is TestLazy{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -136,7 +136,7 @@ Class of SpecUnitTest is TestLazy{
 		Assert:compilerRejects(
 			source: '''
 Class is BadLazyLocal{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Lazy()]
 	];
 	replace Function is init(){
@@ -154,7 +154,7 @@ Class is BadLazyLocal{
 		Assert:compilerRejects(
 			source: '''
 Class is BadLazyInc{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Lazy()]
 	];
 	replace Function is init(){
@@ -172,7 +172,7 @@ Class is BadLazyInc{
 		Assert:compilerRejects(
 			source: '''
 Class is BadLazyField{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Lazy()]
 	];
 	Int is count: 0;
@@ -202,7 +202,7 @@ Class is LazyCounter{
 }
 
 Class is LazySample{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Lazy()],
 		['base', 'sys', as Loops()],
 		['base', 'struct', Array]
@@ -274,7 +274,7 @@ Class is FailingLazy{
 		return 0;
 	});
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', as Lazy()],
 		['base', 'struct', Map]

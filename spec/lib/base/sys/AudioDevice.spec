@@ -2,9 +2,9 @@
 #! Public wrapper over the sysinternal audio floor.
 
 Class is AudioDevice{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', AudioError],
 		['base', 'struct', List],

@@ -2,9 +2,9 @@
 #! Command-line argument access and option parsing over raw argc/argv.
 
 Class is CliArgs{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'sys', as Mem()],

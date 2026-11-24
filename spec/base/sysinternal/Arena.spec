@@ -14,9 +14,9 @@
 ##   offset 16: cap       (i64 payload byte capacity)
 
 Class is Arena{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', as Mem()],
 		['base', 'sysinternal', as Conditional()],
 		['base', 'sysinternal', as Loops()]

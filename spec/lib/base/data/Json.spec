@@ -2,9 +2,9 @@
 #! JSON parser, stringifier, and pretty printer.
 
 Class is Json{
-	namespace: ['base', 'data'];
+	replace [String] is namespace: ['base', 'data'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', Result],
 		['base', 'core', SpecError],
 		['base', 'data', JsonError],

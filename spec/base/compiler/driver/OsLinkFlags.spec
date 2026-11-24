@@ -2,9 +2,9 @@
 #! OS-specific native linker flags for compiled Spec binaries.
 
 Class of OsDispatch is OsLinkFlags{
-	namespace: ['base', 'compiler', 'driver'];
+	replace [String] is namespace: ['base', 'compiler', 'driver'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', OsDispatch],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]

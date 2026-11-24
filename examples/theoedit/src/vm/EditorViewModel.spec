@@ -4,9 +4,9 @@
 #! [FileStorage] and [PathTransformer] to transform the pure [EditorDocument] model.
 
 Class is EditorViewModel{
-	namespace: ['theoedit', 'vm'];
+	replace [String] is namespace: ['theoedit', 'vm'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', EditorDocument],
 		['theoedit', 'util', [EditorFocus, EditorMessageMode, EditorStrings, FileDialogMode, FileStorage, PathTransformer]],

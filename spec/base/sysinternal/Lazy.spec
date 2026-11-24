@@ -2,7 +2,7 @@
 #! The lazy-evaluation floor primitive.
 
 Class is Lazy{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Evaluates [init] lazily on first read of the bound field or local.
 	##

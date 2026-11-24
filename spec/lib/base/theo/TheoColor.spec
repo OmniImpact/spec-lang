@@ -2,9 +2,9 @@
 #! Color descriptor for Theo widgets and cell buffers (none, 256-color, or 24-bit RGB).
 
 Class is TheoColor{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Conditional()]
 	];

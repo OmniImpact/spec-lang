@@ -5,9 +5,9 @@
 ## deterministically by (order(), name()), and executed on the IR module.
 
 Class is SpecOptimizer{
-	namespace: ['base', 'compiler', 'opt'];
+	replace [String] is namespace: ['base', 'compiler', 'opt'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'ir', IrFunction],
 		['base', 'sys', as Conditional()],

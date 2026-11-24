@@ -8,7 +8,7 @@
 ## [NONE] marks "not a primitive".
 
 Enum of String is Primitive {
-	namespace: ['base', 'compiler', 'ast'],
+	replace [String] is namespace: ['base', 'compiler', 'ast'];
 	NONE: '',
 	INT: 'Int',
 	INT8: 'Int8',

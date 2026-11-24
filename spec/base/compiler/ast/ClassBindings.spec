@@ -10,9 +10,9 @@
 ## may own a list the other can drift from.
 
 Class is ClassBindings{
-	namespace: ['base', 'compiler', 'ast'];
+	replace [String] is namespace: ['base', 'compiler', 'ast'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],

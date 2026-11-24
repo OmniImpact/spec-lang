@@ -3,7 +3,7 @@
 #! and constructor overloads on one class.
 
 Class is Over{
-	namespace: ['ovl', 'lib'];
+	replace [String] is namespace: ['ovl', 'lib'];
 	local Int is seed: 0;
 
 	Function of Int is twice(Int is v){

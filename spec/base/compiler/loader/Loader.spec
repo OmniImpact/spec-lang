@@ -9,9 +9,9 @@
 ## require. Group fragments merge into their targets after loading.
 
 Class is Loader{
-	namespace: ['base', 'compiler', 'loader'];
+	replace [String] is namespace: ['base', 'compiler', 'loader'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as File()],
 		['base', 'compiler', 'ast', ProgramNode],

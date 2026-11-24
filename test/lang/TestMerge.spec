@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestMerge{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()]
@@ -100,7 +100,7 @@ Class of Mergeable is MergeableConfig{
 Class is MergeBase{
 
 	## No ancestor declares `using`, so this merge stands alone as a fresh array.
-	merge Array of Array of String is using: [['base', 'sys', as Output()], ['base', 'sys', as Conditional()]] ;
+	merge [[String]] is using: [['base', 'sys', as Output()], ['base', 'sys', as Conditional()]] ;
 
 	List of String is tags: ['core'];
 	Array of String is items: Array(['a', 'b']);
@@ -115,7 +115,7 @@ Class is MergeBase{
 Class of MergeBase is MergeChild{
 
 	## Folds onto MergeBase's using: Output + Array both load.
-	merge Array of Array of String is using: [['base', 'struct', Array], ['base', 'sys', as Output()] ];
+	merge [[String]] is using: [['base', 'struct', Array], ['base', 'sys', as Output()] ];
 
 	## Merges onto ["core"]: result is ["core", "extended"].
 	merge List of String is tags: ['extended'];
@@ -136,7 +136,7 @@ Class of MergeChild is MergeGrandChild{
 }
 
 Class is MergeControlFlow{
-	merge Array of Array of String is using: [];
+	merge [[String]] is using: [];
 
 	Function of Int is sumTo(Int is n){
 		local Int is total: 0;

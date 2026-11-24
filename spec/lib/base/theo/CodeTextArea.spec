@@ -2,9 +2,9 @@
 #! Syntax-highlighted multi-line text editing widget extending [TextArea].
 
 Class of TextArea is CodeTextArea{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [TextArea, FocusTarget, TheoBuffer, SyntaxHighlighter, SyntaxTheme]],
 		['base', 'signal', [TextEmitter, TextCollector]],
 		['base', 'sys', as Conditional()]

@@ -2,7 +2,7 @@
 #! Border and divider line styles for Cleo frames.
 
 Enum of String is BorderStyle {
-	namespace: ['base', 'cleo'],
+	replace [String] is namespace: ['base', 'cleo'];
 	NONE: 'NONE',
 	ASCII: 'ASCII',
 	THIN: 'THIN',

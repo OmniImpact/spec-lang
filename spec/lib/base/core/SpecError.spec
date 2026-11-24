@@ -3,9 +3,9 @@
 #! stringified enum kind name, and Spec stack trace.
 
 Class is SpecError of T{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', StackFrame],
 		['base', 'sys', SourceLocation],
 		['base', 'sys', as Reflection()],

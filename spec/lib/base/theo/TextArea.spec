@@ -2,9 +2,9 @@
 #! Focusable, scrollable multi-line text editing widget.
 
 Class of Widget is TextArea{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'signal', [TextEmitter, TextCollector]],
 		['base', 'sys', [as Conditional(), as Loops()]]

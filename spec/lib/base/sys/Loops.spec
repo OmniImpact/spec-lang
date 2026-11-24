@@ -20,9 +20,9 @@
 ## all closures and the caller in real time.
 
 Class is Loops{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'iterator', Loop],
 		['base', 'iterator', LoopControl],
 		['base', 'struct', List],

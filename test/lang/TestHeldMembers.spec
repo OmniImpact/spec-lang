@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestHeldMembers{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -57,7 +57,7 @@ Class of SpecUnitTest is TestHeldMembers{
 }
 
 Class is HeldShared{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	held String is root: 'shared-root';
 	held Int is depth: 7;
@@ -65,7 +65,7 @@ Class is HeldShared{
 }
 
 Class of HeldShared is HeldChild{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	# Reaches the inherited held members through its own class name:
 	# HeldChild:root and HeldChild:family resolve up the lattice, and
@@ -76,7 +76,7 @@ Class of HeldShared is HeldChild{
 }
 
 Class is HeldConfig{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	held String is appName: 'HeldApp';
 	held Int is maxDepth: 2 + 3 * 2;
@@ -97,7 +97,7 @@ Class is HeldConfig{
 ## Reads another class's public held member through the class-name
 ## prefix — the general constant-registry use case.
 Class is HeldProbe{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	Function of Boolean is checkApp(String is name){
 		return HeldConfig:appName == name;

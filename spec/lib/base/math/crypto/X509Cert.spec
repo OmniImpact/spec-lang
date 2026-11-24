@@ -2,9 +2,9 @@
 #! Parsed X.509 certificate metadata (subject/issuer DER hashes, CN, SAN DNS names).
 
 Class is X509Cert{
-	namespace: ['base', 'math', 'crypto'];
+	replace [String] is namespace: ['base', 'math', 'crypto'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array]
 	];
 

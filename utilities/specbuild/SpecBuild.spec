@@ -18,9 +18,9 @@
 ##   help     Display usage instructions
 
 Class is SpecBuild{
-	namespace: ['specbuild'];
+	replace [String] is namespace: ['specbuild'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],

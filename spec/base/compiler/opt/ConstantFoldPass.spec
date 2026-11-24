@@ -2,9 +2,9 @@
 #! Constant-folding pass over basic blocks for integer BinOp and Cmp.
 
 Class of SpecOptimizer is ConstantFoldPass{
-	namespace: ['base', 'compiler', 'opt'];
+	replace [String] is namespace: ['base', 'compiler', 'opt'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'opt', SpecOptimizer],
 		['base', 'compiler', 'ir', IrFunction],
 		['base', 'compiler', 'ir', IrBlock],

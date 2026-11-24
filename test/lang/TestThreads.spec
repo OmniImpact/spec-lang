@@ -4,7 +4,7 @@
 
 Class of SpecUnitTest is TestThreads{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -161,7 +161,7 @@ Class of SpecUnitTest is TestThreads{
 		Assert:compilerRejects(
 			source: '''
 Class is BadDirectScopeInit{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', 'thread', ThreadScope]
 	];
 	replace Function is init(){
@@ -175,7 +175,7 @@ Class is BadDirectScopeInit{
 		Assert:compilerRejects(
 			source: '''
 Class is BadRawThreadSpawn{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Thread()]
 	];
 	replace Function is init(){
@@ -189,7 +189,7 @@ Class is BadRawThreadSpawn{
 		Assert:compilerRejects(
 			source: '''
 Class is BadDirectTaskInit{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', 'thread', Task]
 	];
 	replace Function is init(){
@@ -203,7 +203,7 @@ Class is BadDirectTaskInit{
 		Assert:compilerRejects(
 			source: '''
 Class is BadScopeFieldEscape{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', 'thread', ThreadScope]
 	];
 	local ThreadScope is leakedScope;
@@ -217,7 +217,7 @@ Class is BadScopeFieldEscape{
 		Assert:compilerRejects(
 			source: '''
 Class is BadScopeReturnEscape{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', 'thread', ThreadScope]
 	];
 	Function of ThreadScope is leak(ThreadScope is scope){
@@ -233,7 +233,7 @@ Class is BadScopeReturnEscape{
 		Assert:compilerRejects(
 			source: '''
 Class is BadUnscopedParallelRun{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Parallel()]
 	];
 	replace Function is init(){

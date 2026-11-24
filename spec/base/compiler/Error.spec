@@ -8,9 +8,9 @@
 ## trace, innermost first, so traced output reads like a story.
 
 Class is Error{
-	replace Array of String is namespace: ['base', 'compiler'];
+	replace [String] is namespace: ['base', 'compiler'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', StackFrame],
 		['base', 'sys', SourceLocation]
 	];

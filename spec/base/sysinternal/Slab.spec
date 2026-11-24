@@ -27,9 +27,9 @@
 ##   class base + 16: spare   (i64: singly-linked list of empty cached slabs)
 
 Class is Slab{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', as Mem()],
 		['base', 'sysinternal', as Conditional()],
 		['base', 'sysinternal', as Loops()]

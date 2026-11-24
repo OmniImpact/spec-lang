@@ -21,7 +21,7 @@ Class is N2UndefinedBare{
 #! case: testAmbiguousBareCollision
 #! expect: provided by the enclosing class and Math; qualify the call
 Class is N3Collision{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', as Math()]
 	];
 	Function of Int is round(){ return 1; }
@@ -53,7 +53,7 @@ Class is N11PrefixField{
 #! case: testColonReceiverExcludesMergedScope
 #! expect: Undefined function 'round' on class 'N12NoMergedOnColon'
 Class is N12NoMergedOnColon{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', as Math()]
 	];
 	replace Function is init(Map of String to String is args){

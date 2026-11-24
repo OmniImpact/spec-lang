@@ -4,9 +4,9 @@
 #! invalid programs.
 
 Class of SpecUnitTest is TestSpecDriver{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -30,7 +30,7 @@ Class of SpecUnitTest is TestSpecDriver{
 }
 Class of Greeter is LoudGreeter{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()]
 	];
@@ -43,7 +43,7 @@ Class is DriverE2E{
 		local Greeter is g: LoudGreeter:init(g: 'hi');
 		Output:line(text: g:toString());
 	}
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()]
 	];

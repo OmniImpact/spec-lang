@@ -2,9 +2,9 @@
 #! The filesystem wrapper over the scalar file PAL floor.
 
 Class is File{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', FileError],
 		['base', 'sys', 'thread', ThreadScope],

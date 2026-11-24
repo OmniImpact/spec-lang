@@ -4,9 +4,9 @@
 #! to [FileManagerViewModel].
 
 Class of Frame is FileManagerFrame{
-	namespace: ['theoedit', 'view'];
+	replace [String] is namespace: ['theoedit', 'view'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'theo', '*'],
 		['base', 'sys', as Loops()],
 		['theoedit', 'util', [EditorStrings, FileManagerFocus]],

@@ -8,7 +8,7 @@
 #! qualifies the reference (LibA:Helper).
 
 Class is N25Consume{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['wallprobe', 'liba', as LibA()],
 		['wallprobe', 'libb', as LibB()]
 	];

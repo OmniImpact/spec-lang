@@ -3,7 +3,7 @@
 #! case: testScopedRegionNoOpenSlot
 #! expect: has no open scope slot
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -14,7 +14,7 @@ Class is App{
 #! case: testValueBranchMismatch
 #! expect: Branch yields mismatched types: 'String' and 'Int'
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -32,7 +32,7 @@ Class is Sink{
 	held String is file: 'log.txt';
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -51,7 +51,7 @@ Class of Enum is Mode{
 	held Mode is off: Mode:init();
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -68,7 +68,7 @@ Class of Enum is Mode{
 	held Mode is off: Mode:init();
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -85,7 +85,7 @@ Class of Enum is Mode{
 	held Mode is off: Mode:init();
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -104,7 +104,7 @@ Enum is Shape{
 	Point
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -123,7 +123,7 @@ Enum is Shape{
 	Point
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -138,7 +138,7 @@ Class is App{
 #! case: testLoopVarsRequireLiterals
 #! expect: requires inline literal closures
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Loops()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -151,7 +151,7 @@ Class is App{
 #! case: testPredicateTableMustBeLiteral
 #! expect: predicate match table is compile-time
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -163,7 +163,7 @@ Class is App{
 #! case: testPredicateArmsTakeNoParameters
 #! expect: Predicate match arms take no parameters
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -183,7 +183,7 @@ Enum is Shape{
 	Dot
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -198,7 +198,7 @@ Class is App{
 #! case: testValuePredicateMatchRequiresElse
 #! expect: A value-yielding predicate match requires an else arm
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){

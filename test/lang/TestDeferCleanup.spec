@@ -13,7 +13,7 @@ Enum is DeferProbeKind{
 
 Class of SpecUnitTest is TestDeferCleanup{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

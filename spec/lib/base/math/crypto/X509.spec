@@ -3,9 +3,9 @@
 #! OS root CA trust store loader, and certificate chain validator.
 
 Class is X509TrustStore{
-	namespace: ['base', 'math', 'crypto'];
+	replace [String] is namespace: ['base', 'math', 'crypto'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Map],
 		['base', 'struct', Array]
 	];
@@ -15,9 +15,9 @@ Class is X509TrustStore{
 }
 
 Class is X509{
-	namespace: ['base', 'math', 'crypto'];
+	replace [String] is namespace: ['base', 'math', 'crypto'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', 'crypto', X509Cert],
 		['base', 'core', SpecError],
 		['base', 'sys', FileError],

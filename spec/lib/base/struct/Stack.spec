@@ -7,9 +7,9 @@
 ## return caller-supplied default values of type T.
 
 Class is Stack of T{
-	namespace: ['base', 'struct'];
+	replace [String] is namespace: ['base', 'struct'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]

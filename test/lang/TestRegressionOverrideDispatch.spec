@@ -18,7 +18,7 @@
 
 Class of SpecUnitTest is TestRegressionOverrideDispatch{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -64,7 +64,7 @@ Class of SpecUnitTest is TestRegressionOverrideDispatch{
 ## Base class declaring the polymorphic contract.
 Class is Animal{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()]
 	];
@@ -76,7 +76,7 @@ Class is Animal{
 ## Mid-chain class whose override must remain visible to subclasses.
 Class of Animal is Dog{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()]
 	];
@@ -88,7 +88,7 @@ Class of Animal is Dog{
 ## Leaf class that does NOT re-declare speak; must inherit Dog's override.
 Class of Dog is Puppy{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()]
 	];
@@ -98,7 +98,7 @@ Class of Dog is Puppy{
 ## Deeper leaf class that does NOT re-declare speak.
 Class of Dog is Lab{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()]
 	];

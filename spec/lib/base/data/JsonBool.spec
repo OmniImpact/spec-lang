@@ -2,9 +2,9 @@
 #! Representation of JSON boolean value.
 
 Class is JsonBool{
-	namespace: ['base', 'data'];
+	replace [String] is namespace: ['base', 'data'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 

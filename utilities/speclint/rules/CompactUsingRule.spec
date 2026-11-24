@@ -2,9 +2,9 @@
 #! Suggests compact grouped syntax when importing several items separately from the same package.
 
 Class of LintRule is CompactUsingRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', [LintRule, LintIssue]],
 		['base', 'compiler', 'ast', [ClassInfo, Member, MemberKind, Expression, NamedArg]],
 		['base', 'struct', [Array, Map]],

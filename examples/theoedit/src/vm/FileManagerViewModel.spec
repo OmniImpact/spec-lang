@@ -4,9 +4,9 @@
 #! [DirectoryListing] model for the view.
 
 Class is FileManagerViewModel{
-	namespace: ['theoedit', 'vm'];
+	replace [String] is namespace: ['theoedit', 'vm'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', DirectoryListing],
 		['theoedit', 'util', [DirectoryScanner, EditorStrings, FileDialogMode, FileManagerFocus, PathTransformer]]

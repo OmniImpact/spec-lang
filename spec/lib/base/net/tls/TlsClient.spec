@@ -4,9 +4,9 @@
 #! with X25519 key exchange, OS CSPRNG, and X.509 certificate chain verification.
 
 Class is TlsClient{
-	namespace: ['base', 'net', 'tls'];
+	replace [String] is namespace: ['base', 'net', 'tls'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'net', Socket],
 		['base', 'net', 'tls', TlsError],

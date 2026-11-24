@@ -2,9 +2,9 @@
 #! One basic block in an IR function.
 
 Class is IrBlock{
-	namespace: ['base', 'compiler', 'ir'];
+	replace [String] is namespace: ['base', 'compiler', 'ir'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ir', IrInst],
 		['base', 'struct', Array],
 		['base', 'sys', as Loops()]

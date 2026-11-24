@@ -9,9 +9,9 @@
 ## arrays, and failed searches return a caller-supplied default.
 
 Class of Mergeable is Array of T{
-	namespace: ['base', 'struct'];
+	replace [String] is namespace: ['base', 'struct'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', Mergeable],
 		['base', 'struct', List],
 		['base', 'sys', as Mem()],

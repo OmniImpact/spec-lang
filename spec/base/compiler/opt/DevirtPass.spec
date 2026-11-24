@@ -8,9 +8,9 @@
 ##    non-escaping AllocObj + no-op init + spec_claim_pool sequences.
 
 Class of SpecOptimizer is DevirtPass{
-	namespace: ['base', 'compiler', 'opt'];
+	replace [String] is namespace: ['base', 'compiler', 'opt'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'opt', SpecOptimizer],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'ir', IrStruct],

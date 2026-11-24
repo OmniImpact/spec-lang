@@ -7,7 +7,7 @@
 ## reports: spawn refusal from the OS and scope/task cancellation.
 
 Enum is ThreadError {
-	namespace: ['base', 'sys', 'thread'];
+	replace [String] is namespace: ['base', 'sys', 'thread'];
 	SPAWN_FAILED,
 	CANCELLED
 }

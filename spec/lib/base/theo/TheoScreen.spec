@@ -2,9 +2,9 @@
 #! Navigation stack of [Frame]s managed by a [TheoApp].
 
 Class is TheoScreen{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', Frame],
 		['base', 'sys', as Conditional()]
 	];

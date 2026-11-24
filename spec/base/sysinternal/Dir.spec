@@ -2,7 +2,7 @@
 #! Filesystem directory floor: scalar/byte-pointer PAL declarations.
 
 Class is Dir{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	Function of Int is pal_dir_open_cstr(Int is path_cstr);
 	Function of Int is pal_dir_next(Int is handle);

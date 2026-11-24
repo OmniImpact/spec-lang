@@ -14,9 +14,9 @@
 #! argv-Map init) constructs.
 
 Class is SpecUnitState{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', TestResult],
 		['specunit', CheckRecord]
 	];

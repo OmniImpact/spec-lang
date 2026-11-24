@@ -13,9 +13,9 @@
 ##   slots 10..13: freelist cached count for buckets 0..3
 
 Class is Arc{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', as Mem()],
 		['base', 'sysinternal', as Conditional()],
 		['base', 'sysinternal', as Loops()],

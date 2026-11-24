@@ -6,9 +6,9 @@
 ## container implementations in pure Spec.
 
 Class is Mem{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', Mem],
 		['base', 'sysinternal', Pool],
 		['base', 'sys', as Conditional()]

@@ -3,9 +3,9 @@
 #! class extends this class and has no init of its own.
 
 Class is BaseApp{
-	namespace: ['entrybase'];
+	replace [String] is namespace: ['entrybase'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Output()]
 	];
 

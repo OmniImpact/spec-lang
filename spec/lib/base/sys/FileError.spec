@@ -7,7 +7,7 @@
 ## read/write errors (the errno text rides the SpecError description).
 
 Enum is FileError {
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 	INVALID_PATH,
 	OUT_OF_MEMORY,
 	IO_ERROR

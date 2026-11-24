@@ -2,9 +2,9 @@
 #! Flags excessive consecutive blank lines (3+) and missing trailing newline at EOF.
 
 Class of LintRule is BlankLinesRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['speclint', SourceMasker],

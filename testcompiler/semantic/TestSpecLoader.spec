@@ -2,9 +2,9 @@
 #! lattice preloads and implicit-Any parenting.
 
 Class of SpecUnitTest is TestSpecLoader{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -26,7 +26,7 @@ Class of SpecUnitTest is TestSpecLoader{
 }
 Class of Greeter is LoudGreeter{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()]
@@ -40,7 +40,7 @@ Class is LoaderE2E{
 		local Greeter is g: LoudGreeter:init(g: 'hi');
 		Output:line(text: g:toString());
 	}
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()]
@@ -83,7 +83,7 @@ Class is LoaderE2E{
 		fileWrite(path: 'testcompiler/semantic/.loader_bad_tmp.spec', content: "Class is BadImporter{
 	replace Function is init(Map of String to String is args){
 	}
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['no', 'such', 'Package'],
 		['base', 'sys', as File()],
@@ -101,9 +101,9 @@ Class is LoaderE2E{
 
 ## Test helper: class lookups over a loaded program.
 Class is LoaderE2EHelper{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'compiler', 'ast', ProgramNode],

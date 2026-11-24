@@ -3,9 +3,9 @@
 #! and Phase 0.5 instance-model audit.
 
 Class is Linter{
-	namespace: ['speclint'];
+	replace [String] is namespace: ['speclint'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],

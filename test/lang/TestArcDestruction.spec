@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestArcDestruction{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -49,7 +49,7 @@ Class of SpecUnitTest is TestArcDestruction{
 
 Class is Resource{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
@@ -67,7 +67,7 @@ Class is Resource{
 
 Class is Container{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()]

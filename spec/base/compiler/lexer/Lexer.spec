@@ -15,9 +15,9 @@
 ## a vocabulary, it is not one).
 
 Class is Lexer{
-	replace Array of String is namespace: ['base', 'compiler', 'lexer'];
+	replace [String] is namespace: ['base', 'compiler', 'lexer'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'utils', Chars],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', TokenKind],

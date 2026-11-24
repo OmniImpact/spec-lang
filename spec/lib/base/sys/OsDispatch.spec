@@ -7,9 +7,9 @@
 ## explicitly, or getOsBlock(separatePosix:) to emit a C preprocessor block.
 
 Class is OsDispatch{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Process()],
 		['base', 'sys', as Conditional()]
 	];

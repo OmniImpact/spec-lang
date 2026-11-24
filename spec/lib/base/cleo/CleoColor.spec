@@ -2,9 +2,9 @@
 #! Unified terminal color value supporting default, 256-color, and 24-bit RGB.
 
 Class is CleoColor{
-	namespace: ['base', 'cleo'];
+	replace [String] is namespace: ['base', 'cleo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Conditional()]
 	];

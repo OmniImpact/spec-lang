@@ -2,9 +2,9 @@
 #! The lazy-evaluation provider: exposes `lazy({ ... })` via `as Lazy()`.
 
 Class is Lazy{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', Lazy]
 	];
 

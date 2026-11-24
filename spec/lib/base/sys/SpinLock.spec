@@ -4,9 +4,9 @@
 ## A lightweight non-reentrant atomic spinlock for guarding concurrent
 ## mutations on shared runtime structures.
 Class is SpinLock{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()]
 	];

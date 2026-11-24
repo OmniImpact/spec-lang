@@ -4,7 +4,7 @@
 ## raw names.
 
 Enum of String is ContractMethod {
-	namespace: ['base', 'compiler', 'ast'],
+	replace [String] is namespace: ['base', 'compiler', 'ast'];
 	INIT: 'init',
 	USING: 'using',
 	TO_STRING: 'toString',

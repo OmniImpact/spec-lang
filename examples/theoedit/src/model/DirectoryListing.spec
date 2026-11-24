@@ -3,7 +3,7 @@
 #! sorted directory, file, and combined display entries.
 
 Class is DirectoryListing{
-	namespace: ['theoedit', 'model'];
+	replace [String] is namespace: ['theoedit', 'model'];
 
 	String is dir: '.';
 	Array of String is dirs: Array();

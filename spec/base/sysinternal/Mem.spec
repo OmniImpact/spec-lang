@@ -6,7 +6,7 @@
 ## the type checker's sysinternal rule).
 
 Class is Mem{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	Function of Int is alloc(Int is bytes);
 	Function of Int is realloc(Int is ptr, Int is bytes);

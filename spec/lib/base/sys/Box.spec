@@ -7,7 +7,7 @@
 ## Compiled as a distinct monomorphized specialization per type argument T.
 
 Class is Box of T{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
 	local T is val;
 

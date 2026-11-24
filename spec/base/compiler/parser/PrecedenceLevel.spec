@@ -6,7 +6,7 @@
 ## [NONE] marks "descend to unary" (the tightest level, not a binary one).
 
 Enum of String is PrecedenceLevel {
-	namespace: ['base', 'compiler', 'parser'],
+	replace [String] is namespace: ['base', 'compiler', 'parser'];
 	NONE: 'NONE',
 	MULTIPLICATIVE: 'MULTIPLICATIVE',
 	ADDITIVE: 'ADDITIVE',

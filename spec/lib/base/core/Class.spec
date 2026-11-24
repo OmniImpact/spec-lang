@@ -11,9 +11,9 @@
 ## none.
 
 Class of Stringable is Class{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'struct', Map],
 		['base', 'sys', as Introspection()],

@@ -3,7 +3,7 @@
 #! and ChaCha20-Poly1305 AEAD (RFC 8439).
 
 Class of SpecUnitTest is TestTlsCrypto{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

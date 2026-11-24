@@ -2,9 +2,9 @@
 #! Root Frame for the Theo simple text editor.
 
 Class of Frame is EditorFrame{
-	namespace: ['theoedit', 'view'];
+	replace [String] is namespace: ['theoedit', 'view'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, FocusTarget, KeyEvent]],
 		['base', 'sys', as Loops()],
 		['theoedit', 'util', EditorFocus],

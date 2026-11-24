@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestHeldResolver{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -40,7 +40,7 @@ Class of SpecUnitTest is TestHeldResolver{
 }
 
 Class is HeldEntry{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	local String is name;
 
@@ -54,7 +54,7 @@ Class is HeldEntry{
 }
 
 Class is HeldRegistry{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	# Declared held members win over the hook — resolution is compile-time
 	# wherever it can be.
@@ -69,13 +69,13 @@ Class is HeldRegistry{
 		return HeldEntry:init(n: name);
 	}
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 }
 
 Class of HeldRegistry is HeldSubRegistry{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
 	# The hook inherits: an undeclared name through the subclass prefix
 	# resolves on the ancestor's registry.

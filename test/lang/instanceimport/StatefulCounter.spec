@@ -2,7 +2,7 @@
 #! Field-ful class for the instance-import regression test (E1/E2 full form).
 
 Class is StatefulCounter{
-	namespace: ['instimport', 'counter'];
+	replace [String] is namespace: ['instimport', 'counter'];
 	local Int is n: 0;
 	local String is label: '';
 

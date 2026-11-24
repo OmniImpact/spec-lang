@@ -7,7 +7,7 @@
 ## completion callback — a no-op until one is assigned.
 
 Class is LoopControl{
-	namespace: ['base', 'iterator'];
+	replace [String] is namespace: ['base', 'iterator'];
 
 	## Flag indicating whether a halt was requested.
 	local Boolean is stopped: false;

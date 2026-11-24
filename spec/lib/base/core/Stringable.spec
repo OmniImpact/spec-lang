@@ -10,7 +10,7 @@
 ## overrides dispatch virtually through the contract's vtable slot.
 
 Class of Loadable is Stringable{
-	namespace: ['base', 'core'];
+	replace [String] is namespace: ['base', 'core'];
 
 	## Renders this object as text.
 	##

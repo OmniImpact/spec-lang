@@ -7,9 +7,9 @@
 ## Spec fields and SpinLock concurrency control over base:sys:Mem.
 
 Class of Mergeable is Map of K to V{
-	namespace: ['base', 'struct'];
+	replace [String] is namespace: ['base', 'struct'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', Mergeable],
 		['base', 'struct', Array],
 		['base', 'sys', as Mem()],

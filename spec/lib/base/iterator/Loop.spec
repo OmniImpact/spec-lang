@@ -10,9 +10,9 @@
 ## loop protocol.
 
 Class is Loop{
-	namespace: ['base', 'iterator'];
+	replace [String] is namespace: ['base', 'iterator'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'iterator', LoopControl]
 	];
 

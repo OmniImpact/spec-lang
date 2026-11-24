@@ -2,9 +2,9 @@
 #! Audio playback interface for raw PCM sound output.
 
 Class is Audio{
-	namespace: ['base', 'audio'];
+	replace [String] is namespace: ['base', 'audio'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', AudioError],
 		['base', 'struct', List],

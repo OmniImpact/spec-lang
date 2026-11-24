@@ -3,9 +3,9 @@
 #! C files in `spec/runtime/` (no embedded C heredocs).
 
 Class is RuntimePrelude{
-	namespace: ['base', 'compiler', 'pal'];
+	replace [String] is namespace: ['base', 'compiler', 'pal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],

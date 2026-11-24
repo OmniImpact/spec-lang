@@ -9,7 +9,7 @@
 
 Class is WordFreq{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'sys', as Conditional()],

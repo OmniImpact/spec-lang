@@ -5,7 +5,7 @@
 
 Class of SpecUnitTest is TestDefaultsDi{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -32,7 +32,7 @@ Class of SpecUnitTest is TestDefaultsDi{
 }
 
 Class is DiService{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['dimath', Math2],
 		['base', 'sys', as Output()]
 	];

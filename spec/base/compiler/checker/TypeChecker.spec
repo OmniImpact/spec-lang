@@ -12,9 +12,9 @@
 ## 'Array of X' accepted on input; both void spellings compare via isVoid.
 
 Class is TypeChecker{
-	namespace: ['base', 'compiler', 'checker'];
+	replace [String] is namespace: ['base', 'compiler', 'checker'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
@@ -6316,7 +6316,7 @@ Class is TypeChecker{
 					:addError(line: m:line, msg: msg);
 				}, {
 					local String is name: m:name;
-					if({ name != ContractMethod:INIT:value() && name != ContractMethod:USING:value() && name != ContractMethod:TO_STRING:value() && :findMemberOwnerClass(className: classDef:name, memberName: name) != Primitive:ANY:value() }, {
+					if({ name != ContractMethod:INIT:value() && name != ContractMethod:USING:value() && name != MetadataField:NAMESPACE:value() && name != MetadataField:CASTABLE:value() && name != ContractMethod:TO_STRING:value() && :findMemberOwnerClass(className: classDef:name, memberName: name) != Primitive:ANY:value() }, {
 						local Member is anc: :findAncestorMember(className: classDef:name, memberName: name);
 						if({ anc:name == '' }, {
 							local String is what: if({ hasMerge }, { 'merge' }, { 'replace' });

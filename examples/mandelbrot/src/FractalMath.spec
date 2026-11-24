@@ -3,7 +3,7 @@
 ## Computes smooth Mandelbrot escape values and maps them to 256-color palette indices and shading glyphs.
 Class is FractalMath{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Ansi()],
 		['base', 'math', as Math()],
 		['base', 'sys', as Loops()],

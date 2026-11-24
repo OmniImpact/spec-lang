@@ -2,9 +2,9 @@
 #! HTTP/1.1 request descriptor with method, URL, headers, body, and options.
 
 Class is HttpRequest{
-	namespace: ['base', 'net'];
+	replace [String] is namespace: ['base', 'net'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Map]
 	];
 

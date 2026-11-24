@@ -2,9 +2,9 @@
 #! CLI entry point for theoedit: parses command-line options and launches TheoApp.
 
 Class is TheoEdit{
-	namespace: ['theoedit'];
+	replace [String] is namespace: ['theoedit'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'theo', [TheoApp, TheoScreen]],
 		['base', 'struct', Map],
 		['base', 'sys', as Output()],

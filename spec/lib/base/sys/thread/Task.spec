@@ -7,9 +7,9 @@
 ## monomorphized result slot `T`.
 
 Class is Task of T{
-	namespace: ['base', 'sys', 'thread'];
+	replace [String] is namespace: ['base', 'sys', 'thread'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Thread()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Conditional()],

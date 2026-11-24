@@ -9,7 +9,7 @@
 
 Class of SpecUnitTest, WallParentA, WallParentB is TestImportWall{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()]
@@ -35,7 +35,7 @@ Class of SpecUnitTest, WallParentA, WallParentB is TestImportWall{
 
 ## Parent A: imports LibA — triple() and the LibA:Helper type ride the grant.
 Class is WallParentA{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['wallprobe', 'liba', as LibA()]
 	];
 
@@ -45,7 +45,7 @@ Class is WallParentA{
 
 ## Parent B: imports LibB — quad() rides the grant.
 Class is WallParentB{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['wallprobe', 'libb', as LibB()]
 	];
 

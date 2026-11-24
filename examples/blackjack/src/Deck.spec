@@ -3,7 +3,7 @@
 ## Provides card deck creation, random card draws, and Ace-aware Blackjack hand scoring.
 Class is Deck{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'math', as Math()],
 		['base', 'sys', as Loops()],

@@ -9,7 +9,7 @@
 ## implementation-environment bindings only Spec source cannot express.
 
 Class is Reflection{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## The enclosing class name at the call site, injected by the generator.
 	##

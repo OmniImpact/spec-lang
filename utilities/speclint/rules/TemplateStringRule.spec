@@ -2,9 +2,9 @@
 #! Suggests fancy template strings (`` `...{{expr}}...` ``) instead of `.` string concatenation with expressions.
 
 Class of LintRule is TemplateStringRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['speclint', SourceMasker],

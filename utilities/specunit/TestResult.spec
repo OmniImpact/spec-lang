@@ -7,7 +7,7 @@
 ## reports every broken expectation, JUnit assertAll style.
 
 Class is TestResult{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
 	## The fully-qualified test identity: "ClassName.methodName".
 	String is name;

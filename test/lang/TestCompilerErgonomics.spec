@@ -1,7 +1,7 @@
 #! specunit: suite
 
 Class of SpecUnitTest is TestCompilerErgonomics{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'signal', '*'],
@@ -103,7 +103,7 @@ Class of SpecUnitTest is TestCompilerErgonomics{
 }
 
 Class is ErgoHelperBase{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 
@@ -115,7 +115,7 @@ Class is ErgoHelperBase{
 }
 
 Class of ErgoHelperBase is ErgoHelperSub{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 
@@ -124,7 +124,7 @@ Class of ErgoHelperBase is ErgoHelperSub{
 }
 
 Class is ErgoCallbackHost{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 
@@ -158,7 +158,7 @@ Class is ErgoCallbackHost{
 }
 
 Class is ErgoOverloaded{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'signal', TextEmitter],
 		['base', 'sys', as Conditional()]
 	];

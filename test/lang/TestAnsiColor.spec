@@ -5,7 +5,7 @@
 
 Class of SpecUnitTest is TestAnsiColor{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Output()],

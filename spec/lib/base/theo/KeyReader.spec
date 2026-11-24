@@ -2,9 +2,9 @@
 #! Decodes raw terminal stdin bytes and VT/ANSI escape sequences into [KeyEvent]s.
 
 Class is KeyReader{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [KeyEvent, MouseEvent]],
 		['base', 'sys', as Input()],
 		['base', 'sys', as Mem()],

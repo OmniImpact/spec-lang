@@ -6,14 +6,14 @@
 ## product members (like source line) are defined once on the base enum.
 
 Enum is Statement {
-	namespace: ['base', 'compiler', 'ast'],
+	replace [String] is namespace: ['base', 'compiler', 'ast'];
 
-	using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', ClassInfo]
-	],
+	];
 
 	VarDecl([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit),
 	Assign(Expression is assignTarget, Expression is assignValue),

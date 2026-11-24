@@ -3,7 +3,7 @@
 #! with zero I/O, UI, or formatting dependencies.
 
 Class is EditorDocument{
-	namespace: ['theoedit', 'model'];
+	replace [String] is namespace: ['theoedit', 'model'];
 
 	String is filePath: '';
 	String is text: '';

@@ -8,6 +8,6 @@
 ## detail text riding the SpecError description.
 
 Enum is RegexError {
-	namespace: ['base', 'regex'];
+	replace [String] is namespace: ['base', 'regex'];
 	COMPILE_FAILED
 }

@@ -2,9 +2,9 @@
 #! Character glyph sets for Cleo outer borders and inner dividers.
 
 Class is BorderGlyphs{
-	namespace: ['base', 'cleo'];
+	replace [String] is namespace: ['base', 'cleo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', BorderStyle],
 		['base', 'sys', as Conditional()]
 	];

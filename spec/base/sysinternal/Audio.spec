@@ -2,7 +2,7 @@
 #! The audio floor: low-level PCM audio output bound to C.
 
 Class is Audio{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Returns the C-string address of the last audio error on this thread.
 	## Bound to `spec_pal_audio_last_error`.

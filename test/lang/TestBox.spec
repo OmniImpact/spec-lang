@@ -2,7 +2,7 @@
 
 Class of SpecUnitTest is TestBox{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -116,7 +116,7 @@ Class is App{
 		Assert:compilerRejects(
 			source: '''
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', Box]
 	];
 	replace Function is init(){
@@ -130,7 +130,7 @@ Class is App{
 		Assert:compilerRejects(
 			source: '''
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', Box]
 	];
 	replace Function is init(){

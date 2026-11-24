@@ -6,7 +6,7 @@
 ## Generates and plays a 12-note random pentatonic melody with high-resolution interval timing.
 Class is RandomTune{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],

@@ -19,7 +19,7 @@ Enum is ProbeOtherKind{
 
 Class of SpecUnitTest is TestErrors{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -179,7 +179,7 @@ Enum is CrashKind{
 	BUBBLED_TO_TOP
 }
 Class is BubblingApp{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError]
 	];
 	replace Function of Boolean is SpecErrorHandler(SpecError is error){
@@ -196,7 +196,7 @@ Class is BubblingApp{
 		Assert:compilerRejects(
 			source: '''
 Class is UnhandledScopeCaller{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', 'thread', ThreadScope]
 	];
 	replace Function is init(){
@@ -211,7 +211,7 @@ Class is UnhandledScopeCaller{
 		Assert:compilerRejects(
 			source: '''
 Class is VoidOnErrorCaller{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', ThreadScope]
 	];
@@ -351,7 +351,7 @@ Class is TypedHandlerWorker{
 	String is observed: '';
 	String is observedDesc: '';
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array]
@@ -377,7 +377,7 @@ Class is TypedHandlerWorker{
 Class is MultiKindHandler{
 	String is observed: '';
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array]
@@ -407,7 +407,7 @@ Class is MultiKindHandler{
 Class is KindedOnlyHandler{
 	String is observed: '';
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array]
@@ -432,7 +432,7 @@ Class is KindedOnlyHandler{
 }
 
 Class is InnerWorker{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array]
@@ -493,7 +493,7 @@ Class is InnerWorker{
 }
 
 Class is OuterService{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array]
@@ -545,7 +545,7 @@ Class is OuterService{
 }
 
 Class is ScopedErrorWorker{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],

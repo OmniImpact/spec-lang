@@ -3,9 +3,9 @@
 #! discovery for test assertions.
 
 Class is AssertHelper{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Uri()]

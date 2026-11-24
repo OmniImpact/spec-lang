@@ -6,7 +6,7 @@
 
 Class of SpecUnitTest is TestNextGenFeatures{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -225,7 +225,7 @@ Enum is Option {
 ## Generic single-value container class demonstrating user-defined generic type parameters.
 Class is Box of T{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Output()]
 	];
 
@@ -258,7 +258,7 @@ Class is Box of T{
 ## Generic pair container class demonstrating multi-parameter user-defined generics.
 Class is Pair of A to B{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Output()]
 	];
 

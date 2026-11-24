@@ -3,9 +3,9 @@
 #! pipeline, and LLVM (.ll) backend.
 
 Class of SpecUnitTest is TestLlvmIrAndOpt{
-	namespace: ['testllvm'];
+	replace [String] is namespace: ['testllvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -73,7 +73,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		});
 
 		local String is src: "Class is LlvmE2E{\n"
-			. "\treplace Array of Array of String is using: [\n"
+			. "\treplace [[String]] is using: [\n"
 			. "\t\t['base', 'sys', as Conditional()],\n"
 			. "\t\t['base', 'sys', as Loops()],\n"
 			. "\t\t['base', 'sys', as Output()]\n"
@@ -125,7 +125,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		});
 
 		local String is src: "Class is LlvmCCA{\n"
-			. "\treplace Array of Array of String is using: [\n"
+			. "\treplace [[String]] is using: [\n"
 			. "\t\t['base', 'struct', Array],\n"
 			. "\t\t['base', 'struct', Map],\n"
 			. "\t\t['base', 'sys', as Conditional()],\n"
@@ -182,7 +182,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		});
 
 		local String is src: "Class is LlvmMatchCap{\n"
-			. "\treplace Array of Array of String is using: [\n"
+			. "\treplace [[String]] is using: [\n"
 			. "\t\t['base', 'struct', Map],\n"
 			. "\t\t['base', 'sys', as Conditional()],\n"
 			. "\t\t['base', 'sys', as Output()],\n"
@@ -265,7 +265,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 			. "\t}\n"
 			. "}\n\n"
 			. "Class is LlvmAdt{\n"
-			. "\treplace Array of Array of String is using: [\n"
+			. "\treplace [[String]] is using: [\n"
 			. "\t\t['base', 'struct', Array],\n"
 			. "\t\t['base', 'struct', Map],\n"
 			. "\t\t['base', 'sys', as Conditional()],\n"
@@ -329,7 +329,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		});
 
 		local String is src: "Class is LlvmSys{\n"
-			. "\treplace Array of Array of String is using: [\n"
+			. "\treplace [[String]] is using: [\n"
 			. "\t\t['base', 'struct', Map],\n"
 			. "\t\t['base', 'sys', as Conditional()],\n"
 			. "\t\t['base', 'sys', as Output()],\n"
@@ -391,7 +391,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 			. "\treplace Function of Int is speak(){ return 42; }\n"
 			. "}\n\n"
 			. "Class is LlvmVt{\n"
-			. "\treplace Array of Array of String is using: [\n"
+			. "\treplace [[String]] is using: [\n"
 			. "\t\t['base', 'struct', Map],\n"
 			. "\t\t['base', 'sys', as Conditional()],\n"
 			. "\t\t['base', 'sys', as Output()],\n"
@@ -443,7 +443,7 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 
 		local String is helperSrc: '''
 Class is MathHelper {
-	namespace: ['demo'];
+	replace [String] is namespace: ['demo'];
 	replace Function is init(){ return; }
 	Function of Int is triple(Int is x){ return x * 3; }
 }
@@ -451,7 +451,7 @@ Class is MathHelper {
 
 		local String is src: ```
 Class is LlvmP7{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Map],
 		['base', 'math', as Math()],
 		['base', 'sys', as Conditional()],
@@ -513,7 +513,7 @@ Class is LlvmP7{
 
 		local String is src: '''
 Class is Counter {
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array]
 	];
 	held Int is count: 10;
@@ -524,7 +524,7 @@ Class is Counter {
 }
 
 Class is LlvmP8{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Map],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()],
@@ -653,7 +653,7 @@ Class is Holder{
 }
 
 Class is LlvmP9{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Output()],
@@ -745,7 +745,7 @@ Class is Counter{
 }
 
 Class is LlvmP10{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()],

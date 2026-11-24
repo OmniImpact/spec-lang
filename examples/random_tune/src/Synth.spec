@@ -3,7 +3,7 @@
 ## Converts MIDI note numbers to frequencies and synthesizes 16-bit stereo PCM sine waves.
 Class is Synth{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'math', as Math()],

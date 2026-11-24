@@ -5,7 +5,7 @@
 ## Parallel Monte Carlo Pi benchmark with live Cleo terminal UI.
 Class is PiBenchmark{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],

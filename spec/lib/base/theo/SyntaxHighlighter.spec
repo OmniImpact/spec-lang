@@ -2,9 +2,9 @@
 #! Multi-language syntax highlighter with off-screen multi-line state tracking.
 
 Class is SyntaxHighlighter{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [TheoBuffer, TheoColor, SyntaxTheme]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];

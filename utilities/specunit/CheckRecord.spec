@@ -6,7 +6,7 @@
 #! available. Assertions are data; the runner is the interpreter.
 
 Class is CheckRecord{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
 	## Whether the assertion held.
 	Boolean is ok: true;

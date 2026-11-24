@@ -7,9 +7,9 @@
 ##   specinit --help
 
 Class is SpecInit{
-	namespace: ['specinit'];
+	replace [String] is namespace: ['specinit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
@@ -142,8 +142,8 @@ Class is SpecInit{
 	local Function of String is buildMainSpec(String is projectName, String is pkgName){
 		local String is s: "#! " . projectName . " — Spec Application\n\n";
 		s: s . "Class is Main{\n";
-		s: s . "\tnamespace: ['" . pkgName . "'];\n\n";
-		s: s . "\treplace Array of Array of String is using: [\n";
+		s: s . "\treplace [String] is namespace: ['" . pkgName . "'];\n\n";
+		s: s . "\tmerge [[String]] is using: [\n";
 		s: s . "\t\t['base', 'sys', as Output()],\n";
 		s: s . "\t\t['base', 'struct', Map]\n";
 		s: s . "\t];\n\n";
@@ -157,7 +157,7 @@ Class is SpecInit{
 	local Function of String is buildLibSpec(String is projectName, String is pkgName, String is className){
 		local String is s: "#! " . projectName . " — Spec Library\n\n";
 		s: s . "Class is " . className . "{\n";
-		s: s . "\tnamespace: ['" . pkgName . "'];\n\n";
+		s: s . "\treplace [String] is namespace: ['" . pkgName . "'];\n\n";
 		s: s . "\tFunction of String is version(){\n";
 		s: s . "\t\treturn '0.1.0';\n";
 		s: s . "\t}\n\n";
@@ -172,8 +172,8 @@ Class is SpecInit{
 		local String is s: "#! specunit: suite\n";
 		s: s . "#! Starter unit tests for " . projectName . ".\n\n";
 		s: s . "Class of SpecUnitTest is MainTest{\n";
-		s: s . "\tnamespace: ['" . pkgName . "', 'tests'];\n\n";
-		s: s . "\treplace Array of Array of String is using: [\n";
+		s: s . "\treplace [String] is namespace: ['" . pkgName . "', 'tests'];\n\n";
+		s: s . "\tmerge [[String]] is using: [\n";
 		s: s . "\t\t['specunit', SpecUnitTest],\n";
 		s: s . "\t\t['specunit', SpecUnitRunner],\n";
 		s: s . "\t\t['specunit', as Assert()]\n";
@@ -190,8 +190,8 @@ Class is SpecInit{
 		local String is s: "#! specunit: suite\n";
 		s: s . "#! Starter unit tests for " . projectName . ".\n\n";
 		s: s . "Class of SpecUnitTest is " . testClass . "{\n";
-		s: s . "\tnamespace: ['" . pkgName . "', 'tests'];\n\n";
-		s: s . "\treplace Array of Array of String is using: [\n";
+		s: s . "\treplace [String] is namespace: ['" . pkgName . "', 'tests'];\n\n";
+		s: s . "\tmerge [[String]] is using: [\n";
 		s: s . "\t\t['specunit', SpecUnitTest],\n";
 		s: s . "\t\t['specunit', SpecUnitRunner],\n";
 		s: s . "\t\t['specunit', as Assert()],\n";

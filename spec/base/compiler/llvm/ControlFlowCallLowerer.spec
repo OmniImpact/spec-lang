@@ -2,9 +2,9 @@
 #! Lowers control-flow calls (if, while) to Spec IR.
 
 Class of CallLowerer is ControlFlowCallLowerer{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', ClassInfo],

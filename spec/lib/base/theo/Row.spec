@@ -2,9 +2,9 @@
 #! Horizontal container placing children one after another with optional [gap] and [Spacer] flex.
 
 Class of Widget is Row{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'math', as Math()]

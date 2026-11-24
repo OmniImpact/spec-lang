@@ -1,7 +1,7 @@
 #! specunit: suite
 
 Class of SpecUnitTest is TestImplicitReturn{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', as Assert()],
 		['base', 'sys', as Conditional()]

@@ -7,7 +7,7 @@
 
 
 Class is WallProbe{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['instimport', 'counter', as StatefulCounter(label: 'w')],
 		['base', 'sys', as Output()]
 	];

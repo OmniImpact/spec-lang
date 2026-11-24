@@ -6,9 +6,9 @@
 ## list and are loaded/sorted deterministically here.
 
 Class is CallLowererRegistry{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', ControlFlowCallLowerer],
 		['base', 'compiler', 'llvm', SysinternalCallLowerer],

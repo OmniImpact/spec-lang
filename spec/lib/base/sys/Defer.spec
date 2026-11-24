@@ -5,9 +5,9 @@
 #! emitter gives wrapper/floor frames no cleanup barrier of their own).
 
 Class is Defer{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', Cleanup]
 	];
 

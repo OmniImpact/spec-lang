@@ -4,9 +4,9 @@
 #! Package transitive:use
 
 Class is TransitiveUse{
-	namespace: ['transitive', 'use'];
+	replace [String] is namespace: ['transitive', 'use'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['transitive', 'dep', as TransitiveLib()]
 	];
 

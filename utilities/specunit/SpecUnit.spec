@@ -39,7 +39,7 @@
 #! the Buf floor) is a tracked follow-up.
 
 Class is SuiteResult{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
 	String is name;
 	Boolean is passed: true;
@@ -52,7 +52,7 @@ Class is SuiteResult{
 }
 
 Class is WorkItem{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
 	String is path;
 	String is kind;
@@ -72,7 +72,7 @@ Class is WorkItem{
 }
 
 Class is ReadyRunItem{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
 	WorkItem is item;
 	Int is idx: -1;
@@ -90,9 +90,9 @@ Class is ReadyRunItem{
 }
 
 Class is SpecTestUi{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
@@ -320,9 +320,9 @@ Class is SpecTestUi{
 ## Held arrays and maps are mutex-protected — the worker pool reads queues and
 ## records results from every worker thread safely.
 Class is SpecTestRegistry{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'sys', Conditional],
@@ -476,9 +476,9 @@ Class is SpecTestRegistry{
 }
 
 Class is SpecUnit{
-	namespace: ['specunit'];
+	replace [String] is namespace: ['specunit'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		# The plain form grants construction (the report's locals), the
 		# as-form grants the bare call surface (the overloads pattern).
 		['base', 'cleo', Cleo],

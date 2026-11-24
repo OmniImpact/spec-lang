@@ -5,9 +5,9 @@
 ## dynamic region cannot push onto the caller's or current claim pool.
 
 Class of SpecOptimizer is PoolElisionPass{
-	namespace: ['base', 'compiler', 'opt'];
+	replace [String] is namespace: ['base', 'compiler', 'opt'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'opt', SpecOptimizer],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'ir', IrFunction],

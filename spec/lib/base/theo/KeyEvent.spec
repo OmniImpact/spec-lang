@@ -2,7 +2,7 @@
 #! Decoded keyboard input event for Theo frames and widgets.
 
 Class is KeyEvent{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
 	String is kind: 'none';
 	String is key: '';

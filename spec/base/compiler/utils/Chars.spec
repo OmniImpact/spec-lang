@@ -6,7 +6,7 @@
 ## String predicates — the compiler eats its own String migration.
 
 Class is Chars{
-	replace Array of String is namespace: ['base', 'compiler', 'utils'];
+	replace [String] is namespace: ['base', 'compiler', 'utils'];
 
 	## True when [ch] may begin an identifier: a letter or an underscore.
 	Function of Boolean is isIdentifierStart(Str is ch){

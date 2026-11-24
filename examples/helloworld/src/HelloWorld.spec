@@ -3,7 +3,7 @@ Class is HelloWorld{
 
 	local Str is greeting: 'Hello';
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Map],
 		['base', 'sys', as Output()],
 		[Greeter]

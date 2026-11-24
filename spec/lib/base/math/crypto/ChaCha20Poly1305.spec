@@ -2,9 +2,9 @@
 #! Pure-Spec ChaCha20-Poly1305 AEAD (RFC 8439).
 
 Class is ChaCha20Poly1305{
-	namespace: ['base', 'math', 'crypto'];
+	replace [String] is namespace: ['base', 'math', 'crypto'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

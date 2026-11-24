@@ -4,7 +4,7 @@
 #! WE call them on the Spec side.
 
 Class is Terminal{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Returns the console width in columns, or 0 when stdout is not a
 	## terminal. Bound to `spec_term_width`.

@@ -35,7 +35,7 @@ Class is UndefinedIdentifier{
 #! case: testNonBooleanConditionControl
 #! expect: Method declared return type 'Boolean', but returned 'Int'
 Class is NonBooleanConditionControl{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 
@@ -49,7 +49,7 @@ Class is NonBooleanConditionControl{
 #! case: testUnassignedFieldRead
 #! expect: is read before being initialized
 Class is UnassignedFieldRead{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Output()]
 	];
 
@@ -80,7 +80,7 @@ Enum is TransportMode{
 }
 
 Class is IncompleteWhenBranches{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 
@@ -179,7 +179,7 @@ Class is N17StringRelationalMixed{
 #! case: testFunctionTypedParam
 #! expect: Argument 'check' for 'Conditional.if': cannot assign 'Function' to 'Function of Boolean'
 Class is N22FunctionTypedParam{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Output()]
 	];
@@ -195,7 +195,7 @@ Class is N22FunctionTypedParam{
 #! case: testVoidInValueContext
 #! expect: 'Conditional.if' declares no return value
 Class is N23VoidInValueContext{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 
@@ -231,7 +231,7 @@ Class is UngroundedGenericMethod{
 #! case: testArrayGetDefaultTypeMismatch
 #! expect: cannot assign 'String' to 'Int'
 Class is ArrayDefaultMismatch{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Array]
 	];
 	replace Function is init(){
@@ -243,7 +243,7 @@ Class is ArrayDefaultMismatch{
 #! case: testMapGetDefaultTypeMismatch
 #! expect: cannot assign 'String' to 'Int'
 Class is MapDefaultMismatch{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Map]
 	];
 	replace Function is init(){
@@ -262,7 +262,7 @@ Enum is Maybe of T {
 	None
 }
 Class is App{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	replace Function is init(Map of String to String is args){
@@ -320,7 +320,7 @@ Class is UninitPubApp{
 #! case: testMissingReturnPathRejected
 #! expect: not all control-flow paths return a value
 Class is MissingReturnApp{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()]
 	];
 	Function of String is maybeName(Boolean is flag){

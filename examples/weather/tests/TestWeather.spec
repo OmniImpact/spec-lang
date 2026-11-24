@@ -1,7 +1,7 @@
 #! Offline unit tests for the weather example's forecast JSON formatting.
 
 Class of SpecUnitTest is TestWeather{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', as Assert()],
 		['base', 'core', Result],

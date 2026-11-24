@@ -1,7 +1,7 @@
 #! specunit: suite
 
 Class of SpecUnitTest is TestVariadicAndDefaultInit{
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', as Introspection()]
 	];

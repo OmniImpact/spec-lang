@@ -2,9 +2,9 @@
 #! Suggests `merge` instead of `replace` on `using` when manually importing `as Conditional()` or `as Loops()`.
 
 Class of LintRule is MergeUsingRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', [LintRule, LintIssue]],
 		['base', 'compiler', 'ast', [ClassInfo, Member, MemberKind, Expression, NamedArg]],
 		['base', 'compiler', 'lexer', Keyword],

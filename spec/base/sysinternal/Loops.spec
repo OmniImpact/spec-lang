@@ -5,7 +5,7 @@
 #! protocol — only this one item binds to C.
 
 Class is Loops{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Runs [iterate] repeatedly while [evaluate] returns `true`.
 	##

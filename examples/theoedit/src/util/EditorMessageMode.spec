@@ -2,7 +2,7 @@
 #! Active message/prompt mode for the editor.
 
 Enum is EditorMessageMode{
-	namespace: ['theoedit', 'util'],
+	replace [String] is namespace: ['theoedit', 'util'];
 	NONE,
 	CONFIRM_QUIT
 }

@@ -6,9 +6,9 @@
 #! or unwind — never as instance-held state.
 
 Class of LintRule is HeldErrorStateRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', ProgramNode],

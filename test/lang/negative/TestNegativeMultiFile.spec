@@ -1,5 +1,5 @@
 Class of SpecUnitTest is TestNegativeMultiFile{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', Assert],
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner]

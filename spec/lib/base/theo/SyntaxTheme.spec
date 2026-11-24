@@ -2,9 +2,9 @@
 #! Configurable syntax-highlighting color palette (defaulting to warm light-brown, amber, and orange tones).
 
 Class is SyntaxTheme{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', TheoColor]
 	];
 

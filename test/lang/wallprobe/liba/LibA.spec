@@ -1,7 +1,7 @@
 #! Package wallprobe:liba
 
 Class is LibA{
-	namespace: ['wallprobe', 'liba'];
+	replace [String] is namespace: ['wallprobe', 'liba'];
 
 	## The function the as-import grants bare.
 	Function of Int is triple(Int is n){

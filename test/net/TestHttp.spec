@@ -2,7 +2,7 @@
 #! HttpResponse, and async Http:get / Http:post with redirects & chunked bodies).
 
 Class of SpecUnitTest is TestHttp{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

@@ -20,9 +20,9 @@
 #! Exit contract: 0 clean; 1 findings or lex/parse errors; 2 usage.
 
 Class is SpecLint{
-	namespace: ['speclint'];
+	replace [String] is namespace: ['speclint'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'ast', ProgramNode],
@@ -310,7 +310,7 @@ Class is SpecLint{
 ## ms-per-file), so no held machinery is needed; a Parallel wave would
 ## make this held, the specunit registry pattern.
 Class is LintTally{
-	namespace: ['speclint'];
+	replace [String] is namespace: ['speclint'];
 
 	Int is files: 0;
 	Int is warnings: 0;

@@ -3,9 +3,9 @@
 #! [DirectoryListing] models.
 
 Class is DirectoryScanner{
-	namespace: ['theoedit', 'util'];
+	replace [String] is namespace: ['theoedit', 'util'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Uri()],
 		['theoedit', 'model', DirectoryListing]

@@ -3,7 +3,7 @@
 #! and lock-free thread-local PRNG bound to C by the naming convention.
 
 Class is Math{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Square root. Bound to `spec_math_sqrt`.
 	Function of Float is math_sqrt(Float is v);

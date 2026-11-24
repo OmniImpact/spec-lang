@@ -3,9 +3,9 @@
 #! floor's single primitive — `else` is just `not if`.
 
 Class is Conditional{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', Conditional]
 	];
 

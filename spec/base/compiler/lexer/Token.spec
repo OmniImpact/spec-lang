@@ -6,9 +6,9 @@
 ## the current file composes the full location when reporting.
 
 Class is Token{
-	replace Array of String is namespace: ['base', 'compiler', 'lexer'];
+	replace [String] is namespace: ['base', 'compiler', 'lexer'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'lexer', Operator]
 ,

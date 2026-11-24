@@ -2,7 +2,7 @@
 #! Decoded mouse input event for Theo frames and widgets.
 
 Class is MouseEvent{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
 	String is kind: 'none';
 	Int is x: 0;

@@ -2,7 +2,7 @@
 #! The console floor: scalar/byte-pointer stdout/stderr/stdin PAL declarations.
 
 Class is Console{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	Function is pal_print(Int is data_addr, Int is len);
 	Function is pal_print_line(Int is data_addr, Int is len);

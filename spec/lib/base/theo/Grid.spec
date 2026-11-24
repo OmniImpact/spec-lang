@@ -2,9 +2,9 @@
 #! Nestable vertical or horizontal grid splitting a frame into fixed or weighted panes.
 
 Class of Widget is Grid{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, GridPane, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'math', as Math()]

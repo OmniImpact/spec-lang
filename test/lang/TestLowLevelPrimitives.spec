@@ -2,7 +2,7 @@
 #! Int8, Int16, Int32, Int128, ISize, UInt128, USize, Float32, Rune, RawPtr.
 
 Class of SpecUnitTest is TestLowLevelPrimitives{
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],

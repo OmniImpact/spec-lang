@@ -3,7 +3,7 @@
 
 Class of SpecUnitTest is TestSpecBuild{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -114,7 +114,7 @@ Class of SpecUnitTest is TestSpecBuild{
 		local String is outBin: tmpDir . '/sb_app_bin' . Uri:exeSuffix();
 		local String is outBinNoExt: tmpDir . '/sb_app_bin';
 
-		local String is appSrc: "Class is SbApp{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(){\n\t\tline('SB_APP_OK');\n\t}\n}\n";
+		local String is appSrc: "Class is SbApp{\n\treplace [[String]] is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(){\n\t\tline('SB_APP_OK');\n\t}\n}\n";
 		fileWrite(path: appSrcFile, content: appSrc);
 
 		local String is manifest: '{"name": "sb_app", "version": "0.1.0", "source": "sb_app.spec", "source_dirs": [".", "' . specDir . '"], "output": "sb_app_bin"}';

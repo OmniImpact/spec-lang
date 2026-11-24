@@ -4,7 +4,7 @@
 #! bound to C by the naming convention.
 
 Class is Time{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Returns monotonic clock reading in nanoseconds. Bound to `spec_time_monotonic_ns`.
 	Function of Int is time_monotonic_ns();

@@ -4,9 +4,9 @@
 ## Callback interface invoked when a [Loop] finishes execution via [LoopControl].
 
 Class is LoopCallback{
-	namespace: ['base', 'iterator'];
+	replace [String] is namespace: ['base', 'iterator'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'iterator', LoopControl]
 	];
 

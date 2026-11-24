@@ -2,9 +2,9 @@
 #! HTTP/1.1 response container holding status code, status text, headers, and body.
 
 Class is HttpResponse{
-	namespace: ['base', 'net'];
+	replace [String] is namespace: ['base', 'net'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'struct', Map]
 	];
 

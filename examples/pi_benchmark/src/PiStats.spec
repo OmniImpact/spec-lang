@@ -3,7 +3,7 @@
 ## Provides Monte Carlo Pi estimation, fixed-precision formatting, and ANSI box helpers.
 Class is PiStats{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Ansi()],
 		['base', 'math', as Math()],
 		['base', 'sys', as Loops()],

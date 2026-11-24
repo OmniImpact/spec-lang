@@ -2,9 +2,9 @@
 #! Boolean-specialized [Emitter] convenience subclass.
 
 Class of Emitter is BoolEmitter{
-	namespace: ['base', 'signal'];
+	replace [String] is namespace: ['base', 'signal'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'signal', Emitter],
 		['base', 'signal', Collector],
 		['base', 'signal', BoolCollector],

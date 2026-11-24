@@ -4,9 +4,9 @@
 #! the same provenance story as scanner and parser diagnostics.
 
 Class is TypeError{
-	namespace: ['base', 'compiler', 'checker'];
+	replace [String] is namespace: ['base', 'compiler', 'checker'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', Error],
 		['base', 'sys', SourceLocation],
 		['base', 'sys', as Reflection()]

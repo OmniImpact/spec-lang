@@ -2,9 +2,9 @@
 #! Focusable push button widget with background highlight and optional Ctrl+letter shortcut.
 
 Class of Widget is Button{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];

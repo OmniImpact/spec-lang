@@ -2,9 +2,9 @@
 #! Single-line text widget accepting either a static [String] or dynamic [TextEmitter].
 
 Class of Widget is TextLine{
-	namespace: ['base', 'theo'];
+	replace [String] is namespace: ['base', 'theo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'theo', [Widget, TheoColor, TheoBuffer, TheoRenderer]],
 		['base', 'signal', [TextEmitter, TextCollector]],
 		['base', 'sys', as Conditional()]

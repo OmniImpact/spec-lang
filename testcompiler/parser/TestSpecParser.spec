@@ -2,9 +2,9 @@
 #! generic-class declarations, interface-style members, and error provenance.
 
 Class of SpecUnitTest is TestSpecParser{
-	namespace: ['test'];
+	replace [String] is namespace: ['test'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -110,7 +110,7 @@ Class of SpecUnitTest is TestSpecParser{
 		local Array of String is errs: :parseOf(src: "Enum of String is Level { NONE: '', WARN: 'WRN' }
 Class is Box of T{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Output()]
 	];
 	replace Function of T is get(){ return :item; }
@@ -120,7 +120,7 @@ Class is Box of T{
 	}
 
 	Function is testInterfaceStyleDeclarationParses(){
-		local Array of String is errs2: :parseOf(src: "Class is Floor{ namespace: ['base', 'x'];
+		local Array of String is errs2: :parseOf(src: "Class is Floor{ replace [String] is namespace: ['base', 'x'];
 	Function of Int is op(String is b); }");
 		Assert:areEqualInt(0, errs2:length());
 	}

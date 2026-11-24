@@ -5,7 +5,7 @@
 
 Class of SpecUnitTest is TestMultifile{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
@@ -70,7 +70,7 @@ Class of SpecUnitTest is TestMultifile{
 ## link). Holds the app reference and stops the run at five.
 Class of Loop is StepCounterLoop{
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'math', as Math()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()],

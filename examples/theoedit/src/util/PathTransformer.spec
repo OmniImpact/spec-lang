@@ -2,9 +2,9 @@
 #! Pure string/path/title transformation utilities used by ViewModels.
 
 Class is PathTransformer{
-	namespace: ['theoedit', 'util'];
+	replace [String] is namespace: ['theoedit', 'util'];
 
-	merge Array of Array of String is using: [
+	merge [[String]] is using: [
 		['theoedit', 'util', EditorStrings]
 	];
 

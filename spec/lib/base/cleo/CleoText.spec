@@ -2,9 +2,9 @@
 #! ANSI-aware UTF-8 display-width measurement, padding, and truncation.
 
 Class is CleoText{
-	namespace: ['base', 'cleo'];
+	replace [String] is namespace: ['base', 'cleo'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

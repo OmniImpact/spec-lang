@@ -8,7 +8,7 @@
 ## SpecError description.
 
 Enum is AudioError {
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 	OPEN_FAILED,
 	WRITE_FAILED
 }

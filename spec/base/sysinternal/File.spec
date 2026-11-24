@@ -2,7 +2,7 @@
 #! The filesystem floor: scalar/byte-pointer PAL declarations.
 
 Class is File{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	Function of Int is pal_file_read(Int is path_cstr, Int is out_len_addr);
 	Function of Int is pal_file_write(Int is path_cstr, Int is data_addr, Int is len, Int is append);

@@ -2,9 +2,9 @@
 #! Minimal URL parser and relative-reference resolver for HTTP/HTTPS.
 
 Class is Url{
-	namespace: ['base', 'net'];
+	replace [String] is namespace: ['base', 'net'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];

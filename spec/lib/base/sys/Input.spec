@@ -2,9 +2,9 @@
 #! The console input wrapper over the console floor's read primitives.
 
 Class is Input{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', InputHandler],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],

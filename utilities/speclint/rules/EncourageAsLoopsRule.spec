@@ -2,9 +2,9 @@
 #! Flags explicit calls to Loops methods, encouraging the 'as Loops()' import.
 
 Class of LintRule is EncourageAsLoopsRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', Expression],

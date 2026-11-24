@@ -2,9 +2,9 @@
 #! Flags `using` imports (and `as ... is alias` bindings) that are never referenced in the class.
 
 Class of LintRule is UnusedUsingRule{
-	namespace: ['speclint', 'rules'];
+	replace [String] is namespace: ['speclint', 'rules'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', ClassInfo],

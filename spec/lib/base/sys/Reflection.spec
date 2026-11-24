@@ -8,9 +8,9 @@
 ## the wrapper becomes the only path.
 
 Class is Reflection{
-	namespace: ['base', 'sys'];
+	replace [String] is namespace: ['base', 'sys'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sysinternal', Reflection]
 	];
 

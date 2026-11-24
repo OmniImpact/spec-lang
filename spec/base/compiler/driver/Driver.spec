@@ -8,9 +8,9 @@
 ## it IS the entry point of the self-hosted compiler.
 
 Class is Driver{
-	namespace: ['base', 'compiler', 'driver'];
+	replace [String] is namespace: ['base', 'compiler', 'driver'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],

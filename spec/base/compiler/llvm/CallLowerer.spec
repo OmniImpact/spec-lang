@@ -6,9 +6,9 @@
 ## back to general method/constructor dispatch.
 
 Class is CallLowerer{
-	namespace: ['base', 'compiler', 'llvm'];
+	replace [String] is namespace: ['base', 'compiler', 'llvm'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'llvm', IrBuilder]

@@ -4,7 +4,7 @@
 #! base:sys Process wrapper decides what WE call them on the Spec side.
 
 Class is Process{
-	namespace: ['base', 'sysinternal'];
+	replace [String] is namespace: ['base', 'sysinternal'];
 
 	## Executes an external system command [cmd_cstr] with C-string argument vector
 	## at [argv_addr] of length [nargs] and returns the process exit status code.

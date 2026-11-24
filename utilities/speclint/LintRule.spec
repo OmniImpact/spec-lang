@@ -2,9 +2,9 @@
 #! Base class and contract for all speclint rules.
 
 Class is LintRule{
-	namespace: ['speclint'];
+	replace [String] is namespace: ['speclint'];
 
-	replace Array of Array of String is using: [
+	replace [[String]] is using: [
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
