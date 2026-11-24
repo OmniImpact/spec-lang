@@ -1,5 +1,5 @@
 #! Package theojack:view
-#! Options screen for TheoJack with Card Style, Starting Amount, and Rounds selectors, live centered card preview, and Cancel/Save actions.
+#! Options screen for TheoJack: pure view bound to [OptionsViewModel].
 
 Class of Frame is OptionsFrame{
 	replace [String] is namespace: ['theojack', 'view'];
@@ -7,76 +7,34 @@ Class of Frame is OptionsFrame{
 	merge [[String]] is using: [
 		['base', 'theo', '*'],
 		['theojack', 'model', [Card, CardStyle, Rank, Suit]],
-		['theojack', 'util', [HomeStrings, OptionsStorage]],
+		['theojack', 'util', HomeStrings],
+		['theojack', 'vm', OptionsViewModel],
 		['theojack', 'view', CardView]
 	];
 
-	OptionsStorage is storage: OptionsStorage();
-	CardStyle is selectedStyle: CardStyle:WIREFRAME;
-	Int is selectedAmount: 500;
-	Int is selectedRounds: 10;
+	OptionsViewModel is vm: OptionsViewModel();
 	CardView is previewCard: CardView(card: Card(rank: Rank:ACE, suit: Suit:HEARTS));
 	FocusTarget is styleFocus: FocusTarget(initial: true);
 	FocusTarget is amountFocus: FocusTarget();
 	FocusTarget is roundsFocus: FocusTarget();
 	FocusTarget is cancelFocus: FocusTarget();
 	FocusTarget is saveFocus: FocusTarget();
-	Function is onCancel: {};
-	Function is onSave: local Function(CardStyle is _s){};
 
-	replace Function is init(
-		OptionsStorage is storage: OptionsStorage(),
-		CardStyle is initialStyle: CardStyle:WIREFRAME,
-		Int is initialAmount: 500,
-		Int is initialRounds: 10,
-		Function is onCancel: {},
-		Function is onSave: local Function(CardStyle is _s){}
-	){
-		:storage: storage;
-		:selectedStyle: initialStyle;
-		:selectedAmount: initialAmount;
-		:selectedRounds: initialRounds;
-		:onCancel: onCancel;
-		:onSave: onSave;
+	replace Function is init(OptionsViewModel is vm: OptionsViewModel()){
+		:vm: vm;
 		:previewCard: CardView(
 			card: Card(rank: Rank:ACE, suit: Suit:HEARTS),
-			style: initialStyle
+			style: vm:selectedStyle:current()
 		);
-	}
-
-	Function is selectStyle(CardStyle is next){
-		:selectedStyle: next;
-		previewCard:setStyle(next: next);
-		invalidate();
-	}
-
-	Function is selectAmount(Int is next){
-		if({ next > 0 }, {
-			:selectedAmount: next;
+		vm:selectedStyle:collect(onEmit: {
+			previewCard:setStyle(next: vm:selectedStyle:current());
 			invalidate();
 		});
 	}
 
-	Function is selectAmountText(String is raw){
-		local Int is parsed: raw:trim() as Int;
-		if({ parsed > 0 }, {
-			:selectedAmount: parsed;
-		});
-	}
-
-	Function is selectRounds(Int is next){
-		:selectedRounds: next;
-		invalidate();
-	}
-
-	Function is saveAndClose(){
-		storage:save(style: selectedStyle, startingAmount: selectedAmount, numRounds: selectedRounds);
-		onSave(selectedStyle);
-	}
-
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() }, {
-			onCancel();
+			vm:cancel();
 			return true;
 		});
 		return false;
@@ -112,11 +70,11 @@ Class of Frame is OptionsFrame{
 												CardStyle:WHITE:value(),
 												CardStyle:METALLIC:value()
 											],
-											selected: selectedStyle:value(),
+											selected: vm:selectedStyle:current():value(),
 											width: 15,
 											focusTarget: styleFocus,
 											onSelect: local Function(String is chosen){
-												selectStyle(next: storage:styleFromName(name: chosen));
+												vm:selectStyleByName(name: chosen);
 											}
 										)
 									])
@@ -135,12 +93,12 @@ Class of Frame is OptionsFrame{
 												children: Array([
 													TextLine(value: '$', bold: true),
 													TextInput(
-														value: selectedAmount as String,
+														value: vm:selectedAmount:current() as String,
 														placeholder: '500',
 														width: 12,
 														focusTarget: amountFocus,
 														onChange: local Function(String is typed){
-															selectAmountText(raw: typed);
+															vm:selectAmountText(raw: typed);
 														}
 													)
 												])
@@ -156,11 +114,11 @@ Class of Frame is OptionsFrame{
 										Dropdown(
 											host: :,
 											options: ['5', '10', '20', '50'],
-											selected: selectedRounds as String,
+											selected: vm:selectedRounds:current() as String,
 											width: 15,
 											focusTarget: roundsFocus,
 											onSelect: local Function(String is chosen){
-												selectRounds(next: chosen as Int);
+												vm:selectRounds(next: chosen as Int);
 											}
 										)
 									])
@@ -190,14 +148,14 @@ Class of Frame is OptionsFrame{
 									label: HomeStrings:LABEL_CANCEL,
 									shortcutKey: 'c',
 									focusTarget: cancelFocus,
-									onClick: { onCancel(); }
+									onClick: { vm:cancel(); }
 								),
 								Spacer(weight: 1.0),
 								Button(
 									label: HomeStrings:LABEL_SAVE,
 									shortcutKey: 's',
 									focusTarget: saveFocus,
-									onClick: { saveAndClose(); }
+									onClick: { vm:save(); }
 								)
 							])
 						)

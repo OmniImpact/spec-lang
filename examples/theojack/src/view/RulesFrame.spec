@@ -1,40 +1,77 @@
 #! Package theojack:view
-#! Scrollable Rules screen displaying JSON-driven text, headers, and example card hands.
+#! Scrollable Rules screen: pure view rendering [RuleItem]s from [RulesViewModel].
 
 Class of Frame is RulesFrame{
 	replace [String] is namespace: ['theojack', 'view'];
 
 	merge [[String]] is using: [
 		['base', 'theo', '*'],
-		['theojack', 'model', CardStyle],
-		['theojack', 'util', [HomeStrings, RulesLoader]]
+		['theojack', 'model', [Card, RuleItem]],
+		['theojack', 'util', HomeStrings],
+		['theojack', 'vm', RulesViewModel],
+		['theojack', 'view', CardView]
 	];
 
-	RulesLoader is loader: RulesLoader();
-	CardStyle is cardStyle: CardStyle:WIREFRAME;
+	RulesViewModel is vm: RulesViewModel();
 	FocusTarget is doneFocus: FocusTarget(initial: true);
-	Function is onDone: {};
 
-	replace Function is init(
-		RulesLoader is loader: RulesLoader(),
-		CardStyle is cardStyle: CardStyle:WIREFRAME,
-		Function is onDone: {}
-	){
-		:loader: loader;
-		:cardStyle: cardStyle;
-		:onDone: onDone;
+	replace Function is init(RulesViewModel is vm: RulesViewModel()){
+		:vm: vm;
+	}
+
+	local Function of Array of Widget is buildContentWidgets(){
+		local Array of Widget is out: Array();
+		local Int is i: 0;
+		while({ i < vm:items:length() }, {
+			local RuleItem is item: vm:items:get(index: i);
+			if({ item:kind == 'header' }, {
+				out:add(item: TextLine(
+					value: item:text,
+					color: TheoColor:ansi(code: 220),
+					bold: true
+				));
+			});
+			if({ item:kind == 'text' }, {
+				out:add(item: TextGraphic(graphic: item:text));
+			});
+			if({ item:kind == 'bullet' }, {
+				local Array of Widget is bulletRows: Array();
+				local Int is bi: 0;
+				while({ bi < item:bullets:length() }, {
+					bulletRows:add(item: Row(
+						gap: 1,
+						children: Array([
+							TextLine(value: '•', color: TheoColor:ansi(code: 220), bold: true),
+							TextGraphic(graphic: item:bullets:get(index: bi))
+						])
+					));
+					bi: bi + 1;
+				});
+				out:add(item: Col(gap: 0, padX: 1, children: bulletRows));
+			});
+			if({ item:kind == 'cards' }, {
+				local Array of Widget is rowKids: Array();
+				local Int is ci: 0;
+				while({ ci < item:cards:length() }, {
+					rowKids:add(item: CardView(card: item:cards:get(index: ci), style: vm:cardStyle));
+					ci: ci + 1;
+				});
+				out:add(item: Row(gap: 2, children: rowKids));
+			});
+			i: i + 1;
+		});
+		return out;
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() || (event:isChar() && event:key:toLower() == 'd') }, {
-			onDone();
+			vm:done();
 			return true;
 		});
 		return false;
 	}
 
 	replace Function of Widget is ui(){
-		local Array of Widget is contentWidgets: loader:loadWidgets(style: cardStyle);
 		Grid(
 			orientation: 'vertical',
 			panes: Array([
@@ -55,7 +92,7 @@ Class of Frame is RulesFrame{
 							scrollable: true,
 							padX: 2,
 							padY: 1,
-							children: contentWidgets
+							children: buildContentWidgets()
 						)
 					)
 				),
@@ -72,7 +109,7 @@ Class of Frame is RulesFrame{
 									label: HomeStrings:LABEL_DONE,
 									shortcutKey: 'd',
 									focusTarget: doneFocus,
-									onClick: { onDone(); }
+									onClick: { vm:done(); }
 								)
 							])
 						)

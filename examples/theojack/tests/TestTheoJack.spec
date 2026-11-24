@@ -9,6 +9,7 @@ Class of SpecUnitTest is TestTheoJack{
 		['base', 'sys', [as File(), as Loops(), as Process()]],
 		['theojack', 'model', [Card, CardStyle, GamePhase, Hand, Rank, Suit]],
 		['theojack', 'util', [HomeStrings, OptionsStorage, RulesLoader]],
+		['theojack', 'vm', [GameViewModel, HomeViewModel, OptionsViewModel, RulesViewModel]],
 		['theojack', 'view', [CardView, HomeFrame, OptionsFrame, RulesFrame, GameFrame]]
 	];
 
@@ -16,11 +17,12 @@ Class of SpecUnitTest is TestTheoJack{
 		local Boolean is quitCalled: false;
 		local Boolean is rulesOpened: false;
 		local Boolean is optionsOpened: false;
-		local HomeFrame is home: HomeFrame(
+		local HomeViewModel is vm: HomeViewModel(
 			onOpenRules: { rulesOpened: true; },
 			onOpenOptions: { optionsOpened: true; },
 			onQuit: { quitCalled: true; }
 		);
+		local HomeFrame is home: HomeFrame(vm: vm);
 		local [FocusTarget] is fts: [home:playFocus, home:rulesFocus, home:optionsFocus, home:aboutFocus, home:quitFocus, home:aboutCloseFocus];
 		times(count: fts:length(), worker: local Function(Int is i){
 			fts:get(index: i):bindOwner(handler: local Function(Any is _t){
@@ -37,7 +39,6 @@ Class of SpecUnitTest is TestTheoJack{
 		home:paint(buf: buf, renderer: ren);
 
 		Assert:areEqualInt(11, home:heroCard:measureWidth(maxW: 80));
-		# Card (height 7) and 4-button menu (4 + 3 gaps = 7) have equal height and align at same boxY
 		Assert:areEqualInt(7, home:heroCard:boxH);
 		Assert:areEqualString('H', buf:cellAt(x: 38, y: 0):ch);
 
@@ -80,17 +81,21 @@ Class of SpecUnitTest is TestTheoJack{
 		local OptionsStorage is storage: OptionsStorage(filePath: tmpPath);
 		Assert:isTrue(storage:loadCardStyle() == CardStyle:WIREFRAME);
 
-		local HomeFrame is home: HomeFrame();
+		local HomeViewModel is hvm: HomeViewModel();
+		local HomeFrame is home: HomeFrame(vm: hvm);
 		local TheoScreen is scr: TheoScreen(root: home);
-		local OptionsFrame is opts: OptionsFrame(
+		local OptionsViewModel is ovm: OptionsViewModel(
 			storage: storage,
-			initialStyle: home:heroCard:style,
+			initialStyle: hvm:cardStyle:current(),
+			initialAmount: storage:startingAmount,
+			initialRounds: storage:numRounds,
 			onCancel: { scr:pop(); },
 			onSave: local Function(CardStyle is saved){
-				home:setCardStyle(next: saved);
+				hvm:setCardStyle(next: saved);
 				scr:pop();
 			}
 		);
+		local OptionsFrame is opts: OptionsFrame(vm: ovm);
 		scr:push(frame: opts);
 		Assert:areEqualInt(2, scr:stack:length());
 
@@ -106,16 +111,21 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'enter')));
 		Assert:isFalse(opts:hasOpenOverlay());
 		Assert:isTrue(opts:previewCard:style == CardStyle:METALLIC);
+
+		ovm:selectAmountText(raw: '1250');
+		ovm:selectRounds(next: 20);
 		local TheoBuffer is buf: TheoBuffer(width: 80, height: 24);
 		local TheoRenderer is ren: TheoRenderer();
 		opts:layout(x: 0, y: 0, w: 80, h: 24);
 		opts:paint(buf: buf, renderer: ren);
 
 		# Save persists JSON, pops back, and updates HomeFrame card style
-		opts:saveAndClose();
+		ovm:save();
 		Assert:areEqualInt(1, scr:stack:length());
 		Assert:isTrue(home:heroCard:style == CardStyle:METALLIC);
 		Assert:isTrue(storage:loadCardStyle() == CardStyle:METALLIC);
+		Assert:areEqualInt(1250, storage:startingAmount);
+		Assert:areEqualInt(20, storage:numRounds);
 
 		# Card 10 of Diamonds renders without shifting border
 		local CardView is tenDia: CardView(card: Card(rank: Rank:TEN, suit: Suit:DIAMONDS), style: CardStyle:BLACK);
@@ -134,10 +144,11 @@ Class of SpecUnitTest is TestTheoJack{
 	Function is testRulesScreenLoadsJsonAndScrolls(){
 		local HomeFrame is home: HomeFrame();
 		local TheoScreen is scr: TheoScreen(root: home);
-		local RulesFrame is rules: RulesFrame(
+		local RulesViewModel is rvm: RulesViewModel(
 			cardStyle: CardStyle:METALLIC,
 			onDone: { scr:pop(); }
 		);
+		local RulesFrame is rules: RulesFrame(vm: rvm);
 		scr:push(frame: rules);
 		Assert:areEqualInt(2, scr:stack:length());
 
@@ -157,7 +168,6 @@ Class of SpecUnitTest is TestTheoJack{
 	}
 
 	Function is testGamePlayDealStandAndWinLoseOverlay(){
-		# Verify Ace-aware Hand scoring
 		local Hand is h: Hand();
 		h:add(card: Card(rank: Rank:ACE, suit: Suit:SPADES));
 		h:add(card: Card(rank: Rank:KING, suit: Suit:HEARTS));
@@ -168,12 +178,13 @@ Class of SpecUnitTest is TestTheoJack{
 
 		local HomeFrame is home: HomeFrame();
 		local TheoScreen is scr: TheoScreen(root: home);
-		local GameFrame is gf: GameFrame(
+		local GameViewModel is gvm: GameViewModel(
 			startingAmount: 500,
 			maxRounds: 5,
 			cardStyle: CardStyle:BLACK,
 			onHome: { scr:pop(); }
 		);
+		local GameFrame is gf: GameFrame(vm: gvm);
 		scr:push(frame: gf);
 		local TheoBuffer is buf: TheoBuffer(width: 80, height: 24);
 		local TheoRenderer is ren: TheoRenderer();
@@ -212,13 +223,13 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:isTrue(gf:handleMouse(event: MouseEvent(kind: 'press', button: 0, x: 4, y: 21)));
 
 		# Bet +10 -> 20, Deal -> either PLAYER_TURN or immediate ROUND_OVER (Blackjack)
-		gf:game:adjustBet(delta: 10);
-		Assert:areEqualInt(20, gf:game:currentBet);
-		gf:doDeal();
-		if({ gf:game:phase == GamePhase:PLAYER_TURN }, {
-			gf:doStand();
+		gvm:adjustBet(delta: 10);
+		Assert:areEqualInt(20, gvm:game:currentBet);
+		gvm:deal();
+		if({ gvm:game:phase == GamePhase:PLAYER_TURN }, {
+			gvm:stand();
 		});
-		Assert:isTrue(gf:game:phase == GamePhase:ROUND_OVER);
+		Assert:isTrue(gvm:game:phase == GamePhase:ROUND_OVER);
 		Assert:isTrue(gf:hasOpenOverlay());
 
 		gf:layout(x: 0, y: 0, w: 80, h: 24);

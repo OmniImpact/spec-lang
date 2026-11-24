@@ -1,17 +1,18 @@
 #! Package theojack:view
-#! Home screen for TheoJack: centered playing card beside the main menu.
+#! Home screen for TheoJack: pure view delegating card rotation, style, About state, and navigation to [HomeViewModel].
 
 Class of Frame is HomeFrame{
 	replace [String] is namespace: ['theojack', 'view'];
 
 	merge [[String]] is using: [
 		['base', 'theo', '*'],
-		['base', 'sys', as Time()],
-		['theojack', 'model', [Card, CardStyle]],
+		['theojack', 'model', Card],
 		['theojack', 'util', HomeStrings],
+		['theojack', 'vm', HomeViewModel],
 		['theojack', 'view', CardView]
 	];
 
+	HomeViewModel is vm: HomeViewModel();
 	FocusTarget is playFocus: FocusTarget(initial: true);
 	FocusTarget is rulesFocus: FocusTarget();
 	FocusTarget is optionsFocus: FocusTarget();
@@ -19,30 +20,23 @@ Class of Frame is HomeFrame{
 	FocusTarget is quitFocus: FocusTarget();
 	FocusTarget is aboutCloseFocus: FocusTarget();
 	CardView is heroCard: CardView();
-	Int is lastCardMs: 0;
-	Function is onOpenPlay: {};
-	Function is onOpenRules: {};
-	Function is onOpenOptions: {};
-	Function is onQuit: {};
 	Array of Overlay is aboutOverlays: Array();
 	Array of Button is aboutButtons: Array();
 
-	replace Function is init(
-		CardStyle is initialStyle: CardStyle:WIREFRAME,
-		Function is onOpenPlay: {},
-		Function is onOpenRules: {},
-		Function is onOpenOptions: {},
-		Function is onQuit: {}
-	){
-		:onOpenPlay: onOpenPlay;
-		:onOpenRules: onOpenRules;
-		:onOpenOptions: onOpenOptions;
-		:onQuit: onQuit;
-		:heroCard: CardView(card: Card():randomCard(), style: initialStyle);
-		:lastCardMs: monotonicMs();
+	replace Function is init(HomeViewModel is vm: HomeViewModel()){
+		:vm: vm;
+		:heroCard: CardView(card: vm:heroCard, style: vm:cardStyle:current());
+		vm:onCardChanged: local Function(Card is next){
+			heroCard:setCard(next: next);
+		};
+		vm:cardStyle:collect(onEmit: {
+			heroCard:setStyle(next: vm:cardStyle:current());
+		});
+
 		local Overlay is aboutOv: Overlay(
 			closeOnEsc: true,
 			closeOnBackdrop: false,
+			onClose: { vm:closeAbout(); },
 			content: Center(
 				child: Surface(
 					background: TheoColor:ansi(code: 235),
@@ -66,7 +60,7 @@ Class of Frame is HomeFrame{
 											shortcutKey: 'c',
 											width: 9,
 											focusTarget: aboutCloseFocus,
-											onClick: { closeAbout(); }
+											onClick: { vm:closeAbout(); }
 										),
 										Spacer(weight: 1.0)
 									])
@@ -79,49 +73,34 @@ Class of Frame is HomeFrame{
 		);
 		aboutOverlays: Array([aboutOv]);
 		addOverlay(overlay: aboutOv);
-	}
 
-	Function is openAbout(){
-		if({ aboutOverlays:length() > 0 && aboutButtons:length() > 0 }, {
-			showOverlay(overlay: aboutOverlays:get(index: 0), anchor: aboutButtons:get(index: 0));
-		});
-	}
-
-	Function is closeAbout(){
-		if({ aboutOverlays:length() > 0 }, {
-			closeOverlay(overlay: aboutOverlays:get(index: 0));
+		vm:aboutOpen:collect(onEmit: {
+			if({ aboutOverlays:length() == 0 }, { return; });
+			local Overlay is ov: aboutOverlays:get(index: 0);
+			if({ vm:aboutOpen:current() }, {
+				if({ !ov:open }, {
+					local Widget is anchor: if({ aboutButtons:length() > 0 }, { aboutButtons:get(index: 0) }, { Widget() });
+					showOverlay(overlay: ov, anchor: anchor);
+				});
+			}, {
+				if({ ov:open }, {
+					closeOverlay(overlay: ov);
+				});
+			});
 		});
 	}
 
 	Function of Boolean is isAboutOpen(){
-		if({ aboutOverlays:length() > 0 }, {
-			return aboutOverlays:get(index: 0):open;
-		});
-		return false;
-	}
-
-	Function is setCardStyle(CardStyle is next){
-		heroCard:setStyle(next: next);
-	}
-
-	Function is randomizeCard(){
-		heroCard:setCard(next: Card():randomCard());
-		:lastCardMs: monotonicMs();
+		return vm:aboutOpen:current();
 	}
 
 	replace Function of Boolean is onTick(){
-		if({ hasOpenOverlay() }, { return false; });
-		local Int is now: monotonicMs();
-		if({ now - lastCardMs >= 1000 }, {
-			randomizeCard();
-			return true;
-		});
-		return false;
+		return vm:onTick();
 	}
 
 	replace Function of Boolean is onKey(KeyEvent is event){
 		if({ event:isEsc() || (event:isChar() && event:key:toLower() == 'q') }, {
-			onQuit();
+			vm:quit();
 			return true;
 		});
 		return false;
@@ -134,7 +113,7 @@ Class of Frame is HomeFrame{
 			shortcutKey: 'a',
 			width: w,
 			focusTarget: aboutFocus,
-			onClick: { openAbout(); }
+			onClick: { vm:openAbout(); }
 		);
 		aboutButtons: Array([aboutBtn]);
 		Grid(
@@ -165,21 +144,21 @@ Class of Frame is HomeFrame{
 												shortcutKey: 'p',
 												width: w,
 												focusTarget: playFocus,
-												onClick: { onOpenPlay(); }
+												onClick: { vm:play(); }
 											),
 											Button(
 												label: HomeStrings:MENU_RULES,
 												shortcutKey: 'r',
 												width: w,
 												focusTarget: rulesFocus,
-												onClick: { onOpenRules(); }
+												onClick: { vm:openRules(); }
 											),
 											Button(
 												label: HomeStrings:MENU_OPTIONS,
 												shortcutKey: 'o',
 												width: w,
 												focusTarget: optionsFocus,
-												onClick: { onOpenOptions(); }
+												onClick: { vm:openOptions(); }
 											),
 											aboutBtn
 										])
@@ -201,7 +180,7 @@ Class of Frame is HomeFrame{
 									label: HomeStrings:MENU_QUIT,
 									shortcutKey: 'q',
 									focusTarget: quitFocus,
-									onClick: { onQuit(); }
+									onClick: { vm:quit(); }
 								),
 								Spacer(weight: 1.0)
 							])
