@@ -215,7 +215,8 @@ Class of Fractal is BarnsleyFernFractal{
 			local Int is cnt: counts:get(index: pi);
 			if({ cnt > 0 }, {
 				local Float is density: log(value: 1.0 + toFloat(value: cnt)) / denom;
-				grid:set(index: pi, item: clamp01(v: 0.2 + 0.8 * density));
+				local Float is boosted: sqrt(value: clamp01(v: density));
+				grid:set(index: pi, item: clamp01(v: 0.30 + 0.70 * boosted));
 			});
 			pi: pi + 1;
 		});
