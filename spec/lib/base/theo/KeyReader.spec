@@ -146,12 +146,30 @@ Class is KeyReader{
 						cur: pollByte(timeoutMs: 15);
 					});
 					term: cur;
+					if({ term == 65 || term == 66 || term == 67 || term == 68 || term == 72 || term == 70 || term == 90 }, {
+						local Int is modBits2: if({ hasSemi && p2 > 0 }, { p2 - 1 }, { 0 });
+						local Boolean is isCtrl2: (modBits2 % 8) >= 4;
+						local Boolean is isAlt2: (modBits2 % 4) >= 2;
+						local KeyAction is act2: KeyAction:PRESS;
+						if({ p3 == 2 }, { act2: KeyAction:REPEAT; });
+						if({ p3 == 3 }, { act2: KeyAction:RELEASE; });
+						if({ term == 65 }, { return KeyEvent(kind: KeyKind:UP, ctrl: isCtrl2, alt: isAlt2, action: act2); });
+						if({ term == 66 }, { return KeyEvent(kind: KeyKind:DOWN, ctrl: isCtrl2, alt: isAlt2, action: act2); });
+						if({ term == 67 }, { return KeyEvent(kind: KeyKind:RIGHT, ctrl: isCtrl2, alt: isAlt2, action: act2); });
+						if({ term == 68 }, { return KeyEvent(kind: KeyKind:LEFT, ctrl: isCtrl2, alt: isAlt2, action: act2); });
+						if({ term == 72 }, { return KeyEvent(kind: KeyKind:HOME, ctrl: isCtrl2, alt: isAlt2, action: act2); });
+						if({ term == 70 }, { return KeyEvent(kind: KeyKind:END, ctrl: isCtrl2, alt: isAlt2, action: act2); });
+						if({ term == 90 }, { return KeyEvent(kind: KeyKind:BACKTAB, ctrl: isCtrl2, alt: isAlt2, action: act2); });
+					});
 					if({ term == 126 }, {
-						if({ p1 == 3 }, { return KeyEvent(kind: KeyKind:DELETE); });
-						if({ p1 == 5 }, { return KeyEvent(kind: KeyKind:PAGE_UP); });
-						if({ p1 == 6 }, { return KeyEvent(kind: KeyKind:PAGE_DOWN); });
-						if({ p1 == 1 || p1 == 7 }, { return KeyEvent(kind: KeyKind:HOME); });
-						if({ p1 == 4 || p1 == 8 }, { return KeyEvent(kind: KeyKind:END); });
+						local KeyAction is actT: KeyAction:PRESS;
+						if({ p3 == 2 }, { actT: KeyAction:REPEAT; });
+						if({ p3 == 3 }, { actT: KeyAction:RELEASE; });
+						if({ p1 == 3 }, { return KeyEvent(kind: KeyKind:DELETE, action: actT); });
+						if({ p1 == 5 }, { return KeyEvent(kind: KeyKind:PAGE_UP, action: actT); });
+						if({ p1 == 6 }, { return KeyEvent(kind: KeyKind:PAGE_DOWN, action: actT); });
+						if({ p1 == 1 || p1 == 7 }, { return KeyEvent(kind: KeyKind:HOME, action: actT); });
+						if({ p1 == 4 || p1 == 8 }, { return KeyEvent(kind: KeyKind:END, action: actT); });
 					});
 					if({ term == 117 }, {
 						local Int is modBits: if({ hasSemi && p2 > 0 }, { p2 - 1 }, { 0 });

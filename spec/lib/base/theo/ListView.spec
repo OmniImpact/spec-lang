@@ -217,7 +217,7 @@ Class of Widget is ListView{
 			});
 			return true;
 		});
-		if({ event:isEnter() }, {
+		if({ event:isEnter() && !event:isRepeat() }, {
 			onActivate(selectedItem());
 			return true;
 		});
