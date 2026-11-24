@@ -14,10 +14,7 @@ Class of Frame is OptionsFrame{
 	OptionsStorage is storage: OptionsStorage();
 	CardStyle is selectedStyle: CardStyle:WIREFRAME;
 	CardView is previewCard: CardView(card: Card(rank: Rank:ACE, suit: Suit:HEARTS));
-	FocusTarget is wireFocus: FocusTarget(initial: true);
-	FocusTarget is blackFocus: FocusTarget();
-	FocusTarget is whiteFocus: FocusTarget();
-	FocusTarget is metallicFocus: FocusTarget();
+	FocusTarget is styleFocus: FocusTarget(initial: true);
 	FocusTarget is cancelFocus: FocusTarget();
 	FocusTarget is saveFocus: FocusTarget();
 	Function is onCancel: {};
@@ -77,32 +74,22 @@ Class of Frame is OptionsFrame{
 							children: Array([
 								Row(
 									gap: 2,
-									arrowFocus: true,
 									children: Array([
 										TextLine(value: HomeStrings:OPTION_CARD_STYLE, bold: true),
-										Button(
-											label: CardStyle:WIREFRAME:value(),
-											width: 11,
-											focusTarget: wireFocus,
-											onClick: { selectStyle(next: CardStyle:WIREFRAME); }
-										),
-										Button(
-											label: CardStyle:BLACK:value(),
-											width: 11,
-											focusTarget: blackFocus,
-											onClick: { selectStyle(next: CardStyle:BLACK); }
-										),
-										Button(
-											label: CardStyle:WHITE:value(),
-											width: 11,
-											focusTarget: whiteFocus,
-											onClick: { selectStyle(next: CardStyle:WHITE); }
-										),
-										Button(
-											label: CardStyle:METALLIC:value(),
-											width: 11,
-											focusTarget: metallicFocus,
-											onClick: { selectStyle(next: CardStyle:METALLIC); }
+										Dropdown(
+											host: :,
+											options: [
+												CardStyle:WIREFRAME:value(),
+												CardStyle:BLACK:value(),
+												CardStyle:WHITE:value(),
+												CardStyle:METALLIC:value()
+											],
+											selected: selectedStyle:value(),
+											width: 14,
+											focusTarget: styleFocus,
+											onSelect: local Function(String is chosen){
+												selectStyle(next: storage:styleFromName(name: chosen));
+											}
 										)
 									])
 								),

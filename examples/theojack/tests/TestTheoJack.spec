@@ -36,7 +36,7 @@ Class of SpecUnitTest is TestTheoJack{
 
 		Assert:areEqualInt(11, home:heroCard:measureWidth(maxW: 80));
 		Assert:areEqualInt(11, home:measureWidth(maxW: 80) - 11 - 3);
-		Assert:areEqualInt(7, home:measureHeight(maxW: 80, maxH: 24));
+		Assert:areEqualInt(9, home:measureHeight(maxW: 80, maxH: 24));
 
 		# Play -> Rules -> Options -> About -> Quit
 		Assert:isTrue(home:playFocus:focused);
@@ -90,8 +90,16 @@ Class of SpecUnitTest is TestTheoJack{
 		scr:push(frame: opts);
 		Assert:areEqualInt(2, scr:stack:length());
 
-		# Select Metallic style -> updates live preview
-		opts:selectStyle(next: CardStyle:METALLIC);
+		# Open Card Style dropdown via Enter, move down to Metallic, Enter selects it
+		opts:layout(x: 0, y: 0, w: 80, h: 24);
+		opts:styleFocus:focused: true;
+		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'enter')));
+		Assert:isTrue(opts:hasOpenOverlay());
+		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
+		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
+		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'down')));
+		Assert:isTrue(opts:handleKey(event: KeyEvent(kind: 'enter')));
+		Assert:isFalse(opts:hasOpenOverlay());
 		Assert:isTrue(opts:previewCard:style == CardStyle:METALLIC);
 		local TheoBuffer is buf: TheoBuffer(width: 80, height: 24);
 		local TheoRenderer is ren: TheoRenderer();

@@ -131,12 +131,12 @@ Class of Widget is Frame{
 		:boxW: w;
 		:boxH: h;
 		ensureBuilt();
-		rootWidget:layout(x: x, y: y, w: w, h: h);
 		local Int is i: 0;
 		while({ i < overlays:length() }, {
 			overlays:get(index: i):layout(x: x, y: y, w: w, h: h);
 			i: i + 1;
 		});
+		rootWidget:layout(x: x, y: y, w: w, h: h);
 	}
 
 	replace Function is paint(TheoBuffer is buf, TheoRenderer is renderer){

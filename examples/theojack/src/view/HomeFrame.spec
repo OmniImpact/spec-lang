@@ -137,7 +137,7 @@ Class of Frame is HomeFrame{
 				children: Array([
 					heroCard,
 					Col(
-						gap: 0,
+						gap: 1,
 						arrowFocus: true,
 						children: Array([
 							Button(
