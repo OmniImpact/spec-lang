@@ -128,7 +128,7 @@ Class is SynthViewModel{
 		if({ autoRelease }, {
 			fallbackTicks:set(index: idx, item: 12);
 		}, {
-			fallbackTicks:set(index: idx, item: if({ seenKittyEvents }, { 0 }, { 28 }));
+			fallbackTicks:set(index: idx, item: if({ seenKittyEvents }, { 0 }, { 45 }));
 		});
 		onStateChanged();
 		if({ audioEnabled }, {
@@ -239,7 +239,7 @@ Class is SynthViewModel{
 			if({ heldFlags:get(index: idx) == 1 }, {
 				# Reject duplicate OS key-repeat press while already held down.
 				if({ !seenKittyEvents }, {
-					fallbackTicks:set(index: idx, item: 28);
+					fallbackTicks:set(index: idx, item: 45);
 				});
 				return true;
 			});

@@ -181,7 +181,12 @@ Class is TheoApp{
 			});
 
 			local KeyEvent is ev: reader:pollKey(timeoutMs: 16);
-			dispatchKeyEvent(screen: screen, ev: ev, mouse: reader:lastMouse);
+			local Int is drained: 0;
+			while({ running && !ev:isNone() && drained < 32 }, {
+				dispatchKeyEvent(screen: screen, ev: ev, mouse: reader:lastMouse);
+				drained: drained + 1;
+				ev: reader:pollKey(timeoutMs: 0);
+			});
 			if({ screen:current():onTick() }, {
 				:dirty: true;
 			});
