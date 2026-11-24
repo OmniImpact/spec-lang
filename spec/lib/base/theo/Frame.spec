@@ -173,6 +173,12 @@ Class of Widget is Frame{
 	Function of Boolean is wantsKeyRelease(){ false }
 
 	replace Function of Boolean is handleKey(KeyEvent is event){
+		if({ event:isRelease() }, {
+			if({ wantsKeyRelease() }, {
+				return onKey(event: event);
+			});
+			return false;
+		});
 		local Int is i: overlays:length() - 1;
 		while({ i >= 0 }, {
 			local Overlay is ov: overlays:get(index: i);

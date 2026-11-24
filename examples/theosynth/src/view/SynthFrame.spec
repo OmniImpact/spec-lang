@@ -52,6 +52,7 @@ Class of Frame is SynthFrame{
 		aboutButtons: Array([
 			Button(
 				label: SynthStrings:ACTION_ABOUT,
+				shortcutKey: 'a',
 				focusTarget: aboutFocus,
 				onClick: { :vm:openAbout(); }
 			)
@@ -91,6 +92,7 @@ Class of Frame is SynthFrame{
 				children: Array([
 					Button(
 						label: SynthStrings:ACTION_QUIT,
+						shortcutKey: 'q',
 						focusTarget: quitFocus,
 						onClick: { :vm:quit(); }
 					),

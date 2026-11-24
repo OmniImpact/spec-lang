@@ -96,5 +96,18 @@ Class of SpecUnitTest is TestTheoSynth{
 		Assert:isTrue(botRow:contains(needle: 'Quit'));
 		Assert:isTrue(botRow:contains(needle: 'Instrument:'));
 		Assert:isTrue(botRow:contains(needle: 'About'));
+
+		# Verify Dropdown stays open on Enter press + Enter release (normal toggle behavior)
+		local SynthViewModel is vm2: SynthViewModel(audioEnabled: false);
+		local SynthFrame is frame2: SynthFrame(vm: vm2);
+		local TheoScreen is screen2: TheoScreen(root: frame2);
+		local TheoApp is app2: TheoApp();
+		local [KeyEvent] is ddKeys: [
+			KeyEvent(kind: KeyKind:CHAR, key: 'p', ctrl: true, action: KeyAction:PRESS),
+			KeyEvent(kind: KeyKind:ENTER, action: KeyAction:PRESS),
+			KeyEvent(kind: KeyKind:ENTER, action: KeyAction:RELEASE)
+		];
+		app2:runHeadless(screen: screen2, keys: ddKeys, width: 90, height: 24);
+		Assert:isTrue(frame2:instrumentPickers:get(index: 0):isOpen());
 	}
 }
