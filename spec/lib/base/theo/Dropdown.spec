@@ -204,7 +204,7 @@ Class of Widget is Dropdown{
 
 	replace Function of Boolean is handleKey(KeyEvent is event){
 		if({ !focusTarget:focused }, { return false; });
-		if({ event:isEnter() || event:key == ' ' || event:isDown() }, {
+		if({ event:isEnter() || event:key == ' ' || event:isDown() || event:isUp() }, {
 			openMenu();
 			return true;
 		});
