@@ -202,7 +202,7 @@ Class is SpecUnitRunner{
 				});
 			});
 		});
-		local String is verdict: if(check: { failed == 0 }, then: { 'ALL GREEN' }, else: { 'FAILED' });
+		local String is verdict: if(check: { failed == 0 }, then: { 'ALL PASSED' }, else: { 'FAILED' });
 		local CleoColor is vColor: if(check: { failed == 0 }, then: { CleoColor:ansi(code: 114) }, else: { CleoColor:ansi(code: 203) });
 		# A test GROUP is a class (the "Class" prefix of each
 		# "Class.method" result); a TEST is one method's execution. A
