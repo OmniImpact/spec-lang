@@ -1,11 +1,11 @@
 #! specunit: suite
 
 Class of SpecUnitTest is TestCleoPi{
-
-	replace [[String]] is using: [
-		['specunit', SpecUnitTest],
-		['specunit', as Assert()],
-		[PiStats]
+	merge [[String]] is using: [
+		['specunit', [SpecUnitTest, as Assert()]],
+		[DomainGrid],
+		[PiStats],
+		[PiTelemetry]
 	];
 
 	Function is testEstimatePiAndFormat(){
@@ -15,11 +15,21 @@ Class of SpecUnitTest is TestCleoPi{
 		Assert:areEqualString('0.000', st:piText(value: st:estimatePi(hits: 0, samples: 0)));
 	}
 
-	Function is testBarAndBoxed(){
-		local PiStats is st: PiStats();
-		Assert:areEqualString('═══', st:bar(width: 3));
-		local String is row: st:boxed(inner: 'Hi', width: 8);
-		Assert:areEqualString('║ Hi    ║', row);
-	}
+	Function is testTelemetryAndDomainGrid(){
+		local PiTelemetry is telemetry: PiTelemetry();
+		telemetry:reset(threads: 2);
+		Assert:isFalse(telemetry:isWorkerActive(threadIndex: 0));
 
+		telemetry:setWorkerActive(threadIndex: 0, active: true);
+		telemetry:setWorkerPos(threadIndex: 0, x: 500, y: 500);
+		telemetry:recordBatch(batchSamples: 100, batchHits: 78);
+
+		Assert:isTrue(telemetry:isWorkerActive(threadIndex: 0));
+		Assert:areEqualInt(100, telemetry:samples());
+		Assert:areEqualInt(78, telemetry:hits());
+
+		local DomainGrid is grid: DomainGrid(width: 10, height: 10);
+		Assert:areEqualInt(0, grid:markerAt(col: 5, row: 5, threads: 2, telemetry: telemetry));
+		Assert:isTrue(grid:renderRow(row: 5, threads: 2, telemetry: telemetry):length() > 0);
+	}
 }
