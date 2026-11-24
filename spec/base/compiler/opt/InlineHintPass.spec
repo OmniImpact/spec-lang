@@ -108,8 +108,7 @@ Class of SpecOptimizer is InlineHintPass{
 
 	replace Function is runOnModule(IrModule is mod){
 		local Map of String to Boolean is modelFnSet: Map:init();
-		local Int is si: 0;
-		while({ si < mod:structs:length() }, {
+		times(count: mod:structs:length(), worker: local Function(Int is si){
 			local IrStruct is st: mod:structs:get(index: si);
 			local Int is userFields: st:fieldNames:length() - 2;
 			if({ userFields < 0 }, { userFields: 0; });
@@ -127,11 +126,9 @@ Class of SpecOptimizer is InlineHintPass{
 					if({ vf != '' && vf != 'null' }, { modelFnSet:set(key: vf, value: true); });
 				});
 			});
-			si++;
 		});
 
-		local Int is fi: 0;
-		while({ fi < mod:functions:length() }, {
+		times(count: mod:functions:length(), worker: local Function(Int is fi){
 			local IrFunction is fn: mod:functions:get(index: fi);
 			if({ !fn:isExternal && fn:blocks:length() > 0 && fn:name != 'main' && fn:name != 'Arc_destroyObj' && fn:name != 'Arc_release' }, {
 				local Boolean is isSingleBlock: fn:blocks:length() == 1;
@@ -141,7 +138,6 @@ Class of SpecOptimizer is InlineHintPass{
 					fn:alwaysInline: true;
 				});
 			});
-			fi++;
 		});
 	}
 }

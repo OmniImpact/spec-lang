@@ -158,10 +158,8 @@ Class is LlvmEmitter{
 			'spec_simd_add4', 'spec_simd_sub4', 'spec_simd_mul4', 'spec_simd_scale4',
 			'spec_simd_fma4', 'spec_simd_dot4', 'spec_simd_clamp4'
 		]);
-		local Int is pi: 0;
-		while({ pi < preludeSyms:length() }, {
+		times(count: preludeSyms:length(), worker: local Function(Int is pi){
 			known:set(key: preludeSyms:get(index: pi, default: ''), value: true);
-			pi++;
 		});
 		local Int is fi: 0;
 		while({ fi < mod:functions:length() }, {
@@ -173,29 +171,23 @@ Class is LlvmEmitter{
 		fi: 0;
 		while({ fi < mod:functions:length() }, {
 			local IrFunction is fn: mod:functions:get(index: fi);
-			local Int is bi: 0;
-			while({ bi < fn:blocks:length() }, {
+			times(count: fn:blocks:length(), worker: local Function(Int is bi){
 				local IrBlock is blk: fn:blocks:get(index: bi);
-				local Int is ii: 0;
-				while({ ii < blk:insts:length() }, {
+				times(count: blk:insts:length(), worker: local Function(Int is ii){
 					match(on: blk:insts:get(index: ii), when: [
 						IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 							if({ callee:startsWith(prefix: 'spec_') && !known:has(key: callee) }, {
 								known:set(key: callee, value: true);
 								local String is sig: '';
-								local Int is ai: 0;
-								while({ ai < argTypes:length() }, {
+								times(count: argTypes:length(), worker: local Function(Int is ai){
 									if({ ai > 0 }, { sig: sig . ', '; });
 									sig: sig . :llvmType(ty: argTypes:get(index: ai));
-									ai++;
 								});
 								out: out . 'declare ' . :llvmType(ty: retType) . ' @' . callee . '(' . sig . ")\n";
 							});
 						}
 					], default: {});
-					ii++;
 				});
-				bi++;
 			});
 			fi++;
 		});
@@ -567,12 +559,10 @@ Class is LlvmEmitter{
 	local Function of String is emitFunctionDecl(IrFunction is fn){
 		local String is retStr: :llvmType(ty: fn:retType);
 		local String is paramsStr: '';
-		local Int is pi: 0;
-		while({ pi < fn:params:length() }, {
+		times(count: fn:params:length(), worker: local Function(Int is pi){
 			if({ pi > 0 }, { paramsStr: paramsStr . ', '; });
 			local IrParam is p: fn:params:get(index: pi);
 			paramsStr: paramsStr . :llvmType(ty: p:ty) . ' ' . p:name;
-			pi++;
 		});
 		return 'declare ' . retStr . ' @' . fn:name . '(' . paramsStr . ")\n";
 	}
@@ -625,8 +615,7 @@ Class is LlvmEmitter{
 		repeat(count: nFn, worker: {
 			ownerShard:push(item: 0);
 		});
-		local Int is pi: 0;
-		while({ pi < nFn }, {
+		times(count: nFn, worker: local Function(Int is pi){
 			local Int is fi: sortedIdx:get(index: pi);
 			local Int is fw: weights:get(index: fi);
 			local Int is bestB: 0;
@@ -641,7 +630,6 @@ Class is LlvmEmitter{
 			buckets:get(index: bestB):push(item: fi);
 			bucketWeights:set(index: bestB, item: bestL + fw);
 			ownerShard:set(index: fi, item: bestB);
-			pi++;
 		});
 
 		# Pre-compute the shared non-primary header once (identical for shards 1..N-1).
@@ -746,11 +734,9 @@ Class is LlvmEmitter{
 		# Emit module header, structs, vtables, registries, and string literals on the calling thread
 		local String is out: :emitModuleHeader(mod: mod);
 
-		local Int is wi: 0;
-		while({ wi < workerTasks:length() }, {
+		times(count: workerTasks:length(), worker: local Function(Int is wi){
 			local Task of String is t: workerTasks:get(index: wi);
 			out: out . t:await();
-			wi++;
 		});
 		return out;
 	}
@@ -762,12 +748,10 @@ Class is LlvmEmitter{
 		});
 		local Int is lastSlash: -1;
 		local Int is n: norm:length();
-		local Int is idx: 0;
-		while({ idx < n }, {
+		times(count: n, worker: local Function(Int is idx){
 			if({ norm:byteAt(index: idx, default: 0) == 47 }, {
 				lastSlash: idx;
 			});
-			idx++;
 		});
 		local String is dir: '.';
 		local String is file: norm;
@@ -796,8 +780,7 @@ Class is LlvmEmitter{
 	local Function of String is escapeDebugStr(String is s){
 		local String is res: '';
 		local Int is len: s:length();
-		local Int is i: 0;
-		while({ i < len }, {
+		times(count: len, worker: local Function(Int is i){
 			local Int is b: s:byteAt(index: i, default: 0);
 			if({ b == 34 }, {
 				res: res . '\\"';
@@ -808,7 +791,6 @@ Class is LlvmEmitter{
 					res: res . s:substring(start: i, end: i + 1);
 				});
 			});
-			i++;
 		});
 		return res;
 	}
@@ -820,11 +802,9 @@ Class is LlvmEmitter{
 			return ir . suffix;
 		});
 		local String is out: '';
-		local Int is pi: 0;
-		while({ pi < parts:length() }, {
+		times(count: parts:length(), worker: local Function(Int is pi){
 			if({ pi > 0 }, { out: out . "\n"; });
 			out: out . parts:get(index: pi, default: '') . suffix;
-			pi++;
 		});
 		return out;
 	}
@@ -860,8 +840,7 @@ Class is LlvmEmitter{
 		local Str is hex: '0123456789ABCDEF';
 		local String is res: '';
 		local Int is len: s:length();
-		local Int is i: 0;
-		while({ i < len }, {
+		times(count: len, worker: local Function(Int is i){
 			local Int is b: s:byteAt(index: i, default: 0);
 			if({ b < 32 || b >= 127 || b == 34 || b == 92 }, {
 				local Int is hi: (b >> 4) & 15;
@@ -870,7 +849,6 @@ Class is LlvmEmitter{
 			}, {
 				res: res . s:substring(start: i, end: i + 1);
 			});
-			i++;
 		});
 		return res;
 	}
@@ -878,12 +856,10 @@ Class is LlvmEmitter{
 	local Function of String is emitFunction(IrFunction is fn){
 		local String is retStr: :llvmType(ty: fn:retType);
 		local String is paramsStr: '';
-		local Int is pi: 0;
-		while({ pi < fn:params:length() }, {
+		times(count: fn:params:length(), worker: local Function(Int is pi){
 			if({ pi > 0 }, { paramsStr: paramsStr . ', '; });
 			local IrParam is p: fn:params:get(index: pi);
 			paramsStr: paramsStr . :llvmType(ty: p:ty) . ' ' . p:name;
-			pi++;
 		});
 
 		if({ fn:isExternal }, {
@@ -906,12 +882,10 @@ Class is LlvmEmitter{
 		});
 
 		local String is out: 'define ' . retStr . ' @' . fn:name . '(' . paramsStr . ')' . inlineAttr . spAttr . " {\n";
-		local Int is bi: 0;
-		while({ bi < fn:blocks:length() }, {
+		times(count: fn:blocks:length(), worker: local Function(Int is bi){
 			local IrBlock is blk: fn:blocks:get(index: bi);
 			out: out . blk:label . ":\n";
-			local Int is ii: 0;
-			while({ ii < blk:insts:length() }, {
+			times(count: blk:insts:length(), worker: local Function(Int is ii){
 				local String is instStr: :emitInst(inst: blk:insts:get(index: ii));
 				if({ spId >= 0 }, {
 					local Int is ln: blk:instLines:get(index: ii);
@@ -920,9 +894,7 @@ Class is LlvmEmitter{
 					instStr: :appendDbgToInst(ir: instStr, locId: locId);
 				});
 				out: out . '  ' . instStr . "\n";
-				ii++;
 			});
-			bi++;
 		});
 		out: out . "}\n";
 		return out;
@@ -1011,11 +983,9 @@ Class is LlvmEmitter{
 			},
 			IrInst:IrCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 				local String is argsStr: '';
-				local Int is ai: 0;
-				while({ ai < args:length() }, {
+				times(count: args:length(), worker: local Function(Int is ai){
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
 					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
-					ai++;
 				});
 				local String is rt: :llvmType(ty: retType);
 				if({ hasDst }, {
@@ -1025,11 +995,9 @@ Class is LlvmEmitter{
 			},
 			IrInst:IndirectCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 				local String is argsStr: '';
-				local Int is ai: 0;
-				while({ ai < args:length() }, {
+				times(count: args:length(), worker: local Function(Int is ai){
 					if({ ai > 0 }, { argsStr: argsStr . ', '; });
 					argsStr: argsStr . :llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
-					ai++;
 				});
 				local String is rt: :llvmType(ty: retType);
 				if({ hasDst }, {

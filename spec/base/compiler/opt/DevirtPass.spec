@@ -43,11 +43,9 @@ Class of SpecOptimizer is DevirtPass{
 
 	replace Function is runOnModule(IrModule is mod){
 		local Map of String to IrStruct is structMap: Map:init();
-		local Int is si: 0;
-		while({ si < mod:structs:length() }, {
+		times(count: mod:structs:length(), worker: local Function(Int is si){
 			local IrStruct is st: mod:structs:get(index: si);
 			structMap:set(key: st:name, value: st);
-			si++;
 		});
 
 		local Map of String to Boolean is noOpInit: Map:init();
@@ -118,15 +116,13 @@ Class of SpecOptimizer is DevirtPass{
 		# Find alloca slots that only receive selfName.
 		if({ fn:blocks:length() > 0 }, {
 			local IrBlock is entry: fn:blocks:get(index: 0);
-			local Int is ii: 0;
-			while({ ii < entry:insts:length() }, {
+			times(count: entry:insts:length(), worker: local Function(Int is ii){
 				match(on: entry:insts:get(index: ii), when: [
 					IrInst:Store: local Function(String is slot, String is val, IrType is ty){
 						if({ val == selfName }, { selfSlots:set(key: slot, value: true); });
 					},
 					else: { }
 				]);
-				ii++;
 			});
 		});
 
@@ -322,11 +318,9 @@ Class of SpecOptimizer is DevirtPass{
 		bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Int is ii: 0;
-			while({ ii < blk:insts:length() }, {
+			times(count: blk:insts:length(), worker: local Function(Int is ii){
 				local IrInst is inst: blk:insts:get(index: ii);
 				:scanUsesForAlloc(inst: inst, knownType: knownType, noOpInit: noOpInit, badAllocs: badAllocs);
-				ii++;
 			});
 			bi++;
 		});
@@ -334,8 +328,7 @@ Class of SpecOptimizer is DevirtPass{
 		bi: 0;
 		while({ bi < fn:blocks:length() }, {
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Int is ii: 0;
-			while({ ii < blk:insts:length() }, {
+			times(count: blk:insts:length(), worker: local Function(Int is ii){
 				match(on: blk:insts:get(index: ii), when: [
 					IrInst:AllocObj: local Function(String is dst, String is structName, String is destroyFn){
 						if({ !badAllocs:has(key: dst) }, {
@@ -344,7 +337,6 @@ Class of SpecOptimizer is DevirtPass{
 					},
 					else: { }
 				]);
-				ii++;
 			});
 			bi++;
 		});
@@ -403,10 +395,8 @@ Class of SpecOptimizer is DevirtPass{
 			local Int is bi: 0;
 			while({ bi < fn:blocks:length() }, {
 				local IrBlock is blk: fn:blocks:get(index: bi);
-				local Int is ii: 0;
-				while({ ii < blk:insts:length() }, {
+				times(count: blk:insts:length(), worker: local Function(Int is ii){
 					:collectUsedRegs(inst: blk:insts:get(index: ii), usedRegs: usedRegs);
-					ii++;
 				});
 				bi++;
 			});
@@ -482,22 +472,18 @@ Class of SpecOptimizer is DevirtPass{
 		match(on: inst, when: [
 			IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
 				local Boolean is safeCall: args:length() == 1 && (callee == 'spec_claim_pool' || noOpInit:has(key: callee));
-				local Int is i: 0;
-				while({ i < args:length() }, {
+				times(count: args:length(), worker: local Function(Int is i){
 					local String is a: args:get(index: i, default: '');
 					if({ knownType:has(key: a) && !(safeCall && i == 0) }, {
 						badAllocs:set(key: a, value: true);
 					});
-					i++;
 				});
 			},
 			IrInst:IndirectCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 				if({ knownType:has(key: fnPtr) }, { badAllocs:set(key: fnPtr, value: true); });
-				local Int is i: 0;
-				while({ i < args:length() }, {
+				times(count: args:length(), worker: local Function(Int is i){
 					local String is a: args:get(index: i, default: '');
 					if({ knownType:has(key: a) }, { badAllocs:set(key: a, value: true); });
-					i++;
 				});
 			},
 			IrInst:Store: local Function(String is slot, String is val, IrType is ty){

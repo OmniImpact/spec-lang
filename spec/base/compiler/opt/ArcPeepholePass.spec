@@ -34,11 +34,9 @@ Class of SpecOptimizer is ArcPeepholePass{
 	}
 
 	replace Function is runOnFunction(IrFunction is fn){
-		local Int is bi: 0;
-		while({ bi < fn:blocks:length() }, {
+		times(count: fn:blocks:length(), worker: local Function(Int is bi){
 			local IrBlock is blk: fn:blocks:get(index: bi);
 			:peepholeBlock(blk: blk);
-			bi++;
 		});
 	}
 
@@ -70,9 +68,8 @@ Class of SpecOptimizer is ArcPeepholePass{
 		nullRegs:set(key: 'null', value: true);
 
 		local [Boolean] is drop: [];
-		while([Int is di: 0], { di < n }, {
+		times(count: n, worker: local Function(Int is di){
 			drop:push(item: false);
-			di++;
 		});
 		local Int is i: 0;
 

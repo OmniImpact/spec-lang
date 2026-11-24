@@ -116,10 +116,8 @@ Class of SpecOptimizer is WrapperUnwrapPass{
 		local Map of String to String is slotConst: Map:init();
 		local Map of String to Boolean is allocas: Map:init();
 
-		local Int is pi: 0;
-		while({ pi < fn:params:length() }, {
+		times(count: fn:params:length(), worker: local Function(Int is pi){
 			regParam:set(key: fn:params:get(index: pi):name, value: pi);
-			pi++;
 		});
 
 		local Boolean is ok: true;

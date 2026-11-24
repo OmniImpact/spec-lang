@@ -77,20 +77,16 @@ Class is GenericSpecializer{
 
 	local Function of Type is cloneType(Type is t){
 		local [Type] is cps: [];
-		local Int is i: 0;
-		while({ i < t:params:length() }, {
+		times(count: t:params:length(), worker: local Function(Int is i){
 			cps:push(item: :cloneType(t: t:params:get(index: i)));
-			i++;
 		});
 		return :makeType(name: t:name, params: cps);
 	}
 
 	local Function of String is typeToSymbolSegment(Type is t){
 		local String is out: t:name;
-		local Int is i: 0;
-		while({ i < t:params:length() }, {
+		times(count: t:params:length(), worker: local Function(Int is i){
 			out: out . '_' . :typeToSymbolSegment(t: t:params:get(index: i));
-			i++;
 		});
 		return out;
 	}
@@ -100,30 +96,24 @@ Class is GenericSpecializer{
 			return t:name;
 		});
 		local String is out: t:name;
-		local Int is i: 0;
-		while({ i < t:params:length() }, {
+		times(count: t:params:length(), worker: local Function(Int is i){
 			out: out . ':' . :typeToResolvedStr(t: t:params:get(index: i));
-			i++;
 		});
 		return out;
 	}
 
 	local Function of String is specKeyFor(String is baseName, [Type] is typeArgs){
 		local String is key: baseName;
-		local Int is i: 0;
-		while({ i < typeArgs:length() }, {
+		times(count: typeArgs:length(), worker: local Function(Int is i){
 			key: key . ':' . :typeToResolvedStr(t: typeArgs:get(index: i));
-			i++;
 		});
 		return key;
 	}
 
 	local Function of String is allocateMangledClassName(String is baseName, [Type] is typeArgs){
 		local String is stem: baseName;
-		local Int is i: 0;
-		while({ i < typeArgs:length() }, {
+		times(count: typeArgs:length(), worker: local Function(Int is i){
 			stem: stem . '__' . :typeToSymbolSegment(t: typeArgs:get(index: i));
-			i++;
 		});
 		local String is cand: stem;
 		local Int is suffix: 1;
@@ -201,10 +191,8 @@ Class is GenericSpecializer{
 			return :transformType(t: mapped, subst: Map:init(), tplParams: tplParams, selfTemplateName: '', selfSpecName: '');
 		});
 		local [Type] is newParams: [];
-		local Int is i: 0;
-		while({ i < t:params:length() }, {
+		times(count: t:params:length(), worker: local Function(Int is i){
 			newParams:push(item: :transformType(t: t:params:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-			i++;
 		});
 		local String is bName: t:name;
 		if({ subst:has(key: bName) }, {
@@ -368,10 +356,8 @@ Class is GenericSpecializer{
 					return st;
 				});
 				local [SemType] is newParams: [];
-				local Int is i: 0;
-				while({ i < params:length() }, {
+				times(count: params:length(), worker: local Function(Int is i){
 					newParams:push(item: :transformSemType(st: params:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-					i++;
 				});
 				local [String] is newPath: path;
 				if({ subst:has(key: bName) }, {
@@ -391,10 +377,8 @@ Class is GenericSpecializer{
 						});
 						if({ allC }, {
 							local [Type] is astArgs: [];
-							local Int is ai: 0;
-							while({ ai < newParams:length() }, {
+							times(count: newParams:length(), worker: local Function(Int is ai){
 								astArgs:push(item: newParams:get(index: ai):toAstType());
-								ai++;
 							});
 							local String is mangled: :ensureSpecialized(baseName: bName, typeArgs: astArgs);
 							return :cachedNamedSemType(name: mangled);
@@ -492,10 +476,8 @@ Class is GenericSpecializer{
 
 	Function of [Statement] is transformStmts([Statement] is stmts, Map of String to Type is subst, Map of String to Boolean is tplParams, String is selfTemplateName, String is selfSpecName){
 		local [Statement] is out: [];
-		local Int is i: 0;
-		while({ i < stmts:length() }, {
+		times(count: stmts:length(), worker: local Function(Int is i){
 			out:push(item: :transformStmt(stmt: stmts:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-			i++;
 		});
 		return out;
 	}
@@ -542,11 +524,9 @@ Class is GenericSpecializer{
 			},
 			Statement:Forward: local Function of Statement([NamedArg] is fargs){
 				local [NamedArg] is nf: [];
-				local Int is fi: 0;
-				while({ fi < fargs:length() }, {
+				times(count: fargs:length(), worker: local Function(Int is fi){
 					local NamedArg is na: fargs:get(index: fi);
 					nf:push(item: NamedArg(name: na:name, value: :transformExpr(expr: na:value, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName)));
-					fi++;
 				});
 				return Statement:Forward(forwardArgs: nf);
 			},
@@ -605,19 +585,17 @@ Class is GenericSpecializer{
 			Expression:Path: local Function of Expression([String] is segs){ return Expression:Path(segments: segs); },
 			Expression:ArrayLit: local Function of Expression([Expression] is items){
 				local [Expression] is nitems: [];
-				while([Int is i: 0], { i < items:length() }, {
+				times(count: items:length(), worker: local Function(Int is i){
 					nitems:push(item: :transformExpr(expr: items:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-					i++;
 				});
 				return Expression:ArrayLit(items: nitems);
 			},
 			Expression:MapLit: local Function of Expression([Expression] is keys, [Expression] is vals){
 				local [Expression] is nkeys: [];
 				local [Expression] is nvals: [];
-				while([Int is i: 0], { i < keys:length() }, {
+				times(count: keys:length(), worker: local Function(Int is i){
 					nkeys:push(item: :transformExpr(expr: keys:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
 					nvals:push(item: :transformExpr(expr: vals:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-					i++;
 				});
 				return Expression:MapLit(keys: nkeys, values: nvals);
 			},
@@ -625,9 +603,8 @@ Class is GenericSpecializer{
 				local Expression is ninner: :transformExpr(expr: inner, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				local String is ntarget: :transformTypeStr(s: target, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				local [Expression] is nargs: [];
-				while([Int is i: 0], { i < args:length() }, {
+				times(count: args:length(), worker: local Function(Int is i){
 					nargs:push(item: :transformExpr(expr: args:get(index: i), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-					i++;
 				});
 				return Expression:Cast(inner: ninner, target: ntarget, args: nargs);
 			},
@@ -659,10 +636,8 @@ Class is GenericSpecializer{
 			Expression:AnonFn: local Function of Expression(Type is rt, [Parameter] is ps, [Statement] is bd){
 				local Type is nrt: :transformType(t: rt, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				local [Parameter] is nps: [];
-				local Int is pi: 0;
-				while({ pi < ps:length() }, {
+				times(count: ps:length(), worker: local Function(Int is pi){
 					nps:push(item: :transformParam(p: ps:get(index: pi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-					pi++;
 				});
 				local [Statement] is nbd: :transformStmts(stmts: bd, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				return Expression:AnonFn(returnType: nrt, params: nps, body: nbd);
@@ -670,11 +645,9 @@ Class is GenericSpecializer{
 			Expression:Call: local Function of Expression(CallData is call){
 				local Expression is ntarget: :transformExpr(expr: call:target, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 				local [NamedArg] is nargs: [];
-				local Int is ai: 0;
-				while({ ai < call:args:length() }, {
+				times(count: call:args:length(), worker: local Function(Int is ai){
 					local NamedArg is na: call:args:get(index: ai);
 					nargs:push(item: NamedArg(name: na:name, value: :transformExpr(expr: na:value, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName)));
-					ai++;
 				});
 				match(on: ntarget, when: [
 					Expression:Ident: local Function(String is tname){
@@ -805,10 +778,8 @@ Class is GenericSpecializer{
 		if({ m:kind == MemberKind:METHOD }, {
 			nm:memberType: :transformType(t: m:memberType, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
 			local [Parameter] is nps: [];
-			local Int is pi: 0;
-			while({ pi < m:params:length() }, {
+			times(count: m:params:length(), worker: local Function(Int is pi){
 				nps:push(item: :transformParam(p: m:params:get(index: pi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-				pi++;
 			});
 			nm:params: nps;
 			nm:body: :transformStmts(stmts: m:body, subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName);
@@ -824,9 +795,8 @@ Class is GenericSpecializer{
 				return m;
 			});
 			local [Member] is subMembers: [];
-			while([Int is smi: 0], { smi < sub:members:length() }, {
+			times(count: sub:members:length(), worker: local Function(Int is smi){
 				subMembers:push(item: :transformMember(m: sub:members:get(index: smi), subst: subst, tplParams: tplParams, selfTemplateName: selfTemplateName, selfSpecName: selfSpecName));
-				smi++;
 			});
 			local ClassInfo is nsub: ClassInfo(name: sub:name, baseClass: sub:baseClass, members: subMembers);
 			nsub:withBaseClasses(name: sub:name, baseClasses: sub:baseClasses, members: subMembers);
@@ -863,27 +833,21 @@ Class is GenericSpecializer{
 		if({ t:name != '' && t:name != ':field' && !:seenClassNames:has(key: t:name) && !:strListHas(xs: cls:typeParams, target: t:name) && out:indexOf(search: t:name, default: -1) < 0 }, {
 			out:add(item: t:name);
 		});
-		local Int is i: 0;
-		while({ i < t:params:length() }, {
+		times(count: t:params:length(), worker: local Function(Int is i){
 			:collectUnboundTypeIdents(t: t:params:get(index: i), cls: cls, out: out);
-			i++;
 		});
 	}
 
 	local Function of String is detectMethodTypeParam(Member is m, ClassInfo is cls){
 		local Map of String to Int is paramCounts: Map:init();
-		local Int is pi: 0;
-		while({ pi < m:params:length() }, {
+		times(count: m:params:length(), worker: local Function(Int is pi){
 			local Parameter is p: m:params:get(index: pi);
 			local Array of String is idents: Array();
 			:collectUnboundTypeIdents(t: p:paramType, cls: cls, out: idents);
-			local Int is ii: 0;
-			while({ ii < idents:length() }, {
+			times(count: idents:length(), worker: local Function(Int is ii){
 				local String is id: idents:get(index: ii, default: '');
 				paramCounts:set(key: id, value: paramCounts:get(key: id, default: 0) + 1);
-				ii++;
 			});
-			pi++;
 		});
 		local Array of String is retIdents: Array();
 		:collectUnboundTypeIdents(t: m:memberType, cls: cls, out: retIdents);
@@ -971,7 +935,7 @@ Class is GenericSpecializer{
 			local ClassInfo is cls: allClasses:get(index: ci);
 			if({ !:bindings:isSysinternal(cls: cls) }, {
 				local [Member] is kept: [];
-				while([Int is mi: 0], { mi < cls:members:length() }, {
+				times(count: cls:members:length(), worker: local Function(Int is mi){
 					local Member is m: cls:members:get(index: mi);
 					if({ m:kind == MemberKind:METHOD }, {
 						local String is mtp: :detectMethodTypeParam(m: m, cls: cls);
@@ -986,7 +950,6 @@ Class is GenericSpecializer{
 					}, {
 						kept:push(item: m);
 					});
-					mi++;
 				});
 				cls:members: kept;
 			});
@@ -1006,9 +969,8 @@ Class is GenericSpecializer{
 			if({ cls:typeParams:length() == 0 && !:bindings:isSysinternal(cls: cls) }, {
 				:curOwnerClassName: cls:name;
 				local [Member] is newMembers: [];
-				while([Int is mi: 0], { mi < cls:members:length() }, {
+				times(count: cls:members:length(), worker: local Function(Int is mi){
 					newMembers:push(item: :transformMember(m: cls:members:get(index: mi), subst: emptySubst, tplParams: emptyTpl, selfTemplateName: '', selfSpecName: ''));
-					mi++;
 				});
 				cls:members: newMembers;
 			});
@@ -1033,9 +995,8 @@ Class is GenericSpecializer{
 						ti++;
 					});
 					local [Member] is specMembers: [];
-					while([Int is mi: 0], { mi < tpl:members:length() }, {
+					times(count: tpl:members:length(), worker: local Function(Int is mi){
 						specMembers:push(item: :transformMember(m: tpl:members:get(index: mi), subst: subst, tplParams: emptyTpl, selfTemplateName: baseName, selfSpecName: mangledName));
-						mi++;
 					});
 					local ClassInfo is specCls: ClassInfo(name: mangledName, baseClass: tpl:baseClass, members: specMembers);
 					specCls:withBaseClasses(name: mangledName, baseClasses: tpl:baseClasses, members: specMembers);
@@ -1054,24 +1015,21 @@ Class is GenericSpecializer{
 					# specializer ran, so flatten the spec clones here —
 					# mirroring the Loader's flattening of declared nesting.
 					local [ClassInfo] is nestedQueue: [];
-					local Int is nqi: 0;
-					while({ nqi < specCls:members:length() }, {
+					times(count: specCls:members:length(), worker: local Function(Int is nqi){
 						local Member is qm: specCls:members:get(index: nqi);
 						if({ qm:kind == MemberKind:CLASS }, {
 							nestedQueue:push(item: qm:nestedClass);
 						});
-						nqi++;
 					});
 					while({ nestedQueue:length() > 0 }, {
 						local ClassInfo is nq: nestedQueue:pop();
 						allClasses:push(item: nq);
 						program:classes:push(item: nq);
-						while([Int is dmi: 0], { dmi < nq:members:length() }, {
+						times(count: nq:members:length(), worker: local Function(Int is dmi){
 							local Member is dm: nq:members:get(index: dmi);
 							if({ dm:kind == MemberKind:CLASS }, {
 								nestedQueue:push(item: dm:nestedClass);
 							});
-							dmi++;
 						});
 					});
 				});

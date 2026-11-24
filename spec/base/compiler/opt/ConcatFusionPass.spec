@@ -76,11 +76,9 @@ Class of SpecOptimizer is ConcatFusionPass{
 
 	local Function of Map of String to Int is countUses(IrFunction is fn){
 		local Map of String to Int is uses: Map:init();
-		local Int is bi: 0;
-		while({ bi < fn:blocks:length() }, {
+		times(count: fn:blocks:length(), worker: local Function(Int is bi){
 			local IrBlock is blk: fn:blocks:get(index: bi);
-			local Int is ii: 0;
-			while({ ii < blk:insts:length() }, {
+			times(count: blk:insts:length(), worker: local Function(Int is ii){
 				match(on: blk:insts:get(index: ii), when: [
 					IrInst:Load: local Function(String is dst, String is slot, IrType is ty){
 						:bumpUse(uses: uses, v: slot);
@@ -100,18 +98,14 @@ Class of SpecOptimizer is ConcatFusionPass{
 						:bumpUse(uses: uses, v: rhs);
 					},
 					IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
-						local Int is ai: 0;
-						while({ ai < args:length() }, {
+						times(count: args:length(), worker: local Function(Int is ai){
 							:bumpUse(uses: uses, v: args:get(index: ai, default: ''));
-							ai++;
 						});
 					},
 					IrInst:IndirectCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, [IrType] is argTypes, [String] is args){
 						:bumpUse(uses: uses, v: fnPtr);
-						local Int is ai: 0;
-						while({ ai < args:length() }, {
+						times(count: args:length(), worker: local Function(Int is ai){
 							:bumpUse(uses: uses, v: args:get(index: ai, default: ''));
-							ai++;
 						});
 					},
 					IrInst:FieldPtr: local Function(String is dst, String is objPtr, String is structName, Int is fieldIndex){
@@ -137,9 +131,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 					},
 					else: {}
 				]);
-				ii++;
 			});
-			bi++;
 		});
 		return uses;
 	}
@@ -334,8 +326,7 @@ Class of SpecOptimizer is ConcatFusionPass{
 		local Map of String to Boolean is isRoot: Map();
 		local [String] is rootOrder: [];
 
-		local Int is ii: 0;
-		while({ ii < blk:insts:length() }, {
+		times(count: blk:insts:length(), worker: local Function(Int is ii){
 			local Int is curIdx: ii;
 			match(on: blk:insts:get(index: ii), when: [
 				IrInst:IrCall: local Function(String is dst, Boolean is hasDst, IrType is retType, String is callee, [IrType] is argTypes, [String] is args){
@@ -378,7 +369,6 @@ Class of SpecOptimizer is ConcatFusionPass{
 				},
 				else: {}
 			]);
-			ii++;
 		});
 
 		local Map of Int to Boolean is deleteSet: Map();
@@ -439,13 +429,11 @@ Class of SpecOptimizer is ConcatFusionPass{
 			return;
 		});
 		local Map of String to Int is uses: :countUses(fn: fn);
-		local Int is bi: 0;
-		while({ bi < fn:blocks:length() }, {
+		times(count: fn:blocks:length(), worker: local Function(Int is bi){
 			local IrBlock is blk: fn:blocks:get(index: bi);
 			if({ :blkHasConcatPair(blk: blk, concatFns: concatFns) }, {
 				:fuseBlock(blk: blk, uses: uses, concatFns: concatFns, createdArities: createdArities, neededArities: neededArities);
 			});
-			bi++;
 		});
 	}
 
@@ -473,11 +461,9 @@ Class of SpecOptimizer is ConcatFusionPass{
 			fi++;
 		});
 
-		local Int is ai: 0;
-		while({ ai < neededArities:length() }, {
+		times(count: neededArities:length(), worker: local Function(Int is ai){
 			local Int is k: neededArities:get(index: ai);
 			mod:functions:push(item: :buildConcatHelper(k: k));
-			ai++;
 		});
 	}
 }
