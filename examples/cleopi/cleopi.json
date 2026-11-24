@@ -1,12 +1,12 @@
 {
-  "name": "pi_benchmark",
+  "name": "cleopi",
   "version": "0.1.0",
-  "source": "src/PiBenchmark.spec",
+  "source": "src/CleoPi.spec",
   "source_dirs": [
     "src",
     "../../spec"
   ],
-  "output": "../../bin/pi_benchmark",
+  "output": "../../bin/cleopi",
   "tests": {
     "runner": "specunit",
     "dirs": [

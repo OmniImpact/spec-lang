@@ -219,10 +219,6 @@ repeat(count: 3, worker: {
 bin/spec -i examples/helloworld/src/HelloWorld.spec -s examples/helloworld/src -o helloworld
 ./helloworld --name Daniel
 
-# Run the scoped region and resource management demo (with Cleo UI)
-bin/spec -i examples/scope_as_demo/src/ScopeAsDemo.spec -s examples/scope_as_demo/src -o scope_demo
-./scope_demo
-
 # Run the pure-Spec HTTPS + TLS 1.3 weather forecast example
 bin/spec -i examples/weather/src/Weather.spec -s examples/weather/src -o weather
 ./weather

@@ -127,7 +127,7 @@ CRuby 3.3 (built **without** YJIT), Spec @ `d8064c2` (`main`).
 | **Spec** | **`bin/spec` → LLVM IR** | **16.744s / 191.4 MB**\* | **5.999s / 122.1 MB** | **5.477s / 118.7 MB** |
 | Python / Ruby | — (interpreted) | — | — | — |
 
-*\*Note on `mc_pi` compile time: `PiBenchmark.spec` imports the full `base:cleo` terminal UI stack in addition to the benchmark loop, which increases whole-program LLVM IR size and `clang -O2` link time compared to `BinaryTrees.spec` (`6.0s`) and `WordFreq.spec` (`5.5s`).*
+*\*Note on `mc_pi` compile time: `CleoPi.spec` imports the full `base:cleo` terminal UI stack in addition to the benchmark loop, which increases whole-program LLVM IR size and `clang -O2` link time compared to `BinaryTrees.spec` (`6.0s`) and `WordFreq.spec` (`5.5s`).*
 
 ---
 

@@ -1,6 +1,6 @@
 #! specunit: suite
 
-Class of SpecUnitTest is TestPiBenchmark{
+Class of SpecUnitTest is TestCleoPi{
 
 	replace [[String]] is using: [
 		['specunit', SpecUnitTest],

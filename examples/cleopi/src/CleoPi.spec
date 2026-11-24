@@ -3,7 +3,7 @@
 #! running stats, and progress bar.
 
 ## Parallel Monte Carlo Pi benchmark with live Cleo terminal UI.
-Class is PiBenchmark{
+Class is CleoPi{
 
 	replace [[String]] is using: [
 		['base', 'cleo', Cleo],
@@ -59,7 +59,7 @@ Class is PiBenchmark{
 		});
 
 		local Cleo is ui: Cleo(
-			title: ' pi_benchmark ',
+			title: ' cleopi ',
 			titleColor: CleoColor:ansi(code: 231),
 			titleBgColor: CleoColor:ansi(code: 24),
 			width: CleoWidth:percent(pct: 100),

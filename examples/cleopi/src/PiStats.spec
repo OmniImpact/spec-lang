@@ -1,4 +1,4 @@
-#! Formatting and math helpers for PiBenchmark.
+#! Formatting and math helpers for CleoPi.
 
 ## Provides Monte Carlo Pi estimation, fixed-precision formatting, and ANSI box helpers.
 Class is PiStats{
