@@ -5,7 +5,7 @@ Class of SpecUnitTest is TestTheoJack{
 
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
-		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, FocusTarget]],
+		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as File(), as Loops(), as Process()]],
 		['theojack', 'model', [Card, CardStyle, GamePhase, Hand, Rank, Suit]],
 		['theojack', 'util', [HomeStrings, OptionsStorage, RulesLoader]],
@@ -196,6 +196,20 @@ Class of SpecUnitTest is TestTheoJack{
 			ry: ry + 1;
 		});
 		Assert:isTrue(foundPlayerL);
+
+		# Hover over -$10 button (at x=2..10, y=20..22) -> shows non-blocking tooltip above it
+		Assert:isTrue(gf:handleMouse(event: MouseEvent(kind: 'move', x: 4, y: 21)));
+		Assert:isTrue(gf:hasOpenOverlay());
+		Assert:isFalse(gf:hasBlockingOverlay());
+
+		# Moving mouse away hides the tooltip
+		Assert:isTrue(gf:handleMouse(event: MouseEvent(kind: 'move', x: 0, y: 0)));
+		Assert:isFalse(gf:hasOpenOverlay());
+
+		# Hover again and click -$10 while tooltip is open (non-blocking)
+		Assert:isTrue(gf:handleMouse(event: MouseEvent(kind: 'move', x: 4, y: 21)));
+		Assert:isTrue(gf:hasOpenOverlay());
+		Assert:isTrue(gf:handleMouse(event: MouseEvent(kind: 'press', button: 0, x: 4, y: 21)));
 
 		# Bet +10 -> 20, Deal -> either PLAYER_TURN or immediate ROUND_OVER (Blackjack)
 		gf:game:adjustBet(delta: 10);

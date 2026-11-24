@@ -38,11 +38,34 @@ Class of Widget is Frame{
 		overlay:close();
 	}
 
+	## Unregisters [overlay] from this frame.
+	Function is removeOverlay(Overlay is overlay){
+		local Int is i: 0;
+		while({ i < overlays:length() }, {
+			if({ overlays:get(index: i) == overlay }, {
+				overlays:removeAt(index: i);
+				return;
+			});
+			i: i + 1;
+		});
+	}
+
 	## True when at least one overlay on this frame is currently open.
 	Function of Boolean is hasOpenOverlay(){
 		local Int is i: 0;
 		while({ i < overlays:length() }, {
 			if({ overlays:get(index: i):open }, { return true; });
+			i: i + 1;
+		});
+		return false;
+	}
+
+	## True when at least one blocking overlay on this frame is currently open.
+	Function of Boolean is hasBlockingOverlay(){
+		local Int is i: 0;
+		while({ i < overlays:length() }, {
+			local Overlay is ov: overlays:get(index: i);
+			if({ ov:open && ov:blocking }, { return true; });
 			i: i + 1;
 		});
 		return false;
@@ -156,7 +179,7 @@ Class of Widget is Frame{
 		local Int is i: overlays:length() - 1;
 		while({ i >= 0 }, {
 			local Overlay is ov: overlays:get(index: i);
-			if({ ov:open }, {
+			if({ ov:open && ov:blocking }, {
 				return ov:handleKey(event: event);
 			});
 			i: i - 1;
@@ -172,7 +195,7 @@ Class of Widget is Frame{
 		local Int is i: overlays:length() - 1;
 		while({ i >= 0 }, {
 			local Overlay is ov: overlays:get(index: i);
-			if({ ov:open }, {
+			if({ ov:open && ov:blocking }, {
 				return ov:handleMouse(event: event);
 			});
 			i: i - 1;
@@ -185,7 +208,7 @@ Class of Widget is Frame{
 		local Int is i: overlays:length() - 1;
 		while({ i >= 0 }, {
 			local Overlay is ov: overlays:get(index: i);
-			if({ ov:open }, {
+			if({ ov:open && ov:blocking }, {
 				ov:collectFocus(targets: targets, owners: owners);
 				return;
 			});

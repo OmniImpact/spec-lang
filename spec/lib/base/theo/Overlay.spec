@@ -12,12 +12,14 @@ Class of Widget is Overlay{
 	Widget is content;
 	Widget is anchor: Widget();
 	Boolean is open: false;
+	Boolean is blocking: true;
 	Boolean is closeOnEsc: true;
 	Boolean is closeOnBackdrop: false;
 	Function is onClose: {};
 
 	replace Function is init(
 		Widget is content: Widget(),
+		Boolean is blocking: true,
 		Boolean is closeOnEsc: true,
 		Boolean is closeOnBackdrop: false,
 		Function is onClose: {}
@@ -25,33 +27,38 @@ Class of Widget is Overlay{
 		:content: content;
 		:anchor: Widget();
 		:open: false;
+		:blocking: blocking;
 		:closeOnEsc: closeOnEsc;
 		:closeOnBackdrop: closeOnBackdrop;
 		:onClose: onClose;
 	}
 
-	## Opens this overlay, recording [anchor] (the invoking element) and focusing the overlay's first focus target if any.
+	## Opens this overlay, recording [anchor] (the invoking element) and focusing the overlay's first focus target if blocking.
 	Function is show(Widget is anchor: Widget()){
 		:anchor: anchor;
 		:open: true;
-		local Array of FocusTarget is fts: Array();
-		local Array of Widget is fws: Array();
-		content:collectFocus(targets: fts, owners: fws);
-		if({ fts:length() > 0 }, {
-			fts:get(index: 0):requestFocus();
+		if({ blocking }, {
+			local Array of FocusTarget is fts: Array();
+			local Array of Widget is fws: Array();
+			content:collectFocus(targets: fts, owners: fws);
+			if({ fts:length() > 0 }, {
+				fts:get(index: 0):requestFocus();
+			});
 		});
 		invalidate();
 	}
 
-	## Closes this overlay and restores focus to [anchor] if it has a [FocusTarget].
+	## Closes this overlay and restores focus to [anchor] if blocking and [anchor] has a [FocusTarget].
 	Function is close(){
 		if({ !open }, { return; });
 		:open: false;
-		local Array of FocusTarget is fts: Array();
-		local Array of Widget is fws: Array();
-		anchor:collectFocus(targets: fts, owners: fws);
-		if({ fts:length() > 0 }, {
-			fts:get(index: 0):requestFocus();
+		if({ blocking }, {
+			local Array of FocusTarget is fts: Array();
+			local Array of Widget is fws: Array();
+			anchor:collectFocus(targets: fts, owners: fws);
+			if({ fts:length() > 0 }, {
+				fts:get(index: 0):requestFocus();
+			});
 		});
 		onClose();
 		invalidate();
@@ -82,6 +89,7 @@ Class of Widget is Overlay{
 
 	replace Function of Boolean is handleKey(KeyEvent is event){
 		if({ !open }, { return false; });
+		if({ !blocking }, { return false; });
 		if({ content:handleKey(event: event) }, {
 			return true;
 		});
@@ -93,6 +101,7 @@ Class of Widget is Overlay{
 
 	replace Function of Boolean is handleMouse(MouseEvent is event){
 		if({ !open }, { return false; });
+		if({ !blocking }, { return false; });
 		content:handleMouse(event: event);
 		if({ closeOnBackdrop && event:isLeftPress() && !content:containsPoint(x: event:x, y: event:y) }, {
 			close();
@@ -101,7 +110,7 @@ Class of Widget is Overlay{
 	}
 
 	replace Function is collectFocus(Array of FocusTarget is targets, Array of Widget is owners){
-		if({ !open }, { return; });
+		if({ !open || !blocking }, { return; });
 		content:collectFocus(targets: targets, owners: owners);
 	}
 

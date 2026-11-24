@@ -163,33 +163,48 @@ Class of Frame is GameFrame{
 	local Function of Array of Widget is buildActionButtons(){
 		local Array of Widget is btns: Array();
 		if({ game:phase == GamePhase:BETTING }, {
-			btns:add(item: Button(
-				label: HomeStrings:ACTION_BET_DOWN,
-				padX: 2,
-				padY: 1,
-				focusTarget: secondaryFocus,
-				onClick: {
-					game:adjustBet(delta: -10);
-					rebuild();
-				}
+			btns:add(item: Tooltip(
+				host: :,
+				text: 'Decrease bet by $10',
+				side: 'top',
+				child: Button(
+					label: HomeStrings:ACTION_BET_DOWN,
+					padX: 2,
+					padY: 1,
+					focusTarget: secondaryFocus,
+					onClick: {
+						game:adjustBet(delta: -10);
+						rebuild();
+					}
+				)
 			));
-			btns:add(item: Button(
-				label: HomeStrings:ACTION_BET_UP,
-				padX: 2,
-				padY: 1,
-				focusTarget: doubleFocus,
-				onClick: {
-					game:adjustBet(delta: 10);
-					rebuild();
-				}
+			btns:add(item: Tooltip(
+				host: :,
+				text: 'Increase bet by $10',
+				side: 'top',
+				child: Button(
+					label: HomeStrings:ACTION_BET_UP,
+					padX: 2,
+					padY: 1,
+					focusTarget: doubleFocus,
+					onClick: {
+						game:adjustBet(delta: 10);
+						rebuild();
+					}
+				)
 			));
-			btns:add(item: Button(
-				label: HomeStrings:ACTION_DEAL,
-				shortcutKey: 'd',
-				padX: 2,
-				padY: 1,
-				focusTarget: primaryFocus,
-				onClick: { doDeal(); }
+			btns:add(item: Tooltip(
+				host: :,
+				text: 'Deal a new hand',
+				side: 'top',
+				child: Button(
+					label: HomeStrings:ACTION_DEAL,
+					shortcutKey: 'd',
+					padX: 2,
+					padY: 1,
+					focusTarget: primaryFocus,
+					onClick: { doDeal(); }
+				)
 			));
 		}, {
 			btns:add(item: Button(
