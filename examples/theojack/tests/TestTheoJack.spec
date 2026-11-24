@@ -14,7 +14,7 @@ Class of SpecUnitTest is TestTheoJack{
 	Function is testHomeScreenCenteredAndEqualWidth(){
 		local Boolean is quitCalled: false;
 		local HomeFrame is home: HomeFrame(onQuit: { quitCalled: true; });
-		local [FocusTarget] is fts: [home:playFocus, home:rulesFocus, home:aboutFocus, home:quitFocus];
+		local [FocusTarget] is fts: [home:playFocus, home:rulesFocus, home:aboutFocus, home:quitFocus, home:aboutCloseFocus];
 		times(count: fts:length(), worker: local Function(Int is i){
 			fts:get(index: i):bindOwner(handler: local Function(Any is _t){
 				times(count: fts:length(), worker: local Function(Int is j){
@@ -34,12 +34,32 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:areEqualInt(HomeStrings:CARD_WIDTH, home:measureWidth(maxW: 80) - HomeStrings:CARD_WIDTH - 3);
 		Assert:areEqualInt(7, home:measureHeight(maxW: 80, maxH: 24));
 
-		# Pressing Down 3 times focuses Quit, Enter activates Quit
+		# Pressing Down 2 times focuses About, Enter opens the About Overlay
 		Assert:isTrue(home:playFocus:focused);
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(home:rulesFocus:focused);
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(home:aboutFocus:focused);
+		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'enter')));
+		Assert:isTrue(home:isAboutOpen());
+		Assert:isTrue(home:aboutCloseFocus:focused);
+
+		# While About overlay is open, 'q' is blocked from reaching HomeFrame:onKey
+		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'char', key: 'q')));
+		Assert:isFalse(quitCalled);
+		Assert:isTrue(home:isAboutOpen());
+
+		# Paint with overlay open and verify title-bar + description render
+		buf:clear();
+		home:layout(x: 0, y: 0, w: 80, h: 24);
+		home:paint(buf: buf, renderer: ren);
+
+		# Esc closes About overlay and restores focus to About button
+		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'esc')));
+		Assert:isFalse(home:isAboutOpen());
+		Assert:isTrue(home:aboutFocus:focused);
+
+		# Now Down focuses Quit, and Enter activates Quit
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'down')));
 		Assert:isTrue(home:quitFocus:focused);
 		Assert:isTrue(home:handleKey(event: KeyEvent(kind: 'enter')));

@@ -12,4 +12,8 @@ Class is HomeStrings{
 	held String is MENU_RULES: 'Rules';
 	held String is MENU_ABOUT: 'About';
 	held String is MENU_QUIT: 'Quit';
+
+	held String is ABOUT_TITLE: ' About ';
+	held String is ABOUT_BODY: "TheoJack is a Blackjack game\nwritten in Spec using the\nTheo TUI toolkit.";
+	held String is ABOUT_CLOSE: 'Close';
 }
