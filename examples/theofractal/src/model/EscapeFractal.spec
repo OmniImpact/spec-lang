@@ -45,9 +45,9 @@ Class of Fractal is EscapeFractal{
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));
 		local Float is xMin: viewport:centerX - spanX * 0.5;
 		local Float is yMin: viewport:centerY - spanY * 0.5;
-		local Float is zoomBoost: if({ viewport:zoom > 1.0 }, { log2(value: viewport:zoom) * 16.0 }, { 0.0 });
-		local Int is maxIter: 80 + toInt(value: zoomBoost);
-		if({ maxIter > 220 }, { maxIter: 220; });
+		local Float is zoomBoost: if({ viewport:zoom > 1.0 }, { log2(value: viewport:zoom) * 40.0 }, { 0.0 });
+		local Int is maxIter: 100 + toInt(value: zoomBoost);
+		if({ maxIter > 2400 }, { maxIter: 2400; });
 
 		# Precompute row x-coordinates using SIMD-accelerated Vector operations
 		local Vector is idxVec: Vector(length: w);

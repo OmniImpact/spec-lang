@@ -20,7 +20,7 @@ Class of Fractal is SnowflakeFractal{
 		FractalViewport(centerX: 0.0, centerY: 0.0, baseSpan: 2.4, zoom: 1.0)
 	}
 
-	local Function of Float is evaluateSnowflake(Float is wx, Float is wy){
+	local Function of Float is evaluateSnowflake(Float is wx, Float is wy, Int is folds){
 		local Float is halfSqrt3: 0.86602540378;
 		local Float is sqrt3: 1.73205080757;
 
@@ -41,7 +41,7 @@ Class of Fractal is SnowflakeFractal{
 
 		local Float is scale: 1.0;
 		local Int is k: 0;
-		while({ k < 7 }, {
+		while({ k < folds }, {
 			if({ px < 0.0 }, { px: -px; });
 			local Float is dx: px - 0.33333333333;
 			local Float is dot: -halfSqrt3 * dx + 0.5 * py;
@@ -78,6 +78,11 @@ Class of Fractal is SnowflakeFractal{
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));
 		local Float is xMin: viewport:centerX - spanX * 0.5;
 		local Float is yMax: viewport:centerY + spanY * 0.5;
+		local Int is folds: 7;
+		if({ viewport:zoom > 1.0 }, {
+			folds: 7 + toInt(value: ceil(value: log(value: viewport:zoom) / 1.09861228867));
+		});
+		if({ folds > 28 }, { folds: 28; });
 
 		local Int is total: w * h;
 		local Vector is outBuf: Vector(length: total, initial: -1.0);
@@ -93,7 +98,7 @@ Class of Fractal is SnowflakeFractal{
 				local Int is px: 0;
 				while({ px < w }, {
 					local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
-					outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy));
+					outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy, folds: folds));
 					px: px + 1;
 				});
 				py: py + 1;
@@ -113,7 +118,7 @@ Class of Fractal is SnowflakeFractal{
 								local Int is px: 0;
 								while({ px < w }, {
 									local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
-									outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy));
+									outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy, folds: folds));
 									px: px + 1;
 								});
 								py: py + nThreads;

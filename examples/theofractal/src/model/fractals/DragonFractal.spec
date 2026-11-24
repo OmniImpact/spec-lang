@@ -53,7 +53,7 @@ Class of Fractal is DragonFractal{
 			return;
 		});
 
-		if({ len < 0.75 || depth >= 26 }, {
+		if({ len < 0.75 || depth >= 84 }, {
 			if({ len < 0.75 }, {
 				local Int is mxp: toInt(value: round(value: (sx1 + sx2) * 0.5));
 				local Int is myp: toInt(value: round(value: (sy1 + sy2) * 0.5));

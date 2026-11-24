@@ -60,7 +60,7 @@ Class of Fractal is BarnsleyFernFractal{
 		local Boolean is fullyInside: cx - halfW >= xMin && cx + halfW <= xMax && cy - halfH >= yMin && cy + halfH <= yMax;
 		local Float is pxW: halfW * 2.0 * scaleX;
 		local Float is pxH: halfH * 2.0 * scaleY;
-		if({ fullyInside || (pxW <= 8.0 && pxH <= 8.0) || depth >= 10 }, {
+		if({ fullyInside || (pxW <= 8.0 && pxH <= 8.0) || depth >= 32 }, {
 			branches:push(item: a);
 			branches:push(item: b);
 			branches:push(item: e);
@@ -155,8 +155,11 @@ Class of Fractal is BarnsleyFernFractal{
 		local Float is y: 0.0;
 		local Int is seed: 1337;
 		local Int is seed2: 7919;
+		local Float is zoomFactor: if({ scaleX > 10.0 }, { log(value: scaleX) }, { 1.0 });
+		local Int is samples: 35000 + toInt(value: zoomFactor * 4000.0);
+		if({ samples > 90000 }, { samples: 90000; });
 		local Int is i: 0;
-		while({ i < 35000 }, {
+		while({ i < samples }, {
 			seed: (seed * 1103515245 + 12345) % 2147483647;
 			if({ seed < 0 }, { seed: -seed; });
 			local Int is r: seed % 100;

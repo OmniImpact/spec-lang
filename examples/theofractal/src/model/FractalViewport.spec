@@ -39,11 +39,11 @@ Class is FractalViewport{
 		centerY: centerY + dyFraction * step;
 	}
 
-	## Multiplies zoom by [factor], clamped to `[0.05, 1000000.0]`.
+	## Multiplies zoom by [factor], clamped to `[0.05, 1000000000000.0]`.
 	Function is zoomBy(Float is factor){
 		local Float is next: zoom * factor;
 		if({ next < 0.05 }, { next: 0.05; });
-		if({ next > 1000000.0 }, { next: 1000000.0; });
+		if({ next > 1000000000000.0 }, { next: 1000000000000.0; });
 		zoom: next;
 	}
 }

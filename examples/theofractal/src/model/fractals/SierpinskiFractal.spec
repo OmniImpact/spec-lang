@@ -60,7 +60,7 @@ Class of Fractal is SierpinskiFractal{
 
 		local Float is bw: maxX - minX;
 		local Float is bh: maxY - minY;
-		if({ (bw <= 1.5 && bh <= 1.5) || depth >= 13 }, {
+		if({ (bw <= 1.5 && bh <= 1.5) || depth >= 48 }, {
 			local Float is t: clamp01(v: 0.25 + 0.75 * ((ay + 0.5) / 1.5));
 			local Int is ix0: toInt(value: round(value: sax));
 			local Int is iy0: toInt(value: round(value: say));

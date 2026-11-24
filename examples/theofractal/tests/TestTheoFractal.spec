@@ -177,4 +177,36 @@ Class of SpecUnitTest is TestTheoFractal{
 		});
 		Assert:isTrue(lit > 50);
 	}
+
+	Function is testDeepZoomAndFidelity(){
+		local ExplorerViewModel is vm: ExplorerViewModel();
+		vm:selectFractal(name: FractalStrings:OPT_MANDELBROT);
+		vm:viewport:centerX: -0.7436438870371587;
+		vm:viewport:centerY: 0.13182590420531197;
+		vm:viewport:zoomBy(factor: 1000000000.0);
+		Assert:isTrue(vm:viewport:zoom > 500000000.0);
+		local [Int] is deepMandel: vm:ensurePixels(w: 32, h: 32);
+		Assert:isTrue(deepMandel:length() == 32 * 32);
+
+		vm:selectFractal(name: FractalStrings:OPT_SNOWFLAKE);
+		vm:viewport:centerX: 0.0;
+		vm:viewport:centerY: 1.0;
+		vm:viewport:zoomBy(factor: 100000000.0);
+		local [Int] is deepSnow: vm:ensurePixels(w: 32, h: 32);
+		Assert:isTrue(deepSnow:length() == 32 * 32);
+
+		vm:selectFractal(name: FractalStrings:OPT_SIERPINSKI);
+		vm:viewport:centerX: 0.0;
+		vm:viewport:centerY: 1.0;
+		vm:viewport:zoomBy(factor: 100000000.0);
+		local [Int] is deepSierp: vm:ensurePixels(w: 32, h: 32);
+		Assert:isTrue(deepSierp:length() == 32 * 32);
+
+		vm:selectFractal(name: FractalStrings:OPT_DRAGON);
+		vm:viewport:centerX: 0.0;
+		vm:viewport:centerY: 0.0;
+		vm:viewport:zoomBy(factor: 100000000.0);
+		local [Int] is deepDragon: vm:ensurePixels(w: 32, h: 32);
+		Assert:isTrue(deepDragon:length() == 32 * 32);
+	}
 }

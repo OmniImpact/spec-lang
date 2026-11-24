@@ -48,19 +48,57 @@ Class is GridRasterizer{
 		});
 	}
 
+	## Clips a floating-point segment `(x0, y0)-(x1, y1)` to `[0, w - 1] x [0, h - 1]` (Liang-Barsky), returning `[ok, cx0, cy0, cx1, cy1]`.
+	local Function of [Float] is clipSegment(Float is x0, Float is y0, Float is x1, Float is y1, Int is w, Int is h){
+		local Float is dx: x1 - x0;
+		local Float is dy: y1 - y0;
+		local Float is t0: 0.0;
+		local Float is t1: 1.0;
+		local Float is maxX: toFloat(value: w - 1);
+		local Float is maxY: toFloat(value: h - 1);
+		local [Float] is p: [-dx, dx, -dy, dy];
+		local [Float] is q: [x0, maxX - x0, y0, maxY - y0];
+		local Int is k: 0;
+		while({ k < 4 }, {
+			local Float is pk: p:get(index: k);
+			local Float is qk: q:get(index: k);
+			if({ pk == 0.0 }, {
+				if({ qk < 0.0 }, { return [0.0]; });
+			}, {
+				local Float is r: qk / pk;
+				if({ pk < 0.0 }, {
+					if({ r > t1 }, { return [0.0]; });
+					if({ r > t0 }, { t0: r; });
+				}, {
+					if({ r < t0 }, { return [0.0]; });
+					if({ r < t1 }, { t1: r; });
+				});
+			});
+			k: k + 1;
+		});
+		return [1.0, x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
+	}
+
 	## Rasterizes a line segment from `(x0, y0)` to `(x1, y1)` into [grid] with intensity [val].
 	Function is drawLine([Float] is grid, Int is w, Int is h, Int is x0, Int is y0, Int is x1, Int is y1, Float is val){
-		local Int is dx: x1 - x0;
-		local Int is dy: y1 - y0;
+		if({ w <= 0 || h <= 0 }, { return; });
+		local [Float] is clipped: clipSegment(x0: toFloat(value: x0), y0: toFloat(value: y0), x1: toFloat(value: x1), y1: toFloat(value: y1), w: w, h: h);
+		if({ clipped:get(index: 0) < 0.5 }, { return; });
+		local Int is cx0: toInt(value: round(value: clipped:get(index: 1)));
+		local Int is cy0: toInt(value: round(value: clipped:get(index: 2)));
+		local Int is cx1: toInt(value: round(value: clipped:get(index: 3)));
+		local Int is cy1: toInt(value: round(value: clipped:get(index: 4)));
+		local Int is dx: cx1 - cx0;
+		local Int is dy: cy1 - cy0;
 		local Int is adx: if({ dx < 0 }, { -dx }, { dx });
 		local Int is ady: if({ dy < 0 }, { -dy }, { dy });
 		local Int is steps: if({ adx > ady }, { adx }, { ady });
 		if({ steps <= 0 }, {
-			plotPoint(grid: grid, w: w, h: h, x: x0, y: y0, val: val);
+			plotPoint(grid: grid, w: w, h: h, x: cx0, y: cy0, val: val);
 			return;
 		});
-		local Float is fx: toFloat(value: x0);
-		local Float is fy: toFloat(value: y0);
+		local Float is fx: toFloat(value: cx0);
+		local Float is fy: toFloat(value: cy0);
 		local Float is sx: toFloat(value: dx) / toFloat(value: steps);
 		local Float is sy: toFloat(value: dy) / toFloat(value: steps);
 		local Int is i: 0;
@@ -81,20 +119,24 @@ Class is GridRasterizer{
 
 	## Rasterizes a line segment from `(x0, y0)` to `(x1, y1)` by incrementing hit counters in [counts].
 	Function is incrementLine([Int] is counts, Int is w, Int is h, Int is x0, Int is y0, Int is x1, Int is y1){
-		if({ (x0 < 0 && x1 < 0) || (x0 >= w && x1 >= w) || (y0 < 0 && y1 < 0) || (y0 >= h && y1 >= h) }, {
-			return;
-		});
-		local Int is dx: x1 - x0;
-		local Int is dy: y1 - y0;
+		if({ w <= 0 || h <= 0 }, { return; });
+		local [Float] is clipped: clipSegment(x0: toFloat(value: x0), y0: toFloat(value: y0), x1: toFloat(value: x1), y1: toFloat(value: y1), w: w, h: h);
+		if({ clipped:get(index: 0) < 0.5 }, { return; });
+		local Int is cx0: toInt(value: round(value: clipped:get(index: 1)));
+		local Int is cy0: toInt(value: round(value: clipped:get(index: 2)));
+		local Int is cx1: toInt(value: round(value: clipped:get(index: 3)));
+		local Int is cy1: toInt(value: round(value: clipped:get(index: 4)));
+		local Int is dx: cx1 - cx0;
+		local Int is dy: cy1 - cy0;
 		local Int is adx: if({ dx < 0 }, { -dx }, { dx });
 		local Int is ady: if({ dy < 0 }, { -dy }, { dy });
 		local Int is steps: if({ adx > ady }, { adx }, { ady });
 		if({ steps <= 0 }, {
-			incrementPoint(counts: counts, w: w, h: h, x: x0, y: y0);
+			incrementPoint(counts: counts, w: w, h: h, x: cx0, y: cy0);
 			return;
 		});
-		local Float is fx: toFloat(value: x0);
-		local Float is fy: toFloat(value: y0);
+		local Float is fx: toFloat(value: cx0);
+		local Float is fy: toFloat(value: cy0);
 		local Float is sx: toFloat(value: dx) / toFloat(value: steps);
 		local Float is sy: toFloat(value: dy) / toFloat(value: steps);
 		local Int is i: 0;
