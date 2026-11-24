@@ -8,8 +8,7 @@ Class of Fractal is BarnsleyFernFractal{
 		['theofractal', 'model', [Fractal, FractalViewport]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
 		['base', 'math', [as Math(), Vector]],
-		['base', 'sys', [as Mem(), Parallel, Process]],
-		['base', 'sys', 'thread', ThreadScope]
+		['base', 'sys', [as Mem(), Parallel, Process]]
 	];
 
 	replace Function of String is name(){ FractalStrings:OPT_BARNSLEY_FERN }
@@ -276,28 +275,22 @@ Class of Fractal is BarnsleyFernFractal{
 				c0: c0 + 1;
 			});
 		}, {
-			ThreadScope:open(
-				body: local Function(ThreadScope is scope){
-					Parallel():run(
-						scope: scope,
-						threads: nThreads,
-						iterations: chunks,
-						worker: local Function of Int(Int is tid, Int is cnt){
-							local Int is c1: tid;
-							while({ c1 < chunks }, {
-								sampleChaosChunk(
-									branchPtr: branchPtr, cumPtr: cumPtr, branchCount: branchCount, totalW: totalW,
-									countPtr: chunkBufs + c1 * chunkBytes,
-									w: w, h: h, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax, scaleX: scaleX, scaleY: scaleY,
-									samples: perChunk, initSeed1: 1337 + c1 * 97, initSeed2: 7919 + c1 * 131
-								);
-								c1: c1 + nThreads;
-							});
-							return 0;
-						}
-					);
-				},
-				onError: local Function of Boolean(SpecError is _err){ false }
+			Parallel():runScoped(
+				threads: nThreads,
+				iterations: chunks,
+				worker: local Function of Int(Int is tid, Int is cnt){
+					local Int is c1: tid;
+					while({ c1 < chunks }, {
+						sampleChaosChunk(
+							branchPtr: branchPtr, cumPtr: cumPtr, branchCount: branchCount, totalW: totalW,
+							countPtr: chunkBufs + c1 * chunkBytes,
+							w: w, h: h, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax, scaleX: scaleX, scaleY: scaleY,
+							samples: perChunk, initSeed1: 1337 + c1 * 97, initSeed2: 7919 + c1 * 131
+						);
+						c1: c1 + nThreads;
+					});
+					return 0;
+				}
 			);
 		});
 

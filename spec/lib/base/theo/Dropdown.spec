@@ -178,10 +178,15 @@ Class of Widget is Dropdown{
 		local String is arrow: if({ isOpen() }, { '▲' }, { '▾' });
 		local Int is innerW: boxW - 2;
 		if({ innerW < 1 }, { innerW: 1; });
-		local String is shown: if({ val:runeCount() > innerW - 2 }, { val:sliceRunes(start: 0, end: innerW - 2) }, { val });
+		local Int is maxChars: if({ innerW > 2 }, { innerW - 2 }, { 0 });
+		local String is shown: if({ maxChars == 0 }, { '' }, { if({ val:runeCount() > maxChars }, { val:sliceRunes(start: 0, end: maxChars) }, { val }) });
 		buf:fillRect(x: boxX, y: boxY, w: boxW, h: 1, fg: useFg, bg: useBg);
-		buf:drawText(x: boxX + 1, y: boxY, text: shown, fg: useFg, bg: useBg, bold: foc || hovered);
-		buf:drawText(x: boxX + boxW - 2, y: boxY, text: arrow, fg: useFg, bg: useBg, bold: foc || hovered);
+		if({ shown != '' }, {
+			buf:drawText(x: boxX + 1, y: boxY, text: shown, fg: useFg, bg: useBg, bold: foc || hovered);
+		});
+		if({ boxW >= 2 }, {
+			buf:drawText(x: boxX + boxW - 2, y: boxY, text: arrow, fg: useFg, bg: useBg, bold: foc || hovered);
+		});
 	}
 
 	replace Function of Boolean is handleMouse(MouseEvent is event){

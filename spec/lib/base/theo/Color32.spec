@@ -19,16 +19,16 @@ Class is Color32{
 	}
 
 	## Extracts the 8-bit red channel (`0..255`).
-	held Function of Int is red(Int is color){ return (color >> 16) & 255; }
+	held Function of Int is red(Int is color){ (color >> 16) & 255 }
 
 	## Extracts the 8-bit green channel (`0..255`).
-	held Function of Int is green(Int is color){ return (color >> 8) & 255; }
+	held Function of Int is green(Int is color){ (color >> 8) & 255 }
 
 	## Extracts the 8-bit blue channel (`0..255`).
-	held Function of Int is blue(Int is color){ return color & 255; }
+	held Function of Int is blue(Int is color){ color & 255 }
 
 	## Extracts the 8-bit alpha channel (`0..255`).
-	held Function of Int is alpha(Int is color){ return (color >> 24) & 255; }
+	held Function of Int is alpha(Int is color){ (color >> 24) & 255 }
 
 	## Averages 4 packed RGB colors (for 2x2 supersampled antialiasing) with zero heap allocation.
 	held Function of Int is avg4(Int is c00, Int is c10, Int is c01, Int is c11){

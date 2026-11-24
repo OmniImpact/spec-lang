@@ -8,8 +8,7 @@ Class of Fractal is SnowflakeFractal{
 		['theofractal', 'model', [Fractal, FractalViewport]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
 		['base', 'math', [as Math(), Vector]],
-		['base', 'sys', [Parallel, Process]],
-		['base', 'sys', 'thread', ThreadScope]
+		['base', 'sys', [Parallel, Process]]
 	];
 
 	replace Function of String is name(){ FractalStrings:OPT_SNOWFLAKE }
@@ -104,30 +103,24 @@ Class of Fractal is SnowflakeFractal{
 				py: py + 1;
 			});
 		}, {
-			ThreadScope:open(
-				body: local Function(ThreadScope is scope){
-					Parallel():run(
-						scope: scope,
-						threads: nThreads,
-						iterations: h,
-						worker: local Function of Int(Int is tid, Int is cnt){
-							local Int is py: tid;
-							while({ py < h }, {
-								local Float is wy: yMax - ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
-								local Int is rowOff: py * w;
-								local Int is px: 0;
-								while({ px < w }, {
-									local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
-									outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy, folds: folds));
-									px: px + 1;
-								});
-								py: py + nThreads;
-							});
-							return 0;
-						}
-					);
-				},
-				onError: local Function of Boolean(SpecError is _err){ false }
+			Parallel():runScoped(
+				threads: nThreads,
+				iterations: h,
+				worker: local Function of Int(Int is tid, Int is cnt){
+					local Int is py: tid;
+					while({ py < h }, {
+						local Float is wy: yMax - ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
+						local Int is rowOff: py * w;
+						local Int is px: 0;
+						while({ px < w }, {
+							local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
+							outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy, folds: folds));
+							px: px + 1;
+						});
+						py: py + nThreads;
+					});
+					return 0;
+				}
 			);
 		});
 

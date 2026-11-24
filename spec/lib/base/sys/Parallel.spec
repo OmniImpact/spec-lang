@@ -11,6 +11,7 @@ Class is Parallel{
 	replace [String] is namespace: ['base', 'sys'];
 
 	replace [[String]] is using: [
+		['base', 'core', SpecError],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', 'thread', Task],
 		['base', 'sys', as Defer()],
@@ -83,6 +84,18 @@ Class is Parallel{
 			k: k + 1;
 		});
 		return total;
+	}
+
+	## Convenience wrapper over [run] that opens a [ThreadScope] and bubbles any worker error.
+	Function of Int is runScoped(Int is threads, Int is iterations, Function is worker){
+		local Int is res: 0;
+		ThreadScope:open(
+			body: local Function(ThreadScope is scope){
+				res: :run(scope: scope, threads: threads, iterations: iterations, worker: worker);
+			},
+			onError: local Function of Boolean(SpecError is _err){ return false; }
+		);
+		return res;
 	}
 
 	## Executes [action] inside a critical section synchronized across all worker

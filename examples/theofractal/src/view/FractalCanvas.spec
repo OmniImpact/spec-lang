@@ -51,25 +51,7 @@ Class of Widget is FractalCanvas{
 
 		local Int is pixH: boxH * 2;
 		local [Int] is pixels: vm:ensurePixels(w: boxW, h: pixH);
-		if({ pixels:length() >= boxW * pixH }, {
-			local Int is cy: 0;
-			while({ cy < boxH }, {
-				local Int is topOff: (cy * 2) * boxW;
-				local Int is botOff: (cy * 2 + 1) * boxW;
-				local Int is cx: 0;
-				while({ cx < boxW }, {
-					buf:setCellRgb(
-						x: boxX + cx,
-						y: boxY + cy,
-						ch: '▀',
-						fgRgb: pixels:get(index: topOff + cx),
-						bgRgb: pixels:get(index: botOff + cx)
-					);
-					cx: cx + 1;
-				});
-				cy: cy + 1;
-			});
-		});
+		buf:blitRgb(x: boxX, y: boxY, w: boxW, h: boxH, pixels: pixels);
 
 		navOverlay:paint(buf: buf, renderer: renderer);
 	}

@@ -139,11 +139,7 @@ Class of EscapeFractal is BurningShipFractal{
 
 		while({ px < w }, {
 			local Float is mu: evaluatePoint(cr: crVec:get(index: px), ci: ci, maxIter: maxIter);
-			if({ mu < 0.0 }, {
-				outBuf:set(index: rowOff + px, value: -1.0);
-			}, {
-				outBuf:set(index: rowOff + px, value: mu);
-			});
+			outBuf:set(index: rowOff + px, value: if({ mu < 0.0 }, { -1.0 }, { mu }));
 			px: px + 1;
 		});
 	}

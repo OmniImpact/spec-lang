@@ -7,8 +7,7 @@ Class of Fractal is EscapeFractal{
 	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, FractalViewport]],
 		['base', 'math', [as Math(), Vector]],
-		['base', 'sys', [as Conditional(), as Loops(), Parallel, Process]],
-		['base', 'sys', 'thread', ThreadScope]
+		['base', 'sys', [as Conditional(), as Loops(), Parallel, Process]]
 	];
 
 	## Override to evaluate smooth escape count at `(cr, ci)` up to [maxIter], or `-1.0` if interior.
@@ -28,11 +27,7 @@ Class of Fractal is EscapeFractal{
 		while({ px < w }, {
 			local Float is cr: crVec:get(index: px);
 			local Float is mu: evaluatePoint(cr: cr, ci: ci, maxIter: maxIter);
-			if({ mu < 0.0 }, {
-				outBuf:set(index: rowOff + px, value: -1.0);
-			}, {
-				outBuf:set(index: rowOff + px, value: mu);
-			});
+			outBuf:set(index: rowOff + px, value: if({ mu < 0.0 }, { -1.0 }, { mu }));
 			px: px + 1;
 		});
 	}
@@ -177,24 +172,18 @@ Class of Fractal is EscapeFractal{
 				py: py + 1;
 			});
 		}, {
-			ThreadScope:open(
-				body: local Function(ThreadScope is scope){
-					Parallel():run(
-						scope: scope,
-						threads: nThreads,
-						iterations: h,
-						worker: local Function of Int(Int is tid, Int is cnt){
-							local Int is py: tid;
-							while({ py < h }, {
-								local Float is ci: yMin + ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
-								evaluateRow(crVec: crVec, ci: ci, w: w, maxIter: maxIter, pixelSpan: pixelSpan, outBuf: outBuf, deBuf: deBuf, rowOff: py * w);
-								py: py + nThreads;
-							});
-							return 0;
-						}
-					);
-				},
-				onError: local Function of Boolean(SpecError is _err){ false }
+			Parallel():runScoped(
+				threads: nThreads,
+				iterations: h,
+				worker: local Function of Int(Int is tid, Int is cnt){
+					local Int is py: tid;
+					while({ py < h }, {
+						local Float is ci: yMin + ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
+						evaluateRow(crVec: crVec, ci: ci, w: w, maxIter: maxIter, pixelSpan: pixelSpan, outBuf: outBuf, deBuf: deBuf, rowOff: py * w);
+						py: py + nThreads;
+					});
+					return 0;
+				}
 			);
 		});
 

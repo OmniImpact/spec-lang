@@ -131,6 +131,28 @@ Class is TheoBuffer{
 		c:reverse: false;
 	}
 
+	## Blits a `w * (h * 2)` packed `Color32` pixel list into `h` half-block (`'▀'`) rows at `(x, y)`.
+	Function is blitRgb(Int is x, Int is y, Int is w, Int is h, [Int] is pixels){
+		if({ w <= 0 || h <= 0 || pixels:length() < w * h * 2 }, { return; });
+		local Int is cy: 0;
+		while({ cy < h }, {
+			local Int is topOff: (cy * 2) * w;
+			local Int is botOff: (cy * 2 + 1) * w;
+			local Int is cx: 0;
+			while({ cx < w }, {
+				:setCellRgb(
+					x: x + cx,
+					y: y + cy,
+					ch: '▀',
+					fgRgb: pixels:get(index: topOff + cx),
+					bgRgb: pixels:get(index: botOff + cx)
+				);
+				cx: cx + 1;
+			});
+			cy: cy + 1;
+		});
+	}
+
 	Function is fillRect(Int is x, Int is y, Int is w, Int is h, TheoColor is fg: TheoColor:none(), TheoColor is bg: TheoColor:none()){
 		local Int is ry: 0;
 		while({ ry < h }, {

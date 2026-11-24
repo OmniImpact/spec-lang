@@ -5,7 +5,7 @@ Class is TheoApp{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [TheoScreen, Frame, Widget, FocusTarget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, KeyReader]],
+		['base', 'theo', [TheoScreen, Frame, Widget, FocusTarget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, KeyReader]],
 		['base', 'sys', [as Ansi(), as Input(), as Conditional(), as Loops()]]
 	];
 
@@ -74,6 +74,74 @@ Class is TheoApp{
 		targets:get(index: next):requestFocus();
 	}
 
+	## Paints [screen] into [buf] if dirty, clearing the dirty flag.
+	Function is paintIfDirty(TheoScreen is screen, TheoBuffer is buf, TheoRenderer is renderer){
+		if({ !dirty }, { return; });
+		:dirty: false;
+		buf:clear();
+		renderer:setCursor(visible: false);
+		local Frame is activeFrame: screen:current();
+		activeFrame:applyTheme(theme: theme);
+		activeFrame:layout(x: 0, y: 0, w: buf:width, h: buf:height);
+		syncFocus(frame: activeFrame);
+		activeFrame:paint(buf: buf, renderer: renderer);
+	}
+
+	## Dispatches a single key or mouse event to [screen] and marks dirty if handled.
+	Function is dispatchKeyEvent(TheoScreen is screen, KeyEvent is ev, MouseEvent is mouse){
+		if({ ev:isNone() }, { return; });
+		local Frame is activeFrame: screen:current();
+		if({ ev:isMouse() }, {
+			local Boolean is mHandled: activeFrame:handleMouse(event: mouse);
+			if({ mHandled }, {
+				syncFocus(frame: screen:current());
+				:dirty: true;
+			});
+			return;
+		});
+		local Boolean is handled: activeFrame:handleKey(event: ev);
+		if({ !handled }, {
+			if({ ev:isTab() }, {
+				cycleFocus(frame: activeFrame, reverse: false);
+				handled: true;
+			});
+			if({ ev:isBackTab() }, {
+				cycleFocus(frame: activeFrame, reverse: true);
+				handled: true;
+			});
+		});
+		if({ handled }, {
+			syncFocus(frame: screen:current());
+			:dirty: true;
+		});
+	}
+
+	## Headless test runner: steps [screen] through [keys] without a TTY and returns the final [TheoBuffer].
+	Function of TheoBuffer is runHeadless(TheoScreen is screen, [KeyEvent] is keys, Int is width: 80, Int is height: 24){
+		:running: true;
+		:dirty: true;
+		screen:bindDirty(cb: {
+			:dirty: true;
+		});
+		local TheoRenderer is renderer: TheoRenderer();
+		local TheoBuffer is buf: TheoBuffer(width: width, height: height);
+		local MouseEvent is emptyMouse: MouseEvent();
+		paintIfDirty(screen: screen, buf: buf, renderer: renderer);
+
+		local Int is ki: 0;
+		while({ running && ki < keys:length() }, {
+			dispatchKeyEvent(screen: screen, ev: keys:get(index: ki), mouse: emptyMouse);
+			if({ screen:current():onTick() }, {
+				:dirty: true;
+			});
+			paintIfDirty(screen: screen, buf: buf, renderer: renderer);
+			ki: ki + 1;
+		});
+		screen:current():onExit();
+		:running: false;
+		return buf;
+	}
+
 	Function is run(TheoScreen is screen){
 		:running: true;
 		:dirty: true;
@@ -104,44 +172,13 @@ Class is TheoApp{
 				:dirty: true;
 			});
 
-			local Frame is activeFrame: screen:current();
 			if({ dirty }, {
-				:dirty: false;
-				buf:clear();
-				renderer:setCursor(visible: false);
-				activeFrame:applyTheme(theme: theme);
-				activeFrame:layout(x: 0, y: 0, w: w, h: h);
-				syncFocus(frame: activeFrame);
-				activeFrame:paint(buf: buf, renderer: renderer);
+				paintIfDirty(screen: screen, buf: buf, renderer: renderer);
 				renderer:render(buffer: buf);
 			});
 
 			local KeyEvent is ev: reader:pollKey(timeoutMs: 16);
-			if({ !ev:isNone() }, {
-				if({ ev:isMouse() }, {
-					local Boolean is mHandled: activeFrame:handleMouse(event: reader:lastMouse);
-					if({ mHandled }, {
-						syncFocus(frame: screen:current());
-						:dirty: true;
-					});
-				}, {
-					local Boolean is handled: activeFrame:handleKey(event: ev);
-					if({ !handled }, {
-						if({ ev:isTab() }, {
-							cycleFocus(frame: activeFrame, reverse: false);
-							handled: true;
-						});
-						if({ ev:isBackTab() }, {
-							cycleFocus(frame: activeFrame, reverse: true);
-							handled: true;
-						});
-					});
-					if({ handled }, {
-						syncFocus(frame: screen:current());
-						:dirty: true;
-					});
-				});
-			});
+			dispatchKeyEvent(screen: screen, ev: ev, mouse: reader:lastMouse);
 			if({ screen:current():onTick() }, {
 				:dirty: true;
 			});
