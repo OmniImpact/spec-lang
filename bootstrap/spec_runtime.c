@@ -2473,7 +2473,7 @@ long long spec_pal_audio_open(long long sample_rate, long long channels, long lo
         _spec_last_audio_err = "Audio error: Failed to open ALSA PCM device";
         return -1;
     }
-    if (_spec_snd_pcm_set_params(pcm, 2, 3, (unsigned int)channels, (unsigned int)sample_rate, 1, 500000) != 0) {
+    if (_spec_snd_pcm_set_params(pcm, 2, 3, (unsigned int)channels, (unsigned int)sample_rate, 1, 30000) != 0) {
         if (_spec_snd_pcm_close) _spec_snd_pcm_close(pcm);
         _spec_last_audio_err = "Audio error: Failed to configure ALSA PCM parameters";
         return -1;

@@ -21,12 +21,20 @@ Class of SpecUnitTest is TestTheoSynth{
 		Assert:isTrue(eng:sampleWave(wave: Waveform:SQUARE, phase: 0.75) == -1.0);
 		Assert:isTrue(eng:sampleWave(wave: Waveform:SAWTOOTH, phase: 0.5) == 0.0);
 
-		local List of Byte is sinePcm: eng:synthesize(wave: Waveform:SINE, freqHz: 440.0, durationMs: 20, rate: 44100);
-		local List of Byte is sqPcm: eng:synthesize(wave: Waveform:SQUARE, freqHz: 440.0, durationMs: 20, rate: 44100);
-		local List of Byte is sawPcm: eng:synthesize(wave: Waveform:SAWTOOTH, freqHz: 440.0, durationMs: 20, rate: 44100);
-		Assert:isTrue(sinePcm:length() == 882 * 4);
-		Assert:isTrue(sqPcm:length() == 882 * 4);
-		Assert:isTrue(sawPcm:length() == 882 * 4);
+		local List of Byte is sinePcm: eng:synthesize(wave: Waveform:SINE, freqHz: 440.0, durationMs: 20, rate: 22050);
+		local List of Byte is sqPcm: eng:synthesize(wave: Waveform:SQUARE, freqHz: 440.0, durationMs: 20, rate: 22050);
+		local List of Byte is sawPcm: eng:synthesize(wave: Waveform:SAWTOOTH, freqHz: 440.0, durationMs: 20, rate: 22050);
+		Assert:isTrue(sinePcm:length() == 441 * 4);
+		Assert:isTrue(sqPcm:length() == 441 * 4);
+		Assert:isTrue(sawPcm:length() == 441 * 4);
+
+		eng:noteOn(midi: 60, wave: Waveform:SINE);
+		eng:noteOn(midi: 64, wave: Waveform:SAWTOOTH);
+		local List of Byte is polyPcm;
+		eng:mixChunk(outBuf: polyPcm, frames: 220);
+		Assert:isTrue(polyPcm:length() == 220 * 4);
+		eng:noteOff(midi: 60);
+		eng:noteOff(midi: 64);
 	}
 
 	Function is testThreeOctaveKeyboardLayoutAndTriggering(){

@@ -14,7 +14,7 @@ Class is SynthEngine{
 		['base', 'sys', 'thread', ThreadScope]
 	];
 
-	Int is sampleRate: 44100;
+	Int is sampleRate: 22050;
 	Int is mutex: 0;
 	Boolean is running: false;
 
@@ -64,7 +64,7 @@ Class is SynthEngine{
 	}
 
 	## Synthesizes a 16-bit signed little-endian stereo PCM buffer for [wave] at [freqHz].
-	Function of List of Byte is synthesize(Waveform is wave, Float is freqHz, Int is durationMs: 160, Int is rate: 44100){
+	Function of List of Byte is synthesize(Waveform is wave, Float is freqHz, Int is durationMs: 160, Int is rate: 22050){
 		local List of Byte is buf;
 		local Int is totalSamples: (rate * durationMs) / 1000;
 		local Int is fadeSamples: (rate * 12) / 1000;
@@ -151,17 +151,29 @@ Class is SynthEngine{
 		mutexUnlock(handle: mutex);
 	}
 
-	local Function is mixChunk(List of Byte is outBuf, Int is frames){
+	local Function is pushSample16(List of Byte is outBuf, Float is sample){
+		local Int is s: toInt(value: round(value: sample));
+		if({ s < -32768 }, { s: -32768; });
+		if({ s > 32767 }, { s: 32767; });
+		if({ s < 0 }, { s: s + 65536; });
+		outBuf:push((s & 255) as Byte);
+		outBuf:push(((s >> 8) & 255) as Byte);
+	}
+
+	## Renders [frames] stereo PCM frames by combining all active voices with equal-power polyphonic normalization.
+	Function is mixChunk(List of Byte is outBuf, Int is frames){
 		outBuf:clear();
-		local Float is attackStep: 1.0 / 350.0;
-		local Float is releaseStep: 1.0 / 900.0;
-		local Float is amp: 9000.0;
+		local Float is attackStep: 1.0 / 176.0;
+		local Float is releaseStep: 1.0 / 440.0;
+		local Float is amp: 14000.0;
 
 		mutexLock(handle: mutex);
 		local Int is nv: voiceMidi:length();
 		local Int is fi: 0;
 		while({ fi < frames }, {
-			local Float is mix: 0.0;
+			local Float is sumL: 0.0;
+			local Float is sumR: 0.0;
+			local Int is activeCount: 0;
 			local Int is vi: 0;
 			while({ vi < nv }, {
 				local Int is gate: voiceGate:get(index: vi);
@@ -179,25 +191,24 @@ Class is SynthEngine{
 				});
 				if({ env > 0.0005 }, {
 					local Float is ph: voicePhase:get(index: vi);
-					mix: mix + sampleWaveId(wid: voiceWave:get(index: vi), phase: ph) * env;
+					local Float is osc: sampleWaveId(wid: voiceWave:get(index: vi), phase: ph) * env;
+					sumL: sumL + osc;
+					sumR: sumR + osc;
+					activeCount: activeCount + 1;
 					ph: ph + voiceStep:get(index: vi);
 					if({ ph >= 1.0 }, { ph: ph - 1.0; });
 					voicePhase:set(index: vi, item: ph);
 				});
 				vi: vi + 1;
 			});
-			if({ mix > 1.2 }, { mix: 1.2; });
-			if({ mix < -1.2 }, { mix: -1.2; });
-			local Int is s: toInt(value: round(value: mix * amp));
-			if({ s < -32768 }, { s: -32768; });
-			if({ s > 32767 }, { s: 32767; });
-			if({ s < 0 }, { s: s + 65536; });
-			local Byte is lo: (s & 255) as Byte;
-			local Byte is hi: ((s >> 8) & 255) as Byte;
-			outBuf:push(lo);
-			outBuf:push(hi);
-			outBuf:push(lo);
-			outBuf:push(hi);
+
+			local Float is norm: if({ activeCount > 1 }, { 1.0 / sqrt(value: toFloat(value: activeCount)) }, { 1.0 });
+			local Float is chL: sumL * norm;
+			local Float is chR: sumR * norm;
+			chL: chL / (1.0 + abs(value: chL) * 0.25);
+			chR: chR / (1.0 + abs(value: chR) * 0.25);
+			pushSample16(outBuf: outBuf, sample: chL * amp);
+			pushSample16(outBuf: outBuf, sample: chR * amp);
 			fi: fi + 1;
 		});
 		mutexUnlock(handle: mutex);
@@ -226,7 +237,7 @@ Class is SynthEngine{
 			if({ errMsg != '' }, { return; });
 
 			local List of Byte is chunkBuf;
-			local Int is chunkFrames: 441;
+			local Int is chunkFrames: 220;
 			while({ true }, {
 				mutexLock(handle: mutex);
 				local Boolean is keepGoing: running;
