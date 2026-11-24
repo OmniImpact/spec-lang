@@ -24,6 +24,8 @@ Class is SynthEngine{
 	[Float] is voiceStep: [];
 	[Float] is voiceEnv: [];
 	[Int] is voiceGate: [];
+	[Int] is voiceHoldFrames: [];
+	[Int] is voiceRelPending: [];
 	Float is normGain: 1.0;
 
 	replace Function is init(){
@@ -113,6 +115,8 @@ Class is SynthEngine{
 			voiceWave:set(index: found, item: wid);
 			voiceStep:set(index: found, item: step);
 			voiceGate:set(index: found, item: 1);
+			voiceHoldFrames:set(index: found, item: 660);
+			voiceRelPending:set(index: found, item: 0);
 		}, {
 			local Int is slot: -1;
 			local Int is j: 0;
@@ -127,6 +131,8 @@ Class is SynthEngine{
 				voiceStep:set(index: slot, item: step);
 				voiceEnv:set(index: slot, item: 0.0);
 				voiceGate:set(index: slot, item: 1);
+				voiceHoldFrames:set(index: slot, item: 660);
+				voiceRelPending:set(index: slot, item: 0);
 			}, {
 				voiceMidi:push(item: midi);
 				voiceWave:push(item: wid);
@@ -134,18 +140,24 @@ Class is SynthEngine{
 				voiceStep:push(item: step);
 				voiceEnv:push(item: 0.0);
 				voiceGate:push(item: 1);
+				voiceHoldFrames:push(item: 660);
+				voiceRelPending:push(item: 0);
 			});
 		});
 		mutexUnlock(handle: mutex);
 	}
 
-	## Begins smooth release of [midi].
+	## Begins smooth release of [midi] (respecting minimum attack hold so fast taps still sound).
 	Function is noteOff(Int is midi){
 		mutexLock(handle: mutex);
 		local Int is i: 0;
 		while({ i < voiceMidi:length() }, {
 			if({ voiceMidi:get(index: i) == midi }, {
-				voiceGate:set(index: i, item: 0);
+				if({ voiceHoldFrames:get(index: i) > 0 }, {
+					voiceRelPending:set(index: i, item: 1);
+				}, {
+					voiceGate:set(index: i, item: 0);
+				});
 			});
 			i: i + 1;
 		});
@@ -177,6 +189,15 @@ Class is SynthEngine{
 			local Int is activeCount: 0;
 			local Int is vi: 0;
 			while({ vi < nv }, {
+				local Int is hold: voiceHoldFrames:get(index: vi);
+				if({ hold > 0 }, {
+					hold: hold - 1;
+					voiceHoldFrames:set(index: vi, item: hold);
+					if({ hold == 0 && voiceRelPending:get(index: vi) == 1 }, {
+						voiceGate:set(index: vi, item: 0);
+						voiceRelPending:set(index: vi, item: 0);
+					});
+				});
 				local Int is gate: voiceGate:get(index: vi);
 				local Float is env: voiceEnv:get(index: vi);
 				if({ gate == 1 }, {

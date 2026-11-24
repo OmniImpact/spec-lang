@@ -210,7 +210,7 @@ Class is KeyReader{
 	}
 
 	## Polls up to [timeoutMs] for the first [KeyEvent] and drains any immediately queued events into a batch.
-	Function of [KeyEvent] is pollBatch(Int is timeoutMs: 16, Int is maxBatch: 64){
+	Function of [KeyEvent] is pollBatch(Int is timeoutMs: 16, Int is maxBatch: 256){
 		local [KeyEvent] is batch: [];
 		local KeyEvent is first: pollKey(timeoutMs: timeoutMs);
 		if({ first:isNone() }, { return batch; });
@@ -219,7 +219,9 @@ Class is KeyReader{
 		while({ count < maxBatch }, {
 			local KeyEvent is next: pollKey(timeoutMs: 0);
 			if({ next:isNone() }, { return batch; });
-			batch:push(item: next);
+			if({ !(next:isMouse() && lastMouse:isMove() && batch:get(index: batch:length() - 1):isMouse()) }, {
+				batch:push(item: next);
+			});
 			count: count + 1;
 		});
 		return batch;
