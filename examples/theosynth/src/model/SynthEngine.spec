@@ -32,6 +32,7 @@ Class is SynthEngine{
 	Array of Vector is ksBuffers2: Array();
 	[Int] is ksPos2: [];
 	[Float] is ksPrev2: [];
+	[Float] is pianoBody: [];
 	Int is ksSeed: 1337;
 	Float is normGain: 1.0;
 
@@ -94,9 +95,9 @@ Class is SynthEngine{
 	local Function of Vector is makePianoDelayLine(Float is freqHz, Int is rate){
 		local Vector is dl: makePluckDelayLine(freqHz: freqHz, rate: rate);
 		local Int is dLen: dl:length();
-		# 4-pass low-pass models a soft felt hammer (removes harsh pluck buzz).
+		# 6-pass low-pass models a soft felt hammer (completely removes sharp pluck buzz).
 		local Int is pass: 0;
-		while({ pass < 4 }, {
+		while({ pass < 6 }, {
 			local Float is prev: dl:get(index: dLen - 1);
 			local Int is i: 0;
 			while({ i < dLen }, {
@@ -107,13 +108,13 @@ Class is SynthEngine{
 			});
 			pass: pass + 1;
 		});
-		# Blend warm piano harmonic series (1st..4th partials) with subtle hammer transient.
+		# Warm fundamental + gentle 2nd/3rd harmonics + subtle felt-hammer thump.
 		local Float is twoPi: 6.283185307179586;
 		local Int is j: 0;
 		while({ j < dLen }, {
 			local Float is ph: twoPi * toFloat(value: j) / toFloat(value: dLen);
-			local Float is harm: 0.55 * sin(value: ph) + 0.27 * sin(value: 2.0 * ph) + 0.13 * sin(value: 3.0 * ph) + 0.05 * sin(value: 4.0 * ph);
-			dl:set(index: j, value: 0.78 * harm + 0.22 * dl:get(index: j));
+			local Float is harm: 0.62 * sin(value: ph) + 0.26 * sin(value: 2.0 * ph) + 0.12 * sin(value: 3.0 * ph);
+			dl:set(index: j, value: 0.90 * harm + 0.10 * dl:get(index: j));
 			j: j + 1;
 		});
 		return dl;
@@ -196,7 +197,7 @@ Class is SynthEngine{
 		local Vector is newDl2: if({ wid == 4 }, { makePianoDelayLine(freqHz: freq * 1.0022, rate: sampleRate) }, { Vector(length: 0) });
 		local Float is initPrev: if({ isWg && newDl:length() > 0 }, { newDl:get(index: newDl:length() - 1) }, { 0.0 });
 		local Float is initPrev2: if({ wid == 4 && newDl2:length() > 0 }, { newDl2:get(index: newDl2:length() - 1) }, { 0.0 });
-		local Float is initEnv: if({ isWg }, { 1.0 }, { 0.0 });
+		local Float is initEnv: if({ wid == 3 }, { 1.0 }, { 0.0 });
 
 		mutexLock(handle: mutex);
 		local Int is found: -1;
@@ -214,9 +215,11 @@ Class is SynthEngine{
 			ksBuffers2:set(index: found, item: newDl2);
 			ksPos2:set(index: found, item: 0);
 			ksPrev2:set(index: found, item: initPrev2);
+			pianoBody:set(index: found, item: 0.0);
 			voiceWave:set(index: found, item: wid);
 			voiceStep:set(index: found, item: step);
-			if({ isWg }, { voiceEnv:set(index: found, item: 1.0); });
+			if({ wid == 3 }, { voiceEnv:set(index: found, item: 1.0); });
+			if({ wid == 4 }, { voiceEnv:set(index: found, item: 0.0); });
 			voiceGate:set(index: found, item: 1);
 			voiceHoldFrames:set(index: found, item: 660);
 			voiceRelPending:set(index: found, item: 0);
@@ -236,6 +239,7 @@ Class is SynthEngine{
 				ksBuffers2:set(index: slot, item: newDl2);
 				ksPos2:set(index: slot, item: 0);
 				ksPrev2:set(index: slot, item: initPrev2);
+				pianoBody:set(index: slot, item: 0.0);
 				voiceMidi:set(index: slot, item: midi);
 				voiceWave:set(index: slot, item: wid);
 				voicePhase:set(index: slot, item: 0.0);
@@ -251,6 +255,7 @@ Class is SynthEngine{
 				ksBuffers2:add(item: newDl2);
 				ksPos2:push(item: 0);
 				ksPrev2:push(item: initPrev2);
+				pianoBody:push(item: 0.0);
 				voiceMidi:push(item: midi);
 				voiceWave:push(item: wid);
 				voicePhase:push(item: 0.0);
@@ -338,7 +343,7 @@ Class is SynthEngine{
 							local Int is pos: ksPos:get(index: vi);
 							local Float is cur: dl:get(index: pos);
 							local Float is prev: ksPrev:get(index: vi);
-							local Float is next1: if({ wid == 4 }, { 0.5 * (cur + prev) * 0.9995 }, { 0.5 * (cur + prev) * 0.994 });
+							local Float is next1: if({ wid == 4 }, { 0.5 * (cur + prev) * 0.9996 }, { 0.5 * (cur + prev) * 0.994 });
 							dl:set(index: pos, value: next1);
 							ksPrev:set(index: vi, item: cur);
 							pos: pos + 1;
@@ -352,13 +357,16 @@ Class is SynthEngine{
 									local Int is pos2: ksPos2:get(index: vi);
 									local Float is cur2: dl2:get(index: pos2);
 									local Float is prev2: ksPrev2:get(index: vi);
-									dl2:set(index: pos2, value: 0.5 * (cur2 + prev2) * 0.9995);
+									dl2:set(index: pos2, value: 0.5 * (cur2 + prev2) * 0.9996);
 									ksPrev2:set(index: vi, item: cur2);
 									pos2: pos2 + 1;
 									if({ pos2 >= dLen2 }, { pos2: 0; });
 									ksPos2:set(index: vi, item: pos2);
 									sOut: 0.5 * (cur + cur2);
 								});
+								local Float is bOut: pianoBody:get(index: vi) * 0.45 + sOut * 0.55;
+								pianoBody:set(index: vi, item: bOut);
+								sOut: bOut;
 							});
 							osc: sOut * env;
 						});
