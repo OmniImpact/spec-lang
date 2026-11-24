@@ -4,6 +4,10 @@
 Class is PathTransformer{
 	namespace: ['theoedit', 'util'];
 
+	merge Array of Array of String is using: [
+		['theoedit', 'util', EditorStrings]
+	];
+
 	Function of Boolean is isDirectoryEntry(String is entry){
 		return entry == '..' || entry:endsWith(suffix: '/');
 	}
@@ -34,7 +38,7 @@ Class is PathTransformer{
 	}
 
 	Function of String is formatDocumentTitle(String is filePath, Boolean is dirty){
-		local String is base: if({ filePath != '' }, { filePath }, { '[untitled]' });
-		return if({ dirty }, { "{{base}} *" }, { base });
+		local String is base: if({ filePath != '' }, { filePath }, { EditorStrings:UNTITLED });
+		return if({ dirty }, { EditorStrings:dirtyTitle(base: base) }, { base });
 	}
 }

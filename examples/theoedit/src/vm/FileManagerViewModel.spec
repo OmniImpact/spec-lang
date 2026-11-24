@@ -9,17 +9,17 @@ Class is FileManagerViewModel{
 	merge Array of Array of String is using: [
 		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', DirectoryListing],
-		['theoedit', 'util', [DirectoryScanner, FileManagerFocus, PathTransformer]]
+		['theoedit', 'util', [DirectoryScanner, EditorStrings, FileDialogMode, FileManagerFocus, PathTransformer]]
 	];
 
 	DirectoryScanner is scanner: DirectoryScanner();
 	PathTransformer is paths: PathTransformer();
 	DirectoryListing is listing: DirectoryListing();
-	String is mode: 'open';
+	FileDialogMode is mode: FileDialogMode:OPEN;
 	String is curDir: '.';
 	String is initialName: '';
 	Array of String is entries: Array();
-	TextEmitter is headerTitle: TextEmitter(initial: 'File Manager');
+	TextEmitter is headerTitle: TextEmitter(initial: EditorStrings:FILE_MANAGER_TITLE);
 	EnumEmitter of FileManagerFocus is focus: EnumEmitter(initial: FileManagerFocus:LIST);
 	EnumEmitter of FileManagerFocus is hover: EnumEmitter(initial: FileManagerFocus:NONE);
 	Function is onConfirm: local Function(String is _path){};
@@ -28,7 +28,7 @@ Class is FileManagerViewModel{
 	Function is onNameUpdated: local Function(String is _fileName){};
 
 	replace Function is init(
-		String is mode: 'open',
+		FileDialogMode is mode: FileDialogMode:OPEN,
 		String is initialDir: '.',
 		String is initialName: '',
 		Function is onConfirm: local Function(String is _path){},
@@ -45,22 +45,22 @@ Class is FileManagerViewModel{
 	}
 
 	Function of Boolean is isSaveAs(){
-		return mode == 'saveAs';
+		return mode == FileDialogMode:SAVE_AS;
 	}
 
 	Function of String is actionLabel(){
-		return if({ isSaveAs() }, { ' Save ' }, { ' Open ' });
+		return if({ isSaveAs() }, { EditorStrings:LABEL_SAVE }, { EditorStrings:LABEL_OPEN });
 	}
 
 	Function of String is actionKey(){
-		return if({ isSaveAs() }, { 's' }, { 'o' });
+		return if({ isSaveAs() }, { EditorStrings:KEY_SAVE }, { EditorStrings:KEY_OPEN });
 	}
 
 	Function is navigateTo(String is nextDir){
 		listing: scanner:scan(dir: nextDir);
 		curDir: listing:dir;
 		entries: listing:entries;
-		headerTitle:emit(value: "File Manager — {{curDir}}");
+		headerTitle:emit(value: EditorStrings:fileManagerTitle(dir: curDir));
 	}
 
 	Function is activateEntry(String is entry){

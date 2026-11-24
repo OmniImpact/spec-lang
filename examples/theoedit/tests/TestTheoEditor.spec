@@ -7,7 +7,7 @@ Class of SpecUnitTest is TestTheoEditor{
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['theoedit', 'model', [EditorDocument, DirectoryListing]],
-		['theoedit', 'util', [EditorFocus, FileManagerFocus, FileStorage, DirectoryScanner, PathTransformer]],
+		['theoedit', 'util', [EditorFocus, EditorMessageMode, EditorStrings, FileDialogMode, FileManagerFocus, FileStorage, DirectoryScanner, PathTransformer]],
 		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
 		['theoedit', 'view', [EditorFrame, FileManagerFrame]]
 	];
@@ -158,7 +158,7 @@ Class of SpecUnitTest is TestTheoEditor{
 		# Edit buffer and press Ctrl+Q -> MessagePanel appears between editor and bottom bar
 		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'x')));
 		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'q', ctrl: true)));
-		Assert:areEqualString('confirmQuit', vm:messageMode);
+		Assert:isTrue(vm:messageMode == EditorMessageMode:CONFIRM_QUIT);
 		Assert:isTrue(frame:msgSaveFocus:focused);
 
 		buf:clear();
@@ -257,7 +257,7 @@ Class of SpecUnitTest is TestTheoEditor{
 		fileWrite(path: "{{rootDir}}/Alpha.txt", content: 'a');
 
 		local FileManagerViewModel is fmVm: FileManagerViewModel(
-			mode: 'open',
+			mode: FileDialogMode:OPEN,
 			initialDir: rootDir,
 			onConfirm: local Function(String is _p){},
 			onCancel: {}
@@ -301,10 +301,10 @@ Class of SpecUnitTest is TestTheoEditor{
 
 		local String is fmDir: "/tmp/theo_fm_vm_{{Process:getPid()}}";
 		Process:execute(command: 'mkdir', args: Array(['-p', fmDir]));
-		local FileManagerViewModel is fmVm: FileManagerViewModel(mode: 'saveAs', initialDir: fmDir, initialName: 'out.txt');
+		local FileManagerViewModel is fmVm: FileManagerViewModel(mode: FileDialogMode:SAVE_AS, initialDir: fmDir, initialName: 'out.txt');
 		Assert:isTrue(fmVm:isSaveAs());
-		Assert:areEqualString(' Save ', fmVm:actionLabel());
-		Assert:areEqualString('s', fmVm:actionKey());
+		Assert:areEqualString(EditorStrings:LABEL_SAVE, fmVm:actionLabel());
+		Assert:areEqualString(EditorStrings:KEY_SAVE, fmVm:actionKey());
 		Assert:isTrue(fmVm:focus:current() == FileManagerFocus:INPUT);
 		Process:execute(command: 'rm', args: Array(['-rf', fmDir]));
 

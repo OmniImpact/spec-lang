@@ -9,7 +9,7 @@ Class is EditorViewModel{
 	merge Array of Array of String is using: [
 		['base', 'signal', [EnumEmitter, TextEmitter]],
 		['theoedit', 'model', EditorDocument],
-		['theoedit', 'util', [EditorFocus, FileStorage, PathTransformer]],
+		['theoedit', 'util', [EditorFocus, EditorMessageMode, EditorStrings, FileDialogMode, FileStorage, PathTransformer]],
 		['theoedit', 'vm', FileManagerViewModel]
 	];
 
@@ -18,7 +18,7 @@ Class is EditorViewModel{
 	PathTransformer is paths: PathTransformer();
 	String is filePath: '';
 	Boolean is dirty: false;
-	String is messageMode: 'none';
+	EditorMessageMode is messageMode: EditorMessageMode:NONE;
 	Boolean is quitAfterSave: false;
 
 	Function is onQuit: local Function(){};
@@ -29,10 +29,10 @@ Class is EditorViewModel{
 	EnumEmitter of EditorFocus is focus: EnumEmitter(initial: EditorFocus:EDITOR);
 	EnumEmitter of EditorFocus is hover: EnumEmitter(initial: EditorFocus:NONE);
 
-	TextEmitter is title: TextEmitter(initial: '[untitled]');
+	TextEmitter is title: TextEmitter(initial: EditorStrings:UNTITLED);
 	TextEmitter is currentPath: TextEmitter(initial: '');
 	TextEmitter is content: TextEmitter(initial: '');
-	TextEmitter is status: TextEmitter(initial: 'Ctrl+M: menu');
+	TextEmitter is status: TextEmitter(initial: EditorStrings:STATUS_DEFAULT);
 	TextEmitter is messageText: TextEmitter(initial: '');
 
 	replace Function is init(String is filePath: ''){
@@ -60,7 +60,7 @@ Class is EditorViewModel{
 		filePath: path;
 		clearMessage();
 		load();
-		status:emit(value: 'Opened');
+		status:emit(value: EditorStrings:STATUS_OPENED);
 	}
 
 	Function is onTextChanged(String is nextText){
@@ -91,11 +91,11 @@ Class is EditorViewModel{
 		);
 		if({ ok }, {
 			doc:markSaved(path: path);
-			messageMode: 'none';
+			messageMode: EditorMessageMode:NONE;
 			syncFromDoc(emitContent: false);
-			status:emit(value: 'Saved');
+			status:emit(value: EditorStrings:STATUS_SAVED);
 		}, {
-			status:emit(value: "Save failed: {{errMsg}}");
+			status:emit(value: EditorStrings:saveFailed(err: errMsg));
 		});
 		return ok;
 	}
@@ -130,8 +130,8 @@ Class is EditorViewModel{
 		focus:emit(value: EditorFocus:PROMPT_SAVE);
 	}
 
-	Function is openFileDialog(String is mode){
-		local String is initName: if({ mode == 'saveAs' }, { doc:filePath }, { '' });
+	Function is openFileDialog(FileDialogMode is mode){
+		local String is initName: if({ mode == FileDialogMode:SAVE_AS }, { doc:filePath }, { '' });
 		local FileManagerViewModel is fmVm: FileManagerViewModel(
 			mode: mode,
 			initialDir: '.',
@@ -163,7 +163,7 @@ Class is EditorViewModel{
 
 	Function is triggerSave(){
 		if({ doc:filePath == '' }, {
-			openFileDialog(mode: 'saveAs');
+			openFileDialog(mode: FileDialogMode:SAVE_AS);
 			return;
 		});
 		save();
@@ -171,11 +171,11 @@ Class is EditorViewModel{
 	}
 
 	Function is triggerSaveAs(){
-		openFileDialog(mode: 'saveAs');
+		openFileDialog(mode: FileDialogMode:SAVE_AS);
 	}
 
 	Function is triggerOpen(){
-		openFileDialog(mode: 'open');
+		openFileDialog(mode: FileDialogMode:OPEN);
 	}
 
 	Function is triggerQuit(){
@@ -193,7 +193,7 @@ Class is EditorViewModel{
 		onRebuild();
 		if({ doc:filePath == '' }, {
 			quitAfterSave: true;
-			openFileDialog(mode: 'saveAs');
+			openFileDialog(mode: FileDialogMode:SAVE_AS);
 			return;
 		});
 		if({ save() }, {
@@ -223,8 +223,8 @@ Class is EditorViewModel{
 		});
 	}
 
-	Function is completeFileDialog(String is mode, String is path, Function is onReadyToQuit){
-		if({ mode == 'saveAs' }, {
+	Function is completeFileDialog(FileDialogMode is mode, String is path, Function is onReadyToQuit){
+		if({ mode == FileDialogMode:SAVE_AS }, {
 			local Boolean is shouldQuit: quitAfterSave;
 			local Boolean is saved: saveTo(path: path);
 			quitAfterSave: false;
@@ -237,17 +237,17 @@ Class is EditorViewModel{
 	}
 
 	Function is showUnsavedPrompt(){
-		messageMode: 'confirmQuit';
-		messageText:emit(value: 'Unsaved changes — save before quitting?');
+		messageMode: EditorMessageMode:CONFIRM_QUIT;
+		messageText:emit(value: EditorStrings:PROMPT_UNSAVED_QUIT);
 	}
 
 	Function is clearMessage(){
-		messageMode: 'none';
+		messageMode: EditorMessageMode:NONE;
 		quitAfterSave: false;
 		messageText:emit(value: '');
 	}
 
 	Function of Boolean is hasMessage(){
-		return messageMode != 'none';
+		return messageMode != EditorMessageMode:NONE;
 	}
 }

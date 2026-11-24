@@ -6,6 +6,7 @@ Class of Frame is MessagePanel{
 
 	merge Array of Array of String is using: [
 		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, TextLine, Button]],
+		['theoedit', 'util', EditorStrings],
 		['theoedit', 'vm', EditorViewModel]
 	];
 
@@ -41,20 +42,20 @@ Class of Frame is MessagePanel{
 					),
 					Spacer(weight: 1.0),
 					Button(
-						label: ' Save ',
-						shortcutKey: 's',
+						label: EditorStrings:LABEL_SAVE,
+						shortcutKey: EditorStrings:KEY_SAVE,
 						focusTarget: saveFocus,
 						onClick: onSave
 					),
 					Button(
-						label: ' Discard ',
-						shortcutKey: 'd',
+						label: EditorStrings:LABEL_DISCARD,
+						shortcutKey: EditorStrings:KEY_DISCARD,
 						focusTarget: discardFocus,
 						onClick: onDiscard
 					),
 					Button(
-						label: ' Cancel ',
-						shortcutKey: 'c',
+						label: EditorStrings:LABEL_CANCEL,
+						shortcutKey: EditorStrings:KEY_CANCEL,
 						focusTarget: cancelFocus,
 						onClick: onCancel
 					)

@@ -5,7 +5,8 @@ Class of Frame is BottomActionBar{
 	namespace: ['theoedit', 'view'];
 
 	merge Array of Array of String is using: [
-		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, Button]]
+		['base', 'theo', [Frame, Widget, FocusTarget, KeyEvent, Panel, Row, Spacer, Button]],
+		['theoedit', 'util', EditorStrings]
 	];
 
 	FocusTarget is saveFocus: FocusTarget();
@@ -36,27 +37,27 @@ Class of Frame is BottomActionBar{
 				arrowFocus: true,
 				children: Array([
 					Button(
-						label: ' Quit ',
-						shortcutKey: 'q',
+						label: EditorStrings:LABEL_QUIT,
+						shortcutKey: EditorStrings:KEY_QUIT,
 						focusTarget: exitFocus,
 						onClick: onQuit
 					),
 					Spacer(weight: 1.0),
 					Button(
-						label: ' Save ',
-						shortcutKey: 's',
+						label: EditorStrings:LABEL_SAVE,
+						shortcutKey: EditorStrings:KEY_SAVE,
 						focusTarget: saveFocus,
 						onClick: onSave
 					),
 					Button(
-						label: ' Save As ',
-						shortcutKey: 'a',
+						label: EditorStrings:LABEL_SAVE_AS,
+						shortcutKey: EditorStrings:KEY_SAVE_AS,
 						focusTarget: saveAsFocus,
 						onClick: onSaveAs
 					),
 					Button(
-						label: ' Open ',
-						shortcutKey: 'o',
+						label: EditorStrings:LABEL_OPEN,
+						shortcutKey: EditorStrings:KEY_OPEN,
 						focusTarget: openFocus,
 						onClick: onOpen
 					)

@@ -9,7 +9,7 @@ Class of Frame is FileManagerFrame{
 	merge Array of Array of String is using: [
 		['base', 'theo', '*'],
 		['base', 'sys', as Loops()],
-		['theoedit', 'util', FileManagerFocus],
+		['theoedit', 'util', [EditorStrings, FileManagerFocus]],
 		['theoedit', 'vm', FileManagerViewModel]
 	];
 
@@ -40,7 +40,7 @@ Class of Frame is FileManagerFrame{
 
 		local TextInput is ti: TextInput(
 			value: vm:initialName,
-			placeholder: 'filename',
+			placeholder: EditorStrings:FILE_MANAGER_PLACEHOLDER,
 			focusTarget: inputFocus,
 			onSubmit: local Function(String is typed){ vm:confirm(typedName: typed); }
 		);
@@ -120,7 +120,7 @@ Class of Frame is FileManagerFrame{
 								),
 								Spacer(weight: 1.0),
 								TextLine(
-									value: 'Ctrl+M: menu · Ctrl+F: files/name',
+									value: EditorStrings:FILE_MANAGER_HINTS,
 									color: activeTheme:mutedColor
 								)
 							])
@@ -147,7 +147,7 @@ Class of Frame is FileManagerFrame{
 							gap: 1,
 							children: Array([
 								TextLine(
-									value: 'Name: ',
+									value: EditorStrings:FILE_MANAGER_NAME_LABEL,
 									color: activeTheme:mutedColor
 								),
 								nameInputs:get(index: 0)
@@ -166,8 +166,8 @@ Class of Frame is FileManagerFrame{
 							arrowFocus: true,
 							children: Array([
 								Button(
-									label: ' Cancel ',
-									shortcutKey: 'c',
+									label: EditorStrings:LABEL_CANCEL,
+									shortcutKey: EditorStrings:KEY_CANCEL,
 									focusTarget: cancelFocus,
 									onClick: { vm:cancel(); }
 								),
