@@ -51,8 +51,17 @@ Class of Frame is OptionsFrame{
 	}
 
 	Function is selectAmount(Int is next){
-		:selectedAmount: next;
-		invalidate();
+		if({ next > 0 }, {
+			:selectedAmount: next;
+			invalidate();
+		});
+	}
+
+	Function is selectAmountText(String is raw){
+		local Int is parsed: raw:trim() as Int;
+		if({ parsed > 0 }, {
+			:selectedAmount: parsed;
+		});
 	}
 
 	Function is selectRounds(Int is next){
@@ -92,8 +101,9 @@ Class of Frame is OptionsFrame{
 							children: Array([
 								Row(
 									gap: 2,
+									align: 'center',
 									children: Array([
-										TextLine(value: HomeStrings:OPTION_CARD_STYLE, bold: true),
+										TextLine(value: HomeStrings:OPTION_CARD_STYLE, bold: true, width: 16),
 										Dropdown(
 											host: :,
 											options: [
@@ -103,6 +113,7 @@ Class of Frame is OptionsFrame{
 												CardStyle:METALLIC:value()
 											],
 											selected: selectedStyle:value(),
+											width: 15,
 											focusTarget: styleFocus,
 											onSelect: local Function(String is chosen){
 												selectStyle(next: storage:styleFromName(name: chosen));
@@ -112,27 +123,41 @@ Class of Frame is OptionsFrame{
 								),
 								Row(
 									gap: 2,
+									align: 'center',
 									children: Array([
-										TextLine(value: HomeStrings:OPTION_STARTING_AMOUNT, bold: true),
-										Dropdown(
-											host: :,
-											options: ['100', '500', '1000', '2500'],
-											selected: selectedAmount as String,
-											focusTarget: amountFocus,
-											onSelect: local Function(String is chosen){
-												selectAmount(next: chosen as Int);
-											}
+										TextLine(value: HomeStrings:OPTION_STARTING_AMOUNT, bold: true, width: 16),
+										Surface(
+											background: activeTheme:buttonBg,
+											width: 15,
+											padX: 1,
+											child: Row(
+												gap: 0,
+												children: Array([
+													TextLine(value: '$', bold: true),
+													TextInput(
+														value: selectedAmount as String,
+														placeholder: '500',
+														width: 12,
+														focusTarget: amountFocus,
+														onChange: local Function(String is typed){
+															selectAmountText(raw: typed);
+														}
+													)
+												])
+											)
 										)
 									])
 								),
 								Row(
 									gap: 2,
+									align: 'center',
 									children: Array([
-										TextLine(value: HomeStrings:OPTION_NUM_ROUNDS, bold: true),
+										TextLine(value: HomeStrings:OPTION_NUM_ROUNDS, bold: true, width: 16),
 										Dropdown(
 											host: :,
 											options: ['5', '10', '20', '50'],
 											selected: selectedRounds as String,
+											width: 15,
 											focusTarget: roundsFocus,
 											onSelect: local Function(String is chosen){
 												selectRounds(next: chosen as Int);

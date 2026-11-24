@@ -13,16 +13,19 @@ Class of Widget is TextLine{
 	String is textValue: '';
 	TheoColor is color: TheoColor:none();
 	Boolean is bold: false;
+	Int is width: 0;
 
-	replace Function is init(String is value: '', TheoColor is color: TheoColor:none(), Boolean is bold: false){
+	replace Function is init(String is value: '', TheoColor is color: TheoColor:none(), Boolean is bold: false, Int is width: 0){
 		:color: color;
 		:bold: bold;
+		:width: width;
 		:textValue: value;
 	}
 
-	replace Function is init(TextEmitter is value, TheoColor is color: TheoColor:none(), Boolean is bold: false){
+	replace Function is init(TextEmitter is value, TheoColor is color: TheoColor:none(), Boolean is bold: false, Int is width: 0){
 		:color: color;
 		:bold: bold;
+		:width: width;
 		:textValue: value:current();
 		trackBinding(slot: 'value', emitter: value, collector: value:collect(onEmit: local Function(String is next){
 			:textValue: next;
@@ -31,7 +34,7 @@ Class of Widget is TextLine{
 	}
 
 	replace Function of Int is measureWidth(Int is maxW){
-		local Int is len: textValue:length();
+		local Int is len: if({ width > 0 }, { width }, { textValue:length() });
 		if({ len > maxW }, { return maxW; });
 		return len;
 	}

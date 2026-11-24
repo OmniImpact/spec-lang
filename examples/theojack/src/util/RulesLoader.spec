@@ -8,7 +8,7 @@ Class is RulesLoader{
 		['base', 'data', as Json()],
 		['base', 'struct', Map],
 		['base', 'sys', as File()],
-		['base', 'theo', [Widget, Row, TextLine, TextGraphic, TheoColor]],
+		['base', 'theo', [Widget, Col, Row, TextLine, TextGraphic, TheoColor]],
 		['theojack', 'model', [Card, CardStyle]],
 		['theojack', 'view', CardView]
 	];
@@ -46,6 +46,23 @@ Class is RulesLoader{
 				out:add(item: TextGraphic(
 					graphic: asString(val: entry:getChecked(key: 'content'))
 				));
+			});
+			if({ kind == 'bullet' && entry:has(key: 'content') }, {
+				local Array of Any is lines: entry:getChecked(key: 'content');
+				local Array of Widget is bulletRows: Array();
+				local Int is bi: 0;
+				while({ bi < lines:length() }, {
+					local String is bText: asString(val: lines:get(index: bi));
+					bulletRows:add(item: Row(
+						gap: 1,
+						children: Array([
+							TextLine(value: '•', color: TheoColor:ansi(code: 220), bold: true),
+							TextGraphic(graphic: bText)
+						])
+					));
+					bi: bi + 1;
+				});
+				out:add(item: Col(gap: 0, padX: 1, children: bulletRows));
 			});
 			if({ kind == 'cards' && entry:has(key: 'content') }, {
 				local Array of Any is codes: entry:getChecked(key: 'content');

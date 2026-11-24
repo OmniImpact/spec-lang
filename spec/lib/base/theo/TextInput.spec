@@ -13,6 +13,7 @@ Class of Widget is TextInput{
 	String is text: '';
 	String is placeholder: '';
 	Int is cursor: 0;
+	Int is width: 0;
 	FocusTarget is focusTarget: FocusTarget();
 	TheoColor is fg: TheoColor:none();
 	TheoColor is placeholderFg: TheoColor:none();
@@ -22,6 +23,7 @@ Class of Widget is TextInput{
 	replace Function is init(
 		String is value: '',
 		String is placeholder: '',
+		Int is width: 0,
 		FocusTarget is focusTarget: FocusTarget(),
 		Function is onChange: local Function(String is _s){},
 		Function is onSubmit: local Function(String is _s){},
@@ -30,6 +32,7 @@ Class of Widget is TextInput{
 	){
 		:text: value;
 		:placeholder: placeholder;
+		:width: width;
 		:cursor: value:length();
 		:focusTarget: focusTarget;
 		:onChange: onChange;
@@ -41,6 +44,7 @@ Class of Widget is TextInput{
 	replace Function is init(
 		TextEmitter is value,
 		String is placeholder: '',
+		Int is width: 0,
 		FocusTarget is focusTarget: FocusTarget(),
 		Function is onChange: local Function(String is _s){},
 		Function is onSubmit: local Function(String is _s){},
@@ -49,6 +53,7 @@ Class of Widget is TextInput{
 	){
 		:text: value:current();
 		:placeholder: placeholder;
+		:width: width;
 		:cursor: value:current():length();
 		:focusTarget: focusTarget;
 		:onChange: onChange;
@@ -86,6 +91,14 @@ Class of Widget is TextInput{
 		:text: value;
 		:cursor: value:length();
 		invalidate();
+	}
+
+	replace Function of Int is measureWidth(Int is maxW){
+		if({ width > 0 }, {
+			if({ width > maxW }, { return maxW; });
+			return width;
+		});
+		return maxW;
 	}
 
 	replace Function of Int is measureHeight(Int is maxW, Int is maxH){
