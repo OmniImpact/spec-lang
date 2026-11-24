@@ -124,4 +124,39 @@ Class of SpecUnitTest is TestTheoSynth{
 		Assert:isFalse(frame2:instrumentPickers:get(index: 0):isOpen());
 		Assert:isTrue(vm2:selectedWaveform == Waveform:SQUARE);
 	}
+
+	Function is testMouseHoldAndDrag(){
+		local SynthViewModel is vm: SynthViewModel(audioEnabled: false);
+		local SynthFrame is frame: SynthFrame(vm: vm);
+		frame:layout(x: 0, y: 0, w: 90, h: 24);
+
+		# Press left mouse button on a key in the top octave row
+		local Boolean is pressed: frame:handleMouse(event: MouseEvent(kind: MouseKind:PRESS, x: 15, y: 4, button: 0));
+		Assert:isTrue(pressed);
+		local Int is firstIdx: vm:lastPlayedIdx;
+		Assert:isTrue(firstIdx >= 0);
+		if({ firstIdx < 0 }, { return; });
+		Assert:isTrue(vm:heldFlags:get(index: firstIdx) == 1);
+
+		# Tick decay many times: held mouse button must not auto-release
+		local Int is t: 0;
+		while({ t < 25 }, {
+			vm:tickDecay();
+			t: t + 1;
+		});
+		Assert:isTrue(vm:heldFlags:get(index: firstIdx) == 1);
+
+		# Drag onto another key in the same row
+		frame:handleMouse(event: MouseEvent(kind: MouseKind:MOVE, x: 37, y: 4, button: 0));
+		local Int is secondIdx: vm:lastPlayedIdx;
+		Assert:isTrue(secondIdx >= 0 && secondIdx != firstIdx);
+		if({ secondIdx < 0 }, { return; });
+		Assert:isTrue(vm:heldFlags:get(index: firstIdx) == 0);
+		Assert:isTrue(vm:heldFlags:get(index: secondIdx) == 1);
+
+		# Release left mouse button (even outside the board)
+		local Boolean is released: frame:handleMouse(event: MouseEvent(kind: MouseKind:RELEASE, x: 37, y: 23, button: 0));
+		Assert:isTrue(released);
+		Assert:isTrue(vm:heldFlags:get(index: secondIdx) == 0);
+	}
 }

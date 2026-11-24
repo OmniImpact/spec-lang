@@ -13,6 +13,7 @@ Class of Widget is PianoBoard{
 
 	SynthViewModel is vm: SynthViewModel();
 	FocusTarget is focusTarget: FocusTarget(initial: true);
+	Int is mousePressedIdx: -1;
 
 	replace Function is init(SynthViewModel is vm, FocusTarget is focusTarget: FocusTarget(initial: true)){
 		:vm: vm;
@@ -127,10 +128,8 @@ Class of Widget is PianoBoard{
 		});
 	}
 
-	replace Function of Boolean is handleMouse(MouseEvent is event){
-		if({ !event:isLeftPress() || !containsPoint(x: event:x, y: event:y) }, { return false; });
-		focusTarget:requestFocus();
-		vm:setPlayMode(enabled: true);
+	local Function of Int is keyIndexAt(Int is x, Int is y){
+		if({ !containsPoint(x: x, y: y) }, { return -1; });
 		local Int is kw: keyWidth();
 		local Int is kh: keyHeight();
 		local Int is ox: boardOriginX() + 7;
@@ -138,17 +137,61 @@ Class of Widget is PianoBoard{
 		local Int is r: 0;
 		while({ r < 3 }, {
 			local Int is ry: oy + r * (kh + 1);
-			if({ event:y >= ry && event:y < ry + kh }, {
-				local Int is relX: event:x - ox;
+			if({ y >= ry && y < ry + kh }, {
+				local Int is relX: x - ox;
 				if({ relX >= 0 }, {
 					local Int is col: relX / kw;
 					if({ col >= 0 && col < 7 }, {
-						vm:triggerKeyIndex(idx: r * 7 + col, autoRelease: true);
-						return true;
+						return r * 7 + col;
 					});
 				});
 			});
 			r: r + 1;
+		});
+		return -1;
+	}
+
+	local Function is releaseMouseKey(){
+		if({ mousePressedIdx >= 0 }, {
+			vm:releaseKeyIndex(idx: mousePressedIdx);
+			mousePressedIdx: -1;
+		});
+	}
+
+	replace Function of Boolean is handleMouse(MouseEvent is event){
+		if({ event:isRelease() }, {
+			if({ mousePressedIdx >= 0 && event:button == 0 }, {
+				releaseMouseKey();
+				return true;
+			});
+			return false;
+		});
+		if({ event:isMove() }, {
+			if({ mousePressedIdx < 0 }, { return false; });
+			if({ event:button != 0 }, {
+				releaseMouseKey();
+				return true;
+			});
+			local Int is idx: keyIndexAt(x: event:x, y: event:y);
+			if({ idx != mousePressedIdx }, {
+				releaseMouseKey();
+				if({ idx >= 0 }, {
+					mousePressedIdx: idx;
+					vm:triggerKeyIndex(idx: idx, autoRelease: false, holdUntilRelease: true);
+				});
+			});
+			return true;
+		});
+		if({ !event:isLeftPress() || !containsPoint(x: event:x, y: event:y) }, { return false; });
+		focusTarget:requestFocus();
+		vm:setPlayMode(enabled: true);
+		local Int is idx: keyIndexAt(x: event:x, y: event:y);
+		if({ idx >= 0 }, {
+			if({ mousePressedIdx >= 0 && mousePressedIdx != idx }, {
+				releaseMouseKey();
+			});
+			mousePressedIdx: idx;
+			vm:triggerKeyIndex(idx: idx, autoRelease: false, holdUntilRelease: true);
 		});
 		return true;
 	}

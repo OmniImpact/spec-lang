@@ -111,16 +111,20 @@ Class is SynthViewModel{
 		return "{{k:noteName}} ({{k:keyChar}}) · {{selectedInstrumentName()}}";
 	}
 
-	## Triggers a note on key press (or mouse click with short auto-release).
-	Function is triggerKeyIndex(Int is idx, Boolean is autoRelease: true){
+	## Triggers a note on key press (or mouse click with short auto-release, or held until explicit release).
+	Function is triggerKeyIndex(Int is idx, Boolean is autoRelease: true, Boolean is holdUntilRelease: false){
 		if({ idx < 0 || idx >= keys:length() }, { return; });
 		lastPlayedIdx: idx;
 		heldFlags:set(index: idx, item: 1);
 		activeTicks:set(index: idx, item: 1);
-		if({ autoRelease }, {
-			fallbackTicks:set(index: idx, item: 10);
+		if({ holdUntilRelease }, {
+			fallbackTicks:set(index: idx, item: 0);
 		}, {
-			fallbackTicks:set(index: idx, item: if({ seenKittyRelease }, { 0 }, { 10 }));
+			if({ autoRelease }, {
+				fallbackTicks:set(index: idx, item: 10);
+			}, {
+				fallbackTicks:set(index: idx, item: if({ seenKittyRelease }, { 0 }, { 10 }));
+			});
 		});
 		onStateChanged();
 		if({ audioEnabled }, {
