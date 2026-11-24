@@ -53,17 +53,23 @@ Class of Fractal is DragonFractal{
 			return;
 		});
 
-		if({ len < 1.8 || depth >= 26 }, {
-			drawLine(
-				grid: grid,
-				w: w,
-				h: h,
-				x0: toInt(value: round(value: sx1)),
-				y0: toInt(value: round(value: sy1)),
-				x1: toInt(value: round(value: sx2)),
-				y1: toInt(value: round(value: sy2)),
-				val: clamp01(v: (tStart + tEnd) * 0.5)
-			);
+		if({ len < 0.75 || depth >= 26 }, {
+			if({ len < 0.75 }, {
+				local Int is mxp: toInt(value: round(value: (sx1 + sx2) * 0.5));
+				local Int is myp: toInt(value: round(value: (sy1 + sy2) * 0.5));
+				plotPoint(grid: grid, w: w, h: h, x: mxp, y: myp, val: clamp01(v: (tStart + tEnd) * 0.5));
+			}, {
+				drawLine(
+					grid: grid,
+					w: w,
+					h: h,
+					x0: toInt(value: round(value: sx1)),
+					y0: toInt(value: round(value: sy1)),
+					x1: toInt(value: round(value: sx2)),
+					y1: toInt(value: round(value: sy2)),
+					val: clamp01(v: (tStart + tEnd) * 0.5)
+				);
+			});
 			return;
 		});
 
