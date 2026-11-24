@@ -5,7 +5,7 @@ Class of Fractal is BarnsleyFernFractal{
 	replace [String] is namespace: ['theofractal', 'model', 'fractals'];
 
 	merge [[String]] is using: [
-		['theofractal', 'model', [Fractal, FractalViewport]],
+		['theofractal', 'model', [Fractal, FractalViewport, SampleGrid]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
 		['base', 'math', [as Math(), Vector]],
 		['base', 'sys', [as Mem(), Parallel, Process]]
@@ -340,5 +340,30 @@ Class of Fractal is BarnsleyFernFractal{
 		);
 		applyLogDensity(counts: counts, grid: grid, floorVal: 0.2);
 		return grid;
+	}
+
+	replace Function of SampleGrid is sampleGridChannels(FractalViewport is viewport, Int is w, Int is h){
+		local [Float] is grid: sampleGrid(viewport: viewport, w: w, h: h);
+		local [Float] is pal: [];
+		local [Float] is cov: [];
+		local [Float] is glow: [];
+		local Int is n: grid:length();
+		local Int is i: 0;
+		while({ i < n }, {
+			local Float is d: grid:get(index: i);
+			if({ d < 0.0 }, {
+				pal:push(item: -1.0);
+				cov:push(item: 0.0);
+				glow:push(item: 0.0);
+			}, {
+				local Float is py: toFloat(value: i / w) / toFloat(value: h);
+				local Float is normD: clamp01(v: (d - 0.2) / 0.8);
+				pal:push(item: clamp01(v: 0.55 * normD + 0.45 * (1.0 - py)));
+				cov:push(item: clamp01(v: 0.30 + 0.70 * normD));
+				glow:push(item: normD * 0.35);
+			});
+			i: i + 1;
+		});
+		return SampleGrid(paletteT: pal, coverage: cov, edgeGlow: glow);
 	}
 }

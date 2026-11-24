@@ -5,7 +5,7 @@ Class of Fractal is EscapeFractal{
 	replace [String] is namespace: ['theofractal', 'model'];
 
 	merge [[String]] is using: [
-		['theofractal', 'model', [Fractal, FractalViewport]],
+		['theofractal', 'model', [Fractal, FractalViewport, SampleGrid]],
 		['base', 'math', [as Math(), Vector]],
 		['base', 'sys', [as Conditional(), as Loops(), Parallel, Process]]
 	];
@@ -43,9 +43,11 @@ Class of Fractal is EscapeFractal{
 		return exp(value: -norm);
 	}
 
-	local Function of [Float] is normalizeEscapeGrid(Vector is outBuf, Vector is deBuf, Int is total){
-		local [Float] is grid: [];
-		if({ total <= 0 }, { return grid; });
+	local Function of SampleGrid is normalizeEscapeChannels(Vector is outBuf, Vector is deBuf, Int is total){
+		local [Float] is pal: [];
+		local [Float] is cov: [];
+		local [Float] is glow: [];
+		if({ total <= 0 }, { return SampleGrid(paletteT: pal, coverage: cov, edgeGlow: glow); });
 
 		local Float is minLog: 1000000.0;
 		local Float is maxLog: -1.0;
@@ -65,10 +67,12 @@ Class of Fractal is EscapeFractal{
 		if({ escaped <= 0 }, {
 			local Int is k0: 0;
 			while({ k0 < total }, {
-				grid:push(item: -1.0);
+				pal:push(item: -1.0);
+				cov:push(item: 0.0);
+				glow:push(item: 0.0);
 				k0: k0 + 1;
 			});
-			return grid;
+			return SampleGrid(paletteT: pal, coverage: cov, edgeGlow: glow);
 		});
 
 		local Float is logRange: maxLog - minLog;
@@ -109,7 +113,9 @@ Class of Fractal is EscapeFractal{
 		while({ i < total }, {
 			local Float is mu3: outBuf:get(index: i);
 			if({ mu3 < 0.0 }, {
-				grid:push(item: -1.0);
+				pal:push(item: -1.0);
+				cov:push(item: 0.0);
+				glow:push(item: 0.0);
 			}, {
 				local Float is logT: (log(value: 1.0 + mu3) - minLog) / logRange;
 				if({ logT < 0.0 }, { logT: 0.0; });
@@ -120,7 +126,28 @@ Class of Fractal is EscapeFractal{
 				local Float is histT: cdf:get(index: b2);
 				local Float is baseT: 0.45 * logT + 0.55 * histT;
 				local Float is dg: deBuf:get(index: i);
-				local Float is val: baseT + (1.0 - baseT) * dg * 0.45;
+				if({ dg < 0.0 }, { dg: 0.0; });
+				if({ dg > 1.0 }, { dg: 1.0; });
+				pal:push(item: baseT);
+				cov:push(item: 1.0);
+				glow:push(item: dg);
+			});
+			i: i + 1;
+		});
+		return SampleGrid(paletteT: pal, coverage: cov, edgeGlow: glow);
+	}
+
+	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		local SampleGrid is sg: sampleGridChannels(viewport: viewport, w: w, h: h);
+		local [Float] is grid: [];
+		local Int is n: sg:length();
+		local Int is i: 0;
+		while({ i < n }, {
+			local Float is p: sg:paletteT:get(index: i);
+			if({ p < 0.0 }, {
+				grid:push(item: -1.0);
+			}, {
+				local Float is val: p + (1.0 - p) * sg:edgeGlow:get(index: i) * 0.45;
 				if({ val > 1.0 }, { val: 1.0; });
 				grid:push(item: val);
 			});
@@ -129,8 +156,8 @@ Class of Fractal is EscapeFractal{
 		return grid;
 	}
 
-	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
-		if({ w <= 0 || h <= 0 }, { return []; });
+	replace Function of SampleGrid is sampleGridChannels(FractalViewport is viewport, Int is w, Int is h){
+		if({ w <= 0 || h <= 0 }, { return SampleGrid(); });
 
 		local Float is spanY: viewport:spanY();
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));
@@ -189,10 +216,10 @@ Class of Fractal is EscapeFractal{
 			);
 		});
 
-		local [Float] is grid: normalizeEscapeGrid(outBuf: outBuf, deBuf: deBuf, total: total);
+		local SampleGrid is sg: normalizeEscapeChannels(outBuf: outBuf, deBuf: deBuf, total: total);
 		crVec:destroy();
 		outBuf:destroy();
 		deBuf:destroy();
-		return grid;
+		return sg;
 	}
 }

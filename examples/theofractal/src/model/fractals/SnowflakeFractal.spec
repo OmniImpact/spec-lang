@@ -5,7 +5,7 @@ Class of Fractal is SnowflakeFractal{
 	replace [String] is namespace: ['theofractal', 'model', 'fractals'];
 
 	merge [[String]] is using: [
-		['theofractal', 'model', [Fractal, FractalViewport]],
+		['theofractal', 'model', [Fractal, FractalViewport, SampleGrid]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
 		['base', 'math', [as Math(), Vector]],
 		['base', 'sys', [Parallel, Process]]
@@ -64,17 +64,32 @@ Class of Fractal is SnowflakeFractal{
 			return -1.0;
 		});
 
-		# Interior shading: glowing crystalline rim along the Koch boundary, softening toward the core
-		local Float is glow: exp(value: -dist * 3.4);
-		return clamp01(v: 0.18 + 0.82 * glow);
+		# Signed distance from the Koch boundary: 0.0 at rim, increasing toward the core
+		return dist;
 	}
 
 	replace Function of [Float] is sampleGrid(FractalViewport is viewport, Int is w, Int is h){
+		local SampleGrid is sg: sampleGridChannels(viewport: viewport, w: w, h: h);
 		local [Float] is grid: [];
-		if({ w <= 0 || h <= 0 }, { return grid; });
+		local Int is n: sg:length();
+		local Int is i: 0;
+		while({ i < n }, {
+			if({ sg:coverage:get(index: i) <= 0.0 }, {
+				grid:push(item: -1.0);
+			}, {
+				grid:push(item: clamp01(v: 0.18 + 0.82 * sg:edgeGlow:get(index: i)));
+			});
+			i: i + 1;
+		});
+		return grid;
+	}
+
+	replace Function of SampleGrid is sampleGridChannels(FractalViewport is viewport, Int is w, Int is h){
+		if({ w <= 0 || h <= 0 }, { return SampleGrid(); });
 
 		local Float is spanY: viewport:spanY();
 		local Float is spanX: spanY * (toFloat(value: w) / toFloat(value: h));
+		local Float is pixelSpan: spanX / toFloat(value: w);
 		local Float is xMin: viewport:centerX - spanX * 0.5;
 		local Float is yMax: viewport:centerY + spanY * 0.5;
 		local Int is folds: 7;
@@ -126,12 +141,27 @@ Class of Fractal is SnowflakeFractal{
 			);
 		});
 
+		local [Float] is pal: [];
+		local [Float] is cov: [];
+		local [Float] is glow: [];
 		local Int is k: 0;
 		while({ k < total }, {
-			grid:push(item: outBuf:get(index: k));
+			local Float is dist: outBuf:get(index: k);
+			if({ dist < 0.0 }, {
+				pal:push(item: -1.0);
+				cov:push(item: 0.0);
+				glow:push(item: 0.0);
+			}, {
+				local Float is edgeCov: if({ pixelSpan > 0.0 }, { clamp01(v: dist / pixelSpan + 0.35) }, { 1.0 });
+				local Float is depthT: clamp01(v: 1.0 - exp(value: -dist * 2.4));
+				local Float is rimGlow: exp(value: -dist * 3.4);
+				pal:push(item: depthT);
+				cov:push(item: edgeCov);
+				glow:push(item: rimGlow);
+			});
 			k: k + 1;
 		});
 		outBuf:destroy();
-		return grid;
+		return SampleGrid(paletteT: pal, coverage: cov, edgeGlow: glow);
 	}
 }

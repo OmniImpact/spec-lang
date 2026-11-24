@@ -5,7 +5,7 @@ Class is ExplorerViewModel{
 	replace [String] is namespace: ['theofractal', 'vm'];
 
 	merge [[String]] is using: [
-		['theofractal', 'model', [Fractal, FractalRegistry, ColorTheme, FractalViewport, FractalRenderer]],
+		['theofractal', 'model', [Fractal, FractalRegistry, ColorTheme, FractalViewport, FractalRenderer, SampleGrid]],
 		['theofractal', 'util', as ColorPalette()],
 		['base', 'math', as Math()],
 		['base', 'sys', as Time()]
@@ -23,7 +23,7 @@ Class is ExplorerViewModel{
 
 	Boolean is helpOpen: false;
 
-	[Float] is cachedSamples: [];
+	SampleGrid is cachedSamples: SampleGrid();
 	[Int] is cachedPixels: [];
 	Int is cachedW: 0;
 	Int is cachedH: 0;
@@ -193,7 +193,7 @@ Class is ExplorerViewModel{
 
 	Function of [Int] is ensurePixels(Int is w, Int is h){
 		if({ !hasFractal() || w <= 0 || h <= 0 }, {
-			cachedSamples: [];
+			cachedSamples: SampleGrid();
 			cachedPixels: [];
 			cachedW: 0;
 			cachedH: 0;

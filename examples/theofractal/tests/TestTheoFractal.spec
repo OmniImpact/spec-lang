@@ -260,5 +260,15 @@ Class of SpecUnitTest is TestTheoFractal{
 		local Int is cFull: color32ForValue(t: 0.25, theme: ColorTheme:RAINBOW, offset: 1.0);
 		Assert:isTrue(c0 != cMid);
 		Assert:isTrue(c0 == cFull);
+
+		# Coverage AA must blend toward background (10, 12, 18) without shifting palette hue
+		local Int is aaEdge: color32ForSample(paletteT: 0.0, coverage: 0.25, edgeGlow: 0.0, theme: ColorTheme:RAINBOW, offset: 0.0);
+		Assert:isTrue(Color32:red(color: aaEdge) > 65 && Color32:red(color: aaEdge) < 80);
+		Assert:isTrue(Color32:green(color: aaEdge) >= 12 && Color32:green(color: aaEdge) < 35);
+
+		# Edge glow must brighten on top of the rotated base color
+		local Int is baseRot: color32ForSample(paletteT: 0.25, coverage: 1.0, edgeGlow: 0.0, theme: ColorTheme:COOL, offset: 0.3);
+		local Int is glowRot: color32ForSample(paletteT: 0.25, coverage: 1.0, edgeGlow: 1.0, theme: ColorTheme:COOL, offset: 0.3);
+		Assert:isTrue(Color32:red(color: glowRot) > Color32:red(color: baseRot));
 	}
 }
