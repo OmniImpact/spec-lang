@@ -1,5 +1,5 @@
 #! Package theojack:util
-#! JSON persistence for TheoJack user options.
+#! JSON persistence for TheoJack user options in the OS-standard config directory.
 
 Class is OptionsStorage{
 	replace [String] is namespace: ['theojack', 'util'];
@@ -8,17 +8,34 @@ Class is OptionsStorage{
 		['base', 'data', as Json()],
 		['base', 'struct', Map],
 		['base', 'sys', as File()],
+		['base', 'sys', as Process()],
+		['base', 'sys', as Uri()],
 		['theojack', 'model', CardStyle]
 	];
 
-	String is filePath: 'theojack_options.json';
+	String is filePath: '';
 	CardStyle is cardStyle: CardStyle:WIREFRAME;
 	Int is startingAmount: 500;
 	Int is numRounds: 10;
 
-	replace Function is init(String is filePath: 'theojack_options.json'){
-		:filePath: filePath;
+	replace Function is init(String is filePath: ''){
+		if({ filePath != '' }, {
+			:filePath: filePath;
+		}, {
+			:filePath: appConfigDir(appName: 'theojack') . '/options.json';
+		});
 		load();
+	}
+
+	local Function is ensureParentDir(){
+		local String is rawDir: fromFilePath(filePath: filePath):dirPath();
+		if({ rawDir == '' || rawDir == '.' || rawDir == '/' }, { return; });
+		local String is dir: Uri(scheme: 'file', path: rawDir):toNativeFilePath();
+		if({ osName() == 'windows' }, {
+			execute(command: 'cmd', args: Array(['/c', "if not exist \"{{dir}}\" mkdir \"{{dir}}\""]));
+		}, {
+			execute(command: 'mkdir', args: Array(['-p', dir]));
+		});
 	}
 
 	Function of CardStyle is styleFromName(String is name){
@@ -57,6 +74,7 @@ Class is OptionsStorage{
 		:cardStyle: style;
 		:startingAmount: startingAmount;
 		:numRounds: numRounds;
+		ensureParentDir();
 		local Map of String to Any is obj: [
 			'cardStyle': style:value(),
 			'startingAmount': startingAmount as String,

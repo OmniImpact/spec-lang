@@ -82,6 +82,9 @@ Class of SpecUnitTest is TestTheoJack{
 	}
 
 	Function is testCardRenderingAndOptionsPersistence(){
+		local OptionsStorage is defaultStorage: OptionsStorage();
+		Assert:isTrue(defaultStorage:filePath:endsWith(suffix: '/theojack/options.json'));
+
 		local String is tmpPath: "/tmp/theojack_opts_{{getPid()}}.json";
 		if({ fileExists(path: tmpPath) }, { fileRemove(path: tmpPath); });
 		local OptionsStorage is storage: OptionsStorage(filePath: tmpPath);

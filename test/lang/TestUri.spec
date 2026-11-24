@@ -118,6 +118,20 @@ Class of SpecUnitTest is TestUri{
 			Assert:isFalse(hd:endsWith(suffix: '/'));
 		});
 
+		local String is cd: Uri:configDir();
+		Assert:isTrue(cd:length() > 0);
+		Assert:isFalse(cd:endsWith(suffix: '/'));
+
+		local String is acd: Uri:appConfigDir(appName: 'theojack');
+		Assert:isTrue(acd:endsWith(suffix: '/theojack'));
+
+		local String is dd: Uri:dataDir();
+		Assert:isTrue(dd:length() > 0);
+		Assert:isFalse(dd:endsWith(suffix: '/'));
+
+		local String is add: Uri:appDataDir(appName: 'theojack');
+		Assert:isTrue(add:endsWith(suffix: '/theojack'));
+
 		local String is cd: Uri:cacheDir();
 		Assert:isTrue(cd:length() > 0);
 		Assert:isFalse(cd:endsWith(suffix: '/'));

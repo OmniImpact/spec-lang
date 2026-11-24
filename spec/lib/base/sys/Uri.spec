@@ -432,6 +432,55 @@ Class is Uri{
 		return :cacheDir() . '/runtime';
 	}
 
+	## Returns the OS-standard user configuration root directory without trailing slash
+	## (`%APPDATA%` on Windows, `~/Library/Application Support` on macOS,
+	## `$XDG_CONFIG_HOME` or `~/.config` on Linux/POSIX).
+	Function of String is configDir(){
+		local String is os: Process:osName();
+		if({ os == 'windows' }, {
+			local String is appData: Process:getEnv(key: 'APPDATA', default: '');
+			if({ appData != '' }, { return :cleanPath(rawPath: appData); });
+			local String is wh: :homeDir();
+			if({ wh != '' }, { return wh . '/AppData/Roaming'; });
+			return :systemTempDir();
+		});
+		if({ os == 'macos' }, {
+			local String is mh: :homeDir();
+			if({ mh != '' }, { return mh . '/Library/Application Support'; });
+			return :systemTempDir();
+		});
+		local String is xdg: Process:getEnv(key: 'XDG_CONFIG_HOME', default: '');
+		if({ xdg != '' }, { return :cleanPath(rawPath: xdg); });
+		local String is lh: :homeDir();
+		if({ lh != '' }, { return lh . '/.config'; });
+		return :systemTempDir();
+	}
+
+	## Returns the OS-standard configuration directory for [appName] without trailing slash.
+	Function of String is appConfigDir(String is appName){
+		return :configDir() . '/' . appName;
+	}
+
+	## Returns the OS-standard user data root directory without trailing slash
+	## (`%APPDATA%` on Windows, `~/Library/Application Support` on macOS,
+	## `$XDG_DATA_HOME` or `~/.local/share` on Linux/POSIX).
+	Function of String is dataDir(){
+		local String is os: Process:osName();
+		if({ os == 'windows' || os == 'macos' }, {
+			return :configDir();
+		});
+		local String is xdg: Process:getEnv(key: 'XDG_DATA_HOME', default: '');
+		if({ xdg != '' }, { return :cleanPath(rawPath: xdg); });
+		local String is lh: :homeDir();
+		if({ lh != '' }, { return lh . '/.local/share'; });
+		return :systemTempDir();
+	}
+
+	## Returns the OS-standard data directory for [appName] without trailing slash.
+	Function of String is appDataDir(String is appName){
+		return :dataDir() . '/' . appName;
+	}
+
 	## Joins path components with '/' and resolves '.' and '..' segments.
 	Function of String is join(Array of String is parts){
 		local Array of String is nonEmpties: Array();
