@@ -339,11 +339,20 @@ Class is FractalRenderer{
 		Float is invSpanX,
 		Float is invSpanY
 	){
+		local Int is totalPixels: w * h;
+		local Array of Int is counts: Array();
+		local Int is ci: 0;
+		while({ ci < totalPixels }, {
+			counts:add(item: 0);
+			ci: ci + 1;
+		});
+
 		local Float is x: 0.0;
 		local Float is y: 0.0;
 		local Int is seed: 1337;
 		local Int is i: 0;
-		local Int is total: 45000;
+		local Int is total: 65000;
+		local Int is maxCount: 1;
 		while({ i < total }, {
 			seed: (seed * 1103515245 + 12345) % 2147483647;
 			if({ seed < 0 }, { seed: -seed; });
@@ -372,10 +381,26 @@ Class is FractalRenderer{
 			if({ i >= 20 }, {
 				local Int is sx: toInt(value: round(value: worldToScreenX(wx: x, xMin: xMin, invSpanX: invSpanX, w: w)));
 				local Int is sy: toInt(value: round(value: worldToScreenYUp(wy: y, yMax: yMax, invSpanY: invSpanY, h: h)));
-				local Float is val: clamp01(v: 0.25 + 0.75 * (y / 10.0));
-				plotPoint(grid: grid, w: w, h: h, x: sx, y: sy, val: val);
+				if({ sx >= 0 && sx < w && sy >= 0 && sy < h }, {
+					local Int is idx: sy * w + sx;
+					local Int is nextCount: counts:get(index: idx) + 1;
+					counts:set(index: idx, item: nextCount);
+					if({ nextCount > maxCount }, { maxCount: nextCount; });
+				});
 			});
 			i: i + 1;
+		});
+
+		local Float is denom: log(value: 1.0 + toFloat(value: maxCount));
+		if({ denom <= 0.0 }, { denom: 1.0; });
+		local Int is pi: 0;
+		while({ pi < totalPixels }, {
+			local Int is c: counts:get(index: pi);
+			if({ c > 0 }, {
+				local Float is density: log(value: 1.0 + toFloat(value: c)) / denom;
+				grid:set(index: pi, item: clamp01(v: 0.15 + 0.85 * density));
+			});
+			pi: pi + 1;
 		});
 	}
 
