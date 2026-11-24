@@ -43,8 +43,8 @@ Class of Fractal is EscapeFractal{
 		local Float is mag: sqrt(value: mag2);
 		local Float is dzMag: sqrt(value: dz2);
 		local Float is dist: (mag * log(value: mag)) / dzMag;
-		local Float is norm: dist / (pixelSpan * 1.5);
-		if({ norm > 12.0 }, { return 0.0; });
+		local Float is norm: dist / pixelSpan;
+		if({ norm > 8.0 }, { return 0.0; });
 		return exp(value: -norm);
 	}
 
@@ -105,8 +105,8 @@ Class of Fractal is EscapeFractal{
 		local Float is denom: toFloat(value: escaped);
 		bi: 0;
 		while({ bi < bins }, {
-			running: running + hist:get(index: bi);
 			cdf:push(item: toFloat(value: running) / denom);
+			running: running + hist:get(index: bi);
 			bi: bi + 1;
 		});
 
@@ -125,7 +125,7 @@ Class of Fractal is EscapeFractal{
 				local Float is histT: cdf:get(index: b2);
 				local Float is baseT: 0.45 * logT + 0.55 * histT;
 				local Float is dg: deBuf:get(index: i);
-				local Float is val: baseT + (1.0 - baseT) * dg * 0.65;
+				local Float is val: baseT + (1.0 - baseT) * dg * 0.45;
 				if({ val > 1.0 }, { val: 1.0; });
 				grid:push(item: val);
 			});
