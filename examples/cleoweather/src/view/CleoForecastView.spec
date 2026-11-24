@@ -7,7 +7,8 @@ Class is CleoForecastView{
 	merge [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'cleo', [Cleo, CleoSection, CleoColor, as CleoColor(), CleoWidth, as CleoWidth(), BorderStyle, ThrobberShape, ThrobberEffect, TitlePlacement]],
-		['base', 'sys', 'thread', ThreadScope],
+		['base', 'net', HttpResponse],
+		['base', 'sys', 'thread', [Task, ThreadScope]],
 		['cleoweather', 'model', ForecastPeriod],
 		['cleoweather', 'vm', WeatherViewModel]
 	];
@@ -83,7 +84,7 @@ Class is CleoForecastView{
 		ThreadScope:open(
 			body: local Function(ThreadScope is scope){
 				ui:start(scope: scope);
-				vm:fetchForecast(scope: scope, onDone: {
+				local Task of HttpResponse is fetchTask: vm:fetchForecast(scope: scope, onDone: {
 					if({ vm:fetchError != '' }, {
 						statusSec:resolveSlot(index: reqSlot, badge: '✖', text: url, color: ansi(code: 203), rightText: 'failed');
 					}, {
@@ -95,6 +96,7 @@ Class is CleoForecastView{
 					});
 					renderPeriods(fcSec: fcSec, vm: vm);
 				});
+				fetchTask:await();
 				ui:finish();
 			},
 			onError: local Function of Boolean(SpecError is _err){ false }

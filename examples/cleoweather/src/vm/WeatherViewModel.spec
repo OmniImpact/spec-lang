@@ -7,7 +7,7 @@ Class is WeatherViewModel{
 	merge [[String]] is using: [
 		['base', 'core', SpecError],
 		['base', 'net', [HttpError, HttpResponse, as Http()]],
-		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', 'thread', [Task, ThreadScope]],
 		['cleoweather', 'model', [CityLocation, ForecastParser, ForecastPeriod, ForecastReport, LocationLoader, StateGroup]]
 	];
 
@@ -108,15 +108,15 @@ Class is WeatherViewModel{
 	}
 
 	## Fetches the NWS forecast for the selected city on [scope] and invokes [onDone].
-	Function is fetchForecast(ThreadScope is scope, Function is onDone){
+	Function of Task of HttpResponse is fetchForecast(ThreadScope is scope, Function is onDone){
 		local String is url: forecastUrl();
 		httpStatusCode: 0;
 		fetchError: '';
-		get(
+		return get(
 			scope: scope,
 			url: url,
 			onSuccess: local Function(HttpResponse is resp){
-				httpStatusCode: resp:statusCode;
+				httpStatusCode: resp:status;
 				report: parser:parse(rawJson: resp:body);
 				onDone();
 			},
