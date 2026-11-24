@@ -6,7 +6,7 @@ Class is SynthEngine{
 
 	merge [[String]] is using: [
 		['theosynth', 'model', Waveform],
-		['base', 'math', as Math()],
+		['base', 'math', [as Math(), Vector]],
 		['base', 'struct', List],
 		['base', 'audio', as Audio()],
 		['base', 'core', SpecError],
@@ -26,6 +26,10 @@ Class is SynthEngine{
 	[Int] is voiceGate: [];
 	[Int] is voiceHoldFrames: [];
 	[Int] is voiceRelPending: [];
+	Array of Vector is ksBuffers: Array();
+	[Int] is ksPos: [];
+	[Float] is ksPrev: [];
+	Int is ksSeed: 1337;
 	Float is normGain: 1.0;
 
 	replace Function is init(){
@@ -52,6 +56,7 @@ Class is SynthEngine{
 	local Function of Int is waveToInt(Waveform is w){
 		if({ w == Waveform:SQUARE }, { return 1; });
 		if({ w == Waveform:SAWTOOTH }, { return 2; });
+		if({ w == Waveform:PLUCK }, { return 3; });
 		return 0;
 	}
 
@@ -66,12 +71,54 @@ Class is SynthEngine{
 		return sin(value: 6.283185307179586 * phase);
 	}
 
+	local Function of Vector is makePluckDelayLine(Float is freqHz, Int is rate){
+		local Int is delayLen: toInt(value: round(value: toFloat(value: rate) / freqHz));
+		if({ delayLen < 2 }, { delayLen: 2; });
+		local Vector is dl: Vector(length: delayLen);
+		local Int is i: 0;
+		while({ i < delayLen }, {
+			ksSeed: (ksSeed * 1103515245 + 12345) % 2147483647;
+			if({ ksSeed < 0 }, { ksSeed: -ksSeed; });
+			local Float is n: (toFloat(value: ksSeed % 20001) / 10000.0) - 1.0;
+			dl:set(index: i, value: n);
+			i: i + 1;
+		});
+		return dl;
+	}
+
 	## Synthesizes a 16-bit signed little-endian stereo PCM buffer for [wave] at [freqHz].
 	Function of List of Byte is synthesize(Waveform is wave, Float is freqHz, Int is durationMs: 160, Int is rate: 22050){
 		local List of Byte is buf;
 		local Int is totalSamples: (rate * durationMs) / 1000;
 		local Int is fadeSamples: (rate * 12) / 1000;
 		local Float is amplitude: 11000.0;
+
+		if({ wave == Waveform:PLUCK }, {
+			local Vector is dl: makePluckDelayLine(freqHz: freqHz, rate: rate);
+			local Int is dLen: dl:length();
+			local Int is pos: 0;
+			local Float is prev: dl:get(index: dLen - 1);
+			local Int is ki: 0;
+			while({ ki < totalSamples }, {
+				local Float is cur: dl:get(index: pos);
+				local Float is nextVal: 0.5 * (cur + prev) * 0.996;
+				dl:set(index: pos, value: nextVal);
+				prev: cur;
+				pos: pos + 1;
+				if({ pos >= dLen }, { pos: 0; });
+				local Float is envK: 1.0;
+				if({ ki > (totalSamples - fadeSamples) && fadeSamples > 0 }, {
+					envK: toFloat(value: totalSamples - ki) / toFloat(value: fadeSamples);
+				});
+				local Float is sampleK: cur * amplitude * envK;
+				pushSample16(outBuf: buf, sample: sampleK);
+				pushSample16(outBuf: buf, sample: sampleK);
+				ki: ki + 1;
+			});
+			dl:destroy();
+			return buf;
+		});
+
 		local Float is phaseStep: freqHz / toFloat(value: rate);
 		local Float is phase: 0.0;
 
@@ -102,8 +149,13 @@ Class is SynthEngine{
 
 	## Triggers or retriggers [midi] with [wave] without blocking the UI thread.
 	Function is noteOn(Int is midi, Waveform is wave){
-		local Float is step: midiToFreq(midi: midi) / toFloat(value: sampleRate);
+		local Float is freq: midiToFreq(midi: midi);
+		local Float is step: freq / toFloat(value: sampleRate);
 		local Int is wid: waveToInt(w: wave);
+		local Vector is newDl: if({ wid == 3 }, { makePluckDelayLine(freqHz: freq, rate: sampleRate) }, { Vector(length: 0) });
+		local Float is initPrev: if({ wid == 3 && newDl:length() > 0 }, { newDl:get(index: newDl:length() - 1) }, { 0.0 });
+		local Float is initEnv: if({ wid == 3 }, { 1.0 }, { 0.0 });
+
 		mutexLock(handle: mutex);
 		local Int is found: -1;
 		local Int is i: 0;
@@ -112,8 +164,13 @@ Class is SynthEngine{
 			i: i + 1;
 		});
 		if({ found >= 0 }, {
+			ksBuffers:get(index: found):destroy();
+			ksBuffers:set(index: found, item: newDl);
+			ksPos:set(index: found, item: 0);
+			ksPrev:set(index: found, item: initPrev);
 			voiceWave:set(index: found, item: wid);
 			voiceStep:set(index: found, item: step);
+			if({ wid == 3 }, { voiceEnv:set(index: found, item: 1.0); });
 			voiceGate:set(index: found, item: 1);
 			voiceHoldFrames:set(index: found, item: 660);
 			voiceRelPending:set(index: found, item: 0);
@@ -125,20 +182,27 @@ Class is SynthEngine{
 				j: j + 1;
 			});
 			if({ slot >= 0 }, {
+				ksBuffers:get(index: slot):destroy();
+				ksBuffers:set(index: slot, item: newDl);
+				ksPos:set(index: slot, item: 0);
+				ksPrev:set(index: slot, item: initPrev);
 				voiceMidi:set(index: slot, item: midi);
 				voiceWave:set(index: slot, item: wid);
 				voicePhase:set(index: slot, item: 0.0);
 				voiceStep:set(index: slot, item: step);
-				voiceEnv:set(index: slot, item: 0.0);
+				voiceEnv:set(index: slot, item: initEnv);
 				voiceGate:set(index: slot, item: 1);
 				voiceHoldFrames:set(index: slot, item: 660);
 				voiceRelPending:set(index: slot, item: 0);
 			}, {
+				ksBuffers:add(item: newDl);
+				ksPos:push(item: 0);
+				ksPrev:push(item: initPrev);
 				voiceMidi:push(item: midi);
 				voiceWave:push(item: wid);
 				voicePhase:push(item: 0.0);
 				voiceStep:push(item: step);
-				voiceEnv:push(item: 0.0);
+				voiceEnv:push(item: initEnv);
 				voiceGate:push(item: 1);
 				voiceHoldFrames:push(item: 660);
 				voiceRelPending:push(item: 0);
@@ -212,14 +276,32 @@ Class is SynthEngine{
 					});
 				});
 				if({ env > 0.0005 }, {
-					local Float is ph: voicePhase:get(index: vi);
-					local Float is osc: sampleWaveId(wid: voiceWave:get(index: vi), phase: ph) * env;
+					local Int is wid: voiceWave:get(index: vi);
+					local Float is osc: 0.0;
+					if({ wid == 3 }, {
+						local Vector is dl: ksBuffers:get(index: vi);
+						local Int is dLen: dl:length();
+						if({ dLen >= 2 }, {
+							local Int is pos: ksPos:get(index: vi);
+							local Float is cur: dl:get(index: pos);
+							local Float is prev: ksPrev:get(index: vi);
+							dl:set(index: pos, value: 0.5 * (cur + prev) * 0.996);
+							ksPrev:set(index: vi, item: cur);
+							pos: pos + 1;
+							if({ pos >= dLen }, { pos: 0; });
+							ksPos:set(index: vi, item: pos);
+							osc: cur * env;
+						});
+					}, {
+						local Float is ph: voicePhase:get(index: vi);
+						osc: sampleWaveId(wid: wid, phase: ph) * env;
+						ph: ph + voiceStep:get(index: vi);
+						if({ ph >= 1.0 }, { ph: ph - 1.0; });
+						voicePhase:set(index: vi, item: ph);
+					});
 					sumL: sumL + osc;
 					sumR: sumR + osc;
 					activeCount: activeCount + 1;
-					ph: ph + voiceStep:get(index: vi);
-					if({ ph >= 1.0 }, { ph: ph - 1.0; });
-					voicePhase:set(index: vi, item: ph);
 				});
 				vi: vi + 1;
 			});

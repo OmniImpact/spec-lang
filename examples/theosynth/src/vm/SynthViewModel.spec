@@ -100,7 +100,11 @@ Class is SynthViewModel{
 			if({ name == SynthStrings:WAVE_SAWTOOTH }, {
 				selectedWaveform: Waveform:SAWTOOTH;
 			}, {
-				selectedWaveform: Waveform:SINE;
+				if({ name == SynthStrings:WAVE_PLUCK }, {
+					selectedWaveform: Waveform:PLUCK;
+				}, {
+					selectedWaveform: Waveform:SINE;
+				});
 			});
 		});
 		onStateChanged();
@@ -109,6 +113,7 @@ Class is SynthViewModel{
 	Function of String is selectedInstrumentName(){
 		if({ selectedWaveform == Waveform:SQUARE }, { return SynthStrings:WAVE_SQUARE; });
 		if({ selectedWaveform == Waveform:SAWTOOTH }, { return SynthStrings:WAVE_SAWTOOTH; });
+		if({ selectedWaveform == Waveform:PLUCK }, { return SynthStrings:WAVE_PLUCK; });
 		return SynthStrings:WAVE_SINE;
 	}
 
