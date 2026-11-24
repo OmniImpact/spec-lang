@@ -28,6 +28,7 @@ Class is SpecBuild{
 		['base', 'core', Result],
 		['base', 'core', SpecError],
 		['base', 'data', JsonError],
+		['base', 'sys', [Bundle, FileError]],
 		['base', 'data', as Json()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
@@ -127,6 +128,58 @@ Class is SpecBuild{
 			return 'bin/speclint.exe';
 		});
 		return 'speclint';
+	}
+
+	local Function is collectBundleEntry(String is srcPath, String is destPath, Array of String is dests, Array of String is payloads){
+		if({ fileExists(path: srcPath) }, {
+			dests:add(item: destPath);
+			payloads:add(item: File:fileRead(path: srcPath, onSuccess: {}, onError: {}, default: ''));
+			return;
+		});
+		local Array of String is children: Dir:dirList(path: srcPath);
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			local String is childName: children:get(index: i);
+			local String is childSrc: "{{srcPath}}/{{childName}}";
+			local String is childDest: if({ destPath == '' }, { childName }, { "{{destPath}}/{{childName}}" });
+			collectBundleEntry(srcPath: childSrc, destPath: childDest, dests: dests, payloads: payloads);
+			i: i + 1;
+		});
+	}
+
+	local Function is appendBundle(String is configDir, String is output, Array is bundledCfg, CleoSection is bSec){
+		if({ bundledCfg:length() == 0 }, { return; });
+		local Array of String is dests: Array();
+		local Array of String is payloads: Array();
+		local Int is i: 0;
+		while({ i < bundledCfg:length() }, {
+			local Map is entry: Json:getObjectAt(arr: bundledCfg, index: i);
+			local String is src: Json:getString(obj: entry, key: 'src', default: Json:getString(obj: entry, key: 'source', default: ''));
+			local String is dest: Json:getString(obj: entry, key: 'dest', default: Json:getString(obj: entry, key: 'destination', default: src));
+			if({ src != '' }, {
+				local String is resolvedSrc: :resolvePath(baseDir: configDir, relPath: src);
+				local Int is before: dests:length();
+				collectBundleEntry(srcPath: resolvedSrc, destPath: dest, dests: dests, payloads: payloads);
+				if({ dests:length() == before }, {
+					bSec:addLine(text: "Bundle path not found: {{resolvedSrc}}", color: CleoColor:ansi(code: 203), rightText: '✖ FAILED');
+					Process:exit(status: 1);
+				});
+			});
+			i: i + 1;
+		});
+		if({ dests:length() == 0 }, { return; });
+		local String is blob: Bundle(autoLoad: false):pack(destPaths: dests, payloads: payloads);
+		local Boolean is ok: File:fileAppend(
+			path: output,
+			content: blob,
+			onSuccess: local Function(Int is _n){ },
+			onError: local Function(SpecError of FileError is _e){ }
+		);
+		if({ !ok }, {
+			bSec:addLine(text: "Failed to append bundle to {{output}}", color: CleoColor:ansi(code: 203), rightText: '✖ FAILED');
+			Process:exit(status: 1);
+		});
+		bSec:addLine(text: "Bundled {{dests:length()}} asset(s)", color: CleoColor:ansi(code: 250), rightText: 'SPECBNDL');
 	}
 
 	Function is printHelp() {
@@ -289,6 +342,7 @@ Class is SpecBuild{
 		local String is rawOutput: Json:getString(obj: cfg, key: 'output', default: '');
 		local Array is sourceDirs: Json:getArray(obj: cfg, key: 'source_dirs');
 		local Array is flags: Json:getArray(obj: cfg, key: 'flags');
+		local Array is bundledCfg: Json:getArray(obj: cfg, key: 'bundled');
 		local Map is testsCfg: Json:getObject(obj: cfg, key: 'tests');
 
 		local String is configDir: :dirOf(path: configPath);
@@ -455,6 +509,7 @@ Class is SpecBuild{
 			ui:render();
 			Process:exit(status: exitCode);
 		});
+		appendBundle(configDir: configDir, output: output, bundledCfg: bundledCfg, bSec: bSec);
 		bSec:addLine(text: 'Build succeeded -> ' . output, color: CleoColor:ansi(code: 252), rightText: '✔ BUILT');
 		ui:render();
 

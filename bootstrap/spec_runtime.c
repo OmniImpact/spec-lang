@@ -650,6 +650,13 @@ long long spec_pal_exe_dir(long long buf_addr, long long buf_size) {
     return (long long)(slash - buf);
 }
 
+long long spec_pal_exe_path(long long buf_addr, long long buf_size) {
+    char* buf = (char*)(intptr_t)buf_addr;
+    if (!buf || buf_size <= 1) return 0;
+    if (!spec_pal_get_exe_path(buf, (size_t)buf_size)) return 0;
+    return (long long)strlen(buf);
+}
+
 long long spec_pal_file_size_cstr(long long path_cstr) {
     const char* p = (const char*)(intptr_t)path_cstr;
     if (!p || !*p) return -1;

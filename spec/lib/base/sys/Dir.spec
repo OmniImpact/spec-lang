@@ -75,6 +75,17 @@ Class is Dir{
 		return res;
 	}
 
+	## Full path of the running spec executable.
+	##
+	## @return: The executable's file path, or empty if unavailable.
+	Function of String is exePath(){
+		local Int is buf: Mem:alloc(bytes: 4096);
+		local Int is n: base:sysinternal:Dir:pal_exe_path(buf_addr: buf, buf_size: 4096);
+		local String is res: if({ n > 0 }, { Mem:strFromBytes(srcAddr: buf, len: n) }, { '' });
+		Mem:free(ptr: buf);
+		return res;
+	}
+
 	## Size of the file at [path] in bytes, or -1 when it does not exist.
 	##
 	## @param path: File to measure.

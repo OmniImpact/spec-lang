@@ -7,6 +7,9 @@
     "../../spec"
   ],
   "output": "../../bin/cleoweather",
+  "bundled": [
+    { "src": "locations.json", "dest": "locations.json" }
+  ],
   "tests": {
     "runner": "specunit",
     "dirs": [

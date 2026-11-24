@@ -8,7 +8,7 @@ Class is LocationLoader{
 		['base', 'core', [Result, SpecError]],
 		['base', 'data', [JsonError, as Json()]],
 		['base', 'struct', [Array, Map]],
-		['base', 'sys', as File()],
+		['base', 'sys', [Bundle, as File()]],
 		['cleoweather', 'model', [CityLocation, StateGroup]]
 	];
 
@@ -28,7 +28,14 @@ Class is LocationLoader{
 	## Loads all states and their cities from the configured JSON file.
 	Function of [StateGroup] is loadStates(){
 		local [StateGroup] is out: [];
-		local String is raw: fileRead(path: resolvePath(), default: '');
+		local String is raw: '';
+		local String is diskPath: resolvePath();
+		if({ fileExists(path: diskPath) }, {
+			raw: fileRead(path: diskPath, default: '');
+		});
+		if({ raw == '' }, {
+			raw: Bundle():readText(path: filePath, default: '');
+		});
 		if({ raw == '' }, { return out; });
 
 		local Result of Map of String to Any to JsonError is rootR: parseMapResult(text: raw);
