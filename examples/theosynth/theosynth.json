@@ -1,0 +1,10 @@
+{
+  "name": "theosynth",
+  "version": "0.1.0",
+  "source": "src/TheoSynth.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/theosynth"
+}
