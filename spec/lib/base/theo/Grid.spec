@@ -5,15 +5,15 @@ Class of Widget is Grid{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [Widget, GridPane, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
+		['base', 'theo', [Widget, GridPane, Orientation, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'math', as Math()]
 	];
 
-	String is orientation: 'vertical';
+	Orientation is orientation: Orientation:VERTICAL;
 	Array of GridPane is panes: Array();
 
-	replace Function is init(String is orientation: 'vertical', Array of GridPane is panes: Array()){
+	replace Function is init(Orientation is orientation: Orientation:VERTICAL, Array of GridPane is panes: Array()){
 		:orientation: orientation;
 		:panes: panes;
 	}
@@ -41,7 +41,7 @@ Class of Widget is Grid{
 		:boxY: y;
 		:boxW: w;
 		:boxH: h;
-		local Int is total: if({ orientation == 'horizontal' }, { w }, { h });
+		local Int is total: if({ orientation == Orientation:HORIZONTAL }, { w }, { h });
 		local Int is fixedUsed: 0;
 		local Float is weightSum: 0.0;
 		panes:each(action: local Function(GridPane is gp){
@@ -70,7 +70,7 @@ Class of Widget is Grid{
 				});
 			});
 			if({ sz < 0 }, { sz: 0; });
-			if({ orientation == 'horizontal' }, {
+			if({ orientation == Orientation:HORIZONTAL }, {
 				gp:child:layout(x: x + pos, y: y, w: sz, h: h);
 			}, {
 				gp:child:layout(x: x, y: y + pos, w: w, h: sz);

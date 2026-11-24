@@ -4,33 +4,37 @@
 Class is KeyEvent{
 	replace [String] is namespace: ['base', 'theo'];
 
-	String is kind: 'none';
+	replace [[String]] is using: [
+		['base', 'theo', KeyKind]
+	];
+
+	KeyKind is kind: KeyKind:NONE;
 	String is key: '';
 	Boolean is ctrl: false;
 	Boolean is alt: false;
 
-	replace Function is init(String is kind: 'none', String is key: '', Boolean is ctrl: false, Boolean is alt: false){
+	replace Function is init(KeyKind is kind: KeyKind:NONE, String is key: '', Boolean is ctrl: false, Boolean is alt: false){
 		:kind: kind;
 		:key: key;
 		:ctrl: ctrl;
 		:alt: alt;
 	}
 
-	Function of Boolean is isNone(){ kind == 'none' }
-	Function of Boolean is isChar(){ kind == 'char' }
-	Function of Boolean is isEnter(){ kind == 'enter' }
-	Function of Boolean is isEsc(){ kind == 'esc' }
-	Function of Boolean is isTab(){ kind == 'tab' }
-	Function of Boolean is isBackTab(){ kind == 'backtab' }
-	Function of Boolean is isBackspace(){ kind == 'backspace' }
-	Function of Boolean is isDelete(){ kind == 'delete' }
-	Function of Boolean is isUp(){ kind == 'up' }
-	Function of Boolean is isDown(){ kind == 'down' }
-	Function of Boolean is isLeft(){ kind == 'left' }
-	Function of Boolean is isRight(){ kind == 'right' }
-	Function of Boolean is isHome(){ kind == 'home' }
-	Function of Boolean is isEnd(){ kind == 'end' }
-	Function of Boolean is isPageUp(){ kind == 'pageUp' }
-	Function of Boolean is isPageDown(){ kind == 'pageDown' }
-	Function of Boolean is isMouse(){ kind == 'mouse' }
+	Function of Boolean is isNone(){ kind == KeyKind:NONE }
+	Function of Boolean is isChar(){ kind == KeyKind:CHAR }
+	Function of Boolean is isEnter(){ kind == KeyKind:ENTER }
+	Function of Boolean is isEsc(){ kind == KeyKind:ESC }
+	Function of Boolean is isTab(){ kind == KeyKind:TAB }
+	Function of Boolean is isBackTab(){ kind == KeyKind:BACKTAB }
+	Function of Boolean is isBackspace(){ kind == KeyKind:BACKSPACE }
+	Function of Boolean is isDelete(){ kind == KeyKind:DELETE }
+	Function of Boolean is isUp(){ kind == KeyKind:UP }
+	Function of Boolean is isDown(){ kind == KeyKind:DOWN }
+	Function of Boolean is isLeft(){ kind == KeyKind:LEFT }
+	Function of Boolean is isRight(){ kind == KeyKind:RIGHT }
+	Function of Boolean is isHome(){ kind == KeyKind:HOME }
+	Function of Boolean is isEnd(){ kind == KeyKind:END }
+	Function of Boolean is isPageUp(){ kind == KeyKind:PAGE_UP }
+	Function of Boolean is isPageDown(){ kind == KeyKind:PAGE_DOWN }
+	Function of Boolean is isMouse(){ kind == KeyKind:MOUSE }
 }

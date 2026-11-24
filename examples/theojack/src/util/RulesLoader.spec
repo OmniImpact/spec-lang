@@ -8,7 +8,7 @@ Class is RulesLoader{
 		['base', 'data', as Json()],
 		['base', 'struct', Map],
 		['base', 'sys', as File()],
-		['theojack', 'model', [Card, RuleItem]]
+		['theojack', 'model', [Card, RuleItem, RuleKind]]
 	];
 
 	String is filePath: 'rules.json';
@@ -32,14 +32,16 @@ Class is RulesLoader{
 		local Int is i: 0;
 		while({ i < items:length() }, {
 			local Map of String to Any is entry: items:get(index: i);
-			local String is kind: if({ entry:has(key: 'type') }, { asString(val: entry:getChecked(key: 'type')) }, { '' });
-			if({ (kind == 'header' || kind == 'text') && entry:has(key: 'content') }, {
+			local String is typeName: if({ entry:has(key: 'type') }, { asString(val: entry:getChecked(key: 'type')) }, { '' });
+			local RuleKind is kind: RuleKind:of(value: typeName);
+			local Boolean is known: kind:value() == typeName;
+			if({ known && (kind == RuleKind:HEADER || kind == RuleKind:TEXT) && entry:has(key: 'content') }, {
 				out:push(item: RuleItem(
 					kind: kind,
 					text: asString(val: entry:getChecked(key: 'content'))
 				));
 			});
-			if({ kind == 'bullet' && entry:has(key: 'content') }, {
+			if({ known && kind == RuleKind:BULLET && entry:has(key: 'content') }, {
 				local Array of Any is lines: entry:getChecked(key: 'content');
 				local [String] is bullets: [];
 				local Int is bi: 0;
@@ -47,9 +49,9 @@ Class is RulesLoader{
 					bullets:push(item: asString(val: lines:get(index: bi)));
 					bi: bi + 1;
 				});
-				out:push(item: RuleItem(kind: 'bullet', bullets: bullets));
+				out:push(item: RuleItem(kind: RuleKind:BULLET, bullets: bullets));
 			});
-			if({ kind == 'cards' && entry:has(key: 'content') }, {
+			if({ known && kind == RuleKind:CARDS && entry:has(key: 'content') }, {
 				local Array of Any is codes: entry:getChecked(key: 'content');
 				local [Card] is cards: [];
 				local Int is ci: 0;
@@ -57,7 +59,7 @@ Class is RulesLoader{
 					cards:push(item: parser:fromNotation(code: asString(val: codes:get(index: ci))));
 					ci: ci + 1;
 				});
-				out:push(item: RuleItem(kind: 'cards', cards: cards));
+				out:push(item: RuleItem(kind: RuleKind:CARDS, cards: cards));
 			});
 			i: i + 1;
 		});

@@ -6,7 +6,7 @@ Class of Frame is RulesFrame{
 
 	merge [[String]] is using: [
 		['base', 'theo', '*'],
-		['theojack', 'model', [Card, RuleItem]],
+		['theojack', 'model', [Card, RuleItem, RuleKind]],
 		['theojack', 'util', HomeStrings],
 		['theojack', 'vm', RulesViewModel],
 		['theojack', 'view', CardView]
@@ -24,17 +24,17 @@ Class of Frame is RulesFrame{
 		local Int is i: 0;
 		while({ i < vm:items:length() }, {
 			local RuleItem is item: vm:items:get(index: i);
-			if({ item:kind == 'header' }, {
+			if({ item:kind == RuleKind:HEADER }, {
 				out:add(item: TextLine(
 					value: item:text,
 					color: activeTheme:accentColor,
 					bold: true
 				));
 			});
-			if({ item:kind == 'text' }, {
+			if({ item:kind == RuleKind:TEXT }, {
 				out:add(item: TextGraphic(graphic: item:text));
 			});
-			if({ item:kind == 'bullet' }, {
+			if({ item:kind == RuleKind:BULLET }, {
 				local Array of Widget is bulletRows: Array();
 				local Int is bi: 0;
 				while({ bi < item:bullets:length() }, {
@@ -49,7 +49,7 @@ Class of Frame is RulesFrame{
 				});
 				out:add(item: Col(gap: 0, padX: 1, children: bulletRows));
 			});
-			if({ item:kind == 'cards' }, {
+			if({ item:kind == RuleKind:CARDS }, {
 				local Array of Widget is rowKids: Array();
 				local Int is ci: 0;
 				while({ ci < item:cards:length() }, {
@@ -73,7 +73,7 @@ Class of Frame is RulesFrame{
 
 	replace Function of Widget is ui(){
 		Grid(
-			orientation: 'vertical',
+			orientation: Orientation:VERTICAL,
 			panes: Array([
 				Grid:weight(
 					weight: 1.0,
@@ -82,9 +82,9 @@ Class of Frame is RulesFrame{
 						padX: 0,
 						padY: 0,
 						scrollable: true,
-						verticalScrollbar: 'auto',
+						verticalScrollbar: ScrollbarMode:AUTO,
 						topTitle: HomeStrings:RULES_TITLE,
-						topTitleAlign: 'center',
+						topTitleAlign: TitleAlign:CENTER,
 						child: Col(
 							gap: 1,
 							scrollable: true,

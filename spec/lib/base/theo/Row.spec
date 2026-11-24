@@ -5,17 +5,17 @@ Class of Widget is Row{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [Widget, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
+		['base', 'theo', [Widget, RowAlign, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as Conditional(), as Loops()]],
 		['base', 'math', as Math()]
 	];
 
 	Int is gap: 0;
 	Boolean is arrowFocus: false;
-	String is align: 'top';
+	RowAlign is align: RowAlign:TOP;
 	Array of Widget is children: Array();
 
-	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, String is align: 'top', Array of Widget is children: Array()){
+	replace Function is init(Int is gap: 0, Boolean is arrowFocus: false, RowAlign is align: RowAlign:TOP, Array of Widget is children: Array()){
 		:gap: gap;
 		:arrowFocus: arrowFocus;
 		:align: align;
@@ -105,8 +105,8 @@ Class of Widget is Row{
 			local Int is chH: ch:measureHeight(maxW: cw, maxH: h);
 			if({ chH > h }, { chH: h; });
 			local Int is chY: y;
-			if({ align == 'center' && chH < h }, { chY: y + (h - chH) / 2; });
-			if({ align == 'bottom' && chH < h }, { chY: y + h - chH; });
+			if({ align == RowAlign:CENTER && chH < h }, { chY: y + (h - chH) / 2; });
+			if({ align == RowAlign:BOTTOM && chH < h }, { chY: y + h - chH; });
 			ch:layout(x: curX, y: chY, w: cw, h: chH);
 			curX: curX + cw + gap;
 			i: i + 1;

@@ -8,7 +8,9 @@ Class of SpecUnitTest is TestTheoBuffer{
 		['base', 'theo', TheoBuffer],
 		['base', 'theo', TheoRenderer],
 		['base', 'theo', KeyEvent],
+		['base', 'theo', KeyKind],
 		['base', 'theo', MouseEvent],
+		['base', 'theo', MouseKind],
 		['base', 'theo', KeyReader],
 		['base', 'theo', Panel],
 		['base', 'theo', TextArea],
@@ -33,7 +35,7 @@ Class of SpecUnitTest is TestTheoBuffer{
 	}
 
 	Function is testKeyEventAndRendererTypes(){
-		local KeyEvent is ev: KeyEvent(kind: 'char', key: 'm', ctrl: true);
+		local KeyEvent is ev: KeyEvent(kind: KeyKind:CHAR, key: 'm', ctrl: true);
 		Assert:isTrue(ev:isChar());
 		Assert:isTrue(ev:ctrl);
 		Assert:areEqualString('m', ev:key);
@@ -129,31 +131,31 @@ Class of SpecUnitTest is TestTheoBuffer{
 
 		# Test Button hover and click
 		root:layout(x: 0, y: 0, w: 20, h: 1);
-		Assert:isTrue(root:handleMouse(event: MouseEvent(kind: 'move', x: 2, y: 0)));
+		Assert:isTrue(root:handleMouse(event: MouseEvent(kind: MouseKind:MOVE, x: 2, y: 0)));
 		Assert:isTrue(btn:hovered);
 		root:paint(buf: buf, renderer: renderer);
 		Assert:areEqualInt(242, buf:cellAt(x: 1, y: 0):bg:c1);
 
 		# Moving mouse outside button clears hover
-		Assert:isTrue(root:handleMouse(event: MouseEvent(kind: 'move', x: 15, y: 0)));
+		Assert:isTrue(root:handleMouse(event: MouseEvent(kind: MouseKind:MOVE, x: 15, y: 0)));
 		Assert:isFalse(btn:hovered);
 		buf:clear();
 		root:paint(buf: buf, renderer: renderer);
 		Assert:areEqualInt(237, buf:cellAt(x: 1, y: 0):bg:c1);
 
 		# Clicking button triggers onClick and focuses it
-		Assert:isTrue(root:handleMouse(event: MouseEvent(kind: 'press', x: 2, y: 0, button: 0)));
+		Assert:isTrue(root:handleMouse(event: MouseEvent(kind: MouseKind:PRESS, x: 2, y: 0, button: 0)));
 		Assert:isTrue(clicked);
 
 		# Test TextArea click-to-move-cursor (with tab) and wheel scroll
 		ta:layout(x: 0, y: 0, w: 20, h: 3);
-		Assert:isTrue(ta:handleMouse(event: MouseEvent(kind: 'press', x: 6, y: 1, button: 0)));
+		Assert:isTrue(ta:handleMouse(event: MouseEvent(kind: MouseKind:PRESS, x: 6, y: 1, button: 0)));
 		Assert:areEqualInt(1, ta:cursorRow);
 		Assert:areEqualInt(3, ta:cursorCol);
 
-		Assert:isTrue(ta:handleMouse(event: MouseEvent(kind: 'wheelDown', x: 1, y: 1)));
+		Assert:isTrue(ta:handleMouse(event: MouseEvent(kind: MouseKind:WHEEL_DOWN, x: 1, y: 1)));
 		Assert:areEqualInt(3, ta:scrollY);
-		Assert:isTrue(ta:handleMouse(event: MouseEvent(kind: 'wheelUp', x: 1, y: 1)));
+		Assert:isTrue(ta:handleMouse(event: MouseEvent(kind: MouseKind:WHEEL_UP, x: 1, y: 1)));
 		Assert:areEqualInt(0, ta:scrollY);
 	}
 

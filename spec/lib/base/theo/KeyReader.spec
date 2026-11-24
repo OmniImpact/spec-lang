@@ -5,7 +5,7 @@ Class is KeyReader{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [KeyEvent, MouseEvent]],
+		['base', 'theo', [KeyEvent, KeyKind, MouseEvent, MouseKind]],
 		['base', 'sys', as Input()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as Loops()],
@@ -27,35 +27,35 @@ Class is KeyReader{
 		return s;
 	}
 
-	## Polls stdin up to [timeoutMs] ms and decodes the next [KeyEvent] (or `kind == 'none'`).
+	## Polls stdin up to [timeoutMs] ms and decodes the next [KeyEvent] (or `kind == KeyKind:NONE`).
 	Function of KeyEvent is pollKey(Int is timeoutMs: 16){
 		local Int is b: pollByte(timeoutMs: timeoutMs);
 		if({ b < 0 }, {
-			return KeyEvent(kind: 'none');
+			return KeyEvent(kind: KeyKind:NONE);
 		});
 		if({ b == 13 }, {
-			return KeyEvent(kind: 'enter');
+			return KeyEvent(kind: KeyKind:ENTER);
 		});
 		if({ b == 9 }, {
-			return KeyEvent(kind: 'tab');
+			return KeyEvent(kind: KeyKind:TAB);
 		});
 		if({ b == 127 || b == 8 }, {
-			return KeyEvent(kind: 'backspace');
+			return KeyEvent(kind: KeyKind:BACKSPACE);
 		});
 		if({ b == 27 }, {
 			local Int is b1: pollByte(timeoutMs: 15);
 			if({ b1 < 0 }, {
-				return KeyEvent(kind: 'esc');
+				return KeyEvent(kind: KeyKind:ESC);
 			});
 			if({ b1 == 91 }, {
 				local Int is b2: pollByte(timeoutMs: 15);
-				if({ b2 == 65 }, { return KeyEvent(kind: 'up'); });
-				if({ b2 == 66 }, { return KeyEvent(kind: 'down'); });
-				if({ b2 == 67 }, { return KeyEvent(kind: 'right'); });
-				if({ b2 == 68 }, { return KeyEvent(kind: 'left'); });
-				if({ b2 == 72 }, { return KeyEvent(kind: 'home'); });
-				if({ b2 == 70 }, { return KeyEvent(kind: 'end'); });
-				if({ b2 == 90 }, { return KeyEvent(kind: 'backtab'); });
+				if({ b2 == 65 }, { return KeyEvent(kind: KeyKind:UP); });
+				if({ b2 == 66 }, { return KeyEvent(kind: KeyKind:DOWN); });
+				if({ b2 == 67 }, { return KeyEvent(kind: KeyKind:RIGHT); });
+				if({ b2 == 68 }, { return KeyEvent(kind: KeyKind:LEFT); });
+				if({ b2 == 72 }, { return KeyEvent(kind: KeyKind:HOME); });
+				if({ b2 == 70 }, { return KeyEvent(kind: KeyKind:END); });
+				if({ b2 == 90 }, { return KeyEvent(kind: KeyKind:BACKTAB); });
 				if({ b2 == 60 }, {
 					# SGR mouse event: ESC [ < btn ; col ; row M/m
 					local Int is btn: 0;
@@ -81,14 +81,14 @@ Class is KeyReader{
 						local Boolean is isMotion: ((btn / 32) % 2) == 1;
 						local Boolean is isWheel: ((btn / 64) % 2) == 1;
 						local Int is lowBtn: btn % 4;
-						local String is mKind: 'press';
+						local MouseKind is mKind: MouseKind:PRESS;
 						if({ isWheel }, {
-							mKind: if({ lowBtn == 0 }, { 'wheelUp' }, { 'wheelDown' });
+							mKind: if({ lowBtn == 0 }, { MouseKind:WHEEL_UP }, { MouseKind:WHEEL_DOWN });
 						}, {
 							if({ isMotion }, {
-								mKind: 'move';
+								mKind: MouseKind:MOVE;
 							}, {
-								if({ cur == 109 }, { mKind: 'release'; });
+								if({ cur == 109 }, { mKind: MouseKind:RELEASE; });
 							});
 						});
 						local Int is mx: col - 1;
@@ -104,7 +104,7 @@ Class is KeyReader{
 							alt: isAlt,
 							shift: isShift
 						);
-						return KeyEvent(kind: 'mouse');
+						return KeyEvent(kind: KeyKind:MOUSE);
 					});
 				});
 				if({ b2 >= 48 && b2 <= 57 }, {
@@ -128,37 +128,37 @@ Class is KeyReader{
 					});
 					term: cur;
 					if({ term == 126 }, {
-						if({ p1 == 3 }, { return KeyEvent(kind: 'delete'); });
-						if({ p1 == 5 }, { return KeyEvent(kind: 'pageUp'); });
-						if({ p1 == 6 }, { return KeyEvent(kind: 'pageDown'); });
-						if({ p1 == 1 || p1 == 7 }, { return KeyEvent(kind: 'home'); });
-						if({ p1 == 4 || p1 == 8 }, { return KeyEvent(kind: 'end'); });
+						if({ p1 == 3 }, { return KeyEvent(kind: KeyKind:DELETE); });
+						if({ p1 == 5 }, { return KeyEvent(kind: KeyKind:PAGE_UP); });
+						if({ p1 == 6 }, { return KeyEvent(kind: KeyKind:PAGE_DOWN); });
+						if({ p1 == 1 || p1 == 7 }, { return KeyEvent(kind: KeyKind:HOME); });
+						if({ p1 == 4 || p1 == 8 }, { return KeyEvent(kind: KeyKind:END); });
 					});
 					if({ term == 117 }, {
 						local Int is modBits: if({ hasSemi && p2 > 0 }, { p2 - 1 }, { 0 });
 						local Boolean is isCtrl: (modBits % 8) >= 4;
 						local Boolean is isAlt: (modBits % 4) >= 2;
-						if({ p1 == 13 && !isCtrl && !isAlt }, { return KeyEvent(kind: 'enter'); });
-						if({ p1 == 9 && !isCtrl && !isAlt }, { return KeyEvent(kind: 'tab'); });
-						if({ p1 == 27 && !isCtrl && !isAlt }, { return KeyEvent(kind: 'esc'); });
-						if({ p1 == 127 || p1 == 8 }, { return KeyEvent(kind: 'backspace', ctrl: isCtrl, alt: isAlt); });
+						if({ p1 == 13 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:ENTER); });
+						if({ p1 == 9 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:TAB); });
+						if({ p1 == 27 && !isCtrl && !isAlt }, { return KeyEvent(kind: KeyKind:ESC); });
+						if({ p1 == 127 || p1 == 8 }, { return KeyEvent(kind: KeyKind:BACKSPACE, ctrl: isCtrl, alt: isAlt); });
 						if({ p1 >= 32 && p1 < 127 }, {
-							return KeyEvent(kind: 'char', key: byteToStr(b: p1), ctrl: isCtrl, alt: isAlt);
+							return KeyEvent(kind: KeyKind:CHAR, key: byteToStr(b: p1), ctrl: isCtrl, alt: isAlt);
 						});
 					});
 				});
-				return KeyEvent(kind: 'esc');
+				return KeyEvent(kind: KeyKind:ESC);
 			});
 			if({ b1 >= 32 && b1 < 127 }, {
-				return KeyEvent(kind: 'char', key: byteToStr(b: b1), alt: true);
+				return KeyEvent(kind: KeyKind:CHAR, key: byteToStr(b: b1), alt: true);
 			});
-			return KeyEvent(kind: 'esc');
+			return KeyEvent(kind: KeyKind:ESC);
 		});
 		if({ b >= 1 && b <= 26 }, {
-			return KeyEvent(kind: 'char', key: byteToStr(b: 96 + b), ctrl: true);
+			return KeyEvent(kind: KeyKind:CHAR, key: byteToStr(b: 96 + b), ctrl: true);
 		});
 		if({ b >= 32 && b < 127 }, {
-			return KeyEvent(kind: 'char', key: byteToStr(b: b));
+			return KeyEvent(kind: KeyKind:CHAR, key: byteToStr(b: b));
 		});
 		# UTF-8 multi-byte sequence
 		if({ b >= 192 }, {
@@ -182,8 +182,8 @@ Class is KeyReader{
 			});
 			local String is ch: Mem:strFromBytes(srcAddr: buf, len: got);
 			Mem:free(ptr: buf);
-			return KeyEvent(kind: 'char', key: ch);
+			return KeyEvent(kind: KeyKind:CHAR, key: ch);
 		});
-		return KeyEvent(kind: 'none');
+		return KeyEvent(kind: KeyKind:NONE);
 	}
 }

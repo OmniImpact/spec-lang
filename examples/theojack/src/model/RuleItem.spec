@@ -5,16 +5,16 @@ Class is RuleItem{
 	replace [String] is namespace: ['theojack', 'model'];
 
 	merge [[String]] is using: [
-		['theojack', 'model', Card]
+		['theojack', 'model', [Card, RuleKind]]
 	];
 
-	String is kind: 'text';
+	RuleKind is kind: RuleKind:TEXT;
 	String is text: '';
 	[String] is bullets: [];
 	[Card] is cards: [];
 
 	replace Function is init(
-		String is kind: 'text',
+		RuleKind is kind: RuleKind:TEXT,
 		String is text: '',
 		[String] is bullets: [],
 		[Card] is cards: []

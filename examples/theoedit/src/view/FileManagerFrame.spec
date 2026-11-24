@@ -77,7 +77,7 @@ Class of Frame is FileManagerFrame{
 
 	replace Function of Widget is ui(){
 		Grid(
-			orientation: 'vertical',
+			orientation: Orientation:VERTICAL,
 			panes: Array([
 				Grid:fixed(
 					size: 3,

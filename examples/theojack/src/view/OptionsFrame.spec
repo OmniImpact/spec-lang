@@ -43,7 +43,7 @@ Class of Frame is OptionsFrame{
 	local Function of Widget is cardStyleRow(){
 		return Row(
 			gap: 2,
-			align: 'center',
+			align: RowAlign:CENTER,
 			children: Array([
 				TextLine(value: HomeStrings:OPTION_CARD_STYLE, bold: true, width: 16),
 				Dropdown(
@@ -68,7 +68,7 @@ Class of Frame is OptionsFrame{
 	local Function of Widget is startingAmountRow(){
 		return Row(
 			gap: 2,
-			align: 'center',
+			align: RowAlign:CENTER,
 			children: Array([
 				TextLine(value: HomeStrings:OPTION_STARTING_AMOUNT, bold: true, width: 16),
 				Surface(
@@ -98,7 +98,7 @@ Class of Frame is OptionsFrame{
 	local Function of Widget is roundsRow(){
 		return Row(
 			gap: 2,
-			align: 'center',
+			align: RowAlign:CENTER,
 			children: Array([
 				TextLine(value: HomeStrings:OPTION_NUM_ROUNDS, bold: true, width: 16),
 				Dropdown(
@@ -121,7 +121,7 @@ Class of Frame is OptionsFrame{
 			padX: 2,
 			padY: 1,
 			topTitle: HomeStrings:OPTIONS_TITLE,
-			topTitleAlign: 'center',
+			topTitleAlign: TitleAlign:CENTER,
 			child: Col(
 				gap: 1,
 				children: Array([
@@ -163,7 +163,7 @@ Class of Frame is OptionsFrame{
 
 	replace Function of Widget is ui(){
 		Grid(
-			orientation: 'vertical',
+			orientation: Orientation:VERTICAL,
 			panes: Array([
 				Grid:weight(weight: 1.0, child: optionsBody()),
 				Grid:fixed(size: 3, child: footerBar())

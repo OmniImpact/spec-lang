@@ -44,7 +44,7 @@ Class of Frame is HomeFrame{
 						padX: 2,
 						padY: 1,
 						topTitle: HomeStrings:ABOUT_TITLE,
-						topTitleAlign: 'center',
+						topTitleAlign: TitleAlign:CENTER,
 						child: Col(
 							gap: 1,
 							children: Array([
@@ -110,7 +110,7 @@ Class of Frame is HomeFrame{
 		);
 		aboutButtons: Array([aboutBtn]);
 		Grid(
-			orientation: 'vertical',
+			orientation: Orientation:VERTICAL,
 			panes: Array([
 				Grid:weight(
 					weight: 1.0,
@@ -119,11 +119,11 @@ Class of Frame is HomeFrame{
 						padX: 2,
 						padY: 1,
 						topTitle: HomeStrings:HOME_TITLE,
-						topTitleAlign: 'center',
+						topTitleAlign: TitleAlign:CENTER,
 						child: Center(
 							child: Row(
 								gap: 3,
-								align: 'center',
+								align: RowAlign:CENTER,
 								children: Array([
 									heroCard,
 									Col(

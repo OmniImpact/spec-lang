@@ -36,7 +36,7 @@ Class of Frame is GameFrame{
 					padX: 2,
 					padY: 1,
 					topTitle: vm:resultTitle(),
-					topTitleAlign: 'center',
+					topTitleAlign: TitleAlign:CENTER,
 					child: Col(
 						gap: 1,
 						children: Array([
@@ -116,7 +116,7 @@ Class of Frame is GameFrame{
 			btns:add(item: Tooltip(
 				host: :,
 				text: 'Decrease bet by $10',
-				side: 'top',
+				side: TooltipSide:TOP,
 				child: Button(
 					label: HomeStrings:ACTION_BET_DOWN,
 					padX: 2,
@@ -128,7 +128,7 @@ Class of Frame is GameFrame{
 			btns:add(item: Tooltip(
 				host: :,
 				text: 'Increase bet by $10',
-				side: 'top',
+				side: TooltipSide:TOP,
 				child: Button(
 					label: HomeStrings:ACTION_BET_UP,
 					padX: 2,
@@ -140,7 +140,7 @@ Class of Frame is GameFrame{
 			btns:add(item: Tooltip(
 				host: :,
 				text: 'Deal a new hand',
-				side: 'top',
+				side: TooltipSide:TOP,
 				child: Button(
 					label: HomeStrings:ACTION_DEAL,
 					shortcut: ShortcutKey:ctrl(key: 'd'),
@@ -221,9 +221,9 @@ Class of Frame is GameFrame{
 			padX: 2,
 			padY: 1,
 			rightTitle: HomeStrings:DEALER_TITLE,
-			rightTitleAlign: 'center',
+			rightTitleAlign: TitleAlign:CENTER,
 			child: Row(
-				align: 'center',
+				align: RowAlign:CENTER,
 				children: Array([
 					Row(gap: 2, children: buildDealerCards()),
 					Spacer(weight: 1.0),
@@ -239,9 +239,9 @@ Class of Frame is GameFrame{
 			padX: 2,
 			padY: 1,
 			leftTitle: HomeStrings:PLAYER_TITLE,
-			leftTitleAlign: 'center',
+			leftTitleAlign: TitleAlign:CENTER,
 			child: Row(
-				align: 'center',
+				align: RowAlign:CENTER,
 				children: Array([
 					Row(gap: 2, children: buildPlayerCards()),
 					Spacer(weight: 1.0),
@@ -262,7 +262,7 @@ Class of Frame is GameFrame{
 
 	replace Function of Widget is ui(){
 		Grid(
-			orientation: 'vertical',
+			orientation: Orientation:VERTICAL,
 			panes: Array([
 				Grid:fixed(size: 3, child: statusBar()),
 				Grid:weight(weight: 1.0, child: dealerSection()),

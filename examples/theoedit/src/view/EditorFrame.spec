@@ -5,7 +5,7 @@ Class of Frame is EditorFrame{
 	replace [String] is namespace: ['theoedit', 'view'];
 
 	merge [[String]] is using: [
-		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, FocusTarget, KeyEvent]],
+		['base', 'theo', [Frame, TheoScreen, Widget, Grid, GridPane, Orientation, FocusTarget, KeyEvent]],
 		['base', 'sys', as Loops()],
 		['theoedit', 'util', EditorFocus],
 		['theoedit', 'vm', [EditorViewModel, FileManagerViewModel]],
@@ -121,7 +121,7 @@ Class of Frame is EditorFrame{
 			)
 		));
 		Grid(
-			orientation: 'vertical',
+			orientation: Orientation:VERTICAL,
 			panes: panes
 		);
 	}

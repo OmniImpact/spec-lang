@@ -5,7 +5,7 @@ Class is ShortcutKey{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', KeyEvent],
+		['base', 'theo', [KeyEvent, KeyKind]],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -32,7 +32,7 @@ Class is ShortcutKey{
 	Function of Boolean is matches(KeyEvent is event){
 		if({ !isSet() }, { return false; });
 		if({ event:ctrl != ctrl || event:alt != alt }, { return false; });
-		return event:key:toLower() == key || event:kind:toLower() == key;
+		return event:key:toLower() == key || event:kind:value():toLower() == key;
 	}
 
 	Function of Boolean is matchesChar(String is ch){

@@ -5,7 +5,7 @@ Class of Widget is Panel{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [Widget, TheoColor, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
+		['base', 'theo', [Widget, ScrollbarMode, TitleAlign, TheoColor, TheoTheme, TheoBuffer, TheoRenderer, KeyEvent, MouseEvent, FocusTarget]],
 		['base', 'sys', [as Conditional(), as Loops()]]
 	];
 
@@ -19,8 +19,8 @@ Class of Widget is Panel{
 	Int is padX: -1;
 	Int is padY: -1;
 	Boolean is scrollable: false;
-	String is verticalScrollbar: 'always';
-	String is horizontalScrollbar: 'auto';
+	ScrollbarMode is verticalScrollbar: ScrollbarMode:ALWAYS;
+	ScrollbarMode is horizontalScrollbar: ScrollbarMode:AUTO;
 	String is scrollTrackChar: '▐';
 	String is scrollThumbChar: '▐';
 	String is scrollHTrackChar: '';
@@ -28,13 +28,13 @@ Class of Widget is Panel{
 	TheoColor is scrollTrackColor: TheoColor:none();
 	TheoColor is scrollThumbColor: TheoColor:none();
 	String is topTitle: '';
-	String is topTitleAlign: 'center';
+	TitleAlign is topTitleAlign: TitleAlign:CENTER;
 	String is bottomTitle: '';
-	String is bottomTitleAlign: 'center';
+	TitleAlign is bottomTitleAlign: TitleAlign:CENTER;
 	String is leftTitle: '';
-	String is leftTitleAlign: 'center';
+	TitleAlign is leftTitleAlign: TitleAlign:CENTER;
 	String is rightTitle: '';
-	String is rightTitleAlign: 'center';
+	TitleAlign is rightTitleAlign: TitleAlign:CENTER;
 	TheoColor is titleFg: TheoColor:none();
 	TheoColor is titleBg: TheoColor:none();
 	Widget is child;
@@ -51,8 +51,8 @@ Class of Widget is Panel{
 		Int is padX: -1,
 		Int is padY: -1,
 		Boolean is scrollable: false,
-		String is verticalScrollbar: 'always',
-		String is horizontalScrollbar: 'auto',
+		ScrollbarMode is verticalScrollbar: ScrollbarMode:ALWAYS,
+		ScrollbarMode is horizontalScrollbar: ScrollbarMode:AUTO,
 		String is scrollTrackChar: '▐',
 		String is scrollThumbChar: '▐',
 		String is scrollHTrackChar: '',
@@ -60,13 +60,13 @@ Class of Widget is Panel{
 		TheoColor is scrollTrackColor: TheoColor:none(),
 		TheoColor is scrollThumbColor: TheoColor:none(),
 		String is topTitle: '',
-		String is topTitleAlign: 'center',
+		TitleAlign is topTitleAlign: TitleAlign:CENTER,
 		String is bottomTitle: '',
-		String is bottomTitleAlign: 'center',
+		TitleAlign is bottomTitleAlign: TitleAlign:CENTER,
 		String is leftTitle: '',
-		String is leftTitleAlign: 'center',
+		TitleAlign is leftTitleAlign: TitleAlign:CENTER,
 		String is rightTitle: '',
-		String is rightTitleAlign: 'center',
+		TitleAlign is rightTitleAlign: TitleAlign:CENTER,
 		TheoColor is titleFg: TheoColor:none(),
 		TheoColor is titleBg: TheoColor:none()
 	){
@@ -156,19 +156,19 @@ Class of Widget is Panel{
 	}
 
 	local Function of Boolean is showVScroll(Int is innerW, Int is innerH){
-		if({ !scrollable || verticalScrollbar == 'never' || innerW <= 1 || innerH <= 0 }, {
+		if({ !scrollable || verticalScrollbar == ScrollbarMode:NEVER || innerW <= 1 || innerH <= 0 }, {
 			return false;
 		});
-		if({ verticalScrollbar == 'always' }, { return true; });
+		if({ verticalScrollbar == ScrollbarMode:ALWAYS }, { return true; });
 		return child:scrollContentH() > innerH;
 	}
 
 	local Function of Boolean is showHScroll(Int is innerW, Int is innerH, Boolean is hasV){
 		local Int is availW: innerW - if({ hasV }, { 1 }, { 0 });
-		if({ !scrollable || horizontalScrollbar == 'never' || innerH <= 1 || availW <= 0 }, {
+		if({ !scrollable || horizontalScrollbar == ScrollbarMode:NEVER || innerH <= 1 || availW <= 0 }, {
 			return false;
 		});
-		if({ horizontalScrollbar == 'always' }, { return true; });
+		if({ horizontalScrollbar == ScrollbarMode:ALWAYS }, { return true; });
 		return child:scrollContentW() > availW;
 	}
 
@@ -214,7 +214,7 @@ Class of Widget is Panel{
 		});
 	}
 
-	local Function is paintTitleHorizontal(TheoBuffer is buf, Int is y, String is title, String is align, TheoColor is fg, TheoColor is bg){
+	local Function is paintTitleHorizontal(TheoBuffer is buf, Int is y, String is title, TitleAlign is align, TheoColor is fg, TheoColor is bg){
 		if({ title == '' }, { return; });
 		local Int is margin: if({ border }, { 1 }, { 0 });
 		local Int is spanX: boxX + margin;
@@ -223,15 +223,15 @@ Class of Widget is Panel{
 		local String is shown: if({ title:runeCount() > spanW }, { title:sliceRunes(start: 0, end: spanW) }, { title });
 		local Int is tLen: shown:runeCount();
 		local Int is startX: spanX + (spanW - tLen) / 2;
-		if({ align == 'left' }, { startX: spanX; });
-		if({ align == 'right' }, { startX: spanX + spanW - tLen; });
+		if({ align == TitleAlign:LEFT }, { startX: spanX; });
+		if({ align == TitleAlign:RIGHT }, { startX: spanX + spanW - tLen; });
 		if({ bg:isSet() }, {
 			buf:fillRect(x: spanX, y: y, w: spanW, h: 1, fg: fg, bg: bg);
 		});
 		buf:drawText(x: startX, y: y, text: shown, fg: fg, bg: bg, bold: true);
 	}
 
-	local Function is paintTitleVertical(TheoBuffer is buf, Int is x, String is title, String is align, TheoColor is fg, TheoColor is bg){
+	local Function is paintTitleVertical(TheoBuffer is buf, Int is x, String is title, TitleAlign is align, TheoColor is fg, TheoColor is bg){
 		if({ title == '' }, { return; });
 		local Int is margin: if({ border }, { 1 }, { 0 });
 		local Int is spanY: boxY + margin;
@@ -240,8 +240,8 @@ Class of Widget is Panel{
 		local String is shown: if({ title:runeCount() > spanH }, { title:sliceRunes(start: 0, end: spanH) }, { title });
 		local Int is tLen: shown:runeCount();
 		local Int is startY: spanY + (spanH - tLen) / 2;
-		if({ align == 'left' }, { startY: spanY; });
-		if({ align == 'right' }, { startY: spanY + spanH - tLen; });
+		if({ align == TitleAlign:LEFT }, { startY: spanY; });
+		if({ align == TitleAlign:RIGHT }, { startY: spanY + spanH - tLen; });
 		if({ bg:isSet() }, {
 			buf:fillRect(x: x, y: spanY, w: 1, h: spanH, fg: fg, bg: bg);
 		});

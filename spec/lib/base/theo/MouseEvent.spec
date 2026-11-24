@@ -4,7 +4,11 @@
 Class is MouseEvent{
 	replace [String] is namespace: ['base', 'theo'];
 
-	String is kind: 'none';
+	replace [[String]] is using: [
+		['base', 'theo', MouseKind]
+	];
+
+	MouseKind is kind: MouseKind:NONE;
 	Int is x: 0;
 	Int is y: 0;
 	Int is button: 0;
@@ -13,7 +17,7 @@ Class is MouseEvent{
 	Boolean is shift: false;
 
 	replace Function is init(
-		String is kind: 'none',
+		MouseKind is kind: MouseKind:NONE,
 		Int is x: 0,
 		Int is y: 0,
 		Int is button: 0,
@@ -30,11 +34,11 @@ Class is MouseEvent{
 		:shift: shift;
 	}
 
-	Function of Boolean is isNone(){ kind == 'none' }
-	Function of Boolean is isPress(){ kind == 'press' }
-	Function of Boolean is isRelease(){ kind == 'release' }
-	Function of Boolean is isMove(){ kind == 'move' }
-	Function of Boolean is isWheelUp(){ kind == 'wheelUp' }
-	Function of Boolean is isWheelDown(){ kind == 'wheelDown' }
-	Function of Boolean is isLeftPress(){ kind == 'press' && button == 0 }
+	Function of Boolean is isNone(){ kind == MouseKind:NONE }
+	Function of Boolean is isPress(){ kind == MouseKind:PRESS }
+	Function of Boolean is isRelease(){ kind == MouseKind:RELEASE }
+	Function of Boolean is isMove(){ kind == MouseKind:MOVE }
+	Function of Boolean is isWheelUp(){ kind == MouseKind:WHEEL_UP }
+	Function of Boolean is isWheelDown(){ kind == MouseKind:WHEEL_DOWN }
+	Function of Boolean is isLeftPress(){ kind == MouseKind:PRESS && button == 0 }
 }

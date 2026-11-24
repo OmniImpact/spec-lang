@@ -5,13 +5,13 @@ Class of Widget is Tooltip{
 	replace [String] is namespace: ['base', 'theo'];
 
 	replace [[String]] is using: [
-		['base', 'theo', [Widget, Frame, Overlay, Surface, Panel, TextLine, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer, TheoTheme]],
+		['base', 'theo', [Widget, Frame, Overlay, Surface, Panel, TextLine, TooltipSide, FocusTarget, KeyEvent, MouseEvent, TheoColor, TheoBuffer, TheoRenderer, TheoTheme]],
 		['base', 'sys', as Conditional()]
 	];
 
 	Widget is child;
 	String is text: '';
-	String is side: 'top';
+	TooltipSide is side: TooltipSide:TOP;
 	[Frame] is hostFrames: [];
 	[Overlay] is tipOverlays: [];
 
@@ -19,7 +19,7 @@ Class of Widget is Tooltip{
 		Frame is host,
 		Widget is child: Widget(),
 		String is text: '',
-		String is side: 'top'
+		TooltipSide is side: TooltipSide:TOP
 	){
 		:child: child;
 		:text: text;
@@ -94,14 +94,14 @@ Class of Widget is Tooltip{
 			local Int is hostH: if({ hostFrames:length() > 0 && hostFrames:get(index: 0):boxH > 0 }, { hostFrames:get(index: 0):boxH }, { 24 });
 			local Int is tx: x + (w - tipW) / 2;
 			local Int is ty: y - tipH;
-			if({ side == 'bottom' }, {
+			if({ side == TooltipSide:BOTTOM }, {
 				ty: y + h;
 			});
-			if({ side == 'left' }, {
+			if({ side == TooltipSide:LEFT }, {
 				tx: x - tipW - 1;
 				ty: y + (h - tipH) / 2;
 			});
-			if({ side == 'right' }, {
+			if({ side == TooltipSide:RIGHT }, {
 				tx: x + w + 1;
 				ty: y + (h - tipH) / 2;
 			});

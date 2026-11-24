@@ -3,7 +3,7 @@
 Class of SpecUnitTest is TestTheoEditor{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
-		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, Frame, FocusTarget]],
+		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, KeyKind, Frame, FocusTarget]],
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['theoedit', 'model', [EditorDocument, DirectoryListing]],
@@ -103,34 +103,34 @@ Class of SpecUnitTest is TestTheoEditor{
 		Assert:areEqualInt(240, buf:cellAt(x: 0, y: 11):fg:c1);
 
 		# Type '!' and Tab
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: '!')));
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'tab')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: '!')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:TAB)));
 		Assert:areEqualString("!\thello\nworld", vm:content:current());
 		Assert:isTrue(vm:title:current():endsWith(suffix: ' *'));
 
 		# Ctrl+M toggles menu focus and back
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'm', ctrl: true)));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'm', ctrl: true)));
 		Assert:isTrue(frame:saveFocus:focused);
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'm', ctrl: true)));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'm', ctrl: true)));
 		Assert:isTrue(frame:editorFocus:focused);
 
 		# Move to menu, Right -> Save As -> Open, Left -> Save As -> Save -> Quit
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'm', ctrl: true)));
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'right')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'm', ctrl: true)));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:RIGHT)));
 		Assert:isTrue(frame:saveAsFocus:focused);
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'right')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:RIGHT)));
 		Assert:isTrue(frame:openFocus:focused);
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'left')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:LEFT)));
 		Assert:isTrue(frame:saveAsFocus:focused);
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'left')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:LEFT)));
 		Assert:isTrue(frame:saveFocus:focused);
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'left')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:LEFT)));
 		Assert:isTrue(frame:exitFocus:focused);
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'right')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:RIGHT)));
 		Assert:isTrue(frame:saveFocus:focused);
 
 		# Enter on Save writes file and clears '*'
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'enter')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:ENTER)));
 		Assert:areEqualString("!\thello\nworld", fileRead(path: tmpPath, default: ''));
 		Assert:areEqualString(tmpPath, vm:title:current());
 		Assert:isTrue(frame:editorFocus:focused);
@@ -156,8 +156,8 @@ Class of SpecUnitTest is TestTheoEditor{
 		Assert:isTrue(buf:rowText(y: 1):contains(needle: '[untitled]'));
 
 		# Edit buffer and press Ctrl+Q -> MessagePanel appears between editor and bottom bar
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'x')));
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 'q', ctrl: true)));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'x')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'q', ctrl: true)));
 		Assert:isTrue(vm:messageMode == EditorMessageMode:CONFIRM_QUIT);
 		Assert:isTrue(frame:msgSaveFocus:focused);
 
@@ -168,16 +168,16 @@ Class of SpecUnitTest is TestTheoEditor{
 		Assert:isTrue(buf:rowText(y: 11):contains(needle: ' Discard '));
 
 		# Right moves to Discard button, Enter discards and exits
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'right')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:RIGHT)));
 		Assert:isTrue(frame:msgDiscardFocus:focused);
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'enter')));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:ENTER)));
 		Assert:isTrue(exited);
 
 		# Cancel message panel and open FileManagerFrame via Ctrl+S on untitled
 		vm:clearMessage();
 		frame:rebuild();
 		frame:editorFocus:requestFocus();
-		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: 'char', key: 's', ctrl: true)));
+		Assert:isTrue(frame:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 's', ctrl: true)));
 		Assert:isTrue(scr:stack:length() == 2);
 
 		local Frame is top: scr:current();
@@ -217,28 +217,28 @@ Class of SpecUnitTest is TestTheoEditor{
 			fmTop:cancelFocus:focused: true;
 		});
 		Assert:isTrue(fmTop:inputFocus:focused);
-		Assert:isTrue(top:handleKey(event: KeyEvent(kind: 'char', key: 'f', ctrl: true)));
+		Assert:isTrue(top:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'f', ctrl: true)));
 		Assert:isTrue(fmTop:listFocus:focused);
-		Assert:isTrue(top:handleKey(event: KeyEvent(kind: 'char', key: 'f', ctrl: true)));
+		Assert:isTrue(top:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'f', ctrl: true)));
 		Assert:isTrue(fmTop:inputFocus:focused);
 
 		# Ctrl+M focuses Save/Cancel menu bar, Left->Cancel, Right->Save, Ctrl+M returns
-		Assert:isTrue(top:handleKey(event: KeyEvent(kind: 'char', key: 'm', ctrl: true)));
+		Assert:isTrue(top:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'm', ctrl: true)));
 		Assert:isTrue(fmTop:okFocus:focused);
-		Assert:isTrue(top:handleKey(event: KeyEvent(kind: 'left')));
+		Assert:isTrue(top:handleKey(event: KeyEvent(kind: KeyKind:LEFT)));
 		Assert:isTrue(fmTop:cancelFocus:focused);
-		Assert:isTrue(top:handleKey(event: KeyEvent(kind: 'right')));
+		Assert:isTrue(top:handleKey(event: KeyEvent(kind: KeyKind:RIGHT)));
 		Assert:isTrue(fmTop:okFocus:focused);
-		Assert:isTrue(top:handleKey(event: KeyEvent(kind: 'char', key: 'm', ctrl: true)));
+		Assert:isTrue(top:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'm', ctrl: true)));
 		Assert:isTrue(fmTop:inputFocus:focused);
 
 		# Type savePath into FileManagerFrame's TextInput and press Enter -> saves & pops back
 		local Int is i: 0;
 		while({ i < savePath:length() }, {
-			top:handleKey(event: KeyEvent(kind: 'char', key: savePath:charAt(index: i, default: '')));
+			top:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: savePath:charAt(index: i, default: '')));
 			i: i + 1;
 		});
-		Assert:isTrue(top:handleKey(event: KeyEvent(kind: 'enter')));
+		Assert:isTrue(top:handleKey(event: KeyEvent(kind: KeyKind:ENTER)));
 		Assert:isTrue(scr:stack:length() == 1);
 		Assert:areEqualString('x', fileRead(path: savePath, default: ''));
 		Assert:areEqualString(savePath, vm:title:current());
