@@ -42,9 +42,9 @@ Class of Widget is Switch{
 	}
 
 	replace Function of Int is measureWidth(Int is maxW){
-		local Int is w: 4;
+		local Int is w: 3;
 		if({ label != '' }, {
-			w: label:runeCount() + 5;
+			w: label:runeCount() + 4;
 		});
 		if({ w > maxW }, { return maxW; });
 		return w;
@@ -57,21 +57,21 @@ Class of Widget is Switch{
 		local Boolean is foc: focusTarget:focused;
 		local TheoColor is useFg: if({ foc }, { activeTheme:buttonFocusFg }, { if({ hovered }, { activeTheme:buttonHoverFg }, { activeTheme:buttonFg }) });
 		local TheoColor is useBg: if({ foc }, { activeTheme:buttonFocusBg }, { if({ hovered }, { activeTheme:buttonHoverBg }, { activeTheme:buttonBg }) });
-		local String is track: if({ checked }, { '[ ●]' }, { '[○ ]' });
+		local String is track: if({ checked }, { '  ●' }, { '○  ' });
 
 		if({ label == '' }, {
 			buf:drawText(x: boxX, y: boxY, text: track, fg: useFg, bg: useBg, bold: foc || hovered);
 			return;
 		});
 
-		local Int is maxLabel: boxW - 5;
+		local Int is maxLabel: boxW - 4;
 		local String is shown: if({ maxLabel > 0 }, {
 			if({ label:runeCount() > maxLabel }, { label:sliceRunes(start: 0, end: maxLabel) }, { label })
 		}, { '' });
 		if({ shown != '' }, {
 			buf:drawText(x: boxX, y: boxY, text: shown, fg: activeTheme:foreground, bg: TheoColor:none(), bold: foc || hovered);
 			local Int is tx: boxX + shown:runeCount() + 1;
-			if({ tx + 4 <= boxX + boxW }, {
+			if({ tx + 3 <= boxX + boxW }, {
 				buf:drawText(x: tx, y: boxY, text: track, fg: useFg, bg: useBg, bold: foc || hovered);
 			});
 		}, {
