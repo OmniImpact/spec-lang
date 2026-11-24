@@ -236,6 +236,26 @@ Enum is SemType {
 		]);
 	}
 
+	## Returns all generic type arguments uniformly across ArrayOf, ListOf, MapOf, FnOf, and Named.
+	Function of [SemType] is allArgs(){
+		return match(on: :, when: [
+			SemType:ArrayOf: local Function of [SemType](SemType is elem){
+				return if({ elem:isEmpty() }, { [] }, { [elem] });
+			},
+			SemType:ListOf: local Function of [SemType](SemType is elem){
+				return if({ elem:isEmpty() }, { [] }, { [elem] });
+			},
+			SemType:MapOf: local Function of [SemType](SemType is key, SemType is val){
+				return if({ key:isEmpty() || val:isEmpty() }, { [] }, { [key, val] });
+			},
+			SemType:FnOf: local Function of [SemType](SemType is ret){
+				return if({ ret:isEmpty() || ret:isVoid() }, { [] }, { [ret] });
+			},
+			SemType:Named: local Function of [SemType]([String] is path, [SemType] is params){ return params; },
+			else: { [] }
+		]);
+	}
+
 	## Returns the element type of Array, List, or a 1-arg Named generic (e.g. Flow/Task/Channel), else Empty.
 	Function of SemType is elemType(){
 		return match(on: :, when: [

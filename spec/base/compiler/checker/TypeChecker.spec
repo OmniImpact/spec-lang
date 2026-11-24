@@ -51,7 +51,6 @@ Class is TypeChecker{
 	## Registered classes: name -> "true".
 	local Map of String to String is registeredClasses: Map:init();
 	local ErrorText is errText: ErrorText:init();
-	local Map of String to Type is typeNodeCache: Map:init();
 	local Map of String to SemType is semTypeCache: Map:init();
 
 	## the per-scope nested-type map — bare
@@ -323,41 +322,31 @@ Class is TypeChecker{
 		return :strListIndexOf(xs: xs, target: target) >= 0;
 	}
 
-	## Substitutes a class's generic type parameters in a structured [Type] node.
-	Function of Type is substituteTypeNode(Type is t, ClassInfo is cls, [Type] is typeArgs){
-		local [String] is tps: cls:typeParams;
-		if({ tps:length() == 0 || typeArgs:length() == 0 || t:name == '' }, {
-			return t;
-		});
-		local Int is idx: :strListIndexOf(xs: tps, target: t:name);
-		if({ idx >= 0 && t:params:length() == 0 }, {
-			if({ idx < typeArgs:length() }, {
-				return typeArgs:get(index: idx):clone();
-			});
-			return Type(name: Primitive:ANY:value());
-		});
-		local [Type] is newParams: [];
-		local Int is pi: 0;
-		while({ pi < t:params:length() }, {
-			newParams:push(item: :substituteTypeNode(t: t:params:get(index: pi), cls: cls, typeArgs: typeArgs));
-			pi++;
-		});
-		local String is bName: t:name;
-		if({ idx >= 0 && idx < typeArgs:length() }, {
-			bName: typeArgs:get(index: idx):name;
-		});
-		return Type:withParams(name: bName, params: newParams);
-	}
-
-	## Converts a canonical type name string into a cached [SemType] sum-type tree.
+	## Converts a canonical type name string into a cached [SemType] sum-type tree
+	## directly (no intermediate AST [Type] tree allocation).
 	Function of SemType is parseSemType(String is s){
 		if({ s == '' }, { return SemTypes:EMPTY; });
 		if({ :semTypeCache:has(key: s) }, {
 			return :semTypeCache:get(key: s, default: SemTypes:EMPTY);
 		});
-		local SemType is st: SemTypes:fromAstType(t: :parseTypeNode(s: s));
-		:semTypeCache:set(key: s, value: st);
-		return st;
+		if({ !s:contains(needle: ':') && !s:contains(needle: ' of ') }, {
+			local SemType is simpleS: SemTypes:named(name: s);
+			:semTypeCache:set(key: s, value: simpleS);
+			return simpleS;
+		});
+		if({ :registeredClasses:has(key: s) }, {
+			local SemType is clsS: SemTypes:named(name: s);
+			:semTypeCache:set(key: s, value: clsS);
+			return clsS;
+		});
+		local String is norm: :normalizeContainerType(t: s);
+		local Array of String is rawParts: norm:split(delimiter: ':');
+		local SemType is parsedS: :rebuildSemType(rawParts: rawParts, bareContainers: false);
+		if({ parsedS:isEmpty() }, {
+			parsedS: :rebuildSemType(rawParts: rawParts, bareContainers: true);
+		});
+		:semTypeCache:set(key: s, value: parsedS);
+		return parsedS;
 	}
 
 	## Stamps the canonical [SemType] on [expr].
@@ -365,47 +354,9 @@ Class is TypeChecker{
 		expr:setSemType(st: :parseSemType(s: t));
 	}
 
-	Function of Type is parseTypeNode(String is s){
-		if({ s == '' }, { return Type:init(name: ''); });
-		if({ :typeNodeCache:has(key: s) }, {
-			return :typeNodeCache:get(key: s, default: Type:EMPTY);
-		});
-		if({ !s:contains(needle: ':') && !s:contains(needle: ' of ') }, {
-			local Type is simpleT: Type:init(name: s);
-			:typeNodeCache:set(key: s, value: simpleT);
-			return simpleT;
-		});
-		if({ :registeredClasses:has(key: s) }, {
-			local Type is clsT: Type:init(name: s);
-			:typeNodeCache:set(key: s, value: clsT);
-			return clsT;
-		});
-		local String is norm: :normalizeContainerType(t: s);
-		local Array of String is rawParts: norm:split(delimiter: ':');
-		# The flat encoding is pre-order: the outer type's segments come
-		# first, then each argument's segments contiguously. The greedy
-		# right-to-left arity machine mis-parses when a BARE arity-1
-		# container (Array/List/Function) is a NON-LAST argument —
-		# 'Result:Array:JsonError' (Result of Array to JsonError): Array
-		# steals JsonError, leaving the outer type with an unfilled arity.
-		# Well-formedness test: the final stack's top must carry exactly
-		# its arity in params. On failure, re-run with the hardcoded
-		# containers parsed BARE — the writer emits the bare spelling
-		# exactly when the argument has no parameters.
-		local Type is parsedT: :rebuildTypeNode(rawParts: rawParts, bareContainers: false);
-		if({ parsedT:name == '' }, {
-			parsedT: :rebuildTypeNode(rawParts: rawParts, bareContainers: true);
-		});
-		:typeNodeCache:set(key: s, value: parsedT);
-		return parsedT;
-	}
-
-	## The right-to-left arity reconstruction of a flat type string.
-	## With [bareContainers] the hardcoded containers (Array/List/
-	## Function) never absorb arguments — the retry pass for the
-	## bare-non-last-argument spelling.
-	Function of Type is rebuildTypeNode(Array of String is rawParts, Boolean is bareContainers){
-		local [Type] is stack: [];
+	## Right-to-left arity reconstruction of a flat type string directly into [SemType].
+	Function of SemType is rebuildSemType(Array of String is rawParts, Boolean is bareContainers){
+		local [SemType] is stack: [];
 		local Int is idx: rawParts:length() - 1;
 		while({ idx >= 0 }, {
 			local String is seg: rawParts:get(index: idx, default: '');
@@ -423,39 +374,55 @@ Class is TypeChecker{
 				});
 			});
 			if({ arity > 0 && stack:length() >= arity }, {
-				local [Type] is tArgs: [];
+				local [SemType] is tArgs: [];
 				local Int is ki: 0;
 				while({ ki < arity }, {
 					tArgs:push(item: stack:pop());
 					ki++;
 				});
-				stack:push(item: Type:withParams(name: seg, params: tArgs));
+				stack:push(item: SemTypes:namedWithParams(name: seg, params: tArgs));
 			}, {
-				stack:push(item: Type(name: seg));
+				stack:push(item: SemTypes:named(name: seg));
 			});
 			idx: idx - 1;
 		});
 		if({ stack:length() == 0 }, {
-			return Type:init(name: '');
+			return SemTypes:EMPTY;
 		});
-		local Type is top: stack:get(index: stack:length() - 1);
+		local SemType is top: stack:get(index: stack:length() - 1);
+		local String is topName: top:baseName();
 		local Int is topArity: 0;
-		if({ top:name == 'Array' || top:name == 'List' || top:name == 'Function' }, {
+		if({ topName == 'Array' || topName == 'List' || topName == 'Function' }, {
 			topArity: if({ bareContainers }, { 0 }, { 1 });
 		}, {
-			if({ top:name == 'Map' }, {
+			if({ topName == 'Map' }, {
 				topArity: 2;
 			}, {
-				local ClassInfo is cls: :findClass(name: top:name);
+				local ClassInfo is cls: :findClass(name: topName);
 				if({ cls:name != '' && cls:typeParams:length() > 0 }, {
 					topArity: cls:typeParams:length();
 				});
 			});
 		});
-		if({ topArity > 0 && top:params:length() != topArity }, {
-			return Type:init(name: '');
+		if({ topArity > 0 && top:allArgs():length() != topArity }, {
+			return SemTypes:EMPTY;
 		});
 		return top;
+	}
+
+	## Substitutes [cls]'s generic type parameters in [rawSem] using [typeArgs].
+	Function of SemType is substituteSemType(SemType is rawSem, ClassInfo is cls, [SemType] is typeArgs){
+		local [String] is tps: cls:typeParams;
+		if({ tps:length() == 0 || typeArgs:length() == 0 }, {
+			return rawSem;
+		});
+		local Map of String to SemType is subst: Map:init();
+		local Int is i: 0;
+		while({ i < tps:length() && i < typeArgs:length() }, {
+			subst:set(key: tps:get(index: i), value: typeArgs:get(index: i));
+			i++;
+		});
+		return rawSem:substitute(subst: subst);
 	}
 
 	## Substitutes a class's generic type parameters in a member type name.
@@ -469,58 +436,57 @@ Class is TypeChecker{
 		if({ tps:length() == 0 || typeArgs:length() == 0 }, {
 			return rawType;
 		});
-		local [Type] is argNodes: [];
+		local [SemType] is argSems: [];
 		typeArgs:each(action: local Function(String is ta){
-			argNodes:push(item: :parseTypeNode(s: ta));
+			argSems:push(item: :parseSemType(s: ta));
 		});
-		local Type is rawNode: :parseTypeNode(s: rawType);
-		local Type is subNode: :substituteTypeNode(t: rawNode, cls: cls, typeArgs: argNodes);
-		return :formatVarTypeString(t: subNode);
+		local SemType is rawSem: :parseSemType(s: rawType);
+		return :substituteSemType(rawSem: rawSem, cls: cls, typeArgs: argSems):toKey();
 	}
 
 	## Infers the grounded generic type ('Box:String', 'Pair:String:Int', 'SpecError:FileOpError')
 	## for a constructor call `C:init(...)` from contextual expectation and/or argument types,
-	## operating over structured [Type] trees (`[Type]`).
+	## operating over structured [SemType] trees.
 	Function of String is inferGenericInitType(String is baseClassName, String is targetType, Member is initMem, CallData is call, String is expected){
 		local ClassInfo is cls: :findClass(name: baseClassName);
 		if({ cls:name == '' || cls:typeParams:length() == 0 }, {
 			return targetType;
 		});
-		local Type is expNode: :parseTypeNode(s: expected);
-		local [Type] is emptyExp: [];
-		local [Type] is expParams: if({ expNode:name == cls:name }, { expNode:params }, { emptyExp });
-		local [Type] is resolvedArgs: [];
+		local SemType is expSem: :parseSemType(s: expected);
+		local [SemType] is emptyExp: [];
+		local [SemType] is expParams: if({ expSem:baseName() == cls:name }, { expSem:allArgs() }, { emptyExp });
+		local [SemType] is resolvedArgs: [];
 		local Boolean is allResolved: true;
 		local Int is tpIdx: 0;
 		while({ tpIdx < cls:typeParams:length() }, {
 			local String is tpName: cls:typeParams:get(index: tpIdx);
-			local Type is argNode: Type:init(name: '');
+			local SemType is argSem: SemTypes:EMPTY;
 			if({ expParams:length() > tpIdx }, {
-				argNode: expParams:get(index: tpIdx);
+				argSem: expParams:get(index: tpIdx);
 			});
-			if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
+			if({ argSem:isEmpty() || argSem:isAny() }, {
 				local Int is pIdx: 0;
 				while({ pIdx < initMem:params:length() }, {
 					local Parameter is p: initMem:params:get(index: pIdx);
 					local Boolean is directMatch: p:paramType:name == tpName;
 					local Boolean is wrappedMatch: !directMatch && p:paramType:isGeneric() && p:paramType:elemType():name == tpName;
-					if({ (argNode:name == '' || argNode:name == Primitive:ANY:value()) && (directMatch || wrappedMatch) }, {
+					if({ (argSem:isEmpty() || argSem:isAny()) && (directMatch || wrappedMatch) }, {
 						local Int is posIdx: 0;
 						while({ posIdx < call:args:length() }, {
 							local NamedArg is a: call:args:get(index: posIdx);
-							if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
+							if({ argSem:isEmpty() || argSem:isAny() }, {
 								if({ (p:name != '' && a:name == p:name) || (a:name == '' && posIdx == pIdx) }, {
 									if({ directMatch }, {
 										local SemType is candSem: a:value:getSemType();
 										if({ !candSem:isEmpty() && !candSem:isAny() }, {
-											argNode: candSem:toAstType();
+											argSem: candSem;
 										});
 									}, {
 										local SemType is aSem: a:value:getSemType();
 										if({ aSem:baseName() == p:paramType:name && aSem:isGeneric() }, {
 											local SemType is elemS: aSem:elemType();
 											if({ !elemS:isEmpty() && !elemS:isAny() }, {
-												argNode: elemS:toAstType();
+												argSem: elemS;
 											});
 										});
 									});
@@ -532,18 +498,18 @@ Class is TypeChecker{
 					pIdx: pIdx + 1;
 				});
 			});
-			if({ argNode:name == '' || argNode:name == Primitive:ANY:value() }, {
+			if({ argSem:isEmpty() || argSem:isAny() }, {
 				allResolved: false;
 			}, {
-				resolvedArgs:push(item: argNode);
+				resolvedArgs:push(item: argSem);
 			});
 			tpIdx: tpIdx + 1;
 		});
 		if({ allResolved && resolvedArgs:length() == cls:typeParams:length() }, {
-			return :formatTypeString(t: Type:withParams(name: cls:name, params: resolvedArgs));
+			return SemTypes:namedWithParams(name: cls:name, params: resolvedArgs):toKey();
 		});
-		if({ expNode:name == cls:name && expParams:length() > 0 }, {
-			return :formatTypeString(t: expNode);
+		if({ expSem:baseName() == cls:name && expParams:length() > 0 }, {
+			return expSem:toKey();
 		});
 		return targetType;
 	}
@@ -837,41 +803,43 @@ Class is TypeChecker{
 		return '';
 	}
 
-	## Determines whether a structured source [Type] node is assignable to a target [Type] node.
-	Function of Boolean is isAssignableNode(Type is targetNode, Type is sourceNode){
-		local String is tBase: targetNode:name;
-		local String is sBase: sourceNode:name;
-		if({ tBase == '' || sBase == '' || tBase == Primitive:ANY:value() || sBase == Primitive:ANY:value() }, {
+	## Determines whether a structured source [SemType] is assignable to a target [SemType].
+	Function of Boolean is isAssignableSem(SemType is targetSem, SemType is sourceSem){
+		if({ targetSem:isEmpty() || sourceSem:isEmpty() || targetSem:isAny() || sourceSem:isAny() }, {
 			return true;
 		});
-		if({ targetNode:equals(other: sourceNode) }, {
+		if({ targetSem:equals(other: sourceSem) }, {
 			return true;
 		});
+		local String is tBase: targetSem:baseName();
+		local String is sBase: sourceSem:baseName();
 		if({ tBase == 'Float' && sBase == Primitive:INT:value() }, {
 			return true;
 		});
-		if({ tBase == 'Function' && sBase == 'Function' }, {
-			if({ targetNode:params:length() == 0 }, {
+		if({ targetSem:isFunction() && sourceSem:isFunction() }, {
+			if({ !targetSem:hasFunctionReturn() }, {
 				return true;
 			});
-			if({ sourceNode:params:length() == 0 }, {
+			if({ !sourceSem:hasFunctionReturn() }, {
 				return false;
 			});
-			local Type is tRet: if({ targetNode:params:length() >= 2 }, { targetNode:params:get(index: 1) }, { targetNode:params:get(index: 0) });
-			local Type is sRet: if({ sourceNode:params:length() >= 2 }, { sourceNode:params:get(index: 1) }, { sourceNode:params:get(index: 0) });
-			if({ tRet:name == Primitive:ANY:value() || sRet:name == Primitive:ANY:value() || tRet:equals(other: sRet) }, {
+			local SemType is tRet: targetSem:functionReturn();
+			local SemType is sRet: sourceSem:functionReturn();
+			if({ tRet:isAny() || sRet:isAny() || tRet:equals(other: sRet) }, {
 				return true;
 			});
 			return false;
 		});
 		if({ tBase == sBase || :isSubclassOf(subName: sBase, baseName: tBase) }, {
-			if({ targetNode:params:length() > 0 && sourceNode:params:length() > 0 }, {
+			local [SemType] is tArgs: targetSem:allArgs();
+			local [SemType] is sArgs: sourceSem:allArgs();
+			if({ tArgs:length() > 0 && sArgs:length() > 0 }, {
 				local Boolean is argsOk: true;
 				local Int is pIdx: 0;
-				while({ argsOk && pIdx < targetNode:params:length() && pIdx < sourceNode:params:length() }, {
-					local Type is tp: targetNode:params:get(index: pIdx);
-					local Type is sp: sourceNode:params:get(index: pIdx);
-					if({ !:isAssignableNode(targetNode: tp, sourceNode: sp) }, {
+				while({ argsOk && pIdx < tArgs:length() && pIdx < sArgs:length() }, {
+					local SemType is tp: tArgs:get(index: pIdx);
+					local SemType is sp: sArgs:get(index: pIdx);
+					if({ !:isAssignableSem(targetSem: tp, sourceSem: sp) }, {
 						argsOk: false;
 					});
 					pIdx: pIdx + 1;
@@ -892,7 +860,7 @@ Class is TypeChecker{
 		if({ target == source || target == Primitive:ANY:value() || source == Primitive:ANY:value() || target == '' || source == '' }, {
 			return true;
 		});
-		return :isAssignableNode(targetNode: :parseTypeNode(s: target), sourceNode: :parseTypeNode(s: source));
+		return :isAssignableSem(targetSem: :parseSemType(s: target), sourceSem: :parseSemType(s: source));
 	}
 
 	## the member-lookup root for a (possibly
@@ -976,8 +944,9 @@ Class is TypeChecker{
 		if({ className == '' || className == Primitive:ANY:value() }, {
 			return '';
 		});
-		local Type is recvNode: :parseTypeNode(s: className);
-		local String is baseClassName: if({ recvNode:params:length() > 0 }, { recvNode:name }, { :memberLookupRoot(className: className) });
+		local SemType is recvSem: :parseSemType(s: className);
+		local [SemType] is recvArgs: recvSem:allArgs();
+		local String is baseClassName: if({ recvArgs:length() > 0 }, { recvSem:baseName() }, { :memberLookupRoot(className: className) });
 		local ClassInfo is cls: :findClass(name: baseClassName);
 		if({ cls:name == '' }, {
 			return '';
@@ -991,8 +960,8 @@ Class is TypeChecker{
 			mi++;
 		});
 		if({ foundM:name != '' }, {
-			local Type is subNode: :substituteTypeNode(t: foundM:memberType, cls: cls, typeArgs: recvNode:params);
-			return :formatVarTypeString(t: subNode);
+			local SemType is subSem: :substituteSemType(rawSem: SemTypes:fromAstType(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
+			return subSem:toKey();
 		});
 		local String is inherited: '';
 		each(list: cls:baseClasses, action: local Function(String is baseName){
@@ -1012,8 +981,9 @@ Class is TypeChecker{
 		if({ className == '' || className == Primitive:ANY:value() }, {
 			return '';
 		});
-		local Type is recvNode: :parseTypeNode(s: className);
-		local String is baseClassName: if({ recvNode:params:length() > 0 }, { recvNode:name }, { :memberLookupRoot(className: className) });
+		local SemType is recvSem: :parseSemType(s: className);
+		local [SemType] is recvArgs: recvSem:allArgs();
+		local String is baseClassName: if({ recvArgs:length() > 0 }, { recvSem:baseName() }, { :memberLookupRoot(className: className) });
 		if({ methodName == ContractMethod:INIT:value() && :registeredClasses:has(key: baseClassName) && !:allEnumNames:has(key: baseClassName) }, {
 			return className;
 		});
@@ -1030,8 +1000,14 @@ Class is TypeChecker{
 			mi++;
 		});
 		if({ foundM:name != '' }, {
-			local Type is subNode: :substituteTypeNode(t: foundM:memberType, cls: cls, typeArgs: recvNode:params);
-			return :formatTypeString(t: subNode);
+			local SemType is subSem: :substituteSemType(rawSem: SemTypes:fromAstType(t: foundM:memberType), cls: cls, typeArgs: recvArgs);
+			if({ subSem:isFunction() }, {
+				if({ subSem:hasFunctionReturn() }, {
+					return subSem:functionReturn():toKey();
+				});
+				return :names:voidName();
+			});
+			return subSem:toKey();
 		});
 		local String is inherited: '';
 		each(list: cls:baseClasses, action: local Function(String is baseName){
@@ -1277,10 +1253,11 @@ Class is TypeChecker{
 															# variant's parameters are read against.
 															local Array of String is groundedArgs: Array();
 															if({ subCls:typeParams:length() > 0 }, {
-																local Type is subjNode: :parseTypeNode(s: subjFull);
-																if({ subjNode:name == subCls:name || subjNode:name == owner }, {
-																	while([Int is pai: 0], { pai < subjNode:params:length() }, {
-																		groundedArgs:add(item: :formatVarTypeString(t: subjNode:params:get(index: pai)));
+																local SemType is subjSem: :parseSemType(s: subjFull);
+																if({ subjSem:baseName() == subCls:name || subjSem:baseName() == owner }, {
+																	local [SemType] is subjArgs: subjSem:allArgs();
+																	while([Int is pai: 0], { pai < subjArgs:length() }, {
+																		groundedArgs:add(item: subjArgs:get(index: pai):toKey());
 																		pai++;
 																	});
 																});
@@ -1291,7 +1268,7 @@ Class is TypeChecker{
 																	local Parameter is vp: pvMem:params:get(index: pbi);
 																	if({ bp:paramType:name == '' || bp:paramType:name == Primitive:ANY:value() }, {
 																		if({ groundedArgs:length() > pbi }, {
-																			bp:paramType: :parseTypeNode(s: groundedArgs:get(index: pbi)):clone();
+																			bp:paramType: :parseSemType(s: groundedArgs:get(index: pbi)):toAstType();
 																		}, {
 																			bp:paramType: vp:paramType;
 																		});
@@ -1671,11 +1648,12 @@ Class is TypeChecker{
 		if({ (cd:name == 'init' || m:hasModifier(kw: Keyword:HELD)) && !callExpr:getSemType():isEmpty() }, {
 			groundedTarget: callExpr:getSemType():toKey();
 		});
-		local Type is gNode: :parseTypeNode(s: groundedTarget);
+		local SemType is gSem: :parseSemType(s: groundedTarget);
+		local [SemType] is gArgs: gSem:allArgs();
 		local Array of String is recvTypeArgs: Array();
 		local Int is pti: 0;
-		while({ pti < gNode:params:length() }, {
-			recvTypeArgs:add(item: :formatVarTypeString(t: gNode:params:get(index: pti)));
+		while({ pti < gArgs:length() }, {
+			recvTypeArgs:add(item: gArgs:get(index: pti):toKey());
 			pti++;
 		});
 		local ClassInfo is recvClsInfo: :findClass(name: baseClassName);
@@ -2438,10 +2416,10 @@ Class is TypeChecker{
 		if({ ownerCls:name == '' }, {
 			return '';
 		});
-		local Type is recvNode: :parseTypeNode(s: className);
-		local Type is rawNode: :parseTypeNode(s: rawT);
-		local Type is subNode: :substituteTypeNode(t: rawNode, cls: ownerCls, typeArgs: recvNode:params);
-		return :formatVarTypeString(t: subNode);
+		local SemType is recvSem: :parseSemType(s: className);
+		local SemType is rawSem: :parseSemType(s: rawT);
+		local SemType is subSem: :substituteSemType(rawSem: rawSem, cls: ownerCls, typeArgs: recvSem:allArgs());
+		return subSem:toKey();
 	}
 	## The stamped member for a call: the idx-th same-name METHOD member at
 	## the nearest declaring ancestor (idx below zero resolves as the
@@ -3279,17 +3257,20 @@ Class is TypeChecker{
 	## @param method: The container method name.
 	## @param expr: The CALL expression.
 	Function is bindContainerCallbackParams(String is targetType, String is method, Expression is expr){
-		local Type is targetNode: :parseTypeNode(s: targetType);
-		local Type is cbElemNode: Type:init(name: Primitive:ANY:value());
-		if({ (targetNode:name == 'Array' || targetNode:name == 'List') && targetNode:params:length() > 0 }, {
-			cbElemNode: targetNode:params:get(index: 0);
+		local SemType is targetSem: :parseSemType(s: targetType);
+		local SemType is cbElemSem: SemTypes:ANY;
+		if({ targetSem:isArray() || targetSem:isList() }, {
+			local SemType is eSem: targetSem:elemType();
+			if({ !eSem:isEmpty() }, {
+				cbElemSem: eSem;
+			});
 		});
 		local [NamedArg] is emptyArgs: [];
 		local CallData is cd: match(on: expr, when: [
 			Expression:Call: local Function of CallData(CallData is call){ return call; },
 			else: { CallData(target: Expression:Unknown, name: '', args: emptyArgs) }
 		]);
-		if({ cbElemNode:name != Primitive:ANY:value() && cbElemNode:name != '' }, {
+		if({ !cbElemSem:isAny() && !cbElemSem:isEmpty() }, {
 			if({ method == 'fold' && cd:args:length() >= 2 }, {
 				local NamedArg is a0: cd:args:get(index: 0);
 				local String is initType: :inferExpressionType(expr: a0:value);
@@ -3300,13 +3281,13 @@ Class is TypeChecker{
 						if({ params:length() >= 1 }, {
 							local Parameter is p0: params:get(index: 0);
 							if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
-								p0:paramType: :parseTypeNode(s: initType);
+								p0:paramType: :parseSemType(s: initType):toAstType();
 							});
 						});
 						if({ params:length() >= 2 }, {
 							local Parameter is p1: params:get(index: 1);
 							if({ p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, {
-								p1:paramType: cbElemNode:clone();
+								p1:paramType: cbElemSem:toAstType();
 							});
 						});
 					},
@@ -3322,7 +3303,7 @@ Class is TypeChecker{
 							while({ pi < params:length() }, {
 								local Parameter is p: params:get(index: pi);
 								if({ p:paramType:name == Primitive:ANY:value() || p:paramType:name == '' }, {
-									p:paramType: cbElemNode:clone();
+									p:paramType: cbElemSem:toAstType();
 								});
 								pi++;
 							});
@@ -3333,9 +3314,11 @@ Class is TypeChecker{
 				});
 			});
 		}, {
-			if({ targetNode:name == 'Map' && method == 'each' }, {
-				local Type is keyNode: if({ targetNode:params:length() >= 1 }, { targetNode:params:get(index: 0) }, { Type(name: 'String') });
-				local Type is valNode: if({ targetNode:params:length() >= 2 }, { targetNode:params:get(index: 1) }, { Type(name: Primitive:STRING:value()) });
+			if({ targetSem:isMap() && method == 'each' }, {
+				local SemType is keySem: targetSem:mapKeyType();
+				local SemType is valSem: targetSem:mapValType();
+				local Type is keyNode: if({ !keySem:isEmpty() }, { keySem:toAstType() }, { Type(name: 'String') });
+				local Type is valNode: if({ !valSem:isEmpty() }, { valSem:toAstType() }, { Type(name: Primitive:STRING:value()) });
 				local Int is ai: 0;
 				while({ ai < cd:args:length() }, {
 					local Expression is av: cd:args:get(index: ai):value;
@@ -3753,10 +3736,10 @@ Class is TypeChecker{
 	}
 
 	local Function of String is inferMapLitExpr([Expression] is keys, [Expression] is values, String is expected){
-		local Type is expNode: :parseTypeNode(s: expected);
-		if({ TypeDomain:isOfBaseNode(t: expNode, base: 'Map') }, {
-			local String is keyT: :formatVarTypeString(t: TypeDomain:mapKeyTypeNode(t: expNode));
-			local String is valT: :formatVarTypeString(t: TypeDomain:mapValTypeNode(t: expNode));
+		local SemType is expSem: :parseSemType(s: expected);
+		if({ expSem:isMap() }, {
+			local String is keyT: expSem:mapKeyType():toKey();
+			local String is valT: expSem:mapValType():toKey();
 			while([Int is ki: 0], { ki < keys:length() }, {
 				local String is kT: :inferExpressionType(expr: keys:get(index: ki));
 				if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !:isAssignable(target: keyT, source: kT) }, {
@@ -4575,10 +4558,11 @@ Class is TypeChecker{
 				});
 			});
 			if({ !isBranchCall && expected != '' && !:isVoid(t: expected) }, {
-				local Type is expNode: :parseTypeNode(s: expected);
-				if({ expNode:params:length() == 1 }, {
-					local Type is expArg0: expNode:params:get(index: 0);
-					if({ expArg0:name != '' && !:isVoid(t: expArg0:name) && expArg0:name != Primitive:ANY:value() }, {
+				local SemType is expSem: :parseSemType(s: expected);
+				local [SemType] is expArgs: expSem:allArgs();
+				if({ expArgs:length() == 1 }, {
+					local SemType is expArg0: expArgs:get(index: 0);
+					if({ !expArg0:isEmpty() && !expArg0:isVoid() && !expArg0:isAny() }, {
 						local Boolean is paramExpectsTypedFn: false;
 						local Member is expCallee: :lookupAnyMember(className: targetType, methodName: method);
 						if({ expCallee:name == '' }, {
@@ -4603,7 +4587,12 @@ Class is TypeChecker{
 						if({ paramExpectsTypedFn }, {
 							match(on: arg:value, when: [
 								Expression:AnonFn: local Function(Type is _fnRt, [Parameter] is _fnPs, [Statement] is _fnBd){
-									callArgExp: 'Function:' . :formatTypeString(t: expArg0);
+									local String is expArg0Str: if({ expArg0:isFunction() }, {
+										if({ expArg0:hasFunctionReturn() }, { expArg0:functionReturn():toKey() }, { :names:voidName() })
+									}, {
+										expArg0:toKey()
+									});
+									callArgExp: 'Function:' . expArg0Str;
 								}
 							], default: {});
 						});
@@ -4832,9 +4821,8 @@ Class is TypeChecker{
 			});
 		});
 		if({ TypeDomain:isOfBase(t: targetType, base: 'Map') && method == 'keys' && (:currentClassName != 'Map' || !targetIsSelf) }, {
-			local Type is mapNode: :parseTypeNode(s: targetType);
-			local Type is kNode: mapNode:mapKeyType();
-			local String is kRaw: if({ !kNode:isEmpty() }, { :formatVarTypeString(t: kNode) }, { '' });
+			local SemType is mapSem: :parseSemType(s: targetType);
+			local String is kRaw: mapSem:mapKeyType():toKey();
 			local String is kType: if({ kRaw != '' && kRaw != 'Any' }, { kRaw }, { Primitive:STRING:value() });
 			res: TypeDomain:makeArray(elem: kType);
 		});
@@ -5844,7 +5832,7 @@ Class is TypeChecker{
 			local Parameter is p: method:params:get(index: mpi);
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
 				local String is ft: :fieldTypes:getString(key: p:name, default: Primitive:ANY:value());
-				p:paramType: :parseTypeNode(s: ft);
+				p:paramType: :parseSemType(s: ft):toAstType();
 				:unassignedFields:remove(key: p:name);
 			});
 			if({ p:hasDefault }, {
@@ -7242,7 +7230,7 @@ Class is TypeChecker{
 						local Parameter is p: m:params:get(index: mpi);
 						if({ p:paramType:name == :names:selfFieldMarker() }, {
 							local String is ft: cFields:getString(key: p:name, default: Primitive:ANY:value());
-							p:paramType: :parseTypeNode(s: ft);
+							p:paramType: :parseSemType(s: ft):toAstType();
 						});
 						mpi++;
 					});
