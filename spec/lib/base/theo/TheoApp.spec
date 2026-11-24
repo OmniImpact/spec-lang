@@ -180,12 +180,11 @@ Class is TheoApp{
 				renderer:render(buffer: buf);
 			});
 
-			local KeyEvent is ev: reader:pollKey(timeoutMs: 16);
-			local Int is drained: 0;
-			while({ running && !ev:isNone() && drained < 32 }, {
-				dispatchKeyEvent(screen: screen, ev: ev, mouse: reader:lastMouse);
-				drained: drained + 1;
-				ev: reader:pollKey(timeoutMs: 0);
+			local [KeyEvent] is batch: reader:pollBatch(timeoutMs: 16);
+			local Int is bi: 0;
+			while({ running && bi < batch:length() }, {
+				dispatchKeyEvent(screen: screen, ev: batch:get(index: bi), mouse: reader:lastMouse);
+				bi: bi + 1;
 			});
 			if({ screen:current():onTick() }, {
 				:dirty: true;

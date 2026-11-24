@@ -128,7 +128,7 @@ Class is SynthViewModel{
 		if({ autoRelease }, {
 			fallbackTicks:set(index: idx, item: 12);
 		}, {
-			fallbackTicks:set(index: idx, item: if({ seenKittyEvents }, { 0 }, { 45 }));
+			fallbackTicks:set(index: idx, item: if({ seenKittyEvents }, { 0 }, { 12 }));
 		});
 		onStateChanged();
 		if({ audioEnabled }, {
@@ -236,12 +236,13 @@ Class is SynthViewModel{
 			return true;
 		});
 		if({ isPress }, {
-			if({ heldFlags:get(index: idx) == 1 }, {
-				# Reject duplicate OS key-repeat press while already held down.
-				if({ !seenKittyEvents }, {
-					fallbackTicks:set(index: idx, item: 45);
-				});
+			if({ seenKittyEvents && heldFlags:get(index: idx) == 1 }, {
+				# Reject duplicate press while already held down under Kitty key-up tracking.
 				return true;
+			});
+			if({ !seenKittyEvents && heldFlags:get(index: idx) == 1 }, {
+				# Without Kitty key-up events, allow re-tapping after brief debounce, or retrigger cleanly.
+				releaseKeyIndex(idx: idx);
 			});
 			triggerKeyIndex(idx: idx, autoRelease: false);
 			return true;
