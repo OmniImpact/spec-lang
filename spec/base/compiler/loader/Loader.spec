@@ -107,28 +107,25 @@ Class is Loader{
 		local ProgramNode is prog: parser:parseProgram();
 		if({ lexer:hasErrors() }, {
 			local [Error] is lexErrors: lexer:getErrors();
-			while([Int is lei: 0], { lei < lexErrors:length() }, {
+			times(count: lexErrors:length(), worker: local Function(Int is lei){
 				:parseErrors:push(item: '  [LexError] [' . filePath . '] ' . lexErrors:get(index: lei):toString());
-				lei++;
 			});
 		});
 		if({ parser:hasErrors() }, {
 			local [Error] is parseErrs: parser:getErrors();
-			while([Int is pei: 0], { pei < parseErrs:length() }, {
+			times(count: parseErrs:length(), worker: local Function(Int is pei){
 				:parseErrors:push(item: parseErrs:get(index: pei):toString());
-				pei++;
 			});
 		});
 
 		Loops:range(start: 0, end: prog:classes:length(), worker: local Function(Int is pci){
 			local ClassInfo is c: prog:classes:get(index: pci);
-			while([Int is mi: 0], { mi < c:members:length() }, {
+			times(count: c:members:length(), worker: local Function(Int is mi){
 				local Member is m: c:members:get(index: mi);
 				m:setSourceFile(file: filePath);
 				if({ m:kind == MemberKind:CLASS }, {
 					m:nestedClass:setSourceFile(file: filePath);
 				});
-				mi++;
 			});
 			# Class identity is namespace-qualified: a base:sys wrapper and
 			# its same-name sysinternal floor coexist in one program, and
@@ -435,7 +432,7 @@ Class is Loader{
 		local Array of String is parts: Array();
 		local String is termClass: '';
 		local Array of String is groupedClasses: Array();
-		while([Int is si: 0], { si < items:length() }, {
+		times(count: items:length(), worker: local Function(Int is si){
 			match(on: items:get(index: si), when: [
 				Expression:Ident: local Function(String is name){
 					termClass: name;
@@ -447,7 +444,7 @@ Class is Loader{
 					termClass: className;
 				},
 				Expression:ArrayLit: local Function([Expression] is grpItems){
-					while([Int is gi: 0], { gi < grpItems:length() }, {
+					times(count: grpItems:length(), worker: local Function(Int is gi){
 						match(on: grpItems:get(index: gi), when: [
 							Expression:Ident: local Function(String is gname){
 								groupedClasses:add(item: gname);
@@ -457,7 +454,6 @@ Class is Loader{
 							},
 							else: {}
 						]);
-						gi++;
 					});
 				},
 				Expression:StringLit: local Function(String is value){
@@ -467,7 +463,6 @@ Class is Loader{
 				},
 				else: {}
 			]);
-			si++;
 		});
 		if({ groupedClasses:length() > 0 }, {
 			groupedClasses:each(action: local Function(String is gc){
@@ -623,16 +618,16 @@ Class is Loader{
 	Function is synthesizeInto([ClassInfo] is classes){
 		Loops:range(start: 0, end: classes:length(), worker: local Function(Int is sci){
 			local ClassInfo is c: classes:get(index: sci);
-			while([Int is mi: 0], { mi < c:members:length() }, {
+			times(count: c:members:length(), worker: local Function(Int is mi){
 				local Member is m: c:members:get(index: mi);
 				if({ m:name == 'using' && m:hasInit }, {
 					match(on: m:initExpr, when: [
 						Expression:ArrayLit: local Function([Expression] is items){
-							while([Int is ii: 0], { ii < items:length() }, {
+							times(count: items:length(), worker: local Function(Int is ii){
 								match(on: items:get(index: ii), when: [
 									Expression:ArrayLit: local Function([Expression] is subItems){
 										local String is pkgPrefix: '';
-										while([Int is si: 0], { si < subItems:length() }, {
+										times(count: subItems:length(), worker: local Function(Int is si){
 											local Expression is seg: subItems:get(index: si);
 											match(on: seg, when: [
 												Expression:StringLit: local Function(String is value){
@@ -648,7 +643,7 @@ Class is Loader{
 													:synthesizeFor(c: c, asExpr: seg, pkgPrefix: pkgPrefix);
 												},
 												Expression:ArrayLit: local Function([Expression] is grpItems){
-													while([Int is gi: 0], { gi < grpItems:length() }, {
+													times(count: grpItems:length(), worker: local Function(Int is gi){
 														local Expression is g: grpItems:get(index: gi);
 														match(on: g, when: [
 															Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
@@ -656,31 +651,26 @@ Class is Loader{
 															},
 															else: {}
 														]);
-														gi++;
 													});
 												},
 												else: {}
 											]);
-											si++;
 										});
 									},
 									else: {}
 								]);
-								ii++;
 							});
 						},
 						else: {}
 					]);
 				});
-				mi++;
 			});
-			while([Int is mi: 0], { mi < c:members:length() }, {
+			times(count: c:members:length(), worker: local Function(Int is mi){
 				local Member is m: c:members:get(index: mi);
 				if({ m:kind == MemberKind:CLASS }, {
 					local [ClassInfo] is one: [m:nestedClass];
 					:synthesizeInto(classes: one);
 				});
-				mi++;
 			});
 			# an inner class inherits the enclosing
 			# chain's as-imports — its instances carry their own synthesized
@@ -704,16 +694,16 @@ Class is Loader{
 		each(list: cls:baseClasses, action: local Function(String is baseName){
 			local ClassInfo is base: :findLoadedClass(name: baseName);
 			if({ base:name != '' }, {
-				while([Int is mi: 0], { mi < base:members:length() }, {
+				times(count: base:members:length(), worker: local Function(Int is mi){
 					local Member is m: base:members:get(index: mi);
 					if({ m:name == 'using' && m:hasInit }, {
 						match(on: m:initExpr, when: [
 							Expression:ArrayLit: local Function([Expression] is items){
-								while([Int is ii: 0], { ii < items:length() }, {
+								times(count: items:length(), worker: local Function(Int is ii){
 									match(on: items:get(index: ii), when: [
 										Expression:ArrayLit: local Function([Expression] is subItems){
 											local String is pkgPrefix: '';
-											while([Int is si: 0], { si < subItems:length() }, {
+											times(count: subItems:length(), worker: local Function(Int is si){
 												local Expression is seg: subItems:get(index: si);
 												match(on: seg, when: [
 													Expression:StringLit: local Function(String is value){
@@ -728,18 +718,15 @@ Class is Loader{
 													},
 													else: {}
 												]);
-												si++;
 											});
 										},
 										else: {}
 									]);
-									ii++;
 								});
 							},
 							else: {}
 						]);
 					});
-					mi++;
 				});
 				:synthesizeInheritedImports(cls: base, visited: visited);
 			});

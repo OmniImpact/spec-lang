@@ -410,23 +410,20 @@ Class is Parser{
 	##
 	## @param classes: The classes at this nesting level.
 	Function is linkNestedClasses([ClassInfo] is classes){
-		local Int is ci: 0;
-		while({ ci < classes:length() }, {
+		times(count: classes:length(), worker: local Function(Int is ci){
 			local ClassInfo is c: classes:get(index: ci);
 			local String is qualifiedOuter: c:name;
 			if({ c:outerName != '' }, {
 				qualifiedOuter: c:outerName . ':' . c:name;
 			});
-			while([Int is mi: 0], { mi < c:members:length() }, {
+			times(count: c:members:length(), worker: local Function(Int is mi){
 				local Member is m: c:members:get(index: mi);
 				if({ m:kind == MemberKind:CLASS }, {
 					m:nestedClass:setOuter(name: qualifiedOuter);
 					m:nestedClass:baseClasses:push(item: c:name);
 					:linkNestedClasses(classes: [m:nestedClass]);
 				});
-				mi++;
 			});
-			ci++;
 		});
 	}
 
@@ -829,8 +826,7 @@ Class is Parser{
 	local Function of [Statement] is parseMethodBody([Parameter] is params){
 		:matchPunct(p: Punctuation:BLOCK_OPEN);
 		local [Statement] is body: [];
-		local Int is pi: 0;
-		while({ pi < params:length() }, {
+		times(count: params:length(), worker: local Function(Int is pi){
 			local Parameter is p: params:get(index: pi);
 			if({ p:paramType:name == :names:selfFieldMarker() }, {
 				local Expression is lhs: Expression:Path(segments: [:names:selfIdent(), p:name]);
@@ -838,7 +834,6 @@ Class is Parser{
 				local Statement is assignS: Statement:Assign(assignTarget: lhs, assignValue: rhs);
 				body:push(item: assignS);
 			});
-			pi++;
 		});
 		while({ !:checkPunct(p: Punctuation:BLOCK_CLOSE) && !:check(kind: TokenKind:EOF, value: '') }, {
 			body:push(item: :parseStatement());

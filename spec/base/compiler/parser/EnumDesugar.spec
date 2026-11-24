@@ -81,7 +81,7 @@ Class is EnumDesugar{
 		local [Member] is out: [];
 		local [Member] is variants: [];
 		local [Member] is common: [];
-		while([Int is mi: 0], { mi < c:members:length() }, {
+		times(count: c:members:length(), worker: local Function(Int is mi){
 			local Member is m: c:members:get(index: mi);
 			if({ m:hasInit && :isArrayExpr(expr: m:initExpr) && m:params:length() == 0 }, {
 				out:push(item: m);
@@ -92,7 +92,6 @@ Class is EnumDesugar{
 					common:push(item: m);
 				});
 			});
-			mi++;
 		});
 
 		# The tag machinery: the base's fields and the reflective readers.
@@ -122,26 +121,24 @@ Class is EnumDesugar{
 		out:push(item: ordFn);
 
 		# Shared product members (common fields and methods).
-		while([Int is ci: 0], { ci < common:length() }, {
+		times(count: common:length(), worker: local Function(Int is ci){
 			out:push(item: common:get(index: ci));
-			ci++;
 		});
 
 		# The variants: nested subclasses carrying real payload fields,
 		# their constructors stamping the tag and the variant name.
-		while([Int is idx: 0], { idx < variants:length() }, {
+		times(count: variants:length(), worker: local Function(Int is idx){
 			local Member is m: variants:get(index: idx);
 			local ClassInfo is sub: ClassInfo(name: m:name, baseClass: name, members: []);
 			sub:setLine(line: m:line);
 			sub:setSourceFile(file: c:sourceFile);
 			local [Member] is subMembers: [];
-			while([Int is pi: 0], { pi < m:params:length() }, {
+			times(count: m:params:length(), worker: local Function(Int is pi){
 				local Parameter is p: m:params:get(index: pi);
 				local Member is pf: Member(kind: MemberKind:FIELD);
 				pf:memberType: p:paramType;
 				pf:name: p:name;
 				subMembers:push(item: pf);
-				pi++;
 			});
 			local Member is subInit: Member(kind: MemberKind:METHOD);
 			subInit:memberType: Type(name: '');
@@ -152,11 +149,10 @@ Class is EnumDesugar{
 			# to them pass validation and substitute at instantiation.
 			sub:setTypeParams(params: c:typeParams);
 			local [Statement] is initBody: [];
-			while([Int is pi: 0], { pi < m:params:length() }, {
+			times(count: m:params:length(), worker: local Function(Int is pi){
 				local Parameter is p: m:params:get(index: pi);
 				local Statement is a: Statement:Assign(assignTarget: :selfPath(member: p:name), assignValue: :ident(name: p:name));
 				initBody:push(item: a);
-				pi++;
 			});
 			local Expression is tagNum: Expression:NumberLit(value: idx, text: '' . idx);
 			local Statement is tagAssign: Statement:Assign(assignTarget: :selfPath(member: '_tag'), assignValue: tagNum);
@@ -171,7 +167,6 @@ Class is EnumDesugar{
 			nest:nestedClass: sub;
 			nest:line: m:line;
 			out:push(item: nest);
-			idx++;
 		});
 
 		c:members: out;
@@ -190,7 +185,7 @@ Class is EnumDesugar{
 		local [Member] is common: [];
 		# Loader directives (array-valued members) stay plain members;
 		# variants collect for the held rewrite; common members preserved.
-		while([Int is mi: 0], { mi < c:members:length() }, {
+		times(count: c:members:length(), worker: local Function(Int is mi){
 			local Member is m: c:members:get(index: mi);
 			if({ m:hasInit && :isArrayExpr(expr: m:initExpr) && m:params:length() == 0 }, {
 				out:push(item: m);
@@ -201,7 +196,6 @@ Class is EnumDesugar{
 					common:push(item: m);
 				});
 			});
-			mi++;
 		});
 
 		# The synthesized contract methods call `Conditional:if` — the
@@ -248,7 +242,7 @@ Class is EnumDesugar{
 
 		# The variants: held members holding instances constructed with
 		# their tags. Untagged variants keep their ordinal-as-tag.
-		while([Int is vi: 0], { vi < variants:length() }, {
+		times(count: variants:length(), worker: local Function(Int is vi){
 			local Member is m: variants:get(index: vi);
 			local Member is hv: Member(kind: MemberKind:FIELD);
 			hv:modifiers: ['held'];
@@ -258,7 +252,6 @@ Class is EnumDesugar{
 			hv:hasInit: true;
 			hv:line: m:line;
 			out:push(item: hv);
-			vi++;
 		});
 
 		# The contract methods, synthesized from the variant list.
@@ -272,18 +265,16 @@ Class is EnumDesugar{
 		# The sugar's render contract: variants render their NAME (the
 		# legacy emission's behavior), not the default TypeName@hash.
 		local [Statement] is tsBody: [];
-		while([Int is vi: 0], { vi < variants:length() }, {
+		times(count: variants:length(), worker: local Function(Int is vi){
 			local Member is v: variants:get(index: vi);
 			local Expression is cond: :eq(left: :ident(name: ':'), right: :variantRef(enumName: name, variant: v:name));
 			tsBody:push(item: :guardIf(cond: cond, val: :strLit(text: v:name)));
-			vi++;
 		});
 		tsBody:push(item: :tailReturn(expr: :strLit(text: name)));
 		out:push(item: :synthToString(body: tsBody));
 
-		while([Int is ci: 0], { ci < common:length() }, {
+		times(count: common:length(), worker: local Function(Int is ci){
 			out:push(item: common:get(index: ci));
-			ci++;
 		});
 
 		c:members: out;
@@ -366,11 +357,10 @@ Class is EnumDesugar{
 		m:params: params;
 		local [Statement] is body: [];
 		local Member is first: variants:get(index: 0);
-		while([Int is vi: 0], { vi < variants:length() }, {
+		times(count: variants:length(), worker: local Function(Int is vi){
 			local Member is v: variants:get(index: vi);
 			local Expression is cond: :eq(left: :ident(name: 'value'), right: v:initExpr);
 			body:push(item: :guardIf(cond: cond, val: :variantRef(enumName: name, variant: v:name)));
-			vi++;
 		});
 		body:push(item: :tailReturn(expr: :variantRef(enumName: name, variant: first:name)));
 		m:body: body;
@@ -402,14 +392,13 @@ Class is EnumDesugar{
 		local [Expression] is emptyItems: [];
 		local Statement is decl: Statement:VarDecl(modifiers: ['local'], varType: declT, varName: 'all', initExpr: Expression:ArrayLit(items: emptyItems), hasInit: true);
 		body:push(item: decl);
-		while([Int is vi: 0], { vi < variants:length() }, {
+		times(count: variants:length(), worker: local Function(Int is vi){
 			local Member is v: variants:get(index: vi);
 			local [NamedArg] is args: [];
 			args:push(item: NamedArg(name: 'item', value: :variantRef(enumName: name, variant: v:name)));
 			local Expression is call: Expression:Call(call: CallData(target: :ident(name: 'all'), name: 'push', args: args));
 			local Statement is s: Statement:Expr(exprStmt: call);
 			body:push(item: s);
-			vi++;
 		});
 		body:push(item: :tailReturn(expr: :ident(name: 'all')));
 		m:body: body;

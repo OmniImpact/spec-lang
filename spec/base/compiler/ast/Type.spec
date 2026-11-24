@@ -67,11 +67,9 @@ Class is Type{
 			return Type:init(name: :name);
 		});
 		local [Type] is cp: [];
-		local Int is i: 0;
-		while({ i < :params:length() }, {
+		times(count: :params:length(), worker: local Function(Int is i){
 			local Type is p: :params:get(index: i);
 			cp:push(item: p:clone());
-			i++;
 		});
 		return Type:withParams(name: :name, params: cp);
 	}

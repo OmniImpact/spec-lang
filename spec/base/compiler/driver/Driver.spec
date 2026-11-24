@@ -98,18 +98,16 @@ Class is Driver{
 
 		local Int is classCount: program:classes:length();
 		local Int is methodCount: 0;
-		while([Int is ci: 0], { ci < classCount }, {
+		times(count: classCount, worker: local Function(Int is ci){
 			local ClassInfo is c: program:classes:get(index: ci);
 			if({ c:name == 'Audio' }, {
 				:builtUsesAudio: true;
 			});
-			while([Int is mi: 0], { mi < c:members:length() }, {
+			times(count: c:members:length(), worker: local Function(Int is mi){
 				if({ c:members:get(index: mi):kind == MemberKind:METHOD }, {
 					methodCount: methodCount + 1;
 				});
-				mi++;
 			});
-			ci++;
 		});
 		:builtClassCount: classCount;
 		:builtMethodCount: methodCount;
@@ -137,10 +135,8 @@ Class is Driver{
 		report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 		if({ errCount > 0 }, {
 			Stderr:line('Type errors encountered during compilation:');
-			local Int is tei: 0;
-			while({ tei < errCount }, {
+			times(count: errCount, worker: local Function(Int is tei){
 				Stderr:line(typeErrors:get(index: tei):toString());
-				tei++;
 			});
 			Stderr:line('Compilation aborted due to type errors.');
 			:builtFailed: true;
@@ -154,13 +150,11 @@ Class is Driver{
 			return IrModule:init();
 		});
 		local [ClassInfo] is rootClasses: [];
-		local Int is rci: 0;
-		while({ rci < program:classes:length() }, {
+		times(count: program:classes:length(), worker: local Function(Int is rci){
 			local ClassInfo is c: program:classes:get(index: rci);
 			if({ c:sourceFile == inputPath }, {
 				rootClasses:push(item: c);
 			});
-			rci++;
 		});
 		if({ rootClasses:length() == 0 }, {
 			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
@@ -223,9 +217,8 @@ Class is Driver{
 		local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
 		if({ irb:errors:length() > 0 }, {
 			Stderr:line('Code generation errors encountered during compilation:');
-			while([Int is iei: 0], { iei < irb:errors:length() }, {
+			times(count: irb:errors:length(), worker: local Function(Int is iei){
 				Stderr:line(irb:errors:get(index: iei):toString());
-				iei++;
 			});
 			Stderr:line('Compilation aborted due to code generation errors.');
 			:builtFailed: true;
@@ -424,13 +417,11 @@ Class is Driver{
 					ccTasks:push(item: ct);
 					ci++;
 				});
-				local Int is wi: 0;
-				while({ wi < ccTasks:length() }, {
+				times(count: ccTasks:length(), worker: local Function(Int is wi){
 					local Int is stCode: ccTasks:get(index: wi):await();
 					if({ stCode != 0 && llStat == 0 }, {
 						llStat: stCode;
 					});
-					wi++;
 				});
 				shardLlPaths:each(action: local Function(String is sp){
 					fileRemove(path: sp, onError: local Function(SpecError of FileError is e){});
@@ -513,7 +504,7 @@ Class is Driver{
 		});
 		visited:add(item: c:name);
 		local Int is initSeen: 0;
-		while([Int is mi: 0], { mi < c:members:length() }, {
+		times(count: c:members:length(), worker: local Function(Int is mi){
 			local Member is m: c:members:get(index: mi);
 			if({ m:name == 'init' && m:kind == MemberKind:METHOD }, {
 				:entryInitSawAny: true;
@@ -547,7 +538,6 @@ Class is Driver{
 				# overloadIndexOf counts exactly this order.
 				initSeen: initSeen + 1;
 			});
-			mi++;
 		});
 		if({ !:entryInitTakesMap }, {
 			each(list: c:baseClasses, action: local Function(String is baseName){

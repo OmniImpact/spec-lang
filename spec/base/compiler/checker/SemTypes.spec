@@ -104,11 +104,9 @@ Class is SemTypes{
 		if({ !name:contains(needle: ':') }, { return [name]; });
 		local Array of String is parts: name:split(delimiter: ':');
 		local [String] is out: [];
-		local Int is i: 0;
-		while({ i < parts:length() }, {
+		times(count: parts:length(), worker: local Function(Int is i){
 			local String is seg: parts:get(index: i, default: '');
 			if({ seg != '' }, { out:push(item: seg); });
-			i++;
 		});
 		return out;
 	}
@@ -163,10 +161,8 @@ Class is SemTypes{
 			return :named(name: t:name);
 		});
 		local [SemType] is ps: [];
-		local Int is i: 0;
-		while({ i < t:params:length() }, {
+		times(count: t:params:length(), worker: local Function(Int is i){
 			ps:push(item: :fromAstType(t: t:params:get(index: i)));
-			i++;
 		});
 		return :namedWithParams(name: t:name, params: ps);
 	}

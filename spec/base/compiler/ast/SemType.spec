@@ -407,13 +407,11 @@ Enum is SemType {
 				if({ params:length() == 0 }, { return :; });
 				local [SemType] is newParams: [];
 				local Boolean is changed: false;
-				local Int is i: 0;
-				while({ i < params:length() }, {
+				times(count: params:length(), worker: local Function(Int is i){
 					local SemType is p: params:get(index: i);
 					local SemType is np: p:substitute(subst: subst);
 					if({ !np:equals(other: p) }, { changed: true; });
 					newParams:push(item: np);
-					i++;
 				});
 				if({ !changed }, { return :; });
 				return SemType:Named(path: path, params: newParams);
@@ -524,11 +522,9 @@ Enum is SemType {
 				local String is base: :baseName();
 				if({ params:length() == 0 }, { return base; });
 				local String is out: base;
-				local Int is i: 0;
-				while({ i < params:length() }, {
+				times(count: params:length(), worker: local Function(Int is i){
 					local SemType is p: params:get(index: i);
 					out: out . ':' . p:toKey();
-					i++;
 				});
 				return out:intern();
 			}
@@ -597,10 +593,8 @@ Enum is SemType {
 				local String is base: :baseName();
 				if({ params:length() == 0 }, { return Type:init(name: base); });
 				local [Type] is ps: [];
-				local Int is i: 0;
-				while({ i < params:length() }, {
+				times(count: params:length(), worker: local Function(Int is i){
 					ps:push(item: params:get(index: i):toAstType());
-					i++;
 				});
 				return Type:withParams(name: base, params: ps);
 			}

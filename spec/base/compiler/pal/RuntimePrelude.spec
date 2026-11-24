@@ -55,10 +55,8 @@ Class is RuntimePrelude{
 			'pal_audio.c'
 		];
 		local Array of String is chunks: Array();
-		local Int is i: 0;
-		while({ i < parts:length() }, {
+		times(count: parts:length(), worker: local Function(Int is i){
 			chunks:add(item: :readPart(dir: dir, name: parts:get(index: i)));
-			i: i + 1;
 		});
 		return chunks:join(separator: '');
 	}
