@@ -275,6 +275,66 @@ Class of SpecUnitTest is TestTheoEditor{
 		Process:execute(command: 'rm', args: Array(['-rf', rootDir]));
 	}
 
+	Function is testEmptyDirectoryListedAsDirectory(){
+		local String is rootDir: "/tmp/theo_fm_empty_{{Process:getPid()}}";
+		Process:execute(command: 'mkdir', args: Array(['-p', "{{rootDir}}/hollow"]));
+		fileWrite(path: "{{rootDir}}/note.txt", content: 'n');
+
+		local DirectoryScanner is scanner: DirectoryScanner();
+		local DirectoryListing is listing: scanner:scan(dir: rootDir);
+		Assert:areEqualInt(1, listing:dirs:length());
+		Assert:areEqualString('hollow/', listing:dirs:get(index: 0));
+		Assert:areEqualInt(1, listing:files:length());
+		Assert:areEqualString('note.txt', listing:files:get(index: 0));
+
+		Process:execute(command: 'rm', args: Array(['-rf', rootDir]));
+	}
+
+	Function is testOpenOnDirtyDocumentPromptsFirst(){
+		local String is tmpPath: "/tmp/theo_open_dirty_{{Process:getPid()}}.txt";
+		fileWrite(path: tmpPath, content: 'orig');
+
+		local EditorViewModel is vm: EditorViewModel(filePath: tmpPath);
+		local EditorFrame is frame: EditorFrame(vm: vm);
+		local TheoScreen is scr: TheoScreen(root: frame);
+		frame:bindScreen(screen: scr);
+
+		# Clean document: Open goes straight to the file manager.
+		vm:triggerOpen();
+		Assert:areEqualInt(2, scr:stack:length());
+		scr:pop();
+		Assert:areEqualInt(1, scr:stack:length());
+
+		# Dirty document: Open asks first and opens nothing yet.
+		vm:onTextChanged(nextText: 'edited');
+		vm:triggerOpen();
+		Assert:isTrue(vm:messageMode == EditorMessageMode:CONFIRM_OPEN);
+		Assert:areEqualInt(1, scr:stack:length());
+		Assert:areEqualString(EditorStrings:PROMPT_UNSAVED_OPEN, vm:messageText:current());
+
+		# Cancel keeps the edits and opens nothing.
+		vm:triggerPromptCancel();
+		Assert:isTrue(vm:messageMode == EditorMessageMode:NONE);
+		Assert:areEqualInt(1, scr:stack:length());
+		Assert:areEqualString('edited', vm:content:current());
+
+		# Save writes the file, then opens the file manager.
+		vm:triggerOpen();
+		vm:triggerPromptSave();
+		Assert:areEqualString('edited', fileRead(path: tmpPath, default: ''));
+		Assert:areEqualInt(2, scr:stack:length());
+		scr:pop();
+
+		# Discard skips the save and opens the file manager.
+		vm:onTextChanged(nextText: 'again');
+		vm:triggerOpen();
+		vm:triggerPromptDiscard();
+		Assert:areEqualString('edited', fileRead(path: tmpPath, default: ''));
+		Assert:areEqualInt(2, scr:stack:length());
+
+		fileRemove(path: tmpPath);
+	}
+
 	Function is testPureModelsAndViewModels(){
 		# Pure EditorDocument model (zero I/O, zero formatting)
 		local EditorDocument is doc: EditorDocument(filePath: 'notes.txt', text: 'initial', dirty: false);

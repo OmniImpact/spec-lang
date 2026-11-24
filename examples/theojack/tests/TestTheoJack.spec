@@ -7,7 +7,7 @@ Class of SpecUnitTest is TestTheoJack{
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'theo', [TheoBuffer, TheoRenderer, TheoScreen, KeyEvent, KeyKind, MouseEvent, MouseKind, FocusTarget, ShortcutKey]],
 		['base', 'sys', [as File(), as Loops(), as Process()]],
-		['theojack', 'model', [Card, CardStyle, GamePhase, Hand, Rank, Suit]],
+		['theojack', 'model', [BlackjackGame, Card, CardStyle, GamePhase, Hand, Rank, Suit]],
 		['theojack', 'util', [HomeStrings, OptionsStorage, RulesLoader]],
 		['theojack', 'vm', [GameViewModel, HomeViewModel, OptionsViewModel, RulesViewModel]],
 		['theojack', 'view', [CardView, HomeFrame, OptionsFrame, RulesFrame, GameFrame]]
@@ -171,6 +171,61 @@ Class of SpecUnitTest is TestTheoJack{
 		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: KeyKind:DOWN)));
 		Assert:isTrue(rules:handleKey(event: KeyEvent(kind: KeyKind:CHAR, key: 'd')));
 		Assert:areEqualInt(1, scr:stack:length());
+	}
+
+	Function is testMatchEndsWithSummaryThenResets(){
+		local GameViewModel is gvm: GameViewModel(startingAmount: 500, maxRounds: 1);
+		gvm:deal();
+		if({ gvm:game:phase == GamePhase:PLAYER_TURN }, {
+			gvm:stand();
+		});
+		Assert:isTrue(gvm:game:phase == GamePhase:ROUND_OVER);
+		Assert:areEqualString('See Results', gvm:resultButtonLabel());
+
+		gvm:advanceFromResult();
+		Assert:isTrue(gvm:game:phase == GamePhase:MATCH_OVER);
+		Assert:isTrue(gvm:isResultShown());
+		Assert:areEqualString(' Match Over ', gvm:resultTitle());
+		Assert:areEqualString('Play Again', gvm:resultButtonLabel());
+
+		gvm:advanceFromResult();
+		Assert:isTrue(gvm:game:phase == GamePhase:BETTING);
+		Assert:areEqualInt(1, gvm:game:currentRound);
+		Assert:areEqualInt(500, gvm:game:bankroll);
+	}
+
+	Function is testDeckReshufflesBetweenRoundsNotMidRound(){
+		local BlackjackGame is game: BlackjackGame(startingAmount: 100000, maxRounds: 1000);
+		local Int is r: 0;
+		while({ r < 40 }, {
+			game:deal();
+			if({ game:phase == GamePhase:PLAYER_TURN }, {
+				game:stand();
+			});
+			Assert:isTrue(game:phase == GamePhase:ROUND_OVER);
+			local [String] is labels: [];
+			local Int is pi: 0;
+			while({ pi < game:playerHand:count() }, {
+				labels:push(item: game:playerHand:cards:get(index: pi):label());
+				pi: pi + 1;
+			});
+			local Int is di: 0;
+			while({ di < game:dealerHand:count() }, {
+				labels:push(item: game:dealerHand:cards:get(index: di):label());
+				di: di + 1;
+			});
+			local Int is a: 0;
+			while({ a < labels:length() }, {
+				local Int is b: a + 1;
+				while({ b < labels:length() }, {
+					Assert:isFalse(labels:get(index: a) == labels:get(index: b));
+					b: b + 1;
+				});
+				a: a + 1;
+			});
+			game:nextRound();
+			r: r + 1;
+		});
 	}
 
 	Function is testGamePlayDealStandAndWinLoseOverlay(){

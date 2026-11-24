@@ -8,8 +8,18 @@ Class is DirectoryScanner{
 	merge [[String]] is using: [
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Uri()],
+		['base', 'sys', FileError],
+		['base', 'core', SpecError],
 		['theoedit', 'model', DirectoryListing]
 	];
+
+	## A path is a directory exactly when it can be opened for listing, so an
+	## empty directory counts and a regular file does not.
+	Function of Boolean is isDirectory(String is path){
+		local Boolean is opened: true;
+		Dir:dirList(path: path, onError: local Function(SpecError of FileError is e){ opened: false; });
+		return opened;
+	}
 
 	Function of String is normalizeDir(String is path){ Uri:fromFilePath(filePath: path):toFilePath() }
 
@@ -90,7 +100,7 @@ Class is DirectoryScanner{
 		Dir:dirList(path: normDir):each(action: local Function(String is name){
 			if({ name:startsWith(prefix: '.') }, { return; });
 			local String is full: "{{normDir}}/{{name}}";
-			if({ Dir:dirList(path: full):length() > 0 }, {
+			if({ isDirectory(path: full) }, {
 				dirs:add(item: "{{name}}/");
 			}, {
 				files:add(item: name);

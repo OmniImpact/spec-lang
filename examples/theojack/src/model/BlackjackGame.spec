@@ -53,6 +53,7 @@ Class is BlackjackGame{
 		if({ phase != GamePhase:BETTING || bankroll <= 0 }, { return; });
 		if({ currentBet > bankroll }, { :currentBet: bankroll; });
 		if({ currentBet <= 0 }, { return; });
+		if({ deck:needsShuffle(cutCards: 26) }, { deck:shuffle(); });
 		:bankroll: bankroll - currentBet;
 		dealerHand:clear();
 		playerHand:clear();

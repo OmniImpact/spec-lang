@@ -51,7 +51,7 @@ Class is GameViewModel{
 	}
 
 	Function is advanceFromResult(){
-		if({ game:phase == GamePhase:MATCH_OVER || game:isMatchFinished() }, {
+		if({ game:phase == GamePhase:MATCH_OVER }, {
 			game:resetMatch();
 		}, {
 			game:nextRound();
@@ -101,8 +101,11 @@ Class is GameViewModel{
 	}
 
 	Function of String is resultButtonLabel(){
-		if({ game:phase == GamePhase:MATCH_OVER || game:isMatchFinished() }, {
+		if({ game:phase == GamePhase:MATCH_OVER }, {
 			return HomeStrings:ACTION_PLAY_AGAIN;
+		});
+		if({ game:isMatchFinished() }, {
+			return HomeStrings:ACTION_SEE_RESULTS;
 		});
 		return HomeStrings:ACTION_NEXT_ROUND;
 	}

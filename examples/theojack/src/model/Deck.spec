@@ -47,6 +47,12 @@ Class is Deck{
 		:pos: 0;
 	}
 
+	Function of Int is remaining(){ cards:length() - pos }
+
+	## True once fewer than [cutCards] cards remain; callers reshuffle between
+	## rounds so the deck never runs dry (and duplicates cards) mid-round.
+	Function of Boolean is needsShuffle(Int is cutCards){ remaining() < cutCards }
+
 	Function of Card is draw(){
 		if({ pos >= cards:length() }, {
 			shuffle();

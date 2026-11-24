@@ -20,6 +20,8 @@ Class is EditorViewModel{
 	Boolean is dirty: false;
 	EditorMessageMode is messageMode: EditorMessageMode:NONE;
 	Boolean is quitAfterSave: false;
+	Boolean is openAfterSave: false;
+	Boolean is reopenPending: false;
 
 	Function is onQuit: local Function(){};
 	Function is onPushFileManager: local Function(FileManagerViewModel is _fmVm){};
@@ -150,6 +152,7 @@ Class is EditorViewModel{
 				if({ !finished }, {
 					onPopFileManager();
 					focusEditor();
+					openPendingFileDialog();
 				});
 			},
 			onCancel: {
@@ -175,7 +178,23 @@ Class is EditorViewModel{
 	}
 
 	Function is triggerOpen(){
+		if({ doc:dirty }, {
+			messageMode: EditorMessageMode:CONFIRM_OPEN;
+			messageText:emit(value: EditorStrings:PROMPT_UNSAVED_OPEN);
+			onRebuild();
+			focusPromptSave();
+			return;
+		});
 		openFileDialog(mode: FileDialogMode:OPEN);
+	}
+
+	## Opens the Open dialog that a save-then-open prompt deferred until the
+	## Save As dialog had been dismissed.
+	Function is openPendingFileDialog(){
+		if({ reopenPending }, {
+			reopenPending: false;
+			openFileDialog(mode: FileDialogMode:OPEN);
+		});
 	}
 
 	Function is triggerQuit(){
@@ -189,19 +208,34 @@ Class is EditorViewModel{
 	}
 
 	Function is triggerPromptSave(){
+		local Boolean is opening: messageMode == EditorMessageMode:CONFIRM_OPEN;
 		clearMessage();
 		onRebuild();
 		if({ doc:filePath == '' }, {
-			quitAfterSave: true;
+			if({ opening }, {
+				openAfterSave: true;
+			}, {
+				quitAfterSave: true;
+			});
 			openFileDialog(mode: FileDialogMode:SAVE_AS);
 			return;
 		});
 		if({ save() }, {
-			onQuit();
+			if({ opening }, {
+				openFileDialog(mode: FileDialogMode:OPEN);
+			}, {
+				onQuit();
+			});
 		});
 	}
 
 	Function is triggerPromptDiscard(){
+		if({ messageMode == EditorMessageMode:CONFIRM_OPEN }, {
+			clearMessage();
+			onRebuild();
+			openFileDialog(mode: FileDialogMode:OPEN);
+			return;
+		});
 		onQuit();
 	}
 
@@ -226,10 +260,15 @@ Class is EditorViewModel{
 	Function is completeFileDialog(FileDialogMode is mode, String is path, Function is onReadyToQuit){
 		if({ mode == FileDialogMode:SAVE_AS }, {
 			local Boolean is shouldQuit: quitAfterSave;
+			local Boolean is shouldOpen: openAfterSave;
 			local Boolean is saved: saveTo(path: path);
 			quitAfterSave: false;
+			openAfterSave: false;
 			if({ saved && shouldQuit }, {
 				onReadyToQuit();
+			});
+			if({ saved && shouldOpen }, {
+				reopenPending: true;
 			});
 			return;
 		});
@@ -244,6 +283,7 @@ Class is EditorViewModel{
 	Function is clearMessage(){
 		messageMode: EditorMessageMode:NONE;
 		quitAfterSave: false;
+		openAfterSave: false;
 		messageText:emit(value: '');
 	}
 

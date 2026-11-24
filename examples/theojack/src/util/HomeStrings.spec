@@ -34,6 +34,7 @@ Class is HomeStrings{
 	held String is ACTION_BET_UP: '+$10';
 	held String is ACTION_NEXT_ROUND: 'Next Round';
 	held String is ACTION_PLAY_AGAIN: 'Play Again';
+	held String is ACTION_SEE_RESULTS: 'See Results';
 	held String is ACTION_HOME: 'Home';
 
 	held String is ABOUT_TITLE: ' About ';

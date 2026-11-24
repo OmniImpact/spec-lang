@@ -9,6 +9,7 @@ Class is EditorStrings{
 	held String is STATUS_OPENED: 'Opened';
 	held String is STATUS_SAVED: 'Saved';
 	held String is PROMPT_UNSAVED_QUIT: 'Unsaved changes — save before quitting?';
+	held String is PROMPT_UNSAVED_OPEN: 'Unsaved changes — save before opening another file?';
 
 	held String is FILE_MANAGER_TITLE: 'File Manager';
 	held String is FILE_MANAGER_HINTS: 'Ctrl+M: menu · Ctrl+F: files/name';

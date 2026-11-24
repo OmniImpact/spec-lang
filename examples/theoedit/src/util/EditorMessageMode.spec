@@ -4,5 +4,6 @@
 Enum is EditorMessageMode{
 	replace [String] is namespace: ['theoedit', 'util'];
 	NONE,
-	CONFIRM_QUIT
+	CONFIRM_QUIT,
+	CONFIRM_OPEN
 }
