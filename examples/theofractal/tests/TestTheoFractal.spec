@@ -19,7 +19,7 @@ Class of SpecUnitTest is TestTheoFractal{
 		Assert:isTrue(vm:activeFractalName() == '');
 		Assert:isTrue(vm:selectedTheme == ColorTheme:GRAYSCALE);
 		Assert:isFalse(vm:helpOpen);
-		local Array of TheoColor is pixels: vm:ensurePixels(w: 40, h: 40);
+		local [Int] is pixels: vm:ensurePixels(w: 40, h: 40);
 		Assert:isTrue(pixels:length() == 0);
 	}
 
@@ -34,17 +34,17 @@ Class of SpecUnitTest is TestTheoFractal{
 			FractalStrings:OPT_BURNING_SHIP,
 			FractalStrings:OPT_DRAGON
 		];
-		local TheoColor is bg: TheoColor:rgb(r: 10, g: 12, b: 18);
+		local Int is bg: Color32:pack(r: 10, g: 12, b: 18);
 		local Int is ni: 0;
 		while({ ni < names:length() }, {
 			vm:selectFractal(name: names:get(index: ni));
 			Assert:isTrue(vm:hasFractal());
-			local Array of TheoColor is pixels: vm:ensurePixels(w: 48, h: 48);
+			local [Int] is pixels: vm:ensurePixels(w: 48, h: 48);
 			Assert:isTrue(pixels:length() == 48 * 48);
 			local Int is litCount: 0;
 			local Int is pi: 0;
 			while({ pi < pixels:length() }, {
-				if({ !pixels:get(index: pi):equals(other: bg) }, {
+				if({ pixels:get(index: pi) != bg }, {
 					litCount: litCount + 1;
 				});
 				pi: pi + 1;
@@ -153,7 +153,7 @@ Class of SpecUnitTest is TestTheoFractal{
 		Assert:isTrue(vm:antialiasing);
 
 		vm:selectFractal(name: FractalStrings:OPT_MANDELBROT);
-		local Array of TheoColor is aaPixels: vm:ensurePixels(w: 32, h: 32);
+		local [Int] is aaPixels: vm:ensurePixels(w: 32, h: 32);
 		Assert:isTrue(aaPixels:length() == 32 * 32);
 
 		aa:toggle();
@@ -165,12 +165,12 @@ Class of SpecUnitTest is TestTheoFractal{
 		vm:zoomIn();
 		vm:zoomIn();
 		vm:zoomIn();
-		local Array of TheoColor is zoomedFern: vm:ensurePixels(w: 48, h: 48);
-		local TheoColor is bg: TheoColor:rgb(r: 10, g: 12, b: 18);
+		local [Int] is zoomedFern: vm:ensurePixels(w: 48, h: 48);
+		local Int is bg: Color32:pack(r: 10, g: 12, b: 18);
 		local Int is lit: 0;
 		local Int is zi: 0;
 		while({ zi < zoomedFern:length() }, {
-			if({ !zoomedFern:get(index: zi):equals(other: bg) }, {
+			if({ zoomedFern:get(index: zi) != bg }, {
 				lit: lit + 1;
 			});
 			zi: zi + 1;

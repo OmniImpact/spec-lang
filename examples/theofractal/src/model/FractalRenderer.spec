@@ -1,5 +1,5 @@
 #! Package theofractal:model
-#! Renders any [Fractal] implementation through [ColorPalette] into a flat [TheoColor] pixel array.
+#! Renders any [Fractal] implementation through [ColorPalette] into a flat packed [Color32] pixel list.
 
 Class is FractalRenderer{
 	replace [String] is namespace: ['theofractal', 'model'];
@@ -7,11 +7,11 @@ Class is FractalRenderer{
 	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, ColorTheme, FractalViewport]],
 		['theofractal', 'util', as ColorPalette()],
-		['base', 'theo', TheoColor]
+		['base', 'theo', Color32]
 	];
 
-	## Renders [fractal] into a flat [TheoColor] pixel array of size `w * h` for [viewport] and [theme], with optional 2x2 SSAA.
-	Function of Array of TheoColor is renderPixels(
+	## Renders [fractal] into a flat packed [Color32] pixel list of size `w * h` for [viewport] and [theme], with optional 2x2 SSAA.
+	Function of [Int] is renderPixels(
 		Fractal is fractal,
 		ColorTheme is theme,
 		FractalViewport is viewport,
@@ -19,7 +19,7 @@ Class is FractalRenderer{
 		Int is h,
 		Boolean is antialiasing: false
 	){
-		local Array of TheoColor is pixels: Array();
+		local [Int] is pixels: [];
 		if({ w <= 0 || h <= 0 }, { return pixels; });
 
 		if({ !antialiasing }, {
@@ -27,7 +27,7 @@ Class is FractalRenderer{
 			local Int is n: values:length();
 			local Int is i: 0;
 			while({ i < n }, {
-				pixels:add(item: colorForValue(t: values:get(index: i), theme: theme));
+				pixels:push(item: color32ForValue(t: values:get(index: i), theme: theme));
 				i: i + 1;
 			});
 			return pixels;
@@ -43,14 +43,11 @@ Class is FractalRenderer{
 			local Int is px: 0;
 			while({ px < w }, {
 				local Int is sx: px * 2;
-				local TheoColor is c00: colorForValue(t: sub:get(index: row0 + sx), theme: theme);
-				local TheoColor is c10: colorForValue(t: sub:get(index: row0 + sx + 1), theme: theme);
-				local TheoColor is c01: colorForValue(t: sub:get(index: row1 + sx), theme: theme);
-				local TheoColor is c11: colorForValue(t: sub:get(index: row1 + sx + 1), theme: theme);
-				local Int is r: (c00:c1 + c10:c1 + c01:c1 + c11:c1) / 4;
-				local Int is g: (c00:c2 + c10:c2 + c01:c2 + c11:c2) / 4;
-				local Int is b: (c00:c3 + c10:c3 + c01:c3 + c11:c3) / 4;
-				pixels:add(item: TheoColor:rgb(r: r, g: g, b: b));
+				local Int is c00: color32ForValue(t: sub:get(index: row0 + sx), theme: theme);
+				local Int is c10: color32ForValue(t: sub:get(index: row0 + sx + 1), theme: theme);
+				local Int is c01: color32ForValue(t: sub:get(index: row1 + sx), theme: theme);
+				local Int is c11: color32ForValue(t: sub:get(index: row1 + sx + 1), theme: theme);
+				pixels:push(item: Color32:avg4(c00: c00, c10: c10, c01: c01, c11: c11));
 				px: px + 1;
 			});
 			py: py + 1;

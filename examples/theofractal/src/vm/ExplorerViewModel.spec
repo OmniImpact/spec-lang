@@ -6,8 +6,7 @@ Class is ExplorerViewModel{
 
 	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, FractalRegistry, ColorTheme, FractalViewport, FractalRenderer]],
-		['theofractal', 'util', as ColorPalette()],
-		['base', 'theo', TheoColor]
+		['theofractal', 'util', as ColorPalette()]
 	];
 
 	FractalRegistry is registry: FractalRegistry();
@@ -19,7 +18,7 @@ Class is ExplorerViewModel{
 
 	Boolean is helpOpen: false;
 
-	Array of TheoColor is cachedPixels: Array();
+	[Int] is cachedPixels: [];
 	Int is cachedW: 0;
 	Int is cachedH: 0;
 	Boolean is renderDirty: true;
@@ -141,9 +140,9 @@ Class is ExplorerViewModel{
 		return false;
 	}
 
-	Function of Array of TheoColor is ensurePixels(Int is w, Int is h){
+	Function of [Int] is ensurePixels(Int is w, Int is h){
 		if({ !hasFractal() || w <= 0 || h <= 0 }, {
-			cachedPixels: Array();
+			cachedPixels: [];
 			cachedW: 0;
 			cachedH: 0;
 			renderDirty: false;

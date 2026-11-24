@@ -7,7 +7,9 @@ Class of Fractal is SnowflakeFractal{
 	merge [[String]] is using: [
 		['theofractal', 'model', [Fractal, FractalViewport]],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
-		['base', 'math', as Math()]
+		['base', 'math', [as Math(), Vector]],
+		['base', 'sys', [Parallel, Process]],
+		['base', 'sys', 'thread', ThreadScope]
 	];
 
 	replace Function of String is name(){ FractalStrings:OPT_SNOWFLAKE }
@@ -77,17 +79,59 @@ Class of Fractal is SnowflakeFractal{
 		local Float is xMin: viewport:centerX - spanX * 0.5;
 		local Float is yMax: viewport:centerY + spanY * 0.5;
 
-		local Int is py: 0;
-		while({ py < h }, {
-			local Float is wy: yMax - ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
-			local Int is px: 0;
-			while({ px < w }, {
-				local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
-				grid:push(item: evaluateSnowflake(wx: wx, wy: wy));
-				px: px + 1;
+		local Int is total: w * h;
+		local Vector is outBuf: Vector(length: total, initial: -1.0);
+		local Int is nThreads: Process():threadCount();
+		if({ nThreads > h }, { nThreads: h; });
+		if({ nThreads < 1 }, { nThreads: 1; });
+
+		if({ nThreads == 1 || total < 1024 }, {
+			local Int is py: 0;
+			while({ py < h }, {
+				local Float is wy: yMax - ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
+				local Int is rowOff: py * w;
+				local Int is px: 0;
+				while({ px < w }, {
+					local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
+					outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy));
+					px: px + 1;
+				});
+				py: py + 1;
 			});
-			py: py + 1;
+		}, {
+			ThreadScope:open(
+				body: local Function(ThreadScope is scope){
+					Parallel():run(
+						scope: scope,
+						threads: nThreads,
+						iterations: h,
+						worker: local Function of Int(Int is tid, Int is cnt){
+							local Int is py: tid;
+							while({ py < h }, {
+								local Float is wy: yMax - ((toFloat(value: py) + 0.5) / toFloat(value: h)) * spanY;
+								local Int is rowOff: py * w;
+								local Int is px: 0;
+								while({ px < w }, {
+									local Float is wx: xMin + ((toFloat(value: px) + 0.5) / toFloat(value: w)) * spanX;
+									outBuf:set(index: rowOff + px, value: evaluateSnowflake(wx: wx, wy: wy));
+									px: px + 1;
+								});
+								py: py + nThreads;
+							});
+							return 0;
+						}
+					);
+				},
+				onError: local Function of Boolean(SpecError is _err){ false }
+			);
 		});
+
+		local Int is k: 0;
+		while({ k < total }, {
+			grid:push(item: outBuf:get(index: k));
+			k: k + 1;
+		});
+		outBuf:destroy();
 		return grid;
 	}
 }

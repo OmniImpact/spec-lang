@@ -7,7 +7,7 @@ Class is ColorPalette{
 	merge [[String]] is using: [
 		['theofractal', 'model', ColorTheme],
 		['theofractal', 'util', [FractalStrings, as GridRasterizer()]],
-		['base', 'theo', TheoColor],
+		['base', 'theo', [TheoColor, Color32]],
 		['base', 'math', as Math()]
 	];
 
@@ -27,36 +27,41 @@ Class is ColorPalette{
 		]);
 	}
 
-	## Maps a normalized value [t] in `[0.0, 1.0]` (or `< 0.0` for background) to a [TheoColor] under [theme].
-	Function of TheoColor is colorForValue(Float is t, ColorTheme is theme){
+	## Maps a normalized value [t] in `[0.0, 1.0]` (or `< 0.0` for background) to a packed [Color32] under [theme].
+	Function of Int is color32ForValue(Float is t, ColorTheme is theme){
 		if({ t < 0.0 }, {
-			return TheoColor:rgb(r: 10, g: 12, b: 18);
+			return Color32:pack(r: 10, g: 12, b: 18);
 		});
 		local Float is u: clamp01(v: t);
 		return match(when: [
 			{ theme == ColorTheme:GRAYSCALE }: {
 				local Int is v: toByte(v: 0.12 + 0.88 * u);
-				TheoColor:rgb(r: v, g: v, b: v);
+				Color32:pack(r: v, g: v, b: v);
 			},
 			{ theme == ColorTheme:COOL }: {
 				local Int is r: toByte(v: 0.05 + 0.65 * (u * u));
 				local Int is g: toByte(v: 0.18 + 0.78 * u);
 				local Int is b: toByte(v: 0.45 + 0.55 * sqrt(value: u));
-				TheoColor:rgb(r: r, g: g, b: b);
+				Color32:pack(r: r, g: g, b: b);
 			},
 			{ theme == ColorTheme:WARM }: {
 				local Int is r: toByte(v: 0.35 + 0.65 * sqrt(value: u));
 				local Int is g: toByte(v: 0.06 + 0.82 * (u * u));
 				local Int is b: toByte(v: 0.04 + 0.46 * (u * u * u));
-				TheoColor:rgb(r: r, g: g, b: b);
+				Color32:pack(r: r, g: g, b: b);
 			},
 			else: {
 				local Float is angle: u * 6.2831853;
 				local Int is r: toByte(v: 0.5 + 0.5 * cos(value: angle));
 				local Int is g: toByte(v: 0.5 + 0.5 * cos(value: angle + 2.0943951));
 				local Int is b: toByte(v: 0.5 + 0.5 * cos(value: angle + 4.1887902));
-				TheoColor:rgb(r: r, g: g, b: b);
+				Color32:pack(r: r, g: g, b: b);
 			}
 		]);
+	}
+
+	## Maps a normalized value [t] in `[0.0, 1.0]` (or `< 0.0` for background) to a [TheoColor] under [theme].
+	Function of TheoColor is colorForValue(Float is t, ColorTheme is theme){
+		return Color32:toTheoColor(color: color32ForValue(t: t, theme: theme));
 	}
 }

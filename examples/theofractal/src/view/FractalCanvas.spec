@@ -50,7 +50,7 @@ Class of Widget is FractalCanvas{
 		});
 
 		local Int is pixH: boxH * 2;
-		local Array of TheoColor is pixels: vm:ensurePixels(w: boxW, h: pixH);
+		local [Int] is pixels: vm:ensurePixels(w: boxW, h: pixH);
 		if({ pixels:length() >= boxW * pixH }, {
 			local Int is cy: 0;
 			while({ cy < boxH }, {
@@ -58,12 +58,12 @@ Class of Widget is FractalCanvas{
 				local Int is botOff: (cy * 2 + 1) * boxW;
 				local Int is cx: 0;
 				while({ cx < boxW }, {
-					buf:setCell(
+					buf:setCellRgb(
 						x: boxX + cx,
 						y: boxY + cy,
 						ch: '▀',
-						fg: pixels:get(index: topOff + cx),
-						bg: pixels:get(index: botOff + cx)
+						fgRgb: pixels:get(index: topOff + cx),
+						bgRgb: pixels:get(index: botOff + cx)
 					);
 					cx: cx + 1;
 				});
