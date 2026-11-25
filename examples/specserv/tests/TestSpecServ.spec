@@ -207,6 +207,9 @@ Class of SpecUnitTest is TestSpecServ{
 					});
 				});
 				Assert:isTrue(sawReqLog);
+				Assert:isTrue(vm:memKb > 0);
+				Assert:isTrue(vm:reqLast60s >= 1);
+				Assert:isTrue(vm:logPanelTitle():contains(needle: 'req/s (1m)'));
 
 				vm:stopServers();
 				Assert:isFalse(vm:serversRunning);

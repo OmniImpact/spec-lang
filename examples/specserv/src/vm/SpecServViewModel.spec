@@ -22,6 +22,9 @@ Class is SpecServViewModel{
 	Boolean is attachedExternal: false;
 	Int is controlPort: 0;
 	Int is logCursor: 0;
+	Int is cpuTenthsPct: 0;
+	Int is memKb: 0;
+	Int is reqLast60s: 0;
 	String is logFilePath: '';
 	Channel of Int is exitChannel: Channel:bounded(capacity: 4);
 	Array of String is logs: Array();
@@ -199,6 +202,30 @@ Class is SpecServViewModel{
 		return 'specserv';
 	}
 
+	local Function is parseStatsLine(String is ln){
+		local String is rest: ln:substring(start: 6, end: ln:length()):trim();
+		local Array of String is parts: rest:split(delimiter: ' ');
+		if({ parts:length() >= 3 }, {
+			cpuTenthsPct: parts:get(index: 0, default: '0'):parseInt(default: 0);
+			memKb: parts:get(index: 1, default: '0'):parseInt(default: 0);
+			reqLast60s: parts:get(index: 2, default: '0'):parseInt(default: 0);
+		});
+	}
+
+	Function of String is logPanelTitle(){
+		local String is cpuStr: (cpuTenthsPct / 10) as String . '.' . (cpuTenthsPct % 10) as String . '%';
+		local String is memStr: if({ memKb >= 1024 }, {
+			((memKb / 1024) as String) . ' MB'
+		}, {
+			(memKb as String) . ' KB'
+		});
+		local Int is hund: (reqLast60s * 100 + 30) / 60;
+		local Int is frac: hund % 100;
+		local String is fracStr: if({ frac < 10 }, { '0' . (frac as String) }, { frac as String });
+		local String is reqStr: ((hund / 100) as String) . '.' . fracStr . ' req/s (1m)';
+		return ' CPU ' . cpuStr . ' · Mem ' . memStr . ' · ' . reqStr . ' ';
+	}
+
 	local Function is probeExistingServer(Int is port){
 		controlPort: port;
 		local String is resp: sendControl(cmd: 'LOGS 0');
@@ -212,9 +239,13 @@ Class is SpecServViewModel{
 				if({ ln:startsWith(prefix: 'LOG ') }, {
 					appendLog(line: ln:substring(start: 4, end: ln:length()));
 				}, {
-					if({ ln:startsWith(prefix: 'END ') }, {
-						local Int is nextCur: ln:substring(start: 4, end: ln:length()):trim():parseInt(default: 0);
-						if({ nextCur > logCursor }, { logCursor: nextCur; });
+					if({ ln:startsWith(prefix: 'STATS ') }, {
+						parseStatsLine(ln: ln);
+					}, {
+						if({ ln:startsWith(prefix: 'END ') }, {
+							local Int is nextCur: ln:substring(start: 4, end: ln:length()):trim():parseInt(default: 0);
+							if({ nextCur > logCursor }, { logCursor: nextCur; });
+						});
 					});
 				});
 			});
@@ -352,6 +383,9 @@ Class is SpecServViewModel{
 		serversRunning: false;
 		attachedExternal: false;
 		controlPort: 0;
+		cpuTenthsPct: 0;
+		memKb: 0;
+		reqLast60s: 0;
 		statusMessage: 'Stopped';
 		appendLog(line: 'Stopped specserv');
 		onChanged();
@@ -369,10 +403,20 @@ Class is SpecServViewModel{
 						appendLog(line: ln:substring(start: 4, end: ln:length()));
 						anyNew: true;
 					}, {
-						if({ ln:startsWith(prefix: 'END ') }, {
-							local Int is nextCur: ln:substring(start: 4, end: ln:length()):trim():parseInt(default: logCursor);
-							if({ nextCur > logCursor }, {
-								logCursor: nextCur;
+						if({ ln:startsWith(prefix: 'STATS ') }, {
+							local Int is prevCpu: cpuTenthsPct;
+							local Int is prevMem: memKb;
+							local Int is prevReq: reqLast60s;
+							parseStatsLine(ln: ln);
+							if({ cpuTenthsPct != prevCpu || memKb != prevMem || reqLast60s != prevReq }, {
+								anyNew: true;
+							});
+						}, {
+							if({ ln:startsWith(prefix: 'END ') }, {
+								local Int is nextCur: ln:substring(start: 4, end: ln:length()):trim():parseInt(default: logCursor);
+								if({ nextCur > logCursor }, {
+									logCursor: nextCur;
+								});
 							});
 						});
 					});
@@ -384,6 +428,9 @@ Class is SpecServViewModel{
 			if({ exitCode != -9999 }, {
 				serversRunning: false;
 				controlPort: 0;
+				cpuTenthsPct: 0;
+				memKb: 0;
+				reqLast60s: 0;
 				statusMessage: 'Stopped (exit ' . (exitCode as String) . ')';
 				appendLog(line: 'specserv exited with code ' . (exitCode as String));
 				onChanged();

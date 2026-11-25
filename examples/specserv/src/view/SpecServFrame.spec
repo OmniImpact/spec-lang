@@ -36,6 +36,7 @@ Class of Frame is SpecServFrame{
 	Array of TextInput is cfgInputs: Array();
 	Array of Button is startStopBtns: Array();
 	Array of TextLine is statusLines: Array();
+	Array of Panel is logPanels: Array();
 
 	replace Function is init(SpecServViewModel is vm: SpecServViewModel()){
 		:vm: vm;
@@ -56,6 +57,11 @@ Class of Frame is SpecServFrame{
 			if({ vm:logs:length() > 0 }, {
 				lv:selectedIdx: vm:logs:length() - 1;
 			});
+		});
+		if({ logPanels:length() > 0 }, {
+			local Panel is lp: logPanels:get(index: 0);
+			lp:topTitle: vm:logPanelTitle();
+			lp:invalidate();
 		});
 	}
 
@@ -230,13 +236,14 @@ Class of Frame is SpecServFrame{
 			])
 		);
 
-		local Widget is logPanel: Panel(
+		local Panel is logPanel: Panel(
 			border: true,
 			padX: 1,
 			padY: 0,
-			topTitle: ' Request Log ',
+			topTitle: vm:logPanelTitle(),
 			child: logList
 		);
+		logPanels: Array([logPanel]);
 
 		return Grid(
 			orientation: Orientation:VERTICAL,
