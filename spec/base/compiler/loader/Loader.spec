@@ -321,6 +321,12 @@ Class is Loader{
 		while({ :loadedClasses:length() > index }, {
 			local ClassInfo is c: :loadedClasses:pop();
 			:seenClassNames:remove(key: c:namespaceJoined() . ':' . c:name);
+			if({ c:members:length() > 0 }, {
+				local String is sf: c:members:get(index: 0):sourceFile;
+				if({ sf != '' }, {
+					:loadedFiles:remove(key: sf);
+				});
+			});
 		});
 	}
 
@@ -383,12 +389,16 @@ Class is Loader{
 		if({ termClass != '' }, {
 			cands:each(action: local Function(String is cand){
 				if({ !resolved }, {
+					local Boolean is wasLoaded: :loadedFiles:has(key: cand);
 					local Int is classBefore: :loadedClasses:length();
 					:loadFile(filePath: cand);
 					if({ :provides(nsJoined: nsJoined, className: termClass) }, {
 						resolved: true;
 					}, {
 						:unloadClassesFrom(index: classBefore);
+						if({ !wasLoaded }, {
+							:loadedFiles:remove(key: cand);
+						});
 					});
 				});
 			});
