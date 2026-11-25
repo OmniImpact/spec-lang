@@ -19,6 +19,7 @@ Class is SpecServViewModel{
 	String is configPath: 'specserv.json';
 	Int is selectedIndex: -1;
 	Boolean is serversRunning: false;
+	Boolean is attachedExternal: false;
 	Int is controlPort: 0;
 	Int is logCursor: 0;
 	String is logFilePath: '';
@@ -51,6 +52,9 @@ Class is SpecServViewModel{
 			selectSite(index: 0);
 		}, {
 			draftPort: config:nextAvailablePort() as String;
+		});
+		if({ allowThreads }, {
+			probeExistingServer(port: 47320);
 		});
 	}
 
@@ -195,6 +199,30 @@ Class is SpecServViewModel{
 		return 'specserv';
 	}
 
+	local Function is probeExistingServer(Int is port){
+		controlPort: port;
+		local String is resp: sendControl(cmd: 'LOGS 0');
+		if({ resp != '' && (resp:startsWith(prefix: 'LOG ') || resp:startsWith(prefix: 'END ')) }, {
+			serversRunning: true;
+			attachedExternal: true;
+			statusMessage: 'Running (attached :' . (port as String) . ')';
+			local Array of String is lines: resp:split(delimiter: "\n");
+			times(count: lines:length(), worker: local Function(Int is i){
+				local String is ln: lines:get(index: i, default: '');
+				if({ ln:startsWith(prefix: 'LOG ') }, {
+					appendLog(line: ln:substring(start: 4, end: ln:length()));
+				}, {
+					if({ ln:startsWith(prefix: 'END ') }, {
+						local Int is nextCur: ln:substring(start: 4, end: ln:length()):trim():parseInt(default: 0);
+						if({ nextCur > logCursor }, { logCursor: nextCur; });
+					});
+				});
+			});
+		}, {
+			controlPort: 0;
+		});
+	}
+
 	local Function of Int is pickControlPort(){
 		local Int is candidate: 47900 + (getPid() % 500);
 		local Boolean is clash: true;
@@ -282,6 +310,7 @@ Class is SpecServViewModel{
 			});
 		});
 		serversRunning: true;
+		attachedExternal: false;
 		statusMessage: 'Running (' . (enabledCount as String) . ' site(s))';
 		appendLog(line: 'Started ' . binPath . ' (' . (enabledCount as String) . ' site(s))');
 		onChanged();
@@ -290,19 +319,38 @@ Class is SpecServViewModel{
 	Function is stopServers(){
 		if({ !serversRunning }, { return; });
 		if({ allowThreads }, {
-			sendControl(cmd: 'STOP');
-			local Int is waited: 0;
-			local Boolean is exited: false;
-			while({ !exited && waited < 30 }, {
-				if({ exitChannel:tryReceive(default: -9999) != -9999 }, {
-					exited: true;
-				}, {
-					sleep(milliseconds: 25);
-					waited++;
+			if({ attachedExternal }, {
+				local Int is tries: 0;
+				local Boolean is ack: false;
+				while({ !ack && tries < 10 }, {
+					local String is r: sendControl(cmd: 'STOP');
+					if({ r:contains(needle: 'OK') }, { ack: true; }, {
+						sleep(milliseconds: 25);
+						tries++;
+					});
+				});
+			}, {
+				local Int is waited: 0;
+				local Boolean is exited: false;
+				local Boolean is sentStop: false;
+				while({ !exited && waited < 60 }, {
+					if({ !sentStop }, {
+						local String is r: sendControl(cmd: 'STOP');
+						if({ r:contains(needle: 'OK') }, {
+							sentStop: true;
+						});
+					});
+					if({ exitChannel:tryReceive(default: -9999) != -9999 }, {
+						exited: true;
+					}, {
+						sleep(milliseconds: 25);
+						waited++;
+					});
 				});
 			});
 		});
 		serversRunning: false;
+		attachedExternal: false;
 		controlPort: 0;
 		statusMessage: 'Stopped';
 		appendLog(line: 'Stopped specserv');
@@ -349,7 +397,9 @@ Class is SpecServViewModel{
 	}
 
 	Function is quit(){
-		stopServers();
+		if({ !attachedExternal }, {
+			stopServers();
+		});
 		onQuit();
 	}
 }

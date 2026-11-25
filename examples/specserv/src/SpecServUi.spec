@@ -9,6 +9,7 @@ Class is SpecServUi{
 		['base', 'theo', [TheoApp, TheoScreen, TheoTheme]],
 		['base', 'struct', Map],
 		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', as Conditional()],
 		['specserv', 'vm', SpecServViewModel],
 		['specserv', 'view', SpecServFrame]
 	];
@@ -30,7 +31,9 @@ Class is SpecServUi{
 				local SpecServFrame is frame: SpecServFrame(vm: vm);
 				local TheoScreen is screen: TheoScreen(root: frame);
 				app:run(screen: screen);
-				vm:stopServers();
+				if({ !vm:attachedExternal }, {
+					vm:stopServers();
+				});
 			}
 		);
 	}

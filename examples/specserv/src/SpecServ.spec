@@ -61,7 +61,7 @@ Class is SpecServ{
 
 		local String is cfgPath: args:getString(key: 'config', default: 'specserv.json');
 		local String is logFile: args:getString(key: 'log-file', default: '');
-		local Int is controlPort: args:getString(key: 'control-port', default: '0'):parseInt(default: 0);
+		local Int is controlPort: args:getString(key: 'control-port', default: '47320'):parseInt(default: 47320);
 
 		local ServerConfig is cfg: ServerConfig();
 		if({ fileExists(path: cfgPath) }, {

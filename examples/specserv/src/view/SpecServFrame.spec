@@ -59,6 +59,13 @@ Class of Frame is SpecServFrame{
 		});
 	}
 
+	local Function of String is formattedStatus(){
+		if({ vm:serversRunning && !vm:statusMessage:startsWith(prefix: 'Running') }, {
+			return 'Status: Running (' . vm:statusMessage . ')';
+		});
+		return 'Status: ' . vm:statusMessage;
+	}
+
 	local Function is syncFromVm(){
 		if({ siteLists:length() > 0 }, {
 			local ListView is sv: siteLists:get(index: 0);
@@ -81,7 +88,7 @@ Class of Frame is SpecServFrame{
 			startStopBtns:get(index: 0):label: if({ vm:serversRunning }, { ' Stop ' }, { ' Start ' });
 		});
 		if({ statusLines:length() > 0 }, {
-			statusLines:get(index: 0):value: 'Status: ' . vm:statusMessage;
+			statusLines:get(index: 0):value: formattedStatus();
 		});
 		syncLogs();
 	}
@@ -99,7 +106,7 @@ Class of Frame is SpecServFrame{
 	}
 
 	replace Function of Widget is ui(){
-		local TextLine is statusLine: TextLine(value: 'Status: ' . vm:statusMessage, bold: true);
+		local TextLine is statusLine: TextLine(value: formattedStatus(), bold: true);
 		statusLines: Array([statusLine]);
 
 		local ListView is siteList: ListView(
