@@ -132,7 +132,85 @@ Class of SpecUnitTest is TestSpecServ{
 				local String is r404: httpGet(port: port, path: '/missing.html');
 				Assert:isTrue(r404:contains(needle: '404 Not Found'));
 
+				local Boolean is sawTimedHtmlLog: false;
+				local Boolean is sawTimedSearchLog: false;
+				local Boolean is draining: true;
+				while({ draining }, {
+					local String is lm: srv:logChannel:tryReceive(default: '');
+					if({ lm == '' }, {
+						draining: false;
+					}, {
+						local Boolean is hasUnit: lm:contains(needle: 'us)') || lm:contains(needle: 'ms)') || lm:contains(needle: 's)');
+						if({ lm:contains(needle: 'GET /index.html -> 200 (') && hasUnit }, {
+							sawTimedHtmlLog: true;
+						});
+						if({ lm:contains(needle: 'GET /search.spec -> 200 (') && hasUnit }, {
+							sawTimedSearchLog: true;
+						});
+					});
+				});
+				Assert:isTrue(sawTimedHtmlLog);
+				Assert:isTrue(sawTimedSearchLog);
+
 				srv:requestStop();
+			}
+		);
+	}
+
+	Function is testViewModelControlsSpecServProcess(){
+		if({ !fileExists(path: 'bin/specserv') }, { return; });
+		ThreadScope:open(
+			onError: local Function of Boolean(SpecError is _e){ true },
+			body: local Function(ThreadScope is _scope){
+				local SpecServViewModel is vm: SpecServViewModel(allowThreads: true, configPath: '/tmp/nonexistent_vm_ctrl.json');
+				vm:config:sites: [] ;
+				vm:config:addDirectory(name: 'Docs', directory: 'examples/specserv/site', port: 47482, enabled: true);
+				vm:startServers();
+				Assert:isTrue(vm:serversRunning);
+
+				local Boolean is ready: false;
+				local Int is tries: 0;
+				while({ !ready && tries < 60 }, {
+					vm:pollLogs();
+					local Int is li: 0;
+					while({ li < vm:logs:length() }, {
+						if({ vm:logs:get(index: li, default: ''):contains(needle: 'Serving ') }, {
+							ready: true;
+						});
+						li++;
+					});
+					if({ !ready }, {
+						sleep(milliseconds: 25);
+						tries++;
+					});
+				});
+				Assert:isTrue(ready);
+
+				local String is body: httpGet(port: 47482, path: '/index.html');
+				Assert:isTrue(body:contains(needle: '200 OK'));
+
+				local Boolean is sawReqLog: false;
+				local Int is ltries: 0;
+				while({ !sawReqLog && ltries < 30 }, {
+					vm:pollLogs();
+					local Int is lj: 0;
+					while({ lj < vm:logs:length() }, {
+						local String is entry: vm:logs:get(index: lj, default: '');
+						if({ entry:contains(needle: ':47482 GET /index.html -> 200 (') }, {
+							sawReqLog: true;
+						});
+						lj++;
+					});
+					if({ !sawReqLog }, {
+						sleep(milliseconds: 25);
+						ltries++;
+					});
+				});
+				Assert:isTrue(sawReqLog);
+
+				vm:stopServers();
+				Assert:isFalse(vm:serversRunning);
+				fileRemove(path: '/tmp/nonexistent_vm_ctrl.json', onError: local Function(SpecError is _e){});
 			}
 		);
 	}

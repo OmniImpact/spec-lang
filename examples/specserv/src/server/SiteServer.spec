@@ -10,7 +10,7 @@ Class is SiteServer{
 		['base', 'core', SpecError],
 		['base', 'net', [as Socket(), NetError]],
 		['base', 'struct', [Array, Map]],
-		['base', 'sys', [as File(), as Process()]],
+		['base', 'sys', [as File(), as Process(), as Time()]],
 		['base', 'sys', 'thread', [Channel, ThreadScope]],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
@@ -27,6 +27,22 @@ Class is SiteServer{
 
 	local Function is emitLog(String is msg){
 		logChannel:send(item: msg);
+	}
+
+	local Function of String is formatDuration(Int is elapsedNs){
+		local Int is us: elapsedNs / 1000;
+		if({ us < 0 }, { us: 0; });
+		if({ us < 1000 }, {
+			return (us as String) . 'us';
+		});
+		if({ us < 1000000 }, {
+			local Int is ms: us / 1000;
+			local Int is tenths: (us % 1000) / 100;
+			return (ms as String) . '.' . (tenths as String) . 'ms';
+		});
+		local Int is secs: us / 1000000;
+		local Int is tenths: (us % 1000000) / 100000;
+		return (secs as String) . '.' . (tenths as String) . 's';
 	}
 
 	local Function of String is statusReason(Int is code){
@@ -120,11 +136,12 @@ Class is SiteServer{
 			req:postArgs: HttpRequestParser():parseFormParams(raw: bodyBuf);
 		});
 
+		local Int is startNs: monotonicNs();
 		local String is fsPath: resolvePath(urlPath: req:path);
 		if({ fsPath == '' }, {
-			emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> 403');
 			sendResponse(client: client, status: 403, contentType: 'text/plain; charset=utf-8', extraHeaders: Map:init(), body: '403 Forbidden');
 			client:close();
+			emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> 403 (' . formatDuration(elapsedNs: monotonicNs() - startNs) . ')');
 			return;
 		});
 
@@ -132,9 +149,9 @@ Class is SiteServer{
 			if({ fileExists(path: fsPath . '/index.html') }, {
 				fsPath: fsPath . '/index.html';
 			}, {
-				emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> 404');
 				sendResponse(client: client, status: 404, contentType: 'text/html; charset=utf-8', extraHeaders: Map:init(), body: '<h1>404 Not Found</h1><p>' . req:path . '</p>');
 				client:close();
+				emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> 404 (' . formatDuration(elapsedNs: monotonicNs() - startNs) . ')');
 				return;
 			});
 		});
@@ -142,22 +159,22 @@ Class is SiteServer{
 		if({ fsPath:endsWith(suffix: '.spec') }, {
 			local SpecPageRunner is pr: SpecPageRunner():runPage(specPath: fsPath, docRoot: site:directory, getArgs: req:getArgs, postArgs: req:postArgs);
 			if({ !pr:ok }, {
-				emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> ' . (pr:statusCode as String));
 				sendResponse(client: client, status: pr:statusCode, contentType: 'text/plain; charset=utf-8', extraHeaders: Map:init(), body: pr:errorMessage);
 				client:close();
+				emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> ' . (pr:statusCode as String) . ' (' . formatDuration(elapsedNs: monotonicNs() - startNs) . ')');
 				return;
 			});
-			emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> ' . (pr:statusCode as String));
 			sendResponse(client: client, status: pr:statusCode, contentType: pr:contentType, extraHeaders: pr:headers, body: pr:body);
 			client:close();
+			emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> ' . (pr:statusCode as String) . ' (' . formatDuration(elapsedNs: monotonicNs() - startNs) . ')');
 			return;
 		});
 
 		local String is content: fileRead(path: fsPath, onSuccess: local Function(String is _s){}, onError: local Function(Any is _e){}, default: '');
 		local String is mime: MimeTypes():forPath(path: fsPath);
-		emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> 200');
 		sendResponse(client: client, status: 200, contentType: mime, extraHeaders: Map:init(), body: content);
 		client:close();
+		emitLog(msg: ':' . (site:port as String) . ' ' . req:method . ' ' . req:path . ' -> 200 (' . formatDuration(elapsedNs: monotonicNs() - startNs) . ')');
 	}
 
 	Function is serveLoop(){

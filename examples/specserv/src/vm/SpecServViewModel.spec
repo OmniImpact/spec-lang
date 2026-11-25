@@ -6,11 +6,11 @@ Class is SpecServViewModel{
 
 	merge [[String]] is using: [
 		['specserv', 'model', [ServerConfig, SiteConfig]],
-		['specserv', 'server', SiteServer],
 		['base', 'core', SpecError],
+		['base', 'net', [as Socket(), NetError]],
 		['base', 'struct', Array],
-		['base', 'sys', [as Dir(), as File()]],
-		['base', 'sys', 'thread', ThreadScope],
+		['base', 'sys', [as Dir(), as File(), as Process()]],
+		['base', 'sys', 'thread', [Channel, ThreadScope]],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -19,7 +19,10 @@ Class is SpecServViewModel{
 	String is configPath: 'specserv.json';
 	Int is selectedIndex: -1;
 	Boolean is serversRunning: false;
-	[SiteServer] is activeServers: [];
+	Int is controlPort: 0;
+	Int is logCursor: 0;
+	String is logFilePath: '';
+	Channel of Int is exitChannel: Channel:bounded(capacity: 4);
 	Array of String is logs: Array();
 	String is statusMessage: 'Stopped';
 
@@ -183,58 +186,160 @@ Class is SpecServViewModel{
 		onChanged();
 	}
 
-	Function is startServers(){
-		if({ serversRunning }, { return; });
-		activeServers: [];
-		local Int is started: 0;
-		times(count: config:sites:length(), worker: local Function(Int is i){
-			local SiteConfig is s: config:sites:get(index: i);
-			if({ s:enabled }, {
-				local SiteServer is srv: SiteServer(site: s);
-				activeServers:push(item: srv);
-				if({ allowThreads }, {
-					ThreadScope:dispatch(task: local Function(){
-						srv:serveLoop();
-					});
+	local Function of String is findSpecServBinary(){
+		local String is exeDirPath: exeDir();
+		if({ exeDirPath != '' && fileExists(path: exeDirPath . '/specserv') }, {
+			return exeDirPath . '/specserv';
+		});
+		if({ fileExists(path: 'bin/specserv') }, { return 'bin/specserv'; });
+		return 'specserv';
+	}
+
+	local Function of Int is pickControlPort(){
+		local Int is candidate: 47900 + (getPid() % 500);
+		local Boolean is clash: true;
+		while({ clash }, {
+			clash: false;
+			times(count: config:sites:length(), worker: local Function(Int is i){
+				if({ config:sites:get(index: i):port == candidate }, {
+					clash: true;
 				});
-				started++;
+			});
+			if({ clash }, {
+				candidate++;
 			});
 		});
-		if({ started == 0 }, {
+		return candidate;
+	}
+
+	local Function of String is sendControl(String is cmd){
+		if({ controlPort <= 0 }, { return ''; });
+		local Boolean is ok: true;
+		local Socket is sock: connect(host: '127.0.0.1', port: controlPort, timeoutMs: 250, onError: local Function(SpecError of NetError is _e){
+			ok: false;
+		});
+		if({ !ok || !sock:isOpen() }, {
+			return '';
+		});
+		sock:setTimeout(timeoutMs: 500);
+		sock:sendString(text: cmd . "\n", onError: local Function(SpecError of NetError is _e){
+			ok: false;
+		});
+		local String is out: '';
+		if({ ok }, {
+			local Boolean is reading: true;
+			while({ reading }, {
+				local String is chunk: sock:receiveString(maxBytes: 8192, onError: local Function(SpecError of NetError is _e){});
+				if({ chunk == '' }, {
+					reading: false;
+				}, {
+					out: out . chunk;
+				});
+			});
+		});
+		sock:close();
+		return out;
+	}
+
+	Function is startServers(){
+		if({ serversRunning }, { return; });
+		local Int is enabledCount: 0;
+		times(count: config:sites:length(), worker: local Function(Int is i){
+			if({ config:sites:get(index: i):enabled }, {
+				enabledCount++;
+			});
+		});
+		if({ enabledCount == 0 }, {
 			statusMessage: 'No enabled sites to start';
 			appendLog(line: statusMessage);
 			onChanged();
 			return;
 		});
+
+		controlPort: pickControlPort();
+		logCursor: 0;
+		while({ exitChannel:tryReceive(default: -1) != -1 }, {});
+
+		if({ !config:saveToFile(path: configPath) }, {
+			statusMessage: 'Failed to save ' . configPath;
+			appendLog(line: statusMessage);
+			onChanged();
+			return;
+		});
+
+		local String is binPath: findSpecServBinary();
+		local Array of String is procArgs: Array(['--config', configPath, '--control-port', controlPort as String]);
+		if({ logFilePath != '' }, {
+			procArgs:add(item: '--log-file');
+			procArgs:add(item: logFilePath);
+		});
+		local Channel of Int is doneCh: exitChannel;
+
+		if({ allowThreads }, {
+			ThreadScope:dispatch(task: local Function(){
+				local Int is code: execute(command: binPath, args: procArgs);
+				doneCh:send(item: code);
+			});
+		});
 		serversRunning: true;
-		statusMessage: 'Running (' . (started as String) . ' site(s))';
+		statusMessage: 'Running (' . (enabledCount as String) . ' site(s))';
+		appendLog(line: 'Started ' . binPath . ' (' . (enabledCount as String) . ' site(s))');
 		onChanged();
 	}
 
 	Function is stopServers(){
 		if({ !serversRunning }, { return; });
-		times(count: activeServers:length(), worker: local Function(Int is i){
-			activeServers:get(index: i):requestStop();
+		if({ allowThreads }, {
+			sendControl(cmd: 'STOP');
+			local Int is waited: 0;
+			local Boolean is exited: false;
+			while({ !exited && waited < 30 }, {
+				if({ exitChannel:tryReceive(default: -9999) != -9999 }, {
+					exited: true;
+				}, {
+					sleep(milliseconds: 25);
+					waited++;
+				});
+			});
 		});
 		serversRunning: false;
+		controlPort: 0;
 		statusMessage: 'Stopped';
-		appendLog(line: 'All sites stopped');
+		appendLog(line: 'Stopped specserv');
 		onChanged();
 	}
 
 	Function of Boolean is pollLogs(){
 		local Boolean is anyNew: false;
-		times(count: activeServers:length(), worker: local Function(Int is i){
-			local SiteServer is srv: activeServers:get(index: i);
-			local Boolean is draining: true;
-			while({ draining }, {
-				local String is msg: srv:logChannel:tryReceive(default: '');
-				if({ msg != '' }, {
-					appendLog(line: msg);
-					anyNew: true;
-				}, {
-					draining: false;
+		if({ serversRunning && controlPort > 0 }, {
+			local String is resp: sendControl(cmd: 'LOGS ' . (logCursor as String));
+			if({ resp != '' }, {
+				local Array of String is lines: resp:split(delimiter: "\n");
+				times(count: lines:length(), worker: local Function(Int is i){
+					local String is ln: lines:get(index: i, default: '');
+					if({ ln:startsWith(prefix: 'LOG ') }, {
+						appendLog(line: ln:substring(start: 4, end: ln:length()));
+						anyNew: true;
+					}, {
+						if({ ln:startsWith(prefix: 'END ') }, {
+							local Int is nextCur: ln:substring(start: 4, end: ln:length()):trim():parseInt(default: logCursor);
+							if({ nextCur > logCursor }, {
+								logCursor: nextCur;
+							});
+						});
+					});
 				});
+			});
+		});
+		if({ serversRunning }, {
+			local Int is exitCode: exitChannel:tryReceive(default: -9999);
+			if({ exitCode != -9999 }, {
+				serversRunning: false;
+				controlPort: 0;
+				statusMessage: 'Stopped (exit ' . (exitCode as String) . ')';
+				appendLog(line: 'specserv exited with code ' . (exitCode as String));
+				onChanged();
+				anyNew: true;
 			});
 		});
 		if({ anyNew }, {
