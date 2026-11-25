@@ -9,7 +9,7 @@ Class is SpecServViewModel{
 		['base', 'core', SpecError],
 		['base', 'net', [as Socket(), NetError]],
 		['base', 'struct', Array],
-		['base', 'sys', [as Dir(), as File(), as Process()]],
+		['base', 'sys', [as Dir(), as File(), as Process(), as Time()]],
 		['base', 'sys', 'thread', [Channel, ThreadScope]],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
@@ -25,6 +25,7 @@ Class is SpecServViewModel{
 	Int is cpuTenthsPct: 0;
 	Int is memKb: 0;
 	Int is reqLast60s: 0;
+	Int is lastStatsRefreshMs: 0;
 	String is logFilePath: '';
 	Channel of Int is exitChannel: Channel:bounded(capacity: 4);
 	Array of String is logs: Array();
@@ -408,7 +409,9 @@ Class is SpecServViewModel{
 							local Int is prevMem: memKb;
 							local Int is prevReq: reqLast60s;
 							parseStatsLine(ln: ln);
-							if({ cpuTenthsPct != prevCpu || memKb != prevMem || reqLast60s != prevReq }, {
+							local Int is nowMs: monotonicMs();
+							if({ cpuTenthsPct != prevCpu || memKb != prevMem || reqLast60s != prevReq || (nowMs - lastStatsRefreshMs >= 1000) }, {
+								lastStatsRefreshMs: nowMs;
 								anyNew: true;
 							});
 						}, {
