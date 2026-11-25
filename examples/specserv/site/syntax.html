@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Spec Language Syntax</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <a class="brand" href="/index.html"><img src="/logo.svg" alt="Spec logo" /><span>Spec Docs</span></a>
+    <nav>
+      <a href="/index.html">Overview</a>
+      <a class="active" href="/syntax.html">Syntax</a>
+      <a href="/keywords.html">Keywords</a>
+      <a href="/stdlib.html">Standard Library</a>
+      <a href="/notes.txt">Notes</a>
+      <form class="search-form" action="/search.spec" method="get">
+        <input type="text" name="q" placeholder="Search docs (/)..." />
+        <button type="submit">Search</button>
+      </form>
+    </nav>
+  </header>
+  <main>
+    <h1>Spec Language Syntax</h1>
+    <h2>Declarations &amp; Types</h2>
+    <div class="card">
+      <p>Spec declarations use the <code>&lt;Type&gt; is &lt;Name&gt;: &lt;Value&gt;;</code> pattern consistently across locals, fields, parameters, classes, and functions.</p>
+      <pre><code>Int is count: 0;
+String is greeting: 'Hello';
+Array of String is items: Array(['one', 'two']);
+Map of String to Int is scores: Map:init();</code></pre>
+    </div>
+    <h2>Classes, Inheritance, and Imports</h2>
+    <div class="card">
+      <p>Classes declare their package with <code>replace [String] is namespace: [...]</code> and import dependencies with <code>using</code>. Instance-importing a utility class with <code>as ClassName()</code> exposes its methods directly on <code>self</code>.</p>
+      <pre><code>Class of BaseWidget is CounterPanel{
+	replace [String] is namespace: ['app', 'ui'];
+
+	merge [[String]] is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
+	];
+
+	Int is value: 0;
+
+	Function of Int is increment(Int is by: 1){
+		value: value + by;
+		return value;
+	}
+}</code></pre>
+    </div>
+    <h2>Conditionals, Loops, and Pattern Matching</h2>
+    <div class="card">
+      <pre><code>if({ count &gt; 0 }, {
+	times(count: count, worker: local Function(Int is i){
+		sum: sum + i;
+	});
+}, {
+	range(start: 1, end: 5, worker: local Function(Int is n){
+		sum: sum + n;
+	});
+});
+
+local String is label: match(on: status, when: [
+	Status:OK: { 'ready' },
+	Status:ERR: { 'failed' },
+	else: { 'unknown' }
+]);</code></pre>
+    </div>
+  </main>
+  <footer>Served by SpecServ · Spec Language Syntax Guide</footer>
+  <script src="/app.js"></script>
+</body>
+</html>

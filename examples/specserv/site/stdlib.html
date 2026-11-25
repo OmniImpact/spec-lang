@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Spec Standard Library</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <a class="brand" href="/index.html"><img src="/logo.svg" alt="Spec logo" /><span>Spec Docs</span></a>
+    <nav>
+      <a href="/index.html">Overview</a>
+      <a href="/syntax.html">Syntax</a>
+      <a href="/keywords.html">Keywords</a>
+      <a class="active" href="/stdlib.html">Standard Library</a>
+      <a href="/notes.txt">Notes</a>
+      <form class="search-form" action="/search.spec" method="get">
+        <input type="text" name="q" placeholder="Search docs (/)..." />
+        <button type="submit">Search</button>
+      </form>
+    </nav>
+  </header>
+  <main>
+    <h1>Spec Standard Library</h1>
+    <div class="card">
+      <h3><code>base:core</code></h3>
+      <p>Core root types: <code>Any</code>, <code>String</code>, <code>Str</code>, <code>Result</code>, <code>SpecError</code>, <code>Stringable</code>, and <code>Mergeable</code>.</p>
+    </div>
+    <div class="card">
+      <h3><code>base:struct</code></h3>
+      <p>Generic collections: <code>Array</code>, <code>List</code>, <code>Map</code>, <code>Stack</code>, and <code>Sort</code>.</p>
+    </div>
+    <div class="card">
+      <h3><code>base:data</code></h3>
+      <p>Structured data parsers and serializers: <code>Json</code> (with <code>JsonNumber</code>, <code>JsonBool</code>, <code>JsonNull</code>) and <code>Xml</code> / <code>XmlNode</code> (strict XML and HTML5 DOM parsing).</p>
+    </div>
+    <div class="card">
+      <h3><code>base:net</code></h3>
+      <p>Networking and web primitives: <code>Socket</code> (TCP client/server), <code>Http</code> (HTTP/1.1 client), <code>TlsClient</code>, <code>Url</code>, and <code>SpecServePage</code>.</p>
+    </div>
+    <div class="card">
+      <h3><code>base:sys</code> &amp; <code>base:sys:thread</code></h3>
+      <p>System interfaces: <code>File</code>, <code>Dir</code>, <code>Process</code>, <code>Time</code>, <code>DateTime</code>, <code>Simd</code>, <code>Conditional</code>, <code>Loops</code>, <code>ThreadScope</code>, <code>Task</code>, <code>Channel</code>, and <code>Parallel</code>.</p>
+    </div>
+    <div class="card">
+      <h3><code>base:theo</code> &amp; <code>base:cleo</code></h3>
+      <p>Terminal UI and CLI frameworks: <code>TheoApp</code>, <code>Frame</code>, <code>Grid</code>, <code>Panel</code>, <code>ListView</code>, <code>TextInput</code>, <code>Button</code>, <code>PixelCanvas</code>, and <code>Cleo</code>.</p>
+    </div>
+  </main>
+  <footer>Served by SpecServ · Standard Library Overview</footer>
+  <script src="/app.js"></script>
+</body>
+</html>

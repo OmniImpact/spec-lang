@@ -1,0 +1,10 @@
+{
+  "name": "specserv",
+  "version": "0.1.0",
+  "source": "src/SpecServ.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/specserv"
+}

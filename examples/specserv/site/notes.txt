@@ -1,0 +1,10 @@
+Spec Language Quick Reference
+=============================
+- Build project:   specbuild <manifest.json> build
+- Run tests:       specunit -s bin/spec -t tests
+- Serve docs:      specserv --serve --config specserv.json
+
+Key declarations:
+  Class is MyClass { ... }
+  Enum is MyEnum { A, B(Int is x) }
+  Function of Int is add(Int is a, Int is b){ return a + b; }

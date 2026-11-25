@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Spec Language Overview</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <a class="brand" href="/index.html"><img src="/logo.svg" alt="Spec logo" /><span>Spec Docs</span></a>
+    <nav>
+      <a class="active" href="/index.html">Overview</a>
+      <a href="/syntax.html">Syntax</a>
+      <a href="/keywords.html">Keywords</a>
+      <a href="/stdlib.html">Standard Library</a>
+      <a href="/notes.txt">Notes</a>
+      <form class="search-form" action="/search.spec" method="get">
+        <input type="text" name="q" placeholder="Search docs (/)..." />
+        <button type="submit">Search</button>
+      </form>
+    </nav>
+  </header>
+  <main>
+    <h1>The Spec Programming Language</h1>
+    <div class="card">
+      <p><strong>Spec</strong> is a statically typed, self-hosting systems and application language that compiles directly to native machine code via LLVM IR and Clang.</p>
+      <p>Spec combines clean object-oriented and algebraic modeling with deterministic Automatic Reference Counting (ARC) — no tracing garbage collector pauses — and structured concurrency.</p>
+    </div>
+    <h2>Core Highlights</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Named Parameters Everywhere:</strong> Every function call and constructor uses explicit <code>name: value</code> arguments, making call sites self-documenting.</li>
+        <li><strong>Deterministic ARC + Claim Pool:</strong> Heap objects are reference-counted deterministically with compile-time scope release and pool elision.</li>
+        <li><strong>Algebraic Enums &amp; Pattern Matching:</strong> Tagged unions (such as <code>Result of T to E</code> and <code>SemType</code>) dispatch cleanly through <code>match(on: ..., when: [...])</code>.</li>
+        <li><strong>Control Flow as Library Constructs:</strong> <code>if</code>, <code>while</code>, <code>times</code>, <code>range</code>, and <code>match</code> are library functions inlined directly into zero-overhead native loops and branches by the compiler.</li>
+        <li><strong>Structured Concurrency:</strong> <code>ThreadScope:open</code>, typed <code>Channel</code>, <code>Task</code>, and <code>Parallel</code> guarantee worker lifetimes never outlive their lexical scope.</li>
+      </ul>
+    </div>
+    <h2>Hello, SpecServ</h2>
+    <pre><code>Class is HelloWorld{
+	replace [String] is namespace: ['hello'];
+
+	replace Function is init(Map of String to String is args){
+		line(text: 'Hello, Spec!');
+	}
+}</code></pre>
+  </main>
+  <footer>Served by SpecServ · Static HTML/CSS/JS/SVG + Dynamic SpecServePage</footer>
+  <script src="/app.js"></script>
+</body>
+</html>

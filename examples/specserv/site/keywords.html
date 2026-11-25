@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Spec Keywords Reference</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <a class="brand" href="/index.html"><img src="/logo.svg" alt="Spec logo" /><span>Spec Docs</span></a>
+    <nav>
+      <a href="/index.html">Overview</a>
+      <a href="/syntax.html">Syntax</a>
+      <a class="active" href="/keywords.html">Keywords</a>
+      <a href="/stdlib.html">Standard Library</a>
+      <a href="/notes.txt">Notes</a>
+      <form class="search-form" action="/search.spec" method="get">
+        <input type="text" name="q" placeholder="Search docs (/)..." />
+        <button type="submit">Search</button>
+      </form>
+    </nav>
+  </header>
+  <main>
+    <h1>Spec Keywords &amp; Modifiers</h1>
+    <table>
+      <thead>
+        <tr><th>Keyword</th><th>Role</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Class</code></td><td>Declares a class or subclass (<code>Class of Base is Sub</code>)</td><td><code>Class is Server { ... }</code></td></tr>
+        <tr><td><code>Enum</code></td><td>Declares an algebraic enum with optional variant payloads</td><td><code>Enum is Result of T to E { Ok(T is value), Err(E is error) }</code></td></tr>
+        <tr><td><code>Function</code></td><td>Declares a method or anonymous closure</td><td><code>Function of Int is add(Int is a, Int is b){ return a + b; }</code></td></tr>
+        <tr><td><code>is</code></td><td>Binds a name to a type or expression</td><td><code>Int is port: 47321;</code></td></tr>
+        <tr><td><code>of</code> / <code>to</code></td><td>Applies generic type parameters</td><td><code>Map of String to Int</code></td></tr>
+        <tr><td><code>local</code></td><td>Block-scoped variable or private class member</td><td><code>local Int is i: 0;</code></td></tr>
+        <tr><td><code>held</code></td><td>Class-scoped singleton field or receiver-free function</td><td><code>held Int is DEFAULT_PORT: 47321;</code></td></tr>
+        <tr><td><code>replace</code></td><td>Overrides an inherited member or metadata field</td><td><code>replace Function is init(){ ... }</code></td></tr>
+        <tr><td><code>merge</code></td><td>Appends metadata entries (such as <code>using</code>) with base classes</td><td><code>merge [[String]] is using: [...];</code></td></tr>
+        <tr><td><code>as</code></td><td>Runtime type cast or instance-import in <code>using</code></td><td><code>['base', 'sys', as Loops()]</code></td></tr>
+        <tr><td><code>lazy</code></td><td>Thread-safe once-initialized field computed on first read</td><td><code>lazy String is index: buildIndex();</code></td></tr>
+        <tr><td><code>return</code></td><td>Returns a value from the enclosing function or closure</td><td><code>return true;</code></td></tr>
+        <tr><td><code>true</code> / <code>false</code> / <code>null</code></td><td>Boolean and null literal values</td><td><code>Boolean is ok: true;</code></td></tr>
+      </tbody>
+    </table>
+  </main>
+  <footer>Served by SpecServ · Spec Keywords Reference</footer>
+  <script src="/app.js"></script>
+</body>
+</html>
