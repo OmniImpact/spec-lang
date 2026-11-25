@@ -2572,6 +2572,8 @@ struct wl_shm;
 struct wl_shm_pool;
 struct wl_buffer;
 struct wl_surface;
+struct wl_seat;
+struct wl_keyboard;
 struct wl_proxy;
 struct wl_interface;
 
@@ -2583,6 +2585,20 @@ struct libdecor_configuration;
 struct spec_wl_registry_listener {
     void (*global)(void* data, struct wl_registry* registry, uint32_t name, const char* interface, uint32_t version);
     void (*global_remove)(void* data, struct wl_registry* registry, uint32_t name);
+};
+
+struct spec_wl_seat_listener {
+    void (*capabilities)(void* data, struct wl_seat* seat, uint32_t capabilities);
+    void (*name)(void* data, struct wl_seat* seat, const char* name);
+};
+
+struct spec_wl_keyboard_listener {
+    void (*keymap)(void* data, struct wl_keyboard* kb, uint32_t format, int32_t fd, uint32_t size);
+    void (*enter)(void* data, struct wl_keyboard* kb, uint32_t serial, struct wl_surface* surface, void* keys);
+    void (*leave)(void* data, struct wl_keyboard* kb, uint32_t serial, struct wl_surface* surface);
+    void (*key)(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t time, uint32_t key, uint32_t state);
+    void (*modifiers)(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group);
+    void (*repeat_info)(void* data, struct wl_keyboard* kb, int32_t rate, int32_t delay);
 };
 
 struct spec_libdecor_interface {
@@ -2634,6 +2650,8 @@ static const struct wl_interface* _wl_shm_iface = NULL;
 static const struct wl_interface* _wl_shm_pool_iface = NULL;
 static const struct wl_interface* _wl_buffer_iface = NULL;
 static const struct wl_interface* _wl_surface_iface = NULL;
+static const struct wl_interface* _wl_seat_iface = NULL;
+static const struct wl_interface* _wl_keyboard_iface = NULL;
 
 static struct libdecor* (*_libdecor_new)(struct wl_display*, struct spec_libdecor_interface*) = NULL;
 static void (*_libdecor_unref)(struct libdecor*) = NULL;
@@ -2677,6 +2695,8 @@ static bool _spec_win_init_libs(void) {
     _wl_shm_pool_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_shm_pool_interface");
     _wl_buffer_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_buffer_interface");
     _wl_surface_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_surface_interface");
+    _wl_seat_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_seat_interface");
+    _wl_keyboard_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_keyboard_interface");
 
     _libdecor_new = dlsym(_spec_decor_so, "libdecor_new");
     _libdecor_unref = dlsym(_spec_decor_so, "libdecor_unref");
@@ -2711,11 +2731,16 @@ typedef struct SpecWaylandWindow {
     struct wl_compositor* compositor;
     struct wl_shm* shm;
     struct wl_surface* surface;
+    struct wl_seat* seat;
+    struct wl_keyboard* keyboard;
     struct wl_shm_pool* shm_pool;
     struct wl_buffer* buffer;
     void* shm_data;
     size_t shm_size;
     int shm_fd;
+    int* key_queue;
+    size_t key_len;
+    size_t key_cap;
     struct libdecor* decor;
     struct libdecor_frame* frame;
 } SpecWaylandWindow;
@@ -2748,6 +2773,86 @@ static SpecWaylandWindow* _spec_get_window(long long handle) {
     return _spec_windows[idx];
 }
 
+static void _spec_push_key(SpecWaylandWindow* w, int code) {
+    if (!w || code <= 0) return;
+    if (w->key_len >= w->key_cap) {
+        size_t new_cap = w->key_cap == 0 ? 16 : w->key_cap * 2;
+        int* next = (int*)realloc(w->key_queue, new_cap * sizeof(int));
+        if (!next) return;
+        w->key_queue = next;
+        w->key_cap = new_cap;
+    }
+    w->key_queue[w->key_len++] = code;
+}
+
+static int _spec_evdev_to_ascii(uint32_t key) {
+    switch (key) {
+        case 1: return 27;   /* KEY_ESC */
+        case 16: return 'q'; /* KEY_Q */
+        case 17: return 'w'; /* KEY_W */
+        case 18: return 'e'; /* KEY_E */
+        case 30: return 'a'; /* KEY_A */
+        case 31: return 's'; /* KEY_S */
+        case 32: return 'd'; /* KEY_D */
+        default: return 0;
+    }
+}
+
+static void _spec_kb_keymap(void* data, struct wl_keyboard* kb, uint32_t fmt, int32_t fd, uint32_t sz) {
+    (void)data; (void)kb; (void)fmt; (void)sz;
+    if (fd >= 0) close(fd);
+}
+static void _spec_kb_enter(void* data, struct wl_keyboard* kb, uint32_t serial, struct wl_surface* s, void* keys) {
+    (void)data; (void)kb; (void)serial; (void)s; (void)keys;
+}
+static void _spec_kb_leave(void* data, struct wl_keyboard* kb, uint32_t serial, struct wl_surface* s) {
+    (void)data; (void)kb; (void)serial; (void)s;
+}
+static void _spec_kb_key(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) {
+    (void)kb; (void)serial; (void)time;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (state == 1 || state == 2) {
+        int ch = _spec_evdev_to_ascii(key);
+        if (ch > 0) _spec_push_key(w, ch);
+    }
+}
+static void _spec_kb_mods(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t d, uint32_t l, uint32_t lo, uint32_t g) {
+    (void)data; (void)kb; (void)serial; (void)d; (void)l; (void)lo; (void)g;
+}
+static void _spec_kb_repeat(void* data, struct wl_keyboard* kb, int32_t rate, int32_t delay) {
+    (void)data; (void)kb; (void)rate; (void)delay;
+}
+
+static const struct spec_wl_keyboard_listener _spec_kb_listener = {
+    _spec_kb_keymap,
+    _spec_kb_enter,
+    _spec_kb_leave,
+    _spec_kb_key,
+    _spec_kb_mods,
+    _spec_kb_repeat
+};
+
+static void _spec_seat_caps(void* data, struct wl_seat* seat, uint32_t caps) {
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if ((caps & 2u /* WL_SEAT_CAPABILITY_KEYBOARD */) && !w->keyboard && _wl_keyboard_iface) {
+        uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)seat);
+        w->keyboard = (struct wl_keyboard*)_wl_proxy_marshal_flags(
+            (struct wl_proxy*)seat, 1 /* WL_SEAT_GET_KEYBOARD */, _wl_keyboard_iface, sv, 0, NULL);
+        if (w->keyboard) {
+            _wl_proxy_add_listener((struct wl_proxy*)w->keyboard, (void (**)(void))&_spec_kb_listener, w);
+        }
+    }
+}
+
+static void _spec_seat_name(void* data, struct wl_seat* seat, const char* name) {
+    (void)data; (void)seat; (void)name;
+}
+
+static const struct spec_wl_seat_listener _spec_seat_listener = {
+    _spec_seat_caps,
+    _spec_seat_name
+};
+
 static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t name, const char* iface, uint32_t version) {
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
     if (strcmp(iface, "wl_compositor") == 0 && _wl_compositor_iface) {
@@ -2759,6 +2864,14 @@ static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t na
         w->shm = (struct wl_shm*)_wl_proxy_marshal_flags(
             (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */, _wl_shm_iface, 1, 0,
             name, iface, 1, NULL);
+    } else if (strcmp(iface, "wl_seat") == 0 && _wl_seat_iface && !w->seat) {
+        uint32_t v = version < 5 ? version : 5;
+        w->seat = (struct wl_seat*)_wl_proxy_marshal_flags(
+            (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */, _wl_seat_iface, v, 0,
+            name, iface, v, NULL);
+        if (w->seat) {
+            _wl_proxy_add_listener((struct wl_proxy*)w->seat, (void (**)(void))&_spec_seat_listener, w);
+        }
     }
 }
 
@@ -2933,8 +3046,11 @@ long long spec_pal_window_close(long long handle) {
     _spec_windows[idx] = NULL;
 
     _spec_release_shm(w);
+    if (w->key_queue) free(w->key_queue);
     if (w->frame && _libdecor_frame_unref) _libdecor_frame_unref(w->frame);
     if (w->decor && _libdecor_unref) _libdecor_unref(w->decor);
+    if (w->keyboard && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->keyboard);
+    if (w->seat && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->seat);
     if (w->surface && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->surface);
     if (w->shm && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->shm);
     if (w->compositor && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->compositor);
@@ -3059,6 +3175,43 @@ long long spec_pal_window_poll(long long handle) {
     return w->should_close ? 0 : 1;
 }
 
+long long spec_pal_window_next_key(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || w->key_len == 0) return 0;
+    int ch = w->key_queue[0];
+    if (w->key_len > 1) {
+        memmove(w->key_queue, w->key_queue + 1, (w->key_len - 1) * sizeof(int));
+    }
+    w->key_len--;
+    return (long long)ch;
+}
+
+long long spec_pal_window_width(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->width : 0;
+}
+
+long long spec_pal_window_height(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->height : 0;
+}
+
+long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !pixels_addr || width <= 0 || height <= 0) return 0;
+    if (!w->shm_data || w->width <= 0 || w->height <= 0) return 0;
+    const uint32_t* src = (const uint32_t*)(intptr_t)pixels_addr;
+    uint32_t* dst = (uint32_t*)w->shm_data;
+    int copy_w = (int)width < w->width ? (int)width : w->width;
+    int copy_h = (int)height < w->height ? (int)height : w->height;
+    for (int y = 0; y < copy_h; y++) {
+        memcpy(dst + (size_t)y * (size_t)w->width, src + (size_t)y * (size_t)width, (size_t)copy_w * 4);
+    }
+    _spec_surface_present(w);
+    _wl_display_flush(w->display);
+    return 1;
+}
+
 #else
 
 long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
@@ -3074,6 +3227,301 @@ long long spec_pal_window_poll(long long handle) {
 
 long long spec_pal_window_close(long long handle) {
     (void)handle;
+    return 0;
+}
+
+long long spec_pal_window_next_key(long long handle) {
+    (void)handle;
+    return 0;
+}
+
+long long spec_pal_window_width(long long handle) {
+    (void)handle;
+    return 0;
+}
+
+long long spec_pal_window_height(long long handle) {
+    (void)handle;
+    return 0;
+}
+
+long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
+    (void)handle; (void)pixels_addr; (void)width; (void)height;
+    return 0;
+}
+
+#endif
+#if defined(__has_include) && __has_include(<stb/stb_truetype.h>)
+#define STB_TRUETYPE_IMPLEMENTATION
+#include <stb/stb_truetype.h>
+#define SPEC_HAS_STB_TRUETYPE 1
+#else
+#define SPEC_HAS_STB_TRUETYPE 0
+#endif
+
+static __thread char _spec_last_font_err[256] = "";
+
+static inline void _spec_set_font_error(const char* msg) {
+    const char* m = msg ? msg : "Font error";
+    snprintf(_spec_last_font_err, sizeof(_spec_last_font_err), "%s", m);
+}
+
+long long spec_pal_font_last_error(void) {
+    return (long long)(intptr_t)_spec_last_font_err;
+}
+
+#if SPEC_HAS_STB_TRUETYPE
+
+typedef struct SpecFont {
+    unsigned char* ttf_data;
+    stbtt_fontinfo info;
+} SpecFont;
+
+static SpecFont** _spec_fonts = NULL;
+static size_t _spec_fonts_cap = 0;
+
+static long long _spec_alloc_font_slot(SpecFont* f) {
+    for (size_t i = 0; i < _spec_fonts_cap; i++) {
+        if (!_spec_fonts[i]) {
+            _spec_fonts[i] = f;
+            return (long long)(i + 1);
+        }
+    }
+    size_t new_cap = _spec_fonts_cap == 0 ? 8 : _spec_fonts_cap * 2;
+    SpecFont** next = (SpecFont**)realloc(_spec_fonts, new_cap * sizeof(SpecFont*));
+    if (!next) return -1;
+    for (size_t i = _spec_fonts_cap; i < new_cap; i++) next[i] = NULL;
+    _spec_fonts = next;
+    size_t idx = _spec_fonts_cap;
+    _spec_fonts_cap = new_cap;
+    _spec_fonts[idx] = f;
+    return (long long)(idx + 1);
+}
+
+static SpecFont* _spec_get_font(long long handle) {
+    if (handle <= 0) return NULL;
+    size_t idx = (size_t)(handle - 1);
+    if (idx >= _spec_fonts_cap) return NULL;
+    return _spec_fonts[idx];
+}
+
+long long spec_pal_font_load(long long path_cstr) {
+    if (!path_cstr) {
+        _spec_set_font_error("Null font path");
+        return -1;
+    }
+    const char* path = (const char*)(intptr_t)path_cstr;
+    FILE* fp = fopen(path, "rb");
+    if (!fp) {
+        _spec_set_font_error("Failed to open font file");
+        return -1;
+    }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        _spec_set_font_error("Failed to seek font file");
+        return -1;
+    }
+    long sz = ftell(fp);
+    if (sz <= 0) {
+        fclose(fp);
+        _spec_set_font_error("Empty font file");
+        return -1;
+    }
+    rewind(fp);
+    unsigned char* data = (unsigned char*)malloc((size_t)sz);
+    if (!data) {
+        fclose(fp);
+        _spec_set_font_error("Out of memory reading font");
+        return -1;
+    }
+    if (fread(data, 1, (size_t)sz, fp) != (size_t)sz) {
+        free(data);
+        fclose(fp);
+        _spec_set_font_error("Failed to read font data");
+        return -1;
+    }
+    fclose(fp);
+
+    SpecFont* f = (SpecFont*)calloc(1, sizeof(SpecFont));
+    if (!f) {
+        free(data);
+        _spec_set_font_error("Out of memory");
+        return -1;
+    }
+    f->ttf_data = data;
+    int offset = stbtt_GetFontOffsetForIndex(data, 0);
+    if (!stbtt_InitFont(&f->info, data, offset)) {
+        free(data);
+        free(f);
+        _spec_set_font_error("stbtt_InitFont failed");
+        return -1;
+    }
+    long long h = _spec_alloc_font_slot(f);
+    if (h <= 0) {
+        free(data);
+        free(f);
+        _spec_set_font_error("Out of font slots");
+        return -1;
+    }
+    return h;
+}
+
+long long spec_pal_font_close(long long handle) {
+    if (handle <= 0) return 0;
+    size_t idx = (size_t)(handle - 1);
+    if (idx >= _spec_fonts_cap || !_spec_fonts[idx]) return 0;
+    SpecFont* f = _spec_fonts[idx];
+    _spec_fonts[idx] = NULL;
+    if (f->ttf_data) free(f->ttf_data);
+    free(f);
+    return 0;
+}
+
+static uint32_t _spec_utf8_next(const char** p) {
+    const unsigned char* s = (const unsigned char*)(*p);
+    if (!s || !*s) return 0;
+    unsigned char c0 = s[0];
+    if (c0 < 0x80) {
+        *p += 1;
+        return c0;
+    } else if ((c0 & 0xE0) == 0xC0 && s[1]) {
+        *p += 2;
+        return ((uint32_t)(c0 & 0x1F) << 6) | (uint32_t)(s[1] & 0x3F);
+    } else if ((c0 & 0xF0) == 0xE0 && s[1] && s[2]) {
+        *p += 3;
+        return ((uint32_t)(c0 & 0x0F) << 12) | ((uint32_t)(s[1] & 0x3F) << 6) | (uint32_t)(s[2] & 0x3F);
+    } else if ((c0 & 0xF8) == 0xF0 && s[1] && s[2] && s[3]) {
+        *p += 4;
+        return ((uint32_t)(c0 & 0x07) << 18) | ((uint32_t)(s[1] & 0x3F) << 12) |
+               ((uint32_t)(s[2] & 0x3F) << 6) | (uint32_t)(s[3] & 0x3F);
+    }
+    *p += 1;
+    return c0;
+}
+
+long long spec_pal_font_draw_text(
+    long long handle,
+    long long pixels_addr,
+    long long buf_w,
+    long long buf_h,
+    long long x,
+    long long y,
+    long long text_cstr,
+    long long pixel_height,
+    long long argb_color
+) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f || !pixels_addr || buf_w <= 0 || buf_h <= 0 || !text_cstr || pixel_height <= 0) return 0;
+
+    uint32_t* dst = (uint32_t*)(intptr_t)pixels_addr;
+    const char* p = (const char*)(intptr_t)text_cstr;
+    float scale = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
+
+    int ascent = 0, descent = 0, line_gap = 0;
+    stbtt_GetFontVMetrics(&f->info, &ascent, &descent, &line_gap);
+    int baseline = (int)y + (int)roundf((float)ascent * scale);
+    float xpos = (float)x;
+
+    uint32_t fg_r = ((uint32_t)argb_color >> 16) & 0xFFu;
+    uint32_t fg_g = ((uint32_t)argb_color >> 8) & 0xFFu;
+    uint32_t fg_b = (uint32_t)argb_color & 0xFFu;
+    uint32_t fg_a = ((uint32_t)argb_color >> 24) & 0xFFu;
+    if (fg_a == 0) fg_a = 255u;
+
+    size_t scratch_cap = 0;
+    unsigned char* scratch = NULL;
+    uint32_t prev_cp = 0;
+
+    while (*p) {
+        uint32_t cp = _spec_utf8_next(&p);
+        if (cp == 0) break;
+        if (cp == '\n') {
+            xpos = (float)x;
+            baseline += (int)roundf((float)(ascent - descent + line_gap) * scale);
+            prev_cp = 0;
+            continue;
+        }
+        if (prev_cp) {
+            xpos += (float)stbtt_GetCodepointKernAdvance(&f->info, (int)prev_cp, (int)cp) * scale;
+        }
+        int adv = 0, lsb = 0;
+        stbtt_GetCodepointHMetrics(&f->info, (int)cp, &adv, &lsb);
+
+        int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        stbtt_GetCodepointBitmapBox(&f->info, (int)cp, scale, scale, &x0, &y0, &x1, &y1);
+        int gw = x1 - x0;
+        int gh = y1 - y0;
+        if (gw > 0 && gh > 0) {
+            size_t needed = (size_t)gw * (size_t)gh;
+            if (needed > scratch_cap) {
+                unsigned char* next = (unsigned char*)realloc(scratch, needed);
+                if (next) {
+                    scratch = next;
+                    scratch_cap = needed;
+                }
+            }
+            if (scratch && needed <= scratch_cap) {
+                stbtt_MakeCodepointBitmap(&f->info, scratch, gw, gh, gw, scale, scale, (int)cp);
+                int dst_x0 = (int)floorf(xpos) + x0;
+                int dst_y0 = baseline + y0;
+                for (int gy = 0; gy < gh; gy++) {
+                    int py = dst_y0 + gy;
+                    if (py < 0 || py >= (int)buf_h) continue;
+                    uint32_t* row = dst + (size_t)py * (size_t)buf_w;
+                    const unsigned char* g_row = scratch + (size_t)gy * (size_t)gw;
+                    for (int gx = 0; gx < gw; gx++) {
+                        int px = dst_x0 + gx;
+                        if (px < 0 || px >= (int)buf_w) continue;
+                        uint32_t cov = g_row[gx];
+                        if (cov == 0) continue;
+                        uint32_t a = (cov * fg_a) / 255u;
+                        uint32_t inv_a = 255u - a;
+                        uint32_t bg = row[px];
+                        uint32_t bg_r = (bg >> 16) & 0xFFu;
+                        uint32_t bg_g = (bg >> 8) & 0xFFu;
+                        uint32_t bg_b = bg & 0xFFu;
+                        uint32_t r = (fg_r * a + bg_r * inv_a) / 255u;
+                        uint32_t g = (fg_g * a + bg_g * inv_a) / 255u;
+                        uint32_t b = (fg_b * a + bg_b * inv_a) / 255u;
+                        row[px] = 0xFF000000u | (r << 16) | (g << 8) | b;
+                    }
+                }
+            }
+        }
+        xpos += (float)adv * scale;
+        prev_cp = cp;
+    }
+
+    if (scratch) free(scratch);
+    return 1;
+}
+
+#else
+
+long long spec_pal_font_load(long long path_cstr) {
+    (void)path_cstr;
+    _spec_set_font_error("stb_truetype.h not available at compile time");
+    return -1;
+}
+
+long long spec_pal_font_close(long long handle) {
+    (void)handle;
+    return 0;
+}
+
+long long spec_pal_font_draw_text(
+    long long handle,
+    long long pixels_addr,
+    long long buf_w,
+    long long buf_h,
+    long long x,
+    long long y,
+    long long text_cstr,
+    long long pixel_height,
+    long long argb_color
+) {
+    (void)handle; (void)pixels_addr; (void)buf_w; (void)buf_h;
+    (void)x; (void)y; (void)text_cstr; (void)pixel_height; (void)argb_color;
     return 0;
 }
 

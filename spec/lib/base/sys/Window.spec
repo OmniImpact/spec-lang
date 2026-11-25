@@ -60,4 +60,33 @@ Class is Window{
 		if({ cstr == 0 }, { return ''; });
 		return Mem:strFromBytes(srcAddr: cstr, len: Mem:cstrLen(cstrAddr: cstr));
 	}
+
+	## Returns the next queued ASCII/key code, or `0` if none.
+	Function of Int is nextKey(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_next_key(handle: handle);
+	}
+
+	## Returns the current content width in pixels.
+	Function of Int is width(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_width(handle: handle);
+	}
+
+	## Returns the current content height in pixels.
+	Function of Int is height(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_height(handle: handle);
+	}
+
+	## Presents an ARGB8888 pixel buffer at [pixelsAddr] to the window.
+	Function of Boolean is present(Int is pixelsAddr, Int is width, Int is height){
+		if({ handle <= 0 || pixelsAddr == 0 }, { return false; });
+		return base:sysinternal:Window:pal_window_present(
+			handle: handle,
+			pixels_addr: pixelsAddr,
+			width: width,
+			height: height
+		) != 0;
+	}
 }

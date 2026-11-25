@@ -20,4 +20,20 @@ Class is Window{
 	## Returns the C-string address of the last window error message.
 	## Bound to `spec_pal_window_last_error`.
 	Function of Int is pal_window_last_error();
+
+	## Returns the next queued key code (`'w'`, `'a'`, `'s'`, `'d'`, `'q'`, `'e'`, `27`), or `0`.
+	## Bound to `spec_pal_window_next_key`.
+	Function of Int is pal_window_next_key(Int is handle);
+
+	## Returns the current content width in pixels.
+	## Bound to `spec_pal_window_width`.
+	Function of Int is pal_window_width(Int is handle);
+
+	## Returns the current content height in pixels.
+	## Bound to `spec_pal_window_height`.
+	Function of Int is pal_window_height(Int is handle);
+
+	## Presents an ARGB8888 pixel buffer at [pixels_addr] to the window.
+	## Bound to `spec_pal_window_present`.
+	Function of Int is pal_window_present(Int is handle, Int is pixels_addr, Int is width, Int is height);
 }
