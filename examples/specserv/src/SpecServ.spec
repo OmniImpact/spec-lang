@@ -17,8 +17,8 @@ Class is SpecServ{
 	];
 
 	Array of Int is reqTimestamps: Array();
-	Int is lastCpuMs: 0;
-	Int is lastWallMs: 0;
+	Int is lastCpuUs: 0;
+	Int is lastWallUs: 0;
 	Int is cachedCpuTenths: 0;
 
 	local Function is pruneOldRequests(Int is nowMs){
@@ -39,51 +39,16 @@ Class is SpecServ{
 		});
 	}
 
-	local Function of Int is currentRssKb(){
-		local String is statusTxt: fileRead(path: '/proc/self/status', onSuccess: local Function(String is _s){}, onError: local Function(Any is _e){}, default: '');
-		if({ statusTxt != '' }, {
-			local Int is idx: statusTxt:indexOf(search: 'VmRSS:', default: -1);
-			if({ idx >= 0 }, {
-				local Int is nl: statusTxt:indexOfFrom(search: "\n", from: idx, default: statusTxt:length());
-				local String is lineStr: statusTxt:substring(start: idx + 6, end: nl):trim();
-				local Int is kbIdx: lineStr:indexOf(search: 'kB', default: -1);
-				if({ kbIdx > 0 }, {
-					lineStr: lineStr:substring(start: 0, end: kbIdx):trim();
-				});
-				local Int is parsed: lineStr:parseInt(default: 0);
-				if({ parsed > 0 }, { return parsed; });
-			});
-		});
-		return peakMemoryKb();
-	}
-
-	local Function of Int is processCpuMs(){
-		local String is statTxt: fileRead(path: '/proc/self/stat', onSuccess: local Function(String is _s){}, onError: local Function(Any is _e){}, default: '');
-		if({ statTxt != '' }, {
-			local Int is rp: statTxt:indexOf(search: ') ', default: -1);
-			if({ rp >= 0 }, {
-				local String is rest: statTxt:substring(start: rp + 2, end: statTxt:length()):trim();
-				local Array of String is parts: rest:split(delimiter: ' ');
-				if({ parts:length() > 12 }, {
-					local Int is utime: parts:get(index: 11, default: '0'):parseInt(default: 0);
-					local Int is stime: parts:get(index: 12, default: '0'):parseInt(default: 0);
-					return (utime + stime) * 10;
-				});
-			});
-		});
-		return 0;
-	}
-
 	local Function of Int is sampleCpuTenths(){
-		local Int is nowWall: monotonicMs();
-		local Int is nowCpu: processCpuMs();
-		local Int is dWall: nowWall - lastWallMs;
-		if({ dWall >= 1000 }, {
-			local Int is dCpu: nowCpu - lastCpuMs;
+		local Int is nowWall: monotonicUs();
+		local Int is nowCpu: cpuTimeUs();
+		local Int is dWall: nowWall - lastWallUs;
+		if({ dWall >= 1000000 }, {
+			local Int is dCpu: nowCpu - lastCpuUs;
 			if({ dCpu < 0 }, { dCpu: 0; });
 			cachedCpuTenths: (dCpu * 1000) / dWall;
-			lastWallMs: nowWall;
-			lastCpuMs: nowCpu;
+			lastWallUs: nowWall;
+			lastCpuUs: nowCpu;
 		});
 		return cachedCpuTenths;
 	}
@@ -126,7 +91,8 @@ Class is SpecServ{
 			local Int is nowMs: monotonicMs();
 			pruneOldRequests(nowMs: nowMs);
 			local Int is cpuTenths: sampleCpuTenths();
-			local Int is rssKb: currentRssKb();
+			local Int is rssKb: currentMemoryKb();
+			if({ rssKb <= 0 }, { rssKb: peakMemoryKb(); });
 			local Int is reqCount: reqTimestamps:length();
 			out: out . 'STATS ' . (cpuTenths as String) . ' ' . (rssKb as String) . ' ' . (reqCount as String) . "\n";
 			out: out . 'END ' . (total as String) . "\n";
@@ -145,8 +111,8 @@ Class is SpecServ{
 		local String is cfgPath: args:getString(key: 'config', default: 'specserv.json');
 		local String is logFile: args:getString(key: 'log-file', default: '');
 		local Int is controlPort: args:getString(key: 'control-port', default: '47320'):parseInt(default: 47320);
-		lastWallMs: monotonicMs();
-		lastCpuMs: processCpuMs();
+		lastWallUs: monotonicUs();
+		lastCpuUs: cpuTimeUs();
 
 		local ServerConfig is cfg: ServerConfig();
 		if({ fileExists(path: cfgPath) }, {

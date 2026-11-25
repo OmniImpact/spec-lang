@@ -1,0 +1,175 @@
+#if defined(_WIN32)
+static void _spec_pal_ensure_tmp_dir(const char* pc) {
+    if (!pc || strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0 || strcmp(pc, "/tmp") == 0) {
+        CreateDirectoryW(L"/tmp", NULL);
+    }
+}
+
+static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* suffix, size_t suffix_cap) {
+    if (strncmp(tpl, "/tmp/", 5) != 0 && strcmp(tpl, "/tmp") != 0) return -1;
+    wchar_t wtemp_dir[MAX_PATH];
+    DWORD td_len = GetTempPathW(MAX_PATH, wtemp_dir);
+    if (td_len == 0 || td_len >= MAX_PATH) return -1;
+    char temp_dir[MAX_PATH * 4];
+    if (!spec_win_wide_to_utf8_buf(wtemp_dir, temp_dir, sizeof(temp_dir))) return -1;
+    const char* base = strrchr(tpl, '/');
+    const char* b2 = strrchr(tpl, '\\');
+    if (b2 && (!base || b2 > base)) base = b2;
+    if (base) base++; else base = tpl;
+    free(*buf_io);
+    char* buf = (char*)spec_xmalloc(strlen(temp_dir) + strlen(base) + 32);
+    sprintf(buf, "%s%s", temp_dir, base);
+    suffix[0] = '\0';
+    char* xpos = strstr(buf, "XXXXXX");
+    if (!xpos) {
+        strcat(buf, "_XXXXXX");
+    } else {
+        if (strlen(xpos + 6) < suffix_cap) {
+            strcpy(suffix, xpos + 6);
+        }
+        xpos[6] = '\0';
+    }
+    *buf_io = buf;
+    return mkstemp(buf);
+}
+#else
+static void _spec_pal_ensure_tmp_dir(const char* pc) {
+    (void)pc;
+}
+
+static int _spec_pal_mkstemp_win_fallback(const char* tpl, char** buf_io, char* suffix, size_t suffix_cap) {
+    (void)tpl; (void)buf_io; (void)suffix; (void)suffix_cap;
+    return -1;
+}
+#endif
+
+long long spec_pal_file_read(long long path_cstr, long long out_len_addr) {
+    long long* out_len = (long long*)(intptr_t)out_len_addr;
+    if (out_len) *out_len = 0;
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return -1;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, L"rb") : NULL;
+    free(wpc);
+#else
+    FILE* f = fopen(pc, "rb");
+#endif
+    if (!f) return -1;
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return -1;
+    }
+    long size = ftell(f);
+    if (size < 0) {
+        fclose(f);
+        return -1;
+    }
+    fseek(f, 0, SEEK_SET);
+    char* buf = (char*)malloc((size_t)size + 1);
+    if (!buf) {
+        fclose(f);
+        return -2;
+    }
+    size_t read_bytes = fread(buf, 1, (size_t)size, f);
+    fclose(f);
+    buf[read_bytes] = '\0';
+    if (out_len) *out_len = (long long)read_bytes;
+    return (long long)(intptr_t)buf;
+}
+
+long long spec_pal_file_write(long long path_cstr, long long data_addr, long long len_ll, long long append) {
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return -1;
+    _spec_pal_ensure_tmp_dir(pc);
+    size_t len = (len_ll > 0 && data_addr) ? (size_t)len_ll : 0;
+    if (append && len == 0) return 0;
+    const char* cc = len ? (const char*)(intptr_t)data_addr : "";
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    FILE* f = wpc ? _wfopen(wpc, append ? L"ab" : L"wb") : NULL;
+    free(wpc);
+#else
+    FILE* f = fopen(pc, append ? "ab" : "wb");
+#endif
+    if (!f) return -1;
+    size_t written = fwrite(cc, 1, len, f);
+    if (fclose(f) != 0) return -1;
+    if (written != len) return -1;
+    return (long long)written;
+}
+
+bool spec_pal_file_exists(long long path_cstr) {
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return false;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    if (!wpc) return false;
+    DWORD attrs = GetFileAttributesW(wpc);
+    free(wpc);
+    return attrs != INVALID_FILE_ATTRIBUTES;
+#else
+    struct stat st;
+    return stat(pc, &st) == 0;
+#endif
+}
+
+bool spec_pal_file_remove(long long path_cstr) {
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    if (!pc || !*pc) return false;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    if (!wpc) return false;
+    int r = _wremove(wpc);
+    free(wpc);
+    return r == 0;
+#else
+    return remove(pc) == 0;
+#endif
+}
+
+long long spec_pal_file_temp(long long tpl_cstr) {
+    _spec_pal_ensure_tmp_dir(NULL);
+    const char* tpl = (const char*)(intptr_t)tpl_cstr;
+    if (!tpl || !*tpl) tpl = "/tmp/spec_XXXXXX";
+    size_t len = strlen(tpl);
+    char* buf = (char*)spec_xmalloc(len + 32);
+    strcpy(buf, tpl);
+    char suffix[64];
+    suffix[0] = '\0';
+    char* xpos = strstr(buf, "XXXXXX");
+    if (!xpos) {
+        strcat(buf, "_XXXXXX");
+    } else {
+        if (strlen(xpos + 6) < sizeof(suffix)) {
+            strcpy(suffix, xpos + 6);
+        }
+        xpos[6] = '\0';
+    }
+    int fd = mkstemp(buf);
+    if (fd == -1) {
+        fd = _spec_pal_mkstemp_win_fallback(tpl, &buf, suffix, sizeof(suffix));
+    }
+    if (fd == -1) {
+        free(buf);
+        return 0;
+    }
+    close(fd);
+    if (suffix[0] != '\0') {
+        size_t final_len = strlen(buf) + strlen(suffix) + 1;
+        char* final_path = (char*)spec_xmalloc(final_len);
+        sprintf(final_path, "%s%s", buf, suffix);
+        if (rename(buf, final_path) != 0) {
+            free(final_path);
+            free(buf);
+            return 0;
+        }
+        free(buf);
+        return (long long)(intptr_t)final_path;
+    }
+    return (long long)(intptr_t)buf;
+}
+
+void spec_pal_file_free(long long ptr) {
+    if (ptr) free((void*)(intptr_t)ptr);
+}

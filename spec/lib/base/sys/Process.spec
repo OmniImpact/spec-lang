@@ -126,6 +126,20 @@ Class is Process{
 		return base:sysinternal:Process:clock_ms();
 	}
 
+	## Returns cumulative process CPU time (user + kernel) in microseconds.
+	##
+	## @return: Process CPU time in microseconds.
+	Function of Int is cpuTimeUs(){
+		return base:sysinternal:Process:cpu_time_us();
+	}
+
+	## Returns the current resident memory used by this process, in kilobytes.
+	##
+	## @return: Current resident memory in KB.
+	Function of Int is currentMemoryKb(){
+		return base:sysinternal:Process:mem_current_kb();
+	}
+
 	## Returns the peak resident memory used by this process, in kilobytes.
 	##
 	## @return: Peak memory in KB.

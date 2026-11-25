@@ -1234,6 +1234,14 @@ long long spec_clock_ms(void) {
     return spec_pal_get_wall_time_us() / 1000;
 }
 
+long long spec_cpu_time_us(void) {
+    return spec_pal_get_cpu_time_us();
+}
+
+long long spec_mem_current_kb(void) {
+    return spec_pal_get_current_rss_kb(spec_pal_get_page_size());
+}
+
 long long spec_mem_peak_kb(void) {
     return spec_pal_get_peak_rss_kb();
 }
@@ -2103,7 +2111,10 @@ long long spec_pal_socket_accept(long long fd) {
         _spec_set_sock_error("Socket error: Socket is closed or invalid");
         return -1;
     }
-    int s = accept((int)fd, NULL, NULL);
+    int s;
+    do {
+        s = accept((int)fd, NULL, NULL);
+    } while (s < 0 && errno == EINTR);
     if (s < 0) {
         _spec_set_last_os_sock_error("Socket error: accept() failed");
     }
@@ -2117,7 +2128,15 @@ long long spec_pal_socket_send(long long fd, long long data_addr, long long len)
     }
     if (!data_addr || len <= 0) return 0;
     const void* ptr = (const void*)(intptr_t)data_addr;
-    ssize_t n = send((int)fd, ptr, (size_t)len, 0);
+#ifdef MSG_NOSIGNAL
+    int flags = MSG_NOSIGNAL;
+#else
+    int flags = 0;
+#endif
+    ssize_t n;
+    do {
+        n = send((int)fd, ptr, (size_t)len, flags);
+    } while (n < 0 && errno == EINTR);
     if (n < 0) {
         _spec_set_last_os_sock_error("Socket error: send() failed");
         return -1;
@@ -2132,7 +2151,10 @@ long long spec_pal_socket_recv(long long fd, long long dst_addr, long long max_b
     }
     if (!dst_addr || max_bytes <= 0) return 0;
     void* ptr = (void*)(intptr_t)dst_addr;
-    ssize_t n = recv((int)fd, ptr, (size_t)max_bytes, 0);
+    ssize_t n;
+    do {
+        n = recv((int)fd, ptr, (size_t)max_bytes, 0);
+    } while (n < 0 && errno == EINTR);
     if (n < 0) {
         _spec_set_last_os_sock_error("Socket error: recv() failed");
         return -1;
@@ -2156,6 +2178,7 @@ long long spec_socket_poll(long long fd, long long mode, long long timeout_ms) {
     pfd.revents = 0;
     int ret = poll(&pfd, 1, (int)timeout_ms);
     if (ret > 0) return (pfd.revents & (POLLIN | POLLOUT)) ? 1 : 0;
+    if (ret < 0 && errno == EINTR) return 0;
     return (ret == 0) ? 0 : -1;
 }
 

@@ -42,6 +42,13 @@ Class is Process{
 	## Bound to `spec_clock_ms`.
 	Function of Int is clock_ms();
 
+	## Returns cumulative process CPU time (user + kernel) in microseconds.
+	## Bound to `spec_cpu_time_us`.
+	Function of Int is cpu_time_us();
+
+	## Returns the current resident memory in kilobytes. Bound to `spec_mem_current_kb`.
+	Function of Int is mem_current_kb();
+
 	## Returns the peak resident memory in kilobytes. Bound to `spec_mem_peak_kb`.
 	Function of Int is mem_peak_kb();
 
