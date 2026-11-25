@@ -1,0 +1,10 @@
+{
+  "name": "suitdemo",
+  "version": "0.1.0",
+  "source": "src/SuitDemo.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/suitdemo"
+}
