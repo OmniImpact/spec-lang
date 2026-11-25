@@ -66,10 +66,15 @@ Class of Frame is SpecServFrame{
 	}
 
 	local Function of String is formattedStatus(){
-		if({ vm:serversRunning && !vm:statusMessage:startsWith(prefix: 'Running') }, {
-			return 'Status: Running (' . vm:statusMessage . ')';
+		local String is raw: if({ vm:serversRunning && !vm:statusMessage:startsWith(prefix: 'Running') }, {
+			'Status: Running (' . vm:statusMessage . ')'
+		}, {
+			'Status: ' . vm:statusMessage
 		});
-		return 'Status: ' . vm:statusMessage;
+		if({ raw:length() > 46 }, {
+			return raw:substring(start: 0, end: 43) . '...';
+		});
+		return raw;
 	}
 
 	local Function is syncFromVm(){
@@ -116,7 +121,7 @@ Class of Frame is SpecServFrame{
 	}
 
 	replace Function of Widget is ui(){
-		local TextLine is statusLine: TextLine(value: formattedStatus(), bold: true, width: 44);
+		local TextLine is statusLine: TextLine(value: formattedStatus(), bold: true);
 		statusLines: Array([statusLine]);
 
 		local ListView is siteList: ListView(
@@ -162,13 +167,13 @@ Class of Frame is SpecServFrame{
 			padY: 0,
 			topTitle: ' SpecServ — Web Server & Config Manager ',
 			topTitleAlign: TitleAlign:LEFT,
-			child: Row(
-				gap: 2,
-				children: Array([
-					statusLine,
-					Spacer(weight: 1.0),
-					startBtn,
-					Button(label: ' Quit ', focusTarget: quitFocus, onClick: { :vm:quit(); })
+			child: Grid(
+				orientation: Orientation:HORIZONTAL,
+				gap: 1,
+				panes: Array([
+					Grid:weight(weight: 1.0, child: statusLine),
+					Grid:fixed(size: 10, child: startBtn),
+					Grid:fixed(size: 9, child: Button(label: ' Quit ', focusTarget: quitFocus, onClick: { :vm:quit(); }))
 				])
 			)
 		);
