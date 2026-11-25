@@ -79,15 +79,25 @@ Class of SpecUnitTest is TestPhase6Codegen{
 	# Steps 5-6: compile via Driver and execute the binary.
 	Function is testGeneratedBinaryCompilesAndRuns(){
 		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: :fixtureSource());
+		local String is binPath: '/tmp/pure_spec_hello';
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
 		local Map of String to String is cli: Map:init();
 		cli:set(key: 'i', value: '/tmp/pure_spec_fixture.spec');
-		cli:set(key: 'o', value: '/tmp/pure_spec_hello');
+		cli:set(key: 'o', value: binPath);
 		cli:set(key: 'quiet', value: 'true');
 		local Driver is d: Driver:init(args: cli);
-		local Int is runCode: Process:execute(command: '/tmp/pure_spec_hello', args: Array());
+		local Int is runCode: Process:execute(command: binPath, args: Array());
 		Assert:areEqualInt(0, runCode);
-		fileRemove(path: '/tmp/pure_spec_hello');
-		fileRemove(path: '/tmp/pure_spec_hello.ll');
-		fileRemove(path: '/tmp/pure_spec_fixture.spec');
+		if({ fileExists(path: binPath) }, {
+			fileRemove(path: binPath);
+		});
+		if({ fileExists(path: '/tmp/pure_spec_hello.ll') }, {
+			fileRemove(path: '/tmp/pure_spec_hello.ll');
+		});
+		if({ fileExists(path: '/tmp/pure_spec_fixture.spec') }, {
+			fileRemove(path: '/tmp/pure_spec_fixture.spec');
+		});
 	}
 }
