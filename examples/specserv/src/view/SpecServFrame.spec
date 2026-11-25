@@ -73,22 +73,26 @@ Class of Frame is SpecServFrame{
 			sv:selectedIdx: vm:selectedIndex;
 		});
 		if({ nameInputs:length() > 0 }, {
-			nameInputs:get(index: 0):value: vm:draftName;
+			nameInputs:get(index: 0):setText(value: vm:draftName);
 		});
 		if({ dirInputs:length() > 0 }, {
-			dirInputs:get(index: 0):value: vm:draftDirectory;
+			dirInputs:get(index: 0):setText(value: vm:draftDirectory);
 		});
 		if({ portInputs:length() > 0 }, {
-			portInputs:get(index: 0):value: vm:draftPort;
+			portInputs:get(index: 0):setText(value: vm:draftPort);
 		});
 		if({ cfgInputs:length() > 0 }, {
-			cfgInputs:get(index: 0):value: vm:configPath;
+			cfgInputs:get(index: 0):setText(value: vm:configPath);
 		});
 		if({ startStopBtns:length() > 0 }, {
-			startStopBtns:get(index: 0):label: if({ vm:serversRunning }, { ' Stop ' }, { ' Start ' });
+			local Button is sb: startStopBtns:get(index: 0);
+			sb:label: if({ vm:serversRunning }, { ' Stop ' }, { ' Start ' });
+			sb:invalidate();
 		});
 		if({ statusLines:length() > 0 }, {
-			statusLines:get(index: 0):value: formattedStatus();
+			local TextLine is sl: statusLines:get(index: 0);
+			sl:textValue: formattedStatus();
+			sl:invalidate();
 		});
 		syncLogs();
 	}
@@ -106,7 +110,7 @@ Class of Frame is SpecServFrame{
 	}
 
 	replace Function of Widget is ui(){
-		local TextLine is statusLine: TextLine(value: formattedStatus(), bold: true);
+		local TextLine is statusLine: TextLine(value: formattedStatus(), bold: true, width: 44);
 		statusLines: Array([statusLine]);
 
 		local ListView is siteList: ListView(
@@ -187,10 +191,10 @@ Class of Frame is SpecServFrame{
 						arrowFocus: true,
 						children: Array([
 							Button(label: ' Add ', focusTarget: addFocus, onClick: {
-								:vm:addSite(name: nameIn:value, directory: dirIn:value, portText: portIn:value);
+								:vm:addSite(name: nameIn:text, directory: dirIn:text, portText: portIn:text);
 							}),
 							Button(label: ' Update ', focusTarget: updateFocus, onClick: {
-								:vm:updateSelectedSite(name: nameIn:value, directory: dirIn:value, portText: portIn:value);
+								:vm:updateSelectedSite(name: nameIn:text, directory: dirIn:text, portText: portIn:text);
 							}),
 							Button(label: ' Enable/Disable ', focusTarget: toggleFocus, onClick: {
 								:vm:toggleSelectedEnabled();
@@ -206,10 +210,10 @@ Class of Frame is SpecServFrame{
 						arrowFocus: true,
 						children: Array([
 							Button(label: ' Save JSON ', focusTarget: saveFocus, onClick: {
-								:vm:saveConfig(path: cfgIn:value);
+								:vm:saveConfig(path: cfgIn:text);
 							}),
 							Button(label: ' Load JSON ', focusTarget: loadFocus, onClick: {
-								:vm:loadConfig(path: cfgIn:value);
+								:vm:loadConfig(path: cfgIn:text);
 							})
 						])
 					)
