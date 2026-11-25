@@ -79,10 +79,10 @@ Class of SpecUnitTest is TestPhase6Codegen{
 	# Steps 5-6: compile via Driver and execute the binary.
 	Function is testGeneratedBinaryCompilesAndRuns(){
 		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: :fixtureSource());
-		local String is binPath: '/tmp/pure_spec_hello';
-		if({ Process:osName() == 'windows' }, {
-			binPath: binPath . '.exe';
-		});
+		local String is binPath: match(on: Process:osName(), when: [
+			'windows': { '/tmp/pure_spec_hello.exe' },
+			else: { '/tmp/pure_spec_hello' }
+		]);
 		local Map of String to String is cli: Map:init();
 		cli:set(key: 'i', value: '/tmp/pure_spec_fixture.spec');
 		cli:set(key: 'o', value: binPath);
