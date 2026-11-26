@@ -72,6 +72,17 @@ Class is SuitWindow{
 		return native:height();
 	}
 
+	## Returns the logical point-to-pixel scale factor (1.0 = 1px per pt).
+	Function of Float is scaleFactor(){
+		return 1.0;
+	}
+
+	Function of Int is pointerX(){ return native:pointerX(); }
+	Function of Int is pointerY(){ return native:pointerY(); }
+	Function of Boolean is pollClick(){ return native:pollClick(); }
+	Function of Int is clickX(){ return native:clickX(); }
+	Function of Int is clickY(){ return native:clickY(); }
+
 	## Presents [canvas] pixels to the window surface.
 	Function of Boolean is present(SuitCanvas is canvas){
 		return native:present(pixelsAddr: canvas:pixelsAddr(), width: canvas:width, height: canvas:height);

@@ -118,15 +118,97 @@ Class is DrawContext{
 			if({ row == 4 || row == 5 }, { return 1; });
 			return 14;
 		});
+		if({ c == 65 }, { ## 'A'
+			if({ row == 0 }, { return 14; });
+			if({ row == 3 }, { return 31; });
+			return 17;
+		});
+		if({ c == 66 }, { ## 'B'
+			if({ row == 0 || row == 3 || row == 6 }, { return 30; });
+			return 17;
+		});
+		if({ c == 67 }, { ## 'C'
+			if({ row == 0 || row == 6 }, { return 14; });
+			if({ row == 1 || row == 5 }, { return 17; });
+			return 16;
+		});
+		if({ c == 68 }, { ## 'D'
+			if({ row == 0 || row == 6 }, { return 30; });
+			return 17;
+		});
+		if({ c == 69 }, { ## 'E'
+			if({ row == 0 || row == 6 }, { return 31; });
+			if({ row == 3 }, { return 28; });
+			return 16;
+		});
 		if({ c == 70 }, { ## 'F'
 			if({ row == 0 }, { return 31; });
 			if({ row == 3 }, { return 28; });
 			return 16;
 		});
+		if({ c == 71 }, { ## 'G'
+			if({ row == 0 || row == 6 }, { return 14; });
+			if({ row == 1 }, { return 17; });
+			if({ row == 2 }, { return 16; });
+			if({ row == 3 }, { return 23; });
+			return 17;
+		});
+		if({ c == 72 }, { ## 'H'
+			if({ row == 3 }, { return 31; });
+			return 17;
+		});
+		if({ c == 73 }, { ## 'I'
+			if({ row == 0 || row == 6 }, { return 14; });
+			return 4;
+		});
+		if({ c == 74 }, { ## 'J'
+			if({ row == 0 }, { return 7; });
+			if({ row == 5 }, { return 17; });
+			if({ row == 6 }, { return 14; });
+			return 2;
+		});
+		if({ c == 75 }, { ## 'K'
+			if({ row == 0 || row == 6 }, { return 17; });
+			if({ row == 1 || row == 5 }, { return 18; });
+			if({ row == 2 || row == 4 }, { return 20; });
+			return 24;
+		});
+		if({ c == 76 }, { ## 'L'
+			if({ row == 6 }, { return 31; });
+			return 16;
+		});
+		if({ c == 77 }, { ## 'M'
+			if({ row == 1 }, { return 27; });
+			if({ row == 2 }, { return 21; });
+			return 17;
+		});
+		if({ c == 78 }, { ## 'N'
+			if({ row == 1 }, { return 25; });
+			if({ row == 2 }, { return 21; });
+			if({ row == 3 }, { return 19; });
+			return 17;
+		});
+		if({ c == 79 }, { ## 'O'
+			if({ row == 0 || row == 6 }, { return 14; });
+			return 17;
+		});
 		if({ c == 80 }, { ## 'P'
 			if({ row == 0 || row == 3 }, { return 30; });
 			if({ row == 1 || row == 2 }, { return 17; });
 			return 16;
+		});
+		if({ c == 81 }, { ## 'Q'
+			if({ row == 0 }, { return 14; });
+			if({ row == 4 }, { return 21; });
+			if({ row == 5 }, { return 18; });
+			if({ row == 6 }, { return 13; });
+			return 17;
+		});
+		if({ c == 82 }, { ## 'R'
+			if({ row == 0 || row == 3 }, { return 30; });
+			if({ row == 4 }, { return 20; });
+			if({ row == 5 }, { return 18; });
+			return 17;
 		});
 		if({ c == 83 }, { ## 'S'
 			if({ row == 0 || row == 6 }, { return 14; });
@@ -134,6 +216,42 @@ Class is DrawContext{
 			if({ row == 3 }, { return 14; });
 			if({ row == 4 || row == 5 }, { return 1; });
 			return 14;
+		});
+		if({ c == 84 }, { ## 'T'
+			if({ row == 0 }, { return 31; });
+			return 4;
+		});
+		if({ c == 85 }, { ## 'U'
+			if({ row == 6 }, { return 14; });
+			return 17;
+		});
+		if({ c == 86 }, { ## 'V'
+			if({ row == 4 }, { return 10; });
+			if({ row == 5 || row == 6 }, { return 4; });
+			return 17;
+		});
+		if({ c == 87 }, { ## 'W'
+			if({ row == 4 }, { return 21; });
+			if({ row == 5 }, { return 27; });
+			return 17;
+		});
+		if({ c == 88 }, { ## 'X'
+			if({ row == 2 || row == 4 }, { return 10; });
+			if({ row == 3 }, { return 4; });
+			return 17;
+		});
+		if({ c == 89 }, { ## 'Y'
+			if({ row == 0 || row == 1 }, { return 17; });
+			if({ row == 2 }, { return 10; });
+			return 4;
+		});
+		if({ c == 90 }, { ## 'Z'
+			if({ row == 0 || row == 6 }, { return 31; });
+			if({ row == 1 }, { return 1; });
+			if({ row == 2 }, { return 2; });
+			if({ row == 3 }, { return 4; });
+			if({ row == 4 }, { return 8; });
+			return 16;
 		});
 		if({ c == 58 }, { ## ':'
 			if({ row == 2 || row == 5 }, { return 4; });

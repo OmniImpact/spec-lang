@@ -2574,6 +2574,7 @@ struct wl_buffer;
 struct wl_surface;
 struct wl_seat;
 struct wl_keyboard;
+struct wl_pointer;
 struct wl_proxy;
 struct wl_interface;
 
@@ -2599,6 +2600,20 @@ struct spec_wl_keyboard_listener {
     void (*key)(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t time, uint32_t key, uint32_t state);
     void (*modifiers)(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group);
     void (*repeat_info)(void* data, struct wl_keyboard* kb, int32_t rate, int32_t delay);
+};
+
+struct spec_wl_pointer_listener {
+    void (*enter)(void* data, struct wl_pointer* ptr, uint32_t serial, struct wl_surface* surface, int32_t sx, int32_t sy);
+    void (*leave)(void* data, struct wl_pointer* ptr, uint32_t serial, struct wl_surface* surface);
+    void (*motion)(void* data, struct wl_pointer* ptr, uint32_t time, int32_t sx, int32_t sy);
+    void (*button)(void* data, struct wl_pointer* ptr, uint32_t serial, uint32_t time, uint32_t button, uint32_t state);
+    void (*axis)(void* data, struct wl_pointer* ptr, uint32_t time, uint32_t axis, int32_t value);
+    void (*frame)(void* data, struct wl_pointer* ptr);
+    void (*axis_source)(void* data, struct wl_pointer* ptr, uint32_t axis_source);
+    void (*axis_stop)(void* data, struct wl_pointer* ptr, uint32_t time, uint32_t axis);
+    void (*axis_discrete)(void* data, struct wl_pointer* ptr, uint32_t axis, int32_t discrete);
+    void (*axis_value120)(void* data, struct wl_pointer* ptr, uint32_t axis, int32_t value120);
+    void (*axis_relative_direction)(void* data, struct wl_pointer* ptr, uint32_t axis, uint32_t direction);
 };
 
 struct spec_libdecor_interface {
@@ -2652,6 +2667,7 @@ static const struct wl_interface* _wl_buffer_iface = NULL;
 static const struct wl_interface* _wl_surface_iface = NULL;
 static const struct wl_interface* _wl_seat_iface = NULL;
 static const struct wl_interface* _wl_keyboard_iface = NULL;
+static const struct wl_interface* _wl_pointer_iface = NULL;
 
 static struct libdecor* (*_libdecor_new)(struct wl_display*, struct spec_libdecor_interface*) = NULL;
 static void (*_libdecor_unref)(struct libdecor*) = NULL;
@@ -2697,6 +2713,7 @@ static bool _spec_win_init_libs(void) {
     _wl_surface_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_surface_interface");
     _wl_seat_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_seat_interface");
     _wl_keyboard_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_keyboard_interface");
+    _wl_pointer_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_pointer_interface");
 
     _libdecor_new = dlsym(_spec_decor_so, "libdecor_new");
     _libdecor_unref = dlsym(_spec_decor_so, "libdecor_unref");
@@ -2734,6 +2751,13 @@ typedef struct SpecWaylandWindow {
     struct wl_surface* surface;
     struct wl_seat* seat;
     struct wl_keyboard* keyboard;
+    struct wl_pointer* pointer;
+    bool pointer_on_surface;
+    int pointer_x;
+    int pointer_y;
+    bool has_click;
+    int click_x;
+    int click_y;
     struct wl_shm_pool* shm_pool;
     struct wl_buffer* buffer;
     void* shm_data;
@@ -2833,8 +2857,73 @@ static const struct spec_wl_keyboard_listener _spec_kb_listener = {
     _spec_kb_repeat
 };
 
+static void _spec_ptr_enter(void* data, struct wl_pointer* ptr, uint32_t serial, struct wl_surface* surface, int32_t sx, int32_t sy) {
+    (void)ptr; (void)serial;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && surface == w->surface) {
+        w->pointer_on_surface = true;
+        w->pointer_x = sx >> 8;
+        w->pointer_y = sy >> 8;
+    } else if (w) {
+        w->pointer_on_surface = false;
+    }
+}
+static void _spec_ptr_leave(void* data, struct wl_pointer* ptr, uint32_t serial, struct wl_surface* surface) {
+    (void)ptr; (void)serial;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && surface == w->surface) {
+        w->pointer_on_surface = false;
+    }
+}
+static void _spec_ptr_motion(void* data, struct wl_pointer* ptr, uint32_t time, int32_t sx, int32_t sy) {
+    (void)ptr; (void)time;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && w->pointer_on_surface) {
+        w->pointer_x = sx >> 8;
+        w->pointer_y = sy >> 8;
+    }
+}
+static void _spec_ptr_button(void* data, struct wl_pointer* ptr, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
+    (void)ptr; (void)serial; (void)time;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && w->pointer_on_surface && button == 0x110U /* BTN_LEFT */ && state == 1U /* PRESSED */) {
+        w->has_click = true;
+        w->click_x = w->pointer_x;
+        w->click_y = w->pointer_y;
+    }
+}
+static void _spec_ptr_axis(void* d, struct wl_pointer* p, uint32_t t, uint32_t a, int32_t v) { (void)d;(void)p;(void)t;(void)a;(void)v; }
+static void _spec_ptr_frame(void* d, struct wl_pointer* p) { (void)d;(void)p; }
+static void _spec_ptr_axis_src(void* d, struct wl_pointer* p, uint32_t s) { (void)d;(void)p;(void)s; }
+static void _spec_ptr_axis_stop(void* d, struct wl_pointer* p, uint32_t t, uint32_t a) { (void)d;(void)p;(void)t;(void)a; }
+static void _spec_ptr_axis_disc(void* d, struct wl_pointer* p, uint32_t a, int32_t di) { (void)d;(void)p;(void)a;(void)di; }
+static void _spec_ptr_axis_v120(void* d, struct wl_pointer* p, uint32_t a, int32_t v) { (void)d;(void)p;(void)a;(void)v; }
+static void _spec_ptr_axis_rel(void* d, struct wl_pointer* p, uint32_t a, uint32_t dir) { (void)d;(void)p;(void)a;(void)dir; }
+
+static const struct spec_wl_pointer_listener _spec_ptr_listener = {
+    _spec_ptr_enter,
+    _spec_ptr_leave,
+    _spec_ptr_motion,
+    _spec_ptr_button,
+    _spec_ptr_axis,
+    _spec_ptr_frame,
+    _spec_ptr_axis_src,
+    _spec_ptr_axis_stop,
+    _spec_ptr_axis_disc,
+    _spec_ptr_axis_v120,
+    _spec_ptr_axis_rel
+};
+
 static void _spec_seat_caps(void* data, struct wl_seat* seat, uint32_t caps) {
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if ((caps & 1u /* WL_SEAT_CAPABILITY_POINTER */) && !w->pointer && _wl_pointer_iface) {
+        uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)seat);
+        w->pointer = (struct wl_pointer*)_wl_proxy_marshal_flags(
+            (struct wl_proxy*)seat, 0 /* WL_SEAT_GET_POINTER */, _wl_pointer_iface, sv, 0, NULL);
+        if (w->pointer) {
+            _wl_proxy_add_listener((struct wl_proxy*)w->pointer, (void (**)(void))&_spec_ptr_listener, w);
+        }
+    }
     if ((caps & 2u /* WL_SEAT_CAPABILITY_KEYBOARD */) && !w->keyboard && _wl_keyboard_iface) {
         uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)seat);
         w->keyboard = (struct wl_keyboard*)_wl_proxy_marshal_flags(
@@ -3055,6 +3144,7 @@ long long spec_pal_window_close(long long handle) {
     if (w->key_queue) free(w->key_queue);
     if (w->frame && _libdecor_frame_unref) _libdecor_frame_unref(w->frame);
     if (w->decor && _libdecor_unref) _libdecor_unref(w->decor);
+    if (w->pointer && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->pointer);
     if (w->keyboard && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->keyboard);
     if (w->seat && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->seat);
     if (w->surface && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->surface);
@@ -3220,6 +3310,33 @@ long long spec_pal_window_height(long long handle) {
     return w ? (long long)w->height : 0;
 }
 
+long long spec_pal_window_pointer_x(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->pointer_x : 0;
+}
+
+long long spec_pal_window_pointer_y(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->pointer_y : 0;
+}
+
+long long spec_pal_window_poll_click(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !w->has_click) return 0;
+    w->has_click = false;
+    return 1;
+}
+
+long long spec_pal_window_click_x(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->click_x : 0;
+}
+
+long long spec_pal_window_click_y(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->click_y : 0;
+}
+
 long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w || !pixels_addr || width <= 0 || height <= 0) return 0;
@@ -3283,6 +3400,12 @@ long long spec_pal_window_height(long long handle) {
     (void)handle;
     return 0;
 }
+
+long long spec_pal_window_pointer_x(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_pointer_y(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_poll_click(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_click_x(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_click_y(long long handle) { (void)handle; return 0; }
 
 long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
     (void)handle; (void)pixels_addr; (void)width; (void)height;

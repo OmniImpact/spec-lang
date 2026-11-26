@@ -1,0 +1,18 @@
+{
+  "usage": "specedit [options]",
+  "options": [
+    {
+      "long": "duration-ms",
+      "type": "int",
+      "default": 0,
+      "arg": "ms",
+      "description": "Exit automatically after N milliseconds (0 = run until closed)"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

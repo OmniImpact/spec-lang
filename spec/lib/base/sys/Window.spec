@@ -93,6 +93,31 @@ Class is Window{
 		return base:sysinternal:Window:pal_window_height(handle: handle);
 	}
 
+	Function of Int is pointerX(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_pointer_x(handle: handle);
+	}
+
+	Function of Int is pointerY(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_pointer_y(handle: handle);
+	}
+
+	Function of Boolean is pollClick(){
+		if({ handle <= 0 }, { return false; });
+		return base:sysinternal:Window:pal_window_poll_click(handle: handle) != 0;
+	}
+
+	Function of Int is clickX(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_click_x(handle: handle);
+	}
+
+	Function of Int is clickY(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_click_y(handle: handle);
+	}
+
 	## Presents an ARGB8888 pixel buffer at [pixelsAddr] to the window.
 	Function of Boolean is present(Int is pixelsAddr, Int is width, Int is height){
 		if({ handle <= 0 || pixelsAddr == 0 }, { return false; });

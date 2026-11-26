@@ -1,0 +1,11 @@
+{
+  "name": "specedit",
+  "version": "0.1.0",
+  "description": "Resolution-independent text editor built on Suit, Sew, Fabric, and Scrap (MVVM)",
+  "source": "src/SpecEdit.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/specedit"
+}

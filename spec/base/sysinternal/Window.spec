@@ -45,6 +45,12 @@ Class is Window{
 	## Bound to `spec_pal_window_height`.
 	Function of Int is pal_window_height(Int is handle);
 
+	Function of Int is pal_window_pointer_x(Int is handle);
+	Function of Int is pal_window_pointer_y(Int is handle);
+	Function of Int is pal_window_poll_click(Int is handle);
+	Function of Int is pal_window_click_x(Int is handle);
+	Function of Int is pal_window_click_y(Int is handle);
+
 	## Presents an ARGB8888 pixel buffer at [pixels_addr] to the window.
 	## Bound to `spec_pal_window_present`.
 	Function of Int is pal_window_present(Int is handle, Int is pixels_addr, Int is width, Int is height);
