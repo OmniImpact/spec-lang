@@ -25,7 +25,7 @@ Class is SettingsViewModel{
 	Function is docDeltaHandler: local Function(Float is _d){};
 	Function is pinnedChangeHandler: local Function(){};
 	Function is defaultsChangeHandler: local Function(Boolean is _mono, Boolean is _wrap, Boolean is _tree){};
-	Function is viewRefreshHandler: local Function(){};
+	Array of Function is viewRefreshListeners: Array();
 	Function of String is activeDirProvider: local Function of String(){ '' };
 	Function of String is activeFileProvider: local Function of String(){ '' };
 
@@ -55,12 +55,16 @@ Class is SettingsViewModel{
 	}
 
 	Function is bindViewRefresh(Function is onRefresh){
-		:viewRefreshHandler: onRefresh;
+		viewRefreshListeners:add(item: onRefresh);
 	}
 
 	local Function is notifyRefresh(){
-		local Function is cb: viewRefreshHandler;
-		cb();
+		local Int is i: 0;
+		while({ i < viewRefreshListeners:length() }, {
+			local Function is cb: viewRefreshListeners:get(index: i);
+			cb();
+			i: i + 1;
+		});
 	}
 
 	Function of Theme is currentTheme(){

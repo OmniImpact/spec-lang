@@ -48,6 +48,9 @@ Class is Theme{
 	Float is toolbarHeightPt: 30.0;
 	Float is menuItemHeightPt: 28.0;
 	Float is paddingPt: 8.0;
+	Float is sectionPaddingPt: 10.0;
+	Float is dialogPaddingPt: 16.0;
+	Float is borderThicknessPt: 1.0;
 	Float is baseTextPt: 15.0;
 
 	replace Function is init(String is preset: 'dark'){
@@ -91,6 +94,7 @@ Class is Theme{
 	Function is setBaseTextPt(Float is pt){
 		local Float is clamped: if({ pt < 10.0 }, { 10.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
 		:baseTextPt: clamped;
+		:deriveTokens();
 	}
 
 	Function of Float is scaledTextPt(Float is defaultPt){
@@ -162,6 +166,11 @@ Class is Theme{
 		textAccent: accent:toArgb();
 		positiveColor: positive:toArgb();
 		negativeColor: negative:toArgb();
+
+		paddingPt: 8.0 * (baseTextPt / 15.0);
+		sectionPaddingPt: paddingPt * 1.25;
+		dialogPaddingPt: paddingPt * 2.0;
+		borderThicknessPt: 1.0;
 
 		synKeyword: if({ light }, { detail:darken(amount: 0.35):toArgb() }, { detail:lighten(amount: 0.50):toArgb() });
 		synType: if({ light }, { detail:mix(other: neutral, t: 0.20):toArgb() }, { detail:mix(other: neutral, t: 0.32):toArgb() });

@@ -17,12 +17,22 @@ Class of SewNode is Frame{
 
 	String is title: '';
 	SewNode is child: SewNode();
-	Float is padPt: 10.0;
+	Float is padPt: 0.0;
 
-	replace Function is init(String is title: '', SewNode is child: SewNode(), Float is padPt: 10.0){
+	replace Function is init(String is title: '', SewNode is child: SewNode(), Float is padPt: 0.0){
 		:title: title;
 		:child: child;
 		:padPt: padPt;
+	}
+
+	local Function of Int is effPadPx(){
+		local Float is pt: if({ padPt > 0.0 }, { padPt }, { activeTheme:sectionPaddingPt });
+		return activeScale:px(pt: pt);
+	}
+
+	local Function of Int is borderPx(){
+		local Int is bw: activeScale:px(pt: activeTheme:borderThicknessPt);
+		return if({ bw < 1 }, { 1 }, { bw });
 	}
 
 	local Function of Int is fontPx(){
@@ -46,7 +56,7 @@ Class of SewNode is Frame{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is padPx: activeScale:px(pt: padPt);
+		local Int is padPx: :effPadPx();
 		local Int is fpx: :fontPx();
 		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
 		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { padPx });
@@ -69,7 +79,7 @@ Class of SewNode is Frame{
 
 	replace Function is arrange(Rect is bounds){
 		layoutBounds: bounds;
-		local Int is padPx: activeScale:px(pt: padPt);
+		local Int is padPx: :effPadPx();
 		local Int is fpx: :fontPx();
 		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
 		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { padPx });
@@ -84,29 +94,30 @@ Class of SewNode is Frame{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is border: activeTheme:panelBorder;
+		local Int is bw: :borderPx();
 		if({ title == '' }, {
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: 1);
+			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: bw);
 		}, {
 			local Int is fpx: :fontPx();
 			local Int is th: DrawContext:measureHeight(pixelHeight: fpx);
 			local Int is tw: DrawContext:measureWidth(text: title, pixelHeight: fpx);
 			local Int is topY: b:y + th / 2;
 			local Int is boxH: b:height - (th / 2);
-			if({ boxH > 1 }, {
-				local Int is titleX: b:x + activeScale:px(pt: padPt);
+			if({ boxH > bw }, {
+				local Int is titleX: b:x + :effPadPx();
 				local Int is gapPad: activeScale:px(pt: 4.0);
 				local Int is leftSegW: (titleX - gapPad) - b:x;
 				if({ leftSegW > 0 }, {
-					ctx:fillRect(x: b:x, y: topY, w: leftSegW, h: 1, color: border);
+					ctx:fillRect(x: b:x, y: topY, w: leftSegW, h: bw, color: border);
 				});
 				local Int is rightStart: titleX + tw + gapPad;
 				local Int is rightSegW: (b:x + b:width) - rightStart;
 				if({ rightSegW > 0 }, {
-					ctx:fillRect(x: rightStart, y: topY, w: rightSegW, h: 1, color: border);
+					ctx:fillRect(x: rightStart, y: topY, w: rightSegW, h: bw, color: border);
 				});
-				ctx:fillRect(x: b:x, y: topY, w: 1, h: boxH, color: border);
-				ctx:fillRect(x: b:x + b:width - 1, y: topY, w: 1, h: boxH, color: border);
-				ctx:fillRect(x: b:x, y: b:y + b:height - 1, w: b:width, h: 1, color: border);
+				ctx:fillRect(x: b:x, y: topY, w: bw, h: boxH, color: border);
+				ctx:fillRect(x: b:x + b:width - bw, y: topY, w: bw, h: boxH, color: border);
+				ctx:fillRect(x: b:x, y: b:y + b:height - bw, w: b:width, h: bw, color: border);
 				ctx:drawText(x: titleX, y: b:y, text: title, color: activeTheme:textMuted, pixelHeight: fpx);
 			});
 		});

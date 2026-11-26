@@ -61,7 +61,8 @@ Class of SewNode is SettingsChip{
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
-		local Int is tw: DrawContext:measureWidth(text: label, pixelHeight: fpx) + activeScale:px(pt: 20.0);
+		local Int is padX: activeScale:px(pt: activeTheme:paddingPt * 2.0);
+		local Int is tw: DrawContext:measureWidth(text: label, pixelHeight: fpx) + padX;
 		local Int is minW: activeScale:px(pt: minWidthPt);
 		local Int is w: if({ tw > minW }, { tw }, { minW });
 		local Int is h: activeScale:px(pt: heightPt);
@@ -76,8 +77,10 @@ Class of SewNode is SettingsChip{
 			if({ hovered }, { activeTheme:hoverBg }, { activeTheme:panelBg })
 		});
 		local Int is border: if({ selected }, { activeTheme:textAccent }, { activeTheme:panelBorder });
+		local Int is bw: activeScale:px(pt: activeTheme:borderThicknessPt);
+		if({ bw < 1 }, { bw: 1; });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
-		ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: 1);
+		ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: bw);
 		local Int is fpx: :fontPx();
 		local Int is tw: DrawContext:measureWidth(text: label, pixelHeight: fpx);
 		local Int is th: DrawContext:measureHeight(pixelHeight: fpx);

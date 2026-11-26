@@ -1,7 +1,7 @@
 #! Package specedit:view:settings
-#! Top-level Settings dialog combining left category sidebar and a NavStack right pane.
+#! Top-level Settings dialog (subclass of Dialog) combining left category sidebar and NavStack pane.
 
-Class is SettingsDialogView{
+Class of Dialog is SettingsDialogView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
 
 	replace [[String]] is using: [
@@ -29,18 +29,29 @@ Class is SettingsDialogView{
 	Array of String is categoryRoutes: Array(['appearance', 'locations', 'interface']);
 	Array of SettingsChip is categoryChips: Array();
 	NavStack is navStack: NavStack();
-	Dialog is dlg: Dialog();
 
 	replace Function is init(SettingsViewModel is vm){
 		:vm: vm;
+		:title: 'Settings';
+		:open: vm:open;
+		:widthPt: 640.0;
+		:heightPt: 420.0;
+		:minWidthPt: 500.0;
+		:minHeightPt: 340.0;
+		:hasContent: true;
 		:appearanceView: AppearanceSettingsView(vm: vm);
 		:locationsView: LocationsSettingsView(vm: vm);
 		:interfaceView: InterfaceSettingsView(vm: vm);
 		:categoryChips: Array();
 		:navStack: NavStack();
+		:content: :buildContent();
+		vm:bindViewRefresh(onRefresh: local Function(){
+			:sync();
+			:isDirty: true;
+		});
 	}
 
-	Function of Dialog is build(){
+	local Function of SewNode is buildContent(){
 		:navStack: NavStack(
 			route: vm:selectedRoute,
 			routes: Array([
@@ -114,22 +125,7 @@ Class is SettingsDialogView{
 			flexFlags: Array([true, false])
 		);
 
-		:dlg: Dialog(
-			title: 'Settings',
-			open: vm:open,
-			widthPt: 640.0,
-			heightPt: 420.0,
-			minWidthPt: 500.0,
-			minHeightPt: 340.0,
-			content: Padding(padPt: 16.0, child: root)
-		);
-
-		vm:bindViewRefresh(onRefresh: local Function(){
-			:sync();
-			dlg:isDirty: true;
-		});
-
-		return dlg;
+		return Padding(useThemePad: true, padScale: 2.0, child: root);
 	}
 
 	Function is sync(){

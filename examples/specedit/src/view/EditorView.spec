@@ -227,8 +227,7 @@ Class is EditorView{
 			contextMenu: vm:contextMenu,
 			onKey: local Function of Boolean(Int is key, Int is mods){ vm:handleShortcut(key: key, mods: mods) }
 		);
-		local Dialog is settingsDlg: SettingsDialogView(vm: vm:settingsVm):build();
-		container:addDialog(d: settingsDlg);
+		container:addDialog(d: SettingsDialogView(vm: vm:settingsVm));
 		container:setZoom(zoomFactor: vm:settingsVm:model:zoomFactor());
 		editorBody:setDocTextDeltaPt(deltaPt: vm:settingsVm:model:docTextDeltaPt);
 		vm:settingsVm:bindHandlers(
