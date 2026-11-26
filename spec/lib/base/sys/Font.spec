@@ -24,6 +24,12 @@ Class is Font{
 		return if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
 	}
 
+	local Function of Int is signI32(Int is v){
+		local Int is u: v & 4294967295;
+		if({ u >= 2147483648 }, { return u - 4294967296; });
+		return u;
+	}
+
 	local Function is ensureMetricsBuf(){
 		if({ metricsAddr == 0 }, {
 			metricsAddr: Mem:alloc(bytes: 16);
@@ -108,7 +114,7 @@ Class is Font{
 				xpos: xpos + math:toFloat(value: kern) * scale;
 			});
 			base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: cp, out_2_i32_ptr: metricsAddr);
-			local Int is adv: Mem:loadI32(ptr: metricsAddr, byteOffset: 0);
+			local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
 			xpos: xpos + math:toFloat(value: adv) * scale + tracking;
 			prevCp: cp;
 		});
@@ -151,9 +157,9 @@ Class is Font{
 		:ensureMetricsBuf();
 		local Float is scale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		base:sysinternal:Font:pal_font_vmetrics(handle: handle, out_3_i32_ptr: metricsAddr);
-		local Int is ascent: Mem:loadI32(ptr: metricsAddr, byteOffset: 0);
-		local Int is descent: Mem:loadI32(ptr: metricsAddr, byteOffset: 4);
-		local Int is lineGap: Mem:loadI32(ptr: metricsAddr, byteOffset: 8);
+		local Int is ascent: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+		local Int is descent: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
+		local Int is lineGap: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
 
 		local Int is baseline: y + math:toInt(value: math:round(value: math:toFloat(value: ascent) * scale));
 		local Int is lineStep: math:toInt(value: math:round(value: math:toFloat(value: ascent - descent + lineGap) * scale));
@@ -186,13 +192,13 @@ Class is Font{
 					xpos: xpos + math:toFloat(value: kern) * scale;
 				});
 				base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: cp, out_2_i32_ptr: metricsAddr);
-				local Int is adv: Mem:loadI32(ptr: metricsAddr, byteOffset: 0);
+				local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
 
 				base:sysinternal:Font:pal_font_glyph_box(handle: handle, cp: cp, pixel_height: pixelHeight, out_4_i32_ptr: metricsAddr);
-				local Int is x0: Mem:loadI32(ptr: metricsAddr, byteOffset: 0);
-				local Int is y0: Mem:loadI32(ptr: metricsAddr, byteOffset: 4);
-				local Int is x1: Mem:loadI32(ptr: metricsAddr, byteOffset: 8);
-				local Int is y1: Mem:loadI32(ptr: metricsAddr, byteOffset: 12);
+				local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+				local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
+				local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
+				local Int is y1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 12));
 				local Int is gw: x1 - x0;
 				local Int is gh: y1 - y0;
 
@@ -219,7 +225,7 @@ Class is Font{
 								while({ gx < gw }, {
 									local Int is px: dstX0 + gx;
 									if({ px >= 0 && px < bufW }, {
-										local Int is cov: Mem:loadByte(ptr: buf, byteOffset: gRowBase + gx);
+										local Int is cov: Mem:loadByte(ptr: buf, byteOffset: gRowBase + gx) & 255;
 										if({ cov > 0 }, {
 											if({ boostNum > 0 }, {
 												cov: cov + ((cov * (255 - cov) * boostNum) >> 16);

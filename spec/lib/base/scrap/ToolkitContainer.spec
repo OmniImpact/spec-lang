@@ -453,7 +453,7 @@ Class of SewNode is ToolkitContainer{
 				});
 			}, {
 				if({ running:current() }, {
-					clock:sleepUntilNs(targetNs: loopStartNs + 8000000);
+					clock:sleepUntilNs(targetNs: loopStartNs + 1000000);
 				});
 			});
 		});
