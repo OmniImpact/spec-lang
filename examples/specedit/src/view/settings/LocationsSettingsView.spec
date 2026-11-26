@@ -34,11 +34,6 @@ Class is LocationsSettingsView{
 					label: 'Add Location',
 					minWidthPt: 96.0,
 					onClick: local Function(){ vm:requestAddLocation(); }
-				),
-				ScrapButton(
-					label: 'Pin Current Folder',
-					minWidthPt: 112.0,
-					onClick: local Function(){ vm:pinCurrentDirectory(); }
 				)
 			])
 		);

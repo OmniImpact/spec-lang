@@ -308,6 +308,7 @@ Class is FileDialog{
 	}
 
 	local Function of Boolean is canConfirm(){
+		if({ directoryMode:current() }, { return true; });
 		if({ saveMode:current() }, { return fileName != ''; });
 		return fileName != '' || selectedPaths:length() > 0;
 	}
@@ -418,12 +419,14 @@ Class is FileDialog{
 			local String is name: entryNames:get(index: idx);
 			local Boolean is isD: entryIsDir:get(index: idx);
 			local String is full: :joinPath(dir: curDir, name: name);
-			local Boolean is isSel: if({ isD }, { selectedRow == idx }, { :isPathSelected(fullPath: full) });
+			local Boolean is dirOnly: directoryMode:current();
+			local Boolean is rowDisabled: dirOnly && !isD;
+			local Boolean is isSel: if({ rowDisabled }, { false }, { if({ isD }, { selectedRow == idx }, { :isPathSelected(fullPath: full) }) });
 
 			if({ isSel }, {
 				ctx:fillRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:activeBg);
 			}, {
-				if({ hoverRow == idx }, {
+				if({ !rowDisabled && hoverRow == idx }, {
 					ctx:fillRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:hoverBg);
 				});
 			});
@@ -432,7 +435,8 @@ Class is FileDialog{
 				if({ linePx > 0 }, { ctx:strokeRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:panelBorder, thickness: linePx); });
 			});
 
-			ctx:drawText(x: listX + padX, y: ry + (rowH - th) / 2, text: name, color: theme:textPrimary, pixelHeight: fpx);
+			local Int is rowCol: if({ rowDisabled }, { theme:textMuted }, { theme:textPrimary });
+			ctx:drawText(x: listX + padX, y: ry + (rowH - th) / 2, text: name, color: rowCol, pixelHeight: fpx);
 			r: r + 1;
 		});
 		ctx:clearClip();
@@ -869,6 +873,9 @@ Class is FileDialog{
 							isDirty: true;
 						});
 					}, {
+						if({ directoryMode:current() }, {
+							return;
+						});
 						local String is full: :joinPath(dir: curDir, name: name);
 						selectedRow: idx;
 						fileName: name;

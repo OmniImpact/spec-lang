@@ -7,6 +7,7 @@ Class of SewNode is TreeView{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
+		['base', 'sys', Time],
 		['base', 'struct', Array],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
@@ -26,6 +27,9 @@ Class of SewNode is TreeView{
 	Array of Array of Boolean is flatAncestors: Array();
 	String is selectedId: '';
 	Int is hoverIdx: -1;
+	String is lastClickId: '';
+	Int is lastClickMs: 0;
+	Time is clock: Time();
 	String is plusIconSvg: '';
 	String is minusIconSvg: '';
 	Function is onSelect: local Function(TreeNode is _node){};
@@ -269,13 +273,24 @@ Class of SewNode is TreeView{
 		local Function is selCb: onSelect;
 		selCb(node);
 		if({ node:expandable }, {
+			:lastClickId: '';
+			:lastClickMs: 0;
 			node:expanded: !node:expanded;
 			local Function is togCb: onToggle;
 			togCb(node);
 			:rebuildFlat();
 		}, {
-			local Function is actCb: onActivate;
-			actCb(node);
+			local Int is nowMs: clock:monotonicMs();
+			local Boolean is isDouble: (node:id == lastClickId) && ((nowMs - lastClickMs) <= 450);
+			if({ isDouble }, {
+				:lastClickId: '';
+				:lastClickMs: 0;
+				local Function is actCb: onActivate;
+				actCb(node);
+			}, {
+				:lastClickId: node:id;
+				:lastClickMs: nowMs;
+			});
 		});
 		invalidate();
 		return true;
