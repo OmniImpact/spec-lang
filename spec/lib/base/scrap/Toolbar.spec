@@ -26,7 +26,6 @@ Class of SewNode is Toolbar{
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
 	ToolbarConfig is config: ToolbarConfig();
-	DrawContext is measureCtx: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 	Int is openMenuIdx: -1;
 	Int is hoverMenuIdx: -1;
 	Int is hoverItemIdx: -1;
@@ -82,7 +81,7 @@ Class of SewNode is Toolbar{
 	}
 
 	local Function of Int is menuButtonWidthPx(MenuConfig is menu){
-		local Int is tw: measureCtx:measureTextWidth(text: menu:label, pixelHeight: :fontPx());
+		local Int is tw: DrawContext:measureWidth(text: menu:label, pixelHeight: :fontPx());
 		return tw + scale:px(pt: 22.0);
 	}
 

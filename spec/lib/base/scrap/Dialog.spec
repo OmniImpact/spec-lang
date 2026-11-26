@@ -76,7 +76,7 @@ Class is Dialog{
 		local Int is h: win:height();
 		if({ w <= 0 || h <= 0 }, { return; });
 		canvas:resize(width: w, height: h);
-		paintCtx:canvas: canvas;
+		paintCtx:rebind(canvas: canvas);
 		local DrawContext is ctx: paintCtx;
 		ctx:fillRect(x: 0, y: 0, w: w, h: h, color: theme:windowBg);
 		if({ hasContent }, {

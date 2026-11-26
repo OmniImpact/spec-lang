@@ -38,8 +38,6 @@ Class of SewNode is TextView{
 	Boolean is lineNumsCached: false;
 	Int is lastWrapW: -1;
 	Int is maxDispW: 0;
-	Font is textFont: Font();
-	Boolean is fontTried: false;
 	String is clipboardText: '';
 	Boolean is ignoreSelfEmit: false;
 	Boolean is cursorVisible: true;
@@ -107,19 +105,9 @@ Class of SewNode is TextView{
 		return if({ px < 12 }, { 12 }, { px });
 	}
 
-	local Function of Font is ensureFont(){
-		if({ !fontTried }, {
-			fontTried: true;
-			textFont:loadDefault();
-		});
-		return textFont;
-	}
-
 	local Function of Int is measureStr(String is s, Int is fpx){
 		if({ s == '' }, { return 0; });
-		local Font is f: :ensureFont();
-		if({ !f:isLoaded() }, { return s:length() * (fpx / 2); });
-		return f:measureWidth(text: s, pixelHeight: fpx);
+		return DrawContext:measureWidth(text: s, pixelHeight: fpx);
 	}
 
 	local Function of Int is gutterWidthPx(Int is fpx){

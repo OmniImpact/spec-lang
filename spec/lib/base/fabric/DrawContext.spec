@@ -7,11 +7,13 @@ Class is DrawContext{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', Font],
+		['base', 'struct', Array],
 		['base', 'suit', SuitCanvas]
 	];
 
-	Font is defaultFont: Font();
-	Boolean is defaultFontTried: false;
+	held Font is sharedFont: Font();
+	held Array of Int is sharedFontState: Array([0]);
+	held DrawContext is shared: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
 	Boolean is hasClip: false;
@@ -23,6 +25,27 @@ Class is DrawContext{
 	replace Function is init(SuitCanvas is canvas){
 		:canvas: canvas;
 		:hasClip: false;
+	}
+
+	## Rebinds this context to [canvas] and resets clip state without allocating a new context.
+	Function is rebind(SuitCanvas is canvas){
+		:canvas: canvas;
+		:hasClip: false;
+	}
+
+	## Returns the process-wide shared default system `Font` (lazily loaded once).
+	held Function of Font is defaultFont(){
+		return DrawContext:shared:activeFont();
+	}
+
+	## Measures UTF-8 [text] width at [pixelHeight] using the shared singleton context (no canvas allocation).
+	held Function of Int is measureWidth(String is text, Int is pixelHeight: 15){
+		return DrawContext:shared:measureTextWidth(text: text, pixelHeight: pixelHeight);
+	}
+
+	## Measures line height for [pixelHeight] without allocating a context.
+	held Function of Int is measureHeight(Int is pixelHeight: 15){
+		return pixelHeight;
 	}
 
 	Function is setClip(Int is x, Int is y, Int is w, Int is h){
@@ -37,12 +60,12 @@ Class is DrawContext{
 		:hasClip: false;
 	}
 
-	local Function of Font is activeFont(){
-		if({ !defaultFontTried }, {
-			defaultFontTried: true;
-			defaultFont:loadDefault();
+	Function of Font is activeFont(){
+		if({ DrawContext:sharedFontState:get(index: 0) == 0 }, {
+			DrawContext:sharedFontState:set(index: 0, item: 1);
+			DrawContext:sharedFont:loadDefault();
 		});
-		return defaultFont;
+		return DrawContext:sharedFont;
 	}
 
 	## Clears the target canvas to fully transparent (`0x00000000`).

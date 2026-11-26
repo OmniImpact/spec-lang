@@ -56,17 +56,14 @@ Class of SewNode is TextScrap{
 		local Array of String is lines: Array();
 		if({ s == '' }, { return lines; });
 		local Int is fpx: :fontPx();
-		local DrawContext is dummy: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
-		local Int is fullW: dummy:measureTextWidth(text: s, pixelHeight: fpx);
+		local Int is fullW: DrawContext:measureWidth(text: s, pixelHeight: fpx);
 		if({ !wrap || maxW <= 0 || fullW <= maxW }, {
-			dummy:canvas:dispose();
 			lines:add(item: s);
 			return lines;
 		});
 
 		local Int is avgCharW: if({ s:length() > 0 && fullW > 0 }, { fullW / s:length() }, { 8 });
 		local Int is maxChars: if({ avgCharW > 0 }, { maxW / avgCharW }, { 40 });
-		dummy:canvas:dispose();
 		if({ maxChars <= 4 || s:length() <= maxChars }, {
 			lines:add(item: s);
 			return lines;
@@ -104,17 +101,15 @@ Class of SewNode is TextScrap{
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
-		local DrawContext is dummy: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
-		local Int is lineH: dummy:measureTextHeight(pixelHeight: fpx);
+		local Int is lineH: DrawContext:measureHeight(pixelHeight: fpx);
 		local Int is gapPx: activeScale:px(pt: lineGapPt);
 		cachedLines: :computeLines(s: text:current(), maxW: c:maxW);
 
 		local Int is maxLineW: 0;
 		times(count: cachedLines:length(), worker: local Function(Int is i){
-			local Int is w: dummy:measureTextWidth(text: cachedLines:get(index: i), pixelHeight: fpx);
+			local Int is w: DrawContext:measureWidth(text: cachedLines:get(index: i), pixelHeight: fpx);
 			if({ w > maxLineW }, { maxLineW: w; });
 		});
-		dummy:canvas:dispose();
 
 		local Int is count: cachedLines:length();
 		local Int is totalH: if({ count > 0 }, { count * lineH + (count - 1) * gapPx }, { lineH });

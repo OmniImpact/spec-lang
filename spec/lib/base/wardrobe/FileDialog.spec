@@ -238,7 +238,7 @@ Class is FileDialog{
 		local Int is h: win:height();
 		if({ w <= 0 || h <= 0 }, { return; });
 		canvas:resize(width: w, height: h);
-		paintCtx:canvas: canvas;
+		paintCtx:rebind(canvas: canvas);
 		local DrawContext is ctx: paintCtx;
 
 		local Int is headerH: scale:px(pt: 32.0);

@@ -38,10 +38,8 @@ Class of SewNode is Label{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local DrawContext is dummy: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
-		local Int is tw: dummy:measureTextWidth(text: text, pixelHeight: scale * 7);
-		local Int is th: dummy:measureTextHeight(pixelHeight: scale * 7);
-		dummy:canvas:dispose();
+		local Int is tw: DrawContext:measureWidth(text: text, pixelHeight: scale * 7);
+		local Int is th: DrawContext:measureHeight(pixelHeight: scale * 7);
 		desiredSize: Size(
 			width: c:clampW(w: tw + padding * 2),
 			height: c:clampH(h: th + padding * 2)
