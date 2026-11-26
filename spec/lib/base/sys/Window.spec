@@ -184,6 +184,11 @@ Class is Window{
 		base:sysinternal:Window:pal_window_set_app_id(handle: handle, app_id_cstr: :cstrAddr(s: appId));
 	}
 
+	Function is setIcon(Int is pixelsAddr, Int is width, Int is height){
+		if({ handle <= 0 || pixelsAddr == 0 || width <= 0 || height <= 0 }, { return; });
+		base:sysinternal:Window:pal_window_set_icon(handle: handle, pixels_addr: pixelsAddr, width: width, height: height);
+	}
+
 	Function is setClipboard(String is text){
 		if({ handle <= 0 }, { return; });
 		base:sysinternal:Window:pal_window_set_clipboard(handle: handle, text_cstr: :cstrAddr(s: text));

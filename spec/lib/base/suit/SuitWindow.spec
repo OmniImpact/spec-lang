@@ -140,6 +140,7 @@ Class is SuitWindow{
 	Function is setCursor(Int is kind){ native:setCursor(kind: kind); }
 	Function is setMinSize(Int is minW, Int is minH){ native:setMinSize(minW: minW, minH: minH); }
 	Function is setAppId(String is appId){ native:setAppId(appId: appId); }
+	Function is setIcon(Int is pixelsAddr, Int is width, Int is height){ native:setIcon(pixelsAddr: pixelsAddr, width: width, height: height); }
 	Function is setClipboard(String is text){ native:setClipboard(text: text); }
 	Function of String is getClipboard(){ return native:getClipboard(); }
 

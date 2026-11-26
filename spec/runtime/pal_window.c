@@ -281,6 +281,30 @@ static const struct spec_wl_message _spec_wp_cursor_mgr_reqs[] = {
 static const struct spec_wl_interface_def _spec_wp_cursor_mgr_iface_def = {
     "wp_cursor_shape_manager_v1", 1, 3, _spec_wp_cursor_mgr_reqs, 0, NULL
 };
+
+static const struct wl_interface* _spec_xdg_icon_create_types[1] = { NULL };
+static const struct wl_interface* _spec_xdg_icon_set_types[2] = { NULL, NULL };
+static const struct wl_interface* _spec_xdg_icon_buf_types[2] = { NULL, NULL };
+static const struct spec_wl_message _spec_xdg_icon_mgr_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "create_icon", "n", _spec_xdg_icon_create_types },
+    { "set_icon", "oo", _spec_xdg_icon_set_types }
+};
+static const struct spec_wl_message _spec_xdg_icon_mgr_evts[] = {
+    { "icon_size", "i", _spec_null_types },
+    { "done", "", _spec_null_types }
+};
+static const struct spec_wl_interface_def _spec_xdg_icon_mgr_iface_def = {
+    "xdg_toplevel_icon_manager_v1", 1, 3, _spec_xdg_icon_mgr_reqs, 2, _spec_xdg_icon_mgr_evts
+};
+static const struct spec_wl_message _spec_xdg_icon_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "set_name", "s", _spec_null_types },
+    { "add_buffer", "oi", _spec_xdg_icon_buf_types }
+};
+static const struct spec_wl_interface_def _spec_xdg_icon_iface_def = {
+    "xdg_toplevel_icon_v1", 1, 3, _spec_xdg_icon_reqs, 0, NULL
+};
 static const struct spec_wl_message _spec_wp_cursor_dev_reqs[] = {
     { "destroy", "", _spec_null_types },
     { "set_shape", "uu", _spec_null_types }
@@ -347,6 +371,10 @@ static bool _spec_win_init_libs(void) {
     _spec_zxdg_deco_types[1] = (const struct wl_interface*)&_spec_xdg_toplevel_iface_def;
     _spec_wp_cursor_dev_types[0] = (const struct wl_interface*)&_spec_wp_cursor_dev_iface_def;
     _spec_wp_cursor_dev_types[1] = _wl_pointer_iface;
+    _spec_xdg_icon_create_types[0] = (const struct wl_interface*)&_spec_xdg_icon_iface_def;
+    _spec_xdg_icon_set_types[0] = (const struct wl_interface*)&_spec_xdg_toplevel_iface_def;
+    _spec_xdg_icon_set_types[1] = (const struct wl_interface*)&_spec_xdg_icon_iface_def;
+    _spec_xdg_icon_buf_types[0] = _wl_buffer_iface;
 
     if (!_spec_xkb_so) {
         _spec_xkb_so = dlopen("libxkbcommon.so.0", RTLD_LAZY | RTLD_LOCAL);
@@ -426,6 +454,7 @@ typedef struct SpecWaylandWindow {
     void* xdg_toplevel;
     void* decor_mgr;
     void* xdg_decoration;
+    void* icon_mgr;
     struct wl_seat* seat;
     struct wl_keyboard* keyboard;
     struct wl_pointer* pointer;
@@ -1009,6 +1038,11 @@ static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t na
         w->cursor_mgr = _wl_proxy_marshal_flags(
             (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
             (const struct wl_interface*)&_spec_wp_cursor_mgr_iface_def, 1, 0,
+            name, iface, 1, NULL);
+    } else if (strcmp(iface, "xdg_toplevel_icon_manager_v1") == 0 && !w->icon_mgr) {
+        w->icon_mgr = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
+            (const struct wl_interface*)&_spec_xdg_icon_mgr_iface_def, 1, 0,
             name, iface, 1, NULL);
     }
 }
@@ -1831,6 +1865,49 @@ long long spec_pal_window_set_app_id(long long handle, long long app_id_cstr) {
     return 0;
 }
 
+long long spec_pal_window_set_icon(long long handle, long long pixels_addr, long long width, long long height) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !pixels_addr || width <= 0 || height <= 0) return 0;
+    if (!w->icon_mgr || !w->xdg_toplevel || !w->shm || !_wl_shm_pool_iface || !_wl_buffer_iface) return 0;
+    int iw = (int)width;
+    int ih = (int)height;
+    int stride = iw * 4;
+    size_t size = (size_t)stride * (size_t)ih;
+    char tmpl[] = "/tmp/spec_icon_shm_XXXXXX";
+    int fd = mkstemp(tmpl);
+    if (fd < 0) return 0;
+    unlink(tmpl);
+    if (ftruncate(fd, (off_t)size) < 0) { close(fd); return 0; }
+    void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (ptr == MAP_FAILED) { close(fd); return 0; }
+    memcpy(ptr, (const void*)(intptr_t)pixels_addr, size);
+    uint32_t shm_ver = _wl_proxy_get_version((struct wl_proxy*)w->shm);
+    struct wl_shm_pool* pool = (struct wl_shm_pool*)_wl_proxy_marshal_flags(
+        (struct wl_proxy*)w->shm, 0 /* WL_SHM_CREATE_POOL */, _wl_shm_pool_iface, shm_ver, 0,
+        NULL, fd, (int32_t)size);
+    if (!pool) { munmap(ptr, size); close(fd); return 0; }
+    uint32_t pool_ver = _wl_proxy_get_version((struct wl_proxy*)pool);
+    struct wl_buffer* wl_buf = (struct wl_buffer*)_wl_proxy_marshal_flags(
+        (struct wl_proxy*)pool, 0 /* WL_SHM_POOL_CREATE_BUFFER */, _wl_buffer_iface, pool_ver, 0,
+        NULL, 0, iw, ih, stride, 0 /* WL_SHM_FORMAT_ARGB8888 */);
+    _wl_proxy_destroy((struct wl_proxy*)pool);
+    munmap(ptr, size);
+    close(fd);
+    if (!wl_buf) return 0;
+    void* icon = _wl_proxy_marshal_flags(
+        (struct wl_proxy*)w->icon_mgr, 1 /* CREATE_ICON */,
+        (const struct wl_interface*)&_spec_xdg_icon_iface_def, 1, 0, NULL);
+    if (icon) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)icon, 2 /* ADD_BUFFER */, NULL, 1, 0, wl_buf, 1);
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->icon_mgr, 2 /* SET_ICON */, NULL, 1, 0, w->xdg_toplevel, icon);
+        _wl_proxy_marshal_flags((struct wl_proxy*)icon, 0 /* DESTROY */, NULL, 1, 1);
+        _wl_display_flush(w->display);
+        return 1;
+    }
+    _wl_proxy_destroy((struct wl_proxy*)wl_buf);
+    return 0;
+}
+
 #else
 
 long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
@@ -1897,6 +1974,7 @@ long long spec_pal_window_mods(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_set_cursor(long long handle, long long kind) { (void)handle; (void)kind; return 0; }
 long long spec_pal_window_set_min_size(long long handle, long long min_w, long long min_h) { (void)handle; (void)min_w; (void)min_h; return 0; }
 long long spec_pal_window_set_app_id(long long handle, long long app_id_cstr) { (void)handle; (void)app_id_cstr; return 0; }
+long long spec_pal_window_set_icon(long long handle, long long pixels_addr, long long width, long long height) { (void)handle; (void)pixels_addr; (void)width; (void)height; return 0; }
 long long spec_pal_window_set_clipboard(long long handle, long long text_cstr) { (void)handle; (void)text_cstr; return 0; }
 long long spec_pal_window_get_clipboard(long long handle) { (void)handle; return 0; }
 

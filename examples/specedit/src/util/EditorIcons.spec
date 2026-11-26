@@ -9,6 +9,7 @@ Class is EditorIcons{
 	];
 
 	Bundle is bundle: Bundle();
+	String is appIcon: '';
 	String is chevronDown: '';
 	String is treePlus: '';
 	String is treeMinus: '';
@@ -29,6 +30,7 @@ Class is EditorIcons{
 
 	replace Function is init(){
 		:bundle: Bundle();
+		:appIcon: bundle:readText(path: 'resources/icons/app-icon.svg');
 		:chevronDown: bundle:readText(path: 'resources/icons/chevron-down.svg');
 		:treePlus: bundle:readText(path: 'resources/icons/tree-plus.svg');
 		:treeMinus: bundle:readText(path: 'resources/icons/tree-minus.svg');

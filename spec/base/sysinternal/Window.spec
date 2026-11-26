@@ -63,6 +63,7 @@ Class is Window{
 	Function of Int is pal_window_set_cursor(Int is handle, Int is kind);
 	Function of Int is pal_window_set_min_size(Int is handle, Int is min_w, Int is min_h);
 	Function of Int is pal_window_set_app_id(Int is handle, Int is app_id_cstr);
+	Function of Int is pal_window_set_icon(Int is handle, Int is pixels_addr, Int is width, Int is height);
 	Function of Int is pal_window_set_clipboard(Int is handle, Int is text_cstr);
 	Function of Int is pal_window_get_clipboard(Int is handle);
 

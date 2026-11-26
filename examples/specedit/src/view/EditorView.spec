@@ -189,6 +189,7 @@ Class is EditorView{
 	Function of ToolkitContainer is build(){
 		:container: ToolkitContainer(
 			title: vm:title,
+			iconSvg: vm:icons:appIcon,
 			running: vm:running,
 			theme: Theme(preset: vm:themePreset),
 			widthPt: vm:windowWidthPt,

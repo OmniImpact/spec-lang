@@ -25,6 +25,8 @@ Class of SewNode is ToolkitContainer{
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
+		['base', 'fabric', 'svg', SvgRenderer],
+		['base', 'fabric', 'svg', SvgBitmap],
 		['base', 'scrap', Bar],
 		['base', 'scrap', 'menu', MenuContext],
 		['base', 'scrap', 'tab', TabBar],
@@ -36,6 +38,7 @@ Class of SewNode is ToolkitContainer{
 	];
 
 	TextEmitter is title: TextEmitter(initial: 'Suit');
+	String is iconSvg: '';
 	BoolEmitter is running: BoolEmitter(initial: true);
 	IntEmitter is targetFps: IntEmitter(initial: 0);
 	Theme is theme: Theme(preset: 'light_grayscale');
@@ -74,6 +77,7 @@ Class of SewNode is ToolkitContainer{
 
 	replace Function is init(
 		TextEmitter is title: TextEmitter(initial: 'Suit'),
+		String is iconSvg: '',
 		BoolEmitter is running: BoolEmitter(initial: true),
 		IntEmitter is targetFps: IntEmitter(initial: 0),
 		Theme is theme: Theme(preset: 'light_grayscale'),
@@ -98,6 +102,7 @@ Class of SewNode is ToolkitContainer{
 		Function of Boolean is onKey: local Function of Boolean(Int is key, Int is mods){ false }
 	){
 		:title: title;
+		:iconSvg: iconSvg;
 		:running: running;
 		:targetFps: targetFps;
 		:theme: theme;
@@ -333,6 +338,14 @@ Class of SewNode is ToolkitContainer{
 		});
 
 		scale: Scale(factor: win:scaleFactor());
+		if({ iconSvg != '' }, {
+			local Int is iconPx: scale:px(pt: 32.0);
+			if({ iconPx < 32 }, { iconPx: 32; });
+			local SvgBitmap is iconBmp: SvgRenderer:shared:rasterize(svgSrc: iconSvg, widthPx: iconPx, heightPx: iconPx);
+			if({ iconBmp:argbAddr != 0 }, {
+				win:setIcon(pixelsAddr: iconBmp:argbAddr, width: iconBmp:width, height: iconBmp:height);
+			});
+		});
 		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
 		if({ hasTabBar }, { tabBar:setScale(scale: scale); });
 		if({ hasBody && !useVulkan }, { bodyPanel:setScale(scale: scale); });
