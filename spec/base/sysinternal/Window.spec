@@ -29,6 +29,10 @@ Class is Window{
 	## Bound to `spec_pal_window_poll_timeout`.
 	Function of Int is pal_window_poll_timeout(Int is handle, Int is timeout_ms);
 
+	## Returns the window content DPI scale factor in thousandths (`1000` = `1.0`).
+	## Bound to `spec_pal_window_scale_milli`.
+	Function of Int is pal_window_scale_milli(Int is handle);
+
 	## Closes the native window and releases its resources.
 	## Bound to `spec_pal_window_close`.
 	Function of Int is pal_window_close(Int is handle);

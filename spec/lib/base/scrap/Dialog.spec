@@ -40,6 +40,7 @@ Class is Dialog{
 	Int is lastH: 0;
 	Int is lastPtrX: -1;
 	Int is lastPtrY: -1;
+	Boolean is wasPtrDown: false;
 	SignalBag is signalBag: SignalBag();
 
 	replace Function is init(
@@ -132,6 +133,7 @@ Class is Dialog{
 		canvas: SuitCanvas(width: win:width(), height: win:height());
 		lastPtrX: -1;
 		lastPtrY: -1;
+		wasPtrDown: false;
 		isShown: true;
 		:paintDialog();
 	}
@@ -206,17 +208,29 @@ Class is Dialog{
 			});
 		});
 
+		local Boolean is ptrDown: win:pointerDown();
 		local Int is px: win:pointerX();
 		local Int is py: win:pointerY();
 		if({ px != lastPtrX || py != lastPtrY }, {
 			lastPtrX: px;
 			lastPtrY: py;
 			if({ hasContent }, {
+				if({ ptrDown }, {
+					if({ content:onPointerDrag(x: px, y: py, mods: curMods) }, {
+						isDirty: true;
+					});
+				});
 				if({ content:onPointerMove(x: px, y: py) }, {
 					isDirty: true;
 				});
 			});
 		});
+		if({ !ptrDown && wasPtrDown && hasContent }, {
+			if({ content:onPointerUp(x: px, y: py) }, {
+				isDirty: true;
+			});
+		});
+		wasPtrDown: ptrDown;
 
 		if({ win:pollClick() }, {
 			if({ hasContent }, {

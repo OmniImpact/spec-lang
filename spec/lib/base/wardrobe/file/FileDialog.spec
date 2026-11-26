@@ -29,6 +29,7 @@ Class is FileDialog{
 	String is title: 'Open File';
 	BoolEmitter is open: BoolEmitter(initial: false);
 	BoolEmitter is saveMode: BoolEmitter(initial: false);
+	BoolEmitter is directoryMode: BoolEmitter(initial: false);
 	TextEmitter is dialogTitle: TextEmitter(initial: '');
 	TextEmitter is suggestedName: TextEmitter(initial: '');
 	Boolean is allowMultiple: false;
@@ -79,6 +80,7 @@ Class is FileDialog{
 		String is title: 'Open File',
 		BoolEmitter is open: BoolEmitter(initial: false),
 		BoolEmitter is saveMode: BoolEmitter(initial: false),
+		BoolEmitter is directoryMode: BoolEmitter(initial: false),
 		TextEmitter is dialogTitle: TextEmitter(initial: ''),
 		TextEmitter is suggestedName: TextEmitter(initial: ''),
 		Boolean is allowMultiple: false,
@@ -93,6 +95,7 @@ Class is FileDialog{
 		:title: title;
 		:open: open;
 		:saveMode: saveMode;
+		:directoryMode: directoryMode;
 		:dialogTitle: dialogTitle;
 		:suggestedName: suggestedName;
 		:allowMultiple: allowMultiple;
@@ -545,6 +548,13 @@ Class is FileDialog{
 	}
 
 	local Function is finishOpen(){
+		if({ directoryMode:current() }, {
+			local String is chosenDir: curDir;
+			if({ selectedRow >= 0 && selectedRow < entryIsDir:length() && entryIsDir:get(index: selectedRow) }, {
+				chosenDir: :joinPath(dir: curDir, name: entryNames:get(index: selectedRow));
+			});
+			selectedPaths: Array([chosenDir]);
+		}, {
 		if({ saveMode:current() }, {
 			if({ fileName == '' }, { return; });
 			selectedPaths: Array([:joinPath(dir: curDir, name: fileName)]);
@@ -554,7 +564,7 @@ Class is FileDialog{
 				local String is resolved: if({ fileName:byteAt(index: 0) == 47 }, { fileName }, { :joinPath(dir: curDir, name: fileName) });
 				selectedPaths: Array([resolved]);
 			});
-		});
+		}); });
 		local Array of String is chosen: selectedPaths;
 		:closeWindow();
 		open:emit(value: false);

@@ -53,6 +53,31 @@ Class is FilePinnedLocations{
 		return true;
 	}
 
+	Function of Boolean is move(Int is fromIdx, Int is toIdx){
+		local Int is count: paths:length();
+		if({ fromIdx < 0 || fromIdx >= count || toIdx < 0 || toIdx >= count || fromIdx == toIdx }, { return false; });
+		local String is nm: names:get(index: fromIdx);
+		local String is pp: paths:get(index: fromIdx);
+		if({ fromIdx < toIdx }, {
+			local Int is i: fromIdx;
+			while({ i < toIdx }, {
+				names:set(index: i, item: names:get(index: i + 1));
+				paths:set(index: i, item: paths:get(index: i + 1));
+				i: i + 1;
+			});
+		}, {
+			local Int is i: fromIdx;
+			while({ i > toIdx }, {
+				names:set(index: i, item: names:get(index: i - 1));
+				paths:set(index: i, item: paths:get(index: i - 1));
+				i: i - 1;
+			});
+		});
+		names:set(index: toIdx, item: nm);
+		paths:set(index: toIdx, item: pp);
+		return true;
+	}
+
 	local Function is addDefaults(){
 		local String is home: Process():getEnv(key: 'HOME', default: '');
 		if({ home == '' }, {
@@ -105,7 +130,7 @@ Class is FilePinnedLocations{
 			local Map of String to Any is obj: j:getObjectAt(arr: arr, index: i);
 			local String is pname: j:getString(obj: obj, key: 'name', default: '');
 			local String is ppath: j:getString(obj: obj, key: 'path', default: '');
-			if({ pname != '' && ppath != '' && (Dir():isDir(path: ppath) || fileExists(path: ppath)) }, {
+			if({ pname != '' && ppath != '' && Dir():isDir(path: ppath) }, {
 				:add(name: pname, path: ppath);
 			});
 			i: i + 1;

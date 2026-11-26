@@ -66,6 +66,14 @@ Class is Window{
 		return true;
 	}
 
+	## Returns the screen density scale factor (`1.0` = 96 DPI).
+	Function of Float is scaleFactor(){
+		if({ handle <= 0 }, { return 1.0; });
+		local Int is milli: base:sysinternal:Window:pal_window_scale_milli(handle: handle);
+		if({ milli <= 0 }, { return 1.0; });
+		return (milli as Float) / 1000.0;
+	}
+
 	## Closes the window if open.
 	Function is close(){
 		if({ handle > 0 }, {

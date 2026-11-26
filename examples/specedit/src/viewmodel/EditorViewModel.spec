@@ -40,6 +40,8 @@ Class is EditorViewModel{
 	TextEmitter is activeRoute: TextEmitter(initial: SpecEditStrings:ROUTE_WELCOME);
 	BoolEmitter is fileDialogOpen: BoolEmitter(initial: false);
 	BoolEmitter is fileDialogSaveMode: BoolEmitter(initial: false);
+	BoolEmitter is fileDialogDirMode: BoolEmitter(initial: false);
+	Boolean is fileDialogPinMode: false;
 	TextEmitter is fileDialogTitle: TextEmitter(initial: SpecEditStrings:FILE_DIALOG_TITLE);
 	TextEmitter is fileDialogSuggestedName: TextEmitter(initial: '');
 	BoolEmitter is aboutOpen: BoolEmitter(initial: false);
@@ -395,8 +397,19 @@ Class is EditorViewModel{
 	}
 
 	Function is requestOpen(){
+		fileDialogPinMode: false;
+		fileDialogDirMode:emit(value: false);
 		fileDialogSaveMode:emit(value: false);
 		fileDialogTitle:emit(value: SpecEditStrings:FILE_DIALOG_TITLE);
+		fileDialogSuggestedName:emit(value: '');
+		fileDialogOpen:emit(value: true);
+	}
+
+	Function is requestPinLocation(){
+		fileDialogPinMode: true;
+		fileDialogSaveMode:emit(value: false);
+		fileDialogDirMode:emit(value: true);
+		fileDialogTitle:emit(value: 'Select Location to Pin');
 		fileDialogSuggestedName:emit(value: '');
 		fileDialogOpen:emit(value: true);
 	}
@@ -425,7 +438,17 @@ Class is EditorViewModel{
 
 	Function is onFileDialogSelected(Array of String is paths){
 		fileDialogOpen:emit(value: false);
-		if({ paths:length() == 0 }, { return; });
+		if({ paths:length() == 0 }, {
+			fileDialogPinMode: false;
+			fileDialogDirMode:emit(value: false);
+			return;
+		});
+		if({ fileDialogPinMode }, {
+			fileDialogPinMode: false;
+			fileDialogDirMode:emit(value: false);
+			settingsVm:pinPath(path: paths:get(index: 0));
+			return;
+		});
 		if({ fileDialogSaveMode:current() }, {
 			:saveDocumentToPath(path: paths:get(index: 0));
 			return;

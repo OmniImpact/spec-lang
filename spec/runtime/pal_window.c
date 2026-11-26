@@ -192,6 +192,7 @@ static const struct wl_interface* _wl_data_device_manager_iface = NULL;
 static const struct wl_interface* _wl_data_device_iface = NULL;
 static const struct wl_interface* _wl_data_source_iface = NULL;
 static const struct wl_interface* _wl_data_offer_iface = NULL;
+static const struct wl_interface* _wl_output_iface = NULL;
 
 /* Minimal xdg-shell + xdg-decoration ABI interfaces (loaded zero-dep) */
 static const struct wl_interface* _spec_xdg_surface_types[2] = { NULL, NULL };
@@ -363,6 +364,7 @@ static bool _spec_win_init_libs(void) {
     _wl_data_device_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_data_device_interface");
     _wl_data_source_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_data_source_interface");
     _wl_data_offer_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_data_offer_interface");
+    _wl_output_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_output_interface");
 
     _spec_xdg_surface_types[0] = (const struct wl_interface*)&_spec_xdg_surface_iface_def;
     _spec_xdg_surface_types[1] = _wl_surface_iface;
@@ -444,6 +446,9 @@ typedef struct SpecWaylandWindow {
     int height;
     int pending_w;
     int pending_h;
+    int output_scale;
+    int output_phys_w_mm;
+    int output_mode_w;
     struct wl_display* display;
     struct wl_registry* registry;
     struct wl_compositor* compositor;
@@ -998,6 +1003,42 @@ static void _spec_ensure_data_device(SpecWaylandWindow* w) {
     }
 }
 
+struct spec_wl_output_listener {
+    void (*geometry)(void* data, void* output, int32_t x, int32_t y, int32_t phys_w, int32_t phys_h, int32_t subpixel, const char* make, const char* model, int32_t transform);
+    void (*mode)(void* data, void* output, uint32_t flags, int32_t width, int32_t height, int32_t refresh);
+    void (*done)(void* data, void* output);
+    void (*scale)(void* data, void* output, int32_t factor);
+};
+
+static void _spec_output_geometry(void* data, void* output, int32_t x, int32_t y, int32_t phys_w, int32_t phys_h, int32_t subpixel, const char* make, const char* model, int32_t transform) {
+    (void)output; (void)x; (void)y; (void)phys_h; (void)subpixel; (void)make; (void)model; (void)transform;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && phys_w > 0 && w->output_phys_w_mm == 0) w->output_phys_w_mm = phys_w;
+}
+
+static void _spec_output_mode(void* data, void* output, uint32_t flags, int32_t width, int32_t height, int32_t refresh) {
+    (void)output; (void)height; (void)refresh;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && (flags & 1) && width > 0 && w->output_mode_w == 0) w->output_mode_w = width;
+}
+
+static void _spec_output_done(void* data, void* output) {
+    (void)data; (void)output;
+}
+
+static void _spec_output_scale(void* data, void* output, int32_t factor) {
+    (void)output;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && factor > w->output_scale) w->output_scale = factor;
+}
+
+static const struct spec_wl_output_listener _spec_output_listener = {
+    _spec_output_geometry,
+    _spec_output_mode,
+    _spec_output_done,
+    _spec_output_scale
+};
+
 static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t name, const char* iface, uint32_t version) {
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
     if (strcmp(iface, "wl_compositor") == 0 && _wl_compositor_iface) {
@@ -1024,6 +1065,14 @@ static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t na
             (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */, _wl_data_device_manager_iface, v, 0,
             name, iface, v, NULL);
         _spec_ensure_data_device(w);
+    } else if (strcmp(iface, "wl_output") == 0 && _wl_output_iface) {
+        uint32_t v = version < 2 ? version : 2;
+        void* out = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */, _wl_output_iface, v, 0,
+            name, iface, v, NULL);
+        if (out) {
+            _wl_proxy_add_listener((struct wl_proxy*)out, (void (**)(void))&_spec_output_listener, w);
+        }
     } else if (strcmp(iface, "xdg_wm_base") == 0 && !w->xdg_wm_base) {
         w->xdg_wm_base = _wl_proxy_marshal_flags(
             (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
@@ -1560,6 +1609,26 @@ long long spec_pal_window_surface_handle(long long handle) {
     return w ? (long long)(intptr_t)w->surface : 0;
 }
 
+long long spec_pal_window_scale_milli(long long handle) {
+    const char* env = getenv("SPEC_UI_SCALE");
+    if (!env || !*env) env = getenv("GDK_SCALE");
+    if (!env || !*env) env = getenv("QT_SCALE_FACTOR");
+    if (env && *env) {
+        double v = atof(env);
+        if (v > 0.25 && v < 8.0) return (long long)(v * 1000.0 + 0.5);
+    }
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w) return 1000;
+    if (w->output_scale > 1) return (long long)w->output_scale * 1000;
+    if (w->output_phys_w_mm > 0 && w->output_mode_w > 0) {
+        double dpi = ((double)w->output_mode_w * 25.4) / (double)w->output_phys_w_mm;
+        if (dpi > 110.0) {
+            return (long long)((dpi / 96.0) * 1000.0 + 0.5);
+        }
+    }
+    return 1000;
+}
+
 long long spec_pal_window_poll_timeout(long long handle, long long timeout_ms) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w || w->should_close) return 0;
@@ -1937,6 +2006,11 @@ long long spec_pal_window_display_handle(long long handle) {
 long long spec_pal_window_surface_handle(long long handle) {
     (void)handle;
     return 0;
+}
+
+long long spec_pal_window_scale_milli(long long handle) {
+    (void)handle;
+    return 1000;
 }
 
 long long spec_pal_window_poll_timeout(long long handle, long long timeout_ms) {

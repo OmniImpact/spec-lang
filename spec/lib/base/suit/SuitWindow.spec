@@ -84,7 +84,7 @@ Class is SuitWindow{
 
 	## Returns the logical point-to-pixel scale factor (1.0 = 1px per pt).
 	Function of Float is scaleFactor(){
-		return 1.0;
+		return native:scaleFactor();
 	}
 
 	Function of Int is pointerX(){ return native:pointerX(); }

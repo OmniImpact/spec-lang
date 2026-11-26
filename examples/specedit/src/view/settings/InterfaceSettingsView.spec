@@ -10,43 +10,32 @@ Class is InterfaceSettingsView{
 		['base', 'sew', Column],
 		['base', 'sew', Row],
 		['base', 'scrap', Frame],
+		['base', 'scrap', Switch],
 		['specedit', 'viewmodel', SettingsViewModel],
-		['specedit', 'view', 'settings', SettingsLabel],
-		['specedit', 'view', 'settings', SettingsChip]
+		['specedit', 'view', 'settings', SettingsLabel]
 	];
 
 	SettingsViewModel is vm: SettingsViewModel();
-	SettingsChip is monoChip: SettingsChip();
-	SettingsChip is wrapChip: SettingsChip();
-	SettingsChip is treeChip: SettingsChip();
+	Switch is monoSwitch: Switch();
+	Switch is wrapSwitch: Switch();
+	Switch is treeSwitch: Switch();
 
 	replace Function is init(SettingsViewModel is vm){
 		:vm: vm;
 	}
 
-	local Function of String is toggleText(Boolean is on){
-		if({ on }, { return 'On'; });
-		return 'Off';
-	}
-
 	Function of SewNode is build(){
-		:monoChip: SettingsChip(
-			label: :toggleText(on: vm:model:defaultMonospace),
-			selected: vm:model:defaultMonospace,
-			minWidthPt: 64.0,
-			onClick: local Function(){ vm:toggleDefaultMonospace(); }
+		:monoSwitch: Switch(
+			checked: vm:model:defaultMonospace,
+			onToggle: local Function(Boolean is _next){ vm:toggleDefaultMonospace(); }
 		);
-		:wrapChip: SettingsChip(
-			label: :toggleText(on: vm:model:defaultWrap),
-			selected: vm:model:defaultWrap,
-			minWidthPt: 64.0,
-			onClick: local Function(){ vm:toggleDefaultWrap(); }
+		:wrapSwitch: Switch(
+			checked: vm:model:defaultWrap,
+			onToggle: local Function(Boolean is _next){ vm:toggleDefaultWrap(); }
 		);
-		:treeChip: SettingsChip(
-			label: :toggleText(on: vm:model:defaultShowFileTree),
-			selected: vm:model:defaultShowFileTree,
-			minWidthPt: 64.0,
-			onClick: local Function(){ vm:toggleDefaultShowFileTree(); }
+		:treeSwitch: Switch(
+			checked: vm:model:defaultShowFileTree,
+			onToggle: local Function(Boolean is _next){ vm:toggleDefaultShowFileTree(); }
 		);
 
 		return Column(
@@ -61,21 +50,21 @@ Class is InterfaceSettingsView{
 							Row(
 								gapPt: 10.0,
 								children: Array([
-									monoChip,
+									monoSwitch,
 									SettingsLabel(text: 'Default Monospace Font')
 								])
 							),
 							Row(
 								gapPt: 10.0,
 								children: Array([
-									wrapChip,
+									wrapSwitch,
 									SettingsLabel(text: 'Default Word Wrap')
 								])
 							),
 							Row(
 								gapPt: 10.0,
 								children: Array([
-									treeChip,
+									treeSwitch,
 									SettingsLabel(text: 'Show File Tree by Default')
 								])
 							)
@@ -87,11 +76,8 @@ Class is InterfaceSettingsView{
 	}
 
 	Function is sync(){
-		monoChip:setSelected(next: vm:model:defaultMonospace);
-		monoChip:setLabel(next: :toggleText(on: vm:model:defaultMonospace));
-		wrapChip:setSelected(next: vm:model:defaultWrap);
-		wrapChip:setLabel(next: :toggleText(on: vm:model:defaultWrap));
-		treeChip:setSelected(next: vm:model:defaultShowFileTree);
-		treeChip:setLabel(next: :toggleText(on: vm:model:defaultShowFileTree));
+		monoSwitch:setChecked(next: vm:model:defaultMonospace);
+		wrapSwitch:setChecked(next: vm:model:defaultWrap);
+		treeSwitch:setChecked(next: vm:model:defaultShowFileTree);
 	}
 }

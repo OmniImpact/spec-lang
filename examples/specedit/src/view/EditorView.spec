@@ -119,6 +119,7 @@ Class is EditorView{
 			title: vm:fileDialogTitle:current(),
 			open: vm:fileDialogOpen,
 			saveMode: vm:fileDialogSaveMode,
+			directoryMode: vm:fileDialogDirMode,
 			dialogTitle: vm:fileDialogTitle,
 			suggestedName: vm:fileDialogSuggestedName,
 			allowMultiple: vm:allowMultipleFiles,
@@ -241,8 +242,8 @@ Class is EditorView{
 			onDefaultsChange: local Function(Boolean is mono, Boolean is wrap, Boolean is showTree){
 				vm:applyInterfaceDefaults(mono: mono, wrap: wrap, showTree: showTree);
 			},
-			getActiveDir: local Function of String(){ fileTree:rootPath },
-			getActiveFile: local Function of String(){ vm:activeFilePath:current() }
+			onAddLocation: local Function(){ vm:requestPinLocation(); },
+			getActiveDir: local Function of String(){ fileTree:rootPath }
 		);
 		container
 	}

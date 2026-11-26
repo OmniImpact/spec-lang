@@ -64,6 +64,11 @@ Class is AppearanceSettingsView{
 					label: '+',
 					minWidthPt: 34.0,
 					onClick: local Function(){ vm:adjustDocTextDelta(delta: 1.0); }
+				),
+				SettingsChip(
+					label: 'Reset',
+					minWidthPt: 58.0,
+					onClick: local Function(){ vm:resetDocTextDelta(); }
 				)
 			])
 		);
@@ -81,6 +86,11 @@ Class is AppearanceSettingsView{
 					label: '+',
 					minWidthPt: 34.0,
 					onClick: local Function(){ vm:adjustBaseTextPt(delta: 1.0); }
+				),
+				SettingsChip(
+					label: 'Reset',
+					minWidthPt: 58.0,
+					onClick: local Function(){ vm:resetBaseTextPt(); }
 				)
 			])
 		);
@@ -105,7 +115,18 @@ Class is AppearanceSettingsView{
 		return Column(
 			gapPt: 10.0,
 			children: Array([
-				SettingsLabel(text: 'Appearance', heading: true),
+				Row(
+					gapPt: 12.0,
+					children: Array([
+						SettingsLabel(text: 'Appearance', heading: true),
+						SettingsChip(
+							label: 'Reset All',
+							minWidthPt: 76.0,
+							heightPt: 24.0,
+							onClick: local Function(){ vm:resetAppearance(); }
+						)
+					])
+				),
 				Frame(
 					title: 'Theme',
 					child: themeRow

@@ -6,6 +6,7 @@ Class is SettingsViewModel{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Dir],
 		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', TextEmitter],
@@ -26,8 +27,8 @@ Class is SettingsViewModel{
 	Function is pinnedChangeHandler: local Function(){};
 	Function is defaultsChangeHandler: local Function(Boolean is _mono, Boolean is _wrap, Boolean is _tree){};
 	Array of Function is viewRefreshListeners: Array();
+	Function is addLocationHandler: local Function(){};
 	Function of String is activeDirProvider: local Function of String(){ '' };
-	Function of String is activeFileProvider: local Function of String(){ '' };
 
 	replace Function is init(){
 		:model: SettingsModel();
@@ -42,16 +43,16 @@ Class is SettingsViewModel{
 		Function is onDocTextDeltaChange,
 		Function is onPinnedChange,
 		Function is onDefaultsChange,
-		Function of String is getActiveDir,
-		Function of String is getActiveFile
+		Function is onAddLocation,
+		Function of String is getActiveDir
 	){
 		:themeChangeHandler: onThemeChange;
 		:zoomChangeHandler: onZoomChange;
 		:docDeltaHandler: onDocTextDeltaChange;
 		:pinnedChangeHandler: onPinnedChange;
 		:defaultsChangeHandler: onDefaultsChange;
+		:addLocationHandler: onAddLocation;
 		:activeDirProvider: getActiveDir;
-		:activeFileProvider: getActiveFile;
 	}
 
 	Function is bindViewRefresh(Function is onRefresh){
@@ -126,6 +127,45 @@ Class is SettingsViewModel{
 		:notifyRefresh();
 	}
 
+	Function is resetDocTextDelta(){
+		model:docTextDeltaPt: 0.0;
+		model:save();
+		local Function is cb: docDeltaHandler;
+		cb(0.0);
+		:notifyRefresh();
+	}
+
+	Function is resetBaseTextPt(){
+		model:baseTextPt: 15.0;
+		model:save();
+		local Function is cb: themeChangeHandler;
+		cb(:currentTheme());
+		:notifyRefresh();
+	}
+
+	Function is resetZoomPct(){
+		model:uiZoomPct: 100;
+		model:save();
+		local Function is cb: zoomChangeHandler;
+		cb(1.0);
+		:notifyRefresh();
+	}
+
+	Function is resetAppearance(){
+		model:themePreset: ThemePreset:LIGHT;
+		model:docTextDeltaPt: 0.0;
+		model:baseTextPt: 15.0;
+		model:uiZoomPct: 100;
+		model:save();
+		local Function is tcb: themeChangeHandler;
+		tcb(:currentTheme());
+		local Function is dcb: docDeltaHandler;
+		dcb(0.0);
+		local Function is zcb: zoomChangeHandler;
+		zcb(1.0);
+		:notifyRefresh();
+	}
+
 	Function is removePinned(Int is index){
 		if({ pinned:removeAt(index: index) }, {
 			pinned:save();
@@ -148,8 +188,17 @@ Class is SettingsViewModel{
 		return path;
 	}
 
+	Function is movePinned(Int is fromIdx, Int is toIdx){
+		if({ pinned:move(fromIdx: fromIdx, toIdx: toIdx) }, {
+			pinned:save();
+			local Function is cb: pinnedChangeHandler;
+			cb();
+			:notifyRefresh();
+		});
+	}
+
 	Function is pinPath(String is path){
-		if({ path == '' }, { return; });
+		if({ path == '' || !Dir():isDir(path: path) }, { return; });
 		local String is name: :baseNameOf(path: path);
 		if({ name == '' }, { name: path; });
 		if({ pinned:add(name: name, path: path) }, {
@@ -160,14 +209,14 @@ Class is SettingsViewModel{
 		});
 	}
 
+	Function is requestAddLocation(){
+		local Function is cb: addLocationHandler;
+		cb();
+	}
+
 	Function is pinCurrentDirectory(){
 		local Function of String is dirFn: activeDirProvider;
 		:pinPath(path: dirFn());
-	}
-
-	Function is pinCurrentFile(){
-		local Function of String is fileFn: activeFileProvider;
-		:pinPath(path: fileFn());
 	}
 
 	Function is toggleDefaultMonospace(){
