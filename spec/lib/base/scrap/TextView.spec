@@ -42,6 +42,8 @@ Class of SewNode is TextView{
 	Boolean is fontTried: false;
 	String is clipboardText: '';
 	Boolean is ignoreSelfEmit: false;
+	Boolean is cursorVisible: true;
+	Int is lastBlinkMs: 0;
 
 	replace Function is init(
 		TextEmitter is text,
@@ -235,6 +237,8 @@ Class of SewNode is TextView{
 		local Function is cb: onTextChange;
 		cb(joined);
 		:emitCursorStatus();
+		cursorVisible: true;
+		lastBlinkMs: 0;
 		invalidate();
 	}
 
@@ -372,6 +376,8 @@ Class of SewNode is TextView{
 		cursorCol: rawLines:get(index: cursorLine):length();
 		hasSelection: true;
 		:emitCursorStatus();
+		cursorVisible: true;
+		lastBlinkMs: 0;
 		invalidate();
 	}
 
@@ -400,7 +406,22 @@ Class of SewNode is TextView{
 			hasSelection: false;
 		});
 		:emitCursorStatus();
+		cursorVisible: true;
+		lastBlinkMs: 0;
 		invalidate();
+	}
+
+	replace Function of Boolean is tick(Int is nowMs){
+		if({ lastBlinkMs == 0 }, {
+			lastBlinkMs: nowMs;
+			return false;
+		});
+		if({ nowMs - lastBlinkMs >= 500 }, {
+			cursorVisible: !cursorVisible;
+			lastBlinkMs: nowMs;
+			return true;
+		});
+		return false;
 	}
 
 	replace Function of Size is measure(Constraints is c){
@@ -418,6 +439,10 @@ Class of SewNode is TextView{
 		local Int is outW: if({ !wrapCached && neededW > c:maxW }, { neededW }, { c:maxW });
 		desiredSize: Size(width: outW, height: totalH);
 		return desiredSize;
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		return :onPointerClickMod(x: x, y: y, mods: 1);
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
@@ -660,7 +685,7 @@ Class of SewNode is TextView{
 				});
 
 				## Cursor caret if on this segment
-				if({ rLine == cursorLine && cursorCol >= rStart && cursorCol <= rEnd }, {
+				if({ cursorVisible && rLine == cursorLine && cursorCol >= rStart && cursorCol <= rEnd }, {
 					local Boolean is isLastSegForLine: (i + 1 >= count) || (dispRawLine:get(index: i + 1) != rLine);
 					if({ cursorCol < rEnd || isLastSegForLine }, {
 						local Int is localCol: cursorCol - rStart;

@@ -253,6 +253,7 @@ Class of SewNode is ToolkitContainer{
 		local Int is startMs: clock:monotonicMs();
 		local Int is lastPtrX: -1;
 		local Int is lastPtrY: -1;
+		local Boolean is wasPtrDown: false;
 		local Boolean is closedByWm: false;
 
 		while({ running:current() }, {
@@ -343,18 +344,43 @@ Class of SewNode is ToolkitContainer{
 					});
 				});
 
+				local Int is sx: win:pollScrollX();
+				if({ sx != 0 && hasBody && !useVulkan }, {
+					if({ bodyPanel:onScrollX(deltaX: sx) }, {
+						:isDirty: true;
+					});
+				});
+
+				local Boolean is ptrDown: win:pointerDown();
 				local Int is px: win:pointerX();
 				local Int is py: win:pointerY();
 				if({ px != lastPtrX || py != lastPtrY }, {
 					lastPtrX: px;
 					lastPtrY: py;
+					if({ ptrDown && hasBody && !useVulkan }, {
+						if({ bodyPanel:onPointerDrag(x: px, y: py, mods: curMods) }, {
+							:isDirty: true;
+						});
+					});
 					if({ :onPointerMove(x: px, y: py) }, {
 						:isDirty: true;
 					});
 				});
+				if({ !ptrDown && wasPtrDown && hasBody && !useVulkan }, {
+					if({ bodyPanel:onPointerUp(x: px, y: py) }, {
+						:isDirty: true;
+					});
+				});
+				wasPtrDown: ptrDown;
 
 				if({ win:pollClick() }, {
 					if({ :onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
+						:isDirty: true;
+					});
+				});
+
+				if({ hasBody && !useVulkan }, {
+					if({ bodyPanel:tick(nowMs: clock:monotonicMs()) }, {
 						:isDirty: true;
 					});
 				});

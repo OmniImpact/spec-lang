@@ -123,6 +123,16 @@ Class is Window{
 		return base:sysinternal:Window:pal_window_poll_scroll_y(handle: handle);
 	}
 
+	Function of Int is pollScrollX(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_poll_scroll_x(handle: handle);
+	}
+
+	Function of Boolean is pointerDown(){
+		if({ handle <= 0 }, { return false; });
+		return base:sysinternal:Window:pal_window_pointer_down(handle: handle) != 0;
+	}
+
 	Function is setTitle(String is title){
 		if({ handle <= 0 }, { return; });
 		base:sysinternal:Window:pal_window_set_title(handle: handle, title_cstr: :cstrAddr(s: title));

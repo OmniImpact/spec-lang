@@ -51,6 +51,8 @@ Class is Window{
 	Function of Int is pal_window_click_x(Int is handle);
 	Function of Int is pal_window_click_y(Int is handle);
 	Function of Int is pal_window_poll_scroll_y(Int is handle);
+	Function of Int is pal_window_poll_scroll_x(Int is handle);
+	Function of Int is pal_window_pointer_down(Int is handle);
 	Function of Int is pal_window_set_title(Int is handle, Int is title_cstr);
 	Function of Int is pal_window_next_char(Int is handle);
 	Function of Int is pal_window_mods(Int is handle);

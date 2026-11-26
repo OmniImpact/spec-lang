@@ -58,6 +58,21 @@ Class is SewNode{
 		return false;
 	}
 
+	## Handles pointer drag while primary button is held at ([x], [y], [mods]); returns `true` if redraw is needed.
+	Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		return false;
+	}
+
+	## Handles primary button release at ([x], [y]); returns `true` if redraw is needed.
+	Function of Boolean is onPointerUp(Int is x, Int is y){
+		return false;
+	}
+
+	## Periodic frame tick in monotonic milliseconds; returns `true` if redraw is needed.
+	Function of Boolean is tick(Int is nowMs){
+		return false;
+	}
+
 	## Handles key press ([key], [mods]); returns `true` if redraw is needed.
 	Function of Boolean is onKey(Int is key, Int is mods){
 		return false;

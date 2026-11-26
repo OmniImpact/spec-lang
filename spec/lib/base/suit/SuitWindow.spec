@@ -83,6 +83,8 @@ Class is SuitWindow{
 	Function of Int is clickX(){ return native:clickX(); }
 	Function of Int is clickY(){ return native:clickY(); }
 	Function of Int is pollScrollY(){ return native:pollScrollY(); }
+	Function of Int is pollScrollX(){ return native:pollScrollX(); }
+	Function of Boolean is pointerDown(){ return native:pointerDown(); }
 	Function is setTitle(String is title){ native:setTitle(title: title); }
 	Function of Int is nextChar(){ return native:nextChar(); }
 	Function of Int is mods(){ return native:mods(); }

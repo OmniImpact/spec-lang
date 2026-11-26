@@ -369,8 +369,8 @@ Class of SewNode is Toolbar{
 			);
 			if({ item:subItems:length() > 0 }, {
 				local Int is ty: iy + (ih - th) / 2;
-				local Int is aw: ctx:measureTextWidth(text: '>', pixelHeight: fpx);
-				ctx:drawText(x: dx + dw - padX - aw, y: ty, text: '>', color: theme:textMuted, pixelHeight: fpx);
+				local Int is aw: ctx:measureTextWidth(text: '...', pixelHeight: fpx);
+				ctx:drawText(x: dx + dw - padX - aw, y: ty, text: '...', color: theme:textMuted, pixelHeight: fpx);
 			});
 		});
 

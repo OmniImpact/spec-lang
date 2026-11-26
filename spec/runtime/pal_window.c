@@ -376,8 +376,10 @@ typedef struct SpecWaylandWindow {
     int pointer_x;
     int pointer_y;
     bool has_click;
+    bool pointer_down;
     int click_x;
     int click_y;
+    int scroll_x;
     int scroll_y;
     uint32_t last_ptr_serial;
     void* cursor_mgr;
@@ -597,17 +599,26 @@ static void _spec_ptr_motion(void* data, struct wl_pointer* ptr, uint32_t time, 
 static void _spec_ptr_button(void* data, struct wl_pointer* ptr, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
     (void)ptr; (void)serial; (void)time;
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
-    if (w && w->pointer_on_surface && button == 0x110U /* BTN_LEFT */ && state == 1U /* PRESSED */) {
-        w->has_click = true;
-        w->click_x = w->pointer_x;
-        w->click_y = w->pointer_y;
+    if (w && button == 0x110U /* BTN_LEFT */) {
+        if (state == 1U /* PRESSED */ && w->pointer_on_surface) {
+            w->pointer_down = true;
+            w->has_click = true;
+            w->click_x = w->pointer_x;
+            w->click_y = w->pointer_y;
+        } else if (state == 0U /* RELEASED */) {
+            w->pointer_down = false;
+        }
     }
 }
 static void _spec_ptr_axis(void* d, struct wl_pointer* p, uint32_t t, uint32_t a, int32_t v) {
     (void)p; (void)t;
     SpecWaylandWindow* w = (SpecWaylandWindow*)d;
-    if (w && w->pointer_on_surface && a == 0 /* WL_POINTER_AXIS_VERTICAL_SCROLL */) {
-        w->scroll_y += (v >> 8);
+    if (w && w->pointer_on_surface) {
+        if (a == 0 /* WL_POINTER_AXIS_VERTICAL_SCROLL */) {
+            w->scroll_y += (v >> 8);
+        } else if (a == 1 /* WL_POINTER_AXIS_HORIZONTAL_SCROLL */) {
+            w->scroll_x += (v >> 8);
+        }
     }
 }
 static void _spec_ptr_frame(void* d, struct wl_pointer* p) { (void)d;(void)p; }
@@ -740,29 +751,65 @@ static bool _spec_ensure_shm_buffer(SpecWaylandWindow* w, int width, int height)
     if (height <= 0) height = 600;
     if (w->buffer && w->width == width && w->height == height) return true;
 
-    _spec_release_shm(w);
+    struct wl_buffer* old_buf = w->buffer;
+    struct wl_shm_pool* old_pool = w->shm_pool;
+    void* old_data = w->shm_data;
+    size_t old_size = w->shm_size;
+    int old_fd = w->shm_fd;
+    int old_w = w->width;
+    int old_h = w->height;
+
+    w->buffer = NULL;
+    w->shm_pool = NULL;
+    w->shm_data = NULL;
+    w->shm_size = 0;
+    w->shm_fd = -1;
+
     int stride = width * 4;
     size_t size = (size_t)stride * (size_t)height;
 
     char tmpl[] = "/tmp/spec_suit_shm_XXXXXX";
     int fd = mkstemp(tmpl);
-    if (fd < 0) return false;
+    if (fd < 0) {
+        w->buffer = old_buf; w->shm_pool = old_pool; w->shm_data = old_data; w->shm_size = old_size; w->shm_fd = old_fd;
+        return false;
+    }
     unlink(tmpl);
     if (ftruncate(fd, (off_t)size) < 0) {
         close(fd);
+        w->buffer = old_buf; w->shm_pool = old_pool; w->shm_data = old_data; w->shm_size = old_size; w->shm_fd = old_fd;
         return false;
     }
     void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (ptr == MAP_FAILED) {
         close(fd);
+        w->buffer = old_buf; w->shm_pool = old_pool; w->shm_data = old_data; w->shm_size = old_size; w->shm_fd = old_fd;
         return false;
     }
 
     uint32_t* px = (uint32_t*)ptr;
     size_t count = (size_t)width * (size_t)height;
-    for (size_t i = 0; i < count; i++) {
-        px[i] = 0xFF181C24u;
+    uint32_t fill = 0xFF181C24u;
+    if (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0) {
+        const uint32_t* opx = (const uint32_t*)old_data;
+        fill = opx[(size_t)(old_h - 1) * (size_t)old_w + (size_t)(old_w - 1)];
     }
+    for (size_t i = 0; i < count; i++) {
+        px[i] = fill;
+    }
+    if (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0) {
+        const uint32_t* opx = (const uint32_t*)old_data;
+        int copy_w = old_w < width ? old_w : width;
+        int copy_h = old_h < height ? old_h : height;
+        for (int row = 0; row < copy_h; row++) {
+            memcpy(px + (size_t)row * (size_t)width, opx + (size_t)row * (size_t)old_w, (size_t)copy_w * 4);
+        }
+    }
+
+    if (old_buf) _wl_proxy_destroy((struct wl_proxy*)old_buf);
+    if (old_pool) _wl_proxy_destroy((struct wl_proxy*)old_pool);
+    if (old_data && old_data != MAP_FAILED && old_size > 0) munmap(old_data, old_size);
+    if (old_fd >= 0) close(old_fd);
 
     uint32_t shm_ver = _wl_proxy_get_version((struct wl_proxy*)w->shm);
     struct wl_shm_pool* pool = (struct wl_shm_pool*)_wl_proxy_marshal_flags(
@@ -1262,6 +1309,19 @@ long long spec_pal_window_poll_scroll_y(long long handle) {
     return dy;
 }
 
+long long spec_pal_window_poll_scroll_x(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w) return 0;
+    long long dx = (long long)w->scroll_x;
+    w->scroll_x = 0;
+    return dx;
+}
+
+long long spec_pal_window_pointer_down(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return (w && w->pointer_down) ? 1 : 0;
+}
+
 long long spec_pal_window_set_title(long long handle, long long title_cstr) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w || !title_cstr) return 0;
@@ -1412,6 +1472,8 @@ long long spec_pal_window_poll_click(long long handle) { (void)handle; return 0;
 long long spec_pal_window_click_x(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_click_y(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_poll_scroll_y(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_poll_scroll_x(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_pointer_down(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_set_title(long long handle, long long title_cstr) { (void)handle; (void)title_cstr; return 0; }
 long long spec_pal_window_next_char(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_mods(long long handle) { (void)handle; return 0; }

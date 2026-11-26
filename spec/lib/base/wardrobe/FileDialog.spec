@@ -48,6 +48,7 @@ Class is FileDialog{
 	Int is hoverBtn: 0; ## 0=none, 1=Cancel, 2=Open
 	Int is lastClickRow: -1;
 	Int is lastClickMs: 0;
+	Boolean is dragScrollbar: false;
 
 	replace Function is init(
 		String is title: 'Open File',
@@ -444,9 +445,38 @@ Class is FileDialog{
 			isDirty: true;
 		});
 
+		if({ !win:pointerDown() }, {
+			dragScrollbar: false;
+		});
+		if({ dragScrollbar && listH > 0 && rowH > 0 }, {
+			local Int is visRows: listH / rowH;
+			local Int is maxScroll: if({ entryNames:length() > visRows }, { entryNames:length() - visRows }, { 0 });
+			if({ maxScroll > 0 }, {
+				local Int is nextRow: ((py - listY) * maxScroll) / listH;
+				if({ nextRow < 0 }, { nextRow: 0; });
+				if({ nextRow > maxScroll }, { nextRow: maxScroll; });
+				if({ nextRow != scrollRow }, {
+					scrollRow: nextRow;
+					isDirty: true;
+				});
+			});
+		});
+
 		if({ win:pollClick() }, {
 			local Int is cx: win:clickX();
 			local Int is cy: win:clickY();
+			if({ cx >= listW && cx < w && cy >= listY && cy < listY + listH && listH > 0 && rowH > 0 }, {
+				dragScrollbar: true;
+				local Int is visRows: listH / rowH;
+				local Int is maxScroll: if({ entryNames:length() > visRows }, { entryNames:length() - visRows }, { 0 });
+				if({ maxScroll > 0 }, {
+					scrollRow: ((cy - listY) * maxScroll) / listH;
+					if({ scrollRow < 0 }, { scrollRow: 0; });
+					if({ scrollRow > maxScroll }, { scrollRow: maxScroll; });
+					isDirty: true;
+				});
+				return;
+			});
 			if({ cy >= btnY && cy < btnY + btnH }, {
 				if({ cx >= cancelX && cx < cancelX + btnW }, {
 					:finishCancel();

@@ -22,6 +22,8 @@ Class of SewNode is ScrollView{
 	Int is contentH: 0;
 	Float is barWidthPt: 12.0;
 	String is scrollbarSide: 'right';
+	Int is dragMode: 0;
+	Int is dragGrabOffset: 0;
 
 	replace Function is init(SewNode is child, Float is barWidthPt: 12.0, String is scrollbarSide: 'right'){
 		:child: child;
@@ -124,6 +126,32 @@ Class of SewNode is ScrollView{
 		return true;
 	}
 
+	local Function of Int is thumbLen(Int is viewLen, Int is contentLen){
+		if({ contentLen <= viewLen || viewLen <= 0 }, { return viewLen; });
+		local Int is t: (viewLen * viewLen) / contentLen;
+		local Int is minT: activeScale:px(pt: 22.0);
+		if({ t < minT }, { t: minT; });
+		if({ t > viewLen }, { t: viewLen; });
+		return t;
+	}
+
+	local Function of Int is thumbPos(Int is scroll, Int is viewLen, Int is contentLen, Int is tLen){
+		local Int is maxScroll: contentLen - viewLen;
+		local Int is range: viewLen - tLen;
+		if({ maxScroll <= 0 || range <= 0 }, { return 0; });
+		return (scroll * range) / maxScroll;
+	}
+
+	local Function of Int is scrollFromThumb(Int is pos, Int is viewLen, Int is contentLen, Int is tLen){
+		local Int is maxScroll: contentLen - viewLen;
+		local Int is range: viewLen - tLen;
+		if({ maxScroll <= 0 || range <= 0 }, { return 0; });
+		local Int is s: (pos * maxScroll) / range;
+		if({ s < 0 }, { s: 0; });
+		if({ s > maxScroll }, { s: maxScroll; });
+		return s;
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Rect is b: bounds();
 		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
@@ -133,31 +161,79 @@ Class of SewNode is ScrollView{
 		local Int is vsx: if({ scrollbarSide == 'left' }, { b:x }, { b:x + vw });
 		local Int is cx: if({ scrollbarSide == 'left' }, { b:x + bw }, { b:x });
 
-		## Vertical scrollbar track click
+		## Vertical scrollbar track / thumb press
 		if({ x >= vsx && x < vsx + bw && y >= b:y && y < b:y + vh }, {
-			local Int is maxScrollY: if({ contentH > vh }, { contentH - vh }, { 0 });
-			if({ maxScrollY > 0 && vh > 0 }, {
-				scrollY: ((y - b:y) * maxScrollY) / vh;
-				:arrange(bounds: b);
-				invalidate();
+			if({ contentH > vh && vh > 0 }, {
+				local Int is tH: :thumbLen(viewLen: vh, contentLen: contentH);
+				local Int is tY: b:y + :thumbPos(scroll: scrollY, viewLen: vh, contentLen: contentH, tLen: tH);
+				dragMode: 1;
+				if({ y >= tY && y < tY + tH }, {
+					dragGrabOffset: y - tY;
+				}, {
+					dragGrabOffset: tH / 2;
+					scrollY: :scrollFromThumb(pos: y - b:y - dragGrabOffset, viewLen: vh, contentLen: contentH, tLen: tH);
+					:arrange(bounds: b);
+					invalidate();
+				});
 				return true;
 			});
 			return false;
 		});
 
-		## Horizontal scrollbar track click
+		## Horizontal scrollbar track / thumb press
 		if({ contentW > vw && y >= b:y + vh && y < b:y + b:height && x >= cx && x < cx + vw }, {
-			local Int is maxScrollX: contentW - vw;
-			if({ maxScrollX > 0 && vw > 0 }, {
-				scrollX: ((x - cx) * maxScrollX) / vw;
+			local Int is tW: :thumbLen(viewLen: vw, contentLen: contentW);
+			local Int is tX: cx + :thumbPos(scroll: scrollX, viewLen: vw, contentLen: contentW, tLen: tW);
+			dragMode: 2;
+			if({ x >= tX && x < tX + tW }, {
+				dragGrabOffset: x - tX;
+			}, {
+				dragGrabOffset: tW / 2;
+				scrollX: :scrollFromThumb(pos: x - cx - dragGrabOffset, viewLen: vw, contentLen: contentW, tLen: tW);
+				:arrange(bounds: b);
+				invalidate();
+			});
+			return true;
+		});
+
+		dragMode: 0;
+		return child:onPointerClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		local Rect is b: bounds();
+		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is vw: :viewWidth(b: b);
+		local Int is vh: :viewHeight(b: b);
+		local Int is cx: if({ scrollbarSide == 'left' }, { b:x + bw }, { b:x });
+		if({ dragMode == 1 && contentH > vh }, {
+			local Int is tH: :thumbLen(viewLen: vh, contentLen: contentH);
+			local Int is nextY: :scrollFromThumb(pos: y - b:y - dragGrabOffset, viewLen: vh, contentLen: contentH, tLen: tH);
+			if({ nextY != scrollY }, {
+				scrollY: nextY;
 				:arrange(bounds: b);
 				invalidate();
 				return true;
 			});
 			return false;
 		});
+		if({ dragMode == 2 && contentW > vw }, {
+			local Int is tW: :thumbLen(viewLen: vw, contentLen: contentW);
+			local Int is nextX: :scrollFromThumb(pos: x - cx - dragGrabOffset, viewLen: vw, contentLen: contentW, tLen: tW);
+			if({ nextX != scrollX }, {
+				scrollX: nextX;
+				:arrange(bounds: b);
+				invalidate();
+				return true;
+			});
+			return false;
+		});
+		return child:onPointerDrag(x: x, y: y, mods: mods);
+	}
 
-		return child:onPointerClickMod(x: x, y: y, mods: mods);
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		dragMode: 0;
+		return child:onPointerUp(x: x, y: y);
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
@@ -170,6 +246,10 @@ Class of SewNode is ScrollView{
 
 	replace Function of Boolean is onText(String is ch, Int is mods){
 		return child:onText(ch: ch, mods: mods);
+	}
+
+	replace Function of Boolean is tick(Int is nowMs){
+		return child:tick(nowMs: nowMs);
 	}
 
 	replace Function is paint(DrawContext is ctx){
