@@ -16,7 +16,6 @@ Class of Dialog is SettingsDialogView{
 		['base', 'scrap', Dialog],
 		['base', 'scrap', ScrapButton],
 		['specedit', 'viewmodel', SettingsViewModel],
-		['specedit', 'view', 'settings', SettingsChip],
 		['specedit', 'view', 'settings', AppearanceSettingsView],
 		['specedit', 'view', 'settings', LocationsSettingsView],
 		['specedit', 'view', 'settings', InterfaceSettingsView]
@@ -27,22 +26,22 @@ Class of Dialog is SettingsDialogView{
 	LocationsSettingsView is locationsView: LocationsSettingsView(vm: SettingsViewModel());
 	InterfaceSettingsView is interfaceView: InterfaceSettingsView(vm: SettingsViewModel());
 	Array of String is categoryRoutes: Array(['appearance', 'locations', 'interface']);
-	Array of SettingsChip is categoryChips: Array();
+	Array of ScrapButton is categoryBtns: Array();
 	NavStack is navStack: NavStack();
 
 	replace Function is init(SettingsViewModel is vm){
 		:vm: vm;
 		:title: 'Settings';
 		:open: vm:open;
-		:widthPt: 640.0;
-		:heightPt: 420.0;
-		:minWidthPt: 500.0;
-		:minHeightPt: 340.0;
+		:widthPt: 600.0;
+		:heightPt: 400.0;
+		:minWidthPt: 460.0;
+		:minHeightPt: 320.0;
 		:hasContent: true;
 		:appearanceView: AppearanceSettingsView(vm: vm);
 		:locationsView: LocationsSettingsView(vm: vm);
 		:interfaceView: InterfaceSettingsView(vm: vm);
-		:categoryChips: Array();
+		:categoryBtns: Array();
 		:navStack: NavStack();
 		:content: :buildContent();
 		vm:bindViewRefresh(onRefresh: local Function(){
@@ -62,26 +61,26 @@ Class of Dialog is SettingsDialogView{
 		);
 
 		local String is curRoute: vm:selectedRoute:current();
-		:categoryChips: Array([
-			SettingsChip(
+		:categoryBtns: Array([
+			ScrapButton(
 				label: 'Appearance',
 				selected: (curRoute == 'appearance'),
-				minWidthPt: 132.0,
-				heightPt: 32.0,
+				minWidthPt: 120.0,
+				heightPt: 28.0,
 				onClick: local Function(){ vm:selectRoute(routeName: 'appearance'); }
 			),
-			SettingsChip(
+			ScrapButton(
 				label: 'Locations',
 				selected: (curRoute == 'locations'),
-				minWidthPt: 132.0,
-				heightPt: 32.0,
+				minWidthPt: 120.0,
+				heightPt: 28.0,
 				onClick: local Function(){ vm:selectRoute(routeName: 'locations'); }
 			),
-			SettingsChip(
+			ScrapButton(
 				label: 'Interface',
 				selected: (curRoute == 'interface'),
-				minWidthPt: 132.0,
-				heightPt: 32.0,
+				minWidthPt: 120.0,
+				heightPt: 28.0,
 				onClick: local Function(){ vm:selectRoute(routeName: 'interface'); }
 			)
 		]);
@@ -89,14 +88,14 @@ Class of Dialog is SettingsDialogView{
 		local Column is sidebar: Column(
 			gapPt: 8.0,
 			children: Array([
-				categoryChips:get(index: 0),
-				categoryChips:get(index: 1),
-				categoryChips:get(index: 2)
+				categoryBtns:get(index: 0),
+				categoryBtns:get(index: 1),
+				categoryBtns:get(index: 2)
 			])
 		);
 
 		local Row is bodyRow: Row(
-			gapPt: 16.0,
+			gapPt: 14.0,
 			children: Array([
 				sidebar,
 				navStack
@@ -109,15 +108,15 @@ Class of Dialog is SettingsDialogView{
 			children: Array([
 				ScrapButton(
 					label: 'Close',
-					minWidthPt: 84.0,
-					heightPt: 30.0,
+					minWidthPt: 80.0,
+					heightPt: 28.0,
 					onClick: local Function(){ vm:closeSettings(); }
 				)
 			])
 		);
 
 		local Column is root: Column(
-			gapPt: 12.0,
+			gapPt: 10.0,
 			children: Array([
 				bodyRow,
 				footerRow
@@ -131,8 +130,8 @@ Class of Dialog is SettingsDialogView{
 	Function is sync(){
 		local String is curRoute: vm:selectedRoute:current();
 		local Int is i: 0;
-		while({ i < categoryRoutes:length() && i < categoryChips:length() }, {
-			categoryChips:get(index: i):setSelected(next: categoryRoutes:get(index: i) == curRoute);
+		while({ i < categoryRoutes:length() && i < categoryBtns:length() }, {
+			categoryBtns:get(index: i):setSelected(next: categoryRoutes:get(index: i) == curRoute);
 			i: i + 1;
 		});
 		appearanceView:sync();

@@ -11,63 +11,67 @@ Class is AppearanceSettingsView{
 		['base', 'sew', Column],
 		['base', 'sew', Row],
 		['base', 'scrap', Frame],
+		['base', 'scrap', Label],
+		['base', 'scrap', ScrapButton],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
-		['specedit', 'viewmodel', SettingsViewModel],
-		['specedit', 'view', 'settings', SettingsLabel],
-		['specedit', 'view', 'settings', SettingsChip]
+		['specedit', 'viewmodel', SettingsViewModel]
 	];
 
 	SettingsViewModel is vm: SettingsViewModel();
-	Array of SettingsChip is themeChips: Array();
-	SettingsLabel is docDeltaVal: SettingsLabel(text: '0 pt', minWidthPt: 58.0);
-	SettingsLabel is baseTextVal: SettingsLabel(text: '15 pt', minWidthPt: 58.0);
+	Array of ScrapButton is themeBtns: Array();
+	Label is docDeltaVal: Label(text: '0 pt', minWidthPt: 52.0);
+	Label is baseTextVal: Label(text: '12 pt', minWidthPt: 52.0);
 	Array of Int is zoomValues: Array([70, 100, 115, 130]);
-	Array of SettingsChip is zoomChips: Array();
+	Array of ScrapButton is zoomBtns: Array();
 
 	replace Function is init(SettingsViewModel is vm){
 		:vm: vm;
-		:themeChips: Array();
-		:zoomChips: Array();
+		:themeBtns: Array();
+		:zoomBtns: Array();
 	}
 
 	Function of SewNode is build(){
-		:themeChips: Array();
-		:zoomChips: Array();
+		:themeBtns: Array();
+		:zoomBtns: Array();
 
 		local Row is themeRow: Row(gapPt: 8.0);
 		local Array of ThemePreset is presets: Theme:presets();
 		local Int is ti: 0;
 		while({ ti < presets:length() }, {
 			local ThemePreset is p: presets:get(index: ti);
-			local SettingsChip is chip: SettingsChip(
+			local ScrapButton is btn: ScrapButton(
 				label: Theme:presetLabel(preset: p),
 				selected: (p == vm:model:themePreset),
-				minWidthPt: 76.0,
+				minWidthPt: 72.0,
+				heightPt: 26.0,
 				onClick: local Function(){ vm:selectTheme(preset: p); }
 			);
-			themeChips:add(item: chip);
-			themeRow:addChild(child: chip);
+			themeBtns:add(item: btn);
+			themeRow:addChild(child: btn);
 			ti: ti + 1;
 		});
 
 		local Row is docSizeRow: Row(
 			gapPt: 8.0,
 			children: Array([
-				SettingsChip(
+				ScrapButton(
 					label: '-',
-					minWidthPt: 34.0,
+					minWidthPt: 32.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:adjustDocTextDelta(delta: -1.0); }
 				),
 				docDeltaVal,
-				SettingsChip(
+				ScrapButton(
 					label: '+',
-					minWidthPt: 34.0,
+					minWidthPt: 32.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:adjustDocTextDelta(delta: 1.0); }
 				),
-				SettingsChip(
+				ScrapButton(
 					label: 'Reset',
-					minWidthPt: 58.0,
+					minWidthPt: 56.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:resetDocTextDelta(); }
 				)
 			])
@@ -76,20 +80,23 @@ Class is AppearanceSettingsView{
 		local Row is baseTextRow: Row(
 			gapPt: 8.0,
 			children: Array([
-				SettingsChip(
+				ScrapButton(
 					label: '-',
-					minWidthPt: 34.0,
+					minWidthPt: 32.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:adjustBaseTextPt(delta: -1.0); }
 				),
 				baseTextVal,
-				SettingsChip(
+				ScrapButton(
 					label: '+',
-					minWidthPt: 34.0,
+					minWidthPt: 32.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:adjustBaseTextPt(delta: 1.0); }
 				),
-				SettingsChip(
+				ScrapButton(
 					label: 'Reset',
-					minWidthPt: 58.0,
+					minWidthPt: 56.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:resetBaseTextPt(); }
 				)
 			])
@@ -99,14 +106,15 @@ Class is AppearanceSettingsView{
 		local Int is zi: 0;
 		while({ zi < zoomValues:length() }, {
 			local Int is zp: zoomValues:get(index: zi);
-			local SettingsChip is zChip: SettingsChip(
+			local ScrapButton is zBtn: ScrapButton(
 				label: (zp as String) . '%',
 				selected: (zp == vm:model:uiZoomPct),
-				minWidthPt: 60.0,
+				minWidthPt: 56.0,
+				heightPt: 26.0,
 				onClick: local Function(){ vm:selectZoomPct(pct: zp); }
 			);
-			zoomChips:add(item: zChip);
-			zoomRow:addChild(child: zChip);
+			zoomBtns:add(item: zBtn);
+			zoomRow:addChild(child: zBtn);
 			zi: zi + 1;
 		});
 
@@ -118,10 +126,10 @@ Class is AppearanceSettingsView{
 				Row(
 					gapPt: 12.0,
 					children: Array([
-						SettingsLabel(text: 'Appearance', heading: true),
-						SettingsChip(
+						Label(text: 'Appearance', heading: true),
+						ScrapButton(
 							label: 'Reset All',
-							minWidthPt: 76.0,
+							minWidthPt: 72.0,
 							heightPt: 24.0,
 							onClick: local Function(){ vm:resetAppearance(); }
 						)
@@ -136,9 +144,9 @@ Class is AppearanceSettingsView{
 					child: Column(
 						gapPt: 6.0,
 						children: Array([
-							SettingsLabel(text: 'Document Text Size (relative to default)', muted: true),
+							Label(text: 'Document Text Size (relative to default)', muted: true),
 							docSizeRow,
-							SettingsLabel(text: 'Default Theme Text Size', muted: true),
+							Label(text: 'Default Theme Text Size', muted: true),
 							baseTextRow
 						])
 					)
@@ -154,15 +162,15 @@ Class is AppearanceSettingsView{
 	Function is sync(){
 		local Array of ThemePreset is presets: Theme:presets();
 		local Int is i: 0;
-		while({ i < presets:length() && i < themeChips:length() }, {
-			themeChips:get(index: i):setSelected(next: presets:get(index: i) == vm:model:themePreset);
+		while({ i < presets:length() && i < themeBtns:length() }, {
+			themeBtns:get(index: i):setSelected(next: presets:get(index: i) == vm:model:themePreset);
 			i: i + 1;
 		});
-		docDeltaVal:setText(next: vm:docDeltaLabel());
-		baseTextVal:setText(next: vm:baseTextLabel());
+		docDeltaVal:setText(text: vm:docDeltaLabel());
+		baseTextVal:setText(text: vm:baseTextLabel());
 		local Int is zi: 0;
-		while({ zi < zoomValues:length() && zi < zoomChips:length() }, {
-			zoomChips:get(index: zi):setSelected(next: zoomValues:get(index: zi) == vm:model:uiZoomPct);
+		while({ zi < zoomValues:length() && zi < zoomBtns:length() }, {
+			zoomBtns:get(index: zi):setSelected(next: zoomValues:get(index: zi) == vm:model:uiZoomPct);
 			zi: zi + 1;
 		});
 	}

@@ -10,10 +10,10 @@ Class is LocationsSettingsView{
 		['base', 'sew', Column],
 		['base', 'sew', Row],
 		['base', 'scrap', Frame],
+		['base', 'scrap', Label],
+		['base', 'scrap', ScrapButton],
 		['base', 'scrap', ScrollView],
 		['specedit', 'viewmodel', SettingsViewModel],
-		['specedit', 'view', 'settings', SettingsLabel],
-		['specedit', 'view', 'settings', SettingsChip],
 		['specedit', 'view', 'settings', PinnedLocationsList]
 	];
 
@@ -31,14 +31,16 @@ Class is LocationsSettingsView{
 		local Row is actionsRow: Row(
 			gapPt: 8.0,
 			children: Array([
-				SettingsChip(
+				ScrapButton(
 					label: 'Add Location',
-					minWidthPt: 112.0,
+					minWidthPt: 108.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:requestAddLocation(); }
 				),
-				SettingsChip(
+				ScrapButton(
 					label: 'Pin Current Folder',
-					minWidthPt: 124.0,
+					minWidthPt: 120.0,
+					heightPt: 26.0,
 					onClick: local Function(){ vm:pinCurrentDirectory(); }
 				)
 			])
@@ -47,7 +49,7 @@ Class is LocationsSettingsView{
 		return Column(
 			gapPt: 10.0,
 			children: Array([
-				SettingsLabel(text: 'Locations', heading: true),
+				Label(text: 'Locations', heading: true),
 				actionsRow,
 				Frame(
 					title: 'Pinned Locations (drag gripper to reorder)',

@@ -10,9 +10,9 @@ Class is InterfaceSettingsView{
 		['base', 'sew', Column],
 		['base', 'sew', Row],
 		['base', 'scrap', Frame],
+		['base', 'scrap', Label],
 		['base', 'scrap', Switch],
-		['specedit', 'viewmodel', SettingsViewModel],
-		['specedit', 'view', 'settings', SettingsLabel]
+		['specedit', 'viewmodel', SettingsViewModel]
 	];
 
 	SettingsViewModel is vm: SettingsViewModel();
@@ -41,7 +41,7 @@ Class is InterfaceSettingsView{
 		return Column(
 			gapPt: 12.0,
 			children: Array([
-				SettingsLabel(text: 'Interface', heading: true),
+				Label(text: 'Interface', heading: true),
 				Frame(
 					title: 'Startup Defaults',
 					child: Column(
@@ -51,21 +51,21 @@ Class is InterfaceSettingsView{
 								gapPt: 10.0,
 								children: Array([
 									monoSwitch,
-									SettingsLabel(text: 'Default Monospace Font')
+									Label(text: 'Default Monospace Font')
 								])
 							),
 							Row(
 								gapPt: 10.0,
 								children: Array([
 									wrapSwitch,
-									SettingsLabel(text: 'Default Word Wrap')
+									Label(text: 'Default Word Wrap')
 								])
 							),
 							Row(
 								gapPt: 10.0,
 								children: Array([
 									treeSwitch,
-									SettingsLabel(text: 'Show File Tree by Default')
+									Label(text: 'Show File Tree by Default')
 								])
 							)
 						])

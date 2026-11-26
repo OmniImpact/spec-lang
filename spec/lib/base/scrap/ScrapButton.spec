@@ -18,7 +18,9 @@ Class of SewNode is ScrapButton{
 	Function is onClick: local Function(){};
 	Float is minWidthPt: 80.0;
 	Float is heightPt: 28.0;
-	Float is padXPt: 14.0;
+	Float is padXPt: 0.0;
+	Boolean is selected: false;
+	Boolean is enabled: true;
 	Boolean is hovered: false;
 
 	replace Function is init(
@@ -26,14 +28,39 @@ Class of SewNode is ScrapButton{
 		Function is onClick: local Function(){},
 		Float is minWidthPt: 80.0,
 		Float is heightPt: 28.0,
-		Float is padXPt: 14.0
+		Float is padXPt: 0.0,
+		Boolean is selected: false,
+		Boolean is enabled: true
 	){
 		:label: label;
 		:onClick: onClick;
 		:minWidthPt: minWidthPt;
 		:heightPt: heightPt;
 		:padXPt: padXPt;
+		:selected: selected;
+		:enabled: enabled;
 		:hovered: false;
+	}
+
+	Function is setSelected(Boolean is next){
+		if({ selected != next }, {
+			:selected: next;
+			invalidate();
+		});
+	}
+
+	Function is setLabel(String is next){
+		if({ label != next }, {
+			:label: next;
+			invalidate();
+		});
+	}
+
+	Function is setEnabled(Boolean is next){
+		if({ enabled != next }, {
+			:enabled: next;
+			invalidate();
+		});
 	}
 
 	local Function of Int is fontPx(){
@@ -49,7 +76,8 @@ Class of SewNode is ScrapButton{
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
 		local Int is tw: DrawContext:measureWidth(text: label, pixelHeight: fpx);
-		local Int is padPx: activeScale:px(pt: padXPt * 2.0);
+		local Float is pxPt: if({ padXPt > 0.0 }, { padXPt }, { activeTheme:paddingPt * 1.5 });
+		local Int is padPx: activeScale:px(pt: pxPt * 2.0);
 		local Int is minW: activeScale:px(pt: minWidthPt);
 		local Int is w: if({ tw + padPx > minW }, { tw + padPx }, { minW });
 		local Int is h: activeScale:px(pt: heightPt);
@@ -57,8 +85,15 @@ Class of SewNode is ScrapButton{
 		return desiredSize;
 	}
 
+	replace Function is clearHover(){
+		if({ hovered }, {
+			:hovered: false;
+			invalidate();
+		});
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
-		local Boolean is inside: :contains(x: x, y: y);
+		local Boolean is inside: enabled && :contains(x: x, y: y);
 		if({ inside != hovered }, {
 			hovered: inside;
 			return true;
@@ -67,7 +102,7 @@ Class of SewNode is ScrapButton{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
-		if({ :contains(x: x, y: y) }, {
+		if({ enabled && :contains(x: x, y: y) }, {
 			local Function is cb: onClick;
 			cb();
 			return true;
@@ -78,17 +113,25 @@ Class of SewNode is ScrapButton{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Int is bg: if({ hovered }, { activeTheme:hoverBg }, { activeTheme:menuBg });
+		local Int is bg: if({ !enabled }, { activeTheme:toolbarBg }, {
+			if({ selected }, { activeTheme:activeBg }, {
+				if({ hovered }, { activeTheme:hoverBg }, { activeTheme:menuBg })
+			})
+		});
+		local Int is border: if({ selected }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
 		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
 		if({ linePx > 0 }, {
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:buttonBorder, thickness: linePx);
+			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: linePx);
 		});
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is tx: b:x + (b:width - tw) / 2;
 		local Int is ty: b:y + (b:height - th) / 2;
-		ctx:drawText(x: tx, y: ty, text: label, color: activeTheme:textPrimary, pixelHeight: fpx);
+		local Int is fg: if({ !enabled }, { activeTheme:textMuted }, {
+			if({ selected }, { activeTheme:textAccent }, { activeTheme:textPrimary })
+		});
+		ctx:drawText(x: tx, y: ty, text: label, color: fg, pixelHeight: fpx);
 	}
 }
