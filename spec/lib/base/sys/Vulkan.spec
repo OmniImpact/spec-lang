@@ -61,6 +61,17 @@ Class is Vulkan{
 		) != 0;
 	}
 
+	## Uploads an ARGB8888 2D overlay buffer at [pixelsAddr] to composite over the 3D scene.
+	Function of Boolean is setOverlay(Int is pixelsAddr, Int is width, Int is height){
+		if({ handle == 0 || pixelsAddr == 0 || width <= 0 || height <= 0 }, { return false; });
+		return base:sysinternal:Vulkan:pal_vulkan_set_overlay(
+			handle: handle,
+			pixels_addr: pixelsAddr,
+			width: width,
+			height: height
+		) != 0;
+	}
+
 	## Destroys the Vulkan context and releases GPU resources.
 	Function is destroy(){
 		if({ handle != 0 }, {

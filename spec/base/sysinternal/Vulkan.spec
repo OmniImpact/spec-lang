@@ -38,6 +38,15 @@ Class is Vulkan{
 		Int is height
 	);
 
+	## Uploads an ARGB8888/BGRA8888 2D overlay image to composite over the 3D scene.
+	## Bound to `spec_pal_vulkan_set_overlay`.
+	Function of Int is pal_vulkan_set_overlay(
+		Int is handle,
+		Int is pixels_addr,
+		Int is width,
+		Int is height
+	);
+
 	## Destroys the Vulkan context and releases all GPU resources.
 	## Bound to `spec_pal_vulkan_destroy`.
 	Function of Int is pal_vulkan_destroy(Int is handle);

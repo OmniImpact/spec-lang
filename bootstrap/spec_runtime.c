@@ -3194,8 +3194,9 @@ long long spec_pal_window_poll(long long handle) {
         w->should_close = true;
         return 0;
     }
+    if (w->should_close) return 0;
     _wl_display_flush(w->display);
-    return w->should_close ? 0 : 1;
+    return 1;
 }
 
 long long spec_pal_window_next_key(long long handle) {
@@ -3601,6 +3602,10 @@ typedef SpecVkHandle64 SpecVkFence;
 typedef SpecVkHandle64 SpecVkBuffer;
 typedef SpecVkHandle64 SpecVkDeviceMemory;
 typedef SpecVkHandle64 SpecVkPipelineCache;
+typedef SpecVkHandle64 SpecVkSampler;
+typedef SpecVkHandle64 SpecVkDescriptorSetLayout;
+typedef SpecVkHandle64 SpecVkDescriptorPool;
+typedef SpecVkHandle64 SpecVkDescriptorSet;
 
 #define SPEC_VK_NULL_HANDLE 0ULL
 #define SPEC_VK_SUCCESS 0
@@ -3635,12 +3640,18 @@ typedef SpecVkHandle64 SpecVkPipelineCache;
 #define SPEC_VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO 27
 #define SPEC_VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO 28
 #define SPEC_VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO 30
+#define SPEC_VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO 31
+#define SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO 32
+#define SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO 33
+#define SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO 34
+#define SPEC_VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET 35
 #define SPEC_VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO 37
 #define SPEC_VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO 38
 #define SPEC_VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO 39
 #define SPEC_VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO 40
 #define SPEC_VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO 42
 #define SPEC_VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO 43
+#define SPEC_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER 45
 #define SPEC_VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR 1000001000
 #define SPEC_VK_STRUCTURE_TYPE_PRESENT_INFO_KHR 1000001001
 #define SPEC_VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR 1000006000
@@ -3649,10 +3660,13 @@ typedef SpecVkHandle64 SpecVkPipelineCache;
 #define SPEC_VK_QUEUE_GRAPHICS_BIT 0x00000001U
 #define SPEC_VK_FORMAT_B8G8R8A8_SRGB 50U
 #define SPEC_VK_FORMAT_B8G8R8A8_UNORM 44U
+#define SPEC_VK_FORMAT_R32G32_SFLOAT 103U
 #define SPEC_VK_FORMAT_R32G32B32_SFLOAT 106U
 #define SPEC_VK_FORMAT_D32_SFLOAT 126U
 #define SPEC_VK_COLOR_SPACE_SRGB_NONLINEAR_KHR 0U
 #define SPEC_VK_PRESENT_MODE_FIFO_KHR 2U
+#define SPEC_VK_IMAGE_USAGE_TRANSFER_DST_BIT 0x00000002U
+#define SPEC_VK_IMAGE_USAGE_SAMPLED_BIT 0x00000004U
 #define SPEC_VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT 0x00000010U
 #define SPEC_VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT 0x00000020U
 #define SPEC_VK_SHARING_MODE_EXCLUSIVE 0U
@@ -3663,6 +3677,8 @@ typedef SpecVkHandle64 SpecVkPipelineCache;
 #define SPEC_VK_IMAGE_LAYOUT_UNDEFINED 0U
 #define SPEC_VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL 2U
 #define SPEC_VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL 3U
+#define SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL 5U
+#define SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL 7U
 #define SPEC_VK_IMAGE_LAYOUT_PRESENT_SRC_KHR 1000001002U
 #define SPEC_VK_IMAGE_VIEW_TYPE_2D 1U
 #define SPEC_VK_IMAGE_ASPECT_COLOR_BIT 0x00000001U
@@ -3692,12 +3708,25 @@ typedef SpecVkHandle64 SpecVkPipelineCache;
 #define SPEC_VK_COMMAND_BUFFER_LEVEL_PRIMARY 0U
 #define SPEC_VK_FENCE_CREATE_SIGNALED_BIT 0x00000001U
 #define SPEC_VK_SUBPASS_CONTENTS_INLINE 0U
+#define SPEC_VK_BUFFER_USAGE_TRANSFER_SRC_BIT 0x00000001U
 #define SPEC_VK_BUFFER_USAGE_VERTEX_BUFFER_BIT 0x00000080U
 #define SPEC_VK_BUFFER_USAGE_INDEX_BUFFER_BIT 0x00000040U
 #define SPEC_VK_INDEX_TYPE_UINT16 0U
 #define SPEC_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT 0x00000001U
 #define SPEC_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT 0x00000002U
 #define SPEC_VK_MEMORY_PROPERTY_HOST_COHERENT_BIT 0x00000004U
+#define SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER 1U
+#define SPEC_VK_FILTER_LINEAR 1U
+#define SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE 2U
+#define SPEC_VK_BLEND_FACTOR_SRC_ALPHA 6U
+#define SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA 7U
+#define SPEC_VK_BLEND_OP_ADD 0U
+#define SPEC_VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 0x00000001U
+#define SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT 0x00001000U
+#define SPEC_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT 0x00000080U
+#define SPEC_VK_ACCESS_TRANSFER_WRITE_BIT 0x00001000U
+#define SPEC_VK_ACCESS_SHADER_READ_BIT 0x00000020U
+#define SPEC_VK_QUEUE_FAMILY_IGNORED (~0U)
 
 typedef struct { uint32_t width, height; } SpecVkExtent2D;
 typedef struct { uint32_t width, height, depth; } SpecVkExtent3D;
@@ -4196,8 +4225,104 @@ typedef struct {
     SpecVkResult* pResults;
 } SpecVkPresentInfoKHR;
 
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags flags;
+    uint32_t magFilter, minFilter, mipmapMode;
+    uint32_t addressModeU, addressModeV, addressModeW;
+    float mipLodBias;
+    SpecVkBool32 anisotropyEnable;
+    float maxAnisotropy;
+    SpecVkBool32 compareEnable;
+    uint32_t compareOp;
+    float minLod, maxLod;
+    uint32_t borderColor;
+    SpecVkBool32 unnormalizedCoordinates;
+} SpecVkSamplerCreateInfo;
+
+typedef struct {
+    uint32_t binding;
+    uint32_t descriptorType;
+    uint32_t descriptorCount;
+    SpecVkFlags stageFlags;
+    const SpecVkSampler* pImmutableSamplers;
+} SpecVkDescriptorSetLayoutBinding;
+
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags flags;
+    uint32_t bindingCount;
+    const SpecVkDescriptorSetLayoutBinding* pBindings;
+} SpecVkDescriptorSetLayoutCreateInfo;
+
+typedef struct {
+    uint32_t type;
+    uint32_t descriptorCount;
+} SpecVkDescriptorPoolSize;
+
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags flags;
+    uint32_t maxSets;
+    uint32_t poolSizeCount;
+    const SpecVkDescriptorPoolSize* pPoolSizes;
+} SpecVkDescriptorPoolCreateInfo;
+
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkDescriptorPool descriptorPool;
+    uint32_t descriptorSetCount;
+    const SpecVkDescriptorSetLayout* pSetLayouts;
+} SpecVkDescriptorSetAllocateInfo;
+
+typedef struct {
+    SpecVkSampler sampler;
+    SpecVkImageView imageView;
+    uint32_t imageLayout;
+} SpecVkDescriptorImageInfo;
+
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkDescriptorSet dstSet;
+    uint32_t dstBinding;
+    uint32_t dstArrayElement;
+    uint32_t descriptorCount;
+    uint32_t descriptorType;
+    const SpecVkDescriptorImageInfo* pImageInfo;
+    const void* pBufferInfo;
+    const void* pTexelBufferView;
+} SpecVkWriteDescriptorSet;
+
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags srcAccessMask;
+    SpecVkFlags dstAccessMask;
+    uint32_t oldLayout;
+    uint32_t newLayout;
+    uint32_t srcQueueFamilyIndex;
+    uint32_t dstQueueFamilyIndex;
+    SpecVkImage image;
+    SpecVkImageSubresourceRange subresourceRange;
+} SpecVkImageMemoryBarrier;
+
+typedef struct {
+    SpecVkDeviceSize bufferOffset;
+    uint32_t bufferRowLength;
+    uint32_t bufferImageHeight;
+    struct { SpecVkFlags aspectMask; uint32_t mipLevel; uint32_t baseArrayLayer; uint32_t layerCount; } imageSubresource;
+    struct { int32_t x, y, z; } imageOffset;
+    SpecVkExtent3D imageExtent;
+} SpecVkBufferImageCopy;
+
 /* Function pointer types */
 typedef void* (*PFN_spec_vkGetInstanceProcAddr)(SpecVkInstance, const char*);
+typedef void* (*PFN_spec_vkGetDeviceProcAddr)(SpecVkDevice, const char*);
 typedef SpecVkResult (*PFN_spec_vkCreateInstance)(const SpecVkInstanceCreateInfo*, const void*, SpecVkInstance*);
 typedef void (*PFN_spec_vkDestroyInstance)(SpecVkInstance, const void*);
 typedef SpecVkResult (*PFN_spec_vkCreateWaylandSurfaceKHR)(SpecVkInstance, const SpecVkWaylandSurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
@@ -4263,10 +4388,23 @@ typedef void (*PFN_spec_vkDestroyFence)(SpecVkDevice, SpecVkFence, const void*);
 typedef SpecVkResult (*PFN_spec_vkWaitForFences)(SpecVkDevice, uint32_t, const SpecVkFence*, SpecVkBool32, uint64_t);
 typedef SpecVkResult (*PFN_spec_vkResetFences)(SpecVkDevice, uint32_t, const SpecVkFence*);
 typedef SpecVkResult (*PFN_spec_vkQueueSubmit)(SpecVkQueue, uint32_t, const SpecVkSubmitInfo*, SpecVkFence);
+typedef SpecVkResult (*PFN_spec_vkCreateSampler)(SpecVkDevice, const SpecVkSamplerCreateInfo*, const void*, SpecVkSampler*);
+typedef void (*PFN_spec_vkDestroySampler)(SpecVkDevice, SpecVkSampler, const void*);
+typedef SpecVkResult (*PFN_spec_vkCreateDescriptorSetLayout)(SpecVkDevice, const SpecVkDescriptorSetLayoutCreateInfo*, const void*, SpecVkDescriptorSetLayout*);
+typedef void (*PFN_spec_vkDestroyDescriptorSetLayout)(SpecVkDevice, SpecVkDescriptorSetLayout, const void*);
+typedef SpecVkResult (*PFN_spec_vkCreateDescriptorPool)(SpecVkDevice, const SpecVkDescriptorPoolCreateInfo*, const void*, SpecVkDescriptorPool*);
+typedef void (*PFN_spec_vkDestroyDescriptorPool)(SpecVkDevice, SpecVkDescriptorPool, const void*);
+typedef SpecVkResult (*PFN_spec_vkAllocateDescriptorSets)(SpecVkDevice, const SpecVkDescriptorSetAllocateInfo*, SpecVkDescriptorSet*);
+typedef void (*PFN_spec_vkUpdateDescriptorSets)(SpecVkDevice, uint32_t, const SpecVkWriteDescriptorSet*, uint32_t, const void*);
+typedef void (*PFN_spec_vkCmdBindDescriptorSets)(SpecVkCommandBuffer, uint32_t, SpecVkPipelineLayout, uint32_t, uint32_t, const SpecVkDescriptorSet*, uint32_t, const uint32_t*);
+typedef void (*PFN_spec_vkCmdDraw)(SpecVkCommandBuffer, uint32_t, uint32_t, uint32_t, uint32_t);
+typedef void (*PFN_spec_vkCmdPipelineBarrier)(SpecVkCommandBuffer, SpecVkFlags, SpecVkFlags, SpecVkFlags, uint32_t, const void*, uint32_t, const void*, uint32_t, const SpecVkImageMemoryBarrier*);
+typedef void (*PFN_spec_vkCmdCopyBufferToImage)(SpecVkCommandBuffer, SpecVkBuffer, SpecVkImage, uint32_t, uint32_t, const SpecVkBufferImageCopy*);
 
 typedef struct {
     void* lib;
     PFN_spec_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+    PFN_spec_vkGetDeviceProcAddr vkGetDeviceProcAddr;
     PFN_spec_vkCreateInstance vkCreateInstance;
     PFN_spec_vkDestroyInstance vkDestroyInstance;
     PFN_spec_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
@@ -4332,6 +4470,18 @@ typedef struct {
     PFN_spec_vkWaitForFences vkWaitForFences;
     PFN_spec_vkResetFences vkResetFences;
     PFN_spec_vkQueueSubmit vkQueueSubmit;
+    PFN_spec_vkCreateSampler vkCreateSampler;
+    PFN_spec_vkDestroySampler vkDestroySampler;
+    PFN_spec_vkCreateDescriptorSetLayout vkCreateDescriptorSetLayout;
+    PFN_spec_vkDestroyDescriptorSetLayout vkDestroyDescriptorSetLayout;
+    PFN_spec_vkCreateDescriptorPool vkCreateDescriptorPool;
+    PFN_spec_vkDestroyDescriptorPool vkDestroyDescriptorPool;
+    PFN_spec_vkAllocateDescriptorSets vkAllocateDescriptorSets;
+    PFN_spec_vkUpdateDescriptorSets vkUpdateDescriptorSets;
+    PFN_spec_vkCmdBindDescriptorSets vkCmdBindDescriptorSets;
+    PFN_spec_vkCmdDraw vkCmdDraw;
+    PFN_spec_vkCmdPipelineBarrier vkCmdPipelineBarrier;
+    PFN_spec_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
 
     SpecVkInstance instance;
     SpecVkSurfaceKHR surface;
@@ -4370,6 +4520,25 @@ typedef struct {
     SpecVkBuffer index_buf;
     SpecVkDeviceMemory index_mem;
     uint32_t index_count;
+
+    SpecVkDescriptorSetLayout overlay_desc_layout;
+    SpecVkDescriptorPool overlay_desc_pool;
+    SpecVkDescriptorSet overlay_desc_set;
+    SpecVkSampler overlay_sampler;
+    SpecVkShaderModule overlay_vert_mod;
+    SpecVkShaderModule overlay_frag_mod;
+    SpecVkPipelineLayout overlay_pipe_layout;
+    SpecVkPipeline overlay_pipeline;
+    SpecVkBuffer overlay_vbuf;
+    SpecVkDeviceMemory overlay_vmem;
+    SpecVkImage overlay_img;
+    SpecVkDeviceMemory overlay_mem;
+    SpecVkImageView overlay_view;
+    SpecVkBuffer overlay_staging_buf;
+    SpecVkDeviceMemory overlay_staging_mem;
+    uint32_t overlay_w;
+    uint32_t overlay_h;
+    int overlay_ready;
 } SpecVulkanCtx;
 
 static char _spec_vk_error[256] = {0};
@@ -4475,6 +4644,19 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
     LOAD_IPROC(vkWaitForFences);
     LOAD_IPROC(vkResetFences);
     LOAD_IPROC(vkQueueSubmit);
+    LOAD_IPROC(vkGetDeviceProcAddr);
+    LOAD_IPROC(vkCreateSampler);
+    LOAD_IPROC(vkDestroySampler);
+    LOAD_IPROC(vkCreateDescriptorSetLayout);
+    LOAD_IPROC(vkDestroyDescriptorSetLayout);
+    LOAD_IPROC(vkCreateDescriptorPool);
+    LOAD_IPROC(vkDestroyDescriptorPool);
+    LOAD_IPROC(vkAllocateDescriptorSets);
+    LOAD_IPROC(vkUpdateDescriptorSets);
+    LOAD_IPROC(vkCmdBindDescriptorSets);
+    LOAD_IPROC(vkCmdDraw);
+    LOAD_IPROC(vkCmdPipelineBarrier);
+    LOAD_IPROC(vkCmdCopyBufferToImage);
     #undef LOAD_IPROC
     return 1;
 }
@@ -4811,6 +4993,19 @@ long long spec_pal_vulkan_create(
         _spec_vk_set_error("vkCreateDevice failed");
         goto fail;
     }
+    if (ctx->vkGetDeviceProcAddr) {
+        #define LOAD_DPROC(fn) do { \
+            void* p = ctx->vkGetDeviceProcAddr(ctx->device, #fn); \
+            if (p) ctx->fn = (PFN_spec_##fn)p; \
+        } while (0)
+        LOAD_DPROC(vkCreateSwapchainKHR);
+        LOAD_DPROC(vkDestroySwapchainKHR);
+        LOAD_DPROC(vkGetSwapchainImagesKHR);
+        LOAD_DPROC(vkAcquireNextImageKHR);
+        LOAD_DPROC(vkQueuePresentKHR);
+        LOAD_DPROC(vkDeviceWaitIdle);
+        #undef LOAD_DPROC
+    }
     ctx->vkGetDeviceQueue(ctx->device, ctx->queue_family, 0, &ctx->queue);
 
     /* Surface format */
@@ -5047,6 +5242,182 @@ long long spec_pal_vulkan_create(
         goto fail;
     }
 
+    /* 2D Overlay pipeline & fullscreen quad */
+    {
+        static const uint32_t ov_vert_spv[] = {
+            0x07230203U, 0x00010000U, 0U, 22U, 0U,
+            (2U<<16)|17U, 1U,
+            (3U<<16)|14U, 0U, 1U,
+            (9U<<16)|15U, 0U, 15U, 0x6E69616DU, 0U, 9U, 10U, 12U, 14U,
+            (4U<<16)|71U, 9U, 30U, 0U,
+            (4U<<16)|71U, 10U, 30U, 1U,
+            (4U<<16)|71U, 12U, 11U, 0U,
+            (4U<<16)|71U, 14U, 30U, 0U,
+            (2U<<16)|19U, 1U,
+            (3U<<16)|33U, 2U, 1U,
+            (3U<<16)|22U, 3U, 32U,
+            (4U<<16)|23U, 4U, 3U, 2U,
+            (4U<<16)|23U, 5U, 3U, 4U,
+            (4U<<16)|43U, 3U, 6U, 0U,
+            (4U<<16)|43U, 3U, 7U, 0x3F800000U,
+            (4U<<16)|32U, 8U, 1U, 4U,
+            (4U<<16)|59U, 8U, 9U, 1U,
+            (4U<<16)|59U, 8U, 10U, 1U,
+            (4U<<16)|32U, 11U, 3U, 5U,
+            (4U<<16)|59U, 11U, 12U, 3U,
+            (4U<<16)|32U, 13U, 3U, 4U,
+            (4U<<16)|59U, 13U, 14U, 3U,
+            (5U<<16)|54U, 1U, 15U, 0U, 2U,
+            (2U<<16)|248U, 16U,
+            (4U<<16)|61U, 4U, 17U, 9U,
+            (5U<<16)|81U, 3U, 18U, 17U, 0U,
+            (5U<<16)|81U, 3U, 19U, 17U, 1U,
+            (7U<<16)|80U, 5U, 20U, 18U, 19U, 6U, 7U,
+            (3U<<16)|62U, 12U, 20U,
+            (4U<<16)|61U, 4U, 21U, 10U,
+            (3U<<16)|62U, 14U, 21U,
+            (1U<<16)|253U,
+            (1U<<16)|56U
+        };
+        static const uint32_t ov_frag_spv[] = {
+            0x07230203U, 0x00010000U, 0U, 19U, 0U,
+            (2U<<16)|17U, 1U,
+            (3U<<16)|14U, 0U, 1U,
+            (7U<<16)|15U, 4U, 14U, 0x6E69616DU, 0U, 11U, 13U,
+            (3U<<16)|16U, 14U, 7U,
+            (4U<<16)|71U, 9U, 34U, 0U,
+            (4U<<16)|71U, 9U, 33U, 0U,
+            (4U<<16)|71U, 11U, 30U, 0U,
+            (4U<<16)|71U, 13U, 30U, 0U,
+            (2U<<16)|19U, 1U,
+            (3U<<16)|33U, 2U, 1U,
+            (3U<<16)|22U, 3U, 32U,
+            (4U<<16)|23U, 4U, 3U, 2U,
+            (4U<<16)|23U, 5U, 3U, 4U,
+            (9U<<16)|25U, 6U, 3U, 1U, 0U, 0U, 0U, 1U, 0U,
+            (3U<<16)|27U, 7U, 6U,
+            (4U<<16)|32U, 8U, 0U, 7U,
+            (4U<<16)|59U, 8U, 9U, 0U,
+            (4U<<16)|32U, 10U, 1U, 4U,
+            (4U<<16)|59U, 10U, 11U, 1U,
+            (4U<<16)|32U, 12U, 3U, 5U,
+            (4U<<16)|59U, 12U, 13U, 3U,
+            (5U<<16)|54U, 1U, 14U, 0U, 2U,
+            (2U<<16)|248U, 15U,
+            (4U<<16)|61U, 7U, 16U, 9U,
+            (4U<<16)|61U, 4U, 17U, 11U,
+            (5U<<16)|87U, 5U, 18U, 16U, 17U,
+            (3U<<16)|62U, 13U, 18U,
+            (1U<<16)|253U,
+            (1U<<16)|56U
+        };
+        SpecVkShaderModuleCreateInfo ov_vsm = { SPEC_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, NULL, 0, sizeof(ov_vert_spv), ov_vert_spv };
+        SpecVkShaderModuleCreateInfo ov_fsm = { SPEC_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, NULL, 0, sizeof(ov_frag_spv), ov_frag_spv };
+        if (ctx->vkCreateShaderModule(ctx->device, &ov_vsm, NULL, &ctx->overlay_vert_mod) == SPEC_VK_SUCCESS &&
+            ctx->vkCreateShaderModule(ctx->device, &ov_fsm, NULL, &ctx->overlay_frag_mod) == SPEC_VK_SUCCESS) {
+            SpecVkDescriptorSetLayoutBinding dslb = { 0, SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, SPEC_VK_SHADER_STAGE_FRAGMENT_BIT, NULL };
+            SpecVkDescriptorSetLayoutCreateInfo dslci = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, NULL, 0, 1, &dslb };
+            ctx->vkCreateDescriptorSetLayout(ctx->device, &dslci, NULL, &ctx->overlay_desc_layout);
+
+            SpecVkDescriptorPoolSize dps = { SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 };
+            SpecVkDescriptorPoolCreateInfo dpci = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL, 0, 1, 1, &dps };
+            ctx->vkCreateDescriptorPool(ctx->device, &dpci, NULL, &ctx->overlay_desc_pool);
+
+            SpecVkDescriptorSetAllocateInfo dsai = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL, ctx->overlay_desc_pool, 1, &ctx->overlay_desc_layout };
+            ctx->vkAllocateDescriptorSets(ctx->device, &dsai, &ctx->overlay_desc_set);
+
+            SpecVkSamplerCreateInfo smci;
+            memset(&smci, 0, sizeof(smci));
+            smci.sType = SPEC_VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            smci.magFilter = SPEC_VK_FILTER_LINEAR;
+            smci.minFilter = SPEC_VK_FILTER_LINEAR;
+            smci.addressModeU = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            smci.addressModeV = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            smci.addressModeW = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            ctx->vkCreateSampler(ctx->device, &smci, NULL, &ctx->overlay_sampler);
+
+            SpecVkPipelineLayoutCreateInfo oplci = { SPEC_VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1, &ctx->overlay_desc_layout, 0, NULL };
+            ctx->vkCreatePipelineLayout(ctx->device, &oplci, NULL, &ctx->overlay_pipe_layout);
+
+            SpecVkPipelineShaderStageCreateInfo ostages[2];
+            memset(ostages, 0, sizeof(ostages));
+            ostages[0].sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            ostages[0].stage = SPEC_VK_SHADER_STAGE_VERTEX_BIT;
+            ostages[0].module = ctx->overlay_vert_mod;
+            ostages[0].pName = "main";
+            ostages[1].sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            ostages[1].stage = SPEC_VK_SHADER_STAGE_FRAGMENT_BIT;
+            ostages[1].module = ctx->overlay_frag_mod;
+            ostages[1].pName = "main";
+
+            SpecVkVertexInputBindingDescription ov_bind = { 0, 16, SPEC_VK_VERTEX_INPUT_RATE_VERTEX };
+            SpecVkVertexInputAttributeDescription ov_attrs[2] = {
+                { 0, 0, SPEC_VK_FORMAT_R32G32_SFLOAT, 0 },
+                { 1, 0, SPEC_VK_FORMAT_R32G32_SFLOAT, 8 }
+            };
+            SpecVkPipelineVertexInputStateCreateInfo ov_vi;
+            memset(&ov_vi, 0, sizeof(ov_vi));
+            ov_vi.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+            ov_vi.vertexBindingDescriptionCount = 1;
+            ov_vi.pVertexBindingDescriptions = &ov_bind;
+            ov_vi.vertexAttributeDescriptionCount = 2;
+            ov_vi.pVertexAttributeDescriptions = ov_attrs;
+
+            SpecVkPipelineRasterizationStateCreateInfo ov_rs;
+            memset(&ov_rs, 0, sizeof(ov_rs));
+            ov_rs.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+            ov_rs.polygonMode = SPEC_VK_POLYGON_MODE_FILL;
+            ov_rs.lineWidth = 1.0f;
+
+            SpecVkPipelineDepthStencilStateCreateInfo ov_ds;
+            memset(&ov_ds, 0, sizeof(ov_ds));
+            ov_ds.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+            SpecVkPipelineColorBlendAttachmentState ov_cba;
+            memset(&ov_cba, 0, sizeof(ov_cba));
+            ov_cba.blendEnable = SPEC_VK_TRUE;
+            ov_cba.srcColorBlendFactor = SPEC_VK_BLEND_FACTOR_SRC_ALPHA;
+            ov_cba.dstColorBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            ov_cba.colorBlendOp = SPEC_VK_BLEND_OP_ADD;
+            ov_cba.srcAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_SRC_ALPHA;
+            ov_cba.dstAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            ov_cba.alphaBlendOp = SPEC_VK_BLEND_OP_ADD;
+            ov_cba.colorWriteMask = 0xFU;
+            SpecVkPipelineColorBlendStateCreateInfo ov_cb;
+            memset(&ov_cb, 0, sizeof(ov_cb));
+            ov_cb.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+            ov_cb.attachmentCount = 1;
+            ov_cb.pAttachments = &ov_cba;
+
+            SpecVkGraphicsPipelineCreateInfo ogpci;
+            memset(&ogpci, 0, sizeof(ogpci));
+            ogpci.sType = SPEC_VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+            ogpci.stageCount = 2;
+            ogpci.pStages = ostages;
+            ogpci.pVertexInputState = &ov_vi;
+            ogpci.pInputAssemblyState = &ia;
+            ogpci.pViewportState = &vp;
+            ogpci.pRasterizationState = &ov_rs;
+            ogpci.pMultisampleState = &ms;
+            ogpci.pDepthStencilState = &ov_ds;
+            ogpci.pColorBlendState = &ov_cb;
+            ogpci.pDynamicState = &dyn;
+            ogpci.layout = ctx->overlay_pipe_layout;
+            ogpci.renderPass = ctx->render_pass;
+            ctx->vkCreateGraphicsPipelines(ctx->device, SPEC_VK_NULL_HANDLE, 1, &ogpci, NULL, &ctx->overlay_pipeline);
+
+            static const float quad_verts[24] = {
+                -1.0f, -1.0f, 0.0f, 0.0f,
+                 1.0f, -1.0f, 1.0f, 0.0f,
+                 1.0f,  1.0f, 1.0f, 1.0f,
+                -1.0f, -1.0f, 0.0f, 0.0f,
+                 1.0f,  1.0f, 1.0f, 1.0f,
+                -1.0f,  1.0f, 0.0f, 1.0f
+            };
+            _spec_vk_create_buffer(ctx, sizeof(quad_verts), SPEC_VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, quad_verts, &ctx->overlay_vbuf, &ctx->overlay_vmem);
+        }
+    }
+
     return (long long)(intptr_t)ctx;
 
 fail:
@@ -5150,6 +5521,14 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
         ctx->vkCmdDrawIndexed(ctx->cmd_buf, ctx->index_count, 1, 0, 0, 0);
     }
 
+    if (ctx->overlay_ready && ctx->overlay_pipeline && ctx->overlay_vbuf && ctx->overlay_desc_set) {
+        SpecVkDeviceSize offset = 0;
+        ctx->vkCmdBindPipeline(ctx->cmd_buf, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipeline);
+        ctx->vkCmdBindDescriptorSets(ctx->cmd_buf, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipe_layout, 0, 1, &ctx->overlay_desc_set, 0, NULL);
+        ctx->vkCmdBindVertexBuffers(ctx->cmd_buf, 0, 1, &ctx->overlay_vbuf, &offset);
+        ctx->vkCmdDraw(ctx->cmd_buf, 6, 1, 0, 0);
+    }
+
     ctx->vkCmdEndRenderPass(ctx->cmd_buf);
     ctx->vkEndCommandBuffer(ctx->cmd_buf);
 
@@ -5186,11 +5565,145 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
     return 1;
 }
 
+long long spec_pal_vulkan_set_overlay(long long handle, long long pixels_addr, long long width, long long height) {
+    SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
+    if (!ctx || !ctx->device || !ctx->overlay_desc_set || !pixels_addr || width <= 0 || height <= 0) return 0;
+
+    SpecVkDeviceSize byte_size = (SpecVkDeviceSize)width * (SpecVkDeviceSize)height * 4ULL;
+    ctx->vkWaitForFences(ctx->device, 1, &ctx->in_flight_fence, SPEC_VK_TRUE, ~0ULL);
+
+    if ((uint32_t)width != ctx->overlay_w || (uint32_t)height != ctx->overlay_h || !ctx->overlay_img) {
+        ctx->vkDeviceWaitIdle(ctx->device);
+        if (ctx->overlay_view) { ctx->vkDestroyImageView(ctx->device, ctx->overlay_view, NULL); ctx->overlay_view = 0; }
+        if (ctx->overlay_img) { ctx->vkDestroyImage(ctx->device, ctx->overlay_img, NULL); ctx->overlay_img = 0; }
+        if (ctx->overlay_mem) { ctx->vkFreeMemory(ctx->device, ctx->overlay_mem, NULL); ctx->overlay_mem = 0; }
+        if (ctx->overlay_staging_buf) { ctx->vkDestroyBuffer(ctx->device, ctx->overlay_staging_buf, NULL); ctx->overlay_staging_buf = 0; }
+        if (ctx->overlay_staging_mem) { ctx->vkFreeMemory(ctx->device, ctx->overlay_staging_mem, NULL); ctx->overlay_staging_mem = 0; }
+
+        if (!_spec_vk_create_buffer(ctx, byte_size, SPEC_VK_BUFFER_USAGE_TRANSFER_SRC_BIT, NULL, &ctx->overlay_staging_buf, &ctx->overlay_staging_mem)) {
+            return 0;
+        }
+
+        SpecVkImageCreateInfo ici;
+        memset(&ici, 0, sizeof(ici));
+        ici.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        ici.imageType = SPEC_VK_IMAGE_TYPE_2D;
+        ici.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
+        ici.extent.width = (uint32_t)width;
+        ici.extent.height = (uint32_t)height;
+        ici.extent.depth = 1;
+        ici.mipLevels = 1;
+        ici.arrayLayers = 1;
+        ici.samples = SPEC_VK_SAMPLE_COUNT_1_BIT;
+        ici.tiling = SPEC_VK_IMAGE_TILING_OPTIMAL;
+        ici.usage = SPEC_VK_IMAGE_USAGE_TRANSFER_DST_BIT | SPEC_VK_IMAGE_USAGE_SAMPLED_BIT;
+        ici.sharingMode = SPEC_VK_SHARING_MODE_EXCLUSIVE;
+        ici.initialLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
+        if (ctx->vkCreateImage(ctx->device, &ici, NULL, &ctx->overlay_img) != SPEC_VK_SUCCESS) return 0;
+
+        SpecVkMemoryRequirements req;
+        ctx->vkGetImageMemoryRequirements(ctx->device, ctx->overlay_img, &req);
+        uint32_t mt = _spec_vk_find_memory_type(ctx, req.memoryTypeBits, SPEC_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        if (mt == ~0U) return 0;
+        SpecVkMemoryAllocateInfo mai = { SPEC_VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, req.size, mt };
+        if (ctx->vkAllocateMemory(ctx->device, &mai, NULL, &ctx->overlay_mem) != SPEC_VK_SUCCESS) return 0;
+        ctx->vkBindImageMemory(ctx->device, ctx->overlay_img, ctx->overlay_mem, 0);
+
+        SpecVkImageViewCreateInfo ivci;
+        memset(&ivci, 0, sizeof(ivci));
+        ivci.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        ivci.image = ctx->overlay_img;
+        ivci.viewType = SPEC_VK_IMAGE_VIEW_TYPE_2D;
+        ivci.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
+        ivci.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+        ivci.subresourceRange.levelCount = 1;
+        ivci.subresourceRange.layerCount = 1;
+        if (ctx->vkCreateImageView(ctx->device, &ivci, NULL, &ctx->overlay_view) != SPEC_VK_SUCCESS) return 0;
+
+        SpecVkDescriptorImageInfo dii = { ctx->overlay_sampler, ctx->overlay_view, SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+        SpecVkWriteDescriptorSet wds;
+        memset(&wds, 0, sizeof(wds));
+        wds.sType = SPEC_VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds.dstSet = ctx->overlay_desc_set;
+        wds.descriptorCount = 1;
+        wds.descriptorType = SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        wds.pImageInfo = &dii;
+        ctx->vkUpdateDescriptorSets(ctx->device, 1, &wds, 0, NULL);
+
+        ctx->overlay_w = (uint32_t)width;
+        ctx->overlay_h = (uint32_t)height;
+    }
+
+    void* mapped = NULL;
+    if (ctx->vkMapMemory(ctx->device, ctx->overlay_staging_mem, 0, byte_size, 0, &mapped) != SPEC_VK_SUCCESS) return 0;
+    memcpy(mapped, (const void*)(intptr_t)pixels_addr, (size_t)byte_size);
+    ctx->vkUnmapMemory(ctx->device, ctx->overlay_staging_mem);
+
+    ctx->vkResetCommandBuffer(ctx->cmd_buf, 0);
+    SpecVkCommandBufferBeginInfo cbi = { SPEC_VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL, 0, NULL };
+    ctx->vkBeginCommandBuffer(ctx->cmd_buf, &cbi);
+
+    SpecVkImageMemoryBarrier b1;
+    memset(&b1, 0, sizeof(b1));
+    b1.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    b1.dstAccessMask = SPEC_VK_ACCESS_TRANSFER_WRITE_BIT;
+    b1.oldLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
+    b1.newLayout = SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    b1.srcQueueFamilyIndex = SPEC_VK_QUEUE_FAMILY_IGNORED;
+    b1.dstQueueFamilyIndex = SPEC_VK_QUEUE_FAMILY_IGNORED;
+    b1.image = ctx->overlay_img;
+    b1.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+    b1.subresourceRange.levelCount = 1;
+    b1.subresourceRange.layerCount = 1;
+    ctx->vkCmdPipelineBarrier(ctx->cmd_buf, SPEC_VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &b1);
+
+    SpecVkBufferImageCopy reg;
+    memset(&reg, 0, sizeof(reg));
+    reg.imageSubresource.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+    reg.imageSubresource.layerCount = 1;
+    reg.imageExtent.width = (uint32_t)width;
+    reg.imageExtent.height = (uint32_t)height;
+    reg.imageExtent.depth = 1;
+    ctx->vkCmdCopyBufferToImage(ctx->cmd_buf, ctx->overlay_staging_buf, ctx->overlay_img, SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &reg);
+
+    SpecVkImageMemoryBarrier b2 = b1;
+    b2.srcAccessMask = SPEC_VK_ACCESS_TRANSFER_WRITE_BIT;
+    b2.dstAccessMask = SPEC_VK_ACCESS_SHADER_READ_BIT;
+    b2.oldLayout = SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    b2.newLayout = SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    ctx->vkCmdPipelineBarrier(ctx->cmd_buf, SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT, SPEC_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &b2);
+
+    ctx->vkEndCommandBuffer(ctx->cmd_buf);
+    SpecVkSubmitInfo si;
+    memset(&si, 0, sizeof(si));
+    si.sType = SPEC_VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    si.commandBufferCount = 1;
+    si.pCommandBuffers = &ctx->cmd_buf;
+    ctx->vkQueueSubmit(ctx->queue, 1, &si, SPEC_VK_NULL_HANDLE);
+    ctx->vkDeviceWaitIdle(ctx->device);
+    ctx->overlay_ready = 1;
+    return 1;
+}
+
 long long spec_pal_vulkan_destroy(long long handle) {
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
     if (!ctx) return 0;
     if (ctx->device) {
         ctx->vkDeviceWaitIdle(ctx->device);
+        if (ctx->overlay_view) ctx->vkDestroyImageView(ctx->device, ctx->overlay_view, NULL);
+        if (ctx->overlay_img) ctx->vkDestroyImage(ctx->device, ctx->overlay_img, NULL);
+        if (ctx->overlay_mem) ctx->vkFreeMemory(ctx->device, ctx->overlay_mem, NULL);
+        if (ctx->overlay_staging_buf) ctx->vkDestroyBuffer(ctx->device, ctx->overlay_staging_buf, NULL);
+        if (ctx->overlay_staging_mem) ctx->vkFreeMemory(ctx->device, ctx->overlay_staging_mem, NULL);
+        if (ctx->overlay_vbuf) ctx->vkDestroyBuffer(ctx->device, ctx->overlay_vbuf, NULL);
+        if (ctx->overlay_vmem) ctx->vkFreeMemory(ctx->device, ctx->overlay_vmem, NULL);
+        if (ctx->overlay_pipeline) ctx->vkDestroyPipeline(ctx->device, ctx->overlay_pipeline, NULL);
+        if (ctx->overlay_pipe_layout) ctx->vkDestroyPipelineLayout(ctx->device, ctx->overlay_pipe_layout, NULL);
+        if (ctx->overlay_sampler) ctx->vkDestroySampler(ctx->device, ctx->overlay_sampler, NULL);
+        if (ctx->overlay_desc_pool) ctx->vkDestroyDescriptorPool(ctx->device, ctx->overlay_desc_pool, NULL);
+        if (ctx->overlay_desc_layout) ctx->vkDestroyDescriptorSetLayout(ctx->device, ctx->overlay_desc_layout, NULL);
+        if (ctx->overlay_frag_mod) ctx->vkDestroyShaderModule(ctx->device, ctx->overlay_frag_mod, NULL);
+        if (ctx->overlay_vert_mod) ctx->vkDestroyShaderModule(ctx->device, ctx->overlay_vert_mod, NULL);
         if (ctx->vertex_buf) ctx->vkDestroyBuffer(ctx->device, ctx->vertex_buf, NULL);
         if (ctx->vertex_mem) ctx->vkFreeMemory(ctx->device, ctx->vertex_mem, NULL);
         if (ctx->index_buf) ctx->vkDestroyBuffer(ctx->device, ctx->index_buf, NULL);
@@ -5251,6 +5764,11 @@ long long spec_pal_vulkan_set_mesh(
 
 long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long long width, long long height) {
     (void)handle; (void)mvp_f32_ptr; (void)width; (void)height;
+    return 0;
+}
+
+long long spec_pal_vulkan_set_overlay(long long handle, long long pixels_addr, long long width, long long height) {
+    (void)handle; (void)pixels_addr; (void)width; (void)height;
     return 0;
 }
 

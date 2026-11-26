@@ -642,8 +642,9 @@ long long spec_pal_window_poll(long long handle) {
         w->should_close = true;
         return 0;
     }
+    if (w->should_close) return 0;
     _wl_display_flush(w->display);
-    return w->should_close ? 0 : 1;
+    return 1;
 }
 
 long long spec_pal_window_next_key(long long handle) {

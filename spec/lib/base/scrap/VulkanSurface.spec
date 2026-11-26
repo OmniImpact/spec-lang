@@ -1,7 +1,7 @@
 #! Package base:scrap
 #! Scrap component binding a `SuitWindow` to a `base:sys:Vulkan` swapchain & 3D render pipeline.
 
-Class is VulkanSurface{
+Class of SewNode is VulkanSurface{
 	replace [String] is namespace: ['base', 'scrap'];
 
 	replace [[String]] is using: [
@@ -9,6 +9,10 @@ Class is VulkanSurface{
 		['base', 'sys', as Mem()],
 		['base', 'sys', Vulkan],
 		['base', 'suit', SuitWindow],
+		['base', 'suit', SuitCanvas],
+		['base', 'sew', SewNode],
+		['base', 'sew', Size],
+		['base', 'sew', Constraints],
 		['base', 'mold', SpirvBuilder],
 		['base', 'mold', CubeMesh],
 		['base', 'mold', Mat4]
@@ -62,6 +66,16 @@ Class is VulkanSurface{
 		if({ mvpAddr == 0 }, { return false; });
 		mvp:packF32(dstAddr: mvpAddr);
 		return vk:render(mvpF32Addr: mvpAddr, width: width, height: height);
+	}
+
+	## Uploads an ARGB8888 [canvas] as the 2D HUD overlay composited over the 3D scene.
+	Function of Boolean is setOverlay(SuitCanvas is canvas){
+		return vk:setOverlay(pixelsAddr: canvas:pixelsAddr(), width: canvas:width, height: canvas:height);
+	}
+
+	replace Function of Size is measure(Constraints is c){
+		desiredSize: Size(width: c:maxW, height: c:maxH);
+		return desiredSize;
 	}
 
 	## Returns the last Vulkan error message, or `''`.
