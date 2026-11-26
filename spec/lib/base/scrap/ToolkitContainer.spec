@@ -44,7 +44,9 @@ Class of SewNode is ToolkitContainer{
 		BoolEmitter is running: BoolEmitter(initial: true),
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Float is widthPt: 800.0,
-		Float is heightPt: 600.0
+		Float is heightPt: 600.0,
+		ToolbarContainer is toolbar: ToolbarContainer(hasToolbar: false),
+		ScrapPanel is body: ScrapPanel()
 	){
 		:title: title;
 		:running: running;
@@ -52,10 +54,18 @@ Class of SewNode is ToolkitContainer{
 		:scale: Scale(factor: 1.0);
 		:widthPt: widthPt;
 		:heightPt: heightPt;
-		toolbarSlot: ToolbarContainer();
-		bodyPanel: ScrapPanel(bgColor: theme:windowBg);
-		hasToolbarSlot: false;
-		hasBody: false;
+		toolbarSlot: toolbar;
+		bodyPanel: body;
+		hasToolbarSlot: toolbar:hasToolbar;
+		hasBody: true;
+		:applyTheme(theme: theme);
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		:theme: theme;
+		if({ hasToolbarSlot }, { toolbarSlot:applyTheme(theme: theme); });
+		if({ hasBody }, { bodyPanel:applyTheme(theme: theme); });
 	}
 
 	## Adds a `ToolbarContainer` at the top of the toolkit workspace.
@@ -121,13 +131,26 @@ Class of SewNode is ToolkitContainer{
 		});
 
 		scale: Scale(factor: win:scaleFactor());
+		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
 
-		running:attach(collector: BoolCollector(onEmit: local Function(){
-			alive: running:current();
-		}));
-		title:attach(collector: TextCollector(onEmit: local Function(String is nextTitle){
-			curTitle: nextTitle;
-		}));
+		local Boolean is dirtyFlag: false;
+		:bindDirty(cb: local Function(){ dirtyFlag: true; });
+		if({ hasToolbarSlot }, { toolbarSlot:bindDirty(cb: local Function(){ dirtyFlag: true; }); });
+
+		signalBag:track(
+			slot: 'running',
+			emitter: running,
+			collector: BoolCollector(onEmit: local Function(){
+				alive: running:current();
+			})
+		);
+		signalBag:track(
+			slot: 'title',
+			emitter: title,
+			collector: TextCollector(onEmit: local Function(String is nextTitle){
+				curTitle: nextTitle;
+			})
+		);
 
 		local Int is curW: win:width();
 		local Int is curH: win:height();
@@ -191,6 +214,7 @@ Class of SewNode is ToolkitContainer{
 			});
 		});
 
+		signalBag:clear();
 		canvas:dispose();
 		win:close();
 	}

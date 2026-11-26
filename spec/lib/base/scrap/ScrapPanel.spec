@@ -1,5 +1,5 @@
 #! Package base:scrap
-#! Simple filled rectangular surface widget participating in Sew layout.
+#! Simple filled rectangular surface widget participating in Sew layout and Theme propagation.
 
 Class of SewNode is ScrapPanel{
 	replace [String] is namespace: ['base', 'scrap'];
@@ -10,13 +10,23 @@ Class of SewNode is ScrapPanel{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext]
 	];
 
 	Int is bgColor: -1;
+	Boolean is useThemeBg: true;
 
-	replace Function is init(Int is bgColor: -1){
+	replace Function is init(Int is bgColor: 0, Boolean is useThemeBg: true){
 		:bgColor: bgColor;
+		:useThemeBg: useThemeBg;
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		if({ useThemeBg }, {
+			:bgColor: theme:windowBg;
+		});
 	}
 
 	replace Function of Size is measure(Constraints is c){

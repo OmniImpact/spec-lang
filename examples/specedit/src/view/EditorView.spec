@@ -1,6 +1,5 @@
 #! Package specedit:view
-#! Absolutely pure composable MVVM View for SpecEdit.
-#! Binds ViewModel emitters and menu config into the Scrap toolkit hierarchy.
+#! Absolutely pure composable MVVM View for SpecEdit (Theo-style declarative composition).
 
 Class is EditorView{
 	replace [String] is namespace: ['specedit', 'view'];
@@ -15,25 +14,16 @@ Class is EditorView{
 	];
 
 	Function of ToolkitContainer is build(EditorViewModel is vm){
-		local Theme is theme: Theme(preset: 'light_grayscale');
-
-		local ToolkitContainer is toolkit: ToolkitContainer(
+		return ToolkitContainer(
 			title: vm:title,
 			running: vm:running,
-			theme: theme,
+			theme: Theme(preset: 'light_grayscale'),
 			widthPt: vm:windowWidthPt,
-			heightPt: vm:windowHeightPt
+			heightPt: vm:windowHeightPt,
+			toolbar: ToolbarContainer(
+				toolbar: Toolbar(config: vm:toolbarConfig)
+			),
+			body: ScrapPanel()
 		);
-
-		local ToolbarContainer is toolbarContainer: ToolbarContainer();
-		toolbarContainer:addToolbar(toolbar: Toolbar(theme: theme));
-		toolbarContainer:pushConfig(
-			config: vm:toolbarConfig,
-			onQuit: local Function(){ vm:requestQuit(); }
-		);
-
-		toolkit:addToolbarContainer(container: toolbarContainer);
-		toolkit:setBody(body: ScrapPanel(bgColor: theme:windowBg));
-		return toolkit;
 	}
 }

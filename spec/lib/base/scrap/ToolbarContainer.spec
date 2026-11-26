@@ -11,6 +11,8 @@ Class of SewNode is ToolbarContainer{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'sew', Scale],
+		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', Toolbar],
 		['base', 'scrap', ToolbarConfig],
@@ -21,9 +23,23 @@ Class of SewNode is ToolbarContainer{
 	Toolbar is toolbar: Toolbar();
 	Boolean is hasToolbar: false;
 
-	replace Function is init(Toolbar is toolbar: Toolbar(), Boolean is attachDefault: false){
+	replace Function is init(Toolbar is toolbar: Toolbar(), Boolean is hasToolbar: true){
 		:toolbar: toolbar;
-		hasToolbar: attachDefault;
+		:hasToolbar: hasToolbar;
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		if({ hasToolbar }, { toolbar:applyTheme(theme: theme); });
+	}
+
+	replace Function is bindDirty(Function is cb){
+		:dirtyListeners: Array([cb]);
+		if({ hasToolbar }, { toolbar:bindDirty(cb: cb); });
+	}
+
+	Function is setScale(Scale is scale){
+		if({ hasToolbar }, { toolbar:setScale(scale: scale); });
 	}
 
 	## Attaches a `Toolbar` widget to this container.

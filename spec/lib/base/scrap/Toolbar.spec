@@ -46,6 +46,16 @@ Class of SewNode is Toolbar{
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;
+		invalidate();
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		:theme: theme;
+	}
+
+	Function is setScale(Scale is scale){
+		:scale: scale;
 	}
 
 	local Function of Int is textScale(){
