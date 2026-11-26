@@ -518,4 +518,39 @@ Class is EditorViewModel{
 	Function is requestQuit(){
 		running:emit(value: false);
 	}
+
+	## Handles system-wide keyboard shortcuts across Welcome and Files containers.
+	Function of Boolean is handleShortcut(Int is key, Int is mods){
+		local Boolean is shift: (mods & 1) != 0;
+		local Boolean is ctrl: (mods & 2) != 0;
+		if({ !ctrl }, { return false; });
+		if({ key == 110 || key == 78 }, { :newDocument(); return true; });
+		if({ key == 111 || key == 79 }, { :requestOpen(); return true; });
+		if({ key == 115 || key == 83 }, {
+			if({ shift }, { :requestSaveAs(); }, { :requestSave(); });
+			return true;
+		});
+		if({ key == 119 || key == 87 }, {
+			if({ :hasOpenDocument() }, { :closeTab(index: activeDocIdx); });
+			return true;
+		});
+		if({ key == 113 || key == 81 }, { :requestQuit(); return true; });
+		if({ key == 99 || key == 67 }, {
+			if({ :hasOpenDocument() }, { :requestCopy(); });
+			return true;
+		});
+		if({ key == 120 || key == 88 }, {
+			if({ :hasOpenDocument() }, { :requestCut(); });
+			return true;
+		});
+		if({ key == 118 || key == 86 }, {
+			if({ :hasOpenDocument() }, { :requestPaste(); });
+			return true;
+		});
+		if({ key == 97 || key == 65 }, {
+			if({ :hasOpenDocument() }, { :requestSelectAll(); });
+			return true;
+		});
+		return false;
+	}
 }

@@ -158,7 +158,8 @@ Class is EditorView{
 			hasDialog: true,
 			fileDialog: :openFileDialog(),
 			hasFileDialog: true,
-			contextMenu: vm:contextMenu
+			contextMenu: vm:contextMenu,
+			onKey: local Function of Boolean(Int is key, Int is mods){ vm:handleShortcut(key: key, mods: mods) }
 		)
 	}
 }

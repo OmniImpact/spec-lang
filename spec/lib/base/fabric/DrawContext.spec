@@ -175,7 +175,11 @@ Class is DrawContext{
 			y: y,
 			text: text,
 			pixelHeight: pixelHeight,
-			argbColor: color
+			argbColor: color,
+			clipX: if({ hasClip }, { clipX }, { 0 }),
+			clipY: if({ hasClip }, { clipY }, { 0 }),
+			clipW: if({ hasClip }, { clipW }, { -1 }),
+			clipH: if({ hasClip }, { clipH }, { -1 })
 		);
 	}
 }

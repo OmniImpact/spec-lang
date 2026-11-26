@@ -225,6 +225,12 @@ Class is Font{
 		return handle;
 	}
 
+	local Function of Float is spaceAdvance(Int is pixelHeight, Float is baseScale, Float is tracking){
+		base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: 32, out_2_i32_ptr: metricsAddr);
+		local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+		return math:toFloat(value: adv) * baseScale + tracking;
+	}
+
 	## Measures the horizontal pixel advance of UTF-8 [text] at [pixelHeight].
 	Function of Int is measureWidth(String is text, Int is pixelHeight: 16, Float is spacing: -1.0){
 		if({ handle <= 0 || pixelHeight <= 0 || text == '' }, { return 0; });
@@ -232,6 +238,7 @@ Class is Font{
 		local Float is baseScale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
 		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
+		local Float is tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: baseScale, tracking: tracking) * 4.0;
 		local Float is xpos: 0.0;
 		local Int is len: text:length();
 		local Int is idx: 0;
@@ -240,17 +247,25 @@ Class is Font{
 		while({ idx < len }, {
 			local Int is cp: :utf8CodeAt(text: text, idx: idx, len: len);
 			idx: idx + :utf8Step(text: text, idx: idx, len: len);
-			local Int is gh: :resolveHandleFor(cp: cp);
-			local Float is gScale: if({ gh == handle }, { baseScale }, { base:sysinternal:Font:pal_font_scale(handle: gh, pixel_height: pixelHeight) });
-			if({ prevCp != 0 && prevH == gh }, {
-				local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gh, cp1: prevCp, cp2: cp);
-				xpos: xpos + math:toFloat(value: kern) * gScale;
+			if({ cp == 9 }, {
+				xpos: xpos + tabAdv;
+				prevCp: 0;
+				prevH: 0;
+			}, {
+				if({ cp >= 32 }, {
+					local Int is gh: :resolveHandleFor(cp: cp);
+					local Float is gScale: if({ gh == handle }, { baseScale }, { base:sysinternal:Font:pal_font_scale(handle: gh, pixel_height: pixelHeight) });
+					if({ prevCp != 0 && prevH == gh }, {
+						local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gh, cp1: prevCp, cp2: cp);
+						xpos: xpos + math:toFloat(value: kern) * gScale;
+					});
+					base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: metricsAddr);
+					local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+					xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
+					prevCp: cp;
+					prevH: gh;
+				});
 			});
-			base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: metricsAddr);
-			local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
-			xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
-			prevCp: cp;
-			prevH: gh;
 		});
 		return math:toInt(value: math:round(value: xpos));
 	}
@@ -297,11 +312,20 @@ Class is Font{
 		Int is pixelHeight: 16,
 		Int is argbColor: -1,
 		Float is spacing: -1.0,
-		Float is weight: -1.0
+		Float is weight: -1.0,
+		Int is clipX: 0,
+		Int is clipY: 0,
+		Int is clipW: -1,
+		Int is clipH: -1
 	){
 		if({ handle <= 0 || pixelsAddr == 0 || bufW <= 0 || bufH <= 0 || pixelHeight <= 0 || text == '' }, {
 			return false;
 		});
+		local Int is minX: if({ clipW >= 0 && clipX > 0 }, { clipX }, { 0 });
+		local Int is maxX: if({ clipW >= 0 && clipX + clipW < bufW }, { clipX + clipW }, { bufW });
+		local Int is minY: if({ clipH >= 0 && clipY > 0 }, { clipY }, { 0 });
+		local Int is maxY: if({ clipH >= 0 && clipY + clipH < bufH }, { clipY + clipH }, { bufH });
+		if({ minX >= maxX || minY >= maxY }, { return true; });
 		:ensureMetricsBuf();
 		local Float is scale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		base:sysinternal:Font:pal_font_vmetrics(handle: handle, out_3_i32_ptr: metricsAddr);
@@ -314,6 +338,7 @@ Class is Font{
 		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
 		local Float is wb: if({ weight >= 0.0 }, { weight }, { weightBoost });
 		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
+		local Float is tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: scale, tracking: tracking) * 4.0;
 		local Float is xpos: math:toFloat(value: x);
 
 		local Int is fgA: (argbColor >> 24) & 255;
@@ -337,78 +362,86 @@ Class is Font{
 				prevCp: 0;
 				prevH: 0;
 			}, {
-				local Int is gHandle: :resolveHandleFor(cp: cp);
-				local Float is gScale: if({ gHandle == handle }, { scale }, { base:sysinternal:Font:pal_font_scale(handle: gHandle, pixel_height: pixelHeight) });
-				if({ prevCp != 0 && prevH == gHandle }, {
-					local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gHandle, cp1: prevCp, cp2: cp);
-					xpos: xpos + math:toFloat(value: kern) * gScale;
-				});
-				base:sysinternal:Font:pal_font_hmetrics(handle: gHandle, cp: cp, out_2_i32_ptr: metricsAddr);
-				local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+				if({ cp == 9 }, {
+					xpos: xpos + tabAdv;
+					prevCp: 0;
+					prevH: 0;
+				}, {
+					if({ cp >= 32 }, {
+						local Int is gHandle: :resolveHandleFor(cp: cp);
+						local Float is gScale: if({ gHandle == handle }, { scale }, { base:sysinternal:Font:pal_font_scale(handle: gHandle, pixel_height: pixelHeight) });
+						if({ prevCp != 0 && prevH == gHandle }, {
+							local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gHandle, cp1: prevCp, cp2: cp);
+							xpos: xpos + math:toFloat(value: kern) * gScale;
+						});
+						base:sysinternal:Font:pal_font_hmetrics(handle: gHandle, cp: cp, out_2_i32_ptr: metricsAddr);
+						local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
 
-				base:sysinternal:Font:pal_font_glyph_box(handle: gHandle, cp: cp, pixel_height: pixelHeight, out_4_i32_ptr: metricsAddr);
-				local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
-				local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
-				local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
-				local Int is y1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 12));
-				local Int is gw: x1 - x0;
-				local Int is gh: y1 - y0;
+						base:sysinternal:Font:pal_font_glyph_box(handle: gHandle, cp: cp, pixel_height: pixelHeight, out_4_i32_ptr: metricsAddr);
+						local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+						local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
+						local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
+						local Int is y1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 12));
+						local Int is gw: x1 - x0;
+						local Int is gh: y1 - y0;
 
-				if({ gw > 0 && gh > 0 }, {
-					local Int is buf: :ensureScratch(needed: gw * gh);
-					if({ buf != 0 }, {
-						base:sysinternal:Font:pal_font_rasterize_glyph(
-							handle: gHandle,
-							cp: cp,
-							pixel_height: pixelHeight,
-							dst_ptr: buf,
-							gw: gw,
-							gh: gh
-						);
-						local Int is dstX0: math:toInt(value: math:floor(value: xpos)) + x0;
-						local Int is dstY0: baseline + y0;
-						local Int is gy: 0;
-						while({ gy < gh }, {
-							local Int is py: dstY0 + gy;
-							if({ py >= 0 && py < bufH }, {
-								local Int is rowBase: py * bufW;
-								local Int is gRowBase: gy * gw;
-								local Int is gx: 0;
-								while({ gx < gw }, {
-									local Int is px: dstX0 + gx;
-									if({ px >= 0 && px < bufW }, {
-										local Int is cov: Mem:loadByte(ptr: buf, byteOffset: gRowBase + gx) & 255;
-										if({ cov > 0 }, {
-											if({ boostNum > 0 }, {
-												cov: cov + ((cov * (255 - cov) * boostNum) >> 16);
-												if({ cov > 255 }, { cov: 255; });
+						if({ gw > 0 && gh > 0 }, {
+							local Int is buf: :ensureScratch(needed: gw * gh);
+							if({ buf != 0 }, {
+								base:sysinternal:Font:pal_font_rasterize_glyph(
+									handle: gHandle,
+									cp: cp,
+									pixel_height: pixelHeight,
+									dst_ptr: buf,
+									gw: gw,
+									gh: gh
+								);
+								local Int is dstX0: math:toInt(value: math:floor(value: xpos)) + x0;
+								local Int is dstY0: baseline + y0;
+								local Int is gy: 0;
+								while({ gy < gh }, {
+									local Int is py: dstY0 + gy;
+									if({ py >= minY && py < maxY }, {
+										local Int is rowBase: py * bufW;
+										local Int is gRowBase: gy * gw;
+										local Int is gx: 0;
+										while({ gx < gw }, {
+											local Int is px: dstX0 + gx;
+											if({ px >= minX && px < maxX }, {
+												local Int is cov: Mem:loadByte(ptr: buf, byteOffset: gRowBase + gx) & 255;
+												if({ cov > 0 }, {
+													if({ boostNum > 0 }, {
+														cov: cov + ((cov * (255 - cov) * boostNum) >> 16);
+														if({ cov > 255 }, { cov: 255; });
+													});
+													local Int is a: (cov * fgA) / 255;
+													local Int is invA: 255 - a;
+													local Int is pOff: (rowBase + px) * 4;
+													local Int is bg: Mem:loadI32(ptr: pixelsAddr, byteOffset: pOff);
+													local Int is bgA: (bg >> 24) & 255;
+													local Int is bgR: (bg >> 16) & 255;
+													local Int is bgG: (bg >> 8) & 255;
+													local Int is bgB: bg & 255;
+													local Int is outA: a + (bgA * invA) / 255;
+													local Int is r: (fgR * a + bgR * invA) / 255;
+													local Int is g: (fgG * a + bgG * invA) / 255;
+													local Int is b: (fgB * a + bgB * invA) / 255;
+													Mem:storeI32(ptr: pixelsAddr, byteOffset: pOff, val: (outA << 24) | (r << 16) | (g << 8) | b);
+												});
 											});
-											local Int is a: (cov * fgA) / 255;
-											local Int is invA: 255 - a;
-											local Int is pOff: (rowBase + px) * 4;
-											local Int is bg: Mem:loadI32(ptr: pixelsAddr, byteOffset: pOff);
-											local Int is bgA: (bg >> 24) & 255;
-											local Int is bgR: (bg >> 16) & 255;
-											local Int is bgG: (bg >> 8) & 255;
-											local Int is bgB: bg & 255;
-											local Int is outA: a + (bgA * invA) / 255;
-											local Int is r: (fgR * a + bgR * invA) / 255;
-											local Int is g: (fgG * a + bgG * invA) / 255;
-											local Int is b: (fgB * a + bgB * invA) / 255;
-											Mem:storeI32(ptr: pixelsAddr, byteOffset: pOff, val: (outA << 24) | (r << 16) | (g << 8) | b);
+											gx: gx + 1;
 										});
 									});
-									gx: gx + 1;
+									gy: gy + 1;
 								});
 							});
-							gy: gy + 1;
 						});
+
+						xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
+						prevCp: cp;
+						prevH: gHandle;
 					});
 				});
-
-				xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
-				prevCp: cp;
-				prevH: gHandle;
 			});
 		});
 		return true;

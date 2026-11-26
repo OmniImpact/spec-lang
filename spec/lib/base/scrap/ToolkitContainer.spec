@@ -68,6 +68,7 @@ Class of SewNode is ToolkitContainer{
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
 	Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){};
 	Function is onDispose: local Function(){};
+	Function of Boolean is onAppKey: local Function of Boolean(Int is key, Int is mods){ false };
 
 	replace Function is init(
 		TextEmitter is title: TextEmitter(initial: 'Suit'),
@@ -91,7 +92,8 @@ Class of SewNode is ToolkitContainer{
 		ContextMenu is contextMenu: ContextMenu(),
 		Function is onInitVulkan: local Function(VulkanSurface is s){},
 		Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){},
-		Function is onDispose: local Function(){}
+		Function is onDispose: local Function(){},
+		Function of Boolean is onKey: local Function of Boolean(Int is key, Int is mods){ false }
 	){
 		:title: title;
 		:running: running;
@@ -118,6 +120,7 @@ Class of SewNode is ToolkitContainer{
 		:onInitVulkan: onInitVulkan;
 		:onFrame: onFrame;
 		:onDispose: onDispose;
+		:onAppKey: onKey;
 		:applyTheme(theme: theme);
 	}
 
@@ -366,10 +369,14 @@ Class of SewNode is ToolkitContainer{
 						running:emit(value: false);
 					});
 				}, {
-					if({ hasBody && !useVulkan }, {
-						if({ bodyPanel:onKey(key: key, mods: curMods) }, {
-							:isDirty: true;
-						}, {
+					local Function of Boolean is appKeyFn: onAppKey;
+					if({ appKeyFn(key, curMods) }, {
+						:isDirty: true;
+					}, {
+						if({ hasBody && !useVulkan }, {
+							if({ bodyPanel:onKey(key: key, mods: curMods) }, {
+								:isDirty: true;
+							}, {
 							if({ key == 1001 }, {
 								if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
 							});
@@ -389,6 +396,7 @@ Class of SewNode is ToolkitContainer{
 								if({ bodyPanel:onScroll(deltaY: 80) }, { :isDirty: true; });
 							});
 						});
+					});
 					});
 				});
 				key: win:nextKey();
