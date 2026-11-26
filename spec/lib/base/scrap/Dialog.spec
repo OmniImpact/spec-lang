@@ -30,6 +30,7 @@ Class is Dialog{
 
 	SuitWindow is win: SuitWindow();
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
+	DrawContext is paintCtx: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 	Boolean is isShown: false;
 	Boolean is isDirty: false;
 	SignalBag is signalBag: SignalBag();
@@ -75,7 +76,8 @@ Class is Dialog{
 		local Int is h: win:height();
 		if({ w <= 0 || h <= 0 }, { return; });
 		canvas:resize(width: w, height: h);
-		local DrawContext is ctx: DrawContext(canvas: canvas);
+		paintCtx:canvas: canvas;
+		local DrawContext is ctx: paintCtx;
 		ctx:fillRect(x: 0, y: 0, w: w, h: h, color: theme:windowBg);
 		if({ hasContent }, {
 			content:applyTheme(theme: theme);

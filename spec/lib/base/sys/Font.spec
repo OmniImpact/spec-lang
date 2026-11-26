@@ -13,7 +13,11 @@ Class is Font{
 		['base', 'sysinternal', Font]
 	];
 
+	held Array of Int is cachedState: Array([-1, 0]);
+	held Array of Int is cachedFallbackHandles: Array();
+
 	Int is handle: -1;
+	Boolean is ownsHandle: true;
 	Float is letterSpacing: 0.045;
 	Float is weightBoost: 0.35;
 	Int is metricsAddr: 0;
@@ -60,6 +64,7 @@ Class is Font{
 		if({ handle > 0 }, { close(); });
 		if({ dataAddr == 0 || byteLen <= 0 }, { return false; });
 		handle: base:sysinternal:Font:pal_font_init_memory(data_ptr: dataAddr, data_len: byteLen);
+		ownsHandle: true;
 		return handle > 0;
 	}
 
@@ -75,8 +80,17 @@ Class is Font{
 		return :loadMemory(dataAddr: :cstrAddr(s: bytes), byteLen: bytes:length());
 	}
 
-	## Resolves and loads the OS default sans-serif TrueType font.
+	## Resolves and loads the OS default sans-serif TrueType font (cached process-wide).
 	Function of Boolean is loadDefault(){
+		local Int is cached: Font:cachedState:get(index: 0);
+		if({ cached > 0 }, {
+			if({ handle > 0 && ownsHandle }, {
+				base:sysinternal:Font:pal_font_close(handle: handle);
+			});
+			handle: cached;
+			ownsHandle: false;
+			return true;
+		});
 		local Int is pathBuf: Mem:alloc(bytes: 512);
 		local Int is pathLen: base:sysinternal:Font:pal_font_default_path(out_buf: pathBuf, out_cap: 512);
 		local String is resolved: '';
@@ -85,9 +99,11 @@ Class is Font{
 		});
 		Mem:free(ptr: pathBuf);
 		if({ resolved != '' && :load(path: resolved) }, {
+			Font:cachedState:set(index: 0, item: handle);
+			ownsHandle: false;
 			return true;
 		});
-		local Array of String is fallbacks: Array([
+		local Array of String is fallbacksList: Array([
 			'/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
 			'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
 			'/usr/share/fonts/TTF/DejaVuSans.ttf',
@@ -95,9 +111,11 @@ Class is Font{
 			'/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf'
 		]);
 		local Int is i: 0;
-		while({ i < fallbacks:length() }, {
-			local String is p: fallbacks:get(index: i);
+		while({ i < fallbacksList:length() }, {
+			local String is p: fallbacksList:get(index: i);
 			if({ fileExists(path: p) && :load(path: p) }, {
+				Font:cachedState:set(index: 0, item: handle);
+				ownsHandle: false;
 				return true;
 			});
 			i: i + 1;
@@ -149,7 +167,12 @@ Class is Font{
 	}
 
 	local Function is ensureFallbacks(){
-		if({ fallbacksLoaded || isFallbackFont }, { return; });
+		if({ isFallbackFont }, { return; });
+		if({ Font:cachedState:get(index: 1) != 0 }, {
+			fallbacksLoaded: true;
+			return;
+		});
+		Font:cachedState:set(index: 1, item: 1);
 		fallbacksLoaded: true;
 		local Array of String is paths: Array([
 			'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
@@ -163,10 +186,17 @@ Class is Font{
 		while({ i < paths:length() }, {
 			local String is p: paths:get(index: i);
 			if({ fileExists(path: p) }, {
-				local Font is fb: Font();
-				fb:isFallbackFont: true;
-				if({ fb:load(path: p) }, {
-					fallbacks:add(item: fb);
+				local String is bytes: fileRead(
+					path: p,
+					onSuccess: local Function(String is _s){},
+					onError: local Function(Any is _e){},
+					default: ''
+				);
+				if({ bytes:length() > 0 }, {
+					local Int is fh: base:sysinternal:Font:pal_font_init_memory(data_ptr: :cstrAddr(s: bytes), data_len: bytes:length());
+					if({ fh > 0 }, {
+						Font:cachedFallbackHandles:add(item: fh);
+					});
 				});
 			});
 			i: i + 1;
@@ -175,12 +205,20 @@ Class is Font{
 
 	local Function of Int is resolveHandleFor(Int is cp){
 		if({ cp < 128 || :hasGlyph(cp: cp) }, { return handle; });
-		:ensureFallbacks();
 		local Int is i: 0;
 		while({ i < fallbacks:length() }, {
 			local Font is fb: fallbacks:get(index: i);
 			if({ fb:hasGlyph(cp: cp) }, {
 				return fb:handle;
+			});
+			i: i + 1;
+		});
+		:ensureFallbacks();
+		i: 0;
+		while({ i < Font:cachedFallbackHandles:length() }, {
+			local Int is fh: Font:cachedFallbackHandles:get(index: i);
+			if({ base:sysinternal:Font:pal_font_has_glyph(handle: fh, cp: cp) != 0 }, {
+				return fh;
 			});
 			i: i + 1;
 		});
@@ -217,7 +255,7 @@ Class is Font{
 		return math:toInt(value: math:round(value: xpos));
 	}
 
-	## Releases the underlying font handle, fallback fonts, and cached scratch buffers.
+	## Releases the underlying font handle (if owned), custom fallback fonts, and cached scratch buffers.
 	Function is close(){
 		local Int is i: 0;
 		while({ i < fallbacks:length() }, {
@@ -227,8 +265,11 @@ Class is Font{
 		fallbacks: Array();
 		fallbacksLoaded: false;
 		if({ handle > 0 }, {
-			base:sysinternal:Font:pal_font_close(handle: handle);
+			if({ ownsHandle }, {
+				base:sysinternal:Font:pal_font_close(handle: handle);
+			});
 			handle: -1;
+			ownsHandle: true;
 		});
 		if({ metricsAddr != 0 }, {
 			Mem:free(ptr: metricsAddr);
@@ -239,6 +280,10 @@ Class is Font{
 			scratchAddr: 0;
 			scratchCap: 0;
 		});
+	}
+
+	Function is destroy(){
+		:close();
 	}
 
 	## Alpha-blends UTF-8 [text] at ([x], [y]) into an ARGB8888 buffer at [pixelsAddr].

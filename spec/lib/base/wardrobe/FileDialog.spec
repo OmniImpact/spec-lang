@@ -33,6 +33,7 @@ Class is FileDialog{
 
 	SuitWindow is win: SuitWindow();
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
+	DrawContext is paintCtx: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 	Time is clock: Time();
 	Boolean is isShown: false;
 	Boolean is isDirty: false;
@@ -237,7 +238,8 @@ Class is FileDialog{
 		local Int is h: win:height();
 		if({ w <= 0 || h <= 0 }, { return; });
 		canvas:resize(width: w, height: h);
-		local DrawContext is ctx: DrawContext(canvas: canvas);
+		paintCtx:canvas: canvas;
+		local DrawContext is ctx: paintCtx;
 
 		local Int is headerH: scale:px(pt: 32.0);
 		local Int is footerH: scale:px(pt: 44.0);

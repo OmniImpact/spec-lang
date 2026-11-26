@@ -102,4 +102,8 @@ Class is SuitCanvas{
 			byteSize: 0;
 		});
 	}
+
+	Function is destroy(){
+		:dispose();
+	}
 }
