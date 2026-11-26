@@ -13,7 +13,9 @@ Class of SewNode is Padding{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
-		['base', 'sew', Scale]
+		['base', 'sew', Scale],
+		['base', 'sew', SuitUnit],
+		['base', 'sew', Pt]
 	];
 
 	Int is top: 0;
@@ -21,6 +23,8 @@ Class of SewNode is Padding{
 	Int is bottom: 0;
 	Int is left: 0;
 	Float is padPt: 0.0;
+	SuitUnit is pad: Pt(value: 0.0);
+	Boolean is hasUnitPad: false;
 	Boolean is useThemePad: false;
 	Float is padScale: 1.0;
 	SewNode is child: SewNode();
@@ -33,6 +37,8 @@ Class of SewNode is Padding{
 		Int is bottom: 0,
 		Int is left: 0,
 		Float is padPt: 0.0,
+		SuitUnit is pad: Pt(value: 0.0),
+		Boolean is hasUnitPad: false,
 		Boolean is useThemePad: false,
 		Float is padScale: 1.0,
 		Boolean is shrinkToChild: true
@@ -43,31 +49,37 @@ Class of SewNode is Padding{
 		:bottom: bottom;
 		:left: left;
 		:padPt: padPt;
+		:pad: pad;
+		:hasUnitPad: hasUnitPad;
 		:useThemePad: useThemePad;
 		:padScale: padScale;
 		:shrinkToChild: shrinkToChild;
 	}
 
 	local Function of Int is effTop(){
-		if({ useThemePad }, { return activeScale:px(pt: activeTheme:paddingPt * padScale); });
+		if({ useThemePad }, { return activeScale:px(pt: activeTheme:padPt(pct: padScale)); });
+		if({ hasUnitPad }, { return :unitPx(unit: pad); });
 		if({ padPt > 0.0 }, { return activeScale:px(pt: padPt); });
 		return top;
 	}
 
 	local Function of Int is effRight(){
-		if({ useThemePad }, { return activeScale:px(pt: activeTheme:paddingPt * padScale); });
+		if({ useThemePad }, { return activeScale:px(pt: activeTheme:padPt(pct: padScale)); });
+		if({ hasUnitPad }, { return :unitPx(unit: pad); });
 		if({ padPt > 0.0 }, { return activeScale:px(pt: padPt); });
 		return right;
 	}
 
 	local Function of Int is effBottom(){
-		if({ useThemePad }, { return activeScale:px(pt: activeTheme:paddingPt * padScale); });
+		if({ useThemePad }, { return activeScale:px(pt: activeTheme:padPt(pct: padScale)); });
+		if({ hasUnitPad }, { return :unitPx(unit: pad); });
 		if({ padPt > 0.0 }, { return activeScale:px(pt: padPt); });
 		return bottom;
 	}
 
 	local Function of Int is effLeft(){
-		if({ useThemePad }, { return activeScale:px(pt: activeTheme:paddingPt * padScale); });
+		if({ useThemePad }, { return activeScale:px(pt: activeTheme:padPt(pct: padScale)); });
+		if({ hasUnitPad }, { return :unitPx(unit: pad); });
 		if({ padPt > 0.0 }, { return activeScale:px(pt: padPt); });
 		return left;
 	}

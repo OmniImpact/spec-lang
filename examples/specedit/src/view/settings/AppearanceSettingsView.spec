@@ -121,16 +121,16 @@ Class is AppearanceSettingsView{
 		:sync();
 
 		return Column(
-			gapPt: 10.0,
+			gapPt: 6.0,
 			children: Array([
 				Row(
-					gapPt: 12.0,
+					gapPt: 8.0,
 					children: Array([
 						Label(text: 'Appearance', heading: true),
 						ScrapButton(
 							label: 'Reset All',
-							minWidthPt: 72.0,
-							heightPt: 24.0,
+							minWidthPt: 64.0,
+							heightPt: 20.0,
 							onClick: local Function(){ vm:resetAppearance(); }
 						)
 					])
@@ -142,7 +142,7 @@ Class is AppearanceSettingsView{
 				Frame(
 					title: 'Text Size',
 					child: Column(
-						gapPt: 6.0,
+						gapPt: 4.0,
 						children: Array([
 							Label(text: 'Document Text Size (relative to default)', muted: true),
 							docSizeRow,

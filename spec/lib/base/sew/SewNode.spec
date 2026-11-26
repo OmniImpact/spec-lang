@@ -13,7 +13,8 @@ Class is SewNode{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
-		['base', 'sew', Scale]
+		['base', 'sew', Scale],
+		['base', 'sew', SuitUnit]
 	];
 
 	Rect is layoutBounds: Rect();
@@ -32,6 +33,16 @@ Class is SewNode{
 	## Propagates point [scale] down the widget tree.
 	Function is setScale(Scale is scale){
 		:activeScale: scale;
+	}
+
+	## Returns current typographic 1em size in physical pixels.
+	Function of Float is emPx(){
+		return activeScale:px(pt: activeTheme:baseTextPt) as Float;
+	}
+
+	## Converts a [SuitUnit] ([Pt] or [Em]) to physical pixels using current scale and theme.
+	Function of Int is unitPx(SuitUnit is unit){
+		return unit:toPx(scale: activeScale, emPx: :emPx());
 	}
 
 	## Paints this node into [ctx].

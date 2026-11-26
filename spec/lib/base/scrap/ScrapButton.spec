@@ -10,6 +10,8 @@ Class of SewNode is ScrapButton{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'sew', SuitUnit],
+		['base', 'sew', Pt],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext]
 	];
@@ -18,6 +20,10 @@ Class of SewNode is ScrapButton{
 	Function is onClick: local Function(){};
 	Float is minWidthPt: 60.0;
 	Float is heightPt: 22.0;
+	SuitUnit is widthUnit: Pt(value: 0.0);
+	SuitUnit is heightUnit: Pt(value: 0.0);
+	Boolean is hasWidthUnit: false;
+	Boolean is hasHeightUnit: false;
 	Float is padXPt: 0.0;
 	Boolean is selected: false;
 	Boolean is enabled: true;
@@ -28,6 +34,10 @@ Class of SewNode is ScrapButton{
 		Function is onClick: local Function(){},
 		Float is minWidthPt: 60.0,
 		Float is heightPt: 22.0,
+		SuitUnit is width: Pt(value: 0.0),
+		SuitUnit is height: Pt(value: 0.0),
+		Boolean is hasWidth: false,
+		Boolean is hasHeight: false,
 		Float is padXPt: 0.0,
 		Boolean is selected: false,
 		Boolean is enabled: true
@@ -36,6 +46,10 @@ Class of SewNode is ScrapButton{
 		:onClick: onClick;
 		:minWidthPt: minWidthPt;
 		:heightPt: heightPt;
+		:widthUnit: width;
+		:heightUnit: height;
+		:hasWidthUnit: hasWidth;
+		:hasHeightUnit: hasHeight;
 		:padXPt: padXPt;
 		:selected: selected;
 		:enabled: enabled;
@@ -76,11 +90,11 @@ Class of SewNode is ScrapButton{
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
 		local Int is tw: DrawContext:measureWidth(text: label, pixelHeight: fpx);
-		local Float is pxPt: if({ padXPt > 0.0 }, { padXPt }, { activeTheme:paddingPt * 1.5 });
+		local Float is pxPt: if({ padXPt > 0.0 }, { padXPt }, { activeTheme:padPt(pct: 1.5) });
 		local Int is padPx: activeScale:px(pt: pxPt * 2.0);
-		local Int is minW: activeScale:px(pt: minWidthPt);
+		local Int is minW: if({ hasWidthUnit }, { :unitPx(unit: widthUnit) }, { activeScale:px(pt: minWidthPt) });
 		local Int is w: if({ tw + padPx > minW }, { tw + padPx }, { minW });
-		local Int is h: activeScale:px(pt: heightPt);
+		local Int is h: if({ hasHeightUnit }, { :unitPx(unit: heightUnit) }, { activeScale:px(pt: heightPt) });
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
 	}

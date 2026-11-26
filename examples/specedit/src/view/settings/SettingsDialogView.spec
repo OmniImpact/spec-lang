@@ -86,7 +86,7 @@ Class of Dialog is SettingsDialogView{
 		]);
 
 		local Column is sidebar: Column(
-			gapPt: 8.0,
+			gapPt: 5.0,
 			children: Array([
 				categoryBtns:get(index: 0),
 				categoryBtns:get(index: 1),
@@ -95,7 +95,7 @@ Class of Dialog is SettingsDialogView{
 		);
 
 		local Row is bodyRow: Row(
-			gapPt: 14.0,
+			gapPt: 10.0,
 			children: Array([
 				sidebar,
 				navStack
@@ -104,7 +104,7 @@ Class of Dialog is SettingsDialogView{
 		);
 
 		local Row is footerRow: Row(
-			gapPt: 8.0,
+			gapPt: 6.0,
 			children: Array([
 				ScrapButton(
 					label: 'Close',
@@ -116,7 +116,7 @@ Class of Dialog is SettingsDialogView{
 		);
 
 		local Column is root: Column(
-			gapPt: 10.0,
+			gapPt: 8.0,
 			children: Array([
 				bodyRow,
 				footerRow
@@ -124,7 +124,7 @@ Class of Dialog is SettingsDialogView{
 			flexFlags: Array([true, false])
 		);
 
-		return Padding(useThemePad: true, padScale: 2.0, child: root);
+		return Padding(useThemePad: true, padScale: 1.5, child: root);
 	}
 
 	Function is sync(){

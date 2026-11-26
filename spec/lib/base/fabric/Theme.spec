@@ -48,14 +48,15 @@ Class is Theme{
 	Int is synHeading: 0;
 	Float is toolbarHeightPt: 22.0;
 	Float is menuItemHeightPt: 20.0;
-	Float is paddingPt: 4.5;
+	Float is basePaddingPt: 4.0;
+	Float is paddingPt: 4.0;
 	Float is sectionPaddingPt: 6.0;
-	Float is dialogPaddingPt: 9.0;
+	Float is dialogPaddingPt: 8.0;
 	Float is borderThicknessPt: 1.0;
 	Float is lineThicknessPt: 1.0;
 	String is borderStyle: 'solid';
 	Float is uiScaleFactor: 1.0;
-	Float is baseTextPt: 10.0;
+	Float is baseTextPt: 12.0;
 
 	replace Function is init(String is preset: 'dark'){
 		:applyPreset(preset: Theme:presetFromString(name: preset));
@@ -88,7 +89,7 @@ Class is Theme{
 		);
 	}
 
-	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 10.0){
+	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 12.0){
 		local Theme is t: Theme();
 		t:setBaseTextPt(pt: baseTextPt);
 		t:applyPreset(preset: preset);
@@ -139,6 +140,11 @@ Class is Theme{
 	Function of Float is scaledTextPt(Float is defaultPt){
 		local Float is v: defaultPt * (baseTextPt / 14.0);
 		return if({ v < 7.0 }, { 7.0 }, { v });
+	}
+
+	## Context-sensitive padding in points, computed as [pct] of [basePaddingPt] (e.g. 0.5 = 50%, 1.0 = 100%, 1.5 = 150%).
+	Function of Float is padPt(Float is pct: 1.0){
+		return basePaddingPt * pct;
 	}
 
 	Function is applyPreset(ThemePreset is preset){
@@ -213,10 +219,11 @@ Class is Theme{
 		positiveColor: positive:toArgb();
 		negativeColor: negative:toArgb();
 
-		paddingPt: 4.5 * (baseTextPt / 10.0);
-		sectionPaddingPt: paddingPt * 1.35;
-		dialogPaddingPt: paddingPt * 2.0;
-		local Float is baseBorder: 1.0 * (baseTextPt / 10.0);
+		basePaddingPt: 4.0 * (baseTextPt / 12.0);
+		paddingPt: basePaddingPt;
+		sectionPaddingPt: basePaddingPt * 1.5;
+		dialogPaddingPt: basePaddingPt * 2.0;
+		local Float is baseBorder: 1.0 * (baseTextPt / 12.0);
 		if({ borderStyle == 'none' }, {
 			borderThicknessPt: 0.0;
 		}, {

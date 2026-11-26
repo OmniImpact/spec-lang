@@ -47,7 +47,7 @@ Class is LocationsSettingsView{
 		);
 
 		return Column(
-			gapPt: 10.0,
+			gapPt: 6.0,
 			children: Array([
 				Label(text: 'Locations', heading: true),
 				actionsRow,

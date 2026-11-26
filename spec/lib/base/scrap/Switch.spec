@@ -31,9 +31,9 @@ Class of SewNode is Switch{
 	}
 
 	local Function of Int is trackHeightPx(){
-		local Float is hPt: activeTheme:scaledTextPt(defaultPt: 14.0) + activeTheme:paddingPt * 0.75;
+		local Float is hPt: activeTheme:scaledTextPt(defaultPt: 14.0) + activeTheme:padPt(pct: 1.0);
 		local Int is px: activeScale:px(pt: hPt);
-		return if({ px < 16 }, { 16 }, { px });
+		return if({ px < 14 }, { 14 }, { px });
 	}
 
 	local Function of Boolean is contains(Int is x, Int is y){
@@ -59,7 +59,7 @@ Class of SewNode is Switch{
 			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: borderCol, thickness: bw);
 		});
 
-		local Int is pad: activeScale:px(pt: activeTheme:paddingPt * 0.35);
+		local Int is pad: activeScale:px(pt: activeTheme:padPt(pct: 0.5));
 		local Int is minPad: bw + 1;
 		if({ pad < minPad }, { pad: minPad; });
 		local Int is sq: b:height - pad * 2;

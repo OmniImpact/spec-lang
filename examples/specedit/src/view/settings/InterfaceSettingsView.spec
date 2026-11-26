@@ -39,30 +39,30 @@ Class is InterfaceSettingsView{
 		);
 
 		return Column(
-			gapPt: 12.0,
+			gapPt: 6.0,
 			children: Array([
 				Label(text: 'Interface', heading: true),
 				Frame(
 					title: 'Startup Defaults',
 					child: Column(
-						gapPt: 10.0,
+						gapPt: 6.0,
 						children: Array([
 							Row(
-								gapPt: 10.0,
+								gapPt: 8.0,
 								children: Array([
 									monoSwitch,
 									Label(text: 'Default Monospace Font')
 								])
 							),
 							Row(
-								gapPt: 10.0,
+								gapPt: 8.0,
 								children: Array([
 									wrapSwitch,
 									Label(text: 'Default Word Wrap')
 								])
 							),
 							Row(
-								gapPt: 10.0,
+								gapPt: 8.0,
 								children: Array([
 									treeSwitch,
 									Label(text: 'Show File Tree by Default')
