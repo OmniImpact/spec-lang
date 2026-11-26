@@ -122,6 +122,10 @@ Class is TypeChecker{
 	local String is currentClassName: '';
 	local String is currentImportMapFor: '';
 	local Map of String to String is currentImportMap: Map:init();
+	local Map of String to ClassInfo is classByQual: Map:init();
+	local Map of String to ClassInfo is classByBare: Map:init();
+	local Map of String to ClassInfo is classByFloor: Map:init();
+	local Map of String to ClassInfo is classByNested: Map:init();
 	local ClassInfo is currentClassDef: ClassInfo(name: '', baseClass: '', members: []);
 
 	## Source file of the class currently being analyzed.
@@ -605,92 +609,77 @@ Class is TypeChecker{
 		return :currentImportMap:getString(key: bareName, default: '');
 	}
 
+	Function is rebuildClassIndex(){
+		:classByQual: Map:init();
+		:classByBare: Map:init();
+		:classByFloor: Map:init();
+		:classByNested: Map:init();
+		local Int is count: :programClasses:length();
+		local Int is i: 0;
+		while({ i < count }, {
+			local ClassInfo is c: :programClasses:get(index: i);
+			local String is q: c:namespaceJoined() . ':' . c:name;
+			if({ !:classByQual:has(key: q) }, {
+				:classByQual:set(key: q, value: c);
+			});
+			local String is nq: c:qualifiedName();
+			if({ nq != c:name && !:classByNested:has(key: nq) }, {
+				:classByNested:set(key: nq, value: c);
+			});
+			local Array of String is cSegs: c:namespaceSegments();
+			local Boolean is isFloor: cSegs:length() > 0 && cSegs:get(index: cSegs:length() - 1) == 'sysinternal';
+			if({ !isFloor }, {
+				if({ !:classByBare:has(key: c:name) }, {
+					:classByBare:set(key: c:name, value: c);
+				});
+			}, {
+				if({ !:classByFloor:has(key: c:name) }, {
+					:classByFloor:set(key: c:name, value: c);
+				});
+			});
+			i++;
+		});
+	}
+
 	## Finds a class descriptor by name.
 	##
 	## @param name: Target class name.
 	## @return: The descriptor, or an unnamed one when absent.
 	Function of ClassInfo is findClass(String is name){
-		local ClassInfo is res: ClassInfo(name: '', baseClass: '', members: []);
-		local Boolean is found: false;
-		local Int is count: :programClasses:length();
+		local ClassInfo is emptyRes: ClassInfo(name: '', baseClass: '', members: []);
 		local Boolean is hasColon: name:contains(needle: ':');
-		if({ !hasColon && :currentClassDef:name != '' }, {
+		if({ hasColon }, {
+			if({ :classByQual:has(key: name) }, {
+				return :classByQual:get(key: name, default: emptyRes);
+			});
+			if({ :classByNested:has(key: name) }, {
+				return :classByNested:get(key: name, default: emptyRes);
+			});
+			return emptyRes;
+		});
+		if({ :currentClassDef:name != '' }, {
 			if({ :currentClassDef:name == name }, {
 				return :currentClassDef;
 			});
 			local String is impQ: :currentImportQualified(bareName: name);
-			if({ impQ != '' && !impQ:contains(needle: 'sysinternal:') }, {
-				local Int is ii: 0;
-				while({ ii < count }, {
-					local ClassInfo is ic: :programClasses:get(index: ii);
-					if({ ic:namespaceJoined() . ':' . ic:name == impQ }, {
-						return ic;
-					});
-					ii++;
-				});
+			if({ impQ != '' && !impQ:contains(needle: 'sysinternal:') && :classByQual:has(key: impQ) }, {
+				return :classByQual:get(key: impQ, default: emptyRes);
 			});
 			local String is curNs: :currentClassDef:namespaceJoined();
 			if({ curNs != '' && !curNs:endsWith(suffix: 'sysinternal') }, {
-				local Int is si: 0;
-				while({ si < count }, {
-					local ClassInfo is sc: :programClasses:get(index: si);
-					if({ sc:name == name && sc:namespaceJoined() == curNs }, {
-						return sc;
-					});
-					si++;
+				local String is sameQ: curNs . ':' . name;
+				if({ :classByQual:has(key: sameQ) }, {
+					return :classByQual:get(key: sameQ, default: emptyRes);
 				});
 			});
 		});
-		local ClassInfo is floorCand: ClassInfo(name: '', baseClass: '', members: []);
-		while(
-			[Int is idx: 0],
-			{ !found && idx < count },
-			{
-				local ClassInfo is cand: :programClasses:get(index: idx);
-				idx++;
-				if({ hasColon }, {
-					local String is candQ: cand:namespaceJoined() . ':' . cand:name;
-					if({ candQ == name }, {
-						res: cand;
-						found: true;
-					});
-				}, {
-					if({ cand:name == name }, {
-						local Array of String is cSegs: cand:namespaceSegments();
-						local Boolean is isFloor: cSegs:length() > 0 && cSegs:get(index: cSegs:length() - 1) == 'sysinternal';
-						if({ !isFloor }, {
-							res: cand;
-							found: true;
-						}, {
-							if({ floorCand:name == '' }, {
-								floorCand: cand;
-							});
-						});
-					});
-				});
-			}
-		);
-		if({ found }, {
-			return res;
+		if({ :classByBare:has(key: name) }, {
+			return :classByBare:get(key: name, default: emptyRes);
 		});
-		if({ !hasColon && floorCand:name != '' }, {
-			return floorCand;
+		if({ :classByFloor:has(key: name) }, {
+			return :classByFloor:get(key: name, default: emptyRes);
 		});
-		if({ hasColon }, {
-			local ClassInfo is qMatch: ClassInfo(name: '', baseClass: '', members: []);
-			local Int is pci: 0;
-			while({ qMatch:name == '' && pci < :programClasses:length() }, {
-				local ClassInfo is c: :programClasses:get(index: pci);
-				if({ c:qualifiedName() == name }, {
-					qMatch: c;
-				});
-				pci++;
-			});
-			if({ qMatch:name != '' }, {
-				return qMatch;
-			});
-		});
-		return res;
+		return emptyRes;
 	}
 
 	## True when [subName] inherits from [baseName] (transitively).
@@ -7223,6 +7212,7 @@ Class is TypeChecker{
 	## into a parallel Pass 2 worker instance.
 	Function is shareFrozenTables([ClassInfo] is progClasses, Map of String to String is regClasses, Map of String to String is enumNames, Map of String to String is enumVariants, Map of String to String is strEnums){
 		:programClasses: progClasses;
+		:rebuildClassIndex();
 		:registeredClasses: regClasses;
 		:allEnumNames: enumNames;
 		:allEnumVariants: enumVariants;
@@ -7302,6 +7292,7 @@ Class is TypeChecker{
 			fi++;
 		});
 		:programClasses: flattened;
+		:rebuildClassIndex();
 
 		:registeredClasses: Map();
 		:allEnumNames: Map();

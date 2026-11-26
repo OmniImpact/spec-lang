@@ -642,6 +642,369 @@ Class is IrBuilder{
 		});
 	}
 
+	local Function of Boolean is reachInheritsFrom(String is sname, String is ancestor, Map of String to [String] is parentsOf, Map of String to Boolean is visited){
+		if({ sname == ancestor }, { return true; });
+		if({ visited:has(key: sname) }, { return false; });
+		visited:set(key: sname, value: true);
+		local [String] is ps: parentsOf:get(key: sname, default: []);
+		local Int is pi: 0;
+		while({ pi < ps:length() }, {
+			if({ :reachInheritsFrom(sname: ps:get(index: pi), ancestor: ancestor, parentsOf: parentsOf, visited: visited) }, {
+				return true;
+			});
+			pi++;
+		});
+		return false;
+	}
+
+	local Function is enqueueReachKey(String is cmKey, Map of String to Boolean is seenKeys, [String] is queue){
+		if({ !seenKeys:has(key: cmKey) }, {
+			seenKeys:set(key: cmKey, value: true);
+			queue:push(item: cmKey);
+		});
+	}
+
+	local Function is markMethodUp(String is sname, String is mname, Map of String to [String] is parentsOf, Map of String to Int is headByKey, Map of String to Boolean is seenKeys, [String] is queue, Map of String to Boolean is vis){
+		if({ sname == '' || vis:has(key: sname) }, { return; });
+		vis:set(key: sname, value: true);
+		local String is k: sname . ':' . mname;
+		if({ headByKey:has(key: k) }, {
+			:enqueueReachKey(cmKey: k, seenKeys: seenKeys, queue: queue);
+		});
+		local [String] is ps: parentsOf:get(key: sname, default: []);
+		local Int is pi: 0;
+		while({ pi < ps:length() }, {
+			:markMethodUp(sname: ps:get(index: pi), mname: mname, parentsOf: parentsOf, headByKey: headByKey, seenKeys: seenKeys, queue: queue, vis: vis);
+			pi++;
+		});
+	}
+
+	local Function is markMethodDown(String is sname, String is mname, Map of String to [String] is childrenOf, Map of String to Int is headByKey, Map of String to Boolean is seenKeys, [String] is queue, Map of String to Boolean is vis){
+		if({ sname == '' || vis:has(key: sname) }, { return; });
+		vis:set(key: sname, value: true);
+		local String is k: sname . ':' . mname;
+		if({ headByKey:has(key: k) }, {
+			:enqueueReachKey(cmKey: k, seenKeys: seenKeys, queue: queue);
+		});
+		local [String] is cs: childrenOf:get(key: sname, default: []);
+		local Int is ci: 0;
+		while({ ci < cs:length() }, {
+			:markMethodDown(sname: cs:get(index: ci), mname: mname, childrenOf: childrenOf, headByKey: headByKey, seenKeys: seenKeys, queue: queue, vis: vis);
+			ci++;
+		});
+	}
+
+	local Function is markClassMethodHierarchy(String is sname, String is mname, Map of String to [String] is parentsOf, Map of String to [String] is childrenOf, Map of String to Int is headByKey, Map of String to [String] is ownersByName, Map of String to Boolean is seenKeys, [String] is queue){
+		if({ mname == '' }, { return; });
+		if({ sname != '' }, {
+			:markMethodUp(sname: sname, mname: mname, parentsOf: parentsOf, headByKey: headByKey, seenKeys: seenKeys, queue: queue, vis: Map:init());
+			:markMethodDown(sname: sname, mname: mname, childrenOf: childrenOf, headByKey: headByKey, seenKeys: seenKeys, queue: queue, vis: Map:init());
+			return;
+		});
+		local [String] is owners: ownersByName:get(key: mname, default: []);
+		local Int is oi: 0;
+		while({ oi < owners:length() }, {
+			:enqueueReachKey(cmKey: owners:get(index: oi) . ':' . mname, seenKeys: seenKeys, queue: queue);
+			oi++;
+		});
+	}
+
+	local Function of String is resolveReachStruct(String is rawName, Map of String to Boolean is knownStructs){
+		if({ rawName == '' || rawName == 'Any' || rawName == 'Void' }, { return ''; });
+		local String is sn: :cStructName(qname: rawName);
+		if({ knownStructs:has(key: sn) }, { return sn; });
+		if({ :clsQNameMap:has(key: rawName) }, {
+			local String is qn: :cStructName(qname: :clsQNameMap:get(key: rawName, default: ''));
+			if({ knownStructs:has(key: qn) }, { return qn; });
+		});
+		return '';
+	}
+
+	local Function is collectRefsInExpr(Expression is expr, String is curSname, Map of String to Boolean is knownStructs, Map of String to [String] is parentsOf, Map of String to [String] is childrenOf, Map of String to Int is headByKey, Map of String to [String] is ownersByName, Map of String to Boolean is seenKeys, [String] is queue){
+		match(on: expr, when: [
+			Expression:Ident: local Function(String is name){
+				if({ name != '' && name != ':' }, {
+					local String is sn: :resolveReachStruct(rawName: name, knownStructs: knownStructs);
+					if({ sn != '' }, {
+						:markClassMethodHierarchy(sname: sn, mname: 'init', parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+					if({ curSname != '' }, {
+						:markClassMethodHierarchy(sname: curSname, mname: name, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+				});
+			},
+			Expression:Path: local Function([String] is segments){
+				if({ segments:length() >= 2 }, {
+					local String is lastSeg: segments:get(index: segments:length() - 1);
+					local String is prevSeg: segments:get(index: segments:length() - 2);
+					local String is recvSn: :resolveReachStruct(rawName: prevSeg, knownStructs: knownStructs);
+					:markClassMethodHierarchy(sname: recvSn, mname: lastSeg, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
+				local String is tSn: :resolveReachStruct(rawName: target:semType:baseName(), knownStructs: knownStructs);
+				:markClassMethodHierarchy(sname: tSn, mname: fieldName, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				:collectRefsInExpr(expr: target, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+			},
+			Expression:Call: local Function(CallData is call){
+				local String is recvSn: '';
+				if({ call:bareProvider != '' }, {
+					recvSn: :resolveReachStruct(rawName: call:bareProvider, knownStructs: knownStructs);
+				}, {
+					if({ call:isBareCall }, {
+						recvSn: curSname;
+					}, {
+						match(on: call:target, when: [
+							Expression:Ident: local Function(String is tname){
+								if({ tname == ':' }, {
+									recvSn: curSname;
+								}, {
+									recvSn: :resolveReachStruct(rawName: tname, knownStructs: knownStructs);
+								});
+							}
+						], default: {});
+						if({ recvSn == '' && !call:target:semType:isEmpty() && !call:target:semType:isAny() }, {
+							recvSn: :resolveReachStruct(rawName: call:target:semType:baseName(), knownStructs: knownStructs);
+						});
+					});
+				});
+				if({ call:name != '' }, {
+					:markClassMethodHierarchy(sname: recvSn, mname: call:name, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				}, {
+					if({ recvSn != '' }, {
+						:markClassMethodHierarchy(sname: recvSn, mname: 'init', parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+				});
+				:collectRefsInExpr(expr: call:target, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				times(count: call:args:length(), worker: local Function(Int is ai){
+					:collectRefsInExpr(expr: call:args:get(index: ai):value, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+			},
+			Expression:ArrayLit: local Function([Expression] is items){
+				times(count: items:length(), worker: local Function(Int is ii){
+					:collectRefsInExpr(expr: items:get(index: ii), curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+			},
+			Expression:MapLit: local Function([Expression] is keys, [Expression] is values){
+				times(count: keys:length(), worker: local Function(Int is ki){
+					:collectRefsInExpr(expr: keys:get(index: ki), curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+				times(count: values:length(), worker: local Function(Int is vi){
+					:collectRefsInExpr(expr: values:get(index: vi), curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+			},
+			Expression:Cast: local Function(Expression is inner, String is target, [Expression] is args){
+				:collectRefsInExpr(expr: inner, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				times(count: args:length(), worker: local Function(Int is ai){
+					:collectRefsInExpr(expr: args:get(index: ai), curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+			},
+			Expression:Index: local Function(Expression is target, Expression is index){
+				:collectRefsInExpr(expr: target, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				:collectRefsInExpr(expr: index, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+			},
+			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
+				:collectRefsInExpr(expr: left, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				:collectRefsInExpr(expr: right, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+			},
+			Expression:Unary: local Function(String is op, Expression is operand){
+				:collectRefsInExpr(expr: operand, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+			},
+			Expression:AnonFn: local Function(Type is returnType, [Parameter] is params, [Statement] is body){
+				times(count: params:length(), worker: local Function(Int is pi){
+					local Parameter is p: params:get(index: pi);
+					if({ p:hasDefault }, {
+						:collectRefsInExpr(expr: p:defaultValue, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+				});
+				:collectRefsInStmts(stmts: body, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+			},
+			Expression:UsingAs: local Function(String is className, [NamedArg] is args){
+				local String is sn: :resolveReachStruct(rawName: className, knownStructs: knownStructs);
+				if({ sn != '' }, {
+					:markClassMethodHierarchy(sname: sn, mname: 'init', parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+				times(count: args:length(), worker: local Function(Int is ai){
+					:collectRefsInExpr(expr: args:get(index: ai):value, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+			}
+		], default: {});
+	}
+
+	local Function is collectRefsInStmts([Statement] is stmts, String is curSname, Map of String to Boolean is knownStructs, Map of String to [String] is parentsOf, Map of String to [String] is childrenOf, Map of String to Int is headByKey, Map of String to [String] is ownersByName, Map of String to Boolean is seenKeys, [String] is queue){
+		local Int is si: 0;
+		while({ si < stmts:length() }, {
+			match(on: stmts:get(index: si), when: [
+				Statement:VarDecl: local Function([String] is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+					if({ hasInit }, {
+						:collectRefsInExpr(expr: initExpr, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+				},
+				Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
+					:collectRefsInExpr(expr: assignTarget, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					:collectRefsInExpr(expr: assignValue, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				},
+				Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
+					if({ hasReturnExpr }, {
+						:collectRefsInExpr(expr: returnExpr, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+				},
+				Statement:Expr: local Function(Expression is exprStmt){
+					:collectRefsInExpr(expr: exprStmt, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				},
+				Statement:Forward: local Function([NamedArg] is forwardArgs){
+					times(count: forwardArgs:length(), worker: local Function(Int is fi){
+						:collectRefsInExpr(expr: forwardArgs:get(index: fi):value, curSname: curSname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+				}
+			], default: {});
+			si++;
+		});
+	}
+
+	local Function of Boolean is isAlwaysKeepReachClass(String is sname, Boolean is isSysCls){
+		if({ isSysCls }, { return true; });
+		if({ sname == 'Array' || sname == 'Map' || sname == 'List' || sname == 'String' || sname == 'Str' || sname == 'Math' }, { return true; });
+		if({ sname == 'Conditional' || sname == 'Loops' || sname == 'Task' || sname == 'ThreadScope' }, { return true; });
+		if({ sname == 'SpecError' || sname == 'Error' || sname == 'SourceLocation' || sname == 'StackFrame' }, { return true; });
+		if({ sname == 'Print' || sname == 'Stdout' || sname == 'Stderr' || sname == 'CliArgs' }, { return true; });
+		local String is sb: :specBaseMap:get(key: sname, default: '');
+		return sb == 'Array' || sb == 'Map' || sb == 'List';
+	}
+
+	local Function of Map of String to Boolean is computeReachableMethods([ClassInfo] is allClasses, Map of String to ClassInfo is clsMap){
+		local Map of String to Boolean is knownStructs: Map:init();
+		local Map of String to [String] is parentsOf: Map:init();
+		local Map of String to [String] is childrenOf: Map:init();
+		local [Member] is allMethods: [];
+		local [String] is allMethodOwners: [];
+		local [Int] is nextSameKey: [];
+		local Map of String to Int is headByKey: Map:init();
+		local Map of String to [String] is ownersByName: Map:init();
+		local Map of String to Boolean is seenKeys: Map:init();
+		local [String] is queue: [];
+
+		local Int is ci: 0;
+		while({ ci < allClasses:length() }, {
+			local ClassInfo is cls: allClasses:get(index: ci);
+			local String is sname: :cStructName(qname: cls:qualifiedName());
+			knownStructs:set(key: sname, value: true);
+			ci++;
+		});
+
+		ci: 0;
+		while({ ci < allClasses:length() }, {
+			local ClassInfo is cls: allClasses:get(index: ci);
+			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local [String] is ps: [];
+			times(count: cls:baseClasses:length(), worker: local Function(Int is bi){
+				local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: cls:baseClasses:get(index: bi), clsMap: clsMap);
+				local String is bsname: :cStructName(qname: bcls:qualifiedName());
+				if({ bsname != sname && knownStructs:has(key: bsname) }, {
+					ps:push(item: bsname);
+					local [String] is chs: childrenOf:get(key: bsname, default: []);
+					chs:push(item: sname);
+					childrenOf:set(key: bsname, value: chs);
+				});
+			});
+			parentsOf:set(key: sname, value: ps);
+			ci++;
+		});
+
+		ci: 0;
+		while({ ci < allClasses:length() }, {
+			local ClassInfo is cls: allClasses:get(index: ci);
+			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local Int is mi: 0;
+			while({ mi < cls:members:length() }, {
+				local Member is m: cls:members:get(index: mi);
+				if({ m:kind == MemberKind:METHOD }, {
+					local String is cmKey: sname . ':' . m:name;
+					local Int is idx: allMethods:length();
+					allMethods:push(item: m);
+					allMethodOwners:push(item: sname);
+					local Int is prevHead: headByKey:get(key: cmKey, default: -1);
+					nextSameKey:push(item: prevHead);
+					headByKey:set(key: cmKey, value: idx);
+					if({ prevHead < 0 }, {
+						local [String] is ow: ownersByName:get(key: m:name, default: []);
+						ow:push(item: sname);
+						ownersByName:set(key: m:name, value: ow);
+					});
+				});
+				mi++;
+			});
+			ci++;
+		});
+
+		ci: 0;
+		while({ ci < allClasses:length() }, {
+			local ClassInfo is cls: allClasses:get(index: ci);
+			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local Boolean is isSysCls: :bindings:isSysinternal(cls: cls);
+			local Boolean is keepAll: :isAlwaysKeepReachClass(sname: sname, isSysCls: isSysCls);
+			local Map of String to Int is mCountsSeed: Map:init();
+			local Int is mi: 0;
+			while({ mi < cls:members:length() }, {
+				local Member is m: cls:members:get(index: mi);
+				if({ m:kind == MemberKind:FIELD && m:hasInit && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' }, {
+					:collectRefsInExpr(expr: m:initExpr, curSname: sname, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				});
+				if({ m:kind == MemberKind:METHOD }, {
+					local Int is ovSeed: mCountsSeed:get(key: m:name, default: 0);
+					mCountsSeed:set(key: m:name, value: ovSeed + 1);
+					local String is vkeySeed: if({ ovSeed > 0 }, { m:name . '_' . ((ovSeed + 1) as String) }, { m:name });
+					if({ keepAll || m:name == 'init' || m:name == 'destroy' || m:name == 'toString' || m:name == 'SpecErrorHandler' || m:hasModifier(kw: Keyword:REPLACE) || :globalVtableMap:has(key: vkeySeed) }, {
+						:enqueueReachKey(cmKey: sname . ':' . m:name, seenKeys: seenKeys, queue: queue);
+					});
+				});
+				mi++;
+			});
+			ci++;
+		});
+
+		local Int is qHead: 0;
+		local Boolean is introExpanded: false;
+		while({ qHead < queue:length() }, {
+			local String is curKey: queue:get(index: qHead);
+			qHead++;
+			local Int is mIdx: headByKey:get(key: curKey, default: -1);
+			while({ mIdx >= 0 }, {
+				local Member is mm: allMethods:get(index: mIdx);
+				local String is ownerSn: allMethodOwners:get(index: mIdx);
+				times(count: mm:params:length(), worker: local Function(Int is pi){
+					local Parameter is p: mm:params:get(index: pi);
+					if({ p:hasDefault }, {
+						:collectRefsInExpr(expr: p:defaultValue, curSname: ownerSn, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+					});
+				});
+				:collectRefsInStmts(stmts: mm:body, curSname: ownerSn, knownStructs: knownStructs, parentsOf: parentsOf, childrenOf: childrenOf, headByKey: headByKey, ownersByName: ownersByName, seenKeys: seenKeys, queue: queue);
+				mIdx: nextSameKey:get(index: mIdx);
+			});
+			# Structural reflection contract: if Introspection:invokeVoid is reachable,
+			# any non-local zero-parameter Void (or zero-arg Function) method may be invoked dynamically.
+			if({ !introExpanded && qHead == queue:length() && seenKeys:has(key: 'Introspection:invokeVoid') }, {
+				introExpanded: true;
+				local Int is rci: 0;
+				while({ rci < allClasses:length() }, {
+					local ClassInfo is rcls: allClasses:get(index: rci);
+					local String is rsname: :cStructName(qname: rcls:qualifiedName());
+					local Int is rmi: 0;
+					while({ rmi < rcls:members:length() }, {
+						local Member is rm: rcls:members:get(index: rmi);
+						if({ rm:kind == MemberKind:METHOD && !rm:hasModifier(kw: Keyword:LOCAL) && rm:params:length() == 0 && (rm:memberType:name == 'Void' || (rm:memberType:name == 'Function' && rm:memberType:params:length() == 0)) }, {
+							:enqueueReachKey(cmKey: rsname . ':' . rm:name, seenKeys: seenKeys, queue: queue);
+						});
+						rmi++;
+					});
+					rci++;
+				});
+			});
+		});
+
+		return seenKeys;
+	}
+
 	local Function is collectAllClasses(ClassInfo is cls, [ClassInfo] is out){
 		out:push(item: cls);
 		times(count: cls:members:length(), worker: local Function(Int is mi){
@@ -847,6 +1210,7 @@ Class is IrBuilder{
 
 		# 2. Lower methods, construct helpers, and held field __ensure accessors
 		:computeCanUnwind(allClasses: allClasses);
+		local Map of String to Boolean is reachableClassMethods: :computeReachableMethods(allClasses: allClasses, clsMap: clsMap);
 		local Map of String to Boolean is seenFns: Map:init();
 		ci: 0;
 		while({ ci < allClasses:length() }, {
@@ -906,7 +1270,9 @@ Class is IrBuilder{
 					if({ m:name == 'SpecErrorHandler' && ehDispatch }, {
 						fnName: sname . '_' . m:name . '_' . ((ovIdx + 1) as String);
 					});
-					if({ (!isSysCls || m:body:length() > 0) && !seenFns:has(key: fnName) }, {
+					local String is vkeyChk: if({ ovIdx > 0 }, { m:name . '_' . ((ovIdx + 1) as String) }, { m:name });
+					local Boolean is isKeepMethod: :isAlwaysKeepReachClass(sname: sname, isSysCls: isSysCls) || m:name == 'init' || m:name == 'destroy' || m:name == 'toString' || m:name == 'SpecErrorHandler' || :globalVtableMap:has(key: vkeyChk) || reachableClassMethods:has(key: sname . ':' . m:name);
+					if({ isKeepMethod && (!isSysCls || m:body:length() > 0) && !seenFns:has(key: fnName) }, {
 						seenFns:set(key: fnName, value: true);
 						:buildMethod(cls: cls, m: m, fnName: fnName);
 					});
@@ -938,6 +1304,21 @@ Class is IrBuilder{
 		:currentMethod: '';
 		:currentSourceFile: '';
 		:currentLine: 0;
+
+		# Null out reflection method pointers for tree-shaken (unemitted) methods
+		local Int is rsti: 0;
+		while({ rsti < :mod:structs:length() }, {
+			local IrStruct is rstM: :mod:structs:get(index: rsti);
+			local Int is rmi: 0;
+			while({ rmi < rstM:metaMethodFns:length() }, {
+				local String is rfn: rstM:metaMethodFns:get(index: rmi);
+				if({ rfn != 'null' && !seenFns:has(key: rfn) }, {
+					rstM:metaMethodFns:set(index: rmi, item: 'null');
+				});
+				rmi++;
+			});
+			rsti++;
+		});
 
 		# 3. Emit held resolvers, RTTI hierarchy helpers, and main()
 		:buildHeldResolvers();
