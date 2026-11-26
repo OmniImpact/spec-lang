@@ -2664,6 +2664,18 @@ struct spec_libdecor_frame_interface {
 
 static void* _spec_wl_so = NULL;
 static void* _spec_decor_so = NULL;
+static void* _spec_xkb_so = NULL;
+
+static void* (*_xkb_context_new)(int) = NULL;
+static void (*_xkb_context_unref)(void*) = NULL;
+static void* (*_xkb_keymap_new_from_string)(void*, const char*, int, int) = NULL;
+static void (*_xkb_keymap_unref)(void*) = NULL;
+static void* (*_xkb_state_new)(void*) = NULL;
+static void (*_xkb_state_unref)(void*) = NULL;
+static int (*_xkb_state_update_mask)(void*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) = NULL;
+static uint32_t (*_xkb_state_key_get_one_sym)(void*, uint32_t) = NULL;
+static int (*_xkb_state_key_get_utf8)(void*, uint32_t, char*, size_t) = NULL;
+static int (*_xkb_state_mod_name_is_active)(void*, const char*, int) = NULL;
 
 static struct wl_display* (*_wl_display_connect)(const char*) = NULL;
 static void (*_wl_display_disconnect)(struct wl_display*) = NULL;
@@ -2768,6 +2780,23 @@ static const struct spec_wl_interface_def _spec_zxdg_deco_iface_def = {
     "zxdg_toplevel_decoration_v1", 1, 3, _spec_zxdg_deco_reqs, 1, _spec_zxdg_deco_evts
 };
 
+static const struct wl_interface* _spec_wp_cursor_dev_types[2] = { NULL, NULL };
+static const struct spec_wl_message _spec_wp_cursor_mgr_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "get_pointer", "no", _spec_wp_cursor_dev_types },
+    { "get_tablet_tool_v2", "no", _spec_null_types }
+};
+static const struct spec_wl_interface_def _spec_wp_cursor_mgr_iface_def = {
+    "wp_cursor_shape_manager_v1", 1, 3, _spec_wp_cursor_mgr_reqs, 0, NULL
+};
+static const struct spec_wl_message _spec_wp_cursor_dev_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "set_shape", "uu", _spec_null_types }
+};
+static const struct spec_wl_interface_def _spec_wp_cursor_dev_iface_def = {
+    "wp_cursor_shape_device_v1", 1, 2, _spec_wp_cursor_dev_reqs, 0, NULL
+};
+
 static struct libdecor* (*_libdecor_new)(struct wl_display*, struct spec_libdecor_interface*) = NULL;
 static void (*_libdecor_unref)(struct libdecor*) = NULL;
 static struct libdecor_frame* (*_libdecor_decorate)(struct libdecor*, struct wl_surface*, struct spec_libdecor_frame_interface*, void*) = NULL;
@@ -2819,6 +2848,24 @@ static bool _spec_win_init_libs(void) {
     _spec_xdg_toplevel_types[0] = (const struct wl_interface*)&_spec_xdg_toplevel_iface_def;
     _spec_zxdg_deco_types[0] = (const struct wl_interface*)&_spec_zxdg_deco_iface_def;
     _spec_zxdg_deco_types[1] = (const struct wl_interface*)&_spec_xdg_toplevel_iface_def;
+    _spec_wp_cursor_dev_types[0] = (const struct wl_interface*)&_spec_wp_cursor_dev_iface_def;
+    _spec_wp_cursor_dev_types[1] = _wl_pointer_iface;
+
+    if (!_spec_xkb_so) {
+        _spec_xkb_so = dlopen("libxkbcommon.so.0", RTLD_LAZY | RTLD_LOCAL);
+        if (_spec_xkb_so) {
+            _xkb_context_new = dlsym(_spec_xkb_so, "xkb_context_new");
+            _xkb_context_unref = dlsym(_spec_xkb_so, "xkb_context_unref");
+            _xkb_keymap_new_from_string = dlsym(_spec_xkb_so, "xkb_keymap_new_from_string");
+            _xkb_keymap_unref = dlsym(_spec_xkb_so, "xkb_keymap_unref");
+            _xkb_state_new = dlsym(_spec_xkb_so, "xkb_state_new");
+            _xkb_state_unref = dlsym(_spec_xkb_so, "xkb_state_unref");
+            _xkb_state_update_mask = dlsym(_spec_xkb_so, "xkb_state_update_mask");
+            _xkb_state_key_get_one_sym = dlsym(_spec_xkb_so, "xkb_state_key_get_one_sym");
+            _xkb_state_key_get_utf8 = dlsym(_spec_xkb_so, "xkb_state_key_get_utf8");
+            _xkb_state_mod_name_is_active = dlsym(_spec_xkb_so, "xkb_state_mod_name_is_active");
+        }
+    }
 
     if (!_wl_display_connect || !_wl_proxy_marshal_flags || !_wl_surface_iface) {
         _spec_set_win_error("Missing required Wayland symbols");
@@ -2884,6 +2931,16 @@ typedef struct SpecWaylandWindow {
     int click_x;
     int click_y;
     int scroll_y;
+    uint32_t last_ptr_serial;
+    void* cursor_mgr;
+    void* cursor_dev;
+    void* xkb_ctx;
+    void* xkb_keymap;
+    void* xkb_state;
+    int mods;
+    int* char_queue;
+    size_t char_len;
+    size_t char_cap;
     struct wl_shm_pool* shm_pool;
     struct wl_buffer* buffer;
     void* shm_data;
@@ -2938,19 +2995,58 @@ static void _spec_push_key(SpecWaylandWindow* w, int code) {
 
 static int _spec_evdev_to_ascii(uint32_t key) {
     switch (key) {
-        case 1: return 27;   /* KEY_ESC */
-        case 16: return 'q'; /* KEY_Q */
-        case 17: return 'w'; /* KEY_W */
-        case 18: return 'e'; /* KEY_E */
-        case 30: return 'a'; /* KEY_A */
-        case 31: return 's'; /* KEY_S */
-        case 32: return 'd'; /* KEY_D */
+        case 1: return 27;     /* KEY_ESC */
+        case 14: return 8;     /* KEY_BACKSPACE */
+        case 15: return 9;     /* KEY_TAB */
+        case 28: return 13;    /* KEY_ENTER */
+        case 102: return 1005; /* KEY_HOME */
+        case 103: return 1001; /* KEY_UP */
+        case 104: return 1007; /* KEY_PAGEUP */
+        case 105: return 1003; /* KEY_LEFT */
+        case 106: return 1004; /* KEY_RIGHT */
+        case 107: return 1006; /* KEY_END */
+        case 108: return 1002; /* KEY_DOWN */
+        case 109: return 1008; /* KEY_PAGEDOWN */
+        case 111: return 127;  /* KEY_DELETE */
+        case 16: return 'q';
+        case 17: return 'w';
+        case 18: return 'e';
+        case 30: return 'a';
+        case 31: return 's';
+        case 32: return 'd';
         default: return 0;
     }
 }
 
+static void _spec_push_char(SpecWaylandWindow* w, int cp) {
+    if (!w || cp <= 0) return;
+    if (w->char_len >= w->char_cap) {
+        size_t new_cap = w->char_cap == 0 ? 16 : w->char_cap * 2;
+        int* next = (int*)realloc(w->char_queue, new_cap * sizeof(int));
+        if (!next) return;
+        w->char_queue = next;
+        w->char_cap = new_cap;
+    }
+    w->char_queue[w->char_len++] = cp;
+}
+
 static void _spec_kb_keymap(void* data, struct wl_keyboard* kb, uint32_t fmt, int32_t fd, uint32_t sz) {
-    (void)data; (void)kb; (void)fmt; (void)sz;
+    (void)kb;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && fmt == 1 /* WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1 */ && fd >= 0 && sz > 0 &&
+        _xkb_context_new && _xkb_keymap_new_from_string && _xkb_state_new) {
+        char* map_str = (char*)mmap(NULL, (size_t)sz, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (map_str != MAP_FAILED) {
+            if (w->xkb_state && _xkb_state_unref) { _xkb_state_unref(w->xkb_state); w->xkb_state = NULL; }
+            if (w->xkb_keymap && _xkb_keymap_unref) { _xkb_keymap_unref(w->xkb_keymap); w->xkb_keymap = NULL; }
+            if (!w->xkb_ctx) w->xkb_ctx = _xkb_context_new(0);
+            if (w->xkb_ctx) {
+                w->xkb_keymap = _xkb_keymap_new_from_string(w->xkb_ctx, map_str, 1, 0);
+                if (w->xkb_keymap) w->xkb_state = _xkb_state_new(w->xkb_keymap);
+            }
+            munmap(map_str, (size_t)sz);
+        }
+    }
     if (fd >= 0) close(fd);
 }
 static void _spec_kb_enter(void* data, struct wl_keyboard* kb, uint32_t serial, struct wl_surface* s, void* keys) {
@@ -2962,13 +3058,53 @@ static void _spec_kb_leave(void* data, struct wl_keyboard* kb, uint32_t serial, 
 static void _spec_kb_key(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) {
     (void)kb; (void)serial; (void)time;
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (!w) return;
     if (state == 1 || state == 2) {
-        int ch = _spec_evdev_to_ascii(key);
-        if (ch > 0) _spec_push_key(w, ch);
+        int nav = _spec_evdev_to_ascii(key);
+        if (w->xkb_state && _xkb_state_key_get_one_sym && _xkb_state_key_get_utf8) {
+            uint32_t xkb_code = key + 8U;
+            uint32_t sym = _xkb_state_key_get_one_sym(w->xkb_state, xkb_code);
+            if (sym == 0xff1b) nav = 27;       /* XKB_KEY_Escape */
+            else if (sym == 0xff0d) nav = 13;  /* XKB_KEY_Return */
+            else if (sym == 0xff08) nav = 8;   /* XKB_KEY_BackSpace */
+            else if (sym == 0xff09) nav = 9;   /* XKB_KEY_Tab */
+            else if (sym == 0xffff) nav = 127; /* XKB_KEY_Delete */
+            else if (sym == 0xff52) nav = 1001;/* Up */
+            else if (sym == 0xff54) nav = 1002;/* Down */
+            else if (sym == 0xff51) nav = 1003;/* Left */
+            else if (sym == 0xff53) nav = 1004;/* Right */
+            else if (sym == 0xff50) nav = 1005;/* Home */
+            else if (sym == 0xff57) nav = 1006;/* End */
+            else if (sym == 0xff55) nav = 1007;/* Page_Up */
+            else if (sym == 0xff56) nav = 1008;/* Page_Down */
+            else if (sym >= 32 && sym < 127) nav = (int)sym;
+
+            char ubuf[16];
+            int ulen = _xkb_state_key_get_utf8(w->xkb_state, xkb_code, ubuf, sizeof(ubuf));
+            if (ulen > 0 && !(w->mods & 2) && (unsigned char)ubuf[0] >= 32 && (unsigned char)ubuf[0] != 127) {
+                uint32_t cp = (unsigned char)ubuf[0];
+                if (ulen >= 2 && (cp & 0xE0) == 0xC0) cp = ((cp & 0x1F) << 6) | ((unsigned char)ubuf[1] & 0x3F);
+                else if (ulen >= 3 && (cp & 0xF0) == 0xE0) cp = ((cp & 0x0F) << 12) | (((unsigned char)ubuf[1] & 0x3F) << 6) | ((unsigned char)ubuf[2] & 0x3F);
+                else if (ulen >= 4 && (cp & 0xF8) == 0xF0) cp = ((cp & 0x07) << 18) | (((unsigned char)ubuf[1] & 0x3F) << 12) | (((unsigned char)ubuf[2] & 0x3F) << 6) | ((unsigned char)ubuf[3] & 0x3F);
+                _spec_push_char(w, (int)cp);
+            }
+        }
+        if (nav > 0) _spec_push_key(w, nav);
     }
 }
 static void _spec_kb_mods(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t d, uint32_t l, uint32_t lo, uint32_t g) {
-    (void)data; (void)kb; (void)serial; (void)d; (void)l; (void)lo; (void)g;
+    (void)kb; (void)serial;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (!w || !w->xkb_state || !_xkb_state_update_mask) return;
+    _xkb_state_update_mask(w->xkb_state, d, l, lo, 0, 0, g);
+    if (_xkb_state_mod_name_is_active) {
+        int m = 0;
+        if (_xkb_state_mod_name_is_active(w->xkb_state, "Shift", 3) > 0) m |= 1;
+        if (_xkb_state_mod_name_is_active(w->xkb_state, "Control", 3) > 0) m |= 2;
+        if (_xkb_state_mod_name_is_active(w->xkb_state, "Mod1", 3) > 0) m |= 4;
+        if (_xkb_state_mod_name_is_active(w->xkb_state, "Mod4", 3) > 0) m |= 8;
+        w->mods = m;
+    }
 }
 static void _spec_kb_repeat(void* data, struct wl_keyboard* kb, int32_t rate, int32_t delay) {
     (void)data; (void)kb; (void)rate; (void)delay;
@@ -2988,6 +3124,7 @@ static void _spec_ptr_enter(void* data, struct wl_pointer* ptr, uint32_t serial,
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
     if (w && surface == w->surface) {
         w->pointer_on_surface = true;
+        w->last_ptr_serial = serial;
         w->pointer_x = sx >> 8;
         w->pointer_y = sy >> 8;
     } else if (w) {
@@ -3103,6 +3240,11 @@ static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t na
         w->decor_mgr = _wl_proxy_marshal_flags(
             (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
             (const struct wl_interface*)&_spec_zxdg_deco_mgr_iface_def, 1, 0,
+            name, iface, 1, NULL);
+    } else if (strcmp(iface, "wp_cursor_shape_manager_v1") == 0 && !w->cursor_mgr) {
+        w->cursor_mgr = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
+            (const struct wl_interface*)&_spec_wp_cursor_mgr_iface_def, 1, 0,
             name, iface, 1, NULL);
     }
 }
@@ -3353,6 +3495,16 @@ long long spec_pal_window_close(long long handle) {
 
     _spec_release_shm(w);
     if (w->key_queue) free(w->key_queue);
+    if (w->char_queue) free(w->char_queue);
+    if (w->xkb_state && _xkb_state_unref) _xkb_state_unref(w->xkb_state);
+    if (w->xkb_keymap && _xkb_keymap_unref) _xkb_keymap_unref(w->xkb_keymap);
+    if (w->xkb_ctx && _xkb_context_unref) _xkb_context_unref(w->xkb_ctx);
+    if (w->cursor_dev && _wl_proxy_destroy) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->cursor_dev, 0 /* DESTROY */, NULL, 1, 1);
+    }
+    if (w->cursor_mgr && _wl_proxy_destroy) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->cursor_mgr, 0 /* DESTROY */, NULL, 1, 1);
+    }
     if (w->xdg_decoration && _wl_proxy_destroy) {
         _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_decoration, 0 /* DESTROY */, NULL, 1, 1 /* WL_MARSHAL_FLAG_DESTROY */);
     }
@@ -3695,6 +3847,69 @@ long long spec_pal_window_present(long long handle, long long pixels_addr, long 
     return 1;
 }
 
+long long spec_pal_window_next_char(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || w->char_len == 0) return 0;
+    int cp = w->char_queue[0];
+    if (w->char_len > 1) {
+        memmove(w->char_queue, w->char_queue + 1, (w->char_len - 1) * sizeof(int));
+    }
+    w->char_len--;
+    return (long long)cp;
+}
+
+long long spec_pal_window_mods(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->mods : 0;
+}
+
+long long spec_pal_window_set_cursor(long long handle, long long kind) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !w->cursor_mgr || !w->pointer || !w->last_ptr_serial) return 0;
+    if (!w->cursor_dev) {
+        w->cursor_dev = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)w->cursor_mgr, 1 /* GET_POINTER */,
+            (const struct wl_interface*)&_spec_wp_cursor_dev_iface_def, 1, 0, NULL, w->pointer);
+    }
+    if (!w->cursor_dev) return 0;
+    uint32_t shape = 1; /* default */
+    if (kind == 1) shape = 9;       /* text */
+    else if (kind == 2) shape = 11; /* pointer */
+    else if (kind == 3) shape = 25; /* ew_resize */
+    else if (kind == 4) shape = 24; /* ns_resize */
+    _wl_proxy_marshal_flags((struct wl_proxy*)w->cursor_dev, 1 /* SET_SHAPE */, NULL, 1, 0, w->last_ptr_serial, shape);
+    _wl_display_flush(w->display);
+    return 1;
+}
+
+long long spec_pal_window_set_min_size(long long handle, long long min_w, long long min_h) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w) return 0;
+    if (w->use_xdg && w->xdg_toplevel) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_toplevel, 8 /* SET_MIN_SIZE */, NULL, 1, 0, (int32_t)min_w, (int32_t)min_h);
+        _wl_display_flush(w->display);
+        return 1;
+    }
+    return 0;
+}
+
+long long spec_pal_window_set_app_id(long long handle, long long app_id_cstr) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !app_id_cstr) return 0;
+    const char* app_id = (const char*)(intptr_t)app_id_cstr;
+    if (w->use_xdg && w->xdg_toplevel) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_toplevel, 3 /* SET_APP_ID */, NULL, 1, 0, app_id);
+        _wl_display_flush(w->display);
+        return 1;
+    }
+    if (w->frame && _libdecor_frame_set_app_id) {
+        _libdecor_frame_set_app_id(w->frame, app_id);
+        _wl_display_flush(w->display);
+        return 1;
+    }
+    return 0;
+}
+
 #else
 
 long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
@@ -3750,6 +3965,11 @@ long long spec_pal_window_click_x(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_click_y(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_poll_scroll_y(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_set_title(long long handle, long long title_cstr) { (void)handle; (void)title_cstr; return 0; }
+long long spec_pal_window_next_char(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_mods(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_set_cursor(long long handle, long long kind) { (void)handle; (void)kind; return 0; }
+long long spec_pal_window_set_min_size(long long handle, long long min_w, long long min_h) { (void)handle; (void)min_w; (void)min_h; return 0; }
+long long spec_pal_window_set_app_id(long long handle, long long app_id_cstr) { (void)handle; (void)app_id_cstr; return 0; }
 
 long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
     (void)handle; (void)pixels_addr; (void)width; (void)height;

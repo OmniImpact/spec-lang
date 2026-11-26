@@ -84,6 +84,11 @@ Class is SuitWindow{
 	Function of Int is clickY(){ return native:clickY(); }
 	Function of Int is pollScrollY(){ return native:pollScrollY(); }
 	Function is setTitle(String is title){ native:setTitle(title: title); }
+	Function of Int is nextChar(){ return native:nextChar(); }
+	Function of Int is mods(){ return native:mods(); }
+	Function is setCursor(Int is kind){ native:setCursor(kind: kind); }
+	Function is setMinSize(Int is minW, Int is minH){ native:setMinSize(minW: minW, minH: minH); }
+	Function is setAppId(String is appId){ native:setAppId(appId: appId); }
 
 	## Presents [canvas] pixels to the window surface.
 	Function of Boolean is present(SuitCanvas is canvas){

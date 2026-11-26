@@ -128,6 +128,31 @@ Class is Window{
 		base:sysinternal:Window:pal_window_set_title(handle: handle, title_cstr: :cstrAddr(s: title));
 	}
 
+	Function of Int is nextChar(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_next_char(handle: handle);
+	}
+
+	Function of Int is mods(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_mods(handle: handle);
+	}
+
+	Function is setCursor(Int is kind){
+		if({ handle <= 0 }, { return; });
+		base:sysinternal:Window:pal_window_set_cursor(handle: handle, kind: kind);
+	}
+
+	Function is setMinSize(Int is minW, Int is minH){
+		if({ handle <= 0 }, { return; });
+		base:sysinternal:Window:pal_window_set_min_size(handle: handle, min_w: minW, min_h: minH);
+	}
+
+	Function is setAppId(String is appId){
+		if({ handle <= 0 }, { return; });
+		base:sysinternal:Window:pal_window_set_app_id(handle: handle, app_id_cstr: :cstrAddr(s: appId));
+	}
+
 	## Presents an ARGB8888 pixel buffer at [pixelsAddr] to the window.
 	Function of Boolean is present(Int is pixelsAddr, Int is width, Int is height){
 		if({ handle <= 0 || pixelsAddr == 0 }, { return false; });

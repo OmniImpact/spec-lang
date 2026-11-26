@@ -213,14 +213,14 @@ Class of SewNode is ToolkitContainer{
 		signalBag:track(
 			slot: 'running',
 			emitter: running,
-			collector: BoolCollector(onEmit: local Function(){
+			collector: running:collect(onEmit: local Function(){
 				:isDirty: true;
 			})
 		);
 		signalBag:track(
 			slot: 'title',
 			emitter: title,
-			collector: TextCollector(onEmit: local Function(String is nextTitle){
+			collector: title:collect(onEmit: local Function(String is nextTitle){
 				win:setTitle(title: nextTitle);
 			})
 		);
@@ -255,6 +255,18 @@ Class of SewNode is ToolkitContainer{
 				while({ key != 0 }, {
 					if({ key == 27 }, {
 						running:emit(value: false);
+					});
+					if({ key == 1001 && hasBody && !useVulkan }, {
+						if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
+					});
+					if({ key == 1002 && hasBody && !useVulkan }, {
+						if({ bodyPanel:onScroll(deltaY: 15) }, { :isDirty: true; });
+					});
+					if({ key == 1007 && hasBody && !useVulkan }, {
+						if({ bodyPanel:onScroll(deltaY: -80) }, { :isDirty: true; });
+					});
+					if({ key == 1008 && hasBody && !useVulkan }, {
+						if({ bodyPanel:onScroll(deltaY: 80) }, { :isDirty: true; });
 					});
 					key: win:nextKey();
 				});

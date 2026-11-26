@@ -39,7 +39,7 @@ Class of SewNode is TextView{
 		signalBag:track(
 			slot: 'text',
 			emitter: text,
-			collector: TextCollector(onEmit: local Function(String is next){
+			collector: text:collect(onEmit: local Function(String is next){
 				:rebuildLines(raw: next);
 				invalidate();
 			})

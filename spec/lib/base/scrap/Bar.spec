@@ -49,17 +49,17 @@ Class of SewNode is Bar{
 		signalBag:track(
 			slot: 'left',
 			emitter: leftText,
-			collector: TextCollector(onEmit: local Function(String is _v){ invalidate(); })
+			collector: leftText:collect(onEmit: local Function(String is _v){ invalidate(); })
 		);
 		signalBag:track(
 			slot: 'center',
 			emitter: centerText,
-			collector: TextCollector(onEmit: local Function(String is _v){ invalidate(); })
+			collector: centerText:collect(onEmit: local Function(String is _v){ invalidate(); })
 		);
 		signalBag:track(
 			slot: 'right',
 			emitter: rightText,
-			collector: TextCollector(onEmit: local Function(String is _v){ invalidate(); })
+			collector: rightText:collect(onEmit: local Function(String is _v){ invalidate(); })
 		);
 	}
 

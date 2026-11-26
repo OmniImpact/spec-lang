@@ -1,6 +1,6 @@
 #! Package base:wardrobe
 #! Reusable non-blocking file picker dialog supporting single or multi-file selection,
-#! directory navigation, scroll wheel, and `onSelect` / `onCancel` callbacks.
+#! bordered directory entries, double-click to open, scroll wheel, and `onSelect`/`onCancel` callbacks.
 
 Class is FileDialog{
 	replace [String] is namespace: ['base', 'wardrobe'];
@@ -9,6 +9,7 @@ Class is FileDialog{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', Dir],
+		['base', 'sys', Time],
 		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', SignalBag],
@@ -25,13 +26,14 @@ Class is FileDialog{
 	String is initialDir: '.';
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
-	Float is widthPt: 560.0;
-	Float is heightPt: 400.0;
+	Float is widthPt: 580.0;
+	Float is heightPt: 420.0;
 	Function is onSelect: local Function(Array of String is paths){};
 	Function is onCancel: local Function(){};
 
 	SuitWindow is win: SuitWindow();
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
+	Time is clock: Time();
 	Boolean is isShown: false;
 	Boolean is isDirty: false;
 	SignalBag is signalBag: SignalBag();
@@ -40,9 +42,12 @@ Class is FileDialog{
 	Array of String is entryNames: Array();
 	Array of Boolean is entryIsDir: Array();
 	Array of String is selectedPaths: Array();
+	Int is selectedRow: -1;
 	Int is scrollRow: 0;
 	Int is hoverRow: -1;
 	Int is hoverBtn: 0; ## 0=none, 1=Cancel, 2=Open
+	Int is lastClickRow: -1;
+	Int is lastClickMs: 0;
 
 	replace Function is init(
 		String is title: 'Open File',
@@ -51,8 +56,8 @@ Class is FileDialog{
 		String is initialDir: '.',
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Scale is scale: Scale(factor: 1.0),
-		Float is widthPt: 560.0,
-		Float is heightPt: 400.0,
+		Float is widthPt: 580.0,
+		Float is heightPt: 420.0,
 		Function is onSelect: local Function(Array of String is paths){},
 		Function is onCancel: local Function(){}
 	){
@@ -72,9 +77,12 @@ Class is FileDialog{
 		:selectedPaths: Array();
 		isShown: false;
 		isDirty: false;
+		selectedRow: -1;
 		scrollRow: 0;
 		hoverRow: -1;
 		hoverBtn: 0;
+		lastClickRow: -1;
+		lastClickMs: 0;
 	}
 
 	Function is applyTheme(Theme is theme){
@@ -119,10 +127,14 @@ Class is FileDialog{
 		return false;
 	}
 
+	local Function is selectSingleFile(String is fullPath){
+		selectedPaths: Array();
+		selectedPaths:add(item: fullPath);
+	}
+
 	local Function is toggleSelect(String is fullPath){
 		if({ !allowMultiple }, {
-			selectedPaths: Array();
-			selectedPaths:add(item: fullPath);
+			:selectSingleFile(fullPath: fullPath);
 			return;
 		});
 		local Int is found: -1;
@@ -157,8 +169,10 @@ Class is FileDialog{
 		entryNames: Array();
 		entryIsDir: Array();
 		selectedPaths: Array();
+		selectedRow: -1;
 		scrollRow: 0;
 		hoverRow: -1;
+		lastClickRow: -1;
 
 		entryNames:add(item: '..');
 		entryIsDir:add(item: true);
@@ -178,7 +192,6 @@ Class is FileDialog{
 			});
 		});
 
-		## Sort dirs and files lexicographically (simple insertion sort)
 		local Int is di: 1;
 		while({ di < dirs:length() }, {
 			local String is key: dirs:get(index: di);
@@ -227,8 +240,9 @@ Class is FileDialog{
 
 		local Int is headerH: scale:px(pt: 32.0);
 		local Int is footerH: scale:px(pt: 44.0);
-		local Int is rowH: scale:px(pt: 26.0);
+		local Int is rowH: scale:px(pt: 28.0);
 		local Int is padX: scale:px(pt: 12.0);
+		local Int is sbW: scale:px(pt: 12.0);
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 
@@ -239,15 +253,16 @@ Class is FileDialog{
 		ctx:fillRect(x: 0, y: headerH - 1, w: w, h: 1, color: theme:toolbarBorder);
 		ctx:drawText(x: padX, y: (headerH - th) / 2, text: 'Dir: ' . curDir, color: theme:textPrimary, pixelHeight: fpx);
 
-		## File list area
+		## File list area + right scrollbar
 		local Int is listY: headerH;
 		local Int is listH: if({ h > headerH + footerH }, { h - headerH - footerH }, { 0 });
+		local Int is listW: if({ w > sbW }, { w - sbW }, { w });
 		local Int is visRows: if({ rowH > 0 }, { listH / rowH }, { 0 });
 		local Int is maxScroll: if({ entryNames:length() > visRows }, { entryNames:length() - visRows }, { 0 });
 		if({ scrollRow > maxScroll }, { scrollRow: maxScroll; });
 		if({ scrollRow < 0 }, { scrollRow: 0; });
 
-		ctx:setClip(x: 0, y: listY, w: w, h: listH);
+		ctx:setClip(x: 0, y: listY, w: listW, h: listH);
 		local Int is r: 0;
 		while({ r <= visRows && (scrollRow + r) < entryNames:length() }, {
 			local Int is idx: scrollRow + r;
@@ -255,22 +270,37 @@ Class is FileDialog{
 			local String is name: entryNames:get(index: idx);
 			local Boolean is isD: entryIsDir:get(index: idx);
 			local String is full: :joinPath(dir: curDir, name: name);
-			local Boolean is isSel: !isD && :isPathSelected(fullPath: full);
+			local Boolean is isSel: if({ isD }, { selectedRow == idx }, { :isPathSelected(fullPath: full) });
 
 			if({ isSel }, {
-				ctx:fillRect(x: 0, y: ry, w: w, h: rowH, color: theme:activeBg);
+				ctx:fillRect(x: 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:activeBg);
 			}, {
 				if({ hoverRow == idx }, {
-					ctx:fillRect(x: 0, y: ry, w: w, h: rowH, color: theme:hoverBg);
+					ctx:fillRect(x: 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:hoverBg);
 				});
 			});
 
-			local String is label: if({ isD }, { '[DIR] ' . name }, { name });
-			local Int is col: if({ isD }, { theme:textMuted }, { theme:textPrimary });
-			ctx:drawText(x: padX, y: ry + (rowH - th) / 2, text: label, color: col, pixelHeight: fpx);
+			## Directories are rendered with a crisp border around them to differentiate from files
+			if({ isD }, {
+				ctx:strokeRect(x: 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:menuBorder);
+			});
+
+			ctx:drawText(x: padX, y: ry + (rowH - th) / 2, text: name, color: theme:textPrimary, pixelHeight: fpx);
 			r: r + 1;
 		});
 		ctx:clearClip();
+
+		## Right-side scrollbar for file list
+		ctx:fillRect(x: listW, y: listY, w: sbW, h: listH, color: theme:menuBg);
+		ctx:fillRect(x: listW, y: listY, w: 1, h: listH, color: theme:toolbarBorder);
+		if({ entryNames:length() > visRows && entryNames:length() > 0 && listH > 0 }, {
+			local Int is thumbH: (listH * visRows) / entryNames:length();
+			if({ thumbH < scale:px(pt: 20.0) }, { thumbH: scale:px(pt: 20.0); });
+			if({ thumbH > listH }, { thumbH: listH; });
+			local Int is trackRange: listH - thumbH;
+			local Int is thumbY: listY + if({ maxScroll > 0 }, { (scrollRow * trackRange) / maxScroll }, { 0 });
+			ctx:fillRect(x: listW + 2, y: thumbY + 1, w: sbW - 4, h: thumbH - 2, color: theme:activeBg);
+		});
 
 		## Footer bar with Cancel and Open buttons
 		local Int is fy: h - footerH;
@@ -283,14 +313,12 @@ Class is FileDialog{
 		local Int is openX: w - padX - btnW;
 		local Int is cancelX: openX - scale:px(pt: 10.0) - btnW;
 
-		## Cancel button
 		local Int is cBg: if({ hoverBtn == 1 }, { theme:hoverBg }, { theme:menuBg });
 		ctx:fillRect(x: cancelX, y: btnY, w: btnW, h: btnH, color: cBg);
 		ctx:strokeRect(x: cancelX, y: btnY, w: btnW, h: btnH, color: theme:menuBorder);
 		local Int is cw: ctx:measureTextWidth(text: 'Cancel', pixelHeight: fpx);
 		ctx:drawText(x: cancelX + (btnW - cw) / 2, y: btnY + (btnH - th) / 2, text: 'Cancel', color: theme:textPrimary, pixelHeight: fpx);
 
-		## Open button
 		local Int is oBg: if({ selectedPaths:length() == 0 }, { theme:toolbarBg }, { if({ hoverBtn == 2 }, { theme:hoverBg }, { theme:activeBg }) });
 		ctx:fillRect(x: openX, y: btnY, w: btnW, h: btnH, color: oBg);
 		ctx:strokeRect(x: openX, y: btnY, w: btnW, h: btnH, color: theme:menuBorder);
@@ -385,10 +413,12 @@ Class is FileDialog{
 		local Int is h: win:height();
 		local Int is headerH: scale:px(pt: 32.0);
 		local Int is footerH: scale:px(pt: 44.0);
-		local Int is rowH: scale:px(pt: 26.0);
+		local Int is rowH: scale:px(pt: 28.0);
 		local Int is padX: scale:px(pt: 12.0);
+		local Int is sbW: scale:px(pt: 12.0);
 		local Int is listY: headerH;
 		local Int is listH: if({ h > headerH + footerH }, { h - headerH - footerH }, { 0 });
+		local Int is listW: if({ w > sbW }, { w - sbW }, { w });
 		local Int is btnW: scale:px(pt: 86.0);
 		local Int is btnH: scale:px(pt: 28.0);
 		local Int is fy: h - footerH;
@@ -399,7 +429,7 @@ Class is FileDialog{
 		local Int is px: win:pointerX();
 		local Int is py: win:pointerY();
 		local Int is nextHoverRow: -1;
-		if({ py >= listY && py < listY + listH && rowH > 0 }, {
+		if({ px < listW && py >= listY && py < listY + listH && rowH > 0 }, {
 			local Int is cand: scrollRow + (py - listY) / rowH;
 			if({ cand >= 0 && cand < entryNames:length() }, { nextHoverRow: cand; });
 		});
@@ -427,20 +457,38 @@ Class is FileDialog{
 					return;
 				});
 			});
-			if({ cy >= listY && cy < listY + listH && rowH > 0 }, {
+			if({ cx < listW && cy >= listY && cy < listY + listH && rowH > 0 }, {
 				local Int is idx: scrollRow + (cy - listY) / rowH;
 				if({ idx >= 0 && idx < entryNames:length() }, {
+					local Int is nowMs: clock:monotonicMs();
+					local Boolean is isDouble: (idx == lastClickRow) && ((nowMs - lastClickMs) <= 450);
+					lastClickRow: idx;
+					lastClickMs: nowMs;
+
 					local String is name: entryNames:get(index: idx);
 					local Boolean is isD: entryIsDir:get(index: idx);
 					if({ isD }, {
-						if({ name == '..' }, {
-							:loadDirectory(dirPath: :parentDir(dir: curDir));
+						if({ isDouble }, {
+							if({ name == '..' }, {
+								:loadDirectory(dirPath: :parentDir(dir: curDir));
+							}, {
+								:loadDirectory(dirPath: :joinPath(dir: curDir, name: name));
+							});
 						}, {
-							:loadDirectory(dirPath: :joinPath(dir: curDir, name: name));
+							selectedRow: idx;
+							isDirty: true;
 						});
 					}, {
-						:toggleSelect(fullPath: :joinPath(dir: curDir, name: name));
-						isDirty: true;
+						local String is full: :joinPath(dir: curDir, name: name);
+						selectedRow: idx;
+						if({ isDouble }, {
+							:selectSingleFile(fullPath: full);
+							:finishOpen();
+							return;
+						}, {
+							:toggleSelect(fullPath: full);
+							isDirty: true;
+						});
 					});
 				});
 			});

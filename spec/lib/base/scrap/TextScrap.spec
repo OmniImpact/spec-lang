@@ -43,7 +43,7 @@ Class of SewNode is TextScrap{
 		signalBag:track(
 			slot: 'text',
 			emitter: text,
-			collector: TextCollector(onEmit: local Function(String is _v){ invalidate(); })
+			collector: text:collect(onEmit: local Function(String is _v){ invalidate(); })
 		);
 	}
 
