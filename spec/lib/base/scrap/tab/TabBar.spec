@@ -11,17 +11,18 @@ Class of SewNode is TabBar{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'sew', DockSide],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', 'tab', TabItemConfig]
 	];
 
 	Array of TabItemConfig is tabs: Array();
 	Int is activeIndex: 0;
-	Float is heightPt: 19.0;
-	Float is outerPadPt: 2.0;
-	String is dockSide: 'top';
-	Float is minTabWidthPt: 96.0;
-	Float is maxTabWidthPt: 210.0;
+	Float is heightPt: 0.0;
+	Float is outerPadPt: -1.0;
+	DockSide is dockSide: DockSide:TOP;
+	Float is minTabWidthPt: 0.0;
+	Float is maxTabWidthPt: 0.0;
 	Boolean is showCloseButton: true;
 	Function is onSelectTab: local Function(Int is _idx){};
 	Function is onCloseTab: local Function(Int is _idx){};
@@ -33,11 +34,11 @@ Class of SewNode is TabBar{
 	replace Function is init(
 		Array of TabItemConfig is tabs: Array(),
 		Int is activeIndex: 0,
-		Float is heightPt: 30.0,
-		Float is outerPadPt: 2.0,
-		String is dockSide: 'top',
-		Float is minTabWidthPt: 96.0,
-		Float is maxTabWidthPt: 210.0,
+		Float is heightPt: 0.0,
+		Float is outerPadPt: -1.0,
+		DockSide is dockSide: DockSide:TOP,
+		Float is minTabWidthPt: 0.0,
+		Float is maxTabWidthPt: 0.0,
 		Boolean is showCloseButton: true,
 		Function is onSelectTab: local Function(Int is _idx){},
 		Function is onCloseTab: local Function(Int is _idx){},
@@ -75,8 +76,8 @@ Class of SewNode is TabBar{
 	local Function of Int is tabWidthPx(Int is totalW){
 		local Int is count: tabs:length();
 		if({ count <= 0 }, { return 0; });
-		local Int is minW: activeScale:px(pt: minTabWidthPt);
-		local Int is maxW: activeScale:px(pt: maxTabWidthPt);
+		local Int is minW: activeScale:px(pt: if({ minTabWidthPt > 0.0 }, { minTabWidthPt }, { activeTheme:tabMinWidthPt }));
+		local Int is maxW: activeScale:px(pt: if({ maxTabWidthPt > 0.0 }, { maxTabWidthPt }, { activeTheme:tabMaxWidthPt }));
 		local Int is w: totalW / count;
 		if({ w > maxW }, { w: maxW; });
 		if({ w < minW }, { w: minW; });
@@ -84,26 +85,27 @@ Class of SewNode is TabBar{
 	}
 
 	local Function of Int is closeBoxSizePx(){
-		return activeScale:px(pt: 16.0);
+		return activeScale:px(pt: activeTheme:iconSizePt * 1.15);
 	}
 
 	local Function of Int is outerPadPx(){
-		local Int is p: activeScale:px(pt: outerPadPt);
+		local Float is pt: if({ outerPadPt >= 0.0 }, { outerPadPt }, { activeTheme:paddingSmallPt });
+		local Int is p: activeScale:px(pt: pt);
 		return if({ p < 1 }, { 1 }, { p });
 	}
 
 	local Function of Rect is tabsAreaRect(Rect is b){
 		local Int is p: :outerPadPx();
-		if({ dockSide == 'bottom' }, { return Rect(x: b:x, y: b:y, width: b:width, height: if({ b:height > p }, { b:height - p }, { b:height })); });
-		if({ dockSide == 'left' }, { return Rect(x: b:x + p, y: b:y, width: if({ b:width > p }, { b:width - p }, { b:width }), height: b:height); });
-		if({ dockSide == 'right' }, { return Rect(x: b:x, y: b:y, width: if({ b:width > p }, { b:width - p }, { b:width }), height: b:height); });
+		if({ dockSide == DockSide:BOTTOM }, { return Rect(x: b:x, y: b:y, width: b:width, height: if({ b:height > p }, { b:height - p }, { b:height })); });
+		if({ dockSide == DockSide:LEFT }, { return Rect(x: b:x + p, y: b:y, width: if({ b:width > p }, { b:width - p }, { b:width }), height: b:height); });
+		if({ dockSide == DockSide:RIGHT }, { return Rect(x: b:x, y: b:y, width: if({ b:width > p }, { b:width - p }, { b:width }), height: b:height); });
 		return Rect(x: b:x, y: b:y + p, width: b:width, height: if({ b:height > p }, { b:height - p }, { b:height }));
 	}
 
 	local Function of Boolean is pointInCloseBtn(Int is x, Int is y, Int is tabX, Int is tabW, Rect is area){
 		if({ !showCloseButton }, { return false; });
 		local Int is cs: :closeBoxSizePx();
-		local Int is padR: activeScale:px(pt: 6.0);
+		local Int is padR: activeScale:px(pt: activeTheme:paddingSmallPt * 2.0);
 		local Int is cx: tabX + tabW - padR - cs;
 		local Int is cy: area:y + (area:height - cs) / 2;
 		return x >= cx && x < cx + cs && y >= cy && y < cy + cs;
@@ -125,7 +127,7 @@ Class of SewNode is TabBar{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is hPx: activeScale:px(pt: heightPt);
+		local Int is hPx: activeScale:px(pt: if({ heightPt > 0.0 }, { heightPt }, { activeTheme:tabBarHeightPt }));
 		desiredSize: Size(width: c:maxW, height: c:clampH(h: hPx));
 		return desiredSize;
 	}
@@ -193,7 +195,7 @@ Class of SewNode is TabBar{
 
 		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:tabBarBg);
-		if({ dockSide == 'bottom' }, {
+		if({ dockSide == DockSide:BOTTOM }, {
 			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
 		}, {
 			ctx:fillRect(x: b:x, y: b:y + b:height - linePx, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
@@ -206,8 +208,8 @@ Class of SewNode is TabBar{
 		local Int is tw: :tabWidthPx(totalW: area:width);
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is padL: activeScale:px(pt: 10.0);
-		local Int is padR: activeScale:px(pt: 6.0);
+		local Int is padL: activeScale:px(pt: activeTheme:paddingPt * 1.5);
+		local Int is padR: activeScale:px(pt: activeTheme:paddingSmallPt * 2.0);
 		local Int is cs: :closeBoxSizePx();
 
 		ctx:setClip(x: area:x, y: area:y, w: area:width, h: area:height);
@@ -218,10 +220,10 @@ Class of SewNode is TabBar{
 				local TabItemConfig is tab: tabs:get(index: i);
 				local Boolean is isActive: i == activeIndex;
 				local Int is bg: if({ isActive }, { activeTheme:windowBg }, { if({ hoverTabIdx == i }, { activeTheme:hoverBg }, { activeTheme:tabBarBg }) });
-				local Int is ty0: if({ dockSide == 'bottom' && !isActive }, { area:y + linePx }, { area:y });
+				local Int is ty0: if({ dockSide == DockSide:BOTTOM && !isActive }, { area:y + linePx }, { area:y });
 				local Int is fillH: if({ isActive }, { area:height }, { area:height - linePx });
 				ctx:fillRect(x: tx, y: ty0, w: tw, h: fillH, color: bg);
-				if({ dockSide != 'bottom' }, {
+				if({ dockSide != DockSide:BOTTOM }, {
 					ctx:fillRect(x: tx, y: area:y, w: tw, h: linePx, color: activeTheme:toolbarBorder);
 				}, {
 					ctx:fillRect(x: tx, y: area:y + area:height - linePx, w: tw, h: linePx, color: activeTheme:toolbarBorder);

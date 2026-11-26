@@ -18,8 +18,8 @@ Class of SewNode is ScrapButton{
 
 	String is label: '';
 	Function is onClick: local Function(){};
-	Float is minWidthPt: 60.0;
-	Float is heightPt: 22.0;
+	Float is minWidthPt: 0.0;
+	Float is heightPt: 0.0;
 	SuitUnit is widthUnit: Pt(value: 0.0);
 	SuitUnit is heightUnit: Pt(value: 0.0);
 	Boolean is hasWidthUnit: false;
@@ -32,8 +32,8 @@ Class of SewNode is ScrapButton{
 	replace Function is init(
 		String is label: '',
 		Function is onClick: local Function(){},
-		Float is minWidthPt: 60.0,
-		Float is heightPt: 22.0,
+		Float is minWidthPt: 0.0,
+		Float is heightPt: 0.0,
 		SuitUnit is width: Pt(value: 0.0),
 		SuitUnit is height: Pt(value: 0.0),
 		Boolean is hasWidth: false,
@@ -90,11 +90,15 @@ Class of SewNode is ScrapButton{
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
 		local Int is tw: DrawContext:measureWidth(text: label, pixelHeight: fpx);
-		local Float is pxPt: if({ padXPt > 0.0 }, { padXPt }, { activeTheme:padPt(pct: 1.5) });
+		local Float is pxPt: if({ padXPt > 0.0 }, { padXPt }, { activeTheme:paddingMediumPt });
 		local Int is padPx: activeScale:px(pt: pxPt * 2.0);
-		local Int is minW: if({ hasWidthUnit }, { :unitPx(unit: widthUnit) }, { activeScale:px(pt: minWidthPt) });
+		local Int is minW: if({ hasWidthUnit }, { :unitPx(unit: widthUnit) }, {
+			activeScale:px(pt: if({ minWidthPt > 0.0 }, { minWidthPt }, { activeTheme:buttonMinWidthPt }))
+		});
 		local Int is w: if({ tw + padPx > minW }, { tw + padPx }, { minW });
-		local Int is h: if({ hasHeightUnit }, { :unitPx(unit: heightUnit) }, { activeScale:px(pt: heightPt) });
+		local Int is h: if({ hasHeightUnit }, { :unitPx(unit: heightUnit) }, {
+			activeScale:px(pt: if({ heightPt > 0.0 }, { heightPt }, { activeTheme:buttonHeightPt }))
+		});
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
 	}

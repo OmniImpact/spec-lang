@@ -6,6 +6,7 @@ Class is Shape3DView{
 
 	replace [[String]] is using: [
 		['base', 'sew', Rect],
+		['base', 'sew', DockSide],
 		['base', 'fabric', Theme],
 		['base', 'mold', CubeMesh],
 		['base', 'scrap', ToolkitContainer],
@@ -31,8 +32,7 @@ Class is Shape3DView{
 			),
 			vulkanSurface: VulkanSurface(mesh: CubeMesh(), hasMesh: true),
 			bottomBar: Bar(
-				heightPt: vm:toolbarHeightPt,
-				borderSide: 'top',
+				borderSide: DockSide:TOP,
 				rightText: vm:fpsText
 			),
 			hasBottomBar: true,

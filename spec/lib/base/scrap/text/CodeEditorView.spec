@@ -39,8 +39,8 @@ Class of TextView is CodeEditorView{
 		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
 		Function is onClipboardWrite: local Function(String is _text){},
 		Function of String is onClipboardRead: local Function of String(){ '' },
-		Float is padPt: 12.0,
-		Float is lineGapPt: 4.0
+		Float is padPt: 0.0,
+		Float is lineGapPt: 0.0
 	){
 		:initTextView(
 			text: text,

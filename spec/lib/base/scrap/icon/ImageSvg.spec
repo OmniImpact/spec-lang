@@ -15,18 +15,18 @@ Class of SewNode is ImageSvg{
 	];
 
 	String is svg: '';
-	Float is widthPt: 16.0;
-	Float is heightPt: 16.0;
+	Float is widthPt: 0.0;
+	Float is heightPt: 0.0;
 
-	replace Function is init(String is svg: '', Float is widthPt: 16.0, Float is heightPt: 16.0){
+	replace Function is init(String is svg: '', Float is widthPt: 0.0, Float is heightPt: 0.0){
 		:svg: svg;
 		:widthPt: widthPt;
 		:heightPt: heightPt;
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is w: activeScale:px(pt: widthPt);
-		local Int is h: activeScale:px(pt: heightPt);
+		local Int is w: activeScale:px(pt: if({ widthPt > 0.0 }, { widthPt }, { activeTheme:iconSizePt }));
+		local Int is h: activeScale:px(pt: if({ heightPt > 0.0 }, { heightPt }, { activeTheme:iconSizePt }));
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
 	}

@@ -15,11 +15,11 @@ Class of SewNode is Icon{
 	];
 
 	String is svg: '';
-	Float is sizePt: 14.0;
+	Float is sizePt: 0.0;
 	Int is color: 0;
 	Boolean is muted: false;
 
-	replace Function is init(String is svg: '', Float is sizePt: 14.0, Int is color: 0, Boolean is muted: false){
+	replace Function is init(String is svg: '', Float is sizePt: 0.0, Int is color: 0, Boolean is muted: false){
 		:svg: svg;
 		:sizePt: sizePt;
 		:color: color;
@@ -27,7 +27,7 @@ Class of SewNode is Icon{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is s: activeScale:px(pt: sizePt);
+		local Int is s: activeScale:px(pt: if({ sizePt > 0.0 }, { sizePt }, { activeTheme:iconSizePt }));
 		desiredSize: Size(width: c:clampW(w: s), height: c:clampH(h: s));
 		return desiredSize;
 	}

@@ -19,7 +19,7 @@ Class of SewNode is GridFlex{
 	];
 
 	Array of GridFlexPanel is panels: Array();
-	Float is spacingPt: 4.0;
+	Float is spacingPt: 0.0;
 	Boolean is movable: true;
 	Boolean is horizontal: true;
 	Int is dragDivider: -1;
@@ -68,8 +68,8 @@ Class of SewNode is GridFlex{
 	}
 
 	local Function of Int is spacingPx(){
-		if({ spacingPt <= 0.0 }, { return 0; });
-		local Int is px: activeScale:px(pt: spacingPt);
+		local Float is pt: if({ spacingPt > 0.0 }, { spacingPt }, { activeTheme:splitterSpacingPt });
+		local Int is px: activeScale:px(pt: pt);
 		return if({ px < 1 }, { 1 }, { px });
 	}
 

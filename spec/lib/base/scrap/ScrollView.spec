@@ -11,6 +11,7 @@ Class of SewNode is ScrollView{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
+		['base', 'sew', DockSide],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext]
 	];
@@ -20,13 +21,13 @@ Class of SewNode is ScrollView{
 	Int is scrollY: 0;
 	Int is contentW: 0;
 	Int is contentH: 0;
-	Float is barWidthPt: 12.0;
-	String is scrollbarSide: 'right';
+	Float is barWidthPt: 0.0;
+	DockSide is scrollbarSide: DockSide:RIGHT;
 	Int is dragMode: 0;
 	Int is dragGrabOffset: 0;
 	Boolean is childCapturing: false;
 
-	replace Function is init(SewNode is child, Float is barWidthPt: 12.0, String is scrollbarSide: 'right'){
+	replace Function is init(SewNode is child, Float is barWidthPt: 0.0, DockSide is scrollbarSide: DockSide:RIGHT){
 		:child: child;
 		:barWidthPt: barWidthPt;
 		:scrollbarSide: scrollbarSide;
@@ -52,7 +53,7 @@ Class of SewNode is ScrollView{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: if({ c:maxW > bw }, { c:maxW - bw }, { c:maxW });
 		local Int is vh: if({ c:maxH > bw }, { c:maxH - bw }, { c:maxH });
 		local Size is cs: child:measure(c: Constraints(minW: vw, maxW: vw, minH: 0, maxH: vh));
@@ -63,12 +64,12 @@ Class of SewNode is ScrollView{
 	}
 
 	local Function of Int is viewWidth(Rect is b){
-		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		return if({ b:width > bw }, { b:width - bw }, { b:width });
 	}
 
 	local Function of Int is viewHeight(Rect is b){
-		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: b);
 		if({ contentW > vw && b:height > bw }, {
 			return b:height - bw;
@@ -78,10 +79,10 @@ Class of SewNode is ScrollView{
 
 	replace Function is arrange(Rect is bounds){
 		layoutBounds: bounds;
-		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: bounds);
 		local Int is vh: :viewHeight(b: bounds);
-		local Int is cx: if({ scrollbarSide == 'left' }, { bounds:x + bw }, { bounds:x });
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { bounds:x + bw }, { bounds:x });
 		local Int is maxScrollX: if({ contentW > vw }, { contentW - vw }, { 0 });
 		local Int is maxScrollY: if({ contentH > vh }, { contentH - vh }, { 0 });
 		if({ scrollX > maxScrollX }, { scrollX: maxScrollX; });
@@ -156,11 +157,11 @@ Class of SewNode is ScrollView{
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Rect is b: bounds();
 		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
-		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: b);
 		local Int is vh: :viewHeight(b: b);
-		local Int is vsx: if({ scrollbarSide == 'left' }, { b:x }, { b:x + vw });
-		local Int is cx: if({ scrollbarSide == 'left' }, { b:x + bw }, { b:x });
+		local Int is vsx: if({ scrollbarSide == DockSide:LEFT }, { b:x }, { b:x + vw });
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { b:x + bw }, { b:x });
 
 		## Vertical scrollbar track / thumb press
 		if({ x >= vsx && x < vsx + bw && y >= b:y && y < b:y + vh }, {
@@ -208,10 +209,10 @@ Class of SewNode is ScrollView{
 
 	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
 		local Rect is b: bounds();
-		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: b);
 		local Int is vh: :viewHeight(b: b);
-		local Int is cx: if({ scrollbarSide == 'left' }, { b:x + bw }, { b:x });
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { b:x + bw }, { b:x });
 		if({ dragMode == 1 && contentH > vh }, {
 			local Int is tH: :thumbLen(viewLen: vh, contentLen: contentH);
 			local Int is nextY: :scrollFromThumb(pos: y - b:y - dragGrabOffset, viewLen: vh, contentLen: contentH, tLen: tH);
@@ -282,10 +283,10 @@ Class of SewNode is ScrollView{
 
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:windowBg);
 
-		local Int is bw: activeScale:px(pt: barWidthPt);
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: b);
 		local Int is vh: :viewHeight(b: b);
-		local Int is cx: if({ scrollbarSide == 'left' }, { b:x + bw }, { b:x });
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { b:x + bw }, { b:x });
 		ctx:setClip(x: cx, y: b:y, w: vw, h: vh);
 		child:paint(ctx: ctx);
 		ctx:clearClip();
@@ -293,9 +294,9 @@ Class of SewNode is ScrollView{
 		## Vertical scrollbar track & thumb on specified side ('right' default or 'left')
 		if({ bw > 2 }, {
 			local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
-			local Int is sx: if({ scrollbarSide == 'left' }, { b:x }, { b:x + vw });
+			local Int is sx: if({ scrollbarSide == DockSide:LEFT }, { b:x }, { b:x + vw });
 			ctx:fillRect(x: sx, y: b:y, w: bw, h: vh, color: activeTheme:menuBg);
-			local Int is borderX: if({ scrollbarSide == 'left' }, { sx + bw - linePx }, { sx });
+			local Int is borderX: if({ scrollbarSide == DockSide:LEFT }, { sx + bw - linePx }, { sx });
 			ctx:fillRect(x: borderX, y: b:y, w: linePx, h: vh, color: activeTheme:toolbarBorder);
 			if({ contentH > vh && vh > 0 }, {
 				local Int is thumbH: (vh * vh) / contentH;

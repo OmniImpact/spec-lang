@@ -17,8 +17,8 @@ Class of SewNode is TextInput{
 	String is placeholder: '';
 	Boolean is focused: false;
 	Boolean is hovered: false;
-	Float is minWidthPt: 120.0;
-	Float is heightPt: 28.0;
+	Float is minWidthPt: 0.0;
+	Float is heightPt: 0.0;
 	Function is onChange: local Function(String is _next){};
 	Function is onSubmit: local Function(String is _val){};
 
@@ -26,8 +26,8 @@ Class of SewNode is TextInput{
 		String is text: '',
 		String is placeholder: '',
 		Boolean is focused: false,
-		Float is minWidthPt: 120.0,
-		Float is heightPt: 28.0,
+		Float is minWidthPt: 0.0,
+		Float is heightPt: 0.0,
 		Function is onChange: local Function(String is _next){},
 		Function is onSubmit: local Function(String is _val){}
 	){
@@ -66,8 +66,8 @@ Class of SewNode is TextInput{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is minW: activeScale:px(pt: minWidthPt);
-		local Int is h: activeScale:px(pt: heightPt);
+		local Int is minW: activeScale:px(pt: if({ minWidthPt > 0.0 }, { minWidthPt }, { activeTheme:inputMinWidthPt }));
+		local Int is h: activeScale:px(pt: if({ heightPt > 0.0 }, { heightPt }, { activeTheme:inputHeightPt }));
 		local Int is w: if({ c:maxW > minW }, { c:maxW }, { minW });
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;

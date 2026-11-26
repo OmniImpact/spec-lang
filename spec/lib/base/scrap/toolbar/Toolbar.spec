@@ -13,6 +13,7 @@ Class of SewNode is Toolbar{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
+		['base', 'sew', DockSide],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'suit', SuitCanvas],
@@ -23,7 +24,7 @@ Class of SewNode is Toolbar{
 		['base', 'scrap', 'menu', MenuItemConfig]
 	];
 
-	Bar is bar: Bar(borderSide: 'bottom');
+	Bar is bar: Bar(borderSide: DockSide:BOTTOM);
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
 	ToolbarConfig is config: ToolbarConfig();
@@ -44,7 +45,7 @@ Class of SewNode is Toolbar{
 		:scale: scale;
 		:config: config;
 		:onMenuOpen: onMenuOpen;
-		:bar: Bar(heightPt: config:heightPt, borderSide: 'bottom', theme: theme, scale: scale);
+		:bar: Bar(heightPt: config:heightPt, borderSide: DockSide:BOTTOM, theme: theme, scale: scale);
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;
@@ -86,12 +87,12 @@ Class of SewNode is Toolbar{
 
 	local Function of Int is menuButtonWidthPx(MenuConfig is menu){
 		local Int is tw: DrawContext:measureWidth(text: menu:label, pixelHeight: :fontPx());
-		return tw + scale:px(pt: theme:padPt(pct: 3.0));
+		return tw + scale:px(pt: theme:paddingMediumPt * 2.0);
 	}
 
 	local Function of Int is menuButtonX(Int is idx){
 		local Rect is b: bounds();
-		local Int is x: b:x + scale:px(pt: 4.0);
+		local Int is x: b:x + scale:px(pt: theme:paddingPt);
 		times(count: idx, worker: local Function(Int is i){
 			local MenuConfig is m: config:menus:get(index: i);
 			if({ m:visible }, {

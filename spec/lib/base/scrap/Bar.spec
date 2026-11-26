@@ -13,6 +13,7 @@ Class of SewNode is Bar{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
+		['base', 'sew', DockSide],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'fabric', 'svg', SvgRenderer]
@@ -20,8 +21,8 @@ Class of SewNode is Bar{
 
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
-	Float is heightPt: 18.0;
-	String is borderSide: 'bottom';
+	Float is heightPt: 0.0;
+	DockSide is borderSide: DockSide:BOTTOM;
 	TextEmitter is leftText: TextEmitter(initial: '');
 	TextEmitter is centerText: TextEmitter(initial: '');
 	TextEmitter is rightText: TextEmitter(initial: '');
@@ -33,8 +34,8 @@ Class of SewNode is Bar{
 	Int is rightHitW: 0;
 
 	replace Function is init(
-		Float is heightPt: 26.0,
-		String is borderSide: 'bottom',
+		Float is heightPt: 0.0,
+		DockSide is borderSide: DockSide:BOTTOM,
 		TextEmitter is leftText: TextEmitter(initial: ''),
 		TextEmitter is centerText: TextEmitter(initial: ''),
 		TextEmitter is rightText: TextEmitter(initial: ''),
@@ -95,7 +96,8 @@ Class of SewNode is Bar{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is h: scale:px(pt: heightPt);
+		local Float is hPt: if({ heightPt > 0.0 }, { heightPt }, { theme:barHeightPt });
+		local Int is h: scale:px(pt: hPt);
 		desiredSize: Size(width: c:clampW(w: c:maxW), height: c:clampH(h: h));
 		return desiredSize;
 	}
@@ -106,18 +108,20 @@ Class of SewNode is Bar{
 
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: theme:toolbarBg);
 		local Int is borderH: theme:borderPx(scaleFactor: scale:factor);
-		if({ borderSide == 'top' }, {
-			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: borderH, color: theme:toolbarBorder);
-		}, {
-			if({ borderSide == 'bottom' }, {
-				ctx:fillRect(x: b:x, y: b:y + b:height - borderH, w: b:width, h: borderH, color: theme:toolbarBorder);
+		if({ borderH > 0 }, {
+			if({ borderSide == DockSide:TOP }, {
+				ctx:fillRect(x: b:x, y: b:y, w: b:width, h: borderH, color: theme:toolbarBorder);
+			}, {
+				if({ borderSide == DockSide:BOTTOM }, {
+					ctx:fillRect(x: b:x, y: b:y + b:height - borderH, w: b:width, h: borderH, color: theme:toolbarBorder);
+				});
 			});
 		});
 
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is ty: b:y + (b:height - th) / 2;
-		local Int is padX: scale:px(pt: 10.0);
+		local Int is padX: scale:px(pt: theme:paddingPt * 1.5);
 
 		local String is lStr: leftText:current();
 		if({ lStr != '' }, {

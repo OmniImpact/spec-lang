@@ -27,8 +27,8 @@ Class of SewNode is TextView{
 	Function is onRightClickMenu: local Function(Int is _x, Int is _y){};
 	Function is onClipboardWrite: local Function(String is _text){};
 	Function of String is onClipboardRead: local Function of String(){ '' };
-	Float is padPt: 12.0;
-	Float is lineGapPt: 4.0;
+	Float is padPt: 0.0;
+	Float is lineGapPt: 0.0;
 	Float is docTextDeltaPt: 0.0;
 
 	Array of String is rawLines: Array(['']);
@@ -60,8 +60,8 @@ Class of SewNode is TextView{
 		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
 		Function is onClipboardWrite: local Function(String is _text){},
 		Function of String is onClipboardRead: local Function of String(){ '' },
-		Float is padPt: 12.0,
-		Float is lineGapPt: 4.0
+		Float is padPt: 0.0,
+		Float is lineGapPt: 0.0
 	){
 		:initTextView(
 			text: text,
@@ -88,8 +88,8 @@ Class of SewNode is TextView{
 		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
 		Function is onClipboardWrite: local Function(String is _text){},
 		Function of String is onClipboardRead: local Function of String(){ '' },
-		Float is padPt: 12.0,
-		Float is lineGapPt: 4.0
+		Float is padPt: 0.0,
+		Float is lineGapPt: 0.0
 	){
 		:text: text;
 		:wrap: wrap;
@@ -516,8 +516,8 @@ Class of SewNode is TextView{
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
-		local Int is gapPx: activeScale:px(pt: lineGapPt);
-		local Int is padPx: activeScale:px(pt: padPt);
+		local Int is gapPx: activeScale:px(pt: if({ lineGapPt > 0.0 }, { lineGapPt }, { activeTheme:lineGapPt }));
+		local Int is padPx: activeScale:px(pt: if({ padPt > 0.0 }, { padPt }, { activeTheme:editorPadPt }));
 		local Int is gw: :gutterWidthPx(fpx: fpx);
 		local Int is availTextW: c:maxW - gw - padPx * 2;
 		if({ availTextW < fpx }, { availTextW: fpx; });
@@ -554,8 +554,8 @@ Class of SewNode is TextView{
 			return false;
 		});
 		local Int is fpx: :fontPx();
-		local Int is gapPx: activeScale:px(pt: lineGapPt);
-		local Int is padPx: activeScale:px(pt: padPt);
+		local Int is gapPx: activeScale:px(pt: if({ lineGapPt > 0.0 }, { lineGapPt }, { activeTheme:lineGapPt }));
+		local Int is padPx: activeScale:px(pt: if({ padPt > 0.0 }, { padPt }, { activeTheme:editorPadPt }));
 		local Int is rowH: fpx + gapPx;
 		local Int is gw: :gutterWidthPx(fpx: fpx);
 		if({ lineNumsCached && gw > 0 && x < b:x + gw }, {
@@ -729,8 +729,8 @@ Class of SewNode is TextView{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		local Int is fpx: :fontPx();
-		local Int is gapPx: activeScale:px(pt: lineGapPt);
-		local Int is padPx: activeScale:px(pt: padPt);
+		local Int is gapPx: activeScale:px(pt: if({ lineGapPt > 0.0 }, { lineGapPt }, { activeTheme:lineGapPt }));
+		local Int is padPx: activeScale:px(pt: if({ padPt > 0.0 }, { padPt }, { activeTheme:editorPadPt }));
 		local Int is rowH: fpx + gapPx;
 		local Int is gw: :gutterWidthPx(fpx: fpx);
 		local Int is textStartX: b:x + gw + padPx;

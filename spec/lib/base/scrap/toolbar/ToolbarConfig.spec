@@ -10,14 +10,14 @@ Class is ToolbarConfig{
 	];
 
 	Array of MenuConfig is menus: Array();
-	Float is heightPt: 19.0;
+	Float is heightPt: 0.0;
 	String is radioOffIconSvg: '';
 	String is radioOnIconSvg: '';
 	String is checkboxOffIconSvg: '';
 	String is checkboxOnIconSvg: '';
 
 	replace Function is init(
-		Float is heightPt: 19.0,
+		Float is heightPt: 0.0,
 		String is radioOffIconSvg: '',
 		String is radioOnIconSvg: '',
 		String is checkboxOffIconSvg: '',

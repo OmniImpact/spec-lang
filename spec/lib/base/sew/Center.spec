@@ -16,9 +16,9 @@ Class of SewNode is Center{
 	];
 
 	SewNode is child: SewNode();
-	Float is padXPt: 16.0;
+	Float is padXPt: -1.0;
 
-	replace Function is init(SewNode is child, Float is padXPt: 16.0){
+	replace Function is init(SewNode is child, Float is padXPt: -1.0){
 		:child: child;
 		:padXPt: padXPt;
 	}
@@ -39,7 +39,7 @@ Class of SewNode is Center{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is padPx: activeScale:px(pt: padXPt * 2.0);
+		local Int is padPx: activeScale:px(pt: if({ padXPt >= 0.0 }, { padXPt }, { activeTheme:paddingLargePt }) * 2.0);
 		local Constraints is inner: Constraints(
 			minW: 0,
 			maxW: if({ c:maxW > padPx }, { c:maxW - padPx }, { c:maxW }),
