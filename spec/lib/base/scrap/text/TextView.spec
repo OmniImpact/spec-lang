@@ -234,36 +234,58 @@ Class of SewNode is TextView{
 				dispLines:add(item: line);
 				dispRawLine:add(item: r);
 				dispRawStart:add(item: 0);
-				local Int is lw: :measureStr(s: line, fpx: fpx);
-				if({ lw > maxDispW }, { maxDispW: lw; });
+				if({ !wrapCached }, {
+					local Int is lw: :measureStr(s: line, fpx: fpx);
+					if({ lw > maxDispW }, { maxDispW: lw; });
+				});
 			}, {
-				local Int is len: line:length();
-				local Int is pos: 0;
-				while({ pos < len }, {
-					local Int is endPos: pos + 1;
-					local Int is lastSpace: -1;
-					local Boolean is fit: true;
-					while({ endPos <= len && fit }, {
-						local String is sub: line:substring(start: pos, end: endPos);
-						if({ :measureStr(s: sub, fpx: fpx) > availTextW && endPos > pos + 1 }, {
-							fit: false;
-						}, {
-							if({ line:byteAt(index: endPos - 1) == 32 }, { lastSpace: endPos; });
-							endPos: endPos + 1;
-						});
-					});
-					local Int is segEnd: endPos - 1;
-					if({ segEnd < len && lastSpace > pos }, {
-						segEnd: lastSpace;
-					});
-					if({ segEnd <= pos }, { segEnd: pos + 1; });
-					local String is seg: line:substring(start: pos, end: segEnd);
-					dispLines:add(item: seg);
+				local Int is fullW: :measureStr(s: line, fpx: fpx);
+				if({ fullW <= availTextW }, {
+					dispLines:add(item: line);
 					dispRawLine:add(item: r);
-					dispRawStart:add(item: pos);
-					local Int is sw: :measureStr(s: seg, fpx: fpx);
-					if({ sw > maxDispW }, { maxDispW: sw; });
-					pos: segEnd;
+					dispRawStart:add(item: 0);
+				}, {
+					local Int is len: line:length();
+					local Int is pos: 0;
+					while({ pos < len }, {
+						local Int is segEnd: len;
+						local Boolean is tailFits: if({ pos == 0 }, { false }, {
+							:measureStr(s: line:substring(start: pos, end: len), fpx: fpx) <= availTextW
+						});
+						if({ !tailFits }, {
+							local Int is lo: pos + 1;
+							local Int is hi: len - 1;
+							local Int is maxFit: pos + 1;
+							while({ lo <= hi }, {
+								local Int is mid: lo + (hi - lo) / 2;
+								if({ :measureStr(s: line:substring(start: pos, end: mid), fpx: fpx) <= availTextW }, {
+									maxFit: mid;
+									lo: mid + 1;
+								}, {
+									hi: mid - 1;
+								});
+							});
+							segEnd: maxFit;
+							if({ segEnd < len }, {
+								local Int is si: segEnd - 1;
+								local Boolean is foundSpace: false;
+								while({ si >= pos && !foundSpace }, {
+									if({ line:byteAt(index: si) == 32 }, {
+										if({ si + 1 > pos }, {
+											segEnd: si + 1;
+											foundSpace: true;
+										});
+									});
+									si: si - 1;
+								});
+							});
+							if({ segEnd <= pos }, { segEnd: pos + 1; });
+						});
+						dispLines:add(item: line:substring(start: pos, end: segEnd));
+						dispRawLine:add(item: r);
+						dispRawStart:add(item: pos);
+						pos: segEnd;
+					});
 				});
 			});
 			r: r + 1;
