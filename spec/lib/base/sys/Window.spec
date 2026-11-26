@@ -133,6 +133,12 @@ Class is Window{
 		return base:sysinternal:Window:pal_window_right_click_y(handle: handle);
 	}
 
+	## Pops the next raw input event into 5 `i32` slots `[kind, a, b, c, d]` at [out5I32Addr]; returns `true` if popped.
+	Function of Boolean is pollEventRaw(Int is out5I32Addr){
+		if({ handle <= 0 || out5I32Addr == 0 }, { return false; });
+		return base:sysinternal:Window:pal_window_poll_event(handle: handle, out_5_i32_ptr: out5I32Addr) != 0;
+	}
+
 	Function of Int is pollScrollY(){
 		if({ handle <= 0 }, { return 0; });
 		return base:sysinternal:Window:pal_window_poll_scroll_y(handle: handle);

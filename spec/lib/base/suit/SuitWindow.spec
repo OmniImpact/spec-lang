@@ -5,7 +5,10 @@ Class is SuitWindow{
 	replace [String] is namespace: ['base', 'suit'];
 
 	merge [[String]] is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
 		['base', 'suit', SuitCanvas],
+		['base', 'suit', InputEvent],
 		['base', 'sys', Window]
 	];
 
@@ -15,6 +18,7 @@ Class is SuitWindow{
 	Boolean is decorated: true;
 	Boolean is useVulkan: false;
 	Window is native: Window();
+	Int is evBufAddr: 0;
 
 	replace Function is init(String is title: 'Suit', Int is width: 800, Int is height: 600, Boolean is decorated: true, Boolean is useVulkan: false){
 		:title: title;
@@ -85,6 +89,41 @@ Class is SuitWindow{
 	Function of Boolean is pollRightClick(){ return native:pollRightClick(); }
 	Function of Int is rightClickX(){ return native:rightClickX(); }
 	Function of Int is rightClickY(){ return native:rightClickY(); }
+
+	## Pops the next raw input event as an `InputEvent` variant (`InputEvent:None` when empty),
+	## covering all pointer buttons (left/right/middle/side/extra), pointer motion, scroll axes,
+	## keys (press/release), UTF-8 chars, touch events, and enter/focus events.
+	Function of InputEvent is pollEvent(){
+		if({ evBufAddr == 0 }, { evBufAddr: Mem:alloc(bytes: 20); });
+		if({ !native:pollEventRaw(out5I32Addr: evBufAddr) }, { return InputEvent:None; });
+		local Int is kind: Mem:loadI32(ptr: evBufAddr, byteOffset: 0);
+		local Int is a: Mem:loadI32(ptr: evBufAddr, byteOffset: 4);
+		local Int is b: Mem:loadI32(ptr: evBufAddr, byteOffset: 8);
+		local Int is c: Mem:loadI32(ptr: evBufAddr, byteOffset: 12);
+		local Int is d: Mem:loadI32(ptr: evBufAddr, byteOffset: 16);
+		if({ kind == 1 }, { return InputEvent:PointerMotion(x: a, y: b); });
+		if({ kind == 2 }, { return InputEvent:PointerButton(button: a, pressed: b != 0, x: c, y: d); });
+		if({ kind == 3 }, {
+			local Int is dVal: if({ b >= 2147483648 }, { b - 4294967296 }, { b });
+			return InputEvent:PointerAxis(axis: a, delta: dVal);
+		});
+		if({ kind == 4 }, { return InputEvent:Key(key: a, pressed: b != 0, mods: c); });
+		if({ kind == 5 }, { return InputEvent:TextChar(codepoint: a, mods: b); });
+		if({ kind == 6 }, { return InputEvent:TouchDown(id: a, x: b, y: c); });
+		if({ kind == 7 }, { return InputEvent:TouchUp(id: a); });
+		if({ kind == 8 }, { return InputEvent:TouchMotion(id: a, x: b, y: c); });
+		if({ kind == 9 }, { return InputEvent:TouchCancel; });
+		if({ kind == 10 }, { return InputEvent:PointerEnter(entered: a != 0, x: b, y: c); });
+		if({ kind == 11 }, { return InputEvent:KeyFocus(focused: a != 0); });
+		return InputEvent:None;
+	}
+
+	Function is destroy(){
+		if({ evBufAddr != 0 }, {
+			Mem:free(ptr: evBufAddr);
+			evBufAddr: 0;
+		});
+	}
 	Function of Int is pollScrollY(){ return native:pollScrollY(); }
 	Function of Int is pollScrollX(){ return native:pollScrollX(); }
 	Function of Boolean is pointerDown(){ return native:pointerDown(); }

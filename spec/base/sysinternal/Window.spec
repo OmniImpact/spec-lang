@@ -53,6 +53,7 @@ Class is Window{
 	Function of Int is pal_window_poll_right_click(Int is handle);
 	Function of Int is pal_window_right_click_x(Int is handle);
 	Function of Int is pal_window_right_click_y(Int is handle);
+	Function of Int is pal_window_poll_event(Int is handle, Int is out_5_i32_ptr);
 	Function of Int is pal_window_poll_scroll_y(Int is handle);
 	Function of Int is pal_window_poll_scroll_x(Int is handle);
 	Function of Int is pal_window_pointer_down(Int is handle);
