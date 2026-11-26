@@ -8,6 +8,7 @@ Class is Font{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', as File()],
+		['base', 'sys', OpenTypeGpos],
 		['base', 'struct', Array],
 		['base', 'math', Math],
 		['base', 'sysinternal', Font]
@@ -15,6 +16,8 @@ Class is Font{
 
 	held Array of Int is cachedState: Array([-1, 0]);
 	held Array of Int is cachedFallbackHandles: Array();
+	held Array of Int is cachedGposHandles: Array();
+	held Array of OpenTypeGpos is cachedGposTables: Array();
 
 	Int is handle: -1;
 	Boolean is ownsHandle: true;
@@ -68,6 +71,33 @@ Class is Font{
 		return handle > 0;
 	}
 
+	local Function is registerGpos(Int is fontHandle, OpenTypeGpos is gpos){
+		if({ fontHandle <= 0 }, { return; });
+		local Int is i: 0;
+		while({ i < Font:cachedGposHandles:length() }, {
+			if({ Font:cachedGposHandles:get(index: i) == fontHandle }, {
+				Font:cachedGposTables:set(index: i, item: gpos);
+				return;
+			});
+			i: i + 1;
+		});
+		Font:cachedGposHandles:add(item: fontHandle);
+		Font:cachedGposTables:add(item: gpos);
+	}
+
+	local Function of Int is kernAdvanceFor(Int is fontHandle, Int is cp1, Int is cp2){
+		local Int is k: base:sysinternal:Font:pal_font_kern_advance(handle: fontHandle, cp1: cp1, cp2: cp2);
+		if({ k != 0 }, { return k; });
+		local Int is i: 0;
+		while({ i < Font:cachedGposHandles:length() }, {
+			if({ Font:cachedGposHandles:get(index: i) == fontHandle }, {
+				return Font:cachedGposTables:get(index: i):kernAdvance(cp1: cp1, cp2: cp2);
+			});
+			i: i + 1;
+		});
+		return 0;
+	}
+
 	## Loads a TrueType/OpenType font from [path] using `base:sys:File`.
 	Function of Boolean is load(String is path){
 		local String is bytes: fileRead(
@@ -77,7 +107,14 @@ Class is Font{
 			default: ''
 		);
 		if({ bytes:length() == 0 }, { return false; });
-		return :loadMemory(dataAddr: :cstrAddr(s: bytes), byteLen: bytes:length());
+		if({ !:loadMemory(dataAddr: :cstrAddr(s: bytes), byteLen: bytes:length()) }, {
+			return false;
+		});
+		local OpenTypeGpos is gpos: OpenTypeGpos();
+		if({ gpos:parse(fontBytes: bytes) }, {
+			:registerGpos(fontHandle: handle, gpos: gpos);
+		});
+		return true;
 	}
 
 	## Resolves and loads the OS default sans-serif TrueType font (cached process-wide).
@@ -196,6 +233,10 @@ Class is Font{
 					local Int is fh: base:sysinternal:Font:pal_font_init_memory(data_ptr: :cstrAddr(s: bytes), data_len: bytes:length());
 					if({ fh > 0 }, {
 						Font:cachedFallbackHandles:add(item: fh);
+						local OpenTypeGpos is fbGpos: OpenTypeGpos();
+						if({ fbGpos:parse(fontBytes: bytes) }, {
+							:registerGpos(fontHandle: fh, gpos: fbGpos);
+						});
 					});
 				});
 			});
@@ -256,7 +297,7 @@ Class is Font{
 					local Int is gh: :resolveHandleFor(cp: cp);
 					local Float is gScale: if({ gh == handle }, { baseScale }, { base:sysinternal:Font:pal_font_scale(handle: gh, pixel_height: pixelHeight) });
 					if({ prevCp != 0 && prevH == gh }, {
-						local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gh, cp1: prevCp, cp2: cp);
+						local Int is kern: :kernAdvanceFor(fontHandle: gh, cp1: prevCp, cp2: cp);
 						xpos: xpos + math:toFloat(value: kern) * gScale;
 					});
 					base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: metricsAddr);
@@ -371,13 +412,15 @@ Class is Font{
 						local Int is gHandle: :resolveHandleFor(cp: cp);
 						local Float is gScale: if({ gHandle == handle }, { scale }, { base:sysinternal:Font:pal_font_scale(handle: gHandle, pixel_height: pixelHeight) });
 						if({ prevCp != 0 && prevH == gHandle }, {
-							local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gHandle, cp1: prevCp, cp2: cp);
+							local Int is kern: :kernAdvanceFor(fontHandle: gHandle, cp1: prevCp, cp2: cp);
 							xpos: xpos + math:toFloat(value: kern) * gScale;
 						});
 						base:sysinternal:Font:pal_font_hmetrics(handle: gHandle, cp: cp, out_2_i32_ptr: metricsAddr);
 						local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
 
-						base:sysinternal:Font:pal_font_glyph_box(handle: gHandle, cp: cp, pixel_height: pixelHeight, out_4_i32_ptr: metricsAddr);
+						local Int is basePx: math:toInt(value: math:floor(value: xpos));
+						local Float is shiftX: xpos - math:toFloat(value: basePx);
+						base:sysinternal:Font:pal_font_glyph_box_subpixel(handle: gHandle, cp: cp, pixel_height: pixelHeight, shift_x: shiftX, out_4_i32_ptr: metricsAddr);
 						local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
 						local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
 						local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
@@ -388,15 +431,16 @@ Class is Font{
 						if({ gw > 0 && gh > 0 }, {
 							local Int is buf: :ensureScratch(needed: gw * gh);
 							if({ buf != 0 }, {
-								base:sysinternal:Font:pal_font_rasterize_glyph(
+								base:sysinternal:Font:pal_font_rasterize_glyph_subpixel(
 									handle: gHandle,
 									cp: cp,
 									pixel_height: pixelHeight,
+									shift_x: shiftX,
 									dst_ptr: buf,
 									gw: gw,
 									gh: gh
 								);
-								local Int is dstX0: math:toInt(value: math:floor(value: xpos)) + x0;
+								local Int is dstX0: basePx + x0;
 								local Int is dstY0: baseline + y0;
 								local Int is gy: 0;
 								while({ gy < gh }, {

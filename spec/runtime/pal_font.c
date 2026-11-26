@@ -156,6 +156,28 @@ long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long lon
     return 1;
 }
 
+long long spec_pal_font_glyph_box_subpixel(long long handle, long long cp, long long pixel_height, double shift_x, long long out_4_i32_ptr) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f || !out_4_i32_ptr || pixel_height <= 0) return 0;
+    float s = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
+    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    stbtt_GetCodepointBitmapBoxSubpixel(&f->info, (int)cp, s, s, (float)shift_x, 0.0f, &x0, &y0, &x1, &y1);
+    int32_t* out = (int32_t*)(intptr_t)out_4_i32_ptr;
+    out[0] = (int32_t)x0;
+    out[1] = (int32_t)y0;
+    out[2] = (int32_t)x1;
+    out[3] = (int32_t)y1;
+    return 1;
+}
+
+long long spec_pal_font_rasterize_glyph_subpixel(long long handle, long long cp, long long pixel_height, double shift_x, long long dst_ptr, long long gw, long long gh) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f || !dst_ptr || pixel_height <= 0 || gw <= 0 || gh <= 0) return 0;
+    float s = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
+    stbtt_MakeCodepointBitmapSubpixel(&f->info, (unsigned char*)(intptr_t)dst_ptr, (int)gw, (int)gh, (int)gw, s, s, (float)shift_x, 0.0f, (int)cp);
+    return 1;
+}
+
 long long spec_pal_font_has_glyph(long long handle, long long cp) {
     SpecFont* f = _spec_get_font(handle);
     if (!f) return 0;
@@ -230,6 +252,8 @@ long long spec_pal_font_hmetrics(long long handle, long long cp, long long out_2
 long long spec_pal_font_kern_advance(long long handle, long long cp1, long long cp2) { (void)handle; (void)cp1; (void)cp2; return 0; }
 long long spec_pal_font_glyph_box(long long handle, long long cp, long long pixel_height, long long out_4_i32_ptr) { (void)handle; (void)cp; (void)pixel_height; (void)out_4_i32_ptr; return 0; }
 long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long long pixel_height, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)dst_ptr; (void)gw; (void)gh; return 0; }
+long long spec_pal_font_glyph_box_subpixel(long long handle, long long cp, long long pixel_height, double shift_x, long long out_4_i32_ptr) { (void)handle; (void)cp; (void)pixel_height; (void)shift_x; (void)out_4_i32_ptr; return 0; }
+long long spec_pal_font_rasterize_glyph_subpixel(long long handle, long long cp, long long pixel_height, double shift_x, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)shift_x; (void)dst_ptr; (void)gw; (void)gh; return 0; }
 long long spec_pal_font_has_glyph(long long handle, long long cp) { (void)handle; (void)cp; return 0; }
 long long spec_pal_font_default_path(long long out_buf, long long out_cap) { (void)out_buf; (void)out_cap; return 0; }
 

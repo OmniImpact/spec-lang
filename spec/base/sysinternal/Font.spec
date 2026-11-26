@@ -41,6 +41,14 @@ Class is Font{
 	## Bound to `spec_pal_font_rasterize_glyph`.
 	Function of Int is pal_font_rasterize_glyph(Int is handle, Int is cp, Int is pixel_height, Int is dst_ptr, Int is gw, Int is gh);
 
+	## Writes `[x0, y0, x1, y1]` bitmap bounding box for [cp] at [pixel_height] with horizontal subpixel [shift_x] in `[0, 1)`.
+	## Bound to `spec_pal_font_glyph_box_subpixel`.
+	Function of Int is pal_font_glyph_box_subpixel(Int is handle, Int is cp, Int is pixel_height, Float is shift_x, Int is out_4_i32_ptr);
+
+	## Rasterizes [cp] at [pixel_height] with horizontal subpixel [shift_x] into [dst_ptr] ([gw] x [gh]).
+	## Bound to `spec_pal_font_rasterize_glyph_subpixel`.
+	Function of Int is pal_font_rasterize_glyph_subpixel(Int is handle, Int is cp, Int is pixel_height, Float is shift_x, Int is dst_ptr, Int is gw, Int is gh);
+
 	## Returns 1 if [cp] maps to a non-zero glyph index in [handle], else 0.
 	## Bound to `spec_pal_font_has_glyph`.
 	Function of Int is pal_font_has_glyph(Int is handle, Int is cp);
