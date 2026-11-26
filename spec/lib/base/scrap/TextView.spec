@@ -503,12 +503,26 @@ Class of SewNode is TextView{
 		return desiredSize;
 	}
 
+	Boolean is selectingDrag: false;
+
 	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		if({ !selectingDrag }, {
+			local Rect is b: bounds();
+			if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
+		});
 		return :onPointerClickMod(x: x, y: y, mods: 1);
+	}
+
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		selectingDrag: false;
+		return false;
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Rect is b: bounds();
+		if({ !selectingDrag && (x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height) }, {
+			return false;
+		});
 		local Int is fpx: :fontPx();
 		local Int is gapPx: activeScale:px(pt: lineGapPt);
 		local Int is padPx: activeScale:px(pt: padPt);
@@ -543,6 +557,7 @@ Class of SewNode is TextView{
 
 		local Int is rLine: dispRawLine:get(index: dispIdx);
 		local Int is rCol: dispRawStart:get(index: dispIdx) + bestCol;
+		selectingDrag: true;
 		:moveCursor(line: rLine, col: rCol, extendSel: (mods & 1) != 0);
 		return true;
 	}

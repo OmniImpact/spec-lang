@@ -23,6 +23,7 @@ Class of SewNode is FlexGridBase{
 	Boolean is movable: true;
 	Boolean is horizontal: true;
 	Int is dragDivider: -1;
+	Int is dragChildIdx: -1;
 	Int is hoverDivider: -1;
 	Int is dragStartPos: 0;
 	Int is dragStartSizeA: 0;
@@ -318,19 +319,25 @@ Class of SewNode is FlexGridBase{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		local Rect is b: bounds();
+		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
 		local Int is di: :dividerAt(x: x, y: y);
 		if({ di >= 0 }, {
+			dragChildIdx: -1;
 			:beginDividerDrag(di: di, x: x, y: y);
 			return true;
 		});
 		local Int is pi: :panelIndexAt(x: x, y: y);
 		if({ pi >= 0 }, {
+			dragChildIdx: pi;
 			return panels:get(index: pi):child:onPointerClickMod(x: x, y: y, mods: mods);
 		});
 		return false;
 	}
 
 	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		local Rect is b: bounds();
+		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
 		local Int is pi: :panelIndexAt(x: x, y: y);
 		if({ pi >= 0 }, {
 			return panels:get(index: pi):child:onRightClickMod(x: x, y: y, mods: mods);
@@ -339,6 +346,9 @@ Class of SewNode is FlexGridBase{
 	}
 
 	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		if({ dragChildIdx >= 0 && dragChildIdx < panels:length() }, {
+			return panels:get(index: dragChildIdx):child:onPointerDrag(x: x, y: y, mods: mods);
+		});
 		if({ movable && dragDivider < 0 }, {
 			local Int is di: :dividerAt(x: x, y: y);
 			if({ di >= 0 }, {
@@ -369,10 +379,10 @@ Class of SewNode is FlexGridBase{
 			invalidate();
 			return true;
 		});
-		local Int is i: 0;
-		while({ i < panels:length() }, {
-			if({ panels:get(index: i):child:onPointerDrag(x: x, y: y, mods: mods) }, { return true; });
-			i: i + 1;
+		local Int is pi: :panelIndexAt(x: x, y: y);
+		if({ pi >= 0 }, {
+			dragChildIdx: pi;
+			return panels:get(index: pi):child:onPointerDrag(x: x, y: y, mods: mods);
 		});
 		return false;
 	}
@@ -380,8 +390,14 @@ Class of SewNode is FlexGridBase{
 	replace Function of Boolean is onPointerUp(Int is x, Int is y){
 		if({ dragDivider >= 0 }, {
 			dragDivider: -1;
+			dragChildIdx: -1;
 			invalidate();
 			return true;
+		});
+		if({ dragChildIdx >= 0 && dragChildIdx < panels:length() }, {
+			local Int is pi: dragChildIdx;
+			dragChildIdx: -1;
+			return panels:get(index: pi):child:onPointerUp(x: x, y: y);
 		});
 		local Boolean is changed: false;
 		local Int is i: 0;

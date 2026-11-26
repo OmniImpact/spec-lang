@@ -96,18 +96,28 @@ Class of SewNode is Row{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		local Rect is b: bounds();
+		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
 		local Int is i: children:length() - 1;
 		while({ i >= 0 }, {
-			if({ children:get(index: i):onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+			local Rect is cb: children:get(index: i):bounds();
+			if({ x >= cb:x && x < cb:x + cb:width && y >= cb:y && y < cb:y + cb:height }, {
+				if({ children:get(index: i):onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+			});
 			i: i - 1;
 		});
 		return false;
 	}
 
 	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		local Rect is b: bounds();
+		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
 		local Int is i: children:length() - 1;
 		while({ i >= 0 }, {
-			if({ children:get(index: i):onRightClickMod(x: x, y: y, mods: mods) }, { return true; });
+			local Rect is cb: children:get(index: i):bounds();
+			if({ x >= cb:x && x < cb:x + cb:width && y >= cb:y && y < cb:y + cb:height }, {
+				if({ children:get(index: i):onRightClickMod(x: x, y: y, mods: mods) }, { return true; });
+			});
 			i: i - 1;
 		});
 		return false;

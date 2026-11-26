@@ -64,6 +64,7 @@ Class of SewNode is ToolkitContainer{
 	Int is lastPtrX: -1;
 	Int is lastPtrY: -1;
 	Boolean is wasPtrDown: false;
+	Int is ptrCaptureTarget: 0;
 	Boolean is closedByWm: false;
 	SuitWindow is activeWin: SuitWindow();
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
@@ -350,6 +351,7 @@ Class of SewNode is ToolkitContainer{
 		lastPtrX: -1;
 		lastPtrY: -1;
 		wasPtrDown: false;
+		ptrCaptureTarget: 0;
 		closedByWm: false;
 
 		while({ running:current() }, {
@@ -477,10 +479,27 @@ Class of SewNode is ToolkitContainer{
 			local Boolean is ptrDown: win:pointerDown();
 			local Int is px: win:pointerX();
 			local Int is py: win:pointerY();
+			if({ ptrDown && !wasPtrDown }, {
+				ptrCaptureTarget: 0;
+				if({ !contextMenu:isOpen }, {
+					if({ hasToolbarSlot && px >= toolbarSlot:bounds():x && px < toolbarSlot:bounds():x + toolbarSlot:bounds():width && py >= toolbarSlot:bounds():y && py < toolbarSlot:bounds():y + toolbarSlot:bounds():height }, {
+						ptrCaptureTarget: 1;
+					}, {
+					if({ hasTabBar && px >= tabBar:bounds():x && px < tabBar:bounds():x + tabBar:bounds():width && py >= tabBar:bounds():y && py < tabBar:bounds():y + tabBar:bounds():height }, {
+						ptrCaptureTarget: 2;
+					}, {
+					if({ hasBottomBar && px >= bottomBar:bounds():x && px < bottomBar:bounds():x + bottomBar:bounds():width && py >= bottomBar:bounds():y && py < bottomBar:bounds():y + bottomBar:bounds():height }, {
+						ptrCaptureTarget: 3;
+					}, {
+					if({ hasBody && !useVulkan && px >= bodyPanel:bounds():x && px < bodyPanel:bounds():x + bodyPanel:bounds():width && py >= bodyPanel:bounds():y && py < bodyPanel:bounds():y + bodyPanel:bounds():height }, {
+						ptrCaptureTarget: 4;
+					}); }); }); });
+				});
+			});
 			if({ px != lastPtrX || py != lastPtrY }, {
 				lastPtrX: px;
 				lastPtrY: py;
-				if({ ptrDown && hasBody && !useVulkan }, {
+				if({ ptrDown && ptrCaptureTarget == 4 && hasBody && !useVulkan }, {
 					if({ bodyPanel:onPointerDrag(x: px, y: py, mods: curMods) }, {
 						:isDirty: true;
 					});
@@ -489,10 +508,13 @@ Class of SewNode is ToolkitContainer{
 					:isDirty: true;
 				});
 			});
-			if({ !ptrDown && wasPtrDown && hasBody && !useVulkan }, {
-				if({ bodyPanel:onPointerUp(x: px, y: py) }, {
-					:isDirty: true;
+			if({ !ptrDown && wasPtrDown }, {
+				if({ ptrCaptureTarget == 4 && hasBody && !useVulkan }, {
+					if({ bodyPanel:onPointerUp(x: px, y: py) }, {
+						:isDirty: true;
+					});
 				});
+				ptrCaptureTarget: 0;
 			});
 			wasPtrDown: ptrDown;
 

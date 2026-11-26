@@ -24,6 +24,7 @@ Class of SewNode is ScrollView{
 	String is scrollbarSide: 'right';
 	Int is dragMode: 0;
 	Int is dragGrabOffset: 0;
+	Boolean is childCapturing: false;
 
 	replace Function is init(SewNode is child, Float is barWidthPt: 12.0, String is scrollbarSide: 'right'){
 		:child: child;
@@ -197,7 +198,12 @@ Class of SewNode is ScrollView{
 		});
 
 		dragMode: 0;
-		return child:onPointerClickMod(x: x, y: y, mods: mods);
+		if({ x >= cx && x < cx + vw && y >= b:y && y < b:y + vh }, {
+			childCapturing: child:onPointerClickMod(x: x, y: y, mods: mods);
+			return childCapturing;
+		});
+		childCapturing: false;
+		return false;
 	}
 
 	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
@@ -228,11 +234,19 @@ Class of SewNode is ScrollView{
 			});
 			return false;
 		});
-		return child:onPointerDrag(x: x, y: y, mods: mods);
+		if({ childCapturing }, {
+			return child:onPointerDrag(x: x, y: y, mods: mods);
+		});
+		if({ x >= cx && x < cx + vw && y >= b:y && y < b:y + vh }, {
+			childCapturing: true;
+			return child:onPointerDrag(x: x, y: y, mods: mods);
+		});
+		return false;
 	}
 
 	replace Function of Boolean is onPointerUp(Int is x, Int is y){
 		dragMode: 0;
+		childCapturing: false;
 		return child:onPointerUp(x: x, y: y);
 	}
 
