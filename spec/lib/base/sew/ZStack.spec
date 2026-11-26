@@ -1,7 +1,7 @@
 #! Package base:sew
 #! Z-order overlay layout container stacking children on top of each other.
 
-Class of SewNode is Stack{
+Class of SewNode is ZStack{
 	replace [String] is namespace: ['base', 'sew'];
 
 	replace [[String]] is using: [

@@ -16,6 +16,8 @@ Class is SpecEditStrings{
 	held String is FILE_DIALOG_TITLE: 'Open File';
 	held String is SAVE_DIALOG_TITLE: 'Save File';
 	held String is TEXT_ALIGN_CENTER: 'center';
+	held String is ROUTE_WELCOME: 'Welcome';
+	held String is ROUTE_FILES: 'Files';
 
 	held String is MENU_KIND_TOGGLE: 'toggle';
 

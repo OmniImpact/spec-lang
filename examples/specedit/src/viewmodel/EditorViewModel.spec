@@ -29,7 +29,7 @@ Class is EditorViewModel{
 
 	TextEmitter is title: TextEmitter(initial: SpecEditStrings:APP_NAME);
 	BoolEmitter is running: BoolEmitter(initial: true);
-	BoolEmitter is hasDocument: BoolEmitter(initial: false);
+	TextEmitter is activeRoute: TextEmitter(initial: SpecEditStrings:ROUTE_WELCOME);
 	BoolEmitter is fileDialogOpen: BoolEmitter(initial: false);
 	BoolEmitter is fileDialogSaveMode: BoolEmitter(initial: false);
 	TextEmitter is fileDialogTitle: TextEmitter(initial: SpecEditStrings:FILE_DIALOG_TITLE);
@@ -71,7 +71,7 @@ Class is EditorViewModel{
 		:model: EditorModel(documentName: SpecEditStrings:UNTITLED);
 		:documents: Array();
 		:activeDocIdx: -1;
-		hasDocument: BoolEmitter(initial: false);
+		activeRoute: TextEmitter(initial: SpecEditStrings:ROUTE_WELCOME);
 		title: TextEmitter(initial: :computeTitle());
 		running: BoolEmitter(initial: true);
 		fileDialogOpen: BoolEmitter(initial: false);
@@ -122,7 +122,7 @@ Class is EditorViewModel{
 		if({ idx < 0 || idx >= documents:length() }, { return; });
 		activeDocIdx: idx;
 		model: documents:get(index: idx);
-		hasDocument:emit(value: true);
+		activeRoute:emit(value: SpecEditStrings:ROUTE_FILES);
 		documentText:emit(value: model:text);
 		cursorStatus:emit(value: SpecEditStrings:DEFAULT_CURSOR_STATUS);
 		title:emit(value: :computeTitle());
@@ -394,7 +394,7 @@ Class is EditorViewModel{
 		documents: Array();
 		activeDocIdx: -1;
 		model: EditorModel(documentName: SpecEditStrings:UNTITLED);
-		hasDocument:emit(value: false);
+		activeRoute:emit(value: SpecEditStrings:ROUTE_WELCOME);
 		documentText:emit(value: '');
 		cursorStatus:emit(value: '');
 		title:emit(value: :computeTitle());

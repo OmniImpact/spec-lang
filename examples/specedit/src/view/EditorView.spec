@@ -11,8 +11,9 @@ Class is EditorView{
 		['base', 'sew', Center],
 		['base', 'sew', Column],
 		['base', 'sew', Row],
-		['base', 'sew', Stack],
-		['base', 'sew', ViewSwitch],
+		['base', 'sew', ZStack],
+		['base', 'sew', NavStack],
+		['base', 'sew', NavRoute],
 		['base', 'fabric', Theme],
 		['base', 'scrap', ToolkitContainer],
 		['base', 'scrap', ToolbarContainer],
@@ -33,6 +34,7 @@ Class is EditorView{
 
 	EditorViewModel is vm: EditorViewModel();
 	TextView is editorBody: TextView(text: TextEmitter(initial: ''));
+	ScrollView is editorScroll: ScrollView(child: TextView(text: TextEmitter(initial: '')));
 	TabBar is tabBar: TabBar();
 
 	replace Function is init(EditorViewModel is vm){
@@ -45,6 +47,7 @@ Class is EditorView{
 			onTextChange: local Function(String is next){ vm:onDocumentEdited(text: next); },
 			onRightClickMenu: local Function(Int is x, Int is y){ vm:showEditorContextMenu(x: x, y: y); }
 		);
+		editorScroll: ScrollView(child: editorBody);
 		tabBar: TabBar(
 			onSelectTab: local Function(Int is idx){ vm:selectTab(index: idx); },
 			onCloseTab: local Function(Int is idx){ vm:closeTab(index: idx); },
@@ -93,8 +96,8 @@ Class is EditorView{
 		)
 	}
 
-	local Function of SewNode is emptyState(){
-		Stack(
+	local Function of SewNode is welcomeContainer(){
+		ZStack(
 			children: Array([
 				ScrapPanel() as SewNode,
 				Center(
@@ -116,6 +119,16 @@ Class is EditorView{
 		)
 	}
 
+	local Function of SewNode is filesContainer(){
+		Column(
+			children: Array([
+				tabBar as SewNode,
+				editorScroll as SewNode
+			]),
+			flexFlags: Array([false, true])
+		)
+	}
+
 	Function of ToolkitContainer is build(){
 		ToolkitContainer(
 			title: vm:title,
@@ -129,12 +142,12 @@ Class is EditorView{
 					onMenuOpen: local Function(MenuConfig is _m){ vm:refreshMenuStates(); }
 				)
 			),
-			tabBar: tabBar,
-			hasTabBar: true,
-			body: ViewSwitch(
-				condition: vm:hasDocument,
-				first: ScrollView(child: editorBody),
-				second: :emptyState()
+			body: NavStack(
+				route: vm:activeRoute,
+				routes: Array([
+					NavRoute(name: SpecEditStrings:ROUTE_WELCOME, child: :welcomeContainer()),
+					NavRoute(name: SpecEditStrings:ROUTE_FILES, child: :filesContainer())
+				])
 			),
 			bottomBar: Bar(
 				leftText: vm:cursorStatus,

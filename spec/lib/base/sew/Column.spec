@@ -21,12 +21,16 @@ Class of SewNode is Column{
 	Array of Boolean is flexFlags: Array();
 	Float is gapPt: 0.0;
 
-	replace Function is init(Array of SewNode is children: Array(), Float is gapPt: 0.0){
+	replace Function is init(Array of SewNode is children: Array(), Float is gapPt: 0.0, Array of Boolean is flexFlags: Array()){
 		:children: children;
 		:gapPt: gapPt;
-		:flexFlags: Array();
-		times(count: children:length(), worker: local Function(Int is _i){
-			flexFlags:add(item: false);
+		if({ flexFlags:length() == children:length() }, {
+			:flexFlags: flexFlags;
+		}, {
+			:flexFlags: Array();
+			times(count: children:length(), worker: local Function(Int is _i){
+				:flexFlags:add(item: false);
+			});
 		});
 	}
 
@@ -38,17 +42,28 @@ Class of SewNode is Column{
 
 	replace Function is applyTheme(Theme is theme){
 		:activeTheme: theme;
-		times(count: children:length(), worker: local Function(Int is i){
-			local SewNode is ch: children:get(index: i);
-			ch:applyTheme(theme: theme);
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			children:get(index: i):applyTheme(theme: theme);
+			i: i + 1;
 		});
 	}
 
 	replace Function is setScale(Scale is scale){
 		:activeScale: scale;
-		times(count: children:length(), worker: local Function(Int is i){
-			local SewNode is ch: children:get(index: i);
-			ch:setScale(scale: scale);
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			children:get(index: i):setScale(scale: scale);
+			i: i + 1;
+		});
+	}
+
+	replace Function is bindDirty(Function is cb){
+		:dirtyListeners: Array([cb]);
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			children:get(index: i):bindDirty(cb: cb);
+			i: i + 1;
 		});
 	}
 
@@ -102,5 +117,92 @@ Class of SewNode is Column{
 			local SewNode is ch: children:get(index: i);
 			ch:paint(ctx: ctx);
 		});
+	}
+
+	replace Function of Boolean is onScroll(Int is deltaY){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onScroll(deltaY: deltaY) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onScrollX(Int is deltaX){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onScrollX(deltaX: deltaX) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onRightClickMod(x: x, y: y, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
+		local Boolean is changed: false;
+		times(count: children:length(), worker: local Function(Int is i){
+			if({ children:get(index: i):onPointerMove(x: x, y: y) }, { changed: true; });
+		});
+		return changed;
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onPointerDrag(x: x, y: y, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		local Boolean is changed: false;
+		times(count: children:length(), worker: local Function(Int is i){
+			if({ children:get(index: i):onPointerUp(x: x, y: y) }, { changed: true; });
+		});
+		return changed;
+	}
+
+	replace Function of Boolean is tick(Int is nowMs){
+		local Boolean is changed: false;
+		times(count: children:length(), worker: local Function(Int is i){
+			if({ children:get(index: i):tick(nowMs: nowMs) }, { changed: true; });
+		});
+		return changed;
+	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onKey(key: key, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onText(String is ch, Int is mods){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onText(ch: ch, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
 	}
 }
