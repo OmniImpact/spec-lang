@@ -54,6 +54,12 @@ Class of SewNode is ToolkitContainer{
 	Boolean is hasDialog: false;
 	Boolean is hasFileDialog: false;
 	Boolean is isDirty: false;
+	Int is loopW: 0;
+	Int is loopH: 0;
+	Int is lastPtrX: -1;
+	Int is lastPtrY: -1;
+	Boolean is wasPtrDown: false;
+	Boolean is closedByWm: false;
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
 	Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){};
 	Function is onDispose: local Function(){};
@@ -253,17 +259,17 @@ Class of SewNode is ToolkitContainer{
 			})
 		);
 
-		local Int is curW: win:width();
-		local Int is curH: win:height();
-		local SuitCanvas is canvas: SuitCanvas(width: curW, height: curH);
+		loopW: win:width();
+		loopH: win:height();
+		local SuitCanvas is canvas: SuitCanvas(width: loopW, height: loopH);
 		local DrawContext is ctx: DrawContext(canvas: canvas);
 
-		:layout(widthPx: curW, heightPx: curH);
+		:layout(widthPx: loopW, heightPx: loopH);
 		:paint(ctx: ctx);
 		if({ gpuPresent }, {
 			vulkanBody:setOverlay(canvas: canvas);
 			if({ !useVulkan }, {
-				vulkanBody:presentOverlay(width: curW, height: curH);
+				vulkanBody:presentOverlay(width: loopW, height: loopH);
 			});
 		}, {
 			win:present(canvas: canvas);
@@ -271,169 +277,13 @@ Class of SewNode is ToolkitContainer{
 
 		local Time is clock: Time();
 		local Int is startMs: clock:monotonicMs();
-		local Int is lastPtrX: -1;
-		local Int is lastPtrY: -1;
-		local Boolean is wasPtrDown: false;
-		local Boolean is closedByWm: false;
+		lastPtrX: -1;
+		lastPtrY: -1;
+		wasPtrDown: false;
+		closedByWm: false;
 
 		while({ running:current() }, {
-			local Int is loopStartNs: clock:monotonicNs();
-			if({ !win:poll() }, {
-				closedByWm: true;
-				running:emit(value: false);
-			});
-
-			local Int is curMods: win:mods();
-			if({ running:current() }, {
-				local Int is key: win:nextKey();
-				while({ key != 0 }, {
-					if({ key == 27 }, {
-						running:emit(value: false);
-					}, {
-						if({ hasBody && !useVulkan }, {
-							if({ bodyPanel:onKey(key: key, mods: curMods) }, {
-								:isDirty: true;
-							}, {
-								if({ key == 1001 }, {
-									if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
-								});
-								if({ key == 1002 }, {
-									if({ bodyPanel:onScroll(deltaY: 15) }, { :isDirty: true; });
-								});
-								if({ key == 1003 }, {
-									if({ bodyPanel:onScrollX(deltaX: -15) }, { :isDirty: true; });
-								});
-								if({ key == 1004 }, {
-									if({ bodyPanel:onScrollX(deltaX: 15) }, { :isDirty: true; });
-								});
-								if({ key == 1007 }, {
-									if({ bodyPanel:onScroll(deltaY: -80) }, { :isDirty: true; });
-								});
-								if({ key == 1008 }, {
-									if({ bodyPanel:onScroll(deltaY: 80) }, { :isDirty: true; });
-								});
-							});
-						});
-					});
-					key: win:nextKey();
-				});
-
-				local Int is cp: win:nextChar();
-				while({ cp != 0 }, {
-					if({ hasBody && !useVulkan && cp >= 32 }, {
-						if({ bodyPanel:onText(ch: String:fromCodePoint(code: cp), mods: curMods) }, {
-							:isDirty: true;
-						});
-					});
-					cp: win:nextChar();
-				});
-			});
-
-			local Int is elapsedMs: clock:monotonicMs() - startMs;
-			if({ durationMs > 0 && elapsedMs >= durationMs }, {
-				running:emit(value: false);
-			});
-
-			if({ running:current() }, {
-				if({ hasDialog }, {
-					dialog:poll();
-				});
-				if({ hasFileDialog }, {
-					fileDialog:poll();
-				});
-
-				local Int is w: win:width();
-				local Int is h: win:height();
-				if({ w > 0 && h > 0 && (w != curW || h != curH) }, {
-					curW: w;
-					curH: h;
-					canvas:resize(width: curW, height: curH);
-					:layout(widthPx: curW, heightPx: curH);
-					:isDirty: true;
-				});
-
-				local Int is sy: win:pollScrollY();
-				if({ sy != 0 && hasBody && !useVulkan }, {
-					if({ (curMods & 1) != 0 }, {
-						if({ bodyPanel:onScrollX(deltaX: sy) }, {
-							:isDirty: true;
-						});
-					}, {
-						if({ bodyPanel:onScroll(deltaY: sy) }, {
-							:isDirty: true;
-						});
-					});
-				});
-
-				local Int is sx: win:pollScrollX();
-				if({ sx != 0 && hasBody && !useVulkan }, {
-					if({ bodyPanel:onScrollX(deltaX: sx) }, {
-						:isDirty: true;
-					});
-				});
-
-				local Boolean is ptrDown: win:pointerDown();
-				local Int is px: win:pointerX();
-				local Int is py: win:pointerY();
-				if({ px != lastPtrX || py != lastPtrY }, {
-					lastPtrX: px;
-					lastPtrY: py;
-					if({ ptrDown && hasBody && !useVulkan }, {
-						if({ bodyPanel:onPointerDrag(x: px, y: py, mods: curMods) }, {
-							:isDirty: true;
-						});
-					});
-					if({ :onPointerMove(x: px, y: py) }, {
-						:isDirty: true;
-					});
-				});
-				if({ !ptrDown && wasPtrDown && hasBody && !useVulkan }, {
-					if({ bodyPanel:onPointerUp(x: px, y: py) }, {
-						:isDirty: true;
-					});
-				});
-				wasPtrDown: ptrDown;
-
-				if({ win:pollClick() }, {
-					if({ :onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
-						:isDirty: true;
-					});
-				});
-
-				if({ hasBody && !useVulkan }, {
-					if({ bodyPanel:tick(nowMs: clock:monotonicMs()) }, {
-						:isDirty: true;
-					});
-				});
-
-				if({ isDirty && running:current() }, {
-					:isDirty: false;
-					:layout(widthPx: curW, heightPx: curH);
-					:paint(ctx: ctx);
-					if({ gpuPresent }, {
-						vulkanBody:setOverlay(canvas: canvas);
-						if({ !useVulkan }, {
-							vulkanBody:presentOverlay(width: curW, height: curH);
-						});
-					}, {
-						win:present(canvas: canvas);
-					});
-				});
-
-				if({ useVulkan && gpuPresent && running:current() }, {
-					local Function is frameCb: onFrame;
-					frameCb(vulkanBody, elapsedMs, curW, curH);
-					local Int is fpsCap: targetFps:current();
-					if({ fpsCap > 0 }, {
-						local Int is budgetNs: 1000000000 / fpsCap;
-						clock:sleepUntilNs(targetNs: loopStartNs + budgetNs);
-					});
-				}, {
-					if({ running:current() }, {
-						clock:sleepUntilNs(targetNs: loopStartNs + 8000000);
-					});
-				});
-			});
+			:stepLoopFrame(win: win, canvas: canvas, ctx: ctx, clock: clock, startMs: startMs, durationMs: durationMs);
 		});
 
 		local Function is dispCb: onDispose;
@@ -446,6 +296,166 @@ Class of SewNode is ToolkitContainer{
 		if({ !gpuPresent || !closedByWm }, {
 			if({ gpuPresent }, { vulkanBody:dispose(); });
 			win:close();
+		});
+	}
+
+	local Function is stepLoopFrame(SuitWindow is win, SuitCanvas is canvas, DrawContext is ctx, Time is clock, Int is startMs, Int is durationMs){
+		local Int is loopStartNs: clock:monotonicNs();
+		if({ !win:poll() }, {
+			closedByWm: true;
+			running:emit(value: false);
+		});
+
+		local Int is curMods: win:mods();
+		if({ running:current() }, {
+			local Int is key: win:nextKey();
+			while({ key != 0 }, {
+				if({ key == 27 }, {
+					running:emit(value: false);
+				}, {
+					if({ hasBody && !useVulkan }, {
+						if({ bodyPanel:onKey(key: key, mods: curMods) }, {
+							:isDirty: true;
+						}, {
+							if({ key == 1001 }, {
+								if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
+							});
+							if({ key == 1002 }, {
+								if({ bodyPanel:onScroll(deltaY: 15) }, { :isDirty: true; });
+							});
+							if({ key == 1003 }, {
+								if({ bodyPanel:onScrollX(deltaX: -15) }, { :isDirty: true; });
+							});
+							if({ key == 1004 }, {
+								if({ bodyPanel:onScrollX(deltaX: 15) }, { :isDirty: true; });
+							});
+							if({ key == 1007 }, {
+								if({ bodyPanel:onScroll(deltaY: -80) }, { :isDirty: true; });
+							});
+							if({ key == 1008 }, {
+								if({ bodyPanel:onScroll(deltaY: 80) }, { :isDirty: true; });
+							});
+						});
+					});
+				});
+				key: win:nextKey();
+			});
+
+			local Int is cp: win:nextChar();
+			while({ cp != 0 }, {
+				if({ hasBody && !useVulkan && cp >= 32 }, {
+					if({ bodyPanel:onText(ch: String:fromCodePoint(code: cp), mods: curMods) }, {
+						:isDirty: true;
+					});
+				});
+				cp: win:nextChar();
+			});
+		});
+
+		local Int is elapsedMs: clock:monotonicMs() - startMs;
+		if({ durationMs > 0 && elapsedMs >= durationMs }, {
+			running:emit(value: false);
+		});
+
+		if({ running:current() }, {
+			if({ hasDialog }, {
+				dialog:poll();
+			});
+			if({ hasFileDialog }, {
+				fileDialog:poll();
+			});
+
+			local Int is w: win:width();
+			local Int is h: win:height();
+			if({ w > 0 && h > 0 && (w != loopW || h != loopH) }, {
+				loopW: w;
+				loopH: h;
+				canvas:resize(width: loopW, height: loopH);
+				:layout(widthPx: loopW, heightPx: loopH);
+				:isDirty: true;
+			});
+
+			local Int is sy: win:pollScrollY();
+			if({ sy != 0 && hasBody && !useVulkan }, {
+				if({ (curMods & 1) != 0 }, {
+					if({ bodyPanel:onScrollX(deltaX: sy) }, {
+						:isDirty: true;
+					});
+				}, {
+					if({ bodyPanel:onScroll(deltaY: sy) }, {
+						:isDirty: true;
+					});
+				});
+			});
+
+			local Int is sx: win:pollScrollX();
+			if({ sx != 0 && hasBody && !useVulkan }, {
+				if({ bodyPanel:onScrollX(deltaX: sx) }, {
+					:isDirty: true;
+				});
+			});
+
+			local Boolean is ptrDown: win:pointerDown();
+			local Int is px: win:pointerX();
+			local Int is py: win:pointerY();
+			if({ px != lastPtrX || py != lastPtrY }, {
+				lastPtrX: px;
+				lastPtrY: py;
+				if({ ptrDown && hasBody && !useVulkan }, {
+					if({ bodyPanel:onPointerDrag(x: px, y: py, mods: curMods) }, {
+						:isDirty: true;
+					});
+				});
+				if({ :onPointerMove(x: px, y: py) }, {
+					:isDirty: true;
+				});
+			});
+			if({ !ptrDown && wasPtrDown && hasBody && !useVulkan }, {
+				if({ bodyPanel:onPointerUp(x: px, y: py) }, {
+					:isDirty: true;
+				});
+			});
+			wasPtrDown: ptrDown;
+
+			if({ win:pollClick() }, {
+				if({ :onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
+					:isDirty: true;
+				});
+			});
+
+			if({ hasBody && !useVulkan }, {
+				if({ bodyPanel:tick(nowMs: clock:monotonicMs()) }, {
+					:isDirty: true;
+				});
+			});
+
+			if({ isDirty && running:current() }, {
+				:isDirty: false;
+				:layout(widthPx: loopW, heightPx: loopH);
+				:paint(ctx: ctx);
+				if({ gpuPresent }, {
+					vulkanBody:setOverlay(canvas: canvas);
+					if({ !useVulkan }, {
+						vulkanBody:presentOverlay(width: loopW, height: loopH);
+					});
+				}, {
+					win:present(canvas: canvas);
+				});
+			});
+
+			if({ useVulkan && gpuPresent && running:current() }, {
+				local Function is frameCb: onFrame;
+				frameCb(vulkanBody, elapsedMs, loopW, loopH);
+				local Int is fpsCap: targetFps:current();
+				if({ fpsCap > 0 }, {
+					local Int is budgetNs: 1000000000 / fpsCap;
+					clock:sleepUntilNs(targetNs: loopStartNs + budgetNs);
+				});
+			}, {
+				if({ running:current() }, {
+					clock:sleepUntilNs(targetNs: loopStartNs + 8000000);
+				});
+			});
 		});
 	}
 }

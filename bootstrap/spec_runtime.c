@@ -4166,149 +4166,61 @@ long long spec_pal_font_close(long long handle) {
     return 0;
 }
 
-static uint32_t _spec_utf8_next(const char** p) {
-    const unsigned char* s = (const unsigned char*)(*p);
-    if (!s || !*s) return 0;
-    unsigned char c0 = s[0];
-    if (c0 < 0x80) {
-        *p += 1;
-        return c0;
-    } else if ((c0 & 0xE0) == 0xC0 && s[1]) {
-        *p += 2;
-        return ((uint32_t)(c0 & 0x1F) << 6) | (uint32_t)(s[1] & 0x3F);
-    } else if ((c0 & 0xF0) == 0xE0 && s[1] && s[2]) {
-        *p += 3;
-        return ((uint32_t)(c0 & 0x0F) << 12) | ((uint32_t)(s[1] & 0x3F) << 6) | (uint32_t)(s[2] & 0x3F);
-    } else if ((c0 & 0xF8) == 0xF0 && s[1] && s[2] && s[3]) {
-        *p += 4;
-        return ((uint32_t)(c0 & 0x07) << 18) | ((uint32_t)(s[1] & 0x3F) << 12) |
-               ((uint32_t)(s[2] & 0x3F) << 6) | (uint32_t)(s[3] & 0x3F);
-    }
-    *p += 1;
-    return c0;
+double spec_pal_font_scale(long long handle, long long pixel_height) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f || pixel_height <= 0) return 0.0;
+    return (double)stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
 }
 
-long long spec_pal_font_draw_text(
-    long long handle,
-    long long pixels_addr,
-    long long buf_w,
-    long long buf_h,
-    long long x,
-    long long y,
-    long long text_cstr,
-    long long pixel_height,
-    long long argb_color
-) {
+long long spec_pal_font_vmetrics(long long handle, long long out_3_i32_ptr) {
     SpecFont* f = _spec_get_font(handle);
-    if (!f || !pixels_addr || buf_w <= 0 || buf_h <= 0 || !text_cstr || pixel_height <= 0) return 0;
-
-    uint32_t* dst = (uint32_t*)(intptr_t)pixels_addr;
-    const char* p = (const char*)(intptr_t)text_cstr;
-    float scale = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
-
-    int ascent = 0, descent = 0, line_gap = 0;
-    stbtt_GetFontVMetrics(&f->info, &ascent, &descent, &line_gap);
-    int baseline = (int)y + (int)roundf((float)ascent * scale);
-    float xpos = (float)x;
-
-    uint32_t fg_r = ((uint32_t)argb_color >> 16) & 0xFFu;
-    uint32_t fg_g = ((uint32_t)argb_color >> 8) & 0xFFu;
-    uint32_t fg_b = (uint32_t)argb_color & 0xFFu;
-    uint32_t fg_a = ((uint32_t)argb_color >> 24) & 0xFFu;
-    if (fg_a == 0) fg_a = 255u;
-
-    size_t scratch_cap = 0;
-    unsigned char* scratch = NULL;
-    uint32_t prev_cp = 0;
-    float tracking = (float)pixel_height * 0.045f;
-
-    while (*p) {
-        uint32_t cp = _spec_utf8_next(&p);
-        if (cp == 0) break;
-        if (cp == '\n') {
-            xpos = (float)x;
-            baseline += (int)roundf((float)(ascent - descent + line_gap) * scale);
-            prev_cp = 0;
-            continue;
-        }
-        if (prev_cp) {
-            xpos += (float)stbtt_GetCodepointKernAdvance(&f->info, (int)prev_cp, (int)cp) * scale;
-        }
-        int adv = 0, lsb = 0;
-        stbtt_GetCodepointHMetrics(&f->info, (int)cp, &adv, &lsb);
-
-        int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-        stbtt_GetCodepointBitmapBox(&f->info, (int)cp, scale, scale, &x0, &y0, &x1, &y1);
-        int gw = x1 - x0;
-        int gh = y1 - y0;
-        if (gw > 0 && gh > 0) {
-            size_t needed = (size_t)gw * (size_t)gh;
-            if (needed > scratch_cap) {
-                unsigned char* next = (unsigned char*)realloc(scratch, needed);
-                if (next) {
-                    scratch = next;
-                    scratch_cap = needed;
-                }
-            }
-            if (scratch && needed <= scratch_cap) {
-                stbtt_MakeCodepointBitmap(&f->info, scratch, gw, gh, gw, scale, scale, (int)cp);
-                int dst_x0 = (int)floorf(xpos) + x0;
-                int dst_y0 = baseline + y0;
-                for (int gy = 0; gy < gh; gy++) {
-                    int py = dst_y0 + gy;
-                    if (py < 0 || py >= (int)buf_h) continue;
-                    uint32_t* row = dst + (size_t)py * (size_t)buf_w;
-                    const unsigned char* g_row = scratch + (size_t)gy * (size_t)gw;
-                    for (int gx = 0; gx < gw; gx++) {
-                        int px = dst_x0 + gx;
-                        if (px < 0 || px >= (int)buf_w) continue;
-                        uint32_t cov = g_row[gx];
-                        if (cov == 0) continue;
-                        cov = cov + (cov * (255u - cov)) / 384u;
-                        if (cov > 255u) cov = 255u;
-                        uint32_t a = (cov * fg_a) / 255u;
-                        uint32_t inv_a = 255u - a;
-                        uint32_t bg = row[px];
-                        uint32_t bg_a = (bg >> 24) & 0xFFu;
-                        uint32_t bg_r = (bg >> 16) & 0xFFu;
-                        uint32_t bg_g = (bg >> 8) & 0xFFu;
-                        uint32_t bg_b = bg & 0xFFu;
-                        uint32_t out_a = a + (bg_a * inv_a) / 255u;
-                        uint32_t r = (fg_r * a + bg_r * inv_a) / 255u;
-                        uint32_t g = (fg_g * a + bg_g * inv_a) / 255u;
-                        uint32_t b = (fg_b * a + bg_b * inv_a) / 255u;
-                        row[px] = (out_a << 24) | (r << 16) | (g << 8) | b;
-                    }
-                }
-            }
-        }
-        xpos += (float)adv * scale + tracking;
-        prev_cp = cp;
-    }
-
-    if (scratch) free(scratch);
+    if (!f || !out_3_i32_ptr) return 0;
+    int a = 0, d = 0, g = 0;
+    stbtt_GetFontVMetrics(&f->info, &a, &d, &g);
+    int32_t* out = (int32_t*)(intptr_t)out_3_i32_ptr;
+    out[0] = (int32_t)a;
+    out[1] = (int32_t)d;
+    out[2] = (int32_t)g;
     return 1;
 }
 
-long long spec_pal_font_measure_width(long long handle, long long text_cstr, long long pixel_height) {
+long long spec_pal_font_hmetrics(long long handle, long long cp, long long out_2_i32_ptr) {
     SpecFont* f = _spec_get_font(handle);
-    if (!f || !text_cstr || pixel_height <= 0) return 0;
-    float scale = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
-    float tracking = (float)pixel_height * 0.045f;
-    const char* p = (const char*)(intptr_t)text_cstr;
-    float xpos = 0.0f;
-    int prev_cp = 0;
-    while (*p) {
-        int cp = _spec_utf8_next(&p);
-        if (prev_cp) {
-            xpos += (float)stbtt_GetCodepointKernAdvance(&f->info, prev_cp, cp) * scale;
-        }
-        int adv = 0, lsb = 0;
-        stbtt_GetCodepointHMetrics(&f->info, cp, &adv, &lsb);
-        xpos += (float)adv * scale + tracking;
-        prev_cp = cp;
-    }
-    return (long long)(xpos + 0.5f);
+    if (!f || !out_2_i32_ptr) return 0;
+    int adv = 0, lsb = 0;
+    stbtt_GetCodepointHMetrics(&f->info, (int)cp, &adv, &lsb);
+    int32_t* out = (int32_t*)(intptr_t)out_2_i32_ptr;
+    out[0] = (int32_t)adv;
+    out[1] = (int32_t)lsb;
+    return 1;
+}
+
+long long spec_pal_font_kern_advance(long long handle, long long cp1, long long cp2) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f) return 0;
+    return (long long)stbtt_GetCodepointKernAdvance(&f->info, (int)cp1, (int)cp2);
+}
+
+long long spec_pal_font_glyph_box(long long handle, long long cp, long long pixel_height, long long out_4_i32_ptr) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f || !out_4_i32_ptr || pixel_height <= 0) return 0;
+    float s = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
+    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    stbtt_GetCodepointBitmapBox(&f->info, (int)cp, s, s, &x0, &y0, &x1, &y1);
+    int32_t* out = (int32_t*)(intptr_t)out_4_i32_ptr;
+    out[0] = (int32_t)x0;
+    out[1] = (int32_t)y0;
+    out[2] = (int32_t)x1;
+    out[3] = (int32_t)y1;
+    return 1;
+}
+
+long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long long pixel_height, long long dst_ptr, long long gw, long long gh) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f || !dst_ptr || pixel_height <= 0 || gw <= 0 || gh <= 0) return 0;
+    float s = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
+    stbtt_MakeCodepointBitmap(&f->info, (unsigned char*)(intptr_t)dst_ptr, (int)gw, (int)gh, (int)gw, s, s, (int)cp);
+    return 1;
 }
 
 #if defined(__linux__)
@@ -4410,26 +4322,12 @@ long long spec_pal_font_close(long long handle) {
     return 0;
 }
 
-long long spec_pal_font_draw_text(
-    long long handle,
-    long long pixels_addr,
-    long long buf_w,
-    long long buf_h,
-    long long x,
-    long long y,
-    long long text_cstr,
-    long long pixel_height,
-    long long argb_color
-) {
-    (void)handle; (void)pixels_addr; (void)buf_w; (void)buf_h;
-    (void)x; (void)y; (void)text_cstr; (void)pixel_height; (void)argb_color;
-    return 0;
-}
-
-long long spec_pal_font_measure_width(long long handle, long long text_cstr, long long pixel_height) {
-    (void)handle; (void)text_cstr; (void)pixel_height;
-    return 0;
-}
+double spec_pal_font_scale(long long handle, long long pixel_height) { (void)handle; (void)pixel_height; return 0.0; }
+long long spec_pal_font_vmetrics(long long handle, long long out_3_i32_ptr) { (void)handle; (void)out_3_i32_ptr; return 0; }
+long long spec_pal_font_hmetrics(long long handle, long long cp, long long out_2_i32_ptr) { (void)handle; (void)cp; (void)out_2_i32_ptr; return 0; }
+long long spec_pal_font_kern_advance(long long handle, long long cp1, long long cp2) { (void)handle; (void)cp1; (void)cp2; return 0; }
+long long spec_pal_font_glyph_box(long long handle, long long cp, long long pixel_height, long long out_4_i32_ptr) { (void)handle; (void)cp; (void)pixel_height; (void)out_4_i32_ptr; return 0; }
+long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long long pixel_height, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)dst_ptr; (void)gw; (void)gh; return 0; }
 
 long long spec_pal_font_load_default(void) {
     _spec_set_font_error("stb_truetype.h not available at compile time");
