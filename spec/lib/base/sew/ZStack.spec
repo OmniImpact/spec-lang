@@ -117,4 +117,12 @@ Class of SewNode is ZStack{
 		});
 		return false;
 	}
+
+	replace Function of Boolean is tick(Int is nowMs){
+		local Boolean is changed: false;
+		times(count: children:length(), worker: local Function(Int is i){
+			if({ children:get(index: i):tick(nowMs: nowMs) }, { changed: true; });
+		});
+		return changed;
+	}
 }

@@ -14,6 +14,7 @@ Class of SewNode is TextView{
 		['base', 'sew', Size],
 		['base', 'sew', Constraints],
 		['base', 'sew', Rect],
+		['base', 'fabric', Color],
 		['base', 'fabric', DrawContext]
 	];
 
@@ -45,7 +46,7 @@ Class of SewNode is TextView{
 	Int is maxDispW: 0;
 	String is clipboardText: '';
 	Boolean is ignoreSelfEmit: false;
-	Boolean is cursorVisible: true;
+	Int is cursorAlphaByte: 255;
 	Int is lastBlinkMs: 0;
 
 	replace Function is init(
@@ -276,7 +277,7 @@ Class of SewNode is TextView{
 		local Function is cb: onTextChange;
 		cb(joined);
 		:emitCursorStatus();
-		cursorVisible: true;
+		cursorAlphaByte: 255;
 		lastBlinkMs: 0;
 		invalidate();
 	}
@@ -436,7 +437,7 @@ Class of SewNode is TextView{
 		cursorCol: rawLines:get(index: cursorLine):length();
 		hasSelection: true;
 		:emitCursorStatus();
-		cursorVisible: true;
+		cursorAlphaByte: 255;
 		lastBlinkMs: 0;
 		invalidate();
 	}
@@ -466,7 +467,7 @@ Class of SewNode is TextView{
 			hasSelection: false;
 		});
 		:emitCursorStatus();
-		cursorVisible: true;
+		cursorAlphaByte: 255;
 		lastBlinkMs: 0;
 		invalidate();
 	}
@@ -474,11 +475,26 @@ Class of SewNode is TextView{
 	replace Function of Boolean is tick(Int is nowMs){
 		if({ lastBlinkMs == 0 }, {
 			lastBlinkMs: nowMs;
+			cursorAlphaByte: 255;
 			return false;
 		});
-		if({ nowMs - lastBlinkMs >= 500 }, {
-			cursorVisible: !cursorVisible;
-			lastBlinkMs: nowMs;
+		local Int is phase: (nowMs - lastBlinkMs) % 1000;
+		local Int is nextAlpha: 255;
+		if({ phase < 400 }, {
+			nextAlpha: 255;
+		}, {
+		if({ phase < 520 }, {
+			nextAlpha: ((520 - phase) * 255) / 120;
+		}, {
+		if({ phase < 880 }, {
+			nextAlpha: 0;
+		}, {
+			nextAlpha: ((phase - 880) * 255) / 120;
+		}); }); });
+		if({ nextAlpha < 0 }, { nextAlpha: 0; });
+		if({ nextAlpha > 255 }, { nextAlpha: 255; });
+		if({ nextAlpha != cursorAlphaByte }, {
+			cursorAlphaByte: nextAlpha;
 			return true;
 		});
 		return false;
@@ -770,14 +786,15 @@ Class of SewNode is TextView{
 						);
 					});
 
-					## Cursor caret if on this segment
-					if({ cursorVisible && rLine == cursorLine && cursorCol >= rStart && cursorCol <= rEnd }, {
+					## Cursor caret if on this segment (with fast-fade alpha)
+					if({ cursorAlphaByte > 0 && rLine == cursorLine && cursorCol >= rStart && cursorCol <= rEnd }, {
 						local Boolean is isLastSegForLine: (i + 1 >= count) || (dispRawLine:get(index: i + 1) != rLine);
 						if({ cursorCol < rEnd || isLastSegForLine }, {
 							local Int is localCol: cursorCol - rStart;
 							local Int is cx: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: localCol), pixelHeight: fpx, mono: monoCached);
 							if({ cx >= minX + gw }, {
-								ctx:fillRect(x: cx, y: ly, w: 2, h: fpx, color: activeTheme:textPrimary);
+								local Int is caretCol: Color:fromArgb(argb: activeTheme:textPrimary):withAlphaByte(a: cursorAlphaByte):toArgb();
+								ctx:fillRect(x: cx, y: ly, w: 2, h: fpx, color: caretCol);
 							});
 						});
 					});

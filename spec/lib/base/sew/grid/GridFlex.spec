@@ -470,4 +470,14 @@ Class of SewNode is GridFlex{
 		});
 		return false;
 	}
+
+	replace Function of Boolean is tick(Int is nowMs){
+		local Boolean is changed: false;
+		local Int is i: 0;
+		while({ i < panels:length() }, {
+			if({ panels:get(index: i):child:tick(nowMs: nowMs) }, { changed: true; });
+			i: i + 1;
+		});
+		return changed;
+	}
 }
