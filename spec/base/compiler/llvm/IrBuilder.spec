@@ -633,8 +633,10 @@ Class is IrBuilder{
 				mCounts:set(key: m:name, value: ovIdx + 1);
 				if({ m:name != 'init' && m:name != 'destroy' && !m:hasModifier(kw: Keyword:HELD) }, {
 					local String is vkey: if({ ovIdx > 0 }, { m:name . '_' . ((ovIdx + 1) as String) }, { m:name });
-					local String is fnSym: sname . '_' . vkey;
-					st:setVtableMethod(mname: vkey, fnName: fnSym);
+					if({ :globalVtableMap:has(key: vkey) }, {
+						local String is fnSym: sname . '_' . vkey;
+						st:setVtableMethod(mname: vkey, fnName: fnSym);
+					});
 				});
 			});
 		});
@@ -727,6 +729,10 @@ Class is IrBuilder{
 		:heldMethods: Map:init();
 		:globalVtableNames: Array();
 		:globalVtableMap: Map:init();
+		:globalVtableMap:set(key: 'toString', value: 0);
+		:globalVtableNames:add(item: 'toString');
+		:globalVtableMap:set(key: 'SpecErrorHandler', value: 1);
+		:globalVtableNames:add(item: 'SpecErrorHandler');
 
 		ci: 0;
 		while({ ci < allClasses:length() }, {
@@ -737,7 +743,7 @@ Class is IrBuilder{
 				if({ vm:kind == MemberKind:METHOD }, {
 					local Int is vOv: vmCounts:get(key: vm:name, default: 0);
 					vmCounts:set(key: vm:name, value: vOv + 1);
-					if({ vm:name != 'init' && vm:name != 'destroy' && !vm:hasModifier(kw: Keyword:HELD) }, {
+					if({ vm:name != 'init' && vm:name != 'destroy' && !vm:hasModifier(kw: Keyword:HELD) && vm:hasModifier(kw: Keyword:REPLACE) }, {
 						local String is vk: if({ vOv > 0 }, { vm:name . '_' . ((vOv + 1) as String) }, { vm:name });
 						if({ !:globalVtableMap:has(key: vk) }, {
 							:globalVtableMap:set(key: vk, value: :globalVtableNames:length());
@@ -5786,6 +5792,13 @@ Class is IrBuilder{
 					local String is vtFn: rst:vtableFns:get(index: vslot);
 					if({ vtFn != '' && vtFn != 'null' }, {
 						dirCallee: vtFn;
+					});
+				}, {
+					if({ !:methodParams:has(key: dirCallee) }, {
+						local String is parentFn: :findParentMethodImpl(clsName: recvStruct, methodName: nm, suffix: ovSuf);
+						if({ parentFn != 'null' && parentFn != '' }, {
+							dirCallee: parentFn;
+						});
 					});
 				});
 			}, {

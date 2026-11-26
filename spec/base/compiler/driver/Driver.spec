@@ -385,7 +385,7 @@ Class is Driver{
 					Process:execute(command: 'mkdir', args: Array(['-p', cacheDir]));
 					fileWrite(path: runtimeC, content: rtText);
 				});
-				Process:execute(command: 'clang', args: Array(['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']));
+				Process:execute(command: 'clang', args: Array(['-O2', '-ffunction-sections', '-fdata-sections', '-c', runtimeC, '-o', runtimeO, '-pthread']));
 			});
 
 			if({ Process:osName() == 'linux' }, {
@@ -407,6 +407,10 @@ Class is Driver{
 					local String is sObj: sLl . '.o';
 					shardObjPaths:add(item: sObj);
 					local Array of String is cArgs: Array([optFlag, '-Wno-override-module', '-c', sLl, '-o', sObj]);
+					if({ !debugMode }, {
+						cArgs:add(item: '-ffunction-sections');
+						cArgs:add(item: '-fdata-sections');
+					});
 					if({ nativeCpu }, {
 						cArgs:add(item: '-march=native');
 					});
@@ -443,6 +447,12 @@ Class is Driver{
 					});
 					if({ debugMode }, {
 						linkArgs:add(item: '-g');
+					}, {
+						if({ Process:osName() == 'macos' }, {
+							linkArgs:add(item: '-Wl,-dead_strip');
+						}, {
+							linkArgs:add(item: '-Wl,--gc-sections');
+						});
 					});
 					llStat: Process:execute(command: 'clang', args: linkArgs);
 				});
@@ -459,6 +469,14 @@ Class is Driver{
 				});
 				if({ debugMode }, {
 					llArgs:add(item: '-g');
+				}, {
+					llArgs:add(item: '-ffunction-sections');
+					llArgs:add(item: '-fdata-sections');
+					if({ Process:osName() == 'macos' }, {
+						llArgs:add(item: '-Wl,-dead_strip');
+					}, {
+						llArgs:add(item: '-Wl,--gc-sections');
+					});
 				});
 				llStat: Process:execute(command: 'clang', args: llArgs);
 				if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath, onError: local Function(SpecError of FileError is e){}); });
