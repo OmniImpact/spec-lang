@@ -47,6 +47,11 @@ Class is SuitWindow{
 		return native:poll();
 	}
 
+	## Dispatches pending window events, waiting up to [timeoutMs] ms for input.
+	Function of Boolean is pollTimeout(Int is timeoutMs){
+		return native:pollTimeout(timeoutMs: timeoutMs);
+	}
+
 	## Closes the native window.
 	Function is close(){
 		native:close();

@@ -25,6 +25,10 @@ Class is Window{
 	## Bound to `spec_pal_window_poll`.
 	Function of Int is pal_window_poll(Int is handle);
 
+	## Dispatches pending window events waiting up to `timeout_ms`; returns `1` while open or `0` on close.
+	## Bound to `spec_pal_window_poll_timeout`.
+	Function of Int is pal_window_poll_timeout(Int is handle, Int is timeout_ms);
+
 	## Closes the native window and releases its resources.
 	## Bound to `spec_pal_window_close`.
 	Function of Int is pal_window_close(Int is handle);

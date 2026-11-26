@@ -1560,9 +1560,10 @@ long long spec_pal_window_surface_handle(long long handle) {
     return w ? (long long)(intptr_t)w->surface : 0;
 }
 
-long long spec_pal_window_poll(long long handle) {
+long long spec_pal_window_poll_timeout(long long handle, long long timeout_ms) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w || w->should_close) return 0;
+    int t = timeout_ms < 0 ? 0 : (int)timeout_ms;
     if (w->use_xdg) {
         if (_wl_display_dispatch_pending) {
             if (_wl_display_dispatch_pending(w->display) < 0) {
@@ -1577,7 +1578,7 @@ long long spec_pal_window_poll(long long handle) {
                 pfd.fd = _wl_display_get_fd(w->display);
                 pfd.events = POLLIN;
                 pfd.revents = 0;
-                int pr = poll(&pfd, 1, w->use_vulkan ? 0 : 4);
+                int pr = poll(&pfd, 1, t);
                 if (pr > 0 && (pfd.revents & POLLIN)) {
                     _wl_display_read_events(w->display);
                     if (_wl_display_dispatch_pending) _wl_display_dispatch_pending(w->display);
@@ -1592,13 +1593,20 @@ long long spec_pal_window_poll(long long handle) {
         _wl_display_flush(w->display);
         return 1;
     }
-    if (_libdecor_dispatch(w->decor, w->use_vulkan ? 0 : 16) < 0) {
+    if (_libdecor_dispatch(w->decor, t) < 0) {
         w->should_close = true;
         return 0;
     }
     if (w->should_close) return 0;
     _wl_display_flush(w->display);
     return 1;
+}
+
+long long spec_pal_window_poll(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || w->should_close) return 0;
+    long long default_ms = w->use_vulkan ? 0 : (w->use_xdg ? 4 : 16);
+    return spec_pal_window_poll_timeout(handle, default_ms);
 }
 
 long long spec_pal_window_next_key(long long handle) {
@@ -1928,6 +1936,12 @@ long long spec_pal_window_display_handle(long long handle) {
 
 long long spec_pal_window_surface_handle(long long handle) {
     (void)handle;
+    return 0;
+}
+
+long long spec_pal_window_poll_timeout(long long handle, long long timeout_ms) {
+    (void)handle;
+    (void)timeout_ms;
     return 0;
 }
 

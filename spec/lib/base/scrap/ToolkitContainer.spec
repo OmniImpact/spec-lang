@@ -69,6 +69,7 @@ Class of SewNode is ToolkitContainer{
 	Boolean is wasPtrDown: false;
 	Int is ptrCaptureTarget: 0;
 	Boolean is closedByWm: false;
+	Int is idleFrames: 0;
 	SuitWindow is activeWin: SuitWindow();
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
 	Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){};
@@ -406,6 +407,7 @@ Class of SewNode is ToolkitContainer{
 		wasPtrDown: false;
 		ptrCaptureTarget: 0;
 		closedByWm: false;
+		idleFrames: 0;
 
 		while({ running:current() }, {
 			:stepLoopFrame(win: win, canvas: canvas, ctx: ctx, clock: clock, startMs: startMs, durationMs: durationMs);
@@ -426,15 +428,37 @@ Class of SewNode is ToolkitContainer{
 
 	local Function is stepLoopFrame(SuitWindow is win, SuitCanvas is canvas, DrawContext is ctx, Time is clock, Int is startMs, Int is durationMs){
 		local Int is loopStartNs: clock:monotonicNs();
-		if({ !win:poll() }, {
+		local Int is pollWaitMs: 0;
+		if({ !(useVulkan && gpuPresent) && !isDirty }, {
+			if({ idleFrames < 4 }, {
+				pollWaitMs: 16;
+			}, {
+			if({ idleFrames < 10 }, {
+				pollWaitMs: 50;
+			}, {
+				pollWaitMs: 100;
+			}); });
+		});
+		if({ durationMs > 0 }, {
+			local Int is remMs: durationMs - (clock:monotonicMs() - startMs);
+			if({ remMs <= 0 }, {
+				pollWaitMs: 0;
+			}, {
+			if({ pollWaitMs > remMs }, {
+				pollWaitMs: remMs;
+			}); });
+		});
+		if({ !win:pollTimeout(timeoutMs: pollWaitMs) }, {
 			closedByWm: true;
 			running:emit(value: false);
 		});
 
+		local Boolean is hadActivity: isDirty;
 		local Int is curMods: win:mods();
 		if({ running:current() }, {
 			local Int is key: win:nextKey();
 			while({ key != 0 }, {
+				hadActivity: true;
 				if({ key == 27 }, {
 					if({ contextMenu:isOpen }, {
 						contextMenu:close();
@@ -478,6 +502,7 @@ Class of SewNode is ToolkitContainer{
 
 			local Int is cp: win:nextChar();
 			while({ cp != 0 }, {
+				hadActivity: true;
 				if({ hasBody && !useVulkan && cp >= 32 }, {
 					if({ bodyPanel:onText(ch: String:fromCodePoint(code: cp), mods: curMods) }, {
 						:isDirty: true;
@@ -503,6 +528,7 @@ Class of SewNode is ToolkitContainer{
 			local Int is w: win:width();
 			local Int is h: win:height();
 			if({ w > 0 && h > 0 && (w != loopW || h != loopH) }, {
+				hadActivity: true;
 				loopW: w;
 				loopH: h;
 				canvas:resize(width: loopW, height: loopH);
@@ -511,6 +537,7 @@ Class of SewNode is ToolkitContainer{
 
 			local Int is sy: win:pollScrollY();
 			if({ sy != 0 && hasBody && !useVulkan }, {
+				hadActivity: true;
 				if({ (curMods & 1) != 0 }, {
 					if({ bodyPanel:onScrollX(deltaX: sy) }, {
 						:isDirty: true;
@@ -524,6 +551,7 @@ Class of SewNode is ToolkitContainer{
 
 			local Int is sx: win:pollScrollX();
 			if({ sx != 0 && hasBody && !useVulkan }, {
+				hadActivity: true;
 				if({ bodyPanel:onScrollX(deltaX: sx) }, {
 					:isDirty: true;
 				});
@@ -533,6 +561,7 @@ Class of SewNode is ToolkitContainer{
 			local Int is px: win:pointerX();
 			local Int is py: win:pointerY();
 			if({ ptrDown && !wasPtrDown }, {
+				hadActivity: true;
 				ptrCaptureTarget: 0;
 				if({ !contextMenu:isOpen }, {
 					if({ hasToolbarSlot && px >= toolbarSlot:bounds():x && px < toolbarSlot:bounds():x + toolbarSlot:bounds():width && py >= toolbarSlot:bounds():y && py < toolbarSlot:bounds():y + toolbarSlot:bounds():height }, {
@@ -550,6 +579,7 @@ Class of SewNode is ToolkitContainer{
 				});
 			});
 			if({ px != lastPtrX || py != lastPtrY }, {
+				hadActivity: true;
 				lastPtrX: px;
 				lastPtrY: py;
 				if({ ptrDown && ptrCaptureTarget == 4 && hasBody && !useVulkan }, {
@@ -562,6 +592,7 @@ Class of SewNode is ToolkitContainer{
 				});
 			});
 			if({ !ptrDown && wasPtrDown }, {
+				hadActivity: true;
 				if({ ptrCaptureTarget == 4 && hasBody && !useVulkan }, {
 					if({ bodyPanel:onPointerUp(x: px, y: py) }, {
 						:isDirty: true;
@@ -572,12 +603,14 @@ Class of SewNode is ToolkitContainer{
 			wasPtrDown: ptrDown;
 
 			if({ win:pollClick() }, {
+				hadActivity: true;
 				if({ :onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
 					:isDirty: true;
 				});
 			});
 
 			if({ win:pollRightClick() }, {
+				hadActivity: true;
 				if({ :onRightClickMod(x: win:rightClickX(), y: win:rightClickY(), mods: curMods) }, {
 					:isDirty: true;
 				});
@@ -586,14 +619,18 @@ Class of SewNode is ToolkitContainer{
 			local Int is frameNowMs: clock:monotonicMs();
 			if({ hasBody && !useVulkan }, {
 				if({ bodyPanel:tick(nowMs: frameNowMs) }, {
+					hadActivity: true;
 					:isDirty: true;
 				});
 			});
 			if({ hasDialog }, {
-				dialog:tick(nowMs: frameNowMs);
+				if({ dialog:tick(nowMs: frameNowMs) }, {
+					hadActivity: true;
+				});
 			});
 
 			if({ isDirty && running:current() }, {
+				hadActivity: true;
 				:isDirty: false;
 				:layout(widthPx: loopW, heightPx: loopH);
 				:paint(ctx: ctx);
@@ -615,10 +652,12 @@ Class of SewNode is ToolkitContainer{
 					local Int is budgetNs: 1000000000 / fpsCap;
 					clock:sleepUntilNs(targetNs: loopStartNs + budgetNs);
 				});
+			});
+
+			if({ hadActivity }, {
+				idleFrames: 0;
 			}, {
-				if({ running:current() }, {
-					clock:sleepUntilNs(targetNs: loopStartNs + 1000000);
-				});
+				idleFrames: idleFrames + 1;
 			});
 		});
 	}

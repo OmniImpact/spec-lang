@@ -55,6 +55,17 @@ Class is Window{
 		return true;
 	}
 
+	## Dispatches pending window events, waiting up to [timeoutMs] ms for input; returns `true` while open.
+	Function of Boolean is pollTimeout(Int is timeoutMs){
+		if({ handle <= 0 }, { return false; });
+		local Int is alive: base:sysinternal:Window:pal_window_poll_timeout(handle: handle, timeout_ms: timeoutMs);
+		if({ alive == 0 }, {
+			close();
+			return false;
+		});
+		return true;
+	}
+
 	## Closes the window if open.
 	Function is close(){
 		if({ handle > 0 }, {
