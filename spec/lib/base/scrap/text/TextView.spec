@@ -808,7 +808,9 @@ Class of SewNode is TextView{
 							local Int is cx: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: localCol), pixelHeight: fpx, mono: monoCached);
 							if({ cx >= minX + gw }, {
 								local Int is caretCol: Color:fromArgb(argb: activeTheme:textPrimary):withAlphaByte(a: cursorAlphaByte):toArgb();
-								ctx:fillRect(x: cx, y: ly, w: 2, h: fpx, color: caretCol);
+								local Int is caretW: activeScale:px(pt: 2.0);
+								if({ caretW < 1 }, { caretW: 1; });
+								ctx:fillRect(x: cx, y: ly, w: caretW, h: fpx, color: caretCol);
 							});
 						});
 					});
@@ -818,8 +820,10 @@ Class of SewNode is TextView{
 
 			## Paint line-number gutter AFTER text so horizontally scrolled text passes underneath it
 			if({ lineNumsCached && gw > 0 }, {
+				local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
+				if({ linePx < 1 }, { linePx: 1; });
 				ctx:fillRect(x: minX, y: minY, w: gw, h: maxY - minY, color: activeTheme:toolbarBg);
-				ctx:fillRect(x: minX + gw - 1, y: minY, w: 1, h: maxY - minY, color: activeTheme:toolbarBorder);
+				ctx:fillRect(x: minX + gw - linePx, y: minY, w: linePx, h: maxY - minY, color: activeTheme:toolbarBorder);
 				local Int is gi: firstIdx;
 				while({ gi <= lastIdx }, {
 					local Int is gly: b:y + padPx + gi * rowH;
@@ -834,8 +838,10 @@ Class of SewNode is TextView{
 			});
 		}, {
 			if({ lineNumsCached && gw > 0 }, {
+				local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
+				if({ linePx < 1 }, { linePx: 1; });
 				ctx:fillRect(x: minX, y: minY, w: gw, h: maxY - minY, color: activeTheme:toolbarBg);
-				ctx:fillRect(x: minX + gw - 1, y: minY, w: 1, h: maxY - minY, color: activeTheme:toolbarBorder);
+				ctx:fillRect(x: minX + gw - linePx, y: minY, w: linePx, h: maxY - minY, color: activeTheme:toolbarBorder);
 			});
 		});
 	}

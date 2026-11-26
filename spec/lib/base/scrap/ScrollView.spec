@@ -292,10 +292,12 @@ Class of SewNode is ScrollView{
 
 		## Vertical scrollbar track & thumb on specified side ('right' default or 'left')
 		if({ bw > 2 }, {
+			local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
+			if({ linePx < 1 }, { linePx: 1; });
 			local Int is sx: if({ scrollbarSide == 'left' }, { b:x }, { b:x + vw });
 			ctx:fillRect(x: sx, y: b:y, w: bw, h: vh, color: activeTheme:menuBg);
-			local Int is borderX: if({ scrollbarSide == 'left' }, { sx + bw - 1 }, { sx });
-			ctx:fillRect(x: borderX, y: b:y, w: 1, h: vh, color: activeTheme:toolbarBorder);
+			local Int is borderX: if({ scrollbarSide == 'left' }, { sx + bw - linePx }, { sx });
+			ctx:fillRect(x: borderX, y: b:y, w: linePx, h: vh, color: activeTheme:toolbarBorder);
 			if({ contentH > vh && vh > 0 }, {
 				local Int is thumbH: (vh * vh) / contentH;
 				if({ thumbH < activeScale:px(pt: 22.0) }, { thumbH: activeScale:px(pt: 22.0); });
@@ -310,7 +312,7 @@ Class of SewNode is ScrollView{
 			if({ contentW > vw && vh < b:height && vw > 0 }, {
 				local Int is hy: b:y + vh;
 				ctx:fillRect(x: cx, y: hy, w: vw, h: bw, color: activeTheme:menuBg);
-				ctx:fillRect(x: cx, y: hy, w: vw, h: 1, color: activeTheme:toolbarBorder);
+				ctx:fillRect(x: cx, y: hy, w: vw, h: linePx, color: activeTheme:toolbarBorder);
 				local Int is thumbW: (vw * vw) / contentW;
 				if({ thumbW < activeScale:px(pt: 22.0) }, { thumbW: activeScale:px(pt: 22.0); });
 				if({ thumbW > vw }, { thumbW: vw; });

@@ -191,11 +191,13 @@ Class of SewNode is TabBar{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
+		local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
+		if({ linePx < 1 }, { linePx: 1; });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:tabBarBg);
 		if({ dockSide == 'bottom' }, {
-			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: 1, color: activeTheme:toolbarBorder);
+			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
 		}, {
-			ctx:fillRect(x: b:x, y: b:y + b:height - 1, w: b:width, h: 1, color: activeTheme:toolbarBorder);
+			ctx:fillRect(x: b:x, y: b:y + b:height - linePx, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
 		});
 
 		local Int is count: tabs:length();
@@ -217,15 +219,15 @@ Class of SewNode is TabBar{
 				local TabItemConfig is tab: tabs:get(index: i);
 				local Boolean is isActive: i == activeIndex;
 				local Int is bg: if({ isActive }, { activeTheme:windowBg }, { if({ hoverTabIdx == i }, { activeTheme:hoverBg }, { activeTheme:tabBarBg }) });
-				local Int is ty0: if({ dockSide == 'bottom' && !isActive }, { area:y + 1 }, { area:y });
-				local Int is fillH: if({ isActive }, { area:height }, { area:height - 1 });
+				local Int is ty0: if({ dockSide == 'bottom' && !isActive }, { area:y + linePx }, { area:y });
+				local Int is fillH: if({ isActive }, { area:height }, { area:height - linePx });
 				ctx:fillRect(x: tx, y: ty0, w: tw, h: fillH, color: bg);
 				if({ dockSide != 'bottom' }, {
-					ctx:fillRect(x: tx, y: area:y, w: tw, h: 1, color: activeTheme:toolbarBorder);
+					ctx:fillRect(x: tx, y: area:y, w: tw, h: linePx, color: activeTheme:toolbarBorder);
 				}, {
-					ctx:fillRect(x: tx, y: area:y + area:height - 1, w: tw, h: 1, color: activeTheme:toolbarBorder);
+					ctx:fillRect(x: tx, y: area:y + area:height - linePx, w: tw, h: linePx, color: activeTheme:toolbarBorder);
 				});
-				ctx:fillRect(x: tx + tw - 1, y: area:y, w: 1, h: area:height, color: activeTheme:toolbarBorder);
+				ctx:fillRect(x: tx + tw - linePx, y: area:y, w: linePx, h: area:height, color: activeTheme:toolbarBorder);
 
 				local Int is closeReserve: if({ showCloseButton && tab:closable }, { cs + padR * 2 }, { padR });
 				local String is rawTitle: if({ tab:dirty }, { tab:label . ' *' }, { tab:label });

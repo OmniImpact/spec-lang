@@ -340,7 +340,9 @@ Class is FileDialog{
 
 		## Top path bar: Up button + editable directory path box
 		ctx:fillRect(x: 0, y: 0, w: w, h: headerH, color: theme:toolbarBg);
-		ctx:fillRect(x: 0, y: headerH - 1, w: w, h: 1, color: theme:toolbarBorder);
+		local Int is linePx: scale:px(pt: theme:borderThicknessPt);
+		if({ linePx < 1 }, { linePx: 1; });
+		ctx:fillRect(x: 0, y: headerH - linePx, w: w, h: linePx, color: theme:toolbarBorder);
 
 		local Int is upW: scale:px(pt: 44.0);
 		local Int is hidW: scale:px(pt: 70.0);
@@ -378,7 +380,7 @@ Class is FileDialog{
 		if({ sideW > 0 && listH > 0 }, {
 			local Int is pinBg: if({ dragOverPinned }, { theme:activeBg }, { theme:menuBg });
 			ctx:fillRect(x: 0, y: listY, w: sideW, h: listH, color: pinBg);
-			ctx:fillRect(x: sideW - 1, y: listY, w: 1, h: listH, color: theme:toolbarBorder);
+			ctx:fillRect(x: sideW - linePx, y: listY, w: linePx, h: listH, color: theme:toolbarBorder);
 			local Int is pinHdrH: scale:px(pt: 24.0);
 			ctx:setClip(x: 0, y: listY, w: sideW - 1, h: listH);
 			ctx:drawText(x: padX, y: listY + (pinHdrH - th) / 2, text: 'Pinned', color: theme:textMuted, pixelHeight: fpx);
@@ -436,7 +438,7 @@ Class is FileDialog{
 		## Right-side scrollbar for file list
 		local Int is sbX: listX + listW;
 		ctx:fillRect(x: sbX, y: listY, w: sbW, h: listH, color: theme:menuBg);
-		ctx:fillRect(x: sbX, y: listY, w: 1, h: listH, color: theme:toolbarBorder);
+		ctx:fillRect(x: sbX, y: listY, w: linePx, h: listH, color: theme:toolbarBorder);
 		if({ entryNames:length() > visRows && entryNames:length() > 0 && listH > 0 }, {
 			local Int is thumbH: (listH * visRows) / entryNames:length();
 			if({ thumbH < scale:px(pt: 20.0) }, { thumbH: scale:px(pt: 20.0); });
@@ -449,7 +451,7 @@ Class is FileDialog{
 		## Footer bar: editable Name input + Cancel + Open/Save buttons
 		local Int is fy: h - footerH;
 		ctx:fillRect(x: 0, y: fy, w: w, h: footerH, color: theme:toolbarBg);
-		ctx:fillRect(x: 0, y: fy, w: w, h: 1, color: theme:toolbarBorder);
+		ctx:fillRect(x: 0, y: fy, w: w, h: linePx, color: theme:toolbarBorder);
 
 		local String is nameLbl: 'Name:';
 		local Int is lw: ctx:measureTextWidth(text: nameLbl, pixelHeight: fpx);

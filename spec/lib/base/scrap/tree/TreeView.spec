@@ -182,13 +182,17 @@ Class of SewNode is TreeView{
 					});
 				});
 
+				local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
+				if({ linePx < 1 }, { linePx: 1; });
+				local Int is dotStep: activeScale:px(pt: 3.0);
+				if({ dotStep < 2 }, { dotStep: 2; });
 				local Int is cy: ry + rowH / 2;
 				# Solid vertical guide lines for ancestor depths with remaining siblings
 				local Int is d: 0;
 				while({ d < depth && d < anc:length() }, {
 					if({ anc:get(index: d) }, {
 						local Int is ax: b:x + padX + d * indentPx + indentPx / 2;
-						ctx:fillRect(x: ax, y: ry, w: 1, h: rowH, color: lineCol);
+						ctx:fillRect(x: ax, y: ry, w: linePx, h: rowH, color: lineCol);
 					});
 					d: d + 1;
 				});
@@ -196,10 +200,10 @@ Class of SewNode is TreeView{
 				# Vertical connector at this node's own depth
 				local Int is cx: b:x + padX + depth * indentPx + indentPx / 2;
 				if({ depth > 0 || i > 0 }, {
-					ctx:fillRect(x: cx, y: ry, w: 1, h: cy - ry + 1, color: lineCol);
+					ctx:fillRect(x: cx, y: ry, w: linePx, h: cy - ry + linePx, color: lineCol);
 				});
 				if({ !isLast }, {
-					ctx:fillRect(x: cx, y: cy, w: 1, h: ry + rowH - cy, color: lineCol);
+					ctx:fillRect(x: cx, y: cy, w: linePx, h: ry + rowH - cy, color: lineCol);
 				});
 
 				local Int is labelX: b:x + padX + (depth + 1) * indentPx + 2;
@@ -207,7 +211,7 @@ Class of SewNode is TreeView{
 				if({ node:expandable }, {
 					# Solid horizontal line to folder label
 					if({ hEnd > cx }, {
-						ctx:fillRect(x: cx, y: cy, w: hEnd - cx, h: 1, color: lineCol);
+						ctx:fillRect(x: cx, y: cy, w: hEnd - cx, h: linePx, color: lineCol);
 					});
 					local Int is bx: cx - halfBox;
 					local Int is by: cy - halfBox;
@@ -218,10 +222,10 @@ Class of SewNode is TreeView{
 					});
 				}, {
 					# Dotted horizontal line connecting vertical line to file label
-					local Int is dx: cx + 2;
+					local Int is dx: cx + dotStep;
 					while({ dx < hEnd }, {
-						ctx:fillRect(x: dx, y: cy, w: 1, h: 1, color: lineCol);
-						dx: dx + 3;
+						ctx:fillRect(x: dx, y: cy, w: linePx, h: linePx, color: lineCol);
+						dx: dx + dotStep;
 					});
 				});
 

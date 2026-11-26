@@ -400,8 +400,10 @@ Class of SewNode is Toolbar{
 		local Int is ih: :dropdownItemHeightPx();
 		local Int is dh: count * ih;
 
+		local Int is strokePx: scale:px(pt: theme:borderThicknessPt);
+		if({ strokePx < 1 }, { strokePx: 1; });
 		ctx:fillRect(x: dx, y: dy, w: dw, h: dh, color: theme:menuBg);
-		ctx:strokeRect(x: dx, y: dy, w: dw, h: dh, color: theme:menuBorder);
+		ctx:strokeRect(x: dx, y: dy, w: dw, h: dh, color: theme:menuBorder, thickness: strokePx);
 
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
@@ -439,7 +441,7 @@ Class of SewNode is Toolbar{
 				local Int is sdy: dy + openSubMenuIdx * ih;
 				local Int is sdh: scount * ih;
 				ctx:fillRect(x: sdx, y: sdy, w: dw, h: sdh, color: theme:menuBg);
-				ctx:strokeRect(x: sdx, y: sdy, w: dw, h: sdh, color: theme:menuBorder);
+				ctx:strokeRect(x: sdx, y: sdy, w: dw, h: sdh, color: theme:menuBorder, thickness: strokePx);
 				local Boolean is subInd: :listHasIndicators(list: parentItem:subItems);
 				times(count: scount, worker: local Function(Int is j){
 					local MenuItemConfig is sub: parentItem:subItems:get(index: j);

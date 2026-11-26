@@ -79,8 +79,10 @@ Class of SewNode is ScrapButton{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is bg: if({ hovered }, { activeTheme:hoverBg }, { activeTheme:menuBg });
+		local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
+		if({ linePx < 1 }, { linePx: 1; });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
-		ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:menuBorder);
+		ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:menuBorder, thickness: linePx);
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);

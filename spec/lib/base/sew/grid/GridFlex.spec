@@ -242,16 +242,18 @@ Class of SewNode is GridFlex{
 		local Int is sp: :spacingPx();
 		if({ sp > 0 }, {
 			local Int is di: 0;
+			local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
+			if({ linePx < 1 }, { linePx: 1; });
 			while({ di < dividerPosPx:length() }, {
 				local Int is dpos: dividerPosPx:get(index: di);
 				local Boolean is active: (dragDivider == di) || (hoverDivider == di && movable);
 				local Int is bgCol: if({ active }, { activeTheme:hoverBg }, { activeTheme:toolbarBg });
 				if({ horizontal }, {
 					ctx:fillRect(x: dpos, y: b:y, w: sp, h: b:height, color: bgCol);
-					ctx:fillRect(x: dpos + sp / 2, y: b:y, w: 1, h: b:height, color: if({ active }, { activeTheme:textAccent }, { activeTheme:toolbarBorder }));
+					ctx:fillRect(x: dpos + (sp - linePx) / 2, y: b:y, w: linePx, h: b:height, color: if({ active }, { activeTheme:textAccent }, { activeTheme:toolbarBorder }));
 				}, {
 					ctx:fillRect(x: b:x, y: dpos, w: b:width, h: sp, color: bgCol);
-					ctx:fillRect(x: b:x, y: dpos + sp / 2, w: b:width, h: 1, color: if({ active }, { activeTheme:textAccent }, { activeTheme:toolbarBorder }));
+					ctx:fillRect(x: b:x, y: dpos + (sp - linePx) / 2, w: b:width, h: linePx, color: if({ active }, { activeTheme:textAccent }, { activeTheme:toolbarBorder }));
 				});
 				di: di + 1;
 			});
