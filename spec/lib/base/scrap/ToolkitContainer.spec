@@ -371,7 +371,6 @@ Class of SewNode is ToolkitContainer{
 				loopW: w;
 				loopH: h;
 				canvas:resize(width: loopW, height: loopH);
-				:layout(widthPx: loopW, heightPx: loopH);
 				:isDirty: true;
 			});
 

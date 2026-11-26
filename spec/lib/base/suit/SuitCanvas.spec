@@ -54,14 +54,32 @@ Class is SuitCanvas{
 		local Int is y0: if({ y < 0 }, { 0 }, { y });
 		local Int is x1: if({ x + w > width }, { width }, { x + w });
 		local Int is y1: if({ y + h > height }, { height }, { y + h });
-		local Int is py: y0;
-		while({ py < y1 }, {
-			local Int is rowOff: py * width;
-			local Int is px: x0;
-			while({ px < x1 }, {
-				Mem:storeI32(ptr: pixelsPtr, byteOffset: (rowOff + px) * 4, val: color);
-				px: px + 1;
-			});
+		local Int is rw: x1 - x0;
+		local Int is rh: y1 - y0;
+		if({ rw <= 0 || rh <= 0 }, { return; });
+
+		## Fast path: full-width zero clear (e.g. clearTransparent)
+		if({ color == 0 && x0 == 0 && rw == width }, {
+			Mem:set(dst: pixelsPtr + (y0 * width) * 4, byteVal: 0, bytes: rh * width * 4);
+			return;
+		});
+
+		## Fill first row using doubling Mem:copy (O(log rw) calls)
+		local Int is row0Addr: pixelsPtr + (y0 * width + x0) * 4;
+		Mem:storeI32(ptr: row0Addr, byteOffset: 0, val: color);
+		local Int is filled: 1;
+		while({ filled < rw }, {
+			local Int is chunk: if({ filled <= rw - filled }, { filled }, { rw - filled });
+			Mem:copy(dst: row0Addr + filled * 4, src: row0Addr, bytes: chunk * 4);
+			filled: filled + chunk;
+		});
+
+		## Copy first row to remaining rows (1 Mem:copy per row)
+		local Int is rowBytes: rw * 4;
+		local Int is strideBytes: width * 4;
+		local Int is py: 1;
+		while({ py < rh }, {
+			Mem:copy(dst: row0Addr + py * strideBytes, src: row0Addr, bytes: rowBytes);
 			py: py + 1;
 		});
 	}

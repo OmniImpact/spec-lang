@@ -431,7 +431,9 @@ Class of SewNode is TextView{
 		local Int is gw: :gutterWidthPx(fpx: fpx);
 		local Int is availTextW: c:maxW - gw - padPx * 2;
 		if({ availTextW < fpx }, { availTextW: fpx; });
-		:rebuildDisplayLines(availTextW: availTextW, fpx: fpx);
+		if({ lastWrapW == -1 || (wrapCached && lastWrapW != availTextW) }, {
+			:rebuildDisplayLines(availTextW: availTextW, fpx: fpx);
+		});
 
 		local Int is rowH: fpx + gapPx;
 		local Int is totalH: padPx * 2 + dispLines:length() * rowH;
