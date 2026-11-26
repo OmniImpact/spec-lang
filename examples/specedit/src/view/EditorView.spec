@@ -32,7 +32,8 @@ Class is EditorView{
 		['base', 'wardrobe', 'file', FileDialog],
 		['base', 'wardrobe', 'file', FileTree],
 		['specedit', 'viewmodel', EditorViewModel],
-		['specedit', 'util', SpecEditStrings]
+		['specedit', 'util', SpecEditStrings],
+		['specedit', 'util', EditorSignalSlot]
 	];
 
 	EditorViewModel is vm: EditorViewModel();
@@ -173,7 +174,7 @@ Class is EditorView{
 			movable: true
 		);
 		splitGrid:signalBag:track(
-			slot: 'fileTreeVisible',
+			slot: EditorSignalSlot:FILE_TREE_VISIBLE as String,
 			emitter: vm:fileTreeEnabled,
 			collector: vm:fileTreeEnabled:collect(onEmit: local Function(){
 				splitGrid:setPanelVisible(index: 0, visible: vm:fileTreeEnabled:current());
