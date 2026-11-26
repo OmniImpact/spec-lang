@@ -104,7 +104,8 @@ Class is EditorView{
 							) as SewNode
 						) as SewNode,
 						TextScrap(text: vm:versionText, align: SpecEditStrings:TEXT_ALIGN_CENTER) as SewNode,
-						TextScrap(text: vm:descriptionText, align: SpecEditStrings:TEXT_ALIGN_CENTER, wrap: true, muted: true) as SewNode
+						TextScrap(text: vm:descriptionText, align: SpecEditStrings:TEXT_ALIGN_CENTER, wrap: true, muted: true) as SewNode,
+						TextScrap(text: vm:processStatsText, align: SpecEditStrings:TEXT_ALIGN_CENTER, muted: true) as SewNode
 					])
 				)
 			)

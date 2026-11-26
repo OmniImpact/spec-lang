@@ -7,6 +7,7 @@ Class is EditorViewModel{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as File()],
+		['base', 'sys', as Process()],
 		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', TextEmitter],
@@ -52,13 +53,15 @@ Class is EditorViewModel{
 	TextEmitter is syntaxStatus: TextEmitter(initial: '');
 	TextEmitter is versionText: TextEmitter(initial: SpecEditStrings:VERSION_TEXT);
 	TextEmitter is descriptionText: TextEmitter(initial: SpecEditStrings:DESCRIPTION_TEXT);
+	TextEmitter is processStatsText: TextEmitter(initial: '');
+	Int is startWallMs: 0;
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
 	Float is toolbarHeightPt: 30.0;
 	String is themePreset: SpecEditStrings:THEME_PRESET;
 	String is aboutTitle: SpecEditStrings:ABOUT_TITLE;
 	Float is aboutWidthPt: 420.0;
-	Float is aboutHeightPt: 230.0;
+	Float is aboutHeightPt: 255.0;
 	Boolean is allowMultipleFiles: false;
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
 	MenuConfig is editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL, visible: false);
@@ -109,6 +112,8 @@ Class is EditorViewModel{
 		activeLanguage: TextEmitter(initial: '');
 		cursorStatus: TextEmitter(initial: '');
 		syntaxStatus: TextEmitter(initial: '');
+		processStatsText: TextEmitter(initial: '');
+		startWallMs: Process:clockMs();
 		toolbarConfig: :buildToolbarConfig();
 		:refreshMenuStates();
 	}
@@ -651,7 +656,24 @@ Class is EditorViewModel{
 		fileTreeItem:checked: next;
 	}
 
+	Function is refreshAboutStats(){
+		local Int is pid: Process:getPid();
+		local Int is cpuUs: Process:cpuTimeUs();
+		local Int is memKb: Process:currentMemoryKb();
+		local Int is cpuMs: cpuUs / 1000;
+		local Int is wallMs: Process:clockMs() - startWallMs;
+		local Int is cpuPct: if({ wallMs > 0 }, { (cpuUs / 10) / wallMs }, { 0 });
+		local Int is memMb: memKb / 1024;
+		local Int is memTenths: ((memKb % 1024) * 10) / 1024;
+		processStatsText:emit(
+			value: 'PID ' . (pid as String)
+				. '  |  CPU ' . (cpuMs as String) . ' ms (' . (cpuPct as String) . '%)'
+				. '  |  Mem ' . (memMb as String) . '.' . (memTenths as String) . ' MB'
+		);
+	}
+
 	Function is requestAbout(){
+		:refreshAboutStats();
 		aboutOpen:emit(value: true);
 	}
 
