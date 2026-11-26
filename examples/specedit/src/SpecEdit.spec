@@ -19,7 +19,6 @@ Class is SpecEdit{
 
 		local EditorModel is model: EditorModel(documentName: 'Untitled');
 		local EditorViewModel is vm: EditorViewModel(model: model);
-		local ToolkitContainer is app: EditorView():build(vm: vm);
-		app:run(durationMs: durationMs);
+		EditorView(vm: vm):build():run(durationMs: durationMs);
 	}
 }

@@ -30,6 +30,12 @@ Class is EditorViewModel{
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
 	Float is toolbarHeightPt: 30.0;
+	String is themePreset: 'light_grayscale';
+	String is aboutTitle: 'About SpecEdit';
+	Float is aboutWidthPt: 420.0;
+	Float is aboutHeightPt: 170.0;
+	String is fileDialogTitle: 'Open File';
+	Boolean is allowMultipleFiles: false;
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
 
 	MenuItemConfig is wrapItem: MenuItemConfig(id: 'wrap', label: 'Wrap', kind: 'toggle');
@@ -40,7 +46,7 @@ Class is EditorViewModel{
 	Function is pasteHandler: local Function(){};
 	Function is selectAllHandler: local Function(){};
 
-	replace Function is init(EditorModel is model){
+	replace Function is init(EditorModel is model: EditorModel(documentName: 'Untitled')){
 		:model: model;
 		title: TextEmitter(initial: :computeTitle());
 		running: BoolEmitter(initial: true);
@@ -170,6 +176,19 @@ Class is EditorViewModel{
 			model:dirty: true;
 			title:emit(value: :computeTitle());
 		});
+	}
+
+	## Binds View-owned editor text actions (copy/cut/paste/selectAll) without coupling VM to `TextView`.
+	Function is bindEditorActions(
+		Function is onCopy,
+		Function is onCut,
+		Function is onPaste,
+		Function is onSelectAll
+	){
+		copyHandler: onCopy;
+		cutHandler: onCut;
+		pasteHandler: onPaste;
+		selectAllHandler: onSelectAll;
 	}
 
 	Function is requestCopy(){
