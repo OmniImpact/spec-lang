@@ -14,6 +14,8 @@ Class is EditorView{
 		['base', 'sew', ZStack],
 		['base', 'sew', NavStack],
 		['base', 'sew', NavRoute],
+		['base', 'sew', FlexGridH],
+		['base', 'sew', FlexGridPanel],
 		['base', 'fabric', Theme],
 		['base', 'scrap', ToolkitContainer],
 		['base', 'scrap', ToolbarContainer],
@@ -28,6 +30,7 @@ Class is EditorView{
 		['base', 'scrap', Bar],
 		['base', 'scrap', Dialog],
 		['base', 'wardrobe', FileDialog],
+		['base', 'wardrobe', FileTree],
 		['specedit', 'viewmodel', EditorViewModel],
 		['specedit', 'util', SpecEditStrings]
 	];
@@ -37,6 +40,8 @@ Class is EditorView{
 	CodeEditorView is editorBody: CodeEditorView(text: TextEmitter(initial: ''));
 	ScrollView is editorScroll: ScrollView(child: CodeEditorView(text: TextEmitter(initial: '')));
 	TabBar is tabBar: TabBar();
+	FileTree is fileTree: FileTree();
+	FlexGridH is splitGrid: FlexGridH();
 
 	replace Function is init(EditorViewModel is vm){
 		:vm: vm;
@@ -61,6 +66,10 @@ Class is EditorView{
 		);
 		vm:bindTabBar(tabBar: tabBar);
 		vm:bindCodeEditor(editor: editorBody);
+		fileTree: FileTree(
+			contextMenu: vm:contextMenu,
+			onOpenFile: local Function(String is path){ vm:openFiles(paths: Array([path])); }
+		);
 		vm:bindEditorActions(
 			onCopy: local Function(){ editorBody:copySelection(); },
 			onCut: local Function(){ editorBody:cutSelection(); },
@@ -136,6 +145,39 @@ Class is EditorView{
 		)
 	}
 
+	local Function of SewNode is buildSplitBody(){
+		local NavStack is nav: NavStack(
+			route: vm:activeRoute,
+			routes: Array([
+				NavRoute(name: SpecEditStrings:ROUTE_WELCOME, child: :welcomeContainer()),
+				NavRoute(name: SpecEditStrings:ROUTE_FILES, child: :filesContainer())
+			])
+		);
+		:splitGrid: FlexGridH(
+			panels: Array([
+				FlexGridPanel(
+					child: fileTree as SewNode,
+					sizePt: 220.0,
+					minSizePt: 140.0,
+					maxSizePt: 480.0,
+					flex: false,
+					visible: vm:fileTreeEnabled:current()
+				),
+				FlexGridPanel(
+					child: nav as SewNode,
+					minSizePt: 200.0,
+					flex: true
+				)
+			]),
+			spacingPt: 4.0,
+			movable: true
+		);
+		vm:fileTreeEnabled:collect(onEmit: local Function(Boolean is on){
+			splitGrid:setPanelVisible(index: 0, visible: on);
+		});
+		return splitGrid;
+	}
+
 	Function of ToolkitContainer is build(){
 		:container: ToolkitContainer(
 			title: vm:title,
@@ -149,13 +191,7 @@ Class is EditorView{
 					onMenuOpen: local Function(MenuConfig is _m){ vm:refreshMenuStates(); }
 				)
 			),
-			body: NavStack(
-				route: vm:activeRoute,
-				routes: Array([
-					NavRoute(name: SpecEditStrings:ROUTE_WELCOME, child: :welcomeContainer()),
-					NavRoute(name: SpecEditStrings:ROUTE_FILES, child: :filesContainer())
-				])
-			),
+			body: :buildSplitBody(),
 			bottomBar: Bar(
 				leftText: vm:cursorStatus,
 				rightText: vm:syntaxStatus,

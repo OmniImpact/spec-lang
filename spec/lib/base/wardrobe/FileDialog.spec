@@ -22,7 +22,8 @@ Class is FileDialog{
 		['base', 'suit', SuitCanvas],
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
-		['base', 'fabric', DrawContext]
+		['base', 'fabric', DrawContext],
+		['base', 'wardrobe', PinnedLocations]
 	];
 
 	String is title: 'Open File';
@@ -57,8 +58,7 @@ Class is FileDialog{
 	Array of String is entryNames: Array();
 	Array of Boolean is entryIsDir: Array();
 	Array of String is selectedPaths: Array();
-	Array of String is pinnedNames: Array();
-	Array of String is pinnedPaths: Array();
+	PinnedLocations is pinned: PinnedLocations();
 	Int is selectedRow: -1;
 	Int is scrollRow: 0;
 	Int is hoverRow: -1;
@@ -108,9 +108,8 @@ Class is FileDialog{
 		:entryNames: Array();
 		:entryIsDir: Array();
 		:selectedPaths: Array();
-		:pinnedNames: Array();
-		:pinnedPaths: Array();
-		:initDefaultPins();
+		:pinned: PinnedLocations();
+		:pinned:load();
 		isShown: false;
 		isDirty: false;
 		lastW: 0;
@@ -139,100 +138,14 @@ Class is FileDialog{
 		return dirPath;
 	}
 
-	local Function of String is pinsConfigPath(){
-		local Uri is u: Uri();
-		local String is appDir: u:appConfigDir(appName: 'spec');
-		if({ Dir():isDir(path: appDir) }, {
-			return appDir . '/filedialog_pinned.txt';
-		});
-		return u:configDir() . '/spec_filedialog_pinned.txt';
-	}
-
 	local Function is savePinnedToConfig(){
-		local String is out: '';
-		local Int is i: 0;
-		while({ i < pinnedPaths:length() }, {
-			if({ i > 0 }, { out: out . "\n"; });
-			out: out . pinnedNames:get(index: i) . "\t" . pinnedPaths:get(index: i);
-			i: i + 1;
-		});
-		fileWrite(
-			path: :pinsConfigPath(),
-			content: out,
-			onSuccess: local Function(Int is _n){},
-			onError: local Function(Any is _err){}
-		);
-	}
-
-	local Function is loadPinnedFromConfig(){
-		local String is raw: fileRead(
-			path: :pinsConfigPath(),
-			onSuccess: local Function(String is _s){},
-			onError: local Function(Any is _err){},
-			default: ''
-		);
-		if({ raw == '' }, { return; });
-		local Int is len: raw:length();
-		local Int is start: 0;
-		while({ start < len }, {
-			local Int is nl: start;
-			while({ nl < len && (raw:byteAt(index: nl) & 255) != 10 }, { nl: nl + 1; });
-			local String is line: raw:substring(start: start, end: nl);
-			local Int is tab: 0;
-			local Int is llen: line:length();
-			while({ tab < llen && (line:byteAt(index: tab) & 255) != 9 }, { tab: tab + 1; });
-			if({ tab > 0 && tab + 1 < llen }, {
-				local String is pname: line:substring(start: 0, end: tab);
-				local String is ppath: line:substring(start: tab + 1, end: llen);
-				if({ Dir():isDir(path: ppath) }, {
-					:addPinned(name: pname, path: ppath);
-				});
-			});
-			start: nl + 1;
-		});
+		pinned:save();
 	}
 
 	local Function is addPinned(String is name, String is path){
-		if({ name == '' || path == '' }, { return; });
-		local Int is i: 0;
-		while({ i < pinnedPaths:length() }, {
-			if({ pinnedPaths:get(index: i) == path }, { return; });
-			i: i + 1;
+		if({ pinned:add(name: name, path: path) }, {
+			isDirty: true;
 		});
-		pinnedNames:add(item: name);
-		pinnedPaths:add(item: path);
-		isDirty: true;
-	}
-
-	local Function is initDefaultPins(){
-		if({ pinnedPaths:length() > 0 }, { return; });
-		local String is home: Process():getEnv(key: 'HOME', default: '');
-		if({ home == '' }, {
-			home: Process():getEnv(key: 'USERPROFILE', default: '');
-		});
-		if({ home != '' && Dir():isDir(path: home) }, {
-			:addPinned(name: 'Home', path: home);
-			local Array of String is entries: Dir():dirList(path: home);
-			local String is docsPath: '';
-			local String is dlPath: '';
-			local Int is i: 0;
-			while({ i < entries:length() }, {
-				local String is name: entries:get(index: i);
-				local String is low: name:toLower();
-				if({ low == 'documents' || low == 'downloads' }, {
-					local String is full: :joinPath(dir: home, name: name);
-					if({ Dir():isDir(path: full) }, {
-						if({ low == 'documents' && docsPath == '' }, { docsPath: full; });
-						if({ low == 'downloads' && dlPath == '' }, { dlPath: full; });
-					});
-				});
-				i: i + 1;
-			});
-			if({ docsPath != '' }, { :addPinned(name: 'Documents', path: docsPath); });
-			if({ dlPath != '' }, { :addPinned(name: 'Downloads', path: dlPath); });
-		});
-		:addPinned(name: 'Root', path: '/');
-		:loadPinnedFromConfig();
 	}
 
 	Function is applyTheme(Theme is theme){
@@ -470,10 +383,10 @@ Class is FileDialog{
 			ctx:setClip(x: 0, y: listY, w: sideW - 1, h: listH);
 			ctx:drawText(x: padX, y: listY + (pinHdrH - th) / 2, text: 'Pinned', color: theme:textMuted, pixelHeight: fpx);
 			local Int is pi: 0;
-			while({ pi < pinnedNames:length() }, {
+			while({ pi < pinned:names:length() }, {
 				local Int is py: listY + pinHdrH + pi * rowH;
 				if({ py < listY + listH }, {
-					local Boolean is isCurPin: pinnedPaths:get(index: pi) == curDir;
+					local Boolean is isCurPin: pinned:paths:get(index: pi) == curDir;
 					if({ isCurPin }, {
 						ctx:fillRect(x: 4, y: py + 2, w: sideW - 9, h: rowH - 4, color: theme:activeBg);
 					}, {
@@ -481,7 +394,7 @@ Class is FileDialog{
 							ctx:fillRect(x: 4, y: py + 2, w: sideW - 9, h: rowH - 4, color: theme:hoverBg);
 						});
 					});
-					ctx:drawText(x: padX, y: py + (rowH - th) / 2, text: pinnedNames:get(index: pi), color: theme:textPrimary, pixelHeight: fpx);
+					ctx:drawText(x: padX, y: py + (rowH - th) / 2, text: pinned:names:get(index: pi), color: theme:textPrimary, pixelHeight: fpx);
 				});
 				pi: pi + 1;
 			});
@@ -779,7 +692,7 @@ Class is FileDialog{
 		local Int is nextHoverPin: -1;
 		if({ sideW > 0 && px >= 0 && px < sideW && py >= listY + pinHdrH && py < listY + listH && rowH > 0 }, {
 			local Int is pcand: (py - (listY + pinHdrH)) / rowH;
-			if({ pcand >= 0 && pcand < pinnedNames:length() }, { nextHoverPin: pcand; });
+			if({ pcand >= 0 && pcand < pinned:names:length() }, { nextHoverPin: pcand; });
 		});
 		local Int is nextHoverBtn: 0;
 		if({ py >= topBoxY && py < topBoxY + topBoxH }, {
@@ -889,9 +802,9 @@ Class is FileDialog{
 			## Left "Pinned" panel clicks
 			if({ sideW > 0 && cx >= 0 && cx < sideW && cy >= listY + pinHdrH && cy < listY + listH && rowH > 0 }, {
 				local Int is pidx: (cy - (listY + pinHdrH)) / rowH;
-				if({ pidx >= 0 && pidx < pinnedPaths:length() }, {
+				if({ pidx >= 0 && pidx < pinned:paths:length() }, {
 					focusTarget: 0;
-					local String is target: pinnedPaths:get(index: pidx);
+					local String is target: pinned:paths:get(index: pidx);
 					if({ Dir():isDir(path: target) }, {
 						:loadDirectory(dirPath: target);
 					});

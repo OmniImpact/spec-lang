@@ -42,6 +42,7 @@ Class is EditorViewModel{
 	BoolEmitter is wrapEnabled: BoolEmitter(initial: false);
 	BoolEmitter is lineNumbersEnabled: BoolEmitter(initial: false);
 	BoolEmitter is monospaceEnabled: BoolEmitter(initial: true);
+	BoolEmitter is fileTreeEnabled: BoolEmitter(initial: false);
 	TextEmitter is documentText: TextEmitter(initial: '');
 	TextEmitter is activeFilePath: TextEmitter(initial: '');
 	TextEmitter is activeLanguage: TextEmitter(initial: '');
@@ -68,6 +69,7 @@ Class is EditorViewModel{
 	MenuItemConfig is wrapItem: MenuItemConfig(id: SpecEditStrings:ITEM_WRAP_ID, label: SpecEditStrings:ITEM_WRAP_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 	MenuItemConfig is lineNumsItem: MenuItemConfig(id: SpecEditStrings:ITEM_LINE_NUMS_ID, label: SpecEditStrings:ITEM_LINE_NUMS_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 	MenuItemConfig is monospaceItem: MenuItemConfig(id: SpecEditStrings:ITEM_MONOSPACE_ID, label: SpecEditStrings:ITEM_MONOSPACE_LABEL, checked: true, kind: SpecEditStrings:MENU_KIND_TOGGLE);
+	MenuItemConfig is fileTreeItem: MenuItemConfig(id: SpecEditStrings:ITEM_FILE_TREE_ID, label: SpecEditStrings:ITEM_FILE_TREE_LABEL, checked: false, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 
 	Function is copyHandler: local Function(){};
 	Function is cutHandler: local Function(){};
@@ -91,6 +93,7 @@ Class is EditorViewModel{
 		wrapEnabled: BoolEmitter(initial: false);
 		lineNumbersEnabled: BoolEmitter(initial: false);
 		monospaceEnabled: BoolEmitter(initial: true);
+		fileTreeEnabled: BoolEmitter(initial: false);
 		documentText: TextEmitter(initial: '');
 		activeFilePath: TextEmitter(initial: '');
 		activeLanguage: TextEmitter(initial: '');
@@ -310,9 +313,17 @@ Class is EditorViewModel{
 			kind: SpecEditStrings:MENU_KIND_TOGGLE,
 			onClick: local Function(){ :toggleMonospace(); }
 		);
+		fileTreeItem: MenuItemConfig(
+			id: SpecEditStrings:ITEM_FILE_TREE_ID,
+			label: SpecEditStrings:ITEM_FILE_TREE_LABEL,
+			checked: fileTreeEnabled:current(),
+			kind: SpecEditStrings:MENU_KIND_TOGGLE,
+			onClick: local Function(){ :toggleFileTree(); }
+		);
 		viewMenu:addItem(item: wrapItem);
 		viewMenu:addItem(item: lineNumsItem);
 		viewMenu:addItem(item: monospaceItem);
+		viewMenu:addItem(item: fileTreeItem);
 		cfg:addMenu(menu: viewMenu);
 
 		local MenuConfig is helpMenu: MenuConfig(id: SpecEditStrings:MENU_HELP_ID, label: SpecEditStrings:MENU_HELP_LABEL);
@@ -598,6 +609,12 @@ Class is EditorViewModel{
 		local Boolean is next: !monospaceEnabled:current();
 		monospaceEnabled:emit(value: next);
 		monospaceItem:checked: next;
+	}
+
+	Function is toggleFileTree(){
+		local Boolean is next: !fileTreeEnabled:current();
+		fileTreeEnabled:emit(value: next);
+		fileTreeItem:checked: next;
 	}
 
 	Function is requestAbout(){

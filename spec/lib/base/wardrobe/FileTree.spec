@@ -1,0 +1,275 @@
+#! Package base:wardrobe
+#! File-browser tree widget built on [TreeView] with a top pinned-locations dropdown backed by [PinnedLocations].
+
+Class of SewNode is FileTree{
+	replace [String] is namespace: ['base', 'wardrobe'];
+
+	replace [[String]] is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', Dir],
+		['base', 'sys', Process],
+		['base', 'struct', Array],
+		['base', 'fabric', Theme],
+		['base', 'fabric', DrawContext],
+		['base', 'sew', SewNode],
+		['base', 'sew', Size],
+		['base', 'sew', Rect],
+		['base', 'sew', Constraints],
+		['base', 'sew', Scale],
+		['base', 'scrap', TreeNode],
+		['base', 'scrap', TreeView],
+		['base', 'scrap', MenuItemConfig],
+		['base', 'scrap', ContextMenu],
+		['base', 'wardrobe', PinnedLocations]
+	];
+
+	String is rootDir: '';
+	String is rootLabel: '';
+	Boolean is showHidden: false;
+	Boolean is headerHover: false;
+	PinnedLocations is pinned: PinnedLocations();
+	TreeView is treeView: TreeView();
+	ContextMenu is contextMenu: ContextMenu();
+	Function is onOpenFile: local Function(String is _path){};
+
+	replace Function is init(
+		String is rootDir: '',
+		ContextMenu is contextMenu: ContextMenu(),
+		Function is onOpenFile: local Function(String is _path){},
+		Boolean is showHidden: false
+	){
+		:contextMenu: contextMenu;
+		:onOpenFile: onOpenFile;
+		:showHidden: showHidden;
+		:pinned: PinnedLocations();
+		:pinned:load();
+		:treeView: TreeView(
+			onToggle: local Function(TreeNode is node){ :handleToggle(node: node); },
+			onActivate: local Function(TreeNode is node){
+				local Function is cb: onOpenFile;
+				cb(node:id);
+			}
+		);
+		local String is startDir: rootDir;
+		if({ startDir == '' || !Dir():isDir(path: startDir) }, {
+			local String is pwd: Process():getEnv(key: 'PWD', default: '');
+			if({ pwd != '' && Dir():isDir(path: pwd) }, {
+				startDir: pwd;
+			}, {
+				local String is home: Process():getEnv(key: 'HOME', default: '');
+				startDir: if({ home != '' && Dir():isDir(path: home) }, { home }, { '/' });
+			});
+		});
+		:setRootDir(dirPath: startDir);
+	}
+
+	local Function of String is baseName(String is path){
+		if({ path == '/' }, { return '/'; });
+		local Int is len: path:length();
+		if({ len == 0 }, { return '/'; });
+		local Int is i: len - 1;
+		while({ i >= 0 && path:byteAt(index: i) != 47 }, { i: i - 1; });
+		local String is b: path:substring(start: i + 1, end: len);
+		return if({ b == '' }, { path }, { b });
+	}
+
+	local Function of String is joinPath(String is dir, String is name){
+		if({ dir == '' || dir == '.' }, { return name; });
+		if({ dir:endsWith(suffix: '/') }, { return dir . name; });
+		return dir . '/' . name;
+	}
+
+	local Function is sortStrings(Array of String is items){
+		local Int is n: items:length();
+		local Int is i: 1;
+		while({ i < n }, {
+			local String is key: items:get(index: i);
+			local String is keyLow: key:toLower();
+			local Int is j: i - 1;
+			while({ j >= 0 && items:get(index: j):toLower() > keyLow }, {
+				items:set(index: j + 1, item: items:get(index: j));
+				j: j - 1;
+			});
+			items:set(index: j + 1, item: key);
+			i: i + 1;
+		});
+	}
+
+	local Function of Array of TreeNode is loadDirectoryNodes(String is dirPath){
+		local Array of TreeNode is nodes: Array();
+		if({ dirPath == '' || !Dir():isDir(path: dirPath) }, { return nodes; });
+		local Array of String is raw: Dir():dirList(path: dirPath);
+		local Array of String is dirs: Array();
+		local Array of String is files: Array();
+		local Int is i: 0;
+		while({ i < raw:length() }, {
+			local String is name: raw:get(index: i);
+			if({ name != '.' && name != '..' && (showHidden || !name:startsWith(prefix: '.')) }, {
+				local String is full: :joinPath(dir: dirPath, name: name);
+				if({ Dir():isDir(path: full) }, {
+					dirs:add(item: name);
+				}, {
+					files:add(item: name);
+				});
+			});
+			i: i + 1;
+		});
+		:sortStrings(items: dirs);
+		:sortStrings(items: files);
+		i: 0;
+		while({ i < dirs:length() }, {
+			local String is dname: dirs:get(index: i);
+			nodes:add(item: TreeNode(
+				id: :joinPath(dir: dirPath, name: dname),
+				label: dname,
+				expandable: true,
+				expanded: false,
+				loaded: false
+			));
+			i: i + 1;
+		});
+		i: 0;
+		while({ i < files:length() }, {
+			local String is fname: files:get(index: i);
+			nodes:add(item: TreeNode(
+				id: :joinPath(dir: dirPath, name: fname),
+				label: fname,
+				expandable: false
+			));
+			i: i + 1;
+		});
+		return nodes;
+	}
+
+	local Function is handleToggle(TreeNode is node){
+		if({ node:expandable && node:expanded && !node:loaded }, {
+			node:children: :loadDirectoryNodes(dirPath: node:id);
+			node:loaded: true;
+		});
+	}
+
+	Function is setRootDir(String is dirPath){
+		if({ dirPath == '' || !Dir():isDir(path: dirPath) }, { return; });
+		:rootDir: dirPath;
+		:rootLabel: :baseName(path: dirPath);
+		treeView:setRoots(roots: :loadDirectoryNodes(dirPath: dirPath));
+		invalidate();
+	}
+
+	local Function of Int is headerHeightPx(){
+		local Int is h: activeScale:px(pt: 28.0);
+		return if({ h < 22 }, { 22 }, { h });
+	}
+
+	local Function of Int is headerFontPx(){
+		local Int is px: activeScale:px(pt: 15.0);
+		return if({ px < 11 }, { 11 }, { px });
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		treeView:applyTheme(theme: theme);
+	}
+
+	replace Function is setScale(Scale is scale){
+		:activeScale: scale;
+		treeView:setScale(scale: scale);
+	}
+
+	replace Function is bindDirty(Function is cb){
+		:dirtyListeners: Array([cb]);
+		treeView:bindDirty(cb: cb);
+	}
+
+	replace Function of Size is measure(Constraints is c){
+		local Int is w: c:clampW(w: c:maxW);
+		local Int is h: c:clampH(h: c:maxH);
+		local Int is hh: :headerHeightPx();
+		local Int is th: if({ h > hh }, { h - hh }, { 0 });
+		treeView:measure(c: Constraints(minW: w, maxW: w, minH: th, maxH: th));
+		desiredSize: Size(width: w, height: h);
+		return desiredSize;
+	}
+
+	replace Function is arrange(Rect is bounds){
+		layoutBounds: bounds;
+		local Int is hh: :headerHeightPx();
+		local Int is th: if({ bounds:height > hh }, { bounds:height - hh }, { 0 });
+		treeView:arrange(bounds: Rect(x: bounds:x, y: bounds:y + hh, width: bounds:width, height: th));
+	}
+
+	replace Function is paint(DrawContext is ctx){
+		local Rect is b: bounds();
+		if({ b:width <= 0 || b:height <= 0 }, { return; });
+		local Int is hh: :headerHeightPx();
+		local Int is bg: if({ headerHover }, { activeTheme:hoverBg }, { activeTheme:toolbarBg });
+		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: hh, color: bg);
+		ctx:fillRect(x: b:x, y: b:y + hh - 1, w: b:width, h: 1, color: activeTheme:toolbarBorder);
+
+		local Int is fpx: :headerFontPx();
+		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
+		local Int is padX: activeScale:px(pt: 10.0);
+		ctx:setClip(x: b:x, y: b:y, w: b:width, h: hh);
+		ctx:drawText(
+			x: b:x + padX,
+			y: b:y + (hh - th) / 2,
+			text: rootLabel . ' ▾',
+			color: activeTheme:textPrimary,
+			pixelHeight: fpx,
+			bold: true
+		);
+		ctx:clearClip();
+
+		treeView:paint(ctx: ctx);
+	}
+
+	local Function is openPinnedDropdown(Int is x, Int is y){
+		pinned:load();
+		local Array of MenuItemConfig is items: Array();
+		local Int is i: 0;
+		while({ i < pinned:paths:length() }, {
+			local String is pname: pinned:names:get(index: i);
+			local String is ppath: pinned:paths:get(index: i);
+			local String is prefix: if({ ppath == rootDir }, { '* ' }, { '  ' });
+			items:add(item: MenuItemConfig(
+				id: 'pin_' . (i as String),
+				label: prefix . pname,
+				onClick: local Function(){ :setRootDir(dirPath: ppath); }
+			));
+			i: i + 1;
+		});
+		if({ items:length() > 0 }, {
+			local Rect is b: bounds();
+			contextMenu:open(x: b:x + 2, y: b:y + :headerHeightPx(), items: items);
+		});
+	}
+
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
+		local Rect is b: bounds();
+		local Int is hh: :headerHeightPx();
+		local Boolean is nextHover: x >= b:x && x < b:x + b:width && y >= b:y && y < b:y + hh;
+		local Boolean is changed: false;
+		if({ nextHover != headerHover }, {
+			headerHover: nextHover;
+			invalidate();
+			changed: true;
+		});
+		if({ treeView:onPointerMove(x: x, y: y) }, { changed: true; });
+		return changed;
+	}
+
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		local Rect is b: bounds();
+		local Int is hh: :headerHeightPx();
+		if({ x >= b:x && x < b:x + b:width && y >= b:y && y < b:y + hh }, {
+			:openPinnedDropdown(x: x, y: y);
+			return true;
+		});
+		return treeView:onPointerClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onScroll(Int is deltaY){
+		return treeView:onScroll(deltaY: deltaY);
+	}
+}
