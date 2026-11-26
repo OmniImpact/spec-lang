@@ -8,6 +8,7 @@ Class is Shape3DViewModel{
 		['base', 'sys', as Conditional()],
 		['base', 'math', Math],
 		['base', 'signal', BoolEmitter],
+		['base', 'signal', IntEmitter],
 		['base', 'signal', TextEmitter],
 		['base', 'scrap', ToolbarConfig],
 		['base', 'scrap', MenuConfig],
@@ -20,30 +21,37 @@ Class is Shape3DViewModel{
 	TextEmitter is title: TextEmitter(initial: 'SuitShape3D');
 	BoolEmitter is running: BoolEmitter(initial: true);
 	BoolEmitter is aboutOpen: BoolEmitter(initial: false);
+	IntEmitter is targetFps: IntEmitter(initial: 60);
 	TextEmitter is fpsText: TextEmitter(initial: 'FPS: --');
 	TextEmitter is versionText: TextEmitter(initial: '');
 	TextEmitter is descriptionText: TextEmitter(initial: '');
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
-	Float is toolbarHeightPt: 26.0;
+	Float is toolbarHeightPt: 30.0;
 
 	Mat4 is mOps: Mat4();
 	Math is math: Math();
 	Int is fpsWindowStartMs: 0;
 	Int is frameCount: 0;
+	Float is emaFps: 0.0;
+	MenuItemConfig is fps30Item: MenuItemConfig(id: 'fps_30', label: '30');
+	MenuItemConfig is fps60Item: MenuItemConfig(id: 'fps_60', label: '60', checked: true);
+	MenuItemConfig is fpsUnlockedItem: MenuItemConfig(id: 'fps_unlocked', label: 'Unlocked');
 
 	replace Function is init(Shape3DModel is model){
 		:model: model;
 		title: TextEmitter(initial: model:appName);
 		running: BoolEmitter(initial: true);
 		aboutOpen: BoolEmitter(initial: false);
+		targetFps: IntEmitter(initial: 60);
 		fpsText: TextEmitter(initial: 'FPS: --');
 		versionText: TextEmitter(initial: model:appName . ' v' . model:version);
 		descriptionText: TextEmitter(initial: model:description);
 		toolbarConfig: :buildToolbarConfig();
 		fpsWindowStartMs: 0;
 		frameCount: 0;
+		emaFps: 0.0;
 	}
 
 	local Function of ToolbarConfig is buildToolbarConfig(){
@@ -57,6 +65,17 @@ Class is Shape3DViewModel{
 		));
 		cfg:addMenu(menu: fileMenu);
 
+		local MenuConfig is configMenu: MenuConfig(id: 'config', label: 'Config');
+		local MenuItemConfig is frMenu: MenuItemConfig(id: 'framerate', label: 'Framerate');
+		fps30Item: MenuItemConfig(id: 'fps_30', label: '30', checked: false, onClick: local Function(){ :setFramerate(fps: 30); });
+		fps60Item: MenuItemConfig(id: 'fps_60', label: '60', checked: true, onClick: local Function(){ :setFramerate(fps: 60); });
+		fpsUnlockedItem: MenuItemConfig(id: 'fps_unlocked', label: 'Unlocked', checked: false, onClick: local Function(){ :setFramerate(fps: 0); });
+		frMenu:addSubItem(item: fps30Item);
+		frMenu:addSubItem(item: fps60Item);
+		frMenu:addSubItem(item: fpsUnlockedItem);
+		configMenu:addItem(item: frMenu);
+		cfg:addMenu(menu: configMenu);
+
 		local MenuConfig is helpMenu: MenuConfig(id: 'help', label: 'Help');
 		helpMenu:addItem(item: MenuItemConfig(
 			id: 'about',
@@ -68,6 +87,13 @@ Class is Shape3DViewModel{
 		return cfg;
 	}
 
+	Function is setFramerate(Int is fps){
+		targetFps:emit(value: fps);
+		fps30Item:checked: (fps == 30);
+		fps60Item:checked: (fps == 60);
+		fpsUnlockedItem:checked: (fps == 0);
+	}
+
 	Function is requestQuit(){
 		running:emit(value: false);
 	}
@@ -76,13 +102,19 @@ Class is Shape3DViewModel{
 		aboutOpen:emit(value: true);
 	}
 
-	## Updates rolling FPS counter and returns the current MVP matrix for [elapsedMs] and viewport [w]x[h].
+	## Updates 500ms moving-average FPS counter and returns the current MVP matrix for [elapsedMs] and viewport [w]x[h].
 	Function of Mat4 is stepFrame(Int is elapsedMs, Int is w, Int is h){
 		frameCount: frameCount + 1;
 		local Int is fpsElapsed: elapsedMs - fpsWindowStartMs;
-		if({ fpsElapsed >= 250 }, {
-			local Int is fps: (frameCount * 1000) / fpsElapsed;
-			fpsText:emit(value: 'FPS: ' . fps);
+		if({ fpsElapsed >= 500 }, {
+			local Float is instFps: (math:toFloat(value: frameCount) * 1000.0) / math:toFloat(value: fpsElapsed);
+			if({ emaFps <= 0.0 }, {
+				emaFps: instFps;
+			}, {
+				emaFps: (emaFps * 0.6) + (instFps * 0.4);
+			});
+			local Int is displayFps: math:toInt(value: math:round(value: emaFps));
+			fpsText:emit(value: 'FPS: ' . displayFps);
 			fpsWindowStartMs: elapsedMs;
 			frameCount: 0;
 		});

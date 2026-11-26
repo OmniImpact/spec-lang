@@ -1,5 +1,5 @@
 #! Package base:scrap
-#! Resolution-independent toolbar widget with dropdown menus (point-based).
+#! Resolution-independent toolbar widget built over `Bar` with dropdown menus and sub-menus.
 
 Class of SewNode is Toolbar{
 	replace [String] is namespace: ['base', 'scrap'];
@@ -29,6 +29,8 @@ Class of SewNode is Toolbar{
 	Int is openMenuIdx: -1;
 	Int is hoverMenuIdx: -1;
 	Int is hoverItemIdx: -1;
+	Int is openSubMenuIdx: -1;
+	Int is hoverSubItemIdx: -1;
 
 	replace Function is init(
 		Theme is theme: Theme(preset: 'light_grayscale'),
@@ -42,6 +44,8 @@ Class of SewNode is Toolbar{
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;
+		openSubMenuIdx: -1;
+		hoverSubItemIdx: -1;
 	}
 
 	Function is setConfig(ToolbarConfig is config){
@@ -50,6 +54,8 @@ Class of SewNode is Toolbar{
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;
+		openSubMenuIdx: -1;
+		hoverSubItemIdx: -1;
 		invalidate();
 	}
 
@@ -70,15 +76,15 @@ Class of SewNode is Toolbar{
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: scale:px(pt: 13.0);
-		return if({ px < 10 }, { 10 }, { px });
+		local Int is px: scale:px(pt: 18.0);
+		return if({ px < 12 }, { 12 }, { px });
 	}
 
 	local Function of Int is menuButtonWidthPx(MenuConfig is menu){
 		local DrawContext is dummy: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 		local Int is tw: dummy:measureTextWidth(text: menu:label, pixelHeight: :fontPx());
 		dummy:canvas:dispose();
-		return tw + scale:px(pt: 20.0);
+		return tw + scale:px(pt: 22.0);
 	}
 
 	local Function of Int is menuButtonX(Int is idx){
@@ -92,7 +98,7 @@ Class of SewNode is Toolbar{
 	}
 
 	local Function of Int is dropdownWidthPx(){
-		return scale:px(pt: 120.0);
+		return scale:px(pt: 150.0);
 	}
 
 	local Function of Int is dropdownItemHeightPx(){
@@ -109,8 +115,11 @@ Class of SewNode is Toolbar{
 	Function of Boolean is onPointerMove(Int is x, Int is y){
 		local Int is prevMenu: hoverMenuIdx;
 		local Int is prevItem: hoverItemIdx;
+		local Int is prevSubOpen: openSubMenuIdx;
+		local Int is prevSubHover: hoverSubItemIdx;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;
+		hoverSubItemIdx: -1;
 
 		local Rect is b: bounds();
 		if({ y >= b:y && y < b:y + b:height }, {
@@ -131,12 +140,35 @@ Class of SewNode is Toolbar{
 			local Int is dw: :dropdownWidthPx();
 			local Int is ih: :dropdownItemHeightPx();
 			local Int is dh: om:items:length() * ih;
-			if({ x >= dx && x < dx + dw && y >= dy && y < dy + dh }, {
-				hoverItemIdx: (y - dy) / ih;
+
+			if({ openSubMenuIdx >= 0 && openSubMenuIdx < om:items:length() }, {
+				local MenuItemConfig is parentItem: om:items:get(index: openSubMenuIdx);
+				if({ parentItem:subItems:length() > 0 }, {
+					local Int is sdx: dx + dw;
+					local Int is sdy: dy + openSubMenuIdx * ih;
+					local Int is sdh: parentItem:subItems:length() * ih;
+					if({ x >= sdx && x < sdx + dw && y >= sdy && y < sdy + sdh }, {
+						hoverSubItemIdx: (y - sdy) / ih;
+						hoverItemIdx: openSubMenuIdx;
+					});
+				});
+			});
+
+			if({ hoverSubItemIdx < 0 && x >= dx && x < dx + dw && y >= dy && y < dy + dh }, {
+				local Int is idx: (y - dy) / ih;
+				hoverItemIdx: idx;
+				if({ idx >= 0 && idx < om:items:length() }, {
+					local MenuItemConfig is item: om:items:get(index: idx);
+					if({ item:subItems:length() > 0 }, {
+						openSubMenuIdx: idx;
+					}, {
+						openSubMenuIdx: -1;
+					});
+				});
 			});
 		});
 
-		return prevMenu != hoverMenuIdx || prevItem != hoverItemIdx;
+		return prevMenu != hoverMenuIdx || prevItem != hoverItemIdx || prevSubOpen != openSubMenuIdx || prevSubHover != hoverSubItemIdx;
 	}
 
 	## Handles a left-click at ([x], [y]); returns `true` if visual state changed.
@@ -152,8 +184,10 @@ Class of SewNode is Toolbar{
 				if({ x >= bx && x < bx + bw }, {
 					if({ openMenuIdx == i }, {
 						openMenuIdx: -1;
+						openSubMenuIdx: -1;
 					}, {
 						openMenuIdx: i;
+						openSubMenuIdx: -1;
 					});
 					handled: true;
 				});
@@ -168,17 +202,44 @@ Class of SewNode is Toolbar{
 			local Int is dw: :dropdownWidthPx();
 			local Int is ih: :dropdownItemHeightPx();
 			local Int is dh: om:items:length() * ih;
+
+			if({ openSubMenuIdx >= 0 && openSubMenuIdx < om:items:length() }, {
+				local MenuItemConfig is parentItem: om:items:get(index: openSubMenuIdx);
+				if({ parentItem:subItems:length() > 0 }, {
+					local Int is sdx: dx + dw;
+					local Int is sdy: dy + openSubMenuIdx * ih;
+					local Int is sdh: parentItem:subItems:length() * ih;
+					if({ x >= sdx && x < sdx + dw && y >= sdy && y < sdy + sdh }, {
+						local Int is subIdx: (y - sdy) / ih;
+						if({ subIdx >= 0 && subIdx < parentItem:subItems:length() }, {
+							local MenuItemConfig is subItem: parentItem:subItems:get(index: subIdx);
+							openMenuIdx: -1;
+							openSubMenuIdx: -1;
+							local Function is scb: subItem:onClick;
+							scb();
+							return true;
+						});
+					});
+				});
+			});
+
 			if({ x >= dx && x < dx + dw && y >= dy && y < dy + dh }, {
 				local Int is itemIdx: (y - dy) / ih;
 				if({ itemIdx >= 0 && itemIdx < om:items:length() }, {
 					local MenuItemConfig is item: om:items:get(index: itemIdx);
+					if({ item:subItems:length() > 0 }, {
+						openSubMenuIdx: itemIdx;
+						return true;
+					});
 					openMenuIdx: -1;
+					openSubMenuIdx: -1;
 					local Function is cb: item:onClick;
 					cb();
 					return true;
 				});
 			});
 			openMenuIdx: -1;
+			openSubMenuIdx: -1;
 			return true;
 		});
 
@@ -192,11 +253,10 @@ Class of SewNode is Toolbar{
 
 		bar:paint(ctx: ctx);
 		local Int is borderH: if({ scale:px(pt: 1.0) < 1 }, { 1 }, { scale:px(pt: 1.0) });
-
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is textY: b:y + (b:height - th) / 2;
-		local Int is padX: scale:px(pt: 10.0);
+		local Int is padX: scale:px(pt: 11.0);
 
 		times(count: config:menus:length(), worker: local Function(Int is i){
 			local MenuConfig is m: config:menus:get(index: i);
@@ -213,7 +273,7 @@ Class of SewNode is Toolbar{
 		});
 	}
 
-	## Paints the open dropdown menu popup above the body layer.
+	## Paints the open dropdown menu popup (and any open sub-menu) above the body layer.
 	Function is paintOverlay(DrawContext is ctx){
 		if({ openMenuIdx < 0 || openMenuIdx >= config:menus:length() }, { return; });
 		local Rect is b: bounds();
@@ -232,16 +292,43 @@ Class of SewNode is Toolbar{
 
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is padX: scale:px(pt: 10.0);
+		local Int is padX: scale:px(pt: 12.0);
 
 		times(count: count, worker: local Function(Int is i){
 			local MenuItemConfig is item: om:items:get(index: i);
 			local Int is iy: dy + i * ih;
-			if({ hoverItemIdx == i }, {
+			if({ hoverItemIdx == i || openSubMenuIdx == i }, {
 				ctx:fillRect(x: dx + 1, y: iy + 1, w: dw - 2, h: ih - 2, color: theme:hoverBg);
 			});
 			local Int is ty: iy + (ih - th) / 2;
-			ctx:drawText(x: dx + padX, y: ty, text: item:label, color: theme:textPrimary, pixelHeight: fpx);
+			local String is lbl: if({ item:checked }, { '* ' . item:label }, { item:label });
+			ctx:drawText(x: dx + padX, y: ty, text: lbl, color: theme:textPrimary, pixelHeight: fpx);
+			if({ item:subItems:length() > 0 }, {
+				local Int is aw: ctx:measureTextWidth(text: '>', pixelHeight: fpx);
+				ctx:drawText(x: dx + dw - padX - aw, y: ty, text: '>', color: theme:textMuted, pixelHeight: fpx);
+			});
+		});
+
+		if({ openSubMenuIdx >= 0 && openSubMenuIdx < count }, {
+			local MenuItemConfig is parentItem: om:items:get(index: openSubMenuIdx);
+			local Int is scount: parentItem:subItems:length();
+			if({ scount > 0 }, {
+				local Int is sdx: dx + dw;
+				local Int is sdy: dy + openSubMenuIdx * ih;
+				local Int is sdh: scount * ih;
+				ctx:fillRect(x: sdx, y: sdy, w: dw, h: sdh, color: theme:menuBg);
+				ctx:strokeRect(x: sdx, y: sdy, w: dw, h: sdh, color: theme:menuBorder);
+				times(count: scount, worker: local Function(Int is j){
+					local MenuItemConfig is sub: parentItem:subItems:get(index: j);
+					local Int is siy: sdy + j * ih;
+					if({ hoverSubItemIdx == j }, {
+						ctx:fillRect(x: sdx + 1, y: siy + 1, w: dw - 2, h: ih - 2, color: theme:hoverBg);
+					});
+					local Int is sty: siy + (ih - th) / 2;
+					local String is slbl: if({ sub:checked }, { '* ' . sub:label }, { sub:label });
+					ctx:drawText(x: sdx + padX, y: sty, text: slbl, color: theme:textPrimary, pixelHeight: fpx);
+				});
+			});
 		});
 	}
 }

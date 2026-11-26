@@ -12,6 +12,7 @@ Class of SewNode is ToolkitContainer{
 		['base', 'sys', Time],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', BoolCollector],
+		['base', 'signal', IntEmitter],
 		['base', 'signal', TextEmitter],
 		['base', 'signal', TextCollector],
 		['base', 'suit', SuitWindow],
@@ -33,6 +34,7 @@ Class of SewNode is ToolkitContainer{
 
 	TextEmitter is title: TextEmitter(initial: 'Suit');
 	BoolEmitter is running: BoolEmitter(initial: true);
+	IntEmitter is targetFps: IntEmitter(initial: 0);
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
 	Float is widthPt: 800.0;
@@ -55,6 +57,7 @@ Class of SewNode is ToolkitContainer{
 	replace Function is init(
 		TextEmitter is title: TextEmitter(initial: 'Suit'),
 		BoolEmitter is running: BoolEmitter(initial: true),
+		IntEmitter is targetFps: IntEmitter(initial: 0),
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Float is widthPt: 800.0,
 		Float is heightPt: 600.0,
@@ -72,6 +75,7 @@ Class of SewNode is ToolkitContainer{
 	){
 		:title: title;
 		:running: running;
+		:targetFps: targetFps;
 		:theme: theme;
 		:scale: Scale(factor: 1.0);
 		:widthPt: widthPt;
@@ -292,8 +296,14 @@ Class of SewNode is ToolkitContainer{
 				});
 
 				if({ useVulkan && running:current() }, {
+					local Int is frameStartNs: clock:monotonicNs();
 					local Function is frameCb: onFrame;
 					frameCb(elapsedMs, curW, curH);
+					local Int is fpsCap: targetFps:current();
+					if({ fpsCap > 0 }, {
+						local Int is budgetNs: 1000000000 / fpsCap;
+						clock:sleepUntilNs(targetNs: frameStartNs + budgetNs);
+					});
 				});
 			});
 		});

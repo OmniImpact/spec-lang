@@ -21,8 +21,8 @@ Class is Theme{
 	Int is textPrimary: 0;
 	Int is textMuted: 0;
 	Int is textAccent: 0;
-	Float is toolbarHeightPt: 26.0;
-	Float is menuItemHeightPt: 24.0;
+	Float is toolbarHeightPt: 30.0;
+	Float is menuItemHeightPt: 28.0;
 	Float is paddingPt: 8.0;
 
 	replace Function is init(String is preset: 'dark'){

@@ -19,7 +19,7 @@ Class of SewNode is Bar{
 
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
-	Float is heightPt: 26.0;
+	Float is heightPt: 30.0;
 	String is borderSide: 'bottom';
 	TextEmitter is leftText: TextEmitter(initial: '');
 	TextEmitter is centerText: TextEmitter(initial: '');
@@ -77,8 +77,8 @@ Class of SewNode is Bar{
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: scale:px(pt: 13.0);
-		return if({ px < 10 }, { 10 }, { px });
+		local Int is px: scale:px(pt: 18.0);
+		return if({ px < 12 }, { 12 }, { px });
 	}
 
 	replace Function of Size is measure(Constraints is c){

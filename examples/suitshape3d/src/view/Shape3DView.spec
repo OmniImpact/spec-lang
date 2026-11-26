@@ -25,6 +25,7 @@ Class is Shape3DView{
 		return ToolkitContainer(
 			title: vm:title,
 			running: vm:running,
+			targetFps: vm:targetFps,
 			theme: theme,
 			widthPt: vm:windowWidthPt,
 			heightPt: vm:windowHeightPt,

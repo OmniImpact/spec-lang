@@ -10,9 +10,9 @@ Class is ToolbarConfig{
 	];
 
 	Array of MenuConfig is menus: Array();
-	Float is heightPt: 26.0;
+	Float is heightPt: 30.0;
 
-	replace Function is init(Float is heightPt: 26.0){
+	replace Function is init(Float is heightPt: 30.0){
 		menus: Array();
 		:heightPt: heightPt;
 	}
