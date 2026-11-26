@@ -26,7 +26,6 @@ typedef struct SpecFont {
 
 static SpecFont** _spec_fonts = NULL;
 static size_t _spec_fonts_cap = 0;
-static long long _spec_default_font_handle = -1;
 
 static long long _spec_alloc_font_slot(SpecFont* f) {
     for (size_t i = 0; i < _spec_fonts_cap; i++) {
@@ -53,60 +52,35 @@ static SpecFont* _spec_get_font(long long handle) {
     return _spec_fonts[idx];
 }
 
-long long spec_pal_font_load(long long path_cstr) {
-    if (!path_cstr) {
-        _spec_set_font_error("Null font path");
+long long spec_pal_font_init_memory(long long data_ptr, long long data_len) {
+    if (!data_ptr || data_len <= 0) {
+        _spec_set_font_error("Empty font buffer");
         return -1;
     }
-    const char* path = (const char*)(intptr_t)path_cstr;
-    FILE* fp = fopen(path, "rb");
-    if (!fp) {
-        _spec_set_font_error("Failed to open font file");
-        return -1;
-    }
-    if (fseek(fp, 0, SEEK_END) != 0) {
-        fclose(fp);
-        _spec_set_font_error("Failed to seek font file");
-        return -1;
-    }
-    long sz = ftell(fp);
-    if (sz <= 0) {
-        fclose(fp);
-        _spec_set_font_error("Empty font file");
-        return -1;
-    }
-    rewind(fp);
-    unsigned char* data = (unsigned char*)malloc((size_t)sz);
-    if (!data) {
-        fclose(fp);
-        _spec_set_font_error("Out of memory reading font");
-        return -1;
-    }
-    if (fread(data, 1, (size_t)sz, fp) != (size_t)sz) {
-        free(data);
-        fclose(fp);
-        _spec_set_font_error("Failed to read font data");
-        return -1;
-    }
-    fclose(fp);
-
-    SpecFont* f = (SpecFont*)calloc(1, sizeof(SpecFont));
-    if (!f) {
-        free(data);
+    unsigned char* copy = (unsigned char*)malloc((size_t)data_len);
+    if (!copy) {
         _spec_set_font_error("Out of memory");
         return -1;
     }
-    f->ttf_data = data;
-    int offset = stbtt_GetFontOffsetForIndex(data, 0);
-    if (!stbtt_InitFont(&f->info, data, offset)) {
-        free(data);
+    memcpy(copy, (const void*)(intptr_t)data_ptr, (size_t)data_len);
+
+    SpecFont* f = (SpecFont*)calloc(1, sizeof(SpecFont));
+    if (!f) {
+        free(copy);
+        _spec_set_font_error("Out of memory");
+        return -1;
+    }
+    f->ttf_data = copy;
+    int offset = stbtt_GetFontOffsetForIndex(copy, 0);
+    if (!stbtt_InitFont(&f->info, copy, offset)) {
+        free(copy);
         free(f);
         _spec_set_font_error("stbtt_InitFont failed");
         return -1;
     }
     long long h = _spec_alloc_font_slot(f);
     if (h <= 0) {
-        free(data);
+        free(copy);
         free(f);
         _spec_set_font_error("Out of font slots");
         return -1;
@@ -115,7 +89,7 @@ long long spec_pal_font_load(long long path_cstr) {
 }
 
 long long spec_pal_font_close(long long handle) {
-    if (handle <= 0 || handle == _spec_default_font_handle) return 0;
+    if (handle <= 0) return 0;
     size_t idx = (size_t)(handle - 1);
     if (idx >= _spec_fonts_cap || !_spec_fonts[idx]) return 0;
     SpecFont* f = _spec_fonts[idx];
@@ -182,10 +156,11 @@ long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long lon
     return 1;
 }
 
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
 #if defined(__linux__)
-static long long _spec_font_try_fontconfig(void) {
+    if (!out_buf || out_cap <= 1) return 0;
     void* fc = dlopen("libfontconfig.so.1", RTLD_LAZY | RTLD_LOCAL);
-    if (!fc) return -1;
+    if (!fc) return 0;
     typedef int (*PFN_FcInit)(void);
     typedef void* (*PFN_FcNameParse)(const unsigned char*);
     typedef int (*PFN_FcConfigSubstitute)(void*, void*, int);
@@ -201,96 +176,54 @@ static long long _spec_font_try_fontconfig(void) {
     PFN_FcFontMatch pFcFontMatch = (PFN_FcFontMatch)dlsym(fc, "FcFontMatch");
     PFN_FcPatternGetString pFcPatternGetString = (PFN_FcPatternGetString)dlsym(fc, "FcPatternGetString");
     PFN_FcPatternDestroy pFcPatternDestroy = (PFN_FcPatternDestroy)dlsym(fc, "FcPatternDestroy");
-
     if (!pFcInit || !pFcNameParse || !pFcConfigSubstitute || !pFcDefaultSubstitute ||
         !pFcFontMatch || !pFcPatternGetString || !pFcPatternDestroy) {
         dlclose(fc);
-        return -1;
+        return 0;
     }
 
     pFcInit();
     void* pat = pFcNameParse((const unsigned char*)"sans");
-    if (!pat) { dlclose(fc); return -1; }
-    pFcConfigSubstitute(NULL, pat, 0 /* FcMatchPattern */);
+    if (!pat) { dlclose(fc); return 0; }
+    pFcConfigSubstitute(NULL, pat, 0);
     pFcDefaultSubstitute(pat);
     int res = 0;
     void* match = pFcFontMatch(NULL, pat, &res);
     pFcPatternDestroy(pat);
-    if (!match) { dlclose(fc); return -1; }
+    if (!match) { dlclose(fc); return 0; }
 
     unsigned char* file = NULL;
-    long long h = -1;
+    long long written = 0;
     if (pFcPatternGetString(match, "file", 0, &file) == 0 && file) {
-        h = spec_pal_font_load((long long)(intptr_t)file);
+        size_t len = strlen((const char*)file);
+        if (len > (size_t)(out_cap - 1)) len = (size_t)(out_cap - 1);
+        memcpy((char*)(intptr_t)out_buf, file, len);
+        ((char*)(intptr_t)out_buf)[len] = '\0';
+        written = (long long)len;
     }
     pFcPatternDestroy(match);
     dlclose(fc);
-    return h;
-}
-#endif
-
-long long spec_pal_font_load_default(void) {
-#if defined(__linux__)
-    if (_spec_default_font_handle > 0) return _spec_default_font_handle;
-    long long h = _spec_font_try_fontconfig();
-    if (h > 0) {
-        _spec_default_font_handle = h;
-        return h;
-    }
-    static const char* fallbacks[] = {
-        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
-        NULL
-    };
-    for (int i = 0; fallbacks[i]; i++) {
-        h = spec_pal_font_load((long long)(intptr_t)fallbacks[i]);
-        if (h > 0) {
-            _spec_default_font_handle = h;
-            return h;
-        }
-    }
-    _spec_set_font_error("No default system sans font found on Linux");
-    return -1;
-#elif defined(__APPLE__)
-    /* TODO: Resolve default system sans font via CoreText (CTFontCreateUIFontForLanguage). */
-    _spec_set_font_error("Default system font not yet implemented on macOS");
-    return -1;
-#elif defined(_WIN32)
-    /* TODO: Resolve default system sans font via DirectWrite or SHGetFolderPath + segoeui.ttf. */
-    _spec_set_font_error("Default system font not yet implemented on Windows");
-    return -1;
+    return written;
 #else
-    _spec_set_font_error("Default system font not supported on this platform");
-    return -1;
+    (void)out_buf; (void)out_cap;
+    return 0;
 #endif
 }
 
 #else
 
-long long spec_pal_font_load(long long path_cstr) {
-    (void)path_cstr;
+long long spec_pal_font_init_memory(long long data_ptr, long long data_len) {
+    (void)data_ptr; (void)data_len;
     _spec_set_font_error("stb_truetype.h not available at compile time");
     return -1;
 }
-
-long long spec_pal_font_close(long long handle) {
-    (void)handle;
-    return 0;
-}
-
+long long spec_pal_font_close(long long handle) { (void)handle; return 0; }
 double spec_pal_font_scale(long long handle, long long pixel_height) { (void)handle; (void)pixel_height; return 0.0; }
 long long spec_pal_font_vmetrics(long long handle, long long out_3_i32_ptr) { (void)handle; (void)out_3_i32_ptr; return 0; }
 long long spec_pal_font_hmetrics(long long handle, long long cp, long long out_2_i32_ptr) { (void)handle; (void)cp; (void)out_2_i32_ptr; return 0; }
 long long spec_pal_font_kern_advance(long long handle, long long cp1, long long cp2) { (void)handle; (void)cp1; (void)cp2; return 0; }
 long long spec_pal_font_glyph_box(long long handle, long long cp, long long pixel_height, long long out_4_i32_ptr) { (void)handle; (void)cp; (void)pixel_height; (void)out_4_i32_ptr; return 0; }
 long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long long pixel_height, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)dst_ptr; (void)gw; (void)gh; return 0; }
-
-long long spec_pal_font_load_default(void) {
-    _spec_set_font_error("stb_truetype.h not available at compile time");
-    return -1;
-}
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) { (void)out_buf; (void)out_cap; return 0; }
 
 #endif

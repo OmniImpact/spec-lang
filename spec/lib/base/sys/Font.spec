@@ -7,6 +7,8 @@ Class is Font{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],
+		['base', 'sys', as File()],
+		['base', 'struct', Array],
 		['base', 'math', Math],
 		['base', 'sysinternal', Font]
 	];
@@ -50,18 +52,54 @@ Class is Font{
 		return scratchAddr;
 	}
 
-	## Loads a TrueType/OpenType font from [path].
-	Function of Boolean is load(String is path){
+	## Loads a TrueType/OpenType font from raw bytes at ([dataAddr], [byteLen]).
+	Function of Boolean is loadMemory(Int is dataAddr, Int is byteLen){
 		if({ handle > 0 }, { close(); });
-		handle: base:sysinternal:Font:pal_font_load(path_cstr: :cstrAddr(s: path));
+		if({ dataAddr == 0 || byteLen <= 0 }, { return false; });
+		handle: base:sysinternal:Font:pal_font_init_memory(data_ptr: dataAddr, data_len: byteLen);
 		return handle > 0;
+	}
+
+	## Loads a TrueType/OpenType font from [path] using `base:sys:File`.
+	Function of Boolean is load(String is path){
+		local String is bytes: fileRead(
+			path: path,
+			onSuccess: local Function(String is _s){},
+			onError: local Function(Any is _e){},
+			default: ''
+		);
+		if({ bytes:length() == 0 }, { return false; });
+		return :loadMemory(dataAddr: :cstrAddr(s: bytes), byteLen: bytes:length());
 	}
 
 	## Resolves and loads the OS default sans-serif TrueType font.
 	Function of Boolean is loadDefault(){
-		if({ handle > 0 }, { close(); });
-		handle: base:sysinternal:Font:pal_font_load_default();
-		return handle > 0;
+		local Int is pathBuf: Mem:alloc(bytes: 512);
+		local Int is pathLen: base:sysinternal:Font:pal_font_default_path(out_buf: pathBuf, out_cap: 512);
+		local String is resolved: '';
+		if({ pathLen > 0 }, {
+			resolved: Mem:strFromBytes(srcAddr: pathBuf, len: pathLen);
+		});
+		Mem:free(ptr: pathBuf);
+		if({ resolved != '' && :load(path: resolved) }, {
+			return true;
+		});
+		local Array of String is fallbacks: Array([
+			'/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
+			'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+			'/usr/share/fonts/TTF/DejaVuSans.ttf',
+			'/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+			'/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf'
+		]);
+		local Int is i: 0;
+		while({ i < fallbacks:length() }, {
+			local String is p: fallbacks:get(index: i);
+			if({ fileExists(path: p) && :load(path: p) }, {
+				return true;
+			});
+			i: i + 1;
+		});
+		return false;
 	}
 
 	## Decodes one UTF-8 codepoint starting at byte [idx] of [text] and advances [outNext] via return.

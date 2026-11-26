@@ -57,6 +57,28 @@ Class is Vulkan{
 		Int is h
 	);
 
+	## Configures the 2D overlay pipeline using Spec-generated SPIR-V and quad vertices.
+	## Bound to `spec_pal_vulkan_set_overlay_pipeline`.
+	Function of Int is pal_vulkan_set_overlay_pipeline(
+		Int is handle,
+		Int is vert_spv_ptr,
+		Int is vert_spv_bytes,
+		Int is frag_spv_ptr,
+		Int is frag_spv_bytes,
+		Int is quad_ptr,
+		Int is quad_bytes
+	);
+
+	## Sets the 3D renderpass clear color.
+	## Bound to `spec_pal_vulkan_set_clear_color`.
+	Function of Int is pal_vulkan_set_clear_color(
+		Int is handle,
+		Float is r,
+		Float is g,
+		Float is b,
+		Float is a
+	);
+
 	## Destroys the Vulkan context and releases all GPU resources.
 	## Bound to `spec_pal_vulkan_destroy`.
 	Function of Int is pal_vulkan_destroy(Int is handle);

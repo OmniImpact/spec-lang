@@ -78,6 +78,33 @@ Class is Vulkan{
 		return base:sysinternal:Vulkan:pal_vulkan_set_viewport(handle: handle, x: x, y: y, w: w, h: h) != 0;
 	}
 
+	## Configures the 2D overlay pipeline from Spec-built SPIR-V shaders and fullscreen quad vertices.
+	Function of Boolean is setOverlayPipeline(
+		Int is vertSpvAddr,
+		Int is vertSpvBytes,
+		Int is fragSpvAddr,
+		Int is fragSpvBytes,
+		Int is quadAddr,
+		Int is quadBytes
+	){
+		if({ handle == 0 }, { return false; });
+		return base:sysinternal:Vulkan:pal_vulkan_set_overlay_pipeline(
+			handle: handle,
+			vert_spv_ptr: vertSpvAddr,
+			vert_spv_bytes: vertSpvBytes,
+			frag_spv_ptr: fragSpvAddr,
+			frag_spv_bytes: fragSpvBytes,
+			quad_ptr: quadAddr,
+			quad_bytes: quadBytes
+		) != 0;
+	}
+
+	## Sets the 3D renderpass background clear color.
+	Function of Boolean is setClearColor(Float is r, Float is g, Float is b, Float is a: 1.0){
+		if({ handle == 0 }, { return false; });
+		return base:sysinternal:Vulkan:pal_vulkan_set_clear_color(handle: handle, r: r, g: g, b: b, a: a) != 0;
+	}
+
 	## Destroys the Vulkan context and releases GPU resources.
 	Function is shutdown(){
 		if({ handle != 0 }, {

@@ -213,6 +213,111 @@ Class is SpirvBuilder{
 		:materialize();
 	}
 
+	## Builds a 2D textured fullscreen overlay vertex shader (vec2 pos, vec2 uv -> gl_Position, uv).
+	Function is buildOverlayVertexShader(){
+		words: Array();
+		:emitHeader(bound: 22);
+		:emitOp1(op: 17, a: 1);
+		:emitOp2(op: 14, a: 0, b: 1);
+		:emitWord(w: (9 * 65536) + 15);
+		:emitWord(w: 0);
+		:emitWord(w: 15);
+		:emitWord(w: 1852399981);
+		:emitWord(w: 0);
+		:emitWord(w: 9);
+		:emitWord(w: 10);
+		:emitWord(w: 12);
+		:emitWord(w: 14);
+
+		:emitOp3(op: 71, a: 9, b: 30, c: 0);
+		:emitOp3(op: 71, a: 10, b: 30, c: 1);
+		:emitOp3(op: 71, a: 12, b: 11, c: 0);
+		:emitOp3(op: 71, a: 14, b: 30, c: 0);
+
+		:emitOp1(op: 19, a: 1);
+		:emitOp2(op: 33, a: 2, b: 1);
+		:emitOp2(op: 22, a: 3, b: 32);
+		:emitOp3(op: 23, a: 4, b: 3, c: 2);
+		:emitOp3(op: 23, a: 5, b: 3, c: 4);
+		:emitOp3(op: 43, a: 3, b: 6, c: 0);
+		:emitOp3(op: 43, a: 3, b: 7, c: 1065353216);
+
+		:emitOp3(op: 32, a: 8, b: 1, c: 4);
+		:emitOp3(op: 59, a: 8, b: 9, c: 1);
+		:emitOp3(op: 59, a: 8, b: 10, c: 1);
+		:emitOp3(op: 32, a: 11, b: 3, c: 5);
+		:emitOp3(op: 59, a: 11, b: 12, c: 3);
+		:emitOp3(op: 32, a: 13, b: 3, c: 4);
+		:emitOp3(op: 59, a: 13, b: 14, c: 3);
+
+		:emitOp4(op: 54, a: 1, b: 15, c: 0, d: 2);
+		:emitOp1(op: 248, a: 16);
+		:emitOp3(op: 61, a: 4, b: 17, c: 9);
+		:emitOp4(op: 81, a: 3, b: 18, c: 17, d: 0);
+		:emitOp4(op: 81, a: 3, b: 19, c: 17, d: 1);
+		:emitOp6(op: 80, a: 5, b: 20, c: 18, d: 19, e: 6, f: 7);
+		:emitOp2(op: 62, a: 12, b: 20);
+		:emitOp3(op: 61, a: 4, b: 21, c: 10);
+		:emitOp2(op: 62, a: 14, b: 21);
+		:emitWord(w: (1 * 65536) + 253);
+		:emitWord(w: (1 * 65536) + 56);
+		:materialize();
+	}
+
+	## Builds a 2D textured overlay fragment shader sampling binding 0 at interpolated uv.
+	Function is buildOverlayFragmentShader(){
+		words: Array();
+		:emitHeader(bound: 19);
+		:emitOp1(op: 17, a: 1);
+		:emitOp2(op: 14, a: 0, b: 1);
+		:emitWord(w: (7 * 65536) + 15);
+		:emitWord(w: 4);
+		:emitWord(w: 14);
+		:emitWord(w: 1852399981);
+		:emitWord(w: 0);
+		:emitWord(w: 11);
+		:emitWord(w: 13);
+		:emitOp2(op: 16, a: 14, b: 7);
+
+		:emitOp3(op: 71, a: 9, b: 34, c: 0);
+		:emitOp3(op: 71, a: 9, b: 33, c: 0);
+		:emitOp3(op: 71, a: 11, b: 30, c: 0);
+		:emitOp3(op: 71, a: 13, b: 30, c: 0);
+
+		:emitOp1(op: 19, a: 1);
+		:emitOp2(op: 33, a: 2, b: 1);
+		:emitOp2(op: 22, a: 3, b: 32);
+		:emitOp3(op: 23, a: 4, b: 3, c: 2);
+		:emitOp3(op: 23, a: 5, b: 3, c: 4);
+		:emitWord(w: (9 * 65536) + 25);
+		:emitWord(w: 6);
+		:emitWord(w: 3);
+		:emitWord(w: 1);
+		:emitWord(w: 0);
+		:emitWord(w: 0);
+		:emitWord(w: 0);
+		:emitWord(w: 1);
+		:emitWord(w: 0);
+		:emitOp2(op: 27, a: 7, b: 6);
+
+		:emitOp3(op: 32, a: 8, b: 0, c: 7);
+		:emitOp3(op: 59, a: 8, b: 9, c: 0);
+		:emitOp3(op: 32, a: 10, b: 1, c: 4);
+		:emitOp3(op: 59, a: 10, b: 11, c: 1);
+		:emitOp3(op: 32, a: 12, b: 3, c: 5);
+		:emitOp3(op: 59, a: 12, b: 13, c: 3);
+
+		:emitOp4(op: 54, a: 1, b: 14, c: 0, d: 2);
+		:emitOp1(op: 248, a: 15);
+		:emitOp3(op: 61, a: 7, b: 16, c: 9);
+		:emitOp3(op: 61, a: 4, b: 17, c: 11);
+		:emitOp4(op: 87, a: 5, b: 18, c: 16, d: 17);
+		:emitOp2(op: 62, a: 13, b: 18);
+		:emitWord(w: (1 * 65536) + 253);
+		:emitWord(w: (1 * 65536) + 56);
+		:materialize();
+	}
+
 	## Returns the native memory address of the SPIR-V `uint32_t` words.
 	Function of Int is wordsAddr(){
 		return bufferAddr;

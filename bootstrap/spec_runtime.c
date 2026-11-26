@@ -4067,7 +4067,6 @@ typedef struct SpecFont {
 
 static SpecFont** _spec_fonts = NULL;
 static size_t _spec_fonts_cap = 0;
-static long long _spec_default_font_handle = -1;
 
 static long long _spec_alloc_font_slot(SpecFont* f) {
     for (size_t i = 0; i < _spec_fonts_cap; i++) {
@@ -4094,60 +4093,35 @@ static SpecFont* _spec_get_font(long long handle) {
     return _spec_fonts[idx];
 }
 
-long long spec_pal_font_load(long long path_cstr) {
-    if (!path_cstr) {
-        _spec_set_font_error("Null font path");
+long long spec_pal_font_init_memory(long long data_ptr, long long data_len) {
+    if (!data_ptr || data_len <= 0) {
+        _spec_set_font_error("Empty font buffer");
         return -1;
     }
-    const char* path = (const char*)(intptr_t)path_cstr;
-    FILE* fp = fopen(path, "rb");
-    if (!fp) {
-        _spec_set_font_error("Failed to open font file");
-        return -1;
-    }
-    if (fseek(fp, 0, SEEK_END) != 0) {
-        fclose(fp);
-        _spec_set_font_error("Failed to seek font file");
-        return -1;
-    }
-    long sz = ftell(fp);
-    if (sz <= 0) {
-        fclose(fp);
-        _spec_set_font_error("Empty font file");
-        return -1;
-    }
-    rewind(fp);
-    unsigned char* data = (unsigned char*)malloc((size_t)sz);
-    if (!data) {
-        fclose(fp);
-        _spec_set_font_error("Out of memory reading font");
-        return -1;
-    }
-    if (fread(data, 1, (size_t)sz, fp) != (size_t)sz) {
-        free(data);
-        fclose(fp);
-        _spec_set_font_error("Failed to read font data");
-        return -1;
-    }
-    fclose(fp);
-
-    SpecFont* f = (SpecFont*)calloc(1, sizeof(SpecFont));
-    if (!f) {
-        free(data);
+    unsigned char* copy = (unsigned char*)malloc((size_t)data_len);
+    if (!copy) {
         _spec_set_font_error("Out of memory");
         return -1;
     }
-    f->ttf_data = data;
-    int offset = stbtt_GetFontOffsetForIndex(data, 0);
-    if (!stbtt_InitFont(&f->info, data, offset)) {
-        free(data);
+    memcpy(copy, (const void*)(intptr_t)data_ptr, (size_t)data_len);
+
+    SpecFont* f = (SpecFont*)calloc(1, sizeof(SpecFont));
+    if (!f) {
+        free(copy);
+        _spec_set_font_error("Out of memory");
+        return -1;
+    }
+    f->ttf_data = copy;
+    int offset = stbtt_GetFontOffsetForIndex(copy, 0);
+    if (!stbtt_InitFont(&f->info, copy, offset)) {
+        free(copy);
         free(f);
         _spec_set_font_error("stbtt_InitFont failed");
         return -1;
     }
     long long h = _spec_alloc_font_slot(f);
     if (h <= 0) {
-        free(data);
+        free(copy);
         free(f);
         _spec_set_font_error("Out of font slots");
         return -1;
@@ -4156,7 +4130,7 @@ long long spec_pal_font_load(long long path_cstr) {
 }
 
 long long spec_pal_font_close(long long handle) {
-    if (handle <= 0 || handle == _spec_default_font_handle) return 0;
+    if (handle <= 0) return 0;
     size_t idx = (size_t)(handle - 1);
     if (idx >= _spec_fonts_cap || !_spec_fonts[idx]) return 0;
     SpecFont* f = _spec_fonts[idx];
@@ -4223,10 +4197,11 @@ long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long lon
     return 1;
 }
 
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
 #if defined(__linux__)
-static long long _spec_font_try_fontconfig(void) {
+    if (!out_buf || out_cap <= 1) return 0;
     void* fc = dlopen("libfontconfig.so.1", RTLD_LAZY | RTLD_LOCAL);
-    if (!fc) return -1;
+    if (!fc) return 0;
     typedef int (*PFN_FcInit)(void);
     typedef void* (*PFN_FcNameParse)(const unsigned char*);
     typedef int (*PFN_FcConfigSubstitute)(void*, void*, int);
@@ -4242,97 +4217,55 @@ static long long _spec_font_try_fontconfig(void) {
     PFN_FcFontMatch pFcFontMatch = (PFN_FcFontMatch)dlsym(fc, "FcFontMatch");
     PFN_FcPatternGetString pFcPatternGetString = (PFN_FcPatternGetString)dlsym(fc, "FcPatternGetString");
     PFN_FcPatternDestroy pFcPatternDestroy = (PFN_FcPatternDestroy)dlsym(fc, "FcPatternDestroy");
-
     if (!pFcInit || !pFcNameParse || !pFcConfigSubstitute || !pFcDefaultSubstitute ||
         !pFcFontMatch || !pFcPatternGetString || !pFcPatternDestroy) {
         dlclose(fc);
-        return -1;
+        return 0;
     }
 
     pFcInit();
     void* pat = pFcNameParse((const unsigned char*)"sans");
-    if (!pat) { dlclose(fc); return -1; }
-    pFcConfigSubstitute(NULL, pat, 0 /* FcMatchPattern */);
+    if (!pat) { dlclose(fc); return 0; }
+    pFcConfigSubstitute(NULL, pat, 0);
     pFcDefaultSubstitute(pat);
     int res = 0;
     void* match = pFcFontMatch(NULL, pat, &res);
     pFcPatternDestroy(pat);
-    if (!match) { dlclose(fc); return -1; }
+    if (!match) { dlclose(fc); return 0; }
 
     unsigned char* file = NULL;
-    long long h = -1;
+    long long written = 0;
     if (pFcPatternGetString(match, "file", 0, &file) == 0 && file) {
-        h = spec_pal_font_load((long long)(intptr_t)file);
+        size_t len = strlen((const char*)file);
+        if (len > (size_t)(out_cap - 1)) len = (size_t)(out_cap - 1);
+        memcpy((char*)(intptr_t)out_buf, file, len);
+        ((char*)(intptr_t)out_buf)[len] = '\0';
+        written = (long long)len;
     }
     pFcPatternDestroy(match);
     dlclose(fc);
-    return h;
-}
-#endif
-
-long long spec_pal_font_load_default(void) {
-#if defined(__linux__)
-    if (_spec_default_font_handle > 0) return _spec_default_font_handle;
-    long long h = _spec_font_try_fontconfig();
-    if (h > 0) {
-        _spec_default_font_handle = h;
-        return h;
-    }
-    static const char* fallbacks[] = {
-        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
-        NULL
-    };
-    for (int i = 0; fallbacks[i]; i++) {
-        h = spec_pal_font_load((long long)(intptr_t)fallbacks[i]);
-        if (h > 0) {
-            _spec_default_font_handle = h;
-            return h;
-        }
-    }
-    _spec_set_font_error("No default system sans font found on Linux");
-    return -1;
-#elif defined(__APPLE__)
-    /* TODO: Resolve default system sans font via CoreText (CTFontCreateUIFontForLanguage). */
-    _spec_set_font_error("Default system font not yet implemented on macOS");
-    return -1;
-#elif defined(_WIN32)
-    /* TODO: Resolve default system sans font via DirectWrite or SHGetFolderPath + segoeui.ttf. */
-    _spec_set_font_error("Default system font not yet implemented on Windows");
-    return -1;
+    return written;
 #else
-    _spec_set_font_error("Default system font not supported on this platform");
-    return -1;
+    (void)out_buf; (void)out_cap;
+    return 0;
 #endif
 }
 
 #else
 
-long long spec_pal_font_load(long long path_cstr) {
-    (void)path_cstr;
+long long spec_pal_font_init_memory(long long data_ptr, long long data_len) {
+    (void)data_ptr; (void)data_len;
     _spec_set_font_error("stb_truetype.h not available at compile time");
     return -1;
 }
-
-long long spec_pal_font_close(long long handle) {
-    (void)handle;
-    return 0;
-}
-
+long long spec_pal_font_close(long long handle) { (void)handle; return 0; }
 double spec_pal_font_scale(long long handle, long long pixel_height) { (void)handle; (void)pixel_height; return 0.0; }
 long long spec_pal_font_vmetrics(long long handle, long long out_3_i32_ptr) { (void)handle; (void)out_3_i32_ptr; return 0; }
 long long spec_pal_font_hmetrics(long long handle, long long cp, long long out_2_i32_ptr) { (void)handle; (void)cp; (void)out_2_i32_ptr; return 0; }
 long long spec_pal_font_kern_advance(long long handle, long long cp1, long long cp2) { (void)handle; (void)cp1; (void)cp2; return 0; }
 long long spec_pal_font_glyph_box(long long handle, long long cp, long long pixel_height, long long out_4_i32_ptr) { (void)handle; (void)cp; (void)pixel_height; (void)out_4_i32_ptr; return 0; }
 long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long long pixel_height, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)dst_ptr; (void)gw; (void)gh; return 0; }
-
-long long spec_pal_font_load_default(void) {
-    _spec_set_font_error("stb_truetype.h not available at compile time");
-    return -1;
-}
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) { (void)out_buf; (void)out_cap; return 0; }
 
 #endif
 /* Runtime Vulkan backend for Linux (Wayland WSI via dlopen("libvulkan.so.1")).
@@ -5320,6 +5253,10 @@ typedef struct {
     int32_t vp_y;
     uint32_t vp_w;
     uint32_t vp_h;
+    float clear_r;
+    float clear_g;
+    float clear_b;
+    float clear_a;
 } SpecVulkanCtx;
 
 static char _spec_vk_error[256] = {0};
@@ -6025,187 +5962,166 @@ long long spec_pal_vulkan_create(
         }
     }
 
-    /* 2D Overlay pipeline & fullscreen quad */
-    {
-        static const uint32_t ov_vert_spv[] = {
-            0x07230203U, 0x00010000U, 0U, 22U, 0U,
-            (2U<<16)|17U, 1U,
-            (3U<<16)|14U, 0U, 1U,
-            (9U<<16)|15U, 0U, 15U, 0x6E69616DU, 0U, 9U, 10U, 12U, 14U,
-            (4U<<16)|71U, 9U, 30U, 0U,
-            (4U<<16)|71U, 10U, 30U, 1U,
-            (4U<<16)|71U, 12U, 11U, 0U,
-            (4U<<16)|71U, 14U, 30U, 0U,
-            (2U<<16)|19U, 1U,
-            (3U<<16)|33U, 2U, 1U,
-            (3U<<16)|22U, 3U, 32U,
-            (4U<<16)|23U, 4U, 3U, 2U,
-            (4U<<16)|23U, 5U, 3U, 4U,
-            (4U<<16)|43U, 3U, 6U, 0U,
-            (4U<<16)|43U, 3U, 7U, 0x3F800000U,
-            (4U<<16)|32U, 8U, 1U, 4U,
-            (4U<<16)|59U, 8U, 9U, 1U,
-            (4U<<16)|59U, 8U, 10U, 1U,
-            (4U<<16)|32U, 11U, 3U, 5U,
-            (4U<<16)|59U, 11U, 12U, 3U,
-            (4U<<16)|32U, 13U, 3U, 4U,
-            (4U<<16)|59U, 13U, 14U, 3U,
-            (5U<<16)|54U, 1U, 15U, 0U, 2U,
-            (2U<<16)|248U, 16U,
-            (4U<<16)|61U, 4U, 17U, 9U,
-            (5U<<16)|81U, 3U, 18U, 17U, 0U,
-            (5U<<16)|81U, 3U, 19U, 17U, 1U,
-            (7U<<16)|80U, 5U, 20U, 18U, 19U, 6U, 7U,
-            (3U<<16)|62U, 12U, 20U,
-            (4U<<16)|61U, 4U, 21U, 10U,
-            (3U<<16)|62U, 14U, 21U,
-            (1U<<16)|253U,
-            (1U<<16)|56U
-        };
-        static const uint32_t ov_frag_spv[] = {
-            0x07230203U, 0x00010000U, 0U, 19U, 0U,
-            (2U<<16)|17U, 1U,
-            (3U<<16)|14U, 0U, 1U,
-            (7U<<16)|15U, 4U, 14U, 0x6E69616DU, 0U, 11U, 13U,
-            (3U<<16)|16U, 14U, 7U,
-            (4U<<16)|71U, 9U, 34U, 0U,
-            (4U<<16)|71U, 9U, 33U, 0U,
-            (4U<<16)|71U, 11U, 30U, 0U,
-            (4U<<16)|71U, 13U, 30U, 0U,
-            (2U<<16)|19U, 1U,
-            (3U<<16)|33U, 2U, 1U,
-            (3U<<16)|22U, 3U, 32U,
-            (4U<<16)|23U, 4U, 3U, 2U,
-            (4U<<16)|23U, 5U, 3U, 4U,
-            (9U<<16)|25U, 6U, 3U, 1U, 0U, 0U, 0U, 1U, 0U,
-            (3U<<16)|27U, 7U, 6U,
-            (4U<<16)|32U, 8U, 0U, 7U,
-            (4U<<16)|59U, 8U, 9U, 0U,
-            (4U<<16)|32U, 10U, 1U, 4U,
-            (4U<<16)|59U, 10U, 11U, 1U,
-            (4U<<16)|32U, 12U, 3U, 5U,
-            (4U<<16)|59U, 12U, 13U, 3U,
-            (5U<<16)|54U, 1U, 14U, 0U, 2U,
-            (2U<<16)|248U, 15U,
-            (4U<<16)|61U, 7U, 16U, 9U,
-            (4U<<16)|61U, 4U, 17U, 11U,
-            (5U<<16)|87U, 5U, 18U, 16U, 17U,
-            (3U<<16)|62U, 13U, 18U,
-            (1U<<16)|253U,
-            (1U<<16)|56U
-        };
-        SpecVkShaderModuleCreateInfo ov_vsm = { SPEC_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, NULL, 0, sizeof(ov_vert_spv), ov_vert_spv };
-        SpecVkShaderModuleCreateInfo ov_fsm = { SPEC_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, NULL, 0, sizeof(ov_frag_spv), ov_frag_spv };
-        if (ctx->vkCreateShaderModule(ctx->device, &ov_vsm, NULL, &ctx->overlay_vert_mod) == SPEC_VK_SUCCESS &&
-            ctx->vkCreateShaderModule(ctx->device, &ov_fsm, NULL, &ctx->overlay_frag_mod) == SPEC_VK_SUCCESS) {
-            SpecVkDescriptorSetLayoutBinding dslb = { 0, SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, SPEC_VK_SHADER_STAGE_FRAGMENT_BIT, NULL };
-            SpecVkDescriptorSetLayoutCreateInfo dslci = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, NULL, 0, 1, &dslb };
-            ctx->vkCreateDescriptorSetLayout(ctx->device, &dslci, NULL, &ctx->overlay_desc_layout);
-
-            SpecVkDescriptorPoolSize dps = { SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 };
-            SpecVkDescriptorPoolCreateInfo dpci = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL, 0, 1, 1, &dps };
-            ctx->vkCreateDescriptorPool(ctx->device, &dpci, NULL, &ctx->overlay_desc_pool);
-
-            SpecVkDescriptorSetAllocateInfo dsai = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL, ctx->overlay_desc_pool, 1, &ctx->overlay_desc_layout };
-            ctx->vkAllocateDescriptorSets(ctx->device, &dsai, &ctx->overlay_desc_set);
-
-            SpecVkSamplerCreateInfo smci;
-            memset(&smci, 0, sizeof(smci));
-            smci.sType = SPEC_VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            smci.magFilter = SPEC_VK_FILTER_LINEAR;
-            smci.minFilter = SPEC_VK_FILTER_LINEAR;
-            smci.addressModeU = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            smci.addressModeV = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            smci.addressModeW = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            ctx->vkCreateSampler(ctx->device, &smci, NULL, &ctx->overlay_sampler);
-
-            SpecVkPipelineLayoutCreateInfo oplci = { SPEC_VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1, &ctx->overlay_desc_layout, 0, NULL };
-            ctx->vkCreatePipelineLayout(ctx->device, &oplci, NULL, &ctx->overlay_pipe_layout);
-
-            SpecVkPipelineShaderStageCreateInfo ostages[2];
-            memset(ostages, 0, sizeof(ostages));
-            ostages[0].sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            ostages[0].stage = SPEC_VK_SHADER_STAGE_VERTEX_BIT;
-            ostages[0].module = ctx->overlay_vert_mod;
-            ostages[0].pName = "main";
-            ostages[1].sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            ostages[1].stage = SPEC_VK_SHADER_STAGE_FRAGMENT_BIT;
-            ostages[1].module = ctx->overlay_frag_mod;
-            ostages[1].pName = "main";
-
-            SpecVkVertexInputBindingDescription ov_bind = { 0, 16, SPEC_VK_VERTEX_INPUT_RATE_VERTEX };
-            SpecVkVertexInputAttributeDescription ov_attrs[2] = {
-                { 0, 0, SPEC_VK_FORMAT_R32G32_SFLOAT, 0 },
-                { 1, 0, SPEC_VK_FORMAT_R32G32_SFLOAT, 8 }
-            };
-            SpecVkPipelineVertexInputStateCreateInfo ov_vi;
-            memset(&ov_vi, 0, sizeof(ov_vi));
-            ov_vi.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-            ov_vi.vertexBindingDescriptionCount = 1;
-            ov_vi.pVertexBindingDescriptions = &ov_bind;
-            ov_vi.vertexAttributeDescriptionCount = 2;
-            ov_vi.pVertexAttributeDescriptions = ov_attrs;
-
-            SpecVkPipelineRasterizationStateCreateInfo ov_rs;
-            memset(&ov_rs, 0, sizeof(ov_rs));
-            ov_rs.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-            ov_rs.polygonMode = SPEC_VK_POLYGON_MODE_FILL;
-            ov_rs.lineWidth = 1.0f;
-
-            SpecVkPipelineDepthStencilStateCreateInfo ov_ds;
-            memset(&ov_ds, 0, sizeof(ov_ds));
-            ov_ds.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-
-            SpecVkPipelineColorBlendAttachmentState ov_cba;
-            memset(&ov_cba, 0, sizeof(ov_cba));
-            ov_cba.blendEnable = SPEC_VK_TRUE;
-            ov_cba.srcColorBlendFactor = SPEC_VK_BLEND_FACTOR_SRC_ALPHA;
-            ov_cba.dstColorBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            ov_cba.colorBlendOp = SPEC_VK_BLEND_OP_ADD;
-            ov_cba.srcAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_SRC_ALPHA;
-            ov_cba.dstAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            ov_cba.alphaBlendOp = SPEC_VK_BLEND_OP_ADD;
-            ov_cba.colorWriteMask = 0xFU;
-            SpecVkPipelineColorBlendStateCreateInfo ov_cb;
-            memset(&ov_cb, 0, sizeof(ov_cb));
-            ov_cb.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-            ov_cb.attachmentCount = 1;
-            ov_cb.pAttachments = &ov_cba;
-
-            SpecVkGraphicsPipelineCreateInfo ogpci;
-            memset(&ogpci, 0, sizeof(ogpci));
-            ogpci.sType = SPEC_VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-            ogpci.stageCount = 2;
-            ogpci.pStages = ostages;
-            ogpci.pVertexInputState = &ov_vi;
-            ogpci.pInputAssemblyState = &ia;
-            ogpci.pViewportState = &vp;
-            ogpci.pRasterizationState = &ov_rs;
-            ogpci.pMultisampleState = &ms;
-            ogpci.pDepthStencilState = &ov_ds;
-            ogpci.pColorBlendState = &ov_cb;
-            ogpci.pDynamicState = &dyn;
-            ogpci.layout = ctx->overlay_pipe_layout;
-            ogpci.renderPass = ctx->render_pass;
-            ctx->vkCreateGraphicsPipelines(ctx->device, SPEC_VK_NULL_HANDLE, 1, &ogpci, NULL, &ctx->overlay_pipeline);
-
-            static const float quad_verts[24] = {
-                -1.0f, -1.0f, 0.0f, 0.0f,
-                 1.0f, -1.0f, 1.0f, 0.0f,
-                 1.0f,  1.0f, 1.0f, 1.0f,
-                -1.0f, -1.0f, 0.0f, 0.0f,
-                 1.0f,  1.0f, 1.0f, 1.0f,
-                -1.0f,  1.0f, 0.0f, 1.0f
-            };
-            _spec_vk_create_buffer(ctx, sizeof(quad_verts), SPEC_VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, quad_verts, &ctx->overlay_vbuf, &ctx->overlay_vmem);
-        }
-    }
+    ctx->clear_r = 0.08f;
+    ctx->clear_g = 0.09f;
+    ctx->clear_b = 0.13f;
+    ctx->clear_a = 1.0f;
 
     return (long long)(intptr_t)ctx;
 
 fail:
     spec_pal_vulkan_destroy((long long)(intptr_t)ctx);
     return 0;
+}
+
+long long spec_pal_vulkan_set_overlay_pipeline(
+    long long handle,
+    long long vert_spv_ptr,
+    long long vert_spv_bytes,
+    long long frag_spv_ptr,
+    long long frag_spv_bytes,
+    long long quad_ptr,
+    long long quad_bytes
+) {
+    SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
+    if (!ctx || !ctx->device || !ctx->render_pass || !vert_spv_ptr || vert_spv_bytes <= 0 || !frag_spv_ptr || frag_spv_bytes <= 0 || !quad_ptr || quad_bytes <= 0) {
+        return 0;
+    }
+    SpecVkShaderModuleCreateInfo ov_vsm = { SPEC_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, NULL, 0, (size_t)vert_spv_bytes, (const uint32_t*)(intptr_t)vert_spv_ptr };
+    SpecVkShaderModuleCreateInfo ov_fsm = { SPEC_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, NULL, 0, (size_t)frag_spv_bytes, (const uint32_t*)(intptr_t)frag_spv_ptr };
+    if (ctx->vkCreateShaderModule(ctx->device, &ov_vsm, NULL, &ctx->overlay_vert_mod) != SPEC_VK_SUCCESS ||
+        ctx->vkCreateShaderModule(ctx->device, &ov_fsm, NULL, &ctx->overlay_frag_mod) != SPEC_VK_SUCCESS) {
+        return 0;
+    }
+    SpecVkDescriptorSetLayoutBinding dslb = { 0, SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, SPEC_VK_SHADER_STAGE_FRAGMENT_BIT, NULL };
+    SpecVkDescriptorSetLayoutCreateInfo dslci = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, NULL, 0, 1, &dslb };
+    ctx->vkCreateDescriptorSetLayout(ctx->device, &dslci, NULL, &ctx->overlay_desc_layout);
+
+    SpecVkDescriptorPoolSize dps = { SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 };
+    SpecVkDescriptorPoolCreateInfo dpci = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL, 0, 1, 1, &dps };
+    ctx->vkCreateDescriptorPool(ctx->device, &dpci, NULL, &ctx->overlay_desc_pool);
+
+    SpecVkDescriptorSetAllocateInfo dsai = { SPEC_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL, ctx->overlay_desc_pool, 1, &ctx->overlay_desc_layout };
+    ctx->vkAllocateDescriptorSets(ctx->device, &dsai, &ctx->overlay_desc_set);
+
+    SpecVkSamplerCreateInfo smci;
+    memset(&smci, 0, sizeof(smci));
+    smci.sType = SPEC_VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    smci.magFilter = SPEC_VK_FILTER_LINEAR;
+    smci.minFilter = SPEC_VK_FILTER_LINEAR;
+    smci.addressModeU = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    smci.addressModeV = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    smci.addressModeW = SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    ctx->vkCreateSampler(ctx->device, &smci, NULL, &ctx->overlay_sampler);
+
+    SpecVkPipelineLayoutCreateInfo oplci = { SPEC_VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1, &ctx->overlay_desc_layout, 0, NULL };
+    ctx->vkCreatePipelineLayout(ctx->device, &oplci, NULL, &ctx->overlay_pipe_layout);
+
+    SpecVkPipelineShaderStageCreateInfo ostages[2];
+    memset(ostages, 0, sizeof(ostages));
+    ostages[0].sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ostages[0].stage = SPEC_VK_SHADER_STAGE_VERTEX_BIT;
+    ostages[0].module = ctx->overlay_vert_mod;
+    ostages[0].pName = "main";
+    ostages[1].sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ostages[1].stage = SPEC_VK_SHADER_STAGE_FRAGMENT_BIT;
+    ostages[1].module = ctx->overlay_frag_mod;
+    ostages[1].pName = "main";
+
+    SpecVkVertexInputBindingDescription ov_bind = { 0, 16, SPEC_VK_VERTEX_INPUT_RATE_VERTEX };
+    SpecVkVertexInputAttributeDescription ov_attrs[2] = {
+        { 0, 0, SPEC_VK_FORMAT_R32G32_SFLOAT, 0 },
+        { 1, 0, SPEC_VK_FORMAT_R32G32_SFLOAT, 8 }
+    };
+    SpecVkPipelineVertexInputStateCreateInfo ov_vi;
+    memset(&ov_vi, 0, sizeof(ov_vi));
+    ov_vi.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    ov_vi.vertexBindingDescriptionCount = 1;
+    ov_vi.pVertexBindingDescriptions = &ov_bind;
+    ov_vi.vertexAttributeDescriptionCount = 2;
+    ov_vi.pVertexAttributeDescriptions = ov_attrs;
+
+    SpecVkPipelineInputAssemblyStateCreateInfo oia;
+    memset(&oia, 0, sizeof(oia));
+    oia.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    oia.topology = SPEC_VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    SpecVkPipelineViewportStateCreateInfo ovp;
+    memset(&ovp, 0, sizeof(ovp));
+    ovp.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    ovp.viewportCount = 1;
+    ovp.scissorCount = 1;
+
+    SpecVkPipelineRasterizationStateCreateInfo ov_rs;
+    memset(&ov_rs, 0, sizeof(ov_rs));
+    ov_rs.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    ov_rs.polygonMode = SPEC_VK_POLYGON_MODE_FILL;
+    ov_rs.lineWidth = 1.0f;
+
+    SpecVkPipelineMultisampleStateCreateInfo oms;
+    memset(&oms, 0, sizeof(oms));
+    oms.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    oms.rasterizationSamples = SPEC_VK_SAMPLE_COUNT_1_BIT;
+
+    SpecVkPipelineDepthStencilStateCreateInfo ov_ds;
+    memset(&ov_ds, 0, sizeof(ov_ds));
+    ov_ds.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+    SpecVkPipelineColorBlendAttachmentState ov_cba;
+    memset(&ov_cba, 0, sizeof(ov_cba));
+    ov_cba.blendEnable = SPEC_VK_TRUE;
+    ov_cba.srcColorBlendFactor = SPEC_VK_BLEND_FACTOR_SRC_ALPHA;
+    ov_cba.dstColorBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    ov_cba.colorBlendOp = SPEC_VK_BLEND_OP_ADD;
+    ov_cba.srcAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_SRC_ALPHA;
+    ov_cba.dstAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    ov_cba.alphaBlendOp = SPEC_VK_BLEND_OP_ADD;
+    ov_cba.colorWriteMask = 0xFU;
+    SpecVkPipelineColorBlendStateCreateInfo ov_cb;
+    memset(&ov_cb, 0, sizeof(ov_cb));
+    ov_cb.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    ov_cb.attachmentCount = 1;
+    ov_cb.pAttachments = &ov_cba;
+
+    uint32_t odyn_states[2] = { SPEC_VK_DYNAMIC_STATE_VIEWPORT, SPEC_VK_DYNAMIC_STATE_SCISSOR };
+    SpecVkPipelineDynamicStateCreateInfo odyn;
+    memset(&odyn, 0, sizeof(odyn));
+    odyn.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    odyn.dynamicStateCount = 2;
+    odyn.pDynamicStates = odyn_states;
+
+    SpecVkGraphicsPipelineCreateInfo ogpci;
+    memset(&ogpci, 0, sizeof(ogpci));
+    ogpci.sType = SPEC_VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    ogpci.stageCount = 2;
+    ogpci.pStages = ostages;
+    ogpci.pVertexInputState = &ov_vi;
+    ogpci.pInputAssemblyState = &oia;
+    ogpci.pViewportState = &ovp;
+    ogpci.pRasterizationState = &ov_rs;
+    ogpci.pMultisampleState = &oms;
+    ogpci.pDepthStencilState = &ov_ds;
+    ogpci.pColorBlendState = &ov_cb;
+    ogpci.pDynamicState = &odyn;
+    ogpci.layout = ctx->overlay_pipe_layout;
+    ogpci.renderPass = ctx->render_pass;
+    if (ctx->vkCreateGraphicsPipelines(ctx->device, SPEC_VK_NULL_HANDLE, 1, &ogpci, NULL, &ctx->overlay_pipeline) != SPEC_VK_SUCCESS) {
+        return 0;
+    }
+    if (!_spec_vk_create_buffer(ctx, (SpecVkDeviceSize)quad_bytes, SPEC_VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, (const void*)(intptr_t)quad_ptr, &ctx->overlay_vbuf, &ctx->overlay_vmem)) {
+        return 0;
+    }
+    return 1;
+}
+
+long long spec_pal_vulkan_set_clear_color(long long handle, double r, double g, double b, double a) {
+    SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
+    if (!ctx) return 0;
+    ctx->clear_r = (float)r;
+    ctx->clear_g = (float)g;
+    ctx->clear_b = (float)b;
+    ctx->clear_a = (float)a;
+    return 1;
 }
 
 long long spec_pal_vulkan_set_mesh(
@@ -6257,7 +6173,7 @@ static int _spec_vk_ensure_overlay_resources(SpecVulkanCtx* ctx, uint32_t w, uin
     memset(&ici, 0, sizeof(ici));
     ici.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ici.imageType = SPEC_VK_IMAGE_TYPE_2D;
-    ici.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
+    ici.format = ctx->color_format;
     ici.extent.width = w;
     ici.extent.height = h;
     ici.extent.depth = 1;
@@ -6283,7 +6199,7 @@ static int _spec_vk_ensure_overlay_resources(SpecVulkanCtx* ctx, uint32_t w, uin
     ivci.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     ivci.image = ctx->overlay_img;
     ivci.viewType = SPEC_VK_IMAGE_VIEW_TYPE_2D;
-    ivci.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
+    ivci.format = ctx->color_format;
     ivci.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
     ivci.subresourceRange.levelCount = 1;
     ivci.subresourceRange.layerCount = 1;
@@ -6399,10 +6315,10 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
 
     SpecVkClearValue clears[2];
     memset(clears, 0, sizeof(clears));
-    clears[0].float32[0] = 0.08f;
-    clears[0].float32[1] = 0.09f;
-    clears[0].float32[2] = 0.13f;
-    clears[0].float32[3] = 1.0f;
+    clears[0].float32[0] = ctx->clear_r;
+    clears[0].float32[1] = ctx->clear_g;
+    clears[0].float32[2] = ctx->clear_b;
+    clears[0].float32[3] = ctx->clear_a;
     clears[1].depthStencil.depth = 1.0f;
     clears[1].depthStencil.stencil = 0;
 
@@ -6614,6 +6530,16 @@ long long spec_pal_vulkan_set_overlay(long long handle, long long pixels_addr, l
 
 long long spec_pal_vulkan_set_viewport(long long handle, long long x, long long y, long long w, long long h) {
     (void)handle; (void)x; (void)y; (void)w; (void)h;
+    return 0;
+}
+
+long long spec_pal_vulkan_set_overlay_pipeline(long long handle, long long vp, long long vb, long long fp, long long fb, long long qp, long long qb) {
+    (void)handle; (void)vp; (void)vb; (void)fp; (void)fb; (void)qp; (void)qb;
+    return 0;
+}
+
+long long spec_pal_vulkan_set_clear_color(long long handle, double r, double g, double b, double a) {
+    (void)handle; (void)r; (void)g; (void)b; (void)a;
     return 0;
 }
 

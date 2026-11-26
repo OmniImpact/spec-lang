@@ -1,17 +1,17 @@
 #! Package base:sysinternal
-#! Thin floor bindings for `stb_truetype` font loading and scalar glyph metrics/rasterization (`spec_pal_font_*`).
+#! Minimum-floor bindings for `stb_truetype` font initialization and scalar glyph primitives (`spec_pal_font_*`).
 #! Only `base:sys:Font` is permitted to call these declarations.
 
 Class is Font{
 	replace [String] is namespace: ['base', 'sysinternal'];
 
-	## Loads a TrueType/OpenType font file from [path_cstr]; returns handle > 0 or -1.
-	## Bound to `spec_pal_font_load`.
-	Function of Int is pal_font_load(Int is path_cstr);
+	## Initializes a TrueType/OpenType font from a memory buffer ([data_ptr], [data_len]); returns handle > 0 or -1.
+	## Bound to `spec_pal_font_init_memory`.
+	Function of Int is pal_font_init_memory(Int is data_ptr, Int is data_len);
 
-	## Resolves and loads the OS default sans-serif TrueType font; returns handle > 0 or -1.
-	## Bound to `spec_pal_font_load_default`.
-	Function of Int is pal_font_load_default();
+	## Queries the OS default sans-serif font path (e.g. via libfontconfig) into [out_buf]; returns byte length or 0.
+	## Bound to `spec_pal_font_default_path`.
+	Function of Int is pal_font_default_path(Int is out_buf, Int is out_cap);
 
 	## Releases a loaded font handle.
 	## Bound to `spec_pal_font_close`.

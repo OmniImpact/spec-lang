@@ -51,6 +51,48 @@ Class of SewNode is VulkanSurface{
 
 		vertSpv:dispose();
 		fragSpv:dispose();
+		if({ ok }, {
+			local SpirvBuilder is ovVert: SpirvBuilder();
+			ovVert:buildOverlayVertexShader();
+			local SpirvBuilder is ovFrag: SpirvBuilder();
+			ovFrag:buildOverlayFragmentShader();
+			local Int is quadBuf: alloc(bytes: 96);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 0, val: -1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 4, val: -1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 8, val: 0.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 12, val: 0.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 16, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 20, val: -1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 24, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 28, val: 0.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 32, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 36, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 40, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 44, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 48, val: -1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 52, val: -1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 56, val: 0.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 60, val: 0.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 64, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 68, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 72, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 76, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 80, val: -1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 84, val: 1.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 88, val: 0.0);
+			vk:packF32(dstAddr: quadBuf, byteOffset: 92, val: 1.0);
+			vk:setOverlayPipeline(
+				vertSpvAddr: ovVert:wordsAddr(),
+				vertSpvBytes: ovVert:byteLength(),
+				fragSpvAddr: ovFrag:wordsAddr(),
+				fragSpvBytes: ovFrag:byteLength(),
+				quadAddr: quadBuf,
+				quadBytes: 96
+			);
+			free(ptr: quadBuf);
+			ovVert:dispose();
+			ovFrag:dispose();
+		});
 		if({ ok && hasMesh }, {
 			:uploadCube(mesh: mesh);
 		});
@@ -83,6 +125,11 @@ Class of SewNode is VulkanSurface{
 	## Constrains the 3D render viewport/scissor to ([x], [y], [w], [h]).
 	Function of Boolean is setViewport(Int is x, Int is y, Int is w, Int is h){
 		return vk:setViewport(x: x, y: y, w: w, h: h);
+	}
+
+	## Sets the 3D renderpass clear color.
+	Function of Boolean is setClearColor(Float is r, Float is g, Float is b, Float is a: 1.0){
+		return vk:setClearColor(r: r, g: g, b: b, a: a);
 	}
 
 	## Renders the 2D overlay only (no 3D mesh push constants).
