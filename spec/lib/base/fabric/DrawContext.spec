@@ -30,16 +30,31 @@ Class is DrawContext{
 	Int is clipY: 0;
 	Int is clipW: 0;
 	Int is clipH: 0;
+	Array of Boolean is clipStackHas: Array();
+	Array of Int is clipStackX: Array();
+	Array of Int is clipStackY: Array();
+	Array of Int is clipStackW: Array();
+	Array of Int is clipStackH: Array();
 
 	replace Function is init(SuitCanvas is canvas){
 		:canvas: canvas;
 		:hasClip: false;
+		:clipStackHas: Array();
+		:clipStackX: Array();
+		:clipStackY: Array();
+		:clipStackW: Array();
+		:clipStackH: Array();
 	}
 
 	## Rebinds this context to [canvas] and resets clip state without allocating a new context.
 	Function is rebind(SuitCanvas is canvas){
 		:canvas: canvas;
 		:hasClip: false;
+		:clipStackHas: Array();
+		:clipStackX: Array();
+		:clipStackY: Array();
+		:clipStackW: Array();
+		:clipStackH: Array();
 	}
 
 	## Returns the process-wide shared default system `Font` (lazily loaded once).
@@ -58,15 +73,51 @@ Class is DrawContext{
 	}
 
 	Function is setClip(Int is x, Int is y, Int is w, Int is h){
+		clipStackHas:add(item: hasClip);
+		clipStackX:add(item: clipX);
+		clipStackY:add(item: clipY);
+		clipStackW:add(item: clipW);
+		clipStackH:add(item: clipH);
+		local Int is nx: x;
+		local Int is ny: y;
+		local Int is nw: w;
+		local Int is nh: h;
+		if({ hasClip }, {
+			local Int is nx2: nx + nw;
+			local Int is ny2: ny + nh;
+			local Int is cx2: clipX + clipW;
+			local Int is cy2: clipY + clipH;
+			if({ nx < clipX }, { nx: clipX; });
+			if({ ny < clipY }, { ny: clipY; });
+			if({ nx2 > cx2 }, { nx2: cx2; });
+			if({ ny2 > cy2 }, { ny2: cy2; });
+			nw: if({ nx2 > nx }, { nx2 - nx }, { 0 });
+			nh: if({ ny2 > ny }, { ny2 - ny }, { 0 });
+		});
 		:hasClip: true;
-		:clipX: x;
-		:clipY: y;
-		:clipW: w;
-		:clipH: h;
+		:clipX: nx;
+		:clipY: ny;
+		:clipW: nw;
+		:clipH: nh;
 	}
 
 	Function is clearClip(){
-		:hasClip: false;
+		local Int is n: clipStackHas:length();
+		if({ n > 0 }, {
+			local Int is last: n - 1;
+			:hasClip: clipStackHas:get(index: last);
+			:clipX: clipStackX:get(index: last);
+			:clipY: clipStackY:get(index: last);
+			:clipW: clipStackW:get(index: last);
+			:clipH: clipStackH:get(index: last);
+			clipStackHas:removeAt(index: last);
+			clipStackX:removeAt(index: last);
+			clipStackY:removeAt(index: last);
+			clipStackW:removeAt(index: last);
+			clipStackH:removeAt(index: last);
+		}, {
+			:hasClip: false;
+		});
 	}
 
 	Function of Font is activeFont(){
@@ -190,10 +241,10 @@ Class is DrawContext{
 		local Int is t: if({ thickness * 2 > w }, { w / 2 }, { thickness });
 		if({ t * 2 > h }, { t: h / 2; });
 		if({ t < 1 }, { t: 1; });
-		canvas:fillRect(x: x, y: y, w: w, h: t, color: color);
-		canvas:fillRect(x: x, y: y + h - t, w: w, h: t, color: color);
-		canvas:fillRect(x: x, y: y, w: t, h: h, color: color);
-		canvas:fillRect(x: x + w - t, y: y, w: t, h: h, color: color);
+		:fillRect(x: x, y: y, w: w, h: t, color: color);
+		:fillRect(x: x, y: y + h - t, w: w, h: t, color: color);
+		:fillRect(x: x, y: y, w: t, h: h, color: color);
+		:fillRect(x: x + w - t, y: y, w: t, h: h, color: color);
 	}
 
 	local Function is plotClipped(Int is x, Int is y, Int is color){

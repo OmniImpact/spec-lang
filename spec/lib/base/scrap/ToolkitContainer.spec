@@ -474,6 +474,15 @@ Class of SewNode is ToolkitContainer{
 			}, {
 				pollWaitMs: 100;
 			}); });
+			local Boolean is anyDialogOpen: (hasDialog && dialog:isShown) || (hasFileDialog && fileDialog:isShown);
+			local Int is odi: 0;
+			while({ !anyDialogOpen && odi < extraDialogs:length() }, {
+				if({ extraDialogs:get(index: odi):isShown }, { anyDialogOpen: true; });
+				odi: odi + 1;
+			});
+			if({ anyDialogOpen && pollWaitMs > 16 }, {
+				pollWaitMs: 16;
+			});
 		});
 		if({ durationMs > 0 }, {
 			local Int is remMs: durationMs - (clock:monotonicMs() - startMs);
@@ -555,11 +564,11 @@ Class of SewNode is ToolkitContainer{
 
 		if({ running:current() }, {
 			if({ hasDialog }, {
-				dialog:poll();
+				if({ dialog:poll() }, { hadActivity: true; });
 			});
 			local Int is edi: 0;
 			while({ edi < extraDialogs:length() }, {
-				extraDialogs:get(index: edi):poll();
+				if({ extraDialogs:get(index: edi):poll() }, { hadActivity: true; });
 				edi: edi + 1;
 			});
 			if({ hasFileDialog }, {

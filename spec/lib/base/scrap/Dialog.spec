@@ -36,6 +36,7 @@ Class is Dialog{
 	DrawContext is paintCtx: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 	Boolean is isShown: false;
 	Boolean is isDirty: false;
+	Boolean is layoutDirty: true;
 	Int is lastW: 0;
 	Int is lastH: 0;
 	Int is lastPtrX: -1;
@@ -78,12 +79,14 @@ Class is Dialog{
 	Function is applyTheme(Theme is theme){
 		:theme: theme;
 		if({ hasContent }, { content:applyTheme(theme: theme); });
+		layoutDirty: true;
 		isDirty: true;
 	}
 
 	Function is setScale(Scale is scale){
 		:scale: scale;
 		if({ hasContent }, { content:setScale(scale: scale); });
+		layoutDirty: true;
 		isDirty: true;
 	}
 
@@ -91,15 +94,21 @@ Class is Dialog{
 		local Int is w: win:width();
 		local Int is h: win:height();
 		if({ w <= 0 || h <= 0 }, { return; });
-		canvas:resize(width: w, height: h);
+		if({ w != lastW || h != lastH }, {
+			canvas:resize(width: w, height: h);
+			layoutDirty: true;
+		});
 		paintCtx:rebind(canvas: canvas);
 		local DrawContext is ctx: paintCtx;
 		ctx:fillRect(x: 0, y: 0, w: w, h: h, color: theme:windowBg);
 		if({ hasContent }, {
-			content:applyTheme(theme: theme);
-			content:setScale(scale: scale);
-			content:measure(c: Constraints(minW: w, maxW: w, minH: h, maxH: h));
-			content:arrange(bounds: Rect(x: 0, y: 0, width: w, height: h));
+			if({ layoutDirty }, {
+				content:applyTheme(theme: theme);
+				content:setScale(scale: scale);
+				content:measure(c: Constraints(minW: w, maxW: w, minH: h, maxH: h));
+				content:arrange(bounds: Rect(x: 0, y: 0, width: w, height: h));
+				layoutDirty: false;
+			});
 			content:paint(ctx: ctx);
 		}, {
 			local Function is cb: onPaint;
@@ -134,6 +143,7 @@ Class is Dialog{
 		lastPtrX: -1;
 		lastPtrY: -1;
 		wasPtrDown: false;
+		layoutDirty: true;
 		isShown: true;
 		:paintDialog();
 	}
@@ -156,27 +166,30 @@ Class is Dialog{
 		return false;
 	}
 
-	## Polled once per frame by `ToolkitContainer:run`.
-	Function is poll(){
+	## Polled once per frame by `ToolkitContainer:run`. Returns `true` when activity or redraw occurred.
+	Function of Boolean is poll(){
 		local Boolean is wantOpen: open:current();
 		if({ wantOpen && !isShown }, {
 			:openWindow();
-			return;
+			return true;
 		});
 		if({ !wantOpen && isShown }, {
 			:closeWindow();
-			return;
+			return true;
 		});
-		if({ !isShown }, { return; });
+		if({ !isShown }, { return false; });
 
 		if({ !win:pollTimeout(timeoutMs: 0) }, {
 			:closeWindow();
 			open:emit(value: false);
-			return;
+			return true;
 		});
 
+		local Boolean is active: isDirty;
 		if({ win:width() != lastW || win:height() != lastH }, {
+			layoutDirty: true;
 			isDirty: true;
+			active: true;
 		});
 		if({ isDirty }, {
 			:paintDialog();
@@ -185,10 +198,11 @@ Class is Dialog{
 		local Int is curMods: win:mods();
 		local Int is key: win:nextKey();
 		while({ key != 0 }, {
+			active: true;
 			if({ key == 27 }, {
 				:closeWindow();
 				open:emit(value: false);
-				return;
+				return true;
 			});
 			if({ hasContent }, {
 				if({ content:onKey(key: key, mods: curMods) }, {
@@ -200,6 +214,7 @@ Class is Dialog{
 
 		local Int is cp: win:nextChar();
 		while({ cp != 0 }, {
+			active: true;
 			if({ hasContent && cp >= 32 }, {
 				if({ content:onText(ch: String:fromCodePoint(code: cp), mods: curMods) }, {
 					isDirty: true;
@@ -210,6 +225,7 @@ Class is Dialog{
 
 		local Int is sy: win:pollScrollY();
 		if({ sy != 0 && hasContent }, {
+			active: true;
 			if({ content:onScroll(deltaY: sy) }, {
 				isDirty: true;
 			});
@@ -219,6 +235,7 @@ Class is Dialog{
 		local Int is px: win:pointerX();
 		local Int is py: win:pointerY();
 		if({ ptrDown && !wasPtrDown && hasContent }, {
+			active: true;
 			if({ content:onPointerDrag(x: px, y: py, mods: curMods) }, {
 				isDirty: true;
 			});
@@ -226,6 +243,7 @@ Class is Dialog{
 		if({ px != lastPtrX || py != lastPtrY }, {
 			lastPtrX: px;
 			lastPtrY: py;
+			active: true;
 			if({ hasContent }, {
 				if({ ptrDown }, {
 					if({ content:onPointerDrag(x: px, y: py, mods: curMods) }, {
@@ -238,6 +256,7 @@ Class is Dialog{
 			});
 		});
 		if({ !ptrDown && wasPtrDown && hasContent }, {
+			active: true;
 			if({ content:onPointerUp(x: px, y: py) }, {
 				isDirty: true;
 			});
@@ -245,6 +264,7 @@ Class is Dialog{
 		wasPtrDown: ptrDown;
 
 		if({ win:pollClick() }, {
+			active: true;
 			if({ hasContent }, {
 				if({ content:onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
 					isDirty: true;
@@ -253,12 +273,16 @@ Class is Dialog{
 		});
 
 		if({ win:width() != lastW || win:height() != lastH }, {
+			layoutDirty: true;
 			isDirty: true;
+			active: true;
 		});
 
 		if({ isDirty }, {
 			:paintDialog();
+			active: true;
 		});
+		return active;
 	}
 
 	Function is dispose(){

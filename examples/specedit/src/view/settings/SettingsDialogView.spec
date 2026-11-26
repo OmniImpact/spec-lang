@@ -55,6 +55,7 @@ Class of Dialog is SettingsDialogView{
 		};
 		vm:bindViewRefresh(onRefresh: local Function(){
 			:sync();
+			:layoutDirty: true;
 			:isDirty: true;
 		});
 	}
