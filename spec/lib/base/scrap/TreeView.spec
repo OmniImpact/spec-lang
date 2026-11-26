@@ -21,6 +21,8 @@ Class of SewNode is TreeView{
 	Array of TreeNode is roots: Array();
 	Array of TreeNode is flatNodes: Array();
 	Array of Int is flatDepths: Array();
+	Array of Boolean is flatIsLast: Array();
+	Array of Array of Boolean is flatAncestors: Array();
 	String is selectedId: '';
 	Int is hoverIdx: -1;
 	Int is scrollY: 0;
@@ -49,13 +51,34 @@ Class of SewNode is TreeView{
 		invalidate();
 	}
 
-	local Function is appendFlat(TreeNode is node, Int is depth){
+	local Function is appendFlat(TreeNode is node, Int is depth, Boolean is isLast, Array of Boolean is ancestors){
 		flatNodes:add(item: node);
 		flatDepths:add(item: depth);
+		flatIsLast:add(item: isLast);
+		local Array of Boolean is ancCopy: Array();
+		local Int is ai: 0;
+		while({ ai < ancestors:length() }, {
+			ancCopy:add(item: ancestors:get(index: ai));
+			ai: ai + 1;
+		});
+		flatAncestors:add(item: ancCopy);
 		if({ node:expandable && node:expanded }, {
+			local Array of Boolean is nextAnc: Array();
+			ai: 0;
+			while({ ai < ancCopy:length() }, {
+				nextAnc:add(item: ancCopy:get(index: ai));
+				ai: ai + 1;
+			});
+			nextAnc:add(item: !isLast);
+			local Int is chLen: node:children:length();
 			local Int is i: 0;
-			while({ i < node:children:length() }, {
-				:appendFlat(node: node:children:get(index: i), depth: depth + 1);
+			while({ i < chLen }, {
+				:appendFlat(
+					node: node:children:get(index: i),
+					depth: depth + 1,
+					isLast: (i == chLen - 1),
+					ancestors: nextAnc
+				);
 				i: i + 1;
 			});
 		});
@@ -64,9 +87,17 @@ Class of SewNode is TreeView{
 	Function is rebuildFlat(){
 		:flatNodes: Array();
 		:flatDepths: Array();
+		:flatIsLast: Array();
+		:flatAncestors: Array();
+		local Int is rLen: roots:length();
 		local Int is i: 0;
-		while({ i < roots:length() }, {
-			:appendFlat(node: roots:get(index: i), depth: 0);
+		while({ i < rLen }, {
+			:appendFlat(
+				node: roots:get(index: i),
+				depth: 0,
+				isLast: (i == rLen - 1),
+				ancestors: Array()
+			);
 			i: i + 1;
 		});
 		:clampScroll();
@@ -109,9 +140,14 @@ Class of SewNode is TreeView{
 		local Int is rowH: :rowHeightPx();
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is indentPx: activeScale:px(pt: 14.0);
-		local Int is padX: activeScale:px(pt: 8.0);
-		local Int is chevronW: activeScale:px(pt: 14.0);
+		local Int is indentPx: activeScale:px(pt: 16.0);
+		if({ indentPx < 14 }, { indentPx: 14; });
+		local Int is padX: activeScale:px(pt: 6.0);
+		local Int is boxSz: activeScale:px(pt: 9.0);
+		if({ boxSz < 9 }, { boxSz: 9; });
+		if({ (boxSz & 1) == 0 }, { boxSz: boxSz + 1; });
+		local Int is halfBox: boxSz / 2;
+		local Int is lineCol: activeTheme:textMuted;
 
 		local Int is firstIdx: if({ rowH > 0 }, { scrollY / rowH }, { 0 });
 		local Int is i: firstIdx;
@@ -120,22 +156,69 @@ Class of SewNode is TreeView{
 			if({ ry >= b:y + b:height }, { i: flatNodes:length(); }, {
 				local TreeNode is node: flatNodes:get(index: i);
 				local Int is depth: flatDepths:get(index: i);
+				local Boolean is isLast: flatIsLast:get(index: i);
+				local Array of Boolean is anc: flatAncestors:get(index: i);
 				local Boolean is isSel: (selectedId != '' && node:id == selectedId);
+				local Int is rowBg: activeTheme:panelBg;
 				if({ isSel }, {
-					ctx:fillRect(x: b:x, y: ry, w: b:width, h: rowH, color: activeTheme:activeBg);
+					rowBg: activeTheme:activeBg;
+					ctx:fillRect(x: b:x, y: ry, w: b:width, h: rowH, color: rowBg);
 				}, {
 					if({ hoverIdx == i }, {
-						ctx:fillRect(x: b:x, y: ry, w: b:width, h: rowH, color: activeTheme:hoverBg);
+						rowBg: activeTheme:hoverBg;
+						ctx:fillRect(x: b:x, y: ry, w: b:width, h: rowH, color: rowBg);
 					});
 				});
-				local Int is ix: b:x + padX + depth * indentPx;
-				local Int is ty: ry + (rowH - th) / 2;
-				if({ node:expandable }, {
-					local String is chev: if({ node:expanded }, { 'v' }, { '>' });
-					ctx:drawText(x: ix, y: ty, text: chev, color: activeTheme:textMuted, pixelHeight: fpx);
+
+				local Int is cy: ry + rowH / 2;
+				# Solid vertical guide lines for ancestor depths with remaining siblings
+				local Int is d: 0;
+				while({ d < depth && d < anc:length() }, {
+					if({ anc:get(index: d) }, {
+						local Int is ax: b:x + padX + d * indentPx + indentPx / 2;
+						ctx:fillRect(x: ax, y: ry, w: 1, h: rowH, color: lineCol);
+					});
+					d: d + 1;
 				});
-				local Int is textCol: if({ isSel }, { activeTheme:textPrimary }, { if({ node:expandable }, { activeTheme:textPrimary }, { activeTheme:textPrimary }) });
-				ctx:drawText(x: ix + chevronW, y: ty, text: node:label, color: textCol, pixelHeight: fpx, bold: node:expandable);
+
+				# Vertical connector at this node's own depth
+				local Int is cx: b:x + padX + depth * indentPx + indentPx / 2;
+				if({ depth > 0 || i > 0 }, {
+					ctx:fillRect(x: cx, y: ry, w: 1, h: cy - ry + 1, color: lineCol);
+				});
+				if({ !isLast }, {
+					ctx:fillRect(x: cx, y: cy, w: 1, h: ry + rowH - cy, color: lineCol);
+				});
+
+				local Int is labelX: b:x + padX + (depth + 1) * indentPx + 2;
+				local Int is hEnd: labelX - 4;
+				if({ node:expandable }, {
+					# Solid horizontal line to folder label
+					if({ hEnd > cx }, {
+						ctx:fillRect(x: cx, y: cy, w: hEnd - cx, h: 1, color: lineCol);
+					});
+					# Square with + (collapsed) or - (expanded)
+					local Int is bx: cx - halfBox;
+					local Int is by: cy - halfBox;
+					ctx:fillRect(x: bx, y: by, w: boxSz, h: boxSz, color: rowBg);
+					ctx:strokeRect(x: bx, y: by, w: boxSz, h: boxSz, color: lineCol);
+					local Int is symPad: 2;
+					if({ boxSz >= 11 }, { symPad: 3; });
+					ctx:fillRect(x: bx + symPad, y: cy, w: boxSz - symPad * 2, h: 1, color: activeTheme:textPrimary);
+					if({ !node:expanded }, {
+						ctx:fillRect(x: cx, y: by + symPad, w: 1, h: boxSz - symPad * 2, color: activeTheme:textPrimary);
+					});
+				}, {
+					# Dotted horizontal line connecting vertical line to file label
+					local Int is dx: cx + 2;
+					while({ dx < hEnd }, {
+						ctx:fillRect(x: dx, y: cy, w: 1, h: 1, color: lineCol);
+						dx: dx + 3;
+					});
+				});
+
+				local Int is ty: ry + (rowH - th) / 2;
+				ctx:drawText(x: labelX, y: ty, text: node:label, color: activeTheme:textPrimary, pixelHeight: fpx, bold: node:expandable);
 				i: i + 1;
 			});
 		});
