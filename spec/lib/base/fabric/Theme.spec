@@ -11,6 +11,7 @@ Class is Theme{
 
 	Int is windowBg: 0;
 	Int is toolbarBg: 0;
+	Int is tabBarBg: 0;
 	Int is toolbarBorder: 0;
 	Int is menuBg: 0;
 	Int is menuBorder: 0;
@@ -30,6 +31,7 @@ Class is Theme{
 		if({ preset == 'light_grayscale' }, {
 			windowBg: c:argb(r: 255, g: 255, b: 255, a: 255);
 			toolbarBg: c:argb(r: 230, g: 230, b: 230, a: 255);
+			tabBarBg: c:argb(r: 214, g: 214, b: 214, a: 255);
 			toolbarBorder: c:argb(r: 196, g: 196, b: 196, a: 255);
 			menuBg: c:argb(r: 245, g: 245, b: 245, a: 255);
 			menuBorder: c:argb(r: 178, g: 178, b: 178, a: 255);
@@ -43,6 +45,7 @@ Class is Theme{
 		}, {
 			windowBg: c:argb(r: 20, g: 23, b: 33, a: 255);
 			toolbarBg: c:argb(r: 32, g: 37, b: 50, a: 255);
+			tabBarBg: c:argb(r: 24, g: 28, b: 38, a: 255);
 			toolbarBorder: c:argb(r: 64, g: 76, b: 102, a: 255);
 			menuBg: c:argb(r: 36, g: 42, b: 56, a: 255);
 			menuBorder: c:argb(r: 72, g: 88, b: 118, a: 255);
