@@ -152,8 +152,8 @@ Class is FileDialog{
 		local String is out: '';
 		local Int is i: 0;
 		while({ i < pinnedPaths:length() }, {
-			if({ i > 0 }, { out: out . '\n'; });
-			out: out . pinnedNames:get(index: i) . '\t' . pinnedPaths:get(index: i);
+			if({ i > 0 }, { out: out . "\n"; });
+			out: out . pinnedNames:get(index: i) . "\t" . pinnedPaths:get(index: i);
 			i: i + 1;
 		});
 		fileWrite(
