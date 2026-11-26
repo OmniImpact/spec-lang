@@ -7,6 +7,7 @@ Class is SuitWindow{
 	merge [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],
+		['base', 'struct', Array],
 		['base', 'suit', SuitCanvas],
 		['base', 'suit', InputEvent],
 		['base', 'sys', Window]
@@ -90,6 +91,21 @@ Class is SuitWindow{
 	Function of Int is rightClickX(){ return native:rightClickX(); }
 	Function of Int is rightClickY(){ return native:rightClickY(); }
 
+	held Array of Function is eventBuilders: Array([
+		local Function of InputEvent(Int is _a, Int is _b, Int is _c, Int is _d){ InputEvent:None },
+		local Function of InputEvent(Int is a, Int is b, Int is _c, Int is _d){ InputEvent:PointerMotion(x: a, y: b) },
+		local Function of InputEvent(Int is a, Int is b, Int is c, Int is d){ InputEvent:PointerButton(button: a, pressed: b != 0, x: c, y: d) },
+		local Function of InputEvent(Int is a, Int is b, Int is _c, Int is _d){ InputEvent:PointerAxis(axis: a, delta: b) },
+		local Function of InputEvent(Int is a, Int is b, Int is c, Int is _d){ InputEvent:Key(key: a, pressed: b != 0, mods: c) },
+		local Function of InputEvent(Int is a, Int is b, Int is _c, Int is _d){ InputEvent:TextChar(codepoint: a, mods: b) },
+		local Function of InputEvent(Int is a, Int is b, Int is c, Int is _d){ InputEvent:TouchDown(id: a, x: b, y: c) },
+		local Function of InputEvent(Int is a, Int is _b, Int is _c, Int is _d){ InputEvent:TouchUp(id: a) },
+		local Function of InputEvent(Int is a, Int is b, Int is c, Int is _d){ InputEvent:TouchMotion(id: a, x: b, y: c) },
+		local Function of InputEvent(Int is _a, Int is _b, Int is _c, Int is _d){ InputEvent:TouchCancel },
+		local Function of InputEvent(Int is a, Int is b, Int is c, Int is _d){ InputEvent:PointerEnter(entered: a != 0, x: b, y: c) },
+		local Function of InputEvent(Int is a, Int is _b, Int is _c, Int is _d){ InputEvent:KeyFocus(focused: a != 0) }
+	]);
+
 	## Pops the next raw input event as an `InputEvent` variant (`InputEvent:None` when empty),
 	## covering all pointer buttons (left/right/middle/side/extra), pointer motion, scroll axes,
 	## keys (press/release), UTF-8 chars, touch events, and enter/focus events.
@@ -97,25 +113,16 @@ Class is SuitWindow{
 		if({ evBufAddr == 0 }, { evBufAddr: Mem:alloc(bytes: 20); });
 		if({ !native:pollEventRaw(out5I32Addr: evBufAddr) }, { return InputEvent:None; });
 		local Int is kind: Mem:loadI32(ptr: evBufAddr, byteOffset: 0);
-		local Int is a: Mem:loadI32(ptr: evBufAddr, byteOffset: 4);
-		local Int is b: Mem:loadI32(ptr: evBufAddr, byteOffset: 8);
-		local Int is c: Mem:loadI32(ptr: evBufAddr, byteOffset: 12);
-		local Int is d: Mem:loadI32(ptr: evBufAddr, byteOffset: 16);
-		if({ kind == 1 }, { return InputEvent:PointerMotion(x: a, y: b); });
-		if({ kind == 2 }, { return InputEvent:PointerButton(button: a, pressed: b != 0, x: c, y: d); });
-		if({ kind == 3 }, {
-			local Int is dVal: if({ b >= 2147483648 }, { b - 4294967296 }, { b });
-			return InputEvent:PointerAxis(axis: a, delta: dVal);
-		});
-		if({ kind == 4 }, { return InputEvent:Key(key: a, pressed: b != 0, mods: c); });
-		if({ kind == 5 }, { return InputEvent:TextChar(codepoint: a, mods: b); });
-		if({ kind == 6 }, { return InputEvent:TouchDown(id: a, x: b, y: c); });
-		if({ kind == 7 }, { return InputEvent:TouchUp(id: a); });
-		if({ kind == 8 }, { return InputEvent:TouchMotion(id: a, x: b, y: c); });
-		if({ kind == 9 }, { return InputEvent:TouchCancel; });
-		if({ kind == 10 }, { return InputEvent:PointerEnter(entered: a != 0, x: b, y: c); });
-		if({ kind == 11 }, { return InputEvent:KeyFocus(focused: a != 0); });
-		return InputEvent:None;
+		if({ kind < 0 || kind >= SuitWindow:eventBuilders:length() }, { return InputEvent:None; });
+		local Function is ctor: SuitWindow:eventBuilders:get(index: kind);
+		local Int is rawB: Mem:loadI32(ptr: evBufAddr, byteOffset: 8);
+		local Int is bVal: if({ kind == 3 && rawB >= 2147483648 }, { rawB - 4294967296 }, { rawB });
+		return ctor(
+			Mem:loadI32(ptr: evBufAddr, byteOffset: 4),
+			bVal,
+			Mem:loadI32(ptr: evBufAddr, byteOffset: 12),
+			Mem:loadI32(ptr: evBufAddr, byteOffset: 16)
+		) as InputEvent;
 	}
 
 	Function is destroy(){
