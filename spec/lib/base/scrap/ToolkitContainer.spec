@@ -51,7 +51,7 @@ Class of SewNode is ToolkitContainer{
 	Boolean is hasDialog: false;
 	Boolean is isDirty: false;
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
-	Function is onFrame: local Function(Int is elapsedMs, Int is width, Int is height){};
+	Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){};
 	Function is onDispose: local Function(){};
 
 	replace Function is init(
@@ -70,7 +70,7 @@ Class of SewNode is ToolkitContainer{
 		Dialog is dialog: Dialog(),
 		Boolean is hasDialog: false,
 		Function is onInitVulkan: local Function(VulkanSurface is s){},
-		Function is onFrame: local Function(Int is elapsedMs, Int is width, Int is height){},
+		Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){},
 		Function is onDispose: local Function(){}
 	){
 		:title: title;
@@ -298,7 +298,7 @@ Class of SewNode is ToolkitContainer{
 				if({ useVulkan && running:current() }, {
 					local Int is frameStartNs: clock:monotonicNs();
 					local Function is frameCb: onFrame;
-					frameCb(elapsedMs, curW, curH);
+					frameCb(vulkanBody, elapsedMs, curW, curH);
 					local Int is fpsCap: targetFps:current();
 					if({ fpsCap > 0 }, {
 						local Int is budgetNs: 1000000000 / fpsCap;

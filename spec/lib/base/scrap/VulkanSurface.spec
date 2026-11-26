@@ -20,11 +20,15 @@ Class of SewNode is VulkanSurface{
 
 	Vulkan is vk: Vulkan();
 	Int is mvpAddr: 0;
+	CubeMesh is mesh: CubeMesh();
+	Boolean is hasMesh: false;
 
 	## Initializes the Vulkan surface wrapper.
-	replace Function is init(){
+	replace Function is init(CubeMesh is mesh: CubeMesh(), Boolean is hasMesh: false){
 		vk: Vulkan();
 		mvpAddr: alloc(bytes: 64);
+		:mesh: mesh;
+		:hasMesh: hasMesh;
 	}
 
 	## Attaches this Vulkan surface to an already-opened `SuitWindow` (`useVulkan: true`).
@@ -47,6 +51,9 @@ Class of SewNode is VulkanSurface{
 
 		vertSpv:dispose();
 		fragSpv:dispose();
+		if({ ok && hasMesh }, {
+			:uploadCube(mesh: mesh);
+		});
 		return ok;
 	}
 
@@ -85,6 +92,7 @@ Class of SewNode is VulkanSurface{
 
 	## Releases Vulkan resources and native staging memory.
 	Function is dispose(){
+		if({ hasMesh }, { mesh:dispose(); });
 		vk:shutdown();
 		if({ mvpAddr != 0 }, {
 			free(ptr: mvpAddr);

@@ -7,7 +7,6 @@ Class is Shape3DView{
 	replace [[String]] is using: [
 		['base', 'fabric', Theme],
 		['base', 'mold', CubeMesh],
-		['base', 'mold', Mat4],
 		['base', 'scrap', ToolkitContainer],
 		['base', 'scrap', ToolbarContainer],
 		['base', 'scrap', Toolbar],
@@ -18,22 +17,18 @@ Class is Shape3DView{
 	];
 
 	Function of ToolkitContainer is build(Shape3DViewModel is vm){
-		local Theme is theme: Theme(preset: 'light_grayscale');
-		local VulkanSurface is surface: VulkanSurface();
-		local CubeMesh is cube: CubeMesh();
-
-		return ToolkitContainer(
+		ToolkitContainer(
 			title: vm:title,
 			running: vm:running,
 			targetFps: vm:targetFps,
-			theme: theme,
+			theme: Theme(preset: 'light_grayscale'),
 			widthPt: vm:windowWidthPt,
 			heightPt: vm:windowHeightPt,
 			useVulkan: true,
 			toolbar: ToolbarContainer(
 				toolbar: Toolbar(config: vm:toolbarConfig)
 			),
-			vulkanSurface: surface,
+			vulkanSurface: VulkanSurface(mesh: CubeMesh(), hasMesh: true),
 			bottomBar: Bar(
 				heightPt: vm:toolbarHeightPt,
 				borderSide: 'top',
@@ -42,16 +37,9 @@ Class is Shape3DView{
 			hasBottomBar: true,
 			dialog: AboutDialog():build(vm: vm),
 			hasDialog: true,
-			onInitVulkan: local Function(VulkanSurface is s){
-				s:uploadCube(mesh: cube);
-			},
-			onFrame: local Function(Int is elapsedMs, Int is w, Int is h){
-				local Mat4 is mvp: vm:stepFrame(elapsedMs: elapsedMs, w: w, h: h);
-				surface:render(mvp: mvp, width: w, height: h);
-			},
-			onDispose: local Function(){
-				cube:dispose();
+			onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is w, Int is h){
+				s:render(mvp: vm:stepFrame(elapsedMs: elapsedMs, w: w, h: h), width: w, height: h);
 			}
-		);
+		)
 	}
 }
