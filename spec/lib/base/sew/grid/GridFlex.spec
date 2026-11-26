@@ -312,10 +312,29 @@ Class of SewNode is GridFlex{
 		});
 		local Int is i: 0;
 		while({ i < panels:length() }, {
-			if({ panels:get(index: i):child:onPointerMove(x: x, y: y) }, { changed: true; });
+			local SewNode is ch: panels:get(index: i):child;
+			if({ nextHover < 0 && ch:blocksPointerAt(x: x, y: y) }, {
+				if({ ch:onPointerMove(x: x, y: y) }, { changed: true; });
+			}, {
+				if({ nextHover >= 0 }, {
+					ch:clearHover();
+				}, {
+					if({ ch:onPointerMove(x: x, y: y) }, { changed: true; });
+				});
+			});
 			i: i + 1;
 		});
 		return changed;
+	}
+
+	replace Function is clearHover(){
+		if({ hoverDivider >= 0 }, {
+			hoverDivider: -1;
+			invalidate();
+		});
+		times(count: panels:length(), worker: local Function(Int is i){
+			panels:get(index: i):child:clearHover();
+		});
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){

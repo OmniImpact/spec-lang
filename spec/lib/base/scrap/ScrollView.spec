@@ -260,6 +260,10 @@ Class of SewNode is ScrollView{
 		return child:onPointerMove(x: x, y: y);
 	}
 
+	replace Function is clearHover(){
+		child:clearHover();
+	}
+
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		return child:onKey(key: key, mods: mods);
 	}

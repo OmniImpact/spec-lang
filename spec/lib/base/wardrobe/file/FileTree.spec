@@ -291,6 +291,14 @@ Class of SewNode is FileTree{
 		return changed;
 	}
 
+	replace Function is clearHover(){
+		if({ headerHover }, {
+			headerHover: false;
+			invalidate();
+		});
+		treeScroll:clearHover();
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Rect is b: bounds();
 		local Int is hh: :headerHeightPx();

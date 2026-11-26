@@ -179,22 +179,53 @@ Class of SewNode is ToolkitContainer{
 		layoutBounds: Rect(x: 0, y: 0, width: widthPx, height: heightPx);
 	}
 
+	local Function is clearHoverBelow(Int is startLayer){
+		if({ startLayer <= 1 && hasToolbarSlot }, { toolbarSlot:clearHover(); });
+		if({ startLayer <= 2 && hasTabBar }, { tabBar:clearHover(); });
+		if({ startLayer <= 3 && hasBottomBar }, { bottomBar:clearHover(); });
+		if({ startLayer <= 4 && hasBody && !useVulkan }, { bodyPanel:clearHover(); });
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		if({ contextMenu:isOpen }, {
-			return contextMenu:handlePointerMove(x: x, y: y, viewW: loopW, viewH: loopH);
+			local Boolean is cmMoved: contextMenu:handlePointerMove(x: x, y: y, viewW: loopW, viewH: loopH);
+			if({ contextMenu:blocksPointerAt(x: x, y: y) }, {
+				:clearHoverBelow(startLayer: 1);
+				return cmMoved;
+			});
 		});
 		local Boolean is changed: false;
+		local Boolean is blocked: false;
 		if({ hasToolbarSlot }, {
-			if({ toolbarSlot:onPointerMove(x: x, y: y) }, { changed: true; });
+			if({ !blocked }, {
+				if({ toolbarSlot:onPointerMove(x: x, y: y) }, { changed: true; });
+				if({ toolbarSlot:blocksPointerAt(x: x, y: y) }, { blocked: true; });
+			}, {
+				toolbarSlot:clearHover();
+			});
 		});
 		if({ hasTabBar }, {
-			if({ tabBar:onPointerMove(x: x, y: y) }, { changed: true; });
-		});
-		if({ hasBody && !useVulkan }, {
-			if({ bodyPanel:onPointerMove(x: x, y: y) }, { changed: true; });
+			if({ !blocked }, {
+				if({ tabBar:onPointerMove(x: x, y: y) }, { changed: true; });
+				if({ tabBar:blocksPointerAt(x: x, y: y) }, { blocked: true; });
+			}, {
+				tabBar:clearHover();
+			});
 		});
 		if({ hasBottomBar }, {
-			if({ bottomBar:onPointerMove(x: x, y: y) }, { changed: true; });
+			if({ !blocked }, {
+				if({ bottomBar:onPointerMove(x: x, y: y) }, { changed: true; });
+				if({ bottomBar:blocksPointerAt(x: x, y: y) }, { blocked: true; });
+			}, {
+				bottomBar:clearHover();
+			});
+		});
+		if({ hasBody && !useVulkan }, {
+			if({ !blocked }, {
+				if({ bodyPanel:onPointerMove(x: x, y: y) }, { changed: true; });
+			}, {
+				bodyPanel:clearHover();
+			});
 		});
 		return changed;
 	}
@@ -205,12 +236,15 @@ Class of SewNode is ToolkitContainer{
 		});
 		if({ hasToolbarSlot }, {
 			if({ toolbarSlot:onPointerClick(x: x, y: y) }, { return true; });
+			if({ toolbarSlot:blocksPointerAt(x: x, y: y) }, { return true; });
 		});
 		if({ hasTabBar }, {
 			if({ tabBar:onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+			if({ tabBar:blocksPointerAt(x: x, y: y) }, { return true; });
 		});
 		if({ hasBottomBar }, {
 			if({ bottomBar:onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+			if({ bottomBar:blocksPointerAt(x: x, y: y) }, { return true; });
 		});
 		if({ hasBody && !useVulkan }, {
 			return bodyPanel:onPointerClickMod(x: x, y: y, mods: mods);

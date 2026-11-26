@@ -251,6 +251,13 @@ Class of SewNode is TreeView{
 		return false;
 	}
 
+	replace Function is clearHover(){
+		if({ hoverIdx >= 0 }, {
+			hoverIdx: -1;
+			invalidate();
+		});
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Int is idx: :rowAt(x: x, y: y);
 		if({ idx < 0 || idx >= flatNodes:length() }, { return false; });

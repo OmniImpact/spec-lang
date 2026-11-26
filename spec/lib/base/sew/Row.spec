@@ -89,10 +89,25 @@ Class of SewNode is Row{
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		local Boolean is changed: false;
-		times(count: children:length(), worker: local Function(Int is i){
-			if({ children:get(index: i):onPointerMove(x: x, y: y) }, { changed: true; });
+		local Boolean is blocked: false;
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			local SewNode is ch: children:get(index: i);
+			if({ !blocked }, {
+				if({ ch:onPointerMove(x: x, y: y) }, { changed: true; });
+				if({ ch:blocksPointerAt(x: x, y: y) }, { blocked: true; });
+			}, {
+				ch:clearHover();
+			});
+			i: i - 1;
 		});
 		return changed;
+	}
+
+	replace Function is clearHover(){
+		times(count: children:length(), worker: local Function(Int is i){
+			children:get(index: i):clearHover();
+		});
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){

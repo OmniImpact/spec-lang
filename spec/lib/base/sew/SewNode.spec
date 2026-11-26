@@ -20,6 +20,7 @@ Class is SewNode{
 	Size is desiredSize: Size();
 	Theme is activeTheme: Theme();
 	Scale is activeScale: Scale(factor: 1.0);
+	Boolean is pointerTransparent: false;
 	SignalBag is signalBag: SignalBag();
 	Array of Function is dirtyListeners: Array();
 
@@ -61,6 +62,22 @@ Class is SewNode{
 	## Handles pointer move at ([x], [y]); returns `true` if redraw is needed.
 	Function of Boolean is onPointerMove(Int is x, Int is y){
 		return false;
+	}
+
+	## Returns `true` when ([x], [y]) lies inside this node's arranged bounds.
+	Function of Boolean is containsPoint(Int is x, Int is y){
+		return x >= layoutBounds:x && x < layoutBounds:x + layoutBounds:width && y >= layoutBounds:y && y < layoutBounds:y + layoutBounds:height;
+	}
+
+	## Returns `true` when this surface intercepts pointer events at ([x], [y]) instead of passing them through.
+	Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		return :containsPoint(x: x, y: y);
+	}
+
+	## Clears any active hover state when a surface above intercepts the pointer.
+	Function is clearHover(){
+		local Int is _noop: 0;
 	}
 
 	## Handles pointer drag while primary button is held at ([x], [y], [mods]); returns `true` if redraw is needed.

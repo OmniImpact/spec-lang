@@ -105,6 +105,17 @@ Class of SewNode is MenuContext{
 		return y;
 	}
 
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		return isOpen && !pointerTransparent;
+	}
+
+	replace Function is clearHover(){
+		if({ hoverIdx >= 0 }, {
+			hoverIdx: -1;
+			invalidate();
+		});
+	}
+
 	Function of Boolean is handlePointerMove(Int is x, Int is y, Int is viewW, Int is viewH){
 		if({ !isOpen }, { return false; });
 		local Int is mw: :menuWidthPx();

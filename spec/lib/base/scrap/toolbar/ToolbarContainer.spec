@@ -83,6 +83,15 @@ Class of SewNode is ToolbarContainer{
 		return toolbar:onPointerMove(x: x, y: y);
 	}
 
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent || !hasToolbar }, { return false; });
+		return toolbar:blocksPointerAt(x: x, y: y);
+	}
+
+	replace Function is clearHover(){
+		if({ hasToolbar }, { toolbar:clearHover(); });
+	}
+
 	Function of Boolean is onPointerClick(Int is x, Int is y){
 		if({ !hasToolbar }, { return false; });
 		return toolbar:onPointerClick(x: x, y: y);

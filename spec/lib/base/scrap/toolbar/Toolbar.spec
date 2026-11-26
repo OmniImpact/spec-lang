@@ -139,6 +139,16 @@ Class of SewNode is Toolbar{
 			});
 		});
 
+		if({ openMenuIdx >= 0 && hoverMenuIdx >= 0 && hoverMenuIdx != openMenuIdx }, {
+			openMenuIdx: hoverMenuIdx;
+			openSubMenuIdx: -1;
+			hoverItemIdx: -1;
+			hoverSubItemIdx: -1;
+			local MenuConfig is nextMenu: config:menus:get(index: openMenuIdx);
+			local Function is ocb: onMenuOpen;
+			ocb(nextMenu);
+		});
+
 		if({ openMenuIdx >= 0 && openMenuIdx < config:menus:length() }, {
 			local MenuConfig is om: config:menus:get(index: openMenuIdx);
 			local Int is dx: :menuButtonX(idx: openMenuIdx);
@@ -175,6 +185,40 @@ Class of SewNode is Toolbar{
 		});
 
 		return prevMenu != hoverMenuIdx || prevItem != hoverItemIdx || prevSubOpen != openSubMenuIdx || prevSubHover != hoverSubItemIdx;
+	}
+
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		if({ :containsPoint(x: x, y: y) }, { return true; });
+		if({ openMenuIdx >= 0 && openMenuIdx < config:menus:length() }, {
+			local Rect is b: bounds();
+			local MenuConfig is om: config:menus:get(index: openMenuIdx);
+			local Int is dx: :menuButtonX(idx: openMenuIdx);
+			local Int is dy: b:y + b:height;
+			local Int is dw: :dropdownWidthPx();
+			local Int is ih: :dropdownItemHeightPx();
+			local Int is dh: om:items:length() * ih;
+			if({ x >= dx && x < dx + dw && y >= dy && y < dy + dh }, { return true; });
+			if({ openSubMenuIdx >= 0 && openSubMenuIdx < om:items:length() }, {
+				local MenuItemConfig is parentItem: om:items:get(index: openSubMenuIdx);
+				if({ parentItem:subItems:length() > 0 }, {
+					local Int is sdx: dx + dw;
+					local Int is sdy: dy + openSubMenuIdx * ih;
+					local Int is sdh: parentItem:subItems:length() * ih;
+					if({ x >= sdx && x < sdx + dw && y >= sdy && y < sdy + sdh }, { return true; });
+				});
+			});
+		});
+		return false;
+	}
+
+	replace Function is clearHover(){
+		if({ hoverMenuIdx >= 0 || hoverItemIdx >= 0 || hoverSubItemIdx >= 0 }, {
+			hoverMenuIdx: -1;
+			hoverItemIdx: -1;
+			hoverSubItemIdx: -1;
+			invalidate();
+		});
 	}
 
 	## Handles a left-click at ([x], [y]); returns `true` if visual state changed.

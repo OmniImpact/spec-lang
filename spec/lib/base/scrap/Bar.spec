@@ -180,6 +180,13 @@ Class of SewNode is Bar{
 		return false;
 	}
 
+	replace Function is clearHover(){
+		if({ rightHover }, {
+			rightHover: false;
+			invalidate();
+		});
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		if({ :inRightHit(x: x, y: y) }, {
 			local Function is cb: onRightClick;

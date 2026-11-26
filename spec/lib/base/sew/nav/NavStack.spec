@@ -154,6 +154,10 @@ Class of SewNode is NavStack{
 		return :activeChild():onPointerMove(x: x, y: y);
 	}
 
+	replace Function is clearHover(){
+		:activeChild():clearHover();
+	}
+
 	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
 		return :activeChild():onPointerDrag(x: x, y: y, mods: mods);
 	}
