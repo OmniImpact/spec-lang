@@ -1,52 +1,55 @@
 #! Package specedit:viewmodel
-#! Pure ViewModel for SpecEdit: exposes state, menu descriptors, and commands.
-#! Zero imports from Suit, Sew, Fabric, or Scrap.
+#! Pure ViewModel for SpecEdit: owns reactive Emitters, ToolbarConfig, and commands.
 
 Class is EditorViewModel{
 	replace [String] is namespace: ['specedit', 'viewmodel'];
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'struct', Array],
+		['base', 'signal', BoolEmitter],
+		['base', 'signal', TextEmitter],
+		['base', 'scrap', ToolbarConfig],
+		['base', 'scrap', MenuConfig],
+		['base', 'scrap', MenuItemConfig],
 		['specedit', 'model', EditorModel]
 	];
 
 	EditorModel is model: EditorModel();
-	Boolean is running: true;
+	TextEmitter is title: TextEmitter(initial: 'SpecEdit - Untitled');
+	BoolEmitter is running: BoolEmitter(initial: true);
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
 	Float is toolbarHeightPt: 26.0;
+	ToolbarConfig is toolbarConfig: ToolbarConfig();
 
 	replace Function is init(EditorModel is model){
 		:model: model;
-		running: true;
+		title: TextEmitter(initial: :computeTitle());
+		running: BoolEmitter(initial: true);
+		toolbarConfig: :buildToolbarConfig();
 	}
 
-	Function of String is windowTitle(){
+	local Function of String is computeTitle(){
 		if({ model:dirty }, {
 			return 'SpecEdit - ' . model:documentName . ' *';
 		});
 		return 'SpecEdit - ' . model:documentName;
 	}
 
-	Function of Boolean is isRunning(){
-		return running;
+	local Function of ToolbarConfig is buildToolbarConfig(){
+		local ToolbarConfig is cfg: ToolbarConfig(heightPt: toolbarHeightPt);
+		local MenuConfig is fileMenu: MenuConfig(id: 'file', label: 'File');
+		fileMenu:addItem(item: MenuItemConfig(
+			id: 'quit',
+			label: 'Quit',
+			onClick: local Function(){ :requestQuit(); }
+		));
+		cfg:addMenu(menu: fileMenu);
+		return cfg;
 	}
 
-	## Command invoked by the View when the user requests application exit.
+	## Command invoked by menu/keyboard bindings to exit the application.
 	Function is requestQuit(){
-		running: false;
-	}
-
-	## Pure menu descriptors: `[menuId, menuLabel, itemId, itemLabel]` tuples.
-	Function of Array of String is fileMenuItemIds(){
-		local Array of String is ids: Array();
-		ids:add(item: 'quit');
-		return ids;
-	}
-
-	Function of String is itemLabelForId(String is id){
-		if({ id == 'quit' }, { return 'Quit'; });
-		return id;
+		running:emit(value: false);
 	}
 }

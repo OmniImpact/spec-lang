@@ -21,9 +21,9 @@ Class of SewNode is ToolbarContainer{
 	Toolbar is toolbar: Toolbar();
 	Boolean is hasToolbar: false;
 
-	replace Function is init(){
-		toolbar: Toolbar();
-		hasToolbar: false;
+	replace Function is init(Toolbar is toolbar: Toolbar(), Boolean is attachDefault: false){
+		:toolbar: toolbar;
+		hasToolbar: attachDefault;
 	}
 
 	## Attaches a `Toolbar` widget to this container.

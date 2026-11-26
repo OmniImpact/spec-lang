@@ -1,5 +1,5 @@
 #! Package specedit
-#! Composition root for SpecEdit (wires Model -> ViewModel -> View).
+#! Composition root for SpecEdit (wires Model -> ViewModel -> View -> ToolkitContainer).
 
 Class is SpecEdit{
 	replace [String] is namespace: ['specedit'];
@@ -7,6 +7,7 @@ Class is SpecEdit{
 	replace [[String]] is using: [
 		['base', 'struct', Map],
 		['base', 'cli', Cli],
+		['base', 'scrap', ToolkitContainer],
 		['specedit', 'model', EditorModel],
 		['specedit', 'viewmodel', EditorViewModel],
 		['specedit', 'view', EditorView]
@@ -18,7 +19,7 @@ Class is SpecEdit{
 
 		local EditorModel is model: EditorModel(documentName: 'Untitled');
 		local EditorViewModel is vm: EditorViewModel(model: model);
-		local EditorView is view: EditorView(vm: vm);
-		view:run(durationMs: durationMs);
+		local ToolkitContainer is app: EditorView():build(vm: vm);
+		app:run(durationMs: durationMs);
 	}
 }

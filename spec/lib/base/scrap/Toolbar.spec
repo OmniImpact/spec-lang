@@ -28,10 +28,14 @@ Class of SewNode is Toolbar{
 	Int is hoverMenuIdx: -1;
 	Int is hoverItemIdx: -1;
 
-	replace Function is init(Theme is theme: Theme(preset: 'light_grayscale'), Scale is scale: Scale(factor: 1.0)){
+	replace Function is init(
+		Theme is theme: Theme(preset: 'light_grayscale'),
+		Scale is scale: Scale(factor: 1.0),
+		ToolbarConfig is config: ToolbarConfig()
+	){
 		:theme: theme;
 		:scale: scale;
-		config: ToolbarConfig();
+		:config: config;
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;

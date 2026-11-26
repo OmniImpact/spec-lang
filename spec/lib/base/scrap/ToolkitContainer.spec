@@ -1,11 +1,21 @@
 #! Package base:scrap
-#! Top-level GUI toolkit container managing theme, point scale, toolbar slot, and body.
+#! Top-level GUI toolkit container managing window lifecycle, canvas, emitter bindings,
+#! theme, point scale, toolbar slot, and body.
 
 Class of SewNode is ToolkitContainer{
 	replace [String] is namespace: ['base', 'scrap'];
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Stderr],
+		['base', 'sys', Process],
+		['base', 'sys', Time],
+		['base', 'signal', BoolEmitter],
+		['base', 'signal', BoolCollector],
+		['base', 'signal', TextEmitter],
+		['base', 'signal', TextCollector],
+		['base', 'suit', SuitWindow],
+		['base', 'suit', SuitCanvas],
 		['base', 'sew', SewNode],
 		['base', 'sew', Column],
 		['base', 'sew', Size],
@@ -18,16 +28,30 @@ Class of SewNode is ToolkitContainer{
 		['base', 'scrap', ScrapPanel]
 	];
 
+	TextEmitter is title: TextEmitter(initial: 'Suit');
+	BoolEmitter is running: BoolEmitter(initial: true);
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
+	Float is widthPt: 800.0;
+	Float is heightPt: 600.0;
 	ToolbarContainer is toolbarSlot: ToolbarContainer();
 	ScrapPanel is bodyPanel: ScrapPanel();
 	Boolean is hasToolbarSlot: false;
 	Boolean is hasBody: false;
 
-	replace Function is init(Theme is theme: Theme(preset: 'light_grayscale'), Scale is scale: Scale(factor: 1.0)){
+	replace Function is init(
+		TextEmitter is title: TextEmitter(initial: 'Suit'),
+		BoolEmitter is running: BoolEmitter(initial: true),
+		Theme is theme: Theme(preset: 'light_grayscale'),
+		Float is widthPt: 800.0,
+		Float is heightPt: 600.0
+	){
+		:title: title;
+		:running: running;
 		:theme: theme;
-		:scale: scale;
+		:scale: Scale(factor: 1.0);
+		:widthPt: widthPt;
+		:heightPt: heightPt;
 		toolbarSlot: ToolbarContainer();
 		bodyPanel: ScrapPanel(bgColor: theme:windowBg);
 		hasToolbarSlot: false;
@@ -75,5 +99,99 @@ Class of SewNode is ToolkitContainer{
 		if({ hasBody }, { bodyPanel:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paintOverlay(ctx: ctx); });
+	}
+
+	## Opens the native window, binds reactive ViewModel emitters, runs the event/render loop,
+	## and disposes window & canvas resources internally on exit.
+	Function is run(Int is durationMs: 0){
+		local Boolean is alive: running:current();
+		local String is curTitle: title:current();
+
+		local SuitWindow is win: SuitWindow(
+			title: curTitle,
+			width: scale:px(pt: widthPt),
+			height: scale:px(pt: heightPt),
+			decorated: true,
+			useVulkan: false
+		);
+
+		if({ !win:open() }, {
+			Stderr():line(text: 'Failed to open window: ':concat(other: win:lastError()));
+			Process():exit(status: 1);
+		});
+
+		scale: Scale(factor: win:scaleFactor());
+
+		running:attach(collector: BoolCollector(onEmit: local Function(){
+			alive: running:current();
+		}));
+		title:attach(collector: TextCollector(onEmit: local Function(String is nextTitle){
+			curTitle: nextTitle;
+		}));
+
+		local Int is curW: win:width();
+		local Int is curH: win:height();
+		local SuitCanvas is canvas: SuitCanvas(width: curW, height: curH);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+
+		:layout(widthPx: curW, heightPx: curH);
+		:paint(ctx: ctx);
+		win:present(canvas: canvas);
+
+		local Time is clock: Time();
+		local Int is startMs: clock:monotonicMs();
+		local Int is lastPtrX: -1;
+		local Int is lastPtrY: -1;
+
+		while({ alive && win:poll() }, {
+			local Int is key: win:nextKey();
+			while({ key != 0 }, {
+				if({ key == 27 }, {
+					running:emit(value: false);
+				});
+				key: win:nextKey();
+			});
+
+			if({ durationMs > 0 && (clock:monotonicMs() - startMs) >= durationMs }, {
+				running:emit(value: false);
+			});
+
+			if({ alive }, {
+				local Boolean is dirty: false;
+				local Int is w: win:width();
+				local Int is h: win:height();
+				if({ w > 0 && h > 0 && (w != curW || h != curH) }, {
+					curW: w;
+					curH: h;
+					canvas:resize(width: curW, height: curH);
+					:layout(widthPx: curW, heightPx: curH);
+					dirty: true;
+				});
+
+				local Int is px: win:pointerX();
+				local Int is py: win:pointerY();
+				if({ px != lastPtrX || py != lastPtrY }, {
+					lastPtrX: px;
+					lastPtrY: py;
+					if({ :onPointerMove(x: px, y: py) }, {
+						dirty: true;
+					});
+				});
+
+				if({ win:pollClick() }, {
+					if({ :onPointerClick(x: win:clickX(), y: win:clickY()) }, {
+						dirty: true;
+					});
+				});
+
+				if({ dirty && alive }, {
+					:paint(ctx: ctx);
+					win:present(canvas: canvas);
+				});
+			});
+		});
+
+		canvas:dispose();
+		win:close();
 	}
 }
