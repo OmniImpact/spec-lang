@@ -34,7 +34,7 @@ Class of SewNode is ScrapPanel{
 		return desiredSize;
 	}
 
-	Function is paint(DrawContext is ctx){
+	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bgColor);

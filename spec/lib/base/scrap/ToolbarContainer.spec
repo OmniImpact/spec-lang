@@ -38,7 +38,7 @@ Class of SewNode is ToolbarContainer{
 		if({ hasToolbar }, { toolbar:bindDirty(cb: cb); });
 	}
 
-	Function is setScale(Scale is scale){
+	replace Function is setScale(Scale is scale){
 		if({ hasToolbar }, { toolbar:setScale(scale: scale); });
 	}
 
@@ -88,7 +88,7 @@ Class of SewNode is ToolbarContainer{
 		return toolbar:onPointerClick(x: x, y: y);
 	}
 
-	Function is paint(DrawContext is ctx){
+	replace Function is paint(DrawContext is ctx){
 		if({ hasToolbar }, { toolbar:paint(ctx: ctx); });
 	}
 

@@ -146,7 +146,7 @@ Class of SewNode is ToolkitContainer{
 	}
 
 	## Renders body (when software 2D), bars, and overlay popups in z-order into [ctx].
-	Function is paint(DrawContext is ctx){
+	replace Function is paint(DrawContext is ctx){
 		if({ useVulkan }, {
 			ctx:clearTransparent();
 		}, {

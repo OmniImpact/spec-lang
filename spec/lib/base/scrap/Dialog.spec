@@ -1,5 +1,5 @@
 #! Package base:scrap
-#! Generic non-blocking secondary dialog window host bound to a `BoolEmitter`.
+#! Generic non-blocking secondary dialog window host bound to a `BoolEmitter` and a `SewNode` content tree.
 
 Class is Dialog{
 	replace [String] is namespace: ['base', 'scrap'];
@@ -10,6 +10,9 @@ Class is Dialog{
 		['base', 'signal', SignalBag],
 		['base', 'suit', SuitWindow],
 		['base', 'suit', SuitCanvas],
+		['base', 'sew', SewNode],
+		['base', 'sew', Constraints],
+		['base', 'sew', Rect],
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext]
@@ -21,11 +24,14 @@ Class is Dialog{
 	Scale is scale: Scale(factor: 1.0);
 	Float is widthPt: 480.0;
 	Float is heightPt: 180.0;
+	SewNode is content: SewNode();
+	Boolean is hasContent: false;
 	Function is onPaint: local Function(DrawContext is ctx, Int is w, Int is h, Theme is theme, Scale is scale){};
 
 	SuitWindow is win: SuitWindow();
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
 	Boolean is isShown: false;
+	Boolean is isDirty: false;
 	SignalBag is signalBag: SignalBag();
 
 	replace Function is init(
@@ -35,6 +41,8 @@ Class is Dialog{
 		Scale is scale: Scale(factor: 1.0),
 		Float is widthPt: 480.0,
 		Float is heightPt: 180.0,
+		SewNode is content: SewNode(),
+		Boolean is hasContent: true,
 		Function is onPaint: local Function(DrawContext is ctx, Int is w, Int is h, Theme is theme, Scale is scale){}
 	){
 		:title: title;
@@ -43,16 +51,23 @@ Class is Dialog{
 		:scale: scale;
 		:widthPt: widthPt;
 		:heightPt: heightPt;
+		:content: content;
+		:hasContent: hasContent;
 		:onPaint: onPaint;
 		isShown: false;
+		isDirty: false;
 	}
 
 	Function is applyTheme(Theme is theme){
 		:theme: theme;
+		if({ hasContent }, { content:applyTheme(theme: theme); });
+		isDirty: true;
 	}
 
 	Function is setScale(Scale is scale){
 		:scale: scale;
+		if({ hasContent }, { content:setScale(scale: scale); });
+		isDirty: true;
 	}
 
 	local Function is paintDialog(){
@@ -62,9 +77,18 @@ Class is Dialog{
 		canvas:resize(width: w, height: h);
 		local DrawContext is ctx: DrawContext(canvas: canvas);
 		ctx:fillRect(x: 0, y: 0, w: w, h: h, color: theme:windowBg);
-		local Function is cb: onPaint;
-		cb(ctx, w, h, theme, scale);
+		if({ hasContent }, {
+			content:applyTheme(theme: theme);
+			content:setScale(scale: scale);
+			content:measure(c: Constraints(minW: w, maxW: w, minH: h, maxH: h));
+			content:arrange(bounds: Rect(x: 0, y: 0, width: w, height: h));
+			content:paint(ctx: ctx);
+		}, {
+			local Function is cb: onPaint;
+			cb(ctx, w, h, theme, scale);
+		});
 		win:present(canvas: canvas);
+		isDirty: false;
 	}
 
 	local Function is openWindow(){
@@ -79,6 +103,9 @@ Class is Dialog{
 		if({ !win:open() }, {
 			open:emit(value: false);
 			return;
+		});
+		if({ hasContent }, {
+			content:bindDirty(cb: local Function(){ :isDirty: true; });
 		});
 		canvas: SuitCanvas(width: win:width(), height: win:height());
 		isShown: true;
@@ -119,6 +146,10 @@ Class is Dialog{
 				return;
 			});
 			key: win:nextKey();
+		});
+
+		if({ isDirty }, {
+			:paintDialog();
 		});
 	}
 

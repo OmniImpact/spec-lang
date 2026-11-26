@@ -68,7 +68,7 @@ Class of SewNode is Bar{
 		:theme: theme;
 	}
 
-	Function is setScale(Scale is scale){
+	replace Function is setScale(Scale is scale){
 		:scale: scale;
 	}
 
@@ -87,7 +87,7 @@ Class of SewNode is Bar{
 		return desiredSize;
 	}
 
-	Function is paint(DrawContext is ctx){
+	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 

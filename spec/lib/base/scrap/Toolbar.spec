@@ -59,7 +59,7 @@ Class of SewNode is Toolbar{
 		bar:applyTheme(theme: theme);
 	}
 
-	Function is setScale(Scale is scale){
+	replace Function is setScale(Scale is scale){
 		:scale: scale;
 		bar:setScale(scale: scale);
 	}
@@ -186,7 +186,7 @@ Class of SewNode is Toolbar{
 	}
 
 	## Paints the underlying `Bar` overlaid with menu trigger buttons.
-	Function is paint(DrawContext is ctx){
+	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
