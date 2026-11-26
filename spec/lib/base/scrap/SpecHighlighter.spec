@@ -16,6 +16,10 @@ Class of ScrapHighlighter is SpecHighlighter{
 		return 'spec';
 	}
 
+	replace Function of String is displayName(){
+		return 'Spec';
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.spec');
 	}

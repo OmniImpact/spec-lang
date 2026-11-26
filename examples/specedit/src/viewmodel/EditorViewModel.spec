@@ -16,6 +16,8 @@ Class is EditorViewModel{
 		['base', 'scrap', TabBar],
 		['base', 'scrap', TabItemConfig],
 		['base', 'scrap', ContextMenu],
+		['base', 'scrap', CodeEditorView],
+		['base', 'scrap', ScrapHighlighter],
 		['specedit', 'model', EditorModel],
 		['specedit', 'util', SpecEditStrings]
 	];
@@ -25,6 +27,8 @@ Class is EditorViewModel{
 	Int is activeDocIdx: -1;
 	TabBar is boundTabBar: TabBar();
 	Boolean is hasBoundTabBar: false;
+	CodeEditorView is boundCodeEditor: CodeEditorView(text: TextEmitter(initial: ''));
+	Boolean is hasBoundCodeEditor: false;
 	ContextMenu is contextMenu: ContextMenu();
 
 	TextEmitter is title: TextEmitter(initial: SpecEditStrings:APP_NAME);
@@ -40,7 +44,9 @@ Class is EditorViewModel{
 	BoolEmitter is monospaceEnabled: BoolEmitter(initial: true);
 	TextEmitter is documentText: TextEmitter(initial: '');
 	TextEmitter is activeFilePath: TextEmitter(initial: '');
+	TextEmitter is activeLanguage: TextEmitter(initial: '');
 	TextEmitter is cursorStatus: TextEmitter(initial: '');
+	TextEmitter is syntaxStatus: TextEmitter(initial: '');
 	TextEmitter is versionText: TextEmitter(initial: SpecEditStrings:VERSION_TEXT);
 	TextEmitter is descriptionText: TextEmitter(initial: SpecEditStrings:DESCRIPTION_TEXT);
 	Float is windowWidthPt: 800.0;
@@ -87,7 +93,9 @@ Class is EditorViewModel{
 		monospaceEnabled: BoolEmitter(initial: true);
 		documentText: TextEmitter(initial: '');
 		activeFilePath: TextEmitter(initial: '');
+		activeLanguage: TextEmitter(initial: '');
 		cursorStatus: TextEmitter(initial: '');
+		syntaxStatus: TextEmitter(initial: '');
 		toolbarConfig: :buildToolbarConfig();
 		:refreshMenuStates();
 	}
@@ -123,6 +131,63 @@ Class is EditorViewModel{
 		boundTabBar:setTabs(tabs: items, activeIndex: activeDocIdx);
 	}
 
+	local Function is syncSyntaxState(){
+		if({ !:hasOpenDocument() }, {
+			activeLanguage:emit(value: '');
+			syntaxStatus:emit(value: '');
+			return;
+		});
+		activeLanguage:emit(value: model:languageOverride);
+		local String is label: 'Plain Text';
+		if({ hasBoundCodeEditor }, {
+			local ScrapHighlighter is hl: boundCodeEditor:highlighterFor(langOverride: model:languageOverride, path: model:filePath);
+			label: hl:displayName();
+		});
+		syntaxStatus:emit(value: label . ' ▾');
+	}
+
+	Function is bindCodeEditor(CodeEditorView is editor){
+		:boundCodeEditor: editor;
+		:hasBoundCodeEditor: true;
+		:syncSyntaxState();
+	}
+
+	Function is setDocumentLanguage(String is langId){
+		if({ !:hasOpenDocument() }, { return; });
+		model:languageOverride: langId;
+		:syncSyntaxState();
+	}
+
+	Function is showSyntaxMenu(Int is x, Int is y){
+		if({ !:hasOpenDocument() || !hasBoundCodeEditor }, { return; });
+		local ScrapHighlighter is detected: boundCodeEditor:highlighterFor(langOverride: '', path: model:filePath);
+		local String is curOverride: model:languageOverride;
+		local Array of MenuItemConfig is items: Array();
+		items:add(item: MenuItemConfig(
+			id: 'syntax_auto',
+			label: (if({ curOverride == '' }, { '* ' }, { '  ' })) . 'Auto-Detect (' . detected:displayName() . ')',
+			onClick: local Function(){ :setDocumentLanguage(langId: ''); }
+		));
+		items:add(item: MenuItemConfig(
+			id: 'syntax_plain',
+			label: (if({ curOverride == 'plain' }, { '* ' }, { '  ' })) . 'Plain Text',
+			onClick: local Function(){ :setDocumentLanguage(langId: 'plain'); }
+		));
+		local Array of ScrapHighlighter is registered: boundCodeEditor:registeredHighlighters();
+		local Int is i: 0;
+		while({ i < registered:length() }, {
+			local ScrapHighlighter is h: registered:get(index: i);
+			local String is lid: h:languageId();
+			items:add(item: MenuItemConfig(
+				id: 'syntax_' . lid,
+				label: (if({ curOverride == lid }, { '* ' }, { '  ' })) . h:displayName(),
+				onClick: local Function(){ :setDocumentLanguage(langId: lid); }
+			));
+			i: i + 1;
+		});
+		contextMenu:open(x: x, y: y, items: items);
+	}
+
 	local Function is activateDocument(Int is idx){
 		if({ idx < 0 || idx >= documents:length() }, { return; });
 		activeDocIdx: idx;
@@ -132,6 +197,7 @@ Class is EditorViewModel{
 		activeFilePath:emit(value: model:filePath);
 		cursorStatus:emit(value: SpecEditStrings:DEFAULT_CURSOR_STATUS);
 		title:emit(value: :computeTitle());
+		:syncSyntaxState();
 		:syncTabs();
 		:refreshMenuStates();
 	}
@@ -319,6 +385,7 @@ Class is EditorViewModel{
 			model:dirty: false;
 			activeFilePath:emit(value: path);
 			title:emit(value: :computeTitle());
+			:syncSyntaxState();
 			:syncTabs();
 			:refreshMenuStates();
 		});
@@ -414,6 +481,7 @@ Class is EditorViewModel{
 		activeFilePath:emit(value: '');
 		cursorStatus:emit(value: '');
 		title:emit(value: :computeTitle());
+		:syncSyntaxState();
 		:syncTabs();
 		:refreshMenuStates();
 	}

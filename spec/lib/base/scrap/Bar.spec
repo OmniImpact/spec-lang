@@ -24,6 +24,11 @@ Class of SewNode is Bar{
 	TextEmitter is leftText: TextEmitter(initial: '');
 	TextEmitter is centerText: TextEmitter(initial: '');
 	TextEmitter is rightText: TextEmitter(initial: '');
+	Boolean is rightInteractive: false;
+	Function is onRightClick: local Function(Int is _x, Int is _y){};
+	Boolean is rightHover: false;
+	Int is rightHitX: 0;
+	Int is rightHitW: 0;
 
 	replace Function is init(
 		Float is heightPt: 26.0,
@@ -31,6 +36,8 @@ Class of SewNode is Bar{
 		TextEmitter is leftText: TextEmitter(initial: ''),
 		TextEmitter is centerText: TextEmitter(initial: ''),
 		TextEmitter is rightText: TextEmitter(initial: ''),
+		Boolean is rightInteractive: false,
+		Function is onRightClick: local Function(Int is _x, Int is _y){},
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Scale is scale: Scale(factor: 1.0)
 	){
@@ -39,6 +46,8 @@ Class of SewNode is Bar{
 		:leftText: leftText;
 		:centerText: centerText;
 		:rightText: rightText;
+		:rightInteractive: rightInteractive;
+		:onRightClick: onRightClick;
 		:theme: theme;
 		:scale: scale;
 		:bindTextEmitters();
@@ -120,8 +129,43 @@ Class of SewNode is Bar{
 		local String is rStr: rightText:current();
 		if({ rStr != '' }, {
 			local Int is rw: ctx:measureTextWidth(text: rStr, pixelHeight: fpx);
-			ctx:drawText(x: b:x + b:width - padX - rw, y: ty, text: rStr, color: theme:textPrimary, pixelHeight: fpx);
+			local Int is rx: b:x + b:width - padX - rw;
+			local Int is hitPad: scale:px(pt: 6.0);
+			:rightHitX: rx - hitPad;
+			:rightHitW: rw + hitPad * 2;
+			if({ rightInteractive && rightHover }, {
+				ctx:fillRect(x: rightHitX, y: b:y + 2, w: rightHitW, h: b:height - 4, color: theme:hoverBg);
+			});
+			ctx:drawText(x: rx, y: ty, text: rStr, color: theme:textPrimary, pixelHeight: fpx);
+		}, {
+			:rightHitX: 0;
+			:rightHitW: 0;
 		});
+	}
+
+	local Function of Boolean is inRightHit(Int is x, Int is y){
+		if({ !rightInteractive || rightHitW <= 0 }, { return false; });
+		local Rect is b: bounds();
+		return x >= rightHitX && x < rightHitX + rightHitW && y >= b:y && y < b:y + b:height;
+	}
+
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
+		local Boolean is nextHover: :inRightHit(x: x, y: y);
+		if({ nextHover != rightHover }, {
+			rightHover: nextHover;
+			invalidate();
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ :inRightHit(x: x, y: y) }, {
+			local Function is cb: onRightClick;
+			cb(x, y);
+			return true;
+		});
+		return false;
 	}
 
 	Function is dispose(){

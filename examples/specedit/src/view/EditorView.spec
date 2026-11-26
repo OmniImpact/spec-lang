@@ -43,6 +43,7 @@ Class is EditorView{
 		editorBody: CodeEditorView(
 			text: vm:documentText,
 			filePath: vm:activeFilePath,
+			language: vm:activeLanguage,
 			wrap: vm:wrapEnabled,
 			lineNumbers: vm:lineNumbersEnabled,
 			monospace: vm:monospaceEnabled,
@@ -59,6 +60,7 @@ Class is EditorView{
 			onRightClickTab: local Function(Int is idx, Int is x, Int is y){ vm:showTabContextMenu(index: idx, x: x, y: y); }
 		);
 		vm:bindTabBar(tabBar: tabBar);
+		vm:bindCodeEditor(editor: editorBody);
 		vm:bindEditorActions(
 			onCopy: local Function(){ editorBody:copySelection(); },
 			onCut: local Function(){ editorBody:cutSelection(); },
@@ -156,7 +158,9 @@ Class is EditorView{
 			),
 			bottomBar: Bar(
 				leftText: vm:cursorStatus,
-				rightText: vm:title
+				rightText: vm:syntaxStatus,
+				rightInteractive: true,
+				onRightClick: local Function(Int is x, Int is y){ vm:showSyntaxMenu(x: x, y: y); }
 			),
 			hasBottomBar: true,
 			dialog: :aboutDialog(),

@@ -192,6 +192,9 @@ Class of SewNode is ToolkitContainer{
 		if({ hasBody && !useVulkan }, {
 			if({ bodyPanel:onPointerMove(x: x, y: y) }, { changed: true; });
 		});
+		if({ hasBottomBar }, {
+			if({ bottomBar:onPointerMove(x: x, y: y) }, { changed: true; });
+		});
 		return changed;
 	}
 
@@ -204,6 +207,9 @@ Class of SewNode is ToolkitContainer{
 		});
 		if({ hasTabBar }, {
 			if({ tabBar:onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+		});
+		if({ hasBottomBar }, {
+			if({ bottomBar:onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
 		});
 		if({ hasBody && !useVulkan }, {
 			return bodyPanel:onPointerClickMod(x: x, y: y, mods: mods);

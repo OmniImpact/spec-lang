@@ -14,18 +14,23 @@ Class of TextView is CodeEditorView{
 		['base', 'scrap', ScrapHighlighter],
 		['base', 'scrap', SpecHighlighter],
 		['base', 'scrap', MarkdownHighlighter],
-		['base', 'scrap', JsonHighlighter]
+		['base', 'scrap', JsonHighlighter],
+		['base', 'scrap', CHighlighter],
+		['base', 'scrap', PythonHighlighter],
+		['base', 'scrap', JavaHighlighter],
+		['base', 'scrap', RubyHighlighter],
+		['base', 'scrap', RustHighlighter]
 	];
 
 	TextEmitter is filePath: TextEmitter(initial: '');
-	String is language: '';
+	TextEmitter is language: TextEmitter(initial: '');
 	Array of ScrapHighlighter is highlighters: Array();
 	ScrapHighlighter is activeHighlighter: ScrapHighlighter();
 
 	replace Function is init(
 		TextEmitter is text: TextEmitter(initial: ''),
 		TextEmitter is filePath: TextEmitter(initial: ''),
-		String is language: '',
+		TextEmitter is language: TextEmitter(initial: ''),
 		BoolEmitter is wrap: BoolEmitter(initial: false),
 		BoolEmitter is lineNumbers: BoolEmitter(initial: false),
 		BoolEmitter is monospace: BoolEmitter(initial: false),
@@ -55,7 +60,12 @@ Class of TextView is CodeEditorView{
 		:highlighters: Array([
 			SpecHighlighter() as ScrapHighlighter,
 			MarkdownHighlighter() as ScrapHighlighter,
-			JsonHighlighter() as ScrapHighlighter
+			JsonHighlighter() as ScrapHighlighter,
+			CHighlighter() as ScrapHighlighter,
+			PythonHighlighter() as ScrapHighlighter,
+			JavaHighlighter() as ScrapHighlighter,
+			RubyHighlighter() as ScrapHighlighter,
+			RustHighlighter() as ScrapHighlighter
 		]);
 		:activeHighlighter: ScrapHighlighter();
 		:updateHighlighter();
@@ -64,6 +74,14 @@ Class of TextView is CodeEditorView{
 			slot: 'filePath',
 			emitter: :filePath,
 			collector: :filePath:collect(onEmit: local Function(String is _p){
+				:updateHighlighter();
+				invalidate();
+			})
+		);
+		signalBag:track(
+			slot: 'language',
+			emitter: :language,
+			collector: :language:collect(onEmit: local Function(String is _l){
 				:updateHighlighter();
 				invalidate();
 			})
@@ -77,26 +95,30 @@ Class of TextView is CodeEditorView{
 		invalidate();
 	}
 
-	local Function is updateHighlighter(){
-		local String is lang: language:toLower();
-		local String is low: filePath:current():toLower();
+	## Returns the registered language highlighters in detection order.
+	Function of Array of ScrapHighlighter is registeredHighlighters(){
+		return highlighters;
+	}
+
+	## Resolves the highlighter for [langOverride] (if non-empty) or [path] extension.
+	Function of ScrapHighlighter is highlighterFor(String is langOverride, String is path){
+		local String is lang: langOverride:toLower();
+		local String is low: path:toLower();
 		local Int is i: 0;
 		while({ i < highlighters:length() }, {
 			local ScrapHighlighter is h: highlighters:get(index: i);
 			if({ lang != '' }, {
-				if({ h:languageId() == lang }, {
-					activeHighlighter: h;
-					return;
-				});
+				if({ h:languageId() == lang }, { return h; });
 			}, {
-				if({ h:matchesExtension(lowPath: low) }, {
-					activeHighlighter: h;
-					return;
-				});
+				if({ h:matchesExtension(lowPath: low) }, { return h; });
 			});
 			i: i + 1;
 		});
-		activeHighlighter: ScrapHighlighter();
+		return ScrapHighlighter();
+	}
+
+	local Function is updateHighlighter(){
+		activeHighlighter: :highlighterFor(langOverride: language:current(), path: filePath:current());
 	}
 
 	replace Function is paintLineText(DrawContext is ctx, Int is x, Int is y, String is lineStr, Int is rLine, Int is rStart, Int is fpx){

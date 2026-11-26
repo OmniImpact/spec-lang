@@ -16,6 +16,10 @@ Class of ScrapHighlighter is JsonHighlighter{
 		return 'json';
 	}
 
+	replace Function of String is displayName(){
+		return 'JSON';
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.json');
 	}

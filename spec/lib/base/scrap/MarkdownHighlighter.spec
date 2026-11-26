@@ -16,6 +16,10 @@ Class of ScrapHighlighter is MarkdownHighlighter{
 		return 'markdown';
 	}
 
+	replace Function of String is displayName(){
+		return 'Markdown';
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.md') || endsWith(s: lowPath, suffix: '.markdown');
 	}

@@ -12,11 +12,13 @@ Class is EditorModel{
 	String is documentName: SpecEditStrings:UNTITLED;
 	Boolean is dirty: false;
 	String is text: '';
+	String is languageOverride: '';
 
 	replace Function is init(String is documentName: SpecEditStrings:UNTITLED){
 		:filePath: '';
 		:documentName: documentName;
 		dirty: false;
 		text: '';
+		languageOverride: '';
 	}
 }
