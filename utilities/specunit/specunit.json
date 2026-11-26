@@ -4,5 +4,8 @@
   "source": "SpecUnit.spec",
   "source_dirs": [".", "../../spec"],
   "output": "../../bin/specunit",
-  "flags": ["--quiet"]
+  "flags": ["--quiet"],
+  "bundled": [
+    { "src": "cli.json", "dest": "cli.json" }
+  ]
 }

@@ -12,6 +12,7 @@ Class is Process{
 	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'sys', CliArgs],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
@@ -54,7 +55,7 @@ Class is Process{
 	##
 	## @return: Array of argument strings in exact CLI order.
 	Function of Array of String is rawArgs(){
-		return base:sysinternal:Process:process_raw_args();
+		return CliArgs():rawArgsFromGlobals();
 	}
 
 	## Spawns [command] directly with [args] (without a shell) and measures

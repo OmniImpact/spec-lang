@@ -93,6 +93,7 @@ Class is SpecTestUi{
 	replace [String] is namespace: ['specunit'];
 
 	replace [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
@@ -323,6 +324,7 @@ Class is SpecTestRegistry{
 	replace [String] is namespace: ['specunit'];
 
 	replace [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'sys', Conditional],
@@ -481,6 +483,7 @@ Class is SpecUnit{
 	replace [[String]] is using: [
 		# The plain form grants construction (the report's locals), the
 		# as-form grants the bare call surface (the overloads pattern).
+		['base', 'cli', Cli],
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
@@ -531,42 +534,42 @@ Class is SpecUnit{
 	}
 
 	replace Function is init(Map of String to String is args){
-		:timeoutTool: :detectTimeoutTool();
-		local String is specBin: args:getString(key: 's', default: args:getString(key: 'spec', default: '.'));
-		if(check: { specBin == '.' }, then: {
-			specBin: 'bin/spec';
-		});
-		local String is root: args:getString(key: 'root', default: '.');
-		local String is dirsRaw: args:getString(key: 't', default: args:getString(key: 'tests', default: ''));
-		if(check: { dirsRaw == '' }, then: {
-			line(color256(code: 203, text: 'specunit: missing required -t <dir> (or --tests <dir>)'));
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/specunit/cli.json');
+		if(check: { !cli:parse(rawArgs: Process:rawArgs()) }, then: {
+			if(check: { cli:helpRequested || cli:versionRequested }, then: {
+				exit(status: 0);
+			});
 			exit(status: 1);
 		});
-		local String is srcDirsRaw: args:getString(key: 'S', default: args:getString(key: 'source-dirs', default: ''));
-		local Boolean is useLlvm: args:has(key: 'llvm');
-		local Boolean is prettyMode: args:has(key: 'pretty');
+
+		:timeoutTool: :detectTimeoutTool();
+		local String is specBin: cli:getString(name: 'spec', default: 'bin/spec');
+		if(check: { specBin == '.' || specBin == '' }, then: {
+			specBin: 'bin/spec';
+		});
+		local String is root: cli:getString(name: 'root', default: '.');
+		local String is dirsRaw: cli:getString(name: 'tests', default: '');
+		local String is srcDirsRaw: cli:getString(name: 'source-dirs', default: '');
+		local Boolean is useLlvm: cli:getBool(name: 'llvm');
+		local Boolean is prettyMode: cli:getBool(name: 'pretty');
 		local String is srcDirFlags: :buildSourceDirFlags(raw: srcDirsRaw);
 		if(check: { useLlvm }, then: {
 			srcDirFlags: ' --llvm' . srcDirFlags;
 		});
 		local Int is cores: Process:threadCount();
-		local String is jArg: args:getString(key: 'j', default: args:getString(key: 'threads', default: ''));
-		local Int is threads: 0;
-		if(check: { jArg != '' }, then: {
-			threads: jArg as Int;
+		local Int is threads: if(check: { cli:has(name: 'threads') }, then: {
+			cli:getInt(name: 'threads', default: 1)
 		}, else: {
-			threads: cores - 2;
+			cores - 2
 		});
 		if(check: { threads < 1 }, then: {
 			threads: 1;
 		});
-		local String is tArg: args:getString(key: 'timeout', default: '');
-		local Int is timeoutSec: if(check: { tArg != '' }, then: { tArg:parseInt(default: 120); }, else: { 120; });
+		local Int is timeoutSec: cli:getInt(name: 'timeout', default: 120);
 		if(check: { timeoutSec < 5 }, then: {
 			timeoutSec: 5;
 		});
-		local String is ctArg: args:getString(key: 'compile-timeout', default: '');
-		local Int is compileTimeoutSec: if(check: { ctArg != '' }, then: { ctArg:parseInt(default: 300); }, else: { 300; });
+		local Int is compileTimeoutSec: cli:getInt(name: 'compile-timeout', default: 300);
 		if(check: { compileTimeoutSec < 10 }, then: {
 			compileTimeoutSec: 10;
 		});

@@ -1,0 +1,75 @@
+{
+  "name": "specunit",
+  "version": "0.1.0",
+  "description": "SpecUnit test runner for Spec programs and compiler suites",
+  "usage": "specunit [options] -t <dir>...",
+  "options": [
+    {
+      "short": "s",
+      "long": "spec",
+      "type": "string",
+      "default": "bin/spec",
+      "arg": "path",
+      "description": "Path to the spec compiler executable"
+    },
+    {
+      "short": "t",
+      "long": "tests",
+      "type": "list",
+      "required": true,
+      "arg": "dir",
+      "description": "Test directory relative to root (repeatable or comma-separated)"
+    },
+    {
+      "short": "S",
+      "long": "source-dirs",
+      "type": "list",
+      "arg": "dir",
+      "description": "Additional -s source directory passed to spec (repeatable)"
+    },
+    {
+      "long": "root",
+      "type": "string",
+      "default": ".",
+      "arg": "dir",
+      "description": "Repository root directory"
+    },
+    {
+      "short": "j",
+      "long": "threads",
+      "type": "int",
+      "arg": "N",
+      "description": "Number of parallel worker threads (default: cores - 2)"
+    },
+    {
+      "long": "timeout",
+      "type": "int",
+      "default": "120",
+      "arg": "sec",
+      "description": "Per-test execution timeout in seconds (min 5)"
+    },
+    {
+      "long": "compile-timeout",
+      "type": "int",
+      "default": "300",
+      "arg": "sec",
+      "description": "Per-suite compile timeout in seconds (min 10)"
+    },
+    {
+      "long": "llvm",
+      "type": "bool",
+      "description": "Pass --llvm to spec when compiling suites"
+    },
+    {
+      "long": "pretty",
+      "type": "bool",
+      "description": "Interactive Cleo progress UI"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

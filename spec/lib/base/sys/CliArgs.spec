@@ -93,6 +93,12 @@ Class is CliArgs{
 		return args;
 	}
 
+	Function of Array of String is rawArgsFromGlobals(){
+		local Int is argc: Mem:tlsGetI64(slot: 12);
+		local Int is av: Mem:tlsGetI64(slot: 13);
+		return :rawArgs(argc: argc, argvAddr: av);
+	}
+
 	## Returns `argv[1..argc-1]` as an `Array of String` in CLI order.
 	Function of Array of String is rawArgs(Int is argc, Int is argvAddr){
 		local Array of String is out: Array();
