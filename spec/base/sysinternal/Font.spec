@@ -9,6 +9,14 @@ Class is Font{
 	## Bound to `spec_pal_font_load`.
 	Function of Int is pal_font_load(Int is path_cstr);
 
+	## Resolves and loads the OS default sans-serif TrueType font; returns handle > 0 or -1.
+	## Bound to `spec_pal_font_load_default`.
+	Function of Int is pal_font_load_default();
+
+	## Measures pixel width of UTF-8 [text_cstr] at [pixel_height].
+	## Bound to `spec_pal_font_measure_width`.
+	Function of Int is pal_font_measure_width(Int is handle, Int is text_cstr, Int is pixel_height);
+
 	## Frees the font handle.
 	## Bound to `spec_pal_font_close`.
 	Function of Int is pal_font_close(Int is handle);

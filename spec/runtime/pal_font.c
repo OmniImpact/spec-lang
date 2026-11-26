@@ -224,13 +224,15 @@ long long spec_pal_font_draw_text(
                         uint32_t a = (cov * fg_a) / 255u;
                         uint32_t inv_a = 255u - a;
                         uint32_t bg = row[px];
+                        uint32_t bg_a = (bg >> 24) & 0xFFu;
                         uint32_t bg_r = (bg >> 16) & 0xFFu;
                         uint32_t bg_g = (bg >> 8) & 0xFFu;
                         uint32_t bg_b = bg & 0xFFu;
+                        uint32_t out_a = a + (bg_a * inv_a) / 255u;
                         uint32_t r = (fg_r * a + bg_r * inv_a) / 255u;
                         uint32_t g = (fg_g * a + bg_g * inv_a) / 255u;
                         uint32_t b = (fg_b * a + bg_b * inv_a) / 255u;
-                        row[px] = 0xFF000000u | (r << 16) | (g << 8) | b;
+                        row[px] = (out_a << 24) | (r << 16) | (g << 8) | b;
                     }
                 }
             }
@@ -241,6 +243,105 @@ long long spec_pal_font_draw_text(
 
     if (scratch) free(scratch);
     return 1;
+}
+
+long long spec_pal_font_measure_width(long long handle, long long text_cstr, long long pixel_height) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f || !text_cstr || pixel_height <= 0) return 0;
+    float scale = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
+    const char* p = (const char*)(intptr_t)text_cstr;
+    float xpos = 0.0f;
+    int prev_cp = 0;
+    while (*p) {
+        int cp = _spec_utf8_next(&p);
+        if (prev_cp) {
+            xpos += (float)stbtt_GetCodepointKernAdvance(&f->info, prev_cp, cp) * scale;
+        }
+        int adv = 0, lsb = 0;
+        stbtt_GetCodepointHMetrics(&f->info, cp, &adv, &lsb);
+        xpos += (float)adv * scale;
+        prev_cp = cp;
+    }
+    return (long long)(xpos + 0.5f);
+}
+
+#if defined(__linux__)
+static long long _spec_font_try_fontconfig(void) {
+    void* fc = dlopen("libfontconfig.so.1", RTLD_LAZY | RTLD_LOCAL);
+    if (!fc) return -1;
+    typedef int (*PFN_FcInit)(void);
+    typedef void* (*PFN_FcNameParse)(const unsigned char*);
+    typedef int (*PFN_FcConfigSubstitute)(void*, void*, int);
+    typedef void (*PFN_FcDefaultSubstitute)(void*);
+    typedef void* (*PFN_FcFontMatch)(void*, void*, int*);
+    typedef int (*PFN_FcPatternGetString)(const void*, const char*, int, unsigned char**);
+    typedef void (*PFN_FcPatternDestroy)(void*);
+
+    PFN_FcInit pFcInit = (PFN_FcInit)dlsym(fc, "FcInit");
+    PFN_FcNameParse pFcNameParse = (PFN_FcNameParse)dlsym(fc, "FcNameParse");
+    PFN_FcConfigSubstitute pFcConfigSubstitute = (PFN_FcConfigSubstitute)dlsym(fc, "FcConfigSubstitute");
+    PFN_FcDefaultSubstitute pFcDefaultSubstitute = (PFN_FcDefaultSubstitute)dlsym(fc, "FcDefaultSubstitute");
+    PFN_FcFontMatch pFcFontMatch = (PFN_FcFontMatch)dlsym(fc, "FcFontMatch");
+    PFN_FcPatternGetString pFcPatternGetString = (PFN_FcPatternGetString)dlsym(fc, "FcPatternGetString");
+    PFN_FcPatternDestroy pFcPatternDestroy = (PFN_FcPatternDestroy)dlsym(fc, "FcPatternDestroy");
+
+    if (!pFcInit || !pFcNameParse || !pFcConfigSubstitute || !pFcDefaultSubstitute ||
+        !pFcFontMatch || !pFcPatternGetString || !pFcPatternDestroy) {
+        dlclose(fc);
+        return -1;
+    }
+
+    pFcInit();
+    void* pat = pFcNameParse((const unsigned char*)"sans");
+    if (!pat) { dlclose(fc); return -1; }
+    pFcConfigSubstitute(NULL, pat, 0 /* FcMatchPattern */);
+    pFcDefaultSubstitute(pat);
+    int res = 0;
+    void* match = pFcFontMatch(NULL, pat, &res);
+    pFcPatternDestroy(pat);
+    if (!match) { dlclose(fc); return -1; }
+
+    unsigned char* file = NULL;
+    long long h = -1;
+    if (pFcPatternGetString(match, "file", 0, &file) == 0 && file) {
+        h = spec_pal_font_load((long long)(intptr_t)file);
+    }
+    pFcPatternDestroy(match);
+    dlclose(fc);
+    return h;
+}
+#endif
+
+long long spec_pal_font_load_default(void) {
+#if defined(__linux__)
+    long long h = _spec_font_try_fontconfig();
+    if (h > 0) return h;
+    static const char* fallbacks[] = {
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
+        NULL
+    };
+    for (int i = 0; fallbacks[i]; i++) {
+        h = spec_pal_font_load((long long)(intptr_t)fallbacks[i]);
+        if (h > 0) return h;
+    }
+    _spec_set_font_error("No default system sans font found on Linux");
+    return -1;
+#elif defined(__APPLE__)
+    /* TODO: Resolve default system sans font via CoreText (CTFontCreateUIFontForLanguage). */
+    _spec_set_font_error("Default system font not yet implemented on macOS");
+    return -1;
+#elif defined(_WIN32)
+    /* TODO: Resolve default system sans font via DirectWrite or SHGetFolderPath + segoeui.ttf. */
+    _spec_set_font_error("Default system font not yet implemented on Windows");
+    return -1;
+#else
+    _spec_set_font_error("Default system font not supported on this platform");
+    return -1;
+#endif
 }
 
 #else
@@ -270,6 +371,16 @@ long long spec_pal_font_draw_text(
     (void)handle; (void)pixels_addr; (void)buf_w; (void)buf_h;
     (void)x; (void)y; (void)text_cstr; (void)pixel_height; (void)argb_color;
     return 0;
+}
+
+long long spec_pal_font_measure_width(long long handle, long long text_cstr, long long pixel_height) {
+    (void)handle; (void)text_cstr; (void)pixel_height;
+    return 0;
+}
+
+long long spec_pal_font_load_default(void) {
+    _spec_set_font_error("stb_truetype.h not available at compile time");
+    return -1;
 }
 
 #endif

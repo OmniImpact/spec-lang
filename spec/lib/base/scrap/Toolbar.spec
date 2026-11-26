@@ -69,14 +69,14 @@ Class of SewNode is Toolbar{
 		bar:arrange(bounds: bounds);
 	}
 
-	local Function of Int is textScale(){
-		local Int is ts: scale:px(pt: 2.0);
-		return if({ ts < 1 }, { 1 }, { ts });
+	local Function of Int is fontPx(){
+		local Int is px: scale:px(pt: 13.0);
+		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	local Function of Int is menuButtonWidthPx(MenuConfig is menu){
 		local DrawContext is dummy: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
-		local Int is tw: dummy:measureTextWidth(text: menu:label, scale: :textScale());
+		local Int is tw: dummy:measureTextWidth(text: menu:label, pixelHeight: :fontPx());
 		dummy:canvas:dispose();
 		return tw + scale:px(pt: 20.0);
 	}
@@ -193,8 +193,8 @@ Class of SewNode is Toolbar{
 		bar:paint(ctx: ctx);
 		local Int is borderH: if({ scale:px(pt: 1.0) < 1 }, { 1 }, { scale:px(pt: 1.0) });
 
-		local Int is ts: :textScale();
-		local Int is th: ctx:measureTextHeight(scale: ts);
+		local Int is fpx: :fontPx();
+		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is textY: b:y + (b:height - th) / 2;
 		local Int is padX: scale:px(pt: 10.0);
 
@@ -209,7 +209,7 @@ Class of SewNode is Toolbar{
 					ctx:fillRect(x: bx, y: b:y, w: bw, h: b:height - borderH, color: theme:hoverBg);
 				});
 			});
-			ctx:drawText(x: bx + padX, y: textY, text: m:label, color: theme:textPrimary, scale: ts);
+			ctx:drawText(x: bx + padX, y: textY, text: m:label, color: theme:textPrimary, pixelHeight: fpx);
 		});
 	}
 
@@ -230,8 +230,8 @@ Class of SewNode is Toolbar{
 		ctx:fillRect(x: dx, y: dy, w: dw, h: dh, color: theme:menuBg);
 		ctx:strokeRect(x: dx, y: dy, w: dw, h: dh, color: theme:menuBorder);
 
-		local Int is ts: :textScale();
-		local Int is th: ctx:measureTextHeight(scale: ts);
+		local Int is fpx: :fontPx();
+		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is padX: scale:px(pt: 10.0);
 
 		times(count: count, worker: local Function(Int is i){
@@ -241,7 +241,7 @@ Class of SewNode is Toolbar{
 				ctx:fillRect(x: dx + 1, y: iy + 1, w: dw - 2, h: ih - 2, color: theme:hoverBg);
 			});
 			local Int is ty: iy + (ih - th) / 2;
-			ctx:drawText(x: dx + padX, y: ty, text: item:label, color: theme:textPrimary, scale: ts);
+			ctx:drawText(x: dx + padX, y: ty, text: item:label, color: theme:textPrimary, pixelHeight: fpx);
 		});
 	}
 }

@@ -26,6 +26,21 @@ struct wl_pointer;
 struct wl_proxy;
 struct wl_interface;
 
+struct spec_wl_message {
+    const char* name;
+    const char* signature;
+    const struct wl_interface** types;
+};
+
+struct spec_wl_interface_def {
+    const char* name;
+    int version;
+    int method_count;
+    const struct spec_wl_message* methods;
+    int event_count;
+    const struct spec_wl_message* events;
+};
+
 struct libdecor;
 struct libdecor_frame;
 struct libdecor_state;
@@ -102,6 +117,11 @@ static struct wl_display* (*_wl_display_connect)(const char*) = NULL;
 static void (*_wl_display_disconnect)(struct wl_display*) = NULL;
 static int (*_wl_display_roundtrip)(struct wl_display*) = NULL;
 static int (*_wl_display_flush)(struct wl_display*) = NULL;
+static int (*_wl_display_dispatch_pending)(struct wl_display*) = NULL;
+static int (*_wl_display_prepare_read)(struct wl_display*) = NULL;
+static int (*_wl_display_read_events)(struct wl_display*) = NULL;
+static void (*_wl_display_cancel_read)(struct wl_display*) = NULL;
+static int (*_wl_display_get_fd)(struct wl_display*) = NULL;
 static struct wl_proxy* (*_wl_proxy_marshal_flags)(struct wl_proxy*, uint32_t, const struct wl_interface*, uint32_t, uint32_t, ...) = NULL;
 static int (*_wl_proxy_add_listener)(struct wl_proxy*, void (**)(void), void*) = NULL;
 static void (*_wl_proxy_destroy)(struct wl_proxy*) = NULL;
@@ -116,6 +136,85 @@ static const struct wl_interface* _wl_surface_iface = NULL;
 static const struct wl_interface* _wl_seat_iface = NULL;
 static const struct wl_interface* _wl_keyboard_iface = NULL;
 static const struct wl_interface* _wl_pointer_iface = NULL;
+
+/* Minimal xdg-shell + xdg-decoration ABI interfaces (loaded zero-dep) */
+static const struct wl_interface* _spec_xdg_surface_types[2] = { NULL, NULL };
+static const struct wl_interface* _spec_xdg_toplevel_types[1] = { NULL };
+static const struct wl_interface* _spec_zxdg_deco_types[2] = { NULL, NULL };
+static const struct wl_interface* _spec_null_types[4] = { NULL, NULL, NULL, NULL };
+
+static const struct spec_wl_message _spec_xdg_wm_base_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "create_positioner", "n", _spec_null_types },
+    { "get_xdg_surface", "no", _spec_xdg_surface_types },
+    { "pong", "u", _spec_null_types }
+};
+static const struct spec_wl_message _spec_xdg_wm_base_evts[] = {
+    { "ping", "u", _spec_null_types }
+};
+static const struct spec_wl_interface_def _spec_xdg_wm_base_iface_def = {
+    "xdg_wm_base", 1, 4, _spec_xdg_wm_base_reqs, 1, _spec_xdg_wm_base_evts
+};
+
+static const struct spec_wl_message _spec_xdg_surface_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "get_toplevel", "n", _spec_xdg_toplevel_types },
+    { "get_popup", "n?oo", _spec_null_types },
+    { "set_window_geometry", "iiii", _spec_null_types },
+    { "ack_configure", "u", _spec_null_types }
+};
+static const struct spec_wl_message _spec_xdg_surface_evts[] = {
+    { "configure", "u", _spec_null_types }
+};
+static const struct spec_wl_interface_def _spec_xdg_surface_iface_def = {
+    "xdg_surface", 1, 5, _spec_xdg_surface_reqs, 1, _spec_xdg_surface_evts
+};
+
+static const struct spec_wl_message _spec_xdg_toplevel_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "set_parent", "?o", _spec_null_types },
+    { "set_title", "s", _spec_null_types },
+    { "set_app_id", "s", _spec_null_types },
+    { "show_window_menu", "ouii", _spec_null_types },
+    { "move", "ou", _spec_null_types },
+    { "resize", "ouu", _spec_null_types },
+    { "set_max_size", "ii", _spec_null_types },
+    { "set_min_size", "ii", _spec_null_types },
+    { "set_maximized", "", _spec_null_types },
+    { "unset_maximized", "", _spec_null_types },
+    { "set_fullscreen", "?o", _spec_null_types },
+    { "unset_fullscreen", "", _spec_null_types },
+    { "set_minimized", "", _spec_null_types }
+};
+static const struct spec_wl_message _spec_xdg_toplevel_evts[] = {
+    { "configure", "iia", _spec_null_types },
+    { "close", "", _spec_null_types },
+    { "configure_bounds", "ii", _spec_null_types },
+    { "wm_capabilities", "a", _spec_null_types }
+};
+static const struct spec_wl_interface_def _spec_xdg_toplevel_iface_def = {
+    "xdg_toplevel", 1, 14, _spec_xdg_toplevel_reqs, 4, _spec_xdg_toplevel_evts
+};
+
+static const struct spec_wl_message _spec_zxdg_deco_mgr_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "get_toplevel_decoration", "no", _spec_zxdg_deco_types }
+};
+static const struct spec_wl_interface_def _spec_zxdg_deco_mgr_iface_def = {
+    "zxdg_decoration_manager_v1", 1, 2, _spec_zxdg_deco_mgr_reqs, 0, NULL
+};
+
+static const struct spec_wl_message _spec_zxdg_deco_reqs[] = {
+    { "destroy", "", _spec_null_types },
+    { "set_mode", "u", _spec_null_types },
+    { "unset_mode", "", _spec_null_types }
+};
+static const struct spec_wl_message _spec_zxdg_deco_evts[] = {
+    { "configure", "u", _spec_null_types }
+};
+static const struct spec_wl_interface_def _spec_zxdg_deco_iface_def = {
+    "zxdg_toplevel_decoration_v1", 1, 3, _spec_zxdg_deco_reqs, 1, _spec_zxdg_deco_evts
+};
 
 static struct libdecor* (*_libdecor_new)(struct wl_display*, struct spec_libdecor_interface*) = NULL;
 static void (*_libdecor_unref)(struct libdecor*) = NULL;
@@ -132,15 +231,10 @@ static void (*_libdecor_state_free)(struct libdecor_state*) = NULL;
 static bool (*_libdecor_configuration_get_content_size)(struct libdecor_configuration*, struct libdecor_frame*, int*, int*) = NULL;
 
 static bool _spec_win_init_libs(void) {
-    if (_spec_wl_so && _spec_decor_so) return true;
+    if (_spec_wl_so) return true;
     _spec_wl_so = dlopen("libwayland-client.so.0", RTLD_LAZY | RTLD_LOCAL);
     if (!_spec_wl_so) {
         _spec_set_win_error("Failed to load libwayland-client.so.0");
-        return false;
-    }
-    _spec_decor_so = dlopen("libdecor-0.so.0", RTLD_LAZY | RTLD_LOCAL);
-    if (!_spec_decor_so) {
-        _spec_set_win_error("Failed to load libdecor-0.so.0");
         return false;
     }
 
@@ -148,6 +242,11 @@ static bool _spec_win_init_libs(void) {
     _wl_display_disconnect = dlsym(_spec_wl_so, "wl_display_disconnect");
     _wl_display_roundtrip = dlsym(_spec_wl_so, "wl_display_roundtrip");
     _wl_display_flush = dlsym(_spec_wl_so, "wl_display_flush");
+    _wl_display_dispatch_pending = dlsym(_spec_wl_so, "wl_display_dispatch_pending");
+    _wl_display_prepare_read = dlsym(_spec_wl_so, "wl_display_prepare_read");
+    _wl_display_read_events = dlsym(_spec_wl_so, "wl_display_read_events");
+    _wl_display_cancel_read = dlsym(_spec_wl_so, "wl_display_cancel_read");
+    _wl_display_get_fd = dlsym(_spec_wl_so, "wl_display_get_fd");
     _wl_proxy_marshal_flags = dlsym(_spec_wl_so, "wl_proxy_marshal_flags");
     _wl_proxy_add_listener = dlsym(_spec_wl_so, "wl_proxy_add_listener");
     _wl_proxy_destroy = dlsym(_spec_wl_so, "wl_proxy_destroy");
@@ -163,6 +262,26 @@ static bool _spec_win_init_libs(void) {
     _wl_keyboard_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_keyboard_interface");
     _wl_pointer_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_pointer_interface");
 
+    _spec_xdg_surface_types[0] = (const struct wl_interface*)&_spec_xdg_surface_iface_def;
+    _spec_xdg_surface_types[1] = _wl_surface_iface;
+    _spec_xdg_toplevel_types[0] = (const struct wl_interface*)&_spec_xdg_toplevel_iface_def;
+    _spec_zxdg_deco_types[0] = (const struct wl_interface*)&_spec_zxdg_deco_iface_def;
+    _spec_zxdg_deco_types[1] = (const struct wl_interface*)&_spec_xdg_toplevel_iface_def;
+
+    if (!_wl_display_connect || !_wl_proxy_marshal_flags || !_wl_surface_iface) {
+        _spec_set_win_error("Missing required Wayland symbols");
+        return false;
+    }
+    return true;
+}
+
+static bool _spec_win_init_libdecor(void) {
+    if (_spec_decor_so) return true;
+    _spec_decor_so = dlopen("libdecor-0.so.0", RTLD_LAZY | RTLD_LOCAL);
+    if (!_spec_decor_so) {
+        _spec_set_win_error("Failed to load libdecor-0.so.0");
+        return false;
+    }
     _libdecor_new = dlsym(_spec_decor_so, "libdecor_new");
     _libdecor_unref = dlsym(_spec_decor_so, "libdecor_unref");
     _libdecor_decorate = dlsym(_spec_decor_so, "libdecor_decorate");
@@ -176,10 +295,8 @@ static bool _spec_win_init_libs(void) {
     _libdecor_state_new = dlsym(_spec_decor_so, "libdecor_state_new");
     _libdecor_state_free = dlsym(_spec_decor_so, "libdecor_state_free");
     _libdecor_configuration_get_content_size = dlsym(_spec_decor_so, "libdecor_configuration_get_content_size");
-
-    if (!_wl_display_connect || !_wl_proxy_marshal_flags || !_wl_surface_iface ||
-        !_libdecor_new || !_libdecor_decorate || !_libdecor_dispatch || !_libdecor_state_new) {
-        _spec_set_win_error("Missing required Wayland/libdecor symbols");
+    if (!_libdecor_new || !_libdecor_decorate || !_libdecor_dispatch || !_libdecor_state_new) {
+        _spec_set_win_error("Missing required libdecor symbols");
         return false;
     }
     return true;
@@ -190,13 +307,21 @@ typedef struct SpecWaylandWindow {
     bool configured;
     bool should_close;
     bool use_vulkan;
+    bool use_xdg;
     int width;
     int height;
+    int pending_w;
+    int pending_h;
     struct wl_display* display;
     struct wl_registry* registry;
     struct wl_compositor* compositor;
     struct wl_shm* shm;
     struct wl_surface* surface;
+    void* xdg_wm_base;
+    void* xdg_surface;
+    void* xdg_toplevel;
+    void* decor_mgr;
+    void* xdg_decoration;
     struct wl_seat* seat;
     struct wl_keyboard* keyboard;
     struct wl_pointer* pointer;
@@ -410,6 +535,16 @@ static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t na
         if (w->seat) {
             _wl_proxy_add_listener((struct wl_proxy*)w->seat, (void (**)(void))&_spec_seat_listener, w);
         }
+    } else if (strcmp(iface, "xdg_wm_base") == 0 && !w->xdg_wm_base) {
+        w->xdg_wm_base = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
+            (const struct wl_interface*)&_spec_xdg_wm_base_iface_def, 1, 0,
+            name, iface, 1, NULL);
+    } else if (strcmp(iface, "zxdg_decoration_manager_v1") == 0 && !w->decor_mgr) {
+        w->decor_mgr = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
+            (const struct wl_interface*)&_spec_zxdg_deco_mgr_iface_def, 1, 0,
+            name, iface, 1, NULL);
     }
 }
 
@@ -581,6 +716,75 @@ static struct spec_libdecor_frame_interface _spec_frame_iface = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
+static void _spec_xdg_wm_ping(void* data, void* wm_base, uint32_t serial) {
+    (void)data;
+    uint32_t v = _wl_proxy_get_version((struct wl_proxy*)wm_base);
+    _wl_proxy_marshal_flags((struct wl_proxy*)wm_base, 3 /* XDG_WM_BASE_PONG */, NULL, v, 0, serial);
+}
+static const struct { void (*ping)(void*, void*, uint32_t); } _spec_xdg_wm_listener = { _spec_xdg_wm_ping };
+
+static void _spec_xdg_surf_configure(void* data, void* xdg_surf, uint32_t serial) {
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    uint32_t v = _wl_proxy_get_version((struct wl_proxy*)xdg_surf);
+    _wl_proxy_marshal_flags((struct wl_proxy*)xdg_surf, 4 /* XDG_SURFACE_ACK_CONFIGURE */, NULL, v, 0, serial);
+    if (!w) return;
+    int cw = w->pending_w > 0 ? w->pending_w : w->width;
+    int ch = w->pending_h > 0 ? w->pending_h : w->height;
+    if (cw <= 0) cw = 800;
+    if (ch <= 0) ch = 600;
+    if (!w->use_vulkan) {
+        if (!w->configured || cw != w->width || ch != w->height) {
+            _spec_ensure_shm_buffer(w, cw, ch);
+            if (w->buffer) {
+                uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)w->surface);
+                _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 1 /* WL_SURFACE_ATTACH */, NULL, sv, 0, w->buffer, 0, 0);
+                if (sv >= 4) {
+                    _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 9 /* WL_SURFACE_DAMAGE_BUFFER */, NULL, sv, 0, 0, 0, w->width, w->height);
+                }
+            }
+        }
+    } else {
+        w->width = cw;
+        w->height = ch;
+    }
+    if (w->surface) {
+        uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)w->surface);
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 6 /* WL_SURFACE_COMMIT */, NULL, sv, 0);
+    }
+    w->configured = true;
+}
+static const struct { void (*configure)(void*, void*, uint32_t); } _spec_xdg_surf_listener = { _spec_xdg_surf_configure };
+
+static void _spec_xdg_top_configure(void* data, void* top, int32_t width, int32_t height, void* states) {
+    (void)top; (void)states;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && width > 0 && height > 0) {
+        w->pending_w = width;
+        w->pending_h = height;
+    }
+}
+static void _spec_xdg_top_close(void* data, void* top) {
+    (void)top;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w) w->should_close = true;
+}
+static void _spec_xdg_top_bounds(void* d, void* t, int32_t w, int32_t h) { (void)d;(void)t;(void)w;(void)h; }
+static void _spec_xdg_top_caps(void* d, void* t, void* a) { (void)d;(void)t;(void)a; }
+static const struct {
+    void (*configure)(void*, void*, int32_t, int32_t, void*);
+    void (*close)(void*, void*);
+    void (*configure_bounds)(void*, void*, int32_t, int32_t);
+    void (*wm_capabilities)(void*, void*, void*);
+} _spec_xdg_top_listener = {
+    _spec_xdg_top_configure,
+    _spec_xdg_top_close,
+    _spec_xdg_top_bounds,
+    _spec_xdg_top_caps
+};
+
+static void _spec_zxdg_deco_configure(void* d, void* deco, uint32_t mode) { (void)d;(void)deco;(void)mode; }
+static const struct { void (*configure)(void*, void*, uint32_t); } _spec_zxdg_deco_listener = { _spec_zxdg_deco_configure };
+
 long long spec_pal_window_close(long long handle) {
     if (handle <= 0) return 0;
     size_t idx = (size_t)(handle - 1);
@@ -590,6 +794,21 @@ long long spec_pal_window_close(long long handle) {
 
     _spec_release_shm(w);
     if (w->key_queue) free(w->key_queue);
+    if (w->xdg_decoration && _wl_proxy_destroy) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_decoration, 0 /* DESTROY */, NULL, 1, 1 /* WL_MARSHAL_FLAG_DESTROY */);
+    }
+    if (w->xdg_toplevel && _wl_proxy_destroy) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_toplevel, 0 /* DESTROY */, NULL, 1, 1);
+    }
+    if (w->xdg_surface && _wl_proxy_destroy) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_surface, 0 /* DESTROY */, NULL, 1, 1);
+    }
+    if (w->decor_mgr && _wl_proxy_destroy) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->decor_mgr, 0 /* DESTROY */, NULL, 1, 1);
+    }
+    if (w->xdg_wm_base && _wl_proxy_destroy) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_wm_base, 0 /* DESTROY */, NULL, 1, 1);
+    }
     if (w->frame && _libdecor_frame_unref) _libdecor_frame_unref(w->frame);
     if (w->decor && _libdecor_unref) _libdecor_unref(w->decor);
     if (w->pointer && _wl_proxy_destroy) _wl_proxy_destroy((struct wl_proxy*)w->pointer);
@@ -655,41 +874,103 @@ long long spec_pal_window_open_ex(long long title_cstr, long long width, long lo
         return -1;
     }
 
-    w->decor = _libdecor_new(w->display, &_spec_decor_iface);
-    if (!w->decor) {
-        _spec_set_win_error("libdecor_new failed");
-        _wl_proxy_destroy((struct wl_proxy*)w->surface);
-        _wl_proxy_destroy((struct wl_proxy*)w->shm);
-        _wl_proxy_destroy((struct wl_proxy*)w->compositor);
-        _wl_proxy_destroy((struct wl_proxy*)w->registry);
-        _wl_display_disconnect(w->display);
-        free(w);
-        return -1;
-    }
+    if (w->xdg_wm_base && w->decor_mgr) {
+        w->use_xdg = true;
+        w->pending_w = (int)width;
+        w->pending_h = (int)height;
+        _wl_proxy_add_listener((struct wl_proxy*)w->xdg_wm_base, (void (**)(void))&_spec_xdg_wm_listener, w);
 
-    w->frame = _libdecor_decorate(w->decor, w->surface, &_spec_frame_iface, w);
-    if (!w->frame) {
-        _spec_set_win_error("libdecor_decorate failed");
-        _libdecor_unref(w->decor);
-        _wl_proxy_destroy((struct wl_proxy*)w->surface);
-        _wl_proxy_destroy((struct wl_proxy*)w->shm);
-        _wl_proxy_destroy((struct wl_proxy*)w->compositor);
-        _wl_proxy_destroy((struct wl_proxy*)w->registry);
-        _wl_display_disconnect(w->display);
-        free(w);
-        return -1;
-    }
+        w->xdg_surface = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)w->xdg_wm_base, 2 /* GET_XDG_SURFACE */,
+            (const struct wl_interface*)&_spec_xdg_surface_iface_def, 1, 0, NULL, w->surface);
+        if (!w->xdg_surface) {
+            _spec_set_win_error("Failed to create xdg_surface");
+            _wl_display_disconnect(w->display);
+            free(w);
+            return -1;
+        }
+        _wl_proxy_add_listener((struct wl_proxy*)w->xdg_surface, (void (**)(void))&_spec_xdg_surf_listener, w);
 
-    if (_libdecor_frame_set_app_id) _libdecor_frame_set_app_id(w->frame, "spec.suit");
-    if (_libdecor_frame_set_title) _libdecor_frame_set_title(w->frame, title);
-    if (!decorated && _libdecor_frame_set_visibility) _libdecor_frame_set_visibility(w->frame, false);
-    _libdecor_frame_map(w->frame);
-    _wl_display_flush(w->display);
+        w->xdg_toplevel = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)w->xdg_surface, 1 /* GET_TOPLEVEL */,
+            (const struct wl_interface*)&_spec_xdg_toplevel_iface_def, 1, 0, NULL);
+        if (!w->xdg_toplevel) {
+            _spec_set_win_error("Failed to create xdg_toplevel");
+            _wl_display_disconnect(w->display);
+            free(w);
+            return -1;
+        }
+        _wl_proxy_add_listener((struct wl_proxy*)w->xdg_toplevel, (void (**)(void))&_spec_xdg_top_listener, w);
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_toplevel, 2 /* SET_TITLE */, NULL, 1, 0, title);
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_toplevel, 3 /* SET_APP_ID */, NULL, 1, 0, "spec.suit");
 
-    int guard = 0;
-    while (!w->configured && !w->should_close && guard < 200) {
-        if (_libdecor_dispatch(w->decor, 16) < 0) break;
-        guard++;
+        w->xdg_decoration = _wl_proxy_marshal_flags(
+            (struct wl_proxy*)w->decor_mgr, 1 /* GET_TOPLEVEL_DECORATION */,
+            (const struct wl_interface*)&_spec_zxdg_deco_iface_def, 1, 0, NULL, w->xdg_toplevel);
+        if (w->xdg_decoration) {
+            _wl_proxy_add_listener((struct wl_proxy*)w->xdg_decoration, (void (**)(void))&_spec_zxdg_deco_listener, w);
+            if (decorated) {
+                _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_decoration, 1 /* SET_MODE */, NULL, 1, 0, 2U /* SERVER_SIDE */);
+            } else {
+                _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_decoration, 1 /* SET_MODE */, NULL, 1, 0, 1U /* CLIENT_SIDE */);
+            }
+        }
+
+        uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)w->surface);
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 6 /* WL_SURFACE_COMMIT */, NULL, sv, 0);
+        _wl_display_flush(w->display);
+
+        int guard = 0;
+        while (!w->configured && !w->should_close && guard < 200) {
+            if (_wl_display_roundtrip(w->display) < 0) break;
+            guard++;
+        }
+    } else {
+        if (!_spec_win_init_libdecor()) {
+            _wl_proxy_destroy((struct wl_proxy*)w->surface);
+            _wl_proxy_destroy((struct wl_proxy*)w->shm);
+            _wl_proxy_destroy((struct wl_proxy*)w->compositor);
+            _wl_proxy_destroy((struct wl_proxy*)w->registry);
+            _wl_display_disconnect(w->display);
+            free(w);
+            return -1;
+        }
+        w->decor = _libdecor_new(w->display, &_spec_decor_iface);
+        if (!w->decor) {
+            _spec_set_win_error("libdecor_new failed");
+            _wl_proxy_destroy((struct wl_proxy*)w->surface);
+            _wl_proxy_destroy((struct wl_proxy*)w->shm);
+            _wl_proxy_destroy((struct wl_proxy*)w->compositor);
+            _wl_proxy_destroy((struct wl_proxy*)w->registry);
+            _wl_display_disconnect(w->display);
+            free(w);
+            return -1;
+        }
+
+        w->frame = _libdecor_decorate(w->decor, w->surface, &_spec_frame_iface, w);
+        if (!w->frame) {
+            _spec_set_win_error("libdecor_decorate failed");
+            _libdecor_unref(w->decor);
+            _wl_proxy_destroy((struct wl_proxy*)w->surface);
+            _wl_proxy_destroy((struct wl_proxy*)w->shm);
+            _wl_proxy_destroy((struct wl_proxy*)w->compositor);
+            _wl_proxy_destroy((struct wl_proxy*)w->registry);
+            _wl_display_disconnect(w->display);
+            free(w);
+            return -1;
+        }
+
+        if (_libdecor_frame_set_app_id) _libdecor_frame_set_app_id(w->frame, "spec.suit");
+        if (_libdecor_frame_set_title) _libdecor_frame_set_title(w->frame, title);
+        if (!decorated && _libdecor_frame_set_visibility) _libdecor_frame_set_visibility(w->frame, false);
+        _libdecor_frame_map(w->frame);
+        _wl_display_flush(w->display);
+
+        int guard = 0;
+        while (!w->configured && !w->should_close && guard < 200) {
+            if (_libdecor_dispatch(w->decor, 16) < 0) break;
+            guard++;
+        }
     }
     if (!w->use_vulkan) {
         _spec_surface_present(w);
@@ -728,6 +1009,35 @@ long long spec_pal_window_surface_handle(long long handle) {
 long long spec_pal_window_poll(long long handle) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w || w->should_close) return 0;
+    if (w->use_xdg) {
+        if (_wl_display_dispatch_pending) {
+            if (_wl_display_dispatch_pending(w->display) < 0) {
+                w->should_close = true;
+                return 0;
+            }
+        }
+        _wl_display_flush(w->display);
+        if (_wl_display_prepare_read && _wl_display_read_events && _wl_display_get_fd) {
+            if (_wl_display_prepare_read(w->display) == 0) {
+                struct pollfd pfd;
+                pfd.fd = _wl_display_get_fd(w->display);
+                pfd.events = POLLIN;
+                pfd.revents = 0;
+                int pr = poll(&pfd, 1, 4);
+                if (pr > 0 && (pfd.revents & POLLIN)) {
+                    _wl_display_read_events(w->display);
+                    if (_wl_display_dispatch_pending) _wl_display_dispatch_pending(w->display);
+                } else {
+                    if (_wl_display_cancel_read) _wl_display_cancel_read(w->display);
+                }
+            } else if (_wl_display_dispatch_pending) {
+                _wl_display_dispatch_pending(w->display);
+            }
+        }
+        if (w->should_close) return 0;
+        _wl_display_flush(w->display);
+        return 1;
+    }
     if (_libdecor_dispatch(w->decor, 16) < 0) {
         w->should_close = true;
         return 0;

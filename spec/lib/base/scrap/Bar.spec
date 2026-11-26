@@ -76,9 +76,9 @@ Class of SewNode is Bar{
 		:heightPt: heightPt;
 	}
 
-	local Function of Int is textScale(){
-		local Int is ts: scale:px(pt: 2.0);
-		return if({ ts < 1 }, { 1 }, { ts });
+	local Function of Int is fontPx(){
+		local Int is px: scale:px(pt: 13.0);
+		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	replace Function of Size is measure(Constraints is c){
@@ -101,26 +101,26 @@ Class of SewNode is Bar{
 			});
 		});
 
-		local Int is ts: :textScale();
-		local Int is th: ctx:measureTextHeight(scale: ts);
+		local Int is fpx: :fontPx();
+		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is ty: b:y + (b:height - th) / 2;
 		local Int is padX: scale:px(pt: 10.0);
 
 		local String is lStr: leftText:current();
 		if({ lStr != '' }, {
-			ctx:drawText(x: b:x + padX, y: ty, text: lStr, color: theme:textPrimary, scale: ts);
+			ctx:drawText(x: b:x + padX, y: ty, text: lStr, color: theme:textPrimary, pixelHeight: fpx);
 		});
 
 		local String is cStr: centerText:current();
 		if({ cStr != '' }, {
-			local Int is cw: ctx:measureTextWidth(text: cStr, scale: ts);
-			ctx:drawText(x: b:x + (b:width - cw) / 2, y: ty, text: cStr, color: theme:textPrimary, scale: ts);
+			local Int is cw: ctx:measureTextWidth(text: cStr, pixelHeight: fpx);
+			ctx:drawText(x: b:x + (b:width - cw) / 2, y: ty, text: cStr, color: theme:textPrimary, pixelHeight: fpx);
 		});
 
 		local String is rStr: rightText:current();
 		if({ rStr != '' }, {
-			local Int is rw: ctx:measureTextWidth(text: rStr, scale: ts);
-			ctx:drawText(x: b:x + b:width - padX - rw, y: ty, text: rStr, color: theme:textPrimary, scale: ts);
+			local Int is rw: ctx:measureTextWidth(text: rStr, pixelHeight: fpx);
+			ctx:drawText(x: b:x + b:width - padX - rw, y: ty, text: rStr, color: theme:textPrimary, pixelHeight: fpx);
 		});
 	}
 

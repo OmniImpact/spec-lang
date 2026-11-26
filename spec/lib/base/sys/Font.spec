@@ -24,6 +24,23 @@ Class is Font{
 		return handle > 0;
 	}
 
+	## Resolves and loads the OS default sans-serif TrueType font.
+	Function of Boolean is loadDefault(){
+		if({ handle > 0 }, { close(); });
+		handle: base:sysinternal:Font:pal_font_load_default();
+		return handle > 0;
+	}
+
+	## Measures the horizontal pixel advance of UTF-8 [text] at [pixelHeight].
+	Function of Int is measureWidth(String is text, Int is pixelHeight: 16){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Font:pal_font_measure_width(
+			handle: handle,
+			text_cstr: :cstrAddr(s: text),
+			pixel_height: pixelHeight
+		);
+	}
+
 	## Closes the loaded font.
 	Function is close(){
 		if({ handle > 0 }, {

@@ -39,8 +39,8 @@ Class of SewNode is Label{
 
 	replace Function of Size is measure(Constraints is c){
 		local DrawContext is dummy: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
-		local Int is tw: dummy:measureTextWidth(text: text, scale: scale);
-		local Int is th: dummy:measureTextHeight(scale: scale);
+		local Int is tw: dummy:measureTextWidth(text: text, pixelHeight: scale * 7);
+		local Int is th: dummy:measureTextHeight(pixelHeight: scale * 7);
 		dummy:canvas:dispose();
 		desiredSize: Size(
 			width: c:clampW(w: tw + padding * 2),
@@ -50,7 +50,7 @@ Class of SewNode is Label{
 	}
 
 	## Paints the label panel, border, and text into [ctx] at its arranged `bounds()`.
-	Function is paint(DrawContext is ctx){
+	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bgColor);
@@ -60,7 +60,7 @@ Class of SewNode is Label{
 			y: b:y + padding,
 			text: text,
 			color: textColor,
-			scale: scale
+			pixelHeight: scale * 7
 		);
 	}
 }
