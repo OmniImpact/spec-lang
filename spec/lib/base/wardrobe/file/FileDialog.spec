@@ -235,6 +235,17 @@ Class is FileDialog{
 		});
 	}
 
+	local Function of String is dirLabelOf(String is p){
+		if({ p == '' || p == '/' }, { return '/'; });
+		local Int is len: p:length();
+		local Int is i: len - 1;
+		while({ i > 0 && p:byteAt(index: i) == 47 }, { i: i - 1; });
+		local Int is endIdx: i + 1;
+		while({ i >= 0 && p:byteAt(index: i) != 47 }, { i: i - 1; });
+		if({ i + 1 < endIdx }, { return p:substring(start: i + 1, end: endIdx); });
+		return p;
+	}
+
 	local Function is loadDirectory(String is dirPath){
 		local Dir is d: Dir();
 		local Array of String is raw: d:dirList(path: dirPath);
@@ -275,6 +286,9 @@ Class is FileDialog{
 
 		curDir: dirPath;
 		editPath: dirPath;
+		if({ directoryMode:current() }, {
+			fileName: :dirLabelOf(p: dirPath);
+		});
 		selectedRow: -1;
 		scrollRow: 0;
 		hoverRow: -1;
@@ -863,6 +877,9 @@ Class is FileDialog{
 							});
 						}, {
 							selectedRow: idx;
+							if({ directoryMode:current() }, {
+								fileName: if({ name == '..' }, { :dirLabelOf(p: :parentDir(dir: curDir)) }, { name });
+							});
 							if({ name != '..' }, {
 								dragCandidateRow: idx;
 								dragStartX: cx;

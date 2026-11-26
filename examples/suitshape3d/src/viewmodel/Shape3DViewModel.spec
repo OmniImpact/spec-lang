@@ -28,7 +28,6 @@ Class is Shape3DViewModel{
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
-	Float is toolbarHeightPt: 30.0;
 
 	Mat4 is mOps: Mat4();
 	Math is math: Math();
@@ -55,7 +54,7 @@ Class is Shape3DViewModel{
 	}
 
 	local Function of ToolbarConfig is buildToolbarConfig(){
-		local ToolbarConfig is cfg: ToolbarConfig(heightPt: toolbarHeightPt);
+		local ToolbarConfig is cfg: ToolbarConfig();
 
 		local MenuConfig is fileMenu: MenuConfig(id: 'file', label: 'File');
 		fileMenu:addItem(item: MenuItemConfig(

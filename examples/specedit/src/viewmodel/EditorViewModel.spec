@@ -62,7 +62,6 @@ Class is EditorViewModel{
 	Float is emaCpuPct: 0.0;
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
-	Float is toolbarHeightPt: 30.0;
 	SettingsViewModel is settingsVm: SettingsViewModel();
 	String is aboutTitle: SpecEditStrings:ABOUT_TITLE;
 	Float is aboutWidthPt: 420.0;
@@ -258,7 +257,6 @@ Class is EditorViewModel{
 
 	local Function of ToolbarConfig is buildToolbarConfig(){
 		local ToolbarConfig is cfg: ToolbarConfig(
-			heightPt: toolbarHeightPt,
 			radioOffIconSvg: icons:radioOff,
 			radioOnIconSvg: icons:radioOn,
 			checkboxOffIconSvg: icons:checkboxOff,
