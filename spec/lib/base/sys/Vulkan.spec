@@ -23,7 +23,7 @@ Class is Vulkan{
 		Int is fragSpvAddr,
 		Int is fragSpvBytes
 	){
-		if({ handle != 0 }, { destroy(); });
+		if({ handle != 0 }, { shutdown(); });
 		handle: base:sysinternal:Vulkan:pal_vulkan_create(
 			wl_display: displayHandle,
 			wl_surface: surfaceHandle,
@@ -73,7 +73,7 @@ Class is Vulkan{
 	}
 
 	## Destroys the Vulkan context and releases GPU resources.
-	Function is destroy(){
+	Function is shutdown(){
 		if({ handle != 0 }, {
 			base:sysinternal:Vulkan:pal_vulkan_destroy(handle: handle);
 			handle: 0;

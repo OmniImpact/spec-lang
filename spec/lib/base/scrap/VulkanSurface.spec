@@ -85,7 +85,7 @@ Class of SewNode is VulkanSurface{
 
 	## Releases Vulkan resources and native staging memory.
 	Function is dispose(){
-		vk:destroy();
+		vk:shutdown();
 		if({ mvpAddr != 0 }, {
 			free(ptr: mvpAddr);
 			mvpAddr: 0;
