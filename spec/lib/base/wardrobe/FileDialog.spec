@@ -50,6 +50,7 @@ Class is FileDialog{
 	String is curDir: '.';
 	String is editPath: '.';
 	String is fileName: '';
+	Boolean is showHidden: false;
 	Int is focusTarget: 0; ## 0=list, 1=path bar, 2=filename input
 	Array of String is entryNames: Array();
 	Array of Boolean is entryIsDir: Array();
@@ -93,9 +94,9 @@ Class is FileDialog{
 		:dialogTitle: dialogTitle;
 		:suggestedName: suggestedName;
 		:allowMultiple: allowMultiple;
-		:initialDir: initialDir;
-		:curDir: initialDir;
-		:editPath: initialDir;
+		:initialDir: :resolveDir(dirPath: initialDir);
+		:curDir: :initialDir;
+		:editPath: :initialDir;
 		:theme: theme;
 		:scale: scale;
 		:widthPt: widthPt;
@@ -112,6 +113,7 @@ Class is FileDialog{
 		isDirty: false;
 		lastW: 0;
 		lastH: 0;
+		showHidden: false;
 		focusTarget: 0;
 		selectedRow: -1;
 		scrollRow: 0;
@@ -124,6 +126,15 @@ Class is FileDialog{
 		dragCandidateRow: -1;
 		isDraggingFolder: false;
 		dragOverPinned: false;
+	}
+
+	local Function of String is resolveDir(String is dirPath){
+		if({ dirPath == '.' || dirPath == '' }, {
+			local String is pwd: Process():getEnv(key: 'PWD', default: '');
+			if({ pwd != '' && Dir():isDir(path: pwd) }, { return pwd; });
+			return '.';
+		});
+		return dirPath;
 	}
 
 	local Function is addPinned(String is name, String is path){
@@ -169,8 +180,12 @@ Class is FileDialog{
 
 	local Function of String is parentDir(String is dir){
 		if({ dir == '' || dir == '.' }, { return '..'; });
+		if({ dir == '..' }, { return '../..'; });
 		if({ dir == '/' }, { return '/'; });
 		local Int is len: dir:length();
+		if({ len >= 3 && dir:substring(start: len - 3, end: len) == '/..' }, {
+			return dir . '/..';
+		});
 		local Int is i: len - 1;
 		while({ i > 0 && dir:byteAt(index: i) == 47 }, { i: i - 1; });
 		while({ i > 0 && dir:byteAt(index: i) != 47 }, { i: i - 1; });
@@ -236,7 +251,9 @@ Class is FileDialog{
 		local Int is i: 0;
 		while({ i < raw:length() }, {
 			local String is name: raw:get(index: i);
-			if({ name != '.' && name != '..' }, {
+			local Boolean is isDot: name:length() > 0 && name:byteAt(index: 0) == 46;
+			local Boolean is visible: showHidden || !isDot;
+			if({ name != '.' && name != '..' && visible }, {
 				local String is full: :joinPath(dir: dirPath, name: name);
 				if({ d:isDir(path: full) }, {
 					dirs:add(item: name);
@@ -251,10 +268,6 @@ Class is FileDialog{
 
 		entryNames: Array();
 		entryIsDir: Array();
-		if({ dirPath != '/' }, {
-			entryNames:add(item: '..');
-			entryIsDir:add(item: true);
-		});
 		i: 0;
 		while({ i < dirs:length() }, {
 			entryNames:add(item: dirs:get(index: i));
@@ -341,6 +354,7 @@ Class is FileDialog{
 		ctx:fillRect(x: 0, y: headerH - 1, w: w, h: 1, color: theme:toolbarBorder);
 
 		local Int is upW: scale:px(pt: 44.0);
+		local Int is hidW: scale:px(pt: 70.0);
 		local Int is topBoxH: scale:px(pt: 26.0);
 		local Int is topBoxY: (headerH - topBoxH) / 2;
 		local Int is upBg: if({ hoverBtn == 3 }, { theme:hoverBg }, { theme:menuBg });
@@ -349,8 +363,15 @@ Class is FileDialog{
 		local Int is uw: ctx:measureTextWidth(text: 'Up', pixelHeight: fpx);
 		ctx:drawText(x: padX + (upW - uw) / 2, y: topBoxY + (topBoxH - th) / 2, text: 'Up', color: theme:textPrimary, pixelHeight: fpx);
 
+		local Int is hidX: w - padX - hidW;
+		local Int is hidBg: if({ showHidden }, { theme:activeBg }, { if({ hoverBtn == 4 }, { theme:hoverBg }, { theme:menuBg }) });
+		ctx:fillRect(x: hidX, y: topBoxY, w: hidW, h: topBoxH, color: hidBg);
+		ctx:strokeRect(x: hidX, y: topBoxY, w: hidW, h: topBoxH, color: theme:menuBorder);
+		local Int is hw: ctx:measureTextWidth(text: 'Hidden', pixelHeight: fpx);
+		ctx:drawText(x: hidX + (hidW - hw) / 2, y: topBoxY + (topBoxH - th) / 2, text: 'Hidden', color: theme:textPrimary, pixelHeight: fpx);
+
 		local Int is pathX: padX + upW + scale:px(pt: 8.0);
-		local Int is pathW: if({ w - padX > pathX }, { w - padX - pathX }, { 40 });
+		local Int is pathW: if({ hidX - scale:px(pt: 8.0) > pathX }, { hidX - scale:px(pt: 8.0) - pathX }, { 40 });
 		local Int is pathBorder: if({ focusTarget == 1 }, { theme:activeBg }, { theme:menuBorder });
 		ctx:fillRect(x: pathX, y: topBoxY, w: pathW, h: topBoxH, color: theme:windowBg);
 		ctx:strokeRect(x: pathX, y: topBoxY, w: pathW, h: topBoxH, color: pathBorder);
@@ -654,10 +675,12 @@ Class is FileDialog{
 		local Int is sbX: listX + listW;
 
 		local Int is upW: scale:px(pt: 44.0);
+		local Int is hidW: scale:px(pt: 70.0);
 		local Int is topBoxH: scale:px(pt: 26.0);
 		local Int is topBoxY: (headerH - topBoxH) / 2;
+		local Int is hidX: w - padX - hidW;
 		local Int is pathX: padX + upW + scale:px(pt: 8.0);
-		local Int is pathW: if({ w - padX > pathX }, { w - padX - pathX }, { 40 });
+		local Int is pathW: if({ hidX - scale:px(pt: 8.0) > pathX }, { hidX - scale:px(pt: 8.0) - pathX }, { 40 });
 
 		local Int is fy: h - footerH;
 		local Int is boxY: fy + scale:px(pt: 8.0);
@@ -683,8 +706,9 @@ Class is FileDialog{
 			if({ pcand >= 0 && pcand < pinnedNames:length() }, { nextHoverPin: pcand; });
 		});
 		local Int is nextHoverBtn: 0;
-		if({ py >= topBoxY && py < topBoxY + topBoxH && px >= padX && px < padX + upW }, {
-			nextHoverBtn: 3;
+		if({ py >= topBoxY && py < topBoxY + topBoxH }, {
+			if({ px >= padX && px < padX + upW }, { nextHoverBtn: 3; });
+			if({ px >= hidX && px < hidX + hidW }, { nextHoverBtn: 4; });
 		});
 		if({ py >= btnY && py < btnY + btnH }, {
 			if({ px >= cancelX && px < cancelX + btnW }, { nextHoverBtn: 1; });
@@ -752,6 +776,12 @@ Class is FileDialog{
 				if({ cx >= padX && cx < padX + upW }, {
 					focusTarget: 0;
 					:loadDirectory(dirPath: :parentDir(dir: curDir));
+					return;
+				});
+				if({ cx >= hidX && cx < hidX + hidW }, {
+					focusTarget: 0;
+					showHidden: !showHidden;
+					:loadDirectory(dirPath: curDir);
 					return;
 				});
 				if({ cx >= pathX && cx < pathX + pathW }, {
