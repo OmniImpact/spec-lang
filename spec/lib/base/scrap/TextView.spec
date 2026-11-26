@@ -58,6 +58,32 @@ Class of SewNode is TextView{
 		Float is padPt: 12.0,
 		Float is lineGapPt: 4.0
 	){
+		:initTextView(
+			text: text,
+			wrap: wrap,
+			lineNumbers: lineNumbers,
+			cursorStatus: cursorStatus,
+			onTextChange: onTextChange,
+			onRightClickMenu: onRightClickMenu,
+			onClipboardWrite: onClipboardWrite,
+			onClipboardRead: onClipboardRead,
+			padPt: padPt,
+			lineGapPt: lineGapPt
+		);
+	}
+
+	Function is initTextView(
+		TextEmitter is text,
+		BoolEmitter is wrap: BoolEmitter(initial: false),
+		BoolEmitter is lineNumbers: BoolEmitter(initial: false),
+		TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1'),
+		Function is onTextChange: local Function(String is _next){},
+		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
+		Function is onClipboardWrite: local Function(String is _text){},
+		Function of String is onClipboardRead: local Function of String(){ '' },
+		Float is padPt: 12.0,
+		Float is lineGapPt: 4.0
+	){
 		:text: text;
 		:wrap: wrap;
 		:lineNumbers: lineNumbers;
@@ -634,6 +660,11 @@ Class of SewNode is TextView{
 		return true;
 	}
 
+	## Renders one display line of text; subclasses (e.g. `CodeEditorView`) can override for syntax highlighting.
+	Function is paintLineText(DrawContext is ctx, Int is x, Int is y, String is lineStr, Int is rLine, Int is rStart, Int is fpx){
+		ctx:drawText(x: x, y: y, text: lineStr, color: activeTheme:textPrimary, pixelHeight: fpx);
+	}
+
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		local Int is fpx: :fontPx();
@@ -697,12 +728,14 @@ Class of SewNode is TextView{
 					});
 
 					if({ lineStr != '' }, {
-						ctx:drawText(
+						:paintLineText(
+							ctx: ctx,
 							x: textStartX,
 							y: ly,
-							text: lineStr,
-							color: activeTheme:textPrimary,
-							pixelHeight: fpx
+							lineStr: lineStr,
+							rLine: rLine,
+							rStart: rStart,
+							fpx: fpx
 						);
 					});
 

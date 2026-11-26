@@ -21,7 +21,7 @@ Class is EditorView{
 		['base', 'scrap', MenuConfig],
 		['base', 'scrap', TabBar],
 		['base', 'scrap', ScrollView],
-		['base', 'scrap', TextView],
+		['base', 'scrap', CodeEditorView],
 		['base', 'scrap', TextScrap],
 		['base', 'scrap', ScrapPanel],
 		['base', 'scrap', ScrapButton],
@@ -34,14 +34,15 @@ Class is EditorView{
 
 	EditorViewModel is vm: EditorViewModel();
 	ToolkitContainer is container: ToolkitContainer();
-	TextView is editorBody: TextView(text: TextEmitter(initial: ''));
-	ScrollView is editorScroll: ScrollView(child: TextView(text: TextEmitter(initial: '')));
+	CodeEditorView is editorBody: CodeEditorView(text: TextEmitter(initial: ''));
+	ScrollView is editorScroll: ScrollView(child: CodeEditorView(text: TextEmitter(initial: '')));
 	TabBar is tabBar: TabBar();
 
 	replace Function is init(EditorViewModel is vm){
 		:vm: vm;
-		editorBody: TextView(
+		editorBody: CodeEditorView(
 			text: vm:documentText,
+			filePath: vm:activeFilePath,
 			wrap: vm:wrapEnabled,
 			lineNumbers: vm:lineNumbersEnabled,
 			cursorStatus: vm:cursorStatus,

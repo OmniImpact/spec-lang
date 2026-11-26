@@ -22,6 +22,13 @@ Class is Theme{
 	Int is textPrimary: 0;
 	Int is textMuted: 0;
 	Int is textAccent: 0;
+	Int is synKeyword: 0;
+	Int is synType: 0;
+	Int is synString: 0;
+	Int is synNumber: 0;
+	Int is synComment: 0;
+	Int is synPunct: 0;
+	Int is synHeading: 0;
 	Float is toolbarHeightPt: 30.0;
 	Float is menuItemHeightPt: 28.0;
 	Float is paddingPt: 8.0;
@@ -42,6 +49,13 @@ Class is Theme{
 			textPrimary: c:argb(r: 28, g: 28, b: 28, a: 255);
 			textMuted: c:argb(r: 96, g: 96, b: 96, a: 255);
 			textAccent: c:argb(r: 40, g: 40, b: 40, a: 255);
+			synKeyword: c:argb(r: 18, g: 18, b: 18, a: 255);
+			synType: c:argb(r: 42, g: 42, b: 42, a: 255);
+			synString: c:argb(r: 80, g: 80, b: 80, a: 255);
+			synNumber: c:argb(r: 64, g: 64, b: 64, a: 255);
+			synComment: c:argb(r: 122, g: 122, b: 122, a: 255);
+			synPunct: c:argb(r: 110, g: 110, b: 110, a: 255);
+			synHeading: c:argb(r: 16, g: 16, b: 16, a: 255);
 		}, {
 			windowBg: c:argb(r: 20, g: 23, b: 33, a: 255);
 			toolbarBg: c:argb(r: 32, g: 37, b: 50, a: 255);
@@ -56,6 +70,13 @@ Class is Theme{
 			textPrimary: c:argb(r: 242, g: 245, b: 250, a: 255);
 			textMuted: c:argb(r: 160, g: 170, b: 190, a: 255);
 			textAccent: c:argb(r: 100, g: 210, b: 255, a: 255);
+			synKeyword: c:argb(r: 248, g: 250, b: 255, a: 255);
+			synType: c:argb(r: 216, g: 224, b: 238, a: 255);
+			synString: c:argb(r: 184, g: 194, b: 212, a: 255);
+			synNumber: c:argb(r: 198, g: 206, b: 224, a: 255);
+			synComment: c:argb(r: 132, g: 142, b: 162, a: 255);
+			synPunct: c:argb(r: 146, g: 156, b: 176, a: 255);
+			synHeading: c:argb(r: 250, g: 252, b: 255, a: 255);
 		});
 		c:dispose();
 	}

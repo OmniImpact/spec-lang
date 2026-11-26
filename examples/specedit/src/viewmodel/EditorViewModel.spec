@@ -38,6 +38,7 @@ Class is EditorViewModel{
 	BoolEmitter is wrapEnabled: BoolEmitter(initial: false);
 	BoolEmitter is lineNumbersEnabled: BoolEmitter(initial: false);
 	TextEmitter is documentText: TextEmitter(initial: '');
+	TextEmitter is activeFilePath: TextEmitter(initial: '');
 	TextEmitter is cursorStatus: TextEmitter(initial: '');
 	TextEmitter is versionText: TextEmitter(initial: SpecEditStrings:VERSION_TEXT);
 	TextEmitter is descriptionText: TextEmitter(initial: SpecEditStrings:DESCRIPTION_TEXT);
@@ -82,6 +83,7 @@ Class is EditorViewModel{
 		wrapEnabled: BoolEmitter(initial: false);
 		lineNumbersEnabled: BoolEmitter(initial: false);
 		documentText: TextEmitter(initial: '');
+		activeFilePath: TextEmitter(initial: '');
 		cursorStatus: TextEmitter(initial: '');
 		toolbarConfig: :buildToolbarConfig();
 		:refreshMenuStates();
@@ -124,6 +126,7 @@ Class is EditorViewModel{
 		model: documents:get(index: idx);
 		activeRoute:emit(value: SpecEditStrings:ROUTE_FILES);
 		documentText:emit(value: model:text);
+		activeFilePath:emit(value: model:filePath);
 		cursorStatus:emit(value: SpecEditStrings:DEFAULT_CURSOR_STATUS);
 		title:emit(value: :computeTitle());
 		:syncTabs();
@@ -303,6 +306,7 @@ Class is EditorViewModel{
 			model:filePath: path;
 			model:documentName: :baseName(path: path);
 			model:dirty: false;
+			activeFilePath:emit(value: path);
 			title:emit(value: :computeTitle());
 			:syncTabs();
 			:refreshMenuStates();
@@ -396,6 +400,7 @@ Class is EditorViewModel{
 		model: EditorModel(documentName: SpecEditStrings:UNTITLED);
 		activeRoute:emit(value: SpecEditStrings:ROUTE_WELCOME);
 		documentText:emit(value: '');
+		activeFilePath:emit(value: '');
 		cursorStatus:emit(value: '');
 		title:emit(value: :computeTitle());
 		:syncTabs();

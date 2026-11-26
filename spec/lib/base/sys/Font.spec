@@ -14,7 +14,7 @@ Class is Font{
 		['base', 'sysinternal', Font]
 	];
 
-	held Array of Int is cachedState: Array([-1, 0]);
+	held Array of Int is cachedState: Array([-1, 0, -1, -1, -1]);
 	held Array of Int is cachedFallbackHandles: Array();
 	held Array of Int is cachedGposHandles: Array();
 	held Array of OpenTypeGpos is cachedGposTables: Array();
@@ -152,6 +152,53 @@ Class is Font{
 			local String is p: fallbacksList:get(index: i);
 			if({ fileExists(path: p) && :load(path: p) }, {
 				Font:cachedState:set(index: 0, item: handle);
+				ownsHandle: false;
+				return true;
+			});
+			i: i + 1;
+		});
+		return false;
+	}
+
+	## Loads a styled variant (bold/italic) of the default sans-serif font, cached process-wide.
+	Function of Boolean is loadStyled(Boolean is bold: false, Boolean is italic: false){
+		if({ !bold && !italic }, { return :loadDefault(); });
+		local Int is slot: if({ bold && italic }, { 4 }, { if({ bold }, { 2 }, { 3 }) });
+		local Int is cached: Font:cachedState:get(index: slot);
+		if({ cached > 0 }, {
+			if({ handle > 0 && ownsHandle }, {
+				base:sysinternal:Font:pal_font_close(handle: handle);
+			});
+			handle: cached;
+			ownsHandle: false;
+			return true;
+		});
+		local Array of String is candidates: if({ bold && italic }, {
+			Array([
+				'/usr/share/fonts/truetype/noto/NotoSans-BoldItalic.ttf',
+				'/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf',
+				'/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf'
+			])
+		}, {
+			if({ bold }, {
+				Array([
+					'/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf',
+					'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+					'/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
+				])
+			}, {
+				Array([
+					'/usr/share/fonts/truetype/noto/NotoSans-Italic.ttf',
+					'/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf',
+					'/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf'
+				])
+			})
+		});
+		local Int is i: 0;
+		while({ i < candidates:length() }, {
+			local String is p: candidates:get(index: i);
+			if({ fileExists(path: p) && :load(path: p) }, {
+				Font:cachedState:set(index: slot, item: handle);
 				ownsHandle: false;
 				return true;
 			});

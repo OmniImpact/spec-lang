@@ -12,7 +12,10 @@ Class is DrawContext{
 	];
 
 	held Font is sharedFont: Font();
-	held Array of Int is sharedFontState: Array([0]);
+	held Font is sharedBoldFont: Font();
+	held Font is sharedItalicFont: Font();
+	held Font is sharedBoldItalicFont: Font();
+	held Array of Int is sharedFontState: Array([0, 0, 0, 0]);
 	held DrawContext is shared: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
@@ -66,6 +69,32 @@ Class is DrawContext{
 			DrawContext:sharedFont:loadDefault();
 		});
 		return DrawContext:sharedFont;
+	}
+
+	Function of Font is styledFont(Boolean is bold: false, Boolean is italic: false){
+		if({ !bold && !italic }, { return :activeFont(); });
+		if({ bold && italic }, {
+			if({ DrawContext:sharedFontState:get(index: 3) == 0 }, {
+				DrawContext:sharedFontState:set(index: 3, item: 1);
+				DrawContext:sharedBoldItalicFont:loadStyled(bold: true, italic: true);
+			});
+			if({ DrawContext:sharedBoldItalicFont:isLoaded() }, { return DrawContext:sharedBoldItalicFont; });
+		});
+		if({ bold }, {
+			if({ DrawContext:sharedFontState:get(index: 1) == 0 }, {
+				DrawContext:sharedFontState:set(index: 1, item: 1);
+				DrawContext:sharedBoldFont:loadStyled(bold: true, italic: false);
+			});
+			if({ DrawContext:sharedBoldFont:isLoaded() }, { return DrawContext:sharedBoldFont; });
+		});
+		if({ italic }, {
+			if({ DrawContext:sharedFontState:get(index: 2) == 0 }, {
+				DrawContext:sharedFontState:set(index: 2, item: 1);
+				DrawContext:sharedItalicFont:loadStyled(bold: false, italic: true);
+			});
+			if({ DrawContext:sharedItalicFont:isLoaded() }, { return DrawContext:sharedItalicFont; });
+		});
+		return :activeFont();
 	}
 
 	## Clears the target canvas to fully transparent (`0x00000000`).
@@ -152,8 +181,8 @@ Class is DrawContext{
 	}
 
 	## Measures the pixel width of UTF-8 [text] at [pixelHeight] using the system font.
-	Function of Int is measureTextWidth(String is text, Int is pixelHeight: 15){
-		local Font is f: :activeFont();
+	Function of Int is measureTextWidth(String is text, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false){
+		local Font is f: :styledFont(bold: bold, italic: italic);
 		if({ !f:isLoaded() }, { return 0; });
 		return f:measureWidth(text: text, pixelHeight: pixelHeight);
 	}
@@ -164,9 +193,10 @@ Class is DrawContext{
 	}
 
 	## Draws UTF-8 [text] at ([x], [y]) using the loaded system TrueType font.
-	Function is drawText(Int is x, Int is y, String is text, Int is color, Int is pixelHeight: 15){
-		local Font is f: :activeFont();
+	Function is drawText(Int is x, Int is y, String is text, Int is color, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false){
+		local Font is f: :styledFont(bold: bold, italic: italic);
 		if({ !f:isLoaded() }, { return; });
+		local Float is wOverride: if({ bold && !DrawContext:sharedBoldFont:isLoaded() }, { 0.75 }, { -1.0 });
 		f:drawText(
 			pixelsAddr: canvas:pixelsAddr(),
 			bufW: canvas:width,
@@ -176,6 +206,7 @@ Class is DrawContext{
 			text: text,
 			pixelHeight: pixelHeight,
 			argbColor: color,
+			weight: wOverride,
 			clipX: if({ hasClip }, { clipX }, { 0 }),
 			clipY: if({ hasClip }, { clipY }, { 0 }),
 			clipW: if({ hasClip }, { clipW }, { -1 }),
