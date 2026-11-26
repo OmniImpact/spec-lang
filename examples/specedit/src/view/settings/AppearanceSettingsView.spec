@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Appearance settings category view using VSection, HSection, and DecoratedTextInput.
+#! Appearance settings category view using SectionV, SectionH, and DecoratedTextInput.
 
 Class is AppearanceSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -11,8 +11,8 @@ Class is AppearanceSettingsView{
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
-		['base', 'scrap', VSection],
-		['base', 'scrap', HSection],
+		['base', 'scrap', SectionV],
+		['base', 'scrap', SectionH],
 		['base', 'scrap', DecoratedTextInput],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
@@ -36,7 +36,7 @@ Class is AppearanceSettingsView{
 		:themeBtns: Array();
 		:zoomBtns: Array();
 
-		local HSection is themeRow: HSection();
+		local SectionV is themeSection: SectionV(segmented: true);
 		local Array of ThemePreset is presets: Theme:presets();
 		local Int is ti: 0;
 		while({ ti < presets:length() }, {
@@ -48,9 +48,10 @@ Class is AppearanceSettingsView{
 				onClick: local Function(){ vm:selectTheme(preset: p); }
 			);
 			themeBtns:add(item: btn);
-			themeRow:row:addChild(child: btn);
+			themeSection:col:addChild(child: btn);
 			ti: ti + 1;
 		});
+		themeSection:joinSegmentedEdges();
 
 		:docDeltaInput: DecoratedTextInput(
 			text: vm:docDeltaLabel(),
@@ -66,7 +67,7 @@ Class is AppearanceSettingsView{
 			onSubmit: local Function(String is v){ vm:setBaseTextPtFromText(raw: v); }
 		);
 
-		local HSection is docSizeRow: HSection(
+		local SectionH is docSizeRow: SectionH(
 			children: Array([
 				docDeltaInput,
 				ScrapButton(
@@ -77,7 +78,7 @@ Class is AppearanceSettingsView{
 			])
 		);
 
-		local HSection is baseTextRow: HSection(
+		local SectionH is baseTextRow: SectionH(
 			children: Array([
 				baseTextInput,
 				ScrapButton(
@@ -88,7 +89,7 @@ Class is AppearanceSettingsView{
 			])
 		);
 
-		local HSection is zoomRow: HSection();
+		local SectionH is zoomRow: SectionH(segmented: true);
 		local Int is zi: 0;
 		while({ zi < zoomValues:length() }, {
 			local Int is zp: zoomValues:get(index: zi);
@@ -102,12 +103,13 @@ Class is AppearanceSettingsView{
 			zoomRow:row:addChild(child: zBtn);
 			zi: zi + 1;
 		});
+		zoomRow:joinSegmentedEdges();
 
 		:sync();
 
-		return VSection(
+		return SectionV(
 			children: Array([
-				HSection(
+				SectionH(
 					children: Array([
 						Label(text: 'Appearance', heading: true),
 						ScrapButton(
@@ -119,14 +121,14 @@ Class is AppearanceSettingsView{
 				),
 				Frame(
 					title: 'Theme',
-					child: themeRow
+					child: themeSection
 				),
 				Frame(
 					title: 'Text Size',
-					child: VSection(
+					child: SectionV(
 						children: Array([
-							VSection(title: 'Document Text Size (relative to default)', children: Array([docSizeRow])),
-							VSection(title: 'Default Theme Text Size', children: Array([baseTextRow]))
+							SectionV(title: 'Document Text Size (relative to default)', children: Array([docSizeRow])),
+							SectionV(title: 'Default Theme Text Size', children: Array([baseTextRow]))
 						])
 					)
 				),

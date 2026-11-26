@@ -28,6 +28,10 @@ Class of SewNode is ScrapButton{
 	Boolean is selected: false;
 	Boolean is enabled: true;
 	Boolean is hovered: false;
+	Boolean is drawTop: true;
+	Boolean is drawRight: true;
+	Boolean is drawBottom: true;
+	Boolean is drawLeft: true;
 
 	replace Function is init(
 		String is label: '',
@@ -54,6 +58,13 @@ Class of SewNode is ScrapButton{
 		:selected: selected;
 		:enabled: enabled;
 		:hovered: false;
+	}
+
+	replace Function is setBorderEdges(Boolean is top, Boolean is right, Boolean is bottom, Boolean is left){
+		:drawTop: top;
+		:drawRight: right;
+		:drawBottom: bottom;
+		:drawLeft: left;
 	}
 
 	Function is setSelected(Boolean is next){
@@ -140,7 +151,14 @@ Class of SewNode is ScrapButton{
 		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
 		if({ linePx > 0 }, {
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: linePx);
+			if({ drawTop && drawRight && drawBottom && drawLeft }, {
+				ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: linePx);
+			}, {
+				if({ drawTop }, { ctx:fillRect(x: b:x, y: b:y, w: b:width, h: linePx, color: border); });
+				if({ drawBottom }, { ctx:fillRect(x: b:x, y: b:y + b:height - linePx, w: b:width, h: linePx, color: border); });
+				if({ drawLeft }, { ctx:fillRect(x: b:x, y: b:y, w: linePx, h: b:height, color: border); });
+				if({ drawRight }, { ctx:fillRect(x: b:x + b:width - linePx, y: b:y, w: linePx, h: b:height, color: border); });
+			});
 		});
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);

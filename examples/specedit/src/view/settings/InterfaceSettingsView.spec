@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Interface settings category view using VSection, HSection, and Switch.
+#! Interface settings category view using SectionV, SectionH, and Switch.
 
 Class is InterfaceSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -10,8 +10,8 @@ Class is InterfaceSettingsView{
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', Switch],
-		['base', 'scrap', VSection],
-		['base', 'scrap', HSection],
+		['base', 'scrap', SectionV],
+		['base', 'scrap', SectionH],
 		['specedit', 'viewmodel', SettingsViewModel]
 	];
 
@@ -38,16 +38,16 @@ Class is InterfaceSettingsView{
 			onToggle: local Function(Boolean is _next){ vm:toggleDefaultShowFileTree(); }
 		);
 
-		return VSection(
+		return SectionV(
 			children: Array([
 				Label(text: 'Interface', heading: true),
 				Frame(
 					title: 'Startup Defaults',
-					child: VSection(
+					child: SectionV(
 						children: Array([
-							HSection(children: Array([monoSwitch, Label(text: 'Default Monospace Font')])),
-							HSection(children: Array([wrapSwitch, Label(text: 'Default Word Wrap')])),
-							HSection(children: Array([treeSwitch, Label(text: 'Show File Tree by Default')]))
+							SectionH(children: Array([monoSwitch, Label(text: 'Default Monospace Font')])),
+							SectionH(children: Array([wrapSwitch, Label(text: 'Default Word Wrap')])),
+							SectionH(children: Array([treeSwitch, Label(text: 'Show File Tree by Default')]))
 						])
 					)
 				)

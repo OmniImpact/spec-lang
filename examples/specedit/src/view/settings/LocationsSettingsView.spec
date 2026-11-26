@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Locations settings category view using VSection and HSection.
+#! Locations settings category view using SectionV and SectionH.
 
 Class is LocationsSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -10,8 +10,8 @@ Class is LocationsSettingsView{
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
-		['base', 'scrap', VSection],
-		['base', 'scrap', HSection],
+		['base', 'scrap', SectionV],
+		['base', 'scrap', SectionH],
 		['specedit', 'viewmodel', SettingsViewModel],
 		['specedit', 'view', 'settings', PinnedLocationsList]
 	];
@@ -27,7 +27,7 @@ Class is LocationsSettingsView{
 	Function of SewNode is build(){
 		:listView: PinnedLocationsList(vm: vm);
 
-		local HSection is actionsRow: HSection(
+		local SectionH is actionsRow: SectionH(
 			children: Array([
 				ScrapButton(
 					label: 'Add Location',
@@ -37,7 +37,7 @@ Class is LocationsSettingsView{
 			])
 		);
 
-		return VSection(
+		return SectionV(
 			children: Array([
 				Label(text: 'Locations', heading: true),
 				actionsRow,

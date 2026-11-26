@@ -25,6 +25,11 @@ Class is SewNode{
 	SignalBag is signalBag: SignalBag();
 	Array of Function is dirtyListeners: Array();
 
+	## Configures which outer border edges are drawn (used by segmented containers).
+	Function is setBorderEdges(Boolean is top, Boolean is right, Boolean is bottom, Boolean is left){
+		local Int is _noop: 0;
+	}
+
 	## Propagates [theme] down the widget tree.
 	Function is applyTheme(Theme is theme){
 		:activeTheme: theme;

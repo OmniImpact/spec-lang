@@ -204,6 +204,24 @@ Class of SewNode is Row{
 		return changed;
 	}
 
+	replace Function of Boolean is onScroll(Int is deltaY){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onScroll(deltaY: deltaY) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onScrollX(Int is deltaX){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onScrollX(deltaX: deltaX) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
 	replace Function of Boolean is tick(Int is nowMs){
 		local Boolean is changed: false;
 		times(count: children:length(), worker: local Function(Int is i){

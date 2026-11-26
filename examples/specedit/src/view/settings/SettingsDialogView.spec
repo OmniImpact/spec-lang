@@ -16,6 +16,8 @@ Class of Dialog is SettingsDialogView{
 		['base', 'scrap', Dialog],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', ScrollView],
+		['base', 'scrap', Frame],
+		['base', 'scrap', SectionV],
 		['specedit', 'viewmodel', SettingsViewModel],
 		['specedit', 'view', 'settings', AppearanceSettingsView],
 		['specedit', 'view', 'settings', LocationsSettingsView],
@@ -91,8 +93,8 @@ Class of Dialog is SettingsDialogView{
 			)
 		]);
 
-		local Column is sidebar: Column(
-			gapPt: 5.0,
+		local SectionV is sidebar: SectionV(
+			segmented: true,
 			children: Array([
 				categoryBtns:get(index: 0),
 				categoryBtns:get(index: 1),
@@ -104,7 +106,7 @@ Class of Dialog is SettingsDialogView{
 			gapPt: 10.0,
 			children: Array([
 				sidebar,
-				navStack
+				Frame(child: navStack)
 			]),
 			flexFlags: Array([false, true])
 		);

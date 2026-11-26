@@ -1,7 +1,7 @@
 #! Package base:scrap
 #! Vertical sectional container with optional title and theme-derived spacing.
 
-Class of SewNode is VSection{
+Class of SewNode is SectionV{
 	replace [String] is namespace: ['base', 'scrap'];
 
 	replace [[String]] is using: [
@@ -20,16 +20,19 @@ Class of SewNode is VSection{
 
 	String is title: '';
 	Float is gapPt: 0.0;
+	Boolean is segmented: false;
 	Column is col: Column();
 
 	replace Function is init(
 		String is title: '',
 		Array of SewNode is children: Array(),
 		Array of Boolean is flexFlags: Array(),
-		Float is gapPt: 0.0
+		Float is gapPt: 0.0,
+		Boolean is segmented: false
 	){
 		:title: title;
 		:gapPt: gapPt;
+		:segmented: segmented;
 		local Array of SewNode is allChildren: Array();
 		local Array of Boolean is allFlex: Array();
 		if({ title != '' }, {
@@ -38,19 +41,36 @@ Class of SewNode is VSection{
 		});
 		local Int is i: 0;
 		while({ i < children:length() }, {
-			allChildren:add(item: children:get(index: i));
+			local SewNode is ch: children:get(index: i);
+			allChildren:add(item: ch);
 			local Boolean is fx: if({ i < flexFlags:length() }, { flexFlags:get(index: i) }, { false });
 			allFlex:add(item: fx);
 			i: i + 1;
 		});
-		:col: Column(children: allChildren, flexFlags: allFlex, gapPt: gapPt);
+		:col: Column(children: allChildren, flexFlags: allFlex, gapPt: if({ segmented }, { 0.0 }, { gapPt }));
+		if({ segmented }, { :joinSegmentedEdges(); });
+	}
+
+	Function is joinSegmentedEdges(){
+		local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
+		local Int is count: col:children:length();
+		local Int is i: startIdx;
+		while({ i < count }, {
+			local SewNode is ch: col:children:get(index: i);
+			ch:setBorderEdges(top: true, right: true, bottom: (i + 1 >= count), left: true);
+			i: i + 1;
+		});
 	}
 
 	replace Function is applyTheme(Theme is theme){
 		:activeTheme: theme;
+		if({ segmented }, {
+			col:gapPt: 0.0;
+			:joinSegmentedEdges();
+		}, {
 		if({ gapPt <= 0.0 }, {
 			col:gapPt: theme:paddingPt;
-		});
+		}); });
 		col:applyTheme(theme: theme);
 	}
 

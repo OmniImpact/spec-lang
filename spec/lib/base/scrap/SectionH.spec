@@ -1,7 +1,7 @@
 #! Package base:scrap
 #! Horizontal sectional container with optional title and theme-derived spacing.
 
-Class of SewNode is HSection{
+Class of SewNode is SectionH{
 	replace [String] is namespace: ['base', 'scrap'];
 
 	replace [[String]] is using: [
@@ -21,6 +21,7 @@ Class of SewNode is HSection{
 
 	String is title: '';
 	Float is gapPt: 0.0;
+	Boolean is segmented: false;
 	Row is row: Row();
 	Column is wrapper: Column();
 	Boolean is hasTitle: false;
@@ -29,18 +30,31 @@ Class of SewNode is HSection{
 		String is title: '',
 		Array of SewNode is children: Array(),
 		Array of Boolean is flexFlags: Array(),
-		Float is gapPt: 0.0
+		Float is gapPt: 0.0,
+		Boolean is segmented: false
 	){
 		:title: title;
 		:gapPt: gapPt;
+		:segmented: segmented;
 		:hasTitle: title != '';
-		:row: Row(children: children, flexFlags: flexFlags, gapPt: gapPt);
+		:row: Row(children: children, flexFlags: flexFlags, gapPt: if({ segmented }, { 0.0 }, { gapPt }));
+		if({ segmented }, { :joinSegmentedEdges(); });
 		if({ hasTitle }, {
 			:wrapper: Column(
 				children: Array([Label(text: title, muted: true), row]),
 				flexFlags: Array([false, true]),
 				gapPt: gapPt
 			);
+		});
+	}
+
+	Function is joinSegmentedEdges(){
+		local Int is count: row:children:length();
+		local Int is i: 0;
+		while({ i < count }, {
+			local SewNode is ch: row:children:get(index: i);
+			ch:setBorderEdges(top: true, right: (i + 1 >= count), bottom: true, left: true);
+			i: i + 1;
 		});
 	}
 
@@ -51,11 +65,15 @@ Class of SewNode is HSection{
 
 	replace Function is applyTheme(Theme is theme){
 		:activeTheme: theme;
+		if({ segmented }, {
+			row:gapPt: 0.0;
+			:joinSegmentedEdges();
+		}, {
 		if({ gapPt <= 0.0 }, {
 			row:gapPt: theme:paddingPt;
-			if({ hasTitle }, {
-				wrapper:gapPt: theme:paddingSmallPt;
-			});
+		}); });
+		if({ hasTitle && gapPt <= 0.0 }, {
+			wrapper:gapPt: theme:paddingSmallPt;
 		});
 		:rootNode():applyTheme(theme: theme);
 	}
