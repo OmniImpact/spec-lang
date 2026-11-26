@@ -261,6 +261,11 @@ Class is DrawContext{
 			if({ row == 6 }, { return 4; });
 			return 0;
 		});
+		if({ c == 44 }, { ## ','
+			if({ row == 5 }, { return 4; });
+			if({ row == 6 }, { return 8; });
+			return 0;
+		});
 		if({ c == 45 }, { ## '-'
 			if({ row == 3 }, { return 14; });
 			return 0;

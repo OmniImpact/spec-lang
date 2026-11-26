@@ -16,11 +16,13 @@ Class of SewNode is Toolbar{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'suit', SuitCanvas],
+		['base', 'scrap', Bar],
 		['base', 'scrap', ToolbarConfig],
 		['base', 'scrap', MenuConfig],
 		['base', 'scrap', MenuItemConfig]
 	];
 
+	Bar is bar: Bar(borderSide: 'bottom');
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
 	ToolbarConfig is config: ToolbarConfig();
@@ -36,6 +38,7 @@ Class of SewNode is Toolbar{
 		:theme: theme;
 		:scale: scale;
 		:config: config;
+		:bar: Bar(heightPt: config:heightPt, borderSide: 'bottom', theme: theme, scale: scale);
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;
@@ -43,6 +46,7 @@ Class of SewNode is Toolbar{
 
 	Function is setConfig(ToolbarConfig is config){
 		:config: config;
+		bar:setHeightPt(heightPt: config:heightPt);
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
 		hoverItemIdx: -1;
@@ -52,10 +56,17 @@ Class of SewNode is Toolbar{
 	replace Function is applyTheme(Theme is theme){
 		:activeTheme: theme;
 		:theme: theme;
+		bar:applyTheme(theme: theme);
 	}
 
 	Function is setScale(Scale is scale){
 		:scale: scale;
+		bar:setScale(scale: scale);
+	}
+
+	replace Function is arrange(Rect is bounds){
+		layoutBounds: bounds;
+		bar:arrange(bounds: bounds);
 	}
 
 	local Function of Int is textScale(){
@@ -174,14 +185,13 @@ Class of SewNode is Toolbar{
 		return false;
 	}
 
-	## Paints the toolbar strip and menu trigger buttons.
+	## Paints the underlying `Bar` overlaid with menu trigger buttons.
 	Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
-		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: theme:toolbarBg);
+		bar:paint(ctx: ctx);
 		local Int is borderH: if({ scale:px(pt: 1.0) < 1 }, { 1 }, { scale:px(pt: 1.0) });
-		ctx:fillRect(x: b:x, y: b:y + b:height - borderH, w: b:width, h: borderH, color: theme:toolbarBorder);
 
 		local Int is ts: :textScale();
 		local Int is th: ctx:measureTextHeight(scale: ts);

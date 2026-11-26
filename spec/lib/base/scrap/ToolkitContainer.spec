@@ -1,6 +1,6 @@
 #! Package base:scrap
-#! Top-level GUI toolkit container managing window lifecycle, canvas, emitter bindings,
-#! theme, point scale, toolbar slot, and body.
+#! Top-level GUI toolkit container managing window lifecycle (2D software or Vulkan 3D + 2D overlay),
+#! emitter bindings, theme propagation, point scale, top toolbar, body, bottom bar, and secondary dialogs.
 
 Class of SewNode is ToolkitContainer{
 	replace [String] is namespace: ['base', 'scrap'];
@@ -24,8 +24,11 @@ Class of SewNode is ToolkitContainer{
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
+		['base', 'scrap', Bar],
 		['base', 'scrap', ToolbarContainer],
-		['base', 'scrap', ScrapPanel]
+		['base', 'scrap', ScrapPanel],
+		['base', 'scrap', VulkanSurface],
+		['base', 'scrap', Dialog]
 	];
 
 	TextEmitter is title: TextEmitter(initial: 'Suit');
@@ -34,11 +37,20 @@ Class of SewNode is ToolkitContainer{
 	Scale is scale: Scale(factor: 1.0);
 	Float is widthPt: 800.0;
 	Float is heightPt: 600.0;
-	ToolbarContainer is toolbarSlot: ToolbarContainer();
+	Boolean is useVulkan: false;
+	ToolbarContainer is toolbarSlot: ToolbarContainer(hasToolbar: false);
 	ScrapPanel is bodyPanel: ScrapPanel();
+	VulkanSurface is vulkanBody: VulkanSurface();
+	Bar is bottomBar: Bar();
+	Dialog is dialog: Dialog();
 	Boolean is hasToolbarSlot: false;
 	Boolean is hasBody: false;
+	Boolean is hasBottomBar: false;
+	Boolean is hasDialog: false;
 	Boolean is isDirty: false;
+	Function is onInitVulkan: local Function(VulkanSurface is s){};
+	Function is onFrame: local Function(Int is elapsedMs, Int is width, Int is height){};
+	Function is onDispose: local Function(){};
 
 	replace Function is init(
 		TextEmitter is title: TextEmitter(initial: 'Suit'),
@@ -46,8 +58,17 @@ Class of SewNode is ToolkitContainer{
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Float is widthPt: 800.0,
 		Float is heightPt: 600.0,
+		Boolean is useVulkan: false,
 		ToolbarContainer is toolbar: ToolbarContainer(hasToolbar: false),
-		ScrapPanel is body: ScrapPanel()
+		ScrapPanel is body: ScrapPanel(),
+		VulkanSurface is vulkanSurface: VulkanSurface(),
+		Bar is bottomBar: Bar(),
+		Boolean is hasBottomBar: false,
+		Dialog is dialog: Dialog(),
+		Boolean is hasDialog: false,
+		Function is onInitVulkan: local Function(VulkanSurface is s){},
+		Function is onFrame: local Function(Int is elapsedMs, Int is width, Int is height){},
+		Function is onDispose: local Function(){}
 	){
 		:title: title;
 		:running: running;
@@ -55,10 +76,19 @@ Class of SewNode is ToolkitContainer{
 		:scale: Scale(factor: 1.0);
 		:widthPt: widthPt;
 		:heightPt: heightPt;
-		toolbarSlot: toolbar;
-		bodyPanel: body;
-		hasToolbarSlot: toolbar:hasToolbar;
-		hasBody: true;
+		:useVulkan: useVulkan;
+		:toolbarSlot: toolbar;
+		:bodyPanel: body;
+		:vulkanBody: vulkanSurface;
+		:bottomBar: bottomBar;
+		:dialog: dialog;
+		:hasToolbarSlot: toolbar:hasToolbar;
+		:hasBody: true;
+		:hasBottomBar: hasBottomBar;
+		:hasDialog: hasDialog;
+		:onInitVulkan: onInitVulkan;
+		:onFrame: onFrame;
+		:onDispose: onDispose;
 		:applyTheme(theme: theme);
 	}
 
@@ -66,7 +96,9 @@ Class of SewNode is ToolkitContainer{
 		:activeTheme: theme;
 		:theme: theme;
 		if({ hasToolbarSlot }, { toolbarSlot:applyTheme(theme: theme); });
-		if({ hasBody }, { bodyPanel:applyTheme(theme: theme); });
+		if({ hasBody && !useVulkan }, { bodyPanel:applyTheme(theme: theme); });
+		if({ hasBottomBar }, { bottomBar:applyTheme(theme: theme); });
+		if({ hasDialog }, { dialog:applyTheme(theme: theme); });
 	}
 
 	## Adds a `ToolbarContainer` at the top of the toolkit workspace.
@@ -79,6 +111,7 @@ Class of SewNode is ToolkitContainer{
 	Function is setBody(ScrapPanel is body){
 		bodyPanel: body;
 		hasBody: true;
+		useVulkan: false;
 	}
 
 	## Runs the two-pass Sew Column layout for ([widthPx], [heightPx]).
@@ -88,7 +121,14 @@ Class of SewNode is ToolkitContainer{
 			col:addChild(child: toolbarSlot, expand: false);
 		});
 		if({ hasBody }, {
-			col:addChild(child: bodyPanel, expand: true);
+			if({ useVulkan }, {
+				col:addChild(child: vulkanBody, expand: true);
+			}, {
+				col:addChild(child: bodyPanel, expand: true);
+			});
+		});
+		if({ hasBottomBar }, {
+			col:addChild(child: bottomBar, expand: false);
 		});
 		col:measure(c: Constraints(minW: widthPx, maxW: widthPx, minH: heightPx, maxH: heightPx));
 		col:arrange(bounds: Rect(x: 0, y: 0, width: widthPx, height: heightPx));
@@ -105,9 +145,14 @@ Class of SewNode is ToolkitContainer{
 		return toolbarSlot:onPointerClick(x: x, y: y);
 	}
 
-	## Renders body, toolbar, and overlay popups in z-order into [ctx].
+	## Renders body (when software 2D), bars, and overlay popups in z-order into [ctx].
 	Function is paint(DrawContext is ctx){
-		if({ hasBody }, { bodyPanel:paint(ctx: ctx); });
+		if({ useVulkan }, {
+			ctx:clearTransparent();
+		}, {
+			if({ hasBody }, { bodyPanel:paint(ctx: ctx); });
+		});
+		if({ hasBottomBar }, { bottomBar:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paintOverlay(ctx: ctx); });
 	}
@@ -122,7 +167,7 @@ Class of SewNode is ToolkitContainer{
 			width: scale:px(pt: widthPt),
 			height: scale:px(pt: heightPt),
 			decorated: true,
-			useVulkan: false
+			useVulkan: useVulkan
 		);
 
 		if({ !win:open() }, {
@@ -130,12 +175,25 @@ Class of SewNode is ToolkitContainer{
 			Process():exit(status: 1);
 		});
 
+		if({ useVulkan }, {
+			if({ !vulkanBody:attach(window: win) }, {
+				Stderr():line(text: 'Failed to initialize Vulkan surface: ':concat(other: vulkanBody:lastError()));
+				win:close();
+				Process():exit(status: 1);
+			});
+			local Function is initVkCb: onInitVulkan;
+			initVkCb(vulkanBody);
+		});
+
 		scale: Scale(factor: win:scaleFactor());
 		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
+		if({ hasBottomBar }, { bottomBar:setScale(scale: scale); });
+		if({ hasDialog }, { dialog:setScale(scale: scale); });
 
 		:isDirty: false;
 		:bindDirty(cb: local Function(){ :isDirty: true; });
 		if({ hasToolbarSlot }, { toolbarSlot:bindDirty(cb: local Function(){ :isDirty: true; }); });
+		if({ hasBottomBar }, { bottomBar:bindDirty(cb: local Function(){ :isDirty: true; }); });
 
 		signalBag:track(
 			slot: 'running',
@@ -159,27 +217,44 @@ Class of SewNode is ToolkitContainer{
 
 		:layout(widthPx: curW, heightPx: curH);
 		:paint(ctx: ctx);
-		win:present(canvas: canvas);
+		if({ useVulkan }, {
+			vulkanBody:setOverlay(canvas: canvas);
+		}, {
+			win:present(canvas: canvas);
+		});
 
 		local Time is clock: Time();
 		local Int is startMs: clock:monotonicMs();
 		local Int is lastPtrX: -1;
 		local Int is lastPtrY: -1;
+		local Boolean is closedByWm: false;
 
-		while({ running:current() && win:poll() }, {
-			local Int is key: win:nextKey();
-			while({ key != 0 }, {
-				if({ key == 27 }, {
-					running:emit(value: false);
-				});
-				key: win:nextKey();
-			});
-
-			if({ durationMs > 0 && (clock:monotonicMs() - startMs) >= durationMs }, {
+		while({ running:current() }, {
+			if({ !win:poll() }, {
+				closedByWm: true;
 				running:emit(value: false);
 			});
 
 			if({ running:current() }, {
+				local Int is key: win:nextKey();
+				while({ key != 0 }, {
+					if({ key == 27 }, {
+						running:emit(value: false);
+					});
+					key: win:nextKey();
+				});
+			});
+
+			local Int is elapsedMs: clock:monotonicMs() - startMs;
+			if({ durationMs > 0 && elapsedMs >= durationMs }, {
+				running:emit(value: false);
+			});
+
+			if({ running:current() }, {
+				if({ hasDialog }, {
+					dialog:poll();
+				});
+
 				local Int is w: win:width();
 				local Int is h: win:height();
 				if({ w > 0 && h > 0 && (w != curW || h != curH) }, {
@@ -209,13 +284,29 @@ Class of SewNode is ToolkitContainer{
 				if({ isDirty && running:current() }, {
 					:isDirty: false;
 					:paint(ctx: ctx);
-					win:present(canvas: canvas);
+					if({ useVulkan }, {
+						vulkanBody:setOverlay(canvas: canvas);
+					}, {
+						win:present(canvas: canvas);
+					});
+				});
+
+				if({ useVulkan && running:current() }, {
+					local Function is frameCb: onFrame;
+					frameCb(elapsedMs, curW, curH);
 				});
 			});
 		});
 
+		local Function is dispCb: onDispose;
+		dispCb();
+		if({ hasBottomBar }, { bottomBar:dispose(); });
+		if({ hasDialog }, { dialog:dispose(); });
 		signalBag:clear();
 		canvas:dispose();
-		win:close();
+		if({ !useVulkan || !closedByWm }, {
+			if({ useVulkan }, { vulkanBody:dispose(); });
+			win:close();
+		});
 	}
 }
