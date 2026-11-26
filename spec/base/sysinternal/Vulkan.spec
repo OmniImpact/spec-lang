@@ -47,6 +47,16 @@ Class is Vulkan{
 		Int is height
 	);
 
+	## Constrains the 3D render viewport and scissor to ([x], [y], [w], [h]).
+	## Bound to `spec_pal_vulkan_set_viewport`.
+	Function of Int is pal_vulkan_set_viewport(
+		Int is handle,
+		Int is x,
+		Int is y,
+		Int is w,
+		Int is h
+	);
+
 	## Destroys the Vulkan context and releases all GPU resources.
 	## Bound to `spec_pal_vulkan_destroy`.
 	Function of Int is pal_vulkan_destroy(Int is handle);

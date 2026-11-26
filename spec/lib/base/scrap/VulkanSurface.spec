@@ -80,6 +80,16 @@ Class of SewNode is VulkanSurface{
 		return vk:setOverlay(pixelsAddr: canvas:pixelsAddr(), width: canvas:width, height: canvas:height);
 	}
 
+	## Constrains the 3D render viewport/scissor to ([x], [y], [w], [h]).
+	Function of Boolean is setViewport(Int is x, Int is y, Int is w, Int is h){
+		return vk:setViewport(x: x, y: y, w: w, h: h);
+	}
+
+	## Renders the 2D overlay only (no 3D mesh push constants).
+	Function of Boolean is presentOverlay(Int is width, Int is height){
+		return vk:render(mvpF32Addr: 0, width: width, height: height);
+	}
+
 	replace Function of Size is measure(Constraints is c){
 		desiredSize: Size(width: c:maxW, height: c:maxH);
 		return desiredSize;

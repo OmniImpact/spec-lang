@@ -5,6 +5,7 @@ Class is Shape3DView{
 	replace [String] is namespace: ['suitshape3d', 'view'];
 
 	replace [[String]] is using: [
+		['base', 'sew', Rect],
 		['base', 'fabric', Theme],
 		['base', 'mold', CubeMesh],
 		['base', 'scrap', ToolkitContainer],
@@ -38,7 +39,10 @@ Class is Shape3DView{
 			dialog: AboutDialog():build(vm: vm),
 			hasDialog: true,
 			onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is w, Int is h){
-				s:render(mvp: vm:stepFrame(elapsedMs: elapsedMs, w: w, h: h), width: w, height: h);
+				local Rect is vb: s:bounds();
+				local Int is vw: if({ vb:width > 0 }, { vb:width }, { w });
+				local Int is vh: if({ vb:height > 0 }, { vb:height }, { h });
+				s:render(mvp: vm:stepFrame(elapsedMs: elapsedMs, w: vw, h: vh), width: w, height: h);
 			}
 		)
 	}

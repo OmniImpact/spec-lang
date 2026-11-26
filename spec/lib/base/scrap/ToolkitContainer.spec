@@ -41,6 +41,7 @@ Class of SewNode is ToolkitContainer{
 	Float is widthPt: 800.0;
 	Float is heightPt: 600.0;
 	Boolean is useVulkan: false;
+	Boolean is gpuPresent: false;
 	ToolbarContainer is toolbarSlot: ToolbarContainer(hasToolbar: false);
 	SewNode is bodyPanel: ScrapPanel();
 	VulkanSurface is vulkanBody: VulkanSurface();
@@ -133,7 +134,7 @@ Class of SewNode is ToolkitContainer{
 			col:addChild(child: toolbarSlot, expand: false);
 		});
 		if({ hasBody }, {
-			if({ useVulkan }, {
+			if({ useVulkan && gpuPresent }, {
 				col:addChild(child: vulkanBody, expand: true);
 			}, {
 				col:addChild(child: bodyPanel, expand: true);
@@ -144,6 +145,10 @@ Class of SewNode is ToolkitContainer{
 		});
 		col:measure(c: Constraints(minW: widthPx, maxW: widthPx, minH: heightPx, maxH: heightPx));
 		col:arrange(bounds: Rect(x: 0, y: 0, width: widthPx, height: heightPx));
+		if({ hasBody && useVulkan && gpuPresent }, {
+			local Rect is vb: vulkanBody:bounds();
+			vulkanBody:setViewport(x: vb:x, y: vb:y, w: vb:width, h: vb:height);
+		});
 		layoutBounds: Rect(x: 0, y: 0, width: widthPx, height: heightPx);
 	}
 
@@ -168,9 +173,9 @@ Class of SewNode is ToolkitContainer{
 		return false;
 	}
 
-	## Renders body (when software 2D), bars, and overlay popups in z-order into [ctx].
+	## Renders body (when software 2D or 2D-over-Vulkan), bars, and overlay popups in z-order into [ctx].
 	replace Function is paint(DrawContext is ctx){
-		if({ useVulkan }, {
+		if({ useVulkan && gpuPresent }, {
 			ctx:clearTransparent();
 		}, {
 			if({ hasBody }, { bodyPanel:paint(ctx: ctx); });
@@ -190,7 +195,7 @@ Class of SewNode is ToolkitContainer{
 			width: scale:px(pt: widthPt),
 			height: scale:px(pt: heightPt),
 			decorated: true,
-			useVulkan: useVulkan
+			useVulkan: true
 		);
 
 		if({ !win:open() }, {
@@ -198,14 +203,26 @@ Class of SewNode is ToolkitContainer{
 			Process():exit(status: 1);
 		});
 
-		if({ useVulkan }, {
-			if({ !vulkanBody:attach(window: win) }, {
-				Stderr():line(text: 'Failed to initialize Vulkan surface: ':concat(other: vulkanBody:lastError()));
-				win:close();
+		gpuPresent: vulkanBody:attach(window: win);
+		if({ gpuPresent }, {
+			if({ useVulkan }, {
+				local Function is initVkCb: onInitVulkan;
+				initVkCb(vulkanBody);
+			});
+		}, {
+			win:close();
+			useVulkan: false;
+			win: SuitWindow(
+				title: curTitle,
+				width: scale:px(pt: widthPt),
+				height: scale:px(pt: heightPt),
+				decorated: true,
+				useVulkan: false
+			);
+			if({ !win:open() }, {
+				Stderr():line(text: 'Failed to open window: ':concat(other: win:lastError()));
 				Process():exit(status: 1);
 			});
-			local Function is initVkCb: onInitVulkan;
-			initVkCb(vulkanBody);
 		});
 
 		scale: Scale(factor: win:scaleFactor());
@@ -243,8 +260,11 @@ Class of SewNode is ToolkitContainer{
 
 		:layout(widthPx: curW, heightPx: curH);
 		:paint(ctx: ctx);
-		if({ useVulkan }, {
+		if({ gpuPresent }, {
 			vulkanBody:setOverlay(canvas: canvas);
+			if({ !useVulkan }, {
+				vulkanBody:presentOverlay(width: curW, height: curH);
+			});
 		}, {
 			win:present(canvas: canvas);
 		});
@@ -389,14 +409,17 @@ Class of SewNode is ToolkitContainer{
 					:isDirty: false;
 					:layout(widthPx: curW, heightPx: curH);
 					:paint(ctx: ctx);
-					if({ useVulkan }, {
+					if({ gpuPresent }, {
 						vulkanBody:setOverlay(canvas: canvas);
+						if({ !useVulkan }, {
+							vulkanBody:presentOverlay(width: curW, height: curH);
+						});
 					}, {
 						win:present(canvas: canvas);
 					});
 				});
 
-				if({ useVulkan && running:current() }, {
+				if({ useVulkan && gpuPresent && running:current() }, {
 					local Int is frameStartNs: clock:monotonicNs();
 					local Function is frameCb: onFrame;
 					frameCb(vulkanBody, elapsedMs, curW, curH);
@@ -416,8 +439,8 @@ Class of SewNode is ToolkitContainer{
 		if({ hasFileDialog }, { fileDialog:dispose(); });
 		signalBag:clear();
 		canvas:dispose();
-		if({ !useVulkan || !closedByWm }, {
-			if({ useVulkan }, { vulkanBody:dispose(); });
+		if({ !gpuPresent || !closedByWm }, {
+			if({ gpuPresent }, { vulkanBody:dispose(); });
 			win:close();
 		});
 	}

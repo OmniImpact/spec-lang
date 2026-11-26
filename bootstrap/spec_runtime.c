@@ -5414,6 +5414,10 @@ typedef struct {
     uint32_t overlay_img_layout;
     int overlay_dirty;
     int overlay_ready;
+    int32_t vp_x;
+    int32_t vp_y;
+    uint32_t vp_w;
+    uint32_t vp_h;
 } SpecVulkanCtx;
 
 static char _spec_vk_error[256] = {0};
@@ -6399,6 +6403,16 @@ static int _spec_vk_ensure_overlay_resources(SpecVulkanCtx* ctx, uint32_t w, uin
     return 1;
 }
 
+long long spec_pal_vulkan_set_viewport(long long handle, long long x, long long y, long long w, long long h) {
+    SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
+    if (!ctx) return 0;
+    ctx->vp_x = (int32_t)x;
+    ctx->vp_y = (int32_t)y;
+    ctx->vp_w = (w > 0) ? (uint32_t)w : 0U;
+    ctx->vp_h = (h > 0) ? (uint32_t)h : 0U;
+    return 1;
+}
+
 long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long long width, long long height) {
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
     if (!ctx || !ctx->device || !ctx->swapchain) return 0;
@@ -6504,6 +6518,24 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
 
     SpecVkViewport vp = { 0.0f, 0.0f, (float)ctx->extent.width, (float)ctx->extent.height, 0.0f, 1.0f };
     SpecVkRect2D sc = { {0, 0}, ctx->extent };
+    if (ctx->vp_w > 0 && ctx->vp_h > 0) {
+        int32_t sx = ctx->vp_x < 0 ? 0 : ctx->vp_x;
+        int32_t sy = ctx->vp_y < 0 ? 0 : ctx->vp_y;
+        uint32_t sw = ctx->vp_w;
+        uint32_t sh = ctx->vp_h;
+        if ((uint32_t)sx >= ctx->extent.width) sx = 0;
+        if ((uint32_t)sy >= ctx->extent.height) sy = 0;
+        if ((uint32_t)sx + sw > ctx->extent.width) sw = ctx->extent.width - (uint32_t)sx;
+        if ((uint32_t)sy + sh > ctx->extent.height) sh = ctx->extent.height - (uint32_t)sy;
+        vp.x = (float)sx;
+        vp.y = (float)sy;
+        vp.width = (float)sw;
+        vp.height = (float)sh;
+        sc.offset.x = sx;
+        sc.offset.y = sy;
+        sc.extent.width = sw;
+        sc.extent.height = sh;
+    }
     ctx->vkCmdSetViewport(cmd, 0, 1, &vp);
     ctx->vkCmdSetScissor(cmd, 0, 1, &sc);
 
@@ -6519,6 +6551,10 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
     }
 
     if (ctx->overlay_ready && ctx->overlay_img && ctx->overlay_pipeline && ctx->overlay_vbuf && ctx->overlay_desc_set) {
+        SpecVkViewport full_vp = { 0.0f, 0.0f, (float)ctx->extent.width, (float)ctx->extent.height, 0.0f, 1.0f };
+        SpecVkRect2D full_sc = { {0, 0}, ctx->extent };
+        ctx->vkCmdSetViewport(cmd, 0, 1, &full_vp);
+        ctx->vkCmdSetScissor(cmd, 0, 1, &full_sc);
         SpecVkDeviceSize offset = 0;
         ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipeline);
         ctx->vkCmdBindDescriptorSets(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipe_layout, 0, 1, &ctx->overlay_desc_set, 0, NULL);
@@ -6671,6 +6707,11 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
 
 long long spec_pal_vulkan_set_overlay(long long handle, long long pixels_addr, long long width, long long height) {
     (void)handle; (void)pixels_addr; (void)width; (void)height;
+    return 0;
+}
+
+long long spec_pal_vulkan_set_viewport(long long handle, long long x, long long y, long long w, long long h) {
+    (void)handle; (void)x; (void)y; (void)w; (void)h;
     return 0;
 }
 

@@ -72,6 +72,12 @@ Class is Vulkan{
 		) != 0;
 	}
 
+	## Constrains the 3D render viewport and scissor to ([x], [y], [w], [h]).
+	Function of Boolean is setViewport(Int is x, Int is y, Int is w, Int is h){
+		if({ handle == 0 }, { return false; });
+		return base:sysinternal:Vulkan:pal_vulkan_set_viewport(handle: handle, x: x, y: y, w: w, h: h) != 0;
+	}
+
 	## Destroys the Vulkan context and releases GPU resources.
 	Function is shutdown(){
 		if({ handle != 0 }, {
