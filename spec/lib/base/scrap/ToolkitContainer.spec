@@ -65,6 +65,7 @@ Class of SewNode is ToolkitContainer{
 	Int is lastPtrY: -1;
 	Boolean is wasPtrDown: false;
 	Boolean is closedByWm: false;
+	SuitWindow is activeWin: SuitWindow();
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
 	Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){};
 	Function is onDispose: local Function(){};
@@ -237,6 +238,16 @@ Class of SewNode is ToolkitContainer{
 		contextMenu:paint(ctx: ctx);
 	}
 
+	## Writes [text] to the native window system clipboard.
+	Function is setClipboard(String is text){
+		activeWin:setClipboard(text: text);
+	}
+
+	## Reads UTF-8 text from the native window system clipboard.
+	Function of String is getClipboard(){
+		return activeWin:getClipboard();
+	}
+
 	## Opens the native window, binds reactive ViewModel emitters, runs the event/render loop,
 	## and disposes window & canvas resources internally on exit.
 	Function is run(Int is durationMs: 0){
@@ -254,6 +265,7 @@ Class of SewNode is ToolkitContainer{
 			Stderr():line(text: 'Failed to open window: ':concat(other: win:lastError()));
 			Process():exit(status: 1);
 		});
+		activeWin: win;
 
 		gpuPresent: false;
 		if({ useVulkan }, {
@@ -275,6 +287,7 @@ Class of SewNode is ToolkitContainer{
 					Stderr():line(text: 'Failed to open window: ':concat(other: win:lastError()));
 					Process():exit(status: 1);
 				});
+				activeWin: win;
 			});
 		});
 

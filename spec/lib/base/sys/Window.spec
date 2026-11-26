@@ -184,6 +184,18 @@ Class is Window{
 		base:sysinternal:Window:pal_window_set_app_id(handle: handle, app_id_cstr: :cstrAddr(s: appId));
 	}
 
+	Function is setClipboard(String is text){
+		if({ handle <= 0 }, { return; });
+		base:sysinternal:Window:pal_window_set_clipboard(handle: handle, text_cstr: :cstrAddr(s: text));
+	}
+
+	Function of String is getClipboard(){
+		if({ handle <= 0 }, { return ''; });
+		local Int is ptr: base:sysinternal:Window:pal_window_get_clipboard(handle: handle);
+		if({ ptr == 0 }, { return ''; });
+		return Mem:strFromBytes(srcAddr: ptr, len: Mem:cstrLen(cstrAddr: ptr));
+	}
+
 	## Presents an ARGB8888 pixel buffer at [pixelsAddr] to the window.
 	Function of Boolean is present(Int is pixelsAddr, Int is width, Int is height){
 		if({ handle <= 0 || pixelsAddr == 0 }, { return false; });

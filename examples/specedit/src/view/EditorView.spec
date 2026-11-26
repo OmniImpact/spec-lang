@@ -33,6 +33,7 @@ Class is EditorView{
 	];
 
 	EditorViewModel is vm: EditorViewModel();
+	ToolkitContainer is container: ToolkitContainer();
 	TextView is editorBody: TextView(text: TextEmitter(initial: ''));
 	ScrollView is editorScroll: ScrollView(child: TextView(text: TextEmitter(initial: '')));
 	TabBar is tabBar: TabBar();
@@ -45,7 +46,9 @@ Class is EditorView{
 			lineNumbers: vm:lineNumbersEnabled,
 			cursorStatus: vm:cursorStatus,
 			onTextChange: local Function(String is next){ vm:onDocumentEdited(text: next); },
-			onRightClickMenu: local Function(Int is x, Int is y){ vm:showEditorContextMenu(x: x, y: y); }
+			onRightClickMenu: local Function(Int is x, Int is y){ vm:showEditorContextMenu(x: x, y: y); },
+			onClipboardWrite: local Function(String is txt){ container:setClipboard(text: txt); },
+			onClipboardRead: local Function of String(){ container:getClipboard() }
 		);
 		editorScroll: ScrollView(child: editorBody);
 		tabBar: TabBar(
@@ -130,7 +133,7 @@ Class is EditorView{
 	}
 
 	Function of ToolkitContainer is build(){
-		ToolkitContainer(
+		:container: ToolkitContainer(
 			title: vm:title,
 			running: vm:running,
 			theme: Theme(preset: vm:themePreset),
@@ -160,6 +163,7 @@ Class is EditorView{
 			hasFileDialog: true,
 			contextMenu: vm:contextMenu,
 			onKey: local Function of Boolean(Int is key, Int is mods){ vm:handleShortcut(key: key, mods: mods) }
-		)
+		);
+		container
 	}
 }

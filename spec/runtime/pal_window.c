@@ -24,6 +24,10 @@ struct wl_seat;
 struct wl_keyboard;
 struct wl_pointer;
 struct wl_touch;
+struct wl_data_device_manager;
+struct wl_data_device;
+struct wl_data_source;
+struct wl_data_offer;
 struct wl_proxy;
 struct wl_interface;
 
@@ -88,6 +92,30 @@ struct spec_wl_touch_listener {
     void (*cancel)(void* data, struct wl_touch* touch);
     void (*shape)(void* data, struct wl_touch* touch, int32_t id, int32_t major, int32_t minor);
     void (*orientation)(void* data, struct wl_touch* touch, int32_t id, int32_t orientation);
+};
+
+struct spec_wl_data_offer_listener {
+    void (*offer)(void* data, struct wl_data_offer* offer, const char* mime_type);
+    void (*source_actions)(void* data, struct wl_data_offer* offer, uint32_t source_actions);
+    void (*action)(void* data, struct wl_data_offer* offer, uint32_t dnd_action);
+};
+
+struct spec_wl_data_source_listener {
+    void (*target)(void* data, struct wl_data_source* source, const char* mime_type);
+    void (*send)(void* data, struct wl_data_source* source, const char* mime_type, int32_t fd);
+    void (*cancelled)(void* data, struct wl_data_source* source);
+    void (*dnd_drop_performed)(void* data, struct wl_data_source* source);
+    void (*dnd_finished)(void* data, struct wl_data_source* source);
+    void (*action)(void* data, struct wl_data_source* source, uint32_t dnd_action);
+};
+
+struct spec_wl_data_device_listener {
+    void (*data_offer)(void* data, struct wl_data_device* dev, struct wl_data_offer* id);
+    void (*enter)(void* data, struct wl_data_device* dev, uint32_t serial, struct wl_surface* surface, int32_t x, int32_t y, struct wl_data_offer* id);
+    void (*leave)(void* data, struct wl_data_device* dev);
+    void (*motion)(void* data, struct wl_data_device* dev, uint32_t time, int32_t x, int32_t y);
+    void (*drop)(void* data, struct wl_data_device* dev);
+    void (*selection)(void* data, struct wl_data_device* dev, struct wl_data_offer* id);
 };
 
 struct spec_libdecor_interface {
@@ -160,6 +188,10 @@ static const struct wl_interface* _wl_seat_iface = NULL;
 static const struct wl_interface* _wl_keyboard_iface = NULL;
 static const struct wl_interface* _wl_pointer_iface = NULL;
 static const struct wl_interface* _wl_touch_iface = NULL;
+static const struct wl_interface* _wl_data_device_manager_iface = NULL;
+static const struct wl_interface* _wl_data_device_iface = NULL;
+static const struct wl_interface* _wl_data_source_iface = NULL;
+static const struct wl_interface* _wl_data_offer_iface = NULL;
 
 /* Minimal xdg-shell + xdg-decoration ABI interfaces (loaded zero-dep) */
 static const struct wl_interface* _spec_xdg_surface_types[2] = { NULL, NULL };
@@ -303,6 +335,10 @@ static bool _spec_win_init_libs(void) {
     _wl_keyboard_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_keyboard_interface");
     _wl_pointer_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_pointer_interface");
     _wl_touch_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_touch_interface");
+    _wl_data_device_manager_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_data_device_manager_interface");
+    _wl_data_device_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_data_device_interface");
+    _wl_data_source_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_data_source_interface");
+    _wl_data_offer_iface = (const struct wl_interface*)dlsym(_spec_wl_so, "wl_data_offer_interface");
 
     _spec_xdg_surface_types[0] = (const struct wl_interface*)&_spec_xdg_surface_iface_def;
     _spec_xdg_surface_types[1] = _wl_surface_iface;
@@ -412,6 +448,18 @@ typedef struct SpecWaylandWindow {
     int scroll_x;
     int scroll_y;
     uint32_t last_ptr_serial;
+    uint32_t last_input_serial;
+    struct wl_data_device_manager* data_mgr;
+    struct wl_data_device* data_device;
+    struct wl_data_source* data_source;
+    struct wl_data_offer* current_offer;
+    struct wl_data_offer* pending_offer;
+    bool pending_has_utf8;
+    bool pending_has_plain;
+    bool offer_has_utf8;
+    bool offer_has_plain;
+    char* clipboard_out;
+    char* clipboard_in;
     void* cursor_mgr;
     void* cursor_dev;
     void* xkb_ctx;
@@ -561,9 +609,12 @@ static void _spec_kb_keymap(void* data, struct wl_keyboard* kb, uint32_t fmt, in
     if (fd >= 0) close(fd);
 }
 static void _spec_kb_enter(void* data, struct wl_keyboard* kb, uint32_t serial, struct wl_surface* s, void* keys) {
-    (void)kb; (void)serial; (void)keys;
+    (void)kb; (void)keys;
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
-    if (w && s == w->surface) _spec_push_event(w, 11, 1, 0, 0, 0);
+    if (w) {
+        w->last_input_serial = serial;
+        if (s == w->surface) _spec_push_event(w, 11, 1, 0, 0, 0);
+    }
 }
 static void _spec_kb_leave(void* data, struct wl_keyboard* kb, uint32_t serial, struct wl_surface* s) {
     (void)kb; (void)serial;
@@ -571,9 +622,10 @@ static void _spec_kb_leave(void* data, struct wl_keyboard* kb, uint32_t serial, 
     if (w && s == w->surface) _spec_push_event(w, 11, 0, 0, 0, 0);
 }
 static void _spec_kb_key(void* data, struct wl_keyboard* kb, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) {
-    (void)kb; (void)serial; (void)time;
+    (void)kb; (void)time;
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
     if (!w) return;
+    w->last_input_serial = serial;
     if (state == 1 || state == 2) {
         int nav = _spec_evdev_to_ascii(key);
         if (w->xkb_state && _xkb_state_key_get_one_sym && _xkb_state_key_get_utf8) {
@@ -676,9 +728,10 @@ static void _spec_ptr_motion(void* data, struct wl_pointer* ptr, uint32_t time, 
     }
 }
 static void _spec_ptr_button(void* data, struct wl_pointer* ptr, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
-    (void)ptr; (void)serial; (void)time;
+    (void)ptr; (void)time;
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
     if (!w) return;
+    w->last_input_serial = serial;
     if (w->pointer_on_surface || state == 0U) {
         _spec_push_event(w, 2, (int32_t)button, (int32_t)state, w->pointer_x, w->pointer_y);
     }
@@ -731,11 +784,14 @@ static const struct spec_wl_pointer_listener _spec_ptr_listener = {
 };
 
 static void _spec_touch_down(void* data, struct wl_touch* touch, uint32_t serial, uint32_t time, struct wl_surface* surface, int32_t id, int32_t sx, int32_t sy) {
-    (void)touch; (void)serial; (void)time;
+    (void)touch; (void)time;
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
-    if (w && surface == w->surface) {
-        w->touch_on_surface = true;
-        _spec_push_event(w, 6, id, sx >> 8, sy >> 8, 0);
+    if (w) {
+        w->last_input_serial = serial;
+        if (surface == w->surface) {
+            w->touch_on_surface = true;
+            _spec_push_event(w, 6, id, sx >> 8, sy >> 8, 0);
+        }
     }
 }
 static void _spec_touch_up(void* data, struct wl_touch* touch, uint32_t serial, uint32_t time, int32_t id) {
@@ -811,6 +867,108 @@ static const struct spec_wl_seat_listener _spec_seat_listener = {
     _spec_seat_name
 };
 
+static void _spec_data_offer_offer(void* data, struct wl_data_offer* offer, const char* mime_type) {
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (!w || !mime_type || offer != w->pending_offer) return;
+    if (strcmp(mime_type, "text/plain;charset=utf-8") == 0) w->pending_has_utf8 = true;
+    else if (strcmp(mime_type, "text/plain") == 0 || strcmp(mime_type, "UTF8_STRING") == 0) w->pending_has_plain = true;
+}
+static void _spec_data_offer_source_actions(void* d, struct wl_data_offer* o, uint32_t a) { (void)d;(void)o;(void)a; }
+static void _spec_data_offer_action(void* d, struct wl_data_offer* o, uint32_t a) { (void)d;(void)o;(void)a; }
+static const struct spec_wl_data_offer_listener _spec_data_offer_listener = {
+    _spec_data_offer_offer,
+    _spec_data_offer_source_actions,
+    _spec_data_offer_action
+};
+
+static void _spec_data_dev_offer(void* data, struct wl_data_device* dev, struct wl_data_offer* id) {
+    (void)dev;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (!w || !id) return;
+    if (w->pending_offer && w->pending_offer != w->current_offer) {
+        _wl_proxy_destroy((struct wl_proxy*)w->pending_offer);
+    }
+    w->pending_offer = id;
+    w->pending_has_utf8 = false;
+    w->pending_has_plain = false;
+    _wl_proxy_add_listener((struct wl_proxy*)id, (void (**)(void))&_spec_data_offer_listener, w);
+}
+static void _spec_data_dev_enter(void* d, struct wl_data_device* dev, uint32_t s, struct wl_surface* sf, int32_t x, int32_t y, struct wl_data_offer* id) {
+    (void)d;(void)dev;(void)s;(void)sf;(void)x;(void)y;
+    if (id) _wl_proxy_destroy((struct wl_proxy*)id);
+}
+static void _spec_data_dev_leave(void* d, struct wl_data_device* dev) { (void)d;(void)dev; }
+static void _spec_data_dev_motion(void* d, struct wl_data_device* dev, uint32_t t, int32_t x, int32_t y) { (void)d;(void)dev;(void)t;(void)x;(void)y; }
+static void _spec_data_dev_drop(void* d, struct wl_data_device* dev) { (void)d;(void)dev; }
+static void _spec_data_dev_selection(void* data, struct wl_data_device* dev, struct wl_data_offer* id) {
+    (void)dev;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (!w) return;
+    if (w->current_offer && w->current_offer != id) {
+        _wl_proxy_destroy((struct wl_proxy*)w->current_offer);
+    }
+    w->current_offer = id;
+    if (id && id == w->pending_offer) {
+        w->offer_has_utf8 = w->pending_has_utf8;
+        w->offer_has_plain = w->pending_has_plain;
+        w->pending_offer = NULL;
+    } else {
+        w->offer_has_utf8 = false;
+        w->offer_has_plain = false;
+    }
+}
+static const struct spec_wl_data_device_listener _spec_data_device_listener = {
+    _spec_data_dev_offer,
+    _spec_data_dev_enter,
+    _spec_data_dev_leave,
+    _spec_data_dev_motion,
+    _spec_data_dev_drop,
+    _spec_data_dev_selection
+};
+
+static void _spec_data_source_target(void* d, struct wl_data_source* s, const char* m) { (void)d;(void)s;(void)m; }
+static void _spec_data_source_send(void* data, struct wl_data_source* source, const char* mime_type, int32_t fd) {
+    (void)source; (void)mime_type;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && w->clipboard_out && fd >= 0) {
+        size_t len = strlen(w->clipboard_out);
+        size_t off = 0;
+        while (off < len) {
+            ssize_t n = write(fd, w->clipboard_out + off, len - off);
+            if (n <= 0) break;
+            off += (size_t)n;
+        }
+    }
+    if (fd >= 0) close(fd);
+}
+static void _spec_data_source_cancelled(void* data, struct wl_data_source* source) {
+    SpecWaylandWindow* w = (SpecWaylandWindow*)data;
+    if (w && w->data_source == source) w->data_source = NULL;
+    if (source) _wl_proxy_destroy((struct wl_proxy*)source);
+}
+static void _spec_data_source_dnd_drop(void* d, struct wl_data_source* s) { (void)d;(void)s; }
+static void _spec_data_source_dnd_fin(void* d, struct wl_data_source* s) { (void)d;(void)s; }
+static void _spec_data_source_action(void* d, struct wl_data_source* s, uint32_t a) { (void)d;(void)s;(void)a; }
+static const struct spec_wl_data_source_listener _spec_data_source_listener = {
+    _spec_data_source_target,
+    _spec_data_source_send,
+    _spec_data_source_cancelled,
+    _spec_data_source_dnd_drop,
+    _spec_data_source_dnd_fin,
+    _spec_data_source_action
+};
+
+static void _spec_ensure_data_device(SpecWaylandWindow* w) {
+    if (!w || w->data_device || !w->data_mgr || !w->seat || !_wl_data_device_iface) return;
+    uint32_t v = _wl_proxy_get_version((struct wl_proxy*)w->data_mgr);
+    w->data_device = (struct wl_data_device*)_wl_proxy_marshal_flags(
+        (struct wl_proxy*)w->data_mgr, 1 /* GET_DATA_DEVICE */, _wl_data_device_iface, v, 0,
+        NULL, w->seat);
+    if (w->data_device) {
+        _wl_proxy_add_listener((struct wl_proxy*)w->data_device, (void (**)(void))&_spec_data_device_listener, w);
+    }
+}
+
 static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t name, const char* iface, uint32_t version) {
     SpecWaylandWindow* w = (SpecWaylandWindow*)data;
     if (strcmp(iface, "wl_compositor") == 0 && _wl_compositor_iface) {
@@ -829,7 +987,14 @@ static void _spec_wl_reg_global(void* data, struct wl_registry* reg, uint32_t na
             name, iface, v, NULL);
         if (w->seat) {
             _wl_proxy_add_listener((struct wl_proxy*)w->seat, (void (**)(void))&_spec_seat_listener, w);
+            _spec_ensure_data_device(w);
         }
+    } else if (strcmp(iface, "wl_data_device_manager") == 0 && _wl_data_device_manager_iface && !w->data_mgr) {
+        uint32_t v = version < 3 ? version : 3;
+        w->data_mgr = (struct wl_data_device_manager*)_wl_proxy_marshal_flags(
+            (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */, _wl_data_device_manager_iface, v, 0,
+            name, iface, v, NULL);
+        _spec_ensure_data_device(w);
     } else if (strcmp(iface, "xdg_wm_base") == 0 && !w->xdg_wm_base) {
         w->xdg_wm_base = _wl_proxy_marshal_flags(
             (struct wl_proxy*)reg, 0 /* WL_REGISTRY_BIND */,
@@ -1132,6 +1297,13 @@ long long spec_pal_window_close(long long handle) {
     if (w->key_queue) free(w->key_queue);
     if (w->char_queue) free(w->char_queue);
     if (w->ev_queue) free(w->ev_queue);
+    if (w->clipboard_out) free(w->clipboard_out);
+    if (w->clipboard_in) free(w->clipboard_in);
+    if (w->data_source) _wl_proxy_destroy((struct wl_proxy*)w->data_source);
+    if (w->current_offer) _wl_proxy_destroy((struct wl_proxy*)w->current_offer);
+    if (w->pending_offer && w->pending_offer != w->current_offer) _wl_proxy_destroy((struct wl_proxy*)w->pending_offer);
+    if (w->data_device) _wl_proxy_destroy((struct wl_proxy*)w->data_device);
+    if (w->data_mgr) _wl_proxy_destroy((struct wl_proxy*)w->data_mgr);
     if (w->touch) _wl_proxy_destroy((struct wl_proxy*)w->touch);
     if (w->xkb_state && _xkb_state_unref) _xkb_state_unref(w->xkb_state);
     if (w->xkb_keymap && _xkb_keymap_unref) _xkb_keymap_unref(w->xkb_keymap);
@@ -1512,6 +1684,74 @@ long long spec_pal_window_set_title(long long handle, long long title_cstr) {
     return 0;
 }
 
+long long spec_pal_window_set_clipboard(long long handle, long long text_cstr) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !text_cstr) return 0;
+    const char* txt = (const char*)(intptr_t)text_cstr;
+    free(w->clipboard_out);
+    w->clipboard_out = strdup(txt);
+    if (!w->clipboard_out) return 0;
+    if (!w->data_mgr || !w->data_device || !_wl_data_source_iface) return 0;
+    if (w->data_source) {
+        _wl_proxy_destroy((struct wl_proxy*)w->data_source);
+        w->data_source = NULL;
+    }
+    uint32_t mgr_v = _wl_proxy_get_version((struct wl_proxy*)w->data_mgr);
+    w->data_source = (struct wl_data_source*)_wl_proxy_marshal_flags(
+        (struct wl_proxy*)w->data_mgr, 0 /* CREATE_DATA_SOURCE */, _wl_data_source_iface, mgr_v, 0, NULL);
+    if (!w->data_source) return 0;
+    _wl_proxy_add_listener((struct wl_proxy*)w->data_source, (void (**)(void))&_spec_data_source_listener, w);
+    uint32_t src_v = _wl_proxy_get_version((struct wl_proxy*)w->data_source);
+    _wl_proxy_marshal_flags((struct wl_proxy*)w->data_source, 0 /* OFFER */, NULL, src_v, 0, "text/plain;charset=utf-8");
+    _wl_proxy_marshal_flags((struct wl_proxy*)w->data_source, 0 /* OFFER */, NULL, src_v, 0, "text/plain");
+    _wl_proxy_marshal_flags((struct wl_proxy*)w->data_source, 0 /* OFFER */, NULL, src_v, 0, "UTF8_STRING");
+    uint32_t dev_v = _wl_proxy_get_version((struct wl_proxy*)w->data_device);
+    _wl_proxy_marshal_flags((struct wl_proxy*)w->data_device, 1 /* SET_SELECTION */, NULL, dev_v, 0, w->data_source, w->last_input_serial);
+    _wl_display_flush(w->display);
+    return 1;
+}
+
+long long spec_pal_window_get_clipboard(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w) return 0;
+    if (w->data_source && w->clipboard_out) {
+        return (long long)(intptr_t)w->clipboard_out;
+    }
+    if (!w->current_offer || (!w->offer_has_utf8 && !w->offer_has_plain)) return 0;
+    const char* mime = w->offer_has_utf8 ? "text/plain;charset=utf-8" : "text/plain";
+    int fds[2];
+    if (pipe(fds) != 0) return 0;
+    uint32_t ov = _wl_proxy_get_version((struct wl_proxy*)w->current_offer);
+    _wl_proxy_marshal_flags((struct wl_proxy*)w->current_offer, 1 /* RECEIVE */, NULL, ov, 0, mime, fds[1]);
+    close(fds[1]);
+    _wl_display_flush(w->display);
+
+    size_t cap = 256;
+    size_t len = 0;
+    char* buf = (char*)malloc(cap);
+    if (!buf) {
+        close(fds[0]);
+        return 0;
+    }
+    for (;;) {
+        if (len + 1 >= cap) {
+            size_t next_cap = cap * 2;
+            char* nb = (char*)realloc(buf, next_cap);
+            if (!nb) break;
+            buf = nb;
+            cap = next_cap;
+        }
+        ssize_t n = read(fds[0], buf + len, cap - 1 - len);
+        if (n <= 0) break;
+        len += (size_t)n;
+    }
+    close(fds[0]);
+    buf[len] = '\0';
+    free(w->clipboard_in);
+    w->clipboard_in = buf;
+    return (long long)(intptr_t)w->clipboard_in;
+}
+
 long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w || !pixels_addr || width <= 0 || height <= 0) return 0;
@@ -1657,6 +1897,8 @@ long long spec_pal_window_mods(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_set_cursor(long long handle, long long kind) { (void)handle; (void)kind; return 0; }
 long long spec_pal_window_set_min_size(long long handle, long long min_w, long long min_h) { (void)handle; (void)min_w; (void)min_h; return 0; }
 long long spec_pal_window_set_app_id(long long handle, long long app_id_cstr) { (void)handle; (void)app_id_cstr; return 0; }
+long long spec_pal_window_set_clipboard(long long handle, long long text_cstr) { (void)handle; (void)text_cstr; return 0; }
+long long spec_pal_window_get_clipboard(long long handle) { (void)handle; return 0; }
 
 long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
     (void)handle; (void)pixels_addr; (void)width; (void)height;

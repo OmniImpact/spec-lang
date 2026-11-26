@@ -23,6 +23,8 @@ Class of SewNode is TextView{
 	TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1');
 	Function is onTextChange: local Function(String is _next){};
 	Function is onRightClickMenu: local Function(Int is _x, Int is _y){};
+	Function is onClipboardWrite: local Function(String is _text){};
+	Function of String is onClipboardRead: local Function of String(){ '' };
 	Float is padPt: 12.0;
 	Float is lineGapPt: 4.0;
 
@@ -51,6 +53,8 @@ Class of SewNode is TextView{
 		TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1'),
 		Function is onTextChange: local Function(String is _next){},
 		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
+		Function is onClipboardWrite: local Function(String is _text){},
+		Function of String is onClipboardRead: local Function of String(){ '' },
 		Float is padPt: 12.0,
 		Float is lineGapPt: 4.0
 	){
@@ -60,6 +64,8 @@ Class of SewNode is TextView{
 		:cursorStatus: cursorStatus;
 		:onTextChange: onTextChange;
 		:onRightClickMenu: onRightClickMenu;
+		:onClipboardWrite: onClipboardWrite;
+		:onClipboardRead: onClipboardRead;
 		:padPt: padPt;
 		:lineGapPt: lineGapPt;
 		:wrapCached: wrap:current();
@@ -338,9 +344,11 @@ Class of SewNode is TextView{
 		return :hasNonEmptySelection();
 	}
 
-	## Returns `true` when the internal clipboard buffer is non-empty.
+	## Returns `true` when the internal or system clipboard buffer is non-empty.
 	Function of Boolean is hasClipboardText(){
-		return clipboardText != '';
+		if({ clipboardText != '' }, { return true; });
+		local Function of String is readFn: onClipboardRead;
+		return readFn() != '';
 	}
 
 	## Copies the active selection into the clipboard buffer and returns it.
@@ -348,6 +356,8 @@ Class of SewNode is TextView{
 		local String is sel: :selectedText();
 		if({ sel != '' }, {
 			clipboardText: sel;
+			local Function is writeFn: onClipboardWrite;
+			writeFn(sel);
 		});
 		return clipboardText;
 	}
@@ -357,13 +367,20 @@ Class of SewNode is TextView{
 		local String is sel: :selectedText();
 		if({ sel == '' }, { return ''; });
 		clipboardText: sel;
+		local Function is writeFn: onClipboardWrite;
+		writeFn(sel);
 		:replaceSelection(replacement: '');
 		return clipboardText;
 	}
 
-	## Pastes [clip] (or the internal clipboard when empty) at the cursor/selection.
+	## Pastes [clip] (or the system/internal clipboard when empty) at the cursor/selection.
 	Function is pasteText(String is clip: ''){
-		local String is src: if({ clip != '' }, { clip }, { clipboardText });
+		local String is src: clip;
+		if({ src == '' }, {
+			local Function of String is readFn: onClipboardRead;
+			src: readFn();
+		});
+		if({ src == '' }, { src: clipboardText; });
 		if({ src == '' }, { return; });
 		:replaceSelection(replacement: src);
 	}
