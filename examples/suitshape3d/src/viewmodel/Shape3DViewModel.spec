@@ -102,11 +102,11 @@ Class is Shape3DViewModel{
 		aboutOpen:emit(value: true);
 	}
 
-	## Updates 500ms moving-average FPS counter and returns the current MVP matrix for [elapsedMs] and viewport [w]x[h].
+	## Updates 200ms moving-average FPS counter and returns the current MVP matrix for [elapsedMs] and viewport [w]x[h].
 	Function of Mat4 is stepFrame(Int is elapsedMs, Int is w, Int is h){
 		frameCount: frameCount + 1;
 		local Int is fpsElapsed: elapsedMs - fpsWindowStartMs;
-		if({ fpsElapsed >= 500 }, {
+		if({ fpsElapsed >= 200 }, {
 			local Float is instFps: (math:toFloat(value: frameCount) * 1000.0) / math:toFloat(value: fpsElapsed);
 			if({ emaFps <= 0.0 }, {
 				emaFps: instFps;
