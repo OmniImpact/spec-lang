@@ -1,6 +1,7 @@
 {
   "name": "specbuild",
   "version": "0.1.0",
+  "description": "Project build orchestrator for Spec",
   "source": "SpecBuild.spec",
   "source_dirs": [".", "../../spec"],
   "output": "../../bin/specbuild",

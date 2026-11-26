@@ -1,6 +1,7 @@
 {
   "name": "cleopi",
   "version": "0.1.0",
+  "description": "Monte Carlo Pi benchmark with live Cleo MVVM dashboard",
   "source": "src/CleoPi.spec",
   "source_dirs": [
     "src",

@@ -1,0 +1,34 @@
+{
+  "name": "speclint",
+  "version": "0.1.0",
+  "description": "Static linter and import auditor for Spec",
+  "usage": "speclint [-i <file.spec> | -t <dir> | <path>] [options]",
+  "options": [
+    {
+      "short": "i",
+      "long": "input",
+      "type": "string",
+      "arg": "file.spec",
+      "description": "Lint a single .spec source file"
+    },
+    {
+      "short": "t",
+      "long": "tests",
+      "type": "list",
+      "arg": "dir",
+      "description": "Directory of .spec files to lint"
+    },
+    {
+      "short": "a",
+      "long": "audit",
+      "type": "bool",
+      "description": "Run import-resolution audit on -i <file.spec>"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

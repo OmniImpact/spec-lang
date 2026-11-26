@@ -1,6 +1,7 @@
 {
   "name": "helloworld",
   "version": "0.1.0",
+  "description": "Minimal greeting application demonstrating CLI arguments",
   "source": "src/HelloWorld.spec",
   "source_dirs": [
     "src",

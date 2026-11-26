@@ -5,18 +5,24 @@ Class is SpecServUi{
 	replace [String] is namespace: ['specserv'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'core', SpecError],
 		['base', 'theo', [TheoApp, TheoScreen, TheoTheme]],
 		['base', 'struct', Map],
 		['base', 'sys', 'thread', ThreadScope],
-		['base', 'sys', as Conditional()],
+		['base', 'sys', [as Conditional(), as Process()]],
 		['specserv', 'vm', SpecServViewModel],
 		['specserv', 'view', SpecServFrame]
 	];
 
 	replace Function is init(Map of String to String is args){
-		local String is cfgPath: args:getString(key: 'config', default: 'specserv.json');
-		local String is logFilePath: args:getString(key: 'log-file', default: '');
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/specserv/cli_ui.json');
+		if({ !cli:parse(rawArgs: rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			exit(status: 1);
+		});
+		local String is cfgPath: cli:getString(name: 'config', default: 'specserv.json');
+		local String is logFilePath: cli:getString(name: 'log-file', default: '');
 
 		ThreadScope:open(
 			onError: local Function of Boolean(SpecError is _err){ true },

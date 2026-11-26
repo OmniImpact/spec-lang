@@ -1,0 +1,11 @@
+{
+  "usage": "theofractal [options]",
+  "options": [
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 {
   "name": "theojack",
   "version": "0.1.0",
+  "description": "Theo TUI Blackjack game",
   "source": "src/TheoJack.spec",
   "source_dirs": [
     "src",

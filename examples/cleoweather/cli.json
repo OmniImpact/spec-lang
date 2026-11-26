@@ -1,0 +1,25 @@
+{
+  "usage": "cleoweather [options]",
+  "options": [
+    {
+      "short": "s",
+      "long": "state",
+      "type": "string",
+      "arg": "state",
+      "description": "US state name or abbreviation"
+    },
+    {
+      "short": "c",
+      "long": "city",
+      "type": "string",
+      "arg": "city",
+      "description": "City name within the selected state"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

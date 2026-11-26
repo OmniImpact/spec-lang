@@ -10,6 +10,7 @@ Class is SpecInit{
 	replace [String] is namespace: ['specinit'];
 
 	replace [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
@@ -207,24 +208,28 @@ Class is SpecInit{
 	}
 
 	replace Function is init(Map of String to String is args){
-		if({ args:has(key: 'h') || args:has(key: 'help') }, {
-			printUsage();
-			return;
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/specinit/cli.json');
+		if({ !cli:parse(rawArgs: Process:rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, {
+				return;
+			});
+			Process:exit(status: 1);
 		});
 
-		local String is targetPath: args:getString(key: '0', default: '');
-		local Boolean is isLib: args:has(key: 'lib');
-		local Boolean is force: args:has(key: 'f') || args:has(key: 'force');
+		local Array of String is pos: cli:positionals();
+		local String is targetPath: pos:get(index: 0, default: '');
+		local Boolean is isLib: cli:getBool(name: 'lib');
+		local Boolean is force: cli:getBool(name: 'force');
 
-		if({ args:has(key: '1') }, {
-			Stderr:line(text: "Error: Unexpected argument '" . args:getString(key: '1', default: '') . "'");
-			printUsage();
+		if({ pos:length() > 1 }, {
+			Stderr:line(text: "Error: Unexpected argument '" . pos:get(index: 1, default: '') . "'");
+			cli:printHelp();
 			Process:exit(status: 2);
 		});
 
 		if({ targetPath == '' }, {
 			Stderr:line(text: "Error: Missing <project_path> argument.");
-			printUsage();
+			cli:printHelp();
 			Process:exit(status: 2);
 		});
 

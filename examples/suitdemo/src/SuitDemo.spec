@@ -5,6 +5,7 @@ Class is SuitDemo{
 	replace [String] is namespace: ['suitdemo'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'suit', [SuitCanvas, SuitFont, SuitWindow]],
 		['base', 'math', Vector],
 		['base', 'struct', Map],
@@ -213,7 +214,12 @@ Class is SuitDemo{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local Int is durationMs: args:getString(key: 'duration-ms', default: '0'):parseInt(default: 0);
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/suitdemo/cli.json');
+		if({ !cli:parse(rawArgs: Process():rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			Process():exit(status: 1);
+		});
+		local Int is durationMs: cli:getInt(name: 'duration-ms', default: 0);
 		local SuitWindow is win: SuitWindow(title: 'Suit Demo', width: 800, height: 600, decorated: true);
 		if({ !win:open() }, {
 			line(text: 'SuitDemo failed to open window: ' . win:lastError());

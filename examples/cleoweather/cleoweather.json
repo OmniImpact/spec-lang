@@ -1,6 +1,7 @@
 {
   "name": "cleoweather",
   "version": "0.1.0",
+  "description": "Interactive US NWS weather forecast viewer using Cleo + MVVM",
   "source": "src/CleoWeather.spec",
   "source_dirs": [
     "src",

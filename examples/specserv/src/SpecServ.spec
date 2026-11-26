@@ -5,6 +5,7 @@ Class is SpecServ{
 	replace [String] is namespace: ['specserv'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'core', SpecError],
 		['base', 'net', [as Socket(), NetError]],
 		['base', 'struct', [Array, Map]],
@@ -103,14 +104,15 @@ Class is SpecServ{
 	}
 
 	replace Function is init(Map of String to String is args){
-		if({ args:has(key: 'help') || args:has(key: 'h') }, {
-			line(text: 'Usage: specserv [--config <path>] [--control-port <port>] [--log-file <path>]');
-			return;
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/specserv/cli.json');
+		if({ !cli:parse(rawArgs: rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			exit(status: 1);
 		});
 
-		local String is cfgPath: args:getString(key: 'config', default: 'specserv.json');
-		local String is logFile: args:getString(key: 'log-file', default: '');
-		local Int is controlPort: args:getString(key: 'control-port', default: '47320'):parseInt(default: 47320);
+		local String is cfgPath: cli:getString(name: 'config', default: 'specserv.json');
+		local String is logFile: cli:getString(name: 'log-file', default: '');
+		local Int is controlPort: cli:getInt(name: 'control-port', default: 47320);
 		lastWallUs: monotonicUs();
 		lastCpuUs: cpuTimeUs();
 

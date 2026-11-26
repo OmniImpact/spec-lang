@@ -1,6 +1,7 @@
 {
   "name": "suitdemo",
   "version": "0.1.0",
+  "description": "Suit native Wayland window demo rendering a SIMD Julia set",
   "source": "src/SuitDemo.spec",
   "source_dirs": [
     "src",

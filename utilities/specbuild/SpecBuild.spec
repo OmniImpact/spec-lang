@@ -21,6 +21,7 @@ Class is SpecBuild{
 	replace [String] is namespace: ['specbuild'];
 
 	replace [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
@@ -147,10 +148,50 @@ Class is SpecBuild{
 		});
 	}
 
-	local Function is appendBundle(String is configDir, String is output, Array is bundledCfg, CleoSection is bSec){
-		if({ bundledCfg:length() == 0 }, { return; });
+	local Function of String is injectCliMetadata(String is rawJson, String is appName, String is appVersion, String is appDescription){
+		if({ rawJson:trim() == '' }, { return rawJson; });
+		local Map of String to Any is root: Json:parseObjectText(text: rawJson);
+		local String is finalName: if({ appName != '' }, { appName }, { Json:getString(obj: root, key: 'name', default: '') });
+		local String is finalVer: if({ appVersion != '' }, { appVersion }, { Json:getString(obj: root, key: 'version', default: '') });
+		local String is finalDesc: if({ appDescription != '' }, { appDescription }, { Json:getString(obj: root, key: 'description', default: '') });
+		local String is usage: Json:getString(obj: root, key: 'usage', default: '');
+		local Array of Any is optsArr: Json:getArray(obj: root, key: 'options');
+
+		local String is out: '{"name":"' . Json:escapeString(str: finalName) . '"'
+			. ',"version":"' . Json:escapeString(str: finalVer) . '"'
+			. ',"description":"' . Json:escapeString(str: finalDesc) . '"';
+		if({ usage != '' }, {
+			out: out . ',"usage":"' . Json:escapeString(str: usage) . '"';
+		});
+		out: out . ',"options":[';
+		local Int is oi: 0;
+		while({ oi < optsArr:length() }, {
+			if({ oi > 0 }, { out: out . ','; });
+			local Map of String to Any is o: Json:getObjectAt(arr: optsArr, index: oi);
+			local String is oShort: Json:getString(obj: o, key: 'short', default: '');
+			local String is oLong: Json:getString(obj: o, key: 'long', default: '');
+			local String is oType: Json:getString(obj: o, key: 'type', default: 'string');
+			local String is oDef: Json:getString(obj: o, key: 'default', default: '');
+			local String is oArg: Json:getString(obj: o, key: 'arg', default: '');
+			local String is oDesc: Json:getString(obj: o, key: 'description', default: '');
+			local Boolean is oReq: Json:getBool(obj: o, key: 'required', default: false);
+			out: out . '{"short":"' . Json:escapeString(str: oShort) . '"'
+				. ',"long":"' . Json:escapeString(str: oLong) . '"'
+				. ',"type":"' . Json:escapeString(str: oType) . '"'
+				. ',"default":"' . Json:escapeString(str: oDef) . '"'
+				. ',"arg":"' . Json:escapeString(str: oArg) . '"'
+				. ',"description":"' . Json:escapeString(str: oDesc) . '"'
+				. ',"required":' . if({ oReq }, { 'true' }, { 'false' }) . '}';
+			oi: oi + 1;
+		});
+		out: out . ']}';
+		return out;
+	}
+
+	local Function is appendBundle(String is configDir, String is output, Array is bundledCfg, String is appName, String is appVersion, String is appDescription, CleoSection is bSec){
 		local Array of String is dests: Array();
 		local Array of String is payloads: Array();
+		local Boolean is hasCliJson: false;
 		local Int is i: 0;
 		while({ i < bundledCfg:length() }, {
 			local Map is entry: Json:getObjectAt(arr: bundledCfg, index: i);
@@ -164,10 +205,33 @@ Class is SpecBuild{
 					bSec:addLine(text: "Bundle path not found: {{resolvedSrc}}", color: CleoColor:ansi(code: 203), rightText: '✖ FAILED');
 					Process:exit(status: 1);
 				});
+				if({ dest == 'cli.json' || dest:endsWith(suffix: '/cli.json') }, {
+					hasCliJson: true;
+				});
 			});
 			i: i + 1;
 		});
+		if({ !hasCliJson }, {
+			local String is autoCli: :resolvePath(baseDir: configDir, relPath: 'cli.json');
+			if({ fileExists(path: autoCli) }, {
+				collectBundleEntry(srcPath: autoCli, destPath: 'cli.json', dests: dests, payloads: payloads);
+			});
+		});
 		if({ dests:length() == 0 }, { return; });
+		local Int is pi: 0;
+		while({ pi < dests:length() }, {
+			local String is dPath: dests:get(index: pi, default: '');
+			if({ dPath == 'cli.json' || dPath:endsWith(suffix: '/cli.json') }, {
+				local String is updated: injectCliMetadata(
+					rawJson: payloads:get(index: pi, default: ''),
+					appName: appName,
+					appVersion: appVersion,
+					appDescription: appDescription
+				);
+				payloads:set(index: pi, item: updated);
+			});
+			pi: pi + 1;
+		});
 		local String is blob: Bundle(autoLoad: false):pack(destPaths: dests, payloads: payloads);
 		local Boolean is ok: File:fileAppend(
 			path: output,
@@ -239,24 +303,21 @@ Class is SpecBuild{
 	}
 
 	replace Function is init(Map of String to String is args){
-		if({ args:has(key: 'h') || args:has(key: 'help') }, {
-			:printHelp();
-			Process:exit(status: 0);
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/specbuild/cli.json');
+		if({ !cli:parse(rawArgs: Process:rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, {
+				Process:exit(status: 0);
+			});
+			Process:exit(status: 1);
 		});
 
-		local String is configPath: '';
+		local String is configPath: cli:getString(name: 'config', default: '');
 		local String is command: 'build';
-		local Boolean is verbose: args:has(key: 'v') || args:has(key: 'verbose');
+		local Boolean is verbose: cli:getBool(name: 'verbose');
 
-		if({ args:has(key: 'c') }, {
-			configPath: args:getString(key: 'c', default: '');
-		});
-		if({ configPath == '' && args:has(key: 'config') }, {
-			configPath: args:getString(key: 'config', default: '');
-		});
-
-		local String is pos0: args:getString(key: '0', default: '');
-		local String is pos1: args:getString(key: '1', default: '');
+		local Array of String is pos: cli:positionals();
+		local String is pos0: pos:get(index: 0, default: '');
+		local String is pos1: pos:get(index: 1, default: '');
 
 		if({ pos0 != '' }, {
 			if({ pos0:endsWith(suffix: '.json') }, {
@@ -335,6 +396,7 @@ Class is SpecBuild{
 
 		local String is name: Json:getString(obj: cfg, key: 'name', default: 'app');
 		local String is version: Json:getString(obj: cfg, key: 'version', default: '0.1.0');
+		local String is description: Json:getString(obj: cfg, key: 'description', default: '');
 		local String is source: Json:getString(obj: cfg, key: 'source', default: '');
 		if({ source == '' }, {
 			source: Json:getString(obj: cfg, key: 'entry', default: '');
@@ -509,7 +571,15 @@ Class is SpecBuild{
 			ui:render();
 			Process:exit(status: exitCode);
 		});
-		appendBundle(configDir: configDir, output: output, bundledCfg: bundledCfg, bSec: bSec);
+		appendBundle(
+			configDir: configDir,
+			output: output,
+			bundledCfg: bundledCfg,
+			appName: name,
+			appVersion: version,
+			appDescription: description,
+			bSec: bSec
+		);
 		bSec:addLine(text: 'Build succeeded -> ' . output, color: CleoColor:ansi(code: 252), rightText: '✔ BUILT');
 		ui:render();
 

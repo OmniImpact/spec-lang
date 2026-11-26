@@ -5,21 +5,29 @@ Class is CleoWeather{
 	replace [String] is namespace: ['cleoweather'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'struct', Map],
-		['base', 'sys', as Output()],
+		['base', 'sys', [as Output(), as Process()]],
+		['base', 'sys', as Conditional()],
 		['cleoweather', 'vm', WeatherViewModel],
 		['cleoweather', 'view', [CleoForecastView, CleoSelectorView]]
 	];
 
 	replace Function is init(Map of String to String is args){
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/cleoweather/cli.json');
+		if({ !cli:parse(rawArgs: rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			exit(status: 1);
+		});
+
 		local WeatherViewModel is vm: WeatherViewModel();
 		if({ !vm:hasStates() }, {
 			line('Error: could not load locations.json');
 			return;
 		});
 
-		local String is stateArg: args:getString(key: 'state', default: '');
-		local String is cityArg: args:getString(key: 'city', default: '');
+		local String is stateArg: cli:getString(name: 'state', default: '');
+		local String is cityArg: cli:getString(name: 'city', default: '');
 		local CleoSelectorView is selector: CleoSelectorView();
 
 		if({ stateArg != '' && vm:selectStateByInput(input: stateArg) }, {

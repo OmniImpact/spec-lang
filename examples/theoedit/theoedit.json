@@ -1,6 +1,7 @@
 {
   "name": "theoedit",
   "version": "0.1.0",
+  "description": "Theo TUI text editor",
   "source": "src/TheoEdit.spec",
   "source_dirs": [
     "src",

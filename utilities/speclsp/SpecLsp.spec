@@ -7,6 +7,7 @@ Class is SpecLsp{
 	replace [String] is namespace: ['speclsp'];
 
 	replace [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'loader', Loader],
@@ -748,6 +749,10 @@ Class is SpecLsp{
 	}
 
 	replace Function is init(Map of String to String is args){
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/speclsp/cli.json');
+		if({ !cli:parse(rawArgs: Process:rawArgs()) }, {
+			return;
+		});
 		:docPrograms: [:];
 		Input:setBinaryMode();
 		local Boolean is running: true;

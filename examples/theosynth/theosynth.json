@@ -1,6 +1,7 @@
 {
   "name": "theosynth",
   "version": "0.1.0",
+  "description": "Interactive 3-octave terminal synthesizer built with Theo and base:audio",
   "source": "src/TheoSynth.spec",
   "source_dirs": [
     "src",

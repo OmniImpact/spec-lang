@@ -30,6 +30,7 @@ Class is SpecLint{
 		['base', 'compiler', 'loader', Loader],
 		['speclint', Linter],
 		['speclint', LintIssue],
+		['base', 'cli', Cli],
 		['base', 'cleo', Cleo],
 		['base', 'cleo', CleoSection],
 		['base', 'cleo', CleoColor],
@@ -50,13 +51,19 @@ Class is SpecLint{
 	];
 
 	replace Function is init(Map of String to String is args){
-		local Int is startMs: Time:monotonicMs();
-		local String is inputPath: args:getString(key: 'i', default: '');
-		if({ inputPath == '' }, {
-			inputPath: args:getString(key: 'input', default: '');
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/speclint/cli.json');
+		if({ !cli:parse(rawArgs: Process:rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, {
+				Process:exit(status: 0);
+			});
+			Process:exit(status: 1);
 		});
-		local String is dirsRaw: args:getString(key: 't', default: '');
-		local String is pos0: args:getString(key: '0', default: '');
+
+		local Int is startMs: Time:monotonicMs();
+		local String is inputPath: cli:getString(name: 'input', default: '');
+		local String is dirsRaw: cli:getString(name: 'tests', default: '');
+		local Array of String is pos: cli:positionals();
+		local String is pos0: pos:get(index: 0, default: '');
 		if({ inputPath == '' && dirsRaw == '' && pos0 != '' }, {
 			if({ Dir:dirList(path: pos0):length() > 0 }, {
 				dirsRaw: pos0;
@@ -64,10 +71,7 @@ Class is SpecLint{
 				inputPath: pos0;
 			});
 		});
-		local Boolean is auditMode: args:has(key: 'a');
-		if({ !auditMode }, {
-			auditMode: args:has(key: 'audit');
-		});
+		local Boolean is auditMode: cli:getBool(name: 'audit');
 
 		# Audit: one file, the full loader (import resolution like the
 		# compiler's), informational — the old always-0 contract holds.

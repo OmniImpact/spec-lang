@@ -1,6 +1,7 @@
 {
   "name": "speclint",
   "version": "0.1.0",
+  "description": "Static linter and import auditor for Spec",
   "source": "SpecLint.spec",
   "source_dirs": [".", "../../spec"],
   "output": "../../bin/speclint",

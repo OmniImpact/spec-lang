@@ -1,6 +1,7 @@
 {
   "name": "speclsp",
   "version": "0.1.0",
+  "description": "Language Server Protocol (LSP) server for Spec",
   "source": "SpecLsp.spec",
   "source_dirs": [".", "../../spec"],
   "output": "../../bin/speclsp",

@@ -1,0 +1,25 @@
+{
+  "usage": "specservui [options]",
+  "options": [
+    {
+      "short": "c",
+      "long": "config",
+      "type": "string",
+      "default": "specserv.json",
+      "arg": "path",
+      "description": "Path to specserv JSON config file"
+    },
+    {
+      "long": "log-file",
+      "type": "string",
+      "arg": "path",
+      "description": "Optional file path for specserv to append request logs"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

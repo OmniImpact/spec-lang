@@ -1,0 +1,25 @@
+{
+  "name": "specinit",
+  "version": "0.1.0",
+  "description": "Project scaffolding tool for Spec",
+  "usage": "specinit <project_path> [--lib] [--force]",
+  "options": [
+    {
+      "long": "lib",
+      "type": "bool",
+      "description": "Scaffold a library project instead of an executable app"
+    },
+    {
+      "short": "f",
+      "long": "force",
+      "type": "bool",
+      "description": "Overwrite existing manifest if present"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

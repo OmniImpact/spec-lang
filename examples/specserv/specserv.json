@@ -1,6 +1,7 @@
 {
   "name": "specserv",
   "version": "0.1.0",
+  "description": "Headless HTTP/1.1 web server for static assets and SpecServePage .spec files",
   "source": "src/SpecServ.spec",
   "source_dirs": [
     "src",

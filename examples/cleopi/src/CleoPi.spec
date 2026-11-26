@@ -5,6 +5,9 @@ Class is CleoPi{
 	replace [String] is namespace: ['cleopi'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Process()],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'struct', Map],
 		['cleopi', 'vm', CleoPiViewModel],
@@ -13,10 +16,15 @@ Class is CleoPi{
 
 	## Entry point; reads optional [args] (`threads`, `points`, `refresh`) and runs the benchmark.
 	replace Function is init(Map of String to String is args){
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/cleopi/cli.json');
+		if({ !cli:parse(rawArgs: rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			exit(status: 1);
+		});
 		local CleoPiViewModel is vm: CleoPiViewModel(
-			threads: args:getInt(key: 'threads', default: 4),
-			points: args:getInt(key: 'points', default: 1_000_000_000),
-			refreshMs: args:getInt(key: 'refresh', default: 40)
+			threads: cli:getInt(name: 'threads', default: 4),
+			points: cli:getInt(name: 'points', default: 1_000_000_000),
+			refreshMs: cli:getInt(name: 'refresh', default: 40)
 		);
 		local CleoDashboard is dashboard: CleoDashboard(vm: vm);
 		vm:run(

@@ -1,0 +1,14 @@
+{
+  "name": "speclsp",
+  "version": "0.1.0",
+  "description": "Language Server Protocol (LSP) server for Spec (communicates over stdio)",
+  "usage": "speclsp [options]",
+  "options": [
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

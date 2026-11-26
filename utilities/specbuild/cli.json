@@ -1,0 +1,42 @@
+{
+  "name": "specbuild",
+  "version": "0.1.0",
+  "description": "SpecBuild - Project Build Orchestrator",
+  "usage": "specbuild [manifest.json] [build|run|test|lint|clean|help] [options]",
+  "options": [
+    {
+      "short": "c",
+      "long": "config",
+      "type": "string",
+      "arg": "file.json",
+      "description": "Path to build manifest (default: <project>.json or specbuild.json)"
+    },
+    {
+      "long": "release",
+      "type": "bool",
+      "description": "Build with -O2 optimization for production"
+    },
+    {
+      "long": "prod",
+      "type": "bool",
+      "description": "Alias for --release"
+    },
+    {
+      "long": "debug",
+      "type": "bool",
+      "description": "Force debug -O0 build"
+    },
+    {
+      "short": "v",
+      "long": "verbose",
+      "type": "bool",
+      "description": "Display detailed compiler commands"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

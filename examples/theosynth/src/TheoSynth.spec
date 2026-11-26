@@ -5,14 +5,21 @@ Class is TheoSynth{
 	replace [String] is namespace: ['theosynth'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'theo', [TheoApp, TheoScreen]],
 		['base', 'core', SpecError],
+		['base', 'sys', [as Conditional(), as Process()]],
 		['base', 'sys', 'thread', ThreadScope],
 		['theosynth', 'vm', SynthViewModel],
 		['theosynth', 'view', SynthFrame]
 	];
 
 	replace Function is init(){
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/theosynth/cli.json');
+		if({ !cli:parse(rawArgs: rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			exit(status: 1);
+		});
 		local TheoApp is app: TheoApp();
 		local SynthViewModel is vm: SynthViewModel(onQuit: {
 			app:quit();

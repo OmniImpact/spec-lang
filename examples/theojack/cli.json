@@ -1,0 +1,11 @@
+{
+  "usage": "theojack [options]",
+  "options": [
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

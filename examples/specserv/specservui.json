@@ -1,10 +1,14 @@
 {
   "name": "specservui",
   "version": "0.1.0",
+  "description": "Theo TUI manager to configure and control specserv",
   "source": "src/SpecServUi.spec",
   "source_dirs": [
     "src",
     "../../spec"
   ],
-  "output": "../../bin/specservui"
+  "output": "../../bin/specservui",
+  "bundled": [
+    { "src": "cli_ui.json", "dest": "cli.json" }
+  ]
 }

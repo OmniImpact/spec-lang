@@ -5,13 +5,20 @@ Class is TheoFractal{
 	replace [String] is namespace: ['theofractal'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'theo', [TheoApp, TheoScreen, TheoTheme]],
 		['base', 'struct', Map],
+		['base', 'sys', [as Conditional(), as Process()]],
 		['theofractal', 'vm', ExplorerViewModel],
 		['theofractal', 'view', ExplorerFrame]
 	];
 
 	replace Function is init(Map of String to String is args){
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/theofractal/cli.json');
+		if({ !cli:parse(rawArgs: rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			exit(status: 1);
+		});
 		local TheoApp is app: TheoApp(theme: TheoTheme());
 		local ExplorerViewModel is vm: ExplorerViewModel(onQuit: { app:quit(); });
 		local ExplorerFrame is mainFrame: ExplorerFrame(vm: vm);

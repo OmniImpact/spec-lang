@@ -1,0 +1,19 @@
+{
+  "usage": "helloworld [options]",
+  "options": [
+    {
+      "short": "n",
+      "long": "name",
+      "type": "string",
+      "default": "User",
+      "arg": "name",
+      "description": "Name to greet"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

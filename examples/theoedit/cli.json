@@ -1,0 +1,17 @@
+{
+  "usage": "theoedit [options] [file]",
+  "options": [
+    {
+      "short": "v",
+      "long": "version",
+      "type": "bool",
+      "description": "Show version information"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

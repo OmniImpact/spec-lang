@@ -1,0 +1,35 @@
+{
+  "usage": "cleopi [options]",
+  "options": [
+    {
+      "short": "t",
+      "long": "threads",
+      "type": "int",
+      "default": "4",
+      "arg": "N",
+      "description": "Worker thread count"
+    },
+    {
+      "short": "p",
+      "long": "points",
+      "type": "int",
+      "default": "1000000000",
+      "arg": "N",
+      "description": "Total Monte Carlo sample points"
+    },
+    {
+      "short": "r",
+      "long": "refresh",
+      "type": "int",
+      "default": "40",
+      "arg": "ms",
+      "description": "Dashboard refresh interval in milliseconds"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

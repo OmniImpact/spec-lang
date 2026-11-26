@@ -1,6 +1,7 @@
 {
   "name": "theofractal",
   "version": "0.1.0",
+  "description": "Interactive terminal fractal explorer built with Theo and SIMD",
   "source": "src/TheoFractal.spec",
   "source_dirs": [
     "src",

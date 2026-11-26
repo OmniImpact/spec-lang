@@ -5,24 +5,23 @@ Class is TheoEdit{
 	replace [String] is namespace: ['theoedit'];
 
 	merge [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'theo', [TheoApp, TheoScreen]],
 		['base', 'struct', Map],
-		['base', 'sys', as Output()],
+		['base', 'sys', [as Output(), as Process()]],
+		['base', 'sys', as Conditional()],
 		['theoedit', 'vm', EditorViewModel],
 		['theoedit', 'view', EditorFrame]
 	];
 
 	replace Function is init(Map of String to String is args){
-		if({ args:has(key: 'h') || args:has(key: 'help') }, {
-			printUsage();
-			return;
-		});
-		if({ args:has(key: 'v') || args:has(key: 'version') }, {
-			line(text: 'theoedit 0.1.0');
-			return;
+		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/theoedit/cli.json');
+		if({ !cli:parse(rawArgs: rawArgs()) }, {
+			if({ cli:helpRequested || cli:versionRequested }, { return; });
+			exit(status: 1);
 		});
 
-		local String is filePath: args:getString(key: '0', default: '');
+		local String is filePath: cli:positionals():get(index: 0, default: '');
 		local TheoApp is app: TheoApp();
 		local EditorViewModel is vm: EditorViewModel(filePath: filePath);
 		local EditorFrame is rootFrame: EditorFrame(
