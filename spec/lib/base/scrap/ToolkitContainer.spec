@@ -147,14 +147,25 @@ Class of SewNode is ToolkitContainer{
 		layoutBounds: Rect(x: 0, y: 0, width: widthPx, height: heightPx);
 	}
 
-	Function of Boolean is onPointerMove(Int is x, Int is y){
-		if({ !hasToolbarSlot }, { return false; });
-		return toolbarSlot:onPointerMove(x: x, y: y);
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
+		local Boolean is changed: false;
+		if({ hasToolbarSlot }, {
+			if({ toolbarSlot:onPointerMove(x: x, y: y) }, { changed: true; });
+		});
+		if({ hasBody && !useVulkan }, {
+			if({ bodyPanel:onPointerMove(x: x, y: y) }, { changed: true; });
+		});
+		return changed;
 	}
 
-	Function of Boolean is onPointerClick(Int is x, Int is y){
-		if({ !hasToolbarSlot }, { return false; });
-		return toolbarSlot:onPointerClick(x: x, y: y);
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ hasToolbarSlot }, {
+			if({ toolbarSlot:onPointerClick(x: x, y: y) }, { return true; });
+		});
+		if({ hasBody && !useVulkan }, {
+			return bodyPanel:onPointerClickMod(x: x, y: y, mods: mods);
+		});
+		return false;
 	}
 
 	## Renders body (when software 2D), bars, and overlay popups in z-order into [ctx].
@@ -250,25 +261,49 @@ Class of SewNode is ToolkitContainer{
 				running:emit(value: false);
 			});
 
+			local Int is curMods: win:mods();
 			if({ running:current() }, {
 				local Int is key: win:nextKey();
 				while({ key != 0 }, {
 					if({ key == 27 }, {
 						running:emit(value: false);
-					});
-					if({ key == 1001 && hasBody && !useVulkan }, {
-						if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
-					});
-					if({ key == 1002 && hasBody && !useVulkan }, {
-						if({ bodyPanel:onScroll(deltaY: 15) }, { :isDirty: true; });
-					});
-					if({ key == 1007 && hasBody && !useVulkan }, {
-						if({ bodyPanel:onScroll(deltaY: -80) }, { :isDirty: true; });
-					});
-					if({ key == 1008 && hasBody && !useVulkan }, {
-						if({ bodyPanel:onScroll(deltaY: 80) }, { :isDirty: true; });
+					}, {
+						if({ hasBody && !useVulkan }, {
+							if({ bodyPanel:onKey(key: key, mods: curMods) }, {
+								:isDirty: true;
+							}, {
+								if({ key == 1001 }, {
+									if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
+								});
+								if({ key == 1002 }, {
+									if({ bodyPanel:onScroll(deltaY: 15) }, { :isDirty: true; });
+								});
+								if({ key == 1003 }, {
+									if({ bodyPanel:onScrollX(deltaX: -15) }, { :isDirty: true; });
+								});
+								if({ key == 1004 }, {
+									if({ bodyPanel:onScrollX(deltaX: 15) }, { :isDirty: true; });
+								});
+								if({ key == 1007 }, {
+									if({ bodyPanel:onScroll(deltaY: -80) }, { :isDirty: true; });
+								});
+								if({ key == 1008 }, {
+									if({ bodyPanel:onScroll(deltaY: 80) }, { :isDirty: true; });
+								});
+							});
+						});
 					});
 					key: win:nextKey();
+				});
+
+				local Int is cp: win:nextChar();
+				while({ cp != 0 }, {
+					if({ hasBody && !useVulkan && cp >= 32 }, {
+						if({ bodyPanel:onText(ch: String:fromCodePoint(code: cp), mods: curMods) }, {
+							:isDirty: true;
+						});
+					});
+					cp: win:nextChar();
 				});
 			});
 
@@ -297,8 +332,14 @@ Class of SewNode is ToolkitContainer{
 
 				local Int is sy: win:pollScrollY();
 				if({ sy != 0 && hasBody && !useVulkan }, {
-					if({ bodyPanel:onScroll(deltaY: sy) }, {
-						:isDirty: true;
+					if({ (curMods & 1) != 0 }, {
+						if({ bodyPanel:onScrollX(deltaX: sy) }, {
+							:isDirty: true;
+						});
+					}, {
+						if({ bodyPanel:onScroll(deltaY: sy) }, {
+							:isDirty: true;
+						});
 					});
 				});
 
@@ -313,7 +354,7 @@ Class of SewNode is ToolkitContainer{
 				});
 
 				if({ win:pollClick() }, {
-					if({ :onPointerClick(x: win:clickX(), y: win:clickY()) }, {
+					if({ :onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
 						:isDirty: true;
 					});
 				});

@@ -81,6 +81,53 @@ Class is DrawContext{
 		canvas:fillRect(x: x + w - 1, y: y, w: 1, h: h, color: color);
 	}
 
+	local Function is plotClipped(Int is x, Int is y, Int is color){
+		if({ hasClip }, {
+			if({ x < clipX || x >= clipX + clipW || y < clipY || y >= clipY + clipH }, { return; });
+		});
+		canvas:setPixel(x: x, y: y, color: color);
+	}
+
+	## Fills a solid circle centered at ([cx], [cy]) with radius [r].
+	Function is fillCircle(Int is cx, Int is cy, Int is r, Int is color){
+		if({ r <= 0 }, { return; });
+		local Int is dy: 0 - r;
+		local Int is r2: r * r;
+		while({ dy <= r }, {
+			local Int is dx: r;
+			while({ dx > 0 && (dx * dx + dy * dy) > r2 }, {
+				dx: dx - 1;
+			});
+			:fillRect(x: cx - dx, y: cy + dy, w: dx * 2 + 1, h: 1, color: color);
+			dy: dy + 1;
+		});
+	}
+
+	## Draws a 1px circle outline centered at ([cx], [cy]) with radius [r].
+	Function is strokeCircle(Int is cx, Int is cy, Int is r, Int is color){
+		if({ r <= 0 }, { return; });
+		local Int is x: r;
+		local Int is y: 0;
+		local Int is err: 1 - x;
+		while({ x >= y }, {
+			:plotClipped(x: cx + x, y: cy + y, color: color);
+			:plotClipped(x: cx + y, y: cy + x, color: color);
+			:plotClipped(x: cx - y, y: cy + x, color: color);
+			:plotClipped(x: cx - x, y: cy + y, color: color);
+			:plotClipped(x: cx - x, y: cy - y, color: color);
+			:plotClipped(x: cx - y, y: cy - x, color: color);
+			:plotClipped(x: cx + y, y: cy - x, color: color);
+			:plotClipped(x: cx + x, y: cy - y, color: color);
+			y: y + 1;
+			if({ err < 0 }, {
+				err: err + 2 * y + 1;
+			}, {
+				x: x - 1;
+				err: err + 2 * (y - x) + 1;
+			});
+		});
+	}
+
 	## Measures the pixel width of UTF-8 [text] at [pixelHeight] using the system font.
 	Function of Int is measureTextWidth(String is text, Int is pixelHeight: 15){
 		local Font is f: :activeFont();

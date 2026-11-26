@@ -43,6 +43,31 @@ Class is SewNode{
 		return false;
 	}
 
+	## Handles horizontal scroll delta; returns `true` if redraw is needed.
+	Function of Boolean is onScrollX(Int is deltaX){
+		return false;
+	}
+
+	## Handles pointer click at ([x], [y], [mods]); returns `true` if redraw is needed.
+	Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		return false;
+	}
+
+	## Handles pointer move at ([x], [y]); returns `true` if redraw is needed.
+	Function of Boolean is onPointerMove(Int is x, Int is y){
+		return false;
+	}
+
+	## Handles key press ([key], [mods]); returns `true` if redraw is needed.
+	Function of Boolean is onKey(Int is key, Int is mods){
+		return false;
+	}
+
+	## Handles UTF-8 text input ([ch], [mods]); returns `true` if redraw is needed.
+	Function of Boolean is onText(String is ch, Int is mods){
+		return false;
+	}
+
 	## Registers a dirty/redraw listener [cb] (Theo-style invalidation).
 	Function is bindDirty(Function is cb){
 		:dirtyListeners: Array([cb]);

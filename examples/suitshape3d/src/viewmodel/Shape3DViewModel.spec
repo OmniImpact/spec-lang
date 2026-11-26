@@ -35,9 +35,9 @@ Class is Shape3DViewModel{
 	Int is fpsWindowStartMs: 0;
 	Int is frameCount: 0;
 	Float is emaFps: 0.0;
-	MenuItemConfig is fps30Item: MenuItemConfig(id: 'fps_30', label: '30');
-	MenuItemConfig is fps60Item: MenuItemConfig(id: 'fps_60', label: '60', checked: true);
-	MenuItemConfig is fpsUnlockedItem: MenuItemConfig(id: 'fps_unlocked', label: 'Unlocked');
+	MenuItemConfig is fps30Item: MenuItemConfig(id: 'fps_30', label: '30', kind: 'radio');
+	MenuItemConfig is fps60Item: MenuItemConfig(id: 'fps_60', label: '60', checked: true, kind: 'radio');
+	MenuItemConfig is fpsUnlockedItem: MenuItemConfig(id: 'fps_unlocked', label: 'Unlocked', kind: 'radio');
 
 	replace Function is init(Shape3DModel is model){
 		:model: model;
@@ -67,9 +67,9 @@ Class is Shape3DViewModel{
 
 		local MenuConfig is configMenu: MenuConfig(id: 'config', label: 'Config');
 		local MenuItemConfig is frMenu: MenuItemConfig(id: 'framerate', label: 'Framerate');
-		fps30Item: MenuItemConfig(id: 'fps_30', label: '30', checked: false, onClick: local Function(){ :setFramerate(fps: 30); });
-		fps60Item: MenuItemConfig(id: 'fps_60', label: '60', checked: true, onClick: local Function(){ :setFramerate(fps: 60); });
-		fpsUnlockedItem: MenuItemConfig(id: 'fps_unlocked', label: 'Unlocked', checked: false, onClick: local Function(){ :setFramerate(fps: 0); });
+		fps30Item: MenuItemConfig(id: 'fps_30', label: '30', checked: false, kind: 'radio', onClick: local Function(){ :setFramerate(fps: 30); });
+		fps60Item: MenuItemConfig(id: 'fps_60', label: '60', checked: true, kind: 'radio', onClick: local Function(){ :setFramerate(fps: 60); });
+		fpsUnlockedItem: MenuItemConfig(id: 'fps_unlocked', label: 'Unlocked', checked: false, kind: 'radio', onClick: local Function(){ :setFramerate(fps: 0); });
 		frMenu:addSubItem(item: fps30Item);
 		frMenu:addSubItem(item: fps60Item);
 		frMenu:addSubItem(item: fpsUnlockedItem);

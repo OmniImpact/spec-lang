@@ -111,7 +111,7 @@ Class of SewNode is Toolbar{
 	}
 
 	## Updates hover state; returns `true` if visual state changed.
-	Function of Boolean is onPointerMove(Int is x, Int is y){
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		local Int is prevMenu: hoverMenuIdx;
 		local Int is prevItem: hoverItemIdx;
 		local Int is prevSubOpen: openSubMenuIdx;
@@ -272,6 +272,63 @@ Class of SewNode is Toolbar{
 		});
 	}
 
+	local Function of Boolean is listHasIndicators(Array of MenuItemConfig is list){
+		local Int is i: 0;
+		while({ i < list:length() }, {
+			local MenuItemConfig is it: list:get(index: i);
+			if({ it:kind == 'radio' || it:kind == 'toggle' || it:checked }, {
+				return true;
+			});
+			i: i + 1;
+		});
+		return false;
+	}
+
+	local Function is paintMenuItem(
+		DrawContext is ctx,
+		MenuItemConfig is item,
+		Int is x,
+		Int is y,
+		Int is w,
+		Int is h,
+		Int is fpx,
+		Int is th,
+		Int is padX,
+		Boolean is hovered,
+		Boolean is reserveInd
+	){
+		if({ hovered }, {
+			ctx:fillRect(x: x + 1, y: y + 1, w: w - 2, h: h - 2, color: theme:hoverBg);
+		});
+		local Int is indW: if({ reserveInd }, { scale:px(pt: 18.0) }, { 0 });
+		local Int is cy: y + h / 2;
+		if({ item:kind == 'radio' }, {
+			local Int is r: scale:px(pt: 5.5);
+			if({ r < 4 }, { r: 4; });
+			local Int is cx: x + padX + r;
+			ctx:strokeCircle(cx: cx, cy: cy, r: r, color: theme:textPrimary);
+			if({ item:checked }, {
+				local Int is ir: r - 2;
+				if({ ir < 2 }, { ir: 2; });
+				ctx:fillCircle(cx: cx, cy: cy, r: ir, color: theme:textPrimary);
+			});
+		}, {
+			if({ item:kind == 'toggle' }, {
+				local Int is sz: scale:px(pt: 11.0);
+				if({ sz < 8 }, { sz: 8; });
+				local Int is sx: x + padX;
+				local Int is sy: cy - sz / 2;
+				ctx:strokeRect(x: sx, y: sy, w: sz, h: sz, color: theme:textPrimary);
+				if({ item:checked }, {
+					ctx:fillRect(x: sx + 3, y: sy + 3, w: sz - 6, h: sz - 6, color: theme:textPrimary);
+				});
+			});
+		});
+		local Int is ty: y + (h - th) / 2;
+		local String is lbl: if({ item:kind == 'action' && item:checked }, { '* ' . item:label }, { item:label });
+		ctx:drawText(x: x + padX + indW, y: ty, text: lbl, color: theme:textPrimary, pixelHeight: fpx);
+	}
+
 	## Paints the open dropdown menu popup (and any open sub-menu) above the body layer.
 	Function is paintOverlay(DrawContext is ctx){
 		if({ openMenuIdx < 0 || openMenuIdx >= config:menus:length() }, { return; });
@@ -292,17 +349,26 @@ Class of SewNode is Toolbar{
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is padX: scale:px(pt: 12.0);
+		local Boolean is mainInd: :listHasIndicators(list: om:items);
 
 		times(count: count, worker: local Function(Int is i){
 			local MenuItemConfig is item: om:items:get(index: i);
 			local Int is iy: dy + i * ih;
-			if({ hoverItemIdx == i || openSubMenuIdx == i }, {
-				ctx:fillRect(x: dx + 1, y: iy + 1, w: dw - 2, h: ih - 2, color: theme:hoverBg);
-			});
-			local Int is ty: iy + (ih - th) / 2;
-			local String is lbl: if({ item:checked }, { '* ' . item:label }, { item:label });
-			ctx:drawText(x: dx + padX, y: ty, text: lbl, color: theme:textPrimary, pixelHeight: fpx);
+			:paintMenuItem(
+				ctx: ctx,
+				item: item,
+				x: dx,
+				y: iy,
+				w: dw,
+				h: ih,
+				fpx: fpx,
+				th: th,
+				padX: padX,
+				hovered: (hoverItemIdx == i || openSubMenuIdx == i),
+				reserveInd: mainInd
+			);
 			if({ item:subItems:length() > 0 }, {
+				local Int is ty: iy + (ih - th) / 2;
 				local Int is aw: ctx:measureTextWidth(text: '>', pixelHeight: fpx);
 				ctx:drawText(x: dx + dw - padX - aw, y: ty, text: '>', color: theme:textMuted, pixelHeight: fpx);
 			});
@@ -317,15 +383,23 @@ Class of SewNode is Toolbar{
 				local Int is sdh: scount * ih;
 				ctx:fillRect(x: sdx, y: sdy, w: dw, h: sdh, color: theme:menuBg);
 				ctx:strokeRect(x: sdx, y: sdy, w: dw, h: sdh, color: theme:menuBorder);
+				local Boolean is subInd: :listHasIndicators(list: parentItem:subItems);
 				times(count: scount, worker: local Function(Int is j){
 					local MenuItemConfig is sub: parentItem:subItems:get(index: j);
 					local Int is siy: sdy + j * ih;
-					if({ hoverSubItemIdx == j }, {
-						ctx:fillRect(x: sdx + 1, y: siy + 1, w: dw - 2, h: ih - 2, color: theme:hoverBg);
-					});
-					local Int is sty: siy + (ih - th) / 2;
-					local String is slbl: if({ sub:checked }, { '* ' . sub:label }, { sub:label });
-					ctx:drawText(x: sdx + padX, y: sty, text: slbl, color: theme:textPrimary, pixelHeight: fpx);
+					:paintMenuItem(
+						ctx: ctx,
+						item: sub,
+						x: sdx,
+						y: siy,
+						w: dw,
+						h: ih,
+						fpx: fpx,
+						th: th,
+						padX: padX,
+						hovered: (hoverSubItemIdx == j),
+						reserveInd: subInd
+					);
 				});
 			});
 		});

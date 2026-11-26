@@ -12,18 +12,21 @@ Class is MenuItemConfig{
 	String is label: '';
 	Function is onClick: local Function(){};
 	Boolean is checked: false;
+	String is kind: 'action';
 	Array of MenuItemConfig is subItems: Array();
 
 	replace Function is init(
 		String is id,
 		String is label,
 		Function is onClick: local Function(){},
-		Boolean is checked: false
+		Boolean is checked: false,
+		String is kind: 'action'
 	){
 		:id: id;
 		:label: label;
 		:onClick: onClick;
 		:checked: checked;
+		:kind: kind;
 		subItems: Array();
 	}
 

@@ -78,7 +78,7 @@ Class of SewNode is ToolbarContainer{
 		});
 	}
 
-	Function of Boolean is onPointerMove(Int is x, Int is y){
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		if({ !hasToolbar }, { return false; });
 		return toolbar:onPointerMove(x: x, y: y);
 	}
