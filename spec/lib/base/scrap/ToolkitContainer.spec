@@ -38,6 +38,7 @@ Class of SewNode is ToolkitContainer{
 	ScrapPanel is bodyPanel: ScrapPanel();
 	Boolean is hasToolbarSlot: false;
 	Boolean is hasBody: false;
+	Boolean is isDirty: false;
 
 	replace Function is init(
 		TextEmitter is title: TextEmitter(initial: 'Suit'),
@@ -114,7 +115,6 @@ Class of SewNode is ToolkitContainer{
 	## Opens the native window, binds reactive ViewModel emitters, runs the event/render loop,
 	## and disposes window & canvas resources internally on exit.
 	Function is run(Int is durationMs: 0){
-		local Boolean is alive: running:current();
 		local String is curTitle: title:current();
 
 		local SuitWindow is win: SuitWindow(
@@ -133,15 +133,15 @@ Class of SewNode is ToolkitContainer{
 		scale: Scale(factor: win:scaleFactor());
 		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
 
-		local Boolean is dirtyFlag: false;
-		:bindDirty(cb: local Function(){ dirtyFlag: true; });
-		if({ hasToolbarSlot }, { toolbarSlot:bindDirty(cb: local Function(){ dirtyFlag: true; }); });
+		:isDirty: false;
+		:bindDirty(cb: local Function(){ :isDirty: true; });
+		if({ hasToolbarSlot }, { toolbarSlot:bindDirty(cb: local Function(){ :isDirty: true; }); });
 
 		signalBag:track(
 			slot: 'running',
 			emitter: running,
 			collector: BoolCollector(onEmit: local Function(){
-				alive: running:current();
+				:isDirty: true;
 			})
 		);
 		signalBag:track(
@@ -166,7 +166,7 @@ Class of SewNode is ToolkitContainer{
 		local Int is lastPtrX: -1;
 		local Int is lastPtrY: -1;
 
-		while({ alive && win:poll() }, {
+		while({ running:current() && win:poll() }, {
 			local Int is key: win:nextKey();
 			while({ key != 0 }, {
 				if({ key == 27 }, {
@@ -179,8 +179,7 @@ Class of SewNode is ToolkitContainer{
 				running:emit(value: false);
 			});
 
-			if({ alive }, {
-				local Boolean is dirty: false;
+			if({ running:current() }, {
 				local Int is w: win:width();
 				local Int is h: win:height();
 				if({ w > 0 && h > 0 && (w != curW || h != curH) }, {
@@ -188,7 +187,7 @@ Class of SewNode is ToolkitContainer{
 					curH: h;
 					canvas:resize(width: curW, height: curH);
 					:layout(widthPx: curW, heightPx: curH);
-					dirty: true;
+					:isDirty: true;
 				});
 
 				local Int is px: win:pointerX();
@@ -197,17 +196,18 @@ Class of SewNode is ToolkitContainer{
 					lastPtrX: px;
 					lastPtrY: py;
 					if({ :onPointerMove(x: px, y: py) }, {
-						dirty: true;
+						:isDirty: true;
 					});
 				});
 
 				if({ win:pollClick() }, {
 					if({ :onPointerClick(x: win:clickX(), y: win:clickY()) }, {
-						dirty: true;
+						:isDirty: true;
 					});
 				});
 
-				if({ dirty && alive }, {
+				if({ isDirty && running:current() }, {
+					:isDirty: false;
 					:paint(ctx: ctx);
 					win:present(canvas: canvas);
 				});
