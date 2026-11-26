@@ -17,6 +17,7 @@ Class is EditorView{
 		['base', 'sew', 'grid', GridFlexH],
 		['base', 'sew', 'grid', GridFlexPanel],
 		['base', 'fabric', Theme],
+		['base', 'fabric', ThemePreset],
 		['base', 'scrap', ToolkitContainer],
 		['base', 'scrap', 'toolbar', ToolbarContainer],
 		['base', 'scrap', 'toolbar', Toolbar],
@@ -201,7 +202,7 @@ Class is EditorView{
 			title: vm:title,
 			iconSvg: vm:icons:appIcon,
 			running: vm:running,
-			theme: Theme(preset: vm:themePreset),
+			theme: Theme:forPreset(preset: vm:themePreset),
 			widthPt: vm:windowWidthPt,
 			heightPt: vm:windowHeightPt,
 			toolbar: ToolbarContainer(
@@ -226,6 +227,7 @@ Class is EditorView{
 			contextMenu: vm:contextMenu,
 			onKey: local Function of Boolean(Int is key, Int is mods){ vm:handleShortcut(key: key, mods: mods) }
 		);
+		vm:bindThemeChange(onThemeChange: local Function(Theme is t){ container:setTheme(nextTheme: t); });
 		container
 	}
 }

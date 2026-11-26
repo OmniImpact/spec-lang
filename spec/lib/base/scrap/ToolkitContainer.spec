@@ -143,6 +143,12 @@ Class of SewNode is ToolkitContainer{
 		contextMenu:applyTheme(theme: theme);
 	}
 
+	## Updates the live theme across the window and all child widgets and schedules a redraw.
+	Function is setTheme(Theme is nextTheme){
+		:applyTheme(theme: nextTheme);
+		:isDirty: true;
+	}
+
 	## Adds a `ToolbarContainer` at the top of the toolkit workspace.
 	Function is addToolbarContainer(ToolbarContainer is container){
 		toolbarSlot: container;

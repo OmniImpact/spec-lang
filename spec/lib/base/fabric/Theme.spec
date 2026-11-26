@@ -6,7 +6,10 @@ Class is Theme{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'fabric', Color]
+		['base', 'sys', Conditional],
+		['base', 'struct', Array],
+		['base', 'fabric', Color],
+		['base', 'fabric', ThemePreset]
 	];
 
 	## Baseline 8 theme colors
@@ -47,7 +50,44 @@ Class is Theme{
 	Float is paddingPt: 8.0;
 
 	replace Function is init(String is preset: 'dark'){
-		if({ preset == 'light_grayscale' }, {
+		:applyPreset(preset: Theme:presetFromString(name: preset));
+	}
+
+	held Function of Array of ThemePreset is presets(){
+		return Array([ThemePreset:LIGHT, ThemePreset:DARK]);
+	}
+
+	held Function of String is presetLabel(ThemePreset is preset){
+		return Conditional:match(on: preset, when: [
+			ThemePreset:LIGHT: { 'Light' },
+			ThemePreset:DARK: { 'Dark' }
+		]);
+	}
+
+	held Function of String is presetId(ThemePreset is preset){
+		return Conditional:match(on: preset, when: [
+			ThemePreset:LIGHT: { 'light' },
+			ThemePreset:DARK: { 'dark' }
+		]);
+	}
+
+	held Function of ThemePreset is presetFromString(String is name){
+		local String is low: name:toLower();
+		return Conditional:if(
+			check: { low == 'light' || low == 'light_grayscale' },
+			then: { ThemePreset:LIGHT },
+			else: { ThemePreset:DARK }
+		);
+	}
+
+	held Function of Theme is forPreset(ThemePreset is preset){
+		local Theme is t: Theme();
+		t:applyPreset(preset: preset);
+		return t;
+	}
+
+	Function is applyPreset(ThemePreset is preset){
+		if({ preset == ThemePreset:LIGHT }, {
 			:primary: Color(r: 255, g: 255, b: 255, a: 255);
 			:secondary: Color(r: 230, g: 230, b: 230, a: 255);
 			:accent: Color(r: 40, g: 40, b: 40, a: 255);
@@ -57,14 +97,14 @@ Class is Theme{
 			:negative: Color(r: 198, g: 40, b: 40, a: 255);
 			:neutral: Color(r: 96, g: 96, b: 96, a: 255);
 		}, {
-			:primary: Color(r: 20, g: 23, b: 33, a: 255);
-			:secondary: Color(r: 32, g: 37, b: 50, a: 255);
-			:accent: Color(r: 100, g: 210, b: 255, a: 255);
-			:highlight: Color(r: 68, g: 82, b: 110, a: 255);
-			:detail: Color(r: 242, g: 245, b: 250, a: 255);
+			:primary: Color(r: 26, g: 28, b: 34, a: 255);
+			:secondary: Color(r: 38, g: 41, b: 49, a: 255);
+			:accent: Color(r: 180, g: 190, b: 210, a: 255);
+			:highlight: Color(r: 64, g: 70, b: 84, a: 255);
+			:detail: Color(r: 232, g: 235, b: 240, a: 255);
 			:positive: Color(r: 76, g: 175, b: 80, a: 255);
 			:negative: Color(r: 239, g: 83, b: 80, a: 255);
-			:neutral: Color(r: 160, g: 170, b: 190, a: 255);
+			:neutral: Color(r: 146, g: 152, b: 166, a: 255);
 		});
 		:deriveTokens();
 	}
