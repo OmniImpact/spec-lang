@@ -15,10 +15,7 @@ Class is TheoFractal{
 
 	replace Function is init(Map of String to String is args){
 		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/theofractal/cli.json');
-		if({ !cli:parse(rawArgs: rawArgs()) }, {
-			if({ cli:helpRequested || cli:versionRequested }, { return; });
-			exit(status: 1);
-		});
+		cli:parseOrExit();
 		local TheoApp is app: TheoApp(theme: TheoTheme());
 		local ExplorerViewModel is vm: ExplorerViewModel(onQuit: { app:quit(); });
 		local ExplorerFrame is mainFrame: ExplorerFrame(vm: vm);

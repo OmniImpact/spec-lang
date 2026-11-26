@@ -237,17 +237,7 @@ Class is Driver{
 			bundlePath: 'cli.json',
 			fallbackPath: cliFb
 		);
-		local Boolean is cliOk: if({ args:keys():length() > 0 }, {
-			cli:parseMap(args: args)
-		}, {
-			cli:parse(rawArgs: Process:rawArgs())
-		});
-		if({ !cliOk }, {
-			if({ cli:helpRequested || cli:versionRequested }, {
-				return;
-			});
-			Process:exit(status: 2);
-		});
+		cli:parseOrExitMap(args: args, failStatus: 2);
 
 		local String is inputPath: cli:getString(name: 'input', default: '');
 		local String is outputPath: cli:getString(name: 'output', default: '');

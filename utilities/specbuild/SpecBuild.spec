@@ -304,12 +304,7 @@ Class is SpecBuild{
 
 	replace Function is init(Map of String to String is args){
 		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/specbuild/cli.json');
-		if({ !cli:parse(rawArgs: Process:rawArgs()) }, {
-			if({ cli:helpRequested || cli:versionRequested }, {
-				Process:exit(status: 0);
-			});
-			Process:exit(status: 1);
-		});
+		cli:parseOrExit();
 
 		local String is configPath: cli:getString(name: 'config', default: '');
 		local String is command: 'build';

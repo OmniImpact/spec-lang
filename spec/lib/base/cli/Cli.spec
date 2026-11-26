@@ -8,7 +8,7 @@ Class is Cli{
 		['base', 'cli', CliOption],
 		['base', 'data', Json],
 		['base', 'struct', [Array, Map]],
-		['base', 'sys', [Bundle, as File(), as Output()]],
+		['base', 'sys', [Bundle, as File(), as Output(), as Process()]],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -305,6 +305,36 @@ Class is Cli{
 		});
 
 		return finalizeParse();
+	}
+
+	## Parses [rawArgs] and exits the process on `--help`/`--version` (`0`) or errors ([failStatus]).
+	Function is parseOrExitArgs(Array of String is rawArgs, Int is failStatus: 1){
+		if({ !parse(rawArgs: rawArgs) }, {
+			if({ helpRequested || versionRequested }, {
+				exit(status: 0);
+			});
+			exit(status: failStatus);
+		});
+	}
+
+	## Parses `Process:rawArgs()` and exits on `--help`/`--version` (`0`) or errors ([failStatus]).
+	Function is parseOrExit(Int is failStatus: 1){
+		parseOrExitArgs(rawArgs: rawArgs(), failStatus: failStatus);
+	}
+
+	## Parses [args] (or `Process:rawArgs()` if [args] is empty) and exits on `--help`/errors.
+	Function is parseOrExitMap(Map of String to String is args, Int is failStatus: 1){
+		local Boolean is ok: if({ args:keys():length() > 0 }, {
+			parseMap(args: args)
+		}, {
+			parse(rawArgs: rawArgs())
+		});
+		if({ !ok }, {
+			if({ helpRequested || versionRequested }, {
+				exit(status: 0);
+			});
+			exit(status: failStatus);
+		});
 	}
 
 	local Function of Boolean is finalizeParse(){

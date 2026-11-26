@@ -750,9 +750,7 @@ Class is SpecLsp{
 
 	replace Function is init(Map of String to String is args){
 		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/speclsp/cli.json');
-		if({ !cli:parse(rawArgs: Process:rawArgs()) }, {
-			return;
-		});
+		cli:parseOrExit();
 		:docPrograms: [:];
 		Input:setBinaryMode();
 		local Boolean is running: true;

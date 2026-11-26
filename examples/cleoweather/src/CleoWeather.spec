@@ -15,10 +15,7 @@ Class is CleoWeather{
 
 	replace Function is init(Map of String to String is args){
 		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/cleoweather/cli.json');
-		if({ !cli:parse(rawArgs: rawArgs()) }, {
-			if({ cli:helpRequested || cli:versionRequested }, { return; });
-			exit(status: 1);
-		});
+		cli:parseOrExit();
 
 		local WeatherViewModel is vm: WeatherViewModel();
 		if({ !vm:hasStates() }, {
