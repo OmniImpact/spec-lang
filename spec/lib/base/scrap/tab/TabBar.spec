@@ -17,7 +17,7 @@ Class of SewNode is TabBar{
 
 	Array of TabItemConfig is tabs: Array();
 	Int is activeIndex: 0;
-	Float is heightPt: 22.0;
+	Float is heightPt: 19.0;
 	Float is outerPadPt: 2.0;
 	String is dockSide: 'top';
 	Float is minTabWidthPt: 96.0;

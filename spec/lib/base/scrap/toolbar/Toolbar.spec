@@ -86,7 +86,7 @@ Class of SewNode is Toolbar{
 
 	local Function of Int is menuButtonWidthPx(MenuConfig is menu){
 		local Int is tw: DrawContext:measureWidth(text: menu:label, pixelHeight: :fontPx());
-		return tw + scale:px(pt: 22.0);
+		return tw + scale:px(pt: theme:padPt(pct: 3.0));
 	}
 
 	local Function of Int is menuButtonX(Int is idx){

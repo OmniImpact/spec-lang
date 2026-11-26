@@ -21,7 +21,7 @@ Class is AppearanceSettingsView{
 	SettingsViewModel is vm: SettingsViewModel();
 	Array of ScrapButton is themeBtns: Array();
 	Label is docDeltaVal: Label(text: '0 pt', minWidthPt: 52.0);
-	Label is baseTextVal: Label(text: '12 pt', minWidthPt: 52.0);
+	Label is baseTextVal: Label(text: '11 pt', minWidthPt: 52.0);
 	Array of Int is zoomValues: Array([70, 100, 115, 130]);
 	Array of ScrapButton is zoomBtns: Array();
 

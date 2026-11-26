@@ -46,8 +46,8 @@ Class is Theme{
 	Int is synComment: 0;
 	Int is synPunct: 0;
 	Int is synHeading: 0;
-	Float is toolbarHeightPt: 22.0;
-	Float is menuItemHeightPt: 20.0;
+	Float is toolbarHeightPt: 19.0;
+	Float is menuItemHeightPt: 18.0;
 	Float is basePaddingPt: 4.0;
 	Float is paddingPt: 4.0;
 	Float is sectionPaddingPt: 6.0;
@@ -56,7 +56,7 @@ Class is Theme{
 	Float is lineThicknessPt: 1.0;
 	String is borderStyle: 'solid';
 	Float is uiScaleFactor: 1.0;
-	Float is baseTextPt: 12.0;
+	Float is baseTextPt: 11.0;
 
 	replace Function is init(String is preset: 'dark'){
 		:applyPreset(preset: Theme:presetFromString(name: preset));
@@ -89,7 +89,7 @@ Class is Theme{
 		);
 	}
 
-	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 12.0){
+	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 11.0){
 		local Theme is t: Theme();
 		t:setBaseTextPt(pt: baseTextPt);
 		t:applyPreset(preset: preset);
@@ -219,11 +219,11 @@ Class is Theme{
 		positiveColor: positive:toArgb();
 		negativeColor: negative:toArgb();
 
-		basePaddingPt: 4.0 * (baseTextPt / 12.0);
+		basePaddingPt: 4.0 * (baseTextPt / 11.0);
 		paddingPt: basePaddingPt;
 		sectionPaddingPt: basePaddingPt * 1.5;
 		dialogPaddingPt: basePaddingPt * 2.0;
-		local Float is baseBorder: 1.0 * (baseTextPt / 12.0);
+		local Float is baseBorder: 1.0 * (baseTextPt / 11.0);
 		if({ borderStyle == 'none' }, {
 			borderThicknessPt: 0.0;
 		}, {
