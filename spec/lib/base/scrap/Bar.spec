@@ -14,7 +14,8 @@ Class of SewNode is Bar{
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
-		['base', 'fabric', DrawContext]
+		['base', 'fabric', DrawContext],
+		['base', 'fabric', 'svg', SvgRenderer]
 	];
 
 	Theme is theme: Theme(preset: 'light_grayscale');
@@ -25,6 +26,7 @@ Class of SewNode is Bar{
 	TextEmitter is centerText: TextEmitter(initial: '');
 	TextEmitter is rightText: TextEmitter(initial: '');
 	Boolean is rightInteractive: false;
+	String is rightIconSvg: '';
 	Function is onRightClick: local Function(Int is _x, Int is _y){};
 	Boolean is rightHover: false;
 	Int is rightHitX: 0;
@@ -37,6 +39,7 @@ Class of SewNode is Bar{
 		TextEmitter is centerText: TextEmitter(initial: ''),
 		TextEmitter is rightText: TextEmitter(initial: ''),
 		Boolean is rightInteractive: false,
+		String is rightIconSvg: '',
 		Function is onRightClick: local Function(Int is _x, Int is _y){},
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Scale is scale: Scale(factor: 1.0)
@@ -47,6 +50,7 @@ Class of SewNode is Bar{
 		:centerText: centerText;
 		:rightText: rightText;
 		:rightInteractive: rightInteractive;
+		:rightIconSvg: rightIconSvg;
 		:onRightClick: onRightClick;
 		:theme: theme;
 		:scale: scale;
@@ -129,14 +133,31 @@ Class of SewNode is Bar{
 		local String is rStr: rightText:current();
 		if({ rStr != '' }, {
 			local Int is rw: ctx:measureTextWidth(text: rStr, pixelHeight: fpx);
-			local Int is rx: b:x + b:width - padX - rw;
+			local Boolean is hasIcon: rightIconSvg != '';
+			local Int is chevSz: if({ hasIcon }, { scale:px(pt: 11.0) }, { 0 });
+			if({ hasIcon && chevSz < 9 }, { chevSz: 9; });
+			local Int is chevGap: if({ hasIcon }, { scale:px(pt: 4.0) }, { 0 });
+			local Int is totalRw: rw + chevGap + chevSz;
+			local Int is rx: b:x + b:width - padX - totalRw;
 			local Int is hitPad: scale:px(pt: 6.0);
 			:rightHitX: rx - hitPad;
-			:rightHitW: rw + hitPad * 2;
+			:rightHitW: totalRw + hitPad * 2;
 			if({ rightInteractive && rightHover }, {
 				ctx:fillRect(x: rightHitX, y: b:y + 2, w: rightHitW, h: b:height - 4, color: theme:hoverBg);
 			});
 			ctx:drawText(x: rx, y: ty, text: rStr, color: theme:textPrimary, pixelHeight: fpx);
+			if({ hasIcon }, {
+				SvgRenderer:shared:draw(
+					ctx: ctx,
+					svgSrc: rightIconSvg,
+					x: rx + rw + chevGap,
+					y: b:y + (b:height - chevSz) / 2,
+					widthPx: chevSz,
+					heightPx: chevSz,
+					tintColor: theme:textMuted,
+					useTint: true
+				);
+			});
 		}, {
 			:rightHitX: 0;
 			:rightHitW: 0;

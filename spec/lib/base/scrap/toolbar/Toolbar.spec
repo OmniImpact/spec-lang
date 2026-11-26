@@ -17,6 +17,7 @@ Class of SewNode is Toolbar{
 		['base', 'fabric', DrawContext],
 		['base', 'suit', SuitCanvas],
 		['base', 'scrap', Bar],
+		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'menu', MenuConfig],
 		['base', 'scrap', 'menu', MenuItemConfig]
@@ -282,7 +283,7 @@ Class of SewNode is Toolbar{
 		local Int is i: 0;
 		while({ i < list:length() }, {
 			local MenuItemConfig is it: list:get(index: i);
-			if({ it:kind == 'radio' || it:kind == 'toggle' || it:checked }, {
+			if({ it:kind == 'radio' || it:kind == 'toggle' || it:checked || it:iconSvg != '' }, {
 				return true;
 			});
 			i: i + 1;
@@ -309,31 +310,28 @@ Class of SewNode is Toolbar{
 		local Int is fgCol: if({ item:enabled }, { theme:textPrimary }, { theme:textMuted });
 		local Int is indW: if({ reserveInd }, { scale:px(pt: 18.0) }, { 0 });
 		local Int is cy: y + h / 2;
+		local Int is iconSz: scale:px(pt: 12.0);
+		if({ iconSz < 10 }, { iconSz: 10; });
+		local Int is iy: cy - iconSz / 2;
 		if({ item:kind == 'radio' }, {
-			local Int is r: scale:px(pt: 5.5);
-			if({ r < 4 }, { r: 4; });
-			local Int is cx: x + padX + r;
-			ctx:strokeCircle(cx: cx, cy: cy, r: r, color: fgCol);
-			if({ item:checked }, {
-				local Int is ir: r - 2;
-				if({ ir < 2 }, { ir: 2; });
-				ctx:fillCircle(cx: cx, cy: cy, r: ir, color: fgCol);
+			local String is rSvg: if({ item:checked }, { config:radioOnIconSvg }, { config:radioOffIconSvg });
+			if({ rSvg != '' }, {
+				SvgRenderer:shared:draw(ctx: ctx, svgSrc: rSvg, x: x + padX, y: iy, widthPx: iconSz, heightPx: iconSz, tintColor: fgCol, useTint: true);
 			});
 		}, {
 			if({ item:kind == 'toggle' }, {
-				local Int is sz: scale:px(pt: 11.0);
-				if({ sz < 8 }, { sz: 8; });
-				local Int is sx: x + padX;
-				local Int is sy: cy - sz / 2;
-				ctx:strokeRect(x: sx, y: sy, w: sz, h: sz, color: fgCol);
-				if({ item:checked }, {
-					ctx:fillRect(x: sx + 3, y: sy + 3, w: sz - 6, h: sz - 6, color: fgCol);
+				local String is cSvg: if({ item:checked }, { config:checkboxOnIconSvg }, { config:checkboxOffIconSvg });
+				if({ cSvg != '' }, {
+					SvgRenderer:shared:draw(ctx: ctx, svgSrc: cSvg, x: x + padX, y: iy, widthPx: iconSz, heightPx: iconSz, tintColor: fgCol, useTint: true);
+				});
+			}, {
+				if({ item:iconSvg != '' }, {
+					SvgRenderer:shared:draw(ctx: ctx, svgSrc: item:iconSvg, x: x + padX, y: iy, widthPx: iconSz, heightPx: iconSz, tintColor: fgCol, useTint: true);
 				});
 			});
 		});
 		local Int is ty: y + (h - th) / 2;
-		local String is lbl: if({ item:kind == 'action' && item:checked }, { '* ' . item:label }, { item:label });
-		ctx:drawText(x: x + padX + indW, y: ty, text: lbl, color: fgCol, pixelHeight: fpx);
+		ctx:drawText(x: x + padX + indW, y: ty, text: item:label, color: fgCol, pixelHeight: fpx);
 	}
 
 	## Paints the open dropdown menu popup (and any open sub-menu) above the body layer.

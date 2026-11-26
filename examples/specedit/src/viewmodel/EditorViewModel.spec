@@ -19,7 +19,8 @@ Class is EditorViewModel{
 		['base', 'scrap', 'text', CodeEditorView],
 		['base', 'scrap', 'highlighter', Highlighter],
 		['specedit', 'model', EditorModel],
-		['specedit', 'util', SpecEditStrings]
+		['specedit', 'util', SpecEditStrings],
+		['specedit', 'util', EditorIcons]
 	];
 
 	EditorModel is model: EditorModel();
@@ -29,6 +30,7 @@ Class is EditorViewModel{
 	Boolean is hasBoundTabBar: false;
 	CodeEditorView is boundCodeEditor: CodeEditorView(text: TextEmitter(initial: ''));
 	Boolean is hasBoundCodeEditor: false;
+	EditorIcons is icons: EditorIcons();
 	MenuContext is contextMenu: MenuContext();
 
 	TextEmitter is title: TextEmitter(initial: SpecEditStrings:APP_NAME);
@@ -79,6 +81,12 @@ Class is EditorViewModel{
 	Function is canPasteHandler: local Function of Boolean(){ false };
 
 	replace Function is init(){
+		:icons: EditorIcons();
+		:contextMenu: MenuContext(
+			radioOffIconSvg: icons:radioOff,
+			radioOnIconSvg: icons:radioOn,
+			checkboxOnIconSvg: icons:checkboxOn
+		);
 		:model: EditorModel(documentName: SpecEditStrings:UNTITLED);
 		:documents: Array();
 		:activeDocIdx: -1;
@@ -146,7 +154,7 @@ Class is EditorViewModel{
 			local Highlighter is hl: boundCodeEditor:highlighterFor(langOverride: model:languageOverride, path: model:filePath);
 			label: hl:displayName();
 		});
-		syntaxStatus:emit(value: label . ' ▾');
+		syntaxStatus:emit(value: label);
 	}
 
 	Function is bindCodeEditor(CodeEditorView is editor){
@@ -168,12 +176,16 @@ Class is EditorViewModel{
 		local Array of MenuItemConfig is items: Array();
 		items:add(item: MenuItemConfig(
 			id: 'syntax_auto',
-			label: (if({ curOverride == '' }, { '* ' }, { '  ' })) . 'Auto-Detect (' . detected:displayName() . ')',
+			label: 'Auto-Detect (' . detected:displayName() . ')',
+			checked: (curOverride == ''),
+			kind: 'radio',
 			onClick: local Function(){ :setDocumentLanguage(langId: ''); }
 		));
 		items:add(item: MenuItemConfig(
 			id: 'syntax_plain',
-			label: (if({ curOverride == 'plain' }, { '* ' }, { '  ' })) . 'Plain Text',
+			label: 'Plain Text',
+			checked: (curOverride == 'plain'),
+			kind: 'radio',
 			onClick: local Function(){ :setDocumentLanguage(langId: 'plain'); }
 		));
 		local Array of Highlighter is registered: boundCodeEditor:registeredHighlighters();
@@ -183,7 +195,9 @@ Class is EditorViewModel{
 			local String is lid: h:languageId();
 			items:add(item: MenuItemConfig(
 				id: 'syntax_' . lid,
-				label: (if({ curOverride == lid }, { '* ' }, { '  ' })) . h:displayName(),
+				label: h:displayName(),
+				checked: (curOverride == lid),
+				kind: 'radio',
 				onClick: local Function(){ :setDocumentLanguage(langId: lid); }
 			));
 			i: i + 1;
@@ -226,29 +240,39 @@ Class is EditorViewModel{
 	}
 
 	local Function of ToolbarConfig is buildToolbarConfig(){
-		local ToolbarConfig is cfg: ToolbarConfig(heightPt: toolbarHeightPt);
+		local ToolbarConfig is cfg: ToolbarConfig(
+			heightPt: toolbarHeightPt,
+			radioOffIconSvg: icons:radioOff,
+			radioOnIconSvg: icons:radioOn,
+			checkboxOffIconSvg: icons:checkboxOff,
+			checkboxOnIconSvg: icons:checkboxOn
+		);
 
 		local MenuConfig is fileMenu: MenuConfig(id: SpecEditStrings:MENU_FILE_ID, label: SpecEditStrings:MENU_FILE_LABEL);
 		fileMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_NEW_ID,
 			label: SpecEditStrings:ITEM_NEW_LABEL,
+			iconSvg: icons:fileNew,
 			onClick: local Function(){ :newDocument(); }
 		));
 		fileMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_OPEN_ID,
 			label: SpecEditStrings:ITEM_OPEN_LABEL,
+			iconSvg: icons:fileOpen,
 			onClick: local Function(){ :requestOpen(); }
 		));
 		saveItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_SAVE_ID,
 			label: SpecEditStrings:ITEM_SAVE_LABEL,
 			enabled: false,
+			iconSvg: icons:fileSave,
 			onClick: local Function(){ :requestSave(); }
 		);
 		saveAsItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_SAVE_AS_ID,
 			label: SpecEditStrings:ITEM_SAVE_AS_LABEL,
 			enabled: false,
+			iconSvg: icons:fileSaveAs,
 			onClick: local Function(){ :requestSaveAs(); }
 		);
 		fileMenu:addItem(item: saveItem);
@@ -256,6 +280,7 @@ Class is EditorViewModel{
 		fileMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_QUIT_ID,
 			label: SpecEditStrings:ITEM_QUIT_LABEL,
+			iconSvg: icons:quit,
 			onClick: local Function(){ :requestQuit(); }
 		));
 		cfg:addMenu(menu: fileMenu);
@@ -265,24 +290,28 @@ Class is EditorViewModel{
 			id: SpecEditStrings:ITEM_COPY_ID,
 			label: SpecEditStrings:ITEM_COPY_LABEL,
 			enabled: false,
+			iconSvg: icons:editCopy,
 			onClick: local Function(){ :requestCopy(); }
 		);
 		cutItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_CUT_ID,
 			label: SpecEditStrings:ITEM_CUT_LABEL,
 			enabled: false,
+			iconSvg: icons:editCut,
 			onClick: local Function(){ :requestCut(); }
 		);
 		pasteItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_PASTE_ID,
 			label: SpecEditStrings:ITEM_PASTE_LABEL,
 			enabled: false,
+			iconSvg: icons:editPaste,
 			onClick: local Function(){ :requestPaste(); }
 		);
 		selectAllItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_SELECT_ALL_ID,
 			label: SpecEditStrings:ITEM_SELECT_ALL_LABEL,
 			enabled: false,
+			iconSvg: icons:editSelectAll,
 			onClick: local Function(){ :requestSelectAll(); }
 		);
 		editMenu:addItem(item: copyItem);
@@ -330,6 +359,7 @@ Class is EditorViewModel{
 		helpMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_ABOUT_ID,
 			label: SpecEditStrings:ITEM_ABOUT_LABEL,
+			iconSvg: icons:infoAbout,
 			onClick: local Function(){ :requestAbout(); }
 		));
 		cfg:addMenu(menu: helpMenu);

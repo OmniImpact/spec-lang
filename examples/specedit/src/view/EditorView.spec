@@ -69,6 +69,9 @@ Class is EditorView{
 		vm:bindCodeEditor(editor: editorBody);
 		fileTree: FileTree(
 			contextMenu: vm:contextMenu,
+			dropdownIconSvg: vm:icons:chevronDown,
+			plusIconSvg: vm:icons:treePlus,
+			minusIconSvg: vm:icons:treeMinus,
 			onOpenFile: local Function(String is path){ vm:openFiles(paths: Array([path])); }
 		);
 		vm:bindEditorActions(
@@ -201,6 +204,7 @@ Class is EditorView{
 				leftText: vm:cursorStatus,
 				rightText: vm:syntaxStatus,
 				rightInteractive: true,
+				rightIconSvg: vm:icons:chevronDown,
 				onRightClick: local Function(Int is x, Int is y){ vm:showSyntaxMenu(x: x, y: y); }
 			),
 			hasBottomBar: true,

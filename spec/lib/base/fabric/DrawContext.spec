@@ -6,6 +6,8 @@ Class is DrawContext{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
 		['base', 'sys', Font],
 		['base', 'struct', Array],
 		['base', 'suit', SuitCanvas]
@@ -245,5 +247,112 @@ Class is DrawContext{
 			clipW: if({ hasClip }, { clipW }, { -1 }),
 			clipH: if({ hasClip }, { clipH }, { -1 })
 		);
+	}
+
+	## Alpha-blends a byte coverage mask ([maskAddr], [w]x[h]) tinted with ARGB [color] at ([x], [y]).
+	Function is blendAlphaMask(Int is x, Int is y, Int is w, Int is h, Int is maskAddr, Int is color){
+		local Int is pixelsPtr: canvas:pixelsAddr();
+		if({ pixelsPtr == 0 || maskAddr == 0 || w <= 0 || h <= 0 }, { return; });
+		local Int is bw: canvas:width;
+		local Int is bh: canvas:height;
+		local Int is x0: if({ x < 0 }, { 0 }, { x });
+		local Int is y0: if({ y < 0 }, { 0 }, { y });
+		local Int is x1: if({ x + w > bw }, { bw }, { x + w });
+		local Int is y1: if({ y + h > bh }, { bh }, { y + h });
+		if({ hasClip }, {
+			if({ clipX > x0 }, { x0: clipX; });
+			if({ clipY > y0 }, { y0: clipY; });
+			if({ clipX + clipW < x1 }, { x1: clipX + clipW; });
+			if({ clipY + clipH < y1 }, { y1: clipY + clipH; });
+		});
+		if({ x1 <= x0 || y1 <= y0 }, { return; });
+
+		local Int is srcA: (color >> 24) & 255;
+		local Int is srcR: (color >> 16) & 255;
+		local Int is srcG: (color >> 8) & 255;
+		local Int is srcB: color & 255;
+		if({ srcA == 0 }, { return; });
+
+		local Int is py: y0;
+		while({ py < y1 }, {
+			local Int is sy: py - y;
+			local Int is px: x0;
+			while({ px < x1 }, {
+				local Int is sx: px - x;
+				local Int is cov: Mem:loadByte(ptr: maskAddr, byteOffset: sy * w + sx) & 255;
+				if({ cov > 0 }, {
+					local Int is a: (cov * srcA) / 255;
+					if({ a >= 255 }, {
+						Mem:storeI32(ptr: pixelsPtr, byteOffset: (py * bw + px) * 4, val: (255 << 24) | (srcR << 16) | (srcG << 8) | srcB);
+					}, {
+						if({ a > 0 }, {
+							local Int is dstOff: (py * bw + px) * 4;
+							local Int is dst: Mem:loadI32(ptr: pixelsPtr, byteOffset: dstOff);
+							local Int is dstR: (dst >> 16) & 255;
+							local Int is dstG: (dst >> 8) & 255;
+							local Int is dstB: dst & 255;
+							local Int is invA: 255 - a;
+							local Int is outR: (srcR * a + dstR * invA) / 255;
+							local Int is outG: (srcG * a + dstG * invA) / 255;
+							local Int is outB: (srcB * a + dstB * invA) / 255;
+							Mem:storeI32(ptr: pixelsPtr, byteOffset: dstOff, val: (255 << 24) | (outR << 16) | (outG << 8) | outB);
+						});
+					});
+				});
+				px: px + 1;
+			});
+			py: py + 1;
+		});
+	}
+
+	## Alpha-blends a pre-colored ARGB8888 buffer ([argbAddr], [w]x[h]) at ([x], [y]).
+	Function is blendArgbBuffer(Int is x, Int is y, Int is w, Int is h, Int is argbAddr){
+		local Int is pixelsPtr: canvas:pixelsAddr();
+		if({ pixelsPtr == 0 || argbAddr == 0 || w <= 0 || h <= 0 }, { return; });
+		local Int is bw: canvas:width;
+		local Int is bh: canvas:height;
+		local Int is x0: if({ x < 0 }, { 0 }, { x });
+		local Int is y0: if({ y < 0 }, { 0 }, { y });
+		local Int is x1: if({ x + w > bw }, { bw }, { x + w });
+		local Int is y1: if({ y + h > bh }, { bh }, { y + h });
+		if({ hasClip }, {
+			if({ clipX > x0 }, { x0: clipX; });
+			if({ clipY > y0 }, { y0: clipY; });
+			if({ clipX + clipW < x1 }, { x1: clipX + clipW; });
+			if({ clipY + clipH < y1 }, { y1: clipY + clipH; });
+		});
+		if({ x1 <= x0 || y1 <= y0 }, { return; });
+
+		local Int is py: y0;
+		while({ py < y1 }, {
+			local Int is sy: py - y;
+			local Int is px: x0;
+			while({ px < x1 }, {
+				local Int is sx: px - x;
+				local Int is src: Mem:loadI32(ptr: argbAddr, byteOffset: (sy * w + sx) * 4);
+				local Int is a: (src >> 24) & 255;
+				if({ a >= 255 }, {
+					Mem:storeI32(ptr: pixelsPtr, byteOffset: (py * bw + px) * 4, val: src);
+				}, {
+					if({ a > 0 }, {
+						local Int is srcR: (src >> 16) & 255;
+						local Int is srcG: (src >> 8) & 255;
+						local Int is srcB: src & 255;
+						local Int is dstOff: (py * bw + px) * 4;
+						local Int is dst: Mem:loadI32(ptr: pixelsPtr, byteOffset: dstOff);
+						local Int is dstR: (dst >> 16) & 255;
+						local Int is dstG: (dst >> 8) & 255;
+						local Int is dstB: dst & 255;
+						local Int is invA: 255 - a;
+						local Int is outR: (srcR * a + dstR * invA) / 255;
+						local Int is outG: (srcG * a + dstG * invA) / 255;
+						local Int is outB: (srcB * a + dstB * invA) / 255;
+						Mem:storeI32(ptr: pixelsPtr, byteOffset: dstOff, val: (255 << 24) | (outR << 16) | (outG << 8) | outB);
+					});
+				});
+				px: px + 1;
+			});
+			py: py + 1;
+		});
 	}
 }

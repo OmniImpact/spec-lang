@@ -15,6 +15,7 @@ Class of SewNode is TreeView{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
+		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'scrap', 'tree', TreeNode]
 	];
 
@@ -25,17 +26,23 @@ Class of SewNode is TreeView{
 	Array of Array of Boolean is flatAncestors: Array();
 	String is selectedId: '';
 	Int is hoverIdx: -1;
+	String is plusIconSvg: '';
+	String is minusIconSvg: '';
 	Function is onSelect: local Function(TreeNode is _node){};
 	Function is onActivate: local Function(TreeNode is _node){};
 	Function is onToggle: local Function(TreeNode is _node){};
 
 	replace Function is init(
 		Array of TreeNode is roots: Array(),
+		String is plusIconSvg: '',
+		String is minusIconSvg: '',
 		Function is onSelect: local Function(TreeNode is _node){},
 		Function is onActivate: local Function(TreeNode is _node){},
 		Function is onToggle: local Function(TreeNode is _node){}
 	){
 		:roots: roots;
+		:plusIconSvg: plusIconSvg;
+		:minusIconSvg: minusIconSvg;
 		:onSelect: onSelect;
 		:onActivate: onActivate;
 		:onToggle: onToggle;
@@ -202,16 +209,12 @@ Class of SewNode is TreeView{
 					if({ hEnd > cx }, {
 						ctx:fillRect(x: cx, y: cy, w: hEnd - cx, h: 1, color: lineCol);
 					});
-					# Square with + (collapsed) or - (expanded)
 					local Int is bx: cx - halfBox;
 					local Int is by: cy - halfBox;
 					ctx:fillRect(x: bx, y: by, w: boxSz, h: boxSz, color: rowBg);
-					ctx:strokeRect(x: bx, y: by, w: boxSz, h: boxSz, color: lineCol);
-					local Int is symPad: 2;
-					if({ boxSz >= 11 }, { symPad: 3; });
-					ctx:fillRect(x: bx + symPad, y: cy, w: boxSz - symPad * 2, h: 1, color: activeTheme:textPrimary);
-					if({ !node:expanded }, {
-						ctx:fillRect(x: cx, y: by + symPad, w: 1, h: boxSz - symPad * 2, color: activeTheme:textPrimary);
+					local String is boxSvg: if({ node:expanded }, { minusIconSvg }, { plusIconSvg });
+					if({ boxSvg != '' }, {
+						SvgRenderer:shared:draw(ctx: ctx, svgSrc: boxSvg, x: bx, y: by, widthPx: boxSz, heightPx: boxSz, tintColor: activeTheme:textPrimary, useTint: true);
 					});
 				}, {
 					# Dotted horizontal line connecting vertical line to file label

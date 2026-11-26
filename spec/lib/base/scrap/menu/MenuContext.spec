@@ -11,6 +11,7 @@ Class of SewNode is MenuContext{
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
+		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'scrap', 'menu', MenuItemConfig]
 	];
 
@@ -19,13 +20,23 @@ Class of SewNode is MenuContext{
 	Int is posY: 0;
 	Int is hoverIdx: -1;
 	Array of MenuItemConfig is items: Array();
+	String is radioOffIconSvg: '';
+	String is radioOnIconSvg: '';
+	String is checkboxOnIconSvg: '';
 
-	replace Function is init(){
+	replace Function is init(
+		String is radioOffIconSvg: '',
+		String is radioOnIconSvg: '',
+		String is checkboxOnIconSvg: ''
+	){
 		isOpen: false;
 		posX: 0;
 		posY: 0;
 		hoverIdx: -1;
 		items: Array();
+		:radioOffIconSvg: radioOffIconSvg;
+		:radioOnIconSvg: radioOnIconSvg;
+		:checkboxOnIconSvg: checkboxOnIconSvg;
 	}
 
 	## Opens the context menu at ([x], [y]) with [items] and invalidates.
@@ -55,14 +66,25 @@ Class of SewNode is MenuContext{
 		return activeScale:px(pt: 28.0);
 	}
 
+	local Function of Boolean is hasIndicators(){
+		local Int is i: 0;
+		while({ i < items:length() }, {
+			local MenuItemConfig is it: items:get(index: i);
+			if({ it:iconSvg != '' || it:checked || it:kind == 'radio' || it:kind == 'toggle' }, { return true; });
+			i: i + 1;
+		});
+		return false;
+	}
+
 	local Function of Int is menuWidthPx(){
 		local Int is fpx: :fontPx();
 		local Int is padX: activeScale:px(pt: 14.0);
+		local Int is indW: if({ :hasIndicators() }, { activeScale:px(pt: 18.0) }, { 0 });
 		local Int is minW: activeScale:px(pt: 140.0);
 		local Int is maxW: minW;
 		local Int is i: 0;
 		while({ i < items:length() }, {
-			local Int is tw: DrawContext:measureWidth(text: items:get(index: i):label, pixelHeight: fpx) + padX * 2;
+			local Int is tw: DrawContext:measureWidth(text: items:get(index: i):label, pixelHeight: fpx) + padX * 2 + indW;
 			if({ tw > maxW }, { maxW: tw; });
 			i: i + 1;
 		});
@@ -139,6 +161,10 @@ Class of SewNode is MenuContext{
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is padX: activeScale:px(pt: 14.0);
+		local Boolean is hasInd: :hasIndicators();
+		local Int is indW: if({ hasInd }, { activeScale:px(pt: 18.0) }, { 0 });
+		local Int is iconSz: activeScale:px(pt: 12.0);
+		if({ iconSz < 10 }, { iconSz: 10; });
 		local Int is i: 0;
 		while({ i < items:length() }, {
 			local MenuItemConfig is item: items:get(index: i);
@@ -148,7 +174,24 @@ Class of SewNode is MenuContext{
 			});
 			local Int is ty: iy + (ih - th) / 2;
 			local Int is txtColor: if({ item:enabled }, { activeTheme:textPrimary }, { activeTheme:textMuted });
-			ctx:drawText(x: mx + padX, y: ty, text: item:label, color: txtColor, pixelHeight: fpx);
+			if({ hasInd }, {
+				local Int is icoY: iy + (ih - iconSz) / 2;
+				if({ item:iconSvg != '' }, {
+					SvgRenderer:shared:draw(ctx: ctx, svgSrc: item:iconSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
+				}, {
+					if({ item:kind == 'radio' }, {
+						local String is rSvg: if({ item:checked }, { radioOnIconSvg }, { radioOffIconSvg });
+						if({ rSvg != '' }, {
+							SvgRenderer:shared:draw(ctx: ctx, svgSrc: rSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
+						});
+					}, {
+						if({ item:checked && checkboxOnIconSvg != '' }, {
+							SvgRenderer:shared:draw(ctx: ctx, svgSrc: checkboxOnIconSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
+						});
+					});
+				});
+			});
+			ctx:drawText(x: mx + padX + indW, y: ty, text: item:label, color: txtColor, pixelHeight: fpx);
 			i: i + 1;
 		});
 	}

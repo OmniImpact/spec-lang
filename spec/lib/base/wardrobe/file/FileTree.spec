@@ -20,6 +20,7 @@ Class of SewNode is FileTree{
 		['base', 'scrap', 'tree', TreeNode],
 		['base', 'scrap', 'tree', TreeView],
 		['base', 'scrap', ScrollView],
+		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'scrap', 'menu', MenuItemConfig],
 		['base', 'scrap', 'menu', MenuContext],
 		['base', 'wardrobe', 'file', FilePinnedLocations]
@@ -29,6 +30,9 @@ Class of SewNode is FileTree{
 	String is rootLabel: '';
 	Boolean is showHidden: false;
 	Boolean is headerHover: false;
+	String is dropdownIconSvg: '';
+	String is plusIconSvg: '';
+	String is minusIconSvg: '';
 	FilePinnedLocations is pinned: FilePinnedLocations();
 	TreeView is treeView: TreeView();
 	ScrollView is treeScroll: ScrollView(child: TreeView());
@@ -39,14 +43,22 @@ Class of SewNode is FileTree{
 		String is rootDir: '',
 		MenuContext is contextMenu: MenuContext(),
 		Function is onOpenFile: local Function(String is _path){},
-		Boolean is showHidden: false
+		Boolean is showHidden: false,
+		String is dropdownIconSvg: '',
+		String is plusIconSvg: '',
+		String is minusIconSvg: ''
 	){
 		:contextMenu: contextMenu;
 		:onOpenFile: onOpenFile;
 		:showHidden: showHidden;
+		:dropdownIconSvg: dropdownIconSvg;
+		:plusIconSvg: plusIconSvg;
+		:minusIconSvg: minusIconSvg;
 		:pinned: FilePinnedLocations();
 		:pinned:load();
 		:treeView: TreeView(
+			plusIconSvg: plusIconSvg,
+			minusIconSvg: minusIconSvg,
 			onToggle: local Function(TreeNode is node){ :handleToggle(node: node); },
 			onActivate: local Function(TreeNode is node){
 				local Function is cb: onOpenFile;
@@ -213,15 +225,31 @@ Class of SewNode is FileTree{
 		local Int is fpx: :headerFontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is padX: activeScale:px(pt: 10.0);
+		local Int is chevSz: activeScale:px(pt: 11.0);
+		if({ chevSz < 9 }, { chevSz: 9; });
 		ctx:setClip(x: b:x, y: b:y, w: b:width, h: hh);
 		ctx:drawText(
 			x: b:x + padX,
 			y: b:y + (hh - th) / 2,
-			text: rootLabel . ' ▾',
+			text: rootLabel,
 			color: activeTheme:textPrimary,
 			pixelHeight: fpx,
 			bold: true
 		);
+		local Int is lw: ctx:measureTextWidth(text: rootLabel, pixelHeight: fpx, bold: true);
+		local Int is chevX: b:x + padX + lw + activeScale:px(pt: 4.0);
+		if({ dropdownIconSvg != '' && chevX + chevSz <= b:x + b:width - 4 }, {
+			SvgRenderer:shared:draw(
+				ctx: ctx,
+				svgSrc: dropdownIconSvg,
+				x: chevX,
+				y: b:y + (hh - chevSz) / 2,
+				widthPx: chevSz,
+				heightPx: chevSz,
+				tintColor: activeTheme:textMuted,
+				useTint: true
+			);
+		});
 		ctx:clearClip();
 
 		treeScroll:paint(ctx: ctx);
@@ -234,10 +262,11 @@ Class of SewNode is FileTree{
 		while({ i < pinned:paths:length() }, {
 			local String is pname: pinned:names:get(index: i);
 			local String is ppath: pinned:paths:get(index: i);
-			local String is prefix: if({ ppath == rootDir }, { '* ' }, { '  ' });
 			items:add(item: MenuItemConfig(
 				id: 'pin_' . (i as String),
-				label: prefix . pname,
+				label: pname,
+				checked: (ppath == rootDir),
+				kind: 'radio',
 				onClick: local Function(){ :setRootDir(dirPath: ppath); }
 			));
 			i: i + 1;

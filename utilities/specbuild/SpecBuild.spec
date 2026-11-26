@@ -132,7 +132,7 @@ Class is SpecBuild{
 	}
 
 	local Function is collectBundleEntry(String is srcPath, String is destPath, Array of String is dests, Array of String is payloads){
-		if({ fileExists(path: srcPath) }, {
+		if({ !Dir:isDir(path: srcPath) && fileExists(path: srcPath) }, {
 			dests:add(item: destPath);
 			payloads:add(item: File:fileRead(path: srcPath, onSuccess: {}, onError: {}, default: ''));
 			return;

@@ -14,6 +14,7 @@ Class is MenuItemConfig{
 	Boolean is checked: false;
 	Boolean is enabled: true;
 	String is kind: 'action';
+	String is iconSvg: '';
 	Array of MenuItemConfig is subItems: Array();
 
 	replace Function is init(
@@ -22,7 +23,8 @@ Class is MenuItemConfig{
 		Function is onClick: local Function(){},
 		Boolean is checked: false,
 		Boolean is enabled: true,
-		String is kind: 'action'
+		String is kind: 'action',
+		String is iconSvg: ''
 	){
 		:id: id;
 		:label: label;
@@ -30,6 +32,7 @@ Class is MenuItemConfig{
 		:checked: checked;
 		:enabled: enabled;
 		:kind: kind;
+		:iconSvg: iconSvg;
 		subItems: Array();
 	}
 

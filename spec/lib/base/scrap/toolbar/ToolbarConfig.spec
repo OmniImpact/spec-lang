@@ -11,10 +11,24 @@ Class is ToolbarConfig{
 
 	Array of MenuConfig is menus: Array();
 	Float is heightPt: 30.0;
+	String is radioOffIconSvg: '';
+	String is radioOnIconSvg: '';
+	String is checkboxOffIconSvg: '';
+	String is checkboxOnIconSvg: '';
 
-	replace Function is init(Float is heightPt: 30.0){
+	replace Function is init(
+		Float is heightPt: 30.0,
+		String is radioOffIconSvg: '',
+		String is radioOnIconSvg: '',
+		String is checkboxOffIconSvg: '',
+		String is checkboxOnIconSvg: ''
+	){
 		menus: Array();
 		:heightPt: heightPt;
+		:radioOffIconSvg: radioOffIconSvg;
+		:radioOnIconSvg: radioOnIconSvg;
+		:checkboxOffIconSvg: checkboxOffIconSvg;
+		:checkboxOnIconSvg: checkboxOnIconSvg;
 	}
 
 	Function is addMenu(MenuConfig is menu){
