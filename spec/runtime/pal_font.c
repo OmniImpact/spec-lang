@@ -156,6 +156,12 @@ long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long lon
     return 1;
 }
 
+long long spec_pal_font_has_glyph(long long handle, long long cp) {
+    SpecFont* f = _spec_get_font(handle);
+    if (!f) return 0;
+    return stbtt_FindGlyphIndex(&f->info, (int)cp) != 0 ? 1 : 0;
+}
+
 long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
 #if defined(__linux__)
     if (!out_buf || out_cap <= 1) return 0;
@@ -224,6 +230,7 @@ long long spec_pal_font_hmetrics(long long handle, long long cp, long long out_2
 long long spec_pal_font_kern_advance(long long handle, long long cp1, long long cp2) { (void)handle; (void)cp1; (void)cp2; return 0; }
 long long spec_pal_font_glyph_box(long long handle, long long cp, long long pixel_height, long long out_4_i32_ptr) { (void)handle; (void)cp; (void)pixel_height; (void)out_4_i32_ptr; return 0; }
 long long spec_pal_font_rasterize_glyph(long long handle, long long cp, long long pixel_height, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)dst_ptr; (void)gw; (void)gh; return 0; }
+long long spec_pal_font_has_glyph(long long handle, long long cp) { (void)handle; (void)cp; return 0; }
 long long spec_pal_font_default_path(long long out_buf, long long out_cap) { (void)out_buf; (void)out_cap; return 0; }
 
 #endif

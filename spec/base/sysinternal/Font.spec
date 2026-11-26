@@ -41,6 +41,10 @@ Class is Font{
 	## Bound to `spec_pal_font_rasterize_glyph`.
 	Function of Int is pal_font_rasterize_glyph(Int is handle, Int is cp, Int is pixel_height, Int is dst_ptr, Int is gw, Int is gh);
 
+	## Returns 1 if [cp] maps to a non-zero glyph index in [handle], else 0.
+	## Bound to `spec_pal_font_has_glyph`.
+	Function of Int is pal_font_has_glyph(Int is handle, Int is cp);
+
 	## Returns the C-string address of the last font error message.
 	## Bound to `spec_pal_font_last_error`.
 	Function of Int is pal_font_last_error();

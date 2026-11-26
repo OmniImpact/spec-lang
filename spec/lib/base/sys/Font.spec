@@ -20,6 +20,9 @@ Class is Font{
 	Int is scratchAddr: 0;
 	Int is scratchCap: 0;
 	Math is math: Math();
+	Array of Font is fallbacks: Array();
+	Boolean is fallbacksLoaded: false;
+	Boolean is isFallbackFont: false;
 
 	local Function of Int is cstrAddr(String is s){
 		local Int is sAddr: Mem:objToAddr(obj: s);
@@ -133,34 +136,96 @@ Class is Font{
 		return 1;
 	}
 
+	## Returns `true` if this font contains a non-`.notdef` glyph for Unicode codepoint [cp].
+	Function of Boolean is hasGlyph(Int is cp){
+		if({ handle <= 0 }, { return false; });
+		return base:sysinternal:Font:pal_font_has_glyph(handle: handle, cp: cp) != 0;
+	}
+
+	## Registers an additional fallback [font] used when a codepoint is missing from this font.
+	Function is addFallback(Font is font){
+		font:isFallbackFont: true;
+		fallbacks:add(item: font);
+	}
+
+	local Function is ensureFallbacks(){
+		if({ fallbacksLoaded || isFallbackFont }, { return; });
+		fallbacksLoaded: true;
+		local Array of String is paths: Array([
+			'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+			'/usr/share/fonts/TTF/DejaVuSans.ttf',
+			'/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf',
+			'/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf',
+			'/usr/share/fonts/truetype/noto/NotoSansMath-Regular.ttf',
+			'/usr/share/fonts/truetype/freefont/FreeSans.ttf'
+		]);
+		local Int is i: 0;
+		while({ i < paths:length() }, {
+			local String is p: paths:get(index: i);
+			if({ fileExists(path: p) }, {
+				local Font is fb: Font();
+				fb:isFallbackFont: true;
+				if({ fb:load(path: p) }, {
+					fallbacks:add(item: fb);
+				});
+			});
+			i: i + 1;
+		});
+	}
+
+	local Function of Int is resolveHandleFor(Int is cp){
+		if({ cp < 128 || :hasGlyph(cp: cp) }, { return handle; });
+		:ensureFallbacks();
+		local Int is i: 0;
+		while({ i < fallbacks:length() }, {
+			local Font is fb: fallbacks:get(index: i);
+			if({ fb:hasGlyph(cp: cp) }, {
+				return fb:handle;
+			});
+			i: i + 1;
+		});
+		return handle;
+	}
+
 	## Measures the horizontal pixel advance of UTF-8 [text] at [pixelHeight].
 	Function of Int is measureWidth(String is text, Int is pixelHeight: 16, Float is spacing: -1.0){
 		if({ handle <= 0 || pixelHeight <= 0 || text == '' }, { return 0; });
 		:ensureMetricsBuf();
-		local Float is scale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
+		local Float is baseScale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
 		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
 		local Float is xpos: 0.0;
 		local Int is len: text:length();
 		local Int is idx: 0;
 		local Int is prevCp: 0;
+		local Int is prevH: 0;
 		while({ idx < len }, {
 			local Int is cp: :utf8CodeAt(text: text, idx: idx, len: len);
 			idx: idx + :utf8Step(text: text, idx: idx, len: len);
-			if({ prevCp != 0 }, {
-				local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: handle, cp1: prevCp, cp2: cp);
-				xpos: xpos + math:toFloat(value: kern) * scale;
+			local Int is gh: :resolveHandleFor(cp: cp);
+			local Float is gScale: if({ gh == handle }, { baseScale }, { base:sysinternal:Font:pal_font_scale(handle: gh, pixel_height: pixelHeight) });
+			if({ prevCp != 0 && prevH == gh }, {
+				local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gh, cp1: prevCp, cp2: cp);
+				xpos: xpos + math:toFloat(value: kern) * gScale;
 			});
-			base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: cp, out_2_i32_ptr: metricsAddr);
+			base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: metricsAddr);
 			local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
-			xpos: xpos + math:toFloat(value: adv) * scale + tracking;
+			xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
 			prevCp: cp;
+			prevH: gh;
 		});
 		return math:toInt(value: math:round(value: xpos));
 	}
 
-	## Releases the underlying font handle and cached scratch buffers.
+	## Releases the underlying font handle, fallback fonts, and cached scratch buffers.
 	Function is close(){
+		local Int is i: 0;
+		while({ i < fallbacks:length() }, {
+			fallbacks:get(index: i):close();
+			i: i + 1;
+		});
+		fallbacks: Array();
+		fallbacksLoaded: false;
 		if({ handle > 0 }, {
 			base:sysinternal:Font:pal_font_close(handle: handle);
 			handle: -1;
@@ -217,6 +282,7 @@ Class is Font{
 		local Int is len: text:length();
 		local Int is idx: 0;
 		local Int is prevCp: 0;
+		local Int is prevH: 0;
 		while({ idx < len }, {
 			local Int is cp: :utf8CodeAt(text: text, idx: idx, len: len);
 			idx: idx + :utf8Step(text: text, idx: idx, len: len);
@@ -224,15 +290,18 @@ Class is Font{
 				xpos: math:toFloat(value: x);
 				baseline: baseline + lineStep;
 				prevCp: 0;
+				prevH: 0;
 			}, {
-				if({ prevCp != 0 }, {
-					local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: handle, cp1: prevCp, cp2: cp);
-					xpos: xpos + math:toFloat(value: kern) * scale;
+				local Int is gHandle: :resolveHandleFor(cp: cp);
+				local Float is gScale: if({ gHandle == handle }, { scale }, { base:sysinternal:Font:pal_font_scale(handle: gHandle, pixel_height: pixelHeight) });
+				if({ prevCp != 0 && prevH == gHandle }, {
+					local Int is kern: base:sysinternal:Font:pal_font_kern_advance(handle: gHandle, cp1: prevCp, cp2: cp);
+					xpos: xpos + math:toFloat(value: kern) * gScale;
 				});
-				base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: cp, out_2_i32_ptr: metricsAddr);
+				base:sysinternal:Font:pal_font_hmetrics(handle: gHandle, cp: cp, out_2_i32_ptr: metricsAddr);
 				local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
 
-				base:sysinternal:Font:pal_font_glyph_box(handle: handle, cp: cp, pixel_height: pixelHeight, out_4_i32_ptr: metricsAddr);
+				base:sysinternal:Font:pal_font_glyph_box(handle: gHandle, cp: cp, pixel_height: pixelHeight, out_4_i32_ptr: metricsAddr);
 				local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
 				local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
 				local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
@@ -244,7 +313,7 @@ Class is Font{
 					local Int is buf: :ensureScratch(needed: gw * gh);
 					if({ buf != 0 }, {
 						base:sysinternal:Font:pal_font_rasterize_glyph(
-							handle: handle,
+							handle: gHandle,
 							cp: cp,
 							pixel_height: pixelHeight,
 							dst_ptr: buf,
@@ -292,8 +361,9 @@ Class is Font{
 					});
 				});
 
-				xpos: xpos + math:toFloat(value: adv) * scale + tracking;
+				xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
 				prevCp: cp;
+				prevH: gHandle;
 			});
 		});
 		return true;
