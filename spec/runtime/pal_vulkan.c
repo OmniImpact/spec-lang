@@ -943,10 +943,11 @@ typedef struct {
     SpecVkPipeline pipeline;
 
     SpecVkCommandPool cmd_pool;
-    SpecVkCommandBuffer cmd_buf;
-    SpecVkSemaphore img_avail_sem;
-    SpecVkSemaphore render_done_sem;
-    SpecVkFence in_flight_fence;
+    SpecVkCommandBuffer cmd_buf[2];
+    SpecVkSemaphore img_avail_sem[2];
+    SpecVkSemaphore render_done_sem[2];
+    SpecVkFence in_flight_fence[2];
+    uint32_t cur_frame;
 
     SpecVkBuffer vertex_buf;
     SpecVkDeviceMemory vertex_mem;
@@ -967,10 +968,16 @@ typedef struct {
     SpecVkImage overlay_img;
     SpecVkDeviceMemory overlay_mem;
     SpecVkImageView overlay_view;
-    SpecVkBuffer overlay_staging_buf;
-    SpecVkDeviceMemory overlay_staging_mem;
+    SpecVkBuffer overlay_staging_buf[2];
+    SpecVkDeviceMemory overlay_staging_mem[2];
+    uint8_t* overlay_cpu_buf;
+    size_t overlay_cpu_bytes;
     uint32_t overlay_w;
     uint32_t overlay_h;
+    uint32_t overlay_img_w;
+    uint32_t overlay_img_h;
+    uint32_t overlay_img_layout;
+    int overlay_dirty;
     int overlay_ready;
 } SpecVulkanCtx;
 
@@ -1655,8 +1662,8 @@ long long spec_pal_vulkan_create(
     cbai.sType = SPEC_VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cbai.commandPool = ctx->cmd_pool;
     cbai.level = SPEC_VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cbai.commandBufferCount = 1;
-    if (ctx->vkAllocateCommandBuffers(ctx->device, &cbai, &ctx->cmd_buf) != SPEC_VK_SUCCESS) {
+    cbai.commandBufferCount = 2;
+    if (ctx->vkAllocateCommandBuffers(ctx->device, &cbai, ctx->cmd_buf) != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkAllocateCommandBuffers failed");
         goto fail;
     }
@@ -1668,11 +1675,13 @@ long long spec_pal_vulkan_create(
     memset(&fci2, 0, sizeof(fci2));
     fci2.sType = SPEC_VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fci2.flags = SPEC_VK_FENCE_CREATE_SIGNALED_BIT;
-    if (ctx->vkCreateSemaphore(ctx->device, &sci2, NULL, &ctx->img_avail_sem) != SPEC_VK_SUCCESS ||
-        ctx->vkCreateSemaphore(ctx->device, &sci2, NULL, &ctx->render_done_sem) != SPEC_VK_SUCCESS ||
-        ctx->vkCreateFence(ctx->device, &fci2, NULL, &ctx->in_flight_fence) != SPEC_VK_SUCCESS) {
-        _spec_vk_set_error("Failed to create sync primitives");
-        goto fail;
+    for (int f = 0; f < 2; f++) {
+        if (ctx->vkCreateSemaphore(ctx->device, &sci2, NULL, &ctx->img_avail_sem[f]) != SPEC_VK_SUCCESS ||
+            ctx->vkCreateSemaphore(ctx->device, &sci2, NULL, &ctx->render_done_sem[f]) != SPEC_VK_SUCCESS ||
+            ctx->vkCreateFence(ctx->device, &fci2, NULL, &ctx->in_flight_fence[f]) != SPEC_VK_SUCCESS) {
+            _spec_vk_set_error("Failed to create sync primitives");
+            goto fail;
+        }
     }
 
     /* 2D Overlay pipeline & fullscreen quad */
@@ -1885,6 +1894,76 @@ long long spec_pal_vulkan_set_mesh(
     return 1;
 }
 
+static int _spec_vk_ensure_overlay_resources(SpecVulkanCtx* ctx, uint32_t w, uint32_t h) {
+    if (ctx->overlay_img && ctx->overlay_img_w == w && ctx->overlay_img_h == h) return 1;
+    ctx->vkDeviceWaitIdle(ctx->device);
+    if (ctx->overlay_view) { ctx->vkDestroyImageView(ctx->device, ctx->overlay_view, NULL); ctx->overlay_view = 0; }
+    if (ctx->overlay_img) { ctx->vkDestroyImage(ctx->device, ctx->overlay_img, NULL); ctx->overlay_img = 0; }
+    if (ctx->overlay_mem) { ctx->vkFreeMemory(ctx->device, ctx->overlay_mem, NULL); ctx->overlay_mem = 0; }
+    for (int f = 0; f < 2; f++) {
+        if (ctx->overlay_staging_buf[f]) { ctx->vkDestroyBuffer(ctx->device, ctx->overlay_staging_buf[f], NULL); ctx->overlay_staging_buf[f] = 0; }
+        if (ctx->overlay_staging_mem[f]) { ctx->vkFreeMemory(ctx->device, ctx->overlay_staging_mem[f], NULL); ctx->overlay_staging_mem[f] = 0; }
+    }
+
+    SpecVkDeviceSize byte_size = (SpecVkDeviceSize)w * (SpecVkDeviceSize)h * 4ULL;
+    for (int f = 0; f < 2; f++) {
+        if (!_spec_vk_create_buffer(ctx, byte_size, SPEC_VK_BUFFER_USAGE_TRANSFER_SRC_BIT, NULL, &ctx->overlay_staging_buf[f], &ctx->overlay_staging_mem[f])) {
+            return 0;
+        }
+    }
+
+    SpecVkImageCreateInfo ici;
+    memset(&ici, 0, sizeof(ici));
+    ici.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ici.imageType = SPEC_VK_IMAGE_TYPE_2D;
+    ici.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
+    ici.extent.width = w;
+    ici.extent.height = h;
+    ici.extent.depth = 1;
+    ici.mipLevels = 1;
+    ici.arrayLayers = 1;
+    ici.samples = SPEC_VK_SAMPLE_COUNT_1_BIT;
+    ici.tiling = SPEC_VK_IMAGE_TILING_OPTIMAL;
+    ici.usage = SPEC_VK_IMAGE_USAGE_TRANSFER_DST_BIT | SPEC_VK_IMAGE_USAGE_SAMPLED_BIT;
+    ici.sharingMode = SPEC_VK_SHARING_MODE_EXCLUSIVE;
+    ici.initialLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
+    if (ctx->vkCreateImage(ctx->device, &ici, NULL, &ctx->overlay_img) != SPEC_VK_SUCCESS) return 0;
+
+    SpecVkMemoryRequirements req;
+    ctx->vkGetImageMemoryRequirements(ctx->device, ctx->overlay_img, &req);
+    uint32_t mt = _spec_vk_find_memory_type(ctx, req.memoryTypeBits, SPEC_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (mt == ~0U) return 0;
+    SpecVkMemoryAllocateInfo mai = { SPEC_VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, req.size, mt };
+    if (ctx->vkAllocateMemory(ctx->device, &mai, NULL, &ctx->overlay_mem) != SPEC_VK_SUCCESS) return 0;
+    ctx->vkBindImageMemory(ctx->device, ctx->overlay_img, ctx->overlay_mem, 0);
+
+    SpecVkImageViewCreateInfo ivci;
+    memset(&ivci, 0, sizeof(ivci));
+    ivci.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = ctx->overlay_img;
+    ivci.viewType = SPEC_VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
+    ivci.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.layerCount = 1;
+    if (ctx->vkCreateImageView(ctx->device, &ivci, NULL, &ctx->overlay_view) != SPEC_VK_SUCCESS) return 0;
+
+    SpecVkDescriptorImageInfo dii = { ctx->overlay_sampler, ctx->overlay_view, SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+    SpecVkWriteDescriptorSet wds;
+    memset(&wds, 0, sizeof(wds));
+    wds.sType = SPEC_VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    wds.dstSet = ctx->overlay_desc_set;
+    wds.descriptorCount = 1;
+    wds.descriptorType = SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    wds.pImageInfo = &dii;
+    ctx->vkUpdateDescriptorSets(ctx->device, 1, &wds, 0, NULL);
+
+    ctx->overlay_img_w = w;
+    ctx->overlay_img_h = h;
+    ctx->overlay_img_layout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
+    return 1;
+}
+
 long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long long width, long long height) {
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
     if (!ctx || !ctx->device || !ctx->swapchain) return 0;
@@ -1895,9 +1974,11 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
         if (!_spec_vk_create_swapchain_resources(ctx, (uint32_t)width, (uint32_t)height)) return 0;
     }
 
-    ctx->vkWaitForFences(ctx->device, 1, &ctx->in_flight_fence, SPEC_VK_TRUE, ~0ULL);
+    uint32_t f = ctx->cur_frame & 1U;
+    SpecVkCommandBuffer cmd = ctx->cmd_buf[f];
+    ctx->vkWaitForFences(ctx->device, 1, &ctx->in_flight_fence[f], SPEC_VK_TRUE, ~0ULL);
     uint32_t img_idx = 0;
-    SpecVkResult acq = ctx->vkAcquireNextImageKHR(ctx->device, ctx->swapchain, ~0ULL, ctx->img_avail_sem, SPEC_VK_NULL_HANDLE, &img_idx);
+    SpecVkResult acq = ctx->vkAcquireNextImageKHR(ctx->device, ctx->swapchain, ~0ULL, ctx->img_avail_sem[f], SPEC_VK_NULL_HANDLE, &img_idx);
     if (acq == SPEC_VK_ERROR_OUT_OF_DATE_KHR) {
         ctx->vkDeviceWaitIdle(ctx->device);
         _spec_vk_destroy_swapchain_resources(ctx);
@@ -1909,13 +1990,61 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
         return 0;
     }
 
-    ctx->vkResetFences(ctx->device, 1, &ctx->in_flight_fence);
-    ctx->vkResetCommandBuffer(ctx->cmd_buf, 0);
+    if (ctx->overlay_dirty && ctx->overlay_cpu_buf && ctx->overlay_w > 0 && ctx->overlay_h > 0) {
+        if (!_spec_vk_ensure_overlay_resources(ctx, ctx->overlay_w, ctx->overlay_h)) return 0;
+    }
+
+    ctx->vkResetFences(ctx->device, 1, &ctx->in_flight_fence[f]);
+    ctx->vkResetCommandBuffer(cmd, 0);
 
     SpecVkCommandBufferBeginInfo cbi;
     memset(&cbi, 0, sizeof(cbi));
     cbi.sType = SPEC_VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    ctx->vkBeginCommandBuffer(ctx->cmd_buf, &cbi);
+    ctx->vkBeginCommandBuffer(cmd, &cbi);
+
+    if (ctx->overlay_dirty && ctx->overlay_cpu_buf && ctx->overlay_img && ctx->overlay_staging_mem[f]) {
+        SpecVkDeviceSize byte_size = (SpecVkDeviceSize)ctx->overlay_w * (SpecVkDeviceSize)ctx->overlay_h * 4ULL;
+        void* mapped = NULL;
+        if (ctx->vkMapMemory(ctx->device, ctx->overlay_staging_mem[f], 0, byte_size, 0, &mapped) == SPEC_VK_SUCCESS) {
+            memcpy(mapped, ctx->overlay_cpu_buf, (size_t)byte_size);
+            ctx->vkUnmapMemory(ctx->device, ctx->overlay_staging_mem[f]);
+
+            SpecVkImageMemoryBarrier b1;
+            memset(&b1, 0, sizeof(b1));
+            b1.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            b1.srcAccessMask = (ctx->overlay_img_layout == SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) ? SPEC_VK_ACCESS_SHADER_READ_BIT : 0U;
+            b1.dstAccessMask = SPEC_VK_ACCESS_TRANSFER_WRITE_BIT;
+            b1.oldLayout = ctx->overlay_img_layout;
+            b1.newLayout = SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            b1.srcQueueFamilyIndex = SPEC_VK_QUEUE_FAMILY_IGNORED;
+            b1.dstQueueFamilyIndex = SPEC_VK_QUEUE_FAMILY_IGNORED;
+            b1.image = ctx->overlay_img;
+            b1.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+            b1.subresourceRange.levelCount = 1;
+            b1.subresourceRange.layerCount = 1;
+            SpecVkFlags src_stage = (ctx->overlay_img_layout == SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) ? SPEC_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT : SPEC_VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            ctx->vkCmdPipelineBarrier(cmd, src_stage, SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &b1);
+
+            SpecVkBufferImageCopy reg;
+            memset(&reg, 0, sizeof(reg));
+            reg.imageSubresource.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+            reg.imageSubresource.layerCount = 1;
+            reg.imageExtent.width = ctx->overlay_w;
+            reg.imageExtent.height = ctx->overlay_h;
+            reg.imageExtent.depth = 1;
+            ctx->vkCmdCopyBufferToImage(cmd, ctx->overlay_staging_buf[f], ctx->overlay_img, SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &reg);
+
+            SpecVkImageMemoryBarrier b2 = b1;
+            b2.srcAccessMask = SPEC_VK_ACCESS_TRANSFER_WRITE_BIT;
+            b2.dstAccessMask = SPEC_VK_ACCESS_SHADER_READ_BIT;
+            b2.oldLayout = SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            b2.newLayout = SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            ctx->vkCmdPipelineBarrier(cmd, SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT, SPEC_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &b2);
+
+            ctx->overlay_img_layout = SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            ctx->overlay_dirty = 0;
+        }
+    }
 
     SpecVkClearValue clears[2];
     memset(clears, 0, sizeof(clears));
@@ -1935,48 +2064,48 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
     rpbi.clearValueCount = 2;
     rpbi.pClearValues = clears;
 
-    ctx->vkCmdBeginRenderPass(ctx->cmd_buf, &rpbi, SPEC_VK_SUBPASS_CONTENTS_INLINE);
-    ctx->vkCmdBindPipeline(ctx->cmd_buf, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->pipeline);
+    ctx->vkCmdBeginRenderPass(cmd, &rpbi, SPEC_VK_SUBPASS_CONTENTS_INLINE);
+    ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->pipeline);
 
     SpecVkViewport vp = { 0.0f, 0.0f, (float)ctx->extent.width, (float)ctx->extent.height, 0.0f, 1.0f };
     SpecVkRect2D sc = { {0, 0}, ctx->extent };
-    ctx->vkCmdSetViewport(ctx->cmd_buf, 0, 1, &vp);
-    ctx->vkCmdSetScissor(ctx->cmd_buf, 0, 1, &sc);
+    ctx->vkCmdSetViewport(cmd, 0, 1, &vp);
+    ctx->vkCmdSetScissor(cmd, 0, 1, &sc);
 
     if (mvp_f32_ptr) {
-        ctx->vkCmdPushConstants(ctx->cmd_buf, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
+        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
     }
 
     if (ctx->vertex_buf && ctx->index_buf && ctx->index_count > 0) {
         SpecVkDeviceSize offset = 0;
-        ctx->vkCmdBindVertexBuffers(ctx->cmd_buf, 0, 1, &ctx->vertex_buf, &offset);
-        ctx->vkCmdBindIndexBuffer(ctx->cmd_buf, ctx->index_buf, 0, SPEC_VK_INDEX_TYPE_UINT16);
-        ctx->vkCmdDrawIndexed(ctx->cmd_buf, ctx->index_count, 1, 0, 0, 0);
+        ctx->vkCmdBindVertexBuffers(cmd, 0, 1, &ctx->vertex_buf, &offset);
+        ctx->vkCmdBindIndexBuffer(cmd, ctx->index_buf, 0, SPEC_VK_INDEX_TYPE_UINT16);
+        ctx->vkCmdDrawIndexed(cmd, ctx->index_count, 1, 0, 0, 0);
     }
 
-    if (ctx->overlay_ready && ctx->overlay_pipeline && ctx->overlay_vbuf && ctx->overlay_desc_set) {
+    if (ctx->overlay_ready && ctx->overlay_img && ctx->overlay_pipeline && ctx->overlay_vbuf && ctx->overlay_desc_set) {
         SpecVkDeviceSize offset = 0;
-        ctx->vkCmdBindPipeline(ctx->cmd_buf, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipeline);
-        ctx->vkCmdBindDescriptorSets(ctx->cmd_buf, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipe_layout, 0, 1, &ctx->overlay_desc_set, 0, NULL);
-        ctx->vkCmdBindVertexBuffers(ctx->cmd_buf, 0, 1, &ctx->overlay_vbuf, &offset);
-        ctx->vkCmdDraw(ctx->cmd_buf, 6, 1, 0, 0);
+        ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipeline);
+        ctx->vkCmdBindDescriptorSets(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->overlay_pipe_layout, 0, 1, &ctx->overlay_desc_set, 0, NULL);
+        ctx->vkCmdBindVertexBuffers(cmd, 0, 1, &ctx->overlay_vbuf, &offset);
+        ctx->vkCmdDraw(cmd, 6, 1, 0, 0);
     }
 
-    ctx->vkCmdEndRenderPass(ctx->cmd_buf);
-    ctx->vkEndCommandBuffer(ctx->cmd_buf);
+    ctx->vkCmdEndRenderPass(cmd);
+    ctx->vkEndCommandBuffer(cmd);
 
     SpecVkFlags wait_stage = SPEC_VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     SpecVkSubmitInfo si;
     memset(&si, 0, sizeof(si));
     si.sType = SPEC_VK_STRUCTURE_TYPE_SUBMIT_INFO;
     si.waitSemaphoreCount = 1;
-    si.pWaitSemaphores = &ctx->img_avail_sem;
+    si.pWaitSemaphores = &ctx->img_avail_sem[f];
     si.pWaitDstStageMask = &wait_stage;
     si.commandBufferCount = 1;
-    si.pCommandBuffers = &ctx->cmd_buf;
+    si.pCommandBuffers = &cmd;
     si.signalSemaphoreCount = 1;
-    si.pSignalSemaphores = &ctx->render_done_sem;
-    if (ctx->vkQueueSubmit(ctx->queue, 1, &si, ctx->in_flight_fence) != SPEC_VK_SUCCESS) {
+    si.pSignalSemaphores = &ctx->render_done_sem[f];
+    if (ctx->vkQueueSubmit(ctx->queue, 1, &si, ctx->in_flight_fence[f]) != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkQueueSubmit failed");
         return 0;
     }
@@ -1985,11 +2114,12 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
     memset(&pi, 0, sizeof(pi));
     pi.sType = SPEC_VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     pi.waitSemaphoreCount = 1;
-    pi.pWaitSemaphores = &ctx->render_done_sem;
+    pi.pWaitSemaphores = &ctx->render_done_sem[f];
     pi.swapchainCount = 1;
     pi.pSwapchains = &ctx->swapchain;
     pi.pImageIndices = &img_idx;
     SpecVkResult pres = ctx->vkQueuePresentKHR(ctx->queue, &pi);
+    ctx->cur_frame = (f + 1U) & 1U;
     if (pres == SPEC_VK_ERROR_OUT_OF_DATE_KHR || pres == SPEC_VK_SUBOPTIMAL_KHR) {
         ctx->vkDeviceWaitIdle(ctx->device);
         _spec_vk_destroy_swapchain_resources(ctx);
@@ -2002,118 +2132,17 @@ long long spec_pal_vulkan_set_overlay(long long handle, long long pixels_addr, l
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
     if (!ctx || !ctx->device || !ctx->overlay_desc_set || !pixels_addr || width <= 0 || height <= 0) return 0;
 
-    SpecVkDeviceSize byte_size = (SpecVkDeviceSize)width * (SpecVkDeviceSize)height * 4ULL;
-    ctx->vkWaitForFences(ctx->device, 1, &ctx->in_flight_fence, SPEC_VK_TRUE, ~0ULL);
-
-    if ((uint32_t)width != ctx->overlay_w || (uint32_t)height != ctx->overlay_h || !ctx->overlay_img) {
-        ctx->vkDeviceWaitIdle(ctx->device);
-        if (ctx->overlay_view) { ctx->vkDestroyImageView(ctx->device, ctx->overlay_view, NULL); ctx->overlay_view = 0; }
-        if (ctx->overlay_img) { ctx->vkDestroyImage(ctx->device, ctx->overlay_img, NULL); ctx->overlay_img = 0; }
-        if (ctx->overlay_mem) { ctx->vkFreeMemory(ctx->device, ctx->overlay_mem, NULL); ctx->overlay_mem = 0; }
-        if (ctx->overlay_staging_buf) { ctx->vkDestroyBuffer(ctx->device, ctx->overlay_staging_buf, NULL); ctx->overlay_staging_buf = 0; }
-        if (ctx->overlay_staging_mem) { ctx->vkFreeMemory(ctx->device, ctx->overlay_staging_mem, NULL); ctx->overlay_staging_mem = 0; }
-
-        if (!_spec_vk_create_buffer(ctx, byte_size, SPEC_VK_BUFFER_USAGE_TRANSFER_SRC_BIT, NULL, &ctx->overlay_staging_buf, &ctx->overlay_staging_mem)) {
-            return 0;
-        }
-
-        SpecVkImageCreateInfo ici;
-        memset(&ici, 0, sizeof(ici));
-        ici.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        ici.imageType = SPEC_VK_IMAGE_TYPE_2D;
-        ici.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
-        ici.extent.width = (uint32_t)width;
-        ici.extent.height = (uint32_t)height;
-        ici.extent.depth = 1;
-        ici.mipLevels = 1;
-        ici.arrayLayers = 1;
-        ici.samples = SPEC_VK_SAMPLE_COUNT_1_BIT;
-        ici.tiling = SPEC_VK_IMAGE_TILING_OPTIMAL;
-        ici.usage = SPEC_VK_IMAGE_USAGE_TRANSFER_DST_BIT | SPEC_VK_IMAGE_USAGE_SAMPLED_BIT;
-        ici.sharingMode = SPEC_VK_SHARING_MODE_EXCLUSIVE;
-        ici.initialLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
-        if (ctx->vkCreateImage(ctx->device, &ici, NULL, &ctx->overlay_img) != SPEC_VK_SUCCESS) return 0;
-
-        SpecVkMemoryRequirements req;
-        ctx->vkGetImageMemoryRequirements(ctx->device, ctx->overlay_img, &req);
-        uint32_t mt = _spec_vk_find_memory_type(ctx, req.memoryTypeBits, SPEC_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        if (mt == ~0U) return 0;
-        SpecVkMemoryAllocateInfo mai = { SPEC_VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, req.size, mt };
-        if (ctx->vkAllocateMemory(ctx->device, &mai, NULL, &ctx->overlay_mem) != SPEC_VK_SUCCESS) return 0;
-        ctx->vkBindImageMemory(ctx->device, ctx->overlay_img, ctx->overlay_mem, 0);
-
-        SpecVkImageViewCreateInfo ivci;
-        memset(&ivci, 0, sizeof(ivci));
-        ivci.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        ivci.image = ctx->overlay_img;
-        ivci.viewType = SPEC_VK_IMAGE_VIEW_TYPE_2D;
-        ivci.format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
-        ivci.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
-        ivci.subresourceRange.levelCount = 1;
-        ivci.subresourceRange.layerCount = 1;
-        if (ctx->vkCreateImageView(ctx->device, &ivci, NULL, &ctx->overlay_view) != SPEC_VK_SUCCESS) return 0;
-
-        SpecVkDescriptorImageInfo dii = { ctx->overlay_sampler, ctx->overlay_view, SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        SpecVkWriteDescriptorSet wds;
-        memset(&wds, 0, sizeof(wds));
-        wds.sType = SPEC_VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        wds.dstSet = ctx->overlay_desc_set;
-        wds.descriptorCount = 1;
-        wds.descriptorType = SPEC_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        wds.pImageInfo = &dii;
-        ctx->vkUpdateDescriptorSets(ctx->device, 1, &wds, 0, NULL);
-
-        ctx->overlay_w = (uint32_t)width;
-        ctx->overlay_h = (uint32_t)height;
+    size_t needed = (size_t)width * (size_t)height * 4U;
+    if (needed > ctx->overlay_cpu_bytes) {
+        uint8_t* next = (uint8_t*)realloc(ctx->overlay_cpu_buf, needed);
+        if (!next) return 0;
+        ctx->overlay_cpu_buf = next;
+        ctx->overlay_cpu_bytes = needed;
     }
-
-    void* mapped = NULL;
-    if (ctx->vkMapMemory(ctx->device, ctx->overlay_staging_mem, 0, byte_size, 0, &mapped) != SPEC_VK_SUCCESS) return 0;
-    memcpy(mapped, (const void*)(intptr_t)pixels_addr, (size_t)byte_size);
-    ctx->vkUnmapMemory(ctx->device, ctx->overlay_staging_mem);
-
-    ctx->vkResetCommandBuffer(ctx->cmd_buf, 0);
-    SpecVkCommandBufferBeginInfo cbi = { SPEC_VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL, 0, NULL };
-    ctx->vkBeginCommandBuffer(ctx->cmd_buf, &cbi);
-
-    SpecVkImageMemoryBarrier b1;
-    memset(&b1, 0, sizeof(b1));
-    b1.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    b1.dstAccessMask = SPEC_VK_ACCESS_TRANSFER_WRITE_BIT;
-    b1.oldLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
-    b1.newLayout = SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    b1.srcQueueFamilyIndex = SPEC_VK_QUEUE_FAMILY_IGNORED;
-    b1.dstQueueFamilyIndex = SPEC_VK_QUEUE_FAMILY_IGNORED;
-    b1.image = ctx->overlay_img;
-    b1.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
-    b1.subresourceRange.levelCount = 1;
-    b1.subresourceRange.layerCount = 1;
-    ctx->vkCmdPipelineBarrier(ctx->cmd_buf, SPEC_VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &b1);
-
-    SpecVkBufferImageCopy reg;
-    memset(&reg, 0, sizeof(reg));
-    reg.imageSubresource.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
-    reg.imageSubresource.layerCount = 1;
-    reg.imageExtent.width = (uint32_t)width;
-    reg.imageExtent.height = (uint32_t)height;
-    reg.imageExtent.depth = 1;
-    ctx->vkCmdCopyBufferToImage(ctx->cmd_buf, ctx->overlay_staging_buf, ctx->overlay_img, SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &reg);
-
-    SpecVkImageMemoryBarrier b2 = b1;
-    b2.srcAccessMask = SPEC_VK_ACCESS_TRANSFER_WRITE_BIT;
-    b2.dstAccessMask = SPEC_VK_ACCESS_SHADER_READ_BIT;
-    b2.oldLayout = SPEC_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    b2.newLayout = SPEC_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    ctx->vkCmdPipelineBarrier(ctx->cmd_buf, SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT, SPEC_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &b2);
-
-    ctx->vkEndCommandBuffer(ctx->cmd_buf);
-    SpecVkSubmitInfo si;
-    memset(&si, 0, sizeof(si));
-    si.sType = SPEC_VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    si.commandBufferCount = 1;
-    si.pCommandBuffers = &ctx->cmd_buf;
-    ctx->vkQueueSubmit(ctx->queue, 1, &si, SPEC_VK_NULL_HANDLE);
-    ctx->vkDeviceWaitIdle(ctx->device);
+    memcpy(ctx->overlay_cpu_buf, (const void*)(intptr_t)pixels_addr, needed);
+    ctx->overlay_w = (uint32_t)width;
+    ctx->overlay_h = (uint32_t)height;
+    ctx->overlay_dirty = 1;
     ctx->overlay_ready = 1;
     return 1;
 }
@@ -2121,13 +2150,16 @@ long long spec_pal_vulkan_set_overlay(long long handle, long long pixels_addr, l
 long long spec_pal_vulkan_destroy(long long handle) {
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
     if (!ctx) return 0;
+    if (ctx->overlay_cpu_buf) { free(ctx->overlay_cpu_buf); ctx->overlay_cpu_buf = NULL; }
     if (ctx->device) {
         ctx->vkDeviceWaitIdle(ctx->device);
         if (ctx->overlay_view) ctx->vkDestroyImageView(ctx->device, ctx->overlay_view, NULL);
         if (ctx->overlay_img) ctx->vkDestroyImage(ctx->device, ctx->overlay_img, NULL);
         if (ctx->overlay_mem) ctx->vkFreeMemory(ctx->device, ctx->overlay_mem, NULL);
-        if (ctx->overlay_staging_buf) ctx->vkDestroyBuffer(ctx->device, ctx->overlay_staging_buf, NULL);
-        if (ctx->overlay_staging_mem) ctx->vkFreeMemory(ctx->device, ctx->overlay_staging_mem, NULL);
+        for (int f = 0; f < 2; f++) {
+            if (ctx->overlay_staging_buf[f]) ctx->vkDestroyBuffer(ctx->device, ctx->overlay_staging_buf[f], NULL);
+            if (ctx->overlay_staging_mem[f]) ctx->vkFreeMemory(ctx->device, ctx->overlay_staging_mem[f], NULL);
+        }
         if (ctx->overlay_vbuf) ctx->vkDestroyBuffer(ctx->device, ctx->overlay_vbuf, NULL);
         if (ctx->overlay_vmem) ctx->vkFreeMemory(ctx->device, ctx->overlay_vmem, NULL);
         if (ctx->overlay_pipeline) ctx->vkDestroyPipeline(ctx->device, ctx->overlay_pipeline, NULL);
@@ -2141,9 +2173,11 @@ long long spec_pal_vulkan_destroy(long long handle) {
         if (ctx->vertex_mem) ctx->vkFreeMemory(ctx->device, ctx->vertex_mem, NULL);
         if (ctx->index_buf) ctx->vkDestroyBuffer(ctx->device, ctx->index_buf, NULL);
         if (ctx->index_mem) ctx->vkFreeMemory(ctx->device, ctx->index_mem, NULL);
-        if (ctx->in_flight_fence) ctx->vkDestroyFence(ctx->device, ctx->in_flight_fence, NULL);
-        if (ctx->render_done_sem) ctx->vkDestroySemaphore(ctx->device, ctx->render_done_sem, NULL);
-        if (ctx->img_avail_sem) ctx->vkDestroySemaphore(ctx->device, ctx->img_avail_sem, NULL);
+        for (int f = 0; f < 2; f++) {
+            if (ctx->in_flight_fence[f]) ctx->vkDestroyFence(ctx->device, ctx->in_flight_fence[f], NULL);
+            if (ctx->render_done_sem[f]) ctx->vkDestroySemaphore(ctx->device, ctx->render_done_sem[f], NULL);
+            if (ctx->img_avail_sem[f]) ctx->vkDestroySemaphore(ctx->device, ctx->img_avail_sem[f], NULL);
+        }
         if (ctx->cmd_pool) ctx->vkDestroyCommandPool(ctx->device, ctx->cmd_pool, NULL);
         if (ctx->pipeline) ctx->vkDestroyPipeline(ctx->device, ctx->pipeline, NULL);
         if (ctx->pipe_layout) ctx->vkDestroyPipelineLayout(ctx->device, ctx->pipe_layout, NULL);

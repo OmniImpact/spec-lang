@@ -1023,7 +1023,7 @@ long long spec_pal_window_poll(long long handle) {
                 pfd.fd = _wl_display_get_fd(w->display);
                 pfd.events = POLLIN;
                 pfd.revents = 0;
-                int pr = poll(&pfd, 1, 4);
+                int pr = poll(&pfd, 1, w->use_vulkan ? 0 : 4);
                 if (pr > 0 && (pfd.revents & POLLIN)) {
                     _wl_display_read_events(w->display);
                     if (_wl_display_dispatch_pending) _wl_display_dispatch_pending(w->display);
@@ -1038,7 +1038,7 @@ long long spec_pal_window_poll(long long handle) {
         _wl_display_flush(w->display);
         return 1;
     }
-    if (_libdecor_dispatch(w->decor, 16) < 0) {
+    if (_libdecor_dispatch(w->decor, w->use_vulkan ? 0 : 16) < 0) {
         w->should_close = true;
         return 0;
     }
