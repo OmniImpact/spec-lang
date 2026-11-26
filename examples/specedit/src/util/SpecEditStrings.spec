@@ -51,6 +51,8 @@ Class is SpecEditStrings{
 	held String is ITEM_WRAP_LABEL: 'Wrap';
 	held String is ITEM_LINE_NUMS_ID: 'line_numbers';
 	held String is ITEM_LINE_NUMS_LABEL: 'Line Numbers';
+	held String is ITEM_MONOSPACE_ID: 'monospace';
+	held String is ITEM_MONOSPACE_LABEL: 'Monospace';
 
 	held String is MENU_HELP_ID: 'help';
 	held String is MENU_HELP_LABEL: 'Help';

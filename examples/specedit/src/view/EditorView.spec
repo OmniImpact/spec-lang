@@ -45,6 +45,7 @@ Class is EditorView{
 			filePath: vm:activeFilePath,
 			wrap: vm:wrapEnabled,
 			lineNumbers: vm:lineNumbersEnabled,
+			monospace: vm:monospaceEnabled,
 			cursorStatus: vm:cursorStatus,
 			onTextChange: local Function(String is next){ vm:onDocumentEdited(text: next); },
 			onRightClickMenu: local Function(Int is x, Int is y){ vm:showEditorContextMenu(x: x, y: y); },

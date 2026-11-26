@@ -37,6 +37,7 @@ Class is EditorViewModel{
 	BoolEmitter is aboutOpen: BoolEmitter(initial: false);
 	BoolEmitter is wrapEnabled: BoolEmitter(initial: false);
 	BoolEmitter is lineNumbersEnabled: BoolEmitter(initial: false);
+	BoolEmitter is monospaceEnabled: BoolEmitter(initial: true);
 	TextEmitter is documentText: TextEmitter(initial: '');
 	TextEmitter is activeFilePath: TextEmitter(initial: '');
 	TextEmitter is cursorStatus: TextEmitter(initial: '');
@@ -60,6 +61,7 @@ Class is EditorViewModel{
 	MenuItemConfig is selectAllItem: MenuItemConfig(id: SpecEditStrings:ITEM_SELECT_ALL_ID, label: SpecEditStrings:ITEM_SELECT_ALL_LABEL, enabled: false);
 	MenuItemConfig is wrapItem: MenuItemConfig(id: SpecEditStrings:ITEM_WRAP_ID, label: SpecEditStrings:ITEM_WRAP_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 	MenuItemConfig is lineNumsItem: MenuItemConfig(id: SpecEditStrings:ITEM_LINE_NUMS_ID, label: SpecEditStrings:ITEM_LINE_NUMS_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
+	MenuItemConfig is monospaceItem: MenuItemConfig(id: SpecEditStrings:ITEM_MONOSPACE_ID, label: SpecEditStrings:ITEM_MONOSPACE_LABEL, checked: true, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 
 	Function is copyHandler: local Function(){};
 	Function is cutHandler: local Function(){};
@@ -82,6 +84,7 @@ Class is EditorViewModel{
 		aboutOpen: BoolEmitter(initial: false);
 		wrapEnabled: BoolEmitter(initial: false);
 		lineNumbersEnabled: BoolEmitter(initial: false);
+		monospaceEnabled: BoolEmitter(initial: true);
 		documentText: TextEmitter(initial: '');
 		activeFilePath: TextEmitter(initial: '');
 		cursorStatus: TextEmitter(initial: '');
@@ -234,8 +237,16 @@ Class is EditorViewModel{
 			kind: SpecEditStrings:MENU_KIND_TOGGLE,
 			onClick: local Function(){ :toggleLineNumbers(); }
 		);
+		monospaceItem: MenuItemConfig(
+			id: SpecEditStrings:ITEM_MONOSPACE_ID,
+			label: SpecEditStrings:ITEM_MONOSPACE_LABEL,
+			checked: monospaceEnabled:current(),
+			kind: SpecEditStrings:MENU_KIND_TOGGLE,
+			onClick: local Function(){ :toggleMonospace(); }
+		);
 		viewMenu:addItem(item: wrapItem);
 		viewMenu:addItem(item: lineNumsItem);
+		viewMenu:addItem(item: monospaceItem);
 		cfg:addMenu(menu: viewMenu);
 
 		local MenuConfig is helpMenu: MenuConfig(id: SpecEditStrings:MENU_HELP_ID, label: SpecEditStrings:MENU_HELP_LABEL);
@@ -513,6 +524,12 @@ Class is EditorViewModel{
 		local Boolean is next: !lineNumbersEnabled:current();
 		lineNumbersEnabled:emit(value: next);
 		lineNumsItem:checked: next;
+	}
+
+	Function is toggleMonospace(){
+		local Boolean is next: !monospaceEnabled:current();
+		monospaceEnabled:emit(value: next);
+		monospaceItem:checked: next;
 	}
 
 	Function is requestAbout(){

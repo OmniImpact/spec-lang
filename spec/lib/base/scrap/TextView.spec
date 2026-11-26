@@ -20,6 +20,7 @@ Class of SewNode is TextView{
 	TextEmitter is text: TextEmitter(initial: '');
 	BoolEmitter is wrap: BoolEmitter(initial: false);
 	BoolEmitter is lineNumbers: BoolEmitter(initial: false);
+	BoolEmitter is monospace: BoolEmitter(initial: false);
 	TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1');
 	Function is onTextChange: local Function(String is _next){};
 	Function is onRightClickMenu: local Function(Int is _x, Int is _y){};
@@ -39,6 +40,7 @@ Class of SewNode is TextView{
 	Boolean is hasSelection: false;
 	Boolean is wrapCached: false;
 	Boolean is lineNumsCached: false;
+	Boolean is monoCached: false;
 	Int is lastWrapW: -1;
 	Int is maxDispW: 0;
 	String is clipboardText: '';
@@ -50,6 +52,7 @@ Class of SewNode is TextView{
 		TextEmitter is text,
 		BoolEmitter is wrap: BoolEmitter(initial: false),
 		BoolEmitter is lineNumbers: BoolEmitter(initial: false),
+		BoolEmitter is monospace: BoolEmitter(initial: false),
 		TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1'),
 		Function is onTextChange: local Function(String is _next){},
 		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
@@ -62,6 +65,7 @@ Class of SewNode is TextView{
 			text: text,
 			wrap: wrap,
 			lineNumbers: lineNumbers,
+			monospace: monospace,
 			cursorStatus: cursorStatus,
 			onTextChange: onTextChange,
 			onRightClickMenu: onRightClickMenu,
@@ -76,6 +80,7 @@ Class of SewNode is TextView{
 		TextEmitter is text,
 		BoolEmitter is wrap: BoolEmitter(initial: false),
 		BoolEmitter is lineNumbers: BoolEmitter(initial: false),
+		BoolEmitter is monospace: BoolEmitter(initial: false),
 		TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1'),
 		Function is onTextChange: local Function(String is _next){},
 		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
@@ -87,6 +92,7 @@ Class of SewNode is TextView{
 		:text: text;
 		:wrap: wrap;
 		:lineNumbers: lineNumbers;
+		:monospace: monospace;
 		:cursorStatus: cursorStatus;
 		:onTextChange: onTextChange;
 		:onRightClickMenu: onRightClickMenu;
@@ -96,6 +102,7 @@ Class of SewNode is TextView{
 		:lineGapPt: lineGapPt;
 		:wrapCached: wrap:current();
 		:lineNumsCached: lineNumbers:current();
+		:monoCached: monospace:current();
 		:rebuildRawLines(raw: text:current());
 		:emitCursorStatus();
 
@@ -133,6 +140,15 @@ Class of SewNode is TextView{
 				invalidate();
 			})
 		);
+		signalBag:track(
+			slot: 'monospace',
+			emitter: monospace,
+			collector: monospace:collect(onEmit: local Function(){
+				:monoCached: monospace:current();
+				:lastWrapW: -1;
+				invalidate();
+			})
+		);
 	}
 
 	local Function of Int is fontPx(){
@@ -142,7 +158,7 @@ Class of SewNode is TextView{
 
 	local Function of Int is measureStr(String is s, Int is fpx){
 		if({ s == '' }, { return 0; });
-		return DrawContext:measureWidth(text: s, pixelHeight: fpx);
+		return DrawContext:shared:measureTextWidth(text: s, pixelHeight: fpx, mono: monoCached);
 	}
 
 	local Function of Int is gutterWidthPx(Int is fpx){
@@ -662,7 +678,7 @@ Class of SewNode is TextView{
 
 	## Renders one display line of text; subclasses (e.g. `CodeEditorView`) can override for syntax highlighting.
 	Function is paintLineText(DrawContext is ctx, Int is x, Int is y, String is lineStr, Int is rLine, Int is rStart, Int is fpx){
-		ctx:drawText(x: x, y: y, text: lineStr, color: activeTheme:textPrimary, pixelHeight: fpx);
+		ctx:drawText(x: x, y: y, text: lineStr, color: activeTheme:textPrimary, pixelHeight: fpx, mono: monoCached);
 	}
 
 	replace Function is paint(DrawContext is ctx){
@@ -716,8 +732,8 @@ Class of SewNode is TextView{
 						if({ segS < 0 }, { segS: 0; });
 						if({ segE > lineStr:length() }, { segE: lineStr:length(); });
 						if({ segE > segS || (rLine < el && segE == lineStr:length() && segS <= lineStr:length()) }, {
-							local Int is hx1: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segS), pixelHeight: fpx);
-							local Int is hx2: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segE), pixelHeight: fpx);
+							local Int is hx1: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segS), pixelHeight: fpx, mono: monoCached);
+							local Int is hx2: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segE), pixelHeight: fpx, mono: monoCached);
 							if({ rLine < el && segE == lineStr:length() }, {
 								hx2: hx2 + fpx / 2;
 							});
@@ -744,7 +760,7 @@ Class of SewNode is TextView{
 						local Boolean is isLastSegForLine: (i + 1 >= count) || (dispRawLine:get(index: i + 1) != rLine);
 						if({ cursorCol < rEnd || isLastSegForLine }, {
 							local Int is localCol: cursorCol - rStart;
-							local Int is cx: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: localCol), pixelHeight: fpx);
+							local Int is cx: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: localCol), pixelHeight: fpx, mono: monoCached);
 							if({ cx >= minX + gw }, {
 								ctx:fillRect(x: cx, y: ly, w: 2, h: fpx, color: activeTheme:textPrimary);
 							});

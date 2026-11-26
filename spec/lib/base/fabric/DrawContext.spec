@@ -15,7 +15,11 @@ Class is DrawContext{
 	held Font is sharedBoldFont: Font();
 	held Font is sharedItalicFont: Font();
 	held Font is sharedBoldItalicFont: Font();
-	held Array of Int is sharedFontState: Array([0, 0, 0, 0]);
+	held Font is sharedMonoFont: Font();
+	held Font is sharedMonoBoldFont: Font();
+	held Font is sharedMonoItalicFont: Font();
+	held Font is sharedMonoBoldItalicFont: Font();
+	held Array of Int is sharedFontState: Array([0, 0, 0, 0, 0, 0, 0, 0]);
 	held DrawContext is shared: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
@@ -71,7 +75,35 @@ Class is DrawContext{
 		return DrawContext:sharedFont;
 	}
 
-	Function of Font is styledFont(Boolean is bold: false, Boolean is italic: false){
+	Function of Font is styledFont(Boolean is bold: false, Boolean is italic: false, Boolean is mono: false){
+		if({ mono }, {
+			if({ bold && italic }, {
+				if({ DrawContext:sharedFontState:get(index: 7) == 0 }, {
+					DrawContext:sharedFontState:set(index: 7, item: 1);
+					DrawContext:sharedMonoBoldItalicFont:loadMonoStyled(bold: true, italic: true);
+				});
+				if({ DrawContext:sharedMonoBoldItalicFont:isLoaded() }, { return DrawContext:sharedMonoBoldItalicFont; });
+			});
+			if({ bold }, {
+				if({ DrawContext:sharedFontState:get(index: 5) == 0 }, {
+					DrawContext:sharedFontState:set(index: 5, item: 1);
+					DrawContext:sharedMonoBoldFont:loadMonoStyled(bold: true, italic: false);
+				});
+				if({ DrawContext:sharedMonoBoldFont:isLoaded() }, { return DrawContext:sharedMonoBoldFont; });
+			});
+			if({ italic }, {
+				if({ DrawContext:sharedFontState:get(index: 6) == 0 }, {
+					DrawContext:sharedFontState:set(index: 6, item: 1);
+					DrawContext:sharedMonoItalicFont:loadMonoStyled(bold: false, italic: true);
+				});
+				if({ DrawContext:sharedMonoItalicFont:isLoaded() }, { return DrawContext:sharedMonoItalicFont; });
+			});
+			if({ DrawContext:sharedFontState:get(index: 4) == 0 }, {
+				DrawContext:sharedFontState:set(index: 4, item: 1);
+				DrawContext:sharedMonoFont:loadMonoStyled(bold: false, italic: false);
+			});
+			if({ DrawContext:sharedMonoFont:isLoaded() }, { return DrawContext:sharedMonoFont; });
+		});
 		if({ !bold && !italic }, { return :activeFont(); });
 		if({ bold && italic }, {
 			if({ DrawContext:sharedFontState:get(index: 3) == 0 }, {
@@ -181,8 +213,8 @@ Class is DrawContext{
 	}
 
 	## Measures the pixel width of UTF-8 [text] at [pixelHeight] using the system font.
-	Function of Int is measureTextWidth(String is text, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false){
-		local Font is f: :styledFont(bold: bold, italic: italic);
+	Function of Int is measureTextWidth(String is text, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false, Boolean is mono: false){
+		local Font is f: :styledFont(bold: bold, italic: italic, mono: mono);
 		if({ !f:isLoaded() }, { return 0; });
 		return f:measureWidth(text: text, pixelHeight: pixelHeight);
 	}
@@ -193,10 +225,11 @@ Class is DrawContext{
 	}
 
 	## Draws UTF-8 [text] at ([x], [y]) using the loaded system TrueType font.
-	Function is drawText(Int is x, Int is y, String is text, Int is color, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false){
-		local Font is f: :styledFont(bold: bold, italic: italic);
+	Function is drawText(Int is x, Int is y, String is text, Int is color, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false, Boolean is mono: false){
+		local Font is f: :styledFont(bold: bold, italic: italic, mono: mono);
 		if({ !f:isLoaded() }, { return; });
-		local Float is wOverride: if({ bold && !DrawContext:sharedBoldFont:isLoaded() }, { 0.75 }, { -1.0 });
+		local Boolean is hasBold: if({ mono }, { DrawContext:sharedMonoBoldFont:isLoaded() }, { DrawContext:sharedBoldFont:isLoaded() });
+		local Float is wOverride: if({ bold && !hasBold }, { 0.75 }, { -1.0 });
 		f:drawText(
 			pixelsAddr: canvas:pixelsAddr(),
 			bufW: canvas:width,

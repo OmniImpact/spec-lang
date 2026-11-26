@@ -14,7 +14,7 @@ Class is Font{
 		['base', 'sysinternal', Font]
 	];
 
-	held Array of Int is cachedState: Array([-1, 0, -1, -1, -1]);
+	held Array of Int is cachedState: Array([-1, 0, -1, -1, -1, -1, -1, -1, -1]);
 	held Array of Int is cachedFallbackHandles: Array();
 	held Array of Int is cachedGposHandles: Array();
 	held Array of OpenTypeGpos is cachedGposTables: Array();
@@ -192,6 +192,60 @@ Class is Font{
 					'/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf',
 					'/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf'
 				])
+			})
+		});
+		local Int is i: 0;
+		while({ i < candidates:length() }, {
+			local String is p: candidates:get(index: i);
+			if({ fileExists(path: p) && :load(path: p) }, {
+				Font:cachedState:set(index: slot, item: handle);
+				ownsHandle: false;
+				return true;
+			});
+			i: i + 1;
+		});
+		return false;
+	}
+
+	## Loads a monospace font variant (regular/bold/italic/bold-italic), cached process-wide.
+	Function of Boolean is loadMonoStyled(Boolean is bold: false, Boolean is italic: false){
+		local Int is slot: if({ bold && italic }, { 8 }, { if({ bold }, { 6 }, { if({ italic }, { 7 }, { 5 }) }) });
+		local Int is cached: Font:cachedState:get(index: slot);
+		if({ cached > 0 }, {
+			if({ handle > 0 && ownsHandle }, {
+				base:sysinternal:Font:pal_font_close(handle: handle);
+			});
+			handle: cached;
+			ownsHandle: false;
+			return true;
+		});
+		local Array of String is candidates: if({ bold && italic }, {
+			Array([
+				'/usr/share/fonts/truetype/dejavu/DejaVuSansMono-BoldOblique.ttf',
+				'/usr/share/fonts/truetype/liberation/LiberationMono-BoldItalic.ttf',
+				'/usr/share/fonts/truetype/noto/NotoSansMono-Bold.ttf'
+			])
+		}, {
+			if({ bold }, {
+				Array([
+					'/usr/share/fonts/truetype/noto/NotoSansMono-Bold.ttf',
+					'/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf',
+					'/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf'
+				])
+			}, {
+				if({ italic }, {
+					Array([
+						'/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Oblique.ttf',
+						'/usr/share/fonts/truetype/liberation/LiberationMono-Italic.ttf',
+						'/usr/share/fonts/truetype/noto/NotoSansMono-Regular.ttf'
+					])
+				}, {
+					Array([
+						'/usr/share/fonts/truetype/noto/NotoSansMono-Regular.ttf',
+						'/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
+						'/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf'
+					])
+				})
 			})
 		});
 		local Int is i: 0;

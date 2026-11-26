@@ -28,6 +28,7 @@ Class of TextView is CodeEditorView{
 		String is language: '',
 		BoolEmitter is wrap: BoolEmitter(initial: false),
 		BoolEmitter is lineNumbers: BoolEmitter(initial: false),
+		BoolEmitter is monospace: BoolEmitter(initial: false),
 		TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1'),
 		Function is onTextChange: local Function(String is _next){},
 		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
@@ -40,6 +41,7 @@ Class of TextView is CodeEditorView{
 			text: text,
 			wrap: wrap,
 			lineNumbers: lineNumbers,
+			monospace: monospace,
 			cursorStatus: cursorStatus,
 			onTextChange: onTextChange,
 			onRightClickMenu: onRightClickMenu,
@@ -98,6 +100,7 @@ Class of TextView is CodeEditorView{
 	}
 
 	replace Function is paintLineText(DrawContext is ctx, Int is x, Int is y, String is lineStr, Int is rLine, Int is rStart, Int is fpx){
+		activeHighlighter:monoMode: monoCached;
 		activeHighlighter:paintLine(ctx: ctx, theme: activeTheme, x: x, y: y, lineStr: lineStr, fpx: fpx);
 	}
 }

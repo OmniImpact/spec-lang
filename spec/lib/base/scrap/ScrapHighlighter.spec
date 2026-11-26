@@ -10,6 +10,8 @@ Class is ScrapHighlighter{
 		['base', 'fabric', DrawContext]
 	];
 
+	Boolean is monoMode: false;
+
 	Function of String is languageId(){
 		return 'plain';
 	}
@@ -48,11 +50,11 @@ Class is ScrapHighlighter{
 		Boolean is italic: false
 	){
 		if({ seg == '' }, { return curX; });
-		ctx:drawText(x: curX, y: y, text: seg, color: color, pixelHeight: fpx, bold: bold, italic: italic);
-		return curX + ctx:measureTextWidth(text: seg, pixelHeight: fpx, bold: bold, italic: italic);
+		ctx:drawText(x: curX, y: y, text: seg, color: color, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
+		return curX + ctx:measureTextWidth(text: seg, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
 	}
 
 	Function is paintLine(DrawContext is ctx, Theme is theme, Int is x, Int is y, String is lineStr, Int is fpx){
-		ctx:drawText(x: x, y: y, text: lineStr, color: theme:textPrimary, pixelHeight: fpx);
+		ctx:drawText(x: x, y: y, text: lineStr, color: theme:textPrimary, pixelHeight: fpx, mono: monoMode);
 	}
 }

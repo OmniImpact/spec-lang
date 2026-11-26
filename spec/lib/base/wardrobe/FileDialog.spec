@@ -10,6 +10,8 @@ Class is FileDialog{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', Dir],
+		['base', 'sys', as File()],
+		['base', 'sys', Uri],
 		['base', 'sys', Process],
 		['base', 'sys', Time],
 		['base', 'struct', Array],
@@ -137,6 +139,59 @@ Class is FileDialog{
 		return dirPath;
 	}
 
+	local Function of String is pinsConfigPath(){
+		local Uri is u: Uri();
+		local String is appDir: u:appConfigDir(appName: 'spec');
+		if({ Dir():isDir(path: appDir) }, {
+			return appDir . '/filedialog_pinned.txt';
+		});
+		return u:configDir() . '/spec_filedialog_pinned.txt';
+	}
+
+	local Function is savePinnedToConfig(){
+		local String is out: '';
+		local Int is i: 0;
+		while({ i < pinnedPaths:length() }, {
+			if({ i > 0 }, { out: out . '\n'; });
+			out: out . pinnedNames:get(index: i) . '\t' . pinnedPaths:get(index: i);
+			i: i + 1;
+		});
+		fileWrite(
+			path: :pinsConfigPath(),
+			content: out,
+			onSuccess: local Function(Int is _n){},
+			onError: local Function(Any is _err){}
+		);
+	}
+
+	local Function is loadPinnedFromConfig(){
+		local String is raw: fileRead(
+			path: :pinsConfigPath(),
+			onSuccess: local Function(String is _s){},
+			onError: local Function(Any is _err){},
+			default: ''
+		);
+		if({ raw == '' }, { return; });
+		local Int is len: raw:length();
+		local Int is start: 0;
+		while({ start < len }, {
+			local Int is nl: start;
+			while({ nl < len && (raw:byteAt(index: nl) & 255) != 10 }, { nl: nl + 1; });
+			local String is line: raw:substring(start: start, end: nl);
+			local Int is tab: 0;
+			local Int is llen: line:length();
+			while({ tab < llen && (line:byteAt(index: tab) & 255) != 9 }, { tab: tab + 1; });
+			if({ tab > 0 && tab + 1 < llen }, {
+				local String is pname: line:substring(start: 0, end: tab);
+				local String is ppath: line:substring(start: tab + 1, end: llen);
+				if({ Dir():isDir(path: ppath) }, {
+					:addPinned(name: pname, path: ppath);
+				});
+			});
+			start: nl + 1;
+		});
+	}
+
 	local Function is addPinned(String is name, String is path){
 		if({ name == '' || path == '' }, { return; });
 		local Int is i: 0;
@@ -177,6 +232,7 @@ Class is FileDialog{
 			if({ dlPath != '' }, { :addPinned(name: 'Downloads', path: dlPath); });
 		});
 		:addPinned(name: 'Root', path: '/');
+		:loadPinnedFromConfig();
 	}
 
 	Function is applyTheme(Theme is theme){
@@ -762,6 +818,7 @@ Class is FileDialog{
 			if({ isDraggingFolder }, {
 				if({ sideW > 0 && px >= 0 && px < sideW && py >= listY && py < listY + listH }, {
 					:addPinned(name: dragFolderName, path: dragFolderPath);
+					:savePinnedToConfig();
 				});
 				isDraggingFolder: false;
 				dragOverPinned: false;
