@@ -16,17 +16,17 @@ Class of SewNode is ScrapButton{
 
 	String is label: '';
 	Function is onClick: local Function(){};
-	Float is minWidthPt: 96.0;
-	Float is heightPt: 34.0;
-	Float is padXPt: 18.0;
+	Float is minWidthPt: 80.0;
+	Float is heightPt: 28.0;
+	Float is padXPt: 14.0;
 	Boolean is hovered: false;
 
 	replace Function is init(
 		String is label: '',
 		Function is onClick: local Function(){},
-		Float is minWidthPt: 96.0,
-		Float is heightPt: 34.0,
-		Float is padXPt: 18.0
+		Float is minWidthPt: 80.0,
+		Float is heightPt: 28.0,
+		Float is padXPt: 14.0
 	){
 		:label: label;
 		:onClick: onClick;
@@ -82,7 +82,7 @@ Class of SewNode is ScrapButton{
 		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
 		if({ linePx > 0 }, {
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:menuBorder, thickness: linePx);
+			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:buttonBorder, thickness: linePx);
 		});
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);

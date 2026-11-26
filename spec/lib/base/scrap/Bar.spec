@@ -20,7 +20,7 @@ Class of SewNode is Bar{
 
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
-	Float is heightPt: 30.0;
+	Float is heightPt: 24.0;
 	String is borderSide: 'bottom';
 	TextEmitter is leftText: TextEmitter(initial: '');
 	TextEmitter is centerText: TextEmitter(initial: '');

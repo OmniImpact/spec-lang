@@ -33,6 +33,7 @@ Class is Theme{
 	Int is activeBg: 0;
 	Int is panelBg: 0;
 	Int is panelBorder: 0;
+	Int is buttonBorder: 0;
 	Int is textPrimary: 0;
 	Int is textMuted: 0;
 	Int is textAccent: 0;
@@ -45,16 +46,16 @@ Class is Theme{
 	Int is synComment: 0;
 	Int is synPunct: 0;
 	Int is synHeading: 0;
-	Float is toolbarHeightPt: 30.0;
-	Float is menuItemHeightPt: 28.0;
-	Float is paddingPt: 8.0;
-	Float is sectionPaddingPt: 10.0;
-	Float is dialogPaddingPt: 16.0;
+	Float is toolbarHeightPt: 26.0;
+	Float is menuItemHeightPt: 24.0;
+	Float is paddingPt: 6.0;
+	Float is sectionPaddingPt: 8.0;
+	Float is dialogPaddingPt: 12.0;
 	Float is borderThicknessPt: 1.0;
 	Float is lineThicknessPt: 1.0;
 	String is borderStyle: 'solid';
 	Float is uiScaleFactor: 1.0;
-	Float is baseTextPt: 15.0;
+	Float is baseTextPt: 12.0;
 
 	replace Function is init(String is preset: 'dark'){
 		:applyPreset(preset: Theme:presetFromString(name: preset));
@@ -87,7 +88,7 @@ Class is Theme{
 		);
 	}
 
-	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 15.0){
+	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 12.0){
 		local Theme is t: Theme();
 		t:setBaseTextPt(pt: baseTextPt);
 		t:applyPreset(preset: preset);
@@ -198,10 +199,12 @@ Class is Theme{
 		activeBg: highlight:toArgb();
 		panelBg: if({ light }, { primary:mix(other: secondary, t: 0.52):toArgb() }, { primary:darken(amount: 0.08):withAlphaByte(a: 210):toArgb() });
 		panelBorder: if({ light }, { toolbarBorder }, { highlight:lighten(amount: 0.08):withAlphaByte(a: 235):toArgb() });
+		buttonBorder: if({ light }, { secondary:darken(amount: 0.26):toArgb() }, { highlight:lighten(amount: 0.16):toArgb() });
 		if({ borderStyle == 'subtle' }, {
 			toolbarBorder: Color:fromArgb(argb: toolbarBorder):withAlphaByte(a: 110):toArgb();
 			menuBorder: Color:fromArgb(argb: menuBorder):withAlphaByte(a: 120):toArgb();
 			panelBorder: Color:fromArgb(argb: panelBorder):withAlphaByte(a: 110):toArgb();
+			buttonBorder: Color:fromArgb(argb: buttonBorder):withAlphaByte(a: 120):toArgb();
 		});
 
 		textPrimary: detail:toArgb();
@@ -210,8 +213,8 @@ Class is Theme{
 		positiveColor: positive:toArgb();
 		negativeColor: negative:toArgb();
 
-		paddingPt: 8.0 * (baseTextPt / 15.0);
-		sectionPaddingPt: paddingPt * 1.25;
+		paddingPt: 6.0 * (baseTextPt / 12.0);
+		sectionPaddingPt: paddingPt * 1.35;
 		dialogPaddingPt: paddingPt * 2.0;
 
 		synKeyword: if({ light }, { detail:darken(amount: 0.35):toArgb() }, { detail:lighten(amount: 0.50):toArgb() });

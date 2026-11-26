@@ -130,7 +130,7 @@ Class of SewNode is PinnedLocationsList{
 			local Int is btnBg: if({ remHov }, { activeTheme:hoverBg }, { activeTheme:panelBg });
 			ctx:fillRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: btnBg);
 			if({ bw > 0 }, {
-				ctx:strokeRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: activeTheme:panelBorder, thickness: bw);
+				ctx:strokeRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: activeTheme:buttonBorder, thickness: bw);
 			});
 			local Int is rw: DrawContext:measureWidth(text: 'Remove', pixelHeight: fpx);
 			ctx:drawText(

@@ -76,7 +76,7 @@ Class of SewNode is SettingsChip{
 		local Int is bg: if({ selected }, { activeTheme:activeBg }, {
 			if({ hovered }, { activeTheme:hoverBg }, { activeTheme:panelBg })
 		});
-		local Int is border: if({ selected }, { activeTheme:textAccent }, { activeTheme:panelBorder });
+		local Int is border: if({ selected }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
 		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
 		if({ bw > 0 }, {

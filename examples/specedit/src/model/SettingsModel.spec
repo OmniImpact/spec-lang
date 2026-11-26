@@ -20,7 +20,7 @@ Class is SettingsModel{
 
 	ThemePreset is themePreset: ThemePreset:LIGHT;
 	Float is docTextDeltaPt: 0.0;
-	Float is baseTextPt: 15.0;
+	Float is baseTextPt: 12.0;
 	Int is uiZoomPct: 100;
 	Boolean is defaultMonospace: false;
 	Boolean is defaultWrap: false;
@@ -55,7 +55,7 @@ Class is SettingsModel{
 		local String is presetStr: j:getString(obj: obj, key: 'theme', default: 'light');
 		:themePreset: Theme:presetFromString(name: presetStr);
 		:docTextDeltaPt: j:getFloat(obj: obj, key: 'docTextDeltaPt', default: 0.0);
-		local Float is bpt: j:getFloat(obj: obj, key: 'baseTextPt', default: 15.0);
+		local Float is bpt: j:getFloat(obj: obj, key: 'baseTextPt', default: 12.0);
 		:baseTextPt: if({ bpt < 10.0 }, { 10.0 }, { if({ bpt > 24.0 }, { 24.0 }, { bpt }) });
 		local Int is zp: j:getInt(obj: obj, key: 'uiZoomPct', default: 100);
 		if({ zp == 70 || zp == 100 || zp == 115 || zp == 130 }, {

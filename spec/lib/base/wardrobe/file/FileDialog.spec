@@ -352,14 +352,14 @@ Class is FileDialog{
 		local Int is topBoxY: (headerH - topBoxH) / 2;
 		local Int is upBg: if({ hoverBtn == 3 }, { theme:hoverBg }, { theme:menuBg });
 		ctx:fillRect(x: padX, y: topBoxY, w: upW, h: topBoxH, color: upBg);
-		ctx:strokeRect(x: padX, y: topBoxY, w: upW, h: topBoxH, color: theme:menuBorder);
+		if({ linePx > 0 }, { ctx:strokeRect(x: padX, y: topBoxY, w: upW, h: topBoxH, color: theme:buttonBorder, thickness: linePx); });
 		local Int is uw: ctx:measureTextWidth(text: 'Up', pixelHeight: fpx);
 		ctx:drawText(x: padX + (upW - uw) / 2, y: topBoxY + (topBoxH - th) / 2, text: 'Up', color: theme:textPrimary, pixelHeight: fpx);
 
 		local Int is hidX: w - padX - hidW;
 		local Int is hidBg: if({ showHidden }, { theme:activeBg }, { if({ hoverBtn == 4 }, { theme:hoverBg }, { theme:menuBg }) });
 		ctx:fillRect(x: hidX, y: topBoxY, w: hidW, h: topBoxH, color: hidBg);
-		ctx:strokeRect(x: hidX, y: topBoxY, w: hidW, h: topBoxH, color: theme:menuBorder);
+		if({ linePx > 0 }, { ctx:strokeRect(x: hidX, y: topBoxY, w: hidW, h: topBoxH, color: theme:buttonBorder, thickness: linePx); });
 		local Int is hw: ctx:measureTextWidth(text: 'Hidden', pixelHeight: fpx);
 		ctx:drawText(x: hidX + (hidW - hw) / 2, y: topBoxY + (topBoxH - th) / 2, text: 'Hidden', color: theme:textPrimary, pixelHeight: fpx);
 
@@ -367,7 +367,7 @@ Class is FileDialog{
 		local Int is pathW: if({ hidX - scale:px(pt: 8.0) > pathX }, { hidX - scale:px(pt: 8.0) - pathX }, { 40 });
 		local Int is pathBorder: if({ focusTarget == 1 }, { theme:activeBg }, { theme:menuBorder });
 		ctx:fillRect(x: pathX, y: topBoxY, w: pathW, h: topBoxH, color: theme:windowBg);
-		ctx:strokeRect(x: pathX, y: topBoxY, w: pathW, h: topBoxH, color: pathBorder);
+		if({ linePx > 0 }, { ctx:strokeRect(x: pathX, y: topBoxY, w: pathW, h: topBoxH, color: pathBorder, thickness: linePx); });
 		local String is pathShown: if({ focusTarget == 1 }, { editPath . '|' }, { curDir });
 		ctx:setClip(x: pathX + 2, y: topBoxY, w: pathW - 4, h: topBoxH);
 		ctx:drawText(x: pathX + scale:px(pt: 6.0), y: topBoxY + (topBoxH - th) / 2, text: pathShown, color: theme:textPrimary, pixelHeight: fpx);
@@ -429,7 +429,7 @@ Class is FileDialog{
 			});
 
 			if({ isD }, {
-				ctx:strokeRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:menuBorder);
+				if({ linePx > 0 }, { ctx:strokeRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:panelBorder, thickness: linePx); });
 			});
 
 			ctx:drawText(x: listX + padX, y: ry + (rowH - th) / 2, text: name, color: theme:textPrimary, pixelHeight: fpx);
@@ -464,7 +464,7 @@ Class is FileDialog{
 		local Int is nameBorder: if({ focusTarget == 2 }, { theme:activeBg }, { theme:menuBorder });
 		ctx:drawText(x: padX, y: boxY + (boxH - th) / 2, text: nameLbl, color: theme:textPrimary, pixelHeight: fpx);
 		ctx:fillRect(x: boxX, y: boxY, w: boxW, h: boxH, color: theme:windowBg);
-		ctx:strokeRect(x: boxX, y: boxY, w: boxW, h: boxH, color: nameBorder);
+		if({ linePx > 0 }, { ctx:strokeRect(x: boxX, y: boxY, w: boxW, h: boxH, color: nameBorder, thickness: linePx); });
 		local String is nameShown: if({ focusTarget == 2 }, { fileName . '|' }, { fileName });
 		ctx:setClip(x: boxX + 2, y: boxY, w: boxW - 4, h: boxH);
 		ctx:drawText(x: boxX + scale:px(pt: 6.0), y: boxY + (boxH - th) / 2, text: nameShown, color: theme:textPrimary, pixelHeight: fpx);
@@ -478,15 +478,15 @@ Class is FileDialog{
 
 		local Int is cBg: if({ hoverBtn == 1 }, { theme:hoverBg }, { theme:menuBg });
 		ctx:fillRect(x: cancelX, y: btnY, w: btnW, h: btnH, color: cBg);
-		ctx:strokeRect(x: cancelX, y: btnY, w: btnW, h: btnH, color: theme:menuBorder);
+		if({ linePx > 0 }, { ctx:strokeRect(x: cancelX, y: btnY, w: btnW, h: btnH, color: theme:buttonBorder, thickness: linePx); });
 		local Int is cw: ctx:measureTextWidth(text: 'Cancel', pixelHeight: fpx);
 		ctx:drawText(x: cancelX + (btnW - cw) / 2, y: btnY + (btnH - th) / 2, text: 'Cancel', color: theme:textPrimary, pixelHeight: fpx);
 
 		local Boolean is canOk: :canConfirm();
-		local String is okLabel: if({ saveMode:current() }, { 'Save' }, { 'Open' });
+		local String is okLabel: if({ directoryMode:current() }, { 'Select' }, { if({ saveMode:current() }, { 'Save' }, { 'Open' }) });
 		local Int is oBg: if({ !canOk }, { theme:toolbarBg }, { if({ hoverBtn == 2 }, { theme:hoverBg }, { theme:activeBg }) });
 		ctx:fillRect(x: openX, y: btnY, w: btnW, h: btnH, color: oBg);
-		ctx:strokeRect(x: openX, y: btnY, w: btnW, h: btnH, color: theme:menuBorder);
+		if({ linePx > 0 }, { ctx:strokeRect(x: openX, y: btnY, w: btnW, h: btnH, color: theme:buttonBorder, thickness: linePx); });
 		local Int is ow: ctx:measureTextWidth(text: okLabel, pixelHeight: fpx);
 		local Int is oCol: if({ !canOk }, { theme:textMuted }, { theme:textPrimary });
 		ctx:drawText(x: openX + (btnW - ow) / 2, y: btnY + (btnH - th) / 2, text: okLabel, color: oCol, pixelHeight: fpx);
