@@ -4,12 +4,16 @@
 Class is EditorModel{
 	replace [String] is namespace: ['specedit', 'model'];
 
+	replace [[String]] is using: [
+		['specedit', 'util', SpecEditStrings]
+	];
+
 	String is filePath: '';
-	String is documentName: 'Untitled';
+	String is documentName: SpecEditStrings:UNTITLED;
 	Boolean is dirty: false;
 	String is text: '';
 
-	replace Function is init(String is documentName: 'Untitled'){
+	replace Function is init(String is documentName: SpecEditStrings:UNTITLED){
 		:filePath: '';
 		:documentName: documentName;
 		dirty: false;

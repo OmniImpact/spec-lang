@@ -20,7 +20,8 @@ Class is EditorView{
 		['base', 'scrap', Bar],
 		['base', 'scrap', Dialog],
 		['base', 'wardrobe', FileDialog],
-		['specedit', 'viewmodel', EditorViewModel]
+		['specedit', 'viewmodel', EditorViewModel],
+		['specedit', 'util', SpecEditStrings]
 	];
 
 	EditorViewModel is vm: EditorViewModel();
@@ -54,8 +55,8 @@ Class is EditorView{
 					gapPt: 8.0,
 					padPt: 20.0,
 					children: Array([
-						TextScrap(text: vm:versionText, align: 'center') as SewNode,
-						TextScrap(text: vm:descriptionText, align: 'center', wrap: true, muted: true) as SewNode
+						TextScrap(text: vm:versionText, align: SpecEditStrings:TEXT_ALIGN_CENTER) as SewNode,
+						TextScrap(text: vm:descriptionText, align: SpecEditStrings:TEXT_ALIGN_CENTER, wrap: true, muted: true) as SewNode
 					])
 				)
 			)

@@ -13,40 +13,41 @@ Class is EditorViewModel{
 		['base', 'scrap', ToolbarConfig],
 		['base', 'scrap', MenuConfig],
 		['base', 'scrap', MenuItemConfig],
-		['specedit', 'model', EditorModel]
+		['specedit', 'model', EditorModel],
+		['specedit', 'util', SpecEditStrings]
 	];
 
 	EditorModel is model: EditorModel();
-	TextEmitter is title: TextEmitter(initial: 'SpecEdit - Untitled');
+	TextEmitter is title: TextEmitter(initial: SpecEditStrings:baseTitle(documentName: SpecEditStrings:UNTITLED));
 	BoolEmitter is running: BoolEmitter(initial: true);
 	BoolEmitter is fileDialogOpen: BoolEmitter(initial: false);
 	BoolEmitter is aboutOpen: BoolEmitter(initial: false);
 	BoolEmitter is wrapEnabled: BoolEmitter(initial: false);
 	BoolEmitter is lineNumbersEnabled: BoolEmitter(initial: false);
 	TextEmitter is documentText: TextEmitter(initial: '');
-	TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1');
-	TextEmitter is versionText: TextEmitter(initial: 'SpecEdit 0.1.0');
-	TextEmitter is descriptionText: TextEmitter(initial: 'Resolution-independent text editor built on Suit, Sew, Fabric, and Scrap.');
+	TextEmitter is cursorStatus: TextEmitter(initial: SpecEditStrings:DEFAULT_CURSOR_STATUS);
+	TextEmitter is versionText: TextEmitter(initial: SpecEditStrings:VERSION_TEXT);
+	TextEmitter is descriptionText: TextEmitter(initial: SpecEditStrings:DESCRIPTION_TEXT);
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
 	Float is toolbarHeightPt: 30.0;
-	String is themePreset: 'light_grayscale';
-	String is aboutTitle: 'About SpecEdit';
+	String is themePreset: SpecEditStrings:THEME_PRESET;
+	String is aboutTitle: SpecEditStrings:ABOUT_TITLE;
 	Float is aboutWidthPt: 420.0;
 	Float is aboutHeightPt: 170.0;
-	String is fileDialogTitle: 'Open File';
+	String is fileDialogTitle: SpecEditStrings:FILE_DIALOG_TITLE;
 	Boolean is allowMultipleFiles: false;
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
 
-	MenuItemConfig is wrapItem: MenuItemConfig(id: 'wrap', label: 'Wrap', kind: 'toggle');
-	MenuItemConfig is lineNumsItem: MenuItemConfig(id: 'line_numbers', label: 'Line Numbers', kind: 'toggle');
+	MenuItemConfig is wrapItem: MenuItemConfig(id: SpecEditStrings:ITEM_WRAP_ID, label: SpecEditStrings:ITEM_WRAP_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
+	MenuItemConfig is lineNumsItem: MenuItemConfig(id: SpecEditStrings:ITEM_LINE_NUMS_ID, label: SpecEditStrings:ITEM_LINE_NUMS_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 
 	Function is copyHandler: local Function(){};
 	Function is cutHandler: local Function(){};
 	Function is pasteHandler: local Function(){};
 	Function is selectAllHandler: local Function(){};
 
-	replace Function is init(EditorModel is model: EditorModel(documentName: 'Untitled')){
+	replace Function is init(EditorModel is model: EditorModel(documentName: SpecEditStrings:UNTITLED)){
 		:model: model;
 		title: TextEmitter(initial: :computeTitle());
 		running: BoolEmitter(initial: true);
@@ -55,20 +56,18 @@ Class is EditorViewModel{
 		wrapEnabled: BoolEmitter(initial: false);
 		lineNumbersEnabled: BoolEmitter(initial: false);
 		documentText: TextEmitter(initial: model:text);
-		cursorStatus: TextEmitter(initial: 'Ln 1, Col 1');
+		cursorStatus: TextEmitter(initial: SpecEditStrings:DEFAULT_CURSOR_STATUS);
 		toolbarConfig: :buildToolbarConfig();
 	}
 
 	local Function of String is computeTitle(){
-		if({ model:dirty }, {
-			return 'SpecEdit - ' . model:documentName . ' *';
-		});
-		return 'SpecEdit - ' . model:documentName;
+		local String is base: SpecEditStrings:baseTitle(documentName: model:documentName);
+		return if({ model:dirty }, { SpecEditStrings:dirtyTitle(base: base) }, { base });
 	}
 
 	local Function of String is baseName(String is path){
 		local Int is len: path:length();
-		if({ len == 0 }, { return 'Untitled'; });
+		if({ len == 0 }, { return SpecEditStrings:UNTITLED; });
 		local Int is i: len - 1;
 		while({ i >= 0 && path:byteAt(index: i) != 47 }, { i: i - 1; });
 		return path:substring(start: i + 1, end: len);
@@ -77,65 +76,65 @@ Class is EditorViewModel{
 	local Function of ToolbarConfig is buildToolbarConfig(){
 		local ToolbarConfig is cfg: ToolbarConfig(heightPt: toolbarHeightPt);
 
-		local MenuConfig is fileMenu: MenuConfig(id: 'file', label: 'File');
+		local MenuConfig is fileMenu: MenuConfig(id: SpecEditStrings:MENU_FILE_ID, label: SpecEditStrings:MENU_FILE_LABEL);
 		fileMenu:addItem(item: MenuItemConfig(
-			id: 'open',
-			label: 'Open...',
+			id: SpecEditStrings:ITEM_OPEN_ID,
+			label: SpecEditStrings:ITEM_OPEN_LABEL,
 			onClick: local Function(){ :requestOpen(); }
 		));
 		fileMenu:addItem(item: MenuItemConfig(
-			id: 'quit',
-			label: 'Quit',
+			id: SpecEditStrings:ITEM_QUIT_ID,
+			label: SpecEditStrings:ITEM_QUIT_LABEL,
 			onClick: local Function(){ :requestQuit(); }
 		));
 		cfg:addMenu(menu: fileMenu);
 
-		local MenuConfig is editMenu: MenuConfig(id: 'edit', label: 'Edit');
+		local MenuConfig is editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL);
 		editMenu:addItem(item: MenuItemConfig(
-			id: 'copy',
-			label: 'Copy',
+			id: SpecEditStrings:ITEM_COPY_ID,
+			label: SpecEditStrings:ITEM_COPY_LABEL,
 			onClick: local Function(){ :requestCopy(); }
 		));
 		editMenu:addItem(item: MenuItemConfig(
-			id: 'cut',
-			label: 'Cut',
+			id: SpecEditStrings:ITEM_CUT_ID,
+			label: SpecEditStrings:ITEM_CUT_LABEL,
 			onClick: local Function(){ :requestCut(); }
 		));
 		editMenu:addItem(item: MenuItemConfig(
-			id: 'paste',
-			label: 'Paste',
+			id: SpecEditStrings:ITEM_PASTE_ID,
+			label: SpecEditStrings:ITEM_PASTE_LABEL,
 			onClick: local Function(){ :requestPaste(); }
 		));
 		editMenu:addItem(item: MenuItemConfig(
-			id: 'select_all',
-			label: 'Select All',
+			id: SpecEditStrings:ITEM_SELECT_ALL_ID,
+			label: SpecEditStrings:ITEM_SELECT_ALL_LABEL,
 			onClick: local Function(){ :requestSelectAll(); }
 		));
 		cfg:addMenu(menu: editMenu);
 
-		local MenuConfig is viewMenu: MenuConfig(id: 'view', label: 'View');
+		local MenuConfig is viewMenu: MenuConfig(id: SpecEditStrings:MENU_VIEW_ID, label: SpecEditStrings:MENU_VIEW_LABEL);
 		wrapItem: MenuItemConfig(
-			id: 'wrap',
-			label: 'Wrap',
+			id: SpecEditStrings:ITEM_WRAP_ID,
+			label: SpecEditStrings:ITEM_WRAP_LABEL,
 			checked: wrapEnabled:current(),
-			kind: 'toggle',
+			kind: SpecEditStrings:MENU_KIND_TOGGLE,
 			onClick: local Function(){ :toggleWrap(); }
 		);
 		lineNumsItem: MenuItemConfig(
-			id: 'line_numbers',
-			label: 'Line Numbers',
+			id: SpecEditStrings:ITEM_LINE_NUMS_ID,
+			label: SpecEditStrings:ITEM_LINE_NUMS_LABEL,
 			checked: lineNumbersEnabled:current(),
-			kind: 'toggle',
+			kind: SpecEditStrings:MENU_KIND_TOGGLE,
 			onClick: local Function(){ :toggleLineNumbers(); }
 		);
 		viewMenu:addItem(item: wrapItem);
 		viewMenu:addItem(item: lineNumsItem);
 		cfg:addMenu(menu: viewMenu);
 
-		local MenuConfig is helpMenu: MenuConfig(id: 'help', label: 'Help');
+		local MenuConfig is helpMenu: MenuConfig(id: SpecEditStrings:MENU_HELP_ID, label: SpecEditStrings:MENU_HELP_LABEL);
 		helpMenu:addItem(item: MenuItemConfig(
-			id: 'about',
-			label: 'About',
+			id: SpecEditStrings:ITEM_ABOUT_ID,
+			label: SpecEditStrings:ITEM_ABOUT_LABEL,
 			onClick: local Function(){ :requestAbout(); }
 		));
 		cfg:addMenu(menu: helpMenu);

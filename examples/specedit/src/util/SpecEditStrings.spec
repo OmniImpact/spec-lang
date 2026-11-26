@@ -1,0 +1,58 @@
+#! Package specedit:util
+#! Centralized UI strings, menu IDs/labels, theme/dialog constants, and title formatters for SpecEdit.
+
+Class is SpecEditStrings{
+	replace [String] is namespace: ['specedit', 'util'];
+
+	held String is APP_NAME: 'SpecEdit';
+	held String is UNTITLED: 'Untitled';
+	held String is TITLE_SEP: ' - ';
+	held String is DIRTY_SUFFIX: ' *';
+	held String is DEFAULT_CURSOR_STATUS: 'Ln 1, Col 1';
+	held String is VERSION_TEXT: 'SpecEdit 0.1.0';
+	held String is DESCRIPTION_TEXT: 'Resolution-independent text editor built on Suit, Sew, Fabric, and Scrap.';
+	held String is THEME_PRESET: 'light_grayscale';
+	held String is ABOUT_TITLE: 'About SpecEdit';
+	held String is FILE_DIALOG_TITLE: 'Open File';
+	held String is TEXT_ALIGN_CENTER: 'center';
+
+	held String is MENU_KIND_TOGGLE: 'toggle';
+
+	held String is MENU_FILE_ID: 'file';
+	held String is MENU_FILE_LABEL: 'File';
+	held String is ITEM_OPEN_ID: 'open';
+	held String is ITEM_OPEN_LABEL: 'Open...';
+	held String is ITEM_QUIT_ID: 'quit';
+	held String is ITEM_QUIT_LABEL: 'Quit';
+
+	held String is MENU_EDIT_ID: 'edit';
+	held String is MENU_EDIT_LABEL: 'Edit';
+	held String is ITEM_COPY_ID: 'copy';
+	held String is ITEM_COPY_LABEL: 'Copy';
+	held String is ITEM_CUT_ID: 'cut';
+	held String is ITEM_CUT_LABEL: 'Cut';
+	held String is ITEM_PASTE_ID: 'paste';
+	held String is ITEM_PASTE_LABEL: 'Paste';
+	held String is ITEM_SELECT_ALL_ID: 'select_all';
+	held String is ITEM_SELECT_ALL_LABEL: 'Select All';
+
+	held String is MENU_VIEW_ID: 'view';
+	held String is MENU_VIEW_LABEL: 'View';
+	held String is ITEM_WRAP_ID: 'wrap';
+	held String is ITEM_WRAP_LABEL: 'Wrap';
+	held String is ITEM_LINE_NUMS_ID: 'line_numbers';
+	held String is ITEM_LINE_NUMS_LABEL: 'Line Numbers';
+
+	held String is MENU_HELP_ID: 'help';
+	held String is MENU_HELP_LABEL: 'Help';
+	held String is ITEM_ABOUT_ID: 'about';
+	held String is ITEM_ABOUT_LABEL: 'About';
+
+	held Function of String is baseTitle(String is documentName){
+		SpecEditStrings:APP_NAME . SpecEditStrings:TITLE_SEP . documentName
+	}
+
+	held Function of String is dirtyTitle(String is base){
+		base . SpecEditStrings:DIRTY_SUFFIX
+	}
+}
