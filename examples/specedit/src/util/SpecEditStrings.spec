@@ -48,6 +48,11 @@ Class is SpecEditStrings{
 	held String is ITEM_ABOUT_ID: 'about';
 	held String is ITEM_ABOUT_LABEL: 'About';
 
+	held String is ITEM_CLOSE_OTHERS_ID: 'close_others';
+	held String is ITEM_CLOSE_OTHERS_LABEL: 'Close Others';
+	held String is ITEM_CLOSE_ALL_ID: 'close_all';
+	held String is ITEM_CLOSE_ALL_LABEL: 'Close All';
+
 	held Function of String is baseTitle(String is documentName){
 		SpecEditStrings:APP_NAME . SpecEditStrings:TITLE_SEP . documentName
 	}

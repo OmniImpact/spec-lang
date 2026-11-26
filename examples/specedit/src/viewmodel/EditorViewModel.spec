@@ -1,5 +1,5 @@
 #! Package specedit:viewmodel
-#! Pure ViewModel for SpecEdit: owns reactive Emitters, ToolbarConfig, file loading, and commands.
+#! Pure ViewModel for SpecEdit: owns multi-document tabs, reactive Emitters, ToolbarConfig, context menus, and commands.
 
 Class is EditorViewModel{
 	replace [String] is namespace: ['specedit', 'viewmodel'];
@@ -13,11 +13,20 @@ Class is EditorViewModel{
 		['base', 'scrap', ToolbarConfig],
 		['base', 'scrap', MenuConfig],
 		['base', 'scrap', MenuItemConfig],
+		['base', 'scrap', TabBar],
+		['base', 'scrap', TabItemConfig],
+		['base', 'scrap', ContextMenu],
 		['specedit', 'model', EditorModel],
 		['specedit', 'util', SpecEditStrings]
 	];
 
 	EditorModel is model: EditorModel();
+	Array of EditorModel is documents: Array();
+	Int is activeDocIdx: 0;
+	TabBar is boundTabBar: TabBar();
+	Boolean is hasBoundTabBar: false;
+	ContextMenu is contextMenu: ContextMenu();
+
 	TextEmitter is title: TextEmitter(initial: SpecEditStrings:baseTitle(documentName: SpecEditStrings:UNTITLED));
 	BoolEmitter is running: BoolEmitter(initial: true);
 	BoolEmitter is fileDialogOpen: BoolEmitter(initial: false);
@@ -49,6 +58,8 @@ Class is EditorViewModel{
 
 	replace Function is init(EditorModel is model: EditorModel(documentName: SpecEditStrings:UNTITLED)){
 		:model: model;
+		:documents: Array([model]);
+		:activeDocIdx: 0;
 		title: TextEmitter(initial: :computeTitle());
 		running: BoolEmitter(initial: true);
 		fileDialogOpen: BoolEmitter(initial: false);
@@ -71,6 +82,34 @@ Class is EditorViewModel{
 		local Int is i: len - 1;
 		while({ i >= 0 && path:byteAt(index: i) != 47 }, { i: i - 1; });
 		return path:substring(start: i + 1, end: len);
+	}
+
+	local Function is syncTabs(){
+		if({ !hasBoundTabBar }, { return; });
+		local Array of TabItemConfig is items: Array();
+		local Int is i: 0;
+		while({ i < documents:length() }, {
+			local EditorModel is d: documents:get(index: i);
+			local String is tid: if({ d:filePath != '' }, { d:filePath }, { SpecEditStrings:UNTITLED . ':' . i });
+			items:add(item: TabItemConfig(id: tid, label: d:documentName, closable: true, dirty: d:dirty));
+			i: i + 1;
+		});
+		boundTabBar:setTabs(tabs: items, activeIndex: activeDocIdx);
+	}
+
+	local Function is activateDocument(Int is idx){
+		if({ idx < 0 || idx >= documents:length() }, { return; });
+		activeDocIdx: idx;
+		model: documents:get(index: idx);
+		documentText:emit(value: model:text);
+		title:emit(value: :computeTitle());
+		:syncTabs();
+	}
+
+	Function is bindTabBar(TabBar is tabBar){
+		boundTabBar: tabBar;
+		hasBoundTabBar: true;
+		:syncTabs();
 	}
 
 	local Function of ToolbarConfig is buildToolbarConfig(){
@@ -150,23 +189,128 @@ Class is EditorViewModel{
 		fileDialogOpen:emit(value: false);
 	}
 
-	## Opens the first selected file from `FileDialog` and publishes its text to the View.
+	## Opens selected files into tabs (reusing already-open tabs or replacing an empty initial Untitled tab).
 	Function is openFiles(Array of String is paths){
 		fileDialogOpen:emit(value: false);
 		if({ paths:length() == 0 }, { return; });
-		local String is path: paths:get(index: 0);
-		local String is content: fileRead(
-			path: path,
-			onSuccess: local Function(String is _s){},
-			onError: local Function(Any is _err){},
-			default: ''
-		);
-		model:filePath: path;
-		model:documentName: :baseName(path: path);
-		model:text: content;
-		model:dirty: false;
-		documentText:emit(value: content);
-		title:emit(value: :computeTitle());
+		local Int is pIdx: 0;
+		while({ pIdx < paths:length() }, {
+			local String is path: paths:get(index: pIdx);
+			local Int is existingIdx: -1;
+			local Int is k: 0;
+			while({ k < documents:length() && existingIdx < 0 }, {
+				if({ documents:get(index: k):filePath == path }, {
+					existingIdx: k;
+				});
+				k: k + 1;
+			});
+
+			if({ existingIdx >= 0 }, {
+				:activateDocument(idx: existingIdx);
+			}, {
+				local String is content: fileRead(
+					path: path,
+					onSuccess: local Function(String is _s){},
+					onError: local Function(Any is _err){},
+					default: ''
+				);
+				local Boolean is reuseEmpty: (documents:length() == 1) && (model:filePath == '') && (model:text == '') && (!model:dirty);
+				if({ reuseEmpty }, {
+					model:filePath: path;
+					model:documentName: :baseName(path: path);
+					model:text: content;
+					model:dirty: false;
+					:activateDocument(idx: 0);
+				}, {
+					local EditorModel is doc: EditorModel(documentName: :baseName(path: path));
+					doc:filePath: path;
+					doc:text: content;
+					doc:dirty: false;
+					documents:add(item: doc);
+					:activateDocument(idx: documents:length() - 1);
+				});
+			});
+			pIdx: pIdx + 1;
+		});
+	}
+
+	Function is selectTab(Int is index){
+		:activateDocument(idx: index);
+	}
+
+	Function is closeTab(Int is index){
+		if({ index < 0 || index >= documents:length() }, { return; });
+		if({ documents:length() == 1 }, {
+			:closeAllTabs();
+			return;
+		});
+		local Array of EditorModel is nextDocs: Array();
+		local Int is i: 0;
+		while({ i < documents:length() }, {
+			if({ i != index }, {
+				nextDocs:add(item: documents:get(index: i));
+			});
+			i: i + 1;
+		});
+		documents: nextDocs;
+		local Int is nextActive: activeDocIdx;
+		if({ index < activeDocIdx }, {
+			nextActive: activeDocIdx - 1;
+		});
+		if({ nextActive >= documents:length() }, {
+			nextActive: documents:length() - 1;
+		});
+		:activateDocument(idx: nextActive);
+	}
+
+	Function is closeOtherTabs(Int is keepIndex){
+		if({ keepIndex < 0 || keepIndex >= documents:length() }, { return; });
+		local EditorModel is kept: documents:get(index: keepIndex);
+		documents: Array([kept]);
+		:activateDocument(idx: 0);
+	}
+
+	Function is closeAllTabs(){
+		local EditorModel is fresh: EditorModel(documentName: SpecEditStrings:UNTITLED);
+		documents: Array([fresh]);
+		:activateDocument(idx: 0);
+	}
+
+	Function is showTabContextMenu(Int is index, Int is x, Int is y){
+		local Array of MenuItemConfig is items: Array([
+			MenuItemConfig(
+				id: SpecEditStrings:ITEM_CLOSE_OTHERS_ID,
+				label: SpecEditStrings:ITEM_CLOSE_OTHERS_LABEL,
+				onClick: local Function(){ :closeOtherTabs(keepIndex: index); }
+			),
+			MenuItemConfig(
+				id: SpecEditStrings:ITEM_CLOSE_ALL_ID,
+				label: SpecEditStrings:ITEM_CLOSE_ALL_LABEL,
+				onClick: local Function(){ :closeAllTabs(); }
+			)
+		]);
+		contextMenu:open(x: x, y: y, items: items);
+	}
+
+	Function is showEditorContextMenu(Int is x, Int is y){
+		local Array of MenuItemConfig is items: Array([
+			MenuItemConfig(
+				id: SpecEditStrings:ITEM_CUT_ID,
+				label: SpecEditStrings:ITEM_CUT_LABEL,
+				onClick: local Function(){ :requestCut(); }
+			),
+			MenuItemConfig(
+				id: SpecEditStrings:ITEM_COPY_ID,
+				label: SpecEditStrings:ITEM_COPY_LABEL,
+				onClick: local Function(){ :requestCopy(); }
+			),
+			MenuItemConfig(
+				id: SpecEditStrings:ITEM_PASTE_ID,
+				label: SpecEditStrings:ITEM_PASTE_LABEL,
+				onClick: local Function(){ :requestPaste(); }
+			)
+		]);
+		contextMenu:open(x: x, y: y, items: items);
 	}
 
 	Function is onDocumentEdited(String is text){
@@ -174,6 +318,7 @@ Class is EditorViewModel{
 		if({ !model:dirty }, {
 			model:dirty: true;
 			title:emit(value: :computeTitle());
+			:syncTabs();
 		});
 	}
 

@@ -53,6 +53,11 @@ Class is SewNode{
 		return false;
 	}
 
+	## Handles secondary (right) pointer click at ([x], [y], [mods]); returns `true` if redraw is needed.
+	Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		return false;
+	}
+
 	## Handles pointer move at ([x], [y]); returns `true` if redraw is needed.
 	Function of Boolean is onPointerMove(Int is x, Int is y){
 		return false;

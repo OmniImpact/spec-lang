@@ -14,6 +14,7 @@ Class is EditorView{
 		['base', 'scrap', ToolkitContainer],
 		['base', 'scrap', ToolbarContainer],
 		['base', 'scrap', Toolbar],
+		['base', 'scrap', TabBar],
 		['base', 'scrap', ScrollView],
 		['base', 'scrap', TextView],
 		['base', 'scrap', TextScrap],
@@ -26,6 +27,7 @@ Class is EditorView{
 
 	EditorViewModel is vm: EditorViewModel();
 	TextView is editorBody: TextView(text: TextEmitter(initial: ''));
+	TabBar is tabBar: TabBar();
 
 	replace Function is init(EditorViewModel is vm){
 		:vm: vm;
@@ -34,8 +36,15 @@ Class is EditorView{
 			wrap: vm:wrapEnabled,
 			lineNumbers: vm:lineNumbersEnabled,
 			cursorStatus: vm:cursorStatus,
-			onTextChange: local Function(String is next){ vm:onDocumentEdited(text: next); }
+			onTextChange: local Function(String is next){ vm:onDocumentEdited(text: next); },
+			onRightClickMenu: local Function(Int is x, Int is y){ vm:showEditorContextMenu(x: x, y: y); }
 		);
+		tabBar: TabBar(
+			onSelectTab: local Function(Int is idx){ vm:selectTab(index: idx); },
+			onCloseTab: local Function(Int is idx){ vm:closeTab(index: idx); },
+			onRightClickTab: local Function(Int is idx, Int is x, Int is y){ vm:showTabContextMenu(index: idx, x: x, y: y); }
+		);
+		vm:bindTabBar(tabBar: tabBar);
 		vm:bindEditorActions(
 			onCopy: local Function(){ editorBody:copySelection(); },
 			onCut: local Function(){ editorBody:cutSelection(); },
@@ -83,6 +92,8 @@ Class is EditorView{
 			toolbar: ToolbarContainer(
 				toolbar: Toolbar(config: vm:toolbarConfig)
 			),
+			tabBar: tabBar,
+			hasTabBar: true,
 			body: ScrollView(
 				child: editorBody
 			),
@@ -94,7 +105,8 @@ Class is EditorView{
 			dialog: :aboutDialog(),
 			hasDialog: true,
 			fileDialog: :openFileDialog(),
-			hasFileDialog: true
+			hasFileDialog: true,
+			contextMenu: vm:contextMenu
 		)
 	}
 }

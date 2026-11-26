@@ -236,6 +236,12 @@ Class of SewNode is ScrollView{
 		return child:onPointerUp(x: x, y: y);
 	}
 
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		local Rect is b: bounds();
+		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
+		return child:onRightClickMod(x: x, y: y, mods: mods);
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		return child:onPointerMove(x: x, y: y);
 	}

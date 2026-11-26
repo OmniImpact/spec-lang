@@ -376,9 +376,12 @@ typedef struct SpecWaylandWindow {
     int pointer_x;
     int pointer_y;
     bool has_click;
+    bool has_right_click;
     bool pointer_down;
     int click_x;
     int click_y;
+    int right_click_x;
+    int right_click_y;
     int scroll_x;
     int scroll_y;
     uint32_t last_ptr_serial;
@@ -608,6 +611,10 @@ static void _spec_ptr_button(void* data, struct wl_pointer* ptr, uint32_t serial
         } else if (state == 0U /* RELEASED */) {
             w->pointer_down = false;
         }
+    } else if (w && button == 0x111U /* BTN_RIGHT */ && state == 1U /* PRESSED */ && w->pointer_on_surface) {
+        w->has_right_click = true;
+        w->right_click_x = w->pointer_x;
+        w->right_click_y = w->pointer_y;
     }
 }
 static void _spec_ptr_axis(void* d, struct wl_pointer* p, uint32_t t, uint32_t a, int32_t v) {
@@ -1301,6 +1308,23 @@ long long spec_pal_window_click_y(long long handle) {
     return w ? (long long)w->click_y : 0;
 }
 
+long long spec_pal_window_poll_right_click(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !w->has_right_click) return 0;
+    w->has_right_click = false;
+    return 1;
+}
+
+long long spec_pal_window_right_click_x(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->right_click_x : 0;
+}
+
+long long spec_pal_window_right_click_y(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)w->right_click_y : 0;
+}
+
 long long spec_pal_window_poll_scroll_y(long long handle) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w) return 0;
@@ -1471,6 +1495,9 @@ long long spec_pal_window_pointer_y(long long handle) { (void)handle; return 0; 
 long long spec_pal_window_poll_click(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_click_x(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_click_y(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_poll_right_click(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_right_click_x(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_right_click_y(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_poll_scroll_y(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_poll_scroll_x(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_pointer_down(long long handle) { (void)handle; return 0; }

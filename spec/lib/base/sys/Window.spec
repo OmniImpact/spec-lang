@@ -118,6 +118,21 @@ Class is Window{
 		return base:sysinternal:Window:pal_window_click_y(handle: handle);
 	}
 
+	Function of Boolean is pollRightClick(){
+		if({ handle <= 0 }, { return false; });
+		return base:sysinternal:Window:pal_window_poll_right_click(handle: handle) != 0;
+	}
+
+	Function of Int is rightClickX(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_right_click_x(handle: handle);
+	}
+
+	Function of Int is rightClickY(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_right_click_y(handle: handle);
+	}
+
 	Function of Int is pollScrollY(){
 		if({ handle <= 0 }, { return 0; });
 		return base:sysinternal:Window:pal_window_poll_scroll_y(handle: handle);

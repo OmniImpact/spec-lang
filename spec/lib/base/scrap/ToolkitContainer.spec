@@ -26,6 +26,8 @@ Class of SewNode is ToolkitContainer{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', Bar],
+		['base', 'scrap', ContextMenu],
+		['base', 'scrap', TabBar],
 		['base', 'scrap', ToolbarContainer],
 		['base', 'scrap', ScrapPanel],
 		['base', 'scrap', VulkanSurface],
@@ -43,12 +45,15 @@ Class of SewNode is ToolkitContainer{
 	Boolean is useVulkan: false;
 	Boolean is gpuPresent: false;
 	ToolbarContainer is toolbarSlot: ToolbarContainer(hasToolbar: false);
+	TabBar is tabBar: TabBar();
 	SewNode is bodyPanel: ScrapPanel();
 	VulkanSurface is vulkanBody: VulkanSurface();
 	Bar is bottomBar: Bar();
 	Dialog is dialog: Dialog();
 	FileDialog is fileDialog: FileDialog();
+	ContextMenu is contextMenu: ContextMenu();
 	Boolean is hasToolbarSlot: false;
+	Boolean is hasTabBar: false;
 	Boolean is hasBody: false;
 	Boolean is hasBottomBar: false;
 	Boolean is hasDialog: false;
@@ -73,6 +78,8 @@ Class of SewNode is ToolkitContainer{
 		Float is heightPt: 600.0,
 		Boolean is useVulkan: false,
 		ToolbarContainer is toolbar: ToolbarContainer(hasToolbar: false),
+		TabBar is tabBar: TabBar(),
+		Boolean is hasTabBar: false,
 		SewNode is body: ScrapPanel(),
 		VulkanSurface is vulkanSurface: VulkanSurface(),
 		Bar is bottomBar: Bar(),
@@ -81,6 +88,7 @@ Class of SewNode is ToolkitContainer{
 		Boolean is hasDialog: false,
 		FileDialog is fileDialog: FileDialog(),
 		Boolean is hasFileDialog: false,
+		ContextMenu is contextMenu: ContextMenu(),
 		Function is onInitVulkan: local Function(VulkanSurface is s){},
 		Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){},
 		Function is onDispose: local Function(){}
@@ -94,12 +102,15 @@ Class of SewNode is ToolkitContainer{
 		:heightPt: heightPt;
 		:useVulkan: useVulkan;
 		:toolbarSlot: toolbar;
+		:tabBar: tabBar;
 		:bodyPanel: body;
 		:vulkanBody: vulkanSurface;
 		:bottomBar: bottomBar;
 		:dialog: dialog;
 		:fileDialog: fileDialog;
+		:contextMenu: contextMenu;
 		:hasToolbarSlot: toolbar:hasToolbar;
+		:hasTabBar: hasTabBar;
 		:hasBody: true;
 		:hasBottomBar: hasBottomBar;
 		:hasDialog: hasDialog;
@@ -114,10 +125,12 @@ Class of SewNode is ToolkitContainer{
 		:activeTheme: theme;
 		:theme: theme;
 		if({ hasToolbarSlot }, { toolbarSlot:applyTheme(theme: theme); });
+		if({ hasTabBar }, { tabBar:applyTheme(theme: theme); });
 		if({ hasBody && !useVulkan }, { bodyPanel:applyTheme(theme: theme); });
 		if({ hasBottomBar }, { bottomBar:applyTheme(theme: theme); });
 		if({ hasDialog }, { dialog:applyTheme(theme: theme); });
 		if({ hasFileDialog }, { fileDialog:applyTheme(theme: theme); });
+		contextMenu:applyTheme(theme: theme);
 	}
 
 	## Adds a `ToolbarContainer` at the top of the toolkit workspace.
@@ -139,6 +152,9 @@ Class of SewNode is ToolkitContainer{
 		if({ hasToolbarSlot }, {
 			col:addChild(child: toolbarSlot, expand: false);
 		});
+		if({ hasTabBar }, {
+			col:addChild(child: tabBar, expand: false);
+		});
 		if({ hasBody }, {
 			if({ useVulkan && gpuPresent }, {
 				col:addChild(child: vulkanBody, expand: true);
@@ -159,9 +175,15 @@ Class of SewNode is ToolkitContainer{
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
+		if({ contextMenu:isOpen }, {
+			return contextMenu:handlePointerMove(x: x, y: y, viewW: loopW, viewH: loopH);
+		});
 		local Boolean is changed: false;
 		if({ hasToolbarSlot }, {
 			if({ toolbarSlot:onPointerMove(x: x, y: y) }, { changed: true; });
+		});
+		if({ hasTabBar }, {
+			if({ tabBar:onPointerMove(x: x, y: y) }, { changed: true; });
 		});
 		if({ hasBody && !useVulkan }, {
 			if({ bodyPanel:onPointerMove(x: x, y: y) }, { changed: true; });
@@ -170,11 +192,30 @@ Class of SewNode is ToolkitContainer{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ contextMenu:isOpen }, {
+			return contextMenu:handlePointerClick(x: x, y: y, viewW: loopW, viewH: loopH);
+		});
 		if({ hasToolbarSlot }, {
 			if({ toolbarSlot:onPointerClick(x: x, y: y) }, { return true; });
 		});
+		if({ hasTabBar }, {
+			if({ tabBar:onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+		});
 		if({ hasBody && !useVulkan }, {
 			return bodyPanel:onPointerClickMod(x: x, y: y, mods: mods);
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ contextMenu:isOpen }, {
+			contextMenu:close();
+		});
+		if({ hasTabBar }, {
+			if({ tabBar:onRightClickMod(x: x, y: y, mods: mods) }, { return true; });
+		});
+		if({ hasBody && !useVulkan }, {
+			return bodyPanel:onRightClickMod(x: x, y: y, mods: mods);
 		});
 		return false;
 	}
@@ -186,9 +227,11 @@ Class of SewNode is ToolkitContainer{
 		}, {
 			if({ hasBody }, { bodyPanel:paint(ctx: ctx); });
 		});
+		if({ hasTabBar }, { tabBar:paint(ctx: ctx); });
 		if({ hasBottomBar }, { bottomBar:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paintOverlay(ctx: ctx); });
+		contextMenu:paint(ctx: ctx);
 	}
 
 	## Opens the native window, binds reactive ViewModel emitters, runs the event/render loop,
@@ -234,16 +277,20 @@ Class of SewNode is ToolkitContainer{
 
 		scale: Scale(factor: win:scaleFactor());
 		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
+		if({ hasTabBar }, { tabBar:setScale(scale: scale); });
 		if({ hasBody && !useVulkan }, { bodyPanel:setScale(scale: scale); });
 		if({ hasBottomBar }, { bottomBar:setScale(scale: scale); });
 		if({ hasDialog }, { dialog:setScale(scale: scale); });
 		if({ hasFileDialog }, { fileDialog:setScale(scale: scale); });
+		contextMenu:setScale(scale: scale);
 
 		:isDirty: false;
 		:bindDirty(cb: local Function(){ :isDirty: true; });
 		if({ hasToolbarSlot }, { toolbarSlot:bindDirty(cb: local Function(){ :isDirty: true; }); });
+		if({ hasTabBar }, { tabBar:bindDirty(cb: local Function(){ :isDirty: true; }); });
 		if({ hasBody && !useVulkan }, { bodyPanel:bindDirty(cb: local Function(){ :isDirty: true; }); });
 		if({ hasBottomBar }, { bottomBar:bindDirty(cb: local Function(){ :isDirty: true; }); });
+		contextMenu:bindDirty(cb: local Function(){ :isDirty: true; });
 
 		signalBag:track(
 			slot: 'running',
@@ -312,7 +359,12 @@ Class of SewNode is ToolkitContainer{
 			local Int is key: win:nextKey();
 			while({ key != 0 }, {
 				if({ key == 27 }, {
-					running:emit(value: false);
+					if({ contextMenu:isOpen }, {
+						contextMenu:close();
+						:isDirty: true;
+					}, {
+						running:emit(value: false);
+					});
 				}, {
 					if({ hasBody && !useVulkan }, {
 						if({ bodyPanel:onKey(key: key, mods: curMods) }, {
@@ -419,6 +471,12 @@ Class of SewNode is ToolkitContainer{
 
 			if({ win:pollClick() }, {
 				if({ :onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
+					:isDirty: true;
+				});
+			});
+
+			if({ win:pollRightClick() }, {
+				if({ :onRightClickMod(x: win:rightClickX(), y: win:rightClickY(), mods: curMods) }, {
 					:isDirty: true;
 				});
 			});

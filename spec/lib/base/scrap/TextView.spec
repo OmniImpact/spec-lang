@@ -22,6 +22,7 @@ Class of SewNode is TextView{
 	BoolEmitter is lineNumbers: BoolEmitter(initial: false);
 	TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1');
 	Function is onTextChange: local Function(String is _next){};
+	Function is onRightClickMenu: local Function(Int is _x, Int is _y){};
 	Float is padPt: 12.0;
 	Float is lineGapPt: 4.0;
 
@@ -49,6 +50,7 @@ Class of SewNode is TextView{
 		BoolEmitter is lineNumbers: BoolEmitter(initial: false),
 		TextEmitter is cursorStatus: TextEmitter(initial: 'Ln 1, Col 1'),
 		Function is onTextChange: local Function(String is _next){},
+		Function is onRightClickMenu: local Function(Int is _x, Int is _y){},
 		Float is padPt: 12.0,
 		Float is lineGapPt: 4.0
 	){
@@ -57,6 +59,7 @@ Class of SewNode is TextView{
 		:lineNumbers: lineNumbers;
 		:cursorStatus: cursorStatus;
 		:onTextChange: onTextChange;
+		:onRightClickMenu: onRightClickMenu;
 		:padPt: padPt;
 		:lineGapPt: lineGapPt;
 		:wrapCached: wrap:current();
@@ -442,6 +445,9 @@ Class of SewNode is TextView{
 		local Int is padPx: activeScale:px(pt: padPt);
 		local Int is rowH: fpx + gapPx;
 		local Int is gw: :gutterWidthPx(fpx: fpx);
+		if({ lineNumsCached && gw > 0 && x < b:x + gw }, {
+			return false;
+		});
 		local Int is count: dispLines:length();
 		if({ count == 0 || rowH <= 0 }, { return false; });
 
@@ -595,6 +601,12 @@ Class of SewNode is TextView{
 		return true;
 	}
 
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		local Function is cb: onRightClickMenu;
+		cb(x, y);
+		return true;
+	}
+
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		local Int is fpx: :fontPx();
@@ -608,91 +620,101 @@ Class of SewNode is TextView{
 		local Int is maxY: if({ ctx:hasClip }, { ctx:clipY + ctx:clipH }, { b:y + b:height });
 		local Int is minX: if({ ctx:hasClip }, { ctx:clipX }, { b:x });
 
-		## Line number gutter background (pinned to left edge of viewport)
-		if({ lineNumsCached && gw > 0 }, {
-			ctx:fillRect(x: minX, y: minY, w: gw, h: maxY - minY, color: activeTheme:toolbarBg);
-			ctx:fillRect(x: minX + gw - 1, y: minY, w: 1, h: maxY - minY, color: activeTheme:toolbarBorder);
-		});
-
 		local Int is count: dispLines:length();
-		if({ count == 0 || rowH <= 0 }, { return; });
+		if({ count > 0 && rowH > 0 }, {
+			local Int is firstIdx: (minY - (b:y + padPx)) / rowH;
+			if({ firstIdx < 0 }, { firstIdx: 0; });
+			local Int is lastIdx: ((maxY - (b:y + padPx)) / rowH) + 1;
+			if({ lastIdx >= count }, { lastIdx: count - 1; });
 
-		local Int is firstIdx: (minY - (b:y + padPx)) / rowH;
-		if({ firstIdx < 0 }, { firstIdx: 0; });
-		local Int is lastIdx: ((maxY - (b:y + padPx)) / rowH) + 1;
-		if({ lastIdx >= count }, { lastIdx: count - 1; });
+			local Boolean is hasSel: :hasNonEmptySelection();
+			local Int is sl: 0;
+			local Int is sc: 0;
+			local Int is el: 0;
+			local Int is ec: 0;
+			if({ hasSel }, {
+				local Array of Int is r: :orderedSelection();
+				sl: r:get(index: 0);
+				sc: r:get(index: 1);
+				el: r:get(index: 2);
+				ec: r:get(index: 3);
+			});
 
-		local Boolean is hasSel: :hasNonEmptySelection();
-		local Int is sl: 0;
-		local Int is sc: 0;
-		local Int is el: 0;
-		local Int is ec: 0;
-		if({ hasSel }, {
-			local Array of Int is r: :orderedSelection();
-			sl: r:get(index: 0);
-			sc: r:get(index: 1);
-			el: r:get(index: 2);
-			ec: r:get(index: 3);
-		});
+			local Int is i: firstIdx;
+			while({ i <= lastIdx }, {
+				local Int is ly: b:y + padPx + i * rowH;
+				if({ ly + fpx >= minY && ly <= maxY }, {
+					local String is lineStr: dispLines:get(index: i);
+					local Int is rLine: dispRawLine:get(index: i);
+					local Int is rStart: dispRawStart:get(index: i);
+					local Int is rEnd: rStart + lineStr:length();
 
-		local Int is i: firstIdx;
-		while({ i <= lastIdx }, {
-			local Int is ly: b:y + padPx + i * rowH;
-			if({ ly + fpx >= minY && ly <= maxY }, {
-				local String is lineStr: dispLines:get(index: i);
-				local Int is rLine: dispRawLine:get(index: i);
-				local Int is rStart: dispRawStart:get(index: i);
-				local Int is rEnd: rStart + lineStr:length();
-
-				## Highlight selection if this segment overlaps [sl:sc .. el:ec]
-				if({ hasSel && rLine >= sl && rLine <= el }, {
-					local Int is segS: 0;
-					local Int is segE: lineStr:length();
-					if({ rLine == sl && sc > rStart }, { segS: sc - rStart; });
-					if({ rLine == el && ec < rEnd }, { segE: ec - rStart; });
-					if({ segS < 0 }, { segS: 0; });
-					if({ segE > lineStr:length() }, { segE: lineStr:length(); });
-					if({ segE > segS || (rLine < el && segE == lineStr:length() && segS <= lineStr:length()) }, {
-						local Int is hx1: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segS), pixelHeight: fpx);
-						local Int is hx2: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segE), pixelHeight: fpx);
-						if({ rLine < el && segE == lineStr:length() }, {
-							hx2: hx2 + fpx / 2;
+					## Highlight selection if this segment overlaps [sl:sc .. el:ec]
+					if({ hasSel && rLine >= sl && rLine <= el }, {
+						local Int is segS: 0;
+						local Int is segE: lineStr:length();
+						if({ rLine == sl && sc > rStart }, { segS: sc - rStart; });
+						if({ rLine == el && ec < rEnd }, { segE: ec - rStart; });
+						if({ segS < 0 }, { segS: 0; });
+						if({ segE > lineStr:length() }, { segE: lineStr:length(); });
+						if({ segE > segS || (rLine < el && segE == lineStr:length() && segS <= lineStr:length()) }, {
+							local Int is hx1: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segS), pixelHeight: fpx);
+							local Int is hx2: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segE), pixelHeight: fpx);
+							if({ rLine < el && segE == lineStr:length() }, {
+								hx2: hx2 + fpx / 2;
+							});
+							if({ hx2 > hx1 }, {
+								ctx:fillRect(x: hx1, y: ly - 1, w: hx2 - hx1, h: rowH, color: activeTheme:activeBg);
+							});
 						});
-						if({ hx2 > hx1 }, {
-							ctx:fillRect(x: hx1, y: ly - 1, w: hx2 - hx1, h: rowH, color: activeTheme:activeBg);
+					});
+
+					if({ lineStr != '' }, {
+						ctx:drawText(
+							x: textStartX,
+							y: ly,
+							text: lineStr,
+							color: activeTheme:textPrimary,
+							pixelHeight: fpx
+						);
+					});
+
+					## Cursor caret if on this segment
+					if({ cursorVisible && rLine == cursorLine && cursorCol >= rStart && cursorCol <= rEnd }, {
+						local Boolean is isLastSegForLine: (i + 1 >= count) || (dispRawLine:get(index: i + 1) != rLine);
+						if({ cursorCol < rEnd || isLastSegForLine }, {
+							local Int is localCol: cursorCol - rStart;
+							local Int is cx: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: localCol), pixelHeight: fpx);
+							if({ cx >= minX + gw }, {
+								ctx:fillRect(x: cx, y: ly, w: 2, h: fpx, color: activeTheme:textPrimary);
+							});
 						});
 					});
 				});
+				i: i + 1;
+			});
 
-				if({ lineStr != '' }, {
-					ctx:drawText(
-						x: textStartX,
-						y: ly,
-						text: lineStr,
-						color: activeTheme:textPrimary,
-						pixelHeight: fpx
-					);
-				});
-
-				## Cursor caret if on this segment
-				if({ cursorVisible && rLine == cursorLine && cursorCol >= rStart && cursorCol <= rEnd }, {
-					local Boolean is isLastSegForLine: (i + 1 >= count) || (dispRawLine:get(index: i + 1) != rLine);
-					if({ cursorCol < rEnd || isLastSegForLine }, {
-						local Int is localCol: cursorCol - rStart;
-						local Int is cx: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: localCol), pixelHeight: fpx);
-						ctx:fillRect(x: cx, y: ly, w: 2, h: fpx, color: activeTheme:textPrimary);
+			## Paint line-number gutter AFTER text so horizontally scrolled text passes underneath it
+			if({ lineNumsCached && gw > 0 }, {
+				ctx:fillRect(x: minX, y: minY, w: gw, h: maxY - minY, color: activeTheme:toolbarBg);
+				ctx:fillRect(x: minX + gw - 1, y: minY, w: 1, h: maxY - minY, color: activeTheme:toolbarBorder);
+				local Int is gi: firstIdx;
+				while({ gi <= lastIdx }, {
+					local Int is gly: b:y + padPx + gi * rowH;
+					if({ gly + fpx >= minY && gly <= maxY && dispRawStart:get(index: gi) == 0 }, {
+						local String is numStr: '' . (dispRawLine:get(index: gi) + 1);
+						local Int is nw: ctx:measureTextWidth(text: numStr, pixelHeight: fpx);
+						local Int is nx: minX + gw - activeScale:px(pt: 8.0) - nw;
+						ctx:drawText(x: nx, y: gly, text: numStr, color: activeTheme:textMuted, pixelHeight: fpx);
 					});
-				});
-
-				## Line number label on first segment of each raw line
-				if({ lineNumsCached && gw > 0 && rStart == 0 }, {
-					local String is numStr: '' . (rLine + 1);
-					local Int is nw: ctx:measureTextWidth(text: numStr, pixelHeight: fpx);
-					local Int is nx: minX + gw - activeScale:px(pt: 8.0) - nw;
-					ctx:drawText(x: nx, y: ly, text: numStr, color: activeTheme:textMuted, pixelHeight: fpx);
+					gi: gi + 1;
 				});
 			});
-			i: i + 1;
+		}, {
+			if({ lineNumsCached && gw > 0 }, {
+				ctx:fillRect(x: minX, y: minY, w: gw, h: maxY - minY, color: activeTheme:toolbarBg);
+				ctx:fillRect(x: minX + gw - 1, y: minY, w: 1, h: maxY - minY, color: activeTheme:toolbarBorder);
+			});
 		});
 	}
 }

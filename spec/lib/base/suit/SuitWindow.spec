@@ -82,6 +82,9 @@ Class is SuitWindow{
 	Function of Boolean is pollClick(){ return native:pollClick(); }
 	Function of Int is clickX(){ return native:clickX(); }
 	Function of Int is clickY(){ return native:clickY(); }
+	Function of Boolean is pollRightClick(){ return native:pollRightClick(); }
+	Function of Int is rightClickX(){ return native:rightClickX(); }
+	Function of Int is rightClickY(){ return native:rightClickY(); }
 	Function of Int is pollScrollY(){ return native:pollScrollY(); }
 	Function of Int is pollScrollX(){ return native:pollScrollX(); }
 	Function of Boolean is pointerDown(){ return native:pointerDown(); }
