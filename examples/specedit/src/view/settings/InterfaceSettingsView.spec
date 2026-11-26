@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Interface settings category view for default editor/layout preferences.
+#! Interface settings category view using VSection, HSection, and Switch.
 
 Class is InterfaceSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -7,11 +7,11 @@ Class is InterfaceSettingsView{
 	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
-		['base', 'sew', Column],
-		['base', 'sew', Row],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', Switch],
+		['base', 'scrap', VSection],
+		['base', 'scrap', HSection],
 		['specedit', 'viewmodel', SettingsViewModel]
 	];
 
@@ -38,36 +38,16 @@ Class is InterfaceSettingsView{
 			onToggle: local Function(Boolean is _next){ vm:toggleDefaultShowFileTree(); }
 		);
 
-		return Column(
-			gapPt: 6.0,
+		return VSection(
 			children: Array([
 				Label(text: 'Interface', heading: true),
 				Frame(
 					title: 'Startup Defaults',
-					child: Column(
-						gapPt: 6.0,
+					child: VSection(
 						children: Array([
-							Row(
-								gapPt: 8.0,
-								children: Array([
-									monoSwitch,
-									Label(text: 'Default Monospace Font')
-								])
-							),
-							Row(
-								gapPt: 8.0,
-								children: Array([
-									wrapSwitch,
-									Label(text: 'Default Word Wrap')
-								])
-							),
-							Row(
-								gapPt: 8.0,
-								children: Array([
-									treeSwitch,
-									Label(text: 'Show File Tree by Default')
-								])
-							)
+							HSection(children: Array([monoSwitch, Label(text: 'Default Monospace Font')])),
+							HSection(children: Array([wrapSwitch, Label(text: 'Default Word Wrap')])),
+							HSection(children: Array([treeSwitch, Label(text: 'Show File Tree by Default')]))
 						])
 					)
 				)

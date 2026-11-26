@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Locations settings category view for adding, removing, and drag-reordering pinned directories.
+#! Locations settings category view using VSection and HSection.
 
 Class is LocationsSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -7,12 +7,12 @@ Class is LocationsSettingsView{
 	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
-		['base', 'sew', Column],
-		['base', 'sew', Row],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', ScrollView],
+		['base', 'scrap', VSection],
+		['base', 'scrap', HSection],
 		['specedit', 'viewmodel', SettingsViewModel],
 		['specedit', 'view', 'settings', PinnedLocationsList]
 	];
@@ -28,26 +28,22 @@ Class is LocationsSettingsView{
 	Function of SewNode is build(){
 		:listView: PinnedLocationsList(vm: vm);
 
-		local Row is actionsRow: Row(
-			gapPt: 8.0,
+		local HSection is actionsRow: HSection(
 			children: Array([
 				ScrapButton(
 					label: 'Add Location',
-					minWidthPt: 108.0,
-					heightPt: 26.0,
+					minWidthPt: 96.0,
 					onClick: local Function(){ vm:requestAddLocation(); }
 				),
 				ScrapButton(
 					label: 'Pin Current Folder',
-					minWidthPt: 120.0,
-					heightPt: 26.0,
+					minWidthPt: 112.0,
 					onClick: local Function(){ vm:pinCurrentDirectory(); }
 				)
 			])
 		);
 
-		return Column(
-			gapPt: 6.0,
+		return VSection(
 			children: Array([
 				Label(text: 'Locations', heading: true),
 				actionsRow,

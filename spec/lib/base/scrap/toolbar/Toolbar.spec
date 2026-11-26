@@ -111,7 +111,8 @@ Class of SewNode is Toolbar{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is h: scale:px(pt: config:heightPt);
+		local Float is hPt: if({ config:heightPt > 0.0 }, { config:heightPt }, { theme:toolbarHeightPt });
+		local Int is h: scale:px(pt: hPt);
 		desiredSize: Size(width: c:clampW(w: c:maxW), height: c:clampH(h: h));
 		return desiredSize;
 	}
@@ -309,11 +310,11 @@ Class of SewNode is Toolbar{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
 		bar:paint(ctx: ctx);
-		local Int is borderH: if({ scale:px(pt: 1.0) < 1 }, { 1 }, { scale:px(pt: 1.0) });
+		local Int is borderH: theme:borderPx(scaleFactor: scale:factor);
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is textY: b:y + (b:height - th) / 2;
-		local Int is padX: scale:px(pt: 11.0);
+		local Int is padX: scale:px(pt: theme:paddingMediumPt);
 
 		times(count: config:menus:length(), worker: local Function(Int is i){
 			local MenuConfig is m: config:menus:get(index: i);

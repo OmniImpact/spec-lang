@@ -44,6 +44,11 @@ Class of Dialog is SettingsDialogView{
 		:categoryBtns: Array();
 		:navStack: NavStack();
 		:content: :buildContent();
+		:onTick: local Function(Int is _ms){
+			if({ vm:stepPending() }, {
+				:isDirty: true;
+			});
+		};
 		vm:bindViewRefresh(onRefresh: local Function(){
 			:sync();
 			:isDirty: true;

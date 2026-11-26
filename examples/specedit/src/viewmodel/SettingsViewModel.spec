@@ -27,6 +27,7 @@ Class is SettingsViewModel{
 	Function is pinnedChangeHandler: local Function(){};
 	Function is defaultsChangeHandler: local Function(Boolean is _mono, Boolean is _wrap, Boolean is _tree){};
 	Array of Function is viewRefreshListeners: Array();
+	Array of Function is pendingApplies: Array();
 	Function is addLocationHandler: local Function(){};
 	Function of String is activeDirProvider: local Function of String(){ '' };
 
@@ -88,67 +89,100 @@ Class is SettingsViewModel{
 		:notifyRefresh();
 	}
 
-	Function is selectTheme(ThemePreset is preset){
-		model:themePreset: preset;
-		model:save();
-		local Function is cb: themeChangeHandler;
-		cb(:currentTheme());
-		:notifyRefresh();
+	local Function is enqueueApply(Function is work){
+		pendingApplies:add(item: work);
 	}
 
-	Function is adjustDocTextDelta(Float is delta){
-		local Float is next: model:docTextDeltaPt + delta;
+	Function of Boolean is stepPending(){
+		if({ pendingApplies:length() == 0 }, { return false; });
+		local Function is work: pendingApplies:get(index: 0);
+		pendingApplies:removeAt(index: 0);
+		work();
+		return true;
+	}
+
+	Function is selectTheme(ThemePreset is preset){
+		model:themePreset: preset;
+		:notifyRefresh();
+		local Theme is nextTheme: :currentTheme();
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is cb: themeChangeHandler;
+			cb(nextTheme);
+		});
+	}
+
+	Function is setDocTextDelta(Float is nextVal){
+		local Float is next: nextVal;
 		if({ next < -6.0 }, { next: -6.0; });
 		if({ next > 16.0 }, { next: 16.0; });
 		model:docTextDeltaPt: next;
-		model:save();
-		local Function is cb: docDeltaHandler;
-		cb(next);
 		:notifyRefresh();
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is cb: docDeltaHandler;
+			cb(next);
+		});
 	}
 
-	Function is adjustBaseTextPt(Float is delta){
-		local Float is next: model:baseTextPt + delta;
+	Function is adjustDocTextDelta(Float is delta){
+		:setDocTextDelta(nextVal: model:docTextDeltaPt + delta);
+	}
+
+	Function is setDocTextDeltaFromText(String is raw){
+		local Int is parsed: raw:trim():parseInt(base: 10, default: -999);
+		if({ parsed != -999 }, {
+			:setDocTextDelta(nextVal: parsed as Float);
+		});
+	}
+
+	Function is setBaseTextPt(Float is nextVal){
+		local Float is next: nextVal;
 		if({ next < 8.0 }, { next: 8.0; });
 		if({ next > 20.0 }, { next: 20.0; });
 		model:baseTextPt: next;
-		model:save();
-		local Function is cb: themeChangeHandler;
-		cb(:currentTheme());
 		:notifyRefresh();
+		local Theme is nextTheme: :currentTheme();
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is cb: themeChangeHandler;
+			cb(nextTheme);
+		});
+	}
+
+	Function is adjustBaseTextPt(Float is delta){
+		:setBaseTextPt(nextVal: model:baseTextPt + delta);
+	}
+
+	Function is setBaseTextPtFromText(String is raw){
+		local Int is parsed: raw:trim():parseInt(base: 10, default: -1);
+		if({ parsed >= 8 && parsed <= 20 }, {
+			:setBaseTextPt(nextVal: parsed as Float);
+		});
 	}
 
 	Function is selectZoomPct(Int is pct){
 		if({ pct != 70 && pct != 100 && pct != 115 && pct != 130 }, { return; });
 		model:uiZoomPct: pct;
-		model:save();
-		local Function is cb: zoomChangeHandler;
-		cb(model:zoomFactor());
 		:notifyRefresh();
+		local Float is z: model:zoomFactor();
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is cb: zoomChangeHandler;
+			cb(z);
+		});
 	}
 
 	Function is resetDocTextDelta(){
-		model:docTextDeltaPt: 0.0;
-		model:save();
-		local Function is cb: docDeltaHandler;
-		cb(0.0);
-		:notifyRefresh();
+		:setDocTextDelta(nextVal: 0.0);
 	}
 
 	Function is resetBaseTextPt(){
-		model:baseTextPt: 11.0;
-		model:save();
-		local Function is cb: themeChangeHandler;
-		cb(:currentTheme());
-		:notifyRefresh();
+		:setBaseTextPt(nextVal: 11.0);
 	}
 
 	Function is resetZoomPct(){
-		model:uiZoomPct: 100;
-		model:save();
-		local Function is cb: zoomChangeHandler;
-		cb(1.0);
-		:notifyRefresh();
+		:selectZoomPct(pct: 100);
 	}
 
 	Function is resetAppearance(){
@@ -156,14 +190,17 @@ Class is SettingsViewModel{
 		model:docTextDeltaPt: 0.0;
 		model:baseTextPt: 11.0;
 		model:uiZoomPct: 100;
-		model:save();
-		local Function is tcb: themeChangeHandler;
-		tcb(:currentTheme());
-		local Function is dcb: docDeltaHandler;
-		dcb(0.0);
-		local Function is zcb: zoomChangeHandler;
-		zcb(1.0);
 		:notifyRefresh();
+		local Theme is nextTheme: :currentTheme();
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is tcb: themeChangeHandler;
+			tcb(nextTheme);
+			local Function is dcb: docDeltaHandler;
+			dcb(0.0);
+			local Function is zcb: zoomChangeHandler;
+			zcb(1.0);
+		});
 	}
 
 	Function is removePinned(Int is index){
@@ -221,26 +258,41 @@ Class is SettingsViewModel{
 
 	Function is toggleDefaultMonospace(){
 		model:defaultMonospace: !model:defaultMonospace;
-		model:save();
-		local Function is cb: defaultsChangeHandler;
-		cb(model:defaultMonospace, model:defaultWrap, model:defaultShowFileTree);
 		:notifyRefresh();
+		local Boolean is m: model:defaultMonospace;
+		local Boolean is w: model:defaultWrap;
+		local Boolean is t: model:defaultShowFileTree;
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is cb: defaultsChangeHandler;
+			cb(m, w, t);
+		});
 	}
 
 	Function is toggleDefaultWrap(){
 		model:defaultWrap: !model:defaultWrap;
-		model:save();
-		local Function is cb: defaultsChangeHandler;
-		cb(model:defaultMonospace, model:defaultWrap, model:defaultShowFileTree);
 		:notifyRefresh();
+		local Boolean is m: model:defaultMonospace;
+		local Boolean is w: model:defaultWrap;
+		local Boolean is t: model:defaultShowFileTree;
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is cb: defaultsChangeHandler;
+			cb(m, w, t);
+		});
 	}
 
 	Function is toggleDefaultShowFileTree(){
 		model:defaultShowFileTree: !model:defaultShowFileTree;
-		model:save();
-		local Function is cb: defaultsChangeHandler;
-		cb(model:defaultMonospace, model:defaultWrap, model:defaultShowFileTree);
 		:notifyRefresh();
+		local Boolean is m: model:defaultMonospace;
+		local Boolean is w: model:defaultWrap;
+		local Boolean is t: model:defaultShowFileTree;
+		:enqueueApply(work: local Function(){
+			model:save();
+			local Function is cb: defaultsChangeHandler;
+			cb(m, w, t);
+		});
 	}
 
 	Function of String is docDeltaLabel(){

@@ -19,6 +19,7 @@ Class of SewNode is TextInput{
 	Boolean is hovered: false;
 	Float is minWidthPt: 0.0;
 	Float is heightPt: 0.0;
+	Boolean is expand: false;
 	Function is onChange: local Function(String is _next){};
 	Function is onSubmit: local Function(String is _val){};
 
@@ -28,6 +29,7 @@ Class of SewNode is TextInput{
 		Boolean is focused: false,
 		Float is minWidthPt: 0.0,
 		Float is heightPt: 0.0,
+		Boolean is expand: false,
 		Function is onChange: local Function(String is _next){},
 		Function is onSubmit: local Function(String is _val){}
 	){
@@ -36,6 +38,7 @@ Class of SewNode is TextInput{
 		:focused: focused;
 		:minWidthPt: minWidthPt;
 		:heightPt: heightPt;
+		:expand: expand;
 		:onChange: onChange;
 		:onSubmit: onSubmit;
 		:hovered: false;
@@ -68,7 +71,10 @@ Class of SewNode is TextInput{
 	replace Function of Size is measure(Constraints is c){
 		local Int is minW: activeScale:px(pt: if({ minWidthPt > 0.0 }, { minWidthPt }, { activeTheme:inputMinWidthPt }));
 		local Int is h: activeScale:px(pt: if({ heightPt > 0.0 }, { heightPt }, { activeTheme:inputHeightPt }));
-		local Int is w: if({ c:maxW > minW }, { c:maxW }, { minW });
+		local Int is fpx: :fontPx();
+		local Int is tw: DrawContext:measureWidth(text: text, pixelHeight: fpx) + activeScale:px(pt: activeTheme:paddingPt * 2.5);
+		local Int is natW: if({ tw > minW }, { tw }, { minW });
+		local Int is w: if({ expand && c:maxW > natW }, { c:maxW }, { natW });
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
 	}
