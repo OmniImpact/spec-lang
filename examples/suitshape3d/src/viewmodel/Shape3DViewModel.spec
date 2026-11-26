@@ -10,9 +10,9 @@ Class is Shape3DViewModel{
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', IntEmitter],
 		['base', 'signal', TextEmitter],
-		['base', 'scrap', ToolbarConfig],
-		['base', 'scrap', MenuConfig],
-		['base', 'scrap', MenuItemConfig],
+		['base', 'scrap', 'toolbar', ToolbarConfig],
+		['base', 'scrap', 'menu', MenuConfig],
+		['base', 'scrap', 'menu', MenuItemConfig],
 		['base', 'mold', Mat4],
 		['suitshape3d', 'model', Shape3DModel]
 	];

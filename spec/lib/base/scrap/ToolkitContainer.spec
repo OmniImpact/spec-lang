@@ -26,13 +26,13 @@ Class of SewNode is ToolkitContainer{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', Bar],
-		['base', 'scrap', ContextMenu],
-		['base', 'scrap', TabBar],
-		['base', 'scrap', ToolbarContainer],
+		['base', 'scrap', 'menu', MenuContext],
+		['base', 'scrap', 'tab', TabBar],
+		['base', 'scrap', 'toolbar', ToolbarContainer],
 		['base', 'scrap', ScrapPanel],
 		['base', 'scrap', VulkanSurface],
 		['base', 'scrap', Dialog],
-		['base', 'wardrobe', FileDialog]
+		['base', 'wardrobe', 'file', FileDialog]
 	];
 
 	TextEmitter is title: TextEmitter(initial: 'Suit');
@@ -51,7 +51,7 @@ Class of SewNode is ToolkitContainer{
 	Bar is bottomBar: Bar();
 	Dialog is dialog: Dialog();
 	FileDialog is fileDialog: FileDialog();
-	ContextMenu is contextMenu: ContextMenu();
+	MenuContext is contextMenu: MenuContext();
 	Boolean is hasToolbarSlot: false;
 	Boolean is hasTabBar: false;
 	Boolean is hasBody: false;
@@ -91,7 +91,7 @@ Class of SewNode is ToolkitContainer{
 		Boolean is hasDialog: false,
 		FileDialog is fileDialog: FileDialog(),
 		Boolean is hasFileDialog: false,
-		ContextMenu is contextMenu: ContextMenu(),
+		MenuContext is contextMenu: MenuContext(),
 		Function is onInitVulkan: local Function(VulkanSurface is s){},
 		Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){},
 		Function is onDispose: local Function(){},

@@ -12,25 +12,25 @@ Class is EditorView{
 		['base', 'sew', Column],
 		['base', 'sew', Row],
 		['base', 'sew', ZStack],
-		['base', 'sew', NavStack],
-		['base', 'sew', NavRoute],
-		['base', 'sew', FlexGridH],
-		['base', 'sew', FlexGridPanel],
+		['base', 'sew', 'nav', NavStack],
+		['base', 'sew', 'nav', NavRoute],
+		['base', 'sew', 'grid', GridFlexH],
+		['base', 'sew', 'grid', GridFlexPanel],
 		['base', 'fabric', Theme],
 		['base', 'scrap', ToolkitContainer],
-		['base', 'scrap', ToolbarContainer],
-		['base', 'scrap', Toolbar],
-		['base', 'scrap', MenuConfig],
-		['base', 'scrap', TabBar],
+		['base', 'scrap', 'toolbar', ToolbarContainer],
+		['base', 'scrap', 'toolbar', Toolbar],
+		['base', 'scrap', 'menu', MenuConfig],
+		['base', 'scrap', 'tab', TabBar],
 		['base', 'scrap', ScrollView],
-		['base', 'scrap', CodeEditorView],
-		['base', 'scrap', TextScrap],
+		['base', 'scrap', 'text', CodeEditorView],
+		['base', 'scrap', 'text', TextScrap],
 		['base', 'scrap', ScrapPanel],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', Bar],
 		['base', 'scrap', Dialog],
-		['base', 'wardrobe', FileDialog],
-		['base', 'wardrobe', FileTree],
+		['base', 'wardrobe', 'file', FileDialog],
+		['base', 'wardrobe', 'file', FileTree],
 		['specedit', 'viewmodel', EditorViewModel],
 		['specedit', 'util', SpecEditStrings]
 	];
@@ -41,7 +41,7 @@ Class is EditorView{
 	ScrollView is editorScroll: ScrollView(child: CodeEditorView(text: TextEmitter(initial: '')));
 	TabBar is tabBar: TabBar();
 	FileTree is fileTree: FileTree();
-	FlexGridH is splitGrid: FlexGridH();
+	GridFlexH is splitGrid: GridFlexH();
 
 	replace Function is init(EditorViewModel is vm){
 		:vm: vm;
@@ -153,9 +153,9 @@ Class is EditorView{
 				NavRoute(name: SpecEditStrings:ROUTE_FILES, child: :filesContainer())
 			])
 		);
-		:splitGrid: FlexGridH(
+		:splitGrid: GridFlexH(
 			panels: Array([
-				FlexGridPanel(
+				GridFlexPanel(
 					child: fileTree as SewNode,
 					sizePt: 220.0,
 					minSizePt: 140.0,
@@ -163,7 +163,7 @@ Class is EditorView{
 					flex: false,
 					visible: vm:fileTreeEnabled:current()
 				),
-				FlexGridPanel(
+				GridFlexPanel(
 					child: nav as SewNode,
 					minSizePt: 200.0,
 					flex: true

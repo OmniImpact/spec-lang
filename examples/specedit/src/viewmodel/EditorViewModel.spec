@@ -10,14 +10,14 @@ Class is EditorViewModel{
 		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', TextEmitter],
-		['base', 'scrap', ToolbarConfig],
-		['base', 'scrap', MenuConfig],
-		['base', 'scrap', MenuItemConfig],
-		['base', 'scrap', TabBar],
-		['base', 'scrap', TabItemConfig],
-		['base', 'scrap', ContextMenu],
-		['base', 'scrap', CodeEditorView],
-		['base', 'scrap', ScrapHighlighter],
+		['base', 'scrap', 'toolbar', ToolbarConfig],
+		['base', 'scrap', 'menu', MenuConfig],
+		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', 'tab', TabBar],
+		['base', 'scrap', 'tab', TabItemConfig],
+		['base', 'scrap', 'menu', MenuContext],
+		['base', 'scrap', 'text', CodeEditorView],
+		['base', 'scrap', 'highlighter', Highlighter],
 		['specedit', 'model', EditorModel],
 		['specedit', 'util', SpecEditStrings]
 	];
@@ -29,7 +29,7 @@ Class is EditorViewModel{
 	Boolean is hasBoundTabBar: false;
 	CodeEditorView is boundCodeEditor: CodeEditorView(text: TextEmitter(initial: ''));
 	Boolean is hasBoundCodeEditor: false;
-	ContextMenu is contextMenu: ContextMenu();
+	MenuContext is contextMenu: MenuContext();
 
 	TextEmitter is title: TextEmitter(initial: SpecEditStrings:APP_NAME);
 	BoolEmitter is running: BoolEmitter(initial: true);
@@ -143,7 +143,7 @@ Class is EditorViewModel{
 		activeLanguage:emit(value: model:languageOverride);
 		local String is label: 'Plain Text';
 		if({ hasBoundCodeEditor }, {
-			local ScrapHighlighter is hl: boundCodeEditor:highlighterFor(langOverride: model:languageOverride, path: model:filePath);
+			local Highlighter is hl: boundCodeEditor:highlighterFor(langOverride: model:languageOverride, path: model:filePath);
 			label: hl:displayName();
 		});
 		syntaxStatus:emit(value: label . ' ▾');
@@ -163,7 +163,7 @@ Class is EditorViewModel{
 
 	Function is showSyntaxMenu(Int is x, Int is y){
 		if({ !:hasOpenDocument() || !hasBoundCodeEditor }, { return; });
-		local ScrapHighlighter is detected: boundCodeEditor:highlighterFor(langOverride: '', path: model:filePath);
+		local Highlighter is detected: boundCodeEditor:highlighterFor(langOverride: '', path: model:filePath);
 		local String is curOverride: model:languageOverride;
 		local Array of MenuItemConfig is items: Array();
 		items:add(item: MenuItemConfig(
@@ -176,10 +176,10 @@ Class is EditorViewModel{
 			label: (if({ curOverride == 'plain' }, { '* ' }, { '  ' })) . 'Plain Text',
 			onClick: local Function(){ :setDocumentLanguage(langId: 'plain'); }
 		));
-		local Array of ScrapHighlighter is registered: boundCodeEditor:registeredHighlighters();
+		local Array of Highlighter is registered: boundCodeEditor:registeredHighlighters();
 		local Int is i: 0;
 		while({ i < registered:length() }, {
-			local ScrapHighlighter is h: registered:get(index: i);
+			local Highlighter is h: registered:get(index: i);
 			local String is lid: h:languageId();
 			items:add(item: MenuItemConfig(
 				id: 'syntax_' . lid,

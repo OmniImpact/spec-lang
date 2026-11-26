@@ -9,7 +9,7 @@ Class is AboutDialog{
 		['base', 'sew', Center],
 		['base', 'sew', Column],
 		['base', 'scrap', Dialog],
-		['base', 'scrap', TextScrap],
+		['base', 'scrap', 'text', TextScrap],
 		['suitshape3d', 'viewmodel', Shape3DViewModel]
 	];
 
