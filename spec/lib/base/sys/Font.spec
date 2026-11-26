@@ -26,6 +26,10 @@ Class is Font{
 	Int is metricsAddr: 0;
 	Int is scratchAddr: 0;
 	Int is scratchCap: 0;
+	Int is glyphCachePtr: 0;
+	Int is glyphCacheCap: 0;
+	Int is glyphCacheCount: 0;
+	Int is glyphCacheBytes: 0;
 	Math is math: Math();
 	Array of Font is fallbacks: Array();
 	Boolean is fallbacksLoaded: false;
@@ -60,6 +64,143 @@ Class is Font{
 			});
 		});
 		return scratchAddr;
+	}
+
+	local Function of Int is glyphKey(Int is fh, Int is cp, Int is pixelHeight, Int is phase){
+		return ((fh & 134217727) << 36) | ((pixelHeight & 1023) << 26) | ((phase & 3) << 24) | (cp & 16777215);
+	}
+
+	local Function of Int is glyphHashSlot(Int is key, Int is mask){
+		return (key ^ (key >> 17) ^ (key >> 33)) & mask;
+	}
+
+	local Function is clearGlyphCache(){
+		if({ glyphCachePtr != 0 && glyphCacheCap > 0 }, {
+			local Int is i: 0;
+			while({ i < glyphCacheCap }, {
+				local Int is off: i * 56;
+				if({ Mem:loadI64(ptr: glyphCachePtr, byteOffset: off) != 0 }, {
+					local Int is bmp: Mem:loadI64(ptr: glyphCachePtr, byteOffset: off + 40);
+					if({ bmp != 0 }, {
+						Mem:free(ptr: bmp);
+					});
+				});
+				i: i + 1;
+			});
+			Mem:free(ptr: glyphCachePtr);
+		});
+		glyphCachePtr: 0;
+		glyphCacheCap: 0;
+		glyphCacheCount: 0;
+		glyphCacheBytes: 0;
+	}
+
+	local Function of Boolean is ensureGlyphCacheCapacity(){
+		if({ glyphCacheBytes > 16777216 }, {
+			:clearGlyphCache();
+		});
+		if({ glyphCacheCap == 0 }, {
+			local Int is initCap: 256;
+			local Int is ptr: Mem:alloc(bytes: initCap * 56);
+			if({ ptr == 0 }, { return false; });
+			local Int is i: 0;
+			while({ i < initCap }, {
+				Mem:storeI64(ptr: ptr, byteOffset: i * 56, val: 0);
+				i: i + 1;
+			});
+			glyphCachePtr: ptr;
+			glyphCacheCap: initCap;
+			glyphCacheCount: 0;
+			return true;
+		});
+		if({ (glyphCacheCount + 1) * 2 >= glyphCacheCap }, {
+			local Int is newCap: glyphCacheCap * 2;
+			local Int is newPtr: Mem:alloc(bytes: newCap * 56);
+			if({ newPtr == 0 }, { return true; });
+			local Int is i: 0;
+			while({ i < newCap }, {
+				Mem:storeI64(ptr: newPtr, byteOffset: i * 56, val: 0);
+				i: i + 1;
+			});
+			local Int is newMask: newCap - 1;
+			i: 0;
+			while({ i < glyphCacheCap }, {
+				local Int is oldOff: i * 56;
+				local Int is k: Mem:loadI64(ptr: glyphCachePtr, byteOffset: oldOff);
+				if({ k != 0 }, {
+					local Int is slot: :glyphHashSlot(key: k, mask: newMask);
+					while({ Mem:loadI64(ptr: newPtr, byteOffset: slot * 56) != 0 }, {
+						slot: (slot + 1) & newMask;
+					});
+					local Int is dstOff: slot * 56;
+					Mem:storeI64(ptr: newPtr, byteOffset: dstOff, val: k);
+					Mem:storeI64(ptr: newPtr, byteOffset: dstOff + 8, val: Mem:loadI64(ptr: glyphCachePtr, byteOffset: oldOff + 8));
+					Mem:storeI64(ptr: newPtr, byteOffset: dstOff + 16, val: Mem:loadI64(ptr: glyphCachePtr, byteOffset: oldOff + 16));
+					Mem:storeI64(ptr: newPtr, byteOffset: dstOff + 24, val: Mem:loadI64(ptr: glyphCachePtr, byteOffset: oldOff + 24));
+					Mem:storeI64(ptr: newPtr, byteOffset: dstOff + 32, val: Mem:loadI64(ptr: glyphCachePtr, byteOffset: oldOff + 32));
+					Mem:storeI64(ptr: newPtr, byteOffset: dstOff + 40, val: Mem:loadI64(ptr: glyphCachePtr, byteOffset: oldOff + 40));
+					Mem:storeI64(ptr: newPtr, byteOffset: dstOff + 48, val: Mem:loadI64(ptr: glyphCachePtr, byteOffset: oldOff + 48));
+				});
+				i: i + 1;
+			});
+			Mem:free(ptr: glyphCachePtr);
+			glyphCachePtr: newPtr;
+			glyphCacheCap: newCap;
+		});
+		return true;
+	}
+
+	local Function of Int is lookupOrRasterizeGlyph(Int is fh, Int is cp, Int is pixelHeight, Int is phase){
+		if({ !:ensureGlyphCacheCapacity() }, { return -1; });
+		local Int is key: :glyphKey(fh: fh, cp: cp, pixelHeight: pixelHeight, phase: phase);
+		local Int is mask: glyphCacheCap - 1;
+		local Int is slot: :glyphHashSlot(key: key, mask: mask);
+		local Int is probes: 0;
+		while({ probes < glyphCacheCap }, {
+			local Int is off: slot * 56;
+			local Int is existing: Mem:loadI64(ptr: glyphCachePtr, byteOffset: off);
+			if({ existing == key }, { return off; });
+			if({ existing == 0 }, {
+				local Float is shiftX: math:toFloat(value: phase) * 0.25;
+				base:sysinternal:Font:pal_font_hmetrics(handle: fh, cp: cp, out_2_i32_ptr: metricsAddr);
+				local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+				base:sysinternal:Font:pal_font_glyph_box_subpixel(handle: fh, cp: cp, pixel_height: pixelHeight, shift_x: shiftX, out_4_i32_ptr: metricsAddr);
+				local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+				local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
+				local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
+				local Int is y1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 12));
+				local Int is gw: x1 - x0;
+				local Int is gh: y1 - y0;
+				local Int is bmp: 0;
+				if({ gw > 0 && gh > 0 }, {
+					bmp: Mem:alloc(bytes: gw * gh);
+					if({ bmp != 0 }, {
+						base:sysinternal:Font:pal_font_rasterize_glyph_subpixel(
+							handle: fh,
+							cp: cp,
+							pixel_height: pixelHeight,
+							shift_x: shiftX,
+							dst_ptr: bmp,
+							gw: gw,
+							gh: gh
+						);
+						glyphCacheBytes: glyphCacheBytes + (gw * gh);
+					});
+				});
+				Mem:storeI64(ptr: glyphCachePtr, byteOffset: off, val: key);
+				Mem:storeI64(ptr: glyphCachePtr, byteOffset: off + 8, val: x0);
+				Mem:storeI64(ptr: glyphCachePtr, byteOffset: off + 16, val: y0);
+				Mem:storeI64(ptr: glyphCachePtr, byteOffset: off + 24, val: gw);
+				Mem:storeI64(ptr: glyphCachePtr, byteOffset: off + 32, val: gh);
+				Mem:storeI64(ptr: glyphCachePtr, byteOffset: off + 40, val: bmp);
+				Mem:storeI64(ptr: glyphCachePtr, byteOffset: off + 48, val: adv);
+				glyphCacheCount: glyphCacheCount + 1;
+				return off;
+			});
+			slot: (slot + 1) & mask;
+			probes: probes + 1;
+		});
+		return -1;
 	}
 
 	## Loads a TrueType/OpenType font from raw bytes at ([dataAddr], [byteLen]).
@@ -412,8 +553,9 @@ Class is Font{
 		return math:toInt(value: math:round(value: xpos));
 	}
 
-	## Releases the underlying font handle (if owned), custom fallback fonts, and cached scratch buffers.
+	## Releases the underlying font handle (if owned), custom fallback fonts, glyph cache, and scratch buffers.
 	Function is close(){
+		:clearGlyphCache();
 		local Int is i: 0;
 		while({ i < fallbacks:length() }, {
 			fallbacks:get(index: i):close();
@@ -516,69 +658,66 @@ Class is Font{
 							local Int is kern: :kernAdvanceFor(fontHandle: gHandle, cp1: prevCp, cp2: cp);
 							xpos: xpos + math:toFloat(value: kern) * gScale;
 						});
-						base:sysinternal:Font:pal_font_hmetrics(handle: gHandle, cp: cp, out_2_i32_ptr: metricsAddr);
-						local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
-
 						local Int is basePx: math:toInt(value: math:floor(value: xpos));
-						local Float is shiftX: xpos - math:toFloat(value: basePx);
-						base:sysinternal:Font:pal_font_glyph_box_subpixel(handle: gHandle, cp: cp, pixel_height: pixelHeight, shift_x: shiftX, out_4_i32_ptr: metricsAddr);
-						local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
-						local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
-						local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
-						local Int is y1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 12));
-						local Int is gw: x1 - x0;
-						local Int is gh: y1 - y0;
+						local Float is fracX: xpos - math:toFloat(value: basePx);
+						local Int is phase: math:toInt(value: math:floor(value: fracX * 4.0));
+						if({ phase < 0 }, { phase: 0; });
+						if({ phase > 3 }, { phase: 3; });
 
-						if({ gw > 0 && gh > 0 }, {
-							local Int is buf: :ensureScratch(needed: gw * gh);
-							if({ buf != 0 }, {
-								base:sysinternal:Font:pal_font_rasterize_glyph_subpixel(
-									handle: gHandle,
-									cp: cp,
-									pixel_height: pixelHeight,
-									shift_x: shiftX,
-									dst_ptr: buf,
-									gw: gw,
-									gh: gh
-								);
-								local Int is dstX0: basePx + x0;
-								local Int is dstY0: baseline + y0;
-								local Int is gy: 0;
-								while({ gy < gh }, {
-									local Int is py: dstY0 + gy;
-									if({ py >= minY && py < maxY }, {
-										local Int is rowBase: py * bufW;
-										local Int is gRowBase: gy * gw;
-										local Int is gx: 0;
-										while({ gx < gw }, {
-											local Int is px: dstX0 + gx;
-											if({ px >= minX && px < maxX }, {
-												local Int is cov: Mem:loadByte(ptr: buf, byteOffset: gRowBase + gx) & 255;
-												if({ cov > 0 }, {
-													if({ boostNum > 0 }, {
-														cov: cov + ((cov * (255 - cov) * boostNum) >> 16);
-														if({ cov > 255 }, { cov: 255; });
-													});
-													local Int is a: (cov * fgA) / 255;
-													local Int is invA: 255 - a;
-													local Int is pOff: (rowBase + px) * 4;
-													local Int is bg: Mem:loadI32(ptr: pixelsAddr, byteOffset: pOff);
-													local Int is bgA: (bg >> 24) & 255;
-													local Int is bgR: (bg >> 16) & 255;
-													local Int is bgG: (bg >> 8) & 255;
-													local Int is bgB: bg & 255;
-													local Int is outA: a + (bgA * invA) / 255;
-													local Int is r: (fgR * a + bgR * invA) / 255;
-													local Int is g: (fgG * a + bgG * invA) / 255;
-													local Int is b: (fgB * a + bgB * invA) / 255;
-													Mem:storeI32(ptr: pixelsAddr, byteOffset: pOff, val: (outA << 24) | (r << 16) | (g << 8) | b);
+						local Int is eOff: :lookupOrRasterizeGlyph(fh: gHandle, cp: cp, pixelHeight: pixelHeight, phase: phase);
+						local Int is adv: 0;
+						local Int is x0: 0;
+						local Int is y0: 0;
+						local Int is gw: 0;
+						local Int is gh: 0;
+						local Int is buf: 0;
+						if({ eOff >= 0 }, {
+							x0: Mem:loadI64(ptr: glyphCachePtr, byteOffset: eOff + 8);
+							y0: Mem:loadI64(ptr: glyphCachePtr, byteOffset: eOff + 16);
+							gw: Mem:loadI64(ptr: glyphCachePtr, byteOffset: eOff + 24);
+							gh: Mem:loadI64(ptr: glyphCachePtr, byteOffset: eOff + 32);
+							buf: Mem:loadI64(ptr: glyphCachePtr, byteOffset: eOff + 40);
+							adv: Mem:loadI64(ptr: glyphCachePtr, byteOffset: eOff + 48);
+						});
+
+						if({ gw > 0 && gh > 0 && buf != 0 }, {
+							local Int is dstX0: basePx + x0;
+							local Int is dstY0: baseline + y0;
+							local Int is gy: 0;
+							while({ gy < gh }, {
+								local Int is py: dstY0 + gy;
+								if({ py >= minY && py < maxY }, {
+									local Int is rowBase: py * bufW;
+									local Int is gRowBase: gy * gw;
+									local Int is gx: 0;
+									while({ gx < gw }, {
+										local Int is px: dstX0 + gx;
+										if({ px >= minX && px < maxX }, {
+											local Int is cov: Mem:loadByte(ptr: buf, byteOffset: gRowBase + gx) & 255;
+											if({ cov > 0 }, {
+												if({ boostNum > 0 }, {
+													cov: cov + ((cov * (255 - cov) * boostNum) >> 16);
+													if({ cov > 255 }, { cov: 255; });
 												});
+												local Int is a: (cov * fgA) / 255;
+												local Int is invA: 255 - a;
+												local Int is pOff: (rowBase + px) * 4;
+												local Int is bg: Mem:loadI32(ptr: pixelsAddr, byteOffset: pOff);
+												local Int is bgA: (bg >> 24) & 255;
+												local Int is bgR: (bg >> 16) & 255;
+												local Int is bgG: (bg >> 8) & 255;
+												local Int is bgB: bg & 255;
+												local Int is outA: a + (bgA * invA) / 255;
+												local Int is r: (fgR * a + bgR * invA) / 255;
+												local Int is g: (fgG * a + bgG * invA) / 255;
+												local Int is b: (fgB * a + bgB * invA) / 255;
+												Mem:storeI32(ptr: pixelsAddr, byteOffset: pOff, val: (outA << 24) | (r << 16) | (g << 8) | b);
 											});
-											gx: gx + 1;
 										});
+										gx: gx + 1;
 									});
-									gy: gy + 1;
 								});
+								gy: gy + 1;
 							});
 						});
 
