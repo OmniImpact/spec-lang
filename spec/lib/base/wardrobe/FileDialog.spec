@@ -151,10 +151,30 @@ Class is FileDialog{
 
 	local Function is initDefaultPins(){
 		if({ pinnedPaths:length() > 0 }, { return; });
-		:addPinned(name: 'Current', path: initialDir);
 		local String is home: Process():getEnv(key: 'HOME', default: '');
+		if({ home == '' }, {
+			home: Process():getEnv(key: 'USERPROFILE', default: '');
+		});
 		if({ home != '' && Dir():isDir(path: home) }, {
 			:addPinned(name: 'Home', path: home);
+			local Array of String is entries: Dir():dirList(path: home);
+			local String is docsPath: '';
+			local String is dlPath: '';
+			local Int is i: 0;
+			while({ i < entries:length() }, {
+				local String is name: entries:get(index: i);
+				local String is low: name:toLower();
+				if({ low == 'documents' || low == 'downloads' }, {
+					local String is full: :joinPath(dir: home, name: name);
+					if({ Dir():isDir(path: full) }, {
+						if({ low == 'documents' && docsPath == '' }, { docsPath: full; });
+						if({ low == 'downloads' && dlPath == '' }, { dlPath: full; });
+					});
+				});
+				i: i + 1;
+			});
+			if({ docsPath != '' }, { :addPinned(name: 'Documents', path: docsPath); });
+			if({ dlPath != '' }, { :addPinned(name: 'Downloads', path: dlPath); });
 		});
 		:addPinned(name: 'Root', path: '/');
 	}
