@@ -21,7 +21,7 @@ Class is Font{
 
 	Int is handle: -1;
 	Boolean is ownsHandle: true;
-	Float is letterSpacing: 0.045;
+	Float is letterSpacing: 0.0;
 	Float is weightBoost: 0.35;
 	Int is metricsAddr: 0;
 	Int is scratchAddr: 0;
