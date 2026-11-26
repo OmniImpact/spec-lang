@@ -277,6 +277,7 @@ Class of SewNode is ToolkitContainer{
 		local Boolean is closedByWm: false;
 
 		while({ running:current() }, {
+			local Int is loopStartNs: clock:monotonicNs();
 			if({ !win:poll() }, {
 				closedByWm: true;
 				running:emit(value: false);
@@ -420,13 +421,16 @@ Class of SewNode is ToolkitContainer{
 				});
 
 				if({ useVulkan && gpuPresent && running:current() }, {
-					local Int is frameStartNs: clock:monotonicNs();
 					local Function is frameCb: onFrame;
 					frameCb(vulkanBody, elapsedMs, curW, curH);
 					local Int is fpsCap: targetFps:current();
 					if({ fpsCap > 0 }, {
 						local Int is budgetNs: 1000000000 / fpsCap;
-						clock:sleepUntilNs(targetNs: frameStartNs + budgetNs);
+						clock:sleepUntilNs(targetNs: loopStartNs + budgetNs);
+					});
+				}, {
+					if({ running:current() }, {
+						clock:sleepUntilNs(targetNs: loopStartNs + 8000000);
 					});
 				});
 			});

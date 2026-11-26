@@ -4220,6 +4220,7 @@ long long spec_pal_font_draw_text(
     size_t scratch_cap = 0;
     unsigned char* scratch = NULL;
     uint32_t prev_cp = 0;
+    float tracking = (float)pixel_height * 0.045f;
 
     while (*p) {
         uint32_t cp = _spec_utf8_next(&p);
@@ -4263,6 +4264,8 @@ long long spec_pal_font_draw_text(
                         if (px < 0 || px >= (int)buf_w) continue;
                         uint32_t cov = g_row[gx];
                         if (cov == 0) continue;
+                        cov = cov + (cov * (255u - cov)) / 384u;
+                        if (cov > 255u) cov = 255u;
                         uint32_t a = (cov * fg_a) / 255u;
                         uint32_t inv_a = 255u - a;
                         uint32_t bg = row[px];
@@ -4279,7 +4282,7 @@ long long spec_pal_font_draw_text(
                 }
             }
         }
-        xpos += (float)adv * scale;
+        xpos += (float)adv * scale + tracking;
         prev_cp = cp;
     }
 
@@ -4291,6 +4294,7 @@ long long spec_pal_font_measure_width(long long handle, long long text_cstr, lon
     SpecFont* f = _spec_get_font(handle);
     if (!f || !text_cstr || pixel_height <= 0) return 0;
     float scale = stbtt_ScaleForPixelHeight(&f->info, (float)pixel_height);
+    float tracking = (float)pixel_height * 0.045f;
     const char* p = (const char*)(intptr_t)text_cstr;
     float xpos = 0.0f;
     int prev_cp = 0;
@@ -4301,7 +4305,7 @@ long long spec_pal_font_measure_width(long long handle, long long text_cstr, lon
         }
         int adv = 0, lsb = 0;
         stbtt_GetCodepointHMetrics(&f->info, cp, &adv, &lsb);
-        xpos += (float)adv * scale;
+        xpos += (float)adv * scale + tracking;
         prev_cp = cp;
     }
     return (long long)(xpos + 0.5f);
