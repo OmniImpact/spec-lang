@@ -12,6 +12,8 @@ Class is SettingsModel{
 		['base', 'struct', Map],
 		['base', 'core', Result],
 		['base', 'data', Json],
+		['base', 'data', JsonNumber],
+		['base', 'data', JsonBool],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset]
 	];
@@ -69,12 +71,12 @@ Class is SettingsModel{
 	Function is save(){
 		local Map of String to Any is obj: Map:init();
 		obj:set(key: 'theme', value: Theme:presetId(preset: themePreset));
-		obj:set(key: 'docTextDeltaPt', value: docTextDeltaPt);
-		obj:set(key: 'baseTextPt', value: baseTextPt);
-		obj:set(key: 'uiZoomPct', value: uiZoomPct);
-		obj:set(key: 'defaultMonospace', value: defaultMonospace);
-		obj:set(key: 'defaultWrap', value: defaultWrap);
-		obj:set(key: 'defaultShowFileTree', value: defaultShowFileTree);
+		obj:set(key: 'docTextDeltaPt', value: JsonNumber(rawText: docTextDeltaPt as String, isFloating: true));
+		obj:set(key: 'baseTextPt', value: JsonNumber(rawText: baseTextPt as String, isFloating: true));
+		obj:set(key: 'uiZoomPct', value: JsonNumber(rawText: uiZoomPct as String, isFloating: false));
+		obj:set(key: 'defaultMonospace', value: JsonBool(value: defaultMonospace));
+		obj:set(key: 'defaultWrap', value: JsonBool(value: defaultWrap));
+		obj:set(key: 'defaultShowFileTree', value: JsonBool(value: defaultShowFileTree));
 		local String is jsonStr: Json():format(value: obj, indent: 2) . "\n";
 		fileWrite(
 			path: :configPath(),
