@@ -94,7 +94,9 @@ Class of SewNode is Toolbar{
 		local Int is x: b:x + scale:px(pt: 4.0);
 		times(count: idx, worker: local Function(Int is i){
 			local MenuConfig is m: config:menus:get(index: i);
-			x: x + :menuButtonWidthPx(menu: m);
+			if({ m:visible }, {
+				x: x + :menuButtonWidthPx(menu: m);
+			});
 		});
 		return x;
 	}
@@ -127,10 +129,12 @@ Class of SewNode is Toolbar{
 		if({ y >= b:y && y < b:y + b:height }, {
 			times(count: config:menus:length(), worker: local Function(Int is i){
 				local MenuConfig is m: config:menus:get(index: i);
-				local Int is bx: :menuButtonX(idx: i);
-				local Int is bw: :menuButtonWidthPx(menu: m);
-				if({ x >= bx && x < bx + bw }, {
-					hoverMenuIdx: i;
+				if({ m:visible }, {
+					local Int is bx: :menuButtonX(idx: i);
+					local Int is bw: :menuButtonWidthPx(menu: m);
+					if({ x >= bx && x < bx + bw }, {
+						hoverMenuIdx: i;
+					});
 				});
 			});
 		});
@@ -181,19 +185,21 @@ Class of SewNode is Toolbar{
 		if({ y >= b:y && y < b:y + b:height }, {
 			times(count: config:menus:length(), worker: local Function(Int is i){
 				local MenuConfig is m: config:menus:get(index: i);
-				local Int is bx: :menuButtonX(idx: i);
-				local Int is bw: :menuButtonWidthPx(menu: m);
-				if({ x >= bx && x < bx + bw }, {
-					if({ openMenuIdx == i }, {
-						openMenuIdx: -1;
-						openSubMenuIdx: -1;
-					}, {
-						openMenuIdx: i;
-						openSubMenuIdx: -1;
-						local Function is ocb: onMenuOpen;
-						ocb(m);
+				if({ m:visible }, {
+					local Int is bx: :menuButtonX(idx: i);
+					local Int is bw: :menuButtonWidthPx(menu: m);
+					if({ x >= bx && x < bx + bw }, {
+						if({ openMenuIdx == i }, {
+							openMenuIdx: -1;
+							openSubMenuIdx: -1;
+						}, {
+							openMenuIdx: i;
+							openSubMenuIdx: -1;
+							local Function is ocb: onMenuOpen;
+							ocb(m);
+						});
+						handled: true;
 					});
-					handled: true;
 				});
 			});
 			if({ handled }, { return true; });
@@ -266,16 +272,18 @@ Class of SewNode is Toolbar{
 
 		times(count: config:menus:length(), worker: local Function(Int is i){
 			local MenuConfig is m: config:menus:get(index: i);
-			local Int is bx: :menuButtonX(idx: i);
-			local Int is bw: :menuButtonWidthPx(menu: m);
-			if({ openMenuIdx == i }, {
-				ctx:fillRect(x: bx, y: b:y, w: bw, h: b:height - borderH, color: theme:activeBg);
-			}, {
-				if({ hoverMenuIdx == i }, {
-					ctx:fillRect(x: bx, y: b:y, w: bw, h: b:height - borderH, color: theme:hoverBg);
+			if({ m:visible }, {
+				local Int is bx: :menuButtonX(idx: i);
+				local Int is bw: :menuButtonWidthPx(menu: m);
+				if({ openMenuIdx == i }, {
+					ctx:fillRect(x: bx, y: b:y, w: bw, h: b:height - borderH, color: theme:activeBg);
+				}, {
+					if({ hoverMenuIdx == i }, {
+						ctx:fillRect(x: bx, y: b:y, w: bw, h: b:height - borderH, color: theme:hoverBg);
+					});
 				});
+				ctx:drawText(x: bx + padX, y: textY, text: m:label, color: theme:textPrimary, pixelHeight: fpx);
 			});
-			ctx:drawText(x: bx + padX, y: textY, text: m:label, color: theme:textPrimary, pixelHeight: fpx);
 		});
 	}
 

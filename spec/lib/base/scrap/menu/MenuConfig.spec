@@ -11,11 +11,13 @@ Class is MenuConfig{
 
 	String is id: '';
 	String is label: '';
+	Boolean is visible: true;
 	Array of MenuItemConfig is items: Array();
 
-	replace Function is init(String is id, String is label){
+	replace Function is init(String is id, String is label, Boolean is visible: true){
 		:id: id;
 		:label: label;
+		:visible: visible;
 		items: Array();
 	}
 

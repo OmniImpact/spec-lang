@@ -61,6 +61,7 @@ Class is EditorViewModel{
 	Float is aboutHeightPt: 170.0;
 	Boolean is allowMultipleFiles: false;
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
+	MenuConfig is editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL, visible: false);
 
 	MenuItemConfig is saveItem: MenuItemConfig(id: SpecEditStrings:ITEM_SAVE_ID, label: SpecEditStrings:ITEM_SAVE_LABEL, enabled: false);
 	MenuItemConfig is saveAsItem: MenuItemConfig(id: SpecEditStrings:ITEM_SAVE_AS_ID, label: SpecEditStrings:ITEM_SAVE_AS_LABEL, enabled: false);
@@ -225,6 +226,7 @@ Class is EditorViewModel{
 		local Function is pasteQ: canPasteHandler;
 		local Boolean is hasSel: if({ hasDoc }, { copyQ() }, { false });
 		local Boolean is hasClip: if({ hasDoc }, { pasteQ() }, { false });
+		editMenu:visible: hasDoc;
 		saveItem:enabled: hasDoc && model:dirty;
 		saveAsItem:enabled: hasDoc;
 		cutItem:enabled: hasSel;
@@ -285,7 +287,7 @@ Class is EditorViewModel{
 		));
 		cfg:addMenu(menu: fileMenu);
 
-		local MenuConfig is editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL);
+		:editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL, visible: :hasOpenDocument());
 		copyItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_COPY_ID,
 			label: SpecEditStrings:ITEM_COPY_LABEL,

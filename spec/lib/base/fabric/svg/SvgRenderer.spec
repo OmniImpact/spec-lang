@@ -39,21 +39,22 @@ Class is SvgRenderer{
 		if({ b0 == 45 }, { neg: true; i: 1; }, { if({ b0 == 43 }, { i: 1; }); });
 		local Float is val: 0.0;
 		local Boolean is anyDigit: false;
-		while({ i < len }, {
+		local Boolean is stopInt: false;
+		while({ i < len && !stopInt }, {
 			local Int is b: t:byteAt(index: i) & 255;
 			if({ b >= 48 && b <= 57 }, {
 				val: val * 10.0 + ((b - 48) as Float);
 				anyDigit: true;
 				i: i + 1;
 			}, {
-				i: len + i;
+				stopInt: true;
 			});
 		});
-		if({ i > len }, { i: i - len; });
 		if({ i < len && (t:byteAt(index: i) & 255) == 46 }, {
 			i: i + 1;
 			local Float is div: 10.0;
-			while({ i < len }, {
+			local Boolean is stopFrac: false;
+			while({ i < len && !stopFrac }, {
 				local Int is b: t:byteAt(index: i) & 255;
 				if({ b >= 48 && b <= 57 }, {
 					val: val + (((b - 48) as Float) / div);
@@ -61,7 +62,7 @@ Class is SvgRenderer{
 					anyDigit: true;
 					i: i + 1;
 				}, {
-					i: len;
+					stopFrac: true;
 				});
 			});
 		});
@@ -82,7 +83,8 @@ Class is SvgRenderer{
 				local Int is start: i;
 				if({ b == 45 || b == 43 }, { i: i + 1; });
 				local Boolean is seenDot: (b == 46);
-				while({ i < len }, {
+				local Boolean is stopNum: false;
+				while({ i < len && !stopNum }, {
 					local Int is nb: text:byteAt(index: i) & 255;
 					if({ nb >= 48 && nb <= 57 }, {
 						i: i + 1;
@@ -91,11 +93,10 @@ Class is SvgRenderer{
 							seenDot: true;
 							i: i + 1;
 						}, {
-							i: i + len;
+							stopNum: true;
 						});
 					});
 				});
-				if({ i >= len }, { i: i - len; });
 				local String is tok: text:substring(start: start, end: i);
 				if({ tok != '' && tok != '-' && tok != '+' && tok != '.' }, {
 					out:add(item: :parseFloatStr(s: tok, def: 0.0));
@@ -197,15 +198,15 @@ Class is SvgRenderer{
 					i: i + 1;
 				}, {
 					local Int is nStart: i;
-					while({ i < len }, {
+					local Boolean is stopArgs: false;
+					while({ i < len && !stopArgs }, {
 						local Int is nb: d:byteAt(index: i) & 255;
 						if({ (nb >= 65 && nb <= 90) || (nb >= 97 && nb <= 122) }, {
-							i: i + len;
+							stopArgs: true;
 						}, {
 							i: i + 1;
 						});
 					});
-					if({ i >= len }, { i: i - len; });
 					local Array of Float is nums: :parseNumberList(text: d:substring(start: nStart, end: i));
 					local Int is ni: 0;
 					local Int is nCount: nums:length();
