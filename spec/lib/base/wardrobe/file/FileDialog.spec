@@ -340,8 +340,7 @@ Class is FileDialog{
 
 		## Top path bar: Up button + editable directory path box
 		ctx:fillRect(x: 0, y: 0, w: w, h: headerH, color: theme:toolbarBg);
-		local Int is linePx: scale:px(pt: theme:borderThicknessPt);
-		if({ linePx < 1 }, { linePx: 1; });
+		local Int is linePx: theme:borderPx(scaleFactor: scale:factor);
 		ctx:fillRect(x: 0, y: headerH - linePx, w: w, h: linePx, color: theme:toolbarBorder);
 
 		local Int is upW: scale:px(pt: 44.0);

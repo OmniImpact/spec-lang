@@ -31,8 +31,7 @@ Class of SewNode is Frame{
 	}
 
 	local Function of Int is borderPx(){
-		local Int is bw: activeScale:px(pt: activeTheme:borderThicknessPt);
-		return if({ bw < 1 }, { 1 }, { bw });
+		return activeTheme:borderPx(scaleFactor: activeScale:factor);
 	}
 
 	local Function of Int is fontPx(){

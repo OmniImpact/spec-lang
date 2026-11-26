@@ -105,7 +105,7 @@ Class of SewNode is Bar{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: theme:toolbarBg);
-		local Int is borderH: if({ scale:px(pt: 1.0) < 1 }, { 1 }, { scale:px(pt: 1.0) });
+		local Int is borderH: theme:borderPx(scaleFactor: scale:factor);
 		if({ borderSide == 'top' }, {
 			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: borderH, color: theme:toolbarBorder);
 		}, {

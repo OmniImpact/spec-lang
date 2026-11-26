@@ -182,8 +182,7 @@ Class of SewNode is TreeView{
 					});
 				});
 
-				local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-				if({ linePx < 1 }, { linePx: 1; });
+				local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
 				local Int is dotStep: activeScale:px(pt: 3.0);
 				if({ dotStep < 2 }, { dotStep: 2; });
 				local Int is cy: ry + rowH / 2;

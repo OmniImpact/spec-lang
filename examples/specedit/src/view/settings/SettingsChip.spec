@@ -77,10 +77,11 @@ Class of SewNode is SettingsChip{
 			if({ hovered }, { activeTheme:hoverBg }, { activeTheme:panelBg })
 		});
 		local Int is border: if({ selected }, { activeTheme:textAccent }, { activeTheme:panelBorder });
-		local Int is bw: activeScale:px(pt: activeTheme:borderThicknessPt);
-		if({ bw < 1 }, { bw: 1; });
+		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
-		ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: bw);
+		if({ bw > 0 }, {
+			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: bw);
+		});
 		local Int is fpx: :fontPx();
 		local Int is tw: DrawContext:measureWidth(text: label, pixelHeight: fpx);
 		local Int is th: DrawContext:measureHeight(pixelHeight: fpx);

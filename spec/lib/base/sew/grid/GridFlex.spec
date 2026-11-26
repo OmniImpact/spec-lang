@@ -242,8 +242,7 @@ Class of SewNode is GridFlex{
 		local Int is sp: :spacingPx();
 		if({ sp > 0 }, {
 			local Int is di: 0;
-			local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-			if({ linePx < 1 }, { linePx: 1; });
+			local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
 			while({ di < dividerPosPx:length() }, {
 				local Int is dpos: dividerPosPx:get(index: di);
 				local Boolean is active: (dragDivider == di) || (hoverDivider == di && movable);

@@ -219,8 +219,7 @@ Class of SewNode is FileTree{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is hh: :headerHeightPx();
 		local Int is bg: if({ headerHover }, { activeTheme:hoverBg }, { activeTheme:toolbarBg });
-		local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-		if({ linePx < 1 }, { linePx: 1; });
+		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: hh, color: bg);
 		ctx:fillRect(x: b:x, y: b:y + hh - linePx, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
 

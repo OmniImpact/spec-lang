@@ -820,8 +820,7 @@ Class of SewNode is TextView{
 
 			## Paint line-number gutter AFTER text so horizontally scrolled text passes underneath it
 			if({ lineNumsCached && gw > 0 }, {
-				local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-				if({ linePx < 1 }, { linePx: 1; });
+				local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
 				ctx:fillRect(x: minX, y: minY, w: gw, h: maxY - minY, color: activeTheme:toolbarBg);
 				ctx:fillRect(x: minX + gw - linePx, y: minY, w: linePx, h: maxY - minY, color: activeTheme:toolbarBorder);
 				local Int is gi: firstIdx;
@@ -838,8 +837,7 @@ Class of SewNode is TextView{
 			});
 		}, {
 			if({ lineNumsCached && gw > 0 }, {
-				local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-				if({ linePx < 1 }, { linePx: 1; });
+				local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
 				ctx:fillRect(x: minX, y: minY, w: gw, h: maxY - minY, color: activeTheme:toolbarBg);
 				ctx:fillRect(x: minX + gw - linePx, y: minY, w: linePx, h: maxY - minY, color: activeTheme:toolbarBorder);
 			});

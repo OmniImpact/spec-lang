@@ -166,10 +166,11 @@ Class of SewNode is MenuContext{
 		local Int is mx: :clampedX(viewW: viewW, mw: mw);
 		local Int is my: :clampedY(viewH: viewH, mh: mh);
 
-		local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-		if({ linePx < 1 }, { linePx: 1; });
+		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: mx, y: my, w: mw, h: mh, color: activeTheme:menuBg);
-		ctx:strokeRect(x: mx, y: my, w: mw, h: mh, color: activeTheme:menuBorder, thickness: linePx);
+		if({ linePx > 0 }, {
+			ctx:strokeRect(x: mx, y: my, w: mw, h: mh, color: activeTheme:menuBorder, thickness: linePx);
+		});
 
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);

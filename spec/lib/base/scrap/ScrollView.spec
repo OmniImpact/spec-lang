@@ -292,8 +292,7 @@ Class of SewNode is ScrollView{
 
 		## Vertical scrollbar track & thumb on specified side ('right' default or 'left')
 		if({ bw > 2 }, {
-			local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-			if({ linePx < 1 }, { linePx: 1; });
+			local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
 			local Int is sx: if({ scrollbarSide == 'left' }, { b:x }, { b:x + vw });
 			ctx:fillRect(x: sx, y: b:y, w: bw, h: vh, color: activeTheme:menuBg);
 			local Int is borderX: if({ scrollbarSide == 'left' }, { sx + bw - linePx }, { sx });

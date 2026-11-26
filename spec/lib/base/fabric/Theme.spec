@@ -51,6 +51,9 @@ Class is Theme{
 	Float is sectionPaddingPt: 10.0;
 	Float is dialogPaddingPt: 16.0;
 	Float is borderThicknessPt: 1.0;
+	Float is lineThicknessPt: 1.0;
+	String is borderStyle: 'solid';
+	Float is uiScaleFactor: 1.0;
 	Float is baseTextPt: 15.0;
 
 	replace Function is init(String is preset: 'dark'){
@@ -95,6 +98,41 @@ Class is Theme{
 		local Float is clamped: if({ pt < 10.0 }, { 10.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
 		:baseTextPt: clamped;
 		:deriveTokens();
+	}
+
+	Function is setUiScaleFactor(Float is factor){
+		:uiScaleFactor: if({ factor > 0.0 }, { factor }, { 1.0 });
+	}
+
+	Function is setBorderThicknessPt(Float is pt){
+		:borderThicknessPt: if({ pt < 0.0 }, { 0.0 }, { pt });
+	}
+
+	Function is setBorderStyle(String is style){
+		:borderStyle: style;
+		if({ style == 'none' }, {
+			:borderThicknessPt: 0.0;
+		}, {
+		if({ style == 'bold' }, {
+			:borderThicknessPt: 2.0;
+		}, {
+			:borderThicknessPt: 1.0;
+		}); });
+		:deriveTokens();
+	}
+
+	Function of Int is borderPx(Float is scaleFactor: 1.0){
+		if({ borderStyle == 'none' || borderThicknessPt <= 0.0 }, { return 0; });
+		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
+		local Int is px: ((borderThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
+		return if({ px < 1 }, { 1 }, { px });
+	}
+
+	Function of Int is linePx(Float is scaleFactor: 1.0){
+		if({ lineThicknessPt <= 0.0 }, { return 0; });
+		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
+		local Int is px: ((lineThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
+		return if({ px < 1 }, { 1 }, { px });
 	}
 
 	Function of Float is scaledTextPt(Float is defaultPt){
@@ -160,6 +198,11 @@ Class is Theme{
 		activeBg: highlight:toArgb();
 		panelBg: if({ light }, { primary:mix(other: secondary, t: 0.52):toArgb() }, { primary:darken(amount: 0.08):withAlphaByte(a: 210):toArgb() });
 		panelBorder: if({ light }, { toolbarBorder }, { highlight:lighten(amount: 0.08):withAlphaByte(a: 235):toArgb() });
+		if({ borderStyle == 'subtle' }, {
+			toolbarBorder: Color:fromArgb(argb: toolbarBorder):withAlphaByte(a: 110):toArgb();
+			menuBorder: Color:fromArgb(argb: menuBorder):withAlphaByte(a: 120):toArgb();
+			panelBorder: Color:fromArgb(argb: panelBorder):withAlphaByte(a: 110):toArgb();
+		});
 
 		textPrimary: detail:toArgb();
 		textMuted: neutral:toArgb();
@@ -170,7 +213,6 @@ Class is Theme{
 		paddingPt: 8.0 * (baseTextPt / 15.0);
 		sectionPaddingPt: paddingPt * 1.25;
 		dialogPaddingPt: paddingPt * 2.0;
-		borderThicknessPt: 1.0;
 
 		synKeyword: if({ light }, { detail:darken(amount: 0.35):toArgb() }, { detail:lighten(amount: 0.50):toArgb() });
 		synType: if({ light }, { detail:mix(other: neutral, t: 0.20):toArgb() }, { detail:mix(other: neutral, t: 0.32):toArgb() });

@@ -191,8 +191,7 @@ Class of SewNode is TabBar{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
-		local Int is linePx: activeScale:px(pt: activeTheme:borderThicknessPt);
-		if({ linePx < 1 }, { linePx: 1; });
+		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:tabBarBg);
 		if({ dockSide == 'bottom' }, {
 			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
