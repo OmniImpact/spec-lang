@@ -50,6 +50,8 @@ Class is Window{
 	Function of Int is pal_window_poll_click(Int is handle);
 	Function of Int is pal_window_click_x(Int is handle);
 	Function of Int is pal_window_click_y(Int is handle);
+	Function of Int is pal_window_poll_scroll_y(Int is handle);
+	Function of Int is pal_window_set_title(Int is handle, Int is title_cstr);
 
 	## Presents an ARGB8888 pixel buffer at [pixels_addr] to the window.
 	## Bound to `spec_pal_window_present`.

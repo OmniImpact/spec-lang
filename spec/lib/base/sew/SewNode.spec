@@ -38,6 +38,11 @@ Class is SewNode{
 		local Int is _noop: 0;
 	}
 
+	## Handles vertical scroll wheel delta; returns `true` if redraw is needed.
+	Function of Boolean is onScroll(Int is deltaY){
+		return false;
+	}
+
 	## Registers a dirty/redraw listener [cb] (Theo-style invalidation).
 	Function is bindDirty(Function is cb){
 		:dirtyListeners: Array([cb]);

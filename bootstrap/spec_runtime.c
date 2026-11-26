@@ -2883,6 +2883,7 @@ typedef struct SpecWaylandWindow {
     bool has_click;
     int click_x;
     int click_y;
+    int scroll_y;
     struct wl_shm_pool* shm_pool;
     struct wl_buffer* buffer;
     void* shm_data;
@@ -3017,7 +3018,13 @@ static void _spec_ptr_button(void* data, struct wl_pointer* ptr, uint32_t serial
         w->click_y = w->pointer_y;
     }
 }
-static void _spec_ptr_axis(void* d, struct wl_pointer* p, uint32_t t, uint32_t a, int32_t v) { (void)d;(void)p;(void)t;(void)a;(void)v; }
+static void _spec_ptr_axis(void* d, struct wl_pointer* p, uint32_t t, uint32_t a, int32_t v) {
+    (void)p; (void)t;
+    SpecWaylandWindow* w = (SpecWaylandWindow*)d;
+    if (w && w->pointer_on_surface && a == 0 /* WL_POINTER_AXIS_VERTICAL_SCROLL */) {
+        w->scroll_y += (v >> 8);
+    }
+}
 static void _spec_ptr_frame(void* d, struct wl_pointer* p) { (void)d;(void)p; }
 static void _spec_ptr_axis_src(void* d, struct wl_pointer* p, uint32_t s) { (void)d;(void)p;(void)s; }
 static void _spec_ptr_axis_stop(void* d, struct wl_pointer* p, uint32_t t, uint32_t a) { (void)d;(void)p;(void)t;(void)a; }
@@ -3647,6 +3654,31 @@ long long spec_pal_window_click_y(long long handle) {
     return w ? (long long)w->click_y : 0;
 }
 
+long long spec_pal_window_poll_scroll_y(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w) return 0;
+    long long dy = (long long)w->scroll_y;
+    w->scroll_y = 0;
+    return dy;
+}
+
+long long spec_pal_window_set_title(long long handle, long long title_cstr) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    if (!w || !title_cstr) return 0;
+    const char* title = (const char*)(intptr_t)title_cstr;
+    if (w->use_xdg && w->xdg_toplevel) {
+        _wl_proxy_marshal_flags((struct wl_proxy*)w->xdg_toplevel, 2 /* SET_TITLE */, NULL, 1, 0, title);
+        _wl_display_flush(w->display);
+        return 1;
+    }
+    if (w->frame && _libdecor_frame_set_title) {
+        _libdecor_frame_set_title(w->frame, title);
+        _wl_display_flush(w->display);
+        return 1;
+    }
+    return 0;
+}
+
 long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
     SpecWaylandWindow* w = _spec_get_window(handle);
     if (!w || !pixels_addr || width <= 0 || height <= 0) return 0;
@@ -3716,6 +3748,8 @@ long long spec_pal_window_pointer_y(long long handle) { (void)handle; return 0; 
 long long spec_pal_window_poll_click(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_click_x(long long handle) { (void)handle; return 0; }
 long long spec_pal_window_click_y(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_poll_scroll_y(long long handle) { (void)handle; return 0; }
+long long spec_pal_window_set_title(long long handle, long long title_cstr) { (void)handle; (void)title_cstr; return 0; }
 
 long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
     (void)handle; (void)pixels_addr; (void)width; (void)height;

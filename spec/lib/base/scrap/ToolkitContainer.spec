@@ -29,7 +29,8 @@ Class of SewNode is ToolkitContainer{
 		['base', 'scrap', ToolbarContainer],
 		['base', 'scrap', ScrapPanel],
 		['base', 'scrap', VulkanSurface],
-		['base', 'scrap', Dialog]
+		['base', 'scrap', Dialog],
+		['base', 'wardrobe', FileDialog]
 	];
 
 	TextEmitter is title: TextEmitter(initial: 'Suit');
@@ -41,14 +42,16 @@ Class of SewNode is ToolkitContainer{
 	Float is heightPt: 600.0;
 	Boolean is useVulkan: false;
 	ToolbarContainer is toolbarSlot: ToolbarContainer(hasToolbar: false);
-	ScrapPanel is bodyPanel: ScrapPanel();
+	SewNode is bodyPanel: ScrapPanel();
 	VulkanSurface is vulkanBody: VulkanSurface();
 	Bar is bottomBar: Bar();
 	Dialog is dialog: Dialog();
+	FileDialog is fileDialog: FileDialog();
 	Boolean is hasToolbarSlot: false;
 	Boolean is hasBody: false;
 	Boolean is hasBottomBar: false;
 	Boolean is hasDialog: false;
+	Boolean is hasFileDialog: false;
 	Boolean is isDirty: false;
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
 	Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){};
@@ -63,12 +66,14 @@ Class of SewNode is ToolkitContainer{
 		Float is heightPt: 600.0,
 		Boolean is useVulkan: false,
 		ToolbarContainer is toolbar: ToolbarContainer(hasToolbar: false),
-		ScrapPanel is body: ScrapPanel(),
+		SewNode is body: ScrapPanel(),
 		VulkanSurface is vulkanSurface: VulkanSurface(),
 		Bar is bottomBar: Bar(),
 		Boolean is hasBottomBar: false,
 		Dialog is dialog: Dialog(),
 		Boolean is hasDialog: false,
+		FileDialog is fileDialog: FileDialog(),
+		Boolean is hasFileDialog: false,
 		Function is onInitVulkan: local Function(VulkanSurface is s){},
 		Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){},
 		Function is onDispose: local Function(){}
@@ -86,10 +91,12 @@ Class of SewNode is ToolkitContainer{
 		:vulkanBody: vulkanSurface;
 		:bottomBar: bottomBar;
 		:dialog: dialog;
+		:fileDialog: fileDialog;
 		:hasToolbarSlot: toolbar:hasToolbar;
 		:hasBody: true;
 		:hasBottomBar: hasBottomBar;
 		:hasDialog: hasDialog;
+		:hasFileDialog: hasFileDialog;
 		:onInitVulkan: onInitVulkan;
 		:onFrame: onFrame;
 		:onDispose: onDispose;
@@ -103,6 +110,7 @@ Class of SewNode is ToolkitContainer{
 		if({ hasBody && !useVulkan }, { bodyPanel:applyTheme(theme: theme); });
 		if({ hasBottomBar }, { bottomBar:applyTheme(theme: theme); });
 		if({ hasDialog }, { dialog:applyTheme(theme: theme); });
+		if({ hasFileDialog }, { fileDialog:applyTheme(theme: theme); });
 	}
 
 	## Adds a `ToolbarContainer` at the top of the toolkit workspace.
@@ -191,12 +199,15 @@ Class of SewNode is ToolkitContainer{
 
 		scale: Scale(factor: win:scaleFactor());
 		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
+		if({ hasBody && !useVulkan }, { bodyPanel:setScale(scale: scale); });
 		if({ hasBottomBar }, { bottomBar:setScale(scale: scale); });
 		if({ hasDialog }, { dialog:setScale(scale: scale); });
+		if({ hasFileDialog }, { fileDialog:setScale(scale: scale); });
 
 		:isDirty: false;
 		:bindDirty(cb: local Function(){ :isDirty: true; });
 		if({ hasToolbarSlot }, { toolbarSlot:bindDirty(cb: local Function(){ :isDirty: true; }); });
+		if({ hasBody && !useVulkan }, { bodyPanel:bindDirty(cb: local Function(){ :isDirty: true; }); });
 		if({ hasBottomBar }, { bottomBar:bindDirty(cb: local Function(){ :isDirty: true; }); });
 
 		signalBag:track(
@@ -210,7 +221,7 @@ Class of SewNode is ToolkitContainer{
 			slot: 'title',
 			emitter: title,
 			collector: TextCollector(onEmit: local Function(String is nextTitle){
-				curTitle: nextTitle;
+				win:setTitle(title: nextTitle);
 			})
 		);
 
@@ -258,6 +269,9 @@ Class of SewNode is ToolkitContainer{
 				if({ hasDialog }, {
 					dialog:poll();
 				});
+				if({ hasFileDialog }, {
+					fileDialog:poll();
+				});
 
 				local Int is w: win:width();
 				local Int is h: win:height();
@@ -267,6 +281,13 @@ Class of SewNode is ToolkitContainer{
 					canvas:resize(width: curW, height: curH);
 					:layout(widthPx: curW, heightPx: curH);
 					:isDirty: true;
+				});
+
+				local Int is sy: win:pollScrollY();
+				if({ sy != 0 && hasBody && !useVulkan }, {
+					if({ bodyPanel:onScroll(deltaY: sy) }, {
+						:isDirty: true;
+					});
 				});
 
 				local Int is px: win:pointerX();
@@ -287,6 +308,7 @@ Class of SewNode is ToolkitContainer{
 
 				if({ isDirty && running:current() }, {
 					:isDirty: false;
+					:layout(widthPx: curW, heightPx: curH);
 					:paint(ctx: ctx);
 					if({ useVulkan }, {
 						vulkanBody:setOverlay(canvas: canvas);
@@ -312,6 +334,7 @@ Class of SewNode is ToolkitContainer{
 		dispCb();
 		if({ hasBottomBar }, { bottomBar:dispose(); });
 		if({ hasDialog }, { dialog:dispose(); });
+		if({ hasFileDialog }, { fileDialog:dispose(); });
 		signalBag:clear();
 		canvas:dispose();
 		if({ !useVulkan || !closedByWm }, {

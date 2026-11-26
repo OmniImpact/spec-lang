@@ -82,6 +82,8 @@ Class is SuitWindow{
 	Function of Boolean is pollClick(){ return native:pollClick(); }
 	Function of Int is clickX(){ return native:clickX(); }
 	Function of Int is clickY(){ return native:clickY(); }
+	Function of Int is pollScrollY(){ return native:pollScrollY(); }
+	Function is setTitle(String is title){ native:setTitle(title: title); }
 
 	## Presents [canvas] pixels to the window surface.
 	Function of Boolean is present(SuitCanvas is canvas){

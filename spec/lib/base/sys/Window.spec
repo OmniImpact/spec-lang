@@ -118,6 +118,16 @@ Class is Window{
 		return base:sysinternal:Window:pal_window_click_y(handle: handle);
 	}
 
+	Function of Int is pollScrollY(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_poll_scroll_y(handle: handle);
+	}
+
+	Function is setTitle(String is title){
+		if({ handle <= 0 }, { return; });
+		base:sysinternal:Window:pal_window_set_title(handle: handle, title_cstr: :cstrAddr(s: title));
+	}
+
 	## Presents an ARGB8888 pixel buffer at [pixelsAddr] to the window.
 	Function of Boolean is present(Int is pixelsAddr, Int is width, Int is height){
 		if({ handle <= 0 || pixelsAddr == 0 }, { return false; });

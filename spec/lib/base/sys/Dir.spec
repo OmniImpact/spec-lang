@@ -95,4 +95,14 @@ Class is Dir{
 		if({ pc == 0 }, { return -1; });
 		return base:sysinternal:Dir:pal_file_size_cstr(path_cstr: pc);
 	}
+
+	## Returns `true` when [path] exists and is a directory.
+	Function of Boolean is isDir(String is path){
+		local Int is pc: :cstrOf(s: path);
+		if({ pc == 0 }, { return false; });
+		local Int is handle: base:sysinternal:Dir:pal_dir_open_cstr(path_cstr: pc);
+		if({ handle == 0 }, { return false; });
+		base:sysinternal:Dir:pal_dir_close(handle: handle);
+		return true;
+	}
 }
