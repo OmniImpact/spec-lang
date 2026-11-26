@@ -28,9 +28,10 @@ Class of SewNode is Stack{
 	replace Function of Size is measure(Constraints is c){
 		local Int is maxW: 0;
 		local Int is maxH: 0;
+		local Constraints is childC: Constraints(minW: 0, maxW: c:maxW, minH: 0, maxH: c:maxH);
 		times(count: children:length(), worker: local Function(Int is i){
 			local SewNode is ch: children:get(index: i);
-			local Size is sz: ch:measure(c: c);
+			local Size is sz: ch:measure(c: childC);
 			if({ sz:width > maxW }, { maxW: sz:width; });
 			if({ sz:height > maxH }, { maxH: sz:height; });
 		});

@@ -85,14 +85,22 @@ Class is SuitShape3D{
 		local Int is frameCount: 0;
 		local Mat4 is mOps: Mat4();
 		local Boolean is running: true;
+		local Boolean is closedByWm: false;
 
-		while({ running && win:poll() }, {
-			local Int is key: win:nextKey();
-			while({ key != 0 }, {
-				if({ key == 27 || key == 113 }, {
-					running: false;
+		while({ running }, {
+			if({ !win:poll() }, {
+				closedByWm: true;
+				running: false;
+			});
+
+			if({ running }, {
+				local Int is key: win:nextKey();
+				while({ key != 0 }, {
+					if({ key == 27 || key == 113 }, {
+						running: false;
+					});
+					key: win:nextKey();
 				});
-				key: win:nextKey();
 			});
 
 			local Int is nowMs: clock:monotonicMs();
@@ -151,7 +159,9 @@ Class is SuitShape3D{
 
 		cube:dispose();
 		overlayCanvas:dispose();
-		surface:dispose();
-		win:close();
+		if({ !closedByWm }, {
+			surface:dispose();
+			win:close();
+		});
 	}
 }
