@@ -1,6 +1,7 @@
 #! Package base:wardrobe
-#! Reusable non-blocking file picker dialog supporting single or multi-file selection,
-#! bordered directory entries, double-click to open, scroll wheel, and `onSelect`/`onCancel` callbacks.
+#! Reusable non-blocking file picker dialog supporting Open/Save modes, top path bar,
+#! editable filename bar, left "Pinned" favorites sidebar with drag-and-drop folder pinning,
+#! directory navigation, scroll wheel/scrollbar, and resize redraw.
 
 Class is FileDialog{
 	replace [String] is namespace: ['base', 'wardrobe'];
@@ -9,6 +10,7 @@ Class is FileDialog{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', Dir],
+		['base', 'sys', Process],
 		['base', 'sys', Time],
 		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
@@ -30,8 +32,8 @@ Class is FileDialog{
 	String is initialDir: '.';
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
-	Float is widthPt: 580.0;
-	Float is heightPt: 420.0;
+	Float is widthPt: 640.0;
+	Float is heightPt: 440.0;
 	Function is onSelect: local Function(Array of String is paths){};
 	Function is onCancel: local Function(){};
 
@@ -41,20 +43,34 @@ Class is FileDialog{
 	Time is clock: Time();
 	Boolean is isShown: false;
 	Boolean is isDirty: false;
+	Int is lastW: 0;
+	Int is lastH: 0;
 	SignalBag is signalBag: SignalBag();
 
 	String is curDir: '.';
+	String is editPath: '.';
+	String is fileName: '';
+	Int is focusTarget: 0; ## 0=list, 1=path bar, 2=filename input
 	Array of String is entryNames: Array();
 	Array of Boolean is entryIsDir: Array();
 	Array of String is selectedPaths: Array();
+	Array of String is pinnedNames: Array();
+	Array of String is pinnedPaths: Array();
 	Int is selectedRow: -1;
 	Int is scrollRow: 0;
 	Int is hoverRow: -1;
-	Int is hoverBtn: 0; ## 0=none, 1=Cancel, 2=Open
+	Int is hoverPinIdx: -1;
+	Int is hoverBtn: 0; ## 0=none, 1=Cancel, 2=Open/Save, 3=Up
 	Int is lastClickRow: -1;
 	Int is lastClickMs: 0;
 	Boolean is dragScrollbar: false;
-	String is fileName: '';
+	Int is dragCandidateRow: -1;
+	Int is dragStartX: 0;
+	Int is dragStartY: 0;
+	Boolean is isDraggingFolder: false;
+	String is dragFolderName: '';
+	String is dragFolderPath: '';
+	Boolean is dragOverPinned: false;
 
 	replace Function is init(
 		String is title: 'Open File',
@@ -66,8 +82,8 @@ Class is FileDialog{
 		String is initialDir: '.',
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Scale is scale: Scale(factor: 1.0),
-		Float is widthPt: 580.0,
-		Float is heightPt: 420.0,
+		Float is widthPt: 640.0,
+		Float is heightPt: 440.0,
 		Function is onSelect: local Function(Array of String is paths){},
 		Function is onCancel: local Function(){}
 	){
@@ -79,6 +95,7 @@ Class is FileDialog{
 		:allowMultiple: allowMultiple;
 		:initialDir: initialDir;
 		:curDir: initialDir;
+		:editPath: initialDir;
 		:theme: theme;
 		:scale: scale;
 		:widthPt: widthPt;
@@ -88,14 +105,47 @@ Class is FileDialog{
 		:entryNames: Array();
 		:entryIsDir: Array();
 		:selectedPaths: Array();
+		:pinnedNames: Array();
+		:pinnedPaths: Array();
+		:initDefaultPins();
 		isShown: false;
 		isDirty: false;
+		lastW: 0;
+		lastH: 0;
+		focusTarget: 0;
 		selectedRow: -1;
 		scrollRow: 0;
 		hoverRow: -1;
+		hoverPinIdx: -1;
 		hoverBtn: 0;
 		lastClickRow: -1;
 		lastClickMs: 0;
+		dragScrollbar: false;
+		dragCandidateRow: -1;
+		isDraggingFolder: false;
+		dragOverPinned: false;
+	}
+
+	local Function is addPinned(String is name, String is path){
+		if({ name == '' || path == '' }, { return; });
+		local Int is i: 0;
+		while({ i < pinnedPaths:length() }, {
+			if({ pinnedPaths:get(index: i) == path }, { return; });
+			i: i + 1;
+		});
+		pinnedNames:add(item: name);
+		pinnedPaths:add(item: path);
+		isDirty: true;
+	}
+
+	local Function is initDefaultPins(){
+		if({ pinnedPaths:length() > 0 }, { return; });
+		:addPinned(name: 'Current', path: initialDir);
+		local String is home: Process():getEnv(key: 'HOME', default: '');
+		if({ home != '' && Dir():isDir(path: home) }, {
+			:addPinned(name: 'Home', path: home);
+		});
+		:addPinned(name: 'Root', path: '/');
 	}
 
 	Function is applyTheme(Theme is theme){
@@ -163,104 +213,108 @@ Class is FileDialog{
 		});
 	}
 
-	local Function of Int is strCmp(String is a, String is b){
-		local Int is la: a:length();
-		local Int is lb: b:length();
-		local Int is minL: if({ la < lb }, { la }, { lb });
-		local Int is i: 0;
-		while({ i < minL }, {
-			local Int is ca: a:byteAt(index: i);
-			local Int is cb: b:byteAt(index: i);
-			if({ ca != cb }, { return ca - cb; });
+	local Function is sortStrings(Array of String is arr){
+		local Int is n: arr:length();
+		local Int is i: 1;
+		while({ i < n }, {
+			local String is key: arr:get(index: i);
+			local Int is j: i - 1;
+			while({ j >= 0 && arr:get(index: j) > key }, {
+				arr:set(index: j + 1, item: arr:get(index: j));
+				j: j - 1;
+			});
+			arr:set(index: j + 1, item: key);
 			i: i + 1;
 		});
-		return la - lb;
 	}
 
 	local Function is loadDirectory(String is dirPath){
-		curDir: dirPath;
+		local Dir is d: Dir();
+		local Array of String is raw: d:dirList(path: dirPath);
+		local Array of String is dirs: Array();
+		local Array of String is files: Array();
+		local Int is i: 0;
+		while({ i < raw:length() }, {
+			local String is name: raw:get(index: i);
+			if({ name != '.' && name != '..' }, {
+				local String is full: :joinPath(dir: dirPath, name: name);
+				if({ d:isDir(path: full) }, {
+					dirs:add(item: name);
+				}, {
+					files:add(item: name);
+				});
+			});
+			i: i + 1;
+		});
+		:sortStrings(arr: dirs);
+		:sortStrings(arr: files);
+
 		entryNames: Array();
 		entryIsDir: Array();
-		selectedPaths: Array();
+		if({ dirPath != '/' }, {
+			entryNames:add(item: '..');
+			entryIsDir:add(item: true);
+		});
+		i: 0;
+		while({ i < dirs:length() }, {
+			entryNames:add(item: dirs:get(index: i));
+			entryIsDir:add(item: true);
+			i: i + 1;
+		});
+		i: 0;
+		while({ i < files:length() }, {
+			entryNames:add(item: files:get(index: i));
+			entryIsDir:add(item: false);
+			i: i + 1;
+		});
+
+		curDir: dirPath;
+		editPath: dirPath;
 		selectedRow: -1;
 		scrollRow: 0;
 		hoverRow: -1;
 		lastClickRow: -1;
-
-		entryNames:add(item: '..');
-		entryIsDir:add(item: true);
-
-		local Dir is d: Dir();
-		local Array of String is raw: d:dirList(path: curDir);
-		local Array of String is dirs: Array();
-		local Array of String is files: Array();
-
-		times(count: raw:length(), worker: local Function(Int is i){
-			local String is name: raw:get(index: i);
-			local String is full: :joinPath(dir: curDir, name: name);
-			if({ d:isDir(path: full) }, {
-				dirs:add(item: name);
-			}, {
-				files:add(item: name);
-			});
-		});
-
-		local Int is di: 1;
-		while({ di < dirs:length() }, {
-			local String is key: dirs:get(index: di);
-			local Int is j: di - 1;
-			while({ j >= 0 && :strCmp(a: dirs:get(index: j), b: key) > 0 }, {
-				dirs:set(index: j + 1, item: dirs:get(index: j));
-				j: j - 1;
-			});
-			dirs:set(index: j + 1, item: key);
-			di: di + 1;
-		});
-		local Int is fi: 1;
-		while({ fi < files:length() }, {
-			local String is key: files:get(index: fi);
-			local Int is j: fi - 1;
-			while({ j >= 0 && :strCmp(a: files:get(index: j), b: key) > 0 }, {
-				files:set(index: j + 1, item: files:get(index: j));
-				j: j - 1;
-			});
-			files:set(index: j + 1, item: key);
-			fi: fi + 1;
-		});
-
-		times(count: dirs:length(), worker: local Function(Int is i){
-			entryNames:add(item: dirs:get(index: i));
-			entryIsDir:add(item: true);
-		});
-		times(count: files:length(), worker: local Function(Int is i){
-			entryNames:add(item: files:get(index: i));
-			entryIsDir:add(item: false);
+		dragCandidateRow: -1;
+		isDraggingFolder: false;
+		dragOverPinned: false;
+		if({ !allowMultiple }, {
+			selectedPaths: Array();
 		});
 		isDirty: true;
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: scale:px(pt: 17.0);
+		local Int is px: scale:px(pt: 16.0);
 		return if({ px < 12 }, { 12 }, { px });
 	}
 
+	local Function of Int is headerHeightPx(){
+		return scale:px(pt: 38.0);
+	}
+
 	local Function of Int is footerHeightPx(){
-		return if({ saveMode:current() }, { scale:px(pt: 78.0) }, { scale:px(pt: 44.0) });
+		return scale:px(pt: 78.0);
+	}
+
+	local Function of Int is sidebarWidthPx(Int is totalW){
+		local Int is sw: scale:px(pt: 140.0);
+		if({ totalW < sw * 2 }, { return 0; });
+		return sw;
 	}
 
 	local Function of Boolean is canConfirm(){
 		if({ saveMode:current() }, { return fileName != ''; });
-		return selectedPaths:length() > 0;
+		return fileName != '' || selectedPaths:length() > 0;
 	}
 
-	local Function is popFileNameChar(){
-		local Int is len: fileName:length();
-		if({ len <= 0 }, { return; });
+	local Function of String is popLastChar(String is s){
+		local Int is len: s:length();
+		if({ len <= 0 }, { return s; });
 		local Int is i: len - 1;
-		while({ i > 0 && ((fileName:byteAt(index: i) & 192) == 128) }, {
+		while({ i > 0 && ((s:byteAt(index: i) & 192) == 128) }, {
 			i: i - 1;
 		});
-		fileName: fileName:substring(start: 0, end: i);
+		return s:substring(start: 0, end: i);
 	}
 
 	local Function is paintDialog(){
@@ -271,31 +325,78 @@ Class is FileDialog{
 		paintCtx:rebind(canvas: canvas);
 		local DrawContext is ctx: paintCtx;
 
-		local Int is headerH: scale:px(pt: 32.0);
+		local Int is headerH: :headerHeightPx();
 		local Int is footerH: :footerHeightPx();
 		local Int is rowH: scale:px(pt: 28.0);
-		local Int is padX: scale:px(pt: 12.0);
+		local Int is padX: scale:px(pt: 10.0);
 		local Int is sbW: scale:px(pt: 12.0);
+		local Int is sideW: :sidebarWidthPx(totalW: w);
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 
 		ctx:fillRect(x: 0, y: 0, w: w, h: h, color: theme:windowBg);
 
-		## Header bar showing current directory
+		## Top path bar: Up button + editable directory path box
 		ctx:fillRect(x: 0, y: 0, w: w, h: headerH, color: theme:toolbarBg);
 		ctx:fillRect(x: 0, y: headerH - 1, w: w, h: 1, color: theme:toolbarBorder);
-		ctx:drawText(x: padX, y: (headerH - th) / 2, text: 'Dir: ' . curDir, color: theme:textPrimary, pixelHeight: fpx);
 
-		## File list area + right scrollbar
+		local Int is upW: scale:px(pt: 44.0);
+		local Int is topBoxH: scale:px(pt: 26.0);
+		local Int is topBoxY: (headerH - topBoxH) / 2;
+		local Int is upBg: if({ hoverBtn == 3 }, { theme:hoverBg }, { theme:menuBg });
+		ctx:fillRect(x: padX, y: topBoxY, w: upW, h: topBoxH, color: upBg);
+		ctx:strokeRect(x: padX, y: topBoxY, w: upW, h: topBoxH, color: theme:menuBorder);
+		local Int is uw: ctx:measureTextWidth(text: 'Up', pixelHeight: fpx);
+		ctx:drawText(x: padX + (upW - uw) / 2, y: topBoxY + (topBoxH - th) / 2, text: 'Up', color: theme:textPrimary, pixelHeight: fpx);
+
+		local Int is pathX: padX + upW + scale:px(pt: 8.0);
+		local Int is pathW: if({ w - padX > pathX }, { w - padX - pathX }, { 40 });
+		local Int is pathBorder: if({ focusTarget == 1 }, { theme:activeBg }, { theme:menuBorder });
+		ctx:fillRect(x: pathX, y: topBoxY, w: pathW, h: topBoxH, color: theme:windowBg);
+		ctx:strokeRect(x: pathX, y: topBoxY, w: pathW, h: topBoxH, color: pathBorder);
+		local String is pathShown: if({ focusTarget == 1 }, { editPath . '|' }, { curDir });
+		ctx:setClip(x: pathX + 2, y: topBoxY, w: pathW - 4, h: topBoxH);
+		ctx:drawText(x: pathX + scale:px(pt: 6.0), y: topBoxY + (topBoxH - th) / 2, text: pathShown, color: theme:textPrimary, pixelHeight: fpx);
+		ctx:clearClip();
+
+		## Middle split: Left "Pinned" panel + File list + Right scrollbar
 		local Int is listY: headerH;
 		local Int is listH: if({ h > headerH + footerH }, { h - headerH - footerH }, { 0 });
-		local Int is listW: if({ w > sbW }, { w - sbW }, { w });
+		local Int is listX: sideW;
+		local Int is listW: if({ w - sideW > sbW }, { w - sideW - sbW }, { w - sideW });
+
+		if({ sideW > 0 && listH > 0 }, {
+			local Int is pinBg: if({ dragOverPinned }, { theme:activeBg }, { theme:menuBg });
+			ctx:fillRect(x: 0, y: listY, w: sideW, h: listH, color: pinBg);
+			ctx:fillRect(x: sideW - 1, y: listY, w: 1, h: listH, color: theme:toolbarBorder);
+			local Int is pinHdrH: scale:px(pt: 24.0);
+			ctx:setClip(x: 0, y: listY, w: sideW - 1, h: listH);
+			ctx:drawText(x: padX, y: listY + (pinHdrH - th) / 2, text: 'Pinned', color: theme:textMuted, pixelHeight: fpx);
+			local Int is pi: 0;
+			while({ pi < pinnedNames:length() }, {
+				local Int is py: listY + pinHdrH + pi * rowH;
+				if({ py < listY + listH }, {
+					local Boolean is isCurPin: pinnedPaths:get(index: pi) == curDir;
+					if({ isCurPin }, {
+						ctx:fillRect(x: 4, y: py + 2, w: sideW - 9, h: rowH - 4, color: theme:activeBg);
+					}, {
+						if({ hoverPinIdx == pi }, {
+							ctx:fillRect(x: 4, y: py + 2, w: sideW - 9, h: rowH - 4, color: theme:hoverBg);
+						});
+					});
+					ctx:drawText(x: padX, y: py + (rowH - th) / 2, text: pinnedNames:get(index: pi), color: theme:textPrimary, pixelHeight: fpx);
+				});
+				pi: pi + 1;
+			});
+			ctx:clearClip();
+		});
+
 		local Int is visRows: if({ rowH > 0 }, { listH / rowH }, { 0 });
 		local Int is maxScroll: if({ entryNames:length() > visRows }, { entryNames:length() - visRows }, { 0 });
 		if({ scrollRow > maxScroll }, { scrollRow: maxScroll; });
 		if({ scrollRow < 0 }, { scrollRow: 0; });
 
-		ctx:setClip(x: 0, y: listY, w: listW, h: listH);
+		ctx:setClip(x: listX, y: listY, w: listW, h: listH);
 		local Int is r: 0;
 		while({ r <= visRows && (scrollRow + r) < entryNames:length() }, {
 			local Int is idx: scrollRow + r;
@@ -306,60 +407,60 @@ Class is FileDialog{
 			local Boolean is isSel: if({ isD }, { selectedRow == idx }, { :isPathSelected(fullPath: full) });
 
 			if({ isSel }, {
-				ctx:fillRect(x: 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:activeBg);
+				ctx:fillRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:activeBg);
 			}, {
 				if({ hoverRow == idx }, {
-					ctx:fillRect(x: 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:hoverBg);
+					ctx:fillRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:hoverBg);
 				});
 			});
 
-			## Directories are rendered with a crisp border around them to differentiate from files
 			if({ isD }, {
-				ctx:strokeRect(x: 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:menuBorder);
+				ctx:strokeRect(x: listX + 4, y: ry + 2, w: listW - 8, h: rowH - 4, color: theme:menuBorder);
 			});
 
-			ctx:drawText(x: padX, y: ry + (rowH - th) / 2, text: name, color: theme:textPrimary, pixelHeight: fpx);
+			ctx:drawText(x: listX + padX, y: ry + (rowH - th) / 2, text: name, color: theme:textPrimary, pixelHeight: fpx);
 			r: r + 1;
 		});
 		ctx:clearClip();
 
 		## Right-side scrollbar for file list
-		ctx:fillRect(x: listW, y: listY, w: sbW, h: listH, color: theme:menuBg);
-		ctx:fillRect(x: listW, y: listY, w: 1, h: listH, color: theme:toolbarBorder);
+		local Int is sbX: listX + listW;
+		ctx:fillRect(x: sbX, y: listY, w: sbW, h: listH, color: theme:menuBg);
+		ctx:fillRect(x: sbX, y: listY, w: 1, h: listH, color: theme:toolbarBorder);
 		if({ entryNames:length() > visRows && entryNames:length() > 0 && listH > 0 }, {
 			local Int is thumbH: (listH * visRows) / entryNames:length();
 			if({ thumbH < scale:px(pt: 20.0) }, { thumbH: scale:px(pt: 20.0); });
 			if({ thumbH > listH }, { thumbH: listH; });
 			local Int is trackRange: listH - thumbH;
 			local Int is thumbY: listY + if({ maxScroll > 0 }, { (scrollRow * trackRange) / maxScroll }, { 0 });
-			ctx:fillRect(x: listW + 2, y: thumbY + 1, w: sbW - 4, h: thumbH - 2, color: theme:activeBg);
+			ctx:fillRect(x: sbX + 2, y: thumbY + 1, w: sbW - 4, h: thumbH - 2, color: theme:activeBg);
 		});
 
-		## Footer bar with optional filename input (Save mode), Cancel, and Open/Save buttons
+		## Footer bar: editable Name input + Cancel + Open/Save buttons
 		local Int is fy: h - footerH;
 		ctx:fillRect(x: 0, y: fy, w: w, h: footerH, color: theme:toolbarBg);
 		ctx:fillRect(x: 0, y: fy, w: w, h: 1, color: theme:toolbarBorder);
 
+		local String is nameLbl: 'Name:';
+		local Int is lw: ctx:measureTextWidth(text: nameLbl, pixelHeight: fpx);
+		local Int is boxX: padX + lw + scale:px(pt: 8.0);
+		local Int is boxY: fy + scale:px(pt: 8.0);
+		local Int is boxH: scale:px(pt: 26.0);
+		local Int is boxW: if({ w - padX > boxX }, { w - padX - boxX }, { 40 });
+		local Int is nameBorder: if({ focusTarget == 2 }, { theme:activeBg }, { theme:menuBorder });
+		ctx:drawText(x: padX, y: boxY + (boxH - th) / 2, text: nameLbl, color: theme:textPrimary, pixelHeight: fpx);
+		ctx:fillRect(x: boxX, y: boxY, w: boxW, h: boxH, color: theme:windowBg);
+		ctx:strokeRect(x: boxX, y: boxY, w: boxW, h: boxH, color: nameBorder);
+		local String is nameShown: if({ focusTarget == 2 }, { fileName . '|' }, { fileName });
+		ctx:setClip(x: boxX + 2, y: boxY, w: boxW - 4, h: boxH);
+		ctx:drawText(x: boxX + scale:px(pt: 6.0), y: boxY + (boxH - th) / 2, text: nameShown, color: theme:textPrimary, pixelHeight: fpx);
+		ctx:clearClip();
+
 		local Int is btnW: scale:px(pt: 86.0);
 		local Int is btnH: scale:px(pt: 28.0);
-		local Int is btnY: if({ saveMode:current() }, { fy + footerH - btnH - scale:px(pt: 8.0) }, { fy + (footerH - btnH) / 2 });
+		local Int is btnY: fy + footerH - btnH - scale:px(pt: 8.0);
 		local Int is openX: w - padX - btnW;
 		local Int is cancelX: openX - scale:px(pt: 10.0) - btnW;
-
-		if({ saveMode:current() }, {
-			local String is nameLbl: 'Name:';
-			local Int is lw: ctx:measureTextWidth(text: nameLbl, pixelHeight: fpx);
-			local Int is boxX: padX + lw + scale:px(pt: 8.0);
-			local Int is boxY: fy + scale:px(pt: 8.0);
-			local Int is boxH: scale:px(pt: 26.0);
-			local Int is boxW: if({ w - padX > boxX }, { w - padX - boxX }, { 40 });
-			ctx:drawText(x: padX, y: boxY + (boxH - th) / 2, text: nameLbl, color: theme:textPrimary, pixelHeight: fpx);
-			ctx:fillRect(x: boxX, y: boxY, w: boxW, h: boxH, color: theme:windowBg);
-			ctx:strokeRect(x: boxX, y: boxY, w: boxW, h: boxH, color: theme:menuBorder);
-			ctx:setClip(x: boxX + 2, y: boxY, w: boxW - 4, h: boxH);
-			ctx:drawText(x: boxX + scale:px(pt: 6.0), y: boxY + (boxH - th) / 2, text: fileName . '|', color: theme:textPrimary, pixelHeight: fpx);
-			ctx:clearClip();
-		});
 
 		local Int is cBg: if({ hoverBtn == 1 }, { theme:hoverBg }, { theme:menuBg });
 		ctx:fillRect(x: cancelX, y: btnY, w: btnW, h: btnH, color: cBg);
@@ -376,7 +477,20 @@ Class is FileDialog{
 		local Int is oCol: if({ !canOk }, { theme:textMuted }, { theme:textPrimary });
 		ctx:drawText(x: openX + (btnW - ow) / 2, y: btnY + (btnH - th) / 2, text: okLabel, color: oCol, pixelHeight: fpx);
 
+		## Floating drag badge when dragging a folder onto Pinned
+		if({ isDraggingFolder && dragFolderName != '' }, {
+			local Int is dx: win:pointerX() + 10;
+			local Int is dy: win:pointerY() + 10;
+			local Int is dw: ctx:measureTextWidth(text: dragFolderName, pixelHeight: fpx) + scale:px(pt: 16.0);
+			local Int is dh: scale:px(pt: 24.0);
+			ctx:fillRect(x: dx, y: dy, w: dw, h: dh, color: theme:menuBg);
+			ctx:strokeRect(x: dx, y: dy, w: dw, h: dh, color: theme:activeBg);
+			ctx:drawText(x: dx + scale:px(pt: 8.0), y: dy + (dh - th) / 2, text: dragFolderName, color: theme:textPrimary, pixelHeight: fpx);
+		});
+
 		win:present(canvas: canvas);
+		lastW: w;
+		lastH: h;
 		isDirty: false;
 	}
 
@@ -384,6 +498,7 @@ Class is FileDialog{
 		if({ isShown }, { return; });
 		local String is effTitle: if({ dialogTitle:current() != '' }, { dialogTitle:current() }, { title });
 		fileName: if({ saveMode:current() }, { suggestedName:current() }, { '' });
+		focusTarget: if({ saveMode:current() }, { 2 }, { 0 });
 		win: SuitWindow(
 			title: effTitle,
 			width: scale:px(pt: widthPt),
@@ -397,6 +512,7 @@ Class is FileDialog{
 			ccb();
 			return;
 		});
+		win:setMinSize(minW: scale:px(pt: 460.0), minH: scale:px(pt: 320.0));
 		canvas: SuitCanvas(width: win:width(), height: win:height());
 		isShown: true;
 		:loadDirectory(dirPath: initialDir);
@@ -422,7 +538,11 @@ Class is FileDialog{
 			if({ fileName == '' }, { return; });
 			selectedPaths: Array([:joinPath(dir: curDir, name: fileName)]);
 		}, {
-			if({ selectedPaths:length() == 0 }, { return; });
+			if({ selectedPaths:length() == 0 }, {
+				if({ fileName == '' }, { return; });
+				local String is resolved: if({ fileName:byteAt(index: 0) == 47 }, { fileName }, { :joinPath(dir: curDir, name: fileName) });
+				selectedPaths: Array([resolved]);
+			});
 		});
 		local Array of String is chosen: selectedPaths;
 		:closeWindow();
@@ -452,16 +572,39 @@ Class is FileDialog{
 		local Int is key: win:nextKey();
 		while({ key != 0 }, {
 			if({ key == 27 }, {
-				:finishCancel();
-				return;
-			});
-			if({ saveMode:current() }, {
-				if({ key == 13 && fileName != '' }, {
-					:finishOpen();
+				if({ focusTarget == 1 }, {
+					editPath: curDir;
+					focusTarget: 0;
+					isDirty: true;
+				}, {
+					:finishCancel();
 					return;
 				});
-				if({ key == 8 && fileName:length() > 0 }, {
-					:popFileNameChar();
+			});
+			if({ key == 13 }, {
+				if({ focusTarget == 1 }, {
+					if({ editPath != '' && Dir():isDir(path: editPath) }, {
+						:loadDirectory(dirPath: editPath);
+					}, {
+						editPath: curDir;
+					});
+					focusTarget: 0;
+					isDirty: true;
+				}, {
+					if({ :canConfirm() }, {
+						:finishOpen();
+						return;
+					});
+				});
+			});
+			if({ key == 8 }, {
+				if({ focusTarget == 1 && editPath:length() > 0 }, {
+					editPath: :popLastChar(s: editPath);
+					isDirty: true;
+				});
+				if({ focusTarget == 2 && fileName:length() > 0 }, {
+					fileName: :popLastChar(s: fileName);
+					if({ !saveMode:current() }, { selectedPaths: Array(); });
 					isDirty: true;
 				});
 			});
@@ -470,9 +613,16 @@ Class is FileDialog{
 
 		local Int is cp: win:nextChar();
 		while({ cp != 0 }, {
-			if({ saveMode:current() && cp >= 32 }, {
-				fileName: fileName . String:fromCodePoint(code: cp);
-				isDirty: true;
+			if({ cp >= 32 }, {
+				if({ focusTarget == 1 }, {
+					editPath: editPath . String:fromCodePoint(code: cp);
+					isDirty: true;
+				});
+				if({ focusTarget == 2 }, {
+					fileName: fileName . String:fromCodePoint(code: cp);
+					if({ !saveMode:current() }, { selectedPaths: Array(); });
+					isDirty: true;
+				});
 			});
 			cp: win:nextChar();
 		});
@@ -487,42 +637,98 @@ Class is FileDialog{
 
 		local Int is w: win:width();
 		local Int is h: win:height();
-		local Int is headerH: scale:px(pt: 32.0);
+		if({ w != lastW || h != lastH }, {
+			isDirty: true;
+		});
+
+		local Int is headerH: :headerHeightPx();
 		local Int is footerH: :footerHeightPx();
 		local Int is rowH: scale:px(pt: 28.0);
-		local Int is padX: scale:px(pt: 12.0);
+		local Int is padX: scale:px(pt: 10.0);
 		local Int is sbW: scale:px(pt: 12.0);
+		local Int is sideW: :sidebarWidthPx(totalW: w);
 		local Int is listY: headerH;
 		local Int is listH: if({ h > headerH + footerH }, { h - headerH - footerH }, { 0 });
-		local Int is listW: if({ w > sbW }, { w - sbW }, { w });
+		local Int is listX: sideW;
+		local Int is listW: if({ w - sideW > sbW }, { w - sideW - sbW }, { w - sideW });
+		local Int is sbX: listX + listW;
+
+		local Int is upW: scale:px(pt: 44.0);
+		local Int is topBoxH: scale:px(pt: 26.0);
+		local Int is topBoxY: (headerH - topBoxH) / 2;
+		local Int is pathX: padX + upW + scale:px(pt: 8.0);
+		local Int is pathW: if({ w - padX > pathX }, { w - padX - pathX }, { 40 });
+
+		local Int is fy: h - footerH;
+		local Int is boxY: fy + scale:px(pt: 8.0);
+		local Int is boxH: scale:px(pt: 26.0);
 		local Int is btnW: scale:px(pt: 86.0);
 		local Int is btnH: scale:px(pt: 28.0);
-		local Int is fy: h - footerH;
-		local Int is btnY: if({ saveMode:current() }, { fy + footerH - btnH - scale:px(pt: 8.0) }, { fy + (footerH - btnH) / 2 });
+		local Int is btnY: fy + footerH - btnH - scale:px(pt: 8.0);
 		local Int is openX: w - padX - btnW;
 		local Int is cancelX: openX - scale:px(pt: 10.0) - btnW;
 
 		local Int is px: win:pointerX();
 		local Int is py: win:pointerY();
+		local Int is pinHdrH: scale:px(pt: 24.0);
+
 		local Int is nextHoverRow: -1;
-		if({ px < listW && py >= listY && py < listY + listH && rowH > 0 }, {
+		if({ px >= listX && px < sbX && py >= listY && py < listY + listH && rowH > 0 }, {
 			local Int is cand: scrollRow + (py - listY) / rowH;
 			if({ cand >= 0 && cand < entryNames:length() }, { nextHoverRow: cand; });
 		});
+		local Int is nextHoverPin: -1;
+		if({ sideW > 0 && px >= 0 && px < sideW && py >= listY + pinHdrH && py < listY + listH && rowH > 0 }, {
+			local Int is pcand: (py - (listY + pinHdrH)) / rowH;
+			if({ pcand >= 0 && pcand < pinnedNames:length() }, { nextHoverPin: pcand; });
+		});
 		local Int is nextHoverBtn: 0;
+		if({ py >= topBoxY && py < topBoxY + topBoxH && px >= padX && px < padX + upW }, {
+			nextHoverBtn: 3;
+		});
 		if({ py >= btnY && py < btnY + btnH }, {
 			if({ px >= cancelX && px < cancelX + btnW }, { nextHoverBtn: 1; });
 			if({ px >= openX && px < openX + btnW }, { nextHoverBtn: 2; });
 		});
-		if({ nextHoverRow != hoverRow || nextHoverBtn != hoverBtn }, {
+		if({ nextHoverRow != hoverRow || nextHoverPin != hoverPinIdx || nextHoverBtn != hoverBtn }, {
 			hoverRow: nextHoverRow;
+			hoverPinIdx: nextHoverPin;
 			hoverBtn: nextHoverBtn;
 			isDirty: true;
 		});
 
-		if({ !win:pointerDown() }, {
+		## Folder drag-and-drop onto the left "Pinned" panel
+		if({ win:pointerDown() }, {
+			if({ dragCandidateRow >= 0 && !isDraggingFolder }, {
+				local Int is dx: px - dragStartX;
+				local Int is dy: py - dragStartY;
+				if({ dx * dx + dy * dy > 36 }, {
+					isDraggingFolder: true;
+					isDirty: true;
+				});
+			});
+			if({ isDraggingFolder }, {
+				local Boolean is overPin: sideW > 0 && px >= 0 && px < sideW && py >= listY && py < listY + listH;
+				if({ overPin != dragOverPinned }, {
+					dragOverPinned: overPin;
+				});
+				isDirty: true;
+			});
+		}, {
+			if({ isDraggingFolder }, {
+				if({ sideW > 0 && px >= 0 && px < sideW && py >= listY && py < listY + listH }, {
+					:addPinned(name: dragFolderName, path: dragFolderPath);
+				});
+				isDraggingFolder: false;
+				dragOverPinned: false;
+				dragFolderName: '';
+				dragFolderPath: '';
+				isDirty: true;
+			});
+			dragCandidateRow: -1;
 			dragScrollbar: false;
 		});
+
 		if({ dragScrollbar && listH > 0 && rowH > 0 }, {
 			local Int is visRows: listH / rowH;
 			local Int is maxScroll: if({ entryNames:length() > visRows }, { entryNames:length() - visRows }, { 0 });
@@ -540,16 +746,26 @@ Class is FileDialog{
 		if({ win:pollClick() }, {
 			local Int is cx: win:clickX();
 			local Int is cy: win:clickY();
-			if({ cx >= listW && cx < w && cy >= listY && cy < listY + listH && listH > 0 && rowH > 0 }, {
-				dragScrollbar: true;
-				local Int is visRows: listH / rowH;
-				local Int is maxScroll: if({ entryNames:length() > visRows }, { entryNames:length() - visRows }, { 0 });
-				if({ maxScroll > 0 }, {
-					scrollRow: ((cy - listY) * maxScroll) / listH;
-					if({ scrollRow < 0 }, { scrollRow: 0; });
-					if({ scrollRow > maxScroll }, { scrollRow: maxScroll; });
-					isDirty: true;
+
+			## Top path bar clicks
+			if({ cy >= topBoxY && cy < topBoxY + topBoxH }, {
+				if({ cx >= padX && cx < padX + upW }, {
+					focusTarget: 0;
+					:loadDirectory(dirPath: :parentDir(dir: curDir));
+					return;
 				});
+				if({ cx >= pathX && cx < pathX + pathW }, {
+					focusTarget: 1;
+					editPath: curDir;
+					isDirty: true;
+					return;
+				});
+			});
+
+			## Footer Name input & Cancel/Open/Save clicks
+			if({ cy >= boxY && cy < boxY + boxH }, {
+				focusTarget: 2;
+				isDirty: true;
 				return;
 			});
 			if({ cy >= btnY && cy < btnY + btnH }, {
@@ -562,7 +778,38 @@ Class is FileDialog{
 					return;
 				});
 			});
-			if({ cx < listW && cy >= listY && cy < listY + listH && rowH > 0 }, {
+
+			## Left "Pinned" panel clicks
+			if({ sideW > 0 && cx >= 0 && cx < sideW && cy >= listY + pinHdrH && cy < listY + listH && rowH > 0 }, {
+				local Int is pidx: (cy - (listY + pinHdrH)) / rowH;
+				if({ pidx >= 0 && pidx < pinnedPaths:length() }, {
+					focusTarget: 0;
+					local String is target: pinnedPaths:get(index: pidx);
+					if({ Dir():isDir(path: target) }, {
+						:loadDirectory(dirPath: target);
+					});
+					return;
+				});
+			});
+
+			## Scrollbar click
+			if({ cx >= sbX && cx < w && cy >= listY && cy < listY + listH && listH > 0 && rowH > 0 }, {
+				focusTarget: 0;
+				dragScrollbar: true;
+				local Int is visRows: listH / rowH;
+				local Int is maxScroll: if({ entryNames:length() > visRows }, { entryNames:length() - visRows }, { 0 });
+				if({ maxScroll > 0 }, {
+					scrollRow: ((cy - listY) * maxScroll) / listH;
+					if({ scrollRow < 0 }, { scrollRow: 0; });
+					if({ scrollRow > maxScroll }, { scrollRow: maxScroll; });
+					isDirty: true;
+				});
+				return;
+			});
+
+			## File list click
+			if({ cx >= listX && cx < sbX && cy >= listY && cy < listY + listH && rowH > 0 }, {
+				focusTarget: 0;
 				local Int is idx: scrollRow + (cy - listY) / rowH;
 				if({ idx >= 0 && idx < entryNames:length() }, {
 					local Int is nowMs: clock:monotonicMs();
@@ -581,27 +828,26 @@ Class is FileDialog{
 							});
 						}, {
 							selectedRow: idx;
+							if({ name != '..' }, {
+								dragCandidateRow: idx;
+								dragStartX: cx;
+								dragStartY: cy;
+								dragFolderName: name;
+								dragFolderPath: :joinPath(dir: curDir, name: name);
+							});
 							isDirty: true;
 						});
 					}, {
 						local String is full: :joinPath(dir: curDir, name: name);
 						selectedRow: idx;
-						if({ saveMode:current() }, {
-							fileName: name;
-							if({ isDouble }, {
-								:finishOpen();
-								return;
-							});
-							isDirty: true;
+						fileName: name;
+						if({ isDouble }, {
+							if({ !saveMode:current() }, { :selectSingleFile(fullPath: full); });
+							:finishOpen();
+							return;
 						}, {
-							if({ isDouble }, {
-								:selectSingleFile(fullPath: full);
-								:finishOpen();
-								return;
-							}, {
-								:toggleSelect(fullPath: full);
-								isDirty: true;
-							});
+							if({ !saveMode:current() }, { :toggleSelect(fullPath: full); });
+							isDirty: true;
 						});
 					});
 				});
