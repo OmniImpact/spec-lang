@@ -138,6 +138,7 @@ Class is IrBuilder{
 	Boolean is entryInitTakesMap: false;
 	Array of String is globalVtableNames: Array();
 	Map of String to Int is globalVtableMap: Map:init();
+	Map of String to String is structToQName: Map:init();
 	Map of String to String is fieldSpecTypes: Map:init();
 	Map of String to Boolean is variadicFieldInitFns: Map:init();
 	Map of String to Boolean is canUnwindCallees: Map:init();
@@ -954,7 +955,7 @@ Class is IrBuilder{
 					local Int is ovSeed: mCountsSeed:get(key: m:name, default: 0);
 					mCountsSeed:set(key: m:name, value: ovSeed + 1);
 					local String is vkeySeed: if({ ovSeed > 0 }, { m:name . '_' . ((ovSeed + 1) as String) }, { m:name });
-					if({ keepAll || m:name == 'init' || m:name == 'destroy' || m:name == 'toString' || m:name == 'SpecErrorHandler' || m:hasModifier(kw: Keyword:REPLACE) || :globalVtableMap:has(key: vkeySeed) }, {
+					if({ keepAll || m:name == 'init' || m:name == 'destroy' || m:name == 'toString' || m:name == 'SpecErrorHandler' || m:name == 'resolveHeld' || m:hasModifier(kw: Keyword:REPLACE) || m:hasModifier(kw: Keyword:MERGE) || :globalVtableMap:has(key: vkeySeed) }, {
 						:enqueueReachKey(cmKey: sname . ':' . m:name, seenKeys: seenKeys, queue: queue);
 					});
 				});
@@ -1069,11 +1070,13 @@ Class is IrBuilder{
 
 		local Map of String to ClassInfo is clsMap: Map:init();
 		local Map of String to String is clsQNameMap: Map:init();
+		local Map of String to String is structToQName: Map:init();
 		local Int is ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is c0: allClasses:get(index: ci);
 			clsMap:set(key: c0:qualifiedName(), value: c0);
 			clsQNameMap:set(key: c0:qualifiedName(), value: c0:qualifiedName());
+			structToQName:set(key: :cStructName(qname: c0:qualifiedName()), value: c0:qualifiedName());
 			if({ c0:outerName == '' }, {
 				clsMap:set(key: c0:name, value: c0);
 				clsQNameMap:set(key: c0:name, value: c0:qualifiedName());
@@ -1082,6 +1085,7 @@ Class is IrBuilder{
 		});
 		:clsMap: clsMap;
 		:clsQNameMap: clsQNameMap;
+		:structToQName: structToQName;
 		:methodParamPtrMask: Map:init();
 		:methodRetIsPtr: Map:init();
 		:methodRetTypes: Map:init();
@@ -1106,7 +1110,7 @@ Class is IrBuilder{
 				if({ vm:kind == MemberKind:METHOD }, {
 					local Int is vOv: vmCounts:get(key: vm:name, default: 0);
 					vmCounts:set(key: vm:name, value: vOv + 1);
-					if({ vm:name != 'init' && vm:name != 'destroy' && !vm:hasModifier(kw: Keyword:HELD) && vm:hasModifier(kw: Keyword:REPLACE) }, {
+					if({ vm:name != 'init' && vm:name != 'destroy' && !vm:hasModifier(kw: Keyword:HELD) && (vm:hasModifier(kw: Keyword:REPLACE) || vm:hasModifier(kw: Keyword:MERGE)) }, {
 						local String is vk: if({ vOv > 0 }, { vm:name . '_' . ((vOv + 1) as String) }, { vm:name });
 						if({ !:globalVtableMap:has(key: vk) }, {
 							:globalVtableMap:set(key: vk, value: :globalVtableNames:length());
@@ -1271,7 +1275,7 @@ Class is IrBuilder{
 						fnName: sname . '_' . m:name . '_' . ((ovIdx + 1) as String);
 					});
 					local String is vkeyChk: if({ ovIdx > 0 }, { m:name . '_' . ((ovIdx + 1) as String) }, { m:name });
-					local Boolean is isKeepMethod: :isAlwaysKeepReachClass(sname: sname, isSysCls: isSysCls) || m:name == 'init' || m:name == 'destroy' || m:name == 'toString' || m:name == 'SpecErrorHandler' || :globalVtableMap:has(key: vkeyChk) || reachableClassMethods:has(key: sname . ':' . m:name);
+					local Boolean is isKeepMethod: entryClass == '' || :isAlwaysKeepReachClass(sname: sname, isSysCls: isSysCls) || m:name == 'init' || m:name == 'destroy' || m:name == 'toString' || m:name == 'SpecErrorHandler' || m:name == 'resolveHeld' || :globalVtableMap:has(key: vkeyChk) || reachableClassMethods:has(key: sname . ':' . m:name);
 					if({ isKeepMethod && (!isSysCls || m:body:length() > 0) && !seenFns:has(key: fnName) }, {
 						seenFns:set(key: fnName, value: true);
 						:buildMethod(cls: cls, m: m, fnName: fnName);
@@ -2272,8 +2276,12 @@ Class is IrBuilder{
 	}
 
 	local Function of String is findParentMethodImpl(String is clsName, String is methodName, String is suffix){
-		if({ !:clsMap:has(key: clsName) }, { return ''; });
-		local ClassInfo is cls: :clsMap:get(key: clsName, default: ClassInfo(name: '', baseClass: '', members: []));
+		local String is lookupKey: clsName;
+		if({ !:clsMap:has(key: lookupKey) && :structToQName:has(key: lookupKey) }, {
+			lookupKey: :structToQName:get(key: lookupKey, default: lookupKey);
+		});
+		if({ !:clsMap:has(key: lookupKey) }, { return ''; });
+		local ClassInfo is cls: :clsMap:get(key: lookupKey, default: ClassInfo(name: '', baseClass: '', members: []));
 		local String is found: '';
 		local Int is bi: 0;
 		while({ found == '' && bi < cls:baseClasses:length() }, {
