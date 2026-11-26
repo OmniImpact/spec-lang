@@ -27,6 +27,7 @@ Class is EditorIcons{
 	String is editPaste: '';
 	String is editSelectAll: '';
 	String is infoAbout: '';
+	String is settings: '';
 
 	replace Function is init(){
 		:bundle: Bundle();
@@ -48,5 +49,6 @@ Class is EditorIcons{
 		:editPaste: bundle:readText(path: 'resources/icons/edit-paste.svg');
 		:editSelectAll: bundle:readText(path: 'resources/icons/edit-select-all.svg');
 		:infoAbout: bundle:readText(path: 'resources/icons/info-about.svg');
+		:settings: bundle:readText(path: 'resources/icons/settings.svg');
 	}
 }

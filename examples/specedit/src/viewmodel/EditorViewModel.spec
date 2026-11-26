@@ -295,6 +295,7 @@ Class is EditorViewModel{
 		fileMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_SETTINGS_ID,
 			label: SpecEditStrings:ITEM_SETTINGS_LABEL,
+			iconSvg: icons:settings,
 			onClick: local Function(){ settingsVm:openSettings(); }
 		));
 		fileMenu:addItem(item: MenuItemConfig(
