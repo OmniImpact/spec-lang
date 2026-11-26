@@ -19,6 +19,7 @@ Class of SewNode is FileTree{
 		['base', 'sew', Scale],
 		['base', 'scrap', TreeNode],
 		['base', 'scrap', TreeView],
+		['base', 'scrap', ScrollView],
 		['base', 'scrap', MenuItemConfig],
 		['base', 'scrap', ContextMenu],
 		['base', 'wardrobe', PinnedLocations]
@@ -30,6 +31,7 @@ Class of SewNode is FileTree{
 	Boolean is headerHover: false;
 	PinnedLocations is pinned: PinnedLocations();
 	TreeView is treeView: TreeView();
+	ScrollView is treeScroll: ScrollView(child: TreeView());
 	ContextMenu is contextMenu: ContextMenu();
 	Function is onOpenFile: local Function(String is _path){};
 
@@ -51,6 +53,7 @@ Class of SewNode is FileTree{
 				cb(node:id);
 			}
 		);
+		:treeScroll: ScrollView(child: treeView);
 		local String is startDir: rootDir;
 		if({ startDir == '' || !Dir():isDir(path: startDir) }, {
 			local String is pwd: Process():getEnv(key: 'PWD', default: '');
@@ -169,17 +172,17 @@ Class of SewNode is FileTree{
 
 	replace Function is applyTheme(Theme is theme){
 		:activeTheme: theme;
-		treeView:applyTheme(theme: theme);
+		treeScroll:applyTheme(theme: theme);
 	}
 
 	replace Function is setScale(Scale is scale){
 		:activeScale: scale;
-		treeView:setScale(scale: scale);
+		treeScroll:setScale(scale: scale);
 	}
 
 	replace Function is bindDirty(Function is cb){
 		:dirtyListeners: Array([cb]);
-		treeView:bindDirty(cb: cb);
+		treeScroll:bindDirty(cb: cb);
 	}
 
 	replace Function of Size is measure(Constraints is c){
@@ -187,7 +190,7 @@ Class of SewNode is FileTree{
 		local Int is h: c:clampH(h: c:maxH);
 		local Int is hh: :headerHeightPx();
 		local Int is th: if({ h > hh }, { h - hh }, { 0 });
-		treeView:measure(c: Constraints(minW: w, maxW: w, minH: th, maxH: th));
+		treeScroll:measure(c: Constraints(minW: w, maxW: w, minH: th, maxH: th));
 		desiredSize: Size(width: w, height: h);
 		return desiredSize;
 	}
@@ -196,7 +199,7 @@ Class of SewNode is FileTree{
 		layoutBounds: bounds;
 		local Int is hh: :headerHeightPx();
 		local Int is th: if({ bounds:height > hh }, { bounds:height - hh }, { 0 });
-		treeView:arrange(bounds: Rect(x: bounds:x, y: bounds:y + hh, width: bounds:width, height: th));
+		treeScroll:arrange(bounds: Rect(x: bounds:x, y: bounds:y + hh, width: bounds:width, height: th));
 	}
 
 	replace Function is paint(DrawContext is ctx){
@@ -221,7 +224,7 @@ Class of SewNode is FileTree{
 		);
 		ctx:clearClip();
 
-		treeView:paint(ctx: ctx);
+		treeScroll:paint(ctx: ctx);
 	}
 
 	local Function is openPinnedDropdown(Int is x, Int is y){
@@ -255,7 +258,7 @@ Class of SewNode is FileTree{
 			invalidate();
 			changed: true;
 		});
-		if({ treeView:onPointerMove(x: x, y: y) }, { changed: true; });
+		if({ treeScroll:onPointerMove(x: x, y: y) }, { changed: true; });
 		return changed;
 	}
 
@@ -266,10 +269,22 @@ Class of SewNode is FileTree{
 			:openPinnedDropdown(x: x, y: y);
 			return true;
 		});
-		return treeView:onPointerClickMod(x: x, y: y, mods: mods);
+		return treeScroll:onPointerClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		return treeScroll:onPointerDrag(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		return treeScroll:onPointerUp(x: x, y: y);
 	}
 
 	replace Function of Boolean is onScroll(Int is deltaY){
-		return treeView:onScroll(deltaY: deltaY);
+		return treeScroll:onScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onScrollX(Int is deltaX){
+		return treeScroll:onScrollX(deltaX: deltaX);
 	}
 }

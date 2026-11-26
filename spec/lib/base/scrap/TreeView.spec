@@ -25,7 +25,6 @@ Class of SewNode is TreeView{
 	Array of Array of Boolean is flatAncestors: Array();
 	String is selectedId: '';
 	Int is hoverIdx: -1;
-	Int is scrollY: 0;
 	Function is onSelect: local Function(TreeNode is _node){};
 	Function is onActivate: local Function(TreeNode is _node){};
 	Function is onToggle: local Function(TreeNode is _node){};
@@ -45,7 +44,6 @@ Class of SewNode is TreeView{
 
 	Function is setRoots(Array of TreeNode is roots){
 		:roots: roots;
-		:scrollY: 0;
 		:hoverIdx: -1;
 		:rebuildFlat();
 		invalidate();
@@ -100,7 +98,6 @@ Class of SewNode is TreeView{
 			);
 			i: i + 1;
 		});
-		:clampScroll();
 	}
 
 	local Function of Int is rowHeightPx(){
@@ -113,35 +110,45 @@ Class of SewNode is TreeView{
 		return if({ px < 11 }, { 11 }, { px });
 	}
 
-	local Function is clampScroll(){
-		local Rect is b: bounds();
-		local Int is totalH: flatNodes:length() * :rowHeightPx();
-		local Int is maxScroll: if({ totalH > b:height && b:height > 0 }, { totalH - b:height }, { 0 });
-		if({ scrollY < 0 }, { scrollY: 0; });
-		if({ scrollY > maxScroll }, { scrollY: maxScroll; });
+	local Function of Int is indentPx(){
+		local Int is ind: activeScale:px(pt: 16.0);
+		return if({ ind < 14 }, { 14 }, { ind });
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		desiredSize: Size(width: c:clampW(w: c:maxW), height: c:clampH(h: c:maxH));
+		local Int is rowH: :rowHeightPx();
+		local Int is fpx: :fontPx();
+		local Int is ind: :indentPx();
+		local Int is padX: activeScale:px(pt: 6.0);
+		local Int is maxW: c:minW;
+		local Int is i: 0;
+		while({ i < flatNodes:length() }, {
+			local TreeNode is node: flatNodes:get(index: i);
+			local Int is depth: flatDepths:get(index: i);
+			local Int is labelX: padX + (depth + 1) * ind + 2;
+			local Int is rw: labelX + DrawContext:measureWidth(text: node:label, pixelHeight: fpx) + padX * 2;
+			if({ rw > maxW }, { maxW: rw; });
+			i: i + 1;
+		});
+		local Int is totalH: flatNodes:length() * rowH;
+		local Int is finalH: if({ totalH > c:minH }, { totalH }, { c:minH });
+		desiredSize: Size(width: maxW, height: finalH);
 		return desiredSize;
 	}
 
 	replace Function is arrange(Rect is bounds){
 		layoutBounds: bounds;
-		:clampScroll();
 	}
 
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:panelBg);
-		ctx:setClip(x: b:x, y: b:y, w: b:width, h: b:height);
 
 		local Int is rowH: :rowHeightPx();
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is indentPx: activeScale:px(pt: 16.0);
-		if({ indentPx < 14 }, { indentPx: 14; });
+		local Int is indentPx: :indentPx();
 		local Int is padX: activeScale:px(pt: 6.0);
 		local Int is boxSz: activeScale:px(pt: 9.0);
 		if({ boxSz < 9 }, { boxSz: 9; });
@@ -149,11 +156,9 @@ Class of SewNode is TreeView{
 		local Int is halfBox: boxSz / 2;
 		local Int is lineCol: activeTheme:textMuted;
 
-		local Int is firstIdx: if({ rowH > 0 }, { scrollY / rowH }, { 0 });
-		local Int is i: firstIdx;
+		local Int is i: 0;
 		while({ i < flatNodes:length() }, {
-			local Int is ry: b:y + (i * rowH) - scrollY;
-			if({ ry >= b:y + b:height }, { i: flatNodes:length(); }, {
+			local Int is ry: b:y + (i * rowH);
 				local TreeNode is node: flatNodes:get(index: i);
 				local Int is depth: flatDepths:get(index: i);
 				local Boolean is isLast: flatIsLast:get(index: i);
@@ -220,22 +225,7 @@ Class of SewNode is TreeView{
 				local Int is ty: ry + (rowH - th) / 2;
 				ctx:drawText(x: labelX, y: ty, text: node:label, color: activeTheme:textPrimary, pixelHeight: fpx, bold: node:expandable);
 				i: i + 1;
-			});
 		});
-
-		# Thin vertical scrollbar thumb when content overflows
-		local Int is totalH: flatNodes:length() * rowH;
-		if({ totalH > b:height && totalH > 0 }, {
-			local Int is sbW: activeScale:px(pt: 4.0);
-			if({ sbW < 3 }, { sbW: 3; });
-			local Int is thumbH: (b:height * b:height) / totalH;
-			if({ thumbH < 20 }, { thumbH: 20; });
-			local Int is maxScroll: totalH - b:height;
-			local Int is thumbY: b:y + ((scrollY * (b:height - thumbH)) / maxScroll);
-			ctx:fillRect(x: b:x + b:width - sbW - 2, y: thumbY, w: sbW, h: thumbH, color: activeTheme:toolbarBorder);
-		});
-
-		ctx:clearClip();
 	}
 
 	local Function of Int is rowAt(Int is x, Int is y){
@@ -243,7 +233,7 @@ Class of SewNode is TreeView{
 		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return -1; });
 		local Int is rowH: :rowHeightPx();
 		if({ rowH <= 0 }, { return -1; });
-		local Int is idx: (y - b:y + scrollY) / rowH;
+		local Int is idx: (y - b:y) / rowH;
 		if({ idx >= 0 && idx < flatNodes:length() }, { return idx; });
 		return -1;
 	}
@@ -276,18 +266,5 @@ Class of SewNode is TreeView{
 		});
 		invalidate();
 		return true;
-	}
-
-	replace Function of Boolean is onScroll(Int is deltaY){
-		local Int is oldScroll: scrollY;
-		scrollY: scrollY - (deltaY * :rowHeightPx() / 15);
-		if({ deltaY > 0 && scrollY == oldScroll }, { scrollY: oldScroll - :rowHeightPx(); });
-		if({ deltaY < 0 && scrollY == oldScroll }, { scrollY: oldScroll + :rowHeightPx(); });
-		:clampScroll();
-		if({ scrollY != oldScroll }, {
-			invalidate();
-			return true;
-		});
-		return false;
 	}
 }
