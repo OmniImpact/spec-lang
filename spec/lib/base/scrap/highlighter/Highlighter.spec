@@ -12,6 +12,10 @@ Class is Highlighter{
 	];
 
 	Boolean is monoMode: false;
+	Boolean is measureOnly: false;
+	Int is measureTargetCol: 0;
+	Int is measureColPos: 0;
+	Int is measureResultX: 0;
 
 	Function of String is languageId(){
 		return 'plain';
@@ -55,12 +59,41 @@ Class is Highlighter{
 		Boolean is italic: false
 	){
 		if({ seg == '' }, { return curX; });
+		if({ measureOnly }, {
+			if({ measureColPos >= measureTargetCol }, { return curX; });
+			local Int is segLen: seg:length();
+			local Int is remaining: measureTargetCol - measureColPos;
+			if({ remaining < segLen }, {
+				local String is part: seg:substring(start: 0, end: remaining);
+				local Int is partW: ctx:measureTextWidth(text: part, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
+				:measureColPos: measureTargetCol;
+				:measureResultX: curX + partW;
+				return curX + partW;
+			});
+			local Int is fullW: ctx:measureTextWidth(text: seg, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
+			:measureColPos: measureColPos + segLen;
+			:measureResultX: curX + fullW;
+			return curX + fullW;
+		});
 		ctx:drawText(x: curX, y: y, text: seg, color: color, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
 		return curX + ctx:measureTextWidth(text: seg, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
 	}
 
 	Function is paintLine(DrawContext is ctx, Theme is theme, Int is x, Int is y, String is lineStr, Int is fpx){
-		ctx:drawText(x: x, y: y, text: lineStr, color: theme:textPrimary, pixelHeight: fpx, mono: monoMode);
+		:drawSpan(ctx: ctx, curX: x, y: y, seg: lineStr, color: theme:textPrimary, fpx: fpx, bold: false, italic: false);
+	}
+
+	## Measures pixel X offset at [col] on [lineStr] using the exact styling of `paintLine`.
+	Function of Int is measureLinePrefix(DrawContext is ctx, Theme is theme, String is lineStr, Int is fpx, Int is col){
+		if({ col <= 0 || lineStr == '' }, { return 0; });
+		local Int is target: if({ col > lineStr:length() }, { lineStr:length() }, { col });
+		:measureOnly: true;
+		:measureTargetCol: target;
+		:measureColPos: 0;
+		:measureResultX: 0;
+		:paintLine(ctx: ctx, theme: theme, x: 0, y: 0, lineStr: lineStr, fpx: fpx);
+		:measureOnly: false;
+		return measureResultX;
 	}
 
 	## Shared single-line scanner for C-like and scripting languages parameterized by comment syntax and keyword list.

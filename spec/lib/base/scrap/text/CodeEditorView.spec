@@ -125,4 +125,9 @@ Class of TextView is CodeEditorView{
 		activeHighlighter:monoMode: monoCached;
 		activeHighlighter:paintLine(ctx: ctx, theme: activeTheme, x: x, y: y, lineStr: lineStr, fpx: fpx);
 	}
+
+	replace Function of Int is measureLinePrefix(DrawContext is ctx, String is lineStr, Int is col, Int is fpx){
+		activeHighlighter:monoMode: monoCached;
+		return activeHighlighter:measureLinePrefix(ctx: ctx, theme: activeTheme, lineStr: lineStr, fpx: fpx, col: col);
+	}
 }

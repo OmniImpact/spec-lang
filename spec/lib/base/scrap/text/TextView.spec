@@ -575,7 +575,7 @@ Class of SewNode is TextView{
 			local Int is bestDist: relX;
 			local Int is c: 1;
 			while({ c <= seg:length() }, {
-				local Int is w: :measureStr(s: seg:substring(start: 0, end: c), fpx: fpx);
+				local Int is w: :measureLinePrefix(ctx: DrawContext:shared, lineStr: seg, col: c, fpx: fpx);
 				local Int is d: if({ w >= relX }, { w - relX }, { relX - w });
 				if({ d <= bestDist }, {
 					bestDist: d;
@@ -726,6 +726,13 @@ Class of SewNode is TextView{
 		ctx:drawText(x: x, y: y, text: lineStr, color: activeTheme:textPrimary, pixelHeight: fpx, mono: monoCached);
 	}
 
+	## Measures pixel X offset at [col] on [lineStr]; subclasses can override to match styled text width.
+	Function of Int is measureLinePrefix(DrawContext is ctx, String is lineStr, Int is col, Int is fpx){
+		if({ col <= 0 || lineStr == '' }, { return 0; });
+		local Int is target: if({ col > lineStr:length() }, { lineStr:length() }, { col });
+		return ctx:measureTextWidth(text: lineStr:substring(start: 0, end: target), pixelHeight: fpx, mono: monoCached);
+	}
+
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		local Int is fpx: :fontPx();
@@ -777,8 +784,8 @@ Class of SewNode is TextView{
 						if({ segS < 0 }, { segS: 0; });
 						if({ segE > lineStr:length() }, { segE: lineStr:length(); });
 						if({ segE > segS || (rLine < el && segE == lineStr:length() && segS <= lineStr:length()) }, {
-							local Int is hx1: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segS), pixelHeight: fpx, mono: monoCached);
-							local Int is hx2: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: segE), pixelHeight: fpx, mono: monoCached);
+							local Int is hx1: textStartX + :measureLinePrefix(ctx: ctx, lineStr: lineStr, col: segS, fpx: fpx);
+							local Int is hx2: textStartX + :measureLinePrefix(ctx: ctx, lineStr: lineStr, col: segE, fpx: fpx);
 							if({ rLine < el && segE == lineStr:length() }, {
 								hx2: hx2 + fpx / 2;
 							});
@@ -805,10 +812,10 @@ Class of SewNode is TextView{
 						local Boolean is isLastSegForLine: (i + 1 >= count) || (dispRawLine:get(index: i + 1) != rLine);
 						if({ cursorCol < rEnd || isLastSegForLine }, {
 							local Int is localCol: cursorCol - rStart;
-							local Int is cx: textStartX + ctx:measureTextWidth(text: lineStr:substring(start: 0, end: localCol), pixelHeight: fpx, mono: monoCached);
+							local Int is cx: textStartX + :measureLinePrefix(ctx: ctx, lineStr: lineStr, col: localCol, fpx: fpx);
 							if({ cx >= minX + gw }, {
 								local Int is caretCol: Color:fromArgb(argb: activeTheme:textPrimary):withAlphaByte(a: cursorAlphaByte):toArgb();
-								local Int is caretW: activeScale:px(pt: 2.0);
+								local Int is caretW: activeScale:px(pt: 1.0);
 								if({ caretW < 1 }, { caretW: 1; });
 								ctx:fillRect(x: cx, y: ly, w: caretW, h: fpx, color: caretCol);
 							});
