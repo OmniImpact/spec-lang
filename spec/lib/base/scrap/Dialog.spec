@@ -24,6 +24,8 @@ Class is Dialog{
 	Scale is scale: Scale(factor: 1.0);
 	Float is widthPt: 480.0;
 	Float is heightPt: 180.0;
+	Float is minWidthPt: 320.0;
+	Float is minHeightPt: 140.0;
 	SewNode is content: SewNode();
 	Boolean is hasContent: false;
 	Function is onPaint: local Function(DrawContext is ctx, Int is w, Int is h, Theme is theme, Scale is scale){};
@@ -33,6 +35,8 @@ Class is Dialog{
 	DrawContext is paintCtx: DrawContext(canvas: SuitCanvas(width: 1, height: 1));
 	Boolean is isShown: false;
 	Boolean is isDirty: false;
+	Int is lastW: 0;
+	Int is lastH: 0;
 	SignalBag is signalBag: SignalBag();
 
 	replace Function is init(
@@ -42,6 +46,8 @@ Class is Dialog{
 		Scale is scale: Scale(factor: 1.0),
 		Float is widthPt: 480.0,
 		Float is heightPt: 180.0,
+		Float is minWidthPt: 320.0,
+		Float is minHeightPt: 140.0,
 		SewNode is content: SewNode(),
 		Boolean is hasContent: true,
 		Function is onPaint: local Function(DrawContext is ctx, Int is w, Int is h, Theme is theme, Scale is scale){}
@@ -52,11 +58,15 @@ Class is Dialog{
 		:scale: scale;
 		:widthPt: widthPt;
 		:heightPt: heightPt;
+		:minWidthPt: minWidthPt;
+		:minHeightPt: minHeightPt;
 		:content: content;
 		:hasContent: hasContent;
 		:onPaint: onPaint;
 		isShown: false;
 		isDirty: false;
+		lastW: 0;
+		lastH: 0;
 	}
 
 	Function is applyTheme(Theme is theme){
@@ -90,6 +100,8 @@ Class is Dialog{
 			cb(ctx, w, h, theme, scale);
 		});
 		win:present(canvas: canvas);
+		lastW: w;
+		lastH: h;
 		isDirty: false;
 	}
 
@@ -105,6 +117,9 @@ Class is Dialog{
 		if({ !win:open() }, {
 			open:emit(value: false);
 			return;
+		});
+		if({ minWidthPt > 0.0 || minHeightPt > 0.0 }, {
+			win:setMinSize(minW: scale:px(pt: minWidthPt), minH: scale:px(pt: minHeightPt));
 		});
 		if({ hasContent }, {
 			content:bindDirty(cb: local Function(){ :isDirty: true; });
@@ -148,6 +163,10 @@ Class is Dialog{
 				return;
 			});
 			key: win:nextKey();
+		});
+
+		if({ win:width() != lastW || win:height() != lastH }, {
+			isDirty: true;
 		});
 
 		if({ isDirty }, {
