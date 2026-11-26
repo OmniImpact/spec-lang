@@ -29,6 +29,7 @@ Class is Dialog{
 	SewNode is content: SewNode();
 	Boolean is hasContent: false;
 	Function is onPaint: local Function(DrawContext is ctx, Int is w, Int is h, Theme is theme, Scale is scale){};
+	Function is onTick: local Function(Int is _nowMs){};
 
 	SuitWindow is win: SuitWindow();
 	SuitCanvas is canvas: SuitCanvas(width: 1, height: 1);
@@ -50,7 +51,8 @@ Class is Dialog{
 		Float is minHeightPt: 140.0,
 		SewNode is content: SewNode(),
 		Boolean is hasContent: true,
-		Function is onPaint: local Function(DrawContext is ctx, Int is w, Int is h, Theme is theme, Scale is scale){}
+		Function is onPaint: local Function(DrawContext is ctx, Int is w, Int is h, Theme is theme, Scale is scale){},
+		Function is onTick: local Function(Int is _nowMs){}
 	){
 		:title: title;
 		:open: open;
@@ -63,6 +65,7 @@ Class is Dialog{
 		:content: content;
 		:hasContent: hasContent;
 		:onPaint: onPaint;
+		:onTick: onTick;
 		isShown: false;
 		isDirty: false;
 		lastW: 0;
@@ -134,6 +137,17 @@ Class is Dialog{
 		isShown: false;
 		canvas:dispose();
 		win:close();
+	}
+
+	Function of Boolean is tick(Int is nowMs){
+		if({ !isShown }, { return false; });
+		local Function is cb: onTick;
+		cb(nowMs);
+		if({ hasContent && content:tick(nowMs: nowMs) }, {
+			isDirty: true;
+			return true;
+		});
+		return false;
 	}
 
 	## Polled once per frame by `ToolkitContainer:run`.

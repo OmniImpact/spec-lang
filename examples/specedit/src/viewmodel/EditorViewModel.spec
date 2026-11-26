@@ -54,7 +54,9 @@ Class is EditorViewModel{
 	TextEmitter is versionText: TextEmitter(initial: SpecEditStrings:VERSION_TEXT);
 	TextEmitter is descriptionText: TextEmitter(initial: SpecEditStrings:DESCRIPTION_TEXT);
 	TextEmitter is processStatsText: TextEmitter(initial: '');
-	Int is startWallMs: 0;
+	Int is statsWindowWallMs: 0;
+	Int is statsWindowCpuUs: 0;
+	Float is emaCpuPct: 0.0;
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
 	Float is toolbarHeightPt: 30.0;
@@ -113,7 +115,9 @@ Class is EditorViewModel{
 		cursorStatus: TextEmitter(initial: '');
 		syntaxStatus: TextEmitter(initial: '');
 		processStatsText: TextEmitter(initial: '');
-		startWallMs: Process:clockMs();
+		statsWindowWallMs: Process:clockMs();
+		statsWindowCpuUs: Process:cpuTimeUs();
+		emaCpuPct: 0.0;
 		toolbarConfig: :buildToolbarConfig();
 		:refreshMenuStates();
 	}
@@ -656,13 +660,7 @@ Class is EditorViewModel{
 		fileTreeItem:checked: next;
 	}
 
-	Function is refreshAboutStats(){
-		local Int is pid: Process:getPid();
-		local Int is cpuUs: Process:cpuTimeUs();
-		local Int is memKb: Process:currentMemoryKb();
-		local Int is cpuMs: cpuUs / 1000;
-		local Int is wallMs: Process:clockMs() - startWallMs;
-		local Int is cpuPct: if({ wallMs > 0 }, { (cpuUs / 10) / wallMs }, { 0 });
+	local Function is emitProcessStats(Int is pid, Int is cpuMs, Int is cpuPct, Int is memKb){
 		local Int is memMb: memKb / 1024;
 		local Int is memTenths: ((memKb % 1024) * 10) / 1024;
 		processStatsText:emit(
@@ -670,6 +668,34 @@ Class is EditorViewModel{
 				. '  |  CPU ' . (cpuMs as String) . ' ms (' . (cpuPct as String) . '%)'
 				. '  |  Mem ' . (memMb as String) . '.' . (memTenths as String) . ' MB'
 		);
+	}
+
+	Function is stepAboutStats(Int is nowMs){
+		local Int is elapsed: nowMs - statsWindowWallMs;
+		if({ elapsed < 250 }, { return; });
+		local Int is pid: Process:getPid();
+		local Int is cpuUs: Process:cpuTimeUs();
+		local Int is memKb: Process:currentMemoryKb();
+		local Int is dCpuUs: cpuUs - statsWindowCpuUs;
+		local Float is instPct: ((dCpuUs as Float) / ((elapsed as Float) * 10.0));
+		if({ emaCpuPct <= 0.0 }, {
+			emaCpuPct: instPct;
+		}, {
+			emaCpuPct: (emaCpuPct * 0.6) + (instPct * 0.4);
+		});
+		statsWindowWallMs: nowMs;
+		statsWindowCpuUs: cpuUs;
+		:emitProcessStats(pid: pid, cpuMs: cpuUs / 1000, cpuPct: (emaCpuPct + 0.5) as Int, memKb: memKb);
+	}
+
+	Function is refreshAboutStats(){
+		local Int is nowMs: Process:clockMs();
+		local Int is pid: Process:getPid();
+		local Int is cpuUs: Process:cpuTimeUs();
+		local Int is memKb: Process:currentMemoryKb();
+		statsWindowWallMs: nowMs;
+		statsWindowCpuUs: cpuUs;
+		:emitProcessStats(pid: pid, cpuMs: cpuUs / 1000, cpuPct: (emaCpuPct + 0.5) as Int, memKb: memKb);
 	}
 
 	Function is requestAbout(){

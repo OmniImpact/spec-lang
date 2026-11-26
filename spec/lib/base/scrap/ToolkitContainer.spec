@@ -577,10 +577,14 @@ Class of SewNode is ToolkitContainer{
 				});
 			});
 
+			local Int is frameNowMs: clock:monotonicMs();
 			if({ hasBody && !useVulkan }, {
-				if({ bodyPanel:tick(nowMs: clock:monotonicMs()) }, {
+				if({ bodyPanel:tick(nowMs: frameNowMs) }, {
 					:isDirty: true;
 				});
+			});
+			if({ hasDialog }, {
+				dialog:tick(nowMs: frameNowMs);
 			});
 
 			if({ isDirty && running:current() }, {

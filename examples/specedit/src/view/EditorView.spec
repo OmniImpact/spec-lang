@@ -91,6 +91,7 @@ Class is EditorView{
 			open: vm:aboutOpen,
 			widthPt: vm:aboutWidthPt,
 			heightPt: vm:aboutHeightPt,
+			onTick: local Function(Int is nowMs){ vm:stepAboutStats(nowMs: nowMs); },
 			content: Center(
 				child: Column(
 					gapPt: 8.0,
