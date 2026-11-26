@@ -14,14 +14,21 @@ Class is SpecEditStrings{
 	held String is THEME_PRESET: 'light_grayscale';
 	held String is ABOUT_TITLE: 'About SpecEdit';
 	held String is FILE_DIALOG_TITLE: 'Open File';
+	held String is SAVE_DIALOG_TITLE: 'Save File';
 	held String is TEXT_ALIGN_CENTER: 'center';
 
 	held String is MENU_KIND_TOGGLE: 'toggle';
 
 	held String is MENU_FILE_ID: 'file';
 	held String is MENU_FILE_LABEL: 'File';
+	held String is ITEM_NEW_ID: 'new';
+	held String is ITEM_NEW_LABEL: 'New';
 	held String is ITEM_OPEN_ID: 'open';
-	held String is ITEM_OPEN_LABEL: 'Open...';
+	held String is ITEM_OPEN_LABEL: 'Open';
+	held String is ITEM_SAVE_ID: 'save';
+	held String is ITEM_SAVE_LABEL: 'Save';
+	held String is ITEM_SAVE_AS_ID: 'save_as';
+	held String is ITEM_SAVE_AS_LABEL: 'Save As';
 	held String is ITEM_QUIT_ID: 'quit';
 	held String is ITEM_QUIT_LABEL: 'Quit';
 

@@ -333,6 +333,16 @@ Class of SewNode is TextView{
 		:notifyEdited();
 	}
 
+	## Returns `true` when there is a non-empty text selection.
+	Function of Boolean is hasSelectedText(){
+		return :hasNonEmptySelection();
+	}
+
+	## Returns `true` when the internal clipboard buffer is non-empty.
+	Function of Boolean is hasClipboardText(){
+		return clipboardText != '';
+	}
+
 	## Copies the active selection into the clipboard buffer and returns it.
 	Function of String is copySelection(){
 		local String is sel: :selectedText();

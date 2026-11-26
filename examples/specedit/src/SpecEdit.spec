@@ -8,18 +8,15 @@ Class is SpecEdit{
 		['base', 'struct', Map],
 		['base', 'cli', Cli],
 		['base', 'scrap', ToolkitContainer],
-		['specedit', 'model', EditorModel],
 		['specedit', 'viewmodel', EditorViewModel],
-		['specedit', 'view', EditorView],
-		['specedit', 'util', SpecEditStrings]
+		['specedit', 'view', EditorView]
 	];
 
 	replace Function is init(Map of String to String is args){
 		local Cli is cli: Cli():parseOrExit();
 		local Int is durationMs: cli:getInt(name: 'duration-ms', default: 0);
 
-		local EditorModel is model: EditorModel(documentName: SpecEditStrings:UNTITLED);
-		local EditorViewModel is vm: EditorViewModel(model: model);
+		local EditorViewModel is vm: EditorViewModel();
 		EditorView(vm: vm):build():run(durationMs: durationMs);
 	}
 }

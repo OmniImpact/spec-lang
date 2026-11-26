@@ -112,6 +112,7 @@ Class of SewNode is ContextMenu{
 			local Int is idx: (y - my) / ih;
 			if({ idx >= 0 && idx < items:length() }, {
 				local MenuItemConfig is item: items:get(index: idx);
+				if({ !item:enabled }, { return true; });
 				:close();
 				local Function is cb: item:onClick;
 				cb();
@@ -142,11 +143,12 @@ Class of SewNode is ContextMenu{
 		while({ i < items:length() }, {
 			local MenuItemConfig is item: items:get(index: i);
 			local Int is iy: my + i * ih;
-			if({ hoverIdx == i }, {
+			if({ hoverIdx == i && item:enabled }, {
 				ctx:fillRect(x: mx + 1, y: iy + 1, w: mw - 2, h: ih - 2, color: activeTheme:hoverBg);
 			});
 			local Int is ty: iy + (ih - th) / 2;
-			ctx:drawText(x: mx + padX, y: ty, text: item:label, color: activeTheme:textPrimary, pixelHeight: fpx);
+			local Int is txtColor: if({ item:enabled }, { activeTheme:textPrimary }, { activeTheme:textMuted });
+			ctx:drawText(x: mx + padX, y: ty, text: item:label, color: txtColor, pixelHeight: fpx);
 			i: i + 1;
 		});
 	}

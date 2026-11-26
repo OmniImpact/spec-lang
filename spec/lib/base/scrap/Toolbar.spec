@@ -31,15 +31,18 @@ Class of SewNode is Toolbar{
 	Int is hoverItemIdx: -1;
 	Int is openSubMenuIdx: -1;
 	Int is hoverSubItemIdx: -1;
+	Function is onMenuOpen: local Function(MenuConfig is menu){};
 
 	replace Function is init(
 		Theme is theme: Theme(preset: 'light_grayscale'),
 		Scale is scale: Scale(factor: 1.0),
-		ToolbarConfig is config: ToolbarConfig()
+		ToolbarConfig is config: ToolbarConfig(),
+		Function is onMenuOpen: local Function(MenuConfig is menu){}
 	){
 		:theme: theme;
 		:scale: scale;
 		:config: config;
+		:onMenuOpen: onMenuOpen;
 		:bar: Bar(heightPt: config:heightPt, borderSide: 'bottom', theme: theme, scale: scale);
 		openMenuIdx: -1;
 		hoverMenuIdx: -1;
@@ -157,7 +160,7 @@ Class of SewNode is Toolbar{
 				hoverItemIdx: idx;
 				if({ idx >= 0 && idx < om:items:length() }, {
 					local MenuItemConfig is item: om:items:get(index: idx);
-					if({ item:subItems:length() > 0 }, {
+					if({ item:enabled && item:subItems:length() > 0 }, {
 						openSubMenuIdx: idx;
 					}, {
 						openSubMenuIdx: -1;
@@ -186,6 +189,8 @@ Class of SewNode is Toolbar{
 					}, {
 						openMenuIdx: i;
 						openSubMenuIdx: -1;
+						local Function is ocb: onMenuOpen;
+						ocb(m);
 					});
 					handled: true;
 				});
@@ -211,6 +216,7 @@ Class of SewNode is Toolbar{
 						local Int is subIdx: (y - sdy) / ih;
 						if({ subIdx >= 0 && subIdx < parentItem:subItems:length() }, {
 							local MenuItemConfig is subItem: parentItem:subItems:get(index: subIdx);
+							if({ !subItem:enabled }, { return true; });
 							openMenuIdx: -1;
 							openSubMenuIdx: -1;
 							local Function is scb: subItem:onClick;
@@ -225,6 +231,7 @@ Class of SewNode is Toolbar{
 				local Int is itemIdx: (y - dy) / ih;
 				if({ itemIdx >= 0 && itemIdx < om:items:length() }, {
 					local MenuItemConfig is item: om:items:get(index: itemIdx);
+					if({ !item:enabled }, { return true; });
 					if({ item:subItems:length() > 0 }, {
 						openSubMenuIdx: itemIdx;
 						return true;
@@ -296,20 +303,21 @@ Class of SewNode is Toolbar{
 		Boolean is hovered,
 		Boolean is reserveInd
 	){
-		if({ hovered }, {
+		if({ hovered && item:enabled }, {
 			ctx:fillRect(x: x + 1, y: y + 1, w: w - 2, h: h - 2, color: theme:hoverBg);
 		});
+		local Int is fgCol: if({ item:enabled }, { theme:textPrimary }, { theme:textMuted });
 		local Int is indW: if({ reserveInd }, { scale:px(pt: 18.0) }, { 0 });
 		local Int is cy: y + h / 2;
 		if({ item:kind == 'radio' }, {
 			local Int is r: scale:px(pt: 5.5);
 			if({ r < 4 }, { r: 4; });
 			local Int is cx: x + padX + r;
-			ctx:strokeCircle(cx: cx, cy: cy, r: r, color: theme:textPrimary);
+			ctx:strokeCircle(cx: cx, cy: cy, r: r, color: fgCol);
 			if({ item:checked }, {
 				local Int is ir: r - 2;
 				if({ ir < 2 }, { ir: 2; });
-				ctx:fillCircle(cx: cx, cy: cy, r: ir, color: theme:textPrimary);
+				ctx:fillCircle(cx: cx, cy: cy, r: ir, color: fgCol);
 			});
 		}, {
 			if({ item:kind == 'toggle' }, {
@@ -317,15 +325,15 @@ Class of SewNode is Toolbar{
 				if({ sz < 8 }, { sz: 8; });
 				local Int is sx: x + padX;
 				local Int is sy: cy - sz / 2;
-				ctx:strokeRect(x: sx, y: sy, w: sz, h: sz, color: theme:textPrimary);
+				ctx:strokeRect(x: sx, y: sy, w: sz, h: sz, color: fgCol);
 				if({ item:checked }, {
-					ctx:fillRect(x: sx + 3, y: sy + 3, w: sz - 6, h: sz - 6, color: theme:textPrimary);
+					ctx:fillRect(x: sx + 3, y: sy + 3, w: sz - 6, h: sz - 6, color: fgCol);
 				});
 			});
 		});
 		local Int is ty: y + (h - th) / 2;
 		local String is lbl: if({ item:kind == 'action' && item:checked }, { '* ' . item:label }, { item:label });
-		ctx:drawText(x: x + padX + indW, y: ty, text: lbl, color: theme:textPrimary, pixelHeight: fpx);
+		ctx:drawText(x: x + padX + indW, y: ty, text: lbl, color: fgCol, pixelHeight: fpx);
 	}
 
 	## Paints the open dropdown menu popup (and any open sub-menu) above the body layer.

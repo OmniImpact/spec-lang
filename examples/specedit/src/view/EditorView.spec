@@ -10,14 +10,20 @@ Class is EditorView{
 		['base', 'sew', SewNode],
 		['base', 'sew', Center],
 		['base', 'sew', Column],
+		['base', 'sew', Row],
+		['base', 'sew', Stack],
+		['base', 'sew', ViewSwitch],
 		['base', 'fabric', Theme],
 		['base', 'scrap', ToolkitContainer],
 		['base', 'scrap', ToolbarContainer],
 		['base', 'scrap', Toolbar],
+		['base', 'scrap', MenuConfig],
 		['base', 'scrap', TabBar],
 		['base', 'scrap', ScrollView],
 		['base', 'scrap', TextView],
 		['base', 'scrap', TextScrap],
+		['base', 'scrap', ScrapPanel],
+		['base', 'scrap', ScrapButton],
 		['base', 'scrap', Bar],
 		['base', 'scrap', Dialog],
 		['base', 'wardrobe', FileDialog],
@@ -49,7 +55,9 @@ Class is EditorView{
 			onCopy: local Function(){ editorBody:copySelection(); },
 			onCut: local Function(){ editorBody:cutSelection(); },
 			onPaste: local Function(){ editorBody:pasteText(); },
-			onSelectAll: local Function(){ editorBody:selectAll(); }
+			onSelectAll: local Function(){ editorBody:selectAll(); },
+			canCopy: local Function of Boolean(){ editorBody:hasSelectedText() },
+			canPaste: local Function of Boolean(){ editorBody:hasClipboardText() }
 		);
 	}
 
@@ -74,11 +82,37 @@ Class is EditorView{
 
 	local Function of FileDialog is openFileDialog(){
 		FileDialog(
-			title: vm:fileDialogTitle,
+			title: vm:fileDialogTitle:current(),
 			open: vm:fileDialogOpen,
+			saveMode: vm:fileDialogSaveMode,
+			dialogTitle: vm:fileDialogTitle,
+			suggestedName: vm:fileDialogSuggestedName,
 			allowMultiple: vm:allowMultipleFiles,
-			onSelect: local Function(Array of String is paths){ vm:openFiles(paths: paths); },
+			onSelect: local Function(Array of String is paths){ vm:onFileDialogSelected(paths: paths); },
 			onCancel: local Function(){ vm:cancelOpen(); }
+		)
+	}
+
+	local Function of SewNode is emptyState(){
+		Stack(
+			children: Array([
+				ScrapPanel() as SewNode,
+				Center(
+					child: Row(
+						gapPt: 14.0,
+						children: Array([
+							ScrapButton(
+								label: SpecEditStrings:ITEM_OPEN_LABEL,
+								onClick: local Function(){ vm:requestOpen(); }
+							) as SewNode,
+							ScrapButton(
+								label: SpecEditStrings:ITEM_NEW_LABEL,
+								onClick: local Function(){ vm:newDocument(); }
+							) as SewNode
+						])
+					)
+				) as SewNode
+			])
 		)
 	}
 
@@ -90,12 +124,17 @@ Class is EditorView{
 			widthPt: vm:windowWidthPt,
 			heightPt: vm:windowHeightPt,
 			toolbar: ToolbarContainer(
-				toolbar: Toolbar(config: vm:toolbarConfig)
+				toolbar: Toolbar(
+					config: vm:toolbarConfig,
+					onMenuOpen: local Function(MenuConfig is _m){ vm:refreshMenuStates(); }
+				)
 			),
 			tabBar: tabBar,
 			hasTabBar: true,
-			body: ScrollView(
-				child: editorBody
+			body: ViewSwitch(
+				condition: vm:hasDocument,
+				first: ScrollView(child: editorBody),
+				second: :emptyState()
 			),
 			bottomBar: Bar(
 				leftText: vm:cursorStatus,

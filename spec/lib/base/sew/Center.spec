@@ -33,6 +33,11 @@ Class of SewNode is Center{
 		child:setScale(scale: scale);
 	}
 
+	replace Function is bindDirty(Function is cb){
+		:dirtyListeners: Array([cb]);
+		child:bindDirty(cb: cb);
+	}
+
 	replace Function of Size is measure(Constraints is c){
 		local Int is padPx: activeScale:px(pt: padXPt * 2.0);
 		local Constraints is inner: Constraints(
@@ -60,5 +65,17 @@ Class of SewNode is Center{
 
 	replace Function is paint(DrawContext is ctx){
 		child:paint(ctx: ctx);
+	}
+
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
+		return child:onPointerMove(x: x, y: y);
+	}
+
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		return child:onPointerClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		return child:onRightClickMod(x: x, y: y, mods: mods);
 	}
 }

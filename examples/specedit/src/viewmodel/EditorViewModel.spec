@@ -22,19 +22,23 @@ Class is EditorViewModel{
 
 	EditorModel is model: EditorModel();
 	Array of EditorModel is documents: Array();
-	Int is activeDocIdx: 0;
+	Int is activeDocIdx: -1;
 	TabBar is boundTabBar: TabBar();
 	Boolean is hasBoundTabBar: false;
 	ContextMenu is contextMenu: ContextMenu();
 
-	TextEmitter is title: TextEmitter(initial: SpecEditStrings:baseTitle(documentName: SpecEditStrings:UNTITLED));
+	TextEmitter is title: TextEmitter(initial: SpecEditStrings:APP_NAME);
 	BoolEmitter is running: BoolEmitter(initial: true);
+	BoolEmitter is hasDocument: BoolEmitter(initial: false);
 	BoolEmitter is fileDialogOpen: BoolEmitter(initial: false);
+	BoolEmitter is fileDialogSaveMode: BoolEmitter(initial: false);
+	TextEmitter is fileDialogTitle: TextEmitter(initial: SpecEditStrings:FILE_DIALOG_TITLE);
+	TextEmitter is fileDialogSuggestedName: TextEmitter(initial: '');
 	BoolEmitter is aboutOpen: BoolEmitter(initial: false);
 	BoolEmitter is wrapEnabled: BoolEmitter(initial: false);
 	BoolEmitter is lineNumbersEnabled: BoolEmitter(initial: false);
 	TextEmitter is documentText: TextEmitter(initial: '');
-	TextEmitter is cursorStatus: TextEmitter(initial: SpecEditStrings:DEFAULT_CURSOR_STATUS);
+	TextEmitter is cursorStatus: TextEmitter(initial: '');
 	TextEmitter is versionText: TextEmitter(initial: SpecEditStrings:VERSION_TEXT);
 	TextEmitter is descriptionText: TextEmitter(initial: SpecEditStrings:DESCRIPTION_TEXT);
 	Float is windowWidthPt: 800.0;
@@ -44,10 +48,15 @@ Class is EditorViewModel{
 	String is aboutTitle: SpecEditStrings:ABOUT_TITLE;
 	Float is aboutWidthPt: 420.0;
 	Float is aboutHeightPt: 170.0;
-	String is fileDialogTitle: SpecEditStrings:FILE_DIALOG_TITLE;
 	Boolean is allowMultipleFiles: false;
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
 
+	MenuItemConfig is saveItem: MenuItemConfig(id: SpecEditStrings:ITEM_SAVE_ID, label: SpecEditStrings:ITEM_SAVE_LABEL, enabled: false);
+	MenuItemConfig is saveAsItem: MenuItemConfig(id: SpecEditStrings:ITEM_SAVE_AS_ID, label: SpecEditStrings:ITEM_SAVE_AS_LABEL, enabled: false);
+	MenuItemConfig is cutItem: MenuItemConfig(id: SpecEditStrings:ITEM_CUT_ID, label: SpecEditStrings:ITEM_CUT_LABEL, enabled: false);
+	MenuItemConfig is copyItem: MenuItemConfig(id: SpecEditStrings:ITEM_COPY_ID, label: SpecEditStrings:ITEM_COPY_LABEL, enabled: false);
+	MenuItemConfig is pasteItem: MenuItemConfig(id: SpecEditStrings:ITEM_PASTE_ID, label: SpecEditStrings:ITEM_PASTE_LABEL, enabled: false);
+	MenuItemConfig is selectAllItem: MenuItemConfig(id: SpecEditStrings:ITEM_SELECT_ALL_ID, label: SpecEditStrings:ITEM_SELECT_ALL_LABEL, enabled: false);
 	MenuItemConfig is wrapItem: MenuItemConfig(id: SpecEditStrings:ITEM_WRAP_ID, label: SpecEditStrings:ITEM_WRAP_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 	MenuItemConfig is lineNumsItem: MenuItemConfig(id: SpecEditStrings:ITEM_LINE_NUMS_ID, label: SpecEditStrings:ITEM_LINE_NUMS_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
 
@@ -55,23 +64,35 @@ Class is EditorViewModel{
 	Function is cutHandler: local Function(){};
 	Function is pasteHandler: local Function(){};
 	Function is selectAllHandler: local Function(){};
+	Function is canCopyHandler: local Function of Boolean(){ false };
+	Function is canPasteHandler: local Function of Boolean(){ false };
 
-	replace Function is init(EditorModel is model: EditorModel(documentName: SpecEditStrings:UNTITLED)){
-		:model: model;
-		:documents: Array([model]);
-		:activeDocIdx: 0;
+	replace Function is init(){
+		:model: EditorModel(documentName: SpecEditStrings:UNTITLED);
+		:documents: Array();
+		:activeDocIdx: -1;
+		hasDocument: BoolEmitter(initial: false);
 		title: TextEmitter(initial: :computeTitle());
 		running: BoolEmitter(initial: true);
 		fileDialogOpen: BoolEmitter(initial: false);
+		fileDialogSaveMode: BoolEmitter(initial: false);
+		fileDialogTitle: TextEmitter(initial: SpecEditStrings:FILE_DIALOG_TITLE);
+		fileDialogSuggestedName: TextEmitter(initial: '');
 		aboutOpen: BoolEmitter(initial: false);
 		wrapEnabled: BoolEmitter(initial: false);
 		lineNumbersEnabled: BoolEmitter(initial: false);
-		documentText: TextEmitter(initial: model:text);
-		cursorStatus: TextEmitter(initial: SpecEditStrings:DEFAULT_CURSOR_STATUS);
+		documentText: TextEmitter(initial: '');
+		cursorStatus: TextEmitter(initial: '');
 		toolbarConfig: :buildToolbarConfig();
+		:refreshMenuStates();
+	}
+
+	Function of Boolean is hasOpenDocument(){
+		return documents:length() > 0 && activeDocIdx >= 0 && activeDocIdx < documents:length();
 	}
 
 	local Function of String is computeTitle(){
+		if({ !:hasOpenDocument() }, { return SpecEditStrings:APP_NAME; });
 		local String is base: SpecEditStrings:baseTitle(documentName: model:documentName);
 		return if({ model:dirty }, { SpecEditStrings:dirtyTitle(base: base) }, { base });
 	}
@@ -101,9 +122,26 @@ Class is EditorViewModel{
 		if({ idx < 0 || idx >= documents:length() }, { return; });
 		activeDocIdx: idx;
 		model: documents:get(index: idx);
+		hasDocument:emit(value: true);
 		documentText:emit(value: model:text);
+		cursorStatus:emit(value: SpecEditStrings:DEFAULT_CURSOR_STATUS);
 		title:emit(value: :computeTitle());
 		:syncTabs();
+		:refreshMenuStates();
+	}
+
+	Function is refreshMenuStates(){
+		local Boolean is hasDoc: :hasOpenDocument();
+		local Function is copyQ: canCopyHandler;
+		local Function is pasteQ: canPasteHandler;
+		local Boolean is hasSel: if({ hasDoc }, { copyQ() }, { false });
+		local Boolean is hasClip: if({ hasDoc }, { pasteQ() }, { false });
+		saveItem:enabled: hasDoc && model:dirty;
+		saveAsItem:enabled: hasDoc;
+		cutItem:enabled: hasSel;
+		copyItem:enabled: hasSel;
+		pasteItem:enabled: hasClip;
+		selectAllItem:enabled: hasDoc && (model:text:length() > 0);
 	}
 
 	Function is bindTabBar(TabBar is tabBar){
@@ -117,10 +155,29 @@ Class is EditorViewModel{
 
 		local MenuConfig is fileMenu: MenuConfig(id: SpecEditStrings:MENU_FILE_ID, label: SpecEditStrings:MENU_FILE_LABEL);
 		fileMenu:addItem(item: MenuItemConfig(
+			id: SpecEditStrings:ITEM_NEW_ID,
+			label: SpecEditStrings:ITEM_NEW_LABEL,
+			onClick: local Function(){ :newDocument(); }
+		));
+		fileMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_OPEN_ID,
 			label: SpecEditStrings:ITEM_OPEN_LABEL,
 			onClick: local Function(){ :requestOpen(); }
 		));
+		saveItem: MenuItemConfig(
+			id: SpecEditStrings:ITEM_SAVE_ID,
+			label: SpecEditStrings:ITEM_SAVE_LABEL,
+			enabled: false,
+			onClick: local Function(){ :requestSave(); }
+		);
+		saveAsItem: MenuItemConfig(
+			id: SpecEditStrings:ITEM_SAVE_AS_ID,
+			label: SpecEditStrings:ITEM_SAVE_AS_LABEL,
+			enabled: false,
+			onClick: local Function(){ :requestSaveAs(); }
+		);
+		fileMenu:addItem(item: saveItem);
+		fileMenu:addItem(item: saveAsItem);
 		fileMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_QUIT_ID,
 			label: SpecEditStrings:ITEM_QUIT_LABEL,
@@ -129,26 +186,34 @@ Class is EditorViewModel{
 		cfg:addMenu(menu: fileMenu);
 
 		local MenuConfig is editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL);
-		editMenu:addItem(item: MenuItemConfig(
+		copyItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_COPY_ID,
 			label: SpecEditStrings:ITEM_COPY_LABEL,
+			enabled: false,
 			onClick: local Function(){ :requestCopy(); }
-		));
-		editMenu:addItem(item: MenuItemConfig(
+		);
+		cutItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_CUT_ID,
 			label: SpecEditStrings:ITEM_CUT_LABEL,
+			enabled: false,
 			onClick: local Function(){ :requestCut(); }
-		));
-		editMenu:addItem(item: MenuItemConfig(
+		);
+		pasteItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_PASTE_ID,
 			label: SpecEditStrings:ITEM_PASTE_LABEL,
+			enabled: false,
 			onClick: local Function(){ :requestPaste(); }
-		));
-		editMenu:addItem(item: MenuItemConfig(
+		);
+		selectAllItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_SELECT_ALL_ID,
 			label: SpecEditStrings:ITEM_SELECT_ALL_LABEL,
+			enabled: false,
 			onClick: local Function(){ :requestSelectAll(); }
-		));
+		);
+		editMenu:addItem(item: copyItem);
+		editMenu:addItem(item: cutItem);
+		editMenu:addItem(item: pasteItem);
+		editMenu:addItem(item: selectAllItem);
 		cfg:addMenu(menu: editMenu);
 
 		local MenuConfig is viewMenu: MenuConfig(id: SpecEditStrings:MENU_VIEW_ID, label: SpecEditStrings:MENU_VIEW_LABEL);
@@ -181,12 +246,67 @@ Class is EditorViewModel{
 		return cfg;
 	}
 
+	Function is newDocument(){
+		local EditorModel is doc: EditorModel(documentName: SpecEditStrings:UNTITLED);
+		documents:add(item: doc);
+		:activateDocument(idx: documents:length() - 1);
+	}
+
 	Function is requestOpen(){
+		fileDialogSaveMode:emit(value: false);
+		fileDialogTitle:emit(value: SpecEditStrings:FILE_DIALOG_TITLE);
+		fileDialogSuggestedName:emit(value: '');
+		fileDialogOpen:emit(value: true);
+	}
+
+	Function is requestSave(){
+		if({ !:hasOpenDocument() }, { return; });
+		if({ model:filePath != '' }, {
+			:saveDocumentToPath(path: model:filePath);
+			return;
+		});
+		:requestSaveAs();
+	}
+
+	Function is requestSaveAs(){
+		if({ !:hasOpenDocument() }, { return; });
+		local String is suggested: if({ model:filePath != '' }, { :baseName(path: model:filePath) }, { model:documentName });
+		fileDialogSaveMode:emit(value: true);
+		fileDialogTitle:emit(value: SpecEditStrings:SAVE_DIALOG_TITLE);
+		fileDialogSuggestedName:emit(value: suggested);
 		fileDialogOpen:emit(value: true);
 	}
 
 	Function is cancelOpen(){
 		fileDialogOpen:emit(value: false);
+	}
+
+	Function is onFileDialogSelected(Array of String is paths){
+		fileDialogOpen:emit(value: false);
+		if({ paths:length() == 0 }, { return; });
+		if({ fileDialogSaveMode:current() }, {
+			:saveDocumentToPath(path: paths:get(index: 0));
+			return;
+		});
+		:openFiles(paths: paths);
+	}
+
+	local Function is saveDocumentToPath(String is path){
+		if({ !:hasOpenDocument() || path == '' }, { return; });
+		local Boolean is ok: fileWrite(
+			path: path,
+			content: model:text,
+			onSuccess: local Function(Int is _written){},
+			onError: local Function(Any is _err){}
+		);
+		if({ ok }, {
+			model:filePath: path;
+			model:documentName: :baseName(path: path);
+			model:dirty: false;
+			title:emit(value: :computeTitle());
+			:syncTabs();
+			:refreshMenuStates();
+		});
 	}
 
 	## Opens selected files into tabs (reusing already-open tabs or replacing an empty initial Untitled tab).
@@ -271,9 +391,15 @@ Class is EditorViewModel{
 	}
 
 	Function is closeAllTabs(){
-		local EditorModel is fresh: EditorModel(documentName: SpecEditStrings:UNTITLED);
-		documents: Array([fresh]);
-		:activateDocument(idx: 0);
+		documents: Array();
+		activeDocIdx: -1;
+		model: EditorModel(documentName: SpecEditStrings:UNTITLED);
+		hasDocument:emit(value: false);
+		documentText:emit(value: '');
+		cursorStatus:emit(value: '');
+		title:emit(value: :computeTitle());
+		:syncTabs();
+		:refreshMenuStates();
 	}
 
 	Function is showTabContextMenu(Int is index, Int is x, Int is y){
@@ -281,11 +407,13 @@ Class is EditorViewModel{
 			MenuItemConfig(
 				id: SpecEditStrings:ITEM_CLOSE_OTHERS_ID,
 				label: SpecEditStrings:ITEM_CLOSE_OTHERS_LABEL,
+				enabled: documents:length() > 1,
 				onClick: local Function(){ :closeOtherTabs(keepIndex: index); }
 			),
 			MenuItemConfig(
 				id: SpecEditStrings:ITEM_CLOSE_ALL_ID,
 				label: SpecEditStrings:ITEM_CLOSE_ALL_LABEL,
+				enabled: documents:length() > 0,
 				onClick: local Function(){ :closeAllTabs(); }
 			)
 		]);
@@ -293,20 +421,28 @@ Class is EditorViewModel{
 	}
 
 	Function is showEditorContextMenu(Int is x, Int is y){
+		local Boolean is hasDoc: :hasOpenDocument();
+		local Function is copyQ: canCopyHandler;
+		local Function is pasteQ: canPasteHandler;
+		local Boolean is hasSel: if({ hasDoc }, { copyQ() }, { false });
+		local Boolean is hasClip: if({ hasDoc }, { pasteQ() }, { false });
 		local Array of MenuItemConfig is items: Array([
 			MenuItemConfig(
 				id: SpecEditStrings:ITEM_CUT_ID,
 				label: SpecEditStrings:ITEM_CUT_LABEL,
+				enabled: hasSel,
 				onClick: local Function(){ :requestCut(); }
 			),
 			MenuItemConfig(
 				id: SpecEditStrings:ITEM_COPY_ID,
 				label: SpecEditStrings:ITEM_COPY_LABEL,
+				enabled: hasSel,
 				onClick: local Function(){ :requestCopy(); }
 			),
 			MenuItemConfig(
 				id: SpecEditStrings:ITEM_PASTE_ID,
 				label: SpecEditStrings:ITEM_PASTE_LABEL,
+				enabled: hasClip,
 				onClick: local Function(){ :requestPaste(); }
 			)
 		]);
@@ -314,12 +450,14 @@ Class is EditorViewModel{
 	}
 
 	Function is onDocumentEdited(String is text){
+		if({ !:hasOpenDocument() }, { return; });
 		model:text: text;
 		if({ !model:dirty }, {
 			model:dirty: true;
 			title:emit(value: :computeTitle());
 			:syncTabs();
 		});
+		:refreshMenuStates();
 	}
 
 	## Binds View-owned editor text actions (copy/cut/paste/selectAll) without coupling VM to `TextView`.
@@ -327,12 +465,17 @@ Class is EditorViewModel{
 		Function is onCopy,
 		Function is onCut,
 		Function is onPaste,
-		Function is onSelectAll
+		Function is onSelectAll,
+		Function is canCopy,
+		Function is canPaste
 	){
 		copyHandler: onCopy;
 		cutHandler: onCut;
 		pasteHandler: onPaste;
 		selectAllHandler: onSelectAll;
+		canCopyHandler: canCopy;
+		canPasteHandler: canPaste;
+		:refreshMenuStates();
 	}
 
 	Function is requestCopy(){

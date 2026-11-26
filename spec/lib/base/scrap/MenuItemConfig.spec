@@ -12,6 +12,7 @@ Class is MenuItemConfig{
 	String is label: '';
 	Function is onClick: local Function(){};
 	Boolean is checked: false;
+	Boolean is enabled: true;
 	String is kind: 'action';
 	Array of MenuItemConfig is subItems: Array();
 
@@ -20,12 +21,14 @@ Class is MenuItemConfig{
 		String is label,
 		Function is onClick: local Function(){},
 		Boolean is checked: false,
+		Boolean is enabled: true,
 		String is kind: 'action'
 	){
 		:id: id;
 		:label: label;
 		:onClick: onClick;
 		:checked: checked;
+		:enabled: enabled;
 		:kind: kind;
 		subItems: Array();
 	}
