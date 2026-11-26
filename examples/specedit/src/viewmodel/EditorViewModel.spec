@@ -11,8 +11,6 @@ Class is EditorViewModel{
 		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', TextEmitter],
-		['base', 'fabric', Theme],
-		['base', 'fabric', ThemePreset],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'menu', MenuConfig],
 		['base', 'scrap', 'menu', MenuItemConfig],
@@ -22,6 +20,7 @@ Class is EditorViewModel{
 		['base', 'scrap', 'text', CodeEditorView],
 		['base', 'scrap', 'highlighter', Highlighter],
 		['specedit', 'model', EditorModel],
+		['specedit', 'viewmodel', SettingsViewModel],
 		['specedit', 'util', SpecEditStrings],
 		['specedit', 'util', EditorIcons]
 	];
@@ -62,9 +61,7 @@ Class is EditorViewModel{
 	Float is windowWidthPt: 800.0;
 	Float is windowHeightPt: 600.0;
 	Float is toolbarHeightPt: 30.0;
-	ThemePreset is themePreset: ThemePreset:LIGHT;
-	Array of MenuItemConfig is themeMenuItems: Array();
-	Function is themeChangeHandler: local Function(Theme is _t){};
+	SettingsViewModel is settingsVm: SettingsViewModel();
 	String is aboutTitle: SpecEditStrings:ABOUT_TITLE;
 	Float is aboutWidthPt: 420.0;
 	Float is aboutHeightPt: 255.0;
@@ -108,11 +105,12 @@ Class is EditorViewModel{
 		fileDialogSaveMode: BoolEmitter(initial: false);
 		fileDialogTitle: TextEmitter(initial: SpecEditStrings:FILE_DIALOG_TITLE);
 		fileDialogSuggestedName: TextEmitter(initial: '');
+		:settingsVm: SettingsViewModel();
 		aboutOpen: BoolEmitter(initial: false);
-		wrapEnabled: BoolEmitter(initial: false);
+		wrapEnabled: BoolEmitter(initial: settingsVm:model:defaultWrap);
 		lineNumbersEnabled: BoolEmitter(initial: false);
-		monospaceEnabled: BoolEmitter(initial: true);
-		fileTreeEnabled: BoolEmitter(initial: false);
+		monospaceEnabled: BoolEmitter(initial: settingsVm:model:defaultMonospace);
+		fileTreeEnabled: BoolEmitter(initial: settingsVm:model:defaultShowFileTree);
 		documentText: TextEmitter(initial: '');
 		activeFilePath: TextEmitter(initial: '');
 		activeLanguage: TextEmitter(initial: '');
@@ -295,6 +293,11 @@ Class is EditorViewModel{
 		fileMenu:addItem(item: saveItem);
 		fileMenu:addItem(item: saveAsItem);
 		fileMenu:addItem(item: MenuItemConfig(
+			id: SpecEditStrings:ITEM_SETTINGS_ID,
+			label: SpecEditStrings:ITEM_SETTINGS_LABEL,
+			onClick: local Function(){ settingsVm:openSettings(); }
+		));
+		fileMenu:addItem(item: MenuItemConfig(
 			id: SpecEditStrings:ITEM_QUIT_ID,
 			label: SpecEditStrings:ITEM_QUIT_LABEL,
 			iconSvg: icons:quit,
@@ -370,24 +373,6 @@ Class is EditorViewModel{
 		viewMenu:addItem(item: lineNumsItem);
 		viewMenu:addItem(item: monospaceItem);
 		viewMenu:addItem(item: fileTreeItem);
-		local MenuItemConfig is themeSub: MenuItemConfig(id: 'theme', label: 'Theme');
-		:themeMenuItems: Array();
-		local Array of ThemePreset is presets: Theme:presets();
-		local Int is ti: 0;
-		while({ ti < presets:length() }, {
-			local ThemePreset is p: presets:get(index: ti);
-			local MenuItemConfig is tItem: MenuItemConfig(
-				id: 'theme_' . Theme:presetId(preset: p),
-				label: Theme:presetLabel(preset: p),
-				checked: (p == themePreset),
-				kind: 'radio',
-				onClick: local Function(){ :selectTheme(preset: p); }
-			);
-			themeMenuItems:add(item: tItem);
-			themeSub:addSubItem(item: tItem);
-			ti: ti + 1;
-		});
-		viewMenu:addItem(item: themeSub);
 		cfg:addMenu(menu: viewMenu);
 
 		local MenuConfig is helpMenu: MenuConfig(id: SpecEditStrings:MENU_HELP_ID, label: SpecEditStrings:MENU_HELP_LABEL);
@@ -676,20 +661,13 @@ Class is EditorViewModel{
 		monospaceItem:checked: next;
 	}
 
-	Function is bindThemeChange(Function is onThemeChange){
-		:themeChangeHandler: onThemeChange;
-	}
-
-	Function is selectTheme(ThemePreset is preset){
-		:themePreset: preset;
-		local Array of ThemePreset is presets: Theme:presets();
-		local Int is i: 0;
-		while({ i < presets:length() && i < themeMenuItems:length() }, {
-			themeMenuItems:get(index: i):checked: (presets:get(index: i) == preset);
-			i: i + 1;
-		});
-		local Function is cb: themeChangeHandler;
-		cb(Theme:forPreset(preset: preset));
+	Function is applyInterfaceDefaults(Boolean is mono, Boolean is wrap, Boolean is showTree){
+		monospaceEnabled:emit(value: mono);
+		monospaceItem:checked: mono;
+		wrapEnabled:emit(value: wrap);
+		wrapItem:checked: wrap;
+		fileTreeEnabled:emit(value: showTree);
+		fileTreeItem:checked: showTree;
 	}
 
 	Function is toggleFileTree(){

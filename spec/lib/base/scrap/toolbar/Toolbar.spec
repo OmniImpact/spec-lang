@@ -80,8 +80,8 @@ Class of SewNode is Toolbar{
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: scale:px(pt: 18.0);
-		return if({ px < 12 }, { 12 }, { px });
+		local Int is px: scale:px(pt: theme:scaledTextPt(defaultPt: 18.0));
+		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	local Function of Int is menuButtonWidthPx(MenuConfig is menu){

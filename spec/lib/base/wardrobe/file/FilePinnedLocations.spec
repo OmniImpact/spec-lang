@@ -46,6 +46,13 @@ Class is FilePinnedLocations{
 		return true;
 	}
 
+	Function of Boolean is removeAt(Int is index){
+		if({ index < 0 || index >= paths:length() }, { return false; });
+		names:removeAt(index: index);
+		paths:removeAt(index: index);
+		return true;
+	}
+
 	local Function is addDefaults(){
 		local String is home: Process():getEnv(key: 'HOME', default: '');
 		if({ home == '' }, {
@@ -78,14 +85,16 @@ Class is FilePinnedLocations{
 	Function is load(){
 		:names: Array();
 		:paths: Array();
-		:addDefaults();
 		local String is raw: fileRead(
 			path: :configPath(),
 			onSuccess: local Function(String is _s){},
 			onError: local Function(Any is _err){},
 			default: ''
 		);
-		if({ raw == '' }, { return; });
+		if({ raw == '' }, {
+			:addDefaults();
+			return;
+		});
 		local Json is j: Json();
 		local Array is arr: Array();
 		match(on: j:parseArrayResult(text: raw), when: [
@@ -96,10 +105,13 @@ Class is FilePinnedLocations{
 			local Map of String to Any is obj: j:getObjectAt(arr: arr, index: i);
 			local String is pname: j:getString(obj: obj, key: 'name', default: '');
 			local String is ppath: j:getString(obj: obj, key: 'path', default: '');
-			if({ pname != '' && ppath != '' && Dir():isDir(path: ppath) }, {
+			if({ pname != '' && ppath != '' && (Dir():isDir(path: ppath) || fileExists(path: ppath)) }, {
 				:add(name: pname, path: ppath);
 			});
 			i: i + 1;
+		});
+		if({ paths:length() == 0 }, {
+			:addDefaults();
 		});
 	}
 

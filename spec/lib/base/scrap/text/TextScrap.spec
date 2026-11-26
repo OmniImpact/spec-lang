@@ -48,8 +48,8 @@ Class of SewNode is TextScrap{
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: activeScale:px(pt: 19.0);
-		return if({ px < 12 }, { 12 }, { px });
+		local Int is px: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: 19.0));
+		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	local Function of Array of String is computeLines(String is s, Int is maxW){

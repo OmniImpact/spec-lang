@@ -48,6 +48,7 @@ Class is Theme{
 	Float is toolbarHeightPt: 30.0;
 	Float is menuItemHeightPt: 28.0;
 	Float is paddingPt: 8.0;
+	Float is baseTextPt: 15.0;
 
 	replace Function is init(String is preset: 'dark'){
 		:applyPreset(preset: Theme:presetFromString(name: preset));
@@ -80,10 +81,21 @@ Class is Theme{
 		);
 	}
 
-	held Function of Theme is forPreset(ThemePreset is preset){
+	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 15.0){
 		local Theme is t: Theme();
+		t:setBaseTextPt(pt: baseTextPt);
 		t:applyPreset(preset: preset);
 		return t;
+	}
+
+	Function is setBaseTextPt(Float is pt){
+		local Float is clamped: if({ pt < 10.0 }, { 10.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+		:baseTextPt: clamped;
+	}
+
+	Function of Float is scaledTextPt(Float is defaultPt){
+		local Float is v: defaultPt * (baseTextPt / 15.0);
+		return if({ v < 8.0 }, { 8.0 }, { v });
 	}
 
 	Function is applyPreset(ThemePreset is preset){

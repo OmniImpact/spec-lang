@@ -29,6 +29,7 @@ Class of SewNode is TextView{
 	Function of String is onClipboardRead: local Function of String(){ '' };
 	Float is padPt: 12.0;
 	Float is lineGapPt: 4.0;
+	Float is docTextDeltaPt: 0.0;
 
 	Array of String is rawLines: Array(['']);
 	Array of String is dispLines: Array(['']);
@@ -152,9 +153,22 @@ Class of SewNode is TextView{
 		);
 	}
 
+	Function is setDocTextDeltaPt(Float is deltaPt){
+		:docTextDeltaPt: deltaPt;
+		:lastWrapW: -1;
+		invalidate();
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		:lastWrapW: -1;
+	}
+
 	local Function of Int is fontPx(){
-		local Int is px: activeScale:px(pt: 18.0);
-		return if({ px < 12 }, { 12 }, { px });
+		local Float is docPt: activeTheme:scaledTextPt(defaultPt: 18.0) + docTextDeltaPt;
+		local Float is clampedPt: if({ docPt < 8.0 }, { 8.0 }, { docPt });
+		local Int is px: activeScale:px(pt: clampedPt);
+		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	local Function of Int is measureStr(String is s, Int is fpx){

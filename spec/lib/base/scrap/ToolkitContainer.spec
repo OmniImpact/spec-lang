@@ -43,6 +43,7 @@ Class of SewNode is ToolkitContainer{
 	IntEmitter is targetFps: IntEmitter(initial: 0);
 	Theme is theme: Theme(preset: 'light_grayscale');
 	Scale is scale: Scale(factor: 1.0);
+	Float is uiZoom: 1.0;
 	Float is widthPt: 800.0;
 	Float is heightPt: 600.0;
 	Boolean is useVulkan: false;
@@ -53,6 +54,7 @@ Class of SewNode is ToolkitContainer{
 	VulkanSurface is vulkanBody: VulkanSurface();
 	Bar is bottomBar: Bar();
 	Dialog is dialog: Dialog();
+	Array of Dialog is extraDialogs: Array();
 	FileDialog is fileDialog: FileDialog();
 	MenuContext is contextMenu: MenuContext();
 	Boolean is hasToolbarSlot: false;
@@ -147,6 +149,41 @@ Class of SewNode is ToolkitContainer{
 	## Updates the live theme across the window and all child widgets and schedules a redraw.
 	Function is setTheme(Theme is nextTheme){
 		:applyTheme(theme: nextTheme);
+		local Int is ei: 0;
+		while({ ei < extraDialogs:length() }, {
+			extraDialogs:get(index: ei):applyTheme(theme: nextTheme);
+			ei: ei + 1;
+		});
+		:isDirty: true;
+	}
+
+	Function is addDialog(Dialog is d){
+		d:applyTheme(theme: theme);
+		d:setScale(scale: scale);
+		extraDialogs:add(item: d);
+	}
+
+	local Function is applyScaleToChildren(){
+		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
+		if({ hasTabBar }, { tabBar:setScale(scale: scale); });
+		if({ hasBody && !useVulkan }, { bodyPanel:setScale(scale: scale); });
+		if({ hasBottomBar }, { bottomBar:setScale(scale: scale); });
+		if({ hasDialog }, { dialog:setScale(scale: scale); });
+		local Int is ei: 0;
+		while({ ei < extraDialogs:length() }, {
+			extraDialogs:get(index: ei):setScale(scale: scale);
+			ei: ei + 1;
+		});
+		if({ hasFileDialog }, { fileDialog:setScale(scale: scale); });
+		contextMenu:setScale(scale: scale);
+	}
+
+	Function is setZoom(Float is zoomFactor){
+		local Float is z: if({ zoomFactor < 0.5 }, { 0.5 }, { if({ zoomFactor > 2.5 }, { 2.5 }, { zoomFactor }) });
+		:uiZoom: z;
+		local Float is baseFactor: if({ activeWin:isOpen() }, { activeWin:scaleFactor() }, { 1.0 });
+		:scale: Scale(factor: baseFactor * uiZoom);
+		:applyScaleToChildren();
 		:isDirty: true;
 	}
 
@@ -344,7 +381,7 @@ Class of SewNode is ToolkitContainer{
 			});
 		});
 
-		scale: Scale(factor: win:scaleFactor());
+		scale: Scale(factor: win:scaleFactor() * uiZoom);
 		if({ iconSvg != '' }, {
 			local Int is iconPx: scale:px(pt: 32.0);
 			if({ iconPx < 32 }, { iconPx: 32; });
@@ -353,13 +390,7 @@ Class of SewNode is ToolkitContainer{
 				win:setIcon(pixelsAddr: iconBmp:argbAddr, width: iconBmp:width, height: iconBmp:height);
 			});
 		});
-		if({ hasToolbarSlot }, { toolbarSlot:setScale(scale: scale); });
-		if({ hasTabBar }, { tabBar:setScale(scale: scale); });
-		if({ hasBody && !useVulkan }, { bodyPanel:setScale(scale: scale); });
-		if({ hasBottomBar }, { bottomBar:setScale(scale: scale); });
-		if({ hasDialog }, { dialog:setScale(scale: scale); });
-		if({ hasFileDialog }, { fileDialog:setScale(scale: scale); });
-		contextMenu:setScale(scale: scale);
+		:applyScaleToChildren();
 
 		:isDirty: false;
 		:bindDirty(cb: local Function(){ :isDirty: true; });
@@ -417,6 +448,11 @@ Class of SewNode is ToolkitContainer{
 		dispCb();
 		if({ hasBottomBar }, { bottomBar:dispose(); });
 		if({ hasDialog }, { dialog:dispose(); });
+		local Int is ei: 0;
+		while({ ei < extraDialogs:length() }, {
+			extraDialogs:get(index: ei):dispose();
+			ei: ei + 1;
+		});
 		if({ hasFileDialog }, { fileDialog:dispose(); });
 		signalBag:clear();
 		canvas:dispose();
@@ -520,6 +556,11 @@ Class of SewNode is ToolkitContainer{
 		if({ running:current() }, {
 			if({ hasDialog }, {
 				dialog:poll();
+			});
+			local Int is edi: 0;
+			while({ edi < extraDialogs:length() }, {
+				extraDialogs:get(index: edi):poll();
+				edi: edi + 1;
 			});
 			if({ hasFileDialog }, {
 				fileDialog:poll();
@@ -627,6 +668,13 @@ Class of SewNode is ToolkitContainer{
 				if({ dialog:tick(nowMs: frameNowMs) }, {
 					hadActivity: true;
 				});
+			});
+			local Int is edi2: 0;
+			while({ edi2 < extraDialogs:length() }, {
+				if({ extraDialogs:get(index: edi2):tick(nowMs: frameNowMs) }, {
+					hadActivity: true;
+				});
+				edi2: edi2 + 1;
 			});
 
 			if({ isDirty && running:current() }, {

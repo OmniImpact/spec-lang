@@ -17,7 +17,6 @@ Class is EditorView{
 		['base', 'sew', 'grid', GridFlexH],
 		['base', 'sew', 'grid', GridFlexPanel],
 		['base', 'fabric', Theme],
-		['base', 'fabric', ThemePreset],
 		['base', 'scrap', ToolkitContainer],
 		['base', 'scrap', 'toolbar', ToolbarContainer],
 		['base', 'scrap', 'toolbar', Toolbar],
@@ -33,6 +32,7 @@ Class is EditorView{
 		['base', 'scrap', 'icon', ImageSvg],
 		['base', 'wardrobe', 'file', FileDialog],
 		['base', 'wardrobe', 'file', FileTree],
+		['specedit', 'view', 'settings', SettingsDialogView],
 		['specedit', 'viewmodel', EditorViewModel],
 		['specedit', 'util', SpecEditStrings],
 		['specedit', 'util', EditorSignalSlot]
@@ -202,7 +202,7 @@ Class is EditorView{
 			title: vm:title,
 			iconSvg: vm:icons:appIcon,
 			running: vm:running,
-			theme: Theme:forPreset(preset: vm:themePreset),
+			theme: vm:settingsVm:currentTheme(),
 			widthPt: vm:windowWidthPt,
 			heightPt: vm:windowHeightPt,
 			toolbar: ToolbarContainer(
@@ -227,7 +227,24 @@ Class is EditorView{
 			contextMenu: vm:contextMenu,
 			onKey: local Function of Boolean(Int is key, Int is mods){ vm:handleShortcut(key: key, mods: mods) }
 		);
-		vm:bindThemeChange(onThemeChange: local Function(Theme is t){ container:setTheme(nextTheme: t); });
+		local Dialog is settingsDlg: SettingsDialogView(vm: vm:settingsVm):build();
+		container:addDialog(d: settingsDlg);
+		container:setZoom(zoomFactor: vm:settingsVm:model:zoomFactor());
+		editorBody:setDocTextDeltaPt(deltaPt: vm:settingsVm:model:docTextDeltaPt);
+		vm:settingsVm:bindHandlers(
+			onThemeChange: local Function(Theme is t){ container:setTheme(nextTheme: t); },
+			onZoomChange: local Function(Float is z){ container:setZoom(zoomFactor: z); },
+			onDocTextDeltaChange: local Function(Float is d){
+				editorBody:setDocTextDeltaPt(deltaPt: d);
+				container:isDirty: true;
+			},
+			onPinnedChange: local Function(){ fileTree:invalidate(); },
+			onDefaultsChange: local Function(Boolean is mono, Boolean is wrap, Boolean is showTree){
+				vm:applyInterfaceDefaults(mono: mono, wrap: wrap, showTree: showTree);
+			},
+			getActiveDir: local Function of String(){ fileTree:rootPath },
+			getActiveFile: local Function of String(){ vm:activeFilePath:current() }
+		);
 		container
 	}
 }

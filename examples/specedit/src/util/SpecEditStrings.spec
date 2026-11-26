@@ -31,6 +31,8 @@ Class is SpecEditStrings{
 	held String is ITEM_SAVE_LABEL: 'Save';
 	held String is ITEM_SAVE_AS_ID: 'save_as';
 	held String is ITEM_SAVE_AS_LABEL: 'Save As';
+	held String is ITEM_SETTINGS_ID: 'settings';
+	held String is ITEM_SETTINGS_LABEL: 'Settings...';
 	held String is ITEM_QUIT_ID: 'quit';
 	held String is ITEM_QUIT_LABEL: 'Quit';
 

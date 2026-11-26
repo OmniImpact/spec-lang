@@ -1,0 +1,159 @@
+#! Package base:scrap
+#! Bordered group frame widget with an optional header title drawn around a child [SewNode].
+
+Class of SewNode is Frame{
+	replace [String] is namespace: ['base', 'scrap'];
+
+	replace [[String]] is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sew', SewNode],
+		['base', 'sew', Size],
+		['base', 'sew', Rect],
+		['base', 'sew', Constraints],
+		['base', 'sew', Scale],
+		['base', 'fabric', Theme],
+		['base', 'fabric', DrawContext]
+	];
+
+	String is title: '';
+	SewNode is child: SewNode();
+	Float is padPt: 10.0;
+
+	replace Function is init(String is title: '', SewNode is child: SewNode(), Float is padPt: 10.0){
+		:title: title;
+		:child: child;
+		:padPt: padPt;
+	}
+
+	local Function of Int is fontPx(){
+		local Int is px: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: 13.0));
+		return if({ px < 10 }, { 10 }, { px });
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		child:applyTheme(theme: theme);
+	}
+
+	replace Function is setScale(Scale is scale){
+		:activeScale: scale;
+		child:setScale(scale: scale);
+	}
+
+	replace Function is bindDirty(Function is cb){
+		:dirtyListeners: Array([cb]);
+		child:bindDirty(cb: cb);
+	}
+
+	replace Function of Size is measure(Constraints is c){
+		local Int is padPx: activeScale:px(pt: padPt);
+		local Int is fpx: :fontPx();
+		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
+		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { padPx });
+		local Int is availW: c:maxW - padPx * 2;
+		if({ availW < 0 }, { availW: 0; });
+		local Int is availH: c:maxH - topPad - padPx;
+		if({ availH < 0 }, { availH: 0; });
+		local Size is cs: child:measure(c: Constraints(minW: 0, maxW: availW, minH: 0, maxH: availH));
+		local Int is w: cs:width + padPx * 2;
+		if({ title != '' }, {
+			local Int is minTitleW: DrawContext:measureWidth(text: title, pixelHeight: fpx) + padPx * 3;
+			if({ minTitleW > w }, { w: minTitleW; });
+		});
+		desiredSize: Size(
+			width: c:clampW(w: w),
+			height: c:clampH(h: cs:height + topPad + padPx)
+		);
+		return desiredSize;
+	}
+
+	replace Function is arrange(Rect is bounds){
+		layoutBounds: bounds;
+		local Int is padPx: activeScale:px(pt: padPt);
+		local Int is fpx: :fontPx();
+		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
+		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { padPx });
+		local Int is cw: bounds:width - padPx * 2;
+		if({ cw < 0 }, { cw: 0; });
+		local Int is ch: bounds:height - topPad - padPx;
+		if({ ch < 0 }, { ch: 0; });
+		child:arrange(bounds: Rect(x: bounds:x + padPx, y: bounds:y + topPad, width: cw, height: ch));
+	}
+
+	replace Function is paint(DrawContext is ctx){
+		local Rect is b: bounds();
+		if({ b:width <= 0 || b:height <= 0 }, { return; });
+		local Int is border: activeTheme:panelBorder;
+		if({ title == '' }, {
+			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: 1);
+		}, {
+			local Int is fpx: :fontPx();
+			local Int is th: DrawContext:measureHeight(pixelHeight: fpx);
+			local Int is tw: DrawContext:measureWidth(text: title, pixelHeight: fpx);
+			local Int is topY: b:y + th / 2;
+			local Int is boxH: b:height - (th / 2);
+			if({ boxH > 1 }, {
+				local Int is titleX: b:x + activeScale:px(pt: padPt);
+				local Int is gapPad: activeScale:px(pt: 4.0);
+				local Int is leftSegW: (titleX - gapPad) - b:x;
+				if({ leftSegW > 0 }, {
+					ctx:fillRect(x: b:x, y: topY, w: leftSegW, h: 1, color: border);
+				});
+				local Int is rightStart: titleX + tw + gapPad;
+				local Int is rightSegW: (b:x + b:width) - rightStart;
+				if({ rightSegW > 0 }, {
+					ctx:fillRect(x: rightStart, y: topY, w: rightSegW, h: 1, color: border);
+				});
+				ctx:fillRect(x: b:x, y: topY, w: 1, h: boxH, color: border);
+				ctx:fillRect(x: b:x + b:width - 1, y: topY, w: 1, h: boxH, color: border);
+				ctx:fillRect(x: b:x, y: b:y + b:height - 1, w: b:width, h: 1, color: border);
+				ctx:drawText(x: titleX, y: b:y, text: title, color: activeTheme:textMuted, pixelHeight: fpx);
+			});
+		});
+		child:paint(ctx: ctx);
+	}
+
+	replace Function of Boolean is onPointerMove(Int is x, Int is y){
+		return child:onPointerMove(x: x, y: y);
+	}
+
+	replace Function is clearHover(){
+		child:clearHover();
+	}
+
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		return child:onPointerClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		return child:onRightClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		return child:onPointerDrag(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		return child:onPointerUp(x: x, y: y);
+	}
+
+	replace Function of Boolean is onScroll(Int is deltaY){
+		return child:onScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onScrollX(Int is deltaX){
+		return child:onScrollX(deltaX: deltaX);
+	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		return child:onKey(key: key, mods: mods);
+	}
+
+	replace Function of Boolean is onText(String is ch, Int is mods){
+		return child:onText(ch: ch, mods: mods);
+	}
+
+	replace Function of Boolean is tick(Int is nowMs){
+		return child:tick(nowMs: nowMs);
+	}
+}

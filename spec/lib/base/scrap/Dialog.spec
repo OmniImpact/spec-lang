@@ -38,6 +38,8 @@ Class is Dialog{
 	Boolean is isDirty: false;
 	Int is lastW: 0;
 	Int is lastH: 0;
+	Int is lastPtrX: -1;
+	Int is lastPtrY: -1;
 	SignalBag is signalBag: SignalBag();
 
 	replace Function is init(
@@ -128,6 +130,8 @@ Class is Dialog{
 			content:bindDirty(cb: local Function(){ :isDirty: true; });
 		});
 		canvas: SuitCanvas(width: win:width(), height: win:height());
+		lastPtrX: -1;
+		lastPtrY: -1;
 		isShown: true;
 		:paintDialog();
 	}
@@ -163,12 +167,13 @@ Class is Dialog{
 		});
 		if({ !isShown }, { return; });
 
-		if({ !win:poll() }, {
+		if({ !win:pollTimeout(timeoutMs: 0) }, {
 			:closeWindow();
 			open:emit(value: false);
 			return;
 		});
 
+		local Int is curMods: win:mods();
 		local Int is key: win:nextKey();
 		while({ key != 0 }, {
 			if({ key == 27 }, {
@@ -176,7 +181,49 @@ Class is Dialog{
 				open:emit(value: false);
 				return;
 			});
+			if({ hasContent }, {
+				if({ content:onKey(key: key, mods: curMods) }, {
+					isDirty: true;
+				});
+			});
 			key: win:nextKey();
+		});
+
+		local Int is cp: win:nextChar();
+		while({ cp != 0 }, {
+			if({ hasContent && cp >= 32 }, {
+				if({ content:onText(ch: String:fromCodePoint(code: cp), mods: curMods) }, {
+					isDirty: true;
+				});
+			});
+			cp: win:nextChar();
+		});
+
+		local Int is sy: win:pollScrollY();
+		if({ sy != 0 && hasContent }, {
+			if({ content:onScroll(deltaY: sy) }, {
+				isDirty: true;
+			});
+		});
+
+		local Int is px: win:pointerX();
+		local Int is py: win:pointerY();
+		if({ px != lastPtrX || py != lastPtrY }, {
+			lastPtrX: px;
+			lastPtrY: py;
+			if({ hasContent }, {
+				if({ content:onPointerMove(x: px, y: py) }, {
+					isDirty: true;
+				});
+			});
+		});
+
+		if({ win:pollClick() }, {
+			if({ hasContent }, {
+				if({ content:onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
+					isDirty: true;
+				});
+			});
 		});
 
 		if({ win:width() != lastW || win:height() != lastH }, {

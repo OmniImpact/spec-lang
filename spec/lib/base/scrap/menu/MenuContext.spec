@@ -58,8 +58,8 @@ Class of SewNode is MenuContext{
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: activeScale:px(pt: 15.0);
-		return if({ px < 11 }, { 11 }, { px });
+		local Int is px: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: 15.0));
+		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	local Function of Int is itemHeightPx(){
