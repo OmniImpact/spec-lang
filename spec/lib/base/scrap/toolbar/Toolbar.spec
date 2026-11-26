@@ -87,12 +87,12 @@ Class of SewNode is Toolbar{
 
 	local Function of Int is menuButtonWidthPx(MenuConfig is menu){
 		local Int is tw: DrawContext:measureWidth(text: menu:label, pixelHeight: :fontPx());
-		return tw + scale:px(pt: theme:paddingMediumPt * 2.0);
+		return tw + scale:px(pt: theme:paddingPt * 2.0);
 	}
 
 	local Function of Int is menuButtonX(Int is idx){
 		local Rect is b: bounds();
-		local Int is x: b:x + scale:px(pt: theme:paddingPt);
+		local Int is x: b:x + scale:px(pt: theme:paddingSmallPt);
 		times(count: idx, worker: local Function(Int is i){
 			local MenuConfig is m: config:menus:get(index: i);
 			if({ m:visible }, {
@@ -314,7 +314,7 @@ Class of SewNode is Toolbar{
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is textY: b:y + (b:height - th) / 2;
-		local Int is padX: scale:px(pt: theme:paddingMediumPt);
+		local Int is padX: scale:px(pt: theme:paddingPt);
 
 		times(count: config:menus:length(), worker: local Function(Int is i){
 			local MenuConfig is m: config:menus:get(index: i);

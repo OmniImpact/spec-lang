@@ -246,16 +246,16 @@ Class is Theme{
 		sectionPaddingPt: paddingMediumPt;
 		dialogPaddingPt: paddingLargePt;
 
-		toolbarHeightPt: baseTextPt + basePaddingPt * 2.0;
-		menuItemHeightPt: baseTextPt + basePaddingPt * 1.75;
+		toolbarHeightPt: baseTextPt + basePaddingPt * 1.0;
+		menuItemHeightPt: baseTextPt + basePaddingPt * 1.0;
 		buttonMinWidthPt: baseTextPt * 5.0;
 		buttonHeightPt: baseTextPt + basePaddingPt * 2.25;
 		inputMinWidthPt: baseTextPt * 10.0;
 		inputHeightPt: baseTextPt + basePaddingPt * 2.25;
-		tabBarHeightPt: baseTextPt + basePaddingPt * 2.0;
+		tabBarHeightPt: baseTextPt + basePaddingPt * 1.25;
 		tabMinWidthPt: baseTextPt * 7.25;
 		tabMaxWidthPt: baseTextPt * 16.0;
-		barHeightPt: baseTextPt + basePaddingPt * 1.75;
+		barHeightPt: baseTextPt + basePaddingPt * 1.0;
 		scrollbarWidthPt: basePaddingPt * 2.5;
 		splitterSpacingPt: basePaddingPt;
 		panelMinSizePt: baseTextPt * 3.25;
