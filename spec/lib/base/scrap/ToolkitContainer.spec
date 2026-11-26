@@ -201,7 +201,7 @@ Class of SewNode is ToolkitContainer{
 			width: scale:px(pt: widthPt),
 			height: scale:px(pt: heightPt),
 			decorated: true,
-			useVulkan: true
+			useVulkan: useVulkan
 		);
 
 		if({ !win:open() }, {
@@ -209,25 +209,26 @@ Class of SewNode is ToolkitContainer{
 			Process():exit(status: 1);
 		});
 
-		gpuPresent: vulkanBody:attach(window: win);
-		if({ gpuPresent }, {
-			if({ useVulkan }, {
+		gpuPresent: false;
+		if({ useVulkan }, {
+			gpuPresent: vulkanBody:attach(window: win);
+			if({ gpuPresent }, {
 				local Function is initVkCb: onInitVulkan;
 				initVkCb(vulkanBody);
-			});
-		}, {
-			win:close();
-			useVulkan: false;
-			win: SuitWindow(
-				title: curTitle,
-				width: scale:px(pt: widthPt),
-				height: scale:px(pt: heightPt),
-				decorated: true,
-				useVulkan: false
-			);
-			if({ !win:open() }, {
-				Stderr():line(text: 'Failed to open window: ':concat(other: win:lastError()));
-				Process():exit(status: 1);
+			}, {
+				win:close();
+				useVulkan: false;
+				win: SuitWindow(
+					title: curTitle,
+					width: scale:px(pt: widthPt),
+					height: scale:px(pt: heightPt),
+					decorated: true,
+					useVulkan: false
+				);
+				if({ !win:open() }, {
+					Stderr():line(text: 'Failed to open window: ':concat(other: win:lastError()));
+					Process():exit(status: 1);
+				});
 			});
 		});
 
