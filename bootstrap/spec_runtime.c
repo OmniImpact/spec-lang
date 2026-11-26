@@ -3751,6 +3751,7 @@ typedef struct SpecFont {
 
 static SpecFont** _spec_fonts = NULL;
 static size_t _spec_fonts_cap = 0;
+static long long _spec_default_font_handle = -1;
 
 static long long _spec_alloc_font_slot(SpecFont* f) {
     for (size_t i = 0; i < _spec_fonts_cap; i++) {
@@ -3839,7 +3840,7 @@ long long spec_pal_font_load(long long path_cstr) {
 }
 
 long long spec_pal_font_close(long long handle) {
-    if (handle <= 0) return 0;
+    if (handle <= 0 || handle == _spec_default_font_handle) return 0;
     size_t idx = (size_t)(handle - 1);
     if (idx >= _spec_fonts_cap || !_spec_fonts[idx]) return 0;
     SpecFont* f = _spec_fonts[idx];
@@ -4039,8 +4040,12 @@ static long long _spec_font_try_fontconfig(void) {
 
 long long spec_pal_font_load_default(void) {
 #if defined(__linux__)
+    if (_spec_default_font_handle > 0) return _spec_default_font_handle;
     long long h = _spec_font_try_fontconfig();
-    if (h > 0) return h;
+    if (h > 0) {
+        _spec_default_font_handle = h;
+        return h;
+    }
     static const char* fallbacks[] = {
         "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -4051,7 +4056,10 @@ long long spec_pal_font_load_default(void) {
     };
     for (int i = 0; fallbacks[i]; i++) {
         h = spec_pal_font_load((long long)(intptr_t)fallbacks[i]);
-        if (h > 0) return h;
+        if (h > 0) {
+            _spec_default_font_handle = h;
+            return h;
+        }
     }
     _spec_set_font_error("No default system sans font found on Linux");
     return -1;
