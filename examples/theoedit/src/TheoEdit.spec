@@ -15,8 +15,7 @@ Class is TheoEdit{
 	];
 
 	replace Function is init(Map of String to String is args){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/theoedit/cli.json');
-		cli:parseOrExit();
+		local Cli is cli: Cli():parseOrExit();
 
 		local String is filePath: cli:positionals():get(index: 0, default: '');
 		local TheoApp is app: TheoApp();

@@ -16,8 +16,7 @@ Class is TheoJack{
 	];
 
 	replace Function is init(Map of String to String is args){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/theojack/cli.json');
-		cli:parseOrExit();
+		Cli():parseOrExit();
 		local TheoApp is app: TheoApp();
 		local OptionsStorage is storage: OptionsStorage();
 		local [HomeViewModel] is homeVms: [];

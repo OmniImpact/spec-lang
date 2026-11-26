@@ -15,8 +15,7 @@ Class is TheoSynth{
 	];
 
 	replace Function is init(){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/theosynth/cli.json');
-		cli:parseOrExit();
+		Cli():parseOrExit();
 		local TheoApp is app: TheoApp();
 		local SynthViewModel is vm: SynthViewModel(onQuit: {
 			app:quit();

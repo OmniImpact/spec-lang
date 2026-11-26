@@ -25,33 +25,23 @@ Class is Cli{
 	String is errorMessage: '';
 	Boolean is quiet: false;
 
-	replace Function is init(Boolean is quiet: false, String is jsonText: ''){
+	replace Function is init(Boolean is quiet: false, String is jsonText: '', String is bundlePath: 'cli.json'){
 		:quiet: quiet;
 		if({ jsonText != '' }, {
 			:loadSchema(jsonText: jsonText);
+			return;
 		});
-	}
-
-	## Loads option definitions from a bundled asset (e.g. `'cli.json'`),
-	## falling back to disk paths when running unbundled.
-	Function of Cli is loadFromBundle(String is bundlePath: 'cli.json', String is fallbackPath: ''){
-		local Bundle is b: Bundle(autoLoad: true);
-		local String is txt: '';
-		if({ b:isBundled() && b:has(path: bundlePath) }, {
-			txt: b:readText(path: bundlePath, default: '');
+		if({ bundlePath != '' }, {
+			local Bundle is b: Bundle(autoLoad: true);
+			if({ b:isBundled() && b:has(path: bundlePath) }, {
+				local String is txt: b:readText(path: bundlePath, default: '');
+				if({ txt != '' }, {
+					:loadSchema(jsonText: txt);
+					return;
+				});
+			});
 		});
-		if({ txt == '' && fileExists(path: bundlePath) }, {
-			txt: fileRead(path: bundlePath, onSuccess: local Function(String is _s){}, onError: local Function(Any is _e){}, default: '');
-		});
-		if({ txt == '' && fallbackPath != '' && fileExists(path: fallbackPath) }, {
-			txt: fileRead(path: fallbackPath, onSuccess: local Function(String is _s){}, onError: local Function(Any is _e){}, default: '');
-		});
-		if({ txt != '' }, {
-			:loadSchema(jsonText: txt);
-		}, {
-			:ensureDefaultHelp();
-		});
-		return :;
+		:ensureDefaultHelp();
 	}
 
 	local Function is ensureDefaultHelp(){
@@ -318,8 +308,9 @@ Class is Cli{
 	}
 
 	## Parses `Process:rawArgs()` and exits on `--help`/`--version` (`0`) or errors ([failStatus]).
-	Function is parseOrExit(Int is failStatus: 1){
+	Function of Cli is parseOrExit(Int is failStatus: 1){
 		parseOrExitArgs(rawArgs: rawArgs(), failStatus: failStatus);
+		return :;
 	}
 
 	## Parses [args] (or `Process:rawArgs()` if [args] is empty) and exits on `--help`/errors.

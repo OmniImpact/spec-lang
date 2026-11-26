@@ -214,8 +214,7 @@ Class is SuitDemo{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/suitdemo/cli.json');
-		cli:parseOrExit();
+		local Cli is cli: Cli():parseOrExit();
 		local Int is durationMs: cli:getInt(name: 'duration-ms', default: 0);
 		local SuitWindow is win: SuitWindow(title: 'Suit Demo', width: 800, height: 600, decorated: true);
 		if({ !win:open() }, {

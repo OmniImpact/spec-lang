@@ -51,8 +51,7 @@ Class is SpecLint{
 	];
 
 	replace Function is init(Map of String to String is args){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/speclint/cli.json');
-		cli:parseOrExit();
+		local Cli is cli: Cli():parseOrExit();
 
 		local Int is startMs: Time:monotonicMs();
 		local String is inputPath: cli:getString(name: 'input', default: '');

@@ -229,14 +229,16 @@ Class is Driver{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local String is cliFb: Dir:exeDir() . '/../spec/base/compiler/driver/cli.json';
-		if({ !fileExists(path: cliFb) }, {
-			cliFb: 'spec/base/compiler/driver/cli.json';
+		local Cli is cli: Cli();
+		if({ cli:options:length() <= 1 }, {
+			local String is cliFb: Dir:exeDir() . '/../spec/base/compiler/driver/cli.json';
+			if({ !fileExists(path: cliFb) }, {
+				cliFb: 'spec/base/compiler/driver/cli.json';
+			});
+			if({ fileExists(path: cliFb) }, {
+				cli:loadSchema(jsonText: fileRead(path: cliFb, default: ''));
+			});
 		});
-		local Cli is cli: Cli():loadFromBundle(
-			bundlePath: 'cli.json',
-			fallbackPath: cliFb
-		);
 		cli:parseOrExitMap(args: args, failStatus: 2);
 
 		local String is inputPath: cli:getString(name: 'input', default: '');

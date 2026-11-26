@@ -16,8 +16,7 @@ Class is CleoPi{
 
 	## Entry point; reads optional [args] (`threads`, `points`, `refresh`) and runs the benchmark.
 	replace Function is init(Map of String to String is args){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/cleopi/cli.json');
-		cli:parseOrExit();
+		local Cli is cli: Cli():parseOrExit();
 		local CleoPiViewModel is vm: CleoPiViewModel(
 			threads: cli:getInt(name: 'threads', default: 4),
 			points: cli:getInt(name: 'points', default: 1_000_000_000),

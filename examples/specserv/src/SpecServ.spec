@@ -104,8 +104,7 @@ Class is SpecServ{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'examples/specserv/cli.json');
-		cli:parseOrExit();
+		local Cli is cli: Cli():parseOrExit();
 
 		local String is cfgPath: cli:getString(name: 'config', default: 'specserv.json');
 		local String is logFile: cli:getString(name: 'log-file', default: '');

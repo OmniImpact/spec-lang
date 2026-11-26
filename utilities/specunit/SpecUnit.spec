@@ -534,8 +534,7 @@ Class is SpecUnit{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local Cli is cli: Cli():loadFromBundle(bundlePath: 'cli.json', fallbackPath: 'utilities/specunit/cli.json');
-		cli:parseOrExit();
+		local Cli is cli: Cli():parseOrExit();
 
 		:timeoutTool: :detectTimeoutTool();
 		local String is specBin: cli:getString(name: 'spec', default: 'bin/spec');
