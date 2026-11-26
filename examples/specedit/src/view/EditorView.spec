@@ -169,12 +169,16 @@ Class is EditorView{
 					flex: true
 				)
 			]),
-			spacingPt: 4.0,
+			spacingPt: 6.0,
 			movable: true
 		);
-		vm:fileTreeEnabled:collect(onEmit: local Function(Boolean is on){
-			splitGrid:setPanelVisible(index: 0, visible: on);
-		});
+		splitGrid:signalBag:track(
+			slot: 'fileTreeVisible',
+			emitter: vm:fileTreeEnabled,
+			collector: vm:fileTreeEnabled:collect(onEmit: local Function(){
+				splitGrid:setPanelVisible(index: 0, visible: vm:fileTreeEnabled:current());
+			})
+		);
 		return splitGrid;
 	}
 
