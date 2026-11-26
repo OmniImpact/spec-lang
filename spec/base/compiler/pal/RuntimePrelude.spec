@@ -54,7 +54,8 @@ Class is RuntimePrelude{
 			'pal_socket.c',
 			'pal_audio.c',
 			'pal_window.c',
-			'pal_font.c'
+			'pal_font.c',
+			'pal_vulkan.c'
 		];
 		local Array of String is chunks: Array();
 		times(count: parts:length(), worker: local Function(Int is i){

@@ -18,16 +18,30 @@ Class is Window{
 	}
 
 	## Opens a native OS window.
-	Function of Boolean is open(String is title: 'Suit', Int is width: 800, Int is height: 600, Boolean is decorated: true){
+	Function of Boolean is open(String is title: 'Suit', Int is width: 800, Int is height: 600, Boolean is decorated: true, Boolean is useVulkan: false){
 		if({ handle > 0 }, { close(); });
 		local Int is decFlag: if({ decorated }, { 1 }, { 0 });
-		handle: base:sysinternal:Window:pal_window_open(
+		local Int is vkFlag: if({ useVulkan }, { 1 }, { 0 });
+		handle: base:sysinternal:Window:pal_window_open_ex(
 			title_cstr: :cstrAddr(s: title),
 			width: width,
 			height: height,
-			decorated: decFlag
+			decorated: decFlag,
+			use_vulkan: vkFlag
 		);
 		return handle > 0;
+	}
+
+	## Returns the native display handle (`wl_display*`, etc.).
+	Function of Int is nativeDisplayHandle(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_display_handle(handle: handle);
+	}
+
+	## Returns the native surface handle (`wl_surface*`, etc.).
+	Function of Int is nativeSurfaceHandle(){
+		if({ handle <= 0 }, { return 0; });
+		return base:sysinternal:Window:pal_window_surface_handle(handle: handle);
 	}
 
 	## Dispatches pending window events; returns `true` while the window remains open.

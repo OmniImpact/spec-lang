@@ -13,18 +13,28 @@ Class is SuitWindow{
 	Int is width: 800;
 	Int is height: 600;
 	Boolean is decorated: true;
+	Boolean is useVulkan: false;
 	Window is native: Window();
 
-	replace Function is init(String is title: 'Suit', Int is width: 800, Int is height: 600, Boolean is decorated: true){
+	replace Function is init(String is title: 'Suit', Int is width: 800, Int is height: 600, Boolean is decorated: true, Boolean is useVulkan: false){
 		:title: title;
 		:width: width;
 		:height: height;
 		:decorated: decorated;
+		:useVulkan: useVulkan;
 	}
 
 	## Opens the native window; returns `true` on success.
 	Function of Boolean is open(){
-		return native:open(title: title, width: width, height: height, decorated: decorated);
+		return native:open(title: title, width: width, height: height, decorated: decorated, useVulkan: useVulkan);
+	}
+
+	Function of Int is nativeDisplayHandle(){
+		return native:nativeDisplayHandle();
+	}
+
+	Function of Int is nativeSurfaceHandle(){
+		return native:nativeSurfaceHandle();
 	}
 
 	## Polls/dispatches pending window events; returns `true` while open.

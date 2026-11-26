@@ -9,6 +9,18 @@ Class is Window{
 	## Bound to `spec_pal_window_open`.
 	Function of Int is pal_window_open(Int is title_cstr, Int is width, Int is height, Int is decorated);
 
+	## Opens a native window with [title_cstr], [width]x[height], optional decorations, and Vulkan mode.
+	## Bound to `spec_pal_window_open_ex`.
+	Function of Int is pal_window_open_ex(Int is title_cstr, Int is width, Int is height, Int is decorated, Int is use_vulkan);
+
+	## Returns the native display handle (`wl_display*`, etc.).
+	## Bound to `spec_pal_window_display_handle`.
+	Function of Int is pal_window_display_handle(Int is handle);
+
+	## Returns the native surface handle (`wl_surface*`, etc.).
+	## Bound to `spec_pal_window_surface_handle`.
+	Function of Int is pal_window_surface_handle(Int is handle);
+
 	## Dispatches pending window events; returns `1` while open or `0` on close.
 	## Bound to `spec_pal_window_poll`.
 	Function of Int is pal_window_poll(Int is handle);

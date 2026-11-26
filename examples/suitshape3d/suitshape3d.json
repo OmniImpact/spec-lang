@@ -1,0 +1,11 @@
+{
+  "name": "suitshape3d",
+  "version": "0.1.0",
+  "description": "Minimal Vulkan 3D spinning cube example using Suit, Mold, and Scrap",
+  "source": "src/SuitShape3D.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/suitshape3d"
+}

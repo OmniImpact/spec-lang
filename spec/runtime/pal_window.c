@@ -172,6 +172,7 @@ typedef struct SpecWaylandWindow {
     bool in_use;
     bool configured;
     bool should_close;
+    bool use_vulkan;
     int width;
     int height;
     struct wl_display* display;
@@ -445,13 +446,18 @@ static void _spec_frame_configure(struct libdecor_frame* frame, struct libdecor_
     if (cw <= 0) cw = 800;
     if (ch <= 0) ch = 600;
 
-    _spec_ensure_shm_buffer(w, cw, ch);
-    uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)w->surface);
-    if (w->buffer) {
-        _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 1 /* WL_SURFACE_ATTACH */, NULL, sv, 0, w->buffer, 0, 0);
-        if (sv >= 4) {
-            _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 9 /* WL_SURFACE_DAMAGE_BUFFER */, NULL, sv, 0, 0, 0, w->width, w->height);
+    if (!w->use_vulkan) {
+        _spec_ensure_shm_buffer(w, cw, ch);
+        uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)w->surface);
+        if (w->buffer) {
+            _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 1 /* WL_SURFACE_ATTACH */, NULL, sv, 0, w->buffer, 0, 0);
+            if (sv >= 4) {
+                _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 9 /* WL_SURFACE_DAMAGE_BUFFER */, NULL, sv, 0, 0, 0, w->width, w->height);
+            }
         }
+    } else {
+        w->width = cw;
+        w->height = ch;
     }
     struct libdecor_state* st = _libdecor_state_new(cw, ch);
     _libdecor_frame_commit(frame, st, cfg);
@@ -508,7 +514,7 @@ long long spec_pal_window_close(long long handle) {
     return 0;
 }
 
-long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
+long long spec_pal_window_open_ex(long long title_cstr, long long width, long long height, long long decorated, long long use_vulkan) {
     if (!_spec_win_init_libs()) return -1;
     const char* title = title_cstr ? (const char*)(intptr_t)title_cstr : "Suit";
     if (width <= 0) width = 800;
@@ -520,6 +526,7 @@ long long spec_pal_window_open(long long title_cstr, long long width, long long 
         return -1;
     }
     w->in_use = true;
+    w->use_vulkan = (use_vulkan != 0);
     w->shm_fd = -1;
     w->width = (int)width;
     w->height = (int)height;
@@ -594,7 +601,9 @@ long long spec_pal_window_open(long long title_cstr, long long width, long long 
         if (_libdecor_dispatch(w->decor, 16) < 0) break;
         guard++;
     }
-    _spec_surface_present(w);
+    if (!w->use_vulkan) {
+        _spec_surface_present(w);
+    }
     _wl_display_flush(w->display);
 
     long long handle = _spec_alloc_window_slot(w);
@@ -610,6 +619,20 @@ long long spec_pal_window_open(long long title_cstr, long long width, long long 
         return -1;
     }
     return handle;
+}
+
+long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
+    return spec_pal_window_open_ex(title_cstr, width, height, decorated, 0);
+}
+
+long long spec_pal_window_display_handle(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)(intptr_t)w->display : 0;
+}
+
+long long spec_pal_window_surface_handle(long long handle) {
+    SpecWaylandWindow* w = _spec_get_window(handle);
+    return w ? (long long)(intptr_t)w->surface : 0;
 }
 
 long long spec_pal_window_poll(long long handle) {
@@ -666,6 +689,21 @@ long long spec_pal_window_open(long long title_cstr, long long width, long long 
     (void)title_cstr; (void)width; (void)height; (void)decorated;
     _spec_set_win_error("Native windowing is currently implemented for Linux Wayland only");
     return -1;
+}
+
+long long spec_pal_window_open_ex(long long title_cstr, long long width, long long height, long long decorated, long long use_vulkan) {
+    (void)use_vulkan;
+    return spec_pal_window_open(title_cstr, width, height, decorated);
+}
+
+long long spec_pal_window_display_handle(long long handle) {
+    (void)handle;
+    return 0;
+}
+
+long long spec_pal_window_surface_handle(long long handle) {
+    (void)handle;
+    return 0;
 }
 
 long long spec_pal_window_poll(long long handle) {
