@@ -211,6 +211,11 @@ Class is Dialog{
 		local Boolean is ptrDown: win:pointerDown();
 		local Int is px: win:pointerX();
 		local Int is py: win:pointerY();
+		if({ ptrDown && !wasPtrDown && hasContent }, {
+			if({ content:onPointerDrag(x: px, y: py, mods: curMods) }, {
+				isDirty: true;
+			});
+		});
 		if({ px != lastPtrX || py != lastPtrY }, {
 			lastPtrX: px;
 			lastPtrY: py;

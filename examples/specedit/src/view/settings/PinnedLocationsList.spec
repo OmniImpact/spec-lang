@@ -114,32 +114,35 @@ Class of SewNode is PinnedLocationsList{
 			});
 
 			## Label: Name (Path)
+			local Boolean is canRemove: !vm:pinned:isDefaultAt(index: i);
 			local Rect is btnR: :removeBtnRect(b: b, rowIdx: i);
 			local String is nm: vm:pinned:names:get(index: i);
 			local String is pp: vm:pinned:paths:get(index: i);
 			local Int is tx: b:x + gripW;
-			local Int is maxTextW: btnR:x - tx - pad;
+			local Int is maxTextW: if({ canRemove }, { btnR:x - tx - pad }, { (b:x + b:width) - tx - pad });
 			if({ maxTextW > 20 }, {
 				ctx:setClip(x: tx, y: ry, w: maxTextW, h: rh);
 				ctx:drawText(x: tx, y: ry + (rh - th) / 2, text: nm . '  (' . pp . ')', color: activeTheme:textPrimary, pixelHeight: fpx);
 				ctx:clearClip();
 			});
 
-			## Remove button
-			local Boolean is remHov: (i == hoverRemoveRow);
-			local Int is btnBg: if({ remHov }, { activeTheme:hoverBg }, { activeTheme:panelBg });
-			ctx:fillRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: btnBg);
-			if({ bw > 0 }, {
-				ctx:strokeRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: activeTheme:buttonBorder, thickness: bw);
+			## Remove button (only for user-pinned locations)
+			if({ canRemove }, {
+				local Boolean is remHov: (i == hoverRemoveRow);
+				local Int is btnBg: if({ remHov }, { activeTheme:hoverBg }, { activeTheme:panelBg });
+				ctx:fillRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: btnBg);
+				if({ bw > 0 }, {
+					ctx:strokeRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: activeTheme:buttonBorder, thickness: bw);
+				});
+				local Int is rw: DrawContext:measureWidth(text: 'Remove', pixelHeight: fpx);
+				ctx:drawText(
+					x: btnR:x + (btnR:width - rw) / 2,
+					y: btnR:y + (btnR:height - th) / 2,
+					text: 'Remove',
+					color: activeTheme:textPrimary,
+					pixelHeight: fpx
+				);
 			});
-			local Int is rw: DrawContext:measureWidth(text: 'Remove', pixelHeight: fpx);
-			ctx:drawText(
-				x: btnR:x + (btnR:width - rw) / 2,
-				y: btnR:y + (btnR:height - th) / 2,
-				text: 'Remove',
-				color: activeTheme:textPrimary,
-				pixelHeight: fpx
-			);
 
 			if({ i + 1 < count && linePx > 0 }, {
 				ctx:fillRect(x: b:x, y: ry + rh - linePx, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
@@ -160,7 +163,7 @@ Class of SewNode is PinnedLocationsList{
 		local Int is nextRow: :rowIndexAt(y: y);
 		if({ !:inRect(r: b, x: x, y: y) }, { nextRow: -1; });
 		local Int is nextRem: -1;
-		if({ nextRow >= 0 }, {
+		if({ nextRow >= 0 && !vm:pinned:isDefaultAt(index: nextRow) }, {
 			if({ :inRect(r: :removeBtnRect(b: b, rowIdx: nextRow), x: x, y: y) }, {
 				nextRem: nextRow;
 			});
@@ -186,7 +189,8 @@ Class of SewNode is PinnedLocationsList{
 		local Rect is b: bounds();
 		local Int is idx: :rowIndexAt(y: y);
 		if({ dragFromIdx < 0 }, {
-			if({ idx >= 0 && !:inRect(r: :removeBtnRect(b: b, rowIdx: idx), x: x, y: y) }, {
+			local Boolean is overRemove: idx >= 0 && !vm:pinned:isDefaultAt(index: idx) && :inRect(r: :removeBtnRect(b: b, rowIdx: idx), x: x, y: y);
+			if({ idx >= 0 && !overRemove }, {
 				:dragFromIdx: idx;
 				:dragToIdx: idx;
 				invalidate();
@@ -221,7 +225,7 @@ Class of SewNode is PinnedLocationsList{
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods){
 		local Rect is b: bounds();
 		local Int is idx: :rowIndexAt(y: y);
-		if({ idx >= 0 && :inRect(r: :removeBtnRect(b: b, rowIdx: idx), x: x, y: y) }, {
+		if({ idx >= 0 && !vm:pinned:isDefaultAt(index: idx) && :inRect(r: :removeBtnRect(b: b, rowIdx: idx), x: x, y: y) }, {
 			vm:removePinned(index: idx);
 			return true;
 		});

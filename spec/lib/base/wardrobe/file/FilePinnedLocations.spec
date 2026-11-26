@@ -19,10 +19,12 @@ Class is FilePinnedLocations{
 
 	Array of String is names: Array();
 	Array of String is paths: Array();
+	Array of Boolean is isDefault: Array();
 
 	replace Function is init(){
 		:names: Array();
 		:paths: Array();
+		:isDefault: Array();
 	}
 
 	Function of String is configPath(){
@@ -34,7 +36,25 @@ Class is FilePinnedLocations{
 		return u:configDir() . '/spec_pinned.json';
 	}
 
-	Function of Boolean is add(String is name, String is path){
+	local Function of Boolean is isDefaultPath(String is path){
+		if({ path == '/' }, { return true; });
+		local String is home: Process():getEnv(key: 'HOME', default: '');
+		if({ home == '' }, {
+			home: Process():getEnv(key: 'USERPROFILE', default: '');
+		});
+		if({ home == '' }, { return false; });
+		if({ path == home }, { return true; });
+		local String is docs: if({ home:endsWith(suffix: '/') }, { home . 'Documents' }, { home . '/Documents' });
+		local String is dl: if({ home:endsWith(suffix: '/') }, { home . 'Downloads' }, { home . '/Downloads' });
+		return path == docs || path == dl;
+	}
+
+	Function of Boolean is isDefaultAt(Int is index){
+		if({ index < 0 || index >= isDefault:length() }, { return false; });
+		return isDefault:get(index: index);
+	}
+
+	Function of Boolean is add(String is name, String is path, Boolean is defaultEntry: false){
 		if({ name == '' || path == '' }, { return false; });
 		local Int is i: 0;
 		while({ i < paths:length() }, {
@@ -43,13 +63,16 @@ Class is FilePinnedLocations{
 		});
 		names:add(item: name);
 		paths:add(item: path);
+		isDefault:add(item: defaultEntry || :isDefaultPath(path: path));
 		return true;
 	}
 
 	Function of Boolean is removeAt(Int is index){
 		if({ index < 0 || index >= paths:length() }, { return false; });
+		if({ :isDefaultAt(index: index) }, { return false; });
 		names:removeAt(index: index);
 		paths:removeAt(index: index);
+		isDefault:removeAt(index: index);
 		return true;
 	}
 
@@ -58,11 +81,13 @@ Class is FilePinnedLocations{
 		if({ fromIdx < 0 || fromIdx >= count || toIdx < 0 || toIdx >= count || fromIdx == toIdx }, { return false; });
 		local String is nm: names:get(index: fromIdx);
 		local String is pp: paths:get(index: fromIdx);
+		local Boolean is def: :isDefaultAt(index: fromIdx);
 		if({ fromIdx < toIdx }, {
 			local Int is i: fromIdx;
 			while({ i < toIdx }, {
 				names:set(index: i, item: names:get(index: i + 1));
 				paths:set(index: i, item: paths:get(index: i + 1));
+				isDefault:set(index: i, item: isDefault:get(index: i + 1));
 				i: i + 1;
 			});
 		}, {
@@ -70,11 +95,13 @@ Class is FilePinnedLocations{
 			while({ i > toIdx }, {
 				names:set(index: i, item: names:get(index: i - 1));
 				paths:set(index: i, item: paths:get(index: i - 1));
+				isDefault:set(index: i, item: isDefault:get(index: i - 1));
 				i: i - 1;
 			});
 		});
 		names:set(index: toIdx, item: nm);
 		paths:set(index: toIdx, item: pp);
+		isDefault:set(index: toIdx, item: def);
 		return true;
 	}
 
@@ -110,6 +137,7 @@ Class is FilePinnedLocations{
 	Function is load(){
 		:names: Array();
 		:paths: Array();
+		:isDefault: Array();
 		local String is raw: fileRead(
 			path: :configPath(),
 			onSuccess: local Function(String is _s){},

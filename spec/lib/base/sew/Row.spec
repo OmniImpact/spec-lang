@@ -20,6 +20,7 @@ Class of SewNode is Row{
 	Array of SewNode is children: Array();
 	Array of Boolean is flexFlags: Array();
 	Float is gapPt: 0.0;
+	Int is dragChildIdx: -1;
 
 	replace Function is init(Array of SewNode is children: Array(), Float is gapPt: 0.0, Array of Boolean is flexFlags: Array()){
 		:children: children;
@@ -172,6 +173,35 @@ Class of SewNode is Row{
 			i: i - 1;
 		});
 		return false;
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		if({ dragChildIdx >= 0 && dragChildIdx < children:length() }, {
+			return children:get(index: dragChildIdx):onPointerDrag(x: x, y: y, mods: mods);
+		});
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			local Rect is cb: children:get(index: i):bounds();
+			if({ x >= cb:x && x < cb:x + cb:width && y >= cb:y && y < cb:y + cb:height }, {
+				dragChildIdx: i;
+				return children:get(index: i):onPointerDrag(x: x, y: y, mods: mods);
+			});
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		if({ dragChildIdx >= 0 && dragChildIdx < children:length() }, {
+			local Int is idx: dragChildIdx;
+			dragChildIdx: -1;
+			return children:get(index: idx):onPointerUp(x: x, y: y);
+		});
+		local Boolean is changed: false;
+		times(count: children:length(), worker: local Function(Int is i){
+			if({ children:get(index: i):onPointerUp(x: x, y: y) }, { changed: true; });
+		});
+		return changed;
 	}
 
 	replace Function of Boolean is tick(Int is nowMs){
