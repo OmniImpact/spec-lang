@@ -58,7 +58,7 @@ Class is EditorViewModel{
 	String is themePreset: SpecEditStrings:THEME_PRESET;
 	String is aboutTitle: SpecEditStrings:ABOUT_TITLE;
 	Float is aboutWidthPt: 420.0;
-	Float is aboutHeightPt: 170.0;
+	Float is aboutHeightPt: 230.0;
 	Boolean is allowMultipleFiles: false;
 	ToolbarConfig is toolbarConfig: ToolbarConfig();
 	MenuConfig is editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL, visible: false);

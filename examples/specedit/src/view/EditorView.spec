@@ -29,6 +29,7 @@ Class is EditorView{
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', Bar],
 		['base', 'scrap', Dialog],
+		['base', 'scrap', 'icon', ImageSvg],
 		['base', 'wardrobe', 'file', FileDialog],
 		['base', 'wardrobe', 'file', FileTree],
 		['specedit', 'viewmodel', EditorViewModel],
@@ -95,6 +96,13 @@ Class is EditorView{
 					gapPt: 8.0,
 					padPt: 20.0,
 					children: Array([
+						Center(
+							child: ImageSvg(
+								svg: vm:icons:appIcon,
+								widthPt: 48.0,
+								heightPt: 48.0
+							) as SewNode
+						) as SewNode,
 						TextScrap(text: vm:versionText, align: SpecEditStrings:TEXT_ALIGN_CENTER) as SewNode,
 						TextScrap(text: vm:descriptionText, align: SpecEditStrings:TEXT_ALIGN_CENTER, wrap: true, muted: true) as SewNode
 					])
