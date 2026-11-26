@@ -33,10 +33,10 @@ Class of Dialog is SettingsDialogView{
 		:vm: vm;
 		:title: 'Settings';
 		:open: vm:open;
-		:widthPt: 600.0;
-		:heightPt: 400.0;
-		:minWidthPt: 460.0;
-		:minHeightPt: 320.0;
+		:widthPt: 480.0;
+		:heightPt: 330.0;
+		:minWidthPt: 400.0;
+		:minHeightPt: 270.0;
 		:hasContent: true;
 		:appearanceView: AppearanceSettingsView(vm: vm);
 		:locationsView: LocationsSettingsView(vm: vm);
@@ -65,22 +65,22 @@ Class of Dialog is SettingsDialogView{
 			ScrapButton(
 				label: 'Appearance',
 				selected: (curRoute == 'appearance'),
-				minWidthPt: 120.0,
-				heightPt: 28.0,
+				minWidthPt: 96.0,
+				heightPt: 22.0,
 				onClick: local Function(){ vm:selectRoute(routeName: 'appearance'); }
 			),
 			ScrapButton(
 				label: 'Locations',
 				selected: (curRoute == 'locations'),
-				minWidthPt: 120.0,
-				heightPt: 28.0,
+				minWidthPt: 96.0,
+				heightPt: 22.0,
 				onClick: local Function(){ vm:selectRoute(routeName: 'locations'); }
 			),
 			ScrapButton(
 				label: 'Interface',
 				selected: (curRoute == 'interface'),
-				minWidthPt: 120.0,
-				heightPt: 28.0,
+				minWidthPt: 96.0,
+				heightPt: 22.0,
 				onClick: local Function(){ vm:selectRoute(routeName: 'interface'); }
 			)
 		]);
@@ -108,8 +108,8 @@ Class of Dialog is SettingsDialogView{
 			children: Array([
 				ScrapButton(
 					label: 'Close',
-					minWidthPt: 80.0,
-					heightPt: 28.0,
+					minWidthPt: 64.0,
+					heightPt: 22.0,
 					onClick: local Function(){ vm:closeSettings(); }
 				)
 			])

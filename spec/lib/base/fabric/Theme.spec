@@ -46,16 +46,16 @@ Class is Theme{
 	Int is synComment: 0;
 	Int is synPunct: 0;
 	Int is synHeading: 0;
-	Float is toolbarHeightPt: 26.0;
-	Float is menuItemHeightPt: 24.0;
-	Float is paddingPt: 6.0;
-	Float is sectionPaddingPt: 8.0;
-	Float is dialogPaddingPt: 12.0;
+	Float is toolbarHeightPt: 22.0;
+	Float is menuItemHeightPt: 20.0;
+	Float is paddingPt: 4.5;
+	Float is sectionPaddingPt: 6.0;
+	Float is dialogPaddingPt: 9.0;
 	Float is borderThicknessPt: 1.0;
 	Float is lineThicknessPt: 1.0;
 	String is borderStyle: 'solid';
 	Float is uiScaleFactor: 1.0;
-	Float is baseTextPt: 12.0;
+	Float is baseTextPt: 10.0;
 
 	replace Function is init(String is preset: 'dark'){
 		:applyPreset(preset: Theme:presetFromString(name: preset));
@@ -88,7 +88,7 @@ Class is Theme{
 		);
 	}
 
-	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 12.0){
+	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 10.0){
 		local Theme is t: Theme();
 		t:setBaseTextPt(pt: baseTextPt);
 		t:applyPreset(preset: preset);
@@ -96,7 +96,7 @@ Class is Theme{
 	}
 
 	Function is setBaseTextPt(Float is pt){
-		local Float is clamped: if({ pt < 10.0 }, { 10.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+		local Float is clamped: if({ pt < 8.0 }, { 8.0 }, { if({ pt > 20.0 }, { 20.0 }, { pt }) });
 		:baseTextPt: clamped;
 		:deriveTokens();
 	}
@@ -137,8 +137,8 @@ Class is Theme{
 	}
 
 	Function of Float is scaledTextPt(Float is defaultPt){
-		local Float is v: defaultPt * (baseTextPt / 15.0);
-		return if({ v < 8.0 }, { 8.0 }, { v });
+		local Float is v: defaultPt * (baseTextPt / 14.0);
+		return if({ v < 7.0 }, { 7.0 }, { v });
 	}
 
 	Function is applyPreset(ThemePreset is preset){
@@ -213,9 +213,19 @@ Class is Theme{
 		positiveColor: positive:toArgb();
 		negativeColor: negative:toArgb();
 
-		paddingPt: 6.0 * (baseTextPt / 12.0);
+		paddingPt: 4.5 * (baseTextPt / 10.0);
 		sectionPaddingPt: paddingPt * 1.35;
 		dialogPaddingPt: paddingPt * 2.0;
+		local Float is baseBorder: 1.0 * (baseTextPt / 10.0);
+		if({ borderStyle == 'none' }, {
+			borderThicknessPt: 0.0;
+		}, {
+		if({ borderStyle == 'bold' }, {
+			borderThicknessPt: baseBorder * 2.0;
+		}, {
+			borderThicknessPt: baseBorder;
+		}); });
+		lineThicknessPt: baseBorder;
 
 		synKeyword: if({ light }, { detail:darken(amount: 0.35):toArgb() }, { detail:lighten(amount: 0.50):toArgb() });
 		synType: if({ light }, { detail:mix(other: neutral, t: 0.20):toArgb() }, { detail:mix(other: neutral, t: 0.32):toArgb() });

@@ -16,8 +16,8 @@ Class of SewNode is ScrapButton{
 
 	String is label: '';
 	Function is onClick: local Function(){};
-	Float is minWidthPt: 80.0;
-	Float is heightPt: 28.0;
+	Float is minWidthPt: 60.0;
+	Float is heightPt: 22.0;
 	Float is padXPt: 0.0;
 	Boolean is selected: false;
 	Boolean is enabled: true;
@@ -26,8 +26,8 @@ Class of SewNode is ScrapButton{
 	replace Function is init(
 		String is label: '',
 		Function is onClick: local Function(){},
-		Float is minWidthPt: 80.0,
-		Float is heightPt: 28.0,
+		Float is minWidthPt: 60.0,
+		Float is heightPt: 22.0,
 		Float is padXPt: 0.0,
 		Boolean is selected: false,
 		Boolean is enabled: true

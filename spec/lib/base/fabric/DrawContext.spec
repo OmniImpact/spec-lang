@@ -185,12 +185,15 @@ Class is DrawContext{
 	}
 
 	## Draws a 1px outline around ([x], [y], [w], [h]).
-	Function is strokeRect(Int is x, Int is y, Int is w, Int is h, Int is color){
-		if({ w <= 0 || h <= 0 }, { return; });
-		canvas:fillRect(x: x, y: y, w: w, h: 1, color: color);
-		canvas:fillRect(x: x, y: y + h - 1, w: w, h: 1, color: color);
-		canvas:fillRect(x: x, y: y, w: 1, h: h, color: color);
-		canvas:fillRect(x: x + w - 1, y: y, w: 1, h: h, color: color);
+	Function is strokeRect(Int is x, Int is y, Int is w, Int is h, Int is color, Int is thickness: 1){
+		if({ w <= 0 || h <= 0 || thickness <= 0 }, { return; });
+		local Int is t: if({ thickness * 2 > w }, { w / 2 }, { thickness });
+		if({ t * 2 > h }, { t: h / 2; });
+		if({ t < 1 }, { t: 1; });
+		canvas:fillRect(x: x, y: y, w: w, h: t, color: color);
+		canvas:fillRect(x: x, y: y + h - t, w: w, h: t, color: color);
+		canvas:fillRect(x: x, y: y, w: t, h: h, color: color);
+		canvas:fillRect(x: x + w - t, y: y, w: t, h: h, color: color);
 	}
 
 	local Function is plotClipped(Int is x, Int is y, Int is color){

@@ -109,8 +109,8 @@ Class is SettingsViewModel{
 
 	Function is adjustBaseTextPt(Float is delta){
 		local Float is next: model:baseTextPt + delta;
-		if({ next < 10.0 }, { next: 10.0; });
-		if({ next > 22.0 }, { next: 22.0; });
+		if({ next < 8.0 }, { next: 8.0; });
+		if({ next > 20.0 }, { next: 20.0; });
 		model:baseTextPt: next;
 		model:save();
 		local Function is cb: themeChangeHandler;
@@ -136,7 +136,7 @@ Class is SettingsViewModel{
 	}
 
 	Function is resetBaseTextPt(){
-		model:baseTextPt: 12.0;
+		model:baseTextPt: 10.0;
 		model:save();
 		local Function is cb: themeChangeHandler;
 		cb(:currentTheme());
@@ -154,7 +154,7 @@ Class is SettingsViewModel{
 	Function is resetAppearance(){
 		model:themePreset: ThemePreset:LIGHT;
 		model:docTextDeltaPt: 0.0;
-		model:baseTextPt: 12.0;
+		model:baseTextPt: 10.0;
 		model:uiZoomPct: 100;
 		model:save();
 		local Function is tcb: themeChangeHandler;
