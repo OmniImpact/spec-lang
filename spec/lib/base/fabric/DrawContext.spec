@@ -155,7 +155,33 @@ Class is DrawContext{
 			rh: y2 - ry;
 		});
 		if({ rw <= 0 || rh <= 0 }, { return; });
-		canvas:fillRect(x: rx, y: ry, w: rw, h: rh, color: color);
+		local Int is srcA: (color >> 24) & 255;
+		if({ srcA == 0 }, { return; });
+		if({ srcA >= 255 }, {
+			canvas:fillRect(x: rx, y: ry, w: rw, h: rh, color: color);
+			return;
+		});
+		local Int is pixelsPtr: canvas:pixelsAddr();
+		if({ pixelsPtr == 0 }, { return; });
+		local Int is bw: canvas:width;
+		local Int is srcR: (color >> 16) & 255;
+		local Int is srcG: (color >> 8) & 255;
+		local Int is srcB: color & 255;
+		local Int is invA: 255 - srcA;
+		local Int is py: ry;
+		while({ py < ry + rh }, {
+			local Int is px: rx;
+			while({ px < rx + rw }, {
+				local Int is off: (py * bw + px) * 4;
+				local Int is dst: Mem:loadI32(ptr: pixelsPtr, byteOffset: off);
+				local Int is outR: (srcR * srcA + ((dst >> 16) & 255) * invA) / 255;
+				local Int is outG: (srcG * srcA + ((dst >> 8) & 255) * invA) / 255;
+				local Int is outB: (srcB * srcA + (dst & 255) * invA) / 255;
+				Mem:storeI32(ptr: pixelsPtr, byteOffset: off, val: (255 << 24) | (outR << 16) | (outG << 8) | outB);
+				px: px + 1;
+			});
+			py: py + 1;
+		});
 	}
 
 	## Draws a 1px outline around ([x], [y], [w], [h]).

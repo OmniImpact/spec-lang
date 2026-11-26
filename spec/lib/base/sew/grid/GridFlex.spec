@@ -248,10 +248,10 @@ Class of SewNode is GridFlex{
 				local Int is bgCol: if({ active }, { activeTheme:hoverBg }, { activeTheme:toolbarBg });
 				if({ horizontal }, {
 					ctx:fillRect(x: dpos, y: b:y, w: sp, h: b:height, color: bgCol);
-					ctx:fillRect(x: dpos + sp / 2, y: b:y, w: 1, h: b:height, color: if({ active }, { activeTheme:accent }, { activeTheme:toolbarBorder }));
+					ctx:fillRect(x: dpos + sp / 2, y: b:y, w: 1, h: b:height, color: if({ active }, { activeTheme:textAccent }, { activeTheme:toolbarBorder }));
 				}, {
 					ctx:fillRect(x: b:x, y: dpos, w: b:width, h: sp, color: bgCol);
-					ctx:fillRect(x: b:x, y: dpos + sp / 2, w: b:width, h: 1, color: if({ active }, { activeTheme:accent }, { activeTheme:toolbarBorder }));
+					ctx:fillRect(x: b:x, y: dpos + sp / 2, w: b:width, h: 1, color: if({ active }, { activeTheme:textAccent }, { activeTheme:toolbarBorder }));
 				});
 				di: di + 1;
 			});
