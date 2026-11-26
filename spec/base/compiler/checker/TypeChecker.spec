@@ -120,6 +120,8 @@ Class is TypeChecker{
 
 	## Class currently being analyzed.
 	local String is currentClassName: '';
+	local String is currentImportMapFor: '';
+	local Map of String to String is currentImportMap: Map:init();
 	local ClassInfo is currentClassDef: ClassInfo(name: '', baseClass: '', members: []);
 
 	## Source file of the class currently being analyzed.
@@ -519,6 +521,90 @@ Class is TypeChecker{
 		return targetType;
 	}
 
+	## Collects bare-name -> qualified-name ('ns:Class') mappings from [cls]'s `using` declaration.
+	## When [checkDup] is true, emits an error if two different namespaces bind the same bare name without aliases.
+	Function is collectUsingBindings(ClassInfo is cls, Map of String to String is out, Boolean is checkDup){
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function([Expression] is items){
+						local Int is ii: 0;
+						while({ ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is segs){
+									local String is nsJoined: '';
+									local Array of String is bareNames: Array();
+									times(count: segs:length(), worker: local Function(Int is si){
+										local Expression is seg: segs:get(index: si);
+										match(on: seg, when: [
+											Expression:StringLit: local Function(String is s){
+												if({ s != '*' }, {
+													nsJoined: if({ nsJoined == '' }, { s }, { nsJoined . ':' . s });
+												});
+											},
+											Expression:Ident: local Function(String is s){
+												bareNames:add(item: s);
+											},
+											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
+												if({ seg:usingAsAlias == '' }, {
+													bareNames:add(item: className);
+												});
+											},
+											Expression:ArrayLit: local Function([Expression] is grpItems){
+												times(count: grpItems:length(), worker: local Function(Int is gi){
+													local Expression is gseg: grpItems:get(index: gi);
+													match(on: gseg, when: [
+														Expression:Ident: local Function(String is gs){
+															bareNames:add(item: gs);
+														},
+														Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
+															if({ gseg:usingAsAlias == '' }, {
+																bareNames:add(item: gclassName);
+															});
+														}
+													], default: {});
+												});
+											}
+										], default: {});
+									});
+									local Int is bi: 0;
+									while({ bi < bareNames:length() }, {
+										local String is bname: bareNames:get(index: bi);
+										local String is qKey: if({ nsJoined != '' }, { nsJoined . ':' . bname }, { bname });
+										if({ out:has(key: bname) }, {
+											local String is prevQ: out:getString(key: bname, default: '');
+											if({ checkDup && prevQ != qKey }, {
+												:addError(line: m:line, msg: 'Ambiguous import of \'' . bname . '\' in \'' . cls:name . '\': both \'' . prevQ . '\' and \'' . qKey . '\' are imported without aliases.');
+											});
+										}, {
+											out:set(key: bname, value: qKey);
+										});
+										bi++;
+									});
+								}
+							], default: {});
+							ii++;
+						});
+					}
+				], default: {});
+			});
+			mi++;
+		});
+	}
+
+	Function of String is currentImportQualified(String is bareName){
+		if({ :currentClassDef:name == '' }, { return ''; });
+		local String is curKey: :currentClassDef:namespaceJoined() . ':' . :currentClassDef:name;
+		if({ :currentImportMapFor != curKey }, {
+			:currentImportMap: Map:init();
+			:currentImportMapFor: curKey;
+			:collectUsingBindings(cls: :currentClassDef, out: :currentImportMap, checkDup: false);
+		});
+		return :currentImportMap:getString(key: bareName, default: '');
+	}
+
 	## Finds a class descriptor by name.
 	##
 	## @param name: Target class name.
@@ -528,6 +614,33 @@ Class is TypeChecker{
 		local Boolean is found: false;
 		local Int is count: :programClasses:length();
 		local Boolean is hasColon: name:contains(needle: ':');
+		if({ !hasColon && :currentClassDef:name != '' }, {
+			if({ :currentClassDef:name == name }, {
+				return :currentClassDef;
+			});
+			local String is impQ: :currentImportQualified(bareName: name);
+			if({ impQ != '' && !impQ:contains(needle: 'sysinternal:') }, {
+				local Int is ii: 0;
+				while({ ii < count }, {
+					local ClassInfo is ic: :programClasses:get(index: ii);
+					if({ ic:namespaceJoined() . ':' . ic:name == impQ }, {
+						return ic;
+					});
+					ii++;
+				});
+			});
+			local String is curNs: :currentClassDef:namespaceJoined();
+			if({ curNs != '' && !curNs:endsWith(suffix: 'sysinternal') }, {
+				local Int is si: 0;
+				while({ si < count }, {
+					local ClassInfo is sc: :programClasses:get(index: si);
+					if({ sc:name == name && sc:namespaceJoined() == curNs }, {
+						return sc;
+					});
+					si++;
+				});
+			});
+		});
 		local ClassInfo is floorCand: ClassInfo(name: '', baseClass: '', members: []);
 		while(
 			[Int is idx: 0],
@@ -7246,6 +7359,7 @@ Class is TypeChecker{
 		fi: 0;
 		while({ fi < flattened:length() }, {
 			:checkInstanceImports(classDef: flattened:get(index: fi));
+			:collectUsingBindings(cls: flattened:get(index: fi), out: Map:init(), checkDup: true);
 			fi++;
 		});
 		# E4: the instance-import graph must be a DAG.

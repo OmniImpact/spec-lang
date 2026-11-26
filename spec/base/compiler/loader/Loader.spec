@@ -338,8 +338,12 @@ Class is Loader{
 	## @param className: The requested class name.
 	## @return: true when provided.
 	Function of Boolean is provides(String is nsJoined, String is className){
+		return :providesFrom(startIdx: 0, nsJoined: nsJoined, className: className);
+	}
+
+	Function of Boolean is providesFrom(Int is startIdx, String is nsJoined, String is className){
 		local Boolean is ok: false;
-		local Int is ci: 0;
+		local Int is ci: startIdx;
 		while({ !ok && ci < :loadedClasses:length() }, {
 			local ClassInfo is c: :loadedClasses:get(index: ci);
 			# A package-form request (no class name) accepts any class
@@ -378,6 +382,9 @@ Class is Loader{
 			});
 		});
 		local String is wanted: nsJoined . ':' . termClass;
+		if({ termClass != '' && :provides(nsJoined: nsJoined, className: termClass) }, {
+			return;
+		});
 		local Array of String is cands: :candidatesFor(className: termClass);
 		# Class form: try each candidate file; accept the first whose load
 		# declares the requested class in the requested namespace. A failed
@@ -388,17 +395,14 @@ Class is Loader{
 		local Boolean is resolved: false;
 		if({ termClass != '' }, {
 			cands:each(action: local Function(String is cand){
-				if({ !resolved }, {
-					local Boolean is wasLoaded: :loadedFiles:has(key: cand);
+				if({ !resolved && !:loadedFiles:has(key: cand) }, {
 					local Int is classBefore: :loadedClasses:length();
 					:loadFile(filePath: cand);
-					if({ :provides(nsJoined: nsJoined, className: termClass) }, {
+					if({ :providesFrom(startIdx: classBefore, nsJoined: nsJoined, className: termClass) }, {
 						resolved: true;
 					}, {
 						:unloadClassesFrom(index: classBefore);
-						if({ !wasLoaded }, {
-							:loadedFiles:remove(key: cand);
-						});
+						:loadedFiles:remove(key: cand);
 					});
 				});
 			});
