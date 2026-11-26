@@ -20,38 +20,57 @@ Class is AppearanceSettingsView{
 	];
 
 	SettingsViewModel is vm: SettingsViewModel();
-	Array of ScrapButton is themeBtns: Array();
+	SectionH is themeSection: SectionH();
 	DecoratedTextInput is docDeltaInput: DecoratedTextInput();
 	DecoratedTextInput is baseTextInput: DecoratedTextInput();
 	Array of Int is zoomValues: Array([70, 100, 115, 130]);
-	Array of ScrapButton is zoomBtns: Array();
+	SectionH is zoomSection: SectionH();
 
 	replace Function is init(SettingsViewModel is vm){
 		:vm: vm;
-		:themeBtns: Array();
-		:zoomBtns: Array();
+		:themeSection: SectionH();
+		:zoomSection: SectionH();
+	}
+
+	local Function of Int is presetIndex(ThemePreset is preset){
+		local Array of ThemePreset is presets: Theme:presets();
+		local Int is i: 0;
+		while({ i < presets:length() }, {
+			if({ presets:get(index: i) == preset }, { return i; });
+			i: i + 1;
+		});
+		return 0;
+	}
+
+	local Function of Int is zoomIndex(Int is pct){
+		local Int is i: 0;
+		while({ i < zoomValues:length() }, {
+			if({ zoomValues:get(index: i) == pct }, { return i; });
+			i: i + 1;
+		});
+		return 1;
 	}
 
 	Function of SewNode is build(){
-		:themeBtns: Array();
-		:zoomBtns: Array();
-
-		local SectionV is themeSection: SectionV(segmented: true);
 		local Array of ThemePreset is presets: Theme:presets();
+		local Array of String is themeLabels: Array();
 		local Int is ti: 0;
 		while({ ti < presets:length() }, {
-			local ThemePreset is p: presets:get(index: ti);
-			local ScrapButton is btn: ScrapButton(
-				label: Theme:presetLabel(preset: p),
-				selected: (p == vm:model:themePreset),
-				minWidthPt: 64.0,
-				onClick: local Function(){ vm:selectTheme(preset: p); }
-			);
-			themeBtns:add(item: btn);
-			themeSection:col:addChild(child: btn);
+			themeLabels:add(item: Theme:presetLabel(preset: presets:get(index: ti)));
 			ti: ti + 1;
 		});
-		themeSection:joinSegmentedEdges();
+		:themeSection: SectionH(
+			segmented: true,
+			options: themeLabels,
+			selectedIndex: :presetIndex(preset: vm:model:themePreset),
+			itemMinWidthPt: 64.0,
+			onSelect: local Function(Int is idx){
+				local Array of ThemePreset is ps: Theme:presets();
+				if({ idx >= 0 && idx < ps:length() }, {
+					vm:selectTheme(preset: ps:get(index: idx));
+				});
+			}
+		);
 
 		:docDeltaInput: DecoratedTextInput(
 			text: vm:docDeltaLabel(),
@@ -89,21 +108,23 @@ Class is AppearanceSettingsView{
 			])
 		);
 
-		local SectionH is zoomRow: SectionH(segmented: true);
+		local Array of String is zoomLabels: Array();
 		local Int is zi: 0;
 		while({ zi < zoomValues:length() }, {
-			local Int is zp: zoomValues:get(index: zi);
-			local ScrapButton is zBtn: ScrapButton(
-				label: (zp as String) . '%',
-				selected: (zp == vm:model:uiZoomPct),
-				minWidthPt: 48.0,
-				onClick: local Function(){ vm:selectZoomPct(pct: zp); }
-			);
-			zoomBtns:add(item: zBtn);
-			zoomRow:row:addChild(child: zBtn);
+			zoomLabels:add(item: (zoomValues:get(index: zi) as String) . '%');
 			zi: zi + 1;
 		});
-		zoomRow:joinSegmentedEdges();
+		:zoomSection: SectionH(
+			segmented: true,
+			options: zoomLabels,
+			selectedIndex: :zoomIndex(pct: vm:model:uiZoomPct),
+			itemMinWidthPt: 48.0,
+			onSelect: local Function(Int is idx){
+				if({ idx >= 0 && idx < zoomValues:length() }, {
+					vm:selectZoomPct(pct: zoomValues:get(index: idx));
+				});
+			}
+		);
 
 		:sync();
 
@@ -134,25 +155,16 @@ Class is AppearanceSettingsView{
 				),
 				Frame(
 					title: 'UI Zoom',
-					child: zoomRow
+					child: zoomSection
 				)
 			])
 		);
 	}
 
 	Function is sync(){
-		local Array of ThemePreset is presets: Theme:presets();
-		local Int is i: 0;
-		while({ i < presets:length() && i < themeBtns:length() }, {
-			themeBtns:get(index: i):setSelected(next: presets:get(index: i) == vm:model:themePreset);
-			i: i + 1;
-		});
+		themeSection:setSelectedIndex(index: :presetIndex(preset: vm:model:themePreset));
 		docDeltaInput:setText(next: vm:docDeltaLabel());
 		baseTextInput:setText(next: vm:baseTextLabel());
-		local Int is zi: 0;
-		while({ zi < zoomValues:length() && zi < zoomBtns:length() }, {
-			zoomBtns:get(index: zi):setSelected(next: zoomValues:get(index: zi) == vm:model:uiZoomPct);
-			zi: zi + 1;
-		});
+		zoomSection:setSelectedIndex(index: :zoomIndex(pct: vm:model:uiZoomPct));
 	}
 }

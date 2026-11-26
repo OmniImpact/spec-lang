@@ -17,16 +17,16 @@ Class of SewNode is Frame{
 
 	String is title: '';
 	SewNode is child: SewNode();
-	Float is padPt: 0.0;
+	Float is padPt: -1.0;
 
-	replace Function is init(String is title: '', SewNode is child: SewNode(), Float is padPt: 0.0){
+	replace Function is init(String is title: '', SewNode is child: SewNode(), Float is padPt: -1.0){
 		:title: title;
 		:child: child;
 		:padPt: padPt;
 	}
 
 	local Function of Int is effPadPx(){
-		local Float is pt: if({ padPt > 0.0 }, { padPt }, { activeTheme:sectionPaddingPt });
+		local Float is pt: if({ padPt >= 0.0 }, { padPt }, { activeTheme:sectionPaddingPt });
 		return activeScale:px(pt: pt);
 	}
 
@@ -56,22 +56,24 @@ Class of SewNode is Frame{
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is padPx: :effPadPx();
+		local Int is bw: :borderPx();
+		local Int is insetPx: if({ padPx < bw }, { bw }, { padPx });
 		local Int is fpx: :fontPx();
 		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
-		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { padPx });
-		local Int is availW: c:maxW - padPx * 2;
+		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { insetPx });
+		local Int is availW: c:maxW - insetPx * 2;
 		if({ availW < 0 }, { availW: 0; });
-		local Int is availH: c:maxH - topPad - padPx;
+		local Int is availH: c:maxH - topPad - insetPx;
 		if({ availH < 0 }, { availH: 0; });
 		local Size is cs: child:measure(c: Constraints(minW: 0, maxW: availW, minH: 0, maxH: availH));
-		local Int is w: cs:width + padPx * 2;
+		local Int is w: cs:width + insetPx * 2;
 		if({ title != '' }, {
-			local Int is minTitleW: DrawContext:measureWidth(text: title, pixelHeight: fpx) + padPx * 3;
+			local Int is minTitleW: DrawContext:measureWidth(text: title, pixelHeight: fpx) + insetPx * 3;
 			if({ minTitleW > w }, { w: minTitleW; });
 		});
 		desiredSize: Size(
 			width: c:clampW(w: w),
-			height: c:clampH(h: cs:height + topPad + padPx)
+			height: c:clampH(h: cs:height + topPad + insetPx)
 		);
 		return desiredSize;
 	}
@@ -79,14 +81,16 @@ Class of SewNode is Frame{
 	replace Function is arrange(Rect is bounds){
 		layoutBounds: bounds;
 		local Int is padPx: :effPadPx();
+		local Int is bw: :borderPx();
+		local Int is insetPx: if({ padPx < bw }, { bw }, { padPx });
 		local Int is fpx: :fontPx();
 		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
-		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { padPx });
-		local Int is cw: bounds:width - padPx * 2;
+		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { insetPx });
+		local Int is cw: bounds:width - insetPx * 2;
 		if({ cw < 0 }, { cw: 0; });
-		local Int is ch: bounds:height - topPad - padPx;
+		local Int is ch: bounds:height - topPad - insetPx;
 		if({ ch < 0 }, { ch: 0; });
-		child:arrange(bounds: Rect(x: bounds:x + padPx, y: bounds:y + topPad, width: cw, height: ch));
+		child:arrange(bounds: Rect(x: bounds:x + insetPx, y: bounds:y + topPad, width: cw, height: ch));
 	}
 
 	replace Function is paint(DrawContext is ctx){

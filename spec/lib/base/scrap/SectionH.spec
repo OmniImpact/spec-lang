@@ -16,12 +16,18 @@ Class of SewNode is SectionH{
 		['base', 'sew', Scale],
 		['base', 'sew', Row],
 		['base', 'sew', Column],
-		['base', 'scrap', Label]
+		['base', 'scrap', Label],
+		['base', 'scrap', Clickable]
 	];
 
 	String is title: '';
 	Float is gapPt: 0.0;
 	Boolean is segmented: false;
+	Int is selectedIndex: -1;
+	Float is itemMinWidthPt: 0.0;
+	Float is itemHeightPt: 0.0;
+	Function is onSelect: local Function(Int is _idx){};
+	Array of Clickable is segmentItems: Array();
 	Row is row: Row();
 	Column is wrapper: Column();
 	Boolean is hasTitle: false;
@@ -31,14 +37,45 @@ Class of SewNode is SectionH{
 		Array of SewNode is children: Array(),
 		Array of Boolean is flexFlags: Array(),
 		Float is gapPt: 0.0,
-		Boolean is segmented: false
+		Boolean is segmented: false,
+		Array of String is options: Array(),
+		Int is selectedIndex: -1,
+		Float is itemMinWidthPt: 0.0,
+		Float is itemHeightPt: 0.0,
+		Function is onSelect: local Function(Int is _idx){}
 	){
 		:title: title;
 		:gapPt: gapPt;
 		:segmented: segmented;
+		:selectedIndex: selectedIndex;
+		:itemMinWidthPt: itemMinWidthPt;
+		:itemHeightPt: itemHeightPt;
+		:onSelect: onSelect;
+		:segmentItems: Array();
 		:hasTitle: title != '';
-		:row: Row(children: children, flexFlags: flexFlags, gapPt: if({ segmented }, { 0.0 }, { gapPt }));
-		if({ segmented }, { :joinSegmentedEdges(); });
+		local Array of SewNode is rowChildren: children;
+		if({ options:length() > 0 }, {
+			rowChildren: Array();
+			local Int is oi: 0;
+			while({ oi < options:length() }, {
+				local Int is idx: oi;
+				local Clickable is item: Clickable(
+					label: options:get(index: idx),
+					selected: (idx == selectedIndex),
+					minWidthPt: itemMinWidthPt,
+					heightPt: itemHeightPt,
+					onClick: local Function(){
+						:setSelectedIndex(index: idx);
+						local Function is cb: :onSelect;
+						cb(idx);
+					}
+				);
+				segmentItems:add(item: item);
+				rowChildren:add(item: item);
+				oi: oi + 1;
+			});
+		});
+		:row: Row(children: rowChildren, flexFlags: flexFlags, gapPt: if({ segmented }, { 0.0 }, { gapPt }));
 		if({ hasTitle }, {
 			:wrapper: Column(
 				children: Array([Label(text: title, muted: true), row]),
@@ -48,12 +85,11 @@ Class of SewNode is SectionH{
 		});
 	}
 
-	Function is joinSegmentedEdges(){
-		local Int is count: row:children:length();
+	Function is setSelectedIndex(Int is index){
+		:selectedIndex: index;
 		local Int is i: 0;
-		while({ i < count }, {
-			local SewNode is ch: row:children:get(index: i);
-			ch:setBorderEdges(top: true, right: (i + 1 >= count), bottom: true, left: true);
+		while({ i < segmentItems:length() }, {
+			segmentItems:get(index: i):setSelected(next: i == index);
 			i: i + 1;
 		});
 	}
@@ -67,7 +103,6 @@ Class of SewNode is SectionH{
 		:activeTheme: theme;
 		if({ segmented }, {
 			row:gapPt: 0.0;
-			:joinSegmentedEdges();
 		}, {
 		if({ gapPt <= 0.0 }, {
 			row:gapPt: theme:paddingPt;
@@ -89,17 +124,69 @@ Class of SewNode is SectionH{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		desiredSize: :rootNode():measure(c: c);
+		local Size is s: :rootNode():measure(c: c);
+		if({ segmented }, {
+			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is count: row:children:length();
+			if({ count > 1 && linePx > 0 }, {
+				local Int is overlap: (count - 1) * linePx;
+				local Int is nw: if({ s:width > overlap }, { s:width - overlap }, { s:width });
+				s: Size(width: nw, height: s:height);
+			});
+		});
+		desiredSize: s;
 		return desiredSize;
 	}
 
 	replace Function is arrange(Rect is bounds){
 		layoutBounds: bounds;
 		:rootNode():arrange(bounds: bounds);
+		if({ segmented }, {
+			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is count: row:children:length();
+			if({ count > 1 && linePx > 0 }, {
+				local Int is i: 1;
+				while({ i < count }, {
+					local SewNode is ch: row:children:get(index: i);
+					local Rect is cb: ch:bounds();
+					local Int is shift: i * linePx;
+					ch:arrange(bounds: Rect(x: cb:x - shift, y: cb:y, width: cb:width, height: cb:height));
+					i: i + 1;
+				});
+			});
+		});
 	}
 
 	replace Function is paint(DrawContext is ctx){
 		:rootNode():paint(ctx: ctx);
+		if({ segmented }, {
+			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			if({ linePx > 0 }, {
+				local Int is count: row:children:length();
+				local Int is i: 0;
+				while({ i < count }, {
+					local SewNode is ch: row:children:get(index: i);
+					if({ !ch:isSelected() }, {
+						local Rect is cb: ch:bounds();
+						if({ cb:width > 0 && cb:height > 0 }, {
+							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:buttonBorder, thickness: linePx);
+						});
+					});
+					i: i + 1;
+				});
+				i: 0;
+				while({ i < count }, {
+					local SewNode is ch: row:children:get(index: i);
+					if({ ch:isSelected() }, {
+						local Rect is cb: ch:bounds();
+						if({ cb:width > 0 && cb:height > 0 }, {
+							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:textAccent, thickness: linePx);
+						});
+					});
+					i: i + 1;
+				});
+			});
+		});
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){

@@ -14,6 +14,7 @@ Class of Dialog is SettingsDialogView{
 		['base', 'sew', 'nav', NavStack],
 		['base', 'sew', 'nav', NavRoute],
 		['base', 'scrap', Dialog],
+		['base', 'scrap', Clickable],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', ScrollView],
 		['base', 'scrap', Frame],
@@ -29,7 +30,7 @@ Class of Dialog is SettingsDialogView{
 	LocationsSettingsView is locationsView: LocationsSettingsView(vm: SettingsViewModel());
 	InterfaceSettingsView is interfaceView: InterfaceSettingsView(vm: SettingsViewModel());
 	Array of String is categoryRoutes: Array(['appearance', 'locations', 'interface']);
-	Array of ScrapButton is categoryBtns: Array();
+	SectionV is categorySection: SectionV();
 	NavStack is navStack: NavStack();
 
 	replace Function is init(SettingsViewModel is vm){
@@ -44,7 +45,7 @@ Class of Dialog is SettingsDialogView{
 		:appearanceView: AppearanceSettingsView(vm: vm);
 		:locationsView: LocationsSettingsView(vm: vm);
 		:interfaceView: InterfaceSettingsView(vm: vm);
-		:categoryBtns: Array();
+		:categorySection: SectionV();
 		:navStack: NavStack();
 		:content: :buildContent();
 		:onTick: local Function(Int is _ms){
@@ -58,55 +59,41 @@ Class of Dialog is SettingsDialogView{
 		});
 	}
 
+	local Function of Int is routeIndex(String is routeName){
+		local Int is i: 0;
+		while({ i < categoryRoutes:length() }, {
+			if({ categoryRoutes:get(index: i) == routeName }, { return i; });
+			i: i + 1;
+		});
+		return 0;
+	}
+
 	local Function of SewNode is buildContent(){
 		:navStack: NavStack(
 			route: vm:selectedRoute,
 			routes: Array([
-				NavRoute(name: 'appearance', child: ScrollView(child: appearanceView:build())),
-				NavRoute(name: 'locations', child: ScrollView(child: locationsView:build())),
-				NavRoute(name: 'interface', child: ScrollView(child: interfaceView:build()))
+				NavRoute(name: 'appearance', child: ScrollView(child: Padding(useThemePad: true, child: appearanceView:build()))),
+				NavRoute(name: 'locations', child: ScrollView(child: Padding(useThemePad: true, child: locationsView:build()))),
+				NavRoute(name: 'interface', child: ScrollView(child: Padding(useThemePad: true, child: interfaceView:build())))
 			])
 		);
 
-		local String is curRoute: vm:selectedRoute:current();
-		:categoryBtns: Array([
-			ScrapButton(
-				label: 'Appearance',
-				selected: (curRoute == 'appearance'),
-				minWidthPt: 96.0,
-				heightPt: 22.0,
-				onClick: local Function(){ vm:selectRoute(routeName: 'appearance'); }
-			),
-			ScrapButton(
-				label: 'Locations',
-				selected: (curRoute == 'locations'),
-				minWidthPt: 96.0,
-				heightPt: 22.0,
-				onClick: local Function(){ vm:selectRoute(routeName: 'locations'); }
-			),
-			ScrapButton(
-				label: 'Interface',
-				selected: (curRoute == 'interface'),
-				minWidthPt: 96.0,
-				heightPt: 22.0,
-				onClick: local Function(){ vm:selectRoute(routeName: 'interface'); }
-			)
-		]);
-
-		local SectionV is sidebar: SectionV(
+		:categorySection: SectionV(
 			segmented: true,
-			children: Array([
-				categoryBtns:get(index: 0),
-				categoryBtns:get(index: 1),
-				categoryBtns:get(index: 2)
-			])
+			options: Array(['Appearance', 'Locations', 'Interface']),
+			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
+			itemMinWidthPt: 96.0,
+			itemHeightPt: 22.0,
+			onSelect: local Function(Int is idx){
+				vm:selectRoute(routeName: categoryRoutes:get(index: idx));
+			}
 		);
 
 		local Row is bodyRow: Row(
 			gapPt: 10.0,
 			children: Array([
-				sidebar,
-				Frame(child: navStack)
+				categorySection,
+				Frame(padPt: 0.0, child: navStack)
 			]),
 			flexFlags: Array([false, true])
 		);
@@ -136,12 +123,7 @@ Class of Dialog is SettingsDialogView{
 	}
 
 	Function is sync(){
-		local String is curRoute: vm:selectedRoute:current();
-		local Int is i: 0;
-		while({ i < categoryRoutes:length() && i < categoryBtns:length() }, {
-			categoryBtns:get(index: i):setSelected(next: categoryRoutes:get(index: i) == curRoute);
-			i: i + 1;
-		});
+		categorySection:setSelectedIndex(index: :routeIndex(routeName: vm:selectedRoute:current()));
 		appearanceView:sync();
 		locationsView:sync();
 		interfaceView:sync();

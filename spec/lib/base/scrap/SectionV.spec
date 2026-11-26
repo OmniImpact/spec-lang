@@ -15,12 +15,18 @@ Class of SewNode is SectionV{
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
 		['base', 'sew', Column],
-		['base', 'scrap', Label]
+		['base', 'scrap', Label],
+		['base', 'scrap', Clickable]
 	];
 
 	String is title: '';
 	Float is gapPt: 0.0;
 	Boolean is segmented: false;
+	Int is selectedIndex: -1;
+	Float is itemMinWidthPt: 0.0;
+	Float is itemHeightPt: 0.0;
+	Function is onSelect: local Function(Int is _idx){};
+	Array of Clickable is segmentItems: Array();
 	Column is col: Column();
 
 	replace Function is init(
@@ -28,36 +34,66 @@ Class of SewNode is SectionV{
 		Array of SewNode is children: Array(),
 		Array of Boolean is flexFlags: Array(),
 		Float is gapPt: 0.0,
-		Boolean is segmented: false
+		Boolean is segmented: false,
+		Array of String is options: Array(),
+		Int is selectedIndex: -1,
+		Float is itemMinWidthPt: 0.0,
+		Float is itemHeightPt: 0.0,
+		Function is onSelect: local Function(Int is _idx){}
 	){
 		:title: title;
 		:gapPt: gapPt;
 		:segmented: segmented;
+		:selectedIndex: selectedIndex;
+		:itemMinWidthPt: itemMinWidthPt;
+		:itemHeightPt: itemHeightPt;
+		:onSelect: onSelect;
+		:segmentItems: Array();
 		local Array of SewNode is allChildren: Array();
 		local Array of Boolean is allFlex: Array();
 		if({ title != '' }, {
 			allChildren:add(item: Label(text: title, muted: true));
 			allFlex:add(item: false);
 		});
-		local Int is i: 0;
-		while({ i < children:length() }, {
-			local SewNode is ch: children:get(index: i);
-			allChildren:add(item: ch);
-			local Boolean is fx: if({ i < flexFlags:length() }, { flexFlags:get(index: i) }, { false });
-			allFlex:add(item: fx);
-			i: i + 1;
+		if({ options:length() > 0 }, {
+			local Int is oi: 0;
+			while({ oi < options:length() }, {
+				local Int is idx: oi;
+				local Clickable is item: Clickable(
+					label: options:get(index: idx),
+					selected: (idx == selectedIndex),
+					minWidthPt: itemMinWidthPt,
+					heightPt: itemHeightPt,
+					onClick: local Function(){
+						:setSelectedIndex(index: idx);
+						local Function is cb: :onSelect;
+						cb(idx);
+					}
+				);
+				segmentItems:add(item: item);
+				allChildren:add(item: item);
+				local Boolean is fx: if({ idx < flexFlags:length() }, { flexFlags:get(index: idx) }, { false });
+				allFlex:add(item: fx);
+				oi: oi + 1;
+			});
+		}, {
+			local Int is i: 0;
+			while({ i < children:length() }, {
+				local SewNode is ch: children:get(index: i);
+				allChildren:add(item: ch);
+				local Boolean is fx: if({ i < flexFlags:length() }, { flexFlags:get(index: i) }, { false });
+				allFlex:add(item: fx);
+				i: i + 1;
+			});
 		});
 		:col: Column(children: allChildren, flexFlags: allFlex, gapPt: if({ segmented }, { 0.0 }, { gapPt }));
-		if({ segmented }, { :joinSegmentedEdges(); });
 	}
 
-	Function is joinSegmentedEdges(){
-		local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
-		local Int is count: col:children:length();
-		local Int is i: startIdx;
-		while({ i < count }, {
-			local SewNode is ch: col:children:get(index: i);
-			ch:setBorderEdges(top: true, right: true, bottom: (i + 1 >= count), left: true);
+	Function is setSelectedIndex(Int is index){
+		:selectedIndex: index;
+		local Int is i: 0;
+		while({ i < segmentItems:length() }, {
+			segmentItems:get(index: i):setSelected(next: i == index);
 			i: i + 1;
 		});
 	}
@@ -66,7 +102,6 @@ Class of SewNode is SectionV{
 		:activeTheme: theme;
 		if({ segmented }, {
 			col:gapPt: 0.0;
-			:joinSegmentedEdges();
 		}, {
 		if({ gapPt <= 0.0 }, {
 			col:gapPt: theme:paddingPt;
@@ -85,17 +120,72 @@ Class of SewNode is SectionV{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		desiredSize: col:measure(c: c);
+		local Size is s: col:measure(c: c);
+		if({ segmented }, {
+			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
+			local Int is segCount: col:children:length() - startIdx;
+			if({ segCount > 1 && linePx > 0 }, {
+				local Int is overlap: (segCount - 1) * linePx;
+				local Int is nh: if({ s:height > overlap }, { s:height - overlap }, { s:height });
+				s: Size(width: s:width, height: nh);
+			});
+		});
+		desiredSize: s;
 		return desiredSize;
 	}
 
 	replace Function is arrange(Rect is bounds){
 		layoutBounds: bounds;
 		col:arrange(bounds: bounds);
+		if({ segmented }, {
+			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
+			local Int is count: col:children:length();
+			if({ count - startIdx > 1 && linePx > 0 }, {
+				local Int is i: startIdx + 1;
+				while({ i < count }, {
+					local SewNode is ch: col:children:get(index: i);
+					local Rect is cb: ch:bounds();
+					local Int is shift: (i - startIdx) * linePx;
+					ch:arrange(bounds: Rect(x: cb:x, y: cb:y - shift, width: cb:width, height: cb:height));
+					i: i + 1;
+				});
+			});
+		});
 	}
 
 	replace Function is paint(DrawContext is ctx){
 		col:paint(ctx: ctx);
+		if({ segmented }, {
+			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			if({ linePx > 0 }, {
+				local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
+				local Int is count: col:children:length();
+				local Int is i: startIdx;
+				while({ i < count }, {
+					local SewNode is ch: col:children:get(index: i);
+					if({ !ch:isSelected() }, {
+						local Rect is cb: ch:bounds();
+						if({ cb:width > 0 && cb:height > 0 }, {
+							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:buttonBorder, thickness: linePx);
+						});
+					});
+					i: i + 1;
+				});
+				i: startIdx;
+				while({ i < count }, {
+					local SewNode is ch: col:children:get(index: i);
+					if({ ch:isSelected() }, {
+						local Rect is cb: ch:bounds();
+						if({ cb:width > 0 && cb:height > 0 }, {
+							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:textAccent, thickness: linePx);
+						});
+					});
+					i: i + 1;
+				});
+			});
+		});
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
