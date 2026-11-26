@@ -11,6 +11,7 @@ Class is Driver{
 	replace [String] is namespace: ['base', 'compiler', 'driver'];
 
 	replace [[String]] is using: [
+		['base', 'cli', Cli],
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
@@ -228,32 +229,43 @@ Class is Driver{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local String is inputPath: args:getString(key: 'i', default: '');
-		if({ inputPath == '' }, {
-			inputPath: args:getString(key: 'input', default: '');
+		local String is cliFb: Dir:exeDir() . '/../spec/base/compiler/driver/cli.json';
+		if({ !fileExists(path: cliFb) }, {
+			cliFb: 'spec/base/compiler/driver/cli.json';
 		});
-		local String is outputPath: args:getString(key: 'o', default: '');
-		if({ outputPath == '' }, {
-			outputPath: args:getString(key: 'output', default: '');
+		local Cli is cli: Cli():loadFromBundle(
+			bundlePath: 'cli.json',
+			fallbackPath: cliFb
+		);
+		local Boolean is cliOk: if({ args:keys():length() > 0 }, {
+			cli:parseMap(args: args)
+		}, {
+			cli:parse(rawArgs: Process:rawArgs())
 		});
-		local Boolean is releaseMode: (args:has(key: 'release') || args:has(key: 'prod')) && !args:has(key: 'debug');
+		if({ !cliOk }, {
+			if({ cli:helpRequested || cli:versionRequested }, {
+				return;
+			});
+			Process:exit(status: 2);
+		});
+
+		local String is inputPath: cli:getString(name: 'input', default: '');
+		local String is outputPath: cli:getString(name: 'output', default: '');
+		local Boolean is releaseMode: (cli:getBool(name: 'release') || cli:getBool(name: 'prod')) && !cli:getBool(name: 'debug');
 		local Boolean is debugMode: !releaseMode;
-		local Boolean is nativeCpu: args:getString(key: 'cpu', default: '') == 'native';
-		local Boolean is quiet: args:has(key: 'quiet');
-		local String is threadsStr: args:getString(key: 'threads', default: '');
-		if({ threadsStr == '' }, {
-			threadsStr: args:getString(key: 'j', default: '');
-		});
+		local Boolean is nativeCpu: cli:getString(name: 'cpu', default: '') == 'native';
+		local Boolean is quiet: cli:getBool(name: 'quiet');
 		local Int is defaultThreads: Process:threadCount() / 2;
 		if({ defaultThreads < 1 }, {
 			defaultThreads: 1;
 		});
-		local Int is threadCount: defaultThreads;
-		if({ threadsStr != '' }, {
-			threadCount: threadsStr:parseInt(base: 10, default: defaultThreads);
-			if({ threadCount < 1 }, {
-				threadCount: 1;
-			});
+		local Int is threadCount: if({ cli:has(name: 'threads') }, {
+			cli:getInt(name: 'threads', default: defaultThreads)
+		}, {
+			defaultThreads
+		});
+		if({ threadCount < 1 }, {
+			threadCount: 1;
 		});
 		local Array of String is sourceDirs: Array();
 		local Function is addSourceDirString: local Function(String is raw){
@@ -268,13 +280,11 @@ Class is Driver{
 				});
 			});
 		};
-		addSourceDirString(raw: args:getString(key: 's', default: ''));
-		addSourceDirString(raw: args:getString(key: 'source-dir', default: ''));
-		addSourceDirString(raw: args:getString(key: 'source-dirs', default: ''));
+		addSourceDirString(raw: cli:getString(name: 'source-dir', default: ''));
+		addSourceDirString(raw: cli:getString(name: 'source-dirs', default: ''));
 
-		if({ inputPath == '' }, {
-			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [-s <source_dir>...] [--emit-llvm <file>] [--threads <N>] [--release] [--debug] [--quiet]');
+		if({ inputPath == '' && cli:getString(name: 'emit-runtime', default: '') == '' }, {
+			cli:printHelp();
 			Process:exit(status: 2);
 		});
 

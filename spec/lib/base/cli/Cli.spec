@@ -261,6 +261,53 @@ Class is Cli{
 			});
 		});
 
+		return finalizeParse();
+	}
+
+	## Parses an already-built `Map of String to String` (such as `init(args:)`
+	## or programmatic `Driver:init(args:)` calls), normalizing aliases and defaults.
+	Function of Boolean is parseMap(Map of String to String is args){
+		values: Map:init();
+		posArgs: Array();
+		helpRequested: false;
+		versionRequested: false;
+		errorMessage: '';
+
+		local Int is di: 0;
+		while({ di < options:length() }, {
+			local CliOption is opt: options:get(index: di);
+			if({ opt:defaultVal != '' }, {
+				values:set(key: opt:canonicalKey(), value: opt:defaultVal);
+			});
+			di: di + 1;
+		});
+
+		local Array of String is ks: args:keys();
+		local Int is ki: 0;
+		while({ ki < ks:length() }, {
+			local String is k: ks:get(index: ki, default: '');
+			local String is val: args:getString(key: k, default: '');
+			if({ k != '' }, {
+				local CliOption is opt: findByLong(name: k);
+				if({ opt:canonicalKey() == '' }, {
+					opt: findByShort(name: k);
+				});
+				if({ opt:canonicalKey() != '' }, {
+					if({ opt:optType == 'bool' && val == '' }, {
+						val: 'true';
+					});
+					storeOptionValue(opt: opt, val: val);
+				}, {
+					values:set(key: k, value: val);
+				});
+			});
+			ki: ki + 1;
+		});
+
+		return finalizeParse();
+	}
+
+	local Function of Boolean is finalizeParse(){
 		if({ helpRequested }, {
 			if({ !quiet }, {
 				printHelp();

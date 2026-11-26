@@ -1,0 +1,96 @@
+{
+  "name": "spec",
+  "version": "0.1.0",
+  "description": "Spec Compiler (Pure Spec)",
+  "usage": "spec -i <input.spec> -o <output_binary> [options]",
+  "options": [
+    {
+      "short": "i",
+      "long": "input",
+      "type": "string",
+      "arg": "file.spec",
+      "description": "Input .spec source file"
+    },
+    {
+      "short": "o",
+      "long": "output",
+      "type": "string",
+      "arg": "binary",
+      "description": "Output executable path"
+    },
+    {
+      "short": "s",
+      "long": "source-dir",
+      "type": "list",
+      "arg": "dir",
+      "description": "Additional package source directory (repeatable)"
+    },
+    {
+      "long": "source-dirs",
+      "type": "list",
+      "arg": "dirs",
+      "description": "Comma-separated list of source directories"
+    },
+    {
+      "short": "j",
+      "long": "threads",
+      "type": "int",
+      "arg": "N",
+      "description": "Compiler worker threads"
+    },
+    {
+      "long": "emit-llvm",
+      "type": "string",
+      "arg": "file.ll",
+      "description": "Emit LLVM IR to file"
+    },
+    {
+      "long": "emit-runtime",
+      "type": "string",
+      "arg": "file.c",
+      "description": "Emit concatenated C runtime prelude to file"
+    },
+    {
+      "long": "release",
+      "type": "bool",
+      "description": "Compile in release mode (optimized)"
+    },
+    {
+      "long": "prod",
+      "type": "bool",
+      "description": "Alias for --release"
+    },
+    {
+      "long": "debug",
+      "type": "bool",
+      "description": "Compile with debug info"
+    },
+    {
+      "long": "cpu",
+      "type": "string",
+      "arg": "mode",
+      "description": "Target CPU tuning (e.g. native)"
+    },
+    {
+      "long": "no-opt",
+      "type": "bool",
+      "description": "Disable LLVM IR optimization passes"
+    },
+    {
+      "long": "clean-cache",
+      "type": "bool",
+      "description": "Rebuild cached spec_runtime.o"
+    },
+    {
+      "long": "quiet",
+      "type": "bool",
+      "description": "Suppress compiler progress output"
+    },
+    {
+      "short": "h",
+      "long": "help",
+      "type": "bool",
+      "description": "Show this help message"
+    }
+  ]
+}

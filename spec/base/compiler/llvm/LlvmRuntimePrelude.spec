@@ -917,15 +917,6 @@ scale:
 
 	Function of Str is emitCliAndAtomics(){
 		return '''
-@_spec_cli_argc = internal global i64 0, align 8
-@_spec_cli_argv = internal global i64 0, align 8
-define internal ptr @spec_process_raw_args() {
-  %ac = load i64, ptr @_spec_cli_argc, align 8
-  %av = load i64, ptr @_spec_cli_argv, align 8
-  %r = call ptr @CliArgs_rawArgs(ptr null, i64 %ac, i64 %av)
-  call ptr @spec_rt_retain(ptr %r)
-  ret ptr %r
-}
 @_spec_atomic_levels = internal global [54 x ptr] zeroinitializer, align 8
 @_spec_atomic_lock = internal global i32 0, align 4
 declare i64 @llvm.ctlz.i64(i64, i1 immarg)
@@ -1130,16 +1121,12 @@ define internal void @spec_simd_clamp4(i64 %dst, i64 %a, double %lo, double %hi)
 		if({ isPrimary }, {
 			text: text:replaceAll(search: '@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer', replacement: '@_spec_tls_i64 = hidden thread_local global [16 x i64] zeroinitializer');
 			text: text:replaceAll(search: '@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8', replacement: '@_spec_intern_state = hidden global [2 x i64] zeroinitializer, align 8');
-			text: text:replaceAll(search: '@_spec_cli_argc = internal global i64 0, align 8', replacement: '@_spec_cli_argc = hidden global i64 0, align 8');
-			text: text:replaceAll(search: '@_spec_cli_argv = internal global i64 0, align 8', replacement: '@_spec_cli_argv = hidden global i64 0, align 8');
 			text: text:replaceAll(search: '@_spec_atomic_levels = internal global [54 x ptr] zeroinitializer, align 8', replacement: '@_spec_atomic_levels = hidden global [54 x ptr] zeroinitializer, align 8');
 			text: text:replaceAll(search: '@_spec_atomic_lock = internal global i32 0, align 4', replacement: '@_spec_atomic_lock = hidden global i32 0, align 4');
 			return text;
 		});
 		text: text:replaceAll(search: '@_spec_tls_i64 = internal thread_local global [16 x i64] zeroinitializer', replacement: '@_spec_tls_i64 = external hidden thread_local global [16 x i64]');
 		text: text:replaceAll(search: '@_spec_intern_state = internal global [2 x i64] zeroinitializer, align 8', replacement: '@_spec_intern_state = external hidden global [2 x i64]');
-		text: text:replaceAll(search: '@_spec_cli_argc = internal global i64 0, align 8', replacement: '@_spec_cli_argc = external hidden global i64');
-		text: text:replaceAll(search: '@_spec_cli_argv = internal global i64 0, align 8', replacement: '@_spec_cli_argv = external hidden global i64');
 		text: text:replaceAll(search: '@_spec_atomic_levels = internal global [54 x ptr] zeroinitializer, align 8', replacement: '@_spec_atomic_levels = external hidden global [54 x ptr]');
 		text: text:replaceAll(search: '@_spec_atomic_lock = internal global i32 0, align 4', replacement: '@_spec_atomic_lock = external hidden global i32');
 		text: text:replaceAll(search: 'define void @spec_pool_thread_cleanup() nounwind {', replacement: 'define available_externally void @spec_pool_thread_cleanup() nounwind {');

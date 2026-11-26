@@ -11,10 +11,6 @@ Class is Process{
 	## Bound to `spec_pal_process_execute_cstr`.
 	Function of Int is pal_process_execute_cstr(Int is cmd_cstr, Int is argv_addr, Int is nargs);
 
-	## Returns the raw command-line arguments passed to the program (`argv[1..]`).
-	## Bound to `spec_process_raw_args`.
-	Function of Array of String is process_raw_args();
-
 	## Spawns [cmd_cstr] directly with C-string argument vector at [argv_addr] of length
 	## [nargs] (without a shell) and writes 4 `i64` metrics (exit, wall_us, cpu_us, rss_kb)
 	## into [out_addr]. Bound to `spec_pal_process_measure_cstr`.

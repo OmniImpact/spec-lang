@@ -6,7 +6,7 @@ Class of SpecUnitTest is TestCli{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'cli', Cli],
-		['base', 'struct', Array]
+		['base', 'struct', [Array, Map]]
 	];
 
 	local Function of String is sampleSchema(){
@@ -49,5 +49,15 @@ Class of SpecUnitTest is TestCli{
 		Assert:isFalse(reqOk);
 		Assert:isFalse(cli2:helpRequested);
 		Assert:isTrue(cli2:errorMessage:contains(needle: 'tests'));
+	}
+
+	Function is testParseMapProgrammatic(){
+		local Cli is cli: Cli(quiet: true, jsonText: sampleSchema());
+		local Map of String to String is m: Map:init();
+		m:set(key: 't', value: 'test');
+		m:set(key: 's', value: 'bin/spec');
+		Assert:isTrue(cli:parseMap(args: m));
+		Assert:areEqualString('bin/spec', cli:getString(name: 'spec'));
+		Assert:areEqualString('test', cli:getString(name: 'tests'));
 	}
 }
