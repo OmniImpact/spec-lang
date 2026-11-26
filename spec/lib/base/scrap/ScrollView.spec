@@ -56,7 +56,7 @@ Class of SewNode is ScrollView{
 		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: if({ c:maxW > bw }, { c:maxW - bw }, { c:maxW });
 		local Int is vh: if({ c:maxH > bw }, { c:maxH - bw }, { c:maxH });
-		local Size is cs: child:measure(c: Constraints(minW: vw, maxW: vw, minH: 0, maxH: vh));
+		local Size is cs: child:measure(c: Constraints(minW: vw, maxW: vw, minH: 0, maxH: 1000000));
 		contentW: cs:width;
 		contentH: cs:height;
 		desiredSize: Size(width: c:maxW, height: c:maxH);

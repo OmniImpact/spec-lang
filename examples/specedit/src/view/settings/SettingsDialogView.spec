@@ -15,6 +15,7 @@ Class of Dialog is SettingsDialogView{
 		['base', 'sew', 'nav', NavRoute],
 		['base', 'scrap', Dialog],
 		['base', 'scrap', ScrapButton],
+		['base', 'scrap', ScrollView],
 		['specedit', 'viewmodel', SettingsViewModel],
 		['specedit', 'view', 'settings', AppearanceSettingsView],
 		['specedit', 'view', 'settings', LocationsSettingsView],
@@ -59,9 +60,9 @@ Class of Dialog is SettingsDialogView{
 		:navStack: NavStack(
 			route: vm:selectedRoute,
 			routes: Array([
-				NavRoute(name: 'appearance', child: appearanceView:build()),
-				NavRoute(name: 'locations', child: locationsView:build()),
-				NavRoute(name: 'interface', child: interfaceView:build())
+				NavRoute(name: 'appearance', child: ScrollView(child: appearanceView:build())),
+				NavRoute(name: 'locations', child: ScrollView(child: locationsView:build())),
+				NavRoute(name: 'interface', child: ScrollView(child: interfaceView:build()))
 			])
 		);
 

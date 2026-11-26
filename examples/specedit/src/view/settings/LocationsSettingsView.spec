@@ -10,7 +10,6 @@ Class is LocationsSettingsView{
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
-		['base', 'scrap', ScrollView],
 		['base', 'scrap', VSection],
 		['base', 'scrap', HSection],
 		['specedit', 'viewmodel', SettingsViewModel],
@@ -44,10 +43,10 @@ Class is LocationsSettingsView{
 				actionsRow,
 				Frame(
 					title: 'Pinned Locations (drag gripper to reorder)',
-					child: ScrollView(child: listView)
+					child: listView
 				)
 			]),
-			flexFlags: Array([false, false, true])
+			flexFlags: Array([false, false, false])
 		);
 	}
 

@@ -175,6 +175,13 @@ Class is Dialog{
 			return;
 		});
 
+		if({ win:width() != lastW || win:height() != lastH }, {
+			isDirty: true;
+		});
+		if({ isDirty }, {
+			:paintDialog();
+		});
+
 		local Int is curMods: win:mods();
 		local Int is key: win:nextKey();
 		while({ key != 0 }, {
