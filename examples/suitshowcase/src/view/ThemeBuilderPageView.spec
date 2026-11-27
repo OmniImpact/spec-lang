@@ -292,7 +292,7 @@ Class is ThemeBuilderPageView{
 		);
 		:useSurfColorBSwitch: Switch(
 			checked: vm:useSurfColorB,
-			onChange: local Function(Boolean is on){ vm:setUseSurfColorB(enabled: on); }
+			onToggle: local Function(Boolean is on){ vm:setUseSurfColorB(enabled: on); }
 		);
 		:surfColorBSwatch: ColorSwatchDropdown(
 			color: vm:surfColorB,
@@ -325,7 +325,7 @@ Class is ThemeBuilderPageView{
 		);
 		:useBtnColorBSwitch: Switch(
 			checked: vm:useBtnColorB,
-			onChange: local Function(Boolean is on){ vm:setUseBtnColorB(enabled: on); }
+			onToggle: local Function(Boolean is on){ vm:setUseBtnColorB(enabled: on); }
 		);
 		:btnColorBSwatch: ColorSwatchDropdown(
 			color: vm:btnColorB,

@@ -16,6 +16,7 @@ Class of SewNode is ColorSwatchDropdown{
 		['base', 'sew', Column],
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
+		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', DropdownPopup],
 		['base', 'scrap', ColorSelector],
@@ -333,13 +334,11 @@ Class of SewNode is ColorSwatchDropdown{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
-		local Int is bg: if({ open }, { activeTheme:activeBg }, { if({ hovered }, { activeTheme:hoverBg }, { activeTheme:menuBg }) });
-		local Int is borderCol: if({ open }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
-		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
-		if({ bw > 0 }, {
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: borderCol, thickness: bw);
-		});
+		local Int is bw: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+		DropdownPopup:shared:paintButtonBox(
+			ctx: ctx, theme: activeTheme, scale: activeScale, bounds: b,
+			selected: open, hovered: hovered, focused: focused
+		);
 		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is sw: b:height - pad * 2;
 		if({ sw < 10 }, { sw: 10; });
@@ -373,11 +372,13 @@ Class of SewNode is ColorSwatchDropdown{
 	replace Function is paintOverlay(DrawContext is ctx){
 		if({ !open }, { return; });
 		:layoutPopup(viewW: ctx:canvas:width, viewH: ctx:canvas:height);
-		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
-		ctx:fillRect(x: popupRect:x, y: popupRect:y, w: popupRect:width, h: popupRect:height, color: activeTheme:menuBg);
-		if({ bw > 0 }, {
-			ctx:strokeRect(x: popupRect:x, y: popupRect:y, w: popupRect:width, h: popupRect:height, color: activeTheme:menuBorder, thickness: bw);
-		});
+		local Int is bw: activeTheme:panelBorderPx(scaleFactor: activeScale:factor);
+		local Int is radPx: activeScale:px(pt: activeTheme:panelCornerRadiusPt);
+		ctx:drawStyledBox(
+			x: popupRect:x, y: popupRect:y, w: popupRect:width, h: popupRect:height,
+			bgColor: activeTheme:menuBg, borderColor: activeTheme:menuBorder,
+			thickness: bw, radius: radPx, style: activeTheme:panelBorderStyle
+		);
 		popupCol:paint(ctx: ctx);
 	}
 }

@@ -257,13 +257,9 @@ Class of SewNode is DateDropdown{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
-		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
-		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: true, selected: open, hovered: hovered, focused: focused);
-		ctx:drawStyledBoxFill(
-			x: b:x, y: b:y, w: b:width, h: b:height,
-			fill: fill, borderColor: activeTheme:buttonBorderColorArgb(),
-			thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+		DropdownPopup:shared:paintButtonBox(
+			ctx: ctx, theme: activeTheme, scale: activeScale, bounds: b,
+			selected: open, hovered: hovered, focused: focused
 		);
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);

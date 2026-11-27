@@ -12,6 +12,7 @@ Class of SewNode is Switch{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext]
 	];
 
@@ -84,30 +85,49 @@ Class of SewNode is Switch{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
-		local Int is bg: if({ checked }, { activeTheme:highlight:toArgb() }, { if({ hovered }, { activeTheme:hoverBg }, { activeTheme:panelBg }) });
-		local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:panelBorder });
-		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
-		if({ bw > 0 }, {
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: borderCol, thickness: bw);
-		});
+		local Int is bw: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+		local Int is shBlur: activeScale:px(pt: activeTheme:buttonShadowBlurPt);
+		local Int is shOffX: activeScale:px(pt: activeTheme:buttonShadowOffsetXPt);
+		local Int is shOffY: activeScale:px(pt: activeTheme:buttonShadowOffsetYPt);
+		local Int is shCol: if({ shBlur > 0 || shOffX != 0 || shOffY != 0 }, { 1426063360 }, { 0 });
+		local FillStyle is fill: activeTheme:resolveButtonFill(
+			enabled: enabled, selected: checked, hovered: hovered, focused: focused
+		);
+		local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:buttonBorderColorArgb() });
+		ctx:drawStyledBoxFill(
+			x: b:x, y: b:y, w: b:width, h: b:height,
+			fill: fill, borderColor: borderCol, thickness: bw, radius: radPx,
+			style: activeTheme:buttonBorderStyle,
+			shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
+		);
 
 		local Int is pad: activeScale:px(pt: activeTheme:padPt(pct: 0.5));
 		local Int is minPad: bw + 1;
 		if({ pad < minPad }, { pad: minPad; });
 		local Int is sq: b:height - pad * 2;
 		if({ sq < 4 }, { sq: 4; });
+		local Int is innerRad: if({ radPx > pad }, { radPx - pad }, { 0 });
+		if({ innerRad > sq / 2 }, { innerRad: sq / 2; });
 
 		if({ checked }, {
 			local Int is rx: b:x + b:width - pad - sq;
 			local Int is ry: b:y + (b:height - sq) / 2;
-			ctx:fillRect(x: rx, y: ry, w: sq, h: sq, color: activeTheme:textPrimary);
+			if({ innerRad > 0 }, {
+				ctx:fillRoundRect(x: rx, y: ry, w: sq, h: sq, radius: innerRad, color: activeTheme:textPrimary);
+			}, {
+				ctx:fillRect(x: rx, y: ry, w: sq, h: sq, color: activeTheme:textPrimary);
+			});
 		}, {
 			local Int is lx: b:x + pad;
 			local Int is ly: b:y + (b:height - sq) / 2;
 			local Int is offStroke: if({ bw > 0 }, { bw }, { activeTheme:linePx(scaleFactor: activeScale:factor) });
 			local Int is offCol: if({ hovered }, { activeTheme:textPrimary }, { activeTheme:textMuted });
-			ctx:strokeRect(x: lx, y: ly, w: sq, h: sq, color: offCol, thickness: offStroke);
+			ctx:drawStyledBox(
+				x: lx, y: ly, w: sq, h: sq,
+				bgColor: 0, borderColor: offCol, thickness: offStroke,
+				radius: innerRad, style: activeTheme:buttonBorderStyle
+			);
 		});
 	}
 
