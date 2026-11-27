@@ -101,7 +101,7 @@ Class is ShowcaseView{
 			child: Row(
 				gapPt: 10.0,
 				children: Array([
-					sidebar,
+					ScrollView(child: sidebar, fitContentWidth: true),
 					Frame(padPt: 0.0, child: navStack)
 				]),
 				flexFlags: Array([false, true])
