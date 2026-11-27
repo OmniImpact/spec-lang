@@ -64,19 +64,13 @@ Class of SewNode is Switch{
 		});
 	}
 
-	local Function of Int is trackHeightPx(){
-		local Float is hPt: activeTheme:scaledTextPt(defaultPt: 14.0) + activeTheme:padPt(pct: 1.0);
-		local Int is px: activeScale:px(pt: hPt);
-		return if({ px < 14 }, { 14 }, { px });
-	}
-
 	local Function of Boolean is contains(Int is x, Int is y){
 		local Rect is b: bounds();
 		return x >= b:x && x < b:x + b:width && y >= b:y && y < b:y + b:height;
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is h: :trackHeightPx();
+		local Int is h: activeScale:px(pt: activeTheme:buttonHeightPt);
 		local Int is w: h * 2;
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
