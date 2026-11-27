@@ -16,10 +16,12 @@ Class of SewNode is ScrapPanel{
 
 	Int is bgColor: -1;
 	Boolean is useThemeBg: true;
+	Float is heightPt: 0.0;
 
-	replace Function is init(Int is bgColor: 0, Boolean is useThemeBg: true){
+	replace Function is init(Int is bgColor: 0, Boolean is useThemeBg: true, Float is heightPt: 0.0){
 		:bgColor: bgColor;
 		:useThemeBg: useThemeBg;
+		:heightPt: heightPt;
 	}
 
 	replace Function is applyTheme(Theme is theme){
@@ -30,7 +32,12 @@ Class of SewNode is ScrapPanel{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		desiredSize: Size(width: c:maxW, height: c:maxH);
+		local Int is h: if({ heightPt > 0.0 }, {
+			c:clampH(h: activeScale:px(pt: heightPt))
+		}, {
+			if({ c:maxH >= 100000 }, { activeScale:px(pt: activeTheme:panelMinSizePt) }, { c:maxH })
+		});
+		desiredSize: Size(width: c:maxW, height: h);
 		return desiredSize;
 	}
 

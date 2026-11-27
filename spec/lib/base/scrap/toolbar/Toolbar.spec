@@ -483,4 +483,14 @@ Class of SewNode is Toolbar{
 		});
 		return '';
 	}
+
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		if({ openMenuIdx >= 0 && !:blocksPointerAt(x: x, y: y) }, {
+			openMenuIdx: -1;
+			openSubMenuIdx: -1;
+			invalidate();
+			return true;
+		});
+		return false;
+	}
 }

@@ -37,34 +37,22 @@ Class is BarsPageView{
 	}
 
 	Function of SewNode is build(){
-		local ToolbarConfig is tbCfg: ToolbarConfig(
-			menus: Array([
-				MenuConfig(
-					id: 'file',
-					label: 'File',
-					items: Array([
-						MenuItemConfig(id: 'new', label: 'New Item', onClick: local Function(){ barActionText:emit(value: 'Toolbar: File -> New Item'); }),
-						MenuItemConfig(id: 'open', label: 'Open...', onClick: local Function(){ barActionText:emit(value: 'Toolbar: File -> Open...'); })
-					])
-				),
-				MenuConfig(
-					id: 'view',
-					label: 'View',
-					items: Array([
-						MenuItemConfig(id: 'grid', label: 'Show Grid', kind: 'toggle', checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Show Grid'); }),
-						MenuItemConfig(id: 'snap', label: 'Snap to Bounds', kind: 'toggle', checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Snap to Bounds'); })
-					])
-				),
-				MenuConfig(
-					id: 'mode',
-					label: 'Mode',
-					items: Array([
-						MenuItemConfig(id: 'm1', label: 'Design', kind: 'radio', checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Design'); }),
-						MenuItemConfig(id: 'm2', label: 'Inspect', kind: 'radio', checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Inspect'); })
-					])
-				)
-			])
-		);
+		local MenuConfig is mFile: MenuConfig(id: 'file', label: 'File');
+		mFile:addItem(item: MenuItemConfig(id: 'new', label: 'New Item', onClick: local Function(){ barActionText:emit(value: 'Toolbar: File -> New Item'); }));
+		mFile:addItem(item: MenuItemConfig(id: 'open', label: 'Open...', onClick: local Function(){ barActionText:emit(value: 'Toolbar: File -> Open...'); }));
+
+		local MenuConfig is mView: MenuConfig(id: 'view', label: 'View');
+		mView:addItem(item: MenuItemConfig(id: 'grid', label: 'Show Grid', kind: 'toggle', checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Show Grid'); }));
+		mView:addItem(item: MenuItemConfig(id: 'snap', label: 'Snap to Bounds', kind: 'toggle', checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Snap to Bounds'); }));
+
+		local MenuConfig is mMode: MenuConfig(id: 'mode', label: 'Mode');
+		mMode:addItem(item: MenuItemConfig(id: 'm1', label: 'Design', kind: 'radio', checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Design'); }));
+		mMode:addItem(item: MenuItemConfig(id: 'm2', label: 'Inspect', kind: 'radio', checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Inspect'); }));
+
+		local ToolbarConfig is tbCfg: ToolbarConfig();
+		tbCfg:addMenu(menu: mFile);
+		tbCfg:addMenu(menu: mView);
+		tbCfg:addMenu(menu: mMode);
 		local Toolbar is demoToolbar: Toolbar(config: tbCfg);
 
 		:demoTabs: TabBar(
@@ -146,11 +134,8 @@ Class is BarsPageView{
 					)
 				),
 				Frame(
-					title: 'ScrapPanel Container',
-					child: ScrapPanel(
-						padPt: 8.0,
-						child: Label(text: 'Content inside ScrapPanel with theme surface & border')
-					)
+					title: 'ScrapPanel Surface',
+					child: ScrapPanel(heightPt: 28.0)
 				),
 				TextScrap(text: barActionText, muted: true)
 			])

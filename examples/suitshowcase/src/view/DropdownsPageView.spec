@@ -34,35 +34,25 @@ Class is DropdownsPageView{
 		local Color is c2: Color(r: 76, g: 175, b: 80);
 		local Color is c3: Color(r: 239, g: 83, b: 80);
 
-		local Toolbar is menuBar: Toolbar(
-			config: ToolbarConfig(
-				menus: Array([
-					MenuConfig(
-						id: 'actions',
-						label: 'Actions',
-						items: Array([
-							MenuItemConfig(id: 'a1', label: 'Run Action', onClick: local Function(){ statusLabel:emit(value: 'Menu: Run Action'); }),
-							MenuItemConfig(
-								id: 'sub',
-								label: 'More Options',
-								subItems: Array([
-									MenuItemConfig(id: 's1', label: 'Sub-item Alpha', onClick: local Function(){ statusLabel:emit(value: 'Menu: Sub-item Alpha'); }),
-									MenuItemConfig(id: 's2', label: 'Sub-item Beta', onClick: local Function(){ statusLabel:emit(value: 'Menu: Sub-item Beta'); })
-								])
-							)
-						])
-					),
-					MenuConfig(
-						id: 'presets',
-						label: 'Presets',
-						items: Array([
-							MenuItemConfig(id: 'p1', label: 'Default', kind: 'radio', checked: true, onClick: local Function(){ statusLabel:emit(value: 'Menu: Default preset'); }),
-							MenuItemConfig(id: 'p2', label: 'Compact', kind: 'radio', checked: false, onClick: local Function(){ statusLabel:emit(value: 'Menu: Compact preset'); })
-						])
-					)
-				])
-			)
-		);
+		local MenuConfig is mActions: MenuConfig(id: 'actions', label: 'Actions');
+		mActions:addItem(item: MenuItemConfig(id: 'a1', label: 'Run Action', onClick: local Function(){ statusLabel:emit(value: 'Menu: Run Action'); }));
+		mActions:addItem(item: MenuItemConfig(
+			id: 'sub',
+			label: 'More Options',
+			subItems: Array([
+				MenuItemConfig(id: 's1', label: 'Sub-item Alpha', onClick: local Function(){ statusLabel:emit(value: 'Menu: Sub-item Alpha'); }),
+				MenuItemConfig(id: 's2', label: 'Sub-item Beta', onClick: local Function(){ statusLabel:emit(value: 'Menu: Sub-item Beta'); })
+			])
+		));
+
+		local MenuConfig is mPresets: MenuConfig(id: 'presets', label: 'Presets');
+		mPresets:addItem(item: MenuItemConfig(id: 'p1', label: 'Default', kind: 'radio', checked: true, onClick: local Function(){ statusLabel:emit(value: 'Menu: Default preset'); }));
+		mPresets:addItem(item: MenuItemConfig(id: 'p2', label: 'Compact', kind: 'radio', checked: false, onClick: local Function(){ statusLabel:emit(value: 'Menu: Compact preset'); }));
+
+		local ToolbarConfig is tbCfg: ToolbarConfig();
+		tbCfg:addMenu(menu: mActions);
+		tbCfg:addMenu(menu: mPresets);
+		local Toolbar is menuBar: Toolbar(config: tbCfg);
 
 		return SectionV(
 			children: Array([
