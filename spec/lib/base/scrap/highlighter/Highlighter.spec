@@ -29,6 +29,11 @@ Class is Highlighter{
 		return 'Plain Text';
 	}
 
+	## Returns a fresh instance of this highlighter for worker-thread wrapping/measurement.
+	Function of Highlighter is clone(){
+		return Highlighter();
+	}
+
 	Function of Boolean is matchesExtension(String is lowPath){
 		return false;
 	}

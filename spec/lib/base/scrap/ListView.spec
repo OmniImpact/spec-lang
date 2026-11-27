@@ -411,16 +411,16 @@ Class of SewNode is ListView{
 		if({ !focused || items:length() == 0 }, { return false; });
 		local Int is n: items:length();
 		local Int is next: selectedIndex;
-		if({ key == 111 }, {
+		if({ key == 1001 }, {
 			next: if({ selectedIndex > 0 }, { selectedIndex - 1 }, { 0 });
 		}, {
-		if({ key == 116 }, {
+		if({ key == 1002 }, {
 			next: if({ selectedIndex + 1 < n }, { selectedIndex + 1 }, { n - 1 });
 		}, {
-		if({ key == 110 }, {
+		if({ key == 1005 }, {
 			next: 0;
 		}, {
-		if({ key == 115 }, {
+		if({ key == 1006 }, {
 			next: n - 1;
 		}, {
 			return false;

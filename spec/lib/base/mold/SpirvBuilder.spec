@@ -438,4 +438,8 @@ Class is SpirvBuilder{
 			bufferBytes: 0;
 		});
 	}
+
+	Function is destroy(){
+		:dispose();
+	}
 }

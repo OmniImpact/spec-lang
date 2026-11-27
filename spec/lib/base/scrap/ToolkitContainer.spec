@@ -152,17 +152,17 @@ Class of SewNode is ToolkitContainer{
 		if({ hasBottomBar }, { bottomBar:applyTheme(theme: theme); });
 		if({ hasDialog }, { dialog:applyTheme(theme: theme); });
 		if({ hasFileDialog }, { fileDialog:applyTheme(theme: theme); });
+		local Int is ei: 0;
+		while({ ei < extraDialogs:length() }, {
+			extraDialogs:get(index: ei):applyTheme(theme: theme);
+			ei: ei + 1;
+		});
 		contextMenu:applyTheme(theme: theme);
 	}
 
 	## Updates the live theme across the window and all child widgets and schedules a redraw.
 	Function is setTheme(Theme is nextTheme){
 		:applyTheme(theme: nextTheme);
-		local Int is ei: 0;
-		while({ ei < extraDialogs:length() }, {
-			extraDialogs:get(index: ei):applyTheme(theme: nextTheme);
-			ei: ei + 1;
-		});
 		:isDirty: true;
 	}
 
@@ -401,9 +401,6 @@ Class of SewNode is ToolkitContainer{
 			if({ bottomBar:blocksPointerAt(x: x, y: y) }, { return true; });
 		});
 		if({ hasBody && !useVulkan }, {
-			if({ bodyPanel:closePopupsOutside(x: x, y: y) }, {
-				:isDirty: true;
-			});
 			return bodyPanel:onPointerClickMod(x: x, y: y, mods: mods);
 		});
 		return false;

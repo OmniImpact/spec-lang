@@ -20,6 +20,10 @@ Class of Highlighter is HighlighterMarkdown{
 		return 'Markdown';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterMarkdown() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.md') || endsWith(s: lowPath, suffix: '.markdown');
 	}

@@ -18,6 +18,10 @@ Class of Highlighter is HighlighterPython{
 		return 'Python';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterPython() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.py');
 	}

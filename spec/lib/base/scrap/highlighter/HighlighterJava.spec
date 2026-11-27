@@ -18,6 +18,10 @@ Class of Highlighter is HighlighterJava{
 		return 'Java';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterJava() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.java');
 	}

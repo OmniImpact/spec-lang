@@ -132,16 +132,7 @@ Class of TextView is CodeEditorView{
 	}
 
 	replace Function of Highlighter is createWrapContext(){
-		local String is lid: activeHighlighter:languageId();
-		if({ lid == 'spec' }, { return HighlighterSpec() as Highlighter; });
-		if({ lid == 'markdown' }, { return HighlighterMarkdown() as Highlighter; });
-		if({ lid == 'json' }, { return HighlighterJson() as Highlighter; });
-		if({ lid == 'c' }, { return HighlighterC() as Highlighter; });
-		if({ lid == 'python' }, { return HighlighterPython() as Highlighter; });
-		if({ lid == 'java' }, { return HighlighterJava() as Highlighter; });
-		if({ lid == 'ruby' }, { return HighlighterRuby() as Highlighter; });
-		if({ lid == 'rust' }, { return HighlighterRust() as Highlighter; });
-		return Highlighter();
+		return activeHighlighter:clone();
 	}
 
 	replace Function is measureLineAdvancesInCtx(Highlighter is hl, String is lineStr, Int is fpx, Boolean is mono, Int is outAdvI32Ptr, Int is scratchPtr){

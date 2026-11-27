@@ -19,6 +19,10 @@ Class of Highlighter is HighlighterC{
 		return 'C / C++';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterC() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.c') || endsWith(s: lowPath, suffix: '.h')
 			|| endsWith(s: lowPath, suffix: '.cpp') || endsWith(s: lowPath, suffix: '.hpp')

@@ -20,4 +20,7 @@ Class is LineWidthStyle{
 			:hasWidth: false;
 		});
 	}
+
+	Function of Float is getWidthPt(){ return widthPt; }
+	Function of Boolean is isWidthSet(){ return hasWidth; }
 }

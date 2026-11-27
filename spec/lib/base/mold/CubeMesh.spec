@@ -131,4 +131,8 @@ Class is CubeMesh{
 			idxAddr: 0;
 		});
 	}
+
+	Function is destroy(){
+		:dispose();
+	}
 }

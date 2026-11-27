@@ -18,6 +18,10 @@ Class of Highlighter is HighlighterRust{
 		return 'Rust';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterRust() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.rs');
 	}

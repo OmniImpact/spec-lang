@@ -16,7 +16,7 @@ Class of SewNode is StyledBox{
 		['base', 'fabric', LineColorStyle],
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
-		['base', 'fabric', BorderStyle],
+		['base', 'fabric', BoxBorderStyle],
 		['base', 'fabric', FillStyle]
 	];
 
@@ -82,7 +82,7 @@ Class of SewNode is StyledBox{
 		return desiredSize;
 	}
 
-	Function is setBorder(BorderStyle is border){
+	Function is setBorder(BoxBorderStyle is border){
 		if({ border:hasStyle }, { :borderStyle: border:style; });
 		if({ border:hasWidth }, { :thicknessPt: border:widthPt; });
 		if({ border:hasColor }, {
@@ -90,13 +90,13 @@ Class of SewNode is StyledBox{
 			:useThemeBorder: false;
 		});
 		if({ border:hasRadius }, { :radiusPt: border:radiusPt; });
-		if({ border:shadow:isActive() || border:shadow:blurPt == 0.0 }, {
+		if({ border:hasShadow }, {
 			:shadowBlurPt: border:shadow:blurPt;
 			:shadowOffsetXPt: border:shadow:offsetXPt;
 			:shadowOffsetYPt: border:shadow:offsetYPt;
 			:shadowAlpha: border:shadow:shadowColor:alpha();
 		});
-		if({ border:innerShadow:isActive() || border:innerShadow:blurPt == 0.0 }, {
+		if({ border:hasInnerShadow }, {
 			:innerShadowBlurPt: border:innerShadow:blurPt;
 			:innerShadowOffsetXPt: border:innerShadow:offsetXPt;
 			:innerShadowOffsetYPt: border:innerShadow:offsetYPt;

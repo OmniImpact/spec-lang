@@ -258,7 +258,7 @@ Class of SewNode is ScrollView{
 		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: b);
 		local Int is vh: :viewHeight(b: b);
-		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { b:x + bw }, { b:x });
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT && vw < b:width }, { b:x + bw }, { b:x });
 		if({ dragMode == 1 && contentH > vh }, {
 			local Int is tH: :thumbLen(viewLen: vh, contentLen: contentH);
 			local Int is nextY: :scrollFromThumb(pos: y - b:y - dragGrabOffset, viewLen: vh, contentLen: contentH, tLen: tH);
@@ -342,6 +342,7 @@ Class of SewNode is ScrollView{
 		if({ hoverVThumb || hoverHThumb }, {
 			:hoverVThumb: false;
 			:hoverHThumb: false;
+			invalidate();
 		});
 		child:clearHover();
 	}
@@ -367,7 +368,7 @@ Class of SewNode is ScrollView{
 		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: b);
 		local Int is vh: :viewHeight(b: b);
-		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { b:x + bw }, { b:x });
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT && vw < b:width }, { b:x + bw }, { b:x });
 		if({ x < cx || x >= cx + vw || y < b:y || y >= b:y + vh }, { return ''; });
 		return child:tooltipAt(x: x, y: y);
 	}

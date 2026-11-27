@@ -1,5 +1,5 @@
 #! Package base:mold
-#! UV-sphere 3D mesh with configurable radius and color plus directional shading (6 floats/vertex: xyz + rgb).
+#! UV-sphere 3D mesh with configurable radius, color, and unit normals (9 floats/vertex: xyz + rgb + normal).
 
 Class is SphereMesh{
 	replace [String] is namespace: ['base', 'mold'];
@@ -110,8 +110,18 @@ Class is SphereMesh{
 		});
 	}
 
+	Function of Int is vertexAddr(){ return vertAddr; }
+	Function of Int is vertexBytes(){ return vertBytes; }
+	Function of Int is indexAddr(){ return idxAddr; }
+	Function of Int is indexBytes(){ return idxBytes; }
+	Function of Int is indexCount(){ return idxCount; }
+
 	Function is dispose(){
 		if({ vertAddr != 0 }, { free(ptr: vertAddr); vertAddr: 0; });
 		if({ idxAddr != 0 }, { free(ptr: idxAddr); idxAddr: 0; });
+	}
+
+	Function is destroy(){
+		:dispose();
 	}
 }

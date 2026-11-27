@@ -33,6 +33,8 @@ Class of SewNode is TableView{
 
 	Int is hoverRow: -1;
 	Int is hoverCol: -1;
+	Boolean is hovered: false;
+	Boolean is focused: false;
 	Int is scrollY: 0;
 	Int is maxScrollY: 0;
 	Int is scrollX: 0;
@@ -279,18 +281,22 @@ Class of SewNode is TableView{
 				colText: colText . if({ sortAscending }, { ' ▲' }, { ' ▼' });
 			});
 			local Int is cellPad: padX / 2;
-			ctx:setClip(x: cx, y: innerY, w: cw, h: hdrH);
-			ctx:drawText(
-				x: cx + cellPad,
-				y: innerY + (hdrH - fontPx) / 2,
-				text: colText,
-				color: activeTheme:textPrimary,
-				pixelHeight: fontPx,
-				bold: true,
-				italic: false,
-				mono: false
-			);
-			ctx:clearClip();
+			local Int is clipX: if({ cx > innerX }, { cx }, { innerX });
+			local Int is clipR: if({ cx + cw < innerX + innerW }, { cx + cw }, { innerX + innerW });
+			if({ clipR > clipX }, {
+				ctx:setClip(x: clipX, y: innerY, w: clipR - clipX, h: hdrH);
+				ctx:drawText(
+					x: cx + cellPad,
+					y: innerY + (hdrH - fontPx) / 2,
+					text: colText,
+					color: activeTheme:textPrimary,
+					pixelHeight: fontPx,
+					bold: true,
+					italic: false,
+					mono: false
+				);
+			});
+			ctx:setClip(x: innerX, y: innerY, w: innerW, h: innerH);
 			if({ divPx > 0 && ci + 1 < columns:length() }, {
 				ctx:drawDivider(
 					x: cx + cw - divPx, y: innerY + 2, w: divPx, h: hdrH - 4,
@@ -335,18 +341,24 @@ Class of SewNode is TableView{
 					while({ cj < columns:length() }, {
 						local Int is cw: :colWidthPx(colIdx: cj);
 						local String is cellText: if({ cj < r:length() }, { r:get(index: cj) }, { '' });
-						ctx:setClip(x: cellX, y: ry, w: cw, h: rh);
-						ctx:drawText(
-							x: cellX + padX / 2,
-							y: ry + (rh - fontPx) / 2,
-							text: cellText,
-							color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textMuted }),
-							pixelHeight: fontPx,
-							bold: isSel,
-							italic: false,
-							mono: false
-						);
-						ctx:clearClip();
+						local Int is clipX: if({ cellX > innerX }, { cellX }, { innerX });
+						local Int is clipR: if({ cellX + cw < innerX + innerW }, { cellX + cw }, { innerX + innerW });
+						local Int is clipY: if({ ry > bodyY }, { ry }, { bodyY });
+						local Int is clipB: if({ ry + rh < bodyY + bodyH }, { ry + rh }, { bodyY + bodyH });
+						if({ clipR > clipX && clipB > clipY }, {
+							ctx:setClip(x: clipX, y: clipY, w: clipR - clipX, h: clipB - clipY);
+							ctx:drawText(
+								x: cellX + padX / 2,
+								y: ry + (rh - fontPx) / 2,
+								text: cellText,
+								color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textMuted }),
+								pixelHeight: fontPx,
+								bold: isSel,
+								italic: false,
+								mono: false
+							);
+						});
+						ctx:setClip(x: innerX, y: bodyY, w: innerW, h: bodyH);
 						cellX: cellX + cw;
 						cj: cj + 1;
 					});
@@ -386,13 +398,15 @@ Class of SewNode is TableView{
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		if({ !:containsPoint(x: x, y: y) }, {
-			if({ hoverRow != -1 || hoverCol != -1 }, {
+			if({ hoverRow != -1 || hoverCol != -1 || hovered }, {
 				:hoverRow: -1;
 				:hoverCol: -1;
+				:hovered: false;
 				:invalidate();
 			});
 			return false;
 		});
+		:hovered: true;
 		local Rect is b: bounds();
 		local Int is bw: activeTheme:panelBorderPx(scaleFactor: activeScale:factor);
 		local Int is rh: :rowHeightPx();
@@ -413,9 +427,10 @@ Class of SewNode is TableView{
 	}
 
 	replace Function is clearHover(){
-		if({ hoverRow != -1 || hoverCol != -1 }, {
+		if({ hoverRow != -1 || hoverCol != -1 || hovered }, {
 			:hoverRow: -1;
 			:hoverCol: -1;
+			:hovered: false;
 			:invalidate();
 		});
 	}
@@ -448,11 +463,10 @@ Class of SewNode is TableView{
 		return true;
 	}
 
-	replace Function of Boolean is onScroll(Int is x, Int is y, Int is dy){
-		if({ !:containsPoint(x: x, y: y) }, { return false; });
-		if({ maxScrollY <= 0 }, { return false; });
+	replace Function of Boolean is onScroll(Int is deltaY){
+		if({ !hovered || maxScrollY <= 0 }, { return false; });
 		local Int is step: activeScale:px(pt: 28.0);
-		local Int is next: scrollY - dy * step;
+		local Int is next: scrollY - deltaY * step;
 		if({ next < 0 }, { next: 0; });
 		if({ next > maxScrollY }, { next: maxScrollY; });
 		if({ next != scrollY }, {
@@ -462,11 +476,10 @@ Class of SewNode is TableView{
 		return true;
 	}
 
-	replace Function of Boolean is onScrollX(Int is x, Int is y, Int is dx){
-		if({ !:containsPoint(x: x, y: y) }, { return false; });
-		if({ maxScrollX <= 0 }, { return false; });
+	replace Function of Boolean is onScrollX(Int is deltaX){
+		if({ !hovered || maxScrollX <= 0 }, { return false; });
 		local Int is step: activeScale:px(pt: 28.0);
-		local Int is next: scrollX - dx * step;
+		local Int is next: scrollX - deltaX * step;
 		if({ next < 0 }, { next: 0; });
 		if({ next > maxScrollX }, { next: maxScrollX; });
 		if({ next != scrollX }, {
@@ -480,16 +493,16 @@ Class of SewNode is TableView{
 		if({ !focused || rows:length() == 0 }, { return false; });
 		local Int is n: rows:length();
 		local Int is next: selectedIndex;
-		if({ key == 111 }, {
+		if({ key == 1001 }, {
 			next: if({ selectedIndex > 0 }, { selectedIndex - 1 }, { 0 });
 		}, {
-		if({ key == 116 }, {
+		if({ key == 1002 }, {
 			next: if({ selectedIndex + 1 < n }, { selectedIndex + 1 }, { n - 1 });
 		}, {
-		if({ key == 110 }, {
+		if({ key == 1005 }, {
 			next: 0;
 		}, {
-		if({ key == 115 }, {
+		if({ key == 1006 }, {
 			next: n - 1;
 		}, {
 			return false;
@@ -510,8 +523,17 @@ Class of SewNode is TableView{
 		return true;
 	}
 
-	replace Function is collectFocusables(Array of SewNode is out){
-		out:add(item: self);
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		:focused: next;
+		:invalidate();
 	}
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){

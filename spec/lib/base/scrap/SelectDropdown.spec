@@ -30,6 +30,7 @@ Class of SewNode is SelectDropdown{
 
 	Boolean is open: false;
 	Boolean is hovered: false;
+	Boolean is focused: false;
 	Int is highlightPos: 0;
 	Int is hoverPos: -1;
 	Int is scrollY: 0;
@@ -399,8 +400,8 @@ Class of SewNode is SelectDropdown{
 		return false;
 	}
 
-	replace Function of Boolean is onScroll(Int is x, Int is y, Int is dy){
-		if({ open && :inRect(r: popupRect, x: x, y: y) }, {
+	replace Function of Boolean is onScroll(Int is deltaY){
+		if({ open }, {
 			local Int is bw: activeTheme:panelBorderPx(scaleFactor: activeScale:factor);
 			local Int is searchH: :searchBarHeightPx();
 			local Int is rh: :rowHeightPx();
@@ -408,7 +409,7 @@ Class of SewNode is SelectDropdown{
 			local Int is maxS: filteredIndices:length() * rh - listH;
 			if({ maxS < 0 }, { maxS: 0; });
 			local Int is step: activeScale:px(pt: 28.0);
-			local Int is next: scrollY - dy * step;
+			local Int is next: scrollY - deltaY * step;
 			if({ next < 0 }, { next: 0; });
 			if({ next > maxS }, { next: maxS; });
 			if({ next != scrollY }, {
@@ -423,38 +424,38 @@ Class of SewNode is SelectDropdown{
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused && !open }, { return false; });
 		if({ !open }, {
-			if({ key == 36 || key == 65 || key == 116 }, {
+			if({ key == 10 || key == 13 || key == 32 || key == 1002 }, {
 				:openPopup();
 				return true;
 			});
 			return false;
 		});
-		if({ key == 9 }, {
+		if({ key == 27 }, {
 			:closePopup();
 			return true;
 		});
 		local Int is n: filteredIndices:length();
-		if({ key == 111 }, {
+		if({ key == 1001 }, {
 			if({ n > 0 && highlightPos > 0 }, {
 				:highlightPos: highlightPos - 1;
 				:invalidate();
 			});
 			return true;
 		});
-		if({ key == 116 }, {
+		if({ key == 1002 }, {
 			if({ n > 0 && highlightPos + 1 < n }, {
 				:highlightPos: highlightPos + 1;
 				:invalidate();
 			});
 			return true;
 		});
-		if({ key == 36 }, {
+		if({ key == 10 || key == 13 }, {
 			if({ highlightPos >= 0 && highlightPos < n }, {
 				:chooseFilteredPos(pos: highlightPos);
 			});
 			return true;
 		});
-		if({ searchable && key == 22 }, {
+		if({ searchable && key == 8 }, {
 			local Int is fl: filterText:length();
 			if({ fl > 0 }, {
 				:filterText: filterText:substring(start: 0, end: fl - 1);
@@ -477,8 +478,17 @@ Class of SewNode is SelectDropdown{
 		return true;
 	}
 
-	replace Function is collectFocusables(Array of SewNode is out){
-		out:add(item: self);
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		:focused: next;
+		:invalidate();
 	}
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){

@@ -250,4 +250,32 @@ Class of SewNode is VulkanViewport{
 			py: py + 1;
 		});
 	}
+
+	## Releases native pixel/push-constant buffers, GPU meshes, and offscreen Vulkan state.
+	Function is dispose(){
+		if({ vkReady }, {
+			vk:shutdown();
+			:vkReady: false;
+		});
+		cube:dispose();
+		roomCube:dispose();
+		sphere:dispose();
+		if({ mvpAddr != 0 }, {
+			free(ptr: mvpAddr);
+			:mvpAddr: 0;
+		});
+		if({ outBufAddr != 0 }, {
+			free(ptr: outBufAddr);
+			:outBufAddr: 0;
+			:outBufBytes: 0;
+		});
+		if({ roomVert36Addr != 0 }, {
+			free(ptr: roomVert36Addr);
+			:roomVert36Addr: 0;
+		});
+	}
+
+	Function is destroy(){
+		:dispose();
+	}
 }

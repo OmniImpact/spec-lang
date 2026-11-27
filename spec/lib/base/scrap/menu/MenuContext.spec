@@ -200,7 +200,7 @@ Class of SewNode is MenuContext{
 							SvgRenderer:shared:draw(ctx: ctx, svgSrc: rSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
 						});
 					}, {
-						if({ item:checked && checkboxOnIconSvg != '' }, {
+						if({ item:kind == 'toggle' && item:checked && checkboxOnIconSvg != '' }, {
 							SvgRenderer:shared:draw(ctx: ctx, svgSrc: checkboxOnIconSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
 						});
 					});

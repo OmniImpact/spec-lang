@@ -20,6 +20,10 @@ Class of Highlighter is HighlighterJson{
 		return 'JSON';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterJson() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.json');
 	}

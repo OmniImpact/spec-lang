@@ -20,7 +20,7 @@ Class is Theme{
 		['base', 'fabric', LineColorStyle],
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
-		['base', 'fabric', BorderStyle],
+		['base', 'fabric', BoxBorderStyle],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', GradientBounds],
 		['base', 'fabric', FillStyle]
@@ -379,8 +379,8 @@ Class is Theme{
 		return if({ customButtonBorderColor != 0 }, { customButtonBorderColor }, { buttonBorder });
 	}
 
-	Function of BorderStyle is panelBorderConfig(){
-		return BorderStyle(
+	Function of BoxBorderStyle is panelBorderConfig(){
+		return BoxBorderStyle(
 			widthPt: panelBorderThicknessPt,
 			color: Color:fromArgb(argb: :panelBorderColorArgb()),
 			style: panelBorderStyle,
@@ -398,8 +398,8 @@ Class is Theme{
 		);
 	}
 
-	Function of BorderStyle is buttonBorderConfig(){
-		return BorderStyle(
+	Function of BoxBorderStyle is buttonBorderConfig(){
+		return BoxBorderStyle(
 			widthPt: buttonBorderThicknessPt,
 			color: Color:fromArgb(argb: :buttonBorderColorArgb()),
 			style: buttonBorderStyle,
@@ -408,18 +408,18 @@ Class is Theme{
 		);
 	}
 
-	Function is setPanelBorder(BorderStyle is border){
+	Function is setPanelBorder(BoxBorderStyle is border){
 		:customMetrics: true;
 		if({ border:hasStyle }, { :setPanelBorderStyle(style: border:style); });
 		if({ border:hasWidth }, { :setPanelBorderThicknessPt(pt: border:widthPt); });
 		if({ border:hasColor }, { :customPanelBorderColor: border:lineColor:toArgb(); });
 		if({ border:hasRadius }, { :setPanelCornerRadiusPt(pt: border:radiusPt); });
-		if({ border:shadow:isActive() || border:shadow:blurPt == 0.0 }, {
+		if({ border:hasShadow }, {
 			:setPanelShadowBlurPt(pt: border:shadow:blurPt);
 			:setPanelShadowOffsetXPt(pt: border:shadow:offsetXPt);
 			:setPanelShadowOffsetYPt(pt: border:shadow:offsetYPt);
 		});
-		if({ border:innerShadow:isActive() || border:innerShadow:blurPt == 0.0 }, {
+		if({ border:hasInnerShadow }, {
 			:setPanelInnerShadowBlurPt(pt: border:innerShadow:blurPt);
 			:setPanelInnerShadowOffsetXPt(pt: border:innerShadow:offsetXPt);
 			:setPanelInnerShadowOffsetYPt(pt: border:innerShadow:offsetYPt);
@@ -480,13 +480,13 @@ Class is Theme{
 		:customDividerColor: color:toArgb();
 	}
 
-	Function is setButtonBorder(BorderStyle is border){
+	Function is setButtonBorder(BoxBorderStyle is border){
 		:customMetrics: true;
 		if({ border:hasStyle }, { :setButtonBorderStyle(style: border:style); });
 		if({ border:hasWidth }, { :setButtonBorderThicknessPt(pt: border:widthPt); });
 		if({ border:hasColor }, { :customButtonBorderColor: border:lineColor:toArgb(); });
 		if({ border:hasRadius }, { :setButtonCornerRadiusPt(pt: border:radiusPt); });
-		if({ border:shadow:isActive() || border:shadow:blurPt == 0.0 }, {
+		if({ border:hasShadow }, {
 			:setButtonShadowBlurPt(pt: border:shadow:blurPt);
 			:setButtonShadowOffsetXPt(pt: border:shadow:offsetXPt);
 			:setButtonShadowOffsetYPt(pt: border:shadow:offsetYPt);
@@ -793,7 +793,7 @@ Class is Theme{
 	Function of Int is surfaceAt(Float is elevation){
 		if({ elevation <= 0.0 }, { return background:toArgb(); });
 		local Float is k: if({ elevation > 1.0 }, { 1.0 }, { elevation });
-		return if({ background:isLight() }, { background:mix(other: surface, t: k):toArgb() }, { background:mix(other: surface, t: k):toArgb() });
+		return background:mix(other: surface, t: k):toArgb();
 	}
 
 	## Context-sensitive hover color for any surface [base]
@@ -946,6 +946,9 @@ Class is Theme{
 		obj:set(key: 'panelShadowBlurPt', value: JsonNumber(rawText: panelShadowBlurPt as String, isFloating: true));
 		obj:set(key: 'panelShadowOffsetXPt', value: JsonNumber(rawText: panelShadowOffsetXPt as String, isFloating: true));
 		obj:set(key: 'panelShadowOffsetYPt', value: JsonNumber(rawText: panelShadowOffsetYPt as String, isFloating: true));
+		obj:set(key: 'panelInnerShadowBlurPt', value: JsonNumber(rawText: panelInnerShadowBlurPt as String, isFloating: true));
+		obj:set(key: 'panelInnerShadowOffsetXPt', value: JsonNumber(rawText: panelInnerShadowOffsetXPt as String, isFloating: true));
+		obj:set(key: 'panelInnerShadowOffsetYPt', value: JsonNumber(rawText: panelInnerShadowOffsetYPt as String, isFloating: true));
 		obj:set(key: 'dividerStyle', value: dividerStyle);
 		obj:set(key: 'dividerThicknessPt', value: JsonNumber(rawText: dividerThicknessPt as String, isFloating: true));
 		obj:set(key: 'buttonBorderStyle', value: buttonBorderStyle);
@@ -1009,6 +1012,9 @@ Class is Theme{
 		:panelShadowBlurPt: j:getFloat(obj: obj, key: 'panelShadowBlurPt', default: panelShadowBlurPt);
 		:panelShadowOffsetXPt: j:getFloat(obj: obj, key: 'panelShadowOffsetXPt', default: panelShadowOffsetXPt);
 		:panelShadowOffsetYPt: j:getFloat(obj: obj, key: 'panelShadowOffsetYPt', default: panelShadowOffsetYPt);
+		:panelInnerShadowBlurPt: j:getFloat(obj: obj, key: 'panelInnerShadowBlurPt', default: panelInnerShadowBlurPt);
+		:panelInnerShadowOffsetXPt: j:getFloat(obj: obj, key: 'panelInnerShadowOffsetXPt', default: panelInnerShadowOffsetXPt);
+		:panelInnerShadowOffsetYPt: j:getFloat(obj: obj, key: 'panelInnerShadowOffsetYPt', default: panelInnerShadowOffsetYPt);
 		:dividerStyle: j:getString(obj: obj, key: 'dividerStyle', default: dividerStyle);
 		:dividerThicknessPt: j:getFloat(obj: obj, key: 'dividerThicknessPt', default: dividerThicknessPt);
 		:buttonBorderStyle: j:getString(obj: obj, key: 'buttonBorderStyle', default: buttonBorderStyle);

@@ -103,10 +103,9 @@ Class of SewNode is DropTarget{
 
 	replace Function of Boolean is onPointerUp(Int is x, Int is y){
 		if({ DragDropState:shared:active && :containsPoint(x: x, y: y) }, {
-			local String is p: DragDropState:shared:payload;
 			:dragHover: false;
-			local Function is cb: onDrop;
-			cb(p);
+			DragDropState:shared:setDropTarget(accepted: true, handler: onDrop);
+			DragDropState:shared:finishDrag();
 			invalidate();
 			return true;
 		});

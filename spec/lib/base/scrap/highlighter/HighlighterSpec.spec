@@ -20,6 +20,10 @@ Class of Highlighter is HighlighterSpec{
 		return 'Spec';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterSpec() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.spec');
 	}

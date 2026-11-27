@@ -21,4 +21,7 @@ Class is LineColorStyle{
 			:hasColor: false;
 		});
 	}
+
+	Function of Color is getLineColor(){ return lineColor; }
+	Function of Boolean is isColorSet(){ return hasColor; }
 }

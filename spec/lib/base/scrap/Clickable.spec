@@ -152,6 +152,7 @@ Class of SewNode is Clickable{
 		local Boolean is inside: enabled && :contains(x: x, y: y);
 		if({ inside != hovered }, {
 			hovered: inside;
+			invalidate();
 			return true;
 		});
 		return false;

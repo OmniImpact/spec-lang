@@ -18,6 +18,10 @@ Class of Highlighter is HighlighterRuby{
 		return 'Ruby';
 	}
 
+	replace Function of Highlighter is clone(){
+		return HighlighterRuby() as Highlighter;
+	}
+
 	replace Function of Boolean is matchesExtension(String is lowPath){
 		return endsWith(s: lowPath, suffix: '.rb');
 	}

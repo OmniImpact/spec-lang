@@ -1,16 +1,18 @@
 #! Package base:fabric
-#! Composable line style inheriting [LineWidthStyle] and [LineColorStyle] plus stroke style (single/double/bevel/groove/inset/outset/none).
+#! Composable line style (width, color, stroke style: single/double/bevel/groove/inset/outset/none).
 
-Class of LineWidthStyle, LineColorStyle is LineStyle{
+Class is LineStyle{
 	replace [String] is namespace: ['base', 'fabric'];
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'fabric', Color],
-		['base', 'fabric', LineWidthStyle],
-		['base', 'fabric', LineColorStyle]
+		['base', 'fabric', Color]
 	];
 
+	Float is widthPt: 0.7;
+	Boolean is hasWidth: false;
+	Color is lineColor: Color(r: 120, g: 130, b: 150);
+	Boolean is hasColor: false;
 	String is style: 'single';
 	Boolean is hasStyle: false;
 
@@ -40,5 +42,18 @@ Class of LineWidthStyle, LineColorStyle is LineStyle{
 			:style: 'single';
 			:hasStyle: false;
 		});
+	}
+
+	Function of Float is getWidthPt(){
+		return :widthPt;
+	}
+	Function of Boolean is isWidthSet(){
+		return :hasWidth;
+	}
+	Function of Color is getLineColor(){
+		return :lineColor;
+	}
+	Function of Boolean is isColorSet(){
+		return :hasColor;
 	}
 }

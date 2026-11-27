@@ -34,6 +34,8 @@ Class of SewNode is GridFlex{
 	Int is lastMouseY: -1;
 	Array of Int is panelSizesPx: Array();
 	Array of Int is dividerPosPx: Array();
+	Array of Int is dividerLeftIdx: Array();
+	Array of Int is dividerRightIdx: Array();
 
 	Function is addPanel(GridFlexPanel is panel){
 		panels:add(item: panel);
@@ -200,6 +202,8 @@ Class of SewNode is GridFlex{
 		local Int is totalMain: if({ horizontal }, { bounds:width }, { bounds:height });
 		:panelSizesPx: :computeSizes(totalMain: totalMain);
 		:dividerPosPx: Array();
+		:dividerLeftIdx: Array();
+		:dividerRightIdx: Array();
 		local Int is sp: :spacingPx();
 		local Int is cur: if({ horizontal }, { bounds:x }, { bounds:y });
 		local Int is i: 0;
@@ -219,14 +223,16 @@ Class of SewNode is GridFlex{
 				ch:measure(c: chC);
 				ch:arrange(bounds: chBounds);
 				cur: cur + szMain;
-				local Boolean is hasNextVis: false;
+				local Int is nextVisIdx: -1;
 				local Int is ni: i + 1;
-				while({ ni < count && !hasNextVis }, {
-					if({ panels:get(index: ni):visible }, { hasNextVis: true; });
+				while({ ni < count && nextVisIdx < 0 }, {
+					if({ panels:get(index: ni):visible }, { nextVisIdx: ni; });
 					ni: ni + 1;
 				});
-				if({ hasNextVis }, {
+				if({ nextVisIdx >= 0 }, {
 					dividerPosPx:add(item: cur);
+					dividerLeftIdx:add(item: i);
+					dividerRightIdx:add(item: nextVisIdx);
 					cur: cur + sp;
 				});
 			});
@@ -299,8 +305,10 @@ Class of SewNode is GridFlex{
 	local Function is beginDividerDrag(Int is di, Int is x, Int is y){
 		dragDivider: di;
 		dragStartPos: if({ horizontal }, { x }, { y });
-		dragStartSizeA: if({ di >= 0 && di < panelSizesPx:length() }, { panelSizesPx:get(index: di) }, { 0 });
-		dragStartSizeB: if({ di + 1 < panelSizesPx:length() }, { panelSizesPx:get(index: di + 1) }, { 0 });
+		local Int is idxA: if({ di >= 0 && di < dividerLeftIdx:length() }, { dividerLeftIdx:get(index: di) }, { -1 });
+		local Int is idxB: if({ di >= 0 && di < dividerRightIdx:length() }, { dividerRightIdx:get(index: di) }, { -1 });
+		dragStartSizeA: if({ idxA >= 0 && idxA < panelSizesPx:length() }, { panelSizesPx:get(index: idxA) }, { 0 });
+		dragStartSizeB: if({ idxB >= 0 && idxB < panelSizesPx:length() }, { panelSizesPx:get(index: idxB) }, { 0 });
 	}
 
 	local Function of Float is pxToPt(Int is px){
@@ -382,12 +390,14 @@ Class of SewNode is GridFlex{
 				:beginDividerDrag(di: di, x: x, y: y);
 			});
 		});
-		if({ dragDivider >= 0 && dragDivider + 1 < panels:length() }, {
+		if({ dragDivider >= 0 && dragDivider < dividerLeftIdx:length() && dragDivider < dividerRightIdx:length() }, {
+			local Int is idxA: dividerLeftIdx:get(index: dragDivider);
+			local Int is idxB: dividerRightIdx:get(index: dragDivider);
 			local Int is curPos: if({ horizontal }, { x }, { y });
 			local Int is delta: curPos - dragStartPos;
 			local Int is combined: dragStartSizeA + dragStartSizeB;
-			local GridFlexPanel is pA: panels:get(index: dragDivider);
-			local GridFlexPanel is pB: panels:get(index: dragDivider + 1);
+			local GridFlexPanel is pA: panels:get(index: idxA);
+			local GridFlexPanel is pB: panels:get(index: idxB);
 			local Int is minA: activeScale:px(pt: pA:minSizePt);
 			local Int is minB: activeScale:px(pt: pB:minSizePt);
 			local Int is maxA: if({ pA:maxSizePt > 0.0 }, { activeScale:px(pt: pA:maxSizePt) }, { combined });
