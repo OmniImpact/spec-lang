@@ -23,12 +23,16 @@ Class is Highlighter{
 	Int is measureColPos: 0;
 	Int is measureResultX: 0;
 
-	Function is destroy(){
+	Function is dispose(){
 		if({ advTmpPtr != 0 }, {
 			Mem:free(ptr: advTmpPtr);
 			:advTmpPtr: 0;
 			:advTmpCap: 0;
 		});
+	}
+
+	Function is destroy(){
+		:dispose();
 	}
 
 	Function of String is languageId(){

@@ -1102,6 +1102,15 @@ Class is DrawContext{
 		});
 	}
 
+	## Pre-populates lock-free GPOS kerning caches across styled fonts for any non-ASCII characters in [text].
+	Function is prewarmText(String is text, Boolean is mono: false){
+		if({ text == '' }, { return; });
+		:styledFont(bold: false, italic: false, mono: mono):prewarmGposForText(text: text);
+		:styledFont(bold: true, italic: false, mono: mono):prewarmGposForText(text: text);
+		:styledFont(bold: false, italic: true, mono: mono):prewarmGposForText(text: text);
+		:styledFont(bold: true, italic: true, mono: mono):prewarmGposForText(text: text);
+	}
+
 	## Measures the pixel width of UTF-8 [text] at [pixelHeight] using the system font.
 	Function of Int is measureTextWidth(String is text, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false, Boolean is mono: false){
 		local Font is f: :styledFont(bold: bold, italic: italic, mono: mono);

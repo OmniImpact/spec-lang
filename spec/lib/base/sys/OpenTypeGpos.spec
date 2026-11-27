@@ -7,6 +7,7 @@ Class is OpenTypeGpos{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
 		['base', 'struct', Array]
 	];
 
@@ -15,6 +16,10 @@ Class is OpenTypeGpos{
 	Int is cmapFmt12Off: -1;
 	Int is cmapFmt4Off: -1;
 	Boolean is valid: false;
+	Int is asciiKernPtr: 0;
+	Int is pairCachePtr: 0;
+	Int is pairCacheCap: 0;
+	Int is pairCacheCount: 0;
 
 	## Parallel arrays describing each PairPos subtable with xAdvance1 support.
 	Array of Int is subOffsets: Array();
@@ -60,6 +65,16 @@ Class is OpenTypeGpos{
 	}
 
 	local Function is reset(){
+		if({ asciiKernPtr != 0 }, {
+			Mem:free(ptr: asciiKernPtr);
+			:asciiKernPtr: 0;
+		});
+		if({ pairCachePtr != 0 }, {
+			Mem:free(ptr: pairCachePtr);
+			:pairCachePtr: 0;
+			:pairCacheCap: 0;
+			:pairCacheCount: 0;
+		});
 		cmapData: '';
 		gposData: '';
 		cmapFmt12Off: -1;
@@ -75,6 +90,19 @@ Class is OpenTypeGpos{
 
 	replace Function is init(){
 		:reset();
+	}
+
+	Function is destroy(){
+		if({ asciiKernPtr != 0 }, {
+			Mem:free(ptr: asciiKernPtr);
+			:asciiKernPtr: 0;
+		});
+		if({ pairCachePtr != 0 }, {
+			Mem:free(ptr: pairCachePtr);
+			:pairCachePtr: 0;
+			:pairCacheCap: 0;
+			:pairCacheCount: 0;
+		});
 	}
 
 	## Parses `cmap` and `GPOS` tables from raw SFNT [fontBytes].
@@ -121,8 +149,156 @@ Class is OpenTypeGpos{
 		if({ !valid }, {
 			cmapData: '';
 			gposData: '';
+		}, {
+			:buildAsciiKernCache();
 		});
 		return valid;
+	}
+
+	local Function of Int is pairKey(Int is cp1, Int is cp2){
+		return (1 << 42) | ((cp1 & 2097151) << 21) | (cp2 & 2097151);
+	}
+
+	local Function of Int is pairSlot(Int is key, Int is mask){
+		return (key ^ (key >> 17) ^ (key >> 33)) & mask;
+	}
+
+	local Function is ensurePairCacheCap(){
+		if({ pairCacheCap == 0 }, {
+			local Int is initCap: 64;
+			local Int is ptr: Mem:alloc(bytes: initCap * 16);
+			if({ ptr == 0 }, { return; });
+			Mem:set(dst: ptr, byteVal: 0, bytes: initCap * 16);
+			:pairCachePtr: ptr;
+			:pairCacheCap: initCap;
+			:pairCacheCount: 0;
+			return;
+		});
+		if({ (pairCacheCount + 1) * 2 >= pairCacheCap }, {
+			local Int is newCap: pairCacheCap * 2;
+			local Int is newPtr: Mem:alloc(bytes: newCap * 16);
+			if({ newPtr == 0 }, { return; });
+			Mem:set(dst: newPtr, byteVal: 0, bytes: newCap * 16);
+			local Int is newMask: newCap - 1;
+			local Int is i: 0;
+			while({ i < pairCacheCap }, {
+				local Int is k: Mem:loadI64(ptr: pairCachePtr, byteOffset: i * 16);
+				if({ k != 0 }, {
+					local Int is s: :pairSlot(key: k, mask: newMask);
+					while({ Mem:loadI64(ptr: newPtr, byteOffset: s * 16) != 0 }, {
+						s: (s + 1) & newMask;
+					});
+					Mem:storeI64(ptr: newPtr, byteOffset: s * 16, val: k);
+					Mem:storeI32(ptr: newPtr, byteOffset: s * 16 + 8, val: Mem:loadI32(ptr: pairCachePtr, byteOffset: i * 16 + 8));
+				});
+				i: i + 1;
+			});
+			Mem:free(ptr: pairCachePtr);
+			:pairCachePtr: newPtr;
+			:pairCacheCap: newCap;
+		});
+	}
+
+	local Function is cachePair(Int is cp1, Int is cp2){
+		if({ !valid }, { return; });
+		if({ cp1 >= 32 && cp1 <= 126 && cp2 >= 32 && cp2 <= 126 }, { return; });
+		:ensurePairCacheCap();
+		if({ pairCachePtr == 0 || pairCacheCap == 0 }, { return; });
+		local Int is k: :pairKey(cp1: cp1, cp2: cp2);
+		local Int is mask: pairCacheCap - 1;
+		local Int is s: :pairSlot(key: k, mask: mask);
+		while({ true }, {
+			local Int is cur: Mem:loadI64(ptr: pairCachePtr, byteOffset: s * 16);
+			if({ cur == k }, { return; });
+			if({ cur == 0 }, {
+				local Int is kv: 0;
+				local Int is g1: :glyphId(cp: cp1);
+				if({ g1 != 0 }, {
+					local Int is g2: :glyphId(cp: cp2);
+					if({ g2 != 0 }, {
+						kv: :kernAdvanceByGid(g1: g1, g2: g2);
+					});
+				});
+				Mem:storeI64(ptr: pairCachePtr, byteOffset: s * 16, val: k);
+				Mem:storeI32(ptr: pairCachePtr, byteOffset: s * 16 + 8, val: kv);
+				:pairCacheCount: pairCacheCount + 1;
+				return;
+			});
+			s: (s + 1) & mask;
+		});
+	}
+
+	## Pre-populates the lock-free pair cache for all non-ASCII character pairs present in [text].
+	Function is prewarmText(String is text){
+		if({ !valid || text == '' }, { return; });
+		local Int is len: text:length();
+		local Int is idx: 0;
+		local Int is prevCp: 0;
+		while({ idx < len }, {
+			local Int is c0: text:byteAt(index: idx) & 255;
+			local Int is cp: c0;
+			local Int is step: 1;
+			if({ c0 >= 128 }, {
+				if({ (c0 & 224) == 192 && idx + 1 < len }, {
+					cp: ((c0 & 31) << 6) | (text:byteAt(index: idx + 1) & 63);
+					step: 2;
+				}, {
+				if({ (c0 & 240) == 224 && idx + 2 < len }, {
+					cp: ((c0 & 15) << 12) | ((text:byteAt(index: idx + 1) & 63) << 6) | (text:byteAt(index: idx + 2) & 63);
+					step: 3;
+				}, {
+				if({ (c0 & 248) == 240 && idx + 3 < len }, {
+					cp: ((c0 & 7) << 18) | ((text:byteAt(index: idx + 1) & 63) << 12) | ((text:byteAt(index: idx + 2) & 63) << 6) | (text:byteAt(index: idx + 3) & 63);
+					step: 4;
+				}); }); });
+			});
+			if({ cp == 10 || cp == 13 || cp == 9 }, {
+				prevCp: 0;
+			}, {
+				if({ cp >= 32 }, {
+					if({ prevCp != 0 && (prevCp > 126 || cp > 126) }, {
+						:cachePair(cp1: prevCp, cp2: cp);
+					});
+					prevCp: cp;
+				});
+			});
+			idx: idx + step;
+		});
+	}
+
+	local Function is buildAsciiKernCache(){
+		local Int is gids: Mem:alloc(bytes: 95 * 4);
+		local Int is kbuf: Mem:alloc(bytes: 95 * 95 * 4);
+		if({ gids == 0 || kbuf == 0 }, {
+			if({ gids != 0 }, { Mem:free(ptr: gids); });
+			if({ kbuf != 0 }, { Mem:free(ptr: kbuf); });
+			return;
+		});
+		local Int is ci: 0;
+		while({ ci < 95 }, {
+			Mem:storeI32(ptr: gids, byteOffset: ci * 4, val: :glyphId(cp: 32 + ci));
+			ci: ci + 1;
+		});
+		local Int is i: 0;
+		while({ i < 95 }, {
+			local Int is g1: Mem:loadI32(ptr: gids, byteOffset: i * 4);
+			local Int is rowOff: i * 95;
+			local Int is j: 0;
+			while({ j < 95 }, {
+				local Int is kv: 0;
+				if({ g1 != 0 }, {
+					local Int is g2: Mem:loadI32(ptr: gids, byteOffset: j * 4);
+					if({ g2 != 0 }, {
+						kv: :kernAdvanceByGid(g1: g1, g2: g2);
+					});
+				});
+				Mem:storeI32(ptr: kbuf, byteOffset: (rowOff + j) * 4, val: kv);
+				j: j + 1;
+			});
+			i: i + 1;
+		});
+		Mem:free(ptr: gids);
+		:asciiKernPtr: kbuf;
 	}
 
 	local Function is parseCmap(){
@@ -354,11 +530,35 @@ Class is OpenTypeGpos{
 	## Returns raw `GPOS` horizontal kerning adjustment (in font units) between [cp1] and [cp2].
 	Function of Int is kernAdvance(Int is cp1, Int is cp2){
 		if({ !valid }, { return 0; });
+		if({ asciiKernPtr != 0 && cp1 >= 32 && cp1 <= 126 && cp2 >= 32 && cp2 <= 126 }, {
+			return Mem:loadI32(ptr: asciiKernPtr, byteOffset: ((cp1 - 32) * 95 + (cp2 - 32)) * 4);
+		});
+		if({ pairCachePtr != 0 && pairCacheCap > 0 }, {
+			local Int is k: :pairKey(cp1: cp1, cp2: cp2);
+			local Int is mask: pairCacheCap - 1;
+			local Int is s: :pairSlot(key: k, mask: mask);
+			local Int is probes: 0;
+			while({ probes < pairCacheCap }, {
+				local Int is cur: Mem:loadI64(ptr: pairCachePtr, byteOffset: s * 16);
+				if({ cur == k }, {
+					return Mem:loadI32(ptr: pairCachePtr, byteOffset: s * 16 + 8);
+				});
+				if({ cur == 0 }, {
+					probes: pairCacheCap;
+				}, {
+					s: (s + 1) & mask;
+					probes: probes + 1;
+				});
+			});
+		});
 		local Int is g1: :glyphId(cp: cp1);
 		if({ g1 == 0 }, { return 0; });
 		local Int is g2: :glyphId(cp: cp2);
 		if({ g2 == 0 }, { return 0; });
+		return :kernAdvanceByGid(g1: g1, g2: g2);
+	}
 
+	local Function of Int is kernAdvanceByGid(Int is g1, Int is g2){
 		local Int is glen: gposData:length();
 		local Int is si: 0;
 		local Int is scount: subOffsets:length();

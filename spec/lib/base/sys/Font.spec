@@ -35,6 +35,8 @@ Class is Font{
 	Boolean is fallbacksLoaded: false;
 	Boolean is isFallbackFont: false;
 	Int is lastDrawAdvancePx: 0;
+	OpenTypeGpos is gposTable: OpenTypeGpos();
+	Boolean is hasGposTable: false;
 
 	local Function of Int is cstrAddr(String is s){
 		local Int is sAddr: Mem:objToAddr(obj: s);
@@ -227,9 +229,27 @@ Class is Font{
 		Font:cachedGposTables:add(item: gpos);
 	}
 
+	local Function is bindCachedGpos(Int is fontHandle){
+		:hasGposTable: false;
+		if({ fontHandle <= 0 }, { return; });
+		local Int is i: 0;
+		while({ i < Font:cachedGposHandles:length() }, {
+			if({ Font:cachedGposHandles:get(index: i) == fontHandle }, {
+				:gposTable: Font:cachedGposTables:get(index: i);
+				:hasGposTable: true;
+				return;
+			});
+			i: i + 1;
+		});
+	}
+
 	local Function of Int is kernAdvanceFor(Int is fontHandle, Int is cp1, Int is cp2){
 		local Int is k: base:sysinternal:Font:pal_font_kern_advance(handle: fontHandle, cp1: cp1, cp2: cp2);
 		if({ k != 0 }, { return k; });
+		if({ fontHandle == handle }, {
+			if({ !hasGposTable }, { return 0; });
+			return gposTable:kernAdvance(cp1: cp1, cp2: cp2);
+		});
 		local Int is i: 0;
 		while({ i < Font:cachedGposHandles:length() }, {
 			if({ Font:cachedGposHandles:get(index: i) == fontHandle }, {
@@ -255,6 +275,10 @@ Class is Font{
 		local OpenTypeGpos is gpos: OpenTypeGpos();
 		if({ gpos:parse(fontBytes: bytes) }, {
 			:registerGpos(fontHandle: handle, gpos: gpos);
+			:gposTable: gpos;
+			:hasGposTable: true;
+		}, {
+			:hasGposTable: false;
 		});
 		return true;
 	}
@@ -268,6 +292,7 @@ Class is Font{
 			});
 			handle: cached;
 			ownsHandle: false;
+			:bindCachedGpos(fontHandle: cached);
 			return true;
 		});
 		local Int is pathBuf: Mem:alloc(bytes: 512);
@@ -313,6 +338,7 @@ Class is Font{
 			});
 			handle: cached;
 			ownsHandle: false;
+			:bindCachedGpos(fontHandle: cached);
 			return true;
 		});
 		local Array of String is candidates: if({ bold && italic }, {
@@ -359,6 +385,7 @@ Class is Font{
 			});
 			handle: cached;
 			ownsHandle: false;
+			:bindCachedGpos(fontHandle: cached);
 			return true;
 		});
 		local Array of String is candidates: if({ bold && italic }, {
@@ -509,10 +536,22 @@ Class is Font{
 		return handle;
 	}
 
-	local Function of Float is spaceAdvance(Int is pixelHeight, Float is baseScale, Float is tracking){
-		base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: 32, out_2_i32_ptr: metricsAddr);
-		local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+	local Function of Float is spaceAdvance(Int is pixelHeight, Float is baseScale, Float is tracking, Int is bufPtr: 0){
+		local Int is p: bufPtr;
+		if({ p == 0 }, {
+			:ensureMetricsBuf();
+			p: metricsAddr;
+		});
+		base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: 32, out_2_i32_ptr: p);
+		local Int is adv: :signI32(v: Mem:loadI32(ptr: p, byteOffset: 0));
 		return math:toFloat(value: adv) * baseScale + tracking;
+	}
+
+	## Pre-populates the lock-free GPOS kerning cache for any non-ASCII character pairs in [text].
+	Function is prewarmGposForText(String is text){
+		if({ hasGposTable && text != '' }, {
+			gposTable:prewarmText(text: text);
+		});
 	}
 
 	## Measures cumulative pixel X advances at each byte offset [0..len] of UTF-8 [text] in a single O(N) pass.
@@ -528,7 +567,7 @@ Class is Font{
 		local Float is baseScale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
 		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
-		local Float is tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: baseScale, tracking: tracking) * 4.0;
+		local Float is tabAdv: -1.0;
 		local Float is xpos: 0.0;
 		local Int is len: text:length();
 		local Int is idx: 0;
@@ -538,6 +577,9 @@ Class is Font{
 			local Int is cp: :utf8CodeAt(text: text, idx: idx, len: len);
 			local Int is step: :utf8Step(text: text, idx: idx, len: len);
 			if({ cp == 9 }, {
+				if({ tabAdv < 0.0 }, {
+					tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: baseScale, tracking: tracking, bufPtr: bufPtr) * 4.0;
+				});
 				xpos: xpos + tabAdv;
 				prevCp: 0;
 				prevH: 0;
@@ -578,7 +620,7 @@ Class is Font{
 		local Float is baseScale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
 		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
-		local Float is tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: baseScale, tracking: tracking) * 4.0;
+		local Float is tabAdv: -1.0;
 		local Float is xpos: 0.0;
 		local Int is len: text:length();
 		local Int is idx: 0;
@@ -588,6 +630,9 @@ Class is Font{
 			local Int is cp: :utf8CodeAt(text: text, idx: idx, len: len);
 			idx: idx + :utf8Step(text: text, idx: idx, len: len);
 			if({ cp == 9 }, {
+				if({ tabAdv < 0.0 }, {
+					tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: baseScale, tracking: tracking, bufPtr: bufPtr) * 4.0;
+				});
 				xpos: xpos + tabAdv;
 				prevCp: 0;
 				prevH: 0;

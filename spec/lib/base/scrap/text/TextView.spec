@@ -242,6 +242,16 @@ Class of SewNode is TextView{
 		DrawContext:shared:measurePrefixAdvances(text: lineStr, pixelHeight: fpx, mono: mono, outAdvI32Ptr: outAdvI32Ptr, scratchPtr: scratchPtr);
 	}
 
+	local Function of Boolean is lineHasNonAscii(String is line){
+		local Int is len: line:length();
+		local Int is i: 0;
+		while({ i < len }, {
+			if({ (line:byteAt(index: i) & 255) >= 128 }, { return true; });
+			i: i + 1;
+		});
+		return false;
+	}
+
 	local Function of Boolean is lineCannotWrap(String is line, Int is availTextW, Int is maxAsciiW, Int is tabW){
 		local Int is len: line:length();
 		if({ len == 0 }, { return true; });
@@ -440,7 +450,16 @@ Class of SewNode is TextView{
 			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, mono: monoCached);
 			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, bold: true, mono: monoCached);
 			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, italic: true, mono: monoCached);
+			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, bold: true, italic: true, mono: monoCached);
 			DrawContext:shared:measureTextWidth(text: '\u2026', pixelHeight: fpx, mono: monoCached);
+			local Int is pw: 0;
+			while({ pw < rcount }, {
+				local String is pl: rawLines:get(index: pw);
+				if({ :lineHasNonAscii(line: pl) }, {
+					DrawContext:shared:prewarmText(text: pl, mono: monoCached);
+				});
+				pw: pw + 1;
+			});
 			local Int is slotPtrs: Mem:alloc(bytes: rcount * 8);
 			local Int is slotCounts: Mem:alloc(bytes: rcount * 4);
 			local Int is nThreads: Process():threadCount();
@@ -475,6 +494,7 @@ Class of SewNode is TextView{
 						);
 						r: r + 1;
 					});
+					wrapCtx:dispose();
 					Mem:free(ptr: scratch);
 					return 0;
 				}
@@ -563,6 +583,7 @@ Class of SewNode is TextView{
 			cachedLineStarts:add(item: lineStarts);
 			r: r + 1;
 		});
+		seqWrapCtx:dispose();
 		lastWrapW: availTextW;
 		lastWrapFpx: fpx;
 	}
@@ -711,9 +732,11 @@ Class of SewNode is TextView{
 						dispRawStart:set(index: baseDisp + k, item: starts:get(index: k));
 						k: k + 1;
 					});
+					editWrapCtx:dispose();
 					return true;
 				});
 			});
+			editWrapCtx:dispose();
 			dispLines: Array();
 			dispRawLine: Array();
 			dispRawStart: Array();
@@ -761,6 +784,7 @@ Class of SewNode is TextView{
 			nextStarts:add(item: starts);
 			ni: ni + 1;
 		});
+		editWrapCtx:dispose();
 		i: el + 1;
 		while({ i < cachedLineSegs:length() }, {
 			nextSegs:add(item: cachedLineSegs:get(index: i));
