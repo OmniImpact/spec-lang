@@ -10,6 +10,7 @@ Class is ThemeBuilderPageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'sew', Grid],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
@@ -105,7 +106,7 @@ Class is ThemeBuilderPageView{
 		);
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');
 
-		local Array of SewNode is colorRows: Array();
+		local Array of SewNode is colorCells: Array();
 		local Int is ci: 0;
 		while({ ci < colorLabels:length() }, {
 			local Int is slot: ci;
@@ -124,15 +125,18 @@ Class is ThemeBuilderPageView{
 			);
 			colorInputs:add(item: inp);
 			colorSwatches:add(item: sw);
-			colorRows:add(item: SectionH(
-				children: Array([
-					Label(text: colorLabels:get(index: slot)),
-					inp,
-					sw
-				])
-			));
+			colorCells:add(item: Label(text: colorLabels:get(index: slot)));
+			colorCells:add(item: inp);
+			colorCells:add(item: sw);
 			ci: ci + 1;
 		});
+
+		local Grid is colorGrid: Grid(
+			columns: 3,
+			colGapPt: 10.0,
+			rowGapPt: 6.0,
+			children: colorCells
+		);
 
 		return SectionV(
 			children: Array([
@@ -170,7 +174,7 @@ Class is ThemeBuilderPageView{
 				),
 				Frame(
 					title: '8 Base Color Tokens (#RRGGBB)',
-					child: SectionV(children: colorRows)
+					child: colorGrid
 				)
 			])
 		);

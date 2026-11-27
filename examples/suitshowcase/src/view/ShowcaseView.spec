@@ -24,6 +24,7 @@ Class is ShowcaseView{
 		['suitshowcase', 'viewmodel', ShowcaseViewModel],
 		['suitshowcase', 'view', IntroPageView],
 		['suitshowcase', 'view', ThemeBuilderPageView],
+		['suitshowcase', 'view', GridPageView],
 		['suitshowcase', 'view', ButtonsPageView],
 		['suitshowcase', 'view', InputsPageView],
 		['suitshowcase', 'view', SlidersPageView],
@@ -33,7 +34,7 @@ Class is ShowcaseView{
 		['suitshowcase', 'view', TextTreePageView]
 	];
 
-	Array of String is categoryRoutes: Array(['intro', 'theme', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'text']);
+	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'text']);
 
 	local Function of Int is routeIndex(String is routeName){
 		local Int is i: 0;
@@ -47,6 +48,7 @@ Class is ShowcaseView{
 	Function of ToolkitContainer is build(ShowcaseViewModel is vm){
 		local IntroPageView is introPage: IntroPageView(vm: vm);
 		local ThemeBuilderPageView is themePage: ThemeBuilderPageView(vm: vm);
+		local GridPageView is gridPage: GridPageView(vm: vm);
 		local ButtonsPageView is buttonsPage: ButtonsPageView(vm: vm);
 		local InputsPageView is inputsPage: InputsPageView(vm: vm);
 		local SlidersPageView is slidersPage: SlidersPageView(vm: vm);
@@ -60,6 +62,7 @@ Class is ShowcaseView{
 			routes: Array([
 				NavRoute(name: 'intro', child: ScrollView(child: Padding(useThemePad: true, child: introPage:build()))),
 				NavRoute(name: 'theme', child: ScrollView(child: Padding(useThemePad: true, child: themePage:build()))),
+				NavRoute(name: 'grid', child: ScrollView(child: Padding(useThemePad: true, child: gridPage:build()))),
 				NavRoute(name: 'buttons', child: ScrollView(child: Padding(useThemePad: true, child: buttonsPage:build()))),
 				NavRoute(name: 'inputs', child: ScrollView(child: Padding(useThemePad: true, child: inputsPage:build()))),
 				NavRoute(name: 'sliders', child: ScrollView(child: Padding(useThemePad: true, child: slidersPage:build()))),
@@ -72,7 +75,7 @@ Class is ShowcaseView{
 
 		local SectionV is sidebar: SectionV(
 			segmented: true,
-			options: Array(['Intro', 'Theme Builder', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Text & Tree']),
+			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Text & Tree']),
 			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
 			itemMinWidthPt: 132.0,
 			itemHeightPt: 24.0,
