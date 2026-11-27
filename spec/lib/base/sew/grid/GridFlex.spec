@@ -21,6 +21,7 @@ Class of SewNode is GridFlex{
 
 	Array of GridFlexPanel is panels: Array();
 	Float is spacingPt: 0.0;
+	Float is heightPt: 0.0;
 	Boolean is movable: true;
 	Boolean is horizontal: true;
 	Int is dragDivider: -1;
@@ -170,7 +171,12 @@ Class of SewNode is GridFlex{
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is w: if({ c:isBoundedW() }, { c:clampW(w: c:maxW) }, { c:clampW(w: 320) });
-		local Int is h: if({ c:isBoundedH() }, { c:clampH(h: c:maxH) }, { c:clampH(h: 240) });
+		local Int is prefH: if({ heightPt > 0.0 }, { activeScale:px(pt: heightPt) }, { 240 });
+		local Int is h: if({ heightPt > 0.0 && !c:isBoundedH() }, {
+			c:clampH(h: prefH)
+		}, {
+			if({ c:isBoundedH() }, { c:clampH(h: c:maxH) }, { c:clampH(h: prefH) })
+		});
 		local Int is totalMain: if({ horizontal }, { w }, { h });
 		local Array of Int is sizes: :computeSizes(totalMain: totalMain);
 		local Int is i: 0;

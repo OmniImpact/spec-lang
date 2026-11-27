@@ -10,6 +10,9 @@ Class is GridPageView{
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
 		['base', 'sew', Grid],
+		['base', 'sew', 'grid', GridFlexH],
+		['base', 'sew', 'grid', GridFlexV],
+		['base', 'sew', 'grid', GridFlexPanel],
 		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
@@ -103,6 +106,50 @@ Class is GridPageView{
 						rowGapPt: 6.0,
 						flexCols: Array([false, true]),
 						children: flexGridCells
+					)
+				),
+				Frame(
+					title: 'Horizontal Flex Grid (GridFlexH — drag dividers)',
+					child: GridFlexH(
+						heightPt: 96.0,
+						panels: Array([
+							GridFlexPanel(
+								sizePt: 120.0,
+								minSizePt: 70.0,
+								flex: false,
+								child: Frame(padPt: 8.0, fillBg: true, child: Label(text: 'Left (Fixed/Drag)'))
+							),
+							GridFlexPanel(
+								minSizePt: 90.0,
+								flex: true,
+								child: Frame(padPt: 8.0, fillBg: true, child: Label(text: 'Center (Flex)'))
+							),
+							GridFlexPanel(
+								sizePt: 120.0,
+								minSizePt: 70.0,
+								flex: false,
+								child: Frame(padPt: 8.0, fillBg: true, child: Label(text: 'Right (Fixed/Drag)'))
+							)
+						])
+					)
+				),
+				Frame(
+					title: 'Vertical Flex Grid (GridFlexV — drag divider)',
+					child: GridFlexV(
+						heightPt: 150.0,
+						panels: Array([
+							GridFlexPanel(
+								sizePt: 60.0,
+								minSizePt: 40.0,
+								flex: false,
+								child: Frame(padPt: 8.0, fillBg: true, child: Label(text: 'Top Pane (Drag divider below)'))
+							),
+							GridFlexPanel(
+								minSizePt: 48.0,
+								flex: true,
+								child: Frame(padPt: 8.0, fillBg: true, child: Label(text: 'Bottom Flex Pane'))
+							)
+						])
 					)
 				)
 			])

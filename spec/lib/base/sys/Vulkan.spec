@@ -37,6 +37,29 @@ Class is Vulkan{
 		return handle != 0;
 	}
 
+	## Creates a headless offscreen Vulkan context.
+	Function of Boolean is createOffscreen(
+		Int is width,
+		Int is height,
+		Int is vertSpvAddr,
+		Int is vertSpvBytes,
+		Int is fragSpvAddr,
+		Int is fragSpvBytes
+	){
+		if({ handle != 0 }, { shutdown(); });
+		handle: base:sysinternal:Vulkan:pal_vulkan_create(
+			wl_display: 0,
+			wl_surface: 0,
+			width: width,
+			height: height,
+			vert_spv_ptr: vertSpvAddr,
+			vert_spv_bytes: vertSpvBytes,
+			frag_spv_ptr: fragSpvAddr,
+			frag_spv_bytes: fragSpvBytes
+		);
+		return handle != 0;
+	}
+
 	## Uploads vertex and index buffers for the active mesh.
 	Function of Boolean is setMesh(Int is vertAddr, Int is vertBytes, Int is idxAddr, Int is idxBytes, Int is idxCount){
 		if({ handle == 0 }, { return false; });
@@ -53,6 +76,36 @@ Class is Vulkan{
 	## Renders a frame with the given 64-byte column-major `mat4` push constant at [mvpF32Addr].
 	Function of Boolean is render(Int is mvpF32Addr, Int is width, Int is height){
 		if({ handle == 0 }, { return false; });
+		return base:sysinternal:Vulkan:pal_vulkan_render(
+			handle: handle,
+			mvp_f32_ptr: mvpF32Addr,
+			width: width,
+			height: height
+		) != 0;
+	}
+
+	## Uploads vertex and index buffers for a secondary translucent mesh (offscreen mode).
+	Function of Boolean is setBlendMesh(Int is vertAddr, Int is vertBytes, Int is idxAddr, Int is idxBytes, Int is idxCount){
+		if({ handle == 0 }, { return false; });
+		return base:sysinternal:Vulkan:pal_vulkan_set_mesh(
+			handle: handle,
+			vert_ptr: vertAddr,
+			vert_bytes: vertBytes,
+			idx_ptr: idxAddr,
+			idx_bytes: idxBytes,
+			idx_count: 0 - idxCount
+		) != 0;
+	}
+
+	## Renders an offscreen frame and copies BGRA8 pixels to [outPixelsAddr].
+	Function of Boolean is renderToPixels(Int is mvpF32Addr, Int is outPixelsAddr, Int is width, Int is height){
+		if({ handle == 0 }, { return false; });
+		base:sysinternal:Vulkan:pal_vulkan_set_overlay(
+			handle: handle,
+			pixels_addr: outPixelsAddr,
+			width: width,
+			height: height
+		);
 		return base:sysinternal:Vulkan:pal_vulkan_render(
 			handle: handle,
 			mvp_f32_ptr: mvpF32Addr,

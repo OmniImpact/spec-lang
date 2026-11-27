@@ -153,7 +153,13 @@ typedef SpecVkHandle64 SpecVkDescriptorSet;
 #define SPEC_VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE 2U
 #define SPEC_VK_BLEND_FACTOR_SRC_ALPHA 6U
 #define SPEC_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA 7U
+#define SPEC_VK_BLEND_FACTOR_CONSTANT_ALPHA 12U
+#define SPEC_VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA 13U
 #define SPEC_VK_BLEND_OP_ADD 0U
+#define SPEC_VK_BUFFER_USAGE_TRANSFER_DST_BIT 2U
+#define SPEC_VK_IMAGE_USAGE_TRANSFER_SRC_BIT 1U
+#define SPEC_VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL 6U
+#define SPEC_VK_ACCESS_TRANSFER_READ_BIT 0x00000800U
 #define SPEC_VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 0x00000001U
 #define SPEC_VK_PIPELINE_STAGE_TRANSFER_BIT 0x00001000U
 #define SPEC_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT 0x00000080U
@@ -833,6 +839,7 @@ typedef void (*PFN_spec_vkCmdBindDescriptorSets)(SpecVkCommandBuffer, uint32_t, 
 typedef void (*PFN_spec_vkCmdDraw)(SpecVkCommandBuffer, uint32_t, uint32_t, uint32_t, uint32_t);
 typedef void (*PFN_spec_vkCmdPipelineBarrier)(SpecVkCommandBuffer, SpecVkFlags, SpecVkFlags, SpecVkFlags, uint32_t, const void*, uint32_t, const void*, uint32_t, const SpecVkImageMemoryBarrier*);
 typedef void (*PFN_spec_vkCmdCopyBufferToImage)(SpecVkCommandBuffer, SpecVkBuffer, SpecVkImage, uint32_t, uint32_t, const SpecVkBufferImageCopy*);
+typedef void (*PFN_spec_vkCmdCopyImageToBuffer)(SpecVkCommandBuffer, SpecVkImage, uint32_t, SpecVkBuffer, uint32_t, const SpecVkBufferImageCopy*);
 
 typedef struct {
     void* lib;
@@ -915,6 +922,7 @@ typedef struct {
     PFN_spec_vkCmdDraw vkCmdDraw;
     PFN_spec_vkCmdPipelineBarrier vkCmdPipelineBarrier;
     PFN_spec_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
+    PFN_spec_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer;
 
     SpecVkInstance instance;
     SpecVkSurfaceKHR surface;
@@ -954,6 +962,23 @@ typedef struct {
     SpecVkBuffer index_buf;
     SpecVkDeviceMemory index_mem;
     uint32_t index_count;
+
+    int is_offscreen;
+    SpecVkPipeline blend_pipeline;
+    SpecVkBuffer blend_vbuf;
+    SpecVkDeviceMemory blend_vmem;
+    SpecVkBuffer blend_ibuf;
+    SpecVkDeviceMemory blend_imem;
+    uint32_t blend_index_count;
+    SpecVkImage off_color_img;
+    SpecVkDeviceMemory off_color_mem;
+    SpecVkImageView off_color_view;
+    SpecVkFramebuffer off_fb;
+    SpecVkBuffer off_read_buf;
+    SpecVkDeviceMemory off_read_mem;
+    uint32_t off_w;
+    uint32_t off_h;
+    uint8_t* off_out_ptr;
 
     SpecVkDescriptorSetLayout overlay_desc_layout;
     SpecVkDescriptorPool overlay_desc_pool;
@@ -1105,6 +1130,7 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
     LOAD_IPROC(vkCmdDraw);
     LOAD_IPROC(vkCmdPipelineBarrier);
     LOAD_IPROC(vkCmdCopyBufferToImage);
+    LOAD_IPROC(vkCmdCopyImageToBuffer);
     #undef LOAD_IPROC
     return 1;
 }
@@ -1323,6 +1349,8 @@ static int _spec_vk_create_buffer(SpecVulkanCtx* ctx, SpecVkDeviceSize size, uin
 }
 
 long long spec_pal_vulkan_destroy(long long handle);
+long long spec_pal_vulkan_set_blend_mesh(long long handle, long long vert_ptr, long long vert_bytes, long long idx_ptr, long long idx_bytes, long long idx_count);
+long long spec_pal_vulkan_render_to_pixels(long long handle, long long mvp_f32_ptr, long long out_bgra_ptr, long long width, long long height);
 
 long long spec_pal_vulkan_create(
     long long wl_display,
@@ -1335,7 +1363,8 @@ long long spec_pal_vulkan_create(
     long long frag_spv_bytes
 ) {
     _spec_vk_set_error(NULL);
-    if (!wl_display || !wl_surface) {
+    int is_offscreen = (!wl_display && !wl_surface);
+    if (!is_offscreen && (!wl_display || !wl_surface)) {
         _spec_vk_set_error("Null Wayland display or surface");
         return 0;
     }
@@ -1346,6 +1375,7 @@ long long spec_pal_vulkan_create(
 
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)calloc(1, sizeof(SpecVulkanCtx));
     if (!ctx) { _spec_vk_set_error("OOM"); return 0; }
+    ctx->is_offscreen = is_offscreen;
     if (!_spec_vk_load_procs(ctx)) { free(ctx); return 0; }
 
     SpecVkApplicationInfo app;
@@ -1362,8 +1392,8 @@ long long spec_pal_vulkan_create(
     memset(&ici, 0, sizeof(ici));
     ici.sType = SPEC_VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     ici.pApplicationInfo = &app;
-    ici.enabledExtensionCount = 2;
-    ici.ppEnabledExtensionNames = inst_exts;
+    ici.enabledExtensionCount = is_offscreen ? 0U : 2U;
+    ici.ppEnabledExtensionNames = is_offscreen ? NULL : inst_exts;
 
     if (ctx->vkCreateInstance(&ici, NULL, &ctx->instance) != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkCreateInstance failed");
@@ -1377,14 +1407,16 @@ long long spec_pal_vulkan_create(
         return 0;
     }
 
-    SpecVkWaylandSurfaceCreateInfoKHR wsci;
-    memset(&wsci, 0, sizeof(wsci));
-    wsci.sType = SPEC_VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    wsci.display = (void*)(intptr_t)wl_display;
-    wsci.surface = (void*)(intptr_t)wl_surface;
-    if (ctx->vkCreateWaylandSurfaceKHR(ctx->instance, &wsci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
-        _spec_vk_set_error("vkCreateWaylandSurfaceKHR failed");
-        goto fail;
+    if (!is_offscreen) {
+        SpecVkWaylandSurfaceCreateInfoKHR wsci;
+        memset(&wsci, 0, sizeof(wsci));
+        wsci.sType = SPEC_VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+        wsci.display = (void*)(intptr_t)wl_display;
+        wsci.surface = (void*)(intptr_t)wl_surface;
+        if (ctx->vkCreateWaylandSurfaceKHR(ctx->instance, &wsci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
+            _spec_vk_set_error("vkCreateWaylandSurfaceKHR failed");
+            goto fail;
+        }
     }
 
     uint32_t dev_count = 0;
@@ -1404,8 +1436,11 @@ long long spec_pal_vulkan_create(
         SpecVkQueueFamilyProperties* qfs = (SpecVkQueueFamilyProperties*)calloc(qf_count, sizeof(SpecVkQueueFamilyProperties));
         ctx->vkGetPhysicalDeviceQueueFamilyProperties(devs[d], &qf_count, qfs);
         for (uint32_t q = 0; q < qf_count; q++) {
-            SpecVkBool32 present_ok = 0;
-            ctx->vkGetPhysicalDeviceSurfaceSupportKHR(devs[d], q, ctx->surface, &present_ok);
+            SpecVkBool32 present_ok = 1;
+            if (!is_offscreen) {
+                present_ok = 0;
+                ctx->vkGetPhysicalDeviceSurfaceSupportKHR(devs[d], q, ctx->surface, &present_ok);
+            }
             if ((qfs[q].queueFlags & SPEC_VK_QUEUE_GRAPHICS_BIT) && present_ok) {
                 ctx->phys = devs[d];
                 ctx->queue_family = q;
@@ -1435,8 +1470,8 @@ long long spec_pal_vulkan_create(
     dci.sType = SPEC_VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dci.queueCreateInfoCount = 1;
     dci.pQueueCreateInfos = &dqci;
-    dci.enabledExtensionCount = 1;
-    dci.ppEnabledExtensionNames = dev_exts;
+    dci.enabledExtensionCount = is_offscreen ? 0U : 1U;
+    dci.ppEnabledExtensionNames = is_offscreen ? NULL : dev_exts;
     if (ctx->vkCreateDevice(ctx->phys, &dci, NULL, &ctx->device) != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkCreateDevice failed");
         goto fail;
@@ -1457,23 +1492,25 @@ long long spec_pal_vulkan_create(
     ctx->vkGetDeviceQueue(ctx->device, ctx->queue_family, 0, &ctx->queue);
 
     /* Surface format */
-    uint32_t fmt_count = 0;
-    ctx->vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->phys, ctx->surface, &fmt_count, NULL);
     ctx->color_format = SPEC_VK_FORMAT_B8G8R8A8_UNORM;
     ctx->color_space = SPEC_VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-    if (fmt_count > 0) {
-        SpecVkSurfaceFormatKHR* fmts = (SpecVkSurfaceFormatKHR*)calloc(fmt_count, sizeof(SpecVkSurfaceFormatKHR));
-        ctx->vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->phys, ctx->surface, &fmt_count, fmts);
-        ctx->color_format = fmts[0].format;
-        ctx->color_space = fmts[0].colorSpace;
-        for (uint32_t i = 0; i < fmt_count; i++) {
-            if (fmts[i].format == SPEC_VK_FORMAT_B8G8R8A8_SRGB && fmts[i].colorSpace == SPEC_VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                ctx->color_format = fmts[i].format;
-                ctx->color_space = fmts[i].colorSpace;
-                break;
+    if (!is_offscreen) {
+        uint32_t fmt_count = 0;
+        ctx->vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->phys, ctx->surface, &fmt_count, NULL);
+        if (fmt_count > 0) {
+            SpecVkSurfaceFormatKHR* fmts = (SpecVkSurfaceFormatKHR*)calloc(fmt_count, sizeof(SpecVkSurfaceFormatKHR));
+            ctx->vkGetPhysicalDeviceSurfaceFormatsKHR(ctx->phys, ctx->surface, &fmt_count, fmts);
+            ctx->color_format = fmts[0].format;
+            ctx->color_space = fmts[0].colorSpace;
+            for (uint32_t i = 0; i < fmt_count; i++) {
+                if (fmts[i].format == SPEC_VK_FORMAT_B8G8R8A8_SRGB && fmts[i].colorSpace == SPEC_VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                    ctx->color_format = fmts[i].format;
+                    ctx->color_space = fmts[i].colorSpace;
+                    break;
+                }
             }
+            free(fmts);
         }
-        free(fmts);
     }
 
     /* Render pass (color + depth) */
@@ -1486,7 +1523,7 @@ long long spec_pal_vulkan_create(
     atts[0].stencilLoadOp = SPEC_VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     atts[0].stencilStoreOp = SPEC_VK_ATTACHMENT_STORE_OP_DONT_CARE;
     atts[0].initialLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
-    atts[0].finalLayout = SPEC_VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    atts[0].finalLayout = is_offscreen ? SPEC_VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : SPEC_VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     atts[1].format = SPEC_VK_FORMAT_D32_SFLOAT;
     atts[1].samples = SPEC_VK_SAMPLE_COUNT_1_BIT;
@@ -1653,6 +1690,34 @@ long long spec_pal_vulkan_create(
     if (ctx->vkCreateGraphicsPipelines(ctx->device, SPEC_VK_NULL_HANDLE, 1, &gpci, NULL, &ctx->pipeline) != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkCreateGraphicsPipelines failed");
         goto fail;
+    }
+
+    if (is_offscreen) {
+        SpecVkPipelineDepthStencilStateCreateInfo bds = ds;
+        bds.depthWriteEnable = SPEC_VK_FALSE;
+        SpecVkPipelineColorBlendAttachmentState bcba;
+        memset(&bcba, 0, sizeof(bcba));
+        bcba.blendEnable = SPEC_VK_TRUE;
+        bcba.srcColorBlendFactor = SPEC_VK_BLEND_FACTOR_CONSTANT_ALPHA;
+        bcba.dstColorBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+        bcba.colorBlendOp = SPEC_VK_BLEND_OP_ADD;
+        bcba.srcAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_CONSTANT_ALPHA;
+        bcba.dstAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+        bcba.alphaBlendOp = SPEC_VK_BLEND_OP_ADD;
+        bcba.colorWriteMask = 0xFU;
+        SpecVkPipelineColorBlendStateCreateInfo bcb;
+        memset(&bcb, 0, sizeof(bcb));
+        bcb.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        bcb.attachmentCount = 1;
+        bcb.pAttachments = &bcba;
+        bcb.blendConstants[0] = 0.0f;
+        bcb.blendConstants[1] = 0.0f;
+        bcb.blendConstants[2] = 0.0f;
+        bcb.blendConstants[3] = 0.42f;
+        SpecVkGraphicsPipelineCreateInfo bgpci = gpci;
+        bgpci.pDepthStencilState = &bds;
+        bgpci.pColorBlendState = &bcb;
+        ctx->vkCreateGraphicsPipelines(ctx->device, SPEC_VK_NULL_HANDLE, 1, &bgpci, NULL, &ctx->blend_pipeline);
     }
 
     SpecVkCommandPoolCreateInfo cpci;
@@ -1864,6 +1929,9 @@ long long spec_pal_vulkan_set_mesh(
 ) {
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
     if (!ctx || !ctx->device) { _spec_vk_set_error("Invalid Vulkan handle"); return 0; }
+    if (idx_count < 0) {
+        return spec_pal_vulkan_set_blend_mesh(handle, vert_ptr, vert_bytes, idx_ptr, idx_bytes, -idx_count);
+    }
     ctx->vkDeviceWaitIdle(ctx->device);
 
     if (ctx->vertex_buf) { ctx->vkDestroyBuffer(ctx->device, ctx->vertex_buf, NULL); ctx->vertex_buf = 0; }
@@ -1963,7 +2031,11 @@ long long spec_pal_vulkan_set_viewport(long long handle, long long x, long long 
 
 long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long long width, long long height) {
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
-    if (!ctx || !ctx->device || !ctx->swapchain) return 0;
+    if (!ctx || !ctx->device) return 0;
+    if (ctx->is_offscreen) {
+        return spec_pal_vulkan_render_to_pixels(handle, mvp_f32_ptr, (long long)(intptr_t)ctx->off_out_ptr, width, height);
+    }
+    if (!ctx->swapchain) return 0;
 
     if (width > 0 && height > 0 && ((uint32_t)width != ctx->extent.width || (uint32_t)height != ctx->extent.height)) {
         ctx->vkDeviceWaitIdle(ctx->device);
@@ -2149,7 +2221,12 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
 
 long long spec_pal_vulkan_set_overlay(long long handle, long long pixels_addr, long long width, long long height) {
     SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
-    if (!ctx || !ctx->device || !ctx->overlay_desc_set || !pixels_addr || width <= 0 || height <= 0) return 0;
+    if (!ctx || !ctx->device || !pixels_addr || width <= 0 || height <= 0) return 0;
+    if (ctx->is_offscreen) {
+        ctx->off_out_ptr = (uint8_t*)(intptr_t)pixels_addr;
+        return 1;
+    }
+    if (!ctx->overlay_desc_set) return 0;
 
     size_t needed = (size_t)width * (size_t)height * 4U;
     if (needed > ctx->overlay_cpu_bytes) {
@@ -2192,12 +2269,23 @@ long long spec_pal_vulkan_destroy(long long handle) {
         if (ctx->vertex_mem) ctx->vkFreeMemory(ctx->device, ctx->vertex_mem, NULL);
         if (ctx->index_buf) ctx->vkDestroyBuffer(ctx->device, ctx->index_buf, NULL);
         if (ctx->index_mem) ctx->vkFreeMemory(ctx->device, ctx->index_mem, NULL);
+        if (ctx->blend_vbuf) ctx->vkDestroyBuffer(ctx->device, ctx->blend_vbuf, NULL);
+        if (ctx->blend_vmem) ctx->vkFreeMemory(ctx->device, ctx->blend_vmem, NULL);
+        if (ctx->blend_ibuf) ctx->vkDestroyBuffer(ctx->device, ctx->blend_ibuf, NULL);
+        if (ctx->blend_imem) ctx->vkFreeMemory(ctx->device, ctx->blend_imem, NULL);
+        if (ctx->off_fb) ctx->vkDestroyFramebuffer(ctx->device, ctx->off_fb, NULL);
+        if (ctx->off_color_view) ctx->vkDestroyImageView(ctx->device, ctx->off_color_view, NULL);
+        if (ctx->off_color_img) ctx->vkDestroyImage(ctx->device, ctx->off_color_img, NULL);
+        if (ctx->off_color_mem) ctx->vkFreeMemory(ctx->device, ctx->off_color_mem, NULL);
+        if (ctx->off_read_buf) ctx->vkDestroyBuffer(ctx->device, ctx->off_read_buf, NULL);
+        if (ctx->off_read_mem) ctx->vkFreeMemory(ctx->device, ctx->off_read_mem, NULL);
         for (int f = 0; f < 2; f++) {
             if (ctx->in_flight_fence[f]) ctx->vkDestroyFence(ctx->device, ctx->in_flight_fence[f], NULL);
             if (ctx->render_done_sem[f]) ctx->vkDestroySemaphore(ctx->device, ctx->render_done_sem[f], NULL);
             if (ctx->img_avail_sem[f]) ctx->vkDestroySemaphore(ctx->device, ctx->img_avail_sem[f], NULL);
         }
         if (ctx->cmd_pool) ctx->vkDestroyCommandPool(ctx->device, ctx->cmd_pool, NULL);
+        if (ctx->blend_pipeline) ctx->vkDestroyPipeline(ctx->device, ctx->blend_pipeline, NULL);
         if (ctx->pipeline) ctx->vkDestroyPipeline(ctx->device, ctx->pipeline, NULL);
         if (ctx->pipe_layout) ctx->vkDestroyPipelineLayout(ctx->device, ctx->pipe_layout, NULL);
         if (ctx->frag_mod) ctx->vkDestroyShaderModule(ctx->device, ctx->frag_mod, NULL);
@@ -2217,9 +2305,225 @@ long long spec_pal_vulkan_last_error(void) {
     return (long long)(intptr_t)_spec_vk_error;
 }
 
+static int _spec_vk_ensure_offscreen_resources(SpecVulkanCtx* ctx, uint32_t w, uint32_t h) {
+    if (ctx->off_fb && ctx->off_w == w && ctx->off_h == h) return 1;
+    ctx->vkDeviceWaitIdle(ctx->device);
+    if (ctx->off_fb) { ctx->vkDestroyFramebuffer(ctx->device, ctx->off_fb, NULL); ctx->off_fb = 0; }
+    if (ctx->off_color_view) { ctx->vkDestroyImageView(ctx->device, ctx->off_color_view, NULL); ctx->off_color_view = 0; }
+    if (ctx->off_color_img) { ctx->vkDestroyImage(ctx->device, ctx->off_color_img, NULL); ctx->off_color_img = 0; }
+    if (ctx->off_color_mem) { ctx->vkFreeMemory(ctx->device, ctx->off_color_mem, NULL); ctx->off_color_mem = 0; }
+    if (ctx->off_read_buf) { ctx->vkDestroyBuffer(ctx->device, ctx->off_read_buf, NULL); ctx->off_read_buf = 0; }
+    if (ctx->off_read_mem) { ctx->vkFreeMemory(ctx->device, ctx->off_read_mem, NULL); ctx->off_read_mem = 0; }
+    if (ctx->depth_view) { ctx->vkDestroyImageView(ctx->device, ctx->depth_view, NULL); ctx->depth_view = 0; }
+    if (ctx->depth_image) { ctx->vkDestroyImage(ctx->device, ctx->depth_image, NULL); ctx->depth_image = 0; }
+    if (ctx->depth_mem) { ctx->vkFreeMemory(ctx->device, ctx->depth_mem, NULL); ctx->depth_mem = 0; }
+
+    SpecVkImageCreateInfo cici;
+    memset(&cici, 0, sizeof(cici));
+    cici.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    cici.imageType = SPEC_VK_IMAGE_TYPE_2D;
+    cici.format = ctx->color_format;
+    cici.extent.width = w;
+    cici.extent.height = h;
+    cici.extent.depth = 1;
+    cici.mipLevels = 1;
+    cici.arrayLayers = 1;
+    cici.samples = SPEC_VK_SAMPLE_COUNT_1_BIT;
+    cici.tiling = SPEC_VK_IMAGE_TILING_OPTIMAL;
+    cici.usage = SPEC_VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | SPEC_VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    cici.sharingMode = SPEC_VK_SHARING_MODE_EXCLUSIVE;
+    cici.initialLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
+    if (ctx->vkCreateImage(ctx->device, &cici, NULL, &ctx->off_color_img) != SPEC_VK_SUCCESS) return 0;
+
+    SpecVkMemoryRequirements creq;
+    ctx->vkGetImageMemoryRequirements(ctx->device, ctx->off_color_img, &creq);
+    uint32_t cmt = _spec_vk_find_memory_type(ctx, creq.memoryTypeBits, SPEC_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (cmt == ~0U) return 0;
+    SpecVkMemoryAllocateInfo cmai = { SPEC_VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, creq.size, cmt };
+    if (ctx->vkAllocateMemory(ctx->device, &cmai, NULL, &ctx->off_color_mem) != SPEC_VK_SUCCESS) return 0;
+    ctx->vkBindImageMemory(ctx->device, ctx->off_color_img, ctx->off_color_mem, 0);
+
+    SpecVkImageViewCreateInfo civ;
+    memset(&civ, 0, sizeof(civ));
+    civ.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    civ.image = ctx->off_color_img;
+    civ.viewType = SPEC_VK_IMAGE_VIEW_TYPE_2D;
+    civ.format = ctx->color_format;
+    civ.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+    civ.subresourceRange.levelCount = 1;
+    civ.subresourceRange.layerCount = 1;
+    if (ctx->vkCreateImageView(ctx->device, &civ, NULL, &ctx->off_color_view) != SPEC_VK_SUCCESS) return 0;
+
+    SpecVkImageCreateInfo dici;
+    memset(&dici, 0, sizeof(dici));
+    dici.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    dici.imageType = SPEC_VK_IMAGE_TYPE_2D;
+    dici.format = SPEC_VK_FORMAT_D32_SFLOAT;
+    dici.extent.width = w;
+    dici.extent.height = h;
+    dici.extent.depth = 1;
+    dici.mipLevels = 1;
+    dici.arrayLayers = 1;
+    dici.samples = SPEC_VK_SAMPLE_COUNT_1_BIT;
+    dici.tiling = SPEC_VK_IMAGE_TILING_OPTIMAL;
+    dici.usage = SPEC_VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    dici.sharingMode = SPEC_VK_SHARING_MODE_EXCLUSIVE;
+    dici.initialLayout = SPEC_VK_IMAGE_LAYOUT_UNDEFINED;
+    if (ctx->vkCreateImage(ctx->device, &dici, NULL, &ctx->depth_image) != SPEC_VK_SUCCESS) return 0;
+
+    SpecVkMemoryRequirements dreq;
+    ctx->vkGetImageMemoryRequirements(ctx->device, ctx->depth_image, &dreq);
+    uint32_t dmt = _spec_vk_find_memory_type(ctx, dreq.memoryTypeBits, SPEC_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (dmt == ~0U) return 0;
+    SpecVkMemoryAllocateInfo dmai = { SPEC_VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, NULL, dreq.size, dmt };
+    if (ctx->vkAllocateMemory(ctx->device, &dmai, NULL, &ctx->depth_mem) != SPEC_VK_SUCCESS) return 0;
+    ctx->vkBindImageMemory(ctx->device, ctx->depth_image, ctx->depth_mem, 0);
+
+    SpecVkImageViewCreateInfo div;
+    memset(&div, 0, sizeof(div));
+    div.sType = SPEC_VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    div.image = ctx->depth_image;
+    div.viewType = SPEC_VK_IMAGE_VIEW_TYPE_2D;
+    div.format = SPEC_VK_FORMAT_D32_SFLOAT;
+    div.subresourceRange.aspectMask = SPEC_VK_IMAGE_ASPECT_DEPTH_BIT;
+    div.subresourceRange.levelCount = 1;
+    div.subresourceRange.layerCount = 1;
+    if (ctx->vkCreateImageView(ctx->device, &div, NULL, &ctx->depth_view) != SPEC_VK_SUCCESS) return 0;
+
+    SpecVkImageView fbatts[2] = { ctx->off_color_view, ctx->depth_view };
+    SpecVkFramebufferCreateInfo fbci;
+    memset(&fbci, 0, sizeof(fbci));
+    fbci.sType = SPEC_VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fbci.renderPass = ctx->render_pass;
+    fbci.attachmentCount = 2;
+    fbci.pAttachments = fbatts;
+    fbci.width = w;
+    fbci.height = h;
+    fbci.layers = 1;
+    if (ctx->vkCreateFramebuffer(ctx->device, &fbci, NULL, &ctx->off_fb) != SPEC_VK_SUCCESS) return 0;
+
+    SpecVkDeviceSize rbytes = (SpecVkDeviceSize)w * (SpecVkDeviceSize)h * 4ULL;
+    if (!_spec_vk_create_buffer(ctx, rbytes, SPEC_VK_BUFFER_USAGE_TRANSFER_DST_BIT, NULL, &ctx->off_read_buf, &ctx->off_read_mem)) return 0;
+
+    ctx->off_w = w;
+    ctx->off_h = h;
+    return 1;
+}
+
+long long spec_pal_vulkan_set_blend_mesh(
+    long long handle,
+    long long vert_ptr,
+    long long vert_bytes,
+    long long idx_ptr,
+    long long idx_bytes,
+    long long idx_count
+) {
+    SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
+    if (!ctx || !ctx->device) { _spec_vk_set_error("Invalid Vulkan handle"); return 0; }
+    ctx->vkDeviceWaitIdle(ctx->device);
+    if (ctx->blend_vbuf) { ctx->vkDestroyBuffer(ctx->device, ctx->blend_vbuf, NULL); ctx->blend_vbuf = 0; }
+    if (ctx->blend_vmem) { ctx->vkFreeMemory(ctx->device, ctx->blend_vmem, NULL); ctx->blend_vmem = 0; }
+    if (ctx->blend_ibuf) { ctx->vkDestroyBuffer(ctx->device, ctx->blend_ibuf, NULL); ctx->blend_ibuf = 0; }
+    if (ctx->blend_imem) { ctx->vkFreeMemory(ctx->device, ctx->blend_imem, NULL); ctx->blend_imem = 0; }
+    if (!_spec_vk_create_buffer(ctx, (SpecVkDeviceSize)vert_bytes, SPEC_VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, (const void*)(intptr_t)vert_ptr, &ctx->blend_vbuf, &ctx->blend_vmem)) return 0;
+    if (!_spec_vk_create_buffer(ctx, (SpecVkDeviceSize)idx_bytes, SPEC_VK_BUFFER_USAGE_INDEX_BUFFER_BIT, (const void*)(intptr_t)idx_ptr, &ctx->blend_ibuf, &ctx->blend_imem)) return 0;
+    ctx->blend_index_count = (uint32_t)idx_count;
+    return 1;
+}
+
+long long spec_pal_vulkan_render_to_pixels(long long handle, long long mvp_f32_ptr, long long out_bgra_ptr, long long width, long long height) {
+    SpecVulkanCtx* ctx = (SpecVulkanCtx*)(intptr_t)handle;
+    if (!ctx || !ctx->device || !ctx->is_offscreen || !out_bgra_ptr || width <= 0 || height <= 0) return 0;
+    uint32_t w = (uint32_t)width;
+    uint32_t h = (uint32_t)height;
+    if (!_spec_vk_ensure_offscreen_resources(ctx, w, h)) return 0;
+
+    SpecVkCommandBuffer cmd = ctx->cmd_buf[0];
+    ctx->vkWaitForFences(ctx->device, 1, &ctx->in_flight_fence[0], SPEC_VK_TRUE, ~0ULL);
+    ctx->vkResetFences(ctx->device, 1, &ctx->in_flight_fence[0]);
+    ctx->vkResetCommandBuffer(cmd, 0);
+
+    SpecVkCommandBufferBeginInfo cbi;
+    memset(&cbi, 0, sizeof(cbi));
+    cbi.sType = SPEC_VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    ctx->vkBeginCommandBuffer(cmd, &cbi);
+
+    SpecVkClearValue clears[2];
+    memset(clears, 0, sizeof(clears));
+    clears[0].float32[0] = ctx->clear_r;
+    clears[0].float32[1] = ctx->clear_g;
+    clears[0].float32[2] = ctx->clear_b;
+    clears[0].float32[3] = ctx->clear_a;
+    clears[1].depthStencil.depth = 1.0f;
+
+    SpecVkRenderPassBeginInfo rpbi;
+    memset(&rpbi, 0, sizeof(rpbi));
+    rpbi.sType = SPEC_VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpbi.renderPass = ctx->render_pass;
+    rpbi.framebuffer = ctx->off_fb;
+    rpbi.renderArea.extent.width = w;
+    rpbi.renderArea.extent.height = h;
+    rpbi.clearValueCount = 2;
+    rpbi.pClearValues = clears;
+    ctx->vkCmdBeginRenderPass(cmd, &rpbi, SPEC_VK_SUBPASS_CONTENTS_INLINE);
+
+    SpecVkViewport vp = { 0.0f, 0.0f, (float)w, (float)h, 0.0f, 1.0f };
+    SpecVkRect2D sc = { { 0, 0 }, { w, h } };
+    ctx->vkCmdSetViewport(cmd, 0, 1, &vp);
+    ctx->vkCmdSetScissor(cmd, 0, 1, &sc);
+
+    if (ctx->vertex_buf && ctx->index_buf && ctx->index_count > 0 && mvp_f32_ptr) {
+        SpecVkDeviceSize voff = 0;
+        ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->pipeline);
+        ctx->vkCmdBindVertexBuffers(cmd, 0, 1, &ctx->vertex_buf, &voff);
+        ctx->vkCmdBindIndexBuffer(cmd, ctx->index_buf, 0, SPEC_VK_INDEX_TYPE_UINT16);
+        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
+        ctx->vkCmdDrawIndexed(cmd, ctx->index_count, 1, 0, 0, 0);
+    }
+
+    if (ctx->blend_pipeline && ctx->blend_vbuf && ctx->blend_ibuf && ctx->blend_index_count > 0 && mvp_f32_ptr) {
+        SpecVkDeviceSize voff = 0;
+        ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->blend_pipeline);
+        ctx->vkCmdBindVertexBuffers(cmd, 0, 1, &ctx->blend_vbuf, &voff);
+        ctx->vkCmdBindIndexBuffer(cmd, ctx->blend_ibuf, 0, SPEC_VK_INDEX_TYPE_UINT16);
+        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
+        ctx->vkCmdDrawIndexed(cmd, ctx->blend_index_count, 1, 0, 0, 0);
+    }
+
+    ctx->vkCmdEndRenderPass(cmd);
+
+    SpecVkBufferImageCopy reg;
+    memset(&reg, 0, sizeof(reg));
+    reg.imageSubresource.aspectMask = SPEC_VK_IMAGE_ASPECT_COLOR_BIT;
+    reg.imageSubresource.layerCount = 1;
+    reg.imageExtent.width = w;
+    reg.imageExtent.height = h;
+    reg.imageExtent.depth = 1;
+    ctx->vkCmdCopyImageToBuffer(cmd, ctx->off_color_img, SPEC_VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ctx->off_read_buf, 1, &reg);
+
+    ctx->vkEndCommandBuffer(cmd);
+
+    SpecVkSubmitInfo si;
+    memset(&si, 0, sizeof(si));
+    si.sType = SPEC_VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    si.commandBufferCount = 1;
+    si.pCommandBuffers = &cmd;
+    if (ctx->vkQueueSubmit(ctx->queue, 1, &si, ctx->in_flight_fence[0]) != SPEC_VK_SUCCESS) return 0;
+    ctx->vkWaitForFences(ctx->device, 1, &ctx->in_flight_fence[0], SPEC_VK_TRUE, ~0ULL);
+
+    SpecVkDeviceSize rbytes = (SpecVkDeviceSize)w * (SpecVkDeviceSize)h * 4ULL;
+    void* mapped = NULL;
+    if (ctx->vkMapMemory(ctx->device, ctx->off_read_mem, 0, rbytes, 0, &mapped) != SPEC_VK_SUCCESS) return 0;
+    memcpy((void*)(intptr_t)out_bgra_ptr, mapped, (size_t)rbytes);
+    ctx->vkUnmapMemory(ctx->device, ctx->off_read_mem);
+    return 1;
+}
+
 #else
 
 long long spec_pal_vulkan_destroy(long long handle);
+long long spec_pal_vulkan_set_blend_mesh(long long handle, long long vert_ptr, long long vert_bytes, long long idx_ptr, long long idx_bytes, long long idx_count);
+long long spec_pal_vulkan_render_to_pixels(long long handle, long long mvp_f32_ptr, long long out_bgra_ptr, long long width, long long height);
 
 long long spec_pal_vulkan_create(
     long long wl_display,
@@ -2280,6 +2584,16 @@ long long spec_pal_vulkan_destroy(long long handle) {
 
 long long spec_pal_vulkan_last_error(void) {
     return (long long)(intptr_t)"Vulkan surface is only supported on Linux";
+}
+
+long long spec_pal_vulkan_set_blend_mesh(long long handle, long long vert_ptr, long long vert_bytes, long long idx_ptr, long long idx_bytes, long long idx_count) {
+    (void)handle; (void)vert_ptr; (void)vert_bytes; (void)idx_ptr; (void)idx_bytes; (void)idx_count;
+    return 0;
+}
+
+long long spec_pal_vulkan_render_to_pixels(long long handle, long long mvp_f32_ptr, long long out_bgra_ptr, long long width, long long height) {
+    (void)handle; (void)mvp_f32_ptr; (void)out_bgra_ptr; (void)width; (void)height;
+    return 0;
 }
 
 #endif

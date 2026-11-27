@@ -36,10 +36,11 @@ Class is ShowcaseView{
 		['suitshowcase', 'view', DateTimePageView],
 		['suitshowcase', 'view', TextStylesPageView],
 		['suitshowcase', 'view', TextTreePageView],
-		['suitshowcase', 'view', DataFeedbackPageView]
+		['suitshowcase', 'view', DataFeedbackPageView],
+		['suitshowcase', 'view', VulkanPageView]
 	];
 
-	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'datetime', 'textstyles', 'lines', 'fills', 'text', 'data']);
+	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'datetime', 'textstyles', 'lines', 'fills', 'text', 'data', 'vulkan']);
 
 	local Function of Int is routeIndex(String is routeName){
 		local Int is i: 0;
@@ -66,6 +67,7 @@ Class is ShowcaseView{
 		local TextStylesPageView is textStylesPage: TextStylesPageView(vm: vm);
 		local TextTreePageView is textPage: TextTreePageView(vm: vm);
 		local DataFeedbackPageView is dataFeedbackPage: DataFeedbackPageView(vm: vm);
+		local VulkanPageView is vulkanPage: VulkanPageView(vm: vm);
 
 		local NavStack is navStack: NavStack(
 			route: vm:selectedRoute,
@@ -84,13 +86,14 @@ Class is ShowcaseView{
 				NavRoute(name: 'lines', child: ScrollView(child: Padding(useThemePad: true, child: linesPage:build()))),
 				NavRoute(name: 'fills', child: ScrollView(child: Padding(useThemePad: true, child: fillsPage:build()))),
 				NavRoute(name: 'text', child: ScrollView(child: Padding(useThemePad: true, child: textPage:build()))),
-				NavRoute(name: 'data', child: ScrollView(child: Padding(useThemePad: true, child: dataFeedbackPage:build())))
+				NavRoute(name: 'data', child: ScrollView(child: Padding(useThemePad: true, child: dataFeedbackPage:build()))),
+				NavRoute(name: 'vulkan', child: ScrollView(child: Padding(useThemePad: true, child: vulkanPage:build())))
 			])
 		);
 
 		local SectionV is sidebar: SectionV(
 			segmented: true,
-			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Date & Time', 'Text Styles', 'Lines & Borders', 'Fill & Effects', 'Text & Tree', 'Data & Feedback']),
+			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Date & Time', 'Text Styles', 'Lines & Borders', 'Fill & Effects', 'Text & Tree', 'Data & Feedback', '3D Vulkan']),
 			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
 			itemMinWidthPt: 132.0,
 			itemHeightPt: 24.0,

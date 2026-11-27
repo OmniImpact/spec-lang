@@ -13,10 +13,12 @@ Class of GridFlex is GridFlexH{
 	replace Function is init(
 		Array of GridFlexPanel is panels: Array(),
 		Float is spacingPt: 0.0,
+		Float is heightPt: 0.0,
 		Boolean is movable: true
 	){
 		:panels: panels;
 		:spacingPt: spacingPt;
+		:heightPt: heightPt;
 		:movable: movable;
 		:horizontal: true;
 	}
