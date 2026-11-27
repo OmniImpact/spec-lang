@@ -98,7 +98,7 @@ Class of SewNode is SelectDropdown{
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is px: activeScale:px(pt: activeTheme:baseTextPt);
 		return if({ px < 10 }, { 10 }, { px });
 	}
 
@@ -106,7 +106,7 @@ Class of SewNode is SelectDropdown{
 		local Int is fpx: :fontPx();
 		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is h: fpx + pad;
-		local Int is minH: activeScale:px(pt: activeTheme:buttonMinHeightPt * 0.85);
+		local Int is minH: activeScale:px(pt: activeTheme:buttonHeightPt * 0.85);
 		return if({ h > minH }, { h }, { minH });
 	}
 
@@ -191,7 +191,7 @@ Class of SewNode is SelectDropdown{
 		local Int is h: if({ heightPt > 0.0 }, {
 			activeScale:px(pt: heightPt)
 		}, {
-			activeScale:px(pt: activeTheme:buttonMinHeightPt)
+			activeScale:px(pt: activeTheme:buttonHeightPt)
 		});
 		desiredSize: Size(width: c:clampW(w: minW), height: c:clampH(h: h));
 		return desiredSize;
@@ -250,7 +250,7 @@ Class of SewNode is SelectDropdown{
 		local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
 		ctx:drawStyledBox(
 			x: pr:x, y: pr:y, w: pr:width, h: pr:height,
-			bgColor: activeTheme:surface, borderColor: activeTheme:panelBorderColorArgb(),
+			bgColor: activeTheme:surfaceBg, borderColor: activeTheme:panelBorderColorArgb(),
 			thickness: bw, radius: rad, style: activeTheme:panelBorderStyle
 		);
 
@@ -268,7 +268,7 @@ Class of SewNode is SelectDropdown{
 
 		ctx:setClip(x: innerX, y: innerY, w: innerW, h: innerH);
 		if({ searchable }, {
-			ctx:fillRect(x: innerX, y: innerY, w: innerW, h: searchH, color: activeTheme:surfaceHover);
+			ctx:fillRect(x: innerX, y: innerY, w: innerW, h: searchH, color: activeTheme:hoverBg);
 			local String is sTxt: if({ filterText != '' }, { filterText }, { 'Filter...' });
 			local Int is sCol: if({ filterText != '' }, { activeTheme:textPrimary }, { activeTheme:textMuted });
 			ctx:drawText(x: innerX + pad, y: innerY + (searchH - th) / 2, text: sTxt, color: sCol, pixelHeight: fpx);
@@ -319,7 +319,7 @@ Class of SewNode is SelectDropdown{
 							x: innerX + pad,
 							y: ry + (rh - th) / 2,
 							text: options:get(index: realIdx),
-							color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textSecondary }),
+							color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textMuted }),
 							pixelHeight: fpx,
 							bold: isSel,
 							italic: false,

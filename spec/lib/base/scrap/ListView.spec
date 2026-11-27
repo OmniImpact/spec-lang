@@ -81,10 +81,10 @@ Class of SewNode is ListView{
 			local Int is h: activeScale:px(pt: rowHeightPt);
 			return if({ h < 16 }, { 16 }, { h });
 		});
-		local Int is fontPx: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is fontPx: activeScale:px(pt: activeTheme:baseTextPt);
 		local Int is padPx: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is h: fontPx + padPx;
-		local Int is minH: activeScale:px(pt: activeTheme:buttonMinHeightPt * 0.85);
+		local Int is minH: activeScale:px(pt: activeTheme:buttonHeightPt * 0.85);
 		return if({ h > minH }, { h }, { minH });
 	}
 
@@ -147,7 +147,7 @@ Class of SewNode is ListView{
 		local Int is padX: activeScale:px(pt: activeTheme:paddingPt) * 2;
 		local Int is gripSpace: if({ reorderable }, { activeScale:px(pt: 18.0) }, { 0 });
 		local Int is maxTextW: activeScale:px(pt: minWidthPt);
-		local Int is fontPx: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is fontPx: activeScale:px(pt: activeTheme:baseTextPt);
 		local Int is i: 0;
 		while({ i < items:length() }, {
 			local Int is tw: (items:get(index: i):length() * fontPx * 6) / 10 + padX + gripSpace + ins * 2;
@@ -182,7 +182,7 @@ Class of SewNode is ListView{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is bw: if({ showBorder }, { activeTheme:panelBorderPx(scaleFactor: activeScale:factor) }, { 0 });
 		local Int is rad: if({ showBorder }, { activeScale:px(pt: activeTheme:panelCornerRadiusPt) }, { 0 });
-		local Int is bgCol: activeTheme:surface;
+		local Int is bgCol: activeTheme:surfaceBg;
 		if({ showBorder }, {
 			ctx:drawStyledBox(
 				x: b:x, y: b:y, w: b:width, h: b:height,
@@ -202,7 +202,7 @@ Class of SewNode is ListView{
 		ctx:setClip(x: clipX, y: clipY, w: clipW, h: clipH);
 
 		local Int is rh: :rowHeightPx();
-		local Int is fontPx: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is fontPx: activeScale:px(pt: activeTheme:baseTextPt);
 		local Int is padX: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is gripW: if({ reorderable }, { activeScale:px(pt: 16.0) }, { 0 });
 		local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
@@ -247,7 +247,7 @@ Class of SewNode is ListView{
 				});
 				local Int is textX: clipX + padX + gripW;
 				local Int is textY: ry + (rh - fontPx) / 2;
-				local Int is textCol: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textSecondary });
+				local Int is textCol: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textMuted });
 				ctx:drawText(
 					x: textX, y: textY,
 					text: items:get(index: i),

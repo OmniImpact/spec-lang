@@ -86,10 +86,10 @@ Class of SewNode is TableView{
 			local Int is h: activeScale:px(pt: rowHeightPt);
 			return if({ h < 18 }, { 18 }, { h });
 		});
-		local Int is fontPx: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is fontPx: activeScale:px(pt: activeTheme:baseTextPt);
 		local Int is padPx: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is h: fontPx + padPx;
-		local Int is minH: activeScale:px(pt: activeTheme:buttonMinHeightPt * 0.9);
+		local Int is minH: activeScale:px(pt: activeTheme:buttonHeightPt * 0.9);
 		return if({ h > minH }, { h }, { minH });
 	}
 
@@ -248,7 +248,7 @@ Class of SewNode is TableView{
 
 		ctx:drawStyledBox(
 			x: b:x, y: b:y, w: b:width, h: b:height,
-			bgColor: activeTheme:surface, borderColor: activeTheme:panelBorderColorArgb(),
+			bgColor: activeTheme:surfaceBg, borderColor: activeTheme:panelBorderColorArgb(),
 			thickness: bw, radius: rad, style: activeTheme:panelBorderStyle
 		);
 
@@ -259,20 +259,20 @@ Class of SewNode is TableView{
 		if({ innerW <= 0 || innerH <= 0 }, { return; });
 
 		local Int is rh: :rowHeightPx();
-		local Int is fontPx: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is fontPx: activeScale:px(pt: activeTheme:baseTextPt);
 		local Int is padX: activeScale:px(pt: activeTheme:paddingPt);
 
 		ctx:setClip(x: innerX, y: innerY, w: innerW, h: innerH);
 
 		# Header row
 		local Int is hdrH: if({ rh < innerH }, { rh }, { innerH });
-		ctx:fillRect(x: innerX, y: innerY, w: innerW, h: hdrH, color: activeTheme:surfaceHover);
+		ctx:fillRect(x: innerX, y: innerY, w: innerW, h: hdrH, color: activeTheme:hoverBg);
 		local Int is cx: innerX - scrollX;
 		local Int is ci: 0;
 		while({ ci < columns:length() }, {
 			local Int is cw: :colWidthPx(colIdx: ci);
 			if({ sortable && ci == hoverCol }, {
-				ctx:fillRect(x: cx, y: innerY, w: cw, h: hdrH, color: activeTheme:surfacePressed);
+				ctx:fillRect(x: cx, y: innerY, w: cw, h: hdrH, color: activeTheme:activeBg);
 			});
 			local String is colText: columns:get(index: ci);
 			if({ ci == sortColumn }, {
@@ -340,7 +340,7 @@ Class of SewNode is TableView{
 							x: cellX + padX / 2,
 							y: ry + (rh - fontPx) / 2,
 							text: cellText,
-							color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textSecondary }),
+							color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textMuted }),
 							pixelHeight: fontPx,
 							bold: isSel,
 							italic: false,

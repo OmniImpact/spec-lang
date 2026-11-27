@@ -160,7 +160,7 @@ Class of SewNode is NumberInput{
 	local Function of Int is btnWidthPx(){
 		local Int is bh: bounds():height;
 		if({ bh > 0 }, { return bh; });
-		return activeScale:px(pt: activeTheme:buttonMinHeightPt);
+		return activeScale:px(pt: activeTheme:buttonHeightPt);
 	}
 
 	local Function of Int is zoneAtX(Int is x){
@@ -177,7 +177,7 @@ Class of SewNode is NumberInput{
 		local Int is h: if({ heightPt > 0.0 }, {
 			activeScale:px(pt: heightPt)
 		}, {
-			activeScale:px(pt: activeTheme:buttonMinHeightPt)
+			activeScale:px(pt: activeTheme:buttonHeightPt)
 		});
 		desiredSize: Size(width: c:clampW(w: minW), height: c:clampH(h: h));
 		return desiredSize;
@@ -201,13 +201,13 @@ Class of SewNode is NumberInput{
 
 		local Int is bw: :btnWidthPx();
 		if({ bw * 2 >= b:width }, { bw: b:width / 3; });
-		local Int is fpx: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is fpx: activeScale:px(pt: activeTheme:baseTextPt);
 		if({ fpx < 10 }, { fpx: 10; });
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 
 		# Minus button
 		if({ hoverZone == 1 }, {
-			ctx:fillRect(x: b:x + btnPx, y: b:y + btnPx, w: bw - btnPx, h: b:height - btnPx * 2, color: activeTheme:surfaceHover);
+			ctx:fillRect(x: b:x + btnPx, y: b:y + btnPx, w: bw - btnPx, h: b:height - btnPx * 2, color: activeTheme:hoverBg);
 		});
 		local Int is minusW: ctx:measureTextWidth(text: '−', pixelHeight: fpx);
 		ctx:drawText(
@@ -221,7 +221,7 @@ Class of SewNode is NumberInput{
 		# Plus button
 		local Int is plusX: b:x + b:width - bw;
 		if({ hoverZone == 3 }, {
-			ctx:fillRect(x: plusX, y: b:y + btnPx, w: bw - btnPx, h: b:height - btnPx * 2, color: activeTheme:surfaceHover);
+			ctx:fillRect(x: plusX, y: b:y + btnPx, w: bw - btnPx, h: b:height - btnPx * 2, color: activeTheme:hoverBg);
 		});
 		local Int is plusW: ctx:measureTextWidth(text: '+', pixelHeight: fpx);
 		ctx:drawText(

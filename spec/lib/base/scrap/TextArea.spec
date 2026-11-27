@@ -57,7 +57,7 @@ Class of SewNode is TextArea{
 	}
 
 	local Function of Int is fontPx(){
-		local Int is px: activeScale:px(pt: activeTheme:fontSizePt);
+		local Int is px: activeScale:px(pt: activeTheme:baseTextPt);
 		return if({ px < 10 }, { 10 }, { px });
 	}
 
