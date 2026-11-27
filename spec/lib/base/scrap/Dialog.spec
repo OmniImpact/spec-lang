@@ -6,6 +6,8 @@ Class is Dialog{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Conditional],
+		['base', 'sys', Loops],
 		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', SignalBag],
@@ -16,9 +18,14 @@ Class is Dialog{
 		['base', 'sew', Constraints],
 		['base', 'sew', Rect],
 		['base', 'sew', Scale],
+		['base', 'sew', Column],
+		['base', 'sew', Row],
+		['base', 'sew', Padding],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
-		['base', 'scrap', Tooltip]
+		['base', 'scrap', Tooltip],
+		['base', 'scrap', DialogButton],
+		['base', 'scrap', ScrapButton]
 	];
 
 	String is title: 'Dialog';
@@ -343,5 +350,61 @@ Class is Dialog{
 	Function is dispose(){
 		signalBag:clear();
 		:closeWindow();
+	}
+
+	## Builds a generic dialog window with a title, a composed `SewNode` message body, and an array of `DialogButton` actions.
+	held Function of Dialog is compose(
+		String is title: 'Dialog',
+		SewNode is message: SewNode(),
+		Array of DialogButton is buttons: Array(),
+		BoolEmitter is open: BoolEmitter(initial: false),
+		Theme is theme: Theme(preset: 'light_grayscale'),
+		Scale is scale: Scale(factor: 1.0),
+		Float is widthPt: 440.0,
+		Float is heightPt: 200.0,
+		Float is minWidthPt: 300.0,
+		Float is minHeightPt: 140.0,
+		Boolean is closeOnAction: true
+	){
+		local Array of SewNode is rowItems: Array([SewNode()]);
+		local Array of Boolean is rowFlex: Array([true]);
+		local Int is i: 0;
+		Loops:while(check: { i < buttons:length() }, body: {
+			local DialogButton is btn: buttons[i];
+			rowItems:add(item: ScrapButton(
+				label: btn:title,
+				tooltip: btn:description,
+				selected: btn:primary,
+				minWidthPt: 84.0,
+				onClick: local Function(){
+					Conditional:if(check: { closeOnAction }, then: { open:emit(value: false); });
+					local Function is cb: btn:onClick;
+					cb();
+				}
+			));
+			rowFlex:add(item: false);
+			i: i + 1;
+		});
+		local Row is buttonRow: Row(children: rowItems, flexFlags: rowFlex, gapPt: 8.0);
+		local SewNode is body: Padding(
+			allPt: 18.0,
+			child: Column(
+				children: Array([message, buttonRow]),
+				flexFlags: Array([true, false]),
+				gapPt: 16.0
+			)
+		);
+		return Dialog(
+			title: title,
+			open: open,
+			theme: theme,
+			scale: scale,
+			widthPt: widthPt,
+			heightPt: heightPt,
+			minWidthPt: minWidthPt,
+			minHeightPt: minHeightPt,
+			content: body,
+			hasContent: true
+		);
 	}
 }

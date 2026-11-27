@@ -27,7 +27,7 @@ Class is DataFeedbackPageView{
 		['base', 'scrap', Badge],
 		['base', 'scrap', Toast],
 		['base', 'scrap', Dialog],
-		['base', 'scrap', AlertDialog],
+		['base', 'scrap', DialogButton],
 		['base', 'scrap', Popover],
 		['base', 'scrap', Draggable],
 		['base', 'scrap', DropTarget],
@@ -189,37 +189,74 @@ Class is DataFeedbackPageView{
 			}
 		);
 
-		:alertDlg: AlertDialog:shared:alert(
-			title: 'SuitShowcase Alert',
-			message: 'This alert dialog was built with AlertDialog:shared:alert.',
+		:alertDlg: Dialog:compose(
+			title: 'Notice',
+			message: Column(
+				gapPt: 6.0,
+				children: Array([
+					Label(text: 'Composed Dialog UI', style: TextStyle:H2),
+					Label(text: 'This dialog was built with Dialog:compose using a custom SewNode message and DialogButton descriptors.', muted: true)
+				])
+			),
+			buttons: Array([
+				DialogButton(
+					title: 'OK',
+					description: 'Acknowledge and close this notice',
+					primary: true,
+					onClick: local Function(){
+						vm:statusText:emit(value: 'Notice Dialog OK clicked');
+					}
+				)
+			]),
 			open: alertOpen,
-			theme: vm:activeTheme,
-			onOk: local Function(){
-				vm:statusText:emit(value: 'AlertDialog OK clicked');
-			}
+			theme: vm:activeTheme
 		);
 
-		:confirmDlg: AlertDialog:shared:confirm(
+		:confirmDlg: Dialog:compose(
 			title: 'Confirm Action',
-			message: 'Proceed with this sample confirmation action?',
+			message: Column(
+				gapPt: 6.0,
+				children: Array([
+					Label(text: 'Apply sample configuration?', style: TextStyle:H2),
+					Label(text: 'Choose Confirm to proceed, Apply Draft to test a secondary action, or Cancel to dismiss.', muted: true)
+				])
+			),
+			buttons: Array([
+				DialogButton(
+					title: 'Cancel',
+					description: 'Dismiss without making changes',
+					onClick: local Function(){
+						vm:statusText:emit(value: 'Dialog cancelled');
+					}
+				),
+				DialogButton(
+					title: 'Apply Draft',
+					description: 'Save as draft without finalizing',
+					onClick: local Function(){
+						vm:statusText:emit(value: 'Dialog Apply Draft clicked');
+					}
+				),
+				DialogButton(
+					title: 'Confirm',
+					description: 'Confirm and apply changes',
+					primary: true,
+					onClick: local Function(){
+						vm:statusText:emit(value: 'Dialog confirmed');
+					}
+				)
+			]),
 			open: confirmOpen,
-			theme: vm:activeTheme,
-			onConfirm: local Function(){
-				vm:statusText:emit(value: 'ConfirmDialog confirmed');
-			},
-			onCancel: local Function(){
-				vm:statusText:emit(value: 'ConfirmDialog cancelled');
-			}
+			theme: vm:activeTheme
 		);
 
 		local Popover is demoPopover: Popover(
-			anchor: ScrapButton(label: 'Toggle Popover', tooltip: 'Opens a floating Popover card'),
+			anchor: ScrapButton(label: 'Toggle Popover', tooltip: 'Opens a draggable floating Popover card'),
 			content: Frame(
 				title: 'Popover Card',
 				child: Column(
 					gapPt: 6.0,
 					children: Array([
-						Label(text: 'Positioned via DropdownPopup.'),
+						Label(text: 'Drag the top grip to move.'),
 						ScrapButton(label: 'Action inside Popover', onClick: local Function(){
 							vm:statusText:emit(value: 'Popover action clicked');
 						})
@@ -323,8 +360,8 @@ Class is DataFeedbackPageView{
 							Row(
 								gapPt: 8.0,
 								children: Array([
-									ScrapButton(label: 'Open AlertDialog', onClick: local Function(){ alertOpen:emit(value: true); }),
-									ScrapButton(label: 'Open ConfirmDialog', onClick: local Function(){ confirmOpen:emit(value: true); }),
+									ScrapButton(label: 'Open Notice Dialog', onClick: local Function(){ alertOpen:emit(value: true); }),
+									ScrapButton(label: 'Open Action Dialog', onClick: local Function(){ confirmOpen:emit(value: true); }),
 									demoPopover
 								])
 							),
