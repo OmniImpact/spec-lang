@@ -117,6 +117,8 @@ Class is ShowcaseViewModel{
 	local Function is applyCurrentTheme(){
 		activeTheme:setBorderStyle(style: borderStyle);
 		activeTheme:setBaseTextPt(pt: baseTextPt);
+		if({ surfFillStyleIdx > 0 }, { :applySurfaceFill(); });
+		if({ btnFillStyleIdx > 0 }, { :applyButtonFill(); });
 		:notifyThemeChange();
 	}
 
@@ -250,11 +252,10 @@ Class is ShowcaseViewModel{
 		statusText:emit(value: 'Loaded ' . Theme:presetLabel(preset: preset) . ' preset');
 	}
 
-	local Function is syncSurfaceFill(){
+	local Function is applySurfaceFill(){
 		if({ surfFillStyleIdx == 0 }, {
 			activeTheme:customSurfaceFill: false;
 			activeTheme:deriveColors();
-			:notifyThemeChange();
 			return;
 		});
 		local FillMode is fMode: if({ surfFillStyleIdx == 3 || surfFillStyleIdx == 4 }, { FillMode:RADIAL }, { FillMode:LINEAR });
@@ -268,14 +269,17 @@ Class is ShowcaseViewModel{
 			blendWidth: (surfBlendPct as Float) / 100.0,
 			reflected: fRefl
 		));
+	}
+
+	local Function is syncSurfaceFill(){
+		:applySurfaceFill();
 		:notifyThemeChange();
 	}
 
-	local Function is syncButtonFill(){
+	local Function is applyButtonFill(){
 		if({ btnFillStyleIdx == 0 }, {
 			activeTheme:customButtonFill: false;
 			activeTheme:deriveColors();
-			:notifyThemeChange();
 			return;
 		});
 		local FillMode is fMode: if({ btnFillStyleIdx == 3 || btnFillStyleIdx == 4 }, { FillMode:RADIAL }, { FillMode:LINEAR });
@@ -290,6 +294,10 @@ Class is ShowcaseViewModel{
 			blendWidth: (btnBlendPct as Float) / 100.0,
 			reflected: fRefl
 		));
+	}
+
+	local Function is syncButtonFill(){
+		:applyButtonFill();
 		:notifyThemeChange();
 	}
 
