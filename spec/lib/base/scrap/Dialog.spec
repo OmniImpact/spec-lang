@@ -364,6 +364,7 @@ Class is Dialog{
 		Float is heightPt: 200.0,
 		Float is minWidthPt: 300.0,
 		Float is minHeightPt: 140.0,
+		Float is padPt: 18.0,
 		Boolean is closeOnAction: true
 	){
 		local Array of SewNode is rowItems: Array([SewNode()]);
@@ -387,7 +388,7 @@ Class is Dialog{
 		});
 		local Row is buttonRow: Row(children: rowItems, flexFlags: rowFlex, gapPt: 8.0);
 		local SewNode is body: Padding(
-			allPt: 18.0,
+			padPt: padPt,
 			child: Column(
 				children: Array([message, buttonRow]),
 				flexFlags: Array([true, false]),

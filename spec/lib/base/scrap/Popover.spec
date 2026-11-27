@@ -21,6 +21,8 @@ Class of SewNode is Popover{
 	SewNode is content: SewNode();
 	Boolean is open: false;
 	Boolean is toggleOnAnchorClick: true;
+	Boolean is closeOnOutsideClick: false;
+	Float is padPt: 6.0;
 	Boolean is draggable: true;
 	Boolean is dragging: false;
 	Boolean is gripHovered: false;
@@ -40,6 +42,8 @@ Class of SewNode is Popover{
 		SewNode is content: SewNode(),
 		Boolean is open: false,
 		Boolean is toggleOnAnchorClick: true,
+		Boolean is closeOnOutsideClick: false,
+		Float is padPt: 6.0,
 		Boolean is draggable: true,
 		Function is onOpenChange: local Function(Boolean is _open){}
 	){
@@ -47,6 +51,8 @@ Class of SewNode is Popover{
 		:content: content;
 		:open: open;
 		:toggleOnAnchorClick: toggleOnAnchorClick;
+		:closeOnOutsideClick: closeOnOutsideClick;
+		:padPt: padPt;
 		:draggable: draggable;
 		:dragging: false;
 		:gripHovered: false;
@@ -92,9 +98,10 @@ Class of SewNode is Popover{
 		if({ viewW > 0 }, { lastViewW: viewW; });
 		if({ viewH > 0 }, { lastViewH: viewH; });
 		local Int is gh: :gripHeight();
+		local Int is padPx: if({ padPt > 0.0 }, { activeScale:px(pt: padPt) }, { 0 });
 		local Size is ps: content:measure(c: Constraints(minW: 0, maxW: 640, minH: 0, maxH: 640));
-		local Int is popW: ps:width;
-		local Int is popH: ps:height + gh;
+		local Int is popW: ps:width + padPx * 2;
+		local Int is popH: ps:height + gh + padPx * 2;
 		local Rect is pr: DropdownPopup:shared:placeRect(
 			anchor: anchor:bounds(),
 			popupW: popW,
@@ -114,7 +121,7 @@ Class of SewNode is Popover{
 			if({ py < 0 }, { py: 0; });
 		});
 		:popupRect: Rect(x: px, y: py, width: popW, height: popH);
-		content:arrange(bounds: Rect(x: px, y: py + gh, width: popW, height: ps:height));
+		content:arrange(bounds: Rect(x: px + padPx, y: py + gh + padPx, width: ps:width, height: ps:height));
 	}
 
 	replace Function is applyTheme(Theme is theme){
@@ -198,8 +205,10 @@ Class of SewNode is Popover{
 			if({ :inRect(r: popupRect, x: x, y: y) }, {
 				return content:onPointerClickMod(x: x, y: y, mods: mods);
 			});
-			:setOpen(next: false);
-			return true;
+			if({ closeOnOutsideClick }, {
+				:setOpen(next: false);
+				return true;
+			});
 		});
 		return false;
 	}
@@ -231,7 +240,7 @@ Class of SewNode is Popover{
 	}
 
 	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
-		if({ dragging }, { return false; });
+		if({ !closeOnOutsideClick || dragging }, { return false; });
 		if({ open && !:blocksPointerAt(x: x, y: y) }, {
 			:setOpen(next: false);
 			return true;
