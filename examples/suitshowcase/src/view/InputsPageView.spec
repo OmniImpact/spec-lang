@@ -11,6 +11,10 @@ Class is InputsPageView{
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', Switch],
+		['base', 'scrap', Checkbox],
+		['base', 'scrap', RadioButton],
+		['base', 'scrap', RadioGroup],
+		['base', 'scrap', Accordion],
 		['base', 'scrap', TextInput],
 		['base', 'scrap', DecoratedTextInput],
 		['base', 'scrap', SectionV],
@@ -24,6 +28,7 @@ Class is InputsPageView{
 	Switch is swA: Switch();
 	Switch is swB: Switch();
 	TextEmitter is echoLabel: TextEmitter(initial: '');
+	TextEmitter is toggleStatus: TextEmitter(initial: 'Radio: Medium | Checkboxes: Auto-save');
 
 	replace Function is init(ShowcaseViewModel is vm){
 		:vm: vm;
@@ -63,6 +68,66 @@ Class is InputsPageView{
 			onToggle: local Function(Boolean is next){ vm:switchB:emit(value: next); }
 		);
 
+		local Checkbox is cbAuto: Checkbox(
+			checked: true,
+			label: 'Auto-save changes',
+			tooltip: 'Checkbox with Space/Enter keyboard support',
+			onToggle: local Function(Boolean is next){
+				toggleStatus:emit(value: 'Auto-save: ' . (if({ next }, { 'On' }, { 'Off' })));
+			}
+		);
+		local Checkbox is cbLine: Checkbox(
+			checked: false,
+			label: 'Show whitespace markers',
+			onToggle: local Function(Boolean is next){
+				toggleStatus:emit(value: 'Whitespace: ' . (if({ next }, { 'On' }, { 'Off' })));
+			}
+		);
+		local Checkbox is cbDis: Checkbox(
+			checked: true,
+			label: 'Disabled checked option',
+			enabled: false
+		);
+
+		local Array of String is sizeOpts: Array(['Small', 'Medium', 'Large']);
+		local RadioGroup is rgVert: RadioGroup(
+			options: sizeOpts,
+			selectedIndex: 1,
+			onSelect: local Function(Int is idx){
+				toggleStatus:emit(value: 'Vertical Radio: ' . sizeOpts:get(index: idx));
+			}
+		);
+		local Array of String is modeOpts: Array(['Auto', 'Light', 'Dark']);
+		local RadioGroup is rgHoriz: RadioGroup(
+			options: modeOpts,
+			selectedIndex: 0,
+			horizontal: true,
+			onSelect: local Function(Int is idx){
+				toggleStatus:emit(value: 'Horizontal Radio: ' . modeOpts:get(index: idx));
+			}
+		);
+
+		local Accordion is acc1: Accordion(
+			title: 'General Preferences',
+			expanded: true,
+			tooltip: 'Click header or press Space/Enter to collapse/expand',
+			child: SectionV(
+				children: Array([
+					Checkbox(checked: true, label: 'Restore previous session'),
+					Checkbox(checked: false, label: 'Check for updates automatically')
+				])
+			)
+		);
+		local Accordion is acc2: Accordion(
+			title: 'Advanced Options',
+			expanded: false,
+			child: SectionV(
+				children: Array([
+					RadioGroup(options: Array(['Balanced', 'Low Latency', 'Power Saver']), selectedIndex: 0)
+				])
+			)
+		);
+
 		return SectionV(
 			children: Array([
 				Label(text: 'Inputs & Toggles', heading: true),
@@ -77,12 +142,22 @@ Class is InputsPageView{
 					)
 				),
 				Frame(
-					title: 'Switch Controls',
+					title: 'Switch, Checkbox & RadioGroup',
 					child: SectionV(
 						children: Array([
 							SectionH(children: Array([swA, Label(text: 'Enable Feature A')])),
-							SectionH(children: Array([swB, Label(text: 'Enable Feature B')]))
+							SectionH(children: Array([swB, Label(text: 'Enable Feature B')])),
+							SectionV(title: 'Checkboxes', children: Array([cbAuto, cbLine, cbDis])),
+							SectionV(title: 'RadioGroup (Vertical)', children: Array([rgVert])),
+							SectionV(title: 'RadioGroup (Horizontal)', children: Array([rgHoriz])),
+							TextScrap(text: toggleStatus, muted: true)
 						])
+					)
+				),
+				Frame(
+					title: 'Accordion Sections',
+					child: SectionV(
+						children: Array([acc1, acc2])
 					)
 				)
 			])

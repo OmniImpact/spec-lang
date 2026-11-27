@@ -5,6 +5,8 @@ Class is DropdownsPageView{
 	replace [String] is namespace: ['suitshowcase', 'view'];
 
 	replace [[String]] is using: [
+		['base', 'sys', DateTime],
+		['base', 'sys', as DateTime()],
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
@@ -12,6 +14,8 @@ Class is DropdownsPageView{
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ColorSwatchDropdown],
+		['base', 'scrap', DateDropdown],
+		['base', 'scrap', TimeDropdown],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', SectionH],
 		['base', 'scrap', 'menu', MenuConfig],
@@ -121,6 +125,46 @@ Class is DropdownsPageView{
 										compactPicker: true,
 										tooltip: 'History disabled; compact picker only',
 										onChange: local Function(Color is c){ statusLabel:emit(value: 'Picker Only: ' . c:toHex()); }
+									)
+								])
+							)
+						])
+					)
+				),
+				Frame(
+					title: 'DateDropdown & TimeDropdown',
+					child: SectionH(
+						children: Array([
+							SectionV(
+								title: 'Date Picker Dropdown',
+								children: Array([
+									DateDropdown(
+										value: DateTime:now(),
+										tooltip: 'Calendar dropdown backed by DateTime',
+										onChange: local Function(DateTime is dt){ statusLabel:emit(value: 'DateDropdown: ' . dt:formatDate()); }
+									)
+								])
+							),
+							SectionV(
+								title: 'Time Picker (12h)',
+								children: Array([
+									TimeDropdown(
+										value: DateTime:now(),
+										use24Hour: false,
+										tooltip: '12-hour time dropdown',
+										onChange: local Function(DateTime is dt){ statusLabel:emit(value: 'TimeDropdown (12h): ' . dt:formatTime12()); }
+									)
+								])
+							),
+							SectionV(
+								title: 'Time Picker (24h + sec)',
+								children: Array([
+									TimeDropdown(
+										value: DateTime:now(),
+										use24Hour: true,
+										showSeconds: true,
+										tooltip: '24-hour time dropdown with seconds',
+										onChange: local Function(DateTime is dt){ statusLabel:emit(value: 'TimeDropdown (24h): ' . dt:formatTime()); }
 									)
 								])
 							)

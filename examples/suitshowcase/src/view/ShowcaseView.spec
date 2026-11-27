@@ -33,10 +33,11 @@ Class is ShowcaseView{
 		['suitshowcase', 'view', ColorPageView],
 		['suitshowcase', 'view', LinesBordersPageView],
 		['suitshowcase', 'view', FillEffectsPageView],
+		['suitshowcase', 'view', DateTimePageView],
 		['suitshowcase', 'view', TextTreePageView]
 	];
 
-	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'lines', 'fills', 'text']);
+	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'datetime', 'lines', 'fills', 'text']);
 
 	local Function of Int is routeIndex(String is routeName){
 		local Int is i: 0;
@@ -59,6 +60,7 @@ Class is ShowcaseView{
 		local ColorPageView is colorPage: ColorPageView(vm: vm);
 		local LinesBordersPageView is linesPage: LinesBordersPageView(vm: vm);
 		local FillEffectsPageView is fillsPage: FillEffectsPageView(vm: vm);
+		local DateTimePageView is dateTimePage: DateTimePageView(vm: vm);
 		local TextTreePageView is textPage: TextTreePageView(vm: vm);
 
 		local NavStack is navStack: NavStack(
@@ -73,6 +75,7 @@ Class is ShowcaseView{
 				NavRoute(name: 'bars', child: ScrollView(child: Padding(useThemePad: true, child: barsPage:build()))),
 				NavRoute(name: 'dropdowns', child: ScrollView(child: Padding(useThemePad: true, child: dropdownsPage:build()))),
 				NavRoute(name: 'colors', child: ScrollView(child: Padding(useThemePad: true, child: colorPage:build()))),
+				NavRoute(name: 'datetime', child: ScrollView(child: Padding(useThemePad: true, child: dateTimePage:build()))),
 				NavRoute(name: 'lines', child: ScrollView(child: Padding(useThemePad: true, child: linesPage:build()))),
 				NavRoute(name: 'fills', child: ScrollView(child: Padding(useThemePad: true, child: fillsPage:build()))),
 				NavRoute(name: 'text', child: ScrollView(child: Padding(useThemePad: true, child: textPage:build())))
@@ -81,7 +84,7 @@ Class is ShowcaseView{
 
 		local SectionV is sidebar: SectionV(
 			segmented: true,
-			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Lines & Borders', 'Fill & Effects', 'Text & Tree']),
+			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Date & Time', 'Lines & Borders', 'Fill & Effects', 'Text & Tree']),
 			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
 			itemMinWidthPt: 132.0,
 			itemHeightPt: 24.0,

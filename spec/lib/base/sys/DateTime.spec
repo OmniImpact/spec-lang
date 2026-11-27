@@ -173,6 +173,138 @@ Class is DateTime{
 		return addMs(ms: days * 86400000);
 	}
 
+	## Returns the number of days in this DateTime's month.
+	Function of Int is daysInCurrentMonth(){
+		return daysInMonth(y: :year, m: :month);
+	}
+
+	## Returns the day of week (0=Sunday .. 6=Saturday) for the 1st of [month] in [year].
+	Function of Int is firstDayOfMonthDow(Int is year, Int is month){
+		local Int is z: daysFromCivil(y: year, m: month, d: 1);
+		return floorMod(a: z + 4, b: 7);
+	}
+
+	## Returns true if [year], [month] (1..12), [day] (1..daysInMonth) is a valid calendar date.
+	Function of Boolean is isValidDate(Int is year, Int is month, Int is day){
+		if({ month < 1 || month > 12 }, { return false; });
+		return day >= 1 && day <= daysInMonth(y: year, m: month);
+	}
+
+	## Returns true if [hour] (0..23), [minute] (0..59), [second] (0..59) is a valid wall-clock time.
+	Function of Boolean is isValidTime(Int is hour, Int is minute, Int is second: 0){
+		return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && second >= 0 && second <= 59;
+	}
+
+	## Clamps [day] into 1..daysInMonth(year, month).
+	Function of Int is clampDay(Int is year, Int is month, Int is day){
+		local Int is dim: daysInMonth(y: year, m: month);
+		if({ day < 1 }, { return 1; });
+		if({ day > dim }, { return dim; });
+		return day;
+	}
+
+	## Returns a new DateTime with calendar date replaced, preserving time of day and offset.
+	Function of DateTime is withDate(Int is year, Int is month, Int is day){
+		local Int is m: if({ month < 1 }, { 1 }, { if({ month > 12 }, { 12 }, { month }) });
+		local Int is d: clampDay(year: year, month: m, day: day);
+		return :of(year: year, month: m, day: d, hour: :hour, minute: :minute, second: :second, millisecond: :millisecond, offsetSec: :offsetSec);
+	}
+
+	## Returns a new DateTime with wall-clock time replaced, preserving calendar date and offset.
+	Function of DateTime is withTime(Int is hour, Int is minute, Int is second: 0, Int is millisecond: 0){
+		local Int is h: if({ hour < 0 }, { 0 }, { if({ hour > 23 }, { 23 }, { hour }) });
+		local Int is mn: if({ minute < 0 }, { 0 }, { if({ minute > 59 }, { 59 }, { minute }) });
+		local Int is s: if({ second < 0 }, { 0 }, { if({ second > 59 }, { 59 }, { second }) });
+		local Int is ms: if({ millisecond < 0 }, { 0 }, { if({ millisecond > 999 }, { 999 }, { millisecond }) });
+		return :of(year: :year, month: :month, day: :day, hour: h, minute: mn, second: s, millisecond: ms, offsetSec: :offsetSec);
+	}
+
+	## Returns a new DateTime at 00:00:00.000 of the same date.
+	Function of DateTime is startOfDay(){
+		return withTime(hour: 0, minute: 0, second: 0, millisecond: 0);
+	}
+
+	## Returns a new DateTime on the 1st of the same month at 00:00:00.000.
+	Function of DateTime is startOfMonth(){
+		return :of(year: :year, month: :month, day: 1, hour: 0, minute: 0, second: 0, millisecond: 0, offsetSec: :offsetSec);
+	}
+
+	## Returns a new DateTime shifted by [months] calendar months (clamping day to month length).
+	Function of DateTime is addMonths(Int is months){
+		local Int is totalM: (:year * 12 + (:month - 1)) + months;
+		local Int is ny: floorDiv(a: totalM, b: 12);
+		local Int is nm: floorMod(a: totalM, b: 12) + 1;
+		local Int is nd: clampDay(year: ny, month: nm, day: :day);
+		return :of(year: ny, month: nm, day: nd, hour: :hour, minute: :minute, second: :second, millisecond: :millisecond, offsetSec: :offsetSec);
+	}
+
+	## Returns a new DateTime shifted by [years] calendar years (clamping Feb 29 if needed).
+	Function of DateTime is addYears(Int is years){
+		return addMonths(months: years * 12);
+	}
+
+	## Returns true if this DateTime has the same calendar year, month, and day as [other].
+	Function of Boolean is isSameDate(DateTime is other){
+		return :year == other:year && :month == other:month && :day == other:day;
+	}
+
+	## Returns 12-hour clock hour (1..12).
+	Function of Int is hour12(){
+		local Int is h: :hour % 12;
+		return if({ h == 0 }, { 12 }, { h });
+	}
+
+	## Returns true if the hour is PM (12..23).
+	Function of Boolean is isPm(){
+		return :hour >= 12;
+	}
+
+	## Returns the full English month name for [month] (1..12).
+	Function of String is monthName(Int is month){
+		if({ month == 1 }, { return "January"; });
+		if({ month == 2 }, { return "February"; });
+		if({ month == 3 }, { return "March"; });
+		if({ month == 4 }, { return "April"; });
+		if({ month == 5 }, { return "May"; });
+		if({ month == 6 }, { return "June"; });
+		if({ month == 7 }, { return "July"; });
+		if({ month == 8 }, { return "August"; });
+		if({ month == 9 }, { return "September"; });
+		if({ month == 10 }, { return "October"; });
+		if({ month == 11 }, { return "November"; });
+		if({ month == 12 }, { return "December"; });
+		return "";
+	}
+
+	## Returns the 3-letter English month abbreviation for [month] (1..12).
+	Function of String is monthShortName(Int is month){
+		if({ month == 1 }, { return "Jan"; });
+		if({ month == 2 }, { return "Feb"; });
+		if({ month == 3 }, { return "Mar"; });
+		if({ month == 4 }, { return "Apr"; });
+		if({ month == 5 }, { return "May"; });
+		if({ month == 6 }, { return "Jun"; });
+		if({ month == 7 }, { return "Jul"; });
+		if({ month == 8 }, { return "Aug"; });
+		if({ month == 9 }, { return "Sep"; });
+		if({ month == 10 }, { return "Oct"; });
+		if({ month == 11 }, { return "Nov"; });
+		if({ month == 12 }, { return "Dec"; });
+		return "";
+	}
+
+	## Returns the 2-letter weekday header for [dow] (0=Sun .. 6=Sat).
+	Function of String is weekdayShortName(Int is dow){
+		if({ dow == 0 }, { return "Su"; });
+		if({ dow == 1 }, { return "Mo"; });
+		if({ dow == 2 }, { return "Tu"; });
+		if({ dow == 3 }, { return "We"; });
+		if({ dow == 4 }, { return "Th"; });
+		if({ dow == 5 }, { return "Fr"; });
+		if({ dow == 6 }, { return "Sa"; });
+		return "";
+	}
+
 	## Returns the signed difference in milliseconds (`self - other`).
 	Function of Int is diffMs(DateTime is other){
 		return :epochMs - other:epochMs;
@@ -226,6 +358,21 @@ Class is DateTime{
 	## Formats the wall-clock time as `HH:MM:SS`.
 	Function of String is formatTime(){
 		return pad2(n: :hour) . ":" . pad2(n: :minute) . ":" . pad2(n: :second);
+	}
+
+	## Formats the wall-clock time as `HH:MM`.
+	Function of String is formatTimeShort(){
+		return pad2(n: :hour) . ":" . pad2(n: :minute);
+	}
+
+	## Formats the wall-clock time in 12-hour format (`hh:MM AM/PM`, optionally with seconds).
+	Function of String is formatTime12(Boolean is includeSeconds: false){
+		local String is suffix: if({ isPm() }, { "PM" }, { "AM" });
+		local String is base: pad2(n: hour12()) . ":" . pad2(n: :minute);
+		if({ includeSeconds }, {
+			base: base . ":" . pad2(n: :second);
+		});
+		return base . " " . suffix;
 	}
 
 	## Formats the date and time in ISO-8601 format (`YYYY-MM-DDTHH:MM:SS.mmmZ` or `±HH:MM`).
