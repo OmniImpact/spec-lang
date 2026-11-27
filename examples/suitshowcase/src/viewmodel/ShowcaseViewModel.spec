@@ -109,38 +109,49 @@ Class is ShowcaseViewModel{
 		statusText:emit(value: 'Button border style: ' . style);
 	}
 
-	Function is setPanelBorderThickness(Int is pt){
-		activeTheme:setPanelBorderThicknessPt(pt: pt as Float);
+	Function of Int is toTenths(Float is pt){
+		return ((pt * 10.0) + 0.5) as Int;
+	}
+
+	Function of String is tenthsLabel(Int is tenths){
+		local Int is t: if({ tenths < 0 }, { 0 }, { tenths });
+		local Int is whole: t / 10;
+		local Int is frac: t - (whole * 10);
+		return (whole as String) . '.' . (frac as String) . ' pt';
+	}
+
+	Function is setPanelBorderThickness(Int is tenths){
+		activeTheme:setPanelBorderThicknessPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 
-	Function is setPanelCornerRadius(Int is pt){
-		activeTheme:setPanelCornerRadiusPt(pt: pt as Float);
+	Function is setPanelCornerRadius(Int is tenths){
+		activeTheme:setPanelCornerRadiusPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 
-	Function is setPanelShadowBlur(Int is pt){
-		activeTheme:setPanelShadowBlurPt(pt: pt as Float);
+	Function is setPanelShadowBlur(Int is tenths){
+		activeTheme:setPanelShadowBlurPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 
-	Function is setDividerThickness(Int is pt){
-		activeTheme:setDividerThicknessPt(pt: pt as Float);
+	Function is setDividerThickness(Int is tenths){
+		activeTheme:setDividerThicknessPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 
-	Function is setButtonBorderThickness(Int is pt){
-		activeTheme:setButtonBorderThicknessPt(pt: pt as Float);
+	Function is setButtonBorderThickness(Int is tenths){
+		activeTheme:setButtonBorderThicknessPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 
-	Function is setButtonCornerRadius(Int is pt){
-		activeTheme:setButtonCornerRadiusPt(pt: pt as Float);
+	Function is setButtonCornerRadius(Int is tenths){
+		activeTheme:setButtonCornerRadiusPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 
-	Function is setButtonShadowBlur(Int is pt){
-		activeTheme:setButtonShadowBlurPt(pt: pt as Float);
+	Function is setButtonShadowBlur(Int is tenths){
+		activeTheme:setButtonShadowBlurPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 

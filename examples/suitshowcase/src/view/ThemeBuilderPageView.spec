@@ -40,6 +40,13 @@ Class is ThemeBuilderPageView{
 	Slider is buttonThickSlider: Slider();
 	Slider is buttonRadiusSlider: Slider();
 	Slider is buttonShadowSlider: Slider();
+	TextEmitter is panelThickLabel: TextEmitter(initial: '1.0 pt');
+	TextEmitter is panelRadiusLabel: TextEmitter(initial: '0.0 pt');
+	TextEmitter is panelShadowLabel: TextEmitter(initial: '0.0 pt');
+	TextEmitter is dividerThickLabel: TextEmitter(initial: '1.0 pt');
+	TextEmitter is buttonThickLabel: TextEmitter(initial: '1.0 pt');
+	TextEmitter is buttonRadiusLabel: TextEmitter(initial: '0.0 pt');
+	TextEmitter is buttonShadowLabel: TextEmitter(initial: '0.0 pt');
 	Slider is alphaSlider: Slider();
 	TextEmitter is alphaLabel: TextEmitter(initial: '100%');
 	DecoratedTextInput is baseTextInput: DecoratedTextInput();
@@ -148,13 +155,20 @@ Class is ThemeBuilderPageView{
 			}
 		);
 
-		:panelThickSlider: Slider(minVal: 0, maxVal: 8, value: vm:activeTheme:panelBorderThicknessPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelBorderThickness(pt: v); });
-		:panelRadiusSlider: Slider(minVal: 0, maxVal: 16, value: vm:activeTheme:panelCornerRadiusPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelCornerRadius(pt: v); });
-		:panelShadowSlider: Slider(minVal: 0, maxVal: 16, value: vm:activeTheme:panelShadowBlurPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelShadowBlur(pt: v); });
-		:dividerThickSlider: Slider(minVal: 0, maxVal: 8, value: vm:activeTheme:dividerThicknessPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setDividerThickness(pt: v); });
-		:buttonThickSlider: Slider(minVal: 0, maxVal: 8, value: vm:activeTheme:buttonBorderThicknessPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonBorderThickness(pt: v); });
-		:buttonRadiusSlider: Slider(minVal: 0, maxVal: 14, value: vm:activeTheme:buttonCornerRadiusPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonCornerRadius(pt: v); });
-		:buttonShadowSlider: Slider(minVal: 0, maxVal: 14, value: vm:activeTheme:buttonShadowBlurPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonShadowBlur(pt: v); });
+		:panelThickSlider: Slider(minVal: 0, maxVal: 80, value: vm:toTenths(pt: vm:activeTheme:panelBorderThicknessPt), minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelBorderThickness(tenths: v); });
+		:panelRadiusSlider: Slider(minVal: 0, maxVal: 160, value: vm:toTenths(pt: vm:activeTheme:panelCornerRadiusPt), minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelCornerRadius(tenths: v); });
+		:panelShadowSlider: Slider(minVal: 0, maxVal: 160, value: vm:toTenths(pt: vm:activeTheme:panelShadowBlurPt), minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelShadowBlur(tenths: v); });
+		:dividerThickSlider: Slider(minVal: 0, maxVal: 80, value: vm:toTenths(pt: vm:activeTheme:dividerThicknessPt), minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setDividerThickness(tenths: v); });
+		:buttonThickSlider: Slider(minVal: 0, maxVal: 80, value: vm:toTenths(pt: vm:activeTheme:buttonBorderThicknessPt), minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonBorderThickness(tenths: v); });
+		:buttonRadiusSlider: Slider(minVal: 0, maxVal: 140, value: vm:toTenths(pt: vm:activeTheme:buttonCornerRadiusPt), minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonCornerRadius(tenths: v); });
+		:buttonShadowSlider: Slider(minVal: 0, maxVal: 140, value: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt), minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonShadowBlur(tenths: v); });
+		panelThickLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:panelBorderThicknessPt)));
+		panelRadiusLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:panelCornerRadiusPt)));
+		panelShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:panelShadowBlurPt)));
+		dividerThickLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:dividerThicknessPt)));
+		buttonThickLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonBorderThicknessPt)));
+		buttonRadiusLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonCornerRadiusPt)));
+		buttonShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt)));
 
 		:baseTextInput: DecoratedTextInput(
 			text: vm:baseTextLabel(),
@@ -282,33 +296,33 @@ Class is ThemeBuilderPageView{
 						children: Array([
 							SectionV(title: 'Panel Border Style', children: Array([panelStyleSection])),
 							Grid(
-								columns: 2,
+								columns: 3,
 								colGapPt: 10.0,
 								rowGapPt: 6.0,
 								children: Array([
-									Label(text: 'Panel Thickness'), panelThickSlider,
-									Label(text: 'Panel Radius'), panelRadiusSlider,
-									Label(text: 'Panel Shadow Blur'), panelShadowSlider
+									Label(text: 'Panel Thickness'), panelThickSlider, TextScrap(text: panelThickLabel, muted: true),
+									Label(text: 'Panel Radius'), panelRadiusSlider, TextScrap(text: panelRadiusLabel, muted: true),
+									Label(text: 'Panel Shadow Blur'), panelShadowSlider, TextScrap(text: panelShadowLabel, muted: true)
 								])
 							),
 							SectionV(title: 'Divider Style', children: Array([dividerStyleSection])),
 							Grid(
-								columns: 2,
+								columns: 3,
 								colGapPt: 10.0,
 								rowGapPt: 6.0,
 								children: Array([
-									Label(text: 'Divider Thickness'), dividerThickSlider
+									Label(text: 'Divider Thickness'), dividerThickSlider, TextScrap(text: dividerThickLabel, muted: true)
 								])
 							),
 							SectionV(title: 'Button Border Style', children: Array([buttonStyleSection])),
 							Grid(
-								columns: 2,
+								columns: 3,
 								colGapPt: 10.0,
 								rowGapPt: 6.0,
 								children: Array([
-									Label(text: 'Button Thickness'), buttonThickSlider,
-									Label(text: 'Button Radius'), buttonRadiusSlider,
-									Label(text: 'Button Shadow Blur'), buttonShadowSlider
+									Label(text: 'Button Thickness'), buttonThickSlider, TextScrap(text: buttonThickLabel, muted: true),
+									Label(text: 'Button Radius'), buttonRadiusSlider, TextScrap(text: buttonRadiusLabel, muted: true),
+									Label(text: 'Button Shadow Blur'), buttonShadowSlider, TextScrap(text: buttonShadowLabel, muted: true)
 								])
 							)
 						])
@@ -324,13 +338,20 @@ Class is ThemeBuilderPageView{
 		panelStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:panelBorderStyle));
 		dividerStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:dividerStyle));
 		buttonStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:buttonBorderStyle));
-		panelThickSlider:setValue(next: vm:activeTheme:panelBorderThicknessPt as Int);
-		panelRadiusSlider:setValue(next: vm:activeTheme:panelCornerRadiusPt as Int);
-		panelShadowSlider:setValue(next: vm:activeTheme:panelShadowBlurPt as Int);
-		dividerThickSlider:setValue(next: vm:activeTheme:dividerThicknessPt as Int);
-		buttonThickSlider:setValue(next: vm:activeTheme:buttonBorderThicknessPt as Int);
-		buttonRadiusSlider:setValue(next: vm:activeTheme:buttonCornerRadiusPt as Int);
-		buttonShadowSlider:setValue(next: vm:activeTheme:buttonShadowBlurPt as Int);
+		panelThickSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:panelBorderThicknessPt));
+		panelRadiusSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:panelCornerRadiusPt));
+		panelShadowSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:panelShadowBlurPt));
+		dividerThickSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:dividerThicknessPt));
+		buttonThickSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:buttonBorderThicknessPt));
+		buttonRadiusSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:buttonCornerRadiusPt));
+		buttonShadowSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt));
+		panelThickLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:panelBorderThicknessPt)));
+		panelRadiusLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:panelCornerRadiusPt)));
+		panelShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:panelShadowBlurPt)));
+		dividerThickLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:dividerThicknessPt)));
+		buttonThickLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonBorderThicknessPt)));
+		buttonRadiusLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonCornerRadiusPt)));
+		buttonShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt)));
 		baseTextInput:setText(next: vm:baseTextLabel());
 		alphaSlider:setValue(next: vm:windowAlphaPct);
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');

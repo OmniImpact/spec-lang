@@ -18,11 +18,11 @@ Class of SewNode is StyledBox{
 	String is borderStyle: 'single';
 	Color is lineColor: Color(r: 100, g: 180, b: 255);
 	Boolean is useThemeBorder: true;
-	Int is thicknessPx: 2;
-	Int is radiusPx: 8;
-	Int is shadowOffsetX: 0;
-	Int is shadowOffsetY: 4;
-	Int is shadowBlur: 8;
+	Float is thicknessPt: 2.0;
+	Float is radiusPt: 6.0;
+	Float is shadowOffsetXPt: 0.0;
+	Float is shadowOffsetYPt: 3.0;
+	Float is shadowBlurPt: 6.0;
 	Int is shadowAlpha: 96;
 	Float is minWidthPt: 96.0;
 	Float is minHeightPt: 52.0;
@@ -32,11 +32,11 @@ Class of SewNode is StyledBox{
 		String is borderStyle: 'single',
 		Color is lineColor: Color(r: 100, g: 180, b: 255),
 		Boolean is useThemeBorder: true,
-		Int is thicknessPx: 2,
-		Int is radiusPx: 8,
-		Int is shadowOffsetX: 0,
-		Int is shadowOffsetY: 4,
-		Int is shadowBlur: 8,
+		Float is thicknessPt: 2.0,
+		Float is radiusPt: 6.0,
+		Float is shadowOffsetXPt: 0.0,
+		Float is shadowOffsetYPt: 3.0,
+		Float is shadowBlurPt: 6.0,
 		Int is shadowAlpha: 96,
 		Float is minWidthPt: 96.0,
 		Float is minHeightPt: 52.0
@@ -45,11 +45,11 @@ Class of SewNode is StyledBox{
 		:borderStyle: borderStyle;
 		:lineColor: lineColor;
 		:useThemeBorder: useThemeBorder;
-		:thicknessPx: thicknessPx;
-		:radiusPx: radiusPx;
-		:shadowOffsetX: shadowOffsetX;
-		:shadowOffsetY: shadowOffsetY;
-		:shadowBlur: shadowBlur;
+		:thicknessPt: thicknessPt;
+		:radiusPt: radiusPt;
+		:shadowOffsetXPt: shadowOffsetXPt;
+		:shadowOffsetYPt: shadowOffsetYPt;
+		:shadowBlurPt: shadowBlurPt;
 		:shadowAlpha: shadowAlpha;
 		:minWidthPt: minWidthPt;
 		:minHeightPt: minHeightPt;
@@ -78,6 +78,12 @@ Class of SewNode is StyledBox{
 		});
 		local Int is bCol: if({ useThemeBorder }, { activeTheme:textAccent }, { lineColor:toArgb() });
 		local Int is sCol: if({ shadowAlpha > 0 }, { Color(r: 0, g: 0, b: 0, a: shadowAlpha):toArgb() }, { 0 });
+		local Int is tPx: if({ thicknessPt > 0.0 }, { activeScale:px(pt: thicknessPt) }, { 0 });
+		if({ thicknessPt > 0.0 && tPx < 1 }, { tPx: 1; });
+		local Int is rPx: if({ radiusPt > 0.0 }, { activeScale:px(pt: radiusPt) }, { 0 });
+		local Int is sxPx: activeScale:px(pt: shadowOffsetXPt);
+		local Int is syPx: activeScale:px(pt: shadowOffsetYPt);
+		local Int is sbPx: if({ shadowBlurPt > 0.0 }, { activeScale:px(pt: shadowBlurPt) }, { 0 });
 		ctx:drawStyledBox(
 			x: bx,
 			y: by,
@@ -85,12 +91,12 @@ Class of SewNode is StyledBox{
 			h: bh,
 			bgColor: activeTheme:panelBg,
 			borderColor: bCol,
-			thickness: thicknessPx,
-			radius: radiusPx,
+			thickness: tPx,
+			radius: rPx,
 			style: borderStyle,
-			shadowOffsetX: shadowOffsetX,
-			shadowOffsetY: shadowOffsetY,
-			shadowBlur: shadowBlur,
+			shadowOffsetX: sxPx,
+			shadowOffsetY: syPx,
+			shadowBlur: sbPx,
 			shadowColor: sCol
 		);
 		if({ label != '' }, {
