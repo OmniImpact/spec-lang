@@ -8,7 +8,7 @@ Class of SpecUnitTest is TestScrapWidgets{
 		['base', 'suit', [KeyCode, KeyMod, SuitCanvas]],
 		['base', 'fabric', [DrawContext, Color, Theme, ThemePreset]],
 		['base', 'sew', [Rect, Constraints, Size, CursorShape]],
-		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner, SectionH, SectionV]],
+		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner, SectionH, SectionV, TextInput]],
 		['base', 'scrap', 'menu', [MenuConfig, MenuItemConfig, MenuItemKind]],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'tab', [TabBar, TabItemConfig]],
@@ -207,8 +207,9 @@ Class of SpecUnitTest is TestScrapWidgets{
 			])
 		);
 		Assert:areEqualInt(1, cfg:menus:length());
-		Assert:isTrue(cfg:checkboxOnIconSvg != '');
-		Assert:isTrue(cfg:radioOnIconSvg != '');
+		# Default icon SVGs are empty so Toolbar uses native Checkbox/RadioButton indicator visuals
+		Assert:areEqualString('', cfg:checkboxOnIconSvg);
+		Assert:areEqualString('', cfg:radioOnIconSvg);
 	}
 
 	Function is testSwitchEnabledAndSpinnerParity(){
@@ -247,5 +248,48 @@ Class of SpecUnitTest is TestScrapWidgets{
 		local Int is px: canvas:pixelsAddr();
 		Assert:areEqualInt(bg, loadI32(ptr: px, byteOffset: (10 * 280 + 10) * 4));
 		canvas:dispose();
+	}
+
+	Function is testTextInputIconsClearableAndAutocomplete(){
+		local String is lastChanged: '';
+		local String is lastAccepted: '';
+		local Array of String is dict: Array(['Apple', 'Apricot', 'Banana', 'Cherry']);
+		local TextInput is inp: TextInput(
+			leftIconSvg: TextInput:ICON_SEARCH_SVG,
+			clearable: true,
+			hasAutocomplete: true,
+			autocompleteProvider: local Function of Array of String(String is q){
+				local Array of String is out: Array();
+				local String is lq: q:toLower();
+				local Int is i: 0;
+				while({ i < dict:length() }, {
+					local String is s: dict:get(index: i);
+					if({ lq == '' || s:toLower():contains(needle: lq) }, { out:add(item: s); });
+					i: i + 1;
+				});
+				return out;
+			},
+			onChange: local Function(String is v){ lastChanged: v; },
+			onAutocompleteSelect: local Function(String is v){ lastAccepted: v; }
+		);
+		inp:arrange(bounds: Rect(x: 0, y: 0, width: 220, height: 30));
+		inp:setFocused(next: true);
+		Assert:isTrue(inp:onText(ch: 'a', mods: 0));
+		Assert:isTrue(inp:onText(ch: 'p', mods: 0));
+		Assert:isTrue(inp:acOpen);
+		Assert:areEqualInt(2, inp:suggestions:length());
+		# Down moves highlight from Apple (0) -> Apricot (1); Enter accepts Apricot
+		Assert:isTrue(inp:onKey(key: KeyCode:DOWN, mods: KeyMod:NONE));
+		Assert:isTrue(inp:onKey(key: KeyCode:ENTER, mods: KeyMod:NONE));
+		Assert:isFalse(inp:acOpen);
+		Assert:areEqualString('Apricot', inp:text);
+		Assert:areEqualString('Apricot', lastAccepted);
+
+		# Clicking right clear button clears text
+		Assert:isTrue(inp:cursorAt(x: 210, y: 15) == CursorShape:POINTER);
+		Assert:areEqualString('Clear', inp:tooltipAt(x: 210, y: 15));
+		Assert:isTrue(inp:onPointerClickMod(x: 210, y: 15));
+		Assert:areEqualString('', inp:text);
+		Assert:areEqualString('', lastChanged);
 	}
 }

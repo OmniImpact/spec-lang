@@ -19,6 +19,8 @@ Class of SewNode is Toolbar{
 		['base', 'fabric', DrawContext],
 		['base', 'suit', SuitCanvas],
 		['base', 'scrap', Bar],
+		['base', 'scrap', Checkbox],
+		['base', 'scrap', RadioButton],
 		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'menu', MenuConfig],
@@ -377,12 +379,24 @@ Class of SewNode is Toolbar{
 			local String is rSvg: if({ item:checked }, { config:radioOnIconSvg }, { config:radioOffIconSvg });
 			if({ rSvg != '' }, {
 				SvgRenderer:shared:draw(ctx: ctx, svgSrc: rSvg, x: x + padX, y: iy, widthPx: iconSz, heightPx: iconSz, tintColor: fgCol, useTint: true);
+			}, {
+				RadioButton:paintIndicator(
+					ctx: ctx, theme: theme, scale: scale,
+					x: x + padX, y: iy, sizePx: iconSz,
+					selected: item:checked, enabled: item:enabled, hovered: hovered, focused: false
+				);
 			});
 		}, {
 			if({ item:kind == MenuItemKind:TOGGLE }, {
 				local String is cSvg: if({ item:checked }, { config:checkboxOnIconSvg }, { config:checkboxOffIconSvg });
 				if({ cSvg != '' }, {
 					SvgRenderer:shared:draw(ctx: ctx, svgSrc: cSvg, x: x + padX, y: iy, widthPx: iconSz, heightPx: iconSz, tintColor: fgCol, useTint: true);
+				}, {
+					Checkbox:paintIndicator(
+						ctx: ctx, theme: theme, scale: scale,
+						x: x + padX, y: iy, sizePx: iconSz,
+						checked: item:checked, enabled: item:enabled, hovered: hovered, focused: false
+					);
 				});
 			}, {
 				if({ item:iconSvg != '' }, {

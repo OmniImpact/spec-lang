@@ -49,6 +49,40 @@ Class is InputsPageView{
 			}
 		);
 
+		local Array of String is widgetCatalog: Array([
+			'Accordion', 'Badge', 'Checkbox', 'ColorSelector', 'DateDropdown',
+			'Dialog', 'ListView', 'Popover', 'ProgressBar', 'RadioButton',
+			'ScrollView', 'SelectDropdown', 'Slider', 'Spinner', 'Switch',
+			'TabBar', 'TableView', 'TextArea', 'TextInput', 'TimeDropdown', 'Toast', 'Toolbar', 'TreeView'
+		]);
+		local TextInput is searchBox: TextInput(
+			placeholder: 'Search widgets (autocomplete)...',
+			leftIconSvg: TextInput:ICON_SEARCH_SVG,
+			clearable: true,
+			hasAutocomplete: true,
+			autocompleteProvider: local Function of Array of String(String is q){
+				local Array of String is out: Array();
+				local String is lowQ: q:toLower();
+				local Int is i: 0;
+				while({ i < widgetCatalog:length() }, {
+					local String is item: widgetCatalog:get(index: i);
+					if({ lowQ == '' || item:toLower():contains(needle: lowQ) }, {
+						out:add(item: item);
+					});
+					i: i + 1;
+				});
+				return out;
+			},
+			minWidthPt: 240.0,
+			tooltip: 'Search icon + clear button + autocomplete provider',
+			onChange: local Function(String is next){
+				echoLabel:emit(value: 'Search: ' . next);
+			},
+			onAutocompleteSelect: local Function(String is chosen){
+				echoLabel:emit(value: 'Selected suggestion: ' . chosen);
+			}
+		);
+
 		:stepperInput: DecoratedTextInput(
 			text: (vm:stepperVal as String) . ' px',
 			suffix: ' px',
@@ -137,6 +171,7 @@ Class is InputsPageView{
 					child: SectionV(
 						children: Array([
 							SectionV(title: 'Single-Line TextInput', children: Array([textBox])),
+							SectionV(title: 'Search TextInput (Left Icon + Clear Button + Autocomplete)', children: Array([searchBox])),
 							SectionV(title: 'DecoratedTextInput (with suffix + Up/Down)', children: Array([stepperInput])),
 							TextScrap(text: echoLabel, muted: true)
 						])

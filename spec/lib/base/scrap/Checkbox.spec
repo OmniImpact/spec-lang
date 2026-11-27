@@ -6,6 +6,7 @@ Class of SewNode is Checkbox{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Conditional],
 		['base', 'sys', as Loops()],
 		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
@@ -13,6 +14,8 @@ Class of SewNode is Checkbox{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'sew', Scale],
+		['base', 'fabric', Theme],
 		['base', 'fabric', Color],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', FillStyle],
@@ -107,6 +110,42 @@ Class of SewNode is Checkbox{
 		return desiredSize;
 	}
 
+	## Paints the themed checkbox indicator square at ([x], [y]) with size [sizePx].
+	held Function is paintIndicator(
+		DrawContext is ctx,
+		Theme is theme,
+		Scale is scale,
+		Int is x,
+		Int is y,
+		Int is sizePx,
+		Boolean is checked,
+		Boolean is enabled: true,
+		Boolean is hovered: false,
+		Boolean is focused: false
+	){
+		local Int is btnPx: theme:buttonBorderPx(scaleFactor: scale:factor);
+		local Int is radPx: scale:px(pt: theme:buttonCornerRadiusPt);
+		local FillStyle is fill: theme:resolveButtonFill(enabled: enabled, selected: checked, hovered: hovered, focused: focused);
+		ctx:drawStyledBoxFill(
+			x: x, y: y, w: sizePx, h: sizePx,
+			fill: fill, borderColor: theme:buttonBorderColorArgb(),
+			thickness: btnPx, radius: radPx, style: theme:buttonBorderStyle
+		);
+		Conditional:if(check: { checked }, then: {
+			local Int is ckCol: Conditional:if(check: { enabled }, then: { theme:textPrimary }, else: { theme:textMuted });
+			local Int is innerPx: (sizePx * 50) / 100;
+			Conditional:if(check: { innerPx < 4 }, then: { innerPx: 4; });
+			local Int is ix: x + (sizePx - innerPx) / 2;
+			local Int is iy: y + (sizePx - innerPx) / 2;
+			local Int is innerRad: Conditional:if(check: { radPx > 1 }, then: { radPx / 2 }, else: { 0 });
+			ctx:fillRoundRectStyled(
+				x: ix, y: iy, w: innerPx, h: innerPx,
+				radius: innerRad,
+				fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: ckCol))
+			);
+		});
+	}
+
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
@@ -114,28 +153,11 @@ Class of SewNode is Checkbox{
 		local Int is boxPx: :boxSizePx();
 		local Int is bx: b:x;
 		local Int is by: b:y + (b:height - boxPx) / 2;
-		local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
-		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
-		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: checked, hovered: hovered, focused: focused);
-		ctx:drawStyledBoxFill(
-			x: bx, y: by, w: boxPx, h: boxPx,
-			fill: fill, borderColor: activeTheme:buttonBorderColorArgb(),
-			thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+		Checkbox:paintIndicator(
+			ctx: ctx, theme: activeTheme, scale: activeScale,
+			x: bx, y: by, sizePx: boxPx,
+			checked: checked, enabled: enabled, hovered: hovered, focused: focused
 		);
-
-		if({ checked }, {
-			local Int is ckCol: if({ enabled }, { activeTheme:textPrimary }, { activeTheme:textMuted });
-			local Int is innerPx: (boxPx * 50) / 100;
-			if({ innerPx < 4 }, { innerPx: 4; });
-			local Int is ix: bx + (boxPx - innerPx) / 2;
-			local Int is iy: by + (boxPx - innerPx) / 2;
-			local Int is innerRad: if({ radPx > 1 }, { radPx / 2 }, { 0 });
-			ctx:fillRoundRectStyled(
-				x: ix, y: iy, w: innerPx, h: innerPx,
-				radius: innerRad,
-				fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: ckCol))
-			);
-		});
 
 		if({ label != '' }, {
 			local Int is fpx: :fontPx();

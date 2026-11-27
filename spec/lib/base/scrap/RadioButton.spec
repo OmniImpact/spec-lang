@@ -6,12 +6,15 @@ Class of SewNode is RadioButton{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Conditional],
 		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
 		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'sew', Scale],
+		['base', 'fabric', Theme],
 		['base', 'fabric', Color],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', FillStyle],
@@ -106,6 +109,40 @@ Class of SewNode is RadioButton{
 		return desiredSize;
 	}
 
+	## Paints the themed circular radio indicator at ([x], [y]) with diameter [sizePx].
+	held Function is paintIndicator(
+		DrawContext is ctx,
+		Theme is theme,
+		Scale is scale,
+		Int is x,
+		Int is y,
+		Int is sizePx,
+		Boolean is selected,
+		Boolean is enabled: true,
+		Boolean is hovered: false,
+		Boolean is focused: false
+	){
+		local Int is btnPx: theme:buttonBorderPx(scaleFactor: scale:factor);
+		local FillStyle is fill: theme:resolveButtonFill(enabled: enabled, selected: selected, hovered: hovered, focused: focused);
+		ctx:drawStyledBoxFill(
+			x: x, y: y, w: sizePx, h: sizePx,
+			fill: fill, borderColor: theme:buttonBorderColorArgb(),
+			thickness: btnPx, radius: sizePx / 2, style: theme:buttonBorderStyle
+		);
+		Conditional:if(check: { selected }, then: {
+			local Int is dotPx: (sizePx * 46) / 100;
+			Conditional:if(check: { dotPx < 4 }, then: { dotPx: 4; });
+			local Int is dx: x + (sizePx - dotPx) / 2;
+			local Int is dy: y + (sizePx - dotPx) / 2;
+			local Int is dotCol: Conditional:if(check: { enabled }, then: { theme:textPrimary }, else: { theme:textMuted });
+			ctx:fillRoundRectStyled(
+				x: dx, y: dy, w: dotPx, h: dotPx,
+				radius: dotPx / 2,
+				fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: dotCol))
+			);
+		});
+	}
+
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
@@ -113,26 +150,11 @@ Class of SewNode is RadioButton{
 		local Int is circPx: :circleSizePx();
 		local Int is cx: b:x;
 		local Int is cy: b:y + (b:height - circPx) / 2;
-		local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
-		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: selected, hovered: hovered, focused: focused);
-		ctx:drawStyledBoxFill(
-			x: cx, y: cy, w: circPx, h: circPx,
-			fill: fill, borderColor: activeTheme:buttonBorderColorArgb(),
-			thickness: btnPx, radius: circPx / 2, style: activeTheme:buttonBorderStyle
+		RadioButton:paintIndicator(
+			ctx: ctx, theme: activeTheme, scale: activeScale,
+			x: cx, y: cy, sizePx: circPx,
+			selected: selected, enabled: enabled, hovered: hovered, focused: focused
 		);
-
-		if({ selected }, {
-			local Int is dotPx: (circPx * 46) / 100;
-			if({ dotPx < 4 }, { dotPx: 4; });
-			local Int is dx: cx + (circPx - dotPx) / 2;
-			local Int is dy: cy + (circPx - dotPx) / 2;
-			local Int is dotCol: if({ enabled }, { activeTheme:textPrimary }, { activeTheme:textMuted });
-			ctx:fillRoundRectStyled(
-				x: dx, y: dy, w: dotPx, h: dotPx,
-				radius: dotPx / 2,
-				fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: dotCol))
-			);
-		});
 
 		if({ label != '' }, {
 			local Int is fpx: :fontPx();

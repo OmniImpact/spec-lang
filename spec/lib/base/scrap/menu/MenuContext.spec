@@ -12,6 +12,8 @@ Class of SewNode is MenuContext{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'fabric', 'svg', SvgRenderer],
+		['base', 'scrap', Checkbox],
+		['base', 'scrap', RadioButton],
 		['base', 'scrap', 'menu', MenuItemConfig],
 		['base', 'scrap', 'menu', MenuItemKind]
 	];
@@ -37,10 +39,10 @@ Class of SewNode is MenuContext{
 		posY: 0;
 		hoverIdx: -1;
 		items: Array();
-		if({ radioOffIconSvg != '' }, { :radioOffIconSvg: radioOffIconSvg; }, { :radioOffIconSvg: "<svg viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"5.5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.5\"/></svg>"; });
-		if({ radioOnIconSvg != '' }, { :radioOnIconSvg: radioOnIconSvg; }, { :radioOnIconSvg: "<svg viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"5.5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.5\"/><circle cx=\"8\" cy=\"8\" r=\"2.8\" fill=\"#ffffff\"/></svg>"; });
-		if({ checkboxOffIconSvg != '' }, { :checkboxOffIconSvg: checkboxOffIconSvg; }, { :checkboxOffIconSvg: "<svg viewBox=\"0 0 16 16\"><rect x=\"2.5\" y=\"2.5\" width=\"11\" height=\"11\" rx=\"2\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.5\"/></svg>"; });
-		if({ checkboxOnIconSvg != '' }, { :checkboxOnIconSvg: checkboxOnIconSvg; }, { :checkboxOnIconSvg: "<svg viewBox=\"0 0 16 16\"><rect x=\"2.5\" y=\"2.5\" width=\"11\" height=\"11\" rx=\"2\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.5\"/><path d=\"M5 8.2L7.2 10.4L11.2 5.6\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"; });
+		:radioOffIconSvg: radioOffIconSvg;
+		:radioOnIconSvg: radioOnIconSvg;
+		:checkboxOffIconSvg: checkboxOffIconSvg;
+		:checkboxOnIconSvg: checkboxOnIconSvg;
 	}
 
 	## Opens the context menu at ([x], [y]) with [items] and invalidates.
@@ -202,12 +204,24 @@ Class of SewNode is MenuContext{
 						local String is rSvg: if({ item:checked }, { radioOnIconSvg }, { radioOffIconSvg });
 						if({ rSvg != '' }, {
 							SvgRenderer:shared:draw(ctx: ctx, svgSrc: rSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
+						}, {
+							RadioButton:paintIndicator(
+								ctx: ctx, theme: activeTheme, scale: activeScale,
+								x: mx + padX, y: icoY, sizePx: iconSz,
+								selected: item:checked, enabled: item:enabled, hovered: (hoverIdx == i), focused: false
+							);
 						});
 					}, {
 						if({ item:kind == MenuItemKind:TOGGLE }, {
 							local String is cSvg: if({ item:checked }, { checkboxOnIconSvg }, { checkboxOffIconSvg });
 							if({ cSvg != '' }, {
 								SvgRenderer:shared:draw(ctx: ctx, svgSrc: cSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
+							}, {
+								Checkbox:paintIndicator(
+									ctx: ctx, theme: activeTheme, scale: activeScale,
+									x: mx + padX, y: icoY, sizePx: iconSz,
+									checked: item:checked, enabled: item:enabled, hovered: (hoverIdx == i), focused: false
+								);
 							});
 						});
 					});

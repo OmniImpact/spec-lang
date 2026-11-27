@@ -37,10 +37,10 @@ Class is ToolbarConfig{
 			mi: mi + 1;
 		});
 		:heightPt: heightPt;
-		if({ radioOffIconSvg != '' }, { :radioOffIconSvg: radioOffIconSvg; }, { :radioOffIconSvg: ToolbarConfig:DEFAULT_RADIO_OFF_SVG; });
-		if({ radioOnIconSvg != '' }, { :radioOnIconSvg: radioOnIconSvg; }, { :radioOnIconSvg: ToolbarConfig:DEFAULT_RADIO_ON_SVG; });
-		if({ checkboxOffIconSvg != '' }, { :checkboxOffIconSvg: checkboxOffIconSvg; }, { :checkboxOffIconSvg: ToolbarConfig:DEFAULT_CHECKBOX_OFF_SVG; });
-		if({ checkboxOnIconSvg != '' }, { :checkboxOnIconSvg: checkboxOnIconSvg; }, { :checkboxOnIconSvg: ToolbarConfig:DEFAULT_CHECKBOX_ON_SVG; });
+		:radioOffIconSvg: radioOffIconSvg;
+		:radioOnIconSvg: radioOnIconSvg;
+		:checkboxOffIconSvg: checkboxOffIconSvg;
+		:checkboxOnIconSvg: checkboxOnIconSvg;
 	}
 
 	Function is addMenu(MenuConfig is menu){
