@@ -14,6 +14,7 @@ Class of SewNode is TabBar{
 		['base', 'sew', DockSide],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
+		['base', 'scrap', 'tab', TabAlign],
 		['base', 'scrap', 'tab', TabItemConfig]
 	];
 
@@ -22,6 +23,7 @@ Class of SewNode is TabBar{
 	Float is heightPt: 0.0;
 	Float is outerPadPt: -1.0;
 	DockSide is dockSide: DockSide:TOP;
+	TabAlign is tabAlign: TabAlign:LEFT;
 	Float is minTabWidthPt: 0.0;
 	Float is maxTabWidthPt: 0.0;
 	Boolean is showCloseButton: true;
@@ -38,6 +40,7 @@ Class of SewNode is TabBar{
 		Float is heightPt: 0.0,
 		Float is outerPadPt: -1.0,
 		DockSide is dockSide: DockSide:TOP,
+		TabAlign is tabAlign: TabAlign:LEFT,
 		Float is minTabWidthPt: 0.0,
 		Float is maxTabWidthPt: 0.0,
 		Boolean is showCloseButton: true,
@@ -50,6 +53,7 @@ Class of SewNode is TabBar{
 		:heightPt: heightPt;
 		:outerPadPt: outerPadPt;
 		:dockSide: dockSide;
+		:tabAlign: tabAlign;
 		:minTabWidthPt: minTabWidthPt;
 		:maxTabWidthPt: maxTabWidthPt;
 		:showCloseButton: showCloseButton;
@@ -83,6 +87,16 @@ Class of SewNode is TabBar{
 		if({ w > maxW }, { w: maxW; });
 		if({ w < minW }, { w: minW; });
 		return w;
+	}
+
+	local Function of Int is tabsStartX(Rect is area, Int is tw){
+		local Int is count: tabs:length();
+		if({ count <= 0 || tw <= 0 }, { return area:x; });
+		local Int is totalW: count * tw;
+		if({ totalW >= area:width }, { return area:x; });
+		if({ tabAlign == TabAlign:RIGHT }, { return area:x + area:width - totalW; });
+		if({ tabAlign == TabAlign:CENTER }, { return area:x + (area:width - totalW) / 2; });
+		return area:x;
 	}
 
 	local Function of Int is closeBoxSizePx(){
@@ -142,13 +156,16 @@ Class of SewNode is TabBar{
 		if({ x >= area:x && x < area:x + area:width && y >= area:y && y < area:y + area:height && tabs:length() > 0 }, {
 			local Int is tw: :tabWidthPx(totalW: area:width);
 			if({ tw > 0 }, {
-				local Int is idx: (x - area:x) / tw;
-				if({ idx >= 0 && idx < tabs:length() }, {
-					nextTab: idx;
-					local TabItemConfig is t: tabs:get(index: idx);
-					if({ showCloseButton && t:closable }, {
-						if({ :pointInCloseBtn(x: x, y: y, tabX: area:x + idx * tw, tabW: tw, area: area) }, {
-							nextClose: idx;
+				local Int is startX: :tabsStartX(area: area, tw: tw);
+				if({ x >= startX }, {
+					local Int is idx: (x - startX) / tw;
+					if({ idx >= 0 && idx < tabs:length() }, {
+						nextTab: idx;
+						local TabItemConfig is t: tabs:get(index: idx);
+						if({ showCloseButton && t:closable }, {
+							if({ :pointInCloseBtn(x: x, y: y, tabX: startX + idx * tw, tabW: tw, area: area) }, {
+								nextClose: idx;
+							});
 						});
 					});
 				});
@@ -167,10 +184,12 @@ Class of SewNode is TabBar{
 		if({ x < area:x || x >= area:x + area:width || y < area:y || y >= area:y + area:height || tabs:length() == 0 }, { return false; });
 		local Int is tw: :tabWidthPx(totalW: area:width);
 		if({ tw <= 0 }, { return false; });
-		local Int is idx: (x - area:x) / tw;
+		local Int is startX: :tabsStartX(area: area, tw: tw);
+		if({ x < startX }, { return false; });
+		local Int is idx: (x - startX) / tw;
 		if({ idx < 0 || idx >= tabs:length() }, { return false; });
 		local TabItemConfig is t: tabs:get(index: idx);
-		if({ showCloseButton && t:closable && :pointInCloseBtn(x: x, y: y, tabX: area:x + idx * tw, tabW: tw, area: area) }, {
+		if({ showCloseButton && t:closable && :pointInCloseBtn(x: x, y: y, tabX: startX + idx * tw, tabW: tw, area: area) }, {
 			local Function is ccb: onCloseTab;
 			ccb(idx);
 			return true;
@@ -185,7 +204,9 @@ Class of SewNode is TabBar{
 		if({ x < area:x || x >= area:x + area:width || y < area:y || y >= area:y + area:height || tabs:length() == 0 }, { return false; });
 		local Int is tw: :tabWidthPx(totalW: area:width);
 		if({ tw <= 0 }, { return false; });
-		local Int is idx: (x - area:x) / tw;
+		local Int is startX: :tabsStartX(area: area, tw: tw);
+		if({ x < startX }, { return false; });
+		local Int is idx: (x - startX) / tw;
 		if({ idx < 0 || idx >= tabs:length() }, { return false; });
 		local Function is rcb: onRightClickTab;
 		rcb(idx, x, y);
@@ -205,6 +226,7 @@ Class of SewNode is TabBar{
 		if({ count > 0 }, {
 			local Rect is area: :tabsAreaRect(b: b);
 			local Int is tw: :tabWidthPx(totalW: area:width);
+			local Int is startX: :tabsStartX(area: area, tw: tw);
 			local Int is fpx: :fontPx();
 			local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 			local Int is padL: activeScale:px(pt: activeTheme:paddingPt * 1.5);
@@ -214,8 +236,8 @@ Class of SewNode is TabBar{
 			ctx:setClip(x: area:x, y: area:y, w: area:width, h: area:height);
 			local Int is i: 0;
 			while({ i < count }, {
-				local Int is tx: area:x + i * tw;
-				if({ tx < area:x + area:width }, {
+				local Int is tx: startX + i * tw;
+				if({ tx < area:x + area:width && tx + tw > area:x }, {
 					local TabItemConfig is tab: tabs:get(index: i);
 					local Boolean is isActive: i == activeIndex;
 					local Boolean is isHov: hoverTabIdx == i;
@@ -225,18 +247,7 @@ Class of SewNode is TabBar{
 					if({ fillH > 0 }, {
 						ctx:setClip(x: tx, y: ty0, w: tw, h: fillH);
 						ctx:fillRoundRectStyled(x: tx, y: ty0, w: tw, h: fillH + btnRad, radius: btnRad, fill: tabFill);
-						if({ btnPx > 0 && activeTheme:buttonBorderStyle != 'none' }, {
-							local Int is tabBorder: if({ isActive }, { activeTheme:textAccent }, { activeTheme:buttonBorderColorArgb() });
-							ctx:drawStyledBox(
-								x: tx, y: ty0, w: tw, h: fillH + btnRad,
-								bgColor: 0, borderColor: tabBorder, thickness: btnPx,
-								radius: btnRad, style: activeTheme:buttonBorderStyle
-							);
-						});
 						ctx:clearClip();
-					});
-					if({ divPx > 0 }, {
-						ctx:drawDivider(x: tx + tw - divPx, y: area:y, w: divPx, h: area:height, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
 					});
 
 					local Int is closeReserve: if({ showCloseButton && tab:closable }, { cs + padR * 2 }, { padR });
@@ -262,6 +273,22 @@ Class of SewNode is TabBar{
 					});
 				});
 				i: i + 1;
+			});
+			if({ divPx > 0 }, {
+				if({ tabAlign == TabAlign:RIGHT || tabAlign == TabAlign:CENTER }, {
+					ctx:drawDivider(x: startX, y: area:y, w: divPx, h: area:height, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
+				});
+				local Int is di: 1;
+				while({ di < count }, {
+					ctx:drawDivider(x: startX + di * tw, y: area:y, w: divPx, h: area:height, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
+					di: di + 1;
+				});
+				if({ tabAlign == TabAlign:LEFT || tabAlign == TabAlign:CENTER }, {
+					local Int is endX: startX + count * tw - divPx;
+					if({ endX < area:x + area:width }, {
+						ctx:drawDivider(x: endX, y: area:y, w: divPx, h: area:height, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
+					});
+				});
 			});
 			ctx:clearClip();
 		});
