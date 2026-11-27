@@ -5,10 +5,12 @@ Class of SpecUnitTest is TestScrapWidgets{
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Mem()],
+		['base', 'signal', TextEmitter],
 		['base', 'suit', [KeyCode, KeyMod, SuitCanvas]],
 		['base', 'fabric', [DrawContext, Color, Theme, ThemePreset]],
 		['base', 'sew', [Rect, Constraints, Size, CursorShape, Scale]],
-		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner, SectionH, SectionV, TextInput, Checkbox, RadioButton]],
+		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner, SectionH, SectionV, TextInput, TextArea, NumberInput, Popover, Checkbox, RadioButton]],
+		['base', 'scrap', 'text', TextView],
 		['base', 'scrap', 'menu', [MenuConfig, MenuItemConfig, MenuItemKind]],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'tab', [TabBar, TabItemConfig]],
@@ -344,5 +346,32 @@ Class of SpecUnitTest is TestScrapWidgets{
 		Assert:isTrue(sharpCorner != roundCorner);
 
 		canvas:dispose();
+	}
+
+	Function is testCtrlASelectAllOnEditableTextWidgets(){
+		local TextInput is inp: TextInput(text: 'Hello World');
+		inp:setFocused(next: true);
+		Assert:isTrue(inp:onKey(key: 97, mods: KeyMod:CTRL));
+		Assert:areEqualInt(0, inp:selAnchor);
+		Assert:areEqualInt(11, inp:cursorPos);
+
+		local TextArea is ta: TextArea(text: 'Line 1\nLine 2');
+		ta:setFocused(next: true);
+		Assert:isTrue(ta:onKey(key: 97, mods: KeyMod:CTRL));
+		Assert:areEqualInt(0, ta:selAnchor);
+		Assert:areEqualInt(14, ta:cursorPos);
+
+		local NumberInput is ni: NumberInput(value: 42.0);
+		ni:setFocused(next: true);
+		Assert:isTrue(ni:onKey(key: 97, mods: KeyMod:CTRL));
+		Assert:isTrue(ni:editing);
+		Assert:isTrue(ni:allSelected);
+
+		local TextView is tv: TextView(text: TextEmitter(initial: 'Alpha\nBeta'));
+		local Popover is pop: Popover(anchor: Label(text: 'Open'), content: tv, open: true);
+		pop:arrange(bounds: Rect(x: 0, y: 0, width: 100, height: 30));
+		tv:setFocused(next: true);
+		Assert:isTrue(pop:onKey(key: 97, mods: KeyMod:CTRL));
+		Assert:areEqualString('Alpha\nBeta', tv:selectedText());
 	}
 }

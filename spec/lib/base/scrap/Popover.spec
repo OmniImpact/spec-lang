@@ -500,6 +500,20 @@ Class of SewNode is Popover{
 		return anchor:onRightClickMod(x: x, y: y, mods: mods);
 	}
 
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		if({ open }, {
+			return :popupRoot():onKey(key: key, mods: mods);
+		});
+		return anchor:onKey(key: key, mods: mods);
+	}
+
+	replace Function of Boolean is onText(String is ch, Int is mods){
+		if({ open }, {
+			return :popupRoot():onText(ch: ch, mods: mods);
+		});
+		return anchor:onText(ch: ch, mods: mods);
+	}
+
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
 		if({ dragging || :inGrip(x: x, y: y) }, { return CursorShape:POINTER; });
 		local Int is re: if({ resizeMode != 0 }, { resizeMode }, { :hitResizeEdge(x: x, y: y) });

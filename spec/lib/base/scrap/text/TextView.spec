@@ -63,6 +63,7 @@ Class of SewNode is TextView{
 	Boolean is ignoreSelfEmit: false;
 	Int is cursorAlphaByte: 255;
 	Int is lastBlinkMs: 0;
+	Boolean is focused: false;
 
 	replace Function is init(
 		TextEmitter is text,
@@ -1212,7 +1213,23 @@ Class of SewNode is TextView{
 		return true;
 	}
 
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		:focused: next;
+		cursorAlphaByte: 255;
+		lastBlinkMs: 0;
+		invalidate();
+	}
+
 	replace Function of Boolean is onKey(Int is key, Int is mods){
+		if({ !focused }, { return false; });
 		local Boolean is shift: (mods & 1) != 0;
 		local Boolean is ctrl: (mods & 2) != 0;
 
@@ -1329,6 +1346,7 @@ Class of SewNode is TextView{
 	}
 
 	replace Function of Boolean is onText(String is ch, Int is mods){
+		if({ !focused }, { return false; });
 		if({ (mods & 2) != 0 || (mods & 4) != 0 || (mods & 8) != 0 }, { return false; });
 		if({ ch == '' }, { return false; });
 		:replaceSelection(replacement: ch);

@@ -62,6 +62,7 @@ Class is EditorView{
 			onClipboardWrite: local Function(String is txt){ container:setClipboard(text: txt); },
 			onClipboardRead: local Function of String(){ container:getClipboard() }
 		);
+		editorBody:setFocused(next: true);
 		editorScroll: ScrollView(child: editorBody);
 		tabBar: TabBar(
 			onSelectTab: local Function(Int is idx){ vm:selectTab(index: idx); },
