@@ -621,24 +621,49 @@ Class is ThemeBuilderPageView{
 						)
 					])
 				),
-				Frame(
-					title: 'State Effects (Hover, Selected, Focused)',
-					child: Grid(
-						columns: 3,
-						colGapPt: 8.0,
-						rowGapPt: 6.0,
-						children: Array([
-							Label(text: 'Hover Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
-							Label(text: 'Hover Tint Shift'), hoverTintSlider, TextScrap(text: hoverTintLabel, muted: true),
-							Label(text: 'Hover Saturation'), hoverSatSlider, TextScrap(text: hoverSatLabel, muted: true),
-							Label(text: 'Selected Brightness'), selectedBriSlider, TextScrap(text: selectedBriLabel, muted: true),
-							Label(text: 'Selected Tint Shift'), selectedTintSlider, TextScrap(text: selectedTintLabel, muted: true),
-							Label(text: 'Selected Saturation'), selectedSatSlider, TextScrap(text: selectedSatLabel, muted: true),
-							Label(text: 'Focus Brightness'), focusBriSlider, TextScrap(text: focusBriLabel, muted: true),
-							Label(text: 'Focus Tint Shift'), focusTintSlider, TextScrap(text: focusTintLabel, muted: true),
-							Label(text: 'Focus Saturation'), focusSatSlider, TextScrap(text: focusSatLabel, muted: true)
-						])
-					)
+				Column(
+					gapPt: 8.0,
+					children: Array([
+						Frame(
+							title: 'Hover Effects',
+							child: Grid(
+								columns: 3,
+								colGapPt: 8.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
+									Label(text: 'Tint Shift'), hoverTintSlider, TextScrap(text: hoverTintLabel, muted: true),
+									Label(text: 'Saturation'), hoverSatSlider, TextScrap(text: hoverSatLabel, muted: true)
+								])
+							)
+						),
+						Frame(
+							title: 'Selected Effects',
+							child: Grid(
+								columns: 3,
+								colGapPt: 8.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Brightness'), selectedBriSlider, TextScrap(text: selectedBriLabel, muted: true),
+									Label(text: 'Tint Shift'), selectedTintSlider, TextScrap(text: selectedTintLabel, muted: true),
+									Label(text: 'Saturation'), selectedSatSlider, TextScrap(text: selectedSatLabel, muted: true)
+								])
+							)
+						),
+						Frame(
+							title: 'Focus Effects',
+							child: Grid(
+								columns: 3,
+								colGapPt: 8.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Brightness'), focusBriSlider, TextScrap(text: focusBriLabel, muted: true),
+									Label(text: 'Tint Shift'), focusTintSlider, TextScrap(text: focusTintLabel, muted: true),
+									Label(text: 'Saturation'), focusSatSlider, TextScrap(text: focusSatLabel, muted: true)
+								])
+							)
+						)
+					])
 				)
 			])
 		);
