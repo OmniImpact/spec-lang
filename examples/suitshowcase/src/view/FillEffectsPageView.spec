@@ -44,7 +44,7 @@ Class is FillEffectsPageView{
 	TextEmitter is cxLabel: TextEmitter(initial: '50%');
 	TextEmitter is cyLabel: TextEmitter(initial: '50%');
 	TextEmitter is angLabel: TextEmitter(initial: '35 deg');
-	TextEmitter is bwLabel: TextEmitter(initial: '1.00');
+	TextEmitter is bwLabel: TextEmitter(initial: '100%');
 	TextEmitter is briLabel: TextEmitter(initial: '0.00');
 	TextEmitter is tintLabel: TextEmitter(initial: '0 deg');
 	TextEmitter is satLabel: TextEmitter(initial: '0.00');
@@ -155,7 +155,7 @@ Class is FillEffectsPageView{
 			minVal: 10, maxVal: 200, value: 100, minWidthPt: 130.0,
 			onChange: local Function(Int is v){
 				liveFill:blendWidth: (v as Float) / 100.0;
-				bwLabel:emit(value: :fmtTenths(val: v));
+				bwLabel:emit(value: (v as String) . '%');
 				previewBox:invalidate();
 			}
 		);

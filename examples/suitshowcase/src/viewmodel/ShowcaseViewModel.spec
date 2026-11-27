@@ -23,13 +23,20 @@ Class is ShowcaseViewModel{
 	Float is baseTextPt: 10.0;
 	String is borderStyle: 'solid';
 	Int is windowAlphaPct: 100;
-	Int is fillStyleIdx: 0;
-	Boolean is useFillColorB: false;
-	Color is fillColorB: Color(r: 90, g: 150, b: 235);
-	Int is fillCenterXPct: 50;
-	Int is fillCenterYPct: 50;
-	Int is fillAngleDeg: 35;
-	Int is fillBlendPct: 100;
+	Int is surfFillStyleIdx: 0;
+	Boolean is useSurfColorB: false;
+	Color is surfColorB: Color(r: 90, g: 150, b: 235);
+	Int is surfCenterXPct: 50;
+	Int is surfCenterYPct: 50;
+	Int is surfAngleDeg: 35;
+	Int is surfBlendPct: 100;
+	Int is btnFillStyleIdx: 0;
+	Boolean is useBtnColorB: false;
+	Color is btnColorB: Color(r: 90, g: 150, b: 235);
+	Int is btnCenterXPct: 50;
+	Int is btnCenterYPct: 50;
+	Int is btnAngleDeg: 35;
+	Int is btnBlendPct: 100;
 
 	## Interactive demo state
 	Int is clickCount: 0;
@@ -212,75 +219,72 @@ Class is ShowcaseViewModel{
 	Function is loadPreset(ThemePreset is preset){
 		:basePreset: preset;
 		:activeTheme: Theme:forPreset(preset: preset, baseTextPt: baseTextPt);
-		:fillStyleIdx: 0;
-		:useFillColorB: false;
+		:surfFillStyleIdx: 0;
+		:useSurfColorB: false;
+		:btnFillStyleIdx: 0;
+		:useBtnColorB: false;
 		:applyCurrentTheme();
 		statusText:emit(value: 'Loaded ' . Theme:presetLabel(preset: preset) . ' preset');
 	}
 
-	local Function is syncThemeFills(){
-		if({ fillStyleIdx == 0 }, {
+	local Function is syncSurfaceFill(){
+		if({ surfFillStyleIdx == 0 }, {
 			activeTheme:customSurfaceFill: false;
+			activeTheme:deriveColors();
+			:notifyThemeChange();
+			return;
+		});
+		local String is fMode: if({ surfFillStyleIdx == 3 || surfFillStyleIdx == 4 }, { 'radial' }, { 'linear' });
+		local Boolean is fRefl: surfFillStyleIdx == 2 || surfFillStyleIdx == 4;
+		local Color is colB: if({ useSurfColorB }, { surfColorB }, { activeTheme:highlight });
+		activeTheme:setSurfaceFill(fill: FillStyle(
+			mode: fMode, colorA: activeTheme:background, colorB: colB,
+			centerX: (surfCenterXPct as Float) / 100.0,
+			centerY: (surfCenterYPct as Float) / 100.0,
+			angleDeg: surfAngleDeg as Float,
+			blendWidth: (surfBlendPct as Float) / 100.0,
+			reflected: fRefl
+		));
+		:notifyThemeChange();
+	}
+
+	local Function is syncButtonFill(){
+		if({ btnFillStyleIdx == 0 }, {
 			activeTheme:customButtonFill: false;
 			activeTheme:deriveColors();
 			:notifyThemeChange();
 			return;
 		});
-		local String is fMode: if({ fillStyleIdx == 3 || fillStyleIdx == 4 }, { 'radial' }, { 'linear' });
-		local Boolean is fRefl: fillStyleIdx == 2 || fillStyleIdx == 4;
+		local String is fMode: if({ btnFillStyleIdx == 3 || btnFillStyleIdx == 4 }, { 'radial' }, { 'linear' });
+		local Boolean is fRefl: btnFillStyleIdx == 2 || btnFillStyleIdx == 4;
 		local Color is btnA: Color:fromArgb(argb: activeTheme:menuBg);
-		local Color is surfA: activeTheme:background;
-		local Color is colB: if({ useFillColorB }, { fillColorB }, { activeTheme:highlight });
-		local Float is cx: (fillCenterXPct as Float) / 100.0;
-		local Float is cy: (fillCenterYPct as Float) / 100.0;
-		local Float is ang: fillAngleDeg as Float;
-		local Float is bw: (fillBlendPct as Float) / 100.0;
+		local Color is colB: if({ useBtnColorB }, { btnColorB }, { activeTheme:highlight });
 		activeTheme:setButtonFill(fill: FillStyle(
 			mode: fMode, colorA: btnA, colorB: colB,
-			centerX: cx, centerY: cy, angleDeg: ang, blendWidth: bw, reflected: fRefl
-		));
-		activeTheme:setSurfaceFill(fill: FillStyle(
-			mode: fMode, colorA: surfA, colorB: colB,
-			centerX: cx, centerY: cy, angleDeg: ang, blendWidth: bw, reflected: fRefl
+			centerX: (btnCenterXPct as Float) / 100.0,
+			centerY: (btnCenterYPct as Float) / 100.0,
+			angleDeg: btnAngleDeg as Float,
+			blendWidth: (btnBlendPct as Float) / 100.0,
+			reflected: fRefl
 		));
 		:notifyThemeChange();
 	}
 
-	Function is setFillStyleIndex(Int is idx){
-		:fillStyleIdx: idx;
-		:syncThemeFills();
-	}
+	Function is setSurfFillStyleIndex(Int is idx){ :surfFillStyleIdx: idx; :syncSurfaceFill(); }
+	Function is setUseSurfColorB(Boolean is enabled){ :useSurfColorB: enabled; :syncSurfaceFill(); }
+	Function is setSurfColorB(Color is col){ :surfColorB: col; :useSurfColorB: true; :syncSurfaceFill(); }
+	Function is setSurfCenterX(Int is pct){ :surfCenterXPct: pct; :syncSurfaceFill(); }
+	Function is setSurfCenterY(Int is pct){ :surfCenterYPct: pct; :syncSurfaceFill(); }
+	Function is setSurfAngle(Int is deg){ :surfAngleDeg: deg; :syncSurfaceFill(); }
+	Function is setSurfBlend(Int is pct){ :surfBlendPct: pct; :syncSurfaceFill(); }
 
-	Function is setUseFillColorB(Boolean is enabled){
-		:useFillColorB: enabled;
-		:syncThemeFills();
-	}
-
-	Function is setFillColorB(Color is col){
-		:fillColorB: col;
-		:useFillColorB: true;
-		:syncThemeFills();
-	}
-
-	Function is setFillCenterX(Int is pct){
-		:fillCenterXPct: pct;
-		:syncThemeFills();
-	}
-
-	Function is setFillCenterY(Int is pct){
-		:fillCenterYPct: pct;
-		:syncThemeFills();
-	}
-
-	Function is setFillAngle(Int is deg){
-		:fillAngleDeg: deg;
-		:syncThemeFills();
-	}
-
-	Function is setFillBlend(Int is pct){
-		:fillBlendPct: pct;
-		:syncThemeFills();
-	}
+	Function is setBtnFillStyleIndex(Int is idx){ :btnFillStyleIdx: idx; :syncButtonFill(); }
+	Function is setUseBtnColorB(Boolean is enabled){ :useBtnColorB: enabled; :syncButtonFill(); }
+	Function is setBtnColorB(Color is col){ :btnColorB: col; :useBtnColorB: true; :syncButtonFill(); }
+	Function is setBtnCenterX(Int is pct){ :btnCenterXPct: pct; :syncButtonFill(); }
+	Function is setBtnCenterY(Int is pct){ :btnCenterYPct: pct; :syncButtonFill(); }
+	Function is setBtnAngle(Int is deg){ :btnAngleDeg: deg; :syncButtonFill(); }
+	Function is setBtnBlend(Int is pct){ :btnBlendPct: pct; :syncButtonFill(); }
 
 	Function is setBorderStyle(String is style){
 		:borderStyle: style;

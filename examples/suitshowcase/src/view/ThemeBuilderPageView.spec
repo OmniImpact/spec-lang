@@ -34,17 +34,28 @@ Class is ThemeBuilderPageView{
 	SectionH is panelStyleSection: SectionH();
 	SectionH is dividerStyleSection: SectionH();
 	SectionH is buttonStyleSection: SectionH();
-	SectionH is fillStyleSection: SectionH();
-	Switch is useColorBSwitch: Switch();
-	ColorSwatchDropdown is colorBSwatch: ColorSwatchDropdown();
-	Slider is fillCenterXSlider: Slider();
-	Slider is fillCenterYSlider: Slider();
-	Slider is fillAngleSlider: Slider();
-	Slider is fillBlendSlider: Slider();
-	TextEmitter is fillCXLabel: TextEmitter(initial: '50%');
-	TextEmitter is fillCYLabel: TextEmitter(initial: '50%');
-	TextEmitter is fillAngLabel: TextEmitter(initial: '35 deg');
-	TextEmitter is fillBwLabel: TextEmitter(initial: '1.00');
+	SectionH is surfFillSection: SectionH();
+	Switch is useSurfColorBSwitch: Switch();
+	ColorSwatchDropdown is surfColorBSwatch: ColorSwatchDropdown();
+	Slider is surfCXSlider: Slider();
+	Slider is surfCYSlider: Slider();
+	Slider is surfAngSlider: Slider();
+	Slider is surfBwSlider: Slider();
+	TextEmitter is surfCXLabel: TextEmitter(initial: '50%');
+	TextEmitter is surfCYLabel: TextEmitter(initial: '50%');
+	TextEmitter is surfAngLabel: TextEmitter(initial: '35 deg');
+	TextEmitter is surfBwLabel: TextEmitter(initial: '100%');
+	SectionH is btnFillSection: SectionH();
+	Switch is useBtnColorBSwitch: Switch();
+	ColorSwatchDropdown is btnColorBSwatch: ColorSwatchDropdown();
+	Slider is btnCXSlider: Slider();
+	Slider is btnCYSlider: Slider();
+	Slider is btnAngSlider: Slider();
+	Slider is btnBwSlider: Slider();
+	TextEmitter is btnCXLabel: TextEmitter(initial: '50%');
+	TextEmitter is btnCYLabel: TextEmitter(initial: '50%');
+	TextEmitter is btnAngLabel: TextEmitter(initial: '35 deg');
+	TextEmitter is btnBwLabel: TextEmitter(initial: '100%');
 	Slider is panelThickSlider: Slider();
 	Slider is panelRadiusSlider: Slider();
 	Slider is panelShadowSlider: Slider();
@@ -210,38 +221,58 @@ Class is ThemeBuilderPageView{
 		buttonShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt)));
 		buttonShadowXLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetXPt)));
 		buttonShadowYLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetYPt)));
-		fillCXLabel:emit(value: (vm:fillCenterXPct as String) . '%');
-		fillCYLabel:emit(value: (vm:fillCenterYPct as String) . '%');
-		fillAngLabel:emit(value: (vm:fillAngleDeg as String) . ' deg');
-		fillBwLabel:emit(value: vm:tenthsLabel(tenths: vm:fillBlendPct / 10));
+		surfCXLabel:emit(value: (vm:surfCenterXPct as String) . '%');
+		surfCYLabel:emit(value: (vm:surfCenterYPct as String) . '%');
+		surfAngLabel:emit(value: (vm:surfAngleDeg as String) . ' deg');
+		surfBwLabel:emit(value: (vm:surfBlendPct as String) . '%');
+		btnCXLabel:emit(value: (vm:btnCenterXPct as String) . '%');
+		btnCYLabel:emit(value: (vm:btnCenterYPct as String) . '%');
+		btnAngLabel:emit(value: (vm:btnAngleDeg as String) . ' deg');
+		btnBwLabel:emit(value: (vm:btnBlendPct as String) . '%');
 
-		:fillStyleSection: SectionH(
+		:surfFillSection: SectionH(
 			segmented: true,
 			options: fillStyleLabels,
-			selectedIndex: vm:fillStyleIdx,
+			selectedIndex: vm:surfFillStyleIdx,
 			itemMinWidthPt: 52.0,
-			onSelect: local Function(Int is idx){
-				vm:setFillStyleIndex(idx: idx);
-			}
+			onSelect: local Function(Int is idx){ vm:setSurfFillStyleIndex(idx: idx); }
 		);
-		:useColorBSwitch: Switch(
-			checked: vm:useFillColorB,
-			onChange: local Function(Boolean is on){
-				vm:setUseFillColorB(enabled: on);
-			}
+		:useSurfColorBSwitch: Switch(
+			checked: vm:useSurfColorB,
+			onChange: local Function(Boolean is on){ vm:setUseSurfColorB(enabled: on); }
 		);
-		:colorBSwatch: ColorSwatchDropdown(
-			color: vm:fillColorB,
+		:surfColorBSwatch: ColorSwatchDropdown(
+			color: vm:surfColorB,
 			compactPicker: true,
-			tooltip: 'Optional second gradient color',
-			onChange: local Function(Color is c){
-				vm:setFillColorB(col: c);
-			}
+			tooltip: 'Optional second surface gradient color',
+			onChange: local Function(Color is c){ vm:setSurfColorB(col: c); }
 		);
-		:fillCenterXSlider: Slider(minVal: 0, maxVal: 100, value: vm:fillCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillCenterX(pct: v); });
-		:fillCenterYSlider: Slider(minVal: 0, maxVal: 100, value: vm:fillCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillCenterY(pct: v); });
-		:fillAngleSlider: Slider(minVal: 0, maxVal: 360, value: vm:fillAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillAngle(deg: v); });
-		:fillBlendSlider: Slider(minVal: 10, maxVal: 200, value: vm:fillBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillBlend(pct: v); });
+		:surfCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfCenterX(pct: v); });
+		:surfCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfCenterY(pct: v); });
+		:surfAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:surfAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfAngle(deg: v); });
+		:surfBwSlider: Slider(minVal: 10, maxVal: 200, value: vm:surfBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfBlend(pct: v); });
+
+		:btnFillSection: SectionH(
+			segmented: true,
+			options: fillStyleLabels,
+			selectedIndex: vm:btnFillStyleIdx,
+			itemMinWidthPt: 52.0,
+			onSelect: local Function(Int is idx){ vm:setBtnFillStyleIndex(idx: idx); }
+		);
+		:useBtnColorBSwitch: Switch(
+			checked: vm:useBtnColorB,
+			onChange: local Function(Boolean is on){ vm:setUseBtnColorB(enabled: on); }
+		);
+		:btnColorBSwatch: ColorSwatchDropdown(
+			color: vm:btnColorB,
+			compactPicker: true,
+			tooltip: 'Optional second button gradient color',
+			onChange: local Function(Color is c){ vm:setBtnColorB(col: c); }
+		);
+		:btnCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnCenterX(pct: v); });
+		:btnCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnCenterY(pct: v); });
+		:btnAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:btnAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnAngle(deg: v); });
+		:btnBwSlider: Slider(minVal: 10, maxVal: 200, value: vm:btnBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnBlend(pct: v); });
 
 		:baseTextInput: DecoratedTextInput(
 			text: vm:baseTextLabel(),
@@ -360,20 +391,40 @@ Class is ThemeBuilderPageView{
 					child: colorGrid
 				),
 				Frame(
-					title: 'Surface & Button Fill',
+					title: 'Surface Fill',
 					child: SectionV(
 						children: Array([
-							SectionV(title: 'Fill Style', children: Array([fillStyleSection])),
+							SectionV(title: 'Fill Style', children: Array([surfFillSection])),
 							Grid(
 								columns: 3,
 								colGapPt: 10.0,
 								rowGapPt: 6.0,
 								children: Array([
-									Label(text: 'Use Second Color'), useColorBSwitch, colorBSwatch,
-									Label(text: 'Center X'), fillCenterXSlider, TextScrap(text: fillCXLabel, muted: true),
-									Label(text: 'Center Y'), fillCenterYSlider, TextScrap(text: fillCYLabel, muted: true),
-									Label(text: 'Linear Angle'), fillAngleSlider, TextScrap(text: fillAngLabel, muted: true),
-									Label(text: 'Blend Width'), fillBlendSlider, TextScrap(text: fillBwLabel, muted: true)
+									Label(text: 'Use Second Color'), useSurfColorBSwitch, surfColorBSwatch,
+									Label(text: 'Center X'), surfCXSlider, TextScrap(text: surfCXLabel, muted: true),
+									Label(text: 'Center Y'), surfCYSlider, TextScrap(text: surfCYLabel, muted: true),
+									Label(text: 'Linear Angle'), surfAngSlider, TextScrap(text: surfAngLabel, muted: true),
+									Label(text: 'Blend Width'), surfBwSlider, TextScrap(text: surfBwLabel, muted: true)
+								])
+							)
+						])
+					)
+				),
+				Frame(
+					title: 'Button Fill',
+					child: SectionV(
+						children: Array([
+							SectionV(title: 'Fill Style', children: Array([btnFillSection])),
+							Grid(
+								columns: 3,
+								colGapPt: 10.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Use Second Color'), useBtnColorBSwitch, btnColorBSwatch,
+									Label(text: 'Center X'), btnCXSlider, TextScrap(text: btnCXLabel, muted: true),
+									Label(text: 'Center Y'), btnCYSlider, TextScrap(text: btnCYLabel, muted: true),
+									Label(text: 'Linear Angle'), btnAngSlider, TextScrap(text: btnAngLabel, muted: true),
+									Label(text: 'Blend Width'), btnBwSlider, TextScrap(text: btnBwLabel, muted: true)
 								])
 							)
 						])
@@ -466,17 +517,28 @@ Class is ThemeBuilderPageView{
 		buttonShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt)));
 		buttonShadowXLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetXPt)));
 		buttonShadowYLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetYPt)));
-		fillStyleSection:setSelectedIndex(index: vm:fillStyleIdx);
-		useColorBSwitch:setChecked(next: vm:useFillColorB);
-		colorBSwatch:setColor(next: vm:fillColorB);
-		fillCenterXSlider:setValue(next: vm:fillCenterXPct);
-		fillCenterYSlider:setValue(next: vm:fillCenterYPct);
-		fillAngleSlider:setValue(next: vm:fillAngleDeg);
-		fillBlendSlider:setValue(next: vm:fillBlendPct);
-		fillCXLabel:emit(value: (vm:fillCenterXPct as String) . '%');
-		fillCYLabel:emit(value: (vm:fillCenterYPct as String) . '%');
-		fillAngLabel:emit(value: (vm:fillAngleDeg as String) . ' deg');
-		fillBwLabel:emit(value: vm:tenthsLabel(tenths: vm:fillBlendPct / 10));
+		surfFillSection:setSelectedIndex(index: vm:surfFillStyleIdx);
+		useSurfColorBSwitch:setChecked(next: vm:useSurfColorB);
+		surfColorBSwatch:setColor(next: vm:surfColorB);
+		surfCXSlider:setValue(next: vm:surfCenterXPct);
+		surfCYSlider:setValue(next: vm:surfCenterYPct);
+		surfAngSlider:setValue(next: vm:surfAngleDeg);
+		surfBwSlider:setValue(next: vm:surfBlendPct);
+		surfCXLabel:emit(value: (vm:surfCenterXPct as String) . '%');
+		surfCYLabel:emit(value: (vm:surfCenterYPct as String) . '%');
+		surfAngLabel:emit(value: (vm:surfAngleDeg as String) . ' deg');
+		surfBwLabel:emit(value: (vm:surfBlendPct as String) . '%');
+		btnFillSection:setSelectedIndex(index: vm:btnFillStyleIdx);
+		useBtnColorBSwitch:setChecked(next: vm:useBtnColorB);
+		btnColorBSwatch:setColor(next: vm:btnColorB);
+		btnCXSlider:setValue(next: vm:btnCenterXPct);
+		btnCYSlider:setValue(next: vm:btnCenterYPct);
+		btnAngSlider:setValue(next: vm:btnAngleDeg);
+		btnBwSlider:setValue(next: vm:btnBlendPct);
+		btnCXLabel:emit(value: (vm:btnCenterXPct as String) . '%');
+		btnCYLabel:emit(value: (vm:btnCenterYPct as String) . '%');
+		btnAngLabel:emit(value: (vm:btnAngleDeg as String) . ' deg');
+		btnBwLabel:emit(value: (vm:btnBlendPct as String) . '%');
 		baseTextInput:setText(next: vm:baseTextLabel());
 		alphaSlider:setValue(next: vm:windowAlphaPct);
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');
