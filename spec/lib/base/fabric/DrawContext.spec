@@ -317,10 +317,20 @@ Class is DrawContext{
 		local Int is t: if({ thickness > halfMin }, { halfMin }, { thickness });
 		if({ t < 1 }, { t: 1; });
 		if({ radius <= 0 }, {
-			:fillRect(x: x, y: y, w: w, h: t, color: topLeftColor);
+			:fillRect(x: x, y: y, w: w - t, h: t, color: topLeftColor);
 			:fillRect(x: x, y: y + t, w: t, h: h - t, color: topLeftColor);
 			:fillRect(x: x + t, y: y + h - t, w: w - t, h: t, color: botRightColor);
 			:fillRect(x: x + w - t, y: y + t, w: t, h: h - 2 * t, color: botRightColor);
+			local Int is mdy: 0;
+			while({ mdy < t }, {
+				local Int is mdx: 0;
+				while({ mdx < t }, {
+					:fillRect(x: x + w - t + mdx, y: y + mdy, w: 1, h: 1, color: if({ mdx + mdy < t }, { topLeftColor }, { botRightColor }));
+					:fillRect(x: x + mdx, y: y + h - t + mdy, w: 1, h: 1, color: if({ mdx + mdy < t }, { topLeftColor }, { botRightColor }));
+					mdx: mdx + 1;
+				});
+				mdy: mdy + 1;
+			});
 			return;
 		});
 		local Int is r: if({ radius > halfMin }, { halfMin }, { radius });
@@ -340,6 +350,7 @@ Class is DrawContext{
 		local Int is brA: brC:alpha();
 		local Float is rf: r as Float;
 		local Float is inRf: (r - t) as Float;
+		local Float is halfPi: pi() * 0.5;
 		local Int is dy: 0;
 		while({ dy < box }, {
 			local Float is cyf: rf - 0.5 - (dy as Float);
@@ -363,25 +374,35 @@ Class is DrawContext{
 				local Float is cov: if({ outerCov < innerCov }, { outerCov }, { innerCov });
 				if({ cov > 0.0 }, {
 					local Int is abTL: (((tlA as Float) * cov) + 0.5) as Int;
-					local Int is abBR: (((brA as Float) * cov) + 0.5) as Int;
 					if({ abTL > 0 }, {
 						local Int is colTL: if({ abTL >= tlA }, { topLeftColor }, { tlC:withAlphaByte(a: abTL):toArgb() });
 						:fillRect(x: x + dx, y: y + dy, w: 1, h: 1, color: colTL);
-						if({ dx >= dy }, {
-							:fillRect(x: x + w - 1 - dx, y: y + dy, w: 1, h: 1, color: colTL);
-						});
-						if({ dy > dx }, {
-							:fillRect(x: x + dx, y: y + h - 1 - dy, w: 1, h: 1, color: colTL);
-						});
 					});
+					local Int is abBR: (((brA as Float) * cov) + 0.5) as Int;
 					if({ abBR > 0 }, {
 						local Int is colBR: if({ abBR >= brA }, { botRightColor }, { brC:withAlphaByte(a: abBR):toArgb() });
 						:fillRect(x: x + w - 1 - dx, y: y + h - 1 - dy, w: 1, h: 1, color: colBR);
-						if({ dx < dy }, {
-							:fillRect(x: x + w - 1 - dx, y: y + dy, w: 1, h: 1, color: colBR);
+					});
+					if({ topLeftColor == botRightColor }, {
+						if({ abTL > 0 }, {
+							local Int is colSame: if({ abTL >= tlA }, { topLeftColor }, { tlC:withAlphaByte(a: abTL):toArgb() });
+							:fillRect(x: x + w - 1 - dx, y: y + dy, w: 1, h: 1, color: colSame);
+							:fillRect(x: x + dx, y: y + h - 1 - dy, w: 1, h: 1, color: colSame);
 						});
-						if({ dy <= dx }, {
-							:fillRect(x: x + dx, y: y + h - 1 - dy, w: 1, h: 1, color: colBR);
+					}, {
+						local Float is cxPos: if({ cxf > 0.0 }, { cxf }, { 0.0 });
+						local Float is cyPos: if({ cyf > 0.0 }, { cyf }, { 0.0 });
+						local Float is tMixTR: :clamp01(v: atan2(y: cxPos, x: cyPos) / halfPi);
+						local Color is trC: tlC:mix(other: brC, t: tMixTR);
+						local Int is abTR: (((trC:alpha() as Float) * cov) + 0.5) as Int;
+						if({ abTR > 0 }, {
+							:fillRect(x: x + w - 1 - dx, y: y + dy, w: 1, h: 1, color: trC:withAlphaByte(a: abTR):toArgb());
+						});
+						local Float is tMixBL: :clamp01(v: atan2(y: cyPos, x: cxPos) / halfPi);
+						local Color is blC: tlC:mix(other: brC, t: tMixBL);
+						local Int is abBL: (((blC:alpha() as Float) * cov) + 0.5) as Int;
+						if({ abBL > 0 }, {
+							:fillRect(x: x + dx, y: y + h - 1 - dy, w: 1, h: 1, color: blC:withAlphaByte(a: abBL):toArgb());
 						});
 					});
 				});
@@ -491,7 +512,21 @@ Class is DrawContext{
 			});
 			return;
 		});
-		if({ style == 'bevel' || style == 'outset' }, {
+		if({ style == 'bevel' }, {
+			local Int is t1: if({ thickness >= 2 }, { thickness / 2 }, { 1 });
+			local Int is t2: if({ thickness - t1 > 0 }, { thickness - t1 }, { 1 });
+			local Int is hiOuter: bc:lighten(amount: 0.45):toArgb();
+			local Int is loOuter: bc:darken(amount: 0.45):toArgb();
+			local Int is hiInner: bc:lighten(amount: 0.16):toArgb();
+			local Int is loInner: bc:darken(amount: 0.20):toArgb();
+			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: hiOuter, botRightColor: loOuter, thickness: t1);
+			if({ w > t1 * 2 && h > t1 * 2 }, {
+				local Int is inR: if({ radius > t1 }, { radius - t1 }, { 0 });
+				:strokeRoundRectSplit(x: x + t1, y: y + t1, w: w - t1 * 2, h: h - t1 * 2, radius: inR, topLeftColor: hiInner, botRightColor: loInner, thickness: t2);
+			});
+			return;
+		});
+		if({ style == 'outset' }, {
 			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: lightC, botRightColor: darkC, thickness: thickness);
 			return;
 		});
