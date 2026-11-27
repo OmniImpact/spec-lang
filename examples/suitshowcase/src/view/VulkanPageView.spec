@@ -35,13 +35,13 @@ Class is VulkanPageView{
 			tooltip: 'Spinning Vulkan 3D cube (transparent background)'
 		);
 
-		local Color is initSphereCol: Color(r: 64, g: 184, b: 245);
+		local Color is initSphereCol: Color(r: 175, g: 178, b: 184);
 		local VulkanViewport is sphereCubeView: VulkanViewport(
 			widthPt: 170.0,
 			heightPt: 170.0,
 			sphereInCube: true,
 			sphereColor: initSphereCol,
-			tooltip: 'Sphere inside translucent colored Vulkan cube'
+			tooltip: 'Gray sphere inside inward-facing colored Vulkan cube room'
 		);
 
 		local ColorSwatchDropdown is sphereColorPicker: ColorSwatchDropdown(

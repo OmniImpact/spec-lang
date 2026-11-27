@@ -17,9 +17,11 @@ Class is CubeMesh{
 	Int is idxCount: 36;
 	Int is vCursor: 0;
 	Int is iCursor: 0;
+	Boolean is inward: false;
 
 	## Allocates and populates the colored cube vertex and index buffers.
-	replace Function is init(){
+	replace Function is init(Boolean is inward: false){
+		:inward: inward;
 		vertAddr: alloc(bytes: vertBytes);
 		idxAddr: alloc(bytes: idxBytes);
 		vCursor: 0;
@@ -105,7 +107,11 @@ Class is CubeMesh{
 		:pushVertex(x: x1, y: y1, z: z1, r: r, g: g, b: b);
 		:pushVertex(x: x2, y: y2, z: z2, r: r, g: g, b: b);
 		:pushVertex(x: x3, y: y3, z: z3, r: r, g: g, b: b);
-		:pushTriPair(a: baseIdx, b: baseIdx + 1, c: baseIdx + 2, d: baseIdx, e: baseIdx + 2, f: baseIdx + 3);
+		if({ inward }, {
+			:pushTriPair(a: baseIdx, b: baseIdx + 2, c: baseIdx + 1, d: baseIdx, e: baseIdx + 3, f: baseIdx + 2);
+		}, {
+			:pushTriPair(a: baseIdx, b: baseIdx + 1, c: baseIdx + 2, d: baseIdx, e: baseIdx + 2, f: baseIdx + 3);
+		});
 	}
 
 	Function of Int is vertexAddr(){ return vertAddr; }

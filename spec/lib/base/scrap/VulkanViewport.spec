@@ -25,7 +25,7 @@ Class of SewNode is VulkanViewport{
 	Float is widthPt: 180.0;
 	Float is heightPt: 180.0;
 	Boolean is sphereInCube: false;
-	Color is sphereColor: Color(r: 64, g: 184, b: 245);
+	Color is sphereColor: Color(r: 175, g: 178, b: 184);
 
 	Vulkan is vk: Vulkan();
 	Boolean is vkTried: false;
@@ -34,6 +34,7 @@ Class of SewNode is VulkanViewport{
 	Int is outBufAddr: 0;
 	Int is outBufBytes: 0;
 	CubeMesh is cube: CubeMesh();
+	CubeMesh is roomCube: CubeMesh(inward: true);
 	SphereMesh is sphere: SphereMesh();
 	Float is rotY: 0.4;
 	Float is rotX: 0.35;
@@ -43,7 +44,7 @@ Class of SewNode is VulkanViewport{
 		Float is widthPt: 180.0,
 		Float is heightPt: 180.0,
 		Boolean is sphereInCube: false,
-		Color is sphereColor: Color(r: 64, g: 184, b: 245),
+		Color is sphereColor: Color(r: 175, g: 178, b: 184),
 		String is tooltip: ''
 	){
 		:widthPt: widthPt;
@@ -53,7 +54,7 @@ Class of SewNode is VulkanViewport{
 		:tooltip: tooltip;
 		:mvpAddr: alloc(bytes: 64);
 		:sphere: SphereMesh(
-			radius: 0.36,
+			radius: 0.28,
 			r: (sphereColor:r as Float) / 255.0,
 			g: (sphereColor:g as Float) / 255.0,
 			b: (sphereColor:b as Float) / 255.0
@@ -107,11 +108,11 @@ Class of SewNode is VulkanViewport{
 				idxCount: sphere:idxCount
 			);
 			vk:setBlendMesh(
-				vertAddr: cube:vertAddr,
-				vertBytes: cube:vertBytes,
-				idxAddr: cube:idxAddr,
-				idxBytes: cube:idxBytes,
-				idxCount: cube:idxCount
+				vertAddr: roomCube:vertAddr,
+				vertBytes: roomCube:vertBytes,
+				idxAddr: roomCube:idxAddr,
+				idxBytes: roomCube:idxBytes,
+				idxCount: roomCube:idxCount
 			);
 		}, {
 			vk:setMesh(

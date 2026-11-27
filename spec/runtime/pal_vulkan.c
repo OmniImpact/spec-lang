@@ -1698,26 +1698,16 @@ long long spec_pal_vulkan_create(
 
     if (is_offscreen) {
         SpecVkPipelineDepthStencilStateCreateInfo bds = ds;
-        bds.depthWriteEnable = SPEC_VK_FALSE;
+        bds.depthWriteEnable = SPEC_VK_TRUE;
         SpecVkPipelineColorBlendAttachmentState bcba;
         memset(&bcba, 0, sizeof(bcba));
-        bcba.blendEnable = SPEC_VK_TRUE;
-        bcba.srcColorBlendFactor = SPEC_VK_BLEND_FACTOR_CONSTANT_ALPHA;
-        bcba.dstColorBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
-        bcba.colorBlendOp = SPEC_VK_BLEND_OP_ADD;
-        bcba.srcAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_CONSTANT_ALPHA;
-        bcba.dstAlphaBlendFactor = SPEC_VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
-        bcba.alphaBlendOp = SPEC_VK_BLEND_OP_ADD;
+        bcba.blendEnable = SPEC_VK_FALSE;
         bcba.colorWriteMask = 0xFU;
         SpecVkPipelineColorBlendStateCreateInfo bcb;
         memset(&bcb, 0, sizeof(bcb));
         bcb.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         bcb.attachmentCount = 1;
         bcb.pAttachments = &bcba;
-        bcb.blendConstants[0] = 0.0f;
-        bcb.blendConstants[1] = 0.0f;
-        bcb.blendConstants[2] = 0.0f;
-        bcb.blendConstants[3] = 0.42f;
         SpecVkGraphicsPipelineCreateInfo bgpci = gpci;
         bgpci.pDepthStencilState = &bds;
         bgpci.pColorBlendState = &bcb;
