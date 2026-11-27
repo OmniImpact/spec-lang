@@ -202,6 +202,20 @@ Class of SewNode is ColorSelector{
 		});
 	}
 
+	local Function is paintAaBorderedPixel(DrawContext is ctx, Int is px, Int is py, Color is fillC, Color is borderC, Float is edgeDist, Float is bw){
+		if({ edgeDist < -0.75 }, { return; });
+		if({ edgeDist >= bw + 0.5 }, {
+			ctx:fillRect(x: px, y: py, w: 1, h: 1, color: fillC:toArgb());
+			return;
+		});
+		local Float is bMix: Color:clamp01(v: (bw + 0.5) - edgeDist);
+		local Color is blended: fillC:mix(other: borderC, t: bMix);
+		local Float is cov: Color:clamp01(v: (edgeDist + 0.75) / 1.25);
+		local Int is ab: ((cov * 255.0) + 0.5) as Int;
+		if({ ab <= 0 }, { return; });
+		ctx:fillRect(x: px, y: py, w: 1, h: 1, color: blended:withAlphaByte(a: ab):toArgb());
+	}
+
 	local Function is drawFull(DrawContext is ctx, Rect is b){
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
@@ -216,39 +230,62 @@ Class of SewNode is ColorSelector{
 		local Int is innerOutR: (outerR * 68) / 100;
 		local Int is innerInR: (outerR * 44) / 100;
 		local Int is centerR: (outerR * 36) / 100;
+		local Float is ringGap: (outerInR - innerOutR) as Float;
+		if({ ringGap < 4.0 }, { ringGap: 4.0; });
+		local Float is halfGapF: ringGap * 0.5;
+		local Float is bw: activeTheme:borderPx(scaleFactor: activeScale:factor) as Float;
+		if({ bw < 1.0 }, { bw: 1.0; });
+		local Color is borderC: Color:fromArgb(argb: activeTheme:buttonBorder);
 		local Int is cx: b:x + b:width / 2;
 		local Int is cy: b:y + ringD / 2;
 		local Float is piVal: pi();
 
-		local Int is dy: 0 - outerR;
-		while({ dy <= outerR }, {
-			local Int is dx: 0 - outerR;
-			while({ dx <= outerR }, {
+		local Int is dy: 0 - (outerR + 1);
+		while({ dy <= outerR + 1 }, {
+			local Int is dx: 0 - (outerR + 1);
+			while({ dx <= outerR + 1 }, {
 				local Int is d2: dx * dx + dy * dy;
-				local Int is r: (sqrt(value: d2 as Float) + 0.5) as Int;
-				if({ r >= outerInR && r <= outerR }, {
+				local Float is rf: sqrt(value: d2 as Float);
+				local Float is outerEdge: (outerR as Float) - rf;
+				local Float is outerInEdge: rf - (outerInR as Float);
+				local Float is hueDist: if({ outerEdge < outerInEdge }, { outerEdge }, { outerInEdge });
+				if({ hueDist >= -0.75 }, {
 					local Float is deg: (atan2(y: dy as Float, x: dx as Float) * 180.0) / piVal;
 					if({ deg < 0.0 }, { deg: deg + 360.0; });
 					local Color is hc: Color:fromHsl(hDeg: deg, s: 1.0, l: 0.5);
-					ctx:fillRect(x: cx + dx, y: cy + dy, w: 1, h: 1, color: hc:toArgb());
+					:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: hc, borderC: borderC, edgeDist: hueDist, bw: bw);
 				}, {
-				if({ r >= innerInR && r <= innerOutR }, {
-					if({ dy <= 0 }, {
-						local Float is ang: atan2(y: (0 - dy) as Float, x: (0 - dx) as Float);
-						local Float is t: Color:clamp01(v: ang / piVal);
-						local Color is sc: Color:fromHsl(hDeg: hueDeg, s: t, l: light);
-						ctx:fillRect(x: cx + dx, y: cy + dy, w: 1, h: 1, color: sc:toArgb());
+					local Float is inOutEdge: (innerOutR as Float) - rf;
+					local Float is inInEdge: rf - (innerInR as Float);
+					local Float is inRadDist: if({ inOutEdge < inInEdge }, { inOutEdge }, { inInEdge });
+					local Int is absDyInt: if({ dy < 0 }, { 0 - dy }, { dy });
+					local Float is absDy: absDyInt as Float;
+					local Float is gapEdge: absDy - halfGapF;
+					local Float is halfRingDist: if({ inRadDist < gapEdge }, { inRadDist }, { gapEdge });
+					if({ halfRingDist >= -0.75 }, {
+						if({ dy <= 0 }, {
+							local Float is adjDy: ((0 - dy) as Float) - halfGapF;
+							if({ adjDy < 0.0 }, { adjDy: 0.0; });
+							local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
+							local Float is t: Color:clamp01(v: ang / piVal);
+							local Color is sc: Color:fromHsl(hDeg: hueDeg, s: t, l: light);
+							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: sc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
+						}, {
+							local Float is adjDy: (dy as Float) - halfGapF;
+							if({ adjDy < 0.0 }, { adjDy: 0.0; });
+							local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
+							local Float is t: Color:clamp01(v: ang / piVal);
+							local Color is lc: Color:fromHsl(hDeg: hueDeg, s: sat, l: t);
+							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: lc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
+						});
 					}, {
-						local Float is ang: atan2(y: dy as Float, x: (0 - dx) as Float);
-						local Float is t: Color:clamp01(v: ang / piVal);
-						local Color is lc: Color:fromHsl(hDeg: hueDeg, s: sat, l: t);
-						ctx:fillRect(x: cx + dx, y: cy + dy, w: 1, h: 1, color: lc:toArgb());
+						local Float is centerDist: (centerR as Float) - rf;
+						if({ centerDist >= -0.75 }, {
+							local Color is pcol: if({ hasCurrent && dx < 0 }, { currentColor }, { color });
+							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: pcol, borderC: borderC, edgeDist: centerDist, bw: bw);
+						});
 					});
-				}, {
-				if({ r <= centerR }, {
-					local Int is pcol: if({ hasCurrent && dx < 0 }, { currentColor:toArgb() }, { color:toArgb() });
-					ctx:fillRect(x: cx + dx, y: cy + dy, w: 1, h: 1, color: pcol);
-				}); }); });
+				});
 				dx: dx + 1;
 			});
 			dy: dy + 1;

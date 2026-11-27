@@ -335,6 +335,11 @@ Class of SewNode is ToolkitContainer{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ hasBody && !useVulkan }, {
+			if({ bodyPanel:closePopupsOutside(x: x, y: y) }, {
+				:isDirty: true;
+			});
+		});
 		if({ contextMenu:isOpen }, {
 			return contextMenu:handlePointerClick(x: x, y: y, viewW: loopW, viewH: loopH);
 		});
@@ -351,6 +356,9 @@ Class of SewNode is ToolkitContainer{
 			if({ bottomBar:blocksPointerAt(x: x, y: y) }, { return true; });
 		});
 		if({ hasBody && !useVulkan }, {
+			if({ bodyPanel:closePopupsOutside(x: x, y: y) }, {
+				:isDirty: true;
+			});
 			return bodyPanel:onPointerClickMod(x: x, y: y, mods: mods);
 		});
 		return false;

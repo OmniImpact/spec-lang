@@ -126,6 +126,16 @@ Class of SewNode is Column{
 		});
 	}
 
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		local Boolean is closed: false;
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			if({ children:get(index: i):closePopupsOutside(x: x, y: y) }, { closed: true; });
+			i: i + 1;
+		});
+		return closed;
+	}
+
 	replace Function of Boolean is onScroll(Int is deltaY){
 		local Int is i: children:length() - 1;
 		while({ i >= 0 }, {

@@ -351,4 +351,8 @@ Class of SewNode is ScrollView{
 	replace Function is paintOverlay(DrawContext is ctx){
 		child:paintOverlay(ctx: ctx);
 	}
+
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		return child:closePopupsOutside(x: x, y: y);
+	}
 }

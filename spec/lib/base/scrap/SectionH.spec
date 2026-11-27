@@ -193,6 +193,10 @@ Class of SewNode is SectionH{
 		:rootNode():paintOverlay(ctx: ctx);
 	}
 
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		return :rootNode():closePopupsOutside(x: x, y: y);
+	}
+
 	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
 		if({ pointerTransparent }, { return false; });
 		return :containsPoint(x: x, y: y) || :rootNode():blocksPointerAt(x: x, y: y);

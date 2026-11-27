@@ -138,6 +138,10 @@ Class of SewNode is NavStack{
 		:activeChild():paintOverlay(ctx: ctx);
 	}
 
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		return :activeChild():closePopupsOutside(x: x, y: y);
+	}
+
 	replace Function of Boolean is onScroll(Int is deltaY){
 		return :activeChild():onScroll(deltaY: deltaY);
 	}

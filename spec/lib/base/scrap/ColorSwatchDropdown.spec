@@ -16,6 +16,7 @@ Class of SewNode is ColorSwatchDropdown{
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
+		['base', 'scrap', DropdownPopup],
 		['base', 'scrap', ColorSelector],
 		['base', 'scrap', ColorSwatchHistory]
 	];
@@ -30,6 +31,8 @@ Class of SewNode is ColorSwatchDropdown{
 	ColorSwatchHistory is history: ColorSwatchHistory();
 	Column is popupCol: Column();
 	Rect is popupRect: Rect();
+	Int is lastViewW: 0;
+	Int is lastViewH: 0;
 	Function is onChange: local Function(Color is _c){};
 
 	replace Function is init(
@@ -138,17 +141,25 @@ Class of SewNode is ColorSwatchDropdown{
 		return desiredSize;
 	}
 
-	local Function is layoutPopup(){
+	local Function is layoutPopup(Int is viewW, Int is viewH){
+		if({ viewW > 0 }, { :lastViewW: viewW; });
+		if({ viewH > 0 }, { :lastViewH: viewH; });
 		local Rect is b: bounds();
 		local Int is pad: activeScale:px(pt: activeTheme:paddingMediumPt);
 		if({ pad < 6 }, { pad: 6; });
 		local Size is cs: popupCol:measure(c: Constraints(minW: 0, maxW: activeScale:px(pt: 240.0), minH: 0, maxH: 1000));
 		local Int is pw: cs:width + pad * 2;
 		local Int is ph: cs:height + pad * 2;
-		local Int is px: b:x;
-		local Int is py: b:y + b:height + 2;
-		:popupRect: Rect(x: px, y: py, width: pw, height: ph);
-		popupCol:arrange(bounds: Rect(x: px + pad, y: py + pad, width: cs:width, height: cs:height));
+		local Rect is placed: DropdownPopup:shared:placeRect(
+			anchor: b,
+			popupW: pw,
+			popupH: ph,
+			viewW: lastViewW,
+			viewH: lastViewH,
+			gapPx: 2
+		);
+		:popupRect: placed;
+		popupCol:arrange(bounds: Rect(x: placed:x + pad, y: placed:y + pad, width: cs:width, height: cs:height));
 	}
 
 	local Function of Boolean is inRect(Rect is r, Int is x, Int is y){
@@ -189,7 +200,7 @@ Class of SewNode is ColorSwatchDropdown{
 			:open: !open;
 			if({ open }, {
 				picker:setCurrentColor(next: color, hasCurrent: true);
-				:layoutPopup();
+				:layoutPopup(viewW: lastViewW, viewH: lastViewH);
 			});
 			invalidate();
 			return true;
@@ -198,6 +209,15 @@ Class of SewNode is ColorSwatchDropdown{
 			if({ :inRect(r: popupRect, x: x, y: y) }, {
 				return popupCol:onPointerClickMod(x: x, y: y, mods: mods);
 			});
+			:open: false;
+			invalidate();
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		if({ open && !:blocksPointerAt(x: x, y: y) }, {
 			:open: false;
 			invalidate();
 			return true;
@@ -251,7 +271,7 @@ Class of SewNode is ColorSwatchDropdown{
 
 	replace Function is paintOverlay(DrawContext is ctx){
 		if({ !open }, { return; });
-		:layoutPopup();
+		:layoutPopup(viewW: ctx:canvas:width, viewH: ctx:canvas:height);
 		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		ctx:fillRect(x: popupRect:x, y: popupRect:y, w: popupRect:width, h: popupRect:height, color: activeTheme:menuBg);
 		if({ bw > 0 }, {

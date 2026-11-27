@@ -305,6 +305,9 @@ Class is Dialog{
 			if({ hasContent }, {
 				local Int is cx: win:clickX();
 				local Int is cy: win:clickY();
+				if({ content:closePopupsOutside(x: cx, y: cy) }, {
+					isDirty: true;
+				});
 				if({ content:onPointerClickMod(x: cx, y: cy, mods: curMods) }, {
 					isDirty: true;
 				});

@@ -87,6 +87,11 @@ Class is SewNode{
 		local Int is _noop: 0;
 	}
 
+	## Dismisses any open popup/dropdown that does not contain ([x], [y]); returns `true` if any closed.
+	Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		return false;
+	}
+
 	## Handles vertical scroll wheel delta; returns `true` if redraw is needed.
 	Function of Boolean is onScroll(Int is deltaY){
 		return false;

@@ -192,6 +192,10 @@ Class of SewNode is SectionV{
 		col:paintOverlay(ctx: ctx);
 	}
 
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		return col:closePopupsOutside(x: x, y: y);
+	}
+
 	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
 		if({ pointerTransparent }, { return false; });
 		return :containsPoint(x: x, y: y) || col:blocksPointerAt(x: x, y: y);

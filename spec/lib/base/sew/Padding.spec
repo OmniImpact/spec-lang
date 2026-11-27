@@ -135,6 +135,10 @@ Class of SewNode is Padding{
 		child:paintOverlay(ctx: ctx);
 	}
 
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		return child:closePopupsOutside(x: x, y: y);
+	}
+
 	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
 		if({ pointerTransparent }, { return false; });
 		return :containsPoint(x: x, y: y) || child:blocksPointerAt(x: x, y: y);

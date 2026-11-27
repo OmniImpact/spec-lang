@@ -130,6 +130,16 @@ Class of SewNode is Row{
 		});
 	}
 
+	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
+		local Boolean is closed: false;
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			if({ children:get(index: i):closePopupsOutside(x: x, y: y) }, { closed: true; });
+			i: i + 1;
+		});
+		return closed;
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		local Boolean is changed: false;
 		local Boolean is blocked: false;
