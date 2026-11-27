@@ -474,7 +474,67 @@ Class is DrawContext{
 		});
 	}
 
-	## Draws a styled box with optional drop shadow, background fill, corner radius, and border style (single/double/bevel/groove/inset/outset).
+	## Draws a soft inner shadow clipped inside a rounded rectangle with offset and blur radius.
+	Function is drawInnerShadow(Int is x, Int is y, Int is w, Int is h, Int is radius: 0, Int is offsetX: 0, Int is offsetY: 2, Int is blurRadius: 6, Int is color: 1426063360){
+		if({ w <= 0 || h <= 0 || color == 0 }, { return; });
+		local Int is blur: if({ blurRadius < 0 }, { 0 }, { blurRadius });
+		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
+		local Int is r: if({ radius > maxR }, { maxR }, { if({ radius < 0 }, { 0 }, { radius }) });
+		local Color is baseC: Color:fromArgb(argb: color);
+		local Int is baseA: baseC:alpha();
+		if({ baseA <= 0 }, { return; });
+		local Float is halfW: (w as Float) * 0.5;
+		local Float is halfH: (h as Float) * 0.5;
+		local Float is cx: (x as Float) + halfW;
+		local Float is cy: (y as Float) + halfH;
+		local Float is rf: r as Float;
+		local Float is blurF: if({ blur > 0 }, { blur as Float }, { 1.0 });
+		local Float is ox: offsetX as Float;
+		local Float is oy: offsetY as Float;
+
+		local Int is absOx: if({ offsetX < 0 }, { 0 - offsetX }, { offsetX });
+		local Int is absOy: if({ offsetY < 0 }, { 0 - offsetY }, { offsetY });
+		local Int is insetX: blur + r + absOx + 1;
+		local Int is insetY: blur + r + absOy + 1;
+		local Int is coreX: x + insetX;
+		local Int is coreY: y + insetY;
+		local Int is coreW: w - 2 * insetX;
+		local Int is coreH: h - 2 * insetY;
+
+		local Int is py: y;
+		while({ py < y + h }, {
+			local Int is px: x;
+			while({ px < x + w }, {
+				if({ coreW > 0 && coreH > 0 && px >= coreX && px < coreX + coreW && py >= coreY && py < coreY + coreH }, {
+					px: coreX + coreW;
+				}, {
+					local Float is pxf: (px as Float) + 0.5;
+					local Float is pyf: (py as Float) + 0.5;
+					local Float is sdShape: :roundBoxSd(px: pxf, py: pyf, cx: cx, cy: cy, halfW: halfW, halfH: halfH, r: rf);
+					local Float is shapeCov: :clamp01(v: 0.5 - sdShape);
+					if({ shapeCov > 0.0 }, {
+						local Float is sdShift: :roundBoxSd(px: pxf - ox, py: pyf - oy, cx: cx, cy: cy, halfW: halfW, halfH: halfH, r: rf);
+						local Float is u: if({ blur <= 0 }, {
+							if({ sdShift >= 0.0 }, { 1.0 }, { 0.0 })
+						}, {
+							:clamp01(v: (sdShift + blurF) / (blurF * 1.25))
+						});
+						if({ u > 0.0 }, {
+							local Float is smooth: u * u * (3.0 - 2.0 * u);
+							local Int is ab: (((baseA as Float) * smooth * shapeCov) + 0.5) as Int;
+							if({ ab > 0 }, {
+								:fillRect(x: px, y: py, w: 1, h: 1, color: baseC:withAlphaByte(a: ab):toArgb());
+							});
+						});
+					});
+					px: px + 1;
+				});
+			});
+			py: py + 1;
+		});
+	}
+
+	## Draws a styled box with optional drop shadow, inner shadow, background fill, corner radius, and border style (single/double/bevel/groove/inset/outset).
 	Function is drawStyledBox(
 		Int is x,
 		Int is y,
@@ -488,7 +548,11 @@ Class is DrawContext{
 		Int is shadowOffsetX: 0,
 		Int is shadowOffsetY: 0,
 		Int is shadowBlur: 0,
-		Int is shadowColor: 1426063360
+		Int is shadowColor: 1426063360,
+		Int is innerShadowOffsetX: 0,
+		Int is innerShadowOffsetY: 0,
+		Int is innerShadowBlur: 0,
+		Int is innerShadowColor: 1426063360
 	){
 		if({ w <= 0 || h <= 0 }, { return; });
 		if({ shadowColor != 0 && (shadowBlur > 0 || shadowOffsetX != 0 || shadowOffsetY != 0) }, {
@@ -496,6 +560,9 @@ Class is DrawContext{
 		});
 		if({ bgColor != 0 }, {
 			:fillRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: bgColor);
+		});
+		if({ innerShadowColor != 0 && (innerShadowBlur > 0 || innerShadowOffsetX != 0 || innerShadowOffsetY != 0) }, {
+			:drawInnerShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: innerShadowOffsetX, offsetY: innerShadowOffsetY, blurRadius: innerShadowBlur, color: innerShadowColor);
 		});
 		if({ thickness <= 0 || borderColor == 0 }, { return; });
 		local Color is bc: Color:fromArgb(argb: borderColor);

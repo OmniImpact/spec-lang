@@ -24,6 +24,10 @@ Class of SewNode is StyledBox{
 	Float is shadowOffsetYPt: 3.0;
 	Float is shadowBlurPt: 6.0;
 	Int is shadowAlpha: 96;
+	Float is innerShadowOffsetXPt: 0.0;
+	Float is innerShadowOffsetYPt: 0.0;
+	Float is innerShadowBlurPt: 0.0;
+	Int is innerShadowAlpha: 96;
 	Float is minWidthPt: 96.0;
 	Float is minHeightPt: 52.0;
 
@@ -38,6 +42,10 @@ Class of SewNode is StyledBox{
 		Float is shadowOffsetYPt: 3.0,
 		Float is shadowBlurPt: 6.0,
 		Int is shadowAlpha: 96,
+		Float is innerShadowOffsetXPt: 0.0,
+		Float is innerShadowOffsetYPt: 0.0,
+		Float is innerShadowBlurPt: 0.0,
+		Int is innerShadowAlpha: 96,
 		Float is minWidthPt: 96.0,
 		Float is minHeightPt: 52.0
 	){
@@ -51,6 +59,10 @@ Class of SewNode is StyledBox{
 		:shadowOffsetYPt: shadowOffsetYPt;
 		:shadowBlurPt: shadowBlurPt;
 		:shadowAlpha: shadowAlpha;
+		:innerShadowOffsetXPt: innerShadowOffsetXPt;
+		:innerShadowOffsetYPt: innerShadowOffsetYPt;
+		:innerShadowBlurPt: innerShadowBlurPt;
+		:innerShadowAlpha: innerShadowAlpha;
 		:minWidthPt: minWidthPt;
 		:minHeightPt: minHeightPt;
 	}
@@ -84,6 +96,10 @@ Class of SewNode is StyledBox{
 		local Int is sxPx: activeScale:px(pt: shadowOffsetXPt);
 		local Int is syPx: activeScale:px(pt: shadowOffsetYPt);
 		local Int is sbPx: if({ shadowBlurPt > 0.0 }, { activeScale:px(pt: shadowBlurPt) }, { 0 });
+		local Int is inSCol: if({ innerShadowAlpha > 0 }, { Color(r: 0, g: 0, b: 0, a: innerShadowAlpha):toArgb() }, { 0 });
+		local Int is isxPx: activeScale:px(pt: innerShadowOffsetXPt);
+		local Int is isyPx: activeScale:px(pt: innerShadowOffsetYPt);
+		local Int is isbPx: if({ innerShadowBlurPt > 0.0 }, { activeScale:px(pt: innerShadowBlurPt) }, { 0 });
 		ctx:drawStyledBox(
 			x: bx,
 			y: by,
@@ -97,7 +113,11 @@ Class of SewNode is StyledBox{
 			shadowOffsetX: sxPx,
 			shadowOffsetY: syPx,
 			shadowBlur: sbPx,
-			shadowColor: sCol
+			shadowColor: sCol,
+			innerShadowOffsetX: isxPx,
+			innerShadowOffsetY: isyPx,
+			innerShadowBlur: isbPx,
+			innerShadowColor: inSCol
 		);
 		if({ label != '' }, {
 			local Int is fpx: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: 13.0));

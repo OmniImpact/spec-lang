@@ -80,6 +80,7 @@ Class is Theme{
 	Float is panelBorderThicknessPt: 1.0;
 	Float is panelCornerRadiusPt: 0.0;
 	Float is panelShadowBlurPt: 0.0;
+	Float is panelInnerShadowBlurPt: 0.0;
 	String is dividerStyle: 'single';
 	Float is dividerThicknessPt: 1.0;
 	String is buttonBorderStyle: 'single';
@@ -225,6 +226,11 @@ Class is Theme{
 		:panelShadowBlurPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
 	}
 
+	Function is setPanelInnerShadowBlurPt(Float is pt){
+		:customMetrics: true;
+		:panelInnerShadowBlurPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+	}
+
 	Function is setDividerStyle(String is style){
 		:customMetrics: true;
 		:dividerStyle: style;
@@ -340,6 +346,7 @@ Class is Theme{
 		:panelBorderStyle: 'single';
 		:panelCornerRadiusPt: 0.0;
 		:panelShadowBlurPt: 0.0;
+		:panelInnerShadowBlurPt: 0.0;
 		:dividerStyle: 'single';
 		:buttonBorderStyle: 'single';
 		:buttonCornerRadiusPt: 0.0;

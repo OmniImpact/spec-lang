@@ -35,6 +35,9 @@ Class is LinesBordersPageView{
 	TextEmitter is offXLabel: TextEmitter(initial: '0 pt');
 	TextEmitter is offYLabel: TextEmitter(initial: '4 pt');
 	TextEmitter is blurLabel: TextEmitter(initial: '8 pt');
+	TextEmitter is inOffXLabel: TextEmitter(initial: '0 pt');
+	TextEmitter is inOffYLabel: TextEmitter(initial: '0 pt');
+	TextEmitter is inBlurLabel: TextEmitter(initial: '0 pt');
 	Int is selStyleIdx: 0;
 
 	replace Function is init(ShowcaseViewModel is vm){
@@ -143,6 +146,42 @@ Class is LinesBordersPageView{
 			}
 		);
 
+		local Slider is inOffXSlider: Slider(
+			minVal: -14,
+			maxVal: 14,
+			value: previewBox:innerShadowOffsetXPt as Int,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:innerShadowOffsetXPt: v as Float;
+				inOffXLabel:emit(value: (v as String) . ' pt');
+				previewBox:invalidate();
+			}
+		);
+
+		local Slider is inOffYSlider: Slider(
+			minVal: -14,
+			maxVal: 14,
+			value: previewBox:innerShadowOffsetYPt as Int,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:innerShadowOffsetYPt: v as Float;
+				inOffYLabel:emit(value: (v as String) . ' pt');
+				previewBox:invalidate();
+			}
+		);
+
+		local Slider is inBlurSlider: Slider(
+			minVal: 0,
+			maxVal: 20,
+			value: previewBox:innerShadowBlurPt as Int,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:innerShadowBlurPt: v as Float;
+				inBlurLabel:emit(value: (v as String) . ' pt');
+				previewBox:invalidate();
+			}
+		);
+
 		local Grid is controlsGrid: Grid(
 			columns: 3,
 			colGapPt: 10.0,
@@ -165,7 +204,16 @@ Class is LinesBordersPageView{
 				TextScrap(text: offYLabel, muted: true),
 				Label(text: 'Shadow Blur'),
 				blurSlider,
-				TextScrap(text: blurLabel, muted: true)
+				TextScrap(text: blurLabel, muted: true),
+				Label(text: 'Inner Offset X'),
+				inOffXSlider,
+				TextScrap(text: inOffXLabel, muted: true),
+				Label(text: 'Inner Offset Y'),
+				inOffYSlider,
+				TextScrap(text: inOffYLabel, muted: true),
+				Label(text: 'Inner Blur'),
+				inBlurSlider,
+				TextScrap(text: inBlurLabel, muted: true)
 			])
 		);
 
@@ -179,7 +227,7 @@ Class is LinesBordersPageView{
 				StyledBox(label: 'Double', borderStyle: 'double', thicknessPt: 4.0, radiusPt: 5.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
 				StyledBox(label: 'Bevel', borderStyle: 'bevel', thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
 				StyledBox(label: 'Groove', borderStyle: 'groove', thicknessPt: 4.0, radiusPt: 4.0, shadowOffsetYPt: 0.0, shadowBlurPt: 0.0, minWidthPt: 120.0, minHeightPt: 64.0),
-				StyledBox(label: 'Inset', borderStyle: 'inset', thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 0.0, shadowBlurPt: 0.0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Inset', borderStyle: 'inset', thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 0.0, shadowBlurPt: 0.0, innerShadowOffsetYPt: 2.0, innerShadowBlurPt: 5.0, minWidthPt: 120.0, minHeightPt: 64.0),
 				StyledBox(label: 'Outset', borderStyle: 'outset', thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 3.0, shadowBlurPt: 5.0, minWidthPt: 120.0, minHeightPt: 64.0)
 			])
 		);

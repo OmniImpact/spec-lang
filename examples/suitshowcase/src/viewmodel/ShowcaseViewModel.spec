@@ -135,6 +135,11 @@ Class is ShowcaseViewModel{
 		:notifyThemeChange();
 	}
 
+	Function is setPanelInnerShadowBlur(Int is tenths){
+		activeTheme:setPanelInnerShadowBlurPt(pt: (tenths as Float) / 10.0);
+		:notifyThemeChange();
+	}
+
 	Function is setDividerThickness(Int is tenths){
 		activeTheme:setDividerThicknessPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
