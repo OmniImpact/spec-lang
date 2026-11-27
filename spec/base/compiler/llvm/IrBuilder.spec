@@ -42,6 +42,11 @@ Class is IrBuilder{
 	Int is lblCounter: 0;
 	Int is anonCounter: 0;
 	String is currentClass: '';
+	ClassInfo is currentClassInfo: ClassInfo(name: '', baseClass: '', members: []);
+	Map of String to Boolean is collidingNames: Map:init();
+	Map of String to String is fullToIrName: Map:init();
+	Map of String to String is currentImportMap: Map:init();
+	String is currentImportMapFor: '';
 	String is currentMethod: '';
 	String is currentSourceFile: '';
 	Int is currentLine: 0;
@@ -547,11 +552,137 @@ Class is IrBuilder{
 		return res;
 	}
 
+	Function of String is fullClassKey(ClassInfo is cls){
+		local String is ns: cls:namespaceJoined();
+		local String is q: cls:qualifiedName();
+		if({ ns != '' }, { return ns . ':' . q; });
+		return q;
+	}
+
+	Function of String is irStructNameForClass(ClassInfo is cls){
+		local String is q: cls:qualifiedName();
+		if({ :collidingNames:has(key: q) }, {
+			local String is ns: cls:namespaceJoined();
+			if({ ns != '' }, {
+				return (ns . ':' . q):replaceAll(search: ':', replacement: '_');
+			});
+		});
+		return q:replaceAll(search: ':', replacement: '_');
+	}
+
+	local Function is collectUsingBindingsFor(ClassInfo is cls, Map of String to String is out){
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function([Expression] is items){
+						local Int is ii: 0;
+						while({ ii < items:length() }, {
+							match(on: items:get(index: ii), when: [
+								Expression:ArrayLit: local Function([Expression] is segs){
+									local String is nsJoined: '';
+									local Array of String is bareNames: Array();
+									times(count: segs:length(), worker: local Function(Int is si){
+										local Expression is seg: segs:get(index: si);
+										match(on: seg, when: [
+											Expression:StringLit: local Function(String is s){
+												if({ s != '*' }, {
+													nsJoined: if({ nsJoined == '' }, { s }, { nsJoined . ':' . s });
+												});
+											},
+											Expression:Ident: local Function(String is s){
+												bareNames:add(item: s);
+											},
+											Expression:UsingAs: local Function(String is className, [NamedArg] is args){
+												if({ seg:usingAsAlias == '' }, {
+													bareNames:add(item: className);
+												});
+											},
+											Expression:ArrayLit: local Function([Expression] is grpItems){
+												times(count: grpItems:length(), worker: local Function(Int is gi){
+													local Expression is gseg: grpItems:get(index: gi);
+													match(on: gseg, when: [
+														Expression:Ident: local Function(String is gs){
+															bareNames:add(item: gs);
+														},
+														Expression:UsingAs: local Function(String is gclassName, [NamedArg] is gargs){
+															if({ gseg:usingAsAlias == '' }, {
+																bareNames:add(item: gclassName);
+															});
+														}
+													], default: {});
+												});
+											}
+										], default: {});
+									});
+									local Int is bi: 0;
+									while({ bi < bareNames:length() }, {
+										local String is bname: bareNames:get(index: bi);
+										local String is qKey: if({ nsJoined != '' }, { nsJoined . ':' . bname }, { bname });
+										if({ !out:has(key: bname) }, {
+											out:set(key: bname, value: qKey);
+										});
+										bi++;
+									});
+								}
+							], default: {});
+							ii++;
+						});
+					}
+				], default: {});
+			});
+			mi++;
+		});
+	}
+
+	local Function of String is resolveCollidingInScope(ClassInfo is scopeCls, String is bareName){
+		if({ scopeCls:name == '' }, { return ''; });
+		if({ scopeCls:qualifiedName() == bareName || scopeCls:name == bareName }, {
+			return :irStructNameForClass(cls: scopeCls);
+		});
+		local String is scopeKey: :fullClassKey(cls: scopeCls);
+		local Map of String to String is impMap: :currentImportMap;
+		if({ scopeKey != :currentImportMapFor }, {
+			impMap: Map:init();
+			:collectUsingBindingsFor(cls: scopeCls, out: impMap);
+			if({ scopeCls:name == :currentClassInfo:name && scopeKey == :fullClassKey(cls: :currentClassInfo) }, {
+				:currentImportMap: impMap;
+				:currentImportMapFor: scopeKey;
+			});
+		});
+		local String is impQ: impMap:get(key: bareName, default: '');
+		if({ impQ != '' && :fullToIrName:has(key: impQ) }, {
+			return :fullToIrName:get(key: impQ, default: '');
+		});
+		local String is curNs: scopeCls:namespaceJoined();
+		if({ curNs != '' }, {
+			local String is sameQ: curNs . ':' . bareName;
+			if({ :fullToIrName:has(key: sameQ) }, {
+				return :fullToIrName:get(key: sameQ, default: '');
+			});
+		});
+		return '';
+	}
+
 	Function of String is cStructName(String is qname){
+		if({ :fullToIrName:has(key: qname) }, {
+			return :fullToIrName:get(key: qname, default: '');
+		});
+		if({ :collidingNames:has(key: qname) }, {
+			local String is resolved: :resolveCollidingInScope(scopeCls: :currentClassInfo, bareName: qname);
+			if({ resolved != '' }, { return resolved; });
+		});
 		return qname:replaceAll(search: ':', replacement: '_');
 	}
 
 	local Function of ClassInfo is resolveBaseClass(ClassInfo is cls, String is bname, Map of String to ClassInfo is clsMap){
+		if({ :collidingNames:has(key: bname) }, {
+			local String is resolvedIr: :resolveCollidingInScope(scopeCls: cls, bareName: bname);
+			if({ resolvedIr != '' && clsMap:has(key: resolvedIr) }, {
+				return clsMap:get(key: resolvedIr, default: cls);
+			});
+		});
 		if({ clsMap:has(key: bname) }, {
 			return clsMap:get(key: bname, default: cls);
 		});
@@ -602,7 +733,7 @@ Class is IrBuilder{
 				});
 				if({ m:hasInit && :isLazyCallExpr(expr: m:initExpr) }, {
 					st:addField(name: '_lazy_state_' . m:name, ty: IrType:I64);
-					local String is ownerSname: :cStructName(qname: cls:qualifiedName());
+					local String is ownerSname: :irStructNameForClass(cls: cls);
 					:lazyFields:set(key: st:name . ':' . m:name, value: ownerSname);
 					:lazyFields:set(key: cls:name . ':' . m:name, value: ownerSname);
 				});
@@ -625,7 +756,7 @@ Class is IrBuilder{
 				:buildVtable(st: st, cls: bcls, clsMap: clsMap);
 			});
 		});
-		local String is sname: :cStructName(qname: cls:qualifiedName());
+		local String is sname: :irStructNameForClass(cls: cls);
 		local Map of String to Int is mCounts: Map:init();
 		times(count: cls:members:length(), worker: local Function(Int is mi){
 			local Member is m: cls:members:get(index: mi);
@@ -888,7 +1019,7 @@ Class is IrBuilder{
 		local Int is ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local String is sname: :irStructNameForClass(cls: cls);
 			knownStructs:set(key: sname, value: true);
 			ci++;
 		});
@@ -896,11 +1027,11 @@ Class is IrBuilder{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local String is sname: :irStructNameForClass(cls: cls);
 			local [String] is ps: [];
 			times(count: cls:baseClasses:length(), worker: local Function(Int is bi){
 				local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: cls:baseClasses:get(index: bi), clsMap: clsMap);
-				local String is bsname: :cStructName(qname: bcls:qualifiedName());
+				local String is bsname: :irStructNameForClass(cls: bcls);
 				if({ bsname != sname && knownStructs:has(key: bsname) }, {
 					ps:push(item: bsname);
 					local [String] is chs: childrenOf:get(key: bsname, default: []);
@@ -915,7 +1046,7 @@ Class is IrBuilder{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local String is sname: :irStructNameForClass(cls: cls);
 			local Int is mi: 0;
 			while({ mi < cls:members:length() }, {
 				local Member is m: cls:members:get(index: mi);
@@ -941,7 +1072,7 @@ Class is IrBuilder{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local String is sname: :irStructNameForClass(cls: cls);
 			local Boolean is isSysCls: :bindings:isSysinternal(cls: cls);
 			local Boolean is keepAll: :isAlwaysKeepReachClass(sname: sname, isSysCls: isSysCls);
 			local Map of String to Int is mCountsSeed: Map:init();
@@ -989,7 +1120,7 @@ Class is IrBuilder{
 				local Int is rci: 0;
 				while({ rci < allClasses:length() }, {
 					local ClassInfo is rcls: allClasses:get(index: rci);
-					local String is rsname: :cStructName(qname: rcls:qualifiedName());
+					local String is rsname: :irStructNameForClass(cls: rcls);
 					local Int is rmi: 0;
 					while({ rmi < rcls:members:length() }, {
 						local Member is rm: rcls:members:get(index: rmi);
@@ -1068,18 +1199,46 @@ Class is IrBuilder{
 		});
 		allClasses: emittableClasses;
 
+		:collidingNames: Map:init();
+		:fullToIrName: Map:init();
+		:currentImportMap: Map:init();
+		:currentImportMapFor: '';
+		local Map of String to Int is qnameCounts: Map:init();
+		local Int is ci0: 0;
+		while({ ci0 < allClasses:length() }, {
+			local ClassInfo is cc0: allClasses:get(index: ci0);
+			if({ !:bindings:isSysinternal(cls: cc0) }, {
+				local String is cq: cc0:qualifiedName();
+				local Int is prevCnt: qnameCounts:get(key: cq, default: 0);
+				qnameCounts:set(key: cq, value: prevCnt + 1);
+				if({ prevCnt >= 1 }, {
+					:collidingNames:set(key: cq, value: true);
+				});
+			});
+			ci0++;
+		});
+
 		local Map of String to ClassInfo is clsMap: Map:init();
 		local Map of String to String is clsQNameMap: Map:init();
 		local Map of String to String is structToQName: Map:init();
 		local Int is ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is c0: allClasses:get(index: ci);
-			clsMap:set(key: c0:qualifiedName(), value: c0);
-			clsQNameMap:set(key: c0:qualifiedName(), value: c0:qualifiedName());
-			structToQName:set(key: :cStructName(qname: c0:qualifiedName()), value: c0:qualifiedName());
-			if({ c0:outerName == '' }, {
-				clsMap:set(key: c0:name, value: c0);
-				clsQNameMap:set(key: c0:name, value: c0:qualifiedName());
+			local String is fkey0: :fullClassKey(cls: c0);
+			local String is ir0: :irStructNameForClass(cls: c0);
+			:fullToIrName:set(key: fkey0, value: ir0);
+			clsMap:set(key: fkey0, value: c0);
+			clsMap:set(key: ir0, value: c0);
+			clsQNameMap:set(key: fkey0, value: fkey0);
+			clsQNameMap:set(key: ir0, value: fkey0);
+			structToQName:set(key: ir0, value: fkey0);
+			if({ !:collidingNames:has(key: c0:qualifiedName()) }, {
+				clsMap:set(key: c0:qualifiedName(), value: c0);
+				clsQNameMap:set(key: c0:qualifiedName(), value: c0:qualifiedName());
+				if({ c0:outerName == '' }, {
+					clsMap:set(key: c0:name, value: c0);
+					clsQNameMap:set(key: c0:name, value: c0:qualifiedName());
+				});
 			});
 			ci++;
 		});
@@ -1127,7 +1286,7 @@ Class is IrBuilder{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local String is sname: :irStructNameForClass(cls: cls);
 			if({ !seenStructs:has(key: sname) }, {
 				seenStructs:set(key: sname, value: true);
 				local IrStruct is st: IrStruct:init(name: sname);
@@ -1205,7 +1364,7 @@ Class is IrBuilder{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
-			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local String is sname: :irStructNameForClass(cls: cls);
 			local Map of String to Boolean is hvis: Map:init();
 			hvis:set(key: cls:qualifiedName(), value: true);
 			:inheritHeldFromAncestors(cls: cls, cur: cls, sname: sname, clsMap: clsMap, hvis: hvis);
@@ -1221,8 +1380,9 @@ Class is IrBuilder{
 			local ClassInfo is cls: allClasses:get(index: ci);
 			local Boolean is isSysCls: :bindings:isSysinternal(cls: cls);
 			:isUnmanagedClass: isSysCls;
-			local String is sname: :cStructName(qname: cls:qualifiedName());
+			local String is sname: :irStructNameForClass(cls: cls);
 			:currentClass: sname;
+			:currentClassInfo: cls;
 			:currentSourceFile: cls:sourceFile;
 			:curClassTypeParams: Map:init();
 			times(count: cls:typeParams:length(), worker: local Function(Int is tpi){
@@ -1305,6 +1465,7 @@ Class is IrBuilder{
 		});
 		:isUnmanagedClass: false;
 		:currentClass: '';
+		:currentClassInfo: ClassInfo(name: '', baseClass: '', members: []);
 		:currentMethod: '';
 		:currentSourceFile: '';
 		:currentLine: 0;
@@ -1340,7 +1501,7 @@ Class is IrBuilder{
 			local ClassInfo is bcls: :resolveBaseClass(cls: cur, bname: bname, clsMap: clsMap);
 			if({ bcls:name != '' && !hvis:has(key: bcls:qualifiedName()) }, {
 				hvis:set(key: bcls:qualifiedName(), value: true);
-				local String is bsname: :cStructName(qname: bcls:qualifiedName());
+				local String is bsname: :irStructNameForClass(cls: bcls);
 				times(count: bcls:members:length(), worker: local Function(Int is bmi){
 					local Member is bm: bcls:members:get(index: bmi);
 					if({ bm:kind == MemberKind:FIELD && bm:hasModifier(kw: Keyword:HELD) }, {
@@ -2292,7 +2453,7 @@ Class is IrBuilder{
 				while({ found == '' && mi < bcls:members:length() }, {
 					local Member is m: bcls:members:get(index: mi);
 					if({ m:kind == MemberKind:METHOD && m:name == methodName && !m:hasModifier(kw: Keyword:HELD) }, {
-						found: :cStructName(qname: bcls:qualifiedName()) . '_' . methodName . suffix;
+						found: :irStructNameForClass(cls: bcls) . '_' . methodName . suffix;
 					});
 					mi++;
 				});
@@ -2308,7 +2469,7 @@ Class is IrBuilder{
 			while({ found == '' && rmi < rootCls:members:length() }, {
 				local Member is rm: rootCls:members:get(index: rmi);
 				if({ rm:kind == MemberKind:METHOD && rm:name == methodName && !rm:hasModifier(kw: Keyword:HELD) }, {
-					found: :cStructName(qname: rootCls:qualifiedName()) . '_' . methodName . suffix;
+					found: :irStructNameForClass(cls: rootCls) . '_' . methodName . suffix;
 				});
 				rmi++;
 			});
@@ -3654,7 +3815,7 @@ Class is IrBuilder{
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
 			if({ m:kind == MemberKind:METHOD && m:name == 'SpecErrorHandler' && !m:hasModifier(kw: Keyword:HELD) }, {
-				return :cStructName(qname: cls:qualifiedName()) . '_SpecErrorHandler';
+				return :irStructNameForClass(cls: cls) . '_SpecErrorHandler';
 			});
 			mi++;
 		});
@@ -3847,7 +4008,7 @@ Class is IrBuilder{
 		times(count: allClasses:length(), worker: local Function(Int is ci){
 			local ClassInfo is cls: allClasses:get(index: ci);
 			if({ !:bindings:isSysinternal(cls: cls) }, {
-				local String is sname: :cStructName(qname: cls:qualifiedName());
+				local String is sname: :irStructNameForClass(cls: cls);
 				local Map of String to Int is mCounts: Map:init();
 				times(count: cls:members:length(), worker: local Function(Int is mi){
 					local Member is m: cls:members:get(index: mi);
