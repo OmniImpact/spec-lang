@@ -14,6 +14,7 @@ Class is ThemeBuilderPageView{
 		['base', 'sew', Row],
 		['base', 'sew', Column],
 		['base', 'sew', Grid],
+		['base', 'sew', FlowH],
 		['base', 'sew', 'nav', NavStack],
 		['base', 'sew', 'nav', NavRoute],
 		['base', 'scrap', Frame],
@@ -380,7 +381,7 @@ Class is ThemeBuilderPageView{
 		);
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');
 
-		local Array of SewNode is colorCells: Array();
+		local Array of SewNode is colorItems: Array();
 		local Int is ci: 0;
 		while({ ci < colorLabels:length() }, {
 			local Int is slot: ci;
@@ -399,20 +400,28 @@ Class is ThemeBuilderPageView{
 			);
 			colorInputs:add(item: inp);
 			colorSwatches:add(item: sw);
-			colorCells:add(item: Label(text: colorLabels:get(index: slot)));
-			colorCells:add(item: inp);
-			colorCells:add(item: sw);
+			colorItems:add(item: Row(
+				gapPt: 6.0,
+				flexFlags: Array([true, false, false]),
+				children: Array([
+					Label(text: colorLabels:get(index: slot)),
+					inp,
+					sw
+				])
+			));
 			ci: ci + 1;
 		});
 
-		local Grid is colorGrid: Grid(
-			columns: 3,
-			colGapPt: 10.0,
-			rowGapPt: 6.0,
-			children: colorCells
+		local FlowH is colorFlow: FlowH(
+			gapPt: 12.0,
+			lineGapPt: 6.0,
+			minItemPt: 230.0,
+			maxItemPt: 340.0,
+			fill: true,
+			children: colorItems
 		);
 
-		local Array of SewNode is metricCells: Array();
+		local Array of SewNode is metricItems: Array();
 		local Int is mi: 0;
 		while({ mi < metricLabels:length() }, {
 			local Int is mslot: mi;
@@ -425,16 +434,24 @@ Class is ThemeBuilderPageView{
 				onSubmit: local Function(String is v){ vm:setMetricSlotFromText(slot: mslot, raw: v); }
 			);
 			metricInputs:add(item: mInp);
-			metricCells:add(item: Label(text: metricLabels:get(index: mslot)));
-			metricCells:add(item: mInp);
+			metricItems:add(item: Row(
+				gapPt: 8.0,
+				flexFlags: Array([true, false]),
+				children: Array([
+					Label(text: metricLabels:get(index: mslot)),
+					mInp
+				])
+			));
 			mi: mi + 1;
 		});
 
-		local Grid is metricGrid: Grid(
-			columns: 2,
-			colGapPt: 12.0,
-			rowGapPt: 6.0,
-			children: metricCells
+		local FlowH is metricFlow: FlowH(
+			gapPt: 12.0,
+			lineGapPt: 6.0,
+			minItemPt: 190.0,
+			maxItemPt: 280.0,
+			fill: true,
+			children: metricItems
 		);
 
 		local CodeEditorView is themeJsonEditor: CodeEditorView(
@@ -568,171 +585,166 @@ Class is ThemeBuilderPageView{
 
 		local SewNode is colorsTab: Frame(
 			title: 'Theme Color Tokens (#RRGGBB)',
-			child: colorGrid
+			child: colorFlow
 		);
 
-		local SewNode is fillsTab: Row(
+		local SewNode is fillsTab: FlowH(
 			gapPt: 8.0,
-			children: Array([
-				Column(
-					gapPt: 8.0,
-					children: Array([
-						Frame(
-							title: 'Surface Fill',
-							child: Column(
-								gapPt: 6.0,
-								children: Array([
-									SectionH(children: Array([surfFillDropdown, surfBoundsDropdown])),
-									Grid(
-										columns: 3,
-										colGapPt: 8.0,
-										rowGapPt: 6.0,
-										children: Array([
-											Label(text: 'Colors'), SectionH(children: Array([surfColorASwatch, useSurfColorBSwitch, surfColorBSwatch])), Label(text: ''),
-											Label(text: 'Center X'), surfCXSlider, TextScrap(text: surfCXLabel, muted: true),
-											Label(text: 'Center Y'), surfCYSlider, TextScrap(text: surfCYLabel, muted: true),
-											Label(text: 'Linear Angle'), surfAngSlider, TextScrap(text: surfAngLabel, muted: true),
-											Label(text: 'Blend Width'), surfBwSlider, TextScrap(text: surfBwLabel, muted: true)
-										])
-									)
-								])
-							)
-						),
-						Frame(
-							title: 'Button Fill',
-							child: Column(
-								gapPt: 6.0,
-								children: Array([
-									SectionH(children: Array([btnFillDropdown, btnBoundsDropdown])),
-									Grid(
-										columns: 3,
-										colGapPt: 8.0,
-										rowGapPt: 6.0,
-										children: Array([
-											Label(text: 'Colors'), SectionH(children: Array([btnColorASwatch, useBtnColorBSwitch, btnColorBSwatch])), Label(text: ''),
-											Label(text: 'Center X'), btnCXSlider, TextScrap(text: btnCXLabel, muted: true),
-											Label(text: 'Center Y'), btnCYSlider, TextScrap(text: btnCYLabel, muted: true),
-											Label(text: 'Linear Angle'), btnAngSlider, TextScrap(text: btnAngLabel, muted: true),
-											Label(text: 'Blend Width'), btnBwSlider, TextScrap(text: btnBwLabel, muted: true)
-										])
-									)
-								])
-							)
-						)
-					])
-				),
-				Column(
-					gapPt: 8.0,
-					children: Array([
-						Frame(
-							title: 'Hover Effects',
-							child: Grid(
-								columns: 3,
-								colGapPt: 8.0,
-								rowGapPt: 6.0,
-								children: Array([
-									Label(text: 'Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
-									Label(text: 'Tint Shift'), hoverTintSlider, TextScrap(text: hoverTintLabel, muted: true),
-									Label(text: 'Saturation'), hoverSatSlider, TextScrap(text: hoverSatLabel, muted: true)
-								])
-							)
-						),
-						Frame(
-							title: 'Selected Effects',
-							child: Grid(
-								columns: 3,
-								colGapPt: 8.0,
-								rowGapPt: 6.0,
-								children: Array([
-									Label(text: 'Brightness'), selectedBriSlider, TextScrap(text: selectedBriLabel, muted: true),
-									Label(text: 'Tint Shift'), selectedTintSlider, TextScrap(text: selectedTintLabel, muted: true),
-									Label(text: 'Saturation'), selectedSatSlider, TextScrap(text: selectedSatLabel, muted: true)
-								])
-							)
-						),
-						Frame(
-							title: 'Focus Effects',
-							child: Grid(
-								columns: 3,
-								colGapPt: 8.0,
-								rowGapPt: 6.0,
-								children: Array([
-									Label(text: 'Brightness'), focusBriSlider, TextScrap(text: focusBriLabel, muted: true),
-									Label(text: 'Tint Shift'), focusTintSlider, TextScrap(text: focusTintLabel, muted: true),
-									Label(text: 'Saturation'), focusSatSlider, TextScrap(text: focusSatLabel, muted: true)
-								])
-							)
-						)
-					])
-				)
-			])
-		);
-
-		local SewNode is bordersTab: Row(
-			gapPt: 8.0,
+			lineGapPt: 8.0,
+			minItemPt: 250.0,
+			maxItemPt: 380.0,
+			fill: true,
+			stretchCross: true,
 			children: Array([
 				Frame(
-					title: 'Panel Border & Shadows',
+					title: 'Surface Fill',
 					child: Column(
 						gapPt: 6.0,
 						children: Array([
+							SectionH(children: Array([surfFillDropdown, surfBoundsDropdown])),
 							Grid(
 								columns: 3,
 								colGapPt: 8.0,
 								rowGapPt: 6.0,
 								children: Array([
-									Label(text: 'Panel Style'), panelStyleDropdown, Label(text: ''),
-									Label(text: 'Panel Thickness'), panelThickSlider, TextScrap(text: panelThickLabel, muted: true),
-									Label(text: 'Panel Radius'), panelRadiusSlider, TextScrap(text: panelRadiusLabel, muted: true),
-									Label(text: 'Shadow Blur'), panelShadowSlider, TextScrap(text: panelShadowLabel, muted: true),
-									Label(text: 'Shadow X'), panelShadowXSlider, TextScrap(text: panelShadowXLabel, muted: true),
-									Label(text: 'Shadow Y'), panelShadowYSlider, TextScrap(text: panelShadowYLabel, muted: true),
-									Label(text: 'Inner Blur'), panelInnerShadowSlider, TextScrap(text: panelInnerShadowLabel, muted: true),
-									Label(text: 'Inner X'), panelInnerShadowXSlider, TextScrap(text: panelInnerShadowXLabel, muted: true),
-									Label(text: 'Inner Y'), panelInnerShadowYSlider, TextScrap(text: panelInnerShadowYLabel, muted: true)
+									Label(text: 'Colors'), SectionH(children: Array([surfColorASwatch, useSurfColorBSwitch, surfColorBSwatch])), Label(text: ''),
+									Label(text: 'Center X'), surfCXSlider, TextScrap(text: surfCXLabel, muted: true),
+									Label(text: 'Center Y'), surfCYSlider, TextScrap(text: surfCYLabel, muted: true),
+									Label(text: 'Linear Angle'), surfAngSlider, TextScrap(text: surfAngLabel, muted: true),
+									Label(text: 'Blend Width'), surfBwSlider, TextScrap(text: surfBwLabel, muted: true)
 								])
 							)
 						])
 					)
 				),
-				Column(
-					gapPt: 8.0,
-					children: Array([
-						Frame(
-							title: 'Divider',
-							child: Grid(
+				Frame(
+					title: 'Button Fill',
+					child: Column(
+						gapPt: 6.0,
+						children: Array([
+							SectionH(children: Array([btnFillDropdown, btnBoundsDropdown])),
+							Grid(
 								columns: 3,
 								colGapPt: 8.0,
 								rowGapPt: 6.0,
 								children: Array([
-									Label(text: 'Divider Style'), dividerStyleDropdown, Label(text: ''),
-									Label(text: 'Thickness'), dividerThickSlider, TextScrap(text: dividerThickLabel, muted: true)
+									Label(text: 'Colors'), SectionH(children: Array([btnColorASwatch, useBtnColorBSwitch, btnColorBSwatch])), Label(text: ''),
+									Label(text: 'Center X'), btnCXSlider, TextScrap(text: btnCXLabel, muted: true),
+									Label(text: 'Center Y'), btnCYSlider, TextScrap(text: btnCYLabel, muted: true),
+									Label(text: 'Linear Angle'), btnAngSlider, TextScrap(text: btnAngLabel, muted: true),
+									Label(text: 'Blend Width'), btnBwSlider, TextScrap(text: btnBwLabel, muted: true)
 								])
 							)
-						),
-						Frame(
-							title: 'Button Border & Shadow',
-							child: Grid(
-								columns: 3,
-								colGapPt: 8.0,
-								rowGapPt: 6.0,
-								children: Array([
-									Label(text: 'Button Style'), buttonStyleDropdown, Label(text: ''),
-									Label(text: 'Thickness'), buttonThickSlider, TextScrap(text: buttonThickLabel, muted: true),
-									Label(text: 'Radius'), buttonRadiusSlider, TextScrap(text: buttonRadiusLabel, muted: true),
-									Label(text: 'Shadow Blur'), buttonShadowSlider, TextScrap(text: buttonShadowLabel, muted: true),
-									Label(text: 'Shadow X'), buttonShadowXSlider, TextScrap(text: buttonShadowXLabel, muted: true),
-									Label(text: 'Shadow Y'), buttonShadowYSlider, TextScrap(text: buttonShadowYLabel, muted: true)
-								])
-							)
-						)
-					])
+						])
+					)
+				),
+				Frame(
+					title: 'Hover Effects',
+					child: Grid(
+						columns: 3,
+						colGapPt: 8.0,
+						rowGapPt: 6.0,
+						children: Array([
+							Label(text: 'Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
+							Label(text: 'Tint Shift'), hoverTintSlider, TextScrap(text: hoverTintLabel, muted: true),
+							Label(text: 'Saturation'), hoverSatSlider, TextScrap(text: hoverSatLabel, muted: true)
+						])
+					)
+				),
+				Frame(
+					title: 'Selected Effects',
+					child: Grid(
+						columns: 3,
+						colGapPt: 8.0,
+						rowGapPt: 6.0,
+						children: Array([
+							Label(text: 'Brightness'), selectedBriSlider, TextScrap(text: selectedBriLabel, muted: true),
+							Label(text: 'Tint Shift'), selectedTintSlider, TextScrap(text: selectedTintLabel, muted: true),
+							Label(text: 'Saturation'), selectedSatSlider, TextScrap(text: selectedSatLabel, muted: true)
+						])
+					)
+				),
+				Frame(
+					title: 'Focus Effects',
+					child: Grid(
+						columns: 3,
+						colGapPt: 8.0,
+						rowGapPt: 6.0,
+						children: Array([
+							Label(text: 'Brightness'), focusBriSlider, TextScrap(text: focusBriLabel, muted: true),
+							Label(text: 'Tint Shift'), focusTintSlider, TextScrap(text: focusTintLabel, muted: true),
+							Label(text: 'Saturation'), focusSatSlider, TextScrap(text: focusSatLabel, muted: true)
+						])
+					)
 				)
 			])
 		);
 
-		local SewNode is layoutTab: Column(
+		local SewNode is bordersTab: FlowH(
 			gapPt: 8.0,
+			lineGapPt: 8.0,
+			minItemPt: 250.0,
+			maxItemPt: 380.0,
+			fill: true,
+			stretchCross: true,
+			children: Array([
+				Frame(
+					title: 'Panel Border & Shadows',
+					child: Grid(
+						columns: 3,
+						colGapPt: 8.0,
+						rowGapPt: 6.0,
+						children: Array([
+							Label(text: 'Panel Style'), panelStyleDropdown, Label(text: ''),
+							Label(text: 'Panel Thickness'), panelThickSlider, TextScrap(text: panelThickLabel, muted: true),
+							Label(text: 'Panel Radius'), panelRadiusSlider, TextScrap(text: panelRadiusLabel, muted: true),
+							Label(text: 'Shadow Blur'), panelShadowSlider, TextScrap(text: panelShadowLabel, muted: true),
+							Label(text: 'Shadow X'), panelShadowXSlider, TextScrap(text: panelShadowXLabel, muted: true),
+							Label(text: 'Shadow Y'), panelShadowYSlider, TextScrap(text: panelShadowYLabel, muted: true),
+							Label(text: 'Inner Blur'), panelInnerShadowSlider, TextScrap(text: panelInnerShadowLabel, muted: true),
+							Label(text: 'Inner X'), panelInnerShadowXSlider, TextScrap(text: panelInnerShadowXLabel, muted: true),
+							Label(text: 'Inner Y'), panelInnerShadowYSlider, TextScrap(text: panelInnerShadowYLabel, muted: true)
+						])
+					)
+				),
+				Frame(
+					title: 'Button Border & Shadow',
+					child: Grid(
+						columns: 3,
+						colGapPt: 8.0,
+						rowGapPt: 6.0,
+						children: Array([
+							Label(text: 'Button Style'), buttonStyleDropdown, Label(text: ''),
+							Label(text: 'Thickness'), buttonThickSlider, TextScrap(text: buttonThickLabel, muted: true),
+							Label(text: 'Radius'), buttonRadiusSlider, TextScrap(text: buttonRadiusLabel, muted: true),
+							Label(text: 'Shadow Blur'), buttonShadowSlider, TextScrap(text: buttonShadowLabel, muted: true),
+							Label(text: 'Shadow X'), buttonShadowXSlider, TextScrap(text: buttonShadowXLabel, muted: true),
+							Label(text: 'Shadow Y'), buttonShadowYSlider, TextScrap(text: buttonShadowYLabel, muted: true)
+						])
+					)
+				),
+				Frame(
+					title: 'Divider',
+					child: Grid(
+						columns: 3,
+						colGapPt: 8.0,
+						rowGapPt: 6.0,
+						children: Array([
+							Label(text: 'Divider Style'), dividerStyleDropdown, Label(text: ''),
+							Label(text: 'Thickness'), dividerThickSlider, TextScrap(text: dividerThickLabel, muted: true)
+						])
+					)
+				)
+			])
+		);
+
+		local SewNode is layoutTab: FlowH(
+			gapPt: 8.0,
+			lineGapPt: 8.0,
+			minItemPt: 270.0,
+			maxItemPt: 460.0,
+			fill: true,
+			stretchCross: true,
 			children: Array([
 				Frame(
 					title: 'Typography, Borders & Window Translucency',
@@ -749,7 +761,7 @@ Class is ThemeBuilderPageView{
 				),
 				Frame(
 					title: 'Padding & Spacing (pt)',
-					child: metricGrid
+					child: metricFlow
 				)
 			])
 		);
