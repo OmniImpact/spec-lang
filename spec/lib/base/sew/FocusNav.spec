@@ -42,7 +42,7 @@ Class is FocusNav{
 		local Int is i: 0;
 		while({ i < n }, {
 			local SewNode is node: focusables:get(index: i);
-			local Boolean is hit: node:containsPoint(x: x, y: y);
+			local Boolean is hit: node:containsPoint(x: x, y: y) || node:blocksPointerAt(x: x, y: y);
 			if({ node:isFocused() != hit }, {
 				node:setFocused(next: hit);
 				changed: true;

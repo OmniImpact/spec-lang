@@ -113,20 +113,24 @@ Class of SewNode is Switch{
 		if({ checked }, {
 			local Int is rx: b:x + b:width - pad - sq;
 			local Int is ry: b:y + (b:height - sq) / 2;
-			if({ innerRad > 0 }, {
-				ctx:fillRoundRect(x: rx, y: ry, w: sq, h: sq, radius: innerRad, color: activeTheme:textPrimary);
-			}, {
-				ctx:fillRect(x: rx, y: ry, w: sq, h: sq, color: activeTheme:textPrimary);
-			});
+			local Int is onStroke: if({ bw > 0 }, { bw }, { activeTheme:linePx(scaleFactor: activeScale:factor) });
+			ctx:drawStyledBox(
+				x: rx, y: ry, w: sq, h: sq,
+				bgColor: activeTheme:textPrimary, borderColor: activeTheme:buttonBorderColorArgb(),
+				thickness: onStroke, radius: innerRad, style: activeTheme:buttonBorderStyle
+			);
 		}, {
 			local Int is lx: b:x + pad;
 			local Int is ly: b:y + (b:height - sq) / 2;
+			local Int is offW: sq / 2;
+			if({ offW < 3 }, { offW: 3; });
+			local Int is offRad: if({ innerRad > offW / 2 }, { offW / 2 }, { innerRad });
 			local Int is offStroke: if({ bw > 0 }, { bw }, { activeTheme:linePx(scaleFactor: activeScale:factor) });
 			local Int is offCol: if({ hovered }, { activeTheme:textPrimary }, { activeTheme:textMuted });
 			ctx:drawStyledBox(
-				x: lx, y: ly, w: sq, h: sq,
+				x: lx, y: ly, w: offW, h: sq,
 				bgColor: 0, borderColor: offCol, thickness: offStroke,
-				radius: innerRad, style: activeTheme:buttonBorderStyle
+				radius: offRad, style: activeTheme:buttonBorderStyle
 			);
 		});
 	}
