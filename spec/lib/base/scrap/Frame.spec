@@ -60,7 +60,7 @@ Class of SewNode is Frame{
 	replace Function of Size is measure(Constraints is c){
 		local Int is padPx: :effPadPx();
 		local Int is bw: :borderPx();
-		local Int is insetPx: if({ padPx < bw }, { bw }, { padPx });
+		local Int is insetPx: padPx + bw;
 		local Int is fpx: :fontPx();
 		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
 		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { insetPx });
@@ -85,7 +85,7 @@ Class of SewNode is Frame{
 		layoutBounds: bounds;
 		local Int is padPx: :effPadPx();
 		local Int is bw: :borderPx();
-		local Int is insetPx: if({ padPx < bw }, { bw }, { padPx });
+		local Int is insetPx: padPx + bw;
 		local Int is fpx: :fontPx();
 		local Int is th: if({ title != '' }, { DrawContext:measureHeight(pixelHeight: fpx) }, { 0 });
 		local Int is topPad: if({ title != '' }, { th + padPx / 2 }, { insetPx });
@@ -103,20 +103,22 @@ Class of SewNode is Frame{
 		local Int is bw: :borderPx();
 		local Int is radPx: activeScale:px(pt: activeTheme:panelCornerRadiusPt);
 		local Int is shBlur: activeScale:px(pt: activeTheme:panelShadowBlurPt);
-		local Int is shOffY: if({ shBlur > 0 }, { (shBlur + 1) / 2 }, { 0 });
-		local Int is shCol: if({ shBlur > 0 }, { 1426063360 }, { 0 });
+		local Int is shOffX: activeScale:px(pt: activeTheme:panelShadowOffsetXPt);
+		local Int is shOffY: activeScale:px(pt: activeTheme:panelShadowOffsetYPt);
+		local Int is shCol: if({ shBlur > 0 || shOffX != 0 || shOffY != 0 }, { 1426063360 }, { 0 });
 		local Int is inShBlur: activeScale:px(pt: activeTheme:panelInnerShadowBlurPt);
-		local Int is inShOffY: if({ inShBlur > 0 }, { (inShBlur + 2) / 3 }, { 0 });
-		local Int is inShCol: if({ inShBlur > 0 }, { 1426063360 }, { 0 });
+		local Int is inShOffX: activeScale:px(pt: activeTheme:panelInnerShadowOffsetXPt);
+		local Int is inShOffY: activeScale:px(pt: activeTheme:panelInnerShadowOffsetYPt);
+		local Int is inShCol: if({ inShBlur > 0 || inShOffX != 0 || inShOffY != 0 }, { 1426063360 }, { 0 });
 		local String is pStyle: activeTheme:panelBorderStyle;
+		local Int is bgCol: if({ padPt != 0.0 || fillBg }, { activeTheme:windowBg }, { 0 });
 		if({ title == '' }, {
-			local Int is bgCol: if({ fillBg && padPt != 0.0 }, { activeTheme:windowBg }, { 0 });
 			ctx:drawStyledBox(
 				x: b:x, y: b:y, w: b:width, h: b:height,
 				bgColor: bgCol, borderColor: border, thickness: bw,
 				radius: radPx, style: pStyle,
-				shadowOffsetX: 0, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
-				innerShadowOffsetX: 0, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
+				shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
+				innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
 			);
 		}, {
 			local Int is fpx: :fontPx();
@@ -125,10 +127,10 @@ Class of SewNode is Frame{
 			local Int is topY: b:y + th / 2;
 			local Int is boxH: b:height - (th / 2);
 			if({ boxH > bw }, {
-				local Int is bgCol: if({ fillBg && padPt != 0.0 }, { activeTheme:windowBg }, { 0 });
-				local Int is titleX: b:x + :effPadPx();
+				local Int is titlePad: activeScale:px(pt: activeTheme:paddingLargePt);
+				local Int is titleX: b:x + bw + radPx + titlePad;
 				local Int is gapPad: activeScale:px(pt: 4.0);
-				if({ pStyle == 'single' && radPx <= 0 && shBlur <= 0 && inShBlur <= 0 }, {
+				if({ pStyle == 'single' && radPx <= 0 && shBlur <= 0 && shOffX == 0 && shOffY == 0 && inShBlur <= 0 && inShOffX == 0 && inShOffY == 0 }, {
 					if({ bgCol != 0 }, {
 						ctx:fillRect(x: b:x + bw, y: topY + bw, w: b:width - bw * 2, h: boxH - bw * 2, color: bgCol);
 					});
@@ -149,10 +151,11 @@ Class of SewNode is Frame{
 						x: b:x, y: topY, w: b:width, h: boxH,
 						bgColor: bgCol, borderColor: border, thickness: bw,
 						radius: radPx, style: pStyle,
-						shadowOffsetX: 0, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
-						innerShadowOffsetX: 0, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
+						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
+						innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
 					);
-					ctx:fillRect(x: titleX - gapPad, y: b:y, w: tw + gapPad * 2, h: th, color: activeTheme:windowBg);
+					local Int is pillH: if({ th > bw + 2 }, { th }, { bw + 2 });
+					ctx:fillRect(x: titleX - gapPad, y: b:y, w: tw + gapPad * 2, h: pillH, color: activeTheme:windowBg);
 				});
 				ctx:drawText(x: titleX, y: b:y, text: title, color: activeTheme:textMuted, pixelHeight: fpx);
 			});

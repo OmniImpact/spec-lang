@@ -114,10 +114,15 @@ Class is ShowcaseViewModel{
 	}
 
 	Function of String is tenthsLabel(Int is tenths){
-		local Int is t: if({ tenths < 0 }, { 0 }, { tenths });
+		local Int is t: tenths;
+		local String is sign: '';
+		if({ t < 0 }, {
+			sign: '-';
+			t: 0 - t;
+		});
 		local Int is whole: t / 10;
 		local Int is frac: t - (whole * 10);
-		return (whole as String) . '.' . (frac as String) . ' pt';
+		return sign . (whole as String) . '.' . (frac as String) . ' pt';
 	}
 
 	Function is setPanelBorderThickness(Int is tenths){
@@ -135,8 +140,28 @@ Class is ShowcaseViewModel{
 		:notifyThemeChange();
 	}
 
+	Function is setPanelShadowOffsetX(Int is tenths){
+		activeTheme:setPanelShadowOffsetXPt(pt: (tenths as Float) / 10.0);
+		:notifyThemeChange();
+	}
+
+	Function is setPanelShadowOffsetY(Int is tenths){
+		activeTheme:setPanelShadowOffsetYPt(pt: (tenths as Float) / 10.0);
+		:notifyThemeChange();
+	}
+
 	Function is setPanelInnerShadowBlur(Int is tenths){
 		activeTheme:setPanelInnerShadowBlurPt(pt: (tenths as Float) / 10.0);
+		:notifyThemeChange();
+	}
+
+	Function is setPanelInnerShadowOffsetX(Int is tenths){
+		activeTheme:setPanelInnerShadowOffsetXPt(pt: (tenths as Float) / 10.0);
+		:notifyThemeChange();
+	}
+
+	Function is setPanelInnerShadowOffsetY(Int is tenths){
+		activeTheme:setPanelInnerShadowOffsetYPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 
@@ -157,6 +182,16 @@ Class is ShowcaseViewModel{
 
 	Function is setButtonShadowBlur(Int is tenths){
 		activeTheme:setButtonShadowBlurPt(pt: (tenths as Float) / 10.0);
+		:notifyThemeChange();
+	}
+
+	Function is setButtonShadowOffsetX(Int is tenths){
+		activeTheme:setButtonShadowOffsetXPt(pt: (tenths as Float) / 10.0);
+		:notifyThemeChange();
+	}
+
+	Function is setButtonShadowOffsetY(Int is tenths){
+		activeTheme:setButtonShadowOffsetYPt(pt: (tenths as Float) / 10.0);
 		:notifyThemeChange();
 	}
 

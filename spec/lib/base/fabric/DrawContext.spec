@@ -566,8 +566,10 @@ Class is DrawContext{
 		});
 		if({ thickness <= 0 || borderColor == 0 }, { return; });
 		local Color is bc: Color:fromArgb(argb: borderColor);
-		local Int is lightC: bc:lighten(amount: 0.38):toArgb();
-		local Int is darkC: bc:darken(amount: 0.42):toArgb();
+		local Color is whiteC: Color(r: 255, g: 255, b: 255);
+		local Color is blackC: Color(r: 0, g: 0, b: 0);
+		local Int is lightC: bc:mix(other: whiteC, t: 0.45):toArgb();
+		local Int is darkC: bc:mix(other: blackC, t: 0.45):toArgb();
 		if({ style == 'double' }, {
 			local Int is t1: if({ thickness >= 3 }, { thickness / 3 }, { 1 });
 			local Int is gap: if({ thickness >= 3 }, { thickness - t1 * 2 }, { 1 });
@@ -582,10 +584,10 @@ Class is DrawContext{
 		if({ style == 'bevel' }, {
 			local Int is t1: if({ thickness >= 2 }, { thickness / 2 }, { 1 });
 			local Int is t2: if({ thickness - t1 > 0 }, { thickness - t1 }, { 1 });
-			local Int is hiOuter: bc:lighten(amount: 0.45):toArgb();
-			local Int is loOuter: bc:darken(amount: 0.45):toArgb();
-			local Int is hiInner: bc:lighten(amount: 0.16):toArgb();
-			local Int is loInner: bc:darken(amount: 0.20):toArgb();
+			local Int is hiOuter: bc:mix(other: whiteC, t: 0.55):toArgb();
+			local Int is loOuter: bc:mix(other: blackC, t: 0.55):toArgb();
+			local Int is hiInner: bc:mix(other: whiteC, t: 0.22):toArgb();
+			local Int is loInner: bc:mix(other: blackC, t: 0.22):toArgb();
 			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: hiOuter, botRightColor: loOuter, thickness: t1);
 			if({ w > t1 * 2 && h > t1 * 2 }, {
 				local Int is inR: if({ radius > t1 }, { radius - t1 }, { 0 });

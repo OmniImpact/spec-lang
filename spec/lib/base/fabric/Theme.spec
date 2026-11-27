@@ -80,13 +80,19 @@ Class is Theme{
 	Float is panelBorderThicknessPt: 1.0;
 	Float is panelCornerRadiusPt: 0.0;
 	Float is panelShadowBlurPt: 0.0;
+	Float is panelShadowOffsetXPt: 0.0;
+	Float is panelShadowOffsetYPt: 0.0;
 	Float is panelInnerShadowBlurPt: 0.0;
+	Float is panelInnerShadowOffsetXPt: 0.0;
+	Float is panelInnerShadowOffsetYPt: 0.0;
 	String is dividerStyle: 'single';
 	Float is dividerThicknessPt: 1.0;
 	String is buttonBorderStyle: 'single';
 	Float is buttonBorderThicknessPt: 1.0;
 	Float is buttonCornerRadiusPt: 0.0;
 	Float is buttonShadowBlurPt: 0.0;
+	Float is buttonShadowOffsetXPt: 0.0;
+	Float is buttonShadowOffsetYPt: 0.0;
 	Float is uiScaleFactor: 1.0;
 	Float is baseTextPt: 10.0;
 	Boolean is customMetrics: false;
@@ -226,9 +232,29 @@ Class is Theme{
 		:panelShadowBlurPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
 	}
 
+	Function is setPanelShadowOffsetXPt(Float is pt){
+		:customMetrics: true;
+		:panelShadowOffsetXPt: if({ pt < -16.0 }, { -16.0 }, { if({ pt > 16.0 }, { 16.0 }, { pt }) });
+	}
+
+	Function is setPanelShadowOffsetYPt(Float is pt){
+		:customMetrics: true;
+		:panelShadowOffsetYPt: if({ pt < -16.0 }, { -16.0 }, { if({ pt > 16.0 }, { 16.0 }, { pt }) });
+	}
+
 	Function is setPanelInnerShadowBlurPt(Float is pt){
 		:customMetrics: true;
 		:panelInnerShadowBlurPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+	}
+
+	Function is setPanelInnerShadowOffsetXPt(Float is pt){
+		:customMetrics: true;
+		:panelInnerShadowOffsetXPt: if({ pt < -16.0 }, { -16.0 }, { if({ pt > 16.0 }, { 16.0 }, { pt }) });
+	}
+
+	Function is setPanelInnerShadowOffsetYPt(Float is pt){
+		:customMetrics: true;
+		:panelInnerShadowOffsetYPt: if({ pt < -16.0 }, { -16.0 }, { if({ pt > 16.0 }, { 16.0 }, { pt }) });
 	}
 
 	Function is setDividerStyle(String is style){
@@ -271,6 +297,16 @@ Class is Theme{
 	Function is setButtonShadowBlurPt(Float is pt){
 		:customMetrics: true;
 		:buttonShadowBlurPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 20.0 }, { 20.0 }, { pt }) });
+	}
+
+	Function is setButtonShadowOffsetXPt(Float is pt){
+		:customMetrics: true;
+		:buttonShadowOffsetXPt: if({ pt < -16.0 }, { -16.0 }, { if({ pt > 16.0 }, { 16.0 }, { pt }) });
+	}
+
+	Function is setButtonShadowOffsetYPt(Float is pt){
+		:customMetrics: true;
+		:buttonShadowOffsetYPt: if({ pt < -16.0 }, { -16.0 }, { if({ pt > 16.0 }, { 16.0 }, { pt }) });
 	}
 
 	Function of Int is borderPx(Float is scaleFactor: 1.0){
@@ -346,11 +382,17 @@ Class is Theme{
 		:panelBorderStyle: 'single';
 		:panelCornerRadiusPt: 0.0;
 		:panelShadowBlurPt: 0.0;
+		:panelShadowOffsetXPt: 0.0;
+		:panelShadowOffsetYPt: 0.0;
 		:panelInnerShadowBlurPt: 0.0;
+		:panelInnerShadowOffsetXPt: 0.0;
+		:panelInnerShadowOffsetYPt: 0.0;
 		:dividerStyle: 'single';
 		:buttonBorderStyle: 'single';
 		:buttonCornerRadiusPt: 0.0;
 		:buttonShadowBlurPt: 0.0;
+		:buttonShadowOffsetXPt: 0.0;
+		:buttonShadowOffsetYPt: 0.0;
 		:deriveTokens();
 	}
 
