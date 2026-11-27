@@ -618,7 +618,7 @@ Class is Theme{
 	Function is applyPreset(ThemePreset is preset){
 		if({ preset == ThemePreset:LIGHT }, {
 			:background: Color(r: 255, g: 255, b: 255, a: 255);
-			:surface: Color(r: 236, g: 238, b: 242, a: 255);
+			:surface: Color(r: 238, g: 238, b: 238, a: 255);
 			:primary: Color(r: 28, g: 28, b: 28, a: 255);
 			:secondary: Color(r: 96, g: 96, b: 96, a: 255);
 			:accent: Color(r: 40, g: 40, b: 40, a: 255);
@@ -628,13 +628,13 @@ Class is Theme{
 			:negative: Color(r: 198, g: 40, b: 40, a: 255);
 			:neutral: Color(r: 115, g: 115, b: 115, a: 255);
 		}, {
-			:background: Color(r: 26, g: 28, b: 34, a: 255);
-			:surface: Color(r: 38, g: 41, b: 49, a: 255);
-			:primary: Color(r: 232, g: 235, b: 240, a: 255);
-			:secondary: Color(r: 152, g: 158, b: 172, a: 255);
-			:accent: Color(r: 180, g: 190, b: 210, a: 255);
-			:highlight: Color(r: 99, g: 103, b: 112, a: 255);
-			:detail: Color(r: 54, g: 58, b: 68, a: 255);
+			:background: Color(r: 28, g: 28, b: 28, a: 255);
+			:surface: Color(r: 41, g: 41, b: 41, a: 255);
+			:primary: Color(r: 235, g: 235, b: 235, a: 255);
+			:secondary: Color(r: 158, g: 158, b: 158, a: 255);
+			:accent: Color(r: 189, g: 189, b: 189, a: 255);
+			:highlight: Color(r: 103, g: 103, b: 103, a: 255);
+			:detail: Color(r: 58, g: 58, b: 58, a: 255);
 			:positive: Color(r: 76, g: 175, b: 80, a: 255);
 			:negative: Color(r: 239, g: 83, b: 80, a: 255);
 			:neutral: Color(r: 146, g: 152, b: 166, a: 255);
