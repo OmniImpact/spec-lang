@@ -24,6 +24,7 @@ Class of SewNode is ColorSwatchDropdown{
 	Color is color: Color(r: 100, g: 180, b: 255);
 	Boolean is open: false;
 	Boolean is hovered: false;
+	Boolean is focused: false;
 	Boolean is showPicker: true;
 	Boolean is showHistory: true;
 	Boolean is compactPicker: false;
@@ -47,6 +48,7 @@ Class of SewNode is ColorSwatchDropdown{
 		:color: color;
 		:open: false;
 		:hovered: false;
+		:focused: false;
 		:showPicker: showPicker;
 		:showHistory: showHistory;
 		:compactPicker: compactPicker;
@@ -101,6 +103,40 @@ Class of SewNode is ColorSwatchDropdown{
 		:popupCol: Column(children: items, gapPt: 8.0);
 		popupCol:applyTheme(theme: activeTheme);
 		popupCol:setScale(scale: activeScale);
+	}
+
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		if({ focused != next }, {
+			:focused: next;
+			if({ !next && open }, { :open: false; });
+			invalidate();
+		});
+	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		if({ focused && (key == 10 || key == 13 || key == 32) }, {
+			:open: !open;
+			if({ open }, {
+				picker:setCurrentColor(next: color, hasCurrent: true);
+				:layoutPopup(viewW: lastViewW, viewH: lastViewH);
+			});
+			invalidate();
+			return true;
+		});
+		if({ open && key == 27 }, {
+			:open: false;
+			invalidate();
+			return true;
+		});
+		return false;
 	}
 
 	Function is setColor(Color is next){

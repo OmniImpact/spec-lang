@@ -74,6 +74,7 @@ Class of SewNode is ToolkitContainer{
 	Int is lastPtrY: -1;
 	Boolean is wasPtrDown: false;
 	Int is ptrCaptureTarget: 0;
+	Boolean is lastClickInOverlay: false;
 	Boolean is closedByWm: false;
 	Int is idleFrames: 0;
 	Int is windowAlphaPct: 100;
@@ -342,16 +343,19 @@ Class of SewNode is ToolkitContainer{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		:lastClickInOverlay: false;
+		if({ contextMenu:isOpen }, {
+			:lastClickInOverlay: true;
+			return contextMenu:handlePointerClick(x: x, y: y, viewW: loopW, viewH: loopH);
+		});
+		if({ hasBody && !useVulkan && bodyPanel:onOverlayPointerClickMod(x: x, y: y, mods: mods) }, {
+			:lastClickInOverlay: true;
+			return true;
+		});
 		if({ hasBody && !useVulkan }, {
 			if({ bodyPanel:closePopupsOutside(x: x, y: y) }, {
 				:isDirty: true;
 			});
-		});
-		if({ contextMenu:isOpen }, {
-			return contextMenu:handlePointerClick(x: x, y: y, viewW: loopW, viewH: loopH);
-		});
-		if({ hasBody && !useVulkan && bodyPanel:onOverlayPointerClickMod(x: x, y: y, mods: mods) }, {
-			return true;
 		});
 		if({ hasToolbarSlot }, {
 			if({ toolbarSlot:onPointerClick(x: x, y: y) }, { return true; });
@@ -789,7 +793,7 @@ Class of SewNode is ToolkitContainer{
 				if({ :onPointerClickMod(x: cx, y: cy, mods: curMods) }, {
 					:isDirty: true;
 				});
-				if({ FocusNav:shared:syncClick(focusables: :collectAllFocusables(), x: cx, y: cy) }, {
+				if({ !lastClickInOverlay && FocusNav:shared:syncClick(focusables: :collectAllFocusables(), x: cx, y: cy) }, {
 					:isDirty: true;
 				});
 			});

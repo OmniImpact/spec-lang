@@ -23,6 +23,7 @@ Class of SewNode is DateDropdown{
 	DateTime is value: DateTime:now();
 	Boolean is open: false;
 	Boolean is hovered: false;
+	Boolean is focused: false;
 	DateSelector is selector: DateSelector();
 	Rect is popupRect: Rect();
 	Int is lastViewW: 0;
@@ -37,6 +38,7 @@ Class of SewNode is DateDropdown{
 		:value: value;
 		:open: false;
 		:hovered: false;
+		:focused: false;
 		:onChange: onChange;
 		:tooltip: tooltip;
 		:selector: DateSelector(
@@ -49,6 +51,40 @@ Class of SewNode is DateDropdown{
 				invalidate();
 			}
 		);
+	}
+
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		if({ focused != next }, {
+			:focused: next;
+			if({ !next && open }, { :open: false; });
+			invalidate();
+		});
+	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		if({ focused && (key == 10 || key == 13 || key == 32) }, {
+			:open: !open;
+			if({ open }, {
+				selector:setValue(next: value);
+				:layoutPopup(viewW: lastViewW, viewH: lastViewH);
+			});
+			invalidate();
+			return true;
+		});
+		if({ open && key == 27 }, {
+			:open: false;
+			invalidate();
+			return true;
+		});
+		return false;
 	}
 
 	Function is setValue(DateTime is next){
@@ -211,7 +247,7 @@ Class of SewNode is DateDropdown{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
-		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: true, selected: open, hovered: hovered);
+		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: true, selected: open, hovered: hovered, focused: focused);
 		ctx:drawStyledBoxFill(
 			x: b:x, y: b:y, w: b:width, h: b:height,
 			fill: fill, borderColor: activeTheme:buttonBorderColorArgb(),
