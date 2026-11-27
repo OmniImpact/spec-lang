@@ -352,8 +352,13 @@ Class is DrawContext{
 		local Float is wf: w as Float;
 		local Float is hf: h as Float;
 		local Boolean is isRadial: fill:mode == 'radial';
-		local Float is bw: if({ fill:blendWidth < 0.05 }, { 0.05 }, { fill:fill:blendWidth });
-		local Float is rMax: if({ bw * 0.5 < 0.05 }, { 0.05 }, { bw * 0.5 });
+		local Float is b: :clamp01(v: fill:blendWidth);
+		local Float is lo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.0 });
+		local Float is hi: if({ b > 0.5 }, { 1.0 }, { b * 2.0 });
+		local Float is spanR: if({ hi - lo < 0.001 }, { 0.001 }, { hi - lo });
+		local Float is linLo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.5 - b });
+		local Float is linHi: if({ b > 0.5 }, { 1.0 }, { 0.5 + b });
+		local Float is linSpan: if({ linHi - linLo < 0.001 }, { 0.001 }, { linHi - linLo });
 		local Float is rad: (fill:angleDeg * pi()) / 180.0;
 		local Float is ux: cos(value: rad);
 		local Float is uy: sin(value: rad);
@@ -387,15 +392,39 @@ Class is DrawContext{
 					if({ isRadial }, {
 						local Float is dx: u - fcx;
 						local Float is dy: v - fcy;
-						local Float is dist: sqrt(value: dx * dx + dy * dy);
-						t: if({ refl }, { :clamp01(v: 1.0 - dist / rMax) }, { :clamp01(v: dist / rMax) });
+						local Float is dist: sqrt(value: dx * dx + dy * dy) * 2.0;
+						if({ b <= 0.001 }, {
+							t: if({ dist <= 0.001 }, { 0.0 }, { 1.0 });
+						}, {
+						if({ b >= 0.999 }, {
+							t: 0.0;
+						}, {
+							t: :clamp01(v: (dist - lo) / spanR);
+						}); });
+						if({ refl }, { t: 1.0 - t; });
 					}, {
 						local Float is proj: (u - fcx) * ux + (v - fcy) * uy;
 						if({ refl }, {
 							local Float is absP: if({ proj < 0.0 }, { 0.0 - proj }, { proj });
-							t: :clamp01(v: 1.0 - absP / (bw * 0.5));
+							local Float is dist: absP * 2.0;
+							if({ b <= 0.001 }, {
+								t: if({ dist <= 0.01 }, { 1.0 }, { 0.0 });
+							}, {
+							if({ b >= 0.999 }, {
+								t: 1.0;
+							}, {
+								t: 1.0 - :clamp01(v: (dist - lo) / spanR);
+							}); });
 						}, {
-							t: :clamp01(v: 0.5 + proj / bw);
+							local Float is pos: 0.5 + proj;
+							if({ b <= 0.001 }, {
+								t: if({ pos >= 0.5 }, { 1.0 }, { 0.0 });
+							}, {
+							if({ b >= 0.999 }, {
+								t: 0.0;
+							}, {
+								t: :clamp01(v: (pos - linLo) / linSpan);
+							}); });
 						});
 					});
 					if({ fastFx }, {

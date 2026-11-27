@@ -14,6 +14,7 @@ Class of SewNode is ScrollView{
 		['base', 'sew', Scale],
 		['base', 'sew', DockSide],
 		['base', 'fabric', Theme],
+		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext]
 	];
 
@@ -28,6 +29,8 @@ Class of SewNode is ScrollView{
 	Int is dragMode: 0;
 	Int is dragGrabOffset: 0;
 	Boolean is childCapturing: false;
+	Boolean is hoverVThumb: false;
+	Boolean is hoverHThumb: false;
 
 	replace Function is init(SewNode is child, Float is barWidthPt: 0.0, DockSide is scrollbarSide: DockSide:RIGHT, Float is heightPt: 0.0){
 		:child: child;
@@ -267,10 +270,39 @@ Class of SewNode is ScrollView{
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
-		return child:onPointerMove(x: x, y: y);
+		local Rect is b: bounds();
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
+		local Int is vw: :viewWidth(b: b);
+		local Int is vh: :viewHeight(b: b);
+		local Int is vsx: if({ scrollbarSide == DockSide:LEFT }, { b:x }, { b:x + vw });
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { b:x + bw }, { b:x });
+		local Boolean is nextV: false;
+		local Boolean is nextH: false;
+		if({ bw > 2 && contentH > vh && vh > 0 && x >= vsx && x < vsx + bw && y >= b:y && y < b:y + vh }, {
+			local Int is tH: :thumbLen(viewLen: vh, contentLen: contentH);
+			local Int is tY: b:y + :thumbPos(scroll: scrollY, viewLen: vh, contentLen: contentH, tLen: tH);
+			if({ y >= tY && y < tY + tH }, { nextV: true; });
+		});
+		if({ bw > 2 && contentW > vw && vw > 0 && y >= b:y + vh && y < b:y + b:height && x >= cx && x < cx + vw }, {
+			local Int is tW: :thumbLen(viewLen: vw, contentLen: contentW);
+			local Int is tX: cx + :thumbPos(scroll: scrollX, viewLen: vw, contentLen: contentW, tLen: tW);
+			if({ x >= tX && x < tX + tW }, { nextH: true; });
+		});
+		local Boolean is changed: false;
+		if({ nextV != hoverVThumb || nextH != hoverHThumb }, {
+			:hoverVThumb: nextV;
+			:hoverHThumb: nextH;
+			changed: true;
+		});
+		if({ child:onPointerMove(x: x, y: y) }, { changed: true; });
+		return changed;
 	}
 
 	replace Function is clearHover(){
+		if({ hoverVThumb || hoverHThumb }, {
+			:hoverVThumb: false;
+			:hoverHThumb: false;
+		});
 		child:clearHover();
 	}
 
@@ -342,9 +374,10 @@ Class of SewNode is ScrollView{
 				local Int is tw: bw - divPx - 2;
 				if({ tw > 2 && thumbH > 2 }, {
 					ctx:setClip(x: tx, y: b:y, w: tw, h: vh);
-					ctx:drawStyledBox(
+					local FillStyle is vFill: activeTheme:resolveButtonFill(enabled: true, selected: false, hovered: hoverVThumb || dragMode == 1);
+					ctx:drawStyledBoxFill(
 						x: tx, y: thumbY + 1, w: tw, h: thumbH - 2,
-						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorderColorArgb(),
+						fill: vFill, borderColor: activeTheme:buttonBorderColorArgb(),
 						thickness: btnPx, radius: btnRad, style: activeTheme:buttonBorderStyle,
 						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
 					);
@@ -371,9 +404,10 @@ Class of SewNode is ScrollView{
 				local Int is th: bw - divPx - 2;
 				if({ th > 2 && thumbW > 2 }, {
 					ctx:setClip(x: cx, y: ty, w: vw, h: th);
-					ctx:drawStyledBox(
+					local FillStyle is hFill: activeTheme:resolveButtonFill(enabled: true, selected: false, hovered: hoverHThumb || dragMode == 2);
+					ctx:drawStyledBoxFill(
 						x: thumbX + 1, y: ty, w: thumbW - 2, h: th,
-						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorderColorArgb(),
+						fill: hFill, borderColor: activeTheme:buttonBorderColorArgb(),
 						thickness: btnPx, radius: btnRad, style: activeTheme:buttonBorderStyle,
 						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
 					);

@@ -12,6 +12,7 @@ Class of SewNode is TabBar{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', DockSide],
+		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', 'tab', TabItemConfig]
 	];
@@ -195,63 +196,82 @@ Class of SewNode is TabBar{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
-		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+		local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
+		local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+		local Int is btnRad: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: activeTheme:tabBarBg);
-		if({ dockSide == DockSide:BOTTOM }, {
-			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
-		}, {
-			ctx:fillRect(x: b:x, y: b:y + b:height - linePx, w: b:width, h: linePx, color: activeTheme:toolbarBorder);
-		});
 
 		local Int is count: tabs:length();
-		if({ count <= 0 }, { return; });
+		if({ count > 0 }, {
+			local Rect is area: :tabsAreaRect(b: b);
+			local Int is tw: :tabWidthPx(totalW: area:width);
+			local Int is fpx: :fontPx();
+			local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
+			local Int is padL: activeScale:px(pt: activeTheme:paddingPt * 1.5);
+			local Int is padR: activeScale:px(pt: activeTheme:paddingSmallPt * 2.0);
+			local Int is cs: :closeBoxSizePx();
 
-		local Rect is area: :tabsAreaRect(b: b);
-		local Int is tw: :tabWidthPx(totalW: area:width);
-		local Int is fpx: :fontPx();
-		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is padL: activeScale:px(pt: activeTheme:paddingPt * 1.5);
-		local Int is padR: activeScale:px(pt: activeTheme:paddingSmallPt * 2.0);
-		local Int is cs: :closeBoxSizePx();
-
-		ctx:setClip(x: area:x, y: area:y, w: area:width, h: area:height);
-		local Int is i: 0;
-		while({ i < count }, {
-			local Int is tx: area:x + i * tw;
-			if({ tx < area:x + area:width }, {
-				local TabItemConfig is tab: tabs:get(index: i);
-				local Boolean is isActive: i == activeIndex;
-				local Int is bg: if({ isActive }, { activeTheme:windowBg }, { if({ hoverTabIdx == i }, { activeTheme:hoverBg }, { activeTheme:tabBarBg }) });
-				local Int is ty0: if({ dockSide == DockSide:BOTTOM && !isActive }, { area:y + linePx }, { area:y });
-				local Int is fillH: if({ isActive }, { area:height }, { area:height - linePx });
-				ctx:fillRect(x: tx, y: ty0, w: tw, h: fillH, color: bg);
-				if({ dockSide != DockSide:BOTTOM }, {
-					ctx:fillRect(x: tx, y: area:y, w: tw, h: linePx, color: activeTheme:toolbarBorder);
-				}, {
-					ctx:fillRect(x: tx, y: area:y + area:height - linePx, w: tw, h: linePx, color: activeTheme:toolbarBorder);
-				});
-				ctx:fillRect(x: tx + tw - linePx, y: area:y, w: linePx, h: area:height, color: activeTheme:toolbarBorder);
-
-				local Int is closeReserve: if({ showCloseButton && tab:closable }, { cs + padR * 2 }, { padR });
-				local String is rawTitle: if({ tab:dirty }, { tab:label . ' *' }, { tab:label });
-				local String is disp: :fitLabel(label: rawTitle, maxTextW: tw - padL - closeReserve, fpx: fpx);
-				local Int is ty: area:y + (area:height - th) / 2;
-				local Int is tcol: if({ isActive }, { activeTheme:textPrimary }, { activeTheme:textMuted });
-				ctx:drawText(x: tx + padL, y: ty, text: disp, color: tcol, pixelHeight: fpx);
-
-				if({ showCloseButton && tab:closable }, {
-					local Int is cx: tx + tw - padR - cs;
-					local Int is cy: area:y + (area:height - cs) / 2;
-					if({ hoverCloseIdx == i }, {
-						ctx:fillRect(x: cx, y: cy, w: cs, h: cs, color: activeTheme:activeBg);
+			ctx:setClip(x: area:x, y: area:y, w: area:width, h: area:height);
+			local Int is i: 0;
+			while({ i < count }, {
+				local Int is tx: area:x + i * tw;
+				if({ tx < area:x + area:width }, {
+					local TabItemConfig is tab: tabs:get(index: i);
+					local Boolean is isActive: i == activeIndex;
+					local Boolean is isHov: hoverTabIdx == i;
+					local FillStyle is tabFill: activeTheme:resolveButtonFill(enabled: true, selected: isActive, hovered: isHov);
+					local Int is ty0: if({ dockSide == DockSide:BOTTOM && !isActive }, { area:y + divPx }, { area:y });
+					local Int is fillH: area:height - (if({ dockSide != DockSide:BOTTOM }, { divPx }, { 0 }));
+					if({ fillH > 0 }, {
+						ctx:setClip(x: tx, y: ty0, w: tw, h: fillH);
+						ctx:fillRoundRectStyled(x: tx, y: ty0, w: tw, h: fillH + btnRad, radius: btnRad, fill: tabFill);
+						if({ btnPx > 0 && activeTheme:buttonBorderStyle != 'none' }, {
+							local Int is tabBorder: if({ isActive }, { activeTheme:textAccent }, { activeTheme:buttonBorderColorArgb() });
+							ctx:drawStyledBox(
+								x: tx, y: ty0, w: tw, h: fillH + btnRad,
+								bgColor: 0, borderColor: tabBorder, thickness: btnPx,
+								radius: btnRad, style: activeTheme:buttonBorderStyle
+							);
+						});
+						ctx:clearClip();
 					});
-					local Int is xw: ctx:measureTextWidth(text: 'x', pixelHeight: fpx);
-					ctx:drawText(x: cx + (cs - xw) / 2, y: cy + (cs - th) / 2, text: 'x', color: tcol, pixelHeight: fpx);
+					if({ divPx > 0 }, {
+						ctx:drawDivider(x: tx + tw - divPx, y: area:y, w: divPx, h: area:height, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
+					});
+
+					local Int is closeReserve: if({ showCloseButton && tab:closable }, { cs + padR * 2 }, { padR });
+					local String is rawTitle: if({ tab:dirty }, { tab:label . ' *' }, { tab:label });
+					local String is disp: :fitLabel(label: rawTitle, maxTextW: tw - padL - closeReserve, fpx: fpx);
+					local Int is ty: area:y + (area:height - th) / 2;
+					local Int is tcol: if({ isActive }, { activeTheme:textPrimary }, { activeTheme:textMuted });
+					ctx:drawText(x: tx + padL, y: ty, text: disp, color: tcol, pixelHeight: fpx);
+
+					if({ showCloseButton && tab:closable }, {
+						local Int is cx: tx + tw - padR - cs;
+						local Int is cy: area:y + (area:height - cs) / 2;
+						if({ hoverCloseIdx == i }, {
+							local FillStyle is closeFill: activeTheme:resolveButtonFill(enabled: true, selected: false, hovered: true);
+							ctx:drawStyledBoxFill(
+								x: cx, y: cy, w: cs, h: cs,
+								fill: closeFill, borderColor: activeTheme:buttonBorderColorArgb(),
+								thickness: btnPx, radius: btnRad, style: activeTheme:buttonBorderStyle
+							);
+						});
+						local Int is xw: ctx:measureTextWidth(text: 'x', pixelHeight: fpx);
+						ctx:drawText(x: cx + (cs - xw) / 2, y: cy + (cs - th) / 2, text: 'x', color: tcol, pixelHeight: fpx);
+					});
 				});
+				i: i + 1;
 			});
-			i: i + 1;
+			ctx:clearClip();
 		});
-		ctx:clearClip();
+		if({ divPx > 0 }, {
+			if({ dockSide == DockSide:BOTTOM }, {
+				ctx:drawDivider(x: b:x, y: b:y, w: b:width, h: divPx, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
+			}, {
+				ctx:drawDivider(x: b:x, y: b:y + b:height - divPx, w: b:width, h: divPx, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
+			});
+		});
 	}
 
 	replace Function of String is tooltipAt(Int is x, Int is y){

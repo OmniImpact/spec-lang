@@ -29,14 +29,17 @@ Class is ShowcaseViewModel{
 	Int is surfCenterXPct: 50;
 	Int is surfCenterYPct: 50;
 	Int is surfAngleDeg: 35;
-	Int is surfBlendPct: 100;
+	Int is surfBlendPct: 50;
 	Int is btnFillStyleIdx: 0;
 	Boolean is useBtnColorB: false;
 	Color is btnColorB: Color(r: 90, g: 150, b: 235);
 	Int is btnCenterXPct: 50;
 	Int is btnCenterYPct: 50;
 	Int is btnAngleDeg: 35;
-	Int is btnBlendPct: 100;
+	Int is btnBlendPct: 50;
+	Int is hoverBriPct: 12;
+	Int is hoverTintDeg: 0;
+	Int is hoverSatPct: 0;
 
 	## Interactive demo state
 	Int is clickCount: 0;
@@ -223,6 +226,9 @@ Class is ShowcaseViewModel{
 		:useSurfColorB: false;
 		:btnFillStyleIdx: 0;
 		:useBtnColorB: false;
+		:hoverBriPct: if({ preset == ThemePreset:LIGHT }, { -8 }, { 12 });
+		:hoverTintDeg: 0;
+		:hoverSatPct: 0;
 		:applyCurrentTheme();
 		statusText:emit(value: 'Loaded ' . Theme:presetLabel(preset: preset) . ' preset');
 	}
@@ -285,6 +291,19 @@ Class is ShowcaseViewModel{
 	Function is setBtnCenterY(Int is pct){ :btnCenterYPct: pct; :syncButtonFill(); }
 	Function is setBtnAngle(Int is deg){ :btnAngleDeg: deg; :syncButtonFill(); }
 	Function is setBtnBlend(Int is pct){ :btnBlendPct: pct; :syncButtonFill(); }
+
+	local Function is syncHoverEffects(){
+		activeTheme:setHoverEffects(
+			brightness: (hoverBriPct as Float) / 100.0,
+			tintShiftDeg: hoverTintDeg as Float,
+			saturationShift: (hoverSatPct as Float) / 100.0
+		);
+		:notifyThemeChange();
+	}
+
+	Function is setHoverBrightness(Int is pct){ :hoverBriPct: pct; :syncHoverEffects(); }
+	Function is setHoverTint(Int is deg){ :hoverTintDeg: deg; :syncHoverEffects(); }
+	Function is setHoverSaturation(Int is pct){ :hoverSatPct: pct; :syncHoverEffects(); }
 
 	Function is setBorderStyle(String is style){
 		:borderStyle: style;

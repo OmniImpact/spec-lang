@@ -16,7 +16,7 @@ Class is FillStyle{
 	Float is centerX: 0.5;
 	Float is centerY: 0.5;
 	Float is angleDeg: 0.0;
-	Float is blendWidth: 1.0;
+	Float is blendWidth: 0.5;
 	Boolean is reflected: false;
 	Float is brightness: 0.0;
 	Float is tintShiftDeg: 0.0;
@@ -29,7 +29,7 @@ Class is FillStyle{
 		Float is centerX: 0.5,
 		Float is centerY: 0.5,
 		Float is angleDeg: 0.0,
-		Float is blendWidth: 1.0,
+		Float is blendWidth: 0.5,
 		Boolean is reflected: false,
 		Float is brightness: 0.0,
 		Float is tintShiftDeg: 0.0,
@@ -41,7 +41,7 @@ Class is FillStyle{
 		:centerX: Color:clamp01(v: centerX);
 		:centerY: Color:clamp01(v: centerY);
 		:angleDeg: angleDeg;
-		:blendWidth: if({ blendWidth < 0.05 }, { 0.05 }, { blendWidth });
+		:blendWidth: Color:clamp01(v: blendWidth);
 		:reflected: reflected;
 		:brightness: brightness;
 		:tintShiftDeg: tintShiftDeg;
@@ -77,19 +77,24 @@ Class is FillStyle{
 		if({ mode == 'solid' }, {
 			return :applyEffects(c: colorA);
 		});
-		local Float is bw: if({ blendWidth < 0.05 }, { 0.05 }, { blendWidth });
+		local Float is b: Color:clamp01(v: blendWidth);
 		local Float is t: 0.0;
 		if({ mode == 'radial' }, {
 			local Float is dx: u - centerX;
 			local Float is dy: v - centerY;
-			local Float is dist: sqrt(value: dx * dx + dy * dy);
-			local Float is rMax: bw * 0.5;
-			if({ rMax < 0.05 }, { rMax: 0.05; });
-			if({ reflected }, {
-				t: Color:clamp01(v: 1.0 - dist / rMax);
+			local Float is dist: sqrt(value: dx * dx + dy * dy) * 2.0;
+			if({ b <= 0.001 }, {
+				t: if({ dist <= 0.001 }, { 0.0 }, { 1.0 });
 			}, {
-				t: Color:clamp01(v: dist / rMax);
-			});
+			if({ b >= 0.999 }, {
+				t: 0.0;
+			}, {
+				local Float is lo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.0 });
+				local Float is hi: if({ b > 0.5 }, { 1.0 }, { b * 2.0 });
+				local Float is span: if({ hi - lo < 0.001 }, { 0.001 }, { hi - lo });
+				t: Color:clamp01(v: (dist - lo) / span);
+			}); });
+			if({ reflected }, { t: 1.0 - t; });
 		}, {
 			local Float is rad: (angleDeg * pi()) / 180.0;
 			local Float is ux: cos(value: rad);
@@ -97,9 +102,31 @@ Class is FillStyle{
 			local Float is proj: (u - centerX) * ux + (v - centerY) * uy;
 			if({ reflected }, {
 				local Float is absP: if({ proj < 0.0 }, { 0.0 - proj }, { proj });
-				t: Color:clamp01(v: 1.0 - absP / (bw * 0.5));
+				local Float is dist: absP * 2.0;
+				if({ b <= 0.001 }, {
+					t: if({ dist <= 0.01 }, { 1.0 }, { 0.0 });
+				}, {
+				if({ b >= 0.999 }, {
+					t: 1.0;
+				}, {
+					local Float is lo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.0 });
+					local Float is hi: if({ b > 0.5 }, { 1.0 }, { b * 2.0 });
+					local Float is span: if({ hi - lo < 0.001 }, { 0.001 }, { hi - lo });
+					t: 1.0 - Color:clamp01(v: (dist - lo) / span);
+				}); });
 			}, {
-				t: Color:clamp01(v: 0.5 + proj / bw);
+				local Float is pos: 0.5 + proj;
+				if({ b <= 0.001 }, {
+					t: if({ pos >= 0.5 }, { 1.0 }, { 0.0 });
+				}, {
+				if({ b >= 0.999 }, {
+					t: 0.0;
+				}, {
+					local Float is lo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.5 - b });
+					local Float is hi: if({ b > 0.5 }, { 1.0 }, { 0.5 + b });
+					local Float is span: if({ hi - lo < 0.001 }, { 0.001 }, { hi - lo });
+					t: Color:clamp01(v: (pos - lo) / span);
+				}); });
 			});
 		});
 		return :applyEffects(c: colorA:mix(other: colorB, t: t));

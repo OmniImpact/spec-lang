@@ -44,7 +44,7 @@ Class is ThemeBuilderPageView{
 	TextEmitter is surfCXLabel: TextEmitter(initial: '50%');
 	TextEmitter is surfCYLabel: TextEmitter(initial: '50%');
 	TextEmitter is surfAngLabel: TextEmitter(initial: '35 deg');
-	TextEmitter is surfBwLabel: TextEmitter(initial: '100%');
+	TextEmitter is surfBwLabel: TextEmitter(initial: '50%');
 	SectionH is btnFillSection: SectionH();
 	Switch is useBtnColorBSwitch: Switch();
 	ColorSwatchDropdown is btnColorBSwatch: ColorSwatchDropdown();
@@ -55,7 +55,13 @@ Class is ThemeBuilderPageView{
 	TextEmitter is btnCXLabel: TextEmitter(initial: '50%');
 	TextEmitter is btnCYLabel: TextEmitter(initial: '50%');
 	TextEmitter is btnAngLabel: TextEmitter(initial: '35 deg');
-	TextEmitter is btnBwLabel: TextEmitter(initial: '100%');
+	TextEmitter is btnBwLabel: TextEmitter(initial: '50%');
+	Slider is hoverBriSlider: Slider();
+	Slider is hoverTintSlider: Slider();
+	Slider is hoverSatSlider: Slider();
+	TextEmitter is hoverBriLabel: TextEmitter(initial: '12%');
+	TextEmitter is hoverTintLabel: TextEmitter(initial: '0 deg');
+	TextEmitter is hoverSatLabel: TextEmitter(initial: '0%');
 	Slider is panelThickSlider: Slider();
 	Slider is panelRadiusSlider: Slider();
 	Slider is panelShadowSlider: Slider();
@@ -250,7 +256,7 @@ Class is ThemeBuilderPageView{
 		:surfCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfCenterX(pct: v); });
 		:surfCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfCenterY(pct: v); });
 		:surfAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:surfAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfAngle(deg: v); });
-		:surfBwSlider: Slider(minVal: 10, maxVal: 200, value: vm:surfBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfBlend(pct: v); });
+		:surfBwSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfBlend(pct: v); });
 
 		:btnFillSection: SectionH(
 			segmented: true,
@@ -272,7 +278,14 @@ Class is ThemeBuilderPageView{
 		:btnCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnCenterX(pct: v); });
 		:btnCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnCenterY(pct: v); });
 		:btnAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:btnAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnAngle(deg: v); });
-		:btnBwSlider: Slider(minVal: 10, maxVal: 200, value: vm:btnBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnBlend(pct: v); });
+		:btnBwSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnBlend(pct: v); });
+
+		:hoverBriSlider: Slider(minVal: -60, maxVal: 60, value: vm:hoverBriPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setHoverBrightness(pct: v); });
+		:hoverTintSlider: Slider(minVal: -180, maxVal: 180, value: vm:hoverTintDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setHoverTint(deg: v); });
+		:hoverSatSlider: Slider(minVal: -100, maxVal: 100, value: vm:hoverSatPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setHoverSaturation(pct: v); });
+		hoverBriLabel:emit(value: (vm:hoverBriPct as String) . '%');
+		hoverTintLabel:emit(value: (vm:hoverTintDeg as String) . ' deg');
+		hoverSatLabel:emit(value: (vm:hoverSatPct as String) . '%');
 
 		:baseTextInput: DecoratedTextInput(
 			text: vm:baseTextLabel(),
@@ -431,6 +444,19 @@ Class is ThemeBuilderPageView{
 					)
 				),
 				Frame(
+					title: 'Mouseover Effect',
+					child: Grid(
+						columns: 3,
+						colGapPt: 10.0,
+						rowGapPt: 6.0,
+						children: Array([
+							Label(text: 'Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
+							Label(text: 'Tint Shift'), hoverTintSlider, TextScrap(text: hoverTintLabel, muted: true),
+							Label(text: 'Saturation'), hoverSatSlider, TextScrap(text: hoverSatLabel, muted: true)
+						])
+					)
+				),
+				Frame(
 					title: 'Padding & Spacing (pt)',
 					child: metricGrid
 				),
@@ -539,6 +565,12 @@ Class is ThemeBuilderPageView{
 		btnCYLabel:emit(value: (vm:btnCenterYPct as String) . '%');
 		btnAngLabel:emit(value: (vm:btnAngleDeg as String) . ' deg');
 		btnBwLabel:emit(value: (vm:btnBlendPct as String) . '%');
+		hoverBriSlider:setValue(next: vm:hoverBriPct);
+		hoverTintSlider:setValue(next: vm:hoverTintDeg);
+		hoverSatSlider:setValue(next: vm:hoverSatPct);
+		hoverBriLabel:emit(value: (vm:hoverBriPct as String) . '%');
+		hoverTintLabel:emit(value: (vm:hoverTintDeg as String) . ' deg');
+		hoverSatLabel:emit(value: (vm:hoverSatPct as String) . '%');
 		baseTextInput:setText(next: vm:baseTextLabel());
 		alphaSlider:setValue(next: vm:windowAlphaPct);
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');

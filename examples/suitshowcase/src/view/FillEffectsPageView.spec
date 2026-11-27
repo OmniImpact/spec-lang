@@ -37,14 +37,14 @@ Class is FillEffectsPageView{
 		centerX: 0.5,
 		centerY: 0.5,
 		angleDeg: 35.0,
-		blendWidth: 1.0,
+		blendWidth: 0.5,
 		reflected: false
 	);
 
 	TextEmitter is cxLabel: TextEmitter(initial: '50%');
 	TextEmitter is cyLabel: TextEmitter(initial: '50%');
 	TextEmitter is angLabel: TextEmitter(initial: '35 deg');
-	TextEmitter is bwLabel: TextEmitter(initial: '100%');
+	TextEmitter is bwLabel: TextEmitter(initial: '50%');
 	TextEmitter is briLabel: TextEmitter(initial: '0.00');
 	TextEmitter is tintLabel: TextEmitter(initial: '0 deg');
 	TextEmitter is satLabel: TextEmitter(initial: '0.00');
@@ -152,7 +152,7 @@ Class is FillEffectsPageView{
 		);
 
 		local Slider is bwSlider: Slider(
-			minVal: 10, maxVal: 200, value: 100, minWidthPt: 130.0,
+			minVal: 0, maxVal: 100, value: 50, minWidthPt: 130.0,
 			onChange: local Function(Int is v){
 				liveFill:blendWidth: (v as Float) / 100.0;
 				bwLabel:emit(value: (v as String) . '%');
