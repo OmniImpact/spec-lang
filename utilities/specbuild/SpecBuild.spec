@@ -760,7 +760,7 @@ Class is SpecBuild{
 			Process:execute(command: 'mkdir', args: Array(['-p', iconSubDir]));
 			local String is destIcon: iconSubDir . '/' . name . iconExt;
 			Process:execute(command: 'cp', args: Array(['-f', iconPath, destIcon]));
-			iconEntry: name;
+			iconEntry: destIcon;
 		});
 
 		## 3. Collect file extensions, MIME types, and defaults
