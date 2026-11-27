@@ -101,7 +101,7 @@ Class of SewNode is Switch{
 		if({ pad < minPad }, { pad: minPad; });
 		local Int is sq: b:height - pad * 2;
 		if({ sq < 4 }, { sq: 4; });
-		local Int is innerRad: if({ radPx > pad }, { radPx - pad }, { 0 });
+		local Int is innerRad: radPx;
 		if({ innerRad > sq / 2 }, { innerRad: sq / 2; });
 
 		if({ checked }, {
