@@ -622,8 +622,8 @@ Class is Theme{
 			:primary: Color(r: 28, g: 28, b: 28, a: 255);
 			:secondary: Color(r: 96, g: 96, b: 96, a: 255);
 			:accent: Color(r: 40, g: 40, b: 40, a: 255);
-			:highlight: Color(r: 175, g: 184, b: 200, a: 255);
-			:detail: Color(r: 176, g: 180, b: 188, a: 255);
+			:highlight: Color(r: 156, g: 156, b: 156, a: 255);
+			:detail: Color(r: 201, g: 201, b: 201, a: 255);
 			:positive: Color(r: 46, g: 125, b: 50, a: 255);
 			:negative: Color(r: 198, g: 40, b: 40, a: 255);
 			:neutral: Color(r: 115, g: 115, b: 115, a: 255);
@@ -633,8 +633,8 @@ Class is Theme{
 			:primary: Color(r: 232, g: 235, b: 240, a: 255);
 			:secondary: Color(r: 152, g: 158, b: 172, a: 255);
 			:accent: Color(r: 180, g: 190, b: 210, a: 255);
-			:highlight: Color(r: 76, g: 88, b: 112, a: 255);
-			:detail: Color(r: 78, g: 84, b: 98, a: 255);
+			:highlight: Color(r: 99, g: 103, b: 112, a: 255);
+			:detail: Color(r: 54, g: 58, b: 68, a: 255);
 			:positive: Color(r: 76, g: 175, b: 80, a: 255);
 			:negative: Color(r: 239, g: 83, b: 80, a: 255);
 			:neutral: Color(r: 146, g: 152, b: 166, a: 255);
