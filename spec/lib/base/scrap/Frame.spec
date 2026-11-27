@@ -19,9 +19,9 @@ Class of SewNode is Frame{
 	String is title: '';
 	SewNode is child: SewNode();
 	Float is padPt: -1.0;
-	Boolean is fillBg: true;
+	Boolean is fillBg: false;
 
-	replace Function is init(String is title: '', SewNode is child: SewNode(), Float is padPt: -1.0, Boolean is fillBg: true){
+	replace Function is init(String is title: '', SewNode is child: SewNode(), Float is padPt: -1.0, Boolean is fillBg: false){
 		:title: title;
 		:child: child;
 		:padPt: padPt;
@@ -99,11 +99,11 @@ Class of SewNode is Frame{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Int is border: activeTheme:panelBorder;
+		local Int is border: activeTheme:textAccent;
 		local Int is bw: :borderPx();
 		if({ title == '' }, {
 			if({ fillBg && padPt != 0.0 }, {
-				ctx:fillRect(x: b:x + bw, y: b:y + bw, w: b:width - bw * 2, h: b:height - bw * 2, color: activeTheme:panelBg);
+				ctx:fillRect(x: b:x + bw, y: b:y + bw, w: b:width - bw * 2, h: b:height - bw * 2, color: activeTheme:windowBg);
 			});
 			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: bw);
 		}, {
@@ -114,7 +114,7 @@ Class of SewNode is Frame{
 			local Int is boxH: b:height - (th / 2);
 			if({ boxH > bw }, {
 				if({ fillBg && padPt != 0.0 }, {
-					ctx:fillRect(x: b:x + bw, y: topY + bw, w: b:width - bw * 2, h: boxH - bw * 2, color: activeTheme:panelBg);
+					ctx:fillRect(x: b:x + bw, y: topY + bw, w: b:width - bw * 2, h: boxH - bw * 2, color: activeTheme:windowBg);
 				});
 				local Int is titleX: b:x + :effPadPx();
 				local Int is gapPad: activeScale:px(pt: 4.0);
