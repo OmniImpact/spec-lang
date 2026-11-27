@@ -12,6 +12,8 @@
 ##
 ## Commands:
 ##   build    Compile target binary (default)
+##   run      Compile target binary and execute it
+##   install  Compile target binary and install to user desktop/bin
 ##   test     Execute project unit tests via runner
 ##   lint     Run speclint over project source directories
 ##   clean    Remove compiled output binary
@@ -256,6 +258,7 @@ Class is SpecBuild{
 		Output:line('Commands:');
 		Output:line('  build    Compile target binary (default)');
 		Output:line('  run      Compile target binary and execute it');
+		Output:line('  install  Compile target binary and install to user desktop/bin');
 		Output:line('  test     Execute project unit tests via runner');
 		Output:line('  lint     Run speclint over project source directories');
 		Output:line('  clean    Remove compiled output binary');
@@ -322,7 +325,7 @@ Class is SpecBuild{
 					command: pos1;
 				});
 			}, {
-				if({ pos0 == 'build' || pos0 == 'run' || pos0 == 'test' || pos0 == 'clean' || pos0 == 'lint' || pos0 == 'help' }, {
+				if({ pos0 == 'build' || pos0 == 'run' || pos0 == 'install' || pos0 == 'test' || pos0 == 'clean' || pos0 == 'lint' || pos0 == 'help' }, {
 					command: pos0;
 					if({ pos1 != '' && pos1:endsWith(suffix: '.json') && configPath == '' }, {
 						configPath: pos1;
@@ -391,6 +394,13 @@ Class is SpecBuild{
 		local String is name: Json:getString(obj: cfg, key: 'name', default: 'app');
 		local String is version: Json:getString(obj: cfg, key: 'version', default: '0.1.0');
 		local String is description: Json:getString(obj: cfg, key: 'description', default: '');
+		local String is rawIcon: Json:getString(obj: cfg, key: 'icon', default: '');
+		local String is category: Json:getString(obj: cfg, key: 'category', default: '');
+		local Array is fileExtsCfg: Json:getArray(obj: cfg, key: 'file_extensions');
+		if({ fileExtsCfg:length() == 0 }, {
+			fileExtsCfg: Json:getArray(obj: cfg, key: 'extensions');
+		});
+		local Array is defaultExtsCfg: Json:getArray(obj: cfg, key: 'default_extensions');
 		local String is source: Json:getString(obj: cfg, key: 'source', default: '');
 		if({ source == '' }, {
 			source: Json:getString(obj: cfg, key: 'entry', default: '');
@@ -581,5 +591,290 @@ Class is SpecBuild{
 			local Int is runCode: Process:execute(command: output, args: Array());
 			Process:exit(status: runCode);
 		});
+
+		if({ command == 'install' }, {
+			local String is iconPath: if({ rawIcon != '' }, { :resolvePath(baseDir: configDir, relPath: rawIcon) }, { '' });
+			:installApp(
+				name: name,
+				description: description,
+				output: output,
+				iconPath: iconPath,
+				category: category,
+				fileExtsCfg: fileExtsCfg,
+				defaultExtsCfg: defaultExtsCfg
+			);
+		});
+	}
+
+	local Function of String is normalizeExt(String is ext){
+		local String is e: ext:trim():toLower();
+		if({ e == '' }, { return ''; });
+		if({ !e:startsWith(prefix: '.') }, { return '.' . e; });
+		return e;
+	}
+
+	local Function of String is mimeTypeForExt(String is ext){
+		local String is e: :normalizeExt(ext: ext);
+		if({ e == '.spec' }, { return 'text/x-spec'; });
+		if({ e == '.txt' }, { return 'text/plain'; });
+		if({ e == '.md' || e == '.markdown' }, { return 'text/markdown'; });
+		if({ e == '.json' }, { return 'application/json'; });
+		if({ e == '.c' }, { return 'text/x-csrc'; });
+		if({ e == '.h' }, { return 'text/x-chdr'; });
+		if({ e == '.cpp' || e == '.cc' || e == '.cxx' }, { return 'text/x-c++src'; });
+		if({ e == '.hpp' || e == '.hh' || e == '.hxx' }, { return 'text/x-c++hdr'; });
+		if({ e == '.py' }, { return 'text/x-python'; });
+		if({ e == '.java' }, { return 'text/x-java'; });
+		if({ e == '.rs' }, { return 'text/rust'; });
+		if({ e == '.rb' }, { return 'application/x-ruby'; });
+		if({ e == '.js' || e == '.mjs' || e == '.cjs' || e == '.jsx' }, { return 'text/javascript'; });
+		if({ e == '.kt' || e == '.kts' }, { return 'text/x-kotlin'; });
+		if({ e == '.css' }, { return 'text/css'; });
+		if({ e == '.cs' }, { return 'text/x-csharp'; });
+		if({ e == '.php' || e == '.phtml' }, { return 'application/x-php'; });
+		if({ e == '.sql' }, { return 'application/sql'; });
+		if({ e == '.html' || e == '.htm' || e == '.xhtml' }, { return 'text/html'; });
+		if({ e == '.xml' }, { return 'application/xml'; });
+		if({ e == '.svg' }, { return 'image/svg+xml'; });
+		if({ e:length() > 1 }, {
+			return 'text/x-' . e:substring(start: 1, end: e:length());
+		});
+		return 'text/plain';
+	}
+
+	local Function of Boolean is needsCustomMimeDef(String is ext){
+		local String is e: :normalizeExt(ext: ext);
+		return e == '.spec' || e == '.kt' || e == '.kts';
+	}
+
+	local Function of String is normalizeCategory(String is cat){
+		local String is c: cat:trim();
+		if({ c == '' }, { return 'Utility'; });
+		local String is low: c:toLower();
+		if({ low == 'utility' || low == 'utilities' || low == 'accessories' }, { return 'Utility'; });
+		if({ low == 'development' || low == 'dev' || low == 'ide' }, { return 'Development'; });
+		if({ low == 'graphics' }, { return 'Graphics'; });
+		if({ low == 'office' }, { return 'Office'; });
+		if({ low == 'network' || low == 'internet' }, { return 'Network'; });
+		if({ low == 'system' }, { return 'System'; });
+		if({ low == 'settings' }, { return 'Settings'; });
+		if({ low == 'game' || low == 'games' }, { return 'Game'; });
+		return c;
+	}
+
+	local Function is appendUniqueStr(Array of String is list, String is val){
+		if({ val == '' }, { return; });
+		local Int is i: 0;
+		while({ i < list:length() }, {
+			if({ list:get(index: i, default: '') == val }, { return; });
+			i: i + 1;
+		});
+		list:add(item: val);
+	}
+
+	local Function of Boolean is arrayContainsStr(Array of String is list, String is val){
+		local Int is i: 0;
+		while({ i < list:length() }, {
+			if({ list:get(index: i, default: '') == val }, { return true; });
+			i: i + 1;
+		});
+		return false;
+	}
+
+	local Function is installApp(
+		String is name,
+		String is description,
+		String is output,
+		String is iconPath,
+		String is category,
+		Array is fileExtsCfg,
+		Array is defaultExtsCfg
+	){
+		local String is os: Process:osName();
+		if({ os == 'macos' }, {
+			:installMacos(name: name, output: output);
+			return;
+		});
+		if({ os == 'windows' }, {
+			:installWindows(name: name, output: output);
+			return;
+		});
+		:installLinux(
+			name: name,
+			description: description,
+			output: output,
+			iconPath: iconPath,
+			category: category,
+			fileExtsCfg: fileExtsCfg,
+			defaultExtsCfg: defaultExtsCfg
+		);
+	}
+
+	local Function is installMacos(String is name, String is output){
+		Output:line('[specbuild] macOS install stub: packaging "' . name . '" (' . output . ') into ~/Applications/' . name . '.app is not yet implemented.');
+	}
+
+	local Function is installWindows(String is name, String is output){
+		Output:line('[specbuild] Windows install stub: installing "' . name . '" (' . output . ') into %LOCALAPPDATA%\\Programs\\' . name . ' is not yet implemented.');
+	}
+
+	local Function is installLinux(
+		String is name,
+		String is description,
+		String is output,
+		String is iconPath,
+		String is category,
+		Array is fileExtsCfg,
+		Array is defaultExtsCfg
+	){
+		local String is home: Uri:homeDir();
+		if({ home == '' }, {
+			Stderr:line('[specbuild] Error: Could not determine user home directory for install.');
+			Process:exit(status: 1);
+		});
+
+		local String is binDir: home . '/.local/bin';
+		local String is appDir: home . '/.local/share/applications';
+		local String is mimePkgDir: home . '/.local/share/mime/packages';
+		local String is mimeRootDir: home . '/.local/share/mime';
+		local String is iconRootDir: home . '/.local/share/icons/hicolor';
+
+		Process:execute(command: 'mkdir', args: Array(['-p', binDir, appDir, mimePkgDir]));
+
+		## 1. Install executable into ~/.local/bin/<name>
+		local String is destBin: binDir . '/' . name;
+		local Int is cpBin: Process:execute(command: 'cp', args: Array(['-f', output, destBin]));
+		if({ cpBin != 0 }, {
+			Stderr:line('[specbuild] Error: Failed to copy executable to ' . destBin);
+			Process:exit(status: 1);
+		});
+		Process:execute(command: 'chmod', args: Array(['755', destBin]));
+
+		## 2. Install icon into ~/.local/share/icons/hicolor/...
+		local String is iconEntry: '';
+		if({ iconPath != '' && fileExists(path: iconPath) }, {
+			local String is lowIcon: iconPath:toLower();
+			local Boolean is isSvg: lowIcon:endsWith(suffix: '.svg');
+			local String is iconSubDir: if({ isSvg }, { iconRootDir . '/scalable/apps' }, { iconRootDir . '/256x256/apps' });
+			local String is iconExt: if({ isSvg }, { '.svg' }, { '.png' });
+			Process:execute(command: 'mkdir', args: Array(['-p', iconSubDir]));
+			local String is destIcon: iconSubDir . '/' . name . iconExt;
+			Process:execute(command: 'cp', args: Array(['-f', iconPath, destIcon]));
+			iconEntry: name;
+		});
+
+		## 3. Collect file extensions, MIME types, and defaults
+		local Array of String is defaultExts: Array();
+		local Int is di: 0;
+		while({ di < defaultExtsCfg:length() }, {
+			local String is de: :normalizeExt(ext: Json:getStringAt(arr: defaultExtsCfg, index: di, default: ''));
+			:appendUniqueStr(list: defaultExts, val: de);
+			di: di + 1;
+		});
+
+		local Array of String is mimeTypes: Array();
+		local Array of String is defaultMimes: Array();
+		local Array of String is customMimes: Array();
+		local Array of String is customExts: Array();
+
+		local Int is ei: 0;
+		while({ ei < fileExtsCfg:length() }, {
+			local String is rawExt: Json:getStringAt(arr: fileExtsCfg, index: ei, default: '');
+			local String is ext: '';
+			local String is explicitMime: '';
+			local Boolean is isDefault: false;
+			if({ rawExt != '' }, {
+				ext: :normalizeExt(ext: rawExt);
+			}, {
+				local Map is obj: Json:getObjectAt(arr: fileExtsCfg, index: ei);
+				ext: :normalizeExt(ext: Json:getString(obj: obj, key: 'ext', default: ''));
+				explicitMime: Json:getString(obj: obj, key: 'mime', default: '');
+				isDefault: Json:getBool(obj: obj, key: 'default', default: false);
+			});
+			if({ ext != '' }, {
+				local String is mime: if({ explicitMime != '' }, { explicitMime }, { :mimeTypeForExt(ext: ext) });
+				:appendUniqueStr(list: mimeTypes, val: mime);
+				if({ isDefault || :arrayContainsStr(list: defaultExts, val: ext) }, {
+					:appendUniqueStr(list: defaultMimes, val: mime);
+				});
+				if({ explicitMime != '' || :needsCustomMimeDef(ext: ext) }, {
+					customMimes:add(item: mime);
+					customExts:add(item: ext);
+				});
+			});
+			ei: ei + 1;
+		});
+
+		## 4. Write custom MIME XML if any custom extensions exist
+		if({ customMimes:length() > 0 }, {
+			local String is xml: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<mime-info xmlns=\"http://www.freedesktop.org/standards/shared-mime-info\">\n";
+			local Int is ci: 0;
+			while({ ci < customMimes:length() }, {
+				local String is cm: customMimes:get(index: ci, default: '');
+				local String is ce: customExts:get(index: ci, default: '');
+				xml: xml . "  <mime-type type=\"" . cm . "\">\n"
+					. "    <comment>" . name . " file (" . ce . ")</comment>\n"
+					. "    <glob pattern=\"*" . ce . "\"/>\n"
+					. "  </mime-type>\n";
+				ci: ci + 1;
+			});
+			xml: xml . "</mime-info>\n";
+			local String is mimeXmlPath: mimePkgDir . '/' . name . '.xml';
+			File:fileWrite(path: mimeXmlPath, content: xml, onSuccess: {}, onError: {});
+			Process:execute(command: 'update-mime-database', args: Array([mimeRootDir]));
+		});
+
+		## 5. Write ~/.local/share/applications/<name>.desktop
+		local String is normCat: :normalizeCategory(cat: category);
+		local String is mimeLine: '';
+		local Int is mi: 0;
+		while({ mi < mimeTypes:length() }, {
+			mimeLine: mimeLine . mimeTypes:get(index: mi, default: '') . ';';
+			mi: mi + 1;
+		});
+
+		local String is desktop: "[Desktop Entry]\n"
+			. "Type=Application\n"
+			. "Name=" . name . "\n";
+		if({ description != '' }, {
+			desktop: desktop . "Comment=" . description . "\n";
+		});
+		desktop: desktop . "Exec=" . destBin . " %F\n";
+		if({ iconEntry != '' }, {
+			desktop: desktop . "Icon=" . iconEntry . "\n";
+		});
+		desktop: desktop . "Terminal=false\n"
+			. "Categories=" . normCat . ";\n";
+		if({ mimeLine != '' }, {
+			desktop: desktop . "MimeType=" . mimeLine . "\n";
+		});
+
+		local String is desktopFile: name . '.desktop';
+		local String is desktopPath: appDir . '/' . desktopFile;
+		File:fileWrite(path: desktopPath, content: desktop, onSuccess: {}, onError: {});
+
+		## 6. Register default MIME associations and refresh Linux desktop menu caches
+		local Int is dmi: 0;
+		while({ dmi < defaultMimes:length() }, {
+			local String is dm: defaultMimes:get(index: dmi, default: '');
+			Process:execute(command: 'xdg-mime', args: Array(['default', desktopFile, dm]));
+			dmi: dmi + 1;
+		});
+		Process:execute(command: 'update-desktop-database', args: Array([appDir]));
+		if({ iconEntry != '' }, {
+			Process:execute(command: 'gtk-update-icon-cache', args: Array(['-f', '-t', iconRootDir]));
+		});
+
+		local Cleo is instUi: Cleo:toolUi(title: ' specbuild ');
+		local CleoSection is iSec: instUi:addToolSection(title: ' Install · ' . name . ' (Linux) ');
+		iSec:addLine(text: 'Binary -> ' . destBin, color: CleoColor:ansi(code: 250), rightText: '✔ BIN');
+		if({ iconEntry != '' }, {
+			iSec:addLine(text: 'Icon -> ' . iconEntry, color: CleoColor:ansi(code: 250), rightText: '✔ ICON');
+		});
+		iSec:addLine(text: 'Desktop -> ' . desktopPath, color: CleoColor:ansi(code: 250), rightText: '✔ DESKTOP');
+		if({ defaultMimes:length() > 0 }, {
+			iSec:addLine(text: 'Default MIME count: ' . (defaultMimes:length() as String), color: CleoColor:ansi(code: 250), rightText: '✔ XDG');
+		});
+		instUi:render();
 	}
 }

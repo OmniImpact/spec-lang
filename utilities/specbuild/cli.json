@@ -2,7 +2,7 @@
   "name": "specbuild",
   "version": "0.1.0",
   "description": "SpecBuild - Project Build Orchestrator",
-  "usage": "specbuild [manifest.json] [build|run|test|lint|clean|help] [options]",
+  "usage": "specbuild [manifest.json] [build|run|install|test|lint|clean|help] [options]",
   "options": [
     {
       "short": "c",
