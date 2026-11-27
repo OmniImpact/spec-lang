@@ -163,7 +163,7 @@ Class of SewNode is ScrollView{
 
 	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
 		if({ pointerTransparent }, { return false; });
-		return :containsPoint(x: x, y: y) || child:blocksPointerAt(x: x, y: y);
+		return :containsPoint(x: x, y: y);
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
@@ -294,7 +294,11 @@ Class of SewNode is ScrollView{
 			:hoverHThumb: nextH;
 			changed: true;
 		});
-		if({ child:onPointerMove(x: x, y: y) }, { changed: true; });
+		if({ x >= b:x && x < b:x + b:width && y >= b:y && y < b:y + b:height }, {
+			if({ child:onPointerMove(x: x, y: y) }, { changed: true; });
+		}, {
+			child:clearHover();
+		});
 		return changed;
 	}
 
