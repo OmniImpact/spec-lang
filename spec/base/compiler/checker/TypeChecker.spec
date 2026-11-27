@@ -4176,10 +4176,10 @@ Class is TypeChecker{
 							bareHasLoopVars: true;
 							times(count: ps:length(), worker: local Function(Int is psi){
 								local Parameter is p: ps:get(index: psi);
-								if({ p:hasDefault }, {
-									:inferExpressionType(expr: p:defaultExpr);
-								});
 								local SemType is pSem: :semTypeFromAst(t: p:paramType);
+								if({ p:hasDefault }, {
+									:inferExpressionType(expr: p:defaultExpr, expected: pSem);
+								});
 								:localVars:set(key: p:name, value: pSem);
 								if({ :inLazyBlock }, {
 									:lazyLocalVars:set(key: p:name, value: pSem:toKey());
@@ -4504,10 +4504,10 @@ Class is TypeChecker{
 						hasLoopVars: true;
 						times(count: ps:length(), worker: local Function(Int is psi){
 							local Parameter is p: ps:get(index: psi);
-							if({ p:hasDefault }, {
-								:inferExpressionType(expr: p:defaultExpr);
-							});
 							local SemType is pSem: :semTypeFromAst(t: p:paramType);
+							if({ p:hasDefault }, {
+								:inferExpressionType(expr: p:defaultExpr, expected: pSem);
+							});
 							:localVars:set(key: p:name, value: pSem);
 							if({ :inLazyBlock }, {
 								:lazyLocalVars:set(key: p:name, value: pSem:toKey());
@@ -5043,6 +5043,11 @@ Class is TypeChecker{
 			});
 		});
 		if({ heldCallFn:name != '' }, {
+			if({ isValueBranch }, {
+				local String is vbRes: :unifyValueBranchTypes(expr: expr);
+				:stampExprType(expr: expr, t: vbRes);
+				return vbRes;
+			});
 			return :inferHeldCall(expr: expr, call: call, heldRoot: heldRoot, method: method, heldCallFn: heldCallFn, expected: expected);
 		});
 		local SemType is targetSem: :parseSemType(s: targetType);
@@ -5851,7 +5856,8 @@ Class is TypeChecker{
 			# the declaring class bakes in — it gates against the declaring
 			# class's imports exactly like a body expression.
 			if({ p:hasDefault }, {
-				:inferExpressionType(expr: p:defaultExpr);
+				local SemType is pExpSem: if({ p:paramType:name == :names:selfFieldMarker() }, { :fieldTypes:get(key: p:name, default: SemTypes:EMPTY) }, { :semTypeFromAst(t: p:paramType) });
+				:inferExpressionType(expr: p:defaultExpr, expected: pExpSem);
 			});
 		});
 		:validateTypeAccess(t: method:memberType, line: method:line);
