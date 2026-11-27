@@ -29,6 +29,7 @@ Class of SewNode is ColorSwatchDropdown{
 	Boolean is showPicker: true;
 	Boolean is showHistory: true;
 	Boolean is compactPicker: false;
+	Boolean is showAlpha: false;
 	ColorSelector is picker: ColorSelector();
 	ColorSwatchHistory is history: ColorSwatchHistory();
 	Column is popupCol: Column();
@@ -42,6 +43,7 @@ Class of SewNode is ColorSwatchDropdown{
 		Boolean is showPicker: true,
 		Boolean is showHistory: true,
 		Boolean is compactPicker: false,
+		Boolean is showAlpha: false,
 		Array of Color is historyColors: Array(),
 		Function is onChange: local Function(Color is _c){},
 		String is tooltip: ''
@@ -53,6 +55,7 @@ Class of SewNode is ColorSwatchDropdown{
 		:showPicker: showPicker;
 		:showHistory: showHistory;
 		:compactPicker: compactPicker;
+		:showAlpha: showAlpha;
 		:onChange: onChange;
 		:tooltip: tooltip;
 
@@ -61,6 +64,7 @@ Class of SewNode is ColorSwatchDropdown{
 			currentColor: color,
 			hasCurrent: true,
 			compact: compactPicker,
+			showAlpha: showAlpha,
 			onChange: local Function(Color is next){
 				:color: next;
 				local Function is cb: :onChange;
@@ -169,7 +173,8 @@ Class of SewNode is ColorSwatchDropdown{
 	replace Function of Size is measure(Constraints is c){
 		local Int is sw: activeScale:px(pt: 20.0);
 		local Int is fpx: :fontPx();
-		local Int is tw: DrawContext:measureWidth(text: '#RRGGBB', pixelHeight: fpx);
+		local String is sampleHex: if({ showAlpha }, { '#RRGGBBAA' }, { '#RRGGBB' });
+		local Int is tw: DrawContext:measureWidth(text: sampleHex, pixelHeight: fpx);
 		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is w: sw + tw + pad * 3;
 		local Int is h: activeScale:px(pt: activeTheme:buttonHeightPt);
@@ -338,13 +343,31 @@ Class of SewNode is ColorSwatchDropdown{
 		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is sw: b:height - pad * 2;
 		if({ sw < 10 }, { sw: 10; });
-		ctx:fillRect(x: b:x + pad, y: b:y + (b:height - sw) / 2, w: sw, h: sw, color: color:toArgb());
+		local Int is sx: b:x + pad;
+		local Int is sy: b:y + (b:height - sw) / 2;
+		if({ showAlpha }, {
+			local Int is cy: 0;
+			while({ cy < sw }, {
+				local Int is ch: if({ cy + 4 <= sw }, { 4 }, { sw - cy });
+				local Int is cx: 0;
+				while({ cx < sw }, {
+					local Int is cw: if({ cx + 4 <= sw }, { 4 }, { sw - cx });
+					local Int is chk: ((cx / 4) + (cy / 4)) & 1;
+					local Color is cc: if({ chk == 0 }, { Color(r: 200, g: 200, b: 200) }, { Color(r: 130, g: 130, b: 130) });
+					ctx:fillRect(x: sx + cx, y: sy + cy, w: cw, h: ch, color: cc:toArgb());
+					cx: cx + 4;
+				});
+				cy: cy + 4;
+			});
+		});
+		ctx:fillRect(x: sx, y: sy, w: sw, h: sw, color: color:toArgb());
 		if({ bw > 0 }, {
-			ctx:strokeRect(x: b:x + pad, y: b:y + (b:height - sw) / 2, w: sw, h: sw, color: activeTheme:buttonBorder, thickness: bw);
+			ctx:strokeRect(x: sx, y: sy, w: sw, h: sw, color: activeTheme:buttonBorder, thickness: bw);
 		});
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		ctx:drawText(x: b:x + pad * 2 + sw, y: b:y + (b:height - th) / 2, text: color:toHex(), color: activeTheme:textPrimary, pixelHeight: fpx);
+		local String is hexTxt: if({ showAlpha }, { color:toHexAlpha() }, { color:toHex() });
+		ctx:drawText(x: b:x + pad * 2 + sw, y: b:y + (b:height - th) / 2, text: hexTxt, color: activeTheme:textPrimary, pixelHeight: fpx);
 	}
 
 	replace Function is paintOverlay(DrawContext is ctx){

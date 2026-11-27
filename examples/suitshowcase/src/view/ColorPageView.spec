@@ -30,6 +30,7 @@ Class is ColorPageView{
 
 	Function of SewNode is build(){
 		local Color is initialCol: Color(r: 100, g: 180, b: 255);
+		local Color is alphaInitCol: Color(r: 100, g: 180, b: 255, a: 180);
 		local Color is prevCol: Color(r: 239, g: 83, b: 80);
 
 		local ColorSelector is fullPicker: ColorSelector(
@@ -42,6 +43,17 @@ Class is ColorPageView{
 			}
 		);
 
+		local ColorSelector is fullAlphaPicker: ColorSelector(
+			color: alphaInitCol,
+			currentColor: prevCol:withAlphaByte(a: 200),
+			hasCurrent: true,
+			compact: false,
+			showAlpha: true,
+			onChange: local Function(Color is c){
+				pickedLabel:emit(value: 'Selected (Ring + Alpha): ' . c:toHexAlpha());
+			}
+		);
+
 		local ColorSelector is compactPicker: ColorSelector(
 			color: initialCol,
 			currentColor: prevCol,
@@ -49,6 +61,17 @@ Class is ColorPageView{
 			compact: true,
 			onChange: local Function(Color is c){
 				pickedLabel:emit(value: 'Selected (Compact): ' . c:toHex());
+			}
+		);
+
+		local ColorSelector is compactAlphaPicker: ColorSelector(
+			color: alphaInitCol,
+			currentColor: prevCol:withAlphaByte(a: 200),
+			hasCurrent: true,
+			compact: true,
+			showAlpha: true,
+			onChange: local Function(Color is c){
+				pickedLabel:emit(value: 'Selected (Compact + Alpha): ' . c:toHexAlpha());
 			}
 		);
 
@@ -95,6 +118,18 @@ Class is ColorPageView{
 			}
 		);
 
+		local ColorSwatchDropdown is alphaDropdown: ColorSwatchDropdown(
+			color: alphaInitCol,
+			showPicker: true,
+			showHistory: true,
+			compactPicker: false,
+			showAlpha: true,
+			tooltip: 'Full picker + alpha + swatch history dropdown',
+			onChange: local Function(Color is c){
+				pickedLabel:emit(value: 'Dropdown (Alpha): ' . c:toHexAlpha());
+			}
+		);
+
 		return SectionV(
 			children: Array([
 				Label(text: 'Color Selector', style: TextStyle:H1),
@@ -102,7 +137,9 @@ Class is ColorPageView{
 				SectionH(
 					children: Array([
 						Frame(title: 'Concentric Ring Mode', child: fullPicker),
-						Frame(title: 'Compact Mode', child: compactPicker)
+						Frame(title: 'Concentric Ring + Alpha (Thirds)', child: fullAlphaPicker),
+						Frame(title: 'Compact Mode', child: compactPicker),
+						Frame(title: 'Compact + Alpha', child: compactAlphaPicker)
 					])
 				),
 				Frame(
@@ -114,6 +151,7 @@ Class is ColorPageView{
 					child: SectionH(
 						children: Array([
 							SectionV(title: 'Picker + History', children: Array([fullDropdown])),
+							SectionV(title: 'Picker + Alpha', children: Array([alphaDropdown])),
 							SectionV(title: 'Swatches Only', children: Array([swatchOnlyDropdown]))
 						])
 					)

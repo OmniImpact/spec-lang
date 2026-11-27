@@ -249,6 +249,10 @@ Class is Color{
 		return '#' . :byteHex(v: :red()) . :byteHex(v: :green()) . :byteHex(v: :blue());
 	}
 
+	Function of String is toHexAlpha(){
+		return :toHex() . :byteHex(v: :alpha());
+	}
+
 	held Function of Int is hexVal(Int is b){
 		Conditional:if(check: { b >= 48 && b <= 57 }, then: { return b - 48; });
 		Conditional:if(check: { b >= 65 && b <= 70 }, then: { return 10 + (b - 65); });

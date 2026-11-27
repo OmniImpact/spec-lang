@@ -19,9 +19,11 @@ Class of SewNode is ColorSelector{
 	Color is currentColor: Color(r: 100, g: 180, b: 255);
 	Boolean is hasCurrent: false;
 	Boolean is compact: false;
+	Boolean is showAlpha: false;
 	Float is hueDeg: 210.0;
 	Float is sat: 0.7;
 	Float is light: 0.65;
+	Float is alpha: 1.0;
 	Int is dragTarget: 0;
 	Function is onChange: local Function(Color is _c){};
 	Function is onCommit: local Function(Color is _c){};
@@ -31,12 +33,14 @@ Class of SewNode is ColorSelector{
 		Color is currentColor: Color(r: 100, g: 180, b: 255),
 		Boolean is hasCurrent: false,
 		Boolean is compact: false,
+		Boolean is showAlpha: false,
 		Function is onChange: local Function(Color is _c){},
 		Function is onCommit: local Function(Color is _c){}
 	){
 		:currentColor: currentColor;
 		:hasCurrent: hasCurrent;
 		:compact: compact;
+		:showAlpha: showAlpha;
 		:onChange: onChange;
 		:onCommit: onCommit;
 		:dragTarget: 0;
@@ -52,6 +56,7 @@ Class of SewNode is ColorSelector{
 		});
 		:sat: s;
 		:light: l;
+		:alpha: if({ showAlpha }, { next:alphaF() }, { 1.0 });
 		invalidate();
 	}
 
@@ -62,7 +67,8 @@ Class of SewNode is ColorSelector{
 	}
 
 	local Function is syncFromHsl(){
-		:color: Color:fromHsl(hDeg: hueDeg, s: sat, l: light);
+		local Int is ab: if({ showAlpha }, { ((alpha * 255.0) + 0.5) as Int }, { 255 });
+		:color: Color:fromHsl(hDeg: hueDeg, s: sat, l: light, a: ab);
 		local Function is cb: onChange;
 		cb(color);
 		invalidate();
@@ -79,7 +85,8 @@ Class of SewNode is ColorSelector{
 			local Int is barH: activeScale:px(pt: 16.0);
 			local Int is gap: activeScale:px(pt: 6.0);
 			local Int is prevH: activeScale:px(pt: 20.0);
-			local Int is h: barH * 3 + gap * 3 + prevH;
+			local Int is barCount: if({ showAlpha }, { 4 }, { 3 });
+			local Int is h: barH * barCount + gap * barCount + prevH;
 			desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 			return desiredSize;
 		});
@@ -114,6 +121,26 @@ Class of SewNode is ColorSelector{
 		ctx:strokeRect(x: x0, y: y0, w: w0, h: h0, color: innerCol, thickness: 1);
 	}
 
+	local Function of Color is checkerAt(Int is px, Int is py){
+		local Int is chk: ((px / 4) + (py / 4)) & 1;
+		return if({ chk == 0 }, { Color(r: 200, g: 200, b: 200) }, { Color(r: 130, g: 130, b: 130) });
+	}
+
+	local Function is drawCheckerRect(DrawContext is ctx, Int is x, Int is y, Int is w, Int is h){
+		local Int is cy: 0;
+		while({ cy < h }, {
+			local Int is ch: if({ cy + 4 <= h }, { 4 }, { h - cy });
+			local Int is cx: 0;
+			while({ cx < w }, {
+				local Int is cw: if({ cx + 4 <= w }, { 4 }, { w - cx });
+				local Color is cc: :checkerAt(px: x + cx, py: y + cy);
+				ctx:fillRect(x: x + cx, y: y + cy, w: cw, h: ch, color: cc:toArgb());
+				cx: cx + 4;
+			});
+			cy: cy + 4;
+		});
+	}
+
 	local Function is drawCompact(DrawContext is ctx, Rect is b){
 		local Int is barH: activeScale:px(pt: 16.0);
 		local Int is gap: activeScale:px(pt: 6.0);
@@ -125,13 +152,18 @@ Class of SewNode is ColorSelector{
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
+		local Int is barCount: if({ showAlpha }, { 4 }, { 3 });
+		local Color is baseCol: Color:fromHsl(hDeg: hueDeg, s: sat, l: light);
 
-		## Row 0: Hue, Row 1: Saturation, Row 2: Brightness/Lightness
+		## Row 0: Hue, Row 1: Saturation, Row 2: Lightness, optional Row 3: Alpha
 		local Int is row: 0;
-		while({ row < 3 }, {
+		while({ row < barCount }, {
 			local Int is ry: b:y + row * (barH + gap);
-			local String is lbl: if({ row == 0 }, { 'H' }, { if({ row == 1 }, { 'S' }, { 'L' }) });
+			local String is lbl: if({ row == 0 }, { 'H' }, { if({ row == 1 }, { 'S' }, { if({ row == 2 }, { 'L' }, { 'A' }) }) });
 			ctx:drawText(x: b:x, y: ry + (barH - th) / 2, text: lbl, color: activeTheme:textMuted, pixelHeight: fpx);
+			if({ row == 3 }, {
+				:drawCheckerRect(ctx: ctx, x: barX, y: ry, w: barW, h: barH);
+			});
 			local Int is xi: 0;
 			while({ xi < barW }, {
 				local Float is t: (xi as Float) / ((barW - 1) as Float);
@@ -141,7 +173,11 @@ Class of SewNode is ColorSelector{
 					if({ row == 1 }, {
 						Color:fromHsl(hDeg: hueDeg, s: t, l: light)
 					}, {
-						Color:fromHsl(hDeg: hueDeg, s: sat, l: t)
+						if({ row == 2 }, {
+							Color:fromHsl(hDeg: hueDeg, s: sat, l: t)
+						}, {
+							baseCol:withAlpha(a: t)
+						})
 					})
 				});
 				ctx:fillRect(x: barX + xi, y: ry, w: 1, h: barH, color: segC:toArgb());
@@ -150,15 +186,18 @@ Class of SewNode is ColorSelector{
 			if({ bw > 0 }, {
 				ctx:strokeRect(x: barX, y: ry, w: barW, h: barH, color: activeTheme:buttonBorder, thickness: bw);
 			});
-			local Float is norm: if({ row == 0 }, { hueDeg / 360.0 }, { if({ row == 1 }, { sat }, { light }) });
+			local Float is norm: if({ row == 0 }, { hueDeg / 360.0 }, { if({ row == 1 }, { sat }, { if({ row == 2 }, { light }, { alpha }) }) });
 			local Int is knobX: barX + ((norm * ((barW - 1) as Float)) + 0.5) as Int;
 			:drawSlottedThumb(ctx: ctx, cx: knobX, topY: ry, barH: barH);
 			row: row + 1;
 		});
 
-		## Row 3: Preview (current left | new right) + hex code
-		local Int is py: b:y + 3 * (barH + gap);
+		## Preview (current left | new right) + hex code
+		local Int is py: b:y + barCount * (barH + gap);
 		local Int is prevW: activeScale:px(pt: 56.0);
+		if({ showAlpha }, {
+			:drawCheckerRect(ctx: ctx, x: b:x, y: py, w: prevW, h: prevH);
+		});
 		if({ hasCurrent }, {
 			local Int is halfW: prevW / 2;
 			ctx:fillRect(x: b:x, y: py, w: halfW, h: prevH, color: currentColor:toArgb());
@@ -169,7 +208,8 @@ Class of SewNode is ColorSelector{
 		if({ bw > 0 }, {
 			ctx:strokeRect(x: b:x, y: py, w: prevW, h: prevH, color: activeTheme:buttonBorder, thickness: bw);
 		});
-		ctx:drawText(x: b:x + prevW + activeScale:px(pt: 8.0), y: py + (prevH - th) / 2, text: color:toHex(), color: activeTheme:textPrimary, pixelHeight: fpx);
+		local String is hexTxt: if({ showAlpha }, { color:toHexAlpha() }, { color:toHex() });
+		ctx:drawText(x: b:x + prevW + activeScale:px(pt: 8.0), y: py + (prevH - th) / 2, text: hexTxt, color: activeTheme:textPrimary, pixelHeight: fpx);
 	}
 
 	local Function is drawRingSlottedHandle(DrawContext is ctx, Int is cx, Int is cy, Float is angleRad, Int is rIn, Int is rOut, Float is shiftY: 0.0){
@@ -250,6 +290,21 @@ Class of SewNode is ColorSelector{
 		return asin(value: ratio);
 	}
 
+	local Function of Float is sectorGapDist(Float is dx, Float is dy, Float is aStart, Float is aEnd, Float is halfGapF){
+		local Float is dStart: dx * (0.0 - sin(value: aStart)) + dy * cos(value: aStart) - halfGapF;
+		local Float is dEnd: dx * sin(value: aEnd) - dy * cos(value: aEnd) - halfGapF;
+		return if({ dStart < dEnd }, { dStart }, { dEnd });
+	}
+
+	local Function of Float is sectorT(Float is dx, Float is dy, Float is aStart, Float is trim, Float is span){
+		local Float is piVal: pi();
+		local Float is twoPi: 2.0 * piVal;
+		local Float is rel: atan2(y: dy, x: dx) - aStart;
+		while({ rel < -0.75 }, { rel: rel + twoPi; });
+		while({ rel >= twoPi - 0.75 }, { rel: rel - twoPi; });
+		return Color:clamp01(v: (rel - trim) / span);
+	}
+
 	local Function is drawFull(DrawContext is ctx, Rect is b){
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
@@ -274,7 +329,14 @@ Class of SewNode is ColorSelector{
 		local Int is cy: b:y + ringD / 2;
 		local Float is piVal: pi();
 		local Float is edgeAng: :innerRingEdgeAngle(innerInR: innerInR, halfGapF: halfGapF);
-		local Float is spanAng: piVal - 2.0 * edgeAng;
+		local Float is thirdSpan: (2.0 * piVal) / 3.0 - 2.0 * edgeAng;
+		local Float is satStart: -5.0 * piVal / 6.0;
+		local Float is satEnd: -piVal / 6.0;
+		local Float is alpStart: -piVal / 6.0;
+		local Float is alpEnd: piVal / 2.0;
+		local Float is litStart: piVal / 2.0;
+		local Float is litEnd: 7.0 * piVal / 6.0;
+		local Color is baseCol: Color:fromHsl(hDeg: hueDeg, s: sat, l: light);
 
 		local Int is dy: 0 - (outerR + 1);
 		while({ dy <= outerR + 1 }, {
@@ -294,31 +356,65 @@ Class of SewNode is ColorSelector{
 					local Float is inOutEdge: (innerOutR as Float) - rf;
 					local Float is inInEdge: rf - (innerInR as Float);
 					local Float is inRadDist: if({ inOutEdge < inInEdge }, { inOutEdge }, { inInEdge });
-					local Int is absDyInt: if({ dy < 0 }, { 0 - dy }, { dy });
-					local Float is absDy: absDyInt as Float;
-					local Float is gapEdge: absDy - halfGapF;
-					local Float is halfRingDist: if({ inRadDist < gapEdge }, { inRadDist }, { gapEdge });
-					if({ halfRingDist >= -0.75 }, {
-						if({ dy <= 0 }, {
-							local Float is adjDy: ((0 - dy) as Float) - halfGapF;
-							if({ adjDy < 0.0 }, { adjDy: 0.0; });
-							local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
-							local Float is t: Color:clamp01(v: ang / piVal);
-							local Color is sc: Color:fromHsl(hDeg: hueDeg, s: t, l: light);
-							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: sc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
+					if({ showAlpha }, {
+						local Float is dSat: :sectorGapDist(dx: dx as Float, dy: dy as Float, aStart: satStart, aEnd: satEnd, halfGapF: halfGapF);
+						local Float is dAlp: :sectorGapDist(dx: dx as Float, dy: dy as Float, aStart: alpStart, aEnd: alpEnd, halfGapF: halfGapF);
+						local Float is dLit: :sectorGapDist(dx: dx as Float, dy: dy as Float, aStart: litStart, aEnd: litEnd, halfGapF: halfGapF);
+						local Float is maxGap: if({ dSat >= dAlp && dSat >= dLit }, { dSat }, { if({ dAlp >= dLit }, { dAlp }, { dLit }) });
+						local Float is thirdDist: if({ inRadDist < maxGap }, { inRadDist }, { maxGap });
+						if({ thirdDist >= -0.75 }, {
+							if({ dSat >= dAlp && dSat >= dLit }, {
+								local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: satStart, trim: edgeAng, span: thirdSpan);
+								local Color is sc: Color:fromHsl(hDeg: hueDeg, s: t, l: light);
+								:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: sc, borderC: borderC, edgeDist: thirdDist, bw: bw);
+							}, {
+								if({ dAlp >= dLit }, {
+									local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: alpStart, trim: edgeAng, span: thirdSpan);
+									local Color is chkBg: :checkerAt(px: cx + dx, py: cy + dy);
+									local Color is ac: chkBg:mix(other: baseCol, t: 1.0 - t);
+									:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: ac, borderC: borderC, edgeDist: thirdDist, bw: bw);
+								}, {
+									local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: litStart, trim: edgeAng, span: thirdSpan);
+									local Color is lc: Color:fromHsl(hDeg: hueDeg, s: sat, l: t);
+									:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: lc, borderC: borderC, edgeDist: thirdDist, bw: bw);
+								});
+							});
 						}, {
-							local Float is adjDy: (dy as Float) - halfGapF;
-							if({ adjDy < 0.0 }, { adjDy: 0.0; });
-							local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
-							local Float is t: Color:clamp01(v: ang / piVal);
-							local Color is lc: Color:fromHsl(hDeg: hueDeg, s: sat, l: t);
-							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: lc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
+							local Float is centerDist: (centerR as Float) - rf;
+							if({ centerDist >= -0.75 }, {
+								local Color is pcol: if({ hasCurrent && dx < 0 }, { currentColor }, { color });
+								local Color is chkBg: :checkerAt(px: cx + dx, py: cy + dy);
+								local Color is pcolDraw: chkBg:mix(other: pcol, t: pcol:alphaF());
+								:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: pcolDraw, borderC: borderC, edgeDist: centerDist, bw: bw);
+							});
 						});
 					}, {
-						local Float is centerDist: (centerR as Float) - rf;
-						if({ centerDist >= -0.75 }, {
-							local Color is pcol: if({ hasCurrent && dx < 0 }, { currentColor }, { color });
-							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: pcol, borderC: borderC, edgeDist: centerDist, bw: bw);
+						local Int is absDyInt: if({ dy < 0 }, { 0 - dy }, { dy });
+						local Float is absDy: absDyInt as Float;
+						local Float is gapEdge: absDy - halfGapF;
+						local Float is halfRingDist: if({ inRadDist < gapEdge }, { inRadDist }, { gapEdge });
+						if({ halfRingDist >= -0.75 }, {
+							if({ dy <= 0 }, {
+								local Float is adjDy: ((0 - dy) as Float) - halfGapF;
+								if({ adjDy < 0.0 }, { adjDy: 0.0; });
+								local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
+								local Float is t: Color:clamp01(v: ang / piVal);
+								local Color is sc: Color:fromHsl(hDeg: hueDeg, s: t, l: light);
+								:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: sc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
+							}, {
+								local Float is adjDy: (dy as Float) - halfGapF;
+								if({ adjDy < 0.0 }, { adjDy: 0.0; });
+								local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
+								local Float is t: Color:clamp01(v: ang / piVal);
+								local Color is lc: Color:fromHsl(hDeg: hueDeg, s: sat, l: t);
+								:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: lc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
+							});
+						}, {
+							local Float is centerDist: (centerR as Float) - rf;
+							if({ centerDist >= -0.75 }, {
+								local Color is pcol: if({ hasCurrent && dx < 0 }, { currentColor }, { color });
+								:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: pcol, borderC: borderC, edgeDist: centerDist, bw: bw);
+							});
 						});
 					});
 				});
@@ -327,26 +423,40 @@ Class of SewNode is ColorSelector{
 			dy: dy + 1;
 		});
 
-		## Rotating slotted handles on Hue, Top Saturation, Bottom Lightness
+		## Rotating slotted handles on Hue + inner segments
 		local Float is hueRad: (hueDeg * piVal) / 180.0;
 		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: hueRad, rIn: outerInR, rOut: outerR);
 
-		local Float is satRad: (sat - 1.0) * piVal;
-		local Float is satCos: cos(value: satRad);
-		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: satRad, rIn: innerInR, rOut: innerOutR, shiftY: 0.0 - halfGapF * satCos * satCos);
+		if({ showAlpha }, {
+			local Float is satRad: satStart + edgeAng + sat * thirdSpan;
+			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: satRad, rIn: innerInR, rOut: innerOutR);
+			local Float is litRad: litStart + edgeAng + light * thirdSpan;
+			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: litRad, rIn: innerInR, rOut: innerOutR);
+			local Float is alpRad: alpStart + edgeAng + (1.0 - alpha) * thirdSpan;
+			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: alpRad, rIn: innerInR, rOut: innerOutR);
+		}, {
+			local Float is satRad: (sat - 1.0) * piVal;
+			local Float is satCos: cos(value: satRad);
+			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: satRad, rIn: innerInR, rOut: innerOutR, shiftY: 0.0 - halfGapF * satCos * satCos);
 
-		local Float is lightRad: (1.0 - light) * piVal;
-		local Float is lightCos: cos(value: lightRad);
-		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: lightRad, rIn: innerInR, rOut: innerOutR, shiftY: halfGapF * lightCos * lightCos);
+			local Float is lightRad: (1.0 - light) * piVal;
+			local Float is lightCos: cos(value: lightRad);
+			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: lightRad, rIn: innerInR, rOut: innerOutR, shiftY: halfGapF * lightCos * lightCos);
+		});
 
-		## Readouts below: Hex, RGB, HSL
+		## Readouts below: Hex, RGB/RGBA, HSL
 		local Int is ty0: b:y + ringD + gap;
 		local Int is lineStep: fpx + activeScale:px(pt: 3.0);
 		local Int is hInt: (hueDeg + 0.5) as Int;
 		local Int is sInt: (sat * 100.0 + 0.5) as Int;
 		local Int is lInt: (light * 100.0 + 0.5) as Int;
-		local String is sHex: 'Hex: ' . color:toHex();
-		local String is sRgb: 'RGB: ' . (color:red() as String) . ', ' . (color:green() as String) . ', ' . (color:blue() as String);
+		local Int is aInt: (alpha * 100.0 + 0.5) as Int;
+		local String is sHex: 'Hex: ' . if({ showAlpha }, { color:toHexAlpha() }, { color:toHex() });
+		local String is sRgb: if({ showAlpha }, {
+			'RGBA: ' . (color:red() as String) . ', ' . (color:green() as String) . ', ' . (color:blue() as String) . ', ' . (aInt as String) . '%'
+		}, {
+			'RGB: ' . (color:red() as String) . ', ' . (color:green() as String) . ', ' . (color:blue() as String)
+		});
 		local String is sHsl: 'HSL: ' . (hInt as String) . 'deg, ' . (sInt as String) . '%, ' . (lInt as String) . '%';
 		ctx:drawText(x: b:x + activeScale:px(pt: 4.0), y: ty0, text: sHex, color: activeTheme:textPrimary, pixelHeight: fpx);
 		ctx:drawText(x: b:x + activeScale:px(pt: 4.0), y: ty0 + lineStep, text: sRgb, color: activeTheme:textMuted, pixelHeight: fpx);
@@ -372,9 +482,10 @@ Class of SewNode is ColorSelector{
 			local Int is barX: b:x + labelW;
 			local Int is barW: b:width - labelW - activeScale:px(pt: 4.0);
 			if({ barW <= 1 }, { return false; });
+			local Int is barCount: if({ showAlpha }, { 4 }, { 3 });
 			if({ isPress }, {
 				local Int is row: 0;
-				while({ row < 3 }, {
+				while({ row < barCount }, {
 					local Int is ry: b:y + row * (barH + gap);
 					if({ x >= barX && x <= barX + barW && y >= ry - 4 && y <= ry + barH + 4 }, {
 						:dragTarget: row + 1;
@@ -382,11 +493,12 @@ Class of SewNode is ColorSelector{
 					row: row + 1;
 				});
 			});
-			if({ dragTarget >= 1 && dragTarget <= 3 }, {
+			if({ dragTarget >= 1 && dragTarget <= barCount }, {
 				local Float is t: Color:clamp01(v: ((x - barX) as Float) / ((barW - 1) as Float));
 				if({ dragTarget == 1 }, { :hueDeg: t * 360.0; });
 				if({ dragTarget == 2 }, { :sat: t; });
 				if({ dragTarget == 3 }, { :light: t; });
+				if({ dragTarget == 4 }, { :alpha: t; });
 				:syncFromHsl();
 				return true;
 			});
@@ -412,13 +524,31 @@ Class of SewNode is ColorSelector{
 		local Float is ringGap: (outerInR - innerOutR) as Float;
 		if({ ringGap < 4.0 }, { ringGap: 4.0; });
 		local Float is halfGapF: ringGap * 0.5;
+		local Float is edgeAng: :innerRingEdgeAngle(innerInR: innerInR, halfGapF: halfGapF);
+		local Float is thirdSpan: (2.0 * piVal) / 3.0 - 2.0 * edgeAng;
+		local Float is satStart: -5.0 * piVal / 6.0;
+		local Float is alpStart: -piVal / 6.0;
+		local Float is litStart: piVal / 2.0;
 
 		if({ isPress }, {
 			if({ r >= (outerInR - 4) as Float && r <= (outerR + 4) as Float }, {
 				:dragTarget: 1;
 			}, {
 			if({ r >= (innerInR - 4) as Float && r <= (innerOutR + 4) as Float }, {
-				:dragTarget: if({ dy <= 0 }, { 2 }, { 3 });
+				if({ showAlpha }, {
+					local Float is ang: atan2(y: dy as Float, x: dx as Float);
+					if({ ang >= satStart && ang < alpStart }, {
+						:dragTarget: 2;
+					}, {
+						if({ ang >= alpStart && ang < litStart }, {
+							:dragTarget: 4;
+						}, {
+							:dragTarget: 3;
+						});
+					});
+				}, {
+					:dragTarget: if({ dy <= 0 }, { 2 }, { 3 });
+				});
 			}); });
 		});
 
@@ -430,18 +560,32 @@ Class of SewNode is ColorSelector{
 			return true;
 		});
 		if({ dragTarget == 2 }, {
-			local Float is adjDy: ((0 - dy) as Float) - halfGapF;
-			if({ adjDy < 0.0 }, { adjDy: 0.0; });
-			local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
-			:sat: Color:clamp01(v: ang / piVal);
+			if({ showAlpha }, {
+				:sat: :sectorT(dx: dx as Float, dy: dy as Float, aStart: satStart, trim: edgeAng, span: thirdSpan);
+			}, {
+				local Float is adjDy: ((0 - dy) as Float) - halfGapF;
+				if({ adjDy < 0.0 }, { adjDy: 0.0; });
+				local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
+				:sat: Color:clamp01(v: ang / piVal);
+			});
 			:syncFromHsl();
 			return true;
 		});
 		if({ dragTarget == 3 }, {
-			local Float is adjDy: (dy as Float) - halfGapF;
-			if({ adjDy < 0.0 }, { adjDy: 0.0; });
-			local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
-			:light: Color:clamp01(v: ang / piVal);
+			if({ showAlpha }, {
+				:light: :sectorT(dx: dx as Float, dy: dy as Float, aStart: litStart, trim: edgeAng, span: thirdSpan);
+			}, {
+				local Float is adjDy: (dy as Float) - halfGapF;
+				if({ adjDy < 0.0 }, { adjDy: 0.0; });
+				local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
+				:light: Color:clamp01(v: ang / piVal);
+			});
+			:syncFromHsl();
+			return true;
+		});
+		if({ dragTarget == 4 && showAlpha }, {
+			local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: alpStart, trim: edgeAng, span: thirdSpan);
+			:alpha: 1.0 - t;
 			:syncFromHsl();
 			return true;
 		});
