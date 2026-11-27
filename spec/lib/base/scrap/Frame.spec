@@ -115,11 +115,25 @@ Class of SewNode is Frame{
 		if({ title == '' }, {
 			ctx:drawStyledBox(
 				x: b:x, y: b:y, w: b:width, h: b:height,
-				bgColor: bgCol, borderColor: border, thickness: bw,
+				bgColor: bgCol, borderColor: 0, thickness: 0,
 				radius: radPx, style: pStyle,
 				shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
 				innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
 			);
+			local Int is clipW: b:width - bw * 2;
+			local Int is clipH: b:height - bw * 2;
+			if({ clipW > 0 && clipH > 0 }, {
+				ctx:setClip(x: b:x + bw, y: b:y + bw, w: clipW, h: clipH);
+				child:paint(ctx: ctx);
+				ctx:clearClip();
+			});
+			if({ bw > 0 && pStyle != 'none' }, {
+				ctx:drawStyledBox(
+					x: b:x, y: b:y, w: b:width, h: b:height,
+					bgColor: 0, borderColor: border, thickness: bw,
+					radius: radPx, style: pStyle
+				);
+			});
 		}, {
 			local Int is fpx: :fontPx();
 			local Int is th: DrawContext:measureHeight(pixelHeight: fpx);
@@ -130,10 +144,28 @@ Class of SewNode is Frame{
 				local Int is titlePad: activeScale:px(pt: activeTheme:paddingLargePt);
 				local Int is titleX: b:x + bw + radPx + titlePad;
 				local Int is gapPad: activeScale:px(pt: 4.0);
-				if({ pStyle == 'single' && radPx <= 0 && shBlur <= 0 && shOffX == 0 && shOffY == 0 && inShBlur <= 0 && inShOffX == 0 && inShOffY == 0 }, {
+				local Boolean is simpleSingle: pStyle == 'single' && radPx <= 0 && shBlur <= 0 && shOffX == 0 && shOffY == 0 && inShBlur <= 0 && inShOffX == 0 && inShOffY == 0;
+				if({ !simpleSingle }, {
+					ctx:drawStyledBox(
+						x: b:x, y: topY, w: b:width, h: boxH,
+						bgColor: bgCol, borderColor: 0, thickness: 0,
+						radius: radPx, style: pStyle,
+						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
+						innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
+					);
+				}, {
 					if({ bgCol != 0 }, {
 						ctx:fillRect(x: b:x + bw, y: topY + bw, w: b:width - bw * 2, h: boxH - bw * 2, color: bgCol);
 					});
+				});
+				local Int is clipW: b:width - bw * 2;
+				local Int is clipH: boxH - bw * 2;
+				if({ clipW > 0 && clipH > 0 }, {
+					ctx:setClip(x: b:x + bw, y: topY + bw, w: clipW, h: clipH);
+					child:paint(ctx: ctx);
+					ctx:clearClip();
+				});
+				if({ simpleSingle }, {
 					local Int is leftSegW: (titleX - gapPad) - b:x;
 					if({ leftSegW > 0 }, {
 						ctx:fillRect(x: b:x, y: topY, w: leftSegW, h: bw, color: border);
@@ -147,26 +179,18 @@ Class of SewNode is Frame{
 					ctx:fillRect(x: b:x + b:width - bw, y: topY, w: bw, h: boxH, color: border);
 					ctx:fillRect(x: b:x, y: b:y + b:height - bw, w: b:width, h: bw, color: border);
 				}, {
-					ctx:drawStyledBox(
-						x: b:x, y: topY, w: b:width, h: boxH,
-						bgColor: bgCol, borderColor: border, thickness: bw,
-						radius: radPx, style: pStyle,
-						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
-						innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
-					);
+					if({ bw > 0 && pStyle != 'none' }, {
+						ctx:drawStyledBox(
+							x: b:x, y: topY, w: b:width, h: boxH,
+							bgColor: 0, borderColor: border, thickness: bw,
+							radius: radPx, style: pStyle
+						);
+					});
 					local Int is pillH: if({ th > bw + 2 }, { th }, { bw + 2 });
 					ctx:fillRect(x: titleX - gapPad, y: b:y, w: tw + gapPad * 2, h: pillH, color: activeTheme:windowBg);
 				});
 				ctx:drawText(x: titleX, y: b:y, text: title, color: activeTheme:textMuted, pixelHeight: fpx);
 			});
-		});
-		local Int is clipTop: if({ title != '' }, { b:y + DrawContext:measureHeight(pixelHeight: :fontPx()) / 2 + bw }, { b:y + bw });
-		local Int is clipH: (b:y + b:height - bw) - clipTop;
-		local Int is clipW: b:width - bw * 2;
-		if({ clipW > 0 && clipH > 0 }, {
-			ctx:setClip(x: b:x + bw, y: clipTop, w: clipW, h: clipH);
-			child:paint(ctx: ctx);
-			ctx:clearClip();
 		});
 	}
 

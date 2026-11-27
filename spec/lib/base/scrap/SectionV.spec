@@ -158,7 +158,6 @@ Class of SewNode is SectionV{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		ctx:setClip(x: b:x, y: b:y, w: b:width, h: b:height);
 		col:paint(ctx: ctx);
 		if({ segmented }, {
 			local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
@@ -213,7 +212,6 @@ Class of SewNode is SectionV{
 				});
 			});
 		});
-		ctx:clearClip();
 	}
 
 	replace Function is paintOverlay(DrawContext is ctx){
