@@ -11,7 +11,12 @@ Class of SewNode is StyledBox{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'fabric', Color],
-		['base', 'fabric', DrawContext]
+		['base', 'fabric', DrawContext],
+		['base', 'fabric', LineWidthStyle],
+		['base', 'fabric', LineColorStyle],
+		['base', 'fabric', ShadowStyle],
+		['base', 'fabric', LineStyle],
+		['base', 'fabric', BorderStyle]
 	];
 
 	String is label: '';
@@ -72,6 +77,70 @@ Class of SewNode is StyledBox{
 		local Int is h: activeScale:px(pt: minHeightPt);
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
+	}
+
+	Function is setBorder(BorderStyle is border){
+		if({ border:hasStyle }, { :borderStyle: border:style; });
+		if({ border:hasWidth }, { :thicknessPt: border:widthPt; });
+		if({ border:hasColor }, {
+			:lineColor: border:lineColor;
+			:useThemeBorder: false;
+		});
+		if({ border:hasRadius }, { :radiusPt: border:radiusPt; });
+		if({ border:shadow:isActive() || border:shadow:blurPt == 0.0 }, {
+			:shadowBlurPt: border:shadow:blurPt;
+			:shadowOffsetXPt: border:shadow:offsetXPt;
+			:shadowOffsetYPt: border:shadow:offsetYPt;
+			:shadowAlpha: border:shadow:shadowColor:alpha();
+		});
+		if({ border:innerShadow:isActive() || border:innerShadow:blurPt == 0.0 }, {
+			:innerShadowBlurPt: border:innerShadow:blurPt;
+			:innerShadowOffsetXPt: border:innerShadow:offsetXPt;
+			:innerShadowOffsetYPt: border:innerShadow:offsetYPt;
+			:innerShadowAlpha: border:innerShadow:shadowColor:alpha();
+		});
+		invalidate();
+	}
+
+	Function is setBorder(LineStyle is line){
+		if({ line:hasStyle }, { :borderStyle: line:style; });
+		if({ line:hasWidth }, { :thicknessPt: line:widthPt; });
+		if({ line:hasColor }, {
+			:lineColor: line:lineColor;
+			:useThemeBorder: false;
+		});
+		invalidate();
+	}
+
+	Function is setBorder(LineWidthStyle is width){
+		if({ width:hasWidth }, {
+			:thicknessPt: width:widthPt;
+			invalidate();
+		});
+	}
+
+	Function is setBorder(LineColorStyle is col){
+		if({ col:hasColor }, {
+			:lineColor: col:lineColor;
+			:useThemeBorder: false;
+			invalidate();
+		});
+	}
+
+	Function is setBorder(Float is thicknessPt){
+		:thicknessPt: thicknessPt;
+		invalidate();
+	}
+
+	Function is setBorder(Int is thicknessPt){
+		:thicknessPt: thicknessPt as Float;
+		invalidate();
+	}
+
+	Function is setBorder(Color is color){
+		:lineColor: color;
+		:useThemeBorder: false;
+		invalidate();
 	}
 
 	replace Function is paint(DrawContext is ctx){

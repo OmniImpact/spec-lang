@@ -110,10 +110,10 @@ Class of SewNode is Bar{
 		local Int is borderH: theme:dividerPx(scaleFactor: scale:factor);
 		if({ borderH > 0 }, {
 			if({ borderSide == DockSide:TOP }, {
-				ctx:drawDivider(x: b:x, y: b:y, w: b:width, h: borderH, color: theme:toolbarBorder, thickness: borderH, style: theme:dividerStyle);
+				ctx:drawDivider(x: b:x, y: b:y, w: b:width, h: borderH, color: theme:dividerColorArgb(), thickness: borderH, style: theme:dividerStyle);
 			}, {
 				if({ borderSide == DockSide:BOTTOM }, {
-					ctx:drawDivider(x: b:x, y: b:y + b:height - borderH, w: b:width, h: borderH, color: theme:toolbarBorder, thickness: borderH, style: theme:dividerStyle);
+					ctx:drawDivider(x: b:x, y: b:y + b:height - borderH, w: b:width, h: borderH, color: theme:dividerColorArgb(), thickness: borderH, style: theme:dividerStyle);
 				});
 			});
 		});

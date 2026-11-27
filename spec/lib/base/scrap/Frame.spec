@@ -99,7 +99,7 @@ Class of SewNode is Frame{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Int is border: activeTheme:textAccent;
+		local Int is border: activeTheme:panelBorderColorArgb();
 		local Int is bw: :borderPx();
 		local Int is radPx: activeScale:px(pt: activeTheme:panelCornerRadiusPt);
 		local Int is shBlur: activeScale:px(pt: activeTheme:panelShadowBlurPt);

@@ -1,0 +1,58 @@
+#! Package base:fabric
+#! Composable border & layer-effect style inheriting [LineStyle] (width, color, style) plus corner radius and outer/inner shadows.
+
+Class of LineStyle is BorderStyle{
+	replace [String] is namespace: ['base', 'fabric'];
+
+	replace [[String]] is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'fabric', Color],
+		['base', 'fabric', LineStyle],
+		['base', 'fabric', ShadowStyle]
+	];
+
+	Float is radiusPt: 0.0;
+	Boolean is hasRadius: false;
+	ShadowStyle is shadow: ShadowStyle();
+	ShadowStyle is innerShadow: ShadowStyle(inset: true);
+
+	replace Function is init(
+		Float is widthPt: -1.0,
+		Color is color: Color(r: 0, g: 0, b: 0, a: 0),
+		String is style: '',
+		Float is radiusPt: -1.0,
+		ShadowStyle is shadow: ShadowStyle(),
+		ShadowStyle is innerShadow: ShadowStyle(inset: true)
+	){
+		if({ widthPt >= 0.0 }, {
+			:widthPt: widthPt;
+			:hasWidth: true;
+		}, {
+			:widthPt: 0.7;
+			:hasWidth: false;
+		});
+		if({ color:alpha() > 0 }, {
+			:lineColor: color;
+			:hasColor: true;
+		}, {
+			:lineColor: Color(r: 120, g: 130, b: 150);
+			:hasColor: false;
+		});
+		if({ style != '' }, {
+			:style: style;
+			:hasStyle: true;
+		}, {
+			:style: 'single';
+			:hasStyle: false;
+		});
+		if({ radiusPt >= 0.0 }, {
+			:radiusPt: radiusPt;
+			:hasRadius: true;
+		}, {
+			:radiusPt: 0.0;
+			:hasRadius: false;
+		});
+		:shadow: shadow;
+		:innerShadow: innerShadow;
+	}
+}

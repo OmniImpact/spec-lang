@@ -9,7 +9,12 @@ Class is Theme{
 		['base', 'sys', Conditional],
 		['base', 'struct', Array],
 		['base', 'fabric', Color],
-		['base', 'fabric', ThemePreset]
+		['base', 'fabric', ThemePreset],
+		['base', 'fabric', LineWidthStyle],
+		['base', 'fabric', LineColorStyle],
+		['base', 'fabric', ShadowStyle],
+		['base', 'fabric', LineStyle],
+		['base', 'fabric', BorderStyle]
 	];
 
 	## Baseline theme colors
@@ -37,6 +42,9 @@ Class is Theme{
 	Int is panelBg: 0;
 	Int is panelBorder: 0;
 	Int is buttonBorder: 0;
+	Int is customPanelBorderColor: 0;
+	Int is customDividerColor: 0;
+	Int is customButtonBorderColor: 0;
 	Int is textPrimary: 0;
 	Int is textMuted: 0;
 	Int is textAccent: 0;
@@ -337,6 +345,159 @@ Class is Theme{
 		return if({ px < 1 }, { 1 }, { px });
 	}
 
+	Function of Int is panelBorderColorArgb(){
+		return if({ customPanelBorderColor != 0 }, { customPanelBorderColor }, { textAccent });
+	}
+
+	Function of Int is dividerColorArgb(){
+		return if({ customDividerColor != 0 }, { customDividerColor }, { toolbarBorder });
+	}
+
+	Function of Int is buttonBorderColorArgb(){
+		return if({ customButtonBorderColor != 0 }, { customButtonBorderColor }, { buttonBorder });
+	}
+
+	Function of BorderStyle is panelBorderConfig(){
+		return BorderStyle(
+			widthPt: panelBorderThicknessPt,
+			color: Color:fromArgb(argb: :panelBorderColorArgb()),
+			style: panelBorderStyle,
+			radiusPt: panelCornerRadiusPt,
+			shadow: ShadowStyle(blurPt: panelShadowBlurPt, offsetXPt: panelShadowOffsetXPt, offsetYPt: panelShadowOffsetYPt),
+			innerShadow: ShadowStyle(blurPt: panelInnerShadowBlurPt, offsetXPt: panelInnerShadowOffsetXPt, offsetYPt: panelInnerShadowOffsetYPt, inset: true)
+		);
+	}
+
+	Function of LineStyle is dividerConfig(){
+		return LineStyle(
+			widthPt: dividerThicknessPt,
+			color: Color:fromArgb(argb: :dividerColorArgb()),
+			style: dividerStyle
+		);
+	}
+
+	Function of BorderStyle is buttonBorderConfig(){
+		return BorderStyle(
+			widthPt: buttonBorderThicknessPt,
+			color: Color:fromArgb(argb: :buttonBorderColorArgb()),
+			style: buttonBorderStyle,
+			radiusPt: buttonCornerRadiusPt,
+			shadow: ShadowStyle(blurPt: buttonShadowBlurPt, offsetXPt: buttonShadowOffsetXPt, offsetYPt: buttonShadowOffsetYPt)
+		);
+	}
+
+	Function is setPanelBorder(BorderStyle is border){
+		:customMetrics: true;
+		if({ border:hasStyle }, { :setPanelBorderStyle(style: border:style); });
+		if({ border:hasWidth }, { :setPanelBorderThicknessPt(pt: border:widthPt); });
+		if({ border:hasColor }, { :customPanelBorderColor: border:lineColor:toArgb(); });
+		if({ border:hasRadius }, { :setPanelCornerRadiusPt(pt: border:radiusPt); });
+		if({ border:shadow:isActive() || border:shadow:blurPt == 0.0 }, {
+			:setPanelShadowBlurPt(pt: border:shadow:blurPt);
+			:setPanelShadowOffsetXPt(pt: border:shadow:offsetXPt);
+			:setPanelShadowOffsetYPt(pt: border:shadow:offsetYPt);
+		});
+		if({ border:innerShadow:isActive() || border:innerShadow:blurPt == 0.0 }, {
+			:setPanelInnerShadowBlurPt(pt: border:innerShadow:blurPt);
+			:setPanelInnerShadowOffsetXPt(pt: border:innerShadow:offsetXPt);
+			:setPanelInnerShadowOffsetYPt(pt: border:innerShadow:offsetYPt);
+		});
+	}
+
+	Function is setPanelBorder(LineStyle is line){
+		:customMetrics: true;
+		if({ line:hasStyle }, { :setPanelBorderStyle(style: line:style); });
+		if({ line:hasWidth }, { :setPanelBorderThicknessPt(pt: line:widthPt); });
+		if({ line:hasColor }, { :customPanelBorderColor: line:lineColor:toArgb(); });
+	}
+
+	Function is setPanelBorder(LineWidthStyle is width){
+		if({ width:hasWidth }, { :setPanelBorderThicknessPt(pt: width:widthPt); });
+	}
+
+	Function is setPanelBorder(LineColorStyle is col){
+		if({ col:hasColor }, { :customPanelBorderColor: col:lineColor:toArgb(); });
+	}
+
+	Function is setPanelBorder(Float is thicknessPt){
+		:setPanelBorderThicknessPt(pt: thicknessPt);
+	}
+
+	Function is setPanelBorder(Int is thicknessPt){
+		:setPanelBorderThicknessPt(pt: thicknessPt as Float);
+	}
+
+	Function is setPanelBorder(Color is color){
+		:customPanelBorderColor: color:toArgb();
+	}
+
+	Function is setDivider(LineStyle is line){
+		:customMetrics: true;
+		if({ line:hasStyle }, { :setDividerStyle(style: line:style); });
+		if({ line:hasWidth }, { :setDividerThicknessPt(pt: line:widthPt); });
+		if({ line:hasColor }, { :customDividerColor: line:lineColor:toArgb(); });
+	}
+
+	Function is setDivider(LineWidthStyle is width){
+		if({ width:hasWidth }, { :setDividerThicknessPt(pt: width:widthPt); });
+	}
+
+	Function is setDivider(LineColorStyle is col){
+		if({ col:hasColor }, { :customDividerColor: col:lineColor:toArgb(); });
+	}
+
+	Function is setDivider(Float is thicknessPt){
+		:setDividerThicknessPt(pt: thicknessPt);
+	}
+
+	Function is setDivider(Int is thicknessPt){
+		:setDividerThicknessPt(pt: thicknessPt as Float);
+	}
+
+	Function is setDivider(Color is color){
+		:customDividerColor: color:toArgb();
+	}
+
+	Function is setButtonBorder(BorderStyle is border){
+		:customMetrics: true;
+		if({ border:hasStyle }, { :setButtonBorderStyle(style: border:style); });
+		if({ border:hasWidth }, { :setButtonBorderThicknessPt(pt: border:widthPt); });
+		if({ border:hasColor }, { :customButtonBorderColor: border:lineColor:toArgb(); });
+		if({ border:hasRadius }, { :setButtonCornerRadiusPt(pt: border:radiusPt); });
+		if({ border:shadow:isActive() || border:shadow:blurPt == 0.0 }, {
+			:setButtonShadowBlurPt(pt: border:shadow:blurPt);
+			:setButtonShadowOffsetXPt(pt: border:shadow:offsetXPt);
+			:setButtonShadowOffsetYPt(pt: border:shadow:offsetYPt);
+		});
+	}
+
+	Function is setButtonBorder(LineStyle is line){
+		:customMetrics: true;
+		if({ line:hasStyle }, { :setButtonBorderStyle(style: line:style); });
+		if({ line:hasWidth }, { :setButtonBorderThicknessPt(pt: line:widthPt); });
+		if({ line:hasColor }, { :customButtonBorderColor: line:lineColor:toArgb(); });
+	}
+
+	Function is setButtonBorder(LineWidthStyle is width){
+		if({ width:hasWidth }, { :setButtonBorderThicknessPt(pt: width:widthPt); });
+	}
+
+	Function is setButtonBorder(LineColorStyle is col){
+		if({ col:hasColor }, { :customButtonBorderColor: col:lineColor:toArgb(); });
+	}
+
+	Function is setButtonBorder(Float is thicknessPt){
+		:setButtonBorderThicknessPt(pt: thicknessPt);
+	}
+
+	Function is setButtonBorder(Int is thicknessPt){
+		:setButtonBorderThicknessPt(pt: thicknessPt as Float);
+	}
+
+	Function is setButtonBorder(Color is color){
+		:customButtonBorderColor: color:toArgb();
+	}
+
 	Function of Int is linePx(Float is scaleFactor: 1.0){
 		if({ lineThicknessPt <= 0.0 }, { return 0; });
 		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
@@ -379,6 +540,9 @@ Class is Theme{
 			:neutral: Color(r: 146, g: 152, b: 166, a: 255);
 		});
 		:customMetrics: false;
+		:customPanelBorderColor: 0;
+		:customDividerColor: 0;
+		:customButtonBorderColor: 0;
 		:panelBorderStyle: 'single';
 		:panelCornerRadiusPt: 0.0;
 		:panelShadowBlurPt: 0.0;

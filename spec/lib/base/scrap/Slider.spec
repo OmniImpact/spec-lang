@@ -212,7 +212,7 @@ Class of SewNode is Slider{
 			ctx:clearClip();
 		});
 		if({ bw > 0 && bStyle != 'none' }, {
-			local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
+			local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:buttonBorderColorArgb() });
 			ctx:drawStyledBox(
 				x: tx, y: ty, w: trackW, h: trackH,
 				bgColor: 0, borderColor: borderCol, thickness: bw,
@@ -227,7 +227,7 @@ Class of SewNode is Slider{
 		local Int is kx: tx + fillW - thumbW / 2;
 		local Int is ky: b:y + (b:height - thumbH) / 2;
 		local Int is kBg: if({ hovered || dragging }, { activeTheme:hoverBg }, { activeTheme:menuBg });
-		local Int is kBorder: if({ focused || dragging }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
+		local Int is kBorder: if({ focused || dragging }, { activeTheme:textAccent }, { activeTheme:buttonBorderColorArgb() });
 		ctx:drawStyledBox(
 			x: kx, y: ky, w: thumbW, h: thumbH,
 			bgColor: kBg, borderColor: kBorder, thickness: bw,

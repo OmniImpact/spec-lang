@@ -175,7 +175,7 @@ Class of SewNode is SectionV{
 				if({ gw > 0 && gh > 0 && btnPx > 0 }, {
 					ctx:drawStyledBox(
 						x: gx, y: gy, w: gw, h: gh,
-						bgColor: 0, borderColor: activeTheme:buttonBorder,
+						bgColor: 0, borderColor: activeTheme:buttonBorderColorArgb(),
 						thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
 					);
 				});
@@ -186,7 +186,7 @@ Class of SewNode is SectionV{
 						if({ cb:width > btnPx * 2 }, {
 							ctx:drawDivider(
 								x: cb:x + btnPx, y: cb:y, w: cb:width - btnPx * 2, h: divPx,
-								color: activeTheme:buttonBorder, thickness: divPx, style: activeTheme:dividerStyle
+								color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle
 							);
 						});
 						di: di + 1;

@@ -329,7 +329,7 @@ Class of SewNode is ScrollView{
 			ctx:fillRect(x: sx, y: b:y, w: bw, h: vh, color: activeTheme:menuBg);
 			if({ divPx > 0 }, {
 				local Int is borderX: if({ scrollbarSide == DockSide:LEFT }, { sx + bw - divPx }, { sx });
-				ctx:drawDivider(x: borderX, y: b:y, w: divPx, h: vh, color: activeTheme:toolbarBorder, thickness: divPx, style: activeTheme:dividerStyle);
+				ctx:drawDivider(x: borderX, y: b:y, w: divPx, h: vh, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
 			});
 			if({ contentH > vh && vh > 0 }, {
 				local Int is thumbH: (vh * vh) / contentH;
@@ -344,7 +344,7 @@ Class of SewNode is ScrollView{
 					ctx:setClip(x: tx, y: b:y, w: tw, h: vh);
 					ctx:drawStyledBox(
 						x: tx, y: thumbY + 1, w: tw, h: thumbH - 2,
-						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorder,
+						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorderColorArgb(),
 						thickness: btnPx, radius: btnRad, style: activeTheme:buttonBorderStyle,
 						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
 					);
@@ -359,7 +359,7 @@ Class of SewNode is ScrollView{
 				ctx:setClip(x: cx, y: hy, w: vw, h: bw);
 				ctx:fillRect(x: cx, y: hy, w: vw, h: bw, color: activeTheme:menuBg);
 				if({ divPx > 0 }, {
-					ctx:drawDivider(x: cx, y: hy, w: vw, h: divPx, color: activeTheme:toolbarBorder, thickness: divPx, style: activeTheme:dividerStyle);
+					ctx:drawDivider(x: cx, y: hy, w: vw, h: divPx, color: activeTheme:dividerColorArgb(), thickness: divPx, style: activeTheme:dividerStyle);
 				});
 				local Int is thumbW: (vw * vw) / contentW;
 				if({ thumbW < activeScale:px(pt: 22.0) }, { thumbW: activeScale:px(pt: 22.0); });
@@ -373,7 +373,7 @@ Class of SewNode is ScrollView{
 					ctx:setClip(x: cx, y: ty, w: vw, h: th);
 					ctx:drawStyledBox(
 						x: thumbX + 1, y: ty, w: thumbW - 2, h: th,
-						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorder,
+						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorderColorArgb(),
 						thickness: btnPx, radius: btnRad, style: activeTheme:buttonBorderStyle,
 						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
 					);
