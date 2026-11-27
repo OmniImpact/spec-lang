@@ -60,7 +60,18 @@ Class of SewNode is TreeView{
 		invalidate();
 	}
 
-	local Function is appendFlat(TreeNode is node, Int is depth, Boolean is isLast, Array of Boolean is ancestors){
+	local Function of Boolean is inVisited(Array of TreeNode is visited, TreeNode is target){
+		local Int is vi: 0;
+		while({ vi < visited:length() }, {
+			if({ visited:get(index: vi) == target }, { return true; });
+			vi: vi + 1;
+		});
+		return false;
+	}
+
+	local Function is appendFlat(TreeNode is node, Int is depth, Boolean is isLast, Array of Boolean is ancestors, Array of TreeNode is visited){
+		if({ :inVisited(visited: visited, target: node) }, { return; });
+		visited:add(item: node);
 		flatNodes:add(item: node);
 		flatDepths:add(item: depth);
 		flatIsLast:add(item: isLast);
@@ -86,7 +97,8 @@ Class of SewNode is TreeView{
 					node: node:children:get(index: i),
 					depth: depth + 1,
 					isLast: (i == chLen - 1),
-					ancestors: nextAnc
+					ancestors: nextAnc,
+					visited: visited
 				);
 				i: i + 1;
 			});
@@ -98,6 +110,7 @@ Class of SewNode is TreeView{
 		:flatDepths: Array();
 		:flatIsLast: Array();
 		:flatAncestors: Array();
+		local Array of TreeNode is visited: Array();
 		local Int is rLen: roots:length();
 		local Int is i: 0;
 		while({ i < rLen }, {
@@ -105,7 +118,8 @@ Class of SewNode is TreeView{
 				node: roots:get(index: i),
 				depth: 0,
 				isLast: (i == rLen - 1),
-				ancestors: Array()
+				ancestors: Array(),
+				visited: visited
 			);
 			i: i + 1;
 		});
@@ -169,9 +183,18 @@ Class of SewNode is TreeView{
 		local Int is halfBox: boxSz / 2;
 		local Int is lineCol: activeTheme:textMuted;
 
+		local Int is totalNodes: flatNodes:length();
 		local Int is i: 0;
-		while({ i < flatNodes:length() }, {
+		local Int is clipTop: if({ ctx:hasClip }, { ctx:clipY }, { b:y });
+		local Int is clipBot: if({ ctx:hasClip }, { ctx:clipY + ctx:clipH }, { b:y + b:height });
+		if({ rowH > 0 && clipTop > b:y }, {
+			i: (clipTop - b:y) / rowH;
+			if({ i < 0 }, { i: 0; });
+		});
+		while({ i < totalNodes }, {
 			local Int is ry: b:y + (i * rowH);
+			if({ ry >= clipBot }, { i: totalNodes; }, {
+			if({ ry + rowH > clipTop }, {
 				local TreeNode is node: flatNodes:get(index: i);
 				local Int is depth: flatDepths:get(index: i);
 				local Boolean is isLast: flatIsLast:get(index: i);
@@ -245,7 +268,9 @@ Class of SewNode is TreeView{
 
 				local Int is ty: ry + (rowH - th) / 2;
 				ctx:drawText(x: labelX, y: ty, text: node:label, color: activeTheme:textPrimary, pixelHeight: fpx, bold: node:expandable);
-				i: i + 1;
+			});
+			i: i + 1;
+			});
 		});
 	}
 

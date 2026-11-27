@@ -8,6 +8,8 @@ Class is Constraints{
 		['base', 'sys', as Conditional()]
 	];
 
+	held Int is UNBOUNDED: 1000000000;
+
 	Int is minW: 0;
 	Int is maxW: 0;
 	Int is minH: 0;

@@ -54,6 +54,17 @@ Class is SpirvBuilder{
 		words:add(item: w);
 	}
 
+	## Emits an arbitrary-length SPIR-V instruction with [op] and operand [args].
+	Function is emitOp(Int is op, Array of Int is args){
+		local Int is count: args:length() + 1;
+		:emitWord(w: (count * 65536) + op);
+		local Int is i: 0;
+		while({ i < args:length() }, {
+			:emitWord(w: args:get(index: i));
+			i: i + 1;
+		});
+	}
+
 	Function is emitOp1(Int is op, Int is a){
 		:emitWord(w: (2 * 65536) + op);
 		:emitWord(w: a);

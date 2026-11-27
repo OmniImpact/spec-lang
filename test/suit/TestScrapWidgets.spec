@@ -5,10 +5,11 @@ Class of SpecUnitTest is TestScrapWidgets{
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', as Conditional()],
 		['base', 'suit', [KeyCode, KeyMod, SuitCanvas]],
-		['base', 'fabric', [DrawContext]],
-		['base', 'sew', [Rect, CursorShape]],
-		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label]],
-		['base', 'scrap', 'menu', [MenuItemConfig, MenuItemKind]]
+		['base', 'fabric', [DrawContext, Color]],
+		['base', 'sew', [Rect, Constraints, Size, CursorShape]],
+		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory]],
+		['base', 'scrap', 'menu', [MenuItemConfig, MenuItemKind]],
+		['base', 'scrap', 'tree', [TreeNode, TreeView]]
 	];
 
 	Function is testKeyCodeAndKeyModHelpers(){
@@ -157,5 +158,28 @@ Class of SpecUnitTest is TestScrapWidgets{
 		Assert:isTrue(toast:kind == ToastKind:SUCCESS);
 		toast:show(title: 'Err', message: 'Boom', kind: ToastKind:ERROR);
 		Assert:isTrue(toast:kind == ToastKind:ERROR);
+	}
+
+	Function is testTreeViewCycleGuard(){
+		local TreeNode is a: TreeNode(id: 'a', label: 'A', expandable: true, expanded: true);
+		local TreeNode is b: TreeNode(id: 'b', label: 'B', expandable: true, expanded: true);
+		a:children:add(item: b);
+		b:children:add(item: a);
+		local TreeView is tv: TreeView(roots: Array([a]));
+		# Must terminate cleanly with exactly 2 unique nodes
+		Assert:areEqualInt(2, tv:flatNodes:length());
+	}
+
+	Function is testColorSwatchHistoryNoHardColCap(){
+		local Array of Color is swatches: Array();
+		local Int is i: 0;
+		while({ i < 12 }, {
+			swatches:add(item: Color(r: i * 20, g: 100, b: 180));
+			i: i + 1;
+		});
+		local ColorSwatchHistory is hist: ColorSwatchHistory(colors: swatches, swatchSizePt: 20.0);
+		local Size is sz: hist:measure(c: Constraints(minW: 0, maxW: 600, minH: 0, maxH: 200));
+		# All 12 swatches fit on 1 row when width is 600px (height <= 30px)
+		Assert:isTrue(sz:height <= 30);
 	}
 }

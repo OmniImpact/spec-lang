@@ -3,6 +3,7 @@
 Class of SpecUnitTest is TestFabricTheme{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
+		['base', 'sys', as Mem()],
 		['base', 'fabric', [Color, Theme, ThemePreset, StrokeStyle, BoxBorderStyle, ShadowStyle, DrawContext]],
 		['base', 'suit', SuitCanvas]
 	];
@@ -66,6 +67,28 @@ Class of SpecUnitTest is TestFabricTheme{
 		Assert:areEqualInt(10, ctx:clipX);
 		ctx:clearClip();
 		Assert:isFalse(ctx:hasClip);
+		canvas:dispose();
+	}
+
+	Function is testDrawContextBlitArgb(){
+		local SuitCanvas is canvas: SuitCanvas(width: 10, height: 10);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+		local Int is black: 255 << 24;
+		canvas:clear(color: black);
+		local Int is src: alloc(bytes: 4 * 4);
+		local Int is red: (255 << 24) | (255 << 16);
+		storeI32(ptr: src, byteOffset: 0, val: red);
+		storeI32(ptr: src, byteOffset: 4, val: red);
+		storeI32(ptr: src, byteOffset: 8, val: red);
+		storeI32(ptr: src, byteOffset: 12, val: 0);
+		ctx:setClip(x: 2, y: 2, w: 1, h: 2);
+		ctx:blitArgb(dstX: 2, dstY: 2, srcAddr: src, srcW: 2, srcH: 2);
+		ctx:clearClip();
+		local Int is dst: canvas:pixelsAddr();
+		Assert:areEqualInt(red, loadI32(ptr: dst, byteOffset: (2 * 10 + 2) * 4));
+		# Clipped column (x=3) must remain black
+		Assert:areEqualInt(black, loadI32(ptr: dst, byteOffset: (2 * 10 + 3) * 4));
+		free(ptr: src);
 		canvas:dispose();
 	}
 }

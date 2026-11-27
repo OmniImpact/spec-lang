@@ -117,18 +117,13 @@ Class of SewNode is NavStack{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		times(count: routes:length(), worker: local Function(Int is i){
-			routes:get(index: i):child:measure(c: c);
-		});
-		desiredSize: :activeChild():desiredSize;
+		desiredSize: :activeChild():measure(c: c);
 		return desiredSize;
 	}
 
 	replace Function is arrange(Rect is bounds){
 		layoutBounds: bounds;
-		times(count: routes:length(), worker: local Function(Int is i){
-			routes:get(index: i):child:arrange(bounds: bounds);
-		});
+		:activeChild():arrange(bounds: bounds);
 	}
 
 	replace Function is paint(DrawContext is ctx){

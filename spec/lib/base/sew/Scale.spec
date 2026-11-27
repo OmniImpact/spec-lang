@@ -9,6 +9,8 @@ Class is Scale{
 		['base', 'math', Math]
 	];
 
+	held Math is sharedMath: Math();
+
 	Float is factor: 1.0;
 
 	replace Function is init(Float is factor: 1.0){
@@ -17,14 +19,12 @@ Class is Scale{
 
 	## Converts logical points ([pt]) to rounded physical pixels.
 	Function of Int is px(Float is pt){
-		local Math is math: Math();
-		local Float is v: math:round(value: pt * factor);
-		return math:toInt(value: v);
+		local Float is v: Scale:sharedMath:round(value: pt * factor);
+		return Scale:sharedMath:toInt(value: v);
 	}
 
 	## Converts physical pixels ([px]) to logical points.
 	Function of Float is pt(Int is px){
-		local Math is math: Math();
-		return math:toFloat(value: px) / factor;
+		return Scale:sharedMath:toFloat(value: px) / factor;
 	}
 }

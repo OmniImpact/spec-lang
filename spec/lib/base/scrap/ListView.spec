@@ -215,10 +215,12 @@ Class of SewNode is ListView{
 		local Int is dotGap: dotSz + 2;
 
 		local Int is n: items:length();
-		local Int is i: 0;
+		local Int is i: if({ rh > 0 && scrollY > 0 }, { scrollY / rh }, { 0 });
+		if({ i < 0 }, { i: 0; });
 		while({ i < n }, {
 			local Int is ry: clipY + i * rh - scrollY;
-			if({ ry + rh > clipY && ry < clipY + clipH }, {
+			if({ ry >= clipY + clipH }, { i: n; }, {
+			if({ ry + rh > clipY }, {
 				local Boolean is isSel: i == selectedIndex;
 				local Boolean is isHov: i == hoverIdx;
 				local Boolean is isDragSrc: dragIdx == i && dragMoved;
@@ -269,6 +271,7 @@ Class of SewNode is ListView{
 				});
 			});
 			i: i + 1;
+			});
 		});
 
 		if({ reorderable && dragIdx >= 0 && dragMoved && dragTargetIdx >= 0 && dragTargetIdx <= n }, {

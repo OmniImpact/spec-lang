@@ -128,7 +128,9 @@ Class of SewNode is TimeDropdown{
 	local Function is layoutPopup(Int is viewW, Int is viewH){
 		if({ viewW > 0 }, { lastViewW: viewW; });
 		if({ viewH > 0 }, { lastViewH: viewH; });
-		local Size is ps: selector:measure(c: Constraints(minW: 0, maxW: 600, minH: 0, maxH: 600));
+		local Int is maxW: if({ lastViewW > 0 }, { lastViewW }, { Constraints:UNBOUNDED });
+		local Int is maxH: if({ lastViewH > 0 }, { lastViewH }, { Constraints:UNBOUNDED });
+		local Size is ps: selector:measure(c: Constraints(minW: 0, maxW: maxW, minH: 0, maxH: maxH));
 		local Rect is pr: DropdownPopup:shared:placeRect(
 			anchor: bounds(),
 			popupW: ps:width,

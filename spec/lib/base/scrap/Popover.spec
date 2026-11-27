@@ -99,7 +99,9 @@ Class of SewNode is Popover{
 		if({ viewH > 0 }, { lastViewH: viewH; });
 		local Int is gh: :gripHeight();
 		local Int is padPx: if({ padPt > 0.0 }, { activeScale:px(pt: padPt) }, { 0 });
-		local Size is ps: content:measure(c: Constraints(minW: 0, maxW: 640, minH: 0, maxH: 640));
+		local Int is maxW: if({ lastViewW > 0 }, { lastViewW }, { Constraints:UNBOUNDED });
+		local Int is maxH: if({ lastViewH > 0 }, { lastViewH }, { Constraints:UNBOUNDED });
+		local Size is ps: content:measure(c: Constraints(minW: 0, maxW: maxW, minH: 0, maxH: maxH));
 		local Int is popW: ps:width + padPx * 2;
 		local Int is popH: ps:height + gh + padPx * 2;
 		local Rect is pr: DropdownPopup:shared:placeRect(

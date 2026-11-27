@@ -18,9 +18,11 @@ Class is SewNode{
 		['base', 'sew', CursorShape]
 	];
 
+	held Theme is defaultTheme: Theme();
+
 	Rect is layoutBounds: Rect();
 	Size is desiredSize: Size();
-	Theme is activeTheme: Theme();
+	Theme is activeTheme: SewNode:defaultTheme;
 	Scale is activeScale: Scale(factor: 1.0);
 	Boolean is pointerTransparent: false;
 	SignalBag is signalBag: SignalBag();

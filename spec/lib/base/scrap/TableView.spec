@@ -316,10 +316,12 @@ Class of SewNode is TableView{
 		if({ bodyH > 0 }, {
 			ctx:setClip(x: innerX, y: bodyY, w: innerW, h: bodyH);
 			local Int is n: rows:length();
-			local Int is ri: 0;
+			local Int is ri: if({ rh > 0 && scrollY > 0 }, { scrollY / rh }, { 0 });
+			if({ ri < 0 }, { ri: 0; });
 			while({ ri < n }, {
 				local Int is ry: bodyY + ri * rh - scrollY;
-				if({ ry + rh > bodyY && ry < bodyY + bodyH }, {
+				if({ ry >= bodyY + bodyH }, { ri: n; }, {
+				if({ ry + rh > bodyY }, {
 					local Boolean is isSel: ri == selectedIndex;
 					local Boolean is isHov: ri == hoverRow;
 					if({ isSel || isHov }, {
@@ -361,6 +363,7 @@ Class of SewNode is TableView{
 					});
 				});
 				ri: ri + 1;
+				});
 			});
 
 			if({ maxScrollY > 0 }, {

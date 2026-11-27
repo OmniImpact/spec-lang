@@ -243,6 +243,54 @@ Class is DrawContext{
 		});
 	}
 
+	## Blits an ARGB8888 native pixel buffer at [srcAddr] into the canvas at ([dstX], [dstY]) with clipping and src-over alpha blending.
+	Function is blitArgb(Int is dstX, Int is dstY, Int is srcAddr, Int is srcW, Int is srcH){
+		if({ srcAddr == 0 || srcW <= 0 || srcH <= 0 }, { return; });
+		local Int is pixelsPtr: canvas:pixelsAddr();
+		if({ pixelsPtr == 0 }, { return; });
+		local Int is bw: canvas:width;
+		local Int is bh: canvas:height;
+		local Int is minX: 0;
+		local Int is minY: 0;
+		local Int is maxX: bw;
+		local Int is maxY: bh;
+		if({ hasClip }, {
+			if({ clipX > minX }, { minX: clipX; });
+			if({ clipY > minY }, { minY: clipY; });
+			if({ clipX + clipW < maxX }, { maxX: clipX + clipW; });
+			if({ clipY + clipH < maxY }, { maxY: clipY + clipH; });
+		});
+		local Int is x0: if({ dstX > minX }, { dstX }, { minX });
+		local Int is y0: if({ dstY > minY }, { dstY }, { minY });
+		local Int is x1: if({ dstX + srcW < maxX }, { dstX + srcW }, { maxX });
+		local Int is y1: if({ dstY + srcH < maxY }, { dstY + srcH }, { maxY });
+		if({ x1 <= x0 || y1 <= y0 }, { return; });
+		local Int is py: y0;
+		while({ py < y1 }, {
+			local Int is srcRowOff: (py - dstY) * srcW * 4;
+			local Int is dstRowOff: py * bw * 4;
+			local Int is px: x0;
+			while({ px < x1 }, {
+				local Int is col: Mem:loadI32(ptr: srcAddr, byteOffset: srcRowOff + (px - dstX) * 4);
+				local Int is srcA: (col >> 24) & 255;
+				if({ srcA >= 255 }, {
+					Mem:storeI32(ptr: pixelsPtr, byteOffset: dstRowOff + px * 4, val: col);
+				}, {
+				if({ srcA > 0 }, {
+					local Int is dstOff: dstRowOff + px * 4;
+					local Int is dst: Mem:loadI32(ptr: pixelsPtr, byteOffset: dstOff);
+					local Int is invA: 255 - srcA;
+					local Int is outR: (((col >> 16) & 255) * srcA + ((dst >> 16) & 255) * invA) / 255;
+					local Int is outG: (((col >> 8) & 255) * srcA + ((dst >> 8) & 255) * invA) / 255;
+					local Int is outB: ((col & 255) * srcA + (dst & 255) * invA) / 255;
+					Mem:storeI32(ptr: pixelsPtr, byteOffset: dstOff, val: (255 << 24) | (outR << 16) | (outG << 8) | outB);
+				}); });
+				px: px + 1;
+			});
+			py: py + 1;
+		});
+	}
+
 	## Draws a 1px outline around ([x], [y], [w], [h]).
 	Function is strokeRect(Int is x, Int is y, Int is w, Int is h, Int is color, Int is thickness: 1){
 		if({ w <= 0 || h <= 0 || thickness <= 0 }, { return; });

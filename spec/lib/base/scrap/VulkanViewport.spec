@@ -235,20 +235,7 @@ Class of SewNode is VulkanViewport{
 			return;
 		});
 
-		local Int is py: 0;
-		while({ py < b:height }, {
-			local Int is rowOff: py * b:width * 4;
-			local Int is px: 0;
-			while({ px < b:width }, {
-				local Int is col: loadI32(ptr: outBufAddr, byteOffset: rowOff + px * 4);
-				local Int is a: (col >> 24) & 255;
-				if({ a > 0 }, {
-					ctx:fillRect(x: b:x + px, y: b:y + py, w: 1, h: 1, color: col);
-				});
-				px: px + 1;
-			});
-			py: py + 1;
-		});
+		ctx:blitArgb(dstX: b:x, dstY: b:y, srcAddr: outBufAddr, srcW: b:width, srcH: b:height);
 	}
 
 	## Releases native pixel/push-constant buffers, GPU meshes, and offscreen Vulkan state.

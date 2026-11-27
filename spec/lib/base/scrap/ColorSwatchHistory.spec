@@ -63,7 +63,6 @@ Class of SewNode is ColorSwatchHistory{
 		if({ availW <= sw }, { return 1; });
 		local Int is cols: (availW + gap) / (sw + gap);
 		if({ cols < 1 }, { cols: 1; });
-		if({ cols > 8 }, { cols: 8; });
 		return cols;
 	}
 

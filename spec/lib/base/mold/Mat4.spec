@@ -65,12 +65,14 @@ Class is Mat4{
 		return out;
 	}
 
+	held Math is sharedMath: Math();
+	held Vulkan is sharedVulkan: Vulkan();
+
 	## Returns a rotation matrix around the X axis by [rad] radians.
 	Function of Mat4 is rotateX(Float is rad){
 		local Mat4 is out: Mat4();
-		local Math is math: Math();
-		local Float is c: math:cos(value: rad);
-		local Float is s: math:sin(value: rad);
+		local Float is c: Mat4:sharedMath:cos(value: rad);
+		local Float is s: Mat4:sharedMath:sin(value: rad);
 		out:set(col: 1, row: 1, val: c);
 		out:set(col: 1, row: 2, val: s);
 		out:set(col: 2, row: 1, val: 0.0 - s);
@@ -81,9 +83,8 @@ Class is Mat4{
 	## Returns a rotation matrix around the Y axis by [rad] radians.
 	Function of Mat4 is rotateY(Float is rad){
 		local Mat4 is out: Mat4();
-		local Math is math: Math();
-		local Float is c: math:cos(value: rad);
-		local Float is s: math:sin(value: rad);
+		local Float is c: Mat4:sharedMath:cos(value: rad);
+		local Float is s: Mat4:sharedMath:sin(value: rad);
 		out:set(col: 0, row: 0, val: c);
 		out:set(col: 0, row: 2, val: 0.0 - s);
 		out:set(col: 2, row: 0, val: s);
@@ -94,9 +95,8 @@ Class is Mat4{
 	## Returns a rotation matrix around the Z axis by [rad] radians.
 	Function of Mat4 is rotateZ(Float is rad){
 		local Mat4 is out: Mat4();
-		local Math is math: Math();
-		local Float is c: math:cos(value: rad);
-		local Float is s: math:sin(value: rad);
+		local Float is c: Mat4:sharedMath:cos(value: rad);
+		local Float is s: Mat4:sharedMath:sin(value: rad);
 		out:set(col: 0, row: 0, val: c);
 		out:set(col: 0, row: 1, val: s);
 		out:set(col: 1, row: 0, val: 0.0 - s);
@@ -107,8 +107,7 @@ Class is Mat4{
 	## Returns a Vulkan-clip-space ([0, 1] depth, Y-flipped) perspective matrix.
 	Function of Mat4 is perspective(Float is fovRad, Float is aspect, Float is nearZ, Float is farZ){
 		local Mat4 is out: Mat4();
-		local Math is math: Math();
-		local Float is f: 1.0 / math:tan(value: fovRad * 0.5);
+		local Float is f: 1.0 / Mat4:sharedMath:tan(value: fovRad * 0.5);
 		out:set(col: 0, row: 0, val: f / aspect);
 		out:set(col: 1, row: 1, val: 0.0 - f);
 		out:set(col: 2, row: 2, val: farZ / (nearZ - farZ));
@@ -121,7 +120,7 @@ Class is Mat4{
 	## Packs all 16 elements as 32-bit IEEE-754 floats (64 bytes) at [dstAddr].
 	Function is packF32(Int is dstAddr){
 		times(count: 16, worker: local Function(Int is i){
-			Vulkan():packF32(dstAddr: dstAddr, byteOffset: i * 4, val: m:get(index: i));
+			Mat4:sharedVulkan:packF32(dstAddr: dstAddr, byteOffset: i * 4, val: m:get(index: i));
 		});
 	}
 }
