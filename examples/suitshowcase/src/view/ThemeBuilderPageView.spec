@@ -46,7 +46,7 @@ Class is ThemeBuilderPageView{
 	];
 
 	ShowcaseViewModel is vm: ShowcaseViewModel();
-	TextEmitter is activeTabRoute: TextEmitter(initial: 'colors');
+	TextEmitter is activeTabRoute: TextEmitter(initial: 'layout');
 	TabBar is optionTabs: TabBar();
 	SectionH is presetSection: SectionH();
 	SectionH is borderSection: SectionH();
@@ -55,11 +55,12 @@ Class is ThemeBuilderPageView{
 		minWidthPt: 340.0,
 		placeholder: 'Click Export JSON to serialize the current theme, or paste JSON and click Import JSON...'
 	);
-	SectionH is panelStyleSection: SectionH();
-	SectionH is dividerStyleSection: SectionH();
-	SectionH is buttonStyleSection: SectionH();
-	SectionH is surfFillSection: SectionH();
-	SectionH is surfBoundsSection: SectionH();
+	SelectDropdown is panelStyleDropdown: SelectDropdown();
+	SelectDropdown is dividerStyleDropdown: SelectDropdown();
+	SelectDropdown is buttonStyleDropdown: SelectDropdown();
+	SelectDropdown is surfFillDropdown: SelectDropdown();
+	SelectDropdown is surfBoundsDropdown: SelectDropdown();
+	ColorSwatchDropdown is surfColorASwatch: ColorSwatchDropdown();
 	Switch is useSurfColorBSwitch: Switch();
 	ColorSwatchDropdown is surfColorBSwatch: ColorSwatchDropdown();
 	Slider is surfCXSlider: Slider();
@@ -70,8 +71,9 @@ Class is ThemeBuilderPageView{
 	TextEmitter is surfCYLabel: TextEmitter(initial: '50%');
 	TextEmitter is surfAngLabel: TextEmitter(initial: '35 deg');
 	TextEmitter is surfBwLabel: TextEmitter(initial: '50%');
-	SectionH is btnFillSection: SectionH();
-	SectionH is btnBoundsSection: SectionH();
+	SelectDropdown is btnFillDropdown: SelectDropdown();
+	SelectDropdown is btnBoundsDropdown: SelectDropdown();
+	ColorSwatchDropdown is btnColorASwatch: ColorSwatchDropdown();
 	Switch is useBtnColorBSwitch: Switch();
 	ColorSwatchDropdown is btnColorBSwatch: ColorSwatchDropdown();
 	Slider is btnCXSlider: Slider();
@@ -202,36 +204,33 @@ Class is ThemeBuilderPageView{
 			}
 		);
 
-		:panelStyleSection: SectionH(
-			segmented: true,
+		:panelStyleDropdown: SelectDropdown(
 			options: targetBorderLabels,
 			selectedIndex: :targetStyleIndex(style: vm:activeTheme:panelBorderStyle),
-			itemMinWidthPt: 46.0,
-			onSelect: local Function(Int is idx){
+			minWidthPt: 110.0,
+			onSelect: local Function(Int is idx, String is _val){
 				if({ idx >= 0 && idx < targetBorderStyles:length() }, {
 					vm:setPanelBorderStyle(style: targetBorderStyles:get(index: idx));
 				});
 			}
 		);
 
-		:dividerStyleSection: SectionH(
-			segmented: true,
+		:dividerStyleDropdown: SelectDropdown(
 			options: targetBorderLabels,
 			selectedIndex: :targetStyleIndex(style: vm:activeTheme:dividerStyle),
-			itemMinWidthPt: 46.0,
-			onSelect: local Function(Int is idx){
+			minWidthPt: 110.0,
+			onSelect: local Function(Int is idx, String is _val){
 				if({ idx >= 0 && idx < targetBorderStyles:length() }, {
 					vm:setDividerStyle(style: targetBorderStyles:get(index: idx));
 				});
 			}
 		);
 
-		:buttonStyleSection: SectionH(
-			segmented: true,
+		:buttonStyleDropdown: SelectDropdown(
 			options: targetBorderLabels,
 			selectedIndex: :targetStyleIndex(style: vm:activeTheme:buttonBorderStyle),
-			itemMinWidthPt: 46.0,
-			onSelect: local Function(Int is idx){
+			minWidthPt: 110.0,
+			onSelect: local Function(Int is idx, String is _val){
 				if({ idx >= 0 && idx < targetBorderStyles:length() }, {
 					vm:setButtonBorderStyle(style: targetBorderStyles:get(index: idx));
 				});
@@ -275,19 +274,23 @@ Class is ThemeBuilderPageView{
 		btnAngLabel:emit(value: (vm:btnAngleDeg as String) . ' deg');
 		btnBwLabel:emit(value: (vm:btnBlendPct as String) . '%');
 
-		:surfFillSection: SectionH(
-			segmented: true,
+		:surfFillDropdown: SelectDropdown(
 			options: fillStyleLabels,
 			selectedIndex: vm:surfFillStyleIdx,
-			itemMinWidthPt: 52.0,
-			onSelect: local Function(Int is idx){ vm:setSurfFillStyleIndex(idx: idx); }
+			minWidthPt: 105.0,
+			onSelect: local Function(Int is idx, String is _val){ vm:setSurfFillStyleIndex(idx: idx); }
 		);
-		:surfBoundsSection: SectionH(
-			segmented: true,
+		:surfBoundsDropdown: SelectDropdown(
 			options: boundsLabels,
 			selectedIndex: if({ vm:surfBounds == GradientBounds:CIRCUMSCRIBE }, { 1 }, { 0 }),
-			itemMinWidthPt: 76.0,
-			onSelect: local Function(Int is idx){ vm:setSurfBounds(bounds: if({ idx == 1 }, { GradientBounds:CIRCUMSCRIBE }, { GradientBounds:INSCRIBE })); }
+			minWidthPt: 112.0,
+			onSelect: local Function(Int is idx, String is _val){ vm:setSurfBounds(bounds: if({ idx == 1 }, { GradientBounds:CIRCUMSCRIBE }, { GradientBounds:INSCRIBE })); }
+		);
+		:surfColorASwatch: ColorSwatchDropdown(
+			color: vm:colorAtSlot(slot: 0),
+			compactPicker: true,
+			tooltip: 'Primary surface gradient color (Background)',
+			onChange: local Function(Color is c){ vm:setColorSlot(slot: 0, nextCol: c); }
 		);
 		:useSurfColorBSwitch: Switch(
 			checked: vm:useSurfColorB,
@@ -299,24 +302,28 @@ Class is ThemeBuilderPageView{
 			tooltip: 'Optional second surface gradient color',
 			onChange: local Function(Color is c){ vm:setSurfColorB(col: c); }
 		);
-		:surfCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfCenterX(pct: v); });
-		:surfCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfCenterY(pct: v); });
-		:surfAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:surfAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfAngle(deg: v); });
-		:surfBwSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSurfBlend(pct: v); });
+		:surfCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterXPct, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setSurfCenterX(pct: v); });
+		:surfCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfCenterYPct, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setSurfCenterY(pct: v); });
+		:surfAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:surfAngleDeg, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setSurfAngle(deg: v); });
+		:surfBwSlider: Slider(minVal: 0, maxVal: 100, value: vm:surfBlendPct, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setSurfBlend(pct: v); });
 
-		:btnFillSection: SectionH(
-			segmented: true,
+		:btnFillDropdown: SelectDropdown(
 			options: fillStyleLabels,
 			selectedIndex: vm:btnFillStyleIdx,
-			itemMinWidthPt: 52.0,
-			onSelect: local Function(Int is idx){ vm:setBtnFillStyleIndex(idx: idx); }
+			minWidthPt: 105.0,
+			onSelect: local Function(Int is idx, String is _val){ vm:setBtnFillStyleIndex(idx: idx); }
 		);
-		:btnBoundsSection: SectionH(
-			segmented: true,
+		:btnBoundsDropdown: SelectDropdown(
 			options: boundsLabels,
 			selectedIndex: if({ vm:btnBounds == GradientBounds:CIRCUMSCRIBE }, { 1 }, { 0 }),
-			itemMinWidthPt: 76.0,
-			onSelect: local Function(Int is idx){ vm:setBtnBounds(bounds: if({ idx == 1 }, { GradientBounds:CIRCUMSCRIBE }, { GradientBounds:INSCRIBE })); }
+			minWidthPt: 112.0,
+			onSelect: local Function(Int is idx, String is _val){ vm:setBtnBounds(bounds: if({ idx == 1 }, { GradientBounds:CIRCUMSCRIBE }, { GradientBounds:INSCRIBE })); }
+		);
+		:btnColorASwatch: ColorSwatchDropdown(
+			color: vm:colorAtSlot(slot: 1),
+			compactPicker: true,
+			tooltip: 'Primary button gradient color (Surface)',
+			onChange: local Function(Color is c){ vm:setColorSlot(slot: 1, nextCol: c); }
 		);
 		:useBtnColorBSwitch: Switch(
 			checked: vm:useBtnColorB,
@@ -328,10 +335,10 @@ Class is ThemeBuilderPageView{
 			tooltip: 'Optional second button gradient color',
 			onChange: local Function(Color is c){ vm:setBtnColorB(col: c); }
 		);
-		:btnCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnCenterX(pct: v); });
-		:btnCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnCenterY(pct: v); });
-		:btnAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:btnAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnAngle(deg: v); });
-		:btnBwSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setBtnBlend(pct: v); });
+		:btnCXSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterXPct, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setBtnCenterX(pct: v); });
+		:btnCYSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnCenterYPct, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setBtnCenterY(pct: v); });
+		:btnAngSlider: Slider(minVal: 0, maxVal: 360, value: vm:btnAngleDeg, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setBtnAngle(deg: v); });
+		:btnBwSlider: Slider(minVal: 0, maxVal: 100, value: vm:btnBlendPct, minWidthPt: 105.0, onChange: local Function(Int is v){ vm:setBtnBlend(pct: v); });
 
 		:hoverBriSlider: Slider(minVal: -60, maxVal: 60, value: vm:hoverBriPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setHoverBrightness(pct: v); });
 		:hoverTintSlider: Slider(minVal: -180, maxVal: 180, value: vm:hoverTintDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setHoverTint(deg: v); });
@@ -511,56 +518,61 @@ Class is ThemeBuilderPageView{
 			child: colorGrid
 		);
 
-		local SewNode is fillsTab: Column(
+		local SewNode is fillsTab: Row(
 			gapPt: 8.0,
 			children: Array([
-				Frame(
-					title: 'Surface Fill',
-					child: Column(
-						gapPt: 6.0,
-						children: Array([
-							SectionH(children: Array([surfFillSection, surfBoundsSection])),
-							Grid(
-								columns: 3,
-								colGapPt: 10.0,
-								rowGapPt: 6.0,
+				Column(
+					gapPt: 8.0,
+					children: Array([
+						Frame(
+							title: 'Surface Fill',
+							child: Column(
+								gapPt: 6.0,
 								children: Array([
-									Label(text: 'Use Second Color'), useSurfColorBSwitch, surfColorBSwatch,
-									Label(text: 'Center X'), surfCXSlider, TextScrap(text: surfCXLabel, muted: true),
-									Label(text: 'Center Y'), surfCYSlider, TextScrap(text: surfCYLabel, muted: true),
-									Label(text: 'Linear Angle'), surfAngSlider, TextScrap(text: surfAngLabel, muted: true),
-									Label(text: 'Blend Width'), surfBwSlider, TextScrap(text: surfBwLabel, muted: true)
+									SectionH(children: Array([surfFillDropdown, surfBoundsDropdown])),
+									Grid(
+										columns: 3,
+										colGapPt: 8.0,
+										rowGapPt: 6.0,
+										children: Array([
+											Label(text: 'Colors'), SectionH(children: Array([surfColorASwatch, useSurfColorBSwitch, surfColorBSwatch])), Label(text: ''),
+											Label(text: 'Center X'), surfCXSlider, TextScrap(text: surfCXLabel, muted: true),
+											Label(text: 'Center Y'), surfCYSlider, TextScrap(text: surfCYLabel, muted: true),
+											Label(text: 'Linear Angle'), surfAngSlider, TextScrap(text: surfAngLabel, muted: true),
+											Label(text: 'Blend Width'), surfBwSlider, TextScrap(text: surfBwLabel, muted: true)
+										])
+									)
 								])
 							)
-						])
-					)
-				),
-				Frame(
-					title: 'Button Fill',
-					child: Column(
-						gapPt: 6.0,
-						children: Array([
-							SectionH(children: Array([btnFillSection, btnBoundsSection])),
-							Grid(
-								columns: 3,
-								colGapPt: 10.0,
-								rowGapPt: 6.0,
+						),
+						Frame(
+							title: 'Button Fill',
+							child: Column(
+								gapPt: 6.0,
 								children: Array([
-									Label(text: 'Use Second Color'), useBtnColorBSwitch, btnColorBSwatch,
-									Label(text: 'Center X'), btnCXSlider, TextScrap(text: btnCXLabel, muted: true),
-									Label(text: 'Center Y'), btnCYSlider, TextScrap(text: btnCYLabel, muted: true),
-									Label(text: 'Linear Angle'), btnAngSlider, TextScrap(text: btnAngLabel, muted: true),
-									Label(text: 'Blend Width'), btnBwSlider, TextScrap(text: btnBwLabel, muted: true)
+									SectionH(children: Array([btnFillDropdown, btnBoundsDropdown])),
+									Grid(
+										columns: 3,
+										colGapPt: 8.0,
+										rowGapPt: 6.0,
+										children: Array([
+											Label(text: 'Colors'), SectionH(children: Array([btnColorASwatch, useBtnColorBSwitch, btnColorBSwatch])), Label(text: ''),
+											Label(text: 'Center X'), btnCXSlider, TextScrap(text: btnCXLabel, muted: true),
+											Label(text: 'Center Y'), btnCYSlider, TextScrap(text: btnCYLabel, muted: true),
+											Label(text: 'Linear Angle'), btnAngSlider, TextScrap(text: btnAngLabel, muted: true),
+											Label(text: 'Blend Width'), btnBwSlider, TextScrap(text: btnBwLabel, muted: true)
+										])
+									)
 								])
 							)
-						])
-					)
+						)
+					])
 				),
 				Frame(
 					title: 'State Effects (Hover, Selected, Focused)',
 					child: Grid(
 						columns: 3,
-						colGapPt: 10.0,
+						colGapPt: 8.0,
 						rowGapPt: 6.0,
 						children: Array([
 							Label(text: 'Hover Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
@@ -578,7 +590,7 @@ Class is ThemeBuilderPageView{
 			])
 		);
 
-		local SewNode is bordersTab: Column(
+		local SewNode is bordersTab: Row(
 			gapPt: 8.0,
 			children: Array([
 				Frame(
@@ -586,54 +598,57 @@ Class is ThemeBuilderPageView{
 					child: Column(
 						gapPt: 6.0,
 						children: Array([
-							panelStyleSection,
 							Grid(
 								columns: 3,
-								colGapPt: 10.0,
+								colGapPt: 8.0,
 								rowGapPt: 6.0,
 								children: Array([
+									Label(text: 'Panel Style'), panelStyleDropdown, Label(text: ''),
 									Label(text: 'Panel Thickness'), panelThickSlider, TextScrap(text: panelThickLabel, muted: true),
 									Label(text: 'Panel Radius'), panelRadiusSlider, TextScrap(text: panelRadiusLabel, muted: true),
-									Label(text: 'Panel Shadow Blur'), panelShadowSlider, TextScrap(text: panelShadowLabel, muted: true),
-									Label(text: 'Panel Shadow X'), panelShadowXSlider, TextScrap(text: panelShadowXLabel, muted: true),
-									Label(text: 'Panel Shadow Y'), panelShadowYSlider, TextScrap(text: panelShadowYLabel, muted: true),
-									Label(text: 'Panel Inner Blur'), panelInnerShadowSlider, TextScrap(text: panelInnerShadowLabel, muted: true),
-									Label(text: 'Panel Inner X'), panelInnerShadowXSlider, TextScrap(text: panelInnerShadowXLabel, muted: true),
-									Label(text: 'Panel Inner Y'), panelInnerShadowYSlider, TextScrap(text: panelInnerShadowYLabel, muted: true)
+									Label(text: 'Shadow Blur'), panelShadowSlider, TextScrap(text: panelShadowLabel, muted: true),
+									Label(text: 'Shadow X'), panelShadowXSlider, TextScrap(text: panelShadowXLabel, muted: true),
+									Label(text: 'Shadow Y'), panelShadowYSlider, TextScrap(text: panelShadowYLabel, muted: true),
+									Label(text: 'Inner Blur'), panelInnerShadowSlider, TextScrap(text: panelInnerShadowLabel, muted: true),
+									Label(text: 'Inner X'), panelInnerShadowXSlider, TextScrap(text: panelInnerShadowXLabel, muted: true),
+									Label(text: 'Inner Y'), panelInnerShadowYSlider, TextScrap(text: panelInnerShadowYLabel, muted: true)
 								])
 							)
 						])
 					)
 				),
-				Frame(
-					title: 'Divider & Button Borders',
-					child: Column(
-						gapPt: 6.0,
-						children: Array([
-							SectionV(title: 'Divider Style', children: Array([dividerStyleSection])),
-							Grid(
+				Column(
+					gapPt: 8.0,
+					children: Array([
+						Frame(
+							title: 'Divider',
+							child: Grid(
 								columns: 3,
-								colGapPt: 10.0,
+								colGapPt: 8.0,
 								rowGapPt: 6.0,
 								children: Array([
-									Label(text: 'Divider Thickness'), dividerThickSlider, TextScrap(text: dividerThickLabel, muted: true)
-								])
-							),
-							SectionV(title: 'Button Border Style', children: Array([buttonStyleSection])),
-							Grid(
-								columns: 3,
-								colGapPt: 10.0,
-								rowGapPt: 6.0,
-								children: Array([
-									Label(text: 'Button Thickness'), buttonThickSlider, TextScrap(text: buttonThickLabel, muted: true),
-									Label(text: 'Button Radius'), buttonRadiusSlider, TextScrap(text: buttonRadiusLabel, muted: true),
-									Label(text: 'Button Shadow Blur'), buttonShadowSlider, TextScrap(text: buttonShadowLabel, muted: true),
-									Label(text: 'Button Shadow X'), buttonShadowXSlider, TextScrap(text: buttonShadowXLabel, muted: true),
-									Label(text: 'Button Shadow Y'), buttonShadowYSlider, TextScrap(text: buttonShadowYLabel, muted: true)
+									Label(text: 'Divider Style'), dividerStyleDropdown, Label(text: ''),
+									Label(text: 'Thickness'), dividerThickSlider, TextScrap(text: dividerThickLabel, muted: true)
 								])
 							)
-						])
-					)
+						),
+						Frame(
+							title: 'Button Border & Shadow',
+							child: Grid(
+								columns: 3,
+								colGapPt: 8.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Button Style'), buttonStyleDropdown, Label(text: ''),
+									Label(text: 'Thickness'), buttonThickSlider, TextScrap(text: buttonThickLabel, muted: true),
+									Label(text: 'Radius'), buttonRadiusSlider, TextScrap(text: buttonRadiusLabel, muted: true),
+									Label(text: 'Shadow Blur'), buttonShadowSlider, TextScrap(text: buttonShadowLabel, muted: true),
+									Label(text: 'Shadow X'), buttonShadowXSlider, TextScrap(text: buttonShadowXLabel, muted: true),
+									Label(text: 'Shadow Y'), buttonShadowYSlider, TextScrap(text: buttonShadowYLabel, muted: true)
+								])
+							)
+						)
+					])
 				)
 			])
 		);
@@ -661,13 +676,13 @@ Class is ThemeBuilderPageView{
 			])
 		);
 
-		local Array of String is tabIds: Array(['colors', 'fills', 'borders', 'layout']);
+		local Array of String is tabIds: Array(['layout', 'colors', 'fills', 'borders']);
 		:optionTabs: TabBar(
 			tabs: Array([
+				TabItemConfig(id: 'layout', label: 'Typography & Spacing', closable: false),
 				TabItemConfig(id: 'colors', label: 'Colors', closable: false),
 				TabItemConfig(id: 'fills', label: 'Fills & Effects', closable: false),
-				TabItemConfig(id: 'borders', label: 'Borders & Shadows', closable: false),
-				TabItemConfig(id: 'layout', label: 'Typography & Spacing', closable: false)
+				TabItemConfig(id: 'borders', label: 'Borders & Shadows', closable: false)
 			]),
 			activeIndex: 0,
 			showCloseButton: false,
@@ -683,10 +698,10 @@ Class is ThemeBuilderPageView{
 		local NavStack is tabContent: NavStack(
 			route: activeTabRoute,
 			routes: Array([
+				NavRoute(name: 'layout', child: layoutTab),
 				NavRoute(name: 'colors', child: colorsTab),
 				NavRoute(name: 'fills', child: fillsTab),
-				NavRoute(name: 'borders', child: bordersTab),
-				NavRoute(name: 'layout', child: layoutTab)
+				NavRoute(name: 'borders', child: bordersTab)
 			])
 		);
 
@@ -719,9 +734,9 @@ Class is ThemeBuilderPageView{
 	Function is sync(){
 		presetSection:setSelectedIndex(index: :presetIndex(p: vm:basePreset));
 		borderSection:setSelectedIndex(index: :borderIndex(style: vm:borderStyle));
-		panelStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:panelBorderStyle));
-		dividerStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:dividerStyle));
-		buttonStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:buttonBorderStyle));
+		panelStyleDropdown:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:panelBorderStyle));
+		dividerStyleDropdown:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:dividerStyle));
+		buttonStyleDropdown:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:buttonBorderStyle));
 		panelThickSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:panelBorderThicknessPt));
 		panelRadiusSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:panelCornerRadiusPt));
 		panelShadowSlider:setValue(next: vm:toTenths(pt: vm:activeTheme:panelShadowBlurPt));
@@ -750,7 +765,9 @@ Class is ThemeBuilderPageView{
 		buttonShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt)));
 		buttonShadowXLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetXPt)));
 		buttonShadowYLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetYPt)));
-		surfFillSection:setSelectedIndex(index: vm:surfFillStyleIdx);
+		surfFillDropdown:setSelectedIndex(index: vm:surfFillStyleIdx);
+		surfBoundsDropdown:setSelectedIndex(index: if({ vm:surfBounds == GradientBounds:CIRCUMSCRIBE }, { 1 }, { 0 }));
+		surfColorASwatch:setColor(next: vm:colorAtSlot(slot: 0));
 		useSurfColorBSwitch:setChecked(next: vm:useSurfColorB);
 		surfColorBSwatch:setColor(next: vm:surfColorB);
 		surfCXSlider:setValue(next: vm:surfCenterXPct);
@@ -761,7 +778,9 @@ Class is ThemeBuilderPageView{
 		surfCYLabel:emit(value: (vm:surfCenterYPct as String) . '%');
 		surfAngLabel:emit(value: (vm:surfAngleDeg as String) . ' deg');
 		surfBwLabel:emit(value: (vm:surfBlendPct as String) . '%');
-		btnFillSection:setSelectedIndex(index: vm:btnFillStyleIdx);
+		btnFillDropdown:setSelectedIndex(index: vm:btnFillStyleIdx);
+		btnBoundsDropdown:setSelectedIndex(index: if({ vm:btnBounds == GradientBounds:CIRCUMSCRIBE }, { 1 }, { 0 }));
+		btnColorASwatch:setColor(next: vm:colorAtSlot(slot: 1));
 		useBtnColorBSwitch:setChecked(next: vm:useBtnColorB);
 		btnColorBSwatch:setColor(next: vm:btnColorB);
 		btnCXSlider:setValue(next: vm:btnCenterXPct);
