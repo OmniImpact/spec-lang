@@ -160,7 +160,14 @@ Class of SewNode is Frame{
 				ctx:drawText(x: titleX, y: b:y, text: title, color: activeTheme:textMuted, pixelHeight: fpx);
 			});
 		});
-		child:paint(ctx: ctx);
+		local Int is clipTop: if({ title != '' }, { b:y + DrawContext:measureHeight(pixelHeight: :fontPx()) / 2 + bw }, { b:y + bw });
+		local Int is clipH: (b:y + b:height - bw) - clipTop;
+		local Int is clipW: b:width - bw * 2;
+		if({ clipW > 0 && clipH > 0 }, {
+			ctx:setClip(x: b:x + bw, y: clipTop, w: clipW, h: clipH);
+			child:paint(ctx: ctx);
+			ctx:clearClip();
+		});
 	}
 
 	replace Function is paintOverlay(DrawContext is ctx){

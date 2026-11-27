@@ -122,7 +122,7 @@ Class of SewNode is SectionV{
 	replace Function of Size is measure(Constraints is c){
 		local Size is s: col:measure(c: c);
 		if({ segmented }, {
-			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is linePx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 			local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
 			local Int is segCount: col:children:length() - startIdx;
 			if({ segCount > 1 && linePx > 0 }, {
@@ -139,7 +139,7 @@ Class of SewNode is SectionV{
 		layoutBounds: bounds;
 		col:arrange(bounds: bounds);
 		if({ segmented }, {
-			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is linePx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 			local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
 			local Int is count: col:children:length();
 			if({ count - startIdx > 1 && linePx > 0 }, {
@@ -156,36 +156,64 @@ Class of SewNode is SectionV{
 	}
 
 	replace Function is paint(DrawContext is ctx){
+		local Rect is b: bounds();
+		if({ b:width <= 0 || b:height <= 0 }, { return; });
+		ctx:setClip(x: b:x, y: b:y, w: b:width, h: b:height);
 		col:paint(ctx: ctx);
 		if({ segmented }, {
-			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
-			if({ linePx > 0 }, {
-				local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
-				local Int is count: col:children:length();
-				local Int is i: startIdx;
-				while({ i < count }, {
-					local SewNode is ch: col:children:get(index: i);
-					if({ !ch:isSelected() && !ch:isFocused() }, {
-						local Rect is cb: ch:bounds();
-						if({ cb:width > 0 && cb:height > 0 }, {
-							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:buttonBorder, thickness: linePx);
-						});
-					});
-					i: i + 1;
+			local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+			local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
+			local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+			local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
+			local Int is count: col:children:length();
+			if({ count > startIdx }, {
+				local Rect is firstB: col:children:get(index: startIdx):bounds();
+				local Rect is lastB: col:children:get(index: count - 1):bounds();
+				local Int is gx: firstB:x;
+				local Int is gy: firstB:y;
+				local Int is gw: firstB:width;
+				local Int is gh: (lastB:y + lastB:height) - firstB:y;
+				if({ gw > 0 && gh > 0 && btnPx > 0 }, {
+					ctx:drawStyledBox(
+						x: gx, y: gy, w: gw, h: gh,
+						bgColor: 0, borderColor: activeTheme:buttonBorder,
+						thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+					);
 				});
-				i: startIdx;
-				while({ i < count }, {
-					local SewNode is ch: col:children:get(index: i);
-					if({ ch:isSelected() || ch:isFocused() }, {
-						local Rect is cb: ch:bounds();
-						if({ cb:width > 0 && cb:height > 0 }, {
-							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:textAccent, thickness: linePx);
+				if({ divPx > 0 }, {
+					local Int is di: startIdx + 1;
+					while({ di < count }, {
+						local Rect is cb: col:children:get(index: di):bounds();
+						if({ cb:width > btnPx * 2 }, {
+							ctx:drawDivider(
+								x: cb:x + btnPx, y: cb:y, w: cb:width - btnPx * 2, h: divPx,
+								color: activeTheme:buttonBorder, thickness: divPx, style: activeTheme:dividerStyle
+							);
 						});
+						di: di + 1;
 					});
-					i: i + 1;
+				});
+				if({ btnPx > 0 }, {
+					local Int is si: startIdx;
+					while({ si < count }, {
+						local SewNode is ch: col:children:get(index: si);
+						if({ ch:isSelected() || ch:isFocused() }, {
+							local Rect is cb: ch:bounds();
+							if({ cb:width > 0 && cb:height > 0 }, {
+								local Int is segRad: if({ count - startIdx == 1 }, { radPx }, { 0 });
+								ctx:drawStyledBox(
+									x: cb:x, y: cb:y, w: cb:width, h: cb:height,
+									bgColor: 0, borderColor: activeTheme:textAccent,
+									thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
+								);
+							});
+						});
+						si: si + 1;
+					});
 				});
 			});
 		});
+		ctx:clearClip();
 	}
 
 	replace Function is paintOverlay(DrawContext is ctx){

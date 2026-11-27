@@ -126,7 +126,7 @@ Class of SewNode is SectionH{
 	replace Function of Size is measure(Constraints is c){
 		local Size is s: :rootNode():measure(c: c);
 		if({ segmented }, {
-			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is linePx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 			local Int is count: row:children:length();
 			if({ count > 1 && linePx > 0 }, {
 				local Int is overlap: (count - 1) * linePx;
@@ -142,7 +142,7 @@ Class of SewNode is SectionH{
 		layoutBounds: bounds;
 		:rootNode():arrange(bounds: bounds);
 		if({ segmented }, {
-			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+			local Int is linePx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 			local Int is count: row:children:length();
 			if({ count > 1 && linePx > 0 }, {
 				local Int is i: 1;
@@ -158,35 +158,63 @@ Class of SewNode is SectionH{
 	}
 
 	replace Function is paint(DrawContext is ctx){
+		local Rect is b: bounds();
+		if({ b:width <= 0 || b:height <= 0 }, { return; });
+		ctx:setClip(x: b:x, y: b:y, w: b:width, h: b:height);
 		:rootNode():paint(ctx: ctx);
 		if({ segmented }, {
-			local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
-			if({ linePx > 0 }, {
-				local Int is count: row:children:length();
-				local Int is i: 0;
-				while({ i < count }, {
-					local SewNode is ch: row:children:get(index: i);
-					if({ !ch:isSelected() && !ch:isFocused() }, {
-						local Rect is cb: ch:bounds();
-						if({ cb:width > 0 && cb:height > 0 }, {
-							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:buttonBorder, thickness: linePx);
-						});
-					});
-					i: i + 1;
+			local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+			local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
+			local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+			local Int is count: row:children:length();
+			if({ count > 0 }, {
+				local Rect is firstB: row:children:get(index: 0):bounds();
+				local Rect is lastB: row:children:get(index: count - 1):bounds();
+				local Int is gx: firstB:x;
+				local Int is gy: firstB:y;
+				local Int is gw: (lastB:x + lastB:width) - firstB:x;
+				local Int is gh: firstB:height;
+				if({ gw > 0 && gh > 0 && btnPx > 0 }, {
+					ctx:drawStyledBox(
+						x: gx, y: gy, w: gw, h: gh,
+						bgColor: 0, borderColor: activeTheme:buttonBorder,
+						thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+					);
 				});
-				i: 0;
-				while({ i < count }, {
-					local SewNode is ch: row:children:get(index: i);
-					if({ ch:isSelected() || ch:isFocused() }, {
-						local Rect is cb: ch:bounds();
-						if({ cb:width > 0 && cb:height > 0 }, {
-							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:textAccent, thickness: linePx);
+				if({ divPx > 0 }, {
+					local Int is di: 1;
+					while({ di < count }, {
+						local Rect is cb: row:children:get(index: di):bounds();
+						if({ cb:height > btnPx * 2 }, {
+							ctx:drawDivider(
+								x: cb:x, y: cb:y + btnPx, w: divPx, h: cb:height - btnPx * 2,
+								color: activeTheme:buttonBorder, thickness: divPx, style: activeTheme:dividerStyle
+							);
 						});
+						di: di + 1;
 					});
-					i: i + 1;
+				});
+				if({ btnPx > 0 }, {
+					local Int is si: 0;
+					while({ si < count }, {
+						local SewNode is ch: row:children:get(index: si);
+						if({ ch:isSelected() || ch:isFocused() }, {
+							local Rect is cb: ch:bounds();
+							if({ cb:width > 0 && cb:height > 0 }, {
+								local Int is segRad: if({ count == 1 }, { radPx }, { 0 });
+								ctx:drawStyledBox(
+									x: cb:x, y: cb:y, w: cb:width, h: cb:height,
+									bgColor: 0, borderColor: activeTheme:textAccent,
+									thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
+								);
+							});
+						});
+						si: si + 1;
+					});
 				});
 			});
 		});
+		ctx:clearClip();
 	}
 
 	replace Function is paintOverlay(DrawContext is ctx){

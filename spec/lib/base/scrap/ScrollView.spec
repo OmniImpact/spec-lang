@@ -316,11 +316,21 @@ Class of SewNode is ScrollView{
 
 		## Vertical scrollbar track & thumb on specified side ('right' default or 'left')
 		if({ bw > 2 }, {
-			local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
+			local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
+			local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+			local Int is btnRad: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+			local Int is shBlur: activeScale:px(pt: activeTheme:buttonShadowBlurPt);
+			local Int is shOffX: activeScale:px(pt: activeTheme:buttonShadowOffsetXPt);
+			local Int is shOffY: activeScale:px(pt: activeTheme:buttonShadowOffsetYPt);
+			local Int is shCol: if({ shBlur > 0 || shOffX != 0 || shOffY != 0 }, { 1426063360 }, { 0 });
+
 			local Int is sx: if({ scrollbarSide == DockSide:LEFT }, { b:x }, { b:x + vw });
+			ctx:setClip(x: sx, y: b:y, w: bw, h: vh);
 			ctx:fillRect(x: sx, y: b:y, w: bw, h: vh, color: activeTheme:menuBg);
-			local Int is borderX: if({ scrollbarSide == DockSide:LEFT }, { sx + bw - linePx }, { sx });
-			ctx:fillRect(x: borderX, y: b:y, w: linePx, h: vh, color: activeTheme:toolbarBorder);
+			if({ divPx > 0 }, {
+				local Int is borderX: if({ scrollbarSide == DockSide:LEFT }, { sx + bw - divPx }, { sx });
+				ctx:drawDivider(x: borderX, y: b:y, w: divPx, h: vh, color: activeTheme:toolbarBorder, thickness: divPx, style: activeTheme:dividerStyle);
+			});
 			if({ contentH > vh && vh > 0 }, {
 				local Int is thumbH: (vh * vh) / contentH;
 				if({ thumbH < activeScale:px(pt: 22.0) }, { thumbH: activeScale:px(pt: 22.0); });
@@ -328,21 +338,48 @@ Class of SewNode is ScrollView{
 				local Int is maxScroll: contentH - vh;
 				local Int is trackRange: vh - thumbH;
 				local Int is thumbY: b:y + if({ maxScroll > 0 }, { (scrollY * trackRange) / maxScroll }, { 0 });
-				ctx:fillRect(x: sx + 2, y: thumbY + 1, w: bw - 4, h: thumbH - 2, color: activeTheme:activeBg);
+				local Int is tx: if({ scrollbarSide == DockSide:LEFT }, { sx + 1 }, { sx + divPx + 1 });
+				local Int is tw: bw - divPx - 2;
+				if({ tw > 2 && thumbH > 2 }, {
+					ctx:setClip(x: tx, y: b:y, w: tw, h: vh);
+					ctx:drawStyledBox(
+						x: tx, y: thumbY + 1, w: tw, h: thumbH - 2,
+						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorder,
+						thickness: btnPx, radius: btnRad, style: activeTheme:buttonBorderStyle,
+						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
+					);
+					ctx:clearClip();
+				});
 			});
+			ctx:clearClip();
 
 			## Horizontal scrollbar track & thumb along bottom when content overflows horizontally
 			if({ contentW > vw && vh < b:height && vw > 0 }, {
 				local Int is hy: b:y + vh;
+				ctx:setClip(x: cx, y: hy, w: vw, h: bw);
 				ctx:fillRect(x: cx, y: hy, w: vw, h: bw, color: activeTheme:menuBg);
-				ctx:fillRect(x: cx, y: hy, w: vw, h: linePx, color: activeTheme:toolbarBorder);
+				if({ divPx > 0 }, {
+					ctx:drawDivider(x: cx, y: hy, w: vw, h: divPx, color: activeTheme:toolbarBorder, thickness: divPx, style: activeTheme:dividerStyle);
+				});
 				local Int is thumbW: (vw * vw) / contentW;
 				if({ thumbW < activeScale:px(pt: 22.0) }, { thumbW: activeScale:px(pt: 22.0); });
 				if({ thumbW > vw }, { thumbW: vw; });
 				local Int is maxScrollX: contentW - vw;
 				local Int is trackRangeX: vw - thumbW;
 				local Int is thumbX: cx + if({ maxScrollX > 0 }, { (scrollX * trackRangeX) / maxScrollX }, { 0 });
-				ctx:fillRect(x: thumbX + 1, y: hy + 2, w: thumbW - 2, h: bw - 4, color: activeTheme:activeBg);
+				local Int is ty: hy + divPx + 1;
+				local Int is th: bw - divPx - 2;
+				if({ th > 2 && thumbW > 2 }, {
+					ctx:setClip(x: cx, y: ty, w: vw, h: th);
+					ctx:drawStyledBox(
+						x: thumbX + 1, y: ty, w: thumbW - 2, h: th,
+						bgColor: activeTheme:activeBg, borderColor: activeTheme:buttonBorder,
+						thickness: btnPx, radius: btnRad, style: activeTheme:buttonBorderStyle,
+						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
+					);
+					ctx:clearClip();
+				});
+				ctx:clearClip();
 				ctx:fillRect(x: sx, y: hy, w: bw, h: bw, color: activeTheme:toolbarBg);
 			});
 		});
