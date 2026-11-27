@@ -140,6 +140,10 @@ Class is ShowcaseView{
 		vm:bindAlphaApply(onAlphaApply: local Function(Int is pct){
 			container:setWindowAlphaPct(pct: pct);
 		});
+		vm:bindClipboard(
+			onWrite: local Function(String is t){ container:setClipboard(text: t); },
+			onRead: local Function of String(){ return container:getClipboard(); }
+		);
 		vm:bindRefresh(onRefresh: local Function(){
 			sidebar:setSelectedIndex(index: :routeIndex(routeName: vm:selectedRoute:current()));
 			themePage:sync();

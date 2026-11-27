@@ -383,7 +383,6 @@ Class of SewNode is ToolkitContainer{
 			return contextMenu:handlePointerClick(x: x, y: y, viewW: loopW, viewH: loopH);
 		});
 		if({ hasBody && !useVulkan && bodyPanel:onOverlayPointerClickMod(x: x, y: y, mods: mods) }, {
-			:lastClickInOverlay: true;
 			return true;
 		});
 		if({ hasBody && !useVulkan }, {

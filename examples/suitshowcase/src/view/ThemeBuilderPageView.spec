@@ -8,6 +8,7 @@ Class is ThemeBuilderPageView{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'struct', Array],
+		['base', 'signal', BoolEmitter],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
 		['base', 'sew', Row],
@@ -27,14 +28,15 @@ Class is ThemeBuilderPageView{
 		['base', 'scrap', NumberInput],
 		['base', 'scrap', SelectDropdown],
 		['base', 'scrap', Popover],
+		['base', 'scrap', ScrollView],
 		['base', 'scrap', ColorSwatchDropdown],
 		['base', 'scrap', TextInput],
-		['base', 'scrap', TextArea],
 		['base', 'scrap', DecoratedTextInput],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', SectionH],
 		['base', 'scrap', 'tab', TabBar],
 		['base', 'scrap', 'tab', TabItemConfig],
+		['base', 'scrap', 'text', CodeEditorView],
 		['base', 'scrap', 'text', TextScrap],
 		['base', 'fabric', Color],
 		['base', 'fabric', TextStyle],
@@ -50,11 +52,7 @@ Class is ThemeBuilderPageView{
 	TabBar is optionTabs: TabBar();
 	SectionH is presetSection: SectionH();
 	SectionH is borderSection: SectionH();
-	TextArea is themeJsonArea: TextArea(
-		minLines: 8,
-		minWidthPt: 340.0,
-		placeholder: 'Click Export JSON to serialize the current theme, or paste JSON and click Import JSON...'
-	);
+	TextEmitter is themeJsonText: TextEmitter(initial: '');
 	SelectDropdown is panelStyleDropdown: SelectDropdown();
 	SelectDropdown is dividerStyleDropdown: SelectDropdown();
 	SelectDropdown is buttonStyleDropdown: SelectDropdown();
@@ -439,6 +437,23 @@ Class is ThemeBuilderPageView{
 			children: metricCells
 		);
 
+		local CodeEditorView is themeJsonEditor: CodeEditorView(
+			text: themeJsonText,
+			filePath: TextEmitter(initial: 'theme.json'),
+			wrap: BoolEmitter(initial: true),
+			lineNumbers: BoolEmitter(initial: false),
+			monospace: BoolEmitter(initial: true),
+			onTextChange: local Function(String is next){
+				themeJsonText:emit(value: next);
+			},
+			onClipboardWrite: local Function(String is clip){
+				vm:writeClipboard(text: clip);
+			},
+			onClipboardRead: local Function of String(){
+				return vm:readClipboard();
+			}
+		);
+
 		local Popover is jsonPopover: Popover(
 			anchor: ScrapButton(
 				label: 'JSON Import / Export',
@@ -456,19 +471,53 @@ Class is ThemeBuilderPageView{
 									label: 'Export JSON',
 									onClick: local Function(){
 										local String is outJson: vm:activeTheme:toJson();
-										themeJsonArea:setText(next: outJson);
+										themeJsonText:emit(value: outJson);
 										vm:statusText:emit(value: 'Exported theme JSON (' . (outJson:length() as String) . ' bytes)');
 									}
 								),
 								ScrapButton(
 									label: 'Import JSON',
 									onClick: local Function(){
-										vm:importThemeJson(json: themeJsonArea:text);
+										vm:importThemeJson(json: themeJsonText:current());
+									}
+								),
+								ScrapButton(
+									label: 'Copy',
+									tooltip: 'Copy selected JSON (or full theme JSON) to clipboard',
+									onClick: local Function(){
+										local String is copied: themeJsonEditor:copySelection();
+										if({ copied != '' }, {
+											vm:statusText:emit(value: 'Copied selection (' . (copied:length() as String) . ' bytes)');
+											return;
+										});
+										local String is cur: themeJsonText:current();
+										if({ cur == '' }, {
+											cur: vm:activeTheme:toJson();
+											themeJsonText:emit(value: cur);
+										});
+										vm:writeClipboard(text: cur);
+										vm:statusText:emit(value: 'Copied theme JSON (' . (cur:length() as String) . ' bytes)');
+									}
+								),
+								ScrapButton(
+									label: 'Paste',
+									tooltip: 'Paste clipboard JSON into the editor',
+									onClick: local Function(){
+										local String is clip: vm:readClipboard();
+										if({ clip == '' }, {
+											vm:statusText:emit(value: 'Clipboard is empty');
+											return;
+										});
+										themeJsonText:emit(value: clip);
+										vm:statusText:emit(value: 'Pasted JSON (' . (clip:length() as String) . ' bytes)');
 									}
 								)
 							])
 						),
-						themeJsonArea
+						Frame(
+							padPt: 0.0,
+							child: ScrollView(heightPt: 180.0, child: themeJsonEditor)
+						)
 					])
 				)
 			)

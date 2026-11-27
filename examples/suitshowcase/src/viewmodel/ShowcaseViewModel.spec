@@ -67,6 +67,8 @@ Class is ShowcaseViewModel{
 
 	Function is themeApplyHandler: local Function(Theme is _t){};
 	Function is alphaApplyHandler: local Function(Int is _pct){};
+	Function is clipboardWriteHandler: local Function(String is _text){};
+	Function of String is clipboardReadHandler: local Function of String(){ '' };
 	Array of Function is refreshListeners: Array();
 
 	replace Function is init(){
@@ -82,6 +84,21 @@ Class is ShowcaseViewModel{
 
 	Function is bindAlphaApply(Function is onAlphaApply){
 		:alphaApplyHandler: onAlphaApply;
+	}
+
+	Function is bindClipboard(Function is onWrite, Function of String is onRead){
+		:clipboardWriteHandler: onWrite;
+		:clipboardReadHandler: onRead;
+	}
+
+	Function is writeClipboard(String is text){
+		local Function is cb: clipboardWriteHandler;
+		cb(text);
+	}
+
+	Function of String is readClipboard(){
+		local Function of String is cb: clipboardReadHandler;
+		return cb();
 	}
 
 	Function is setWindowAlphaPct(Int is pct){

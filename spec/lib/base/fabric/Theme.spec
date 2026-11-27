@@ -559,6 +559,7 @@ Class is Theme{
 	Function is setSurfaceFill(FillStyle is fill){
 		:customSurfaceFill: true;
 		:surfaceFill: fill;
+		:deriveColors();
 	}
 
 	Function is setButtonFill(FillStyle is fill){
@@ -738,8 +739,14 @@ Class is Theme{
 		local Boolean is light: background:isLight();
 		windowBg: background:toArgb();
 		surfaceBg: surface:toArgb();
-		toolbarBg: surface:toArgb();
-		tabBarBg: if({ light }, { surface:darken(amount: 0.07):toArgb() }, { background:mix(other: surface, t: 0.45):toArgb() });
+		local Color is surfBase: if({ customSurfaceFill && surfaceFill:mode != FillMode:SOLID }, {
+			surfaceFill:colorA:mix(other: surfaceFill:colorB, t: 0.5)
+		}, {
+			surface
+		});
+		local Int is synthBarBg: surfBase:mix(other: primary, t: 0.30):toArgb();
+		toolbarBg: synthBarBg;
+		tabBarBg: synthBarBg;
 		toolbarBorder: if({ light }, { detail:toArgb() }, { detail:mix(other: surface, t: 0.25):toArgb() });
 		menuBg: if({ light }, { background:mix(other: surface, t: 0.65):toArgb() }, { surface:lighten(amount: 0.04):toArgb() });
 		menuBorder: if({ light }, { surface:darken(amount: 0.23):toArgb() }, { highlight:lighten(amount: 0.08):toArgb() });

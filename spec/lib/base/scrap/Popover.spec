@@ -144,6 +144,23 @@ Class of SewNode is Popover{
 		content:bindDirty(cb: cb);
 	}
 
+	replace Function is collectFocusables(Array of SewNode is out){
+		anchor:collectFocusables(out: out);
+		if({ open }, {
+			content:collectFocusables(out: out);
+		});
+	}
+
+	replace Function of Boolean is onScroll(Int is deltaY){
+		if({ open && content:onScroll(deltaY: deltaY) }, { return true; });
+		return anchor:onScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onScrollX(Int is deltaX){
+		if({ open && content:onScrollX(deltaX: deltaX) }, { return true; });
+		return anchor:onScrollX(deltaX: deltaX);
+	}
+
 	replace Function of Size is measure(Constraints is c){
 		desiredSize: anchor:measure(c: c);
 		return desiredSize;
