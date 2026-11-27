@@ -1163,7 +1163,7 @@ static bool _spec_ensure_shm_buffer(SpecWaylandWindow* w, int width, int height)
         return false;
     }
     unlink(tmpl);
-    if (ftruncate(fd, (off_t)size) < 0) {
+    if (ftruncate(fd, (off_t)size) < 0 || posix_fallocate(fd, 0, (off_t)size) != 0) {
         close(fd);
         w->buffer = old_buf; w->shm_pool = old_pool; w->shm_data = old_data; w->shm_size = old_size; w->shm_fd = old_fd;
         return false;
@@ -1178,14 +1178,16 @@ static bool _spec_ensure_shm_buffer(SpecWaylandWindow* w, int width, int height)
     uint32_t* px = (uint32_t*)ptr;
     size_t count = (size_t)width * (size_t)height;
     uint32_t fill = 0xFF181C24u;
-    if (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0) {
+    bool has_old_pixels = (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0 &&
+        old_size >= (size_t)old_h * (size_t)old_w * 4);
+    if (has_old_pixels) {
         const uint32_t* opx = (const uint32_t*)old_data;
         fill = opx[(size_t)(old_h - 1) * (size_t)old_w + (size_t)(old_w - 1)];
     }
     for (size_t i = 0; i < count; i++) {
         px[i] = fill;
     }
-    if (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0) {
+    if (has_old_pixels) {
         const uint32_t* opx = (const uint32_t*)old_data;
         int copy_w = old_w < width ? old_w : width;
         int copy_h = old_h < height ? old_h : height;

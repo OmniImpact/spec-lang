@@ -141,6 +141,7 @@ Class of MultiChildNode is Flow{
 			effBounded: true;
 			if({ !mainBounded || maxLinePx < availMain }, { effAvailMain: maxLinePx; });
 		});
+		if({ effBounded && effAvailMain < 1 }, { effAvailMain: 1; });
 
 		local Int is itemMaxMain: if({ horizontal }, { baseC:maxW }, { baseC:maxH });
 		if({ maxItemPx > 0 }, {
