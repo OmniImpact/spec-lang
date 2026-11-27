@@ -20,6 +20,10 @@ Class of SpecUnitTest is TestFabricTheme{
 
 	Function is testThemeBorderShadowPreservationAndJsonRoundTrip(){
 		local Theme is t: Theme:forPreset(preset: ThemePreset:DARK);
+		Assert:areEqualString('#4C4C4C', t:detail:toHex());
+		Assert:areEqualString('#828282', t:highlight:toHex());
+		Assert:areEqualString('#989898', t:secondary:toHex());
+		Assert:areEqualString('#555555', t:accent:toHex());
 		t:setPanelShadowBlurPt(pt: 6.0);
 		t:setPanelInnerShadowBlurPt(pt: 4.0);
 		t:setPanelInnerShadowOffsetXPt(pt: 1.5);
