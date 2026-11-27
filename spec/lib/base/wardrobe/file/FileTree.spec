@@ -225,7 +225,7 @@ Class of SewNode is FileTree{
 
 		local Int is fpx: :headerFontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is padX: activeScale:px(pt: 10.0);
+		local Int is padX: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is chevSz: activeScale:px(pt: 11.0);
 		if({ chevSz < 9 }, { chevSz: 9; });
 		ctx:setClip(x: b:x, y: b:y, w: b:width, h: hh);

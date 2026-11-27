@@ -178,7 +178,7 @@ Class is SettingsViewModel{
 	}
 
 	Function is resetBaseTextPt(){
-		:setBaseTextPt(nextVal: 11.0);
+		:setBaseTextPt(nextVal: 10.0);
 	}
 
 	Function is resetZoomPct(){
@@ -188,7 +188,7 @@ Class is SettingsViewModel{
 	Function is resetAppearance(){
 		model:themePreset: ThemePreset:LIGHT;
 		model:docTextDeltaPt: 0.0;
-		model:baseTextPt: 11.0;
+		model:baseTextPt: 10.0;
 		model:uiZoomPct: 100;
 		:notifyRefresh();
 		local Theme is nextTheme: :currentTheme();

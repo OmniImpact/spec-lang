@@ -112,8 +112,8 @@ Class of SewNode is TreeView{
 	}
 
 	local Function of Int is rowHeightPx(){
-		local Int is h: activeScale:px(pt: 24.0);
-		return if({ h < 18 }, { 18 }, { h });
+		local Int is h: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: 15.0) + activeTheme:paddingPt);
+		return if({ h < 14 }, { 14 }, { h });
 	}
 
 	local Function of Int is fontPx(){
@@ -122,15 +122,16 @@ Class of SewNode is TreeView{
 	}
 
 	local Function of Int is indentPx(){
-		local Int is ind: activeScale:px(pt: 16.0);
-		return if({ ind < 14 }, { 14 }, { ind });
+		local Int is ind: activeScale:px(pt: 12.0);
+		return if({ ind < 10 }, { 10 }, { ind });
 	}
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is rowH: :rowHeightPx();
 		local Int is fpx: :fontPx();
 		local Int is ind: :indentPx();
-		local Int is padX: activeScale:px(pt: 6.0);
+		local Int is padX: activeScale:px(pt: activeTheme:paddingSmallPt);
+		if({ padX < 2 }, { padX: 2; });
 		local Int is maxW: c:minW;
 		local Int is i: 0;
 		while({ i < flatNodes:length() }, {
@@ -160,7 +161,8 @@ Class of SewNode is TreeView{
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is indentPx: :indentPx();
-		local Int is padX: activeScale:px(pt: 6.0);
+		local Int is padX: activeScale:px(pt: activeTheme:paddingSmallPt);
+		if({ padX < 2 }, { padX: 2; });
 		local Int is boxSz: activeScale:px(pt: 9.0);
 		if({ boxSz < 9 }, { boxSz: 9; });
 		if({ (boxSz & 1) == 0 }, { boxSz: boxSz + 1; });

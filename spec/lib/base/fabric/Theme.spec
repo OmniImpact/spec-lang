@@ -74,7 +74,7 @@ Class is Theme{
 	Float is lineThicknessPt: 1.0;
 	String is borderStyle: 'solid';
 	Float is uiScaleFactor: 1.0;
-	Float is baseTextPt: 11.0;
+	Float is baseTextPt: 10.0;
 
 	replace Function is init(String is preset: 'dark'){
 		:applyPreset(preset: Theme:presetFromString(name: preset));
@@ -107,7 +107,7 @@ Class is Theme{
 		);
 	}
 
-	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 11.0){
+	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 10.0){
 		local Theme is t: Theme();
 		t:setBaseTextPt(pt: baseTextPt);
 		t:applyPreset(preset: preset);
