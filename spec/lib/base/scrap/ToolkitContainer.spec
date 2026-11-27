@@ -123,6 +123,7 @@ Class of SewNode is ToolkitContainer{
 		:bodyPanel: body;
 		:vulkanBody: vulkanSurface;
 		:bottomBar: bottomBar;
+		if({ hasBottomBar }, { :bottomBar:borderSide: DockSide:TOP; });
 		:dialog: dialog;
 		:fileDialog: fileDialog;
 		:contextMenu: contextMenu;
