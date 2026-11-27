@@ -9,6 +9,8 @@ Class is DrawContext{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', Font],
+		['base', 'sys', 'thread', ThreadScope],
+		['base', 'core', SpecError],
 		['base', 'math', as Math()],
 		['base', 'struct', Array],
 		['base', 'suit', SuitCanvas],
@@ -311,15 +313,37 @@ Class is DrawContext{
 		});
 	}
 
-	## Fills a rounded rectangle using a [FillStyle] (solid, linear, or radial gradient + color effects).
-	Function is fillRoundRectStyled(Int is x, Int is y, Int is w, Int is h, Int is radius, FillStyle is fill){
-		if({ w <= 0 || h <= 0 }, { return; });
-		if({ fill:isSolid() }, {
-			:fillRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: fill:applyEffects(c: fill:colorA):toArgb());
+	local Function is blendDirect(Int is pixelsPtr, Int is strideW, Int is px, Int is py, Int is cX0, Int is cY0, Int is cX1, Int is cY1, Int is srcR, Int is srcG, Int is srcB, Int is srcA){
+		if({ srcA <= 0 || px < cX0 || px >= cX1 || py < cY0 || py >= cY1 }, { return; });
+		local Int is off: (py * strideW + px) * 4;
+		if({ srcA >= 255 }, {
+			Mem:storeI32(ptr: pixelsPtr, byteOffset: off, val: (255 << 24) | (srcR << 16) | (srcG << 8) | srcB);
 			return;
 		});
-		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
-		local Int is r: if({ radius > maxR }, { maxR }, { if({ radius < 0 }, { 0 }, { radius }) });
+		local Int is dst: Mem:loadI32(ptr: pixelsPtr, byteOffset: off);
+		local Int is invA: 255 - srcA;
+		local Int is outR: (srcR * srcA + ((dst >> 16) & 255) * invA) / 255;
+		local Int is outG: (srcG * srcA + ((dst >> 8) & 255) * invA) / 255;
+		local Int is outB: (srcB * srcA + (dst & 255) * invA) / 255;
+		Mem:storeI32(ptr: pixelsPtr, byteOffset: off, val: (255 << 24) | (outR << 16) | (outG << 8) | outB);
+	}
+
+	local Function is fillStyledRows(
+		Int is pixelsPtr,
+		Int is strideW,
+		Int is x,
+		Int is y,
+		Int is w,
+		Int is h,
+		Int is yStart,
+		Int is yEnd,
+		Int is cX0,
+		Int is cY0,
+		Int is cX1,
+		Int is cY1,
+		Int is r,
+		FillStyle is fill
+	){
 		local Float is halfW: (w as Float) * 0.5;
 		local Float is halfH: (h as Float) * 0.5;
 		local Float is cx: (x as Float) + halfW;
@@ -327,12 +351,31 @@ Class is DrawContext{
 		local Float is rf: r as Float;
 		local Float is wf: w as Float;
 		local Float is hf: h as Float;
+		local Boolean is isRadial: fill:mode == 'radial';
+		local Float is bw: if({ fill:blendWidth < 0.05 }, { 0.05 }, { fill:fill:blendWidth });
+		local Float is rMax: if({ bw * 0.5 < 0.05 }, { 0.05 }, { bw * 0.5 });
+		local Float is rad: (fill:angleDeg * pi()) / 180.0;
+		local Float is ux: cos(value: rad);
+		local Float is uy: sin(value: rad);
+		local Float is fcx: fill:centerX;
+		local Float is fcy: fill:centerY;
+		local Boolean is refl: fill:reflected;
+		local Boolean is fastFx: fill:tintShiftDeg == 0.0 && fill:saturationShift == 0.0;
+		local Int is aR: fill:colorA:red();
+		local Int is aG: fill:colorA:green();
+		local Int is aB: fill:colorA:blue();
+		local Int is aA: fill:colorA:alpha();
+		local Int is bR: fill:colorB:red();
+		local Int is bG: fill:colorB:green();
+		local Int is bB: fill:colorB:blue();
+		local Int is bA: fill:colorB:alpha();
+		local Float is bri: fill:brightness;
 
-		local Int is py: y;
-		while({ py < y + h }, {
+		local Int is py: yStart;
+		while({ py < yEnd }, {
 			local Float is v: ((py - y) as Float + 0.5) / hf;
-			local Int is px: x;
-			while({ px < x + w }, {
+			local Int is px: cX0;
+			while({ px < cX1 }, {
 				local Float is cov: 1.0;
 				if({ r > 0 }, {
 					local Float is sd: :roundBoxSd(px: (px as Float) + 0.5, py: (py as Float) + 0.5, cx: cx, cy: cy, halfW: halfW, halfH: halfH, r: rf);
@@ -340,18 +383,98 @@ Class is DrawContext{
 				});
 				if({ cov > 0.0 }, {
 					local Float is u: ((px - x) as Float + 0.5) / wf;
-					local Color is c: fill:sampleAt(u: u, v: v);
-					local Int is baseA: c:alpha();
-					local Int is ab: (((baseA as Float) * cov) + 0.5) as Int;
-					if({ ab > 0 }, {
-						local Int is col: if({ ab >= baseA }, { c:toArgb() }, { c:withAlphaByte(a: ab):toArgb() });
-						:fillRect(x: px, y: py, w: 1, h: 1, color: col);
+					local Float is t: 0.0;
+					if({ isRadial }, {
+						local Float is dx: u - fcx;
+						local Float is dy: v - fcy;
+						local Float is dist: sqrt(value: dx * dx + dy * dy);
+						t: if({ refl }, { :clamp01(v: 1.0 - dist / rMax) }, { :clamp01(v: dist / rMax) });
+					}, {
+						local Float is proj: (u - fcx) * ux + (v - fcy) * uy;
+						if({ refl }, {
+							local Float is absP: if({ proj < 0.0 }, { 0.0 - proj }, { proj });
+							t: :clamp01(v: 1.0 - absP / (bw * 0.5));
+						}, {
+							t: :clamp01(v: 0.5 + proj / bw);
+						});
+					});
+					if({ fastFx }, {
+						local Int is mr: (aR as Float + ((bR - aR) as Float) * t + 0.5) as Int;
+						local Int is mg: (aG as Float + ((bG - aG) as Float) * t + 0.5) as Int;
+						local Int is mb: (aB as Float + ((bB - aB) as Float) * t + 0.5) as Int;
+						local Int is ma: (aA as Float + ((bA - aA) as Float) * t + 0.5) as Int;
+						if({ bri > 0.0 }, {
+							local Float is amt: if({ bri > 1.0 }, { 1.0 }, { bri });
+							mr: mr + (((255 - mr) as Float) * amt + 0.5) as Int;
+							mg: mg + (((255 - mg) as Float) * amt + 0.5) as Int;
+							mb: mb + (((255 - mb) as Float) * amt + 0.5) as Int;
+						}, {
+						if({ bri < 0.0 }, {
+							local Float is amt: if({ bri < -1.0 }, { 1.0 }, { 0.0 - bri });
+							local Float is keep: 1.0 - amt;
+							mr: ((mr as Float) * keep + 0.5) as Int;
+							mg: ((mg as Float) * keep + 0.5) as Int;
+							mb: ((mb as Float) * keep + 0.5) as Int;
+						}); });
+						local Int is ab: (((ma as Float) * cov) + 0.5) as Int;
+						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: px, py: py, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: mr, srcG: mg, srcB: mb, srcA: ab);
+					}, {
+						local Color is c: fill:sampleAt(u: u, v: v);
+						local Int is ab: (((c:alpha() as Float) * cov) + 0.5) as Int;
+						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: px, py: py, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: c:red(), srcG: c:green(), srcB: c:blue(), srcA: ab);
 					});
 				});
 				px: px + 1;
 			});
 			py: py + 1;
 		});
+	}
+
+	## Fills a rounded rectangle using a [FillStyle] (solid, linear, or radial gradient + color effects).
+	Function is fillRoundRectStyled(Int is x, Int is y, Int is w, Int is h, Int is radius, FillStyle is fill){
+		if({ w <= 0 || h <= 0 }, { return; });
+		if({ fill:isSolid() }, {
+			:fillRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: fill:applyEffects(c: fill:colorA):toArgb());
+			return;
+		});
+		local Int is pixelsPtr: canvas:pixelsAddr();
+		if({ pixelsPtr == 0 }, { return; });
+		local Int is strideW: canvas:width;
+		local Int is cX0: if({ x < 0 }, { 0 }, { x });
+		local Int is cY0: if({ y < 0 }, { 0 }, { y });
+		local Int is cX1: if({ x + w > strideW }, { strideW }, { x + w });
+		local Int is cY1: if({ y + h > canvas:height }, { canvas:height }, { y + h });
+		if({ hasClip }, {
+			if({ cX0 < clipX }, { cX0: clipX; });
+			if({ cY0 < clipY }, { cY0: clipY; });
+			if({ cX1 > clipX + clipW }, { cX1: clipX + clipW; });
+			if({ cY1 > clipY + clipH }, { cY1: clipY + clipH; });
+		});
+		if({ cX1 <= cX0 || cY1 <= cY0 }, { return; });
+		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
+		local Int is r: if({ radius > maxR }, { maxR }, { if({ radius < 0 }, { 0 }, { radius }) });
+
+		local Int is spanH: cY1 - cY0;
+		local Int is area: (cX1 - cX0) * spanH;
+		if({ area >= 16384 && spanH >= 16 }, {
+			local Int is band: spanH / 4;
+			local Int is y0: cY0;
+			local Int is y1: cY0 + band;
+			local Int is y2: cY0 + band * 2;
+			local Int is y3: cY0 + band * 3;
+			local Int is y4: cY1;
+			ThreadScope:open(
+				onError: local Function of Boolean(SpecError is _err){ return false; },
+				body: local Function(ThreadScope is scope){
+					scope:spawn(task: local Function(){ :fillStyledRows(pixelsPtr: pixelsPtr, strideW: strideW, x: x, y: y, w: w, h: h, yStart: y0, yEnd: y1, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, r: r, fill: fill); });
+					scope:spawn(task: local Function(){ :fillStyledRows(pixelsPtr: pixelsPtr, strideW: strideW, x: x, y: y, w: w, h: h, yStart: y1, yEnd: y2, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, r: r, fill: fill); });
+					scope:spawn(task: local Function(){ :fillStyledRows(pixelsPtr: pixelsPtr, strideW: strideW, x: x, y: y, w: w, h: h, yStart: y2, yEnd: y3, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, r: r, fill: fill); });
+					scope:spawn(task: local Function(){ :fillStyledRows(pixelsPtr: pixelsPtr, strideW: strideW, x: x, y: y, w: w, h: h, yStart: y3, yEnd: y4, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, r: r, fill: fill); });
+				}
+			);
+			return;
+		});
+		:fillStyledRows(pixelsPtr: pixelsPtr, strideW: strideW, x: x, y: y, w: w, h: h, yStart: cY0, yEnd: cY1, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, r: r, fill: fill);
 	}
 
 	## Strokes a rounded rectangle with anti-aliased corners, optionally using separate [topLeftColor] and [botRightColor].
@@ -461,70 +584,152 @@ Class is DrawContext{
 		:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: color, botRightColor: color, thickness: thickness);
 	}
 
-	## Draws a soft drop shadow for a rounded rectangle with offset and blur radius.
+	## Draws a soft drop shadow for a rounded rectangle with offset and blur radius (9-slice + 4-way symmetric corner SDF).
 	Function is drawShadow(Int is x, Int is y, Int is w, Int is h, Int is radius: 0, Int is offsetX: 0, Int is offsetY: 4, Int is blurRadius: 8, Int is color: 1426063360){
-		if({ w <= 0 || h <= 0 }, { return; });
+		if({ w <= 0 || h <= 0 || color == 0 }, { return; });
 		local Int is sx: x + offsetX;
 		local Int is sy: y + offsetY;
 		if({ blurRadius <= 0 }, {
 			:fillRoundRect(x: sx, y: sy, w: w, h: h, radius: radius, color: color);
 			return;
 		});
+		local Int is pixelsPtr: canvas:pixelsAddr();
+		if({ pixelsPtr == 0 }, { return; });
+		local Int is strideW: canvas:width;
+		local Int is cX0: 0;
+		local Int is cY0: 0;
+		local Int is cX1: strideW;
+		local Int is cY1: canvas:height;
+		if({ hasClip }, {
+			if({ cX0 < clipX }, { cX0: clipX; });
+			if({ cY0 < clipY }, { cY0: clipY; });
+			if({ cX1 > clipX + clipW }, { cX1: clipX + clipW; });
+			if({ cY1 > clipY + clipH }, { cY1: clipY + clipH; });
+		});
+
 		local Int is blur: blurRadius;
 		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
 		local Int is r: if({ radius > maxR }, { maxR }, { if({ radius < 0 }, { 0 }, { radius }) });
 		local Color is baseC: Color:fromArgb(argb: color);
+		local Int is srcR: baseC:red();
+		local Int is srcG: baseC:green();
+		local Int is srcB: baseC:blue();
 		local Int is baseA: baseC:alpha();
-		local Float is halfW: (w as Float) * 0.5;
-		local Float is halfH: (h as Float) * 0.5;
-		local Float is cx: (sx as Float) + halfW;
-		local Float is cy: (sy as Float) + halfH;
-		local Float is rf: r as Float;
 		local Float is blurF: blur as Float;
+		local Float is denom: blurF * 1.25;
+		local Int is inset: if({ r > blur }, { r }, { blur });
+		if({ inset * 2 > w }, { inset: w / 2; });
+		if({ inset * 2 > h }, { inset: h / 2; });
 
-		local Int is coreInset: blur + r;
-		local Int is coreX: sx + coreInset;
-		local Int is coreY: sy + coreInset;
-		local Int is coreW: w - 2 * coreInset;
-		local Int is coreH: h - 2 * coreInset;
-		if({ coreW > 0 && coreH > 0 }, {
-			:fillRect(x: coreX, y: coreY, w: coreW, h: coreH, color: color);
+		local Int is midX0: sx + inset;
+		local Int is midX1: sx + w - inset;
+		local Int is midY0: sy + inset;
+		local Int is midY1: sy + h - inset;
+		local Int is midW: midX1 - midX0;
+		local Int is midH: midY1 - midY0;
+
+		if({ midW > 0 && midH > 0 }, {
+			:fillRect(x: midX0, y: midY0, w: midW, h: midH, color: color);
 		});
 
-		local Int is x0: sx - blur;
-		local Int is y0: sy - blur;
-		local Int is x1: sx + w + blur;
-		local Int is y1: sy + h + blur;
-		local Int is py: y0;
-		while({ py < y1 }, {
-			local Int is px: x0;
-			while({ px < x1 }, {
-				if({ coreW > 0 && coreH > 0 && px >= coreX && px < coreX + coreW && py >= coreY && py < coreY + coreH }, {
-					px: coreX + coreW;
-				}, {
-					local Float is sd: :roundBoxSd(px: (px as Float) + 0.5, py: (py as Float) + 0.5, cx: cx, cy: cy, halfW: halfW, halfH: halfH, r: rf);
-					local Float is u: :clamp01(v: 1.0 - (sd + blurF * 0.25) / (blurF * 1.25));
-					if({ u > 0.0 }, {
-						local Float is smooth: u * u * (3.0 - 2.0 * u);
-						local Int is ab: (((baseA as Float) * smooth) + 0.5) as Int;
-						if({ ab > 0 }, {
-							:fillRect(x: px, y: py, w: 1, h: 1, color: baseC:withAlphaByte(a: ab):toArgb());
-						});
+		if({ midW > 0 }, {
+			local Int is ey: sy - blur;
+			while({ ey < midY0 }, {
+				local Float is sd: (sy as Float) - ((ey as Float) + 0.5);
+				local Float is u: :clamp01(v: 1.0 - (sd + blurF * 0.25) / denom);
+				if({ u > 0.0 }, {
+					local Float is smooth: u * u * (3.0 - 2.0 * u);
+					local Int is ab: (((baseA as Float) * smooth) + 0.5) as Int;
+					if({ ab > 0 }, {
+						local Int is rowCol: (ab << 24) | (srcR << 16) | (srcG << 8) | srcB;
+						:fillRect(x: midX0, y: ey, w: midW, h: 1, color: rowCol);
+						local Int is botY: sy + h - 1 - (ey - sy);
+						:fillRect(x: midX0, y: botY, w: midW, h: 1, color: rowCol);
 					});
-					px: px + 1;
 				});
+				ey: ey + 1;
 			});
-			py: py + 1;
+		});
+
+		if({ midH > 0 }, {
+			local Int is ex: sx - blur;
+			while({ ex < midX0 }, {
+				local Float is sd: (sx as Float) - ((ex as Float) + 0.5);
+				local Float is u: :clamp01(v: 1.0 - (sd + blurF * 0.25) / denom);
+				if({ u > 0.0 }, {
+					local Float is smooth: u * u * (3.0 - 2.0 * u);
+					local Int is ab: (((baseA as Float) * smooth) + 0.5) as Int;
+					if({ ab > 0 }, {
+						local Int is colC: (ab << 24) | (srcR << 16) | (srcG << 8) | srcB;
+						:fillRect(x: ex, y: midY0, w: 1, h: midH, color: colC);
+						local Int is rightX: sx + w - 1 - (ex - sx);
+						:fillRect(x: rightX, y: midY0, w: 1, h: midH, color: colC);
+					});
+				});
+				ex: ex + 1;
+			});
+		});
+
+		local Int is cornerW: inset + blur;
+		local Float is rf: r as Float;
+		local Float is cornerPivot: (blur + r) as Float;
+		local Int is dy: 0;
+		while({ dy < cornerW }, {
+			local Float is qy: cornerPivot - ((dy as Float) + 0.5);
+			local Int is dx: 0;
+			while({ dx < cornerW }, {
+				local Float is qx: cornerPivot - ((dx as Float) + 0.5);
+				local Float is ox: if({ qx > 0.0 }, { qx }, { 0.0 });
+				local Float is oy: if({ qy > 0.0 }, { qy }, { 0.0 });
+				local Float is maxD: if({ qx > qy }, { qx }, { qy });
+				local Float is inD: if({ maxD < 0.0 }, { maxD }, { 0.0 });
+				local Float is sd: sqrt(value: ox * ox + oy * oy) + inD - rf;
+				local Float is u: :clamp01(v: 1.0 - (sd + blurF * 0.25) / denom);
+				if({ u > 0.0 }, {
+					local Float is smooth: u * u * (3.0 - 2.0 * u);
+					local Int is ab: (((baseA as Float) * smooth) + 0.5) as Int;
+					if({ ab > 0 }, {
+						local Int is lx: sx - blur + dx;
+						local Int is rx: sx + w + blur - 1 - dx;
+						local Int is ty: sy - blur + dy;
+						local Int is by: sy + h + blur - 1 - dy;
+						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: lx, py: ty, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: rx, py: ty, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: lx, py: by, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: rx, py: by, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+					});
+				});
+				dx: dx + 1;
+			});
+			dy: dy + 1;
 		});
 	}
 
 	## Draws a soft inner shadow clipped inside a rounded rectangle with offset and blur radius.
 	Function is drawInnerShadow(Int is x, Int is y, Int is w, Int is h, Int is radius: 0, Int is offsetX: 0, Int is offsetY: 2, Int is blurRadius: 6, Int is color: 1426063360){
 		if({ w <= 0 || h <= 0 || color == 0 }, { return; });
+		local Int is pixelsPtr: canvas:pixelsAddr();
+		if({ pixelsPtr == 0 }, { return; });
+		local Int is strideW: canvas:width;
+		local Int is cX0: if({ x < 0 }, { 0 }, { x });
+		local Int is cY0: if({ y < 0 }, { 0 }, { y });
+		local Int is cX1: if({ x + w > strideW }, { strideW }, { x + w });
+		local Int is cY1: if({ y + h > canvas:height }, { canvas:height }, { y + h });
+		if({ hasClip }, {
+			if({ cX0 < clipX }, { cX0: clipX; });
+			if({ cY0 < clipY }, { cY0: clipY; });
+			if({ cX1 > clipX + clipW }, { cX1: clipX + clipW; });
+			if({ cY1 > clipY + clipH }, { cY1: clipY + clipH; });
+		});
+		if({ cX1 <= cX0 || cY1 <= cY0 }, { return; });
+
 		local Int is blur: if({ blurRadius < 0 }, { 0 }, { blurRadius });
 		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
 		local Int is r: if({ radius > maxR }, { maxR }, { if({ radius < 0 }, { 0 }, { radius }) });
 		local Color is baseC: Color:fromArgb(argb: color);
+		local Int is srcR: baseC:red();
+		local Int is srcG: baseC:green();
+		local Int is srcB: baseC:blue();
 		local Int is baseA: baseC:alpha();
 		if({ baseA <= 0 }, { return; });
 		local Float is halfW: (w as Float) * 0.5;
@@ -545,10 +750,10 @@ Class is DrawContext{
 		local Int is coreW: w - 2 * insetX;
 		local Int is coreH: h - 2 * insetY;
 
-		local Int is py: y;
-		while({ py < y + h }, {
-			local Int is px: x;
-			while({ px < x + w }, {
+		local Int is py: cY0;
+		while({ py < cY1 }, {
+			local Int is px: cX0;
+			while({ px < cX1 }, {
 				if({ coreW > 0 && coreH > 0 && px >= coreX && px < coreX + coreW && py >= coreY && py < coreY + coreH }, {
 					px: coreX + coreW;
 				}, {
@@ -566,9 +771,7 @@ Class is DrawContext{
 						if({ u > 0.0 }, {
 							local Float is smooth: u * u * (3.0 - 2.0 * u);
 							local Int is ab: (((baseA as Float) * smooth * shapeCov) + 0.5) as Int;
-							if({ ab > 0 }, {
-								:fillRect(x: px, y: py, w: 1, h: 1, color: baseC:withAlphaByte(a: ab):toArgb());
-							});
+							:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: px, py: py, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
 						});
 					});
 					px: px + 1;
