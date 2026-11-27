@@ -112,14 +112,25 @@ Class of SewNode is Frame{
 		local Int is inShCol: if({ inShBlur > 0 || inShOffX != 0 || inShOffY != 0 }, { 1426063360 }, { 0 });
 		local String is pStyle: activeTheme:panelBorderStyle;
 		local Int is bgCol: if({ padPt != 0.0 || fillBg }, { activeTheme:windowBg }, { 0 });
+		local Boolean is useGradFill: activeTheme:customSurfaceFill && !activeTheme:surfaceFill:isSolid() && bgCol != 0;
 		if({ title == '' }, {
-			ctx:drawStyledBox(
-				x: b:x, y: b:y, w: b:width, h: b:height,
-				bgColor: bgCol, borderColor: 0, thickness: 0,
-				radius: radPx, style: pStyle,
-				shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
-				innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
-			);
+			if({ useGradFill }, {
+				ctx:drawStyledBoxFill(
+					x: b:x, y: b:y, w: b:width, h: b:height,
+					fill: activeTheme:surfaceFill, borderColor: 0, thickness: 0,
+					radius: radPx, style: pStyle,
+					shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
+					innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
+				);
+			}, {
+				ctx:drawStyledBox(
+					x: b:x, y: b:y, w: b:width, h: b:height,
+					bgColor: bgCol, borderColor: 0, thickness: 0,
+					radius: radPx, style: pStyle,
+					shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
+					innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
+				);
+			});
 			local Int is clipW: b:width - bw * 2;
 			local Int is clipH: b:height - bw * 2;
 			if({ clipW > 0 && clipH > 0 }, {
@@ -144,15 +155,25 @@ Class of SewNode is Frame{
 				local Int is titlePad: activeScale:px(pt: activeTheme:paddingLargePt);
 				local Int is titleX: b:x + bw + radPx + titlePad;
 				local Int is gapPad: activeScale:px(pt: 4.0);
-				local Boolean is simpleSingle: pStyle == 'single' && radPx <= 0 && shBlur <= 0 && shOffX == 0 && shOffY == 0 && inShBlur <= 0 && inShOffX == 0 && inShOffY == 0;
+				local Boolean is simpleSingle: pStyle == 'single' && radPx <= 0 && shBlur <= 0 && shOffX == 0 && shOffY == 0 && inShBlur <= 0 && inShOffX == 0 && inShOffY == 0 && !useGradFill;
 				if({ !simpleSingle }, {
-					ctx:drawStyledBox(
-						x: b:x, y: topY, w: b:width, h: boxH,
-						bgColor: bgCol, borderColor: 0, thickness: 0,
-						radius: radPx, style: pStyle,
-						shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
-						innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
-					);
+					if({ useGradFill }, {
+						ctx:drawStyledBoxFill(
+							x: b:x, y: topY, w: b:width, h: boxH,
+							fill: activeTheme:surfaceFill, borderColor: 0, thickness: 0,
+							radius: radPx, style: pStyle,
+							shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
+							innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
+						);
+					}, {
+						ctx:drawStyledBox(
+							x: b:x, y: topY, w: b:width, h: boxH,
+							bgColor: bgCol, borderColor: 0, thickness: 0,
+							radius: radPx, style: pStyle,
+							shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol,
+							innerShadowOffsetX: inShOffX, innerShadowOffsetY: inShOffY, innerShadowBlur: inShBlur, innerShadowColor: inShCol
+						);
+					});
 				}, {
 					if({ bgCol != 0 }, {
 						ctx:fillRect(x: b:x + bw, y: topY + bw, w: b:width - bw * 2, h: boxH - bw * 2, color: bgCol);

@@ -12,7 +12,8 @@ Class is ShowcaseViewModel{
 		['base', 'signal', TextEmitter],
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
-		['base', 'fabric', ThemePreset]
+		['base', 'fabric', ThemePreset],
+		['base', 'fabric', FillStyle]
 	];
 
 	TextEmitter is selectedRoute: TextEmitter(initial: 'intro');
@@ -22,6 +23,13 @@ Class is ShowcaseViewModel{
 	Float is baseTextPt: 10.0;
 	String is borderStyle: 'solid';
 	Int is windowAlphaPct: 100;
+	Int is fillStyleIdx: 0;
+	Boolean is useFillColorB: false;
+	Color is fillColorB: Color(r: 90, g: 150, b: 235);
+	Int is fillCenterXPct: 50;
+	Int is fillCenterYPct: 50;
+	Int is fillAngleDeg: 35;
+	Int is fillBlendPct: 100;
 
 	## Interactive demo state
 	Int is clickCount: 0;
@@ -204,8 +212,74 @@ Class is ShowcaseViewModel{
 	Function is loadPreset(ThemePreset is preset){
 		:basePreset: preset;
 		:activeTheme: Theme:forPreset(preset: preset, baseTextPt: baseTextPt);
+		:fillStyleIdx: 0;
+		:useFillColorB: false;
 		:applyCurrentTheme();
 		statusText:emit(value: 'Loaded ' . Theme:presetLabel(preset: preset) . ' preset');
+	}
+
+	local Function is syncThemeFills(){
+		if({ fillStyleIdx == 0 }, {
+			activeTheme:customSurfaceFill: false;
+			activeTheme:customButtonFill: false;
+			activeTheme:deriveColors();
+			:notifyThemeChange();
+			return;
+		});
+		local String is fMode: if({ fillStyleIdx == 3 || fillStyleIdx == 4 }, { 'radial' }, { 'linear' });
+		local Boolean is fRefl: fillStyleIdx == 2 || fillStyleIdx == 4;
+		local Color is btnA: Color:fromArgb(argb: activeTheme:menuBg);
+		local Color is surfA: activeTheme:background;
+		local Color is colB: if({ useFillColorB }, { fillColorB }, { activeTheme:highlight });
+		local Float is cx: (fillCenterXPct as Float) / 100.0;
+		local Float is cy: (fillCenterYPct as Float) / 100.0;
+		local Float is ang: fillAngleDeg as Float;
+		local Float is bw: (fillBlendPct as Float) / 100.0;
+		activeTheme:setButtonFill(fill: FillStyle(
+			mode: fMode, colorA: btnA, colorB: colB,
+			centerX: cx, centerY: cy, angleDeg: ang, blendWidth: bw, reflected: fRefl
+		));
+		activeTheme:setSurfaceFill(fill: FillStyle(
+			mode: fMode, colorA: surfA, colorB: colB,
+			centerX: cx, centerY: cy, angleDeg: ang, blendWidth: bw, reflected: fRefl
+		));
+		:notifyThemeChange();
+	}
+
+	Function is setFillStyleIndex(Int is idx){
+		:fillStyleIdx: idx;
+		:syncThemeFills();
+	}
+
+	Function is setUseFillColorB(Boolean is enabled){
+		:useFillColorB: enabled;
+		:syncThemeFills();
+	}
+
+	Function is setFillColorB(Color is col){
+		:fillColorB: col;
+		:useFillColorB: true;
+		:syncThemeFills();
+	}
+
+	Function is setFillCenterX(Int is pct){
+		:fillCenterXPct: pct;
+		:syncThemeFills();
+	}
+
+	Function is setFillCenterY(Int is pct){
+		:fillCenterYPct: pct;
+		:syncThemeFills();
+	}
+
+	Function is setFillAngle(Int is deg){
+		:fillAngleDeg: deg;
+		:syncThemeFills();
+	}
+
+	Function is setFillBlend(Int is pct){
+		:fillBlendPct: pct;
+		:syncThemeFills();
 	}
 
 	Function is setBorderStyle(String is style){

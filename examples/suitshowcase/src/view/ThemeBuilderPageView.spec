@@ -15,6 +15,7 @@ Class is ThemeBuilderPageView{
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', Slider],
+		['base', 'scrap', Switch],
 		['base', 'scrap', ColorSwatchDropdown],
 		['base', 'scrap', TextInput],
 		['base', 'scrap', DecoratedTextInput],
@@ -33,6 +34,17 @@ Class is ThemeBuilderPageView{
 	SectionH is panelStyleSection: SectionH();
 	SectionH is dividerStyleSection: SectionH();
 	SectionH is buttonStyleSection: SectionH();
+	SectionH is fillStyleSection: SectionH();
+	Switch is useColorBSwitch: Switch();
+	ColorSwatchDropdown is colorBSwatch: ColorSwatchDropdown();
+	Slider is fillCenterXSlider: Slider();
+	Slider is fillCenterYSlider: Slider();
+	Slider is fillAngleSlider: Slider();
+	Slider is fillBlendSlider: Slider();
+	TextEmitter is fillCXLabel: TextEmitter(initial: '50%');
+	TextEmitter is fillCYLabel: TextEmitter(initial: '50%');
+	TextEmitter is fillAngLabel: TextEmitter(initial: '35 deg');
+	TextEmitter is fillBwLabel: TextEmitter(initial: '1.00');
 	Slider is panelThickSlider: Slider();
 	Slider is panelRadiusSlider: Slider();
 	Slider is panelShadowSlider: Slider();
@@ -78,6 +90,7 @@ Class is ThemeBuilderPageView{
 	Array of String is borderStyles: Array(['none', 'solid', 'bold']);
 	Array of String is targetBorderStyles: Array(['none', 'single', 'double', 'bevel', 'groove', 'inset', 'outset']);
 	Array of String is targetBorderLabels: Array(['None', 'Single', 'Double', 'Bevel', 'Groove', 'Inset', 'Outset']);
+	Array of String is fillStyleLabels: Array(['Solid', 'Linear', 'Lin Refl', 'Radial', 'Rad Refl']);
 
 	replace Function is init(ShowcaseViewModel is vm){
 		:vm: vm;
@@ -197,6 +210,38 @@ Class is ThemeBuilderPageView{
 		buttonShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt)));
 		buttonShadowXLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetXPt)));
 		buttonShadowYLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetYPt)));
+		fillCXLabel:emit(value: (vm:fillCenterXPct as String) . '%');
+		fillCYLabel:emit(value: (vm:fillCenterYPct as String) . '%');
+		fillAngLabel:emit(value: (vm:fillAngleDeg as String) . ' deg');
+		fillBwLabel:emit(value: vm:tenthsLabel(tenths: vm:fillBlendPct / 10));
+
+		:fillStyleSection: SectionH(
+			segmented: true,
+			options: fillStyleLabels,
+			selectedIndex: vm:fillStyleIdx,
+			itemMinWidthPt: 52.0,
+			onSelect: local Function(Int is idx){
+				vm:setFillStyleIndex(idx: idx);
+			}
+		);
+		:useColorBSwitch: Switch(
+			checked: vm:useFillColorB,
+			onChange: local Function(Boolean is on){
+				vm:setUseFillColorB(enabled: on);
+			}
+		);
+		:colorBSwatch: ColorSwatchDropdown(
+			color: vm:fillColorB,
+			compactPicker: true,
+			tooltip: 'Optional second gradient color',
+			onChange: local Function(Color is c){
+				vm:setFillColorB(col: c);
+			}
+		);
+		:fillCenterXSlider: Slider(minVal: 0, maxVal: 100, value: vm:fillCenterXPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillCenterX(pct: v); });
+		:fillCenterYSlider: Slider(minVal: 0, maxVal: 100, value: vm:fillCenterYPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillCenterY(pct: v); });
+		:fillAngleSlider: Slider(minVal: 0, maxVal: 360, value: vm:fillAngleDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillAngle(deg: v); });
+		:fillBlendSlider: Slider(minVal: 10, maxVal: 200, value: vm:fillBlendPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFillBlend(pct: v); });
 
 		:baseTextInput: DecoratedTextInput(
 			text: vm:baseTextLabel(),
@@ -315,6 +360,26 @@ Class is ThemeBuilderPageView{
 					child: colorGrid
 				),
 				Frame(
+					title: 'Surface & Button Fill',
+					child: SectionV(
+						children: Array([
+							SectionV(title: 'Fill Style', children: Array([fillStyleSection])),
+							Grid(
+								columns: 3,
+								colGapPt: 10.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Use Second Color'), useColorBSwitch, colorBSwatch,
+									Label(text: 'Center X'), fillCenterXSlider, TextScrap(text: fillCXLabel, muted: true),
+									Label(text: 'Center Y'), fillCenterYSlider, TextScrap(text: fillCYLabel, muted: true),
+									Label(text: 'Linear Angle'), fillAngleSlider, TextScrap(text: fillAngLabel, muted: true),
+									Label(text: 'Blend Width'), fillBlendSlider, TextScrap(text: fillBwLabel, muted: true)
+								])
+							)
+						])
+					)
+				),
+				Frame(
 					title: 'Padding & Spacing (pt)',
 					child: metricGrid
 				),
@@ -401,6 +466,17 @@ Class is ThemeBuilderPageView{
 		buttonShadowLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowBlurPt)));
 		buttonShadowXLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetXPt)));
 		buttonShadowYLabel:emit(value: vm:tenthsLabel(tenths: vm:toTenths(pt: vm:activeTheme:buttonShadowOffsetYPt)));
+		fillStyleSection:setSelectedIndex(index: vm:fillStyleIdx);
+		useColorBSwitch:setChecked(next: vm:useFillColorB);
+		colorBSwatch:setColor(next: vm:fillColorB);
+		fillCenterXSlider:setValue(next: vm:fillCenterXPct);
+		fillCenterYSlider:setValue(next: vm:fillCenterYPct);
+		fillAngleSlider:setValue(next: vm:fillAngleDeg);
+		fillBlendSlider:setValue(next: vm:fillBlendPct);
+		fillCXLabel:emit(value: (vm:fillCenterXPct as String) . '%');
+		fillCYLabel:emit(value: (vm:fillCenterYPct as String) . '%');
+		fillAngLabel:emit(value: (vm:fillAngleDeg as String) . ' deg');
+		fillBwLabel:emit(value: vm:tenthsLabel(tenths: vm:fillBlendPct / 10));
 		baseTextInput:setText(next: vm:baseTextLabel());
 		alphaSlider:setValue(next: vm:windowAlphaPct);
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');
