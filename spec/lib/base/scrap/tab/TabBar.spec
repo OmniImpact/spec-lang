@@ -8,12 +8,14 @@ Class of SewNode is TabBar{
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', DockSide],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
+		['base', 'scrap', DragDropState],
 		['base', 'scrap', 'tab', TabAlign],
 		['base', 'scrap', 'tab', TabItemConfig]
 	];
@@ -36,6 +38,7 @@ Class of SewNode is TabBar{
 	Int is hoverTabIdx: -1;
 	Int is hoverCloseIdx: -1;
 	Int is dragTabIdx: -1;
+	Int is dragTargetIdx: -1;
 	Int is dragStartX: 0;
 	Boolean is draggingTab: false;
 	Boolean is suppressNextClick: false;
@@ -244,6 +247,7 @@ Class of SewNode is TabBar{
 				return false;
 			});
 			:dragTabIdx: idx;
+			:dragTargetIdx: idx;
 			:dragStartX: x;
 			:draggingTab: false;
 			return true;
@@ -255,17 +259,19 @@ Class of SewNode is TabBar{
 			if({ dx >= thresh }, {
 				:draggingTab: true;
 				:suppressNextClick: true;
+				local TabItemConfig is dt: tabs:get(index: dragTabIdx);
+				DragDropState:shared:beginDrag(payload: '', label: dt:label, x: x, y: y);
 			});
 		});
 		if({ draggingTab }, {
+			DragDropState:shared:updatePointer(x: x, y: y);
 			local Int is targetIdx: (x - startX) / tw;
 			if({ x < startX }, { targetIdx: 0; });
 			if({ targetIdx < 0 }, { targetIdx: 0; });
 			if({ targetIdx >= tabs:length() }, { targetIdx: tabs:length() - 1; });
-			if({ targetIdx != dragTabIdx }, {
-				local Int is fromIdx: dragTabIdx;
-				:dragTabIdx: targetIdx;
-				:moveTabItem(fromIdx: fromIdx, toIdx: targetIdx);
+			if({ targetIdx != dragTargetIdx }, {
+				:dragTargetIdx: targetIdx;
+				invalidate();
 			});
 		});
 		return true;
@@ -273,8 +279,16 @@ Class of SewNode is TabBar{
 
 	replace Function of Boolean is onPointerUp(Int is x, Int is y){
 		if({ dragTabIdx >= 0 }, {
+			local Int is fromI: dragTabIdx;
+			local Int is toI: dragTargetIdx;
+			local Boolean is wasDragging: draggingTab;
 			:dragTabIdx: -1;
+			:dragTargetIdx: -1;
 			:draggingTab: false;
+			DragDropState:shared:finishDrag();
+			if({ wasDragging && fromI != toI && toI >= 0 && toI < tabs:length() }, {
+				:moveTabItem(fromIdx: fromI, toIdx: toI);
+			});
 			invalidate();
 			return true;
 		});
@@ -338,6 +352,11 @@ Class of SewNode is TabBar{
 			local Int is padL: activeScale:px(pt: activeTheme:paddingPt * 1.5);
 			local Int is padR: activeScale:px(pt: activeTheme:paddingSmallPt * 2.0);
 			local Int is cs: :closeBoxSizePx();
+			local Boolean is showGrip: reorderable && count > 1;
+			local Int is dotSz: activeScale:px(pt: 2.0);
+			if({ dotSz < 2 }, { dotSz: 2; });
+			local Int is dotGap: dotSz + 2;
+			local Int is gripW: if({ showGrip }, { dotGap * 2 + activeScale:px(pt: 6.0) }, { 0 });
 
 			ctx:setClip(x: area:x, y: area:y, w: area:width, h: area:height);
 			local Int is i: 0;
@@ -346,7 +365,7 @@ Class of SewNode is TabBar{
 				if({ tx < area:x + area:width && tx + tw > area:x }, {
 					local TabItemConfig is tab: tabs:get(index: i);
 					local Boolean is isActive: i == activeIndex;
-					local Boolean is isHov: hoverTabIdx == i;
+					local Boolean is isHov: hoverTabIdx == i || (draggingTab && dragTabIdx == i);
 					local FillStyle is tabFill: activeTheme:resolveButtonFill(enabled: true, selected: isActive, hovered: isHov);
 					local Int is ty0: if({ dockSide == DockSide:BOTTOM && !isActive }, { area:y + divPx }, { area:y });
 					local Int is fillH: area:height - (if({ dockSide != DockSide:BOTTOM }, { divPx }, { 0 }));
@@ -356,12 +375,28 @@ Class of SewNode is TabBar{
 						ctx:clearClip();
 					});
 
+					local Int is tcol: if({ isActive }, { activeTheme:textPrimary }, { activeTheme:textMuted });
+					if({ showGrip }, {
+						local Int is gx: tx + padL / 2;
+						local Int is gy: area:y + (area:height - (dotSz * 3 + 4)) / 2;
+						local Int is gcol: if({ isActive || isHov }, { activeTheme:textPrimary }, { activeTheme:textMuted });
+						local Int is gr: 0;
+						while({ gr < 3 }, {
+							local Int is gc: 0;
+							while({ gc < 2 }, {
+								ctx:fillRect(x: gx + gc * dotGap, y: gy + gr * dotGap, w: dotSz, h: dotSz, color: gcol);
+								gc: gc + 1;
+							});
+							gr: gr + 1;
+						});
+					});
+
+					local Int is textStartX: tx + padL + gripW;
 					local Int is closeReserve: if({ showCloseButton && tab:closable }, { cs + padR * 2 }, { padR });
 					local String is rawTitle: if({ tab:dirty }, { tab:label . ' *' }, { tab:label });
-					local String is disp: :fitLabel(label: rawTitle, maxTextW: tw - padL - closeReserve, fpx: fpx);
+					local String is disp: :fitLabel(label: rawTitle, maxTextW: tw - padL - gripW - closeReserve, fpx: fpx);
 					local Int is ty: area:y + (area:height - th) / 2;
-					local Int is tcol: if({ isActive }, { activeTheme:textPrimary }, { activeTheme:textMuted });
-					ctx:drawText(x: tx + padL, y: ty, text: disp, color: tcol, pixelHeight: fpx);
+					ctx:drawText(x: textStartX, y: ty, text: disp, color: tcol, pixelHeight: fpx);
 
 					if({ showCloseButton && tab:closable }, {
 						local Int is cx: tx + tw - padR - cs;
@@ -396,6 +431,19 @@ Class of SewNode is TabBar{
 					});
 				});
 			});
+			if({ reorderable && draggingTab && dragTargetIdx >= 0 && dragTargetIdx < count }, {
+				local Int is lineW: activeScale:px(pt: 2.5);
+				if({ lineW < 3 }, { lineW: 3; });
+				local Int is targetX: startX + dragTargetIdx * tw;
+				local Int is ix: if({ dragTargetIdx > dragTabIdx }, { targetX + tw - lineW }, { targetX });
+				ctx:fillRect(x: ix, y: area:y, w: lineW, h: area:height, color: activeTheme:textAccent);
+				ctx:drawStyledBox(
+					x: targetX, y: area:y, w: tw, h: area:height,
+					bgColor: 0, borderColor: activeTheme:textAccent,
+					thickness: if({ lineW > 2 }, { 2 }, { lineW }),
+					radius: btnRad, style: activeTheme:buttonBorderStyle
+				);
+			});
 			ctx:clearClip();
 		});
 		if({ divPx > 0 }, {
@@ -415,5 +463,14 @@ Class of SewNode is TabBar{
 			return tabs:get(index: hoverTabIdx):label;
 		});
 		return '';
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ draggingTab }, { return CursorShape:POINTER; });
+		local Rect is area: :tabsAreaRect(b: bounds());
+		if({ x >= area:x && x < area:x + area:width && y >= area:y && y < area:y + area:height && hoverTabIdx >= 0 }, {
+			return CursorShape:POINTER;
+		});
+		return CursorShape:DEFAULT;
 	}
 }

@@ -15,7 +15,8 @@ Class of SewNode is ListView{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
-		['base', 'sew', Scale]
+		['base', 'sew', Scale],
+		['base', 'scrap', DragDropState]
 	];
 
 	Array of String is items: Array();
@@ -29,6 +30,8 @@ Class of SewNode is ListView{
 	Function is onReorder: local Function(Int is _from, Int is _to){};
 
 	Int is hoverIdx: -1;
+	Boolean is hovered: false;
+	Boolean is focused: false;
 	Int is scrollY: 0;
 	Int is maxScrollY: 0;
 	Int is dragIdx: -1;
@@ -268,13 +271,20 @@ Class of SewNode is ListView{
 		});
 
 		if({ reorderable && dragIdx >= 0 && dragMoved && dragTargetIdx >= 0 && dragTargetIdx < n }, {
-			local Int is lineH: activeScale:px(pt: 2.0);
-			if({ lineH < 2 }, { lineH: 2; });
-			local Int is targetY: clipY + dragTargetIdx * rh - scrollY;
+			local Int is lineH: activeScale:px(pt: 2.5);
+			if({ lineH < 3 }, { lineH: 3; });
+			local Int is rowY: clipY + dragTargetIdx * rh - scrollY;
+			local Int is targetY: rowY;
 			if({ dragTargetIdx > dragIdx }, {
 				targetY: targetY + rh - lineH;
 			});
 			ctx:fillRect(x: clipX, y: targetY, w: clipW, h: lineH, color: activeTheme:textAccent);
+			ctx:drawStyledBox(
+				x: clipX, y: rowY, w: clipW, h: rh,
+				bgColor: 0, borderColor: activeTheme:textAccent,
+				thickness: if({ lineH > 2 }, { 2 }, { lineH }),
+				radius: 0, style: activeTheme:buttonBorderStyle
+			);
 		});
 
 		if({ maxScrollY > 0 }, {
@@ -301,12 +311,14 @@ Class of SewNode is ListView{
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		if({ !:containsPoint(x: x, y: y) }, {
-			if({ hoverIdx != -1 }, {
+			if({ hoverIdx != -1 || hovered }, {
 				:hoverIdx: -1;
+				:hovered: false;
 				:invalidate();
 			});
 			return false;
 		});
+		:hovered: true;
 		local Int is idx: :rowAtY(y: y);
 		if({ idx != hoverIdx }, {
 			:hoverIdx: idx;
@@ -316,8 +328,9 @@ Class of SewNode is ListView{
 	}
 
 	replace Function is clearHover(){
-		if({ hoverIdx != -1 }, {
+		if({ hoverIdx != -1 || hovered }, {
 			:hoverIdx: -1;
+			:hovered: false;
 			:invalidate();
 		});
 	}
@@ -344,8 +357,12 @@ Class of SewNode is ListView{
 		if({ !reorderable || dragIdx < 0 || items:length() <= 1 }, { return false; });
 		local Int is dy: y - dragStartY;
 		if({ dy < 0 }, { dy: 0 - dy; });
-		if({ dy > 4 }, { :dragMoved: true; });
+		if({ dy > 4 && !dragMoved }, {
+			:dragMoved: true;
+			DragDropState:shared:beginDrag(payload: '', label: items:get(index: dragIdx), x: x, y: y);
+		});
 		if({ dragMoved }, {
+			DragDropState:shared:updatePointer(x: x, y: y);
 			local Rect is b: bounds();
 			local Int is ins: :insetPx();
 			local Int is rh: :rowHeightPx();
@@ -370,6 +387,7 @@ Class of SewNode is ListView{
 			:dragIdx: -1;
 			:dragTargetIdx: -1;
 			:dragMoved: false;
+			DragDropState:shared:finishDrag();
 			if({ moved && fromI != toI && toI >= 0 && toI < items:length() }, {
 				:moveItem(fromIdx: fromI, toIdx: toI);
 				local Function is rcb: :onReorder;
@@ -381,11 +399,10 @@ Class of SewNode is ListView{
 		return false;
 	}
 
-	replace Function of Boolean is onScroll(Int is x, Int is y, Int is dy){
-		if({ !:containsPoint(x: x, y: y) }, { return false; });
-		if({ maxScrollY <= 0 }, { return false; });
+	replace Function of Boolean is onScroll(Int is deltaY){
+		if({ !hovered || maxScrollY <= 0 }, { return false; });
 		local Int is step: activeScale:px(pt: 28.0);
-		local Int is next: scrollY - dy * step;
+		local Int is next: scrollY - deltaY * step;
 		if({ next < 0 }, { next: 0; });
 		if({ next > maxScrollY }, { next: maxScrollY; });
 		if({ next != scrollY }, {
@@ -429,8 +446,17 @@ Class of SewNode is ListView{
 		return true;
 	}
 
-	replace Function is collectFocusables(Array of SewNode is out){
-		out:add(item: self);
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		:focused: next;
+		:invalidate();
 	}
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
