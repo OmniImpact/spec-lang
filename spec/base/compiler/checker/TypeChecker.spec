@@ -4154,6 +4154,7 @@ Class is TypeChecker{
 		local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !:isVoid(t: expected) && bareArg1Anon && bareArg2Anon;
 		local Map of String to SemType is savedLoopVars: Map:init();
 		local Map of String to String is savedLoopLazyVars: Map:init();
+		local Boolean is bareHasLoopVars: false;
 		if({ provider == 'Loops' }, {
 			savedLoopVars: Map:init();
 			local Array of String is lvKeys: :localVars:keys();
@@ -4167,7 +4168,6 @@ Class is TypeChecker{
 					savedLoopLazyVars:set(key: k, value: :lazyLocalVars:getString(key: k, default: ''));
 				});
 			});
-			local Boolean is bareHasLoopVars: false;
 			times(count: call:args:length(), worker: local Function(Int is blvi){
 				local NamedArg is arg: call:args:get(index: blvi);
 				match(on: arg:value, when: [
@@ -4212,10 +4212,12 @@ Class is TypeChecker{
 		}, {
 			if({ provider == 'Loops' }, {
 				local Boolean is savedLoopBranch: :inBranchClosure;
-				:inBranchClosure: false;
+				local Boolean is isInlineLoop: call:name == 'while' || call:name == 'until' || call:name == 'repeat' || call:name == 'loop';
 				times(count: call:args:length(), worker: local Function(Int is lai){
 					local NamedArg is arg: call:args:get(index: lai);
-					if({ arg:name == 'evaluate' }, {
+					local Boolean is isCondArg: isInlineLoop && (arg:name == 'evaluate' || arg:name == 'check' || (arg:name == '' && ((bareHasLoopVars && lai == 1) || (!bareHasLoopVars && lai == 0 && call:name != 'repeat'))));
+					local Boolean is isBodyArg: isInlineLoop && !isCondArg && (arg:name == 'body' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((bareHasLoopVars && lai == 2) || (!bareHasLoopVars && lai == 1))));
+					if({ isCondArg }, {
 						match(on: arg:value, when: [
 							Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
@@ -4242,6 +4244,17 @@ Class is TypeChecker{
 							bareArgExp: Primitive:ANY:value();
 						});
 					});
+					local Boolean is bodyIsVoidBlock: false;
+					if({ isBodyArg }, {
+						match(on: arg:value, when: [
+							Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
+								if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+									bodyIsVoidBlock: true;
+								});
+							}
+						], default: {});
+					});
+					:inBranchClosure: bodyIsVoidBlock;
 					:inferExpressionType(expr: arg:value, expected: :parseSemType(s: bareArgExp));
 				});
 				:inBranchClosure: savedLoopBranch;
@@ -4542,10 +4555,11 @@ Class is TypeChecker{
 		});
 		:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
 		local Boolean is savedLoopBranch: :inBranchClosure;
-		:inBranchClosure: false;
 		times(count: call:args:length(), worker: local Function(Int is loopArgIdx){
 			local NamedArg is arg: call:args:get(index: loopArgIdx);
-			if({ arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0))) }, {
+			local Boolean is isCondArg: arg:name == 'evaluate' || arg:name == 'check' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0 && method != 'repeat')));
+			local Boolean is isBodyArg: !isCondArg && (arg:name == 'body' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 2) || (!hasLoopVars && loopArgIdx == 1))));
+			if({ isCondArg }, {
 				match(on: arg:value, when: [
 					Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
 						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
@@ -4554,6 +4568,17 @@ Class is TypeChecker{
 					}
 				], default: {});
 			});
+			local Boolean is bodyIsVoidBlock: false;
+			if({ isBodyArg }, {
+				match(on: arg:value, when: [
+					Expression:AnonFn: local Function(Type is returnType, [Parameter] is ps, [Statement] is bd){
+						if({ returnType:name == '' || returnType:name == :names:voidName() }, {
+							bodyIsVoidBlock: true;
+						});
+					}
+				], default: {});
+			});
+			:inBranchClosure: bodyIsVoidBlock;
 			:inferExpressionType(expr: arg:value);
 		});
 		:inBranchClosure: savedLoopBranch;
