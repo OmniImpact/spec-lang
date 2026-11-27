@@ -13,7 +13,8 @@ Class of SewNode is Toast{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
-		['base', 'sew', Scale]
+		['base', 'sew', Scale],
+		['base', 'scrap', ScrapButton]
 	];
 
 	String is title: '';
@@ -26,7 +27,7 @@ Class of SewNode is Toast{
 
 	Int is elapsedMs: 0;
 	Int is lastTickMs: 0;
-	Boolean is hoveredClose: false;
+	ScrapButton is closeBtn: ScrapButton();
 
 	replace Function is init(
 		String is title: '',
@@ -44,6 +45,29 @@ Class of SewNode is Toast{
 		:autoHideMs: autoHideMs;
 		:minWidthPt: minWidthPt;
 		:onDismiss: onDismiss;
+		:closeBtn: ScrapButton(
+			label: '×',
+			minWidthPt: 18.0,
+			heightPt: 18.0,
+			padXPt: 3.0,
+			tooltip: 'Dismiss',
+			onClick: local Function(){ :dismiss(); }
+		);
+	}
+
+	replace Function is applyTheme(Theme is theme){
+		:activeTheme: theme;
+		closeBtn:applyTheme(theme: theme);
+	}
+
+	replace Function is setScale(Scale is scale){
+		:activeScale: scale;
+		closeBtn:setScale(scale: scale);
+	}
+
+	replace Function is bindDirty(Function is cb){
+		:dirtyListeners: Array([cb]);
+		closeBtn:bindDirty(cb: cb);
 	}
 
 	Function is show(String is title, String is message, Int is kind: 0){
@@ -104,6 +128,17 @@ Class of SewNode is Toast{
 		return desiredSize;
 	}
 
+	replace Function is arrange(Rect is bounds){
+		layoutBounds: bounds;
+		if({ !visible }, { return; });
+		local Int is bw: activeTheme:panelBorderPx(scaleFactor: activeScale:factor);
+		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
+		local Size is cs: closeBtn:measure(c: Constraints(minW: 0, maxW: bounds:width, minH: 0, maxH: bounds:height));
+		local Int is bx: bounds:x + bounds:width - bw - pad - cs:width;
+		local Int is by: bounds:y + bw + pad / 2;
+		closeBtn:arrange(bounds: Rect(x: bx, y: by, width: cs:width, height: cs:height));
+	}
+
 	replace Function is paint(DrawContext is ctx){
 		if({ !visible }, { return; });
 		local Rect is b: bounds();
@@ -123,7 +158,8 @@ Class of SewNode is Toast{
 		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is tx: b:x + bw + stripeW + pad;
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is textW: b:width - (tx - b:x) - pad * 2 - 14;
+		local Int is btnW: closeBtn:bounds():width;
+		local Int is textW: b:width - (tx - b:x) - pad * 2 - btnW;
 		if({ textW > 0 }, {
 			ctx:setClip(x: tx, y: b:y + bw, w: textW, h: b:height - bw * 2);
 			if({ title != '' && message != '' }, {
@@ -135,52 +171,31 @@ Class of SewNode is Toast{
 			});
 			ctx:clearClip();
 		});
-
-		local Int is xW: ctx:measureTextWidth(text: '×', pixelHeight: fpx);
-		local Int is xCol: if({ hoveredClose }, { activeTheme:textAccent }, { activeTheme:textMuted });
-		ctx:drawText(
-			x: b:x + b:width - pad - xW,
-			y: b:y + pad,
-			text: '×',
-			color: xCol,
-			pixelHeight: fpx
-		);
+		closeBtn:paint(ctx: ctx);
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		if({ !visible || !:containsPoint(x: x, y: y) }, {
-			if({ hoveredClose }, { :hoveredClose: false; :invalidate(); });
+			closeBtn:clearHover();
 			return false;
 		});
-		local Rect is b: bounds();
-		local Int is closeBox: activeScale:px(pt: 24.0);
-		local Boolean is overX: x >= b:x + b:width - closeBox;
-		if({ overX != hoveredClose }, {
-			:hoveredClose: overX;
-			:invalidate();
-		});
+		closeBtn:onPointerMove(x: x, y: y);
 		return true;
 	}
 
 	replace Function is clearHover(){
-		if({ hoveredClose }, { :hoveredClose: false; :invalidate(); });
+		closeBtn:clearHover();
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		if({ !visible || !:containsPoint(x: x, y: y) }, { return false; });
-		local Rect is b: bounds();
-		local Int is closeBox: activeScale:px(pt: 24.0);
-		if({ x >= b:x + b:width - closeBox }, {
-			:dismiss();
-		});
+		if({ closeBtn:onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
 		return true;
 	}
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
 		if({ visible && :containsPoint(x: x, y: y) }, {
-			local Rect is b: bounds();
-			local Int is closeBox: activeScale:px(pt: 24.0);
-			if({ x >= b:x + b:width - closeBox }, { return CursorShape:POINTER; });
+			return closeBtn:cursorAt(x: x, y: y);
 		});
 		return CursorShape:DEFAULT;
 	}

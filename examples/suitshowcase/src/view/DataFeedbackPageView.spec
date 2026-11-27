@@ -135,7 +135,8 @@ Class is DataFeedbackPageView{
 
 		local ProgressBar is detBar: ProgressBar(value: 0.45, showLabel: true, minWidthPt: 180.0);
 		local ProgressBar is indetBar: ProgressBar(indeterminate: true, minWidthPt: 180.0);
-		local Spinner is spinWidget: Spinner(sizePt: 22.0, indeterminate: true, label: 'Working...');
+		local Spinner is spinWidget: Spinner(sizePt: 28.0, indeterminate: true, label: 'Working...');
+		local Spinner is detRing: Spinner(sizePt: 46.0, indeterminate: false, progress: 0.45, showLabel: true);
 
 		local NumberInput is intSpin: NumberInput(
 			value: 45.0,
@@ -146,6 +147,7 @@ Class is DataFeedbackPageView{
 			suffix: '%',
 			onChange: local Function(Float is v){
 				detBar:setValue(next: v / 100.0);
+				detRing:setProgress(next: v / 100.0);
 				vm:statusText:emit(value: 'Progress set to ' . (v as String) . '%');
 			}
 		);
@@ -291,7 +293,7 @@ Class is DataFeedbackPageView{
 					child: Column(
 						gapPt: 10.0,
 						children: Array([
-							Row(gapPt: 12.0, children: Array([detBar, indetBar, spinWidget])),
+							Row(gapPt: 12.0, children: Array([detBar, indetBar, detRing, spinWidget])),
 							Row(
 								gapPt: 8.0,
 								children: Array([

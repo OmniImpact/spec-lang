@@ -6,7 +6,6 @@ Class of SewNode is ProgressBar{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'sys', as Math()],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'sew', SewNode],
@@ -65,7 +64,7 @@ Class of SewNode is ProgressBar{
 		if({ lastTickMs > 0 }, {
 			local Int is dt: nowMs - lastTickMs;
 			if({ dt > 0 && dt < 500 }, {
-				:animPhase: animPhase + math:toFloat(value: dt) / 1400.0;
+				:animPhase: animPhase + (dt as Float) / 1400.0;
 				while({ animPhase >= 1.0 }, { :animPhase: animPhase - 1.0; });
 			});
 		});
@@ -102,18 +101,19 @@ Class of SewNode is ProgressBar{
 		local Int is trackW: b:width - ins * 2;
 		local Int is trackH: b:height - ins * 2;
 		if({ trackW > 0 && trackH > 0 }, {
+			local Int is fillCol: activeTheme:accent:mix(other: activeTheme:surface, t: 0.42):toArgb();
 			local Int is fillRad: trackH / 2;
 			ctx:setClip(x: trackX, y: trackY, w: trackW, h: trackH);
 			if({ indeterminate }, {
 				local Int is segW: trackW / 3;
 				if({ segW < 18 }, { segW: 18; });
 				local Int is span: trackW + segW;
-				local Int is sx: trackX + math:toInt(value: animPhase * math:toFloat(value: span)) - segW;
-				ctx:fillRoundRect(x: sx, y: trackY, w: segW, h: trackH, radius: fillRad, color: activeTheme:textAccent);
+				local Int is sx: trackX + (((animPhase * (span as Float)) + 0.5) as Int) - segW;
+				ctx:fillRoundRect(x: sx, y: trackY, w: segW, h: trackH, radius: fillRad, color: fillCol);
 			}, {
-				local Int is fillW: math:toInt(value: math:round(value: math:toFloat(value: trackW) * value));
+				local Int is fillW: (((trackW as Float) * value) + 0.5) as Int;
 				if({ fillW > 0 }, {
-					ctx:fillRoundRect(x: trackX, y: trackY, w: fillW, h: trackH, radius: fillRad, color: activeTheme:textAccent);
+					ctx:fillRoundRect(x: trackX, y: trackY, w: fillW, h: trackH, radius: fillRad, color: fillCol);
 				});
 			});
 			ctx:clearClip();
@@ -123,7 +123,7 @@ Class of SewNode is ProgressBar{
 			local String is txt: if({ label != '' }, {
 				label
 			}, {
-				if({ indeterminate }, { '...' }, { ('' . math:toInt(value: math:round(value: value * 100.0))) . '%' })
+				if({ indeterminate }, { '...' }, { ((((value * 100.0) + 0.5) as Int) as String) . '%' })
 			});
 			local Int is fpx: activeScale:px(pt: activeTheme:baseTextPt * 0.85);
 			if({ fpx < 9 }, { fpx: 9; });
