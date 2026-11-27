@@ -54,8 +54,19 @@ Class is Mem{
 		base:sysinternal:Mem:storeI64(ptr: ptr, byteOffset: byteOffset, val: val);
 	}
 
+	## Loads a 32-bit value at [ptr + byteOffset], zero-extended to 64-bit Int (alias for [loadU32]).
 	Function of Int is loadI32(Int is ptr, Int is byteOffset){
 		return base:sysinternal:Mem:loadI32(ptr: ptr, byteOffset: byteOffset);
+	}
+
+	## Loads an unsigned 32-bit integer at [ptr + byteOffset], zero-extended to 64-bit Int.
+	Function of Int is loadU32(Int is ptr, Int is byteOffset){
+		return base:sysinternal:Mem:loadU32(ptr: ptr, byteOffset: byteOffset);
+	}
+
+	## Loads a signed 32-bit integer at [ptr + byteOffset], sign-extended to 64-bit Int.
+	Function of Int is loadS32(Int is ptr, Int is byteOffset){
+		return base:sysinternal:Mem:loadS32(ptr: ptr, byteOffset: byteOffset);
 	}
 
 	Function is storeI32(Int is ptr, Int is byteOffset, Int is val){

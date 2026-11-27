@@ -2310,6 +2310,7 @@ Class is IrBuilder{
 			});
 			if({ hty == IrType:Ptr && iv != 'null' }, {
 				:emit(inst: IrInst:Retain(val: iv));
+				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_rt_mark_immortal', argTypes: [IrType:Ptr], args: [iv]));
 			});
 			:emit(inst: IrInst:Store(slot: valGlob, val: iv, ty: hty));
 		});

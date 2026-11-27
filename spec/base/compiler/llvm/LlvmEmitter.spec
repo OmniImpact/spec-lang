@@ -145,7 +145,7 @@ Class is LlvmEmitter{
 	local Function of String is emitExternalSpecDecls(IrModule is mod){
 		local Map of String to Boolean is known: Map:init();
 		local Array of String is preludeSyms: Array([
-			'spec_rt_alloc', 'spec_rt_retain', 'spec_rt_release',
+			'spec_rt_alloc', 'spec_rt_retain', 'spec_rt_release', 'spec_rt_mark_immortal',
 			'spec_pool_frame', 'spec_pool_release_to', 'spec_pool_release_to_transfer', 'spec_claim_pool',
 			'spec_rt_closure_new', 'spec_rt_box_new', 'spec_rt_box_get', 'spec_rt_box_set',
 			'spec_string_intern', 'spec_to_string_float', 'spec_to_string_bool',
