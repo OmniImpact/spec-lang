@@ -7,12 +7,16 @@ Class is Highlighter{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext]
 	];
 
 	Boolean is monoMode: false;
 	Boolean is measureOnly: false;
+	Boolean is advOnly: false;
+	Int is advOutPtr: 0;
+	Int is advScratchPtr: 0;
 	Int is measureTargetCol: 0;
 	Int is measureColPos: 0;
 	Int is measureResultX: 0;
@@ -59,6 +63,21 @@ Class is Highlighter{
 		Boolean is italic: false
 	){
 		if({ seg == '' }, { return curX; });
+		if({ advOnly }, {
+			local Int is slen: seg:length();
+			local Int is tmpAdv: Mem:alloc(bytes: (slen + 1) * 4);
+			ctx:measurePrefixAdvances(text: seg, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode, outAdvI32Ptr: tmpAdv, scratchPtr: advScratchPtr);
+			local Int is si: 1;
+			while({ si <= slen }, {
+				local Int is v: curX + Mem:loadI32(ptr: tmpAdv, byteOffset: si * 4);
+				Mem:storeI32(ptr: advOutPtr, byteOffset: (measureColPos + si) * 4, val: v);
+				si: si + 1;
+			});
+			local Int is endX: curX + Mem:loadI32(ptr: tmpAdv, byteOffset: slen * 4);
+			Mem:free(ptr: tmpAdv);
+			:measureColPos: measureColPos + slen;
+			return endX;
+		});
 		if({ measureOnly }, {
 			if({ measureColPos >= measureTargetCol }, { return curX; });
 			local Int is segLen: seg:length();
@@ -94,6 +113,19 @@ Class is Highlighter{
 		:paintLine(ctx: ctx, theme: theme, x: 0, y: 0, lineStr: lineStr, fpx: fpx);
 		:measureOnly: false;
 		return measureResultX;
+	}
+
+	## Measures cumulative styled pixel X advances for [lineStr] into [outAdvI32Ptr] in a single pass.
+	Function is measureLineAdvances(DrawContext is ctx, Theme is theme, String is lineStr, Int is fpx, Int is outAdvI32Ptr, Int is scratchPtr: 0){
+		if({ outAdvI32Ptr == 0 }, { return; });
+		Mem:storeI32(ptr: outAdvI32Ptr, byteOffset: 0, val: 0);
+		if({ lineStr == '' }, { return; });
+		:advOnly: true;
+		:advOutPtr: outAdvI32Ptr;
+		:advScratchPtr: scratchPtr;
+		:measureColPos: 0;
+		:paintLine(ctx: ctx, theme: theme, x: 0, y: 0, lineStr: lineStr, fpx: fpx);
+		:advOnly: false;
 	}
 
 	## Shared single-line scanner for C-like and scripting languages parameterized by comment syntax and keyword list.

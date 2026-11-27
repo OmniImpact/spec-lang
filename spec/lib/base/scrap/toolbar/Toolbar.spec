@@ -468,4 +468,15 @@ Class of SewNode is Toolbar{
 			});
 		});
 	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		if({ openMenuIdx >= 0 }, { return ''; });
+		local Rect is b: bounds();
+		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return ''; });
+		if({ hoverMenuIdx >= 0 && hoverMenuIdx < config:menus:length() }, {
+			local MenuConfig is m: config:menus:get(index: hoverMenuIdx);
+			if({ m:visible }, { return m:label . ' menu'; });
+		});
+		return '';
+	}
 }

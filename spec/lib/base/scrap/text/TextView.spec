@@ -227,7 +227,16 @@ Class of SewNode is TextView{
 		lastWrapW: -1;
 	}
 
+	Function of Any is createWrapContext(){
+		return DrawContext:shared as Any;
+	}
+
+	Function is measureLineAdvancesInCtx(Any is _ctxObj, String is lineStr, Int is fpx, Boolean is mono, Int is outAdvI32Ptr, Int is scratchPtr){
+		DrawContext:shared:measurePrefixAdvances(text: lineStr, pixelHeight: fpx, mono: mono, outAdvI32Ptr: outAdvI32Ptr, scratchPtr: scratchPtr);
+	}
+
 	local Function is wrapLineSingle(
+		Any is wrapCtx,
 		String is line,
 		Int is availTextW,
 		Int is fpx,
@@ -241,15 +250,16 @@ Class of SewNode is TextView{
 			outStarts:add(item: 0);
 			return;
 		});
-		local Int is fullW: DrawContext:shared:measureTextWidthWithScratch(text: line, pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr);
+		local Int is len: line:length();
+		local Int is advBuf: Mem:alloc(bytes: (len + 1) * 4);
+		:measureLineAdvancesInCtx(ctxObj: wrapCtx, lineStr: line, fpx: fpx, mono: mono, outAdvI32Ptr: advBuf, scratchPtr: scratchPtr);
+		local Int is fullW: Mem:loadI32(ptr: advBuf, byteOffset: len * 4);
 		if({ fullW <= availTextW }, {
+			Mem:free(ptr: advBuf);
 			outSegs:add(item: line);
 			outStarts:add(item: 0);
 			return;
 		});
-		local Int is len: line:length();
-		local Int is advBuf: Mem:alloc(bytes: (len + 1) * 4);
-		DrawContext:shared:measurePrefixAdvances(text: line, pixelHeight: fpx, mono: mono, outAdvI32Ptr: advBuf, scratchPtr: scratchPtr);
 		local Int is pos: 0;
 		while({ pos < len }, {
 			local Int is baseAdv: Mem:loadI32(ptr: advBuf, byteOffset: pos * 4);
@@ -292,6 +302,7 @@ Class of SewNode is TextView{
 	}
 
 	local Function is wrapLineRanges(
+		Any is wrapCtx,
 		String is line,
 		Int is availTextW,
 		Int is fpx,
@@ -306,15 +317,16 @@ Class of SewNode is TextView{
 			Mem:storeI64(ptr: slotPtrs, byteOffset: rIdx * 8, val: 0);
 			return;
 		});
-		local Int is fullW: DrawContext:shared:measureTextWidthWithScratch(text: line, pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr);
+		local Int is len: line:length();
+		local Int is advBuf: Mem:alloc(bytes: (len + 1) * 4);
+		:measureLineAdvancesInCtx(ctxObj: wrapCtx, lineStr: line, fpx: fpx, mono: mono, outAdvI32Ptr: advBuf, scratchPtr: scratchPtr);
+		local Int is fullW: Mem:loadI32(ptr: advBuf, byteOffset: len * 4);
 		if({ fullW <= availTextW }, {
+			Mem:free(ptr: advBuf);
 			Mem:storeI32(ptr: slotCounts, byteOffset: rIdx * 4, val: 1);
 			Mem:storeI64(ptr: slotPtrs, byteOffset: rIdx * 8, val: 0);
 			return;
 		});
-		local Int is len: line:length();
-		local Int is advBuf: Mem:alloc(bytes: (len + 1) * 4);
-		DrawContext:shared:measurePrefixAdvances(text: line, pixelHeight: fpx, mono: mono, outAdvI32Ptr: advBuf, scratchPtr: scratchPtr);
 		local Int is cap: 16;
 		local Int is buf: Mem:alloc(bytes: cap * 8);
 		local Int is cnt: 0;
@@ -383,6 +395,8 @@ Class of SewNode is TextView{
 		local Int is rcount: rawLines:length();
 		if({ wrapCached && availTextW > fpx && rcount >= 64 }, {
 			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, mono: monoCached);
+			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, bold: true, mono: monoCached);
+			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, italic: true, mono: monoCached);
 			DrawContext:shared:measureTextWidth(text: '\u2026', pixelHeight: fpx, mono: monoCached);
 			local Int is slotPtrs: Mem:alloc(bytes: rcount * 8);
 			local Int is slotCounts: Mem:alloc(bytes: rcount * 4);
@@ -400,9 +414,11 @@ Class of SewNode is TextView{
 					local Int is startR: tid * baseCount + if({ tid < remCount }, { tid }, { remCount });
 					local Int is endR: startR + cnt;
 					local Int is scratch: Mem:alloc(bytes: 8);
+					local Any is wrapCtx: :createWrapContext();
 					local Int is r: startR;
 					while({ r < endR }, {
 						:wrapLineRanges(
+							wrapCtx: wrapCtx,
 							line: rawLines:get(index: r),
 							availTextW: availTextW,
 							fpx: fpx,
@@ -461,6 +477,7 @@ Class of SewNode is TextView{
 
 		cachedLineSegs: Array();
 		cachedLineStarts: Array();
+		local Any is seqWrapCtx: :createWrapContext();
 		local Int is r: 0;
 		while({ r < rcount }, {
 			local String is line: rawLines:get(index: r);
@@ -478,6 +495,7 @@ Class of SewNode is TextView{
 				});
 			}, {
 				:wrapLineSingle(
+					wrapCtx: seqWrapCtx,
 					line: line,
 					availTextW: availTextW,
 					fpx: fpx,
@@ -540,11 +558,13 @@ Class of SewNode is TextView{
 			nextStarts:add(item: cachedLineStarts:get(index: i));
 			i: i + 1;
 		});
+		local Any is editWrapCtx: :createWrapContext();
 		local Int is ni: sl;
 		while({ ni <= newEndLine && ni < rawLines:length() }, {
 			local Array of String is segs: Array();
 			local Array of Int is starts: Array();
 			:wrapLineSingle(
+				wrapCtx: editWrapCtx,
 				line: rawLines:get(index: ni),
 				availTextW: lastWrapW,
 				fpx: lastWrapFpx,

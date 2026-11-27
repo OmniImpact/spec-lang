@@ -104,4 +104,9 @@ Class of SewNode is ToolbarContainer{
 	Function is paintOverlay(DrawContext is ctx){
 		if({ hasToolbar }, { toolbar:paintOverlay(ctx: ctx); });
 	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		if({ !hasToolbar }, { return ''; });
+		return toolbar:tooltipAt(x: x, y: y);
+	}
 }

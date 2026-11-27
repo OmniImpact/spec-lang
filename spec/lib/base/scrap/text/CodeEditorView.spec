@@ -130,4 +130,14 @@ Class of TextView is CodeEditorView{
 		activeHighlighter:monoMode: monoCached;
 		return activeHighlighter:measureLinePrefix(ctx: ctx, theme: activeTheme, lineStr: lineStr, fpx: fpx, col: col);
 	}
+
+	replace Function of Any is createWrapContext(){
+		return :highlighterFor(langOverride: language:current(), path: filePath:current()) as Any;
+	}
+
+	replace Function is measureLineAdvancesInCtx(Any is ctxObj, String is lineStr, Int is fpx, Boolean is mono, Int is outAdvI32Ptr, Int is scratchPtr){
+		local Highlighter is hl: ctxObj as Highlighter;
+		hl:monoMode: mono;
+		hl:measureLineAdvances(ctx: DrawContext:shared, theme: activeTheme, lineStr: lineStr, fpx: fpx, outAdvI32Ptr: outAdvI32Ptr, scratchPtr: scratchPtr);
+	}
 }

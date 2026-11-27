@@ -590,26 +590,28 @@ Class is FileDialog{
 		scb(chosen);
 	}
 
-	## Polled once per frame by `ToolkitContainer:run`.
-	Function is poll(){
+	## Polled once per frame by `ToolkitContainer:run`. Returns `true` when activity or redraw occurred.
+	Function of Boolean is poll(){
 		local Boolean is wantOpen: open:current();
 		if({ wantOpen && !isShown }, {
 			:openWindow();
-			return;
+			return true;
 		});
 		if({ !wantOpen && isShown }, {
 			:closeWindow();
-			return;
+			return true;
 		});
-		if({ !isShown }, { return; });
+		if({ !isShown }, { return false; });
 
 		if({ !win:poll() }, {
 			:finishCancel();
-			return;
+			return true;
 		});
 
+		local Boolean is active: isDirty;
 		local Int is key: win:nextKey();
 		while({ key != 0 }, {
+			active: true;
 			if({ key == 27 }, {
 				if({ focusTarget == 1 }, {
 					editPath: curDir;
@@ -617,7 +619,7 @@ Class is FileDialog{
 					isDirty: true;
 				}, {
 					:finishCancel();
-					return;
+					return true;
 				});
 			});
 			if({ key == 13 }, {
@@ -632,7 +634,7 @@ Class is FileDialog{
 				}, {
 					if({ :canConfirm() }, {
 						:finishOpen();
-						return;
+						return true;
 					});
 				});
 			});
@@ -787,6 +789,7 @@ Class is FileDialog{
 		});
 
 		if({ win:pollClick() }, {
+			active: true;
 			local Int is cx: win:clickX();
 			local Int is cy: win:clickY();
 
@@ -795,19 +798,19 @@ Class is FileDialog{
 				if({ cx >= padX && cx < padX + upW }, {
 					focusTarget: 0;
 					:loadDirectory(dirPath: :parentDir(dir: curDir));
-					return;
+					return true;
 				});
 				if({ cx >= hidX && cx < hidX + hidW }, {
 					focusTarget: 0;
 					showHidden: !showHidden;
 					:loadDirectory(dirPath: curDir);
-					return;
+					return true;
 				});
 				if({ cx >= pathX && cx < pathX + pathW }, {
 					focusTarget: 1;
 					editPath: curDir;
 					isDirty: true;
-					return;
+					return true;
 				});
 			});
 
@@ -815,16 +818,16 @@ Class is FileDialog{
 			if({ cy >= boxY && cy < boxY + boxH }, {
 				focusTarget: 2;
 				isDirty: true;
-				return;
+				return true;
 			});
 			if({ cy >= btnY && cy < btnY + btnH }, {
 				if({ cx >= cancelX && cx < cancelX + btnW }, {
 					:finishCancel();
-					return;
+					return true;
 				});
 				if({ cx >= openX && cx < openX + btnW }, {
 					:finishOpen();
-					return;
+					return true;
 				});
 			});
 
@@ -837,7 +840,7 @@ Class is FileDialog{
 					if({ Dir():isDir(path: target) }, {
 						:loadDirectory(dirPath: target);
 					});
-					return;
+					return true;
 				});
 			});
 
@@ -853,7 +856,7 @@ Class is FileDialog{
 					if({ scrollRow > maxScroll }, { scrollRow: maxScroll; });
 					isDirty: true;
 				});
-				return;
+				return true;
 			});
 
 			## File list click
@@ -891,7 +894,7 @@ Class is FileDialog{
 						});
 					}, {
 						if({ directoryMode:current() }, {
-							return;
+							return true;
 						});
 						local String is full: :joinPath(dir: curDir, name: name);
 						selectedRow: idx;
@@ -899,7 +902,7 @@ Class is FileDialog{
 						if({ isDouble }, {
 							if({ !saveMode:current() }, { :selectSingleFile(fullPath: full); });
 							:finishOpen();
-							return;
+							return true;
 						}, {
 							if({ !saveMode:current() }, { :toggleSelect(fullPath: full); });
 							isDirty: true;
@@ -911,7 +914,9 @@ Class is FileDialog{
 
 		if({ isDirty }, {
 			:paintDialog();
+			active: true;
 		});
+		return active;
 	}
 
 	Function is dispose(){

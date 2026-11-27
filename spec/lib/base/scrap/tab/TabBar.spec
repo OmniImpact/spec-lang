@@ -251,4 +251,14 @@ Class of SewNode is TabBar{
 		});
 		ctx:clearClip();
 	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		local Rect is area: :tabsAreaRect(b: bounds());
+		if({ x < area:x || x >= area:x + area:width || y < area:y || y >= area:y + area:height }, { return ''; });
+		if({ hoverCloseIdx >= 0 }, { return 'Close tab'; });
+		if({ hoverTabIdx >= 0 && hoverTabIdx < tabs:length() }, {
+			return tabs:get(index: hoverTabIdx):label;
+		});
+		return '';
+	}
 }

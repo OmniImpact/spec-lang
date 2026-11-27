@@ -18,6 +18,8 @@ Class of SewNode is TextInput{
 	String is suffix: '';
 	Boolean is focused: false;
 	Boolean is hovered: false;
+	Int is cursorPos: 0;
+	Int is scrollX: 0;
 	Float is minWidthPt: 0.0;
 	Float is heightPt: 0.0;
 	Boolean is expand: false;
@@ -79,6 +81,7 @@ Class of SewNode is TextInput{
 		local String is val: if({ focused }, { :stripSuffix(s: next) }, { next });
 		if({ text != val }, {
 			:text: val;
+			if({ cursorPos > text:length() }, { :cursorPos: text:length(); });
 			invalidate();
 		});
 	}
@@ -96,10 +99,13 @@ Class of SewNode is TextInput{
 			:focused: next;
 			if({ next }, {
 				:text: :stripSuffix(s: text);
+				:cursorPos: text:length();
 			}, {
 				local Function is scb: onSubmit;
 				scb(text);
 				:text: :ensureSuffix(s: text);
+				:cursorPos: 0;
+				:scrollX: 0;
 			});
 			invalidate();
 		});
@@ -144,11 +150,33 @@ Class of SewNode is TextInput{
 		local Int is clipW: b:width - padX * 2;
 		if({ clipW > 4 }, {
 			ctx:setClip(x: b:x + padX, y: b:y, w: clipW, h: b:height);
+			local Int is textY: b:y + (b:height - th) / 2;
 			if({ text == '' && !focused && placeholder != '' }, {
-				ctx:drawText(x: b:x + padX, y: b:y + (b:height - th) / 2, text: placeholder, color: activeTheme:textMuted, pixelHeight: fpx);
+				ctx:drawText(x: b:x + padX, y: textY, text: placeholder, color: activeTheme:textMuted, pixelHeight: fpx);
 			}, {
-				local String is shown: if({ focused }, { text . '|' }, { text });
-				ctx:drawText(x: b:x + padX, y: b:y + (b:height - th) / 2, text: shown, color: activeTheme:textPrimary, pixelHeight: fpx);
+				local Int is cPos: cursorPos;
+				if({ cPos < 0 }, { cPos: 0; });
+				if({ cPos > text:length() }, { cPos: text:length(); });
+				local Int is caretOff: if({ focused && cPos > 0 }, {
+					ctx:measureTextWidth(text: text:substring(start: 0, end: cPos), pixelHeight: fpx)
+				}, { 0 });
+				local Int is caretW: activeScale:px(pt: 1.0);
+				if({ caretW < 1 }, { caretW: 1; });
+				if({ focused }, {
+					if({ caretOff - scrollX > clipW - caretW }, {
+						:scrollX: caretOff - (clipW - caretW);
+					});
+					if({ caretOff - scrollX < 0 }, {
+						:scrollX: caretOff;
+					});
+					if({ scrollX < 0 }, { :scrollX: 0; });
+				}, {
+					:scrollX: 0;
+				});
+				ctx:drawText(x: b:x + padX - scrollX, y: textY, text: text, color: activeTheme:textPrimary, pixelHeight: fpx);
+				if({ focused }, {
+					ctx:fillRect(x: b:x + padX + caretOff - scrollX, y: textY, w: caretW, h: th, color: activeTheme:textPrimary);
+				});
 			});
 			ctx:clearClip();
 		});
@@ -175,9 +203,33 @@ Class of SewNode is TextInput{
 		local Boolean is inside: :contains(x: x, y: y);
 		if({ inside != focused }, {
 			:setFocused(next: inside);
+		});
+		if({ inside }, {
+			local Rect is b: bounds();
+			local Int is padX: activeScale:px(pt: activeTheme:paddingPt);
+			local Int is fpx: :fontPx();
+			local Int is relX: (x - (b:x + padX)) + scrollX;
+			local Int is best: 0;
+			if({ relX > 0 && text:length() > 0 }, {
+				local Int is bestDist: relX;
+				local Int is i: 1;
+				while({ i <= text:length() }, {
+					local Int is w: DrawContext:measureWidth(text: text:substring(start: 0, end: i), pixelHeight: fpx);
+					local Int is d: if({ w >= relX }, { w - relX }, { relX - w });
+					if({ d <= bestDist }, {
+						bestDist: d;
+						best: i;
+					});
+					i: i + 1;
+				});
+			});
+			if({ best != cursorPos }, {
+				:cursorPos: best;
+				invalidate();
+			});
 			return true;
 		});
-		return inside;
+		return false;
 	}
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
@@ -192,10 +244,47 @@ Class of SewNode is TextInput{
 			dcb();
 			return true;
 		});
-		if({ key == 8 || key == 127 }, {
-			local Int is n: text:length();
-			if({ n > 0 }, {
-				:text: text:substring(start: 0, end: n - 1);
+		if({ key == 1003 }, {
+			if({ cursorPos > 0 }, {
+				:cursorPos: cursorPos - 1;
+				invalidate();
+			});
+			return true;
+		});
+		if({ key == 1004 }, {
+			if({ cursorPos < text:length() }, {
+				:cursorPos: cursorPos + 1;
+				invalidate();
+			});
+			return true;
+		});
+		if({ key == 1005 }, {
+			if({ cursorPos != 0 }, {
+				:cursorPos: 0;
+				invalidate();
+			});
+			return true;
+		});
+		if({ key == 1006 }, {
+			if({ cursorPos != text:length() }, {
+				:cursorPos: text:length();
+				invalidate();
+			});
+			return true;
+		});
+		if({ key == 8 }, {
+			if({ cursorPos > 0 }, {
+				:text: text:substring(start: 0, end: cursorPos - 1) . text:substring(start: cursorPos, end: text:length());
+				:cursorPos: cursorPos - 1;
+				local Function is cb: onChange;
+				cb(text);
+				invalidate();
+			});
+			return true;
+		});
+		if({ key == 127 }, {
+			if({ cursorPos < text:length() }, {
+				:text: text:substring(start: 0, end: cursorPos) . text:substring(start: cursorPos + 1, end: text:length());
 				local Function is cb: onChange;
 				cb(text);
 				invalidate();
@@ -212,7 +301,11 @@ Class of SewNode is TextInput{
 
 	replace Function of Boolean is onText(String is ch, Int is mods){
 		if({ !focused || ch == '' }, { return false; });
-		:text: text . ch;
+		local Int is cPos: cursorPos;
+		if({ cPos < 0 }, { cPos: 0; });
+		if({ cPos > text:length() }, { cPos: text:length(); });
+		:text: text:substring(start: 0, end: cPos) . ch . text:substring(start: cPos, end: text:length());
+		:cursorPos: cPos + ch:length();
 		local Function is cb: onChange;
 		cb(text);
 		invalidate();

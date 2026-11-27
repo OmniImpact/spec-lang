@@ -651,7 +651,7 @@ Class of SewNode is ToolkitContainer{
 				edi: edi + 1;
 			});
 			if({ hasFileDialog }, {
-				fileDialog:poll();
+				if({ fileDialog:poll() }, { hadActivity: true; });
 			});
 
 			local Int is w: win:width();
