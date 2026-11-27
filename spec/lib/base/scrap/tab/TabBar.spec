@@ -179,6 +179,14 @@ Class of SewNode is TabBar{
 		return false;
 	}
 
+	replace Function is clearHover(){
+		if({ hoverTabIdx >= 0 || hoverCloseIdx >= 0 }, {
+			hoverTabIdx: -1;
+			hoverCloseIdx: -1;
+			invalidate();
+		});
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Rect is area: :tabsAreaRect(b: bounds());
 		if({ x < area:x || x >= area:x + area:width || y < area:y || y >= area:y + area:height || tabs:length() == 0 }, { return false; });
