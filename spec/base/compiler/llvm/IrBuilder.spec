@@ -1315,13 +1315,10 @@ Class is IrBuilder{
 						hasArcField: true;
 					});
 				});
-				local Boolean is hasUserDestroy: false;
-				times(count: cls:members:length(), worker: local Function(Int is dmi){
-					local Member is dm: cls:members:get(index: dmi);
-					if({ dm:kind == MemberKind:METHOD && dm:name == 'destroy' && dm:params:length() == 0 }, {
-						hasUserDestroy: true;
-					});
-				});
+				local Array of String is destroyChain: Array();
+				local Map of String to Boolean is dVis: Map:init();
+				:collectDestroyChain(cls: cls, clsMap: clsMap, visited: dVis, outFns: destroyChain);
+				local Boolean is hasUserDestroy: destroyChain:length() > 0;
 				if({ hasArcField || hasUserDestroy }, {
 					st:destroyFn: sname . '__destroy';
 				});
@@ -1568,6 +1565,26 @@ Class is IrBuilder{
 		return 'null';
 	}
 
+	local Function is collectDestroyChain(ClassInfo is cls, Map of String to ClassInfo is clsMap, Map of String to Boolean is visited, Array of String is outFns){
+		local String is fkey: :fullClassKey(cls: cls);
+		if({ cls:name == '' || visited:has(key: fkey) }, { return; });
+		visited:set(key: fkey, value: true);
+		local String is csname: :irStructNameForClass(cls: cls);
+		times(count: cls:members:length(), worker: local Function(Int is dmi){
+			local Member is dm: cls:members:get(index: dmi);
+			if({ dm:kind == MemberKind:METHOD && dm:name == 'destroy' && dm:params:length() == 0 && !dm:hasModifier(kw: Keyword:HELD) }, {
+				outFns:add(item: csname . '_destroy');
+			});
+		});
+		times(count: cls:baseClasses:length(), worker: local Function(Int is bi){
+			local String is bname: cls:baseClasses:get(index: bi);
+			local ClassInfo is bcls: :resolveBaseClass(cls: cls, bname: bname, clsMap: clsMap);
+			if({ :fullClassKey(cls: bcls) != fkey }, {
+				:collectDestroyChain(cls: bcls, clsMap: clsMap, visited: visited, outFns: outFns);
+			});
+		});
+	}
+
 	local Function is buildDestroyHelper(IrStruct is st, ClassInfo is cls, String is sname, String is destroyFn){
 		local IrFunction is fn: IrFunction:init(name: destroyFn, retType: IrType:Void);
 		fn:addParam(name: '%self', ty: IrType:Ptr);
@@ -1576,11 +1593,13 @@ Class is IrBuilder{
 		:switchBlock(blk: entry);
 		:tmpCounter: 0;
 		:curPoolMark: '';
-		times(count: cls:members:length(), worker: local Function(Int is dmi){
-			local Member is dm: cls:members:get(index: dmi);
-			if({ dm:kind == MemberKind:METHOD && dm:name == 'destroy' && dm:params:length() == 0 }, {
-				:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: sname . '_destroy', argTypes: [IrType:Ptr], args: ['%self']));
-			});
+		local Array of String is destroyChain: Array();
+		local Map of String to Boolean is dVis: Map:init();
+		:collectDestroyChain(cls: cls, clsMap: :clsMap, visited: dVis, outFns: destroyChain);
+		local Int is di: 0;
+		while({ di < destroyChain:length() }, {
+			:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: destroyChain:get(index: di), argTypes: [IrType:Ptr], args: ['%self']));
+			di++;
 		});
 		range(start: 2, end: st:fieldTypes:length(), worker: local Function(Int is fi){
 			if({ st:fieldIsArc:get(index: fi) }, {

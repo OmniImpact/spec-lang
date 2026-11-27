@@ -25,6 +25,8 @@ Class is Mem{
 	Function of Int is loadI64(Int is ptr, Int is byteOffset);
 	Function is storeI64(Int is ptr, Int is byteOffset, Int is val);
 	Function of Int is loadI32(Int is ptr, Int is byteOffset);
+	Function of Int is loadU32(Int is ptr, Int is byteOffset);
+	Function of Int is loadS32(Int is ptr, Int is byteOffset);
 	Function is storeI32(Int is ptr, Int is byteOffset, Int is val);
 	Function of Int is loadByte(Int is ptr, Int is byteOffset);
 	Function is storeByte(Int is ptr, Int is byteOffset, Int is val);

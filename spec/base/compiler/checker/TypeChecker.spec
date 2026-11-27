@@ -6386,7 +6386,7 @@ Class is TypeChecker{
 					:addError(line: m:line, msg: msg);
 				}, {
 					local String is name: m:name;
-					if({ name != ContractMethod:INIT:value() && name != ContractMethod:USING:value() && name != MetadataField:NAMESPACE:value() && name != MetadataField:CASTABLE:value() && name != ContractMethod:TO_STRING:value() && :findMemberOwnerClass(className: classDef:name, memberName: name) != Primitive:ANY:value() }, {
+					if({ name != ContractMethod:INIT:value() && name != 'destroy' && name != ContractMethod:USING:value() && name != MetadataField:NAMESPACE:value() && name != MetadataField:CASTABLE:value() && name != ContractMethod:TO_STRING:value() && :findMemberOwnerClass(className: classDef:name, memberName: name) != Primitive:ANY:value() }, {
 						local Member is anc: :findAncestorMember(className: classDef:name, memberName: name);
 						if({ anc:name == '' }, {
 							local String is what: if({ hasMerge }, { 'merge' }, { 'replace' });
@@ -6636,7 +6636,7 @@ Class is TypeChecker{
 										:applyMerge(classDef: classDef, subM: subM, parentM: parentM, baseName: baseName);
 									});
 								}, {
-									if({ !hasReplace }, {
+									if({ !hasReplace && subM:name != 'destroy' }, {
 										local String is msg: 'Member \'' . subM:name . '\' in class \'' . classDef:name . '\' overrides ancestor member from \'' . baseName . '\', but is missing \'replace\' modifier.';
 										:addError(line: subM:line, msg: msg);
 									});

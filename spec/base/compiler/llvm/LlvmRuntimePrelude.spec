@@ -66,6 +66,17 @@ atomic_inc:
 done:
   ret ptr %obj
 }
+define internal void @spec_rt_mark_immortal(ptr %obj) alwaysinline {
+  %isnull = icmp eq ptr %obj, null
+  br i1 %isnull, label %done, label %mark
+mark:
+  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %unused = atomicrmw or ptr %sfp, i32 1 monotonic, align 4
+  br label %done
+done:
+  ret void
+}
 define internal void @spec_rt_release(ptr %obj) alwaysinline {
   %isnull = icmp eq ptr %obj, null
   br i1 %isnull, label %done, label %chk_mt
@@ -370,6 +381,20 @@ define internal i64 @__spec_mem_load_i32(i64 %base, i64 %off) alwaysinline {
   %p = getelementptr i8, ptr %p0, i64 %off
   %v = load i32, ptr %p
   %ext = zext i32 %v to i64
+  ret i64 %ext
+}
+define internal i64 @__spec_mem_load_u32(i64 %base, i64 %off) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %v = load i32, ptr %p
+  %ext = zext i32 %v to i64
+  ret i64 %ext
+}
+define internal i64 @__spec_mem_load_s32(i64 %base, i64 %off) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %v = load i32, ptr %p
+  %ext = sext i32 %v to i64
   ret i64 %ext
 }
 define internal void @__spec_mem_store_i32(i64 %base, i64 %off, i64 %val) alwaysinline {

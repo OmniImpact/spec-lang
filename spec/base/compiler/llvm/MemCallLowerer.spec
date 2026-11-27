@@ -34,7 +34,7 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 		match(on: call:name, when: [
 			['init', 'classRegistryAddr', 'classRegistryCount', 'heldRegistryAddr', 'slabAlloc', 'isMultithreaded']: { ok: true; },
 			['alloc', 'free', 'slabFree', 'vmAlloc', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'internStr', 'panic', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64', 'callConstruct', 'cstrToStr', 'typeNameOf', 'tlsGetI64']: { ok: true; },
-			['realloc', 'vmFree', 'strFromBytes', 'loadI64', 'loadI32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy', 'tlsSetI64', 'randomBytes']: { ok: argc >= 2; },
+			['realloc', 'vmFree', 'strFromBytes', 'loadI64', 'loadI32', 'loadU32', 'loadS32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy', 'tlsSetI64', 'randomBytes']: { ok: argc >= 2; },
 			['copy', 'move', 'set', 'cmp', 'vmRealloc', 'storeI64', 'storeI32', 'storeByte', 'storePtr', 'storeF64', 'atomicCasI64']: { ok: argc >= 3; }
 		]);
 		return ok;
@@ -153,6 +153,16 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
 				local String is off: :lowerNamedArg(b: b, call: call, argName: 'byteOffset', posIdx: 1, defVal: '0');
 				res: :emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_load_i32', argTypes: [IrType:I64, IrType:I64], args: [p, off]);
+			},
+			'loadU32': {
+				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
+				local String is off: :lowerNamedArg(b: b, call: call, argName: 'byteOffset', posIdx: 1, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_load_u32', argTypes: [IrType:I64, IrType:I64], args: [p, off]);
+			},
+			'loadS32': {
+				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
+				local String is off: :lowerNamedArg(b: b, call: call, argName: 'byteOffset', posIdx: 1, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_load_s32', argTypes: [IrType:I64, IrType:I64], args: [p, off]);
 			},
 			'storeI32': {
 				local String is p: :lowerNamedArg(b: b, call: call, argName: 'ptr', posIdx: 0, defVal: '0');
