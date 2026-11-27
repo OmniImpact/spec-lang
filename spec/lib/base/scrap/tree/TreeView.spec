@@ -224,6 +224,15 @@ Class of SewNode is TreeView{
 					local String is boxSvg: if({ node:expanded }, { minusIconSvg }, { plusIconSvg });
 					if({ boxSvg != '' }, {
 						SvgRenderer:shared:draw(ctx: ctx, svgSrc: boxSvg, x: bx, y: by, widthPx: boxSz, heightPx: boxSz, tintColor: activeTheme:textPrimary, useTint: true);
+					}, {
+						ctx:strokeRect(x: bx, y: by, w: boxSz, h: boxSz, color: lineCol, thickness: linePx);
+						local Int is arm: boxSz - 4;
+						if({ arm < 3 }, { arm: 3; });
+						local Int is armOff: (boxSz - arm) / 2;
+						ctx:fillRect(x: bx + armOff, y: cy - linePx / 2, w: arm, h: linePx, color: activeTheme:textPrimary);
+						if({ !node:expanded }, {
+							ctx:fillRect(x: cx - linePx / 2, y: by + armOff, w: linePx, h: arm, color: activeTheme:textPrimary);
+						});
 					});
 				}, {
 					# Dotted horizontal line connecting vertical line to file label

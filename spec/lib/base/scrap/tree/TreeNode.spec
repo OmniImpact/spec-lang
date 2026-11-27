@@ -25,7 +25,7 @@ Class is TreeNode{
 	){
 		:id: id;
 		:label: label;
-		:expandable: expandable;
+		:expandable: expandable || (children:length() > 0);
 		:expanded: expanded;
 		:loaded: loaded;
 		:children: children;
