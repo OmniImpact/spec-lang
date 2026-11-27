@@ -497,4 +497,18 @@ Class is ShowcaseViewModel{
 		statusText:emit(value: 'Stepper value: ' . (stepperVal as String));
 		:notifyRefresh();
 	}
+
+	Function of Boolean is importThemeJson(String is json){
+		if({ !activeTheme:fromJson(json: json) }, {
+			statusText:emit(value: 'Theme JSON import failed: invalid JSON');
+			return false;
+		});
+		:baseTextPt: activeTheme:baseTextPt;
+		:borderStyle: activeTheme:borderStyle;
+		local Function is cb: :themeApplyHandler;
+		cb(activeTheme);
+		statusText:emit(value: 'Imported theme from JSON');
+		:notifyRefresh();
+		return true;
+	}
 }

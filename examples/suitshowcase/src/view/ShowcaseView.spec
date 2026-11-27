@@ -35,10 +35,11 @@ Class is ShowcaseView{
 		['suitshowcase', 'view', FillEffectsPageView],
 		['suitshowcase', 'view', DateTimePageView],
 		['suitshowcase', 'view', TextStylesPageView],
-		['suitshowcase', 'view', TextTreePageView]
+		['suitshowcase', 'view', TextTreePageView],
+		['suitshowcase', 'view', DataFeedbackPageView]
 	];
 
-	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'datetime', 'textstyles', 'lines', 'fills', 'text']);
+	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'datetime', 'textstyles', 'lines', 'fills', 'text', 'data']);
 
 	local Function of Int is routeIndex(String is routeName){
 		local Int is i: 0;
@@ -64,6 +65,7 @@ Class is ShowcaseView{
 		local DateTimePageView is dateTimePage: DateTimePageView(vm: vm);
 		local TextStylesPageView is textStylesPage: TextStylesPageView(vm: vm);
 		local TextTreePageView is textPage: TextTreePageView(vm: vm);
+		local DataFeedbackPageView is dataFeedbackPage: DataFeedbackPageView(vm: vm);
 
 		local NavStack is navStack: NavStack(
 			route: vm:selectedRoute,
@@ -81,13 +83,14 @@ Class is ShowcaseView{
 				NavRoute(name: 'textstyles', child: ScrollView(child: Padding(useThemePad: true, child: textStylesPage:build()))),
 				NavRoute(name: 'lines', child: ScrollView(child: Padding(useThemePad: true, child: linesPage:build()))),
 				NavRoute(name: 'fills', child: ScrollView(child: Padding(useThemePad: true, child: fillsPage:build()))),
-				NavRoute(name: 'text', child: ScrollView(child: Padding(useThemePad: true, child: textPage:build())))
+				NavRoute(name: 'text', child: ScrollView(child: Padding(useThemePad: true, child: textPage:build()))),
+				NavRoute(name: 'data', child: ScrollView(allowHScroll: true, child: Padding(useThemePad: true, child: dataFeedbackPage:build())))
 			])
 		);
 
 		local SectionV is sidebar: SectionV(
 			segmented: true,
-			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Date & Time', 'Text Styles', 'Lines & Borders', 'Fill & Effects', 'Text & Tree']),
+			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Date & Time', 'Text Styles', 'Lines & Borders', 'Fill & Effects', 'Text & Tree', 'Data & Feedback']),
 			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
 			itemMinWidthPt: 132.0,
 			itemHeightPt: 24.0,
@@ -125,6 +128,8 @@ Class is ShowcaseView{
 			bottomBar: Bar(leftText: vm:statusText),
 			hasBottomBar: true
 		);
+		container:extraDialogs:add(item: dataFeedbackPage:alertDlg);
+		container:extraDialogs:add(item: dataFeedbackPage:confirmDlg);
 
 		vm:bindThemeApply(onThemeApply: local Function(Theme is t){
 			container:setTheme(nextTheme: t);

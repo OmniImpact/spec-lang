@@ -18,6 +18,7 @@ Class is ThemeBuilderPageView{
 		['base', 'scrap', Switch],
 		['base', 'scrap', ColorSwatchDropdown],
 		['base', 'scrap', TextInput],
+		['base', 'scrap', TextArea],
 		['base', 'scrap', DecoratedTextInput],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', SectionH],
@@ -33,6 +34,11 @@ Class is ThemeBuilderPageView{
 	ShowcaseViewModel is vm: ShowcaseViewModel();
 	SectionH is presetSection: SectionH();
 	SectionH is borderSection: SectionH();
+	TextArea is themeJsonArea: TextArea(
+		minLines: 6,
+		minWidthPt: 360.0,
+		placeholder: 'Click Export JSON to serialize the current theme, or paste JSON and click Import JSON...'
+	);
 	SectionH is panelStyleSection: SectionH();
 	SectionH is dividerStyleSection: SectionH();
 	SectionH is buttonStyleSection: SectionH();
@@ -555,6 +561,32 @@ Class is ThemeBuilderPageView{
 									Label(text: 'Button Shadow Y'), buttonShadowYSlider, TextScrap(text: buttonShadowYLabel, muted: true)
 								])
 							)
+						])
+					)
+				),
+				Frame(
+					title: 'Theme JSON (Export / Import)',
+					child: SectionV(
+						children: Array([
+							SectionH(
+								children: Array([
+									ScrapButton(
+										label: 'Export JSON',
+										onClick: local Function(){
+											local String is outJson: vm:activeTheme:toJson();
+											themeJsonArea:setText(next: outJson);
+											vm:statusText:emit(value: 'Exported theme JSON (' . (outJson:length() as String) . ' bytes)');
+										}
+									),
+									ScrapButton(
+										label: 'Import JSON',
+										onClick: local Function(){
+											vm:importThemeJson(json: themeJsonArea:text);
+										}
+									)
+								])
+							),
+							themeJsonArea
 						])
 					)
 				)
