@@ -194,18 +194,30 @@ Class of SewNode is Slider{
 		if({ trackH < 4 }, { trackH: 4; });
 		local Int is tx: b:x + padX;
 		local Int is ty: b:y + (b:height - trackH) / 2;
-		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
+		local Int is bw: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+		local Int is trackRad: if({ radPx > trackH / 2 }, { trackH / 2 }, { radPx });
+		local Int is shBlur: activeScale:px(pt: activeTheme:buttonShadowBlurPt);
+		local Int is shOffX: activeScale:px(pt: activeTheme:buttonShadowOffsetXPt);
+		local Int is shOffY: activeScale:px(pt: activeTheme:buttonShadowOffsetYPt);
+		local Int is shCol: if({ shBlur > 0 || shOffX != 0 || shOffY != 0 }, { 1426063360 }, { 0 });
+		local String is bStyle: activeTheme:buttonBorderStyle;
 
-		ctx:fillRect(x: tx, y: ty, w: trackW, h: trackH, color: activeTheme:panelBg);
-		if({ bw > 0 }, {
-			local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
-			ctx:strokeRect(x: tx, y: ty, w: trackW, h: trackH, color: borderCol, thickness: bw);
-		});
-
+		ctx:fillRoundRect(x: tx, y: ty, w: trackW, h: trackH, radius: trackRad, color: activeTheme:panelBg);
 		local Int is span: maxVal - minVal;
 		local Int is fillW: if({ span > 0 }, { ((value - minVal) * trackW) / span }, { 0 });
 		if({ fillW > 0 }, {
-			ctx:fillRect(x: tx, y: ty, w: fillW, h: trackH, color: activeTheme:textAccent);
+			ctx:setClip(x: tx, y: ty, w: fillW, h: trackH);
+			ctx:fillRoundRect(x: tx, y: ty, w: trackW, h: trackH, radius: trackRad, color: activeTheme:textAccent);
+			ctx:clearClip();
+		});
+		if({ bw > 0 && bStyle != 'none' }, {
+			local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
+			ctx:drawStyledBox(
+				x: tx, y: ty, w: trackW, h: trackH,
+				bgColor: 0, borderColor: borderCol, thickness: bw,
+				radius: trackRad, style: bStyle
+			);
 		});
 
 		local Int is thumbW: activeScale:px(pt: 10.0);
@@ -216,9 +228,11 @@ Class of SewNode is Slider{
 		local Int is ky: b:y + (b:height - thumbH) / 2;
 		local Int is kBg: if({ hovered || dragging }, { activeTheme:hoverBg }, { activeTheme:menuBg });
 		local Int is kBorder: if({ focused || dragging }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
-		ctx:fillRect(x: kx, y: ky, w: thumbW, h: thumbH, color: kBg);
-		if({ bw > 0 }, {
-			ctx:strokeRect(x: kx, y: ky, w: thumbW, h: thumbH, color: kBorder, thickness: bw);
-		});
+		ctx:drawStyledBox(
+			x: kx, y: ky, w: thumbW, h: thumbH,
+			bgColor: kBg, borderColor: kBorder, thickness: bw,
+			radius: radPx, style: bStyle,
+			shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
+		);
 	}
 }

@@ -73,11 +73,11 @@ Class is Theme{
 	Float is iconSizePt: 12.0;
 	Float is lineGapPt: 3.0;
 	Float is editorPadPt: 8.0;
-	Float is borderThicknessPt: 1.0;
-	Float is lineThicknessPt: 1.0;
+	Float is borderThicknessPt: 0.7;
+	Float is lineThicknessPt: 0.7;
 	String is borderStyle: 'solid';
 	String is panelBorderStyle: 'single';
-	Float is panelBorderThicknessPt: 1.0;
+	Float is panelBorderThicknessPt: 0.7;
 	Float is panelCornerRadiusPt: 0.0;
 	Float is panelShadowBlurPt: 0.0;
 	Float is panelShadowOffsetXPt: 0.0;
@@ -86,9 +86,9 @@ Class is Theme{
 	Float is panelInnerShadowOffsetXPt: 0.0;
 	Float is panelInnerShadowOffsetYPt: 0.0;
 	String is dividerStyle: 'single';
-	Float is dividerThicknessPt: 1.0;
+	Float is dividerThicknessPt: 0.7;
 	String is buttonBorderStyle: 'single';
-	Float is buttonBorderThicknessPt: 1.0;
+	Float is buttonBorderThicknessPt: 0.7;
 	Float is buttonCornerRadiusPt: 0.0;
 	Float is buttonShadowBlurPt: 0.0;
 	Float is buttonShadowOffsetXPt: 0.0;
@@ -194,9 +194,9 @@ Class is Theme{
 			:borderThicknessPt: 0.0;
 		}, {
 		if({ style == 'bold' }, {
-			:borderThicknessPt: 2.0;
+			:borderThicknessPt: 1.4;
 		}, {
-			:borderThicknessPt: 1.0;
+			:borderThicknessPt: 0.7;
 		}); });
 		if({ !customMetrics }, {
 			:panelBorderThicknessPt: borderThicknessPt;
@@ -213,7 +213,7 @@ Class is Theme{
 			:panelBorderThicknessPt: 0.0;
 		}, {
 		if({ panelBorderThicknessPt <= 0.0 }, {
-			:panelBorderThicknessPt: 1.0;
+			:panelBorderThicknessPt: 0.7;
 		}); });
 	}
 
@@ -264,7 +264,7 @@ Class is Theme{
 			:dividerThicknessPt: 0.0;
 		}, {
 		if({ dividerThicknessPt <= 0.0 }, {
-			:dividerThicknessPt: 1.0;
+			:dividerThicknessPt: 0.7;
 		}); });
 	}
 
@@ -280,7 +280,7 @@ Class is Theme{
 			:buttonBorderThicknessPt: 0.0;
 		}, {
 		if({ buttonBorderThicknessPt <= 0.0 }, {
-			:buttonBorderThicknessPt: 1.0;
+			:buttonBorderThicknessPt: 0.7;
 		}); });
 	}
 
@@ -485,7 +485,7 @@ Class is Theme{
 		iconSizePt: baseTextPt * 1.1;
 		lineGapPt: basePaddingPt * 0.75;
 		editorPadPt: paddingLargePt;
-		local Float is baseBorder: 1.0 * (baseTextPt / 11.0);
+		local Float is baseBorder: 0.7 * (baseTextPt / 10.0);
 		if({ borderStyle == 'none' }, {
 			borderThicknessPt: 0.0;
 		}, {
