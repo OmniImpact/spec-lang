@@ -13,8 +13,10 @@ Class of Dialog is SettingsDialogView{
 		['base', 'sew', Padding],
 		['base', 'sew', 'nav', NavStack],
 		['base', 'sew', 'nav', NavRoute],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Dialog],
 		['base', 'scrap', Clickable],
+		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', ScrollView],
 		['base', 'scrap', Frame],
@@ -37,10 +39,10 @@ Class of Dialog is SettingsDialogView{
 		:vm: vm;
 		:title: 'Settings';
 		:open: vm:open;
-		:widthPt: 480.0;
-		:heightPt: 330.0;
-		:minWidthPt: 400.0;
-		:minHeightPt: 270.0;
+		:widthPt: 580.0;
+		:heightPt: 400.0;
+		:minWidthPt: 480.0;
+		:minHeightPt: 320.0;
 		:hasContent: true;
 		:appearanceView: AppearanceSettingsView(vm: vm);
 		:locationsView: LocationsSettingsView(vm: vm);
@@ -83,33 +85,39 @@ Class of Dialog is SettingsDialogView{
 			segmented: true,
 			options: Array(['Appearance', 'Locations', 'Interface']),
 			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
-			itemMinWidthPt: 96.0,
-			itemHeightPt: 22.0,
+			itemMinWidthPt: 112.0,
+			itemHeightPt: 24.0,
 			onSelect: local Function(Int is idx){
 				vm:selectRoute(routeName: categoryRoutes:get(index: idx));
 			}
 		);
 
 		local Row is bodyRow: Row(
-			gapPt: 10.0,
+			gapPt: 12.0,
 			children: Array([
-				categorySection,
-				Frame(padPt: 0.0, child: navStack)
+				Column(children: Array([categorySection])),
+				Frame(padPt: 0.0, fillBg: true, child: navStack)
 			]),
 			flexFlags: Array([false, true])
 		);
 
 		local Row is footerRow: Row(
-			gapPt: 6.0,
+			gapPt: 8.0,
 			children: Array([
+				Label(
+					text: 'Changes apply immediately and are saved automatically.',
+					style: TextStyle:CAPTION,
+					muted: true
+				),
 				ScrapButton(
 					label: 'Close',
-					minWidthPt: 64.0,
-					heightPt: 22.0,
+					minWidthPt: 72.0,
+					heightPt: 24.0,
 					tooltip: 'Close Settings dialog (Esc)',
 					onClick: local Function(){ vm:closeSettings(); }
 				)
-			])
+			]),
+			flexFlags: Array([true, false])
 		);
 
 		local Column is root: Column(

@@ -129,11 +129,16 @@ Class of SewNode is PinnedLocationsList{
 			## Remove button (only for user-pinned locations)
 			if({ canRemove }, {
 				local Boolean is remHov: (i == hoverRemoveRow);
-				local Int is btnBg: if({ remHov }, { activeTheme:hoverBg }, { activeTheme:panelBg });
-				ctx:fillRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: btnBg);
-				if({ bw > 0 }, {
-					ctx:strokeRect(x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height, color: activeTheme:buttonBorder, thickness: bw);
-				});
+				local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+				local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+				ctx:drawStyledBoxFill(
+					x: btnR:x, y: btnR:y, w: btnR:width, h: btnR:height,
+					fill: activeTheme:resolveButtonFill(enabled: true, selected: false, hovered: remHov, focused: false),
+					borderColor: activeTheme:buttonBorderColorArgb(),
+					thickness: btnPx,
+					radius: radPx,
+					style: activeTheme:buttonBorderStyle
+				);
 				local Int is rw: DrawContext:measureWidth(text: 'Remove', pixelHeight: fpx);
 				ctx:drawText(
 					x: btnR:x + (btnR:width - rw) / 2,

@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Locations settings category view using SectionV and SectionH.
+#! Locations settings category view using Row, Column, Frame, and PinnedLocationsList.
 
 Class is LocationsSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -7,11 +7,12 @@ Class is LocationsSettingsView{
 	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
+		['base', 'sew', Column],
+		['base', 'sew', Row],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
-		['base', 'scrap', SectionV],
-		['base', 'scrap', SectionH],
 		['specedit', 'viewmodel', SettingsViewModel],
 		['specedit', 'view', 'settings', PinnedLocationsList]
 	];
@@ -27,26 +28,47 @@ Class is LocationsSettingsView{
 	Function of SewNode is build(){
 		:listView: PinnedLocationsList(vm: vm);
 
-		local SectionH is actionsRow: SectionH(
+		local Row is headerRow: Row(
+			gapPt: 8.0,
+			flexFlags: Array([true, false]),
 			children: Array([
-				ScrapButton(
-					label: 'Add Location',
-					minWidthPt: 96.0,
-					onClick: local Function(){ vm:requestAddLocation(); }
+				Label(text: 'Locations', heading: true),
+				Row(
+					gapPt: 6.0,
+					children: Array([
+						ScrapButton(
+							label: 'Pin Current Folder',
+							minWidthPt: 110.0,
+							tooltip: 'Pin the currently open folder to quick-access locations',
+							onClick: local Function(){ vm:pinCurrentDirectory(); }
+						),
+						ScrapButton(
+							label: 'Add Location...',
+							minWidthPt: 96.0,
+							tooltip: 'Browse for a folder to pin',
+							onClick: local Function(){ vm:requestAddLocation(); }
+						)
+					])
 				)
 			])
 		);
 
-		return SectionV(
+		return Column(
+			gapPt: 10.0,
 			children: Array([
-				Label(text: 'Locations', heading: true),
-				actionsRow,
+				headerRow,
 				Frame(
-					title: 'Pinned Locations (drag gripper to reorder)',
+					title: 'Pinned Locations',
+					fillBg: true,
+					padPt: 4.0,
 					child: listView
+				),
+				Label(
+					text: 'Drag a row by its gripper handle to reorder pinned folders.',
+					style: TextStyle:CAPTION,
+					muted: true
 				)
-			]),
-			flexFlags: Array([false, false, false])
+			])
 		);
 	}
 

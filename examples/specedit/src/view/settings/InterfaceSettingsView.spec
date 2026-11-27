@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Interface settings category view using SectionV, SectionH, and Switch.
+#! Interface settings category view using Grid, Frame, Label, and Switch.
 
 Class is InterfaceSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -7,11 +7,12 @@ Class is InterfaceSettingsView{
 	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
+		['base', 'sew', Column],
+		['base', 'sew', Grid],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', Switch],
-		['base', 'scrap', SectionV],
-		['base', 'scrap', SectionH],
 		['specedit', 'viewmodel', SettingsViewModel]
 	];
 
@@ -41,18 +42,47 @@ Class is InterfaceSettingsView{
 			onToggle: local Function(Boolean is _next){ vm:toggleDefaultShowFileTree(); }
 		);
 
-		return SectionV(
+		local Grid is defaultsGrid: Grid(
+			columns: 2,
+			colGapPt: 12.0,
+			rowGapPt: 10.0,
+			flexCols: Array([true, false]),
+			children: Array([
+				Column(
+					gapPt: 1.0,
+					children: Array([
+						Label(text: 'Default Monospace Font'),
+						Label(text: 'Use a fixed-width font for newly opened documents', style: TextStyle:CAPTION, muted: true)
+					])
+				),
+				monoSwitch,
+				Column(
+					gapPt: 1.0,
+					children: Array([
+						Label(text: 'Default Word Wrap'),
+						Label(text: 'Wrap long lines to fit the editor viewport width', style: TextStyle:CAPTION, muted: true)
+					])
+				),
+				wrapSwitch,
+				Column(
+					gapPt: 1.0,
+					children: Array([
+						Label(text: 'Show File Tree on Startup'),
+						Label(text: 'Open the workspace file tree sidebar when launching', style: TextStyle:CAPTION, muted: true)
+					])
+				),
+				treeSwitch
+			])
+		);
+
+		return Column(
+			gapPt: 10.0,
 			children: Array([
 				Label(text: 'Interface', heading: true),
 				Frame(
-					title: 'Startup Defaults',
-					child: SectionV(
-						children: Array([
-							SectionH(children: Array([monoSwitch, Label(text: 'Default Monospace Font')])),
-							SectionH(children: Array([wrapSwitch, Label(text: 'Default Word Wrap')])),
-							SectionH(children: Array([treeSwitch, Label(text: 'Show File Tree by Default')]))
-						])
-					)
+					title: 'Editor & Workspace Defaults',
+					fillBg: true,
+					child: defaultsGrid
 				)
 			])
 		);

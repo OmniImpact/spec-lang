@@ -1,5 +1,5 @@
 #! Package specedit:view:settings
-#! Appearance settings category view using SectionV, SectionH, and DecoratedTextInput.
+#! Appearance settings category view using Grid, NumberInput, SectionH, and Frame.
 
 Class is AppearanceSettingsView{
 	replace [String] is namespace: ['specedit', 'view', 'settings'];
@@ -8,21 +8,25 @@ Class is AppearanceSettingsView{
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
+		['base', 'sew', Column],
+		['base', 'sew', Row],
+		['base', 'sew', Grid],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', SectionH],
-		['base', 'scrap', DecoratedTextInput],
+		['base', 'scrap', NumberInput],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
+		['base', 'fabric', TextStyle],
 		['specedit', 'viewmodel', SettingsViewModel]
 	];
 
 	SettingsViewModel is vm: SettingsViewModel();
 	SectionH is themeSection: SectionH();
-	DecoratedTextInput is docDeltaInput: DecoratedTextInput();
-	DecoratedTextInput is baseTextInput: DecoratedTextInput();
+	NumberInput is docDeltaInput: NumberInput();
+	NumberInput is baseTextInput: NumberInput();
 	Array of Int is zoomValues: Array([70, 100, 115, 130]);
 	SectionH is zoomSection: SectionH();
 
@@ -72,41 +76,51 @@ Class is AppearanceSettingsView{
 			}
 		);
 
-		:docDeltaInput: DecoratedTextInput(
-			text: vm:docDeltaLabel(),
+		:docDeltaInput: NumberInput(
+			value: vm:model:docTextDeltaPt,
+			minVal: -6.0,
+			maxVal: 16.0,
+			step: 1.0,
+			decimals: 0,
 			suffix: ' pt',
-			tooltip: 'Adjust editor font size offset (type number or press Up/Down)',
-			onLeftClick: local Function(){ vm:adjustDocTextDelta(delta: -1.0); },
-			onRightClick: local Function(){ vm:adjustDocTextDelta(delta: 1.0); },
-			onSubmit: local Function(String is v){ vm:setDocTextDeltaFromText(raw: v); }
+			minWidthPt: 100.0,
+			tooltip: 'Adjust editor font size offset (-6 to +16 pt)',
+			onChange: local Function(Float is nextVal){ vm:setDocTextDelta(nextVal: nextVal); }
 		);
 
-		:baseTextInput: DecoratedTextInput(
-			text: vm:baseTextLabel(),
+		:baseTextInput: NumberInput(
+			value: vm:model:baseTextPt,
+			minVal: 8.0,
+			maxVal: 20.0,
+			step: 1.0,
+			decimals: 0,
 			suffix: ' pt',
-			tooltip: 'Set base UI font size in points (type number or press Up/Down)',
-			onLeftClick: local Function(){ vm:adjustBaseTextPt(delta: -1.0); },
-			onRightClick: local Function(){ vm:adjustBaseTextPt(delta: 1.0); },
-			onSubmit: local Function(String is v){ vm:setBaseTextPtFromText(raw: v); }
+			minWidthPt: 100.0,
+			tooltip: 'Set base UI font size in points (8 to 20 pt)',
+			onChange: local Function(Float is nextVal){ vm:setBaseTextPt(nextVal: nextVal); }
 		);
 
-		local SectionH is docSizeRow: SectionH(
+		local Row is docSizeRow: Row(
+			gapPt: 6.0,
 			children: Array([
 				docDeltaInput,
 				ScrapButton(
 					label: 'Reset',
-					minWidthPt: 50.0,
+					minWidthPt: 48.0,
+					tooltip: 'Reset document font offset to 0 pt',
 					onClick: local Function(){ vm:resetDocTextDelta(); }
 				)
 			])
 		);
 
-		local SectionH is baseTextRow: SectionH(
+		local Row is baseTextRow: Row(
+			gapPt: 6.0,
 			children: Array([
 				baseTextInput,
 				ScrapButton(
 					label: 'Reset',
-					minWidthPt: 50.0,
+					minWidthPt: 48.0,
+					tooltip: 'Reset default theme text size to 10 pt',
 					onClick: local Function(){ vm:resetBaseTextPt(); }
 				)
 			])
@@ -122,7 +136,7 @@ Class is AppearanceSettingsView{
 			segmented: true,
 			options: zoomLabels,
 			selectedIndex: :zoomIndex(pct: vm:model:uiZoomPct),
-			itemMinWidthPt: 48.0,
+			itemMinWidthPt: 46.0,
 			onSelect: local Function(Int is idx){
 				if({ idx >= 0 && idx < zoomValues:length() }, {
 					vm:selectZoomPct(pct: zoomValues:get(index: idx));
@@ -132,35 +146,81 @@ Class is AppearanceSettingsView{
 
 		:sync();
 
-		return SectionV(
+		local Grid is themeGrid: Grid(
+			columns: 2,
+			colGapPt: 12.0,
+			rowGapPt: 8.0,
+			flexCols: Array([true, false]),
 			children: Array([
-				SectionH(
+				Column(
+					gapPt: 1.0,
+					children: Array([
+						Label(text: 'Color Theme'),
+						Label(text: 'Switch between light and dark palettes', style: TextStyle:CAPTION, muted: true)
+					])
+				),
+				themeSection,
+				Column(
+					gapPt: 1.0,
+					children: Array([
+						Label(text: 'UI Zoom'),
+						Label(text: 'Scale interface controls and spacing', style: TextStyle:CAPTION, muted: true)
+					])
+				),
+				zoomSection
+			])
+		);
+
+		local Grid is textGrid: Grid(
+			columns: 2,
+			colGapPt: 12.0,
+			rowGapPt: 8.0,
+			flexCols: Array([true, false]),
+			children: Array([
+				Column(
+					gapPt: 1.0,
+					children: Array([
+						Label(text: 'Document Font Offset'),
+						Label(text: 'Relative to default editor font size', style: TextStyle:CAPTION, muted: true)
+					])
+				),
+				docSizeRow,
+				Column(
+					gapPt: 1.0,
+					children: Array([
+						Label(text: 'Interface Font Size'),
+						Label(text: 'Default theme text size in points', style: TextStyle:CAPTION, muted: true)
+					])
+				),
+				baseTextRow
+			])
+		);
+
+		return Column(
+			gapPt: 10.0,
+			children: Array([
+				Row(
+					gapPt: 8.0,
+					flexFlags: Array([true, false]),
 					children: Array([
 						Label(text: 'Appearance', heading: true),
 						ScrapButton(
 							label: 'Reset All',
-							minWidthPt: 64.0,
+							minWidthPt: 68.0,
 							tooltip: 'Restore all appearance settings to defaults',
 							onClick: local Function(){ vm:resetAppearance(); }
 						)
 					])
 				),
 				Frame(
-					title: 'Theme',
-					child: themeSection
+					title: 'Theme & Scale',
+					fillBg: true,
+					child: themeGrid
 				),
 				Frame(
-					title: 'Text Size',
-					child: SectionV(
-						children: Array([
-							SectionV(title: 'Document Text Size (relative to default)', children: Array([docSizeRow])),
-							SectionV(title: 'Default Theme Text Size', children: Array([baseTextRow]))
-						])
-					)
-				),
-				Frame(
-					title: 'UI Zoom',
-					child: zoomSection
+					title: 'Typography',
+					fillBg: true,
+					child: textGrid
 				)
 			])
 		);
@@ -168,8 +228,8 @@ Class is AppearanceSettingsView{
 
 	Function is sync(){
 		themeSection:setSelectedIndex(index: :presetIndex(preset: vm:model:themePreset));
-		docDeltaInput:setText(next: vm:docDeltaLabel());
-		baseTextInput:setText(next: vm:baseTextLabel());
+		docDeltaInput:setValue(next: vm:model:docTextDeltaPt);
+		baseTextInput:setValue(next: vm:model:baseTextPt);
 		zoomSection:setSelectedIndex(index: :zoomIndex(pct: vm:model:uiZoomPct));
 	}
 }
