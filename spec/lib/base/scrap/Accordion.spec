@@ -14,13 +14,16 @@ Class of SewNode is Accordion{
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
-		['base', 'fabric', DrawContext]
+		['base', 'fabric', DrawContext],
+		['base', 'fabric', 'svg', SvgRenderer]
 	];
 
 	String is title: 'Section';
 	Boolean is expanded: false;
 	SewNode is child: SewNode();
 	Float is padPt: -1.0;
+	String is collapsedIconSvg: '';
+	String is expandedIconSvg: '';
 	Function is onToggle: local Function(Boolean is _expanded){};
 
 	Boolean is hovered: false;
@@ -33,6 +36,8 @@ Class of SewNode is Accordion{
 		Boolean is expanded: false,
 		SewNode is child: SewNode(),
 		Float is padPt: -1.0,
+		String is collapsedIconSvg: '',
+		String is expandedIconSvg: '',
 		Function is onToggle: local Function(Boolean is _expanded){},
 		String is tooltip: ''
 	){
@@ -40,6 +45,8 @@ Class of SewNode is Accordion{
 		:expanded: expanded;
 		:child: child;
 		:padPt: padPt;
+		:collapsedIconSvg: collapsedIconSvg;
+		:expandedIconSvg: expandedIconSvg;
 		:onToggle: onToggle;
 		:hovered: false;
 		:focused: false;
@@ -168,17 +175,24 @@ Class of SewNode is Accordion{
 
 		local FillStyle is hFill: activeTheme:resolveButtonFill(enabled: true, selected: expanded, hovered: hovered, focused: focused);
 		if({ expanded && bodyBounds:height > 0 }, {
+			local Int is hx: headerBounds:x + panelPx;
+			local Int is hy: headerBounds:y + panelPx;
+			local Int is hw: if({ headerBounds:width > panelPx * 2 }, { headerBounds:width - panelPx * 2 }, { headerBounds:width });
+			local Int is hh: if({ headerBounds:height > panelPx }, { headerBounds:height - panelPx }, { headerBounds:height });
+			local Int is innerRad: if({ radPx > panelPx }, { radPx - panelPx }, { 0 });
 			ctx:drawStyledBox(
 				x: b:x, y: b:y, w: b:width, h: b:height,
 				bgColor: activeTheme:panelBg, borderColor: activeTheme:panelBorderColorArgb(),
 				thickness: panelPx, radius: radPx, style: activeTheme:panelBorderStyle
 			);
-			ctx:setClip(x: headerBounds:x, y: headerBounds:y, w: headerBounds:width, h: headerBounds:height);
-			ctx:fillRoundRectStyled(x: headerBounds:x, y: headerBounds:y, w: headerBounds:width, h: headerBounds:height + radPx, radius: radPx, fill: hFill);
-			ctx:clearClip();
-			if({ btnPx > 0 }, {
+			if({ hw > 0 && hh > 0 }, {
+				ctx:setClip(x: hx, y: hy, w: hw, h: hh);
+				ctx:fillRoundRectStyled(x: hx, y: hy, w: hw, h: hh + innerRad, radius: innerRad, fill: hFill);
+				ctx:clearClip();
+			});
+			if({ btnPx > 0 && hw > 0 }, {
 				ctx:drawDivider(
-					x: headerBounds:x, y: headerBounds:y + headerBounds:height - btnPx, w: headerBounds:width, h: btnPx,
+					x: hx, y: headerBounds:y + headerBounds:height - btnPx, w: hw, h: btnPx,
 					color: activeTheme:dividerColorArgb(), thickness: btnPx, style: activeTheme:dividerStyle
 				);
 			});
@@ -194,11 +208,16 @@ Class of SewNode is Accordion{
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is padX: activeScale:px(pt: activeTheme:paddingLargePt);
-		local String is glyph: if({ expanded }, { 'v' }, { '>' });
-		local Int is gw: ctx:measureTextWidth(text: glyph, pixelHeight: fpx);
 		local Int is ty: headerBounds:y + (headerBounds:height - th) / 2;
-		ctx:drawText(x: headerBounds:x + padX, y: ty, text: glyph, color: activeTheme:textMuted, pixelHeight: fpx);
-		ctx:drawText(x: headerBounds:x + padX * 2 + gw, y: ty, text: title, color: activeTheme:textPrimary, pixelHeight: fpx);
+		local String is ico: if({ expanded }, { expandedIconSvg }, { collapsedIconSvg });
+		if({ ico != '' }, {
+			local Int is isz: activeScale:px(pt: activeTheme:iconSizePt);
+			if({ isz < 10 }, { isz: 10; });
+			SvgRenderer:shared:draw(ctx: ctx, svgSrc: ico, x: headerBounds:x + padX, y: headerBounds:y + (headerBounds:height - isz) / 2, widthPx: isz, heightPx: isz, tintColor: activeTheme:textMuted, useTint: true);
+			ctx:drawText(x: headerBounds:x + padX * 2 + isz, y: ty, text: title, color: activeTheme:textPrimary, pixelHeight: fpx);
+		}, {
+			ctx:drawText(x: headerBounds:x + padX, y: ty, text: title, color: activeTheme:textPrimary, pixelHeight: fpx);
+		});
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){

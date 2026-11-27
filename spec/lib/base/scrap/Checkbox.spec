@@ -11,6 +11,8 @@ Class of SewNode is Checkbox{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'fabric', Color],
+		['base', 'fabric', FillMode],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext]
 	];
@@ -121,30 +123,16 @@ Class of SewNode is Checkbox{
 
 		if({ checked }, {
 			local Int is ckCol: if({ enabled }, { activeTheme:textPrimary }, { activeTheme:textMuted });
-			local Int is thick: activeScale:px(pt: 1.5);
-			if({ thick < 2 }, { thick: 2; });
-			local Int is x0: bx + (boxPx * 22) / 100;
-			local Int is y0: by + (boxPx * 52) / 100;
-			local Int is xm: bx + (boxPx * 42) / 100;
-			local Int is ym: by + (boxPx * 72) / 100;
-			local Int is x1: bx + (boxPx * 76) / 100;
-			local Int is y1: by + (boxPx * 28) / 100;
-			local Int is steps1: if({ xm > x0 }, { xm - x0 }, { 1 });
-			local Int is s1: 0;
-			while({ s1 <= steps1 }, {
-				local Int is px: x0 + s1;
-				local Int is py: y0 + ((ym - y0) * s1) / steps1;
-				ctx:fillRect(x: px - thick / 2, y: py - thick / 2, w: thick, h: thick, color: ckCol);
-				s1: s1 + 1;
-			});
-			local Int is steps2: if({ x1 > xm }, { x1 - xm }, { 1 });
-			local Int is s2: 0;
-			while({ s2 <= steps2 }, {
-				local Int is px: xm + s2;
-				local Int is py: ym + ((y1 - ym) * s2) / steps2;
-				ctx:fillRect(x: px - thick / 2, y: py - thick / 2, w: thick, h: thick, color: ckCol);
-				s2: s2 + 1;
-			});
+			local Int is innerPx: (boxPx * 50) / 100;
+			if({ innerPx < 4 }, { innerPx: 4; });
+			local Int is ix: bx + (boxPx - innerPx) / 2;
+			local Int is iy: by + (boxPx - innerPx) / 2;
+			local Int is innerRad: if({ radPx > 1 }, { radPx / 2 }, { 0 });
+			ctx:fillRoundRectStyled(
+				x: ix, y: iy, w: innerPx, h: innerPx,
+				radius: innerRad,
+				fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: ckCol))
+			);
 		});
 
 		if({ label != '' }, {
