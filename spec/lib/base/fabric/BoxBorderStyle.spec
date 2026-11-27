@@ -8,7 +8,8 @@ Class of LineStyle is BoxBorderStyle{
 		['base', 'sys', as Conditional()],
 		['base', 'fabric', Color],
 		['base', 'fabric', LineStyle],
-		['base', 'fabric', ShadowStyle]
+		['base', 'fabric', ShadowStyle],
+		['base', 'fabric', StrokeStyle]
 	];
 
 	Float is radiusPt: 0.0;
@@ -21,7 +22,8 @@ Class of LineStyle is BoxBorderStyle{
 	replace Function is init(
 		Float is widthPt: -1.0,
 		Color is color: Color(r: 0, g: 0, b: 0, a: 0),
-		String is style: '',
+		StrokeStyle is style: StrokeStyle:SINGLE,
+		Boolean is hasStyle: false,
 		Float is radiusPt: -1.0,
 		ShadowStyle is shadow: ShadowStyle(specified: false),
 		ShadowStyle is innerShadow: ShadowStyle(inset: true, specified: false)
@@ -40,13 +42,8 @@ Class of LineStyle is BoxBorderStyle{
 			:lineColor: Color(r: 120, g: 130, b: 150);
 			:hasColor: false;
 		});
-		if({ style != '' }, {
-			:style: style;
-			:hasStyle: true;
-		}, {
-			:style: 'single';
-			:hasStyle: false;
-		});
+		:style: style;
+		:hasStyle: hasStyle || style != StrokeStyle:SINGLE;
 		if({ radiusPt >= 0.0 }, {
 			:radiusPt: radiusPt;
 			:hasRadius: true;

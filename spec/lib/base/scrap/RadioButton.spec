@@ -6,6 +6,7 @@ Class of SewNode is RadioButton{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
 		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
@@ -71,7 +72,7 @@ Class of SewNode is RadioButton{
 	}
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
-		if({ enabled && focused && (key == 10 || key == 13 || key == 32) }, {
+		if({ enabled && focused && (KeyCode:isEnter(key: key) || key == KeyCode:SPACE) }, {
 			:selectSelf();
 			return true;
 		});

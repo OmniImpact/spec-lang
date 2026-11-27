@@ -26,6 +26,7 @@ Class is DataFeedbackPageView{
 		['base', 'scrap', Spinner],
 		['base', 'scrap', Badge],
 		['base', 'scrap', Toast],
+		['base', 'scrap', ToastKind],
 		['base', 'scrap', Dialog],
 		['base', 'scrap', DialogButton],
 		['base', 'scrap', Popover],
@@ -176,7 +177,7 @@ Class is DataFeedbackPageView{
 		local Toast is toastBanner: Toast(
 			title: 'Toolkit Ready',
 			message: 'Click the buttons below to trigger different Toast severities.',
-			kind: 0,
+			kind: ToastKind:INFO,
 			visible: true,
 			minWidthPt: 280.0
 		);
@@ -343,10 +344,10 @@ Class is DataFeedbackPageView{
 							Row(
 								gapPt: 8.0,
 								children: Array([
-									ScrapButton(label: 'Info Toast', onClick: local Function(){ toastBanner:show(title: 'Info', message: 'Informational notification', kind: 0); }),
-									ScrapButton(label: 'Success Toast', onClick: local Function(){ toastBanner:show(title: 'Saved', message: 'Changes applied cleanly', kind: 1); }),
-									ScrapButton(label: 'Warning Toast', onClick: local Function(){ toastBanner:show(title: 'Heads up', message: 'Check configuration values', kind: 2); }),
-									ScrapButton(label: 'Error Toast', onClick: local Function(){ toastBanner:show(title: 'Error', message: 'Something went wrong', kind: 3); })
+									ScrapButton(label: 'Info Toast', onClick: local Function(){ toastBanner:show(title: 'Info', message: 'Informational notification', kind: ToastKind:INFO); }),
+									ScrapButton(label: 'Success Toast', onClick: local Function(){ toastBanner:show(title: 'Saved', message: 'Changes applied cleanly', kind: ToastKind:SUCCESS); }),
+									ScrapButton(label: 'Warning Toast', onClick: local Function(){ toastBanner:show(title: 'Heads up', message: 'Check configuration values', kind: ToastKind:WARNING); }),
+									ScrapButton(label: 'Error Toast', onClick: local Function(){ toastBanner:show(title: 'Error', message: 'Something went wrong', kind: ToastKind:ERROR); })
 								])
 							)
 						])

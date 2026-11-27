@@ -10,6 +10,7 @@ Class of SewNode is SelectDropdown{
 		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
+		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
 		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
@@ -424,38 +425,38 @@ Class of SewNode is SelectDropdown{
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused && !open }, { return false; });
 		if({ !open }, {
-			if({ key == 10 || key == 13 || key == 32 || key == 1002 }, {
+			if({ KeyCode:isEnter(key: key) || key == KeyCode:SPACE || key == KeyCode:DOWN }, {
 				:openPopup();
 				return true;
 			});
 			return false;
 		});
-		if({ key == 27 }, {
+		if({ key == KeyCode:ESC }, {
 			:closePopup();
 			return true;
 		});
 		local Int is n: filteredIndices:length();
-		if({ key == 1001 }, {
+		if({ key == KeyCode:UP }, {
 			if({ n > 0 && highlightPos > 0 }, {
 				:highlightPos: highlightPos - 1;
 				:invalidate();
 			});
 			return true;
 		});
-		if({ key == 1002 }, {
+		if({ key == KeyCode:DOWN }, {
 			if({ n > 0 && highlightPos + 1 < n }, {
 				:highlightPos: highlightPos + 1;
 				:invalidate();
 			});
 			return true;
 		});
-		if({ key == 10 || key == 13 }, {
+		if({ KeyCode:isEnter(key: key) }, {
 			if({ highlightPos >= 0 && highlightPos < n }, {
 				:chooseFilteredPos(pos: highlightPos);
 			});
 			return true;
 		});
-		if({ searchable && key == 8 }, {
+		if({ searchable && key == KeyCode:BACKSPACE }, {
 			local Int is fl: filterText:length();
 			if({ fl > 0 }, {
 				:filterText: filterText:substring(start: 0, end: fl - 1);

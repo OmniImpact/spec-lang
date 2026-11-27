@@ -14,12 +14,13 @@ Class of SewNode is Toast{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
-		['base', 'scrap', ScrapButton]
+		['base', 'scrap', ScrapButton],
+		['base', 'scrap', ToastKind]
 	];
 
 	String is title: '';
 	String is message: '';
-	Int is kind: 0;
+	ToastKind is kind: ToastKind:INFO;
 	Boolean is visible: true;
 	Int is autoHideMs: 0;
 	Float is minWidthPt: 220.0;
@@ -32,7 +33,7 @@ Class of SewNode is Toast{
 	replace Function is init(
 		String is title: '',
 		String is message: '',
-		Int is kind: 0,
+		ToastKind is kind: ToastKind:INFO,
 		Boolean is visible: true,
 		Int is autoHideMs: 0,
 		Float is minWidthPt: 220.0,
@@ -70,7 +71,7 @@ Class of SewNode is Toast{
 		closeBtn:bindDirty(cb: cb);
 	}
 
-	Function is show(String is title, String is message, Int is kind: 0){
+	Function is show(String is title, String is message, ToastKind is kind: ToastKind:INFO){
 		:title: title;
 		:message: message;
 		:kind: kind;
@@ -89,9 +90,9 @@ Class of SewNode is Toast{
 	}
 
 	local Function of Int is stripeColor(){
-		if({ kind == 1 }, { return -13716885; });
-		if({ kind == 2 }, { return -2651608; });
-		if({ kind == 3 }, { return -2668478; });
+		if({ kind == ToastKind:SUCCESS }, { return activeTheme:positive:toArgb(); });
+		if({ kind == ToastKind:WARNING }, { return -2651608; });
+		if({ kind == ToastKind:ERROR }, { return activeTheme:negative:toArgb(); });
 		return activeTheme:textAccent;
 	}
 

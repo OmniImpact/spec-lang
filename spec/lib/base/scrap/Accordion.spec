@@ -7,6 +7,7 @@ Class of SewNode is Accordion{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array],
+		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
@@ -83,7 +84,7 @@ Class of SewNode is Accordion{
 	}
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
-		if({ focused && (key == 10 || key == 13 || key == 32) }, {
+		if({ focused && (KeyCode:isEnter(key: key) || key == KeyCode:SPACE) }, {
 			:toggleExpanded();
 			return true;
 		});

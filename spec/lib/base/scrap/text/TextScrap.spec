@@ -11,6 +11,7 @@ Class of SewNode is TextScrap{
 		['base', 'signal', TextEmitter],
 		['base', 'signal', TextCollector],
 		['base', 'sew', SewNode],
+		['base', 'sew', HAlign],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -21,7 +22,7 @@ Class of SewNode is TextScrap{
 	];
 
 	TextEmitter is text: TextEmitter(initial: '');
-	String is align: 'left';
+	HAlign is align: HAlign:LEFT;
 	Boolean is wrap: false;
 	Boolean is muted: false;
 	Float is lineGapPt: 0.0;
@@ -31,7 +32,7 @@ Class of SewNode is TextScrap{
 
 	replace Function is init(
 		TextEmitter is text: TextEmitter(initial: ''),
-		String is align: 'left',
+		HAlign is align: HAlign:LEFT,
 		Boolean is wrap: false,
 		Boolean is muted: false,
 		Float is lineGapPt: 0.0
@@ -144,10 +145,10 @@ Class of SewNode is TextScrap{
 			local String is lineStr: cachedLines:get(index: i);
 			local Int is lw: ctx:measureTextWidth(text: lineStr, pixelHeight: fpx);
 			local Int is lx: b:x;
-			if({ align == 'center' }, {
+			if({ align == HAlign:CENTER }, {
 				lx: b:x + (b:width - lw) / 2;
 			}, {
-				if({ align == 'right' }, {
+				if({ align == HAlign:RIGHT }, {
 					lx: b:x + b:width - lw;
 				});
 			});

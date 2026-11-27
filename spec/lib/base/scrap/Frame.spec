@@ -14,6 +14,7 @@ Class of SewNode is Frame{
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', DrawContext]
 	];
 
@@ -111,7 +112,7 @@ Class of SewNode is Frame{
 		local Int is inShOffX: activeScale:px(pt: activeTheme:panelInnerShadowOffsetXPt);
 		local Int is inShOffY: activeScale:px(pt: activeTheme:panelInnerShadowOffsetYPt);
 		local Int is inShCol: if({ inShBlur > 0 || inShOffX != 0 || inShOffY != 0 }, { 1426063360 }, { 0 });
-		local String is pStyle: activeTheme:panelBorderStyle;
+		local StrokeStyle is pStyle: activeTheme:panelBorderStyle;
 		local Int is bgCol: if({ padPt != 0.0 || fillBg }, { activeTheme:windowBg }, { 0 });
 		local Boolean is useGradFill: activeTheme:customSurfaceFill && !activeTheme:surfaceFill:isSolid() && bgCol != 0;
 		if({ title == '' }, {
@@ -139,7 +140,7 @@ Class of SewNode is Frame{
 				child:paint(ctx: ctx);
 				ctx:clearClip();
 			});
-			if({ bw > 0 && pStyle != 'none' }, {
+			if({ bw > 0 && pStyle != StrokeStyle:NONE }, {
 				ctx:drawStyledBox(
 					x: b:x, y: b:y, w: b:width, h: b:height,
 					bgColor: 0, borderColor: border, thickness: bw,
@@ -156,7 +157,7 @@ Class of SewNode is Frame{
 				local Int is titlePad: activeScale:px(pt: activeTheme:paddingLargePt);
 				local Int is titleX: b:x + bw + radPx + titlePad;
 				local Int is gapPad: activeScale:px(pt: 4.0);
-				local Boolean is simpleSingle: pStyle == 'single' && radPx <= 0 && shBlur <= 0 && shOffX == 0 && shOffY == 0 && inShBlur <= 0 && inShOffX == 0 && inShOffY == 0 && !useGradFill;
+				local Boolean is simpleSingle: pStyle == StrokeStyle:SINGLE && radPx <= 0 && shBlur <= 0 && shOffX == 0 && shOffY == 0 && inShBlur <= 0 && inShOffX == 0 && inShOffY == 0 && !useGradFill;
 				if({ !simpleSingle }, {
 					if({ useGradFill }, {
 						ctx:drawStyledBoxFill(
@@ -201,7 +202,7 @@ Class of SewNode is Frame{
 					ctx:fillRect(x: b:x + b:width - bw, y: topY, w: bw, h: boxH, color: border);
 					ctx:fillRect(x: b:x, y: b:y + b:height - bw, w: b:width, h: bw, color: border);
 				}, {
-					if({ bw > 0 && pStyle != 'none' }, {
+					if({ bw > 0 && pStyle != StrokeStyle:NONE }, {
 						ctx:drawStyledBox(
 							x: b:x, y: topY, w: b:width, h: boxH,
 							bgColor: 0, borderColor: border, thickness: bw,

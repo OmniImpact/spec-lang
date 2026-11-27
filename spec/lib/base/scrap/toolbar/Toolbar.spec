@@ -15,17 +15,19 @@ Class of SewNode is Toolbar{
 		['base', 'sew', Scale],
 		['base', 'sew', DockSide],
 		['base', 'fabric', Theme],
+		['base', 'fabric', ThemePreset],
 		['base', 'fabric', DrawContext],
 		['base', 'suit', SuitCanvas],
 		['base', 'scrap', Bar],
 		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'menu', MenuConfig],
-		['base', 'scrap', 'menu', MenuItemConfig]
+		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', 'menu', MenuItemKind]
 	];
 
 	Bar is bar: Bar(borderSide: DockSide:BOTTOM);
-	Theme is theme: Theme(preset: 'light_grayscale');
+	Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT);
 	Scale is scale: Scale(factor: 1.0);
 	ToolbarConfig is config: ToolbarConfig();
 	Int is openMenuIdx: -1;
@@ -36,7 +38,7 @@ Class of SewNode is Toolbar{
 	Function is onMenuOpen: local Function(MenuConfig is menu){};
 
 	replace Function is init(
-		Theme is theme: Theme(preset: 'light_grayscale'),
+		Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT),
 		Scale is scale: Scale(factor: 1.0),
 		ToolbarConfig is config: ToolbarConfig(),
 		Function is onMenuOpen: local Function(MenuConfig is menu){}
@@ -341,7 +343,7 @@ Class of SewNode is Toolbar{
 		local Int is i: 0;
 		while({ i < list:length() }, {
 			local MenuItemConfig is it: list:get(index: i);
-			if({ it:kind == 'radio' || it:kind == 'toggle' || it:checked || it:iconSvg != '' }, {
+			if({ it:kind == MenuItemKind:RADIO || it:kind == MenuItemKind:TOGGLE || it:checked || it:iconSvg != '' }, {
 				return true;
 			});
 			i: i + 1;
@@ -371,13 +373,13 @@ Class of SewNode is Toolbar{
 		local Int is iconSz: scale:px(pt: 12.0);
 		if({ iconSz < 10 }, { iconSz: 10; });
 		local Int is iy: cy - iconSz / 2;
-		if({ item:kind == 'radio' }, {
+		if({ item:kind == MenuItemKind:RADIO }, {
 			local String is rSvg: if({ item:checked }, { config:radioOnIconSvg }, { config:radioOffIconSvg });
 			if({ rSvg != '' }, {
 				SvgRenderer:shared:draw(ctx: ctx, svgSrc: rSvg, x: x + padX, y: iy, widthPx: iconSz, heightPx: iconSz, tintColor: fgCol, useTint: true);
 			});
 		}, {
-			if({ item:kind == 'toggle' }, {
+			if({ item:kind == MenuItemKind:TOGGLE }, {
 				local String is cSvg: if({ item:checked }, { config:checkboxOnIconSvg }, { config:checkboxOffIconSvg });
 				if({ cSvg != '' }, {
 					SvgRenderer:shared:draw(ctx: ctx, svgSrc: cSvg, x: x + padX, y: iy, widthPx: iconSz, heightPx: iconSz, tintColor: fgCol, useTint: true);

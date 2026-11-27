@@ -12,7 +12,8 @@ Class of SewNode is MenuContext{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'fabric', 'svg', SvgRenderer],
-		['base', 'scrap', 'menu', MenuItemConfig]
+		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', 'menu', MenuItemKind]
 	];
 
 	Boolean is isOpen: false;
@@ -71,7 +72,7 @@ Class of SewNode is MenuContext{
 		local Int is i: 0;
 		while({ i < items:length() }, {
 			local MenuItemConfig is it: items:get(index: i);
-			if({ it:iconSvg != '' || it:checked || it:kind == 'radio' || it:kind == 'toggle' }, { return true; });
+			if({ it:iconSvg != '' || it:checked || it:kind == MenuItemKind:RADIO || it:kind == MenuItemKind:TOGGLE }, { return true; });
 			i: i + 1;
 		});
 		return false;
@@ -194,13 +195,13 @@ Class of SewNode is MenuContext{
 				if({ item:iconSvg != '' }, {
 					SvgRenderer:shared:draw(ctx: ctx, svgSrc: item:iconSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
 				}, {
-					if({ item:kind == 'radio' }, {
+					if({ item:kind == MenuItemKind:RADIO }, {
 						local String is rSvg: if({ item:checked }, { radioOnIconSvg }, { radioOffIconSvg });
 						if({ rSvg != '' }, {
 							SvgRenderer:shared:draw(ctx: ctx, svgSrc: rSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
 						});
 					}, {
-						if({ item:kind == 'toggle' && item:checked && checkboxOnIconSvg != '' }, {
+						if({ item:kind == MenuItemKind:TOGGLE && item:checked && checkboxOnIconSvg != '' }, {
 							SvgRenderer:shared:draw(ctx: ctx, svgSrc: checkboxOnIconSvg, x: mx + padX, y: icoY, widthPx: iconSz, heightPx: iconSz, tintColor: txtColor, useTint: true);
 						});
 					});

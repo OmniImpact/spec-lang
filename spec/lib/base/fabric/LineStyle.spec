@@ -6,20 +6,22 @@ Class is LineStyle{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'fabric', Color]
+		['base', 'fabric', Color],
+		['base', 'fabric', StrokeStyle]
 	];
 
 	Float is widthPt: 0.7;
 	Boolean is hasWidth: false;
 	Color is lineColor: Color(r: 120, g: 130, b: 150);
 	Boolean is hasColor: false;
-	String is style: 'single';
+	StrokeStyle is style: StrokeStyle:SINGLE;
 	Boolean is hasStyle: false;
 
 	replace Function is init(
 		Float is widthPt: -1.0,
 		Color is color: Color(r: 0, g: 0, b: 0, a: 0),
-		String is style: ''
+		StrokeStyle is style: StrokeStyle:SINGLE,
+		Boolean is hasStyle: false
 	){
 		if({ widthPt >= 0.0 }, {
 			:widthPt: widthPt;
@@ -35,13 +37,8 @@ Class is LineStyle{
 			:lineColor: Color(r: 120, g: 130, b: 150);
 			:hasColor: false;
 		});
-		if({ style != '' }, {
-			:style: style;
-			:hasStyle: true;
-		}, {
-			:style: 'single';
-			:hasStyle: false;
-		});
+		:style: style;
+		:hasStyle: hasStyle || style != StrokeStyle:SINGLE;
 	}
 
 	Function of Float is getWidthPt(){

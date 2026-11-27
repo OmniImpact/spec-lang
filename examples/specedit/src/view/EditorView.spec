@@ -8,6 +8,7 @@ Class is EditorView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'sew', HAlign],
 		['base', 'sew', Center],
 		['base', 'sew', Column],
 		['base', 'sew', Row],
@@ -106,9 +107,9 @@ Class is EditorView{
 								heightPt: 48.0
 							) as SewNode
 						) as SewNode,
-						TextScrap(text: vm:versionText, align: SpecEditStrings:TEXT_ALIGN_CENTER) as SewNode,
-						TextScrap(text: vm:descriptionText, align: SpecEditStrings:TEXT_ALIGN_CENTER, wrap: true, muted: true) as SewNode,
-						TextScrap(text: vm:processStatsText, align: SpecEditStrings:TEXT_ALIGN_CENTER, muted: true) as SewNode
+						TextScrap(text: vm:versionText, align: HAlign:CENTER) as SewNode,
+						TextScrap(text: vm:descriptionText, align: HAlign:CENTER, wrap: true, muted: true) as SewNode,
+						TextScrap(text: vm:processStatsText, align: HAlign:CENTER, muted: true) as SewNode
 					])
 				)
 			)

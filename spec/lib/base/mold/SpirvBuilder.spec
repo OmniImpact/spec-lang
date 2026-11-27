@@ -11,6 +11,34 @@ Class is SpirvBuilder{
 		['base', 'struct', Array]
 	];
 
+	held Int is MAGIC: 119734787;
+	held Int is VERSION_1_0: 65536;
+	held Int is FLOAT_ONE_BITS: 1065353216;
+	held Int is MAIN_STR_WORD: 1852399981;
+	held Int is OP_MEMORY_MODEL: 14;
+	held Int is OP_ENTRY_POINT: 15;
+	held Int is OP_EXECUTION_MODE: 16;
+	held Int is OP_CAPABILITY: 17;
+	held Int is OP_TYPE_VOID: 19;
+	held Int is OP_TYPE_FLOAT: 22;
+	held Int is OP_TYPE_VECTOR: 23;
+	held Int is OP_TYPE_MATRIX: 24;
+	held Int is OP_TYPE_STRUCT: 30;
+	held Int is OP_TYPE_POINTER: 32;
+	held Int is OP_TYPE_FUNCTION: 33;
+	held Int is OP_CONSTANT: 43;
+	held Int is OP_FUNCTION: 54;
+	held Int is OP_FUNCTION_END: 56;
+	held Int is OP_VARIABLE: 59;
+	held Int is OP_LOAD: 61;
+	held Int is OP_STORE: 62;
+	held Int is OP_DECORATE: 71;
+	held Int is OP_MEMBER_DECORATE: 72;
+	held Int is OP_COMPOSITE_CONSTRUCT: 80;
+	held Int is OP_MATRIX_TIMES_VECTOR: 145;
+	held Int is OP_LABEL: 248;
+	held Int is OP_RETURN: 253;
+
 	Array of Int is words: Array();
 	Int is bufferAddr: 0;
 	Int is bufferBytes: 0;

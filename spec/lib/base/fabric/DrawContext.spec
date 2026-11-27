@@ -17,7 +17,8 @@ Class is DrawContext{
 		['base', 'fabric', Color],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', GradientBounds],
-		['base', 'fabric', FillStyle]
+		['base', 'fabric', FillStyle],
+		['base', 'fabric', StrokeStyle]
 	];
 
 	held Font is sharedFont: Font();
@@ -855,7 +856,7 @@ Class is DrawContext{
 		Int is borderColor,
 		Int is thickness: 1,
 		Int is radius: 0,
-		String is style: 'single',
+		StrokeStyle is style: StrokeStyle:SINGLE,
 		Int is shadowOffsetX: 0,
 		Int is shadowOffsetY: 0,
 		Int is shadowBlur: 0,
@@ -875,13 +876,13 @@ Class is DrawContext{
 		if({ innerShadowColor != 0 && (innerShadowBlur > 0 || innerShadowOffsetX != 0 || innerShadowOffsetY != 0) }, {
 			:drawInnerShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: innerShadowOffsetX, offsetY: innerShadowOffsetY, blurRadius: innerShadowBlur, color: innerShadowColor);
 		});
-		if({ thickness <= 0 || borderColor == 0 }, { return; });
+		if({ thickness <= 0 || borderColor == 0 || style == StrokeStyle:NONE }, { return; });
 		local Color is bc: Color:fromArgb(argb: borderColor);
 		local Color is whiteC: Color(r: 255, g: 255, b: 255);
 		local Color is blackC: Color(r: 0, g: 0, b: 0);
 		local Int is lightC: bc:mix(other: whiteC, t: 0.45):toArgb();
 		local Int is darkC: bc:mix(other: blackC, t: 0.45):toArgb();
-		if({ style == 'double' }, {
+		if({ style == StrokeStyle:DOUBLE }, {
 			local Int is t1: if({ thickness >= 3 }, { thickness / 3 }, { 1 });
 			local Int is gap: if({ thickness >= 3 }, { thickness - t1 * 2 }, { 1 });
 			local Int is off: t1 + gap;
@@ -892,7 +893,7 @@ Class is DrawContext{
 			});
 			return;
 		});
-		if({ style == 'bevel' }, {
+		if({ style == StrokeStyle:BEVEL }, {
 			local Int is t1: if({ thickness >= 2 }, { thickness / 2 }, { 1 });
 			local Int is t2: if({ thickness - t1 > 0 }, { thickness - t1 }, { 1 });
 			local Int is hiOuter: bc:mix(other: whiteC, t: 0.55):toArgb();
@@ -906,15 +907,15 @@ Class is DrawContext{
 			});
 			return;
 		});
-		if({ style == 'outset' }, {
+		if({ style == StrokeStyle:OUTSET }, {
 			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: lightC, botRightColor: darkC, thickness: thickness);
 			return;
 		});
-		if({ style == 'inset' }, {
+		if({ style == StrokeStyle:INSET }, {
 			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: darkC, botRightColor: lightC, thickness: thickness);
 			return;
 		});
-		if({ style == 'groove' }, {
+		if({ style == StrokeStyle:GROOVE }, {
 			local Int is t1: if({ thickness >= 2 }, { thickness / 2 }, { 1 });
 			local Int is t2: if({ thickness - t1 > 0 }, { thickness - t1 }, { 1 });
 			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: darkC, botRightColor: lightC, thickness: t1);
@@ -937,7 +938,7 @@ Class is DrawContext{
 		Int is borderColor,
 		Int is thickness: 1,
 		Int is radius: 0,
-		String is style: 'single',
+		StrokeStyle is style: StrokeStyle:SINGLE,
 		Int is shadowOffsetX: 0,
 		Int is shadowOffsetY: 0,
 		Int is shadowBlur: 0,
@@ -962,10 +963,10 @@ Class is DrawContext{
 		);
 	}
 
-	## Draws a horizontal or vertical divider line using [style] (none/single/double/bevel/groove/inset/outset).
-	Function is drawDivider(Int is x, Int is y, Int is w, Int is h, Int is color, Int is thickness: 1, String is style: 'single'){
-		if({ w <= 0 || h <= 0 || thickness <= 0 || color == 0 || style == 'none' }, { return; });
-		if({ style == 'single' }, {
+	## Draws a horizontal or vertical divider line using [style] ([StrokeStyle]).
+	Function is drawDivider(Int is x, Int is y, Int is w, Int is h, Int is color, Int is thickness: 1, StrokeStyle is style: StrokeStyle:SINGLE){
+		if({ w <= 0 || h <= 0 || thickness <= 0 || color == 0 || style == StrokeStyle:NONE }, { return; });
+		if({ style == StrokeStyle:SINGLE }, {
 			:fillRect(x: x, y: y, w: w, h: h, color: color);
 			return;
 		});
@@ -976,7 +977,7 @@ Class is DrawContext{
 		local Int is span: if({ horiz }, { h }, { w });
 		local Int is t1: if({ span >= 2 }, { span / 2 }, { 1 });
 		local Int is t2: if({ span - t1 > 0 }, { span - t1 }, { 1 });
-		if({ style == 'double' }, {
+		if({ style == StrokeStyle:DOUBLE }, {
 			if({ span < 3 }, {
 				:fillRect(x: x, y: y, w: w, h: h, color: color);
 				return;
@@ -991,8 +992,8 @@ Class is DrawContext{
 			});
 			return;
 		});
-		local Int is firstC: if({ style == 'bevel' || style == 'outset' }, { lightC }, { darkC });
-		local Int is secondC: if({ style == 'bevel' || style == 'outset' }, { darkC }, { lightC });
+		local Int is firstC: if({ style == StrokeStyle:BEVEL || style == StrokeStyle:OUTSET }, { lightC }, { darkC });
+		local Int is secondC: if({ style == StrokeStyle:BEVEL || style == StrokeStyle:OUTSET }, { darkC }, { lightC });
 		if({ span < 2 }, {
 			:fillRect(x: x, y: y, w: w, h: h, color: firstC);
 			return;

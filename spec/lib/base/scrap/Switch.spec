@@ -6,6 +6,7 @@ Class of SewNode is Switch{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
 		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
@@ -43,7 +44,7 @@ Class of SewNode is Switch{
 	}
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
-		if({ focused && (key == 10 || key == 13 || key == 32) }, {
+		if({ focused && (KeyCode:isEnter(key: key) || key == KeyCode:SPACE) }, {
 			:checked: !checked;
 			local Function is cb: onToggle;
 			cb(checked);

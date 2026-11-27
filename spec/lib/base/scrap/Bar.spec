@@ -15,11 +15,12 @@ Class of SewNode is Bar{
 		['base', 'sew', Scale],
 		['base', 'sew', DockSide],
 		['base', 'fabric', Theme],
+		['base', 'fabric', ThemePreset],
 		['base', 'fabric', DrawContext],
 		['base', 'fabric', 'svg', SvgRenderer]
 	];
 
-	Theme is theme: Theme(preset: 'light_grayscale');
+	Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT);
 	Scale is scale: Scale(factor: 1.0);
 	Float is heightPt: 0.0;
 	DockSide is borderSide: DockSide:BOTTOM;
@@ -42,7 +43,7 @@ Class of SewNode is Bar{
 		Boolean is rightInteractive: false,
 		String is rightIconSvg: '',
 		Function is onRightClick: local Function(Int is _x, Int is _y){},
-		Theme is theme: Theme(preset: 'light_grayscale'),
+		Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT),
 		Scale is scale: Scale(factor: 1.0)
 	){
 		:heightPt: heightPt;

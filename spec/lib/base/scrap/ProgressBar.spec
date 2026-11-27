@@ -7,6 +7,7 @@ Class of SewNode is ProgressBar{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'fabric', Theme],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'sew', SewNode],
 		['base', 'sew', Size],
@@ -128,7 +129,7 @@ Class of SewNode is ProgressBar{
 			ctx:clearClip();
 		});
 
-		if({ bw > 0 && activeTheme:buttonBorderStyle != 'none' }, {
+		if({ bw > 0 && activeTheme:buttonBorderStyle != StrokeStyle:NONE }, {
 			ctx:drawStyledBox(
 				x: b:x, y: b:y, w: b:width, h: b:height,
 				bgColor: 0, borderColor: activeTheme:buttonBorderColorArgb(),

@@ -22,6 +22,7 @@ Class of SewNode is FileTree{
 		['base', 'scrap', ScrollView],
 		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', 'menu', MenuItemKind],
 		['base', 'scrap', 'menu', MenuContext],
 		['base', 'wardrobe', 'file', FilePinnedLocations]
 	];
@@ -267,7 +268,7 @@ Class of SewNode is FileTree{
 				id: 'pin_' . (i as String),
 				label: pname,
 				checked: (ppath == rootDir),
-				kind: 'radio',
+				kind: MenuItemKind:RADIO,
 				onClick: local Function(){ :setRootDir(dirPath: ppath); }
 			));
 			i: i + 1;

@@ -17,11 +17,12 @@ Class of SewNode is StyledBox{
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
 		['base', 'fabric', BoxBorderStyle],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', FillStyle]
 	];
 
 	String is label: '';
-	String is borderStyle: 'single';
+	StrokeStyle is borderStyle: StrokeStyle:SINGLE;
 	Color is lineColor: Color(r: 100, g: 180, b: 255);
 	Boolean is useThemeBorder: true;
 	Float is thicknessPt: 2.0;
@@ -41,7 +42,7 @@ Class of SewNode is StyledBox{
 
 	replace Function is init(
 		String is label: '',
-		String is borderStyle: 'single',
+		StrokeStyle is borderStyle: StrokeStyle:SINGLE,
 		Color is lineColor: Color(r: 100, g: 180, b: 255),
 		Boolean is useThemeBorder: true,
 		Float is thicknessPt: 2.0,

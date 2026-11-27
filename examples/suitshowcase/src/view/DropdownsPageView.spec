@@ -21,6 +21,7 @@ Class is DropdownsPageView{
 		['base', 'scrap', SectionH],
 		['base', 'scrap', 'menu', MenuConfig],
 		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', 'menu', MenuItemKind],
 		['base', 'scrap', 'toolbar', Toolbar],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'text', TextScrap],
@@ -51,8 +52,8 @@ Class is DropdownsPageView{
 		));
 
 		local MenuConfig is mPresets: MenuConfig(id: 'presets', label: 'Presets');
-		mPresets:addItem(item: MenuItemConfig(id: 'p1', label: 'Default', kind: 'radio', checked: true, onClick: local Function(){ statusLabel:emit(value: 'Menu: Default preset'); }));
-		mPresets:addItem(item: MenuItemConfig(id: 'p2', label: 'Compact', kind: 'radio', checked: false, onClick: local Function(){ statusLabel:emit(value: 'Menu: Compact preset'); }));
+		mPresets:addItem(item: MenuItemConfig(id: 'p1', label: 'Default', kind: MenuItemKind:RADIO, checked: true, onClick: local Function(){ statusLabel:emit(value: 'Menu: Default preset'); }));
+		mPresets:addItem(item: MenuItemConfig(id: 'p2', label: 'Compact', kind: MenuItemKind:RADIO, checked: false, onClick: local Function(){ statusLabel:emit(value: 'Menu: Compact preset'); }));
 
 		local ToolbarConfig is tbCfg: ToolbarConfig();
 		tbCfg:addMenu(menu: mActions);

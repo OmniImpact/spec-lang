@@ -13,6 +13,7 @@ Class is LinesBordersPageView{
 		['base', 'sew', Padding],
 		['base', 'sew', Center],
 		['base', 'fabric', Color],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', TextStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', Frame],
@@ -28,6 +29,7 @@ Class is LinesBordersPageView{
 	];
 
 	ShowcaseViewModel is vm: ShowcaseViewModel();
+	Array of StrokeStyle is styleValues: Array([StrokeStyle:SINGLE, StrokeStyle:DOUBLE, StrokeStyle:BEVEL, StrokeStyle:GROOVE, StrokeStyle:INSET, StrokeStyle:OUTSET]);
 	Array of String is styleNames: Array(['single', 'double', 'bevel', 'groove', 'inset', 'outset']);
 	Array of String is styleLabels: Array(['Single', 'Double', 'Bevel', 'Groove', 'Inset', 'Outset']);
 	StyledBox is previewBox: StyledBox();
@@ -48,7 +50,7 @@ Class is LinesBordersPageView{
 	Function of SewNode is build(){
 		:previewBox: StyledBox(
 			label: 'Live Preview Box',
-			borderStyle: 'single',
+			borderStyle: StrokeStyle:SINGLE,
 			lineColor: Color(r: 90, g: 170, b: 255),
 			useThemeBorder: false,
 			thicknessPt: 3.0,
@@ -69,7 +71,7 @@ Class is LinesBordersPageView{
 			onSelect: local Function(Int is idx){
 				if({ idx >= 0 && idx < styleNames:length() }, {
 					:selStyleIdx: idx;
-					previewBox:borderStyle: styleNames:get(index: idx);
+					previewBox:borderStyle: styleValues:get(index: idx);
 					previewBox:invalidate();
 					vm:statusText:emit(value: 'Border style: ' . styleNames:get(index: idx));
 				});
@@ -224,12 +226,12 @@ Class is LinesBordersPageView{
 			rowGapPt: 8.0,
 			equalCols: true,
 			children: Array([
-				StyledBox(label: 'Single', borderStyle: 'single', thicknessPt: 2.0, radiusPt: 5.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
-				StyledBox(label: 'Double', borderStyle: 'double', thicknessPt: 4.0, radiusPt: 5.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
-				StyledBox(label: 'Bevel', borderStyle: 'bevel', thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
-				StyledBox(label: 'Groove', borderStyle: 'groove', thicknessPt: 4.0, radiusPt: 4.0, shadowOffsetYPt: 0.0, shadowBlurPt: 0.0, minWidthPt: 120.0, minHeightPt: 64.0),
-				StyledBox(label: 'Inset', borderStyle: 'inset', thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 0.0, shadowBlurPt: 0.0, innerShadowOffsetYPt: 2.0, innerShadowBlurPt: 5.0, minWidthPt: 120.0, minHeightPt: 64.0),
-				StyledBox(label: 'Outset', borderStyle: 'outset', thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 3.0, shadowBlurPt: 5.0, minWidthPt: 120.0, minHeightPt: 64.0)
+				StyledBox(label: 'Single', borderStyle: StrokeStyle:SINGLE, thicknessPt: 2.0, radiusPt: 5.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Double', borderStyle: StrokeStyle:DOUBLE, thicknessPt: 4.0, radiusPt: 5.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Bevel', borderStyle: StrokeStyle:BEVEL, thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Groove', borderStyle: StrokeStyle:GROOVE, thicknessPt: 4.0, radiusPt: 4.0, shadowOffsetYPt: 0.0, shadowBlurPt: 0.0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Inset', borderStyle: StrokeStyle:INSET, thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 0.0, shadowBlurPt: 0.0, innerShadowOffsetYPt: 2.0, innerShadowBlurPt: 5.0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Outset', borderStyle: StrokeStyle:OUTSET, thicknessPt: 3.0, radiusPt: 4.0, shadowOffsetYPt: 3.0, shadowBlurPt: 5.0, minWidthPt: 120.0, minHeightPt: 64.0)
 			])
 		);
 

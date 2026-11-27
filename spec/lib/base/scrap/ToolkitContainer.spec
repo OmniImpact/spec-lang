@@ -18,6 +18,8 @@ Class of SewNode is ToolkitContainer{
 		['base', 'signal', TextCollector],
 		['base', 'suit', SuitWindow],
 		['base', 'suit', SuitCanvas],
+		['base', 'suit', KeyCode],
+		['base', 'suit', KeyMod],
 		['base', 'sew', SewNode],
 		['base', 'sew', FocusNav],
 		['base', 'sew', Column],
@@ -28,6 +30,7 @@ Class of SewNode is ToolkitContainer{
 		['base', 'sew', CursorShape],
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
+		['base', 'fabric', ThemePreset],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', DragDropState],
 		['base', 'fabric', 'svg', SvgRenderer],
@@ -47,7 +50,7 @@ Class of SewNode is ToolkitContainer{
 	String is iconSvg: '';
 	BoolEmitter is running: BoolEmitter(initial: true);
 	IntEmitter is targetFps: IntEmitter(initial: 0);
-	Theme is theme: Theme(preset: 'light_grayscale');
+	Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT);
 	Scale is scale: Scale(factor: 1.0);
 	Float is uiZoom: 1.0;
 	Float is widthPt: 800.0;
@@ -91,7 +94,7 @@ Class of SewNode is ToolkitContainer{
 		String is iconSvg: '',
 		BoolEmitter is running: BoolEmitter(initial: true),
 		IntEmitter is targetFps: IntEmitter(initial: 0),
-		Theme is theme: Theme(preset: 'light_grayscale'),
+		Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT),
 		Float is widthPt: 800.0,
 		Float is heightPt: 600.0,
 		Boolean is useVulkan: false,
@@ -627,7 +630,7 @@ Class of SewNode is ToolkitContainer{
 			local Int is key: win:nextKey();
 			while({ key != 0 }, {
 				hadActivity: true;
-				if({ key == 27 }, {
+				if({ key == KeyCode:ESC }, {
 					if({ contextMenu:isOpen }, {
 						contextMenu:close();
 						:isDirty: true;
@@ -656,29 +659,29 @@ Class of SewNode is ToolkitContainer{
 							handledKey: true;
 							:isDirty: true;
 						});
-						if({ !handledKey && key == 9 }, {
-							if({ FocusNav:shared:stepTab(focusables: :collectAllFocusables(), reverse: (curMods & 1) != 0) }, {
+						if({ !handledKey && key == KeyCode:TAB }, {
+							if({ FocusNav:shared:stepTab(focusables: :collectAllFocusables(), reverse: KeyMod:hasShift(mods: curMods)) }, {
 								handledKey: true;
 								:isDirty: true;
 							});
 						});
 						if({ !handledKey && hasBody && !useVulkan }, {
-							if({ key == 1001 }, {
+							if({ key == KeyCode:UP }, {
 								if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
 							});
-							if({ key == 1002 }, {
+							if({ key == KeyCode:DOWN }, {
 								if({ bodyPanel:onScroll(deltaY: 15) }, { :isDirty: true; });
 							});
-							if({ key == 1003 }, {
+							if({ key == KeyCode:LEFT }, {
 								if({ bodyPanel:onScrollX(deltaX: -15) }, { :isDirty: true; });
 							});
-							if({ key == 1004 }, {
+							if({ key == KeyCode:RIGHT }, {
 								if({ bodyPanel:onScrollX(deltaX: 15) }, { :isDirty: true; });
 							});
-							if({ key == 1007 }, {
+							if({ key == KeyCode:PAGE_UP }, {
 								if({ bodyPanel:onScroll(deltaY: -80) }, { :isDirty: true; });
 							});
-							if({ key == 1008 }, {
+							if({ key == KeyCode:PAGE_DOWN }, {
 								if({ bodyPanel:onScroll(deltaY: 80) }, { :isDirty: true; });
 							});
 						});

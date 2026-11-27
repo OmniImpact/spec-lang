@@ -13,6 +13,8 @@ Class is Dialog{
 		['base', 'signal', SignalBag],
 		['base', 'suit', SuitWindow],
 		['base', 'suit', SuitCanvas],
+		['base', 'suit', KeyCode],
+		['base', 'suit', KeyMod],
 		['base', 'sew', SewNode],
 		['base', 'sew', FocusNav],
 		['base', 'sew', Constraints],
@@ -22,6 +24,7 @@ Class is Dialog{
 		['base', 'sew', Row],
 		['base', 'sew', Padding],
 		['base', 'fabric', Theme],
+		['base', 'fabric', ThemePreset],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', Tooltip],
 		['base', 'scrap', DialogButton],
@@ -30,7 +33,7 @@ Class is Dialog{
 
 	String is title: 'Dialog';
 	BoolEmitter is open: BoolEmitter(initial: false);
-	Theme is theme: Theme(preset: 'light_grayscale');
+	Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT);
 	Scale is scale: Scale(factor: 1.0);
 	Float is widthPt: 480.0;
 	Float is heightPt: 180.0;
@@ -58,7 +61,7 @@ Class is Dialog{
 	replace Function is init(
 		String is title: 'Dialog',
 		BoolEmitter is open: BoolEmitter(initial: false),
-		Theme is theme: Theme(preset: 'light_grayscale'),
+		Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT),
 		Scale is scale: Scale(factor: 1.0),
 		Float is widthPt: 480.0,
 		Float is heightPt: 180.0,
@@ -232,14 +235,14 @@ Class is Dialog{
 		local Int is key: win:nextKey();
 		while({ key != 0 }, {
 			active: true;
-			if({ key == 27 }, {
+			if({ key == KeyCode:ESC }, {
 				:closeWindow();
 				open:emit(value: false);
 				return true;
 			});
 			if({ hasContent }, {
-				if({ key == 9 }, {
-					if({ :stepFocusTab(reverse: (curMods & 1) != 0) }, {
+				if({ key == KeyCode:TAB }, {
+					if({ :stepFocusTab(reverse: KeyMod:hasShift(mods: curMods)) }, {
 						isDirty: true;
 					});
 				}, {
@@ -358,7 +361,7 @@ Class is Dialog{
 		SewNode is message: SewNode(),
 		Array of DialogButton is buttons: Array(),
 		BoolEmitter is open: BoolEmitter(initial: false),
-		Theme is theme: Theme(preset: 'light_grayscale'),
+		Theme is theme: Theme:forPreset(preset: ThemePreset:LIGHT),
 		Scale is scale: Scale(factor: 1.0),
 		Float is widthPt: 440.0,
 		Float is heightPt: 200.0,

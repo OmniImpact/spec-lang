@@ -19,6 +19,7 @@ Class is BarsPageView{
 		['base', 'scrap', SectionH],
 		['base', 'scrap', 'menu', MenuConfig],
 		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', 'menu', MenuItemKind],
 		['base', 'scrap', 'toolbar', Toolbar],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'tab', TabBar],
@@ -43,12 +44,12 @@ Class is BarsPageView{
 		mFile:addItem(item: MenuItemConfig(id: 'open', label: 'Open...', onClick: local Function(){ barActionText:emit(value: 'Toolbar: File -> Open...'); }));
 
 		local MenuConfig is mView: MenuConfig(id: 'view', label: 'View');
-		mView:addItem(item: MenuItemConfig(id: 'grid', label: 'Show Grid', kind: 'toggle', checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Show Grid'); }));
-		mView:addItem(item: MenuItemConfig(id: 'snap', label: 'Snap to Bounds', kind: 'toggle', checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Snap to Bounds'); }));
+		mView:addItem(item: MenuItemConfig(id: 'grid', label: 'Show Grid', kind: MenuItemKind:TOGGLE, checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Show Grid'); }));
+		mView:addItem(item: MenuItemConfig(id: 'snap', label: 'Snap to Bounds', kind: MenuItemKind:TOGGLE, checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: View -> Snap to Bounds'); }));
 
 		local MenuConfig is mMode: MenuConfig(id: 'mode', label: 'Mode');
-		mMode:addItem(item: MenuItemConfig(id: 'm1', label: 'Design', kind: 'radio', checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Design'); }));
-		mMode:addItem(item: MenuItemConfig(id: 'm2', label: 'Inspect', kind: 'radio', checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Inspect'); }));
+		mMode:addItem(item: MenuItemConfig(id: 'm1', label: 'Design', kind: MenuItemKind:RADIO, checked: true, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Design'); }));
+		mMode:addItem(item: MenuItemConfig(id: 'm2', label: 'Inspect', kind: MenuItemKind:RADIO, checked: false, onClick: local Function(){ barActionText:emit(value: 'Toolbar: Mode -> Inspect'); }));
 
 		local ToolbarConfig is tbCfg: ToolbarConfig();
 		tbCfg:addMenu(menu: mFile);

@@ -21,6 +21,7 @@ Class is Theme{
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
 		['base', 'fabric', BoxBorderStyle],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', GradientBounds],
 		['base', 'fabric', FillStyle]
@@ -106,7 +107,7 @@ Class is Theme{
 	Float is borderThicknessPt: 0.7;
 	Float is lineThicknessPt: 0.7;
 	String is borderStyle: 'solid';
-	String is panelBorderStyle: 'single';
+	StrokeStyle is panelBorderStyle: StrokeStyle:SINGLE;
 	Float is panelBorderThicknessPt: 0.7;
 	Float is panelCornerRadiusPt: 0.0;
 	Float is panelShadowBlurPt: 0.0;
@@ -115,9 +116,9 @@ Class is Theme{
 	Float is panelInnerShadowBlurPt: 0.0;
 	Float is panelInnerShadowOffsetXPt: 0.0;
 	Float is panelInnerShadowOffsetYPt: 0.0;
-	String is dividerStyle: 'single';
+	StrokeStyle is dividerStyle: StrokeStyle:SINGLE;
 	Float is dividerThicknessPt: 0.5;
-	String is buttonBorderStyle: 'single';
+	StrokeStyle is buttonBorderStyle: StrokeStyle:SINGLE;
 	Float is buttonBorderThicknessPt: 0.7;
 	Float is buttonCornerRadiusPt: 2.0;
 	Float is buttonShadowBlurPt: 0.0;
@@ -156,6 +157,41 @@ Class is Theme{
 			then: { ThemePreset:LIGHT },
 			else: { ThemePreset:DARK }
 		);
+	}
+
+	held Function of StrokeStyle is strokeStyleFromString(String is name){
+		local String is low: name:toLower();
+		return Conditional:if(
+			check: { low == 'none' }, then: { StrokeStyle:NONE },
+			else: { Conditional:if(
+				check: { low == 'double' }, then: { StrokeStyle:DOUBLE },
+				else: { Conditional:if(
+					check: { low == 'bevel' }, then: { StrokeStyle:BEVEL },
+					else: { Conditional:if(
+						check: { low == 'groove' }, then: { StrokeStyle:GROOVE },
+						else: { Conditional:if(
+							check: { low == 'inset' }, then: { StrokeStyle:INSET },
+							else: { Conditional:if(
+								check: { low == 'outset' }, then: { StrokeStyle:OUTSET },
+								else: { StrokeStyle:SINGLE }
+							) }
+						) }
+					) }
+				) }
+			) }
+		);
+	}
+
+	held Function of String is strokeStyleToString(StrokeStyle is s){
+		return Conditional:match(on: s, when: [
+			StrokeStyle:NONE: { 'none' },
+			StrokeStyle:SINGLE: { 'single' },
+			StrokeStyle:DOUBLE: { 'double' },
+			StrokeStyle:BEVEL: { 'bevel' },
+			StrokeStyle:GROOVE: { 'groove' },
+			StrokeStyle:INSET: { 'inset' },
+			StrokeStyle:OUTSET: { 'outset' }
+		]);
 	}
 
 	held Function of Theme is forPreset(ThemePreset is preset, Float is baseTextPt: 10.0){
@@ -236,10 +272,10 @@ Class is Theme{
 		:deriveColors();
 	}
 
-	Function is setPanelBorderStyle(String is style){
+	Function is setPanelBorderStyle(StrokeStyle is style){
 		:customMetrics: true;
 		:panelBorderStyle: style;
-		if({ style == 'none' }, {
+		if({ style == StrokeStyle:NONE }, {
 			:panelBorderThicknessPt: 0.0;
 		}, {
 		if({ panelBorderThicknessPt <= 0.0 }, {
@@ -287,10 +323,10 @@ Class is Theme{
 		:panelInnerShadowOffsetYPt: if({ pt < -16.0 }, { -16.0 }, { if({ pt > 16.0 }, { 16.0 }, { pt }) });
 	}
 
-	Function is setDividerStyle(String is style){
+	Function is setDividerStyle(StrokeStyle is style){
 		:customMetrics: true;
 		:dividerStyle: style;
-		if({ style == 'none' }, {
+		if({ style == StrokeStyle:NONE }, {
 			:dividerThicknessPt: 0.0;
 		}, {
 		if({ dividerThicknessPt <= 0.0 }, {
@@ -303,10 +339,10 @@ Class is Theme{
 		:dividerThicknessPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 12.0 }, { 12.0 }, { pt }) });
 	}
 
-	Function is setButtonBorderStyle(String is style){
+	Function is setButtonBorderStyle(StrokeStyle is style){
 		:customMetrics: true;
 		:buttonBorderStyle: style;
-		if({ style == 'none' }, {
+		if({ style == StrokeStyle:NONE }, {
 			:buttonBorderThicknessPt: 0.0;
 		}, {
 		if({ buttonBorderThicknessPt <= 0.0 }, {
@@ -347,21 +383,21 @@ Class is Theme{
 	}
 
 	Function of Int is panelBorderPx(Float is scaleFactor: 1.0){
-		if({ panelBorderStyle == 'none' || panelBorderThicknessPt <= 0.0 }, { return 0; });
+		if({ panelBorderStyle == StrokeStyle:NONE || panelBorderThicknessPt <= 0.0 }, { return 0; });
 		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
 		local Int is px: ((panelBorderThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
 		return if({ px < 1 }, { 1 }, { px });
 	}
 
 	Function of Int is dividerPx(Float is scaleFactor: 1.0){
-		if({ dividerStyle == 'none' || dividerThicknessPt <= 0.0 }, { return 0; });
+		if({ dividerStyle == StrokeStyle:NONE || dividerThicknessPt <= 0.0 }, { return 0; });
 		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
 		local Int is px: ((dividerThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
 		return if({ px < 1 }, { 1 }, { px });
 	}
 
 	Function of Int is buttonBorderPx(Float is scaleFactor: 1.0){
-		if({ buttonBorderStyle == 'none' || buttonBorderThicknessPt <= 0.0 }, { return 0; });
+		if({ buttonBorderStyle == StrokeStyle:NONE || buttonBorderThicknessPt <= 0.0 }, { return 0; });
 		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
 		local Int is px: ((buttonBorderThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
 		return if({ px < 1 }, { 1 }, { px });
@@ -654,7 +690,7 @@ Class is Theme{
 		:focusBrightness: if({ preset == ThemePreset:LIGHT }, { -0.10 }, { 0.14 });
 		:focusTintShiftDeg: 0.0;
 		:focusSaturationShift: 0.0;
-		:panelBorderStyle: 'single';
+		:panelBorderStyle: StrokeStyle:SINGLE;
 		:panelCornerRadiusPt: 0.0;
 		:panelShadowBlurPt: 0.0;
 		:panelShadowOffsetXPt: 0.0;
@@ -662,8 +698,8 @@ Class is Theme{
 		:panelInnerShadowBlurPt: 0.0;
 		:panelInnerShadowOffsetXPt: 0.0;
 		:panelInnerShadowOffsetYPt: 0.0;
-		:dividerStyle: 'single';
-		:buttonBorderStyle: 'single';
+		:dividerStyle: StrokeStyle:SINGLE;
+		:buttonBorderStyle: StrokeStyle:SINGLE;
 		:buttonCornerRadiusPt: 2.0;
 		:buttonShadowBlurPt: 0.0;
 		:buttonShadowOffsetXPt: 0.0;
@@ -940,7 +976,7 @@ Class is Theme{
 		obj:set(key: 'customDividerColor', value: JsonNumber(rawText: customDividerColor as String, isFloating: false));
 		obj:set(key: 'customButtonBorderColor', value: JsonNumber(rawText: customButtonBorderColor as String, isFloating: false));
 		obj:set(key: 'borderStyle', value: borderStyle);
-		obj:set(key: 'panelBorderStyle', value: panelBorderStyle);
+		obj:set(key: 'panelBorderStyle', value: Theme:strokeStyleToString(s: panelBorderStyle));
 		obj:set(key: 'panelBorderThicknessPt', value: JsonNumber(rawText: panelBorderThicknessPt as String, isFloating: true));
 		obj:set(key: 'panelCornerRadiusPt', value: JsonNumber(rawText: panelCornerRadiusPt as String, isFloating: true));
 		obj:set(key: 'panelShadowBlurPt', value: JsonNumber(rawText: panelShadowBlurPt as String, isFloating: true));
@@ -949,9 +985,9 @@ Class is Theme{
 		obj:set(key: 'panelInnerShadowBlurPt', value: JsonNumber(rawText: panelInnerShadowBlurPt as String, isFloating: true));
 		obj:set(key: 'panelInnerShadowOffsetXPt', value: JsonNumber(rawText: panelInnerShadowOffsetXPt as String, isFloating: true));
 		obj:set(key: 'panelInnerShadowOffsetYPt', value: JsonNumber(rawText: panelInnerShadowOffsetYPt as String, isFloating: true));
-		obj:set(key: 'dividerStyle', value: dividerStyle);
+		obj:set(key: 'dividerStyle', value: Theme:strokeStyleToString(s: dividerStyle));
 		obj:set(key: 'dividerThicknessPt', value: JsonNumber(rawText: dividerThicknessPt as String, isFloating: true));
-		obj:set(key: 'buttonBorderStyle', value: buttonBorderStyle);
+		obj:set(key: 'buttonBorderStyle', value: Theme:strokeStyleToString(s: buttonBorderStyle));
 		obj:set(key: 'buttonBorderThicknessPt', value: JsonNumber(rawText: buttonBorderThicknessPt as String, isFloating: true));
 		obj:set(key: 'buttonCornerRadiusPt', value: JsonNumber(rawText: buttonCornerRadiusPt as String, isFloating: true));
 		obj:set(key: 'buttonShadowBlurPt', value: JsonNumber(rawText: buttonShadowBlurPt as String, isFloating: true));
@@ -1006,7 +1042,7 @@ Class is Theme{
 		:customDividerColor: j:getInt(obj: obj, key: 'customDividerColor', default: customDividerColor);
 		:customButtonBorderColor: j:getInt(obj: obj, key: 'customButtonBorderColor', default: customButtonBorderColor);
 		:borderStyle: j:getString(obj: obj, key: 'borderStyle', default: borderStyle);
-		:panelBorderStyle: j:getString(obj: obj, key: 'panelBorderStyle', default: panelBorderStyle);
+		:panelBorderStyle: Theme:strokeStyleFromString(name: j:getString(obj: obj, key: 'panelBorderStyle', default: Theme:strokeStyleToString(s: panelBorderStyle)));
 		:panelBorderThicknessPt: j:getFloat(obj: obj, key: 'panelBorderThicknessPt', default: panelBorderThicknessPt);
 		:panelCornerRadiusPt: j:getFloat(obj: obj, key: 'panelCornerRadiusPt', default: panelCornerRadiusPt);
 		:panelShadowBlurPt: j:getFloat(obj: obj, key: 'panelShadowBlurPt', default: panelShadowBlurPt);
@@ -1015,9 +1051,9 @@ Class is Theme{
 		:panelInnerShadowBlurPt: j:getFloat(obj: obj, key: 'panelInnerShadowBlurPt', default: panelInnerShadowBlurPt);
 		:panelInnerShadowOffsetXPt: j:getFloat(obj: obj, key: 'panelInnerShadowOffsetXPt', default: panelInnerShadowOffsetXPt);
 		:panelInnerShadowOffsetYPt: j:getFloat(obj: obj, key: 'panelInnerShadowOffsetYPt', default: panelInnerShadowOffsetYPt);
-		:dividerStyle: j:getString(obj: obj, key: 'dividerStyle', default: dividerStyle);
+		:dividerStyle: Theme:strokeStyleFromString(name: j:getString(obj: obj, key: 'dividerStyle', default: Theme:strokeStyleToString(s: dividerStyle)));
 		:dividerThicknessPt: j:getFloat(obj: obj, key: 'dividerThicknessPt', default: dividerThicknessPt);
-		:buttonBorderStyle: j:getString(obj: obj, key: 'buttonBorderStyle', default: buttonBorderStyle);
+		:buttonBorderStyle: Theme:strokeStyleFromString(name: j:getString(obj: obj, key: 'buttonBorderStyle', default: Theme:strokeStyleToString(s: buttonBorderStyle)));
 		:buttonBorderThicknessPt: j:getFloat(obj: obj, key: 'buttonBorderThicknessPt', default: buttonBorderThicknessPt);
 		:buttonCornerRadiusPt: j:getFloat(obj: obj, key: 'buttonCornerRadiusPt', default: buttonCornerRadiusPt);
 		:buttonShadowBlurPt: j:getFloat(obj: obj, key: 'buttonShadowBlurPt', default: buttonShadowBlurPt);

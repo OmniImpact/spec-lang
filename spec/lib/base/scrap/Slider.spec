@@ -6,11 +6,14 @@ Class of SewNode is Slider{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'suit', KeyCode],
+		['base', 'suit', KeyMod],
 		['base', 'sew', SewNode],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
-		['base', 'fabric', DrawContext]
+		['base', 'fabric', DrawContext],
+		['base', 'fabric', StrokeStyle]
 	];
 
 	Int is minVal: 0;
@@ -148,8 +151,8 @@ Class of SewNode is Slider{
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused }, { return false; });
-		local Int is step: if({ (mods & 1) != 0 }, { 5 }, { 1 });
-		if({ key == 1003 || key == 1002 }, {
+		local Int is step: if({ KeyMod:hasShift(mods: mods) }, { 5 }, { 1 });
+		if({ key == KeyCode:LEFT || key == KeyCode:DOWN }, {
 			local Int is next: :clampVal(v: value - step);
 			if({ next != value }, {
 				:value: next;
@@ -159,7 +162,7 @@ Class of SewNode is Slider{
 			});
 			return true;
 		});
-		if({ key == 1004 || key == 1001 }, {
+		if({ key == KeyCode:RIGHT || key == KeyCode:UP }, {
 			local Int is next: :clampVal(v: value + step);
 			if({ next != value }, {
 				:value: next;
@@ -169,16 +172,22 @@ Class of SewNode is Slider{
 			});
 			return true;
 		});
-		if({ key == 1005 }, {
-			:setValue(next: minVal);
-			local Function is cb: onChange;
-			cb(value);
+		if({ key == KeyCode:HOME }, {
+			local Int is next: :clampVal(v: minVal);
+			if({ next != value }, {
+				:setValue(next: next);
+				local Function is cb: onChange;
+				cb(value);
+			});
 			return true;
 		});
-		if({ key == 1006 }, {
-			:setValue(next: maxVal);
-			local Function is cb: onChange;
-			cb(value);
+		if({ key == KeyCode:END }, {
+			local Int is next: :clampVal(v: maxVal);
+			if({ next != value }, {
+				:setValue(next: next);
+				local Function is cb: onChange;
+				cb(value);
+			});
 			return true;
 		});
 		return false;
@@ -201,7 +210,7 @@ Class of SewNode is Slider{
 		local Int is shOffX: activeScale:px(pt: activeTheme:buttonShadowOffsetXPt);
 		local Int is shOffY: activeScale:px(pt: activeTheme:buttonShadowOffsetYPt);
 		local Int is shCol: if({ shBlur > 0 || shOffX != 0 || shOffY != 0 }, { 1426063360 }, { 0 });
-		local String is bStyle: activeTheme:buttonBorderStyle;
+		local StrokeStyle is bStyle: activeTheme:buttonBorderStyle;
 
 		ctx:fillRoundRect(x: tx, y: ty, w: trackW, h: trackH, radius: trackRad, color: activeTheme:panelBg);
 		local Int is span: maxVal - minVal;
@@ -211,7 +220,7 @@ Class of SewNode is Slider{
 			ctx:fillRoundRect(x: tx, y: ty, w: trackW, h: trackH, radius: trackRad, color: activeTheme:highlight:toArgb());
 			ctx:clearClip();
 		});
-		if({ bw > 0 && bStyle != 'none' }, {
+		if({ bw > 0 && bStyle != StrokeStyle:NONE }, {
 			local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:buttonBorderColorArgb() });
 			ctx:drawStyledBox(
 				x: tx, y: ty, w: trackW, h: trackH,

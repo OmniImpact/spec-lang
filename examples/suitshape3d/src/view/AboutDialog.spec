@@ -6,6 +6,7 @@ Class is AboutDialog{
 
 	replace [[String]] is using: [
 		['base', 'sew', SewNode],
+		['base', 'sew', HAlign],
 		['base', 'sew', Center],
 		['base', 'sew', Column],
 		['base', 'scrap', Dialog],
@@ -23,8 +24,8 @@ Class is AboutDialog{
 				child: Column(
 					gapPt: 10.0,
 					children: Array([
-						TextScrap(text: vm:versionText, align: 'center') as SewNode,
-						TextScrap(text: vm:descriptionText, align: 'center', wrap: true, muted: true) as SewNode
+						TextScrap(text: vm:versionText, align: HAlign:CENTER) as SewNode,
+						TextScrap(text: vm:descriptionText, align: HAlign:CENTER, wrap: true, muted: true) as SewNode
 					])
 				)
 			)

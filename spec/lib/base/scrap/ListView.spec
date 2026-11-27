@@ -10,6 +10,7 @@ Class of SewNode is ListView{
 		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
+		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
 		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
@@ -411,16 +412,16 @@ Class of SewNode is ListView{
 		if({ !focused || items:length() == 0 }, { return false; });
 		local Int is n: items:length();
 		local Int is next: selectedIndex;
-		if({ key == 1001 }, {
+		if({ key == KeyCode:UP }, {
 			next: if({ selectedIndex > 0 }, { selectedIndex - 1 }, { 0 });
 		}, {
-		if({ key == 1002 }, {
+		if({ key == KeyCode:DOWN }, {
 			next: if({ selectedIndex + 1 < n }, { selectedIndex + 1 }, { n - 1 });
 		}, {
-		if({ key == 1005 }, {
+		if({ key == KeyCode:HOME }, {
 			next: 0;
 		}, {
-		if({ key == 1006 }, {
+		if({ key == KeyCode:END }, {
 			next: n - 1;
 		}, {
 			return false;

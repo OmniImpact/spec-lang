@@ -27,6 +27,7 @@ Class is ThemeBuilderPageView{
 		['base', 'fabric', TextStyle],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', GradientBounds],
 		['suitshowcase', 'viewmodel', ShowcaseViewModel]
 	];
@@ -127,7 +128,7 @@ Class is ThemeBuilderPageView{
 		'Splitter Spacing', 'Line Gap', 'Editor Padding'
 	]);
 	Array of String is borderStyles: Array(['none', 'solid', 'bold']);
-	Array of String is targetBorderStyles: Array(['none', 'single', 'double', 'bevel', 'groove', 'inset', 'outset']);
+	Array of StrokeStyle is targetBorderStyles: Array([StrokeStyle:NONE, StrokeStyle:SINGLE, StrokeStyle:DOUBLE, StrokeStyle:BEVEL, StrokeStyle:GROOVE, StrokeStyle:INSET, StrokeStyle:OUTSET]);
 	Array of String is targetBorderLabels: Array(['None', 'Single', 'Double', 'Bevel', 'Groove', 'Inset', 'Outset']);
 	Array of String is fillStyleLabels: Array(['Solid', 'Linear', 'Lin Refl', 'Radial', 'Rad Refl']);
 	Array of String is boundsLabels: Array(['Inscribe', 'Circumscribe']);
@@ -150,7 +151,7 @@ Class is ThemeBuilderPageView{
 		return 1;
 	}
 
-	local Function of Int is targetStyleIndex(String is style){
+	local Function of Int is targetStyleIndex(StrokeStyle is style){
 		local Int is i: 0;
 		while({ i < targetBorderStyles:length() }, {
 			if({ targetBorderStyles:get(index: i) == style }, { return i; });

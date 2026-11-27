@@ -4,7 +4,8 @@ Class of SpecUnitTest is TestPhase1Fixes{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', as Conditional()],
-		['base', 'fabric', [Theme, BoxBorderStyle, ShadowStyle, Color]],
+		['base', 'fabric', [Theme, BoxBorderStyle, ShadowStyle, Color, DrawContext]],
+		['base', 'suit', SuitCanvas],
 		['base', 'sew', [SewNode, Rect, Constraints, Scale]],
 		['base', 'sew', 'grid', [GridFlexH, GridFlexPanel]],
 		['base', 'scrap', [SelectDropdown, ListView, TableView, DropTarget, DragDropState, Clickable, Label]],
@@ -80,6 +81,13 @@ Class of SpecUnitTest is TestPhase1Fixes{
 		Assert:areEqualInt(2, tvSel);
 		Assert:isTrue(tv:onKey(key: 1005, mods: 0));
 		Assert:areEqualInt(0, tvSel);
+
+		# Verify TableView:paint() leaves DrawContext clip stack balanced
+		local SuitCanvas is canvas: SuitCanvas(width: 220, height: 220);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+		tv:paint(ctx: ctx);
+		Assert:isFalse(ctx:hasClip);
+		canvas:dispose();
 	}
 
 	Function is testDropTargetNoDoubleFire(){

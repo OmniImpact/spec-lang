@@ -5,7 +5,8 @@ Class is MenuItemConfig{
 	replace [String] is namespace: ['base', 'scrap', 'menu'];
 
 	replace [[String]] is using: [
-		['base', 'struct', Array]
+		['base', 'struct', Array],
+		['base', 'scrap', 'menu', MenuItemKind]
 	];
 
 	String is id: '';
@@ -13,7 +14,7 @@ Class is MenuItemConfig{
 	Function is onClick: local Function(){};
 	Boolean is checked: false;
 	Boolean is enabled: true;
-	String is kind: 'action';
+	MenuItemKind is kind: MenuItemKind:ACTION;
 	String is iconSvg: '';
 	Array of MenuItemConfig is subItems: Array();
 
@@ -23,7 +24,7 @@ Class is MenuItemConfig{
 		Function is onClick: local Function(){},
 		Boolean is checked: false,
 		Boolean is enabled: true,
-		String is kind: 'action',
+		MenuItemKind is kind: MenuItemKind:ACTION,
 		String is iconSvg: ''
 	){
 		:id: id;

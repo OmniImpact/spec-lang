@@ -12,6 +12,7 @@ Class is FillEffectsPageView{
 		['base', 'sew', Grid],
 		['base', 'sew', Center],
 		['base', 'fabric', Color],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', TextStyle],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', GradientBounds],
@@ -76,7 +77,7 @@ Class is FillEffectsPageView{
 	Function of SewNode is build(){
 		:previewBox: StyledBox(
 			label: 'Live Fill & Effects',
-			borderStyle: 'single',
+			borderStyle: StrokeStyle:SINGLE,
 			thicknessPt: 1.5,
 			radiusPt: 8.0,
 			shadowOffsetYPt: 3.0,

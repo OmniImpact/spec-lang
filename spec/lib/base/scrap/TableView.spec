@@ -10,6 +10,7 @@ Class of SewNode is TableView{
 		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
+		['base', 'suit', KeyCode],
 		['base', 'sew', SewNode],
 		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
@@ -281,22 +282,18 @@ Class of SewNode is TableView{
 				colText: colText . if({ sortAscending }, { ' ▲' }, { ' ▼' });
 			});
 			local Int is cellPad: padX / 2;
-			local Int is clipX: if({ cx > innerX }, { cx }, { innerX });
-			local Int is clipR: if({ cx + cw < innerX + innerW }, { cx + cw }, { innerX + innerW });
-			if({ clipR > clipX }, {
-				ctx:setClip(x: clipX, y: innerY, w: clipR - clipX, h: hdrH);
-				ctx:drawText(
-					x: cx + cellPad,
-					y: innerY + (hdrH - fontPx) / 2,
-					text: colText,
-					color: activeTheme:textPrimary,
-					pixelHeight: fontPx,
-					bold: true,
-					italic: false,
-					mono: false
-				);
-			});
-			ctx:setClip(x: innerX, y: innerY, w: innerW, h: innerH);
+			ctx:setClip(x: cx, y: innerY, w: cw, h: hdrH);
+			ctx:drawText(
+				x: cx + cellPad,
+				y: innerY + (hdrH - fontPx) / 2,
+				text: colText,
+				color: activeTheme:textPrimary,
+				pixelHeight: fontPx,
+				bold: true,
+				italic: false,
+				mono: false
+			);
+			ctx:clearClip();
 			if({ divPx > 0 && ci + 1 < columns:length() }, {
 				ctx:drawDivider(
 					x: cx + cw - divPx, y: innerY + 2, w: divPx, h: hdrH - 4,
@@ -341,24 +338,18 @@ Class of SewNode is TableView{
 					while({ cj < columns:length() }, {
 						local Int is cw: :colWidthPx(colIdx: cj);
 						local String is cellText: if({ cj < r:length() }, { r:get(index: cj) }, { '' });
-						local Int is clipX: if({ cellX > innerX }, { cellX }, { innerX });
-						local Int is clipR: if({ cellX + cw < innerX + innerW }, { cellX + cw }, { innerX + innerW });
-						local Int is clipY: if({ ry > bodyY }, { ry }, { bodyY });
-						local Int is clipB: if({ ry + rh < bodyY + bodyH }, { ry + rh }, { bodyY + bodyH });
-						if({ clipR > clipX && clipB > clipY }, {
-							ctx:setClip(x: clipX, y: clipY, w: clipR - clipX, h: clipB - clipY);
-							ctx:drawText(
-								x: cellX + padX / 2,
-								y: ry + (rh - fontPx) / 2,
-								text: cellText,
-								color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textMuted }),
-								pixelHeight: fontPx,
-								bold: isSel,
-								italic: false,
-								mono: false
-							);
-						});
-						ctx:setClip(x: innerX, y: bodyY, w: innerW, h: bodyH);
+						ctx:setClip(x: cellX, y: ry, w: cw, h: rh);
+						ctx:drawText(
+							x: cellX + padX / 2,
+							y: ry + (rh - fontPx) / 2,
+							text: cellText,
+							color: if({ isSel }, { activeTheme:textPrimary }, { activeTheme:textMuted }),
+							pixelHeight: fontPx,
+							bold: isSel,
+							italic: false,
+							mono: false
+						);
+						ctx:clearClip();
 						cellX: cellX + cw;
 						cj: cj + 1;
 					});
@@ -493,16 +484,16 @@ Class of SewNode is TableView{
 		if({ !focused || rows:length() == 0 }, { return false; });
 		local Int is n: rows:length();
 		local Int is next: selectedIndex;
-		if({ key == 1001 }, {
+		if({ key == KeyCode:UP }, {
 			next: if({ selectedIndex > 0 }, { selectedIndex - 1 }, { 0 });
 		}, {
-		if({ key == 1002 }, {
+		if({ key == KeyCode:DOWN }, {
 			next: if({ selectedIndex + 1 < n }, { selectedIndex + 1 }, { n - 1 });
 		}, {
-		if({ key == 1005 }, {
+		if({ key == KeyCode:HOME }, {
 			next: 0;
 		}, {
-		if({ key == 1006 }, {
+		if({ key == KeyCode:END }, {
 			next: n - 1;
 		}, {
 			return false;

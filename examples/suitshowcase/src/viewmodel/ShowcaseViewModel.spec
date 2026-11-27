@@ -12,6 +12,7 @@ Class is ShowcaseViewModel{
 		['base', 'signal', TextEmitter],
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
+		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', ThemePreset],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', GradientBounds],
@@ -119,22 +120,22 @@ Class is ShowcaseViewModel{
 		:notifyThemeChange();
 	}
 
-	Function is setPanelBorderStyle(String is style){
+	Function is setPanelBorderStyle(StrokeStyle is style){
 		activeTheme:setPanelBorderStyle(style: style);
 		:notifyThemeChange();
-		statusText:emit(value: 'Panel border style: ' . style);
+		statusText:emit(value: 'Panel border style: ' . Theme:strokeStyleToString(s: style));
 	}
 
-	Function is setDividerStyle(String is style){
+	Function is setDividerStyle(StrokeStyle is style){
 		activeTheme:setDividerStyle(style: style);
 		:notifyThemeChange();
-		statusText:emit(value: 'Divider style: ' . style);
+		statusText:emit(value: 'Divider style: ' . Theme:strokeStyleToString(s: style));
 	}
 
-	Function is setButtonBorderStyle(String is style){
+	Function is setButtonBorderStyle(StrokeStyle is style){
 		activeTheme:setButtonBorderStyle(style: style);
 		:notifyThemeChange();
-		statusText:emit(value: 'Button border style: ' . style);
+		statusText:emit(value: 'Button border style: ' . Theme:strokeStyleToString(s: style));
 	}
 
 	Function of Int is toTenths(Float is pt){

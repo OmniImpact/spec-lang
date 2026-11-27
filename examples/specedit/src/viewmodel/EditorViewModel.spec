@@ -14,6 +14,7 @@ Class is EditorViewModel{
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'menu', MenuConfig],
 		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', 'menu', MenuItemKind],
 		['base', 'scrap', 'tab', TabBar],
 		['base', 'scrap', 'tab', TabItemConfig],
 		['base', 'scrap', 'menu', MenuContext],
@@ -77,10 +78,10 @@ Class is EditorViewModel{
 	MenuItemConfig is copyItem: MenuItemConfig(id: SpecEditStrings:ITEM_COPY_ID, label: SpecEditStrings:ITEM_COPY_LABEL, enabled: false);
 	MenuItemConfig is pasteItem: MenuItemConfig(id: SpecEditStrings:ITEM_PASTE_ID, label: SpecEditStrings:ITEM_PASTE_LABEL, enabled: false);
 	MenuItemConfig is selectAllItem: MenuItemConfig(id: SpecEditStrings:ITEM_SELECT_ALL_ID, label: SpecEditStrings:ITEM_SELECT_ALL_LABEL, enabled: false);
-	MenuItemConfig is wrapItem: MenuItemConfig(id: SpecEditStrings:ITEM_WRAP_ID, label: SpecEditStrings:ITEM_WRAP_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
-	MenuItemConfig is lineNumsItem: MenuItemConfig(id: SpecEditStrings:ITEM_LINE_NUMS_ID, label: SpecEditStrings:ITEM_LINE_NUMS_LABEL, kind: SpecEditStrings:MENU_KIND_TOGGLE);
-	MenuItemConfig is monospaceItem: MenuItemConfig(id: SpecEditStrings:ITEM_MONOSPACE_ID, label: SpecEditStrings:ITEM_MONOSPACE_LABEL, checked: true, kind: SpecEditStrings:MENU_KIND_TOGGLE);
-	MenuItemConfig is fileTreeItem: MenuItemConfig(id: SpecEditStrings:ITEM_FILE_TREE_ID, label: SpecEditStrings:ITEM_FILE_TREE_LABEL, checked: false, kind: SpecEditStrings:MENU_KIND_TOGGLE);
+	MenuItemConfig is wrapItem: MenuItemConfig(id: SpecEditStrings:ITEM_WRAP_ID, label: SpecEditStrings:ITEM_WRAP_LABEL, kind: MenuItemKind:TOGGLE);
+	MenuItemConfig is lineNumsItem: MenuItemConfig(id: SpecEditStrings:ITEM_LINE_NUMS_ID, label: SpecEditStrings:ITEM_LINE_NUMS_LABEL, kind: MenuItemKind:TOGGLE);
+	MenuItemConfig is monospaceItem: MenuItemConfig(id: SpecEditStrings:ITEM_MONOSPACE_ID, label: SpecEditStrings:ITEM_MONOSPACE_LABEL, checked: true, kind: MenuItemKind:TOGGLE);
+	MenuItemConfig is fileTreeItem: MenuItemConfig(id: SpecEditStrings:ITEM_FILE_TREE_ID, label: SpecEditStrings:ITEM_FILE_TREE_LABEL, checked: false, kind: MenuItemKind:TOGGLE);
 
 	Function is copyHandler: local Function(){};
 	Function is cutHandler: local Function(){};
@@ -192,14 +193,14 @@ Class is EditorViewModel{
 			id: 'syntax_auto',
 			label: 'Auto-Detect (' . detected:displayName() . ')',
 			checked: (curOverride == ''),
-			kind: 'radio',
+			kind: MenuItemKind:RADIO,
 			onClick: local Function(){ :setDocumentLanguage(langId: ''); }
 		));
 		items:add(item: MenuItemConfig(
 			id: 'syntax_plain',
 			label: 'Plain Text',
 			checked: (curOverride == 'plain'),
-			kind: 'radio',
+			kind: MenuItemKind:RADIO,
 			onClick: local Function(){ :setDocumentLanguage(langId: 'plain'); }
 		));
 		local Array of Highlighter is registered: boundCodeEditor:registeredHighlighters();
@@ -211,7 +212,7 @@ Class is EditorViewModel{
 				id: 'syntax_' . lid,
 				label: h:displayName(),
 				checked: (curOverride == lid),
-				kind: 'radio',
+				kind: MenuItemKind:RADIO,
 				onClick: local Function(){ :setDocumentLanguage(langId: lid); }
 			));
 			i: i + 1;
@@ -346,28 +347,28 @@ Class is EditorViewModel{
 			id: SpecEditStrings:ITEM_WRAP_ID,
 			label: SpecEditStrings:ITEM_WRAP_LABEL,
 			checked: wrapEnabled:current(),
-			kind: SpecEditStrings:MENU_KIND_TOGGLE,
+			kind: MenuItemKind:TOGGLE,
 			onClick: local Function(){ :toggleWrap(); }
 		);
 		lineNumsItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_LINE_NUMS_ID,
 			label: SpecEditStrings:ITEM_LINE_NUMS_LABEL,
 			checked: lineNumbersEnabled:current(),
-			kind: SpecEditStrings:MENU_KIND_TOGGLE,
+			kind: MenuItemKind:TOGGLE,
 			onClick: local Function(){ :toggleLineNumbers(); }
 		);
 		monospaceItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_MONOSPACE_ID,
 			label: SpecEditStrings:ITEM_MONOSPACE_LABEL,
 			checked: monospaceEnabled:current(),
-			kind: SpecEditStrings:MENU_KIND_TOGGLE,
+			kind: MenuItemKind:TOGGLE,
 			onClick: local Function(){ :toggleMonospace(); }
 		);
 		fileTreeItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_FILE_TREE_ID,
 			label: SpecEditStrings:ITEM_FILE_TREE_LABEL,
 			checked: fileTreeEnabled:current(),
-			kind: SpecEditStrings:MENU_KIND_TOGGLE,
+			kind: MenuItemKind:TOGGLE,
 			onClick: local Function(){ :toggleFileTree(); }
 		);
 		viewMenu:addItem(item: wrapItem);
