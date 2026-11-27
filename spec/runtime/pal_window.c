@@ -1906,9 +1906,9 @@ long long spec_pal_window_set_cursor(long long handle, long long kind) {
     if (!w->cursor_dev) return 0;
     uint32_t shape = 1; /* default */
     if (kind == 1) shape = 9;       /* text */
-    else if (kind == 2) shape = 11; /* pointer */
-    else if (kind == 3) shape = 25; /* ew_resize */
-    else if (kind == 4) shape = 24; /* ns_resize */
+    else if (kind == 2) shape = 4;  /* pointer */
+    else if (kind == 3) shape = 26; /* ew_resize */
+    else if (kind == 4) shape = 27; /* ns_resize */
     _wl_proxy_marshal_flags((struct wl_proxy*)w->cursor_dev, 1 /* SET_SHAPE */, NULL, 1, 0, w->last_ptr_serial, shape);
     _wl_display_flush(w->display);
     return 1;
