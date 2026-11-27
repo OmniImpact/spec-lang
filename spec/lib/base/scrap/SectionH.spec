@@ -91,7 +91,6 @@ Class of SewNode is SectionH{
 					item:insetRight: idx == nOpt - 1;
 					item:insetTop: true;
 					item:insetBottom: true;
-					item:invertSelectedBg: true;
 				});
 				segmentItems:add(item: item);
 				rowChildren:add(item: item);
@@ -294,7 +293,6 @@ Class of SewNode is SectionH{
 				item:insetRight: idx == n - 1;
 				item:insetTop: true;
 				item:insetBottom: true;
-				item:invertSelectedBg: true;
 			});
 			newChildren:add(item: item);
 			k: k + 1;

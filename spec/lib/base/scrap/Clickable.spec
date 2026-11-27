@@ -40,7 +40,6 @@ Class of SewNode is Clickable{
 	Boolean is insetRight: true;
 	Boolean is insetTop: true;
 	Boolean is insetBottom: true;
-	Boolean is invertSelectedBg: false;
 
 	replace Function is init(
 		String is label: '',
@@ -181,8 +180,7 @@ Class of SewNode is Clickable{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Boolean is bgSelected: if({ invertSelectedBg }, { !selected }, { selected });
-		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: bgSelected, hovered: hovered, focused: focused);
+		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: selected, hovered: hovered, focused: focused);
 		local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 		local Int is iL: if({ insetLeft }, { btnPx }, { 0 });
 		local Int is iR: if({ insetRight }, { btnPx }, { 0 });
