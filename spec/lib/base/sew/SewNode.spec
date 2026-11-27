@@ -14,7 +14,8 @@ Class is SewNode{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
-		['base', 'sew', SuitUnit]
+		['base', 'sew', SuitUnit],
+		['base', 'sew', CursorShape]
 	];
 
 	Rect is layoutBounds: Rect();
@@ -55,6 +56,11 @@ Class is SewNode{
 	Function of String is tooltipAt(Int is x, Int is y){
 		if({ tooltip != '' && :containsPoint(x: x, y: y) }, { return tooltip; });
 		return '';
+	}
+
+	## Returns preferred pointer cursor shape at ([x], [y]).
+	Function of CursorShape is cursorAt(Int is x, Int is y){
+		return CursorShape:DEFAULT;
 	}
 
 	## Propagates [theme] down the widget tree.

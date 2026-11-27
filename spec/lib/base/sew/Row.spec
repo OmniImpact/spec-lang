@@ -11,6 +11,7 @@ Class of SewNode is Row{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -328,5 +329,16 @@ Class of SewNode is Row{
 			i: i - 1;
 		});
 		return tooltip;
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ !:containsPoint(x: x, y: y) }, { return CursorShape:DEFAULT; });
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			local CursorShape is cur: children:get(index: i):cursorAt(x: x, y: y);
+			if({ cur != CursorShape:DEFAULT }, { return cur; });
+			i: i - 1;
+		});
+		return CursorShape:DEFAULT;
 	}
 }

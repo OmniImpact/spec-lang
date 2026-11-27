@@ -11,6 +11,7 @@ Class of SewNode is GridFlex{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', 'grid', GridFlexPanel],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
@@ -452,6 +453,15 @@ Class of SewNode is GridFlex{
 			i: i + 1;
 		});
 		return false;
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ :dividerAt(x: x, y: y) >= 0 }, {
+			return if({ horizontal }, { CursorShape:EW_RESIZE }, { CursorShape:NS_RESIZE });
+		});
+		local Int is pi: :panelIndexAt(x: x, y: y);
+		if({ pi >= 0 }, { return panels:get(index: pi):child:cursorAt(x: x, y: y); });
+		return CursorShape:DEFAULT;
 	}
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){

@@ -8,6 +8,7 @@ Class of SewNode is ColorSwatchDropdown{
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -317,6 +318,11 @@ Class of SewNode is ColorSwatchDropdown{
 		});
 		if({ tooltip != '' && :containsPoint(x: x, y: y) }, { return tooltip; });
 		return '';
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ :containsPoint(x: x, y: y) }, { return CursorShape:POINTER; });
+		return CursorShape:DEFAULT;
 	}
 
 	replace Function is paint(DrawContext is ctx){

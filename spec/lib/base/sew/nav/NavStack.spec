@@ -12,6 +12,7 @@ Class of SewNode is NavStack{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', 'nav', NavRoute],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
@@ -214,5 +215,9 @@ Class of SewNode is NavStack{
 
 	replace Function of String is tooltipAt(Int is x, Int is y){
 		return :activeChild():tooltipAt(x: x, y: y);
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		return :activeChild():cursorAt(x: x, y: y);
 	}
 }

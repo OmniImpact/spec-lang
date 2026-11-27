@@ -8,6 +8,7 @@ Class of SewNode is Frame{
 		['base', 'sys', as Conditional()],
 		['base', 'struct', Array],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -297,5 +298,10 @@ Class of SewNode is Frame{
 		local String is tip: child:tooltipAt(x: x, y: y);
 		if({ tip != '' }, { return tip; });
 		return tooltip;
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ !:containsPoint(x: x, y: y) }, { return CursorShape:DEFAULT; });
+		return child:cursorAt(x: x, y: y);
 	}
 }

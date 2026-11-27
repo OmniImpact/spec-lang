@@ -9,6 +9,7 @@ Class of SewNode is DateDropdown{
 		['base', 'sys', as DateTime()],
 		['base', 'sys', as Conditional()],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -244,6 +245,11 @@ Class of SewNode is DateDropdown{
 	replace Function of String is tooltipAt(Int is x, Int is y){
 		if({ tooltip != '' && :hitSelf(x: x, y: y) }, { return tooltip; });
 		return '';
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ :hitSelf(x: x, y: y) }, { return CursorShape:POINTER; });
+		return CursorShape:DEFAULT;
 	}
 
 	replace Function is paint(DrawContext is ctx){

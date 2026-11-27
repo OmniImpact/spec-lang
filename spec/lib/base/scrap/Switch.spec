@@ -7,6 +7,7 @@ Class of SewNode is Switch{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -133,5 +134,10 @@ Class of SewNode is Switch{
 			return true;
 		});
 		return false;
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ :contains(x: x, y: y) }, { return CursorShape:POINTER; });
+		return CursorShape:DEFAULT;
 	}
 }

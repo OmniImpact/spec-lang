@@ -8,6 +8,7 @@ Class of SewNode is Checkbox{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -167,5 +168,10 @@ Class of SewNode is Checkbox{
 			return true;
 		});
 		return false;
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ enabled && :contains(x: x, y: y) }, { return CursorShape:POINTER; });
+		return CursorShape:DEFAULT;
 	}
 }

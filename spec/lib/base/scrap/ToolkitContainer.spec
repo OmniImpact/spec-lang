@@ -25,9 +25,11 @@ Class of SewNode is ToolkitContainer{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
+		['base', 'sew', CursorShape],
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
+		['base', 'scrap', DragDropState],
 		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'fabric', 'svg', SvgBitmap],
 		['base', 'scrap', Bar],
@@ -254,6 +256,27 @@ Class of SewNode is ToolkitContainer{
 	}
 
 	String is activeTooltip: '';
+	Boolean is tooltipVisible: false;
+	Int is tooltipHoverStartMs: 0;
+	Int is lastCursorKind: 0;
+	Time is tipClock: Time();
+
+	local Function of Int is cursorKindOf(CursorShape is shape){
+		if({ shape == CursorShape:TEXT }, { return 1; });
+		if({ shape == CursorShape:POINTER }, { return 2; });
+		if({ shape == CursorShape:EW_RESIZE }, { return 3; });
+		if({ shape == CursorShape:NS_RESIZE }, { return 4; });
+		return 0;
+	}
+
+	local Function of CursorShape is resolveCursorAt(Int is x, Int is y){
+		if({ contextMenu:isOpen }, { return CursorShape:DEFAULT; });
+		if({ hasToolbarSlot && toolbarSlot:blocksPointerAt(x: x, y: y) }, { return CursorShape:POINTER; });
+		if({ hasTabBar && tabBar:blocksPointerAt(x: x, y: y) }, { return CursorShape:POINTER; });
+		if({ hasBottomBar && bottomBar:blocksPointerAt(x: x, y: y) }, { return bottomBar:cursorAt(x: x, y: y); });
+		if({ hasBody && !useVulkan }, { return bodyPanel:cursorAt(x: x, y: y); });
+		return CursorShape:DEFAULT;
+	}
 
 	local Function of String is resolveTooltipAt(Int is x, Int is y){
 		if({ contextMenu:isOpen }, { return ''; });
@@ -298,7 +321,13 @@ Class of SewNode is ToolkitContainer{
 		if({ hasBody && !useVulkan && bodyPanel:onOverlayPointerMove(x: x, y: y) }, {
 			:clearHoverBelow(startLayer: 1);
 			local String is nextTipOvl: :resolveTooltipAt(x: x, y: y);
-			if({ nextTipOvl != activeTooltip }, { activeTooltip: nextTipOvl; });
+			:activeTooltip: nextTipOvl;
+			if({ tooltipVisible }, {
+				:tooltipVisible: false;
+				:tooltipHoverStartMs: tipClock:monotonicMs();
+			}, {
+				:tooltipHoverStartMs: tipClock:monotonicMs();
+			});
 			return true;
 		});
 		local Boolean is changed: false;
@@ -335,10 +364,12 @@ Class of SewNode is ToolkitContainer{
 			});
 		});
 		local String is nextTip: :resolveTooltipAt(x: x, y: y);
-		if({ nextTip != activeTooltip }, {
-			activeTooltip: nextTip;
+		:activeTooltip: nextTip;
+		if({ tooltipVisible }, {
+			:tooltipVisible: false;
 			changed: true;
 		});
+		:tooltipHoverStartMs: tipClock:monotonicMs();
 		return changed;
 	}
 
@@ -413,7 +444,8 @@ Class of SewNode is ToolkitContainer{
 		if({ hasToolbarSlot }, { toolbarSlot:paintOverlay(ctx: ctx); });
 		if({ hasBody && !useVulkan }, { bodyPanel:paintOverlay(ctx: ctx); });
 		contextMenu:paint(ctx: ctx);
-		if({ activeTooltip != '' && lastPtrX >= 0 && lastPtrY >= 0 }, {
+		DragDropState:shared:paintOverlay(ctx: ctx, theme: theme, scale: scale, winW: loopW, winH: loopH);
+		if({ tooltipVisible && activeTooltip != '' && lastPtrX >= 0 && lastPtrY >= 0 }, {
 			Tooltip:shared:paint(ctx: ctx, theme: theme, scale: scale, text: activeTooltip, ptrX: lastPtrX, ptrY: lastPtrY, winW: loopW, winH: loopH);
 		});
 	}
@@ -527,6 +559,9 @@ Class of SewNode is ToolkitContainer{
 		lastPtrY: -1;
 		wasPtrDown: false;
 		activeTooltip: '';
+		tooltipVisible: false;
+		tooltipHoverStartMs: 0;
+		lastCursorKind: 0;
 		ptrCaptureTarget: 0;
 		closedByWm: false;
 		idleFrames: 0;
@@ -736,6 +771,10 @@ Class of SewNode is ToolkitContainer{
 			local Int is py: win:pointerY();
 			if({ ptrDown && !wasPtrDown }, {
 				hadActivity: true;
+				if({ DragDropState:shared:active }, {
+					DragDropState:shared:finishDrag();
+					:isDirty: true;
+				});
 				ptrCaptureTarget: 0;
 				if({ !contextMenu:isOpen }, {
 					if({ hasToolbarSlot && px >= toolbarSlot:bounds():x && px < toolbarSlot:bounds():x + toolbarSlot:bounds():width && py >= toolbarSlot:bounds():y && py < toolbarSlot:bounds():y + toolbarSlot:bounds():height }, {
@@ -757,6 +796,9 @@ Class of SewNode is ToolkitContainer{
 				lastPtrX: px;
 				lastPtrY: py;
 				if({ ptrDown && hasBody && !useVulkan }, {
+					if({ DragDropState:shared:active }, {
+						DragDropState:shared:updatePointer(x: px, y: py);
+					});
 					if({ bodyPanel:onOverlayPointerDrag(x: px, y: py, mods: curMods) }, {
 						:isDirty: true;
 					}, {
@@ -764,10 +806,18 @@ Class of SewNode is ToolkitContainer{
 						if({ bodyPanel:onPointerDrag(x: px, y: py, mods: curMods) }, {
 							:isDirty: true;
 						});
+						if({ DragDropState:shared:active }, {
+							bodyPanel:onPointerMove(x: px, y: py);
+						});
 					}); });
 				});
 				if({ :onPointerMove(x: px, y: py) }, {
 					:isDirty: true;
+				});
+				local Int is nextCursor: :cursorKindOf(shape: :resolveCursorAt(x: px, y: py));
+				if({ nextCursor != lastCursorKind }, {
+					:lastCursorKind: nextCursor;
+					win:setCursor(kind: nextCursor);
 				});
 			});
 			if({ !ptrDown && wasPtrDown }, {
@@ -781,6 +831,10 @@ Class of SewNode is ToolkitContainer{
 							:isDirty: true;
 						});
 					}); });
+				});
+				if({ DragDropState:shared:active }, {
+					DragDropState:shared:finishDrag();
+					:isDirty: true;
 				});
 				ptrCaptureTarget: 0;
 			});
@@ -806,6 +860,10 @@ Class of SewNode is ToolkitContainer{
 			});
 
 			local Int is frameNowMs: clock:monotonicMs();
+			if({ !tooltipVisible && activeTooltip != '' && lastPtrX >= 0 && lastPtrY >= 0 && (frameNowMs - tooltipHoverStartMs >= 480) }, {
+				:tooltipVisible: true;
+				:isDirty: true;
+			});
 			if({ hasBody && !useVulkan }, {
 				if({ bodyPanel:tick(nowMs: frameNowMs) }, {
 					hadActivity: true;

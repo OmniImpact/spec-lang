@@ -10,6 +10,7 @@ Class of SewNode is SectionH{
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -301,5 +302,9 @@ Class of SewNode is SectionH{
 
 	replace Function of String is tooltipAt(Int is x, Int is y){
 		return :rootNode():tooltipAt(x: x, y: y);
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		return :rootNode():cursorAt(x: x, y: y);
 	}
 }

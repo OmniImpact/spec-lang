@@ -7,6 +7,7 @@ Class of SewNode is TextInput{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sew', SewNode],
+		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
@@ -197,6 +198,11 @@ Class of SewNode is TextInput{
 			:hovered: false;
 			invalidate();
 		});
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		if({ :contains(x: x, y: y) }, { return CursorShape:TEXT; });
+		return CursorShape:DEFAULT;
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods){
