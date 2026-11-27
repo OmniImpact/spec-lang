@@ -26,9 +26,12 @@ Class of SewNode is TextArea{
 	Function is onChange: local Function(String is _next){};
 
 	Boolean is hovered: false;
+	Boolean is focused: false;
 	Int is cursorPos: 0;
 	Int is scrollY: 0;
 	Int is maxScrollY: 0;
+	Boolean is caretVisible: true;
+	Int is caretBlinkMs: 0;
 
 	replace Function is init(
 		String is text: '',
@@ -186,7 +189,7 @@ Class of SewNode is TextArea{
 					if({ ln != '' }, {
 						ctx:drawText(x: clipX, y: ly + yOff, text: ln, color: activeTheme:textPrimary, pixelHeight: fpx);
 					});
-					if({ focused && i == curLine }, {
+					if({ focused && caretVisible && i == curLine }, {
 						local Int is cc: if({ curCol > ln:length() }, { ln:length() }, { curCol });
 						local String is before: ln:substring(start: 0, end: cc);
 						local Int is cw: if({ before != '' }, { ctx:measureTextWidth(text: before, pixelHeight: fpx) }, { 0 });
@@ -246,15 +249,35 @@ Class of SewNode is TextArea{
 		local Int is approxCol: if({ relX <= 0 }, { 0 }, { (relX * 10) / (:fontPx() * 6) });
 		if({ approxCol > ln:length() }, { approxCol: ln:length(); });
 		:cursorPos: starts:get(index: li) + approxCol;
+		:caretVisible: true;
+		:caretBlinkMs: 0;
 		:invalidate();
 		return true;
 	}
 
-	replace Function of Boolean is onScroll(Int is x, Int is y, Int is dy){
-		if({ !:containsPoint(x: x, y: y) }, { return false; });
-		if({ maxScrollY <= 0 }, { return false; });
+	replace Function of Boolean is tick(Int is nowMs){
+		if({ !focused }, {
+			:caretBlinkMs: 0;
+			:caretVisible: true;
+			return false;
+		});
+		if({ caretBlinkMs == 0 }, {
+			:caretBlinkMs: nowMs;
+			return false;
+		});
+		if({ nowMs - caretBlinkMs >= 530 }, {
+			:caretBlinkMs: nowMs;
+			:caretVisible: !caretVisible;
+			:invalidate();
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onScroll(Int is deltaY){
+		if({ !hovered || maxScrollY <= 0 }, { return false; });
 		local Int is step: activeScale:px(pt: 24.0);
-		local Int is next: scrollY - dy * step;
+		local Int is next: scrollY - deltaY * step;
 		if({ next < 0 }, { next: 0; });
 		if({ next > maxScrollY }, { next: maxScrollY; });
 		if({ next != scrollY }, {
@@ -273,6 +296,8 @@ Class of SewNode is TextArea{
 		local String is after: text:substring(start: cursorPos, end: n);
 		:text: before . ch . after;
 		:cursorPos: cursorPos + ch:length();
+		:caretVisible: true;
+		:caretBlinkMs: 0;
 		:ensureCursorVisible();
 		local Function is cb: :onChange;
 		cb(text);
@@ -287,11 +312,13 @@ Class of SewNode is TextArea{
 		if({ cursorPos > n }, { :cursorPos: n; });
 
 		# Enter -> insert newline
-		if({ key == 36 }, {
+		if({ key == 10 || key == 13 || key == 36 }, {
 			local String is before: text:substring(start: 0, end: cursorPos);
 			local String is after: text:substring(start: cursorPos, end: n);
 			:text: before . '\n' . after;
 			:cursorPos: cursorPos + 1;
+			:caretVisible: true;
+			:caretBlinkMs: 0;
 			:ensureCursorVisible();
 			local Function is cb: :onChange;
 			cb(text);
@@ -299,12 +326,14 @@ Class of SewNode is TextArea{
 			return true;
 		});
 		# Backspace
-		if({ key == 22 }, {
+		if({ key == 8 || key == 22 }, {
 			if({ cursorPos > 0 }, {
 				local String is before: text:substring(start: 0, end: cursorPos - 1);
 				local String is after: text:substring(start: cursorPos, end: n);
 				:text: before . after;
 				:cursorPos: cursorPos - 1;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				:ensureCursorVisible();
 				local Function is cb: :onChange;
 				cb(text);
@@ -313,11 +342,13 @@ Class of SewNode is TextArea{
 			return true;
 		});
 		# Delete
-		if({ key == 119 }, {
+		if({ key == 127 || key == 119 }, {
 			if({ cursorPos < n }, {
 				local String is before: text:substring(start: 0, end: cursorPos);
 				local String is after: text:substring(start: cursorPos + 1, end: n);
 				:text: before . after;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				local Function is cb: :onChange;
 				cb(text);
 				:invalidate();
@@ -325,12 +356,12 @@ Class of SewNode is TextArea{
 			return true;
 		});
 		# Left / Right
-		if({ key == 113 }, {
-			if({ cursorPos > 0 }, { :cursorPos: cursorPos - 1; :ensureCursorVisible(); :invalidate(); });
+		if({ key == 1003 || key == 113 }, {
+			if({ cursorPos > 0 }, { :cursorPos: cursorPos - 1; :caretVisible: true; :caretBlinkMs: 0; :ensureCursorVisible(); :invalidate(); });
 			return true;
 		});
-		if({ key == 114 }, {
-			if({ cursorPos < n }, { :cursorPos: cursorPos + 1; :ensureCursorVisible(); :invalidate(); });
+		if({ key == 1004 || key == 114 }, {
+			if({ cursorPos < n }, { :cursorPos: cursorPos + 1; :caretVisible: true; :caretBlinkMs: 0; :ensureCursorVisible(); :invalidate(); });
 			return true;
 		});
 		# Up / Down / Home / End
@@ -338,34 +369,42 @@ Class of SewNode is TextArea{
 		local Array of Int is starts: :lineStartOffsets();
 		local Int is li: :cursorLineIndex(starts: starts);
 		local Int is col: cursorPos - starts:get(index: li);
-		if({ key == 111 }, {
+		if({ key == 1001 || key == 111 }, {
 			if({ li > 0 }, {
 				local Int is prevLen: lines:get(index: li - 1):length();
 				local Int is nc: if({ col < prevLen }, { col }, { prevLen });
 				:cursorPos: starts:get(index: li - 1) + nc;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				:ensureCursorVisible();
 				:invalidate();
 			});
 			return true;
 		});
-		if({ key == 116 }, {
+		if({ key == 1002 || key == 116 }, {
 			if({ li + 1 < lines:length() }, {
 				local Int is nextLen: lines:get(index: li + 1):length();
 				local Int is nc: if({ col < nextLen }, { col }, { nextLen });
 				:cursorPos: starts:get(index: li + 1) + nc;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				:ensureCursorVisible();
 				:invalidate();
 			});
 			return true;
 		});
-		if({ key == 110 }, {
+		if({ key == 1005 || key == 110 }, {
 			:cursorPos: starts:get(index: li);
+			:caretVisible: true;
+			:caretBlinkMs: 0;
 			:ensureCursorVisible();
 			:invalidate();
 			return true;
 		});
-		if({ key == 115 }, {
+		if({ key == 1006 || key == 115 }, {
 			:cursorPos: starts:get(index: li) + lines:get(index: li):length();
+			:caretVisible: true;
+			:caretBlinkMs: 0;
 			:ensureCursorVisible();
 			:invalidate();
 			return true;
@@ -373,8 +412,19 @@ Class of SewNode is TextArea{
 		return false;
 	}
 
-	replace Function is collectFocusables(Array of SewNode is out){
-		out:add(item: self);
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		:focused: next;
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		:invalidate();
 	}
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){

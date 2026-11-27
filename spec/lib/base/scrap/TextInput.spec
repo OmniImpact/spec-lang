@@ -21,6 +21,8 @@ Class of SewNode is TextInput{
 	Boolean is hovered: false;
 	Int is cursorPos: 0;
 	Int is scrollX: 0;
+	Boolean is caretVisible: true;
+	Int is caretBlinkMs: 0;
 	Float is minWidthPt: 0.0;
 	Float is heightPt: 0.0;
 	Boolean is expand: false;
@@ -98,6 +100,8 @@ Class of SewNode is TextInput{
 	replace Function is setFocused(Boolean is next){
 		if({ focused != next }, {
 			:focused: next;
+			:caretVisible: true;
+			:caretBlinkMs: 0;
 			if({ next }, {
 				:text: :stripSuffix(s: text);
 				:cursorPos: text:length();
@@ -175,7 +179,7 @@ Class of SewNode is TextInput{
 					:scrollX: 0;
 				});
 				ctx:drawText(x: b:x + padX - scrollX, y: textY, text: text, color: activeTheme:textPrimary, pixelHeight: fpx);
-				if({ focused }, {
+				if({ focused && caretVisible }, {
 					ctx:fillRect(x: b:x + padX + caretOff - scrollX, y: textY, w: caretW, h: th, color: activeTheme:textPrimary);
 				});
 			});
@@ -231,8 +235,29 @@ Class of SewNode is TextInput{
 			});
 			if({ best != cursorPos }, {
 				:cursorPos: best;
-				invalidate();
 			});
+			:caretVisible: true;
+			:caretBlinkMs: 0;
+			invalidate();
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is tick(Int is nowMs){
+		if({ !focused }, {
+			:caretBlinkMs: 0;
+			:caretVisible: true;
+			return false;
+		});
+		if({ caretBlinkMs == 0 }, {
+			:caretBlinkMs: nowMs;
+			return false;
+		});
+		if({ nowMs - caretBlinkMs >= 530 }, {
+			:caretBlinkMs: nowMs;
+			:caretVisible: !caretVisible;
+			invalidate();
 			return true;
 		});
 		return false;
@@ -253,6 +278,8 @@ Class of SewNode is TextInput{
 		if({ key == 1003 }, {
 			if({ cursorPos > 0 }, {
 				:cursorPos: cursorPos - 1;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				invalidate();
 			});
 			return true;
@@ -260,6 +287,8 @@ Class of SewNode is TextInput{
 		if({ key == 1004 }, {
 			if({ cursorPos < text:length() }, {
 				:cursorPos: cursorPos + 1;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				invalidate();
 			});
 			return true;
@@ -267,6 +296,8 @@ Class of SewNode is TextInput{
 		if({ key == 1005 }, {
 			if({ cursorPos != 0 }, {
 				:cursorPos: 0;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				invalidate();
 			});
 			return true;
@@ -274,6 +305,8 @@ Class of SewNode is TextInput{
 		if({ key == 1006 }, {
 			if({ cursorPos != text:length() }, {
 				:cursorPos: text:length();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				invalidate();
 			});
 			return true;
@@ -282,6 +315,8 @@ Class of SewNode is TextInput{
 			if({ cursorPos > 0 }, {
 				:text: text:substring(start: 0, end: cursorPos - 1) . text:substring(start: cursorPos, end: text:length());
 				:cursorPos: cursorPos - 1;
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				local Function is cb: onChange;
 				cb(text);
 				invalidate();
@@ -291,6 +326,8 @@ Class of SewNode is TextInput{
 		if({ key == 127 }, {
 			if({ cursorPos < text:length() }, {
 				:text: text:substring(start: 0, end: cursorPos) . text:substring(start: cursorPos + 1, end: text:length());
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				local Function is cb: onChange;
 				cb(text);
 				invalidate();
@@ -312,6 +349,8 @@ Class of SewNode is TextInput{
 		if({ cPos > text:length() }, { cPos: text:length(); });
 		:text: text:substring(start: 0, end: cPos) . ch . text:substring(start: cPos, end: text:length());
 		:cursorPos: cPos + ch:length();
+		:caretVisible: true;
+		:caretBlinkMs: 0;
 		local Function is cb: onChange;
 		cb(text);
 		invalidate();

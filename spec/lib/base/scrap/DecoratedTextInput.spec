@@ -123,6 +123,10 @@ Class of SewNode is DecoratedTextInput{
 		return row:onText(ch: ch, mods: mods);
 	}
 
+	replace Function of Boolean is tick(Int is nowMs){
+		return row:tick(nowMs: nowMs);
+	}
+
 	replace Function is collectFocusables(Array of SewNode is out){
 		row:collectFocusables(out: out);
 	}

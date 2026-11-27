@@ -6,7 +6,6 @@ Class of SewNode is NumberInput{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'sys', as Math()],
 		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
@@ -29,9 +28,12 @@ Class of SewNode is NumberInput{
 	Function is onChange: local Function(Float is _next){};
 
 	Boolean is hovered: false;
+	Boolean is focused: false;
 	Int is hoverZone: 0;
 	Boolean is editing: false;
 	String is editBuffer: '';
+	Boolean is caretVisible: true;
+	Int is caretBlinkMs: 0;
 
 	replace Function is init(
 		Float is value: 0.0,
@@ -69,10 +71,15 @@ Class of SewNode is NumberInput{
 		:invalidate();
 	}
 
+	local Function of Int is roundFloat(Float is v){
+		if({ v >= 0.0 }, { return (v + 0.5) as Int; });
+		return (v - 0.5) as Int;
+	}
+
 	local Function of String is formatValue(Float is v){
 		if({ decimals <= 0 }, {
-			local Int is iv: math:toInt(value: math:round(value: v));
-			return '' . iv . suffix;
+			local Int is iv: :roundFloat(v: v);
+			return (iv as String) . suffix;
 		});
 		local Float is mult: 1.0;
 		local Int is d: 0;
@@ -80,18 +87,18 @@ Class of SewNode is NumberInput{
 			mult: mult * 10.0;
 			d: d + 1;
 		});
-		local Int is scaled: math:toInt(value: math:round(value: v * mult));
+		local Int is scaled: :roundFloat(v: v * mult);
 		local Boolean is neg: scaled < 0;
 		if({ neg }, { scaled: 0 - scaled; });
-		local Int is imult: math:toInt(value: mult);
+		local Int is imult: :roundFloat(v: mult);
 		local Int is whole: scaled / imult;
 		local Int is frac: scaled - whole * imult;
-		local String is fracStr: '' . frac;
+		local String is fracStr: frac as String;
 		while({ fracStr:length() < decimals }, {
 			fracStr: '0' . fracStr;
 		});
 		local String is sign: if({ neg && (whole > 0 || frac > 0) }, { '-' }, { '' });
-		return sign . whole . '.' . fracStr . suffix;
+		return sign . (whole as String) . '.' . fracStr . suffix;
 	}
 
 	local Function of Float is parseBuffer(String is s){
@@ -115,7 +122,7 @@ Class of SewNode is NumberInput{
 			local Int is cp: s:codePointAtRune(runeIndex: i);
 			if({ cp >= 48 && cp <= 57 }, {
 				seenDigit: true;
-				local Float is digit: math:toFloat(value: cp - 48);
+				local Float is digit: (cp - 48) as Float;
 				if({ seenDot }, {
 					fracDiv: fracDiv * 10.0;
 					fracPart: fracPart + digit / fracDiv;
@@ -257,7 +264,7 @@ Class of SewNode is NumberInput{
 				italic: false,
 				mono: true
 			);
-			if({ focused && editing }, {
+			if({ focused && editing && caretVisible }, {
 				local Int is cx: tx + tw + 1;
 				if({ cx >= centerX && cx < centerX + centerW }, {
 					ctx:fillRect(x: cx, y: b:y + (b:height - th) / 2, w: 1, h: th, color: activeTheme:textAccent);
@@ -301,18 +308,39 @@ Class of SewNode is NumberInput{
 			return true;
 		});
 		:editing: true;
-		local Int is iv: math:toInt(value: math:round(value: value));
-		:editBuffer: if({ decimals <= 0 }, { '' . iv }, { :formatValue(v: value) });
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		local Int is iv: :roundFloat(v: value);
+		:editBuffer: if({ decimals <= 0 }, { iv as String }, { :formatValue(v: value) });
 		:invalidate();
 		return true;
 	}
 
-	replace Function of Boolean is onScroll(Int is x, Int is y, Int is dy){
-		if({ !:containsPoint(x: x, y: y) }, { return false; });
-		if({ dy > 0 }, {
+	replace Function of Boolean is tick(Int is nowMs){
+		if({ !focused || !editing }, {
+			:caretBlinkMs: 0;
+			:caretVisible: true;
+			return false;
+		});
+		if({ caretBlinkMs == 0 }, {
+			:caretBlinkMs: nowMs;
+			return false;
+		});
+		if({ nowMs - caretBlinkMs >= 530 }, {
+			:caretBlinkMs: nowMs;
+			:caretVisible: !caretVisible;
+			:invalidate();
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onScroll(Int is deltaY){
+		if({ !hovered }, { return false; });
+		if({ deltaY > 0 }, {
 			:stepBy(delta: step);
 		}, {
-		if({ dy < 0 }, {
+		if({ deltaY < 0 }, {
 			:stepBy(delta: 0.0 - step);
 		}); });
 		return true;
@@ -328,6 +356,8 @@ Class of SewNode is NumberInput{
 		local Boolean is ok: (cp >= 48 && cp <= 57) || cp == 46 || cp == 45;
 		if({ ok }, {
 			:editBuffer: editBuffer . ch;
+			:caretVisible: true;
+			:caretBlinkMs: 0;
 			:invalidate();
 		});
 		return true;
@@ -335,27 +365,29 @@ Class of SewNode is NumberInput{
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused }, { return false; });
-		if({ key == 111 }, {
+		if({ key == 1001 || key == 111 }, {
 			:stepBy(delta: step);
 			return true;
 		});
-		if({ key == 116 }, {
+		if({ key == 1002 || key == 116 }, {
 			:stepBy(delta: 0.0 - step);
 			return true;
 		});
-		if({ key == 36 }, {
+		if({ key == 10 || key == 13 || key == 36 }, {
 			:commitEdit();
 			return true;
 		});
-		if({ key == 9 }, {
+		if({ key == 27 || key == 9 }, {
 			:editing: false;
 			:invalidate();
 			return true;
 		});
-		if({ key == 22 && editing }, {
+		if({ (key == 8 || key == 22) && editing }, {
 			local Int is n: editBuffer:length();
 			if({ n > 0 }, {
 				:editBuffer: editBuffer:substring(start: 0, end: n - 1);
+				:caretVisible: true;
+				:caretBlinkMs: 0;
 				:invalidate();
 			});
 			return true;
@@ -363,8 +395,18 @@ Class of SewNode is NumberInput{
 		return false;
 	}
 
-	replace Function is collectFocusables(Array of SewNode is out){
-		out:add(item: self);
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		if({ !next && editing }, { :commitEdit(); });
+		:focused: next;
+		:invalidate();
 	}
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
