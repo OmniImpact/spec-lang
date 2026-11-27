@@ -130,16 +130,23 @@ Class of SewNode is RadioButton{
 			thickness: btnPx, radius: sizePx / 2, style: theme:buttonBorderStyle
 		);
 		Conditional:if(check: { selected }, then: {
-			local Int is dotPx: (sizePx * 46) / 100;
-			Conditional:if(check: { dotPx < 4 }, then: { dotPx: 4; });
-			local Int is dx: x + (sizePx - dotPx) / 2;
-			local Int is dy: y + (sizePx - dotPx) / 2;
-			local Int is dotCol: Conditional:if(check: { enabled }, then: { theme:textPrimary }, else: { theme:textMuted });
-			ctx:fillRoundRectStyled(
-				x: dx, y: dy, w: dotPx, h: dotPx,
-				radius: dotPx / 2,
-				fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: dotCol))
-			);
+			local Int is inset: (sizePx * 22) / 100;
+			local Int is minInset: btnPx + 1;
+			Conditional:if(check: { inset < minInset }, then: { inset: minInset; });
+			local Int is maxInset: (sizePx - 4) / 2;
+			Conditional:if(check: { maxInset < 1 }, then: { maxInset: 1; });
+			Conditional:if(check: { inset > maxInset }, then: { inset: maxInset; });
+			local Int is dotPx: sizePx - inset * 2;
+			Conditional:if(check: { dotPx > 0 }, then: {
+				local Int is dx: x + inset;
+				local Int is dy: y + inset;
+				local Int is dotCol: Conditional:if(check: { enabled }, then: { theme:textPrimary }, else: { theme:textMuted });
+				ctx:fillRoundRectStyled(
+					x: dx, y: dy, w: dotPx, h: dotPx,
+					radius: dotPx / 2,
+					fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: dotCol))
+				);
+			});
 		});
 	}
 

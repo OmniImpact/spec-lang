@@ -133,16 +133,31 @@ Class of SewNode is Checkbox{
 		);
 		Conditional:if(check: { checked }, then: {
 			local Int is ckCol: Conditional:if(check: { enabled }, then: { theme:textPrimary }, else: { theme:textMuted });
-			local Int is innerPx: (sizePx * 50) / 100;
-			Conditional:if(check: { innerPx < 4 }, then: { innerPx: 4; });
-			local Int is ix: x + (sizePx - innerPx) / 2;
-			local Int is iy: y + (sizePx - innerPx) / 2;
-			local Int is innerRad: Conditional:if(check: { radPx > 1 }, then: { radPx / 2 }, else: { 0 });
-			ctx:fillRoundRectStyled(
-				x: ix, y: iy, w: innerPx, h: innerPx,
-				radius: innerRad,
-				fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: ckCol))
-			);
+			local Int is inset: (sizePx * 22) / 100;
+			local Int is minInset: btnPx + 1;
+			Conditional:if(check: { inset < minInset }, then: { inset: minInset; });
+			local Int is maxInset: (sizePx - 4) / 2;
+			Conditional:if(check: { maxInset < 1 }, then: { maxInset: 1; });
+			Conditional:if(check: { inset > maxInset }, then: { inset: maxInset; });
+			local Int is innerPx: sizePx - inset * 2;
+			Conditional:if(check: { innerPx > 0 }, then: {
+				local Int is ix: x + inset;
+				local Int is iy: y + inset;
+				local Int is maxOuterRad: sizePx / 2;
+				local Int is clampedRad: Conditional:if(check: { radPx > maxOuterRad }, then: { maxOuterRad }, else: { radPx });
+				local Int is innerRad: 0;
+				Conditional:if(check: { clampedRad > 0 }, then: {
+					innerRad: (clampedRad * innerPx + sizePx / 2) / sizePx;
+					Conditional:if(check: { innerRad < 1 }, then: { innerRad: 1; });
+					local Int is maxInnerRad: innerPx / 2;
+					Conditional:if(check: { innerRad > maxInnerRad }, then: { innerRad: maxInnerRad; });
+				});
+				ctx:fillRoundRectStyled(
+					x: ix, y: iy, w: innerPx, h: innerPx,
+					radius: innerRad,
+					fill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: ckCol))
+				);
+			});
 		});
 	}
 

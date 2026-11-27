@@ -7,8 +7,8 @@ Class of SpecUnitTest is TestScrapWidgets{
 		['base', 'sys', as Mem()],
 		['base', 'suit', [KeyCode, KeyMod, SuitCanvas]],
 		['base', 'fabric', [DrawContext, Color, Theme, ThemePreset]],
-		['base', 'sew', [Rect, Constraints, Size, CursorShape]],
-		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner, SectionH, SectionV, TextInput]],
+		['base', 'sew', [Rect, Constraints, Size, CursorShape, Scale]],
+		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner, SectionH, SectionV, TextInput, Checkbox, RadioButton]],
 		['base', 'scrap', 'menu', [MenuConfig, MenuItemConfig, MenuItemKind]],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'tab', [TabBar, TabItemConfig]],
@@ -291,5 +291,58 @@ Class of SpecUnitTest is TestScrapWidgets{
 		Assert:isTrue(inp:onPointerClickMod(x: 210, y: 15));
 		Assert:areEqualString('', inp:text);
 		Assert:areEqualString('', lastChanged);
+	}
+
+	Function is testCheckboxAndRadioIndicatorSymmetryAndRadius(){
+		local Theme is t: Theme:forPreset(preset: ThemePreset:DARK);
+		local Scale is sc: Scale(factor: 1.0);
+		local SuitCanvas is canvas: SuitCanvas(width: 64, height: 64);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+		local Int is px: canvas:pixelsAddr();
+		local Int is bg: 255 << 24;
+
+		# Even size (14) and odd size (15): Checkbox inner square must be pixel-symmetric
+		local Array of Int is sizes: Array([14, 15]);
+		local Int is si: 0;
+		while({ si < sizes:length() }, {
+			local Int is sz: sizes:get(index: si);
+			t:setButtonCornerRadiusPt(pt: 0.0);
+			canvas:clear(color: bg);
+			Checkbox:paintIndicator(ctx: ctx, theme: t, scale: sc, x: 10, y: 10, sizePx: sz, checked: true);
+			local Int is midY: 10 + sz / 2;
+			local Int is dx: 0;
+			while({ dx < sz }, {
+				local Int is leftCol: loadI32(ptr: px, byteOffset: (midY * 64 + 10 + dx) * 4);
+				local Int is rightCol: loadI32(ptr: px, byteOffset: (midY * 64 + 10 + sz - 1 - dx) * 4);
+				Assert:areEqualInt(leftCol, rightCol);
+				dx: dx + 1;
+			});
+
+			# RadioButton inner circle must also be pixel-symmetric
+			canvas:clear(color: bg);
+			RadioButton:paintIndicator(ctx: ctx, theme: t, scale: sc, x: 10, y: 10, sizePx: sz, selected: true);
+			dx: 0;
+			while({ dx < sz }, {
+				local Int is leftCol: loadI32(ptr: px, byteOffset: (midY * 64 + 10 + dx) * 4);
+				local Int is rightCol: loadI32(ptr: px, byteOffset: (midY * 64 + 10 + sz - 1 - dx) * 4);
+				Assert:areEqualInt(leftCol, rightCol);
+				dx: dx + 1;
+			});
+			si: si + 1;
+		});
+
+		# Checkbox inner square corner follows buttonCornerRadiusPt (sharp at 0pt vs rounded at 6pt)
+		t:setButtonCornerRadiusPt(pt: 0.0);
+		canvas:clear(color: bg);
+		Checkbox:paintIndicator(ctx: ctx, theme: t, scale: sc, x: 10, y: 10, sizePx: 14, checked: true);
+		local Int is sharpCorner: loadI32(ptr: px, byteOffset: (13 * 64 + 13) * 4);
+
+		t:setButtonCornerRadiusPt(pt: 6.0);
+		canvas:clear(color: bg);
+		Checkbox:paintIndicator(ctx: ctx, theme: t, scale: sc, x: 10, y: 10, sizePx: 14, checked: true);
+		local Int is roundCorner: loadI32(ptr: px, byteOffset: (13 * 64 + 13) * 4);
+		Assert:isTrue(sharpCorner != roundCorner);
+
+		canvas:dispose();
 	}
 }
