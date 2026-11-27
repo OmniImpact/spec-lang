@@ -14,11 +14,13 @@ Class is ThemeBuilderPageView{
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', Slider],
+		['base', 'scrap', ColorSwatchDropdown],
 		['base', 'scrap', TextInput],
 		['base', 'scrap', DecoratedTextInput],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', SectionH],
 		['base', 'scrap', 'text', TextScrap],
+		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
 		['suitshowcase', 'viewmodel', ShowcaseViewModel]
@@ -31,6 +33,7 @@ Class is ThemeBuilderPageView{
 	TextEmitter is alphaLabel: TextEmitter(initial: '100%');
 	DecoratedTextInput is baseTextInput: DecoratedTextInput();
 	Array of TextInput is colorInputs: Array();
+	Array of ColorSwatchDropdown is colorSwatches: Array();
 	Array of String is colorLabels: Array([
 		'Primary', 'Secondary', 'Accent', 'Highlight',
 		'Detail', 'Positive', 'Negative', 'Neutral'
@@ -57,6 +60,7 @@ Class is ThemeBuilderPageView{
 
 	Function of SewNode is build(){
 		:colorInputs: Array();
+		:colorSwatches: Array();
 
 		:presetSection: SectionH(
 			segmented: true,
@@ -112,11 +116,19 @@ Class is ThemeBuilderPageView{
 				tooltip: 'Enter #RRGGBB hex color and press Enter or Tab',
 				onSubmit: local Function(String is v){ vm:setColorSlotFromHex(slot: slot, raw: v); }
 			);
+			local ColorSwatchDropdown is sw: ColorSwatchDropdown(
+				color: vm:colorAtSlot(slot: slot),
+				compactPicker: true,
+				tooltip: 'Pick color from compact picker or swatch history',
+				onChange: local Function(Color is c){ vm:setColorSlot(slot: slot, nextCol: c); }
+			);
 			colorInputs:add(item: inp);
+			colorSwatches:add(item: sw);
 			colorRows:add(item: SectionH(
 				children: Array([
 					Label(text: colorLabels:get(index: slot)),
-					inp
+					inp,
+					sw
 				])
 			));
 			ci: ci + 1;
@@ -172,7 +184,11 @@ Class is ThemeBuilderPageView{
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');
 		local Int is i: 0;
 		while({ i < colorInputs:length() }, {
-			colorInputs:get(index: i):setText(next: vm:colorToHex(c: vm:colorAtSlot(slot: i)));
+			local Color is colVal: vm:colorAtSlot(slot: i);
+			colorInputs:get(index: i):setText(next: vm:colorToHex(c: colVal));
+			if({ i < colorSwatches:length() }, {
+				colorSwatches:get(index: i):setColor(next: colVal);
+			});
 			i: i + 1;
 		});
 	}

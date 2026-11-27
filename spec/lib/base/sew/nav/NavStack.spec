@@ -134,6 +134,10 @@ Class of SewNode is NavStack{
 		:activeChild():paint(ctx: ctx);
 	}
 
+	replace Function is paintOverlay(DrawContext is ctx){
+		:activeChild():paintOverlay(ctx: ctx);
+	}
+
 	replace Function of Boolean is onScroll(Int is deltaY){
 		return :activeChild():onScroll(deltaY: deltaY);
 	}
@@ -148,6 +152,11 @@ Class of SewNode is NavStack{
 
 	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
 		return :activeChild():onRightClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		return :containsPoint(x: x, y: y) || :activeChild():blocksPointerAt(x: x, y: y);
 	}
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){

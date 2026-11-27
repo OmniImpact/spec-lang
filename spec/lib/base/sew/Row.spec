@@ -124,6 +124,12 @@ Class of SewNode is Row{
 		});
 	}
 
+	replace Function is paintOverlay(DrawContext is ctx){
+		times(count: children:length(), worker: local Function(Int is i){
+			children:get(index: i):paintOverlay(ctx: ctx);
+		});
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		local Boolean is changed: false;
 		local Boolean is blocked: false;
@@ -147,14 +153,23 @@ Class of SewNode is Row{
 		});
 	}
 
-	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
-		local Rect is b: bounds();
-		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		if({ :containsPoint(x: x, y: y) }, { return true; });
 		local Int is i: children:length() - 1;
 		while({ i >= 0 }, {
-			local Rect is cb: children:get(index: i):bounds();
-			if({ x >= cb:x && x < cb:x + cb:width && y >= cb:y && y < cb:y + cb:height }, {
-				if({ children:get(index: i):onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+			if({ children:get(index: i):blocksPointerAt(x: x, y: y) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			local SewNode is ch: children:get(index: i);
+			if({ ch:blocksPointerAt(x: x, y: y) }, {
+				if({ ch:onPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
 			});
 			i: i - 1;
 		});
@@ -181,10 +196,10 @@ Class of SewNode is Row{
 		});
 		local Int is i: children:length() - 1;
 		while({ i >= 0 }, {
-			local Rect is cb: children:get(index: i):bounds();
-			if({ x >= cb:x && x < cb:x + cb:width && y >= cb:y && y < cb:y + cb:height }, {
+			local SewNode is ch: children:get(index: i);
+			if({ ch:blocksPointerAt(x: x, y: y) }, {
 				dragChildIdx: i;
-				return children:get(index: i):onPointerDrag(x: x, y: y, mods: mods);
+				return ch:onPointerDrag(x: x, y: y, mods: mods);
 			});
 			i: i - 1;
 		});

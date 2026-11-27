@@ -114,6 +114,7 @@ Class is Dialog{
 				layoutDirty: false;
 			});
 			content:paint(ctx: ctx);
+			content:paintOverlay(ctx: ctx);
 			if({ activeTooltip != '' && lastPtrX >= 0 && lastPtrY >= 0 }, {
 				Tooltip:shared:paint(ctx: ctx, theme: theme, scale: scale, text: activeTooltip, ptrX: lastPtrX, ptrY: lastPtrY, winW: w, winH: h);
 			});

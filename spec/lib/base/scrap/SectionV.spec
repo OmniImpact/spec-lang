@@ -188,6 +188,15 @@ Class of SewNode is SectionV{
 		});
 	}
 
+	replace Function is paintOverlay(DrawContext is ctx){
+		col:paintOverlay(ctx: ctx);
+	}
+
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		return :containsPoint(x: x, y: y) || col:blocksPointerAt(x: x, y: y);
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		return col:onPointerMove(x: x, y: y);
 	}

@@ -389,7 +389,7 @@ Class of SewNode is Toolbar{
 	}
 
 	## Paints the open dropdown menu popup (and any open sub-menu) above the body layer.
-	Function is paintOverlay(DrawContext is ctx){
+	replace Function is paintOverlay(DrawContext is ctx){
 		if({ openMenuIdx < 0 || openMenuIdx >= config:menus:length() }, { return; });
 		local Rect is b: bounds();
 		local MenuConfig is om: config:menus:get(index: openMenuIdx);

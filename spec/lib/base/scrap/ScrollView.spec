@@ -158,6 +158,11 @@ Class of SewNode is ScrollView{
 		return s;
 	}
 
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		return :containsPoint(x: x, y: y) || child:blocksPointerAt(x: x, y: y);
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Rect is b: bounds();
 		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
@@ -203,7 +208,7 @@ Class of SewNode is ScrollView{
 		});
 
 		dragMode: 0;
-		if({ x >= cx && x < cx + vw && y >= b:y && y < b:y + vh }, {
+		if({ (x >= cx && x < cx + vw && y >= b:y && y < b:y + vh) || child:blocksPointerAt(x: x, y: y) }, {
 			childCapturing: child:onPointerClickMod(x: x, y: y, mods: mods);
 			return childCapturing;
 		});
@@ -341,5 +346,9 @@ Class of SewNode is ScrollView{
 				ctx:fillRect(x: sx, y: hy, w: bw, h: bw, color: activeTheme:toolbarBg);
 			});
 		});
+	}
+
+	replace Function is paintOverlay(DrawContext is ctx){
+		child:paintOverlay(ctx: ctx);
 	}
 }

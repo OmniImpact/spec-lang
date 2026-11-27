@@ -165,23 +165,7 @@ Class is ShowcaseViewModel{
 		return activeTheme:neutral;
 	}
 
-	Function is setColorSlotFromHex(Int is slot, String is raw){
-		local String is t: raw:trim();
-		if({ t:length() > 0 && t:byteAt(index: 0) == 35 }, {
-			t: t:substring(start: 1, end: t:length());
-		});
-		if({ t:length() != 6 }, {
-			:notifyRefresh();
-			return;
-		});
-		local Int is r: :parseHexByte(s: t, off: 0);
-		local Int is g: :parseHexByte(s: t, off: 2);
-		local Int is b: :parseHexByte(s: t, off: 4);
-		if({ r < 0 || g < 0 || b < 0 }, {
-			:notifyRefresh();
-			return;
-		});
-		local Color is nextCol: Color(r: r, g: g, b: b);
+	Function is setColorSlot(Int is slot, Color is nextCol){
 		if({ slot == 0 }, { activeTheme:primary: nextCol; });
 		if({ slot == 1 }, { activeTheme:secondary: nextCol; });
 		if({ slot == 2 }, { activeTheme:accent: nextCol; });
@@ -191,7 +175,17 @@ Class is ShowcaseViewModel{
 		if({ slot == 6 }, { activeTheme:negative: nextCol; });
 		if({ slot == 7 }, { activeTheme:neutral: nextCol; });
 		:applyCurrentTheme();
-		statusText:emit(value: 'Updated theme color #' . t);
+		statusText:emit(value: 'Updated theme color ' . nextCol:toHex());
+	}
+
+	Function is setColorSlotFromHex(Int is slot, String is raw){
+		local Color is cur: :colorAtSlot(slot: slot);
+		local Color is nextCol: Color:fromHex(hex: raw, fallback: cur);
+		if({ nextCol:toArgb() == cur:toArgb() }, {
+			:notifyRefresh();
+			return;
+		});
+		:setColorSlot(slot: slot, nextCol: nextCol);
 	}
 
 	Function is incrementClicks(){

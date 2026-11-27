@@ -128,6 +128,15 @@ Class of SewNode is Frame{
 		child:paint(ctx: ctx);
 	}
 
+	replace Function is paintOverlay(DrawContext is ctx){
+		child:paintOverlay(ctx: ctx);
+	}
+
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		return :containsPoint(x: x, y: y) || child:blocksPointerAt(x: x, y: y);
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		return child:onPointerMove(x: x, y: y);
 	}

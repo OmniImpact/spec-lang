@@ -389,6 +389,7 @@ Class of SewNode is ToolkitContainer{
 		if({ hasBottomBar }, { bottomBar:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paintOverlay(ctx: ctx); });
+		if({ hasBody && !useVulkan }, { bodyPanel:paintOverlay(ctx: ctx); });
 		contextMenu:paint(ctx: ctx);
 		if({ activeTooltip != '' && lastPtrX >= 0 && lastPtrY >= 0 }, {
 			Tooltip:shared:paint(ctx: ctx, theme: theme, scale: scale, text: activeTooltip, ptrX: lastPtrX, ptrY: lastPtrY, winW: loopW, winH: loopH);

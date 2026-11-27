@@ -82,6 +82,11 @@ Class is SewNode{
 		local Int is _noop: 0;
 	}
 
+	## Paints floating overlays (e.g. dropdown popups) above sibling/parent clips.
+	Function is paintOverlay(DrawContext is ctx){
+		local Int is _noop: 0;
+	}
+
 	## Handles vertical scroll wheel delta; returns `true` if redraw is needed.
 	Function of Boolean is onScroll(Int is deltaY){
 		return false;

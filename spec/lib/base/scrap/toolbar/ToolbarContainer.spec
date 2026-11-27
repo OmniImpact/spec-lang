@@ -101,7 +101,7 @@ Class of SewNode is ToolbarContainer{
 		if({ hasToolbar }, { toolbar:paint(ctx: ctx); });
 	}
 
-	Function is paintOverlay(DrawContext is ctx){
+	replace Function is paintOverlay(DrawContext is ctx){
 		if({ hasToolbar }, { toolbar:paintOverlay(ctx: ctx); });
 	}
 

@@ -120,6 +120,12 @@ Class of SewNode is Column{
 		});
 	}
 
+	replace Function is paintOverlay(DrawContext is ctx){
+		times(count: children:length(), worker: local Function(Int is i){
+			children:get(index: i):paintOverlay(ctx: ctx);
+		});
+	}
+
 	replace Function of Boolean is onScroll(Int is deltaY){
 		local Int is i: children:length() - 1;
 		while({ i >= 0 }, {
@@ -138,11 +144,22 @@ Class of SewNode is Column{
 		return false;
 	}
 
+	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
+		if({ pointerTransparent }, { return false; });
+		if({ :containsPoint(x: x, y: y) }, { return true; });
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):blocksPointerAt(x: x, y: y) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
 	local Function of Int is childIndexAt(Int is x, Int is y){
 		local Int is i: children:length() - 1;
 		while({ i >= 0 }, {
-			local Rect is cb: children:get(index: i):bounds();
-			if({ x >= cb:x && x < cb:x + cb:width && y >= cb:y && y < cb:y + cb:height }, {
+			local SewNode is ch: children:get(index: i);
+			if({ ch:blocksPointerAt(x: x, y: y) }, {
 				return i;
 			});
 			i: i - 1;
@@ -151,8 +168,6 @@ Class of SewNode is Column{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
-		local Rect is b: bounds();
-		if({ x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height }, { return false; });
 		local Int is idx: :childIndexAt(x: x, y: y);
 		if({ idx >= 0 }, {
 			dragChildIdx: idx;
