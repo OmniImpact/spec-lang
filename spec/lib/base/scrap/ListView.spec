@@ -433,7 +433,7 @@ Class of SewNode is ListView{
 		out:add(item: self);
 	}
 
-	replace Function of Int is cursorAt(Int is x, Int is y){
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
 		if({ !:containsPoint(x: x, y: y) }, { return CursorShape:DEFAULT; });
 		if({ dragIdx >= 0 && dragMoved }, { return CursorShape:POINTER; });
 		if({ :rowAtY(y: y) >= 0 }, { return CursorShape:POINTER; });

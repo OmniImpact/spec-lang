@@ -514,7 +514,7 @@ Class of SewNode is TableView{
 		out:add(item: self);
 	}
 
-	replace Function of Int is cursorAt(Int is x, Int is y){
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
 		if({ !:containsPoint(x: x, y: y) }, { return CursorShape:DEFAULT; });
 		if({ (sortable && hoverCol >= 0) || hoverRow >= 0 }, { return CursorShape:POINTER; });
 		return CursorShape:DEFAULT;
