@@ -467,6 +467,7 @@ Class is ThemeBuilderPageView{
 				title: 'Theme JSON (Export / Import)',
 				child: Column(
 					gapPt: 6.0,
+					flexFlags: Array([false, true]),
 					children: Array([
 						SectionH(
 							children: Array([
