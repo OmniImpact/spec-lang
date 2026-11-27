@@ -76,6 +76,7 @@ Class of SewNode is TabBar{
 		hoverTabIdx: -1;
 		hoverCloseIdx: -1;
 		dragTabIdx: -1;
+		dragTargetIdx: -1;
 		dragStartX: 0;
 		draggingTab: false;
 		suppressNextClick: false;
@@ -88,6 +89,44 @@ Class of SewNode is TabBar{
 		hoverTabIdx: -1;
 		hoverCloseIdx: -1;
 		invalidate();
+	}
+
+	## Selects tab [index] if in range and triggers a redraw.
+	Function is selectTab(Int is index){
+		if({ index < 0 || index >= tabs:length() }, { return; });
+		if({ activeIndex != index }, {
+			:activeIndex: index;
+			invalidate();
+		});
+	}
+
+	## Appends [tab] to the tab list, optionally activating it, and triggers a redraw.
+	Function is addTab(TabItemConfig is tab, Boolean is activate: false){
+		tabs:add(item: tab);
+		if({ activate || activeIndex < 0 }, {
+			:activeIndex: tabs:length() - 1;
+		});
+		invalidate();
+	}
+
+	## Removes tab at [index], clamping [activeIndex] cleanly, and triggers a redraw.
+	Function is removeTab(Int is index){
+		local Int is n: tabs:length();
+		if({ index < 0 || index >= n }, { return; });
+		local Array of TabItemConfig is next: Array();
+		local Int is i: 0;
+		while({ i < n }, {
+			if({ i != index }, { next:add(item: tabs:get(index: i)); });
+			i: i + 1;
+		});
+		local Int is nextActive: activeIndex;
+		if({ next:length() == 0 }, {
+			nextActive: -1;
+		}, {
+			if({ nextActive >= next:length() }, { nextActive: next:length() - 1; });
+			if({ nextActive > index }, { nextActive: nextActive - 1; });
+		});
+		:setTabs(tabs: next, activeIndex: nextActive);
 	}
 
 	local Function of Int is fontPx(){

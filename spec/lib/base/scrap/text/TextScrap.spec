@@ -32,12 +32,15 @@ Class of SewNode is TextScrap{
 
 	replace Function is init(
 		TextEmitter is text: TextEmitter(initial: ''),
+		String is content: '',
 		HAlign is align: HAlign:LEFT,
 		Boolean is wrap: false,
 		Boolean is muted: false,
 		Float is lineGapPt: 0.0
 	){
-		:text: text;
+		local TextEmitter is effText: text;
+		if({ content != '' }, { effText: TextEmitter(initial: content); });
+		:text: effText;
 		:align: align;
 		:wrap: wrap;
 		:muted: muted;
@@ -45,8 +48,8 @@ Class of SewNode is TextScrap{
 		:cachedLines: Array();
 		signalBag:track(
 			slot: 'text',
-			emitter: text,
-			collector: text:collect(onEmit: local Function(String is _v){ invalidate(); })
+			emitter: effText,
+			collector: effText:collect(onEmit: local Function(String is _v){ invalidate(); })
 		);
 	}
 

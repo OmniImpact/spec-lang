@@ -7,8 +7,10 @@ Class of SpecUnitTest is TestScrapWidgets{
 		['base', 'suit', [KeyCode, KeyMod, SuitCanvas]],
 		['base', 'fabric', [DrawContext, Color]],
 		['base', 'sew', [Rect, Constraints, Size, CursorShape]],
-		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory]],
-		['base', 'scrap', 'menu', [MenuItemConfig, MenuItemKind]],
+		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner]],
+		['base', 'scrap', 'menu', [MenuConfig, MenuItemConfig, MenuItemKind]],
+		['base', 'scrap', 'toolbar', ToolbarConfig],
+		['base', 'scrap', 'tab', [TabBar, TabItemConfig]],
 		['base', 'scrap', 'tree', [TreeNode, TreeView]]
 	];
 
@@ -181,5 +183,44 @@ Class of SpecUnitTest is TestScrapWidgets{
 		local Size is sz: hist:measure(c: Constraints(minW: 0, maxW: 600, minH: 0, maxH: 200));
 		# All 12 swatches fit on 1 row when width is 600px (height <= 30px)
 		Assert:isTrue(sz:height <= 30);
+	}
+
+	Function is testTabBarMutatorsAndDeclarativeToolbarConfig(){
+		local TabBar is tb: TabBar();
+		tb:addTab(tab: TabItemConfig(id: 'a', label: 'A'), activate: true);
+		tb:addTab(tab: TabItemConfig(id: 'b', label: 'B'), activate: false);
+		tb:addTab(tab: TabItemConfig(id: 'c', label: 'C'), activate: true);
+		Assert:areEqualInt(3, tb:tabs:length());
+		Assert:areEqualInt(2, tb:activeIndex);
+		tb:selectTab(index: 1);
+		Assert:areEqualInt(1, tb:activeIndex);
+		tb:removeTab(index: 0);
+		Assert:areEqualInt(2, tb:tabs:length());
+		Assert:areEqualInt(0, tb:activeIndex);
+
+		local ToolbarConfig is cfg: ToolbarConfig(
+			menus: Array([
+				MenuConfig(id: 'f', label: 'File', items: Array([
+					MenuItemConfig(id: 't', label: 'Toggle', kind: MenuItemKind:TOGGLE)
+				]))
+			])
+		);
+		Assert:areEqualInt(1, cfg:menus:length());
+		Assert:isTrue(cfg:checkboxOnIconSvg != '');
+		Assert:isTrue(cfg:radioOnIconSvg != '');
+	}
+
+	Function is testSwitchEnabledAndSpinnerParity(){
+		local Switch is sw: Switch(checked: false, enabled: false);
+		sw:arrange(bounds: Rect(x: 0, y: 0, width: 40, height: 24));
+		Assert:isFalse(sw:canFocus());
+		Assert:isFalse(sw:onPointerClickMod(x: 10, y: 10));
+		Assert:isFalse(sw:checked);
+
+		local Spinner is sp: Spinner(indeterminate: true);
+		sp:setIndeterminate(next: false);
+		Assert:isFalse(sp:indeterminate);
+		sp:setValue(next: 0.75);
+		Assert:isTrue(sp:progress > 0.74 && sp:progress < 0.76);
 	}
 }

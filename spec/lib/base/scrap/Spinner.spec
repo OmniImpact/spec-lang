@@ -53,6 +53,18 @@ Class of SewNode is Spinner{
 		:invalidate();
 	}
 
+	Function is setValue(Float is next){
+		:setProgress(next: next);
+	}
+
+	Function is setIndeterminate(Boolean is next){
+		if({ indeterminate != next }, {
+			:indeterminate: next;
+			:lastTickMs: 0;
+			:invalidate();
+		});
+	}
+
 	replace Function of Boolean is tick(Int is nowMs){
 		if({ !indeterminate }, { return false; });
 		if({ lastTickMs > 0 }, {

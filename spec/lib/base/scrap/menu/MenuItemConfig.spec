@@ -25,7 +25,8 @@ Class is MenuItemConfig{
 		Boolean is checked: false,
 		Boolean is enabled: true,
 		MenuItemKind is kind: MenuItemKind:ACTION,
-		String is iconSvg: ''
+		String is iconSvg: '',
+		Array of MenuItemConfig is subItems: Array()
 	){
 		:id: id;
 		:label: label;
@@ -34,7 +35,12 @@ Class is MenuItemConfig{
 		:enabled: enabled;
 		:kind: kind;
 		:iconSvg: iconSvg;
-		subItems: Array();
+		:subItems: Array();
+		local Int is si: 0;
+		while({ si < subItems:length() }, {
+			:subItems:add(item: subItems:get(index: si));
+			si: si + 1;
+		});
 	}
 
 	Function is addSubItem(MenuItemConfig is item){

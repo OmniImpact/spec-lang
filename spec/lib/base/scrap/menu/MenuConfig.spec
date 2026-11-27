@@ -14,11 +14,21 @@ Class is MenuConfig{
 	Boolean is visible: true;
 	Array of MenuItemConfig is items: Array();
 
-	replace Function is init(String is id, String is label, Boolean is visible: true){
+	replace Function is init(
+		String is id,
+		String is label,
+		Boolean is visible: true,
+		Array of MenuItemConfig is items: Array()
+	){
 		:id: id;
 		:label: label;
 		:visible: visible;
-		items: Array();
+		:items: Array();
+		local Int is ii: 0;
+		while({ ii < items:length() }, {
+			:items:add(item: items:get(index: ii));
+			ii: ii + 1;
+		});
 	}
 
 	Function is addItem(MenuItemConfig is item){

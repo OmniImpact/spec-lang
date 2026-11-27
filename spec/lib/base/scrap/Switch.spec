@@ -16,12 +16,14 @@ Class of SewNode is Switch{
 	];
 
 	Boolean is checked: false;
+	Boolean is enabled: true;
 	Boolean is hovered: false;
 	Boolean is focused: false;
 	Function is onToggle: local Function(Boolean is _next){};
 
-	replace Function is init(Boolean is checked: false, Function is onToggle: local Function(Boolean is _next){}, String is tooltip: ''){
+	replace Function is init(Boolean is checked: false, Boolean is enabled: true, Function is onToggle: local Function(Boolean is _next){}, String is tooltip: ''){
 		:checked: checked;
+		:enabled: enabled;
 		:onToggle: onToggle;
 		:hovered: false;
 		:focused: false;
@@ -29,7 +31,7 @@ Class of SewNode is Switch{
 	}
 
 	replace Function of Boolean is canFocus(){
-		return true;
+		return enabled;
 	}
 
 	replace Function of Boolean is isFocused(){
@@ -44,7 +46,7 @@ Class of SewNode is Switch{
 	}
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
-		if({ focused && (KeyCode:isEnter(key: key) || key == KeyCode:SPACE) }, {
+		if({ enabled && focused && (KeyCode:isEnter(key: key) || key == KeyCode:SPACE) }, {
 			:checked: !checked;
 			local Function is cb: onToggle;
 			cb(checked);
@@ -126,8 +128,8 @@ Class of SewNode is Switch{
 		});
 	}
 
-	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods){
-		if({ :contains(x: x, y: y) }, {
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ enabled && :contains(x: x, y: y) }, {
 			:checked: !checked;
 			local Function is cb: onToggle;
 			cb(checked);
@@ -138,7 +140,7 @@ Class of SewNode is Switch{
 	}
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
-		if({ :contains(x: x, y: y) }, { return CursorShape:POINTER; });
+		if({ enabled && :contains(x: x, y: y) }, { return CursorShape:POINTER; });
 		return CursorShape:DEFAULT;
 	}
 }

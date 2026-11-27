@@ -24,8 +24,9 @@ Class of SpecUnitTest is TestHighlighterAndText{
 		Assert:isTrue(copy:matchesExtension(lowPath: 'lib.rs'));
 	}
 
-	Function is testTextScrapAlignment(){
-		local TextScrap is ts: TextScrap(align: HAlign:CENTER);
+	Function is testTextScrapAlignmentAndStaticContent(){
+		local TextScrap is ts: TextScrap(content: 'Static Hello', align: HAlign:CENTER);
 		Assert:isTrue(ts:align == HAlign:CENTER);
+		Assert:areEqualString('Static Hello', ts:text:current());
 	}
 }
