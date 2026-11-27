@@ -355,4 +355,20 @@ Class of SewNode is ScrollView{
 	replace Function of Boolean is closePopupsOutside(Int is x, Int is y){
 		return child:closePopupsOutside(x: x, y: y);
 	}
+
+	replace Function of Boolean is onOverlayPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		return child:onOverlayPointerClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
+		return child:onOverlayPointerMove(x: x, y: y);
+	}
+
+	replace Function of Boolean is onOverlayPointerDrag(Int is x, Int is y, Int is mods: 0){
+		return child:onOverlayPointerDrag(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onOverlayPointerUp(Int is x, Int is y){
+		return child:onOverlayPointerUp(x: x, y: y);
+	}
 }

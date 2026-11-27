@@ -196,6 +196,22 @@ Class of SewNode is SectionV{
 		return col:closePopupsOutside(x: x, y: y);
 	}
 
+	replace Function of Boolean is onOverlayPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		return col:onOverlayPointerClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
+		return col:onOverlayPointerMove(x: x, y: y);
+	}
+
+	replace Function of Boolean is onOverlayPointerDrag(Int is x, Int is y, Int is mods: 0){
+		return col:onOverlayPointerDrag(x: x, y: y, mods: mods);
+	}
+
+	replace Function of Boolean is onOverlayPointerUp(Int is x, Int is y){
+		return col:onOverlayPointerUp(x: x, y: y);
+	}
+
 	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
 		if({ pointerTransparent }, { return false; });
 		return :containsPoint(x: x, y: y) || col:blocksPointerAt(x: x, y: y);

@@ -293,6 +293,12 @@ Class of SewNode is ToolkitContainer{
 				return cmMoved;
 			});
 		});
+		if({ hasBody && !useVulkan && bodyPanel:onOverlayPointerMove(x: x, y: y) }, {
+			:clearHoverBelow(startLayer: 1);
+			local String is nextTipOvl: :resolveTooltipAt(x: x, y: y);
+			if({ nextTipOvl != activeTooltip }, { activeTooltip: nextTipOvl; });
+			return true;
+		});
 		local Boolean is changed: false;
 		local Boolean is blocked: false;
 		if({ hasToolbarSlot }, {
@@ -342,6 +348,9 @@ Class of SewNode is ToolkitContainer{
 		});
 		if({ contextMenu:isOpen }, {
 			return contextMenu:handlePointerClick(x: x, y: y, viewW: loopW, viewH: loopH);
+		});
+		if({ hasBody && !useVulkan && bodyPanel:onOverlayPointerClickMod(x: x, y: y, mods: mods) }, {
+			return true;
 		});
 		if({ hasToolbarSlot }, {
 			if({ toolbarSlot:onPointerClick(x: x, y: y) }, { return true; });
@@ -742,10 +751,15 @@ Class of SewNode is ToolkitContainer{
 				hadActivity: true;
 				lastPtrX: px;
 				lastPtrY: py;
-				if({ ptrDown && ptrCaptureTarget == 4 && hasBody && !useVulkan }, {
-					if({ bodyPanel:onPointerDrag(x: px, y: py, mods: curMods) }, {
+				if({ ptrDown && hasBody && !useVulkan }, {
+					if({ bodyPanel:onOverlayPointerDrag(x: px, y: py, mods: curMods) }, {
 						:isDirty: true;
-					});
+					}, {
+					if({ ptrCaptureTarget == 4 }, {
+						if({ bodyPanel:onPointerDrag(x: px, y: py, mods: curMods) }, {
+							:isDirty: true;
+						});
+					}); });
 				});
 				if({ :onPointerMove(x: px, y: py) }, {
 					:isDirty: true;
@@ -753,10 +767,15 @@ Class of SewNode is ToolkitContainer{
 			});
 			if({ !ptrDown && wasPtrDown }, {
 				hadActivity: true;
-				if({ ptrCaptureTarget == 4 && hasBody && !useVulkan }, {
-					if({ bodyPanel:onPointerUp(x: px, y: py) }, {
+				if({ hasBody && !useVulkan }, {
+					if({ bodyPanel:onOverlayPointerUp(x: px, y: py) }, {
 						:isDirty: true;
-					});
+					}, {
+					if({ ptrCaptureTarget == 4 }, {
+						if({ bodyPanel:onPointerUp(x: px, y: py) }, {
+							:isDirty: true;
+						});
+					}); });
 				});
 				ptrCaptureTarget: 0;
 			});

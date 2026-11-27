@@ -92,6 +92,26 @@ Class is SewNode{
 		return false;
 	}
 
+	## Intercepts pointer click for open floating overlays before normal hit-testing.
+	Function of Boolean is onOverlayPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		return false;
+	}
+
+	## Intercepts pointer move for open floating overlays before normal hit-testing.
+	Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
+		return false;
+	}
+
+	## Intercepts pointer drag for open floating overlays before normal hit-testing.
+	Function of Boolean is onOverlayPointerDrag(Int is x, Int is y, Int is mods: 0){
+		return false;
+	}
+
+	## Intercepts pointer release for open floating overlays before normal hit-testing.
+	Function of Boolean is onOverlayPointerUp(Int is x, Int is y){
+		return false;
+	}
+
 	## Handles vertical scroll wheel delta; returns `true` if redraw is needed.
 	Function of Boolean is onScroll(Int is deltaY){
 		return false;

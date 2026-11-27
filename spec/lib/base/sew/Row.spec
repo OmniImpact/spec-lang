@@ -140,6 +140,42 @@ Class of SewNode is Row{
 		return closed;
 	}
 
+	replace Function of Boolean is onOverlayPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onOverlayPointerClickMod(x: x, y: y, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onOverlayPointerMove(x: x, y: y) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayPointerDrag(Int is x, Int is y, Int is mods: 0){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onOverlayPointerDrag(x: x, y: y, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayPointerUp(Int is x, Int is y){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onOverlayPointerUp(x: x, y: y) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		local Boolean is changed: false;
 		local Boolean is blocked: false;

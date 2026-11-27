@@ -177,28 +177,48 @@ Class of SewNode is ColorSelector{
 		local Float is uy: sin(value: angleRad);
 		local Float is px: 0.0 - uy;
 		local Float is py: ux;
-		local Int is halfSlot: activeScale:px(pt: 2.5);
-		if({ halfSlot < 2 }, { halfSlot: 2; });
-		local Int is railCol: activeTheme:textPrimary;
-		local Int is outlineCol: activeTheme:windowBg;
+		local Float is halfSlot: activeScale:px(pt: 2.0) as Float;
+		if({ halfSlot < 2.0 }, { halfSlot: 2.0; });
+		local Float is wall: 2.0;
+		local Float is rMin: (rIn as Float) - 1.5;
+		local Float is rMax: (rOut as Float) + 1.5;
+		local Float is sMin: (rIn as Float) + 1.5;
+		local Float is sMax: (rOut as Float) - 1.5;
+		local Float is halfOuter: halfSlot + wall;
+		local Color is railCol: Color:fromArgb(argb: activeTheme:textPrimary);
+		local Color is outlineCol: Color:fromArgb(argb: activeTheme:windowBg);
 
-		local Int is r: rIn - 2;
-		while({ r <= rOut + 2 }, {
-			local Float is rf: r as Float;
-			local Boolean is isCap: (r < rIn) || (r > rOut);
-			local Int is off: 0 - (halfSlot + 2);
-			while({ off <= halfSlot + 2 }, {
-				local Int is aOff: if({ off < 0 }, { 0 - off }, { off });
-				local Boolean is drawPx: isCap || (aOff >= halfSlot);
-				if({ drawPx }, {
-					local Int is col: if({ aOff > halfSlot + 1 || r == rIn - 2 || r == rOut + 2 }, { outlineCol }, { railCol });
-					local Int is gx: cx + ((rf * ux + (off as Float) * px) + 0.5) as Int;
-					local Int is gy: cy + ((rf * uy + (off as Float) * py) + 0.5) as Int;
-					ctx:fillRect(x: gx, y: gy, w: 1, h: 1, color: col);
+		local Float is rMid: (rMin + rMax) * 0.5;
+		local Int is hcx: cx + ((rMid * ux) + 0.5) as Int;
+		local Int is hcy: cy + ((rMid * uy) + 0.5) as Int;
+		local Int is boxR: ((rMax - rMin) * 0.5 + halfOuter + 3.0) as Int;
+
+		local Int is sy: hcy - boxR;
+		while({ sy <= hcy + boxR }, {
+			local Int is sx: hcx - boxR;
+			while({ sx <= hcx + boxR }, {
+				local Float is dx: (sx - cx) as Float;
+				local Float is dy: (sy - cy) as Float;
+				local Float is along: dx * ux + dy * uy;
+				local Float is perp: dx * px + dy * py;
+				local Float is absPerp: if({ perp < 0.0 }, { 0.0 - perp }, { perp });
+
+				local Float is dAlong: if({ (rMax - along) < (along - rMin) }, { rMax - along }, { along - rMin });
+				local Float is dPerp: halfOuter - absPerp;
+				local Float is outerDist: if({ dAlong < dPerp }, { dAlong }, { dPerp });
+
+				local Float is sdAlong: if({ (sMax - along) < (along - sMin) }, { sMax - along }, { along - sMin });
+				local Float is sdPerp: halfSlot - absPerp;
+				local Float is slotDist: if({ sdAlong < sdPerp }, { sdAlong }, { sdPerp });
+
+				local Float is negSlot: 0.0 - slotDist;
+				local Float is frameDist: if({ outerDist < negSlot }, { outerDist }, { negSlot });
+				if({ frameDist >= -0.75 }, {
+					:paintAaBorderedPixel(ctx: ctx, px: sx, py: sy, fillC: railCol, borderC: outlineCol, edgeDist: frameDist, bw: 0.85);
 				});
-				off: off + 1;
+				sx: sx + 1;
 			});
-			r: r + 1;
+			sy: sy + 1;
 		});
 	}
 

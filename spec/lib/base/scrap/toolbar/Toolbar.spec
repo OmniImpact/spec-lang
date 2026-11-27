@@ -493,4 +493,19 @@ Class of SewNode is Toolbar{
 		});
 		return false;
 	}
+
+	replace Function of Boolean is onOverlayPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ openMenuIdx >= 0 && :blocksPointerAt(x: x, y: y) }, {
+			return :onPointerClick(x: x, y: y);
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
+		if({ openMenuIdx >= 0 && :blocksPointerAt(x: x, y: y) }, {
+			:onPointerMove(x: x, y: y);
+			return true;
+		});
+		return false;
+	}
 }

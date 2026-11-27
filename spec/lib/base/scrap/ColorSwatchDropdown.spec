@@ -225,6 +225,36 @@ Class of SewNode is ColorSwatchDropdown{
 		return false;
 	}
 
+	replace Function of Boolean is onOverlayPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ open && :inRect(r: popupRect, x: x, y: y) }, {
+			popupCol:onPointerClickMod(x: x, y: y, mods: mods);
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
+		if({ open && :inRect(r: popupRect, x: x, y: y) }, {
+			popupCol:onPointerMove(x: x, y: y);
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayPointerDrag(Int is x, Int is y, Int is mods: 0){
+		if({ open && (:inRect(r: popupRect, x: x, y: y) || popupCol:onPointerDrag(x: x, y: y, mods: mods)) }, {
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayPointerUp(Int is x, Int is y){
+		if({ open && (:inRect(r: popupRect, x: x, y: y) || popupCol:onPointerUp(x: x, y: y)) }, {
+			return true;
+		});
+		return false;
+	}
+
 	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
 		if({ open }, {
 			return popupCol:onPointerDrag(x: x, y: y, mods: mods);

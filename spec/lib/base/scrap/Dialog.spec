@@ -278,13 +278,19 @@ Class is Dialog{
 			active: true;
 			if({ hasContent }, {
 				if({ ptrDown }, {
+					if({ content:onOverlayPointerDrag(x: px, y: py, mods: curMods) }, {
+						isDirty: true;
+					}, {
 					if({ content:onPointerDrag(x: px, y: py, mods: curMods) }, {
 						isDirty: true;
-					});
+					}); });
 				});
+				if({ content:onOverlayPointerMove(x: px, y: py) }, {
+					isDirty: true;
+				}, {
 				if({ content:onPointerMove(x: px, y: py) }, {
 					isDirty: true;
-				});
+				}); });
 				local String is nextTip: content:tooltipAt(x: px, y: py);
 				if({ nextTip != activeTooltip }, {
 					:activeTooltip: nextTip;
@@ -294,9 +300,12 @@ Class is Dialog{
 		});
 		if({ !ptrDown && wasPtrDown && hasContent }, {
 			active: true;
+			if({ content:onOverlayPointerUp(x: px, y: py) }, {
+				isDirty: true;
+			}, {
 			if({ content:onPointerUp(x: px, y: py) }, {
 				isDirty: true;
-			});
+			}); });
 		});
 		wasPtrDown: ptrDown;
 
@@ -308,9 +317,12 @@ Class is Dialog{
 				if({ content:closePopupsOutside(x: cx, y: cy) }, {
 					isDirty: true;
 				});
+				if({ content:onOverlayPointerClickMod(x: cx, y: cy, mods: curMods) }, {
+					isDirty: true;
+				}, {
 				if({ content:onPointerClickMod(x: cx, y: cy, mods: curMods) }, {
 					isDirty: true;
-				});
+				}); });
 				:syncFocusOnClick(x: cx, y: cy);
 			});
 		});
