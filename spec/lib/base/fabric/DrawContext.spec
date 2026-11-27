@@ -547,6 +547,50 @@ Class is DrawContext{
 		:strokeRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: borderColor, thickness: thickness);
 	}
 
+	## Draws a horizontal or vertical divider line using [style] (none/single/double/bevel/groove/inset/outset).
+	Function is drawDivider(Int is x, Int is y, Int is w, Int is h, Int is color, Int is thickness: 1, String is style: 'single'){
+		if({ w <= 0 || h <= 0 || thickness <= 0 || color == 0 || style == 'none' }, { return; });
+		if({ style == 'single' }, {
+			:fillRect(x: x, y: y, w: w, h: h, color: color);
+			return;
+		});
+		local Boolean is horiz: w >= h;
+		local Color is bc: Color:fromArgb(argb: color);
+		local Int is lightC: bc:lighten(amount: 0.38):toArgb();
+		local Int is darkC: bc:darken(amount: 0.42):toArgb();
+		local Int is span: if({ horiz }, { h }, { w });
+		local Int is t1: if({ span >= 2 }, { span / 2 }, { 1 });
+		local Int is t2: if({ span - t1 > 0 }, { span - t1 }, { 1 });
+		if({ style == 'double' }, {
+			if({ span < 3 }, {
+				:fillRect(x: x, y: y, w: w, h: h, color: color);
+				return;
+			});
+			local Int is dt: if({ span >= 3 }, { span / 3 }, { 1 });
+			if({ horiz }, {
+				:fillRect(x: x, y: y, w: w, h: dt, color: color);
+				:fillRect(x: x, y: y + h - dt, w: w, h: dt, color: color);
+			}, {
+				:fillRect(x: x, y: y, w: dt, h: h, color: color);
+				:fillRect(x: x + w - dt, y: y, w: dt, h: h, color: color);
+			});
+			return;
+		});
+		local Int is firstC: if({ style == 'bevel' || style == 'outset' }, { lightC }, { darkC });
+		local Int is secondC: if({ style == 'bevel' || style == 'outset' }, { darkC }, { lightC });
+		if({ span < 2 }, {
+			:fillRect(x: x, y: y, w: w, h: h, color: firstC);
+			return;
+		});
+		if({ horiz }, {
+			:fillRect(x: x, y: y, w: w, h: t1, color: firstC);
+			:fillRect(x: x, y: y + t1, w: w, h: t2, color: secondC);
+		}, {
+			:fillRect(x: x, y: y, w: t1, h: h, color: firstC);
+			:fillRect(x: x + t1, y: y, w: t2, h: h, color: secondC);
+		});
+	}
+
 	local Function is plotClipped(Int is x, Int is y, Int is color){
 		if({ hasClip }, {
 			if({ x < clipX || x >= clipX + clipW || y < clipY || y >= clipY + clipH }, { return; });

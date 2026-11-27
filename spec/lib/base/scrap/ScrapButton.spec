@@ -123,11 +123,20 @@ Class of SewNode is ScrapButton{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
+		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+		local Int is shBlur: activeScale:px(pt: activeTheme:buttonShadowBlurPt);
+		if({ shBlur > 0 }, {
+			ctx:drawShadow(x: b:x, y: b:y, w: b:width, h: b:height, radius: radPx, offsetX: 0, offsetY: (shBlur + 1) / 2, blurRadius: shBlur, color: 1426063360);
+		});
 		inner:paint(ctx: ctx);
-		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
+		local Int is linePx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 		if({ linePx > 0 }, {
 			local Int is border: if({ inner:selected || inner:focused }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: linePx);
+			ctx:drawStyledBox(
+				x: b:x, y: b:y, w: b:width, h: b:height,
+				bgColor: 0, borderColor: border, thickness: linePx,
+				radius: radPx, style: activeTheme:buttonBorderStyle
+			);
 		});
 	}
 }

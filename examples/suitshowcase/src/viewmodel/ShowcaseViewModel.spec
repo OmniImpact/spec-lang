@@ -79,12 +79,69 @@ Class is ShowcaseViewModel{
 		});
 	}
 
-	local Function is applyCurrentTheme(){
-		activeTheme:setBorderStyle(style: borderStyle);
-		activeTheme:setBaseTextPt(pt: baseTextPt);
+	local Function is notifyThemeChange(){
 		local Function is cb: themeApplyHandler;
 		cb(activeTheme);
 		:notifyRefresh();
+	}
+
+	local Function is applyCurrentTheme(){
+		activeTheme:setBorderStyle(style: borderStyle);
+		activeTheme:setBaseTextPt(pt: baseTextPt);
+		:notifyThemeChange();
+	}
+
+	Function is setPanelBorderStyle(String is style){
+		activeTheme:setPanelBorderStyle(style: style);
+		:notifyThemeChange();
+		statusText:emit(value: 'Panel border style: ' . style);
+	}
+
+	Function is setDividerStyle(String is style){
+		activeTheme:setDividerStyle(style: style);
+		:notifyThemeChange();
+		statusText:emit(value: 'Divider style: ' . style);
+	}
+
+	Function is setButtonBorderStyle(String is style){
+		activeTheme:setButtonBorderStyle(style: style);
+		:notifyThemeChange();
+		statusText:emit(value: 'Button border style: ' . style);
+	}
+
+	Function is setPanelBorderThickness(Int is pt){
+		activeTheme:setPanelBorderThicknessPt(pt: pt as Float);
+		:notifyThemeChange();
+	}
+
+	Function is setPanelCornerRadius(Int is pt){
+		activeTheme:setPanelCornerRadiusPt(pt: pt as Float);
+		:notifyThemeChange();
+	}
+
+	Function is setPanelShadowBlur(Int is pt){
+		activeTheme:setPanelShadowBlurPt(pt: pt as Float);
+		:notifyThemeChange();
+	}
+
+	Function is setDividerThickness(Int is pt){
+		activeTheme:setDividerThicknessPt(pt: pt as Float);
+		:notifyThemeChange();
+	}
+
+	Function is setButtonBorderThickness(Int is pt){
+		activeTheme:setButtonBorderThicknessPt(pt: pt as Float);
+		:notifyThemeChange();
+	}
+
+	Function is setButtonCornerRadius(Int is pt){
+		activeTheme:setButtonCornerRadiusPt(pt: pt as Float);
+		:notifyThemeChange();
+	}
+
+	Function is setButtonShadowBlur(Int is pt){
+		activeTheme:setButtonShadowBlurPt(pt: pt as Float);
+		:notifyThemeChange();
 	}
 
 	Function is selectRoute(String is routeName){

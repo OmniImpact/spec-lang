@@ -30,6 +30,16 @@ Class is ThemeBuilderPageView{
 	ShowcaseViewModel is vm: ShowcaseViewModel();
 	SectionH is presetSection: SectionH();
 	SectionH is borderSection: SectionH();
+	SectionH is panelStyleSection: SectionH();
+	SectionH is dividerStyleSection: SectionH();
+	SectionH is buttonStyleSection: SectionH();
+	Slider is panelThickSlider: Slider();
+	Slider is panelRadiusSlider: Slider();
+	Slider is panelShadowSlider: Slider();
+	Slider is dividerThickSlider: Slider();
+	Slider is buttonThickSlider: Slider();
+	Slider is buttonRadiusSlider: Slider();
+	Slider is buttonShadowSlider: Slider();
 	Slider is alphaSlider: Slider();
 	TextEmitter is alphaLabel: TextEmitter(initial: '100%');
 	DecoratedTextInput is baseTextInput: DecoratedTextInput();
@@ -45,6 +55,8 @@ Class is ThemeBuilderPageView{
 		'Splitter Spacing', 'Line Gap', 'Editor Padding'
 	]);
 	Array of String is borderStyles: Array(['none', 'solid', 'bold']);
+	Array of String is targetBorderStyles: Array(['none', 'single', 'double', 'bevel', 'groove', 'inset', 'outset']);
+	Array of String is targetBorderLabels: Array(['None', 'Single', 'Double', 'Bevel', 'Groove', 'Inset', 'Outset']);
 
 	replace Function is init(ShowcaseViewModel is vm){
 		:vm: vm;
@@ -59,6 +71,15 @@ Class is ThemeBuilderPageView{
 		local Int is i: 0;
 		while({ i < borderStyles:length() }, {
 			if({ borderStyles:get(index: i) == style }, { return i; });
+			i: i + 1;
+		});
+		return 1;
+	}
+
+	local Function of Int is targetStyleIndex(String is style){
+		local Int is i: 0;
+		while({ i < targetBorderStyles:length() }, {
+			if({ targetBorderStyles:get(index: i) == style }, { return i; });
 			i: i + 1;
 		});
 		return 1;
@@ -90,6 +111,50 @@ Class is ThemeBuilderPageView{
 				});
 			}
 		);
+
+		:panelStyleSection: SectionH(
+			segmented: true,
+			options: targetBorderLabels,
+			selectedIndex: :targetStyleIndex(style: vm:activeTheme:panelBorderStyle),
+			itemMinWidthPt: 46.0,
+			onSelect: local Function(Int is idx){
+				if({ idx >= 0 && idx < targetBorderStyles:length() }, {
+					vm:setPanelBorderStyle(style: targetBorderStyles:get(index: idx));
+				});
+			}
+		);
+
+		:dividerStyleSection: SectionH(
+			segmented: true,
+			options: targetBorderLabels,
+			selectedIndex: :targetStyleIndex(style: vm:activeTheme:dividerStyle),
+			itemMinWidthPt: 46.0,
+			onSelect: local Function(Int is idx){
+				if({ idx >= 0 && idx < targetBorderStyles:length() }, {
+					vm:setDividerStyle(style: targetBorderStyles:get(index: idx));
+				});
+			}
+		);
+
+		:buttonStyleSection: SectionH(
+			segmented: true,
+			options: targetBorderLabels,
+			selectedIndex: :targetStyleIndex(style: vm:activeTheme:buttonBorderStyle),
+			itemMinWidthPt: 46.0,
+			onSelect: local Function(Int is idx){
+				if({ idx >= 0 && idx < targetBorderStyles:length() }, {
+					vm:setButtonBorderStyle(style: targetBorderStyles:get(index: idx));
+				});
+			}
+		);
+
+		:panelThickSlider: Slider(minVal: 0, maxVal: 8, value: vm:activeTheme:panelBorderThicknessPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelBorderThickness(pt: v); });
+		:panelRadiusSlider: Slider(minVal: 0, maxVal: 16, value: vm:activeTheme:panelCornerRadiusPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelCornerRadius(pt: v); });
+		:panelShadowSlider: Slider(minVal: 0, maxVal: 16, value: vm:activeTheme:panelShadowBlurPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setPanelShadowBlur(pt: v); });
+		:dividerThickSlider: Slider(minVal: 0, maxVal: 8, value: vm:activeTheme:dividerThicknessPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setDividerThickness(pt: v); });
+		:buttonThickSlider: Slider(minVal: 0, maxVal: 8, value: vm:activeTheme:buttonBorderThicknessPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonBorderThickness(pt: v); });
+		:buttonRadiusSlider: Slider(minVal: 0, maxVal: 14, value: vm:activeTheme:buttonCornerRadiusPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonCornerRadius(pt: v); });
+		:buttonShadowSlider: Slider(minVal: 0, maxVal: 14, value: vm:activeTheme:buttonShadowBlurPt as Int, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setButtonShadowBlur(pt: v); });
 
 		:baseTextInput: DecoratedTextInput(
 			text: vm:baseTextLabel(),
@@ -210,6 +275,44 @@ Class is ThemeBuilderPageView{
 				Frame(
 					title: 'Padding & Spacing (pt)',
 					child: metricGrid
+				),
+				Frame(
+					title: 'Panel, Divider & Button Styles',
+					child: SectionV(
+						children: Array([
+							SectionV(title: 'Panel Border Style', children: Array([panelStyleSection])),
+							Grid(
+								columns: 2,
+								colGapPt: 10.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Panel Thickness'), panelThickSlider,
+									Label(text: 'Panel Radius'), panelRadiusSlider,
+									Label(text: 'Panel Shadow Blur'), panelShadowSlider
+								])
+							),
+							SectionV(title: 'Divider Style', children: Array([dividerStyleSection])),
+							Grid(
+								columns: 2,
+								colGapPt: 10.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Divider Thickness'), dividerThickSlider
+								])
+							),
+							SectionV(title: 'Button Border Style', children: Array([buttonStyleSection])),
+							Grid(
+								columns: 2,
+								colGapPt: 10.0,
+								rowGapPt: 6.0,
+								children: Array([
+									Label(text: 'Button Thickness'), buttonThickSlider,
+									Label(text: 'Button Radius'), buttonRadiusSlider,
+									Label(text: 'Button Shadow Blur'), buttonShadowSlider
+								])
+							)
+						])
+					)
 				)
 			])
 		);
@@ -218,6 +321,16 @@ Class is ThemeBuilderPageView{
 	Function is sync(){
 		presetSection:setSelectedIndex(index: :presetIndex(p: vm:basePreset));
 		borderSection:setSelectedIndex(index: :borderIndex(style: vm:borderStyle));
+		panelStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:panelBorderStyle));
+		dividerStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:dividerStyle));
+		buttonStyleSection:setSelectedIndex(index: :targetStyleIndex(style: vm:activeTheme:buttonBorderStyle));
+		panelThickSlider:setValue(next: vm:activeTheme:panelBorderThicknessPt as Int);
+		panelRadiusSlider:setValue(next: vm:activeTheme:panelCornerRadiusPt as Int);
+		panelShadowSlider:setValue(next: vm:activeTheme:panelShadowBlurPt as Int);
+		dividerThickSlider:setValue(next: vm:activeTheme:dividerThicknessPt as Int);
+		buttonThickSlider:setValue(next: vm:activeTheme:buttonBorderThicknessPt as Int);
+		buttonRadiusSlider:setValue(next: vm:activeTheme:buttonCornerRadiusPt as Int);
+		buttonShadowSlider:setValue(next: vm:activeTheme:buttonShadowBlurPt as Int);
 		baseTextInput:setText(next: vm:baseTextLabel());
 		alphaSlider:setValue(next: vm:windowAlphaPct);
 		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');

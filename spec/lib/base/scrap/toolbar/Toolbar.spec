@@ -314,7 +314,7 @@ Class of SewNode is Toolbar{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 
 		bar:paint(ctx: ctx);
-		local Int is borderH: theme:borderPx(scaleFactor: scale:factor);
+		local Int is borderH: theme:dividerPx(scaleFactor: scale:factor);
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is textY: b:y + (b:height - th) / 2;

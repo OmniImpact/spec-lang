@@ -168,7 +168,12 @@ Class of SewNode is Clickable{
 				if({ hovered }, { activeTheme:hoverBg }, { activeTheme:menuBg })
 			})
 		});
-		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
+		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
+		if({ radPx > 0 }, {
+			ctx:fillRoundRect(x: b:x, y: b:y, w: b:width, h: b:height, radius: radPx, color: bg);
+		}, {
+			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
+		});
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);

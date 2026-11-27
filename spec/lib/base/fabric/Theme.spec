@@ -76,6 +76,16 @@ Class is Theme{
 	Float is borderThicknessPt: 1.0;
 	Float is lineThicknessPt: 1.0;
 	String is borderStyle: 'solid';
+	String is panelBorderStyle: 'single';
+	Float is panelBorderThicknessPt: 1.0;
+	Float is panelCornerRadiusPt: 0.0;
+	Float is panelShadowBlurPt: 0.0;
+	String is dividerStyle: 'single';
+	Float is dividerThicknessPt: 1.0;
+	String is buttonBorderStyle: 'single';
+	Float is buttonBorderThicknessPt: 1.0;
+	Float is buttonCornerRadiusPt: 0.0;
+	Float is buttonShadowBlurPt: 0.0;
 	Float is uiScaleFactor: 1.0;
 	Float is baseTextPt: 10.0;
 	Boolean is customMetrics: false;
@@ -181,13 +191,107 @@ Class is Theme{
 		}, {
 			:borderThicknessPt: 1.0;
 		}); });
-		:deriveTokens();
+		if({ !customMetrics }, {
+			:panelBorderThicknessPt: borderThicknessPt;
+			:dividerThicknessPt: borderThicknessPt;
+			:buttonBorderThicknessPt: borderThicknessPt;
+		});
+		:deriveColors();
+	}
+
+	Function is setPanelBorderStyle(String is style){
+		:customMetrics: true;
+		:panelBorderStyle: style;
+		if({ style == 'none' }, {
+			:panelBorderThicknessPt: 0.0;
+		}, {
+		if({ panelBorderThicknessPt <= 0.0 }, {
+			:panelBorderThicknessPt: 1.0;
+		}); });
+	}
+
+	Function is setPanelBorderThicknessPt(Float is pt){
+		:customMetrics: true;
+		:panelBorderThicknessPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 12.0 }, { 12.0 }, { pt }) });
+	}
+
+	Function is setPanelCornerRadiusPt(Float is pt){
+		:customMetrics: true;
+		:panelCornerRadiusPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+	}
+
+	Function is setPanelShadowBlurPt(Float is pt){
+		:customMetrics: true;
+		:panelShadowBlurPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+	}
+
+	Function is setDividerStyle(String is style){
+		:customMetrics: true;
+		:dividerStyle: style;
+		if({ style == 'none' }, {
+			:dividerThicknessPt: 0.0;
+		}, {
+		if({ dividerThicknessPt <= 0.0 }, {
+			:dividerThicknessPt: 1.0;
+		}); });
+	}
+
+	Function is setDividerThicknessPt(Float is pt){
+		:customMetrics: true;
+		:dividerThicknessPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 12.0 }, { 12.0 }, { pt }) });
+	}
+
+	Function is setButtonBorderStyle(String is style){
+		:customMetrics: true;
+		:buttonBorderStyle: style;
+		if({ style == 'none' }, {
+			:buttonBorderThicknessPt: 0.0;
+		}, {
+		if({ buttonBorderThicknessPt <= 0.0 }, {
+			:buttonBorderThicknessPt: 1.0;
+		}); });
+	}
+
+	Function is setButtonBorderThicknessPt(Float is pt){
+		:customMetrics: true;
+		:buttonBorderThicknessPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 12.0 }, { 12.0 }, { pt }) });
+	}
+
+	Function is setButtonCornerRadiusPt(Float is pt){
+		:customMetrics: true;
+		:buttonCornerRadiusPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 20.0 }, { 20.0 }, { pt }) });
+	}
+
+	Function is setButtonShadowBlurPt(Float is pt){
+		:customMetrics: true;
+		:buttonShadowBlurPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 20.0 }, { 20.0 }, { pt }) });
 	}
 
 	Function of Int is borderPx(Float is scaleFactor: 1.0){
 		if({ borderStyle == 'none' || borderThicknessPt <= 0.0 }, { return 0; });
 		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
 		local Int is px: ((borderThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
+		return if({ px < 1 }, { 1 }, { px });
+	}
+
+	Function of Int is panelBorderPx(Float is scaleFactor: 1.0){
+		if({ panelBorderStyle == 'none' || panelBorderThicknessPt <= 0.0 }, { return 0; });
+		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
+		local Int is px: ((panelBorderThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
+		return if({ px < 1 }, { 1 }, { px });
+	}
+
+	Function of Int is dividerPx(Float is scaleFactor: 1.0){
+		if({ dividerStyle == 'none' || dividerThicknessPt <= 0.0 }, { return 0; });
+		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
+		local Int is px: ((dividerThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
+		return if({ px < 1 }, { 1 }, { px });
+	}
+
+	Function of Int is buttonBorderPx(Float is scaleFactor: 1.0){
+		if({ buttonBorderStyle == 'none' || buttonBorderThicknessPt <= 0.0 }, { return 0; });
+		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
+		local Int is px: ((buttonBorderThicknessPt * uiScaleFactor * sf) + 0.5) as Int;
 		return if({ px < 1 }, { 1 }, { px });
 	}
 
@@ -233,6 +337,13 @@ Class is Theme{
 			:neutral: Color(r: 146, g: 152, b: 166, a: 255);
 		});
 		:customMetrics: false;
+		:panelBorderStyle: 'single';
+		:panelCornerRadiusPt: 0.0;
+		:panelShadowBlurPt: 0.0;
+		:dividerStyle: 'single';
+		:buttonBorderStyle: 'single';
+		:buttonCornerRadiusPt: 0.0;
+		:buttonShadowBlurPt: 0.0;
 		:deriveTokens();
 	}
 
@@ -335,6 +446,9 @@ Class is Theme{
 			borderThicknessPt: baseBorder;
 		}); });
 		lineThicknessPt: baseBorder;
+		panelBorderThicknessPt: borderThicknessPt;
+		dividerThicknessPt: borderThicknessPt;
+		buttonBorderThicknessPt: borderThicknessPt;
 	}
 
 	Function is deriveTokens(){

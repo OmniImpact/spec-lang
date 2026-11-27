@@ -34,7 +34,7 @@ Class of SewNode is Frame{
 	}
 
 	local Function of Int is borderPx(){
-		return activeTheme:borderPx(scaleFactor: activeScale:factor);
+		return activeTheme:panelBorderPx(scaleFactor: activeScale:factor);
 	}
 
 	local Function of Int is fontPx(){
@@ -101,11 +101,19 @@ Class of SewNode is Frame{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is border: activeTheme:textAccent;
 		local Int is bw: :borderPx();
+		local Int is radPx: activeScale:px(pt: activeTheme:panelCornerRadiusPt);
+		local Int is shBlur: activeScale:px(pt: activeTheme:panelShadowBlurPt);
+		local Int is shOffY: if({ shBlur > 0 }, { (shBlur + 1) / 2 }, { 0 });
+		local Int is shCol: if({ shBlur > 0 }, { 1426063360 }, { 0 });
+		local String is pStyle: activeTheme:panelBorderStyle;
 		if({ title == '' }, {
-			if({ fillBg && padPt != 0.0 }, {
-				ctx:fillRect(x: b:x + bw, y: b:y + bw, w: b:width - bw * 2, h: b:height - bw * 2, color: activeTheme:windowBg);
-			});
-			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: bw);
+			local Int is bgCol: if({ fillBg && padPt != 0.0 }, { activeTheme:windowBg }, { 0 });
+			ctx:drawStyledBox(
+				x: b:x, y: b:y, w: b:width, h: b:height,
+				bgColor: bgCol, borderColor: border, thickness: bw,
+				radius: radPx, style: pStyle,
+				shadowOffsetX: 0, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
+			);
 		}, {
 			local Int is fpx: :fontPx();
 			local Int is th: DrawContext:measureHeight(pixelHeight: fpx);
@@ -113,23 +121,34 @@ Class of SewNode is Frame{
 			local Int is topY: b:y + th / 2;
 			local Int is boxH: b:height - (th / 2);
 			if({ boxH > bw }, {
-				if({ fillBg && padPt != 0.0 }, {
-					ctx:fillRect(x: b:x + bw, y: topY + bw, w: b:width - bw * 2, h: boxH - bw * 2, color: activeTheme:windowBg);
-				});
+				local Int is bgCol: if({ fillBg && padPt != 0.0 }, { activeTheme:windowBg }, { 0 });
 				local Int is titleX: b:x + :effPadPx();
 				local Int is gapPad: activeScale:px(pt: 4.0);
-				local Int is leftSegW: (titleX - gapPad) - b:x;
-				if({ leftSegW > 0 }, {
-					ctx:fillRect(x: b:x, y: topY, w: leftSegW, h: bw, color: border);
+				if({ pStyle == 'single' && radPx <= 0 && shBlur <= 0 }, {
+					if({ bgCol != 0 }, {
+						ctx:fillRect(x: b:x + bw, y: topY + bw, w: b:width - bw * 2, h: boxH - bw * 2, color: bgCol);
+					});
+					local Int is leftSegW: (titleX - gapPad) - b:x;
+					if({ leftSegW > 0 }, {
+						ctx:fillRect(x: b:x, y: topY, w: leftSegW, h: bw, color: border);
+					});
+					local Int is rightStart: titleX + tw + gapPad;
+					local Int is rightSegW: (b:x + b:width) - rightStart;
+					if({ rightSegW > 0 }, {
+						ctx:fillRect(x: rightStart, y: topY, w: rightSegW, h: bw, color: border);
+					});
+					ctx:fillRect(x: b:x, y: topY, w: bw, h: boxH, color: border);
+					ctx:fillRect(x: b:x + b:width - bw, y: topY, w: bw, h: boxH, color: border);
+					ctx:fillRect(x: b:x, y: b:y + b:height - bw, w: b:width, h: bw, color: border);
+				}, {
+					ctx:drawStyledBox(
+						x: b:x, y: topY, w: b:width, h: boxH,
+						bgColor: bgCol, borderColor: border, thickness: bw,
+						radius: radPx, style: pStyle,
+						shadowOffsetX: 0, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
+					);
+					ctx:fillRect(x: titleX - gapPad, y: b:y, w: tw + gapPad * 2, h: th, color: activeTheme:windowBg);
 				});
-				local Int is rightStart: titleX + tw + gapPad;
-				local Int is rightSegW: (b:x + b:width) - rightStart;
-				if({ rightSegW > 0 }, {
-					ctx:fillRect(x: rightStart, y: topY, w: rightSegW, h: bw, color: border);
-				});
-				ctx:fillRect(x: b:x, y: topY, w: bw, h: boxH, color: border);
-				ctx:fillRect(x: b:x + b:width - bw, y: topY, w: bw, h: boxH, color: border);
-				ctx:fillRect(x: b:x, y: b:y + b:height - bw, w: b:width, h: bw, color: border);
 				ctx:drawText(x: titleX, y: b:y, text: title, color: activeTheme:textMuted, pixelHeight: fpx);
 			});
 		});
