@@ -90,8 +90,18 @@ Class of Highlighter is HighlighterSpec{
 				i: j;
 			}, {
 			if({ b == 123 || b == 125 || b == 91 || b == 93 || b == 40 || b == 41 || b == 58 || b == 59 || b == 44 || b == 46 }, {
-				curX: drawSpan(ctx: ctx, curX: curX, y: y, seg: lineStr:substring(start: i, end: i + 1), color: theme:synPunct, fpx: fpx, bold: false, italic: false);
-				i: i + 1;
+				local Int is j: i + 1;
+				local Boolean is keepPunct: true;
+				while({ j < len && keepPunct }, {
+					local Int is pb: lineStr:byteAt(index: j) & 255;
+					if({ pb == 123 || pb == 125 || pb == 91 || pb == 93 || pb == 40 || pb == 41 || pb == 58 || pb == 59 || pb == 44 || pb == 46 }, {
+						j: j + 1;
+					}, {
+						keepPunct: false;
+					});
+				});
+				curX: drawSpan(ctx: ctx, curX: curX, y: y, seg: lineStr:substring(start: i, end: j), color: theme:synPunct, fpx: fpx, bold: false, italic: false);
+				i: j;
 			}, {
 				local Int is j: i + 1;
 				local Boolean is stopPlain: false;

@@ -17,9 +17,19 @@ Class is Highlighter{
 	Boolean is advOnly: false;
 	Int is advOutPtr: 0;
 	Int is advScratchPtr: 0;
+	Int is advTmpPtr: 0;
+	Int is advTmpCap: 0;
 	Int is measureTargetCol: 0;
 	Int is measureColPos: 0;
 	Int is measureResultX: 0;
+
+	Function is destroy(){
+		if({ advTmpPtr != 0 }, {
+			Mem:free(ptr: advTmpPtr);
+			:advTmpPtr: 0;
+			:advTmpCap: 0;
+		});
+	}
 
 	Function of String is languageId(){
 		return 'plain';
@@ -70,16 +80,25 @@ Class is Highlighter{
 		if({ seg == '' }, { return curX; });
 		if({ advOnly }, {
 			local Int is slen: seg:length();
-			local Int is tmpAdv: Mem:alloc(bytes: (slen + 1) * 4);
-			ctx:measurePrefixAdvances(text: seg, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode, outAdvI32Ptr: tmpAdv, scratchPtr: advScratchPtr);
+			local Int is needBytes: (slen + 1) * 4;
+			if({ needBytes > advTmpCap }, {
+				local Int is nextCap: if({ advTmpCap > 0 }, { advTmpCap * 2 }, { 256 });
+				while({ nextCap < needBytes }, { nextCap: nextCap * 2; });
+				if({ advTmpPtr != 0 }, {
+					:advTmpPtr: Mem:realloc(ptr: advTmpPtr, bytes: nextCap);
+				}, {
+					:advTmpPtr: Mem:alloc(bytes: nextCap);
+				});
+				:advTmpCap: nextCap;
+			});
+			ctx:measurePrefixAdvances(text: seg, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode, outAdvI32Ptr: advTmpPtr, scratchPtr: advScratchPtr);
 			local Int is si: 1;
 			while({ si <= slen }, {
-				local Int is v: curX + Mem:loadI32(ptr: tmpAdv, byteOffset: si * 4);
+				local Int is v: curX + Mem:loadI32(ptr: advTmpPtr, byteOffset: si * 4);
 				Mem:storeI32(ptr: advOutPtr, byteOffset: (measureColPos + si) * 4, val: v);
 				si: si + 1;
 			});
-			local Int is endX: curX + Mem:loadI32(ptr: tmpAdv, byteOffset: slen * 4);
-			Mem:free(ptr: tmpAdv);
+			local Int is endX: curX + Mem:loadI32(ptr: advTmpPtr, byteOffset: slen * 4);
 			:measureColPos: measureColPos + slen;
 			return endX;
 		});
@@ -99,8 +118,7 @@ Class is Highlighter{
 			:measureResultX: curX + fullW;
 			return curX + fullW;
 		});
-		ctx:drawText(x: curX, y: y, text: seg, color: color, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
-		return curX + ctx:measureTextWidth(text: seg, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
+		return curX + ctx:drawTextAdvance(x: curX, y: y, text: seg, color: color, pixelHeight: fpx, bold: bold, italic: italic, mono: monoMode);
 	}
 
 	Function is paintLine(DrawContext is ctx, Theme is theme, Int is x, Int is y, String is lineStr, Int is fpx){
@@ -218,8 +236,18 @@ Class is Highlighter{
 				i: j;
 			}, {
 			if({ b == 123 || b == 125 || b == 91 || b == 93 || b == 40 || b == 41 || b == 58 || b == 59 || b == 44 || b == 46 }, {
-				curX: :drawSpan(ctx: ctx, curX: curX, y: y, seg: lineStr:substring(start: i, end: i + 1), color: theme:synPunct, fpx: fpx, bold: false, italic: false);
-				i: i + 1;
+				local Int is j: i + 1;
+				local Boolean is keepPunct: true;
+				while({ j < len && keepPunct }, {
+					local Int is pb: lineStr:byteAt(index: j) & 255;
+					if({ pb == 123 || pb == 125 || pb == 91 || pb == 93 || pb == 40 || pb == 41 || pb == 58 || pb == 59 || pb == 44 || pb == 46 }, {
+						j: j + 1;
+					}, {
+						keepPunct: false;
+					});
+				});
+				curX: :drawSpan(ctx: ctx, curX: curX, y: y, seg: lineStr:substring(start: i, end: j), color: theme:synPunct, fpx: fpx, bold: false, italic: false);
+				i: j;
 			}, {
 				local Int is j: i + 1;
 				local Boolean is stopPlain: false;

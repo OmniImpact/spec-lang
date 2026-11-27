@@ -1128,6 +1128,30 @@ Class is DrawContext{
 		return pixelHeight;
 	}
 
+	## Draws UTF-8 [text] at ([x], [y]) using the loaded system TrueType font and returns its pixel advance width.
+	Function of Int is drawTextAdvance(Int is x, Int is y, String is text, Int is color, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false, Boolean is mono: false){
+		local Font is f: :styledFont(bold: bold, italic: italic, mono: mono);
+		if({ !f:isLoaded() }, { return 0; });
+		local Boolean is hasBold: if({ mono }, { DrawContext:sharedMonoBoldFont:isLoaded() }, { DrawContext:sharedBoldFont:isLoaded() });
+		local Float is wOverride: if({ bold && !hasBold }, { 0.75 }, { -1.0 });
+		f:drawText(
+			pixelsAddr: canvas:pixelsAddr(),
+			bufW: canvas:width,
+			bufH: canvas:height,
+			x: x,
+			y: y,
+			text: text,
+			pixelHeight: pixelHeight,
+			argbColor: color,
+			weight: wOverride,
+			clipX: if({ hasClip }, { clipX }, { 0 }),
+			clipY: if({ hasClip }, { clipY }, { 0 }),
+			clipW: if({ hasClip }, { clipW }, { -1 }),
+			clipH: if({ hasClip }, { clipH }, { -1 })
+		);
+		return f:lastDrawAdvancePx;
+	}
+
 	## Draws UTF-8 [text] at ([x], [y]) using the loaded system TrueType font.
 	Function is drawText(Int is x, Int is y, String is text, Int is color, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false, Boolean is mono: false){
 		local Font is f: :styledFont(bold: bold, italic: italic, mono: mono);

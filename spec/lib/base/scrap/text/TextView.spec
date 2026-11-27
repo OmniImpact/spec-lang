@@ -242,6 +242,28 @@ Class of SewNode is TextView{
 		DrawContext:shared:measurePrefixAdvances(text: lineStr, pixelHeight: fpx, mono: mono, outAdvI32Ptr: outAdvI32Ptr, scratchPtr: scratchPtr);
 	}
 
+	local Function of Boolean is lineCannotWrap(String is line, Int is availTextW, Int is maxAsciiW, Int is tabW){
+		local Int is len: line:length();
+		if({ len == 0 }, { return true; });
+		if({ len * maxAsciiW <= availTextW }, {
+			local Int is i: 0;
+			local Int is boundW: 0;
+			while({ i < len }, {
+				local Int is b: line:byteAt(index: i) & 255;
+				if({ b >= 128 }, { return false; });
+				if({ b == 9 }, {
+					boundW: boundW + tabW;
+				}, {
+					boundW: boundW + maxAsciiW;
+				});
+				if({ boundW > availTextW }, { return false; });
+				i: i + 1;
+			});
+			return true;
+		});
+		return false;
+	}
+
 	local Function is wrapLineSingle(
 		Highlighter is wrapCtx,
 		String is line,
@@ -250,10 +272,17 @@ Class of SewNode is TextView{
 		Boolean is mono,
 		Int is scratchPtr,
 		Array of String is outSegs,
-		Array of Int is outStarts
+		Array of Int is outStarts,
+		Int is maxAsciiW: 0,
+		Int is tabW: 0
 	){
 		if({ line == '' }, {
 			outSegs:add(item: '');
+			outStarts:add(item: 0);
+			return;
+		});
+		if({ maxAsciiW > 0 && :lineCannotWrap(line: line, availTextW: availTextW, maxAsciiW: maxAsciiW, tabW: tabW) }, {
+			outSegs:add(item: line);
 			outStarts:add(item: 0);
 			return;
 		});
@@ -317,9 +346,11 @@ Class of SewNode is TextView{
 		Int is scratchPtr,
 		Int is slotPtrs,
 		Int is slotCounts,
-		Int is rIdx
+		Int is rIdx,
+		Int is maxAsciiW: 0,
+		Int is tabW: 0
 	){
-		if({ line == '' }, {
+		if({ line == '' || (maxAsciiW > 0 && :lineCannotWrap(line: line, availTextW: availTextW, maxAsciiW: maxAsciiW, tabW: tabW)) }, {
 			Mem:storeI32(ptr: slotCounts, byteOffset: rIdx * 4, val: 1);
 			Mem:storeI64(ptr: slotPtrs, byteOffset: rIdx * 8, val: 0);
 			return;
@@ -400,6 +431,11 @@ Class of SewNode is TextView{
 		dispRawStart: Array();
 		maxDispW: 0;
 		local Int is rcount: rawLines:length();
+		local Int is maxAsciiW: DrawContext:shared:measureTextWidth(text: 'W', pixelHeight: fpx, bold: true, mono: monoCached) + 2;
+		if({ maxAsciiW < fpx / 2 }, { maxAsciiW: fpx / 2; });
+		if({ maxAsciiW < 4 }, { maxAsciiW: 4; });
+		local Int is tabW: DrawContext:shared:measureTextWidth(text: '\t', pixelHeight: fpx, bold: true, mono: monoCached) + 2;
+		if({ tabW < maxAsciiW * 2 }, { tabW: maxAsciiW * 2; });
 		if({ wrapCached && availTextW > fpx && rcount >= 64 }, {
 			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, mono: monoCached);
 			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, bold: true, mono: monoCached);
@@ -433,7 +469,9 @@ Class of SewNode is TextView{
 							scratchPtr: scratch,
 							slotPtrs: slotPtrs,
 							slotCounts: slotCounts,
-							rIdx: r
+							rIdx: r,
+							maxAsciiW: maxAsciiW,
+							tabW: tabW
 						);
 						r: r + 1;
 					});
@@ -496,7 +534,7 @@ Class of SewNode is TextView{
 				dispLines:add(item: line);
 				dispRawLine:add(item: r);
 				dispRawStart:add(item: 0);
-				if({ !wrapCached }, {
+				if({ !wrapCached && !:lineCannotWrap(line: line, availTextW: maxDispW, maxAsciiW: maxAsciiW, tabW: tabW) }, {
 					local Int is lw: :measureStr(s: line, fpx: fpx);
 					if({ lw > maxDispW }, { maxDispW: lw; });
 				});
@@ -509,7 +547,9 @@ Class of SewNode is TextView{
 					mono: monoCached,
 					scratchPtr: 0,
 					outSegs: lineSegs,
-					outStarts: lineStarts
+					outStarts: lineStarts,
+					maxAsciiW: maxAsciiW,
+					tabW: tabW
 				);
 				local Int is j: 0;
 				while({ j < lineSegs:length() }, {
@@ -528,14 +568,39 @@ Class of SewNode is TextView{
 	}
 
 	local Function of String is joinRawLines(){
-		local String is out: '';
-		local Int is i: 0;
 		local Int is n: rawLines:length();
+		if({ n == 0 }, { return ''; });
+		if({ n == 1 }, { return rawLines:get(index: 0); });
+		local Int is totalBytes: n - 1;
+		local Int is i: 0;
 		while({ i < n }, {
-			if({ i > 0 }, { out: out . '\n'; });
-			out: out . rawLines:get(index: i);
+			totalBytes: totalBytes + rawLines:get(index: i):length();
 			i: i + 1;
 		});
+		if({ totalBytes <= 0 }, { return ''; });
+		local Int is buf: Mem:alloc(bytes: totalBytes + 1);
+		if({ buf == 0 }, { return ''; });
+		local Int is pos: 0;
+		i: 0;
+		while({ i < n }, {
+			if({ i > 0 }, {
+				Mem:storeByte(ptr: buf, byteOffset: pos, val: 10);
+				pos: pos + 1;
+			});
+			local String is ln: rawLines:get(index: i);
+			local Int is sAddr: Mem:objToAddr(obj: ln);
+			if({ sAddr != 0 }, {
+				local Int is dAddr: Mem:loadI64(ptr: sAddr, byteOffset: 0);
+				local Int is slen: Mem:loadI64(ptr: sAddr, byteOffset: 8);
+				if({ dAddr != 0 && slen > 0 }, {
+					Mem:copy(dst: buf + pos, src: dAddr, bytes: slen);
+					pos: pos + slen;
+				});
+			});
+			i: i + 1;
+		});
+		local String is out: Mem:strFromBytes(srcAddr: buf, len: pos);
+		Mem:free(ptr: buf);
 		return out;
 	}
 
@@ -554,9 +619,120 @@ Class of SewNode is TextView{
 		invalidate();
 	}
 
+	local Function of Int is findFirstDispForRaw(Int is rawIdx){
+		local Int is n: dispRawLine:length();
+		local Int is lo: 0;
+		local Int is hi: n - 1;
+		local Int is ans: -1;
+		while({ lo <= hi }, {
+			local Int is mid: lo + (hi - lo) / 2;
+			local Int is v: dispRawLine:get(index: mid);
+			if({ v >= rawIdx }, {
+				if({ v == rawIdx }, { ans: mid; });
+				hi: mid - 1;
+			}, {
+				lo: mid + 1;
+			});
+		});
+		return ans;
+	}
+
 	local Function of Boolean is updateWrapCacheForEdit(Int is sl, Int is el, Int is newEndLine){
-		if({ !wrapCached || lastWrapW <= 0 || lastWrapFpx <= 0 || cachedLineSegs:length() == 0 }, { return false; });
-		if({ lastWrapW <= lastWrapFpx }, { return false; });
+		if({ lastWrapW < 0 || lastWrapFpx <= 0 }, { return false; });
+		if({ !wrapCached }, {
+			local Int is rc: rawLines:length();
+			if({ sl == el && newEndLine == sl && dispLines:length() == rc }, {
+				local String is edited: rawLines:get(index: sl);
+				dispLines:set(index: sl, item: edited);
+				if({ cachedLineSegs:length() == rc }, {
+					local Array of String is sArr: Array([edited]);
+					local Array of Int is stArr: Array([0]);
+					cachedLineSegs:set(index: sl, item: sArr);
+					cachedLineStarts:set(index: sl, item: stArr);
+				});
+				local Int is lw: :measureStr(s: edited, fpx: lastWrapFpx);
+				if({ lw > maxDispW }, { maxDispW: lw; });
+				return true;
+			});
+			dispLines: Array();
+			dispRawLine: Array();
+			dispRawStart: Array();
+			cachedLineSegs: Array();
+			cachedLineStarts: Array();
+			local Int is r: 0;
+			while({ r < rc }, {
+				local String is ln: rawLines:get(index: r);
+				dispLines:add(item: ln);
+				dispRawLine:add(item: r);
+				dispRawStart:add(item: 0);
+				cachedLineSegs:add(item: Array([ln]));
+				cachedLineStarts:add(item: Array([0]));
+				if({ r >= sl && r <= newEndLine }, {
+					local Int is lw: :measureStr(s: ln, fpx: lastWrapFpx);
+					if({ lw > maxDispW }, { maxDispW: lw; });
+				});
+				r: r + 1;
+			});
+			return true;
+		});
+		if({ lastWrapW <= lastWrapFpx || cachedLineSegs:length() == 0 }, { return false; });
+		local Int is maxAsciiW: DrawContext:shared:measureTextWidth(text: 'W', pixelHeight: lastWrapFpx, bold: true, mono: monoCached) + 2;
+		if({ maxAsciiW < lastWrapFpx / 2 }, { maxAsciiW: lastWrapFpx / 2; });
+		if({ maxAsciiW < 4 }, { maxAsciiW: 4; });
+		local Int is tabW: DrawContext:shared:measureTextWidth(text: '\t', pixelHeight: lastWrapFpx, bold: true, mono: monoCached) + 2;
+		if({ tabW < maxAsciiW * 2 }, { tabW: maxAsciiW * 2; });
+		local Highlighter is editWrapCtx: :createWrapContext();
+
+		## Fast path: single-line edit with unchanged wrapped segment count updates dispLines in-place (O(log N))
+		if({ sl == el && newEndLine == sl && cachedLineSegs:length() == rawLines:length() }, {
+			local Array of String is segs: Array();
+			local Array of Int is starts: Array();
+			:wrapLineSingle(
+				wrapCtx: editWrapCtx,
+				line: rawLines:get(index: sl),
+				availTextW: lastWrapW,
+				fpx: lastWrapFpx,
+				mono: monoCached,
+				scratchPtr: 0,
+				outSegs: segs,
+				outStarts: starts,
+				maxAsciiW: maxAsciiW,
+				tabW: tabW
+			);
+			local Int is oldCnt: cachedLineSegs:get(index: sl):length();
+			cachedLineSegs:set(index: sl, item: segs);
+			cachedLineStarts:set(index: sl, item: starts);
+			if({ segs:length() == oldCnt }, {
+				local Int is baseDisp: :findFirstDispForRaw(rawIdx: sl);
+				if({ baseDisp >= 0 && baseDisp + oldCnt <= dispLines:length() }, {
+					local Int is k: 0;
+					while({ k < oldCnt }, {
+						dispLines:set(index: baseDisp + k, item: segs:get(index: k));
+						dispRawStart:set(index: baseDisp + k, item: starts:get(index: k));
+						k: k + 1;
+					});
+					return true;
+				});
+			});
+			dispLines: Array();
+			dispRawLine: Array();
+			dispRawStart: Array();
+			local Int is rr: 0;
+			while({ rr < cachedLineSegs:length() }, {
+				local Array of String is rSegs: cachedLineSegs:get(index: rr);
+				local Array of Int is rStarts: cachedLineStarts:get(index: rr);
+				local Int is jj: 0;
+				while({ jj < rSegs:length() }, {
+					dispLines:add(item: rSegs:get(index: jj));
+					dispRawLine:add(item: rr);
+					dispRawStart:add(item: rStarts:get(index: jj));
+					jj: jj + 1;
+				});
+				rr: rr + 1;
+			});
+			return true;
+		});
+
 		local Array of Array of String is nextSegs: Array();
 		local Array of Array of Int is nextStarts: Array();
 		local Int is i: 0;
@@ -565,7 +741,6 @@ Class of SewNode is TextView{
 			nextStarts:add(item: cachedLineStarts:get(index: i));
 			i: i + 1;
 		});
-		local Highlighter is editWrapCtx: :createWrapContext();
 		local Int is ni: sl;
 		while({ ni <= newEndLine && ni < rawLines:length() }, {
 			local Array of String is segs: Array();
@@ -578,7 +753,9 @@ Class of SewNode is TextView{
 				mono: monoCached,
 				scratchPtr: 0,
 				outSegs: segs,
-				outStarts: starts
+				outStarts: starts,
+				maxAsciiW: maxAsciiW,
+				tabW: tabW
 			);
 			nextSegs:add(item: segs);
 			nextStarts:add(item: starts);
@@ -677,31 +854,36 @@ Class of SewNode is TextView{
 			k: k + 1;
 		});
 
-		## Rebuild rawLines with [sl..el] replaced by split(combined)
-		local Array of String is nextRaw: Array();
-		local Int is i: 0;
-		while({ i < sl }, {
-			nextRaw:add(item: rawLines:get(index: i));
-			i: i + 1;
-		});
-		local Int is start: 0;
-		local Int is j: 0;
-		while({ j < combined:length() }, {
-			if({ combined:byteAt(index: j) == 10 }, {
-				local Int is endIdx: j;
-				if({ endIdx > start && combined:byteAt(index: endIdx - 1) == 13 }, { endIdx: endIdx - 1; });
-				nextRaw:add(item: combined:substring(start: start, end: endIdx));
-				start: j + 1;
+		## Fast path: single-line edit without newlines updates rawLines in-place (O(1))
+		if({ sl == el && repLines == 0 }, {
+			rawLines:set(index: sl, item: combined);
+		}, {
+			## Rebuild rawLines with [sl..el] replaced by split(combined)
+			local Array of String is nextRaw: Array();
+			local Int is i: 0;
+			while({ i < sl }, {
+				nextRaw:add(item: rawLines:get(index: i));
+				i: i + 1;
 			});
-			j: j + 1;
+			local Int is start: 0;
+			local Int is j: 0;
+			while({ j < combined:length() }, {
+				if({ combined:byteAt(index: j) == 10 }, {
+					local Int is endIdx: j;
+					if({ endIdx > start && combined:byteAt(index: endIdx - 1) == 13 }, { endIdx: endIdx - 1; });
+					nextRaw:add(item: combined:substring(start: start, end: endIdx));
+					start: j + 1;
+				});
+				j: j + 1;
+			});
+			nextRaw:add(item: combined:substring(start: start, end: combined:length()));
+			i: el + 1;
+			while({ i < rawLines:length() }, {
+				nextRaw:add(item: rawLines:get(index: i));
+				i: i + 1;
+			});
+			rawLines: nextRaw;
 		});
-		nextRaw:add(item: combined:substring(start: start, end: combined:length()));
-		i: el + 1;
-		while({ i < rawLines:length() }, {
-			nextRaw:add(item: rawLines:get(index: i));
-			i: i + 1;
-		});
-		rawLines: nextRaw;
 
 		cursorLine: sl + repLines;
 		if({ repLines == 0 }, {

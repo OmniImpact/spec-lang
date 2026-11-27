@@ -34,6 +34,7 @@ Class is Font{
 	Array of Font is fallbacks: Array();
 	Boolean is fallbacksLoaded: false;
 	Boolean is isFallbackFont: false;
+	Int is lastDrawAdvancePx: 0;
 
 	local Function of Int is cstrAddr(String is s){
 		local Int is sAddr: Mem:objToAddr(obj: s);
@@ -663,6 +664,7 @@ Class is Font{
 		Int is clipW: -1,
 		Int is clipH: -1
 	){
+		:lastDrawAdvancePx: 0;
 		if({ handle <= 0 || pixelsAddr == 0 || bufW <= 0 || bufH <= 0 || pixelHeight <= 0 || text == '' }, {
 			return false;
 		});
@@ -683,7 +685,7 @@ Class is Font{
 		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
 		local Float is wb: if({ weight >= 0.0 }, { weight }, { weightBoost });
 		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
-		local Float is tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: scale, tracking: tracking) * 4.0;
+		local Float is tabAdv: -1.0;
 		local Float is xpos: math:toFloat(value: x);
 
 		local Int is fgA: (argbColor >> 24) & 255;
@@ -708,6 +710,9 @@ Class is Font{
 				prevH: 0;
 			}, {
 				if({ cp == 9 }, {
+					if({ tabAdv < 0.0 }, {
+						tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: scale, tracking: tracking) * 4.0;
+					});
 					xpos: xpos + tabAdv;
 					prevCp: 0;
 					prevH: 0;
@@ -789,6 +794,7 @@ Class is Font{
 				});
 			});
 		});
+		:lastDrawAdvancePx: math:toInt(value: math:round(value: xpos - math:toFloat(value: x)));
 		return true;
 	}
 
