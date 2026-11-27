@@ -36,10 +36,10 @@ Class is IntroPageView{
 					title: 'Architecture Layers',
 					child: SectionV(
 						children: Array([
-							Label(text: 'base:fabric — Color tokens, Theme presets, DrawContext (clip stack & alpha)'),
-							Label(text: 'base:sew — SewNode layout, Column, Row, Padding, NavStack, FocusNav'),
-							Label(text: 'base:scrap — Clickable, ScrapButton, SectionV/H, Switch, TextInput, ScrollView, TreeView, Tooltip'),
-							Label(text: 'base:wardrobe — High-level FileDialog and FileTree components')
+							TextScrap(text: TextEmitter(initial: 'base:fabric — Color tokens, Theme presets, DrawContext (clip stack & alpha)'), wrap: true),
+							TextScrap(text: TextEmitter(initial: 'base:sew — SewNode layout, Column, Row, Padding, NavStack, FocusNav'), wrap: true),
+							TextScrap(text: TextEmitter(initial: 'base:scrap — Clickable, ScrapButton, SectionV/H, Switch, Slider, TextInput, ScrollView, TreeView, Tooltip'), wrap: true),
+							TextScrap(text: TextEmitter(initial: 'base:wardrobe — High-level FileDialog and FileTree components'), wrap: true)
 						])
 					)
 				),

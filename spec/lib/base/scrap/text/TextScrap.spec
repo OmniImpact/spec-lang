@@ -27,6 +27,7 @@ Class of SewNode is TextScrap{
 	Float is lineGapPt: 0.0;
 	Array of String is cachedLines: Array();
 	String is lastMeasuredText: '';
+	Int is lastMeasuredMaxW: -1;
 
 	replace Function is init(
 		TextEmitter is text: TextEmitter(initial: ''),
@@ -63,39 +64,43 @@ Class of SewNode is TextScrap{
 			return lines;
 		});
 
-		local Int is avgCharW: if({ s:length() > 0 && fullW > 0 }, { fullW / s:length() }, { 8 });
-		local Int is maxChars: if({ avgCharW > 0 }, { maxW / avgCharW }, { 40 });
-		if({ maxChars <= 4 || s:length() <= maxChars }, {
-			lines:add(item: s);
-			return lines;
-		});
-
 		local Int is start: 0;
 		local Int is len: s:length();
 		while({ start < len }, {
-			local Int is rem: len - start;
-			if({ rem <= maxChars }, {
-				lines:add(item: s:substring(start: start, end: len));
-				start: len;
-			}, {
-				local Int is splitAt: start + maxChars;
-				local Int is k: splitAt;
-				local Boolean is foundSpace: false;
-				while({ k > start && !foundSpace }, {
-					if({ s:byteAt(index: k) == 32 }, {
-						foundSpace: true;
+			local Int is segEnd: len;
+			if({ DrawContext:measureWidth(text: s:substring(start: start, end: len), pixelHeight: fpx) > maxW }, {
+				local Int is lo: start + 1;
+				local Int is hi: len - 1;
+				local Int is maxFit: start + 1;
+				while({ lo <= hi }, {
+					local Int is mid: lo + (hi - lo) / 2;
+					if({ DrawContext:measureWidth(text: s:substring(start: start, end: mid), pixelHeight: fpx) <= maxW }, {
+						maxFit: mid;
+						lo: mid + 1;
 					}, {
-						k: k - 1;
+						hi: mid - 1;
 					});
 				});
-				if({ foundSpace && k > start }, {
-					lines:add(item: s:substring(start: start, end: k));
-					start: k + 1;
-				}, {
-					lines:add(item: s:substring(start: start, end: splitAt));
-					start: splitAt;
+				segEnd: maxFit;
+				if({ segEnd < len }, {
+					local Int is si: segEnd - 1;
+					local Boolean is foundSpace: false;
+					while({ si > start && !foundSpace }, {
+						if({ s:byteAt(index: si) == 32 }, {
+							segEnd: si + 1;
+							foundSpace: true;
+						});
+						si: si - 1;
+					});
 				});
+				if({ segEnd <= start }, { segEnd: start + 1; });
 			});
+			local String is part: s:substring(start: start, end: segEnd);
+			if({ part:length() > 0 && part:byteAt(index: part:length() - 1) == 32 }, {
+				part: part:substring(start: 0, end: part:length() - 1);
+			});
+			lines:add(item: part);
+			start: segEnd;
 		});
 		return lines;
 	}
@@ -106,6 +111,7 @@ Class of SewNode is TextScrap{
 		local Int is gapPx: activeScale:px(pt: if({ lineGapPt > 0.0 }, { lineGapPt }, { activeTheme:lineGapPt * 1.5 }));
 		local String is cur: text:current();
 		lastMeasuredText: cur;
+		lastMeasuredMaxW: c:maxW;
 		cachedLines: :computeLines(s: cur, maxW: c:maxW);
 
 		local Int is maxLineW: 0;
@@ -124,8 +130,9 @@ Class of SewNode is TextScrap{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local String is cur: text:current();
-		if({ cur != lastMeasuredText }, {
+		if({ cur != lastMeasuredText || (wrap && b:width > 0 && b:width != lastMeasuredMaxW) }, {
 			lastMeasuredText: cur;
+			lastMeasuredMaxW: b:width;
 			cachedLines: :computeLines(s: cur, maxW: b:width);
 		});
 		local Int is fpx: :fontPx();
