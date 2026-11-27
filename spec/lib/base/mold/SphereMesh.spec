@@ -74,16 +74,29 @@ Class is SphereMesh{
 				local Float is px: nx * radius;
 				local Float is py: ny * radius;
 				local Float is pz: nz * radius;
-				# Directional shading for clear 3D depth
-				local Float is ndotl: nx * 0.45 + ny * 0.65 + nz * 0.60;
+				# Directional diffuse + Blinn-Phong specular highlight from upper-front-right light source
+				local Float is ndotl: nx * 0.42 + ny * 0.68 + nz * 0.60;
 				if({ ndotl < 0.0 }, { ndotl: 0.0; });
-				local Float is shade: 0.38 + 0.62 * ndotl;
+				local Float is shade: 0.25 + 0.75 * ndotl;
+				# Half-vector H = normalize((0.42, 0.68, 0.60) + (0, 0, 1)) ~= (0.235, 0.380, 0.895)
+				local Float is ndoth: nx * 0.235 + ny * 0.380 + nz * 0.895;
+				if({ ndoth < 0.0 }, { ndoth: 0.0; });
+				local Float is spec2: ndoth * ndoth;
+				local Float is spec4: spec2 * spec2;
+				local Float is spec16: spec4 * spec4 * spec4 * spec4;
+				local Float is spec: spec16 * 0.55;
+				local Float is outR: colorR * shade + spec;
+				local Float is outG: colorG * shade + spec;
+				local Float is outB: colorB * shade + spec;
+				if({ outR > 1.0 }, { outR: 1.0; });
+				if({ outG > 1.0 }, { outG: 1.0; });
+				if({ outB > 1.0 }, { outB: 1.0; });
 				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor, val: px);
 				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 4, val: py);
 				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 8, val: pz);
-				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 12, val: colorR * shade);
-				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 16, val: colorG * shade);
-				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 20, val: colorB * shade);
+				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 12, val: outR);
+				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 16, val: outG);
+				vk:packF32(dstAddr: vertAddr, byteOffset: vCursor + 20, val: outB);
 				vCursor: vCursor + 24;
 				sl: sl + 1;
 			});

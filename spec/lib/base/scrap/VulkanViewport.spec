@@ -127,6 +127,7 @@ Class of SewNode is VulkanViewport{
 	}
 
 	replace Function of Boolean is tick(Int is nowMs){
+		if({ sphereInCube }, { return false; });
 		if({ lastTickMs > 0 }, {
 			local Int is dt: nowMs - lastTickMs;
 			if({ dt > 0 && dt < 200 }, {
@@ -168,8 +169,13 @@ Class of SewNode is VulkanViewport{
 
 		local Float is aspect: (b:width as Float) / (b:height as Float);
 		local Mat4 is proj: Mat4():perspective(fovRad: 0.785398, aspect: aspect, nearZ: 0.1, farZ: 20.0);
-		local Mat4 is view: Mat4():translate(tx: 0.0, ty: 0.0, tz: -2.45);
-		local Mat4 is model: Mat4():rotateY(rad: rotY):mul(other: Mat4():rotateX(rad: rotX));
+		local Float is camZ: if({ sphereInCube }, { -1.85 }, { -2.45 });
+		local Mat4 is view: Mat4():translate(tx: 0.0, ty: 0.0, tz: camZ);
+		local Mat4 is model: if({ sphereInCube }, {
+			Mat4():identity()
+		}, {
+			Mat4():rotateY(rad: rotY):mul(other: Mat4():rotateX(rad: rotX))
+		});
 		local Mat4 is mvp: proj:mul(other: view):mul(other: model);
 		mvp:packF32(dstAddr: mvpAddr);
 
