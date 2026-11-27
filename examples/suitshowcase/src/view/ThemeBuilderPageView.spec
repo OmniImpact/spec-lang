@@ -35,9 +35,14 @@ Class is ThemeBuilderPageView{
 	DecoratedTextInput is baseTextInput: DecoratedTextInput();
 	Array of TextInput is colorInputs: Array();
 	Array of ColorSwatchDropdown is colorSwatches: Array();
+	Array of DecoratedTextInput is metricInputs: Array();
 	Array of String is colorLabels: Array([
-		'Primary', 'Secondary', 'Accent', 'Highlight',
-		'Detail', 'Positive', 'Negative', 'Neutral'
+		'Background', 'Surface', 'Primary', 'Secondary', 'Accent',
+		'Highlight', 'Detail', 'Positive', 'Negative', 'Neutral'
+	]);
+	Array of String is metricLabels: Array([
+		'Base Padding', 'Section Padding', 'Dialog Padding',
+		'Splitter Spacing', 'Line Gap', 'Editor Padding'
 	]);
 	Array of String is borderStyles: Array(['none', 'solid', 'bold']);
 
@@ -62,6 +67,7 @@ Class is ThemeBuilderPageView{
 	Function of SewNode is build(){
 		:colorInputs: Array();
 		:colorSwatches: Array();
+		:metricInputs: Array();
 
 		:presetSection: SectionH(
 			segmented: true,
@@ -138,6 +144,31 @@ Class is ThemeBuilderPageView{
 			children: colorCells
 		);
 
+		local Array of SewNode is metricCells: Array();
+		local Int is mi: 0;
+		while({ mi < metricLabels:length() }, {
+			local Int is mslot: mi;
+			local DecoratedTextInput is mInp: DecoratedTextInput(
+				text: vm:metricLabel(slot: mslot),
+				suffix: ' pt',
+				tooltip: 'Adjust ' . metricLabels:get(index: mslot) . ' (in points)',
+				onLeftClick: local Function(){ vm:adjustMetricSlot(slot: mslot, delta: -0.5); },
+				onRightClick: local Function(){ vm:adjustMetricSlot(slot: mslot, delta: 0.5); },
+				onSubmit: local Function(String is v){ vm:setMetricSlotFromText(slot: mslot, raw: v); }
+			);
+			metricInputs:add(item: mInp);
+			metricCells:add(item: Label(text: metricLabels:get(index: mslot)));
+			metricCells:add(item: mInp);
+			mi: mi + 1;
+		});
+
+		local Grid is metricGrid: Grid(
+			columns: 2,
+			colGapPt: 12.0,
+			rowGapPt: 6.0,
+			children: metricCells
+		);
+
 		return SectionV(
 			children: Array([
 				SectionH(
@@ -173,8 +204,12 @@ Class is ThemeBuilderPageView{
 					)
 				),
 				Frame(
-					title: '8 Base Color Tokens (#RRGGBB)',
+					title: 'Theme Color Tokens (#RRGGBB)',
 					child: colorGrid
+				),
+				Frame(
+					title: 'Padding & Spacing (pt)',
+					child: metricGrid
 				)
 			])
 		);
@@ -194,6 +229,11 @@ Class is ThemeBuilderPageView{
 				colorSwatches:get(index: i):setColor(next: colVal);
 			});
 			i: i + 1;
+		});
+		local Int is mi: 0;
+		while({ mi < metricInputs:length() }, {
+			metricInputs:get(index: mi):setText(next: vm:metricLabel(slot: mi));
+			mi: mi + 1;
 		});
 	}
 }

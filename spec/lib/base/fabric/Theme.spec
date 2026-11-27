@@ -1,5 +1,5 @@
 #! Package base:fabric
-#! Theme tokens derived from 8 base [Color]s (primary, secondary, accent, highlight, detail, positive, negative, neutral).
+#! Theme tokens derived from base [Color]s (background, surface, primary, secondary, accent, highlight, detail, positive, negative, neutral).
 
 Class is Theme{
 	replace [String] is namespace: ['base', 'fabric'];
@@ -12,18 +12,21 @@ Class is Theme{
 		['base', 'fabric', ThemePreset]
 	];
 
-	## Baseline 8 theme colors
-	Color is primary: Color(r: 20, g: 23, b: 33);
-	Color is secondary: Color(r: 32, g: 37, b: 50);
+	## Baseline theme colors
+	Color is background: Color(r: 26, g: 28, b: 34);
+	Color is surface: Color(r: 38, g: 41, b: 49);
+	Color is primary: Color(r: 232, g: 235, b: 240);
+	Color is secondary: Color(r: 152, g: 158, b: 172);
 	Color is accent: Color(r: 100, g: 210, b: 255);
 	Color is highlight: Color(r: 68, g: 82, b: 110);
-	Color is detail: Color(r: 242, g: 245, b: 250);
+	Color is detail: Color(r: 78, g: 84, b: 98);
 	Color is positive: Color(r: 76, g: 175, b: 80);
 	Color is negative: Color(r: 239, g: 83, b: 80);
-	Color is neutral: Color(r: 160, g: 170, b: 190);
+	Color is neutral: Color(r: 146, g: 152, b: 166);
 
 	## Derived ARGB surface/foreground/syntax tokens (populated by deriveTokens)
 	Int is windowBg: 0;
+	Int is surfaceBg: 0;
 	Int is toolbarBg: 0;
 	Int is tabBarBg: 0;
 	Int is toolbarBorder: 0;
@@ -75,6 +78,7 @@ Class is Theme{
 	String is borderStyle: 'solid';
 	Float is uiScaleFactor: 1.0;
 	Float is baseTextPt: 10.0;
+	Boolean is customMetrics: false;
 
 	replace Function is init(String is preset: 'dark'){
 		:applyPreset(preset: Theme:presetFromString(name: preset));
@@ -116,8 +120,47 @@ Class is Theme{
 
 	Function is setBaseTextPt(Float is pt){
 		local Float is clamped: if({ pt < 8.0 }, { 8.0 }, { if({ pt > 20.0 }, { 20.0 }, { pt }) });
-		:baseTextPt: clamped;
-		:deriveTokens();
+		if({ clamped != baseTextPt }, {
+			:baseTextPt: clamped;
+			if({ !customMetrics }, { :deriveMetrics(); });
+		});
+		:deriveColors();
+	}
+
+	Function is setBasePaddingPt(Float is pt){
+		local Float is clamped: if({ pt < 1.0 }, { 1.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+		:customMetrics: true;
+		:basePaddingPt: clamped;
+		:paddingTinyPt: clamped * 0.25;
+		:paddingSmallPt: clamped * 0.50;
+		:paddingPt: clamped;
+		:paddingMediumPt: clamped * 1.50;
+		:paddingLargePt: clamped * 2.00;
+	}
+
+	Function is setSectionPaddingPt(Float is pt){
+		:customMetrics: true;
+		:sectionPaddingPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 32.0 }, { 32.0 }, { pt }) });
+	}
+
+	Function is setDialogPaddingPt(Float is pt){
+		:customMetrics: true;
+		:dialogPaddingPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 32.0 }, { 32.0 }, { pt }) });
+	}
+
+	Function is setSplitterSpacingPt(Float is pt){
+		:customMetrics: true;
+		:splitterSpacingPt: if({ pt < 1.0 }, { 1.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+	}
+
+	Function is setLineGapPt(Float is pt){
+		:customMetrics: true;
+		:lineGapPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 24.0 }, { 24.0 }, { pt }) });
+	}
+
+	Function is setEditorPadPt(Float is pt){
+		:customMetrics: true;
+		:editorPadPt: if({ pt < 0.0 }, { 0.0 }, { if({ pt > 32.0 }, { 32.0 }, { pt }) });
 	}
 
 	Function is setUiScaleFactor(Float is factor){
@@ -167,38 +210,47 @@ Class is Theme{
 
 	Function is applyPreset(ThemePreset is preset){
 		if({ preset == ThemePreset:LIGHT }, {
-			:primary: Color(r: 255, g: 255, b: 255, a: 255);
-			:secondary: Color(r: 230, g: 230, b: 230, a: 255);
+			:background: Color(r: 255, g: 255, b: 255, a: 255);
+			:surface: Color(r: 236, g: 238, b: 242, a: 255);
+			:primary: Color(r: 28, g: 28, b: 28, a: 255);
+			:secondary: Color(r: 96, g: 96, b: 96, a: 255);
 			:accent: Color(r: 40, g: 40, b: 40, a: 255);
 			:highlight: Color(r: 190, g: 190, b: 190, a: 255);
-			:detail: Color(r: 28, g: 28, b: 28, a: 255);
+			:detail: Color(r: 176, g: 180, b: 188, a: 255);
 			:positive: Color(r: 46, g: 125, b: 50, a: 255);
 			:negative: Color(r: 198, g: 40, b: 40, a: 255);
-			:neutral: Color(r: 96, g: 96, b: 96, a: 255);
+			:neutral: Color(r: 115, g: 115, b: 115, a: 255);
 		}, {
-			:primary: Color(r: 26, g: 28, b: 34, a: 255);
-			:secondary: Color(r: 38, g: 41, b: 49, a: 255);
+			:background: Color(r: 26, g: 28, b: 34, a: 255);
+			:surface: Color(r: 38, g: 41, b: 49, a: 255);
+			:primary: Color(r: 232, g: 235, b: 240, a: 255);
+			:secondary: Color(r: 152, g: 158, b: 172, a: 255);
 			:accent: Color(r: 180, g: 190, b: 210, a: 255);
 			:highlight: Color(r: 64, g: 70, b: 84, a: 255);
-			:detail: Color(r: 232, g: 235, b: 240, a: 255);
+			:detail: Color(r: 78, g: 84, b: 98, a: 255);
 			:positive: Color(r: 76, g: 175, b: 80, a: 255);
 			:negative: Color(r: 239, g: 83, b: 80, a: 255);
 			:neutral: Color(r: 146, g: 152, b: 166, a: 255);
 		});
+		:customMetrics: false;
 		:deriveTokens();
 	}
 
 	held Function of Theme is fromPalette(
+		Color is background,
+		Color is surface,
 		Color is primary,
 		Color is secondary,
 		Color is accent,
 		Color is highlight,
-		Color is detail,
+		Color is detail: Color(r: 78, g: 84, b: 98),
 		Color is positive: Color(r: 76, g: 175, b: 80),
 		Color is negative: Color(r: 239, g: 83, b: 80),
 		Color is neutral: Color(r: 140, g: 148, b: 164)
 	){
 		local Theme is t: Theme();
+		t:background: background;
+		t:surface: surface;
 		t:primary: primary;
 		t:secondary: secondary;
 		t:accent: accent;
@@ -211,19 +263,20 @@ Class is Theme{
 		return t;
 	}
 
-	Function is deriveTokens(){
-		local Boolean is light: primary:isLight();
-		windowBg: primary:toArgb();
-		toolbarBg: secondary:toArgb();
-		tabBarBg: if({ light }, { secondary:darken(amount: 0.07):toArgb() }, { primary:mix(other: secondary, t: 0.35):toArgb() });
-		toolbarBorder: if({ light }, { secondary:darken(amount: 0.15):toArgb() }, { highlight:mix(other: secondary, t: 0.25):toArgb() });
-		menuBg: if({ light }, { primary:mix(other: secondary, t: 0.40):toArgb() }, { secondary:lighten(amount: 0.04):toArgb() });
-		menuBorder: if({ light }, { secondary:darken(amount: 0.23):toArgb() }, { highlight:lighten(amount: 0.08):toArgb() });
-		hoverBg: if({ light }, { secondary:mix(other: highlight, t: 0.50):toArgb() }, { secondary:mix(other: highlight, t: 0.65):toArgb() });
+	Function is deriveColors(){
+		local Boolean is light: background:isLight();
+		windowBg: background:toArgb();
+		surfaceBg: surface:toArgb();
+		toolbarBg: surface:toArgb();
+		tabBarBg: if({ light }, { surface:darken(amount: 0.07):toArgb() }, { background:mix(other: surface, t: 0.45):toArgb() });
+		toolbarBorder: if({ light }, { detail:toArgb() }, { detail:mix(other: surface, t: 0.25):toArgb() });
+		menuBg: if({ light }, { background:mix(other: surface, t: 0.65):toArgb() }, { surface:lighten(amount: 0.04):toArgb() });
+		menuBorder: if({ light }, { surface:darken(amount: 0.23):toArgb() }, { highlight:lighten(amount: 0.08):toArgb() });
+		hoverBg: if({ light }, { surface:mix(other: highlight, t: 0.50):toArgb() }, { surface:mix(other: highlight, t: 0.65):toArgb() });
 		activeBg: highlight:toArgb();
-		panelBg: if({ light }, { primary:mix(other: secondary, t: 0.52):toArgb() }, { primary:darken(amount: 0.08):withAlphaByte(a: 210):toArgb() });
-		panelBorder: if({ light }, { toolbarBorder }, { highlight:lighten(amount: 0.08):withAlphaByte(a: 235):toArgb() });
-		buttonBorder: if({ light }, { secondary:darken(amount: 0.26):toArgb() }, { highlight:lighten(amount: 0.16):toArgb() });
+		panelBg: surface:toArgb();
+		panelBorder: if({ light }, { toolbarBorder }, { detail:lighten(amount: 0.08):withAlphaByte(a: 235):toArgb() });
+		buttonBorder: if({ light }, { surface:darken(amount: 0.26):toArgb() }, { highlight:lighten(amount: 0.16):toArgb() });
 		if({ borderStyle == 'subtle' }, {
 			toolbarBorder: Color:fromArgb(argb: toolbarBorder):withAlphaByte(a: 110):toArgb();
 			menuBorder: Color:fromArgb(argb: menuBorder):withAlphaByte(a: 120):toArgb();
@@ -231,12 +284,22 @@ Class is Theme{
 			buttonBorder: Color:fromArgb(argb: buttonBorder):withAlphaByte(a: 120):toArgb();
 		});
 
-		textPrimary: detail:toArgb();
-		textMuted: neutral:toArgb();
+		textPrimary: primary:toArgb();
+		textMuted: secondary:toArgb();
 		textAccent: accent:toArgb();
 		positiveColor: positive:toArgb();
 		negativeColor: negative:toArgb();
 
+		synKeyword: if({ light }, { primary:darken(amount: 0.35):toArgb() }, { primary:lighten(amount: 0.50):toArgb() });
+		synType: if({ light }, { primary:mix(other: neutral, t: 0.20):toArgb() }, { primary:mix(other: neutral, t: 0.32):toArgb() });
+		synString: primary:mix(other: neutral, t: 0.76):toArgb();
+		synNumber: primary:mix(other: neutral, t: 0.54):toArgb();
+		synComment: neutral:mix(other: background, t: 0.16):toArgb();
+		synPunct: neutral:mix(other: background, t: 0.08):toArgb();
+		synHeading: if({ light }, { primary:darken(amount: 0.45):toArgb() }, { primary:lighten(amount: 0.65):toArgb() });
+	}
+
+	Function is deriveMetrics(){
 		basePaddingPt: 4.0 * (baseTextPt / 11.0);
 		paddingTinyPt: basePaddingPt * 0.25;
 		paddingSmallPt: basePaddingPt * 0.50;
@@ -272,31 +335,28 @@ Class is Theme{
 			borderThicknessPt: baseBorder;
 		}); });
 		lineThicknessPt: baseBorder;
+	}
 
-		synKeyword: if({ light }, { detail:darken(amount: 0.35):toArgb() }, { detail:lighten(amount: 0.50):toArgb() });
-		synType: if({ light }, { detail:mix(other: neutral, t: 0.20):toArgb() }, { detail:mix(other: neutral, t: 0.32):toArgb() });
-		synString: detail:mix(other: neutral, t: 0.76):toArgb();
-		synNumber: detail:mix(other: neutral, t: 0.54):toArgb();
-		synComment: neutral:mix(other: primary, t: 0.16):toArgb();
-		synPunct: neutral:mix(other: primary, t: 0.08):toArgb();
-		synHeading: if({ light }, { detail:darken(amount: 0.45):toArgb() }, { detail:lighten(amount: 0.65):toArgb() });
+	Function is deriveTokens(){
+		:deriveColors();
+		if({ !customMetrics }, { :deriveMetrics(); });
 	}
 
 	## Context-sensitive surface elevation helper
-	Function of Int is surface(Float is elevation){
-		if({ elevation <= 0.0 }, { return primary:toArgb(); });
+	Function of Int is surfaceAt(Float is elevation){
+		if({ elevation <= 0.0 }, { return background:toArgb(); });
 		local Float is k: if({ elevation > 1.0 }, { 1.0 }, { elevation });
-		return if({ primary:isLight() }, { primary:mix(other: secondary, t: k):toArgb() }, { primary:lighten(amount: k * 0.16):toArgb() });
+		return if({ background:isLight() }, { background:mix(other: surface, t: k):toArgb() }, { background:mix(other: surface, t: k):toArgb() });
 	}
 
 	## Context-sensitive hover color for any surface [base]
 	Function of Int is hoverOn(Color is base){
-		return if({ primary:isLight() }, { base:darken(amount: 0.08):toArgb() }, { base:lighten(amount: 0.12):toArgb() });
+		return if({ background:isLight() }, { base:darken(amount: 0.08):toArgb() }, { base:lighten(amount: 0.12):toArgb() });
 	}
 
 	## Context-sensitive active/pressed color for any surface [base]
 	Function of Int is activeOn(Color is base){
-		return if({ primary:isLight() }, { base:darken(amount: 0.16):toArgb() }, { base:lighten(amount: 0.22):toArgb() });
+		return if({ background:isLight() }, { base:darken(amount: 0.16):toArgb() }, { base:lighten(amount: 0.22):toArgb() });
 	}
 
 	## Context-sensitive border color for any surface [base]

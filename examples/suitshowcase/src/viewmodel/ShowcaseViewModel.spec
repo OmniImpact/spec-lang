@@ -155,27 +155,70 @@ Class is ShowcaseViewModel{
 	}
 
 	Function of Color is colorAtSlot(Int is slot){
-		if({ slot == 0 }, { return activeTheme:primary; });
-		if({ slot == 1 }, { return activeTheme:secondary; });
-		if({ slot == 2 }, { return activeTheme:accent; });
-		if({ slot == 3 }, { return activeTheme:highlight; });
-		if({ slot == 4 }, { return activeTheme:detail; });
-		if({ slot == 5 }, { return activeTheme:positive; });
-		if({ slot == 6 }, { return activeTheme:negative; });
+		if({ slot == 0 }, { return activeTheme:background; });
+		if({ slot == 1 }, { return activeTheme:surface; });
+		if({ slot == 2 }, { return activeTheme:primary; });
+		if({ slot == 3 }, { return activeTheme:secondary; });
+		if({ slot == 4 }, { return activeTheme:accent; });
+		if({ slot == 5 }, { return activeTheme:highlight; });
+		if({ slot == 6 }, { return activeTheme:detail; });
+		if({ slot == 7 }, { return activeTheme:positive; });
+		if({ slot == 8 }, { return activeTheme:negative; });
 		return activeTheme:neutral;
 	}
 
 	Function is setColorSlot(Int is slot, Color is nextCol){
-		if({ slot == 0 }, { activeTheme:primary: nextCol; });
-		if({ slot == 1 }, { activeTheme:secondary: nextCol; });
-		if({ slot == 2 }, { activeTheme:accent: nextCol; });
-		if({ slot == 3 }, { activeTheme:highlight: nextCol; });
-		if({ slot == 4 }, { activeTheme:detail: nextCol; });
-		if({ slot == 5 }, { activeTheme:positive: nextCol; });
-		if({ slot == 6 }, { activeTheme:negative: nextCol; });
-		if({ slot == 7 }, { activeTheme:neutral: nextCol; });
+		if({ slot == 0 }, { activeTheme:background: nextCol; });
+		if({ slot == 1 }, { activeTheme:surface: nextCol; });
+		if({ slot == 2 }, { activeTheme:primary: nextCol; });
+		if({ slot == 3 }, { activeTheme:secondary: nextCol; });
+		if({ slot == 4 }, { activeTheme:accent: nextCol; });
+		if({ slot == 5 }, { activeTheme:highlight: nextCol; });
+		if({ slot == 6 }, { activeTheme:detail: nextCol; });
+		if({ slot == 7 }, { activeTheme:positive: nextCol; });
+		if({ slot == 8 }, { activeTheme:negative: nextCol; });
+		if({ slot == 9 }, { activeTheme:neutral: nextCol; });
 		:applyCurrentTheme();
 		statusText:emit(value: 'Updated theme color ' . nextCol:toHex());
+	}
+
+	Function of Float is metricAtSlot(Int is slot){
+		if({ slot == 0 }, { return activeTheme:basePaddingPt; });
+		if({ slot == 1 }, { return activeTheme:sectionPaddingPt; });
+		if({ slot == 2 }, { return activeTheme:dialogPaddingPt; });
+		if({ slot == 3 }, { return activeTheme:splitterSpacingPt; });
+		if({ slot == 4 }, { return activeTheme:lineGapPt; });
+		return activeTheme:editorPadPt;
+	}
+
+	Function of String is metricLabel(Int is slot){
+		local Float is v: :metricAtSlot(slot: slot);
+		local Int is tenths: ((v * 10.0) + 0.5) as Int;
+		local Int is whole: tenths / 10;
+		local Int is frac: tenths - (whole * 10);
+		return (whole as String) . '.' . (frac as String) . ' pt';
+	}
+
+	Function is setMetricSlot(Int is slot, Float is val){
+		if({ slot == 0 }, { activeTheme:setBasePaddingPt(pt: val); });
+		if({ slot == 1 }, { activeTheme:setSectionPaddingPt(pt: val); });
+		if({ slot == 2 }, { activeTheme:setDialogPaddingPt(pt: val); });
+		if({ slot == 3 }, { activeTheme:setSplitterSpacingPt(pt: val); });
+		if({ slot == 4 }, { activeTheme:setLineGapPt(pt: val); });
+		if({ slot == 5 }, { activeTheme:setEditorPadPt(pt: val); });
+		:applyCurrentTheme();
+		statusText:emit(value: 'Updated theme spacing: ' . :metricLabel(slot: slot));
+	}
+
+	Function is adjustMetricSlot(Int is slot, Float is delta){
+		local Float is next: :metricAtSlot(slot: slot) + delta;
+		:setMetricSlot(slot: slot, val: next);
+	}
+
+	Function is setMetricSlotFromText(Int is slot, String is raw){
+		local Float is cur: :metricAtSlot(slot: slot);
+		local Int is parsed: raw:trim():parseInt(base: 10, default: ((cur + 0.5) as Int));
+		:setMetricSlot(slot: slot, val: parsed as Float);
 	}
 
 	Function is setColorSlotFromHex(Int is slot, String is raw){
