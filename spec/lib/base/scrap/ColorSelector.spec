@@ -212,7 +212,7 @@ Class of SewNode is ColorSelector{
 		ctx:drawText(x: b:x + prevW + activeScale:px(pt: 8.0), y: py + (prevH - th) / 2, text: hexTxt, color: activeTheme:textPrimary, pixelHeight: fpx);
 	}
 
-	local Function is drawRingSlottedHandle(DrawContext is ctx, Int is cx, Int is cy, Float is angleRad, Int is rIn, Int is rOut, Float is shiftY: 0.0){
+	local Function is drawRingSlottedHandle(DrawContext is ctx, Int is cx, Int is cy, Float is angleRad, Int is rIn, Int is rOut, Float is shiftX: 0.0, Float is shiftY: 0.0){
 		local Float is ux: cos(value: angleRad);
 		local Float is uy: sin(value: angleRad);
 		local Float is px: 0.0 - uy;
@@ -220,7 +220,7 @@ Class of SewNode is ColorSelector{
 		local Float is halfSlot: activeScale:px(pt: 2.0) as Float;
 		if({ halfSlot < 2.0 }, { halfSlot: 2.0; });
 		local Float is wall: 2.0;
-		local Float is rShift: shiftY * uy;
+		local Float is rShift: shiftX * ux + shiftY * uy;
 		local Float is rMin: (rIn as Float) - 1.5 - rShift;
 		local Float is rMax: (rOut as Float) + 1.5 - rShift;
 		local Float is sMin: (rIn as Float) + 1.5 - rShift;
@@ -229,9 +229,10 @@ Class of SewNode is ColorSelector{
 		local Color is railCol: Color:fromArgb(argb: activeTheme:textPrimary);
 		local Color is outlineCol: Color:fromArgb(argb: activeTheme:windowBg);
 
+		local Float is cxBase: (cx as Float) + shiftX;
 		local Float is cyBase: (cy as Float) + shiftY;
 		local Float is rMid: (rMin + rMax) * 0.5;
-		local Int is hcx: cx + ((rMid * ux) + 0.5) as Int;
+		local Int is hcx: ((cxBase + rMid * ux) + 0.5) as Int;
 		local Int is hcy: ((cyBase + rMid * uy) + 0.5) as Int;
 		local Int is boxR: ((rMax - rMin) * 0.5 + halfOuter + 3.0) as Int;
 
@@ -239,7 +240,7 @@ Class of SewNode is ColorSelector{
 		while({ sy <= hcy + boxR }, {
 			local Int is sx: hcx - boxR;
 			while({ sx <= hcx + boxR }, {
-				local Float is dx: (sx - cx) as Float;
+				local Float is dx: (sx as Float) - cxBase;
 				local Float is dy: (sy as Float) - cyBase;
 				local Float is along: dx * ux + dy * uy;
 				local Float is perp: dx * px + dy * py;
@@ -290,6 +291,25 @@ Class of SewNode is ColorSelector{
 		return asin(value: ratio);
 	}
 
+	local Function is drawThirdRingHandle(DrawContext is ctx, Int is cx, Int is cy, Float is t, Float is aStart, Float is aEnd, Int is rIn, Int is rOut, Float is halfGapF){
+		local Float is ct: Color:clamp01(v: t);
+		local Float is ang: aStart + ct * (aEnd - aStart);
+		local Float is sx: 0.0;
+		local Float is sy: 0.0;
+		if({ ct < 0.5 }, {
+			local Float is w: 1.0 - 2.0 * ct;
+			local Float is w2: w * w;
+			sx: w2 * halfGapF * (0.0 - sin(value: aStart));
+			sy: w2 * halfGapF * cos(value: aStart);
+		}, {
+			local Float is w: 2.0 * ct - 1.0;
+			local Float is w2: w * w;
+			sx: w2 * halfGapF * sin(value: aEnd);
+			sy: w2 * halfGapF * (0.0 - cos(value: aEnd));
+		});
+		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: ang, rIn: rIn, rOut: rOut, shiftX: sx, shiftY: sy);
+	}
+
 	local Function of Float is sectorGapDist(Float is dx, Float is dy, Float is aStart, Float is aEnd, Float is halfGapF){
 		local Float is dStart: dx * (0.0 - sin(value: aStart)) + dy * cos(value: aStart) - halfGapF;
 		local Float is dEnd: dx * sin(value: aEnd) - dy * cos(value: aEnd) - halfGapF;
@@ -328,8 +348,7 @@ Class of SewNode is ColorSelector{
 		local Int is cx: b:x + b:width / 2;
 		local Int is cy: b:y + ringD / 2;
 		local Float is piVal: pi();
-		local Float is edgeAng: :innerRingEdgeAngle(innerInR: innerInR, halfGapF: halfGapF);
-		local Float is thirdSpan: (2.0 * piVal) / 3.0 - 2.0 * edgeAng;
+		local Float is thirdSpan: (2.0 * piVal) / 3.0;
 		local Float is satStart: -5.0 * piVal / 6.0;
 		local Float is satEnd: -piVal / 6.0;
 		local Float is alpStart: -piVal / 6.0;
@@ -364,17 +383,17 @@ Class of SewNode is ColorSelector{
 						local Float is thirdDist: if({ inRadDist < maxGap }, { inRadDist }, { maxGap });
 						if({ thirdDist >= -0.75 }, {
 							if({ dSat >= dAlp && dSat >= dLit }, {
-								local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: satStart, trim: edgeAng, span: thirdSpan);
+								local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: satStart, trim: 0.0, span: thirdSpan);
 								local Color is sc: Color:fromHsl(hDeg: hueDeg, s: t, l: light);
 								:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: sc, borderC: borderC, edgeDist: thirdDist, bw: bw);
 							}, {
 								if({ dAlp >= dLit }, {
-									local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: alpStart, trim: edgeAng, span: thirdSpan);
+									local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: alpStart, trim: 0.0, span: thirdSpan);
 									local Color is chkBg: :checkerAt(px: cx + dx, py: cy + dy);
 									local Color is ac: chkBg:mix(other: baseCol, t: 1.0 - t);
 									:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: ac, borderC: borderC, edgeDist: thirdDist, bw: bw);
 								}, {
-									local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: litStart, trim: edgeAng, span: thirdSpan);
+									local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: litStart, trim: 0.0, span: thirdSpan);
 									local Color is lc: Color:fromHsl(hDeg: hueDeg, s: sat, l: t);
 									:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: lc, borderC: borderC, edgeDist: thirdDist, bw: bw);
 								});
@@ -428,12 +447,9 @@ Class of SewNode is ColorSelector{
 		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: hueRad, rIn: outerInR, rOut: outerR);
 
 		if({ showAlpha }, {
-			local Float is satRad: satStart + edgeAng + sat * thirdSpan;
-			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: satRad, rIn: innerInR, rOut: innerOutR);
-			local Float is litRad: litStart + edgeAng + light * thirdSpan;
-			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: litRad, rIn: innerInR, rOut: innerOutR);
-			local Float is alpRad: alpStart + edgeAng + (1.0 - alpha) * thirdSpan;
-			:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: alpRad, rIn: innerInR, rOut: innerOutR);
+			:drawThirdRingHandle(ctx: ctx, cx: cx, cy: cy, t: sat, aStart: satStart, aEnd: satEnd, rIn: innerInR, rOut: innerOutR, halfGapF: halfGapF);
+			:drawThirdRingHandle(ctx: ctx, cx: cx, cy: cy, t: light, aStart: litStart, aEnd: litEnd, rIn: innerInR, rOut: innerOutR, halfGapF: halfGapF);
+			:drawThirdRingHandle(ctx: ctx, cx: cx, cy: cy, t: 1.0 - alpha, aStart: alpStart, aEnd: alpEnd, rIn: innerInR, rOut: innerOutR, halfGapF: halfGapF);
 		}, {
 			local Float is satRad: (sat - 1.0) * piVal;
 			local Float is satCos: cos(value: satRad);
@@ -524,8 +540,7 @@ Class of SewNode is ColorSelector{
 		local Float is ringGap: (outerInR - innerOutR) as Float;
 		if({ ringGap < 4.0 }, { ringGap: 4.0; });
 		local Float is halfGapF: ringGap * 0.5;
-		local Float is edgeAng: :innerRingEdgeAngle(innerInR: innerInR, halfGapF: halfGapF);
-		local Float is thirdSpan: (2.0 * piVal) / 3.0 - 2.0 * edgeAng;
+		local Float is thirdSpan: (2.0 * piVal) / 3.0;
 		local Float is satStart: -5.0 * piVal / 6.0;
 		local Float is alpStart: -piVal / 6.0;
 		local Float is litStart: piVal / 2.0;
@@ -561,7 +576,7 @@ Class of SewNode is ColorSelector{
 		});
 		if({ dragTarget == 2 }, {
 			if({ showAlpha }, {
-				:sat: :sectorT(dx: dx as Float, dy: dy as Float, aStart: satStart, trim: edgeAng, span: thirdSpan);
+				:sat: :sectorT(dx: dx as Float, dy: dy as Float, aStart: satStart, trim: 0.0, span: thirdSpan);
 			}, {
 				local Float is adjDy: ((0 - dy) as Float) - halfGapF;
 				if({ adjDy < 0.0 }, { adjDy: 0.0; });
@@ -573,7 +588,7 @@ Class of SewNode is ColorSelector{
 		});
 		if({ dragTarget == 3 }, {
 			if({ showAlpha }, {
-				:light: :sectorT(dx: dx as Float, dy: dy as Float, aStart: litStart, trim: edgeAng, span: thirdSpan);
+				:light: :sectorT(dx: dx as Float, dy: dy as Float, aStart: litStart, trim: 0.0, span: thirdSpan);
 			}, {
 				local Float is adjDy: (dy as Float) - halfGapF;
 				if({ adjDy < 0.0 }, { adjDy: 0.0; });
@@ -584,7 +599,7 @@ Class of SewNode is ColorSelector{
 			return true;
 		});
 		if({ dragTarget == 4 && showAlpha }, {
-			local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: alpStart, trim: edgeAng, span: thirdSpan);
+			local Float is t: :sectorT(dx: dx as Float, dy: dy as Float, aStart: alpStart, trim: 0.0, span: thirdSpan);
 			:alpha: 1.0 - t;
 			:syncFromHsl();
 			return true;
