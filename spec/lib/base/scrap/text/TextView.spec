@@ -1043,7 +1043,8 @@ Class of SewNode is TextView{
 		local Int is gapPx: activeScale:px(pt: if({ lineGapPt > 0.0 }, { lineGapPt }, { activeTheme:lineGapPt }));
 		local Int is padPx: activeScale:px(pt: if({ padPt > 0.0 }, { padPt }, { activeTheme:editorPadPt }));
 		local Int is gw: :gutterWidthPx(fpx: fpx);
-		local Int is availTextW: c:maxW - gw - padPx * 2;
+		local Int is layoutMaxW: if({ c:maxW >= 1000000 && c:minW > 0 }, { c:minW }, { c:maxW });
+		local Int is availTextW: layoutMaxW - gw - padPx * 2;
 		if({ availTextW < fpx }, { availTextW: fpx; });
 		if({ lastWrapW == -1 || (wrapCached && (lastWrapW != availTextW || lastWrapFpx != fpx)) }, {
 			:rebuildDisplayLines(availTextW: availTextW, fpx: fpx);
@@ -1052,7 +1053,11 @@ Class of SewNode is TextView{
 		local Int is rowH: fpx + gapPx;
 		local Int is totalH: padPx * 2 + dispLines:length() * rowH;
 		local Int is neededW: gw + padPx * 2 + maxDispW;
-		local Int is outW: if({ !wrapCached && neededW > c:maxW }, { neededW }, { c:maxW });
+		local Int is outW: if({ c:maxW >= 1000000 }, {
+			if({ neededW > c:minW }, { neededW }, { c:minW })
+		}, {
+			if({ !wrapCached && neededW > c:maxW }, { neededW }, { c:maxW })
+		});
 		desiredSize: Size(width: outW, height: totalH);
 		return desiredSize;
 	}
