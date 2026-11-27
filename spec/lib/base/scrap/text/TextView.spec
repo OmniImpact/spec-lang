@@ -10,6 +10,7 @@ Class of SewNode is TextView{
 		['base', 'sys', Process],
 		['base', 'sys', Font],
 		['base', 'sys', Parallel],
+		['base', 'sys', Time],
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'signal', BoolEmitter],
@@ -47,6 +48,11 @@ Class of SewNode is TextView{
 	Int is selAnchorLine: 0;
 	Int is selAnchorCol: 0;
 	Boolean is hasSelection: false;
+	Int is lastClickMs: 0;
+	Int is clickStreak: 0;
+	Int is lastClickLine: -1;
+	Int is lastClickCol: -1;
+	Time is clock: Time();
 	Boolean is wrapCached: false;
 	Boolean is lineNumsCached: false;
 	Boolean is monoCached: false;
@@ -860,6 +866,61 @@ Class of SewNode is TextView{
 		return false;
 	}
 
+	local Function of Boolean is isWordCode(Int is cp){
+		return (cp >= 48 && cp <= 57) || (cp >= 65 && cp <= 90) || (cp >= 97 && cp <= 122) || cp == 95;
+	}
+
+	local Function is selectWordAt(Int is rLine, Int is rCol){
+		if({ rLine < 0 || rLine >= rawLines:length() }, { return; });
+		local String is ln: rawLines:get(index: rLine);
+		local Int is n: ln:length();
+		if({ n == 0 }, {
+			:moveCursor(line: rLine, col: 0, extendSel: false);
+			return;
+		});
+		local Int is p: rCol;
+		if({ p >= n }, { p: n - 1; });
+		if({ p < 0 }, { p: 0; });
+		local Int is cp: ln:codePointAtRune(runeIndex: p);
+		if({ !:isWordCode(cp: cp) && p > 0 && :isWordCode(cp: ln:codePointAtRune(runeIndex: p - 1)) }, {
+			p: p - 1;
+			cp: ln:codePointAtRune(runeIndex: p);
+		});
+		local Int is start: p;
+		local Int is end: p + 1;
+		if({ :isWordCode(cp: cp) }, {
+			while({ start > 0 && :isWordCode(cp: ln:codePointAtRune(runeIndex: start - 1)) }, {
+				start: start - 1;
+			});
+			while({ end < n && :isWordCode(cp: ln:codePointAtRune(runeIndex: end)) }, {
+				end: end + 1;
+			});
+		});
+		selAnchorLine: rLine;
+		selAnchorCol: start;
+		cursorLine: rLine;
+		cursorCol: end;
+		hasSelection: true;
+		:emitCursorStatus();
+		cursorAlphaByte: 255;
+		lastBlinkMs: 0;
+		invalidate();
+	}
+
+	local Function is selectLineAt(Int is rLine){
+		if({ rLine < 0 || rLine >= rawLines:length() }, { return; });
+		local String is ln: rawLines:get(index: rLine);
+		selAnchorLine: rLine;
+		selAnchorCol: 0;
+		cursorLine: rLine;
+		cursorCol: ln:length();
+		hasSelection: ln:length() > 0;
+		:emitCursorStatus();
+		cursorAlphaByte: 255;
+		lastBlinkMs: 0;
+		invalidate();
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		local Rect is b: bounds();
 		if({ !selectingDrag && (x < b:x || x >= b:x + b:width || y < b:y || y >= b:y + b:height) }, {
@@ -907,8 +968,36 @@ Class of SewNode is TextView{
 
 		local Int is rLine: dispRawLine:get(index: dispIdx);
 		local Int is rCol: dispRawStart:get(index: dispIdx) + bestCol;
+		if({ (mods & 1) != 0 }, {
+			:clickStreak: 1;
+			:lastClickMs: 0;
+			selectingDrag: true;
+			:moveCursor(line: rLine, col: rCol, extendSel: true);
+			return true;
+		});
+		local Int is nowMs: clock:monotonicMs();
+		local Int is dCol: if({ rCol >= lastClickCol }, { rCol - lastClickCol }, { lastClickCol - rCol });
+		if({ lastClickMs > 0 && (nowMs - lastClickMs) <= 450 && rLine == lastClickLine && dCol <= 2 }, {
+			:clickStreak: clickStreak + 1;
+			if({ clickStreak > 3 }, { :clickStreak: 1; });
+		}, {
+			:clickStreak: 1;
+		});
+		:lastClickMs: nowMs;
+		:lastClickLine: rLine;
+		:lastClickCol: rCol;
+		if({ clickStreak == 2 }, {
+			selectingDrag: false;
+			:selectWordAt(rLine: rLine, rCol: rCol);
+			return true;
+		});
+		if({ clickStreak == 3 }, {
+			selectingDrag: false;
+			:selectLineAt(rLine: rLine);
+			return true;
+		});
 		selectingDrag: true;
-		:moveCursor(line: rLine, col: rCol, extendSel: (mods & 1) != 0);
+		:moveCursor(line: rLine, col: rCol, extendSel: false);
 		return true;
 	}
 

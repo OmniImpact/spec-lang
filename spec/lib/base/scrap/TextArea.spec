@@ -6,6 +6,7 @@ Class of SewNode is TextArea{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Time],
 		['base', 'struct', Array],
 		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
@@ -28,10 +29,15 @@ Class of SewNode is TextArea{
 	Boolean is hovered: false;
 	Boolean is focused: false;
 	Int is cursorPos: 0;
+	Int is selAnchor: 0;
 	Int is scrollY: 0;
 	Int is maxScrollY: 0;
 	Boolean is caretVisible: true;
 	Int is caretBlinkMs: 0;
+	Int is lastClickMs: 0;
+	Int is clickStreak: 0;
+	Int is lastClickPos: -1;
+	Time is clock: Time();
 
 	replace Function is init(
 		String is text: '',
@@ -50,12 +56,72 @@ Class of SewNode is TextArea{
 		:tooltip: tooltip;
 		:onChange: onChange;
 		:cursorPos: text:length();
+		:selAnchor: cursorPos;
+	}
+
+	local Function of Boolean is hasSelection(){
+		return selAnchor != cursorPos;
+	}
+
+	local Function of Int is selStart(){
+		return if({ selAnchor < cursorPos }, { selAnchor }, { cursorPos });
+	}
+
+	local Function of Int is selEnd(){
+		return if({ selAnchor > cursorPos }, { selAnchor }, { cursorPos });
+	}
+
+	local Function is clearSelection(){
+		:selAnchor: cursorPos;
+	}
+
+	local Function of Boolean is isWordCode(Int is cp){
+		return (cp >= 48 && cp <= 57) || (cp >= 65 && cp <= 90) || (cp >= 97 && cp <= 122) || cp == 95;
+	}
+
+	local Function is selectWordAt(Int is pos){
+		local Int is n: text:length();
+		if({ n == 0 }, {
+			:cursorPos: 0;
+			:selAnchor: 0;
+			return;
+		});
+		local Int is p: pos;
+		if({ p >= n }, { p: n - 1; });
+		if({ p < 0 }, { p: 0; });
+		local Int is cp: text:codePointAtRune(runeIndex: p);
+		if({ !:isWordCode(cp: cp) && p > 0 && :isWordCode(cp: text:codePointAtRune(runeIndex: p - 1)) }, {
+			p: p - 1;
+			cp: text:codePointAtRune(runeIndex: p);
+		});
+		local Int is start: p;
+		local Int is end: p + 1;
+		if({ :isWordCode(cp: cp) }, {
+			while({ start > 0 && :isWordCode(cp: text:codePointAtRune(runeIndex: start - 1)) }, {
+				start: start - 1;
+			});
+			while({ end < n && :isWordCode(cp: text:codePointAtRune(runeIndex: end)) }, {
+				end: end + 1;
+			});
+		});
+		:selAnchor: start;
+		:cursorPos: end;
+	}
+
+	local Function is deleteSelection(){
+		local Int is s0: :selStart();
+		local Int is s1: :selEnd();
+		if({ s1 <= s0 }, { return; });
+		:text: text:substring(start: 0, end: s0) . text:substring(start: s1, end: text:length());
+		:cursorPos: s0;
+		:selAnchor: s0;
 	}
 
 	Function is setText(String is next){
 		:text: next;
 		if({ cursorPos > text:length() }, { :cursorPos: text:length(); });
 		if({ cursorPos < 0 }, { :cursorPos: 0; });
+		:selAnchor: cursorPos;
 		:invalidate();
 	}
 
@@ -186,6 +252,23 @@ Class of SewNode is TextArea{
 				local Int is ly: clipY + i * lh - scrollY;
 				if({ ly + lh > clipY && ly < clipY + clipH }, {
 					local String is ln: lines:get(index: i);
+					if({ focused && :hasSelection() }, {
+						local Int is lineStart: starts:get(index: i);
+						local Int is lineEnd: lineStart + ln:length();
+						local Int is s0: :selStart();
+						local Int is s1: :selEnd();
+						local Int is ov0: if({ s0 > lineStart }, { s0 }, { lineStart });
+						local Int is ov1: if({ s1 < lineEnd }, { s1 }, { lineEnd });
+						if({ ov1 > ov0 }, {
+							local Int is c0: ov0 - lineStart;
+							local Int is c1: ov1 - lineStart;
+							local Int is x0: if({ c0 > 0 }, { ctx:measureTextWidth(text: ln:substring(start: 0, end: c0), pixelHeight: fpx) }, { 0 });
+							local Int is x1: ctx:measureTextWidth(text: ln:substring(start: 0, end: c1), pixelHeight: fpx);
+							if({ x1 > x0 }, {
+								ctx:fillRect(x: clipX + x0, y: ly + 1, w: x1 - x0, h: lh - 2, color: activeTheme:accentSubtle(alpha: 0.35));
+							});
+						});
+					});
 					if({ ln != '' }, {
 						ctx:drawText(x: clipX, y: ly + yOff, text: ln, color: activeTheme:textPrimary, pixelHeight: fpx);
 					});
@@ -248,7 +331,27 @@ Class of SewNode is TextArea{
 		local Int is relX: x - (b:x + pad);
 		local Int is approxCol: if({ relX <= 0 }, { 0 }, { (relX * 10) / (:fontPx() * 6) });
 		if({ approxCol > ln:length() }, { approxCol: ln:length(); });
-		:cursorPos: starts:get(index: li) + approxCol;
+		local Int is clickPos: starts:get(index: li) + approxCol;
+		local Int is nowMs: clock:monotonicMs();
+		local Int is dist: if({ clickPos >= lastClickPos }, { clickPos - lastClickPos }, { lastClickPos - clickPos });
+		if({ lastClickMs > 0 && (nowMs - lastClickMs) <= 450 && dist <= 2 }, {
+			:clickStreak: clickStreak + 1;
+			if({ clickStreak > 3 }, { :clickStreak: 1; });
+		}, {
+			:clickStreak: 1;
+		});
+		:lastClickMs: nowMs;
+		:lastClickPos: clickPos;
+		if({ clickStreak == 2 }, {
+			:selectWordAt(pos: clickPos);
+		}, {
+		if({ clickStreak == 3 }, {
+			:selAnchor: starts:get(index: li);
+			:cursorPos: starts:get(index: li) + ln:length();
+		}, {
+			:cursorPos: clickPos;
+			:selAnchor: clickPos;
+		}); });
 		:caretVisible: true;
 		:caretBlinkMs: 0;
 		:invalidate();
@@ -289,6 +392,7 @@ Class of SewNode is TextArea{
 
 	replace Function of Boolean is onText(String is ch, Int is mods){
 		if({ !focused || ch == '' }, { return false; });
+		if({ :hasSelection() }, { :deleteSelection(); });
 		local Int is n: text:length();
 		if({ cursorPos < 0 }, { :cursorPos: 0; });
 		if({ cursorPos > n }, { :cursorPos: n; });
@@ -296,6 +400,7 @@ Class of SewNode is TextArea{
 		local String is after: text:substring(start: cursorPos, end: n);
 		:text: before . ch . after;
 		:cursorPos: cursorPos + ch:length();
+		:selAnchor: cursorPos;
 		:caretVisible: true;
 		:caretBlinkMs: 0;
 		:ensureCursorVisible();
@@ -313,10 +418,12 @@ Class of SewNode is TextArea{
 
 		# Enter -> insert newline
 		if({ key == 10 || key == 13 || key == 36 }, {
+			if({ :hasSelection() }, { :deleteSelection(); n: text:length(); });
 			local String is before: text:substring(start: 0, end: cursorPos);
 			local String is after: text:substring(start: cursorPos, end: n);
 			:text: before . '\n' . after;
 			:cursorPos: cursorPos + 1;
+			:selAnchor: cursorPos;
 			:caretVisible: true;
 			:caretBlinkMs: 0;
 			:ensureCursorVisible();
@@ -327,41 +434,77 @@ Class of SewNode is TextArea{
 		});
 		# Backspace
 		if({ key == 8 || key == 22 }, {
-			if({ cursorPos > 0 }, {
-				local String is before: text:substring(start: 0, end: cursorPos - 1);
-				local String is after: text:substring(start: cursorPos, end: n);
-				:text: before . after;
-				:cursorPos: cursorPos - 1;
+			if({ :hasSelection() }, {
+				:deleteSelection();
 				:caretVisible: true;
 				:caretBlinkMs: 0;
 				:ensureCursorVisible();
 				local Function is cb: :onChange;
 				cb(text);
 				:invalidate();
-			});
+			}, {
+			if({ cursorPos > 0 }, {
+				local String is before: text:substring(start: 0, end: cursorPos - 1);
+				local String is after: text:substring(start: cursorPos, end: n);
+				:text: before . after;
+				:cursorPos: cursorPos - 1;
+				:clearSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				:ensureCursorVisible();
+				local Function is cb: :onChange;
+				cb(text);
+				:invalidate();
+			}); });
 			return true;
 		});
 		# Delete
 		if({ key == 127 || key == 119 }, {
+			if({ :hasSelection() }, {
+				:deleteSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				:ensureCursorVisible();
+				local Function is cb: :onChange;
+				cb(text);
+				:invalidate();
+			}, {
 			if({ cursorPos < n }, {
 				local String is before: text:substring(start: 0, end: cursorPos);
 				local String is after: text:substring(start: cursorPos + 1, end: n);
 				:text: before . after;
+				:clearSelection();
 				:caretVisible: true;
 				:caretBlinkMs: 0;
 				local Function is cb: :onChange;
 				cb(text);
 				:invalidate();
-			});
+			}); });
 			return true;
 		});
 		# Left / Right
 		if({ key == 1003 || key == 113 }, {
-			if({ cursorPos > 0 }, { :cursorPos: cursorPos - 1; :caretVisible: true; :caretBlinkMs: 0; :ensureCursorVisible(); :invalidate(); });
+			if({ :hasSelection() }, {
+				:cursorPos: :selStart();
+				:clearSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				:ensureCursorVisible();
+				:invalidate();
+			}, {
+			if({ cursorPos > 0 }, { :cursorPos: cursorPos - 1; :clearSelection(); :caretVisible: true; :caretBlinkMs: 0; :ensureCursorVisible(); :invalidate(); }); });
 			return true;
 		});
 		if({ key == 1004 || key == 114 }, {
-			if({ cursorPos < n }, { :cursorPos: cursorPos + 1; :caretVisible: true; :caretBlinkMs: 0; :ensureCursorVisible(); :invalidate(); });
+			if({ :hasSelection() }, {
+				:cursorPos: :selEnd();
+				:clearSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				:ensureCursorVisible();
+				:invalidate();
+			}, {
+			if({ cursorPos < n }, { :cursorPos: cursorPos + 1; :clearSelection(); :caretVisible: true; :caretBlinkMs: 0; :ensureCursorVisible(); :invalidate(); }); });
 			return true;
 		});
 		# Up / Down / Home / End

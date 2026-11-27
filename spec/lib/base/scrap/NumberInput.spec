@@ -6,6 +6,7 @@ Class of SewNode is NumberInput{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Time],
 		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
@@ -32,8 +33,12 @@ Class of SewNode is NumberInput{
 	Int is hoverZone: 0;
 	Boolean is editing: false;
 	String is editBuffer: '';
+	Boolean is allSelected: false;
 	Boolean is caretVisible: true;
 	Int is caretBlinkMs: 0;
+	Int is lastClickMs: 0;
+	Int is clickStreak: 0;
+	Time is clock: Time();
 
 	replace Function is init(
 		Float is value: 0.0,
@@ -254,6 +259,9 @@ Class of SewNode is NumberInput{
 			ctx:setClip(x: centerX, y: b:y, w: centerW, h: b:height);
 			local Int is tx: centerX + (centerW - tw) / 2;
 			if({ tx < centerX + 4 }, { tx: centerX + 4; });
+			if({ focused && editing && allSelected && tw > 0 }, {
+				ctx:fillRect(x: tx, y: b:y + (b:height - th) / 2, w: tw, h: th, color: activeTheme:accentSubtle(alpha: 0.35));
+			});
 			ctx:drawText(
 				x: tx,
 				y: b:y + (b:height - th) / 2,
@@ -307,11 +315,22 @@ Class of SewNode is NumberInput{
 			:stepBy(delta: step);
 			return true;
 		});
-		:editing: true;
+		local Int is nowMs: clock:monotonicMs();
+		if({ lastClickMs > 0 && (nowMs - lastClickMs) <= 450 }, {
+			:clickStreak: clickStreak + 1;
+			if({ clickStreak > 3 }, { :clickStreak: 1; });
+		}, {
+			:clickStreak: 1;
+		});
+		:lastClickMs: nowMs;
+		if({ !editing }, {
+			:editing: true;
+			local Int is iv: :roundFloat(v: value);
+			:editBuffer: if({ decimals <= 0 }, { iv as String }, { :formatValue(v: value) });
+		});
+		:allSelected: clickStreak >= 2;
 		:caretVisible: true;
 		:caretBlinkMs: 0;
-		local Int is iv: :roundFloat(v: value);
-		:editBuffer: if({ decimals <= 0 }, { iv as String }, { :formatValue(v: value) });
 		:invalidate();
 		return true;
 	}
@@ -355,7 +374,12 @@ Class of SewNode is NumberInput{
 		local Int is cp: ch:codePointAtRune(runeIndex: 0);
 		local Boolean is ok: (cp >= 48 && cp <= 57) || cp == 46 || cp == 45;
 		if({ ok }, {
-			:editBuffer: editBuffer . ch;
+			if({ allSelected }, {
+				:editBuffer: ch;
+				:allSelected: false;
+			}, {
+				:editBuffer: editBuffer . ch;
+			});
 			:caretVisible: true;
 			:caretBlinkMs: 0;
 			:invalidate();
@@ -383,12 +407,20 @@ Class of SewNode is NumberInput{
 			return true;
 		});
 		if({ (key == 8 || key == 22) && editing }, {
-			local Int is n: editBuffer:length();
-			if({ n > 0 }, {
-				:editBuffer: editBuffer:substring(start: 0, end: n - 1);
+			if({ allSelected }, {
+				:editBuffer: '';
+				:allSelected: false;
 				:caretVisible: true;
 				:caretBlinkMs: 0;
 				:invalidate();
+			}, {
+				local Int is n: editBuffer:length();
+				if({ n > 0 }, {
+					:editBuffer: editBuffer:substring(start: 0, end: n - 1);
+					:caretVisible: true;
+					:caretBlinkMs: 0;
+					:invalidate();
+				});
 			});
 			return true;
 		});

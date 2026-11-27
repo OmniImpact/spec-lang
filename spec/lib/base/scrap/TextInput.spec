@@ -6,6 +6,7 @@ Class of SewNode is TextInput{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', Time],
 		['base', 'sew', SewNode],
 		['base', 'sew', CursorShape],
 		['base', 'sew', Size],
@@ -20,9 +21,14 @@ Class of SewNode is TextInput{
 	Boolean is focused: false;
 	Boolean is hovered: false;
 	Int is cursorPos: 0;
+	Int is selAnchor: 0;
 	Int is scrollX: 0;
 	Boolean is caretVisible: true;
 	Int is caretBlinkMs: 0;
+	Int is lastClickMs: 0;
+	Int is clickStreak: 0;
+	Int is lastClickPos: -1;
+	Time is clock: Time();
 	Float is minWidthPt: 0.0;
 	Float is heightPt: 0.0;
 	Boolean is expand: false;
@@ -80,11 +86,75 @@ Class of SewNode is TextInput{
 		return s . suffix;
 	}
 
+	local Function of Boolean is hasSelection(){
+		return selAnchor != cursorPos;
+	}
+
+	local Function of Int is selStart(){
+		return if({ selAnchor < cursorPos }, { selAnchor }, { cursorPos });
+	}
+
+	local Function of Int is selEnd(){
+		return if({ selAnchor > cursorPos }, { selAnchor }, { cursorPos });
+	}
+
+	local Function is clearSelection(){
+		:selAnchor: cursorPos;
+	}
+
+	local Function of Boolean is isWordCode(Int is cp){
+		return (cp >= 48 && cp <= 57) || (cp >= 65 && cp <= 90) || (cp >= 97 && cp <= 122) || cp == 95;
+	}
+
+	local Function is selectWordAt(Int is pos){
+		local Int is n: text:length();
+		if({ n == 0 }, {
+			:cursorPos: 0;
+			:selAnchor: 0;
+			return;
+		});
+		local Int is p: pos;
+		if({ p >= n }, { p: n - 1; });
+		if({ p < 0 }, { p: 0; });
+		local Int is cp: text:codePointAtRune(runeIndex: p);
+		if({ !:isWordCode(cp: cp) && p > 0 && :isWordCode(cp: text:codePointAtRune(runeIndex: p - 1)) }, {
+			p: p - 1;
+			cp: text:codePointAtRune(runeIndex: p);
+		});
+		local Int is start: p;
+		local Int is end: p + 1;
+		if({ :isWordCode(cp: cp) }, {
+			while({ start > 0 && :isWordCode(cp: text:codePointAtRune(runeIndex: start - 1)) }, {
+				start: start - 1;
+			});
+			while({ end < n && :isWordCode(cp: text:codePointAtRune(runeIndex: end)) }, {
+				end: end + 1;
+			});
+		});
+		:selAnchor: start;
+		:cursorPos: end;
+	}
+
+	local Function is selectAll(){
+		:selAnchor: 0;
+		:cursorPos: text:length();
+	}
+
+	local Function is deleteSelection(){
+		local Int is s0: :selStart();
+		local Int is s1: :selEnd();
+		if({ s1 <= s0 }, { return; });
+		:text: text:substring(start: 0, end: s0) . text:substring(start: s1, end: text:length());
+		:cursorPos: s0;
+		:selAnchor: s0;
+	}
+
 	Function is setText(String is next){
 		local String is val: if({ focused }, { :stripSuffix(s: next) }, { next });
 		if({ text != val }, {
 			:text: val;
 			if({ cursorPos > text:length() }, { :cursorPos: text:length(); });
+			:selAnchor: cursorPos;
 			invalidate();
 		});
 	}
@@ -105,6 +175,7 @@ Class of SewNode is TextInput{
 			if({ next }, {
 				:text: :stripSuffix(s: text);
 				:cursorPos: text:length();
+				:selAnchor: cursorPos;
 			}, {
 				local Function is scb: onSubmit;
 				scb(text);
@@ -178,6 +249,20 @@ Class of SewNode is TextInput{
 				}, {
 					:scrollX: 0;
 				});
+				if({ focused && :hasSelection() }, {
+					local Int is s0: :selStart();
+					local Int is s1: :selEnd();
+					if({ s0 > text:length() }, { s0: text:length(); });
+					if({ s1 > text:length() }, { s1: text:length(); });
+					if({ s1 > s0 }, {
+						local Int is sx0: if({ s0 > 0 }, { ctx:measureTextWidth(text: text:substring(start: 0, end: s0), pixelHeight: fpx) }, { 0 });
+						local Int is sx1: ctx:measureTextWidth(text: text:substring(start: 0, end: s1), pixelHeight: fpx);
+						local Int is selW: sx1 - sx0;
+						if({ selW > 0 }, {
+							ctx:fillRect(x: b:x + padX + sx0 - scrollX, y: textY, w: selW, h: th, color: activeTheme:accentSubtle(alpha: 0.35));
+						});
+					});
+				});
 				ctx:drawText(x: b:x + padX - scrollX, y: textY, text: text, color: activeTheme:textPrimary, pixelHeight: fpx);
 				if({ focused && caretVisible }, {
 					ctx:fillRect(x: b:x + padX + caretOff - scrollX, y: textY, w: caretW, h: th, color: activeTheme:textPrimary);
@@ -233,9 +318,25 @@ Class of SewNode is TextInput{
 					i: i + 1;
 				});
 			});
-			if({ best != cursorPos }, {
-				:cursorPos: best;
+			local Int is nowMs: clock:monotonicMs();
+			local Int is dist: if({ best >= lastClickPos }, { best - lastClickPos }, { lastClickPos - best });
+			if({ lastClickMs > 0 && (nowMs - lastClickMs) <= 450 && dist <= 2 }, {
+				:clickStreak: clickStreak + 1;
+				if({ clickStreak > 3 }, { :clickStreak: 1; });
+			}, {
+				:clickStreak: 1;
 			});
+			:lastClickMs: nowMs;
+			:lastClickPos: best;
+			if({ clickStreak == 2 }, {
+				:selectWordAt(pos: best);
+			}, {
+			if({ clickStreak == 3 }, {
+				:selectAll();
+			}, {
+				:cursorPos: best;
+				:selAnchor: best;
+			}); });
 			:caretVisible: true;
 			:caretBlinkMs: 0;
 			invalidate();
@@ -276,62 +377,94 @@ Class of SewNode is TextInput{
 			return true;
 		});
 		if({ key == 1003 }, {
-			if({ cursorPos > 0 }, {
-				:cursorPos: cursorPos - 1;
+			if({ :hasSelection() }, {
+				:cursorPos: :selStart();
+				:clearSelection();
 				:caretVisible: true;
 				:caretBlinkMs: 0;
 				invalidate();
-			});
+			}, {
+			if({ cursorPos > 0 }, {
+				:cursorPos: cursorPos - 1;
+				:clearSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				invalidate();
+			}); });
 			return true;
 		});
 		if({ key == 1004 }, {
-			if({ cursorPos < text:length() }, {
-				:cursorPos: cursorPos + 1;
+			if({ :hasSelection() }, {
+				:cursorPos: :selEnd();
+				:clearSelection();
 				:caretVisible: true;
 				:caretBlinkMs: 0;
 				invalidate();
-			});
+			}, {
+			if({ cursorPos < text:length() }, {
+				:cursorPos: cursorPos + 1;
+				:clearSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				invalidate();
+			}); });
 			return true;
 		});
 		if({ key == 1005 }, {
-			if({ cursorPos != 0 }, {
-				:cursorPos: 0;
-				:caretVisible: true;
-				:caretBlinkMs: 0;
-				invalidate();
-			});
+			:cursorPos: 0;
+			:clearSelection();
+			:caretVisible: true;
+			:caretBlinkMs: 0;
+			invalidate();
 			return true;
 		});
 		if({ key == 1006 }, {
-			if({ cursorPos != text:length() }, {
-				:cursorPos: text:length();
-				:caretVisible: true;
-				:caretBlinkMs: 0;
-				invalidate();
-			});
+			:cursorPos: text:length();
+			:clearSelection();
+			:caretVisible: true;
+			:caretBlinkMs: 0;
+			invalidate();
 			return true;
 		});
 		if({ key == 8 }, {
+			if({ :hasSelection() }, {
+				:deleteSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				local Function is cb: onChange;
+				cb(text);
+				invalidate();
+			}, {
 			if({ cursorPos > 0 }, {
 				:text: text:substring(start: 0, end: cursorPos - 1) . text:substring(start: cursorPos, end: text:length());
 				:cursorPos: cursorPos - 1;
+				:clearSelection();
 				:caretVisible: true;
 				:caretBlinkMs: 0;
 				local Function is cb: onChange;
 				cb(text);
 				invalidate();
-			});
+			}); });
 			return true;
 		});
 		if({ key == 127 }, {
-			if({ cursorPos < text:length() }, {
-				:text: text:substring(start: 0, end: cursorPos) . text:substring(start: cursorPos + 1, end: text:length());
+			if({ :hasSelection() }, {
+				:deleteSelection();
 				:caretVisible: true;
 				:caretBlinkMs: 0;
 				local Function is cb: onChange;
 				cb(text);
 				invalidate();
-			});
+			}, {
+			if({ cursorPos < text:length() }, {
+				:text: text:substring(start: 0, end: cursorPos) . text:substring(start: cursorPos + 1, end: text:length());
+				:clearSelection();
+				:caretVisible: true;
+				:caretBlinkMs: 0;
+				local Function is cb: onChange;
+				cb(text);
+				invalidate();
+			}); });
 			return true;
 		});
 		if({ key == 10 || key == 13 }, {
@@ -344,11 +477,13 @@ Class of SewNode is TextInput{
 
 	replace Function of Boolean is onText(String is ch, Int is mods){
 		if({ !focused || ch == '' }, { return false; });
+		if({ :hasSelection() }, { :deleteSelection(); });
 		local Int is cPos: cursorPos;
 		if({ cPos < 0 }, { cPos: 0; });
 		if({ cPos > text:length() }, { cPos: text:length(); });
 		:text: text:substring(start: 0, end: cPos) . ch . text:substring(start: cPos, end: text:length());
 		:cursorPos: cPos + ch:length();
+		:selAnchor: cursorPos;
 		:caretVisible: true;
 		:caretBlinkMs: 0;
 		local Function is cb: onChange;
