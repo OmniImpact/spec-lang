@@ -108,7 +108,9 @@ Class of SewNode is TabBar{
 		local Int is padR: activeScale:px(pt: activeTheme:paddingSmallPt * 2.0);
 		local Int is cx: tabX + tabW - padR - cs;
 		local Int is cy: area:y + (area:height - cs) / 2;
-		return x >= cx && x < cx + cs && y >= cy && y < cy + cs;
+		local Int is hitPad: activeScale:px(pt: 2.0);
+		if({ hitPad < 2 }, { hitPad: 2; });
+		return x >= cx - hitPad && x < cx + cs + hitPad && y >= cy - hitPad && y < cy + cs + hitPad;
 	}
 
 	local Function of String is fitLabel(String is label, Int is maxTextW, Int is fpx){
@@ -244,7 +246,7 @@ Class of SewNode is TabBar{
 						ctx:fillRect(x: cx, y: cy, w: cs, h: cs, color: activeTheme:activeBg);
 					});
 					local Int is xw: ctx:measureTextWidth(text: 'x', pixelHeight: fpx);
-					ctx:drawText(x: cx + (cs - xw) / 2, y: cy + (cs - th) / 2 - 1, text: 'x', color: tcol, pixelHeight: fpx);
+					ctx:drawText(x: cx + (cs - xw) / 2, y: cy + (cs - th) / 2, text: 'x', color: tcol, pixelHeight: fpx);
 				});
 			});
 			i: i + 1;

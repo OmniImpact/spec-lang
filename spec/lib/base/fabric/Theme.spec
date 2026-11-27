@@ -707,7 +707,7 @@ Class is Theme{
 		buttonHeightPt: baseTextPt + basePaddingPt * 2.25;
 		inputMinWidthPt: baseTextPt * 10.0;
 		inputHeightPt: baseTextPt + basePaddingPt * 2.25;
-		tabBarHeightPt: baseTextPt + basePaddingPt * 1.25;
+		tabBarHeightPt: baseTextPt + basePaddingPt * 2.75;
 		tabMinWidthPt: baseTextPt * 7.25;
 		tabMaxWidthPt: baseTextPt * 16.0;
 		barHeightPt: baseTextPt + basePaddingPt * 1.50;
