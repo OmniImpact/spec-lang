@@ -4,7 +4,7 @@ Class of SpecUnitTest is TestHighlighterAndText{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sew', HAlign],
-		['base', 'scrap', 'highlighter', [Highlighter, HighlighterC, HighlighterPython, HighlighterRust, HighlighterJavaScript, HighlighterKotlin, HighlighterCss]],
+		['base', 'scrap', 'highlighter', [Highlighter, HighlighterC, HighlighterPython, HighlighterRust, HighlighterJavaScript, HighlighterKotlin, HighlighterCss, HighlighterCSharp, HighlighterPhp, HighlighterSql, HighlighterHtml, HighlighterXml]],
 		['base', 'scrap', 'text', [CodeEditorView, TextScrap]]
 	];
 
@@ -42,6 +42,34 @@ Class of SpecUnitTest is TestHighlighterAndText{
 		Assert:areEqualString('css', css:languageId());
 		Assert:areEqualString('CSS', css:displayName());
 		Assert:areEqualString('css', css:clone():languageId());
+	}
+
+	Function is testCSharpPhpSqlHtmlXmlHighlighters(){
+		local CodeEditorView is ed: CodeEditorView();
+
+		local Highlighter is cs: ed:highlighterFor(langOverride: '', path: 'Program.cs');
+		Assert:areEqualString('csharp', cs:languageId());
+		Assert:areEqualString('C#', cs:displayName());
+
+		local Highlighter is php: ed:highlighterFor(langOverride: '', path: 'index.php');
+		Assert:areEqualString('php', php:languageId());
+		Assert:areEqualString('PHP', php:displayName());
+
+		local Highlighter is sql: ed:highlighterFor(langOverride: '', path: 'query.sql');
+		Assert:areEqualString('sql', sql:languageId());
+		Assert:areEqualString('SQL', sql:displayName());
+		Assert:areEqualString('sql', sql:clone():languageId());
+
+		local Highlighter is html: ed:highlighterFor(langOverride: '', path: 'page.html');
+		Assert:areEqualString('html', html:languageId());
+		Assert:areEqualString('HTML', html:displayName());
+		Assert:isTrue(html:matchesExtension(lowPath: 'index.htm'));
+
+		local Highlighter is xml: ed:highlighterFor(langOverride: '', path: 'config.xml');
+		Assert:areEqualString('xml', xml:languageId());
+		Assert:areEqualString('XML', xml:displayName());
+		Assert:isTrue(xml:matchesExtension(lowPath: 'icon.svg'));
+		Assert:areEqualString('xml', xml:clone():languageId());
 	}
 
 	Function is testTextScrapAlignmentAndStaticContent(){

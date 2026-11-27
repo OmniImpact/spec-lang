@@ -22,7 +22,12 @@ Class of TextView is CodeEditorView{
 		['base', 'scrap', 'highlighter', HighlighterRust],
 		['base', 'scrap', 'highlighter', HighlighterJavaScript],
 		['base', 'scrap', 'highlighter', HighlighterKotlin],
-		['base', 'scrap', 'highlighter', HighlighterCss]
+		['base', 'scrap', 'highlighter', HighlighterCss],
+		['base', 'scrap', 'highlighter', HighlighterCSharp],
+		['base', 'scrap', 'highlighter', HighlighterPhp],
+		['base', 'scrap', 'highlighter', HighlighterSql],
+		['base', 'scrap', 'highlighter', HighlighterHtml],
+		['base', 'scrap', 'highlighter', HighlighterXml]
 	];
 
 	TextEmitter is filePath: TextEmitter(initial: '');
@@ -71,7 +76,12 @@ Class of TextView is CodeEditorView{
 			HighlighterRust() as Highlighter,
 			HighlighterJavaScript() as Highlighter,
 			HighlighterKotlin() as Highlighter,
-			HighlighterCss() as Highlighter
+			HighlighterCss() as Highlighter,
+			HighlighterCSharp() as Highlighter,
+			HighlighterPhp() as Highlighter,
+			HighlighterSql() as Highlighter,
+			HighlighterHtml() as Highlighter,
+			HighlighterXml() as Highlighter
 		]);
 		:activeHighlighter: Highlighter();
 		:updateHighlighter();
