@@ -835,10 +835,10 @@ Class is Theme{
 
 	local Function of Map of String to Any is colorToMap(Color is c){
 		local Map of String to Any is m: Map:init();
-		m:set(key: 'r', value: JsonNumber(rawText: c:r as String, isFloating: false));
-		m:set(key: 'g', value: JsonNumber(rawText: c:g as String, isFloating: false));
-		m:set(key: 'b', value: JsonNumber(rawText: c:b as String, isFloating: false));
-		m:set(key: 'a', value: JsonNumber(rawText: c:a as String, isFloating: false));
+		m:set(key: 'r', value: JsonNumber(rawText: c:red() as String, isFloating: false));
+		m:set(key: 'g', value: JsonNumber(rawText: c:green() as String, isFloating: false));
+		m:set(key: 'b', value: JsonNumber(rawText: c:blue() as String, isFloating: false));
+		m:set(key: 'a', value: JsonNumber(rawText: c:alpha() as String, isFloating: false));
 		return m;
 	}
 
@@ -847,10 +847,10 @@ Class is Theme{
 		local Any is raw: obj:get(key: key, default: '');
 		if({ Introspection:typeIdentity(obj: raw) != 'Map' }, { return fallback; });
 		local Map of String to Any is m: raw as Map;
-		local Int is r: j:getInt(obj: m, key: 'r', default: fallback:r);
-		local Int is g: j:getInt(obj: m, key: 'g', default: fallback:g);
-		local Int is b: j:getInt(obj: m, key: 'b', default: fallback:b);
-		local Int is a: j:getInt(obj: m, key: 'a', default: fallback:a);
+		local Int is r: j:getInt(obj: m, key: 'r', default: fallback:red());
+		local Int is g: j:getInt(obj: m, key: 'g', default: fallback:green());
+		local Int is b: j:getInt(obj: m, key: 'b', default: fallback:blue());
+		local Int is a: j:getInt(obj: m, key: 'a', default: fallback:alpha());
 		return Color(r: r, g: g, b: b, a: a);
 	}
 

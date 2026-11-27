@@ -55,18 +55,18 @@ Class of SewNode is VulkanViewport{
 		:mvpAddr: alloc(bytes: 64);
 		:sphere: SphereMesh(
 			radius: 0.28,
-			r: (sphereColor:r as Float) / 255.0,
-			g: (sphereColor:g as Float) / 255.0,
-			b: (sphereColor:b as Float) / 255.0
+			r: (sphereColor:red() as Float) / 255.0,
+			g: (sphereColor:green() as Float) / 255.0,
+			b: (sphereColor:blue() as Float) / 255.0
 		);
 	}
 
 	Function is setSphereColor(Color is next){
 		:sphereColor: next;
 		sphere:setColor(
-			r: (next:r as Float) / 255.0,
-			g: (next:g as Float) / 255.0,
-			b: (next:b as Float) / 255.0
+			r: (next:red() as Float) / 255.0,
+			g: (next:green() as Float) / 255.0,
+			b: (next:blue() as Float) / 255.0
 		);
 		if({ vkReady && sphereInCube }, {
 			vk:setMesh(
