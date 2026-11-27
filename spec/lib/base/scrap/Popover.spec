@@ -43,6 +43,9 @@ Class of SewNode is Popover{
 	Int is resizeStartPtrY: 0;
 	Int is resizeStartW: 0;
 	Int is resizeStartH: 0;
+	Boolean is hasPinnedPos: false;
+	Int is pinnedX: 0;
+	Int is pinnedY: 0;
 	Int is lastPtrX: -1;
 	Int is lastPtrY: -1;
 	Rect is popupRect: Rect();
@@ -96,6 +99,7 @@ Class of SewNode is Popover{
 				:dragOffsetY: 0;
 				:resizeMode: 0;
 				:hoverResizeMode: 0;
+				:hasPinnedPos: false;
 			});
 			local Function is cb: onOpenChange;
 			cb(open);
@@ -174,23 +178,40 @@ Class of SewNode is Popover{
 			if({ popH < minH }, { popH: minH; });
 			if({ lastViewH > 16 && popH > lastViewH - 16 }, { popH: lastViewH - 16; });
 		});
-		local Rect is pr: DropdownPopup:shared:placeRect(
-			anchor: anchor:bounds(),
-			popupW: popW,
-			popupH: popH,
-			viewW: lastViewW,
-			viewH: lastViewH,
-			gapPx: 2
-		);
-		local Int is px: pr:x + dragOffsetX;
-		local Int is py: pr:y + dragOffsetY;
-		if({ lastViewW > 0 }, {
-			if({ px + popW > lastViewW }, { px: lastViewW - popW; });
-			if({ px < 0 }, { px: 0; });
-		});
-		if({ lastViewH > 0 }, {
-			if({ py + popH > lastViewH }, { py: lastViewH - popH; });
-			if({ py < 0 }, { py: 0; });
+		local Int is px: 0;
+		local Int is py: 0;
+		if({ hasPinnedPos }, {
+			px: pinnedX + dragOffsetX;
+			py: pinnedY + dragOffsetY;
+			if({ lastViewW > 0 }, {
+				if({ px < 0 }, { px: 0; });
+				if({ dragging && px + popW > lastViewW }, { px: lastViewW - popW; });
+				if({ px + popW > lastViewW }, { popW: lastViewW - px; });
+			});
+			if({ lastViewH > 0 }, {
+				if({ py < 0 }, { py: 0; });
+				if({ dragging && py + popH > lastViewH }, { py: lastViewH - popH; });
+				if({ py + popH > lastViewH }, { popH: lastViewH - py; });
+			});
+		}, {
+			local Rect is pr: DropdownPopup:shared:placeRect(
+				anchor: anchor:bounds(),
+				popupW: popW,
+				popupH: popH,
+				viewW: lastViewW,
+				viewH: lastViewH,
+				gapPx: 2
+			);
+			px: pr:x + dragOffsetX;
+			py: pr:y + dragOffsetY;
+			if({ lastViewW > 0 }, {
+				if({ px + popW > lastViewW }, { px: lastViewW - popW; });
+				if({ px < 0 }, { px: 0; });
+			});
+			if({ lastViewH > 0 }, {
+				if({ py + popH > lastViewH }, { py: lastViewH - popH; });
+				if({ py < 0 }, { py: 0; });
+			});
 		});
 		:popupRect: Rect(x: px, y: py, width: popW, height: popH);
 		local Int is innerW: if({ popW > padPx * 2 }, { popW - padPx * 2 }, { 0 });
@@ -379,6 +400,11 @@ Class of SewNode is Popover{
 			:resizeStartPtrY: y;
 			:resizeStartW: popupRect:width;
 			:resizeStartH: popupRect:height;
+			:pinnedX: popupRect:x;
+			:pinnedY: popupRect:y;
+			:hasPinnedPos: true;
+			:dragOffsetX: 0;
+			:dragOffsetY: 0;
 			invalidate();
 			return true;
 		});
