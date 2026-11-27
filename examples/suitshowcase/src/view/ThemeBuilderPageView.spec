@@ -10,18 +10,31 @@ Class is ThemeBuilderPageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'sew', Row],
+		['base', 'sew', Column],
 		['base', 'sew', Grid],
+		['base', 'sew', 'nav', NavStack],
+		['base', 'sew', 'nav', NavRoute],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
+		['base', 'scrap', Badge],
+		['base', 'scrap', Checkbox],
+		['base', 'scrap', RadioButton],
 		['base', 'scrap', ScrapButton],
 		['base', 'scrap', Slider],
 		['base', 'scrap', Switch],
+		['base', 'scrap', ProgressBar],
+		['base', 'scrap', NumberInput],
+		['base', 'scrap', SelectDropdown],
+		['base', 'scrap', Popover],
 		['base', 'scrap', ColorSwatchDropdown],
 		['base', 'scrap', TextInput],
 		['base', 'scrap', TextArea],
 		['base', 'scrap', DecoratedTextInput],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', SectionH],
+		['base', 'scrap', 'tab', TabBar],
+		['base', 'scrap', 'tab', TabItemConfig],
 		['base', 'scrap', 'text', TextScrap],
 		['base', 'fabric', Color],
 		['base', 'fabric', TextStyle],
@@ -33,11 +46,13 @@ Class is ThemeBuilderPageView{
 	];
 
 	ShowcaseViewModel is vm: ShowcaseViewModel();
+	TextEmitter is activeTabRoute: TextEmitter(initial: 'colors');
+	TabBar is optionTabs: TabBar();
 	SectionH is presetSection: SectionH();
 	SectionH is borderSection: SectionH();
 	TextArea is themeJsonArea: TextArea(
-		minLines: 6,
-		minWidthPt: 360.0,
+		minLines: 8,
+		minWidthPt: 340.0,
 		placeholder: 'Click Export JSON to serialize the current theme, or paste JSON and click Import JSON...'
 	);
 	SectionH is panelStyleSection: SectionH();
@@ -417,50 +432,94 @@ Class is ThemeBuilderPageView{
 			children: metricCells
 		);
 
-		return SectionV(
-			children: Array([
-				SectionH(
+		local Popover is jsonPopover: Popover(
+			anchor: ScrapButton(
+				label: 'JSON Import / Export',
+				tooltip: 'Open theme JSON export and import tools'
+			),
+			closeOnOutsideClick: true,
+			content: Frame(
+				title: 'Theme JSON (Export / Import)',
+				child: Column(
+					gapPt: 6.0,
 					children: Array([
-						Label(text: 'Theme Builder', style: TextStyle:H1),
-						ScrapButton(
-							label: 'Reset to Preset',
-							tooltip: 'Reload the active Light or Dark preset defaults',
-							onClick: local Function(){ vm:loadPreset(preset: vm:basePreset); }
-						)
+						SectionH(
+							children: Array([
+								ScrapButton(
+									label: 'Export JSON',
+									onClick: local Function(){
+										local String is outJson: vm:activeTheme:toJson();
+										themeJsonArea:setText(next: outJson);
+										vm:statusText:emit(value: 'Exported theme JSON (' . (outJson:length() as String) . ' bytes)');
+									}
+								),
+								ScrapButton(
+									label: 'Import JSON',
+									onClick: local Function(){
+										vm:importThemeJson(json: themeJsonArea:text);
+									}
+								)
+							])
+						),
+						themeJsonArea
 					])
-				),
-				Frame(
-					title: 'Base Preset',
-					child: presetSection
-				),
-				Frame(
-					title: 'Typography & Borders',
-					child: SectionV(
+				)
+			)
+		);
+
+		local Frame is previewFrame: Frame(
+			title: 'Live Theme Preview',
+			child: Column(
+				gapPt: 6.0,
+				children: Array([
+					SectionH(
 						children: Array([
-							SectionV(title: 'Base Text Size', children: Array([baseTextInput])),
-							SectionV(title: 'Border Style', children: Array([borderSection]))
+							ScrapButton(label: 'Primary Action', onClick: local Function(){
+								vm:statusText:emit(value: 'Theme preview button clicked');
+							}),
+							ScrapButton(label: 'Disabled', enabled: false),
+							Checkbox(checked: true, label: 'Check'),
+							RadioButton(selected: true, label: 'Radio'),
+							Switch(checked: true),
+							Badge(text: 'Accent', accent: true),
+							Badge(text: 'Tag', closable: true)
+						])
+					),
+					SectionH(
+						children: Array([
+							TextInput(text: 'Sample input', minWidthPt: 105.0),
+							SelectDropdown(options: Array(['Option A', 'Option B', 'Option C']), selectedIndex: 0, minWidthPt: 100.0),
+							NumberInput(value: 42.0, minVal: 0.0, maxVal: 100.0, minWidthPt: 82.0),
+							Slider(minVal: 0, maxVal: 100, value: 65, minWidthPt: 90.0),
+							ProgressBar(value: 0.68, showLabel: true, minWidthPt: 105.0)
+						])
+					),
+					SectionH(
+						children: Array([
+							SectionH(segmented: true, options: Array(['One', 'Two', 'Three']), selectedIndex: 1, itemMinWidthPt: 44.0),
+							Label(text: 'Heading', style: TextStyle:H3),
+							Label(text: 'Muted caption', style: TextStyle:CAPTION),
+							Label(text: 'Code', style: TextStyle:CODE, boxed: true)
 						])
 					)
-				),
-				Frame(
-					title: 'Window Translucency (Separate from Theme)',
-					child: SectionH(
-						children: Array([
-							alphaSlider,
-							TextScrap(text: alphaLabel, muted: true)
-						])
-					)
-				),
-				Frame(
-					title: 'Theme Color Tokens (#RRGGBB)',
-					child: colorGrid
-				),
+				])
+			)
+		);
+
+		local SewNode is colorsTab: Frame(
+			title: 'Theme Color Tokens (#RRGGBB)',
+			child: colorGrid
+		);
+
+		local SewNode is fillsTab: Column(
+			gapPt: 8.0,
+			children: Array([
 				Frame(
 					title: 'Surface Fill',
-					child: SectionV(
+					child: Column(
+						gapPt: 6.0,
 						children: Array([
-							SectionV(title: 'Fill Style', children: Array([surfFillSection])),
-							SectionV(title: 'Bounds', children: Array([surfBoundsSection])),
+							SectionH(children: Array([surfFillSection, surfBoundsSection])),
 							Grid(
 								columns: 3,
 								colGapPt: 10.0,
@@ -478,10 +537,10 @@ Class is ThemeBuilderPageView{
 				),
 				Frame(
 					title: 'Button Fill',
-					child: SectionV(
+					child: Column(
+						gapPt: 6.0,
 						children: Array([
-							SectionV(title: 'Fill Style', children: Array([btnFillSection])),
-							SectionV(title: 'Bounds', children: Array([btnBoundsSection])),
+							SectionH(children: Array([btnFillSection, btnBoundsSection])),
 							Grid(
 								columns: 3,
 								colGapPt: 10.0,
@@ -515,16 +574,19 @@ Class is ThemeBuilderPageView{
 							Label(text: 'Focus Saturation'), focusSatSlider, TextScrap(text: focusSatLabel, muted: true)
 						])
 					)
-				),
+				)
+			])
+		);
+
+		local SewNode is bordersTab: Column(
+			gapPt: 8.0,
+			children: Array([
 				Frame(
-					title: 'Padding & Spacing (pt)',
-					child: metricGrid
-				),
-				Frame(
-					title: 'Panel, Divider & Button Styles',
-					child: SectionV(
+					title: 'Panel Border & Shadows',
+					child: Column(
+						gapPt: 6.0,
 						children: Array([
-							SectionV(title: 'Panel Border Style', children: Array([panelStyleSection])),
+							panelStyleSection,
 							Grid(
 								columns: 3,
 								colGapPt: 10.0,
@@ -539,7 +601,15 @@ Class is ThemeBuilderPageView{
 									Label(text: 'Panel Inner X'), panelInnerShadowXSlider, TextScrap(text: panelInnerShadowXLabel, muted: true),
 									Label(text: 'Panel Inner Y'), panelInnerShadowYSlider, TextScrap(text: panelInnerShadowYLabel, muted: true)
 								])
-							),
+							)
+						])
+					)
+				),
+				Frame(
+					title: 'Divider & Button Borders',
+					child: Column(
+						gapPt: 6.0,
+						children: Array([
 							SectionV(title: 'Divider Style', children: Array([dividerStyleSection])),
 							Grid(
 								columns: 3,
@@ -564,32 +634,83 @@ Class is ThemeBuilderPageView{
 							)
 						])
 					)
-				),
+				)
+			])
+		);
+
+		local SewNode is layoutTab: Column(
+			gapPt: 8.0,
+			children: Array([
 				Frame(
-					title: 'Theme JSON (Export / Import)',
-					child: SectionV(
+					title: 'Typography, Borders & Window Translucency',
+					child: Grid(
+						columns: 2,
+						colGapPt: 12.0,
+						rowGapPt: 6.0,
 						children: Array([
-							SectionH(
-								children: Array([
-									ScrapButton(
-										label: 'Export JSON',
-										onClick: local Function(){
-											local String is outJson: vm:activeTheme:toJson();
-											themeJsonArea:setText(next: outJson);
-											vm:statusText:emit(value: 'Exported theme JSON (' . (outJson:length() as String) . ' bytes)');
-										}
-									),
-									ScrapButton(
-										label: 'Import JSON',
-										onClick: local Function(){
-											vm:importThemeJson(json: themeJsonArea:text);
-										}
-									)
-								])
-							),
-							themeJsonArea
+							Label(text: 'Base Text Size'), baseTextInput,
+							Label(text: 'Global Border Style'), borderSection,
+							Label(text: 'Window Opacity'), SectionH(children: Array([alphaSlider, TextScrap(text: alphaLabel, muted: true)]))
 						])
 					)
+				),
+				Frame(
+					title: 'Padding & Spacing (pt)',
+					child: metricGrid
+				)
+			])
+		);
+
+		local Array of String is tabIds: Array(['colors', 'fills', 'borders', 'layout']);
+		:optionTabs: TabBar(
+			tabs: Array([
+				TabItemConfig(id: 'colors', label: 'Colors', closable: false),
+				TabItemConfig(id: 'fills', label: 'Fills & Effects', closable: false),
+				TabItemConfig(id: 'borders', label: 'Borders & Shadows', closable: false),
+				TabItemConfig(id: 'layout', label: 'Typography & Spacing', closable: false)
+			]),
+			activeIndex: 0,
+			showCloseButton: false,
+			reorderable: false,
+			onSelectTab: local Function(Int is idx){
+				optionTabs:selectTab(index: idx);
+				if({ idx >= 0 && idx < tabIds:length() }, {
+					activeTabRoute:emit(value: tabIds:get(index: idx));
+				});
+			}
+		);
+
+		local NavStack is tabContent: NavStack(
+			route: activeTabRoute,
+			routes: Array([
+				NavRoute(name: 'colors', child: colorsTab),
+				NavRoute(name: 'fills', child: fillsTab),
+				NavRoute(name: 'borders', child: bordersTab),
+				NavRoute(name: 'layout', child: layoutTab)
+			])
+		);
+
+		return SectionV(
+			children: Array([
+				SectionH(
+					children: Array([
+						Label(text: 'Theme Builder', style: TextStyle:H1),
+						presetSection,
+						ScrapButton(
+							label: 'Reset to Preset',
+							tooltip: 'Reload the active Light or Dark preset defaults',
+							onClick: local Function(){ vm:loadPreset(preset: vm:basePreset); }
+						),
+						jsonPopover
+					])
+				),
+				previewFrame,
+				Column(
+					gapPt: 0.0,
+					children: Array([
+						optionTabs,
+						tabContent
+					])
 				)
 			])
 		);
