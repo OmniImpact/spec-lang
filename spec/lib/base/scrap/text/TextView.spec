@@ -286,6 +286,88 @@ Class of SewNode is TextView{
 		});
 	}
 
+	local Function is wrapLineRanges(
+		String is line,
+		Int is availTextW,
+		Int is fpx,
+		Boolean is mono,
+		Int is scratchPtr,
+		Int is slotPtrs,
+		Int is slotCounts,
+		Int is rIdx
+	){
+		if({ line == '' }, {
+			Mem:storeI32(ptr: slotCounts, byteOffset: rIdx * 4, val: 1);
+			Mem:storeI64(ptr: slotPtrs, byteOffset: rIdx * 8, val: 0);
+			return;
+		});
+		local Int is fullW: DrawContext:shared:measureTextWidthWithScratch(text: line, pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr);
+		if({ fullW <= availTextW }, {
+			Mem:storeI32(ptr: slotCounts, byteOffset: rIdx * 4, val: 1);
+			Mem:storeI64(ptr: slotPtrs, byteOffset: rIdx * 8, val: 0);
+			return;
+		});
+		local Int is len: line:length();
+		local Int is cap: 16;
+		local Int is buf: Mem:alloc(bytes: cap * 8);
+		local Int is cnt: 0;
+		local Int is pos: 0;
+		while({ pos < len }, {
+			local Int is segEnd: len;
+			local Boolean is tailFits: if({ pos == 0 }, { false }, {
+				DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: len), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW
+			});
+			if({ !tailFits }, {
+				local Int is lo: pos + 1;
+				local Int is hi: len - 1;
+				local Int is maxFit: pos + 1;
+				while({ lo <= hi }, {
+					local Int is mid: lo + (hi - lo) / 2;
+					if({ DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: mid), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW }, {
+						maxFit: mid;
+						lo: mid + 1;
+					}, {
+						hi: mid - 1;
+					});
+				});
+				segEnd: maxFit;
+				if({ segEnd < len }, {
+					local Int is si: segEnd - 1;
+					local Boolean is foundSpace: false;
+					while({ si >= pos && !foundSpace }, {
+						if({ line:byteAt(index: si) == 32 }, {
+							if({ si + 1 > pos }, {
+								segEnd: si + 1;
+								foundSpace: true;
+							});
+						});
+						si: si - 1;
+					});
+				});
+				if({ segEnd <= pos }, { segEnd: pos + 1; });
+			});
+			if({ cnt >= cap }, {
+				local Int is newCap: cap * 2;
+				local Int is newBuf: Mem:alloc(bytes: newCap * 8);
+				local Int is ci: 0;
+				while({ ci < cnt }, {
+					Mem:storeI32(ptr: newBuf, byteOffset: ci * 8, val: Mem:loadI32(ptr: buf, byteOffset: ci * 8));
+					Mem:storeI32(ptr: newBuf, byteOffset: ci * 8 + 4, val: Mem:loadI32(ptr: buf, byteOffset: ci * 8 + 4));
+					ci: ci + 1;
+				});
+				Mem:free(ptr: buf);
+				buf: newBuf;
+				cap: newCap;
+			});
+			Mem:storeI32(ptr: buf, byteOffset: cnt * 8, val: pos);
+			Mem:storeI32(ptr: buf, byteOffset: cnt * 8 + 4, val: segEnd);
+			cnt: cnt + 1;
+			pos: segEnd;
+		});
+		Mem:storeI32(ptr: slotCounts, byteOffset: rIdx * 4, val: cnt);
+		Mem:storeI64(ptr: slotPtrs, byteOffset: rIdx * 8, val: buf);
+	}
+
 	local Function is rebuildDisplayLines(Int is availTextW, Int is fpx){
 		dispLines: Array();
 		dispRawLine: Array();
@@ -295,14 +377,8 @@ Class of SewNode is TextView{
 		if({ wrapCached && availTextW > fpx && rcount >= 64 }, {
 			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, mono: monoCached);
 			DrawContext:shared:measureTextWidth(text: '\u2026', pixelHeight: fpx, mono: monoCached);
-			local Array of Array of String is segLinesSlots: Array();
-			local Array of Array of Int is segStartsSlots: Array();
-			local Int is si: 0;
-			while({ si < rcount }, {
-				segLinesSlots:add(item: Array());
-				segStartsSlots:add(item: Array());
-				si: si + 1;
-			});
+			local Int is slotPtrs: Mem:alloc(bytes: rcount * 8);
+			local Int is slotCounts: Mem:alloc(bytes: rcount * 4);
 			local Int is nThreads: Process():threadCount();
 			if({ nThreads < 2 }, { nThreads: 2; });
 			if({ nThreads > 8 }, { nThreads: 8; });
@@ -319,14 +395,15 @@ Class of SewNode is TextView{
 					local Int is scratch: Mem:alloc(bytes: 8);
 					local Int is r: startR;
 					while({ r < endR }, {
-						:wrapSingleLine(
+						:wrapLineRanges(
 							line: rawLines:get(index: r),
 							availTextW: availTextW,
 							fpx: fpx,
 							mono: monoVal,
 							scratchPtr: scratch,
-							outSegs: segLinesSlots:get(index: r),
-							outStarts: segStartsSlots:get(index: r)
+							slotPtrs: slotPtrs,
+							slotCounts: slotCounts,
+							rIdx: r
 						);
 						r: r + 1;
 					});
@@ -336,17 +413,29 @@ Class of SewNode is TextView{
 			);
 			local Int is mr: 0;
 			while({ mr < rcount }, {
-				local Array of String is segs: segLinesSlots:get(index: mr);
-				local Array of Int is starts: segStartsSlots:get(index: mr);
-				local Int is j: 0;
-				while({ j < segs:length() }, {
-					dispLines:add(item: segs:get(index: j));
+				local String is line: rawLines:get(index: mr);
+				local Int is cnt: Mem:loadI32(ptr: slotCounts, byteOffset: mr * 4);
+				local Int is bufPtr: Mem:loadI64(ptr: slotPtrs, byteOffset: mr * 8);
+				if({ bufPtr == 0 }, {
+					dispLines:add(item: line);
 					dispRawLine:add(item: mr);
-					dispRawStart:add(item: starts:get(index: j));
-					j: j + 1;
+					dispRawStart:add(item: 0);
+				}, {
+					local Int is j: 0;
+					while({ j < cnt }, {
+						local Int is sp: Mem:loadI32(ptr: bufPtr, byteOffset: j * 8);
+						local Int is ep: Mem:loadI32(ptr: bufPtr, byteOffset: j * 8 + 4);
+						dispLines:add(item: line:substring(start: sp, end: ep));
+						dispRawLine:add(item: mr);
+						dispRawStart:add(item: sp);
+						j: j + 1;
+					});
+					Mem:free(ptr: bufPtr);
 				});
 				mr: mr + 1;
 			});
+			Mem:free(ptr: slotPtrs);
+			Mem:free(ptr: slotCounts);
 			lastWrapW: availTextW;
 			return;
 		});
