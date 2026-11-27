@@ -1331,7 +1331,7 @@ static void _spec_xdg_surf_configure(void* data, void* xdg_surf, uint32_t serial
         w->width = cw;
         w->height = ch;
     }
-    if (w->surface) {
+    if (w->surface && (!w->use_vulkan || !w->configured)) {
         uint32_t sv = _wl_proxy_get_version((struct wl_proxy*)w->surface);
         _wl_proxy_marshal_flags((struct wl_proxy*)w->surface, 6 /* WL_SURFACE_COMMIT */, NULL, sv, 0);
     }

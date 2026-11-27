@@ -1139,7 +1139,7 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
     return 1;
 }
 
-static void _spec_vk_destroy_swapchain_resources(SpecVulkanCtx* ctx) {
+static void _spec_vk_destroy_swapchain_attachments(SpecVulkanCtx* ctx) {
     if (!ctx || !ctx->device) return;
     if (ctx->framebuffers) {
         for (uint32_t i = 0; i < ctx->image_count; i++) {
@@ -1163,12 +1163,24 @@ static void _spec_vk_destroy_swapchain_resources(SpecVulkanCtx* ctx) {
     if (ctx->depth_view) { ctx->vkDestroyImageView(ctx->device, ctx->depth_view, NULL); ctx->depth_view = 0; }
     if (ctx->depth_image) { ctx->vkDestroyImage(ctx->device, ctx->depth_image, NULL); ctx->depth_image = 0; }
     if (ctx->depth_mem) { ctx->vkFreeMemory(ctx->device, ctx->depth_mem, NULL); ctx->depth_mem = 0; }
+}
+
+static void _spec_vk_destroy_swapchain_resources(SpecVulkanCtx* ctx) {
+    if (!ctx || !ctx->device) return;
+    _spec_vk_destroy_swapchain_attachments(ctx);
     if (ctx->swapchain) { ctx->vkDestroySwapchainKHR(ctx->device, ctx->swapchain, NULL); ctx->swapchain = 0; }
 }
 
 static int _spec_vk_create_swapchain_resources(SpecVulkanCtx* ctx, uint32_t req_w, uint32_t req_h) {
+    SpecVkSwapchainKHR old_swapchain = ctx->swapchain;
+    if (old_swapchain) {
+        _spec_vk_destroy_swapchain_attachments(ctx);
+        ctx->swapchain = 0;
+    }
+
     SpecVkSurfaceCapabilitiesKHR caps;
     if (ctx->vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->phys, ctx->surface, &caps) != SPEC_VK_SUCCESS) {
+        if (old_swapchain) ctx->vkDestroySwapchainKHR(ctx->device, old_swapchain, NULL);
         _spec_vk_set_error("vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed");
         return 0;
     }
@@ -1206,8 +1218,13 @@ static int _spec_vk_create_swapchain_resources(SpecVulkanCtx* ctx, uint32_t req_
     sci.compositeAlpha = SPEC_VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     sci.presentMode = SPEC_VK_PRESENT_MODE_FIFO_KHR;
     sci.clipped = SPEC_VK_TRUE;
+    sci.oldSwapchain = old_swapchain;
 
-    if (ctx->vkCreateSwapchainKHR(ctx->device, &sci, NULL, &ctx->swapchain) != SPEC_VK_SUCCESS) {
+    SpecVkResult sc_res = ctx->vkCreateSwapchainKHR(ctx->device, &sci, NULL, &ctx->swapchain);
+    if (old_swapchain) {
+        ctx->vkDestroySwapchainKHR(ctx->device, old_swapchain, NULL);
+    }
+    if (sc_res != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkCreateSwapchainKHR failed");
         return 0;
     }
@@ -2048,7 +2065,6 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
 
     if (width > 0 && height > 0 && ((uint32_t)width != ctx->extent.width || (uint32_t)height != ctx->extent.height)) {
         ctx->vkDeviceWaitIdle(ctx->device);
-        _spec_vk_destroy_swapchain_resources(ctx);
         if (!_spec_vk_create_swapchain_resources(ctx, (uint32_t)width, (uint32_t)height)) return 0;
     }
 
@@ -2059,7 +2075,6 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
     SpecVkResult acq = ctx->vkAcquireNextImageKHR(ctx->device, ctx->swapchain, ~0ULL, ctx->img_avail_sem[f], SPEC_VK_NULL_HANDLE, &img_idx);
     if (acq == SPEC_VK_ERROR_OUT_OF_DATE_KHR) {
         ctx->vkDeviceWaitIdle(ctx->device);
-        _spec_vk_destroy_swapchain_resources(ctx);
         if (!_spec_vk_create_swapchain_resources(ctx, (uint32_t)width, (uint32_t)height)) return 0;
         return 1;
     }
@@ -2222,7 +2237,6 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
     ctx->cur_frame = (f + 1U) & 1U;
     if (pres == SPEC_VK_ERROR_OUT_OF_DATE_KHR || pres == SPEC_VK_SUBOPTIMAL_KHR) {
         ctx->vkDeviceWaitIdle(ctx->device);
-        _spec_vk_destroy_swapchain_resources(ctx);
         if (!_spec_vk_create_swapchain_resources(ctx, (uint32_t)width, (uint32_t)height)) return 0;
     }
     return 1;
