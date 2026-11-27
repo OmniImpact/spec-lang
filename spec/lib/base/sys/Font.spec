@@ -514,6 +514,58 @@ Class is Font{
 		return math:toFloat(value: adv) * baseScale + tracking;
 	}
 
+	## Measures cumulative pixel X advances at each byte offset [0..len] of UTF-8 [text] in a single O(N) pass.
+	Function is measurePrefixAdvances(String is text, Int is pixelHeight: 16, Int is outAdvI32Ptr: 0, Int is scratchPtr: 0, Float is spacing: -1.0){
+		if({ outAdvI32Ptr == 0 }, { return; });
+		Mem:storeI32(ptr: outAdvI32Ptr, byteOffset: 0, val: 0);
+		if({ handle <= 0 || pixelHeight <= 0 || text == '' }, { return; });
+		local Int is bufPtr: scratchPtr;
+		if({ bufPtr == 0 }, {
+			:ensureMetricsBuf();
+			bufPtr: metricsAddr;
+		});
+		local Float is baseScale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
+		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
+		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
+		local Float is tabAdv: :spaceAdvance(pixelHeight: pixelHeight, baseScale: baseScale, tracking: tracking) * 4.0;
+		local Float is xpos: 0.0;
+		local Int is len: text:length();
+		local Int is idx: 0;
+		local Int is prevCp: 0;
+		local Int is prevH: 0;
+		while({ idx < len }, {
+			local Int is cp: :utf8CodeAt(text: text, idx: idx, len: len);
+			local Int is step: :utf8Step(text: text, idx: idx, len: len);
+			if({ cp == 9 }, {
+				xpos: xpos + tabAdv;
+				prevCp: 0;
+				prevH: 0;
+			}, {
+				if({ cp >= 32 }, {
+					local Int is gh: :resolveHandleFor(cp: cp);
+					local Float is gScale: if({ gh == handle }, { baseScale }, { base:sysinternal:Font:pal_font_scale(handle: gh, pixel_height: pixelHeight) });
+					if({ prevCp != 0 && prevH == gh }, {
+						local Int is kern: :kernAdvanceFor(fontHandle: gh, cp1: prevCp, cp2: cp);
+						xpos: xpos + math:toFloat(value: kern) * gScale;
+					});
+					base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: bufPtr);
+					local Int is adv: :signI32(v: Mem:loadI32(ptr: bufPtr, byteOffset: 0));
+					xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
+					prevCp: cp;
+					prevH: gh;
+				});
+			});
+			local Int is px: math:toInt(value: math:round(value: xpos));
+			local Int is nextIdx: idx + step;
+			local Int is bi: idx + 1;
+			while({ bi <= nextIdx && bi <= len }, {
+				Mem:storeI32(ptr: outAdvI32Ptr, byteOffset: bi * 4, val: px);
+				bi: bi + 1;
+			});
+			idx: nextIdx;
+		});
+	}
+
 	## Measures the horizontal pixel advance of UTF-8 [text] at [pixelHeight] using an explicit 8-byte [scratchPtr].
 	Function of Int is measureWidthWithScratch(String is text, Int is pixelHeight: 16, Int is scratchPtr: 0, Float is spacing: -1.0){
 		if({ handle <= 0 || pixelHeight <= 0 || text == '' }, { return 0; });

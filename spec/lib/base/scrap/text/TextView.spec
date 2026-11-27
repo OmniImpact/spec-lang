@@ -38,6 +38,9 @@ Class of SewNode is TextView{
 	Array of String is dispLines: Array(['']);
 	Array of Int is dispRawLine: Array([0]);
 	Array of Int is dispRawStart: Array([0]);
+	Array of Array of String is cachedLineSegs: Array();
+	Array of Array of Int is cachedLineStarts: Array();
+	Int is lastWrapFpx: 0;
 	Int is cursorLine: 0;
 	Int is cursorCol: 0;
 	Int is selAnchorLine: 0;
@@ -224,7 +227,7 @@ Class of SewNode is TextView{
 		lastWrapW: -1;
 	}
 
-	local Function is wrapSingleLine(
+	local Function is wrapLineSingle(
 		String is line,
 		Int is availTextW,
 		Int is fpx,
@@ -245,19 +248,20 @@ Class of SewNode is TextView{
 			return;
 		});
 		local Int is len: line:length();
+		local Int is advBuf: Mem:alloc(bytes: (len + 1) * 4);
+		DrawContext:shared:measurePrefixAdvances(text: line, pixelHeight: fpx, mono: mono, outAdvI32Ptr: advBuf, scratchPtr: scratchPtr);
 		local Int is pos: 0;
 		while({ pos < len }, {
+			local Int is baseAdv: Mem:loadI32(ptr: advBuf, byteOffset: pos * 4);
+			local Int is totalAdv: Mem:loadI32(ptr: advBuf, byteOffset: len * 4);
 			local Int is segEnd: len;
-			local Boolean is tailFits: if({ pos == 0 }, { false }, {
-				DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: len), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW
-			});
-			if({ !tailFits }, {
+			if({ totalAdv - baseAdv > availTextW }, {
 				local Int is lo: pos + 1;
 				local Int is hi: len - 1;
 				local Int is maxFit: pos + 1;
 				while({ lo <= hi }, {
 					local Int is mid: lo + (hi - lo) / 2;
-					if({ DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: mid), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW }, {
+					if({ Mem:loadI32(ptr: advBuf, byteOffset: mid * 4) - baseAdv <= availTextW }, {
 						maxFit: mid;
 						lo: mid + 1;
 					}, {
@@ -284,6 +288,7 @@ Class of SewNode is TextView{
 			outStarts:add(item: pos);
 			pos: segEnd;
 		});
+		Mem:free(ptr: advBuf);
 	}
 
 	local Function is wrapLineRanges(
@@ -308,22 +313,23 @@ Class of SewNode is TextView{
 			return;
 		});
 		local Int is len: line:length();
+		local Int is advBuf: Mem:alloc(bytes: (len + 1) * 4);
+		DrawContext:shared:measurePrefixAdvances(text: line, pixelHeight: fpx, mono: mono, outAdvI32Ptr: advBuf, scratchPtr: scratchPtr);
 		local Int is cap: 16;
 		local Int is buf: Mem:alloc(bytes: cap * 8);
 		local Int is cnt: 0;
 		local Int is pos: 0;
 		while({ pos < len }, {
+			local Int is baseAdv: Mem:loadI32(ptr: advBuf, byteOffset: pos * 4);
+			local Int is totalAdv: Mem:loadI32(ptr: advBuf, byteOffset: len * 4);
 			local Int is segEnd: len;
-			local Boolean is tailFits: if({ pos == 0 }, { false }, {
-				DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: len), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW
-			});
-			if({ !tailFits }, {
+			if({ totalAdv - baseAdv > availTextW }, {
 				local Int is lo: pos + 1;
 				local Int is hi: len - 1;
 				local Int is maxFit: pos + 1;
 				while({ lo <= hi }, {
 					local Int is mid: lo + (hi - lo) / 2;
-					if({ DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: mid), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW }, {
+					if({ Mem:loadI32(ptr: advBuf, byteOffset: mid * 4) - baseAdv <= availTextW }, {
 						maxFit: mid;
 						lo: mid + 1;
 					}, {
@@ -364,6 +370,7 @@ Class of SewNode is TextView{
 			cnt: cnt + 1;
 			pos: segEnd;
 		});
+		Mem:free(ptr: advBuf);
 		Mem:storeI32(ptr: slotCounts, byteOffset: rIdx * 4, val: cnt);
 		Mem:storeI64(ptr: slotPtrs, byteOffset: rIdx * 8, val: buf);
 	}
@@ -411,12 +418,18 @@ Class of SewNode is TextView{
 					return 0;
 				}
 			);
+			cachedLineSegs: Array();
+			cachedLineStarts: Array();
 			local Int is mr: 0;
 			while({ mr < rcount }, {
 				local String is line: rawLines:get(index: mr);
 				local Int is cnt: Mem:loadI32(ptr: slotCounts, byteOffset: mr * 4);
 				local Int is bufPtr: Mem:loadI64(ptr: slotPtrs, byteOffset: mr * 8);
+				local Array of String is lineSegs: Array();
+				local Array of Int is lineStarts: Array();
 				if({ bufPtr == 0 }, {
+					lineSegs:add(item: line);
+					lineStarts:add(item: 0);
 					dispLines:add(item: line);
 					dispRawLine:add(item: mr);
 					dispRawStart:add(item: 0);
@@ -425,25 +438,37 @@ Class of SewNode is TextView{
 					while({ j < cnt }, {
 						local Int is sp: Mem:loadI32(ptr: bufPtr, byteOffset: j * 8);
 						local Int is ep: Mem:loadI32(ptr: bufPtr, byteOffset: j * 8 + 4);
-						dispLines:add(item: line:substring(start: sp, end: ep));
+						local String is segStr: line:substring(start: sp, end: ep);
+						lineSegs:add(item: segStr);
+						lineStarts:add(item: sp);
+						dispLines:add(item: segStr);
 						dispRawLine:add(item: mr);
 						dispRawStart:add(item: sp);
 						j: j + 1;
 					});
 					Mem:free(ptr: bufPtr);
 				});
+				cachedLineSegs:add(item: lineSegs);
+				cachedLineStarts:add(item: lineStarts);
 				mr: mr + 1;
 			});
 			Mem:free(ptr: slotPtrs);
 			Mem:free(ptr: slotCounts);
 			lastWrapW: availTextW;
+			lastWrapFpx: fpx;
 			return;
 		});
 
+		cachedLineSegs: Array();
+		cachedLineStarts: Array();
 		local Int is r: 0;
 		while({ r < rcount }, {
 			local String is line: rawLines:get(index: r);
+			local Array of String is lineSegs: Array();
+			local Array of Int is lineStarts: Array();
 			if({ !wrapCached || availTextW <= fpx || line == '' }, {
+				lineSegs:add(item: line);
+				lineStarts:add(item: 0);
 				dispLines:add(item: line);
 				dispRawLine:add(item: r);
 				dispRawStart:add(item: 0);
@@ -452,28 +477,29 @@ Class of SewNode is TextView{
 					if({ lw > maxDispW }, { maxDispW: lw; });
 				});
 			}, {
-				local Array of String is segs: Array();
-				local Array of Int is starts: Array();
-				:wrapSingleLine(
+				:wrapLineSingle(
 					line: line,
 					availTextW: availTextW,
 					fpx: fpx,
 					mono: monoCached,
 					scratchPtr: 0,
-					outSegs: segs,
-					outStarts: starts
+					outSegs: lineSegs,
+					outStarts: lineStarts
 				);
 				local Int is j: 0;
-				while({ j < segs:length() }, {
-					dispLines:add(item: segs:get(index: j));
+				while({ j < lineSegs:length() }, {
+					dispLines:add(item: lineSegs:get(index: j));
 					dispRawLine:add(item: r);
-					dispRawStart:add(item: starts:get(index: j));
+					dispRawStart:add(item: lineStarts:get(index: j));
 					j: j + 1;
 				});
 			});
+			cachedLineSegs:add(item: lineSegs);
+			cachedLineStarts:add(item: lineStarts);
 			r: r + 1;
 		});
 		lastWrapW: availTextW;
+		lastWrapFpx: fpx;
 	}
 
 	local Function of String is joinRawLines(){
@@ -488,9 +514,11 @@ Class of SewNode is TextView{
 		return out;
 	}
 
-	local Function is notifyEdited(){
+	local Function is notifyEdited(Boolean is keepWrapCache: false){
 		local String is joined: :joinRawLines();
-		lastWrapW: -1;
+		if({ !keepWrapCache }, {
+			lastWrapW: -1;
+		});
 		ignoreSelfEmit: true;
 		text:emit(value: joined);
 		local Function is cb: onTextChange;
@@ -499,6 +527,63 @@ Class of SewNode is TextView{
 		cursorAlphaByte: 255;
 		lastBlinkMs: 0;
 		invalidate();
+	}
+
+	local Function of Boolean is updateWrapCacheForEdit(Int is sl, Int is el, Int is newEndLine){
+		if({ !wrapCached || lastWrapW <= 0 || lastWrapFpx <= 0 || cachedLineSegs:length() == 0 }, { return false; });
+		if({ lastWrapW <= lastWrapFpx }, { return false; });
+		local Array of Array of String is nextSegs: Array();
+		local Array of Array of Int is nextStarts: Array();
+		local Int is i: 0;
+		while({ i < sl && i < cachedLineSegs:length() }, {
+			nextSegs:add(item: cachedLineSegs:get(index: i));
+			nextStarts:add(item: cachedLineStarts:get(index: i));
+			i: i + 1;
+		});
+		local Int is ni: sl;
+		while({ ni <= newEndLine && ni < rawLines:length() }, {
+			local Array of String is segs: Array();
+			local Array of Int is starts: Array();
+			:wrapLineSingle(
+				line: rawLines:get(index: ni),
+				availTextW: lastWrapW,
+				fpx: lastWrapFpx,
+				mono: monoCached,
+				scratchPtr: 0,
+				outSegs: segs,
+				outStarts: starts
+			);
+			nextSegs:add(item: segs);
+			nextStarts:add(item: starts);
+			ni: ni + 1;
+		});
+		i: el + 1;
+		while({ i < cachedLineSegs:length() }, {
+			nextSegs:add(item: cachedLineSegs:get(index: i));
+			nextStarts:add(item: cachedLineStarts:get(index: i));
+			i: i + 1;
+		});
+		if({ nextSegs:length() != rawLines:length() }, { return false; });
+		cachedLineSegs: nextSegs;
+		cachedLineStarts: nextStarts;
+
+		dispLines: Array();
+		dispRawLine: Array();
+		dispRawStart: Array();
+		local Int is r: 0;
+		while({ r < cachedLineSegs:length() }, {
+			local Array of String is rSegs: cachedLineSegs:get(index: r);
+			local Array of Int is rStarts: cachedLineStarts:get(index: r);
+			local Int is j: 0;
+			while({ j < rSegs:length() }, {
+				dispLines:add(item: rSegs:get(index: j));
+				dispRawLine:add(item: r);
+				dispRawStart:add(item: rStarts:get(index: j));
+				j: j + 1;
+			});
+			r: r + 1;
+		});
+		return true;
 	}
 
 	local Function of Boolean is hasNonEmptySelection(){
@@ -598,7 +683,8 @@ Class of SewNode is TextView{
 			cursorCol: replacement:length() - (lastNl + 1);
 		});
 		hasSelection: false;
-		:notifyEdited();
+		local Boolean is kept: :updateWrapCacheForEdit(sl: sl, el: el, newEndLine: sl + repLines);
+		:notifyEdited(keepWrapCache: kept);
 	}
 
 	## Returns `true` when there is a non-empty text selection.
@@ -726,7 +812,7 @@ Class of SewNode is TextView{
 		local Int is gw: :gutterWidthPx(fpx: fpx);
 		local Int is availTextW: c:maxW - gw - padPx * 2;
 		if({ availTextW < fpx }, { availTextW: fpx; });
-		if({ lastWrapW == -1 || (wrapCached && lastWrapW != availTextW) }, {
+		if({ lastWrapW == -1 || (wrapCached && (lastWrapW != availTextW || lastWrapFpx != fpx)) }, {
 			:rebuildDisplayLines(availTextW: availTextW, fpx: fpx);
 		});
 
@@ -776,18 +862,26 @@ Class of SewNode is TextView{
 		local Int is relX: x - (b:x + gw + padPx);
 		local String is seg: dispLines:get(index: dispIdx);
 		local Int is bestCol: 0;
-		if({ relX > 0 }, {
-			local Int is bestDist: relX;
-			local Int is c: 1;
-			while({ c <= seg:length() }, {
-				local Int is w: :measureLinePrefix(ctx: DrawContext:shared, lineStr: seg, col: c, fpx: fpx);
-				local Int is d: if({ w >= relX }, { w - relX }, { relX - w });
-				if({ d <= bestDist }, {
-					bestDist: d;
-					bestCol: c;
+		if({ relX > 0 && seg:length() > 0 }, {
+			local Int is lo: 1;
+			local Int is hi: seg:length();
+			local Int is geIdx: seg:length();
+			while({ lo <= hi }, {
+				local Int is mid: lo + (hi - lo) / 2;
+				local Int is mw: :measureLinePrefix(ctx: DrawContext:shared, lineStr: seg, col: mid, fpx: fpx);
+				if({ mw >= relX }, {
+					geIdx: mid;
+					hi: mid - 1;
+				}, {
+					lo: mid + 1;
 				});
-				c: c + 1;
 			});
+			local Int is prevIdx: geIdx - 1;
+			local Int is wGe: :measureLinePrefix(ctx: DrawContext:shared, lineStr: seg, col: geIdx, fpx: fpx);
+			local Int is wPrev: if({ prevIdx > 0 }, { :measureLinePrefix(ctx: DrawContext:shared, lineStr: seg, col: prevIdx, fpx: fpx) }, { 0 });
+			local Int is dGe: if({ wGe >= relX }, { wGe - relX }, { relX - wGe });
+			local Int is dPrev: if({ wPrev >= relX }, { wPrev - relX }, { relX - wPrev });
+			bestCol: if({ dGe <= dPrev }, { geIdx }, { prevIdx });
 		});
 
 		local Int is rLine: dispRawLine:get(index: dispIdx);

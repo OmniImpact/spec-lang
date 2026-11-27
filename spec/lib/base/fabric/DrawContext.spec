@@ -308,6 +308,13 @@ Class is DrawContext{
 		return f:measureWidthWithScratch(text: text, pixelHeight: pixelHeight, scratchPtr: scratchPtr);
 	}
 
+	## Thread-safe O(N) single-pass cumulative advance measurement into [outAdvI32Ptr].
+	Function is measurePrefixAdvances(String is text, Int is pixelHeight: 15, Boolean is mono: false, Int is outAdvI32Ptr: 0, Int is scratchPtr: 0){
+		local Font is f: :styledFont(bold: false, italic: false, mono: mono);
+		if({ !f:isLoaded() }, { return; });
+		f:measurePrefixAdvances(text: text, pixelHeight: pixelHeight, outAdvI32Ptr: outAdvI32Ptr, scratchPtr: scratchPtr);
+	}
+
 	## Measures the line height for [pixelHeight].
 	Function of Int is measureTextHeight(Int is pixelHeight: 15){
 		return pixelHeight;
