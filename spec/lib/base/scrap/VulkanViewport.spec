@@ -26,6 +26,8 @@ Class of SewNode is VulkanViewport{
 	Float is heightPt: 180.0;
 	Boolean is sphereInCube: false;
 	Color is sphereColor: Color(r: 175, g: 178, b: 184);
+	Float is specularity: 0.55;
+	Float is reflectivity: 0.25;
 
 	Vulkan is vk: Vulkan();
 	Boolean is vkTried: false;
@@ -35,6 +37,7 @@ Class of SewNode is VulkanViewport{
 	Int is outBufBytes: 0;
 	CubeMesh is cube: CubeMesh();
 	CubeMesh is roomCube: CubeMesh(inward: true);
+	Int is roomVert36Addr: 0;
 	SphereMesh is sphere: SphereMesh();
 	Float is rotY: 0.4;
 	Float is rotX: 0.35;
@@ -45,14 +48,18 @@ Class of SewNode is VulkanViewport{
 		Float is heightPt: 180.0,
 		Boolean is sphereInCube: false,
 		Color is sphereColor: Color(r: 175, g: 178, b: 184),
+		Float is specularity: 0.55,
+		Float is reflectivity: 0.25,
 		String is tooltip: ''
 	){
 		:widthPt: widthPt;
 		:heightPt: heightPt;
 		:sphereInCube: sphereInCube;
 		:sphereColor: sphereColor;
+		:specularity: specularity;
+		:reflectivity: reflectivity;
 		:tooltip: tooltip;
-		:mvpAddr: alloc(bytes: 64);
+		:mvpAddr: alloc(bytes: 128);
 		:sphere: SphereMesh(
 			radius: 0.28,
 			r: (sphereColor:red() as Float) / 255.0,
@@ -80,13 +87,34 @@ Class of SewNode is VulkanViewport{
 		:invalidate();
 	}
 
+	Function is setSpecularity(Float is next){
+		local Float is v: next;
+		if({ v < 0.0 }, { v: 0.0; });
+		if({ v > 1.0 }, { v: 1.0; });
+		:specularity: v;
+		:invalidate();
+	}
+
+	Function is setReflectivity(Float is next){
+		local Float is v: next;
+		if({ v < 0.0 }, { v: 0.0; });
+		if({ v > 1.0 }, { v: 1.0; });
+		:reflectivity: v;
+		:invalidate();
+	}
+
 	local Function is ensureVulkan(Int is w, Int is h){
 		if({ vkTried }, { return; });
 		:vkTried: true;
 		local SpirvBuilder is vertSpv: SpirvBuilder();
-		vertSpv:buildColorVertexShader();
 		local SpirvBuilder is fragSpv: SpirvBuilder();
-		fragSpv:buildColorFragmentShader();
+		if({ sphereInCube }, {
+			vertSpv:buildLitReflectVertexShader();
+			fragSpv:buildLitReflectFragmentShader();
+		}, {
+			vertSpv:buildColorVertexShader();
+			fragSpv:buildColorFragmentShader();
+		});
 		local Boolean is ok: vk:createOffscreen(
 			width: w,
 			height: h,
@@ -100,6 +128,22 @@ Class of SewNode is VulkanViewport{
 		if({ !ok }, { return; });
 		vk:setClearColor(r: 0.0, g: 0.0, b: 0.0, a: 0.0);
 		if({ sphereInCube }, {
+			local Int is r36Bytes: 24 * 36;
+			if({ roomVert36Addr == 0 }, { :roomVert36Addr: alloc(bytes: r36Bytes); });
+			local Int is vi: 0;
+			while({ vi < 24 }, {
+				local Int is srcOff: vi * 24;
+				local Int is dstOff: vi * 36;
+				local Int is k: 0;
+				while({ k < 24 }, {
+					storeI32(ptr: roomVert36Addr, byteOffset: dstOff + k, val: loadI32(ptr: roomCube:vertAddr, byteOffset: srcOff + k));
+					k: k + 4;
+				});
+				vk:packF32(dstAddr: roomVert36Addr, byteOffset: dstOff + 24, val: 0.0);
+				vk:packF32(dstAddr: roomVert36Addr, byteOffset: dstOff + 28, val: 0.0);
+				vk:packF32(dstAddr: roomVert36Addr, byteOffset: dstOff + 32, val: 0.0);
+				vi: vi + 1;
+			});
 			vk:setMesh(
 				vertAddr: sphere:vertAddr,
 				vertBytes: sphere:vertBytes,
@@ -108,8 +152,8 @@ Class of SewNode is VulkanViewport{
 				idxCount: sphere:idxCount
 			);
 			vk:setBlendMesh(
-				vertAddr: roomCube:vertAddr,
-				vertBytes: roomCube:vertBytes,
+				vertAddr: roomVert36Addr,
+				vertBytes: r36Bytes,
 				idxAddr: roomCube:idxAddr,
 				idxBytes: roomCube:idxBytes,
 				idxCount: roomCube:idxCount
@@ -178,6 +222,14 @@ Class of SewNode is VulkanViewport{
 		});
 		local Mat4 is mvp: proj:mul(other: view):mul(other: model);
 		mvp:packF32(dstAddr: mvpAddr);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 64, val: specularity);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 68, val: reflectivity);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 72, val: 0.0);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 76, val: 0.0);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 80, val: 1.85);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 84, val: 0.35);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 88, val: 0.40);
+		vk:packF32(dstAddr: mvpAddr, byteOffset: 92, val: 0.45);
 
 		if({ !vk:renderToPixels(mvpF32Addr: mvpAddr, outPixelsAddr: outBufAddr, width: b:width, height: b:height) }, {
 			return;

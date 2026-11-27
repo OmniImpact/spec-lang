@@ -10,10 +10,12 @@ Class is VulkanPageView{
 		['base', 'sew', SewNode],
 		['base', 'sew', Row],
 		['base', 'sew', Column],
+		['base', 'sew', Grid],
 		['base', 'fabric', Color],
 		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
+		['base', 'scrap', Slider],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', ColorSwatchDropdown],
 		['base', 'scrap', VulkanViewport],
@@ -54,6 +56,33 @@ Class is VulkanPageView{
 			}
 		);
 
+		local TextEmitter is specLabel: TextEmitter(initial: '55%');
+		local TextEmitter is reflLabel: TextEmitter(initial: '25%');
+
+		local Slider is specSlider: Slider(
+			minVal: 0,
+			maxVal: 100,
+			value: 55,
+			minWidthPt: 110.0,
+			tooltip: 'Blinn-Phong specularity',
+			onChange: local Function(Int is v){
+				sphereCubeView:setSpecularity(next: (v as Float) / 100.0);
+				specLabel:emit(value: (v as String) . '%');
+			}
+		);
+
+		local Slider is reflSlider: Slider(
+			minVal: 0,
+			maxVal: 100,
+			value: 25,
+			minWidthPt: 110.0,
+			tooltip: 'Room-cube reflectivity',
+			onChange: local Function(Int is v){
+				sphereCubeView:setReflectivity(next: (v as Float) / 100.0);
+				reflLabel:emit(value: (v as String) . '%');
+			}
+		);
+
 		return SectionV(
 			children: Array([
 				Label(text: '3D Vulkan', style: TextStyle:H1),
@@ -79,6 +108,15 @@ Class is VulkanPageView{
 										children: Array([
 											Label(text: 'Sphere Color:'),
 											sphereColorPicker
+										])
+									),
+									Grid(
+										columns: 3,
+										colGapPt: 8.0,
+										rowGapPt: 6.0,
+										children: Array([
+											Label(text: 'Specularity'), specSlider, TextScrap(text: specLabel, muted: true),
+											Label(text: 'Reflectivity'), reflSlider, TextScrap(text: reflLabel, muted: true)
 										])
 									)
 								])

@@ -1594,7 +1594,7 @@ long long spec_pal_vulkan_create(
         goto fail;
     }
 
-    SpecVkPushConstantRange pcr = { SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64 };
+    SpecVkPushConstantRange pcr = { SPEC_VK_SHADER_STAGE_VERTEX_BIT | SPEC_VK_SHADER_STAGE_FRAGMENT_BIT, 0, 128 };
     SpecVkPipelineLayoutCreateInfo plci;
     memset(&plci, 0, sizeof(plci));
     plci.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -1697,6 +1697,20 @@ long long spec_pal_vulkan_create(
     }
 
     if (is_offscreen) {
+        SpecVkVertexInputBindingDescription bvbind = { 0, 36, SPEC_VK_VERTEX_INPUT_RATE_VERTEX };
+        SpecVkVertexInputAttributeDescription bvattrs[3] = {
+            { 0, 0, SPEC_VK_FORMAT_R32G32B32_SFLOAT, 0 },
+            { 1, 0, SPEC_VK_FORMAT_R32G32B32_SFLOAT, 12 },
+            { 2, 0, SPEC_VK_FORMAT_R32G32B32_SFLOAT, 24 }
+        };
+        SpecVkPipelineVertexInputStateCreateInfo bvi;
+        memset(&bvi, 0, sizeof(bvi));
+        bvi.sType = SPEC_VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        bvi.vertexBindingDescriptionCount = 1;
+        bvi.pVertexBindingDescriptions = &bvbind;
+        bvi.vertexAttributeDescriptionCount = 3;
+        bvi.pVertexAttributeDescriptions = bvattrs;
+
         SpecVkPipelineDepthStencilStateCreateInfo bds = ds;
         bds.depthWriteEnable = SPEC_VK_TRUE;
         SpecVkPipelineColorBlendAttachmentState bcba;
@@ -1709,6 +1723,7 @@ long long spec_pal_vulkan_create(
         bcb.attachmentCount = 1;
         bcb.pAttachments = &bcba;
         SpecVkGraphicsPipelineCreateInfo bgpci = gpci;
+        bgpci.pVertexInputState = &bvi;
         bgpci.pDepthStencilState = &bds;
         bgpci.pColorBlendState = &bcb;
         ctx->vkCreateGraphicsPipelines(ctx->device, SPEC_VK_NULL_HANDLE, 1, &bgpci, NULL, &ctx->blend_pipeline);
@@ -2154,7 +2169,7 @@ long long spec_pal_vulkan_render(long long handle, long long mvp_f32_ptr, long l
     ctx->vkCmdSetScissor(cmd, 0, 1, &sc);
 
     if (mvp_f32_ptr) {
-        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
+        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT | SPEC_VK_SHADER_STAGE_FRAGMENT_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
     }
 
     if (ctx->vertex_buf && ctx->index_buf && ctx->index_count > 0) {
@@ -2466,12 +2481,13 @@ long long spec_pal_vulkan_render_to_pixels(long long handle, long long mvp_f32_p
     ctx->vkCmdSetViewport(cmd, 0, 1, &vp);
     ctx->vkCmdSetScissor(cmd, 0, 1, &sc);
 
+    SpecVkPipeline active_pipe = (ctx->blend_pipeline && ctx->blend_index_count > 0) ? ctx->blend_pipeline : ctx->pipeline;
     if (ctx->vertex_buf && ctx->index_buf && ctx->index_count > 0 && mvp_f32_ptr) {
         SpecVkDeviceSize voff = 0;
-        ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->pipeline);
+        ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, active_pipe);
         ctx->vkCmdBindVertexBuffers(cmd, 0, 1, &ctx->vertex_buf, &voff);
         ctx->vkCmdBindIndexBuffer(cmd, ctx->index_buf, 0, SPEC_VK_INDEX_TYPE_UINT16);
-        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
+        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT | SPEC_VK_SHADER_STAGE_FRAGMENT_BIT, 0, 128, (const void*)(intptr_t)mvp_f32_ptr);
         ctx->vkCmdDrawIndexed(cmd, ctx->index_count, 1, 0, 0, 0);
     }
 
@@ -2480,7 +2496,7 @@ long long spec_pal_vulkan_render_to_pixels(long long handle, long long mvp_f32_p
         ctx->vkCmdBindPipeline(cmd, SPEC_VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->blend_pipeline);
         ctx->vkCmdBindVertexBuffers(cmd, 0, 1, &ctx->blend_vbuf, &voff);
         ctx->vkCmdBindIndexBuffer(cmd, ctx->blend_ibuf, 0, SPEC_VK_INDEX_TYPE_UINT16);
-        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT, 0, 64, (const void*)(intptr_t)mvp_f32_ptr);
+        ctx->vkCmdPushConstants(cmd, ctx->pipe_layout, SPEC_VK_SHADER_STAGE_VERTEX_BIT | SPEC_VK_SHADER_STAGE_FRAGMENT_BIT, 0, 128, (const void*)(intptr_t)mvp_f32_ptr);
         ctx->vkCmdDrawIndexed(cmd, ctx->blend_index_count, 1, 0, 0, 0);
     }
 
