@@ -421,6 +421,14 @@ Class of SewNode is SectionV{
 		return col:onScrollX(deltaX: deltaX);
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		return col:onOverlayScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		return col:onOverlayScrollX(deltaX: deltaX);
+	}
+
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		return col:onKey(key: key, mods: mods);
 	}

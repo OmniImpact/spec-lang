@@ -401,6 +401,10 @@ Class of SewNode is SelectDropdown{
 		return false;
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		return :onScroll(deltaY: deltaY);
+	}
+
 	replace Function of Boolean is onScroll(Int is deltaY){
 		if({ open }, {
 			local Int is bw: activeTheme:panelBorderPx(scaleFactor: activeScale:factor);

@@ -110,6 +110,14 @@ Class of SewNode is SingleChildNode{
 		return child:onScrollX(deltaX: deltaX);
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		return child:onOverlayScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		return child:onOverlayScrollX(deltaX: deltaX);
+	}
+
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		return child:onKey(key: key, mods: mods);
 	}

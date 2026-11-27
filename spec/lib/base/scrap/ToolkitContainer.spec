@@ -758,11 +758,11 @@ Class of SewNode is ToolkitContainer{
 			if({ sy != 0 && hasBody && !useVulkan }, {
 				hadActivity: true;
 				if({ (curMods & 1) != 0 }, {
-					if({ bodyPanel:onScrollX(deltaX: sy) }, {
+					if({ bodyPanel:onOverlayScrollX(deltaX: sy) || bodyPanel:onScrollX(deltaX: sy) }, {
 						:isDirty: true;
 					});
 				}, {
-					if({ bodyPanel:onScroll(deltaY: sy) }, {
+					if({ bodyPanel:onOverlayScroll(deltaY: sy) || bodyPanel:onScroll(deltaY: sy) }, {
 						:isDirty: true;
 					});
 				});

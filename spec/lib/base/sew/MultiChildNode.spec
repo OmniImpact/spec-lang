@@ -122,6 +122,24 @@ Class of SewNode is MultiChildNode{
 		return false;
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onOverlayScroll(deltaY: deltaY) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onOverlayScrollX(deltaX: deltaX) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
 	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
 		if({ pointerTransparent }, { return false; });
 		if({ :containsPoint(x: x, y: y) }, { return true; });

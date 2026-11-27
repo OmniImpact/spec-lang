@@ -471,6 +471,24 @@ Class of SewNode is GridFlex{
 		return false;
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		local Int is i: 0;
+		while({ i < panels:length() }, {
+			if({ panels:get(index: i):child:onOverlayScroll(deltaY: deltaY) }, { return true; });
+			i: i + 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		local Int is i: 0;
+		while({ i < panels:length() }, {
+			if({ panels:get(index: i):child:onOverlayScrollX(deltaX: deltaX) }, { return true; });
+			i: i + 1;
+		});
+		return false;
+	}
+
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
 		if({ :dividerAt(x: x, y: y) >= 0 }, {
 			return if({ horizontal }, { CursorShape:EW_RESIZE }, { CursorShape:NS_RESIZE });

@@ -414,6 +414,14 @@ Class of SewNode is SectionH{
 		return :rootNode():onScrollX(deltaX: deltaX);
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		return :rootNode():onOverlayScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		return :rootNode():onOverlayScrollX(deltaX: deltaX);
+	}
+
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		return :rootNode():onKey(key: key, mods: mods);
 	}

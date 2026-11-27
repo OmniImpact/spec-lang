@@ -130,6 +130,16 @@ Class is SewNode{
 		return false;
 	}
 
+	## Routes a vertical scroll event to an active floating overlay (e.g. Popover, Dropdown).
+	Function of Boolean is onOverlayScroll(Int is deltaY){
+		return false;
+	}
+
+	## Routes a horizontal scroll event to an active floating overlay (e.g. Popover, Dropdown).
+	Function of Boolean is onOverlayScrollX(Int is deltaX){
+		return false;
+	}
+
 	## Handles pointer click at ([x], [y], [mods]); returns `true` if redraw is needed.
 	Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		return false;

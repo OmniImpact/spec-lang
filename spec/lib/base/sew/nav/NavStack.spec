@@ -162,6 +162,14 @@ Class of SewNode is NavStack{
 		return :activeChild():onScrollX(deltaX: deltaX);
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		return :activeChild():onOverlayScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		return :activeChild():onOverlayScrollX(deltaX: deltaX);
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
 		return :activeChild():onPointerClickMod(x: x, y: y, mods: mods);
 	}

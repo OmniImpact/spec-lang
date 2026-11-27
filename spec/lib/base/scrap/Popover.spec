@@ -43,6 +43,8 @@ Class of SewNode is Popover{
 	Int is resizeStartPtrY: 0;
 	Int is resizeStartW: 0;
 	Int is resizeStartH: 0;
+	Int is lastPtrX: -1;
+	Int is lastPtrY: -1;
 	Rect is popupRect: Rect();
 	Int is lastViewW: 0;
 	Int is lastViewH: 0;
@@ -231,6 +233,26 @@ Class of SewNode is Popover{
 		return anchor:onScrollX(deltaX: deltaX);
 	}
 
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		if({ !open }, { return false; });
+		if({ content:onOverlayScroll(deltaY: deltaY) }, { return true; });
+		if({ :inRect(r: popupRect, x: lastPtrX, y: lastPtrY) }, {
+			content:onScroll(deltaY: deltaY);
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		if({ !open }, { return false; });
+		if({ content:onOverlayScrollX(deltaX: deltaX) }, { return true; });
+		if({ :inRect(r: popupRect, x: lastPtrX, y: lastPtrY) }, {
+			content:onScrollX(deltaX: deltaX);
+			return true;
+		});
+		return false;
+	}
+
 	replace Function of Size is measure(Constraints is c){
 		desiredSize: anchor:measure(c: c);
 		return desiredSize;
@@ -365,6 +387,8 @@ Class of SewNode is Popover{
 	}
 
 	replace Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
+		:lastPtrX: x;
+		:lastPtrY: y;
 		local Boolean is ghov: :inGrip(x: x, y: y);
 		local Int is rEdge: :hitResizeEdge(x: x, y: y);
 		if({ ghov != gripHovered || rEdge != hoverResizeMode }, {

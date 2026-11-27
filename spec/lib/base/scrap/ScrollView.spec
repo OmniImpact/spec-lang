@@ -500,4 +500,12 @@ Class of SewNode is ScrollView{
 	replace Function of Boolean is onOverlayPointerUp(Int is x, Int is y){
 		return child:onOverlayPointerUp(x: x, y: y);
 	}
+
+	replace Function of Boolean is onOverlayScroll(Int is deltaY){
+		return child:onOverlayScroll(deltaY: deltaY);
+	}
+
+	replace Function of Boolean is onOverlayScrollX(Int is deltaX){
+		return child:onOverlayScrollX(deltaX: deltaX);
+	}
 }
