@@ -236,6 +236,18 @@ Class of SewNode is ColorSelector{
 		ctx:fillRect(x: px, y: py, w: 1, h: 1, color: blended:withAlphaByte(a: ab):toArgb());
 	}
 
+	local Function of Float is innerRingEdgeAngle(Int is innerInR, Float is halfGapF){
+		local Float is halfSlot: activeScale:px(pt: 2.0) as Float;
+		if({ halfSlot < 2.0 }, { halfSlot: 2.0; });
+		local Float is halfOuter: halfSlot + 2.0;
+		local Float is rMin: (innerInR as Float) - 1.5;
+		if({ rMin < 1.0 }, { rMin: 1.0; });
+		local Float is ratio: (halfGapF + halfOuter) / rMin;
+		if({ ratio > 0.45 }, { ratio: 0.45; });
+		if({ ratio < 0.0 }, { ratio: 0.0; });
+		return asin(value: ratio);
+	}
+
 	local Function is drawFull(DrawContext is ctx, Rect is b){
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
@@ -259,6 +271,8 @@ Class of SewNode is ColorSelector{
 		local Int is cx: b:x + b:width / 2;
 		local Int is cy: b:y + ringD / 2;
 		local Float is piVal: pi();
+		local Float is edgeAng: :innerRingEdgeAngle(innerInR: innerInR, halfGapF: halfGapF);
+		local Float is spanAng: piVal - 2.0 * edgeAng;
 
 		local Int is dy: 0 - (outerR + 1);
 		while({ dy <= outerR + 1 }, {
@@ -284,17 +298,13 @@ Class of SewNode is ColorSelector{
 					local Float is halfRingDist: if({ inRadDist < gapEdge }, { inRadDist }, { gapEdge });
 					if({ halfRingDist >= -0.75 }, {
 						if({ dy <= 0 }, {
-							local Float is adjDy: ((0 - dy) as Float) - halfGapF;
-							if({ adjDy < 0.0 }, { adjDy: 0.0; });
-							local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
-							local Float is t: Color:clamp01(v: ang / piVal);
+							local Float is ang: atan2(y: (0 - dy) as Float, x: (0 - dx) as Float);
+							local Float is t: Color:clamp01(v: (ang - edgeAng) / spanAng);
 							local Color is sc: Color:fromHsl(hDeg: hueDeg, s: t, l: light);
 							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: sc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
 						}, {
-							local Float is adjDy: (dy as Float) - halfGapF;
-							if({ adjDy < 0.0 }, { adjDy: 0.0; });
-							local Float is ang: atan2(y: adjDy, x: (0 - dx) as Float);
-							local Float is t: Color:clamp01(v: ang / piVal);
+							local Float is ang: atan2(y: dy as Float, x: (0 - dx) as Float);
+							local Float is t: Color:clamp01(v: (ang - edgeAng) / spanAng);
 							local Color is lc: Color:fromHsl(hDeg: hueDeg, s: sat, l: t);
 							:paintAaBorderedPixel(ctx: ctx, px: cx + dx, py: cy + dy, fillC: lc, borderC: borderC, edgeDist: halfRingDist, bw: bw);
 						});
@@ -315,10 +325,10 @@ Class of SewNode is ColorSelector{
 		local Float is hueRad: (hueDeg * piVal) / 180.0;
 		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: hueRad, rIn: outerInR, rOut: outerR);
 
-		local Float is satRad: (sat - 1.0) * piVal;
+		local Float is satRad: (0.0 - piVal) + edgeAng + sat * spanAng;
 		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: satRad, rIn: innerInR, rOut: innerOutR);
 
-		local Float is lightRad: (1.0 - light) * piVal;
+		local Float is lightRad: piVal - edgeAng - light * spanAng;
 		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: lightRad, rIn: innerInR, rOut: innerOutR);
 
 		## Readouts below: Hex, RGB, HSL
@@ -391,6 +401,10 @@ Class of SewNode is ColorSelector{
 		local Int is dy: y - cy;
 		local Float is r: sqrt(value: (dx * dx + dy * dy) as Float);
 		local Float is piVal: pi();
+		local Float is ringGap: (outerInR - innerOutR) as Float;
+		if({ ringGap < 4.0 }, { ringGap: 4.0; });
+		local Float is edgeAng: :innerRingEdgeAngle(innerInR: innerInR, halfGapF: ringGap * 0.5);
+		local Float is spanAng: piVal - 2.0 * edgeAng;
 
 		if({ isPress }, {
 			if({ r >= (outerInR - 4) as Float && r <= (outerR + 4) as Float }, {
@@ -411,14 +425,14 @@ Class of SewNode is ColorSelector{
 		if({ dragTarget == 2 }, {
 			local Int is clampedDy: if({ dy > 0 }, { 0 }, { dy });
 			local Float is ang: atan2(y: (0 - clampedDy) as Float, x: (0 - dx) as Float);
-			:sat: Color:clamp01(v: ang / piVal);
+			:sat: Color:clamp01(v: (ang - edgeAng) / spanAng);
 			:syncFromHsl();
 			return true;
 		});
 		if({ dragTarget == 3 }, {
 			local Int is clampedDy: if({ dy < 0 }, { 0 }, { dy });
 			local Float is ang: atan2(y: clampedDy as Float, x: (0 - dx) as Float);
-			:light: Color:clamp01(v: ang / piVal);
+			:light: Color:clamp01(v: (ang - edgeAng) / spanAng);
 			:syncFromHsl();
 			return true;
 		});
