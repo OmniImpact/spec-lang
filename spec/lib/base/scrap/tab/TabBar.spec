@@ -265,12 +265,12 @@ Class of SewNode is TabBar{
 		});
 		if({ draggingTab }, {
 			DragDropState:shared:updatePointer(x: x, y: y);
-			local Int is targetIdx: (x - startX) / tw;
-			if({ x < startX }, { targetIdx: 0; });
-			if({ targetIdx < 0 }, { targetIdx: 0; });
-			if({ targetIdx >= tabs:length() }, { targetIdx: tabs:length() - 1; });
-			if({ targetIdx != dragTargetIdx }, {
-				:dragTargetIdx: targetIdx;
+			local Int is slot: (x - startX + tw / 2) / tw;
+			if({ x < startX }, { slot: 0; });
+			if({ slot < 0 }, { slot: 0; });
+			if({ slot > tabs:length() }, { slot: tabs:length(); });
+			if({ slot != dragTargetIdx }, {
+				:dragTargetIdx: slot;
 				invalidate();
 			});
 		});
@@ -280,14 +280,17 @@ Class of SewNode is TabBar{
 	replace Function of Boolean is onPointerUp(Int is x, Int is y){
 		if({ dragTabIdx >= 0 }, {
 			local Int is fromI: dragTabIdx;
-			local Int is toI: dragTargetIdx;
+			local Int is slot: dragTargetIdx;
 			local Boolean is wasDragging: draggingTab;
 			:dragTabIdx: -1;
 			:dragTargetIdx: -1;
 			:draggingTab: false;
 			DragDropState:shared:finishDrag();
-			if({ wasDragging && fromI != toI && toI >= 0 && toI < tabs:length() }, {
-				:moveTabItem(fromIdx: fromI, toIdx: toI);
+			if({ wasDragging && slot >= 0 && slot <= tabs:length() }, {
+				local Int is toI: if({ slot > fromI }, { slot - 1 }, { slot });
+				if({ toI != fromI && toI >= 0 && toI < tabs:length() }, {
+					:moveTabItem(fromIdx: fromI, toIdx: toI);
+				});
 			});
 			invalidate();
 			return true;
@@ -431,18 +434,13 @@ Class of SewNode is TabBar{
 					});
 				});
 			});
-			if({ reorderable && draggingTab && dragTargetIdx >= 0 && dragTargetIdx < count }, {
-				local Int is lineW: activeScale:px(pt: 2.5);
+			if({ reorderable && draggingTab && dragTargetIdx >= 0 && dragTargetIdx <= count }, {
+				local Int is lineW: activeScale:px(pt: 3.0);
 				if({ lineW < 3 }, { lineW: 3; });
-				local Int is targetX: startX + dragTargetIdx * tw;
-				local Int is ix: if({ dragTargetIdx > dragTabIdx }, { targetX + tw - lineW }, { targetX });
-				ctx:fillRect(x: ix, y: area:y, w: lineW, h: area:height, color: activeTheme:textAccent);
-				ctx:drawStyledBox(
-					x: targetX, y: area:y, w: tw, h: area:height,
-					bgColor: 0, borderColor: activeTheme:textAccent,
-					thickness: if({ lineW > 2 }, { 2 }, { lineW }),
-					radius: btnRad, style: activeTheme:buttonBorderStyle
-				);
+				local Int is divX: startX + dragTargetIdx * tw - lineW / 2;
+				if({ divX < area:x }, { divX: area:x; });
+				if({ divX + lineW > area:x + area:width }, { divX: area:x + area:width - lineW; });
+				ctx:fillRect(x: divX, y: area:y, w: lineW, h: area:height, color: activeTheme:textAccent);
 			});
 			ctx:clearClip();
 		});

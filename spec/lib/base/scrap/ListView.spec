@@ -270,21 +270,13 @@ Class of SewNode is ListView{
 			i: i + 1;
 		});
 
-		if({ reorderable && dragIdx >= 0 && dragMoved && dragTargetIdx >= 0 && dragTargetIdx < n }, {
-			local Int is lineH: activeScale:px(pt: 2.5);
+		if({ reorderable && dragIdx >= 0 && dragMoved && dragTargetIdx >= 0 && dragTargetIdx <= n }, {
+			local Int is lineH: activeScale:px(pt: 3.0);
 			if({ lineH < 3 }, { lineH: 3; });
-			local Int is rowY: clipY + dragTargetIdx * rh - scrollY;
-			local Int is targetY: rowY;
-			if({ dragTargetIdx > dragIdx }, {
-				targetY: targetY + rh - lineH;
-			});
-			ctx:fillRect(x: clipX, y: targetY, w: clipW, h: lineH, color: activeTheme:textAccent);
-			ctx:drawStyledBox(
-				x: clipX, y: rowY, w: clipW, h: rh,
-				bgColor: 0, borderColor: activeTheme:textAccent,
-				thickness: if({ lineH > 2 }, { 2 }, { lineH }),
-				radius: 0, style: activeTheme:buttonBorderStyle
-			);
+			local Int is divY: clipY + dragTargetIdx * rh - scrollY - lineH / 2;
+			if({ divY < clipY }, { divY: clipY; });
+			if({ divY + lineH > clipY + clipH }, { divY: clipY + clipH - lineH; });
+			ctx:fillRect(x: clipX, y: divY, w: clipW, h: lineH, color: activeTheme:textAccent);
 		});
 
 		if({ maxScrollY > 0 }, {
@@ -367,11 +359,11 @@ Class of SewNode is ListView{
 			local Int is ins: :insetPx();
 			local Int is rh: :rowHeightPx();
 			local Int is relY: y - (b:y + ins) + scrollY;
-			local Int is target: if({ rh > 0 }, { relY / rh }, { 0 });
-			if({ target < 0 }, { target: 0; });
-			if({ target >= items:length() }, { target: items:length() - 1; });
-			if({ target != dragTargetIdx }, {
-				:dragTargetIdx: target;
+			local Int is slot: if({ rh > 0 }, { (relY + rh / 2) / rh }, { 0 });
+			if({ slot < 0 }, { slot: 0; });
+			if({ slot > items:length() }, { slot: items:length(); });
+			if({ slot != dragTargetIdx }, {
+				:dragTargetIdx: slot;
 				:invalidate();
 			});
 			return true;
@@ -382,16 +374,19 @@ Class of SewNode is ListView{
 	replace Function of Boolean is onPointerUp(Int is x, Int is y){
 		if({ dragIdx >= 0 }, {
 			local Int is fromI: dragIdx;
-			local Int is toI: dragTargetIdx;
+			local Int is slot: dragTargetIdx;
 			local Boolean is moved: dragMoved;
 			:dragIdx: -1;
 			:dragTargetIdx: -1;
 			:dragMoved: false;
 			DragDropState:shared:finishDrag();
-			if({ moved && fromI != toI && toI >= 0 && toI < items:length() }, {
-				:moveItem(fromIdx: fromI, toIdx: toI);
-				local Function is rcb: :onReorder;
-				rcb(fromI, toI);
+			if({ moved && slot >= 0 && slot <= items:length() }, {
+				local Int is toI: if({ slot > fromI }, { slot - 1 }, { slot });
+				if({ toI != fromI && toI >= 0 && toI < items:length() }, {
+					:moveItem(fromIdx: fromI, toIdx: toI);
+					local Function is rcb: :onReorder;
+					rcb(fromI, toI);
+				});
 			});
 			:invalidate();
 			return true;
