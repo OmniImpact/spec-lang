@@ -1053,24 +1053,28 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
         ctx->fn = (PFN_spec_##fn)ctx->vkGetInstanceProcAddr(inst, #fn); \
         if (!ctx->fn) { _spec_vk_set_error("Missing Vulkan proc: " #fn); return 0; } \
     } while (0)
+    #define LOAD_IPROC_KHR(fn) do { \
+        ctx->fn = (PFN_spec_##fn)ctx->vkGetInstanceProcAddr(inst, #fn); \
+        if (!ctx->fn && !ctx->is_offscreen) { _spec_vk_set_error("Missing Vulkan proc: " #fn); return 0; } \
+    } while (0)
     LOAD_IPROC(vkDestroyInstance);
-    LOAD_IPROC(vkCreateWaylandSurfaceKHR);
-    LOAD_IPROC(vkDestroySurfaceKHR);
+    LOAD_IPROC_KHR(vkCreateWaylandSurfaceKHR);
+    LOAD_IPROC_KHR(vkDestroySurfaceKHR);
     LOAD_IPROC(vkEnumeratePhysicalDevices);
     LOAD_IPROC(vkGetPhysicalDeviceQueueFamilyProperties);
-    LOAD_IPROC(vkGetPhysicalDeviceSurfaceSupportKHR);
+    LOAD_IPROC_KHR(vkGetPhysicalDeviceSurfaceSupportKHR);
     LOAD_IPROC(vkGetPhysicalDeviceMemoryProperties);
-    LOAD_IPROC(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
-    LOAD_IPROC(vkGetPhysicalDeviceSurfaceFormatsKHR);
+    LOAD_IPROC_KHR(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
+    LOAD_IPROC_KHR(vkGetPhysicalDeviceSurfaceFormatsKHR);
     LOAD_IPROC(vkCreateDevice);
     LOAD_IPROC(vkDestroyDevice);
     LOAD_IPROC(vkGetDeviceQueue);
     LOAD_IPROC(vkDeviceWaitIdle);
-    LOAD_IPROC(vkCreateSwapchainKHR);
-    LOAD_IPROC(vkDestroySwapchainKHR);
-    LOAD_IPROC(vkGetSwapchainImagesKHR);
-    LOAD_IPROC(vkAcquireNextImageKHR);
-    LOAD_IPROC(vkQueuePresentKHR);
+    LOAD_IPROC_KHR(vkCreateSwapchainKHR);
+    LOAD_IPROC_KHR(vkDestroySwapchainKHR);
+    LOAD_IPROC_KHR(vkGetSwapchainImagesKHR);
+    LOAD_IPROC_KHR(vkAcquireNextImageKHR);
+    LOAD_IPROC_KHR(vkQueuePresentKHR);
     LOAD_IPROC(vkCreateImageView);
     LOAD_IPROC(vkDestroyImageView);
     LOAD_IPROC(vkCreateImage);

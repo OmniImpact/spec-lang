@@ -88,11 +88,11 @@ Class of SewNode is ProgressBar{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is bw: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
-		local Int is rad: b:height / 2;
+		local Int is rad: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
 		ctx:drawStyledBox(
 			x: b:x, y: b:y, w: b:width, h: b:height,
-			bgColor: activeTheme:hoverBg, borderColor: activeTheme:buttonBorderColorArgb(),
-			thickness: bw, radius: rad, style: activeTheme:buttonBorderStyle
+			bgColor: activeTheme:hoverBg, borderColor: 0,
+			thickness: 0, radius: rad, style: activeTheme:buttonBorderStyle
 		);
 
 		local Int is ins: bw;
@@ -102,21 +102,38 @@ Class of SewNode is ProgressBar{
 		local Int is trackH: b:height - ins * 2;
 		if({ trackW > 0 && trackH > 0 }, {
 			local Int is fillCol: activeTheme:highlight:toArgb();
-			local Int is fillRad: trackH / 2;
+			local Int is fillRad: if({ rad > ins }, { rad - ins }, { 0 });
+			if({ fillRad > trackH / 2 }, { fillRad: trackH / 2; });
 			ctx:setClip(x: trackX, y: trackY, w: trackW, h: trackH);
 			if({ indeterminate }, {
 				local Int is segW: trackW / 3;
 				if({ segW < 18 }, { segW: 18; });
+				if({ segW > trackW }, { segW: trackW; });
 				local Int is span: trackW + segW;
 				local Int is sx: trackX + (((animPhase * (span as Float)) + 0.5) as Int) - segW;
-				ctx:fillRoundRect(x: sx, y: trackY, w: segW, h: trackH, radius: fillRad, color: fillCol);
+				local Int is sx2: sx + segW;
+				if({ sx < trackX }, { sx: trackX; });
+				if({ sx2 > trackX + trackW }, { sx2: trackX + trackW; });
+				local Int is visW: sx2 - sx;
+				if({ visW > 0 }, {
+					ctx:fillRoundRect(x: sx, y: trackY, w: visW, h: trackH, radius: fillRad, color: fillCol);
+				});
 			}, {
 				local Int is fillW: (((trackW as Float) * value) + 0.5) as Int;
+				if({ fillW > trackW }, { fillW: trackW; });
 				if({ fillW > 0 }, {
 					ctx:fillRoundRect(x: trackX, y: trackY, w: fillW, h: trackH, radius: fillRad, color: fillCol);
 				});
 			});
 			ctx:clearClip();
+		});
+
+		if({ bw > 0 && activeTheme:buttonBorderStyle != 'none' }, {
+			ctx:drawStyledBox(
+				x: b:x, y: b:y, w: b:width, h: b:height,
+				bgColor: 0, borderColor: activeTheme:buttonBorderColorArgb(),
+				thickness: bw, radius: rad, style: activeTheme:buttonBorderStyle
+			);
 		});
 
 		if({ showLabel }, {

@@ -152,7 +152,9 @@ Class of SewNode is VulkanViewport{
 		:ensureVulkan(w: b:width, h: b:height);
 		if({ !vkReady }, {
 			local Int is fpx: activeScale:px(pt: activeTheme:baseTextPt);
-			ctx:drawText(x: b:x + 8, y: b:y + b:height / 2, text: 'Vulkan unavailable', color: activeTheme:textMuted, pixelHeight: fpx);
+			local String is errMsg: vk:lastError();
+			local String is msg: if({ errMsg != '' }, { 'Vulkan unavailable: ' . errMsg }, { 'Vulkan unavailable' });
+			ctx:drawText(x: b:x + 8, y: b:y + b:height / 2, text: msg, color: activeTheme:textMuted, pixelHeight: fpx);
 			return;
 		});
 
