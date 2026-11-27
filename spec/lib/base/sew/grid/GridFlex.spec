@@ -169,8 +169,8 @@ Class of SewNode is GridFlex{
 	}
 
 	replace Function of Size is measure(Constraints is c){
-		local Int is w: c:clampW(w: c:maxW);
-		local Int is h: c:clampH(h: c:maxH);
+		local Int is w: if({ c:isBoundedW() }, { c:clampW(w: c:maxW) }, { c:clampW(w: 320) });
+		local Int is h: if({ c:isBoundedH() }, { c:clampH(h: c:maxH) }, { c:clampH(h: 240) });
 		local Int is totalMain: if({ horizontal }, { w }, { h });
 		local Array of Int is sizes: :computeSizes(totalMain: totalMain);
 		local Int is i: 0;

@@ -82,10 +82,13 @@ Class of SewNode is Row{
 		});
 		local Int is totalW: fixedW + totalGap;
 		if({ flexCount > 0 }, {
-			local Int is remW: c:maxW - fixedW - totalGap;
-			if({ remW < 0 }, { remW: 0; });
-			local Int is eachW: remW / flexCount;
-			local Constraints is flexC: Constraints(minW: eachW, maxW: eachW, minH: 0, maxH: c:maxH);
+			local Constraints is flexC: loose;
+			if({ c:isBoundedW() }, {
+				local Int is remW: c:maxW - fixedW - totalGap;
+				if({ remW < 0 }, { remW: 0; });
+				local Int is eachW: remW / flexCount;
+				flexC: Constraints(minW: eachW, maxW: eachW, minH: 0, maxH: c:maxH);
+			});
 			times(count: count, worker: local Function(Int is i){
 				if({ i < flexFlags:length() && flexFlags:get(index: i) }, {
 					local Size is sz: children:get(index: i):measure(c: flexC);
@@ -93,7 +96,6 @@ Class of SewNode is Row{
 					if({ sz:height > maxH }, { maxH: sz:height; });
 				});
 			});
-			if({ c:maxH > maxH }, { maxH: c:maxH; });
 		});
 		desiredSize: Size(width: c:clampW(w: totalW), height: c:clampH(h: maxH));
 		return desiredSize;

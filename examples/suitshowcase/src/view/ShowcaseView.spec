@@ -84,7 +84,7 @@ Class is ShowcaseView{
 				NavRoute(name: 'lines', child: ScrollView(child: Padding(useThemePad: true, child: linesPage:build()))),
 				NavRoute(name: 'fills', child: ScrollView(child: Padding(useThemePad: true, child: fillsPage:build()))),
 				NavRoute(name: 'text', child: ScrollView(child: Padding(useThemePad: true, child: textPage:build()))),
-				NavRoute(name: 'data', child: ScrollView(allowHScroll: true, child: Padding(useThemePad: true, child: dataFeedbackPage:build())))
+				NavRoute(name: 'data', child: ScrollView(child: Padding(useThemePad: true, child: dataFeedbackPage:build())))
 			])
 		);
 

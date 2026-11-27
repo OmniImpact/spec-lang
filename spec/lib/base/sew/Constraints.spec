@@ -20,6 +20,14 @@ Class is Constraints{
 		:maxH: maxH;
 	}
 
+	Function of Boolean is isBoundedW(){
+		return maxW > 0 && maxW < 500000;
+	}
+
+	Function of Boolean is isBoundedH(){
+		return maxH > 0 && maxH < 500000;
+	}
+
 	Function of Int is clampW(Int is w){
 		if({ w < minW }, { return minW; });
 		if({ maxW > 0 && w > maxW }, { return maxW; });
