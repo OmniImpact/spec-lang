@@ -14,7 +14,8 @@ Class is Theme{
 		['base', 'fabric', LineColorStyle],
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
-		['base', 'fabric', BorderStyle]
+		['base', 'fabric', BorderStyle],
+		['base', 'fabric', FillStyle]
 	];
 
 	## Baseline theme colors
@@ -45,6 +46,13 @@ Class is Theme{
 	Int is customPanelBorderColor: 0;
 	Int is customDividerColor: 0;
 	Int is customButtonBorderColor: 0;
+	FillStyle is surfaceFill: FillStyle();
+	FillStyle is buttonFill: FillStyle();
+	Boolean is customSurfaceFill: false;
+	Boolean is customButtonFill: false;
+	Float is hoverBrightness: 0.08;
+	Float is hoverTintShiftDeg: 0.0;
+	Float is hoverSaturationShift: 0.0;
 	Int is textPrimary: 0;
 	Int is textMuted: 0;
 	Int is textAccent: 0;
@@ -498,6 +506,53 @@ Class is Theme{
 		:customButtonBorderColor: color:toArgb();
 	}
 
+	Function is setSurfaceFill(FillStyle is fill){
+		:customSurfaceFill: true;
+		:surfaceFill: fill;
+	}
+
+	Function is setButtonFill(FillStyle is fill){
+		:customButtonFill: true;
+		:buttonFill: fill;
+	}
+
+	Function is setHoverEffects(Float is brightness: 0.08, Float is tintShiftDeg: 0.0, Float is saturationShift: 0.0){
+		:customMetrics: true;
+		:hoverBrightness: brightness;
+		:hoverTintShiftDeg: tintShiftDeg;
+		:hoverSaturationShift: saturationShift;
+		:deriveColors();
+	}
+
+	Function of FillStyle is resolveButtonFill(Boolean is enabled, Boolean is selected, Boolean is hovered){
+		if({ !enabled }, {
+			return FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: toolbarBg));
+		});
+		if({ selected }, {
+			return FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: activeBg));
+		});
+		if({ customButtonFill }, {
+			if({ hovered }, {
+				return FillStyle(
+					mode: buttonFill:mode,
+					colorA: buttonFill:colorA,
+					colorB: buttonFill:colorB,
+					centerX: buttonFill:centerX,
+					centerY: buttonFill:centerY,
+					angleDeg: buttonFill:angleDeg,
+					blendWidth: buttonFill:blendWidth,
+					reflected: buttonFill:reflected,
+					brightness: buttonFill:brightness + hoverBrightness,
+					tintShiftDeg: buttonFill:tintShiftDeg + hoverTintShiftDeg,
+					saturationShift: buttonFill:saturationShift + hoverSaturationShift
+				);
+			});
+			return buttonFill;
+		});
+		local Int is bg: if({ hovered }, { hoverBg }, { menuBg });
+		return FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: bg));
+	}
+
 	Function of Int is linePx(Float is scaleFactor: 1.0){
 		if({ lineThicknessPt <= 0.0 }, { return 0; });
 		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });
@@ -543,6 +598,11 @@ Class is Theme{
 		:customPanelBorderColor: 0;
 		:customDividerColor: 0;
 		:customButtonBorderColor: 0;
+		:customSurfaceFill: false;
+		:customButtonFill: false;
+		:hoverBrightness: if({ preset == ThemePreset:LIGHT }, { -0.08 }, { 0.12 });
+		:hoverTintShiftDeg: 0.0;
+		:hoverSaturationShift: 0.0;
 		:panelBorderStyle: 'single';
 		:panelCornerRadiusPt: 0.0;
 		:panelShadowBlurPt: 0.0;
@@ -596,7 +656,15 @@ Class is Theme{
 		toolbarBorder: if({ light }, { detail:toArgb() }, { detail:mix(other: surface, t: 0.25):toArgb() });
 		menuBg: if({ light }, { background:mix(other: surface, t: 0.65):toArgb() }, { surface:lighten(amount: 0.04):toArgb() });
 		menuBorder: if({ light }, { surface:darken(amount: 0.23):toArgb() }, { highlight:lighten(amount: 0.08):toArgb() });
-		hoverBg: if({ light }, { surface:mix(other: highlight, t: 0.50):toArgb() }, { surface:mix(other: highlight, t: 0.65):toArgb() });
+		local Color is hoverBase: surface:mix(other: highlight, t: if({ light }, { 0.35 }, { 0.45 }));
+		local FillStyle is hoverFx: FillStyle(brightness: hoverBrightness, tintShiftDeg: hoverTintShiftDeg, saturationShift: hoverSaturationShift);
+		hoverBg: hoverFx:applyEffects(c: hoverBase):toArgb();
+		if({ !customSurfaceFill }, {
+			:surfaceFill: FillStyle(mode: 'solid', colorA: surface);
+		});
+		if({ !customButtonFill }, {
+			:buttonFill: FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: menuBg));
+		});
 		activeBg: highlight:toArgb();
 		panelBg: surface:toArgb();
 		panelBorder: if({ light }, { toolbarBorder }, { detail:lighten(amount: 0.08):withAlphaByte(a: 235):toArgb() });

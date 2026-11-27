@@ -12,7 +12,8 @@ Class is DrawContext{
 		['base', 'math', as Math()],
 		['base', 'struct', Array],
 		['base', 'suit', SuitCanvas],
-		['base', 'fabric', Color]
+		['base', 'fabric', Color],
+		['base', 'fabric', FillStyle]
 	];
 
 	held Font is sharedFont: Font();
@@ -307,6 +308,49 @@ Class is DrawContext{
 				dx: dx + 1;
 			});
 			dy: dy + 1;
+		});
+	}
+
+	## Fills a rounded rectangle using a [FillStyle] (solid, linear, or radial gradient + color effects).
+	Function is fillRoundRectStyled(Int is x, Int is y, Int is w, Int is h, Int is radius, FillStyle is fill){
+		if({ w <= 0 || h <= 0 }, { return; });
+		if({ fill:isSolid() }, {
+			:fillRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: fill:applyEffects(c: fill:colorA):toArgb());
+			return;
+		});
+		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
+		local Int is r: if({ radius > maxR }, { maxR }, { if({ radius < 0 }, { 0 }, { radius }) });
+		local Float is halfW: (w as Float) * 0.5;
+		local Float is halfH: (h as Float) * 0.5;
+		local Float is cx: (x as Float) + halfW;
+		local Float is cy: (y as Float) + halfH;
+		local Float is rf: r as Float;
+		local Float is wf: w as Float;
+		local Float is hf: h as Float;
+
+		local Int is py: y;
+		while({ py < y + h }, {
+			local Float is v: ((py - y) as Float + 0.5) / hf;
+			local Int is px: x;
+			while({ px < x + w }, {
+				local Float is cov: 1.0;
+				if({ r > 0 }, {
+					local Float is sd: :roundBoxSd(px: (px as Float) + 0.5, py: (py as Float) + 0.5, cx: cx, cy: cy, halfW: halfW, halfH: halfH, r: rf);
+					cov: :clamp01(v: 0.5 - sd);
+				});
+				if({ cov > 0.0 }, {
+					local Float is u: ((px - x) as Float + 0.5) / wf;
+					local Color is c: fill:sampleAt(u: u, v: v);
+					local Int is baseA: c:alpha();
+					local Int is ab: (((baseA as Float) * cov) + 0.5) as Int;
+					if({ ab > 0 }, {
+						local Int is col: if({ ab >= baseA }, { c:toArgb() }, { c:withAlphaByte(a: ab):toArgb() });
+						:fillRect(x: px, y: py, w: 1, h: 1, color: col);
+					});
+				});
+				px: px + 1;
+			});
+			py: py + 1;
 		});
 	}
 
@@ -614,6 +658,41 @@ Class is DrawContext{
 			return;
 		});
 		:strokeRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: borderColor, thickness: thickness);
+	}
+
+	## Draws a styled box using a [FillStyle] background plus optional drop/inner shadows and styled border.
+	Function is drawStyledBoxFill(
+		Int is x,
+		Int is y,
+		Int is w,
+		Int is h,
+		FillStyle is fill,
+		Int is borderColor,
+		Int is thickness: 1,
+		Int is radius: 0,
+		String is style: 'single',
+		Int is shadowOffsetX: 0,
+		Int is shadowOffsetY: 0,
+		Int is shadowBlur: 0,
+		Int is shadowColor: 1426063360,
+		Int is innerShadowOffsetX: 0,
+		Int is innerShadowOffsetY: 0,
+		Int is innerShadowBlur: 0,
+		Int is innerShadowColor: 1426063360
+	){
+		if({ w <= 0 || h <= 0 }, { return; });
+		if({ shadowColor != 0 && (shadowBlur > 0 || shadowOffsetX != 0 || shadowOffsetY != 0) }, {
+			:drawShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: shadowOffsetX, offsetY: shadowOffsetY, blurRadius: shadowBlur, color: shadowColor);
+		});
+		:fillRoundRectStyled(x: x, y: y, w: w, h: h, radius: radius, fill: fill);
+		if({ innerShadowColor != 0 && (innerShadowBlur > 0 || innerShadowOffsetX != 0 || innerShadowOffsetY != 0) }, {
+			:drawInnerShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: innerShadowOffsetX, offsetY: innerShadowOffsetY, blurRadius: innerShadowBlur, color: innerShadowColor);
+		});
+		:drawStyledBox(
+			x: x, y: y, w: w, h: h,
+			bgColor: 0, borderColor: borderColor, thickness: thickness,
+			radius: radius, style: style
+		);
 	}
 
 	## Draws a horizontal or vertical divider line using [style] (none/single/double/bevel/groove/inset/outset).

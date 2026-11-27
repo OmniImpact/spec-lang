@@ -16,7 +16,8 @@ Class of SewNode is StyledBox{
 		['base', 'fabric', LineColorStyle],
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
-		['base', 'fabric', BorderStyle]
+		['base', 'fabric', BorderStyle],
+		['base', 'fabric', FillStyle]
 	];
 
 	String is label: '';
@@ -33,6 +34,8 @@ Class of SewNode is StyledBox{
 	Float is innerShadowOffsetYPt: 0.0;
 	Float is innerShadowBlurPt: 0.0;
 	Int is innerShadowAlpha: 96;
+	FillStyle is fillStyle: FillStyle();
+	Boolean is useCustomFill: false;
 	Float is minWidthPt: 96.0;
 	Float is minHeightPt: 52.0;
 
@@ -169,25 +172,34 @@ Class of SewNode is StyledBox{
 		local Int is isxPx: activeScale:px(pt: innerShadowOffsetXPt);
 		local Int is isyPx: activeScale:px(pt: innerShadowOffsetYPt);
 		local Int is isbPx: if({ innerShadowBlurPt > 0.0 }, { activeScale:px(pt: innerShadowBlurPt) }, { 0 });
-		ctx:drawStyledBox(
-			x: bx,
-			y: by,
-			w: bw,
-			h: bh,
-			bgColor: activeTheme:panelBg,
-			borderColor: bCol,
-			thickness: tPx,
-			radius: rPx,
-			style: borderStyle,
-			shadowOffsetX: sxPx,
-			shadowOffsetY: syPx,
-			shadowBlur: sbPx,
-			shadowColor: sCol,
-			innerShadowOffsetX: isxPx,
-			innerShadowOffsetY: isyPx,
-			innerShadowBlur: isbPx,
-			innerShadowColor: inSCol
-		);
+		if({ useCustomFill }, {
+			ctx:drawStyledBoxFill(
+				x: bx, y: by, w: bw, h: bh,
+				fill: fillStyle, borderColor: bCol, thickness: tPx, radius: rPx, style: borderStyle,
+				shadowOffsetX: sxPx, shadowOffsetY: syPx, shadowBlur: sbPx, shadowColor: sCol,
+				innerShadowOffsetX: isxPx, innerShadowOffsetY: isyPx, innerShadowBlur: isbPx, innerShadowColor: inSCol
+			);
+		}, {
+			ctx:drawStyledBox(
+				x: bx,
+				y: by,
+				w: bw,
+				h: bh,
+				bgColor: activeTheme:panelBg,
+				borderColor: bCol,
+				thickness: tPx,
+				radius: rPx,
+				style: borderStyle,
+				shadowOffsetX: sxPx,
+				shadowOffsetY: syPx,
+				shadowBlur: sbPx,
+				shadowColor: sCol,
+				innerShadowOffsetX: isxPx,
+				innerShadowOffsetY: isyPx,
+				innerShadowBlur: isbPx,
+				innerShadowColor: inSCol
+			);
+		});
 		if({ label != '' }, {
 			local Int is fpx: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: 13.0));
 			if({ fpx < 10 }, { fpx: 10; });

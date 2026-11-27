@@ -32,10 +32,11 @@ Class is ShowcaseView{
 		['suitshowcase', 'view', DropdownsPageView],
 		['suitshowcase', 'view', ColorPageView],
 		['suitshowcase', 'view', LinesBordersPageView],
+		['suitshowcase', 'view', FillEffectsPageView],
 		['suitshowcase', 'view', TextTreePageView]
 	];
 
-	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'lines', 'text']);
+	Array of String is categoryRoutes: Array(['intro', 'theme', 'grid', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'lines', 'fills', 'text']);
 
 	local Function of Int is routeIndex(String is routeName){
 		local Int is i: 0;
@@ -57,6 +58,7 @@ Class is ShowcaseView{
 		local DropdownsPageView is dropdownsPage: DropdownsPageView(vm: vm);
 		local ColorPageView is colorPage: ColorPageView(vm: vm);
 		local LinesBordersPageView is linesPage: LinesBordersPageView(vm: vm);
+		local FillEffectsPageView is fillsPage: FillEffectsPageView(vm: vm);
 		local TextTreePageView is textPage: TextTreePageView(vm: vm);
 
 		local NavStack is navStack: NavStack(
@@ -72,13 +74,14 @@ Class is ShowcaseView{
 				NavRoute(name: 'dropdowns', child: ScrollView(child: Padding(useThemePad: true, child: dropdownsPage:build()))),
 				NavRoute(name: 'colors', child: ScrollView(child: Padding(useThemePad: true, child: colorPage:build()))),
 				NavRoute(name: 'lines', child: ScrollView(child: Padding(useThemePad: true, child: linesPage:build()))),
+				NavRoute(name: 'fills', child: ScrollView(child: Padding(useThemePad: true, child: fillsPage:build()))),
 				NavRoute(name: 'text', child: ScrollView(child: Padding(useThemePad: true, child: textPage:build())))
 			])
 		);
 
 		local SectionV is sidebar: SectionV(
 			segmented: true,
-			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Lines & Borders', 'Text & Tree']),
+			options: Array(['Intro', 'Theme Builder', 'Grid Layout', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Lines & Borders', 'Fill & Effects', 'Text & Tree']),
 			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
 			itemMinWidthPt: 132.0,
 			itemHeightPt: 24.0,

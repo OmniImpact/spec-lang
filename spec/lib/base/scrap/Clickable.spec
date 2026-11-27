@@ -13,6 +13,7 @@ Class of SewNode is Clickable{
 		['base', 'sew', SuitUnit],
 		['base', 'sew', Pt],
 		['base', 'fabric', Theme],
+		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext]
 	];
 
@@ -163,17 +164,9 @@ Class of SewNode is Clickable{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local Int is bg: if({ !enabled }, { activeTheme:toolbarBg }, {
-			if({ selected }, { activeTheme:activeBg }, {
-				if({ hovered }, { activeTheme:hoverBg }, { activeTheme:menuBg })
-			})
-		});
+		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: selected, hovered: hovered);
 		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
-		if({ radPx > 0 }, {
-			ctx:fillRoundRect(x: b:x, y: b:y, w: b:width, h: b:height, radius: radPx, color: bg);
-		}, {
-			ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
-		});
+		ctx:fillRoundRectStyled(x: b:x, y: b:y, w: b:width, h: b:height, radius: radPx, fill: fill);
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
