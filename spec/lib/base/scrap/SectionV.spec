@@ -23,12 +23,18 @@ Class of SewNode is SectionV{
 	String is title: '';
 	Float is gapPt: 0.0;
 	Boolean is segmented: false;
+	Boolean is reorderable: false;
 	Int is selectedIndex: -1;
 	Float is itemMinWidthPt: 0.0;
 	Float is itemHeightPt: 0.0;
 	Function is onSelect: local Function(Int is _idx){};
+	Function is onReorder: local Function(Int is _from, Int is _to){};
 	Array of Clickable is segmentItems: Array();
 	Column is col: Column();
+	Int is dragIdx: -1;
+	Int is dragTargetIdx: -1;
+	Int is dragStartY: 0;
+	Boolean is dragMoved: false;
 
 	replace Function is init(
 		String is title: '',
@@ -36,19 +42,23 @@ Class of SewNode is SectionV{
 		Array of Boolean is flexFlags: Array(),
 		Float is gapPt: 0.0,
 		Boolean is segmented: false,
+		Boolean is reorderable: false,
 		Array of String is options: Array(),
 		Int is selectedIndex: -1,
 		Float is itemMinWidthPt: 0.0,
 		Float is itemHeightPt: 0.0,
-		Function is onSelect: local Function(Int is _idx){}
+		Function is onSelect: local Function(Int is _idx){},
+		Function is onReorder: local Function(Int is _from, Int is _to){}
 	){
 		:title: title;
 		:gapPt: gapPt;
 		:segmented: segmented;
+		:reorderable: reorderable;
 		:selectedIndex: selectedIndex;
 		:itemMinWidthPt: itemMinWidthPt;
 		:itemHeightPt: itemHeightPt;
 		:onSelect: onSelect;
+		:onReorder: onReorder;
 		:segmentItems: Array();
 		local Array of SewNode is allChildren: Array();
 		local Array of Boolean is allFlex: Array();
@@ -220,6 +230,76 @@ Class of SewNode is SectionV{
 				});
 			});
 		});
+		if({ reorderable && dragIdx >= 0 && dragMoved && dragTargetIdx >= 0 && dragTargetIdx < segmentItems:length() }, {
+			local Rect is tb: segmentItems:get(index: dragTargetIdx):bounds();
+			local Int is lineH: activeScale:px(pt: 2.0);
+			if({ lineH < 2 }, { lineH: 2; });
+			local Int is iy: if({ dragTargetIdx > dragIdx }, { tb:y + tb:height - lineH }, { tb:y });
+			ctx:fillRect(x: tb:x, y: iy, w: tb:width, h: lineH, color: activeTheme:textAccent);
+		});
+	}
+
+	local Function is reorderSegment(Int is fromIdx, Int is toIdx){
+		local Int is n: segmentItems:length();
+		if({ fromIdx < 0 || fromIdx >= n || toIdx < 0 || toIdx >= n || fromIdx == toIdx }, { return; });
+		local Clickable is moved: segmentItems:get(index: fromIdx);
+		local Array of Clickable is nextSegs: Array();
+		local Int is i: 0;
+		while({ i < n }, {
+			if({ i != fromIdx }, { nextSegs:add(item: segmentItems:get(index: i)); });
+			i: i + 1;
+		});
+		local Array of Clickable is finalSegs: Array();
+		local Int is j: 0;
+		local Boolean is inserted: false;
+		while({ j < nextSegs:length() }, {
+			if({ j == toIdx }, {
+				finalSegs:add(item: moved);
+				inserted: true;
+			});
+			finalSegs:add(item: nextSegs:get(index: j));
+			j: j + 1;
+		});
+		if({ !inserted }, { finalSegs:add(item: moved); });
+		:segmentItems: finalSegs;
+
+		if({ selectedIndex == fromIdx }, {
+			:selectedIndex: toIdx;
+		}, {
+			if({ fromIdx < selectedIndex && toIdx >= selectedIndex }, {
+				:selectedIndex: selectedIndex - 1;
+			}, {
+				if({ fromIdx > selectedIndex && toIdx <= selectedIndex }, {
+					:selectedIndex: selectedIndex + 1;
+				});
+			});
+		});
+
+		local Array of SewNode is newChildren: Array();
+		if({ title != '' && col:children:length() > 0 }, {
+			newChildren:add(item: col:children:get(index: 0));
+		});
+		local Int is k: 0;
+		while({ k < finalSegs:length() }, {
+			local Int is idx: k;
+			local Clickable is item: finalSegs:get(index: idx);
+			item:onClick: local Function(){
+				:setSelectedIndex(index: idx);
+				local Function is cb: :onSelect;
+				cb(idx);
+			};
+			item:setSelected(next: idx == selectedIndex);
+			if({ segmented }, {
+				item:roundTop: idx == 0;
+				item:roundBottom: idx == n - 1;
+				item:roundLeft: idx == 0 || idx == n - 1;
+				item:roundRight: idx == 0 || idx == n - 1;
+			});
+			newChildren:add(item: item);
+			k: k + 1;
+		});
+		col:children: newChildren;
+		:invalidate();
 	}
 
 	replace Function is paintOverlay(DrawContext is ctx){
@@ -260,6 +340,19 @@ Class of SewNode is SectionV{
 	}
 
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ reorderable && segmentItems:length() > 1 }, {
+			local Int is i: 0;
+			while({ i < segmentItems:length() }, {
+				if({ segmentItems:get(index: i):containsPoint(x: x, y: y) }, {
+					:dragIdx: i;
+					:dragTargetIdx: i;
+					:dragStartY: y;
+					:dragMoved: false;
+					i: segmentItems:length();
+				});
+				i: i + 1;
+			});
+		});
 		return col:onPointerClickMod(x: x, y: y, mods: mods);
 	}
 
@@ -268,10 +361,49 @@ Class of SewNode is SectionV{
 	}
 
 	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		if({ reorderable && dragIdx >= 0 && segmentItems:length() > 1 }, {
+			local Int is dy: y - dragStartY;
+			if({ dy < 0 }, { dy: 0 - dy; });
+			if({ dy > 4 }, { :dragMoved: true; });
+			if({ dragMoved }, {
+				local Int is n: segmentItems:length();
+				local Int is newTarget: n - 1;
+				local Int is i: 0;
+				while({ i < n }, {
+					local Rect is ib: segmentItems:get(index: i):bounds();
+					if({ y < ib:y + ib:height / 2 }, {
+						newTarget: i;
+						i: n;
+					});
+					i: i + 1;
+				});
+				if({ newTarget != dragTargetIdx }, {
+					:dragTargetIdx: newTarget;
+					:invalidate();
+				});
+				return true;
+			});
+		});
 		return col:onPointerDrag(x: x, y: y, mods: mods);
 	}
 
 	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		if({ dragIdx >= 0 }, {
+			local Int is fromI: dragIdx;
+			local Int is toI: dragTargetIdx;
+			local Boolean is moved: dragMoved;
+			:dragIdx: -1;
+			:dragTargetIdx: -1;
+			:dragMoved: false;
+			if({ moved && fromI != toI && toI >= 0 && toI < segmentItems:length() }, {
+				:reorderSegment(fromIdx: fromI, toIdx: toI);
+				local Function is rcb: :onReorder;
+				rcb(fromI, toI);
+				col:onPointerUp(x: x, y: y);
+				return true;
+			});
+			:invalidate();
+		});
 		return col:onPointerUp(x: x, y: y);
 	}
 
