@@ -15,4 +15,9 @@ Class is Rect{
 		:width: width;
 		:height: height;
 	}
+
+	## Returns true when ([px], [py]) lies within this rectangle.
+	Function of Boolean is contains(Int is px, Int is py){
+		return px >= x && px < x + width && py >= y && py < y + height;
+	}
 }

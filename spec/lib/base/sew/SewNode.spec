@@ -145,7 +145,7 @@ Class is SewNode{
 
 	## Returns `true` when ([x], [y]) lies inside this node's arranged bounds.
 	Function of Boolean is containsPoint(Int is x, Int is y){
-		return x >= layoutBounds:x && x < layoutBounds:x + layoutBounds:width && y >= layoutBounds:y && y < layoutBounds:y + layoutBounds:height;
+		return layoutBounds:contains(px: x, py: y);
 	}
 
 	## Returns `true` when this surface intercepts pointer events at ([x], [y]) instead of passing them through.

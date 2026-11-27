@@ -97,16 +97,6 @@ Class is Color{
 		return :tint(target: Color(r: 0, g: 0, b: 0, a: :alpha()), amount: amount);
 	}
 
-	local Function of Float is hueToRgb(Float is p, Float is q, Float is tRaw){
-		local Float is t: tRaw;
-		if({ t < 0.0 }, { t: t + 1.0; });
-		if({ t > 1.0 }, { t: t - 1.0; });
-		if({ t < (1.0 / 6.0) }, { return p + (q - p) * 6.0 * t; });
-		if({ t < 0.5 }, { return q; });
-		if({ t < (2.0 / 3.0) }, { return p + (q - p) * ((2.0 / 3.0) - t) * 6.0; });
-		return p;
-	}
-
 	Function of Color is rotateHue(Float is degrees){
 		local Float is r: (:red() as Float) / 255.0;
 		local Float is g: (:green() as Float) / 255.0;
@@ -141,9 +131,9 @@ Class is Color{
 
 		local Float is q: if({ l < 0.5 }, { l * (1.0 + s) }, { l + s - l * s });
 		local Float is p: 2.0 * l - q;
-		local Int is nr: ((:hueToRgb(p: p, q: q, tRaw: h + (1.0 / 3.0)) * 255.0) + 0.5) as Int;
-		local Int is ng: ((:hueToRgb(p: p, q: q, tRaw: h) * 255.0) + 0.5) as Int;
-		local Int is nb: ((:hueToRgb(p: p, q: q, tRaw: h - (1.0 / 3.0)) * 255.0) + 0.5) as Int;
+		local Int is nr: ((Color:hslChan(p: p, q: q, tRaw: h + (1.0 / 3.0)) * 255.0) + 0.5) as Int;
+		local Int is ng: ((Color:hslChan(p: p, q: q, tRaw: h) * 255.0) + 0.5) as Int;
+		local Int is nb: ((Color:hslChan(p: p, q: q, tRaw: h - (1.0 / 3.0)) * 255.0) + 0.5) as Int;
 		return Color(r: nr, g: ng, b: nb, a: :alpha());
 	}
 

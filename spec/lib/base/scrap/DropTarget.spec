@@ -1,23 +1,19 @@
 #! Package base:scrap
 #! Drop zone wrapper (`SewNode`) that highlights when a [Draggable] hovers during a drag and fires [onDrop] on release.
 
-Class of SewNode is DropTarget{
+Class of SingleChildNode is DropTarget{
 	replace [String] is namespace: ['base', 'scrap'];
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sew', SewNode],
-		['base', 'sew', Size],
+		['base', 'sew', SingleChildNode],
 		['base', 'sew', Rect],
-		['base', 'sew', Constraints],
-		['base', 'sew', Scale],
-		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', DragDropState]
 	];
 
-	SewNode is child: SewNode();
 	Function is onDrop: local Function(String is _payload){};
 	Boolean is dragHover: false;
 
@@ -30,31 +26,6 @@ Class of SewNode is DropTarget{
 		:onDrop: onDrop;
 		:dragHover: false;
 		:tooltip: tooltip;
-	}
-
-	replace Function is applyTheme(Theme is theme){
-		:activeTheme: theme;
-		child:applyTheme(theme: theme);
-	}
-
-	replace Function is setScale(Scale is scale){
-		:activeScale: scale;
-		child:setScale(scale: scale);
-	}
-
-	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: Array([cb]);
-		child:bindDirty(cb: cb);
-	}
-
-	replace Function of Size is measure(Constraints is c){
-		desiredSize: child:measure(c: c);
-		return desiredSize;
-	}
-
-	replace Function is arrange(Rect is bounds){
-		layoutBounds: bounds;
-		child:arrange(bounds: bounds);
 	}
 
 	replace Function is paint(DrawContext is ctx){

@@ -1,22 +1,18 @@
 #! Package base:scrap
 #! Mouse-follow container primitive (`SewNode`) that tracks pointer position inside its bounds and paints an optional follower badge.
 
-Class of SewNode is MouseFollow{
+Class of SingleChildNode is MouseFollow{
 	replace [String] is namespace: ['base', 'scrap'];
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sew', SewNode],
-		['base', 'sew', Size],
+		['base', 'sew', SingleChildNode],
 		['base', 'sew', Rect],
-		['base', 'sew', Constraints],
-		['base', 'sew', Scale],
-		['base', 'fabric', Theme],
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext]
 	];
 
-	SewNode is child: SewNode();
 	String is badgeText: '';
 	Boolean is showCrosshair: false;
 	Function is onFollow: local Function(Int is _x, Int is _y){};
@@ -35,31 +31,6 @@ Class of SewNode is MouseFollow{
 		:badgeText: badgeText;
 		:showCrosshair: showCrosshair;
 		:onFollow: onFollow;
-	}
-
-	replace Function is applyTheme(Theme is theme){
-		:activeTheme: theme;
-		child:applyTheme(theme: theme);
-	}
-
-	replace Function is setScale(Scale is scale){
-		:activeScale: scale;
-		child:setScale(scale: scale);
-	}
-
-	replace Function is bindDirty(Function is cb){
-		:dirtyListeners: Array([cb]);
-		child:bindDirty(cb: cb);
-	}
-
-	replace Function of Size is measure(Constraints is c){
-		desiredSize: child:measure(c: c);
-		return desiredSize;
-	}
-
-	replace Function is arrange(Rect is bounds){
-		layoutBounds: bounds;
-		child:arrange(bounds: bounds);
 	}
 
 	replace Function is paint(DrawContext is ctx){
