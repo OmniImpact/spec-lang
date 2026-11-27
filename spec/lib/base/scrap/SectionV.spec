@@ -230,45 +230,6 @@ Class of SewNode is SectionV{
 						di: di + 1;
 					});
 				});
-				if({ btnPx > 0 }, {
-					local Int is segCount: count - startIdx;
-					local Int is si: startIdx;
-					while({ si < count }, {
-						local SewNode is ch: col:children:get(index: si);
-						if({ ch:isSelected() || ch:isFocused() }, {
-							local Rect is cb: ch:bounds();
-							if({ cb:width > 0 && cb:height > 0 }, {
-								if({ segCount == 1 || (si > startIdx && si < count - 1) || radPx <= 0 }, {
-									local Int is segRad: if({ segCount == 1 }, { radPx }, { 0 });
-									ctx:drawStyledBox(
-										x: cb:x, y: cb:y, w: cb:width, h: cb:height,
-										bgColor: 0, borderColor: activeTheme:textAccent,
-										thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
-									);
-								}, {
-									ctx:setClip(x: cb:x, y: cb:y, w: cb:width, h: cb:height);
-									if({ si == startIdx }, {
-										ctx:drawStyledBox(
-											x: cb:x, y: cb:y, w: cb:width, h: cb:height + radPx,
-											bgColor: 0, borderColor: activeTheme:textAccent,
-											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
-										);
-										ctx:fillRect(x: cb:x, y: cb:y + cb:height - btnPx, w: cb:width, h: btnPx, color: activeTheme:textAccent);
-									}, {
-										ctx:drawStyledBox(
-											x: cb:x, y: cb:y - radPx, w: cb:width, h: cb:height + radPx,
-											bgColor: 0, borderColor: activeTheme:textAccent,
-											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
-										);
-										ctx:fillRect(x: cb:x, y: cb:y, w: cb:width, h: btnPx, color: activeTheme:textAccent);
-									});
-									ctx:clearClip();
-								});
-							});
-						});
-						si: si + 1;
-					});
-				});
 			});
 		});
 		if({ reorderable && dragIdx >= 0 && dragMoved && dragTargetIdx >= 0 && dragTargetIdx < segmentItems:length() }, {

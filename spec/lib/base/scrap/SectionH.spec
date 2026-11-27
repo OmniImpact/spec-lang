@@ -226,44 +226,6 @@ Class of SewNode is SectionH{
 						di: di + 1;
 					});
 				});
-				if({ btnPx > 0 }, {
-					local Int is si: 0;
-					while({ si < count }, {
-						local SewNode is ch: row:children:get(index: si);
-						if({ ch:isSelected() || ch:isFocused() }, {
-							local Rect is cb: ch:bounds();
-							if({ cb:width > 0 && cb:height > 0 }, {
-								if({ count == 1 || (si > 0 && si < count - 1) || radPx <= 0 }, {
-									local Int is segRad: if({ count == 1 }, { radPx }, { 0 });
-									ctx:drawStyledBox(
-										x: cb:x, y: cb:y, w: cb:width, h: cb:height,
-										bgColor: 0, borderColor: activeTheme:textAccent,
-										thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
-									);
-								}, {
-									ctx:setClip(x: cb:x, y: cb:y, w: cb:width, h: cb:height);
-									if({ si == 0 }, {
-										ctx:drawStyledBox(
-											x: cb:x, y: cb:y, w: cb:width + radPx, h: cb:height,
-											bgColor: 0, borderColor: activeTheme:textAccent,
-											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
-										);
-										ctx:fillRect(x: cb:x + cb:width - btnPx, y: cb:y, w: btnPx, h: cb:height, color: activeTheme:textAccent);
-									}, {
-										ctx:drawStyledBox(
-											x: cb:x - radPx, y: cb:y, w: cb:width + radPx, h: cb:height,
-											bgColor: 0, borderColor: activeTheme:textAccent,
-											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
-										);
-										ctx:fillRect(x: cb:x, y: cb:y, w: btnPx, h: cb:height, color: activeTheme:textAccent);
-									});
-									ctx:clearClip();
-								});
-							});
-						});
-						si: si + 1;
-					});
-				});
 			});
 		});
 		if({ reorderable && dragIdx >= 0 && dragMoved && dragTargetIdx >= 0 && dragTargetIdx < segmentItems:length() }, {
