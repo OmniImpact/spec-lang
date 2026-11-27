@@ -20,6 +20,7 @@ Class of SewNode is TextView{
 		['base', 'sew', Rect],
 		['base', 'fabric', Color],
 		['base', 'fabric', DrawContext],
+		['base', 'scrap', TextEditBridge],
 		['base', 'scrap', 'highlighter', Highlighter]
 	];
 
@@ -924,7 +925,8 @@ Class of SewNode is TextView{
 	Function of Boolean is hasClipboardText(){
 		if({ clipboardText != '' }, { return true; });
 		local Function of String is readFn: onClipboardRead;
-		return readFn() != '';
+		if({ readFn() != '' }, { return true; });
+		return TextEditBridge:shared:readClipboard() != '';
 	}
 
 	## Copies the active selection into the clipboard buffer and returns it.
@@ -932,6 +934,7 @@ Class of SewNode is TextView{
 		local String is sel: :selectedText();
 		if({ sel != '' }, {
 			clipboardText: sel;
+			TextEditBridge:shared:writeClipboard(text: sel);
 			local Function is writeFn: onClipboardWrite;
 			writeFn(sel);
 		});
@@ -943,6 +946,7 @@ Class of SewNode is TextView{
 		local String is sel: :selectedText();
 		if({ sel == '' }, { return ''; });
 		clipboardText: sel;
+		TextEditBridge:shared:writeClipboard(text: sel);
 		local Function is writeFn: onClipboardWrite;
 		writeFn(sel);
 		:replaceSelection(replacement: '');
@@ -956,6 +960,7 @@ Class of SewNode is TextView{
 			local Function of String is readFn: onClipboardRead;
 			src: readFn();
 		});
+		if({ src == '' }, { src: TextEditBridge:shared:readClipboard(); });
 		if({ src == '' }, { src: clipboardText; });
 		if({ src == '' }, { return; });
 		:replaceSelection(replacement: src);
@@ -1326,8 +1331,23 @@ Class of SewNode is TextView{
 	}
 
 	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ !:containsPoint(x: x, y: y) }, { return false; });
 		local Function is cb: onRightClickMenu;
 		cb(x, y);
+		if({ !TextEditBridge:shared:isHostMenuOpen() }, {
+			local Boolean is hasSel: :hasNonEmptySelection();
+			TextEditBridge:shared:openEditMenu(
+				x: x,
+				y: y,
+				onCut: local Function(){ :cutSelection(); },
+				onCopy: local Function(){ :copySelection(); },
+				onPaste: local Function(){ :pasteText(); },
+				onSelectAll: local Function(){ :selectAll(); },
+				canCut: hasSel,
+				canCopy: hasSel,
+				canPaste: :hasClipboardText()
+			);
+		});
 		return true;
 	}
 

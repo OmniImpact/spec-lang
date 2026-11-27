@@ -15,7 +15,8 @@ Class of SewNode is NumberInput{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
-		['base', 'sew', Scale]
+		['base', 'sew', Scale],
+		['base', 'scrap', TextEditBridge]
 	];
 
 	Float is value: 0.0;
@@ -387,8 +388,94 @@ Class of SewNode is NumberInput{
 		return true;
 	}
 
+	local Function is selectAllText(){
+		if({ !editing }, {
+			:editing: true;
+			:editBuffer: :formatValue(v: value);
+		});
+		:allSelected: true;
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		:invalidate();
+	}
+
+	local Function is copyText(){
+		local String is txt: if({ editing }, { editBuffer }, { :formatValue(v: value) });
+		if({ txt != '' }, {
+			TextEditBridge:shared:writeClipboard(text: txt);
+		});
+	}
+
+	local Function is cutText(){
+		:copyText();
+		if({ !editing }, {
+			:editing: true;
+			:editBuffer: '';
+		}, {
+			:editBuffer: '';
+		});
+		:allSelected: false;
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		:invalidate();
+	}
+
+	local Function is pasteText(){
+		local String is clip: TextEditBridge:shared:readClipboard();
+		if({ clip == '' }, { return; });
+		if({ !editing }, {
+			:editing: true;
+			:editBuffer: clip;
+		}, {
+			if({ allSelected }, {
+				:editBuffer: clip;
+			}, {
+				:editBuffer: editBuffer . clip;
+			});
+		});
+		:allSelected: false;
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		:invalidate();
+	}
+
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ !:containsPoint(x: x, y: y) }, { return false; });
+		TextEditBridge:shared:openEditMenu(
+			x: x,
+			y: y,
+			onCut: local Function(){ :cutText(); },
+			onCopy: local Function(){ :copyText(); },
+			onPaste: local Function(){ :pasteText(); },
+			onSelectAll: local Function(){ :selectAllText(); },
+			canCut: true,
+			canCopy: true,
+			canPaste: TextEditBridge:shared:readClipboard() != ''
+		);
+		return true;
+	}
+
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused }, { return false; });
+		if({ (mods & 2) != 0 }, {
+			if({ key == 97 || key == 65 || key == 1 }, {
+				:selectAllText();
+				return true;
+			});
+			if({ key == 99 || key == 67 || key == 3 }, {
+				:copyText();
+				return true;
+			});
+			if({ key == 120 || key == 88 || key == 24 }, {
+				:cutText();
+				return true;
+			});
+			if({ key == 118 || key == 86 || key == 22 }, {
+				:pasteText();
+				return true;
+			});
+			return false;
+		});
 		if({ key == 1001 || key == 111 }, {
 			:stepBy(delta: step);
 			return true;

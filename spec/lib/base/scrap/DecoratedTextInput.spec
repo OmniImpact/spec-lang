@@ -115,6 +115,14 @@ Class of SewNode is DecoratedTextInput{
 		return row:onPointerClickMod(x: x, y: y, mods: mods);
 	}
 
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		return row:onRightClickMod(x: x, y: y, mods: mods);
+	}
+
+	replace Function of CursorShape is cursorAt(Int is x, Int is y){
+		return row:cursorAt(x: x, y: y);
+	}
+
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		return row:onKey(key: key, mods: mods);
 	}

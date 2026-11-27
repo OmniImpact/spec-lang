@@ -38,6 +38,8 @@ Class of SewNode is ToolkitContainer{
 		['base', 'scrap', Bar],
 		['base', 'scrap', Tooltip],
 		['base', 'scrap', 'menu', MenuContext],
+		['base', 'scrap', 'menu', MenuItemConfig],
+		['base', 'scrap', TextEditBridge],
 		['base', 'scrap', 'tab', TabBar],
 		['base', 'scrap', 'toolbar', ToolbarContainer],
 		['base', 'scrap', ScrapPanel],
@@ -520,6 +522,15 @@ Class of SewNode is ToolkitContainer{
 		if({ hasBody && !useVulkan }, { bodyPanel:bindDirty(cb: local Function(){ :isDirty: true; }); });
 		if({ hasBottomBar }, { bottomBar:bindDirty(cb: local Function(){ :isDirty: true; }); });
 		contextMenu:bindDirty(cb: local Function(){ :isDirty: true; });
+		TextEditBridge:shared:bindHost(
+			onWrite: local Function(String is t){ :setClipboard(text: t); },
+			onRead: local Function of String(){ return :getClipboard(); },
+			onOpenMenu: local Function(Int is mx, Int is my, Array of MenuItemConfig is mitems){
+				contextMenu:open(x: mx, y: my, items: mitems);
+				:isDirty: true;
+			},
+			isMenuOpen: local Function of Boolean(){ return contextMenu:isOpen; }
+		);
 
 		signalBag:track(
 			slot: 'running',

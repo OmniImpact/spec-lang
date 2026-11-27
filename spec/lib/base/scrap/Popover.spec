@@ -23,6 +23,9 @@ Class of SewNode is Popover{
 	Boolean is toggleOnAnchorClick: true;
 	Boolean is closeOnOutsideClick: false;
 	Float is padPt: 6.0;
+	Float is maxWidthPt: 420.0;
+	Float is maxHeightPt: 340.0;
+	Boolean is resizable: false;
 	Boolean is draggable: true;
 	Boolean is dragging: false;
 	Boolean is gripHovered: false;
@@ -32,6 +35,14 @@ Class of SewNode is Popover{
 	Int is dragStartPtrY: 0;
 	Int is dragStartOffX: 0;
 	Int is dragStartOffY: 0;
+	Int is customWidthPx: 0;
+	Int is customHeightPx: 0;
+	Int is resizeMode: 0;
+	Int is hoverResizeMode: 0;
+	Int is resizeStartPtrX: 0;
+	Int is resizeStartPtrY: 0;
+	Int is resizeStartW: 0;
+	Int is resizeStartH: 0;
 	Rect is popupRect: Rect();
 	Int is lastViewW: 0;
 	Int is lastViewH: 0;
@@ -44,6 +55,9 @@ Class of SewNode is Popover{
 		Boolean is toggleOnAnchorClick: true,
 		Boolean is closeOnOutsideClick: false,
 		Float is padPt: 6.0,
+		Float is maxWidthPt: 420.0,
+		Float is maxHeightPt: 340.0,
+		Boolean is resizable: false,
 		Boolean is draggable: true,
 		Function is onOpenChange: local Function(Boolean is _open){}
 	){
@@ -53,11 +67,18 @@ Class of SewNode is Popover{
 		:toggleOnAnchorClick: toggleOnAnchorClick;
 		:closeOnOutsideClick: closeOnOutsideClick;
 		:padPt: padPt;
+		:maxWidthPt: maxWidthPt;
+		:maxHeightPt: maxHeightPt;
+		:resizable: resizable;
 		:draggable: draggable;
 		:dragging: false;
 		:gripHovered: false;
 		:dragOffsetX: 0;
 		:dragOffsetY: 0;
+		:customWidthPx: 0;
+		:customHeightPx: 0;
+		:resizeMode: 0;
+		:hoverResizeMode: 0;
 		:onOpenChange: onOpenChange;
 	}
 
@@ -71,6 +92,8 @@ Class of SewNode is Popover{
 				:gripHovered: false;
 				:dragOffsetX: 0;
 				:dragOffsetY: 0;
+				:resizeMode: 0;
+				:hoverResizeMode: 0;
 			});
 			local Function is cb: onOpenChange;
 			cb(open);
@@ -94,16 +117,61 @@ Class of SewNode is Popover{
 		return x >= popupRect:x && x < popupRect:x + popupRect:width && y >= popupRect:y && y < popupRect:y + gh;
 	}
 
+	local Function of Int is hitResizeEdge(Int is x, Int is y){
+		if({ !resizable || !open }, { return 0; });
+		local Int is edge: activeScale:px(pt: 6.0);
+		if({ edge < 6 }, { edge: 6; });
+		local Int is rx: popupRect:x + popupRect:width;
+		local Int is by: popupRect:y + popupRect:height;
+		local Boolean is inX: x >= popupRect:x && x <= rx + 2;
+		local Boolean is inY: y >= popupRect:y && y <= by + 2;
+		if({ !inX || !inY }, { return 0; });
+		local Boolean is onRight: x >= rx - edge;
+		local Boolean is onBottom: y >= by - edge;
+		if({ onRight && onBottom }, { return 3; });
+		if({ onRight }, { return 1; });
+		if({ onBottom }, { return 2; });
+		return 0;
+	}
+
 	local Function is layoutPopup(Int is viewW, Int is viewH){
 		if({ viewW > 0 }, { lastViewW: viewW; });
 		if({ viewH > 0 }, { lastViewH: viewH; });
 		local Int is gh: :gripHeight();
 		local Int is padPx: if({ padPt > 0.0 }, { activeScale:px(pt: padPt) }, { 0 });
-		local Int is maxW: if({ lastViewW > 0 }, { lastViewW }, { Constraints:UNBOUNDED });
-		local Int is maxH: if({ lastViewH > 0 }, { lastViewH }, { Constraints:UNBOUNDED });
-		local Size is ps: content:measure(c: Constraints(minW: 0, maxW: maxW, minH: 0, maxH: maxH));
+		local Int is maxW: if({ lastViewW > 24 }, { lastViewW - 24 }, { Constraints:UNBOUNDED });
+		local Int is maxH: if({ lastViewH > 24 }, { lastViewH - 24 }, { Constraints:UNBOUNDED });
+		if({ maxWidthPt > 0.0 && (!resizable || customWidthPx == 0) }, {
+			local Int is capW: activeScale:px(pt: maxWidthPt);
+			if({ maxW == Constraints:UNBOUNDED || capW < maxW }, { maxW: capW; });
+		});
+		if({ maxHeightPt > 0.0 && (!resizable || customHeightPx == 0) }, {
+			local Int is capH: activeScale:px(pt: maxHeightPt);
+			if({ maxH == Constraints:UNBOUNDED || capH < maxH }, { maxH: capH; });
+		});
+		local Int is cMaxW: if({ maxW == Constraints:UNBOUNDED }, { Constraints:UNBOUNDED }, {
+			if({ maxW > padPx * 2 }, { maxW - padPx * 2 }, { 64 })
+		});
+		local Int is cMaxH: if({ maxH == Constraints:UNBOUNDED }, { Constraints:UNBOUNDED }, {
+			if({ maxH > gh + padPx * 2 }, { maxH - gh - padPx * 2 }, { 64 })
+		});
+		local Size is ps: content:measure(c: Constraints(minW: 0, maxW: cMaxW, minH: 0, maxH: cMaxH));
 		local Int is popW: ps:width + padPx * 2;
 		local Int is popH: ps:height + gh + padPx * 2;
+		if({ maxW != Constraints:UNBOUNDED && popW > maxW }, { popW: maxW; });
+		if({ maxH != Constraints:UNBOUNDED && popH > maxH }, { popH: maxH; });
+		if({ resizable && customWidthPx > 0 }, {
+			local Int is minW: activeScale:px(pt: 180.0);
+			popW: customWidthPx;
+			if({ popW < minW }, { popW: minW; });
+			if({ lastViewW > 16 && popW > lastViewW - 16 }, { popW: lastViewW - 16; });
+		});
+		if({ resizable && customHeightPx > 0 }, {
+			local Int is minH: activeScale:px(pt: 120.0);
+			popH: customHeightPx;
+			if({ popH < minH }, { popH: minH; });
+			if({ lastViewH > 16 && popH > lastViewH - 16 }, { popH: lastViewH - 16; });
+		});
 		local Rect is pr: DropdownPopup:shared:placeRect(
 			anchor: anchor:bounds(),
 			popupW: popW,
@@ -123,7 +191,9 @@ Class of SewNode is Popover{
 			if({ py < 0 }, { py: 0; });
 		});
 		:popupRect: Rect(x: px, y: py, width: popW, height: popH);
-		content:arrange(bounds: Rect(x: px + padPx, y: py + gh + padPx, width: ps:width, height: ps:height));
+		local Int is innerW: if({ popW > padPx * 2 }, { popW - padPx * 2 }, { 0 });
+		local Int is innerH: if({ popH > gh + padPx * 2 }, { popH - gh - padPx * 2 }, { 0 });
+		content:arrange(bounds: Rect(x: px + padPx, y: py + gh + padPx, width: innerW, height: innerH));
 	}
 
 	replace Function is applyTheme(Theme is theme){
@@ -175,7 +245,7 @@ Class of SewNode is Popover{
 	replace Function of Boolean is blocksPointerAt(Int is x, Int is y){
 		if({ pointerTransparent }, { return false; });
 		if({ anchor:blocksPointerAt(x: x, y: y) }, { return true; });
-		if({ open && (dragging || :inRect(r: popupRect, x: x, y: y)) }, { return true; });
+		if({ open && (dragging || resizeMode != 0 || :inRect(r: popupRect, x: x, y: y)) }, { return true; });
 		return false;
 	}
 
@@ -277,6 +347,16 @@ Class of SewNode is Popover{
 			invalidate();
 			return true;
 		});
+		local Int is re: :hitResizeEdge(x: x, y: y);
+		if({ re != 0 }, {
+			:resizeMode: re;
+			:resizeStartPtrX: x;
+			:resizeStartPtrY: y;
+			:resizeStartW: popupRect:width;
+			:resizeStartH: popupRect:height;
+			invalidate();
+			return true;
+		});
 		if({ open && :inRect(r: popupRect, x: x, y: y) }, {
 			content:onPointerClickMod(x: x, y: y, mods: mods);
 			return true;
@@ -286,21 +366,34 @@ Class of SewNode is Popover{
 
 	replace Function of Boolean is onOverlayPointerMove(Int is x, Int is y){
 		local Boolean is ghov: :inGrip(x: x, y: y);
-		if({ ghov != gripHovered }, {
+		local Int is rEdge: :hitResizeEdge(x: x, y: y);
+		if({ ghov != gripHovered || rEdge != hoverResizeMode }, {
 			:gripHovered: ghov;
+			:hoverResizeMode: rEdge;
 			invalidate();
 		});
 		if({ open && :inRect(r: popupRect, x: x, y: y) }, {
 			content:onPointerMove(x: x, y: y);
 			return true;
 		});
-		return ghov;
+		return ghov || rEdge != 0;
 	}
 
 	replace Function of Boolean is onOverlayPointerDrag(Int is x, Int is y, Int is mods: 0){
 		if({ open && dragging }, {
 			:dragOffsetX: dragStartOffX + (x - dragStartPtrX);
 			:dragOffsetY: dragStartOffY + (y - dragStartPtrY);
+			:layoutPopup(viewW: lastViewW, viewH: lastViewH);
+			invalidate();
+			return true;
+		});
+		if({ open && resizeMode != 0 }, {
+			if({ resizeMode == 1 || resizeMode == 3 }, {
+				:customWidthPx: resizeStartW + (x - resizeStartPtrX);
+			});
+			if({ resizeMode == 2 || resizeMode == 3 }, {
+				:customHeightPx: resizeStartH + (y - resizeStartPtrY);
+			});
 			:layoutPopup(viewW: lastViewW, viewH: lastViewH);
 			invalidate();
 			return true;
@@ -318,6 +411,11 @@ Class of SewNode is Popover{
 			invalidate();
 			return true;
 		});
+		if({ resizeMode != 0 }, {
+			:resizeMode: 0;
+			invalidate();
+			return true;
+		});
 		if({ open && :inRect(r: popupRect, x: x, y: y) }, {
 			content:onPointerUp(x: x, y: y);
 			return true;
@@ -327,6 +425,9 @@ Class of SewNode is Popover{
 
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
 		if({ dragging || :inGrip(x: x, y: y) }, { return CursorShape:POINTER; });
+		local Int is re: if({ resizeMode != 0 }, { resizeMode }, { :hitResizeEdge(x: x, y: y) });
+		if({ re == 1 || re == 3 }, { return CursorShape:EW_RESIZE; });
+		if({ re == 2 }, { return CursorShape:NS_RESIZE; });
 		if({ open && :inRect(r: popupRect, x: x, y: y) }, { return content:cursorAt(x: x, y: y); });
 		return anchor:cursorAt(x: x, y: y);
 	}
@@ -383,5 +484,16 @@ Class of SewNode is Popover{
 		});
 		content:paint(ctx: ctx);
 		content:paintOverlay(ctx: ctx);
+		if({ resizable }, {
+			local Int is gCol: if({ resizeMode != 0 || hoverResizeMode != 0 }, { activeTheme:textPrimary }, { activeTheme:textMuted });
+			local Int is sz: activeScale:px(pt: 2.0);
+			if({ sz < 2 }, { sz: 2; });
+			local Int is step: sz * 2;
+			local Int is rx: popupRect:x + popupRect:width - sz * 2;
+			local Int is by: popupRect:y + popupRect:height - sz * 2;
+			ctx:fillRect(x: rx, y: by, w: sz, h: sz, color: gCol);
+			ctx:fillRect(x: rx - step, y: by, w: sz, h: sz, color: gCol);
+			ctx:fillRect(x: rx, y: by - step, w: sz, h: sz, color: gCol);
+		});
 	}
 }

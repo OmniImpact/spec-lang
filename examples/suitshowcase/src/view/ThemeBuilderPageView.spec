@@ -460,6 +460,9 @@ Class is ThemeBuilderPageView{
 				tooltip: 'Open theme JSON export and import tools'
 			),
 			closeOnOutsideClick: true,
+			resizable: true,
+			maxWidthPt: 400.0,
+			maxHeightPt: 290.0,
 			content: Frame(
 				title: 'Theme JSON (Export / Import)',
 				child: Column(
@@ -516,7 +519,7 @@ Class is ThemeBuilderPageView{
 						),
 						Frame(
 							padPt: 0.0,
-							child: ScrollView(heightPt: 180.0, child: themeJsonEditor)
+							child: ScrollView(heightPt: 180.0, allowHScroll: true, child: themeJsonEditor)
 						)
 					])
 				)

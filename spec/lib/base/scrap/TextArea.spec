@@ -16,7 +16,8 @@ Class of SewNode is TextArea{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
-		['base', 'sew', Scale]
+		['base', 'sew', Scale],
+		['base', 'scrap', TextEditBridge]
 	];
 
 	String is text: '';
@@ -37,6 +38,7 @@ Class of SewNode is TextArea{
 	Int is lastClickMs: 0;
 	Int is clickStreak: 0;
 	Int is lastClickPos: -1;
+	Boolean is selectingDrag: false;
 	Time is clock: Time();
 
 	replace Function is init(
@@ -106,6 +108,69 @@ Class of SewNode is TextArea{
 		});
 		:selAnchor: start;
 		:cursorPos: end;
+	}
+
+	local Function is selectAll(){
+		:selAnchor: 0;
+		:cursorPos: text:length();
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		:invalidate();
+	}
+
+	local Function is copySelection(){
+		if({ !:hasSelection() }, { return; });
+		local String is sel: text:substring(start: :selStart(), end: :selEnd());
+		if({ sel != '' }, {
+			TextEditBridge:shared:writeClipboard(text: sel);
+		});
+	}
+
+	local Function is cutSelection(){
+		if({ !:hasSelection() }, { return; });
+		:copySelection();
+		:deleteSelection();
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		:ensureCursorVisible();
+		local Function is cb: :onChange;
+		cb(text);
+		:invalidate();
+	}
+
+	local Function is pasteText(){
+		local String is clip: TextEditBridge:shared:readClipboard();
+		if({ clip == '' }, { return; });
+		if({ :hasSelection() }, { :deleteSelection(); });
+		local Int is n: text:length();
+		if({ cursorPos < 0 }, { :cursorPos: 0; });
+		if({ cursorPos > n }, { :cursorPos: n; });
+		:text: text:substring(start: 0, end: cursorPos) . clip . text:substring(start: cursorPos, end: n);
+		:cursorPos: cursorPos + clip:length();
+		:selAnchor: cursorPos;
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		:ensureCursorVisible();
+		local Function is cb: :onChange;
+		cb(text);
+		:invalidate();
+	}
+
+	local Function of Int is posAtPoint(Int is x, Int is y){
+		local Rect is b: bounds();
+		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
+		local Int is lh: :lineHeightPx();
+		local Int is relY: y - (b:y + pad) + scrollY;
+		local Array of String is lines: :splitLines();
+		local Array of Int is starts: :lineStartOffsets();
+		local Int is li: if({ lh > 0 }, { relY / lh }, { 0 });
+		if({ li < 0 }, { li: 0; });
+		if({ li >= lines:length() }, { li: lines:length() - 1; });
+		local String is ln: lines:get(index: li);
+		local Int is relX: x - (b:x + pad);
+		local Int is approxCol: if({ relX <= 0 }, { 0 }, { (relX * 10) / (:fontPx() * 6) });
+		if({ approxCol > ln:length() }, { approxCol: ln:length(); });
+		return starts:get(index: li) + approxCol;
 	}
 
 	local Function is deleteSelection(){
@@ -351,10 +416,49 @@ Class of SewNode is TextArea{
 		}, {
 			:cursorPos: clickPos;
 			:selAnchor: clickPos;
+			:selectingDrag: true;
 		}); });
 		:caretVisible: true;
 		:caretBlinkMs: 0;
 		:invalidate();
+		return true;
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		if({ !selectingDrag }, { return false; });
+		local Int is pos: :posAtPoint(x: x, y: y);
+		if({ pos != cursorPos }, {
+			:cursorPos: pos;
+			:caretVisible: true;
+			:caretBlinkMs: 0;
+			:ensureCursorVisible();
+			:invalidate();
+		});
+		return true;
+	}
+
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		if({ selectingDrag }, {
+			:selectingDrag: false;
+			return true;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ !:containsPoint(x: x, y: y) }, { return false; });
+		local Boolean is hasSel: :hasSelection();
+		TextEditBridge:shared:openEditMenu(
+			x: x,
+			y: y,
+			onCut: local Function(){ :cutSelection(); },
+			onCopy: local Function(){ :copySelection(); },
+			onPaste: local Function(){ :pasteText(); },
+			onSelectAll: local Function(){ :selectAll(); },
+			canCut: hasSel,
+			canCopy: hasSel,
+			canPaste: TextEditBridge:shared:readClipboard() != ''
+		);
 		return true;
 	}
 
@@ -412,6 +516,25 @@ Class of SewNode is TextArea{
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused }, { return false; });
+		if({ (mods & 2) != 0 }, {
+			if({ key == 97 || key == 65 || key == 1 }, {
+				:selectAll();
+				return true;
+			});
+			if({ key == 99 || key == 67 || key == 3 }, {
+				:copySelection();
+				return true;
+			});
+			if({ key == 120 || key == 88 || key == 24 }, {
+				:cutSelection();
+				return true;
+			});
+			if({ key == 118 || key == 86 || key == 22 }, {
+				:pasteText();
+				return true;
+			});
+			return false;
+		});
 		local Int is n: text:length();
 		if({ cursorPos < 0 }, { :cursorPos: 0; });
 		if({ cursorPos > n }, { :cursorPos: n; });

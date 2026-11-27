@@ -17,7 +17,8 @@ Class of SewNode is TextInput{
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'fabric', 'svg', SvgRenderer],
-		['base', 'scrap', DropdownPopup]
+		['base', 'scrap', DropdownPopup],
+		['base', 'scrap', TextEditBridge]
 	];
 
 	held String is ICON_SEARCH_SVG: "<svg viewBox=\"0 0 16 16\"><circle cx=\"7\" cy=\"7\" r=\"4.5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.6\"/><path d=\"M10.5 10.5L14 14\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg>";
@@ -197,6 +198,47 @@ Class of SewNode is TextInput{
 	local Function is selectAll(){
 		:selAnchor: 0;
 		:cursorPos: text:length();
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		invalidate();
+	}
+
+	local Function is copySelection(){
+		if({ !:hasSelection() }, { return; });
+		local String is sel: text:substring(start: :selStart(), end: :selEnd());
+		if({ sel != '' }, {
+			TextEditBridge:shared:writeClipboard(text: sel);
+		});
+	}
+
+	local Function is cutSelection(){
+		if({ !:hasSelection() }, { return; });
+		:copySelection();
+		:deleteSelection();
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		local Function is cb: onChange;
+		cb(text);
+		:refreshAutocomplete();
+		invalidate();
+	}
+
+	local Function is pasteText(){
+		local String is clip: TextEditBridge:shared:readClipboard();
+		if({ clip == '' }, { return; });
+		if({ :hasSelection() }, { :deleteSelection(); });
+		local Int is cPos: cursorPos;
+		if({ cPos < 0 }, { cPos: 0; });
+		if({ cPos > text:length() }, { cPos: text:length(); });
+		:text: text:substring(start: 0, end: cPos) . clip . text:substring(start: cPos, end: text:length());
+		:cursorPos: cPos + clip:length();
+		:selAnchor: cursorPos;
+		:caretVisible: true;
+		:caretBlinkMs: 0;
+		local Function is cb: onChange;
+		cb(text);
+		:refreshAutocomplete();
+		invalidate();
 	}
 
 	local Function is deleteSelection(){
@@ -584,6 +626,25 @@ Class of SewNode is TextInput{
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused }, { return false; });
+		if({ (mods & 2) != 0 }, {
+			if({ key == 97 || key == 65 || key == 1 }, {
+				:selectAll();
+				return true;
+			});
+			if({ key == 99 || key == 67 || key == 3 }, {
+				:copySelection();
+				return true;
+			});
+			if({ key == 120 || key == 88 || key == 24 }, {
+				:cutSelection();
+				return true;
+			});
+			if({ key == 118 || key == 86 || key == 22 }, {
+				:pasteText();
+				return true;
+			});
+			return false;
+		});
 		if({ acOpen }, {
 			local Int is vis: suggestions:length();
 			if({ vis > autocompleteMaxVisible }, { vis: autocompleteMaxVisible; });
@@ -748,6 +809,23 @@ Class of SewNode is TextInput{
 		cb(text);
 		:refreshAutocomplete();
 		invalidate();
+		return true;
+	}
+
+	replace Function of Boolean is onRightClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ !:contains(x: x, y: y) }, { return false; });
+		local Boolean is hasSel: :hasSelection();
+		TextEditBridge:shared:openEditMenu(
+			x: x,
+			y: y,
+			onCut: local Function(){ :cutSelection(); },
+			onCopy: local Function(){ :copySelection(); },
+			onPaste: local Function(){ :pasteText(); },
+			onSelectAll: local Function(){ :selectAll(); },
+			canCut: hasSel,
+			canCopy: hasSel,
+			canPaste: TextEditBridge:shared:readClipboard() != ''
+		);
 		return true;
 	}
 
