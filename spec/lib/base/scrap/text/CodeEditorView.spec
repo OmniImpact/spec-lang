@@ -19,7 +19,10 @@ Class of TextView is CodeEditorView{
 		['base', 'scrap', 'highlighter', HighlighterPython],
 		['base', 'scrap', 'highlighter', HighlighterJava],
 		['base', 'scrap', 'highlighter', HighlighterRuby],
-		['base', 'scrap', 'highlighter', HighlighterRust]
+		['base', 'scrap', 'highlighter', HighlighterRust],
+		['base', 'scrap', 'highlighter', HighlighterJavaScript],
+		['base', 'scrap', 'highlighter', HighlighterKotlin],
+		['base', 'scrap', 'highlighter', HighlighterCss]
 	];
 
 	TextEmitter is filePath: TextEmitter(initial: '');
@@ -65,7 +68,10 @@ Class of TextView is CodeEditorView{
 			HighlighterPython() as Highlighter,
 			HighlighterJava() as Highlighter,
 			HighlighterRuby() as Highlighter,
-			HighlighterRust() as Highlighter
+			HighlighterRust() as Highlighter,
+			HighlighterJavaScript() as Highlighter,
+			HighlighterKotlin() as Highlighter,
+			HighlighterCss() as Highlighter
 		]);
 		:activeHighlighter: Highlighter();
 		:updateHighlighter();
