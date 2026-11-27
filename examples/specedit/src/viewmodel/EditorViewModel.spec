@@ -9,6 +9,7 @@ Class is EditorViewModel{
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['base', 'struct', Array],
+		['base', 'suit', KeyMod],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', TextEmitter],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
@@ -55,8 +56,6 @@ Class is EditorViewModel{
 	TextEmitter is activeLanguage: TextEmitter(initial: '');
 	TextEmitter is cursorStatus: TextEmitter(initial: '');
 	TextEmitter is syntaxStatus: TextEmitter(initial: '');
-	TextEmitter is versionText: TextEmitter(initial: SpecEditStrings:VERSION_TEXT);
-	TextEmitter is descriptionText: TextEmitter(initial: SpecEditStrings:DESCRIPTION_TEXT);
 	TextEmitter is processStatsText: TextEmitter(initial: '');
 	Int is statsWindowWallMs: 0;
 	Int is statsWindowCpuUs: 0;
@@ -92,33 +91,15 @@ Class is EditorViewModel{
 
 	replace Function is init(){
 		:icons: EditorIcons();
-		:contextMenu: MenuContext(
-			radioOffIconSvg: icons:radioOff,
-			radioOnIconSvg: icons:radioOn,
-			checkboxOnIconSvg: icons:checkboxOn
-		);
+		:contextMenu: MenuContext();
 		:model: EditorModel(documentName: SpecEditStrings:UNTITLED);
 		:documents: Array();
 		:activeDocIdx: -1;
-		activeRoute: TextEmitter(initial: SpecEditStrings:ROUTE_WELCOME);
-		title: TextEmitter(initial: :computeTitle());
-		running: BoolEmitter(initial: true);
-		fileDialogOpen: BoolEmitter(initial: false);
-		fileDialogSaveMode: BoolEmitter(initial: false);
-		fileDialogTitle: TextEmitter(initial: SpecEditStrings:FILE_DIALOG_TITLE);
-		fileDialogSuggestedName: TextEmitter(initial: '');
 		:settingsVm: SettingsViewModel();
-		aboutOpen: BoolEmitter(initial: false);
 		wrapEnabled: BoolEmitter(initial: settingsVm:model:defaultWrap);
-		lineNumbersEnabled: BoolEmitter(initial: false);
 		monospaceEnabled: BoolEmitter(initial: settingsVm:model:defaultMonospace);
 		fileTreeEnabled: BoolEmitter(initial: settingsVm:model:defaultShowFileTree);
-		documentText: TextEmitter(initial: '');
-		activeFilePath: TextEmitter(initial: '');
-		activeLanguage: TextEmitter(initial: '');
-		cursorStatus: TextEmitter(initial: '');
-		syntaxStatus: TextEmitter(initial: '');
-		processStatsText: TextEmitter(initial: '');
+		title: TextEmitter(initial: :computeTitle());
 		statsWindowWallMs: Process:clockMs();
 		statsWindowCpuUs: Process:cpuTimeUs();
 		emaCpuPct: 0.0;
@@ -137,11 +118,7 @@ Class is EditorViewModel{
 	}
 
 	local Function of String is baseName(String is path){
-		local Int is len: path:length();
-		if({ len == 0 }, { return SpecEditStrings:UNTITLED; });
-		local Int is i: len - 1;
-		while({ i >= 0 && path:byteAt(index: i) != 47 }, { i: i - 1; });
-		return path:substring(start: i + 1, end: len);
+		return SpecEditStrings:baseName(path: path, fallback: SpecEditStrings:UNTITLED);
 	}
 
 	local Function is syncTabs(){
@@ -257,26 +234,6 @@ Class is EditorViewModel{
 	}
 
 	local Function of ToolbarConfig is buildToolbarConfig(){
-		local ToolbarConfig is cfg: ToolbarConfig(
-			radioOffIconSvg: icons:radioOff,
-			radioOnIconSvg: icons:radioOn,
-			checkboxOffIconSvg: icons:checkboxOff,
-			checkboxOnIconSvg: icons:checkboxOn
-		);
-
-		local MenuConfig is fileMenu: MenuConfig(id: SpecEditStrings:MENU_FILE_ID, label: SpecEditStrings:MENU_FILE_LABEL);
-		fileMenu:addItem(item: MenuItemConfig(
-			id: SpecEditStrings:ITEM_NEW_ID,
-			label: SpecEditStrings:ITEM_NEW_LABEL,
-			iconSvg: icons:fileNew,
-			onClick: local Function(){ :newDocument(); }
-		));
-		fileMenu:addItem(item: MenuItemConfig(
-			id: SpecEditStrings:ITEM_OPEN_ID,
-			label: SpecEditStrings:ITEM_OPEN_LABEL,
-			iconSvg: icons:fileOpen,
-			onClick: local Function(){ :requestOpen(); }
-		));
 		saveItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_SAVE_ID,
 			label: SpecEditStrings:ITEM_SAVE_LABEL,
@@ -291,23 +248,6 @@ Class is EditorViewModel{
 			iconSvg: icons:fileSaveAs,
 			onClick: local Function(){ :requestSaveAs(); }
 		);
-		fileMenu:addItem(item: saveItem);
-		fileMenu:addItem(item: saveAsItem);
-		fileMenu:addItem(item: MenuItemConfig(
-			id: SpecEditStrings:ITEM_SETTINGS_ID,
-			label: SpecEditStrings:ITEM_SETTINGS_LABEL,
-			iconSvg: icons:settings,
-			onClick: local Function(){ settingsVm:openSettings(); }
-		));
-		fileMenu:addItem(item: MenuItemConfig(
-			id: SpecEditStrings:ITEM_QUIT_ID,
-			label: SpecEditStrings:ITEM_QUIT_LABEL,
-			iconSvg: icons:quit,
-			onClick: local Function(){ :requestQuit(); }
-		));
-		cfg:addMenu(menu: fileMenu);
-
-		:editMenu: MenuConfig(id: SpecEditStrings:MENU_EDIT_ID, label: SpecEditStrings:MENU_EDIT_LABEL, visible: :hasOpenDocument());
 		copyItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_COPY_ID,
 			label: SpecEditStrings:ITEM_COPY_LABEL,
@@ -336,13 +276,6 @@ Class is EditorViewModel{
 			iconSvg: icons:editSelectAll,
 			onClick: local Function(){ :requestSelectAll(); }
 		);
-		editMenu:addItem(item: copyItem);
-		editMenu:addItem(item: cutItem);
-		editMenu:addItem(item: pasteItem);
-		editMenu:addItem(item: selectAllItem);
-		cfg:addMenu(menu: editMenu);
-
-		:viewMenu: MenuConfig(id: SpecEditStrings:MENU_VIEW_ID, label: SpecEditStrings:MENU_VIEW_LABEL, visible: :hasOpenDocument());
 		wrapItem: MenuItemConfig(
 			id: SpecEditStrings:ITEM_WRAP_ID,
 			label: SpecEditStrings:ITEM_WRAP_LABEL,
@@ -371,22 +304,70 @@ Class is EditorViewModel{
 			kind: MenuItemKind:TOGGLE,
 			onClick: local Function(){ :toggleFileTree(); }
 		);
-		viewMenu:addItem(item: wrapItem);
-		viewMenu:addItem(item: lineNumsItem);
-		viewMenu:addItem(item: monospaceItem);
-		viewMenu:addItem(item: fileTreeItem);
-		cfg:addMenu(menu: viewMenu);
 
-		local MenuConfig is helpMenu: MenuConfig(id: SpecEditStrings:MENU_HELP_ID, label: SpecEditStrings:MENU_HELP_LABEL);
-		helpMenu:addItem(item: MenuItemConfig(
-			id: SpecEditStrings:ITEM_ABOUT_ID,
-			label: SpecEditStrings:ITEM_ABOUT_LABEL,
-			iconSvg: icons:infoAbout,
-			onClick: local Function(){ :requestAbout(); }
-		));
-		cfg:addMenu(menu: helpMenu);
+		:editMenu: MenuConfig(
+			id: SpecEditStrings:MENU_EDIT_ID,
+			label: SpecEditStrings:MENU_EDIT_LABEL,
+			visible: :hasOpenDocument(),
+			items: Array([copyItem, cutItem, pasteItem, selectAllItem])
+		);
+		:viewMenu: MenuConfig(
+			id: SpecEditStrings:MENU_VIEW_ID,
+			label: SpecEditStrings:MENU_VIEW_LABEL,
+			visible: :hasOpenDocument(),
+			items: Array([wrapItem, lineNumsItem, monospaceItem, fileTreeItem])
+		);
 
-		return cfg;
+		return ToolbarConfig(
+			menus: Array([
+				MenuConfig(
+					id: SpecEditStrings:MENU_FILE_ID,
+					label: SpecEditStrings:MENU_FILE_LABEL,
+					items: Array([
+						MenuItemConfig(
+							id: SpecEditStrings:ITEM_NEW_ID,
+							label: SpecEditStrings:ITEM_NEW_LABEL,
+							iconSvg: icons:fileNew,
+							onClick: local Function(){ :newDocument(); }
+						),
+						MenuItemConfig(
+							id: SpecEditStrings:ITEM_OPEN_ID,
+							label: SpecEditStrings:ITEM_OPEN_LABEL,
+							iconSvg: icons:fileOpen,
+							onClick: local Function(){ :requestOpen(); }
+						),
+						saveItem,
+						saveAsItem,
+						MenuItemConfig(
+							id: SpecEditStrings:ITEM_SETTINGS_ID,
+							label: SpecEditStrings:ITEM_SETTINGS_LABEL,
+							iconSvg: icons:settings,
+							onClick: local Function(){ settingsVm:openSettings(); }
+						),
+						MenuItemConfig(
+							id: SpecEditStrings:ITEM_QUIT_ID,
+							label: SpecEditStrings:ITEM_QUIT_LABEL,
+							iconSvg: icons:quit,
+							onClick: local Function(){ :requestQuit(); }
+						)
+					])
+				),
+				editMenu,
+				viewMenu,
+				MenuConfig(
+					id: SpecEditStrings:MENU_HELP_ID,
+					label: SpecEditStrings:MENU_HELP_LABEL,
+					items: Array([
+						MenuItemConfig(
+							id: SpecEditStrings:ITEM_ABOUT_ID,
+							label: SpecEditStrings:ITEM_ABOUT_LABEL,
+							iconSvg: icons:infoAbout,
+							onClick: local Function(){ :requestAbout(); }
+						)
+					])
+				)
+			])
+		);
 	}
 
 	Function is newDocument(){
@@ -774,8 +755,8 @@ Class is EditorViewModel{
 
 	## Handles system-wide keyboard shortcuts across Welcome and Files containers.
 	Function of Boolean is handleShortcut(Int is key, Int is mods){
-		local Boolean is shift: (mods & 1) != 0;
-		local Boolean is ctrl: (mods & 2) != 0;
+		local Boolean is shift: KeyMod:hasShift(mods: mods);
+		local Boolean is ctrl: KeyMod:hasCtrl(mods: mods);
 		if({ !ctrl }, { return false; });
 		if({ key == 110 || key == 78 }, { :newDocument(); return true; });
 		if({ key == 111 || key == 79 }, { :requestOpen(); return true; });

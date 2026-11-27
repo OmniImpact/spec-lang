@@ -4,6 +4,11 @@
 Class is SpecEditStrings{
 	replace [String] is namespace: ['specedit', 'util'];
 
+	replace [[String]] is using: [
+		['base', 'sys', Conditional],
+		['base', 'sys', Loops]
+	];
+
 	held String is APP_NAME: 'SpecEdit';
 	held String is UNTITLED: 'Untitled';
 	held String is TITLE_SEP: ' - ';
@@ -11,15 +16,11 @@ Class is SpecEditStrings{
 	held String is DEFAULT_CURSOR_STATUS: 'Ln 1, Col 1';
 	held String is VERSION_TEXT: 'SpecEdit 0.1.0';
 	held String is DESCRIPTION_TEXT: 'Resolution-independent text editor built on Suit, Sew, Fabric, and Scrap.';
-	held String is THEME_PRESET: 'light_grayscale';
 	held String is ABOUT_TITLE: 'About SpecEdit';
 	held String is FILE_DIALOG_TITLE: 'Open File';
 	held String is SAVE_DIALOG_TITLE: 'Save File';
-	held String is TEXT_ALIGN_CENTER: 'center';
 	held String is ROUTE_WELCOME: 'Welcome';
 	held String is ROUTE_FILES: 'Files';
-
-	held String is MENU_KIND_TOGGLE: 'toggle';
 
 	held String is MENU_FILE_ID: 'file';
 	held String is MENU_FILE_LABEL: 'File';
@@ -74,5 +75,24 @@ Class is SpecEditStrings{
 
 	held Function of String is dirtyTitle(String is base){
 		base . SpecEditStrings:DIRTY_SUFFIX
+	}
+
+	held Function of String is baseName(String is path, String is fallback: ''){
+		local Int is len: path:length();
+		Conditional:if(check: { len == 0 }, then: { return fallback; });
+		local String is out: path;
+		local Boolean is found: false;
+		local Int is i: len - 1;
+		Loops:while(check: { i >= 0 && !found }, body: {
+			local Int is b: path:byteAt(index: i);
+			Conditional:if(check: { b == 47 || b == 92 }, then: {
+				local String is tail: path:substring(start: i + 1, end: len);
+				out: fallback;
+				Conditional:if(check: { tail != '' }, then: { out: tail; });
+				found: true;
+			});
+			i: i - 1;
+		});
+		return out;
 	}
 }

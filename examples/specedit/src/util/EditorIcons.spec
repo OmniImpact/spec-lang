@@ -13,10 +13,6 @@ Class is EditorIcons{
 	String is chevronDown: '';
 	String is treePlus: '';
 	String is treeMinus: '';
-	String is radioOff: '';
-	String is radioOn: '';
-	String is checkboxOff: '';
-	String is checkboxOn: '';
 	String is fileNew: '';
 	String is fileOpen: '';
 	String is fileSave: '';
@@ -35,10 +31,6 @@ Class is EditorIcons{
 		:chevronDown: bundle:readText(path: 'resources/icons/chevron-down.svg');
 		:treePlus: bundle:readText(path: 'resources/icons/tree-plus.svg');
 		:treeMinus: bundle:readText(path: 'resources/icons/tree-minus.svg');
-		:radioOff: bundle:readText(path: 'resources/icons/radio-off.svg');
-		:radioOn: bundle:readText(path: 'resources/icons/radio-on.svg');
-		:checkboxOff: bundle:readText(path: 'resources/icons/checkbox-off.svg');
-		:checkboxOn: bundle:readText(path: 'resources/icons/checkbox-on.svg');
 		:fileNew: bundle:readText(path: 'resources/icons/file-new.svg');
 		:fileOpen: bundle:readText(path: 'resources/icons/file-open.svg');
 		:fileSave: bundle:readText(path: 'resources/icons/file-save.svg');

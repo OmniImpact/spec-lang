@@ -13,7 +13,8 @@ Class is SettingsViewModel{
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
 		['base', 'wardrobe', 'file', FilePinnedLocations],
-		['specedit', 'model', SettingsModel]
+		['specedit', 'model', SettingsModel],
+		['specedit', 'util', SpecEditStrings]
 	];
 
 	SettingsModel is model: SettingsModel();
@@ -125,17 +126,6 @@ Class is SettingsViewModel{
 		});
 	}
 
-	Function is adjustDocTextDelta(Float is delta){
-		:setDocTextDelta(nextVal: model:docTextDeltaPt + delta);
-	}
-
-	Function is setDocTextDeltaFromText(String is raw){
-		local Int is parsed: raw:trim():parseInt(base: 10, default: -999);
-		if({ parsed != -999 }, {
-			:setDocTextDelta(nextVal: parsed as Float);
-		});
-	}
-
 	Function is setBaseTextPt(Float is nextVal){
 		local Float is next: nextVal;
 		if({ next < 8.0 }, { next: 8.0; });
@@ -147,17 +137,6 @@ Class is SettingsViewModel{
 			model:save();
 			local Function is cb: themeChangeHandler;
 			cb(nextTheme);
-		});
-	}
-
-	Function is adjustBaseTextPt(Float is delta){
-		:setBaseTextPt(nextVal: model:baseTextPt + delta);
-	}
-
-	Function is setBaseTextPtFromText(String is raw){
-		local Int is parsed: raw:trim():parseInt(base: 10, default: -1);
-		if({ parsed >= 8 && parsed <= 20 }, {
-			:setBaseTextPt(nextVal: parsed as Float);
 		});
 	}
 
@@ -212,19 +191,6 @@ Class is SettingsViewModel{
 		});
 	}
 
-	local Function of String is baseNameOf(String is path){
-		local Int is len: path:length();
-		local Int is i: len - 1;
-		while({ i >= 0 }, {
-			local String is ch: path:substring(start: i, end: i + 1);
-			if({ ch == '/' || ch == '\\' }, {
-				return path:substring(start: i + 1, end: len);
-			});
-			i: i - 1;
-		});
-		return path;
-	}
-
 	Function is movePinned(Int is fromIdx, Int is toIdx){
 		if({ pinned:move(fromIdx: fromIdx, toIdx: toIdx) }, {
 			pinned:save();
@@ -236,8 +202,7 @@ Class is SettingsViewModel{
 
 	Function is pinPath(String is path){
 		if({ path == '' || !Dir():isDir(path: path) }, { return; });
-		local String is name: :baseNameOf(path: path);
-		if({ name == '' }, { name: path; });
+		local String is name: SpecEditStrings:baseName(path: path, fallback: path);
 		if({ pinned:add(name: name, path: path) }, {
 			pinned:save();
 			local Function is cb: pinnedChangeHandler;
@@ -256,8 +221,7 @@ Class is SettingsViewModel{
 		:pinPath(path: dirFn());
 	}
 
-	Function is toggleDefaultMonospace(){
-		model:defaultMonospace: !model:defaultMonospace;
+	local Function is commitInterfaceDefaults(){
 		:notifyRefresh();
 		local Boolean is m: model:defaultMonospace;
 		local Boolean is w: model:defaultWrap;
@@ -267,42 +231,20 @@ Class is SettingsViewModel{
 			local Function is cb: defaultsChangeHandler;
 			cb(m, w, t);
 		});
+	}
+
+	Function is toggleDefaultMonospace(){
+		model:defaultMonospace: !model:defaultMonospace;
+		:commitInterfaceDefaults();
 	}
 
 	Function is toggleDefaultWrap(){
 		model:defaultWrap: !model:defaultWrap;
-		:notifyRefresh();
-		local Boolean is m: model:defaultMonospace;
-		local Boolean is w: model:defaultWrap;
-		local Boolean is t: model:defaultShowFileTree;
-		:enqueueApply(work: local Function(){
-			model:save();
-			local Function is cb: defaultsChangeHandler;
-			cb(m, w, t);
-		});
+		:commitInterfaceDefaults();
 	}
 
 	Function is toggleDefaultShowFileTree(){
 		model:defaultShowFileTree: !model:defaultShowFileTree;
-		:notifyRefresh();
-		local Boolean is m: model:defaultMonospace;
-		local Boolean is w: model:defaultWrap;
-		local Boolean is t: model:defaultShowFileTree;
-		:enqueueApply(work: local Function(){
-			model:save();
-			local Function is cb: defaultsChangeHandler;
-			cb(m, w, t);
-		});
-	}
-
-	Function of String is docDeltaLabel(){
-		local Int is v: (model:docTextDeltaPt + if({ model:docTextDeltaPt >= 0.0 }, { 0.5 }, { -0.5 })) as Int;
-		if({ v > 0 }, { return '+' . (v as String) . ' pt'; });
-		return (v as String) . ' pt';
-	}
-
-	Function of String is baseTextLabel(){
-		local Int is v: (model:baseTextPt + 0.5) as Int;
-		return (v as String) . ' pt';
+		:commitInterfaceDefaults();
 	}
 }
