@@ -165,13 +165,14 @@ Class is Dialog{
 
 	Function of Boolean is tick(Int is nowMs){
 		if({ !isShown }, { return false; });
+		local Boolean is wasDirty: isDirty;
 		local Function is cb: onTick;
 		cb(nowMs);
 		if({ hasContent && content:tick(nowMs: nowMs) }, {
 			isDirty: true;
 			return true;
 		});
-		return false;
+		return !wasDirty && isDirty;
 	}
 
 	local Function of Boolean is stepFocusTab(Boolean is reverse){

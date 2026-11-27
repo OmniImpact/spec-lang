@@ -6,7 +6,10 @@ Class of SewNode is TextView{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
+		['base', 'sys', Process],
 		['base', 'sys', Font],
+		['base', 'sys', Parallel],
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'signal', BoolEmitter],
@@ -221,12 +224,133 @@ Class of SewNode is TextView{
 		lastWrapW: -1;
 	}
 
+	local Function is wrapSingleLine(
+		String is line,
+		Int is availTextW,
+		Int is fpx,
+		Boolean is mono,
+		Int is scratchPtr,
+		Array of String is outSegs,
+		Array of Int is outStarts
+	){
+		if({ line == '' }, {
+			outSegs:add(item: '');
+			outStarts:add(item: 0);
+			return;
+		});
+		local Int is fullW: DrawContext:shared:measureTextWidthWithScratch(text: line, pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr);
+		if({ fullW <= availTextW }, {
+			outSegs:add(item: line);
+			outStarts:add(item: 0);
+			return;
+		});
+		local Int is len: line:length();
+		local Int is pos: 0;
+		while({ pos < len }, {
+			local Int is segEnd: len;
+			local Boolean is tailFits: if({ pos == 0 }, { false }, {
+				DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: len), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW
+			});
+			if({ !tailFits }, {
+				local Int is lo: pos + 1;
+				local Int is hi: len - 1;
+				local Int is maxFit: pos + 1;
+				while({ lo <= hi }, {
+					local Int is mid: lo + (hi - lo) / 2;
+					if({ DrawContext:shared:measureTextWidthWithScratch(text: line:substring(start: pos, end: mid), pixelHeight: fpx, mono: mono, scratchPtr: scratchPtr) <= availTextW }, {
+						maxFit: mid;
+						lo: mid + 1;
+					}, {
+						hi: mid - 1;
+					});
+				});
+				segEnd: maxFit;
+				if({ segEnd < len }, {
+					local Int is si: segEnd - 1;
+					local Boolean is foundSpace: false;
+					while({ si >= pos && !foundSpace }, {
+						if({ line:byteAt(index: si) == 32 }, {
+							if({ si + 1 > pos }, {
+								segEnd: si + 1;
+								foundSpace: true;
+							});
+						});
+						si: si - 1;
+					});
+				});
+				if({ segEnd <= pos }, { segEnd: pos + 1; });
+			});
+			outSegs:add(item: line:substring(start: pos, end: segEnd));
+			outStarts:add(item: pos);
+			pos: segEnd;
+		});
+	}
+
 	local Function is rebuildDisplayLines(Int is availTextW, Int is fpx){
 		dispLines: Array();
 		dispRawLine: Array();
 		dispRawStart: Array();
 		maxDispW: 0;
 		local Int is rcount: rawLines:length();
+		if({ wrapCached && availTextW > fpx && rcount >= 64 }, {
+			DrawContext:shared:measureTextWidth(text: ' ', pixelHeight: fpx, mono: monoCached);
+			DrawContext:shared:measureTextWidth(text: '\u2026', pixelHeight: fpx, mono: monoCached);
+			local Array of Array of String is segLinesSlots: Array();
+			local Array of Array of Int is segStartsSlots: Array();
+			local Int is si: 0;
+			while({ si < rcount }, {
+				segLinesSlots:add(item: Array());
+				segStartsSlots:add(item: Array());
+				si: si + 1;
+			});
+			local Int is nThreads: Process():threadCount();
+			if({ nThreads < 2 }, { nThreads: 2; });
+			if({ nThreads > 8 }, { nThreads: 8; });
+			if({ nThreads > rcount }, { nThreads: rcount; });
+			local Int is baseCount: rcount / nThreads;
+			local Int is remCount: rcount % nThreads;
+			local Boolean is monoVal: monoCached;
+			Parallel():runScoped(
+				threads: nThreads,
+				iterations: rcount,
+				worker: local Function of Int(Int is tid, Int is cnt){
+					local Int is startR: tid * baseCount + if({ tid < remCount }, { tid }, { remCount });
+					local Int is endR: startR + cnt;
+					local Int is scratch: Mem:alloc(bytes: 8);
+					local Int is r: startR;
+					while({ r < endR }, {
+						:wrapSingleLine(
+							line: rawLines:get(index: r),
+							availTextW: availTextW,
+							fpx: fpx,
+							mono: monoVal,
+							scratchPtr: scratch,
+							outSegs: segLinesSlots:get(index: r),
+							outStarts: segStartsSlots:get(index: r)
+						);
+						r: r + 1;
+					});
+					Mem:free(ptr: scratch);
+					return 0;
+				}
+			);
+			local Int is mr: 0;
+			while({ mr < rcount }, {
+				local Array of String is segs: segLinesSlots:get(index: mr);
+				local Array of Int is starts: segStartsSlots:get(index: mr);
+				local Int is j: 0;
+				while({ j < segs:length() }, {
+					dispLines:add(item: segs:get(index: j));
+					dispRawLine:add(item: mr);
+					dispRawStart:add(item: starts:get(index: j));
+					j: j + 1;
+				});
+				mr: mr + 1;
+			});
+			lastWrapW: availTextW;
+			return;
+		});
+
 		local Int is r: 0;
 		while({ r < rcount }, {
 			local String is line: rawLines:get(index: r);
@@ -239,53 +363,23 @@ Class of SewNode is TextView{
 					if({ lw > maxDispW }, { maxDispW: lw; });
 				});
 			}, {
-				local Int is fullW: :measureStr(s: line, fpx: fpx);
-				if({ fullW <= availTextW }, {
-					dispLines:add(item: line);
+				local Array of String is segs: Array();
+				local Array of Int is starts: Array();
+				:wrapSingleLine(
+					line: line,
+					availTextW: availTextW,
+					fpx: fpx,
+					mono: monoCached,
+					scratchPtr: 0,
+					outSegs: segs,
+					outStarts: starts
+				);
+				local Int is j: 0;
+				while({ j < segs:length() }, {
+					dispLines:add(item: segs:get(index: j));
 					dispRawLine:add(item: r);
-					dispRawStart:add(item: 0);
-				}, {
-					local Int is len: line:length();
-					local Int is pos: 0;
-					while({ pos < len }, {
-						local Int is segEnd: len;
-						local Boolean is tailFits: if({ pos == 0 }, { false }, {
-							:measureStr(s: line:substring(start: pos, end: len), fpx: fpx) <= availTextW
-						});
-						if({ !tailFits }, {
-							local Int is lo: pos + 1;
-							local Int is hi: len - 1;
-							local Int is maxFit: pos + 1;
-							while({ lo <= hi }, {
-								local Int is mid: lo + (hi - lo) / 2;
-								if({ :measureStr(s: line:substring(start: pos, end: mid), fpx: fpx) <= availTextW }, {
-									maxFit: mid;
-									lo: mid + 1;
-								}, {
-									hi: mid - 1;
-								});
-							});
-							segEnd: maxFit;
-							if({ segEnd < len }, {
-								local Int is si: segEnd - 1;
-								local Boolean is foundSpace: false;
-								while({ si >= pos && !foundSpace }, {
-									if({ line:byteAt(index: si) == 32 }, {
-										if({ si + 1 > pos }, {
-											segEnd: si + 1;
-											foundSpace: true;
-										});
-									});
-									si: si - 1;
-								});
-							});
-							if({ segEnd <= pos }, { segEnd: pos + 1; });
-						});
-						dispLines:add(item: line:substring(start: pos, end: segEnd));
-						dispRawLine:add(item: r);
-						dispRawStart:add(item: pos);
-						pos: segEnd;
-					});
+					dispRawStart:add(item: starts:get(index: j));
+					j: j + 1;
 				});
 			});
 			r: r + 1;

@@ -514,10 +514,14 @@ Class is Font{
 		return math:toFloat(value: adv) * baseScale + tracking;
 	}
 
-	## Measures the horizontal pixel advance of UTF-8 [text] at [pixelHeight].
-	Function of Int is measureWidth(String is text, Int is pixelHeight: 16, Float is spacing: -1.0){
+	## Measures the horizontal pixel advance of UTF-8 [text] at [pixelHeight] using an explicit 8-byte [scratchPtr].
+	Function of Int is measureWidthWithScratch(String is text, Int is pixelHeight: 16, Int is scratchPtr: 0, Float is spacing: -1.0){
 		if({ handle <= 0 || pixelHeight <= 0 || text == '' }, { return 0; });
-		:ensureMetricsBuf();
+		local Int is bufPtr: scratchPtr;
+		if({ bufPtr == 0 }, {
+			:ensureMetricsBuf();
+			bufPtr: metricsAddr;
+		});
 		local Float is baseScale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		local Float is sp: if({ spacing >= 0.0 }, { spacing }, { letterSpacing });
 		local Float is tracking: math:toFloat(value: pixelHeight) * sp;
@@ -542,8 +546,8 @@ Class is Font{
 						local Int is kern: :kernAdvanceFor(fontHandle: gh, cp1: prevCp, cp2: cp);
 						xpos: xpos + math:toFloat(value: kern) * gScale;
 					});
-					base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: metricsAddr);
-					local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+					base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: bufPtr);
+					local Int is adv: :signI32(v: Mem:loadI32(ptr: bufPtr, byteOffset: 0));
 					xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
 					prevCp: cp;
 					prevH: gh;
@@ -551,6 +555,11 @@ Class is Font{
 			});
 		});
 		return math:toInt(value: math:round(value: xpos));
+	}
+
+	## Measures the horizontal pixel advance of UTF-8 [text] at [pixelHeight].
+	Function of Int is measureWidth(String is text, Int is pixelHeight: 16, Float is spacing: -1.0){
+		return :measureWidthWithScratch(text: text, pixelHeight: pixelHeight, scratchPtr: 0, spacing: spacing);
 	}
 
 	## Releases the underlying font handle (if owned), custom fallback fonts, glyph cache, and scratch buffers.

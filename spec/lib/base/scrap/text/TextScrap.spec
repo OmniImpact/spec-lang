@@ -26,6 +26,7 @@ Class of SewNode is TextScrap{
 	Boolean is muted: false;
 	Float is lineGapPt: 0.0;
 	Array of String is cachedLines: Array();
+	String is lastMeasuredText: '';
 
 	replace Function is init(
 		TextEmitter is text: TextEmitter(initial: ''),
@@ -103,7 +104,9 @@ Class of SewNode is TextScrap{
 		local Int is fpx: :fontPx();
 		local Int is lineH: DrawContext:measureHeight(pixelHeight: fpx);
 		local Int is gapPx: activeScale:px(pt: if({ lineGapPt > 0.0 }, { lineGapPt }, { activeTheme:lineGapPt * 1.5 }));
-		cachedLines: :computeLines(s: text:current(), maxW: c:maxW);
+		local String is cur: text:current();
+		lastMeasuredText: cur;
+		cachedLines: :computeLines(s: cur, maxW: c:maxW);
 
 		local Int is maxLineW: 0;
 		times(count: cachedLines:length(), worker: local Function(Int is i){
@@ -120,6 +123,11 @@ Class of SewNode is TextScrap{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
+		local String is cur: text:current();
+		if({ cur != lastMeasuredText }, {
+			lastMeasuredText: cur;
+			cachedLines: :computeLines(s: cur, maxW: b:width);
+		});
 		local Int is fpx: :fontPx();
 		local Int is lineH: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is gapPx: activeScale:px(pt: if({ lineGapPt > 0.0 }, { lineGapPt }, { activeTheme:lineGapPt * 1.5 }));

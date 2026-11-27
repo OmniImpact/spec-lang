@@ -301,6 +301,13 @@ Class is DrawContext{
 		return f:measureWidth(text: text, pixelHeight: pixelHeight);
 	}
 
+	## Thread-safe text width measurement using an explicit 8-byte [scratchPtr].
+	Function of Int is measureTextWidthWithScratch(String is text, Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false, Boolean is mono: false, Int is scratchPtr: 0){
+		local Font is f: :styledFont(bold: bold, italic: italic, mono: mono);
+		if({ !f:isLoaded() }, { return 0; });
+		return f:measureWidthWithScratch(text: text, pixelHeight: pixelHeight, scratchPtr: scratchPtr);
+	}
+
 	## Measures the line height for [pixelHeight].
 	Function of Int is measureTextHeight(Int is pixelHeight: 15){
 		return pixelHeight;
