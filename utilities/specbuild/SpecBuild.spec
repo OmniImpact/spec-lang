@@ -863,6 +863,17 @@ Class is SpecBuild{
 		Process:execute(command: 'update-desktop-database', args: Array([appDir]));
 		if({ iconEntry != '' }, {
 			Process:execute(command: 'gtk-update-icon-cache', args: Array(['-f', '-t', iconRootDir]));
+			local String is kdeIconCache: home . '/.cache/icon-cache.kcache';
+			if({ fileExists(path: kdeIconCache) }, {
+				File:fileRemove(path: kdeIconCache);
+			});
+		});
+		if({ fileExists(path: '/usr/bin/kbuildsycoca6') }, {
+			Process:execute(command: 'kbuildsycoca6', args: Array(['--noincremental']));
+		}, {
+			if({ fileExists(path: '/usr/bin/kbuildsycoca5') }, {
+				Process:execute(command: 'kbuildsycoca5', args: Array(['--noincremental']));
+			});
 		});
 
 		local Cleo is instUi: Cleo:toolUi(title: ' specbuild ');
