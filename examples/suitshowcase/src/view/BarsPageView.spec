@@ -77,6 +77,9 @@ Class is BarsPageView{
 				});
 				demoTabs:setTabs(tabs: next, activeIndex: 0);
 				barActionText:emit(value: 'Closed tab index ' . (idx as String));
+			},
+			onReorderTab: local Function(Int is fromIdx, Int is toIdx){
+				barActionText:emit(value: 'Reordered tab ' . (fromIdx as String) . ' -> ' . (toIdx as String));
 			}
 		);
 

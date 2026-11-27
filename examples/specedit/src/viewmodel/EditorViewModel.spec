@@ -523,6 +523,31 @@ Class is EditorViewModel{
 		:activateDocument(idx: index);
 	}
 
+	Function is reorderTab(Int is fromIdx, Int is toIdx){
+		local Int is n: documents:length();
+		if({ fromIdx < 0 || fromIdx >= n || toIdx < 0 || toIdx >= n || fromIdx == toIdx }, { return; });
+		local EditorModel is moved: documents:get(index: fromIdx);
+		local Array of EditorModel is nextDocs: Array();
+		local Int is i: 0;
+		while({ i < n }, {
+			if({ i == toIdx && toIdx < fromIdx }, { nextDocs:add(item: moved); });
+			if({ i != fromIdx }, { nextDocs:add(item: documents:get(index: i)); });
+			if({ i == toIdx && toIdx > fromIdx }, { nextDocs:add(item: moved); });
+			i: i + 1;
+		});
+		documents: nextDocs;
+		if({ activeDocIdx == fromIdx }, {
+			activeDocIdx: toIdx;
+		}, {
+		if({ fromIdx < activeDocIdx && activeDocIdx <= toIdx }, {
+			activeDocIdx: activeDocIdx - 1;
+		}, {
+		if({ toIdx <= activeDocIdx && activeDocIdx < fromIdx }, {
+			activeDocIdx: activeDocIdx + 1;
+		}); }); });
+		:syncTabs();
+	}
+
 	Function is closeTab(Int is index){
 		if({ index < 0 || index >= documents:length() }, { return; });
 		if({ documents:length() == 1 }, {

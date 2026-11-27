@@ -27,12 +27,18 @@ Class of SewNode is TabBar{
 	Float is minTabWidthPt: 0.0;
 	Float is maxTabWidthPt: 0.0;
 	Boolean is showCloseButton: true;
+	Boolean is reorderable: true;
 	Function is onSelectTab: local Function(Int is _idx){};
 	Function is onCloseTab: local Function(Int is _idx){};
 	Function is onRightClickTab: local Function(Int is _idx, Int is _x, Int is _y){};
+	Function is onReorderTab: local Function(Int is _fromIdx, Int is _toIdx){};
 
 	Int is hoverTabIdx: -1;
 	Int is hoverCloseIdx: -1;
+	Int is dragTabIdx: -1;
+	Int is dragStartX: 0;
+	Boolean is draggingTab: false;
+	Boolean is suppressNextClick: false;
 
 	replace Function is init(
 		Array of TabItemConfig is tabs: Array(),
@@ -44,9 +50,11 @@ Class of SewNode is TabBar{
 		Float is minTabWidthPt: 0.0,
 		Float is maxTabWidthPt: 0.0,
 		Boolean is showCloseButton: true,
+		Boolean is reorderable: true,
 		Function is onSelectTab: local Function(Int is _idx){},
 		Function is onCloseTab: local Function(Int is _idx){},
-		Function is onRightClickTab: local Function(Int is _idx, Int is _x, Int is _y){}
+		Function is onRightClickTab: local Function(Int is _idx, Int is _x, Int is _y){},
+		Function is onReorderTab: local Function(Int is _fromIdx, Int is _toIdx){}
 	){
 		:tabs: tabs;
 		:activeIndex: activeIndex;
@@ -57,11 +65,17 @@ Class of SewNode is TabBar{
 		:minTabWidthPt: minTabWidthPt;
 		:maxTabWidthPt: maxTabWidthPt;
 		:showCloseButton: showCloseButton;
+		:reorderable: reorderable;
 		:onSelectTab: onSelectTab;
 		:onCloseTab: onCloseTab;
 		:onRightClickTab: onRightClickTab;
+		:onReorderTab: onReorderTab;
 		hoverTabIdx: -1;
 		hoverCloseIdx: -1;
+		dragTabIdx: -1;
+		dragStartX: 0;
+		draggingTab: false;
+		suppressNextClick: false;
 	}
 
 	## Replaces the visible tab list and active index, triggering a redraw.
@@ -187,7 +201,91 @@ Class of SewNode is TabBar{
 		});
 	}
 
+	local Function is moveTabItem(Int is fromIdx, Int is toIdx){
+		local Int is n: tabs:length();
+		if({ fromIdx < 0 || fromIdx >= n || toIdx < 0 || toIdx >= n || fromIdx == toIdx }, { return; });
+		local TabItemConfig is moved: tabs:get(index: fromIdx);
+		local Array of TabItemConfig is next: Array();
+		local Int is i: 0;
+		while({ i < n }, {
+			if({ i == toIdx && toIdx < fromIdx }, { next:add(item: moved); });
+			if({ i != fromIdx }, { next:add(item: tabs:get(index: i)); });
+			if({ i == toIdx && toIdx > fromIdx }, { next:add(item: moved); });
+			i: i + 1;
+		});
+		:tabs: next;
+		if({ activeIndex == fromIdx }, {
+			:activeIndex: toIdx;
+		}, {
+		if({ fromIdx < activeIndex && activeIndex <= toIdx }, {
+			:activeIndex: activeIndex - 1;
+		}, {
+		if({ toIdx <= activeIndex && activeIndex < fromIdx }, {
+			:activeIndex: activeIndex + 1;
+		}); }); });
+		:hoverTabIdx: toIdx;
+		local Function is rcb: onReorderTab;
+		rcb(fromIdx, toIdx);
+		invalidate();
+	}
+
+	replace Function of Boolean is onPointerDrag(Int is x, Int is y, Int is mods: 0){
+		if({ !reorderable || tabs:length() <= 1 }, { return false; });
+		local Rect is area: :tabsAreaRect(b: bounds());
+		local Int is tw: :tabWidthPx(totalW: area:width);
+		if({ tw <= 0 }, { return false; });
+		local Int is startX: :tabsStartX(area: area, tw: tw);
+		if({ dragTabIdx < 0 }, {
+			if({ x < startX || x >= area:x + area:width || y < area:y || y >= area:y + area:height }, { return false; });
+			local Int is idx: (x - startX) / tw;
+			if({ idx < 0 || idx >= tabs:length() }, { return false; });
+			local TabItemConfig is t: tabs:get(index: idx);
+			if({ showCloseButton && t:closable && :pointInCloseBtn(x: x, y: y, tabX: startX + idx * tw, tabW: tw, area: area) }, {
+				return false;
+			});
+			:dragTabIdx: idx;
+			:dragStartX: x;
+			:draggingTab: false;
+			return true;
+		});
+		if({ !draggingTab }, {
+			local Int is thresh: activeScale:px(pt: 4.0);
+			if({ thresh < 3 }, { thresh: 3; });
+			local Int is dx: if({ x >= dragStartX }, { x - dragStartX }, { dragStartX - x });
+			if({ dx >= thresh }, {
+				:draggingTab: true;
+				:suppressNextClick: true;
+			});
+		});
+		if({ draggingTab }, {
+			local Int is targetIdx: (x - startX) / tw;
+			if({ x < startX }, { targetIdx: 0; });
+			if({ targetIdx < 0 }, { targetIdx: 0; });
+			if({ targetIdx >= tabs:length() }, { targetIdx: tabs:length() - 1; });
+			if({ targetIdx != dragTabIdx }, {
+				local Int is fromIdx: dragTabIdx;
+				:dragTabIdx: targetIdx;
+				:moveTabItem(fromIdx: fromIdx, toIdx: targetIdx);
+			});
+		});
+		return true;
+	}
+
+	replace Function of Boolean is onPointerUp(Int is x, Int is y){
+		if({ dragTabIdx >= 0 }, {
+			:dragTabIdx: -1;
+			:draggingTab: false;
+			invalidate();
+			return true;
+		});
+		return false;
+	}
+
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		if({ suppressNextClick }, {
+			:suppressNextClick: false;
+			return true;
+		});
 		local Rect is area: :tabsAreaRect(b: bounds());
 		if({ x < area:x || x >= area:x + area:width || y < area:y || y >= area:y + area:height || tabs:length() == 0 }, { return false; });
 		local Int is tw: :tabWidthPx(totalW: area:width);

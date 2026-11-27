@@ -65,7 +65,8 @@ Class is EditorView{
 		tabBar: TabBar(
 			onSelectTab: local Function(Int is idx){ vm:selectTab(index: idx); },
 			onCloseTab: local Function(Int is idx){ vm:closeTab(index: idx); },
-			onRightClickTab: local Function(Int is idx, Int is x, Int is y){ vm:showTabContextMenu(index: idx, x: x, y: y); }
+			onRightClickTab: local Function(Int is idx, Int is x, Int is y){ vm:showTabContextMenu(index: idx, x: x, y: y); },
+			onReorderTab: local Function(Int is fromIdx, Int is toIdx){ vm:reorderTab(fromIdx: fromIdx, toIdx: toIdx); }
 		);
 		vm:bindTabBar(tabBar: tabBar);
 		vm:bindCodeEditor(editor: editorBody);
