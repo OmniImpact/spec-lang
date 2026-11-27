@@ -131,12 +131,20 @@ Class of TextView is CodeEditorView{
 		return activeHighlighter:measureLinePrefix(ctx: ctx, theme: activeTheme, lineStr: lineStr, fpx: fpx, col: col);
 	}
 
-	replace Function of Any is createWrapContext(){
-		return :highlighterFor(langOverride: language:current(), path: filePath:current()) as Any;
+	replace Function of Highlighter is createWrapContext(){
+		local String is lid: activeHighlighter:languageId();
+		if({ lid == 'spec' }, { return HighlighterSpec() as Highlighter; });
+		if({ lid == 'markdown' }, { return HighlighterMarkdown() as Highlighter; });
+		if({ lid == 'json' }, { return HighlighterJson() as Highlighter; });
+		if({ lid == 'c' }, { return HighlighterC() as Highlighter; });
+		if({ lid == 'python' }, { return HighlighterPython() as Highlighter; });
+		if({ lid == 'java' }, { return HighlighterJava() as Highlighter; });
+		if({ lid == 'ruby' }, { return HighlighterRuby() as Highlighter; });
+		if({ lid == 'rust' }, { return HighlighterRust() as Highlighter; });
+		return Highlighter();
 	}
 
-	replace Function is measureLineAdvancesInCtx(Any is ctxObj, String is lineStr, Int is fpx, Boolean is mono, Int is outAdvI32Ptr, Int is scratchPtr){
-		local Highlighter is hl: ctxObj as Highlighter;
+	replace Function is measureLineAdvancesInCtx(Highlighter is hl, String is lineStr, Int is fpx, Boolean is mono, Int is outAdvI32Ptr, Int is scratchPtr){
 		hl:monoMode: mono;
 		hl:measureLineAdvances(ctx: DrawContext:shared, theme: activeTheme, lineStr: lineStr, fpx: fpx, outAdvI32Ptr: outAdvI32Ptr, scratchPtr: scratchPtr);
 	}
