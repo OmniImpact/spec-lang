@@ -58,6 +58,8 @@ Class is DropdownsPageView{
 		tbCfg:addMenu(menu: mPresets);
 		local Toolbar is menuBar: Toolbar(config: tbCfg);
 
+		local String is calSvg: "<svg viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"3\" width=\"12\" height=\"11\" rx=\"1.5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.5\"/><path d=\"M2 6.5h12M5 1.5v2.5M11 1.5v2.5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg>";
+
 		return SectionV(
 			children: Array([
 				Label(text: 'Dropdowns', heading: true),
@@ -140,7 +142,8 @@ Class is DropdownsPageView{
 								children: Array([
 									DateDropdown(
 										value: DateTime:now(),
-										tooltip: 'Calendar dropdown backed by DateTime',
+										iconSvg: calSvg,
+										tooltip: 'Calendar dropdown with custom calendar SVG icon',
 										onChange: local Function(DateTime is dt){ statusLabel:emit(value: 'DateDropdown: ' . dt:formatDate()); }
 									)
 								])

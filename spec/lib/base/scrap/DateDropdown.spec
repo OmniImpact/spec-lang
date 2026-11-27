@@ -17,10 +17,12 @@ Class of SewNode is DateDropdown{
 		['base', 'fabric', FillStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', DropdownPopup],
-		['base', 'scrap', DateSelector]
+		['base', 'scrap', DateSelector],
+		['base', 'fabric', 'svg', SvgRenderer]
 	];
 
 	DateTime is value: DateTime:now();
+	String is iconSvg: '';
 	Boolean is open: false;
 	Boolean is hovered: false;
 	Boolean is focused: false;
@@ -32,10 +34,12 @@ Class of SewNode is DateDropdown{
 
 	replace Function is init(
 		DateTime is value: DateTime:now(),
+		String is iconSvg: '',
 		Function is onChange: local Function(DateTime is _dt){},
 		String is tooltip: ''
 	){
 		:value: value;
+		:iconSvg: iconSvg;
 		:open: false;
 		:hovered: false;
 		:focused: false;
@@ -141,7 +145,7 @@ Class of SewNode is DateDropdown{
 		local Int is fpx: :fontPx();
 		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
 		local Int is h: activeScale:px(pt: activeTheme:buttonHeightPt);
-		local Int is dw: DrawContext:measureWidth(text: '2026-12-31  v', pixelHeight: fpx);
+		local Int is dw: DrawContext:measureWidth(text: '2026-12-31  ▾', pixelHeight: fpx);
 		local Int is w: dw + pad * 3;
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
@@ -258,8 +262,14 @@ Class of SewNode is DateDropdown{
 		local Int is pad: activeScale:px(pt: activeTheme:paddingPt);
 		local String is txt: value:formatDate();
 		ctx:drawText(x: b:x + pad, y: b:y + (b:height - th) / 2, text: txt, color: activeTheme:textPrimary, pixelHeight: fpx);
-		local Int is cw: ctx:measureTextWidth(text: 'v', pixelHeight: fpx);
-		ctx:drawText(x: b:x + b:width - pad - cw, y: b:y + (b:height - th) / 2, text: 'v', color: activeTheme:textMuted, pixelHeight: fpx);
+		if({ iconSvg != '' }, {
+			local Int is iconSz: activeScale:px(pt: activeTheme:iconSizePt);
+			if({ iconSz < 10 }, { iconSz: 10; });
+			SvgRenderer:shared:draw(ctx: ctx, svgSrc: iconSvg, x: b:x + b:width - pad - iconSz, y: b:y + (b:height - iconSz) / 2, widthPx: iconSz, heightPx: iconSz, tintColor: activeTheme:textMuted, useTint: true);
+		}, {
+			local Int is cw: ctx:measureTextWidth(text: '▾', pixelHeight: fpx);
+			ctx:drawText(x: b:x + b:width - pad - cw, y: b:y + (b:height - th) / 2, text: '▾', color: activeTheme:textMuted, pixelHeight: fpx);
+		});
 	}
 
 	replace Function is paintOverlay(DrawContext is ctx){

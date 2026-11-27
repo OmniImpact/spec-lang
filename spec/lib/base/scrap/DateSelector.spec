@@ -14,23 +14,30 @@ Class of SewNode is DateSelector{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'fabric', FillStyle],
-		['base', 'fabric', DrawContext]
+		['base', 'fabric', DrawContext],
+		['base', 'fabric', 'svg', SvgRenderer]
 	];
 
 	DateTime is value: DateTime:now();
 	Int is viewYear: 2026;
 	Int is viewMonth: 1;
 	Int is hoverPart: 0;
+	String is prevIconSvg: '';
+	String is nextIconSvg: '';
 	Function is onChange: local Function(DateTime is _dt){};
 
 	replace Function is init(
 		DateTime is value: DateTime:now(),
+		String is prevIconSvg: '',
+		String is nextIconSvg: '',
 		Function is onChange: local Function(DateTime is _dt){},
 		String is tooltip: ''
 	){
 		:value: value;
 		:viewYear: value:getYear();
 		:viewMonth: value:getMonth();
+		:prevIconSvg: prevIconSvg;
+		:nextIconSvg: nextIconSvg;
 		:onChange: onChange;
 		:hoverPart: 0;
 		:tooltip: tooltip;
@@ -155,16 +162,28 @@ Class of SewNode is DateSelector{
 			fill: activeTheme:resolveButtonFill(enabled: true, selected: false, hovered: hoverPart == 1),
 			borderColor: activeTheme:buttonBorderColorArgb(), thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
 		);
-		local Int is pw: ctx:measureTextWidth(text: '<', pixelHeight: fpx);
-		ctx:drawText(x: pr:x + (pr:width - pw) / 2, y: pr:y + (pr:height - th) / 2, text: '<', color: activeTheme:textPrimary, pixelHeight: fpx);
+		if({ prevIconSvg != '' }, {
+			local Int is isz: (pr:height * 60) / 100;
+			if({ isz < 10 }, { isz: 10; });
+			SvgRenderer:shared:draw(ctx: ctx, svgSrc: prevIconSvg, x: pr:x + (pr:width - isz) / 2, y: pr:y + (pr:height - isz) / 2, widthPx: isz, heightPx: isz, tintColor: activeTheme:textPrimary, useTint: true);
+		}, {
+			local Int is pw: ctx:measureTextWidth(text: '◀', pixelHeight: fpx);
+			ctx:drawText(x: pr:x + (pr:width - pw) / 2, y: pr:y + (pr:height - th) / 2, text: '◀', color: activeTheme:textPrimary, pixelHeight: fpx);
+		});
 
 		ctx:drawStyledBoxFill(
 			x: nr:x, y: nr:y, w: nr:width, h: nr:height,
 			fill: activeTheme:resolveButtonFill(enabled: true, selected: false, hovered: hoverPart == 2),
 			borderColor: activeTheme:buttonBorderColorArgb(), thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
 		);
-		local Int is nw: ctx:measureTextWidth(text: '>', pixelHeight: fpx);
-		ctx:drawText(x: nr:x + (nr:width - nw) / 2, y: nr:y + (nr:height - th) / 2, text: '>', color: activeTheme:textPrimary, pixelHeight: fpx);
+		if({ nextIconSvg != '' }, {
+			local Int is isz: (nr:height * 60) / 100;
+			if({ isz < 10 }, { isz: 10; });
+			SvgRenderer:shared:draw(ctx: ctx, svgSrc: nextIconSvg, x: nr:x + (nr:width - isz) / 2, y: nr:y + (nr:height - isz) / 2, widthPx: isz, heightPx: isz, tintColor: activeTheme:textPrimary, useTint: true);
+		}, {
+			local Int is nw: ctx:measureTextWidth(text: '▶', pixelHeight: fpx);
+			ctx:drawText(x: nr:x + (nr:width - nw) / 2, y: nr:y + (nr:height - th) / 2, text: '▶', color: activeTheme:textPrimary, pixelHeight: fpx);
+		});
 
 		ctx:drawStyledBoxFill(
 			x: tr:x, y: tr:y, w: tr:width, h: tr:height,
