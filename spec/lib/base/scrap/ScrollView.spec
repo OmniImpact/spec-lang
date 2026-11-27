@@ -23,14 +23,16 @@ Class of SewNode is ScrollView{
 	Int is contentW: 0;
 	Int is contentH: 0;
 	Float is barWidthPt: 0.0;
+	Float is heightPt: 0.0;
 	DockSide is scrollbarSide: DockSide:RIGHT;
 	Int is dragMode: 0;
 	Int is dragGrabOffset: 0;
 	Boolean is childCapturing: false;
 
-	replace Function is init(SewNode is child, Float is barWidthPt: 0.0, DockSide is scrollbarSide: DockSide:RIGHT){
+	replace Function is init(SewNode is child, Float is barWidthPt: 0.0, DockSide is scrollbarSide: DockSide:RIGHT, Float is heightPt: 0.0){
 		:child: child;
 		:barWidthPt: barWidthPt;
+		:heightPt: heightPt;
 		:scrollbarSide: scrollbarSide;
 		:scrollX: 0;
 		:scrollY: 0;
@@ -60,7 +62,8 @@ Class of SewNode is ScrollView{
 		local Size is cs: child:measure(c: Constraints(minW: vw, maxW: vw, minH: 0, maxH: 1000000));
 		contentW: cs:width;
 		contentH: cs:height;
-		desiredSize: Size(width: c:maxW, height: c:maxH);
+		local Int is outH: if({ heightPt > 0.0 }, { c:clampH(h: activeScale:px(pt: heightPt)) }, { c:maxH });
+		desiredSize: Size(width: c:maxW, height: outH);
 		return desiredSize;
 	}
 

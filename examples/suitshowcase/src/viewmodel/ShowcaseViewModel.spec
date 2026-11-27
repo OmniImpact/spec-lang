@@ -34,7 +34,7 @@ Class is ShowcaseViewModel{
 	BoolEmitter is demoWrap: BoolEmitter(initial: false);
 	BoolEmitter is demoNums: BoolEmitter(initial: true);
 	BoolEmitter is demoMono: BoolEmitter(initial: true);
-	TextEmitter is demoCodeText: TextEmitter(initial: 'Class is Hello {\n\t## Try word wrap, line numbers, or typing here\n\tFunction is greet(String is name) {\n\t\tlocal String is msg: "Hello, " . name . "!";\n\t\treturn msg;\n\t}\n}\n');
+	TextEmitter is demoCodeText: TextEmitter(initial: "Class is Hello {\n\t## Try word wrap, line numbers, or typing here\n\tFunction is greet(String is name) {\n\t\tlocal String is msg: \"Hello, \" . name . \"!\";\n\t\treturn msg;\n\t}\n}\n");
 
 	Function is themeApplyHandler: local Function(Theme is _t){};
 	Function is alphaApplyHandler: local Function(Int is _pct){};

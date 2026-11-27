@@ -82,13 +82,13 @@ Class is TextTreePageView{
 									]))
 								])
 							),
-							Frame(padPt: 0.0, child: ScrollView(child: editor))
+							Frame(padPt: 0.0, child: ScrollView(heightPt: 150.0, child: editor))
 						])
 					)
 				),
 				Frame(
 					title: 'TreeView',
-					child: Frame(padPt: 0.0, child: tree)
+					child: Frame(padPt: 0.0, child: ScrollView(heightPt: 140.0, child: tree))
 				)
 			])
 		);
