@@ -1,0 +1,11 @@
+{
+  "name": "suitshowcase",
+  "version": "0.1.0",
+  "description": "Component showcase and live Theme Builder for Suit, Sew, and Scrap",
+  "source": "src/SuitShowcase.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/suitshowcase"
+}
