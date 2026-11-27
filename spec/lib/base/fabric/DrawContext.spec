@@ -356,9 +356,10 @@ Class is DrawContext{
 		local Float is lo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.0 });
 		local Float is hi: if({ b > 0.5 }, { 1.0 }, { b * 2.0 });
 		local Float is spanR: if({ hi - lo < 0.001 }, { 0.001 }, { hi - lo });
-		local Float is linLo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.5 - b });
-		local Float is linHi: if({ b > 0.5 }, { 1.0 }, { 0.5 + b });
+		local Float is linLo: 0.5 - b;
+		local Float is linHi: 0.5 + b;
 		local Float is linSpan: if({ linHi - linLo < 0.001 }, { 0.001 }, { linHi - linLo });
+		local Float is linEdge: 1.0 - b;
 		local Float is rad: (fill:angleDeg * pi()) / 180.0;
 		local Float is ux: cos(value: rad);
 		local Float is uy: sin(value: rad);
@@ -421,10 +422,20 @@ Class is DrawContext{
 								t: if({ pos >= 0.5 }, { 1.0 }, { 0.0 });
 							}, {
 							if({ b >= 0.999 }, {
-								t: 0.0;
+								t: 0.5;
+							}, {
+							if({ b > 0.5 }, {
+								if({ pos <= linEdge }, {
+									t: :clamp01(v: pos / linEdge) * 0.5;
+								}, {
+								if({ pos >= b }, {
+									t: 0.5 + :clamp01(v: (pos - b) / linEdge) * 0.5;
+								}, {
+									t: 0.5;
+								}); });
 							}, {
 								t: :clamp01(v: (pos - linLo) / linSpan);
-							}); });
+							}); }); });
 						});
 					});
 					if({ fastFx }, {

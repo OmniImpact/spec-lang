@@ -120,13 +120,24 @@ Class is FillStyle{
 					t: if({ pos >= 0.5 }, { 1.0 }, { 0.0 });
 				}, {
 				if({ b >= 0.999 }, {
-					t: 0.0;
+					t: 0.5;
 				}, {
-					local Float is lo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.5 - b });
-					local Float is hi: if({ b > 0.5 }, { 1.0 }, { 0.5 + b });
+				if({ b > 0.5 }, {
+					local Float is edge: 1.0 - b;
+					if({ pos <= edge }, {
+						t: Color:clamp01(v: pos / edge) * 0.5;
+					}, {
+					if({ pos >= b }, {
+						t: 0.5 + Color:clamp01(v: (pos - b) / edge) * 0.5;
+					}, {
+						t: 0.5;
+					}); });
+				}, {
+					local Float is lo: 0.5 - b;
+					local Float is hi: 0.5 + b;
 					local Float is span: if({ hi - lo < 0.001 }, { 0.001 }, { hi - lo });
 					t: Color:clamp01(v: (pos - lo) / span);
-				}); });
+				}); }); });
 			});
 		});
 		return :applyEffects(c: colorA:mix(other: colorB, t: t));
