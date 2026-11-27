@@ -70,6 +70,13 @@ Class of SewNode is SectionV{
 						cb(idx);
 					}
 				);
+				if({ segmented }, {
+					local Int is nOpt: options:length();
+					item:roundTop: idx == 0;
+					item:roundBottom: idx == nOpt - 1;
+					item:roundLeft: idx == 0 || idx == nOpt - 1;
+					item:roundRight: idx == 0 || idx == nOpt - 1;
+				});
 				segmentItems:add(item: item);
 				allChildren:add(item: item);
 				local Boolean is fx: if({ idx < flexFlags:length() }, { flexFlags:get(index: idx) }, { false });

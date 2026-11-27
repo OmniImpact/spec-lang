@@ -54,6 +54,12 @@ Class is Theme{
 	Float is hoverBrightness: 0.08;
 	Float is hoverTintShiftDeg: 0.0;
 	Float is hoverSaturationShift: 0.0;
+	Float is selectedBrightness: 0.22;
+	Float is selectedTintShiftDeg: 0.0;
+	Float is selectedSaturationShift: 0.0;
+	Float is focusBrightness: 0.14;
+	Float is focusTintShiftDeg: 0.0;
+	Float is focusSaturationShift: 0.0;
 	Int is textPrimary: 0;
 	Int is textMuted: 0;
 	Int is textAccent: 0;
@@ -525,34 +531,64 @@ Class is Theme{
 		:deriveColors();
 	}
 
-	Function of FillStyle is resolveButtonFill(Boolean is enabled, Boolean is selected, Boolean is hovered){
+	Function is setSelectedEffects(Float is brightness: 0.22, Float is tintShiftDeg: 0.0, Float is saturationShift: 0.0){
+		:customMetrics: true;
+		:selectedBrightness: brightness;
+		:selectedTintShiftDeg: tintShiftDeg;
+		:selectedSaturationShift: saturationShift;
+		:deriveColors();
+	}
+
+	Function is setFocusEffects(Float is brightness: 0.14, Float is tintShiftDeg: 0.0, Float is saturationShift: 0.0){
+		:customMetrics: true;
+		:focusBrightness: brightness;
+		:focusTintShiftDeg: tintShiftDeg;
+		:focusSaturationShift: saturationShift;
+		:deriveColors();
+	}
+
+	Function of FillStyle is resolveButtonFill(Boolean is enabled, Boolean is selected, Boolean is hovered, Boolean is focused: false){
 		if({ !enabled }, {
 			return FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: toolbarBg));
 		});
+		local FillStyle is baseFill: if({ customButtonFill }, { buttonFill }, {
+			FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: menuBg))
+		});
+		if({ !selected && !hovered && !focused }, {
+			return baseFill;
+		});
+		local Float is bri: baseFill:brightness;
+		local Float is tint: baseFill:tintShiftDeg;
+		local Float is sat: baseFill:saturationShift;
 		if({ selected }, {
-			return FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: activeBg));
+			bri: bri + selectedBrightness;
+			tint: tint + selectedTintShiftDeg;
+			sat: sat + selectedSaturationShift;
 		});
-		if({ customButtonFill }, {
-			if({ hovered }, {
-				return FillStyle(
-					mode: buttonFill:mode,
-					bounds: buttonFill:bounds,
-					colorA: buttonFill:colorA,
-					colorB: buttonFill:colorB,
-					centerX: buttonFill:centerX,
-					centerY: buttonFill:centerY,
-					angleDeg: buttonFill:angleDeg,
-					blendWidth: buttonFill:blendWidth,
-					reflected: buttonFill:reflected,
-					brightness: buttonFill:brightness + hoverBrightness,
-					tintShiftDeg: buttonFill:tintShiftDeg + hoverTintShiftDeg,
-					saturationShift: buttonFill:saturationShift + hoverSaturationShift
-				);
-			});
-			return buttonFill;
+		if({ focused }, {
+			bri: bri + focusBrightness;
+			tint: tint + focusTintShiftDeg;
+			sat: sat + focusSaturationShift;
 		});
-		local Int is bg: if({ hovered }, { hoverBg }, { menuBg });
-		return FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: bg));
+		if({ hovered }, {
+			bri: bri + hoverBrightness;
+			tint: tint + hoverTintShiftDeg;
+			sat: sat + hoverSaturationShift;
+		});
+		return FillStyle(
+			mode: baseFill:mode,
+			bounds: baseFill:bounds,
+			colorA: baseFill:colorA,
+			colorB: baseFill:colorB,
+			centerX: baseFill:centerX,
+			centerY: baseFill:centerY,
+			angleDeg: baseFill:angleDeg,
+			blendWidth: baseFill:blendWidth,
+			reflected: baseFill:reflected,
+			brightness: bri,
+			tintShiftDeg: tint,
+			saturationShift: sat
+		);
 	}
 
 	Function of Int is linePx(Float is scaleFactor: 1.0){
@@ -605,6 +641,12 @@ Class is Theme{
 		:hoverBrightness: if({ preset == ThemePreset:LIGHT }, { -0.08 }, { 0.12 });
 		:hoverTintShiftDeg: 0.0;
 		:hoverSaturationShift: 0.0;
+		:selectedBrightness: if({ preset == ThemePreset:LIGHT }, { -0.16 }, { 0.22 });
+		:selectedTintShiftDeg: 0.0;
+		:selectedSaturationShift: 0.0;
+		:focusBrightness: if({ preset == ThemePreset:LIGHT }, { -0.10 }, { 0.14 });
+		:focusTintShiftDeg: 0.0;
+		:focusSaturationShift: 0.0;
 		:panelBorderStyle: 'single';
 		:panelCornerRadiusPt: 0.0;
 		:panelShadowBlurPt: 0.0;
@@ -658,16 +700,17 @@ Class is Theme{
 		toolbarBorder: if({ light }, { detail:toArgb() }, { detail:mix(other: surface, t: 0.25):toArgb() });
 		menuBg: if({ light }, { background:mix(other: surface, t: 0.65):toArgb() }, { surface:lighten(amount: 0.04):toArgb() });
 		menuBorder: if({ light }, { surface:darken(amount: 0.23):toArgb() }, { highlight:lighten(amount: 0.08):toArgb() });
-		local Color is hoverBase: surface:mix(other: highlight, t: if({ light }, { 0.35 }, { 0.45 }));
+		local Color is menuColor: Color:fromArgb(argb: menuBg);
 		local FillStyle is hoverFx: FillStyle(brightness: hoverBrightness, tintShiftDeg: hoverTintShiftDeg, saturationShift: hoverSaturationShift);
-		hoverBg: hoverFx:applyEffects(c: hoverBase):toArgb();
+		local FillStyle is selectedFx: FillStyle(brightness: selectedBrightness, tintShiftDeg: selectedTintShiftDeg, saturationShift: selectedSaturationShift);
+		hoverBg: hoverFx:applyEffects(c: menuColor):toArgb();
 		if({ !customSurfaceFill }, {
 			:surfaceFill: FillStyle(mode: FillMode:SOLID, colorA: surface);
 		});
 		if({ !customButtonFill }, {
-			:buttonFill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: menuBg));
+			:buttonFill: FillStyle(mode: FillMode:SOLID, colorA: menuColor);
 		});
-		activeBg: highlight:toArgb();
+		activeBg: selectedFx:applyEffects(c: menuColor):toArgb();
 		panelBg: surface:toArgb();
 		panelBorder: if({ light }, { toolbarBorder }, { detail:lighten(amount: 0.08):withAlphaByte(a: 235):toArgb() });
 		buttonBorder: if({ light }, { surface:darken(amount: 0.26):toArgb() }, { highlight:lighten(amount: 0.16):toArgb() });

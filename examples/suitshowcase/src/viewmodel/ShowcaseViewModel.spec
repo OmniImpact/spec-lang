@@ -44,6 +44,12 @@ Class is ShowcaseViewModel{
 	Int is hoverBriPct: 12;
 	Int is hoverTintDeg: 0;
 	Int is hoverSatPct: 0;
+	Int is selectedBriPct: 22;
+	Int is selectedTintDeg: 0;
+	Int is selectedSatPct: 0;
+	Int is focusBriPct: 14;
+	Int is focusTintDeg: 0;
+	Int is focusSatPct: 0;
 
 	## Interactive demo state
 	Int is clickCount: 0;
@@ -233,6 +239,12 @@ Class is ShowcaseViewModel{
 		:hoverBriPct: if({ preset == ThemePreset:LIGHT }, { -8 }, { 12 });
 		:hoverTintDeg: 0;
 		:hoverSatPct: 0;
+		:selectedBriPct: if({ preset == ThemePreset:LIGHT }, { -16 }, { 22 });
+		:selectedTintDeg: 0;
+		:selectedSatPct: 0;
+		:focusBriPct: if({ preset == ThemePreset:LIGHT }, { -10 }, { 14 });
+		:focusTintDeg: 0;
+		:focusSatPct: 0;
 		:applyCurrentTheme();
 		statusText:emit(value: 'Loaded ' . Theme:presetLabel(preset: preset) . ' preset');
 	}
@@ -310,6 +322,32 @@ Class is ShowcaseViewModel{
 	Function is setHoverBrightness(Int is pct){ :hoverBriPct: pct; :syncHoverEffects(); }
 	Function is setHoverTint(Int is deg){ :hoverTintDeg: deg; :syncHoverEffects(); }
 	Function is setHoverSaturation(Int is pct){ :hoverSatPct: pct; :syncHoverEffects(); }
+
+	local Function is syncSelectedEffects(){
+		activeTheme:setSelectedEffects(
+			brightness: (selectedBriPct as Float) / 100.0,
+			tintShiftDeg: selectedTintDeg as Float,
+			saturationShift: (selectedSatPct as Float) / 100.0
+		);
+		:notifyThemeChange();
+	}
+
+	Function is setSelectedBrightness(Int is pct){ :selectedBriPct: pct; :syncSelectedEffects(); }
+	Function is setSelectedTint(Int is deg){ :selectedTintDeg: deg; :syncSelectedEffects(); }
+	Function is setSelectedSaturation(Int is pct){ :selectedSatPct: pct; :syncSelectedEffects(); }
+
+	local Function is syncFocusEffects(){
+		activeTheme:setFocusEffects(
+			brightness: (focusBriPct as Float) / 100.0,
+			tintShiftDeg: focusTintDeg as Float,
+			saturationShift: (focusSatPct as Float) / 100.0
+		);
+		:notifyThemeChange();
+	}
+
+	Function is setFocusBrightness(Int is pct){ :focusBriPct: pct; :syncFocusEffects(); }
+	Function is setFocusTint(Int is deg){ :focusTintDeg: deg; :syncFocusEffects(); }
+	Function is setFocusSaturation(Int is pct){ :focusSatPct: pct; :syncFocusEffects(); }
 
 	Function is setBorderStyle(String is style){
 		:borderStyle: style;

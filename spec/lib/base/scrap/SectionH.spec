@@ -70,6 +70,13 @@ Class of SewNode is SectionH{
 						cb(idx);
 					}
 				);
+				if({ segmented }, {
+					local Int is nOpt: options:length();
+					item:roundLeft: idx == 0;
+					item:roundRight: idx == nOpt - 1;
+					item:roundTop: idx == 0 || idx == nOpt - 1;
+					item:roundBottom: idx == 0 || idx == nOpt - 1;
+				});
 				segmentItems:add(item: item);
 				rowChildren:add(item: item);
 				oi: oi + 1;

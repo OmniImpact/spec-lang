@@ -133,7 +133,7 @@ Class of SewNode is ScrapButton{
 		inner:paint(ctx: ctx);
 		local Int is linePx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 		if({ linePx > 0 }, {
-			local Int is border: if({ inner:selected || inner:focused }, { activeTheme:textAccent }, { activeTheme:buttonBorderColorArgb() });
+			local Int is border: activeTheme:buttonBorderColorArgb();
 			ctx:drawStyledBox(
 				x: b:x, y: b:y, w: b:width, h: b:height,
 				bgColor: 0, borderColor: border, thickness: linePx,

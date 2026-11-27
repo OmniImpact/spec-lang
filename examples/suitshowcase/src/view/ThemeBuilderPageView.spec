@@ -65,6 +65,18 @@ Class is ThemeBuilderPageView{
 	TextEmitter is hoverBriLabel: TextEmitter(initial: '12%');
 	TextEmitter is hoverTintLabel: TextEmitter(initial: '0 deg');
 	TextEmitter is hoverSatLabel: TextEmitter(initial: '0%');
+	Slider is selectedBriSlider: Slider();
+	Slider is selectedTintSlider: Slider();
+	Slider is selectedSatSlider: Slider();
+	TextEmitter is selectedBriLabel: TextEmitter(initial: '22%');
+	TextEmitter is selectedTintLabel: TextEmitter(initial: '0 deg');
+	TextEmitter is selectedSatLabel: TextEmitter(initial: '0%');
+	Slider is focusBriSlider: Slider();
+	Slider is focusTintSlider: Slider();
+	Slider is focusSatSlider: Slider();
+	TextEmitter is focusBriLabel: TextEmitter(initial: '14%');
+	TextEmitter is focusTintLabel: TextEmitter(initial: '0 deg');
+	TextEmitter is focusSatLabel: TextEmitter(initial: '0%');
 	Slider is panelThickSlider: Slider();
 	Slider is panelRadiusSlider: Slider();
 	Slider is panelShadowSlider: Slider();
@@ -305,6 +317,20 @@ Class is ThemeBuilderPageView{
 		hoverTintLabel:emit(value: (vm:hoverTintDeg as String) . ' deg');
 		hoverSatLabel:emit(value: (vm:hoverSatPct as String) . '%');
 
+		:selectedBriSlider: Slider(minVal: -60, maxVal: 60, value: vm:selectedBriPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSelectedBrightness(pct: v); });
+		:selectedTintSlider: Slider(minVal: -180, maxVal: 180, value: vm:selectedTintDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSelectedTint(deg: v); });
+		:selectedSatSlider: Slider(minVal: -100, maxVal: 100, value: vm:selectedSatPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setSelectedSaturation(pct: v); });
+		selectedBriLabel:emit(value: (vm:selectedBriPct as String) . '%');
+		selectedTintLabel:emit(value: (vm:selectedTintDeg as String) . ' deg');
+		selectedSatLabel:emit(value: (vm:selectedSatPct as String) . '%');
+
+		:focusBriSlider: Slider(minVal: -60, maxVal: 60, value: vm:focusBriPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFocusBrightness(pct: v); });
+		:focusTintSlider: Slider(minVal: -180, maxVal: 180, value: vm:focusTintDeg, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFocusTint(deg: v); });
+		:focusSatSlider: Slider(minVal: -100, maxVal: 100, value: vm:focusSatPct, minWidthPt: 110.0, onChange: local Function(Int is v){ vm:setFocusSaturation(pct: v); });
+		focusBriLabel:emit(value: (vm:focusBriPct as String) . '%');
+		focusTintLabel:emit(value: (vm:focusTintDeg as String) . ' deg');
+		focusSatLabel:emit(value: (vm:focusSatPct as String) . '%');
+
 		:baseTextInput: DecoratedTextInput(
 			text: vm:baseTextLabel(),
 			suffix: ' pt',
@@ -464,15 +490,21 @@ Class is ThemeBuilderPageView{
 					)
 				),
 				Frame(
-					title: 'Mouseover Effect',
+					title: 'State Effects (Hover, Selected, Focused)',
 					child: Grid(
 						columns: 3,
 						colGapPt: 10.0,
 						rowGapPt: 6.0,
 						children: Array([
-							Label(text: 'Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
-							Label(text: 'Tint Shift'), hoverTintSlider, TextScrap(text: hoverTintLabel, muted: true),
-							Label(text: 'Saturation'), hoverSatSlider, TextScrap(text: hoverSatLabel, muted: true)
+							Label(text: 'Hover Brightness'), hoverBriSlider, TextScrap(text: hoverBriLabel, muted: true),
+							Label(text: 'Hover Tint Shift'), hoverTintSlider, TextScrap(text: hoverTintLabel, muted: true),
+							Label(text: 'Hover Saturation'), hoverSatSlider, TextScrap(text: hoverSatLabel, muted: true),
+							Label(text: 'Selected Brightness'), selectedBriSlider, TextScrap(text: selectedBriLabel, muted: true),
+							Label(text: 'Selected Tint Shift'), selectedTintSlider, TextScrap(text: selectedTintLabel, muted: true),
+							Label(text: 'Selected Saturation'), selectedSatSlider, TextScrap(text: selectedSatLabel, muted: true),
+							Label(text: 'Focus Brightness'), focusBriSlider, TextScrap(text: focusBriLabel, muted: true),
+							Label(text: 'Focus Tint Shift'), focusTintSlider, TextScrap(text: focusTintLabel, muted: true),
+							Label(text: 'Focus Saturation'), focusSatSlider, TextScrap(text: focusSatLabel, muted: true)
 						])
 					)
 				),

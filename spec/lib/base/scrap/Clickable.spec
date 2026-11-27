@@ -30,6 +30,10 @@ Class of SewNode is Clickable{
 	Boolean is enabled: true;
 	Boolean is hovered: false;
 	Boolean is focused: false;
+	Boolean is roundLeft: true;
+	Boolean is roundRight: true;
+	Boolean is roundTop: true;
+	Boolean is roundBottom: true;
 
 	replace Function is init(
 		String is label: '',
@@ -164,17 +168,28 @@ Class of SewNode is Clickable{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: selected, hovered: hovered);
+		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: selected, hovered: hovered, focused: focused);
 		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
-		ctx:fillRoundRectStyled(x: b:x, y: b:y, w: b:width, h: b:height, radius: radPx, fill: fill);
+		if({ !roundLeft && !roundRight && !roundTop && !roundBottom }, {
+			ctx:fillRoundRectStyled(x: b:x, y: b:y, w: b:width, h: b:height, radius: 0, fill: fill);
+		}, {
+		if({ roundLeft && roundRight && roundTop && roundBottom }, {
+			ctx:fillRoundRectStyled(x: b:x, y: b:y, w: b:width, h: b:height, radius: radPx, fill: fill);
+		}, {
+			local Int is padL: if({ roundLeft }, { 0 }, { radPx });
+			local Int is padR: if({ roundRight }, { 0 }, { radPx });
+			local Int is padT: if({ roundTop }, { 0 }, { radPx });
+			local Int is padB: if({ roundBottom }, { 0 }, { radPx });
+			ctx:setClip(x: b:x, y: b:y, w: b:width, h: b:height);
+			ctx:fillRoundRectStyled(x: b:x - padL, y: b:y - padT, w: b:width + padL + padR, h: b:height + padT + padB, radius: radPx, fill: fill);
+			ctx:clearClip();
+		}); });
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
 		local Int is tx: b:x + (b:width - tw) / 2;
 		local Int is ty: b:y + (b:height - th) / 2;
-		local Int is fg: if({ !enabled }, { activeTheme:textMuted }, {
-			if({ selected }, { activeTheme:textAccent }, { activeTheme:textPrimary })
-		});
+		local Int is fg: if({ !enabled }, { activeTheme:textMuted }, { activeTheme:textPrimary });
 		ctx:drawText(x: tx, y: ty, text: label, color: fg, pixelHeight: fpx);
 	}
 }
