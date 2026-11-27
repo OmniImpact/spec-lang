@@ -111,8 +111,11 @@ Class is ShowcaseView{
 			)
 		);
 
+		local String is appIconSvg: "<svg viewBox=\"0 0 24 24\"><rect x=\"2\" y=\"2\" width=\"20\" height=\"20\" rx=\"4\" fill=\"#2a3346\" stroke=\"#64d2ff\" stroke-width=\"1.6\"/><rect x=\"5\" y=\"5\" width=\"14\" height=\"3.5\" rx=\"1\" fill=\"#64d2ff\"/><rect x=\"5\" y=\"10.5\" width=\"5.5\" height=\"8.5\" rx=\"1\" fill=\"#8fa8c8\"/><rect x=\"12.5\" y=\"10.5\" width=\"6.5\" height=\"3.5\" rx=\"1\" fill=\"#e8edf5\"/><rect x=\"12.5\" y=\"15.5\" width=\"6.5\" height=\"3.5\" rx=\"1\" fill=\"#64d2ff\"/></svg>";
+
 		local ToolkitContainer is container: ToolkitContainer(
 			title: TextEmitter(initial: 'SuitShowcase'),
+			iconSvg: appIconSvg,
 			running: BoolEmitter(initial: true),
 			theme: vm:activeTheme,
 			widthPt: 760.0,

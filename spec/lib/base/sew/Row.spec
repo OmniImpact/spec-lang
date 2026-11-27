@@ -112,6 +112,7 @@ Class of SewNode is Row{
 			local Int is w: ch:desiredSize:width;
 			local Boolean is isFlex: i < flexFlags:length() && flexFlags:get(index: i);
 			local Int is h: if({ isFlex }, { bounds:height }, { ch:desiredSize:height });
+			if({ h > bounds:height }, { h: bounds:height; });
 			local Int is cy: if({ hasFlex }, { bounds:y }, { bounds:y + (bounds:height - h) / 2 });
 			ch:arrange(bounds: Rect(x: curX, y: cy, width: w, height: h));
 			curX: curX + w + gapPx;
