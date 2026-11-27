@@ -744,7 +744,7 @@ Class is Theme{
 		}, {
 			surface
 		});
-		local Int is synthBarBg: surfBase:mix(other: primary, t: 0.30):toArgb();
+		local Int is synthBarBg: surfBase:mix(other: primary, t: 0.20):toArgb();
 		toolbarBg: synthBarBg;
 		tabBarBg: synthBarBg;
 		toolbarBorder: if({ light }, { detail:toArgb() }, { detail:mix(other: surface, t: 0.25):toArgb() });
