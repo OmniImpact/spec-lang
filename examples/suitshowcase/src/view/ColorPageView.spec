@@ -9,6 +9,7 @@ Class is ColorPageView{
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
 		['base', 'fabric', Color],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ColorSelector],
@@ -96,7 +97,7 @@ Class is ColorPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Color Selector', heading: true),
+				Label(text: 'Color Selector', style: TextStyle:H1),
 				TextScrap(text: pickedLabel, muted: true),
 				SectionH(
 					children: Array([

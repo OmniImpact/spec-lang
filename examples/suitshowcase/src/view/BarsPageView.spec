@@ -9,6 +9,7 @@ Class is BarsPageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Bar],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
@@ -96,7 +97,7 @@ Class is BarsPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Bars & Toolbars', heading: true),
+				Label(text: 'Bars & Toolbars', style: TextStyle:H1),
 				Frame(
 					title: 'Toolbar (Menu Triggers & Dropdowns)',
 					child: Frame(padPt: 0.0, child: demoToolbar)

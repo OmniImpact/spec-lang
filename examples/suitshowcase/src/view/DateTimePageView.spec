@@ -10,6 +10,7 @@ Class is DateTimePageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', DateSelector],
@@ -109,7 +110,7 @@ Class is DateTimePageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Date & Time Selectors', heading: true),
+				Label(text: 'Date & Time Selectors', style: TextStyle:H1),
 				TextScrap(text: summaryLabel, muted: true),
 				Frame(
 					title: 'Dropdown Selectors (DropdownPopup Overlay)',

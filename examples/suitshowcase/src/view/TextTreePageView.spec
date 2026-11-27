@@ -8,6 +8,7 @@ Class is TextTreePageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', Switch],
@@ -112,7 +113,7 @@ Class is TextTreePageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Text & Tree', heading: true),
+				Label(text: 'Text & Tree', style: TextStyle:H1),
 				Frame(
 					title: 'CodeEditorView',
 					child: SectionV(

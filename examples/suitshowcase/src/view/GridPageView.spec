@@ -10,6 +10,7 @@ Class is GridPageView{
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
 		['base', 'sew', Grid],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
@@ -29,9 +30,9 @@ Class is GridPageView{
 
 	Function of SewNode is build(){
 		local Array of SewNode is formGridCells: Array([
-			Label(text: 'Field', bold: true),
-			Label(text: 'Control', bold: true),
-			Label(text: 'Notes', bold: true),
+			Label(text: 'Field', style: TextStyle:H3),
+			Label(text: 'Control', style: TextStyle:H3),
+			Label(text: 'Notes', style: TextStyle:H3),
 			Label(text: 'Project Name'),
 			TextInput(text: 'SuitShowcase', minWidthPt: 110.0),
 			TextScrap(text: TextEmitter(initial: 'Auto-sized column 1'), muted: true),
@@ -69,7 +70,7 @@ Class is GridPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Grid Layout', heading: true),
+				Label(text: 'Grid Layout', style: TextStyle:H1),
 				Frame(
 					title: 'Auto-Sized Columns (3x4)',
 					child: Grid(

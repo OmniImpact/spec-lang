@@ -8,6 +8,7 @@ Class is InputsPageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', Switch],
@@ -130,7 +131,7 @@ Class is InputsPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Inputs & Toggles', heading: true),
+				Label(text: 'Inputs & Toggles', style: TextStyle:H1),
 				Frame(
 					title: 'TextInput & DecoratedTextInput',
 					child: SectionV(

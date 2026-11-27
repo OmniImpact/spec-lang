@@ -10,10 +10,12 @@ Class of SewNode is Label{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'fabric', TextStyle],
 		['base', 'fabric', DrawContext]
 	];
 
 	String is text: '';
+	TextStyle is style: TextStyle:BODY;
 	Boolean is heading: false;
 	Boolean is muted: false;
 	Boolean is boxed: false;
@@ -21,12 +23,14 @@ Class of SewNode is Label{
 
 	replace Function is init(
 		String is text: '',
+		TextStyle is style: TextStyle:BODY,
 		Boolean is heading: false,
 		Boolean is muted: false,
 		Boolean is boxed: false,
 		Float is minWidthPt: 0.0
 	){
 		:text: text;
+		:style: style;
 		:heading: heading;
 		:muted: muted;
 		:boxed: boxed;
@@ -40,15 +44,43 @@ Class of SewNode is Label{
 		});
 	}
 
+	local Function of TextStyle is effectiveStyle(){
+		if({ heading && style == TextStyle:BODY }, { return TextStyle:H1; });
+		return style;
+	}
+
+	local Function of Boolean is isBold(){
+		local TextStyle is s: :effectiveStyle();
+		return s == TextStyle:DISPLAY || s == TextStyle:H1 || s == TextStyle:H2 || s == TextStyle:H3 || s == TextStyle:OVERLINE;
+	}
+
+	local Function of Boolean is isMono(){
+		return :effectiveStyle() == TextStyle:CODE;
+	}
+
+	local Function of Boolean is isMutedStyle(){
+		local TextStyle is s: :effectiveStyle();
+		return muted || s == TextStyle:SUBTITLE || s == TextStyle:CAPTION || s == TextStyle:OVERLINE;
+	}
+
 	local Function of Int is fontPx(){
-		local Float is pt: if({ heading }, { 17.5 }, { 15.0 });
+		local TextStyle is s: :effectiveStyle();
+		local Float is pt: 15.0;
+		if({ s == TextStyle:DISPLAY }, { pt: 26.0; });
+		if({ s == TextStyle:H1 }, { pt: 22.0; });
+		if({ s == TextStyle:H2 }, { pt: 18.5; });
+		if({ s == TextStyle:H3 }, { pt: 16.0; });
+		if({ s == TextStyle:SUBTITLE }, { pt: 15.5; });
+		if({ s == TextStyle:CAPTION }, { pt: 12.5; });
+		if({ s == TextStyle:OVERLINE }, { pt: 11.5; });
+		if({ s == TextStyle:CODE }, { pt: 14.0; });
 		local Int is px: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: pt));
 		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
-		local Int is tw: DrawContext:measureWidth(text: text, pixelHeight: fpx);
+		local Int is tw: DrawContext:measureWidth(text: text, pixelHeight: fpx) + (if({ :isBold() }, { fpx / 3 }, { 0 }));
 		local Int is padX: if({ boxed }, { activeScale:px(pt: activeTheme:paddingPt) }, { 0 });
 		local Int is padY: if({ boxed }, { activeScale:px(pt: activeTheme:paddingPt * 0.75) }, { activeScale:px(pt: 4.0) });
 		local Int is minW: activeScale:px(pt: minWidthPt);
@@ -71,7 +103,7 @@ Class of SewNode is Label{
 		});
 		local Int is fpx: :fontPx();
 		local Int is th: DrawContext:measureHeight(pixelHeight: fpx);
-		local Int is fg: if({ muted }, { activeTheme:textMuted }, { activeTheme:textPrimary });
-		ctx:drawText(x: b:x + padX, y: b:y + (b:height - th) / 2, text: text, color: fg, pixelHeight: fpx);
+		local Int is fg: if({ :isMutedStyle() }, { activeTheme:textMuted }, { activeTheme:textPrimary });
+		ctx:drawText(x: b:x + padX, y: b:y + (b:height - th) / 2, text: text, color: fg, pixelHeight: fpx, bold: :isBold(), mono: :isMono());
 	}
 }

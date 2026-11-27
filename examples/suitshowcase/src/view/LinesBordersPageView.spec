@@ -13,6 +13,7 @@ Class is LinesBordersPageView{
 		['base', 'sew', Padding],
 		['base', 'sew', Center],
 		['base', 'fabric', Color],
+		['base', 'fabric', TextStyle],
 		['base', 'fabric', DrawContext],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
@@ -254,7 +255,7 @@ Class is LinesBordersPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Lines & Borders', heading: true),
+				Label(text: 'Lines & Borders', style: TextStyle:H1),
 				Frame(
 					title: 'Interactive Border & Layer Effects',
 					child: SectionV(

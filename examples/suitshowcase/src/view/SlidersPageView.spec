@@ -8,6 +8,7 @@ Class is SlidersPageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', Slider],
@@ -64,7 +65,7 @@ Class is SlidersPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Sliders', heading: true),
+				Label(text: 'Sliders', style: TextStyle:H1),
 				TextScrap(
 					text: TextEmitter(initial: 'Drag along any Slider track, or Tab to focus and use Left/Right arrows (Shift for +/- 5) or Home/End.'),
 					wrap: true,

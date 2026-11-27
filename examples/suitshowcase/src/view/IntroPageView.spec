@@ -8,6 +8,7 @@ Class is IntroPageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
@@ -26,7 +27,8 @@ Class is IntroPageView{
 	Function of SewNode is build(){
 		return SectionV(
 			children: Array([
-				Label(text: 'Welcome to SuitShowcase', heading: true),
+				Label(text: 'SUIT · SEW · SCRAP · FABRIC', style: TextStyle:OVERLINE),
+				Label(text: 'Welcome to SuitShowcase', style: TextStyle:DISPLAY),
 				TextScrap(
 					text: TextEmitter(initial: 'This interactive gallery exercises the Suit, Sew, Scrap, and Fabric UI framework. Use the category list on the left (or Tab / Shift+Tab) to explore each widget group.'),
 					wrap: true,

@@ -8,6 +8,7 @@ Class is ButtonsPageView{
 		['base', 'struct', Array],
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
@@ -31,7 +32,7 @@ Class is ButtonsPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Buttons & Sections', heading: true),
+				Label(text: 'Buttons & Sections', style: TextStyle:H1),
 				Frame(
 					title: 'ScrapButton States',
 					child: SectionV(

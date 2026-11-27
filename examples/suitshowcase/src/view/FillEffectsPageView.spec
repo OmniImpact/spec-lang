@@ -12,6 +12,7 @@ Class is FillEffectsPageView{
 		['base', 'sew', Grid],
 		['base', 'sew', Center],
 		['base', 'fabric', Color],
+		['base', 'fabric', TextStyle],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', GradientBounds],
 		['base', 'fabric', FillStyle],
@@ -261,7 +262,7 @@ Class is FillEffectsPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Fill & Effects', heading: true),
+				Label(text: 'Fill & Effects', style: TextStyle:H1),
 				Frame(
 					title: 'Interactive Gradient & Color Effects',
 					child: SectionV(

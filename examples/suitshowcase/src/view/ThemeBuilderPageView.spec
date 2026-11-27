@@ -23,6 +23,7 @@ Class is ThemeBuilderPageView{
 		['base', 'scrap', SectionH],
 		['base', 'scrap', 'text', TextScrap],
 		['base', 'fabric', Color],
+		['base', 'fabric', TextStyle],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
 		['base', 'fabric', GradientBounds],
@@ -413,7 +414,7 @@ Class is ThemeBuilderPageView{
 			children: Array([
 				SectionH(
 					children: Array([
-						Label(text: 'Theme Builder', heading: true),
+						Label(text: 'Theme Builder', style: TextStyle:H1),
 						ScrapButton(
 							label: 'Reset to Preset',
 							tooltip: 'Reload the active Light or Dark preset defaults',

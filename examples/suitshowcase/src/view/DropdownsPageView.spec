@@ -11,6 +11,7 @@ Class is DropdownsPageView{
 		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
 		['base', 'fabric', Color],
+		['base', 'fabric', TextStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ColorSwatchDropdown],
@@ -62,7 +63,7 @@ Class is DropdownsPageView{
 
 		return SectionV(
 			children: Array([
-				Label(text: 'Dropdowns', heading: true),
+				Label(text: 'Dropdowns', style: TextStyle:H1),
 				TextScrap(text: statusLabel, muted: true),
 				Frame(
 					title: 'Menu & Submenu Dropdowns (Toolbar)',
