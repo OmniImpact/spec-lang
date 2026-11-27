@@ -9,8 +9,10 @@ Class is DrawContext{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Mem()],
 		['base', 'sys', Font],
+		['base', 'math', as Math()],
 		['base', 'struct', Array],
-		['base', 'suit', SuitCanvas]
+		['base', 'suit', SuitCanvas],
+		['base', 'fabric', Color]
 	];
 
 	held Font is sharedFont: Font();
@@ -245,6 +247,269 @@ Class is DrawContext{
 		:fillRect(x: x, y: y + h - t, w: w, h: t, color: color);
 		:fillRect(x: x, y: y, w: t, h: h, color: color);
 		:fillRect(x: x + w - t, y: y, w: t, h: h, color: color);
+	}
+
+	local Function of Float is clamp01(Float is v){
+		if({ v < 0.0 }, { return 0.0; });
+		if({ v > 1.0 }, { return 1.0; });
+		return v;
+	}
+
+	local Function of Float is roundBoxSd(Float is px, Float is py, Float is cx, Float is cy, Float is halfW, Float is halfH, Float is r){
+		local Float is dxAbs: if({ px >= cx }, { px - cx }, { cx - px });
+		local Float is dyAbs: if({ py >= cy }, { py - cy }, { cy - py });
+		local Float is dx: dxAbs - (halfW - r);
+		local Float is dy: dyAbs - (halfH - r);
+		local Float is qx: if({ dx > 0.0 }, { dx }, { 0.0 });
+		local Float is qy: if({ dy > 0.0 }, { dy }, { 0.0 });
+		local Float is outD: sqrt(value: qx * qx + qy * qy);
+		local Float is maxD: if({ dx > dy }, { dx }, { dy });
+		local Float is inD: if({ maxD < 0.0 }, { maxD }, { 0.0 });
+		return outD + inD - r;
+	}
+
+	## Fills a rounded rectangle with anti-aliased corners.
+	Function is fillRoundRect(Int is x, Int is y, Int is w, Int is h, Int is radius, Int is color){
+		if({ w <= 0 || h <= 0 }, { return; });
+		if({ radius <= 0 }, {
+			:fillRect(x: x, y: y, w: w, h: h, color: color);
+			return;
+		});
+		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
+		local Int is r: if({ radius > maxR }, { maxR }, { radius });
+		if({ r <= 0 }, {
+			:fillRect(x: x, y: y, w: w, h: h, color: color);
+			return;
+		});
+		:fillRect(x: x + r, y: y, w: w - 2 * r, h: h, color: color);
+		:fillRect(x: x, y: y + r, w: r, h: h - 2 * r, color: color);
+		:fillRect(x: x + w - r, y: y + r, w: r, h: h - 2 * r, color: color);
+
+		local Color is baseC: Color:fromArgb(argb: color);
+		local Int is baseA: baseC:alpha();
+		local Float is rf: r as Float;
+		local Int is dy: 0;
+		while({ dy < r }, {
+			local Float is cyf: rf - 0.5 - (dy as Float);
+			local Int is dx: 0;
+			while({ dx < r }, {
+				local Float is cxf: rf - 0.5 - (dx as Float);
+				local Float is d: sqrt(value: cxf * cxf + cyf * cyf);
+				local Float is cov: :clamp01(v: rf - d + 0.5);
+				local Int is ab: (((baseA as Float) * cov) + 0.5) as Int;
+				if({ ab > 0 }, {
+					local Int is pxCol: if({ ab >= baseA }, { color }, { baseC:withAlphaByte(a: ab):toArgb() });
+					:fillRect(x: x + dx, y: y + dy, w: 1, h: 1, color: pxCol);
+					:fillRect(x: x + w - 1 - dx, y: y + dy, w: 1, h: 1, color: pxCol);
+					:fillRect(x: x + dx, y: y + h - 1 - dy, w: 1, h: 1, color: pxCol);
+					:fillRect(x: x + w - 1 - dx, y: y + h - 1 - dy, w: 1, h: 1, color: pxCol);
+				});
+				dx: dx + 1;
+			});
+			dy: dy + 1;
+		});
+	}
+
+	## Strokes a rounded rectangle with anti-aliased corners, optionally using separate [topLeftColor] and [botRightColor].
+	Function is strokeRoundRectSplit(Int is x, Int is y, Int is w, Int is h, Int is radius, Int is topLeftColor, Int is botRightColor, Int is thickness: 1){
+		if({ w <= 0 || h <= 0 || thickness <= 0 }, { return; });
+		local Int is halfMin: if({ w < h }, { w / 2 }, { h / 2 });
+		local Int is t: if({ thickness > halfMin }, { halfMin }, { thickness });
+		if({ t < 1 }, { t: 1; });
+		if({ radius <= 0 }, {
+			:fillRect(x: x, y: y, w: w, h: t, color: topLeftColor);
+			:fillRect(x: x, y: y + t, w: t, h: h - t, color: topLeftColor);
+			:fillRect(x: x + t, y: y + h - t, w: w - t, h: t, color: botRightColor);
+			:fillRect(x: x + w - t, y: y + t, w: t, h: h - 2 * t, color: botRightColor);
+			return;
+		});
+		local Int is r: if({ radius > halfMin }, { halfMin }, { radius });
+		local Int is box: if({ r > t }, { r }, { t });
+		if({ w > 2 * box }, {
+			:fillRect(x: x + box, y: y, w: w - 2 * box, h: t, color: topLeftColor);
+			:fillRect(x: x + box, y: y + h - t, w: w - 2 * box, h: t, color: botRightColor);
+		});
+		if({ h > 2 * box }, {
+			:fillRect(x: x, y: y + box, w: t, h: h - 2 * box, color: topLeftColor);
+			:fillRect(x: x + w - t, y: y + box, w: t, h: h - 2 * box, color: botRightColor);
+		});
+
+		local Color is tlC: Color:fromArgb(argb: topLeftColor);
+		local Color is brC: Color:fromArgb(argb: botRightColor);
+		local Int is tlA: tlC:alpha();
+		local Int is brA: brC:alpha();
+		local Float is rf: r as Float;
+		local Float is inRf: (r - t) as Float;
+		local Int is dy: 0;
+		while({ dy < box }, {
+			local Float is cyf: rf - 0.5 - (dy as Float);
+			local Int is dx: 0;
+			while({ dx < box }, {
+				local Float is cxf: rf - 0.5 - (dx as Float);
+				local Float is outerCov: 1.0;
+				if({ dx < r && dy < r }, {
+					local Float is dOut: sqrt(value: cxf * cxf + cyf * cyf);
+					outerCov: :clamp01(v: rf - dOut + 0.5);
+				});
+				local Float is innerCov: 1.0;
+				if({ dx >= t && dy >= t }, {
+					if({ r > t }, {
+						local Float is dIn: sqrt(value: cxf * cxf + cyf * cyf);
+						innerCov: :clamp01(v: dIn - inRf + 0.5);
+					}, {
+						innerCov: 0.0;
+					});
+				});
+				local Float is cov: if({ outerCov < innerCov }, { outerCov }, { innerCov });
+				if({ cov > 0.0 }, {
+					local Int is abTL: (((tlA as Float) * cov) + 0.5) as Int;
+					local Int is abBR: (((brA as Float) * cov) + 0.5) as Int;
+					if({ abTL > 0 }, {
+						local Int is colTL: if({ abTL >= tlA }, { topLeftColor }, { tlC:withAlphaByte(a: abTL):toArgb() });
+						:fillRect(x: x + dx, y: y + dy, w: 1, h: 1, color: colTL);
+						if({ dx >= dy }, {
+							:fillRect(x: x + w - 1 - dx, y: y + dy, w: 1, h: 1, color: colTL);
+						});
+						if({ dy > dx }, {
+							:fillRect(x: x + dx, y: y + h - 1 - dy, w: 1, h: 1, color: colTL);
+						});
+					});
+					if({ abBR > 0 }, {
+						local Int is colBR: if({ abBR >= brA }, { botRightColor }, { brC:withAlphaByte(a: abBR):toArgb() });
+						:fillRect(x: x + w - 1 - dx, y: y + h - 1 - dy, w: 1, h: 1, color: colBR);
+						if({ dx < dy }, {
+							:fillRect(x: x + w - 1 - dx, y: y + dy, w: 1, h: 1, color: colBR);
+						});
+						if({ dy <= dx }, {
+							:fillRect(x: x + dx, y: y + h - 1 - dy, w: 1, h: 1, color: colBR);
+						});
+					});
+				});
+				dx: dx + 1;
+			});
+			dy: dy + 1;
+		});
+	}
+
+	## Strokes a rounded rectangle outline with anti-aliased corners.
+	Function is strokeRoundRect(Int is x, Int is y, Int is w, Int is h, Int is radius, Int is color, Int is thickness: 1){
+		:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: color, botRightColor: color, thickness: thickness);
+	}
+
+	## Draws a soft drop shadow for a rounded rectangle with offset and blur radius.
+	Function is drawShadow(Int is x, Int is y, Int is w, Int is h, Int is radius: 0, Int is offsetX: 0, Int is offsetY: 4, Int is blurRadius: 8, Int is color: 1426063360){
+		if({ w <= 0 || h <= 0 }, { return; });
+		local Int is sx: x + offsetX;
+		local Int is sy: y + offsetY;
+		if({ blurRadius <= 0 }, {
+			:fillRoundRect(x: sx, y: sy, w: w, h: h, radius: radius, color: color);
+			return;
+		});
+		local Int is blur: blurRadius;
+		local Int is maxR: if({ w < h }, { w / 2 }, { h / 2 });
+		local Int is r: if({ radius > maxR }, { maxR }, { if({ radius < 0 }, { 0 }, { radius }) });
+		local Color is baseC: Color:fromArgb(argb: color);
+		local Int is baseA: baseC:alpha();
+		local Float is halfW: (w as Float) * 0.5;
+		local Float is halfH: (h as Float) * 0.5;
+		local Float is cx: (sx as Float) + halfW;
+		local Float is cy: (sy as Float) + halfH;
+		local Float is rf: r as Float;
+		local Float is blurF: blur as Float;
+
+		local Int is coreInset: blur + r;
+		local Int is coreX: sx + coreInset;
+		local Int is coreY: sy + coreInset;
+		local Int is coreW: w - 2 * coreInset;
+		local Int is coreH: h - 2 * coreInset;
+		if({ coreW > 0 && coreH > 0 }, {
+			:fillRect(x: coreX, y: coreY, w: coreW, h: coreH, color: color);
+		});
+
+		local Int is x0: sx - blur;
+		local Int is y0: sy - blur;
+		local Int is x1: sx + w + blur;
+		local Int is y1: sy + h + blur;
+		local Int is py: y0;
+		while({ py < y1 }, {
+			local Int is px: x0;
+			while({ px < x1 }, {
+				if({ coreW > 0 && coreH > 0 && px >= coreX && px < coreX + coreW && py >= coreY && py < coreY + coreH }, {
+					px: coreX + coreW;
+				}, {
+					local Float is sd: :roundBoxSd(px: (px as Float) + 0.5, py: (py as Float) + 0.5, cx: cx, cy: cy, halfW: halfW, halfH: halfH, r: rf);
+					local Float is u: :clamp01(v: 1.0 - (sd + blurF * 0.25) / (blurF * 1.25));
+					if({ u > 0.0 }, {
+						local Float is smooth: u * u * (3.0 - 2.0 * u);
+						local Int is ab: (((baseA as Float) * smooth) + 0.5) as Int;
+						if({ ab > 0 }, {
+							:fillRect(x: px, y: py, w: 1, h: 1, color: baseC:withAlphaByte(a: ab):toArgb());
+						});
+					});
+					px: px + 1;
+				});
+			});
+			py: py + 1;
+		});
+	}
+
+	## Draws a styled box with optional drop shadow, background fill, corner radius, and border style (single/double/bevel/groove/inset/outset).
+	Function is drawStyledBox(
+		Int is x,
+		Int is y,
+		Int is w,
+		Int is h,
+		Int is bgColor,
+		Int is borderColor,
+		Int is thickness: 1,
+		Int is radius: 0,
+		String is style: 'single',
+		Int is shadowOffsetX: 0,
+		Int is shadowOffsetY: 0,
+		Int is shadowBlur: 0,
+		Int is shadowColor: 1426063360
+	){
+		if({ w <= 0 || h <= 0 }, { return; });
+		if({ shadowColor != 0 && (shadowBlur > 0 || shadowOffsetX != 0 || shadowOffsetY != 0) }, {
+			:drawShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: shadowOffsetX, offsetY: shadowOffsetY, blurRadius: shadowBlur, color: shadowColor);
+		});
+		if({ bgColor != 0 }, {
+			:fillRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: bgColor);
+		});
+		if({ thickness <= 0 || borderColor == 0 }, { return; });
+		local Color is bc: Color:fromArgb(argb: borderColor);
+		local Int is lightC: bc:lighten(amount: 0.38):toArgb();
+		local Int is darkC: bc:darken(amount: 0.42):toArgb();
+		if({ style == 'double' }, {
+			local Int is t1: if({ thickness >= 3 }, { thickness / 3 }, { 1 });
+			local Int is gap: if({ thickness >= 3 }, { thickness - t1 * 2 }, { 1 });
+			local Int is off: t1 + gap;
+			:strokeRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: borderColor, thickness: t1);
+			if({ w > off * 2 && h > off * 2 }, {
+				local Int is inR: if({ radius > off }, { radius - off }, { 0 });
+				:strokeRoundRect(x: x + off, y: y + off, w: w - off * 2, h: h - off * 2, radius: inR, color: borderColor, thickness: t1);
+			});
+			return;
+		});
+		if({ style == 'bevel' || style == 'outset' }, {
+			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: lightC, botRightColor: darkC, thickness: thickness);
+			return;
+		});
+		if({ style == 'inset' }, {
+			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: darkC, botRightColor: lightC, thickness: thickness);
+			return;
+		});
+		if({ style == 'groove' }, {
+			local Int is t1: if({ thickness >= 2 }, { thickness / 2 }, { 1 });
+			local Int is t2: if({ thickness - t1 > 0 }, { thickness - t1 }, { 1 });
+			:strokeRoundRectSplit(x: x, y: y, w: w, h: h, radius: radius, topLeftColor: darkC, botRightColor: lightC, thickness: t1);
+			if({ w > t1 * 2 && h > t1 * 2 }, {
+				local Int is inR: if({ radius > t1 }, { radius - t1 }, { 0 });
+				:strokeRoundRectSplit(x: x + t1, y: y + t1, w: w - t1 * 2, h: h - t1 * 2, radius: inR, topLeftColor: lightC, botRightColor: darkC, thickness: t2);
+			});
+			return;
+		});
+		:strokeRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: borderColor, thickness: thickness);
 	}
 
 	local Function is plotClipped(Int is x, Int is y, Int is color){

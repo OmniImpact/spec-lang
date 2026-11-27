@@ -1,0 +1,223 @@
+#! Package suitshowcase:view
+#! Showcase page for Lines & Borders: line color, thickness, border styles (single/double/bevel/groove/inset/outset), shadows, and corner radius.
+
+Class is LinesBordersPageView{
+	replace [String] is namespace: ['suitshowcase', 'view'];
+
+	replace [[String]] is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'struct', Array],
+		['base', 'signal', TextEmitter],
+		['base', 'sew', SewNode],
+		['base', 'sew', Grid],
+		['base', 'sew', Padding],
+		['base', 'sew', Center],
+		['base', 'fabric', Color],
+		['base', 'fabric', DrawContext],
+		['base', 'scrap', Frame],
+		['base', 'scrap', Label],
+		['base', 'scrap', Slider],
+		['base', 'scrap', ScrapPanel],
+		['base', 'scrap', StyledBox],
+		['base', 'scrap', ColorSwatchDropdown],
+		['base', 'scrap', SectionV],
+		['base', 'scrap', SectionH],
+		['base', 'scrap', 'text', TextScrap],
+		['suitshowcase', 'viewmodel', ShowcaseViewModel]
+	];
+
+	ShowcaseViewModel is vm: ShowcaseViewModel();
+	Array of String is styleNames: Array(['single', 'double', 'bevel', 'groove', 'inset', 'outset']);
+	Array of String is styleLabels: Array(['Single', 'Double', 'Bevel', 'Groove', 'Inset', 'Outset']);
+	StyledBox is previewBox: StyledBox();
+	TextEmitter is thickLabel: TextEmitter(initial: '3 px');
+	TextEmitter is radiusLabel: TextEmitter(initial: '10 px');
+	TextEmitter is offXLabel: TextEmitter(initial: '0 px');
+	TextEmitter is offYLabel: TextEmitter(initial: '6 px');
+	TextEmitter is blurLabel: TextEmitter(initial: '10 px');
+	Int is selStyleIdx: 0;
+
+	replace Function is init(ShowcaseViewModel is vm){
+		:vm: vm;
+	}
+
+	Function of SewNode is build(){
+		:previewBox: StyledBox(
+			label: 'Live Preview Box',
+			borderStyle: 'single',
+			lineColor: Color(r: 90, g: 170, b: 255),
+			useThemeBorder: false,
+			thicknessPx: 3,
+			radiusPx: 10,
+			shadowOffsetX: 0,
+			shadowOffsetY: 6,
+			shadowBlur: 10,
+			shadowAlpha: 110,
+			minWidthPt: 260.0,
+			minHeightPt: 96.0
+		);
+
+		local SectionH is styleSeg: SectionH(
+			segmented: true,
+			options: styleLabels,
+			selectedIndex: selStyleIdx,
+			itemMinWidthPt: 52.0,
+			onSelect: local Function(Int is idx){
+				if({ idx >= 0 && idx < styleNames:length() }, {
+					:selStyleIdx: idx;
+					previewBox:borderStyle: styleNames:get(index: idx);
+					previewBox:invalidate();
+					vm:statusText:emit(value: 'Border style: ' . styleNames:get(index: idx));
+				});
+			}
+		);
+
+		local ColorSwatchDropdown is colorPick: ColorSwatchDropdown(
+			color: previewBox:lineColor,
+			compactPicker: true,
+			tooltip: 'Pick border/line color',
+			onChange: local Function(Color is c){
+				previewBox:lineColor: c;
+				previewBox:useThemeBorder: false;
+				previewBox:invalidate();
+			}
+		);
+
+		local Slider is thickSlider: Slider(
+			minVal: 1,
+			maxVal: 12,
+			value: previewBox:thicknessPx,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:thicknessPx: v;
+				thickLabel:emit(value: (v as String) . ' px');
+				previewBox:invalidate();
+			}
+		);
+
+		local Slider is radiusSlider: Slider(
+			minVal: 0,
+			maxVal: 28,
+			value: previewBox:radiusPx,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:radiusPx: v;
+				radiusLabel:emit(value: (v as String) . ' px');
+				previewBox:invalidate();
+			}
+		);
+
+		local Slider is offXSlider: Slider(
+			minVal: -16,
+			maxVal: 16,
+			value: previewBox:shadowOffsetX,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:shadowOffsetX: v;
+				offXLabel:emit(value: (v as String) . ' px');
+				previewBox:invalidate();
+			}
+		);
+
+		local Slider is offYSlider: Slider(
+			minVal: -16,
+			maxVal: 16,
+			value: previewBox:shadowOffsetY,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:shadowOffsetY: v;
+				offYLabel:emit(value: (v as String) . ' px');
+				previewBox:invalidate();
+			}
+		);
+
+		local Slider is blurSlider: Slider(
+			minVal: 0,
+			maxVal: 24,
+			value: previewBox:shadowBlur,
+			minWidthPt: 140.0,
+			onChange: local Function(Int is v){
+				previewBox:shadowBlur: v;
+				blurLabel:emit(value: (v as String) . ' px');
+				previewBox:invalidate();
+			}
+		);
+
+		local Grid is controlsGrid: Grid(
+			columns: 3,
+			colGapPt: 10.0,
+			rowGapPt: 6.0,
+			children: Array([
+				Label(text: 'Line Color'),
+				colorPick,
+				Label(text: ''),
+				Label(text: 'Thickness'),
+				thickSlider,
+				TextScrap(text: thickLabel, muted: true),
+				Label(text: 'Corner Radius'),
+				radiusSlider,
+				TextScrap(text: radiusLabel, muted: true),
+				Label(text: 'Shadow Offset X'),
+				offXSlider,
+				TextScrap(text: offXLabel, muted: true),
+				Label(text: 'Shadow Offset Y'),
+				offYSlider,
+				TextScrap(text: offYLabel, muted: true),
+				Label(text: 'Shadow Blur'),
+				blurSlider,
+				TextScrap(text: blurLabel, muted: true)
+			])
+		);
+
+		local Grid is stylesGrid: Grid(
+			columns: 3,
+			colGapPt: 8.0,
+			rowGapPt: 8.0,
+			equalCols: true,
+			children: Array([
+				StyledBox(label: 'Single', borderStyle: 'single', thicknessPx: 2, radiusPx: 6, shadowOffsetY: 2, shadowBlur: 4, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Double', borderStyle: 'double', thicknessPx: 4, radiusPx: 6, shadowOffsetY: 2, shadowBlur: 4, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Bevel', borderStyle: 'bevel', thicknessPx: 3, radiusPx: 4, shadowOffsetY: 2, shadowBlur: 4, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Groove', borderStyle: 'groove', thicknessPx: 4, radiusPx: 4, shadowOffsetY: 0, shadowBlur: 0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Inset', borderStyle: 'inset', thicknessPx: 3, radiusPx: 4, shadowOffsetY: 0, shadowBlur: 0, minWidthPt: 120.0, minHeightPt: 64.0),
+				StyledBox(label: 'Outset', borderStyle: 'outset', thicknessPx: 3, radiusPx: 4, shadowOffsetY: 3, shadowBlur: 6, minWidthPt: 120.0, minHeightPt: 64.0)
+			])
+		);
+
+		local ScrapPanel is linesCanvas: ScrapPanel(
+			minWidthPt: 340.0,
+			minHeightPt: 84.0,
+			onPaint: local Function(DrawContext is ctx, Int is x, Int is y, Int is w, Int is h){
+				local Int is rowH: h / 4;
+				ctx:fillRect(x: x + 8, y: y + rowH / 2, w: w - 16, h: 1, color: Color(r: 180, g: 190, b: 210):toArgb());
+				ctx:fillRect(x: x + 8, y: y + rowH + rowH / 2 - 1, w: w - 16, h: 2, color: Color(r: 100, g: 210, b: 255):toArgb());
+				ctx:fillRect(x: x + 8, y: y + rowH * 2 + rowH / 2 - 2, w: w - 16, h: 4, color: Color(r: 76, g: 175, b: 80):toArgb());
+				ctx:fillRect(x: x + 8, y: y + rowH * 3 + rowH / 2 - 3, w: w - 16, h: 6, color: Color(r: 239, g: 83, b: 80):toArgb());
+			}
+		);
+
+		return SectionV(
+			children: Array([
+				Label(text: 'Lines & Borders', heading: true),
+				Frame(
+					title: 'Interactive Border & Layer Effects',
+					child: SectionV(
+						children: Array([
+							Center(child: previewBox),
+							styleSeg,
+							controlsGrid
+						])
+					)
+				),
+				Frame(
+					title: 'Border Styles Gallery',
+					child: stylesGrid
+				),
+				Frame(
+					title: 'Line Colors & Thicknesses (1px / 2px / 4px / 6px)',
+					child: linesCanvas
+				)
+			])
+		);
+	}
+}
