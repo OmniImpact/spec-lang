@@ -107,11 +107,10 @@ Class of SewNode is Switch{
 		if({ checked }, {
 			local Int is rx: b:x + b:width - pad - sq;
 			local Int is ry: b:y + (b:height - sq) / 2;
-			local Int is onStroke: if({ bw > 0 }, { bw }, { activeTheme:linePx(scaleFactor: activeScale:factor) });
 			ctx:drawStyledBox(
 				x: rx, y: ry, w: sq, h: sq,
 				bgColor: activeTheme:textPrimary, borderColor: activeTheme:buttonBorderColorArgb(),
-				thickness: onStroke, radius: innerRad, style: activeTheme:buttonBorderStyle
+				thickness: bw, radius: innerRad, style: activeTheme:buttonBorderStyle
 			);
 		}, {
 			local Int is lx: b:x + pad;
