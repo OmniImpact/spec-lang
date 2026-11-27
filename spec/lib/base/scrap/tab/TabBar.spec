@@ -408,7 +408,7 @@ Class of SewNode is TabBar{
 					local TabItemConfig is tab: tabs:get(index: i);
 					local Boolean is isActive: i == activeIndex;
 					local Boolean is isHov: hoverTabIdx == i || (draggingTab && dragTabIdx == i);
-					local FillStyle is tabFill: activeTheme:resolveButtonFill(enabled: true, selected: isActive, hovered: isHov);
+					local FillStyle is tabFill: activeTheme:resolveButtonFill(enabled: true, selected: !isActive, hovered: isHov);
 					local Int is ty0: if({ dockSide == DockSide:BOTTOM && !isActive }, { area:y + divPx }, { area:y });
 					local Int is fillH: area:height - (if({ dockSide != DockSide:BOTTOM }, { divPx }, { 0 }));
 					if({ fillH > 0 }, {
