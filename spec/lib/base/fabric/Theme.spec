@@ -86,10 +86,10 @@ Class is Theme{
 	Float is panelInnerShadowOffsetXPt: 0.0;
 	Float is panelInnerShadowOffsetYPt: 0.0;
 	String is dividerStyle: 'single';
-	Float is dividerThicknessPt: 0.7;
+	Float is dividerThicknessPt: 0.5;
 	String is buttonBorderStyle: 'single';
 	Float is buttonBorderThicknessPt: 0.7;
-	Float is buttonCornerRadiusPt: 0.0;
+	Float is buttonCornerRadiusPt: 2.0;
 	Float is buttonShadowBlurPt: 0.0;
 	Float is buttonShadowOffsetXPt: 0.0;
 	Float is buttonShadowOffsetYPt: 0.0;
@@ -200,7 +200,7 @@ Class is Theme{
 		}); });
 		if({ !customMetrics }, {
 			:panelBorderThicknessPt: borderThicknessPt;
-			:dividerThicknessPt: borderThicknessPt;
+			:dividerThicknessPt: if({ style == 'none' }, { 0.0 }, { if({ style == 'bold' }, { 1.0 }, { 0.5 }) });
 			:buttonBorderThicknessPt: borderThicknessPt;
 		});
 		:deriveColors();
@@ -264,7 +264,7 @@ Class is Theme{
 			:dividerThicknessPt: 0.0;
 		}, {
 		if({ dividerThicknessPt <= 0.0 }, {
-			:dividerThicknessPt: 0.7;
+			:dividerThicknessPt: 0.5;
 		}); });
 	}
 
@@ -389,7 +389,7 @@ Class is Theme{
 		:panelInnerShadowOffsetYPt: 0.0;
 		:dividerStyle: 'single';
 		:buttonBorderStyle: 'single';
-		:buttonCornerRadiusPt: 0.0;
+		:buttonCornerRadiusPt: 2.0;
 		:buttonShadowBlurPt: 0.0;
 		:buttonShadowOffsetXPt: 0.0;
 		:buttonShadowOffsetYPt: 0.0;
@@ -496,7 +496,7 @@ Class is Theme{
 		}); });
 		lineThicknessPt: baseBorder;
 		panelBorderThicknessPt: borderThicknessPt;
-		dividerThicknessPt: borderThicknessPt;
+		dividerThicknessPt: if({ borderStyle == 'none' }, { 0.0 }, { if({ borderStyle == 'bold' }, { 1.0 }, { 0.5 }) }) * (baseTextPt / 10.0);
 		buttonBorderThicknessPt: borderThicknessPt;
 	}
 
