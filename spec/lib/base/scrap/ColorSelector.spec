@@ -180,10 +180,11 @@ Class of SewNode is ColorSelector{
 		local Float is halfSlot: activeScale:px(pt: 2.0) as Float;
 		if({ halfSlot < 2.0 }, { halfSlot: 2.0; });
 		local Float is wall: 2.0;
-		local Float is rMin: (rIn as Float) - 1.5;
-		local Float is rMax: (rOut as Float) + 1.5;
-		local Float is sMin: (rIn as Float) + 1.5;
-		local Float is sMax: (rOut as Float) - 1.5;
+		local Float is rShift: shiftY * uy;
+		local Float is rMin: (rIn as Float) - 1.5 - rShift;
+		local Float is rMax: (rOut as Float) + 1.5 - rShift;
+		local Float is sMin: (rIn as Float) + 1.5 - rShift;
+		local Float is sMax: (rOut as Float) - 1.5 - rShift;
 		local Float is halfOuter: halfSlot + wall;
 		local Color is railCol: Color:fromArgb(argb: activeTheme:textPrimary);
 		local Color is outlineCol: Color:fromArgb(argb: activeTheme:windowBg);
@@ -330,19 +331,13 @@ Class of SewNode is ColorSelector{
 		local Float is hueRad: (hueDeg * piVal) / 180.0;
 		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: hueRad, rIn: outerInR, rOut: outerR);
 
-		local Float is halfSlotH: activeScale:px(pt: 2.0) as Float;
-		if({ halfSlotH < 2.0 }, { halfSlotH: 2.0; });
-		local Float is shiftMax: halfGapF + halfSlotH + 2.0;
-
 		local Float is satRad: (sat - 1.0) * piVal;
 		local Float is satCos: cos(value: satRad);
-		local Float is satAbsCos: if({ satCos < 0.0 }, { 0.0 - satCos }, { satCos });
-		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: satRad, rIn: innerInR, rOut: innerOutR, shiftY: 0.0 - shiftMax * satAbsCos);
+		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: satRad, rIn: innerInR, rOut: innerOutR, shiftY: 0.0 - halfGapF * satCos * satCos);
 
 		local Float is lightRad: (1.0 - light) * piVal;
 		local Float is lightCos: cos(value: lightRad);
-		local Float is lightAbsCos: if({ lightCos < 0.0 }, { 0.0 - lightCos }, { lightCos });
-		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: lightRad, rIn: innerInR, rOut: innerOutR, shiftY: shiftMax * lightAbsCos);
+		:drawRingSlottedHandle(ctx: ctx, cx: cx, cy: cy, angleRad: lightRad, rIn: innerInR, rOut: innerOutR, shiftY: halfGapF * lightCos * lightCos);
 
 		## Readouts below: Hex, RGB, HSL
 		local Int is ty0: b:y + ringD + gap;
