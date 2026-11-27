@@ -514,6 +514,12 @@ Class of SewNode is Popover{
 		return anchor:onText(ch: ch, mods: mods);
 	}
 
+	replace Function of Boolean is tick(Int is nowMs){
+		local Boolean is changed: anchor:tick(nowMs: nowMs);
+		if({ open && :popupRoot():tick(nowMs: nowMs) }, { changed: true; });
+		return changed;
+	}
+
 	replace Function of CursorShape is cursorAt(Int is x, Int is y){
 		if({ dragging || :inGrip(x: x, y: y) }, { return CursorShape:POINTER; });
 		local Int is re: if({ resizeMode != 0 }, { resizeMode }, { :hitResizeEdge(x: x, y: y) });

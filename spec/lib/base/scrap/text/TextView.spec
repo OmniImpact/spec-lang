@@ -1012,6 +1012,11 @@ Class of SewNode is TextView{
 	}
 
 	replace Function of Boolean is tick(Int is nowMs){
+		if({ !focused }, {
+			lastBlinkMs: 0;
+			cursorAlphaByte: 255;
+			return false;
+		});
 		if({ lastBlinkMs == 0 }, {
 			lastBlinkMs: nowMs;
 			cursorAlphaByte: 255;
