@@ -195,6 +195,9 @@ Class of SewNode is Popover{
 		:popupRect: Rect(x: px, y: py, width: popW, height: popH);
 		local Int is innerW: if({ popW > padPx * 2 }, { popW - padPx * 2 }, { 0 });
 		local Int is innerH: if({ popH > gh + padPx * 2 }, { popH - gh - padPx * 2 }, { 0 });
+		if({ resizable && (customWidthPx > 0 || customHeightPx > 0) }, {
+			content:measure(c: Constraints(minW: innerW, maxW: innerW, minH: 0, maxH: innerH));
+		});
 		content:arrange(bounds: Rect(x: px + padPx, y: py + gh + padPx, width: innerW, height: innerH));
 	}
 
