@@ -35,6 +35,7 @@ Class of SewNode is ScrollView{
 	Boolean is childCapturing: false;
 	Boolean is hoverVThumb: false;
 	Boolean is hoverHThumb: false;
+	Boolean is pointerInside: false;
 
 	replace Function is init(
 		SewNode is child,
@@ -130,6 +131,8 @@ Class of SewNode is ScrollView{
 	}
 
 	replace Function of Boolean is onScroll(Int is deltaY){
+		if({ !pointerInside }, { return false; });
+		if({ child:onScroll(deltaY: deltaY) }, { return true; });
 		local Rect is b: bounds();
 		local Int is vh: :viewHeight(b: b);
 		local Int is maxScroll: if({ contentH > vh }, { contentH - vh }, { 0 });
@@ -147,6 +150,8 @@ Class of SewNode is ScrollView{
 	}
 
 	replace Function of Boolean is onScrollX(Int is deltaX){
+		if({ !pointerInside }, { return false; });
+		if({ child:onScrollX(deltaX: deltaX) }, { return true; });
 		local Rect is b: bounds();
 		local Int is vw: :viewWidth(b: b);
 		local Int is maxScroll: if({ contentW > vw }, { contentW - vw }, { 0 });
@@ -299,6 +304,7 @@ Class of SewNode is ScrollView{
 
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		local Rect is b: bounds();
+		:pointerInside: :containsPoint(x: x, y: y);
 		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is vw: :viewWidth(b: b);
 		local Int is vh: :viewHeight(b: b);
@@ -331,6 +337,7 @@ Class of SewNode is ScrollView{
 	}
 
 	replace Function is clearHover(){
+		:pointerInside: false;
 		if({ hoverVThumb || hoverHThumb }, {
 			:hoverVThumb: false;
 			:hoverHThumb: false;
