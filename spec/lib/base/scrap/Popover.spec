@@ -509,7 +509,18 @@ Class of SewNode is Popover{
 		content:paint(ctx: ctx);
 		content:paintOverlay(ctx: ctx);
 		if({ resizable }, {
-			local Int is gCol: if({ resizeMode != 0 || hoverResizeMode != 0 }, { activeTheme:textPrimary }, { activeTheme:textMuted });
+			local Int is activeEdge: if({ resizeMode != 0 }, { resizeMode }, { hoverResizeMode });
+			if({ activeEdge != 0 }, {
+				local Int is linePx: activeTheme:linePx(scaleFactor: activeScale:factor);
+				if({ linePx < 2 }, { linePx: 2; });
+				if({ activeEdge == 1 || activeEdge == 3 }, {
+					ctx:fillRect(x: popupRect:x + popupRect:width - linePx, y: popupRect:y, w: linePx, h: popupRect:height, color: activeTheme:textAccent);
+				});
+				if({ activeEdge == 2 || activeEdge == 3 }, {
+					ctx:fillRect(x: popupRect:x, y: popupRect:y + popupRect:height - linePx, w: popupRect:width, h: linePx, color: activeTheme:textAccent);
+				});
+			});
+			local Int is gCol: if({ activeEdge != 0 }, { activeTheme:textAccent }, { activeTheme:textMuted });
 			local Int is sz: activeScale:px(pt: 2.0);
 			if({ sz < 2 }, { sz: 2; });
 			local Int is step: sz * 2;
