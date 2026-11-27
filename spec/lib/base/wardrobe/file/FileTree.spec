@@ -173,13 +173,13 @@ Class of SewNode is FileTree{
 	}
 
 	local Function of Int is headerHeightPx(){
-		local Int is h: activeScale:px(pt: 28.0);
-		return if({ h < 22 }, { 22 }, { h });
+		local Int is h: activeScale:px(pt: activeTheme:menuItemHeightPt);
+		return if({ h < 16 }, { 16 }, { h });
 	}
 
 	local Function of Int is headerFontPx(){
-		local Int is px: activeScale:px(pt: 15.0);
-		return if({ px < 11 }, { 11 }, { px });
+		local Int is px: activeScale:px(pt: activeTheme:scaledTextPt(defaultPt: 14.0));
+		return if({ px < 10 }, { 10 }, { px });
 	}
 
 	replace Function is applyTheme(Theme is theme){

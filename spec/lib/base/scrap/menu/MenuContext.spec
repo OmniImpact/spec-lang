@@ -63,7 +63,8 @@ Class of SewNode is MenuContext{
 	}
 
 	local Function of Int is itemHeightPx(){
-		return activeScale:px(pt: 28.0);
+		local Int is h: activeScale:px(pt: activeTheme:menuItemHeightPt);
+		return if({ h < 16 }, { 16 }, { h });
 	}
 
 	local Function of Boolean is hasIndicators(){
@@ -78,9 +79,9 @@ Class of SewNode is MenuContext{
 
 	local Function of Int is menuWidthPx(){
 		local Int is fpx: :fontPx();
-		local Int is padX: activeScale:px(pt: 14.0);
-		local Int is indW: if({ :hasIndicators() }, { activeScale:px(pt: 18.0) }, { 0 });
-		local Int is minW: activeScale:px(pt: 140.0);
+		local Int is padX: activeScale:px(pt: activeTheme:paddingMediumPt);
+		local Int is indW: if({ :hasIndicators() }, { activeScale:px(pt: activeTheme:iconSizePt + activeTheme:paddingPt) }, { 0 });
+		local Int is minW: activeScale:px(pt: activeTheme:buttonMinWidthPt * 2.0);
 		local Int is maxW: minW;
 		local Int is i: 0;
 		while({ i < items:length() }, {
@@ -174,9 +175,9 @@ Class of SewNode is MenuContext{
 
 		local Int is fpx: :fontPx();
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
-		local Int is padX: activeScale:px(pt: 14.0);
+		local Int is padX: activeScale:px(pt: activeTheme:paddingMediumPt);
 		local Boolean is hasInd: :hasIndicators();
-		local Int is indW: if({ hasInd }, { activeScale:px(pt: 18.0) }, { 0 });
+		local Int is indW: if({ hasInd }, { activeScale:px(pt: activeTheme:iconSizePt + activeTheme:paddingPt) }, { 0 });
 		local Int is iconSz: activeScale:px(pt: 12.0);
 		if({ iconSz < 10 }, { iconSz: 10; });
 		local Int is i: 0;
