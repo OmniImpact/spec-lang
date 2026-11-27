@@ -82,8 +82,8 @@ Class of SewNode is Switch{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
-		local Int is bg: if({ hovered }, { activeTheme:hoverBg }, { activeTheme:panelBg });
-		local Int is borderCol: if({ focused || checked }, { activeTheme:textAccent }, { activeTheme:panelBorder });
+		local Int is bg: if({ checked }, { activeTheme:highlight:toArgb() }, { if({ hovered }, { activeTheme:hoverBg }, { activeTheme:panelBg }) });
+		local Int is borderCol: if({ focused }, { activeTheme:textAccent }, { activeTheme:panelBorder });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
 		if({ bw > 0 }, {
 			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: borderCol, thickness: bw);
@@ -98,7 +98,7 @@ Class of SewNode is Switch{
 		if({ checked }, {
 			local Int is rx: b:x + b:width - pad - sq;
 			local Int is ry: b:y + (b:height - sq) / 2;
-			ctx:fillRect(x: rx, y: ry, w: sq, h: sq, color: activeTheme:textAccent);
+			ctx:fillRect(x: rx, y: ry, w: sq, h: sq, color: activeTheme:textPrimary);
 		}, {
 			local Int is lx: b:x + pad;
 			local Int is ly: b:y + (b:height - sq) / 2;

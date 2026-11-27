@@ -260,7 +260,7 @@ Class of SewNode is NumberInput{
 			local Int is tx: centerX + (centerW - tw) / 2;
 			if({ tx < centerX + 4 }, { tx: centerX + 4; });
 			if({ focused && editing && allSelected && tw > 0 }, {
-				ctx:fillRect(x: tx, y: b:y + (b:height - th) / 2, w: tw, h: th, color: activeTheme:accentSubtle(alpha: 0.35));
+				ctx:fillRect(x: tx, y: b:y + (b:height - th) / 2, w: tw, h: th, color: activeTheme:highlight:toArgb());
 			});
 			ctx:drawText(
 				x: tx,

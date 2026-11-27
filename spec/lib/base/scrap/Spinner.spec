@@ -126,7 +126,7 @@ Class of SewNode is Spinner{
 		local Float is borderW: if({ bwPx > 0 }, { bwPx as Float }, { 1.0 });
 
 		local Int is trackCol: activeTheme:hoverBg;
-		local Int is fillCol: activeTheme:accent:mix(other: activeTheme:surface, t: 0.42):toArgb();
+		local Int is fillCol: activeTheme:highlight:toArgb();
 		local Int is borderCol: activeTheme:buttonBorderColorArgb();
 
 		local Float is twoPi: 6.283185307;

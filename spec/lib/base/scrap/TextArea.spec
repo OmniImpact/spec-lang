@@ -265,7 +265,7 @@ Class of SewNode is TextArea{
 							local Int is x0: if({ c0 > 0 }, { ctx:measureTextWidth(text: ln:substring(start: 0, end: c0), pixelHeight: fpx) }, { 0 });
 							local Int is x1: ctx:measureTextWidth(text: ln:substring(start: 0, end: c1), pixelHeight: fpx);
 							if({ x1 > x0 }, {
-								ctx:fillRect(x: clipX + x0, y: ly + 1, w: x1 - x0, h: lh - 2, color: activeTheme:accentSubtle(alpha: 0.35));
+								ctx:fillRect(x: clipX + x0, y: ly + 1, w: x1 - x0, h: lh - 2, color: activeTheme:highlight:toArgb());
 							});
 						});
 					});

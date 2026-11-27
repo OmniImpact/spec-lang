@@ -101,7 +101,7 @@ Class of SewNode is ProgressBar{
 		local Int is trackW: b:width - ins * 2;
 		local Int is trackH: b:height - ins * 2;
 		if({ trackW > 0 && trackH > 0 }, {
-			local Int is fillCol: activeTheme:accent:mix(other: activeTheme:surface, t: 0.42):toArgb();
+			local Int is fillCol: activeTheme:highlight:toArgb();
 			local Int is fillRad: trackH / 2;
 			ctx:setClip(x: trackX, y: trackY, w: trackW, h: trackH);
 			if({ indeterminate }, {

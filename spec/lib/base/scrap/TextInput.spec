@@ -259,7 +259,7 @@ Class of SewNode is TextInput{
 						local Int is sx1: ctx:measureTextWidth(text: text:substring(start: 0, end: s1), pixelHeight: fpx);
 						local Int is selW: sx1 - sx0;
 						if({ selW > 0 }, {
-							ctx:fillRect(x: b:x + padX + sx0 - scrollX, y: textY, w: selW, h: th, color: activeTheme:accentSubtle(alpha: 0.35));
+							ctx:fillRect(x: b:x + padX + sx0 - scrollX, y: textY, w: selW, h: th, color: activeTheme:highlight:toArgb());
 						});
 					});
 				});

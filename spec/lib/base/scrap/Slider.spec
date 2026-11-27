@@ -208,7 +208,7 @@ Class of SewNode is Slider{
 		local Int is fillW: if({ span > 0 }, { ((value - minVal) * trackW) / span }, { 0 });
 		if({ fillW > 0 }, {
 			ctx:setClip(x: tx, y: ty, w: fillW, h: trackH);
-			ctx:fillRoundRect(x: tx, y: ty, w: trackW, h: trackH, radius: trackRad, color: activeTheme:textAccent);
+			ctx:fillRoundRect(x: tx, y: ty, w: trackW, h: trackH, radius: trackRad, color: activeTheme:highlight:toArgb());
 			ctx:clearClip();
 		});
 		if({ bw > 0 && bStyle != 'none' }, {
