@@ -15,6 +15,7 @@ Class is Theme{
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
 		['base', 'fabric', BorderStyle],
+		['base', 'fabric', FillMode],
 		['base', 'fabric', FillStyle]
 	];
 
@@ -526,15 +527,16 @@ Class is Theme{
 
 	Function of FillStyle is resolveButtonFill(Boolean is enabled, Boolean is selected, Boolean is hovered){
 		if({ !enabled }, {
-			return FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: toolbarBg));
+			return FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: toolbarBg));
 		});
 		if({ selected }, {
-			return FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: activeBg));
+			return FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: activeBg));
 		});
 		if({ customButtonFill }, {
 			if({ hovered }, {
 				return FillStyle(
 					mode: buttonFill:mode,
+					bounds: buttonFill:bounds,
 					colorA: buttonFill:colorA,
 					colorB: buttonFill:colorB,
 					centerX: buttonFill:centerX,
@@ -550,7 +552,7 @@ Class is Theme{
 			return buttonFill;
 		});
 		local Int is bg: if({ hovered }, { hoverBg }, { menuBg });
-		return FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: bg));
+		return FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: bg));
 	}
 
 	Function of Int is linePx(Float is scaleFactor: 1.0){
@@ -660,10 +662,10 @@ Class is Theme{
 		local FillStyle is hoverFx: FillStyle(brightness: hoverBrightness, tintShiftDeg: hoverTintShiftDeg, saturationShift: hoverSaturationShift);
 		hoverBg: hoverFx:applyEffects(c: hoverBase):toArgb();
 		if({ !customSurfaceFill }, {
-			:surfaceFill: FillStyle(mode: 'solid', colorA: surface);
+			:surfaceFill: FillStyle(mode: FillMode:SOLID, colorA: surface);
 		});
 		if({ !customButtonFill }, {
-			:buttonFill: FillStyle(mode: 'solid', colorA: Color:fromArgb(argb: menuBg));
+			:buttonFill: FillStyle(mode: FillMode:SOLID, colorA: Color:fromArgb(argb: menuBg));
 		});
 		activeBg: highlight:toArgb();
 		panelBg: surface:toArgb();

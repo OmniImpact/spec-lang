@@ -13,6 +13,8 @@ Class is ShowcaseViewModel{
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
+		['base', 'fabric', FillMode],
+		['base', 'fabric', GradientBounds],
 		['base', 'fabric', FillStyle]
 	];
 
@@ -24,6 +26,7 @@ Class is ShowcaseViewModel{
 	String is borderStyle: 'solid';
 	Int is windowAlphaPct: 100;
 	Int is surfFillStyleIdx: 0;
+	GradientBounds is surfBounds: GradientBounds:INSCRIBE;
 	Boolean is useSurfColorB: false;
 	Color is surfColorB: Color(r: 90, g: 150, b: 235);
 	Int is surfCenterXPct: 50;
@@ -31,6 +34,7 @@ Class is ShowcaseViewModel{
 	Int is surfAngleDeg: 35;
 	Int is surfBlendPct: 50;
 	Int is btnFillStyleIdx: 0;
+	GradientBounds is btnBounds: GradientBounds:INSCRIBE;
 	Boolean is useBtnColorB: false;
 	Color is btnColorB: Color(r: 90, g: 150, b: 235);
 	Int is btnCenterXPct: 50;
@@ -240,11 +244,11 @@ Class is ShowcaseViewModel{
 			:notifyThemeChange();
 			return;
 		});
-		local String is fMode: if({ surfFillStyleIdx == 3 || surfFillStyleIdx == 4 }, { 'radial' }, { 'linear' });
+		local FillMode is fMode: if({ surfFillStyleIdx == 3 || surfFillStyleIdx == 4 }, { FillMode:RADIAL }, { FillMode:LINEAR });
 		local Boolean is fRefl: surfFillStyleIdx == 2 || surfFillStyleIdx == 4;
 		local Color is colB: if({ useSurfColorB }, { surfColorB }, { activeTheme:highlight });
 		activeTheme:setSurfaceFill(fill: FillStyle(
-			mode: fMode, colorA: activeTheme:background, colorB: colB,
+			mode: fMode, bounds: surfBounds, colorA: activeTheme:background, colorB: colB,
 			centerX: (surfCenterXPct as Float) / 100.0,
 			centerY: (surfCenterYPct as Float) / 100.0,
 			angleDeg: surfAngleDeg as Float,
@@ -261,12 +265,12 @@ Class is ShowcaseViewModel{
 			:notifyThemeChange();
 			return;
 		});
-		local String is fMode: if({ btnFillStyleIdx == 3 || btnFillStyleIdx == 4 }, { 'radial' }, { 'linear' });
+		local FillMode is fMode: if({ btnFillStyleIdx == 3 || btnFillStyleIdx == 4 }, { FillMode:RADIAL }, { FillMode:LINEAR });
 		local Boolean is fRefl: btnFillStyleIdx == 2 || btnFillStyleIdx == 4;
 		local Color is btnA: Color:fromArgb(argb: activeTheme:menuBg);
 		local Color is colB: if({ useBtnColorB }, { btnColorB }, { activeTheme:highlight });
 		activeTheme:setButtonFill(fill: FillStyle(
-			mode: fMode, colorA: btnA, colorB: colB,
+			mode: fMode, bounds: btnBounds, colorA: btnA, colorB: colB,
 			centerX: (btnCenterXPct as Float) / 100.0,
 			centerY: (btnCenterYPct as Float) / 100.0,
 			angleDeg: btnAngleDeg as Float,
@@ -277,6 +281,7 @@ Class is ShowcaseViewModel{
 	}
 
 	Function is setSurfFillStyleIndex(Int is idx){ :surfFillStyleIdx: idx; :syncSurfaceFill(); }
+	Function is setSurfBounds(GradientBounds is bounds){ :surfBounds: bounds; :syncSurfaceFill(); }
 	Function is setUseSurfColorB(Boolean is enabled){ :useSurfColorB: enabled; :syncSurfaceFill(); }
 	Function is setSurfColorB(Color is col){ :surfColorB: col; :useSurfColorB: true; :syncSurfaceFill(); }
 	Function is setSurfCenterX(Int is pct){ :surfCenterXPct: pct; :syncSurfaceFill(); }
@@ -285,6 +290,7 @@ Class is ShowcaseViewModel{
 	Function is setSurfBlend(Int is pct){ :surfBlendPct: pct; :syncSurfaceFill(); }
 
 	Function is setBtnFillStyleIndex(Int is idx){ :btnFillStyleIdx: idx; :syncButtonFill(); }
+	Function is setBtnBounds(GradientBounds is bounds){ :btnBounds: bounds; :syncButtonFill(); }
 	Function is setUseBtnColorB(Boolean is enabled){ :useBtnColorB: enabled; :syncButtonFill(); }
 	Function is setBtnColorB(Color is col){ :btnColorB: col; :useBtnColorB: true; :syncButtonFill(); }
 	Function is setBtnCenterX(Int is pct){ :btnCenterXPct: pct; :syncButtonFill(); }

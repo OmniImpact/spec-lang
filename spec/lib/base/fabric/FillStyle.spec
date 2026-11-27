@@ -7,10 +7,13 @@ Class is FillStyle{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'math', as Math()],
-		['base', 'fabric', Color]
+		['base', 'fabric', Color],
+		['base', 'fabric', FillMode],
+		['base', 'fabric', GradientBounds]
 	];
 
-	String is mode: 'solid';
+	FillMode is mode: FillMode:SOLID;
+	GradientBounds is bounds: GradientBounds:INSCRIBE;
 	Color is colorA: Color(r: 40, g: 44, b: 56);
 	Color is colorB: Color(r: 90, g: 150, b: 235);
 	Float is centerX: 0.5;
@@ -23,7 +26,8 @@ Class is FillStyle{
 	Float is saturationShift: 0.0;
 
 	replace Function is init(
-		String is mode: 'solid',
+		FillMode is mode: FillMode:SOLID,
+		GradientBounds is bounds: GradientBounds:INSCRIBE,
 		Color is colorA: Color(r: 40, g: 44, b: 56),
 		Color is colorB: Color(r: 90, g: 150, b: 235),
 		Float is centerX: 0.5,
@@ -36,6 +40,7 @@ Class is FillStyle{
 		Float is saturationShift: 0.0
 	){
 		:mode: mode;
+		:bounds: bounds;
 		:colorA: colorA;
 		:colorB: colorB;
 		:centerX: Color:clamp01(v: centerX);
@@ -49,7 +54,7 @@ Class is FillStyle{
 	}
 
 	Function of Boolean is isSolid(){
-		return mode == 'solid';
+		return mode == FillMode:SOLID;
 	}
 
 	## Applies tint (hue) shift, saturation shift, and brightness modulation to [c].
@@ -74,15 +79,22 @@ Class is FillStyle{
 
 	## Samples the fill at normalized coordinates ([u], [v]) in [0, 1] x [0, 1].
 	Function of Color is sampleAt(Float is u, Float is v){
-		if({ mode == 'solid' }, {
+		if({ mode == FillMode:SOLID }, {
 			return :applyEffects(c: colorA);
 		});
 		local Float is b: Color:clamp01(v: blendWidth);
 		local Float is t: 0.0;
-		if({ mode == 'radial' }, {
+		if({ mode == FillMode:RADIAL }, {
 			local Float is dx: u - centerX;
 			local Float is dy: v - centerY;
-			local Float is dist: sqrt(value: dx * dx + dy * dy) * 2.0;
+			local Float is radMaxD: 0.5;
+			if({ bounds == GradientBounds:CIRCUMSCRIBE }, {
+				local Float is mx: if({ centerX > 1.0 - centerX }, { centerX }, { 1.0 - centerX });
+				local Float is my: if({ centerY > 1.0 - centerY }, { centerY }, { 1.0 - centerY });
+				radMaxD: sqrt(value: mx * mx + my * my);
+				if({ radMaxD < 0.001 }, { radMaxD: 0.001; });
+			});
+			local Float is dist: sqrt(value: dx * dx + dy * dy) / radMaxD;
 			if({ b <= 0.001 }, {
 				t: if({ dist <= 0.001 }, { 0.0 }, { 1.0 });
 			}, {
@@ -100,9 +112,25 @@ Class is FillStyle{
 			local Float is ux: cos(value: rad);
 			local Float is uy: sin(value: rad);
 			local Float is proj: (u - centerX) * ux + (v - centerY) * uy;
+			local Float is halfSpan: 0.5;
+			if({ bounds == GradientBounds:CIRCUMSCRIBE }, {
+				local Float is p00: (0.0 - centerX) * ux + (0.0 - centerY) * uy;
+				local Float is p10: (1.0 - centerX) * ux + (0.0 - centerY) * uy;
+				local Float is p01: (0.0 - centerX) * ux + (1.0 - centerY) * uy;
+				local Float is p11: (1.0 - centerX) * ux + (1.0 - centerY) * uy;
+				local Float is a00: if({ p00 < 0.0 }, { 0.0 - p00 }, { p00 });
+				local Float is a10: if({ p10 < 0.0 }, { 0.0 - p10 }, { p10 });
+				local Float is a01: if({ p01 < 0.0 }, { 0.0 - p01 }, { p01 });
+				local Float is a11: if({ p11 < 0.0 }, { 0.0 - p11 }, { p11 });
+				halfSpan: a00;
+				if({ a10 > halfSpan }, { halfSpan: a10; });
+				if({ a01 > halfSpan }, { halfSpan: a01; });
+				if({ a11 > halfSpan }, { halfSpan: a11; });
+				if({ halfSpan < 0.001 }, { halfSpan: 0.001; });
+			});
 			if({ reflected }, {
 				local Float is absP: if({ proj < 0.0 }, { 0.0 - proj }, { proj });
-				local Float is dist: absP * 2.0;
+				local Float is dist: absP / halfSpan;
 				if({ b <= 0.001 }, {
 					t: if({ dist <= 0.01 }, { 1.0 }, { 0.0 });
 				}, {
@@ -115,7 +143,7 @@ Class is FillStyle{
 					t: 1.0 - Color:clamp01(v: (dist - lo) / span);
 				}); });
 			}, {
-				local Float is pos: 0.5 + proj;
+				local Float is pos: 0.5 + proj / (2.0 * halfSpan);
 				if({ b <= 0.001 }, {
 					t: if({ pos >= 0.5 }, { 1.0 }, { 0.0 });
 				}, {

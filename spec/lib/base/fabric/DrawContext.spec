@@ -15,6 +15,8 @@ Class is DrawContext{
 		['base', 'struct', Array],
 		['base', 'suit', SuitCanvas],
 		['base', 'fabric', Color],
+		['base', 'fabric', FillMode],
+		['base', 'fabric', GradientBounds],
 		['base', 'fabric', FillStyle]
 	];
 
@@ -351,7 +353,8 @@ Class is DrawContext{
 		local Float is rf: r as Float;
 		local Float is wf: w as Float;
 		local Float is hf: h as Float;
-		local Boolean is isRadial: fill:mode == 'radial';
+		local Boolean is isRadial: fill:mode == FillMode:RADIAL;
+		local Boolean is isCircum: fill:bounds == GradientBounds:CIRCUMSCRIBE;
 		local Float is b: :clamp01(v: fill:blendWidth);
 		local Float is lo: if({ b > 0.5 }, { (b - 0.5) * 2.0 }, { 0.0 });
 		local Float is hi: if({ b > 0.5 }, { 1.0 }, { b * 2.0 });
@@ -365,6 +368,27 @@ Class is DrawContext{
 		local Float is uy: sin(value: rad);
 		local Float is fcx: fill:centerX;
 		local Float is fcy: fill:centerY;
+		local Float is radMaxD: 0.5;
+		local Float is linHalfSpan: 0.5;
+		if({ isCircum }, {
+			local Float is mx: if({ fcx > 1.0 - fcx }, { fcx }, { 1.0 - fcx });
+			local Float is my: if({ fcy > 1.0 - fcy }, { fcy }, { 1.0 - fcy });
+			radMaxD: sqrt(value: mx * mx + my * my);
+			if({ radMaxD < 0.001 }, { radMaxD: 0.001; });
+			local Float is p00: (0.0 - fcx) * ux + (0.0 - fcy) * uy;
+			local Float is p10: (1.0 - fcx) * ux + (0.0 - fcy) * uy;
+			local Float is p01: (0.0 - fcx) * ux + (1.0 - fcy) * uy;
+			local Float is p11: (1.0 - fcx) * ux + (1.0 - fcy) * uy;
+			local Float is a00: if({ p00 < 0.0 }, { 0.0 - p00 }, { p00 });
+			local Float is a10: if({ p10 < 0.0 }, { 0.0 - p10 }, { p10 });
+			local Float is a01: if({ p01 < 0.0 }, { 0.0 - p01 }, { p01 });
+			local Float is a11: if({ p11 < 0.0 }, { 0.0 - p11 }, { p11 });
+			linHalfSpan: a00;
+			if({ a10 > linHalfSpan }, { linHalfSpan: a10; });
+			if({ a01 > linHalfSpan }, { linHalfSpan: a01; });
+			if({ a11 > linHalfSpan }, { linHalfSpan: a11; });
+			if({ linHalfSpan < 0.001 }, { linHalfSpan: 0.001; });
+		});
 		local Boolean is refl: fill:reflected;
 		local Boolean is fastFx: fill:tintShiftDeg == 0.0 && fill:saturationShift == 0.0;
 		local Int is aR: fill:colorA:red();
@@ -393,7 +417,7 @@ Class is DrawContext{
 					if({ isRadial }, {
 						local Float is dx: u - fcx;
 						local Float is dy: v - fcy;
-						local Float is dist: sqrt(value: dx * dx + dy * dy) * 2.0;
+						local Float is dist: sqrt(value: dx * dx + dy * dy) / radMaxD;
 						if({ b <= 0.001 }, {
 							t: if({ dist <= 0.001 }, { 0.0 }, { 1.0 });
 						}, {
@@ -407,7 +431,7 @@ Class is DrawContext{
 						local Float is proj: (u - fcx) * ux + (v - fcy) * uy;
 						if({ refl }, {
 							local Float is absP: if({ proj < 0.0 }, { 0.0 - proj }, { proj });
-							local Float is dist: absP * 2.0;
+							local Float is dist: absP / linHalfSpan;
 							if({ b <= 0.001 }, {
 								t: if({ dist <= 0.01 }, { 1.0 }, { 0.0 });
 							}, {
@@ -417,7 +441,7 @@ Class is DrawContext{
 								t: 1.0 - :clamp01(v: (dist - lo) / spanR);
 							}); });
 						}, {
-							local Float is pos: 0.5 + proj;
+							local Float is pos: 0.5 + proj / (2.0 * linHalfSpan);
 							if({ b <= 0.001 }, {
 								t: if({ pos >= 0.5 }, { 1.0 }, { 0.0 });
 							}, {

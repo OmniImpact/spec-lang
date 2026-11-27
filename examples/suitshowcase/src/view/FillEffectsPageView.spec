@@ -12,6 +12,8 @@ Class is FillEffectsPageView{
 		['base', 'sew', Grid],
 		['base', 'sew', Center],
 		['base', 'fabric', Color],
+		['base', 'fabric', FillMode],
+		['base', 'fabric', GradientBounds],
 		['base', 'fabric', FillStyle],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
@@ -26,12 +28,15 @@ Class is FillEffectsPageView{
 	];
 
 	ShowcaseViewModel is vm: ShowcaseViewModel();
-	Array of String is modeNames: Array(['solid', 'linear', 'radial']);
+	Array of FillMode is modeValues: Array([FillMode:SOLID, FillMode:LINEAR, FillMode:RADIAL]);
 	Array of String is modeLabels: Array(['Solid', 'Linear', 'Radial']);
+	Array of String is boundsLabels: Array(['Inscribe', 'Circumscribe']);
 	Int is selModeIdx: 1;
+	Int is selBoundsIdx: 0;
 	StyledBox is previewBox: StyledBox();
 	FillStyle is liveFill: FillStyle(
-		mode: 'linear',
+		mode: FillMode:LINEAR,
+		bounds: GradientBounds:INSCRIBE,
 		colorA: Color(r: 40, g: 64, b: 120),
 		colorB: Color(r: 110, g: 205, b: 255),
 		centerX: 0.5,
@@ -87,12 +92,25 @@ Class is FillEffectsPageView{
 			selectedIndex: selModeIdx,
 			itemMinWidthPt: 64.0,
 			onSelect: local Function(Int is idx){
-				if({ idx >= 0 && idx < modeNames:length() }, {
+				if({ idx >= 0 && idx < modeValues:length() }, {
 					:selModeIdx: idx;
-					liveFill:mode: modeNames:get(index: idx);
+					liveFill:mode: modeValues:get(index: idx);
 					previewBox:invalidate();
-					vm:statusText:emit(value: 'Fill mode: ' . liveFill:mode);
+					vm:statusText:emit(value: 'Fill mode: ' . modeLabels:get(index: idx));
 				});
+			}
+		);
+
+		local SectionH is boundsSeg: SectionH(
+			segmented: true,
+			options: boundsLabels,
+			selectedIndex: selBoundsIdx,
+			itemMinWidthPt: 76.0,
+			onSelect: local Function(Int is idx){
+				:selBoundsIdx: idx;
+				liveFill:bounds: if({ idx == 1 }, { GradientBounds:CIRCUMSCRIBE }, { GradientBounds:INSCRIBE });
+				previewBox:invalidate();
+				vm:statusText:emit(value: 'Gradient bounds: ' . boundsLabels:get(index: idx));
 			}
 		);
 
@@ -194,6 +212,7 @@ Class is FillEffectsPageView{
 			children: Array([
 				Label(text: 'Color A'), colAPick, Label(text: ''),
 				Label(text: 'Color B'), colBPick, Label(text: ''),
+				Label(text: 'Bounds'), boundsSeg, Label(text: ''),
 				Label(text: 'Reflected Mode'), reflSwitch, TextScrap(text: TextEmitter(initial: 'Color B at center'), muted: true),
 				Label(text: 'Center X'), cxSlider, TextScrap(text: cxLabel, muted: true),
 				Label(text: 'Center Y'), cySlider, TextScrap(text: cyLabel, muted: true),
@@ -210,27 +229,27 @@ Class is FillEffectsPageView{
 
 		local StyledBox is g1: StyledBox(label: 'Linear', radiusPt: 6.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0);
 		g1:useCustomFill: true;
-		g1:fillStyle: FillStyle(mode: 'linear', colorA: c1, colorB: c2, angleDeg: 0.0, blendWidth: 1.0);
+		g1:fillStyle: FillStyle(mode: FillMode:LINEAR, colorA: c1, colorB: c2, angleDeg: 0.0, blendWidth: 0.5);
 
 		local StyledBox is g2: StyledBox(label: 'Lin Reflected', radiusPt: 6.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0);
 		g2:useCustomFill: true;
-		g2:fillStyle: FillStyle(mode: 'linear', colorA: c1, colorB: c2, angleDeg: 0.0, blendWidth: 0.9, reflected: true);
+		g2:fillStyle: FillStyle(mode: FillMode:LINEAR, colorA: c1, colorB: c2, angleDeg: 0.0, blendWidth: 0.5, reflected: true);
 
 		local StyledBox is g3: StyledBox(label: 'Radial', radiusPt: 6.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0);
 		g3:useCustomFill: true;
-		g3:fillStyle: FillStyle(mode: 'radial', colorA: c1, colorB: c2, centerX: 0.35, centerY: 0.35, blendWidth: 1.1);
+		g3:fillStyle: FillStyle(mode: FillMode:RADIAL, colorA: c1, colorB: c2, centerX: 0.35, centerY: 0.35, blendWidth: 0.5);
 
 		local StyledBox is g4: StyledBox(label: 'Rad Reflected', radiusPt: 6.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0);
 		g4:useCustomFill: true;
-		g4:fillStyle: FillStyle(mode: 'radial', colorA: c1, colorB: c2, centerX: 0.5, centerY: 0.5, blendWidth: 1.0, reflected: true);
+		g4:fillStyle: FillStyle(mode: FillMode:RADIAL, colorA: c1, colorB: c2, centerX: 0.5, centerY: 0.5, blendWidth: 0.5, reflected: true);
 
 		local StyledBox is g5: StyledBox(label: 'Brightness +', radiusPt: 6.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0);
 		g5:useCustomFill: true;
-		g5:fillStyle: FillStyle(mode: 'linear', colorA: c1, colorB: c2, angleDeg: 45.0, brightness: 0.35);
+		g5:fillStyle: FillStyle(mode: FillMode:LINEAR, colorA: c1, colorB: c2, angleDeg: 45.0, brightness: 0.35);
 
 		local StyledBox is g6: StyledBox(label: 'Tint + Sat', radiusPt: 6.0, shadowOffsetYPt: 2.0, shadowBlurPt: 4.0, minWidthPt: 120.0, minHeightPt: 64.0);
 		g6:useCustomFill: true;
-		g6:fillStyle: FillStyle(mode: 'linear', colorA: c1, colorB: c2, angleDeg: 45.0, tintShiftDeg: 95.0, saturationShift: 0.45);
+		g6:fillStyle: FillStyle(mode: FillMode:LINEAR, colorA: c1, colorB: c2, angleDeg: 45.0, tintShiftDeg: 95.0, saturationShift: 0.45);
 
 		local Grid is galleryGrid: Grid(
 			columns: 3,

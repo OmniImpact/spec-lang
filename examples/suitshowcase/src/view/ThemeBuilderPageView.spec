@@ -25,6 +25,7 @@ Class is ThemeBuilderPageView{
 		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
+		['base', 'fabric', GradientBounds],
 		['suitshowcase', 'viewmodel', ShowcaseViewModel]
 	];
 
@@ -35,6 +36,7 @@ Class is ThemeBuilderPageView{
 	SectionH is dividerStyleSection: SectionH();
 	SectionH is buttonStyleSection: SectionH();
 	SectionH is surfFillSection: SectionH();
+	SectionH is surfBoundsSection: SectionH();
 	Switch is useSurfColorBSwitch: Switch();
 	ColorSwatchDropdown is surfColorBSwatch: ColorSwatchDropdown();
 	Slider is surfCXSlider: Slider();
@@ -46,6 +48,7 @@ Class is ThemeBuilderPageView{
 	TextEmitter is surfAngLabel: TextEmitter(initial: '35 deg');
 	TextEmitter is surfBwLabel: TextEmitter(initial: '50%');
 	SectionH is btnFillSection: SectionH();
+	SectionH is btnBoundsSection: SectionH();
 	Switch is useBtnColorBSwitch: Switch();
 	ColorSwatchDropdown is btnColorBSwatch: ColorSwatchDropdown();
 	Slider is btnCXSlider: Slider();
@@ -108,6 +111,7 @@ Class is ThemeBuilderPageView{
 	Array of String is targetBorderStyles: Array(['none', 'single', 'double', 'bevel', 'groove', 'inset', 'outset']);
 	Array of String is targetBorderLabels: Array(['None', 'Single', 'Double', 'Bevel', 'Groove', 'Inset', 'Outset']);
 	Array of String is fillStyleLabels: Array(['Solid', 'Linear', 'Lin Refl', 'Radial', 'Rad Refl']);
+	Array of String is boundsLabels: Array(['Inscribe', 'Circumscribe']);
 
 	replace Function is init(ShowcaseViewModel is vm){
 		:vm: vm;
@@ -243,6 +247,13 @@ Class is ThemeBuilderPageView{
 			itemMinWidthPt: 52.0,
 			onSelect: local Function(Int is idx){ vm:setSurfFillStyleIndex(idx: idx); }
 		);
+		:surfBoundsSection: SectionH(
+			segmented: true,
+			options: boundsLabels,
+			selectedIndex: if({ vm:surfBounds == GradientBounds:CIRCUMSCRIBE }, { 1 }, { 0 }),
+			itemMinWidthPt: 76.0,
+			onSelect: local Function(Int is idx){ vm:setSurfBounds(bounds: if({ idx == 1 }, { GradientBounds:CIRCUMSCRIBE }, { GradientBounds:INSCRIBE })); }
+		);
 		:useSurfColorBSwitch: Switch(
 			checked: vm:useSurfColorB,
 			onChange: local Function(Boolean is on){ vm:setUseSurfColorB(enabled: on); }
@@ -264,6 +275,13 @@ Class is ThemeBuilderPageView{
 			selectedIndex: vm:btnFillStyleIdx,
 			itemMinWidthPt: 52.0,
 			onSelect: local Function(Int is idx){ vm:setBtnFillStyleIndex(idx: idx); }
+		);
+		:btnBoundsSection: SectionH(
+			segmented: true,
+			options: boundsLabels,
+			selectedIndex: if({ vm:btnBounds == GradientBounds:CIRCUMSCRIBE }, { 1 }, { 0 }),
+			itemMinWidthPt: 76.0,
+			onSelect: local Function(Int is idx){ vm:setBtnBounds(bounds: if({ idx == 1 }, { GradientBounds:CIRCUMSCRIBE }, { GradientBounds:INSCRIBE })); }
 		);
 		:useBtnColorBSwitch: Switch(
 			checked: vm:useBtnColorB,
@@ -408,6 +426,7 @@ Class is ThemeBuilderPageView{
 					child: SectionV(
 						children: Array([
 							SectionV(title: 'Fill Style', children: Array([surfFillSection])),
+							SectionV(title: 'Bounds', children: Array([surfBoundsSection])),
 							Grid(
 								columns: 3,
 								colGapPt: 10.0,
@@ -428,6 +447,7 @@ Class is ThemeBuilderPageView{
 					child: SectionV(
 						children: Array([
 							SectionV(title: 'Fill Style', children: Array([btnFillSection])),
+							SectionV(title: 'Bounds', children: Array([btnBoundsSection])),
 							Grid(
 								columns: 3,
 								colGapPt: 10.0,
