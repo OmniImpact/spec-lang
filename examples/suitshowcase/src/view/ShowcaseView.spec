@@ -26,11 +26,14 @@ Class is ShowcaseView{
 		['suitshowcase', 'view', ThemeBuilderPageView],
 		['suitshowcase', 'view', ButtonsPageView],
 		['suitshowcase', 'view', InputsPageView],
+		['suitshowcase', 'view', SlidersPageView],
+		['suitshowcase', 'view', BarsPageView],
+		['suitshowcase', 'view', DropdownsPageView],
 		['suitshowcase', 'view', ColorPageView],
 		['suitshowcase', 'view', TextTreePageView]
 	];
 
-	Array of String is categoryRoutes: Array(['intro', 'theme', 'buttons', 'inputs', 'colors', 'text']);
+	Array of String is categoryRoutes: Array(['intro', 'theme', 'buttons', 'inputs', 'sliders', 'bars', 'dropdowns', 'colors', 'text']);
 
 	local Function of Int is routeIndex(String is routeName){
 		local Int is i: 0;
@@ -46,6 +49,9 @@ Class is ShowcaseView{
 		local ThemeBuilderPageView is themePage: ThemeBuilderPageView(vm: vm);
 		local ButtonsPageView is buttonsPage: ButtonsPageView(vm: vm);
 		local InputsPageView is inputsPage: InputsPageView(vm: vm);
+		local SlidersPageView is slidersPage: SlidersPageView(vm: vm);
+		local BarsPageView is barsPage: BarsPageView(vm: vm);
+		local DropdownsPageView is dropdownsPage: DropdownsPageView(vm: vm);
 		local ColorPageView is colorPage: ColorPageView(vm: vm);
 		local TextTreePageView is textPage: TextTreePageView(vm: vm);
 
@@ -56,6 +62,9 @@ Class is ShowcaseView{
 				NavRoute(name: 'theme', child: ScrollView(child: Padding(useThemePad: true, child: themePage:build()))),
 				NavRoute(name: 'buttons', child: ScrollView(child: Padding(useThemePad: true, child: buttonsPage:build()))),
 				NavRoute(name: 'inputs', child: ScrollView(child: Padding(useThemePad: true, child: inputsPage:build()))),
+				NavRoute(name: 'sliders', child: ScrollView(child: Padding(useThemePad: true, child: slidersPage:build()))),
+				NavRoute(name: 'bars', child: ScrollView(child: Padding(useThemePad: true, child: barsPage:build()))),
+				NavRoute(name: 'dropdowns', child: ScrollView(child: Padding(useThemePad: true, child: dropdownsPage:build()))),
 				NavRoute(name: 'colors', child: ScrollView(child: Padding(useThemePad: true, child: colorPage:build()))),
 				NavRoute(name: 'text', child: ScrollView(child: Padding(useThemePad: true, child: textPage:build())))
 			])
@@ -63,7 +72,7 @@ Class is ShowcaseView{
 
 		local SectionV is sidebar: SectionV(
 			segmented: true,
-			options: Array(['Intro', 'Theme Builder', 'Buttons & Sections', 'Inputs & Toggles', 'Color Selector', 'Text & Tree']),
+			options: Array(['Intro', 'Theme Builder', 'Buttons & Sections', 'Inputs & Toggles', 'Sliders', 'Bars & Toolbars', 'Dropdowns', 'Color Selector', 'Text & Tree']),
 			selectedIndex: :routeIndex(routeName: vm:selectedRoute:current()),
 			itemMinWidthPt: 132.0,
 			itemHeightPt: 24.0,
@@ -110,6 +119,7 @@ Class is ShowcaseView{
 			themePage:sync();
 			buttonsPage:sync();
 			inputsPage:sync();
+			slidersPage:sync();
 			navStack:invalidate();
 			container:isDirty: true;
 		});

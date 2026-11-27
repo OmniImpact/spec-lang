@@ -224,6 +224,10 @@ Class of SewNode is Toolbar{
 	}
 
 	## Handles a left-click at ([x], [y]); returns `true` if visual state changed.
+	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods: 0){
+		return :onPointerClick(x: x, y: y);
+	}
+
 	Function of Boolean is onPointerClick(Int is x, Int is y){
 		local Rect is b: bounds();
 		local Boolean is handled: false;
