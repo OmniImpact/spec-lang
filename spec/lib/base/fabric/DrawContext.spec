@@ -1102,6 +1102,51 @@ Class is DrawContext{
 		);
 	}
 
+	## Draws UTF-8 [text] with optional outline border and drop shadow effects.
+	Function is drawTextStyled(
+		Int is x, Int is y, String is text, Int is color,
+		Int is pixelHeight: 15, Boolean is bold: false, Boolean is italic: false, Boolean is mono: false,
+		Int is outlinePx: 0, Int is outlineColor: -16777216,
+		Int is shadowOffsetX: 0, Int is shadowOffsetY: 0, Int is shadowBlur: 0, Int is shadowColor: 1426063360
+	){
+		if({ shadowOffsetX != 0 || shadowOffsetY != 0 || shadowBlur > 0 }, {
+			local Int is sx: x + shadowOffsetX;
+			local Int is sy: y + shadowOffsetY;
+			if({ shadowBlur <= 0 }, {
+				:drawText(x: sx, y: sy, text: text, color: shadowColor, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+			}, {
+				local Int is r: if({ shadowBlur > 4 }, { 4 }, { shadowBlur });
+				local Int is shA: (shadowColor >> 24) & 255;
+				local Int is shRgb: shadowColor & 16777215;
+				local Int is tapA: shA / 5;
+				if({ tapA < 12 }, { tapA: 12; });
+				local Int is tapCol: (tapA << 24) | shRgb;
+				local Int is step: if({ r > 2 }, { r / 2 }, { 1 });
+				:drawText(x: sx - step, y: sy, text: text, color: tapCol, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+				:drawText(x: sx + step, y: sy, text: text, color: tapCol, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+				:drawText(x: sx, y: sy - step, text: text, color: tapCol, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+				:drawText(x: sx, y: sy + step, text: text, color: tapCol, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+				:drawText(x: sx, y: sy, text: text, color: tapCol, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+			});
+		});
+		if({ outlinePx > 0 }, {
+			local Int is r: if({ outlinePx > 4 }, { 4 }, { outlinePx });
+			local Int is r2: r * r + 1;
+			local Int is oy: 0 - r;
+			while({ oy <= r }, {
+				local Int is ox: 0 - r;
+				while({ ox <= r }, {
+					if({ (ox != 0 || oy != 0) && (ox * ox + oy * oy <= r2) }, {
+						:drawText(x: x + ox, y: y + oy, text: text, color: outlineColor, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+					});
+					ox: ox + 1;
+				});
+				oy: oy + 1;
+			});
+		});
+		:drawText(x: x, y: y, text: text, color: color, pixelHeight: pixelHeight, bold: bold, italic: italic, mono: mono);
+	}
+
 	## Alpha-blends a byte coverage mask ([maskAddr], [w]x[h]) tinted with ARGB [color] at ([x], [y]).
 	Function is blendAlphaMask(Int is x, Int is y, Int is w, Int is h, Int is maskAddr, Int is color){
 		local Int is pixelsPtr: canvas:pixelsAddr();

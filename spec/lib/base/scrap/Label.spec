@@ -10,6 +10,7 @@ Class of SewNode is Label{
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
+		['base', 'fabric', Color],
 		['base', 'fabric', TextStyle],
 		['base', 'fabric', DrawContext]
 	];
@@ -20,6 +21,13 @@ Class of SewNode is Label{
 	Boolean is muted: false;
 	Boolean is boxed: false;
 	Float is minWidthPt: 0.0;
+	Float is outlinePt: 0.0;
+	Color is outlineColor: Color(r: 0, g: 0, b: 0, a: 220);
+	Boolean is useCustomOutlineColor: false;
+	Float is shadowOffsetXPt: 0.0;
+	Float is shadowOffsetYPt: 0.0;
+	Float is shadowBlurPt: 0.0;
+	Int is shadowAlpha: 120;
 
 	replace Function is init(
 		String is text: '',
@@ -27,7 +35,14 @@ Class of SewNode is Label{
 		Boolean is heading: false,
 		Boolean is muted: false,
 		Boolean is boxed: false,
-		Float is minWidthPt: 0.0
+		Float is minWidthPt: 0.0,
+		Float is outlinePt: 0.0,
+		Color is outlineColor: Color(r: 0, g: 0, b: 0, a: 220),
+		Boolean is useCustomOutlineColor: false,
+		Float is shadowOffsetXPt: 0.0,
+		Float is shadowOffsetYPt: 0.0,
+		Float is shadowBlurPt: 0.0,
+		Int is shadowAlpha: 120
 	){
 		:text: text;
 		:style: style;
@@ -35,6 +50,13 @@ Class of SewNode is Label{
 		:muted: muted;
 		:boxed: boxed;
 		:minWidthPt: minWidthPt;
+		:outlinePt: outlinePt;
+		:outlineColor: outlineColor;
+		:useCustomOutlineColor: useCustomOutlineColor;
+		:shadowOffsetXPt: shadowOffsetXPt;
+		:shadowOffsetYPt: shadowOffsetYPt;
+		:shadowBlurPt: shadowBlurPt;
+		:shadowAlpha: shadowAlpha;
 	}
 
 	Function is setText(String is text){
@@ -80,12 +102,13 @@ Class of SewNode is Label{
 
 	replace Function of Size is measure(Constraints is c){
 		local Int is fpx: :fontPx();
-		local Int is tw: DrawContext:measureWidth(text: text, pixelHeight: fpx) + (if({ :isBold() }, { fpx / 3 }, { 0 }));
+		local Int is outPx: if({ outlinePt > 0.0 }, { activeScale:px(pt: outlinePt) }, { 0 });
+		local Int is tw: DrawContext:measureWidth(text: text, pixelHeight: fpx) + (if({ :isBold() }, { fpx / 3 }, { 0 })) + outPx * 2;
 		local Int is padX: if({ boxed }, { activeScale:px(pt: activeTheme:paddingPt) }, { 0 });
 		local Int is padY: if({ boxed }, { activeScale:px(pt: activeTheme:paddingPt * 0.75) }, { activeScale:px(pt: 4.0) });
 		local Int is minW: activeScale:px(pt: minWidthPt);
 		local Int is w: if({ tw + padX * 2 > minW }, { tw + padX * 2 }, { minW });
-		local Int is h: DrawContext:measureHeight(pixelHeight: fpx) + padY * 2;
+		local Int is h: DrawContext:measureHeight(pixelHeight: fpx) + padY * 2 + outPx * 2;
 		desiredSize: Size(width: c:clampW(w: w), height: c:clampH(h: h));
 		return desiredSize;
 	}
@@ -104,6 +127,21 @@ Class of SewNode is Label{
 		local Int is fpx: :fontPx();
 		local Int is th: DrawContext:measureHeight(pixelHeight: fpx);
 		local Int is fg: if({ :isMutedStyle() }, { activeTheme:textMuted }, { activeTheme:textPrimary });
-		ctx:drawText(x: b:x + padX, y: b:y + (b:height - th) / 2, text: text, color: fg, pixelHeight: fpx, bold: :isBold(), mono: :isMono());
+		local Int is outPx: if({ outlinePt > 0.0 }, { activeScale:px(pt: outlinePt) }, { 0 });
+		local Int is shOffX: activeScale:px(pt: shadowOffsetXPt);
+		local Int is shOffY: activeScale:px(pt: shadowOffsetYPt);
+		local Int is shBlur: activeScale:px(pt: shadowBlurPt);
+		if({ outPx > 0 || shOffX != 0 || shOffY != 0 || shBlur > 0 }, {
+			local Int is outCol: if({ useCustomOutlineColor }, { outlineColor:toArgb() }, { activeTheme:background:toArgb() });
+			local Int is shCol: (shadowAlpha & 255) << 24;
+			ctx:drawTextStyled(
+				x: b:x + padX + outPx, y: b:y + (b:height - th) / 2, text: text, color: fg,
+				pixelHeight: fpx, bold: :isBold(), mono: :isMono(),
+				outlinePx: outPx, outlineColor: outCol,
+				shadowOffsetX: shOffX, shadowOffsetY: shOffY, shadowBlur: shBlur, shadowColor: shCol
+			);
+		}, {
+			ctx:drawText(x: b:x + padX, y: b:y + (b:height - th) / 2, text: text, color: fg, pixelHeight: fpx, bold: :isBold(), mono: :isMono());
+		});
 	}
 }
