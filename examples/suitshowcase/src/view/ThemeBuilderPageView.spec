@@ -8,14 +8,17 @@ Class is ThemeBuilderPageView{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'struct', Array],
+		['base', 'signal', TextEmitter],
 		['base', 'sew', SewNode],
 		['base', 'scrap', Frame],
 		['base', 'scrap', Label],
 		['base', 'scrap', ScrapButton],
+		['base', 'scrap', Slider],
 		['base', 'scrap', TextInput],
 		['base', 'scrap', DecoratedTextInput],
 		['base', 'scrap', SectionV],
 		['base', 'scrap', SectionH],
+		['base', 'scrap', 'text', TextScrap],
 		['base', 'fabric', Theme],
 		['base', 'fabric', ThemePreset],
 		['suitshowcase', 'viewmodel', ShowcaseViewModel]
@@ -24,6 +27,8 @@ Class is ThemeBuilderPageView{
 	ShowcaseViewModel is vm: ShowcaseViewModel();
 	SectionH is presetSection: SectionH();
 	SectionH is borderSection: SectionH();
+	Slider is alphaSlider: Slider();
+	TextEmitter is alphaLabel: TextEmitter(initial: '100%');
 	DecoratedTextInput is baseTextInput: DecoratedTextInput();
 	Array of TextInput is colorInputs: Array();
 	Array of String is colorLabels: Array([
@@ -84,6 +89,18 @@ Class is ThemeBuilderPageView{
 			onSubmit: local Function(String is v){ vm:setBaseTextPtFromText(raw: v); }
 		);
 
+		:alphaSlider: Slider(
+			minVal: 0,
+			maxVal: 100,
+			value: vm:windowAlphaPct,
+			minWidthPt: 180.0,
+			tooltip: 'Adjust window background opacity (0% - 100%)',
+			onChange: local Function(Int is pct){
+				vm:setWindowAlphaPct(pct: pct);
+			}
+		);
+		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');
+
 		local Array of SewNode is colorRows: Array();
 		local Int is ci: 0;
 		while({ ci < colorLabels:length() }, {
@@ -131,6 +148,15 @@ Class is ThemeBuilderPageView{
 					)
 				),
 				Frame(
+					title: 'Window Translucency (Separate from Theme)',
+					child: SectionH(
+						children: Array([
+							alphaSlider,
+							TextScrap(text: alphaLabel, muted: true)
+						])
+					)
+				),
+				Frame(
 					title: '8 Base Color Tokens (#RRGGBB)',
 					child: SectionV(children: colorRows)
 				)
@@ -142,6 +168,8 @@ Class is ThemeBuilderPageView{
 		presetSection:setSelectedIndex(index: :presetIndex(p: vm:basePreset));
 		borderSection:setSelectedIndex(index: :borderIndex(style: vm:borderStyle));
 		baseTextInput:setText(next: vm:baseTextLabel());
+		alphaSlider:setValue(next: vm:windowAlphaPct);
+		alphaLabel:emit(value: (vm:windowAlphaPct as String) . '%');
 		local Int is i: 0;
 		while({ i < colorInputs:length() }, {
 			colorInputs:get(index: i):setText(next: vm:colorToHex(c: vm:colorAtSlot(slot: i)));

@@ -25,6 +25,7 @@ Class of SewNode is ToolkitContainer{
 		['base', 'sew', Rect],
 		['base', 'sew', Constraints],
 		['base', 'sew', Scale],
+		['base', 'fabric', Color],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'fabric', 'svg', SvgRenderer],
@@ -75,6 +76,7 @@ Class of SewNode is ToolkitContainer{
 	Int is ptrCaptureTarget: 0;
 	Boolean is closedByWm: false;
 	Int is idleFrames: 0;
+	Int is windowAlphaPct: 100;
 	SuitWindow is activeWin: SuitWindow();
 	Function is onInitVulkan: local Function(VulkanSurface is s){};
 	Function is onFrame: local Function(VulkanSurface is s, Int is elapsedMs, Int is width, Int is height){};
@@ -158,6 +160,17 @@ Class of SewNode is ToolkitContainer{
 			ei: ei + 1;
 		});
 		:isDirty: true;
+	}
+
+	## Sets the window background opacity percentage (0..100).
+	Function is setWindowAlphaPct(Int is pct){
+		local Int is clamped: pct;
+		if({ clamped < 0 }, { clamped: 0; });
+		if({ clamped > 100 }, { clamped: 100; });
+		if({ clamped != windowAlphaPct }, {
+			windowAlphaPct: clamped;
+			:isDirty: true;
+		});
 	}
 
 	Function is addDialog(Dialog is d){
@@ -361,6 +374,15 @@ Class of SewNode is ToolkitContainer{
 		if({ useVulkan && gpuPresent }, {
 			ctx:clearTransparent();
 		}, {
+			local Int is alphaByte: (windowAlphaPct * 255) / 100;
+			local Color is baseC: Color:fromArgb(argb: theme:windowBg);
+			local Int is bgCol: Color(
+				r: (baseC:red() * alphaByte) / 255,
+				g: (baseC:green() * alphaByte) / 255,
+				b: (baseC:blue() * alphaByte) / 255,
+				a: alphaByte
+			):toArgb();
+			ctx:canvas:fillRect(x: 0, y: 0, w: loopW, h: loopH, color: bgCol);
 			if({ hasBody }, { bodyPanel:paint(ctx: ctx); });
 		});
 		if({ hasTabBar }, { tabBar:paint(ctx: ctx); });

@@ -21,6 +21,7 @@ Class is ShowcaseViewModel{
 	Theme is activeTheme: Theme:forPreset(preset: ThemePreset:LIGHT);
 	Float is baseTextPt: 10.0;
 	String is borderStyle: 'solid';
+	Int is windowAlphaPct: 100;
 
 	## Interactive demo state
 	Int is clickCount: 0;
@@ -36,6 +37,7 @@ Class is ShowcaseViewModel{
 	TextEmitter is demoCodeText: TextEmitter(initial: 'Class is Hello {\n\t## Try word wrap, line numbers, or typing here\n\tFunction is greet(String is name) {\n\t\tlocal String is msg: "Hello, " . name . "!";\n\t\treturn msg;\n\t}\n}\n');
 
 	Function is themeApplyHandler: local Function(Theme is _t){};
+	Function is alphaApplyHandler: local Function(Int is _pct){};
 	Array of Function is refreshListeners: Array();
 
 	replace Function is init(){
@@ -47,6 +49,21 @@ Class is ShowcaseViewModel{
 
 	Function is bindThemeApply(Function is onThemeApply){
 		:themeApplyHandler: onThemeApply;
+	}
+
+	Function is bindAlphaApply(Function is onAlphaApply){
+		:alphaApplyHandler: onAlphaApply;
+	}
+
+	Function is setWindowAlphaPct(Int is pct){
+		local Int is clamped: pct;
+		if({ clamped < 0 }, { clamped: 0; });
+		if({ clamped > 100 }, { clamped: 100; });
+		:windowAlphaPct: clamped;
+		local Function is cb: alphaApplyHandler;
+		cb(windowAlphaPct);
+		statusText:emit(value: 'Window opacity: ' . (windowAlphaPct as String) . '%');
+		:notifyRefresh();
 	}
 
 	Function is bindRefresh(Function is onRefresh){

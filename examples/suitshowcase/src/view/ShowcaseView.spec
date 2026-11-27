@@ -99,6 +99,9 @@ Class is ShowcaseView{
 		vm:bindThemeApply(onThemeApply: local Function(Theme is t){
 			container:setTheme(nextTheme: t);
 		});
+		vm:bindAlphaApply(onAlphaApply: local Function(Int is pct){
+			container:setWindowAlphaPct(pct: pct);
+		});
 		vm:bindRefresh(onRefresh: local Function(){
 			sidebar:setSelectedIndex(index: :routeIndex(routeName: vm:selectedRoute:current()));
 			themePage:sync();
