@@ -24,10 +24,37 @@ Class is SewNode{
 	Boolean is pointerTransparent: false;
 	SignalBag is signalBag: SignalBag();
 	Array of Function is dirtyListeners: Array();
+	String is tooltip: '';
 
 	## Returns `true` when this node is currently selected (used by segmented containers).
 	Function of Boolean is isSelected(){
 		return false;
+	}
+
+	## Focus hierarchy hint: whether this node can receive keyboard focus.
+	Function of Boolean is canFocus(){
+		return false;
+	}
+
+	## Returns `true` when this node currently holds keyboard focus.
+	Function of Boolean is isFocused(){
+		return false;
+	}
+
+	## Updates keyboard focus state on this node.
+	Function is setFocused(Boolean is next){
+		local Int is _noop: 0;
+	}
+
+	## Appends focusable descendant nodes in tab-traversal order to [out].
+	Function is collectFocusables(Array of SewNode is out){
+		local Int is _noop: 0;
+	}
+
+	## Returns tooltip text at ([x], [y]), or empty string if none.
+	Function of String is tooltipAt(Int is x, Int is y){
+		if({ tooltip != '' && :containsPoint(x: x, y: y) }, { return tooltip; });
+		return '';
 	}
 
 	## Propagates [theme] down the widget tree.

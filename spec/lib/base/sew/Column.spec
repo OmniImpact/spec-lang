@@ -246,4 +246,24 @@ Class of SewNode is Column{
 		});
 		return false;
 	}
+
+	replace Function is collectFocusables(Array of SewNode is out){
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			local SewNode is ch: children:get(index: i);
+			if({ ch:canFocus() }, { out:add(item: ch); }, { ch:collectFocusables(out: out); });
+			i: i + 1;
+		});
+	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		if({ !:containsPoint(x: x, y: y) }, { return ''; });
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			local String is tip: children:get(index: i):tooltipAt(x: x, y: y);
+			if({ tip != '' }, { return tip; });
+			i: i - 1;
+		});
+		return tooltip;
+	}
 }

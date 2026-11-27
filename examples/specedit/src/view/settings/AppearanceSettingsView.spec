@@ -74,6 +74,8 @@ Class is AppearanceSettingsView{
 
 		:docDeltaInput: DecoratedTextInput(
 			text: vm:docDeltaLabel(),
+			suffix: ' pt',
+			tooltip: 'Adjust editor font size offset (type number or press Up/Down)',
 			onLeftClick: local Function(){ vm:adjustDocTextDelta(delta: -1.0); },
 			onRightClick: local Function(){ vm:adjustDocTextDelta(delta: 1.0); },
 			onSubmit: local Function(String is v){ vm:setDocTextDeltaFromText(raw: v); }
@@ -81,6 +83,8 @@ Class is AppearanceSettingsView{
 
 		:baseTextInput: DecoratedTextInput(
 			text: vm:baseTextLabel(),
+			suffix: ' pt',
+			tooltip: 'Set base UI font size in points (type number or press Up/Down)',
 			onLeftClick: local Function(){ vm:adjustBaseTextPt(delta: -1.0); },
 			onRightClick: local Function(){ vm:adjustBaseTextPt(delta: 1.0); },
 			onSubmit: local Function(String is v){ vm:setBaseTextPtFromText(raw: v); }
@@ -136,6 +140,7 @@ Class is AppearanceSettingsView{
 						ScrapButton(
 							label: 'Reset All',
 							minWidthPt: 64.0,
+							tooltip: 'Restore all appearance settings to defaults',
 							onClick: local Function(){ vm:resetAppearance(); }
 						)
 					])

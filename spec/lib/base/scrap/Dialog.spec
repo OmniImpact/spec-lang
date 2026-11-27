@@ -6,16 +6,19 @@ Class is Dialog{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', SignalBag],
 		['base', 'suit', SuitWindow],
 		['base', 'suit', SuitCanvas],
 		['base', 'sew', SewNode],
+		['base', 'sew', FocusNav],
 		['base', 'sew', Constraints],
 		['base', 'sew', Rect],
 		['base', 'sew', Scale],
 		['base', 'fabric', Theme],
-		['base', 'fabric', DrawContext]
+		['base', 'fabric', DrawContext],
+		['base', 'scrap', Tooltip]
 	];
 
 	String is title: 'Dialog';
@@ -42,6 +45,7 @@ Class is Dialog{
 	Int is lastPtrX: -1;
 	Int is lastPtrY: -1;
 	Boolean is wasPtrDown: false;
+	String is activeTooltip: '';
 	SignalBag is signalBag: SignalBag();
 
 	replace Function is init(
@@ -110,6 +114,9 @@ Class is Dialog{
 				layoutDirty: false;
 			});
 			content:paint(ctx: ctx);
+			if({ activeTooltip != '' && lastPtrX >= 0 && lastPtrY >= 0 }, {
+				Tooltip:shared:paint(ctx: ctx, theme: theme, scale: scale, text: activeTooltip, ptrX: lastPtrX, ptrY: lastPtrY, winW: w, winH: h);
+			});
 		}, {
 			local Function is cb: onPaint;
 			cb(ctx, w, h, theme, scale);
@@ -143,6 +150,7 @@ Class is Dialog{
 		lastPtrX: -1;
 		lastPtrY: -1;
 		wasPtrDown: false;
+		activeTooltip: '';
 		layoutDirty: true;
 		isShown: true;
 		:paintDialog();
@@ -164,6 +172,22 @@ Class is Dialog{
 			return true;
 		});
 		return false;
+	}
+
+	local Function of Boolean is stepFocusTab(Boolean is reverse){
+		if({ !hasContent }, { return false; });
+		local Array of SewNode is focusables: Array();
+		content:collectFocusables(out: focusables);
+		return FocusNav:shared:stepTab(focusables: focusables, reverse: reverse);
+	}
+
+	local Function is syncFocusOnClick(Int is x, Int is y){
+		if({ !hasContent }, { return; });
+		local Array of SewNode is focusables: Array();
+		content:collectFocusables(out: focusables);
+		if({ FocusNav:shared:syncClick(focusables: focusables, x: x, y: y) }, {
+			isDirty: true;
+		});
 	}
 
 	## Polled once per frame by `ToolkitContainer:run`. Returns `true` when activity or redraw occurred.
@@ -205,8 +229,14 @@ Class is Dialog{
 				return true;
 			});
 			if({ hasContent }, {
-				if({ content:onKey(key: key, mods: curMods) }, {
-					isDirty: true;
+				if({ key == 9 }, {
+					if({ :stepFocusTab(reverse: (curMods & 1) != 0) }, {
+						isDirty: true;
+					});
+				}, {
+					if({ content:onKey(key: key, mods: curMods) }, {
+						isDirty: true;
+					});
 				});
 			});
 			key: win:nextKey();
@@ -253,6 +283,11 @@ Class is Dialog{
 				if({ content:onPointerMove(x: px, y: py) }, {
 					isDirty: true;
 				});
+				local String is nextTip: content:tooltipAt(x: px, y: py);
+				if({ nextTip != activeTooltip }, {
+					:activeTooltip: nextTip;
+					isDirty: true;
+				});
 			});
 		});
 		if({ !ptrDown && wasPtrDown && hasContent }, {
@@ -266,9 +301,12 @@ Class is Dialog{
 		if({ win:pollClick() }, {
 			active: true;
 			if({ hasContent }, {
-				if({ content:onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
+				local Int is cx: win:clickX();
+				local Int is cy: win:clickY();
+				if({ content:onPointerClickMod(x: cx, y: cy, mods: curMods) }, {
 					isDirty: true;
 				});
+				:syncFocusOnClick(x: cx, y: cy);
 			});
 		});
 

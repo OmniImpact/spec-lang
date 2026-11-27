@@ -6,6 +6,7 @@ Class of SewNode is Frame{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'struct', Array],
 		['base', 'sew', SewNode],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
@@ -169,5 +170,16 @@ Class of SewNode is Frame{
 
 	replace Function of Boolean is tick(Int is nowMs){
 		return child:tick(nowMs: nowMs);
+	}
+
+	replace Function is collectFocusables(Array of SewNode is out){
+		if({ child:canFocus() }, { out:add(item: child); }, { child:collectFocusables(out: out); });
+	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		if({ !:containsPoint(x: x, y: y) }, { return ''; });
+		local String is tip: child:tooltipAt(x: x, y: y);
+		if({ tip != '' }, { return tip; });
+		return tooltip;
 	}
 }

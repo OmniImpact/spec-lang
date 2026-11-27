@@ -177,4 +177,13 @@ Class of SewNode is NavStack{
 	replace Function of Boolean is onText(String is ch, Int is mods){
 		return :activeChild():onText(ch: ch, mods: mods);
 	}
+
+	replace Function is collectFocusables(Array of SewNode is out){
+		local SewNode is ch: :activeChild();
+		if({ ch:canFocus() }, { out:add(item: ch); }, { ch:collectFocusables(out: out); });
+	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		return :activeChild():tooltipAt(x: x, y: y);
+	}
 }

@@ -28,6 +28,7 @@ Class of SewNode is Clickable{
 	Boolean is selected: false;
 	Boolean is enabled: true;
 	Boolean is hovered: false;
+	Boolean is focused: false;
 
 	replace Function is init(
 		String is label: '',
@@ -40,7 +41,8 @@ Class of SewNode is Clickable{
 		Boolean is hasHeight: false,
 		Float is padXPt: 0.0,
 		Boolean is selected: false,
-		Boolean is enabled: true
+		Boolean is enabled: true,
+		String is tooltip: ''
 	){
 		:label: label;
 		:onClick: onClick;
@@ -54,6 +56,32 @@ Class of SewNode is Clickable{
 		:selected: selected;
 		:enabled: enabled;
 		:hovered: false;
+		:focused: false;
+		:tooltip: tooltip;
+	}
+
+	replace Function of Boolean is canFocus(){
+		return enabled;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		if({ focused != next }, {
+			:focused: next;
+			invalidate();
+		});
+	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		if({ enabled && focused && (key == 10 || key == 13 || key == 32) }, {
+			local Function is cb: onClick;
+			cb();
+			return true;
+		});
+		return false;
 	}
 
 	replace Function of Boolean is isSelected(){

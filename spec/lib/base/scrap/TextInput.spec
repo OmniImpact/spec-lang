@@ -15,6 +15,7 @@ Class of SewNode is TextInput{
 
 	String is text: '';
 	String is placeholder: '';
+	String is suffix: '';
 	Boolean is focused: false;
 	Boolean is hovered: false;
 	Float is minWidthPt: 0.0;
@@ -22,38 +23,84 @@ Class of SewNode is TextInput{
 	Boolean is expand: false;
 	Function is onChange: local Function(String is _next){};
 	Function is onSubmit: local Function(String is _val){};
+	Function is onUp: local Function(){};
+	Function is onDown: local Function(){};
 
 	replace Function is init(
 		String is text: '',
 		String is placeholder: '',
+		String is suffix: '',
 		Boolean is focused: false,
 		Float is minWidthPt: 0.0,
 		Float is heightPt: 0.0,
 		Boolean is expand: false,
 		Function is onChange: local Function(String is _next){},
-		Function is onSubmit: local Function(String is _val){}
+		Function is onSubmit: local Function(String is _val){},
+		Function is onUp: local Function(){},
+		Function is onDown: local Function(){},
+		String is tooltip: ''
 	){
 		:text: text;
 		:placeholder: placeholder;
+		:suffix: suffix;
 		:focused: focused;
 		:minWidthPt: minWidthPt;
 		:heightPt: heightPt;
 		:expand: expand;
 		:onChange: onChange;
 		:onSubmit: onSubmit;
+		:onUp: onUp;
+		:onDown: onDown;
 		:hovered: false;
+		:tooltip: tooltip;
+	}
+
+	local Function of String is stripSuffix(String is s){
+		if({ suffix == '' }, { return s; });
+		local Int is sl: s:length();
+		local Int is fl: suffix:length();
+		if({ sl >= fl && s:substring(start: sl - fl, end: sl) == suffix }, {
+			return s:substring(start: 0, end: sl - fl);
+		});
+		return s;
+	}
+
+	local Function of String is ensureSuffix(String is s){
+		if({ suffix == '' || s == '' }, { return s; });
+		local Int is sl: s:length();
+		local Int is fl: suffix:length();
+		if({ sl >= fl && s:substring(start: sl - fl, end: sl) == suffix }, {
+			return s;
+		});
+		return s . suffix;
 	}
 
 	Function is setText(String is next){
-		if({ text != next }, {
-			:text: next;
+		local String is val: if({ focused }, { :stripSuffix(s: next) }, { next });
+		if({ text != val }, {
+			:text: val;
 			invalidate();
 		});
 	}
 
-	Function is setFocused(Boolean is next){
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
 		if({ focused != next }, {
 			:focused: next;
+			if({ next }, {
+				:text: :stripSuffix(s: text);
+			}, {
+				local Function is scb: onSubmit;
+				scb(text);
+				:text: :ensureSuffix(s: text);
+			});
 			invalidate();
 		});
 	}
@@ -127,8 +174,7 @@ Class of SewNode is TextInput{
 	replace Function of Boolean is onPointerClickMod(Int is x, Int is y, Int is mods){
 		local Boolean is inside: :contains(x: x, y: y);
 		if({ inside != focused }, {
-			:focused: inside;
-			invalidate();
+			:setFocused(next: inside);
 			return true;
 		});
 		return inside;
@@ -136,6 +182,16 @@ Class of SewNode is TextInput{
 
 	replace Function of Boolean is onKey(Int is key, Int is mods){
 		if({ !focused }, { return false; });
+		if({ key == 1001 }, {
+			local Function is ucb: onUp;
+			ucb();
+			return true;
+		});
+		if({ key == 1002 }, {
+			local Function is dcb: onDown;
+			dcb();
+			return true;
+		});
 		if({ key == 8 || key == 127 }, {
 			local Int is n: text:length();
 			if({ n > 0 }, {

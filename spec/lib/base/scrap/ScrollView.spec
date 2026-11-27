@@ -6,6 +6,7 @@ Class of SewNode is ScrollView{
 
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'struct', Array],
 		['base', 'sew', SewNode],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
@@ -275,6 +276,20 @@ Class of SewNode is ScrollView{
 
 	replace Function of Boolean is tick(Int is nowMs){
 		return child:tick(nowMs: nowMs);
+	}
+
+	replace Function is collectFocusables(Array of SewNode is out){
+		if({ child:canFocus() }, { out:add(item: child); }, { child:collectFocusables(out: out); });
+	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		local Rect is b: bounds();
+		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
+		local Int is vw: :viewWidth(b: b);
+		local Int is vh: :viewHeight(b: b);
+		local Int is cx: if({ scrollbarSide == DockSide:LEFT }, { b:x + bw }, { b:x });
+		if({ x < cx || x >= cx + vw || y < b:y || y >= b:y + vh }, { return ''; });
+		return child:tooltipAt(x: x, y: y);
 	}
 
 	replace Function is paint(DrawContext is ctx){

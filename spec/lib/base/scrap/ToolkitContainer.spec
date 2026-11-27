@@ -10,6 +10,7 @@ Class of SewNode is ToolkitContainer{
 		['base', 'sys', Stderr],
 		['base', 'sys', Process],
 		['base', 'sys', Time],
+		['base', 'struct', Array],
 		['base', 'signal', BoolEmitter],
 		['base', 'signal', BoolCollector],
 		['base', 'signal', IntEmitter],
@@ -18,6 +19,7 @@ Class of SewNode is ToolkitContainer{
 		['base', 'suit', SuitWindow],
 		['base', 'suit', SuitCanvas],
 		['base', 'sew', SewNode],
+		['base', 'sew', FocusNav],
 		['base', 'sew', Column],
 		['base', 'sew', Size],
 		['base', 'sew', Rect],
@@ -28,6 +30,7 @@ Class of SewNode is ToolkitContainer{
 		['base', 'fabric', 'svg', SvgRenderer],
 		['base', 'fabric', 'svg', SvgBitmap],
 		['base', 'scrap', Bar],
+		['base', 'scrap', Tooltip],
 		['base', 'scrap', 'menu', MenuContext],
 		['base', 'scrap', 'tab', TabBar],
 		['base', 'scrap', 'toolbar', ToolbarContainer],
@@ -235,6 +238,40 @@ Class of SewNode is ToolkitContainer{
 		if({ startLayer <= 4 && hasBody && !useVulkan }, { bodyPanel:clearHover(); });
 	}
 
+	String is activeTooltip: '';
+
+	local Function of String is resolveTooltipAt(Int is x, Int is y){
+		if({ contextMenu:isOpen }, { return ''; });
+		if({ hasToolbarSlot }, {
+			local String is t1: toolbarSlot:tooltipAt(x: x, y: y);
+			if({ t1 != '' }, { return t1; });
+			if({ toolbarSlot:blocksPointerAt(x: x, y: y) }, { return ''; });
+		});
+		if({ hasTabBar }, {
+			local String is t2: tabBar:tooltipAt(x: x, y: y);
+			if({ t2 != '' }, { return t2; });
+			if({ tabBar:blocksPointerAt(x: x, y: y) }, { return ''; });
+		});
+		if({ hasBottomBar }, {
+			local String is t3: bottomBar:tooltipAt(x: x, y: y);
+			if({ t3 != '' }, { return t3; });
+			if({ bottomBar:blocksPointerAt(x: x, y: y) }, { return ''; });
+		});
+		if({ hasBody && !useVulkan }, {
+			return bodyPanel:tooltipAt(x: x, y: y);
+		});
+		return '';
+	}
+
+	local Function of Array of SewNode is collectAllFocusables(){
+		local Array of SewNode is out: Array();
+		if({ hasToolbarSlot }, { toolbarSlot:collectFocusables(out: out); });
+		if({ hasTabBar }, { tabBar:collectFocusables(out: out); });
+		if({ hasBody && !useVulkan }, { bodyPanel:collectFocusables(out: out); });
+		if({ hasBottomBar }, { bottomBar:collectFocusables(out: out); });
+		return out;
+	}
+
 	replace Function of Boolean is onPointerMove(Int is x, Int is y){
 		if({ contextMenu:isOpen }, {
 			local Boolean is cmMoved: contextMenu:handlePointerMove(x: x, y: y, viewW: loopW, viewH: loopH);
@@ -275,6 +312,11 @@ Class of SewNode is ToolkitContainer{
 			}, {
 				bodyPanel:clearHover();
 			});
+		});
+		local String is nextTip: :resolveTooltipAt(x: x, y: y);
+		if({ nextTip != activeTooltip }, {
+			activeTooltip: nextTip;
+			changed: true;
 		});
 		return changed;
 	}
@@ -326,6 +368,9 @@ Class of SewNode is ToolkitContainer{
 		if({ hasToolbarSlot }, { toolbarSlot:paint(ctx: ctx); });
 		if({ hasToolbarSlot }, { toolbarSlot:paintOverlay(ctx: ctx); });
 		contextMenu:paint(ctx: ctx);
+		if({ activeTooltip != '' && lastPtrX >= 0 && lastPtrY >= 0 }, {
+			Tooltip:shared:paint(ctx: ctx, theme: theme, scale: scale, text: activeTooltip, ptrX: lastPtrX, ptrY: lastPtrY, winW: loopW, winH: loopH);
+		});
 	}
 
 	## Writes [text] to the native window system clipboard.
@@ -436,6 +481,7 @@ Class of SewNode is ToolkitContainer{
 		lastPtrX: -1;
 		lastPtrY: -1;
 		wasPtrDown: false;
+		activeTooltip: '';
 		ptrCaptureTarget: 0;
 		closedByWm: false;
 		idleFrames: 0;
@@ -516,10 +562,30 @@ Class of SewNode is ToolkitContainer{
 					if({ appKeyFn(key, curMods) }, {
 						:isDirty: true;
 					}, {
-						if({ hasBody && !useVulkan }, {
-							if({ bodyPanel:onKey(key: key, mods: curMods) }, {
+						local Boolean is handledKey: false;
+						if({ hasBody && !useVulkan && bodyPanel:onKey(key: key, mods: curMods) }, {
+							handledKey: true;
+							:isDirty: true;
+						});
+						if({ !handledKey && hasToolbarSlot && toolbarSlot:onKey(key: key, mods: curMods) }, {
+							handledKey: true;
+							:isDirty: true;
+						});
+						if({ !handledKey && hasTabBar && tabBar:onKey(key: key, mods: curMods) }, {
+							handledKey: true;
+							:isDirty: true;
+						});
+						if({ !handledKey && hasBottomBar && bottomBar:onKey(key: key, mods: curMods) }, {
+							handledKey: true;
+							:isDirty: true;
+						});
+						if({ !handledKey && key == 9 }, {
+							if({ FocusNav:shared:stepTab(focusables: :collectAllFocusables(), reverse: (curMods & 1) != 0) }, {
+								handledKey: true;
 								:isDirty: true;
-							}, {
+							});
+						});
+						if({ !handledKey && hasBody && !useVulkan }, {
 							if({ key == 1001 }, {
 								if({ bodyPanel:onScroll(deltaY: -15) }, { :isDirty: true; });
 							});
@@ -540,7 +606,6 @@ Class of SewNode is ToolkitContainer{
 							});
 						});
 					});
-					});
 				});
 				key: win:nextKey();
 			});
@@ -548,8 +613,22 @@ Class of SewNode is ToolkitContainer{
 			local Int is cp: win:nextChar();
 			while({ cp != 0 }, {
 				hadActivity: true;
-				if({ hasBody && !useVulkan && cp >= 32 }, {
-					if({ bodyPanel:onText(ch: String:fromCodePoint(code: cp), mods: curMods) }, {
+				if({ cp >= 32 }, {
+					local String is ch: String:fromCodePoint(code: cp);
+					local Boolean is handledText: false;
+					if({ hasBody && !useVulkan && bodyPanel:onText(ch: ch, mods: curMods) }, {
+						handledText: true;
+						:isDirty: true;
+					});
+					if({ !handledText && hasToolbarSlot && toolbarSlot:onText(ch: ch, mods: curMods) }, {
+						handledText: true;
+						:isDirty: true;
+					});
+					if({ !handledText && hasTabBar && tabBar:onText(ch: ch, mods: curMods) }, {
+						handledText: true;
+						:isDirty: true;
+					});
+					if({ !handledText && hasBottomBar && bottomBar:onText(ch: ch, mods: curMods) }, {
 						:isDirty: true;
 					});
 				});
@@ -654,7 +733,12 @@ Class of SewNode is ToolkitContainer{
 
 			if({ win:pollClick() }, {
 				hadActivity: true;
-				if({ :onPointerClickMod(x: win:clickX(), y: win:clickY(), mods: curMods) }, {
+				local Int is cx: win:clickX();
+				local Int is cy: win:clickY();
+				if({ :onPointerClickMod(x: cx, y: cy, mods: curMods) }, {
+					:isDirty: true;
+				});
+				if({ FocusNav:shared:syncClick(focusables: :collectAllFocusables(), x: cx, y: cy) }, {
 					:isDirty: true;
 				});
 			});

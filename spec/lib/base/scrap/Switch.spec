@@ -15,12 +15,41 @@ Class of SewNode is Switch{
 
 	Boolean is checked: false;
 	Boolean is hovered: false;
+	Boolean is focused: false;
 	Function is onToggle: local Function(Boolean is _next){};
 
-	replace Function is init(Boolean is checked: false, Function is onToggle: local Function(Boolean is _next){}){
+	replace Function is init(Boolean is checked: false, Function is onToggle: local Function(Boolean is _next){}, String is tooltip: ''){
 		:checked: checked;
 		:onToggle: onToggle;
 		:hovered: false;
+		:focused: false;
+		:tooltip: tooltip;
+	}
+
+	replace Function of Boolean is canFocus(){
+		return true;
+	}
+
+	replace Function of Boolean is isFocused(){
+		return focused;
+	}
+
+	replace Function is setFocused(Boolean is next){
+		if({ focused != next }, {
+			:focused: next;
+			invalidate();
+		});
+	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		if({ focused && (key == 10 || key == 13 || key == 32) }, {
+			:checked: !checked;
+			local Function is cb: onToggle;
+			cb(checked);
+			invalidate();
+			return true;
+		});
+		return false;
 	}
 
 	Function is setChecked(Boolean is next){
@@ -53,7 +82,7 @@ Class of SewNode is Switch{
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local Int is bw: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		local Int is bg: if({ hovered }, { activeTheme:hoverBg }, { activeTheme:panelBg });
-		local Int is borderCol: if({ checked }, { activeTheme:textAccent }, { activeTheme:panelBorder });
+		local Int is borderCol: if({ focused || checked }, { activeTheme:textAccent }, { activeTheme:panelBorder });
 		ctx:fillRect(x: b:x, y: b:y, w: b:width, h: b:height, color: bg);
 		if({ bw > 0 }, {
 			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: borderCol, thickness: bw);

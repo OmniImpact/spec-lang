@@ -229,4 +229,42 @@ Class of SewNode is Row{
 		});
 		return changed;
 	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onKey(key: key, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function of Boolean is onText(String is ch, Int is mods){
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			if({ children:get(index: i):onText(ch: ch, mods: mods) }, { return true; });
+			i: i - 1;
+		});
+		return false;
+	}
+
+	replace Function is collectFocusables(Array of SewNode is out){
+		local Int is i: 0;
+		while({ i < children:length() }, {
+			local SewNode is ch: children:get(index: i);
+			if({ ch:canFocus() }, { out:add(item: ch); }, { ch:collectFocusables(out: out); });
+			i: i + 1;
+		});
+	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		if({ !:containsPoint(x: x, y: y) }, { return ''; });
+		local Int is i: children:length() - 1;
+		while({ i >= 0 }, {
+			local String is tip: children:get(index: i):tooltipAt(x: x, y: y);
+			if({ tip != '' }, { return tip; });
+			i: i - 1;
+		});
+		return tooltip;
+	}
 }

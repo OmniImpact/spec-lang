@@ -166,7 +166,7 @@ Class of SewNode is SectionH{
 				local Int is i: 0;
 				while({ i < count }, {
 					local SewNode is ch: row:children:get(index: i);
-					if({ !ch:isSelected() }, {
+					if({ !ch:isSelected() && !ch:isFocused() }, {
 						local Rect is cb: ch:bounds();
 						if({ cb:width > 0 && cb:height > 0 }, {
 							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:buttonBorder, thickness: linePx);
@@ -177,7 +177,7 @@ Class of SewNode is SectionH{
 				i: 0;
 				while({ i < count }, {
 					local SewNode is ch: row:children:get(index: i);
-					if({ ch:isSelected() }, {
+					if({ ch:isSelected() || ch:isFocused() }, {
 						local Rect is cb: ch:bounds();
 						if({ cb:width > 0 && cb:height > 0 }, {
 							ctx:strokeRect(x: cb:x, y: cb:y, w: cb:width, h: cb:height, color: activeTheme:textAccent, thickness: linePx);
@@ -231,5 +231,13 @@ Class of SewNode is SectionH{
 
 	replace Function of Boolean is tick(Int is nowMs){
 		return :rootNode():tick(nowMs: nowMs);
+	}
+
+	replace Function is collectFocusables(Array of SewNode is out){
+		:rootNode():collectFocusables(out: out);
+	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		return :rootNode():tooltipAt(x: x, y: y);
 	}
 }

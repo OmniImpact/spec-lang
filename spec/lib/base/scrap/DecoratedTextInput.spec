@@ -33,26 +33,35 @@ Class of SewNode is DecoratedTextInput{
 		Function is onRightClick: local Function(){},
 		Function is onChange: local Function(String is _next){},
 		Function is onSubmit: local Function(String is _val){},
-		Float is inputMinWidthPt: 52.0
+		Float is inputMinWidthPt: 52.0,
+		String is suffix: '',
+		String is tooltip: ''
 	){
+		:tooltip: tooltip;
 		:leftBtn: ScrapButton(
 			label: leftLabel,
 			minWidthPt: 24.0,
 			padXPt: 4.0,
-			onClick: onLeftClick
+			onClick: onLeftClick,
+			tooltip: tooltip
 		);
 		:input: TextInput(
 			text: text,
 			placeholder: placeholder,
+			suffix: suffix,
 			minWidthPt: inputMinWidthPt,
 			onChange: onChange,
-			onSubmit: onSubmit
+			onSubmit: onSubmit,
+			onUp: onRightClick,
+			onDown: onLeftClick,
+			tooltip: tooltip
 		);
 		:rightBtn: ScrapButton(
 			label: rightLabel,
 			minWidthPt: 24.0,
 			padXPt: 4.0,
-			onClick: onRightClick
+			onClick: onRightClick,
+			tooltip: tooltip
 		);
 		:row: Row(
 			children: Array([leftBtn, input, rightBtn]),
@@ -112,5 +121,16 @@ Class of SewNode is DecoratedTextInput{
 
 	replace Function of Boolean is onText(String is ch, Int is mods){
 		return row:onText(ch: ch, mods: mods);
+	}
+
+	replace Function is collectFocusables(Array of SewNode is out){
+		row:collectFocusables(out: out);
+	}
+
+	replace Function of String is tooltipAt(Int is x, Int is y){
+		if({ !:containsPoint(x: x, y: y) }, { return ''; });
+		local String is tip: row:tooltipAt(x: x, y: y);
+		if({ tip != '' }, { return tip; });
+		return tooltip;
 	}
 }

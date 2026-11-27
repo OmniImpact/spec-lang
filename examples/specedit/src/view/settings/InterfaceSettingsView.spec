@@ -27,14 +27,17 @@ Class is InterfaceSettingsView{
 	Function of SewNode is build(){
 		:monoSwitch: Switch(
 			checked: vm:model:defaultMonospace,
+			tooltip: 'Use monospace font by default for new documents',
 			onToggle: local Function(Boolean is _next){ vm:toggleDefaultMonospace(); }
 		);
 		:wrapSwitch: Switch(
 			checked: vm:model:defaultWrap,
+			tooltip: 'Enable word wrapping by default for new documents',
 			onToggle: local Function(Boolean is _next){ vm:toggleDefaultWrap(); }
 		);
 		:treeSwitch: Switch(
 			checked: vm:model:defaultShowFileTree,
+			tooltip: 'Show the file tree sidebar on startup',
 			onToggle: local Function(Boolean is _next){ vm:toggleDefaultShowFileTree(); }
 		);
 

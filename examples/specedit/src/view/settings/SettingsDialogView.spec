@@ -106,6 +106,7 @@ Class of Dialog is SettingsDialogView{
 					label: 'Close',
 					minWidthPt: 64.0,
 					heightPt: 22.0,
+					tooltip: 'Close Settings dialog (Esc)',
 					onClick: local Function(){ vm:closeSettings(); }
 				)
 			])

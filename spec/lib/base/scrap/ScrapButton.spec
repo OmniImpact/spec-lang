@@ -31,7 +31,8 @@ Class of SewNode is ScrapButton{
 		Boolean is hasHeight: false,
 		Float is padXPt: 0.0,
 		Boolean is selected: false,
-		Boolean is enabled: true
+		Boolean is enabled: true,
+		String is tooltip: ''
 	){
 		:inner: Clickable(
 			label: label,
@@ -44,8 +45,26 @@ Class of SewNode is ScrapButton{
 			hasHeight: hasHeight,
 			padXPt: padXPt,
 			selected: selected,
-			enabled: enabled
+			enabled: enabled,
+			tooltip: tooltip
 		);
+		:tooltip: tooltip;
+	}
+
+	replace Function of Boolean is canFocus(){
+		return inner:canFocus();
+	}
+
+	replace Function of Boolean is isFocused(){
+		return inner:isFocused();
+	}
+
+	replace Function is setFocused(Boolean is next){
+		inner:setFocused(next: next);
+	}
+
+	replace Function of Boolean is onKey(Int is key, Int is mods){
+		return inner:onKey(key: key, mods: mods);
 	}
 
 	replace Function of Boolean is isSelected(){
@@ -107,7 +126,7 @@ Class of SewNode is ScrapButton{
 		inner:paint(ctx: ctx);
 		local Int is linePx: activeTheme:borderPx(scaleFactor: activeScale:factor);
 		if({ linePx > 0 }, {
-			local Int is border: if({ inner:selected }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
+			local Int is border: if({ inner:selected || inner:focused }, { activeTheme:textAccent }, { activeTheme:buttonBorder });
 			ctx:strokeRect(x: b:x, y: b:y, w: b:width, h: b:height, color: border, thickness: linePx);
 		});
 	}
