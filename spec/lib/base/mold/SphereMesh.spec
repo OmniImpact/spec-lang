@@ -113,9 +113,10 @@ Class is SphereMesh{
 				local Int is b: a + stride;
 				local Int is c0: a + 1;
 				local Int is d0: b + 1;
-				storeI32(ptr: idxAddr, byteOffset: iCursor, val: (b * 65536) + a);
-				storeI32(ptr: idxAddr, byteOffset: iCursor + 4, val: (b * 65536) + c0);
-				storeI32(ptr: idxAddr, byteOffset: iCursor + 8, val: (c0 * 65536) + d0);
+				# CCW from outside: (a, c0, b) and (c0, d0, b)
+				storeI32(ptr: idxAddr, byteOffset: iCursor, val: (c0 * 65536) + a);
+				storeI32(ptr: idxAddr, byteOffset: iCursor + 4, val: (c0 * 65536) + b);
+				storeI32(ptr: idxAddr, byteOffset: iCursor + 8, val: (b * 65536) + d0);
 				iCursor: iCursor + 12;
 				c: c + 1;
 			});
