@@ -15,8 +15,10 @@ Class is SuitShowcase{
 	replace Function is init(Map of String to String is args){
 		local Cli is cli: Cli():parseOrExit();
 		local Int is durationMs: cli:getInt(name: 'duration-ms', default: 0);
+		local String is startRoute: cli:getString(name: 'route', default: '');
 
 		local ShowcaseViewModel is vm: ShowcaseViewModel();
+		if({ startRoute != '' }, { vm:selectRoute(routeName: startRoute); });
 		local ToolkitContainer is app: ShowcaseView():build(vm: vm);
 		app:run(durationMs: durationMs);
 	}

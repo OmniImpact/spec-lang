@@ -1569,7 +1569,7 @@ long long spec_pal_vulkan_create(
         goto fail;
     }
 
-    if (!_spec_vk_create_swapchain_resources(ctx, (uint32_t)width, (uint32_t)height)) {
+    if (!is_offscreen && !_spec_vk_create_swapchain_resources(ctx, (uint32_t)width, (uint32_t)height)) {
         goto fail;
     }
 
