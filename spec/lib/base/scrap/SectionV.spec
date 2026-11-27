@@ -87,6 +87,10 @@ Class of SewNode is SectionV{
 					item:roundBottom: idx == nOpt - 1;
 					item:roundLeft: idx == 0 || idx == nOpt - 1;
 					item:roundRight: idx == 0 || idx == nOpt - 1;
+					item:insetTop: idx == 0;
+					item:insetBottom: idx == nOpt - 1;
+					item:insetLeft: true;
+					item:insetRight: true;
 				});
 				segmentItems:add(item: item);
 				allChildren:add(item: item);
@@ -176,13 +180,17 @@ Class of SewNode is SectionV{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		col:paint(ctx: ctx);
-		if({ segmented }, {
+		if({ !segmented }, {
+			col:paint(ctx: ctx);
+		}, {
 			local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 			local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
 			local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
 			local Int is startIdx: if({ title != '' }, { 1 }, { 0 });
 			local Int is count: col:children:length();
+			if({ startIdx > 0 && count > 0 }, {
+				col:children:get(index: 0):paint(ctx: ctx);
+			});
 			if({ count > startIdx }, {
 				local Rect is firstB: col:children:get(index: startIdx):bounds();
 				local Rect is lastB: col:children:get(index: count - 1):bounds();
@@ -190,6 +198,18 @@ Class of SewNode is SectionV{
 				local Int is gy: firstB:y;
 				local Int is gw: firstB:width;
 				local Int is gh: (lastB:y + lastB:height) - firstB:y;
+				local Boolean is clippedInner: btnPx > 0 && gw > btnPx * 2 && gh > btnPx * 2;
+				if({ clippedInner }, {
+					ctx:setClip(x: gx + btnPx, y: gy + btnPx, w: gw - btnPx * 2, h: gh - btnPx * 2);
+				});
+				local Int is pi: startIdx;
+				while({ pi < count }, {
+					col:children:get(index: pi):paint(ctx: ctx);
+					pi: pi + 1;
+				});
+				if({ clippedInner }, {
+					ctx:clearClip();
+				});
 				if({ gw > 0 && gh > 0 && btnPx > 0 }, {
 					ctx:drawStyledBox(
 						x: gx, y: gy, w: gw, h: gh,
@@ -211,18 +231,39 @@ Class of SewNode is SectionV{
 					});
 				});
 				if({ btnPx > 0 }, {
+					local Int is segCount: count - startIdx;
 					local Int is si: startIdx;
 					while({ si < count }, {
 						local SewNode is ch: col:children:get(index: si);
 						if({ ch:isSelected() || ch:isFocused() }, {
 							local Rect is cb: ch:bounds();
 							if({ cb:width > 0 && cb:height > 0 }, {
-								local Int is segRad: if({ count - startIdx == 1 }, { radPx }, { 0 });
-								ctx:drawStyledBox(
-									x: cb:x, y: cb:y, w: cb:width, h: cb:height,
-									bgColor: 0, borderColor: activeTheme:textAccent,
-									thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
-								);
+								if({ segCount == 1 || (si > startIdx && si < count - 1) || radPx <= 0 }, {
+									local Int is segRad: if({ segCount == 1 }, { radPx }, { 0 });
+									ctx:drawStyledBox(
+										x: cb:x, y: cb:y, w: cb:width, h: cb:height,
+										bgColor: 0, borderColor: activeTheme:textAccent,
+										thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
+									);
+								}, {
+									ctx:setClip(x: cb:x, y: cb:y, w: cb:width, h: cb:height);
+									if({ si == startIdx }, {
+										ctx:drawStyledBox(
+											x: cb:x, y: cb:y, w: cb:width, h: cb:height + radPx,
+											bgColor: 0, borderColor: activeTheme:textAccent,
+											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+										);
+										ctx:fillRect(x: cb:x, y: cb:y + cb:height - btnPx, w: cb:width, h: btnPx, color: activeTheme:textAccent);
+									}, {
+										ctx:drawStyledBox(
+											x: cb:x, y: cb:y - radPx, w: cb:width, h: cb:height + radPx,
+											bgColor: 0, borderColor: activeTheme:textAccent,
+											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+										);
+										ctx:fillRect(x: cb:x, y: cb:y, w: cb:width, h: btnPx, color: activeTheme:textAccent);
+									});
+									ctx:clearClip();
+								});
 							});
 						});
 						si: si + 1;
@@ -294,6 +335,10 @@ Class of SewNode is SectionV{
 				item:roundBottom: idx == n - 1;
 				item:roundLeft: idx == 0 || idx == n - 1;
 				item:roundRight: idx == 0 || idx == n - 1;
+				item:insetTop: idx == 0;
+				item:insetBottom: idx == n - 1;
+				item:insetLeft: true;
+				item:insetRight: true;
 			});
 			newChildren:add(item: item);
 			k: k + 1;

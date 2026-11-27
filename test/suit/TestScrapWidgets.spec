@@ -4,10 +4,11 @@ Class of SpecUnitTest is TestScrapWidgets{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', as Conditional()],
+		['base', 'sys', as Mem()],
 		['base', 'suit', [KeyCode, KeyMod, SuitCanvas]],
-		['base', 'fabric', [DrawContext, Color]],
+		['base', 'fabric', [DrawContext, Color, Theme, ThemePreset]],
 		['base', 'sew', [Rect, Constraints, Size, CursorShape]],
-		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner]],
+		['base', 'scrap', [SelectDropdown, ListView, TableView, Slider, Clickable, ScrapButton, DropTarget, DragDropState, Toast, ToastKind, Label, ColorSwatchHistory, Switch, Spinner, SectionH, SectionV]],
 		['base', 'scrap', 'menu', [MenuConfig, MenuItemConfig, MenuItemKind]],
 		['base', 'scrap', 'toolbar', ToolbarConfig],
 		['base', 'scrap', 'tab', [TabBar, TabItemConfig]],
@@ -222,5 +223,29 @@ Class of SpecUnitTest is TestScrapWidgets{
 		Assert:isFalse(sp:indeterminate);
 		sp:setValue(next: 0.75);
 		Assert:isTrue(sp:progress > 0.74 && sp:progress < 0.76);
+	}
+
+	Function is testSegmentedSectionRoundingAndClipBalance(){
+		local Theme is t: Theme:forPreset(preset: ThemePreset:DARK);
+		t:setButtonCornerRadiusPt(pt: 10.0);
+		t:setButtonBorderThicknessPt(pt: 2.0);
+		local SectionH is sh: SectionH(
+			segmented: true,
+			options: Array(['One', 'Two', 'Three']),
+			selectedIndex: 0
+		);
+		sh:applyTheme(theme: t);
+		sh:measure(c: Constraints(minW: 0, maxW: 300, minH: 0, maxH: 100));
+		sh:arrange(bounds: Rect(x: 10, y: 10, width: 240, height: 32));
+		local SuitCanvas is canvas: SuitCanvas(width: 280, height: 80);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+		local Int is bg: 255 << 24;
+		canvas:clear(color: bg);
+		sh:paint(ctx: ctx);
+		Assert:isFalse(ctx:hasClip);
+		# Outer corner pixel (10, 10) must stay untouched background because of 10pt corner radius
+		local Int is px: canvas:pixelsAddr();
+		Assert:areEqualInt(bg, loadI32(ptr: px, byteOffset: (10 * 280 + 10) * 4));
+		canvas:dispose();
 	}
 }

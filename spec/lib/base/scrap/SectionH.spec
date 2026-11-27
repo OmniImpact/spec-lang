@@ -87,6 +87,10 @@ Class of SewNode is SectionH{
 					item:roundRight: idx == nOpt - 1;
 					item:roundTop: idx == 0 || idx == nOpt - 1;
 					item:roundBottom: idx == 0 || idx == nOpt - 1;
+					item:insetLeft: idx == 0;
+					item:insetRight: idx == nOpt - 1;
+					item:insetTop: true;
+					item:insetBottom: true;
 				});
 				segmentItems:add(item: item);
 				rowChildren:add(item: item);
@@ -178,12 +182,16 @@ Class of SewNode is SectionH{
 	replace Function is paint(DrawContext is ctx){
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
-		:rootNode():paint(ctx: ctx);
-		if({ segmented }, {
+		if({ !segmented }, {
+			:rootNode():paint(ctx: ctx);
+		}, {
 			local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
 			local Int is divPx: activeTheme:dividerPx(scaleFactor: activeScale:factor);
 			local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
 			local Int is count: row:children:length();
+			if({ hasTitle && wrapper:children:length() > 0 }, {
+				wrapper:children:get(index: 0):paint(ctx: ctx);
+			});
 			if({ count > 0 }, {
 				local Rect is firstB: row:children:get(index: 0):bounds();
 				local Rect is lastB: row:children:get(index: count - 1):bounds();
@@ -191,6 +199,13 @@ Class of SewNode is SectionH{
 				local Int is gy: firstB:y;
 				local Int is gw: (lastB:x + lastB:width) - firstB:x;
 				local Int is gh: firstB:height;
+				if({ btnPx > 0 && gw > btnPx * 2 && gh > btnPx * 2 }, {
+					ctx:setClip(x: gx + btnPx, y: gy + btnPx, w: gw - btnPx * 2, h: gh - btnPx * 2);
+					row:paint(ctx: ctx);
+					ctx:clearClip();
+				}, {
+					row:paint(ctx: ctx);
+				});
 				if({ gw > 0 && gh > 0 && btnPx > 0 }, {
 					ctx:drawStyledBox(
 						x: gx, y: gy, w: gw, h: gh,
@@ -218,12 +233,32 @@ Class of SewNode is SectionH{
 						if({ ch:isSelected() || ch:isFocused() }, {
 							local Rect is cb: ch:bounds();
 							if({ cb:width > 0 && cb:height > 0 }, {
-								local Int is segRad: if({ count == 1 }, { radPx }, { 0 });
-								ctx:drawStyledBox(
-									x: cb:x, y: cb:y, w: cb:width, h: cb:height,
-									bgColor: 0, borderColor: activeTheme:textAccent,
-									thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
-								);
+								if({ count == 1 || (si > 0 && si < count - 1) || radPx <= 0 }, {
+									local Int is segRad: if({ count == 1 }, { radPx }, { 0 });
+									ctx:drawStyledBox(
+										x: cb:x, y: cb:y, w: cb:width, h: cb:height,
+										bgColor: 0, borderColor: activeTheme:textAccent,
+										thickness: btnPx, radius: segRad, style: activeTheme:buttonBorderStyle
+									);
+								}, {
+									ctx:setClip(x: cb:x, y: cb:y, w: cb:width, h: cb:height);
+									if({ si == 0 }, {
+										ctx:drawStyledBox(
+											x: cb:x, y: cb:y, w: cb:width + radPx, h: cb:height,
+											bgColor: 0, borderColor: activeTheme:textAccent,
+											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+										);
+										ctx:fillRect(x: cb:x + cb:width - btnPx, y: cb:y, w: btnPx, h: cb:height, color: activeTheme:textAccent);
+									}, {
+										ctx:drawStyledBox(
+											x: cb:x - radPx, y: cb:y, w: cb:width + radPx, h: cb:height,
+											bgColor: 0, borderColor: activeTheme:textAccent,
+											thickness: btnPx, radius: radPx, style: activeTheme:buttonBorderStyle
+										);
+										ctx:fillRect(x: cb:x, y: cb:y, w: btnPx, h: cb:height, color: activeTheme:textAccent);
+									});
+									ctx:clearClip();
+								});
 							});
 						});
 						si: si + 1;
@@ -292,6 +327,10 @@ Class of SewNode is SectionH{
 				item:roundRight: idx == n - 1;
 				item:roundTop: idx == 0 || idx == n - 1;
 				item:roundBottom: idx == 0 || idx == n - 1;
+				item:insetLeft: idx == 0;
+				item:insetRight: idx == n - 1;
+				item:insetTop: true;
+				item:insetBottom: true;
 			});
 			newChildren:add(item: item);
 			k: k + 1;

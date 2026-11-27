@@ -36,6 +36,10 @@ Class of SewNode is Clickable{
 	Boolean is roundRight: true;
 	Boolean is roundTop: true;
 	Boolean is roundBottom: true;
+	Boolean is insetLeft: true;
+	Boolean is insetRight: true;
+	Boolean is insetTop: true;
+	Boolean is insetBottom: true;
 
 	replace Function is init(
 		String is label: '',
@@ -177,21 +181,33 @@ Class of SewNode is Clickable{
 		local Rect is b: bounds();
 		if({ b:width <= 0 || b:height <= 0 }, { return; });
 		local FillStyle is fill: activeTheme:resolveButtonFill(enabled: enabled, selected: selected, hovered: hovered, focused: focused);
+		local Int is btnPx: activeTheme:buttonBorderPx(scaleFactor: activeScale:factor);
+		local Int is iL: if({ insetLeft }, { btnPx }, { 0 });
+		local Int is iR: if({ insetRight }, { btnPx }, { 0 });
+		local Int is iT: if({ insetTop }, { btnPx }, { 0 });
+		local Int is iB: if({ insetBottom }, { btnPx }, { 0 });
+		local Int is fx: b:x + iL;
+		local Int is fy: b:y + iT;
+		local Int is fw: b:width - iL - iR;
+		local Int is fh: b:height - iT - iB;
 		local Int is radPx: activeScale:px(pt: activeTheme:buttonCornerRadiusPt);
-		if({ !roundLeft && !roundRight && !roundTop && !roundBottom }, {
-			ctx:fillRoundRectStyled(x: b:x, y: b:y, w: b:width, h: b:height, radius: 0, fill: fill);
-		}, {
-		if({ roundLeft && roundRight && roundTop && roundBottom }, {
-			ctx:fillRoundRectStyled(x: b:x, y: b:y, w: b:width, h: b:height, radius: radPx, fill: fill);
-		}, {
-			local Int is padL: if({ roundLeft }, { 0 }, { radPx });
-			local Int is padR: if({ roundRight }, { 0 }, { radPx });
-			local Int is padT: if({ roundTop }, { 0 }, { radPx });
-			local Int is padB: if({ roundBottom }, { 0 }, { radPx });
-			ctx:setClip(x: b:x, y: b:y, w: b:width, h: b:height);
-			ctx:fillRoundRectStyled(x: b:x - padL, y: b:y - padT, w: b:width + padL + padR, h: b:height + padT + padB, radius: radPx, fill: fill);
-			ctx:clearClip();
-		}); });
+		local Int is fillRad: if({ radPx > btnPx }, { radPx - btnPx }, { 0 });
+		if({ fw > 0 && fh > 0 }, {
+			if({ !roundLeft && !roundRight && !roundTop && !roundBottom }, {
+				ctx:fillRoundRectStyled(x: fx, y: fy, w: fw, h: fh, radius: 0, fill: fill);
+			}, {
+			if({ roundLeft && roundRight && roundTop && roundBottom }, {
+				ctx:fillRoundRectStyled(x: fx, y: fy, w: fw, h: fh, radius: fillRad, fill: fill);
+			}, {
+				local Int is padL: if({ roundLeft }, { 0 }, { fillRad });
+				local Int is padR: if({ roundRight }, { 0 }, { fillRad });
+				local Int is padT: if({ roundTop }, { 0 }, { fillRad });
+				local Int is padB: if({ roundBottom }, { 0 }, { fillRad });
+				ctx:setClip(x: fx, y: fy, w: fw, h: fh);
+				ctx:fillRoundRectStyled(x: fx - padL, y: fy - padT, w: fw + padL + padR, h: fh + padT + padB, radius: fillRad, fill: fill);
+				ctx:clearClip();
+			}); });
+		});
 		local Int is fpx: :fontPx();
 		local Int is tw: ctx:measureTextWidth(text: label, pixelHeight: fpx);
 		local Int is th: ctx:measureTextHeight(pixelHeight: fpx);
