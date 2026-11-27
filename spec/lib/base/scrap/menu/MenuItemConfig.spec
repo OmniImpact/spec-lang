@@ -35,12 +35,7 @@ Class is MenuItemConfig{
 		:enabled: enabled;
 		:kind: kind;
 		:iconSvg: iconSvg;
-		:subItems: Array();
-		local Int is si: 0;
-		while({ si < subItems:length() }, {
-			:subItems:add(item: subItems:get(index: si));
-			si: si + 1;
-		});
+		:subItems: subItems;
 	}
 
 	Function is addSubItem(MenuItemConfig is item){

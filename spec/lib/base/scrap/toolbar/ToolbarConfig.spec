@@ -30,12 +30,7 @@ Class is ToolbarConfig{
 		String is checkboxOffIconSvg: '',
 		String is checkboxOnIconSvg: ''
 	){
-		:menus: Array();
-		local Int is mi: 0;
-		while({ mi < menus:length() }, {
-			:menus:add(item: menus:get(index: mi));
-			mi: mi + 1;
-		});
+		:menus: menus;
 		:heightPt: heightPt;
 		:radioOffIconSvg: radioOffIconSvg;
 		:radioOnIconSvg: radioOnIconSvg;

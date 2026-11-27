@@ -23,12 +23,7 @@ Class is MenuConfig{
 		:id: id;
 		:label: label;
 		:visible: visible;
-		:items: Array();
-		local Int is ii: 0;
-		while({ ii < items:length() }, {
-			:items:add(item: items:get(index: ii));
-			ii: ii + 1;
-		});
+		:items: items;
 	}
 
 	Function is addItem(MenuItemConfig is item){

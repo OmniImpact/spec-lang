@@ -20,7 +20,7 @@ Class is Theme{
 		['base', 'fabric', LineColorStyle],
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
-		['base', 'fabric', BoxBorderStyle],
+		['base', 'fabric', BorderStyleBox],
 		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', FillMode],
 		['base', 'fabric', GradientBounds],
@@ -415,8 +415,8 @@ Class is Theme{
 		return if({ customButtonBorderColor != 0 }, { customButtonBorderColor }, { buttonBorder });
 	}
 
-	Function of BoxBorderStyle is panelBorderConfig(){
-		return BoxBorderStyle(
+	Function of BorderStyleBox is panelBorderConfig(){
+		return BorderStyleBox(
 			widthPt: panelBorderThicknessPt,
 			color: Color:fromArgb(argb: :panelBorderColorArgb()),
 			style: panelBorderStyle,
@@ -434,8 +434,8 @@ Class is Theme{
 		);
 	}
 
-	Function of BoxBorderStyle is buttonBorderConfig(){
-		return BoxBorderStyle(
+	Function of BorderStyleBox is buttonBorderConfig(){
+		return BorderStyleBox(
 			widthPt: buttonBorderThicknessPt,
 			color: Color:fromArgb(argb: :buttonBorderColorArgb()),
 			style: buttonBorderStyle,
@@ -444,7 +444,7 @@ Class is Theme{
 		);
 	}
 
-	Function is setPanelBorder(BoxBorderStyle is border){
+	Function is setPanelBorder(BorderStyleBox is border){
 		:customMetrics: true;
 		if({ border:hasStyle }, { :setPanelBorderStyle(style: border:style); });
 		if({ border:hasWidth }, { :setPanelBorderThicknessPt(pt: border:widthPt); });
@@ -516,7 +516,7 @@ Class is Theme{
 		:customDividerColor: color:toArgb();
 	}
 
-	Function is setButtonBorder(BoxBorderStyle is border){
+	Function is setButtonBorder(BorderStyleBox is border){
 		:customMetrics: true;
 		if({ border:hasStyle }, { :setButtonBorderStyle(style: border:style); });
 		if({ border:hasWidth }, { :setButtonBorderThicknessPt(pt: border:widthPt); });

@@ -494,7 +494,6 @@ Class of SewNode is TextView{
 						);
 						r: r + 1;
 					});
-					wrapCtx:dispose();
 					Mem:free(ptr: scratch);
 					return 0;
 				}
@@ -583,7 +582,6 @@ Class of SewNode is TextView{
 			cachedLineStarts:add(item: lineStarts);
 			r: r + 1;
 		});
-		seqWrapCtx:dispose();
 		lastWrapW: availTextW;
 		lastWrapFpx: fpx;
 	}
@@ -732,11 +730,9 @@ Class of SewNode is TextView{
 						dispRawStart:set(index: baseDisp + k, item: starts:get(index: k));
 						k: k + 1;
 					});
-					editWrapCtx:dispose();
 					return true;
 				});
 			});
-			editWrapCtx:dispose();
 			dispLines: Array();
 			dispRawLine: Array();
 			dispRawStart: Array();
@@ -784,7 +780,6 @@ Class of SewNode is TextView{
 			nextStarts:add(item: starts);
 			ni: ni + 1;
 		});
-		editWrapCtx:dispose();
 		i: el + 1;
 		while({ i < cachedLineSegs:length() }, {
 			nextSegs:add(item: cachedLineSegs:get(index: i));

@@ -4,7 +4,7 @@ Class of SpecUnitTest is TestFabricTheme{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', as Mem()],
-		['base', 'fabric', [Color, Theme, ThemePreset, StrokeStyle, BoxBorderStyle, ShadowStyle, DrawContext]],
+		['base', 'fabric', [Color, Theme, ThemePreset, StrokeStyle, BorderStyleBox, ShadowStyle, DrawContext]],
 		['base', 'suit', SuitCanvas]
 	];
 
@@ -29,8 +29,8 @@ Class of SpecUnitTest is TestFabricTheme{
 		t:setPanelInnerShadowOffsetXPt(pt: 1.5);
 		t:setPanelInnerShadowOffsetYPt(pt: 2.5);
 
-		# Width-only BoxBorderStyle must NOT wipe existing shadows
-		t:setPanelBorder(BoxBorderStyle(widthPt: 2.0));
+		# Width-only BorderStyleBox must NOT wipe existing shadows
+		t:setPanelBorder(BorderStyleBox(widthPt: 2.0));
 		Assert:isTrue(t:panelShadowBlurPt > 5.5);
 		Assert:isTrue(t:panelInnerShadowBlurPt > 3.5);
 
@@ -53,7 +53,7 @@ Class of SpecUnitTest is TestFabricTheme{
 		Assert:areEqualInt(0, t2:panelBorderPx(scaleFactor: 1.0));
 
 		# Explicit ShadowStyle(blurPt: 0.0) clears the shadow
-		t:setPanelBorder(BoxBorderStyle(shadow: ShadowStyle(blurPt: 0.0)));
+		t:setPanelBorder(BorderStyleBox(shadow: ShadowStyle(blurPt: 0.0)));
 		Assert:isTrue(t:panelShadowBlurPt < 0.01);
 	}
 

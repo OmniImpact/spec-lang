@@ -80,19 +80,15 @@ Class is SpecEditStrings{
 	held Function of String is baseName(String is path, String is fallback: ''){
 		local Int is len: path:length();
 		Conditional:if(check: { len == 0 }, then: { return fallback; });
-		local String is out: path;
-		local Boolean is found: false;
 		local Int is i: len - 1;
-		Loops:while(check: { i >= 0 && !found }, body: {
+		Loops:while(check: { i >= 0 }, body: {
 			local Int is b: path:byteAt(index: i);
 			Conditional:if(check: { b == 47 || b == 92 }, then: {
 				local String is tail: path:substring(start: i + 1, end: len);
-				out: fallback;
-				Conditional:if(check: { tail != '' }, then: { out: tail; });
-				found: true;
+				return Conditional:if(check: { tail != '' }, then: { tail }, else: { fallback });
 			});
 			i: i - 1;
 		});
-		return out;
+		return path;
 	}
 }

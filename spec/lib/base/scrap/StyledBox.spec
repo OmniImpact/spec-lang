@@ -16,7 +16,7 @@ Class of SewNode is StyledBox{
 		['base', 'fabric', LineColorStyle],
 		['base', 'fabric', ShadowStyle],
 		['base', 'fabric', LineStyle],
-		['base', 'fabric', BoxBorderStyle],
+		['base', 'fabric', BorderStyleBox],
 		['base', 'fabric', StrokeStyle],
 		['base', 'fabric', FillStyle]
 	];
@@ -83,7 +83,7 @@ Class of SewNode is StyledBox{
 		return desiredSize;
 	}
 
-	Function is setBorder(BoxBorderStyle is border){
+	Function is setBorder(BorderStyleBox is border){
 		if({ border:hasStyle }, { :borderStyle: border:style; });
 		if({ border:hasWidth }, { :thicknessPt: border:widthPt; });
 		if({ border:hasColor }, {

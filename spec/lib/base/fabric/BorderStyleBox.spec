@@ -1,7 +1,7 @@
 #! Package base:fabric
 #! Composable border & layer-effect style inheriting [LineStyle] (width, color, style) plus corner radius and outer/inner shadows.
 
-Class of LineStyle is BoxBorderStyle{
+Class of LineStyle is BorderStyleBox{
 	replace [String] is namespace: ['base', 'fabric'];
 
 	replace [[String]] is using: [

@@ -43,12 +43,6 @@ Class is Font{
 		return if({ sAddr != 0 }, { Mem:loadI64(ptr: sAddr, byteOffset: 0) }, { 0 });
 	}
 
-	local Function of Int is signI32(Int is v){
-		local Int is u: v & 4294967295;
-		if({ u >= 2147483648 }, { return u - 4294967296; });
-		return u;
-	}
-
 	local Function is ensureMetricsBuf(){
 		if({ metricsAddr == 0 }, {
 			metricsAddr: Mem:alloc(bytes: 16);
@@ -166,12 +160,12 @@ Class is Font{
 			if({ existing == 0 }, {
 				local Float is shiftX: math:toFloat(value: phase) * 0.25;
 				base:sysinternal:Font:pal_font_hmetrics(handle: fh, cp: cp, out_2_i32_ptr: metricsAddr);
-				local Int is adv: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
+				local Int is adv: Mem:loadS32(ptr: metricsAddr, byteOffset: 0);
 				base:sysinternal:Font:pal_font_glyph_box_subpixel(handle: fh, cp: cp, pixel_height: pixelHeight, shift_x: shiftX, out_4_i32_ptr: metricsAddr);
-				local Int is x0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
-				local Int is y0: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
-				local Int is x1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
-				local Int is y1: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 12));
+				local Int is x0: Mem:loadS32(ptr: metricsAddr, byteOffset: 0);
+				local Int is y0: Mem:loadS32(ptr: metricsAddr, byteOffset: 4);
+				local Int is x1: Mem:loadS32(ptr: metricsAddr, byteOffset: 8);
+				local Int is y1: Mem:loadS32(ptr: metricsAddr, byteOffset: 12);
 				local Int is gw: x1 - x0;
 				local Int is gh: y1 - y0;
 				local Int is bmp: 0;
@@ -543,7 +537,7 @@ Class is Font{
 			p: metricsAddr;
 		});
 		base:sysinternal:Font:pal_font_hmetrics(handle: handle, cp: 32, out_2_i32_ptr: p);
-		local Int is adv: :signI32(v: Mem:loadI32(ptr: p, byteOffset: 0));
+		local Int is adv: Mem:loadS32(ptr: p, byteOffset: 0);
 		return math:toFloat(value: adv) * baseScale + tracking;
 	}
 
@@ -592,7 +586,7 @@ Class is Font{
 						xpos: xpos + math:toFloat(value: kern) * gScale;
 					});
 					base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: bufPtr);
-					local Int is adv: :signI32(v: Mem:loadI32(ptr: bufPtr, byteOffset: 0));
+					local Int is adv: Mem:loadS32(ptr: bufPtr, byteOffset: 0);
 					xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
 					prevCp: cp;
 					prevH: gh;
@@ -645,7 +639,7 @@ Class is Font{
 						xpos: xpos + math:toFloat(value: kern) * gScale;
 					});
 					base:sysinternal:Font:pal_font_hmetrics(handle: gh, cp: cp, out_2_i32_ptr: bufPtr);
-					local Int is adv: :signI32(v: Mem:loadI32(ptr: bufPtr, byteOffset: 0));
+					local Int is adv: Mem:loadS32(ptr: bufPtr, byteOffset: 0);
 					xpos: xpos + math:toFloat(value: adv) * gScale + tracking;
 					prevCp: cp;
 					prevH: gh;
@@ -721,9 +715,9 @@ Class is Font{
 		:ensureMetricsBuf();
 		local Float is scale: base:sysinternal:Font:pal_font_scale(handle: handle, pixel_height: pixelHeight);
 		base:sysinternal:Font:pal_font_vmetrics(handle: handle, out_3_i32_ptr: metricsAddr);
-		local Int is ascent: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 0));
-		local Int is descent: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 4));
-		local Int is lineGap: :signI32(v: Mem:loadI32(ptr: metricsAddr, byteOffset: 8));
+		local Int is ascent: Mem:loadS32(ptr: metricsAddr, byteOffset: 0);
+		local Int is descent: Mem:loadS32(ptr: metricsAddr, byteOffset: 4);
+		local Int is lineGap: Mem:loadS32(ptr: metricsAddr, byteOffset: 8);
 
 		local Int is baseline: y + math:toInt(value: math:round(value: math:toFloat(value: ascent) * scale));
 		local Int is lineStep: math:toInt(value: math:round(value: math:toFloat(value: ascent - descent + lineGap) * scale));
