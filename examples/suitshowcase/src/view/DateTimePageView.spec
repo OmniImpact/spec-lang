@@ -111,7 +111,7 @@ Class is DateTimePageView{
 		return SectionV(
 			children: Array([
 				Label(text: 'Date & Time Selectors', style: TextStyle:H1),
-				TextScrap(text: summaryLabel, muted: true),
+				TextScrap(text: summaryLabel, wrap: true, muted: true),
 				Frame(
 					title: 'Dropdown Selectors (DropdownPopup Overlay)',
 					child: SectionH(

@@ -26,6 +26,7 @@ Class of SewNode is ScrollView{
 	Float is barWidthPt: 0.0;
 	Float is heightPt: 0.0;
 	Boolean is fitContentWidth: false;
+	Boolean is allowHScroll: false;
 	Boolean is alwaysShowVScroll: false;
 	Boolean is alwaysShowHScroll: false;
 	DockSide is scrollbarSide: DockSide:RIGHT;
@@ -41,6 +42,7 @@ Class of SewNode is ScrollView{
 		DockSide is scrollbarSide: DockSide:RIGHT,
 		Float is heightPt: 0.0,
 		Boolean is fitContentWidth: false,
+		Boolean is allowHScroll: false,
 		Boolean is alwaysShowVScroll: false,
 		Boolean is alwaysShowHScroll: false
 	){
@@ -48,6 +50,7 @@ Class of SewNode is ScrollView{
 		:barWidthPt: barWidthPt;
 		:heightPt: heightPt;
 		:fitContentWidth: fitContentWidth;
+		:allowHScroll: allowHScroll;
 		:alwaysShowVScroll: alwaysShowVScroll;
 		:alwaysShowHScroll: alwaysShowHScroll;
 		:scrollbarSide: scrollbarSide;
@@ -75,14 +78,16 @@ Class of SewNode is ScrollView{
 	replace Function of Size is measure(Constraints is c){
 		local Int is bw: activeScale:px(pt: if({ barWidthPt > 0.0 }, { barWidthPt }, { activeTheme:scrollbarWidthPt }));
 		local Int is availW: if({ alwaysShowVScroll && c:maxW > bw }, { c:maxW - bw }, { c:maxW });
-		local Size is cs: child:measure(c: Constraints(minW: if({ fitContentWidth }, { 0 }, { availW }), maxW: 1000000, minH: 0, maxH: 1000000));
+		local Int is childMaxW: if({ allowHScroll || alwaysShowHScroll }, { 1000000 }, { availW });
+		local Size is cs: child:measure(c: Constraints(minW: if({ fitContentWidth }, { 0 }, { availW }), maxW: childMaxW, minH: 0, maxH: 1000000));
 		contentW: cs:width;
 		contentH: cs:height;
 		local Int is outH: if({ heightPt > 0.0 }, { c:clampH(h: activeScale:px(pt: heightPt)) }, { c:maxH });
 		local Boolean is needV: bw > 2 && (alwaysShowVScroll || contentH > outH);
 		if({ needV && !alwaysShowVScroll && !fitContentWidth && c:maxW > bw }, {
 			local Int is vw: c:maxW - bw;
-			cs: child:measure(c: Constraints(minW: vw, maxW: 1000000, minH: 0, maxH: 1000000));
+			local Int is nextMaxW: if({ allowHScroll || alwaysShowHScroll }, { 1000000 }, { vw });
+			cs: child:measure(c: Constraints(minW: vw, maxW: nextMaxW, minH: 0, maxH: 1000000));
 			contentW: cs:width;
 			contentH: cs:height;
 		});
