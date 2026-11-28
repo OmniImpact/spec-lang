@@ -112,8 +112,9 @@ jobs:
           export ASAN_OPTIONS=detect_leaks=0
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
           export SPEC_BIN="bin/spec-asan"
-          bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
-          bin/specunit-asan -s bin/spec-asan -t test -t testcompiler -j 2
+          bin/spec-asan --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
+          bin/specbuild utilities/specunit/specunit.json
+          bin/specunit -s bin/spec-asan -t test -t testcompiler -j 2
 
   windows:
     runs-on: windows-latest
