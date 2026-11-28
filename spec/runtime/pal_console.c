@@ -133,6 +133,50 @@ static void _spec_restore_termios(void) {
         _spec_raw_active = false;
     }
 }
+#else
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+#ifndef ENABLE_VIRTUAL_TERMINAL_INPUT
+#define ENABLE_VIRTUAL_TERMINAL_INPUT 0x0200
+#endif
+#ifndef ENABLE_EXTENDED_FLAGS
+#define ENABLE_EXTENDED_FLAGS 0x0080
+#endif
+#ifndef ENABLE_QUICK_EDIT_MODE
+#define ENABLE_QUICK_EDIT_MODE 0x0040
+#endif
+
+static DWORD _spec_win_orig_in_mode = 0;
+static DWORD _spec_win_orig_out_mode = 0;
+static bool _spec_win_has_orig_out = false;
+static bool _spec_win_raw_active = false;
+static bool _spec_win_raw_atexit_reg = false;
+static unsigned char _spec_win_in_buf[64];
+static int _spec_win_in_pos = 0;
+static int _spec_win_in_len = 0;
+
+static void _spec_win_restore_console(void) {
+    if (_spec_win_raw_active) {
+        HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+        if (hIn != INVALID_HANDLE_VALUE) {
+            SetConsoleMode(hIn, _spec_win_orig_in_mode);
+        }
+        if (_spec_win_has_orig_out) {
+            HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (hOut != INVALID_HANDLE_VALUE) {
+                SetConsoleMode(hOut, _spec_win_orig_out_mode);
+            }
+        }
+        const char* seq = "\x1b[?1006l\x1b[?1003l\x1b[<u\x1b[?25h\x1b[?1049l";
+        DWORD written = 0;
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hOut != INVALID_HANDLE_VALUE) {
+            WriteFile(hOut, seq, (DWORD)strlen(seq), &written, NULL);
+        }
+        _spec_win_raw_active = false;
+    }
+}
 #endif
 
 void spec_pal_raw_mode(long long enable) {
@@ -164,7 +208,48 @@ void spec_pal_raw_mode(long long enable) {
         }
     }
 #else
-    (void)enable;
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD cur_in_mode = 0;
+    if (hIn == INVALID_HANDLE_VALUE || !GetConsoleMode(hIn, &cur_in_mode)) return;
+    if (enable) {
+        if (!_spec_win_raw_active) {
+            _spec_win_orig_in_mode = cur_in_mode;
+            HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (hOut != INVALID_HANDLE_VALUE && GetConsoleMode(hOut, &_spec_win_orig_out_mode)) {
+                _spec_win_has_orig_out = true;
+                SetConsoleMode(hOut, _spec_win_orig_out_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+            } else {
+                _spec_win_has_orig_out = false;
+            }
+            SetConsoleOutputCP(CP_UTF8);
+            SetConsoleCP(CP_UTF8);
+            if (!_spec_win_raw_atexit_reg) {
+                atexit(_spec_win_restore_console);
+                _spec_win_raw_atexit_reg = true;
+            }
+            DWORD raw_in = _spec_win_orig_in_mode;
+            raw_in &= ~(DWORD)(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_QUICK_EDIT_MODE);
+            raw_in |= (DWORD)(ENABLE_EXTENDED_FLAGS | ENABLE_VIRTUAL_TERMINAL_INPUT | ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+            if (SetConsoleMode(hIn, raw_in)) {
+                _spec_win_raw_active = true;
+                _spec_win_in_pos = 0;
+                _spec_win_in_len = 0;
+            }
+        }
+    } else {
+        if (_spec_win_raw_active) {
+            SetConsoleMode(hIn, _spec_win_orig_in_mode);
+            if (_spec_win_has_orig_out) {
+                HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                if (hOut != INVALID_HANDLE_VALUE) {
+                    SetConsoleMode(hOut, _spec_win_orig_out_mode);
+                }
+            }
+            _spec_win_raw_active = false;
+            _spec_win_in_pos = 0;
+            _spec_win_in_len = 0;
+        }
+    }
 #endif
 }
 
@@ -183,7 +268,84 @@ long long spec_pal_poll_byte(long long timeout_ms) {
     }
     return -1;
 #else
-    (void)timeout_ms;
-    return -1;
+    if (_spec_win_in_pos < _spec_win_in_len) {
+        return (long long)_spec_win_in_buf[_spec_win_in_pos++];
+    }
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    if (hIn == INVALID_HANDLE_VALUE) return -1;
+
+    DWORD mode = 0;
+    if (!GetConsoleMode(hIn, &mode)) {
+        DWORD avail = 0;
+        if (PeekNamedPipe(hIn, NULL, 0, NULL, &avail, NULL)) {
+            if (avail == 0 && timeout_ms != 0) {
+                ULONGLONG start = GetTickCount64();
+                for (;;) {
+                    Sleep(1);
+                    if (!PeekNamedPipe(hIn, NULL, 0, NULL, &avail, NULL)) return -1;
+                    if (avail > 0) break;
+                    if (timeout_ms >= 0 && (long long)(GetTickCount64() - start) >= timeout_ms) {
+                        return -1;
+                    }
+                }
+            }
+            if (avail == 0) return -1;
+        }
+        unsigned char ch = 0;
+        DWORD got = 0;
+        if (ReadFile(hIn, &ch, 1, &got, NULL) && got == 1) {
+            return (long long)ch;
+        }
+        return -1;
+    }
+
+    ULONGLONG start = GetTickCount64();
+    for (;;) {
+        DWORD wait_ms;
+        if (timeout_ms < 0) {
+            wait_ms = INFINITE;
+        } else if (timeout_ms == 0) {
+            wait_ms = 0;
+        } else {
+            ULONGLONG elapsed = GetTickCount64() - start;
+            if ((long long)elapsed >= timeout_ms) return -1;
+            wait_ms = (DWORD)(timeout_ms - (long long)elapsed);
+        }
+
+        DWORD wr = WaitForSingleObject(hIn, wait_ms);
+        if (wr != WAIT_OBJECT_0) return -1;
+
+        INPUT_RECORD rec;
+        DWORD n_ev = 0;
+        if (!PeekConsoleInputW(hIn, &rec, 1, &n_ev) || n_ev == 0) return -1;
+
+        if (rec.EventType == FOCUS_EVENT || rec.EventType == MENU_EVENT || rec.EventType == WINDOW_BUFFER_SIZE_EVENT) {
+            ReadConsoleInputW(hIn, &rec, 1, &n_ev);
+            continue;
+        }
+        if (rec.EventType == KEY_EVENT) {
+            if (!rec.Event.KeyEvent.bKeyDown) {
+                ReadConsoleInputW(hIn, &rec, 1, &n_ev);
+                continue;
+            }
+            if (rec.Event.KeyEvent.uChar.UnicodeChar == 0) {
+                WORD vk = rec.Event.KeyEvent.wVirtualKeyCode;
+                if (vk == VK_SHIFT || vk == VK_CONTROL || vk == VK_MENU ||
+                    vk == VK_LWIN || vk == VK_RWIN || vk == VK_CAPITAL ||
+                    vk == VK_NUMLOCK || vk == VK_SCROLL) {
+                    ReadConsoleInputW(hIn, &rec, 1, &n_ev);
+                    continue;
+                }
+            }
+        }
+
+        DWORD got = 0;
+        if (ReadFile(hIn, _spec_win_in_buf, sizeof(_spec_win_in_buf), &got, NULL) && got > 0) {
+            _spec_win_in_pos = 1;
+            _spec_win_in_len = (int)got;
+            return (long long)_spec_win_in_buf[0];
+        }
+        return -1;
+    }
 #endif
 }

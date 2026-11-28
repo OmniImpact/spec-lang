@@ -519,6 +519,9 @@ Class is SpecBuild{
 		if({ output == '' }, {
 			output: :resolvePath(baseDir: configDir, relPath: 'bin/' . name);
 		});
+		if({ Process:osName() == 'windows' && !output:toLower():endsWith(suffix: '.exe') }, {
+			output: output . '.exe';
+		});
 
 		local String is outParent: :dirOf(path: output);
 		if({ outParent != '' && !fileExists(path: outParent) }, {

@@ -8,6 +8,7 @@
 #include <mmeapi.h>
 #include <psapi.h>
 #include <io.h>
+#include <direct.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>

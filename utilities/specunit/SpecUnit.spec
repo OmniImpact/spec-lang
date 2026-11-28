@@ -908,14 +908,14 @@ Class is SpecUnit{
 			local String is diag: fileRead(path: compileOut, default: '');
 			local String is note: if(check: { cStatus == 124 || cStatus == 137 }, then: { 'compilation timed out after ' . (timeoutSec as String) . 's (killed)'; }, else: { 'compilation failed: ' . :firstLine(text: diag); });
 			SpecTestRegistry:addResult(name: item:path, passed: false, note: note, report: diag, expectedTests: item:expectedTests, tPassed: 0, tFailed: item:expectedTests);
-			fileRemove(path: compileOut);
+			:safeRemove(path: compileOut);
 			if(check: { File:fileExists(path: bin) }, then: {
-				fileRemove(path: bin);
+				:safeRemove(path: bin);
 			});
 			SpecTestRegistry:finishCompileOnly();
 			return;
 		});
-		fileRemove(path: compileOut);
+		:safeRemove(path: compileOut);
 		SpecTestRegistry:enqueueReadyRun(rItem: ReadyRunItem:init(item: item, idx: idx, binPath: bin, compileCpuUs: cCpu, compileRssKb: cRss));
 	}
 
@@ -975,8 +975,8 @@ Class is SpecUnit{
 			});
 		});
 		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: out, expectedTests: item:expectedTests, tPassed: tPassed, tFailed: tFailed);
-		fileRemove(path: bin);
-		fileRemove(path: runOut);
+		:safeRemove(path: bin);
+		:safeRemove(path: runOut);
 	}
 
 	## Compile-must-fail: the produced diagnostics must contain every
@@ -1017,10 +1017,18 @@ Class is SpecUnit{
 		local Int is tp: if(check: { passed }, then: { 1; }, else: { 0; });
 		local Int is tf: if(check: { passed }, then: { 0; }, else: { 1; });
 		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: cText, expectedTests: 1, tPassed: tp, tFailed: tf);
-		fileRemove(path: compileOut);
+		:safeRemove(path: compileOut);
 		if(check: { tempSrc }, then: {
-			fileRemove(path: src);
+			:safeRemove(path: src);
 		});
+	}
+
+	## Removes a temporary test artifact, ignoring transient Windows file-lock errors.
+	Function is safeRemove(String is path){
+		if(check: { path == '' || !File:fileExists(path: path) }, then: {
+			return;
+		});
+		fileRemove(path: path, onError: local Function(SpecError of FileError is _e){});
 	}
 
 	## The flat work path for one item's artifacts: pid + queue
