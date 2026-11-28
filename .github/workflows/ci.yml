@@ -51,7 +51,9 @@ jobs:
       - name: Bootstrap compiler (clang)
         run: CLANG=clang ./bootstrap.sh
       - name: Build specunit
-        run: bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+        run: |
+          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
+          bin/specbuild utilities/specunit/specunit.json
       - name: Regression suite
         run: |
           bin/specunit -s bin/spec -t test -t testcompiler
