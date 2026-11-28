@@ -918,13 +918,19 @@ Class is DrawContext{
 		if({ shadowColor != 0 && (shadowBlur > 0 || shadowOffsetX != 0 || shadowOffsetY != 0) }, {
 			:drawShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: shadowOffsetX, offsetY: shadowOffsetY, blurRadius: shadowBlur, color: shadowColor);
 		});
+		local Boolean is hasBorder: thickness > 0 && borderColor != 0 && style != StrokeStyle:NONE;
 		if({ bgColor != 0 }, {
-			:fillRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: bgColor);
+			if({ hasBorder && w > 2 && h > 2 }, {
+				local Int is bgRad: if({ radius > 1 }, { radius - 1 }, { 0 });
+				:fillRoundRect(x: x + 1, y: y + 1, w: w - 2, h: h - 2, radius: bgRad, color: bgColor);
+			}, {
+				:fillRoundRect(x: x, y: y, w: w, h: h, radius: radius, color: bgColor);
+			});
 		});
 		if({ innerShadowColor != 0 && (innerShadowBlur > 0 || innerShadowOffsetX != 0 || innerShadowOffsetY != 0) }, {
 			:drawInnerShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: innerShadowOffsetX, offsetY: innerShadowOffsetY, blurRadius: innerShadowBlur, color: innerShadowColor);
 		});
-		if({ thickness <= 0 || borderColor == 0 || style == StrokeStyle:NONE }, { return; });
+		if({ !hasBorder }, { return; });
 		local Color is bc: Color:fromArgb(argb: borderColor);
 		local Color is whiteC: Color(r: 255, g: 255, b: 255);
 		local Color is blackC: Color(r: 0, g: 0, b: 0);
@@ -1000,7 +1006,13 @@ Class is DrawContext{
 		if({ shadowColor != 0 && (shadowBlur > 0 || shadowOffsetX != 0 || shadowOffsetY != 0) }, {
 			:drawShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: shadowOffsetX, offsetY: shadowOffsetY, blurRadius: shadowBlur, color: shadowColor);
 		});
-		:fillRoundRectStyled(x: x, y: y, w: w, h: h, radius: radius, fill: fill);
+		local Boolean is hasBorder: thickness > 0 && borderColor != 0 && style != StrokeStyle:NONE;
+		if({ hasBorder && w > 2 && h > 2 }, {
+			local Int is bgRad: if({ radius > 1 }, { radius - 1 }, { 0 });
+			:fillRoundRectStyled(x: x + 1, y: y + 1, w: w - 2, h: h - 2, radius: bgRad, fill: fill);
+		}, {
+			:fillRoundRectStyled(x: x, y: y, w: w, h: h, radius: radius, fill: fill);
+		});
 		if({ innerShadowColor != 0 && (innerShadowBlur > 0 || innerShadowOffsetX != 0 || innerShadowOffsetY != 0) }, {
 			:drawInnerShadow(x: x, y: y, w: w, h: h, radius: radius, offsetX: innerShadowOffsetX, offsetY: innerShadowOffsetY, blurRadius: innerShadowBlur, color: innerShadowColor);
 		});
