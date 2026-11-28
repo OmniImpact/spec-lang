@@ -5842,6 +5842,579 @@ long long spec_pal_window_present(long long handle, long long pixels_addr, long 
     return drawn > 0 ? 1 : 0;
 }
 
+#elif defined(__APPLE__) && defined(__MACH__)
+
+#include <objc/objc.h>
+#include <CoreGraphics/CoreGraphics.h>
+
+typedef struct {
+    int type;
+    int a;
+    int b;
+    int c;
+    int d;
+} SpecMacEvent;
+
+#define SPEC_MAC_KEY_QUEUE_CAP 64
+#define SPEC_MAC_EV_QUEUE_CAP 128
+
+typedef struct SpecMacWindow {
+    id nswindow;
+    id content_view;
+    id metal_layer;
+    int width;
+    int height;
+    int min_w;
+    int min_h;
+    int scale_milli;
+    int pointer_x;
+    int pointer_y;
+    int pointer_down;
+    int scroll_y;
+    int scroll_x;
+    int mods;
+    int closed;
+    int use_vulkan;
+    int click_pending;
+    int click_x;
+    int click_y;
+    int rclick_pending;
+    int rclick_x;
+    int rclick_y;
+    int key_queue[SPEC_MAC_KEY_QUEUE_CAP];
+    int key_head;
+    int key_tail;
+    int char_queue[SPEC_MAC_KEY_QUEUE_CAP];
+    int char_head;
+    int char_tail;
+    SpecMacEvent ev_queue[SPEC_MAC_EV_QUEUE_CAP];
+    int ev_head;
+    int ev_tail;
+    char* clip_utf8;
+} SpecMacWindow;
+
+static void* _spec_mac_objc = NULL;
+static void* _spec_mac_appkit = NULL;
+static void* _spec_mac_quartz = NULL;
+static void* _spec_mac_cg = NULL;
+static id _spec_mac_nsapp = nil;
+static id _spec_mac_default_mode = nil;
+static id _spec_mac_pb_string_type = nil;
+
+typedef id (*PFN_spec_objc_getClass)(const char*);
+typedef SEL (*PFN_spec_sel_registerName)(const char*);
+static PFN_spec_objc_getClass _spec_objc_getClass = NULL;
+static PFN_spec_sel_registerName _spec_sel_registerName = NULL;
+static void* _spec_objc_msgSend = NULL;
+#if defined(__x86_64__)
+static void* _spec_objc_msgSend_stret = NULL;
+#endif
+
+typedef CGColorSpaceRef (*PFN_CGColorSpaceCreateDeviceRGB)(void);
+typedef void (*PFN_CGColorSpaceRelease)(CGColorSpaceRef);
+typedef CGDataProviderRef (*PFN_CGDataProviderCreateWithData)(void*, const void*, size_t, CGDataProviderReleaseDataCallback);
+typedef void (*PFN_CGDataProviderRelease)(CGDataProviderRef);
+typedef CGImageRef (*PFN_CGImageCreate)(size_t, size_t, size_t, size_t, size_t, CGColorSpaceRef, CGBitmapInfo, CGDataProviderRef, const CGFloat*, bool, CGColorRenderingIntent);
+typedef void (*PFN_CGImageRelease)(CGImageRef);
+
+static PFN_CGColorSpaceCreateDeviceRGB _spec_cg_cs_rgb = NULL;
+static PFN_CGColorSpaceRelease _spec_cg_cs_rel = NULL;
+static PFN_CGDataProviderCreateWithData _spec_cg_dp_create = NULL;
+static PFN_CGDataProviderRelease _spec_cg_dp_rel = NULL;
+static PFN_CGImageCreate _spec_cg_img_create = NULL;
+static PFN_CGImageRelease _spec_cg_img_rel = NULL;
+
+#define _spec_m0(o, s) ((id (*)(id, SEL))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s))
+#define _spec_m1_id(o, s, a) ((id (*)(id, SEL, id))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s), (id)(a))
+#define _spec_m1_ptr(o, s, a) ((id (*)(id, SEL, const void*))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s), (const void*)(a))
+#define _spec_m1_ll(o, s, a) ((id (*)(id, SEL, long long))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s), (long long)(a))
+#define _spec_m1_u64(o, s, a) ((id (*)(id, SEL, unsigned long))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s), (unsigned long)(a))
+#define _spec_m1_bool(o, s, a) ((void (*)(id, SEL, signed char))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s), (signed char)(a))
+#define _spec_m1_dbl(o, s, a) ((id (*)(id, SEL, double))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s), (double)(a))
+#define _spec_m0_ll(o, s) ((long long (*)(id, SEL))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s))
+#define _spec_m0_u64(o, s) ((unsigned long (*)(id, SEL))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s))
+#define _spec_m0_dbl(o, s) ((double (*)(id, SEL))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s))
+#define _spec_m0_bool(o, s) ((signed char (*)(id, SEL))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s))
+#define _spec_m0_cstr(o, s) ((const char* (*)(id, SEL))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s))
+#define _spec_m0_pt(o, s) ((CGPoint (*)(id, SEL))_spec_objc_msgSend)((id)(o), _spec_sel_registerName(s))
+
+static inline CGRect _spec_m0_rect(id o, const char* s) {
+#if defined(__x86_64__)
+    CGRect r;
+    ((void (*)(CGRect*, id, SEL))_spec_objc_msgSend_stret)(&r, o, _spec_sel_registerName(s));
+    return r;
+#else
+    return ((CGRect (*)(id, SEL))_spec_objc_msgSend)(o, _spec_sel_registerName(s));
+#endif
+}
+
+static bool _spec_mac_ensure_init(void) {
+    if (_spec_mac_nsapp) return true;
+    _spec_mac_objc = dlopen("/usr/lib/libobjc.A.dylib", RTLD_LAZY | RTLD_GLOBAL);
+    _spec_mac_appkit = dlopen("/System/Library/Frameworks/AppKit.framework/AppKit", RTLD_LAZY | RTLD_GLOBAL);
+    _spec_mac_quartz = dlopen("/System/Library/Frameworks/QuartzCore.framework/QuartzCore", RTLD_LAZY | RTLD_GLOBAL);
+    _spec_mac_cg = dlopen("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics", RTLD_LAZY | RTLD_GLOBAL);
+    if (!_spec_mac_objc || !_spec_mac_appkit || !_spec_mac_quartz || !_spec_mac_cg) {
+        _spec_set_win_error("Failed to dlopen macOS libobjc/AppKit/QuartzCore/CoreGraphics frameworks");
+        return false;
+    }
+    _spec_objc_getClass = (PFN_spec_objc_getClass)dlsym(_spec_mac_objc, "objc_getClass");
+    _spec_sel_registerName = (PFN_spec_sel_registerName)dlsym(_spec_mac_objc, "sel_registerName");
+    _spec_objc_msgSend = dlsym(_spec_mac_objc, "objc_msgSend");
+#if defined(__x86_64__)
+    _spec_objc_msgSend_stret = dlsym(_spec_mac_objc, "objc_msgSend_stret");
+#endif
+    if (!_spec_objc_getClass || !_spec_sel_registerName || !_spec_objc_msgSend) {
+        _spec_set_win_error("Failed to resolve libobjc runtime symbols");
+        return false;
+    }
+    _spec_cg_cs_rgb = (PFN_CGColorSpaceCreateDeviceRGB)dlsym(_spec_mac_cg, "CGColorSpaceCreateDeviceRGB");
+    _spec_cg_cs_rel = (PFN_CGColorSpaceRelease)dlsym(_spec_mac_cg, "CGColorSpaceRelease");
+    _spec_cg_dp_create = (PFN_CGDataProviderCreateWithData)dlsym(_spec_mac_cg, "CGDataProviderCreateWithData");
+    _spec_cg_dp_rel = (PFN_CGDataProviderRelease)dlsym(_spec_mac_cg, "CGDataProviderRelease");
+    _spec_cg_img_create = (PFN_CGImageCreate)dlsym(_spec_mac_cg, "CGImageCreate");
+    _spec_cg_img_rel = (PFN_CGImageRelease)dlsym(_spec_mac_cg, "CGImageRelease");
+
+    id cls_app = (id)_spec_objc_getClass("NSApplication");
+    if (!cls_app) {
+        _spec_set_win_error("NSApplication class not found");
+        return false;
+    }
+    _spec_mac_nsapp = _spec_m0(cls_app, "sharedApplication");
+    _spec_m1_ll(_spec_mac_nsapp, "setActivationPolicy:", 0);
+    _spec_m0(_spec_mac_nsapp, "finishLaunching");
+    _spec_m1_bool(_spec_mac_nsapp, "activateIgnoringOtherApps:", 1);
+
+    id cls_str = (id)_spec_objc_getClass("NSString");
+    _spec_mac_default_mode = _spec_m1_ptr(cls_str, "stringWithUTF8String:", "kCFRunLoopDefaultMode");
+    _spec_m0(_spec_mac_default_mode, "retain");
+    _spec_mac_pb_string_type = _spec_m1_ptr(cls_str, "stringWithUTF8String:", "public.utf8-plain-text");
+    _spec_m0(_spec_mac_pb_string_type, "retain");
+    return true;
+}
+
+static void _spec_mac_push_key(SpecMacWindow* w, int k) {
+    int next = (w->key_tail + 1) % SPEC_MAC_KEY_QUEUE_CAP;
+    if (next != w->key_head) { w->key_queue[w->key_tail] = k; w->key_tail = next; }
+}
+
+static void _spec_mac_push_char(SpecMacWindow* w, int ch) {
+    int next = (w->char_tail + 1) % SPEC_MAC_KEY_QUEUE_CAP;
+    if (next != w->char_head) { w->char_queue[w->char_tail] = ch; w->char_tail = next; }
+}
+
+static void _spec_mac_push_ev(SpecMacWindow* w, int type, int a, int b, int c, int d) {
+    int next = (w->ev_tail + 1) % SPEC_MAC_EV_QUEUE_CAP;
+    if (next != w->ev_head) {
+        w->ev_queue[w->ev_tail].type = type;
+        w->ev_queue[w->ev_tail].a = a;
+        w->ev_queue[w->ev_tail].b = b;
+        w->ev_queue[w->ev_tail].c = c;
+        w->ev_queue[w->ev_tail].d = d;
+        w->ev_tail = next;
+    }
+}
+
+static int _spec_mac_translate_keycode(unsigned short kc) {
+    switch (kc) {
+        case 36: return 257; /* Return */
+        case 48: return 258; /* Tab */
+        case 51: return 259; /* Backspace */
+        case 53: return 256; /* Escape */
+        case 117: return 261; /* Delete */
+        case 123: return 263; /* Left */
+        case 124: return 262; /* Right */
+        case 125: return 264; /* Down */
+        case 126: return 265; /* Up */
+        case 115: return 268; /* Home */
+        case 119: return 269; /* End */
+        case 116: return 266; /* PageUp */
+        case 121: return 267; /* PageDown */
+        default: return (int)kc;
+    }
+}
+
+static int _spec_mac_translate_mods(unsigned long flags) {
+    int m = 0;
+    if (flags & (1UL << 17)) m |= 1; /* Shift */
+    if (flags & (1UL << 18)) m |= 2; /* Control */
+    if (flags & (1UL << 19)) m |= 4; /* Option/Alt */
+    if (flags & (1UL << 20)) m |= 8; /* Command/Super */
+    return m;
+}
+
+long long spec_pal_window_open_ex(long long title_cstr, long long width, long long height, long long decorated, long long use_vulkan) {
+    if (!_spec_mac_ensure_init()) return -1;
+    int wpx = width > 0 ? (int)width : 800;
+    int hpx = height > 0 ? (int)height : 600;
+    CGRect frame = CGRectMake(100.0, 100.0, (double)wpx, (double)hpx);
+    unsigned long style = decorated ? (1UL | 2UL | 4UL | 8UL) : 0UL;
+
+    id cls_win = (id)_spec_objc_getClass("NSWindow");
+    id win = _spec_m0(cls_win, "alloc");
+    win = ((id (*)(id, SEL, CGRect, unsigned long, unsigned long, signed char))_spec_objc_msgSend)(
+        win, _spec_sel_registerName("initWithContentRect:styleMask:backing:defer:"),
+        frame, style, 2UL, 0
+    );
+    if (!win) {
+        _spec_set_win_error("Failed to create NSWindow");
+        return -1;
+    }
+    _spec_m1_bool(win, "setReleasedWhenClosed:", 0);
+    _spec_m1_bool(win, "setAcceptsMouseMovedEvents:", 1);
+    const char* t = (const char*)(intptr_t)title_cstr;
+    if (t && *t) {
+        id ns_title = _spec_m1_ptr((id)_spec_objc_getClass("NSString"), "stringWithUTF8String:", t);
+        _spec_m1_id(win, "setTitle:", ns_title);
+    }
+
+    id cv = _spec_m0(win, "contentView");
+    _spec_m1_bool(cv, "setWantsLayer:", 1);
+    id layer = nil;
+    if (use_vulkan) {
+        id cls_metal = (id)_spec_objc_getClass("CAMetalLayer");
+        if (cls_metal) {
+            layer = _spec_m0(cls_metal, "layer");
+            _spec_m1_id(cv, "setLayer:", layer);
+        }
+    } else {
+        layer = _spec_m0(cv, "layer");
+    }
+
+    _spec_m1_id(win, "makeKeyAndOrderFront:", nil);
+    _spec_m1_bool(_spec_mac_nsapp, "activateIgnoringOtherApps:", 1);
+
+    SpecMacWindow* sw = (SpecMacWindow*)calloc(1, sizeof(SpecMacWindow));
+    if (!sw) return -1;
+    sw->nswindow = win;
+    sw->content_view = cv;
+    sw->metal_layer = layer;
+    sw->width = wpx;
+    sw->height = hpx;
+    sw->use_vulkan = use_vulkan ? 1 : 0;
+    double sf = _spec_m0_dbl(win, "backingScaleFactor");
+    sw->scale_milli = sf > 0.0 ? (int)(sf * 1000.0 + 0.5) : 1000;
+    return (long long)(intptr_t)sw;
+}
+
+long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
+    return spec_pal_window_open_ex(title_cstr, width, height, decorated, 0);
+}
+
+long long spec_pal_window_display_handle(long long handle) {
+    (void)handle;
+    return 0;
+}
+
+long long spec_pal_window_surface_handle(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)(intptr_t)w->metal_layer : 0;
+}
+
+long long spec_pal_window_scale_milli(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->scale_milli : 1000;
+}
+
+long long spec_pal_window_poll_timeout(long long handle, long long timeout_ms) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || w->closed) return 0;
+    if (!_spec_m0_bool(w->nswindow, "isVisible")) {
+        w->closed = 1;
+        return 0;
+    }
+
+    id until = nil;
+    if (timeout_ms > 0) {
+        until = _spec_m1_dbl((id)_spec_objc_getClass("NSDate"), "dateWithTimeIntervalSinceNow:", (double)timeout_ms / 1000.0);
+    } else {
+        until = _spec_m0((id)_spec_objc_getClass("NSDate"), "distantPast");
+    }
+
+    for (;;) {
+        id ev = ((id (*)(id, SEL, unsigned long, id, id, signed char))_spec_objc_msgSend)(
+            _spec_mac_nsapp,
+            _spec_sel_registerName("nextEventMatchingMask:untilDate:inMode:dequeue:"),
+            0xFFFFFFFFFFFFFFFFULL, until, _spec_mac_default_mode, 1
+        );
+        if (!ev) break;
+        until = _spec_m0((id)_spec_objc_getClass("NSDate"), "distantPast");
+
+        unsigned long etype = _spec_m0_u64(ev, "type");
+        unsigned long mflags = _spec_m0_u64(ev, "modifierFlags");
+        w->mods = _spec_mac_translate_mods(mflags);
+
+        CGRect cr = _spec_m0_rect(w->content_view, "bounds");
+        if (cr.size.width > 0 && cr.size.height > 0) {
+            w->width = (int)cr.size.width;
+            w->height = (int)cr.size.height;
+        }
+        double sf = _spec_m0_dbl(w->nswindow, "backingScaleFactor");
+        if (sf > 0.0) w->scale_milli = (int)(sf * 1000.0 + 0.5);
+
+        if (etype == 1 || etype == 2 || etype == 3 || etype == 5 || etype == 6 || etype == 7) {
+            CGPoint pt = _spec_m0_pt(ev, "locationInWindow");
+            int px = (int)pt.x;
+            int py = w->height - (int)pt.y;
+            w->pointer_x = px;
+            w->pointer_y = py;
+            if (etype == 1) {
+                w->pointer_down = 1;
+                w->click_pending = 1;
+                w->click_x = px;
+                w->click_y = py;
+                _spec_mac_push_ev(w, 1, px, py, 1, w->mods);
+            } else if (etype == 2) {
+                w->pointer_down = 0;
+                _spec_mac_push_ev(w, 2, px, py, 1, w->mods);
+            } else if (etype == 3) {
+                w->rclick_pending = 1;
+                w->rclick_x = px;
+                w->rclick_y = py;
+                _spec_mac_push_ev(w, 1, px, py, 2, w->mods);
+            } else {
+                _spec_mac_push_ev(w, 3, px, py, 0, w->mods);
+            }
+        } else if (etype == 10) { /* KeyDown */
+            unsigned short kc = (unsigned short)_spec_m0_u64(ev, "keyCode");
+            int tk = _spec_mac_translate_keycode(kc);
+            _spec_mac_push_key(w, tk);
+            _spec_mac_push_ev(w, 4, tk, 1, w->mods, 0);
+            id chars = _spec_m0(ev, "characters");
+            const char* u8 = chars ? _spec_m0_cstr(chars, "UTF8String") : NULL;
+            if (u8 && (unsigned char)u8[0] >= 32 && (unsigned char)u8[0] != 127) {
+                _spec_mac_push_char(w, (unsigned char)u8[0]);
+            }
+        } else if (etype == 22) { /* ScrollWheel */
+            double dx = _spec_m0_dbl(ev, "scrollingDeltaX");
+            double dy = _spec_m0_dbl(ev, "scrollingDeltaY");
+            w->scroll_x += (int)dx;
+            w->scroll_y += (int)dy;
+        }
+
+        _spec_m1_id(_spec_mac_nsapp, "sendEvent:", ev);
+    }
+    _spec_m0(_spec_mac_nsapp, "updateWindows");
+
+    if (!_spec_m0_bool(w->nswindow, "isVisible")) {
+        w->closed = 1;
+        return 0;
+    }
+    return 1;
+}
+
+long long spec_pal_window_poll(long long handle) {
+    return spec_pal_window_poll_timeout(handle, 0);
+}
+
+long long spec_pal_window_close(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w) return 0;
+    if (!w->closed && w->nswindow) {
+        _spec_m1_id(w->nswindow, "close", nil);
+        _spec_m0(w->nswindow, "release");
+    }
+    if (w->clip_utf8) free(w->clip_utf8);
+    free(w);
+    return 0;
+}
+
+long long spec_pal_window_next_key(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || w->key_head == w->key_tail) return 0;
+    int k = w->key_queue[w->key_head];
+    w->key_head = (w->key_head + 1) % SPEC_MAC_KEY_QUEUE_CAP;
+    return (long long)k;
+}
+
+long long spec_pal_window_next_char(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || w->char_head == w->char_tail) return 0;
+    int ch = w->char_queue[w->char_head];
+    w->char_head = (w->char_head + 1) % SPEC_MAC_KEY_QUEUE_CAP;
+    return (long long)ch;
+}
+
+long long spec_pal_window_width(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->width : 0;
+}
+
+long long spec_pal_window_height(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->height : 0;
+}
+
+long long spec_pal_window_pointer_x(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->pointer_x : 0;
+}
+
+long long spec_pal_window_pointer_y(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->pointer_y : 0;
+}
+
+long long spec_pal_window_poll_click(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || !w->click_pending) return 0;
+    w->click_pending = 0;
+    return 1;
+}
+
+long long spec_pal_window_click_x(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->click_x : 0;
+}
+
+long long spec_pal_window_click_y(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->click_y : 0;
+}
+
+long long spec_pal_window_poll_right_click(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || !w->rclick_pending) return 0;
+    w->rclick_pending = 0;
+    return 1;
+}
+
+long long spec_pal_window_right_click_x(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->rclick_x : 0;
+}
+
+long long spec_pal_window_right_click_y(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->rclick_y : 0;
+}
+
+long long spec_pal_window_poll_event(long long handle, long long out_5_i32_ptr) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || w->ev_head == w->ev_tail || !out_5_i32_ptr) return 0;
+    int* out = (int*)(intptr_t)out_5_i32_ptr;
+    SpecMacEvent e = w->ev_queue[w->ev_head];
+    w->ev_head = (w->ev_head + 1) % SPEC_MAC_EV_QUEUE_CAP;
+    out[0] = e.type; out[1] = e.a; out[2] = e.b; out[3] = e.c; out[4] = e.d;
+    return 1;
+}
+
+long long spec_pal_window_poll_scroll_y(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w) return 0;
+    int v = w->scroll_y;
+    w->scroll_y = 0;
+    return (long long)v;
+}
+
+long long spec_pal_window_poll_scroll_x(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w) return 0;
+    int v = w->scroll_x;
+    w->scroll_x = 0;
+    return (long long)v;
+}
+
+long long spec_pal_window_pointer_down(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->pointer_down : 0;
+}
+
+long long spec_pal_window_set_title(long long handle, long long title_cstr) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    const char* t = (const char*)(intptr_t)title_cstr;
+    if (!w || !w->nswindow || !t) return 0;
+    id ns = _spec_m1_ptr((id)_spec_objc_getClass("NSString"), "stringWithUTF8String:", t);
+    _spec_m1_id(w->nswindow, "setTitle:", ns);
+    return 1;
+}
+
+long long spec_pal_window_mods(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    return w ? (long long)w->mods : 0;
+}
+
+long long spec_pal_window_set_cursor(long long handle, long long kind) {
+    (void)handle;
+    id cls = (id)_spec_objc_getClass("NSCursor");
+    if (!cls) return 0;
+    id cur = nil;
+    if (kind == 1) cur = _spec_m0(cls, "pointingHandCursor");
+    else if (kind == 2) cur = _spec_m0(cls, "IBeamCursor");
+    else if (kind == 3) cur = _spec_m0(cls, "resizeLeftRightCursor");
+    else if (kind == 4) cur = _spec_m0(cls, "resizeUpDownCursor");
+    else cur = _spec_m0(cls, "arrowCursor");
+    if (cur) _spec_m0(cur, "set");
+    return 1;
+}
+
+long long spec_pal_window_set_min_size(long long handle, long long min_w, long long min_h) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || !w->nswindow) return 0;
+    w->min_w = (int)min_w;
+    w->min_h = (int)min_h;
+    CGSize sz = CGSizeMake((double)(min_w > 0 ? min_w : 0), (double)(min_h > 0 ? min_h : 0));
+    ((void (*)(id, SEL, CGSize))_spec_objc_msgSend)(w->nswindow, _spec_sel_registerName("setContentMinSize:"), sz);
+    return 1;
+}
+
+long long spec_pal_window_set_app_id(long long handle, long long app_id_cstr) {
+    (void)handle; (void)app_id_cstr;
+    return 1;
+}
+
+long long spec_pal_window_set_icon(long long handle, long long pixels_addr, long long width, long long height) {
+    (void)handle; (void)pixels_addr; (void)width; (void)height;
+    return 1;
+}
+
+long long spec_pal_window_set_clipboard(long long handle, long long text_cstr) {
+    (void)handle;
+    const char* t = (const char*)(intptr_t)text_cstr;
+    if (!t || !_spec_mac_pb_string_type) return 0;
+    id pb = _spec_m0((id)_spec_objc_getClass("NSPasteboard"), "generalPasteboard");
+    if (!pb) return 0;
+    _spec_m0(pb, "clearContents");
+    id ns = _spec_m1_ptr((id)_spec_objc_getClass("NSString"), "stringWithUTF8String:", t);
+    ((signed char (*)(id, SEL, id, id))_spec_objc_msgSend)(pb, _spec_sel_registerName("setString:forType:"), ns, _spec_mac_pb_string_type);
+    return 1;
+}
+
+long long spec_pal_window_get_clipboard(long long handle) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || !_spec_mac_pb_string_type) return 0;
+    id pb = _spec_m0((id)_spec_objc_getClass("NSPasteboard"), "generalPasteboard");
+    if (!pb) return 0;
+    id ns = _spec_m1_id(pb, "stringForType:", _spec_mac_pb_string_type);
+    const char* u8 = ns ? _spec_m0_cstr(ns, "UTF8String") : NULL;
+    if (!u8) return 0;
+    if (w->clip_utf8) free(w->clip_utf8);
+    w->clip_utf8 = strdup(u8);
+    return (long long)(intptr_t)w->clip_utf8;
+}
+
+long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
+    SpecMacWindow* w = (SpecMacWindow*)(intptr_t)handle;
+    if (!w || !w->content_view || !pixels_addr || width <= 0 || height <= 0) return 0;
+    if (!_spec_cg_cs_rgb || !_spec_cg_dp_create || !_spec_cg_img_create) return 0;
+    id layer = _spec_m0(w->content_view, "layer");
+    if (!layer) return 0;
+    CGColorSpaceRef cs = _spec_cg_cs_rgb();
+    CGDataProviderRef dp = _spec_cg_dp_create(NULL, (const void*)(intptr_t)pixels_addr, (size_t)(width * height * 4), NULL);
+    CGImageRef img = _spec_cg_img_create(
+        (size_t)width, (size_t)height, 8, 32, (size_t)(width * 4),
+        cs, (CGBitmapInfo)(kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst),
+        dp, NULL, false, kCGRenderingIntentDefault
+    );
+    if (img) {
+        _spec_m1_ptr(layer, "setContents:", (const void*)img);
+        _spec_cg_img_rel(img);
+    }
+    if (dp) _spec_cg_dp_rel(dp);
+    if (cs) _spec_cg_cs_rel(cs);
+    return img ? 1 : 0;
+}
+
 #else
 
 long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
@@ -6374,16 +6947,26 @@ long long spec_pal_font_default_path(long long out_buf, long long out_cap) { (vo
 long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) { (void)mono; (void)bold; (void)italic; (void)out_buf; (void)out_cap; return 0; }
 
 #endif
-/* Runtime Vulkan backend for Linux (Wayland WSI) and Windows (Win32 WSI).
- * Loads libvulkan.so.1 / vulkan-1.dll dynamically; zero compile-time dependency on <vulkan/vulkan.h>.
+/* Runtime Vulkan backend for Linux (Wayland WSI), Windows (Win32 WSI), and macOS (Metal WSI).
+ * Loads libvulkan / vulkan-1.dll / libMoltenVK.dylib dynamically; zero compile-time dependency on <vulkan/vulkan.h>.
  */
 
-#if defined(__linux__) || defined(_WIN32)
+#if defined(__linux__) || defined(_WIN32) || (defined(__APPLE__) && defined(__MACH__))
 
 #if defined(_WIN32)
 #define _spec_vk_dlopen() ((void*)LoadLibraryA("vulkan-1.dll"))
 #define _spec_vk_dlsym(lib, name) ((void*)GetProcAddress((HMODULE)(lib), (name)))
 #define _spec_vk_dlclose(lib) FreeLibrary((HMODULE)(lib))
+#elif defined(__APPLE__)
+static inline void* _spec_vk_dlopen(void) {
+    void* h = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!h) h = dlopen("libMoltenVK.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!h) h = dlopen("/opt/homebrew/lib/libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!h) h = dlopen("/usr/local/lib/libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+    return h;
+}
+#define _spec_vk_dlsym(lib, name) dlsym((lib), (name))
+#define _spec_vk_dlclose(lib) dlclose((lib))
 #else
 #define _spec_vk_dlopen() dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL)
 #define _spec_vk_dlsym(lib, name) dlsym((lib), (name))
@@ -6596,6 +7179,14 @@ typedef struct {
     HINSTANCE hinstance;
     HWND hwnd;
 } SpecVkWin32SurfaceCreateInfoKHR;
+#elif defined(__APPLE__)
+#define SPEC_VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT 1000217000U
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags flags;
+    const void* pLayer;
+} SpecVkMetalSurfaceCreateInfoEXT;
 #endif
 
 typedef struct {
@@ -7163,6 +7754,8 @@ typedef void (*PFN_spec_vkDestroyInstance)(SpecVkInstance, const void*);
 typedef SpecVkResult (*PFN_spec_vkCreateWaylandSurfaceKHR)(SpecVkInstance, const SpecVkWaylandSurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
 #if defined(_WIN32)
 typedef SpecVkResult (*PFN_spec_vkCreateWin32SurfaceKHR)(SpecVkInstance, const SpecVkWin32SurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
+#elif defined(__APPLE__)
+typedef SpecVkResult (*PFN_spec_vkCreateMetalSurfaceEXT)(SpecVkInstance, const SpecVkMetalSurfaceCreateInfoEXT*, const void*, SpecVkSurfaceKHR*);
 #endif
 typedef void (*PFN_spec_vkDestroySurfaceKHR)(SpecVkInstance, SpecVkSurfaceKHR, const void*);
 typedef SpecVkResult (*PFN_spec_vkEnumeratePhysicalDevices)(SpecVkInstance, uint32_t*, SpecVkPhysicalDevice*);
@@ -7249,6 +7842,8 @@ typedef struct {
     PFN_spec_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
 #if defined(_WIN32)
     PFN_spec_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
+#elif defined(__APPLE__)
+    PFN_spec_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 #endif
     PFN_spec_vkDestroySurfaceKHR vkDestroySurfaceKHR;
     PFN_spec_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
@@ -7462,6 +8057,8 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
     LOAD_IPROC(vkDestroyInstance);
 #if defined(_WIN32)
     LOAD_IPROC_KHR(vkCreateWin32SurfaceKHR);
+#elif defined(__APPLE__)
+    LOAD_IPROC_KHR(vkCreateMetalSurfaceEXT);
 #else
     LOAD_IPROC_KHR(vkCreateWaylandSurfaceKHR);
 #endif
@@ -7816,14 +8413,22 @@ long long spec_pal_vulkan_create(
 
 #if defined(_WIN32)
     const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_win32_surface" };
+    uint32_t ext_count = 2U;
+#elif defined(__APPLE__)
+    const char* inst_exts[3] = { "VK_KHR_surface", "VK_EXT_metal_surface", "VK_KHR_portability_enumeration" };
+    uint32_t ext_count = 3U;
 #else
     const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_wayland_surface" };
+    uint32_t ext_count = 2U;
 #endif
     SpecVkInstanceCreateInfo ici;
     memset(&ici, 0, sizeof(ici));
     ici.sType = SPEC_VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+#if defined(__APPLE__)
+    ici.flags = 0x00000001U; /* VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR */
+#endif
     ici.pApplicationInfo = &app;
-    ici.enabledExtensionCount = is_offscreen ? 0U : 2U;
+    ici.enabledExtensionCount = is_offscreen ? 0U : ext_count;
     ici.ppEnabledExtensionNames = is_offscreen ? NULL : inst_exts;
 
     if (ctx->vkCreateInstance(&ici, NULL, &ctx->instance) != SPEC_VK_SUCCESS) {
@@ -7847,6 +8452,15 @@ long long spec_pal_vulkan_create(
         wsci.hwnd = (HWND)(intptr_t)wl_surface;
         if (ctx->vkCreateWin32SurfaceKHR(ctx->instance, &wsci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
             _spec_vk_set_error("vkCreateWin32SurfaceKHR failed");
+            goto fail;
+        }
+#elif defined(__APPLE__)
+        SpecVkMetalSurfaceCreateInfoEXT msci;
+        memset(&msci, 0, sizeof(msci));
+        msci.sType = SPEC_VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
+        msci.pLayer = (const void*)(intptr_t)wl_surface;
+        if (ctx->vkCreateMetalSurfaceEXT(ctx->instance, &msci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
+            _spec_vk_set_error("vkCreateMetalSurfaceEXT failed");
             goto fail;
         }
 #else

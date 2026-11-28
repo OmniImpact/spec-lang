@@ -74,6 +74,10 @@ jobs:
       - name: Regression suite
         run: |
           bin/specunit -s bin/spec -t test -t testcompiler
+      - name: Build GUI apps
+        run: |
+          bin/spec -i examples/specedit/src/SpecEdit.spec -o bin/specedit
+          bin/spec -i examples/suitshape3d/src/SuitShape3D.spec -o bin/suitshape3d
       - name: Package macOS Artifact
         run: |
           ARCH=$(uname -m)

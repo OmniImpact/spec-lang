@@ -1,13 +1,23 @@
-/* Runtime Vulkan backend for Linux (Wayland WSI) and Windows (Win32 WSI).
- * Loads libvulkan.so.1 / vulkan-1.dll dynamically; zero compile-time dependency on <vulkan/vulkan.h>.
+/* Runtime Vulkan backend for Linux (Wayland WSI), Windows (Win32 WSI), and macOS (Metal WSI).
+ * Loads libvulkan / vulkan-1.dll / libMoltenVK.dylib dynamically; zero compile-time dependency on <vulkan/vulkan.h>.
  */
 
-#if defined(__linux__) || defined(_WIN32)
+#if defined(__linux__) || defined(_WIN32) || (defined(__APPLE__) && defined(__MACH__))
 
 #if defined(_WIN32)
 #define _spec_vk_dlopen() ((void*)LoadLibraryA("vulkan-1.dll"))
 #define _spec_vk_dlsym(lib, name) ((void*)GetProcAddress((HMODULE)(lib), (name)))
 #define _spec_vk_dlclose(lib) FreeLibrary((HMODULE)(lib))
+#elif defined(__APPLE__)
+static inline void* _spec_vk_dlopen(void) {
+    void* h = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!h) h = dlopen("libMoltenVK.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!h) h = dlopen("/opt/homebrew/lib/libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+    if (!h) h = dlopen("/usr/local/lib/libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+    return h;
+}
+#define _spec_vk_dlsym(lib, name) dlsym((lib), (name))
+#define _spec_vk_dlclose(lib) dlclose((lib))
 #else
 #define _spec_vk_dlopen() dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL)
 #define _spec_vk_dlsym(lib, name) dlsym((lib), (name))
@@ -220,6 +230,14 @@ typedef struct {
     HINSTANCE hinstance;
     HWND hwnd;
 } SpecVkWin32SurfaceCreateInfoKHR;
+#elif defined(__APPLE__)
+#define SPEC_VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT 1000217000U
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags flags;
+    const void* pLayer;
+} SpecVkMetalSurfaceCreateInfoEXT;
 #endif
 
 typedef struct {
@@ -787,6 +805,8 @@ typedef void (*PFN_spec_vkDestroyInstance)(SpecVkInstance, const void*);
 typedef SpecVkResult (*PFN_spec_vkCreateWaylandSurfaceKHR)(SpecVkInstance, const SpecVkWaylandSurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
 #if defined(_WIN32)
 typedef SpecVkResult (*PFN_spec_vkCreateWin32SurfaceKHR)(SpecVkInstance, const SpecVkWin32SurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
+#elif defined(__APPLE__)
+typedef SpecVkResult (*PFN_spec_vkCreateMetalSurfaceEXT)(SpecVkInstance, const SpecVkMetalSurfaceCreateInfoEXT*, const void*, SpecVkSurfaceKHR*);
 #endif
 typedef void (*PFN_spec_vkDestroySurfaceKHR)(SpecVkInstance, SpecVkSurfaceKHR, const void*);
 typedef SpecVkResult (*PFN_spec_vkEnumeratePhysicalDevices)(SpecVkInstance, uint32_t*, SpecVkPhysicalDevice*);
@@ -873,6 +893,8 @@ typedef struct {
     PFN_spec_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
 #if defined(_WIN32)
     PFN_spec_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
+#elif defined(__APPLE__)
+    PFN_spec_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 #endif
     PFN_spec_vkDestroySurfaceKHR vkDestroySurfaceKHR;
     PFN_spec_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
@@ -1086,6 +1108,8 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
     LOAD_IPROC(vkDestroyInstance);
 #if defined(_WIN32)
     LOAD_IPROC_KHR(vkCreateWin32SurfaceKHR);
+#elif defined(__APPLE__)
+    LOAD_IPROC_KHR(vkCreateMetalSurfaceEXT);
 #else
     LOAD_IPROC_KHR(vkCreateWaylandSurfaceKHR);
 #endif
@@ -1440,14 +1464,22 @@ long long spec_pal_vulkan_create(
 
 #if defined(_WIN32)
     const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_win32_surface" };
+    uint32_t ext_count = 2U;
+#elif defined(__APPLE__)
+    const char* inst_exts[3] = { "VK_KHR_surface", "VK_EXT_metal_surface", "VK_KHR_portability_enumeration" };
+    uint32_t ext_count = 3U;
 #else
     const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_wayland_surface" };
+    uint32_t ext_count = 2U;
 #endif
     SpecVkInstanceCreateInfo ici;
     memset(&ici, 0, sizeof(ici));
     ici.sType = SPEC_VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+#if defined(__APPLE__)
+    ici.flags = 0x00000001U; /* VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR */
+#endif
     ici.pApplicationInfo = &app;
-    ici.enabledExtensionCount = is_offscreen ? 0U : 2U;
+    ici.enabledExtensionCount = is_offscreen ? 0U : ext_count;
     ici.ppEnabledExtensionNames = is_offscreen ? NULL : inst_exts;
 
     if (ctx->vkCreateInstance(&ici, NULL, &ctx->instance) != SPEC_VK_SUCCESS) {
@@ -1471,6 +1503,15 @@ long long spec_pal_vulkan_create(
         wsci.hwnd = (HWND)(intptr_t)wl_surface;
         if (ctx->vkCreateWin32SurfaceKHR(ctx->instance, &wsci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
             _spec_vk_set_error("vkCreateWin32SurfaceKHR failed");
+            goto fail;
+        }
+#elif defined(__APPLE__)
+        SpecVkMetalSurfaceCreateInfoEXT msci;
+        memset(&msci, 0, sizeof(msci));
+        msci.sType = SPEC_VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
+        msci.pLayer = (const void*)(intptr_t)wl_surface;
+        if (ctx->vkCreateMetalSurfaceEXT(ctx->instance, &msci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
+            _spec_vk_set_error("vkCreateMetalSurfaceEXT failed");
             goto fail;
         }
 #else
