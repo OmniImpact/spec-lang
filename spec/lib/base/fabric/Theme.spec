@@ -635,6 +635,18 @@ Class is Theme{
 		);
 	}
 
+	## Resolves the fill style for a tab item, keeping the active tab elevated/brighter
+	## and inactive tabs recessed in both light and dark themes.
+	Function of FillStyle is resolveTabFill(Boolean is active, Boolean is hovered: false){
+		if({ background:isLight() }, {
+			if({ active }, {
+				return if({ customSurfaceFill }, { surfaceFill }, { FillStyle(mode: FillMode:SOLID, colorA: surface) });
+			});
+			return :resolveButtonFill(enabled: true, selected: true, hovered: hovered);
+		});
+		return :resolveButtonFill(enabled: true, selected: active, hovered: hovered);
+	}
+
 	Function of Int is linePx(Float is scaleFactor: 1.0){
 		if({ lineThicknessPt <= 0.0 }, { return 0; });
 		local Float is sf: if({ scaleFactor > 0.0 }, { scaleFactor }, { 1.0 });

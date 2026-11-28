@@ -170,4 +170,22 @@ Class of SpecUnitTest is TestFabricTheme{
 		Assert:isTrue(rssAfter - rssBefore < 1024);
 		canvas:dispose();
 	}
+
+	Function is testThemeResolveTabFillLightAndDark(){
+		local Theme is lightTheme: Theme:forPreset(preset: ThemePreset:LIGHT);
+		local FillStyle is lAct: lightTheme:resolveTabFill(active: true, hovered: false);
+		local FillStyle is lInact: lightTheme:resolveTabFill(active: false, hovered: false);
+		local Int is lActLum: lAct:applyEffects(c: lAct:colorA):red();
+		local Int is lInactLum: lInact:applyEffects(c: lInact:colorA):red();
+		# In light theme, active tab is brighter than recessed inactive tab
+		Assert:isTrue(lActLum > lInactLum);
+
+		local Theme is darkTheme: Theme:forPreset(preset: ThemePreset:DARK);
+		local FillStyle is dAct: darkTheme:resolveTabFill(active: true, hovered: false);
+		local FillStyle is dInact: darkTheme:resolveTabFill(active: false, hovered: false);
+		local Int is dActLum: dAct:applyEffects(c: dAct:colorA):red();
+		local Int is dInactLum: dInact:applyEffects(c: dInact:colorA):red();
+		# In dark theme, active tab is also brighter than inactive tab
+		Assert:isTrue(dActLum > dInactLum);
+	}
 }
