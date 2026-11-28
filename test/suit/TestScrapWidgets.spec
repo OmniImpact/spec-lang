@@ -228,6 +228,32 @@ Class of SpecUnitTest is TestScrapWidgets{
 		Assert:isTrue(sp:progress > 0.74 && sp:progress < 0.76);
 	}
 
+	Function is testSwitchOnInnerCornerRounding(){
+		local Theme is t: Theme:forPreset(preset: ThemePreset:DARK);
+		t:setButtonCornerRadiusPt(pt: 6.0);
+		t:setButtonBorderThicknessPt(pt: 1.0);
+		local Switch is sw: Switch(checked: true);
+		sw:applyTheme(theme: t);
+		sw:arrange(bounds: Rect(x: 10, y: 10, width: 40, height: 24));
+		local SuitCanvas is canvas: SuitCanvas(width: 80, height: 60);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+		local Int is bg: 255 << 24;
+		canvas:clear(color: bg);
+		sw:paint(ctx: ctx);
+
+		local Int is pad: t:padPt(pct: 0.5) as Int;
+		if({ pad < 2 }, { pad: 2; });
+		local Int is sq: 24 - pad * 2;
+		local Int is rx: 10 + 40 - pad - sq;
+		local Int is ry: 10 + (24 - sq) / 2;
+		local Int is px: canvas:pixelsAddr();
+		local Int is centerCol: loadI32(ptr: px, byteOffset: ((ry + sq / 2) * 80 + (rx + sq / 2)) * 4);
+		local Int is cornerCol: loadI32(ptr: px, byteOffset: (ry * 80 + rx) * 4);
+		Assert:areEqualInt(t:textPrimary, centerCol);
+		Assert:isTrue(cornerCol != t:textPrimary);
+		canvas:dispose();
+	}
+
 	Function is testSegmentedSectionRoundingAndClipBalance(){
 		local Theme is t: Theme:forPreset(preset: ThemePreset:DARK);
 		t:setButtonCornerRadiusPt(pt: 10.0);
