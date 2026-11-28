@@ -1122,6 +1122,71 @@ define internal void @spec_simd_clamp4(i64 %dst, i64 %a, double %lo, double %hi)
   %pd = inttoptr i64 %dst to ptr
   store <4 x double> %r2, ptr %pd, align 8
   ret void
+}
+declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
+declare <4 x double> @llvm.fabs.v4f64(<4 x double>)
+define internal void @spec_simd_axpy4(i64 %dst, i64 %a, double %s, i64 %c) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %v0 = insertelement <4 x double> poison, double %s, i32 0
+  %vs = shufflevector <4 x double> %v0, <4 x double> poison, <4 x i32> zeroinitializer
+  %pc = inttoptr i64 %c to ptr
+  %vc = load <4 x double>, ptr %pc, align 8
+  %vm = fmul <4 x double> %va, %vs
+  %vr = fadd <4 x double> %vm, %vc
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal double @spec_simd_sum4(i64 %a) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %e0 = extractelement <4 x double> %va, i32 0
+  %e1 = extractelement <4 x double> %va, i32 1
+  %e2 = extractelement <4 x double> %va, i32 2
+  %e3 = extractelement <4 x double> %va, i32 3
+  %s01 = fadd double %e0, %e1
+  %s23 = fadd double %e2, %e3
+  %sum = fadd double %s01, %s23
+  ret double %sum
+}
+define internal void @spec_simd_sqrt4(i64 %dst, i64 %a) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %vr = call <4 x double> @llvm.sqrt.v4f64(<4 x double> %va)
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_abs4(i64 %dst, i64 %a) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %vr = call <4 x double> @llvm.fabs.v4f64(<4 x double> %va)
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_min4(i64 %dst, i64 %a, i64 %b) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %pb = inttoptr i64 %b to ptr
+  %vb = load <4 x double>, ptr %pb, align 8
+  %c = fcmp olt <4 x double> %va, %vb
+  %vr = select <4 x i1> %c, <4 x double> %va, <4 x double> %vb
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
+}
+define internal void @spec_simd_max4(i64 %dst, i64 %a, i64 %b) alwaysinline {
+  %pa = inttoptr i64 %a to ptr
+  %va = load <4 x double>, ptr %pa, align 8
+  %pb = inttoptr i64 %b to ptr
+  %vb = load <4 x double>, ptr %pb, align 8
+  %c = fcmp ogt <4 x double> %va, %vb
+  %vr = select <4 x i1> %c, <4 x double> %va, <4 x double> %vb
+  %pd = inttoptr i64 %dst to ptr
+  store <4 x double> %vr, ptr %pd, align 8
+  ret void
 }''';
 	}
 

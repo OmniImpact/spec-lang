@@ -4,7 +4,8 @@ Class of SpecUnitTest is TestFabricTheme{
 	merge [[String]] is using: [
 		['specunit', [SpecUnitTest, as Assert()]],
 		['base', 'sys', as Mem()],
-		['base', 'fabric', [Color, Theme, ThemePreset, StrokeStyle, BorderStyleBox, ShadowStyle, DrawContext]],
+		['base', 'sys', as Process()],
+		['base', 'fabric', [Color, Theme, ThemePreset, StrokeStyle, BorderStyleBox, ShadowStyle, DrawContext, FillStyle, FillMode, GradientBounds]],
 		['base', 'suit', SuitCanvas]
 	];
 
@@ -93,6 +94,80 @@ Class of SpecUnitTest is TestFabricTheme{
 		# Clipped column (x=3) must remain black
 		Assert:areEqualInt(black, loadI32(ptr: dst, byteOffset: (2 * 10 + 3) * 4));
 		free(ptr: src);
+		canvas:dispose();
+	}
+
+	Function is testRadialGradientSimdParallelSymmetryClipAndTails(){
+		# 200x160 canvas; 183x137 radial gradient (>16384 px -> triggers 4-thread ThreadScope + SIMD + tail)
+		local SuitCanvas is canvas: SuitCanvas(width: 200, height: 160);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+		local Int is bg: (255 << 24);
+		canvas:clear(color: bg);
+
+		local FillStyle is fill: FillStyle(
+			mode: FillMode:RADIAL,
+			colorA: Color(r: 255, g: 0, b: 0),
+			colorB: Color(r: 0, g: 0, b: 255),
+			blendWidth: 0.6,
+			bounds: GradientBounds:INSCRIBE
+		);
+		# Odd rect dimensions + rounded corners + clip
+		ctx:setClip(x: 11, y: 9, w: 175, h: 131);
+		ctx:fillRoundRectStyled(x: 7, y: 5, w: 183, h: 137, radius: 11, fill: fill);
+		ctx:clearClip();
+
+		local Int is px: canvas:pixelsAddr();
+		# Outside clip (x=9, y=50) must stay untouched background
+		Assert:areEqualInt(bg, loadI32(ptr: px, byteOffset: (50 * 200 + 9) * 4));
+		# Center pixel (7 + 91 = 98, 5 + 68 = 73) should be pure red (colorA)
+		local Int is centerCol: loadI32(ptr: px, byteOffset: (73 * 200 + 98) * 4);
+		local Int is cR: (centerCol >> 16) & 255;
+		local Int is cB: centerCol & 255;
+		Assert:isTrue(cR > 240);
+		Assert:isTrue(cB < 15);
+		# Left/right symmetry across center (proves 4-thread SIMD scratch isolation & tail parity)
+		local Int is leftCol: loadI32(ptr: px, byteOffset: (73 * 200 + (98 - 35)) * 4);
+		local Int is rightCol: loadI32(ptr: px, byteOffset: (73 * 200 + (98 + 35)) * 4);
+		Assert:areEqualInt(leftCol, rightCol);
+		# Top/bottom symmetry across ThreadScope bands
+		local Int is topCol: loadI32(ptr: px, byteOffset: ((73 - 30) * 200 + 98) * 4);
+		local Int is botCol: loadI32(ptr: px, byteOffset: ((73 + 30) * 200 + 98) * 4);
+		Assert:areEqualInt(topCol, botCol);
+		canvas:dispose();
+	}
+
+	Function is testShadowCornerSimdSymmetryAndNoLeak(){
+		local SuitCanvas is canvas: SuitCanvas(width: 120, height: 100);
+		local DrawContext is ctx: DrawContext(canvas: canvas);
+		local Int is white: (255 << 24) | (255 << 16) | (255 << 8) | 255;
+		canvas:clear(color: white);
+		local Int is shCol: (160 << 24);
+		# blur=9, radius=4 -> cornerW = 13 (3*4 SIMD + 1 scalar tail)
+		ctx:drawShadow(x: 20, y: 20, w: 61, h: 43, radius: 4, offsetX: 0, offsetY: 0, blurRadius: 9, color: shCol);
+		local Int is px: canvas:pixelsAddr();
+		# Verify exact 4-way corner symmetry on both SIMD lanes (dx=2) and tail lane (dx=12)
+		local Int is tl1: loadI32(ptr: px, byteOffset: ((20 - 9 + 2) * 120 + (20 - 9 + 2)) * 4);
+		local Int is tr1: loadI32(ptr: px, byteOffset: ((20 - 9 + 2) * 120 + (20 + 61 + 9 - 1 - 2)) * 4);
+		local Int is bl1: loadI32(ptr: px, byteOffset: ((20 + 43 + 9 - 1 - 2) * 120 + (20 - 9 + 2)) * 4);
+		local Int is br1: loadI32(ptr: px, byteOffset: ((20 + 43 + 9 - 1 - 2) * 120 + (20 + 61 + 9 - 1 - 2)) * 4);
+		Assert:areEqualInt(tl1, tr1);
+		Assert:areEqualInt(tl1, bl1);
+		Assert:areEqualInt(tl1, br1);
+
+		local Int is tlTail: loadI32(ptr: px, byteOffset: ((20 - 9 + 12) * 120 + (20 - 9 + 12)) * 4);
+		local Int is brTail: loadI32(ptr: px, byteOffset: ((20 + 43 + 9 - 1 - 12) * 120 + (20 + 61 + 9 - 1 - 12)) * 4);
+		Assert:areEqualInt(tlTail, brTail);
+		Assert:isTrue(tlTail != white);
+
+		# Leak check: 400 shadow renders should not grow peak RSS materially
+		local Int is rssBefore: Process:peakMemoryKb();
+		local Int is i: 0;
+		while({ i < 400 }, {
+			ctx:drawShadow(x: 20, y: 20, w: 61, h: 43, radius: 4, offsetX: 0, offsetY: 0, blurRadius: 9, color: shCol);
+			i: i + 1;
+		});
+		local Int is rssAfter: Process:peakMemoryKb();
+		Assert:isTrue(rssAfter - rssBefore < 1024);
 		canvas:dispose();
 	}
 }

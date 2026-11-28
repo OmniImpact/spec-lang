@@ -833,4 +833,67 @@ Class is LlvmP10{
 		File:fileRemove(path: dataPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testNewSimdIntrinsicsLlvmLowering(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_simd_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_simd_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_simd_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: '''Class is LlvmSimdCheck{
+	replace [[String]] is using: [
+		['base', 'struct', Map],
+		['base', 'sys', as Mem()],
+		['base', 'sys', as Simd()],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Process()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Int is a: Mem:alloc(bytes: 32);
+		local Int is b: Mem:alloc(bytes: 32);
+		local Int is c: Mem:alloc(bytes: 32);
+		Simd:fill4(dst: a, val: -9.0);
+		Simd:fill4(dst: b, val: 2.0);
+		Simd:fill4(dst: c, val: 1.0);
+		Simd:abs4(dst: a, a: a);
+		Simd:sqrt4(dst: a, a: a);
+		Simd:axpy4(dst: c, a: a, scalar: 2.0, c: c);
+		Simd:min4(dst: b, a: c, b: b);
+		Simd:max4(dst: b, a: b, b: c);
+		local Float is s: Simd:sum4(a: b);
+		Mem:free(ptr: a);
+		Mem:free(ptr: b);
+		Mem:free(ptr: c);
+		if({ s < 27.9 || s > 28.1 }, { Process:exit(status: 2); });
+	}
+}
+''';
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: Array(['--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]));
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: 'define internal void @spec_simd_axpy4('));
+		Assert:isTrue(ll:contains(needle: 'define internal double @spec_simd_sum4('));
+		Assert:isTrue(ll:contains(needle: 'define internal void @spec_simd_sqrt4('));
+		Assert:isTrue(ll:contains(needle: 'define internal void @spec_simd_abs4('));
+		Assert:isTrue(ll:contains(needle: 'define internal void @spec_simd_min4('));
+		Assert:isTrue(ll:contains(needle: 'define internal void @spec_simd_max4('));
+		Assert:isTrue(ll:contains(needle: '@llvm.sqrt.v4f64'));
+		Assert:isTrue(ll:contains(needle: '@llvm.fabs.v4f64'));
+
+		local Int is runRc: Process:execute(command: binPath, args: Array());
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }

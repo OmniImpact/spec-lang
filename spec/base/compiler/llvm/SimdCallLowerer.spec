@@ -31,9 +31,10 @@ Class of SysinternalCallLowerer is SimdCallLowerer{
 		local Boolean is ok: false;
 		match(on: call:name, when: [
 			'init': { ok: true; },
-			['fill4', 'dot4']: { ok: argc >= 2; },
-			['add4', 'sub4', 'mul4', 'scale4']: { ok: argc >= 3; },
-			['fma4', 'clamp4']: { ok: argc >= 4; }
+			['sum4']: { ok: argc >= 1; },
+			['fill4', 'dot4', 'sqrt4', 'abs4']: { ok: argc >= 2; },
+			['add4', 'sub4', 'mul4', 'scale4', 'min4', 'max4']: { ok: argc >= 3; },
+			['fma4', 'axpy4', 'clamp4']: { ok: argc >= 4; }
 		]);
 		return ok;
 	}
@@ -90,6 +91,39 @@ Class of SysinternalCallLowerer is SimdCallLowerer{
 				local String is lo: :lowerNamedArg(b: b, call: call, argName: 'lo', posIdx: 2, defVal: '0.0');
 				local String is hi: :lowerNamedArg(b: b, call: call, argName: 'hi', posIdx: 3, defVal: '1.0');
 				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_simd_clamp4', argTypes: [IrType:I64, IrType:I64, IrType:F64, IrType:F64], args: [d, a, lo, hi]);
+			},
+			'axpy4': {
+				local String is d: :lowerNamedArg(b: b, call: call, argName: 'dst', posIdx: 0, defVal: '0');
+				local String is a: :lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 1, defVal: '0');
+				local String is s: :lowerNamedArg(b: b, call: call, argName: 'scalar', posIdx: 2, defVal: '0.0');
+				local String is c: :lowerNamedArg(b: b, call: call, argName: 'c', posIdx: 3, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_simd_axpy4', argTypes: [IrType:I64, IrType:I64, IrType:F64, IrType:I64], args: [d, a, s, c]);
+			},
+			'sum4': {
+				local String is a: :lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 0, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:F64, callee: 'spec_simd_sum4', argTypes: [IrType:I64], args: [a]);
+			},
+			'sqrt4': {
+				local String is d: :lowerNamedArg(b: b, call: call, argName: 'dst', posIdx: 0, defVal: '0');
+				local String is a: :lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 1, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_simd_sqrt4', argTypes: [IrType:I64, IrType:I64], args: [d, a]);
+			},
+			'abs4': {
+				local String is d: :lowerNamedArg(b: b, call: call, argName: 'dst', posIdx: 0, defVal: '0');
+				local String is a: :lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 1, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_simd_abs4', argTypes: [IrType:I64, IrType:I64], args: [d, a]);
+			},
+			'min4': {
+				local String is d: :lowerNamedArg(b: b, call: call, argName: 'dst', posIdx: 0, defVal: '0');
+				local String is a: :lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 1, defVal: '0');
+				local String is bArg: :lowerNamedArg(b: b, call: call, argName: 'b', posIdx: 2, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_simd_min4', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [d, a, bArg]);
+			},
+			'max4': {
+				local String is d: :lowerNamedArg(b: b, call: call, argName: 'dst', posIdx: 0, defVal: '0');
+				local String is a: :lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 1, defVal: '0');
+				local String is bArg: :lowerNamedArg(b: b, call: call, argName: 'b', posIdx: 2, defVal: '0');
+				res: :emitSysCall(b: b, retType: IrType:Void, callee: 'spec_simd_max4', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [d, a, bArg]);
 			}
 		]);
 		return res;

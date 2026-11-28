@@ -11,12 +11,6 @@ Class is Input{
 		['base', 'sysinternal', Console]
 	];
 
-	local Function of Boolean is hasClosure(Function is cb){
-		local Int is addr: Mem:objToAddr(obj: cb);
-		if({ addr == 0 }, { return false; });
-		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
-	}
-
 	## Reads one line of console input and dispatches it to
 	## [handler]'s onInput; at end of input nothing is dispatched.
 	##
@@ -36,7 +30,7 @@ Class is Input{
 		if({ lineAddr != 0 }, {
 			local String is text: Mem:strFromBytes(srcAddr: lineAddr, len: len);
 			base:sysinternal:Console:pal_console_free(ptr: lineAddr);
-			if({ :hasClosure(cb: onLine) }, {
+			if({ Mem:hasClosure(cb: onLine) }, {
 				onLine(text);
 			});
 		});

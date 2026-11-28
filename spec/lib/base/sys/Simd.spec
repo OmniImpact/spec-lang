@@ -47,4 +47,34 @@ Class is Simd{
 	Function is clamp4(Int is dst, Int is a, Float is lo, Float is hi){
 		base:sysinternal:Simd:clamp4(dst: dst, a: a, lo: lo, hi: hi);
 	}
+
+	## Computes `dst[0..3] = a[0..3] * scalar + c[0..3]`.
+	Function is axpy4(Int is dst, Int is a, Float is scalar, Int is c){
+		base:sysinternal:Simd:axpy4(dst: dst, a: a, scalar: scalar, c: c);
+	}
+
+	## Returns the horizontal sum `a[0] + a[1] + a[2] + a[3]`.
+	Function of Float is sum4(Int is a){
+		return base:sysinternal:Simd:sum4(a: a);
+	}
+
+	## Computes `dst[0..3] = sqrt(a[0..3])`.
+	Function is sqrt4(Int is dst, Int is a){
+		base:sysinternal:Simd:sqrt4(dst: dst, a: a);
+	}
+
+	## Computes `dst[0..3] = abs(a[0..3])`.
+	Function is abs4(Int is dst, Int is a){
+		base:sysinternal:Simd:abs4(dst: dst, a: a);
+	}
+
+	## Computes `dst[0..3] = min(a[0..3], b[0..3])`.
+	Function is min4(Int is dst, Int is a, Int is b){
+		base:sysinternal:Simd:min4(dst: dst, a: a, b: b);
+	}
+
+	## Computes `dst[0..3] = max(a[0..3], b[0..3])`.
+	Function is max4(Int is dst, Int is a, Int is b){
+		base:sysinternal:Simd:max4(dst: dst, a: a, b: b);
+	}
 }

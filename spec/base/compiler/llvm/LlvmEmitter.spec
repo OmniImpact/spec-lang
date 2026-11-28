@@ -156,7 +156,9 @@ Class is LlvmEmitter{
 			'spec_pal_random_bytes',
 			'spec_simd_fill4',
 			'spec_simd_add4', 'spec_simd_sub4', 'spec_simd_mul4', 'spec_simd_scale4',
-			'spec_simd_fma4', 'spec_simd_dot4', 'spec_simd_clamp4'
+			'spec_simd_fma4', 'spec_simd_dot4', 'spec_simd_clamp4',
+			'spec_simd_axpy4', 'spec_simd_sum4', 'spec_simd_sqrt4',
+			'spec_simd_abs4', 'spec_simd_min4', 'spec_simd_max4'
 		]);
 		times(count: preludeSyms:length(), worker: local Function(Int is pi){
 			known:set(key: preludeSyms:get(index: pi, default: ''), value: true);

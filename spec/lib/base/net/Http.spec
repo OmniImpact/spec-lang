@@ -24,12 +24,6 @@ Class is Http{
 		['base', 'struct', Map]
 	];
 
-	local Function of Boolean is hasClosure(Function is cb){
-		local Int is addr: Mem:objToAddr(obj: cb);
-		if({ addr == 0 }, { return false; });
-		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
-	}
-
 	local Function of String is decodeChunked(String is raw){
 		local [Byte] is out;
 		local Int is pos: 0;
@@ -206,13 +200,13 @@ Class is Http{
 			local Array of SpecError of HttpError is errOut: Array();
 			local String is rawResp: :exchangeOnce(u: curUrl, rawReq: rawReq, timeoutMs: curReq:timeoutMs, errOut: errOut);
 			if({ errOut:length() > 0 }, {
-				if({ :hasClosure(cb: onError) }, { onError(errOut:get(index: 0)); });
+				if({ Mem:hasClosure(cb: onError) }, { onError(errOut:get(index: 0)); });
 				resp: HttpResponse:init(status: 0, body: '');
 				return false;
 			});
 			resp: :parseResponse(rawResp: rawResp);
 			if({ resp:status == 0 }, {
-				if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: HttpError:INVALID_RESPONSE, description: 'Invalid HTTP response from ' . curUrl:toString())); });
+				if({ Mem:hasClosure(cb: onError) }, { onError(SpecError:init(kind: HttpError:INVALID_RESPONSE, description: 'Invalid HTTP response from ' . curUrl:toString())); });
 				return false;
 			});
 			if({ resp:isRedirect() && hops < req:maxRedirects }, {
@@ -234,10 +228,10 @@ Class is Http{
 		});
 		if({ resp:status < 200 || resp:status >= 400 }, {
 			local String is msg: 'HTTP ' . (resp:status as String) . ' for ' . curUrl:toString();
-			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: HttpError:HTTP_ERROR, description: msg)); });
+			if({ Mem:hasClosure(cb: onError) }, { onError(SpecError:init(kind: HttpError:HTTP_ERROR, description: msg)); });
 			return resp;
 		});
-		if({ :hasClosure(cb: onSuccess) }, { onSuccess(resp); });
+		if({ Mem:hasClosure(cb: onSuccess) }, { onSuccess(resp); });
 		return resp;
 	}
 

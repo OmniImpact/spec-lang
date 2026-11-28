@@ -7,7 +7,9 @@ Class is DrawContext{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
+		['base', 'sys', as Cpu()],
 		['base', 'sys', as Mem()],
+		['base', 'sys', as Simd()],
 		['base', 'sys', Font],
 		['base', 'sys', 'thread', ThreadScope],
 		['base', 'core', SpecError],
@@ -379,6 +381,57 @@ Class is DrawContext{
 		Mem:storeI32(ptr: pixelsPtr, byteOffset: off, val: (255 << 24) | (outR << 16) | (outG << 8) | outB);
 	}
 
+	local Function is blendFastFxPixel(
+		Int is pixelsPtr, Int is strideW,
+		Int is px, Int is py,
+		Int is cX0, Int is cY0, Int is cX1, Int is cY1,
+		Int is aR, Int is aG, Int is aB, Int is aA,
+		Int is bR, Int is bG, Int is bB, Int is bA,
+		Float is bri, Float is t, Float is cov
+	){
+		local Int is mr: (aR as Float + ((bR - aR) as Float) * t + 0.5) as Int;
+		local Int is mg: (aG as Float + ((bG - aG) as Float) * t + 0.5) as Int;
+		local Int is mb: (aB as Float + ((bB - aB) as Float) * t + 0.5) as Int;
+		local Int is ma: (aA as Float + ((bA - aA) as Float) * t + 0.5) as Int;
+		if({ bri > 0.0 }, {
+			local Float is amt: if({ bri > 1.0 }, { 1.0 }, { bri });
+			mr: mr + (((255 - mr) as Float) * amt + 0.5) as Int;
+			mg: mg + (((255 - mg) as Float) * amt + 0.5) as Int;
+			mb: mb + (((255 - mb) as Float) * amt + 0.5) as Int;
+		}, {
+		if({ bri < 0.0 }, {
+			local Float is amt: if({ bri < -1.0 }, { 1.0 }, { 0.0 - bri });
+			local Float is keep: 1.0 - amt;
+			mr: ((mr as Float) * keep + 0.5) as Int;
+			mg: ((mg as Float) * keep + 0.5) as Int;
+			mb: ((mb as Float) * keep + 0.5) as Int;
+		}); });
+		local Int is ab: if({ cov >= 1.0 }, { ma }, { (((ma as Float) * cov) + 0.5) as Int });
+		:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: px, py: py, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: mr, srcG: mg, srcB: mb, srcA: ab);
+	}
+
+	local Function is blendShadowCorner4Way(
+		Int is pixelsPtr, Int is strideW,
+		Int is sx, Int is sy, Int is w, Int is h, Int is blur,
+		Int is dx, Int is dy,
+		Int is cX0, Int is cY0, Int is cX1, Int is cY1,
+		Int is srcR, Int is srcG, Int is srcB, Int is baseA,
+		Float is u
+	){
+		if({ u <= 0.0 }, { return; });
+		local Float is smooth: u * u * (3.0 - 2.0 * u);
+		local Int is ab: (((baseA as Float) * smooth) + 0.5) as Int;
+		if({ ab <= 0 }, { return; });
+		local Int is lx: sx - blur + dx;
+		local Int is rx: sx + w + blur - 1 - dx;
+		local Int is ty: sy - blur + dy;
+		local Int is by: sy + h + blur - 1 - dy;
+		:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: lx, py: ty, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+		:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: rx, py: ty, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+		:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: lx, py: by, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+		:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: rx, py: by, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
+	}
+
 	local Function is fillStyledRows(
 		Int is pixelsPtr,
 		Int is strideW,
@@ -450,11 +503,63 @@ Class is DrawContext{
 		local Int is bA: fill:colorB:alpha();
 		local Float is bri: fill:brightness;
 
+		local Boolean is useRadialSimd: Cpu:hasSimd() && isRadial && fastFx && b > 0.001 && b < 0.999 && (cX1 - cX0) >= 4;
+		local Int is simdScratch: 0;
+		local Int is sDx: 0;
+		local Int is sDy2: 0;
+		local Int is sDist: 0;
+		local Int is sLo: 0;
+		local Int is sT: 0;
+		local Float is invWf: 1.0 / wf;
+		local Float is invRadMaxD: 1.0 / radMaxD;
+		local Float is invSpanR: 1.0 / spanR;
+		if({ useRadialSimd }, {
+			simdScratch: Mem:alloc(bytes: 160);
+			sDx: simdScratch;
+			sDy2: simdScratch + 32;
+			sDist: simdScratch + 64;
+			sLo: simdScratch + 96;
+			sT: simdScratch + 128;
+			Simd:fill4(dst: sLo, val: lo);
+		});
+
 		local Int is py: yStart;
 		while({ py < yEnd }, {
 			local Float is v: ((py - y) as Float + 0.5) / hf;
+			local Int is inX0: cX0;
+			local Int is inX1: cX1;
+			if({ r > 0 && (py < y + r || py >= y + h - r) }, {
+				if({ x + r > inX0 }, { inX0: x + r; });
+				if({ x + w - r < inX1 }, { inX1: x + w - r; });
+			});
+			if({ useRadialSimd }, {
+				local Float is dyRow: v - fcy;
+				Simd:fill4(dst: sDy2, val: dyRow * dyRow);
+			});
 			local Int is px: cX0;
 			while({ px < cX1 }, {
+				if({ useRadialSimd && px >= inX0 && px + 4 <= inX1 }, {
+					local Float is dx0: ((px - x) as Float + 0.5) * invWf - fcx;
+					Mem:storeF64(ptr: sDx, byteOffset: 0, val: dx0);
+					Mem:storeF64(ptr: sDx, byteOffset: 8, val: dx0 + invWf);
+					Mem:storeF64(ptr: sDx, byteOffset: 16, val: dx0 + invWf * 2.0);
+					Mem:storeF64(ptr: sDx, byteOffset: 24, val: dx0 + invWf * 3.0);
+					Simd:mul4(dst: sDist, a: sDx, b: sDx);
+					Simd:add4(dst: sDist, a: sDist, b: sDy2);
+					Simd:sqrt4(dst: sDist, a: sDist);
+					Simd:scale4(dst: sDist, a: sDist, scalar: invRadMaxD);
+					Simd:sub4(dst: sT, a: sDist, b: sLo);
+					Simd:scale4(dst: sT, a: sT, scalar: invSpanR);
+					Simd:clamp4(dst: sT, a: sT, lo: 0.0, hi: 1.0);
+					local Int is lane: 0;
+					while({ lane < 4 }, {
+						local Float is tl: Mem:loadF64(ptr: sT, byteOffset: lane * 8);
+						if({ refl }, { tl: 1.0 - tl; });
+						:blendFastFxPixel(pixelsPtr: pixelsPtr, strideW: strideW, px: px + lane, py: py, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, aR: aR, aG: aG, aB: aB, aA: aA, bR: bR, bG: bG, bB: bB, bA: bA, bri: bri, t: tl, cov: 1.0);
+						lane: lane + 1;
+					});
+					px: px + 4;
+				}, {
 				local Float is cov: 1.0;
 				if({ r > 0 }, {
 					local Float is sd: :roundBoxSd(px: (px as Float) + 0.5, py: (py as Float) + 0.5, cx: cx, cy: cy, halfW: halfW, halfH: halfH, r: rf);
@@ -512,25 +617,7 @@ Class is DrawContext{
 						});
 					});
 					if({ fastFx }, {
-						local Int is mr: (aR as Float + ((bR - aR) as Float) * t + 0.5) as Int;
-						local Int is mg: (aG as Float + ((bG - aG) as Float) * t + 0.5) as Int;
-						local Int is mb: (aB as Float + ((bB - aB) as Float) * t + 0.5) as Int;
-						local Int is ma: (aA as Float + ((bA - aA) as Float) * t + 0.5) as Int;
-						if({ bri > 0.0 }, {
-							local Float is amt: if({ bri > 1.0 }, { 1.0 }, { bri });
-							mr: mr + (((255 - mr) as Float) * amt + 0.5) as Int;
-							mg: mg + (((255 - mg) as Float) * amt + 0.5) as Int;
-							mb: mb + (((255 - mb) as Float) * amt + 0.5) as Int;
-						}, {
-						if({ bri < 0.0 }, {
-							local Float is amt: if({ bri < -1.0 }, { 1.0 }, { 0.0 - bri });
-							local Float is keep: 1.0 - amt;
-							mr: ((mr as Float) * keep + 0.5) as Int;
-							mg: ((mg as Float) * keep + 0.5) as Int;
-							mb: ((mb as Float) * keep + 0.5) as Int;
-						}); });
-						local Int is ab: (((ma as Float) * cov) + 0.5) as Int;
-						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: px, py: py, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: mr, srcG: mg, srcB: mb, srcA: ab);
+						:blendFastFxPixel(pixelsPtr: pixelsPtr, strideW: strideW, px: px, py: py, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, aR: aR, aG: aG, aB: aB, aA: aA, bR: bR, bG: bG, bB: bB, bA: bA, bri: bri, t: t, cov: cov);
 					}, {
 						local Color is c: fill:sampleAt(u: u, v: v);
 						local Int is ab: (((c:alpha() as Float) * cov) + 0.5) as Int;
@@ -538,8 +625,12 @@ Class is DrawContext{
 					});
 				});
 				px: px + 1;
+				});
 			});
 			py: py + 1;
+		});
+		if({ simdScratch != 0 }, {
+			Mem:free(ptr: simdScratch);
 		});
 	}
 
@@ -786,35 +877,74 @@ Class is DrawContext{
 		local Int is cornerW: inset + blur;
 		local Float is rf: r as Float;
 		local Float is cornerPivot: (blur + r) as Float;
+		local Boolean is useCornerSimd: Cpu:hasSimd() && cornerW >= 4;
+		local Int is cScratch: 0;
+		local Int is sOx: 0;
+		local Int is sOy2: 0;
+		local Int is sInD: 0;
+		local Int is sSd: 0;
+		local Int is sBaseU: 0;
+		local Int is sU: 0;
+		local Float is negInvDenom: (0.0 - 1.0) / denom;
+		if({ useCornerSimd }, {
+			cScratch: Mem:alloc(bytes: 192);
+			sOx: cScratch;
+			sOy2: cScratch + 32;
+			sInD: cScratch + 64;
+			sSd: cScratch + 96;
+			sBaseU: cScratch + 128;
+			sU: cScratch + 160;
+			Simd:fill4(dst: sBaseU, val: 1.0 - (blurF * 0.25 - rf) / denom);
+		});
 		local Int is dy: 0;
 		while({ dy < cornerW }, {
 			local Float is qy: cornerPivot - ((dy as Float) + 0.5);
+			local Float is oyRow: if({ qy > 0.0 }, { qy }, { 0.0 });
+			if({ useCornerSimd }, {
+				Simd:fill4(dst: sOy2, val: oyRow * oyRow);
+			});
 			local Int is dx: 0;
+			if({ useCornerSimd }, {
+				while({ dx + 4 <= cornerW }, {
+					local Int is lane: 0;
+					while({ lane < 4 }, {
+						local Float is qxl: cornerPivot - (((dx + lane) as Float) + 0.5);
+						local Float is oxl: if({ qxl > 0.0 }, { qxl }, { 0.0 });
+						local Float is maxDl: if({ qxl > qy }, { qxl }, { qy });
+						local Float is inDl: if({ maxDl < 0.0 }, { maxDl }, { 0.0 });
+						Mem:storeF64(ptr: sOx, byteOffset: lane * 8, val: oxl);
+						Mem:storeF64(ptr: sInD, byteOffset: lane * 8, val: inDl);
+						lane: lane + 1;
+					});
+					Simd:mul4(dst: sSd, a: sOx, b: sOx);
+					Simd:add4(dst: sSd, a: sSd, b: sOy2);
+					Simd:sqrt4(dst: sSd, a: sSd);
+					Simd:add4(dst: sSd, a: sSd, b: sInD);
+					Simd:axpy4(dst: sU, a: sSd, scalar: negInvDenom, c: sBaseU);
+					Simd:clamp4(dst: sU, a: sU, lo: 0.0, hi: 1.0);
+					lane: 0;
+					while({ lane < 4 }, {
+						:blendShadowCorner4Way(pixelsPtr: pixelsPtr, strideW: strideW, sx: sx, sy: sy, w: w, h: h, blur: blur, dx: dx + lane, dy: dy, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, baseA: baseA, u: Mem:loadF64(ptr: sU, byteOffset: lane * 8));
+						lane: lane + 1;
+					});
+					dx: dx + 4;
+				});
+			});
 			while({ dx < cornerW }, {
 				local Float is qx: cornerPivot - ((dx as Float) + 0.5);
 				local Float is ox: if({ qx > 0.0 }, { qx }, { 0.0 });
-				local Float is oy: if({ qy > 0.0 }, { qy }, { 0.0 });
+				local Float is oy: oyRow;
 				local Float is maxD: if({ qx > qy }, { qx }, { qy });
 				local Float is inD: if({ maxD < 0.0 }, { maxD }, { 0.0 });
 				local Float is sd: sqrt(value: ox * ox + oy * oy) + inD - rf;
 				local Float is u: :clamp01(v: 1.0 - (sd + blurF * 0.25) / denom);
-				if({ u > 0.0 }, {
-					local Float is smooth: u * u * (3.0 - 2.0 * u);
-					local Int is ab: (((baseA as Float) * smooth) + 0.5) as Int;
-					if({ ab > 0 }, {
-						local Int is lx: sx - blur + dx;
-						local Int is rx: sx + w + blur - 1 - dx;
-						local Int is ty: sy - blur + dy;
-						local Int is by: sy + h + blur - 1 - dy;
-						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: lx, py: ty, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
-						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: rx, py: ty, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
-						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: lx, py: by, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
-						:blendDirect(pixelsPtr: pixelsPtr, strideW: strideW, px: rx, py: by, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, srcA: ab);
-					});
-				});
+				:blendShadowCorner4Way(pixelsPtr: pixelsPtr, strideW: strideW, sx: sx, sy: sy, w: w, h: h, blur: blur, dx: dx, dy: dy, cX0: cX0, cY0: cY0, cX1: cX1, cY1: cY1, srcR: srcR, srcG: srcG, srcB: srcB, baseA: baseA, u: u);
 				dx: dx + 1;
 			});
 			dy: dy + 1;
+		});
+		if({ cScratch != 0 }, {
+			Mem:free(ptr: cScratch);
 		});
 	}
 

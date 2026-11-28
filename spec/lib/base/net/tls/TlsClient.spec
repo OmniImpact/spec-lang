@@ -27,12 +27,6 @@ Class is TlsClient{
 	local String is lastErr: '';
 	local TlsError is lastKind: TlsError:CONNECT_FAILED;
 
-	local Function of Boolean is hasClosure(Function is cb){
-		local Int is addr: Mem:objToAddr(obj: cb);
-		if({ addr == 0 }, { return false; });
-		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
-	}
-
 	## Private plumbing: the failure sites deep in the handshake set
 	## the message and its phase kind; the public face delivers the
 	## currency at the call boundary. The state never outlives the call.
@@ -573,7 +567,7 @@ Class is TlsClient{
 	## detail). The Boolean return observes the outcome regardless.
 	Function of Boolean is connect(String is host, Int is port: 443, Int is timeoutMs: 15000, Boolean is verifyCert: true, Function is onError: local Function(SpecError of TlsError is error){}){
 		local Boolean is ok: :connectImpl(host: host, port: port, timeoutMs: timeoutMs, verifyCert: verifyCert);
-		if({ !ok && :lastErr != '' && :hasClosure(cb: onError) }, {
+		if({ !ok && :lastErr != '' && Mem:hasClosure(cb: onError) }, {
 			onError(SpecError:init(kind: :lastKind, description: :lastErr));
 		});
 		return ok;
@@ -583,7 +577,7 @@ Class is TlsClient{
 	## through [onError] as the full error currency.
 	Function of Boolean is sendString(String is text, Function is onError: local Function(SpecError of TlsError is error){}){
 		local Boolean is ok: :sendStringImpl(text: text);
-		if({ !ok && :lastErr != '' && :hasClosure(cb: onError) }, {
+		if({ !ok && :lastErr != '' && Mem:hasClosure(cb: onError) }, {
 			onError(SpecError:init(kind: :lastKind, description: :lastErr));
 		});
 		return ok;

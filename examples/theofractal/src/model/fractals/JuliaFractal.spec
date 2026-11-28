@@ -52,6 +52,8 @@ Class of EscapeFractal is JuliaFractal{
 			local Vector is dzr: Vector(length: 4);
 			local Vector is dzi: Vector(length: 4);
 			local Vector is tmp: Vector(length: 4);
+			local Vector is tmp2: Vector(length: 4);
+			local Vector is tmp3: Vector(length: 4);
 			local Vector is jcVec: Vector(length: 4, initial: -0.7);
 			local Vector is jiVec: Vector(length: 4, initial: 0.27015);
 			local Int is zrPtr: zr:dataAddr();
@@ -61,6 +63,8 @@ Class of EscapeFractal is JuliaFractal{
 			local Int is dzrPtr: dzr:dataAddr();
 			local Int is dziPtr: dzi:dataAddr();
 			local Int is tmpPtr: tmp:dataAddr();
+			local Int is tmp2Ptr: tmp2:dataAddr();
+			local Int is tmp3Ptr: tmp3:dataAddr();
 			local Int is jcPtr: jcVec:dataAddr();
 			local Int is jiPtr: jiVec:dataAddr();
 			local Int is crBase: crVec:dataAddr();
@@ -92,22 +96,18 @@ Class of EscapeFractal is JuliaFractal{
 				local Int is active: 4;
 				local Int is iter: 0;
 				while({ iter < maxIter && active > 0 }, {
-					# Update derivative dz = 2*z*dz per active lane
-					local Int is lane: 0;
-					while({ lane < 4 }, {
-						local Int is off: lane * 8;
-						local Float is lzr: loadF64(ptr: zrPtr, byteOffset: off);
-						local Float is lzi: loadF64(ptr: ziPtr, byteOffset: off);
-						local Float is ldzr: loadF64(ptr: dzrPtr, byteOffset: off);
-						local Float is ldzi: loadF64(ptr: dziPtr, byteOffset: off);
-						storeF64(ptr: dzrPtr, byteOffset: off, val: 2.0 * (lzr * ldzr - lzi * ldzi));
-						storeF64(ptr: dziPtr, byteOffset: off, val: 2.0 * (lzr * ldzi + lzi * ldzr));
-						lane: lane + 1;
-					});
+					# Update derivative dz = 2*z*dz in 4-wide SIMD
+					mul4(dst: tmpPtr, a: zrPtr, b: dzrPtr);
+					mul4(dst: tmp2Ptr, a: ziPtr, b: dziPtr);
+					sub4(dst: tmp3Ptr, a: tmpPtr, b: tmp2Ptr);
+					mul4(dst: tmpPtr, a: zrPtr, b: dziPtr);
+					mul4(dst: tmp2Ptr, a: ziPtr, b: dzrPtr);
+					add4(dst: tmpPtr, a: tmpPtr, b: tmp2Ptr);
+					scale4(dst: dzrPtr, a: tmp3Ptr, scalar: 2.0);
+					scale4(dst: dziPtr, a: tmpPtr, scalar: 2.0);
 
 					mul4(dst: tmpPtr, a: zrPtr, b: ziPtr);
-					scale4(dst: tmpPtr, a: tmpPtr, scalar: 2.0);
-					add4(dst: ziPtr, a: tmpPtr, b: jiPtr);
+					axpy4(dst: ziPtr, a: tmpPtr, scalar: 2.0, c: jiPtr);
 
 					sub4(dst: tmpPtr, a: zr2Ptr, b: zi2Ptr);
 					add4(dst: zrPtr, a: tmpPtr, b: jcPtr);

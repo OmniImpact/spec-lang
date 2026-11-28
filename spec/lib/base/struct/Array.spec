@@ -53,11 +53,8 @@ Class of Mergeable is Array of T{
 	}
 
 	local Function is notifyError(Function is error, String is msg){
-		local Int is errAddr: Mem:objToAddr(obj: error);
-		if({ errAddr != 0 }, {
-			if({ Mem:loadI64(ptr: errAddr, byteOffset: 0) != 0 }, {
-				error(msg);
-			});
+		if({ Mem:hasClosure(cb: error) }, {
+			error(msg);
 		});
 	}
 

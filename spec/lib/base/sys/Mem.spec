@@ -105,6 +105,13 @@ Class is Mem{
 		return base:sysinternal:Mem:addrToObj(addr: addr);
 	}
 
+	## Returns `true` when [cb] holds a non-empty callable closure.
+	Function of Boolean is hasClosure(Function is cb){
+		local Int is addr: :objToAddr(obj: cb);
+		if({ addr == 0 }, { return false; });
+		return :loadI64(ptr: addr, byteOffset: 0) != 0;
+	}
+
 	Function of Int is retainAddr(Int is objAddr){
 		return base:sysinternal:Mem:retainAddr(objAddr: objAddr);
 	}

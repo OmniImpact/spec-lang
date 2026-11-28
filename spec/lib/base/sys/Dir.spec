@@ -14,12 +14,6 @@ Class is Dir{
 		['base', 'sysinternal', Dir]
 	];
 
-	local Function of Boolean is hasClosure(Function is cb){
-		local Int is addr: Mem:objToAddr(obj: cb);
-		if({ addr == 0 }, { return false; });
-		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
-	}
-
 	local Function of Int is cstrOf(String is s){
 		local Int is sAddr: Mem:objToAddr(obj: s);
 		if({ sAddr == 0 || Mem:loadI64(ptr: sAddr, byteOffset: 8) == 0 }, {
@@ -40,7 +34,7 @@ Class is Dir{
 		local Array of String is out: Array();
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ :hasClosure(cb: onError) }, {
+			if({ Mem:hasClosure(cb: onError) }, {
 				onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path'));
 			});
 			return out;
@@ -49,7 +43,7 @@ Class is Dir{
 		if({ handle == 0 }, {
 			local Int is ec: base:sysinternal:Dir:pal_last_error_cstr();
 			local Int is elen: Mem:cstrLen(cstrAddr: ec);
-			if({ :hasClosure(cb: onError) }, {
+			if({ Mem:hasClosure(cb: onError) }, {
 				onError(SpecError:init(kind: FileError:IO_ERROR, description: Mem:strFromBytes(srcAddr: ec, len: elen)));
 			});
 			return out;

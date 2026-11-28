@@ -22,17 +22,11 @@ Class is File{
 		return Mem:loadI64(ptr: sAddr, byteOffset: 0);
 	}
 
-	local Function of Boolean is hasClosure(Function is cb){
-		local Int is addr: Mem:objToAddr(obj: cb);
-		if({ addr == 0 }, { return false; });
-		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
-	}
-
 	## Reports a failure through [onError] as the full error currency:
 	## a `SpecError of FileError` whose kind is [kind] and whose
 	## description is the OS errno text when available, else [fallback].
 	local Function is emitLastError(FileError is kind, Function is onError, String is fallback){
-		if({ !:hasClosure(cb: onError) }, { return; });
+		if({ !Mem:hasClosure(cb: onError) }, { return; });
 		local String is detail: fallback;
 		local Int is ec: base:sysinternal:File:pal_last_error_cstr();
 		if({ ec != 0 }, {
@@ -47,7 +41,7 @@ Class is File{
 		local String is defStr: if({ Mem:objToAddr(obj: default) != 0 }, { default }, { '' });
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
+			if({ Mem:hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
 			return defStr;
 		});
 		local Int is lenBuf: Mem:alloc(bytes: 8);
@@ -56,7 +50,7 @@ Class is File{
 		Mem:free(ptr: lenBuf);
 		if({ bufAddr < 0 }, {
 			if({ bufAddr == -2 }, {
-				if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:OUT_OF_MEMORY, description: 'out of memory')); });
+				if({ Mem:hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:OUT_OF_MEMORY, description: 'out of memory')); });
 			}, {
 				:emitLastError(kind: FileError:IO_ERROR, onError: onError, fallback: 'read failed');
 			});
@@ -64,7 +58,7 @@ Class is File{
 		});
 		local String is res: Mem:strFromBytes(srcAddr: bufAddr, len: len);
 		base:sysinternal:File:pal_file_free(ptr: bufAddr);
-		if({ :hasClosure(cb: onSuccess) }, {
+		if({ Mem:hasClosure(cb: onSuccess) }, {
 			onSuccess(res);
 		});
 		return res;
@@ -80,7 +74,7 @@ Class is File{
 	local Function of Boolean is writeInternal(String is path, String is content, Int is append, Function is onSuccess, Function is onError){
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
+			if({ Mem:hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
 			return false;
 		});
 		local Int is cAddr: Mem:objToAddr(obj: content);
@@ -91,7 +85,7 @@ Class is File{
 			:emitLastError(kind: FileError:IO_ERROR, onError: onError, fallback: 'write failed');
 			return false;
 		});
-		if({ :hasClosure(cb: onSuccess) }, {
+		if({ Mem:hasClosure(cb: onSuccess) }, {
 			onSuccess(written);
 		});
 		return true;
@@ -125,7 +119,7 @@ Class is File{
 	Function of Boolean is fileRemove(String is path, Function is onError: local Function(SpecError of FileError is e){ :raiseError(error: e); }){
 		local Int is pc: :cstrOf(s: path);
 		if({ pc == 0 }, {
-			if({ :hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
+			if({ Mem:hasClosure(cb: onError) }, { onError(SpecError:init(kind: FileError:INVALID_PATH, description: 'invalid path')); });
 			return false;
 		});
 		if({ base:sysinternal:File:pal_file_remove(path_cstr: pc) }, {

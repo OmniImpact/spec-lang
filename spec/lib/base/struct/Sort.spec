@@ -178,4 +178,64 @@ Class is Sort{
 		if({ i < hi }, { :qsortBy(values: values, lo: i, hi: hi, compare: compare); });
 	}
 
+	## Sorts [values] in place in ascending floating-point order.
+	Function is sortFloats(Array of Float is values){
+		local Int is len: values:length();
+		if({ len > 1 }, {
+			:qsortFloats(values: values, lo: 0, hi: len - 1, desc: false);
+		});
+	}
+
+	## Sorts [values] in place in descending floating-point order.
+	Function is sortFloatsDesc(Array of Float is values){
+		local Int is len: values:length();
+		if({ len > 1 }, {
+			:qsortFloats(values: values, lo: 0, hi: len - 1, desc: true);
+		});
+	}
+
+	## Returns a new array containing [values] sorted in ascending floating-point order.
+	Function of Array of Float is floats(Array of Float is values){
+		local Array of Float is out: values:copy();
+		:sortFloats(values: out);
+		return out;
+	}
+
+	## Returns a new array containing [values] sorted in descending floating-point order.
+	Function of Array of Float is floatsDesc(Array of Float is values){
+		local Array of Float is out: values:copy();
+		:sortFloatsDesc(values: out);
+		return out;
+	}
+
+	local Function is qsortFloats(Array of Float is values, Int is lo, Int is hi, Boolean is desc){
+		if({ lo >= hi }, { return; });
+		local Float is pivot: values:get(index: (lo + hi) / 2, default: 0.0);
+		local Int is i: lo;
+		local Int is j: hi;
+		while({ i <= j }, {
+			local Boolean is scanI: true;
+			while({ scanI }, {
+				local Float is curI: values:get(index: i, default: 0.0);
+				local Boolean is advI: if({ desc }, { curI > pivot }, { curI < pivot });
+				if({ advI }, { i: i + 1; }, { scanI: false; });
+			});
+			local Boolean is scanJ: true;
+			while({ scanJ }, {
+				local Float is curJ: values:get(index: j, default: 0.0);
+				local Boolean is advJ: if({ desc }, { curJ < pivot }, { curJ > pivot });
+				if({ advJ }, { j: j - 1; }, { scanJ: false; });
+			});
+			if({ i <= j }, {
+				local Float is tmp: values:get(index: i, default: 0.0);
+				values:set(index: i, item: values:get(index: j, default: 0.0));
+				values:set(index: j, item: tmp);
+				i: i + 1;
+				j: j - 1;
+			});
+		});
+		if({ lo < j }, { :qsortFloats(values: values, lo: lo, hi: j, desc: desc); });
+		if({ i < hi }, { :qsortFloats(values: values, lo: i, hi: hi, desc: desc); });
+	}
+
 }

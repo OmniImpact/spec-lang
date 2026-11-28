@@ -41,13 +41,6 @@ Class of EscapeFractal is BurningShipFractal{
 		return smoothEscapeValue(iter: escIter, mag2: mag2);
 	}
 
-	local Function is abs4(Int is dstPtr, Int is srcPtr){
-		storeF64(ptr: dstPtr, byteOffset: 0, val: abs(value: loadF64(ptr: srcPtr, byteOffset: 0)));
-		storeF64(ptr: dstPtr, byteOffset: 8, val: abs(value: loadF64(ptr: srcPtr, byteOffset: 8)));
-		storeF64(ptr: dstPtr, byteOffset: 16, val: abs(value: loadF64(ptr: srcPtr, byteOffset: 16)));
-		storeF64(ptr: dstPtr, byteOffset: 24, val: abs(value: loadF64(ptr: srcPtr, byteOffset: 24)));
-	}
-
 	## Evaluates 4 pixels per step using portable `<4 x double>` LLVM SIMD when available.
 	replace Function is evaluateRow(Vector is crVec, Float is ci, Int is w, Int is maxIter, Float is pixelSpan, Vector is outBuf, Vector is deBuf, Int is rowOff){
 		local Int is px: 0;
@@ -88,11 +81,10 @@ Class of EscapeFractal is BurningShipFractal{
 				local Int is active: 4;
 				local Int is iter: 0;
 				while({ iter < maxIter && active > 0 }, {
-					abs4(dstPtr: azrPtr, srcPtr: zrPtr);
-					abs4(dstPtr: aziPtr, srcPtr: ziPtr);
+					abs4(dst: azrPtr, a: zrPtr);
+					abs4(dst: aziPtr, a: ziPtr);
 					mul4(dst: tmpPtr, a: azrPtr, b: aziPtr);
-					scale4(dst: tmpPtr, a: tmpPtr, scalar: 2.0);
-					add4(dst: ziPtr, a: tmpPtr, b: ciPtr);
+					axpy4(dst: ziPtr, a: tmpPtr, scalar: 2.0, c: ciPtr);
 
 					sub4(dst: tmpPtr, a: zr2Ptr, b: zi2Ptr);
 					add4(dst: zrPtr, a: tmpPtr, b: crPtr);

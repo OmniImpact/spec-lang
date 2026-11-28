@@ -7,8 +7,10 @@ Class of SewNode is TreeView{
 	replace [[String]] is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
+		['base', 'sys', as Mem()],
 		['base', 'sys', Time],
 		['base', 'struct', Array],
+		['base', 'struct', TreeSet],
 		['base', 'fabric', Theme],
 		['base', 'fabric', DrawContext],
 		['base', 'sew', SewNode],
@@ -60,18 +62,9 @@ Class of SewNode is TreeView{
 		invalidate();
 	}
 
-	local Function of Boolean is inVisited(Array of TreeNode is visited, TreeNode is target){
-		local Int is vi: 0;
-		while({ vi < visited:length() }, {
-			if({ visited:get(index: vi) == target }, { return true; });
-			vi: vi + 1;
-		});
-		return false;
-	}
-
-	local Function is appendFlat(TreeNode is node, Int is depth, Boolean is isLast, Array of Boolean is ancestors, Array of TreeNode is visited){
-		if({ :inVisited(visited: visited, target: node) }, { return; });
-		visited:add(item: node);
+	local Function is appendFlat(TreeNode is node, Int is depth, Boolean is isLast, Array of Boolean is ancestors, TreeSet of Int is visited){
+		local Int is nodeAddr: Mem:objToAddr(obj: node);
+		if({ !visited:add(item: nodeAddr) }, { return; });
 		flatNodes:add(item: node);
 		flatDepths:add(item: depth);
 		flatIsLast:add(item: isLast);
@@ -110,7 +103,7 @@ Class of SewNode is TreeView{
 		:flatDepths: Array();
 		:flatIsLast: Array();
 		:flatAncestors: Array();
-		local Array of TreeNode is visited: Array();
+		local TreeSet of Int is visited: TreeSet();
 		local Int is rLen: roots:length();
 		local Int is i: 0;
 		while({ i < rLen }, {

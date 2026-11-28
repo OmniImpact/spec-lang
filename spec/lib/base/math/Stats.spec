@@ -8,6 +8,7 @@ Class is Stats{
 	replace [[String]] is using: [
 		['base', 'struct', Array],
 		['base', 'math', as Math()],
+		['base', 'math', Vector],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
@@ -116,6 +117,33 @@ Class is Stats{
 	## Returns the population standard deviation of [values] (`0.0` when empty).
 	Function of Float is stdDev(Array of Int is values){
 		return sqrt(value: :variance(values: values));
+	}
+
+	## Returns the SIMD-accelerated sum of all elements in [vec] (`0.0` when empty).
+	Function of Float is sum(Vector is vec){
+		return vec:sum();
+	}
+
+	## Returns the SIMD-accelerated arithmetic mean of [vec] (`0.0` when empty).
+	Function of Float is average(Vector is vec){
+		local Int is n: vec:length();
+		if({ n <= 0 }, { return 0.0; });
+		return vec:sum() / toFloat(value: n);
+	}
+
+	## Returns the SIMD-accelerated population variance of [vec] (`0.0` when empty).
+	Function of Float is variance(Vector is vec){
+		local Int is n: vec:length();
+		if({ n <= 0 }, { return 0.0; });
+		local Float is mean: vec:sum() / toFloat(value: n);
+		local Float is sqMean: vec:dot(other: vec) / toFloat(value: n);
+		local Float is v: sqMean - mean * mean;
+		return if({ v < 0.0 }, { 0.0 }, { v });
+	}
+
+	## Returns the SIMD-accelerated population standard deviation of [vec] (`0.0` when empty).
+	Function of Float is stdDev(Vector is vec){
+		return sqrt(value: :variance(vec: vec));
 	}
 
 }

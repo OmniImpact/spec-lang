@@ -17,12 +17,6 @@ Class is Flow of T{
 
 	local Int is producerAddr: 0;
 
-	local Function of Boolean is hasClosure(Function is cb){
-		local Int is addr: Mem:objToAddr(obj: cb);
-		if({ addr == 0 }, { return false; });
-		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
-	}
-
 	local Function is invokeProducer(Function is prod, Function is emit){
 		prod(emit);
 	}
@@ -87,7 +81,7 @@ Class is Flow of T{
 	Function is collect(Function is onItem){
 		if({ :producerAddr != 0 }, {
 			local Function is prod: Mem:addrToObj(addr: :producerAddr);
-			if({ :hasClosure(cb: prod) }, {
+			if({ Mem:hasClosure(cb: prod) }, {
 				:invokeProducer(prod: prod, emit: onItem);
 			});
 		});
@@ -157,7 +151,7 @@ Class is Flow of T{
 		local Flow of T is upstream: :;
 		return Flow:init(producer: local Function(Function is emit){
 			upstream:collect(onItem: emit);
-			if({ !Mem:hasPendingError() && upstream:hasClosure(cb: action) }, {
+			if({ !Mem:hasPendingError() && Mem:hasClosure(cb: action) }, {
 				action();
 			});
 		});

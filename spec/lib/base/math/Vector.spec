@@ -5,6 +5,7 @@ Class is Vector{
 	replace [String] is namespace: ['base', 'math'];
 
 	merge [[String]] is using: [
+		['base', 'math', as Math()],
 		['base', 'sys', [as Cpu(), as Mem(), as Simd()]]
 	];
 
@@ -218,5 +219,150 @@ Class is Vector{
 			storeF64(ptr: dPtr, byteOffset: off2, val: v);
 			i: i + 1;
 		});
+	}
+
+	## Computes `out[i] = this[i] * scalar + c[i]` using 4-wide SIMD `axpy4`.
+	Function is axpy(Float is scalar, Vector is c, Vector is out){
+		local Int is n: len;
+		if({ c:length() < n }, { n: c:length(); });
+		if({ out:length() < n }, { n: out:length(); });
+		local Int is aPtr: data;
+		local Int is cPtr: c:dataAddr();
+		local Int is dPtr: out:dataAddr();
+		if({ n <= 0 || aPtr == 0 || cPtr == 0 || dPtr == 0 }, { return; });
+		local Int is i: 0;
+		if({ hasSimd() }, {
+			while({ i + 4 <= n }, {
+				local Int is off: i * 8;
+				axpy4(dst: dPtr + off, a: aPtr + off, scalar: scalar, c: cPtr + off);
+				i: i + 4;
+			});
+		});
+		while({ i < n }, {
+			local Int is off2: i * 8;
+			storeF64(ptr: dPtr, byteOffset: off2, val: loadF64(ptr: aPtr, byteOffset: off2) * scalar + loadF64(ptr: cPtr, byteOffset: off2));
+			i: i + 1;
+		});
+	}
+
+	## Returns the sum of all elements using 4-wide SIMD `sum4`.
+	Function of Float is sum(){
+		if({ len <= 0 || data == 0 }, { return 0.0; });
+		local Float is acc: 0.0;
+		local Int is i: 0;
+		if({ hasSimd() }, {
+			while({ i + 4 <= len }, {
+				acc: acc + sum4(a: data + i * 8);
+				i: i + 4;
+			});
+		});
+		while({ i < len }, {
+			acc: acc + loadF64(ptr: data, byteOffset: i * 8);
+			i: i + 1;
+		});
+		return acc;
+	}
+
+	## Computes `out[i] = sqrt(this[i])` using 4-wide SIMD `sqrt4`.
+	Function is sqrt(Vector is out){
+		local Int is n: len;
+		if({ out:length() < n }, { n: out:length(); });
+		local Int is aPtr: data;
+		local Int is dPtr: out:dataAddr();
+		if({ n <= 0 || aPtr == 0 || dPtr == 0 }, { return; });
+		local Int is i: 0;
+		if({ hasSimd() }, {
+			while({ i + 4 <= n }, {
+				local Int is off: i * 8;
+				sqrt4(dst: dPtr + off, a: aPtr + off);
+				i: i + 4;
+			});
+		});
+		while({ i < n }, {
+			local Int is off2: i * 8;
+			storeF64(ptr: dPtr, byteOffset: off2, val: Math:sqrt(value: loadF64(ptr: aPtr, byteOffset: off2)));
+			i: i + 1;
+		});
+	}
+
+	## Computes `out[i] = abs(this[i])` using 4-wide SIMD `abs4`.
+	Function is abs(Vector is out){
+		local Int is n: len;
+		if({ out:length() < n }, { n: out:length(); });
+		local Int is aPtr: data;
+		local Int is dPtr: out:dataAddr();
+		if({ n <= 0 || aPtr == 0 || dPtr == 0 }, { return; });
+		local Int is i: 0;
+		if({ hasSimd() }, {
+			while({ i + 4 <= n }, {
+				local Int is off: i * 8;
+				abs4(dst: dPtr + off, a: aPtr + off);
+				i: i + 4;
+			});
+		});
+		while({ i < n }, {
+			local Int is off2: i * 8;
+			local Float is v: loadF64(ptr: aPtr, byteOffset: off2);
+			if({ v < 0.0 }, { v: 0.0 - v; });
+			storeF64(ptr: dPtr, byteOffset: off2, val: v);
+			i: i + 1;
+		});
+	}
+
+	## Computes `out[i] = min(this[i], other[i])` using 4-wide SIMD `min4`.
+	Function is minElem(Vector is other, Vector is out){
+		local Int is n: len;
+		if({ other:length() < n }, { n: other:length(); });
+		if({ out:length() < n }, { n: out:length(); });
+		local Int is aPtr: data;
+		local Int is bPtr: other:dataAddr();
+		local Int is dPtr: out:dataAddr();
+		if({ n <= 0 || aPtr == 0 || bPtr == 0 || dPtr == 0 }, { return; });
+		local Int is i: 0;
+		if({ hasSimd() }, {
+			while({ i + 4 <= n }, {
+				local Int is off: i * 8;
+				min4(dst: dPtr + off, a: aPtr + off, b: bPtr + off);
+				i: i + 4;
+			});
+		});
+		while({ i < n }, {
+			local Int is off2: i * 8;
+			local Float is va: loadF64(ptr: aPtr, byteOffset: off2);
+			local Float is vb: loadF64(ptr: bPtr, byteOffset: off2);
+			storeF64(ptr: dPtr, byteOffset: off2, val: if({ va < vb }, { va }, { vb }));
+			i: i + 1;
+		});
+	}
+
+	## Computes `out[i] = max(this[i], other[i])` using 4-wide SIMD `max4`.
+	Function is maxElem(Vector is other, Vector is out){
+		local Int is n: len;
+		if({ other:length() < n }, { n: other:length(); });
+		if({ out:length() < n }, { n: out:length(); });
+		local Int is aPtr: data;
+		local Int is bPtr: other:dataAddr();
+		local Int is dPtr: out:dataAddr();
+		if({ n <= 0 || aPtr == 0 || bPtr == 0 || dPtr == 0 }, { return; });
+		local Int is i: 0;
+		if({ hasSimd() }, {
+			while({ i + 4 <= n }, {
+				local Int is off: i * 8;
+				max4(dst: dPtr + off, a: aPtr + off, b: bPtr + off);
+				i: i + 4;
+			});
+		});
+		while({ i < n }, {
+			local Int is off2: i * 8;
+			local Float is va: loadF64(ptr: aPtr, byteOffset: off2);
+			local Float is vb: loadF64(ptr: bPtr, byteOffset: off2);
+			storeF64(ptr: dPtr, byteOffset: off2, val: if({ va > vb }, { va }, { vb }));
+			i: i + 1;
+		});
+	}
+
+	## Returns the Euclidean (L2) norm `sqrt(dot(this, this))`.
+	Function of Float is norm(){
+		return Math:sqrt(value: :dot(other: :));
 	}
 }

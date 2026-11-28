@@ -59,12 +59,6 @@ Class is ThreadScope{
 		});
 	}
 
-	local Function of Boolean is hasClosure(Function is cb){
-		local Int is addr: Mem:objToAddr(obj: cb);
-		if({ addr == 0 }, { return false; });
-		return Mem:loadI64(ptr: addr, byteOffset: 0) != 0;
-	}
-
 	local Function of Boolean is invokeErrorHandler(Function is cb, Any is err){
 		return cb(err);
 	}
@@ -136,7 +130,7 @@ Class is ThreadScope{
 			Mem:retainAddr(objAddr: ehAddr);
 		});
 		:errorHandlerAddr: ehAddr;
-		:hasErrorHandler: :hasClosure(cb: onError);
+		:hasErrorHandler: Mem:hasClosure(cb: onError);
 	}
 
 	## Opens a structured concurrency scope, executes [body] with the scope,
@@ -150,7 +144,7 @@ Class is ThreadScope{
 		local Int is tid: Thread:currentId();
 		ThreadScope:pushActiveScope(tid: tid, scopeAddr: Mem:objToAddr(obj: :));
 		local Int is bodyErrAddr: Mem:callCatching(action: local Function(){
-			if({ :hasClosure(cb: body) }, {
+			if({ Mem:hasClosure(cb: body) }, {
 				body(:);
 			});
 		});
@@ -285,7 +279,7 @@ Class is ThreadScope{
 			Mem:releaseAddr(objAddr: primaryErrAddr);
 			return;
 		});
-		if({ :hasClosure(cb: then) }, {
+		if({ Mem:hasClosure(cb: then) }, {
 			then();
 		});
 	}
@@ -293,7 +287,7 @@ Class is ThreadScope{
 	## Joins all tasks currently in the scope and invokes [then] if no unhandled errors occurred.
 	Function is onComplete(Function is then){
 		:joinAll();
-		if({ !Mem:hasPendingError() && :hasClosure(cb: then) }, {
+		if({ !Mem:hasPendingError() && Mem:hasClosure(cb: then) }, {
 			then();
 		});
 	}
