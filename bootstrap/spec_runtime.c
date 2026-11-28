@@ -674,6 +674,34 @@ long long spec_pal_file_size_cstr(long long path_cstr) {
     return (long long)st.st_size;
 #endif
 }
+
+bool spec_pal_dir_mkdir(long long path_cstr) {
+    const char* p = (const char*)(intptr_t)path_cstr;
+    if (!p || !*p) return false;
+#ifdef _WIN32
+    wchar_t* wp = spec_win_utf8_to_wide(p);
+    if (!wp) return false;
+    int r = _wmkdir(wp);
+    free(wp);
+    return r == 0;
+#else
+    return mkdir(p, 0755) == 0;
+#endif
+}
+
+bool spec_pal_dir_rmdir(long long path_cstr) {
+    const char* p = (const char*)(intptr_t)path_cstr;
+    if (!p || !*p) return false;
+#ifdef _WIN32
+    wchar_t* wp = spec_win_utf8_to_wide(p);
+    if (!wp) return false;
+    int r = _wrmdir(wp);
+    free(wp);
+    return r == 0;
+#else
+    return rmdir(p) == 0;
+#endif
+}
 #if defined(_WIN32)
 static void _spec_pal_ensure_tmp_dir(const char* pc) {
     if (!pc || strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0 || strcmp(pc, "/tmp") == 0) {
@@ -848,6 +876,69 @@ long long spec_pal_file_temp(long long tpl_cstr) {
 
 void spec_pal_file_free(long long ptr) {
     if (ptr) free((void*)(intptr_t)ptr);
+}
+
+long long spec_pal_file_open(long long path_cstr, long long mode_cstr) {
+    const char* pc = (const char*)(intptr_t)path_cstr;
+    const char* mc = (const char*)(intptr_t)mode_cstr;
+    if (!pc || !*pc || !mc || !*mc) return 0;
+#ifdef _WIN32
+    wchar_t* wpc = spec_win_utf8_to_wide(pc);
+    wchar_t* wmc = spec_win_utf8_to_wide(mc);
+    FILE* f = (wpc && wmc) ? _wfopen(wpc, wmc) : NULL;
+    free(wpc);
+    free(wmc);
+#else
+    FILE* f = fopen(pc, mc);
+#endif
+    return (long long)(intptr_t)f;
+}
+
+long long spec_pal_file_read_chunk(long long handle, long long dst_addr, long long max_bytes) {
+    if (!handle || !dst_addr || max_bytes <= 0) return -1;
+    FILE* f = (FILE*)(intptr_t)handle;
+    size_t n = fread((void*)(intptr_t)dst_addr, 1, (size_t)max_bytes, f);
+    if (n == 0 && ferror(f)) return -1;
+    return (long long)n;
+}
+
+long long spec_pal_file_write_chunk(long long handle, long long src_addr, long long len) {
+    if (!handle || !src_addr || len <= 0) return (len == 0 && handle) ? 0 : -1;
+    FILE* f = (FILE*)(intptr_t)handle;
+    size_t n = fwrite((const void*)(intptr_t)src_addr, 1, (size_t)len, f);
+    if (n != (size_t)len && ferror(f)) return -1;
+    return (long long)n;
+}
+
+long long spec_pal_file_seek(long long handle, long long offset, long long whence) {
+    if (!handle) return -1;
+    FILE* f = (FILE*)(intptr_t)handle;
+    int w = (whence == 1) ? SEEK_CUR : ((whence == 2) ? SEEK_END : SEEK_SET);
+#ifdef _WIN32
+    return (_fseeki64(f, (__int64)offset, w) == 0) ? 0 : -1;
+#else
+    return (fseeko(f, (off_t)offset, w) == 0) ? 0 : -1;
+#endif
+}
+
+long long spec_pal_file_tell(long long handle) {
+    if (!handle) return -1;
+    FILE* f = (FILE*)(intptr_t)handle;
+#ifdef _WIN32
+    return (long long)_ftelli64(f);
+#else
+    return (long long)ftello(f);
+#endif
+}
+
+long long spec_pal_file_flush(long long handle) {
+    if (!handle) return -1;
+    return (fflush((FILE*)(intptr_t)handle) == 0) ? 0 : -1;
+}
+
+long long spec_pal_file_close(long long handle) {
+    if (!handle) return 0;
+    return (fclose((FILE*)(intptr_t)handle) == 0) ? 0 : -1;
 }
 #if defined(_WIN32)
 long long spec_pal_process_execute_cstr(long long cmd_cstr, long long argv_addr, long long nargs_ll) {

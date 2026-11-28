@@ -11,4 +11,11 @@ Class is File{
 	Function of Int is pal_file_temp(Int is tpl_cstr);
 	Function is pal_file_free(Int is ptr);
 	Function of Int is pal_last_error_cstr();
+	Function of Int is pal_file_open(Int is path_cstr, Int is mode_cstr);
+	Function of Int is pal_file_read_chunk(Int is handle, Int is dst_addr, Int is max_bytes);
+	Function of Int is pal_file_write_chunk(Int is handle, Int is src_addr, Int is len);
+	Function of Int is pal_file_seek(Int is handle, Int is offset, Int is whence);
+	Function of Int is pal_file_tell(Int is handle);
+	Function of Int is pal_file_flush(Int is handle);
+	Function of Int is pal_file_close(Int is handle);
 }

@@ -71,3 +71,31 @@ long long spec_pal_file_size_cstr(long long path_cstr) {
     return (long long)st.st_size;
 #endif
 }
+
+bool spec_pal_dir_mkdir(long long path_cstr) {
+    const char* p = (const char*)(intptr_t)path_cstr;
+    if (!p || !*p) return false;
+#ifdef _WIN32
+    wchar_t* wp = spec_win_utf8_to_wide(p);
+    if (!wp) return false;
+    int r = _wmkdir(wp);
+    free(wp);
+    return r == 0;
+#else
+    return mkdir(p, 0755) == 0;
+#endif
+}
+
+bool spec_pal_dir_rmdir(long long path_cstr) {
+    const char* p = (const char*)(intptr_t)path_cstr;
+    if (!p || !*p) return false;
+#ifdef _WIN32
+    wchar_t* wp = spec_win_utf8_to_wide(p);
+    if (!wp) return false;
+    int r = _wrmdir(wp);
+    free(wp);
+    return r == 0;
+#else
+    return rmdir(p) == 0;
+#endif
+}

@@ -142,4 +142,32 @@ Class is File{
 		base:sysinternal:File:pal_file_free(ptr: outAddr);
 		return res;
 	}
+
+	held Function of Int is rawOpen(Int is pathCstr, Int is modeCstr){
+		return base:sysinternal:File:pal_file_open(path_cstr: pathCstr, mode_cstr: modeCstr);
+	}
+
+	held Function of Int is rawReadChunk(Int is handle, Int is dstAddr, Int is maxBytes){
+		return base:sysinternal:File:pal_file_read_chunk(handle: handle, dst_addr: dstAddr, max_bytes: maxBytes);
+	}
+
+	held Function of Int is rawWriteChunk(Int is handle, Int is srcAddr, Int is len){
+		return base:sysinternal:File:pal_file_write_chunk(handle: handle, src_addr: srcAddr, len: len);
+	}
+
+	held Function of Int is rawSeek(Int is handle, Int is offset, Int is whence){
+		return base:sysinternal:File:pal_file_seek(handle: handle, offset: offset, whence: whence);
+	}
+
+	held Function of Int is rawTell(Int is handle){
+		return base:sysinternal:File:pal_file_tell(handle: handle);
+	}
+
+	held Function of Int is rawFlush(Int is handle){
+		return base:sysinternal:File:pal_file_flush(handle: handle);
+	}
+
+	held Function of Int is rawClose(Int is handle){
+		return base:sysinternal:File:pal_file_close(handle: handle);
+	}
 }

@@ -99,4 +99,44 @@ Class is Dir{
 		base:sysinternal:Dir:pal_dir_close(handle: handle);
 		return true;
 	}
+
+	## Creates a single directory at [path]; returns `true` on success.
+	Function of Boolean is makeDir(String is path){
+		local Int is pc: :cstrOf(s: path);
+		if({ pc == 0 }, { return false; });
+		return base:sysinternal:Dir:pal_dir_mkdir(path_cstr: pc);
+	}
+
+	## Creates [path] and any missing parent directories; returns `true` if [path] exists as a directory.
+	Function of Boolean is makeDirAll(String is path){
+		if({ path == '' }, { return false; });
+		if({ :isDir(path: path) }, { return true; });
+		local String is norm: path:replaceAll(search: "\\", replacement: '/');
+		local Boolean is isAbs: norm:startsWith(prefix: '/');
+		local Array of String is parts: norm:split(delimiter: '/');
+		local String is cur: if({ isAbs }, { '' }, { '.' });
+		local Int is i: 0;
+		while({ i < parts:length() }, {
+			local String is seg: parts:get(index: i, default: '');
+			if({ seg != '' }, {
+				if({ cur == '' }, {
+					cur: '/' . seg;
+				}, {
+					if({ cur == '.' }, { cur: seg; }, { cur: cur . '/' . seg; });
+				});
+				if({ !:isDir(path: cur) }, {
+					:makeDir(path: cur);
+				});
+			});
+			i: i + 1;
+		});
+		return :isDir(path: path);
+	}
+
+	## Removes an empty directory at [path]; returns `true` on success.
+	Function of Boolean is removeDir(String is path){
+		local Int is pc: :cstrOf(s: path);
+		if({ pc == 0 }, { return false; });
+		return base:sysinternal:Dir:pal_dir_rmdir(path_cstr: pc);
+	}
 }

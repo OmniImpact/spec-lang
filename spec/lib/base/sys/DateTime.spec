@@ -388,6 +388,70 @@ Class is DateTime{
 		return base . sign . pad2(n: offH) . ":" . pad2(n: offM);
 	}
 
+	## Parses an ISO-8601 timestamp (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM:SS[.mmm][Z|±HH:MM]`).
+	## Returns [default] when [text] is malformed.
+	Function of DateTime is parseIso(String is text, DateTime is default){
+		local String is s: text:trim();
+		if({ s:length() < 10 }, { return default; });
+		if({ s:substring(start: 4, end: 5) != '-' || s:substring(start: 7, end: 8) != '-' }, { return default; });
+		local Int is y: s:substring(start: 0, end: 4):parseInt(default: -1);
+		local Int is mo: s:substring(start: 5, end: 7):parseInt(default: -1);
+		local Int is d: s:substring(start: 8, end: 10):parseInt(default: -1);
+		if({ y < 0 || !:isValidDate(year: y, month: mo, day: d) }, { return default; });
+		local Int is h: 0;
+		local Int is mi: 0;
+		local Int is sec: 0;
+		local Int is ms: 0;
+		local Int is offSec: 0;
+		local Int is pos: 10;
+		local Int is n: s:length();
+		if({ pos < n }, {
+			local String is sep: s:substring(start: pos, end: pos + 1);
+			if({ sep != 'T' && sep != 't' && sep != ' ' }, { return default; });
+			pos: pos + 1;
+			if({ pos + 5 > n }, { return default; });
+			h: s:substring(start: pos, end: pos + 2):parseInt(default: -1);
+			if({ s:substring(start: pos + 2, end: pos + 3) != ':' }, { return default; });
+			mi: s:substring(start: pos + 3, end: pos + 5):parseInt(default: -1);
+			pos: pos + 5;
+			if({ pos + 3 <= n && s:substring(start: pos, end: pos + 1) == ':' }, {
+				sec: s:substring(start: pos + 1, end: pos + 3):parseInt(default: -1);
+				pos: pos + 3;
+			});
+			if({ !:isValidTime(hour: h, minute: mi, second: sec) }, { return default; });
+			if({ pos < n && s:substring(start: pos, end: pos + 1) == '.' }, {
+				pos: pos + 1;
+				local Int is fStart: pos;
+				local Boolean is readingFrac: true;
+				while({ readingFrac && pos < n }, {
+					local Int is ch: s:byteAt(index: pos, default: 0);
+					if({ ch >= 48 && ch <= 57 }, { pos: pos + 1; }, { readingFrac: false; });
+				});
+				local String is frac: s:substring(start: fStart, end: pos);
+				if({ frac:length() == 1 }, { ms: frac:parseInt(default: 0) * 100; });
+				if({ frac:length() == 2 }, { ms: frac:parseInt(default: 0) * 10; });
+				if({ frac:length() >= 3 }, { ms: frac:substring(start: 0, end: 3):parseInt(default: 0); });
+			});
+			if({ pos < n }, {
+				local String is tz: s:substring(start: pos, end: pos + 1);
+				if({ tz == 'Z' || tz == 'z' }, {
+					offSec: 0;
+				}, {
+					if({ (tz == '+' || tz == '-') && pos + 6 <= n && s:substring(start: pos + 3, end: pos + 4) == ':' }, {
+						local Int is oh: s:substring(start: pos + 1, end: pos + 3):parseInt(default: -1);
+						local Int is om: s:substring(start: pos + 4, end: pos + 6):parseInt(default: -1);
+						if({ oh < 0 || oh > 23 || om < 0 || om > 59 }, { return default; });
+						offSec: oh * 3600 + om * 60;
+						if({ tz == '-' }, { offSec: 0 - offSec; });
+					}, {
+						return default;
+					});
+				});
+			});
+		});
+		return :of(year: y, month: mo, day: d, hour: h, minute: mi, second: sec, millisecond: ms, offsetSec: offSec);
+	}
+
 	replace Function of String is toString(){
 		return formatIso();
 	}

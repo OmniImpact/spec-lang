@@ -19,6 +19,31 @@ Class is Pem{
 		return -1;
 	}
 
+	## Encodes raw bytes (`0..255`) into standard Base64 text.
+	Function of String is base64Encode(Array of Int is data){
+		local String is alpha: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+		local String is out: '';
+		local Int is n: data:length();
+		local Int is i: 0;
+		while({ i < n }, {
+			local Int is b0: data:get(index: i, default: 0) & 255;
+			local Boolean is has1: (i + 1) < n;
+			local Boolean is has2: (i + 2) < n;
+			local Int is b1: if({ has1 }, { data:get(index: i + 1, default: 0) & 255 }, { 0 });
+			local Int is b2: if({ has2 }, { data:get(index: i + 2, default: 0) & 255 }, { 0 });
+			local Int is triple: (b0 << 16) | (b1 << 8) | b2;
+			local Int is c0: (triple >> 18) & 63;
+			local Int is c1: (triple >> 12) & 63;
+			local Int is c2: (triple >> 6) & 63;
+			local Int is c3: triple & 63;
+			out: out . alpha:substring(start: c0, end: c0 + 1) . alpha:substring(start: c1, end: c1 + 1);
+			out: out . if({ has1 }, { alpha:substring(start: c2, end: c2 + 1) }, { '=' });
+			out: out . if({ has2 }, { alpha:substring(start: c3, end: c3 + 1) }, { '=' });
+			i: i + 3;
+		});
+		return out;
+	}
+
 	## Decodes standard Base64 text (ignoring whitespace) into raw byte values (`0..255`).
 	Function of Array of Int is base64Decode(String is text){
 		local Array of Int is out: Array();

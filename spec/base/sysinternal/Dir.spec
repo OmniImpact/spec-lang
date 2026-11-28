@@ -11,4 +11,6 @@ Class is Dir{
 	Function of Int is pal_exe_dir(Int is buf_addr, Int is buf_size);
 	Function of Int is pal_exe_path(Int is buf_addr, Int is buf_size);
 	Function of Int is pal_file_size_cstr(Int is path_cstr);
+	Function of Boolean is pal_dir_mkdir(Int is path_cstr);
+	Function of Boolean is pal_dir_rmdir(Int is path_cstr);
 }

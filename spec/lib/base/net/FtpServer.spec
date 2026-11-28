@@ -293,13 +293,13 @@ Class is FtpServer{
 				}, {
 				if({ cmd == 'MKD' }, {
 					local String is dV: :normalizeVPath(cwd: cwd, arg: arg);
-					local Int is rc: Process:execute(command: 'mkdir', args: Array(['-p', :toFsPath(vPath: dV)]));
-					if({ rc == 0 }, { :sendLine(sock: ctrl, line: '257 "' . dV . '" created'); }, { :sendLine(sock: ctrl, line: '550 MKD failed'); });
+					local Boolean is ok: Dir:makeDirAll(path: :toFsPath(vPath: dV));
+					if({ ok }, { :sendLine(sock: ctrl, line: '257 "' . dV . '" created'); }, { :sendLine(sock: ctrl, line: '550 MKD failed'); });
 				}, {
 				if({ cmd == 'RMD' }, {
 					local String is dV: :normalizeVPath(cwd: cwd, arg: arg);
-					local Int is rc2: Process:execute(command: 'rmdir', args: Array([:toFsPath(vPath: dV)]));
-					if({ rc2 == 0 }, { :sendLine(sock: ctrl, line: '250 Directory removed'); }, { :sendLine(sock: ctrl, line: '550 RMD failed'); });
+					local Boolean is ok2: Dir:removeDir(path: :toFsPath(vPath: dV));
+					if({ ok2 }, { :sendLine(sock: ctrl, line: '250 Directory removed'); }, { :sendLine(sock: ctrl, line: '550 RMD failed'); });
 				}, {
 					:sendLine(sock: ctrl, line: '502 Command not implemented');
 				}); }); }); }); }); }); }); }); }); }); }); }); }); }); }); }); }); }); });
