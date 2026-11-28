@@ -37,4 +37,20 @@ Class is Socket{
 
 	## Configures send and receive timeout on [fd]. Bound to `spec_socket_set_timeout`.
 	Function of Int is socket_set_timeout(Int is fd, Int is timeout_ms);
+
+	## Returns the local bound port of [fd] via getsockname, or -1 on error.
+	## Bound to `spec_pal_socket_local_port`.
+	Function of Int is pal_socket_local_port(Int is fd);
+
+	## Binds a UDP (SOCK_DGRAM) socket to [host_cstr]:[port] (port 0 = ephemeral).
+	## Bound to `spec_pal_udp_bind`.
+	Function of Int is pal_udp_bind(Int is host_cstr, Int is port);
+
+	## Sends a UDP datagram to [host_cstr]:[port].
+	## Bound to `spec_pal_udp_sendto`.
+	Function of Int is pal_udp_sendto(Int is fd, Int is host_cstr, Int is port, Int is data_addr, Int is len);
+
+	## Receives a UDP datagram into [dst_addr], writing peer IP C-string and port.
+	## Bound to `spec_pal_udp_recvfrom`.
+	Function of Int is pal_udp_recvfrom(Int is fd, Int is dst_addr, Int is max_bytes, Int is host_buf, Int is host_buf_len, Int is port_out_addr);
 }

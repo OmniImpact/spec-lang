@@ -1910,7 +1910,7 @@ long long spec_pal_tcp_connect(long long host_cstr, long long port, long long ti
 }
 
 long long spec_pal_tcp_listen(long long host_cstr, long long port, long long backlog) {
-    if (port <= 0 || port > 65535) {
+    if (port < 0 || port > 65535) {
         _spec_set_sock_error("Socket error: Invalid port");
         return -1;
     }
@@ -2015,6 +2015,106 @@ long long spec_socket_set_timeout(long long fd, long long timeout_ms) {
     setsockopt((SOCKET)fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv));
     return 0;
 }
+
+long long spec_pal_socket_local_port(long long fd) {
+    if (fd < 0) return -1;
+    struct sockaddr_storage ss;
+    int slen = (int)sizeof(ss);
+    if (getsockname((SOCKET)fd, (struct sockaddr*)&ss, &slen) != 0) {
+        _spec_set_last_os_sock_error("Socket error: getsockname() failed");
+        return -1;
+    }
+    if (ss.ss_family == AF_INET) return (long long)ntohs(((struct sockaddr_in*)&ss)->sin_port);
+    if (ss.ss_family == AF_INET6) return (long long)ntohs(((struct sockaddr_in6*)&ss)->sin6_port);
+    return -1;
+}
+
+long long spec_pal_udp_bind(long long host_cstr, long long port) {
+    if (port < 0 || port > 65535) {
+        _spec_set_sock_error("Socket error: Invalid port");
+        return -1;
+    }
+    _spec_ensure_winsock();
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%lld", port);
+    const char* h = (const char*)(intptr_t)host_cstr;
+    if (h && !*h) h = NULL;
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+    int gai_rc = getaddrinfo(h, port_str, &hints, &res);
+    if (gai_rc != 0 || !res) {
+        snprintf(_spec_last_sock_err, sizeof(_spec_last_sock_err), "Socket error: getaddrinfo failed (%d)", gai_rc);
+        return -1;
+    }
+    SOCKET s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (s == INVALID_SOCKET) { _spec_set_last_os_sock_error("Socket error: socket() failed"); freeaddrinfo(res); return -1; }
+    BOOL opt = TRUE;
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
+    if (bind(s, res->ai_addr, (int)res->ai_addrlen) != 0) {
+        _spec_set_last_os_sock_error("Socket error: bind() failed");
+        closesocket(s);
+        freeaddrinfo(res);
+        return -1;
+    }
+    freeaddrinfo(res);
+    return (long long)s;
+}
+
+long long spec_pal_udp_sendto(long long fd, long long host_cstr, long long port, long long data_addr, long long len) {
+    if (fd < 0 || !host_cstr || port <= 0 || port > 65535) {
+        _spec_set_sock_error("Socket error: Invalid UDP sendto arguments");
+        return -1;
+    }
+    if (!data_addr || len <= 0) return 0;
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%lld", port);
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    int gai_rc = getaddrinfo((const char*)(intptr_t)host_cstr, port_str, &hints, &res);
+    if (gai_rc != 0 || !res) {
+        snprintf(_spec_last_sock_err, sizeof(_spec_last_sock_err), "Socket error: getaddrinfo failed (%d)", gai_rc);
+        return -1;
+    }
+    int n = sendto((SOCKET)fd, (const char*)(intptr_t)data_addr, (int)len, 0, res->ai_addr, (int)res->ai_addrlen);
+    freeaddrinfo(res);
+    if (n == SOCKET_ERROR) {
+        _spec_set_last_os_sock_error("Socket error: sendto() failed");
+        return -1;
+    }
+    return (long long)n;
+}
+
+long long spec_pal_udp_recvfrom(long long fd, long long dst_addr, long long max_bytes, long long host_buf, long long host_buf_len, long long port_out_addr) {
+    if (fd < 0 || !dst_addr || max_bytes <= 0) return -1;
+    struct sockaddr_storage ss;
+    int slen = (int)sizeof(ss);
+    int n = recvfrom((SOCKET)fd, (char*)(intptr_t)dst_addr, (int)max_bytes, 0, (struct sockaddr*)&ss, &slen);
+    if (n < 0) {
+        _spec_set_last_os_sock_error("Socket error: recvfrom() failed");
+        return -1;
+    }
+    long long peer_port = 0;
+    if (host_buf && host_buf_len > 0) {
+        char* hb = (char*)(intptr_t)host_buf;
+        hb[0] = '\0';
+        if (ss.ss_family == AF_INET) {
+            struct sockaddr_in* sin = (struct sockaddr_in*)&ss;
+            inet_ntop(AF_INET, &sin->sin_addr, hb, (size_t)host_buf_len);
+            peer_port = (long long)ntohs(sin->sin_port);
+        } else if (ss.ss_family == AF_INET6) {
+            struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&ss;
+            inet_ntop(AF_INET6, &sin6->sin6_addr, hb, (size_t)host_buf_len);
+            peer_port = (long long)ntohs(sin6->sin6_port);
+        }
+    }
+    if (port_out_addr) *(long long*)(intptr_t)port_out_addr = peer_port;
+    return (long long)n;
+}
 #else
 static inline void _spec_set_last_os_sock_error(const char* fallback) {
     if (errno != 0) {
@@ -2071,7 +2171,7 @@ long long spec_pal_tcp_connect(long long host_cstr, long long port, long long ti
 }
 
 long long spec_pal_tcp_listen(long long host_cstr, long long port, long long backlog) {
-    if (port <= 0 || port > 65535) {
+    if (port < 0 || port > 65535) {
         _spec_set_sock_error("Socket error: Invalid port");
         return -1;
     }
@@ -2190,6 +2290,111 @@ long long spec_socket_set_timeout(long long fd, long long timeout_ms) {
     setsockopt((int)fd, SOL_SOCKET, SO_RCVTIMEO, (const void*)&tv, sizeof(tv));
     setsockopt((int)fd, SOL_SOCKET, SO_SNDTIMEO, (const void*)&tv, sizeof(tv));
     return 0;
+}
+
+long long spec_pal_socket_local_port(long long fd) {
+    if (fd < 0) return -1;
+    struct sockaddr_storage ss;
+    socklen_t slen = sizeof(ss);
+    if (getsockname((int)fd, (struct sockaddr*)&ss, &slen) != 0) {
+        _spec_set_last_os_sock_error("Socket error: getsockname() failed");
+        return -1;
+    }
+    if (ss.ss_family == AF_INET) return (long long)ntohs(((struct sockaddr_in*)&ss)->sin_port);
+    if (ss.ss_family == AF_INET6) return (long long)ntohs(((struct sockaddr_in6*)&ss)->sin6_port);
+    return -1;
+}
+
+long long spec_pal_udp_bind(long long host_cstr, long long port) {
+    if (port < 0 || port > 65535) {
+        _spec_set_sock_error("Socket error: Invalid port");
+        return -1;
+    }
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%lld", port);
+    const char* h = (const char*)(intptr_t)host_cstr;
+    if (h && !*h) h = NULL;
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+    int gai_rc = getaddrinfo(h, port_str, &hints, &res);
+    if (gai_rc != 0 || !res) {
+        _spec_set_sock_error(gai_strerror(gai_rc));
+        return -1;
+    }
+    int s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (s < 0) { _spec_set_last_os_sock_error("Socket error: socket() failed"); freeaddrinfo(res); return -1; }
+    int opt = 1;
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    if (bind(s, res->ai_addr, res->ai_addrlen) != 0) {
+        _spec_set_last_os_sock_error("Socket error: bind() failed");
+        close(s);
+        freeaddrinfo(res);
+        return -1;
+    }
+    freeaddrinfo(res);
+    return (long long)s;
+}
+
+long long spec_pal_udp_sendto(long long fd, long long host_cstr, long long port, long long data_addr, long long len) {
+    if (fd < 0 || !host_cstr || port <= 0 || port > 65535) {
+        _spec_set_sock_error("Socket error: Invalid UDP sendto arguments");
+        return -1;
+    }
+    if (!data_addr || len <= 0) return 0;
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%lld", port);
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    int gai_rc = getaddrinfo((const char*)(intptr_t)host_cstr, port_str, &hints, &res);
+    if (gai_rc != 0 || !res) {
+        _spec_set_sock_error(gai_strerror(gai_rc));
+        return -1;
+    }
+    ssize_t n;
+    do {
+        n = sendto((int)fd, (const void*)(intptr_t)data_addr, (size_t)len, 0, res->ai_addr, res->ai_addrlen);
+    } while (n < 0 && errno == EINTR);
+    freeaddrinfo(res);
+    if (n < 0) {
+        _spec_set_last_os_sock_error("Socket error: sendto() failed");
+        return -1;
+    }
+    return (long long)n;
+}
+
+long long spec_pal_udp_recvfrom(long long fd, long long dst_addr, long long max_bytes, long long host_buf, long long host_buf_len, long long port_out_addr) {
+    if (fd < 0 || !dst_addr || max_bytes <= 0) return -1;
+    struct sockaddr_storage ss;
+    socklen_t slen = sizeof(ss);
+    ssize_t n;
+    do {
+        n = recvfrom((int)fd, (void*)(intptr_t)dst_addr, (size_t)max_bytes, 0, (struct sockaddr*)&ss, &slen);
+    } while (n < 0 && errno == EINTR);
+    if (n < 0) {
+        _spec_set_last_os_sock_error("Socket error: recvfrom() failed");
+        return -1;
+    }
+    long long peer_port = 0;
+    if (host_buf && host_buf_len > 0) {
+        char* hb = (char*)(intptr_t)host_buf;
+        hb[0] = '\0';
+        if (ss.ss_family == AF_INET) {
+            struct sockaddr_in* sin = (struct sockaddr_in*)&ss;
+            inet_ntop(AF_INET, &sin->sin_addr, hb, (size_t)host_buf_len);
+            peer_port = (long long)ntohs(sin->sin_port);
+        } else if (ss.ss_family == AF_INET6) {
+            struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&ss;
+            inet_ntop(AF_INET6, &sin6->sin6_addr, hb, (size_t)host_buf_len);
+            peer_port = (long long)ntohs(sin6->sin6_port);
+        }
+    }
+    if (port_out_addr) *(long long*)(intptr_t)port_out_addr = peer_port;
+    return (long long)n;
 }
 #endif
 static __thread const char* _spec_last_audio_err = "";
@@ -3715,7 +3920,7 @@ static bool _spec_ensure_shm_buffer(SpecWaylandWindow* w, int width, int height)
         return false;
     }
     unlink(tmpl);
-    if (ftruncate(fd, (off_t)size) < 0) {
+    if (ftruncate(fd, (off_t)size) < 0 || posix_fallocate(fd, 0, (off_t)size) != 0) {
         close(fd);
         w->buffer = old_buf; w->shm_pool = old_pool; w->shm_data = old_data; w->shm_size = old_size; w->shm_fd = old_fd;
         return false;
@@ -3730,14 +3935,16 @@ static bool _spec_ensure_shm_buffer(SpecWaylandWindow* w, int width, int height)
     uint32_t* px = (uint32_t*)ptr;
     size_t count = (size_t)width * (size_t)height;
     uint32_t fill = 0xFF181C24u;
-    if (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0) {
+    bool has_old_pixels = (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0 &&
+        old_size >= (size_t)old_h * (size_t)old_w * 4);
+    if (has_old_pixels) {
         const uint32_t* opx = (const uint32_t*)old_data;
         fill = opx[(size_t)(old_h - 1) * (size_t)old_w + (size_t)(old_w - 1)];
     }
     for (size_t i = 0; i < count; i++) {
         px[i] = fill;
     }
-    if (old_data && old_data != MAP_FAILED && old_w > 0 && old_h > 0) {
+    if (has_old_pixels) {
         const uint32_t* opx = (const uint32_t*)old_data;
         int copy_w = old_w < width ? old_w : width;
         int copy_h = old_h < height ? old_h : height;

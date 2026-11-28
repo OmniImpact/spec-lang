@@ -196,8 +196,46 @@ Class is Socket{
 		});
 	}
 
+	## Returns the local bound port (useful after `listen(port: 0)`), or -1 if closed/error.
+	Function of Int is localPort(){
+		if({ :isClosed }, { return -1; });
+		return base:sysinternal:Socket:pal_socket_local_port(fd: :descriptor);
+	}
+
 	## Returns true if the socket is open and connected.
 	Function of Boolean is isOpen(){
 		return !:isClosed;
+	}
+
+	held Function of Int is rawLastError(){
+		return base:sysinternal:Socket:pal_socket_last_error();
+	}
+
+	held Function of Int is rawLocalPort(Int is fd){
+		return base:sysinternal:Socket:pal_socket_local_port(fd: fd);
+	}
+
+	held Function of Int is rawUdpBind(Int is hostCstr, Int is port){
+		return base:sysinternal:Socket:pal_udp_bind(host_cstr: hostCstr, port: port);
+	}
+
+	held Function of Int is rawUdpSendTo(Int is fd, Int is hostCstr, Int is port, Int is dataAddr, Int is len){
+		return base:sysinternal:Socket:pal_udp_sendto(fd: fd, host_cstr: hostCstr, port: port, data_addr: dataAddr, len: len);
+	}
+
+	held Function of Int is rawUdpRecvFrom(Int is fd, Int is dstAddr, Int is maxBytes, Int is hostBuf, Int is hostBufLen, Int is portOutAddr){
+		return base:sysinternal:Socket:pal_udp_recvfrom(fd: fd, dst_addr: dstAddr, max_bytes: maxBytes, host_buf: hostBuf, host_buf_len: hostBufLen, port_out_addr: portOutAddr);
+	}
+
+	held Function of Int is rawPoll(Int is fd, Int is mode, Int is timeoutMs){
+		return base:sysinternal:Socket:socket_poll(fd: fd, mode: mode, timeout_ms: timeoutMs);
+	}
+
+	held Function of Int is rawSetTimeout(Int is fd, Int is timeoutMs){
+		return base:sysinternal:Socket:socket_set_timeout(fd: fd, timeout_ms: timeoutMs);
+	}
+
+	held Function of Int is rawClose(Int is fd){
+		return base:sysinternal:Socket:socket_close(fd: fd);
 	}
 }
