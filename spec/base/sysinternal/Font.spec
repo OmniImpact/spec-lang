@@ -13,6 +13,10 @@ Class is Font{
 	## Bound to `spec_pal_font_default_path`.
 	Function of Int is pal_font_default_path(Int is out_buf, Int is out_cap);
 
+	## Queries a system font path matching [mono], [bold], and [italic] into [out_buf]; returns byte length or 0.
+	## Bound to `spec_pal_font_find_path`.
+	Function of Int is pal_font_find_path(Int is mono, Int is bold, Int is italic, Int is out_buf, Int is out_cap);
+
 	## Releases a loaded font handle.
 	## Bound to `spec_pal_font_close`.
 	Function of Int is pal_font_close(Int is handle);

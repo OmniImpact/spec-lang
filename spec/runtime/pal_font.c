@@ -184,8 +184,8 @@ long long spec_pal_font_has_glyph(long long handle, long long cp) {
     return stbtt_FindGlyphIndex(&f->info, (int)cp) != 0 ? 1 : 0;
 }
 
-long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
 #if defined(__linux__)
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
     if (!out_buf || out_cap <= 1) return 0;
     void* fc = dlopen("libfontconfig.so.1", RTLD_LAZY | RTLD_LOCAL);
     if (!fc) return 0;
@@ -232,11 +232,195 @@ long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
     pFcPatternDestroy(match);
     dlclose(fc);
     return written;
+}
+
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) {
+    (void)mono; (void)bold; (void)italic; (void)out_buf; (void)out_cap;
+    return 0;
+}
+#elif defined(_WIN32)
+typedef struct {
+    char path[MAX_PATH * 2];
+    bool is_mono;
+    bool is_bold;
+    bool is_italic;
+    int score;
+} SpecWinFontEntry;
+
+static SpecWinFontEntry* _spec_win_font_cache = NULL;
+static int _spec_win_font_count = 0;
+static bool _spec_win_font_scanned = false;
+
+static uint16_t _spec_be16(const unsigned char* p) {
+    return (uint16_t)(((uint16_t)p[0] << 8) | (uint16_t)p[1]);
+}
+
+static uint32_t _spec_be32(const unsigned char* p) {
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+}
+
+static bool _spec_win_inspect_ttf(const char* path, bool* out_mono, bool* out_bold, bool* out_italic, int* out_score) {
+    FILE* fp = fopen(path, "rb");
+    if (!fp) return false;
+    unsigned char hdr[12];
+    if (fread(hdr, 1, 12, fp) != 12) { fclose(fp); return false; }
+    uint32_t ver = _spec_be32(hdr);
+    if (ver != 0x00010000U && ver != 0x4F54544FU /* OTTO */) { fclose(fp); return false; }
+    uint16_t num_tables = _spec_be16(hdr + 4);
+    if (num_tables == 0 || num_tables > 64) { fclose(fp); return false; }
+
+    unsigned char tbls[64 * 16];
+    if (fread(tbls, 16, num_tables, fp) != num_tables) { fclose(fp); return false; }
+
+    uint32_t off_os2 = 0, len_os2 = 0;
+    uint32_t off_post = 0, len_post = 0;
+    uint32_t off_head = 0, len_head = 0;
+    bool has_cmap = false;
+
+    for (uint16_t i = 0; i < num_tables; i++) {
+        const unsigned char* r = tbls + i * 16;
+        uint32_t tag = _spec_be32(r);
+        uint32_t off = _spec_be32(r + 8);
+        uint32_t len = _spec_be32(r + 12);
+        if (tag == 0x4F532F32U /* OS/2 */) { off_os2 = off; len_os2 = len; }
+        else if (tag == 0x706F7374U /* post */) { off_post = off; len_post = len; }
+        else if (tag == 0x68656164U /* head */) { off_head = off; len_head = len; }
+        else if (tag == 0x636D6170U /* cmap */) { has_cmap = true; }
+    }
+    if (!has_cmap || off_os2 == 0 || len_os2 < 68) { fclose(fp); return false; }
+
+    unsigned char os2[68];
+    if (fseek(fp, (long)off_os2, SEEK_SET) != 0 || fread(os2, 1, 68, fp) != 68) { fclose(fp); return false; }
+
+    uint16_t weight = _spec_be16(os2 + 4);
+    uint16_t width_cls = _spec_be16(os2 + 6);
+    unsigned char panose0 = os2[32];
+    unsigned char panose1 = os2[33];
+    unsigned char panose3 = os2[35];
+    uint32_t ur1 = _spec_be32(os2 + 42);
+    uint16_t fs_sel = _spec_be16(os2 + 62);
+
+    if (panose0 == 5 || !(ur1 & 1U)) { fclose(fp); return false; }
+
+    uint32_t fixed_pitch = 0;
+    if (off_post != 0 && len_post >= 16) {
+        unsigned char post[16];
+        if (fseek(fp, (long)off_post, SEEK_SET) == 0 && fread(post, 1, 16, fp) == 16) {
+            fixed_pitch = _spec_be32(post + 12);
+        }
+    }
+
+    uint16_t mac_style = 0;
+    if (off_head != 0 && len_head >= 48) {
+        unsigned char head[48];
+        if (fseek(fp, (long)off_head, SEEK_SET) == 0 && fread(head, 1, 48, fp) == 48) {
+            mac_style = _spec_be16(head + 44);
+        }
+    }
+    fclose(fp);
+
+    bool is_mono = (fixed_pitch != 0) || (panose3 == 9);
+    bool is_bold = ((fs_sel & 0x20U) != 0) || ((mac_style & 0x01U) != 0) || (weight >= 600);
+    bool is_italic = ((fs_sel & 0x01U) != 0) || ((mac_style & 0x02U) != 0);
+
+    int score = 100;
+    if (panose0 == 2) score += 50;
+    else if (panose0 == 4) score -= 20;
+    if (width_cls == 5) score += 30;
+    if (weight == (is_bold ? 700 : 400)) score += 20;
+    if (!is_mono && panose1 >= 11 && panose1 <= 15) score += 25;
+    if (is_mono && fixed_pitch != 0 && panose3 == 9) score += 25;
+
+    *out_mono = is_mono;
+    *out_bold = is_bold;
+    *out_italic = is_italic;
+    *out_score = score;
+    return true;
+}
+
+static void _spec_win_scan_fonts(void) {
+    if (_spec_win_font_scanned) return;
+    _spec_win_font_scanned = true;
+    char win_dir[MAX_PATH];
+    UINT wn = GetWindowsDirectoryA(win_dir, MAX_PATH);
+    if (wn == 0 || wn >= MAX_PATH) return;
+
+    char pattern[MAX_PATH * 2];
+    snprintf(pattern, sizeof(pattern), "%s\\Fonts\\*.ttf", win_dir);
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = FindFirstFileA(pattern, &fd);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+
+    int cap = 128;
+    _spec_win_font_cache = (SpecWinFontEntry*)malloc((size_t)cap * sizeof(SpecWinFontEntry));
+    if (!_spec_win_font_cache) { FindClose(hFind); return; }
+
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        char full[MAX_PATH * 2];
+        snprintf(full, sizeof(full), "%s\\Fonts\\%s", win_dir, fd.cFileName);
+        bool mono = false, bold = false, italic = false;
+        int score = 0;
+        if (_spec_win_inspect_ttf(full, &mono, &bold, &italic, &score)) {
+            if (_spec_win_font_count >= cap) {
+                int new_cap = cap * 2;
+                SpecWinFontEntry* next = (SpecWinFontEntry*)realloc(_spec_win_font_cache, (size_t)new_cap * sizeof(SpecWinFontEntry));
+                if (!next) break;
+                _spec_win_font_cache = next;
+                cap = new_cap;
+            }
+            SpecWinFontEntry* e = &_spec_win_font_cache[_spec_win_font_count++];
+            snprintf(e->path, sizeof(e->path), "%s", full);
+            e->is_mono = mono;
+            e->is_bold = bold;
+            e->is_italic = italic;
+            e->score = score;
+        }
+    } while (FindNextFileA(hFind, &fd));
+    FindClose(hFind);
+}
+
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) {
+    if (!out_buf || out_cap <= 1) return 0;
+    _spec_win_scan_fonts();
+    if (!_spec_win_font_cache || _spec_win_font_count == 0) return 0;
+    bool want_mono = mono != 0;
+    bool want_bold = bold != 0;
+    bool want_italic = italic != 0;
+    const SpecWinFontEntry* best = NULL;
+    int best_rank = -100000;
+    for (int i = 0; i < _spec_win_font_count; i++) {
+        const SpecWinFontEntry* e = &_spec_win_font_cache[i];
+        if (e->is_mono != want_mono) continue;
+        int rank = e->score;
+        if (e->is_bold == want_bold) rank += 200;
+        if (e->is_italic == want_italic) rank += 200;
+        if (rank > best_rank) {
+            best_rank = rank;
+            best = e;
+        }
+    }
+    if (!best) return 0;
+    size_t len = strlen(best->path);
+    if (len > (size_t)(out_cap - 1)) len = (size_t)(out_cap - 1);
+    memcpy((char*)(intptr_t)out_buf, best->path, len);
+    ((char*)(intptr_t)out_buf)[len] = '\0';
+    return (long long)len;
+}
+
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
+    return spec_pal_font_find_path(0, 0, 0, out_buf, out_cap);
+}
 #else
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) {
+    (void)mono; (void)bold; (void)italic; (void)out_buf; (void)out_cap;
+    return 0;
+}
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
     (void)out_buf; (void)out_cap;
     return 0;
-#endif
 }
+#endif
 
 #else
 
@@ -256,5 +440,6 @@ long long spec_pal_font_glyph_box_subpixel(long long handle, long long cp, long 
 long long spec_pal_font_rasterize_glyph_subpixel(long long handle, long long cp, long long pixel_height, double shift_x, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)shift_x; (void)dst_ptr; (void)gw; (void)gh; return 0; }
 long long spec_pal_font_has_glyph(long long handle, long long cp) { (void)handle; (void)cp; return 0; }
 long long spec_pal_font_default_path(long long out_buf, long long out_cap) { (void)out_buf; (void)out_cap; return 0; }
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) { (void)mono; (void)bold; (void)italic; (void)out_buf; (void)out_cap; return 0; }
 
 #endif

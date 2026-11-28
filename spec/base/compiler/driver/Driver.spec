@@ -74,6 +74,7 @@ Class is Driver{
 	local Int is builtCheckMs: 0;
 	local Int is builtIrGenT0: 0;
 	local Boolean is builtUsesAudio: false;
+	local Boolean is builtUsesWindow: false;
 	local Boolean is builtFailed: false;
 
 	## Runs Stages 1–3a (load, typecheck, entry resolution, IR construction) in
@@ -86,6 +87,7 @@ Class is Driver{
 		:builtCheckMs: 0;
 		:builtIrGenT0: 0;
 		:builtUsesAudio: false;
+		:builtUsesWindow: false;
 		:builtFailed: false;
 
 		# 1. Multi-file module loading and dependency resolution.
@@ -103,6 +105,9 @@ Class is Driver{
 			local ClassInfo is c: program:classes:get(index: ci);
 			if({ c:name == 'Audio' }, {
 				:builtUsesAudio: true;
+			});
+			if({ c:name == 'Window' }, {
+				:builtUsesWindow: true;
 			});
 			times(count: c:members:length(), worker: local Function(Int is mi){
 				if({ c:members:get(index: mi):kind == MemberKind:METHOD }, {
@@ -325,6 +330,7 @@ Class is Driver{
 			local Int is methodCount: :builtMethodCount;
 			local Int is llvmGenT0: :builtIrGenT0;
 			local Boolean is usesAudio: :builtUsesAudio;
+			local Boolean is usesWindow: :builtUsesWindow;
 
 			if({ !args:has(key: 'no-opt') }, {
 				local OptimizerPipeline is optPipe: OptimizerPipeline:init(assumeSimd: nativeCpu);
@@ -395,6 +401,7 @@ Class is Driver{
 			});
 
 			local String is optFlag: if({ debugMode }, { '-O0' }, { '-O2' });
+			local String is extraLinkArg: args:getString(key: 'link-arg', default: '');
 			local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
 			local Int is llCcT0: Process:clockMs();
 			local Int is llStat: 0;
@@ -445,6 +452,12 @@ Class is Driver{
 					llOsFlags:each(action: local Function(String is fl){
 						linkArgs:add(item: fl);
 					});
+					if({ usesWindow && Process:osName() == 'windows' }, {
+						linkArgs:add(item: '-mwindows');
+					});
+					if({ extraLinkArg != '' }, {
+						linkArgs:add(item: extraLinkArg);
+					});
 					if({ debugMode }, {
 						linkArgs:add(item: '-g');
 					}, {
@@ -466,6 +479,12 @@ Class is Driver{
 				});
 				llOsFlags:each(action: local Function(String is fl){
 					llArgs:add(item: fl);
+				});
+				if({ usesWindow && Process:osName() == 'windows' }, {
+					llArgs:add(item: '-mwindows');
+				});
+				if({ extraLinkArg != '' }, {
+					llArgs:add(item: extraLinkArg);
 				});
 				if({ debugMode }, {
 					llArgs:add(item: '-g');

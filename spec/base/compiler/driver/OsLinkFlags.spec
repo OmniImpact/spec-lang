@@ -33,7 +33,7 @@ Class of OsDispatch is OsLinkFlags{
 	}
 
 	replace Function of String is windows(){
-		return '-lws2_32 -lwinmm -lpsapi -Wl,-Bstatic,-lpthread,-Bdynamic';
+		return '-lws2_32 -lwinmm -lpsapi -luser32 -lgdi32 -Wl,-Bstatic,-lpthread,-Bdynamic';
 	}
 
 	Function of Array of String is flags(){

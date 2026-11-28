@@ -4998,11 +4998,855 @@ long long spec_pal_window_set_icon(long long handle, long long pixels_addr, long
     return 0;
 }
 
+#elif defined(_WIN32)
+
+#ifndef WM_DPICHANGED
+#define WM_DPICHANGED 0x02E0
+#endif
+
+#define SPEC_WIN32_MAX_WINDOWS 32
+
+typedef struct {
+    int32_t kind;
+    int32_t a;
+    int32_t b;
+    int32_t c;
+    int32_t d;
+} SpecWin32Event;
+
+typedef struct {
+    bool active;
+    bool closed;
+    bool pointer_down;
+    bool pointer_on_surface;
+    bool has_click;
+    bool has_right_click;
+    HWND hwnd;
+    HINSTANCE hinst;
+    HCURSOR cur_cursor;
+    HICON cur_icon;
+    int width;
+    int height;
+    int min_w;
+    int min_h;
+    int scale_milli;
+    int pointer_x;
+    int pointer_y;
+    int click_x;
+    int click_y;
+    int right_click_x;
+    int right_click_y;
+    int scroll_x;
+    int scroll_y;
+    int mods;
+    uint16_t high_surrogate;
+    int* key_queue;
+    size_t key_len;
+    size_t key_cap;
+    int* char_queue;
+    size_t char_len;
+    size_t char_cap;
+    SpecWin32Event* ev_queue;
+    int ev_head;
+    int ev_tail;
+    int ev_cap;
+    char* clip_buf;
+    void* last_pixels;
+    int last_pix_w;
+    int last_pix_h;
+    size_t last_pix_cap;
+} SpecWin32Window;
+
+static SpecWin32Window _spec_win32_windows[SPEC_WIN32_MAX_WINDOWS];
+static bool _spec_win32_class_reg = false;
+static bool _spec_win32_dpi_init = false;
+static LPVOID _spec_main_fiber = NULL;
+static LPVOID _spec_msg_fiber = NULL;
+static bool _spec_in_modal_loop = false;
+static DWORD _spec_modal_timeout_ms = 0;
+
+static SpecWin32Window* _spec_win32_get(long long handle) {
+    if (handle <= 0 || handle > SPEC_WIN32_MAX_WINDOWS) return NULL;
+    SpecWin32Window* w = &_spec_win32_windows[handle - 1];
+    return w->active ? w : NULL;
+}
+
+static void _spec_win32_push_key(SpecWin32Window* w, int code) {
+    if (!w || code <= 0) return;
+    if (w->key_len >= w->key_cap) {
+        size_t new_cap = w->key_cap == 0 ? 16 : w->key_cap * 2;
+        int* next = (int*)realloc(w->key_queue, new_cap * sizeof(int));
+        if (!next) return;
+        w->key_queue = next;
+        w->key_cap = new_cap;
+    }
+    w->key_queue[w->key_len++] = code;
+}
+
+static void _spec_win32_push_char(SpecWin32Window* w, int cp) {
+    if (!w || cp <= 0) return;
+    if (w->char_len >= w->char_cap) {
+        size_t new_cap = w->char_cap == 0 ? 16 : w->char_cap * 2;
+        int* next = (int*)realloc(w->char_queue, new_cap * sizeof(int));
+        if (!next) return;
+        w->char_queue = next;
+        w->char_cap = new_cap;
+    }
+    w->char_queue[w->char_len++] = cp;
+}
+
+static void _spec_win32_push_event(SpecWin32Window* w, int32_t kind, int32_t a, int32_t b, int32_t c, int32_t d) {
+    if (!w) return;
+    if (!w->ev_queue) {
+        w->ev_cap = 64;
+        w->ev_queue = (SpecWin32Event*)malloc(sizeof(SpecWin32Event) * (size_t)w->ev_cap);
+        if (!w->ev_queue) return;
+        w->ev_head = 0;
+        w->ev_tail = 0;
+    }
+    int count = (w->ev_tail - w->ev_head + w->ev_cap) % w->ev_cap;
+    if (count + 1 >= w->ev_cap) {
+        int new_cap = w->ev_cap * 2;
+        SpecWin32Event* next = (SpecWin32Event*)malloc(sizeof(SpecWin32Event) * (size_t)new_cap);
+        if (!next) return;
+        for (int i = 0; i < count; i++) {
+            next[i] = w->ev_queue[(w->ev_head + i) % w->ev_cap];
+        }
+        free(w->ev_queue);
+        w->ev_queue = next;
+        w->ev_cap = new_cap;
+        w->ev_head = 0;
+        w->ev_tail = count;
+    }
+    w->ev_queue[w->ev_tail].kind = kind;
+    w->ev_queue[w->ev_tail].a = a;
+    w->ev_queue[w->ev_tail].b = b;
+    w->ev_queue[w->ev_tail].c = c;
+    w->ev_queue[w->ev_tail].d = d;
+    w->ev_tail = (w->ev_tail + 1) % w->ev_cap;
+}
+
+static int _spec_win32_mods(void) {
+    int m = 0;
+    if (GetKeyState(VK_SHIFT) & 0x8000) m |= 1;
+    if (GetKeyState(VK_CONTROL) & 0x8000) m |= 2;
+    if (GetKeyState(VK_MENU) & 0x8000) m |= 4;
+    if ((GetKeyState(VK_LWIN) & 0x8000) || (GetKeyState(VK_RWIN) & 0x8000)) m |= 8;
+    return m;
+}
+
+static int _spec_win32_vk_to_nav(WPARAM vk) {
+    switch (vk) {
+        case VK_ESCAPE: return 27;
+        case VK_RETURN: return 13;
+        case VK_BACK:   return 8;
+        case VK_TAB:    return 9;
+        case VK_DELETE: return 127;
+        case VK_UP:     return 1001;
+        case VK_DOWN:   return 1002;
+        case VK_LEFT:   return 1003;
+        case VK_RIGHT:  return 1004;
+        case VK_HOME:   return 1005;
+        case VK_END:    return 1006;
+        case VK_PRIOR:  return 1007;
+        case VK_NEXT:   return 1008;
+        default: break;
+    }
+    if (vk >= 'A' && vk <= 'Z') return (int)(vk - 'A' + 'a');
+    if (vk >= '0' && vk <= '9') return (int)vk;
+    if (vk == VK_SPACE) return ' ';
+    UINT ch = MapVirtualKeyW((UINT)vk, MAPVK_VK_TO_CHAR) & 0xFFFFU;
+    if (ch >= 32 && ch < 127) return (int)ch;
+    return 0;
+}
+
+static int _spec_win32_compute_scale_milli(HWND hwnd) {
+    const char* env = getenv("SPEC_UI_SCALE");
+    if (env && *env) {
+        double v = atof(env);
+        if (v > 0.25 && v < 8.0) return (int)(v * 1000.0 + 0.5);
+    }
+    int os_dpi = 96;
+    HMODULE u32 = GetModuleHandleA("user32.dll");
+    if (u32) {
+        typedef UINT (WINAPI *PFN_GetDpiForWindow)(HWND);
+        PFN_GetDpiForWindow pGetDpi = (PFN_GetDpiForWindow)GetProcAddress(u32, "GetDpiForWindow");
+        if (pGetDpi) {
+            UINT dpi = pGetDpi(hwnd);
+            if (dpi > 0) os_dpi = (int)dpi;
+        }
+    }
+    HDC hdc = GetDC(hwnd);
+    if (hdc) {
+        if (os_dpi <= 96) {
+            int cap_dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+            if (cap_dpi > os_dpi) os_dpi = cap_dpi;
+        }
+        if (os_dpi <= 96) {
+            int horz_res = GetDeviceCaps(hdc, HORZRES);
+            int horz_mm = GetDeviceCaps(hdc, HORZSIZE);
+            if (horz_res > 0 && horz_mm > 0) {
+                double phys_dpi = ((double)horz_res * 25.4) / (double)horz_mm;
+                if (phys_dpi > 110.0) {
+                    ReleaseDC(hwnd, hdc);
+                    return (int)((phys_dpi / 96.0) * 1000.0 + 0.5);
+                }
+            }
+        }
+        ReleaseDC(hwnd, hdc);
+    }
+    return (os_dpi * 1000 + 48) / 96;
+}
+
+static LRESULT CALLBACK _spec_win32_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    SpecWin32Window* w = (SpecWin32Window*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+    if (!w) return DefWindowProcW(hwnd, msg, wp, lp);
+
+    switch (msg) {
+        case WM_CLOSE:
+        case WM_DESTROY:
+            w->closed = true;
+            return 0;
+        case WM_ERASEBKGND:
+            return 1;
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            if (hdc && w->last_pixels && w->last_pix_w > 0 && w->last_pix_h > 0) {
+                BITMAPINFO bmi;
+                memset(&bmi, 0, sizeof(bmi));
+                bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                bmi.bmiHeader.biWidth = (LONG)w->last_pix_w;
+                bmi.bmiHeader.biHeight = -(LONG)w->last_pix_h;
+                bmi.bmiHeader.biPlanes = 1;
+                bmi.bmiHeader.biBitCount = 32;
+                bmi.bmiHeader.biCompression = BI_RGB;
+                int dst_w = w->width > 0 ? w->width : w->last_pix_w;
+                int dst_h = w->height > 0 ? w->height : w->last_pix_h;
+                StretchDIBits(
+                    hdc, 0, 0, dst_w, dst_h,
+                    0, 0, w->last_pix_w, w->last_pix_h,
+                    w->last_pixels, &bmi, DIB_RGB_COLORS, SRCCOPY
+                );
+            }
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+        case WM_ENTERSIZEMOVE:
+            _spec_in_modal_loop = true;
+            SetTimer(hwnd, 1, 16, NULL);
+            return 0;
+        case WM_EXITSIZEMOVE:
+            KillTimer(hwnd, 1);
+            _spec_in_modal_loop = false;
+            return 0;
+        case WM_SIZE:
+            w->width = (int)LOWORD(lp);
+            w->height = (int)HIWORD(lp);
+            if (_spec_in_modal_loop && _spec_main_fiber) {
+                SwitchToFiber(_spec_main_fiber);
+            }
+            return 0;
+        case WM_TIMER:
+            if (wp == 1 && _spec_in_modal_loop && _spec_main_fiber) {
+                SwitchToFiber(_spec_main_fiber);
+                return 0;
+            }
+            break;
+        case WM_DPICHANGED: {
+            UINT dpi = HIWORD(wp);
+            if (dpi > 0) w->scale_milli = (int)((dpi * 1000U + 48U) / 96U);
+            RECT* pr = (RECT*)lp;
+            if (pr) {
+                SetWindowPos(hwnd, NULL, pr->left, pr->top, pr->right - pr->left, pr->bottom - pr->top, SWP_NOZORDER | SWP_NOACTIVATE);
+            }
+            return 0;
+        }
+        case WM_GETMINMAXINFO: {
+            if (w->min_w > 0 || w->min_h > 0) {
+                MINMAXINFO* mmi = (MINMAXINFO*)lp;
+                RECT rc = { 0, 0, w->min_w > 0 ? w->min_w : 1, w->min_h > 0 ? w->min_h : 1 };
+                DWORD style = (DWORD)GetWindowLongPtrW(hwnd, GWL_STYLE);
+                DWORD exStyle = (DWORD)GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                AdjustWindowRectEx(&rc, style, FALSE, exStyle);
+                if (w->min_w > 0) mmi->ptMinTrackSize.x = rc.right - rc.left;
+                if (w->min_h > 0) mmi->ptMinTrackSize.y = rc.bottom - rc.top;
+                return 0;
+            }
+            break;
+        }
+        case WM_SETFOCUS:
+            _spec_win32_push_event(w, 11, 1, 0, 0, 0);
+            return 0;
+        case WM_KILLFOCUS:
+            _spec_win32_push_event(w, 11, 0, 0, 0, 0);
+            return 0;
+        case WM_MOUSEMOVE: {
+            int x = (int)(short)LOWORD(lp);
+            int y = (int)(short)HIWORD(lp);
+            if (!w->pointer_on_surface) {
+                TRACKMOUSEEVENT tme;
+                memset(&tme, 0, sizeof(tme));
+                tme.cbSize = sizeof(tme);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = hwnd;
+                TrackMouseEvent(&tme);
+                w->pointer_on_surface = true;
+                _spec_win32_push_event(w, 10, 1, x, y, 0);
+            }
+            w->pointer_x = x;
+            w->pointer_y = y;
+            _spec_win32_push_event(w, 1, x, y, 0, 0);
+            return 0;
+        }
+        case WM_MOUSELEAVE:
+            w->pointer_on_surface = false;
+            _spec_win32_push_event(w, 10, 0, w->pointer_x, w->pointer_y, 0);
+            return 0;
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_RBUTTONDOWN:
+        case WM_RBUTTONUP:
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONUP: {
+            int x = (int)(short)LOWORD(lp);
+            int y = (int)(short)HIWORD(lp);
+            w->pointer_x = x;
+            w->pointer_y = y;
+            int32_t btn = 0x110;
+            if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONUP) btn = 0x111;
+            else if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONUP) btn = 0x112;
+            int32_t state = (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN) ? 1 : 0;
+            _spec_win32_push_event(w, 2, btn, state, x, y);
+            if (btn == 0x110) {
+                if (state == 1) {
+                    SetCapture(hwnd);
+                    w->pointer_down = true;
+                    w->has_click = true;
+                    w->click_x = x;
+                    w->click_y = y;
+                } else {
+                    ReleaseCapture();
+                    w->pointer_down = false;
+                }
+            } else if (btn == 0x111 && state == 1) {
+                w->has_right_click = true;
+                w->right_click_x = x;
+                w->right_click_y = y;
+            }
+            return 0;
+        }
+        case WM_MOUSEWHEEL: {
+            int delta = -((int)(short)HIWORD(wp)) / 12;
+            w->scroll_y += delta;
+            _spec_win32_push_event(w, 3, 0, delta, 0, 0);
+            return 0;
+        }
+        case WM_MOUSEHWHEEL: {
+            int delta = ((int)(short)HIWORD(wp)) / 12;
+            w->scroll_x += delta;
+            _spec_win32_push_event(w, 3, 1, delta, 0, 0);
+            return 0;
+        }
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN: {
+            w->mods = _spec_win32_mods();
+            int32_t state = (lp & (1 << 30)) ? 2 : 1;
+            int nav = _spec_win32_vk_to_nav(wp);
+            if (nav > 0) {
+                _spec_win32_push_key(w, nav);
+                _spec_win32_push_event(w, 4, nav, state, w->mods, 0);
+            }
+            if (msg == WM_SYSKEYDOWN && wp == VK_F4) break;
+            return 0;
+        }
+        case WM_KEYUP:
+        case WM_SYSKEYUP: {
+            w->mods = _spec_win32_mods();
+            int nav = _spec_win32_vk_to_nav(wp);
+            if (nav > 0) {
+                _spec_win32_push_event(w, 4, nav, 0, w->mods, 0);
+            }
+            return 0;
+        }
+        case WM_CHAR: {
+            w->mods = _spec_win32_mods();
+            uint16_t u16 = (uint16_t)wp;
+            if (u16 >= 0xD800 && u16 <= 0xDBFF) {
+                w->high_surrogate = u16;
+                return 0;
+            }
+            uint32_t cp = u16;
+            if (u16 >= 0xDC00 && u16 <= 0xDFFF && w->high_surrogate) {
+                cp = 0x10000U + (((uint32_t)(w->high_surrogate - 0xD800U) << 10) | (uint32_t)(u16 - 0xDC00U));
+                w->high_surrogate = 0;
+            } else {
+                w->high_surrogate = 0;
+            }
+            if (!(w->mods & 2) && cp >= 32 && cp != 127) {
+                _spec_win32_push_char(w, (int)cp);
+                _spec_win32_push_event(w, 5, (int32_t)cp, w->mods, 0, 0);
+            }
+            return 0;
+        }
+        case WM_SETCURSOR:
+            if (LOWORD(lp) == HTCLIENT && w->cur_cursor) {
+                SetCursor(w->cur_cursor);
+                return TRUE;
+            }
+            break;
+    }
+    return DefWindowProcW(hwnd, msg, wp, lp);
+}
+
+long long spec_pal_window_open_ex(long long title_cstr, long long width, long long height, long long decorated, long long use_vulkan) {
+    (void)use_vulkan;
+    if (!_spec_win32_dpi_init) {
+        _spec_win32_dpi_init = true;
+        HMODULE u32 = GetModuleHandleA("user32.dll");
+        if (u32) {
+            typedef BOOL (WINAPI *PFN_SetProcessDpiAwarenessContext)(HANDLE);
+            PFN_SetProcessDpiAwarenessContext pSetCtx = (PFN_SetProcessDpiAwarenessContext)GetProcAddress(u32, "SetProcessDpiAwarenessContext");
+            if (pSetCtx) {
+                pSetCtx((HANDLE)(intptr_t)-4); /* DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 */
+            } else {
+                SetProcessDPIAware();
+            }
+        }
+    }
+
+    int slot = -1;
+    for (int i = 0; i < SPEC_WIN32_MAX_WINDOWS; i++) {
+        if (!_spec_win32_windows[i].active) { slot = i; break; }
+    }
+    if (slot < 0) {
+        _spec_set_win_error("Too many open windows");
+        return -1;
+    }
+
+    HINSTANCE hinst = GetModuleHandleW(NULL);
+    const wchar_t* cls_name = L"SpecSuitWindowClass";
+    if (!_spec_win32_class_reg) {
+        WNDCLASSEXW wc;
+        memset(&wc, 0, sizeof(wc));
+        wc.cbSize = sizeof(wc);
+        wc.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+        wc.lpfnWndProc = _spec_win32_wndproc;
+        wc.hInstance = hinst;
+        wc.hCursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW);
+        wc.lpszClassName = cls_name;
+        if (!RegisterClassExW(&wc)) {
+            _spec_set_win_error("RegisterClassExW failed");
+            return -1;
+        }
+        _spec_win32_class_reg = true;
+    }
+
+    int req_w = width > 0 ? (int)width : 640;
+    int req_h = height > 0 ? (int)height : 480;
+    DWORD style = decorated ? WS_OVERLAPPEDWINDOW : (WS_POPUP | WS_SYSMENU);
+    RECT rc = { 0, 0, req_w, req_h };
+    AdjustWindowRectEx(&rc, style, FALSE, 0);
+
+    const char* title = title_cstr ? (const char*)(intptr_t)title_cstr : "Spec";
+    wchar_t* wtitle = spec_win_utf8_to_wide(title);
+    HWND hwnd = CreateWindowExW(
+        0, cls_name, wtitle ? wtitle : L"Spec", style,
+        CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top,
+        NULL, NULL, hinst, NULL
+    );
+    if (wtitle) free(wtitle);
+    if (!hwnd) {
+        _spec_set_win_error("CreateWindowExW failed");
+        return -1;
+    }
+
+    SpecWin32Window* w = &_spec_win32_windows[slot];
+    memset(w, 0, sizeof(*w));
+    w->active = true;
+    w->hwnd = hwnd;
+    w->hinst = hinst;
+    w->cur_cursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW);
+    w->width = req_w;
+    w->height = req_h;
+    w->scale_milli = _spec_win32_compute_scale_milli(hwnd);
+    if (w->scale_milli > 1000) {
+        int scaled_w = (req_w * w->scale_milli + 500) / 1000;
+        int scaled_h = (req_h * w->scale_milli + 500) / 1000;
+        RECT s_rc = { 0, 0, scaled_w, scaled_h };
+        AdjustWindowRectEx(&s_rc, style, FALSE, 0);
+        w->width = scaled_w;
+        w->height = scaled_h;
+        SetWindowPos(hwnd, NULL, 0, 0, s_rc.right - s_rc.left, s_rc.bottom - s_rc.top, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)w);
+    ShowWindow(hwnd, SW_SHOW);
+    UpdateWindow(hwnd);
+    return (long long)(slot + 1);
+}
+
+long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
+    return spec_pal_window_open_ex(title_cstr, width, height, decorated, 0);
+}
+
+long long spec_pal_window_display_handle(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)(intptr_t)w->hinst : 0;
+}
+
+long long spec_pal_window_surface_handle(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)(intptr_t)w->hwnd : 0;
+}
+
+long long spec_pal_window_scale_milli(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->scale_milli : 1000;
+}
+
+static VOID CALLBACK _spec_win32_msg_fiber_proc(LPVOID param) {
+    (void)param;
+    for (;;) {
+        MSG msg;
+        if (_spec_modal_timeout_ms > 0 && !PeekMessageW(&msg, NULL, 0, 0, PM_NOREMOVE)) {
+            MsgWaitForMultipleObjects(0, NULL, FALSE, _spec_modal_timeout_ms, QS_ALLINPUT);
+        }
+        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+        _spec_in_modal_loop = false;
+        SwitchToFiber(_spec_main_fiber);
+    }
+}
+
+long long spec_pal_window_poll_timeout(long long handle, long long timeout_ms) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || w->closed) return 0;
+    if (!_spec_main_fiber) {
+        _spec_main_fiber = IsThreadAFiber() ? GetCurrentFiber() : ConvertThreadToFiber(NULL);
+    }
+    if (!_spec_msg_fiber && _spec_main_fiber) {
+        _spec_msg_fiber = CreateFiber(0, _spec_win32_msg_fiber_proc, NULL);
+    }
+    if (_spec_msg_fiber) {
+        _spec_modal_timeout_ms = timeout_ms > 0 ? (DWORD)timeout_ms : 0;
+        SwitchToFiber(_spec_msg_fiber);
+    } else {
+        MSG msg;
+        if (timeout_ms > 0 && !PeekMessageW(&msg, NULL, 0, 0, PM_NOREMOVE)) {
+            MsgWaitForMultipleObjects(0, NULL, FALSE, (DWORD)timeout_ms, QS_ALLINPUT);
+        }
+        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+    return w->closed ? 0 : 1;
+}
+
+long long spec_pal_window_poll(long long handle) {
+    return spec_pal_window_poll_timeout(handle, 0);
+}
+
+long long spec_pal_window_close(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w) return 0;
+    if (w->hwnd) {
+        SetWindowLongPtrW(w->hwnd, GWLP_USERDATA, 0);
+        DestroyWindow(w->hwnd);
+        w->hwnd = NULL;
+    }
+    if (w->cur_icon) { DestroyIcon(w->cur_icon); w->cur_icon = NULL; }
+    if (w->key_queue) free(w->key_queue);
+    if (w->char_queue) free(w->char_queue);
+    if (w->ev_queue) free(w->ev_queue);
+    if (w->clip_buf) free(w->clip_buf);
+    if (w->last_pixels) free(w->last_pixels);
+    memset(w, 0, sizeof(*w));
+    return 1;
+}
+
+long long spec_pal_window_next_key(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || w->key_len == 0) return 0;
+    int k = w->key_queue[0];
+    if (w->key_len > 1) memmove(w->key_queue, w->key_queue + 1, (w->key_len - 1) * sizeof(int));
+    w->key_len--;
+    return (long long)k;
+}
+
+long long spec_pal_window_width(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->width : 0;
+}
+
+long long spec_pal_window_height(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->height : 0;
+}
+
+long long spec_pal_window_pointer_x(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->pointer_x : 0;
+}
+
+long long spec_pal_window_pointer_y(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->pointer_y : 0;
+}
+
+long long spec_pal_window_poll_click(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || !w->has_click) return 0;
+    w->has_click = false;
+    return 1;
+}
+
+long long spec_pal_window_click_x(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->click_x : 0;
+}
+
+long long spec_pal_window_click_y(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->click_y : 0;
+}
+
+long long spec_pal_window_poll_right_click(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || !w->has_right_click) return 0;
+    w->has_right_click = false;
+    return 1;
+}
+
+long long spec_pal_window_right_click_x(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->right_click_x : 0;
+}
+
+long long spec_pal_window_right_click_y(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->right_click_y : 0;
+}
+
+long long spec_pal_window_poll_event(long long handle, long long out_5_i32_ptr) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || !out_5_i32_ptr || !w->ev_queue || w->ev_head == w->ev_tail) return 0;
+    SpecWin32Event ev = w->ev_queue[w->ev_head];
+    w->ev_head = (w->ev_head + 1) % w->ev_cap;
+    int32_t* out = (int32_t*)(intptr_t)out_5_i32_ptr;
+    out[0] = ev.kind;
+    out[1] = ev.a;
+    out[2] = ev.b;
+    out[3] = ev.c;
+    out[4] = ev.d;
+    return 1;
+}
+
+long long spec_pal_window_poll_scroll_y(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w) return 0;
+    long long dy = (long long)w->scroll_y;
+    w->scroll_y = 0;
+    return dy;
+}
+
+long long spec_pal_window_poll_scroll_x(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w) return 0;
+    long long dx = (long long)w->scroll_x;
+    w->scroll_x = 0;
+    return dx;
+}
+
+long long spec_pal_window_pointer_down(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return (w && w->pointer_down) ? 1 : 0;
+}
+
+long long spec_pal_window_set_title(long long handle, long long title_cstr) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || !w->hwnd || !title_cstr) return 0;
+    wchar_t* wt = spec_win_utf8_to_wide((const char*)(intptr_t)title_cstr);
+    if (!wt) return 0;
+    BOOL ok = SetWindowTextW(w->hwnd, wt);
+    free(wt);
+    return ok ? 1 : 0;
+}
+
+long long spec_pal_window_next_char(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || w->char_len == 0) return 0;
+    int cp = w->char_queue[0];
+    if (w->char_len > 1) memmove(w->char_queue, w->char_queue + 1, (w->char_len - 1) * sizeof(int));
+    w->char_len--;
+    return (long long)cp;
+}
+
+long long spec_pal_window_mods(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    return w ? (long long)w->mods : 0;
+}
+
+long long spec_pal_window_set_cursor(long long handle, long long kind) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w) return 0;
+    LPCWSTR id = (LPCWSTR)IDC_ARROW;
+    if (kind == 1) id = (LPCWSTR)IDC_IBEAM;
+    else if (kind == 2) id = (LPCWSTR)IDC_HAND;
+    else if (kind == 3) id = (LPCWSTR)IDC_SIZEWE;
+    else if (kind == 4) id = (LPCWSTR)IDC_SIZENS;
+    w->cur_cursor = LoadCursorW(NULL, id);
+    if (w->pointer_on_surface && w->cur_cursor) SetCursor(w->cur_cursor);
+    return 1;
+}
+
+long long spec_pal_window_set_min_size(long long handle, long long min_w, long long min_h) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w) return 0;
+    w->min_w = (int)min_w;
+    w->min_h = (int)min_h;
+    return 1;
+}
+
+long long spec_pal_window_set_app_id(long long handle, long long app_id_cstr) {
+    (void)handle; (void)app_id_cstr;
+    return 1;
+}
+
+long long spec_pal_window_set_icon(long long handle, long long pixels_addr, long long width, long long height) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || !w->hwnd || !pixels_addr || width <= 0 || height <= 0) return 0;
+    int iw = (int)width;
+    int ih = (int)height;
+    BITMAPV5HEADER bi;
+    memset(&bi, 0, sizeof(bi));
+    bi.bV5Size = sizeof(bi);
+    bi.bV5Width = iw;
+    bi.bV5Height = -ih;
+    bi.bV5Planes = 1;
+    bi.bV5BitCount = 32;
+    bi.bV5Compression = BI_BITFIELDS;
+    bi.bV5RedMask = 0x00FF0000;
+    bi.bV5GreenMask = 0x0000FF00;
+    bi.bV5BlueMask = 0x000000FF;
+    bi.bV5AlphaMask = 0xFF000000;
+    void* bits = NULL;
+    HDC hdc = GetDC(NULL);
+    HBITMAP color_bmp = CreateDIBSection(hdc, (BITMAPINFO*)&bi, DIB_RGB_COLORS, &bits, NULL, 0);
+    ReleaseDC(NULL, hdc);
+    if (!color_bmp || !bits) {
+        if (color_bmp) DeleteObject(color_bmp);
+        return 0;
+    }
+    memcpy(bits, (const void*)(intptr_t)pixels_addr, (size_t)iw * (size_t)ih * 4);
+    HBITMAP mask_bmp = CreateBitmap(iw, ih, 1, 1, NULL);
+    ICONINFO ii;
+    memset(&ii, 0, sizeof(ii));
+    ii.fIcon = TRUE;
+    ii.hbmMask = mask_bmp;
+    ii.hbmColor = color_bmp;
+    HICON icon = CreateIconIndirect(&ii);
+    DeleteObject(color_bmp);
+    if (mask_bmp) DeleteObject(mask_bmp);
+    if (!icon) return 0;
+    if (w->cur_icon) DestroyIcon(w->cur_icon);
+    w->cur_icon = icon;
+    SendMessageW(w->hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
+    SendMessageW(w->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+    return 1;
+}
+
+long long spec_pal_window_set_clipboard(long long handle, long long text_cstr) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || !text_cstr) return 0;
+    wchar_t* wt = spec_win_utf8_to_wide((const char*)(intptr_t)text_cstr);
+    if (!wt) return 0;
+    size_t bytes = (wcslen(wt) + 1) * sizeof(wchar_t);
+    HGLOBAL hmem = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    if (!hmem) { free(wt); return 0; }
+    void* dst = GlobalLock(hmem);
+    if (dst) {
+        memcpy(dst, wt, bytes);
+        GlobalUnlock(hmem);
+    }
+    free(wt);
+    if (!OpenClipboard(w->hwnd)) { GlobalFree(hmem); return 0; }
+    EmptyClipboard();
+    if (!SetClipboardData(CF_UNICODETEXT, hmem)) {
+        CloseClipboard();
+        GlobalFree(hmem);
+        return 0;
+    }
+    CloseClipboard();
+    return 1;
+}
+
+long long spec_pal_window_get_clipboard(long long handle) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w) return 0;
+    if (!OpenClipboard(w->hwnd)) return 0;
+    HANDLE hdata = GetClipboardData(CF_UNICODETEXT);
+    if (!hdata) { CloseClipboard(); return 0; }
+    const wchar_t* wt = (const wchar_t*)GlobalLock(hdata);
+    if (!wt) { CloseClipboard(); return 0; }
+    int n = WideCharToMultiByte(CP_UTF8, 0, wt, -1, NULL, 0, NULL, NULL);
+    if (n > 0) {
+        char* next = (char*)realloc(w->clip_buf, (size_t)n);
+        if (next) {
+            w->clip_buf = next;
+            WideCharToMultiByte(CP_UTF8, 0, wt, -1, w->clip_buf, n, NULL, NULL);
+        }
+    }
+    GlobalUnlock(hdata);
+    CloseClipboard();
+    return w->clip_buf ? (long long)(intptr_t)w->clip_buf : 0;
+}
+
+long long spec_pal_window_present(long long handle, long long pixels_addr, long long width, long long height) {
+    SpecWin32Window* w = _spec_win32_get(handle);
+    if (!w || !w->hwnd || !pixels_addr || width <= 0 || height <= 0) return 0;
+    size_t needed = (size_t)width * (size_t)height * 4;
+    if (needed > w->last_pix_cap) {
+        void* next = realloc(w->last_pixels, needed);
+        if (next) {
+            w->last_pixels = next;
+            w->last_pix_cap = needed;
+        }
+    }
+    if (w->last_pixels && needed <= w->last_pix_cap) {
+        memcpy(w->last_pixels, (const void*)(intptr_t)pixels_addr, needed);
+        w->last_pix_w = (int)width;
+        w->last_pix_h = (int)height;
+    }
+    HDC hdc = GetDC(w->hwnd);
+    if (!hdc) return 0;
+    BITMAPINFO bmi;
+    memset(&bmi, 0, sizeof(bmi));
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = (LONG)width;
+    bmi.bmiHeader.biHeight = -(LONG)height;
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    int dst_w = w->width > 0 ? w->width : (int)width;
+    int dst_h = w->height > 0 ? w->height : (int)height;
+    int drawn = StretchDIBits(
+        hdc, 0, 0, dst_w, dst_h,
+        0, 0, (int)width, (int)height,
+        (const void*)(intptr_t)pixels_addr, &bmi, DIB_RGB_COLORS, SRCCOPY
+    );
+    ReleaseDC(w->hwnd, hdc);
+    return drawn > 0 ? 1 : 0;
+}
+
 #else
 
 long long spec_pal_window_open(long long title_cstr, long long width, long long height, long long decorated) {
     (void)title_cstr; (void)width; (void)height; (void)decorated;
-    _spec_set_win_error("Native windowing is currently implemented for Linux Wayland only");
+    _spec_set_win_error("Native windowing is currently implemented for Linux Wayland and Windows");
     return -1;
 }
 
@@ -5271,8 +6115,8 @@ long long spec_pal_font_has_glyph(long long handle, long long cp) {
     return stbtt_FindGlyphIndex(&f->info, (int)cp) != 0 ? 1 : 0;
 }
 
-long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
 #if defined(__linux__)
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
     if (!out_buf || out_cap <= 1) return 0;
     void* fc = dlopen("libfontconfig.so.1", RTLD_LAZY | RTLD_LOCAL);
     if (!fc) return 0;
@@ -5319,11 +6163,195 @@ long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
     pFcPatternDestroy(match);
     dlclose(fc);
     return written;
+}
+
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) {
+    (void)mono; (void)bold; (void)italic; (void)out_buf; (void)out_cap;
+    return 0;
+}
+#elif defined(_WIN32)
+typedef struct {
+    char path[MAX_PATH * 2];
+    bool is_mono;
+    bool is_bold;
+    bool is_italic;
+    int score;
+} SpecWinFontEntry;
+
+static SpecWinFontEntry* _spec_win_font_cache = NULL;
+static int _spec_win_font_count = 0;
+static bool _spec_win_font_scanned = false;
+
+static uint16_t _spec_be16(const unsigned char* p) {
+    return (uint16_t)(((uint16_t)p[0] << 8) | (uint16_t)p[1]);
+}
+
+static uint32_t _spec_be32(const unsigned char* p) {
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+}
+
+static bool _spec_win_inspect_ttf(const char* path, bool* out_mono, bool* out_bold, bool* out_italic, int* out_score) {
+    FILE* fp = fopen(path, "rb");
+    if (!fp) return false;
+    unsigned char hdr[12];
+    if (fread(hdr, 1, 12, fp) != 12) { fclose(fp); return false; }
+    uint32_t ver = _spec_be32(hdr);
+    if (ver != 0x00010000U && ver != 0x4F54544FU /* OTTO */) { fclose(fp); return false; }
+    uint16_t num_tables = _spec_be16(hdr + 4);
+    if (num_tables == 0 || num_tables > 64) { fclose(fp); return false; }
+
+    unsigned char tbls[64 * 16];
+    if (fread(tbls, 16, num_tables, fp) != num_tables) { fclose(fp); return false; }
+
+    uint32_t off_os2 = 0, len_os2 = 0;
+    uint32_t off_post = 0, len_post = 0;
+    uint32_t off_head = 0, len_head = 0;
+    bool has_cmap = false;
+
+    for (uint16_t i = 0; i < num_tables; i++) {
+        const unsigned char* r = tbls + i * 16;
+        uint32_t tag = _spec_be32(r);
+        uint32_t off = _spec_be32(r + 8);
+        uint32_t len = _spec_be32(r + 12);
+        if (tag == 0x4F532F32U /* OS/2 */) { off_os2 = off; len_os2 = len; }
+        else if (tag == 0x706F7374U /* post */) { off_post = off; len_post = len; }
+        else if (tag == 0x68656164U /* head */) { off_head = off; len_head = len; }
+        else if (tag == 0x636D6170U /* cmap */) { has_cmap = true; }
+    }
+    if (!has_cmap || off_os2 == 0 || len_os2 < 68) { fclose(fp); return false; }
+
+    unsigned char os2[68];
+    if (fseek(fp, (long)off_os2, SEEK_SET) != 0 || fread(os2, 1, 68, fp) != 68) { fclose(fp); return false; }
+
+    uint16_t weight = _spec_be16(os2 + 4);
+    uint16_t width_cls = _spec_be16(os2 + 6);
+    unsigned char panose0 = os2[32];
+    unsigned char panose1 = os2[33];
+    unsigned char panose3 = os2[35];
+    uint32_t ur1 = _spec_be32(os2 + 42);
+    uint16_t fs_sel = _spec_be16(os2 + 62);
+
+    if (panose0 == 5 || !(ur1 & 1U)) { fclose(fp); return false; }
+
+    uint32_t fixed_pitch = 0;
+    if (off_post != 0 && len_post >= 16) {
+        unsigned char post[16];
+        if (fseek(fp, (long)off_post, SEEK_SET) == 0 && fread(post, 1, 16, fp) == 16) {
+            fixed_pitch = _spec_be32(post + 12);
+        }
+    }
+
+    uint16_t mac_style = 0;
+    if (off_head != 0 && len_head >= 48) {
+        unsigned char head[48];
+        if (fseek(fp, (long)off_head, SEEK_SET) == 0 && fread(head, 1, 48, fp) == 48) {
+            mac_style = _spec_be16(head + 44);
+        }
+    }
+    fclose(fp);
+
+    bool is_mono = (fixed_pitch != 0) || (panose3 == 9);
+    bool is_bold = ((fs_sel & 0x20U) != 0) || ((mac_style & 0x01U) != 0) || (weight >= 600);
+    bool is_italic = ((fs_sel & 0x01U) != 0) || ((mac_style & 0x02U) != 0);
+
+    int score = 100;
+    if (panose0 == 2) score += 50;
+    else if (panose0 == 4) score -= 20;
+    if (width_cls == 5) score += 30;
+    if (weight == (is_bold ? 700 : 400)) score += 20;
+    if (!is_mono && panose1 >= 11 && panose1 <= 15) score += 25;
+    if (is_mono && fixed_pitch != 0 && panose3 == 9) score += 25;
+
+    *out_mono = is_mono;
+    *out_bold = is_bold;
+    *out_italic = is_italic;
+    *out_score = score;
+    return true;
+}
+
+static void _spec_win_scan_fonts(void) {
+    if (_spec_win_font_scanned) return;
+    _spec_win_font_scanned = true;
+    char win_dir[MAX_PATH];
+    UINT wn = GetWindowsDirectoryA(win_dir, MAX_PATH);
+    if (wn == 0 || wn >= MAX_PATH) return;
+
+    char pattern[MAX_PATH * 2];
+    snprintf(pattern, sizeof(pattern), "%s\\Fonts\\*.ttf", win_dir);
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = FindFirstFileA(pattern, &fd);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+
+    int cap = 128;
+    _spec_win_font_cache = (SpecWinFontEntry*)malloc((size_t)cap * sizeof(SpecWinFontEntry));
+    if (!_spec_win_font_cache) { FindClose(hFind); return; }
+
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        char full[MAX_PATH * 2];
+        snprintf(full, sizeof(full), "%s\\Fonts\\%s", win_dir, fd.cFileName);
+        bool mono = false, bold = false, italic = false;
+        int score = 0;
+        if (_spec_win_inspect_ttf(full, &mono, &bold, &italic, &score)) {
+            if (_spec_win_font_count >= cap) {
+                int new_cap = cap * 2;
+                SpecWinFontEntry* next = (SpecWinFontEntry*)realloc(_spec_win_font_cache, (size_t)new_cap * sizeof(SpecWinFontEntry));
+                if (!next) break;
+                _spec_win_font_cache = next;
+                cap = new_cap;
+            }
+            SpecWinFontEntry* e = &_spec_win_font_cache[_spec_win_font_count++];
+            snprintf(e->path, sizeof(e->path), "%s", full);
+            e->is_mono = mono;
+            e->is_bold = bold;
+            e->is_italic = italic;
+            e->score = score;
+        }
+    } while (FindNextFileA(hFind, &fd));
+    FindClose(hFind);
+}
+
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) {
+    if (!out_buf || out_cap <= 1) return 0;
+    _spec_win_scan_fonts();
+    if (!_spec_win_font_cache || _spec_win_font_count == 0) return 0;
+    bool want_mono = mono != 0;
+    bool want_bold = bold != 0;
+    bool want_italic = italic != 0;
+    const SpecWinFontEntry* best = NULL;
+    int best_rank = -100000;
+    for (int i = 0; i < _spec_win_font_count; i++) {
+        const SpecWinFontEntry* e = &_spec_win_font_cache[i];
+        if (e->is_mono != want_mono) continue;
+        int rank = e->score;
+        if (e->is_bold == want_bold) rank += 200;
+        if (e->is_italic == want_italic) rank += 200;
+        if (rank > best_rank) {
+            best_rank = rank;
+            best = e;
+        }
+    }
+    if (!best) return 0;
+    size_t len = strlen(best->path);
+    if (len > (size_t)(out_cap - 1)) len = (size_t)(out_cap - 1);
+    memcpy((char*)(intptr_t)out_buf, best->path, len);
+    ((char*)(intptr_t)out_buf)[len] = '\0';
+    return (long long)len;
+}
+
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
+    return spec_pal_font_find_path(0, 0, 0, out_buf, out_cap);
+}
 #else
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) {
+    (void)mono; (void)bold; (void)italic; (void)out_buf; (void)out_cap;
+    return 0;
+}
+long long spec_pal_font_default_path(long long out_buf, long long out_cap) {
     (void)out_buf; (void)out_cap;
     return 0;
-#endif
 }
+#endif
 
 #else
 
@@ -5343,14 +6371,24 @@ long long spec_pal_font_glyph_box_subpixel(long long handle, long long cp, long 
 long long spec_pal_font_rasterize_glyph_subpixel(long long handle, long long cp, long long pixel_height, double shift_x, long long dst_ptr, long long gw, long long gh) { (void)handle; (void)cp; (void)pixel_height; (void)shift_x; (void)dst_ptr; (void)gw; (void)gh; return 0; }
 long long spec_pal_font_has_glyph(long long handle, long long cp) { (void)handle; (void)cp; return 0; }
 long long spec_pal_font_default_path(long long out_buf, long long out_cap) { (void)out_buf; (void)out_cap; return 0; }
+long long spec_pal_font_find_path(long long mono, long long bold, long long italic, long long out_buf, long long out_cap) { (void)mono; (void)bold; (void)italic; (void)out_buf; (void)out_cap; return 0; }
 
 #endif
-/* Runtime Vulkan backend for Linux (Wayland WSI via dlopen("libvulkan.so.1")).
- * Zero compile-time dependency on <vulkan/vulkan.h>.
- * Non-Linux platforms receive clean no-op stubs.
+/* Runtime Vulkan backend for Linux (Wayland WSI) and Windows (Win32 WSI).
+ * Loads libvulkan.so.1 / vulkan-1.dll dynamically; zero compile-time dependency on <vulkan/vulkan.h>.
  */
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(_WIN32)
+
+#if defined(_WIN32)
+#define _spec_vk_dlopen() ((void*)LoadLibraryA("vulkan-1.dll"))
+#define _spec_vk_dlsym(lib, name) ((void*)GetProcAddress((HMODULE)(lib), (name)))
+#define _spec_vk_dlclose(lib) FreeLibrary((HMODULE)(lib))
+#else
+#define _spec_vk_dlopen() dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL)
+#define _spec_vk_dlsym(lib, name) dlsym((lib), (name))
+#define _spec_vk_dlclose(lib) dlclose((lib))
+#endif
 
 #define SPEC_VK_NO_PROTOTYPES
 
@@ -5548,6 +6586,17 @@ typedef struct {
     void* display;
     void* surface;
 } SpecVkWaylandSurfaceCreateInfoKHR;
+
+#if defined(_WIN32)
+#define SPEC_VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR 1000009000U
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags flags;
+    HINSTANCE hinstance;
+    HWND hwnd;
+} SpecVkWin32SurfaceCreateInfoKHR;
+#endif
 
 typedef struct {
     SpecVkFlags queueFlags;
@@ -6112,6 +7161,9 @@ typedef void* (*PFN_spec_vkGetDeviceProcAddr)(SpecVkDevice, const char*);
 typedef SpecVkResult (*PFN_spec_vkCreateInstance)(const SpecVkInstanceCreateInfo*, const void*, SpecVkInstance*);
 typedef void (*PFN_spec_vkDestroyInstance)(SpecVkInstance, const void*);
 typedef SpecVkResult (*PFN_spec_vkCreateWaylandSurfaceKHR)(SpecVkInstance, const SpecVkWaylandSurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
+#if defined(_WIN32)
+typedef SpecVkResult (*PFN_spec_vkCreateWin32SurfaceKHR)(SpecVkInstance, const SpecVkWin32SurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
+#endif
 typedef void (*PFN_spec_vkDestroySurfaceKHR)(SpecVkInstance, SpecVkSurfaceKHR, const void*);
 typedef SpecVkResult (*PFN_spec_vkEnumeratePhysicalDevices)(SpecVkInstance, uint32_t*, SpecVkPhysicalDevice*);
 typedef void (*PFN_spec_vkGetPhysicalDeviceQueueFamilyProperties)(SpecVkPhysicalDevice, uint32_t*, SpecVkQueueFamilyProperties*);
@@ -6195,6 +7247,9 @@ typedef struct {
     PFN_spec_vkCreateInstance vkCreateInstance;
     PFN_spec_vkDestroyInstance vkDestroyInstance;
     PFN_spec_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
+#if defined(_WIN32)
+    PFN_spec_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
+#endif
     PFN_spec_vkDestroySurfaceKHR vkDestroySurfaceKHR;
     PFN_spec_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
     PFN_spec_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
@@ -6380,12 +7435,12 @@ static uint32_t _spec_vk_find_memory_type(SpecVulkanCtx* ctx, uint32_t type_filt
 }
 
 static int _spec_vk_load_procs(SpecVulkanCtx* ctx) {
-    ctx->lib = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
+    ctx->lib = _spec_vk_dlopen();
     if (!ctx->lib) {
-        _spec_vk_set_error("dlopen(libvulkan.so.1) failed");
+        _spec_vk_set_error("Failed to load Vulkan loader");
         return 0;
     }
-    ctx->vkGetInstanceProcAddr = (PFN_spec_vkGetInstanceProcAddr)dlsym(ctx->lib, "vkGetInstanceProcAddr");
+    ctx->vkGetInstanceProcAddr = (PFN_spec_vkGetInstanceProcAddr)_spec_vk_dlsym(ctx->lib, "vkGetInstanceProcAddr");
     if (!ctx->vkGetInstanceProcAddr) {
         _spec_vk_set_error("vkGetInstanceProcAddr not found");
         return 0;
@@ -6405,7 +7460,11 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
         if (!ctx->fn && !ctx->is_offscreen) { _spec_vk_set_error("Missing Vulkan proc: " #fn); return 0; } \
     } while (0)
     LOAD_IPROC(vkDestroyInstance);
+#if defined(_WIN32)
+    LOAD_IPROC_KHR(vkCreateWin32SurfaceKHR);
+#else
     LOAD_IPROC_KHR(vkCreateWaylandSurfaceKHR);
+#endif
     LOAD_IPROC_KHR(vkDestroySurfaceKHR);
     LOAD_IPROC(vkEnumeratePhysicalDevices);
     LOAD_IPROC(vkGetPhysicalDeviceQueueFamilyProperties);
@@ -6755,7 +7814,11 @@ long long spec_pal_vulkan_create(
     app.engineVersion = 1;
     app.apiVersion = SPEC_VK_MAKE_API_VERSION(0, 1, 0, 0);
 
+#if defined(_WIN32)
+    const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_win32_surface" };
+#else
     const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_wayland_surface" };
+#endif
     SpecVkInstanceCreateInfo ici;
     memset(&ici, 0, sizeof(ici));
     ici.sType = SPEC_VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -6765,17 +7828,28 @@ long long spec_pal_vulkan_create(
 
     if (ctx->vkCreateInstance(&ici, NULL, &ctx->instance) != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkCreateInstance failed");
-        dlclose(ctx->lib);
+        _spec_vk_dlclose(ctx->lib);
         free(ctx);
         return 0;
     }
     if (!_spec_vk_load_instance_procs(ctx)) {
-        dlclose(ctx->lib);
+        _spec_vk_dlclose(ctx->lib);
         free(ctx);
         return 0;
     }
 
     if (!is_offscreen) {
+#if defined(_WIN32)
+        SpecVkWin32SurfaceCreateInfoKHR wsci;
+        memset(&wsci, 0, sizeof(wsci));
+        wsci.sType = SPEC_VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        wsci.hinstance = (HINSTANCE)(intptr_t)wl_display;
+        wsci.hwnd = (HWND)(intptr_t)wl_surface;
+        if (ctx->vkCreateWin32SurfaceKHR(ctx->instance, &wsci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
+            _spec_vk_set_error("vkCreateWin32SurfaceKHR failed");
+            goto fail;
+        }
+#else
         SpecVkWaylandSurfaceCreateInfoKHR wsci;
         memset(&wsci, 0, sizeof(wsci));
         wsci.sType = SPEC_VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
@@ -6785,6 +7859,7 @@ long long spec_pal_vulkan_create(
             _spec_vk_set_error("vkCreateWaylandSurfaceKHR failed");
             goto fail;
         }
+#endif
     }
 
     uint32_t dev_count = 0;
@@ -7666,7 +8741,7 @@ long long spec_pal_vulkan_destroy(long long handle) {
     }
     if (ctx->surface && ctx->instance) ctx->vkDestroySurfaceKHR(ctx->instance, ctx->surface, NULL);
     if (ctx->instance) ctx->vkDestroyInstance(ctx->instance, NULL);
-    if (ctx->lib) dlclose(ctx->lib);
+    if (ctx->lib) _spec_vk_dlclose(ctx->lib);
     free(ctx);
     return 1;
 }

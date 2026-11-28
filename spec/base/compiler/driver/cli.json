@@ -72,6 +72,12 @@
       "description": "Target CPU tuning (e.g. native)"
     },
     {
+      "long": "link-arg",
+      "type": "string",
+      "arg": "arg",
+      "description": "Additional linker argument passed to clang"
+    },
+    {
       "long": "no-opt",
       "type": "bool",
       "description": "Disable LLVM IR optimization passes"

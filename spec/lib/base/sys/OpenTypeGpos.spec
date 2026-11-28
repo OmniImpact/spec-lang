@@ -531,7 +531,7 @@ Class is OpenTypeGpos{
 	Function of Int is kernAdvance(Int is cp1, Int is cp2){
 		if({ !valid }, { return 0; });
 		if({ asciiKernPtr != 0 && cp1 >= 32 && cp1 <= 126 && cp2 >= 32 && cp2 <= 126 }, {
-			return Mem:loadI32(ptr: asciiKernPtr, byteOffset: ((cp1 - 32) * 95 + (cp2 - 32)) * 4);
+			return Mem:loadS32(ptr: asciiKernPtr, byteOffset: ((cp1 - 32) * 95 + (cp2 - 32)) * 4);
 		});
 		if({ pairCachePtr != 0 && pairCacheCap > 0 }, {
 			local Int is k: :pairKey(cp1: cp1, cp2: cp2);
@@ -541,7 +541,7 @@ Class is OpenTypeGpos{
 			while({ probes < pairCacheCap }, {
 				local Int is cur: Mem:loadI64(ptr: pairCachePtr, byteOffset: s * 16);
 				if({ cur == k }, {
-					return Mem:loadI32(ptr: pairCachePtr, byteOffset: s * 16 + 8);
+					return Mem:loadS32(ptr: pairCachePtr, byteOffset: s * 16 + 8);
 				});
 				if({ cur == 0 }, {
 					probes: pairCacheCap;

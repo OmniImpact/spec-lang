@@ -1,9 +1,18 @@
-/* Runtime Vulkan backend for Linux (Wayland WSI via dlopen("libvulkan.so.1")).
- * Zero compile-time dependency on <vulkan/vulkan.h>.
- * Non-Linux platforms receive clean no-op stubs.
+/* Runtime Vulkan backend for Linux (Wayland WSI) and Windows (Win32 WSI).
+ * Loads libvulkan.so.1 / vulkan-1.dll dynamically; zero compile-time dependency on <vulkan/vulkan.h>.
  */
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(_WIN32)
+
+#if defined(_WIN32)
+#define _spec_vk_dlopen() ((void*)LoadLibraryA("vulkan-1.dll"))
+#define _spec_vk_dlsym(lib, name) ((void*)GetProcAddress((HMODULE)(lib), (name)))
+#define _spec_vk_dlclose(lib) FreeLibrary((HMODULE)(lib))
+#else
+#define _spec_vk_dlopen() dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL)
+#define _spec_vk_dlsym(lib, name) dlsym((lib), (name))
+#define _spec_vk_dlclose(lib) dlclose((lib))
+#endif
 
 #define SPEC_VK_NO_PROTOTYPES
 
@@ -201,6 +210,17 @@ typedef struct {
     void* display;
     void* surface;
 } SpecVkWaylandSurfaceCreateInfoKHR;
+
+#if defined(_WIN32)
+#define SPEC_VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR 1000009000U
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    SpecVkFlags flags;
+    HINSTANCE hinstance;
+    HWND hwnd;
+} SpecVkWin32SurfaceCreateInfoKHR;
+#endif
 
 typedef struct {
     SpecVkFlags queueFlags;
@@ -765,6 +785,9 @@ typedef void* (*PFN_spec_vkGetDeviceProcAddr)(SpecVkDevice, const char*);
 typedef SpecVkResult (*PFN_spec_vkCreateInstance)(const SpecVkInstanceCreateInfo*, const void*, SpecVkInstance*);
 typedef void (*PFN_spec_vkDestroyInstance)(SpecVkInstance, const void*);
 typedef SpecVkResult (*PFN_spec_vkCreateWaylandSurfaceKHR)(SpecVkInstance, const SpecVkWaylandSurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
+#if defined(_WIN32)
+typedef SpecVkResult (*PFN_spec_vkCreateWin32SurfaceKHR)(SpecVkInstance, const SpecVkWin32SurfaceCreateInfoKHR*, const void*, SpecVkSurfaceKHR*);
+#endif
 typedef void (*PFN_spec_vkDestroySurfaceKHR)(SpecVkInstance, SpecVkSurfaceKHR, const void*);
 typedef SpecVkResult (*PFN_spec_vkEnumeratePhysicalDevices)(SpecVkInstance, uint32_t*, SpecVkPhysicalDevice*);
 typedef void (*PFN_spec_vkGetPhysicalDeviceQueueFamilyProperties)(SpecVkPhysicalDevice, uint32_t*, SpecVkQueueFamilyProperties*);
@@ -848,6 +871,9 @@ typedef struct {
     PFN_spec_vkCreateInstance vkCreateInstance;
     PFN_spec_vkDestroyInstance vkDestroyInstance;
     PFN_spec_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
+#if defined(_WIN32)
+    PFN_spec_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
+#endif
     PFN_spec_vkDestroySurfaceKHR vkDestroySurfaceKHR;
     PFN_spec_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
     PFN_spec_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
@@ -1033,12 +1059,12 @@ static uint32_t _spec_vk_find_memory_type(SpecVulkanCtx* ctx, uint32_t type_filt
 }
 
 static int _spec_vk_load_procs(SpecVulkanCtx* ctx) {
-    ctx->lib = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
+    ctx->lib = _spec_vk_dlopen();
     if (!ctx->lib) {
-        _spec_vk_set_error("dlopen(libvulkan.so.1) failed");
+        _spec_vk_set_error("Failed to load Vulkan loader");
         return 0;
     }
-    ctx->vkGetInstanceProcAddr = (PFN_spec_vkGetInstanceProcAddr)dlsym(ctx->lib, "vkGetInstanceProcAddr");
+    ctx->vkGetInstanceProcAddr = (PFN_spec_vkGetInstanceProcAddr)_spec_vk_dlsym(ctx->lib, "vkGetInstanceProcAddr");
     if (!ctx->vkGetInstanceProcAddr) {
         _spec_vk_set_error("vkGetInstanceProcAddr not found");
         return 0;
@@ -1058,7 +1084,11 @@ static int _spec_vk_load_instance_procs(SpecVulkanCtx* ctx) {
         if (!ctx->fn && !ctx->is_offscreen) { _spec_vk_set_error("Missing Vulkan proc: " #fn); return 0; } \
     } while (0)
     LOAD_IPROC(vkDestroyInstance);
+#if defined(_WIN32)
+    LOAD_IPROC_KHR(vkCreateWin32SurfaceKHR);
+#else
     LOAD_IPROC_KHR(vkCreateWaylandSurfaceKHR);
+#endif
     LOAD_IPROC_KHR(vkDestroySurfaceKHR);
     LOAD_IPROC(vkEnumeratePhysicalDevices);
     LOAD_IPROC(vkGetPhysicalDeviceQueueFamilyProperties);
@@ -1408,7 +1438,11 @@ long long spec_pal_vulkan_create(
     app.engineVersion = 1;
     app.apiVersion = SPEC_VK_MAKE_API_VERSION(0, 1, 0, 0);
 
+#if defined(_WIN32)
+    const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_win32_surface" };
+#else
     const char* inst_exts[2] = { "VK_KHR_surface", "VK_KHR_wayland_surface" };
+#endif
     SpecVkInstanceCreateInfo ici;
     memset(&ici, 0, sizeof(ici));
     ici.sType = SPEC_VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -1418,17 +1452,28 @@ long long spec_pal_vulkan_create(
 
     if (ctx->vkCreateInstance(&ici, NULL, &ctx->instance) != SPEC_VK_SUCCESS) {
         _spec_vk_set_error("vkCreateInstance failed");
-        dlclose(ctx->lib);
+        _spec_vk_dlclose(ctx->lib);
         free(ctx);
         return 0;
     }
     if (!_spec_vk_load_instance_procs(ctx)) {
-        dlclose(ctx->lib);
+        _spec_vk_dlclose(ctx->lib);
         free(ctx);
         return 0;
     }
 
     if (!is_offscreen) {
+#if defined(_WIN32)
+        SpecVkWin32SurfaceCreateInfoKHR wsci;
+        memset(&wsci, 0, sizeof(wsci));
+        wsci.sType = SPEC_VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        wsci.hinstance = (HINSTANCE)(intptr_t)wl_display;
+        wsci.hwnd = (HWND)(intptr_t)wl_surface;
+        if (ctx->vkCreateWin32SurfaceKHR(ctx->instance, &wsci, NULL, &ctx->surface) != SPEC_VK_SUCCESS) {
+            _spec_vk_set_error("vkCreateWin32SurfaceKHR failed");
+            goto fail;
+        }
+#else
         SpecVkWaylandSurfaceCreateInfoKHR wsci;
         memset(&wsci, 0, sizeof(wsci));
         wsci.sType = SPEC_VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
@@ -1438,6 +1483,7 @@ long long spec_pal_vulkan_create(
             _spec_vk_set_error("vkCreateWaylandSurfaceKHR failed");
             goto fail;
         }
+#endif
     }
 
     uint32_t dev_count = 0;
@@ -2319,7 +2365,7 @@ long long spec_pal_vulkan_destroy(long long handle) {
     }
     if (ctx->surface && ctx->instance) ctx->vkDestroySurfaceKHR(ctx->instance, ctx->surface, NULL);
     if (ctx->instance) ctx->vkDestroyInstance(ctx->instance, NULL);
-    if (ctx->lib) dlclose(ctx->lib);
+    if (ctx->lib) _spec_vk_dlclose(ctx->lib);
     free(ctx);
     return 1;
 }

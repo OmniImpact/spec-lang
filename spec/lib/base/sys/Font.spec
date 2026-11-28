@@ -335,6 +335,20 @@ Class is Font{
 			:bindCachedGpos(fontHandle: cached);
 			return true;
 		});
+		local Int is bFlag: if({ bold }, { 1 }, { 0 });
+		local Int is iFlag: if({ italic }, { 1 }, { 0 });
+		local Int is pathBuf: Mem:alloc(bytes: 512);
+		local Int is pathLen: base:sysinternal:Font:pal_font_find_path(mono: 0, bold: bFlag, italic: iFlag, out_buf: pathBuf, out_cap: 512);
+		local String is resolved: '';
+		if({ pathLen > 0 }, {
+			resolved: Mem:strFromBytes(srcAddr: pathBuf, len: pathLen);
+		});
+		Mem:free(ptr: pathBuf);
+		if({ resolved != '' && :load(path: resolved) }, {
+			Font:cachedState:set(index: slot, item: handle);
+			ownsHandle: false;
+			return true;
+		});
 		local Array of String is candidates: if({ bold && italic }, {
 			Array([
 				'/usr/share/fonts/truetype/noto/NotoSans-BoldItalic.ttf',
@@ -380,6 +394,20 @@ Class is Font{
 			handle: cached;
 			ownsHandle: false;
 			:bindCachedGpos(fontHandle: cached);
+			return true;
+		});
+		local Int is bFlag: if({ bold }, { 1 }, { 0 });
+		local Int is iFlag: if({ italic }, { 1 }, { 0 });
+		local Int is pathBuf: Mem:alloc(bytes: 512);
+		local Int is pathLen: base:sysinternal:Font:pal_font_find_path(mono: 1, bold: bFlag, italic: iFlag, out_buf: pathBuf, out_cap: 512);
+		local String is resolved: '';
+		if({ pathLen > 0 }, {
+			resolved: Mem:strFromBytes(srcAddr: pathBuf, len: pathLen);
+		});
+		Mem:free(ptr: pathBuf);
+		if({ resolved != '' && :load(path: resolved) }, {
+			Font:cachedState:set(index: slot, item: handle);
+			ownsHandle: false;
 			return true;
 		});
 		local Array of String is candidates: if({ bold && italic }, {

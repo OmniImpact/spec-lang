@@ -34,7 +34,10 @@ Class is SpecBuild{
 		['base', 'sys', [Bundle, FileError]],
 		['base', 'data', as Json()],
 		['base', 'struct', Array],
+		['base', 'struct', List],
 		['base', 'struct', Map],
+		['base', 'fabric', 'svg', [SvgRenderer, SvgBitmap]],
+		['base', 'sys', as Mem()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Stderr()],
 		['base', 'sys', as Process()],
@@ -554,6 +557,13 @@ Class is SpecBuild{
 			});
 		});
 
+		local String is resolvedIcon: if({ rawIcon != '' }, { :resolvePath(baseDir: configDir, relPath: rawIcon) }, { '' });
+		local String is winResObj: :buildWindowsIconResource(iconPath: resolvedIcon);
+		if({ winResObj != '' }, {
+			specArgs:add(item: '--link-arg');
+			specArgs:add(item: winResObj);
+		});
+
 		local Cleo is prepUi: Cleo:toolUi(title: ' specbuild ', directOutput: true);
 		local CleoSection is prepSec: prepUi:addToolSection(title: ' Building · ' . name . ' v' . version . ' ');
 		prepSec:addLine(text: 'Source: ' . resolvedSource, color: CleoColor:ansi(code: 250), rightText: 'Output: ' . output);
@@ -569,6 +579,9 @@ Class is SpecBuild{
 		prepUi:finish();
 
 		local Int is exitCode: Process:execute(command: compiler, args: specArgs);
+		if({ winResObj != '' }, {
+			fileRemove(path: winResObj, onError: local Function(SpecError of FileError is _e){});
+		});
 
 		local Cleo is ui: Cleo:toolUi(title: ' specbuild ');
 		local CleoSection is bSec: ui:addToolSection(title: ' Build · ' . name . ' v' . version . ' ');
@@ -684,6 +697,132 @@ Class is SpecBuild{
 		return false;
 	}
 
+	local Function is pushIcoU16(List of Byte is buf, Int is val){
+		buf:push(item: (val & 255) as Byte);
+		buf:push(item: ((val >> 8) & 255) as Byte);
+	}
+
+	local Function is pushIcoU32(List of Byte is buf, Int is val){
+		buf:push(item: (val & 255) as Byte);
+		buf:push(item: ((val >> 8) & 255) as Byte);
+		buf:push(item: ((val >> 16) & 255) as Byte);
+		buf:push(item: ((val >> 24) & 255) as Byte);
+	}
+
+	local Function of String is buildWindowsIconResource(String is iconPath){
+		if({ Process:osName() != 'windows' || iconPath == '' || !fileExists(path: iconPath) }, {
+			return '';
+		});
+		local String is low: iconPath:toLower();
+		local String is tmpDir: Uri:systemTempDir();
+		local String is pidStr: Process:getPid() as String;
+		local String is icoPath: '';
+		local Boolean is tempIco: false;
+
+		if({ low:endsWith(suffix: '.ico') }, {
+			icoPath: iconPath;
+		}, {
+			if({ !low:endsWith(suffix: '.svg') }, {
+				return '';
+			});
+			local String is svgText: fileRead(path: iconPath, default: '');
+			if({ svgText == '' }, { return ''; });
+
+			local Array of Int is sizes: Array([16, 32, 48, 256]);
+			local Array of String is dibBlobs: Array();
+			local Array of Int is validSizes: Array();
+			local Int is si: 0;
+			while({ si < sizes:length() }, {
+				local Int is sz: sizes:get(index: si);
+				local SvgBitmap is bmp: SvgRenderer:shared:rasterize(svgSrc: svgText, widthPx: sz, heightPx: sz);
+				if({ bmp:argbAddr != 0 && bmp:width == sz && bmp:height == sz }, {
+					local Int is maskRow: ((sz + 31) / 32) * 4;
+					local Int is imgBytes: sz * sz * 4 + maskRow * sz;
+					local List of Byte is dib: List(byteMode: true);
+					:pushIcoU32(buf: dib, val: 40);
+					:pushIcoU32(buf: dib, val: sz);
+					:pushIcoU32(buf: dib, val: sz * 2);
+					:pushIcoU16(buf: dib, val: 1);
+					:pushIcoU16(buf: dib, val: 32);
+					:pushIcoU32(buf: dib, val: 0);
+					:pushIcoU32(buf: dib, val: imgBytes);
+					:pushIcoU32(buf: dib, val: 0);
+					:pushIcoU32(buf: dib, val: 0);
+					:pushIcoU32(buf: dib, val: 0);
+					:pushIcoU32(buf: dib, val: 0);
+
+					local Int is y: sz - 1;
+					while({ y >= 0 }, {
+						local Int is rowOff: y * sz * 4;
+						local Int is x: 0;
+						while({ x < sz * 4 }, {
+							dib:push(item: (Mem:loadByte(ptr: bmp:argbAddr, byteOffset: rowOff + x) & 255) as Byte);
+							x: x + 1;
+						});
+						y: y - 1;
+					});
+					local Int is mBytes: maskRow * sz;
+					local Int is mi: 0;
+					while({ mi < mBytes }, {
+						dib:push(item: 0 as Byte);
+						mi: mi + 1;
+					});
+					dibBlobs:add(item: dib:toString());
+					validSizes:add(item: sz);
+				});
+				si: si + 1;
+			});
+			if({ dibBlobs:length() == 0 }, { return ''; });
+
+			local List of Byte is ico: List(byteMode: true);
+			local Int is cnt: dibBlobs:length();
+			:pushIcoU16(buf: ico, val: 0);
+			:pushIcoU16(buf: ico, val: 1);
+			:pushIcoU16(buf: ico, val: cnt);
+			local Int is dataOff: 6 + cnt * 16;
+			local Int is di: 0;
+			while({ di < cnt }, {
+				local Int is s: validSizes:get(index: di);
+				local Int is dLen: dibBlobs:get(index: di):byteLength();
+				local Int is dimVal: if({ s >= 256 }, { 0 }, { s });
+				ico:push(item: dimVal as Byte);
+				ico:push(item: dimVal as Byte);
+				ico:push(item: 0 as Byte);
+				ico:push(item: 0 as Byte);
+				:pushIcoU16(buf: ico, val: 1);
+				:pushIcoU16(buf: ico, val: 32);
+				:pushIcoU32(buf: ico, val: dLen);
+				:pushIcoU32(buf: ico, val: dataOff);
+				dataOff: dataOff + dLen;
+				di: di + 1;
+			});
+			di: 0;
+			while({ di < cnt }, {
+				ico:appendString(value: dibBlobs:get(index: di));
+				di: di + 1;
+			});
+			icoPath: tmpDir . '/spec_icon_' . pidStr . '.ico';
+			if({ !fileWrite(path: icoPath, content: ico:toString()) }, { return ''; });
+			tempIco: true;
+		});
+
+		local String is rcPath: tmpDir . '/spec_icon_' . pidStr . '.rc';
+		local String is resPath: tmpDir . '/spec_icon_' . pidStr . '.res.o';
+		local String is icoEsc: icoPath:replaceAll(search: '\\', replacement: '/');
+		if({ !fileWrite(path: rcPath, content: '1 ICON "' . icoEsc . '"' . "\n") }, {
+			if({ tempIco }, { fileRemove(path: icoPath, onError: local Function(SpecError of FileError is _e){}); });
+			return '';
+		});
+		local Int is wrCode: Process:execute(command: 'windres', args: Array(['-i', rcPath, '-O', 'coff', '-o', resPath]));
+		fileRemove(path: rcPath, onError: local Function(SpecError of FileError is _e){});
+		if({ tempIco }, { fileRemove(path: icoPath, onError: local Function(SpecError of FileError is _e){}); });
+		if({ wrCode != 0 }, {
+			fileRemove(path: resPath, onError: local Function(SpecError of FileError is _e){});
+			return '';
+		});
+		return resPath;
+	}
+
 	local Function is installApp(
 		String is name,
 		String is description,
@@ -699,7 +838,13 @@ Class is SpecBuild{
 			return;
 		});
 		if({ os == 'windows' }, {
-			:installWindows(name: name, output: output);
+			:installWindows(
+				name: name,
+				description: description,
+				output: output,
+				fileExtsCfg: fileExtsCfg,
+				defaultExtsCfg: defaultExtsCfg
+			);
 			return;
 		});
 		:installLinux(
@@ -717,8 +862,95 @@ Class is SpecBuild{
 		Output:line('[specbuild] macOS install stub: packaging "' . name . '" (' . output . ') into ~/Applications/' . name . '.app is not yet implemented.');
 	}
 
-	local Function is installWindows(String is name, String is output){
-		Output:line('[specbuild] Windows install stub: installing "' . name . '" (' . output . ') into %LOCALAPPDATA%\\Programs\\' . name . ' is not yet implemented.');
+	local Function is installWindows(
+		String is name,
+		String is description,
+		String is output,
+		Array is fileExtsCfg,
+		Array is defaultExtsCfg
+	){
+		local String is localApp: Process:getEnv(key: 'LOCALAPPDATA', default: '');
+		if({ localApp == '' }, {
+			local String is home: Uri:homeDir();
+			if({ home == '' }, {
+				Stderr:line('[specbuild] Error: Could not determine LOCALAPPDATA or home directory for Windows install.');
+				Process:exit(status: 1);
+			});
+			localApp: home . '/AppData/Local';
+		});
+		local String is localAppUnix: localApp:replaceAll(search: '\\', replacement: '/');
+		local String is installDir: localAppUnix . '/Programs/' . name;
+		Process:execute(command: 'mkdir', args: Array(['-p', installDir]));
+
+		local String is exeName: if({ name:toLower():endsWith(suffix: '.exe') }, { name }, { name . '.exe' });
+		local String is destBin: installDir . '/' . exeName;
+		local Int is cpBin: Process:execute(command: 'cp', args: Array(['-f', output, destBin]));
+		if({ cpBin != 0 }, {
+			Stderr:line('[specbuild] Error: Failed to copy executable to ' . destBin);
+			Process:exit(status: 1);
+		});
+
+		local String is destBinWin: destBin:replaceAll(search: '/', replacement: '\\');
+		local String is installDirWin: installDir:replaceAll(search: '/', replacement: '\\');
+		local String is descStr: if({ description != '' }, { description }, { name });
+
+		## Create Start Menu shortcut
+		local String is appData: Process:getEnv(key: 'APPDATA', default: '');
+		if({ appData != '' }, {
+			local String is startMenuDir: appData:replaceAll(search: '\\', replacement: '/') . '/Microsoft/Windows/Start Menu/Programs';
+			Process:execute(command: 'mkdir', args: Array(['-p', startMenuDir]));
+			local String is lnkPath: (startMenuDir . '/' . name . '.lnk'):replaceAll(search: '/', replacement: '\\');
+			local String is psCmd: "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('" . lnkPath . "'); $s.TargetPath = '" . destBinWin . "'; $s.WorkingDirectory = '" . installDirWin . "'; $s.Description = '" . descStr:replaceAll(search: "'", replacement: "''") . "'; $s.IconLocation = '" . destBinWin . ",0'; $s.Save()";
+			Process:execute(command: 'powershell', args: Array(['-NoProfile', '-NonInteractive', '-Command', psCmd]));
+			Process:execute(command: 'ie4uinit.exe', args: Array(['-show']));
+		});
+
+		## Register ProgID and per-user file associations in HKCU\Software\Classes
+		local String is progId: 'SpecBuild.' . name;
+		local String is openCmd: '"' . destBinWin . '" "%1"';
+		Process:execute(command: 'reg', args: Array(['add', 'HKCU\\Software\\Classes\\' . progId, '/ve', '/d', descStr, '/f']));
+		Process:execute(command: 'reg', args: Array(['add', 'HKCU\\Software\\Classes\\' . progId . '\\DefaultIcon', '/ve', '/d', destBinWin . ',0', '/f']));
+		Process:execute(command: 'reg', args: Array(['add', 'HKCU\\Software\\Classes\\' . progId . '\\shell\\open\\command', '/ve', '/d', openCmd, '/f']));
+		Process:execute(command: 'reg', args: Array(['add', 'HKCU\\Software\\Classes\\Applications\\' . exeName . '\\shell\\open\\command', '/ve', '/d', openCmd, '/f']));
+
+		local Array of String is defaultExts: Array();
+		local Int is di: 0;
+		while({ di < defaultExtsCfg:length() }, {
+			local String is de: :normalizeExt(ext: Json:getStringAt(arr: defaultExtsCfg, index: di, default: ''));
+			:appendUniqueStr(list: defaultExts, val: de);
+			di: di + 1;
+		});
+
+		local Int is extCount: 0;
+		local Int is ei: 0;
+		while({ ei < fileExtsCfg:length() }, {
+			local String is rawExt: Json:getStringAt(arr: fileExtsCfg, index: ei, default: '');
+			local String is ext: '';
+			local Boolean is isDefault: false;
+			if({ rawExt != '' }, {
+				ext: :normalizeExt(ext: rawExt);
+			}, {
+				local Map is obj: Json:getObjectAt(arr: fileExtsCfg, index: ei);
+				ext: :normalizeExt(ext: Json:getString(obj: obj, key: 'ext', default: ''));
+				isDefault: Json:getBool(obj: obj, key: 'default', default: false);
+			});
+			if({ ext != '' }, {
+				extCount: extCount + 1;
+				Process:execute(command: 'reg', args: Array(['add', 'HKCU\\Software\\Classes\\' . ext . '\\OpenWithProgids', '/v', progId, '/t', 'REG_NONE', '/f']));
+				if({ isDefault || :arrayContainsStr(list: defaultExts, val: ext) }, {
+					Process:execute(command: 'reg', args: Array(['add', 'HKCU\\Software\\Classes\\' . ext, '/ve', '/d', progId, '/f']));
+				});
+			});
+			ei: ei + 1;
+		});
+
+		Output:line('[specbuild] Installed binary:  ' . destBinWin);
+		if({ appData != '' }, {
+			Output:line('[specbuild] Start Menu link:   ' . (appData:replaceAll(search: '/', replacement: '\\')) . '\\Microsoft\\Windows\\Start Menu\\Programs\\' . name . '.lnk');
+		});
+		if({ extCount > 0 }, {
+			Output:line('[specbuild] File associations: ' . (extCount as String) . ' extension(s) registered under HKCU\\Software\\Classes');
+		});
 	}
 
 	local Function is installLinux(
